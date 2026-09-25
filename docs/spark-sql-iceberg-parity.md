@@ -1183,14 +1183,14 @@ perfectly good read.
   `PARQUET:field_id` (fork ask F-DML-FIELD-ID-1), so the surface never routes
   through it.
 
-#### DML-7 — `INSERT INTO … REPLACE WHERE` — **FIXED 2026-09-24 (U8 PR1); NULL keys and folds 2026-09-25**
+#### DML-7 — `INSERT INTO … REPLACE WHERE` — **FIXED 2026-09-24 (U8 PR1); NULL keys, folds and literal rules 2026-09-25**
 
 - **repark** — `INSERT INTO [TABLE] t REPLACE WHERE <predicate> <query>` runs on the Spark door
   (`crates/repark-spark/src/router/insert_positional/replace_where.rs`). The predicate converts
   to an Iceberg row filter by Spark's optimizer and V2-filter rules
   (`repark_iceberg::write::spark_overwrite_filter`: `=`, `<>`, `<=>`, ranges, `BETWEEN`, `IN`,
   `NOT IN`, `IS [NOT] NULL`, prefix `LIKE`, `AND` / `OR` / `NOT`, a string literal coerced to
-  the column type). A NULL key follows Spark: `<` and `<=` carry a `notNull` conjunct (Java
+  the column type). A NULL key in its own manifest follows Spark: `<` and `<=` carry a `notNull` conjunct (Java
   Iceberg's `lt` never matches NULL), `NOT` pushes down as Spark's optimizer pushes it (`NOT cat
   < 'y'` → `cat >= 'y'`, `NOT BETWEEN` → `< low OR > high`), a one-element `IN` / `NOT IN` folds
   to `=` / `<>` (so `NOT IN ('y')` deletes the NULL row), and a longer `NOT IN` is `notNull AND
@@ -1198,7 +1198,13 @@ perfectly good read.
   INT-typed `=` / `IN` refuses `…: null`, an unreachable `<` / `<>` / `NOT IN` refuses `…: (i IS
   NOT NULL) OR (null)`, `<=>` is FALSE and `NOT <=>` TRUE (the statement commits), a literal
   beyond i64 folds a range comparison to TRUE or FALSE, a fractional literal on an integer
-  column rounds (`id < 2.5` → `id <= 2`), and an `IN` drops the unreachable element. A refusal
+  column rounds (`id < 2.5` → `id <= 2`), and an `IN` drops the unreachable element. A decimal
+  literal on an INT column outside the INT range but inside i64 folds as an out-of-range integer
+  does, never to a constant (`i < 2147483647.5` → `…: (i IS NOT NULL) OR (null)`), and a `.0`
+  literal exactly at the INT maximum or minimum follows Spark's boundary rules (`i > 2147483647.0`
+  → `…: null`, `i <= 2147483647.0` → `…: (i IS NOT NULL) OR (null)`, `i < 2147483647.0` →
+  `NOT (i = 2147483647)`, `i >= 2147483647.0` → `i = 2147483647`). A suffix-typed literal
+  renders as its cast (`id = 1BD` → `…: id = CAST(1 AS DECIMAL(1,0))`). A refusal
   renders the first conjunct Spark cannot convert, as Spark splits its optimized predicate (`cat
   = NULL AND id = 1` → `null`, `cat = NULL OR id = 1` → `(null) OR (id = 1)`). The query's rows
   commit through `overwrite_by_row_filter` with no added-file validation
@@ -1210,20 +1216,35 @@ perfectly good read.
   predicate `UNSUPPORTED_FEATURE.OVERWRITE_BY_SUBQUERY` / `0A000`, a non-deterministic one
   `INVALID_NON_DETERMINISTIC_EXPRESSIONS` / `42K0E`, an untranslatable one
   `IllegalArgumentException: Cannot convert Spark predicate to Iceberg expression: …`, a
-  wrong-width source `INSERT_COLUMN_ARITY_MISMATCH` / `21S01`, a missing table or namespace
+  wrong-width source `INSERT_COLUMN_ARITY_MISMATCH` / `21S01` naming each data column as Spark
+  names it (a cast of a column is the column, `(id + 1)`, `substr(data, 1, 1)`, a `*` beside a
+  cast expands), a missing table or namespace
   `TABLE_OR_VIEW_NOT_FOUND`, and `REPLACE WHERE` after `OVERWRITE`, a column list, `BY NAME` or
   `PARTITION` a `ParseException` `PARSE_SYNTAX_ERROR` near `'REPLACE'`.
 - **Apache Spark** — `OverwriteByExpression` → Iceberg `SparkWrite.OverwriteByFilter`, the same
   answers. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-24 and 2026-09-25, committed
-  as `python/repark/tests/u8_write_sql_spark_oracle.json` (396 cases; keys `pr1/…`, `r1/…`,
-  `r2/…`, `r2b/…`, `r2fix/…`) and replayed case by case on both doors; scoreboard cell
-  `W-INSERT-OVERWRITE-WHERE`.)*
+  as `python/repark/tests/u8_write_sql_spark_oracle.json` (572 cases; keys `pr1/…`, `r1/…`,
+  `r2/…`, `r2b/…`, `r2fix/…`, `r3/…`..`r3e/…`, `r3fix/…`) and replayed case by case — 438 cases
+  on the Rust door, 439 on the facade (plus the WAP branch); a residue case carries RePark's
+  recorded answer and is held to it; snapshot summaries are pinned by the hand pins only;
+  scoreboard cell `W-INSERT-OVERWRITE-WHERE`.)*
 - **Residue** — (1) the partial-match refusal is `PySparkException` with `DataInvalid => …` and
   the fork's filter spelling (`id = 2`, `(data IS NOT NULL) AND (data < "b")`), where Spark
   raises `Py4JJavaError` wrapping `ValidationException` and spells `ref(name="id") == 2`; a
   mis-cased column (`CAT = 'x'`) refuses Iceberg's `Cannot find field 'CAT' in struct: …` as
   `AnalysisException`. (2) The untranslatable-predicate text quotes the statement's own
-  spelling, where Spark renders its V2 expression (`(id + 1) = 3`, `CAST(id AS string)`). (3)
+  spelling, where Spark renders its V2 expression (`(id + 1) = 3`, `CAST(id AS string)`).
+  Dated 2026-09-25 (oracle keys `r3/…`): both refuse with different text for `d = 1000000` on
+  DECIMAL(5,2) (Spark `CAST(d AS decimal(9,2)) = 1000000.00`, RePark `d = 1000000`), `d <
+  99999999999999999999` (Spark `CAST(d AS decimal(22,2)) < 99999999999999999999.00`), `d =
+  1.505` (Spark `null`, RePark `d = 1.505`), `cat = 1` / `cat < 2` / `cat IN (1, 2)` on STRING
+  (Spark `CAST(cat AS long) = 1`, RePark `cat = 1`), `d = 'abc'` on DATE (Spark
+  `DateTimeException` `CAST_INVALID_INPUT` / `22018`, RePark `IllegalArgumentException` `…: d =
+  'abc'`) and `d = 1` on DATE (Spark `DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES` / `42K09`, RePark
+  an unconditioned `AnalysisException` whose text is the analyzer's `spark_expr_semantics` /
+  `caused by` chain around `DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION`). The missing-namespace
+  `TABLE_OR_VIEW_NOT_FOUND` is RePark's one-line rendering behind `Error during planning: `;
+  Spark's text is newline-separated. (3)
   `TIMESTAMP` literals in the predicate refuse as untranslatable; Spark converts them. (4) A
   `TABLE a.b.c` source is the door's pre-existing parse gap for three-part `TABLE` queries. (5)
   Dated 2026-09-25: `NOT LIKE 'y%'` over a NULL key — Spark fails `[INTERNAL_ERROR] Eagerly
@@ -1235,13 +1256,22 @@ perfectly good read.
   the facade qualifies a bare temp-view name to the current catalog, so RePark answers
   `TABLE_OR_VIEW_NOT_FOUND`, and a DataFusion session table on the Rust door answers RePark's
   own `INSERT INTO … REPLACE WHERE requires an Iceberg table, got …` (pinned by
-  `replace_where_sources.rs`).
+  `replace_where_sources.rs`). (7) Dated 2026-09-25 (ledger R-11): Spark commits and RePark
+  refuses `Cannot convert Spark predicate to Iceberg expression: …` for a suffix-typed or
+  scientific literal on an INT column (`i = 1L` → RePark `i = CAST(1 AS BIGINT)`, `i < 1.5E0` →
+  `i < CAST(1.5 AS DOUBLE)`, also `1E0`, `1D`, `1BD`, `1Y`), any literal against a DECIMAL key
+  (`d = 1.5`, `d = 2`, `d IN (1.5, 2)`) and a timestamp-shaped string against a DATE key (`d =
+  '2024-01-02 10:00:00'`). (8) Dated 2026-09-25 (ledger R-12): a NULL key written by the same
+  INSERT as the keys a `<` / `<=` filter matches is replaced by Spark and kept by RePark
+  (`i < 1.5` over `(1, 'a'), (2, 'b'), (NULL, 'n')` — Spark `[[2,b],[9,z]]`, RePark also
+  `[null,n]`); a NULL key in its own manifest matches. Follow-up: emulate Java Iceberg's
+  manifest-level delete in the fork's overwrite-by-filter.
 - **Pin** — `python/repark/tests/test_ice_write_sql_1.py`;
   `crates/repark-spark/src/tests/replace_where.rs`;
   `crates/repark-spark/src/tests/replace_where_oracle.rs` (reads the oracle);
   `crates/repark-spark/src/tests/replace_where_sources.rs`;
   `crates/repark-iceberg/src/write/overwrite_filter/tests.rs`.
-  pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021
+  pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024
 - **Rationale** — FIXED. Spark-only syntax, like DML-6; the native door has no spelling.
 
 #### DML-8 — `INSERT INTO … PARTITION (…)` — **FIXED 2026-09-24 (U8 PR1)**
@@ -1256,16 +1286,18 @@ perfectly good read.
   `DUPLICATE_KEY` / `23505` (`ParseException`), a value the cast rejects `CAST_INVALID_INPUT` /
   `22018`, a static key in the column list `STATIC_PARTITION_COLUMN_IN_INSERT_COLUMN_LIST` /
   `42713`, and a wrong-width query `INSERT_COLUMN_ARITY_MISMATCH` naming the static column at
-  its table position. On a `write.spark.accept-any-schema` table the append resolves by name
+  its table position and each data column as Spark names it (`` `id`, `id`, `cat`, `1` `` for
+  `PARTITION (cat = 'q') SELECT id, CAST(id AS STRING), 1`). On a `write.spark.accept-any-schema` table the append resolves by name
   (U6's door), so `SELECT 9, 'z'` refuses `Field 9 not found in source schema`.
 - **Apache Spark** — the same answers. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0,
-  2026-09-24, keys `pr1/PC…` and `r2fix/P-…` of `python/repark/tests/u8_write_sql_spark_oracle.json`;
+  2026-09-24, keys `pr1/PC…`, `r2fix/P-…` and `r3fix/N-part-…` of
+  `python/repark/tests/u8_write_sql_spark_oracle.json`;
   scoreboard cell `W-INSERT-PARTITION-CLAUSE`.)*
 - **Residue** — Spark raises `NumberFormatException` for `CAST_INVALID_INPUT`; RePark raises its
   parent `IllegalArgumentException` (the facade has no narrower class).
 - **Pin** — `python/repark/tests/test_ice_write_sql_1.py`;
   `crates/repark-spark/src/tests/partition_append.rs`.
-  pins: u8-write-sql/C-006, C-007, C-008, C-009, C-010
+  pins: u8-write-sql/C-006, C-007, C-008, C-009, C-010, C-023
 - **Rationale** — FIXED. `Partitioned inserts not yet supported` (DataFusion's planner text)
   retires.
 

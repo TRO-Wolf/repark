@@ -2179,8 +2179,19 @@ measurements committed in
 (read with `include_str!`) on the router door: it creates each case's table, runs its
 statements, and compares the rows and the outcome (the `Cannot convert …` text and the arity
 texts by equality; the R-1 Iceberg validation refusals by their message core). The Spark-bug
-keys (R-8) are skipped and the R-2 spelling keys compare class only. It replaces round 2's
+keys (R-8) are skipped and the R-2 spelling keys compare class only (both superseded by round 4 below). It replaces round 2's
 transcribed `NULL_CAT_CASES` / `NULL_ID_CASES`. `replace_where_sources.rs` (was
 `replace_where_nulls.rs`) keeps the repeated-name sources, the full missing-namespace text and
 the Rust-door non-Iceberg-target text. pins: u8-write-sql/C-015, C-016, C-017, C-018, C-019,
 C-020, C-021
+
+U8 WRITE-SQL PR1 round 4 (2026-09-25, critic r3): `replace_where_oracle.rs` replays 25 prefixes
+(438 cases, counted exactly; the new ones are `r2fix/A-`, `r3/` .. `r3e/`, `r3fix/`) and skips
+none. Every refusal compares its `ErrorClass` and its full normalized message, condition and
+SQLSTATE included; Spark's `Py4JJavaError` cases (R-1) compare the base class and Iceberg's
+`Cannot delete file …` text. A case with a `residue` record (R-2, R-8, R-11, R-12) is held to
+RePark's recorded step and rows, an R-2 case also to Spark's rows. Integer columns compare as
+numbers, DECIMAL and DATE as their text. `replace_where_sources.rs` adds
+`an_arity_refusal_names_every_data_column_as_spark_does` (cast, `*` beside a cast, `substr`,
+alias, too-many) and `a_suffix_typed_literal_renders_as_its_cast_in_the_refusal`.
+pins: u8-write-sql/C-015, C-019, C-021, C-022, C-023, C-024

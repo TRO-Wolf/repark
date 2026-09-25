@@ -11,9 +11,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   text of ice-overwrite-mode-1/C-013. Critic r1 remediation (2026-09-25): NULL partition keys
   under `<`, `<=`, `NOT` and `NOT IN`, repeated-name REPLACE WHERE sources, out-of-range
   literals. Critic r2 remediation: `<=>` and beyond-i64 constants, Spark's conjunct-split
-  refusal texts, repeated-name arity naming, and the committed Spark oracle. C-001..C-021 PROVEN.
+  refusal texts, repeated-name arity naming, and the committed Spark oracle. Critic r3
+  disposition: decimal literals on INT columns (C-022), Spark's data-column names (C-023), the
+  suffix-literal rendering (C-024), residues R-11 (typed / DECIMAL / timestamp-string literals)
+  and R-12 (a NULL key in the same INSERT). C-001..C-024 PROVEN.
   `risk_tier: standard`. Branch `feat/u8-write-sql`.
-  pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021
+  pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024
 - [u6-write-refusals-ledger.md](u6-write-refusals-ledger.md) —
   **U6 WRITE-REFUSALS PR1 (2026-09-24), in flight:** refusal parity on
   `write.spark.accept-any-schema` tables — positional writes resolve by name and

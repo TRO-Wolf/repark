@@ -5,7 +5,10 @@ use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::LogicalPlan;
 use datafusion::prelude::{DataFrame, SessionContext};
-use datafusion::sql::sqlparser::ast::{Expr, Ident, ObjectName, Query, SetExpr, visit_expressions};
+use datafusion::sql::sqlparser::ast::{
+    Expr, FunctionArg, FunctionArgExpr, FunctionArguments, Ident, ObjectName, ObjectNamePart,
+    Query, SetExpr, visit_expressions, visit_expressions_mut,
+};
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::parser::{Parser, ParserError};
@@ -233,7 +236,7 @@ pub(crate) async fn execute_replace_where(
     );
     refuse_non_deterministic(ctx, catalogs, &base_table, &replace.predicate).await?;
     let filter = repark_iceberg::write::spark_overwrite_filter(
-        &replace.predicate,
+        &as_written(&replace.predicate),
         table.metadata().current_schema(),
     )?;
     let staged = stage_source(ctx, &table, source_df, options).await?;
@@ -294,6 +297,36 @@ async fn missing_target(
         Err(error) => error.kind() == iceberg::ErrorKind::NamespaceNotFound,
     };
     missing.then(|| table_or_view_not_found(catalog_name, namespace, table))
+}
+
+fn as_written(predicate: &Expr) -> Expr {
+    let mut written = predicate.clone();
+    let _ = visit_expressions_mut(&mut written, |expr| {
+        if let Some(literal) = suffix_literal(expr) {
+            *expr = literal;
+        }
+        ControlFlow::<()>::Continue(())
+    });
+    written
+}
+
+fn suffix_literal(expr: &Expr) -> Option<Expr> {
+    let Expr::Function(function) = expr else {
+        return None;
+    };
+    let [ObjectNamePart::Identifier(name)] = function.name.0.as_slice() else {
+        return None;
+    };
+    if !name.value.eq_ignore_ascii_case(crate::SUFFIX_LITERAL_NAME) {
+        return None;
+    }
+    let FunctionArguments::List(list) = &function.args else {
+        return None;
+    };
+    match list.args.as_slice() {
+        [FunctionArg::Unnamed(FunctionArgExpr::Expr(literal))] => Some(literal.clone()),
+        _ => None,
+    }
 }
 
 fn refuse_subquery(predicate: &Expr) -> Result<()> {

@@ -1,6 +1,6 @@
 {
  "provenance": {
-  "engine": "PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, in-memory Iceberg catalog `sc`, spark.sql.session.timeZone=UTC, measured 2026-09-25",
+  "engine": "PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, in-memory Iceberg catalog `sc`, spark.sql.session.timeZone=UTC, measured 2026-09-24 (pr1) and 2026-09-25 (r1..r3fix)",
   "seed": "CREATE TABLE {T} (<columns>) USING iceberg <partitioned_by> TBLPROPERTIES ('format-version'='2'); when default_seed is true, INSERT INTO {T} VALUES (1,'a','x'),(2,'b','y'),(3,'c','x'); then the statements in order. `steps` holds one outcome per statement Spark ran (the critic's r2/r2b probes ran their seed outside the recorded steps). `rows` is SELECT * FROM {T} afterwards, sorted by Python repr; `branch_rows` reads {T}.branch_wb.",
   "sources": [
    {
@@ -42,10 +42,35 @@
    {
     "prefix": "r2fix",
     "probe": "target/probe-u8-r2fix/probe_r2fix_c.py"
+   },
+   {
+    "prefix": "r3",
+    "probe": "xr-probe/r3/probe_r3.py (critic r3)"
+   },
+   {
+    "prefix": "r3b",
+    "probe": "xr-probe/r3/probe_r3b.py (critic r3)"
+   },
+   {
+    "prefix": "r3c",
+    "probe": "xr-probe/r3/probe_r3c.py (critic r3)"
+   },
+   {
+    "prefix": "r3d",
+    "probe": "xr-probe/r3/probe_r3d.py (critic r3)"
+   },
+   {
+    "prefix": "r3e",
+    "probe": "xr-probe/r3/probe_r3e.py (critic r3)"
+   },
+   {
+    "prefix": "r3fix",
+    "probe": "target/probe-u8-r3fix/probe_r3fix.py"
    }
   ],
   "normalized": "warehouse paths -> <wh>; table names -> <t>; Spark's '== SQL' block and the '; line 1 pos' suffix of conditioned messages are dropped",
-  "generator": "target/probe-u8-r2fix/build_oracle.py in the U8 lane clone"
+  "generator": "target/probe-u8-r3fix/build_oracle.py in the U8 lane clone",
+  "residue": "a case whose RePark answer is a named residue (ledger u8-write-sql R-2, R-8, R-11, R-12) carries residue = {id, repark: {step, rows}}, RePark's answer recorded through the facade on 2026-09-25 by target/probe-u8-r3fix/record_repark.py; both replays hold RePark to that recorded step and rows, and an R-2 case also to Spark's rows. The R-1 cases (Spark's Py4JJavaError ValidationException) carry no residue: the replays hold RePark to the base class and Iceberg's 'Cannot delete file where some, but not all, rows match filter' text"
  },
  "cases": {
   "pr1/RW-record": {
@@ -1321,7 +1346,7 @@
      "type": "NumberFormatException",
      "condition": "CAST_INVALID_INPUT",
      "sqlstate": "22018",
-     "message": "[CAST_INVALID_INPUT] The value 'abc' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018\n== SQL (line 1, position 1) ==\nINSERT INTO sc.ns.<t> PARTITION (id = 'abc') SELECT 'z', 'q'\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+     "message": "[CAST_INVALID_INPUT] The value 'abc' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
     }
    ],
    "rows": [
@@ -1420,7 +1445,7 @@
      "type": "NumberFormatException",
      "condition": "CAST_INVALID_INPUT",
      "sqlstate": "22018",
-     "message": "[CAST_INVALID_INPUT] The value '7.5' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018\n== SQL (line 1, position 1) ==\nINSERT INTO sc.ns.<t> PARTITION (id = 7.5) SELECT 'z', 'q'\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+     "message": "[CAST_INVALID_INPUT] The value '7.5' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
     }
    ],
    "rows": [
@@ -1725,7 +1750,7 @@
      "type": "ParseException",
      "condition": "DUPLICATE_KEY",
      "sqlstate": "23505",
-     "message": "[DUPLICATE_KEY] Found duplicate keys `cat`. SQLSTATE: 23505\n== SQL (line 1, position 23) ==\nINSERT INTO sc.ns.<t> PARTITION (cat = 'q', cat = 'r') SELECT 9, 'z'\n                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+     "message": "[DUPLICATE_KEY] Found duplicate keys `cat`. SQLSTATE: 23505"
     }
    ],
    "rows": [
@@ -4152,7 +4177,7 @@
      "type": "NumberFormatException",
      "condition": "CAST_INVALID_INPUT",
      "sqlstate": "22018",
-     "message": "[CAST_INVALID_INPUT] The value '3000000000' of the type \"STRING\" cannot be cast to \"INT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018\n== SQL (line 1, position 1) ==\nINSERT INTO sc.ns.<t> PARTITION (n = 3000000000) SELECT 9, 'z', 'q'\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+     "message": "[CAST_INVALID_INPUT] The value '3000000000' of the type \"STRING\" cannot be cast to \"INT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
     }
    ],
    "rows": []
@@ -4239,7 +4264,7 @@
      "type": "DateTimeException",
      "condition": "CAST_INVALID_INPUT",
      "sqlstate": "22018",
-     "message": "[CAST_INVALID_INPUT] The value '2024-13-45' of the type \"STRING\" cannot be cast to \"DATE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018\n== SQL (line 1, position 1) ==\nINSERT OVERWRITE sc.ns.<t> PARTITION (d = '2024-13-45') SELECT 9, 'z'\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+     "message": "[CAST_INVALID_INPUT] The value '2024-13-45' of the type \"STRING\" cannot be cast to \"DATE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
     }
    ],
    "rows": [
@@ -4262,7 +4287,7 @@
      "type": "DateTimeException",
      "condition": "CAST_INVALID_INPUT",
      "sqlstate": "22018",
-     "message": "[CAST_INVALID_INPUT] The value '2024-13-45' of the type \"STRING\" cannot be cast to \"DATE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018\n== SQL (line 1, position 1) ==\nINSERT INTO sc.ns.<t> PARTITION (d = '2024-13-45') SELECT 9, 'z'\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+     "message": "[CAST_INVALID_INPUT] The value '2024-13-45' of the type \"STRING\" cannot be cast to \"DATE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
     }
    ],
    "rows": []
@@ -5205,7 +5230,25 @@
      "n",
      null
     ]
-   ]
+   ],
+   "residue": {
+    "id": "R-8",
+    "repark": {
+     "rows": [
+      [
+       2,
+       "b",
+       "y"
+      ],
+      [
+       9,
+       "z",
+       "x"
+      ]
+     ],
+     "step": "ok"
+    }
+   }
   },
   "r1/S1-like-exact": {
    "columns": "id BIGINT, data STRING, cat STRING",
@@ -7017,7 +7060,25 @@
      "n",
      null
     ]
-   ]
+   ],
+   "residue": {
+    "id": "R-8",
+    "repark": {
+     "rows": [
+      [
+       2,
+       "b",
+       "y"
+      ],
+      [
+       9,
+       "z",
+       "x"
+      ]
+     ],
+     "step": "ok"
+    }
+   }
   },
   "r2/C-not-in-and-between": {
    "columns": "id BIGINT, data STRING, cat STRING",
@@ -11461,7 +11522,40 @@
      "n",
      "w"
     ]
-   ]
+   ],
+   "residue": {
+    "id": "R-2",
+    "repark": {
+     "rows": [
+      [
+       1,
+       "a",
+       "x"
+      ],
+      [
+       2,
+       "b",
+       "y"
+      ],
+      [
+       3,
+       "c",
+       "x"
+      ],
+      [
+       null,
+       "n",
+       "w"
+      ]
+     ],
+     "step": {
+      "condition": null,
+      "message": "Cannot convert Spark predicate to Iceberg expression: upper(cat) = 'X'",
+      "sqlstate": null,
+      "type": "IllegalArgumentException"
+     }
+    }
+   }
   },
   "r2fix/Q-upper-and-arith": {
    "columns": "id BIGINT, data STRING, cat STRING",
@@ -11501,7 +11595,40 @@
      "n",
      "w"
     ]
-   ]
+   ],
+   "residue": {
+    "id": "R-2",
+    "repark": {
+     "rows": [
+      [
+       1,
+       "a",
+       "x"
+      ],
+      [
+       2,
+       "b",
+       "y"
+      ],
+      [
+       3,
+       "c",
+       "x"
+      ],
+      [
+       null,
+       "n",
+       "w"
+      ]
+     ],
+     "step": {
+      "condition": null,
+      "message": "Cannot convert Spark predicate to Iceberg expression: upper(cat) = 'X'",
+      "sqlstate": null,
+      "type": "IllegalArgumentException"
+     }
+    }
+   }
   },
   "r2fix/Q-upper-or": {
    "columns": "id BIGINT, data STRING, cat STRING",
@@ -11541,7 +11668,40 @@
      "n",
      "w"
     ]
-   ]
+   ],
+   "residue": {
+    "id": "R-2",
+    "repark": {
+     "rows": [
+      [
+       1,
+       "a",
+       "x"
+      ],
+      [
+       2,
+       "b",
+       "y"
+      ],
+      [
+       3,
+       "c",
+       "x"
+      ],
+      [
+       null,
+       "n",
+       "w"
+      ]
+     ],
+     "step": {
+      "condition": null,
+      "message": "Cannot convert Spark predicate to Iceberg expression: (upper(cat) = 'X') OR (cat = 'x')",
+      "sqlstate": null,
+      "type": "IllegalArgumentException"
+     }
+    }
+   }
   },
   "r2fix/Q-not-upper-and": {
    "columns": "id BIGINT, data STRING, cat STRING",
@@ -11581,7 +11741,40 @@
      "n",
      "w"
     ]
-   ]
+   ],
+   "residue": {
+    "id": "R-2",
+    "repark": {
+     "rows": [
+      [
+       1,
+       "a",
+       "x"
+      ],
+      [
+       2,
+       "b",
+       "y"
+      ],
+      [
+       3,
+       "c",
+       "x"
+      ],
+      [
+       null,
+       "n",
+       "w"
+      ]
+     ],
+     "step": {
+      "condition": null,
+      "message": "Cannot convert Spark predicate to Iceberg expression: (NOT (upper(cat) = 'X')) OR (NOT (cat = 'x'))",
+      "sqlstate": null,
+      "type": "IllegalArgumentException"
+     }
+    }
+   }
   },
   "r2fix/Q-and-or-arith": {
    "columns": "id BIGINT, data STRING, cat STRING",
@@ -11621,7 +11814,40 @@
      "n",
      "w"
     ]
-   ]
+   ],
+   "residue": {
+    "id": "R-2",
+    "repark": {
+     "rows": [
+      [
+       1,
+       "a",
+       "x"
+      ],
+      [
+       2,
+       "b",
+       "y"
+      ],
+      [
+       3,
+       "c",
+       "x"
+      ],
+      [
+       null,
+       "n",
+       "w"
+      ]
+     ],
+     "step": {
+      "condition": null,
+      "message": "Cannot convert Spark predicate to Iceberg expression: (id + 1 = 3) OR (cat = 'y')",
+      "sqlstate": null,
+      "type": "IllegalArgumentException"
+     }
+    }
+   }
   },
   "r2fix/Q-like-suffix-and": {
    "columns": "id BIGINT, data STRING, cat STRING",
@@ -11661,7 +11887,40 @@
      "n",
      "w"
     ]
-   ]
+   ],
+   "residue": {
+    "id": "R-2",
+    "repark": {
+     "rows": [
+      [
+       1,
+       "a",
+       "x"
+      ],
+      [
+       2,
+       "b",
+       "y"
+      ],
+      [
+       3,
+       "c",
+       "x"
+      ],
+      [
+       null,
+       "n",
+       "w"
+      ]
+     ],
+     "step": {
+      "condition": null,
+      "message": "Cannot convert Spark predicate to Iceberg expression: cat LIKE '%x'",
+      "sqlstate": null,
+      "type": "IllegalArgumentException"
+     }
+    }
+   }
   },
   "r2fix/Q-id-eq-2.5": {
    "columns": "id BIGINT, data STRING, cat STRING",
@@ -12304,6 +12563,5654 @@
      9,
      "z",
      "q"
+    ]
+   ]
+  },
+  "r3/I-nest-not-or-fold": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE NOT (NOT (i = 3000000000) OR i = 1) SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: null"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3/I-not-or-fold": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE NOT (i = 3000000000 OR i = 1) SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i IS NOT NULL) OR (null)"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3/I-not-or-huge-fold": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE NOT (i > 99999999999999999999 OR i = 3000000000) SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i IS NOT NULL) OR (null)"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3/I-notnot-lt-huge": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE NOT (NOT (i < 99999999999999999999)) SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ]
+   ]
+  },
+  "r3/I-not-and-folds": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE NOT (i <> 3000000000 AND i >= 1) SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: ((i IS NULL) AND (null)) OR (i < 1)"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3/I-ns-null": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <=> NULL SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ]
+   ]
+  },
+  "r3/I-not-ns-null": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE NOT (i <=> NULL) SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3/I-null-ns": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE NULL <=> i SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ]
+   ]
+  },
+  "r3/I-frac-eq": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i = 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: null"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3/I-frac-lt": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ]
+   ],
+   "residue": {
+    "id": "R-12",
+    "repark": {
+     "rows": [
+      [
+       2,
+       "b"
+      ],
+      [
+       9,
+       "z"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": "ok"
+    }
+   }
+  },
+  "r3/I-frac-le": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ]
+   ],
+   "residue": {
+    "id": "R-12",
+    "repark": {
+     "rows": [
+      [
+       2,
+       "b"
+      ],
+      [
+       9,
+       "z"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": "ok"
+    }
+   }
+  },
+  "r3/I-frac-gt": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i > 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3/I-frac-ge": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i >= 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3/I-frac-ne": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <> 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i IS NOT NULL) OR (null)"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3/I-frac-in": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i IN (1.0, 2.5) SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3/I-frac-notin": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i NOT IN (1.0, 2.5) SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     9,
+     "z"
+    ]
+   ]
+  },
+  "r3/I-frac-lt-neg": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < -0.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3/I-frac-gt-neg": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i > -0.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3/I-frac-between": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i BETWEEN 0.5 AND 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3/I-frac-not-between": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i NOT BETWEEN 0.5 AND 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     9,
+     "z"
+    ]
+   ],
+   "residue": {
+    "id": "R-12",
+    "repark": {
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       9,
+       "z"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": "ok"
+    }
+   }
+  },
+  "r3/I-frac-lt-max": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 2147483647.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i IS NOT NULL) OR (null)"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3/I-frac-gt-max": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i > 2147483646.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3/I-frac-eq-150": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i = 1.50 SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: null"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3/I-sci-lt": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 1.5E0 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ]
+   ],
+   "residue": {
+    "id": "R-11",
+    "repark": {
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": {
+      "condition": null,
+      "message": "Cannot convert Spark predicate to Iceberg expression: i < CAST(1.5 AS DOUBLE)",
+      "sqlstate": null,
+      "type": "IllegalArgumentException"
+     }
+    }
+   }
+  },
+  "r3/I-sci-eq": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i = 1E0 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ],
+   "residue": {
+    "id": "R-11",
+    "repark": {
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": {
+      "condition": null,
+      "message": "Cannot convert Spark predicate to Iceberg expression: i = CAST(1 AS DOUBLE)",
+      "sqlstate": null,
+      "type": "IllegalArgumentException"
+     }
+    }
+   }
+  },
+  "r3/I-typed-L": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i = 1L SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ],
+   "residue": {
+    "id": "R-11",
+    "repark": {
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": {
+      "condition": null,
+      "message": "Cannot convert Spark predicate to Iceberg expression: i = CAST(1 AS BIGINT)",
+      "sqlstate": null,
+      "type": "IllegalArgumentException"
+     }
+    }
+   }
+  },
+  "r3/I-typed-D": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i = 1D SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ],
+   "residue": {
+    "id": "R-11",
+    "repark": {
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": {
+      "condition": null,
+      "message": "Cannot convert Spark predicate to Iceberg expression: i = CAST(1 AS DOUBLE)",
+      "sqlstate": null,
+      "type": "IllegalArgumentException"
+     }
+    }
+   }
+  },
+  "r3/I-typed-BD": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i = 1BD SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ],
+   "residue": {
+    "id": "R-11",
+    "repark": {
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": {
+      "condition": null,
+      "message": "Cannot convert Spark predicate to Iceberg expression: i = CAST(1 AS DECIMAL(1,0))",
+      "sqlstate": null,
+      "type": "IllegalArgumentException"
+     }
+    }
+   }
+  },
+  "r3/I-typed-Y": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i = 1Y SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ],
+   "residue": {
+    "id": "R-11",
+    "repark": {
+     "rows": [
+      [
+       1,
+       "a"
+      ],
+      [
+       2,
+       "b"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": {
+      "condition": null,
+      "message": "Cannot convert Spark predicate to Iceberg expression: i = CAST(1 AS TINYINT)",
+      "sqlstate": null,
+      "type": "IllegalArgumentException"
+     }
+    }
+   }
+  },
+  "r3/I-str-int": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i = '1' SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3/L-notin-huge-1": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i NOT IN (99999999999999999999, 1) SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     9,
+     "z"
+    ]
+   ]
+  },
+  "r3/L-notin-huge-1-2": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i NOT IN (99999999999999999999, 1, 2) SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3/L-in-huge-null": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i IN (99999999999999999999, NULL) SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: null"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3/L-frac-lt": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ]
+   ],
+   "residue": {
+    "id": "R-12",
+    "repark": {
+     "rows": [
+      [
+       2,
+       "b"
+      ],
+      [
+       9,
+       "z"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": "ok"
+    }
+   }
+  },
+  "r3/L-frac-in": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i IN (1.0, 2.5) SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3/L-between-huge": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i BETWEEN 1 AND 99999999999999999999 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3/T2-ns3e9-and-cat": {
+   "columns": "i INT, data STRING, cat STRING",
+   "partitioned_by": "PARTITIONED BY (i, cat)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a', 'x'), (2, 'b', 'y'), (NULL, 'n', 'x'), (1, 'c', 'y')",
+    "INSERT INTO {T} REPLACE WHERE i <=> 3000000000 AND cat = 'x' SELECT 9, 'z', 'x'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     1,
+     "c",
+     "y"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     9,
+     "z",
+     "x"
+    ],
+    [
+     null,
+     "n",
+     "x"
+    ]
+   ]
+  },
+  "r3/T2-ns3e9-or-cat": {
+   "columns": "i INT, data STRING, cat STRING",
+   "partitioned_by": "PARTITIONED BY (i, cat)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a', 'x'), (2, 'b', 'y'), (NULL, 'n', 'x'), (1, 'c', 'y')",
+    "INSERT INTO {T} REPLACE WHERE i <=> 3000000000 OR cat = 'x' SELECT 9, 'z', 'x'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "c",
+     "y"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ]
+  },
+  "r3/T2-eq3e9-or-cat": {
+   "columns": "i INT, data STRING, cat STRING",
+   "partitioned_by": "PARTITIONED BY (i, cat)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a', 'x'), (2, 'b', 'y'), (NULL, 'n', 'x'), (1, 'c', 'y')",
+    "INSERT INTO {T} REPLACE WHERE i = 3000000000 OR cat = 'x' SELECT 9, 'z', 'x'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: ((i IS NULL) AND (null)) OR (cat = 'x')"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     1,
+     "c",
+     "y"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     null,
+     "n",
+     "x"
+    ]
+   ]
+  },
+  "r3/T2-lt3e9-and-cat": {
+   "columns": "i INT, data STRING, cat STRING",
+   "partitioned_by": "PARTITIONED BY (i, cat)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a', 'x'), (2, 'b', 'y'), (NULL, 'n', 'x'), (1, 'c', 'y')",
+    "INSERT INTO {T} REPLACE WHERE i < 3000000000 AND cat = 'x' SELECT 9, 'z', 'x'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i IS NOT NULL) OR (null)"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     1,
+     "c",
+     "y"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     null,
+     "n",
+     "x"
+    ]
+   ]
+  },
+  "r3/T2-gt-huge-or-cat": {
+   "columns": "i INT, data STRING, cat STRING",
+   "partitioned_by": "PARTITIONED BY (i, cat)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a', 'x'), (2, 'b', 'y'), (NULL, 'n', 'x'), (1, 'c', 'y')",
+    "INSERT INTO {T} REPLACE WHERE i > 99999999999999999999 OR cat = 'x' SELECT 9, 'z', 'x'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "c",
+     "y"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ]
+  },
+  "r3/T2-lt-huge-and-cat": {
+   "columns": "i INT, data STRING, cat STRING",
+   "partitioned_by": "PARTITIONED BY (i, cat)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a', 'x'), (2, 'b', 'y'), (NULL, 'n', 'x'), (1, 'c', 'y')",
+    "INSERT INTO {T} REPLACE WHERE i < 99999999999999999999 AND cat = 'x' SELECT 9, 'z', 'x'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "c",
+     "y"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ]
+  },
+  "r3/T2-frac-eq-or-cat": {
+   "columns": "i INT, data STRING, cat STRING",
+   "partitioned_by": "PARTITIONED BY (i, cat)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a', 'x'), (2, 'b', 'y'), (NULL, 'n', 'x'), (1, 'c', 'y')",
+    "INSERT INTO {T} REPLACE WHERE i = 1.5 OR cat = 'x' SELECT 9, 'z', 'x'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: ((i IS NULL) AND (null)) OR (cat = 'x')"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     1,
+     "c",
+     "y"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     null,
+     "n",
+     "x"
+    ]
+   ]
+  },
+  "r3/T2-cat-and-in3e9": {
+   "columns": "i INT, data STRING, cat STRING",
+   "partitioned_by": "PARTITIONED BY (i, cat)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a', 'x'), (2, 'b', 'y'), (NULL, 'n', 'x'), (1, 'c', 'y')",
+    "INSERT INTO {T} REPLACE WHERE cat = 'x' AND i IN (3000000000) SELECT 9, 'z', 'x'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: null"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     1,
+     "c",
+     "y"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     null,
+     "n",
+     "x"
+    ]
+   ]
+  },
+  "r3/T2-frac-lt-and-cat": {
+   "columns": "i INT, data STRING, cat STRING",
+   "partitioned_by": "PARTITIONED BY (i, cat)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a', 'x'), (2, 'b', 'y'), (NULL, 'n', 'x'), (1, 'c', 'y')",
+    "INSERT INTO {T} REPLACE WHERE i < 1.5 AND cat = 'y' SELECT 9, 'z', 'x'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     9,
+     "z",
+     "x"
+    ],
+    [
+     null,
+     "n",
+     "x"
+    ]
+   ]
+  },
+  "r3/D-eq": {
+   "columns": "d DECIMAL(5,2), data STRING",
+   "partitioned_by": "PARTITIONED BY (d)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1.50, 'a'), (2.00, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE d = 1.5 SELECT 9.00, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     "2.00",
+     "b"
+    ],
+    [
+     "9.00",
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ],
+   "residue": {
+    "id": "R-11",
+    "repark": {
+     "rows": [
+      [
+       "1.50",
+       "a"
+      ],
+      [
+       "2.00",
+       "b"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": {
+      "condition": null,
+      "message": "Cannot convert Spark predicate to Iceberg expression: d = 1.5",
+      "sqlstate": null,
+      "type": "IllegalArgumentException"
+     }
+    }
+   }
+  },
+  "r3/D-eq-int": {
+   "columns": "d DECIMAL(5,2), data STRING",
+   "partitioned_by": "PARTITIONED BY (d)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1.50, 'a'), (2.00, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE d = 2 SELECT 9.00, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     "1.50",
+     "a"
+    ],
+    [
+     "9.00",
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ],
+   "residue": {
+    "id": "R-11",
+    "repark": {
+     "rows": [
+      [
+       "1.50",
+       "a"
+      ],
+      [
+       "2.00",
+       "b"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": {
+      "condition": null,
+      "message": "Cannot convert Spark predicate to Iceberg expression: d = 2",
+      "sqlstate": null,
+      "type": "IllegalArgumentException"
+     }
+    }
+   }
+  },
+  "r3/D-eq-oor": {
+   "columns": "d DECIMAL(5,2), data STRING",
+   "partitioned_by": "PARTITIONED BY (d)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1.50, 'a'), (2.00, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE d = 1000000 SELECT 9.00, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: CAST(d AS decimal(9,2)) = 1000000.00"
+    }
+   ],
+   "rows": [
+    [
+     "1.50",
+     "a"
+    ],
+    [
+     "2.00",
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ],
+   "residue": {
+    "id": "R-2",
+    "repark": {
+     "rows": [
+      [
+       "1.50",
+       "a"
+      ],
+      [
+       "2.00",
+       "b"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": {
+      "condition": null,
+      "message": "Cannot convert Spark predicate to Iceberg expression: d = 1000000",
+      "sqlstate": null,
+      "type": "IllegalArgumentException"
+     }
+    }
+   }
+  },
+  "r3/D-lt-huge": {
+   "columns": "d DECIMAL(5,2), data STRING",
+   "partitioned_by": "PARTITIONED BY (d)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1.50, 'a'), (2.00, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE d < 99999999999999999999 SELECT 9.00, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: CAST(d AS decimal(22,2)) < 99999999999999999999.00"
+    }
+   ],
+   "rows": [
+    [
+     "1.50",
+     "a"
+    ],
+    [
+     "2.00",
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ],
+   "residue": {
+    "id": "R-2",
+    "repark": {
+     "rows": [
+      [
+       "1.50",
+       "a"
+      ],
+      [
+       "2.00",
+       "b"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": {
+      "condition": null,
+      "message": "Cannot convert Spark predicate to Iceberg expression: d < 99999999999999999999",
+      "sqlstate": null,
+      "type": "IllegalArgumentException"
+     }
+    }
+   }
+  },
+  "r3/D-eq-3dp": {
+   "columns": "d DECIMAL(5,2), data STRING",
+   "partitioned_by": "PARTITIONED BY (d)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1.50, 'a'), (2.00, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE d = 1.505 SELECT 9.00, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: null"
+    }
+   ],
+   "rows": [
+    [
+     "1.50",
+     "a"
+    ],
+    [
+     "2.00",
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ],
+   "residue": {
+    "id": "R-2",
+    "repark": {
+     "rows": [
+      [
+       "1.50",
+       "a"
+      ],
+      [
+       "2.00",
+       "b"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": {
+      "condition": null,
+      "message": "Cannot convert Spark predicate to Iceberg expression: d = 1.505",
+      "sqlstate": null,
+      "type": "IllegalArgumentException"
+     }
+    }
+   }
+  },
+  "r3/D-in": {
+   "columns": "d DECIMAL(5,2), data STRING",
+   "partitioned_by": "PARTITIONED BY (d)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1.50, 'a'), (2.00, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE d IN (1.5, 2) SELECT 9.00, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     "9.00",
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ],
+   "residue": {
+    "id": "R-11",
+    "repark": {
+     "rows": [
+      [
+       "1.50",
+       "a"
+      ],
+      [
+       "2.00",
+       "b"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": {
+      "condition": null,
+      "message": "Cannot convert Spark predicate to Iceberg expression: d IN (1.5, 2)",
+      "sqlstate": null,
+      "type": "IllegalArgumentException"
+     }
+    }
+   }
+  },
+  "r3/S-eq-int": {
+   "columns": "id BIGINT, data STRING, cat STRING",
+   "partitioned_by": "PARTITIONED BY (cat)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a', 'x'), (2, 'b', '1'), (3, 'c', NULL)",
+    "INSERT INTO {T} REPLACE WHERE cat = 1 SELECT 9, 'z', 'x'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: CAST(cat AS long) = 1"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "1"
+    ],
+    [
+     3,
+     "c",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-2",
+    "repark": {
+     "rows": [
+      [
+       1,
+       "a",
+       "x"
+      ],
+      [
+       2,
+       "b",
+       "1"
+      ],
+      [
+       3,
+       "c",
+       null
+      ]
+     ],
+     "step": {
+      "condition": null,
+      "message": "Cannot convert Spark predicate to Iceberg expression: cat = 1",
+      "sqlstate": null,
+      "type": "IllegalArgumentException"
+     }
+    }
+   }
+  },
+  "r3/S-lt-int": {
+   "columns": "id BIGINT, data STRING, cat STRING",
+   "partitioned_by": "PARTITIONED BY (cat)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a', 'x'), (2, 'b', '1'), (3, 'c', NULL)",
+    "INSERT INTO {T} REPLACE WHERE cat < 2 SELECT 9, 'z', 'x'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: CAST(cat AS long) < 2"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "1"
+    ],
+    [
+     3,
+     "c",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-2",
+    "repark": {
+     "rows": [
+      [
+       1,
+       "a",
+       "x"
+      ],
+      [
+       2,
+       "b",
+       "1"
+      ],
+      [
+       3,
+       "c",
+       null
+      ]
+     ],
+     "step": {
+      "condition": null,
+      "message": "Cannot convert Spark predicate to Iceberg expression: cat < 2",
+      "sqlstate": null,
+      "type": "IllegalArgumentException"
+     }
+    }
+   }
+  },
+  "r3/S-in-int": {
+   "columns": "id BIGINT, data STRING, cat STRING",
+   "partitioned_by": "PARTITIONED BY (cat)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a', 'x'), (2, 'b', '1'), (3, 'c', NULL)",
+    "INSERT INTO {T} REPLACE WHERE cat IN (1, 2) SELECT 9, 'z', 'x'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: CAST(cat AS long) IN (1, 2)"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "1"
+    ],
+    [
+     3,
+     "c",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-2",
+    "repark": {
+     "rows": [
+      [
+       1,
+       "a",
+       "x"
+      ],
+      [
+       2,
+       "b",
+       "1"
+      ],
+      [
+       3,
+       "c",
+       null
+      ]
+     ],
+     "step": {
+      "condition": null,
+      "message": "Cannot convert Spark predicate to Iceberg expression: cat IN (1, 2)",
+      "sqlstate": null,
+      "type": "IllegalArgumentException"
+     }
+    }
+   }
+  },
+  "r3/DT-eq-short": {
+   "columns": "id INT, d DATE",
+   "partitioned_by": "PARTITIONED BY (d)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, DATE'2024-01-02'), (2, DATE'2024-01-03'), (3, NULL)",
+    "INSERT INTO {T} REPLACE WHERE d = '2024-1-2' SELECT 9, DATE'2024-01-02'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "2024-01-03"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     9,
+     "2024-01-02"
+    ]
+   ]
+  },
+  "r3/DT-lt-str": {
+   "columns": "id INT, d DATE",
+   "partitioned_by": "PARTITIONED BY (d)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, DATE'2024-01-02'), (2, DATE'2024-01-03'), (3, NULL)",
+    "INSERT INTO {T} REPLACE WHERE d < '2024-01-03' SELECT 9, DATE'2024-01-02'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "2024-01-03"
+    ],
+    [
+     9,
+     "2024-01-02"
+    ]
+   ],
+   "residue": {
+    "id": "R-12",
+    "repark": {
+     "rows": [
+      [
+       2,
+       "2024-01-03"
+      ],
+      [
+       3,
+       null
+      ],
+      [
+       9,
+       "2024-01-02"
+      ]
+     ],
+     "step": "ok"
+    }
+   }
+  },
+  "r3/DT-eq-ts-str": {
+   "columns": "id INT, d DATE",
+   "partitioned_by": "PARTITIONED BY (d)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, DATE'2024-01-02'), (2, DATE'2024-01-03'), (3, NULL)",
+    "INSERT INTO {T} REPLACE WHERE d = '2024-01-02 10:00:00' SELECT 9, DATE'2024-01-02'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "2024-01-03"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     9,
+     "2024-01-02"
+    ]
+   ],
+   "residue": {
+    "id": "R-11",
+    "repark": {
+     "rows": [
+      [
+       1,
+       "2024-01-02"
+      ],
+      [
+       2,
+       "2024-01-03"
+      ],
+      [
+       3,
+       null
+      ]
+     ],
+     "step": {
+      "condition": null,
+      "message": "Cannot convert Spark predicate to Iceberg expression: d = '2024-01-02 10:00:00'",
+      "sqlstate": null,
+      "type": "IllegalArgumentException"
+     }
+    }
+   }
+  },
+  "r3/DT-eq-bad": {
+   "columns": "id INT, d DATE",
+   "partitioned_by": "PARTITIONED BY (d)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, DATE'2024-01-02'), (2, DATE'2024-01-03'), (3, NULL)",
+    "INSERT INTO {T} REPLACE WHERE d = 'abc' SELECT 9, DATE'2024-01-02'"
+   ],
+   "steps": [
+    {
+     "type": "DateTimeException",
+     "condition": "CAST_INVALID_INPUT",
+     "sqlstate": "22018",
+     "message": "[CAST_INVALID_INPUT] The value 'abc' of the type \"STRING\" cannot be cast to \"DATE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "2024-01-02"
+    ],
+    [
+     2,
+     "2024-01-03"
+    ],
+    [
+     3,
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-2",
+    "repark": {
+     "rows": [
+      [
+       1,
+       "2024-01-02"
+      ],
+      [
+       2,
+       "2024-01-03"
+      ],
+      [
+       3,
+       null
+      ]
+     ],
+     "step": {
+      "condition": null,
+      "message": "Cannot convert Spark predicate to Iceberg expression: d = 'abc'",
+      "sqlstate": null,
+      "type": "IllegalArgumentException"
+     }
+    }
+   }
+  },
+  "r3/DT-in-str": {
+   "columns": "id INT, d DATE",
+   "partitioned_by": "PARTITIONED BY (d)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, DATE'2024-01-02'), (2, DATE'2024-01-03'), (3, NULL)",
+    "INSERT INTO {T} REPLACE WHERE d IN ('2024-01-02', '2024-01-04') SELECT 9, DATE'2024-01-02'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "2024-01-03"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     9,
+     "2024-01-02"
+    ]
+   ]
+  },
+  "r3/DT-eq-pad": {
+   "columns": "id INT, d DATE",
+   "partitioned_by": "PARTITIONED BY (d)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, DATE'2024-01-02'), (2, DATE'2024-01-03'), (3, NULL)",
+    "INSERT INTO {T} REPLACE WHERE d = ' 2024-01-02 ' SELECT 9, DATE'2024-01-02'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "2024-01-03"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     9,
+     "2024-01-02"
+    ]
+   ]
+  },
+  "r3/DT-eq-int": {
+   "columns": "id INT, d DATE",
+   "partitioned_by": "PARTITIONED BY (d)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, DATE'2024-01-02'), (2, DATE'2024-01-03'), (3, NULL)",
+    "INSERT INTO {T} REPLACE WHERE d = 1 SELECT 9, DATE'2024-01-02'"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES] Cannot resolve \"(d = 1)\" due to data type mismatch: the left and right operands of the binary operator have incompatible types (\"DATE\" and \"INT\"). SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "2024-01-02"
+    ],
+    [
+     2,
+     "2024-01-03"
+    ],
+    [
+     3,
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-2",
+    "repark": {
+     "rows": [
+      [
+       1,
+       "2024-01-02"
+      ],
+      [
+       2,
+       "2024-01-03"
+      ],
+      [
+       3,
+       null
+      ]
+     ],
+     "step": {
+      "condition": null,
+      "message": "spark_expr_semantics\ncaused by\nError during planning: [DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION] Cannot resolve \"CAST(Int32(1) AS DATE)\" due to data type mismatch: cannot cast \"INT\" to \"DATE\". To convert values from \"INT\" to \"DATE\", you can use the functions `DATE_FROM_UNIX_DATE` instead. SQLSTATE: 42K09",
+      "sqlstate": "42K09",
+      "type": "AnalysisException"
+     }
+    }
+   }
+  },
+  "r3b/INT-one-i < 1.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ]
+   ],
+   "residue": {
+    "id": "R-12",
+    "repark": {
+     "rows": [
+      [
+       2,
+       "b"
+      ],
+      [
+       9,
+       "z"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": "ok"
+    }
+   }
+  },
+  "r3b/INT-one-i <= 1": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= 1 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ]
+   ],
+   "residue": {
+    "id": "R-12",
+    "repark": {
+     "rows": [
+      [
+       2,
+       "b"
+      ],
+      [
+       9,
+       "z"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": "ok"
+    }
+   }
+  },
+  "r3b/INT-one-i < 2.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 2.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ]
+   ],
+   "residue": {
+    "id": "R-12",
+    "repark": {
+     "rows": [
+      [
+       9,
+       "z"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": "ok"
+    }
+   }
+  },
+  "r3b/INT-one-i <= 2": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= 2 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ]
+   ],
+   "residue": {
+    "id": "R-12",
+    "repark": {
+     "rows": [
+      [
+       9,
+       "z"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": "ok"
+    }
+   }
+  },
+  "r3b/INT-one-i < 2": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 2 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ]
+   ],
+   "residue": {
+    "id": "R-12",
+    "repark": {
+     "rows": [
+      [
+       2,
+       "b"
+      ],
+      [
+       9,
+       "z"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": "ok"
+    }
+   }
+  },
+  "r3b/INT-one-i < 3.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 3.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ]
+   ],
+   "residue": {
+    "id": "R-12",
+    "repark": {
+     "rows": [
+      [
+       9,
+       "z"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": "ok"
+    }
+   }
+  },
+  "r3b/INT-one-i <= 1.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ]
+   ],
+   "residue": {
+    "id": "R-12",
+    "repark": {
+     "rows": [
+      [
+       2,
+       "b"
+      ],
+      [
+       9,
+       "z"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": "ok"
+    }
+   }
+  },
+  "r3b/INT-one-i > 1.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i > 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/INT-split-i < 1.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/INT-split-i <= 1": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= 1 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/INT-split-i < 2.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 2.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/INT-split-i <= 2": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= 2 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/INT-split-i < 2": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 2 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/INT-split-i < 3.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 3.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/INT-split-i <= 1.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/INT-split-i > 1.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i > 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/INT-three-i < 1.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (3, 'c')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/INT-three-i <= 1": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (3, 'c')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= 1 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/INT-three-i < 2.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (3, 'c')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 2.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     3,
+     "c"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/INT-three-i <= 2": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (3, 'c')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= 2 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     3,
+     "c"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/INT-three-i < 2": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (3, 'c')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 2 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/INT-three-i < 3.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (3, 'c')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 3.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/INT-three-i <= 1.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (3, 'c')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/INT-three-i > 1.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (3, 'c')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i > 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/BIGINT-one-i < 1.5": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ]
+   ],
+   "residue": {
+    "id": "R-12",
+    "repark": {
+     "rows": [
+      [
+       2,
+       "b"
+      ],
+      [
+       9,
+       "z"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": "ok"
+    }
+   }
+  },
+  "r3b/BIGINT-one-i <= 1": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= 1 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ]
+   ],
+   "residue": {
+    "id": "R-12",
+    "repark": {
+     "rows": [
+      [
+       2,
+       "b"
+      ],
+      [
+       9,
+       "z"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": "ok"
+    }
+   }
+  },
+  "r3b/BIGINT-one-i < 2.5": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 2.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ]
+   ],
+   "residue": {
+    "id": "R-12",
+    "repark": {
+     "rows": [
+      [
+       9,
+       "z"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": "ok"
+    }
+   }
+  },
+  "r3b/BIGINT-one-i <= 2": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= 2 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ]
+   ],
+   "residue": {
+    "id": "R-12",
+    "repark": {
+     "rows": [
+      [
+       9,
+       "z"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": "ok"
+    }
+   }
+  },
+  "r3b/BIGINT-one-i < 2": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 2 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ]
+   ],
+   "residue": {
+    "id": "R-12",
+    "repark": {
+     "rows": [
+      [
+       2,
+       "b"
+      ],
+      [
+       9,
+       "z"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": "ok"
+    }
+   }
+  },
+  "r3b/BIGINT-one-i < 3.5": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 3.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ]
+   ],
+   "residue": {
+    "id": "R-12",
+    "repark": {
+     "rows": [
+      [
+       9,
+       "z"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": "ok"
+    }
+   }
+  },
+  "r3b/BIGINT-one-i <= 1.5": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ]
+   ],
+   "residue": {
+    "id": "R-12",
+    "repark": {
+     "rows": [
+      [
+       2,
+       "b"
+      ],
+      [
+       9,
+       "z"
+      ],
+      [
+       null,
+       "n"
+      ]
+     ],
+     "step": "ok"
+    }
+   }
+  },
+  "r3b/BIGINT-one-i > 1.5": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i > 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/BIGINT-split-i < 1.5": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/BIGINT-split-i <= 1": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= 1 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/BIGINT-split-i < 2.5": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 2.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/BIGINT-split-i <= 2": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= 2 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/BIGINT-split-i < 2": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 2 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/BIGINT-split-i < 3.5": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 3.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/BIGINT-split-i <= 1.5": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/BIGINT-split-i > 1.5": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i > 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/BIGINT-three-i < 1.5": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (3, 'c')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/BIGINT-three-i <= 1": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (3, 'c')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= 1 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/BIGINT-three-i < 2.5": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (3, 'c')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 2.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     3,
+     "c"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/BIGINT-three-i <= 2": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (3, 'c')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= 2 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     3,
+     "c"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/BIGINT-three-i < 2": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (3, 'c')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 2 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/BIGINT-three-i < 3.5": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (3, 'c')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 3.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/BIGINT-three-i <= 1.5": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (3, 'c')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3b/BIGINT-three-i > 1.5": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b'), (3, 'c')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i > 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3c/INT-i < 2147483647.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 2147483647.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i IS NOT NULL) OR (null)"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3c/INT-i <= 2147483647.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= 2147483647.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i IS NOT NULL) OR (null)"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3c/INT-i > 2147483647.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i > 2147483647.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: null"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3c/INT-i >= 2147483647.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i >= 2147483647.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: null"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3c/INT-i = 2147483647.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i = 2147483647.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: null"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3c/INT-i <> 2147483647.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <> 2147483647.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i IS NOT NULL) OR (null)"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3c/INT-i > -2147483648.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i > -2147483648.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i IS NOT NULL) OR (null)"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3c/INT-i < -2147483648.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < -2147483648.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: null"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3c/INT-i < 3000000000.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 3000000000.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i IS NOT NULL) OR (null)"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3c/INT-i > 3000000000.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i > 3000000000.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: null"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3c/INT-i < 3000000000.0": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 3000000000.0 SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i IS NOT NULL) OR (null)"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3c/INT-i > 3000000000.0": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i > 3000000000.0 SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: null"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3c/INT-i IN (1, 2147483647.5)": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i IN (1, 2147483647.5) SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3c/INT-i NOT IN (2147483647.5)": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i NOT IN (2147483647.5) SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i IS NOT NULL) OR (null)"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3c/INT-i < 99999999999999999999.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 99999999999999999999.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ]
+   ]
+  },
+  "r3c/INT-i < 2147483647.0": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 2147483647.0 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ]
+   ]
+  },
+  "r3c/INT-i <=> 2147483647.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <=> 2147483647.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3c/INT-NOT (i >= 2147483647.5)": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE NOT (i >= 2147483647.5) SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i IS NOT NULL) OR (null)"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3c/INT-i BETWEEN 1 AND 2147483647.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i BETWEEN 1 AND 2147483647.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i IS NOT NULL) OR (null)"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3c/BIGINT-i < 9223372036854775807.5": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 9223372036854775807.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ]
+   ]
+  },
+  "r3c/BIGINT-i > 9223372036854775807.5": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i > 9223372036854775807.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3c/BIGINT-i > -9223372036854775808.5": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i > -9223372036854775808.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ]
+   ]
+  },
+  "r3c/BIGINT-i < 9223372036854775808.0": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 9223372036854775808.0 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ]
+   ]
+  },
+  "r3c/BIGINT-i > 9223372036854775807.0": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i > 9223372036854775807.0 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3c/SMALLINT-i < 1.5": {
+   "columns": "i SMALLINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3c/SMALLINT-i < 32767.5": {
+   "columns": "i SMALLINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 32767.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3c/SMALLINT-i > 32767.5": {
+   "columns": "i SMALLINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i > 32767.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3c/SMALLINT-i > -32768.5": {
+   "columns": "i SMALLINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i > -32768.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3c/SMALLINT-i < 40000.5": {
+   "columns": "i SMALLINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 40000.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3c/TINYINT-i < 127.5": {
+   "columns": "i TINYINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 127.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3c/TINYINT-i > 127.5": {
+   "columns": "i TINYINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i > 127.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3c/TINYINT-i < 1.5": {
+   "columns": "i TINYINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 1.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3d/INT-i <= 2147483647.0": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= 2147483647.0 SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i IS NOT NULL) OR (null)"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3d/INT-i > 2147483647.0": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i > 2147483647.0 SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: null"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3d/INT-i >= 2147483647.0": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i >= 2147483647.0 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3d/INT-i >= -2147483648.0": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i >= -2147483648.0 SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i IS NOT NULL) OR (null)"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3d/INT-i > -2147483648.0": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i > -2147483648.0 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ]
+   ]
+  },
+  "r3d/INT-i < -2147483648.0": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < -2147483648.0 SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: null"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3d/INT-i < 2147483647": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 2147483647 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3d/INT-i <= 2147483647.0 AND data = 'a'": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= 2147483647.0 AND data = 'a' SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i IS NOT NULL) OR (null)"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3d/BIGINT-i < 9223372036854775807.0": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 9223372036854775807.0 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3d/BIGINT-i <= 9223372036854775807.0": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= 9223372036854775807.0 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3d/BIGINT-i < 3000000000.5": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 3000000000.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3e/SMALLINT-i <= 32767": {
+   "columns": "i SMALLINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= 32767 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3e/SMALLINT-i < 32767": {
+   "columns": "i SMALLINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 32767 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3e/SMALLINT-i > -32768": {
+   "columns": "i SMALLINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i > -32768 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3e/SMALLINT-i >= -32768": {
+   "columns": "i SMALLINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i >= -32768 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3e/SMALLINT-i > 32767": {
+   "columns": "i SMALLINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i > 32767 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3e/TINYINT-i <= 127": {
+   "columns": "i TINYINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= 127 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3e/TINYINT-i < 127": {
+   "columns": "i TINYINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 127 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3e/INT-i <= 2147483647": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= 2147483647 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3e/INT-i > -2147483648": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i > -2147483648 SELECT 9, 'z'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     9,
+     "z"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r3fix/N-cast-dup": {
+   "columns": "id BIGINT, data STRING, cat STRING",
+   "partitioned_by": "PARTITIONED BY (cat)",
+   "default_seed": true,
+   "statements": [
+    "INSERT INTO {T} REPLACE WHERE cat = 'x' SELECT id, CAST(id AS STRING) FROM {T}"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS",
+     "sqlstate": "21S01",
+     "message": "[INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS] Cannot write to `sc`.`ns`.`<t>`, the reason is not enough data columns:\nTable columns: `id`, `data`, `cat`.\nData columns: `id`, `id`. SQLSTATE: 21S01"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ]
+  },
+  "r3fix/N-arith-cast": {
+   "columns": "id BIGINT, data STRING, cat STRING",
+   "partitioned_by": "PARTITIONED BY (cat)",
+   "default_seed": true,
+   "statements": [
+    "INSERT INTO {T} REPLACE WHERE cat = 'x' SELECT id + 1, CAST(data AS INT) FROM {T}"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS",
+     "sqlstate": "21S01",
+     "message": "[INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS] Cannot write to `sc`.`ns`.`<t>`, the reason is not enough data columns:\nTable columns: `id`, `data`, `cat`.\nData columns: `(id + 1)`, `data`. SQLSTATE: 21S01"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ]
+  },
+  "r3fix/N-lit-func": {
+   "columns": "id BIGINT, data STRING, cat STRING",
+   "partitioned_by": "PARTITIONED BY (cat)",
+   "default_seed": true,
+   "statements": [
+    "INSERT INTO {T} REPLACE WHERE cat = 'x' SELECT 1, upper(data) FROM {T}"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS",
+     "sqlstate": "21S01",
+     "message": "[INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS] Cannot write to `sc`.`ns`.`<t>`, the reason is not enough data columns:\nTable columns: `id`, `data`, `cat`.\nData columns: `1`, `upper(data)`. SQLSTATE: 21S01"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ]
+  },
+  "r3fix/N-alias-cast": {
+   "columns": "id BIGINT, data STRING, cat STRING",
+   "partitioned_by": "PARTITIONED BY (cat)",
+   "default_seed": true,
+   "statements": [
+    "INSERT INTO {T} REPLACE WHERE cat = 'x' SELECT id AS k, CAST(id AS STRING) FROM {T}"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS",
+     "sqlstate": "21S01",
+     "message": "[INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS] Cannot write to `sc`.`ns`.`<t>`, the reason is not enough data columns:\nTable columns: `id`, `data`, `cat`.\nData columns: `k`, `id`. SQLSTATE: 21S01"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ]
+  },
+  "r3fix/N-qualified-cast": {
+   "columns": "id BIGINT, data STRING, cat STRING",
+   "partitioned_by": "PARTITIONED BY (cat)",
+   "default_seed": true,
+   "statements": [
+    "INSERT INTO {T} REPLACE WHERE cat = 'x' SELECT {T}.id, CAST({T}.id AS STRING) FROM {T}"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS",
+     "sqlstate": "21S01",
+     "message": "[INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS] Cannot write to `sc`.`ns`.`<t>`, the reason is not enough data columns:\nTable columns: `id`, `data`, `cat`.\nData columns: `id`, `id`. SQLSTATE: 21S01"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ]
+  },
+  "r3fix/N-substr-mul": {
+   "columns": "id BIGINT, data STRING, cat STRING",
+   "partitioned_by": "PARTITIONED BY (cat)",
+   "default_seed": true,
+   "statements": [
+    "INSERT INTO {T} REPLACE WHERE cat = 'x' SELECT substr(data, 1, 1), id * 2 FROM {T}"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS",
+     "sqlstate": "21S01",
+     "message": "[INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS] Cannot write to `sc`.`ns`.`<t>`, the reason is not enough data columns:\nTable columns: `id`, `data`, `cat`.\nData columns: `substr(data, 1, 1)`, `(id * 2)`. SQLSTATE: 21S01"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ]
+  },
+  "r3fix/N-cast-arith-lit": {
+   "columns": "id BIGINT, data STRING, cat STRING",
+   "partitioned_by": "PARTITIONED BY (cat)",
+   "default_seed": true,
+   "statements": [
+    "INSERT INTO {T} REPLACE WHERE cat = 'x' SELECT CAST(id + 1 AS STRING), 'x' FROM {T}"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS",
+     "sqlstate": "21S01",
+     "message": "[INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS] Cannot write to `sc`.`ns`.`<t>`, the reason is not enough data columns:\nTable columns: `id`, `data`, `cat`.\nData columns: `CAST((id + 1) AS STRING)`, `x`. SQLSTATE: 21S01"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ]
+  },
+  "r3fix/N-star-cast": {
+   "columns": "id BIGINT, data STRING, cat STRING",
+   "partitioned_by": "PARTITIONED BY (cat)",
+   "default_seed": true,
+   "statements": [
+    "INSERT INTO {T} REPLACE WHERE cat = 'x' SELECT *, CAST(id AS STRING) FROM (SELECT id FROM {T})"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS",
+     "sqlstate": "21S01",
+     "message": "[INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS] Cannot write to `sc`.`ns`.`<t>`, the reason is not enough data columns:\nTable columns: `id`, `data`, `cat`.\nData columns: `id`, `id`. SQLSTATE: 21S01"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ]
+  },
+  "r3fix/N-coalesce-abs": {
+   "columns": "id BIGINT, data STRING, cat STRING",
+   "partitioned_by": "PARTITIONED BY (cat)",
+   "default_seed": true,
+   "statements": [
+    "INSERT INTO {T} REPLACE WHERE cat = 'x' SELECT coalesce(id, 0), abs(id) FROM {T}"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS",
+     "sqlstate": "21S01",
+     "message": "[INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS] Cannot write to `sc`.`ns`.`<t>`, the reason is not enough data columns:\nTable columns: `id`, `data`, `cat`.\nData columns: `coalesce(id, 0)`, `abs(id)`. SQLSTATE: 21S01"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ]
+  },
+  "r3fix/N-plain-dup": {
+   "columns": "id BIGINT, data STRING, cat STRING",
+   "partitioned_by": "PARTITIONED BY (cat)",
+   "default_seed": true,
+   "statements": [
+    "INSERT INTO {T} REPLACE WHERE cat = 'x' SELECT id, id FROM {T}"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS",
+     "sqlstate": "21S01",
+     "message": "[INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS] Cannot write to `sc`.`ns`.`<t>`, the reason is not enough data columns:\nTable columns: `id`, `data`, `cat`.\nData columns: `id`, `id`. SQLSTATE: 21S01"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ]
+  },
+  "r3fix/N-alias-over-cast": {
+   "columns": "id BIGINT, data STRING, cat STRING",
+   "partitioned_by": "PARTITIONED BY (cat)",
+   "default_seed": true,
+   "statements": [
+    "INSERT INTO {T} REPLACE WHERE cat = 'x' SELECT data, CAST(id AS STRING) AS data FROM {T}"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS",
+     "sqlstate": "21S01",
+     "message": "[INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS] Cannot write to `sc`.`ns`.`<t>`, the reason is not enough data columns:\nTable columns: `id`, `data`, `cat`.\nData columns: `data`, `data`. SQLSTATE: 21S01"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ]
+  },
+  "r3fix/N-cast-cast": {
+   "columns": "id BIGINT, data STRING, cat STRING",
+   "partitioned_by": "PARTITIONED BY (cat)",
+   "default_seed": true,
+   "statements": [
+    "INSERT INTO {T} REPLACE WHERE cat = 'x' SELECT CAST(id AS STRING), CAST(id AS STRING) FROM {T}"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS",
+     "sqlstate": "21S01",
+     "message": "[INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS] Cannot write to `sc`.`ns`.`<t>`, the reason is not enough data columns:\nTable columns: `id`, `data`, `cat`.\nData columns: `id`, `id`. SQLSTATE: 21S01"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ]
+  },
+  "r3fix/N-tbl-alias": {
+   "columns": "id BIGINT, data STRING, cat STRING",
+   "partitioned_by": "PARTITIONED BY (cat)",
+   "default_seed": true,
+   "statements": [
+    "INSERT INTO {T} REPLACE WHERE cat = 'x' SELECT s.id, CAST(s.id AS STRING) FROM {T} s"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS",
+     "sqlstate": "21S01",
+     "message": "[INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS] Cannot write to `sc`.`ns`.`<t>`, the reason is not enough data columns:\nTable columns: `id`, `data`, `cat`.\nData columns: `id`, `id`. SQLSTATE: 21S01"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ]
+  },
+  "r3fix/N-part-cast-dup": {
+   "columns": "id BIGINT, data STRING, cat STRING",
+   "partitioned_by": "PARTITIONED BY (cat)",
+   "default_seed": true,
+   "statements": [
+    "INSERT INTO {T} PARTITION (cat = 'q') SELECT id, CAST(id AS STRING), 1 FROM {T}"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS",
+     "sqlstate": "21S01",
+     "message": "[INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS] Cannot write to `sc`.`ns`.`<t>`, the reason is too many data columns:\nTable columns: `id`, `data`, `cat`.\nData columns: `id`, `id`, `cat`, `1`. SQLSTATE: 21S01"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ]
+  },
+  "r3fix/N-part-dyn-cast-dup": {
+   "columns": "id BIGINT, data STRING, cat STRING",
+   "partitioned_by": "PARTITIONED BY (cat)",
+   "default_seed": true,
+   "statements": [
+    "INSERT INTO {T} PARTITION (cat) SELECT id, CAST(id AS STRING) FROM {T}"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS",
+     "sqlstate": "21S01",
+     "message": "[INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS] Cannot write to `sc`.`ns`.`<t>`, the reason is not enough data columns:\nTable columns: `id`, `data`, `cat`.\nData columns: `id`, `id`. SQLSTATE: 21S01"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
     ]
    ]
   }

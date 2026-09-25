@@ -21,9 +21,12 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   keeps its input's name) in every top-level `SELECT` of the source, because a positional
   write never reads the names, then hands the statement to the PARTITION rewrite.
   `PreparedInsert.owned_append` tells the router to commit through the owned append. Round 3
-  (2026-09-25): it hands the raw source to the PARTITION rewrite for arity naming. Its two
-  children are in [insert_positional/](insert_positional/map.md).
-  pins: u8-write-sql/C-011
+  (2026-09-25): it hands the raw source to the PARTITION rewrite for arity naming. Round 4
+  (2026-09-25, critic r3 V-003): beside a `*` it also aliases every column-named item (a
+  column, a cast of one, or an alias), because the expansion's names are unknown before
+  planning; a `SELECT *, CAST(id AS STRING)` no longer leaks DataFusion's `Projections require
+  unique expression names`. Its two children are in [insert_positional/](insert_positional/map.md).
+  pins: u8-write-sql/C-011, C-023
 
 - `tests.rs` — `#[cfg(test)] mod tests;` in `../router.rs`.
   **MW-6:** the CALL dispatch covers all supported procedures, including `register_table`.

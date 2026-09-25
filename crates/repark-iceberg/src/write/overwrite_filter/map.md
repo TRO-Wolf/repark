@@ -20,7 +20,11 @@ Tests for [`overwrite_filter.rs`](../overwrite_filter.rs), which declares `#[cfg
   push-down table, the one-element `IN` fold (the `notNull AND notIn` shape is pinned on a
   two-element list), and the out-of-range integer folds. Round 3 (2026-09-25): the conjunct-split
   refusal texts, the `<=>` / beyond-i64 constants, and fractional rounding, each case taken
-  from `python/repark/tests/u8_write_sql_spark_oracle.json`.
+  from `python/repark/tests/u8_write_sql_spark_oracle.json`. Round 4 (2026-09-25, critic r3
+  V-001, V-002): `a_decimal_literal_on_an_int_column_follows_spark_unwrap_rules` — a decimal
+  literal outside the INT range folds to the out-of-range texts, never a constant, and a `.0`
+  literal at the INT boundary follows Spark's boundary rules; BIGINT keeps its constants.
+  pins: u8-write-sql/C-022
 
 ## Pointers
 

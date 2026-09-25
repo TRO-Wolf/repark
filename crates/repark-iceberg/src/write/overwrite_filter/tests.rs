@@ -601,3 +601,67 @@ fn a_fractional_literal_on_an_integer_column_rounds_as_spark_does() {
         assert_eq!(converted(sql), expected, "{sql}");
     }
 }
+
+#[test]
+fn a_decimal_literal_on_an_int_column_follows_spark_unwrap_rules() {
+    let refusals = [
+        ("i < 2147483647.5", "(i IS NOT NULL) OR (null)"),
+        ("i <= 2147483647.5", "(i IS NOT NULL) OR (null)"),
+        ("i > -2147483648.5", "(i IS NOT NULL) OR (null)"),
+        ("NOT (i >= 2147483647.5)", "(i IS NOT NULL) OR (null)"),
+        ("i < 3000000000.5", "(i IS NOT NULL) OR (null)"),
+        ("i < 3000000000.0", "(i IS NOT NULL) OR (null)"),
+        ("i <> 2147483647.5", "(i IS NOT NULL) OR (null)"),
+        ("i NOT IN (2147483647.5)", "(i IS NOT NULL) OR (null)"),
+        ("i BETWEEN 1 AND 2147483647.5", "(i IS NOT NULL) OR (null)"),
+        ("i > 2147483647.5", "null"),
+        ("i >= 2147483647.5", "null"),
+        ("i < -2147483648.5", "null"),
+        ("i > 3000000000.5", "null"),
+        ("i > 3000000000.0", "null"),
+        ("i = 2147483647.5", "null"),
+        ("i <= 2147483647.0", "(i IS NOT NULL) OR (null)"),
+        ("i >= -2147483648.0", "(i IS NOT NULL) OR (null)"),
+        (
+            "i <= 2147483647.0 AND data = 'a'",
+            "(i IS NOT NULL) OR (null)",
+        ),
+        ("i > 2147483647.0", "null"),
+        ("i < -2147483648.0", "null"),
+    ];
+    for (sql, rendered) in refusals {
+        assert_eq!(
+            refused(sql),
+            format!("Cannot convert Spark predicate to Iceberg expression: {rendered}"),
+            "{sql}"
+        );
+    }
+    let conversions = [
+        ("i < 2147483647.0", "NOT (i = 2147483647)"),
+        ("i > -2147483648.0", "NOT (i = -2147483648)"),
+        ("i >= 2147483647.0", "i = 2147483647"),
+        ("i <= -2147483648.0", "i = -2147483648"),
+        ("i = 2147483647.0", "i = 2147483647"),
+        ("i < 2147483647", "(i IS NOT NULL) AND (i < 2147483647)"),
+        ("i <= 2147483647", "(i IS NOT NULL) AND (i <= 2147483647)"),
+        ("i IN (1, 2147483647.5)", "i = 1"),
+        ("i <=> 2147483647.5", "FALSE"),
+        ("i < 99999999999999999999.5", "TRUE"),
+        ("id < 9223372036854775807.5", "TRUE"),
+        ("id > 9223372036854775807.5", "FALSE"),
+        ("id > -9223372036854775808.5", "TRUE"),
+        ("id < 9223372036854775808.0", "TRUE"),
+        (
+            "id < 9223372036854775807.0",
+            "(id IS NOT NULL) AND (id < 9223372036854775807)",
+        ),
+        ("id > 9223372036854775807.0", "id > 9223372036854775807"),
+        (
+            "id < 3000000000.5",
+            "(id IS NOT NULL) AND (id <= 3000000000)",
+        ),
+    ];
+    for (sql, expected) in conversions {
+        assert_eq!(converted(sql), expected, "{sql}");
+    }
+}

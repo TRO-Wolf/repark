@@ -136,3 +136,70 @@ async fn a_replace_where_into_a_session_table_answers_the_iceberg_only_refusal()
         "Error during planning: INSERT INTO … REPLACE WHERE requires an Iceberg table, got `plain`"
     );
 }
+
+async fn refusal(sql: &str) -> String {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, PARTITIONED).await;
+    run(&ctx, &catalogs, SEED).await;
+    match execute(&ctx, &catalogs, sql).await {
+        Ok(frame) => frame.collect().await.expect_err(sql),
+        Err(error) => error,
+    }
+    .to_string()
+}
+
+#[tokio::test]
+async fn an_arity_refusal_names_every_data_column_as_spark_does() {
+    let cases = [
+        (
+            "SELECT id, CAST(id AS STRING) FROM ice.sales.t",
+            "not enough data columns",
+            "`id`, `id`",
+        ),
+        (
+            "SELECT *, CAST(id AS STRING) FROM (SELECT id FROM ice.sales.t)",
+            "not enough data columns",
+            "`id`, `id`",
+        ),
+        (
+            "SELECT substr(data, 1, 1), id * 2 FROM ice.sales.t",
+            "not enough data columns",
+            "`substr(data, 1, 1)`, `(id * 2)`",
+        ),
+        (
+            "SELECT data, CAST(id AS STRING) AS data FROM ice.sales.t",
+            "not enough data columns",
+            "`data`, `data`",
+        ),
+        (
+            "SELECT id, CAST(id AS STRING), 'x', 1 FROM ice.sales.t",
+            "too many data columns",
+            "`id`, `id`, `x`, `1`",
+        ),
+    ];
+    for (source, reason, columns) in cases {
+        let message = refusal(&format!(
+            "INSERT INTO ice.sales.t REPLACE WHERE cat = 'x' {source}"
+        ))
+        .await;
+        assert!(
+            message.contains(&format!(
+                "the reason is {reason}:\nTable columns: `id`, `data`, `cat`.\nData columns: {columns}. SQLSTATE: 21S01"
+            )),
+            "{source}: {message}"
+        );
+        assert!(!message.contains("__repark_"), "{source}: {message}");
+    }
+}
+
+#[tokio::test]
+async fn a_suffix_typed_literal_renders_as_its_cast_in_the_refusal() {
+    let message =
+        refusal("INSERT INTO ice.sales.t REPLACE WHERE id = 1BD SELECT 9, 'z', 'x'").await;
+    assert_eq!(
+        message,
+        "External error: Cannot convert Spark predicate to Iceberg expression: \
+         id = CAST(1 AS DECIMAL(1,0))"
+    );
+}

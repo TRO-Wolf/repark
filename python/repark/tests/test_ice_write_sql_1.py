@@ -13,16 +13,20 @@ Every measurement is committed in ``u8_write_sql_spark_oracle.json`` beside this
 The rounds-2 and -3 pins (C-015..C-017, C-019..C-021) replay that file case by case:
 ``r1/…`` (NULL ``cat`` / ``id`` keys, INT keys, repeated source names), ``r2/…`` and
 ``r2b/…`` (the critic's r2 probes) and ``r2fix/…`` (BIGINT and fractional literals,
-``<=>``, the conjunct-split refusal texts, repeated-name arity texts, the WAP branch).
+``<=>``, the conjunct-split refusal texts, repeated-name arity texts, the WAP branch). Round 4
+(C-022..C-024) adds the critic's ``r3/…`` .. ``r3e/…`` and ``r3fix/…``; a case whose answer is
+a named residue (R-2, R-8, R-11, R-12) is held to RePark's recorded answer.
 
 pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
-C-011, C-012, C-014, C-015, C-016, C-017, C-019, C-020, C-021
+C-011, C-012, C-014, C-015, C-016, C-017, C-019, C-020, C-021, C-022, C-023, C-024
 """
 
 from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from datetime import date
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -788,26 +792,30 @@ REPLAYED = (
     "r2fix/CN-",
     "r2fix/P-",
     "r2fix/W-",
-)
-SPARK_BUG = ("r1/S1-notlike", "r2/C-not-like")
-SPELLING = (
-    "r2fix/Q-and-upper",
-    "r2fix/Q-upper-and-arith",
-    "r2fix/Q-upper-or",
-    "r2fix/Q-not-upper-and",
-    "r2fix/Q-and-or-arith",
-    "r2fix/Q-like-suffix-and",
+    "r2fix/A-",
+    "r3/",
+    "r3b/",
+    "r3c/",
+    "r3d/",
+    "r3e/",
+    "r3fix/",
 )
 TYPES = {
     "IllegalArgumentException": IllegalArgumentException,
     "AnalysisException": AnalysisException,
     "ParseException": ParseException,
+    "PySparkException": PySparkException,
 }
 
 
 def _replayed_keys() -> list[str]:
     """Return the oracle cases this file replays, in fixture order."""
-    return [key for key in ORACLE if key.startswith(REPLAYED) and key not in SPARK_BUG]
+    return [key for key in ORACLE if key.startswith(REPLAYED)]
+
+
+def _cell(value: Any) -> Any:
+    """Spell a DECIMAL or DATE cell as the oracle records it."""
+    return str(value) if isinstance(value, (Decimal, date)) else value
 
 
 def _normalized(message: str, table: str) -> str:
@@ -816,29 +824,30 @@ def _normalized(message: str, table: str) -> str:
     return message.removeprefix("Error during planning: ").replace(ticked, "`sc`.`ns`.`<t>`")
 
 
-def _assert_refusal(key: str, error: Exception, spark: dict[str, Any], table: str) -> None:
-    """Compare one RePark refusal with Spark's measured refusal for ``key``."""
+def _assert_refusal(key: str, error: Exception, expected: dict[str, Any], table: str) -> None:
+    """Compare one RePark refusal with the answer the oracle holds it to for ``key``."""
     message = _normalized(str(error), table)
-    if spark["type"] == "Py4JJavaError":
-        assert isinstance(error, PySparkException), key
-        assert (
-            "Cannot delete file where some, but not all, rows match filter" in message
-            or "Cannot find field" in message
-        ), (key, message)
+    if expected["type"] == "Py4JJavaError":
+        assert type(error) is PySparkException, (key, type(error))
+        assert "Cannot delete file where some, but not all, rows match filter" in message, (
+            key,
+            message,
+        )
         return
-    assert isinstance(error, TYPES[spark["type"]]), (key, type(error))
-    assert error.getCondition() == spark["condition"], key
-    assert error.getSqlState() == spark["sqlstate"], key
-    if key not in SPELLING:
-        assert message == spark["message"], key
+    assert type(error) is TYPES[expected["type"]], (key, type(error))
+    assert error.getCondition() == expected["condition"], key
+    assert error.getSqlState() == expected["sqlstate"], key
+    assert message == expected["message"], key
 
 
 @pytest.mark.parametrize("key", _replayed_keys())
 def test_the_replace_where_measurements_replay_as_spark_answered(
     spark: ReparkSession, key: str
 ) -> None:
-    """pins: u8-write-sql/C-015, C-016, C-017, C-019, C-020, C-021"""
+    """pins: u8-write-sql/C-015, C-016, C-017, C-019, C-020, C-021, C-022, C-023, C-024"""
     case = ORACLE[key]
+    residue = case.get("residue")
+    expected = residue["repark"] if residue else {"step": case["steps"][-1], "rows": case["rows"]}
     table = f"{NS}.oracle"
     spark.sql(
         f"CREATE TABLE {table} ({case['columns']}) USING iceberg {case['partitioned_by'] or ''} "
@@ -849,13 +858,15 @@ def test_the_replace_where_measurements_replay_as_spark_answered(
     *setup, last = [statement.replace("{T}", table) for statement in case["statements"]]
     for statement in setup:
         spark.sql(statement)
-    outcome = case["steps"][-1]
-    if outcome == "ok":
+    if expected["step"] == "ok":
         spark.sql(last)
     else:
         with pytest.raises(PySparkException) as caught:
             spark.sql(last)
-        _assert_refusal(key, caught.value, outcome, table)
-    assert _rows(spark, table) == sorted(case["rows"], key=repr), key
+        _assert_refusal(key, caught.value, expected["step"], table)
+    rows = sorted(([_cell(value) for value in row] for row in _rows(spark, table)), key=repr)
+    assert rows == sorted(expected["rows"], key=repr), key
+    if residue and residue["id"] == "R-2":
+        assert rows == sorted(case["rows"], key=repr), key
     if "branch_rows" in case:
         assert _rows(spark, f"{table}.branch_wb") == sorted(case["branch_rows"], key=repr), key

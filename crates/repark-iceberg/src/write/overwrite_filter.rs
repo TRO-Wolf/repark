@@ -40,6 +40,7 @@ enum Literal {
     Null,
     OutOfRange { above: bool, decimal: bool },
     Fractional { floor: Datum, ceil: Datum },
+    Boundary { datum: Datum, at_max: bool },
 }
 
 enum Folded {
@@ -283,6 +284,26 @@ impl Comparison {
     }
 }
 
+fn boundary(
+    comparison: Comparison,
+    at_max: bool,
+    reference: Reference,
+    datum: Datum,
+    name: String,
+    equal: String,
+) -> Folded {
+    match (comparison, at_max) {
+        (Comparison::Gt, true) | (Comparison::Lt, false) => Folded::FalseIfNotNull(name),
+        (Comparison::LtEq, true) | (Comparison::GtEq, false) => Folded::TrueIfNotNull(name),
+        (Comparison::Eq | Comparison::NullSafe | Comparison::GtEq | Comparison::LtEq, _) => {
+            Folded::leaf(reference.equal_to(datum), equal)
+        }
+        (Comparison::NotEq | Comparison::NotNullSafe | Comparison::Lt | Comparison::Gt, _) => {
+            Folded::leaf(!reference.equal_to(datum), format!("NOT ({equal})"))
+        }
+    }
+}
+
 impl Converter<'_> {
     fn lower(&self, expr: &Expr, negated: bool, depth: usize) -> Result<Folded> {
         let opaque = || {
@@ -477,6 +498,10 @@ impl Converter<'_> {
                     text(&ceil, Comparison::GtEq),
                 ),
             },
+            Literal::Boundary { datum, at_max } => {
+                let equal = text(literal, Comparison::Eq);
+                boundary(comparison, at_max, reference, datum, name, equal)
+            }
             Literal::Value(datum) => {
                 let rendered = text(literal, comparison);
                 match comparison {
@@ -518,7 +543,7 @@ impl Converter<'_> {
         let mut has_null = false;
         for item in list {
             match Self::literal(item, &field) {
-                Some(Literal::Value(datum)) => {
+                Some(Literal::Value(datum) | Literal::Boundary { datum, .. }) => {
                     if !values.iter().any(|(seen, _)| *seen == datum) {
                         values.push((datum, item));
                     }
@@ -644,14 +669,14 @@ impl Converter<'_> {
 }
 
 fn number_literal(raw: &str, primitive: &PrimitiveType) -> Option<Literal> {
-    if let Some(datum) = number_datum(raw, primitive) {
-        return Some(Literal::Value(datum));
-    }
-    if !matches!(primitive, PrimitiveType::Int | PrimitiveType::Long) {
-        return None;
-    }
+    let long = match primitive {
+        PrimitiveType::Int => false,
+        PrimitiveType::Long => true,
+        _ => return number_datum(raw, primitive).map(Literal::Value),
+    };
     let negative = raw.starts_with('-');
     let unsigned = raw.strip_prefix('-').unwrap_or(raw);
+    let written_decimal = unsigned.contains('.');
     let (whole, fraction) = unsigned.split_once('.').unwrap_or((unsigned, ""));
     let digits = |part: &str| part.bytes().all(|byte| byte.is_ascii_digit());
     if whole.is_empty() || !digits(whole) || !digits(fraction) {
@@ -665,28 +690,38 @@ fn number_literal(raw: &str, primitive: &PrimitiveType) -> Option<Literal> {
         return Some(out_of_range(true));
     };
     let truncated = if negative { -magnitude } else { magnitude };
-    let (low, high) = match primitive {
-        PrimitiveType::Int => (i128::from(i32::MIN), i128::from(i32::MAX)),
-        _ => (i128::from(i64::MIN), i128::from(i64::MAX)),
+    let (low, high) = if long {
+        (i128::from(i64::MIN), i128::from(i64::MAX))
+    } else {
+        (i128::from(i32::MIN), i128::from(i32::MAX))
     };
-    let is_decimal = !fraction.is_empty()
-        || truncated < i128::from(i64::MIN)
-        || truncated > i128::from(i64::MAX);
-    if fraction.bytes().any(|byte| byte != b'0') {
-        let (floor, ceil) = if negative {
-            (truncated - 1, truncated)
-        } else {
-            (truncated, truncated + 1)
-        };
-        if floor < low || ceil > high {
-            return Some(out_of_range(true));
+    let beyond_i64 = truncated < i128::from(i64::MIN) || truncated > i128::from(i64::MAX);
+    let decimal = long || beyond_i64;
+    if fraction.bytes().all(|byte| byte == b'0') {
+        if truncated < low || truncated > high {
+            return Some(out_of_range(decimal));
         }
-        return Some(Literal::Fractional {
-            floor: integer_datum(floor, primitive)?,
-            ceil: integer_datum(ceil, primitive)?,
-        });
+        let datum = integer_datum(truncated, primitive)?;
+        if written_decimal && !long && (truncated == low || truncated == high) {
+            return Some(Literal::Boundary {
+                datum,
+                at_max: truncated == high,
+            });
+        }
+        return Some(Literal::Value(datum));
     }
-    Some(out_of_range(is_decimal))
+    let (floor, ceil) = if negative {
+        (truncated - 1, truncated)
+    } else {
+        (truncated, truncated + 1)
+    };
+    if floor < low || ceil > high {
+        return Some(out_of_range(decimal));
+    }
+    Some(Literal::Fractional {
+        floor: integer_datum(floor, primitive)?,
+        ceil: integer_datum(ceil, primitive)?,
+    })
 }
 
 fn integer_datum(value: i128, primitive: &PrimitiveType) -> Option<Datum> {

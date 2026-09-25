@@ -7,7 +7,7 @@ use datafusion::arrow::datatypes::DataType as ArrowDataType;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
-    BinaryOperator, CastKind, Expr, Ident, Insert, ObjectName, Query, SelectItem, SetExpr,
+    BinaryOperator, CastKind, Expr, Ident, Insert, ObjectName, Query, Select, SelectItem, SetExpr,
     TableObject, UnaryOperator, Value, ValueWithSpan, Values,
 };
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
@@ -499,12 +499,94 @@ fn typed_cast(value: Value, spark_type: &str) -> Result<Expr> {
 }
 
 fn data_columns(source: &Query, planned: &[String], statics: &[StaticColumn]) -> Vec<String> {
-    let mut names = spark_source_names(source).unwrap_or_else(|| planned.to_vec());
+    let mut names = spark_source_names(source).unwrap_or_else(|| {
+        planned
+            .iter()
+            .map(|name| named_back(source, name).unwrap_or_else(|| name.clone()))
+            .collect()
+    });
     for column in statics {
         let at = column.index.min(names.len());
         names.insert(at, column.name.clone());
     }
     names
+}
+
+fn leftmost_select(source: &Query) -> Option<&Select> {
+    let mut body = source.body.as_ref();
+    loop {
+        match body {
+            SetExpr::Query(inner) => body = inner.body.as_ref(),
+            SetExpr::SetOperation { left, .. } => body = left.as_ref(),
+            SetExpr::Select(select) => return Some(select),
+            _ => return None,
+        }
+    }
+}
+
+fn named_back(source: &Query, planned: &str) -> Option<String> {
+    let position = planned
+        .strip_prefix("__repark_col_")?
+        .parse::<usize>()
+        .ok()?
+        .checked_sub(1)?;
+    item_name(leftmost_select(source)?.projection.get(position)?)
+}
+
+fn item_name(item: &SelectItem) -> Option<String> {
+    match item {
+        SelectItem::ExprWithAlias { alias, .. } => Some(alias.value.clone()),
+        SelectItem::UnnamedExpr(expr) => Some(expression_output_name(expr)),
+        _ => None,
+    }
+}
+
+fn expression_output_name(expr: &Expr) -> String {
+    let mut peeled = expr;
+    while let Expr::Nested(inner) = peeled {
+        peeled = inner;
+    }
+    match peeled {
+        Expr::Identifier(ident) => ident.value.clone(),
+        Expr::CompoundIdentifier(parts) => parts
+            .last()
+            .map(|ident| ident.value.clone())
+            .unwrap_or_default(),
+        Expr::Cast {
+            kind: CastKind::Cast,
+            expr: inner,
+            data_type,
+            format: None,
+            ..
+        } => {
+            let mut child = inner.as_ref();
+            while let Expr::Nested(nested) = child {
+                child = nested;
+            }
+            match child {
+                Expr::Identifier(_) | Expr::CompoundIdentifier(_) => expression_output_name(child),
+                other => format!("CAST({} AS {data_type})", expression_output_name(other)),
+            }
+        }
+        Expr::Substring {
+            expr: inner,
+            substring_from: Some(from),
+            substring_for: Some(length),
+            special: true,
+            shorthand,
+        } => format!(
+            "{}({}, {}, {})",
+            if *shorthand { "substr" } else { "substring" },
+            argument_name(inner),
+            argument_name(from),
+            argument_name(length)
+        ),
+        other => argument_name(other),
+    }
+}
+fn argument_name(expr: &Expr) -> String {
+    crate::insert_by_name::spark_names::expression_name(expr, &[])
+        .unwrap_or_else(|| expr.to_string())
 }
 
 fn spark_source_names(source: &Query) -> Option<Vec<String>> {
@@ -520,19 +602,7 @@ fn spark_source_names(source: &Query) -> Option<Vec<String>> {
                         .collect(),
                 );
             }
-            SetExpr::Select(select) => {
-                return select
-                    .projection
-                    .iter()
-                    .map(|item| match item {
-                        SelectItem::ExprWithAlias { alias, .. } => Some(alias.value.clone()),
-                        SelectItem::UnnamedExpr(expr) => {
-                            crate::insert_by_name::spark_names::expression_name(expr, &[])
-                        }
-                        _ => None,
-                    })
-                    .collect();
-            }
+            SetExpr::Select(select) => return select.projection.iter().map(item_name).collect(),
             _ => return None,
         }
     }

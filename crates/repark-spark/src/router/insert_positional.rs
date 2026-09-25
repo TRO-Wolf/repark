@@ -73,13 +73,19 @@ fn deduplicate_body(body: &mut SetExpr) -> bool {
 }
 
 fn deduplicate_select(select: &mut Select) -> bool {
+    let starred = select.projection.iter().any(|item| {
+        matches!(
+            item,
+            SelectItem::Wildcard(_) | SelectItem::QualifiedWildcard(..)
+        )
+    });
     let mut seen = HashSet::new();
     let mut changed = false;
     for (index, item) in select.projection.iter_mut().enumerate() {
         let Some(key) = output_key(item) else {
             continue;
         };
-        if seen.insert(key) {
+        if seen.insert(key) && !(starred && column_named(item)) {
             continue;
         }
         let alias = Ident::new(format!("__repark_col_{}", index + 1));
@@ -103,6 +109,27 @@ fn output_key(item: &SelectItem) -> Option<String> {
         SelectItem::UnnamedExpr(expr) => Some(expression_key(expr)),
         SelectItem::ExprWithAlias { alias, .. } => Some(folded(alias)),
         _ => None,
+    }
+}
+
+fn column_named(item: &SelectItem) -> bool {
+    match item {
+        SelectItem::ExprWithAlias { .. } => true,
+        SelectItem::UnnamedExpr(expr) => column_expression(expr),
+        _ => false,
+    }
+}
+
+fn column_expression(expr: &Expr) -> bool {
+    match expr {
+        Expr::Cast {
+            kind: CastKind::Cast | CastKind::DoubleColon,
+            expr: inner,
+            ..
+        }
+        | Expr::Nested(inner) => column_expression(inner),
+        Expr::Identifier(_) | Expr::CompoundIdentifier(_) => true,
+        _ => false,
     }
 }
 

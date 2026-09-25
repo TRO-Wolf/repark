@@ -1276,6 +1276,12 @@ First checks: `cargo test -p repark-iceberg write::` (all on `MemoryCatalog`). E
   against any of them is FALSE; an `IN` drops them. A string literal is coerced to the column
   type. A column reference binds by its exact name; another case refuses Iceberg's
   `Cannot find field '<name>' in struct: …`. pins: u8-write-sql/C-015, C-017, C-019, C-020
+  **Round 4 (2026-09-25, critic r3):** `number_literal` types a decimal literal on an INT
+  column as Spark does: outside the INT range but inside i64 it is `OutOfRange` with the INT
+  folds (never a constant), and a `.0` literal exactly at the INT maximum or minimum is a
+  `Boundary`, which `boundary` folds by Spark's rules (`> max` → `null`, `<= max` →
+  `(c IS NOT NULL) OR (null)`, `< max` → `NOT (c = max)`, `>= max` → `c = max`, mirrored at the
+  minimum). pins: u8-write-sql/C-022
   `commit_overwrite_by_filter_with_summary` commits `overwrite_files().overwrite_by_row_filter`
   with the staged files and no added-file validation (Spark adds none), with the isolation,
   `validate_from_snapshot` and branch handling of its siblings in `write_options.rs`. A set

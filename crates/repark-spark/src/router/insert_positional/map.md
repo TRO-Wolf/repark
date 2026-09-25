@@ -23,8 +23,11 @@ Rewrite or execute the INSERT forms the stock parser cannot model on the Spark d
   optimizer does. A missing target answers `TABLE_OR_VIEW_NOT_FOUND`, also when its namespace
   does not exist (round 2, 2026-09-25). The width check plans the deduplicated source, so a
   source whose output names repeat writes (critic r1 V-003); the refusal names the columns
-  from the raw source, so no dedup alias reaches the text (round 3, critic r2 V-004).
-  pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-016, C-018, C-021
+  from the raw source, so no dedup alias reaches the text (round 3, critic r2 V-004). Round 4
+  (2026-09-25, critic r3 V-005): `as_written` swaps each `__repark_suffix_literal__(x)` marker
+  back to `x` before the kernel converts or renders the predicate, so `id = 1BD` refuses
+  `…: id = CAST(1 AS DECIMAL(1,0))`; the non-determinism check still reads the parsed predicate.
+  pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-016, C-018, C-021, C-024
 - `partition_append.rs` — `INSERT INTO … PARTITION (…)` becomes a plain positional INSERT.
   Static values (Spark's string form, checked by an Arrow cast with `safe: false`,
   `CAST_INVALID_INPUT` on failure) go in at their table positions (or after a column list),
@@ -35,8 +38,14 @@ Rewrite or execute the INSERT forms the stock parser cannot model on the Spark d
   `sql_has_partition_append` marks the statement as an owned write head;
   `refuse_positional_arity` is shared with `replace_where.rs`; it plans one source and names
   the columns from another (the raw source), and `rewrite_partition_clause` takes the raw
-  source for the same reason (round 3).
-  pins: u8-write-sql/C-006, C-007, C-008, C-009
+  source for the same reason (round 3). Round 4 (2026-09-25, critic r3 V-003): the arity text
+  names each raw item as Spark does (`spark_source_names` → `item_name` →
+  `expression_output_name`: an alias, a column, a cast of a column as the column, any other
+  cast as `CAST(<name> AS <TYPE>)`, `substr` / `substring` in their written spelling, and U6's
+  `spark_names::expression_name` for the rest); a source whose leftmost `SELECT` has a `*` falls
+  back to the planned names, with each `__repark_col_<n>` mapped back to raw item `n` by
+  `named_back`.
+  pins: u8-write-sql/C-006, C-007, C-008, C-009, C-023
 
 ## Pointers
 
