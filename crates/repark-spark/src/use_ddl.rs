@@ -13,7 +13,7 @@ use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::parser::{Parser, ParserError};
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
-use iceberg::{NamespaceIdent, TableIdent};
+use iceberg::{Catalog, ErrorKind, NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
 use repark_functions::session_names::SessionDefaults;
 
@@ -91,28 +91,58 @@ pub(crate) fn complete_name(catalogs: &CatalogRegistry, parts: &[String]) -> Res
 }
 
 #[allow(clippy::missing_errors_doc)]
-pub(crate) fn rename_dest(
-    src_catalog: &str,
-    src_namespace: &NamespaceIdent,
-    dest: &ObjectName,
-) -> Result<(String, TableIdent)> {
-    let parts = name_parts(dest);
-    match parts.as_slice() {
-        [table] => Ok((
-            src_catalog.to_string(),
-            TableIdent::new(src_namespace.clone(), table.clone()),
-        )),
-        [namespace, table] => Ok((
-            src_catalog.to_string(),
-            TableIdent::new(NamespaceIdent::new(namespace.clone()), table.clone()),
-        )),
-        [catalog, namespace, table] => Ok((
-            catalog.clone(),
-            TableIdent::new(NamespaceIdent::new(namespace.clone()), table.clone()),
-        )),
-        _ => Err(DataFusionError::Plan(format!(
-            "ALTER TABLE expects a three-part `catalog.namespace.table` name, got `{dest}`"
-        ))),
+pub(crate) fn rename_dest(src_namespace: &NamespaceIdent, dest: &ObjectName) -> Result<TableIdent> {
+    let mut parts = name_parts(dest);
+    let table = parts.pop().ok_or_else(|| {
+        DataFusionError::Plan(format!(
+            "ALTER TABLE RENAME TO needs a target name, got `{dest}`"
+        ))
+    })?;
+    let namespace = if parts.is_empty() {
+        src_namespace.clone()
+    } else {
+        NamespaceIdent::from_vec(parts).map_err(iceberg_err)?
+    };
+    Ok(TableIdent::new(namespace, table))
+}
+
+pub(crate) async fn rename_error(
+    catalog: &dyn Catalog,
+    error: iceberg::Error,
+    src: &TableIdent,
+    dest: &TableIdent,
+) -> DataFusionError {
+    let missing_target_namespace = matches!(error.kind(), ErrorKind::NamespaceNotFound)
+        && catalog.table_exists(src).await.unwrap_or(false)
+        && !catalog
+            .namespace_exists(dest.namespace())
+            .await
+            .unwrap_or(true);
+    match error.kind() {
+        ErrorKind::TableAlreadyExists => {
+            let target = dest
+                .namespace()
+                .iter()
+                .chain(std::iter::once(&dest.name))
+                .map(|part| crate::sort_order_parse::quote_if_needed(part))
+                .collect::<Vec<_>>()
+                .join(".");
+            DataFusionError::Plan(format!(
+                "[TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view {target} because it \
+                 already exists.\nChoose a different name, drop or replace the existing object, \
+                 or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07"
+            ))
+        }
+        ErrorKind::NamespaceNotFound if missing_target_namespace => {
+            let namespace = dest.namespace().join(".");
+            DataFusionError::Execution(format!(
+                "Cannot rename {}.{} to {namespace}.{}. Namespace does not exist: {namespace}",
+                src.namespace().join("."),
+                src.name,
+                dest.name
+            ))
+        }
+        _ => repark_iceberg::write::unsupported_message_error(error),
     }
 }
 

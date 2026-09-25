@@ -181,7 +181,7 @@ def _served() -> tuple[Shape, ...]:
         Shape(
             "S-RENAME",
             "spark__rename_relation",
-            f"alter table {fact} rename to {CATALOG}.{NAMESPACE}.gold_fct_renamed",
+            f"alter table {fact} rename to {NAMESPACE}.gold_fct_renamed",
             None,
         ),
         Shape(
@@ -252,6 +252,13 @@ def _refused() -> tuple[Shape, ...]:
             "spark__rename_relation",
             f"alter table ghost.{STEM}_survey rename to ghost.renamed",
             "No such namespace",
+        ),
+        Shape(
+            "R-RENAME-THREE-PART",
+            "spark__rename_relation",
+            f"alter table {fact} rename to {CATALOG}.{NAMESPACE}.renamed",
+            f"Cannot rename {NAMESPACE}.{STEM}_survey to {CATALOG}.{NAMESPACE}.renamed. "
+            f"Namespace does not exist: {CATALOG}.{NAMESPACE}",
         ),
         Shape(
             "R-CTAS-OPTIONS",

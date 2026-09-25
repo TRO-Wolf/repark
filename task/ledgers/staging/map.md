@@ -252,8 +252,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   V-005 and V-007 residues.
   **WO U5 PR3 (2026-09-25, C-058):** hive-style typed `PARTITIONED BY` columns become table
   columns with identity partition fields (D-X-PARTITIONED-COLDEF); residues R-U5-PR3-MIX-RENDER,
-  R-U5-PR3-NON-PRIMITIVE, R-U5-PR3-CTAS-TYPED. D-RENAME-TABLE is held for a ruling
-  (R-U5-PR3-RENAME-TABLE).
+  R-U5-PR3-NON-PRIMITIVE, R-U5-PR3-CTAS-TYPED. **Ruling (2026-09-25, C-059):** `RENAME TO`
+  reads its target inside the source catalog like Spark's InMemoryCatalog (D-RENAME-TABLE);
+  supersedes ice-catalog-session-1/C-022's cross-catalog half and dbt-1-adapter/C-001's
+  `S-RENAME` row. Residues R-U5-PR3-RENAME-CLASS, NESTED-NS-SQL, RENAME-MISSING-SOURCE and
+  DBT-RENAME.
 - [ice-array-insert-1-ledger.md](ice-array-insert-1-ledger.md) —
   **ICE-ARRAY-INSERT-1 (2026-09-18), in flight:** inserts into array columns answer Spark
   4.1.2 on every door at fork #295 (F-LIST-INSERT-1) — one pin per recorded cell (three

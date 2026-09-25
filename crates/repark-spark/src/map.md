@@ -1902,6 +1902,11 @@ pins: rp-4-fork-repin/C-005, C-006
   pre-parse). Planner `default_catalog` / `default_schema` stay at the DataFusion
   builtins; a raw `SET` of either key still lands there and mirrors that side into the
   box (R6). `rename_dest` anchors short `RENAME TO` targets on the source table (T-3);
+  **WO U5 PR3 (2026-09-25):** it reads every longer target as `namespace…name` inside the
+  source catalog, as Spark does (the cross-catalog refusal in `alter.rs` is gone), and
+  `rename_error` answers Spark's `Cannot rename <src> to <target>. Namespace does not exist:
+  <ns>` (source present, target namespace missing) and `[TABLE_OR_VIEW_ALREADY_EXISTS]`
+  texts; every other catalog error keeps its old mapping. pins: ice-nested-evo-1/C-059
   the ALTER / CALL / CREATE / CTAS / DROP call sites complete through `complete_name`.
   S4 adds the `SHOW CATALOGS` / `SHOW TABLES` / `SHOW COLUMNS` executors (sorted
   names, ambient scope from the session defaults, `LIKE`-glob suffix, `TERSE` /

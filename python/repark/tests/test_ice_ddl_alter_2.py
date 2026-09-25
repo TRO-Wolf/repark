@@ -965,3 +965,28 @@ def test_typed_partition_column_refusals_match_spark(
     assert type(caught) is expected_type
     assert str(caught) == message
     assert not spark.catalog.tableExists("sc.ns.pr")
+
+
+@pytest.mark.parametrize(
+    ("target", "namespace"), [("sc.ns.u", "sc.ns"), ("hc.ns.u", "hc.ns"), ("x.y.z.w", "x.y.z")]
+)
+def test_rename_to_reads_the_target_inside_the_source_catalog(
+    spark: ReparkSession, target: str, namespace: str
+) -> None:
+    spark.sql("CREATE TABLE sc.ns.rt (id BIGINT) USING iceberg")
+    caught = _refusal(spark, f"ALTER TABLE sc.ns.rt RENAME TO {target}")
+    assert type(caught) is PySparkException
+    assert str(caught) == (
+        f"datafusion engine error: Execution error: Cannot rename ns.rt to {target}. "
+        f"Namespace does not exist: {namespace}"
+    )
+    assert spark.catalog.tableExists("sc.ns.rt")
+
+
+def test_rename_to_an_existing_table_answers_spark_text(spark: ReparkSession) -> None:
+    spark.sql("CREATE TABLE sc.ns.ra (id BIGINT) USING iceberg")
+    spark.sql("CREATE TABLE sc.ns.rb (id BIGINT) USING iceberg")
+    caught = _refusal(spark, "ALTER TABLE sc.ns.ra RENAME TO ns.rb")
+    assert type(caught) is AnalysisException
+    assert caught.getCondition() == "TABLE_OR_VIEW_ALREADY_EXISTS"
+    assert "table or view ns.rb because it already exists.\nChoose" in str(caught)

@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException, UnsupportedOperationException
+from repark.errors import AnalysisException, PySparkException, UnsupportedOperationException
 
 _ORACLE: dict[str, Any] = json.loads(
     (Path(__file__).parent / "ice_catalog_session_1_oracle.json").read_text(encoding="utf-8")
@@ -423,17 +423,23 @@ def test_rename_to_two_part_cell(spark: ReparkSession) -> None:
     )["data"]
 
 
-def test_rename_across_catalogs_still_refuses(
+def test_rename_across_catalogs_reads_a_namespace_like_spark(
     runtime_catalog: ReparkSession, tmp_path: Path
 ) -> None:
-    """C-022: a three-part cross-catalog ``RENAME TO`` still refuses."""
+    """C-022 as corrected by ice-nested-evo-1/C-059: the target is a namespace in ``sc``."""
     spark = runtime_catalog
     spark.register_memory_catalog("hc", tmp_path / "hc")
     spark.sql("CREATE NAMESPACE sc.ns").to_arrow()
     spark.sql("CREATE NAMESPACE hc.ns").to_arrow()
     spark.sql("CREATE TABLE sc.ns.t (a INT) USING iceberg").to_arrow()
-    with pytest.raises(AnalysisException, match="cannot move across catalogs"):
+    with pytest.raises(PySparkException) as caught:
         spark.sql("ALTER TABLE sc.ns.t RENAME TO hc.ns.t2").to_arrow()
+    assert type(caught.value) is PySparkException
+    assert str(caught.value) == (
+        "datafusion engine error: Execution error: Cannot rename ns.t to hc.ns.t2. "
+        "Namespace does not exist: hc.ns"
+    )
+    assert spark.catalog.tableExists("sc.ns.t")
 
 
 def test_call_no_catalog_cell(spark: ReparkSession) -> None:

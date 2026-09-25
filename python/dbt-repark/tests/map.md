@@ -54,6 +54,11 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   `SELECT`, and `SHOW TABLES IN gold` answers the dbt glob shape); `R-RENAME-TWO-PART`
   keeps refusing, against a missing namespace — a missing object refuses, never the name's
   shape (DBT-QUALIFY-1 FIXED).
+  **WO U5 PR3 (2026-09-25, D-RENAME-TABLE):** the Spark door reads a `RENAME TO` target inside
+  the source catalog, like Spark. `S-RENAME` now pins the catalog-less target
+  (`rename to gold.gold_fct_renamed`), and `R-RENAME-THREE-PART` pins the three-part target that
+  `spark__rename_relation` emits for a dbt-repark relation: Spark's `Namespace does not exist:
+  ice.gold`. Residue R-U5-PR3-DBT-RENAME. pins: ice-nested-evo-1/C-059
   **SHOW-TABLE-EXTENDED-1 (2026-09-23):** `S-SHOW-TABLE-EXTENDED` moves to served, and
   `test_show_table_extended_answers_spark_shape` compares every column name and value of the one
   four-column row (`to_pylist()`), including the full information text; `R-SHOW-TBLPROPERTIES` stays

@@ -152,17 +152,16 @@ async fn execute_rename_table(
     src_ident: &TableIdent,
     dest_name: &ObjectName,
 ) -> Result<TableIdent> {
-    let (dest_catalog, dest_ident) = rename_dest(catalog_name, src_ident.namespace(), dest_name)?;
-    if dest_catalog != catalog_name {
-        return Err(DataFusionError::Plan(format!(
-            "ALTER TABLE RENAME cannot move across catalogs (`{catalog_name}` → `{dest_catalog}`)"
-        )));
+    let dest_ident = rename_dest(src_ident.namespace(), dest_name)?;
+    if let Err(error) =
+        repark_iceberg::write::alter::rename_table(handle.as_ref(), src_ident, &dest_ident).await
+    {
+        return Err(
+            crate::use_ddl::rename_error(handle.as_ref(), error, src_ident, &dest_ident).await,
+        );
     }
     let src_namespace = crate::namespace_schema_name(src_ident.namespace());
     let dest_namespace = crate::namespace_schema_name(dest_ident.namespace());
-    repark_iceberg::write::alter::rename_table(handle.as_ref(), src_ident, &dest_ident)
-        .await
-        .map_err(repark_iceberg::write::unsupported_message_error)?;
     if src_namespace == dest_namespace {
         reregister(ctx, handle, catalog_name, &src_namespace).await?;
     } else {

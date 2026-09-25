@@ -137,7 +137,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split configuration bindings from query and catalog bindings.",
     ),
     "crates/repark-spark/src/alter.rs": (
-        1354,
+        1353,
         "Spark ALTER token rewrites and dispatch share one planner module.",
         "Split syntax normalization from Iceberg operation dispatch.",
     ),
@@ -202,7 +202,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split statement families into production-aligned test modules.",
     ),
     "crates/repark-sql/tests/cross_door.rs": (
-        1254,
+        1253,
         "Cross-door parity cases share one integration battery.",
         "Split syntax-equivalence from deliberate-divergence cases.",
     ),

@@ -328,10 +328,9 @@ async fn cross_door_alter_lands_the_same_evolved_schema() {
         "…and the shared schema must be the RIGHT one (add + drop + rename all applied)"
     );
 
-    // TABLE rename (`ALTER TABLE … RENAME TO`) uses the same spelling in both doors.
-    for door in [&ansi, &spark] {
+    for (door, target) in [(&ansi, "ice.sales.orders_v2"), (&spark, "sales.orders_v2")] {
         door.session
-            .sql("ALTER TABLE ice.sales.orders RENAME TO ice.sales.orders_v2")
+            .sql(&format!("ALTER TABLE ice.sales.orders RENAME TO {target}"))
             .await
             .expect("RENAME TO");
         door.session

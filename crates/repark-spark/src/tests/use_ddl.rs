@@ -294,7 +294,7 @@ async fn rename_two_part_dest_anchors_on_the_source_catalog() {
 }
 
 #[tokio::test]
-async fn rename_three_part_dest_across_catalogs_still_refuses() {
+async fn rename_three_part_dest_reads_the_catalog_as_a_namespace() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = two_catalog_setup(&wh).await;
     run(&ctx, &catalogs, "CREATE TABLE ice.sales.t (id INT)").await;
@@ -304,11 +304,13 @@ async fn rename_three_part_dest_across_catalogs_still_refuses() {
         "ALTER TABLE ice.sales.t RENAME TO duo.other.t2",
     )
     .await
-    .expect_err("cross-catalog RENAME must refuse");
-    assert!(
-        error.to_string().contains("cannot move across catalogs"),
-        "got: {error}"
+    .expect_err("a three-part RENAME target is a namespace inside the source catalog");
+    assert_eq!(
+        error.to_string(),
+        "Execution error: Cannot rename sales.t to duo.other.t2. Namespace does not exist: \
+         duo.other"
     );
+    assert!(table_exists(&catalogs, "ice", "sales", "t").await);
 }
 
 #[tokio::test]

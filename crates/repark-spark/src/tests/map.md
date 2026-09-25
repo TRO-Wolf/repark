@@ -1125,6 +1125,15 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `repark-sql/src/properties/tests.rs` are gone; this row and the D-CREATE-V1 registry row carry
   the citation.
   pins: ice-nested-evo-1/C-052, C-057
+- [rename_target.rs](rename_target.rs) — **WO U5 PR3 (2026-09-25):** D-RENAME-TABLE. A
+  catalog-qualified `RENAME TO` target is a namespace inside the source catalog: `ice.sales.r3b`,
+  `other.sales.rcb`, `nope.rnb` and `x.y.z.w` answer Spark's exact `Cannot rename … Namespace
+  does not exist: …` execution error and the source keeps its rows; with nested namespace
+  `[ice, nested]` present, `ice.nested.rqb` moves the table there (created through the catalog
+  API, since SQL cannot create a nested namespace). Two-part, one-part and other-namespace
+  targets rename; an existing target answers `[TABLE_OR_VIEW_ALREADY_EXISTS]` with Spark's
+  text; a missing source keeps the catalog's `No such namespace`. The three `tests/alter.rs`
+  multi-op renames now spell a two-part target. pins: ice-nested-evo-1/C-059
 - [create_typed_partition.rs](create_typed_partition.rs) — **WO U5 PR3 (2026-09-25):**
   D-X-PARTITIONED-COLDEF. Typed `PARTITIONED BY` columns append after the declared columns with
   the next ids and identity fields (`cat STRING`; `cat, k INT, d DATE`; `NOT NULL` + `COMMENT`
@@ -1252,7 +1261,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - [hadoop_rename.rs](hadoop_rename.rs) — **PR-B hadoop naming (2026-09-24):** on a config-map
   `type=hadoop` catalog, `ALTER TABLE … RENAME TO` fails with `Error::NotImplemented` whose text
   is exactly "Cannot rename Hadoop tables", and the table still reads under its old name. The
-  near miss: `type=memory` still renames. Mutation: map the rename error through `iceberg_err`
+  near miss: `type=memory` still renames (a two-part `db.u` target since WO U5 PR3, 2026-09-25;
+  `hadoop_type_rename_refuses_every_target_shape` pins the refusal for one-, two-, three- and
+  four-part targets and a missing namespace). Mutation: map the rename error through `iceberg_err`
   and the pin reads `FeatureUnsupported => Cannot rename Hadoop tables`.
   `hadoop_type_staged_create_still_writes_uuid_names_divergence` pins the known gap. This
   door's `CREATE TABLE` goes through `commit_staged_schema_only`, so on a hadoop catalog it
@@ -1961,7 +1972,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `DATABASE`/`SCHEMA`, `USE CATALOG` parse refusal, zero-row answer, `USE DEFAULT`
   arm reachability, the completer legs, and the `SHOW`/`CACHE`/`CALL` statement-variant
   parse pins. S3 adds the short-name mechanism pins: ALTER source + RENAME dest
-  (source-anchored, T-3), cross-catalog RENAME refusal, CREATE / CTAS / DROP
+  (source-anchored, T-3), the three-part RENAME target read as a namespace (WO U5 PR3,
+  2026-09-25: `rename_three_part_dest_reads_the_catalog_as_a_namespace` replaces the
+  cross-catalog refusal pin), CREATE / CTAS / DROP
   completion, and two-part CALL catalog resolution. S4 adds the `SHOW` mechanism
   pins: catalog listing + `LIKE`, tables-after-`USE` + `IN`/`LIKE` forms + missing
   explicit namespace refusal + empty ambient scope, columns declaration order +

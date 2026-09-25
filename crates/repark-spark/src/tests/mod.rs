@@ -93,6 +93,7 @@ mod purge;
 mod ref_branch_on_empty;
 mod ref_ddl;
 mod refs_and_wap;
+mod rename_target;
 mod replace_columns;
 mod replace_table;
 mod replace_where;

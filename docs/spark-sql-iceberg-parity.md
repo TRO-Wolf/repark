@@ -8429,6 +8429,33 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `…::test_typed_partition_column_refusals_match_spark`.
   pins: ice-nested-evo-1/C-058
 
+### D-RENAME-TABLE — a catalog-qualified `RENAME TO` target renamed across the catalog name — **FIXED 2026-09-25 (WO U5 PR3)**
+
+- **repark** — the Spark door reads the whole `RENAME TO` target inside the source catalog.
+  A one-part target keeps the source namespace. Two or more parts are `namespace…name`, so
+  `ALTER TABLE sc.ns.t RENAME TO sc.ns.u` targets namespace `sc.ns` inside `sc`. When that
+  namespace is missing, the statement raises `Cannot rename ns.t to sc.ns.u. Namespace does not
+  exist: sc.ns` and the source keeps its rows. The same holds for `hc.ns.u` (`hc.ns`) and
+  `x.y.z.w` (`x.y.z`). When the nested namespace exists, the table moves into it. Two-part,
+  one-part and other-namespace targets rename. An existing target raises
+  `[TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view ns.re2 because it already
+  exists.` with Spark's text. `type=hadoop` keeps `Cannot rename Hadoop tables` for every
+  target. The cross-catalog refusal is gone. The ANSI door keeps `catalog.schema.table`.
+  Residues: RePark raises PySparkException `datafusion engine error: Execution error: …` where
+  Spark raises Py4JJavaError; SQL cannot create or list a nested namespace (owner item
+  D-NS-NESTED); a missing source keeps the catalog's text where Spark raises
+  TABLE_OR_VIEW_NOT_FOUND; dbt-repark's `spark__rename_relation` emits a three-part target,
+  which now refuses as it would on Spark.
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0 on `catalog-impl` InMemoryCatalog and
+  `type=hadoop`, measured 2026-09-25 (`target/probe-u5-pr3/spark.out` in the lane clone;
+  scoreboard cells `D-RENAME-TABLE` and `D-RENAME-TABLE-SHORT`, both replayed EQUAL).
+- **Pin** — `crates/repark-spark/src/tests/rename_target.rs`,
+  `crates/repark-spark/src/tests/hadoop_rename.rs`,
+  `python/repark/tests/test_ice_ddl_alter_2.py::test_rename_to_reads_the_target_inside_the_source_catalog`,
+  `…::test_rename_to_an_existing_table_answers_spark_text`,
+  `python/repark/tests/test_ice_catalog_session_1.py::test_rename_across_catalogs_reads_a_namespace_like_spark`.
+  pins: ice-nested-evo-1/C-059
+
 ### CUTOVER-CTAS-REQ-1 — parquet CTAS keeps source non-null fields required; Spark makes every column optional
 
 - **repark** — **FIXED 2026-09-04 (CUTOVER-SCHEMA-1).** The same CTAS stores every field
