@@ -1,3 +1,4 @@
+pub(crate) mod filter_validation;
 pub(crate) mod fork_pin;
 pub(crate) mod merge_append_series;
 pub(crate) mod output_spec;

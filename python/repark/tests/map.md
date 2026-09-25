@@ -619,12 +619,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   clean, isolating the fixture refusal to rewrite-stale manifest sizes. The
   live tables seed from the recorder's own seed functions, one code path.
   pins: ice-page-prune-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
-- [test_ice_hadoop_vn_1.py](test_ice_hadoop_vn_1.py) — U7 PR2 slice-1 round 2 (2026-09-25):
-  `_assert_stale_write_raises` takes the message start as a parameter, so the stale
-  `saveAsTable(overwrite)` (the replace door, `CatalogCommitConflicts => Cannot stage replace
-  to`) keeps every other observation — the exact class, `version file already exists`,
-  `v3.metadata.json`, the three metadata names and v3's bytes — and pins the full message.
-  pins: u7-write-df-2/C-002
+- [test_ice_hadoop_vn_1.py](test_ice_hadoop_vn_1.py) — U7 PR2 (2026-09-24; slice-1 round 2
+  2026-09-25): `test_stale_overwrite_doors_raise` pins a stale `saveAsTable(overwrite)` on the
+  replace door (`CatalogCommitConflicts => Cannot stage replace to …`) with the full message —
+  `_assert_stale_write_raises` takes the message start as a parameter, so the door keeps every
+  other observation (the exact class, `version file already exists`, `v3.metadata.json`, the
+  three metadata names and v3's bytes) — and, since slice 2, a stale
+  `writeTo().overwrite(lit(True))` on the commit door (the recorded conflict contract); the
+  metadata files stay v1..v3. pins: u7-write-df-2/C-002, C-006
   **ICE-HADOOP-VN-1
   (2026-09-17):** the stale Hadoop `vN` writer raises loud and loses nothing. The
   committed `fixtures/torture/data/ice_hadoop_vn_1` Spark-written v2 table (one seed
@@ -931,6 +933,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins column-def `CREATE OR REPLACE`, `REPLACE TABLE`, SQL RTAS, `createOrReplace()` and
   `replace()` on the full state with the old branch's rows.
   pins: u7-write-df-2/C-001, C-002, C-003, C-004, C-005, C-011, C-012
+- [test_ice_write_df_2_overwrite.py](test_ice_write_df_2_overwrite.py) — **U7 PR2 slice 2
+  (2026-09-24, rebased 2026-09-25):** `DataFrameWriterV2.overwrite(condition)` on the helpers of
+  `test_ice_write_df_2.py` (split out when the merged pin file crossed the 1000-line ceiling):
+  the recorded cells `W-DF-V2-OVERWRITE-COND-PART` and `-ROWS`, the `oc_*` shapes (row filters
+  on partitioned, unpartitioned and bucketed tables, `OR`/`AND`/`IN`/`IS NULL`/`BETWEEN`/`!=`,
+  `true`/`false`, empty frames, a reordered or narrower frame, a non-Column condition, a
+  snapshot property, a repeat) and the `vf_*` validation shapes, each compared on the same
+  observations as the slice-1 shapes (field ids included, re-recorded on the rebase);
+  residues R-2 to R-8 are pinned by rules over Spark's recorded refusal (`_planning`,
+  `_data_invalid`, …) and `test_overwrite_condition_divergences_where_one_engine_answers`.
+  pins: u7-write-df-2/C-006, C-007, C-008, C-009, C-010
 - [test_ice_write_df_1_edges.py](test_ice_write_df_1_edges.py) — **U7 PR1 round 2
   (2026-09-24):** the shapes critic r1 found unpinned or wrong, each against its `measured`
   oracle entry through the helpers of `test_ice_write_df_1.py`: the missing bucket column
@@ -969,8 +982,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`target/probe-u7-pr2a-r2fix/record_doors.py`) adds the five replace-door shapes
   `sql_column_def_replace`, `sql_replace_table`, `sql_rtas_reordered`,
   `v2_create_or_replace_reordered` and `v2_replace_renamed`.
+  them. Slice 2 adds the `oc_*` and `vf_*` shapes (`#<id>` stands for a Spark attribute id;
+  a `vf_*` shape starts validation at the seed snapshot and applies its change first) and the
+  recorded cells `W-DF-V2-OVERWRITE-COND-PART` and `W-DF-V2-OVERWRITE-COND-ROWS`.
   pins: u7-write-df-2/C-001, C-004
 - [test_ice_write_options_1.py](test_ice_write_options_1.py) —
+  **U7 PR2 (2026-09-24):** P2-14's refusal pin is now
+  `test_overwrite_condition_carries_options`: the conditional overwrite commits once with the
+  recorded cell's snapshot count, `run_id` and `total-records`. pins: u7-write-df-2/C-006
   **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the `COLL-*` pins here now expect
   `IllegalArgumentException` — the class Spark 4.1.2 raises for a summary-key collision and
   the one this file's own fixture records — after the shared refusal moved onto
@@ -1630,6 +1649,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `F.startswith` over a literal prefix agrees with `Column.startswith`.
   Live Spark 4.1.2 (UTC, ANSI on) measured 2026-09-21.
 - [test_examples_window_catalog.py](test_examples_window_catalog.py) — **EX-21 (2026-09-04, r2):**
+  U7 PR2 (2026-09-24): the EX-W2-3 pin is `test_writerv2_option_branch_writes_the_default_branch`
+  (main gains the row, `b1` keeps its seed) and the EX-W2-1 pin is
+  `test_writerv2_overwrite_condition_replaces_the_matching_files` (one file per row, Spark's
+  `[(1,'aa'), (2,'b')]`). pins: u7-write-df-2/C-004, C-006
   EX-22 (2026-09-04): the module docstring names all three batches after the merge of main; imports sorted.
   the five divergence pins for the catalog/session example batch — `registerFunction` answers
   the UDF object where Spark's deprecated alias returns the original callable (EX-SES-1), an
@@ -5534,6 +5557,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`test_a_hidden_metadata_table_is_still_queryable_at_the_facade`). Hidden from the listing,
   never removed from the engine.
 - `test_time_travel.py` — U7 PR2 (2026-09-24/25): the writer `branch`/`tag` option pins are
+- `test_time_travel.py` — U7 PR2 (2026-09-24): the writer `branch`/`tag` option pins are
   `test_write_to_branch_option_writes_main` and `test_write_to_tag_option_writes_main` (the
   row lands on main, the ref keeps its snapshot, as on Spark). pins: u7-write-df-2/C-005
   **I1 / R-TIME-TRAVEL** named oracle: multi-snapshot fixture (CTAS +
@@ -6908,7 +6932,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 | Add a withColumnRenamed / na (fillna/dropna) test | `test_na_rename.py` |
 | Add a `DataFrame.write` (saveAsTable/insertInto) test | `test_writer.py` |
 | Add a CTAS write-path type-derivation test (division/write-schema) | `test_ctas_division_writeback.py` |
-| Add a Group I `writeTo` / path parquet / `sortWithinPartitions` / `F.weekday` test | `test_writer_v2.py` (octo r1–r4 + 2026-07-22 review: empty stage-swap, sticky transforms incl. Window.partitionBy, same-session path read after overwrite; **DML-B** `overwritePartitions` replaces source partitions, empty input refuses, snapshot `overwrite` (pins: dml-b-insert-overwrite/C-003, C-004); **ICE-WRITE-OPTIONS-1** replaces the C1-Q-005 option warn-once test with a stored-without-warning pin; C3-SEC-001 transform identity quoting pin (now incl. `bucket`); O3-C1-Q-003 `insertInto` empty overwrite wipe pin; Group P: `test_bucket_partitioned_by_round_trips_e2e` + `test_years_partitioned_by_round_trips_e2e` — non-identity transform CTAS works end-to-end (replaced the old transform-gate rejects)) |
+| Add a Group I `writeTo` / path parquet / `sortWithinPartitions` / `F.weekday` test | `test_writer_v2.py` (octo r1–r4 + 2026-07-22 review: empty stage-swap, sticky transforms incl. Window.partitionBy, same-session path read after overwrite; **DML-B** `overwritePartitions` replaces source partitions, empty input refuses, snapshot `overwrite` (pins: dml-b-insert-overwrite/C-003, C-004); **ICE-WRITE-OPTIONS-1** replaces the C1-Q-005 option warn-once test with a stored-without-warning pin; C3-SEC-001 transform identity quoting pin (now incl. `bucket`); O3-C1-Q-003 `insertInto` empty overwrite wipe pin; Group P: `test_bucket_partitioned_by_round_trips_e2e` + `test_years_partitioned_by_round_trips_e2e` — non-identity transform CTAS works end-to-end (replaced the old transform-gate rejects); **U7 PR2** (2026-09-24) the `overwrite(condition)` loud-reject pin is `test_write_to_overwrite_condition_replaces_the_matching_file`) |
 | Add a facade SQL `INSERT OVERWRITE … PARTITION` pin (DML-B) | `test_dml_b_partition_overwrite.py` — static nonempty/empty + Hive arity + two-key AND/incomplete + string/NULL + dynamic keep-siblings + empty-dynamic refuse (pins: dml-b-insert-overwrite/C-001, C-002, C-004, C-005) |
 | Add a Window / date-function / row_number test | `test_functions_dates.py` |
 | Add a `declareSorted` / sort-elimination plan or refusal test | `test_declare_sorted.py` |

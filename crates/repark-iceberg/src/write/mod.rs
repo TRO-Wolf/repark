@@ -6,7 +6,7 @@ mod append_fanout_serial;
 pub mod column_move;
 mod commit_error;
 pub mod commit_target;
-pub use commit_target::commit_append_to;
+pub use commit_target::{FilterValidation, commit_append_to};
 pub mod concurrency;
 pub(crate) mod conflict_filter;
 pub(crate) mod conform;

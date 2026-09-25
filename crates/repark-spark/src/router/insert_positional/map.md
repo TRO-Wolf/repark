@@ -19,7 +19,10 @@ Rewrite or execute the INSERT forms the stock parser cannot model on the Spark d
   source through `spark_ast::execute_insert_source` (the branch write ref stripped), checks
   the width, refuses a volatile predicate from the planned `Filter`, converts it with
   `repark_iceberg::write::spark_overwrite_filter`, stages, and commits
-  `commit_overwrite_by_filter_with_summary`; a literal `false` commits an append, as Spark's
+  `commit_overwrite_by_filter_with_summary` (U7 PR2, 2026-09-24: with the statement's
+  `isolation-level` and `validate-from-snapshot-id` as `FilterValidation`; the DataFrame
+  writer's `overwrite(condition)` reaches this door through its generated statement,
+  pins: u7-write-df-2/C-006, C-009); a literal `false` commits an append, as Spark's
   optimizer does. A missing target answers `TABLE_OR_VIEW_NOT_FOUND`, also when its namespace
   does not exist (round 2, 2026-09-25). The width check plans the deduplicated source, so a
   source whose output names repeat writes (critic r1 V-003); the refusal names the columns

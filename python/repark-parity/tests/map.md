@@ -1083,3 +1083,4 @@ RP-42 fork pin bump (2026-09-20, run 27): `test_v3_cov_docs.py` holds its own co
 - `test_cap_1_source_file_line_cap.py` — **WO U5 PR2b round 2 (2026-09-25):** the mirror rows
   move with the ratchet: `repark-iceberg/src/write/merge/mod.rs` 1630 → 1628 and
   `repark-spark/src/tests/ctas.rs` 1357 → 1356. pins: ice-nested-evo-1/C-057
+- `test_cap_1_source_file_line_cap.py` — **U7 PR1 writer surface (2026-09-24):** the `python/repark/src/repark/spark/dataframe/writer_readwriter.py` mirror row ratchets 1077 → 1073 to the measured file and `scripts/check_lib_py.py`. No other row moves. Round 2 (2026-09-24): the same row ratchets 1073 → 1039 in lockstep with the gate. U7 PR2 (2026-09-24): 1039 → 1033 in lockstep with the gate (the `DataFrameWriterV2.option` branch/tag refusal leaves), then 1033 → 1031 (`overwrite(condition)` delegates its SQL to `writer_schema.py`).

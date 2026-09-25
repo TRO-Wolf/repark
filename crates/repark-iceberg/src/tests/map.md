@@ -82,6 +82,14 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   pins: u7-write-df/C-015, C-018
   U7 PR2 (2026-09-24): a `saveAsTable` overwrite plans `rtas` whether or not the table
   exists or is bucketed. pins: u7-write-df-2/C-002
+- `filter_validation.rs` — **U7 PR2 (2026-09-24):** `FilterValidation` through a real
+  overwrite-by-filter commit on a memory catalog seeded with one file per row: an explicit
+  `serializable` or `snapshot` level validates from the requested snapshot (a later delete of
+  a matching file refuses, a later snapshot passes), no level ignores the request, an explicit
+  level without a start validates from the loaded snapshot (residue R-6), `serializable`
+  refuses a matching append and `snapshot` does not, a change to other rows never conflicts,
+  and a start that is not a long or not an ancestor refuses with Java's text.
+  pins: u7-write-df-2/C-009
 - `tracing.rs` — shared tracing harness: one global subscriber, both capture layers
   (forced-edit class 6). Accessors used by `catalog/tests/catalog.rs` and
   `write/merge/tests/streaming_scan.rs`.

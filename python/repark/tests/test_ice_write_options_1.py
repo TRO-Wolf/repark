@@ -524,20 +524,26 @@ def test_empty_suffix_key(spark: ReparkSession) -> None:
     assert "" in _fixture_cell("P2-18-empty-suffix")["summary"]
 
 
-def test_overwrite_condition_refusal_with_options(spark: ReparkSession) -> None:
-    """P2-14: conditional overwrite stays a loud refusal; options never reach a commit."""
+def test_overwrite_condition_carries_options(spark: ReparkSession) -> None:
+    """P2-14: a conditional overwrite commits once and carries the snapshot property.
+
+    U7 PR2 (2026-09-24) retired the refusal; the recorded Spark cell names ``run_id``.
+    """
     from repark import functions as fns
 
     _seed(spark, "cond")
     table = f"{CATALOG}.{NS}.cond"
-    with pytest.raises(UnsupportedOperationException, match="overwrite"):
-        (
-            _frame(spark)
-            .writeTo(table)
-            .option("snapshot-property.run_id", "cond-1")
-            .overwrite(fns.col("id") < 100)
-        )
-    assert _snapshot_count(spark, table) == 1
+    (
+        _frame(spark)
+        .writeTo(table)
+        .option("snapshot-property.run_id", "cond-1")
+        .overwrite(fns.col("id") < 100)
+    )
+    recorded = _fixture_cell("P2-14-overwrite-cond")
+    summary = _latest_summary(spark, table)
+    assert _snapshot_count(spark, table) == recorded["snapshot_count"]
+    assert summary["run_id"] == recorded["summary"]["run_id"]
+    assert summary["total-records"] == recorded["summary"]["total-records"]
 
 
 def test_v1_append_mode_property(spark: ReparkSession) -> None:

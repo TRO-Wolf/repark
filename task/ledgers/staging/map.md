@@ -1709,5 +1709,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `W-DF-V2-OPTION-BRANCH` EQUAL; residue R-1 (format-less provider property) is registry
   `EX-W2-5`. Round 2 (critic r1): a replace keeps field ids by name (Java's
   `assignFreshIds`), so an older branch reads its rows; residues R-9 and R-10.
-  `risk_tier: standard`. Branch `feat/u7-write-df-2` (slice 1: `feat/u7-write-df-2a`).
-  pins: u7-write-df-2/C-001, C-002, C-003, C-004, C-005, C-011, C-012
+  Slice 2: `writeTo(t).overwrite(condition)` is Spark's overwrite by filter on U8's
+  REPLACE WHERE door (built on repark#833, rebased onto main once #833 and #835 merged), with
+  `validate-from-snapshot-id` beside an `isolation-level`; cells `W-DF-V2-OVERWRITE-COND-PART`
+  and `-ROWS` EQUAL, residues R-2..R-8 in registry EX-W2-1.
+  `risk_tier: standard`. Branch `feat/u7-write-df-2b` (slice 1: `feat/u7-write-df-2a`, repark#835).
+  pins: u7-write-df-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012

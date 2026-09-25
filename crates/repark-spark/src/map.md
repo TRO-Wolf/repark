@@ -391,6 +391,11 @@ pins: rp-4-fork-repin/C-005, C-006
   column-def CREATE (measured 2026-09-24); `ctas.rs` and `create_table.rs` pass
   `spark_door_case_insensitive`, and the early column-def validation passes `true` because the
   execute-time build is authoritative. pins: u7-write-df/C-010, C-013
+- `write_options.rs` — **U7 PR2 (2026-09-24):** `validate-from-snapshot-id` is kept raw
+  (`StatementWriteOptions.validate_from_snapshot_id`): only the overwrite-by-filter commit
+  reads it, so an append with a bad value commits as on Spark.
+  `router/insert_positional/replace_where.rs` passes it with the level as
+  `repark_iceberg::write::FilterValidation`. pins: u7-write-df-2/C-009
 - `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** last-wins validation of
   the out-of-band option pairs (snapshot-property strip-and-lowercase, parquet
   honour, orc/avro/bogus refusals, option-over-table-property

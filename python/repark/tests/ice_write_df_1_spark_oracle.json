@@ -1,5 +1,5 @@
 {
- "source": "live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, InMemoryCatalog `sc`, 2026-09-24; probe drivers target/probe-u7-pr1/probe.py, probe2.py, probe3.py (U7 PR1 step 1); recorded cells from the 2026-09-24 scoreboard spark-core.json; round-2 fix probes target/probe-u7-r1fix/sprobe.py and sprobe2.py (same Spark and Iceberg, 2026-09-24) re-measured ctas_part_upper and create_part_upper with the `# Partition Information` rows (`partition_info`) and added the shapes from bucketBy_new_missing_col_overwrite to ctas_clustered_colname; `<root>` stands for that probe directory; round-3 fix probe target/probe-u7-r2fix/sprobe.py (same Spark and Iceberg, 2026-09-24) added bucketBy_new_nested_col, bucketBy_new_nested_missing and bucketBy_new_dotted_missing (Spark backtick-quotes a bucket column name containing '.', and only that; sprobe.out and sprobe2.out hold the other name shapes), spec_id_current_then_absent, bucket_existing_void_append (a format-version 1 table whose dropped field became void) and bucket_existing_time_append; the nested frame is createDataFrame with the DDL `id BIGINT, s STRUCT<a: INT, b: STRING>`; round-4 fix probe target/probe-u7-r3fix/sprobe.py (same Spark and Iceberg, 2026-09-24) added sortBy_missing, sortBy_dotted_missing, sortBy_second_missing, sortBy_missing_overwrite and sortBy_bucket_missing_first (a sortBy column the frame lacks is the same 3060 as a bucket column, the bucket columns named first; no table is left behind); U7 PR2 (2026-09-24): target/probe-u7-pr2/record.py recorded the sat_*, *_option_branch_*, v2_option_tag_append and v2_options_branch_upper shapes (seed `values` = one INSERT VALUES, `named` = INSERT … UNION ALL, three files; `schema`/`refs`/`history` (snapshot indexes in commit order)/`properties`/`format_version`/`sort_fields`/`uuid_same`/`branch_rows` read after the write; an AnalysisException message stops before Spark's appended plan); recorded cells W-DF-SAVEASTABLE-OVERWRITE and W-DF-V2-OPTION-BRANCH from the same scoreboard file. U7 PR2 slice-1 round 2 (2026-09-25): target/probe-u7-pr2a-r1fix/record_ids.py re-recorded the slice-1 shapes with the current schema's field ids by name (`field_ids`, nested struct/list/map ids included), `identifier_field_ids`, `last_column_id`, `current_schema_id`, `schema_ids`, the default spec's `spec_fields` (source id, field id, name, transform) and the sorted `spec_ids` (every earlier value unchanged), and added the ids_* shapes (reordered, swapped, renamed, added, dropped, type-changed, nested-reordered, identifier, reordered partitionBy and re-added columns, each reading branch b1 where it has one), sat_overwrite_dynamic_option, v1_option_branch_overwrite, v1_option_branch_insert_into_overwrite and sat_overwrite_partby_on_partitioned; the SparkException text of ids_type_change_branch keeps only its ClassCastException clause. U7 PR2 slice-1 round 3 (2026-09-25): target/probe-u7-pr2a-r2fix/record_doors.py recorded the five replace doors with the same observations and a branch b1 read: sql_column_def_replace, sql_replace_table, sql_rtas_reordered, v2_create_or_replace_reordered and v2_replace_renamed (the critic's r2 probe /tmp/xr-xu7-writedf-probe/spark.json measured the same branch rows and ids).",
+ "source": "live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, InMemoryCatalog `sc`, 2026-09-24; probe drivers target/probe-u7-pr1/probe.py, probe2.py, probe3.py (U7 PR1 step 1); recorded cells from the 2026-09-24 scoreboard spark-core.json; round-2 fix probes target/probe-u7-r1fix/sprobe.py and sprobe2.py (same Spark and Iceberg, 2026-09-24) re-measured ctas_part_upper and create_part_upper with the `# Partition Information` rows (`partition_info`) and added the shapes from bucketBy_new_missing_col_overwrite to ctas_clustered_colname; `<root>` stands for that probe directory; round-3 fix probe target/probe-u7-r2fix/sprobe.py (same Spark and Iceberg, 2026-09-24) added bucketBy_new_nested_col, bucketBy_new_nested_missing and bucketBy_new_dotted_missing (Spark backtick-quotes a bucket column name containing '.', and only that; sprobe.out and sprobe2.out hold the other name shapes), spec_id_current_then_absent, bucket_existing_void_append (a format-version 1 table whose dropped field became void) and bucket_existing_time_append; the nested frame is createDataFrame with the DDL `id BIGINT, s STRUCT<a: INT, b: STRING>`; round-4 fix probe target/probe-u7-r3fix/sprobe.py (same Spark and Iceberg, 2026-09-24) added sortBy_missing, sortBy_dotted_missing, sortBy_second_missing, sortBy_missing_overwrite and sortBy_bucket_missing_first (a sortBy column the frame lacks is the same 3060 as a bucket column, the bucket columns named first; no table is left behind); U7 PR2 (2026-09-24): target/probe-u7-pr2/record.py recorded the sat_*, *_option_branch_*, v2_option_tag_append, v2_options_branch_upper, oc_* and vf_* shapes (a vf_* shape takes validate-from-snapshot-id from the seed snapshot and applies its change before the overwrite; `#<id>` stands for a Spark attribute id) (seed `values` = one INSERT VALUES, `named` = INSERT … UNION ALL, three files; `schema`/`refs`/`history` (snapshot indexes in commit order)/`properties`/`format_version`/`sort_fields`/`uuid_same`/`branch_rows` read after the write; an AnalysisException message stops before Spark's appended plan); recorded cells W-DF-SAVEASTABLE-OVERWRITE, W-DF-V2-OPTION-BRANCH, W-DF-V2-OVERWRITE-COND-PART and W-DF-V2-OVERWRITE-COND-ROWS from the same scoreboard file. U7 PR2 slice-1 round 2 (2026-09-25): target/probe-u7-pr2a-r1fix/record_ids.py re-recorded the slice-1 shapes with the current schema's field ids by name (`field_ids`, nested struct/list/map ids included), `identifier_field_ids`, `last_column_id`, `current_schema_id`, `schema_ids`, the default spec's `spec_fields` (source id, field id, name, transform) and the sorted `spec_ids` (every earlier value unchanged), and added the ids_* shapes (reordered, swapped, renamed, added, dropped, type-changed, nested-reordered, identifier, reordered partitionBy and re-added columns, each reading branch b1 where it has one), sat_overwrite_dynamic_option, v1_option_branch_overwrite, v1_option_branch_insert_into_overwrite and sat_overwrite_partby_on_partitioned; the SparkException text of ids_type_change_branch keeps only its ClassCastException clause. U7 PR2 slice-1 round 3 (2026-09-25): target/probe-u7-pr2a-r2fix/record_doors.py recorded the five replace doors with the same observations and a branch b1 read: sql_column_def_replace, sql_replace_table, sql_rtas_reordered, v2_create_or_replace_reordered and v2_replace_renamed (the critic's r2 probe /tmp/xr-xu7-writedf-probe/spark.json measured the same branch rows and ids). U7 PR2 slice-2 rebase (2026-09-25): the oc_*, vf_* and v2_option_branch_overwrite_condition shapes re-recorded through record.py's shapes under a recorder adding the same field-id observations (every earlier value unchanged).",
  "seed": "t (id BIGINT, data STRING, cat STRING) seeded (1,'a','x'),(2,'b','y'),(3,'c','x'); frame [(7,'g','x'),(8,'h','w')]",
  "recorded": {
   "W-DF-SAVE-NAME": {
@@ -810,6 +810,295 @@
      [
       "total-data-files",
       "2"
+     ],
+     [
+      "total-delete-files",
+      "0"
+     ]
+    ]
+   ]
+  },
+  "W-DF-V2-OVERWRITE-COND-PART": {
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "md.format-version": 2,
+   "md.schema": [
+    [
+     "id",
+     "long",
+     false,
+     null
+    ],
+    [
+     "data",
+     "string",
+     false,
+     null
+    ],
+    [
+     "cat",
+     "string",
+     false,
+     null
+    ]
+   ],
+   "md.identifier-fields": [],
+   "md.spec": [
+    [
+     "cat",
+     "identity",
+     "cat"
+    ]
+   ],
+   "md.spec-count": 1,
+   "md.sort-order": [],
+   "md.properties": [],
+   "md.refs": [
+    [
+     "main",
+     "branch",
+     "S1",
+     null,
+     null,
+     null
+    ]
+   ],
+   "md.snapshots": [
+    [
+     [
+      "added-records",
+      "3"
+     ],
+     [
+      "changed-partition-count",
+      "2"
+     ],
+     [
+      "operation",
+      "append"
+     ],
+     [
+      "total-position-deletes",
+      "0"
+     ],
+     [
+      "total-records",
+      "3"
+     ]
+    ],
+    [
+     [
+      "added-records",
+      "2"
+     ],
+     [
+      "changed-partition-count",
+      "2"
+     ],
+     [
+      "deleted-records",
+      "2"
+     ],
+     [
+      "operation",
+      "overwrite"
+     ],
+     [
+      "total-position-deletes",
+      "0"
+     ],
+     [
+      "total-records",
+      "3"
+     ]
+    ]
+   ],
+   "layout.snapshots": [
+    [
+     [
+      "added-data-files",
+      "2"
+     ],
+     [
+      "total-data-files",
+      "2"
+     ],
+     [
+      "total-delete-files",
+      "0"
+     ]
+    ],
+    [
+     [
+      "added-data-files",
+      "2"
+     ],
+     [
+      "deleted-data-files",
+      "1"
+     ],
+     [
+      "total-data-files",
+      "3"
+     ],
+     [
+      "total-delete-files",
+      "0"
+     ]
+    ]
+   ]
+  },
+  "W-DF-V2-OVERWRITE-COND-ROWS": {
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "md.format-version": 2,
+   "md.schema": [
+    [
+     "id",
+     "long",
+     false,
+     null
+    ],
+    [
+     "data",
+     "string",
+     false,
+     null
+    ],
+    [
+     "cat",
+     "string",
+     false,
+     null
+    ]
+   ],
+   "md.identifier-fields": [],
+   "md.spec": [],
+   "md.spec-count": 1,
+   "md.sort-order": [],
+   "md.properties": [],
+   "md.refs": [
+    [
+     "main",
+     "branch",
+     "S1",
+     null,
+     null,
+     null
+    ]
+   ],
+   "md.snapshots": [
+    [
+     [
+      "added-records",
+      "3"
+     ],
+     [
+      "changed-partition-count",
+      "1"
+     ],
+     [
+      "operation",
+      "append"
+     ],
+     [
+      "total-position-deletes",
+      "0"
+     ],
+     [
+      "total-records",
+      "3"
+     ]
+    ],
+    [
+     [
+      "added-records",
+      "2"
+     ],
+     [
+      "changed-partition-count",
+      "1"
+     ],
+     [
+      "deleted-records",
+      "1"
+     ],
+     [
+      "operation",
+      "overwrite"
+     ],
+     [
+      "total-position-deletes",
+      "0"
+     ],
+     [
+      "total-records",
+      "4"
+     ]
+    ]
+   ],
+   "layout.snapshots": [
+    [
+     [
+      "added-data-files",
+      "3"
+     ],
+     [
+      "total-data-files",
+      "3"
+     ],
+     [
+      "total-delete-files",
+      "0"
+     ]
+    ],
+    [
+     [
+      "added-data-files",
+      "1"
+     ],
+     [
+      "deleted-data-files",
+      "1"
+     ],
+     [
+      "total-data-files",
+      "3"
      ],
      [
       "total-delete-files",
@@ -9164,6 +9453,4832 @@
    "schema_ids": [
     0,
     1
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "v2_option_branch_overwrite_condition": {
+   "branch_rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "ok": true,
+   "rows": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "deleted-data-files": "1",
+     "deleted-records": "2",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "b1",
+     "BRANCH",
+     0
+    ],
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [
+    [
+     3,
+     1000,
+     "cat",
+     "identity"
+    ]
+   ],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_partition": {
+   "ok": true,
+   "rows": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "deleted-data-files": "1",
+     "deleted-records": "2",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [
+    [
+     3,
+     1000,
+     "cat",
+     "identity"
+    ]
+   ],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_rows": {
+   "ok": true,
+   "rows": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "deleted-data-files": "1",
+     "deleted-records": "1",
+     "total-records": "4"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_non_partition_column": {
+   "error": {
+    "type": "ValidationException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Cannot delete file where some, but not all, rows match filter ref(name=\"id\") == 1: <file>"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [
+    [
+     3,
+     1000,
+     "cat",
+     "identity"
+    ]
+   ],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_matches_nothing": {
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "5"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     4
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_or": {
+   "ok": true,
+   "rows": [
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "deleted-data-files": "2",
+     "deleted-records": "2",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_and_partition": {
+   "ok": true,
+   "rows": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "deleted-data-files": "1",
+     "deleted-records": "2",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [
+    [
+     3,
+     1000,
+     "cat",
+     "identity"
+    ]
+   ],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_merge_schema": {
+   "ok": true,
+   "rows": [
+    [
+     2,
+     "b",
+     "y",
+     null
+    ],
+    [
+     3,
+     "c",
+     "x",
+     null
+    ],
+    [
+     7,
+     "g",
+     "x",
+     14
+    ],
+    [
+     8,
+     "h",
+     "w",
+     16
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "deleted-data-files": "1",
+     "deleted-records": "1",
+     "total-records": "4"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ],
+    [
+     "extra",
+     "bigint"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {
+    "write.spark.accept-any-schema": "true"
+   },
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ],
+    [
+     4,
+     "extra",
+     false,
+     "long"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 4,
+   "current_schema_id": 1,
+   "schema_ids": [
+    0,
+    1
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_partial_file": {
+   "error": {
+    "type": "ValidationException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Cannot delete file where some, but not all, rows match filter ref(name=\"id\") == 1: <file>"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_string_condition": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "sqlstate": "42703",
+    "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `id = 1` cannot be resolved. Did you mean one of the following? [`id`, `data`, `cat`]. SQLSTATE: 42703"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_expr_condition": {
+   "ok": true,
+   "rows": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "deleted-data-files": "1",
+     "deleted-records": "1",
+     "total-records": "4"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_true": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "deleted-data-files": "3",
+     "deleted-records": "3",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_false": {
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "5"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     4
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_unknown_column": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "sqlstate": "42703",
+    "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `zz` cannot be resolved. Did you mean one of the following? [`id`, `cat`, `data`]. SQLSTATE: 42703"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_empty_frame": {
+   "ok": true,
+   "rows": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append",
+    "delete"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "deleted-data-files": "1",
+     "deleted-records": "1",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_empty_frame_unsnapshotted": {
+   "ok": true,
+   "rows": [],
+   "operations": [
+    "delete"
+   ],
+   "summaries": [
+    {
+     "total-records": "0"
+    }
+   ],
+   "specs": [],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_isin_partition": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "deleted-data-files": "2",
+     "deleted-records": "3",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [
+    [
+     3,
+     1000,
+     "cat",
+     "identity"
+    ]
+   ],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_isnull_partition": {
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "5"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     4
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [
+    [
+     3,
+     1000,
+     "cat",
+     "identity"
+    ]
+   ],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_reordered_frame": {
+   "ok": true,
+   "rows": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "deleted-data-files": "1",
+     "deleted-records": "2",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [
+    [
+     3,
+     1000,
+     "cat",
+     "identity"
+    ]
+   ],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_upper_column": {
+   "error": {
+    "type": "ValidationException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Cannot find field 'CAT' in struct: struct<1: id: optional long, 2: data: optional string, 3: cat: optional string>"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [
+    [
+     3,
+     1000,
+     "cat",
+     "identity"
+    ]
+   ],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_function": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Cannot convert Spark predicate to Iceberg expression: UPPER(cat) = 'X'"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [
+    [
+     3,
+     1000,
+     "cat",
+     "identity"
+    ]
+   ],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_extra_column": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS",
+    "sqlstate": "21S01",
+    "message": "[INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS] Cannot write to `sc`.`u7`.`t`, the reason is too many data columns:\nTable columns: `id`, `data`, `cat`.\nData columns: `id`, `data`, `cat`, `extra`. SQLSTATE: 21S01"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [
+    [
+     3,
+     1000,
+     "cat",
+     "identity"
+    ]
+   ],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_missing_table": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "TABLE_OR_VIEW_NOT_FOUND",
+    "sqlstate": "42P01",
+    "message": "[TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`u7`.`t` cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
+   },
+   "state_error": "AnalysisException"
+  },
+  "oc_bucket_aligned": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "deleted-data-files": "2",
+     "deleted-records": "3",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [
+    "bucket(2, id)"
+   ],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [
+    [
+     1,
+     1000,
+     "id_bucket",
+     "bucket[2]"
+    ]
+   ],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_between": {
+   "ok": true,
+   "rows": [
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "deleted-data-files": "2",
+     "deleted-records": "2",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_not_equal": {
+   "ok": true,
+   "rows": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "deleted-data-files": "2",
+     "deleted-records": "2",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_string_literal_on_long": {
+   "ok": true,
+   "rows": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "deleted-data-files": "1",
+     "deleted-records": "1",
+     "total-records": "4"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_missing_frame_column": {
+   "ok": true,
+   "rows": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     null,
+     "x"
+    ],
+    [
+     8,
+     null,
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "deleted-data-files": "1",
+     "deleted-records": "1",
+     "total-records": "4"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_bool_condition": {
+   "error": {
+    "type": "PySparkTypeError",
+    "condition": "NOT_COLUMN_OR_STR",
+    "sqlstate": null,
+    "message": "[NOT_COLUMN_OR_STR] Argument `col` should be a Column or str, got bool."
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_frame_join_column": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION",
+    "sqlstate": "XX000",
+    "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"cat\" missing from \"id\", \"data\", \"cat\" in operator !OverwriteByExpression RelationV2[id#<id>, data#<id>, cat#<id>] sc.u7.t, (cat#<id> = x), true. Attribute(s) with the same name appear in the operation: \"cat\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [
+    [
+     3,
+     1000,
+     "cat",
+     "identity"
+    ]
+   ],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_repeated": {
+   "ok": true,
+   "rows": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "deleted-data-files": "1",
+     "deleted-records": "2",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "deleted-data-files": "1",
+     "deleted-records": "1",
+     "total-records": "4"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     4
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     2
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ],
+    [
+     2,
+     1,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [
+    [
+     3,
+     1000,
+     "cat",
+     "identity"
+    ]
+   ],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_snapshot_property": {
+   "custom_summary": [
+    null,
+    "v"
+   ],
+   "ok": true,
+   "rows": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "deleted-data-files": "1",
+     "deleted-records": "2",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [
+    [
+     3,
+     1000,
+     "cat",
+     "identity"
+    ]
+   ],
+   "spec_ids": [
+    0
+   ]
+  },
+  "vf_serializable_from_s0": {
+   "error": {
+    "type": "ValidationException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Found conflicting deleted files that can contain records matching ref(name=\"id\") == 1: [<file>]"
+   },
+   "rows": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append",
+    "delete"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "deleted-data-files": "1",
+     "deleted-records": "1",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "vf_snapshot_from_s0": {
+   "error": {
+    "type": "ValidationException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Found conflicting deleted files that can contain records matching ref(name=\"id\") == 1: [<file>]"
+   },
+   "rows": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append",
+    "delete"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "deleted-data-files": "1",
+     "deleted-records": "1",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "vf_serializable_no_from": {
+   "error": {
+    "type": "ValidationException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Found conflicting files that can contain records matching ref(name=\"id\") == 1: [<file>]"
+   },
+   "rows": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append",
+    "delete"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "deleted-data-files": "1",
+     "deleted-records": "1",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "vf_from_s0_no_level": {
+   "ok": true,
+   "rows": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "delete",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "deleted-data-files": "1",
+     "deleted-records": "1",
+     "total-records": "2"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "4"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     2
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ],
+    [
+     2,
+     1,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "vf_serializable_from_latest": {
+   "ok": true,
+   "rows": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "delete",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "deleted-data-files": "1",
+     "deleted-records": "1",
+     "total-records": "2"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "4"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     2
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ],
+    [
+     2,
+     1,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "vf_serializable_append_conflict": {
+   "error": {
+    "type": "ValidationException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Found conflicting files that can contain records matching ref(name=\"id\") == 1: [<file>]"
+   },
+   "rows": [
+    [
+     1,
+     "z",
+     "q"
+    ],
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "1",
+     "total-records": "4"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     4
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "vf_snapshot_append_conflict": {
+   "ok": true,
+   "rows": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "1",
+     "total-records": "4"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "deleted-data-files": "2",
+     "deleted-records": "2",
+     "total-records": "4"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     2
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ],
+    [
+     2,
+     1,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "vf_serializable_other_rows": {
+   "ok": true,
+   "rows": [
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "delete",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "deleted-data-files": "1",
+     "deleted-records": "1",
+     "total-records": "2"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "deleted-data-files": "1",
+     "deleted-records": "1",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     2
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ],
+    [
+     2,
+     1,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "vf_bad_snapshot_id": {
+   "error": {
+    "type": "NumberFormatException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "For input string: \"abc\""
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "vf_unknown_snapshot_id": {
+   "error": {
+    "type": "ValidationException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Cannot determine history between starting snapshot 12345 and the last known ancestor 2682563212589141028"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "vf_bad_level": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Invalid isolation level: bogus"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
    ],
    "spec_fields": [],
    "spec_ids": [

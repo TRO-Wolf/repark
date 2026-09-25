@@ -135,7 +135,8 @@ illustrative. A claim with no verified basis does not go in.
   (`s3://` / `s3a://` / `file://` / bare absolute path) and their refusals, reading and writing
   through the facade (CTAS-VIEW-1, 2026-09-03: unpartitioned parquet-view CTAS is named),
   partition overwrite (DML-1 FIXED), the write forms that refuse
-  (DML-2 / `overwrite(condition)`), time
+  (DML-2; `overwrite(condition)` left that list when U7 PR2 made it Spark's overwrite by
+  filter, 2026-09-24, pins: u7-write-df-2/C-006), time
   travel both spellings plus the reader options, the sixteen metadata tables, maintenance `CALL`
   plus `register_table` adoption (V3-1, including the Spark-written v3 fixture numbers),
   and the registry sections that govern each. **MW-6** added "Compacting manifests"

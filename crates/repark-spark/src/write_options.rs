@@ -17,6 +17,7 @@ pub struct StatementWriteOptions {
     pub level: Option<String>,
     pub distribution_mode: Option<String>,
     pub isolation: Option<String>,
+    pub validate_from_snapshot_id: Option<String>,
     pub overwrite_intent: repark_iceberg::write::OverwriteIntent,
     pub overwrite_mode_dynamic: bool,
     pub merge_schema: Option<bool>,
@@ -136,6 +137,7 @@ impl StatementWriteOptions {
                     options.distribution_mode = Some(validate_distribution_mode(&value)?);
                 }
                 "isolation-level" => options.isolation = Some(validate_isolation_level(&value)?),
+                "validate-from-snapshot-id" => options.validate_from_snapshot_id = Some(value),
                 "output-spec-id" => {
                     options.output_spec_id =
                         Some(repark_iceberg::write::parse_output_spec_id(&value)?);
@@ -287,6 +289,14 @@ mod tests {
             .downcast_ref::<repark_iceberg::write::NumberFormatMarker>()
             .expect("expected a NumberFormatMarker");
         assert_eq!(marker.0, "For input string: \"x\"");
+    }
+
+    #[test]
+    fn validate_from_snapshot_id_stays_raw_until_an_overwrite_commit_reads_it() {
+        let options =
+            StatementWriteOptions::validate(vec![pair("Validate-From-Snapshot-Id", "abc")])
+                .expect("an append never parses it");
+        assert_eq!(options.validate_from_snapshot_id.as_deref(), Some("abc"));
     }
 
     #[test]

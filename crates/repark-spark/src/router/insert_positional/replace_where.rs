@@ -258,7 +258,10 @@ pub(crate) async fn execute_replace_where(
             filter,
             branch.as_deref(),
             &snapshot_extra,
-            options.isolation.as_deref(),
+            repark_iceberg::write::FilterValidation {
+                isolation: options.isolation.as_deref(),
+                validate_from_snapshot_id: options.validate_from_snapshot_id.as_deref(),
+            },
         )
         .await?;
     }

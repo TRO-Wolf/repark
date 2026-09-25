@@ -4,7 +4,6 @@
 # link takes its row away. The key is path:link — line numbers are not part of the key, so
 # an unrelated edit that shifts lines never reds the gate; two identical broken links in
 # one file collapse to a single entry.
-docs/guide/iceberg-guide.md:../spark-sql-iceberg-parity.md#ref-1--writing-to-a-branch-or-tag
 task/ledgers/archive/2026-08/2026-08-13-y3-getdatabase-ledger.md:../python/repark/src/repark/catalog.py
 task/ledgers/archive/2026-08/2026-08-15-occ2-conflict-batteries-ledger.md:../crates/repark-iceberg/src/write/predicate_dml_tests.rs
 task/ledgers/archive/2026-08/2026-08-15-occ2-conflict-batteries-ledger.md:../crates/repark-iceberg/src/write/predicate_dml_update_tests.rs

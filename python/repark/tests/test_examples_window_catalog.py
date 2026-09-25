@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException, UnsupportedOperationException
+from repark.errors import AnalysisException
 from repark.spark import Window
 from repark.spark import functions as F  # noqa: N812
 from repark.spark.catalog import Database
@@ -122,16 +122,22 @@ def spark_v2(tmp_path: Path) -> Iterator[ReparkSession]:
     session.stop()
 
 
-def test_writerv2_overwrite_condition_refuses(spark_v2: ReparkSession) -> None:
-    """overwrite(condition) raises; Spark overwrites the matching rows (EX-W2-1)."""
+def test_writerv2_overwrite_condition_replaces_the_matching_files(spark_v2: ReparkSession) -> None:
+    """overwrite(condition) replaces files whose rows all match, as Spark does (EX-W2-1).
+
+    One file per row, as Spark's EX-22 fixture wrote them; a file that matches only in part
+    refuses on both engines (Iceberg's row-filter overwrite).
+    """
     session = spark_v2
-    session.sql("SELECT * FROM (VALUES (1,'a'),(2,'b')) AS t(id, name)").writeTo(
+    session.sql("SELECT * FROM (VALUES (1,'a')) AS t(id, name)").writeTo(
         "local.ns.t_pin_ow"
     ).create()
-    with pytest.raises(UnsupportedOperationException, match=r"overwrite\(condition\)"):
-        session.sql("SELECT * FROM (VALUES (1,'aa')) AS t(id, name)").writeTo(
-            "local.ns.t_pin_ow"
-        ).overwrite(F.col("id") == 1)
+    session.sql("INSERT INTO local.ns.t_pin_ow VALUES (2, 'b')")
+    session.sql("SELECT * FROM (VALUES (1,'aa')) AS t(id, name)").writeTo(
+        "local.ns.t_pin_ow"
+    ).overwrite(F.col("id") == 1)
+    rows = session.sql("SELECT id, name FROM local.ns.t_pin_ow ORDER BY id").to_arrow()
+    assert rows.to_pylist() == [{"id": 1, "name": "aa"}, {"id": 2, "name": "b"}]
 
 
 def test_writerv2_overwrite_partitions_empty_commits_nothing(spark_v2: ReparkSession) -> None:

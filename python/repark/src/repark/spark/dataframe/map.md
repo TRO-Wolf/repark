@@ -637,7 +637,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - `writer_readwriter.py` owns `DataFrameWriter`, `DataFrameWriterV2`, statistics, and write
   helpers. **U7 PR2 (2026-09-24):** `DataFrameWriterV2.option` stores a `branch` or `tag` key
   like any other option (the refusal is gone); no writer reads it, so the write lands on main
-  as Spark's does (`check_lib_py.py` 1039 → 1033). pins: u7-write-df-2/C-005 **DML-B:** `overwritePartitions()` emits dynamic `INSERT OVERWRITE … PARTITION`
+  as Spark's does (`check_lib_py.py` 1039 → 1033). pins: u7-write-df-2/C-005
+  `DataFrameWriterV2.overwrite(condition)` runs `writer_schema.replace_where_statement`
+  through the temp view with the writer's options; the `UnsupportedOperationException`
+  refusal is gone (1033 → 1031). pins: u7-write-df-2/C-006 **DML-B:** `overwritePartitions()` emits dynamic `INSERT OVERWRITE … PARTITION`
   (ceiling 1117→1113). pins: dml-b-insert-overwrite/C-003, C-004
   **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** table writes emit an explicit target
   column list and pass through columns missing from the frame; the engine fills
@@ -1314,6 +1317,13 @@ and when two spellings coexist the last one set wins (runtime layer over builder
 ## IPI-19 (2026-09-20) — the schema-evolving DataFrame append
 
 - `writer_schema.py` — the by-name write shapes both writers share.
+  **U7 PR2 (2026-09-24):** `replace_where_statement` is `DataFrameWriterV2.overwrite(condition)`:
+  `INSERT INTO t REPLACE WHERE <condition> SELECT … FROM <view>`, the condition rendered by
+  `Column.sql_expr_part` (a `str` is a column name, as in PySpark; anything else raises
+  Spark's `NOT_COLUMN_OR_STR` text), the frame's columns in table order with `NULL AS <col>`
+  for a column the frame lacks, or every frame column in frame order when it carries one the
+  table lacks so the engine answers Spark's arity refusal. The overwrite itself is U8's
+  REPLACE WHERE door. pins: u7-write-df-2/C-006, C-007
   `by_name_projection` is the old refusal path, still used by the overwrite
   arms. `append_statement` is the new one: when the frame carries columns the
   table does not have, the append lowers to `INSERT INTO t BY NAME SELECT …`
