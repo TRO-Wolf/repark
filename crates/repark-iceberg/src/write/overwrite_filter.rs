@@ -21,7 +21,6 @@ const MAX_FILTER_DEPTH: usize = 64;
 
 struct Converter<'a> {
     schema: &'a Schema,
-    whole: &'a Expr,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -39,20 +38,34 @@ enum Comparison {
 enum Literal {
     Value(Datum),
     Null,
-    AboveRange,
-    BelowRange,
+    OutOfRange { above: bool, decimal: bool },
+    Fractional { floor: Datum, ceil: Datum },
+}
+
+enum Folded {
+    Leaf { predicate: Predicate, text: String },
+    Opaque(String),
+    Null,
+    FalseIfNotNull(String),
+    TrueIfNotNull(String),
+    And(Box<Folded>, Box<Folded>),
+    Or(Box<Folded>, Box<Folded>),
 }
 
 #[allow(clippy::missing_errors_doc)]
 pub fn spark_overwrite_filter(expr: &Expr, schema: &Schema) -> Result<Predicate> {
-    let converter = Converter {
-        schema,
-        whole: expr,
-    };
-    if let Some(folded) = converter.folded(expr, false, 0)? {
-        return Err(cannot_convert(folded));
+    let converter = Converter { schema };
+    let folded = converter.lower(expr, false, 0)?;
+    let mut conjuncts = Vec::new();
+    split_conjuncts(folded, &mut conjuncts);
+    let mut predicate = Predicate::AlwaysTrue;
+    for conjunct in &conjuncts {
+        let iceberg = conjunct
+            .predicate()
+            .ok_or_else(|| cannot_convert(conjunct.render()))?;
+        predicate = predicate.and(iceberg);
     }
-    converter.convert(expr, false, 0)
+    Ok(predicate)
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -110,6 +123,108 @@ fn unnest(expr: &Expr) -> &Expr {
     }
 }
 
+fn split_conjuncts(folded: Folded, out: &mut Vec<Folded>) {
+    match folded {
+        Folded::And(left, right) => {
+            split_conjuncts(*left, out);
+            split_conjuncts(*right, out);
+        }
+        Folded::FalseIfNotNull(column) => {
+            out.push(Folded::Leaf {
+                predicate: Reference::new(column.clone()).is_null(),
+                text: format!("{column} IS NULL"),
+            });
+            out.push(Folded::Null);
+        }
+        other => out.push(other),
+    }
+}
+
+impl Folded {
+    fn constant(value: bool) -> Self {
+        Self::Leaf {
+            predicate: if value {
+                Predicate::AlwaysTrue
+            } else {
+                Predicate::AlwaysFalse
+            },
+            text: value.to_string(),
+        }
+    }
+
+    fn leaf(predicate: Predicate, text: String) -> Self {
+        Self::Leaf { predicate, text }
+    }
+
+    fn constant_value(&self) -> Option<bool> {
+        match self {
+            Self::Leaf {
+                predicate: Predicate::AlwaysTrue,
+                ..
+            } => Some(true),
+            Self::Leaf {
+                predicate: Predicate::AlwaysFalse,
+                ..
+            } => Some(false),
+            _ => None,
+        }
+    }
+
+    fn and(self, other: Self) -> Self {
+        match (self.constant_value(), other.constant_value()) {
+            (Some(false), _) | (_, Some(false)) => Self::constant(false),
+            (Some(true), _) => other,
+            (_, Some(true)) => self,
+            _ => Self::And(Box::new(self), Box::new(other)),
+        }
+    }
+
+    fn or(self, other: Self) -> Self {
+        match (self.constant_value(), other.constant_value()) {
+            (Some(true), _) | (_, Some(true)) => Self::constant(true),
+            (Some(false), _) => other,
+            (_, Some(false)) => self,
+            _ => Self::Or(Box::new(self), Box::new(other)),
+        }
+    }
+
+    fn predicate(&self) -> Option<Predicate> {
+        match self {
+            Self::Leaf { predicate, .. } => Some(predicate.clone()),
+            Self::And(left, right) => Some(left.predicate()?.and(right.predicate()?)),
+            Self::Or(left, right) => Some(left.predicate()?.or(right.predicate()?)),
+            Self::Opaque(_) | Self::Null | Self::FalseIfNotNull(_) | Self::TrueIfNotNull(_) => None,
+        }
+    }
+
+    fn render(&self) -> String {
+        match self {
+            Self::Leaf { text, .. } | Self::Opaque(text) => text.clone(),
+            Self::Null => "null".to_string(),
+            Self::FalseIfNotNull(column) => format!("({column} IS NULL) AND (null)"),
+            Self::TrueIfNotNull(column) => format!("({column} IS NOT NULL) OR (null)"),
+            Self::And(left, right) => format!("({}) AND ({})", left.render(), right.render()),
+            Self::Or(left, right) => format!("({}) OR ({})", left.render(), right.render()),
+        }
+    }
+
+    fn negated(self) -> Self {
+        match self {
+            Self::Leaf { predicate, text } => match predicate {
+                Predicate::AlwaysTrue => Self::constant(false),
+                Predicate::AlwaysFalse => Self::constant(true),
+                other => Self::leaf(!other, format!("NOT ({text})")),
+            },
+            Self::Opaque(text) => Self::Opaque(format!("NOT ({text})")),
+            Self::Null => Self::Null,
+            Self::FalseIfNotNull(column) => Self::TrueIfNotNull(column),
+            Self::TrueIfNotNull(column) => Self::FalseIfNotNull(column),
+            Self::And(left, right) => left.negated().or(right.negated()),
+            Self::Or(left, right) => left.negated().and(right.negated()),
+        }
+    }
+}
+
 impl Comparison {
     fn of(op: &BinaryOperator) -> Option<Self> {
         match op {
@@ -147,127 +262,89 @@ impl Comparison {
         }
     }
 
-    fn holds_for_every_value(self, literal: &Literal) -> bool {
-        match literal {
-            Literal::AboveRange => matches!(self, Self::Lt | Self::LtEq | Self::NotEq),
-            Literal::BelowRange => matches!(self, Self::Gt | Self::GtEq | Self::NotEq),
-            Literal::Value(_) | Literal::Null => false,
+    fn symbol(self) -> &'static str {
+        match self {
+            Self::Eq => "=",
+            Self::NotEq => "<>",
+            Self::Lt => "<",
+            Self::LtEq => "<=",
+            Self::Gt => ">",
+            Self::GtEq => ">=",
+            Self::NullSafe | Self::NotNullSafe => "<=>",
+        }
+    }
+
+    fn holds_for_every_value_below(self, above: bool) -> bool {
+        if above {
+            matches!(self, Self::Lt | Self::LtEq | Self::NotEq)
+        } else {
+            matches!(self, Self::Gt | Self::GtEq | Self::NotEq)
         }
     }
 }
 
 impl Converter<'_> {
-    fn refuse(&self) -> DataFusionError {
-        cannot_convert(self.whole)
-    }
-
-    fn folded(&self, expr: &Expr, negated: bool, depth: usize) -> Result<Option<String>> {
+    fn lower(&self, expr: &Expr, negated: bool, depth: usize) -> Result<Folded> {
+        let opaque = || {
+            Folded::Opaque(if negated {
+                format!("NOT ({expr})")
+            } else {
+                expr.to_string()
+            })
+        };
         if depth >= MAX_FILTER_DEPTH {
-            return Ok(None);
+            return Ok(opaque());
         }
         match expr {
-            Expr::Nested(inner) => self.folded(inner, negated, depth + 1),
-            Expr::UnaryOp {
-                op: UnaryOperator::Not,
-                expr: inner,
-            } => self.folded(inner, !negated, depth + 1),
-            Expr::BinaryOp { left, op, right } => {
-                let Some(comparison) = Comparison::of(op) else {
-                    return Ok(None);
-                };
-                let comparison = if negated {
-                    comparison.negated()
-                } else {
-                    comparison
-                };
-                let Some((field, literal, comparison)) = self.operands(left, comparison, right)?
-                else {
-                    return Ok(None);
-                };
-                Ok(match self.literal(literal, &field)? {
-                    Literal::Null
-                        if !matches!(
-                            comparison,
-                            Comparison::NullSafe | Comparison::NotNullSafe
-                        ) =>
-                    {
-                        Some("null".to_string())
-                    }
-                    bound @ (Literal::AboveRange | Literal::BelowRange) => {
-                        Some(if comparison.holds_for_every_value(&bound) {
-                            format!("({} IS NOT NULL) OR (null)", field.name)
-                        } else {
-                            "null".to_string()
-                        })
-                    }
-                    _ => None,
-                })
-            }
-            Expr::InList {
-                expr: inner,
-                list,
-                negated: listed_negated,
-            } if !(negated ^ *listed_negated) => {
-                let Some(field) = self.column_of(inner)? else {
-                    return Ok(None);
-                };
-                let mut out_of_range = true;
-                for item in list {
-                    out_of_range &= matches!(
-                        self.literal(item, &field)?,
-                        Literal::AboveRange | Literal::BelowRange
-                    );
-                }
-                Ok(out_of_range.then(|| "null".to_string()))
-            }
-            _ => Ok(None),
-        }
-    }
-
-    fn convert(&self, expr: &Expr, negated: bool, depth: usize) -> Result<Predicate> {
-        if depth >= MAX_FILTER_DEPTH {
-            return Err(self.refuse());
-        }
-        match expr {
-            Expr::Nested(inner) => self.convert(inner, negated, depth + 1),
+            Expr::Nested(inner) => self.lower(inner, negated, depth + 1),
             Expr::Value(ValueWithSpan {
                 value: Value::Boolean(flag),
                 ..
-            }) => Ok(if *flag ^ negated {
-                Predicate::AlwaysTrue
-            } else {
-                Predicate::AlwaysFalse
-            }),
+            }) => Ok(Folded::constant(*flag ^ negated)),
+            Expr::Value(ValueWithSpan {
+                value: Value::Null, ..
+            }) => Ok(Folded::Null),
             Expr::UnaryOp {
                 op: UnaryOperator::Not,
                 expr: inner,
-            } => self.convert(inner, !negated, depth + 1),
+            } => self.lower(inner, !negated, depth + 1),
             Expr::IsNull(inner) | Expr::IsNotNull(inner) => {
-                let reference = Reference::new(self.column(inner)?.name.clone());
+                let Some(field) = self.column_of(inner)? else {
+                    return Ok(opaque());
+                };
+                let reference = Reference::new(field.name.clone());
                 Ok(if matches!(expr, Expr::IsNull(_)) ^ negated {
-                    reference.is_null()
+                    Folded::leaf(reference.is_null(), format!("{} IS NULL", field.name))
                 } else {
-                    reference.is_not_null()
+                    Folded::leaf(
+                        reference.is_not_null(),
+                        format!("{} IS NOT NULL", field.name),
+                    )
                 })
             }
             Expr::InList {
                 expr: inner,
                 list,
                 negated: listed_negated,
-            } => self.in_list(inner, list, *listed_negated ^ negated),
+            } => Ok(self
+                .in_list(inner, list, *listed_negated ^ negated)?
+                .unwrap_or_else(opaque)),
             Expr::Between {
                 expr: inner,
                 negated: listed_negated,
                 low,
                 high,
             } => {
-                if *listed_negated ^ negated {
-                    let below = self.comparison(inner, Comparison::Lt, low)?;
-                    Ok(below.or(self.comparison(inner, Comparison::Gt, high)?))
+                let folded = if *listed_negated ^ negated {
+                    self.comparison(inner, Comparison::Lt, low)?
+                        .zip(self.comparison(inner, Comparison::Gt, high)?)
+                        .map(|(below, above)| below.or(above))
                 } else {
-                    let above = self.comparison(inner, Comparison::GtEq, low)?;
-                    Ok(above.and(self.comparison(inner, Comparison::LtEq, high)?))
-                }
+                    self.comparison(inner, Comparison::GtEq, low)?
+                        .zip(self.comparison(inner, Comparison::LtEq, high)?)
+                        .map(|(above, below)| above.and(below))
+                };
+                Ok(folded.unwrap_or_else(opaque))
             }
             Expr::Like {
                 negated: listed_negated,
@@ -275,18 +352,15 @@ impl Converter<'_> {
                 expr: inner,
                 pattern,
                 escape_char: None,
-            } => {
-                let like = self.like(inner, pattern)?;
-                Ok(if *listed_negated ^ negated {
-                    !like
-                } else {
-                    like
-                })
-            }
+            } => Ok(match self.like(inner, pattern)? {
+                Some(like) if *listed_negated ^ negated => like.negated(),
+                Some(like) => like,
+                None => opaque(),
+            }),
             Expr::BinaryOp { left, op, right } => match op {
                 BinaryOperator::And | BinaryOperator::Or => {
-                    let left = self.convert(left, negated, depth + 1)?;
-                    let right = self.convert(right, negated, depth + 1)?;
+                    let left = self.lower(left, negated, depth + 1)?;
+                    let right = self.lower(right, negated, depth + 1)?;
                     Ok(if matches!(op, BinaryOperator::And) ^ negated {
                         left.and(right)
                     } else {
@@ -294,21 +368,21 @@ impl Converter<'_> {
                     })
                 }
                 _ => {
-                    let comparison = Comparison::of(op).ok_or_else(|| self.refuse())?;
+                    let Some(comparison) = Comparison::of(op) else {
+                        return Ok(opaque());
+                    };
                     let comparison = if negated {
                         comparison.negated()
                     } else {
                         comparison
                     };
-                    self.comparison(left, comparison, right)
+                    Ok(self
+                        .comparison(left, comparison, right)?
+                        .unwrap_or_else(opaque))
                 }
             },
-            _ => Err(self.refuse()),
+            _ => Ok(opaque()),
         }
-    }
-
-    fn column(&self, expr: &Expr) -> Result<NestedFieldRef> {
-        self.column_of(expr)?.ok_or_else(|| self.refuse())
     }
 
     fn column_of(&self, expr: &Expr) -> Result<Option<NestedFieldRef>> {
@@ -317,10 +391,10 @@ impl Converter<'_> {
         };
         let fields = self.schema.as_struct().fields();
         if let Some(field) = fields.iter().find(|field| field.name == ident.value) {
-            return match field.field_type.as_ref() {
-                Type::Primitive(_) => Ok(Some(Arc::clone(field))),
-                _ => Err(self.refuse()),
-            };
+            return Ok(match field.field_type.as_ref() {
+                Type::Primitive(_) => Some(Arc::clone(field)),
+                _ => None,
+            });
         }
         if fields
             .iter()
@@ -328,7 +402,7 @@ impl Converter<'_> {
         {
             return Err(missing_field(ident, self.schema));
         }
-        Err(self.refuse())
+        Ok(None)
     }
 
     fn operands<'e>(
@@ -345,99 +419,190 @@ impl Converter<'_> {
             .map(|field| (field, left, comparison.mirrored())))
     }
 
-    fn comparison(&self, left: &Expr, comparison: Comparison, right: &Expr) -> Result<Predicate> {
-        let (field, literal, comparison) = self
-            .operands(left, comparison, right)?
-            .ok_or_else(|| self.refuse())?;
-        let reference = Reference::new(field.name.clone());
-        let datum = match self.literal(literal, &field)? {
-            Literal::Value(datum) => datum,
-            Literal::Null => {
-                return match comparison {
-                    Comparison::NullSafe => Ok(reference.is_null()),
-                    Comparison::NotNullSafe => Ok(reference.is_not_null()),
-                    _ => Err(self.refuse()),
-                };
-            }
-            Literal::AboveRange | Literal::BelowRange => return Err(self.refuse()),
+    fn comparison(
+        &self,
+        left: &Expr,
+        comparison: Comparison,
+        right: &Expr,
+    ) -> Result<Option<Folded>> {
+        let Some((field, literal, comparison)) = self.operands(left, comparison, right)? else {
+            return Ok(None);
         };
-        Ok(match comparison {
-            Comparison::Eq | Comparison::NullSafe => reference.equal_to(datum),
-            Comparison::NotEq | Comparison::NotNullSafe => !reference.equal_to(datum),
-            Comparison::Lt => reference
-                .clone()
-                .is_not_null()
-                .and(reference.less_than(datum)),
-            Comparison::LtEq => reference
-                .clone()
-                .is_not_null()
-                .and(reference.less_than_or_equal_to(datum)),
-            Comparison::Gt => reference.greater_than(datum),
-            Comparison::GtEq => reference.greater_than_or_equal_to(datum),
-        })
-    }
-
-    fn in_list(&self, inner: &Expr, list: &[Expr], negated: bool) -> Result<Predicate> {
-        let field = self.column(inner)?;
-        let mut values: Vec<Datum> = Vec::with_capacity(list.len());
-        let mut has_null = false;
-        for item in list {
-            match self.literal(item, &field)? {
-                Literal::Value(datum) => {
-                    if !values.contains(&datum) {
-                        values.push(datum);
+        let Some(literal_value) = Self::literal(literal, &field) else {
+            return Ok(None);
+        };
+        let name = field.name.clone();
+        let reference = Reference::new(name.clone());
+        let text = |value: &dyn std::fmt::Display, comparison: Comparison| {
+            format!("{name} {} {value}", comparison.symbol())
+        };
+        Ok(Some(match literal_value {
+            Literal::Null => match comparison {
+                Comparison::NullSafe => {
+                    Folded::leaf(reference.is_null(), format!("{name} IS NULL"))
+                }
+                Comparison::NotNullSafe => {
+                    Folded::leaf(reference.is_not_null(), format!("{name} IS NOT NULL"))
+                }
+                _ => Folded::Null,
+            },
+            Literal::OutOfRange { above, decimal } => match comparison {
+                Comparison::NullSafe => Folded::constant(false),
+                Comparison::NotNullSafe => Folded::constant(true),
+                Comparison::Eq => Folded::FalseIfNotNull(name),
+                Comparison::NotEq => Folded::TrueIfNotNull(name),
+                range => {
+                    let holds = range.holds_for_every_value_below(above);
+                    match (decimal, holds) {
+                        (true, holds) => Folded::constant(holds),
+                        (false, true) => Folded::TrueIfNotNull(name),
+                        (false, false) => Folded::FalseIfNotNull(name),
                     }
                 }
-                Literal::Null => has_null = true,
-                Literal::AboveRange | Literal::BelowRange => {}
+            },
+            Literal::Fractional { floor, ceil } => match comparison {
+                Comparison::NullSafe => Folded::constant(false),
+                Comparison::NotNullSafe => Folded::constant(true),
+                Comparison::Eq => Folded::FalseIfNotNull(name),
+                Comparison::NotEq => Folded::TrueIfNotNull(name),
+                Comparison::Lt | Comparison::LtEq => Folded::leaf(
+                    reference
+                        .clone()
+                        .is_not_null()
+                        .and(reference.less_than_or_equal_to(floor.clone())),
+                    text(&floor, Comparison::LtEq),
+                ),
+                Comparison::Gt | Comparison::GtEq => Folded::leaf(
+                    reference.greater_than_or_equal_to(ceil.clone()),
+                    text(&ceil, Comparison::GtEq),
+                ),
+            },
+            Literal::Value(datum) => {
+                let rendered = text(literal, comparison);
+                match comparison {
+                    Comparison::Eq | Comparison::NullSafe => {
+                        Folded::leaf(reference.equal_to(datum), text(literal, Comparison::Eq))
+                    }
+                    Comparison::NotEq | Comparison::NotNullSafe => Folded::leaf(
+                        !reference.equal_to(datum),
+                        format!("NOT ({})", text(literal, Comparison::Eq)),
+                    ),
+                    Comparison::Lt => Folded::leaf(
+                        reference
+                            .clone()
+                            .is_not_null()
+                            .and(reference.less_than(datum)),
+                        rendered,
+                    ),
+                    Comparison::LtEq => Folded::leaf(
+                        reference
+                            .clone()
+                            .is_not_null()
+                            .and(reference.less_than_or_equal_to(datum)),
+                        rendered,
+                    ),
+                    Comparison::Gt => Folded::leaf(reference.greater_than(datum), rendered),
+                    Comparison::GtEq => {
+                        Folded::leaf(reference.greater_than_or_equal_to(datum), rendered)
+                    }
+                }
             }
-        }
-        let reference = Reference::new(field.name.clone());
-        match (values.len(), has_null) {
-            (0, _) => Err(self.refuse()),
-            (1, false) => {
-                let equal = reference.equal_to(values.remove(0));
-                Ok(if negated { !equal } else { equal })
-            }
-            _ if negated => Ok(reference
-                .clone()
-                .is_not_null()
-                .and(reference.is_not_in(values))),
-            _ => Ok(reference.is_in(values)),
-        }
+        }))
     }
 
-    fn like(&self, inner: &Expr, pattern: &Expr) -> Result<Predicate> {
-        let field = self.column(inner)?;
+    fn in_list(&self, inner: &Expr, list: &[Expr], negated: bool) -> Result<Option<Folded>> {
+        let Some(field) = self.column_of(inner)? else {
+            return Ok(None);
+        };
+        let mut values: Vec<(Datum, &Expr)> = Vec::with_capacity(list.len());
+        let mut has_null = false;
+        for item in list {
+            match Self::literal(item, &field) {
+                Some(Literal::Value(datum)) => {
+                    if !values.iter().any(|(seen, _)| *seen == datum) {
+                        values.push((datum, item));
+                    }
+                }
+                Some(Literal::Null) => has_null = true,
+                Some(Literal::OutOfRange { .. } | Literal::Fractional { .. }) => {}
+                None => return Ok(None),
+            }
+        }
+        let name = field.name.clone();
+        let reference = Reference::new(name.clone());
+        let folded = match (values.len(), has_null) {
+            (0, true) => Folded::Null,
+            (0, false) => {
+                let unreachable = Folded::FalseIfNotNull(name);
+                return Ok(Some(if negated {
+                    unreachable.negated()
+                } else {
+                    unreachable
+                }));
+            }
+            (1, false) => {
+                let (datum, item) = values.remove(0);
+                Folded::leaf(reference.equal_to(datum), format!("{name} = {item}"))
+            }
+            _ => {
+                let items = values
+                    .iter()
+                    .map(|(_, item)| item.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                let datums: Vec<Datum> = values.into_iter().map(|(datum, _)| datum).collect();
+                if negated {
+                    return Ok(Some(Folded::leaf(
+                        reference
+                            .clone()
+                            .is_not_null()
+                            .and(reference.is_not_in(datums)),
+                        format!("NOT ({name} IN ({items}))"),
+                    )));
+                }
+                Folded::leaf(reference.is_in(datums), format!("{name} IN ({items})"))
+            }
+        };
+        Ok(Some(if negated { folded.negated() } else { folded }))
+    }
+
+    fn like(&self, inner: &Expr, pattern: &Expr) -> Result<Option<Folded>> {
+        let Some(field) = self.column_of(inner)? else {
+            return Ok(None);
+        };
         if !matches!(
             field.field_type.as_ref(),
             Type::Primitive(PrimitiveType::String)
         ) {
-            return Err(self.refuse());
+            return Ok(None);
         }
         let Expr::Value(ValueWithSpan {
             value: Value::SingleQuotedString(text) | Value::DoubleQuotedString(text),
             ..
         }) = unnest(pattern)
         else {
-            return Err(self.refuse());
+            return Ok(None);
         };
         let reference = Reference::new(field.name.clone());
         let wildcard = |text: &str| text.contains(['%', '_', '\\']);
         if !wildcard(text) {
-            return Ok(reference.equal_to(Datum::string(text)));
+            return Ok(Some(Folded::leaf(
+                reference.equal_to(Datum::string(text)),
+                format!("{} = {pattern}", field.name),
+            )));
         }
-        match text.strip_suffix('%') {
-            Some(prefix) if !prefix.is_empty() && !wildcard(prefix) => {
-                Ok(reference.starts_with(Datum::string(prefix)))
-            }
-            _ => Err(self.refuse()),
-        }
+        Ok(match text.strip_suffix('%') {
+            Some(prefix) if !prefix.is_empty() && !wildcard(prefix) => Some(Folded::leaf(
+                reference.starts_with(Datum::string(prefix)),
+                format!("{} LIKE {pattern}", field.name),
+            )),
+            _ => None,
+        })
     }
 
-    fn literal(&self, expr: &Expr, field: &NestedFieldRef) -> Result<Literal> {
+    fn literal(expr: &Expr, field: &NestedFieldRef) -> Option<Literal> {
         let Type::Primitive(primitive) = field.field_type.as_ref() else {
-            return Err(self.refuse());
+            return None;
         };
         match unnest(expr) {
             Expr::Value(ValueWithSpan {
@@ -475,7 +640,6 @@ impl Converter<'_> {
             }
             _ => None,
         }
-        .ok_or_else(|| self.refuse())
     }
 }
 
@@ -483,19 +647,54 @@ fn number_literal(raw: &str, primitive: &PrimitiveType) -> Option<Literal> {
     if let Some(datum) = number_datum(raw, primitive) {
         return Some(Literal::Value(datum));
     }
-    let whole = match primitive {
-        PrimitiveType::Int | PrimitiveType::Long => integral_text(raw)?,
-        _ => return None,
-    };
-    let digits = whole.strip_prefix('-').unwrap_or(whole);
-    if digits.is_empty() || !digits.bytes().all(|byte| byte.is_ascii_digit()) {
+    if !matches!(primitive, PrimitiveType::Int | PrimitiveType::Long) {
         return None;
     }
-    Some(if whole.starts_with('-') {
-        Literal::BelowRange
-    } else {
-        Literal::AboveRange
-    })
+    let negative = raw.starts_with('-');
+    let unsigned = raw.strip_prefix('-').unwrap_or(raw);
+    let (whole, fraction) = unsigned.split_once('.').unwrap_or((unsigned, ""));
+    let digits = |part: &str| part.bytes().all(|byte| byte.is_ascii_digit());
+    if whole.is_empty() || !digits(whole) || !digits(fraction) {
+        return None;
+    }
+    let out_of_range = |decimal: bool| Literal::OutOfRange {
+        above: !negative,
+        decimal,
+    };
+    let Ok(magnitude) = whole.parse::<i128>() else {
+        return Some(out_of_range(true));
+    };
+    let truncated = if negative { -magnitude } else { magnitude };
+    let (low, high) = match primitive {
+        PrimitiveType::Int => (i128::from(i32::MIN), i128::from(i32::MAX)),
+        _ => (i128::from(i64::MIN), i128::from(i64::MAX)),
+    };
+    let is_decimal = !fraction.is_empty()
+        || truncated < i128::from(i64::MIN)
+        || truncated > i128::from(i64::MAX);
+    if fraction.bytes().any(|byte| byte != b'0') {
+        let (floor, ceil) = if negative {
+            (truncated - 1, truncated)
+        } else {
+            (truncated, truncated + 1)
+        };
+        if floor < low || ceil > high {
+            return Some(out_of_range(true));
+        }
+        return Some(Literal::Fractional {
+            floor: integer_datum(floor, primitive)?,
+            ceil: integer_datum(ceil, primitive)?,
+        });
+    }
+    Some(out_of_range(is_decimal))
+}
+
+fn integer_datum(value: i128, primitive: &PrimitiveType) -> Option<Datum> {
+    match primitive {
+        PrimitiveType::Int => i32::try_from(value).ok().map(Datum::int),
+        PrimitiveType::Long => i64::try_from(value).ok().map(Datum::long),
+        _ => None,
+    }
 }
 
 fn number_datum(raw: &str, primitive: &PrimitiveType) -> Option<Datum> {

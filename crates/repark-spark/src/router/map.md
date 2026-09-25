@@ -20,7 +20,8 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   projection item whose DataFusion name repeats an earlier one (`__repark_col_<n>`; a cast
   keeps its input's name) in every top-level `SELECT` of the source, because a positional
   write never reads the names, then hands the statement to the PARTITION rewrite.
-  `PreparedInsert.owned_append` tells the router to commit through the owned append. Its two
+  `PreparedInsert.owned_append` tells the router to commit through the owned append. Round 3
+  (2026-09-25): it hands the raw source to the PARTITION rewrite for arity naming. Its two
   children are in [insert_positional/](insert_positional/map.md).
   pins: u8-write-sql/C-011
 

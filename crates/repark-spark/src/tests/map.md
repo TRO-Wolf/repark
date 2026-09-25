@@ -2173,7 +2173,14 @@ table, four files). `overwrite_mode.rs` re-pins
 `CAST_INVALID_INPUT` text. pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-006, C-007,
 C-008, C-009, C-010, C-011, C-012
 
-U8 WRITE-SQL PR1 round 2 (2026-09-25, critic r1): `replace_where_nulls.rs` pins REPLACE WHERE
-over a NULL partition key — 49 predicates on a NULL `cat` key and 7 on a NULL `id` key, each
-row set generated from Spark's measured rows (`target/probe-u8-r1fix/spark_r1.json`) — plus the
-repeated-name sources and the missing-namespace refusal. pins: u8-write-sql/C-015, C-016, C-018
+U8 WRITE-SQL PR1 round 3 (2026-09-25, critic r2): `replace_where_oracle.rs` replays the Spark
+measurements committed in
+[`python/repark/tests/u8_write_sql_spark_oracle.json`](../../../../python/repark/tests/u8_write_sql_spark_oracle.json)
+(read with `include_str!`) on the router door: it creates each case's table, runs its
+statements, and compares the rows and the outcome (the `Cannot convert …` text and the arity
+texts by equality; the R-1 Iceberg validation refusals by their message core). The Spark-bug
+keys (R-8) are skipped and the R-2 spelling keys compare class only. It replaces round 2's
+transcribed `NULL_CAT_CASES` / `NULL_ID_CASES`. `replace_where_sources.rs` (was
+`replace_where_nulls.rs`) keeps the repeated-name sources, the full missing-namespace text and
+the Rust-door non-Iceberg-target text. pins: u8-write-sql/C-015, C-016, C-017, C-018, C-019,
+C-020, C-021

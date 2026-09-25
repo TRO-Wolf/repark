@@ -22,8 +22,9 @@ Rewrite or execute the INSERT forms the stock parser cannot model on the Spark d
   `commit_overwrite_by_filter_with_summary`; a literal `false` commits an append, as Spark's
   optimizer does. A missing target answers `TABLE_OR_VIEW_NOT_FOUND`, also when its namespace
   does not exist (round 2, 2026-09-25). The width check plans the deduplicated source, so a
-  source whose output names repeat writes (critic r1 V-003).
-  pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-016, C-018
+  source whose output names repeat writes (critic r1 V-003); the refusal names the columns
+  from the raw source, so no dedup alias reaches the text (round 3, critic r2 V-004).
+  pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-016, C-018, C-021
 - `partition_append.rs` — `INSERT INTO … PARTITION (…)` becomes a plain positional INSERT.
   Static values (Spark's string form, checked by an Arrow cast with `safe: false`,
   `CAST_INVALID_INPUT` on failure) go in at their table positions (or after a column list),
@@ -32,7 +33,9 @@ Rewrite or execute the INSERT forms the stock parser cannot model on the Spark d
   A repeated key refuses `DUPLICATE_KEY` as a parser error, on `INSERT OVERWRITE` too, and an
   overwrite's static values get the same cast check before `insert_overwrite.rs` runs.
   `sql_has_partition_append` marks the statement as an owned write head;
-  `refuse_positional_arity` is shared with `replace_where.rs`.
+  `refuse_positional_arity` is shared with `replace_where.rs`; it plans one source and names
+  the columns from another (the raw source), and `rewrite_partition_clause` takes the raw
+  source for the same reason (round 3).
   pins: u8-write-sql/C-006, C-007, C-008, C-009
 
 ## Pointers

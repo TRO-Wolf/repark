@@ -1,7 +1,7 @@
 # map — repark-iceberg/src/write/overwrite_filter
 
 U8 WRITE-SQL PR1 (2026-09-24): the pins of Spark's overwrite-by-filter kernel.
-pins: u8-write-sql/C-003, C-004, C-013, C-015, C-017
+pins: u8-write-sql/C-003, C-004, C-013, C-015, C-017, C-019, C-020
 
 ## Purpose
 
@@ -18,7 +18,9 @@ Tests for [`overwrite_filter.rs`](../overwrite_filter.rs), which declares `#[cfg
   `delete` on a seeded and on an unsnapshotted table, and a partial file match that refuses
   before any commit. Round 2 (2026-09-25): the `<`/`<=` `notNull` conjunct, the `NOT`
   push-down table, the one-element `IN` fold (the `notNull AND notIn` shape is pinned on a
-  two-element list), and the out-of-range integer folds.
+  two-element list), and the out-of-range integer folds. Round 3 (2026-09-25): the conjunct-split
+  refusal texts, the `<=>` / beyond-i64 constants, and fractional rounding, each case taken
+  from `python/repark/tests/u8_write_sql_spark_oracle.json`.
 
 ## Pointers
 

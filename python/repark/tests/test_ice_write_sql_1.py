@@ -1,24 +1,27 @@
 """U8 WRITE-SQL PR1 — REPLACE WHERE, the INSERT PARTITION clause, and bucketed INSERT.
 
-Oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, measured on 2026-09-24 by
-``target/probe-u8-pr1/probe.py`` (``spark.json``: RW-*, PC-*, BK-*), ``probe2.py``
-(``spark2.json``: RW2-*, PC2-*), ``probe3.py`` (``spark3.json``) and ``probe4.py``
-(``spark4.json``), plus the scoreboard record of the cells ``W-INSERT-OVERWRITE-WHERE``,
-``W-INSERT-PARTITION-CLAUSE`` and ``W-INSERT-BUCKETED``.
+Oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, measured on 2026-09-24
+(``pr1/RW-*``, ``pr1/PC-*``, ``pr1/BK-*``, ``pr1/RW2-*``, ``pr1/PC2-*``..``pr1/PC4-*`` in
+``u8_write_sql_spark_oracle.json``) plus the scoreboard record of the cells
+``W-INSERT-OVERWRITE-WHERE``, ``W-INSERT-PARTITION-CLAUSE`` and ``W-INSERT-BUCKETED``.
 
 Every expected value below is Spark's recorded answer, not a RePark derivation. Where the
 exception class or the rendering differs, the pin says so and the ledger names the residue.
 
-The round-2 pins (C-015..C-017) come from ``target/probe-u8-r1fix/probe_r1.py``
-(``spark_r1.json``: S1-* over a NULL ``cat`` key, S3-* over a NULL ``id`` key, S4-* on an INT
-key, S5-* repeated source names) and the critic's ``probe_xr.py`` / ``probe_xn.py``.
+Every measurement is committed in ``u8_write_sql_spark_oracle.json`` beside this file (its
+``provenance`` block names the probes; keys ``pr1/…`` hold the 2026-09-24 probes cited below).
+The rounds-2 and -3 pins (C-015..C-017, C-019..C-021) replay that file case by case:
+``r1/…`` (NULL ``cat`` / ``id`` keys, INT keys, repeated source names), ``r2/…`` and
+``r2b/…`` (the critic's r2 probes) and ``r2fix/…`` (BIGINT and fractional literals,
+``<=>``, the conjunct-split refusal texts, repeated-name arity texts, the WAP branch).
 
 pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
-C-011, C-012, C-014, C-015, C-016, C-017
+C-011, C-012, C-014, C-015, C-016, C-017, C-019, C-020, C-021
 """
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -762,98 +765,97 @@ def test_near_misses_keep_their_answers(spark: ReparkSession) -> None:
     assert _rows(spark, table) == [[9, "z", "x"]]
 
 
-NULL_KEY_ROW = [4, "n", None]
-
-
-@pytest.mark.parametrize(
-    ("predicate", "rows"),
-    [
-        ("cat < 'y'", [[2, "b", "y"], NULL_KEY_ROW, [9, "z", "x"]]),
-        ("cat <= 'x'", [[2, "b", "y"], NULL_KEY_ROW, [9, "z", "x"]]),
-        ("'y' > cat", [[2, "b", "y"], NULL_KEY_ROW, [9, "z", "x"]]),
-        ("cat NOT BETWEEN 'y' AND 'z'", [[2, "b", "y"], NULL_KEY_ROW, [9, "z", "x"]]),
-        ("NOT (cat BETWEEN 'y' AND 'z')", [[2, "b", "y"], NULL_KEY_ROW, [9, "z", "x"]]),
-        ("NOT cat >= 'y'", [[2, "b", "y"], NULL_KEY_ROW, [9, "z", "x"]]),
-        ("NOT cat < 'y'", [[1, "a", "x"], [3, "c", "x"], NULL_KEY_ROW, [9, "z", "x"]]),
-        ("cat > 'a'", [NULL_KEY_ROW, [9, "z", "x"]]),
-        ("cat NOT IN ('y')", [[2, "b", "y"], [9, "z", "x"]]),
-        ("NOT cat IN ('y')", [[2, "b", "y"], [9, "z", "x"]]),
-        ("cat NOT IN ('y', 'y')", [[2, "b", "y"], [9, "z", "x"]]),
-        ("cat NOT IN ('y', 'q')", [[2, "b", "y"], NULL_KEY_ROW, [9, "z", "x"]]),
-        ("cat NOT IN ('y', NULL)", [[2, "b", "y"], NULL_KEY_ROW, [9, "z", "x"]]),
-        ("cat <> 'x'", [[1, "a", "x"], [3, "c", "x"], [9, "z", "x"]]),
-        ("cat IN ('x', NULL)", [[2, "b", "y"], NULL_KEY_ROW, [9, "z", "x"]]),
-        ("cat < 'b' OR cat = 'x'", [[2, "b", "y"], NULL_KEY_ROW, [9, "z", "x"]]),
-        ("NOT (cat = 'x' AND cat IN ('y'))", [[9, "z", "x"]]),
-        ("cat IS NULL", [[1, "a", "x"], [2, "b", "y"], [3, "c", "x"], [9, "z", "x"]]),
-    ],
+ORACLE = json.loads(
+    (Path(__file__).resolve().parent / "u8_write_sql_spark_oracle.json").read_text()
+)["cases"]
+REPLAYED = (
+    "r1/S1-",
+    "r1/S2-",
+    "r1/S3-",
+    "r1/S4-",
+    "r1/S5-",
+    "r2/C-",
+    "r2/I-",
+    "r2/O-",
+    "r2/A-",
+    "r2b/O-",
+    "r2fix/L-",
+    "r2fix/IN-",
+    "r2fix/SM-",
+    "r2fix/IO-",
+    "r2fix/QI-",
+    "r2fix/Q-",
+    "r2fix/CN-",
+    "r2fix/P-",
+    "r2fix/W-",
 )
-def test_a_null_partition_key_is_kept_or_replaced_as_spark_does(
-    spark: ReparkSession, predicate: str, rows: list[list[Any]]
-) -> None:
-    """pins: u8-write-sql/C-015"""
-    table = _create(spark, "nullkey")
-    spark.sql(f"INSERT INTO {table} VALUES (4, 'n', NULL)")
-    spark.sql(f"INSERT INTO {table} REPLACE WHERE {predicate} SELECT 9, 'z', 'x'")
-    assert _rows(spark, table) == sorted(rows, key=repr)
-
-
-def test_a_null_long_key_is_kept_under_a_range_predicate(spark: ReparkSession) -> None:
-    """pins: u8-write-sql/C-015"""
-    table = _create(spark, "nullid", "PARTITIONED BY (id)")
-    spark.sql(f"INSERT INTO {table} VALUES (NULL, 'n', 'w')")
-    spark.sql(f"INSERT INTO {table} REPLACE WHERE id < 3 SELECT 9, 'z', 'x'")
-    assert _rows(spark, table) == sorted([[3, "c", "x"], [9, "z", "x"], [None, "n", "w"]], key=repr)
-
-
-@pytest.mark.parametrize(
-    ("source", "rows"),
-    [
-        (
-            "SELECT id, CAST(id AS STRING), 'x' FROM {t} WHERE cat = 'x'",
-            [[1, "1", "x"], [2, "b", "y"], [3, "3", "x"]],
-        ),
-        ("SELECT 9 AS a, 'z' AS a, 'x'", [[2, "b", "y"], [9, "z", "x"]]),
-        (
-            "SELECT 9 AS a, 'z' AS a, 'x' UNION ALL SELECT 10, 'w', 'x'",
-            [[10, "w", "x"], [2, "b", "y"], [9, "z", "x"]],
-        ),
-    ],
+SPARK_BUG = ("r1/S1-notlike", "r2/C-not-like")
+SPELLING = (
+    "r2fix/Q-and-upper",
+    "r2fix/Q-upper-and-arith",
+    "r2fix/Q-upper-or",
+    "r2fix/Q-not-upper-and",
+    "r2fix/Q-and-or-arith",
+    "r2fix/Q-like-suffix-and",
 )
-def test_a_replace_where_source_with_repeated_names_writes(
-    spark: ReparkSession, source: str, rows: list[list[Any]]
-) -> None:
-    """pins: u8-write-sql/C-016"""
-    table = _create(spark, "dupnames")
-    spark.sql(f"INSERT INTO {table} REPLACE WHERE cat = 'x' {source.format(t=table)}")
-    assert _rows(spark, table) == rows
+TYPES = {
+    "IllegalArgumentException": IllegalArgumentException,
+    "AnalysisException": AnalysisException,
+    "ParseException": ParseException,
+}
 
 
-@pytest.mark.parametrize(
-    ("predicate", "rendered"),
-    [
-        ("i = 3000000000", "null"),
-        ("i > 3000000000", "null"),
-        ("i IN (3000000000)", "null"),
-        ("i <= -3000000000", "null"),
-        ("i < 3000000000", "(i IS NOT NULL) OR (null)"),
-        ("i <> 3000000000", "(i IS NOT NULL) OR (null)"),
-    ],
-)
-def test_an_out_of_range_integer_literal_refuses_as_spark_folds_it(
-    spark: ReparkSession, predicate: str, rendered: str
+def _replayed_keys() -> list[str]:
+    """Return the oracle cases this file replays, in fixture order."""
+    return [key for key in ORACLE if key.startswith(REPLAYED) and key not in SPARK_BUG]
+
+
+def _normalized(message: str, table: str) -> str:
+    """Drop the planner prefix and spell the target as the oracle does."""
+    ticked = ".".join(f"`{part}`" for part in table.split("."))
+    return message.removeprefix("Error during planning: ").replace(ticked, "`sc`.`ns`.`<t>`")
+
+
+def _assert_refusal(key: str, error: Exception, spark: dict[str, Any], table: str) -> None:
+    """Compare one RePark refusal with Spark's measured refusal for ``key``."""
+    message = _normalized(str(error), table)
+    if spark["type"] == "Py4JJavaError":
+        assert isinstance(error, PySparkException), key
+        assert (
+            "Cannot delete file where some, but not all, rows match filter" in message
+            or "Cannot find field" in message
+        ), (key, message)
+        return
+    assert isinstance(error, TYPES[spark["type"]]), (key, type(error))
+    assert error.getCondition() == spark["condition"], key
+    assert error.getSqlState() == spark["sqlstate"], key
+    if key not in SPELLING:
+        assert message == spark["message"], key
+
+
+@pytest.mark.parametrize("key", _replayed_keys())
+def test_the_replace_where_measurements_replay_as_spark_answered(
+    spark: ReparkSession, key: str
 ) -> None:
-    """pins: u8-write-sql/C-017"""
-    table = _create(
-        spark, "intkey", "PARTITIONED BY (i)", seeded=False, columns="i INT, data STRING"
+    """pins: u8-write-sql/C-015, C-016, C-017, C-019, C-020, C-021"""
+    case = ORACLE[key]
+    table = f"{NS}.oracle"
+    spark.sql(
+        f"CREATE TABLE {table} ({case['columns']}) USING iceberg {case['partitioned_by'] or ''} "
+        "TBLPROPERTIES ('format-version' = '2')"
     )
-    spark.sql(f"INSERT INTO {table} VALUES (1, 'a'), (2, 'b')")
-    _raises(
-        lambda: spark.sql(f"INSERT INTO {table} REPLACE WHERE {predicate} SELECT 9, 'z'"),
-        IllegalArgumentException,
-        f"Cannot convert Spark predicate to Iceberg expression: {rendered}",
-        None,
-        None,
-    )
-    spark.sql(f"INSERT INTO {table} REPLACE WHERE i IN (1, 3000000000) SELECT 9, 'z'")
-    assert _rows(spark, table) == [[2, "b"], [9, "z"]]
+    if case["default_seed"]:
+        spark.sql(SEED.format(t=table))
+    *setup, last = [statement.replace("{T}", table) for statement in case["statements"]]
+    for statement in setup:
+        spark.sql(statement)
+    outcome = case["steps"][-1]
+    if outcome == "ok":
+        spark.sql(last)
+    else:
+        with pytest.raises(PySparkException) as caught:
+            spark.sql(last)
+        _assert_refusal(key, caught.value, outcome, table)
+    assert _rows(spark, table) == sorted(case["rows"], key=repr), key
+    if "branch_rows" in case:
+        assert _rows(spark, f"{table}.branch_wb") == sorted(case["branch_rows"], key=repr), key

@@ -222,6 +222,7 @@ pub(crate) async fn execute_replace_where(
         &catalog_name,
         &table,
         planned_source,
+        source,
     )
     .await?;
     let source_df = spark_ast::execute_insert_source(ctx, catalogs, &planning_sql).await?;

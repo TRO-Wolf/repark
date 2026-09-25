@@ -43,6 +43,7 @@ pub(crate) async fn rewrite_partition_clause(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     insert: &Insert,
+    named_source: Option<&Query>,
 ) -> Result<Option<PreparedInsert>> {
     let Some(clause) = insert.partitioned.as_ref() else {
         return Ok(None);
@@ -67,7 +68,7 @@ pub(crate) async fn rewrite_partition_clause(
     if !plain_positional(insert) {
         return Ok(None);
     }
-    let rewritten = rewrite_append(ctx, catalogs, insert, name, &items).await?;
+    let rewritten = rewrite_append(ctx, catalogs, insert, name, &items, named_source).await?;
     Ok(Some(PreparedInsert {
         owned_append: true,
         ..rewritten
@@ -114,6 +115,7 @@ async fn rewrite_append(
     insert: &Insert,
     name: &ObjectName,
     items: &[ClauseItem],
+    named_source: Option<&Query>,
 ) -> Result<PreparedInsert> {
     let (catalog_name, table) =
         match crate::insert_overwrite::try_resolve_iceberg_overwrite_target(ctx, catalogs, name)
@@ -131,20 +133,22 @@ async fn rewrite_append(
     let statics = static_columns(&table, items)?;
     if statics.is_empty() {
         if let Some(source) = insert.source.as_ref().filter(|_| insert.columns.is_empty()) {
-            refuse_positional_arity(ctx, catalogs, &catalog_name, &table, source).await?;
+            let named = named_source.unwrap_or(source);
+            refuse_positional_arity(ctx, catalogs, &catalog_name, &table, source, named).await?;
         }
         return reparsed(without_partition(insert));
     }
-    rewrite_with_statics(ctx, catalogs, insert, &catalog_name, &table, &statics).await
+    let target = (catalog_name.as_str(), &table);
+    rewrite_with_statics(ctx, catalogs, insert, target, &statics, named_source).await
 }
 
 async fn rewrite_with_statics(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     insert: &Insert,
-    catalog_name: &str,
-    table: &iceberg::table::Table,
+    (catalog_name, table): (&str, &iceberg::table::Table),
     statics: &[StaticColumn],
+    named_source: Option<&Query>,
 ) -> Result<PreparedInsert> {
     let source = insert.source.as_ref().ok_or_else(|| {
         DataFusionError::Plan(
@@ -157,7 +161,7 @@ async fn rewrite_with_statics(
         let expected = fields.len() - statics.len();
         if planned.len() != expected {
             let display = table_display(catalog_name, table);
-            let data = data_columns(source, &planned, statics);
+            let data = data_columns(named_source.unwrap_or(source), &planned, statics);
             return Err(arity_error(
                 &display,
                 &fields,
@@ -223,6 +227,7 @@ pub(crate) async fn refuse_positional_arity(
     catalog_name: &str,
     table: &iceberg::table::Table,
     source: &Query,
+    named_source: &Query,
 ) -> Result<()> {
     let planned = planned_source_names(ctx, catalogs, source).await?;
     let fields = field_names(table);
@@ -230,7 +235,7 @@ pub(crate) async fn refuse_positional_arity(
         return Ok(());
     }
     let display = table_display(catalog_name, table);
-    let data = data_columns(source, &planned, &[]);
+    let data = data_columns(named_source, &planned, &[]);
     Err(arity_error(
         &display,
         &fields,

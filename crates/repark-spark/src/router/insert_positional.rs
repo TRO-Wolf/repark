@@ -24,7 +24,8 @@ pub(crate) async fn prepare_positional_insert(
     let deduplicated = deduplicate_source_names(insert);
     let current = deduplicated.as_ref().unwrap_or(insert);
     if let Some(rewritten) =
-        partition_append::rewrite_partition_clause(ctx, catalogs, current).await?
+        partition_append::rewrite_partition_clause(ctx, catalogs, current, insert.source.as_deref())
+            .await?
     {
         return Ok(Some(rewritten));
     }

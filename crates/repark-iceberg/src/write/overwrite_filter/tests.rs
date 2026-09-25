@@ -226,15 +226,15 @@ fn untranslatable_predicates_refuse_with_the_spark_message() {
         ),
         (
             "cat = 'x' AND upper(cat) = 'X'",
-            "Cannot convert Spark predicate to Iceberg expression: cat = 'x' AND upper(cat) = 'X'",
+            "Cannot convert Spark predicate to Iceberg expression: upper(cat) = 'X'",
         ),
         (
             "id = 2.5",
-            "Cannot convert Spark predicate to Iceberg expression: id = 2.5",
+            "Cannot convert Spark predicate to Iceberg expression: null",
         ),
         (
             "cat IN (NULL)",
-            "Cannot convert Spark predicate to Iceberg expression: cat IN (NULL)",
+            "Cannot convert Spark predicate to Iceberg expression: null",
         ),
     ];
     for (sql, expected) in cases {
@@ -474,4 +474,130 @@ async fn an_empty_source_on_a_table_without_snapshots_commits_a_delete() {
     assert_eq!(operation, Operation::Delete);
     assert_eq!(summary.get("total-records").map(String::as_str), Some("0"));
     assert_eq!(table.metadata().snapshots().count(), 1);
+}
+
+#[test]
+fn a_refusal_renders_the_first_unconvertible_conjunct_as_spark_does() {
+    let cases = [
+        ("i = 3000000000 AND data = 'a'", "null"),
+        ("data = 'a' AND i = 3000000000", "null"),
+        (
+            "i = 3000000000 OR data = 'a'",
+            "((i IS NULL) AND (null)) OR (data = 'a')",
+        ),
+        ("i < 3000000000 AND data = 'a'", "(i IS NOT NULL) OR (null)"),
+        (
+            "i < 3000000000 OR data = 'a'",
+            "((i IS NOT NULL) OR (null)) OR (data = 'a')",
+        ),
+        (
+            "NOT (i = 3000000000 AND data = 'a')",
+            "((i IS NOT NULL) OR (null)) OR (NOT (data = 'a'))",
+        ),
+        (
+            "NOT (i = 3000000000) AND data = 'a'",
+            "(i IS NOT NULL) OR (null)",
+        ),
+        ("i NOT IN (3000000000)", "(i IS NOT NULL) OR (null)"),
+        (
+            "i NOT IN (3000000000) AND data = 'a'",
+            "(i IS NOT NULL) OR (null)",
+        ),
+        ("i IN (3000000000) AND data = 'a'", "null"),
+        ("i IN (3000000000, NULL)", "null"),
+        ("i NOT IN (3000000000, NULL)", "null"),
+        ("cat NOT IN (NULL)", "null"),
+        ("cat IN (NULL, NULL)", "null"),
+        ("cat NOT IN (NULL, NULL)", "null"),
+        ("cat = NULL AND id = 1", "null"),
+        ("id = 1 AND cat = NULL", "null"),
+        ("cat = NULL OR id = 1", "(null) OR (id = 1)"),
+        ("cat IN (NULL) OR id = 1", "(null) OR (id = 1)"),
+        ("NOT (cat = NULL AND id = 1)", "(null) OR (NOT (id = 1))"),
+        ("NOT (cat = NULL OR id = 1)", "null"),
+        (
+            "upper(cat) = 'X' OR cat = 'x'",
+            "(upper(cat) = 'X') OR (cat = 'x')",
+        ),
+        (
+            "NOT (upper(cat) = 'X' AND cat = 'x')",
+            "(NOT (upper(cat) = 'X')) OR (NOT (cat = 'x'))",
+        ),
+        ("id <> 2.5", "(id IS NOT NULL) OR (null)"),
+        ("id IN (2.5)", "null"),
+        ("id = -2.5", "null"),
+        ("id = 99999999999999999999", "null"),
+        ("id <> 99999999999999999999", "(id IS NOT NULL) OR (null)"),
+        ("id IN (99999999999999999999)", "null"),
+        (
+            "id NOT IN (99999999999999999999)",
+            "(id IS NOT NULL) OR (null)",
+        ),
+        ("i = 99999999999999999999", "null"),
+        ("i <> 99999999999999999999", "(i IS NOT NULL) OR (null)"),
+    ];
+    for (sql, rendered) in cases {
+        assert_eq!(
+            refused(sql),
+            format!("Cannot convert Spark predicate to Iceberg expression: {rendered}"),
+            "{sql}"
+        );
+    }
+}
+
+#[test]
+fn unreachable_literals_fold_to_constants_where_spark_folds_them() {
+    let huge = "99999999999999999999";
+    let cases = [
+        ("i <=> 3000000000".to_string(), "FALSE"),
+        ("i <=> -3000000000".to_string(), "FALSE"),
+        ("3000000000 <=> i".to_string(), "FALSE"),
+        ("NOT (i <=> 3000000000)".to_string(), "TRUE"),
+        ("NOT (i <=> -3000000000)".to_string(), "TRUE"),
+        ("i <=> 3000000000 OR i = 1".to_string(), "i = 1"),
+        ("i <=> 3000000000 AND data = 'a'".to_string(), "FALSE"),
+        ("NOT (i <=> 3000000000) AND i = 1".to_string(), "i = 1"),
+        (format!("id < {huge}"), "TRUE"),
+        (format!("id <= {huge}"), "TRUE"),
+        (format!("id >= -{huge}"), "TRUE"),
+        (format!("id > -{huge}"), "TRUE"),
+        (format!("id > {huge}"), "FALSE"),
+        (format!("id >= {huge}"), "FALSE"),
+        (format!("id < -{huge}"), "FALSE"),
+        (format!("id <= -{huge}"), "FALSE"),
+        (format!("id <=> {huge}"), "FALSE"),
+        (format!("NOT (id <=> {huge})"), "TRUE"),
+        (format!("NOT (id < {huge})"), "FALSE"),
+        (format!("NOT (id > {huge})"), "TRUE"),
+        (format!("id < {huge} AND data = 'a'"), "data = \"a\""),
+        (format!("id > {huge} OR data = 'a'"), "data = \"a\""),
+        (format!("id <=> {huge} OR id = 1"), "id = 1"),
+        (format!("id > {huge} AND id = 1"), "FALSE"),
+        (format!("i < {huge}"), "TRUE"),
+        (format!("i > {huge}"), "FALSE"),
+        (format!("i <=> {huge}"), "FALSE"),
+        (format!("id IN (1, {huge})"), "id = 1"),
+        (format!("id NOT IN (1, {huge})"), "NOT (id = 1)"),
+        ("id <=> 2.5".to_string(), "FALSE"),
+    ];
+    for (sql, expected) in cases {
+        assert_eq!(converted(&sql), expected, "{sql}");
+    }
+}
+
+#[test]
+fn a_fractional_literal_on_an_integer_column_rounds_as_spark_does() {
+    let cases = [
+        ("id < 2.5", "(id IS NOT NULL) AND (id <= 2)"),
+        ("id <= 2.5", "(id IS NOT NULL) AND (id <= 2)"),
+        ("id > 2.5", "id >= 3"),
+        ("id >= 2.5", "id >= 3"),
+        ("id < -2.5", "(id IS NOT NULL) AND (id <= -3)"),
+        ("id > -2.5", "id >= -2"),
+        ("id IN (1, 2.5)", "id = 1"),
+        ("id = 2.0", "id = 2"),
+    ];
+    for (sql, expected) in cases {
+        assert_eq!(converted(sql), expected, "{sql}");
+    }
 }
