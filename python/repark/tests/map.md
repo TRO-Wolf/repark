@@ -613,7 +613,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   clean, isolating the fixture refusal to rewrite-stale manifest sizes. The
   live tables seed from the recorder's own seed functions, one code path.
   pins: ice-page-prune-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
-- [test_ice_hadoop_vn_1.py](test_ice_hadoop_vn_1.py) — **ICE-HADOOP-VN-1
+- [test_ice_hadoop_vn_1.py](test_ice_hadoop_vn_1.py) — U7 PR2 slice-1 round 2 (2026-09-25):
+  `_assert_stale_write_raises` takes the message start as a parameter, so the stale
+  `saveAsTable(overwrite)` (the replace door, `CatalogCommitConflicts => Cannot stage replace
+  to`) keeps every other observation — the exact class, `version file already exists`,
+  `v3.metadata.json`, the three metadata names and v3's bytes — and pins the full message.
+  pins: u7-write-df-2/C-002
+  **ICE-HADOOP-VN-1
   (2026-09-17):** the stale Hadoop `vN` writer raises loud and loses nothing. The
   committed `fixtures/torture/data/ice_hadoop_vn_1` Spark-written v2 table (one seed
   row) is materialized at its baked-in path under a directory lock and adopted at
@@ -889,8 +895,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   property is residue R-1, pinned as a divergence. A `branch` or `tag` option, in any case
   and on any writer, is ignored: the write lands on main. Each shape compares rows,
   operations, summary counters, spec counts, partitioning, schema, refs, history, selected
-  properties, format version, sort fields and the uuid.
-  pins: u7-write-df-2/C-001, C-002, C-003, C-004, C-005
+  properties, format version, sort fields and the uuid. Round 2 (2026-09-25): every shape
+  also compares the current schema's field ids by name (nested included), identifier field
+  ids, `last-column-id`, the current and all schema ids, the default spec's source and field
+  ids and the spec ids; the `ids_*` shapes pin Java's by-name id reuse and the branch rows it
+  protects, the type-change branch read is residue R-9, and `overwrite-mode=dynamic` as an
+  option plus the `DataFrameWriter` overwrite and `insertInto` overwrite branch doors are
+  pinned.
+  pins: u7-write-df-2/C-001, C-002, C-003, C-004, C-005, C-011, C-012
 - [test_ice_write_df_1_edges.py](test_ice_write_df_1_edges.py) — **U7 PR1 round 2
   (2026-09-24):** the shapes critic r1 found unpinned or wrong, each against its `measured`
   oracle entry through the helpers of `test_ice_write_df_1.py`: the missing bucket column
@@ -922,7 +934,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   indexes, `properties`, `format_version`, `sort_fields`, `uuid_same`, `branch_rows`; an
   `AnalysisException` message stops before Spark's appended plan) and the recorded cells
   `W-DF-SAVEASTABLE-OVERWRITE` and `W-DF-V2-OPTION-BRANCH`; `test_ice_write_df_2.py` reads
-  them.
+  them. Round 2 (2026-09-25, `target/probe-u7-pr2a-r1fix/record_ids.py`) re-records those
+  shapes with the field-id, schema-id and spec observations (earlier values unchanged) and
+  adds the `ids_*` shapes, `sat_overwrite_dynamic_option`, `v1_option_branch_overwrite`,
+  `v1_option_branch_insert_into_overwrite` and `sat_overwrite_partby_on_partitioned`.
   pins: u7-write-df-2/C-001, C-004
 - [test_ice_write_options_1.py](test_ice_write_options_1.py) —
   **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the `COLL-*` pins here now expect
@@ -5482,7 +5497,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   spellings of a hidden name still return the same rows
   (`test_a_hidden_metadata_table_is_still_queryable_at_the_facade`). Hidden from the listing,
   never removed from the engine.
-- `test_time_travel.py` — **I1 / R-TIME-TRAVEL** named oracle: multi-snapshot fixture (CTAS +
+- `test_time_travel.py` — U7 PR2 (2026-09-24/25): the writer `branch`/`tag` option pins are
+  `test_write_to_branch_option_writes_main` and `test_write_to_tag_option_writes_main` (the
+  row lands on main, the ref keeps its snapshot, as on Spark). pins: u7-write-df-2/C-005
+  **I1 / R-TIME-TRAVEL** named oracle: multi-snapshot fixture (CTAS +
   append + MERGE) + tag/branch via `_testing_create_ref`; SQL `VERSION AS OF` /
   `TIMESTAMP AS OF` / `FOR SYSTEM_*` (incl. latest-`<=` at s2/s3_ts + mid-interval — octo
   C1-Q-001/L-001/L-002); reader options: legacy `snapshot-id` / `as-of-timestamp` /

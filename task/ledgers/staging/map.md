@@ -1687,5 +1687,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   replaced; the replace snapshot has no parent), and a `branch`/`tag` writer option is
   ignored as on Spark (the write lands on main). Cells `W-DF-SAVEASTABLE-OVERWRITE` and
   `W-DF-V2-OPTION-BRANCH` EQUAL; residue R-1 (format-less provider property) is registry
-  `EX-W2-5`. `risk_tier: standard`. Branch `feat/u7-write-df-2`.
-  pins: u7-write-df-2/C-001, C-002, C-003, C-004, C-005
+  `EX-W2-5`. Round 2 (critic r1): a replace keeps field ids by name (Java's
+  `assignFreshIds`), so an older branch reads its rows; residues R-9 and R-10.
+  `risk_tier: standard`. Branch `feat/u7-write-df-2` (slice 1: `feat/u7-write-df-2a`).
+  pins: u7-write-df-2/C-001, C-002, C-003, C-004, C-005, C-011, C-012

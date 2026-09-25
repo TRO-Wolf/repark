@@ -110,6 +110,15 @@ repark-core's error map.
   parameter. Pins: `../tests/writer_plan.rs`.
   pins: u7-write-df/C-015, C-018
   pins: u7-write-df-2/C-002
+- `replace_schema.rs` — **U7 PR2 slice-1 round 2 (2026-09-25):** `replacement_schema` gives a
+  replace's schema the field ids Java's `TableMetadata.buildReplacement` gives it: the fork's
+  `assign_fresh_ids_with_base` (the port of `TypeUtil.assignFreshIds(schema, base, nextId)`)
+  against the table's current schema, the counter starting at its `last-column-id`. A kept
+  name, nested ones by dotted name, keeps its id; a new name takes the next id. The fork's
+  `StagedTableTransaction::begin_replace` takes the caller's ids as given, so the Spark
+  door's replace staging (`repark-spark` `ctas.rs`) calls this first and builds the partition
+  spec from the result. Pins: `../tests/replace_schema.rs`.
+  pins: u7-write-df-2/C-011
 - `set_location.rs` — **IPI-26/27 round 4 (2026-09-21, cell `D-SET-LOCATION`):**
   `set_table_location` applies the fork's `update_location` action
   (`TableUpdate::SetLocation`) in one transaction: the move commit itself and every

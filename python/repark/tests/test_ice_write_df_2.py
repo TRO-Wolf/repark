@@ -20,6 +20,7 @@ from typing import Any
 import pytest
 
 from repark import ReparkSession
+from repark.spark import functions
 
 _ORACLE: dict[str, Any] = json.loads(
     Path(__file__).with_name("ice_write_df_1_spark_oracle.json").read_text(encoding="utf-8")
@@ -74,6 +75,24 @@ def _frame(spark: ReparkSession) -> Any:
 def _seed(spark: ReparkSession, seed: str, part: str, props: str, version: int) -> None:
     if seed == "none":
         return
+    if seed == "nested":
+        spark.sql(
+            f"CREATE TABLE {_T} (id BIGINT, s STRUCT<a: INT, b: STRING>) USING iceberg "
+            "TBLPROPERTIES ('format-version'='2')"
+        )
+        spark.sql(
+            f"INSERT INTO {_T} VALUES (1, named_struct('a', 1, 'b', 'x')), "
+            "(2, named_struct('a', 2, 'b', 'y'))"
+        )
+        return
+    if seed == "identifier":
+        spark.sql(
+            f"CREATE TABLE {_T} (id BIGINT NOT NULL, data STRING, cat STRING) USING iceberg "
+            "TBLPROPERTIES ('format-version'='2')"
+        )
+        spark.sql(f"ALTER TABLE {_T} SET IDENTIFIER FIELDS id")
+        spark.sql(f"INSERT INTO {_T} VALUES (1, 'a', 'x')")
+        return
     spark.sql(
         f"CREATE TABLE {_T} (id BIGINT, data STRING, cat STRING) USING iceberg {part} "
         f"TBLPROPERTIES ('format-version'='{version}'{props})"
@@ -95,10 +114,64 @@ def _metadata(warehouse: Path) -> dict[str, Any]:
     return json.loads(files[-1].read_text(encoding="utf-8"))
 
 
-def _state(spark: ReparkSession, warehouse: Path, uuid_before: str | None) -> dict[str, Any]:
-    state: dict[str, Any] = {
-        "rows": [list(row) for row in spark.sql(f"SELECT * FROM {_T} ORDER BY id").collect()]
+def _plain(value: Any) -> Any:
+    if isinstance(value, dict):
+        return [_plain(item) for item in value.values()]
+    return value
+
+
+def _rows_of(spark: ReparkSession, query: str) -> list[list[Any]]:
+    return [[_plain(value) for value in row] for row in spark.sql(query).collect()]
+
+
+def _type_ids(field_type: Any) -> Any:
+    if isinstance(field_type, str):
+        return field_type
+    kind = field_type["type"]
+    if kind == "struct":
+        return [
+            [field["id"], field["name"], field["required"], _type_ids(field["type"])]
+            for field in field_type["fields"]
+        ]
+    if kind == "list":
+        return {"element-id": field_type["element-id"], "element": _type_ids(field_type["element"])}
+    if kind == "map":
+        return {
+            "key-id": field_type["key-id"],
+            "value-id": field_type["value-id"],
+            "key": _type_ids(field_type["key"]),
+            "value": _type_ids(field_type["value"]),
+        }
+    return kind
+
+
+def _ids(metadata: dict[str, Any]) -> dict[str, Any]:
+    current = next(
+        schema
+        for schema in metadata["schemas"]
+        if schema["schema-id"] == metadata["current-schema-id"]
+    )
+    spec = next(
+        spec
+        for spec in metadata["partition-specs"]
+        if spec["spec-id"] == metadata["default-spec-id"]
+    )
+    return {
+        "field_ids": _type_ids({"type": "struct", "fields": current["fields"]}),
+        "identifier_field_ids": current.get("identifier-field-ids", []),
+        "last_column_id": metadata["last-column-id"],
+        "current_schema_id": metadata["current-schema-id"],
+        "schema_ids": sorted(schema["schema-id"] for schema in metadata["schemas"]),
+        "spec_fields": [
+            [field["source-id"], field["field-id"], field["name"], field["transform"]]
+            for field in spec["fields"]
+        ],
+        "spec_ids": sorted(spec["spec-id"] for spec in metadata["partition-specs"]),
     }
+
+
+def _state(spark: ReparkSession, warehouse: Path, uuid_before: str | None) -> dict[str, Any]:
+    state: dict[str, Any] = {"rows": _rows_of(spark, f"SELECT * FROM {_T} ORDER BY id")}
     snapshots = spark.sql(
         f"SELECT snapshot_id, operation, summary FROM {_T}.snapshots ORDER BY committed_at"
     ).collect()
@@ -134,12 +207,12 @@ def _state(spark: ReparkSession, warehouse: Path, uuid_before: str | None) -> di
     state["sort_fields"] = len(orders[0]["fields"]) if orders else None
     if uuid_before is not None:
         state["uuid_same"] = metadata["table-uuid"] == uuid_before
+    state.update(_ids(metadata))
     return state
 
 
 def _branch_rows(spark: ReparkSession, out: dict[str, Any], name: str = "b1") -> None:
-    query = f"SELECT * FROM {_T}.branch_{name} ORDER BY id"
-    out["branch_rows"] = [list(row) for row in spark.sql(query).collect()]
+    out["branch_rows"] = _rows_of(spark, f"SELECT * FROM {_T}.branch_{name} ORDER BY id")
 
 
 def _iceberg(frame: Any) -> Any:
@@ -213,6 +286,18 @@ def _v2_options_branch_upper(spark: ReparkSession, frame: Any, out: dict[str, An
     _branch_rows(spark, out)
 
 
+def _v1_branch_overwrite(spark: ReparkSession, frame: Any, out: dict[str, Any]) -> None:
+    _create_branch(spark)
+    _iceberg(frame).option("branch", "b1").mode("overwrite").saveAsTable(_T)
+    _branch_rows(spark, out)
+
+
+def _v1_branch_insert_overwrite(spark: ReparkSession, frame: Any, out: dict[str, Any]) -> None:
+    _create_branch(spark)
+    frame.write.option("branch", "b1").mode("overwrite").insertInto(_T)
+    _branch_rows(spark, out)
+
+
 def _replace_overwrite(frame: Any) -> None:
     _iceberg(frame).mode("overwrite").saveAsTable(_T)
 
@@ -271,6 +356,22 @@ _SAVE_AS_TABLE: dict[str, tuple[str, str, str, int, Action]] = {
     "sat_overwrite_twice": ("values", "", "", 2, lambda s, f, o: _overwrite_twice(f)),
     "sat_overwrite_v3": ("values", "", "", 3, lambda s, f, o: _replace_overwrite(f)),
     "sat_overwrite_self_source": ("values", "", "", 2, lambda s, f, o: _self_source_overwrite(s)),
+    "sat_overwrite_dynamic_option": (
+        "values",
+        _PARTITIONED,
+        "",
+        2,
+        lambda s, f, o: (
+            _iceberg(f).option("overwrite-mode", "dynamic").mode("overwrite").saveAsTable(_T)
+        ),
+    ),
+    "sat_overwrite_partby_on_partitioned": (
+        "values",
+        _PARTITIONED,
+        "",
+        2,
+        lambda s, f, o: _iceberg(f).partitionBy("data").mode("overwrite").saveAsTable(_T),
+    ),
 }
 
 _NO_FORMAT: dict[str, tuple[str, str, str, int, Action]] = {
@@ -310,6 +411,85 @@ _BRANCH_OPTION: dict[str, tuple[str, str, str, int, Action]] = {
         2,
         lambda s, f, o: f.writeTo(_T).option("branch", "b1").using("iceberg").create(),
     ),
+    "v1_option_branch_overwrite": ("values", "", "", 2, _v1_branch_overwrite),
+    "v1_option_branch_insert_into_overwrite": ("values", "", "", 2, _v1_branch_insert_overwrite),
+}
+
+
+def _replace_with_branch(spark: ReparkSession, frame: Any, out: dict[str, Any]) -> None:
+    _create_branch(spark)
+    _replace_overwrite(frame)
+    _branch_rows(spark, out)
+
+
+def _nested_reorder(spark: ReparkSession, frame: Any, out: dict[str, Any]) -> None:
+    _ = frame
+    _create_branch(spark)
+    reordered = spark.createDataFrame([(7, ("g", 70))], "id BIGINT, s STRUCT<b: STRING, a: INT>")
+    _replace_overwrite(reordered)
+    out["branch_rows"] = _rows_of(spark, f"SELECT id, s.a, s.b FROM {_T}.branch_b1 ORDER BY id")
+    out["flat_rows"] = _rows_of(spark, f"SELECT id, s.a, s.b FROM {_T} ORDER BY id")
+
+
+def _readd_dropped(frame: Any) -> None:
+    _replace_overwrite(frame.withColumn("extra", functions.lit(1)))
+    _replace_overwrite(frame)
+    _replace_overwrite(frame.withColumn("extra", functions.lit(2)))
+
+
+_FIELD_IDS: dict[str, tuple[str, str, str, int, Action]] = {
+    "ids_reorder_branch": (
+        "values",
+        "",
+        "",
+        2,
+        lambda s, f, o: _replace_with_branch(s, f.select("cat", "data", "id"), o),
+    ),
+    "ids_swap_branch": (
+        "values",
+        "",
+        "",
+        2,
+        lambda s, f, o: _replace_with_branch(
+            s, f.selectExpr("cat AS data", "data AS cat", "id"), o
+        ),
+    ),
+    "ids_rename_branch": (
+        "values",
+        "",
+        "",
+        2,
+        lambda s, f, o: _replace_with_branch(s, f.withColumnRenamed("data", "payload"), o),
+    ),
+    "ids_add_branch": (
+        "values",
+        "",
+        "",
+        2,
+        lambda s, f, o: _replace_with_branch(s, f.withColumn("extra", functions.lit(1)), o),
+    ),
+    "ids_drop_branch": (
+        "values",
+        "",
+        "",
+        2,
+        lambda s, f, o: _replace_with_branch(s, f.drop("cat"), o),
+    ),
+    "ids_nested_reorder_branch": ("nested", "", "", 2, _nested_reorder),
+    "ids_identifier": ("identifier", "", "", 2, lambda s, f, o: _replace_overwrite(f)),
+    "ids_partby_reordered": (
+        "values",
+        _PARTITIONED,
+        "",
+        2,
+        lambda s, f, o: (
+            _iceberg(f.select("cat", "id", "data"))
+            .partitionBy("cat")
+            .mode("overwrite")
+            .saveAsTable(_T)
+        ),
+    ),
+    "ids_readd_dropped": ("values", "", "", 2, lambda s, f, o: _readd_dropped(f)),
 }
 
 
@@ -420,3 +600,48 @@ def test_branch_and_tag_options_are_ignored_like_spark(
     pins: u7-write-df-2/C-005
     """
     assert _run(spark, warehouse, _BRANCH_OPTION[name]) == _MEASURED[name]
+
+
+@pytest.mark.parametrize("name", list(_FIELD_IDS))
+def test_save_as_table_overwrite_keeps_field_ids_by_name_like_spark(
+    spark: ReparkSession, warehouse: Path, name: str
+) -> None:
+    """The replace keeps each column's field id by name, as Java's ``assignFreshIds`` does.
+
+    A new name takes a fresh id above ``last-column-id``, nested fields keep theirs by dotted
+    name, and a branch that still points at a pre-replace snapshot reads its own rows.
+
+    pins: u7-write-df-2/C-011
+    """
+    assert _run(spark, warehouse, _FIELD_IDS[name]) == _MEASURED[name]
+
+
+def test_a_type_change_on_a_kept_name_reads_the_old_branch_as_null_divergence(
+    spark: ReparkSession, warehouse: Path
+) -> None:
+    """Residue R-9: after ``id`` turns INT, the old branch reads NULL ids on RePark.
+
+    Spark 4.1.2 fails that read (``ClassCastException`` IntVector to BigIntVector). Every other
+    observation, the kept field ids included, equals Spark's.
+
+    pins: u7-write-df-2/C-012
+    """
+    observed = _run(
+        spark,
+        warehouse,
+        (
+            "values",
+            "",
+            "",
+            2,
+            lambda s, f, o: _replace_with_branch(
+                s, f.selectExpr("CAST(id AS INT) AS id", "data", "cat"), o
+            ),
+        ),
+    )
+    expected = dict(_MEASURED["ids_type_change_branch"])
+    assert expected.pop("branch_rows")["error"]["message"].startswith(
+        "java.lang.ClassCastException"
+    )
+    assert observed.pop("branch_rows") == [[None, "a", "x"], [None, "b", "y"], [None, "c", "x"]]
+    assert observed == expected

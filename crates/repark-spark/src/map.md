@@ -602,6 +602,12 @@ pins: rp-4-fork-repin/C-005, C-006
   parity, oracle-pinned in `python/repark/tests/branch_ops_1_truth.json`).
   Details: [call/map.md](call/map.md).
   pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-007, C-010
+- `ctas.rs` — **U7 PR2 slice-1 round 2 (2026-09-25):** a replace loads the existing table
+  before the schema is built, and `repark_iceberg::write::replacement_schema` re-keys the
+  query's fresh-id schema by name against the table's current schema (Java's RTAS) before the
+  partition spec is built from it; the staging reuses the loaded table. Every door that
+  replaces (`saveAsTable` overwrite, `createOrReplace`, `replace`, SQL `CREATE OR REPLACE`)
+  keeps its column ids, so an older ref still reads its rows. pins: u7-write-df-2/C-011
 - `ctas.rs` — CTAS staged create/replace (fork `StagedTableTransaction`, one catalog publish),
   service-managed (S3 Tables) create-first path, create-clause refuse helpers.
   **D-5 (2026-09-21):** `refuse_unsupported_create_table_clauses`' options arm

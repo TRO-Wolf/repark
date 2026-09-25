@@ -25,7 +25,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException, IllegalArgumentException, UnsupportedOperationException
+from repark.errors import AnalysisException, IllegalArgumentException
 
 TABLE = "mem.ns.events"
 SELECTOR_TABLE = "mem.ns.tt_selector"
@@ -312,14 +312,20 @@ def test_incremental_snapshot_bounds_reach_the_incremental_scan(
         spark.read.format("iceberg").option("end-snapshot-id", str(s1)).load(TABLE)
 
 
-def test_write_to_branch_unsupported(
+def _ref_snapshot(spark: ReparkSession, name: str) -> object:
+    rows = spark.sql(f"SELECT snapshot_id FROM {TABLE}.refs WHERE name = '{name}'").collect()
+    return rows[0][0]
+
+
+def test_write_to_branch_option_writes_main(
     spark: ReparkSession, multi_snapshot: dict[str, object]
 ) -> None:
-    """Write path stays CURRENT-only — branch writer option fails loud."""
+    """A ``branch`` writer option is ignored, as Spark does: main gains the row (EX-W2-3)."""
     _ = multi_snapshot
-    frame = spark.sql("SELECT 99 AS id, 'x' AS name")
-    with pytest.raises(UnsupportedOperationException, match=r"branch|current-snapshot"):
-        frame.writeTo(TABLE).option("branch", "branch_s2").append()
+    before = _ref_snapshot(spark, "branch_s2")
+    spark.sql("SELECT 99 AS id, 'x' AS name").writeTo(TABLE).option("branch", "branch_s2").append()
+    assert spark.sql(f"SELECT count(*) FROM {TABLE} WHERE id = 99").collect()[0][0] == 1
+    assert _ref_snapshot(spark, "branch_s2") == before
 
 
 def _tt_registrations(spark: ReparkSession) -> list[str]:
@@ -379,12 +385,15 @@ def test_two_part_identifier_expands_for_time_travel(
     assert _arrow_ids(arrow) == multi_snapshot["ids_s1"]
 
 
-def test_write_to_tag_unsupported(spark: ReparkSession, multi_snapshot: dict[str, object]) -> None:
-    """WriterV2.tag option refuses loud (same CURRENT-only contract as branch)."""
+def test_write_to_tag_option_writes_main(
+    spark: ReparkSession, multi_snapshot: dict[str, object]
+) -> None:
+    """A ``tag`` writer option is ignored like ``branch``: main gains the row (EX-W2-3)."""
     _ = multi_snapshot
-    frame = spark.sql("SELECT 99 AS id, 'x' AS name")
-    with pytest.raises(UnsupportedOperationException, match=r"tag|current-snapshot"):
-        frame.writeTo(TABLE).option("tag", "tag_s1").append()
+    before = _ref_snapshot(spark, "tag_s1")
+    spark.sql("SELECT 99 AS id, 'x' AS name").writeTo(TABLE).option("tag", "tag_s1").append()
+    assert spark.sql(f"SELECT count(*) FROM {TABLE} WHERE id = 99").collect()[0][0] == 1
+    assert _ref_snapshot(spark, "tag_s1") == before
 
 
 def test_negative_snapshot_id_sql_is_recognized(

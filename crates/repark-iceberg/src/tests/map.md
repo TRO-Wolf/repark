@@ -61,6 +61,10 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   Round 3: a void field dropped from the table side and `years`/`months`/`hours` named, as
   Spark measured them (`bucket_existing_void_append`, `bucket_existing_time_append`).
   pins: u7-write-df/C-005, C-006, C-014
+- `replace_schema.rs` — **U7 PR2 slice-1 round 2 (2026-09-25):** `replacement_schema` keeps
+  ids by name over reordered, renamed and added columns (fresh ids above `last-column-id`),
+  keeps a type-changed column's id, does not reuse a dropped id for a new name, and keeps
+  nested struct ids by dotted name. pins: u7-write-df-2/C-011
 - `writer_plan.rs` — **U7 PR1 round 2 (2026-09-24):** `plan_writer` pins: the `saveAsTable`
   statement for every mode and existence with and without buckets, Spark's already-exists
   text, the missing bucket column on every create-or-replace arm (and not on an existing

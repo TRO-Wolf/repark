@@ -131,8 +131,16 @@ def _run_conc_shape(session: Any, table_root: Path) -> bytes:
     return (table_root / "metadata" / "v3.metadata.json").read_bytes()
 
 
-def _assert_stale_write_raises(session: Any, write: Callable[[], object], table_root: Path) -> str:
-    """Run a stale-pointer write; it must raise the recorded conflict; return its text."""
+def _assert_stale_write_raises(
+    session: Any,
+    write: Callable[[], object],
+    table_root: Path,
+    prefix: str | None = None,
+) -> str:
+    """Run a stale-pointer write; it must raise the recorded conflict; return its text.
+
+    ``prefix`` replaces the contract's message start for a door that stages a replace.
+    """
     from repark.errors import PySparkException
 
     contract = _ORACLE_DOC["repark_stale_commit"]
@@ -141,7 +149,7 @@ def _assert_stale_write_raises(session: Any, write: Callable[[], object], table_
         write()
     message = str(excinfo.value)
     assert type(excinfo.value) is PySparkException
-    assert message.startswith(contract["message_starts_with"]), message[:200]
+    assert message.startswith(prefix or contract["message_starts_with"]), message[:200]
     assert contract["message_contains"] in message
     assert "v3.metadata.json" in message
     assert _metadata_names(table_root) == [
@@ -277,7 +285,7 @@ def test_stale_overwrite_shapes_raise(tmp_path: Path) -> None:
 
 def test_stale_overwrite_doors_raise(tmp_path: Path) -> None:
     """L-03: saveAsTable(overwrite) is a stale replace; writeTo().overwrite refuses declared."""
-    from repark.errors import PySparkException, UnsupportedOperationException
+    from repark.errors import UnsupportedOperationException
 
     session = _new_session(tmp_path)
     try:
@@ -286,10 +294,16 @@ def test_stale_overwrite_doors_raise(tmp_path: Path) -> None:
             stale = f"{_CATALOG_TWO}.{_NAMESPACE}.{_TABLE}"
             fresh = f"{_CATALOG_ONE}.{_NAMESPACE}.{_TABLE}"
             frame = session.createDataFrame([(8, "df-ovw")], ["id", "s"])
-            with pytest.raises(PySparkException, match="CatalogCommitConflicts") as stale_replace:
-                frame.write.mode("overwrite").saveAsTable(stale)
-            assert str(stale_replace.value).startswith(
-                "CatalogCommitConflicts => Cannot stage replace to"
+            message = _assert_stale_write_raises(
+                session,
+                lambda: frame.write.mode("overwrite").saveAsTable(stale),
+                table_root,
+                prefix="CatalogCommitConflicts => Cannot stage replace to",
+            )
+            version_three = table_root / "metadata" / "v3.metadata.json"
+            assert message == (
+                f"CatalogCommitConflicts => Cannot stage replace to {version_three}: "
+                f"version file already exists ({version_three})"
             )
             with pytest.raises(UnsupportedOperationException, match="overwrite"):
                 session.sql("SELECT 7 AS id, 'df-wt-ovw' AS s").writeTo(stale).overwrite("true")

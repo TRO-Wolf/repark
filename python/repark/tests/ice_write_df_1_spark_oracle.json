@@ -1,5 +1,5 @@
 {
- "source": "live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, InMemoryCatalog `sc`, 2026-09-24; probe drivers target/probe-u7-pr1/probe.py, probe2.py, probe3.py (U7 PR1 step 1); recorded cells from the 2026-09-24 scoreboard spark-core.json; round-2 fix probes target/probe-u7-r1fix/sprobe.py and sprobe2.py (same Spark and Iceberg, 2026-09-24) re-measured ctas_part_upper and create_part_upper with the `# Partition Information` rows (`partition_info`) and added the shapes from bucketBy_new_missing_col_overwrite to ctas_clustered_colname; `<root>` stands for that probe directory; round-3 fix probe target/probe-u7-r2fix/sprobe.py (same Spark and Iceberg, 2026-09-24) added bucketBy_new_nested_col, bucketBy_new_nested_missing and bucketBy_new_dotted_missing (Spark backtick-quotes a bucket column name containing '.', and only that; sprobe.out and sprobe2.out hold the other name shapes), spec_id_current_then_absent, bucket_existing_void_append (a format-version 1 table whose dropped field became void) and bucket_existing_time_append; the nested frame is createDataFrame with the DDL `id BIGINT, s STRUCT<a: INT, b: STRING>`; round-4 fix probe target/probe-u7-r3fix/sprobe.py (same Spark and Iceberg, 2026-09-24) added sortBy_missing, sortBy_dotted_missing, sortBy_second_missing, sortBy_missing_overwrite and sortBy_bucket_missing_first (a sortBy column the frame lacks is the same 3060 as a bucket column, the bucket columns named first; no table is left behind); U7 PR2 (2026-09-24): target/probe-u7-pr2/record.py recorded the sat_*, *_option_branch_*, v2_option_tag_append and v2_options_branch_upper shapes (seed `values` = one INSERT VALUES, `named` = INSERT … UNION ALL, three files; `schema`/`refs`/`history` (snapshot indexes in commit order)/`properties`/`format_version`/`sort_fields`/`uuid_same`/`branch_rows` read after the write; an AnalysisException message stops before Spark's appended plan); recorded cells W-DF-SAVEASTABLE-OVERWRITE and W-DF-V2-OPTION-BRANCH from the same scoreboard file.",
+ "source": "live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, InMemoryCatalog `sc`, 2026-09-24; probe drivers target/probe-u7-pr1/probe.py, probe2.py, probe3.py (U7 PR1 step 1); recorded cells from the 2026-09-24 scoreboard spark-core.json; round-2 fix probes target/probe-u7-r1fix/sprobe.py and sprobe2.py (same Spark and Iceberg, 2026-09-24) re-measured ctas_part_upper and create_part_upper with the `# Partition Information` rows (`partition_info`) and added the shapes from bucketBy_new_missing_col_overwrite to ctas_clustered_colname; `<root>` stands for that probe directory; round-3 fix probe target/probe-u7-r2fix/sprobe.py (same Spark and Iceberg, 2026-09-24) added bucketBy_new_nested_col, bucketBy_new_nested_missing and bucketBy_new_dotted_missing (Spark backtick-quotes a bucket column name containing '.', and only that; sprobe.out and sprobe2.out hold the other name shapes), spec_id_current_then_absent, bucket_existing_void_append (a format-version 1 table whose dropped field became void) and bucket_existing_time_append; the nested frame is createDataFrame with the DDL `id BIGINT, s STRUCT<a: INT, b: STRING>`; round-4 fix probe target/probe-u7-r3fix/sprobe.py (same Spark and Iceberg, 2026-09-24) added sortBy_missing, sortBy_dotted_missing, sortBy_second_missing, sortBy_missing_overwrite and sortBy_bucket_missing_first (a sortBy column the frame lacks is the same 3060 as a bucket column, the bucket columns named first; no table is left behind); U7 PR2 (2026-09-24): target/probe-u7-pr2/record.py recorded the sat_*, *_option_branch_*, v2_option_tag_append and v2_options_branch_upper shapes (seed `values` = one INSERT VALUES, `named` = INSERT … UNION ALL, three files; `schema`/`refs`/`history` (snapshot indexes in commit order)/`properties`/`format_version`/`sort_fields`/`uuid_same`/`branch_rows` read after the write; an AnalysisException message stops before Spark's appended plan); recorded cells W-DF-SAVEASTABLE-OVERWRITE and W-DF-V2-OPTION-BRANCH from the same scoreboard file. U7 PR2 slice-1 round 2 (2026-09-25): target/probe-u7-pr2a-r1fix/record_ids.py re-recorded the slice-1 shapes with the current schema's field ids by name (`field_ids`, nested struct/list/map ids included), `identifier_field_ids`, `last_column_id`, `current_schema_id`, `schema_ids`, the default spec's `spec_fields` (source id, field id, name, transform) and the sorted `spec_ids` (every earlier value unchanged), and added the ids_* shapes (reordered, swapped, renamed, added, dropped, type-changed, nested-reordered, identifier, reordered partitionBy and re-added columns, each reading branch b1 where it has one), sat_overwrite_dynamic_option, v1_option_branch_overwrite, v1_option_branch_insert_into_overwrite and sat_overwrite_partby_on_partitioned; the SparkException text of ids_type_change_branch keeps only its ClassCastException clause.",
  "seed": "t (id BIGINT, data STRING, cat STRING) seeded (1,'a','x'),(2,'b','y'),(3,'c','x'); frame [(7,'g','x'),(8,'h','w')]",
  "recorded": {
   "W-DF-SAVE-NAME": {
@@ -4364,7 +4364,37 @@
    "properties": {},
    "format_version": 2,
    "sort_fields": 0,
-   "uuid_same": true
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
   },
   "sat_overwrite_partitioned": {
    "ok": true,
@@ -4439,7 +4469,38 @@
    "properties": {},
    "format_version": 2,
    "sort_fields": 0,
-   "uuid_same": true
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0,
+    1
+   ]
   },
   "sat_overwrite_partby": {
    "ok": true,
@@ -4514,7 +4575,45 @@
    "properties": {},
    "format_version": 2,
    "sort_fields": 0,
-   "uuid_same": true
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [
+    [
+     3,
+     1000,
+     "cat",
+     "identity"
+    ]
+   ],
+   "spec_ids": [
+    0,
+    1
+   ]
   },
   "sat_overwrite_props": {
    "ok": true,
@@ -4591,7 +4690,37 @@
    },
    "format_version": 2,
    "sort_fields": 0,
-   "uuid_same": true
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
   },
   "sat_overwrite_option": {
    "ok": true,
@@ -4666,7 +4795,37 @@
    "properties": {},
    "format_version": 2,
    "sort_fields": 0,
-   "uuid_same": true
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
   },
   "sat_overwrite_schema": {
    "ok": true,
@@ -4735,7 +4894,32 @@
    "properties": {},
    "format_version": 2,
    "sort_fields": 0,
-   "uuid_same": true
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     4,
+     "extra",
+     false,
+     "int"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 4,
+   "current_schema_id": 1,
+   "schema_ids": [
+    0,
+    1
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
   },
   "sat_overwrite_missing": {
    "ok": true,
@@ -4798,7 +4982,37 @@
    ],
    "properties": {},
    "format_version": 2,
-   "sort_fields": 0
+   "sort_fields": 0,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
   },
   "sat_overwrite_branch_ref": {
    "branch_rows": [
@@ -4895,7 +5109,37 @@
    "properties": {},
    "format_version": 2,
    "sort_fields": 0,
-   "uuid_same": true
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
   },
   "sat_overwrite_sorted": {
    "ok": true,
@@ -4972,7 +5216,37 @@
    },
    "format_version": 2,
    "sort_fields": 0,
-   "uuid_same": true
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
   },
   "sat_overwrite_empty": {
    "ok": true,
@@ -5029,7 +5303,37 @@
    "properties": {},
    "format_version": 2,
    "sort_fields": 0,
-   "uuid_same": true
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
   },
   "sat_overwrite_dynamic_session": {
    "ok": true,
@@ -5104,7 +5408,38 @@
    "properties": {},
    "format_version": 2,
    "sort_fields": 0,
-   "uuid_same": true
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0,
+    1
+   ]
   },
   "sat_overwrite_twice": {
    "ok": true,
@@ -5190,7 +5525,37 @@
    "properties": {},
    "format_version": 2,
    "sort_fields": 0,
-   "uuid_same": true
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
   },
   "sat_overwrite_v3": {
    "ok": true,
@@ -5265,7 +5630,37 @@
    "properties": {},
    "format_version": 3,
    "sort_fields": 0,
-   "uuid_same": true
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
   },
   "sat_overwrite_self_source": {
    "ok": true,
@@ -5340,7 +5735,37 @@
    "properties": {},
    "format_version": 2,
    "sort_fields": 0,
-   "uuid_same": true
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
   },
   "sat_overwrite_no_format": {
    "ok": true,
@@ -5417,7 +5842,37 @@
    },
    "format_version": 2,
    "sort_fields": 0,
-   "uuid_same": true
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
   },
   "sat_new_no_format": {
    "ok": true,
@@ -5482,7 +5937,37 @@
     "write.format.default": "parquet"
    },
    "format_version": 2,
-   "sort_fields": 0
+   "sort_fields": 0,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
   },
   "v2_option_branch_append": {
    "branch_rows": [
@@ -5594,7 +6079,37 @@
    "properties": {},
    "format_version": 2,
    "sort_fields": 0,
-   "uuid_same": true
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
   },
   "v1_option_branch_append": {
    "branch_rows": [
@@ -5706,7 +6221,37 @@
    "properties": {},
    "format_version": 2,
    "sort_fields": 0,
-   "uuid_same": true
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
   },
   "v2_option_branch_missing": {
    "ok": true,
@@ -5796,7 +6341,37 @@
    "properties": {},
    "format_version": 2,
    "sort_fields": 0,
-   "uuid_same": true
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
   },
   "v2_option_branch_overwrite_partitions": {
    "branch_rows": [
@@ -5900,7 +6475,44 @@
    "properties": {},
    "format_version": 2,
    "sort_fields": 0,
-   "uuid_same": true
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [
+    [
+     3,
+     1000,
+     "cat",
+     "identity"
+    ]
+   ],
+   "spec_ids": [
+    0
+   ]
   },
   "v2_option_tag_append": {
    "ok": true,
@@ -5995,7 +6607,37 @@
    "properties": {},
    "format_version": 2,
    "sort_fields": 0,
-   "uuid_same": true
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
   },
   "v2_options_branch_upper": {
    "branch_rows": [
@@ -6107,7 +6749,37 @@
    "properties": {},
    "format_version": 2,
    "sort_fields": 0,
-   "uuid_same": true
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
   },
   "v2_option_branch_create": {
    "ok": true,
@@ -6170,7 +6842,1762 @@
    ],
    "properties": {},
    "format_version": 2,
-   "sort_fields": 0
+   "sort_fields": 0,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "ids_reorder_branch": {
+   "branch_rows": [
+    [
+     "x",
+     "a",
+     1
+    ],
+    [
+     "y",
+     "b",
+     2
+    ],
+    [
+     "x",
+     "c",
+     3
+    ]
+   ],
+   "ok": true,
+   "rows": [
+    [
+     "x",
+     "g",
+     7
+    ],
+    [
+     "w",
+     "h",
+     8
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "cat",
+     "string"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "id",
+     "bigint"
+    ]
+   ],
+   "refs": [
+    [
+     "b1",
+     "BRANCH",
+     0
+    ],
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 1,
+   "schema_ids": [
+    0,
+    1
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "ids_swap_branch": {
+   "branch_rows": [
+    [
+     "a",
+     "x",
+     1
+    ],
+    [
+     "b",
+     "y",
+     2
+    ],
+    [
+     "c",
+     "x",
+     3
+    ]
+   ],
+   "ok": true,
+   "rows": [
+    [
+     "x",
+     "g",
+     7
+    ],
+    [
+     "w",
+     "h",
+     8
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ],
+    [
+     "id",
+     "bigint"
+    ]
+   ],
+   "refs": [
+    [
+     "b1",
+     "BRANCH",
+     0
+    ],
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ],
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 1,
+   "schema_ids": [
+    0,
+    1
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "ids_rename_branch": {
+   "branch_rows": [
+    [
+     1,
+     null,
+     "x"
+    ],
+    [
+     2,
+     null,
+     "y"
+    ],
+    [
+     3,
+     null,
+     "x"
+    ]
+   ],
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "payload",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "b1",
+     "BRANCH",
+     0
+    ],
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     4,
+     "payload",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 4,
+   "current_schema_id": 1,
+   "schema_ids": [
+    0,
+    1
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "ids_add_branch": {
+   "branch_rows": [
+    [
+     1,
+     "a",
+     "x",
+     null
+    ],
+    [
+     2,
+     "b",
+     "y",
+     null
+    ],
+    [
+     3,
+     "c",
+     "x",
+     null
+    ]
+   ],
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x",
+     1
+    ],
+    [
+     8,
+     "h",
+     "w",
+     1
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ],
+    [
+     "extra",
+     "int"
+    ]
+   ],
+   "refs": [
+    [
+     "b1",
+     "BRANCH",
+     0
+    ],
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ],
+    [
+     4,
+     "extra",
+     false,
+     "int"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 4,
+   "current_schema_id": 1,
+   "schema_ids": [
+    0,
+    1
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "ids_drop_branch": {
+   "branch_rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     3,
+     "c"
+    ]
+   ],
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g"
+    ],
+    [
+     8,
+     "h"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "b1",
+     "BRANCH",
+     0
+    ],
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 1,
+   "schema_ids": [
+    0,
+    1
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "ids_type_change_branch": {
+   "branch_rows": {
+    "error": {
+     "type": "SparkException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "java.lang.ClassCastException: class org.apache.iceberg.shaded.org.apache.arrow.vector.IntVector cannot be cast to class org.apache.iceberg.shaded.org.apache.arrow.vector.BigIntVector"
+    }
+   },
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "int"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "b1",
+     "BRANCH",
+     0
+    ],
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "int"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 1,
+   "schema_ids": [
+    0,
+    1
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "ids_nested_reorder_branch": {
+   "branch_rows": [
+    [
+     1,
+     1,
+     "x"
+    ],
+    [
+     2,
+     2,
+     "y"
+    ]
+   ],
+   "flat_rows": [
+    [
+     7,
+     70,
+     "g"
+    ]
+   ],
+   "ok": true,
+   "rows": [
+    [
+     7,
+     [
+      "g",
+      70
+     ]
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "1",
+     "total-records": "1"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "struct<b:string,a:int>"
+    ]
+   ],
+   "refs": [
+    [
+     "b1",
+     "BRANCH",
+     0
+    ],
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "s",
+     false,
+     [
+      [
+       4,
+       "b",
+       false,
+       "string"
+      ],
+      [
+       3,
+       "a",
+       false,
+       "int"
+      ]
+     ]
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 4,
+   "current_schema_id": 1,
+   "schema_ids": [
+    0,
+    1
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "ids_identifier": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "1",
+     "total-records": "1"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 2,
+   "schema_ids": [
+    0,
+    1,
+    2
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "ids_partby_reordered": {
+   "ok": true,
+   "rows": [
+    [
+     "x",
+     7,
+     "g"
+    ],
+    [
+     "w",
+     8,
+     "h"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "cat",
+     "string"
+    ],
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ],
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 1,
+   "schema_ids": [
+    0,
+    1
+   ],
+   "spec_fields": [
+    [
+     3,
+     1000,
+     "cat",
+     "identity"
+    ]
+   ],
+   "spec_ids": [
+    0
+   ]
+  },
+  "ids_readd_dropped": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x",
+     2
+    ],
+    [
+     8,
+     "h",
+     "w",
+     2
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite",
+    "overwrite",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ],
+    [
+     "extra",
+     "int"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     3
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     false
+    ],
+    [
+     2,
+     null,
+     false
+    ],
+    [
+     3,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ],
+    [
+     5,
+     "extra",
+     false,
+     "int"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 5,
+   "current_schema_id": 2,
+   "schema_ids": [
+    0,
+    1,
+    2
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "sat_overwrite_dynamic_option": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     1,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0,
+    1
+   ]
+  },
+  "v1_option_branch_overwrite": {
+   "branch_rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "b1",
+     "BRANCH",
+     0
+    ],
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "v1_option_branch_insert_into_overwrite": {
+   "branch_rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "deleted-data-files": "1",
+     "deleted-records": "3",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "b1",
+     "BRANCH",
+     0
+    ],
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "sat_overwrite_partby_on_partitioned": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     1,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [
+    [
+     2,
+     1001,
+     "data",
+     "identity"
+    ]
+   ],
+   "spec_ids": [
+    0,
+    1
+   ]
   }
  }
 }

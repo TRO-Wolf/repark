@@ -12199,9 +12199,12 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 ### EX-W2-3 — `option`/`options` with a branch or tag key refuse where Spark silently writes the default branch — **FIXED 2026-09-24 (U7 PR2)**
 
 - **repark** — since U7 PR2 (2026-09-24) `DataFrameWriterV2.option`/`options` store a
-  `branch` or `tag` key (any case) like any other option and no writer reads it: the write
-  lands on main and the named ref keeps its snapshot, as on Spark, even when the ref does not
-  exist; `DataFrameWriter` already did so. Before, the V2 writer raised
+  `branch` or `tag` key (any case) like any other option and no writer reads it: on
+  `writeTo` `append`, `overwritePartitions` and `create`, and on `DataFrameWriter`
+  `saveAsTable` append and overwrite and `insertInto` overwrite, the write lands on main and
+  the named ref keeps its snapshot, as on Spark, even when the ref does not exist;
+  `DataFrameWriter` already did so. (`writeTo(...).overwrite(condition)` still refuses in U7
+  PR2 slice 1; row EX-W2-1.) Before, the V2 writer raised
   `UnsupportedOperationException` ("writing to an Iceberg branch is not supported — repark
   write path is current-snapshot only (I1 / R-TIME-TRAVEL)").
 - **Apache Spark** — `option("branch", "b1").append()` neither errors nor writes the branch:
@@ -12211,11 +12214,14 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   Re-measured 2026-09-24 (U7 PR2, scoreboard cell `W-DF-V2-OPTION-BRANCH` and the
   `*_option_branch_*`/`v2_option_tag_append`/`v2_options_branch_upper` shapes in
   `python/repark/tests/ice_write_df_1_spark_oracle.json`): the same on `append`,
-  `overwritePartitions`, `overwrite(condition)`, `create`, `DataFrameWriter` append and a
-  missing branch.
+  `overwritePartitions`, `overwrite(condition)`, `create`, `DataFrameWriter` append,
+  `saveAsTable` overwrite and `insertInto` overwrite, and a missing branch.
 - **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_writerv2_option_branch_writes_the_default_branch`;
   `python/repark/tests/test_ice_write_df_2.py::test_writer_v2_branch_option_writes_main_like_the_recorded_cell`,
-  `::test_branch_and_tag_options_are_ignored_like_spark`.
+  `::test_branch_and_tag_options_are_ignored_like_spark` (one shape per door, the two
+  `DataFrameWriter` overwrite doors added 2026-09-25);
+  `python/repark/tests/test_time_travel.py::test_write_to_branch_option_writes_main`,
+  `::test_write_to_tag_option_writes_main`.
 - **Rationale** — FIXED 2026-09-24 (U7 PR2). Filed BACKLOG 2026-09-04 from the EX-22
   measurement.
   pins: u7-write-df-2/C-004, C-005
@@ -14107,9 +14113,25 @@ field NAME.
   table uuid, its properties and its other refs; the frame's schema, the `partitionBy` spec
   (unpartitioned without one) and an empty sort order replace the old ones; the new
   `overwrite` snapshot has no parent (scoreboard cell `W-DF-SAVEASTABLE-OVERWRITE` and the
-  `sat_*` shapes in `python/repark/tests/ice_write_df_1_spark_oracle.json`). Before, it ran a
+  `sat_*` shapes in `python/repark/tests/ice_write_df_1_spark_oracle.json`). Since round 2
+  (2026-09-25) the replacement schema keeps each column's field id by name, as Java's
+  `TableMetadata.buildReplacement` does through `TypeUtil.assignFreshIds(schema, base,
+  nextId)`: a new name takes a fresh id above `last-column-id`, nested fields keep theirs by
+  dotted name, and a branch or tag that still points at a pre-replace snapshot reads its own
+  rows (the `ids_*` shapes; before, ids were renumbered by position and `branch_b1` read
+  `[null, 'a', null]` after a reordered overwrite). The same fix covers
+  `writeTo(...).createOrReplace()`, `replace()` and SQL `CREATE OR REPLACE TABLE … AS SELECT`,
+  which share the replace staging. Before U7 PR2, the overwrite ran a
   by-name `INSERT OVERWRITE`: the table kept its schema and an omitted defaulted column
   filled from `write_default` (`[(30, 's', 5)]`, `c` still in the schema).
+  *Residual (2026-09-25):* after a replace that changes a kept column's type (`id` BIGINT →
+  INT), reading a branch that still points at a pre-replace snapshot answers NULL for that
+  column; Spark 4.1.2 fails the read (`ClassCastException`, `IntVector` to `BigIntVector`)
+  (shape `ids_type_change_branch`, residue R-9). The metadata file lists `partition-specs`
+  (and `schemas`, `sort-orders`) in the fork serializer's hash order, where Java writes them
+  by ascending id (`[1, 0]` against `[0, 1]` after a `partitionBy('data')` overwrite of a
+  `cat`-partitioned table); the ids and fields are equal and SQL cannot observe the order
+  (residue R-10, a fork serializer question).
 - **Apache Spark** — REPLACES the table: rows `[[30, 's']]`, schema narrowed to
   the frame `[id int, name string]`, the `c` column gone. This is the unit's
   finding F-002 (`saveAsTable(overwrite)` replace vs RePark `INSERT OVERWRITE`),
@@ -14121,11 +14143,14 @@ field NAME.
   (the old `test_saveastable_overwrite_is_insert_overwrite_not_replace` flipped red and
   was re-pinned to the recorded Spark cell and schema);
   `python/repark/tests/test_ice_write_df_2.py::test_save_as_table_overwrite_replaces_like_the_recorded_cell`,
-  `::test_save_as_table_overwrite_shapes_match_spark`.
+  `::test_save_as_table_overwrite_shapes_match_spark`,
+  `::test_save_as_table_overwrite_keeps_field_ids_by_name_like_spark`,
+  `::test_a_type_change_on_a_kept_name_reads_the_old_branch_as_null_divergence`; Rust
+  `crates/repark-iceberg/src/tests/replace_schema.rs`.
 - **Rationale** — FIXED 2026-09-24 (U7 PR2). DECLARED 2026-09-17 (ruling Q-21b-5) as
   the standing replace-vs-overwrite difference (F-002), left to its own unit.
   pins: ice-v3-write-default-1/C-017
-  pins: u7-write-df-2/C-001, C-002
+  pins: u7-write-df-2/C-001, C-002, C-011, C-012
 
 ### ICE-V3-WRITE-DEFAULT-1-NESTED — nested struct-field defaults are unpinned — **DECLARED 2026-09-17**
 

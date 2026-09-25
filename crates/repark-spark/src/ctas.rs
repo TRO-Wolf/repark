@@ -210,6 +210,21 @@ pub(crate) async fn execute_ctas(
     let derived_schema = repark_core::relax_schema_to_nullable(arrow_schema.as_ref());
     let iceberg_schema =
         arrow_schema_to_schema_auto_assign_ids(&derived_schema).map_err(iceberg_err)?;
+    let existing = match mode {
+        CtasMode::Replace => Some(
+            catalog
+                .load_table(&table_ident)
+                .await
+                .map_err(iceberg_err)?,
+        ),
+        _ => None,
+    };
+    let iceberg_schema = match &existing {
+        Some(table) => {
+            repark_iceberg::write::replacement_schema(table.metadata(), &iceberg_schema)?
+        }
+        None => iceberg_schema,
+    };
     let partition_spec = build_partition_spec(
         &iceberg_schema,
         &ctas.partition_fields,
@@ -252,11 +267,9 @@ pub(crate) async fn execute_ctas(
                 .with_replace_write(ctas.or_replace);
         (staged, None)
     } else {
-        // Replace: stage against the existing table (its own location + FileIO).
-        let existing = catalog
-            .load_table(&table_ident)
-            .await
-            .map_err(iceberg_err)?;
+        let existing = existing.ok_or_else(|| {
+            DataFusionError::Internal("replace mode without a loaded table".to_string())
+        })?;
         let replace_base = existing.metadata_location().map(str::to_string);
         let mut properties = catalogs.table_creation_properties(&ctas.catalog, &ctas.properties);
         crate::create_table::stamp_requested_format_version(
