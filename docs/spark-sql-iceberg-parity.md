@@ -8158,7 +8158,7 @@ the pin rather than obeying it.
 
 ### V3-COV-5 — `ALTER TABLE … WRITE ORDERED BY` is unimplemented
 
-- **repark** — **FIXED 2026-09-06 (WRITE-ORDER-DIST-1).** `ALTER TABLE t WRITE ORDERED BY (id,
+- **repark** — **FIXED 2026-09-06 (WRITE-ORDER-DIST-1; row filed 2026-09-03).** `ALTER TABLE t WRITE ORDERED BY (id,
   name DESC NULLS LAST)` appends the sort order, makes it default, and sets
   `write.distribution-mode = range`, on v2 and v3 — and the `WRITE LOCALLY ORDERED BY`,
   `WRITE DISTRIBUTED BY PARTITION [LOCALLY ORDERED BY]`, and `WRITE UNORDERED` siblings set
