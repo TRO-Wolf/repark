@@ -68,6 +68,7 @@ pub(crate) async fn refuse_cast_then_fold_nested(
         sql_qualifier: alias.unwrap_or_else(|| written.join(".")),
         column_prefix: None,
         probe_from: update.table.to_string(),
+        case_sensitive: !crate::spark_door_case_insensitive(ctx.state().config().options()),
     };
     if !nested_assign::repeats_a_column(&target.arrow_schema, &scope, &update.assignments) {
         refuse_incompatible_update_cast(ctx, &target, object_name, update).await?;

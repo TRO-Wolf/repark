@@ -205,8 +205,17 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
     wide-struct scan that merely has an unnest nearby. Recorded trade: within an
     `Unnest`-carrying subtree the rule's error is swallowed (repark-core has no logging dep), so
     a genuinely-failing shape silently keeps the slower, correct plan.
-  Pins: all seven live in `tests/df_guard.rs` (below), not in `tests/session.rs`;
-  ledger `task/c25-bugfix-ledger.md` → DEFECT-2.
+    **U8 WRITE-SQL PR2 fix round 4 (2026-09-25):** outside that path the wrapper also declines
+    on a `Projection` whose rewrite fails with the rule's own alias collision
+    (`SchemaError::AmbiguousReference` on a `__datafusion_extracted…` name: "qualified field
+    name s.__datafusion_extracted_1 and unqualified field name …"). The shape is a
+    `get_field` over a `SubqueryAlias` of a LEFT JOIN under a filter, which a MERGE insert query
+    over a derived source builds; stock 54.1 fails it outright. Only a `Projection` is cloned
+    for the decline, and every other inner error stays loud.
+  Pins: all eight live in `tests/df_guard.rs` (below), not in `tests/session.rs`;
+  ledger `task/c25-bugfix-ledger.md` → DEFECT-2; the eighth,
+  `a_left_join_projection_the_rule_cannot_rewrite_keeps_its_field_access`, pins:
+  u8-write-sql/C-030.
   **NEVER-OOM-PANIC-1 (2026-09-16):** `context_with_df_54_1_rule_guards` also appends the
   `NljBuildSideReset` physical-optimizer rule (guard 3, same 54.1-defect family as the two
   above): it runs after DataFusion's own physical rules and wraps each nested-loop-join
@@ -225,7 +234,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   recommended-rule order. `session.rs` re-exports `resolve_bound_expr` /
   `resolve_scoped_expr` / `resolve_subquery_plan` for the binding layer.
   pins: df-subquery-1/C-001, C-002, C-004
-- `tests/df_guard.rs` — the seven `df_guards.rs` pins, split out of `tests.rs` when the DEFECT-2
+- `tests/df_guard.rs` — the eight `df_guards.rs` pins, split out of `tests.rs` when the DEFECT-2
   cohort pushed that file past the 1500-line ceiling (the sanctioned "split the module" out, not
   an EXCEPTIONS row). Guard 1: a bare no-extension session carries the scalar-subquery config
   default. Guard 2, six pins: the `enable_leaf_expression_pushdown` flag stays ENABLED (the
@@ -234,6 +243,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   an `Unnest` plan the rule CAN rewrite still gets the optimization (this is what makes the scope
   "by failure", not "by shape"), an explicit conf can still disable the optimization, and a mixed
   plan's non-`Unnest` inner-rule error stays loud (`mixed_plan_non_unnest_inner_error_stays_loud`).
+  The eighth (U8 WRITE-SQL PR2 fix round 4, 2026-09-25): a LEFT JOIN projection that stock 54.1
+  cannot optimize (`__datafusion_extracted` collision) answers its field reads on a core session
+  (`a_left_join_projection_the_rule_cannot_rewrite_keeps_its_field_access`). pins: u8-write-sql/C-030
 - `spill.rs` — **S-1:** FairSpillPool install + runtime `SET datafusion.runtime.memory_limit`
   intercept (R1). DataFusion 54.1 has no in-place resize (`pool_size` lives outside the mutex),
   so SET **swaps** a new `FairSpillPool` (in-flight reservations stay on the old pool).

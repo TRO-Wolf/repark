@@ -1335,9 +1335,23 @@ perfectly good read.
   MERGE) refuses `INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS` `Multiple assignments for 'id': 5, 6`;
   before, UPDATE leaked an Arrow error or silently kept the last value on a table without a
   struct column, and MERGE answered RePark's own text. The gate's own refusal text names both
-  types without Iceberg field ids.
+  types without Iceberg field ids. Fix round 4 (2026-09-25, verifier V-001..V-005): an `INSERT *`
+  whose source struct is re-cased (`named_struct('A', 22, 'B', 'w')`) writes; before, the rebuild
+  over a source column met a DataFusion 54.1 `push_down_leaf_projections` failure (`qualified
+  field name s.__datafusion_extracted_1 and unqualified field name …`), which the core session's
+  leaf-pushdown guard now declines on that node (`crates/repark-core/src/session/df_guards.rs`).
+  Under `spark.sql.caseSensitive=true` struct fields and star columns match exactly: `SET *`,
+  `INSERT *`, a whole-struct SET on UPDATE and MERGE and an `INSERT (id, st) VALUES` struct with
+  `A`/`B` fields refuse `CANNOT_FIND_DATA` for `` `st`.`a` ``, and a source column written `ID` or
+  `ST` under a star refuses `[UNRESOLVED_COLUMN.WITH_SUGGESTION] … name `id` cannot be resolved.
+  Did you mean one of the following? [`ID`, `V`]. SQLSTATE: 42703`; before, RePark committed
+  each. A reordered struct into a table with a `NOT NULL` sub-field writes (`INSERT *`, `INSERT
+  (id, st) VALUES`); before, it refused `Unsupported CAST … to Struct("a": non-null Int32, …)`.
+  A repeated key in a MERGE `INSERT` column list refuses `Multiple assignments for 'id': 1, 2`,
+  and `UPDATE SET *, t.v = 1` refuses `[PARSE_SYNTAX_ERROR] Syntax error at or near ','.
+  SQLSTATE: 42601`.
 - **Apache Spark** — the same answers. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0,
-  2026-09-25, 131 keys `pr2/…` of `python/repark/tests/u8_write_sql_nested_spark_oracle.json`;
+  2026-09-25, 161 keys `pr2/…` of `python/repark/tests/u8_write_sql_nested_spark_oracle.json`;
   scoreboard cells `W-UPDATE-NESTED-FIELD`, `W-MERGE-NESTED`.)*
 - **Residue** — an `UPDATE` without `WHERE` on a table with a struct column fails in the fork's
   `IcebergUpdateExec` (`arguments need to have the same data type`), also for top-level
@@ -1346,12 +1360,16 @@ perfectly good read.
   seeded, so Spark's `NOT_NULL_ASSERT_VIOLATION` for `SET st.a = NULL` is unreachable (R-14).
   Top-level texts outside the fold keep their rendering: `UNRESOLVED_COLUMN` without Spark's
   table-qualified suggestions, the table name in a top-level `CANNOT_SAFELY_CAST`, and RePark's
-  clause-order text where Spark answers `PARSE_SYNTAX_ERROR` (R-16). R-17 (a whole-struct value with a missing field wrote
+  clause-order text where Spark answers `PARSE_SYNTAX_ERROR` (R-16). A NULL leaf into a
+  `NOT NULL` sub-field refuses Arrow's `Found unmasked nulls for non-nullable StructArray field
+  "a"` where Spark raises `SparkRuntimeException` `NOT_NULL_ASSERT_VIOLATION` / `42000` (R-14; the
+  facade has no runtime exception class). `MERGE WITH SCHEMA EVOLUTION` with a reordered struct
+  under `UPDATE SET *` or `INSERT *` refuses RePark's gate text where Spark writes (R-18). R-17 (a whole-struct value with a missing field wrote
   NULL; a reordered or renamed MERGE value refused RePark's gate text) is retired by fix round 2.
   Spark appends `; line N pos M` to key refusals; RePark does not.
 - **Pin** — `python/repark/tests/test_ice_write_sql_1.py`;
   `crates/repark-spark/src/tests/nested_assign.rs`, `nested_assign_oracle.rs`.
-  pins: u8-write-sql/C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032
+  pins: u8-write-sql/C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032, C-033
 - **Rationale** — FIXED. `nested-field assignment is not supported` (MERGE) and
   `UNRESOLVED_COLUMN` for the field name (UPDATE) retire on the Spark door. The native ANSI
   door keeps its nested-assignment refusal (`crates/repark-sql/src/merge.rs`).

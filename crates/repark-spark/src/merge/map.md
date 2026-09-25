@@ -48,11 +48,17 @@ and the star-sentinel rewrite live here instead of in it.
   INSERT clause has a column list, and applies the fold to each UPDATE clause. A star whose
   source struct differs from the target by name or order is expanded first, and struct INSERT
   values are rebuilt by name ([nested_assign/expand.rs](nested_assign/map.md), fix round 3).
+  Fix round 4 (2026-09-25): `AssignmentScope.case_sensitive` carries `spark.sql.caseSensitive`
+  (the UPDATE route sets it too), and `value_sql_for` then matches struct fields exactly. The
+  rebuild takes `named_struct` instead of the Arrow cast when the target struct has a
+  `NOT NULL` field at any depth, since Arrow's by-name struct cast refuses a nullable source
+  there. A repeated key in an INSERT column list joins the nested-INSERT-key refusal as
+  `Multiple assignments for '<col>': …` (`repeated_insert_keys`).
   The design did not reuse repark-iceberg's `resolve_nested_path`. Its path grammar is the
   ALTER one (`key` / `value` / `element` name map and list children, and its refusals are the
   ALTER texts). Spark reads the same spellings in a SET key as value extraction with other
   refusals, and the rebuild needs the Arrow types.
-  pins: u8-write-sql/C-025, C-026, C-027, C-028, C-029, C-032
+  pins: u8-write-sql/C-025, C-026, C-027, C-028, C-029, C-030, C-032, C-033
 
 ## Pointers
 

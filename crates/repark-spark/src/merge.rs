@@ -6,6 +6,7 @@ use datafusion::sql::sqlparser::ast::{
     Assignment, AssignmentTarget, Expr, MergeAction, MergeClause, MergeClauseKind, MergeInsertExpr,
     MergeInsertKind, MergeUpdateExpr, ObjectName, TableFactor,
 };
+use datafusion::sql::sqlparser::parser::ParserError;
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_iceberg::write::merge::{
     InsertAction, InsertClause, MatchedAction, MatchedClause, MergeSpec, NotMatchedBySourceAction,
@@ -328,8 +329,11 @@ fn star_update(assignments: &[Assignment]) -> Result<Option<MatchedAction>> {
     {
         return Ok(Some(MatchedAction::UpdateAll));
     }
-    Err(DataFusionError::Plan(
-        "MERGE `UPDATE SET *` cannot be combined with other assignments".to_string(),
+    Err(DataFusionError::SQL(
+        Box::new(ParserError::ParserError(
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near ','. SQLSTATE: 42601".to_string(),
+        )),
+        None,
     ))
 }
 
@@ -709,10 +713,12 @@ mod tests {
              WHEN MATCHED THEN UPDATE SET *, name = s.name",
         );
         let err = lower(&table, &source, &on, &clauses).unwrap_err();
-        assert!(
-            err.to_string()
-                .contains("cannot be combined with other assignments")
-        );
+        assert!(matches!(
+            &err,
+            DataFusionError::SQL(parser, None)
+                if parser.to_string()
+                    == "sql parser error: [PARSE_SYNTAX_ERROR] Syntax error at or near ','. SQLSTATE: 42601"
+        ));
     }
 
     /// A two-part target name is rejected; this door requires a three-part target.

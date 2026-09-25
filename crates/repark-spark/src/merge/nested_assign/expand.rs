@@ -1,10 +1,12 @@
 use datafusion::arrow::datatypes::{DataType, Field, Fields, Schema as ArrowSchema};
-use datafusion::error::Result;
+use datafusion::common::utils::datafusion_strsim::levenshtein;
+use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
-    Assignment, AssignmentTarget, Ident, MergeInsertExpr, MergeInsertKind, ObjectName,
-    ObjectNamePart, TableFactor,
+    Assignment, AssignmentTarget, Expr, Ident, MergeInsertExpr, MergeInsertKind, ObjectName,
+    ObjectNamePart, SelectItem, SetExpr, TableFactor,
 };
+use repark_common::spark_error;
 
 use super::{AssignmentScope, parse_expr, probe_type, render, resolve_target, value_sql_for};
 
@@ -33,12 +35,67 @@ fn needs_rebuild(source: &DataType, target: &DataType) -> bool {
     }
 }
 
-fn unique_match<'a>(fields: &'a Fields, name: &str) -> Option<&'a Field> {
-    let mut matches = fields
-        .iter()
-        .filter(|field| field.name().eq_ignore_ascii_case(name));
+fn unique_match<'a>(fields: &'a Fields, name: &str, case_sensitive: bool) -> Option<&'a Field> {
+    let mut matches = fields.iter().filter(|field| {
+        if case_sensitive {
+            field.name() == name
+        } else {
+            field.name().eq_ignore_ascii_case(name)
+        }
+    });
     let first = matches.next()?;
     matches.next().is_none().then_some(first.as_ref())
+}
+
+fn written_name(item: &SelectItem) -> Option<String> {
+    match item {
+        SelectItem::ExprWithAlias { alias, .. } => Some(alias.value.clone()),
+        SelectItem::UnnamedExpr(Expr::Identifier(ident)) => Some(ident.value.clone()),
+        SelectItem::UnnamedExpr(Expr::CompoundIdentifier(parts)) => {
+            parts.last().map(|ident| ident.value.clone())
+        }
+        _ => None,
+    }
+}
+
+fn written_source_names(source: &TableFactor) -> Option<Vec<String>> {
+    let TableFactor::Derived { subquery, .. } = source else {
+        return None;
+    };
+    let SetExpr::Select(select) = subquery.body.as_ref() else {
+        return None;
+    };
+    select.projection.iter().map(written_name).collect()
+}
+
+pub(super) fn refuse_unwritten_star_columns(
+    schema: &ArrowSchema,
+    source: &TableFactor,
+) -> Result<()> {
+    let Some(mut names) = written_source_names(source) else {
+        return Ok(());
+    };
+    let Some(missing) = schema
+        .fields()
+        .iter()
+        .find(|field| !names.iter().any(|name| name == field.name()))
+    else {
+        return Ok(());
+    };
+    names.sort();
+    names.sort_by_key(|name| levenshtein(name, missing.name()));
+    let suggestions = names
+        .iter()
+        .map(|name| render::backtick(name))
+        .collect::<Vec<_>>()
+        .join(", ");
+    Err(DataFusionError::Plan(spark_error::message(
+        spark_error::UNRESOLVED_COLUMN_WITH_SUGGESTION,
+        &[
+            ("columnName", render::backtick(missing.name()).as_str()),
+            ("suggestions", suggestions.as_str()),
+        ],
+    )))
 }
 
 pub(super) async fn star_source(
@@ -46,6 +103,7 @@ pub(super) async fn star_source(
     schema: &ArrowSchema,
     source: &TableFactor,
     source_alias: &str,
+    case_sensitive: bool,
 ) -> Option<StarSource> {
     if !schema
         .fields()
@@ -58,7 +116,7 @@ pub(super) async fn star_source(
     let mut pairs = Vec::with_capacity(schema.fields().len());
     let mut rebuild = false;
     for target in schema.fields() {
-        let found = unique_match(&fields, target.name())?;
+        let found = unique_match(&fields, target.name(), case_sensitive)?;
         rebuild |= needs_rebuild(found.data_type(), target.data_type());
         pairs.push((
             target.name().clone(),
@@ -151,6 +209,7 @@ pub(super) async fn fold_insert_values(
             &source,
             target.data_type(),
             std::slice::from_ref(&key.column),
+            scope.case_sensitive,
         )?;
         *value = parse_expr(&rebuilt)?;
         changed = true;

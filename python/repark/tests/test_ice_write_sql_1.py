@@ -949,7 +949,7 @@ def test_merge_sets_one_struct_field_as_spark_does(spark: ReparkSession) -> None
 
 def test_the_nested_oracle_holds_every_measurement() -> None:
     """pins: u8-write-sql/C-031"""
-    assert len(NESTED) == 131
+    assert len(NESTED) == 161
 
 
 @pytest.mark.parametrize("key", list(NESTED))
@@ -965,18 +965,25 @@ def test_the_nested_assignment_measurements_replay_as_spark_answered(
     seed = f"INSERT INTO {table} VALUES {case['seed']}"
     statements = [statement.replace("{T}", table) for statement in case["statements"]]
     last = seed if expected.get("at") == "seed" else statements[-1]
-    if last != seed:
+    if last != seed and case["seed"]:
         spark.sql(seed)
+    conf = case.get("conf", {})
+    for name, value in conf.items():
+        spark.conf.set(name, value)
     step = expected["step"]
-    if step == "ok":
-        spark.sql(last)
-    else:
-        with pytest.raises(PySparkException) as caught:
+    try:
+        if step == "ok":
             spark.sql(last)
-        assert type(caught.value).__name__ == step["type"], key
-        assert caught.value.getCondition() == step["condition"], key
-        assert caught.value.getSqlState() == step["sqlstate"], key
-        assert _nested_message(caught.value, table) == step["message"], key
+        else:
+            with pytest.raises(PySparkException) as caught:
+                spark.sql(last)
+            assert type(caught.value).__name__ == step["type"], key
+            assert caught.value.getCondition() == step["condition"], key
+            assert caught.value.getSqlState() == step["sqlstate"], key
+            assert _nested_message(caught.value, table) == step["message"], key
+    finally:
+        for name in conf:
+            spark.conf.set(name, "false")
     if expected["rows"] is not None:
         rows = sorted(([_plain(value) for value in row] for row in _rows(spark, table)), key=repr)
         assert rows == sorted(expected["rows"], key=repr), key

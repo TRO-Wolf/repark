@@ -461,8 +461,10 @@ pins: rp-4-fork-repin/C-005, C-006
   assignments` refusal answers first, as Spark's does), and then folds nested struct-field assignments and
   top-level struct values through [`merge/nested_assign.rs`](merge/map.md). It re-renders the
   statement only when something folded, so every other UPDATE keeps its original SQL.
-  `router.rs` stays at 1000 lines (two lines replaced by two).
-  pins: u8-write-sql/C-025, C-027, C-032
+  `router.rs` stays at 1000 lines (two lines replaced by two). Fix round 4 (2026-09-25): the
+  fold's scope carries `spark.sql.caseSensitive`, so a re-cased whole-struct value refuses
+  `CANNOT_FIND_DATA` under `true`.
+  pins: u8-write-sql/C-025, C-027, C-032, C-033
 - `write_to_branch.rs` — Spark-door write-to-branch routing: tag/missing-branch Spark-shaped
   refuse; two-part names qualify through session defaults; the MOR valve runs on the
   Iceberg ident before the temp rewrite; fork-executed INSERT/UPDATE/DELETE via
@@ -2069,7 +2071,9 @@ First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#d
   on a struct column is folded too, so it resolves by name (fix round 2, C-032). A star or an
   INSERT struct value resolves by name too, and a repeated atomic key refuses Spark's
   `Multiple assignments` text (fix round 3). A MERGE without an UPDATE SET key or an INSERT
-  column list returns without loading the table. pins: u8-write-sql/C-026,
+  column list returns without loading the table. Fix round 4 (2026-09-25): `UPDATE SET *, t.v = 1`
+  refuses `ParseException` `[PARSE_SYNTAX_ERROR] Syntax error at or near ','. SQLSTATE: 42601`
+  (`star_update`; the star rewrite only lets a comma follow `SET *`). pins: u8-write-sql/C-026,
   C-029, C-032
 - `time_travel.rs` — **ICE-METADATA-COLS-1 WO-R1 (2026-09-21):** the Spark-door `snapshot_id_<id>`
   and `at_timestamp_<ms>` ref selectors resolve to snapshot pins beside `branch_`/`tag_`; an

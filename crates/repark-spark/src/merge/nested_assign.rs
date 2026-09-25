@@ -25,6 +25,7 @@ pub(crate) struct AssignmentScope {
     pub(crate) column_prefix: Option<String>,
     pub(crate) value_qualifiers: Vec<Vec<String>>,
     pub(crate) probe_from: String,
+    pub(crate) case_sensitive: bool,
 }
 
 pub(crate) fn name_suffixes(parts: &[String]) -> Vec<Vec<String>> {
@@ -118,6 +119,24 @@ fn find_field<'a>(fields: &'a Fields, name: &str) -> Option<&'a Arc<Field>> {
                 .iter()
                 .find(|field| field.name().eq_ignore_ascii_case(name))
         })
+}
+
+fn source_field<'a>(
+    fields: &'a Fields,
+    name: &str,
+    case_sensitive: bool,
+) -> Option<&'a Arc<Field>> {
+    if case_sensitive {
+        return fields.iter().find(|field| field.name() == name);
+    }
+    find_field(fields, name)
+}
+
+fn has_required_field(fields: &Fields) -> bool {
+    fields.iter().any(|field| {
+        !field.is_nullable()
+            || matches!(field.data_type(), DataType::Struct(inner) if has_required_field(inner))
+    })
 }
 
 fn unqualified<'p>(
@@ -247,6 +266,7 @@ async fn probe_type(
 
 struct Aligner {
     errors: Vec<String>,
+    case_sensitive: bool,
 }
 
 impl Aligner {
@@ -286,7 +306,7 @@ impl Aligner {
             return Ok(column_sql.to_string());
         }
         if let [(_, only)] = exact.as_slice() {
-            return leaf_sql(only, data_type, path);
+            return leaf_sql(only, data_type, path, self.case_sensitive);
         }
         if nested.is_empty() {
             return Ok(column_sql.to_string());
@@ -319,10 +339,15 @@ impl Aligner {
     }
 }
 
-fn leaf_sql(keyed: &Keyed<'_>, target: &DataType, path: &[String]) -> Result<String> {
+fn leaf_sql(
+    keyed: &Keyed<'_>,
+    target: &DataType,
+    path: &[String],
+    case_sensitive: bool,
+) -> Result<String> {
     let value_sql = keyed.value.to_string();
     match &keyed.value_type {
-        Some(source) => value_sql_for(&value_sql, source, target, path),
+        Some(source) => value_sql_for(&value_sql, source, target, path, case_sensitive),
         None => Ok(store_assignment_cast_sql(&value_sql, target)),
     }
 }
@@ -347,6 +372,7 @@ fn value_sql_for(
     source: &DataType,
     target: &DataType,
     path: &[String],
+    case_sensitive: bool,
 ) -> Result<String> {
     let (DataType::Struct(source_fields), DataType::Struct(target_fields)) = (source, target)
     else {
@@ -362,7 +388,7 @@ fn value_sql_for(
     for target_field in target_fields {
         let mut child_path = path.to_vec();
         child_path.push(target_field.name().clone());
-        let source_field = find_field(source_fields, target_field.name())
+        let source_field = source_field(source_fields, target_field.name(), case_sensitive)
             .ok_or_else(|| render::cannot_find_data(&child_path))?;
         used.insert(source_field.name().clone());
         let child_sql = format!(
@@ -374,6 +400,7 @@ fn value_sql_for(
             source_field.data_type(),
             target_field.data_type(),
             &child_path,
+            case_sensitive,
         )?;
         members.push(format!(
             "{}, {member}",
@@ -388,7 +415,7 @@ fn value_sql_for(
     if !extra.is_empty() {
         return Err(render::extra_struct_fields(&extra, path));
     }
-    if names_match_exactly(source_fields, target_fields) {
+    if names_match_exactly(source_fields, target_fields) && !has_required_field(target_fields) {
         return Ok(store_assignment_cast_sql(value_sql, target));
     }
     Ok(format!(
@@ -447,7 +474,10 @@ pub(crate) async fn fold_nested_assignments(
             sql: format!("{} = {}", key.sql(scope), assignment.value),
         });
     }
-    let mut aligner = Aligner { errors: Vec::new() };
+    let mut aligner = Aligner {
+        errors: Vec::new(),
+        case_sensitive: scope.case_sensitive,
+    };
     let mut rebuilt = HashMap::new();
     for field in schema.fields() {
         if !affected.contains(field.name()) {
@@ -521,18 +551,27 @@ fn refuse_nested_insert_keys(
     for column in &insert.columns {
         keys.push(resolve_target(schema, scope, column)?);
     }
-    let nested = insert
-        .columns
+    if insert.columns.len() != row.len() {
+        return Ok(());
+    }
+    let nested = keys
         .iter()
-        .zip(&keys)
         .zip(row.iter())
-        .filter_map(|((_, key), value)| {
+        .filter_map(|(key, value)| {
             key.as_ref()
                 .filter(|key| !key.steps.is_empty())
                 .map(|key| format!("{} = {value}", key.sql(scope)))
         })
         .collect::<Vec<_>>();
-    if nested.is_empty() || insert.columns.len() != row.len() {
+    let mut errors = Vec::new();
+    if !nested.is_empty() {
+        errors.push(format!(
+            "INSERT assignment keys cannot be nested fields: {}",
+            nested.join(", ")
+        ));
+    }
+    errors.extend(repeated_insert_keys(&keys, row));
+    if errors.is_empty() {
         return Ok(());
     }
     let pretty = insert
@@ -542,13 +581,31 @@ fn refuse_nested_insert_keys(
         .zip(row.iter())
         .map(|((name, key), value)| pretty_assignment(schema, scope, name, key.as_ref(), value))
         .collect::<Vec<_>>();
-    Err(render::row_level_refusal(
-        &pretty,
-        &[format!(
-            "INSERT assignment keys cannot be nested fields: {}",
-            nested.join(", ")
-        )],
-    ))
+    Err(render::row_level_refusal(&pretty, &errors))
+}
+
+fn repeated_insert_keys(keys: &[Option<ResolvedKey>], row: &[Expr]) -> Vec<String> {
+    let mut columns: Vec<(&str, Vec<String>)> = Vec::new();
+    for (key, value) in keys.iter().zip(row) {
+        let Some(key) = key.as_ref().filter(|key| key.steps.is_empty()) else {
+            continue;
+        };
+        match columns.iter_mut().find(|(column, _)| *column == key.column) {
+            Some((_, values)) => values.push(value.to_string()),
+            None => columns.push((&key.column, vec![value.to_string()])),
+        }
+    }
+    columns
+        .into_iter()
+        .filter(|(_, values)| values.len() > 1)
+        .map(|(column, values)| {
+            format!(
+                "Multiple assignments for '{}': {}",
+                render::quoted_column_path(&[column.to_string()]),
+                values.join(", ")
+            )
+        })
+        .collect()
 }
 
 fn merge_needs_fold(clauses: &[MergeClause]) -> bool {
@@ -643,8 +700,14 @@ pub(crate) async fn fold_merge_clauses(
         MergeAction::Insert(insert) => super::star_insert(insert),
         MergeAction::Delete { .. } => false,
     });
+    let case_sensitive = !crate::spark_door_case_insensitive(ctx.state().config().options());
+    if has_star && case_sensitive && !schema_evolution {
+        expand::refuse_unwritten_star_columns(&schema, source)?;
+    }
     let star = match source_alias.filter(|_| has_star && !schema_evolution) {
-        Some((_, rendered)) => expand::star_source(ctx, &schema, source, &rendered).await,
+        Some((_, rendered)) => {
+            expand::star_source(ctx, &schema, source, &rendered, case_sensitive).await
+        }
         None => None,
     };
     let scope = AssignmentScope {
@@ -653,6 +716,7 @@ pub(crate) async fn fold_merge_clauses(
         column_prefix: Some(target_rendered),
         value_qualifiers,
         probe_from: format!("{source} CROSS JOIN {table}"),
+        case_sensitive,
     };
     let mut folded = clauses.to_vec();
     let mut changed = false;

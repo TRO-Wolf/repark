@@ -183,6 +183,28 @@ async fn explicit_conf_can_still_disable_leaf_expression_pushdown() {
 /// with no `Unnest` UNION ALL an `Unnest`) must still surface an inner-rule error
 /// on the non-`Unnest` sibling — wrapping the full walk in `unwrap_or` reds this.
 #[tokio::test]
+async fn a_left_join_projection_the_rule_cannot_rewrite_keeps_its_field_access() {
+    const QUERY: &str = "SELECT get_field(s.st, 'A') AS a, get_field(s.st, 'B') AS b FROM \
+         (SELECT s.*, t.x AS p FROM (SELECT 5 AS id, named_struct('A', 22, 'B', 'w') AS st) s \
+         LEFT JOIN (SELECT 1 AS id, 7 AS x) t ON s.id = t.id) AS s WHERE p IS NULL";
+    let stock = datafusion::prelude::SessionContext::new();
+    let refusal = stock
+        .sql(QUERY)
+        .await
+        .unwrap()
+        .into_optimized_plan()
+        .expect_err("the fixture must be a plan stock DataFusion 54.1 cannot optimize")
+        .to_string();
+    assert!(refusal.contains("__datafusion_extracted"), "{refusal}");
+    let session = ReparkSession::new().unwrap();
+    let batches = session.sql(QUERY).await.unwrap().collect().await.unwrap();
+    let rendered = datafusion::arrow::util::pretty::pretty_format_batches(&batches)
+        .unwrap()
+        .to_string();
+    assert!(rendered.contains("| 22 | w |"), "{rendered}");
+}
+
+#[tokio::test]
 async fn mixed_plan_non_unnest_inner_error_stays_loud() {
     const SQL: &str = "SELECT value FROM generate_series(1, 3) WHERE value > 0 \
          UNION ALL \

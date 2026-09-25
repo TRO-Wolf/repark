@@ -1,4 +1,5 @@
 use datafusion::arrow::array::AsArray;
+use datafusion::optimizer::OptimizerRule;
 use serde_json::Value as Json;
 
 use super::super::*;
@@ -107,9 +108,14 @@ fn rust_door_replays(case: &Json) -> bool {
     !columns.contains("ARRAY") && !columns.contains("MAP") && case.get("residue").is_none()
 }
 
-async fn replay(key: &str, case: &Json) {
+async fn replay(key: &str, case: &Json, guarded: &[Arc<dyn OptimizerRule + Send + Sync>]) {
     let wh = TempDir::new().unwrap();
-    let (ctx, catalogs) = setup(&wh).await;
+    let (plain, catalogs) = setup(&wh).await;
+    let ctx = SessionContext::new_with_state(
+        datafusion::execution::SessionStateBuilder::new_from_existing(plain.state())
+            .with_optimizer_rules(guarded.to_vec())
+            .build(),
+    );
     let columns = case["columns"].as_str().unwrap();
     let props = case["props"].as_str().unwrap();
     run(
@@ -119,12 +125,22 @@ async fn replay(key: &str, case: &Json) {
     )
     .await;
     let seed = case["seed"].as_str().unwrap();
-    run(
-        &ctx,
-        &catalogs,
-        &format!("INSERT INTO {TABLE} VALUES {seed}"),
-    )
-    .await;
+    if !seed.is_empty() {
+        run(
+            &ctx,
+            &catalogs,
+            &format!("INSERT INTO {TABLE} VALUES {seed}"),
+        )
+        .await;
+    }
+    if case["conf"]["spark.sql.caseSensitive"] == "true" {
+        ctx.state_ref()
+            .write()
+            .config_mut()
+            .options_mut()
+            .extensions
+            .insert(repark_functions::case_sensitive::SparkCaseSensitiveConfig { enabled: true });
+    }
     let statements: Vec<String> = case["statements"]
         .as_array()
         .unwrap()
@@ -140,11 +156,12 @@ async fn replay(key: &str, case: &Json) {
         run(&ctx, &catalogs, last).await;
     } else {
         let mapped = refusal(&ctx, &catalogs, last).await;
-        assert_eq!(
-            mapped.exception_class(),
-            repark_common::ErrorClass::Analysis,
-            "{key}: {mapped:?}"
-        );
+        let class = if step["type"] == "ParseException" {
+            repark_common::ErrorClass::Parse
+        } else {
+            repark_common::ErrorClass::Analysis
+        };
+        assert_eq!(mapped.exception_class(), class, "{key}: {mapped:?}");
         assert_eq!(
             normalized(&mapped.to_string()),
             step["message"].as_str().unwrap(),
@@ -161,13 +178,19 @@ async fn replay(key: &str, case: &Json) {
 #[tokio::test]
 async fn every_nested_assignment_measurement_answers_as_spark_did() {
     let oracle: Json = serde_json::from_str(ORACLE).unwrap();
+    let guarded = repark_core::ReparkSession::new()
+        .unwrap()
+        .context()
+        .state()
+        .optimizers()
+        .to_vec();
     let mut replayed = 0;
     for (key, case) in oracle["cases"].as_object().unwrap() {
         if !rust_door_replays(case) {
             continue;
         }
-        replay(key, case).await;
+        replay(key, case, &guarded).await;
         replayed += 1;
     }
-    assert_eq!(replayed, 108, "{replayed} cases replayed");
+    assert_eq!(replayed, 134, "{replayed} cases replayed");
 }

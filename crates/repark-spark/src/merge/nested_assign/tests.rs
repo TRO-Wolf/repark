@@ -42,6 +42,7 @@ fn scope() -> AssignmentScope {
         column_prefix: Some("t".to_string()),
         value_qualifiers: vec![vec!["t".to_string()], vec!["s".to_string()]],
         probe_from: "missing_probe_table".to_string(),
+        case_sensitive: false,
     }
 }
 
@@ -179,7 +180,7 @@ fn a_struct_value_resolves_by_name_as_spark_does() {
         Field::new("y", DataType::Utf8, true),
     ]);
     assert_eq!(
-        value_sql_for("v", &missing, &target, &path)
+        value_sql_for("v", &missing, &target, &path, false)
             .unwrap_err()
             .to_string(),
         "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write \
@@ -192,7 +193,7 @@ fn a_struct_value_resolves_by_name_as_spark_does() {
         Field::new("z", DataType::Int64, true),
     ]);
     assert_eq!(
-        value_sql_for("v", &extra, &target, &path)
+        value_sql_for("v", &extra, &target, &path, false)
             .unwrap_err()
             .to_string(),
         "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write \
@@ -204,7 +205,7 @@ fn a_struct_value_resolves_by_name_as_spark_does() {
         Field::new("y", DataType::Utf8, true),
     ]);
     assert!(
-        value_sql_for("v", &bad_leaf, &target, &path)
+        value_sql_for("v", &bad_leaf, &target, &path, false)
             .unwrap_err()
             .to_string()
             .contains("Cannot safely cast `st`.`inner`.`x` \"STRING\" to \"INT\"")
@@ -214,7 +215,7 @@ fn a_struct_value_resolves_by_name_as_spark_does() {
         Field::new("x", DataType::Int64, true),
     ]);
     assert_eq!(
-        value_sql_for("v", &reordered, &target, &path).unwrap(),
+        value_sql_for("v", &reordered, &target, &path, false).unwrap(),
         "arrow_cast((v), 'Struct(\"x\": Int32, \"y\": Utf8)')"
     );
     let recased = struct_type(vec![
@@ -222,10 +223,28 @@ fn a_struct_value_resolves_by_name_as_spark_does() {
         Field::new("Y", DataType::Utf8, true),
     ]);
     assert_eq!(
-        value_sql_for("v", &recased, &target, &path).unwrap(),
+        value_sql_for("v", &recased, &target, &path, false).unwrap(),
         "CASE WHEN (v) IS NULL THEN NULL ELSE named_struct('x', \
          arrow_cast((get_field((v), 'X')), 'Int32'), 'y', \
          arrow_cast((get_field((v), 'Y')), 'Utf8')) END"
+    );
+    assert_eq!(
+        value_sql_for("v", &recased, &target, &path, true)
+            .unwrap_err()
+            .to_string(),
+        "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write \
+         incompatible data for the table ``: Cannot find data for the output column \
+         `st`.`inner`.`x`. SQLSTATE: KD000"
+    );
+    let required = struct_type(vec![
+        Field::new("x", DataType::Int32, false),
+        Field::new("y", DataType::Utf8, true),
+    ]);
+    assert_eq!(
+        value_sql_for("v", &reordered, &required, &path, false).unwrap(),
+        "CASE WHEN (v) IS NULL THEN NULL ELSE named_struct('x', \
+         arrow_cast((get_field((v), 'x')), 'Int32'), 'y', \
+         arrow_cast((get_field((v), 'y')), 'Utf8')) END"
     );
 }
 
