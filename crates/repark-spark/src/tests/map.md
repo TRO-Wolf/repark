@@ -1104,6 +1104,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   ADD routes. `a_repeated_column_after_use_renders_the_three_part_table_like_spark` issues
   `USE ice.sales` before a one-part and a two-part table name.
   pins: ice-nested-evo-1/C-044, C-045, C-046, C-047, C-048
+  **Round 4 fold (2026-09-24):** `a_comment_list_after_another_change_is_the_mixed_list_refusal`
+  pins the mixed-list text for lists whose first spec is an action or a `TYPE`, on `ALTER
+  COLUMN`, bare `ALTER` and bare `CHANGE`. `wrapped_and_malformed_comment_lists_are_parse_errors_like_spark`
+  pins the missing literal, `extra input`, a quoted later path, a first spec with no action,
+  and the `IF EXISTS` and `PARTITION` wrappers. It also pins the forms that stay on their
+  routes (`is_none`). `other_column_comment_statements_answer_the_residual_refusal` pins the
+  residual text and its near misses.
+  pins: ice-nested-evo-1/C-049, C-050, C-051
 - [column_move.rs](column_move.rs) — **ICE-COLUMN-REORDER-1 (2026-09-17):**
   `alter_column_move_first_and_after_reorder` pins the move end to end over
   `common::setup` (`name FIRST` leads with `name`, `name AFTER id` restores the order).

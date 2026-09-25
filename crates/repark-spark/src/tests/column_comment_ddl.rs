@@ -348,6 +348,178 @@ async fn alter_column_comment_refuses_malformed_spec_lists_like_spark() {
 }
 
 #[tokio::test]
+async fn a_comment_list_after_another_change_is_the_mixed_list_refusal() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, COMMENT_CREATE).await;
+    for (clause, column) in [
+        ("ALTER COLUMN id DROP NOT NULL, data COMMENT 'dn'", "id"),
+        ("ALTER COLUMN id SET NOT NULL, data COMMENT 'sn'", "id"),
+        ("ALTER COLUMN cat SET DEFAULT 'x', data COMMENT 'sd'", "cat"),
+        ("ALTER COLUMN cat DROP DEFAULT, data COMMENT 'dd'", "cat"),
+        ("ALTER COLUMN cat FIRST, data COMMENT 'ff'", "cat"),
+        ("ALTER COLUMN cat AFTER id, data COMMENT 'af'", "cat"),
+        ("ALTER COLUMN cat TYPE STRING, data COMMENT 'tf'", "cat"),
+        ("ALTER COLUMN st.x TYPE BIGINT, data COMMENT 'nt'", "st.x"),
+        (
+            "ALTER COLUMN id DROP NOT NULL, cat TYPE STRING, data COMMENT 'three'",
+            "id",
+        ),
+        ("ALTER COLUMN id DROP NOT NULL, st.x COMMENT 'nx'", "id"),
+        ("ALTER id DROP NOT NULL, data COMMENT 'bare'", "id"),
+        ("ALTER id TYPE BIGINT, data COMMENT 'bt'", "id"),
+        ("CHANGE id DROP NOT NULL, data COMMENT 'bd'", "id"),
+    ] {
+        let sql = format!("ALTER TABLE ice.sales.ac {clause}");
+        assert_eq!(
+            refusal(&ctx, &catalogs, &sql).await,
+            format!(
+                "This feature is not implemented: ALTER TABLE … ALTER COLUMN mixes COMMENT with \
+                 another change for `{column}` in one column list; only a list of COMMENT changes \
+                 is supported, so split the statement"
+            ),
+            "{sql}"
+        );
+    }
+    assert_eq!(schema_count(&catalogs).await, 1);
+}
+
+#[tokio::test]
+async fn wrapped_and_malformed_comment_lists_are_parse_errors_like_spark() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, COMMENT_CREATE).await;
+    for (sql, message) in [
+        (
+            "ALTER TABLE ice.sales.ac ALTER COLUMN id DROP NOT NULL, data COMMENT",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near end of input. SQLSTATE: 42601",
+        ),
+        (
+            "ALTER TABLE ice.sales.ac ALTER COLUMN cat TYPE STRING, data COMMENT",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near end of input. SQLSTATE: 42601",
+        ),
+        (
+            "ALTER TABLE ice.sales.ac ALTER COLUMN id DROP NOT NULL, data COMMENT 'x' FIRST",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'FIRST': extra input 'FIRST'. \
+             SQLSTATE: 42601",
+        ),
+        (
+            "ALTER TABLE ice.sales.ac ALTER COLUMN id DROP NOT NULL, 'data' COMMENT 'q'",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near ''data''. SQLSTATE: 42601",
+        ),
+        (
+            "ALTER TABLE ice.sales.ac ALTER COLUMN id foo, data COMMENT 'b2'",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'foo'. SQLSTATE: 42601",
+        ),
+        (
+            "ALTER TABLE ice.sales.ac ALTER COLUMN id NOT NULL, data COMMENT 'nn'",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'NOT'. SQLSTATE: 42601",
+        ),
+        (
+            "ALTER TABLE ice.sales.ac ALTER COLUMN id, data COMMENT 'b1'",
+            "SQL error: ParserError(\"Operation not allowed: ALTER TABLE table ALTER COLUMN \
+             requires a TYPE, a SET/DROP, a COMMENT, or a FIRST/AFTER.\")",
+        ),
+        (
+            "ALTER TABLE IF EXISTS ice.sales.ac ALTER COLUMN id COMMENT 'ie'",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'EXISTS'. SQLSTATE: 42601",
+        ),
+        (
+            "alter table if exists ice.sales.ac alter column id comment 'lw'",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'exists'. SQLSTATE: 42601",
+        ),
+        (
+            "ALTER TABLE IF EXISTS ice.sales.ac CHANGE COLUMN id COMMENT 'ie2'",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'EXISTS'. SQLSTATE: 42601",
+        ),
+        (
+            "ALTER TABLE IF EXISTS ice.sales.nope ALTER COLUMN st.x COMMENT 'ie3'",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'EXISTS'. SQLSTATE: 42601",
+        ),
+        (
+            "ALTER TABLE IF EXISTS ice.sales.ac ALTER COLUMN id DROP NOT NULL, data COMMENT 'x'",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'EXISTS'. SQLSTATE: 42601",
+        ),
+        (
+            "ALTER TABLE IF EXISTS ice.sales.ac PARTITION (id=1) ALTER COLUMN id COMMENT 'x'",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'EXISTS'. SQLSTATE: 42601",
+        ),
+        (
+            "ALTER TABLE ice.sales.ac PARTITION (id=1) ALTER COLUMN id COMMENT 'pp'",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'ALTER'. SQLSTATE: 42601",
+        ),
+        (
+            "ALTER TABLE ice.sales.ac PARTITION (id=1) ALTER id COMMENT 'pa'",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'ALTER'. SQLSTATE: 42601",
+        ),
+        (
+            "ALTER TABLE ice.sales.ac PARTITION (id=1) ALTER COLUMN st.x COMMENT 'pnest'",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'ALTER'. SQLSTATE: 42601",
+        ),
+        (
+            "alter table ice.sales.ac partition (id=1) alter column id comment 'pl'",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'alter'. SQLSTATE: 42601",
+        ),
+    ] {
+        assert_eq!(parse_refusal(&ctx, &catalogs, sql).await, message, "{sql}");
+    }
+    assert_eq!(schema_count(&catalogs).await, 1);
+}
+
+#[tokio::test]
+async fn other_column_comment_statements_answer_the_residual_refusal() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, COMMENT_CREATE).await;
+    for sql in [
+        "ALTER TABLE ice.sales.ac ADD COLUMNS (z2 INT), ALTER COLUMN id COMMENT 'aa'",
+        "ALTER TABLE ice.sales.ac DROP COLUMN cat, ALTER COLUMN id COMMENT 'da'",
+        "ALTER TABLE ice.sales.ac ALTER COLUMN id DROP NOT NULL foo COMMENT 'x'",
+        "ALTER TABLE ice.sales.ac ALTER COLUMN id TYPE, data COMMENT 'x'",
+    ] {
+        assert_eq!(
+            refusal(&ctx, &catalogs, sql).await,
+            "This feature is not implemented: ALTER TABLE … ALTER COLUMN … COMMENT is supported \
+             only as ALTER TABLE <table> ALTER COLUMN <column> COMMENT '<doc>' or a list of such \
+             COMMENT specs; this statement shape is not supported",
+            "{sql}"
+        );
+    }
+    for sql in [
+        "ALTER TABLE ice.sales.ac ALTER COLUMN comment TYPE BIGINT",
+        "ALTER TABLE ice.sales.ac ADD COLUMN z INT COMMENT 'x'",
+        "ALTER TABLE ice.sales.ac CHANGE COLUMN data data STRING COMMENT 'x'",
+    ] {
+        assert!(
+            crate::nested_column_ddl::residual_column_comment_refusal(sql).is_none(),
+            "{sql}"
+        );
+    }
+    for sql in [
+        "ALTER TABLE ice.sales.ac ALTER COLUMN id DROP NOT NULL, cat DROP NOT NULL",
+        "ALTER TABLE ice.sales.ac CHANGE data data STRING COMMENT 'x'",
+        "ALTER TABLE IF EXISTS ice.sales.ac ADD COLUMN z INT COMMENT 'x'",
+        "ALTER TABLE IF EXISTS ice.sales.ac ALTER COLUMN st.x TYPE BIGINT",
+        "ALTER TABLE ice.sales.ac PARTITION (id=1) CHANGE COLUMN id COMMENT 'x'",
+        "ALTER TABLE ice.sales.ac PARTITION (id=1) ALTER COLUMN id TYPE BIGINT",
+    ] {
+        assert!(
+            crate::nested_column_ddl::try_parse_nested_column_ddl(sql).is_none(),
+            "{sql}"
+        );
+    }
+    assert_eq!(
+        docs(&catalogs)
+            .await
+            .iter()
+            .filter(|(_, doc)| doc.is_some())
+            .count(),
+        0
+    );
+    assert_eq!(schema_count(&catalogs).await, 1);
+}
+
+#[tokio::test]
 async fn alter_column_comment_tails_follow_spark_token_recovery() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;

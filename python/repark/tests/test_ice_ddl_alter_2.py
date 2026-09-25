@@ -288,6 +288,34 @@ def test_alter_column_comment_takes_the_dbt_statement_shapes(
             id="mixed-list-first",
         ),
         pytest.param(
+            "id DROP NOT NULL, data COMMENT 'dn'",
+            UnsupportedOperationException,
+            "This feature is not implemented: ALTER TABLE … ALTER COLUMN mixes COMMENT with "
+            "another change for `id` in one column list; only a list of COMMENT changes is "
+            "supported, so split the statement",
+            None,
+            None,
+            id="mixed-list-drop-not-null-first",
+        ),
+        pytest.param(
+            "cat TYPE STRING, data COMMENT 'tf'",
+            UnsupportedOperationException,
+            "This feature is not implemented: ALTER TABLE … ALTER COLUMN mixes COMMENT with "
+            "another change for `cat` in one column list; only a list of COMMENT changes is "
+            "supported, so split the statement",
+            None,
+            None,
+            id="mixed-list-type-first",
+        ),
+        pytest.param(
+            "id DROP NOT NULL, data COMMENT",
+            ParseException,
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near end of input. SQLSTATE: 42601",
+            "PARSE_SYNTAX_ERROR",
+            "42601",
+            id="mixed-list-missing-literal",
+        ),
+        pytest.param(
             "data COMMENT 'dup', data COMMENT 'dup2'",
             AnalysisException,
             _SAME_COLUMN.format(column="`data`"),
@@ -340,6 +368,44 @@ def test_alter_column_comment_refusals_match_spark(
     assert caught.value.getCondition() == condition
     assert caught.value.getSqlState() == sql_state
     assert _current_schema(_metadata(tmp_path, "ac")) == before
+    assert _metadata_files(tmp_path, "ac") == files
+
+
+@pytest.mark.parametrize(
+    ("statement", "near"),
+    [
+        pytest.param(
+            "ALTER TABLE IF EXISTS sc.ns.ac ALTER COLUMN id COMMENT 'ie'", "EXISTS", id="if-exists"
+        ),
+        pytest.param(
+            "alter table if exists sc.ns.ac alter column id comment 'lw'",
+            "exists",
+            id="if-exists-lower",
+        ),
+        pytest.param(
+            "ALTER TABLE sc.ns.ac PARTITION (id=1) ALTER COLUMN id COMMENT 'pp'",
+            "ALTER",
+            id="partition-spec",
+        ),
+        pytest.param(
+            "ALTER TABLE sc.ns.ac PARTITION (id=1) ALTER COLUMN st.x COMMENT 'pnest'",
+            "ALTER",
+            id="partition-spec-nested",
+        ),
+    ],
+)
+def test_wrapped_column_comments_are_parse_errors_like_spark(
+    spark: ReparkSession, tmp_path: Path, statement: str, near: str
+) -> None:
+    spark.sql(_COMMENT_TABLE)
+    files = _metadata_files(tmp_path, "ac")
+    with pytest.raises(ParseException) as caught:
+        spark.sql(statement)
+    assert str(caught.value) == (
+        f"[PARSE_SYNTAX_ERROR] Syntax error at or near '{near}'. SQLSTATE: 42601"
+    )
+    assert caught.value.getCondition() == "PARSE_SYNTAX_ERROR"
+    assert caught.value.getSqlState() == "42601"
     assert _metadata_files(tmp_path, "ac") == files
 
 
@@ -435,12 +501,35 @@ def test_element_and_value_comments_add_no_schema_like_spark(
 
 
 @pytest.mark.parametrize(
+    "clause",
+    [
+        pytest.param("ADD COLUMNS (z2 INT), ALTER COLUMN id COMMENT 'aa'", id="add-then-alter"),
+        pytest.param("ALTER COLUMN id DROP NOT NULL foo COMMENT 'x'", id="action-word-comment"),
+    ],
+)
+def test_other_column_comment_statements_answer_the_residual_refusal(
+    spark: ReparkSession, tmp_path: Path, clause: str
+) -> None:
+    spark.sql(_COMMENT_TABLE)
+    files = _metadata_files(tmp_path, "ac")
+    with pytest.raises(UnsupportedOperationException) as caught:
+        spark.sql(f"ALTER TABLE sc.ns.ac {clause}")
+    assert str(caught.value) == (
+        "This feature is not implemented: ALTER TABLE … ALTER COLUMN … COMMENT is supported "
+        "only as ALTER TABLE <table> ALTER COLUMN <column> COMMENT '<doc>' or a list of such "
+        "COMMENT specs; this statement shape is not supported"
+    )
+    assert _metadata_files(tmp_path, "ac") == files
+
+
+@pytest.mark.parametrize(
     ("clause", "rendered"),
     [
         pytest.param("ALTER COLUMN `st.x` COMMENT 'a'", "`st.x`", id="comment-dotted-name"),
         pytest.param("ALTER COLUMN st.`x.y` COMMENT 'a'", "`st`.`x.y`", id="comment-dotted-field"),
         pytest.param("ALTER COLUMN st.`x.y` TYPE BIGINT", "`st`.`x.y`", id="type-dotted-field"),
         pytest.param("ADD COLUMN nope.z INT", "`nope`", id="add-missing-parent"),
+        pytest.param("ALTER COLUMN nope FIRST", "`nope`", id="move-missing-column"),
     ],
 )
 def test_unresolved_columns_render_backquoted_parts_like_spark(

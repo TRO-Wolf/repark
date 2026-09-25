@@ -806,6 +806,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_a_repeated_column_after_use_names_the_three_part_table` pin the name rendering and the
   `USE sc.ns` table name.
   pins: ice-nested-evo-1/C-044, C-045, C-046, C-047, C-048
+  **Round 4 fold (2026-09-24):** the refusal table adds `mixed-list-drop-not-null-first`,
+  `mixed-list-type-first` and `mixed-list-missing-literal`.
+  `test_wrapped_column_comments_are_parse_errors_like_spark` pins `IF EXISTS` and `PARTITION`
+  near their tokens, and `test_other_column_comment_statements_answer_the_residual_refusal`
+  pins the residual text. The name-rendering test adds the MOVE route (`move-missing-column`).
+  pins: ice-nested-evo-1/C-048, C-049, C-050, C-051
 - [test_u5_alter_ddl.py](test_u5_alter_ddl.py) — **WO U5 PR1 (2026-09-24):** facade pins for
   nested struct/list/map-value TYPE promotions read the current Iceberg metadata file and the
   SQL DESCRIBE type. It also pins the UNSET IF EXISTS missing-key no-op, namespace SET

@@ -4752,8 +4752,11 @@ the pin rather than obeying it.
   refusal. A comment on a list element or map value is a no-op that adds no schema, as in
   Spark. `SET`/`DROP NOT NULL`, `SET`/`DROP DEFAULT`, `FIRST` or
   `AFTER` followed by `COMMENT` raises `PARSE_SYNTAX_ERROR` near `COMMENT`. A list that mixes
-  `COMMENT` with another column change is refused as not implemented, where Spark accepts it
-  (residue R-U5-MIXED-COMMENT-LIST in the `ice-nested-evo-1` ledger).
+  `COMMENT` with another column change, in either order, is refused as not implemented, where
+  Spark accepts it (residue R-U5-MIXED-COMMENT-LIST in the `ice-nested-evo-1` ledger).
+  `ALTER TABLE IF EXISTS` and a `PARTITION (…)` spec before the column form raise Spark's
+  `PARSE_SYNTAX_ERROR` near `EXISTS` / `ALTER`. Any other `ALTER COLUMN … COMMENT '<doc>'`
+  statement shape is refused as not implemented, and none leaks raw parser text.
 - **Apache Spark** — sets the column comment on an Iceberg table. *(oracle: recorded live —
   Spark 4.1.2 + Iceberg 1.11.0 scoreboard cell `D-ALTER-COMMENT` and the WO U5 PR2 probes.)*
 - **Pin** —

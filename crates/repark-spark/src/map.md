@@ -995,7 +995,8 @@ pins: rp-4-fork-repin/C-005, C-006
   `replace_columns.rs`; `alter.rs` only detects the form and routes it.
   **WO U5 PR2a (2026-09-24):** the last residual refusal, `refuse_unsupported_alter_sql`
   (`ALTER COLUMN … COMMENT is not supported yet via SQL`), is deleted with its router call;
-  `nested_column_ddl.rs` serves the statement.
+  `nested_column_ddl.rs` serves the statement. The round 4 fold puts a narrowed token-based
+  refusal, `nested_column_ddl::residual_column_comment_refusal`, back at that router step.
   **PR-B hadoop naming (2026-09-24):** `execute_rename_table` maps the fork error through
   `repark_iceberg::write::unsupported_message_error`, so a `type=hadoop` catalog answers
   exactly "Cannot rename Hadoop tables". Pinned in `tests/hadoop_rename.rs`.
@@ -1074,7 +1075,7 @@ pins: rp-4-fork-repin/C-005, C-006
   **WO U5 PR1 round 2 (2026-09-24):** `unset_if_exists_pair` (the `IF EXISTS` span the UNSET
   rewrite drops) and `unset_tblproperties_if_refusal`, a router pre-parse intercept placed after
   the comment-DDL pre-parse (the `refuse_unsupported_alter_sql` step it followed is gone since WO
-  U5 PR2a). It gives Spark's `PARSE_SYNTAX_ERROR` for a lone `IF`
+  U5 PR2a; `residual_column_comment_refusal` runs just before it since the round 4 fold). It gives Spark's `PARSE_SYNTAX_ERROR` for a lone `IF`
   (`missing 'EXISTS'`, or `end of input`) and for a leading `EXISTS` (`extra input`).
   pins: ice-nested-evo-1/C-031
 - `nested_column_ddl.rs` — **ICE-NESTED-EVO-1 (2026-09-17):** the nested-path `ALTER TABLE`
@@ -1172,6 +1173,16 @@ pins: rp-4-fork-repin/C-005, C-006
   token after a complete spec, or after a list path, with `extra input` only when it is the
   last token before end of input or `;`. Otherwise it answers the plain `near '<t>'`.
   pins: ice-nested-evo-1/C-044, C-045, C-046, C-047
+  **PR2a round 4 fold (2026-09-24):** a list whose first spec is an action (`column_action`) or
+  a `TYPE` runs `comment_list_after_first_spec`. `later_comment_spec` scans the later specs, and
+  one `<path> COMMENT '<doc>'` makes the statement `MixedCommentList` for the first path. The
+  nested TYPE route keeps its `near ','` when no COMMENT spec follows. `first_spec_without_action`
+  gives `Operation not allowed` before a `,` and `near` its token otherwise, but only when a
+  COMMENT spec follows. `wrapped_column_comment_refusal` answers `IF EXISTS` near `EXISTS` and
+  a `PARTITION (…)` spec near `ALTER` when an `ALTER`/`CHANGE` and a `COMMENT` follow.
+  `residual_column_comment_refusal`, which `router.rs` calls where the deleted I6 refusal ran,
+  names every other unclaimed `ALTER COLUMN … COMMENT '<literal>'` statement.
+  pins: ice-nested-evo-1/C-049, C-050, C-051
 - `alter_write_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** the `ALTER TABLE …
   WRITE …` pre-parse intercept (sqlparser carries none of these forms): `WRITE ORDERED BY`
   (sort order + `write.distribution-mode = range`), `WRITE LOCALLY ORDERED BY` (sort order,

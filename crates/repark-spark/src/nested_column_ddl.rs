@@ -69,7 +69,11 @@ pub(crate) fn try_parse_nested_column_ddl(sql: &str) -> Option<Result<NestedColu
     if !parser.parse_keywords(&[Keyword::ALTER, Keyword::TABLE]) {
         return None;
     }
+    let exists = if_exists_token(&mut parser);
     let table_parts = name_parts(&parser.parse_object_name(false).ok()?);
+    if exists.is_some() || parser.peek_keyword(Keyword::PARTITION) {
+        return wrapped_column_comment_refusal(&mut parser, exists);
+    }
     let mut names = NameParser {
         parser,
         quoted_near: None,
@@ -119,6 +123,99 @@ pub(crate) fn try_parse_nested_column_ddl(sql: &str) -> Option<Result<NestedColu
             },
         }),
         Err(error) => Some(Err(parser_error(error))),
+    }
+}
+
+pub(crate) fn residual_column_comment_refusal(sql: &str) -> Option<DataFusionError> {
+    if !starts_with_alter(sql) {
+        return None;
+    }
+    let dialect = SparkSqlDialect {};
+    let mut parser = Parser::new(&dialect).try_with_sql(sql).ok()?;
+    if !parser.parse_keywords(&[Keyword::ALTER, Keyword::TABLE]) {
+        return None;
+    }
+    let mut column_altered = false;
+    loop {
+        if parser.parse_keywords(&[Keyword::ALTER, Keyword::COLUMN]) {
+            column_altered = true;
+            continue;
+        }
+        match parser.next_token().token {
+            Token::EOF => return None,
+            Token::Word(word)
+                if column_altered
+                    && word.keyword == Keyword::COMMENT
+                    && matches!(
+                        parser.peek_token().token,
+                        Token::SingleQuotedString(_) | Token::DoubleQuotedString(_)
+                    ) =>
+            {
+                return Some(DataFusionError::NotImplemented(
+                    "ALTER TABLE … ALTER COLUMN … COMMENT is supported only as ALTER TABLE \
+                     <table> ALTER COLUMN <column> COMMENT '<doc>' or a list of such COMMENT \
+                     specs; this statement shape is not supported"
+                        .into(),
+                ));
+            }
+            _ => {}
+        }
+    }
+}
+
+fn if_exists_token(parser: &mut Parser<'_>) -> Option<Token> {
+    if !parser.parse_keywords(&[Keyword::IF, Keyword::EXISTS]) {
+        return None;
+    }
+    parser.prev_token();
+    Some(parser.next_token().token)
+}
+
+fn wrapped_column_comment_refusal(
+    parser: &mut Parser<'_>,
+    exists: Option<Token>,
+) -> Option<Result<NestedColumnDdl>> {
+    let near = exists.or_else(|| partition_spec_then_alter(parser))?;
+    let keywords = remaining_keywords(parser);
+    let alters_a_column = keywords
+        .iter()
+        .any(|keyword| matches!(keyword, Keyword::ALTER | Keyword::CHANGE));
+    (alters_a_column && keywords.contains(&Keyword::COMMENT))
+        .then(|| Err(verbatim_parser_error(syntax_error_near(&near))))
+}
+
+fn partition_spec_then_alter(parser: &mut Parser<'_>) -> Option<Token> {
+    parser.next_token();
+    skip_parenthesized(parser)?;
+    parser
+        .peek_keyword(Keyword::ALTER)
+        .then(|| parser.peek_token().token)
+}
+
+fn skip_parenthesized(parser: &mut Parser<'_>) -> Option<()> {
+    if !parser.consume_token(&Token::LParen) {
+        return None;
+    }
+    let mut depth = 1_usize;
+    while depth > 0 {
+        match parser.next_token().token {
+            Token::LParen => depth = depth.saturating_add(1),
+            Token::RParen => depth = depth.saturating_sub(1),
+            Token::EOF => return None,
+            _ => {}
+        }
+    }
+    Some(())
+}
+
+fn remaining_keywords(parser: &mut Parser<'_>) -> Vec<Keyword> {
+    let mut keywords = Vec::new();
+    loop {
+        match parser.next_token().token {
+            Token::EOF => return keywords,
+            Token::Word(word) => keywords.push(word.keyword),
+            _ => {}
+        }
     }
 }
 
@@ -296,21 +393,40 @@ fn parse_alter_column(
     }
     if type_allowed && names.parser.parse_keyword(Keyword::TYPE) {
         if path.len() < 2 {
-            return top_level_type_tail(&mut names.parser);
+            return top_level_type_tail(names, path);
         }
         let data_type = names.parser.parse_data_type()?;
         let data_type = parse_unparameterized_type_parameters(&mut names.parser, data_type)?;
+        if names.parser.peek_token().token == Token::Comma {
+            let near_comma = syntax_error_at(&names.parser);
+            return match comment_list_after_first_spec(names, path)? {
+                Some(mixed) => Ok(Some(mixed)),
+                None => Err(near_comma),
+            };
+        }
         expect_end(&mut names.parser)?;
         return Ok(Some(NestedColumnOperation::AlterType { path, data_type }));
     }
-    if !hive_change && column_action_then_comment(&mut names.parser) {
-        return Err(syntax_error_at(&names.parser));
+    if hive_change {
+        return Ok(None);
     }
-    Ok(None)
+    if column_action(&mut names.parser) {
+        if names.parser.parse_keyword(Keyword::COMMENT) {
+            names.parser.prev_token();
+            return Err(syntax_error_at(&names.parser));
+        }
+    } else if names.parser.parse_keyword(Keyword::TYPE) {
+        if names.parser.parse_data_type().is_err() {
+            return Ok(None);
+        }
+    } else {
+        return first_spec_without_action(names);
+    }
+    comment_list_after_first_spec(names, path)
 }
 
-fn column_action_then_comment(parser: &mut Parser<'_>) -> bool {
-    let action = if parser.parse_keywords(&[Keyword::SET, Keyword::DEFAULT]) {
+fn column_action(parser: &mut Parser<'_>) -> bool {
+    if parser.parse_keywords(&[Keyword::SET, Keyword::DEFAULT]) {
         parser.parse_expr().is_ok()
     } else if parser.parse_keyword(Keyword::AFTER) {
         parser.parse_identifier().is_ok()
@@ -319,12 +435,65 @@ fn column_action_then_comment(parser: &mut Parser<'_>) -> bool {
             || parser.parse_keywords(&[Keyword::DROP, Keyword::NOT, Keyword::NULL])
             || parser.parse_keywords(&[Keyword::DROP, Keyword::DEFAULT])
             || parser.parse_keyword(Keyword::FIRST)
-    };
-    if action && parser.parse_keyword(Keyword::COMMENT) {
-        parser.prev_token();
-        return true;
     }
-    false
+}
+
+fn first_spec_without_action(
+    names: &mut NameParser<'_>,
+) -> ParseResult<Option<NestedColumnOperation>> {
+    match names.parser.peek_token().token {
+        Token::EOF | Token::SemiColon => Ok(None),
+        Token::Comma => {
+            names.parser.next_token();
+            if later_comment_spec(names)? {
+                return Err(operation_not_allowed());
+            }
+            Ok(None)
+        }
+        _ => {
+            let near = syntax_error_at(&names.parser);
+            match later_comment_spec(names) {
+                Ok(false) => Ok(None),
+                Ok(true) | Err(_) => Err(near),
+            }
+        }
+    }
+}
+
+fn comment_list_after_first_spec(
+    names: &mut NameParser<'_>,
+    path: Vec<String>,
+) -> ParseResult<Option<NestedColumnOperation>> {
+    if !names.parser.consume_token(&Token::Comma) {
+        return Ok(None);
+    }
+    Ok(later_comment_spec(names)?.then_some(NestedColumnOperation::MixedCommentList(path)))
+}
+
+fn later_comment_spec(names: &mut NameParser<'_>) -> ParseResult<bool> {
+    let mut depth = 0_usize;
+    let mut spec_start = true;
+    loop {
+        if spec_start
+            && depth == 0
+            && names.column_path().is_ok()
+            && names.parser.parse_keyword(Keyword::COMMENT)
+        {
+            comment_literal(&mut names.parser)?;
+            return match names.parser.peek_token().token {
+                Token::EOF | Token::Comma | Token::SemiColon => Ok(true),
+                extra => Err(trailing_input(&names.parser, &extra)),
+            };
+        }
+        spec_start = false;
+        match names.parser.next_token().token {
+            Token::EOF => return Ok(false),
+            Token::LParen => depth = depth.saturating_add(1),
+            Token::RParen => depth = depth.saturating_sub(1),
+            Token::Comma => spec_start = depth == 0,
+            _ => {}
+        }
+    }
 }
 
 fn parse_comment_specs(
@@ -366,13 +535,17 @@ fn spec_without_comment(
         {
             Ok(NestedColumnOperation::MixedCommentList(path))
         }
-        Token::EOF | Token::Comma | Token::SemiColon => Err(ParserError::ParserError(
-            "Operation not allowed: ALTER TABLE table ALTER COLUMN requires a TYPE, a SET/DROP, \
-             a COMMENT, or a FIRST/AFTER."
-                .into(),
-        )),
+        Token::EOF | Token::Comma | Token::SemiColon => Err(operation_not_allowed()),
         extra => Err(trailing_input(parser, &extra)),
     }
+}
+
+fn operation_not_allowed() -> ParserError {
+    ParserError::ParserError(
+        "Operation not allowed: ALTER TABLE table ALTER COLUMN requires a TYPE, a SET/DROP, a \
+         COMMENT, or a FIRST/AFTER."
+            .into(),
+    )
 }
 
 fn trailing_input(parser: &Parser<'_>, extra: &Token) -> ParserError {
@@ -407,7 +580,11 @@ fn comment_literal(parser: &mut Parser<'_>) -> ParseResult<String> {
     }
 }
 
-fn top_level_type_tail(parser: &mut Parser<'_>) -> ParseResult<Option<NestedColumnOperation>> {
+fn top_level_type_tail(
+    names: &mut NameParser<'_>,
+    path: Vec<String>,
+) -> ParseResult<Option<NestedColumnOperation>> {
+    let parser = &mut names.parser;
     if parser.parse_data_type().is_err() {
         return Ok(None);
     }
@@ -415,7 +592,7 @@ fn top_level_type_tail(parser: &mut Parser<'_>) -> ParseResult<Option<NestedColu
         parser.prev_token();
         return Err(syntax_error_at(parser));
     }
-    Ok(None)
+    comment_list_after_first_spec(names, path)
 }
 
 fn parse_unparameterized_type_parameters(
