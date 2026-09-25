@@ -2687,6 +2687,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   floored to µs, in UTC and New York; a nine-digit `TIMESTAMP` value in `VALUES` stores what
   `INSERT … SELECT` stores; `EXPLAIN` lowers ns casts.
   pins: ice-tsns-sql-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+- [test_ice_typed_partition_refusals.py](test_ice_typed_partition_refusals.py) — **WO U5 PR3
+  verifier fixes (2026-09-25):** D-X-PARTITIONED-COLDEF refusals beside
+  `test_ice_ddl_alter_2.py` (kept under the 1000-line cap).
+  `test_typed_partition_column_shapes_refuse_like_spark` pins the `MAP` and two-field `STRUCT`
+  non-primitive texts (the element splitter keeps commas inside `<…>`) and the `DEFAULT`
+  `PARSE_SYNTAX_ERROR`s; `test_ctas_mixing_untyped_and_typed_partition_elements_answers_the_mix_text`
+  pins Spark's mix text on CTAS; `test_typed_partition_columns_differing_by_case_reach_the_fork_under_case_sensitive`
+  pins the fork's lower-case-index refusal under `caseSensitive=true`. No table is created.
+  pins: ice-nested-evo-1/C-058
 - [ice_tsns_sql_1_oracle.json](ice_tsns_sql_1_oracle.json) — **ICE-TSNS-SQL-1 (2026-09-17):**
   the PyIceberg `StaticTable` read-back of the DataFrame-door control (schema type names, spec,
   int64-ns values, partitions with counts), RePark's `.partitions` answer for the same table,

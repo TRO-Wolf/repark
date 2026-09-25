@@ -88,6 +88,7 @@ pub(crate) fn build_ctas(
             "Schema may not be specified in a {statement} statement"
         )));
     }
+    crate::create_table::typed_partition_columns(partitioning)?;
     let mut partition_fields = Vec::with_capacity(partitioning.len());
     for element in partitioning {
         match element {

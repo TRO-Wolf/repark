@@ -996,8 +996,13 @@ pins: rp-4-fork-repin/C-005, C-006
   (D-X-PARTITIONED-COLDEF) joins the schema after the declared columns and gets an identity
   field; `typed_partition_columns` raises Spark's `Cannot mix partition expressions and
   partition columns` parse error beside any other element, and
-  `refuse_duplicate_partition_columns` answers `COLUMN_ALREADY_EXISTS`. `normalize.rs` parses
-  the element into a `ColumnDef` (`PartitionedByElement::Typed`). pins: ice-nested-evo-1/C-058
+  `refuse_duplicate_partition_columns` answers `COLUMN_ALREADY_EXISTS`, comparing exactly under
+  `spark.sql.caseSensitive=true` (verifier fix 2026-09-25, V-001). `ctas.rs` runs the same mix
+  check before its typed-CTAS refusal (V-004). `normalize.rs` splits the elements at depth 0 of
+  parentheses and angle brackets (V-002) and hands a typed element to
+  `nested_column_ddl.rs::typed_partition_column`, which parses name, type, `NOT NULL` and
+  `COMMENT` into a `ColumnDef` (`PartitionedByElement::Typed`) and answers any other option with
+  Spark's `PARSE_SYNTAX_ERROR` text (V-003). pins: ice-nested-evo-1/C-058
 - `create_table.rs` — **U7 PR2 slice-1 round 3 (2026-09-25):** a column-def `CREATE OR
   REPLACE` / `REPLACE TABLE` loads the existing table first and re-keys the declared schema
   through `repark_iceberg::write::replacement_schema` before the partition spec is built, so

@@ -1141,7 +1141,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   refusal pins Spark's parse text for a transform, many elements and `DECIMAL`/`ARRAY`
   spellings; the duplicate refusal pins `COLUMN_ALREADY_EXISTS` for a declared name, a case
   variant and a repeated typed name. Neither creates a table. Near misses: untyped `(cat)`,
-  `(days(ts))`, and the empty-column-list refusal without typed columns.
+  `(days(ts))`, and the empty-column-list refusal without typed columns. Verifier fixes
+  (2026-09-25): `CREATE OR REPLACE` and `REPLACE TABLE` re-key a kept and an added typed column
+  (ids 3/4, spec fields 1001/1002, last-partition-id 1002); under `caseSensitive=true` a
+  case-only pair reaches the fork's lower-case-index refusal; `MAP`, two-field `STRUCT` and
+  `ARRAY<MAP<…>>` reach the non-primitive refusal whole; `DEFAULT` and `NULL` options answer
+  `PARSE_SYNTAX_ERROR`; a CTAS mixing untyped and typed elements answers the mix text.
   pins: ice-nested-evo-1/C-058
 - [column_comment_ddl.rs](column_comment_ddl.rs) — **WO U5 PR2a (2026-09-24):** `ALTER
   COLUMN … COMMENT` on the Spark door. The docs land as Spark measured: top level, nested

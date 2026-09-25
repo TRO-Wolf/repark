@@ -256,7 +256,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   reads its target inside the source catalog like Spark's InMemoryCatalog (D-RENAME-TABLE);
   supersedes ice-catalog-session-1/C-022's cross-catalog half and dbt-1-adapter/C-001's
   `S-RENAME` row. Residues R-U5-PR3-RENAME-CLASS, NESTED-NS-SQL, RENAME-MISSING-SOURCE and
-  DBT-RENAME.
+  DBT-RENAME. Verifier fixes (2026-09-25): R-U5-PR3-NON-PRIMITIVE and CTAS-TYPED narrowed to
+  measured texts; new residues CASE-SENSITIVE, SYNTAX-CONTEXT and TEMP-VIEW-RENAME; the dbt
+  rename follow-up line.
 - [ice-array-insert-1-ledger.md](ice-array-insert-1-ledger.md) —
   **ICE-ARRAY-INSERT-1 (2026-09-18), in flight:** inserts into array columns answer Spark
   4.1.2 on every door at fork #295 (F-LIST-INSERT-1) — one pin per recorded cell (three

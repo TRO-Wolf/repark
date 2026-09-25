@@ -55,9 +55,18 @@ pub(crate) async fn execute_create_table(
     partitioning: &[PartitionedByElement],
     clauses: &CreateClauses,
 ) -> Result<DataFrame> {
-    let timestamp_type = spark_timestamp_type_from_options(ctx.copied_config().options());
-    let schema_create =
-        build_schema_create(catalogs, create, partitioning, timestamp_type, clauses)?;
+    let options = ctx.copied_config();
+    let timestamp_type = spark_timestamp_type_from_options(options.options());
+    let case_sensitive =
+        repark_functions::case_sensitive::spark_case_sensitive_from_options(options.options());
+    let schema_create = build_schema_create(
+        catalogs,
+        create,
+        partitioning,
+        timestamp_type,
+        case_sensitive,
+        clauses,
+    )?;
     execute_schema_create(ctx, catalogs, schema_create).await
 }
 
@@ -68,6 +77,7 @@ fn build_schema_create(
     create: &CreateTable,
     partitioning: &[PartitionedByElement],
     timestamp_type: SparkTimestampType,
+    case_sensitive: bool,
     clauses: &CreateClauses,
 ) -> Result<SchemaCreate> {
     if create.query.is_some() {
@@ -161,7 +171,7 @@ fn build_schema_create(
     }
 
     let table_name = format!("`{catalog}`.`{namespace}`.`{table}`");
-    refuse_duplicate_partition_columns(&create.columns, &typed_columns)?;
+    refuse_duplicate_partition_columns(&create.columns, &typed_columns, case_sensitive)?;
     let columns: Vec<ColumnDef> = create
         .columns
         .iter()
@@ -188,7 +198,9 @@ fn build_schema_create(
     })
 }
 
-fn typed_partition_columns(partitioning: &[PartitionedByElement]) -> Result<Vec<ColumnDef>> {
+pub(crate) fn typed_partition_columns(
+    partitioning: &[PartitionedByElement],
+) -> Result<Vec<ColumnDef>> {
     let mut columns = Vec::new();
     let mut expressions = Vec::new();
     for element in partitioning {
@@ -223,14 +235,20 @@ fn typed_partition_columns(partitioning: &[PartitionedByElement]) -> Result<Vec<
     ))
 }
 
-fn refuse_duplicate_partition_columns(declared: &[ColumnDef], typed: &[ColumnDef]) -> Result<()> {
+fn refuse_duplicate_partition_columns(
+    declared: &[ColumnDef],
+    typed: &[ColumnDef],
+    case_sensitive: bool,
+) -> Result<()> {
     for (index, column) in typed.iter().enumerate() {
         let name = &column.name.value;
-        if declared
-            .iter()
-            .chain(&typed[..index])
-            .any(|earlier| earlier.name.value.eq_ignore_ascii_case(name))
-        {
+        if declared.iter().chain(&typed[..index]).any(|earlier| {
+            if case_sensitive {
+                earlier.name.value == *name
+            } else {
+                earlier.name.value.eq_ignore_ascii_case(name)
+            }
+        }) {
             return Err(DataFusionError::Plan(format!(
                 "[COLUMN_ALREADY_EXISTS] The column `{}` already exists. Choose another name or \
                  rename the existing column. SQLSTATE: 42711",

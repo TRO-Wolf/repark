@@ -691,9 +691,10 @@ pub(crate) fn find_partitioned_by_run(tokens: &[Token], boundary: usize) -> Opti
 pub(crate) fn parse_partitioned_by_elements(inner: &[Token]) -> Result<Vec<PartitionedByElement>> {
     let mut elements = Vec::new();
     let mut depth = 0usize;
+    let mut angle = 0usize;
     let mut current: Vec<&Token> = Vec::new();
     for token in inner {
-        if matches!(token, Token::Comma) && depth == 0 {
+        if matches!(token, Token::Comma) && depth == 0 && angle == 0 {
             elements.push(classify_partitioned_by_element(&current)?);
             current.clear();
             continue;
@@ -701,6 +702,9 @@ pub(crate) fn parse_partitioned_by_elements(inner: &[Token]) -> Result<Vec<Parti
         match token {
             Token::LParen => depth += 1,
             Token::RParen => depth = depth.saturating_sub(1),
+            Token::Lt => angle += 1,
+            Token::Gt => angle = angle.saturating_sub(1),
+            Token::ShiftRight => angle = angle.saturating_sub(2),
             _ => {}
         }
         if !matches!(token, Token::Whitespace(_)) {
@@ -732,29 +736,15 @@ pub(crate) fn classify_partitioned_by_element(tokens: &[&Token]) -> Result<Parti
         [Token::Word(_), Token::Period, ..] => Ok(PartitionedByElement::Nested(
             tokens.iter().map(ToString::to_string).collect::<String>(),
         )),
-        [Token::Word(_), Token::Word(_), ..] => typed_partition_column(tokens),
+        [Token::Word(_), Token::Word(_), ..] => {
+            crate::nested_column_ddl::typed_partition_column(tokens)
+        }
         other => Err(DataFusionError::Plan(format!(
             "malformed PARTITIONED BY element `{}`: expected a column name, got an \
              unrecognisable shape",
             other.iter().map(ToString::to_string).collect::<String>()
         ))),
     }
-}
-
-fn typed_partition_column(tokens: &[&Token]) -> Result<PartitionedByElement> {
-    let mut parser = Parser::new(&DatabricksDialect {})
-        .with_tokens(tokens.iter().map(|token| (*token).clone()).collect());
-    let column = parser
-        .parse_column_def()
-        .map_err(|error| DataFusionError::SQL(Box::new(error), None))?;
-    if parser.peek_token().token != Token::EOF {
-        return Err(DataFusionError::Plan(format!(
-            "malformed PARTITIONED BY element `{}`: expected a column name, got an \
-             unrecognisable shape",
-            tokens.iter().map(ToString::to_string).collect::<String>()
-        )));
-    }
-    Ok(PartitionedByElement::Typed(column))
 }
 
 /// Split transform-call arguments on top-level commas and render each to its semantic string.

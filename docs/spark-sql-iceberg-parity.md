@@ -8416,17 +8416,26 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   PARTITION BY: Cannot mix partition expressions and partition columns:` with Spark's
   `Expressions:` and `Columns:` lines; a repeated name (case-insensitive) raises AnalysisException
   `[COLUMN_ALREADY_EXISTS] The column `<name>` already exists. …SQLSTATE: 42711` with the
-  lower-cased name. Residues: the mix text spells each type as written, lower-cased (`integer`
+  lower-cased name; under `spark.sql.caseSensitive=true` only an exact repeat does, and a
+  case-only pair reaches the fork's `Cannot build lower case index: data and DATA collide` where
+  Spark commits both columns. A typed column may carry only `NOT NULL` and `COMMENT`; `DEFAULT`
+  or `NULL` raises ParseException `[PARSE_SYNTAX_ERROR] Syntax error at or near '<token>'.
+  SQLSTATE: 42601`. A CTAS mixing an untyped and a typed element answers the mix text. Residues: the mix text spells each type as written, lower-cased (`integer`
   where Spark says `int`), and the facade wraps it as `SQL error: ParserError("…")`; a STRUCT or
-  ARRAY typed column answers the fork's `DataInvalid => Cannot partition by non-primitive source
-  field` text where Spark raises ValidationException with its own rendering; CTAS keeps its
+  ARRAY or MAP typed column (commas inside `<…>` stay in the element) answers the fork's
+  `DataInvalid => Cannot partition by non-primitive source field` text where Spark raises
+  ValidationException with its own rendering; Spark's syntax-error position and `== SQL ==` block
+  are not rendered; the case-sensitive pair above; a CTAS with only typed columns keeps its
   pre-existing typed-partition text.
 - **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25
   (`target/probe-u5-pr3/spark.out`, `spark2.out` in the lane clone; scoreboard cell
   `D-X-PARTITIONED-COLDEF`, replayed EQUAL).
 - **Pin** — `crates/repark-spark/src/tests/create_typed_partition.rs`,
   `python/repark/tests/test_ice_ddl_alter_2.py::test_typed_partition_columns_become_identity_columns_like_spark`,
-  `…::test_typed_partition_column_refusals_match_spark`.
+  `…::test_typed_partition_column_refusals_match_spark`,
+  `python/repark/tests/test_ice_typed_partition_refusals.py`.
+  Verifier probe 2026-09-25 (critic `xr-spark.out`; `REPLACE TABLE` and `NULL` in the critic
+  scratchpad `xr/rep_spark.out`).
   pins: ice-nested-evo-1/C-058
 
 ### D-RENAME-TABLE — a catalog-qualified `RENAME TO` target renamed across the catalog name — **FIXED 2026-09-25 (WO U5 PR3)**
