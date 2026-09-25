@@ -84,6 +84,8 @@ def latest_metadata(warehouse: Path, table: str) -> dict[str, Any]:
         for path in warehouse.rglob("*.metadata.json")
         if path.parent.name == "metadata" and path.parent.parent.name.split("-")[0] == name
     ]
+    if not files:
+        raise FileNotFoundError(f"no metadata for {table}")
     newest = max(files, key=lambda path: (path.stat().st_mtime_ns, path.name))
     return json.loads(newest.read_text(encoding="utf-8"))
 

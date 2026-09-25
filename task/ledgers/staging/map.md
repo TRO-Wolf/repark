@@ -8,7 +8,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   **WO U9-TYPES-1 (2026-09-25), in flight:** four column types end to end on the Spark door,
   measured against Spark 4.1.2 + Iceberg 1.11 and replayed step by step from
   `python/repark/tests/u9_types_1_spark_oracle.json`. `TIMESTAMP_LTZ` columns and typed
-  literals (C-001..C-005); `MAP` columns and the empty `map()` literal (C-006..C-008).
+  literals (C-001..C-005); `MAP` columns and the empty `map()` literal (C-006..C-008);
+  `VOID` (v3 `unknown`) measured and held OPEN on the fork's write refusal (C-009, R-14).
   `risk_tier: standard`. Branch `feat/u9-types-1`.
   pins: u9-types-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [u8-write-sql-ledger.md](u8-write-sql-ledger.md) —

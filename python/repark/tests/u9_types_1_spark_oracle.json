@@ -4320,6 +4320,685 @@
      "map<string,int>"
     ]
    ]
+  },
+  {
+   "group": "void",
+   "key": "void/v3/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.v3 (id INT, c VOID) USING iceberg TBLPROPERTIES ('format-version'='3')",
+   "spark": "ok",
+   "residue": {
+    "id": "R-14",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "UnsupportedOperationException"
+     ],
+     [
+      "msg",
+      "This feature is not implemented: column type `VOID` is not supported yet for Iceberg tables"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void",
+   "key": "void/v2/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.v2 (id INT, c VOID) USING iceberg TBLPROPERTIES ('format-version'='2')",
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o56.sql.\n: java.lang.IllegalStateException: Invalid schema for v2:\n- Invalid type for c: unknown is not supported until v3"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-14",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "UnsupportedOperationException"
+     ],
+     [
+      "msg",
+      "This feature is not implemented: column type `VOID` is not supported yet for Iceberg tables"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void",
+   "key": "void/v1/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.v1 (id INT, c VOID) USING iceberg TBLPROPERTIES ('format-version'='1')",
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o56.sql.\n: java.lang.IllegalStateException: Invalid schema for v1:\n- Invalid type for c: unknown is not supported until v3"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-14",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "UnsupportedOperationException"
+     ],
+     [
+      "msg",
+      "This feature is not implemented: column type `VOID` is not supported yet for Iceberg tables"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void",
+   "key": "void/v3/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.v3 VALUES (0, NULL), (1, NULL)",
+   "spark": "ok",
+   "residue": {
+    "id": "R-14",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: table 'sc.ns.v3' not found"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void",
+   "key": "void/v3/select",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.v3",
+   "spark": [
+    [
+     0,
+     null
+    ],
+    [
+     1,
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-14",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: table 'sc.ns.v3' not found"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void",
+   "key": "void/v3/md",
+   "do": "md",
+   "table": "sc.ns.v3",
+   "spark": [
+    [
+     "fields",
+     [
+      [
+       [
+        "id",
+        1
+       ],
+       [
+        "name",
+        "id"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "int"
+       ]
+      ],
+      [
+       [
+        "id",
+        2
+       ],
+       [
+        "name",
+        "c"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "unknown"
+       ]
+      ]
+     ]
+    ],
+    [
+     "spec",
+     []
+    ]
+   ],
+   "residue": {
+    "id": "R-14",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "FileNotFoundError"
+     ],
+     [
+      "msg",
+      "no metadata for sc.ns.v3"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void",
+   "key": "void/v3/cols",
+   "do": "cols",
+   "sql": "SELECT * FROM sc.ns.v3",
+   "spark": [
+    [
+     "id",
+     "int"
+    ],
+    [
+     "c",
+     "void"
+    ]
+   ],
+   "residue": {
+    "id": "R-14",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: table 'sc.ns.v3' not found"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void",
+   "key": "void/v3/describe",
+   "do": "describe",
+   "sql": "sc.ns.v3",
+   "spark": [
+    [
+     "id",
+     "int"
+    ],
+    [
+     "c",
+     "void"
+    ]
+   ],
+   "residue": {
+    "id": "R-14",
+    "repark": [
+     [
+      "cond",
+      "TABLE_OR_VIEW_NOT_FOUND"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`ns`.`v3` cannot be found. Verify the spelling and correctness of the schema and catalog. If you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
+     ],
+     [
+      "state",
+      "42P01"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void",
+   "key": "void/v3/dtypes",
+   "do": "dtypes",
+   "sql": "SELECT * FROM sc.ns.v3",
+   "spark": [
+    [
+     "id",
+     "int"
+    ],
+    [
+     "c",
+     "void"
+    ]
+   ],
+   "residue": {
+    "id": "R-14",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: table 'sc.ns.v3' not found"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void",
+   "key": "void/v3/pytypes",
+   "do": "pytypes",
+   "sql": "SELECT c FROM sc.ns.v3 ORDER BY id",
+   "spark": [
+    [
+     "NoneType"
+    ],
+    [
+     "NoneType"
+    ]
+   ],
+   "residue": {
+    "id": "R-14",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: table 'sc.ns.v3' not found"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void",
+   "key": "void/v3/filter-notnull",
+   "do": "rows",
+   "sql": "SELECT id FROM sc.ns.v3 WHERE c IS NOT NULL",
+   "spark": [],
+   "residue": {
+    "id": "R-14",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: table 'sc.ns.v3' not found"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void",
+   "key": "void/v3/insert-value",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.v3 VALUES (2, 1)",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`v3`: Cannot safely cast `c` \"INT\" to \"VOID\". SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-14",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: table 'sc.ns.v3' not found"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void",
+   "key": "void/v3/insert-omit",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.v3 (id) VALUES (6)",
+   "spark": "ok",
+   "residue": {
+    "id": "R-14",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: table 'sc.ns.v3' not found"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void",
+   "key": "void/v3/cast-null-void",
+   "do": "cols",
+   "sql": "SELECT CAST(NULL AS VOID) AS x",
+   "spark": [
+    [
+     "x",
+     "void"
+    ]
+   ],
+   "residue": {
+    "id": "R-14",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "UnsupportedOperationException"
+     ],
+     [
+      "msg",
+      "This feature is not implemented: Unsupported SQL type VOID"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void",
+   "key": "void/v3/addcol",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.v3b (id INT) USING iceberg TBLPROPERTIES ('format-version'='3')",
+   "spark": "ok"
+  },
+  {
+   "group": "void",
+   "key": "void/v3/addcol-insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.v3b VALUES (1)",
+   "spark": "ok"
+  },
+  {
+   "group": "void",
+   "key": "void/v3/addcol-alter",
+   "do": "sql",
+   "sql": "ALTER TABLE sc.ns.v3b ADD COLUMN c VOID",
+   "spark": "ok",
+   "residue": {
+    "id": "R-14",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "UnsupportedOperationException"
+     ],
+     [
+      "msg",
+      "This feature is not implemented: column type `VOID` is not supported yet for Iceberg tables"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void",
+   "key": "void/v3/addcol-rows",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.v3b",
+   "spark": [
+    [
+     1,
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-14",
+    "repark": [
+     [
+      1
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void",
+   "key": "void/v3/addcol-insert-after",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.v3b VALUES (2, NULL)",
+   "spark": "ok",
+   "residue": {
+    "id": "R-14",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: Inconsistent data length across values list: got 2 values in row 0 but expected 1"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void",
+   "key": "void/v2/addcol",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.v2b (id INT) USING iceberg TBLPROPERTIES ('format-version'='2')",
+   "spark": "ok"
+  },
+  {
+   "group": "void",
+   "key": "void/v2/addcol-alter",
+   "do": "sql",
+   "sql": "ALTER TABLE sc.ns.v2b ADD COLUMN c VOID",
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o56.sql.\n: java.lang.IllegalStateException: Invalid schema for v2:\n- Invalid type for c: unknown is not supported until v3"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-14",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "UnsupportedOperationException"
+     ],
+     [
+      "msg",
+      "This feature is not implemented: column type `VOID` is not supported yet for Iceberg tables"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
   }
  ]
 }
