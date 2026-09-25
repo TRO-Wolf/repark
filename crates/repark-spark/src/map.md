@@ -1003,7 +1003,9 @@ pins: rp-4-fork-repin/C-005, C-006
   `nested_column_ddl.rs::typed_partition_column`, which parses name, type, an optional `NOT NULL`
   then an optional `COMMENT`, each once and in that order, into a `ColumnDef`
   (`PartitionedByElement::Typed`) and answers any other option, order or repeat with Spark's
-  `PARSE_SYNTAX_ERROR` text naming the unexpected token (V-003; r2 V-001). pins: ice-nested-evo-1/C-058
+  `PARSE_SYNTAX_ERROR` text naming the unexpected token (V-003; r2 V-001); a truncated tail
+  (`NOT`, `COMMENT` with no string, `NOT NULL NULL`) refuses with RePark's own token text,
+  residue R-U5-PR3-OPTION-TAIL-TEXT. pins: ice-nested-evo-1/C-058
 - `create_table.rs` — **U7 PR2 slice-1 round 3 (2026-09-25):** a column-def `CREATE OR
   REPLACE` / `REPLACE TABLE` loads the existing table first and re-keys the declared schema
   through `repark_iceberg::write::replacement_schema` before the partition spec is built, so
