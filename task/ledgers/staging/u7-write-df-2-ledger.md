@@ -307,7 +307,9 @@ round-2 wheel):
 - **R-16** (2026-09-25) — a sub-field spelled `A` for `a` under the default case-insensitive
   setting passes the resolver and writes `a` NULL through `overwrite(condition)`; Spark
   writes 9 (`oc_nested_upper_subfield`). The writer's struct cast matches sub-field names
-  exactly. Pinned beside Spark's answer.
+  exactly. Any case-only sub-field spelling, at any depth and in any position (`B` for
+  `b`, `s.t.A`), writes that field NULL the same way (verifier r3 V-002, 2026-09-25). Pinned
+  beside Spark's answer.
 - **R-17** (2026-09-25, critic r3 V-005a) — a STRING `id` into BIGINT refuses
   `AnalysisException` (condition null) `repark_insert_store_assignment\ncaused by\nError
   during planning: INSERT INTO cannot store-assign column `id`: source type Utf8 is not
@@ -321,6 +323,24 @@ round-2 wheel):
   'id' is declared as non-nullable but contains null values`; Spark `SparkRuntimeException`
   `[NOT_NULL_ASSERT_VIOLATION] NULL value appeared in non-nullable field: id …` SQLSTATE 42000
   (`oc_null_into_not_null`; ICE-WRITE-OPTIONS-1 rationale (a)). Both leave the table unchanged.
+- **R-19** (2026-09-25, verifier r3 V-001, pre-existing, not worked) — the table properties
+  `write.overwrite.isolation-level`, `write.merge.isolation-level` and
+  `write.delete.isolation-level` are parsed by RePark where Spark ignores an unknown value:
+  `bogus` refuses `Invalid isolation level: bogus` on `overwrite(condition)` and on
+  `writeTo.overwritePartitions()` (Spark commits), and on a MERGE that only inserts unmatched
+  rows (Spark commits); `write.delete.isolation-level=bogus` with `DELETE WHERE id = 1`
+  commits the delete on RePark, copy-on-write and merge-on-read, where Spark refuses the
+  same text and keeps its rows (`xr6/spark.json` vs `xr6/repark.json`). No clause claims
+  these EQUAL; the fix is one parser for the three properties that mirrors Spark's per-door
+  reading.
+- **R-20** (2026-09-25, verifier r3 V-003, text only) — shapes that refuse on both engines
+  with the same rows but different texts: a struct inside an ARRAY or MAP with a missing or
+  extra sub-field answers the engine's `Cannot automatically convert List(Struct(...)) to
+  List(...)` where Spark answers `CANNOT_FIND_DATA` naming `` `s`.`element`.`b` `` or
+  `` `s`.`value`.`b` `` (or `EXTRA_STRUCT_FIELDS` on `` `s`.`element` ``); an INT given for a
+  struct answers `Cannot automatically convert Int32 to Struct(...)` where Spark answers
+  `CANNOT_SAFELY_CAST`; a NULL into a NOT NULL struct is the R-18 family. The by-name walk
+  does not descend lists and maps (`insert_by_name/map.md`).
 
 ## Mutation (step 6, `target/probe-u7-pr2/mutation-*.txt`)
 

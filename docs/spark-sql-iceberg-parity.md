@@ -4138,7 +4138,10 @@ the pin rather than obeying it.
   on append where Spark commits. The table property `write.overwrite.isolation-level` is
   not the option: a `bogus` value refuses `Invalid isolation level: bogus` on
   `overwrite(condition)` where Spark ignores the property and commits
-  (`y_prop_isolation_bogus`, critic r3 V-003, 2026-09-25, not worked); `none` there keeps
+  (`y_prop_isolation_bogus`, critic r3 V-003, 2026-09-25, not worked) — and the same
+  unworked parsers flip `writeTo.overwritePartitions()` and an insert-only MERGE under
+  `write.merge.isolation-level`, while `write.delete.isolation-level=bogus` lets a DELETE
+  commit where Spark refuses (u7-write-df-2 residue R-19, verifier r3, 2026-09-25); `none` there keeps
   the fork's skip-validation sentinel, and a non-concurrent overwrite matches Spark.
   `distribution-mode` (`none`/`hash`/`range`), `fanout-enabled`, `check-nullability`,
   and `check-ordering` are accepted with Spark's leniency (any boolean spelling; unknown
