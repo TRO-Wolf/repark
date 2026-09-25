@@ -16,6 +16,7 @@ use repark_core::CatalogRegistry;
 
 use crate::{catalog_handle, name_parts};
 
+pub(crate) mod nested_assign;
 pub(crate) mod schema_evolution;
 mod stars;
 
@@ -85,7 +86,8 @@ pub(crate) async fn execute_merge(
     clauses: &[MergeClause],
     schema_evolution: bool,
 ) -> Result<DataFrame> {
-    let (catalog_name, mut spec) = lower(table, source, on, clauses)?;
+    let folded = nested_assign::fold_merge_clauses(ctx, catalogs, table, source, clauses).await?;
+    let (catalog_name, mut spec) = lower(table, source, on, folded.as_deref().unwrap_or(clauses))?;
     spec.schema_evolution = schema_evolution;
     let handle = catalog_handle(catalogs, &catalog_name)?;
     crate::merge_fragments::maybe_rewrite_merge_fragments(ctx, handle, &mut spec).await?;

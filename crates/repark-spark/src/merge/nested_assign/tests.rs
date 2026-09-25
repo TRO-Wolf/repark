@@ -1,0 +1,290 @@
+use std::sync::Arc;
+
+use datafusion::arrow::datatypes::{DataType, Field, Fields, Schema as ArrowSchema};
+use datafusion::prelude::SessionContext;
+use datafusion::sql::sqlparser::ast::{Assignment, Statement};
+use datafusion::sql::sqlparser::dialect::DatabricksDialect;
+use datafusion::sql::sqlparser::parser::Parser;
+
+use super::{AssignmentScope, Step, fold_nested_assignments, render, resolve_key, value_sql_for};
+
+fn struct_type(fields: Vec<Field>) -> DataType {
+    DataType::Struct(Fields::from(fields))
+}
+
+fn schema() -> ArrowSchema {
+    let inner = struct_type(vec![
+        Field::new("x", DataType::Int32, true),
+        Field::new("y", DataType::Utf8, true),
+    ]);
+    ArrowSchema::new(vec![
+        Field::new("id", DataType::Int64, true),
+        Field::new(
+            "st",
+            struct_type(vec![
+                Field::new("a", DataType::Int32, true),
+                Field::new("inner", inner, true),
+            ]),
+            true,
+        ),
+        Field::new(
+            "arr",
+            DataType::List(Arc::new(Field::new("element", DataType::Int32, true))),
+            true,
+        ),
+    ])
+}
+
+fn scope() -> AssignmentScope {
+    AssignmentScope {
+        qualifiers: vec![vec!["t".to_string()]],
+        sql_qualifier: "t".to_string(),
+        column_prefix: Some("t".to_string()),
+        value_qualifiers: vec![vec!["t".to_string()], vec!["s".to_string()]],
+        probe_from: "missing_probe_table".to_string(),
+    }
+}
+
+fn parts(path: &str) -> Vec<String> {
+    path.split('.').map(ToString::to_string).collect()
+}
+
+fn assignments(sql: &str) -> Vec<Assignment> {
+    let statement = Parser::new(&DatabricksDialect {})
+        .try_with_sql(sql)
+        .and_then(|mut parser| parser.parse_statement())
+        .unwrap();
+    let Statement::Update(update) = statement else {
+        panic!("expected an UPDATE");
+    };
+    update.assignments
+}
+
+#[test]
+fn a_struct_path_resolves_to_canonical_field_names() {
+    let key = resolve_key(&schema(), &parts("ST.Inner.X"))
+        .unwrap()
+        .unwrap();
+    assert_eq!(key.column, "st");
+    assert_eq!(
+        key.steps,
+        vec![
+            Step::Field("inner".to_string()),
+            Step::Field("x".to_string())
+        ]
+    );
+    assert_eq!(key.pretty(), "st.inner.x");
+    assert_eq!(key.sql(&scope()), "t.st.`inner`.`x`");
+}
+
+#[test]
+fn an_unknown_column_is_left_to_the_existing_path() {
+    assert!(resolve_key(&schema(), &parts("zz.a")).unwrap().is_none());
+}
+
+#[test]
+fn key_resolution_refuses_as_spark_does() {
+    let missing = resolve_key(&schema(), &parts("st.zz"))
+        .unwrap_err()
+        .to_string();
+    assert_eq!(
+        missing,
+        "Error during planning: [FIELD_NOT_FOUND] No such struct field `zz` in `a`, `inner`. \
+         SQLSTATE: 42704"
+    );
+    let atomic = resolve_key(&schema(), &parts("id.a"))
+        .unwrap_err()
+        .to_string();
+    assert_eq!(
+        atomic,
+        "Error during planning: [INVALID_EXTRACT_BASE_FIELD_TYPE] Can't extract a value from \
+         \"id\". Need a complex type [STRUCT, ARRAY, MAP] but got \"BIGINT\". SQLSTATE: 42000"
+    );
+    let index = resolve_key(&schema(), &parts("arr.b"))
+        .unwrap_err()
+        .to_string();
+    assert_eq!(
+        index,
+        "Error during planning: [DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \
+         \"arr[b]\" due to data type mismatch: The second parameter requires the \"INTEGRAL\" \
+         type, however \"b\" has the type \"STRING\". SQLSTATE: 42K09"
+    );
+}
+
+#[test]
+fn scala_type_names_follow_spark_to_string() {
+    let map = DataType::Map(
+        Arc::new(Field::new(
+            "key_value",
+            struct_type(vec![
+                Field::new("key", DataType::Utf8, false),
+                Field::new(
+                    "value",
+                    struct_type(vec![Field::new("x", DataType::Int32, true)]),
+                    true,
+                ),
+            ]),
+            false,
+        )),
+        false,
+    );
+    assert_eq!(
+        render::scala_type(&map),
+        "MapType(StringType,StructType(StructField(x,IntegerType,true)),true)"
+    );
+    assert_eq!(
+        render::scala_type(&DataType::List(Arc::new(Field::new(
+            "element",
+            DataType::Decimal128(10, 2),
+            false
+        )))),
+        "ArrayType(DecimalType(10,2),false)"
+    );
+}
+
+#[test]
+fn a_path_part_is_quoted_only_when_spark_quotes_it() {
+    assert_eq!(render::quote_if_needed("st"), "st");
+    assert_eq!(render::quote_if_needed("b c"), "`b c`");
+    assert_eq!(render::quote_if_needed("12"), "`12`");
+    assert_eq!(render::quote_if_needed("a`b"), "`a``b`");
+}
+
+#[test]
+fn pretty_values_drop_qualifiers_and_string_quotes() {
+    let values = assignments(
+        "UPDATE t SET a = named_struct('a', s.na, 'b', 'z'), b = t.st.a + 1, c = sc.ns.t.id",
+    );
+    let qualifiers = vec![
+        vec!["t".to_string()],
+        vec!["s".to_string()],
+        vec!["sc".to_string(), "ns".to_string(), "t".to_string()],
+    ];
+    let pretty: Vec<String> = values
+        .iter()
+        .map(|assignment| render::pretty_expr(&assignment.value, &qualifiers))
+        .collect();
+    assert_eq!(pretty, ["named_struct(a, na, b, z)", "(st.a + 1)", "id"]);
+}
+
+#[test]
+fn a_struct_value_resolves_by_name_as_spark_does() {
+    let target = struct_type(vec![
+        Field::new("x", DataType::Int32, true),
+        Field::new("y", DataType::Utf8, true),
+    ]);
+    let path = parts("st.inner");
+    let missing = struct_type(vec![
+        Field::new("q", DataType::Int64, true),
+        Field::new("y", DataType::Utf8, true),
+    ]);
+    assert_eq!(
+        value_sql_for("v", &missing, &target, &path)
+            .unwrap_err()
+            .to_string(),
+        "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write \
+         incompatible data for the table ``: Cannot find data for the output column \
+         `st`.`inner`.`x`. SQLSTATE: KD000"
+    );
+    let extra = struct_type(vec![
+        Field::new("x", DataType::Int64, true),
+        Field::new("y", DataType::Utf8, true),
+        Field::new("z", DataType::Int64, true),
+    ]);
+    assert_eq!(
+        value_sql_for("v", &extra, &target, &path)
+            .unwrap_err()
+            .to_string(),
+        "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write \
+         incompatible data for the table ``: Cannot write extra fields `z` to the struct \
+         `st`.`inner`. SQLSTATE: KD000"
+    );
+    let bad_leaf = struct_type(vec![
+        Field::new("x", DataType::Utf8, true),
+        Field::new("y", DataType::Utf8, true),
+    ]);
+    assert!(
+        value_sql_for("v", &bad_leaf, &target, &path)
+            .unwrap_err()
+            .to_string()
+            .contains("Cannot safely cast `st`.`inner`.`x` \"STRING\" to \"INT\"")
+    );
+    let reordered = struct_type(vec![
+        Field::new("y", DataType::Utf8, true),
+        Field::new("x", DataType::Int64, true),
+    ]);
+    assert_eq!(
+        value_sql_for("v", &reordered, &target, &path).unwrap(),
+        "arrow_cast((v), 'Struct(\"x\": Int32, \"y\": Utf8)')"
+    );
+    let recased = struct_type(vec![
+        Field::new("X", DataType::Int64, true),
+        Field::new("Y", DataType::Utf8, true),
+    ]);
+    assert_eq!(
+        value_sql_for("v", &recased, &target, &path).unwrap(),
+        "CASE WHEN (v) IS NULL THEN NULL ELSE named_struct('x', \
+         arrow_cast((get_field((v), 'X')), 'Int32'), 'y', \
+         arrow_cast((get_field((v), 'Y')), 'Utf8')) END"
+    );
+}
+
+#[tokio::test]
+async fn top_level_assignments_are_not_folded() {
+    let ctx = SessionContext::new();
+    let folded = fold_nested_assignments(
+        &ctx,
+        &schema(),
+        &scope(),
+        &assignments("UPDATE t SET t.id = 1, st = named_struct('a', 1, 'inner', NULL)"),
+    )
+    .await
+    .unwrap();
+    assert!(folded.is_none());
+}
+
+#[tokio::test]
+async fn nested_assignments_fold_into_one_struct_rebuild() {
+    let ctx = SessionContext::new();
+    let folded = fold_nested_assignments(
+        &ctx,
+        &schema(),
+        &scope(),
+        &assignments("UPDATE t SET t.st.inner.x = s.v, id = 2, st.a = 7"),
+    )
+    .await
+    .unwrap()
+    .unwrap();
+    let rendered: Vec<String> = folded.iter().map(ToString::to_string).collect();
+    assert_eq!(
+        rendered,
+        [
+            "`st` = named_struct('a', arrow_cast((7), 'Int32'), 'inner', \
+             named_struct('x', arrow_cast((s.v), 'Int32'), 'y', \
+             get_field(get_field(t.`st`, 'inner'), 'y')))",
+            "id = 2",
+        ]
+    );
+}
+
+#[tokio::test]
+async fn conflicting_and_repeated_assignments_refuse_with_every_error() {
+    let ctx = SessionContext::new();
+    let error = fold_nested_assignments(
+        &ctx,
+        &schema(),
+        &scope(),
+        &assignments("UPDATE t SET st.a = 1, st.a = 2, st.inner = NULL, st.inner.y = 'q', id = 3"),
+    )
+    .await
+    .unwrap_err()
+    .to_string();
+    assert_eq!(
+        error,
+        "Error during planning: [DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] \
+         Cannot resolve \"st.a = 1\", \"st.a = 2\", \"st.inner = NULL\", \"st.inner.y = q\", \
+         \"id = 3\" due to data type mismatch: \n- Multiple assignments for 'st.a': 1, 2\n- \
+         Conflicting assignments for 'st.inner': t.st.`inner` = NULL, t.st.`inner`.`y` = 'q' \
+         SQLSTATE: 42K09"
+    );
+}

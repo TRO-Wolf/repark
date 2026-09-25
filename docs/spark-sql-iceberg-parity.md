@@ -1305,6 +1305,43 @@ perfectly good read.
 - **Rationale** — FIXED. `Partitioned inserts not yet supported` (DataFusion's planner text)
   retires.
 
+#### DML-9 — nested struct-field assignment in `UPDATE` and `MERGE` — **FIXED 2026-09-25 (U8 PR2)**
+
+- **repark** — the Spark door folds every `SET <col>.<field>… = v` of one statement or MERGE
+  clause into one whole-column assignment before the existing UPDATE and MERGE paths run
+  (`crates/repark-spark/src/merge/nested_assign.rs`, called from `update_cast.rs` and
+  `merge.rs`). The fold follows Spark's `AssignmentUtils`: each struct is rebuilt as
+  `named_struct(…)` over its fields in table order, an untouched field reads the stored value, and
+  an assigned leaf is cast by Spark's store-assignment rules. A NULL struct becomes a struct with
+  only the assigned field set, as in Spark. A struct-valued leaf resolves by name
+  (reorder and case are accepted). A key resolves like Spark's field extraction: a qualifier,
+  case-insensitive names, and map values or arrays of structs as extraction steps. Refusals carry
+  Spark's condition, SQLSTATE and text: `FIELD_NOT_FOUND` / `42704`,
+  `INVALID_EXTRACT_BASE_FIELD_TYPE` / `42000`, `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` /
+  `42K09` (a field of an array of atomics), `DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS`
+  / `42K09` (multiple or conflicting assignments, a map or array target, nested `INSERT` keys),
+  and `INCOMPATIBLE_DATA_FOR_TABLE.{CANNOT_SAFELY_CAST, CANNOT_FIND_DATA, EXTRA_STRUCT_FIELDS}` /
+  `KD000` (table name ``` `` ```, column `` `st`.`a` ``). The MERGE store-assignment gate
+  (`repark-iceberg` `write/store_assign.rs`) now judges a struct field by field and ignores
+  Iceberg field ids. Whole-struct `SET t.st = named_struct(…)`, `UPDATE SET *` and a struct
+  `INSERT` value therefore write Spark's rows. Before, they refused `not ANSI-store-assignable`.
+- **Apache Spark** — the same answers. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0,
+  2026-09-25, 93 keys `pr2/…` of `python/repark/tests/u8_write_sql_nested_spark_oracle.json`;
+  scoreboard cells `W-UPDATE-NESTED-FIELD`, `W-MERGE-NESTED`.)*
+- **Residue** — an `UPDATE` without `WHERE` on a table with a struct column fails in the fork's
+  `IcebergUpdateExec` (`arguments need to have the same data type`), also for top-level
+  assignments (R-13). An overflowing leaf refuses with Arrow's cast text, where Spark raises
+  `CAST_OVERFLOW_IN_TABLE_INSERT` (R-15). A whole-struct `UPDATE SET st = named_struct('q', …)`
+  with a missing field writes NULL into it (Spark refuses `CANNOT_FIND_DATA`). A whole-struct MERGE
+  assignment with reordered or renamed fields refuses with RePark's gate text (R-17). Spark
+  appends `; line N pos M` to key refusals; RePark does not.
+- **Pin** — `python/repark/tests/test_ice_write_sql_1.py`;
+  `crates/repark-spark/src/tests/nested_assign.rs`, `nested_assign_oracle.rs`.
+  pins: u8-write-sql/C-025, C-026, C-027, C-028, C-029, C-030, C-031
+- **Rationale** — FIXED. `nested-field assignment is not supported` (MERGE) and
+  `UNRESOLVED_COLUMN` for the field name (UPDATE) retire on the Spark door. The native ANSI
+  door keeps its nested-assignment refusal (`crates/repark-sql/src/merge.rs`).
+
 #### RTAS-OPS-1 — `[CREATE OR ]REPLACE TABLE [… AS SELECT]` snapshot operation stamps
 
 - **repark** — **both spellings reach the same paths (IPI-25, 2026-09-20):** `REPLACE TABLE …`

@@ -331,6 +331,10 @@ repark-core's error map.
   `commit_truncate_to` commits onto a named branch.
   pins: dml-c-truncate/C-001, C-005
   pins: rp-5-fork-repin/C-004
+- `update_cast.rs` — **U8 WRITE-SQL PR2 (2026-09-25):** `store_assignment_cast_sql` is the one
+  home of the `arrow_cast((expr), '<type>')` store-assignment cast, with the field ids
+  stripped from the type name. MERGE's `insert.rs` and the Spark door's nested-assignment fold
+  both call it. pins: u8-write-sql/C-030
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** `incompatible_update_message` renders
   `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]`/`KD000` through the shared
   `ansi_store_assignable` predicate (never a second matrix) with uppercase Spark type
@@ -747,6 +751,14 @@ repark-core's error map.
   (`rewrite_insert_markers` loads, then calls it); `query_has_default_marker` is the
   public AST probe. The Spark door's `INSERT OVERWRITE` calls both (ruling Q-21b-4).
   pins: ice-v3-write-default-1/C-016
+- `store_assign.rs` — **U8 WRITE-SQL PR2 (2026-09-25):** `ansi_store_assignable` judges a
+  struct pair field by field, as Spark's `canANSIStoreAssign` does. The two structs must have
+  the same length and the same names in the same order (case-insensitive), and each field
+  must be assignable. The field metadata (Iceberg's `PARQUET:field_id`) is ignored. Before, a
+  struct passed only by identity, so every MERGE struct assignment refused against a table
+  schema that carries field ids. Reordered or renamed struct fields still refuse, which is
+  stricter than Spark (u8-write-sql R-17). `without_field_metadata` strips those ids at every
+  depth for the cast type name. pins: u8-write-sql/C-030
 - `store_assign.rs` (crate-private) — **WI-1 (2026-08-15):** the ONE home for Spark's ANSI
   store-assignment matrix (`Cast.canANSIStoreAssign` → Arrow):
   `ansi_store_assignable` / `normalize_for_assignment` /

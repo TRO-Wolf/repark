@@ -2315,3 +2315,15 @@ numbers, DECIMAL and DATE as their text. `replace_where_sources.rs` adds
 `an_arity_refusal_names_every_data_column_as_spark_does` (cast, `*` beside a cast, `substr`,
 alias, too-many) and `a_suffix_typed_literal_renders_as_its_cast_in_the_refusal`.
 pins: u8-write-sql/C-015, C-019, C-021, C-022, C-023, C-024
+
+U8 WRITE-SQL PR2 (2026-09-25): `nested_assign.rs` pins the two scoreboard cells on the router
+door. `UPDATE … SET st.a = 99` (W-UPDATE-NESTED-FIELD) and `MERGE … UPDATE SET t.st.a = s.na`
+(W-MERGE-NESTED) are checked on rows, an unchanged schema and Spark's snapshot summary. A third
+test pins whole-struct `UPDATE SET *` and a struct `INSERT` value through the MERGE gate. The
+gate judges structs field by field now; before, both refused. `nested_assign_oracle.rs` replays
+[`python/repark/tests/u8_write_sql_nested_spark_oracle.json`](../../../../python/repark/tests/u8_write_sql_nested_spark_oracle.json)
+(read with `include_str!`). It covers 67 of its 93 keys, counted exactly: every key without a
+residue record and without an ARRAY or MAP column. The Rust test context has no Spark `array` /
+`map` constructors, and the facade replays every key. Each refusal compares the Analysis class
+and the full normalized message. Rows compare as JSON with structs and maps as objects.
+pins: u8-write-sql/C-025, C-026, C-027, C-028, C-029, C-030, C-031
