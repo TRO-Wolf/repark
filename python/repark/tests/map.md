@@ -2691,8 +2691,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   verifier fixes (2026-09-25):** D-X-PARTITIONED-COLDEF refusals beside
   `test_ice_ddl_alter_2.py` (kept under the 1000-line cap).
   `test_typed_partition_column_shapes_refuse_like_spark` pins the `MAP` and two-field `STRUCT`
-  non-primitive texts (the element splitter keeps commas inside `<…>`) and the `DEFAULT`
-  `PARSE_SYNTAX_ERROR`s; `test_ctas_mixing_untyped_and_typed_partition_elements_answers_the_mix_text`
+  non-primitive texts (the element splitter keeps commas inside `<…>`) and the `DEFAULT`,
+  out-of-order and repeated `NOT NULL` / `COMMENT` `PARSE_SYNTAX_ERROR`s (r2 V-001); `test_ctas_mixing_untyped_and_typed_partition_elements_answers_the_mix_text`
   pins Spark's mix text on CTAS; `test_typed_partition_columns_differing_by_case_reach_the_fork_under_case_sensitive`
   pins the fork's lower-case-index refusal under `caseSensitive=true`. No table is created.
   pins: ice-nested-evo-1/C-058

@@ -8415,11 +8415,13 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   column beside an untyped column or a transform raises ParseException `Operation not allowed:
   PARTITION BY: Cannot mix partition expressions and partition columns:` with Spark's
   `Expressions:` and `Columns:` lines; a repeated name (case-insensitive) raises AnalysisException
-  `[COLUMN_ALREADY_EXISTS] The column `<name>` already exists. …SQLSTATE: 42711` with the
-  lower-cased name; under `spark.sql.caseSensitive=true` only an exact repeat does, and a
+  `Error during planning: [COLUMN_ALREADY_EXISTS] The column `<name>` already exists.
+  …SQLSTATE: 42711` with the lower-cased name (Spark's text after RePark's planning prefix,
+  R-U5-PR2B-PLANNING-PREFIX); under `spark.sql.caseSensitive=true` only an exact repeat does, and a
   case-only pair reaches the fork's `Cannot build lower case index: data and DATA collide` where
-  Spark commits both columns. A typed column may carry only `NOT NULL` and `COMMENT`; `DEFAULT`
-  or `NULL` raises ParseException `[PARSE_SYNTAX_ERROR] Syntax error at or near '<token>'.
+  Spark commits both columns. A typed column may carry only `NOT NULL` then `COMMENT`, in that order and
+  each at most once; `DEFAULT`, `NULL`, `COMMENT 'c' NOT NULL`, a repeated `NOT NULL` or a
+  repeated `COMMENT` raises ParseException `[PARSE_SYNTAX_ERROR] Syntax error at or near '<token>'.
   SQLSTATE: 42601`. A CTAS mixing an untyped and a typed element answers the mix text. Residues: the mix text spells each type as written, lower-cased (`integer`
   where Spark says `int`), and the facade wraps it as `SQL error: ParserError("…")`; a STRUCT or
   ARRAY or MAP typed column (commas inside `<…>` stay in the element) answers the fork's

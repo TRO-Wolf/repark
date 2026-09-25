@@ -882,20 +882,23 @@ pub(crate) fn typed_partition_column(tokens: &[&Token]) -> Result<PartitionedByE
     let name = parser.parse_identifier().map_err(sql_error)?;
     let data_type = parser.parse_data_type().map_err(sql_error)?;
     let mut options = Vec::new();
-    loop {
-        let option = if parser.parse_keywords(&[Keyword::NOT, Keyword::NULL]) {
-            ColumnOption::NotNull
-        } else if parser.parse_keyword(Keyword::COMMENT) {
-            ColumnOption::Comment(parser.parse_literal_string().map_err(sql_error)?)
-        } else if parser.peek_token().token == Token::EOF {
-            break;
-        } else {
-            return Err(verbatim_parser_error(syntax_error_near(
-                &parser.peek_token().token,
-            )));
-        };
-        options.push(ColumnOptionDef { name: None, option });
+    if parser.parse_keywords(&[Keyword::NOT, Keyword::NULL]) {
+        options.push(ColumnOption::NotNull);
     }
+    if parser.parse_keyword(Keyword::COMMENT) {
+        options.push(ColumnOption::Comment(
+            parser.parse_literal_string().map_err(sql_error)?,
+        ));
+    }
+    if parser.peek_token().token != Token::EOF {
+        return Err(verbatim_parser_error(syntax_error_near(
+            &parser.peek_token().token,
+        )));
+    }
+    let options = options
+        .into_iter()
+        .map(|option| ColumnOptionDef { name: None, option })
+        .collect();
     Ok(PartitionedByElement::Typed(ColumnDef {
         name,
         data_type,

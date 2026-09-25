@@ -49,6 +49,36 @@ def _refusal(spark: ReparkSession, statement: str) -> PySparkException:
             "[PARSE_SYNTAX_ERROR] Syntax error at or near 'DEFAULT'. SQLSTATE: 42601",
             id="not-null-default-comment",
         ),
+        pytest.param(
+            "(p STRING COMMENT 'c' NOT NULL)",
+            ParseException,
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'NOT'. SQLSTATE: 42601",
+            id="comment-not-null",
+        ),
+        pytest.param(
+            "(p STRING NOT NULL NOT NULL)",
+            ParseException,
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'NOT'. SQLSTATE: 42601",
+            id="not-null-twice",
+        ),
+        pytest.param(
+            "(p STRING COMMENT 'c' NOT NULL, q INT)",
+            ParseException,
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'NOT'. SQLSTATE: 42601",
+            id="comment-not-null-then-column",
+        ),
+        pytest.param(
+            "(p STRING COMMENT 'a' COMMENT 'b')",
+            ParseException,
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'COMMENT'. SQLSTATE: 42601",
+            id="comment-twice",
+        ),
+        pytest.param(
+            "(p STRING NOT NULL COMMENT 'a' COMMENT 'b')",
+            ParseException,
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'COMMENT'. SQLSTATE: 42601",
+            id="not-null-comment-twice",
+        ),
     ],
 )
 def test_typed_partition_column_shapes_refuse_like_spark(

@@ -409,6 +409,23 @@ async fn typed_partition_column_options_beyond_not_null_and_comment_refuse_like_
             "DEFAULT",
         ),
         ("opt_null", "p STRING NULL", "NULL"),
+        ("opt_comment_nn", "p STRING COMMENT 'c' NOT NULL", "NOT"),
+        ("opt_nn_nn", "p STRING NOT NULL NOT NULL", "NOT"),
+        (
+            "opt_comment_nn_q",
+            "p STRING COMMENT 'c' NOT NULL, q INT",
+            "NOT",
+        ),
+        (
+            "opt_comment_comment",
+            "p STRING COMMENT 'a' COMMENT 'b'",
+            "COMMENT",
+        ),
+        (
+            "opt_nn_comment_comment",
+            "p STRING NOT NULL COMMENT 'a' COMMENT 'b'",
+            "COMMENT",
+        ),
     ] {
         let error = execute(
             &ctx,
