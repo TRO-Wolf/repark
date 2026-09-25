@@ -93,10 +93,12 @@ struct Keyed<'a> {
     sql: String,
 }
 
-pub(crate) fn has_multipart_target(assignments: &[Assignment]) -> bool {
-    assignments.iter().any(|assignment| {
-        matches!(&assignment.target, AssignmentTarget::ColumnName(name) if name.0.len() > 1)
-    })
+fn folds(schema: &ArrowSchema, key: &ResolvedKey) -> bool {
+    !key.steps.is_empty()
+        || matches!(
+            find_field(schema.fields(), &key.column).map(|field| field.data_type()),
+            Some(DataType::Struct(_))
+        )
 }
 
 fn key_parts(name: &ObjectName) -> Option<Vec<String>> {
@@ -424,7 +426,7 @@ pub(crate) async fn fold_nested_assignments(
     let affected: HashSet<String> = keys
         .iter()
         .flatten()
-        .filter(|key| !key.steps.is_empty())
+        .filter(|key| folds(schema, key))
         .map(|key| key.column.clone())
         .collect();
     if affected.is_empty() {
@@ -548,7 +550,7 @@ fn refuse_nested_insert_keys(
 
 fn merge_needs_fold(clauses: &[MergeClause]) -> bool {
     clauses.iter().any(|clause| match &clause.action {
-        MergeAction::Update(update) => has_multipart_target(&update.assignments),
+        MergeAction::Update(update) => !update.assignments.is_empty(),
         MergeAction::Insert(insert) => insert.columns.iter().any(|column| column.0.len() > 1),
         MergeAction::Delete { .. } => false,
     })

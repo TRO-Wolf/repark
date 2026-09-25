@@ -1,4 +1,5 @@
 use super::super::*;
+use super::accept_any_refusals::refusal;
 use super::common::*;
 
 async fn struct_table(rows: &str) -> (TempDir, SessionContext, CatalogRegistry) {
@@ -131,5 +132,77 @@ async fn whole_struct_merge_assignments_pass_the_store_assignment_gate() {
             "| 2 | {a: 22, b: w} |",
             "| 3 | {a: 30, b: n} |"
         ]
+    );
+}
+
+const SEED: &str = "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))";
+
+async fn whole_struct_answer(statement: &str) -> Result<Vec<String>, String> {
+    let (_wh, ctx, catalogs) = struct_table(SEED).await;
+    let sql = statement.replace("{T}", "ice.sales.t");
+    let refused = match execute(&ctx, &catalogs, &sql).await {
+        Ok(frame) => frame.collect().await.err(),
+        Err(error) => Some(error),
+    };
+    if refused.is_some() {
+        let mapped = refusal(&ctx, &catalogs, &sql).await;
+        return Err(mapped
+            .to_string()
+            .trim_start_matches("Error during planning: ")
+            .to_string());
+    }
+    Ok(text(&ctx, &catalogs, "SELECT * FROM ice.sales.t ORDER BY id").await)
+}
+
+#[tokio::test]
+async fn whole_struct_values_resolve_by_name_on_update_and_merge() {
+    let missing = "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data \
+                   for the table ``: Cannot find data for the output column `st`.`a`. \
+                   SQLSTATE: KD000";
+    let extra = "[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible \
+                 data for the table ``: Cannot write extra fields `x` to the struct `st`. \
+                 SQLSTATE: KD000";
+    let update = "UPDATE {T} SET st = ";
+    let matched = "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id \
+                   WHEN MATCHED THEN UPDATE SET t.st = ";
+    let unqualified = "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id \
+                       WHEN MATCHED THEN UPDATE SET st = ";
+    let by_source = "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id \
+                     WHEN NOT MATCHED BY SOURCE THEN UPDATE SET t.st = ";
+    for prefix in [update, matched, unqualified, by_source] {
+        let suffix = if prefix == update {
+            " WHERE id = 1"
+        } else {
+            ""
+        };
+        for (value, expected) in [
+            ("named_struct('q', 1, 'b', 'z')", missing),
+            ("named_struct('a', 1, 'b', 'z', 'x', 2)", extra),
+        ] {
+            assert_eq!(
+                whole_struct_answer(&format!("{prefix}{value}{suffix}")).await,
+                Err(expected.to_string()),
+                "{prefix}{value}"
+            );
+        }
+    }
+    let written = |first: &str, second: &str| Ok(vec![first.to_string(), second.to_string()]);
+    assert_eq!(
+        whole_struct_answer("UPDATE {T} SET st = named_struct('b', 'z', 'a', 5) WHERE id = 1")
+            .await,
+        written("| 1 | {a: 5, b: z} |", "| 2 | {a: 2, b: q} |")
+    );
+    assert_eq!(
+        whole_struct_answer(&format!("{matched}named_struct('b', 'z', 'a', s.na)")).await,
+        written("| 1 | {a: 1, b: p} |", "| 2 | {a: 20, b: z} |")
+    );
+    assert_eq!(
+        whole_struct_answer(&format!("{by_source}named_struct('b', 'z', 'a', 9)")).await,
+        written("| 1 | {a: 9, b: z} |", "| 2 | {a: 2, b: q} |")
+    );
+    assert_eq!(
+        whole_struct_answer("UPDATE {T} SET st = named_struct('A', 5, 'B', 'z') WHERE id = 1")
+            .await,
+        written("| 1 | {a: 5, b: z} |", "| 2 | {a: 2, b: q} |")
     );
 }

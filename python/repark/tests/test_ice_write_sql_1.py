@@ -18,14 +18,15 @@ The rounds-2 and -3 pins (C-015..C-017, C-019..C-021) replay that file case by c
 ``r4/…`` (fractional comparisons rendered in refusal texts); a case whose answer is a named
 residue (R-2, R-8, R-11, R-12) is held to RePark's recorded answer.
 
-PR2 (C-025..C-031, 2026-09-25) pins nested struct-field assignment in UPDATE and MERGE. The
-cells ``W-UPDATE-NESTED-FIELD`` and ``W-MERGE-NESTED`` have their own tests. The 93 ``pr2/…``
+PR2 (C-025..C-032, 2026-09-25) pins nested struct-field assignment in UPDATE and MERGE. The
+cells ``W-UPDATE-NESTED-FIELD`` and ``W-MERGE-NESTED`` have their own tests. The 107 ``pr2/…``
 measurements in ``u8_write_sql_nested_spark_oracle.json`` replay case by case, and a residue
-key (R-13..R-17) is held to RePark's recorded answer.
+key (R-13..R-16) is held to RePark's recorded answer. The ``pr2/U4-…`` and ``pr2/M4-…`` keys
+(C-032) are whole-struct values of UPDATE and MERGE resolved by name.
 
 pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
 C-011, C-012, C-014, C-015, C-016, C-017, C-019, C-020, C-021, C-022, C-023, C-024, C-025,
-C-026, C-027, C-028, C-029, C-030, C-031
+C-026, C-027, C-028, C-029, C-030, C-031, C-032
 """
 
 from __future__ import annotations
@@ -948,7 +949,7 @@ def test_merge_sets_one_struct_field_as_spark_does(spark: ReparkSession) -> None
 def test_the_nested_assignment_measurements_replay_as_spark_answered(
     spark: ReparkSession, key: str
 ) -> None:
-    """pins: u8-write-sql/C-025, C-026, C-027, C-028, C-029, C-030, C-031"""
+    """pins: u8-write-sql/C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032"""
     case = NESTED[key]
     residue = case.get("residue")
     expected = residue["repark"] if residue else {"step": case["steps"][-1], "rows": case["rows"]}

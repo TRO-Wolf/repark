@@ -456,12 +456,12 @@ pins: rp-4-fork-repin/C-005, C-006
   catalog/table, unresolvable names, and failed probes fall through. Pins:
   [tests/update_cast.rs](tests/update_cast.rs). pins: ipi-51/W-UPDATE-TYPE-ERR
   **U8 WRITE-SQL PR2 (2026-09-25):** `execute_update` now calls
-  `refuse_cast_then_fold_nested`. It runs the same top-level cast refusal and then, when a SET
-  target has more than one part, folds nested struct-field assignments through
-  [`merge/nested_assign.rs`](merge/map.md). It re-renders the statement only when something
-  folded, so every other UPDATE keeps its original SQL. `load_update_target` is the one table
-  load both steps share. `router.rs` stays at 1000 lines (two lines replaced by two).
-  pins: u8-write-sql/C-025, C-027
+  `refuse_cast_then_fold_nested`. It loads the target once (`load_update_target`), runs the
+  same top-level cast refusal on it, and then folds nested struct-field assignments and
+  top-level struct values through [`merge/nested_assign.rs`](merge/map.md). It re-renders the
+  statement only when something folded, so every other UPDATE keeps its original SQL.
+  `router.rs` stays at 1000 lines (two lines replaced by two).
+  pins: u8-write-sql/C-025, C-027, C-032
 - `write_to_branch.rs` — Spark-door write-to-branch routing: tag/missing-branch Spark-shaped
   refuse; two-part names qualify through session defaults; the MOR valve runs on the
   Iceberg ident before the temp rewrite; fork-executed INSERT/UPDATE/DELETE via
@@ -2064,8 +2064,10 @@ First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#d
   **U8 WRITE-SQL PR2 (2026-09-25):** `execute_merge` first runs
   `merge::nested_assign::fold_merge_clauses`, which folds nested SET targets of every UPDATE
   clause (matched and NOT MATCHED BY SOURCE) into whole-column `named_struct` rebuilds and
-  refuses nested INSERT keys. `lower` then sees only top-level targets. When nothing is nested,
-  the fold returns without loading the table. pins: u8-write-sql/C-026, C-029
+  refuses nested INSERT keys. `lower` then sees only top-level targets. A top-level SET value
+  on a struct column is folded too, so it resolves by name (fix round 2, C-032). A MERGE
+  without an UPDATE SET key returns without loading the table. pins: u8-write-sql/C-026,
+  C-029, C-032
 - `time_travel.rs` — **ICE-METADATA-COLS-1 WO-R1 (2026-09-21):** the Spark-door `snapshot_id_<id>`
   and `at_timestamp_<ms>` ref selectors resolve to snapshot pins beside `branch_`/`tag_`; an
   unparsable numeric suffix refuses `IllegalArgumentException` naming the selector, never

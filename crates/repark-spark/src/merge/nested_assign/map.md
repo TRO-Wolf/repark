@@ -16,7 +16,9 @@ fold moves elsewhere.
   detail. Spark's `quoteIfNeeded` quotes a path part only when it is not a plain word.
 - `tests.rs` — unit pins: key resolution and its refusals, the Scala type names, quoting,
   the pretty values, the struct-by-name leaf rules, the fold of several assignments into one
-  rebuild, and the combined refusal text. pins: u8-write-sql/C-027, C-028, C-029
+  rebuild, the combined refusal text, and a top-level struct value folded through the
+  by-name check (missing, extra, deep missing, reordered). pins: u8-write-sql/C-027, C-028,
+  C-029, C-032
 
 ## Pointers
 

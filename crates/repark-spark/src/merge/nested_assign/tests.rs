@@ -236,11 +236,68 @@ async fn top_level_assignments_are_not_folded() {
         &ctx,
         &schema(),
         &scope(),
-        &assignments("UPDATE t SET t.id = 1, st = named_struct('a', 1, 'inner', NULL)"),
+        &assignments("UPDATE t SET t.id = 1, id = 2"),
     )
     .await
     .unwrap();
     assert!(folded.is_none());
+}
+
+#[tokio::test]
+async fn a_top_level_struct_value_folds_through_the_by_name_check() {
+    let ctx = SessionContext::new();
+    let probed = AssignmentScope {
+        probe_from: "(SELECT 1 AS one) s".to_string(),
+        ..scope()
+    };
+    let fold = |sql: &'static str| {
+        let ctx = ctx.clone();
+        let probed = &probed;
+        async move { fold_nested_assignments(&ctx, &schema(), probed, &assignments(sql)).await }
+    };
+    assert_eq!(
+        fold("UPDATE t SET st = named_struct('q', 1, 'inner', named_struct('x', 1, 'y', 'v'))")
+            .await
+            .unwrap_err()
+            .to_string(),
+        "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write \
+         incompatible data for the table ``: Cannot find data for the output column `st`.`a`. \
+         SQLSTATE: KD000"
+    );
+    assert_eq!(
+        fold(
+            "UPDATE t SET st = named_struct('a', 1, 'inner', named_struct('x', 1, 'y', 'v'), \
+             'x', 2)"
+        )
+        .await
+        .unwrap_err()
+        .to_string(),
+        "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write \
+         incompatible data for the table ``: Cannot write extra fields `x` to the struct `st`. \
+         SQLSTATE: KD000"
+    );
+    assert_eq!(
+        fold("UPDATE t SET st = named_struct('a', 1, 'inner', named_struct('x', 1)), id = 3")
+            .await
+            .unwrap_err()
+            .to_string(),
+        "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write \
+         incompatible data for the table ``: Cannot find data for the output column \
+         `st`.`inner`.`y`. SQLSTATE: KD000"
+    );
+    let reordered = fold(
+        "UPDATE t SET id = 3, st = named_struct('inner', named_struct('y', 'v', 'x', 3), 'a', 7)",
+    )
+    .await
+    .unwrap()
+    .unwrap();
+    let rendered: Vec<String> = reordered.iter().map(ToString::to_string).collect();
+    assert_eq!(rendered[0], "id = 3");
+    assert_eq!(
+        rendered[1],
+        "`st` = arrow_cast((named_struct('inner', named_struct('y', 'v', 'x', 3), 'a', 7)), \
+         'Struct(\"a\": Int32, \"inner\": Struct(\"x\": Int32, \"y\": Utf8))')"
+    );
 }
 
 #[tokio::test]

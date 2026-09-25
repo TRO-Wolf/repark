@@ -37,12 +37,18 @@ and the star-sentinel rewrite live here instead of in it.
   leaf is cast unchecked and the statement fails later if the value is wrong.
   A struct-valued leaf resolves by name (`CANNOT_FIND_DATA`, `EXTRA_STRUCT_FIELDS`). Arrow's
   struct cast fills a missing field with NULL, so this check must come before the cast.
-  `fold_merge_clauses` loads the MERGE target and applies the fold to each UPDATE clause.
+  A top-level SET key that names a struct column goes through the same by-name check
+  (fix round 2, 2026-09-25), so `SET st = named_struct('q', 1, 'b', 'z')` refuses
+  `CANNOT_FIND_DATA` for `st`.`a` instead of writing a NULL field, an extra field refuses
+  `EXTRA_STRUCT_FIELDS`, and a reordered or re-cased value resolves by name. A top-level key
+  on an atomic column is not folded.
+  `fold_merge_clauses` loads the MERGE target when any UPDATE clause has a SET key, and applies
+  the fold to each UPDATE clause.
   The design did not reuse repark-iceberg's `resolve_nested_path`. Its path grammar is the
   ALTER one (`key` / `value` / `element` name map and list children, and its refusals are the
   ALTER texts). Spark reads the same spellings in a SET key as value extraction with other
   refusals, and the rebuild needs the Arrow types.
-  pins: u8-write-sql/C-025, C-026, C-027, C-028, C-029
+  pins: u8-write-sql/C-025, C-026, C-027, C-028, C-029, C-032
 
 ## Pointers
 

@@ -1,7 +1,9 @@
 use datafusion::arrow::datatypes::Schema as ArrowSchema;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
-use datafusion::sql::sqlparser::ast::{AssignmentTarget, Statement, TableFactor, Update};
+use datafusion::sql::sqlparser::ast::{
+    AssignmentTarget, ObjectName, Statement, TableFactor, Update,
+};
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
 
@@ -43,16 +45,13 @@ pub(crate) async fn refuse_cast_then_fold_nested(
     catalogs: &CatalogRegistry,
     update: &Update,
 ) -> Result<Option<String>> {
-    refuse_incompatible_update_cast(ctx, catalogs, update).await?;
-    if !nested_assign::has_multipart_target(&update.assignments) {
-        return Ok(None);
-    }
-    let Some(target) = load_update_target(ctx, catalogs, update).await else {
-        return Ok(None);
-    };
     let Some(object_name) = crate::object_name_from_table_with_joins(&update.table) else {
         return Ok(None);
     };
+    let Some(target) = load_update_target(ctx, catalogs, update).await else {
+        return Ok(None);
+    };
+    refuse_incompatible_update_cast(ctx, &target, object_name, update).await?;
     let alias = match &update.table.relation {
         TableFactor::Table {
             alias: Some(alias), ..
@@ -86,17 +85,12 @@ pub(crate) async fn refuse_cast_then_fold_nested(
     Ok(Some(Statement::Update(folded).to_string()))
 }
 
-pub(crate) async fn refuse_incompatible_update_cast(
+async fn refuse_incompatible_update_cast(
     ctx: &SessionContext,
-    catalogs: &CatalogRegistry,
+    target: &UpdateTarget,
+    object_name: &ObjectName,
     update: &Update,
 ) -> Result<()> {
-    let Some(object_name) = crate::object_name_from_table_with_joins(&update.table) else {
-        return Ok(());
-    };
-    let Some(target) = load_update_target(ctx, catalogs, update).await else {
-        return Ok(());
-    };
     let table_name = target
         .qualified
         .iter()
