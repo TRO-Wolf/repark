@@ -832,6 +832,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   near their tokens, and `test_other_column_comment_statements_answer_the_residual_refusal`
   pins the residual text. The name-rendering test adds the MOVE route (`move-missing-column`).
   pins: ice-nested-evo-1/C-048, C-049, C-050, C-051
+  **WO U5 PR2b (2026-09-24):** the three PR2b cells on the facade. D-CREATE-V1: a v1 table
+  writes format-version 1 with no sequence numbers and the legacy keys, reads back its seed on
+  the Arrow path (value and type) and deletes copy-on-write; `5` and `abc` raise
+  IllegalArgumentException with Spark's text, and `0` and `4` keep the not-implemented residue.
+  D-WRITE-ORDERED-TRANSFORM: the cell's order and `range`, the argument-order and `date_hour`
+  spellings, the identity near miss, and the void, zorder, zero-width and unbindable refusals
+  with no metadata written. D-REF-BRANCH-ON-EMPTY: the empty append's summary, the `b1` ref, an
+  empty branch read, `IF NOT EXISTS` and retention, the tag, replace and duplicate refusals,
+  `CREATE BRANCH main`, and a seeded table's unchanged refs.
 - [test_u5_alter_ddl.py](test_u5_alter_ddl.py) — **WO U5 PR1 (2026-09-24):** facade pins for
   nested struct/list/map-value TYPE promotions read the current Iceberg metadata file and the
   SQL DESCRIBE type. It also pins the UNSET IF EXISTS missing-key no-op, namespace SET

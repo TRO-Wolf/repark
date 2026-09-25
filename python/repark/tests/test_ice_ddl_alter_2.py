@@ -9,6 +9,7 @@ import pytest
 from repark import ReparkSession
 from repark.errors import (
     AnalysisException,
+    IllegalArgumentException,
     ParseException,
     PySparkException,
     UnsupportedOperationException,
@@ -580,3 +581,261 @@ def test_alter_column_type_and_hive_change_stay_unchanged(
     fields = {field["name"]: field for field in schema["fields"]}
     assert fields["id"]["type"] == "long"
     assert fields["data"]["doc"] == "hive-style"
+
+
+def _snapshots(metadata: dict[str, Any]) -> list[dict[str, Any]]:
+    return metadata.get("snapshots", [])
+
+
+def _default_order(metadata: dict[str, Any]) -> list[list[Any]]:
+    default = metadata["default-sort-order-id"]
+    for order in metadata["sort-orders"]:
+        if order["order-id"] == default:
+            return [
+                [field["transform"], field["source-id"], field["direction"], field["null-order"]]
+                for field in order["fields"]
+            ]
+    raise AssertionError(f"no default sort order {default}")
+
+
+def _refusal(spark: ReparkSession, statement: str) -> PySparkException:
+    with pytest.raises(PySparkException) as caught:
+        spark.sql(statement).collect()
+    return caught.value
+
+
+_EMPTY_SUMMARY = {
+    "operation": "append",
+    "manifests-created": "0",
+    "manifests-kept": "0",
+    "manifests-replaced": "0",
+    "changed-partition-count": "0",
+    "total-records": "0",
+    "total-files-size": "0",
+    "total-data-files": "0",
+    "total-delete-files": "0",
+    "total-position-deletes": "0",
+    "total-equality-deletes": "0",
+}
+
+
+def test_create_format_version_one_writes_v1_like_spark(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    spark.sql(
+        "CREATE TABLE sc.ns.v1 (id BIGINT, data STRING, cat STRING) USING iceberg "
+        "TBLPROPERTIES ('format-version'='1')"
+    )
+    spark.sql("INSERT INTO sc.ns.v1 VALUES (0,'d0','a'),(1,'d1','b'),(2,'d2','a')")
+    metadata = _metadata(tmp_path, "v1")
+    assert metadata["format-version"] == 1
+    assert "last-sequence-number" not in metadata
+    assert "schema" in metadata
+    assert "partition-spec" in metadata
+    assert "sequence-number" not in _snapshots(metadata)[0]
+    assert metadata["snapshot-log"][0]["snapshot-id"] == metadata["current-snapshot-id"]
+    seeded = spark.sql("SELECT * FROM sc.ns.v1 ORDER BY id").to_arrow()
+    assert seeded.to_pylist() == [
+        {"id": 0, "data": "d0", "cat": "a"},
+        {"id": 1, "data": "d1", "cat": "b"},
+        {"id": 2, "data": "d2", "cat": "a"},
+    ]
+    assert [str(field.type) for field in seeded.schema] == ["int64", "string", "string"]
+    spark.sql("DELETE FROM sc.ns.v1 WHERE id = 1")
+    deleted = _metadata(tmp_path, "v1")
+    assert _snapshots(deleted)[-1]["summary"]["operation"] == "overwrite"
+    assert _snapshots(deleted)[-1]["summary"]["total-delete-files"] == "0"
+    assert spark.sql("SELECT id FROM sc.ns.v1 ORDER BY id").to_arrow().to_pylist() == [
+        {"id": 0},
+        {"id": 2},
+    ]
+
+
+@pytest.mark.parametrize(
+    ("version", "expected_type", "message"),
+    [
+        pytest.param(
+            "5",
+            IllegalArgumentException,
+            "Unsupported format version: v5 (supported: v4)",
+            id="v5",
+        ),
+        pytest.param("abc", IllegalArgumentException, 'For input string: "abc"', id="abc"),
+        pytest.param(
+            "0",
+            UnsupportedOperationException,
+            "This feature is not implemented: TBLPROPERTIES 'format-version' = '0' is not "
+            "supported (tables are created as Iceberg format v1, v2 or v3)",
+            id="v0-residue",
+        ),
+        pytest.param(
+            "4",
+            UnsupportedOperationException,
+            "This feature is not implemented: TBLPROPERTIES 'format-version' = '4' is not "
+            "supported (tables are created as Iceberg format v1, v2 or v3)",
+            id="v4-residue",
+        ),
+    ],
+)
+def test_create_format_version_refusals_match_spark(
+    spark: ReparkSession,
+    version: str,
+    expected_type: type[Exception],
+    message: str,
+) -> None:
+    caught = _refusal(
+        spark,
+        "CREATE TABLE sc.ns.bad (id BIGINT) USING iceberg "
+        f"TBLPROPERTIES ('format-version'='{version}')",
+    )
+    assert type(caught) is expected_type
+    assert str(caught) == message
+    assert not spark.catalog.tableExists("sc.ns.bad")
+
+
+def test_create_format_version_two_stays_the_default(spark: ReparkSession, tmp_path: Path) -> None:
+    spark.sql(
+        "CREATE TABLE sc.ns.v2 (id BIGINT) USING iceberg TBLPROPERTIES ('format-version'='2')"
+    )
+    spark.sql("CREATE TABLE sc.ns.vd (id BIGINT) USING iceberg")
+    assert _metadata(tmp_path, "v2")["format-version"] == 2
+    assert _metadata(tmp_path, "vd")["format-version"] == 2
+
+
+def test_write_ordered_by_transforms_lands_the_order_spark_measured(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    spark.sql("CREATE TABLE sc.ns.wo (id BIGINT, ts TIMESTAMP) USING iceberg")
+    spark.sql("ALTER TABLE sc.ns.wo WRITE ORDERED BY bucket(4, id), days(ts) DESC NULLS FIRST")
+    metadata = _metadata(tmp_path, "wo")
+    assert _default_order(metadata) == [
+        ["bucket[4]", 1, "asc", "nulls-first"],
+        ["day", 2, "desc", "nulls-first"],
+    ]
+    assert metadata["properties"]["write.distribution-mode"] == "range"
+    spark.sql("ALTER TABLE sc.ns.wo WRITE ORDERED BY truncate(id, 2) DESC, date_hour(ts)")
+    assert _default_order(_metadata(tmp_path, "wo")) == [
+        ["truncate[2]", 1, "desc", "nulls-last"],
+        ["hour", 2, "asc", "nulls-first"],
+    ]
+    spark.sql("ALTER TABLE sc.ns.wo WRITE ORDERED BY id")
+    assert _default_order(_metadata(tmp_path, "wo")) == [["identity", 1, "asc", "nulls-first"]]
+
+
+@pytest.mark.parametrize(
+    ("spec", "expected_type", "message"),
+    [
+        pytest.param(
+            "void(id)",
+            UnsupportedOperationException,
+            "Transform is not supported: void(id)",
+            id="void",
+        ),
+        pytest.param(
+            "zorder(id, ts)", IllegalArgumentException, "Term must be unbound", id="zorder"
+        ),
+        pytest.param(
+            "bucket(0, id)",
+            IllegalArgumentException,
+            "Unsupported width for transform: bucket(0, id)",
+            id="bucket-zero",
+        ),
+        pytest.param(
+            "days(id)",
+            PySparkException,
+            "DataInvalid => Cannot bind: day cannot transform long values from 'id'",
+            id="days-on-long",
+        ),
+    ],
+)
+def test_write_ordered_by_transform_refusals_match_spark(
+    spark: ReparkSession,
+    tmp_path: Path,
+    spec: str,
+    expected_type: type[Exception],
+    message: str,
+) -> None:
+    spark.sql("CREATE TABLE sc.ns.wo (id BIGINT, ts TIMESTAMP) USING iceberg")
+    files = _metadata_files(tmp_path, "wo")
+    caught = _refusal(spark, f"ALTER TABLE sc.ns.wo WRITE ORDERED BY {spec}")
+    assert type(caught) is expected_type
+    assert str(caught) == message
+    assert _metadata_files(tmp_path, "wo") == files
+
+
+def test_create_branch_on_an_empty_table_commits_an_empty_append_like_spark(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    spark.sql("CREATE TABLE sc.ns.be (id BIGINT, data STRING, cat STRING) USING iceberg")
+    spark.sql("ALTER TABLE sc.ns.be CREATE BRANCH b1")
+    metadata = _metadata(tmp_path, "be")
+    (snapshot,) = _snapshots(metadata)
+    assert snapshot["sequence-number"] == 1
+    assert {key: snapshot["summary"].get(key) for key in _EMPTY_SUMMARY} == _EMPTY_SUMMARY
+    assert metadata["refs"] == {"b1": {"snapshot-id": snapshot["snapshot-id"], "type": "branch"}}
+    assert metadata.get("current-snapshot-id") is None
+    assert metadata.get("snapshot-log", []) == []
+    branch = spark.sql("SELECT * FROM sc.ns.be.branch_b1").to_arrow()
+    assert branch.num_rows == 0
+    assert [str(field.type) for field in branch.schema] == ["int64", "string", "string"]
+    assert spark.sql("SELECT * FROM sc.ns.be").to_arrow().num_rows == 0
+    spark.sql("ALTER TABLE sc.ns.be CREATE BRANCH IF NOT EXISTS b1")
+    spark.sql("ALTER TABLE sc.ns.be CREATE BRANCH b2 WITH SNAPSHOT RETENTION 3 SNAPSHOTS")
+    refs = spark.sql(
+        "SELECT name, type, min_snapshots_to_keep FROM sc.ns.be.refs ORDER BY name"
+    ).collect()
+    assert [list(row) for row in refs] == [["b1", "BRANCH", None], ["b2", "BRANCH", 3]]
+    assert len(_snapshots(_metadata(tmp_path, "be"))) == 2
+
+
+@pytest.mark.parametrize(
+    ("statement", "message"),
+    [
+        pytest.param(
+            "ALTER TABLE sc.ns.be CREATE TAG t1",
+            "Cannot complete create or replace tag operation on ns.be, main has no snapshot",
+            id="tag",
+        ),
+        pytest.param(
+            "ALTER TABLE sc.ns.be CREATE OR REPLACE BRANCH b1",
+            "Cannot complete replace branch operation on ns.be, main has no snapshot",
+            id="replace-existing-branch",
+        ),
+        pytest.param(
+            "ALTER TABLE sc.ns.be CREATE BRANCH b1", "Ref b1 already exists", id="duplicate"
+        ),
+    ],
+)
+def test_refs_on_an_empty_table_refuse_like_spark(
+    spark: ReparkSession, tmp_path: Path, statement: str, message: str
+) -> None:
+    spark.sql("CREATE TABLE sc.ns.be (id BIGINT) USING iceberg")
+    spark.sql("ALTER TABLE sc.ns.be CREATE BRANCH b1")
+    files = _metadata_files(tmp_path, "be")
+    caught = _refusal(spark, statement)
+    assert type(caught) is IllegalArgumentException
+    assert str(caught) == message
+    assert _metadata_files(tmp_path, "be") == files
+
+
+def test_create_branch_main_and_seeded_branches_keep_their_answers(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    spark.sql("CREATE TABLE sc.ns.bm (id BIGINT) USING iceberg")
+    spark.sql("ALTER TABLE sc.ns.bm CREATE BRANCH main")
+    main = _metadata(tmp_path, "bm")
+    (snapshot,) = _snapshots(main)
+    assert main["current-snapshot-id"] == snapshot["snapshot-id"]
+    assert main["snapshot-log"][0]["snapshot-id"] == snapshot["snapshot-id"]
+    spark.sql("CREATE TABLE sc.ns.bs (id BIGINT) USING iceberg")
+    spark.sql("INSERT INTO sc.ns.bs VALUES (1)")
+    spark.sql("ALTER TABLE sc.ns.bs CREATE BRANCH b1")
+    spark.sql("ALTER TABLE sc.ns.bs CREATE TAG t1")
+    seeded = _metadata(tmp_path, "bs")
+    current = seeded["current-snapshot-id"]
+    assert len(_snapshots(seeded)) == 1
+    assert {name: ref["snapshot-id"] for name, ref in seeded["refs"].items()} == {
+        "main": current,
+        "b1": current,
+        "t1": current,
+    }
