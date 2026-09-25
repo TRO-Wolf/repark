@@ -258,12 +258,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: ice-nested-evo-1/C-055
 - [u9_map.rs](u9_map.rs) — **WO U9-TYPES-1 (2026-09-25):** `map()` / `MAP()` is an empty
   map of `Null` keys and values; a `MAP<STRING, INT>` column and a nested map column take
-  `map('k', 1)`, `map()`, `NULL` and `SELECT … map()` and read back with lookups.
+  `map('k', 1)`, `map()`, `NULL` and `SELECT … map()` and read back with lookups; the
+  back-quoted `` `map`() `` is the same map, and `UPDATE` plus the three MERGE assigning
+  clauses write `map()` (r2).
   pins: u9-types-1/C-006
 - [u9_timestamp_ltz.rs](u9_timestamp_ltz.rs) — **WO U9-TYPES-1 (2026-09-25):** a
   `TIMESTAMP_LTZ` column is `timestamptz` on v2 and v3, in a struct and at ADD COLUMN; it
   writes, filters on a `TIMESTAMP_LTZ '…'` literal and partitions by `days`; the typed literal
-  is a zoned instant; a `timestamp_ltz` identifier keeps its meaning.
+  is a zoned instant, double-quoted too (r2); a `timestamp_ltz` identifier keeps its meaning.
   pins: u9-types-1/C-001, C-002, C-003
 - [alter_write_order_transform.rs](alter_write_order_transform.rs) — **WO U5 PR2b
   (2026-09-24):** D-WRITE-ORDERED-TRANSFORM. Seventeen measured `WRITE ORDERED BY` specs land

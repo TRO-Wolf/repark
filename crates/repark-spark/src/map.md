@@ -843,7 +843,12 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: ice-tsns-sql-1/C-002, C-010
 - `keyword_lower.rs` — **WO U9-TYPES-1 (2026-09-25):** `lower_expression` rewrites an
   unqualified zero-argument `map()` (no `OVER`, no `FILTER`) into
-  `map(make_array(), make_array())`, Spark's empty `map<void,void>` (cell `TY-MAP`).
+  `map(make_array(), make_array())`, Spark's empty `map<void,void>` (cell `TY-MAP`). The name
+  matches on the identifier value, so the back-quoted `` `map`() `` lowers too (r2, V-003).
+  `lower_empty_map_calls` is that rewrite alone: `spark_ast.rs` applies it before the
+  identity-DML path so `UPDATE … SET c = map()` plans (V-001); a MERGE runs
+  `lower_empty_maps_and_timestamp_ns_casts` when `has_empty_map_or_timestamp_ns_cast` finds
+  either, so every MERGE clause takes `map()`.
   pins: u9-types-1/C-006
 - `keyword_lower.rs` — **SPARK-SQL-GRAMMAR-1 C-003/C-004/C-005 (2026-09-16):**
   Spark-only keyword lowerings onto registered kernels. `x RLIKE p` becomes
@@ -859,7 +864,7 @@ pins: rp-4-fork-repin/C-005, C-006
   `::` included, `TRY_CAST` not) lowers to the embedded `__repark_cast_timestamp_ns__` /
   `__repark_cast_timestamptz_ns__` calls; `lower_timestamp_ns_casts` is the same lowering alone,
   applied by `router.rs` to a MERGE's source, `ON` and clauses (MERGE plans its rendered pieces
-  outside the passthrough) only when `has_timestamp_ns_cast` finds one, and by `spark_ast.rs` to
+  outside the passthrough) only when `has_empty_map_or_timestamp_ns_cast` finds one, and by `spark_ast.rs` to
   the statement an `EXPLAIN` wraps. pins: ice-tsns-sql-1/C-001, C-011
   **UNRESOLVED-ROUTINE-1 (2026-09-16):** `unrelated_errors_pass_through` now
   fixtures a genuinely unrelated `Plan` error — unknown names reshape in

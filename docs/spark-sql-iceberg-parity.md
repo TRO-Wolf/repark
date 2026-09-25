@@ -8553,12 +8553,22 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   metrics and `days` / `hours` / identity / `months` partitioning answer as Spark. Before, the
   CREATE refused `column type TIMESTAMP_LTZ is not supported yet for Iceberg tables` and the
   literal did not parse. The ANSI door keeps refusing the Spark spelling. Residues (ledger
-  R-1..R-5, each held by its oracle record): a STRING literal writes into the column where
+  R-1..R-5 and R-16, each held by its oracle record): a STRING literal writes into the column where
   Spark refuses `CANNOT_SAFELY_CAST` (as for `TIMESTAMP`); the `TIMESTAMP_NTZ` name stays
   refused (TZ-6); `ALTER COLUMN … TYPE` refusals keep RePark's class and `DataInvalid =>`
   prefix; `collect()` in a non-UTC session answers the session-zone wall (TZ-7 Q12); a bare
-  `TIMESTAMP` under `spark.sql.timestampType=TIMESTAMP_NTZ` stays `timestamptz` (TZ-6 Q10).
-- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25 (85 steps in
+  `TIMESTAMP` under `spark.sql.timestampType=TIMESTAMP_NTZ` stays `timestamptz` (TZ-6 Q10);
+  an invalid literal (`TIMESTAMP_LTZ 'garbage'`) fails at execution with `[CAST_INVALID_INPUT] …
+  cannot be cast to "TIMESTAMP" … SQLSTATE: 22018` where Spark raises `ParseException`
+  `[INVALID_TYPED_LITERAL] The value of the typed literal "TIMESTAMP_LTZ" is invalid: 'garbage'.
+  SQLSTATE: 42604` (R-16, dated 2026-09-25, as for `TIMESTAMP 'garbage'`). The double-quoted
+  `TIMESTAMP_LTZ "…"` is the same literal.
+- **ANSI door (residue R-17, measured 2026-09-25, no code)** — `TIMESTAMP(6) WITH TIME ZONE`
+  stores Iceberg `timestamp` (naive), reads `Timestamp(µs)` with no zone, and stores a
+  `TIMESTAMP '2024-01-01 00:00:00+05:00'` value as the UTC wall `2023-12-31T19:00:00`; a bare
+  `TIMESTAMP WITH TIME ZONE` refuses as nanosecond precision (9). The Spark door's
+  `TIMESTAMP_LTZ` column is `timestamptz`.
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25 (88 steps in
   `python/repark/tests/u9_types_1_spark_oracle.json`, group `ltz`; scoreboard cell
   `TY-TIMESTAMP-LTZ`, replayed EQUAL).
 - **Pin** — `python/repark/tests/test_u9_types_1.py`,
@@ -8568,11 +8578,12 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 
 ### TY-MAP — the empty map literal `map()` refused, so a `MAP` column could not take it — **FIXED 2026-09-25 (WO U9-TYPES-1)**
 
-- **repark** — the Spark door reads an unqualified zero-argument `map()` as Spark's empty
+- **repark** — the Spark door reads an unqualified zero-argument `map()` (bare or back-quoted) as Spark's empty
   `map<void,void>` (`{}`), so `INSERT … VALUES (0, map('k', 1)), (1, map())` into a
   `MAP<STRING, INT>` column writes and reads back `[[0, [["k", 1]]], [1, []]]` as Spark does,
-  also through `INSERT … SELECT`, a typed `CAST`, a nested map value, `CASE`, `UNION ALL` and
-  `map_concat`. The rest of the measured `MAP` column surface (schema surfaces, lookups,
+  also through `INSERT … SELECT`, a typed `CAST`, a nested map value, `CASE`, `UNION ALL`,
+  `map_concat`, `UPDATE … SET c = map()` and every MERGE clause that assigns it (matched
+  update, not-matched insert, not-matched-by-source update). The rest of the measured `MAP` column surface (schema surfaces, lookups,
   `element_at`, `map_keys` / `map_values`, `size`, map-to-map casts, DataFrame appends, `.files`
   counts, `ADD COLUMN`, `ALTER COLUMN c.value TYPE`, struct and map values) already answered
   as Spark and is now pinned. Before, `map()` raised `Function 'map' expected at least one
@@ -8582,8 +8593,10 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `{k -> 1}`; two refusal texts differ only in rendering; invalid map values and map
   partitioning refuse with DataFusion's / the fork's texts; `ALTER COLUMN c TYPE MAP<…>`
   refuses; `c['k'].a` refuses; `map()` does not unify inside `coalesce`, `if`, `array` or a
-  `VALUES` table.
-- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25 (77 steps in
+  `VALUES` table, and `element_at(map(), 'a')` refuses DataFusion's `Failed to coerce arguments
+  to satisfy a call to 'element_at' function …` where Spark answers `NULL` typed `void` (dated
+  2026-09-25).
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25 (87 steps in
   `python/repark/tests/u9_types_1_spark_oracle.json`, group `map`; scoreboard cell `TY-MAP`,
   replayed EQUAL).
 - **Pin** — `python/repark/tests/test_u9_types_1.py`, `crates/repark-spark/src/tests/u9_map.rs`,

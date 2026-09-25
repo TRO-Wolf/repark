@@ -170,3 +170,24 @@ async fn a_timestamp_ltz_word_that_is_not_a_typed_literal_keeps_its_meaning() {
         "+---------------+\n| timestamp_ltz |\n+---------------+\n| x             |\n+---------------+"
     );
 }
+
+#[tokio::test]
+async fn a_double_quoted_timestamp_ltz_literal_is_the_same_instant() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    let text = rendered(
+        &ctx,
+        &catalogs,
+        "SELECT CAST(TIMESTAMP_LTZ \"2024-01-01 00:00:00\" AS STRING) AS x, \
+         TIMESTAMP_LTZ \"2024-01-01 00:00:00\" = TIMESTAMP_LTZ '2024-01-01 00:00:00' AS same",
+    )
+    .await;
+    assert_eq!(
+        text,
+        "+---------------------+------+\n\
+         | x                   | same |\n\
+         +---------------------+------+\n\
+         | 2024-01-01 00:00:00 | true |\n\
+         +---------------------+------+"
+    );
+}

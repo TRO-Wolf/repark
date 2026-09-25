@@ -4,8 +4,8 @@ use std::ops::ControlFlow;
 use datafusion::error::DataFusionError;
 use datafusion::sql::sqlparser::ast::{
     CastKind, DataType, Expr, Function, FunctionArg, FunctionArgExpr, FunctionArgumentList,
-    FunctionArguments, Ident, ObjectName, Statement, TimezoneInfo, UnaryOperator, Value,
-    ValueWithSpan, Visit, VisitMut, Visitor, VisitorMut,
+    FunctionArguments, Ident, ObjectName, ObjectNamePart, Statement, TimezoneInfo, UnaryOperator,
+    Value, ValueWithSpan, Visit, VisitMut, Visitor, VisitorMut,
 };
 use datafusion::sql::sqlparser::tokenizer::Span;
 use repark_functions::timestamp_ns_cast::{TIMESTAMP_NS_CAST_NAME, TIMESTAMPTZ_NS_CAST_NAME};
@@ -85,25 +85,31 @@ fn is_empty_map_call(node: &Expr) -> bool {
         FunctionArguments::List(list) => list.args.is_empty() && list.clauses.is_empty(),
         FunctionArguments::None | FunctionArguments::Subquery(_) => false,
     };
+    let [ObjectNamePart::Identifier(name)] = function.name.0.as_slice() else {
+        return false;
+    };
     empty_arguments
         && function.over.is_none()
         && function.filter.is_none()
-        && function.name.0.len() == 1
-        && function.name.to_string().eq_ignore_ascii_case("map")
+        && name.value.eq_ignore_ascii_case("map")
+}
+
+fn lower_empty_map_call(node: &mut Expr) -> bool {
+    if !is_empty_map_call(node) {
+        return false;
+    }
+    *node = function_call(
+        "map",
+        vec![
+            function_call("make_array", Vec::new()),
+            function_call("make_array", Vec::new()),
+        ],
+    );
+    true
 }
 
 fn lower_expression(node: &mut Expr) {
-    if lower_timestamp_ns_cast(node) {
-        return;
-    }
-    if is_empty_map_call(node) {
-        *node = function_call(
-            "map",
-            vec![
-                function_call("make_array", Vec::new()),
-                function_call("make_array", Vec::new()),
-            ],
-        );
+    if lower_timestamp_ns_cast(node) || lower_empty_map_call(node) {
         return;
     }
     if let Expr::RLike {
@@ -149,19 +155,42 @@ pub(crate) fn lower_spark_keywords(statement: &mut Statement) {
     let _ = statement.visit(&mut KeywordLower);
 }
 
-struct TimestampNsCastLower;
+struct TimestampNsCastLower {
+    empty_maps: bool,
+}
 
 impl VisitorMut for TimestampNsCastLower {
     type Break = Infallible;
 
     fn post_visit_expr(&mut self, expr: &mut Expr) -> ControlFlow<Self::Break> {
-        lower_timestamp_ns_cast(expr);
+        if !lower_timestamp_ns_cast(expr) && self.empty_maps {
+            lower_empty_map_call(expr);
+        }
         ControlFlow::Continue(())
     }
 }
 
 pub(crate) fn lower_timestamp_ns_casts<T: VisitMut>(node: &mut T) {
-    let _ = node.visit(&mut TimestampNsCastLower);
+    let _ = node.visit(&mut TimestampNsCastLower { empty_maps: false });
+}
+
+pub(crate) fn lower_empty_maps_and_timestamp_ns_casts<T: VisitMut>(node: &mut T) {
+    let _ = node.visit(&mut TimestampNsCastLower { empty_maps: true });
+}
+
+pub(crate) fn lower_empty_map_calls<T: VisitMut>(node: &mut T) {
+    let _ = node.visit(&mut EmptyMapLower);
+}
+
+struct EmptyMapLower;
+
+impl VisitorMut for EmptyMapLower {
+    type Break = Infallible;
+
+    fn post_visit_expr(&mut self, expr: &mut Expr) -> ControlFlow<Self::Break> {
+        lower_empty_map_call(expr);
+        ControlFlow::Continue(())
+    }
 }
 
 struct TimestampNsCastProbe;
@@ -178,12 +207,13 @@ impl Visitor for TimestampNsCastProbe {
                 format: None,
                 ..
             } if timestamp_ns_cast_name(data_type).is_some() => ControlFlow::Break(()),
+            _ if is_empty_map_call(expr) => ControlFlow::Break(()),
             _ => ControlFlow::Continue(()),
         }
     }
 }
 
-pub(crate) fn has_timestamp_ns_cast<T: Visit>(node: &T) -> bool {
+pub(crate) fn has_empty_map_or_timestamp_ns_cast<T: Visit>(node: &T) -> bool {
     node.visit(&mut TimestampNsCastProbe).is_break()
 }
 
@@ -246,6 +276,13 @@ mod tests {
         );
         assert!(text.contains("map('k', 1) AS c"), "{text}");
         assert!(text.contains("s.map() AS d"), "{text}");
+        let quoted = lowered("SELECT `map`() AS a, `MAP`() AS b, `s`.`map`() AS c").to_string();
+        assert!(
+            quoted.contains("map(make_array(), make_array()) AS a")
+                && quoted.contains("map(make_array(), make_array()) AS b")
+                && quoted.contains("`s`.`map`() AS c"),
+            "{quoted}"
+        );
     }
 
     #[test]
@@ -269,23 +306,29 @@ mod tests {
     }
 
     #[test]
-    fn the_ns_cast_probe_finds_only_ns_casts() {
+    fn the_probe_finds_only_ns_casts_and_empty_map_calls() {
         let parse = |sql: &str| {
             Parser::parse_sql(&DatabricksDialect {}, sql)
                 .unwrap()
                 .remove(0)
         };
-        assert!(has_timestamp_ns_cast(&parse(
+        assert!(has_empty_map_or_timestamp_ns_cast(&parse(
             "SELECT id FROM t WHERE ts > CAST('2026-01-02' AS timestamptz_ns)"
         )));
-        assert!(has_timestamp_ns_cast(&parse(
+        assert!(has_empty_map_or_timestamp_ns_cast(&parse(
             "SELECT '2026-01-02'::TIMESTAMP_NS AS v"
         )));
-        assert!(!has_timestamp_ns_cast(&parse(
+        assert!(!has_empty_map_or_timestamp_ns_cast(&parse(
             "SELECT CAST('2026-01-02' AS TIMESTAMP) AS v"
         )));
-        assert!(!has_timestamp_ns_cast(&parse(
+        assert!(!has_empty_map_or_timestamp_ns_cast(&parse(
             "SELECT TRY_CAST('x' AS timestamp_ns) AS v"
+        )));
+        assert!(has_empty_map_or_timestamp_ns_cast(&parse(
+            "UPDATE t SET c = `MAP`() WHERE id = 0"
+        )));
+        assert!(!has_empty_map_or_timestamp_ns_cast(&parse(
+            "UPDATE t SET c = s.map() WHERE id = 0"
         )));
     }
 

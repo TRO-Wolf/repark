@@ -64,6 +64,7 @@ async fn execute_passthrough_inner(
             // G15 — collation at the EXECUTING parse (G3-E8 altitude).
             crate::refuse_collation_in_statement(inner)?;
             crate::refuse_declared_function_in_statement(inner)?;
+            crate::keyword_lower::lower_empty_map_calls(inner);
             if let Some(done) = try_execute_identity_dml(ctx, catalogs, inner).await? {
                 return Ok(done);
             }

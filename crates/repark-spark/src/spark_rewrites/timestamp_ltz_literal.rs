@@ -15,7 +15,7 @@ pub(crate) fn plan_timestamp_ltz_literal_regions(tokens: &[TokenWithSpan]) -> Ve
         let next = skip_whitespace(tokens, index + 1);
         if matches!(
             tokens.get(next).map(|candidate| &candidate.token),
-            Some(Token::SingleQuotedString(_))
+            Some(Token::SingleQuotedString(_) | Token::DoubleQuotedString(_))
         ) {
             regions.push(LiteralRegion {
                 start: with_span.span.start,

@@ -88,3 +88,41 @@ async fn a_map_column_takes_literals_the_empty_map_and_null() {
          +----+-------------+-------------+---+---+"
     );
 }
+
+#[tokio::test]
+async fn a_back_quoted_empty_map_call_is_an_empty_map_of_void() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    assert_eq!(
+        rendered(&ctx, &catalogs, "SELECT `map`() AS m, `MAP`() AS n").await,
+        "+----+----+\n| m  | n  |\n+----+----+\n| {} | {} |\n+----+----+"
+    );
+}
+
+#[tokio::test]
+async fn update_and_every_merge_clause_assign_the_empty_map() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    for sql in [
+        "CREATE TABLE ice.sales.mu (id INT, c MAP<STRING, INT>) USING iceberg",
+        "INSERT INTO ice.sales.mu VALUES (0, map('a', 1)), (1, map('b', 2)), (2, map('c', 3))",
+        "UPDATE ice.sales.mu SET c = map() WHERE id = 0",
+        "MERGE INTO ice.sales.mu t USING (SELECT 1 AS id) s ON t.id = s.id \
+         WHEN MATCHED THEN UPDATE SET c = map()",
+        "MERGE INTO ice.sales.mu t USING (SELECT 5 AS id) s ON t.id = s.id \
+         WHEN NOT MATCHED THEN INSERT (id, c) VALUES (s.id, map())",
+        "MERGE INTO ice.sales.mu t USING (SELECT 0 AS id) s ON t.id = s.id \
+         WHEN NOT MATCHED BY SOURCE AND t.id = 2 THEN UPDATE SET c = map()",
+    ] {
+        run(&ctx, &catalogs, sql).await;
+    }
+    assert_eq!(
+        rendered(
+            &ctx,
+            &catalogs,
+            "SELECT id, c FROM ice.sales.mu ORDER BY id"
+        )
+        .await,
+        "+----+----+\n| id | c  |\n+----+----+\n| 0  | {} |\n| 1  | {} |\n| 2  | {} |\n| 5  | {} |\n+----+----+"
+    );
+}

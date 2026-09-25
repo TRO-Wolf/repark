@@ -31,6 +31,9 @@ pub(crate) fn ansi_store_assignable(src: &DataType, dst: &DataType) -> bool {
     if let (DataType::Struct(from), DataType::Struct(to)) = (src, dst) {
         return struct_fields_store_assignable(from, to);
     }
+    if let (DataType::Map(from, _), DataType::Map(to, _)) = (src, dst) {
+        return map_entries_store_assignable(from.data_type(), to.data_type());
+    }
     // NullType → anything (the projection NULL-fills nullable columns as untyped NULL).
     if matches!(src, Null) {
         return true;
@@ -88,6 +91,20 @@ fn struct_fields_store_assignable(from: &Fields, to: &Fields) -> bool {
                     normalize_for_assignment(source.data_type()),
                     normalize_for_assignment(target.data_type()),
                 )
+        })
+}
+
+fn map_entries_store_assignable(from: &DataType, to: &DataType) -> bool {
+    let (DataType::Struct(from), DataType::Struct(to)) = (from, to) else {
+        return false;
+    };
+    from.len() == 2
+        && to.len() == 2
+        && from.iter().zip(to.iter()).all(|(source, target)| {
+            ansi_store_assignable(
+                normalize_for_assignment(source.data_type()),
+                normalize_for_assignment(target.data_type()),
+            )
         })
 }
 
@@ -175,6 +192,45 @@ mod tests {
         refuse_unless_ansi_store_assignable, refuse_unless_write_store_assignable,
         without_field_metadata,
     };
+
+    fn map_of(key: DataType, value: DataType, entries: &str) -> DataType {
+        DataType::Map(
+            Arc::new(Field::new(
+                entries,
+                DataType::Struct(
+                    vec![
+                        Field::new("key", key, false),
+                        Field::new("value", value, true),
+                    ]
+                    .into(),
+                ),
+                false,
+            )),
+            false,
+        )
+    }
+
+    #[test]
+    fn a_map_assigns_when_its_key_and_value_assign() {
+        use DataType::{Date32, Int32, Int64, Null, Utf8};
+        let target = map_of(Utf8, Int32, "key_value");
+        assert!(ansi_store_assignable(
+            &map_of(Null, Null, "entries"),
+            &target
+        ));
+        assert!(ansi_store_assignable(
+            &map_of(Utf8, Int32, "entries"),
+            &map_of(Utf8, Int64, "key_value")
+        ));
+        assert!(!ansi_store_assignable(
+            &map_of(Utf8, Utf8, "entries"),
+            &target
+        ));
+        assert!(!ansi_store_assignable(
+            &map_of(Date32, Int32, "entries"),
+            &map_of(Int32, Int32, "key_value")
+        ));
+    }
 
     /// WI-1: `Date32 → Int32|Int64` is the silently-wrong pair every plain INSERT persisted before.
     #[test]

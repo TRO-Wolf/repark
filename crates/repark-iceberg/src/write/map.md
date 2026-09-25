@@ -760,6 +760,9 @@ repark-core's error map.
   reordered struct by name before it reaches the gate (u8-write-sql C-030, C-032).
   `without_field_metadata` strips those ids at every depth for the cast type name and for
   both types in the refusal text, so no `PARQUET:field_id` reaches a user. pins: u8-write-sql/C-030
+  **WO U9-TYPES-1 r2 (2026-09-25):** a map pair is assignable when its key and its value
+  types each are (Spark's `MapType` arm), so a MERGE assigns `map()` (`Map<Null, Null>`) to a
+  typed map column; `a_map_assigns_when_its_key_and_value_assign`. pins: u9-types-1/C-006
 - `store_assign.rs` (crate-private) — **WI-1 (2026-08-15):** the ONE home for Spark's ANSI
   store-assignment matrix (`Cast.canANSIStoreAssign` → Arrow):
   `ansi_store_assignable` / `normalize_for_assignment` /

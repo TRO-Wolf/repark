@@ -2002,6 +2002,74 @@
    }
   },
   {
+   "group": "ltz",
+   "key": "ltz/literal/double-quoted",
+   "do": "rows",
+   "sql": "SELECT TIMESTAMP_LTZ \"2024-01-01 00:00:00\" AS x",
+   "spark": [
+    [
+     "2024-01-01T00:00:00"
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/literal/double-quoted-cols",
+   "do": "cols",
+   "sql": "SELECT TIMESTAMP_LTZ \"2024-01-01 00:00:00\" AS x",
+   "spark": [
+    [
+     "x",
+     "timestamp"
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/literal/garbage",
+   "do": "rows",
+   "sql": "SELECT TIMESTAMP_LTZ 'garbage' AS x",
+   "spark": [
+    [
+     "cond",
+     "INVALID_TYPED_LITERAL"
+    ],
+    [
+     "error",
+     "ParseException"
+    ],
+    [
+     "msg",
+     "[INVALID_TYPED_LITERAL] The value of the typed literal \"TIMESTAMP_LTZ\" is invalid: 'garbage'. SQLSTATE: 42604\n== SQL (line 1, position 8) ==\nSELECT TIMESTAMP_LTZ 'garbage' AS x\n       ^^^^^^^^^^^^^^^^^^^^^^^"
+    ],
+    [
+     "state",
+     "42604"
+    ]
+   ],
+   "residue": {
+    "id": "R-16",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "Execution error: [CAST_INVALID_INPUT] The value 'garbage' of the type \"STRING\" cannot be cast to \"TIMESTAMP\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+     ],
+     [
+      "state",
+      "22018"
+     ]
+    ]
+   }
+  },
+  {
    "group": "map",
    "key": "map/v2/create",
    "do": "sql",
@@ -4318,6 +4386,128 @@
     [
      "m",
      "map<string,int>"
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/literal/backtick",
+   "do": "rows",
+   "sql": "SELECT `map`() AS m, `MAP`() AS n",
+   "spark": [
+    [
+     [],
+     []
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/literal/backtick-cols",
+   "do": "cols",
+   "sql": "SELECT `map`() AS m",
+   "spark": [
+    [
+     "m",
+     "map<void,void>"
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/literal/element-at",
+   "do": "rows",
+   "sql": "SELECT element_at(map(), 'a') AS e",
+   "spark": [
+    [
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-13",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: Failed to coerce arguments to satisfy a call to 'element_at' function: coercion from Map(\"entries\": non-null Struct(\"key\": non-null Null, \"value\": Null), unsorted), Utf8 to the signature UserDefined failed. No function matches the given name and argument types 'element_at(Map(\"entries\": non-null Struct(\"key\": non-null Null, \"value\": Null), unsorted), Utf8)'. You might need to add explicit type casts.\n\tCandidate functions:\n\telement_at(UserDefined)"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/dml/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.mu (id INT, c MAP<STRING, INT>) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/dml/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.mu VALUES (0, map('a', 1)), (1, map('b', 2)), (2, map('c', 3))",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/dml/update-empty",
+   "do": "sql",
+   "sql": "UPDATE sc.ns.mu SET c = map() WHERE id = 0",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/dml/merge-matched-empty",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.mu t USING (SELECT 1 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET c = map()",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/dml/merge-insert-empty",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.mu t USING (SELECT 5 AS id) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, c) VALUES (s.id, map())",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/dml/merge-by-source-empty",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.mu t USING (SELECT 0 AS id) s ON t.id = s.id WHEN NOT MATCHED BY SOURCE AND t.id = 2 THEN UPDATE SET c = map()",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/dml/after",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.mu",
+   "spark": [
+    [
+     0,
+     []
+    ],
+    [
+     1,
+     []
+    ],
+    [
+     2,
+     []
+    ],
+    [
+     5,
+     []
     ]
    ]
   },

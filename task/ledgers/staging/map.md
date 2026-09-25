@@ -10,7 +10,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `python/repark/tests/u9_types_1_spark_oracle.json`. `TIMESTAMP_LTZ` columns and typed
   literals (C-001..C-005); `MAP` columns and the empty `map()` literal (C-006..C-008);
   `VOID` (v3 `unknown`) measured and held OPEN on the fork's write refusal (C-009, R-14);
-  `uuid` read as string measured and held OPEN for a design ruling (C-010, R-15).
+  `uuid` read as string measured and held OPEN for a design ruling (C-010, R-15). Verifier
+  round r2: `map()` in UPDATE / MERGE and back-quoted, double-quoted LTZ literals; residues
+  R-16 (invalid LTZ literal text) and R-17 (ANSI door `WITH TIME ZONE` is naive).
   `risk_tier: standard`. Branch `feat/u9-types-1`.
   pins: u9-types-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [u8-write-sql-ledger.md](u8-write-sql-ledger.md) —
