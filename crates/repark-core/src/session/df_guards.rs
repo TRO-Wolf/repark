@@ -2,8 +2,8 @@
 
 use std::sync::Arc;
 
-use datafusion::common::Result as DataFusionResult;
 use datafusion::common::tree_node::{Transformed, TreeNodeRecursion, TreeNodeRewriter};
+use datafusion::common::{DataFusionError, Result as DataFusionResult, SchemaError};
 use datafusion::execution::SessionStateBuilder;
 use datafusion::execution::runtime_env::RuntimeEnv;
 use datafusion::logical_expr::LogicalPlan;
@@ -19,6 +19,8 @@ mod window_rescan;
 
 /// DataFusion's own name for the pass-2 leaf-projection rule.
 const LEAF_PUSHDOWN_RULE_NAME: &str = "push_down_leaf_projections";
+
+const EXTRACTED_ALIAS_PREFIX: &str = "__datafusion_extracted";
 
 pub(super) const DEAD_DATAFUSION_54_1_KEYS: &[&str] = &["datafusion.execution.coalesce_batches"];
 
@@ -175,12 +177,31 @@ fn apply_inner_scoped(
     inside_unnest: bool,
 ) -> DataFusionResult<Transformed<LogicalPlan>> {
     if !inside_unnest && !carries_unnest(&node)? {
-        return inner.rewrite(node, config);
+        if !matches!(node, LogicalPlan::Projection(_)) {
+            return inner.rewrite(node, config);
+        }
+        let declined = node.clone();
+        return match inner.rewrite(node, config) {
+            Err(error) if extraction_alias_collision(&error) => Ok(Transformed::no(declined)),
+            outcome => outcome,
+        };
     }
     let declined = node.clone();
     Ok(inner
         .rewrite(node, config)
         .unwrap_or(Transformed::no(declined)))
+}
+
+fn extraction_alias_collision(error: &DataFusionError) -> bool {
+    matches!(
+        error.find_root(),
+        DataFusionError::SchemaError(inner, _)
+            if matches!(
+                inner.as_ref(),
+                SchemaError::AmbiguousReference { field }
+                    if field.name.starts_with(EXTRACTED_ALIAS_PREFIX)
+            )
+    )
 }
 
 /// Test seam: wrap an arbitrary inner rule with the same Unnest-scoped decline.

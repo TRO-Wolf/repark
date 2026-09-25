@@ -1,0 +1,5694 @@
+{
+ "provenance": {
+  "measured": "2026-09-25, PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, InMemoryCatalog (harness /tmp/oc-worker/scoreboard/2026-09-24/harness.py)",
+  "generator": "target/probe-u8-pr2/build_oracle.py",
+  "sources": [
+   {
+    "spark": "spark.json",
+    "repark": "repark-after.json",
+    "probe": "probe.py",
+    "sha256": "e2ebbfa61b0896f008edce6a619ad6bd5897591ad3af4fe4e8ab5b25557924b5"
+   },
+   {
+    "spark": "spark2.json",
+    "repark": "repark2-after.json",
+    "probe": "probe2.py",
+    "sha256": "3544b57025f65f79195b6491c6a824f4b242d7bf22195e143e7a5b3d9fb90c91"
+   },
+   {
+    "spark": "spark3.json",
+    "repark": "repark3-after.json",
+    "probe": "probe3.py",
+    "sha256": "318284ee8b5f09483661c6e2990244a87250792fd475c0513a34f76c15eb19ae"
+   },
+   {
+    "spark": "spark4.json",
+    "repark": "repark4-after.json",
+    "probe": "probe4.py",
+    "sha256": "1cf7da0ecbae1897662b7028bd368208f4b33bb9e9f07649b247b3ebe7bf9783"
+   },
+   {
+    "spark": "spark5.json",
+    "repark": "repark5-after.json",
+    "probe": "probe5.py",
+    "sha256": "f36f21bb840d98f6dac811e9671c8cbe807e3f8ad42c42840122fea98c9dc92d"
+   },
+   {
+    "spark": "spark6.json",
+    "repark": "repark6-after.json",
+    "probe": "probe6.py",
+    "sha256": "fd3314485aea3439596046b10d5b21648bfbd65c38fa0fc487aa8205ecba2ae8"
+   },
+   {
+    "spark": "spark7.json",
+    "repark": "repark7-after.json",
+    "probe": "probe7.py",
+    "sha256": "3049fc8b4e89e8cd2f7d849d481dbf0234560b9e067b37f12df54639ad99889a"
+   }
+  ],
+  "normalization": "each case ran on table sc.ns.n<k> (k = its index in its probe); messages drop RePark's 'Error during planning: ' prefix and Spark's '; line N pos M' / '(line N, pos M)' suffix with the plan that follows, and spell the table <T> (plain), `<T>` (ticked) and its last part `<t>`; rows hold structs and maps as objects (map keys as strings); a case's conf holds the session confs set before its statements and reset to false after",
+  "residues": {
+   "R-13": [
+    "U-self-ref",
+    "U-ref-other",
+    "U-null-struct",
+    "U-deep",
+    "U-deep-mid",
+    "U-deep-and-sibling"
+   ],
+   "R-14": [
+    "U-notnull-field",
+    "N6-nn-insstar-reorder-null-a-empty",
+    "N6-nn-ins-values-plain-null-a-empty"
+   ],
+   "R-15": [
+    "U2-overflow",
+    "M2-overflow"
+   ],
+   "R-16": [
+    "U-missing-top",
+    "U-table-qualified",
+    "U2-order",
+    "U2-order2",
+    "M2-two-clauses"
+   ],
+   "R-18": [
+    "E6-evo-setstar-reorder-noprop",
+    "E6-evo-insstar-reorder-noprop"
+   ]
+  }
+ },
+ "cases": {
+  "pr2/U-cell": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.a = 99 WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 99,
+      "b": "p"
+     }
+    ]
+   ]
+  },
+  "pr2/M-cell": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st.a = s.na"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 20,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U-str-int": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.a = '5' WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `st`.`a` \"STRING\" to \"INT\". SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U-str-bad": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.a = 'x' WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `st`.`a` \"STRING\" to \"INT\". SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U-dec": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.a = 1.5 WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U-double": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.a = CAST(1.5 AS DOUBLE) WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U-bigint": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.a = CAST(7 AS BIGINT) WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 7,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U-int-to-str": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.b = 7 WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "7"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U-null": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.a = NULL WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": null,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U-missing": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.zz = 1 WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "FIELD_NOT_FOUND",
+     "sqlstate": "42704",
+     "message": "[FIELD_NOT_FOUND] No such struct field `zz` in `a`, `b`. SQLSTATE: 42704"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U-missing-top": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET zz.a = 1 WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+     "sqlstate": "42703",
+     "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `zz`.`a` cannot be resolved. Did you mean one of the following? [`<t>`.`id`, `<t>`.`st`]. SQLSTATE: 42703"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "residue": {
+    "id": "R-16",
+    "repark": {
+     "step": {
+      "type": "AnalysisException",
+      "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+      "sqlstate": "42703",
+      "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `a` cannot be resolved. Did you mean one of the following? [`id`, `st`]. SQLSTATE: 42703"
+     },
+     "rows": [
+      [
+       1,
+       {
+        "a": 1,
+        "b": "p"
+       }
+      ],
+      [
+       2,
+       {
+        "a": 2,
+        "b": "q"
+       }
+      ]
+     ]
+    }
+   }
+  },
+  "pr2/U-not-struct": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET id.a = 1 WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INVALID_EXTRACT_BASE_FIELD_TYPE",
+     "sqlstate": "42000",
+     "message": "[INVALID_EXTRACT_BASE_FIELD_TYPE] Can't extract a value from \"id\". Need a complex type [STRUCT, ARRAY, MAP] but got \"BIGINT\". SQLSTATE: 42000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U-two": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.a = 1, st.b = 'x' WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "x"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U-dup": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.a = 1, st.a = 2 WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"st.a = 1\", \"st.a = 2\" due to data type mismatch: \n- Multiple assignments for 'st.a': 1, 2 SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U-whole-and-field": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st = named_struct('a', 5, 'b', 'z'), st.a = 1 WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"st = named_struct(a, 5, b, z)\", \"st.a = 1\" due to data type mismatch: \n- Conflicting assignments for 'st': <T>.st = named_struct('a', 5, 'b', 'z'), <T>.st.`a` = 1 SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U-field-and-whole": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.a = 1, st = named_struct('a', 5, 'b', 'z') WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"st.a = 1\", \"st = named_struct(a, 5, b, z)\" due to data type mismatch: \n- Conflicting assignments for 'st': <T>.st = named_struct('a', 5, 'b', 'z'), <T>.st.`a` = 1 SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U-whole": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st = named_struct('a', 5, 'b', 'z') WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 5,
+      "b": "z"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U-top-and-field": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET id = 9, st.a = 1 WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ],
+    [
+     9,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ]
+   ]
+  },
+  "pr2/U-self-ref": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.a = st.a + 10"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 11,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 12,
+      "b": "q"
+     }
+    ]
+   ],
+   "residue": {
+    "id": "R-13",
+    "repark": {
+     "step": {
+      "type": "PySparkException",
+      "condition": null,
+      "sqlstate": null,
+      "message": "datafusion engine error: Arrow error: Invalid argument error: arguments need to have the same data type"
+     },
+     "rows": [
+      [
+       1,
+       {
+        "a": 1,
+        "b": "p"
+       }
+      ],
+      [
+       2,
+       {
+        "a": 2,
+        "b": "q"
+       }
+      ]
+     ]
+    }
+   }
+  },
+  "pr2/U-ref-other": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.a = id * 100, st.b = concat(st.b, '!')"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 100,
+      "b": "p!"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 200,
+      "b": "q!"
+     }
+    ]
+   ],
+   "residue": {
+    "id": "R-13",
+    "repark": {
+     "step": {
+      "type": "PySparkException",
+      "condition": null,
+      "sqlstate": null,
+      "message": "datafusion engine error: Arrow error: Invalid argument error: arguments need to have the same data type"
+     },
+     "rows": [
+      [
+       1,
+       {
+        "a": 1,
+        "b": "p"
+       }
+      ],
+      [
+       2,
+       {
+        "a": 2,
+        "b": "q"
+       }
+      ]
+     ]
+    }
+   }
+  },
+  "pr2/U-case": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET ST.A = 7 WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 7,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U-backtick": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET `st`.`a` = 7 WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 7,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U-qualified": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} x SET x.st.a = 7 WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 7,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U-table-qualified": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET n23.st.a = 7 WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+     "sqlstate": "42703",
+     "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `n23`.`st`.`a` cannot be resolved. Did you mean one of the following? [`<T>`.`st`, `<T>`.`id`]. SQLSTATE: 42703"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "residue": {
+    "id": "R-16",
+    "repark": {
+     "step": {
+      "type": "AnalysisException",
+      "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+      "sqlstate": "42703",
+      "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `a` cannot be resolved. Did you mean one of the following? [`id`, `st`]. SQLSTATE: 42703"
+     },
+     "rows": [
+      [
+       1,
+       {
+        "a": 1,
+        "b": "p"
+       }
+      ],
+      [
+       2,
+       {
+        "a": 2,
+        "b": "q"
+       }
+      ]
+     ]
+    }
+   }
+  },
+  "pr2/U-null-struct": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, CAST(NULL AS STRUCT<a: INT, b: STRING>)), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.a = 5"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 5,
+      "b": null
+     }
+    ],
+    [
+     2,
+     {
+      "a": 5,
+      "b": "q"
+     }
+    ]
+   ],
+   "residue": {
+    "id": "R-13",
+    "repark": {
+     "step": {
+      "type": "PySparkException",
+      "condition": null,
+      "sqlstate": null,
+      "message": "datafusion engine error: Arrow error: Invalid argument error: arguments need to have the same data type"
+     },
+     "rows": [
+      [
+       1,
+       null
+      ],
+      [
+       2,
+       {
+        "a": 2,
+        "b": "q"
+       }
+      ]
+     ]
+    }
+   }
+  },
+  "pr2/U-deep": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u')))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.inner.x = 11"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "inner": {
+       "x": 11,
+       "y": "u"
+      }
+     }
+    ]
+   ],
+   "residue": {
+    "id": "R-13",
+    "repark": {
+     "step": {
+      "type": "PySparkException",
+      "condition": null,
+      "sqlstate": null,
+      "message": "datafusion engine error: Arrow error: Invalid argument error: arguments need to have the same data type"
+     },
+     "rows": [
+      [
+       1,
+       {
+        "a": 1,
+        "inner": {
+         "x": 10,
+         "y": "u"
+        }
+       }
+      ]
+     ]
+    }
+   }
+  },
+  "pr2/U-deep-mid": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u')))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.inner = named_struct('x', 3, 'y', 'v')"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "inner": {
+       "x": 3,
+       "y": "v"
+      }
+     }
+    ]
+   ],
+   "residue": {
+    "id": "R-13",
+    "repark": {
+     "step": {
+      "type": "PySparkException",
+      "condition": null,
+      "sqlstate": null,
+      "message": "datafusion engine error: Arrow error: Invalid argument error: arguments need to have the same data type"
+     },
+     "rows": [
+      [
+       1,
+       {
+        "a": 1,
+        "inner": {
+         "x": 10,
+         "y": "u"
+        }
+       }
+      ]
+     ]
+    }
+   }
+  },
+  "pr2/U-deep-and-sibling": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u')))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.inner.x = 11, st.a = 2"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 2,
+      "inner": {
+       "x": 11,
+       "y": "u"
+      }
+     }
+    ]
+   ],
+   "residue": {
+    "id": "R-13",
+    "repark": {
+     "step": {
+      "type": "PySparkException",
+      "condition": null,
+      "sqlstate": null,
+      "message": "datafusion engine error: Arrow error: Invalid argument error: arguments need to have the same data type"
+     },
+     "rows": [
+      [
+       1,
+       {
+        "a": 1,
+        "inner": {
+         "x": 10,
+         "y": "u"
+        }
+       }
+      ]
+     ]
+    }
+   }
+  },
+  "pr2/U-deep-conflict": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u')))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.inner.x = 11, st.inner = named_struct('x', 3, 'y', 'v')"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"st.inner.x = 11\", \"st.inner = named_struct(x, 3, y, v)\" due to data type mismatch: \n- Conflicting assignments for 'st.inner': <T>.st.`inner` = named_struct('x', 3, 'y', 'v'), <T>.st.`inner`.`x` = 11 SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "inner": {
+       "x": 10,
+       "y": "u"
+      }
+     }
+    ]
+   ]
+  },
+  "pr2/U-notnull-field": {
+   "columns": "id BIGINT, st STRUCT<a: INT NOT NULL, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.a = NULL"
+   ],
+   "steps": [
+    {
+     "type": "SparkRuntimeException",
+     "condition": "NOT_NULL_ASSERT_VIOLATION",
+     "sqlstate": "42000",
+     "message": "[NOT_NULL_ASSERT_VIOLATION] NULL value appeared in non-nullable field: \nst\na\nIf the schema is inferred from a Scala tuple/case class, or a Java bean, please try to use scala.Option[_] or other nullable types (such as java.lang.Integer instead of int/scala.Int). SQLSTATE: 42000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ]
+   ],
+   "residue": {
+    "id": "R-14",
+    "repark": {
+     "at": "seed",
+     "step": {
+      "type": "UnsupportedOperationException",
+      "condition": null,
+      "sqlstate": null,
+      "message": "Optimizer rule 'simplify_expressions' failed\ncaused by\nThis feature is not implemented: Unsupported CAST from Struct(\"a\": Int32, \"b\": Utf8) to Struct(\"a\": non-null Int32, \"b\": Utf8)"
+     },
+     "rows": null
+    }
+   }
+  },
+  "pr2/U-map-value": {
+   "columns": "id BIGINT, m MAP<STRING, STRUCT<x: INT>>, arr ARRAY<STRUCT<x: INT>>",
+   "seed": "(1, map('k', named_struct('x', 1)), array(named_struct('x', 1)))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET m.value.x = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"m[value].x = 1\" due to data type mismatch: \n- Updating nested fields is only supported for StructType but 'm' is of type MapType(StringType,StructType(StructField(x,IntegerType,true)),true) SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "k": {
+       "x": 1
+      }
+     },
+     [
+      {
+       "x": 1
+      }
+     ]
+    ]
+   ]
+  },
+  "pr2/U-arr-element": {
+   "columns": "id BIGINT, m MAP<STRING, STRUCT<x: INT>>, arr ARRAY<STRUCT<x: INT>>",
+   "seed": "(1, map('k', named_struct('x', 1)), array(named_struct('x', 1)))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET arr.element.x = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "FIELD_NOT_FOUND",
+     "sqlstate": "42704",
+     "message": "[FIELD_NOT_FOUND] No such struct field `element` in `x`. SQLSTATE: 42704"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "k": {
+       "x": 1
+      }
+     },
+     [
+      {
+       "x": 1
+      }
+     ]
+    ]
+   ]
+  },
+  "pr2/U-map-key": {
+   "columns": "id BIGINT, m MAP<STRING, INT>",
+   "seed": "(1, map('k', 1))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET m.key = 'z'"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"m[key] = z\" due to data type mismatch: \n- Updating nested fields is only supported for StructType but 'm' is of type MapType(StringType,IntegerType,true) SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "k": 1
+     }
+    ]
+   ]
+  },
+  "pr2/U-mor": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "TBLPROPERTIES ('format-version'='2', 'write.update.mode'='merge-on-read')",
+   "statements": [
+    "UPDATE {T} SET st.a = 99 WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 99,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M-str-int": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st.a = '5'"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `st`.`a` \"STRING\" to \"INT\". SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M-dec": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st.a = 1.5"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 1,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M-bigint-src": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT CAST(2 AS BIGINT) AS id, CAST(20 AS BIGINT) AS na) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st.a = s.na"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 20,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M-missing": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st.zz = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "FIELD_NOT_FOUND",
+     "sqlstate": "42704",
+     "message": "[FIELD_NOT_FOUND] No such struct field `zz` in `a`, `b`. SQLSTATE: 42704"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M-map-value": {
+   "columns": "id BIGINT, m MAP<STRING, STRUCT<x: INT>>, arr ARRAY<STRUCT<x: INT>>",
+   "seed": "(1, map('k', named_struct('x', 1)), array(named_struct('x', 1)))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 1 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.m.value.x = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"m[value].x = 1\" due to data type mismatch: \n- Updating nested fields is only supported for StructType but 'm' is of type MapType(StringType,StructType(StructField(x,IntegerType,true)),true) SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "k": {
+       "x": 1
+      }
+     },
+     [
+      {
+       "x": 1
+      }
+     ]
+    ]
+   ]
+  },
+  "pr2/M-arr-element": {
+   "columns": "id BIGINT, m MAP<STRING, STRUCT<x: INT>>, arr ARRAY<STRUCT<x: INT>>",
+   "seed": "(1, map('k', named_struct('x', 1)), array(named_struct('x', 1)))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 1 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.arr.element.x = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "FIELD_NOT_FOUND",
+     "sqlstate": "42704",
+     "message": "[FIELD_NOT_FOUND] No such struct field `element` in `x`. SQLSTATE: 42704"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "k": {
+       "x": 1
+      }
+     },
+     [
+      {
+       "x": 1
+      }
+     ]
+    ]
+   ]
+  },
+  "pr2/M-two": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st.a = s.na, t.st.b = 'x'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 20,
+      "b": "x"
+     }
+    ]
+   ]
+  },
+  "pr2/M-unqualified": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET st.a = s.na"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 20,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M-whole-and-field": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st = named_struct('a', 5, 'b', 'z'), t.st.a = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"st = named_struct(a, 5, b, z)\", \"st.a = 1\" due to data type mismatch: \n- Conflicting assignments for 'st': t.st = named_struct('a', 5, 'b', 'z'), t.st.`a` = 1 SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M-dup": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st.a = 1, t.st.a = 2"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"st.a = 1\", \"st.a = 2\" due to data type mismatch: \n- Multiple assignments for 'st.a': 1, 2 SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M-whole": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st = named_struct('a', s.na, 'b', 'z')"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 20,
+      "b": "z"
+     }
+    ]
+   ]
+  },
+  "pr2/M-self-ref": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st.a = t.st.a + s.na"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 22,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M-insert-nested-col": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 3 AS id, 30 AS na) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, st.a) VALUES (s.id, s.na)"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"id = id\", \"st.a = na\" due to data type mismatch: \n- INSERT assignment keys cannot be nested fields: t.st.`a` = s.na SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M-insert-struct-value": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 3 AS id, 30 AS na) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, named_struct('a', s.na, 'b', 'n'))"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ],
+    [
+     3,
+     {
+      "a": 30,
+      "b": "n"
+     }
+    ]
+   ]
+  },
+  "pr2/M-nmbs": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id WHEN NOT MATCHED BY SOURCE THEN UPDATE SET t.st.a = -1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": -1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M-set-star": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, named_struct('a', 22, 'b', 'w') AS st) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 22,
+      "b": "w"
+     }
+    ]
+   ]
+  },
+  "pr2/M-deep": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u')))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 1 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st.inner.x = 11"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "inner": {
+       "x": 11,
+       "y": "u"
+      }
+     }
+    ]
+   ]
+  },
+  "pr2/M-mor": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "TBLPROPERTIES ('format-version'='2', 'write.merge.mode'='merge-on-read')",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st.a = s.na"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 20,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M-top-unchanged": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.id = 7"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     7,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U-top-unchanged": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET id = 7 WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ],
+    [
+     7,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ]
+   ]
+  },
+  "pr2/U2-arr-field": {
+   "columns": "id BIGINT, arr ARRAY<STRUCT<x: INT>>, ai ARRAY<INT>, mi MAP<INT, STRUCT<x: INT>>",
+   "seed": "(1, array(named_struct('x', 1)), array(1), map(1, named_struct('x', 1)))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET arr.x = 1 WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"arr.x = 1\" due to data type mismatch: \n- Updating nested fields is only supported for StructType but 'arr' is of type ArrayType(StructType(StructField(x,IntegerType,true)),true) SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     [
+      {
+       "x": 1
+      }
+     ],
+     [
+      1
+     ],
+     {
+      "1": {
+       "x": 1
+      }
+     }
+    ]
+   ]
+  },
+  "pr2/U2-arr-int": {
+   "columns": "id BIGINT, arr ARRAY<STRUCT<x: INT>>, ai ARRAY<INT>, mi MAP<INT, STRUCT<x: INT>>",
+   "seed": "(1, array(named_struct('x', 1)), array(1), map(1, named_struct('x', 1)))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET ai.a = 1 WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"ai[a]\" due to data type mismatch: The second parameter requires the \"INTEGRAL\" type, however \"a\" has the type \"STRING\". SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     [
+      {
+       "x": 1
+      }
+     ],
+     [
+      1
+     ],
+     {
+      "1": {
+       "x": 1
+      }
+     }
+    ]
+   ]
+  },
+  "pr2/U2-map-int-key": {
+   "columns": "id BIGINT, arr ARRAY<STRUCT<x: INT>>, ai ARRAY<INT>, mi MAP<INT, STRUCT<x: INT>>",
+   "seed": "(1, array(named_struct('x', 1)), array(1), map(1, named_struct('x', 1)))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET mi.k.x = 1 WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"mi[k].x = 1\" due to data type mismatch: \n- Updating nested fields is only supported for StructType but 'mi' is of type MapType(IntegerType,StructType(StructField(x,IntegerType,true)),true) SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     [
+      {
+       "x": 1
+      }
+     ],
+     [
+      1
+     ],
+     {
+      "1": {
+       "x": 1
+      }
+     }
+    ]
+   ]
+  },
+  "pr2/U2-order": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.a = 'x', id = 'y' WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `id` \"STRING\" to \"BIGINT\". SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "residue": {
+    "id": "R-16",
+    "repark": {
+     "step": {
+      "type": "AnalysisException",
+      "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+      "sqlstate": "KD000",
+      "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `<T>`: Cannot safely cast `id` \"STRING\" to \"BIGINT\". SQLSTATE: KD000"
+     },
+     "rows": [
+      [
+       1,
+       {
+        "a": 1,
+        "b": "p"
+       }
+      ],
+      [
+       2,
+       {
+        "a": 2,
+        "b": "q"
+       }
+      ]
+     ]
+    }
+   }
+  },
+  "pr2/U2-order2": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET id = 'y', st.a = 'x' WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `id` \"STRING\" to \"BIGINT\". SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "residue": {
+    "id": "R-16",
+    "repark": {
+     "step": {
+      "type": "AnalysisException",
+      "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+      "sqlstate": "KD000",
+      "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `<T>`: Cannot safely cast `id` \"STRING\" to \"BIGINT\". SQLSTATE: KD000"
+     },
+     "rows": [
+      [
+       1,
+       {
+        "a": 1,
+        "b": "p"
+       }
+      ],
+      [
+       2,
+       {
+        "a": 2,
+        "b": "q"
+       }
+      ]
+     ]
+    }
+   }
+  },
+  "pr2/U2-quoted-field": {
+   "columns": "id BIGINT, st STRUCT<`b c`: INT, d: INT>",
+   "seed": "(1, named_struct('b c', 1, 'd', 2))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.`b c` = 5, st.`b c` = 6 WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"st.b c = 5\", \"st.b c = 6\" due to data type mismatch: \n- Multiple assignments for 'st.`b c`': 5, 6 SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "b c": 1,
+      "d": 2
+     }
+    ]
+   ]
+  },
+  "pr2/U2-quoted-field-ok": {
+   "columns": "id BIGINT, st STRUCT<`b c`: INT, d: INT>",
+   "seed": "(1, named_struct('b c', 1, 'd', 2))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.`b c` = 5 WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "b c": 5,
+      "d": 2
+     }
+    ]
+   ]
+  },
+  "pr2/U2-dup-strings": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.b = 'x', st.b = 'y' WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"st.b = x\", \"st.b = y\" due to data type mismatch: \n- Multiple assignments for 'st.b': 'x', 'y' SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U2-overflow": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.a = 3000000000 WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "ArithmeticException",
+     "condition": "CAST_OVERFLOW_IN_TABLE_INSERT",
+     "sqlstate": "22003",
+     "message": "[CAST_OVERFLOW_IN_TABLE_INSERT] Fail to assign a value of \"BIGINT\" type to the \"INT\" type column or variable `st`.`a` due to an overflow. Use `try_cast` on the input value to tolerate overflow and return NULL instead. SQLSTATE: 22003"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "residue": {
+    "id": "R-15",
+    "repark": {
+     "step": {
+      "type": "PySparkException",
+      "condition": null,
+      "sqlstate": null,
+      "message": "datafusion engine error: Optimizer rule 'simplify_expressions' failed\ncaused by\nArrow error: Cast error: Can't cast value 3000000000 to type Int32"
+     },
+     "rows": [
+      [
+       1,
+       {
+        "a": 1,
+        "b": "p"
+       }
+      ],
+      [
+       2,
+       {
+        "a": 2,
+        "b": "q"
+       }
+      ]
+     ]
+    }
+   }
+  },
+  "pr2/U2-wrong-names": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u')))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.inner = named_struct('q', 3, 'y', 'v') WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `st`.`inner`.`x`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "inner": {
+       "x": 10,
+       "y": "u"
+      }
+     }
+    ]
+   ]
+  },
+  "pr2/U2-full-name": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET {T}.st.a = 7 WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 7,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U2-alias-value": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} x SET x.st.a = x.id * 3 WHERE x.id = 2"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 6,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U2-bool-into-int": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.a = true WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `st`.`a` \"BOOLEAN\" to \"INT\". SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U2-date-into-str": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.b = DATE'2024-01-02' WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "2024-01-02"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U2-mor-whole": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "TBLPROPERTIES ('format-version'='2', 'write.update.mode'='merge-on-read')",
+   "statements": [
+    "UPDATE {T} SET st = named_struct('a', 5, 'b', 'z') WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 5,
+      "b": "z"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U2-mor-deep": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u'))), (2, named_struct('a', 2, 'inner', named_struct('x', 20, 'y', 'w')))",
+   "props": "TBLPROPERTIES ('format-version'='2', 'write.update.mode'='merge-on-read')",
+   "statements": [
+    "UPDATE {T} SET st.inner.x = 11 WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "inner": {
+       "x": 11,
+       "y": "u"
+      }
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "inner": {
+       "x": 20,
+       "y": "w"
+      }
+     }
+    ]
+   ]
+  },
+  "pr2/U2-where-deep": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u'))), (2, named_struct('a', 2, 'inner', named_struct('x', 20, 'y', 'w')))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.inner.x = st.inner.x + 1, st.a = 0 WHERE st.a = 2"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "inner": {
+       "x": 10,
+       "y": "u"
+      }
+     }
+    ],
+    [
+     2,
+     {
+      "a": 0,
+      "inner": {
+       "x": 21,
+       "y": "w"
+      }
+     }
+    ]
+   ]
+  },
+  "pr2/U2-null-struct-where": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, CAST(NULL AS STRUCT<a: INT, b: STRING>)), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.a = 5 WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 5,
+      "b": null
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M2-insert-missing": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 3 AS id, 30 AS na) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, st.zz) VALUES (s.id, s.na)"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "FIELD_NOT_FOUND",
+     "sqlstate": "42704",
+     "message": "[FIELD_NOT_FOUND] No such struct field `zz` in `a`, `b`. SQLSTATE: 42704"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M2-insert-two-nested": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 3 AS id, 30 AS na) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, st.a, st.b) VALUES (s.id, s.na, 'z')"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"id = id\", \"st.a = na\", \"st.b = z\" due to data type mismatch: \n- INSERT assignment keys cannot be nested fields: t.st.`a` = s.na, t.st.`b` = 'z' SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M2-two-clauses": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q')), (5, named_struct('a', 5, 'b', 'r'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st.a = s.na WHEN NOT MATCHED BY SOURCE AND t.id = 1 THEN UPDATE SET t.st.b = 'gone' WHEN NOT MATCHED THEN INSERT *"
+   ],
+   "steps": [
+    {
+     "type": "ParseException",
+     "condition": "PARSE_SYNTAX_ERROR",
+     "sqlstate": "42601",
+     "message": "[PARSE_SYNTAX_ERROR] Syntax error at or near 'THEN'. SQLSTATE: 42601"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ],
+    [
+     5,
+     {
+      "a": 5,
+      "b": "r"
+     }
+    ]
+   ],
+   "residue": {
+    "id": "R-16",
+    "repark": {
+     "step": {
+      "type": "AnalysisException",
+      "condition": null,
+      "sqlstate": null,
+      "message": "WHEN NOT MATCHED clauses must precede WHEN NOT MATCHED BY SOURCE"
+     },
+     "rows": [
+      [
+       1,
+       {
+        "a": 1,
+        "b": "p"
+       }
+      ],
+      [
+       2,
+       {
+        "a": 2,
+        "b": "q"
+       }
+      ],
+      [
+       5,
+       {
+        "a": 5,
+        "b": "r"
+       }
+      ]
+     ]
+    }
+   }
+  },
+  "pr2/M2-cond-two-matched": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 1 AS id, 10 AS na UNION ALL SELECT 2, 20) s ON t.id = s.id WHEN MATCHED AND t.id = 1 THEN UPDATE SET t.st.b = 'one' WHEN MATCHED THEN UPDATE SET t.st.a = s.na"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "one"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 20,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M2-unaliased": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} USING (SELECT 2 AS id, 20 AS na) s ON {T}.id = s.id WHEN MATCHED THEN UPDATE SET st.a = s.na"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 20,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M2-overflow": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st.a = 3000000000"
+   ],
+   "steps": [
+    {
+     "type": "ArithmeticException",
+     "condition": "CAST_OVERFLOW_IN_TABLE_INSERT",
+     "sqlstate": "22003",
+     "message": "[CAST_OVERFLOW_IN_TABLE_INSERT] Fail to assign a value of \"BIGINT\" type to the \"INT\" type column or variable `st`.`a` due to an overflow. Use `try_cast` on the input value to tolerate overflow and return NULL instead. SQLSTATE: 22003"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "residue": {
+    "id": "R-15",
+    "repark": {
+     "step": {
+      "type": "PySparkException",
+      "condition": null,
+      "sqlstate": null,
+      "message": "datafusion engine error: Optimizer rule 'simplify_expressions' failed\ncaused by\nArrow error: Cast error: Can't cast value 3000000000 to type Int32"
+     },
+     "rows": [
+      [
+       1,
+       {
+        "a": 1,
+        "b": "p"
+       }
+      ],
+      [
+       2,
+       {
+        "a": 2,
+        "b": "q"
+       }
+      ]
+     ]
+    }
+   }
+  },
+  "pr2/M2-mor-deep": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u')))",
+   "props": "TBLPROPERTIES ('format-version'='2', 'write.merge.mode'='merge-on-read')",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 1 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st.inner.y = 'mor'"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "inner": {
+       "x": 10,
+       "y": "mor"
+      }
+     }
+    ]
+   ]
+  },
+  "pr2/M2-dup-strings": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st.b = 'x', st.b = s.na"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"st.b = x\", \"st.b = na\" due to data type mismatch: \n- Multiple assignments for 'st.b': 'x', s.na SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U3-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u')))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.inner = named_struct('y', 'v', 'x', 3) WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "inner": {
+       "x": 3,
+       "y": "v"
+      }
+     }
+    ]
+   ]
+  },
+  "pr2/U3-extra": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u')))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.inner = named_struct('x', 3, 'y', 'v', 'z', 1) WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for the table ``: Cannot write extra fields `z` to the struct `st`.`inner`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "inner": {
+       "x": 10,
+       "y": "u"
+      }
+     }
+    ]
+   ]
+  },
+  "pr2/U3-missing": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u')))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.inner = named_struct('x', 3) WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `st`.`inner`.`y`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "inner": {
+       "x": 10,
+       "y": "u"
+      }
+     }
+    ]
+   ]
+  },
+  "pr2/U3-bad-leaf": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u')))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.inner = named_struct('x', 's', 'y', 'v') WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `st`.`inner`.`x` \"STRING\" to \"INT\". SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "inner": {
+       "x": 10,
+       "y": "u"
+      }
+     }
+    ]
+   ]
+  },
+  "pr2/U3-case-names": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u')))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.inner = named_struct('X', 3, 'Y', 'v') WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "inner": {
+       "x": 3,
+       "y": "v"
+      }
+     }
+    ]
+   ]
+  },
+  "pr2/U3-null-leaf-struct": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u')))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.inner = NULL WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "inner": null
+     }
+    ]
+   ]
+  },
+  "pr2/U3-whole-wrong": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st = named_struct('q', 1, 'b', 'z') WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `st`.`a`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U3-whole-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st = named_struct('b', 'z', 'a', 5) WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 5,
+      "b": "z"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M3-whole-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st = named_struct('b', 'z', 'a', s.na)"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 20,
+      "b": "z"
+     }
+    ]
+   ]
+  },
+  "pr2/M3-whole-wrong": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st = named_struct('q', 1, 'b', 'z')"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `st`.`a`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M3-deep-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u')))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 1 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st.inner = named_struct('y', 'v', 'x', 3)"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "inner": {
+       "x": 3,
+       "y": "v"
+      }
+     }
+    ]
+   ]
+  },
+  "pr2/M3-deep-missing": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u')))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 1 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st.inner = named_struct('q', 3, 'y', 'v')"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `st`.`inner`.`x`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "inner": {
+       "x": 10,
+       "y": "u"
+      }
+     }
+    ]
+   ]
+  },
+  "pr2/U3-arr-idx": {
+   "columns": "id BIGINT, ai ARRAY<INT>",
+   "seed": "(1, array(1, 2))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET ai.b = 1 WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"ai[b]\" due to data type mismatch: The second parameter requires the \"INTEGRAL\" type, however \"b\" has the type \"STRING\". SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     [
+      1,
+      2
+     ]
+    ]
+   ]
+  },
+  "pr2/U4-whole-extra": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st = named_struct('a', 1, 'b', 'z', 'x', 2) WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for the table ``: Cannot write extra fields `x` to the struct `st`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U4-whole-case": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st = named_struct('A', 5, 'B', 'z') WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 5,
+      "b": "z"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U4-whole-null": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st = NULL WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     null
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U4-whole-deep-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u')))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st = named_struct('inner', named_struct('y', 'v', 'x', 3), 'a', 7) WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 7,
+      "inner": {
+       "x": 3,
+       "y": "v"
+      }
+     }
+    ]
+   ]
+  },
+  "pr2/U4-whole-deep-missing": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u')))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st = named_struct('a', 7, 'inner', named_struct('x', 3)) WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `st`.`inner`.`y`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "inner": {
+       "x": 10,
+       "y": "u"
+      }
+     }
+    ]
+   ]
+  },
+  "pr2/U4-whole-bad-leaf": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st = named_struct('a', 'x', 'b', 'z') WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `st`.`a` \"STRING\" to \"INT\". SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M4-whole-extra": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st = named_struct('a', 1, 'b', 'z', 'x', 2)"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for the table ``: Cannot write extra fields `x` to the struct `st`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M4-whole-unqualified-missing": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET st = named_struct('q', 1, 'b', 'z')"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `st`.`a`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M4-whole-unqualified-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET st = named_struct('b', 'z', 'a', s.na)"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 20,
+      "b": "z"
+     }
+    ]
+   ]
+  },
+  "pr2/M4-whole-null": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st = NULL"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     null
+    ]
+   ]
+  },
+  "pr2/M4-nmbs-missing": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id WHEN NOT MATCHED BY SOURCE THEN UPDATE SET t.st = named_struct('q', 1, 'b', 'z')"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `st`.`a`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M4-nmbs-extra": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id WHEN NOT MATCHED BY SOURCE THEN UPDATE SET t.st = named_struct('a', 1, 'b', 'z', 'x', 2)"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for the table ``: Cannot write extra fields `x` to the struct `st`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M4-nmbs-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id WHEN NOT MATCHED BY SOURCE THEN UPDATE SET t.st = named_struct('b', 'z', 'a', 9)"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 9,
+      "b": "z"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M4-whole-deep-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u')))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 1 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st = named_struct('inner', named_struct('y', 'v', 'x', 3), 'a', 7)"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 7,
+      "inner": {
+       "x": 3,
+       "y": "v"
+      }
+     }
+    ]
+   ]
+  },
+  "pr2/M5-setstar-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, named_struct('b', 'w', 'a', 22) AS st) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 22,
+      "b": "w"
+     }
+    ]
+   ]
+  },
+  "pr2/M5-setstar-missing": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, named_struct('a', 22) AS st) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `st`.`b`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M5-setstar-extra": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, named_struct('a', 22, 'b', 'w', 'z', 1) AS st) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for the table ``: Cannot write extra fields `z` to the struct `st`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M5-setstar-deep-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u'))), (2, named_struct('a', 2, 'inner', named_struct('x', 20, 'y', 'v')))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, named_struct('inner', named_struct('y', 'k', 'x', 33), 'a', 22) AS st) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "inner": {
+       "x": 10,
+       "y": "u"
+      }
+     }
+    ],
+    [
+     2,
+     {
+      "a": 22,
+      "inner": {
+       "x": 33,
+       "y": "k"
+      }
+     }
+    ]
+   ]
+  },
+  "pr2/M5-setstar-deep-missing": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u'))), (2, named_struct('a', 2, 'inner', named_struct('x', 20, 'y', 'v')))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, named_struct('a', 22, 'inner', named_struct('x', 33)) AS st) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `st`.`inner`.`y`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "inner": {
+       "x": 10,
+       "y": "u"
+      }
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "inner": {
+       "x": 20,
+       "y": "v"
+      }
+     }
+    ]
+   ]
+  },
+  "pr2/M5-insstar-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id, named_struct('b', 'n', 'a', 55) AS st) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ],
+    [
+     5,
+     {
+      "a": 55,
+      "b": "n"
+     }
+    ]
+   ]
+  },
+  "pr2/M5-insstar-missing": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id, named_struct('a', 55) AS st) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `st`.`b`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M5-insstar-extra": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id, named_struct('a', 55, 'b', 'n', 'z', 1) AS st) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for the table ``: Cannot write extra fields `z` to the struct `st`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M5-insstar-deep-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u'))), (2, named_struct('a', 2, 'inner', named_struct('x', 20, 'y', 'v')))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id, named_struct('inner', named_struct('y', 'k', 'x', 33), 'a', 55) AS st) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "inner": {
+       "x": 10,
+       "y": "u"
+      }
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "inner": {
+       "x": 20,
+       "y": "v"
+      }
+     }
+    ],
+    [
+     5,
+     {
+      "a": 55,
+      "inner": {
+       "x": 33,
+       "y": "k"
+      }
+     }
+    ]
+   ]
+  },
+  "pr2/M5-ins-values-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, named_struct('b', 'n', 'a', 55))"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ],
+    [
+     5,
+     {
+      "a": 55,
+      "b": "n"
+     }
+    ]
+   ]
+  },
+  "pr2/M5-ins-values-srccol": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id, named_struct('b', 'n', 'a', 55) AS sv) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, s.sv)"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ],
+    [
+     5,
+     {
+      "a": 55,
+      "b": "n"
+     }
+    ]
+   ]
+  },
+  "pr2/M5-ins-values-missing": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, named_struct('a', 55))"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `st`.`b`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M5-ins-values-extra": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, named_struct('a', 55, 'b', 'n', 'z', 1))"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for the table ``: Cannot write extra fields `z` to the struct `st`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M5-ins-values-deep-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u'))), (2, named_struct('a', 2, 'inner', named_struct('x', 20, 'y', 'v')))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (st, id) VALUES (named_struct('inner', named_struct('y', 'k', 'x', 33), 'a', 55), s.id)"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "inner": {
+       "x": 10,
+       "y": "u"
+      }
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "inner": {
+       "x": 20,
+       "y": "v"
+      }
+     }
+    ],
+    [
+     5,
+     {
+      "a": 55,
+      "inner": {
+       "x": 33,
+       "y": "k"
+      }
+     }
+    ]
+   ]
+  },
+  "pr2/M5-ins-values-case": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, named_struct('B', 'n', 'A', 55))"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ],
+    [
+     5,
+     {
+      "a": 55,
+      "b": "n"
+     }
+    ]
+   ]
+  },
+  "pr2/M5-both-star-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT id, named_struct('b', concat('w', id), 'a', CAST(id * 11 AS INT)) AS st FROM VALUES (2), (6) AS v(id)) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET * WHEN NOT MATCHED THEN INSERT *"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 22,
+      "b": "w2"
+     }
+    ],
+    [
+     6,
+     {
+      "a": 66,
+      "b": "w6"
+     }
+    ]
+   ]
+  },
+  "pr2/U5-dup-scalar": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET id = 5, id = 6 WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"id = 5\", \"id = 6\" due to data type mismatch: \n- Multiple assignments for 'id': 5, 6 SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U5-dup-scalar-flat": {
+   "columns": "id BIGINT, v INT",
+   "seed": "(1, 10), (2, 20)",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET v = 5, v = 6 WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"v = 5\", \"v = 6\" due to data type mismatch: \n- Multiple assignments for 'v': 5, 6 SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  "pr2/U5-dup-scalar-case": {
+   "columns": "id BIGINT, v INT",
+   "seed": "(1, 10), (2, 20)",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET v = 5, V = 6 WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"v = 5\", \"V = 6\" due to data type mismatch: \n- Multiple assignments for 'v': 5, 6 SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  "pr2/U5-dup-scalar-mixed": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET id = 5, st.a = 1, id = 6 WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"id = 5\", \"st.a = 1\", \"id = 6\" due to data type mismatch: \n- Multiple assignments for 'id': 5, 6 SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U5-dup-scalar-three": {
+   "columns": "id BIGINT, v INT",
+   "seed": "(1, 10), (2, 20)",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET v = 5, id = 3, v = 6, v = 'x' WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"v = 5\", \"id = 3\", \"v = 6\", \"v = x\" due to data type mismatch: \n- Multiple assignments for 'v': 5, 6, 'x' SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  "pr2/M5-dup-scalar": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.id = 5, t.id = 6"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"id = 5\", \"id = 6\" due to data type mismatch: \n- Multiple assignments for 'id': 5, 6 SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M5-dup-scalar-flat": {
+   "columns": "id BIGINT, v INT",
+   "seed": "(1, 10), (2, 20)",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 7 AS nv) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.nv, t.v = 6"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"v = nv\", \"v = 6\" due to data type mismatch: \n- Multiple assignments for 'v': s.nv, 6 SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  "pr2/M5-dup-scalar-nmbs": {
+   "columns": "id BIGINT, v INT",
+   "seed": "(1, 10), (2, 20)",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 7 AS nv) s ON t.id = s.id WHEN NOT MATCHED BY SOURCE THEN UPDATE SET v = 1, v = 2"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"v = 1\", \"v = 2\" due to data type mismatch: \n- Multiple assignments for 'v': 1, 2 SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  "pr2/C6-ci-setstar-struct-case": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, named_struct('A', 22, 'B', 'w') AS st) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 22,
+      "b": "w"
+     }
+    ]
+   ]
+  },
+  "pr2/C6-cs-setstar-struct-case": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, named_struct('A', 22, 'B', 'w') AS st) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `st`.`a`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "conf": {
+    "spark.sql.caseSensitive": "true"
+   }
+  },
+  "pr2/C6-ci-setstar-struct-case-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, named_struct('B', 'w', 'A', 22) AS st) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 22,
+      "b": "w"
+     }
+    ]
+   ]
+  },
+  "pr2/C6-cs-setstar-struct-case-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, named_struct('B', 'w', 'A', 22) AS st) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `st`.`a`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "conf": {
+    "spark.sql.caseSensitive": "true"
+   }
+  },
+  "pr2/C6-ci-insstar-struct-case": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id, named_struct('A', 22, 'B', 'w') AS st) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ],
+    [
+     5,
+     {
+      "a": 22,
+      "b": "w"
+     }
+    ]
+   ]
+  },
+  "pr2/C6-cs-insstar-struct-case": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id, named_struct('A', 22, 'B', 'w') AS st) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `st`.`a`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "conf": {
+    "spark.sql.caseSensitive": "true"
+   }
+  },
+  "pr2/C6-ci-insstar-struct-case-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id, named_struct('B', 'w', 'A', 22) AS st) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ],
+    [
+     5,
+     {
+      "a": 22,
+      "b": "w"
+     }
+    ]
+   ]
+  },
+  "pr2/C6-cs-insstar-struct-case-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id, named_struct('B', 'w', 'A', 22) AS st) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `st`.`a`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "conf": {
+    "spark.sql.caseSensitive": "true"
+   }
+  },
+  "pr2/C6-ci-merge-whole-struct-case": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st = named_struct('A', 22, 'B', 'w')"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 22,
+      "b": "w"
+     }
+    ]
+   ]
+  },
+  "pr2/C6-cs-merge-whole-struct-case": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st = named_struct('A', 22, 'B', 'w')"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `st`.`a`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "conf": {
+    "spark.sql.caseSensitive": "true"
+   }
+  },
+  "pr2/C6-ci-update-whole-struct-case": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st = named_struct('A', 22, 'B', 'w') WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 22,
+      "b": "w"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/C6-cs-update-whole-struct-case": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st = named_struct('A', 22, 'B', 'w') WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `st`.`a`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "conf": {
+    "spark.sql.caseSensitive": "true"
+   }
+  },
+  "pr2/C6-ci-ins-values-struct-case": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, named_struct('B', 'n', 'A', 55))"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ],
+    [
+     5,
+     {
+      "a": 55,
+      "b": "n"
+     }
+    ]
+   ]
+  },
+  "pr2/C6-cs-ins-values-struct-case": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, named_struct('B', 'n', 'A', 55))"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `st`.`a`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "conf": {
+    "spark.sql.caseSensitive": "true"
+   }
+  },
+  "pr2/C6-ci-setstar-top-case": {
+   "columns": "id BIGINT, v INT",
+   "seed": "(1, 10), (2, 20)",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS ID, 7 AS V) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     7
+    ]
+   ]
+  },
+  "pr2/C6-cs-setstar-top-case": {
+   "columns": "id BIGINT, v INT",
+   "seed": "(1, 10), (2, 20)",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS ID, 7 AS V) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+     "sqlstate": "42703",
+     "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `id` cannot be resolved. Did you mean one of the following? [`ID`, `V`]. SQLSTATE: 42703"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ],
+   "conf": {
+    "spark.sql.caseSensitive": "true"
+   }
+  },
+  "pr2/C6-ci-setstar-struct-top-case-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, named_struct('b', 'w', 'a', 22) AS ST) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 22,
+      "b": "w"
+     }
+    ]
+   ]
+  },
+  "pr2/C6-cs-setstar-struct-top-case-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, named_struct('b', 'w', 'a', 22) AS ST) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+     "sqlstate": "42703",
+     "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `st` cannot be resolved. Did you mean one of the following? [`ST`, `id`]. SQLSTATE: 42703"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "conf": {
+    "spark.sql.caseSensitive": "true"
+   }
+  },
+  "pr2/C6-ci-insstar-top-case": {
+   "columns": "id BIGINT, v INT",
+   "seed": "(1, 10), (2, 20)",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS ID, 7 AS V) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ],
+    [
+     5,
+     7
+    ]
+   ]
+  },
+  "pr2/C6-cs-insstar-top-case": {
+   "columns": "id BIGINT, v INT",
+   "seed": "(1, 10), (2, 20)",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS ID, 7 AS V) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+     "sqlstate": "42703",
+     "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `id` cannot be resolved. Did you mean one of the following? [`ID`, `V`]. SQLSTATE: 42703"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ],
+   "conf": {
+    "spark.sql.caseSensitive": "true"
+   }
+  },
+  "pr2/N6-nn-insstar-reorder-empty": {
+   "columns": "id BIGINT, st STRUCT<a: INT NOT NULL, b: STRING>",
+   "seed": "",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id, named_struct('b', 'w', 'a', 22) AS st) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     5,
+     {
+      "a": 22,
+      "b": "w"
+     }
+    ]
+   ]
+  },
+  "pr2/N6-nn-insstar-reorder-null-a-empty": {
+   "columns": "id BIGINT, st STRUCT<a: INT NOT NULL, b: STRING>",
+   "seed": "",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id, named_struct('b', 'w', 'a', CAST(NULL AS INT)) AS st) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+   ],
+   "steps": [
+    {
+     "type": "SparkRuntimeException",
+     "condition": "NOT_NULL_ASSERT_VIOLATION",
+     "sqlstate": "42000",
+     "message": "[NOT_NULL_ASSERT_VIOLATION] NULL value appeared in non-nullable field: \nst\na\nIf the schema is inferred from a Scala tuple/case class, or a Java bean, please try to use scala.Option[_] or other nullable types (such as java.lang.Integer instead of int/scala.Int). SQLSTATE: 42000"
+    }
+   ],
+   "rows": [],
+   "residue": {
+    "id": "R-14",
+    "repark": {
+     "step": {
+      "type": "PySparkException",
+      "condition": null,
+      "sqlstate": null,
+      "message": "datafusion engine error: Arrow error: Invalid argument error: Found unmasked nulls for non-nullable StructArray field \"a\""
+     },
+     "rows": []
+    }
+   }
+  },
+  "pr2/N6-nn-ins-values-reorder-empty": {
+   "columns": "id BIGINT, st STRUCT<a: INT NOT NULL, b: STRING>",
+   "seed": "",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, named_struct('b', 'n', 'a', 55))"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     5,
+     {
+      "a": 55,
+      "b": "n"
+     }
+    ]
+   ]
+  },
+  "pr2/N6-nn-ins-values-plain-null-a-empty": {
+   "columns": "id BIGINT, st STRUCT<a: INT NOT NULL, b: STRING>",
+   "seed": "",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, named_struct('a', CAST(NULL AS INT), 'b', 'n'))"
+   ],
+   "steps": [
+    {
+     "type": "SparkRuntimeException",
+     "condition": "NOT_NULL_ASSERT_VIOLATION",
+     "sqlstate": "42000",
+     "message": "[NOT_NULL_ASSERT_VIOLATION] NULL value appeared in non-nullable field: \nst\na\nIf the schema is inferred from a Scala tuple/case class, or a Java bean, please try to use scala.Option[_] or other nullable types (such as java.lang.Integer instead of int/scala.Int). SQLSTATE: 42000"
+    }
+   ],
+   "rows": [],
+   "residue": {
+    "id": "R-14",
+    "repark": {
+     "step": {
+      "type": "PySparkException",
+      "condition": null,
+      "sqlstate": null,
+      "message": "datafusion engine error: Arrow error: Invalid argument error: Found unmasked nulls for non-nullable StructArray field \"a\""
+     },
+     "rows": []
+    }
+   }
+  },
+  "pr2/E6-evo-setstar-reorder-noprop": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE WITH SCHEMA EVOLUTION INTO {T} t USING (SELECT CAST(2 AS BIGINT) AS id, named_struct('b', 'w', 'a', 22) AS st) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 22,
+      "b": "w"
+     }
+    ]
+   ],
+   "residue": {
+    "id": "R-18",
+    "repark": {
+     "step": {
+      "type": "AnalysisException",
+      "condition": null,
+      "sqlstate": null,
+      "message": "MERGE UPDATE SET cannot store-assign column `st`: source type Struct(\"b\": Utf8, \"a\": Int64) is not ANSI-store-assignable to target type Struct(\"a\": Int64, \"b\": Utf8) (Spark INCOMPATIBLE_DATA_FOR_TABLE; add an explicit CAST only if the reinterpretation is intended semantics)"
+     },
+     "rows": [
+      [
+       1,
+       {
+        "a": 1,
+        "b": "p"
+       }
+      ],
+      [
+       2,
+       {
+        "a": 2,
+        "b": "q"
+       }
+      ]
+     ]
+    }
+   }
+  },
+  "pr2/E6-evo-insstar-reorder-noprop": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE WITH SCHEMA EVOLUTION INTO {T} t USING (SELECT CAST(5 AS BIGINT) AS id, named_struct('b', 'w', 'a', 22) AS st) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ],
+    [
+     5,
+     {
+      "a": 22,
+      "b": "w"
+     }
+    ]
+   ],
+   "residue": {
+    "id": "R-18",
+    "repark": {
+     "step": {
+      "type": "AnalysisException",
+      "condition": null,
+      "sqlstate": null,
+      "message": "MERGE INSERT cannot store-assign column `st`: source type Struct(\"b\": Utf8, \"a\": Int64) is not ANSI-store-assignable to target type Struct(\"a\": Int64, \"b\": Utf8) (Spark INCOMPATIBLE_DATA_FOR_TABLE; add an explicit CAST only if the reinterpretation is intended semantics)"
+     },
+     "rows": [
+      [
+       1,
+       {
+        "a": 1,
+        "b": "p"
+       }
+      ],
+      [
+       2,
+       {
+        "a": 2,
+        "b": "q"
+       }
+      ]
+     ]
+    }
+   }
+  },
+  "pr2/B6-merge-setstar-plus-v": {
+   "columns": "id BIGINT, v INT",
+   "seed": "(1, 10), (2, 20)",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 7 AS v) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *, t.v = 1"
+   ],
+   "steps": [
+    {
+     "type": "ParseException",
+     "condition": "PARSE_SYNTAX_ERROR",
+     "sqlstate": "42601",
+     "message": "[PARSE_SYNTAX_ERROR] Syntax error at or near ','. SQLSTATE: 42601"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  "pr2/B6-merge-ins-id-id": {
+   "columns": "id BIGINT, v INT",
+   "seed": "(1, 10), (2, 20)",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, id) VALUES (1, 2)"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"id = 1\", \"id = 2\" due to data type mismatch: \n- Multiple assignments for 'id': 1, 2 SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  "pr2/B6-merge-ins-id-id-struct": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, st, id) VALUES (1, named_struct('b', 'n', 'a', 5), 2)"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"id = 1\", \"st = named_struct(b, n, a, 5)\", \"id = 2\" due to data type mismatch: \n- Multiple assignments for 'id': 1, 2 SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/B6-merge-ins-v-v-three": {
+   "columns": "id BIGINT, v INT",
+   "seed": "(1, 10), (2, 20)",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, v, V, v) VALUES (s.id, 1, 2, 3)"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"id = id\", \"v = 1\", \"V = 2\", \"v = 3\" due to data type mismatch: \n- Multiple assignments for 'v': 1, 2, 3 SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  "pr2/K-ci-update-set-leaf-A": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.A = 5 WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 5,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/K-cs-update-set-leaf-A": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.A = 5 WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "FIELD_NOT_FOUND",
+     "sqlstate": "42704",
+     "message": "[FIELD_NOT_FOUND] No such struct field `A` in `a`, `b`. SQLSTATE: 42704"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "conf": {
+    "spark.sql.caseSensitive": "true"
+   }
+  },
+  "pr2/K-ci-merge-set-leaf-A": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st.A = 5"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 5,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/K-cs-merge-set-leaf-A": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st.A = 5"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "FIELD_NOT_FOUND",
+     "sqlstate": "42704",
+     "message": "[FIELD_NOT_FOUND] No such struct field `A` in `a`, `b`. SQLSTATE: 42704"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "conf": {
+    "spark.sql.caseSensitive": "true"
+   }
+  },
+  "pr2/K-ci-update-set-root-ST": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET ST = named_struct('a', 9, 'b', 'z') WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 9,
+      "b": "z"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/K-cs-update-set-root-ST": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET ST = named_struct('a', 9, 'b', 'z') WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+     "sqlstate": "42703",
+     "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ST` cannot be resolved. Did you mean one of the following? [`id`, `st`]. SQLSTATE: 42703"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "conf": {
+    "spark.sql.caseSensitive": "true"
+   }
+  },
+  "pr2/K-ci-merge-set-root-ST-leaf": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.ST.a = 5"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 5,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/K-cs-merge-set-root-ST-leaf": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.ST.a = 5"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+     "sqlstate": "42703",
+     "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `t`.`ST`.`a` cannot be resolved. Did you mean one of the following? [`id`, `st`]. SQLSTATE: 42703"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "conf": {
+    "spark.sql.caseSensitive": "true"
+   }
+  },
+  "pr2/K-ci-update-set-root-ST-leaf": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET ST.a = 5 WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 5,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/K-cs-update-set-root-ST-leaf": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET ST.a = 5 WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+     "sqlstate": "42703",
+     "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ST`.`a` cannot be resolved. Did you mean one of the following? [`<t>`.`id`, `<t>`.`st`]. SQLSTATE: 42703"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "conf": {
+    "spark.sql.caseSensitive": "true"
+   }
+  },
+  "pr2/K-ci-merge-set-root-ST": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.ST = named_struct('a', 9, 'b', 'z')"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 9,
+      "b": "z"
+     }
+    ]
+   ]
+  },
+  "pr2/K-cs-merge-set-root-ST": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.ST = named_struct('a', 9, 'b', 'z')"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+     "sqlstate": "42703",
+     "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `t`.`ST` cannot be resolved. Did you mean one of the following? [`id`, `st`]. SQLSTATE: 42703"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "conf": {
+    "spark.sql.caseSensitive": "true"
+   }
+  },
+  "pr2/K-ci-insstar-ID-struct": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS ID, named_struct('a', 22, 'b', 'w') AS st, 1 AS idx, 2 AS zz) s ON t.id = s.ID WHEN NOT MATCHED THEN INSERT *"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ],
+    [
+     5,
+     {
+      "a": 22,
+      "b": "w"
+     }
+    ]
+   ]
+  },
+  "pr2/K-cs-insstar-ID-struct": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS ID, named_struct('a', 22, 'b', 'w') AS st, 1 AS idx, 2 AS zz) s ON t.id = s.ID WHEN NOT MATCHED THEN INSERT *"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+     "sqlstate": "42703",
+     "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `id` cannot be resolved. Did you mean one of the following? [`ID`, `idx`, `st`, `zz`]. SQLSTATE: 42703"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "conf": {
+    "spark.sql.caseSensitive": "true"
+   }
+  },
+  "pr2/K-ci-ins-list-id-ID": {
+   "columns": "id BIGINT, v INT",
+   "seed": "(1, 10), (2, 20)",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, ID) VALUES (s.id, 6)"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"id = id\", \"ID = 6\" due to data type mismatch: \n- Multiple assignments for 'id': s.id, 6 SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  "pr2/K-cs-ins-list-id-ID": {
+   "columns": "id BIGINT, v INT",
+   "seed": "(1, 10), (2, 20)",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, ID) VALUES (s.id, 6)"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+     "sqlstate": "42703",
+     "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ID` cannot be resolved. Did you mean one of the following? [`id`, `v`]. SQLSTATE: 42703"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ],
+   "conf": {
+    "spark.sql.caseSensitive": "true"
+   }
+  }
+ }
+}

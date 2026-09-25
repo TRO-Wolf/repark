@@ -2315,3 +2315,28 @@ numbers, DECIMAL and DATE as their text. `replace_where_sources.rs` adds
 `an_arity_refusal_names_every_data_column_as_spark_does` (cast, `*` beside a cast, `substr`,
 alias, too-many) and `a_suffix_typed_literal_renders_as_its_cast_in_the_refusal`.
 pins: u8-write-sql/C-015, C-019, C-021, C-022, C-023, C-024
+
+U8 WRITE-SQL PR2 (2026-09-25): `nested_assign.rs` pins the two scoreboard cells on the router
+door. `UPDATE … SET st.a = 99` (W-UPDATE-NESTED-FIELD) and `MERGE … UPDATE SET t.st.a = s.na`
+(W-MERGE-NESTED) are checked on rows, an unchanged schema and Spark's snapshot summary. A third
+test pins whole-struct `UPDATE SET *` and a struct `INSERT` value through the MERGE gate. The
+gate judges structs field by field now; before, both refused. A fourth (fix round 2,
+`whole_struct_values_resolve_by_name_on_update_and_merge`) pins a top-level struct value on
+UPDATE, MERGE matched (qualified and bare key) and NOT MATCHED BY SOURCE: a missing field refuses
+`CANNOT_FIND_DATA`, an extra field `EXTRA_STRUCT_FIELDS`, a reordered or re-cased value writes by
+name. Fix round 3 adds `star_and_inserted_struct_values_resolve_by_name` (`UPDATE SET *`,
+`INSERT *`, `INSERT (id, st) VALUES (…)` with a reordered, re-cased, short or wide struct),
+`a_struct_reordered_two_levels_down_resolves_by_name`, and
+`repeated_top_level_assignments_refuse_like_spark` (a repeated atomic key on UPDATE, MERGE
+matched and NOT MATCHED BY SOURCE refuses Spark's `Multiple assignments` text).
+`nested_assign_oracle.rs` replays
+[`python/repark/tests/u8_write_sql_nested_spark_oracle.json`](../../../../python/repark/tests/u8_write_sql_nested_spark_oracle.json)
+(read with `include_str!`). It covers 150 of its 177 keys, counted exactly: every key without a
+residue record and without an ARRAY or MAP column. The Rust test context has no Spark `array` /
+`map` constructors, and the facade replays every key. Each case runs on the test context rebuilt
+with a core `ReparkSession`'s optimizer rules (fix round 4), so the DataFusion 54.1 guards apply
+as on a real session; a key's `conf` sets `spark.sql.caseSensitive` and an empty `seed` skips the
+seed insert. The table is `ice.sales.nested` (fix round 5), so the MERGE alias `t` in a refusal
+text is not respelled as the table. Each refusal compares the class (Parse for a `ParseException` key, else Analysis)
+and the full normalized message. Rows compare as JSON with structs and maps as objects.
+pins: u8-write-sql/C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032, C-033

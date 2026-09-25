@@ -261,6 +261,10 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   pins: rp-5-fork-repin/C-004
   **ICE-CATALOG-SESSION-1 S9 (2026-09-20):** `quote_scratch_name` is `pub(crate)` so
   predicate DML quotes 3-part scratch names per segment like the MERGE SQL builders.
+- `insert.rs` — **U8 WRITE-SQL PR2 (2026-09-25):** `store_assignment_then_sql` delegates to
+  `../update_cast.rs`'s `store_assignment_cast_sql`, so a struct target casts to its type
+  without Iceberg field ids. With the struct-aware gate in `../store_assign.rs`, whole-struct
+  SET, `UPDATE SET *` and struct INSERT values write. pins: u8-write-sql/C-030
 - `insert.rs` — NOT MATCHED INSERT machinery: `insert_projection` (clause→projection lowering,
   moved from `mod.rs` 2026-08-15), the source-only execution seam (`insert_stream_checked`),
   and the ANSI store-assignment gate (audit M4/M9). **BL-4 (2026-08-15):**

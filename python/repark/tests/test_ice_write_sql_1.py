@@ -1,4 +1,4 @@
-"""U8 WRITE-SQL PR1 — REPLACE WHERE, the INSERT PARTITION clause, and bucketed INSERT.
+"""U8 WRITE-SQL PR1 and PR2 — REPLACE WHERE, INSERT PARTITION, bucketed INSERT, nested SET.
 
 Oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, measured on 2026-09-24
 (``pr1/RW-*``, ``pr1/PC-*``, ``pr1/BK-*``, ``pr1/RW2-*``, ``pr1/PC2-*``..``pr1/PC4-*`` in
@@ -18,8 +18,17 @@ The rounds-2 and -3 pins (C-015..C-017, C-019..C-021) replay that file case by c
 ``r4/…`` (fractional comparisons rendered in refusal texts); a case whose answer is a named
 residue (R-2, R-8, R-11, R-12) is held to RePark's recorded answer.
 
+PR2 (C-025..C-032, 2026-09-25) pins nested struct-field assignment in UPDATE and MERGE. The
+cells ``W-UPDATE-NESTED-FIELD`` and ``W-MERGE-NESTED`` have their own tests. The 131 ``pr2/…``
+measurements in ``u8_write_sql_nested_spark_oracle.json`` replay case by case, and a residue
+key (R-13..R-16) is held to RePark's recorded answer. The ``pr2/U4-…`` and ``pr2/M4-…`` keys
+(C-032) are whole-struct values of UPDATE and MERGE resolved by name; the ``pr2/M5-…`` keys
+(C-030) are star-expanded and inserted struct values, and the ``pr2/U5-…`` and ``M5-dup-…``
+keys (C-029) are repeated top-level keys.
+
 pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
-C-011, C-012, C-014, C-015, C-016, C-017, C-019, C-020, C-021, C-022, C-023, C-024
+C-011, C-012, C-014, C-015, C-016, C-017, C-019, C-020, C-021, C-022, C-023, C-024, C-025,
+C-026, C-027, C-028, C-029, C-030, C-031, C-032
 """
 
 from __future__ import annotations
@@ -872,3 +881,109 @@ def test_the_replace_where_measurements_replay_as_spark_answered(
         assert rows == sorted(case["rows"], key=repr), key
     if "branch_rows" in case:
         assert _rows(spark, f"{table}.branch_wb") == sorted(case["branch_rows"], key=repr), key
+
+
+NESTED = json.loads(
+    (Path(__file__).resolve().parent / "u8_write_sql_nested_spark_oracle.json").read_text()
+)["cases"]
+STRUCT_COLUMNS = "id BIGINT, st STRUCT<a: INT, b: STRING>"
+NESTED_WRITE = {
+    "operation": "overwrite",
+    "added-records": "1",
+    "deleted-records": "1",
+    "added-data-files": "1",
+    "deleted-data-files": "1",
+    "changed-partition-count": "1",
+}
+
+
+def _plain(value: Any) -> Any:
+    """Spell a struct, map or array cell as the nested oracle records it."""
+    if isinstance(value, dict):
+        return {key: _plain(item) for key, item in value.items()}
+    if isinstance(value, list) and value and all(isinstance(item, tuple) for item in value):
+        return {str(key): _plain(item) for key, item in value}
+    if isinstance(value, list):
+        return [_plain(item) for item in value]
+    return value
+
+
+def _nested_message(error: Exception, table: str) -> str:
+    """Drop the planner prefix and spell the target as the nested oracle does."""
+    ticked = ".".join(f"`{part}`" for part in table.split("."))
+    last = table.rsplit(".", 1)[-1]
+    message = str(error).removeprefix("Error during planning: ")
+    return message.replace(ticked, "`<T>`").replace(table, "<T>").replace(f"`{last}`", "`<t>`")
+
+
+def test_update_sets_one_struct_field_as_spark_does(spark: ReparkSession) -> None:
+    """pins: u8-write-sql/C-025"""
+    table = _create(spark, "upd_nested", "", seeded=False, columns=STRUCT_COLUMNS)
+    spark.sql(f"INSERT INTO {table} VALUES (1, named_struct('a', 1, 'b', 'p'))")
+    spark.sql(f"UPDATE {table} SET st.a = 99 WHERE id = 1")
+    assert _rows(spark, table) == [[1, {"a": 99, "b": "p"}]]
+    assert spark.table(table).schema.simpleString() == "struct<id:bigint,st:struct<a:int,b:string>>"
+    assert _summaries(spark, table)[-1] == {**NESTED_WRITE, "total-records": "1"}
+
+
+def test_merge_sets_one_struct_field_as_spark_does(spark: ReparkSession) -> None:
+    """pins: u8-write-sql/C-026"""
+    table = _create(spark, "mrg_nested", "", seeded=False, columns=STRUCT_COLUMNS)
+    spark.sql(
+        f"INSERT INTO {table} VALUES (1, named_struct('a', 1, 'b', 'p')), "
+        "(2, named_struct('a', 2, 'b', 'q'))"
+    )
+    spark.sql(
+        f"MERGE INTO {table} t USING (SELECT 2 AS id, 20 AS na) s ON t.id = s.id "
+        "WHEN MATCHED THEN UPDATE SET t.st.a = s.na"
+    )
+    assert _rows(spark, table) == [[1, {"a": 1, "b": "p"}], [2, {"a": 20, "b": "q"}]]
+    assert spark.table(table).schema.simpleString() == "struct<id:bigint,st:struct<a:int,b:string>>"
+    assert _summaries(spark, table)[-1] == {
+        **NESTED_WRITE,
+        "added-records": "2",
+        "deleted-records": "2",
+        "total-records": "2",
+    }
+
+
+def test_the_nested_oracle_holds_every_measurement() -> None:
+    """pins: u8-write-sql/C-031"""
+    assert len(NESTED) == 177
+
+
+@pytest.mark.parametrize("key", list(NESTED))
+def test_the_nested_assignment_measurements_replay_as_spark_answered(
+    spark: ReparkSession, key: str
+) -> None:
+    """pins: u8-write-sql/C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032"""
+    case = NESTED[key]
+    residue = case.get("residue")
+    expected = residue["repark"] if residue else {"step": case["steps"][-1], "rows": case["rows"]}
+    table = f"{NS}.nested"
+    spark.sql(f"CREATE TABLE {table} ({case['columns']}) USING iceberg {case['props']}")
+    seed = f"INSERT INTO {table} VALUES {case['seed']}"
+    statements = [statement.replace("{T}", table) for statement in case["statements"]]
+    last = seed if expected.get("at") == "seed" else statements[-1]
+    if last != seed and case["seed"]:
+        spark.sql(seed)
+    conf = case.get("conf", {})
+    for name, value in conf.items():
+        spark.conf.set(name, value)
+    step = expected["step"]
+    try:
+        if step == "ok":
+            spark.sql(last)
+        else:
+            with pytest.raises(PySparkException) as caught:
+                spark.sql(last)
+            assert type(caught.value).__name__ == step["type"], key
+            assert caught.value.getCondition() == step["condition"], key
+            assert caught.value.getSqlState() == step["sqlstate"], key
+            assert _nested_message(caught.value, table) == step["message"], key
+    finally:
+        for name in conf:
+            spark.conf.set(name, "false")
+    if expected["rows"] is not None:
+        rows = sorted(([_plain(value) for value in row] for row in _rows(spark, table)), key=repr)
+        assert rows == sorted(expected["rows"], key=repr), key

@@ -248,8 +248,7 @@ fn update_assignment_probe_sql(
 
 /// CAST a validated SET expression to the target Arrow type so the rewrite `CASE` unifies.
 pub(super) fn store_assignment_then_sql(expr: &str, target_type: &DataType) -> String {
-    let type_name = target_type.to_string().replace('\'', "''");
-    format!("arrow_cast(({expr}), '{type_name}')")
+    crate::write::update_cast::store_assignment_cast_sql(expr, target_type)
 }
 
 /// Shared refusal — path label is `INSERT` or `UPDATE SET`; the matrix is not forked.

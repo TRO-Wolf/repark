@@ -544,8 +544,8 @@ async fn execute_update(
         }
     }
     refuse_mor_unpartitioned_multi_spec_dml(ctx, catalogs, object_name, MorDmlKind::Update).await?;
-    crate::update_cast::refuse_incompatible_update_cast(ctx, catalogs, update).await?;
-    spark_ast::execute_passthrough(ctx, catalogs, sql).await
+    let folded = crate::update_cast::refuse_cast_then_fold_nested(ctx, catalogs, update).await?;
+    spark_ast::execute_passthrough(ctx, catalogs, folded.as_deref().unwrap_or(sql)).await
 }
 
 fn show_partitions_preparse(
