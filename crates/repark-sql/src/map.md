@@ -172,6 +172,15 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   Blanks string-literal / quoted-identifier / comment CONTENT so the guards and the sniff cannot
   false-positive. Backticks are deliberately NOT treated as quoting (they are the Spark-ism the
   sniff reports). In-module tests.
+- `create_table.rs` — **U7 PR2 slice-1 round 3 (2026-09-25):** when the target exists, the
+  native door re-keys its CTAS or column-def schema through
+  `repark_iceberg::write::replacement_schema` before building the partition spec, so a
+  replace keeps each column's id by name (Java's `buildReplacement`). Critic r3 [S3]: one load
+  serves the replace — `replacement_if_existed` hands the loaded table back and
+  `Placement::StagedReplace { existing }` carries it into `execute_staged_create`, so the ids are
+  keyed against the same metadata `begin_replace` stages on (a commit landing between two loads
+  can no longer split them). Pinned by the two partitioned-replace tests in
+  [create_table/map.md](create_table/map.md). pins: u7-write-df-2/C-011
 - `create_table.rs` — **PERF-ICE-WRITEPATH-1 (2026-09-05):** the CTAS arm's `write_stream` is now
   `write_query`, handing the SELECT's physical plan to
   [`write/partition_write.rs`](../../repark-iceberg/src/write/map.md) for one writer per

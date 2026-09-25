@@ -195,10 +195,10 @@ class DataFrameWriter:
     cluster_by = clusterBy
 
     def saveAsTable(self, name: str) -> None:  # noqa: N802 — PySpark method name
-        """Persist an Iceberg table using CTAS or by-name insert/overwrite semantics.
+        """Persist an Iceberg table: CTAS, a by-name append, or an overwrite that replaces it.
 
-        Bare names resolve and quote at action time. Existing-table source columns follow target
-        order. Empty overwrite validates schema through ``INSERT OVERWRITE`` before wiping.
+        Bare names resolve and quote at action time. Appended source columns follow target
+        order. ``mode("overwrite")`` is Spark's replace-table-as-select.
         """
         self._dataframe._ensure_alive()
         if self._format != "iceberg":
@@ -909,14 +909,8 @@ class DataFrameWriterV2:
         )
 
     def option(self, key: str, value: Any) -> DataFrameWriterV2:
-        """Set an option; branch and tag writes are rejected, the rest ride the action SQL."""
-        key_str = str(key)
-        if key_str.lower() in {"branch", "tag"}:
-            raise UnsupportedOperationException(
-                f"writing to an Iceberg {key_str.lower()} is not supported — "
-                "repark write path is current-snapshot only (I1 / R-TIME-TRAVEL)"
-            )
-        writer_layout.store_writer_option(self._options, key_str, str(value))
+        """Set an option that rides the action SQL; a ``branch`` or ``tag`` key is ignored."""
+        writer_layout.store_writer_option(self._options, str(key), str(value))
         return self
 
     def options(self, **options: Any) -> DataFrameWriterV2:

@@ -40,6 +40,7 @@ pub mod partition_write;
 pub(crate) mod position_delete;
 /// Identity DELETE/UPDATE (G3-E8 A1): SELECT over pinned `(_file, _pos)`, MERGE write arms.
 pub mod predicate_dml;
+pub mod replace_schema;
 pub mod scan_concurrency;
 pub mod scan_prune;
 pub mod schema_evolution;
@@ -128,6 +129,7 @@ pub use partition_overwrite::{
 pub use partition_write::{WRITTEN_FILES_COL_NAME, write_data_files_from_plan};
 pub use position_delete::{MorDmlKind, refuse_mor_unpartitioned_multi_spec_dml};
 pub use repark_common::{Error, Result};
+pub use replace_schema::replacement_schema;
 pub use session_write_conf::{
     IcebergSessionWriteConf, SESSION_CODEC_KEY, SESSION_LEVEL_KEY, SESSION_SNAPSHOT_PREFIX,
     SessionWriteView, apply_session_extras, apply_session_write_key, resolve_empty_session_write,

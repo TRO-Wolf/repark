@@ -2024,7 +2024,11 @@ above.
   `IF EXISTS` and the `[TABLE_OR_VIEW_NOT_FOUND]` / `42P01` answer on a missing target, and the
   failure posture: a sweep whose every per-file delete fails returns those failures in
   `DeleteReachableFilesResult::delete_failures` rather than raising, and the `DROP` still runs.
-- `replace_table.rs` — **IPI-25 (2026-09-20):** the `REPLACE TABLE` spelling on the Rust door.
+- `replace_table.rs` — **U7 PR2 slice-1 round 3 (2026-09-25):**
+  `column_def_replace_keeps_field_ids_by_name` (reordered columns keep 3, 2, 1 and the
+  `PARTITIONED BY (cat)` source id 3) and `replace_table_takes_a_fresh_id_above_the_last_column_id`
+  (`payload` takes 4). pins: u7-write-df-2/C-011
+  **IPI-25 (2026-09-20):** the `REPLACE TABLE` spelling on the Rust door.
   `replace_table_column_list_takes_the_column_def_replace_path` asserts the column-def form keeps
   the single pre-existing `append`, drops the main ref (no current snapshot) and reads zero rows;
   `replace_table_as_select_records_an_overwrite` asserts `[append, overwrite]`, which is exactly

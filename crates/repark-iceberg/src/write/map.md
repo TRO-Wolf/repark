@@ -98,9 +98,10 @@ repark-core's error map.
   `saveAsTable` and `save()`. It maps the action, mode, existence and layout to a
   `WriterStatement` (`ctas`, `rtas`, `append`, `overwrite`, `skip`) plus whether the caller
   checks the layout against the table: `save()` goes through `decide_save_target`; `saveAsTable`
-  appends to an existing table with the check, replaces on a bucketed overwrite, overwrites an
-  existing table statically otherwise, creates a missing one, skips on ignore and refuses the
-  error mode with Spark's already-exists text. On every create-or-replace arm a bucket column,
+  appends to an existing table with the check, replaces on every overwrite (U7 PR2,
+  2026-09-24: Spark's `ReplaceTableAsSelect(orCreate)`, bucketed or not, existing or not;
+  it was a static `INSERT OVERWRITE` for an unbucketed existing table), creates a missing
+  one, skips on ignore and refuses the error mode with Spark's already-exists text. On every create-or-replace arm a bucket column,
   then a `sortBy` column (round 4), absent from the frame (case-folded unless the session is
   case-sensitive) is
   `WriterRefusal::MissingBucketColumn`, rendered as `_LEGACY_ERROR_TEMP_3060` by
@@ -108,6 +109,17 @@ repark-core's error map.
   rendering of the name (backticks when it contains a `.`, no escaping), also the `i`
   parameter. Pins: `../tests/writer_plan.rs`.
   pins: u7-write-df/C-015, C-018
+  pins: u7-write-df-2/C-002
+- `replace_schema.rs` — **U7 PR2 slice-1 round 2 (2026-09-25):** `replacement_schema` gives a
+  replace's schema the field ids Java's `TableMetadata.buildReplacement` gives it: the fork's
+  `assign_fresh_ids_with_base` (the port of `TypeUtil.assignFreshIds(schema, base, nextId)`)
+  against the table's current schema, the counter starting at its `last-column-id`. A kept
+  name, nested ones by dotted name, keeps its id; a new name takes the next id. The fork's
+  `StagedTableTransaction::begin_replace` takes the caller's ids as given, so every
+  `begin_replace` caller calls this first and builds the partition spec from the result:
+  `repark-spark` `ctas.rs` and `create_table.rs`, `repark-sql` `create_table.rs` (round 3,
+  2026-09-25). Pins: `../tests/replace_schema.rs`.
+  pins: u7-write-df-2/C-011
 - `set_location.rs` — **IPI-26/27 round 4 (2026-09-21, cell `D-SET-LOCATION`):**
   `set_table_location` applies the fork's `update_location` action
   (`TableUpdate::SetLocation`) in one transaction: the move commit itself and every
