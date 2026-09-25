@@ -38,6 +38,7 @@ mod collation;
 mod column_comment_ddl;
 mod column_move;
 mod count_fold;
+mod create_format_version_one;
 mod create_table;
 mod create_table_options;
 mod ctas;

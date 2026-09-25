@@ -13,6 +13,9 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
   SELECT round-trips ns values and Arrow types (pins: v3-6-v3-types/C-003).
   **V3-9:** the opt-in refusal must not claim merge-on-read is unserved
   (pins: v3-9-mor-predicate-dml-dv/C-006).
+  **WO U5 PR2b (2026-09-24):** `format_version_one_creates_v1_and_deletes_copy_on_write` is the
+  ANSI-door D-CREATE-V1 row: a v1 column-def table seeds, deletes copy-on-write (no delete
+  files) and keeps sequence number 0; a v1 CTAS writes v1.
   **V3-12:** `upgraded_v3_merge_delete_merges_a_legacy_parquet_position_delete_into_the_dv` is the
   ANSI door's V3-12 cell — it lives here, not in `cow.rs`, because the upgrade needs
   `door_with_session_v3_opt_in` (the real `ReparkSqlConfig`), which `cow.rs`'s extension-only

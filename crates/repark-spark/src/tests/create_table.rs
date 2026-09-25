@@ -279,21 +279,6 @@ async fn column_def_location_comment_serve_other_clauses_refuse() {
         Some("hello")
     );
 
-    // pins: v3-2-create-v3-opt-in/C-007
-    // format-version=1 refuse on column-def.
-    let fv1 = execute(
-        &ctx,
-        &catalogs,
-        "CREATE TABLE ice.sales.fv1 (id BIGINT) USING iceberg \
-             TBLPROPERTIES ('format-version' = '1')",
-    )
-    .await
-    .expect_err("format-version=1");
-    assert!(
-        fv1.to_string().contains("format-version") && fv1.to_string().contains("not supported"),
-        "got: {fv1}"
-    );
-
     // pins: v3-2-create-v3-opt-in/C-004
     let fv3 = execute(
         &ctx,

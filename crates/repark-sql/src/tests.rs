@@ -520,10 +520,10 @@ async fn with_format_version_sets_the_table_format_version() {
     );
 
     let err = door
-        .err("CREATE TABLE ice.sales.v1 WITH (format_version = 1) AS SELECT 1 AS id")
+        .err("CREATE TABLE ice.sales.v4 WITH (format_version = 4) AS SELECT 1 AS id")
         .await;
     assert!(err.contains("format_version"), "must name the key: {err}");
-    assert!(!door.table_exists("sales", "v1").await, "nothing created");
+    assert!(!door.table_exists("sales", "v4").await, "nothing created");
 }
 
 #[tokio::test]

@@ -232,7 +232,8 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   Tests:
   [create_table/map.md](create_table/map.md).
 - `properties.rs` — the curated `WITH (…)` vocabulary (Q1/G4/G9): `format`, `format_version`
-  (V3-2: `'2'` and `'3'` stored at parse; execute applies the session opt-in),
+  (V3-2: `'2'` and `'3'` stored at parse; execute applies the session opt-in; WO U5 PR2b
+  2026-09-24: `'1'` is stored too and `create_table.rs` creates a v1 table),
   `location`, `partitioning`, the `extra_properties = MAP(ARRAY[…], ARRAY[…])` raw-key hatch,
   and the reserved refusals (`sorted_by`, ORC/AVRO) that name their triggers.
   Tests: [properties/map.md](properties/map.md).

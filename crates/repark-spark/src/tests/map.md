@@ -1071,6 +1071,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   probe's `DECIMAL(38,18)`/INT struct and the measured map value BIGINT→SMALLINT. The
   missing-table test adds a missing namespace.
   pins: ice-nested-evo-1/C-032, C-033, C-035, C-036
+- [create_format_version_one.rs](create_format_version_one.rs) — **WO U5 PR2b (2026-09-24):**
+  D-CREATE-V1. `'format-version'='1'` writes the v1 metadata Spark measured: format-version 1,
+  no `last-sequence-number` and no snapshot `sequence-number`, the legacy `schema` and
+  `partition-spec` keys, a snapshot-log entry and `main` on the seed. DELETE is copy-on-write
+  (`overwrite`, zero delete files). CTAS and `'01'` write v1 too. The refusals pin full text:
+  `v5` and `abc` as IllegalArgumentException, `0`/`-1`/`4` as not implemented, and the fork's
+  downgrade text for `CREATE OR REPLACE` v2 → v1 (Spark says `Cannot downgrade v2 table to v1`).
 - [column_comment_ddl.rs](column_comment_ddl.rs) — **WO U5 PR2a (2026-09-24):** `ALTER
   COLUMN … COMMENT` on the Spark door. The docs land as Spark measured: top level, nested
   struct field, empty string, `CHANGE COLUMN`, upper-cased name, double-quoted literal, and a

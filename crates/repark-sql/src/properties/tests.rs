@@ -184,16 +184,20 @@ fn unknown_format_refuses() {
     assert!(err.contains("'PARQUET'"), "must list the support: {err}");
 }
 
-/// A format version other than 2 or 3 refuses rather than being silently ignored.
+/// A format version other than 1, 2 or 3 refuses rather than being silently ignored.
 /// pins: v3-2-create-v3-opt-in/C-007
 #[test]
 fn non_v2_format_version_refuses() {
-    for spelling in ["1", "4"] {
+    assert!(parse("format_version = 1").is_ok());
+    for spelling in ["0", "4"] {
         let err = parse(&format!("format_version = {spelling}"))
             .unwrap_err()
             .to_string();
         assert!(err.contains("format_version"), "must name the key: {err}");
-        assert!(err.contains("v2"), "must state what IS created: {err}");
+        assert!(
+            err.contains("v1, v2 or v3"),
+            "must state what IS created: {err}"
+        );
     }
 }
 

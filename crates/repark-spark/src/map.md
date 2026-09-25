@@ -953,6 +953,13 @@ pins: rp-4-fork-repin/C-005, C-006
   primitives behind the same opt-in (pins: v3-6-v3-types/C-003); v2 CREATE refuses via
   the fork's `check_compatibility`.
   4 in-module tests (`type_mapping_tests`) + `tests/create_table.rs` pin + CTAS type smoke.
+  **WO U5 PR2b (2026-09-24):** `'format-version'='1'` creates a v1 table (D-CREATE-V1), and
+  `stamp_requested_format_version` stamps the number from the enum.
+  `refuse_format_version_spark_rejects` answers Spark's measured IllegalArgumentException
+  texts before the shared resolver: `Unsupported format version: v5 (supported: v4)` above
+  v4, and `For input string: "abc"` for a non-integer. Spark writes metadata v0, v-1 and v4 for
+  `'0'`, `'-1'` and `'4'`; the fork cannot, so those keep the loud not-implemented refusal.
+  Pinned by [tests/create_format_version_one.rs](tests/create_format_version_one.rs).
   **ICE-CATALOG-SESSION-1 S6 (2026-09-20):** `execute_schema_create` merges user
   `TBLPROPERTIES` through the catalog side map (override > user > default).
   pins: ice-catalog-session-1/C-027

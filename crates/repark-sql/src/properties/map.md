@@ -9,7 +9,8 @@ refusals especially — a refusal that stops firing is a silent behavior change.
 
 - `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../properties.rs`.
   **V3-2:** `format_version = 3` is accepted at parse (execute still needs the session opt-in);
-  `'1'` and `'4'` still refuse.
+  `'1'` and `'4'` still refuse. **WO U5 PR2b (2026-09-24):** `'1'` is accepted; `'0'` and `'4'`
+  refuse, naming v1, v2 or v3.
 
 ## Pointers
 

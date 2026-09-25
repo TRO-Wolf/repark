@@ -120,13 +120,14 @@ pub(crate) fn refuse_format_value(value: &str, form: &str) -> Result<()> {
     }
 }
 
-/// `format_version`: `'2'` and `'3'` are stored for execute (v3 still needs the session opt-in).
+/// `format_version`: `'1'`, `'2'` and `'3'` are stored for execute (v3 still needs the session
+/// opt-in).
 fn parse_format_version(value: &str, form: &str) -> Result<String> {
     match value.trim() {
-        version @ ("2" | "3") => Ok(version.to_string()),
+        version @ ("1" | "2" | "3") => Ok(version.to_string()),
         other => Err(DataFusionError::NotImplemented(format!(
             "{form} WITH: format_version = {other} is not supported — tables are created as \
-             Iceberg format v2 (format v3 requires session conf \
+             Iceberg format v1, v2 or v3 (format v3 requires session conf \
              `repark.sql.allowCreateFormatVersion3` = true)"
         ))),
     }

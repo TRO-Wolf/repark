@@ -544,15 +544,35 @@ pub(crate) fn iceberg_create_format_version(
     use repark_functions::cardinality::{
         repark_sql_settings_from_options, resolve_create_format_version,
     };
+    refuse_format_version_spark_rejects(requested)?;
     let allow = repark_sql_settings_from_options(ctx.copied_config().options())
         .allow_create_format_version_3;
     let number =
         resolve_create_format_version(requested, allow, "format-version", "TBLPROPERTIES")?;
-    Ok(if number == 3 {
-        FormatVersion::V3
-    } else {
-        FormatVersion::V2
+    Ok(match number {
+        1 => FormatVersion::V1,
+        3 => FormatVersion::V3,
+        _ => FormatVersion::V2,
     })
+}
+
+const SPARK_MAX_FORMAT_VERSION: i32 = 4;
+
+fn refuse_format_version_spark_rejects(requested: Option<&str>) -> Result<()> {
+    let Some(raw) = requested.map(str::trim).filter(|value| !value.is_empty()) else {
+        return Ok(());
+    };
+    match raw.parse::<i32>() {
+        Err(_) => Err(repark_core::illegal_argument_error(format!(
+            "For input string: \"{raw}\""
+        ))),
+        Ok(number) if number > SPARK_MAX_FORMAT_VERSION => {
+            Err(repark_core::illegal_argument_error(format!(
+                "Unsupported format version: v{number} (supported: v{SPARK_MAX_FORMAT_VERSION})"
+            )))
+        }
+        Ok(_) => Ok(()),
+    }
 }
 
 /// The fork replace path upgrades format version from `format-version`, not `TableCreation`.
@@ -564,11 +584,7 @@ pub(crate) fn stamp_requested_format_version(
     if requested.map(str::trim).is_none_or(str::is_empty) {
         return;
     }
-    let number = if format_version == iceberg::spec::FormatVersion::V3 {
-        "3"
-    } else {
-        "2"
-    };
+    let number = format_version as u8;
     properties.insert("format-version".to_string(), number.to_string());
 }
 

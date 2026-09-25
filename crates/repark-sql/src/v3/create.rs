@@ -523,6 +523,31 @@ async fn surviving_ids(door: &Door, table: &str) -> Vec<i32> {
 }
 
 #[tokio::test]
+async fn format_version_one_creates_v1_and_deletes_copy_on_write() {
+    let door = door_with_schema().await;
+    door.ok("CREATE TABLE ice.sales.v1 (id INT, name VARCHAR) WITH (format_version = 1)")
+        .await;
+    door.ok("INSERT INTO ice.sales.v1 VALUES (0, 'd0'), (1, 'd1'), (2, 'd2')")
+        .await;
+    door.ok("DELETE FROM ice.sales.v1 WHERE id = 1").await;
+    let table = door.table("sales", "v1").await;
+    assert_eq!(table.metadata().format_version() as u8, 1);
+    assert_eq!(table.metadata().last_sequence_number(), 0);
+    assert_eq!(surviving_ids(&door, "v1").await, vec![0, 2]);
+    assert!(live_delete_file_kinds(&door, "v1").await.is_empty());
+
+    door.ok("CREATE TABLE ice.sales.v1ctas WITH (format_version = 1) AS SELECT 1 AS id")
+        .await;
+    assert_eq!(
+        door.table("sales", "v1ctas")
+            .await
+            .metadata()
+            .format_version() as u8,
+        1
+    );
+}
+
+#[tokio::test]
 async fn upgraded_v3_merge_delete_merges_a_legacy_parquet_position_delete_into_the_dv() {
     let door = door_with_session_v3_opt_in().await;
     door.ok(&format!(
