@@ -426,3 +426,87 @@ async fn typed_width_literals_and_parse_shapes_answer_spark() {
     assert_eq!(table.metadata().sort_orders_iter().len(), 1);
     assert_eq!(table.metadata().default_sort_order_id(), 0);
 }
+
+#[tokio::test]
+async fn hex_quoted_and_string_tokens_render_as_spark_does() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = transform_door(&wh).await;
+    let sql = |spec: &str| format!("ALTER TABLE ice.sales.wo WRITE ORDERED BY {spec}");
+    for (spec, expected) in [
+        (
+            "bucket(0x4, id)",
+            "Cannot convert transform with more than one column reference: bucket(`0x4`, id)",
+        ),
+        (
+            "bucket(0X4, id) DESC",
+            "Cannot convert transform with more than one column reference: bucket(`0X4`, id)",
+        ),
+        (
+            "truncate(0x4, s)",
+            "Cannot convert transform with more than one column reference: truncate(`0x4`, s)",
+        ),
+        (
+            "bucket(0x4)",
+            "Cannot find width for transform: bucket(`0x4`)",
+        ),
+        (
+            "bucket(1abc, id)",
+            "Cannot convert transform with more than one column reference: bucket(`1abc`, id)",
+        ),
+        (
+            "bucket(`my col`, id)",
+            "Cannot convert transform with more than one column reference: bucket(`my col`, id)",
+        ),
+        (
+            "bucket(`a.b`, id)",
+            "Cannot convert transform with more than one column reference: bucket(`a.b`, id)",
+        ),
+        (
+            "bucket(a.b, id)",
+            "Cannot convert transform with more than one column reference: bucket(a.b, id)",
+        ),
+        (
+            "bucket(X'4', id)",
+            "Cannot find width for transform: bucket(0x04, id)",
+        ),
+        (
+            "bucket(x'abc', id)",
+            "Cannot find width for transform: bucket(0x0ABC, id)",
+        ),
+        (
+            "bucket(X'', id)",
+            "Cannot find width for transform: bucket(0x, id)",
+        ),
+        (
+            "truncate('a\\'b', s)",
+            "Cannot find width for transform: truncate('a''b', s)",
+        ),
+        (
+            "truncate('a''b', s)",
+            "Cannot find width for transform: truncate('a''b', s)",
+        ),
+        (
+            "truncate(\"a'b\", s)",
+            "Cannot find width for transform: truncate('a''b', s)",
+        ),
+        (
+            "truncate('a`b', s)",
+            "Cannot find width for transform: truncate('a`b', s)",
+        ),
+    ] {
+        let mapped = refusal(&ctx, &catalogs, &sql(spec)).await;
+        assert!(
+            matches!(&mapped, repark_common::Error::IllegalArgument(message) if message == expected),
+            "{spec}: got {mapped:?}"
+        );
+    }
+    let mapped = refusal(&ctx, &catalogs, &sql("bucket(4, 0x4)")).await;
+    assert!(
+        matches!(&mapped, repark_common::Error::Iceberg(message)
+            if message == "DataInvalid => Cannot find field 0x4 in table schema"),
+        "got {mapped:?}"
+    );
+    let table = load_sales_table(&catalogs, "wo").await;
+    assert_eq!(table.metadata().sort_orders_iter().len(), 1);
+    assert_eq!(table.metadata().default_sort_order_id(), 0);
+}

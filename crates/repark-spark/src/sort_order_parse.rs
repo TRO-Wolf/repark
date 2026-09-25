@@ -17,6 +17,7 @@ pub(crate) enum Sig {
     Comma,
     String(String),
     Minus,
+    Hex(String),
     Other(String),
 }
 
@@ -41,26 +42,94 @@ pub(crate) enum ZOrderScan {
 pub(crate) fn tokenize_significant(sql: &str) -> Option<Vec<Sig>> {
     use datafusion::sql::sqlparser::dialect::DatabricksDialect;
     use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
-    let tokens = Tokenizer::new(&DatabricksDialect {}, sql).tokenize().ok()?;
-    Some(
-        tokens
-            .into_iter()
-            .filter_map(|token| match token {
-                Token::Whitespace(_) | Token::EOF | Token::SemiColon => None,
-                Token::Word(word) => Some(Sig::Word(word.value)),
-                Token::Period => Some(Sig::Period),
-                Token::Number(raw, _) => Some(Sig::Number(raw)),
-                Token::LParen => Some(Sig::LParen),
-                Token::RParen => Some(Sig::RParen),
-                Token::Comma => Some(Sig::Comma),
-                Token::Minus => Some(Sig::Minus),
-                Token::SingleQuotedString(text) | Token::DoubleQuotedString(text) => {
-                    Some(Sig::String(text))
-                }
-                other => Some(Sig::Other(other.to_string())),
-            })
-            .collect(),
-    )
+    let tokens = Tokenizer::new(&DatabricksDialect {}, sql)
+        .tokenize_with_location()
+        .ok()?;
+    let line_starts = line_starts(sql);
+    tokens
+        .into_iter()
+        .filter_map(|with_span| match with_span.token {
+            Token::Whitespace(_) | Token::EOF | Token::SemiColon => None,
+            Token::Word(word) => Some(Some(Sig::Word(word.value))),
+            Token::Period => Some(Some(Sig::Period)),
+            Token::Number(raw, _) => Some(Some(Sig::Number(raw))),
+            Token::LParen => Some(Some(Sig::LParen)),
+            Token::RParen => Some(Some(Sig::RParen)),
+            Token::Comma => Some(Some(Sig::Comma)),
+            Token::Minus => Some(Some(Sig::Minus)),
+            Token::SingleQuotedString(text) | Token::DoubleQuotedString(text) => {
+                Some(Some(Sig::String(text)))
+            }
+            Token::HexStringLiteral(_) => {
+                Some(span_text(sql, &line_starts, &with_span.span).map(|typed| {
+                    if typed.starts_with("0x") || typed.starts_with("0X") {
+                        Sig::Word(typed.to_string())
+                    } else {
+                        Sig::Hex(typed.to_string())
+                    }
+                }))
+            }
+            _ => Some(
+                span_text(sql, &line_starts, &with_span.span)
+                    .map(|typed| Sig::Other(typed.to_string())),
+            ),
+        })
+        .collect()
+}
+
+fn line_starts(sql: &str) -> Vec<usize> {
+    std::iter::once(0)
+        .chain(sql.match_indices('\n').map(|(offset, _)| offset + 1))
+        .collect()
+}
+
+fn span_text<'a>(
+    sql: &'a str,
+    line_starts: &[usize],
+    span: &datafusion::sql::sqlparser::tokenizer::Span,
+) -> Option<&'a str> {
+    let start = location_offset(sql, line_starts, span.start.line, span.start.column)?;
+    let end = location_offset(sql, line_starts, span.end.line, span.end.column)?;
+    sql.get(start..end)
+}
+
+fn location_offset(sql: &str, line_starts: &[usize], line: u64, column: u64) -> Option<usize> {
+    let line = usize::try_from(line).ok()?.checked_sub(1)?;
+    let column = usize::try_from(column).ok()?.checked_sub(1)?;
+    let start = *line_starts.get(line)?;
+    let rest = sql.get(start..)?;
+    match rest.char_indices().nth(column) {
+        Some((offset, _)) => Some(start + offset),
+        None => (rest.chars().count() == column).then_some(sql.len()),
+    }
+}
+
+pub(crate) fn hex_constant(typed: &str) -> Option<String> {
+    let digits = typed
+        .strip_prefix(['x', 'X'])?
+        .strip_prefix('\'')?
+        .strip_suffix('\'')?;
+    let padding = if digits.len() % 2 == 1 { "0" } else { "" };
+    Some(format!("0x{padding}{}", digits.to_ascii_uppercase()))
+}
+
+pub(crate) fn quote_if_needed(part: &str) -> String {
+    let plain = part
+        .chars()
+        .next()
+        .is_some_and(|first| first.is_ascii_alphabetic() || first == '_')
+        && part
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric() || character == '_');
+    if plain {
+        part.to_string()
+    } else {
+        format!("`{}`", part.replace('`', "``"))
+    }
+}
+
+pub(crate) fn quote_constant(text: &str) -> String {
+    format!("'{}'", text.replace('\'', "''"))
 }
 
 pub(crate) fn word_eq(significant: &[Sig], index: usize, expected: &str) -> bool {
@@ -109,7 +178,7 @@ pub(crate) fn render_sig_at(significant: &[Sig], index: usize) -> String {
         Some(Sig::Comma) => ",".into(),
         Some(Sig::String(text)) => format!("'{text}'"),
         Some(Sig::Minus) => "-".into(),
-        Some(Sig::Other(text)) => text.clone(),
+        Some(Sig::Hex(typed) | Sig::Other(typed)) => typed.clone(),
         None => "<eof>".into(),
     }
 }

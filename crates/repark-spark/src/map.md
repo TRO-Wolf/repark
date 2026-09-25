@@ -715,6 +715,11 @@ pins: rp-4-fork-repin/C-005, C-006
   own append / identity-DML path instead of the fork temp provider (which carries neither
   snapshot properties nor a codec — `QS-BRANCH-*`, `QZ-BRANCH-*`).
   pins: ice-session-write-conf-1/C-038, C-039, C-040
+  **WO U5 PR2b round 3 (2026-09-25):** `commit_write_on_branch` checks that an explicit
+  `t.branch_x` target exists before the v1 ref kernel, so a missing branch on a format v1 table
+  answers REF-1's `Cannot use branch (does not exist): x` (Spark's text) and the kernel answers
+  only for a branch that exists; the session WAP path still meets the kernel first.
+  pins: ice-nested-evo-1/C-053
 - `time_travel.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the ref-selector scan
   skips the `FROM` that names a `DELETE` target, so `DELETE FROM t.branch_b …` is a write to
   the branch and not a read pinned to it (the pin turned the target into a read-only temp
@@ -1269,6 +1274,13 @@ pins: rp-4-fork-repin/C-005, C-006
   or a literal (`+`, `(`), and `(` after a term raise AnalysisException with Spark's ANTLR text
   and `== SQL ==` block. `verbatim_write_order_sql` lets `router.rs` skip the literal
   canonicalizer for these statements, so `4L` reaches the parser as typed.
+  **WO U5 PR2b round 3 (2026-09-25):** a column argument renders each part through
+  `quote_if_needed` (Spark's rule: back-quoted unless it matches `[A-Za-z_][A-Za-z0-9_]*`, so
+  `0x4`, `1abc` and `my col` render back-quoted and `a.b` stays plain) while the bound name is
+  the plain join; a string constant renders through `quote_constant` (embedded `'` doubled,
+  as Spark's `describe` does); a `Sig::Hex` token (`X'4'`) is a binary constant rendered
+  through `hex_constant` (`0x04`). Only a token that is neither a name, a literal nor a hex
+  constant reaches the ANTLR-shaped message, and it is named as typed.
   pins: ice-nested-evo-1/C-054, C-055
 - `namespace_ddl/` — the table-lifecycle work `namespace_ddl.rs` delegates; see
   [namespace_ddl/map.md](namespace_ddl/map.md). `purge.rs` holds the `DROP TABLE … PURGE`
@@ -1306,6 +1318,14 @@ pins: rp-4-fork-repin/C-005, C-006
   (Spark's `Term must be unbound` since WO U5 PR2b, 2026-09-24). `order_list_segments` hands the
   ALTER door the raw segments (it parses transform terms itself); `Sig::Minus` carries a
   leading `-` so a negative width renders as Spark does.
+  **WO U5 PR2b round 3 (2026-09-25):** `tokenize_significant` tokenizes with spans and reads
+  every token outside the named variants back from its source text (`span_text` maps
+  sqlparser's line/column locations to byte offsets), so `Sig::Other` carries what the user
+  typed rather than sqlparser's Display (`0x4` had rendered as `X'4'`). A hex literal typed
+  `0x…` is `Sig::Word` — Spark's lexer reads it as an identifier — and one typed `X'…'` is the
+  new `Sig::Hex`. `quote_if_needed`, `quote_constant` and `hex_constant` hold Spark's
+  renderings for the ALTER door's messages.
+  pins: ice-nested-evo-1/C-055
   pins: ice-rdf-sort-parse-1/C-001, C-002, C-003,
   tests/alter_write_order_transform.rs::write_ordered_by_transform_refusals_match_spark_and_commit_nothing
   **WO U5 PR2b round 2 (2026-09-25):** `Sig::Other` carries its token's text, so a refusal

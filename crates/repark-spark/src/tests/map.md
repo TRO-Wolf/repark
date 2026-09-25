@@ -263,6 +263,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `bucket((4), id)`, `bucket(4, id)(x)`) with Spark's text. The insert pin is positive (bucket
   order, order id 1), and `delete_after_a_repark_bucket_order_is_the_identity_only_residue` pins
   R-U5-PR2B-IDENTITY-ONLY-DML's full text with nothing committed.
+  **Round 3 (2026-09-25):** `hex_quoted_and_string_tokens_render_as_spark_does` pins the
+  measured renderings: `0x4`/`0X4`/`1abc`/`` `my col` ``/`` `a.b` `` back-quoted and `a.b` plain
+  in the one-column-reference text, `bucket(0x4)` in the width text, `X'4'`/`x'abc'`/`X''` as
+  `0x04`/`0x0ABC`/`0x`, `'a\'b'`, `'a''b'` and `"a'b"` as `'a''b'`, `'a`b'` as typed, and
+  `bucket(4, 0x4)` as the unknown-field residue, with nothing committed.
   pins: ice-nested-evo-1/C-054, C-055
 - `replace_columns.rs` — **ICE-REPLACE-COLUMNS-1 (2026-09-19):** the Rust twins of the measured
   `RC-*` cells — fresh ids + all-NULL read-back on the basic, same-list and re-typed forms, the
@@ -2096,6 +2101,11 @@ above.
   `rewrite_data_files(branch => …)` each refuse with the `BRANCH` v1 text, with no metadata file,
   snapshot or ref written. `set_current_snapshot` and `fast_forward('main', 'main')` keep
   working. `wap_branch.rs::set_wap` is `pub(super)` for these pins.
+  **Round 3 (2026-09-25):** `writes_into_a_missing_branch_on_a_v1_table_answer_the_missing_branch_text`
+  replaces the `t.branch_b1` kernel pin: `INSERT`, `DELETE`, `MERGE INTO` and `INSERT OVERWRITE`
+  into a missing branch on the seeded v1 table answer the full mapped REF-1 text
+  (`Error during planning: Cannot use branch (does not exist): b1`) with no metadata file,
+  snapshot or ref written and the seed row intact.
   pins: ice-nested-evo-1/C-053
 - `ref_ddl.rs` — **IPI-42 (2026-09-20):**
   `ref_guards_are_conditional_and_never_move_an_existing_ref` is the mutation-proof half the four

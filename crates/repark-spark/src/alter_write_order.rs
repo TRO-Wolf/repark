@@ -5,8 +5,9 @@ use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::{CatalogRegistry, illegal_argument_error};
 
 use crate::sort_order_parse::{
-    OrderParseError, Sig, collect_name_parts, is_period_at, order_list_segments,
-    parse_order_segment, render_sig_at, tokenize_significant, word_at, word_eq,
+    OrderParseError, Sig, collect_name_parts, hex_constant, is_period_at, order_list_segments,
+    parse_order_segment, quote_constant, quote_if_needed, render_sig_at, tokenize_significant,
+    word_at, word_eq,
 };
 use crate::{catalog_handle, iceberg_err, reregister};
 use repark_iceberg::write::sort_order::WriteSortField;
@@ -360,8 +361,15 @@ fn parse_term_argument(
         }
         [Sig::String(text)] if !negative => Ok(ParsedArgument {
             argument: TermArgument::Constant,
-            rendered: format!("'{text}'"),
+            rendered: quote_constant(text),
         }),
+        [Sig::Hex(typed)] if !negative => match hex_constant(typed) {
+            Some(rendered) => Ok(ParsedArgument {
+                argument: TermArgument::Constant,
+                rendered,
+            }),
+            None => Err(no_viable_alternative(typed, sql)),
+        },
         [Sig::Word(_), ..] if !negative => column_argument(argument, function, term),
         _ => Err(no_viable_alternative(&render_sig_at(argument, 0), sql)),
     }
@@ -426,10 +434,14 @@ fn column_argument(argument: &[Sig], function: &str, term: &[Sig]) -> Result<Par
              constants only (transform `{function}`)"
         ))
     })?;
-    let name = parts.join(".");
+    let rendered = parts
+        .iter()
+        .map(|part| quote_if_needed(part))
+        .collect::<Vec<_>>()
+        .join(".");
     Ok(ParsedArgument {
-        argument: TermArgument::Column(name.clone()),
-        rendered: name,
+        argument: TermArgument::Column(parts.join(".")),
+        rendered,
     })
 }
 

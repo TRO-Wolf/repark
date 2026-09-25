@@ -753,6 +753,18 @@ def test_write_ordered_by_transforms_lands_the_order_spark_measured(
             "ALTER TABLE sc.ns.wo WRITE ORDERED BY bucket()",
             id="empty-arguments",
         ),
+        pytest.param(
+            "bucket(0x4, id)",
+            IllegalArgumentException,
+            "Cannot convert transform with more than one column reference: bucket(`0x4`, id)",
+            id="hex-token-is-a-quoted-reference",
+        ),
+        pytest.param(
+            "truncate('a\\'b', id)",
+            IllegalArgumentException,
+            "Cannot find width for transform: truncate('a''b', id)",
+            id="string-constant-doubles-its-quote",
+        ),
     ],
 )
 def test_write_ordered_by_transform_refusals_match_spark(

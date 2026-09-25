@@ -20,15 +20,22 @@ async fn assert_refused_with_nothing_written(
     sql: &str,
     ref_name: &str,
 ) {
+    let expected = v1_ref_refusal("BRANCH", "sales.t");
+    assert_text_refused_with_nothing_written(ctx, catalogs, sql, ref_name, &expected).await;
+}
+
+async fn assert_text_refused_with_nothing_written(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    ref_name: &str,
+    expected: &str,
+) {
     let before = load_sales_table(catalogs, "t").await;
     let files = metadata_file_count(&before);
     let snapshots = before.metadata().snapshots().count();
     let error = refusal(ctx, catalogs, sql).await;
-    assert_eq!(
-        error.to_string(),
-        v1_ref_refusal("BRANCH", "sales.t"),
-        "{sql}"
-    );
+    assert_eq!(error.to_string(), expected, "{sql}");
     let after = load_sales_table(catalogs, "t").await;
     assert_eq!(metadata_file_count(&after), files, "{sql}");
     assert_eq!(after.metadata().snapshots().count(), snapshots, "{sql}");
@@ -71,16 +78,27 @@ async fn a_wap_branch_write_on_an_empty_v1_table_refuses() {
 }
 
 #[tokio::test]
-async fn branch_selector_writes_on_a_v1_table_refuse() {
+async fn writes_into_a_missing_branch_on_a_v1_table_answer_the_missing_branch_text() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     v1_table(&ctx, &catalogs, true).await;
     for sql in [
         "INSERT INTO ice.sales.t.branch_b1 VALUES (2, 'b')",
         "DELETE FROM ice.sales.t.branch_b1 WHERE id = 1",
+        "MERGE INTO ice.sales.t.branch_b1 t USING (SELECT 1 AS id, 'q' AS name) u ON t.id = u.id \
+         WHEN MATCHED THEN UPDATE SET name = u.name",
+        "INSERT OVERWRITE ice.sales.t.branch_b1 VALUES (3, 'c')",
     ] {
-        assert_refused_with_nothing_written(&ctx, &catalogs, sql, "b1").await;
+        assert_text_refused_with_nothing_written(
+            &ctx,
+            &catalogs,
+            sql,
+            "b1",
+            "Error during planning: Cannot use branch (does not exist): b1",
+        )
+        .await;
     }
+    assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM ice.sales.t").await, 1);
 }
 
 #[tokio::test]

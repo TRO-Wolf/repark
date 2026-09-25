@@ -848,6 +848,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_write_ordered_by_a_long_width_literal_lands_like_spark` lands `bucket(4L, id)`.
   days-on-long moved to `test_write_ordered_by_bind_refusal_keeps_the_fork_text_residue`, a
   residue pin (R-U5-PR2B-BIND-TEXT), not a parity pin.
+  **Round 3 (2026-09-25):** the transform refusal table adds `hex-token-is-a-quoted-reference`
+  (`bucket(0x4, id)` → `bucket(`0x4`, id)`) and `string-constant-doubles-its-quote`
+  (`truncate('a\'b', id)` → `truncate('a''b', id)`).
   pins: ice-nested-evo-1/C-052, C-053, C-054, C-055, C-056
 - [test_u5_alter_ddl.py](test_u5_alter_ddl.py) — **WO U5 PR1 (2026-09-24):** facade pins for
   nested struct/list/map-value TYPE promotions read the current Iceberg metadata file and the

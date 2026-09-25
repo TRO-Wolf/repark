@@ -344,7 +344,11 @@ Supported surface, for reference:
   leave `main` unmoved. A write naming a **tag** refuses Spark-shaped (`Cannot write to table
   with time travel` / `Cannot modify table with time travel` for UPDATE/DELETE/MERGE). A write
   naming a missing branch refuses `Cannot use branch (does not exist): <name>` and does not
-  create the branch (Spark 4.1.2 + Iceberg 1.11.0, 2026-09-01). Fork-executed families
+  create the branch (Spark 4.1.2 + Iceberg 1.11.0, 2026-09-01; on a format v1 table too,
+  re-measured 2026-09-25 for INSERT, DELETE, UPDATE, MERGE and INSERT OVERWRITE — the
+  missing-branch check runs before the v1 ref kernel of D-CREATE-V1, WO U5 PR2b round 3).
+  RePark raises it as AnalysisException after its `Error during planning: ` prefix, where Spark
+  raises ValidationException (pre-existing, R-U5-PR2B-PLANNING-PREFIX). Fork-executed families
   (`INSERT`/`UPDATE`/`DELETE`) use `IcebergTableProvider::with_commit_branch`; RePark-owned
   families (`MERGE`/`INSERT OVERWRITE`/`TRUNCATE`) pass `.to_branch` and scan the branch head.
 - **Apache Spark** — the Iceberg extension writes to the named **branch**: `INSERT INTO
@@ -8169,7 +8173,17 @@ the pin rather than obeying it.
   `date` and `date_hour` names map to year/month/day/hour, `identity(id)` is identity, DESC
   defaults to nulls-last and duplicates stay. A long width literal (`bucket(4L, id)`,
   `truncate(s, 2L)`) lands as Spark lands it (round 2, 2026-09-25); the statement skips the
-  literal canonicalizer, so no parser-internal text reaches a message. RePark's own refusals
+  literal canonicalizer, and every token a message names is the token as typed (round 3,
+  2026-09-25: the tokenizer reads each other token back from its source span). A `0x…` token
+  is an identifier, as Spark's lexer reads it, and a column part outside
+  `[A-Za-z_][A-Za-z0-9_]*` renders back-quoted, as Spark's `quoteIfNeeded` does:
+  `bucket(0x4, id)` raises IllegalArgumentException `Cannot convert transform with more than one
+  column reference: bucket(`0x4`, id)` (also `0X4`, `1abc`, `` `my col` ``, `` `a.b` ``; `a.b`
+  stays plain), `bucket(0x4)` raises `Cannot find width for transform: bucket(`0x4`)`, and a
+  `0x…` token in the column position is an unknown field. `X'4'` is a binary constant rendered
+  `0x04` (`x'abc'` → `0x0ABC`, `X''` → `0x`), and a string constant doubles its embedded quote:
+  `truncate('a\'b', s)`, `truncate('a''b', s)` and `truncate("a'b", s)` all raise `Cannot find
+  width for transform: truncate('a''b', s)` (`'a`b'` and `'a\\b'` render as typed). RePark's own refusals
   answer Spark's measured class and text and commit nothing: UnsupportedOperationException
   `Transform is not supported: void(id)`; IllegalArgumentException `Term must be unbound`,
   `Unsupported width for transform: bucket(0, id)` (also `0L`, `-4L`, `3000000000L`), `Cannot
@@ -8187,7 +8201,11 @@ the pin rather than obeying it.
   `struct<5: a: optional int, 6: b: optional string>`. An unknown column in a term keeps
   RePark's `Cannot find field nope in table schema`, where Spark says `Cannot find field 'nope'
   in struct: struct<…>` (also `id.x` and `sc.ns.wo.id`). Other malformed shapes keep RePark's
-  analysis texts (`bucket(`, `bucket(4, id))`, `… DESC DESC`, `… NULLS`, `… LOCALLY`). After a
+  analysis texts (`bucket(`, `bucket(4, id))`, `… DESC DESC`, `… NULLS`, `… LOCALLY`), and
+  `bucket(4, 0xid)` (sqlparser splits `0x` from `id`) keeps RePark's `takes column names and
+  constants only` text where Spark reads one identifier and says `Cannot find field '0xid'`.
+  The ANTLR-shaped and missing-branch refusals carry RePark's `Error during planning: ` prefix
+  (R-U5-PR2B-PLANNING-PREFIX). After a
   RePark-set transform order, UPDATE, DELETE, MERGE INTO and INSERT OVERWRITE raise
   UnsupportedOperationException `This feature is not implemented: sorting by the table's
   default sort order uses transform `bucket[4]` on source id 1, only identity sort fields are
@@ -8280,11 +8298,21 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   implemented: BRANCH on the format v1 table <ns>.<table> is not supported: the Iceberg fork
   writes v1 metadata without its refs, so the new ref would be lost` (`TAG …` for a tag). It
   covers branch and tag DDL on both doors (including IF NOT EXISTS, OR REPLACE, REPLACE and
-  AS OF VERSION, and `main` with retention), a session WAP branch write, `INSERT`/`DELETE`
-  into `t.branch_x`, every RePark branch commit (`writeTo().option('branch')`, MERGE, overwrite),
-  `CALL fast_forward` to a new branch and `rewrite_data_files` on a branch. Commits that move
-  only `main` (`set_current_snapshot`, `cherrypick_snapshot`, `REPLACE BRANCH main`) keep
-  working. Round 2 (2026-09-25): merge-on-read DELETE, UPDATE and MERGE on a v1 table raise
+  AS OF VERSION, and `main` with retention), a session WAP branch write, every RePark branch
+  commit through `commit_target::maybe_to_branch` (MERGE, overwrite, the session WAP branch),
+  `CALL fast_forward` to a new branch and `rewrite_data_files` on a branch. A write into
+  `t.branch_x` answers REF-1's missing-branch text first (round 3, 2026-09-25: `INSERT`,
+  `DELETE`, `UPDATE`, `MERGE` and `INSERT OVERWRITE` into a missing branch on v1 raise `Cannot
+  use branch (does not exist): x`, as Spark does); the kernel answers only for a branch that
+  exists, which on v1 only Java can have written. `writeTo().option('branch', …)` does not reach
+  the kernel on this branch: the Python facade refuses it first with the pre-existing
+  UnsupportedOperationException `writing to an Iceberg branch is not supported — repark write
+  path is current-snapshot only (I1 / R-TIME-TRAVEL)`, where Spark 4.1.2 ignores the option and
+  appends to `main` (measured 2026-09-25, R-U5-PR2B-WRITETO-BRANCH-OPTION); U7 PR2 slice 1
+  (repark#835) removes that facade refusal, after which the write takes the `maybe_to_branch`
+  path the kernel pin covers. Commits that move only `main` (`set_current_snapshot`,
+  `cherrypick_snapshot`, `REPLACE BRANCH main`) keep working. Round 2 (2026-09-25):
+  merge-on-read DELETE, UPDATE and MERGE on a v1 table raise
   IllegalArgumentException `Deletes are supported in V2 and above`, as Spark does, and the
   Spark door's `ALTER TABLE <v2> SET TBLPROPERTIES ('format-version'='1')` answers Spark's
   `Unsupported table change: Cannot downgrade v2 table to v1` (RePark renders it as
