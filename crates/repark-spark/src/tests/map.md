@@ -2187,7 +2187,8 @@ C-020, C-021
 
 U8 WRITE-SQL PR1 round 4 (2026-09-25, critic r3): `replace_where_oracle.rs` replays 25 prefixes
 (438 cases, counted exactly; the new ones are `r2fix/A-`, `r3/` .. `r3e/`, `r3fix/`) and skips
-none. Every refusal compares its `ErrorClass` and its full normalized message, condition and
+none; round 5 (verifier V-001) adds `r4/` (26 prefixes, 450 cases: fractional comparisons
+rendered in refusal texts with Spark's ceil/floor). Every refusal compares its `ErrorClass` and its full normalized message, condition and
 SQLSTATE included; Spark's `Py4JJavaError` cases (R-1) compare the base class and Iceberg's
 `Cannot delete file …` text. A case with a `residue` record (R-2, R-8, R-11, R-12) is held to
 RePark's recorded step and rows, an R-2 case also to Spark's rows. Integer columns compare as

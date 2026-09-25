@@ -1,6 +1,6 @@
 {
  "provenance": {
-  "engine": "PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, in-memory Iceberg catalog `sc`, spark.sql.session.timeZone=UTC, measured 2026-09-24 (pr1) and 2026-09-25 (r1..r3fix)",
+  "engine": "PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, in-memory Iceberg catalog `sc`, spark.sql.session.timeZone=UTC, measured 2026-09-24 (pr1) and 2026-09-25 (r1..r4)",
   "seed": "CREATE TABLE {T} (<columns>) USING iceberg <partitioned_by> TBLPROPERTIES ('format-version'='2'); when default_seed is true, INSERT INTO {T} VALUES (1,'a','x'),(2,'b','y'),(3,'c','x'); then the statements in order. `steps` holds one outcome per statement Spark ran (the critic's r2/r2b probes ran their seed outside the recorded steps). `rows` is SELECT * FROM {T} afterwards, sorted by Python repr; `branch_rows` reads {T}.branch_wb.",
   "sources": [
    {
@@ -66,6 +66,10 @@
    {
     "prefix": "r3fix",
     "probe": "target/probe-u8-r3fix/probe_r3fix.py"
+   },
+   {
+    "prefix": "r4",
+    "probe": "target/probe-u8-r3fix/probe_r4.py"
    }
   ],
   "normalized": "warehouse paths -> <wh>; table names -> <t>; Spark's '== SQL' block and the '; line 1 pos' suffix of conditioned messages are dropped",
@@ -18211,6 +18215,390 @@
      3,
      "c",
      "x"
+    ]
+   ]
+  },
+  "r4/INT-i < 2.5 OR UPPER(data) = 'A'": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 2.5 OR UPPER(data) = 'A' SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i < 3) OR (UPPER(data) = 'A')"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r4/INT-i <= 2.5 OR UPPER(data) = 'A'": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= 2.5 OR UPPER(data) = 'A' SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i <= 2) OR (UPPER(data) = 'A')"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r4/INT-i > 2.5 OR UPPER(data) = 'A'": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i > 2.5 OR UPPER(data) = 'A' SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i > 2) OR (UPPER(data) = 'A')"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r4/INT-i >= 2.5 OR UPPER(data) = 'A'": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i >= 2.5 OR UPPER(data) = 'A' SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i >= 3) OR (UPPER(data) = 'A')"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r4/INT-i NOT BETWEEN 0.5 AND 2147483647.5": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i NOT BETWEEN 0.5 AND 2147483647.5 SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i < 1) OR ((i IS NULL) AND (null))"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r4/INT-i < -0.5 OR UPPER(data) = 'A'": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < -0.5 OR UPPER(data) = 'A' SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i < 0) OR (UPPER(data) = 'A')"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r4/INT-i <= -0.5 OR UPPER(data) = 'A'": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i <= -0.5 OR UPPER(data) = 'A' SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i <= -1) OR (UPPER(data) = 'A')"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r4/INT-i > -0.5 OR UPPER(data) = 'A'": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i > -0.5 OR UPPER(data) = 'A' SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i > -1) OR (UPPER(data) = 'A')"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r4/INT-i >= -0.5 OR UPPER(data) = 'A'": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i >= -0.5 OR UPPER(data) = 'A' SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i >= 0) OR (UPPER(data) = 'A')"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r4/INT-NOT (i < 2.5) OR UPPER(data) = 'A'": {
+   "columns": "i INT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE NOT (i < 2.5) OR UPPER(data) = 'A' SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i >= 3) OR (UPPER(data) = 'A')"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r4/BIGINT-i < 2.5 OR UPPER(data) = 'A'": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i < 2.5 OR UPPER(data) = 'A' SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i < 3) OR (UPPER(data) = 'A')"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
+    ]
+   ]
+  },
+  "r4/BIGINT-i >= 2.5 OR UPPER(data) = 'A'": {
+   "columns": "i BIGINT, data STRING",
+   "partitioned_by": "PARTITIONED BY (i)",
+   "default_seed": false,
+   "statements": [
+    "INSERT INTO {T} VALUES (1, 'a'), (2, 'b')",
+    "INSERT INTO {T} VALUES (NULL, 'n')",
+    "INSERT INTO {T} REPLACE WHERE i >= 2.5 OR UPPER(data) = 'A' SELECT 9, 'z'"
+   ],
+   "steps": [
+    {
+     "type": "IllegalArgumentException",
+     "condition": null,
+     "sqlstate": null,
+     "message": "Cannot convert Spark predicate to Iceberg expression: (i >= 3) OR (UPPER(data) = 'A')"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ],
+    [
+     null,
+     "n"
     ]
    ]
   }

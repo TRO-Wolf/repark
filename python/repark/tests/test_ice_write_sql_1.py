@@ -14,8 +14,9 @@ The rounds-2 and -3 pins (C-015..C-017, C-019..C-021) replay that file case by c
 ``r1/…`` (NULL ``cat`` / ``id`` keys, INT keys, repeated source names), ``r2/…`` and
 ``r2b/…`` (the critic's r2 probes) and ``r2fix/…`` (BIGINT and fractional literals,
 ``<=>``, the conjunct-split refusal texts, repeated-name arity texts, the WAP branch). Round 4
-(C-022..C-024) adds the critic's ``r3/…`` .. ``r3e/…`` and ``r3fix/…``; a case whose answer is
-a named residue (R-2, R-8, R-11, R-12) is held to RePark's recorded answer.
+(C-022..C-024) adds the critic's ``r3/…`` .. ``r3e/…`` and ``r3fix/…``; round 5 (C-019) adds
+``r4/…`` (fractional comparisons rendered in refusal texts); a case whose answer is a named
+residue (R-2, R-8, R-11, R-12) is held to RePark's recorded answer.
 
 pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
 C-011, C-012, C-014, C-015, C-016, C-017, C-019, C-020, C-021, C-022, C-023, C-024
@@ -799,6 +800,7 @@ REPLAYED = (
     "r3d/",
     "r3e/",
     "r3fix/",
+    "r4/",
 )
 TYPES = {
     "IllegalArgumentException": IllegalArgumentException,

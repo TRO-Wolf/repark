@@ -1272,8 +1272,9 @@ First checks: `cargo test -p repark-iceberg write::` (all on `MemoryCatalog`). E
   folds to `=` / `<>`. A literal an integer column cannot hold follows Spark's unwrap-cast: a
   BIGINT-typed literal on INT folds `=` / range comparisons to `(c IS NULL) AND (null)` or
   `(c IS NOT NULL) OR (null)`; a literal beyond i64 folds range comparisons to TRUE / FALSE;
-  a fractional literal rounds range comparisons (`< 2.5` → `<= 2`, `> 2.5` → `>= 3`); `<=>`
-  against any of them is FALSE; an `IN` drops them. A string literal is coerced to the column
+  a fractional literal selects the rows of `<= floor` / `>= ceil` and renders in a refusal as
+  Spark's unwrap-cast renders it (`<` → `< ceil`, `<=` → `<= floor`, `>` → `> floor`, `>=` →
+  `>= ceil`; round 5, verifier V-001); `<=>` against any of them is FALSE; an `IN` drops them. A string literal is coerced to the column
   type. A column reference binds by its exact name; another case refuses Iceberg's
   `Cannot find field '<name>' in struct: …`. pins: u8-write-sql/C-015, C-017, C-019, C-020
   **Round 4 (2026-09-25, critic r3):** `number_literal` types a decimal literal on an INT

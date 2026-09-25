@@ -508,6 +508,46 @@ fn a_refusal_renders_the_first_unconvertible_conjunct_as_spark_does() {
         ("i NOT IN (3000000000, NULL)", "null"),
         ("cat NOT IN (NULL)", "null"),
         ("cat IN (NULL, NULL)", "null"),
+        (
+            "i < 2.5 OR UPPER(data) = 'A'",
+            "(i < 3) OR (UPPER(data) = 'A')",
+        ),
+        (
+            "i <= 2.5 OR UPPER(data) = 'A'",
+            "(i <= 2) OR (UPPER(data) = 'A')",
+        ),
+        (
+            "i > 2.5 OR UPPER(data) = 'A'",
+            "(i > 2) OR (UPPER(data) = 'A')",
+        ),
+        (
+            "i >= 2.5 OR UPPER(data) = 'A'",
+            "(i >= 3) OR (UPPER(data) = 'A')",
+        ),
+        (
+            "i < -0.5 OR UPPER(data) = 'A'",
+            "(i < 0) OR (UPPER(data) = 'A')",
+        ),
+        (
+            "i <= -0.5 OR UPPER(data) = 'A'",
+            "(i <= -1) OR (UPPER(data) = 'A')",
+        ),
+        (
+            "i > -0.5 OR UPPER(data) = 'A'",
+            "(i > -1) OR (UPPER(data) = 'A')",
+        ),
+        (
+            "i >= -0.5 OR UPPER(data) = 'A'",
+            "(i >= 0) OR (UPPER(data) = 'A')",
+        ),
+        (
+            "NOT (i < 2.5) OR UPPER(data) = 'A'",
+            "(i >= 3) OR (UPPER(data) = 'A')",
+        ),
+        (
+            "i NOT BETWEEN 0.5 AND 2147483647.5",
+            "(i < 1) OR ((i IS NULL) AND (null))",
+        ),
         ("cat NOT IN (NULL, NULL)", "null"),
         ("cat = NULL AND id = 1", "null"),
         ("id = 1 AND cat = NULL", "null"),

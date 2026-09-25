@@ -11,7 +11,7 @@ const ORACLE: &str = include_str!(concat!(
     "/../../python/repark/tests/u8_write_sql_spark_oracle.json"
 ));
 
-const REPLAYED: [&str; 25] = [
+const REPLAYED: [&str; 26] = [
     "r1/S1-",
     "r1/S2-",
     "r1/S3-",
@@ -37,6 +37,7 @@ const REPLAYED: [&str; 25] = [
     "r3d/",
     "r3e/",
     "r3fix/",
+    "r4/",
 ];
 
 fn json_cell(column: &dyn Array, index: usize) -> Json {
@@ -180,5 +181,5 @@ async fn every_replayed_spark_measurement_answers_as_spark_did() {
         replay(key, case).await;
         replayed += 1;
     }
-    assert_eq!(replayed, 438, "{replayed} cases replayed");
+    assert_eq!(replayed, 450, "{replayed} cases replayed");
 }

@@ -491,11 +491,17 @@ impl Converter<'_> {
                         .clone()
                         .is_not_null()
                         .and(reference.less_than_or_equal_to(floor.clone())),
-                    text(&floor, Comparison::LtEq),
+                    match comparison {
+                        Comparison::Lt => text(&ceil, Comparison::Lt),
+                        _ => text(&floor, Comparison::LtEq),
+                    },
                 ),
                 Comparison::Gt | Comparison::GtEq => Folded::leaf(
                     reference.greater_than_or_equal_to(ceil.clone()),
-                    text(&ceil, Comparison::GtEq),
+                    match comparison {
+                        Comparison::Gt => text(&floor, Comparison::Gt),
+                        _ => text(&ceil, Comparison::GtEq),
+                    },
                 ),
             },
             Literal::Boundary { datum, at_max } => {
