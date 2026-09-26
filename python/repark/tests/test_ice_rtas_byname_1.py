@@ -186,7 +186,6 @@ def test_thin_native_door_parse_errors_loudly(spark: Any) -> None:
     assert "BY" in str(excinfo.value), str(excinfo.value)
 
 
-@pytest.mark.xfail(strict=True, reason="BLOCKED-ON-FORK F-DML-FIELD-ID-1")
 def test_dataframe_writeto_appends_by_name(spark: Any) -> None:
     """writeTo append maps the swapped-order frame by name. pins: ice-rtas-byname-1/C-001"""
     _seed_shapes(spark)

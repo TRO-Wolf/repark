@@ -1071,6 +1071,12 @@ pins: rp-4-fork-repin/C-005, C-006
   `uuid` column succeeds and leaves the type `uuid`, as Spark's does. `lib.rs` holds its
   156-line ceiling with the unit's four new `mod` lines by deleting four section-marker
   comments. pins: u9-types-1/C-010
+- `spark_ast.rs` — **WO U9-TYPES-1 round-3 fixer (2026-09-26):** the passthrough awaits
+  `refuse_insert_void_values` through `Box::pin`, so its future stays off the frame that view
+  expansion recurses through (`read.rs` `expand_view_body` → `execute_view_body_query`). Inline,
+  it grew that frame until a debug build segfaulted at the 34th nested `CREATE VIEW`
+  (`test_ice_views_1.py::test_nested_view_depth_guard`); boxed, the debug wheel reaches main's
+  depth again. pins: u9-types-1/C-014
 - `create_table.rs` — **WO U5 PR3 (2026-09-25):** a hive-style typed `PARTITIONED BY` column
   (D-X-PARTITIONED-COLDEF) joins the schema after the declared columns and gets an identity
   field; `typed_partition_columns` raises Spark's `Cannot mix partition expressions and

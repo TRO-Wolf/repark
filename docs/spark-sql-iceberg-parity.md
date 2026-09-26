@@ -1438,8 +1438,12 @@ perfectly good read.
   `crates/repark-spark/src/tests/service_managed_ctas.rs::ctas_service_managed_rtas_creating_the_table_records_overwrite`,
   `…::ctas_service_managed_empty_rtas_records_delete_then_delete`,
   `…::ctas_service_managed_plain_ctas_records_append` (C-019). The suite's remaining xfail,
-  `test_dataframe_writeto_appends_by_name`, belongs to fork ask
-  F-DML-FIELD-ID-1, not this row (orchestrator ruling Q-21c-1).
+  `test_dataframe_writeto_appends_by_name`, belonged to fork ask
+  F-DML-FIELD-ID-1, not this row (orchestrator ruling Q-21c-1). Green since 2026-09-26
+  (U9-TYPES-1 round 3): the catalog provider's uuid-as-text switch wraps every `insert_into`
+  input in the fork's `UuidTextToBytesExec`, which rebuilds each batch against the target
+  schema, so the swapped-order frame lands by name (`[('Ann', 'Smith', 1)]`, measured on
+  Spark 4.1.2 the same day).
 - **Rationale** — FIXED by the fork's `with_replace_write` opt-in (F-RTAS-OPS-1)
   plus the RePark-side call on both doors (ICE-RTAS-OPS-2 round 2 added the native
   door and the service-managed new-table arms): replace mode with files stages
@@ -1966,9 +1970,14 @@ ambiguity SQLSTATE to the measured `42704` (Q-21b-1).
   `test_measured_query_cells_answer_spark[V01_* / V02_* / V04_join_using_select]` and
   `test_join_using_insert_folds_and_writes_the_left_columns`, plus the Rust
   `crates/repark-core/src/column_resolution/tests.rs` `v01_*`, `v02_*`, `v04_*`.
-  `test_measured_join_using_insert_answers_spark` (the V-04 INSERT cell) is
-  `xfail(strict=True)` on fork ask F-DML-FIELD-ID-1: the fold plans, but the right-side join
-  column of an INSERT from two Iceberg scans is written NULL (pre-existing on `origin/main`).
+  `test_measured_join_using_insert_answers_spark` (the V-04 INSERT cell) was
+  `xfail(strict=True)` on fork ask F-DML-FIELD-ID-1: the fold planned, but the right-side join
+  column of an INSERT from two Iceberg scans was written NULL. Green since 2026-09-26
+  (U9-TYPES-1 round 3) against the recorded `V04_join_using_insert` Spark rows: the catalog
+  provider's uuid-as-text switch routes every `insert_into` through the fork's
+  `UuidTextToBytesExec`, which rebuilds each batch against the target schema, so the source's
+  `PARQUET:field_id` no longer routes the write on this door; the fork ask stays open for a
+  root fix.
 - **Rationale** — FIXED on the Spark door under `false` (ICE-MIXED-CASE-1, 2026-09-17); the
   `true` unquoted-exact refusal and the stored-name output echo are DECLARED splits with pins.
   INTENDED split on the ANSI door per G11 Option A. The old declared-divergence pin reddened

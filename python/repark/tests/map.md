@@ -20,6 +20,8 @@ U1-MEM-LAYOUT-1 (2026-09-23): the maintenance sweep test name now describes the 
 
 ICE-MIXED-CASE-1 (2026-09-17): `test_ice_mixed_case_1.py` pins the Spark-door case-insensitive column resolution cells against `ice_mixed_case_1_spark_oracle.json` (live PySpark 4.1.2 recording); `_record_ice_mixed_case_1.py` is the recorder driver, not a collected test. Round 3: the WHERE-cell ids read `MC-WHERE-*` (typos gate); the record script stays ruff-clean; the moved-symbol baseline carries the new `_SQLCONF_DEFAULTS` hash for the `spark.sql.caseSensitive` default row. Run 21b: the oracle JSON gains `measured_21b` (the orchestrator's `probe_mc.py` recording, verbatim) and the pin file gains the V-01 / V-02 / V-04 / L-08 cells on a `measured` memory-catalog fixture, the twin-adoption declared refusal and the 42704 ambiguity sentence. The measured V-04 INSERT cell is `xfail(strict=True)` on fork ask F-DML-FIELD-ID-1 (the pre-existing join-INSERT field-id misroute, ledger §7, registry ID-1); `test_join_using_insert_folds_and_writes_the_left_columns` keeps the fold green. Run 21b round 2 (2026-09-18): the oracle gains `measured_21b_r2` (the orchestrator's `probe_mc2.py` cells, copied from its log — the probe stopped before writing JSON); Q-21b-11 pins the three correlated IN-subquery spellings (Spark answers `[[1],[2]]`, RePark refuses loud at physical planning — declared, the same refusal as an all-lowercase schema) and the scalar-subquery cell (both refuse). N-02: the case-twin reference pin gains a correlated EXISTS cell (`t.ID` from inside the subquery refuses 42704). Q-21b-12: `test_star_over_a_case_twin_frame_answers_both_columns_declared` pins the declared `SELECT *` answer on a twin frame beside the two recorded Spark 42711 cells. `test_live_spark_matches_the_round_2_recording` re-derives every `measured_21b_r2` cell on live Spark under `REPARK_PARITY_LIVE=1` (one hadoop catalog per cell). Run 22b (N-04): each correlated IN-subquery cell also asserts Spark's recorded output column name, the requested spelling. Run 22b (the debug-wheel segfault): `test_five_thousand_branch_union_all_plans_on_the_spark_door` plans (no collect) a 5,000-branch `UNION ALL` count under the default `caseSensitive=false` — segfaulted before the grown-stack fix; about 62 s on the debug wheel (DataFusion's quadratic per-level span walk), C-022. The module docstring's `pins:` line cites C-019…C-021 explicitly (the ledger-grammar citation reads comma lists). pins: ice-mixed-case-1/C-001…C-016
 
+ICE-MIXED-CASE-1 note, U9-TYPES-1 round-3 fixer (2026-09-26): `test_measured_join_using_insert_answers_spark` (the V-04 INSERT cell) is green, its strict xfail on F-DML-FIELD-ID-1 removed; it asserts the recorded `V04_join_using_insert` Spark rows. The uuid-as-text catalog switch routes every `insert_into` through the fork's `UuidTextToBytesExec`, which rebuilds each batch against the target schema, so the right-side join column is no longer written NULL; switching it off turns the cell back to an xfail. pins: ice-mixed-case-1/C-015
+
 ICE-MIXED-CASE-1 round 5 (2026-09-17, Q-20b-2): the `true` cells pin the declared contract — backticked exact-case succeeds against the recorded `true` oracle rows (`_TRUE_BACKTICK_SQL`), unquoted exact-case refuses. pins: ice-mixed-case-1/C-006
 
 CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
@@ -4475,6 +4477,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   it never belonged to the RTAS row). The live
   replay cell (`test_live_oracle_fixture_reproduces`) skips without a
   `/tmp/sparkenv` interpreter.
+  **WO U9-TYPES-1 round-3 fixer (2026-09-26):** `test_dataframe_writeto_appends_by_name` is
+  green, its strict xfail removed: Spark 4.1.2 measured `[('Ann', 'Smith', 1)]` the same day
+  (`target/probe-u9-types-2/p9.py`, key `writeto-rows`). The catalog provider's uuid-as-text
+  switch (U9-TYPES-1) wraps every `insert_into` input in the fork's `UuidTextToBytesExec`, which
+  rebuilds each batch against the target schema, so the source's `PARQUET:field_id` no longer
+  routes the write; turning the switch off turns it back to an xfail. F-DML-FIELD-ID-1 stays
+  open for a root fix in the fork. pins: ice-rtas-byname-1/C-001
   **ICE-RTAS-OPS-2 (2026-09-18):** the four RTAS snapshot-operation pins
   (`test_rtas_replace_records_overwrite`, `test_rtas_new_table_records_overwrite`,
   `test_rtas_empty_new_records_delete`, `test_rtas_empty_twice_records_two_deletes`)
