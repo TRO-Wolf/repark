@@ -27,6 +27,7 @@ def main() -> None:
             "CREATE TABLE ex21_cat.ex21_db.ex21_t AS SELECT 1 AS id UNION ALL SELECT 2 AS id"
         ).collect()
         repark.createDataFrame([(1, "x")], ["k", "s"]).createOrReplaceTempView("ex21_tv")
+        catalog.setCurrentCatalog("ex21_cat")
 
         rows = [tuple(row) for row in catalog.list_tables("ex21_db")]
         rows_expected = [

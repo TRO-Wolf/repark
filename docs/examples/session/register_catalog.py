@@ -16,7 +16,7 @@ COVERS: list[str] = [
 
 
 def main() -> None:
-    """Run the measured registration answers: lists, becomes current, hosts a namespace."""
+    """Run the measured registration answers: lists, current catalog kept, hosts a namespace."""
     warehouse = Path.cwd() / "ex21_wh_reg"
     warehouse.mkdir(parents=True, exist_ok=True)
     repark = ReparkSession.builder.appName("ex21-ses-register").master("local[1]").getOrCreate()
@@ -30,11 +30,12 @@ def main() -> None:
             raise SystemExit(f"Catalog.listCatalogs rows {catalogs!r} != {catalogs_expected!r}")
 
         current = catalog.currentCatalog()
-        current_expected = "ex21_cat"
+        current_expected = "spark_catalog"
         if current != current_expected:
             raise SystemExit(f"currentCatalog after register {current!r} != {current_expected!r}")
 
         repark.create_namespace("ex21_cat", "ex21_db")
+        catalog.setCurrentCatalog("ex21_cat")
         exists = catalog.databaseExists("ex21_db")
         exists_expected = True
         if exists != exists_expected:

@@ -25,11 +25,12 @@ def main() -> None:
     try:
         catalog = repark.catalog
         repark.register_memory_catalog("ex21_cat", str(warehouse))
-        flipped = catalog.currentCatalog()
-        flipped_expected = "ex21_cat"
-        if flipped != flipped_expected:
+        after_register = catalog.currentCatalog()
+        after_register_expected = "spark_catalog"
+        if after_register != after_register_expected:
             raise SystemExit(
-                f"Catalog.currentCatalog after register {flipped!r} != {flipped_expected!r}"
+                f"Catalog.currentCatalog after register {after_register!r}"
+                f" != {after_register_expected!r}"
             )
 
         repark.create_namespace("ex21_cat", "ex21_db")
@@ -47,10 +48,9 @@ def main() -> None:
 
         catalog.set_current_catalog("ex21_cat")
         snake_current = catalog.currentCatalog()
-        if snake_current != flipped_expected:
+        if snake_current != "ex21_cat":
             raise SystemExit(
-                f"Catalog.currentCatalog after set_current_catalog {snake_current!r}"
-                f" != {flipped_expected!r}"
+                f"Catalog.currentCatalog after set_current_catalog {snake_current!r} != 'ex21_cat'"
             )
 
         catalog.setCurrentDatabase("ex21_db")
