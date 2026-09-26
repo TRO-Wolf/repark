@@ -45,6 +45,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   relation text, the folded reference spelling on compound Columns). Round 5 (2026-09-26):
   the facade's own re-projections and origin Columns bind by attribute, exactly (C-024, C-025),
   and a Column drop matching two fields refuses AMBIGUOUS_REFERENCE (C-026).
+  Residues R-16…R-21 dated 2026-09-26 for CASESENS-1 (orderBy's UNRESOLVED class on twins,
+  candidate rendering on selectExpr / string filter / SQL subquery, aliased and USING joins,
+  eager getitem refusal, twin rename and replace, star forms).
   `risk_tier: standard`. Branch `feat/u11-edge-1`.
 - [u8-write-sql-ledger.md](u8-write-sql-ledger.md) —
   **U8 WRITE-SQL PR1 (2026-09-24), in flight:** `INSERT INTO … REPLACE WHERE` as Spark's
