@@ -2,6 +2,7 @@
  "generator": "target/probe-u9-types-1/build_oracle.py + merge_oracle.py",
  "engine": "Spark 4.1.2 + Iceberg 1.11.0 (local[1], InMemoryCatalog sc, session zone UTC)",
  "measured": "2026-09-25",
+ "revised": "r3 2026-09-25: +41 steps map/assign/* and map/cmp/* measured on Spark; RePark re-recorded on every group",
  "steps": [
   {
    "group": "ltz",
@@ -2329,7 +2330,20 @@
     "id": "R-6",
     "repark": [
      [
-      0
+      "cond",
+      "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(c = map(k, 1))\" due to data type mismatch: The `=` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09"
+     ],
+     [
+      "state",
+      "42K09"
      ]
     ]
    }
@@ -2361,16 +2375,20 @@
     "id": "R-6",
     "repark": [
      [
-      2
+      "cond",
+      "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
      ],
      [
-      1
+      "error",
+      "AnalysisException"
      ],
      [
-      3
+      "msg",
+      "Error during planning: [DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"c ASC NULLS FIRST\" due to data type mismatch: The `sortorder` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09"
      ],
      [
-      0
+      "state",
+      "42K09"
      ]
     ]
    }
@@ -4510,6 +4528,1303 @@
      []
     ]
    ]
+  },
+  {
+   "group": "map",
+   "key": "map/assign/key/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.mkey (id INT, c MAP<INT, STRING>) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/assign/key/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.mkey VALUES (0, NULL)",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/assign/key/update",
+   "do": "sql",
+   "sql": "UPDATE sc.ns.mkey SET c = map('1', 'x') WHERE id = 0",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c`.`key` \"STRING\" to \"INT\". SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-18",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c`.`key` \"STRING\" to \"INT\". SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/assign/key/merge-matched",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.mkey x USING (SELECT 0 AS id, map('1', 'x') AS m) y ON x.id = y.id WHEN MATCHED THEN UPDATE SET c = y.m",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c`.`key` \"STRING\" to \"INT\". SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-18",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c`.`key` \"STRING\" to \"INT\". SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/assign/key/merge-insert",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.mkey x USING (SELECT 7 AS id, map('1', 'x') AS m) y ON x.id = y.id WHEN NOT MATCHED THEN INSERT (id, c) VALUES (y.id, y.m)",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c`.`key` \"STRING\" to \"INT\". SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-18",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c`.`key` \"STRING\" to \"INT\". SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/assign/key/rows",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.mkey",
+   "spark": [
+    [
+     0,
+     null
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/assign/value/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.mval (id INT, c MAP<STRING, INT>) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/assign/value/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.mval VALUES (0, NULL)",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/assign/value/update",
+   "do": "sql",
+   "sql": "UPDATE sc.ns.mval SET c = map('a', 'x') WHERE id = 0",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c`.`value` \"STRING\" to \"INT\". SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-18",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c`.`value` \"STRING\" to \"INT\". SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/assign/value/merge-matched",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.mval x USING (SELECT 0 AS id, map('a', 'x') AS m) y ON x.id = y.id WHEN MATCHED THEN UPDATE SET c = y.m",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c`.`value` \"STRING\" to \"INT\". SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-18",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c`.`value` \"STRING\" to \"INT\". SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/assign/value/merge-insert",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.mval x USING (SELECT 7 AS id, map('a', 'x') AS m) y ON x.id = y.id WHEN NOT MATCHED THEN INSERT (id, c) VALUES (y.id, y.m)",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c`.`value` \"STRING\" to \"INT\". SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-18",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c`.`value` \"STRING\" to \"INT\". SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/assign/value/rows",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.mval",
+   "spark": [
+    [
+     0,
+     null
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/assign/date/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.mdate (id INT, c MAP<STRING, INT>) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/assign/date/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.mdate VALUES (0, NULL)",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/assign/date/update",
+   "do": "sql",
+   "sql": "UPDATE sc.ns.mdate SET c = map('a', DATE'2024-01-01') WHERE id = 0",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c`.`value` \"DATE\" to \"INT\". SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-18",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c`.`value` \"DATE\" to \"INT\". SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/assign/date/merge-matched",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.mdate x USING (SELECT 0 AS id, map('a', DATE'2024-01-01') AS m) y ON x.id = y.id WHEN MATCHED THEN UPDATE SET c = y.m",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c`.`value` \"DATE\" to \"INT\". SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-18",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c`.`value` \"DATE\" to \"INT\". SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/assign/date/merge-insert",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.mdate x USING (SELECT 7 AS id, map('a', DATE'2024-01-01') AS m) y ON x.id = y.id WHEN NOT MATCHED THEN INSERT (id, c) VALUES (y.id, y.m)",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c`.`value` \"DATE\" to \"INT\". SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-18",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c`.`value` \"DATE\" to \"INT\". SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/assign/date/rows",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.mdate",
+   "spark": [
+    [
+     0,
+     null
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/assign/struct-missing/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.mstruct (id INT, c MAP<STRING, STRUCT<a: INT, b: INT>>) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/assign/struct-missing/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.mstruct VALUES (0, NULL)",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/assign/struct-missing/update",
+   "do": "sql",
+   "sql": "UPDATE sc.ns.mstruct SET c = map('a', named_struct('a', 1)) WHERE id = 0",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `c`.`value`.`b`. SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-18",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `c`.`value`.`b`. SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/assign/struct-missing/merge-matched",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.mstruct x USING (SELECT 0 AS id, map('a', named_struct('a', 1)) AS m) y ON x.id = y.id WHEN MATCHED THEN UPDATE SET c = y.m",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `c`.`value`.`b`. SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-18",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `c`.`value`.`b`. SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/assign/struct-missing/merge-insert",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.mstruct x USING (SELECT 7 AS id, map('a', named_struct('a', 1)) AS m) y ON x.id = y.id WHEN NOT MATCHED THEN INSERT (id, c) VALUES (y.id, y.m)",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `c`.`value`.`b`. SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-18",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `c`.`value`.`b`. SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/assign/struct-missing/rows",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.mstruct",
+   "spark": [
+    [
+     0,
+     null
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/cmp/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.mq (id INT, c MAP<STRING, INT>, d MAP<STRING, INT>, note STRING) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/cmp/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.mq VALUES (0, map('a', 1), map('a', 1), 'n'), (1, map(), map(), 'n')",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/cmp/eq-empty",
+   "do": "rows",
+   "sql": "SELECT id FROM sc.ns.mq WHERE c = map()",
+   "spark": [
+    [
+     "cond",
+     "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(c = map())\" due to data type mismatch: The `=` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09; line 1 pos 30;\n'Project ['id]\n+- 'Filter (c#945 = cast(map() as map<string,int>))\n   +- SubqueryAlias sc.ns.mq\n      +- RelationV2[id#944, c#945, d#946, note#947] sc.ns.mq"
+    ],
+    [
+     "state",
+     "42K09"
+    ]
+   ],
+   "residue": {
+    "id": "R-6",
+    "repark": [
+     [
+      "cond",
+      "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(c = map())\" due to data type mismatch: The `=` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09"
+     ],
+     [
+      "state",
+      "42K09"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/cmp/eq-cols",
+   "do": "rows",
+   "sql": "SELECT id FROM sc.ns.mq WHERE c = d",
+   "spark": [
+    [
+     "cond",
+     "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(c = d)\" due to data type mismatch: The `=` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09; line 1 pos 30;\n'Project ['id]\n+- 'Filter (c#949 = d#950)\n   +- SubqueryAlias sc.ns.mq\n      +- RelationV2[id#948, c#949, d#950, note#951] sc.ns.mq"
+    ],
+    [
+     "state",
+     "42K09"
+    ]
+   ],
+   "residue": {
+    "id": "R-6",
+    "repark": [
+     [
+      "cond",
+      "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(c = d)\" due to data type mismatch: The `=` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09"
+     ],
+     [
+      "state",
+      "42K09"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/cmp/ne",
+   "do": "rows",
+   "sql": "SELECT id FROM sc.ns.mq WHERE c <> map('a', 1)",
+   "spark": [
+    [
+     "cond",
+     "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(c = map(a, 1))\" due to data type mismatch: The `=` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09; line 1 pos 30;\n'Project ['id]\n+- 'Filter NOT (c#953 = cast(map(a, 1) as map<string,int>))\n   +- SubqueryAlias sc.ns.mq\n      +- RelationV2[id#952, c#953, d#954, note#955] sc.ns.mq"
+    ],
+    [
+     "state",
+     "42K09"
+    ]
+   ],
+   "residue": {
+    "id": "R-6",
+    "repark": [
+     [
+      "cond",
+      "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(c = map(a, 1))\" due to data type mismatch: The `=` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09"
+     ],
+     [
+      "state",
+      "42K09"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/cmp/lt",
+   "do": "rows",
+   "sql": "SELECT id FROM sc.ns.mq WHERE c < d",
+   "spark": [
+    [
+     "cond",
+     "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(c < d)\" due to data type mismatch: The `<` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09; line 1 pos 30;\n'Project ['id]\n+- 'Filter (c#957 < d#958)\n   +- SubqueryAlias sc.ns.mq\n      +- RelationV2[id#956, c#957, d#958, note#959] sc.ns.mq"
+    ],
+    [
+     "state",
+     "42K09"
+    ]
+   ],
+   "residue": {
+    "id": "R-6",
+    "repark": [
+     [
+      "cond",
+      "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(c < d)\" due to data type mismatch: The `<` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09"
+     ],
+     [
+      "state",
+      "42K09"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/cmp/null-safe-eq",
+   "do": "rows",
+   "sql": "SELECT id FROM sc.ns.mq WHERE c <=> d",
+   "spark": [
+    [
+     "cond",
+     "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(c <=> d)\" due to data type mismatch: The `<=>` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09; line 1 pos 30;\n'Project ['id]\n+- 'Filter (c#961 <=> d#962)\n   +- SubqueryAlias sc.ns.mq\n      +- RelationV2[id#960, c#961, d#962, note#963] sc.ns.mq"
+    ],
+    [
+     "state",
+     "42K09"
+    ]
+   ],
+   "residue": {
+    "id": "R-6",
+    "repark": [
+     [
+      "cond",
+      "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(c <=> d)\" due to data type mismatch: The `<=>` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09"
+     ],
+     [
+      "state",
+      "42K09"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/cmp/in",
+   "do": "rows",
+   "sql": "SELECT id FROM sc.ns.mq WHERE c IN (map('a', 1))",
+   "spark": [
+    [
+     "cond",
+     "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(c IN (map(a, 1)))\" due to data type mismatch: The `in` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09; line 1 pos 32;\n'Project ['id]\n+- 'Filter cast(c#965 as map<string,int>) IN (cast(map(a, 1) as map<string,int>))\n   +- SubqueryAlias sc.ns.mq\n      +- RelationV2[id#964, c#965, d#966, note#967] sc.ns.mq"
+    ],
+    [
+     "state",
+     "42K09"
+    ]
+   ],
+   "residue": {
+    "id": "R-6",
+    "repark": [
+     [
+      "cond",
+      "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(c IN (map(a, 1)))\" due to data type mismatch: The `in` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09"
+     ],
+     [
+      "state",
+      "42K09"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/cmp/projection",
+   "do": "rows",
+   "sql": "SELECT c = d AS e FROM sc.ns.mq",
+   "spark": [
+    [
+     "cond",
+     "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(c = d)\" due to data type mismatch: The `=` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09; line 1 pos 7;\n'Project [(c#970 = d#971) AS e#968]\n+- SubqueryAlias sc.ns.mq\n   +- RelationV2[id#969, c#970, d#971, note#972] sc.ns.mq"
+    ],
+    [
+     "state",
+     "42K09"
+    ]
+   ],
+   "residue": {
+    "id": "R-6",
+    "repark": [
+     [
+      "cond",
+      "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(c = d)\" due to data type mismatch: The `=` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09"
+     ],
+     [
+      "state",
+      "42K09"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/cmp/order-desc",
+   "do": "ordered",
+   "sql": "SELECT id FROM sc.ns.mq ORDER BY c DESC",
+   "spark": [
+    [
+     "cond",
+     "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"c DESC NULLS LAST\" due to data type mismatch: The `sortorder` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09; line 1 pos 33;\n'Project [id#973]\n+- 'Sort [c#974 DESC NULLS LAST], true\n   +- Project [id#973, c#974]\n      +- SubqueryAlias sc.ns.mq\n         +- RelationV2[id#973, c#974, d#975, note#976] sc.ns.mq"
+    ],
+    [
+     "state",
+     "42K09"
+    ]
+   ],
+   "residue": {
+    "id": "R-6",
+    "repark": [
+     [
+      "cond",
+      "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"c DESC NULLS LAST\" due to data type mismatch: The `sortorder` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09"
+     ],
+     [
+      "state",
+      "42K09"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/cmp/distinct",
+   "do": "rows",
+   "sql": "SELECT DISTINCT c FROM sc.ns.mq",
+   "spark": [
+    [
+     "cond",
+     "UNSUPPORTED_FEATURE.SET_OPERATION_ON_MAP_TYPE"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[UNSUPPORTED_FEATURE.SET_OPERATION_ON_MAP_TYPE] The feature is not supported: Cannot have MAP type columns in DataFrame which calls set operations (INTERSECT, EXCEPT, etc.), but the type of column `c` is \"MAP<STRING, INT>\". SQLSTATE: 0A000; line 1 pos 0;\nDistinct\n+- Project [c#983]\n   +- SubqueryAlias sc.ns.mq\n      +- RelationV2[id#982, c#983, d#984, note#985] sc.ns.mq"
+    ],
+    [
+     "state",
+     "0A000"
+    ]
+   ],
+   "residue": {
+    "id": "R-6",
+    "repark": [
+     [
+      "cond",
+      "UNSUPPORTED_FEATURE.SET_OPERATION_ON_MAP_TYPE"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [UNSUPPORTED_FEATURE.SET_OPERATION_ON_MAP_TYPE] The feature is not supported: Cannot have MAP type columns in DataFrame which calls set operations (INTERSECT, EXCEPT, etc.), but the type of column `c` is \"MAP<STRING, INT>\". SQLSTATE: 0A000"
+     ],
+     [
+      "state",
+      "0A000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/cmp/group",
+   "do": "rows",
+   "sql": "SELECT c, count(*) FROM sc.ns.mq GROUP BY c",
+   "spark": [
+    [
+     [
+      [
+       "a",
+       1
+      ]
+     ],
+     1
+    ],
+    [
+     [],
+     1
+    ]
+   ],
+   "residue": {
+    "id": "R-19",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "Arrow error: Not yet implemented: Row format support not yet implemented for: [SortField { options: SortOptions { descending: false, nulls_first: true }, data_type: Map(Field { name: \"key_value\", data_type: Struct([Field { name: \"key\", data_type: Utf8 }, Field { name: \"value\", data_type: Int32, nullable: true }]) }, false) }]"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/cmp/update-where",
+   "do": "sql",
+   "sql": "UPDATE sc.ns.mq SET note = 'hit' WHERE c = map()",
+   "spark": [
+    [
+     "cond",
+     "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(c = map())\" due to data type mismatch: The `=` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09; line 1 pos 39;\n'UpdateTable [assignment(note#1009, hit)], (c#1007 = cast(map() as map<string,int>))\n+- SubqueryAlias sc.ns.mq\n   +- RelationV2[id#1006, c#1007, d#1008, note#1009] sc.ns.mq"
+    ],
+    [
+     "state",
+     "42K09"
+    ]
+   ],
+   "residue": {
+    "id": "R-6",
+    "repark": [
+     [
+      "cond",
+      "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(c = map())\" due to data type mismatch: The `=` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09"
+     ],
+     [
+      "state",
+      "42K09"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/cmp/update-where-literal",
+   "do": "sql",
+   "sql": "UPDATE sc.ns.mq SET note = 'hit' WHERE c = map('a', 1)",
+   "spark": [
+    [
+     "cond",
+     "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(c = map(a, 1))\" due to data type mismatch: The `=` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09; line 1 pos 39;\n'UpdateTable [assignment(note#1013, hit)], (c#1011 = cast(map(a, 1) as map<string,int>))\n+- SubqueryAlias sc.ns.mq\n   +- RelationV2[id#1010, c#1011, d#1012, note#1013] sc.ns.mq"
+    ],
+    [
+     "state",
+     "42K09"
+    ]
+   ],
+   "residue": {
+    "id": "R-6",
+    "repark": [
+     [
+      "cond",
+      "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(c = map(a, 1))\" due to data type mismatch: The `=` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09"
+     ],
+     [
+      "state",
+      "42K09"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/cmp/delete-where",
+   "do": "sql",
+   "sql": "DELETE FROM sc.ns.mq WHERE c = d",
+   "spark": [
+    [
+     "cond",
+     "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(c = d)\" due to data type mismatch: The `=` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09; line 1 pos 27;\n'DeleteFromTable (c#1015 = d#1016)\n+- SubqueryAlias sc.ns.mq\n   +- RelationV2[id#1014, c#1015, d#1016, note#1017] sc.ns.mq"
+    ],
+    [
+     "state",
+     "42K09"
+    ]
+   ],
+   "residue": {
+    "id": "R-6",
+    "repark": [
+     [
+      "cond",
+      "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(c = d)\" due to data type mismatch: The `=` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09"
+     ],
+     [
+      "state",
+      "42K09"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/cmp/merge-on",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.mq x USING (SELECT map('a', 1) AS m) y ON x.c = y.m WHEN MATCHED THEN UPDATE SET note = 'hit'",
+   "spark": [
+    [
+     "cond",
+     "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(c = m)\" due to data type mismatch: The `=` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09; line 1 pos 59;\n'MergeIntoTable (c#1020 = cast(m#1018 as map<string,int>)), [updateaction(None, assignment(note#1022, hit), false)], false\n:- SubqueryAlias x\n:  +- SubqueryAlias sc.ns.mq\n:     +- RelationV2[id#1019, c#1020, d#1021, note#1022] sc.ns.mq\n+- SubqueryAlias y\n   +- Project [map(a, 1) AS m#1018]\n      +- OneRowRelation"
+    ],
+    [
+     "state",
+     "42K09"
+    ]
+   ],
+   "residue": {
+    "id": "R-19",
+    "repark": "ok"
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/cmp/rows",
+   "do": "rows",
+   "sql": "SELECT id, note FROM sc.ns.mq",
+   "spark": [
+    [
+     0,
+     "n"
+    ],
+    [
+     1,
+     "n"
+    ]
+   ],
+   "residue": {
+    "id": "R-19",
+    "repark": [
+     [
+      0,
+      "hit"
+     ],
+     [
+      1,
+      "n"
+     ]
+    ]
+   }
   },
   {
    "group": "void",

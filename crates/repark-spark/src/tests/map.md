@@ -262,6 +262,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   back-quoted `` `map`() `` is the same map, and `UPDATE` plus the three MERGE assigning
   clauses write `map()` (r2).
   pins: u9-types-1/C-006
+  r3: UPDATE and both MERGE assigning clauses refuse a map key, a map value and a struct value
+  missing a field with Spark's exact text and write nothing; a map operand of a comparison,
+  `IN`, `ORDER BY` (SELECT, UPDATE and DELETE `WHERE`) and `SELECT DISTINCT` refuse with
+  Spark's text. pins: u9-types-1/C-011, C-012
 - [u9_timestamp_ltz.rs](u9_timestamp_ltz.rs) — **WO U9-TYPES-1 (2026-09-25):** a
   `TIMESTAMP_LTZ` column is `timestamptz` on v2 and v3, in a struct and at ADD COLUMN; it
   writes, filters on a `TIMESTAMP_LTZ '…'` literal and partitions by `days`; the typed literal

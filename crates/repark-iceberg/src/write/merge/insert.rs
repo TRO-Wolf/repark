@@ -258,6 +258,21 @@ fn refuse_unless_ansi_store_assignable(
     source_type: &DataType,
     target_type: &DataType,
 ) -> Result<()> {
+    let is_map = |data_type: &DataType| {
+        matches!(
+            store_assign::normalize_for_assignment(data_type),
+            DataType::Map(_, _)
+        )
+    };
+    if (is_map(source_type) || is_map(target_type))
+        && let Some(text) = crate::write::update_cast::incompatible_nested_message(
+            &format!("`{column}`"),
+            source_type,
+            target_type,
+        )
+    {
+        return Err(DataFusionError::Plan(text));
+    }
     store_assign::refuse_unless_ansi_store_assignable(
         &format!("MERGE {path}"),
         MERGE_SPARK_CLASS,

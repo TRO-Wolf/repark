@@ -117,7 +117,10 @@ async fn execute_passthrough_inner(
     } else {
         plan
     };
-    let plan = crate::insert_timestamp_ns::before_analysis(plan, &timestamp_cells)?;
+    let plan = crate::insert_timestamp_ns::before_analysis(
+        crate::normalize::map_ordering::refuse_map_ordering(plan)?,
+        &timestamp_cells,
+    )?;
     // Refuse local CREATE EXTERNAL and COPY TO before eager execution unless explicitly allowed.
     local_fs_ddl::refuse_local_filesystem_plan(ctx, catalogs, &plan)?;
     // Apply the shared create guard to the plan the sink will register.

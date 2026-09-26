@@ -8588,19 +8588,33 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   counts, `ADD COLUMN`, `ALTER COLUMN c.value TYPE`, struct and map values) already answered
   as Spark and is now pinned. Before, `map()` raised `Function 'map' expected at least one
   argument but received 0`. The ANSI door keeps `MAP(ARRAY[], ARRAY[])` and refuses `MAP()`.
-  Residues (ledger R-6..R-13, each held by its oracle record): maps compare and sort where
-  Spark refuses `INVALID_ORDERING_TYPE`; `CAST(<map> AS STRING)` refuses where Spark renders
+  Round r3 (2026-09-25): `UPDATE … SET c = <map>` and MERGE `UPDATE SET` / `INSERT` refuse a
+  map key or value that cannot store-assign with Spark's `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]
+  Cannot write incompatible data for the table ``: Cannot safely cast `c`.`key` "STRING" to "INT".
+  SQLSTATE: KD000` (and `` `c`.`value` `` "DATE" to "INT"; `CANNOT_FIND_DATA` … `` `c`.`value`.`b` ``
+  for a struct value missing a field); before, UPDATE committed `{1: 'x'}` and `{'a': 19723}`.
+  A map operand of `=`, `<>`, `<`, `>=`, `<=>`, `IN` and `ORDER BY` (SELECT, UPDATE and DELETE
+  `WHERE`) refuses with Spark's `[DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve
+  "(c = map(a, 1))" due to data type mismatch: The `=` does not support ordering on type
+  "MAP<STRING, INT>". SQLSTATE: 42K09`, and `SELECT DISTINCT` over a map with
+  `[UNSUPPORTED_FEATURE.SET_OPERATION_ON_MAP_TYPE] … SQLSTATE: 0A000`.
+  Residues (ledger R-6..R-13, R-18..R-20, each held by its oracle record): the map ordering and
+  assignment refusals carry RePark's `Error during planning: ` prefix (and lack Spark's
+  position and plan tail); a MERGE `ON` over maps commits and `GROUP BY <map>` fails at
+  execution where Spark refuses / answers; a struct inside a map value collects as a `dict`
+  where PySpark answers a `Row`; `CAST(<map> AS STRING)` refuses where Spark renders
   `{k -> 1}`; two refusal texts differ only in rendering; invalid map values and map
   partitioning refuse with DataFusion's / the fork's texts; `ALTER COLUMN c TYPE MAP<…>`
   refuses; `c['k'].a` refuses; `map()` does not unify inside `coalesce`, `if`, `array` or a
   `VALUES` table, and `element_at(map(), 'a')` refuses DataFusion's `Failed to coerce arguments
   to satisfy a call to 'element_at' function …` where Spark answers `NULL` typed `void` (dated
   2026-09-25).
-- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25 (87 steps in
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25 (128 steps after r3 in
   `python/repark/tests/u9_types_1_spark_oracle.json`, group `map`; scoreboard cell `TY-MAP`,
   replayed EQUAL).
 - **Pin** — `python/repark/tests/test_u9_types_1.py`, `crates/repark-spark/src/tests/u9_map.rs`,
-  `crates/repark-spark/src/keyword_lower.rs` (unit pin),
+  `crates/repark-spark/src/keyword_lower.rs` (unit pin), `crates/repark-iceberg/src/write/update_cast.rs`
+  (unit pins),
   `crates/repark-sql/tests/ansi_door_u9_types.rs`.
 
 ### TY-UNKNOWN-VOID — OPEN (measured 2026-09-25): a `VOID` column (Iceberg v3 `unknown`) refused at CREATE

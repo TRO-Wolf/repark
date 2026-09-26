@@ -1015,6 +1015,10 @@ pins: rp-4-fork-repin/C-005, C-006
   inner. Inner renames are out of scope:
   analysis runs twice and outer references would go stale.
   pins: fnp-4b/C-012, C-014, C-015, C-019, C-020, C-021, C-022
+- `spark_ast.rs` — **WO U9-TYPES-1 r3 (2026-09-25):** the passthrough runs every planned
+  statement through `normalize/map_ordering.rs`'s `refuse_map_ordering` before analysis, so a
+  map comparison, `ORDER BY` or `DISTINCT` refuses as Spark does (verifier V-003).
+  pins: u9-types-1/C-012
 - `create_table.rs` — **WO U9-TYPES-1 (2026-09-25):** `iceberg_named_primitive` (renamed from
   `iceberg_v3_named_primitive`) maps the Spark type name `TIMESTAMP_LTZ` to Iceberg
   `timestamptz` whatever `spark.sql.timestampType` says, at CREATE, ADD COLUMN and nested

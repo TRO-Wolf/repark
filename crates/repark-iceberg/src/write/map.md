@@ -763,6 +763,15 @@ repark-core's error map.
   **WO U9-TYPES-1 r2 (2026-09-25):** a map pair is assignable when its key and its value
   types each are (Spark's `MapType` arm), so a MERGE assigns `map()` (`Map<Null, Null>`) to a
   typed map column; `a_map_assigns_when_its_key_and_value_assign`. pins: u9-types-1/C-006
+- `update_cast.rs` — **WO U9-TYPES-1 r3 (2026-09-25):** `incompatible_nested_message` walks a
+  map's key and value (and a struct value's fields by name) and answers Spark's
+  `CANNOT_SAFELY_CAST` text with the `` `c`.`key` `` / `` `c`.`value` `` path, or
+  `CANNOT_FIND_DATA` for a struct value missing a field, against table ``` `` ``` as Spark's
+  UPDATE and MERGE do; `incompatible_update_message` defers to it when either side is a map,
+  so `UPDATE … SET c = map('1', 'x')` on `MAP<INT, STRING>` refuses instead of committing
+  (verifier V-001). Pins `a_map_key_or_value_that_cannot_store_assign_names_its_path_as_spark_does`,
+  `a_map_struct_value_missing_a_field_cannot_find_its_data`,
+  `a_map_whose_key_and_value_store_assign_has_no_message`. pins: u9-types-1/C-011
 - `store_assign.rs` (crate-private) — **WI-1 (2026-08-15):** the ONE home for Spark's ANSI
   store-assignment matrix (`Cast.canANSIStoreAssign` → Arrow):
   `ansi_store_assignable` / `normalize_for_assignment` /
