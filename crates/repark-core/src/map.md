@@ -700,6 +700,14 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 - `column_resolution.rs` — **U11-EDGE-1 round 6 (2026-09-26, V-001):** the SQL audit's
   ambiguity candidates drop a scratch relation (`frame_names::is_scratch_relation`), so a
   `_repark_h1_sel_*` view renders its candidates unqualified. pins: u11-edge-1/C-027
+  **Round 7 (2026-09-26, V-001):** `audit_plan_for_ambiguity` does not descend into a view
+  the statement names: `written_references` collects the named table factors that are not a
+  CTE of the statement (`WrittenRefs::views`, the alias when one is written), and the walk
+  jumps over a `SubqueryAlias` carrying one of those names. The outer statement's written
+  references belonged to the view body before, so `SELECT id, Data FROM v` over a temp view of
+  `jn.select(a['ID'].alias('id'), …)` refused `[`sc`.`ns`.`t`.`id`, `id`]` — the by-name write
+  binding of `writeTo(t).append()` and `INSERT INTO t SELECT id, Data FROM v` both plan through
+  it. CTE bodies and derived tables are still audited. pins: u11-edge-1/C-028
 - `column_resolution/display.rs` — **U11-EDGE-1 (2026-09-26):** output columns keep the
   query's spelling; `plan_with_repair` hands every successful insensitive plan to
   `finish_with_display` (boxed, like the strict guard, so the repair future stays small for
