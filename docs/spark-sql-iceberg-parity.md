@@ -14878,10 +14878,9 @@ field NAME.
   INT), reading a branch that still points at a pre-replace snapshot answers NULL for that
   column; Spark 4.1.2 fails the read (`ClassCastException`, `IntVector` to `BigIntVector`)
   (shape `ids_type_change_branch`, residue R-9). The metadata file lists `partition-specs`
-  (and `schemas`, `sort-orders`) in the fork serializer's hash order, where Java writes them
-  by ascending id (`[1, 0]` against `[0, 1]` after a `partitionBy('data')` overwrite of a
-  `cat`-partitioned table); the ids and fields are equal and SQL cannot observe the order
-  (residue R-10, a fork serializer question).
+  in ascending id order as Java does (residue R-10, retired 2026-09-26 by RP50-B: the fork
+  serializes `schemas`, `partition-specs` and `sort-orders` in ascending id order at the
+  RP-50 pin, and the `partition-specs` list is pinned `==`).
 - **Apache Spark** — REPLACES the table: rows `[[30, 's']]`, schema narrowed to
   the frame `[id int, name string]`, the `c` column gone. This is the unit's
   finding F-002 (`saveAsTable(overwrite)` replace vs RePark `INSERT OVERWRITE`),
@@ -14897,9 +14896,10 @@ field NAME.
   `::test_save_as_table_overwrite_keeps_field_ids_by_name_like_spark`,
   `::test_a_type_change_on_a_kept_name_reads_the_old_branch_as_null_divergence`,
   `::test_every_replace_door_keeps_field_ids_by_name_like_spark`; Rust
-  `crates/repark-iceberg/src/tests/replace_schema.rs`,
   `crates/repark-spark/src/tests/replace_table.rs`,
-  `crates/repark-sql/src/create_table/rtas_ops_tests.rs`.
+  `crates/repark-sql/src/create_table/rtas_ops_tests.rs` (RP50-B, 2026-09-26: the
+  `repark-iceberg` `replace_schema` pins went with the deleted module — the fork owns the
+  re-keying since fork #354).
 - **Rationale** — FIXED 2026-09-24 (U7 PR2). DECLARED 2026-09-17 (ruling Q-21b-5) as
   the standing replace-vs-overwrite difference (F-002), left to its own unit.
   pins: ice-v3-write-default-1/C-017

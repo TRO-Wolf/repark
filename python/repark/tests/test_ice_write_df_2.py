@@ -176,12 +176,12 @@ def _ids(metadata: dict[str, Any]) -> dict[str, Any]:
         "identifier_field_ids": current.get("identifier-field-ids", []),
         "last_column_id": metadata["last-column-id"],
         "current_schema_id": metadata["current-schema-id"],
-        "schema_ids": sorted(schema["schema-id"] for schema in metadata["schemas"]),
+        "schema_ids": [schema["schema-id"] for schema in metadata["schemas"]],
         "spec_fields": [
             [field["source-id"], field["field-id"], field["name"], field["transform"]]
             for field in spec["fields"]
         ],
-        "spec_ids": sorted(spec["spec-id"] for spec in metadata["partition-specs"]),
+        "spec_ids": [spec["spec-id"] for spec in metadata["partition-specs"]],
     }
 
 

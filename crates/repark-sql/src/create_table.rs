@@ -179,7 +179,6 @@ async fn replacement_if_existed(
         .load_table(&target.ident())
         .await
         .map_err(iceberg_err)?;
-    let schema = repark_iceberg::write::replacement_schema(existing.metadata(), &schema)?;
     Ok((schema, Some(existing)))
 }
 
