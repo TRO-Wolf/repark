@@ -114,6 +114,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `INSERT *` and `UPDATE SET u = s.u`) and `uuid-nested` (five `STRUCT<u: uuid>` assignments
   and an invalid nested text). `add_uuid` takes an optional `struct` name and adds
   `<name> STRUCT<u: uuid>`. The three invalid-text refusals carry R-27. pins: u9-types-1/C-016
+  **WO U9-TYPES-1 round-4 fold (2026-09-26, verifier V-004/V-005/V-007):** 16 more steps in
+  group `uuid-binary-doors`, measured by `target/probe-u9-types-2/measure_r8.py`: the undashed
+  uuid literal (R-27), sixteen raw bytes through INSERT SELECT of a `BINARY` column,
+  `CAST(b AS STRING)`, `writeTo().append()`, `insertInto`, `saveAsTable` and `INSERT VALUES
+  X'…'` (R-35), and a positional struct literal (R-36). New step kinds `insert_into` and
+  `save_as_table` share `write_dataframe`; `decode` reads `{"bytes": <hex>}` as a `bytearray`.
+  pins: u9-types-1/C-016
   The VOID groups: `void-write` (a value into VOID on every door; R-23) and `void-create`
   (DataFrame create and CTAS of a NULL column on v3; v2 refuses, R-22). pins: u9-types-1/C-014,
   C-015
@@ -4490,6 +4497,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   rebuilds each batch against the target schema, so the source's `PARQUET:field_id` no longer
   routes the write; turning the switch off turns it back to an xfail. F-DML-FIELD-ID-1 stays
   open for a root fix in the fork. pins: ice-rtas-byname-1/C-001
+  **WO U9-TYPES-1 round-4 fold (2026-09-26, verifier V-006):** the pin compares against
+  `FIXTURE["insert_by_name"]["by_name"]["rows"]`, the measured rows it equals, not a
+  literal. pins: ice-rtas-byname-1/C-001
   **ICE-RTAS-OPS-2 (2026-09-18):** the four RTAS snapshot-operation pins
   (`test_rtas_replace_records_overwrite`, `test_rtas_new_table_records_overwrite`,
   `test_rtas_empty_new_records_delete`, `test_rtas_empty_twice_records_two_deletes`)

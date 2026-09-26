@@ -101,6 +101,10 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
   **WO U9-TYPES-1 round-3 fixer (2026-09-26):** `a_binary_source_is_decoded_text_like_spark`
   pins the sixteen-byte refusal text Spark printed and a 36-byte canonical text (Binary and
   LargeBinary) storing the uuid; red before the binary arm. pins: u9-types-1/C-016
+  **WO U9-TYPES-1 round-4 fold (2026-09-26, verifier V-005):** the undashed refusal in
+  `the_parser_is_java_uuid_from_string` is Spark's measured core text, oracle step
+  `uuid/bd/insert-undashed` (`Invalid UUID string: 123e4567e89b12d3a456426614174000`, the
+  wrapper split held by R-27). pins: u9-types-1/C-013
 - `memory_props_span.rs` — **PR-B class sweep (2026-09-24):** the
   `catalog.memory_catalog_cached_with_props` span records exactly `warehouse`,
   `metadata_cache`, `manifest_cache_bytes` and `footer_cache`. No field value carries a prop

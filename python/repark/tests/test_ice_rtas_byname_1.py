@@ -190,7 +190,7 @@ def test_dataframe_writeto_appends_by_name(spark: Any) -> None:
     """writeTo append maps the swapped-order frame by name. pins: ice-rtas-byname-1/C-001"""
     _seed_shapes(spark)
     spark.table(SW).writeTo(BN).append()
-    assert _rows(spark, BN) == [("Ann", "Smith", 1)]
+    assert _rows(spark, BN) == [tuple(row) for row in FIXTURE["insert_by_name"]["by_name"]["rows"]]
 
 
 def test_parquet_by_name_reorders(spark: Any) -> None:

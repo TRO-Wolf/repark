@@ -72,6 +72,8 @@ def decode(value: Any) -> Any:
         return datetime.datetime.fromisoformat(value["datetime"])
     if isinstance(value, dict) and set(value) == {"map"}:
         return dict(value["map"])
+    if isinstance(value, dict) and set(value) == {"bytes"}:
+        return bytearray.fromhex(value["bytes"])
     if isinstance(value, list):
         return [decode(item) for item in value]
     return value
@@ -180,7 +182,7 @@ def run_step(session: Any, step: dict[str, Any], warehouse: Path, engine: str) -
         if kind == "conf":
             session.conf.set(step["setting"], step["value"])
             return "ok"
-        if kind in ("append", "overwrite_partitions", "df_create"):
+        if kind in ("append", "overwrite_partitions", "df_create", "insert_into", "save_as_table"):
             return write_dataframe(session, step)
         if kind == "add_uuid":
             return add_uuid_column(session, step["table"], engine, step.get("struct"))
@@ -194,9 +196,16 @@ def run_step(session: Any, step: dict[str, Any], warehouse: Path, engine: str) -
 
 
 def write_dataframe(session: Any, step: dict[str, Any]) -> str:
-    """Write the step's rows through ``writeTo``: append, overwritePartitions or create."""
+    """Write the step's rows: ``writeTo`` append, overwritePartitions or create, or ``write``."""
     rows = [tuple(decode(value) for value in row) for row in step["rows"]]
-    writer = session.createDataFrame(rows, step["schema"]).writeTo(step["table"])
+    frame = session.createDataFrame(rows, step["schema"])
+    if step["do"] == "insert_into":
+        frame.write.mode("append").insertInto(step["table"])
+        return "ok"
+    if step["do"] == "save_as_table":
+        frame.write.mode("append").saveAsTable(step["table"])
+        return "ok"
+    writer = frame.writeTo(step["table"])
     if step["do"] == "append":
         writer.append()
     elif step["do"] == "overwrite_partitions":
