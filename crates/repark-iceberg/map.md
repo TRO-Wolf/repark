@@ -142,10 +142,12 @@ v1 crate-root re-export lists.
     **Repin duty:** if a future rev lists at construction again the freeze is a no-op; if a
     rev lists on every access (never freezes) those four pins fail-closed.
     pins: rp-1-fork-repin/C-011
-  - **R91 unknown-on-write (RP-5 C-006).** Fork `#246` falsified the V3-6 pin that
-    a Null `unknown` column commits then fails at scan. The pin now asserts the
-    parquet write refuses `Writing the unknown column 'u' is not supported yet`.
-    CREATE refusal stands. No new surface.
+  - **R91 unknown-on-write (RP-5 C-006, flipped by RP-51).** Fork `#246` falsified
+    the V3-6 pin that a Null `unknown` column commits then fails at scan, and the pin
+    asserted the parquet write refusal until RP-51: fork `#356` writes the file without
+    the column, so the pin now asserts the append commits and the column scans NULL
+    (`fork_unknown_write_omits_the_column_and_reads_null`). CREATE refusal stands
+    until U9 PR2. No new surface.
     pins: rp-5-fork-repin/C-006
   - **RP-5 document lockstep (C-008).** Pin history, registry REF-1 FIXED / REF-3 BACKLOG /
     RDF-1 BACKLOG, and handoff F-6b/F-6c/F-8/F-16r/F-0 consumed notes match the pins.

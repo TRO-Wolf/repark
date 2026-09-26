@@ -214,7 +214,7 @@ async fn fork_timestamptz_ns_parquet_write_and_scan_round_trip() {
 }
 
 #[tokio::test]
-async fn fork_unknown_write_refuses_naming_the_column() {
+async fn fork_unknown_write_omits_the_column_and_reads_null() {
     let _: &str = "pins: v3-6-v3-types/C-004";
     let _: &str = "pins: rp-5-fork-repin/C-006";
     let mapped = schema_to_arrow_schema(&unknown_schema()).expect("unknown maps");
@@ -233,13 +233,28 @@ async fn fork_unknown_write_refuses_naming_the_column() {
         ],
     )
     .expect("batch");
-    let error = append(&catalog, &ident, vec![batch])
+    append(&catalog, &ident, vec![batch])
         .await
-        .expect_err("R91 parquet write refuses an unknown column");
-    let text = error.to_string();
-    assert!(
-        text.contains("Writing the unknown column 'u' is not supported yet"),
-        "R91 write refuse, got: {text}"
+        .expect("RP-51 parquet write omits an unknown column");
+    let table = catalog.load_table(&ident).await.expect("load");
+    let batches: Vec<RecordBatch> = table
+        .scan()
+        .select(["id", "u"])
+        .build()
+        .expect("scan")
+        .to_arrow()
+        .await
+        .expect("to_arrow")
+        .try_collect()
+        .await
+        .expect("collect");
+    assert_eq!(batches.len(), 1, "one written file scans as one batch");
+    assert_eq!(batches[0].num_rows(), 1);
+    assert_eq!(batches[0].schema().field(1).data_type(), &DataType::Null);
+    assert_eq!(
+        batches[0].column(1).logical_null_count(),
+        1,
+        "the unknown column reads NULL"
     );
 }
 
