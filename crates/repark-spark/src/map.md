@@ -1023,6 +1023,17 @@ pins: rp-4-fork-repin/C-005, C-006
   `iceberg_v3_named_primitive`) maps the Spark type name `TIMESTAMP_LTZ` to Iceberg
   `timestamptz` whatever `spark.sql.timestampType` says, at CREATE, ADD COLUMN and nested
   (cell `TY-TIMESTAMP-LTZ`). pins: u9-types-1/C-001
+- `create_table.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** `iceberg_named_primitive` maps the
+  Spark type name `VOID` to Iceberg `unknown` at CREATE and ADD COLUMN (cell
+  `TY-UNKNOWN-VOID`); v3 commits, v1 / v2 refuse at the fork's schema choke point with its
+  Java-mirrored `Invalid schema for v<N>` text. `type_table.rs` names Arrow `Null` `void` on
+  every schema surface. pins: u9-types-1/C-009
+- `void_type.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** `rewrite_cast_null_to_void` turns
+  `CAST(NULL AS VOID)` into a typed null; `refuse_insert_void_values` refuses a non-NULL
+  `INSERT … VALUES` value into an `unknown` column with Spark's
+  `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] … Cannot safely cast `c` "INT" to "VOID".
+  SQLSTATE: KD000`, naming the value's Spark type. `spark_ast.rs`'s passthrough calls both.
+  pins: u9-types-1/C-009
 - `create_table.rs` — **WO U5 PR3 (2026-09-25):** a hive-style typed `PARTITIONED BY` column
   (D-X-PARTITIONED-COLDEF) joins the schema after the declared columns and gets an identity
   field; `typed_partition_columns` raises Spark's `Cannot mix partition expressions and

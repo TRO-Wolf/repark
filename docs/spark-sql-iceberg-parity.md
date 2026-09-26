@@ -8617,25 +8617,28 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   (unit pins),
   `crates/repark-sql/tests/ansi_door_u9_types.rs`.
 
-### TY-UNKNOWN-VOID — OPEN (measured 2026-09-25): a `VOID` column (Iceberg v3 `unknown`) refused at CREATE
+### TY-UNKNOWN-VOID — EQUAL (2026-09-26): a `VOID` column (Iceberg v3 `unknown`) end to end
 
-- **repark** — the Spark door refuses `VOID` at CREATE and `ADD COLUMN` (`column type `VOID` is
-  not supported yet for Iceberg tables`) and `CAST(NULL AS VOID)` (`Unsupported SQL type VOID`).
-  The refusal stays until the owned fork writes `unknown`: with the type mapped, every INSERT
-  fails in the fork's parquet writer (`FeatureUnsupported => Writing the unknown column 'c' is
-  not supported yet`) and `.files` fails in its `readable_metrics`, so accepting the DDL would
-  create tables no INSERT can write.
-- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25 (21 steps, group
-  `void` of `python/repark/tests/u9_types_1_spark_oracle.json`): v3 CREATE / ADD COLUMN store
+- **repark** — the Spark door maps `VOID` to `PrimitiveType::Unknown` on CREATE and `ADD
+  COLUMN` (and the ANSI door on CREATE); v3 commits, v1 / v2 refuse at the fork's schema
+  choke point. `INSERT … VALUES (0, NULL)` writes (the Parquet file carries no `c` column),
+  the column reads NULL and describes as `void` on every surface (`cols`, `DESCRIBE`,
+  `dtypes`, `printSchema`); a non-NULL value refuses Spark's `CANNOT_SAFELY_CAST` text;
+  `CAST(NULL AS VOID)` is a typed null; `.files` `readable_metrics.c` is all null; a
+  copy-on-write DELETE keeps the column absent.
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25 (21 steps) and
+  2026-09-26 (+6 steps: printSchema, cast rows, file metrics, CoW DELETE; group `void` of
+  `python/repark/tests/u9_types_1_spark_oracle.json`): v3 CREATE / ADD COLUMN store
   `unknown`; `INSERT … VALUES (0, NULL)` writes; the column reads NULL and describes as `void`;
   `INSERT … VALUES (2, 1)` refuses `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] … Cannot
   safely cast `c` "INT" to "VOID". SQLSTATE: KD000`; v1 and v2 refuse `IllegalStateException:
   Invalid schema for v<N>: - Invalid type for c: unknown is not supported until v3`.
-- **Pin** — `python/repark/tests/test_u9_types_1.py` (group `void`, residue R-14 of
-  `task/ledgers/staging/u9-types-1-ledger.md`).
-- **Rationale** — OPEN, dated 2026-09-25, WO U9-TYPES-1 clause C-009 and hand-back question Q1
-  (the fork change: the parquet writer omits `unknown` columns, `readable_metrics` answers a
-  null metrics row).
+- **Pin** — `python/repark/tests/test_u9_types_1.py` (group `void`, residues R-22, R-23, R-24
+  of `task/ledgers/staging/u9-types-1-ledger.md`) and
+  `crates/repark-spark/src/tests/u9_void_uuid.rs`.
+- **Rationale** — EQUAL, dated 2026-09-26, WO U9-TYPES-1 clause C-009 (PROVEN). Remaining
+  dated divergences: the v1/v2 refusal class and volatile Py4J wrapper line (R-22, R-24) and
+  the planning prefix on the value refusal (R-23).
 
 ### TY-UUID-READ — OPEN (measured 2026-09-25): an Iceberg `uuid` column does not read as `string`
 

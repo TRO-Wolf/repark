@@ -56,11 +56,11 @@ pub mod type_table;
 mod update_cast;
 mod use_ddl;
 pub mod view_ddl;
+mod void_type;
 pub mod wap;
 mod window_range;
 pub(crate) mod write_options;
 mod write_to_branch;
-// --- Router entrypoints.
 pub use router::{
     execute, execute_static_overwrite, execute_with_read_only, execute_with_statement_options,
 };

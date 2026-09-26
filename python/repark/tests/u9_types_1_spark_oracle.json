@@ -2,7 +2,7 @@
  "generator": "target/probe-u9-types-1/build_oracle.py + merge_oracle.py",
  "engine": "Spark 4.1.2 + Iceberg 1.11.0 (local[1], InMemoryCatalog sc, session zone UTC)",
  "measured": "2026-09-25",
- "revised": "r3 2026-09-25: +41 steps map/assign/* and map/cmp/* measured on Spark; RePark re-recorded on every group",
+ "revised": "r4 2026-09-26: +6 steps void printschema/cast-rows/files-metrics/delete for U9-TYPES-1 PR2 (VOID end to end); R-14 retired, R-22..R-24 recorded",
  "steps": [
   {
    "group": "ltz",
@@ -5831,28 +5831,7 @@
    "key": "void/v3/create",
    "do": "sql",
    "sql": "CREATE TABLE sc.ns.v3 (id INT, c VOID) USING iceberg TBLPROPERTIES ('format-version'='3')",
-   "spark": "ok",
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "UnsupportedOperationException"
-     ],
-     [
-      "msg",
-      "This feature is not implemented: column type `VOID` is not supported yet for Iceberg tables"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   "spark": "ok"
   },
   {
    "group": "void",
@@ -5878,7 +5857,8 @@
     ]
    ],
    "residue": {
-    "id": "R-14",
+    "id": "R-22",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
     "repark": [
      [
       "cond",
@@ -5886,17 +5866,18 @@
      ],
      [
       "error",
-      "UnsupportedOperationException"
+      "PySparkException"
      ],
      [
       "msg",
-      "This feature is not implemented: column type `VOID` is not supported yet for Iceberg tables"
+      "DataInvalid => Invalid schema for v2:\n- Invalid type for c: unknown is not supported until v3"
      ],
      [
       "state",
       null
      ]
-    ]
+    ],
+    "note": "2026-09-26: Spark answers Py4JJavaError wrapping java.lang.IllegalStateException: Invalid schema for v2 (volatile o-id call prefix o56 on 2026-09-25, o45 on 2026-09-26); RePark has no JVM, so the fork refuses the commit with its Java-mirrored DataInvalid text, carried as PySparkException. The Java core text matches; the class and the volatile Py4J wrapper line differ. Probe key void/v2/create-reconfirm."
    }
   },
   {
@@ -5923,7 +5904,8 @@
     ]
    ],
    "residue": {
-    "id": "R-14",
+    "id": "R-22",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
     "repark": [
      [
       "cond",
@@ -5931,17 +5913,18 @@
      ],
      [
       "error",
-      "UnsupportedOperationException"
+      "PySparkException"
      ],
      [
       "msg",
-      "This feature is not implemented: column type `VOID` is not supported yet for Iceberg tables"
+      "DataInvalid => Invalid schema for v1:\n- Invalid type for c: unknown is not supported until v3"
      ],
      [
       "state",
       null
      ]
-    ]
+    ],
+    "note": "2026-09-26: v1 door of R-22; Spark text measured with o45 on 2026-09-26, o56 on 2026-09-25. Probe key void/v1/create-reconfirm."
    }
   },
   {
@@ -5949,28 +5932,7 @@
    "key": "void/v3/insert",
    "do": "sql",
    "sql": "INSERT INTO sc.ns.v3 VALUES (0, NULL), (1, NULL)",
-   "spark": "ok",
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: table 'sc.ns.v3' not found"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   "spark": "ok"
   },
   {
    "group": "void",
@@ -5986,28 +5948,7 @@
      1,
      null
     ]
-   ],
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: table 'sc.ns.v3' not found"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "void",
@@ -6060,28 +6001,7 @@
      "spec",
      []
     ]
-   ],
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "FileNotFoundError"
-     ],
-     [
-      "msg",
-      "no metadata for sc.ns.v3"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "void",
@@ -6097,28 +6017,7 @@
      "c",
      "void"
     ]
-   ],
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: table 'sc.ns.v3' not found"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "void",
@@ -6134,28 +6033,7 @@
      "c",
      "void"
     ]
-   ],
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      "cond",
-      "TABLE_OR_VIEW_NOT_FOUND"
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`ns`.`v3` cannot be found. Verify the spelling and correctness of the schema and catalog. If you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
-     ],
-     [
-      "state",
-      "42P01"
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "void",
@@ -6171,28 +6049,7 @@
      "c",
      "void"
     ]
-   ],
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: table 'sc.ns.v3' not found"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "void",
@@ -6206,56 +6063,14 @@
     [
      "NoneType"
     ]
-   ],
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: table 'sc.ns.v3' not found"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "void",
    "key": "void/v3/filter-notnull",
    "do": "rows",
    "sql": "SELECT id FROM sc.ns.v3 WHERE c IS NOT NULL",
-   "spark": [],
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: table 'sc.ns.v3' not found"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   "spark": []
   },
   {
    "group": "void",
@@ -6281,11 +6096,12 @@
     ]
    ],
    "residue": {
-    "id": "R-14",
+    "id": "R-23",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
     "repark": [
      [
       "cond",
-      null
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
      ],
      [
       "error",
@@ -6293,13 +6109,14 @@
      ],
      [
       "msg",
-      "Error during planning: table 'sc.ns.v3' not found"
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`v3`: Cannot safely cast `c` \"INT\" to \"VOID\". SQLSTATE: KD000"
      ],
      [
       "state",
-      null
+      "KD000"
      ]
-    ]
+    ],
+    "note": "2026-09-26: class, condition, SQLSTATE and message body match Spark; the facade keeps RePark's Error during planning: prefix, which Spark has no equivalent of on this path."
    }
   },
   {
@@ -6307,28 +6124,25 @@
    "key": "void/v3/insert-omit",
    "do": "sql",
    "sql": "INSERT INTO sc.ns.v3 (id) VALUES (6)",
-   "spark": "ok",
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: table 'sc.ns.v3' not found"
-     ],
-     [
-      "state",
-      null
-     ]
+   "spark": "ok"
+  },
+  {
+   "group": "void",
+   "key": "void/v3/printschema",
+   "do": "printschema",
+   "sql": "SELECT * FROM sc.ns.v3",
+   "spark": "root\n |-- id: integer (nullable = true)\n |-- c: void (nullable = true)\n\n"
+  },
+  {
+   "group": "void",
+   "key": "void/v3/files-metrics",
+   "do": "rows",
+   "sql": "SELECT count(*) FROM sc.ns.v3.files WHERE readable_metrics.c.value_count IS NOT NULL OR readable_metrics.c.lower_bound IS NOT NULL OR readable_metrics.c.upper_bound IS NOT NULL",
+   "spark": [
+    [
+     0
     ]
-   }
+   ]
   },
   {
    "group": "void",
@@ -6340,28 +6154,18 @@
      "x",
      "void"
     ]
-   ],
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "UnsupportedOperationException"
-     ],
-     [
-      "msg",
-      "This feature is not implemented: Unsupported SQL type VOID"
-     ],
-     [
-      "state",
-      null
-     ]
+   ]
+  },
+  {
+   "group": "void",
+   "key": "void/v3/cast-null-void-rows",
+   "do": "rows",
+   "sql": "SELECT CAST(NULL AS VOID) AS x",
+   "spark": [
+    [
+     null
     ]
-   }
+   ]
   },
   {
    "group": "void",
@@ -6382,28 +6186,7 @@
    "key": "void/v3/addcol-alter",
    "do": "sql",
    "sql": "ALTER TABLE sc.ns.v3b ADD COLUMN c VOID",
-   "spark": "ok",
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "UnsupportedOperationException"
-     ],
-     [
-      "msg",
-      "This feature is not implemented: column type `VOID` is not supported yet for Iceberg tables"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   "spark": "ok"
   },
   {
    "group": "void",
@@ -6415,43 +6198,14 @@
      1,
      null
     ]
-   ],
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      1
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "void",
    "key": "void/v3/addcol-insert-after",
    "do": "sql",
    "sql": "INSERT INTO sc.ns.v3b VALUES (2, NULL)",
-   "spark": "ok",
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: Inconsistent data length across values list: got 2 values in row 0 but expected 1"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   "spark": "ok"
   },
   {
    "group": "void",
@@ -6484,7 +6238,8 @@
     ]
    ],
    "residue": {
-    "id": "R-14",
+    "id": "R-24",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
     "repark": [
      [
       "cond",
@@ -6492,17 +6247,18 @@
      ],
      [
       "error",
-      "UnsupportedOperationException"
+      "PySparkException"
      ],
      [
       "msg",
-      "This feature is not implemented: column type `VOID` is not supported yet for Iceberg tables"
+      "DataInvalid => Invalid schema for v2:\n- Invalid type for c: unknown is not supported until v3"
      ],
      [
       "state",
       null
      ]
-    ]
+    ],
+    "note": "2026-09-26: the ADD COLUMN door of R-22: the fork refuses the v2 schema update with the same Java-mirrored text."
    }
   },
   {
@@ -6846,6 +6602,40 @@
     "id": "R-15",
     "repark": []
    }
+  },
+  {
+   "group": "void",
+   "key": "void/v3/delete",
+   "do": "sql",
+   "sql": "DELETE FROM sc.ns.v3 WHERE id = 0",
+   "spark": "ok"
+  },
+  {
+   "group": "void",
+   "key": "void/v3/rows-after-delete",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.v3",
+   "spark": [
+    [
+     1,
+     null
+    ],
+    [
+     6,
+     null
+    ]
+   ]
+  },
+  {
+   "group": "void",
+   "key": "void/v3/files-metrics-after-delete",
+   "do": "rows",
+   "sql": "SELECT count(*) FROM sc.ns.v3.files WHERE readable_metrics.c.value_count IS NOT NULL OR readable_metrics.c.lower_bound IS NOT NULL OR readable_metrics.c.upper_bound IS NOT NULL",
+   "spark": [
+    [
+     0
+    ]
+   ]
   }
  ]
 }

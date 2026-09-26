@@ -953,6 +953,7 @@ fn iceberg_v3_named_primitive(
     match data_type.to_string().to_ascii_lowercase().as_str() {
         "timestamp_ns" => Some(PrimitiveType::TimestampNs),
         "timestamptz_ns" => Some(PrimitiveType::TimestamptzNs),
+        "void" => Some(PrimitiveType::Unknown),
         _ => None,
     }
 }

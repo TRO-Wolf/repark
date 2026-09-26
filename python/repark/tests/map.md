@@ -84,6 +84,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   steps, 1 EQUAL; the rest hold residue R-15 until the uuid-as-string ruling (C-010 OPEN);
   its `add_uuid` step adds the column through the Iceberg API on Spark and through
   `ALTER TABLE … ADD COLUMN u UUID` on RePark, as the scoreboard cell does.
+  PR2 (2026-09-26): group `void` grows to 27 steps (printSchema, cast rows, `.files`
+  metrics, copy-on-write DELETE), 23 EQUAL; R-14 retires and R-22, R-23, R-24 hold the
+  v1 / v2 refusal class and the planning prefix. pins: u9-types-1/C-009
 - [test_ice_error_conditions_1.py](test_ice_error_conditions_1.py) —
   **ICE-ERROR-CONDITIONS-1 / IPI-51 PR1 (2026-09-20):** constructor pins for the native
   error-condition parser — `getCondition`/`getErrorClass`/`getSqlState` on the PyO3

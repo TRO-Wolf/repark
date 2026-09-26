@@ -274,6 +274,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   writes, filters on a `TIMESTAMP_LTZ '…'` literal and partitions by `days`; the typed literal
   is a zoned instant, double-quoted too (r2); a `timestamp_ltz` identifier keeps its meaning.
   pins: u9-types-1/C-001, C-002, C-003
+- [u9_void_uuid.rs](u9_void_uuid.rs) — **WO U9-TYPES-1 PR2 (2026-09-26):** `VOID` is
+  `unknown` on v3 at CREATE and ADD COLUMN and refuses below v3; `INSERT … VALUES (0, NULL)`
+  writes and a value refuses `CANNOT_SAFELY_CAST`; `CAST(NULL AS VOID)` is a typed null.
+  pins: u9-types-1/C-009
 - [alter_write_order_transform.rs](alter_write_order_transform.rs) — **WO U5 PR2b
   (2026-09-24):** D-WRITE-ORDERED-TRANSFORM. Seventeen measured `WRITE ORDERED BY` specs land
   the sort order Spark wrote (rendered as `transform source direction nulls`) with `range`;

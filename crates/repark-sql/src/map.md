@@ -42,6 +42,8 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   staged transaction's unstamped commit. A `CREATE TABLE` with no query resolves nothing, so a
   bogus session codec still refuses at the first write and not at DDL.
   pins: ice-session-write-conf-1/C-042
+  **WO U9-TYPES-1 PR2 (2026-09-26):** `iceberg_v3_named_primitive` maps `VOID` to Iceberg
+  `unknown` on the ANSI door's CREATE. pins: u9-types-1/C-009
   **IPI-51 (2026-09-20):** the already-exists arm renders `[TABLE_OR_VIEW_ALREADY_EXISTS]` /
   `SQLSTATE: 42P07` through `repark_common::spark_error` with a per-part-backticked
   `relationName`. pins: ice-error-conditions-1/C-011
