@@ -12,6 +12,7 @@ import re
 from collections import namedtuple
 from typing import TYPE_CHECKING, Any
 
+from repark import _native
 from repark.errors import AnalysisException, PySparkTypeError
 from repark.spark._idents import quote_ident_if_needed as _quote_ident
 from repark.spark._idents import quote_multipart as _quote_multipart_ssot
@@ -174,50 +175,27 @@ class Catalog:
     def table_exists(self, table_name: str) -> bool:
         """Whether a table exists (PySpark ``spark.catalog.tableExists``).
 
-        * three-part ``catalog.namespace.table`` → Iceberg catalog probe (native), with
-          ``spark_catalog`` alias expansion matching :func:`~repark.session.resolve_table_name`
+        * three-part ``catalog.namespace.table`` → Iceberg catalog probe (native)
         * two-part ``namespace.table`` → resolved under :meth:`currentCatalog`
         * one-part name → temp view first, else ``currentCatalog.currentDatabase.name``
         """
-        from repark.spark.session import _alias_catalog_name
-
         inner = self._session._ensure_alive()
         table_name = _require_str(table_name, "tableName")
         parts = _split_identifier(table_name)
         state = self._session._catalog_state()
-        known_raw = state.get("known_catalogs") or set()
-        known: set[str] = known_raw if isinstance(known_raw, set) else set(known_raw)
         current_catalog = str(state["current_catalog"])
         if len(parts) == 3:
-            catalog = _alias_catalog_name(
-                parts[0],
-                current_catalog=current_catalog,
-                known_catalogs=known,
-                default_catalog_is_auto=bool(state.get("auto_default_catalog")),
-            )
-            qualified = _multipart([catalog, parts[1], parts[2]])
+            qualified = _multipart([parts[0], parts[1], parts[2]])
             return bool(inner.table_exists(qualified))
         if len(parts) == 2:
-            catalog = _alias_catalog_name(
-                current_catalog,
-                current_catalog=current_catalog,
-                known_catalogs=known,
-                default_catalog_is_auto=bool(state.get("auto_default_catalog")),
-            )
-            qualified = _multipart([catalog, parts[0], parts[1]])
+            qualified = _multipart([current_catalog, parts[0], parts[1]])
             return bool(inner.table_exists(qualified))
         if len(parts) == 1:
             # Temp view (native one-part) first — live Spark checks temps before current db.
             if inner.table_exists(parts[0]):
                 return True
-            catalog = _alias_catalog_name(
-                current_catalog,
-                current_catalog=current_catalog,
-                known_catalogs=known,
-                default_catalog_is_auto=bool(state.get("auto_default_catalog")),
-            )
             database = self.current_database()
-            qualified = _multipart([catalog, database, parts[0]])
+            qualified = _multipart([current_catalog, database, parts[0]])
             try:
                 return bool(inner.table_exists(qualified))
             except RuntimeError:
@@ -281,9 +259,13 @@ class Catalog:
     # ===========================================================================================
 
     def current_catalog(self) -> str:
-        """The session's current catalog name (PySpark ``currentCatalog``)."""
-        self._session._ensure_alive()
-        return str(self._session._catalog_state()["current_catalog"])
+        """The session's current catalog name (PySpark ``currentCatalog``).
+
+        Reads the engine's current catalog. A ``spark.sql.defaultCatalog`` that names no
+        configured catalog raises ``CATALOG_NOT_FOUND``; a refused catalog raises its refusal.
+        """
+        catalog, _namespace = _native.current_catalog_checked(self._session._ensure_alive())
+        return str(catalog)
 
     currentCatalog = current_catalog  # noqa: N815
 
@@ -382,17 +364,12 @@ class Catalog:
     def database_exists(self, db_name: str) -> bool:
         """Whether a database/namespace exists (PySpark ``databaseExists``).
 
-        Never raises for mere absence (live Spark parity). ``spark_catalog`` in a two-part
-        ``catalog.db`` form aliases the same way as :func:`~repark.session.resolve_table_name`
-        (the facade contract).
+        Never raises for mere absence (live Spark parity). A two-part ``catalog.db`` form names
+        that catalog; ``spark_catalog`` names the session catalog only.
         """
-        from repark.spark.session import _alias_catalog_name
-
         self._session._ensure_alive()
         name = _require_str(db_name, "dbName")
         state = self._session._catalog_state()
-        known_raw = state.get("known_catalogs") or set()
-        known: set[str] = known_raw if isinstance(known_raw, set) else set(known_raw)
         current_catalog = str(state["current_catalog"])
         # Accept optional catalog.db two-part form (oracle: spark_catalog.default works).
         parts = _split_identifier(name)
@@ -402,12 +379,6 @@ class Catalog:
             catalog = current_catalog
         else:
             return False
-        catalog = _alias_catalog_name(
-            catalog,
-            current_catalog=current_catalog,
-            known_catalogs=known,
-            default_catalog_is_auto=bool(state.get("auto_default_catalog")),
-        )
         try:
             return self._namespace_exists(catalog, name)
         except Exception:
@@ -424,15 +395,11 @@ class Catalog:
         Existence and location both come from ``DESCRIBE NAMESPACE`` (the engine already
         checks ``namespace_exists`` and preserves catalog/IO errors). Missing schema →
         :class:`~repark.errors.AnalysisException` ``SCHEMA_NOT_FOUND``. Two-part
-        ``catalog.db`` forms expand ``spark_catalog`` like :meth:`database_exists`.
+        ``catalog.db`` forms name that catalog, as in :meth:`database_exists`.
         """
-        from repark.spark.session import _alias_catalog_name
-
         self._session._ensure_alive()
         name = _require_str(db_name, "dbName")
         state = self._session._catalog_state()
-        known_raw = state.get("known_catalogs") or set()
-        known: set[str] = known_raw if isinstance(known_raw, set) else set(known_raw)
         current_catalog = str(state["current_catalog"])
         parts = _split_identifier(name)
         if len(parts) == 2:
@@ -444,12 +411,6 @@ class Catalog:
                 f"[SCHEMA_NOT_FOUND] The schema `{name}` cannot be found. Verify "
                 f"the spelling and correctness of the schema and catalog."
             )
-        catalog = _alias_catalog_name(
-            catalog,
-            current_catalog=current_catalog,
-            known_catalogs=known,
-            default_catalog_is_auto=bool(state.get("auto_default_catalog")),
-        )
         # Existence and location both come from DESCRIBE NAMESPACE (engine
         # namespace_exists + get_namespace + location resolver). Do not SHOW-list
         # listDatabases stays on SHOW (FA-2).
@@ -492,11 +453,9 @@ class Catalog:
         ``information_schema.tables``, which materializes every provider table and hard-fails
         after an out-of-band drop of a DF-known Iceberg name.
         Missing schema raises :class:`~repark.errors.AnalysisException` ``SCHEMA_NOT_FOUND``.
-        Two-part ``catalog.db`` forms expand ``spark_catalog`` the same way as
-        :meth:`table_exists` / :meth:`database_exists`.
+        Two-part ``catalog.db`` forms name that catalog, as in :meth:`table_exists` /
+        :meth:`database_exists`.
         """
-        from repark.spark.session import _alias_catalog_name
-
         self._session._ensure_alive()
         catalog = self.current_catalog()
         database = self.current_database() if db_name is None else _require_str(db_name, "dbName")
@@ -507,16 +466,6 @@ class Catalog:
             catalog, database = db_parts[0], db_parts[1]
         elif len(db_parts) != 1:
             raise AnalysisException(f"[SCHEMA_NOT_FOUND] The schema `{database}` cannot be found.")
-        state = self._session._catalog_state()
-        known_raw = state.get("known_catalogs") or set()
-        known: set[str] = known_raw if isinstance(known_raw, set) else set(known_raw)
-        current_catalog = str(state["current_catalog"])
-        catalog = _alias_catalog_name(
-            catalog,
-            current_catalog=current_catalog,
-            known_catalogs=known,
-            default_catalog_is_auto=bool(state.get("auto_default_catalog")),
-        )
         # Bare-session parity: PySpark's `default` database always exists, so a NO-ARG
         # listTables() must list temp views, never raise — even when the engine has no
         # `default` schema (fresh session, no catalogs). Fall through: zero base tables for a

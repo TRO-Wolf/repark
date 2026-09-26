@@ -59,10 +59,11 @@ SNAPSHOT_ID_REFUSAL = (
 
 @pytest.fixture
 def spark(tmp_path: Path) -> ReparkSession:
-    """A session with a ``mem`` memory catalog and the ``mem.ns`` namespace."""
+    """A session whose current catalog is the ``mem`` memory catalog, with ``mem.ns``."""
     session = ReparkSession.builder.appName("pytest-iceberg-load-path").getOrCreate()
     session.register_memory_catalog("mem", tmp_path)
     session.sql("CREATE NAMESPACE mem.ns")
+    session.sql("USE mem")
     return session
 
 

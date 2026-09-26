@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, PoisonError, RwLock};
+use std::sync::{Arc, RwLock};
 
 use datafusion::catalog::SchemaProvider;
 use iceberg::Catalog;
@@ -11,6 +11,8 @@ use repark_iceberg::catalog::{CatalogCaches, IcebergCacheSettings};
 
 use crate::config_file::maintenance::MaintenancePolicy;
 use crate::config_file::sources::SourceSpec;
+
+pub(crate) mod session_catalog;
 
 /// How a registered catalog resolves a staged-CTAS location when the target namespace has none.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -108,7 +110,7 @@ pub struct CatalogRegistry {
     local_warehouse_roots: Vec<String>,
     iceberg_caches: Arc<CatalogCaches>,
     maintenance_policy: Option<(String, Option<MaintenancePolicy>)>,
-    session_defaults: Arc<RwLock<(String, String)>>,
+    session_defaults: Arc<RwLock<session_catalog::CurrentCatalog>>,
     view_wrapped_schemas: Arc<std::sync::Mutex<ViewWrappedSchemas>>,
     view_expansion_depth: Arc<AtomicUsize>,
 }
@@ -122,10 +124,7 @@ impl Default for CatalogRegistry {
             local_warehouse_roots: Vec::new(),
             iceberg_caches: Arc::new(CatalogCaches::new(IcebergCacheSettings::default())),
             maintenance_policy: None,
-            session_defaults: Arc::new(RwLock::new((
-                "spark_catalog".to_string(),
-                "default".to_string(),
-            ))),
+            session_defaults: Arc::new(RwLock::new(session_catalog::CurrentCatalog::default())),
             view_wrapped_schemas: Arc::new(std::sync::Mutex::new(HashMap::new())),
             view_expansion_depth: Arc::new(AtomicUsize::new(0)),
         }
@@ -304,18 +303,6 @@ impl CatalogRegistry {
         self.entries
             .get(name)
             .map(|entry| entry.location_policy.clone())
-    }
-
-    #[must_use]
-    pub fn current_defaults(&self) -> (String, String) {
-        RwLock::read(&self.session_defaults)
-            .unwrap_or_else(PoisonError::into_inner)
-            .clone()
-    }
-
-    pub fn set_defaults(&self, catalog: &str, namespace: &str) {
-        *RwLock::write(&self.session_defaults).unwrap_or_else(PoisonError::into_inner) =
-            (catalog.to_string(), namespace.to_string());
     }
 
     #[must_use]

@@ -9,6 +9,8 @@ CC-2 close: `dynamicFlatten` docstring again names ``repark_core::dynamic_flatte
 The Spark DataFrame facade. It builds lazy native plans and exposes Spark-compatible actions,
 joins, grouping, exports, UDF bridges, and writers. Engine computation stays in Rust; Python
 callbacks run only where the API accepts user UDFs and receive Arrow batches.
+- `writer_readwriter.py` — **CATALOG-1 (2026-09-26):** `_resolve_writer_table` passes only the
+  current catalog and database to `resolve_table_name` (no known-catalog alias). pins: catalog-1/C-002
 
 ## Modules
 

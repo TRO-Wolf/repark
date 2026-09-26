@@ -262,6 +262,7 @@ vars(_sql_udf_materialization).update(
 )
 
 from repark.spark.session.session_configuration import (
+    DEFAULT_CATALOG_KEY,
     PARTITION_OVERWRITE_MODE_KEY,
     _BATCH_SIZE_KEYS,
     _CONF_GET_UNSET,
@@ -293,11 +294,6 @@ from repark.spark.session.session_configuration import (
 )
 
 from repark.spark.session.catalog_resolution import (
-    _AUTO_MEMORY_CATALOG_KEY,
-    _alias_catalog_name,
-    _auto_memory_catalog_wanted,
-    _catalog_names_from_builder_config,
-    _default_catalog_from_builder_config,
     _default_namespace_from_builder_config,
     _join_table_identifier_segments,
     _sync_display_style_into_builder_config,

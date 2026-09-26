@@ -14,6 +14,11 @@ accuracy contracts restored in condensed form (see the unit ledger's findings di
 
 Rust implementation of the `_native` PyO3 module. The modules below keep the Python facade thin
 and hand execution, SQL, and ML semantics to the engine crates.
+- `session_runtime.rs` — **CATALOG-1 (2026-09-26):** `set_runtime_config` / `unset_runtime_config`
+  serve `spark.sql.defaultCatalog` through `repark_spark::session_catalog::apply_default_catalog`
+  (an empty value is unset); `current_catalog_checked`, `auto_session_catalog_wanted` and
+  `session_catalog_names` (registered Iceberg catalogs) replace `set_session_catalog`.
+  pins: catalog-1/C-002, C-003, C-004
 
 ## Modules
 

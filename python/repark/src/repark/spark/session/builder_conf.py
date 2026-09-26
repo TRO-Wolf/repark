@@ -9,6 +9,7 @@ from typing import Any
 from repark import _native
 from repark.spark.session import _funcs as _session_funcs
 from repark.spark.session.session_configuration import (
+    DEFAULT_CATALOG_KEY,
     PARTITION_OVERWRITE_MODE_KEY,
     SPARK_SQL_ANSI_ENABLED_KEY,
     SPARK_SQL_CASE_SENSITIVE_KEY,
@@ -231,6 +232,9 @@ class RuntimeConfig:
             _native.set_runtime_config(inner, key, text)
         if is_iceberg_session_write_key(key):
             _native.set_runtime_config(inner, key, text)
+        if key == DEFAULT_CATALOG_KEY:
+            _native.set_runtime_config(inner, key, text)
+            self._session._sync_catalog_state_from_engine()
         if _looks_like_datafusion_conf_key(key):
             _forward_datafusion_conf(self._session, key, text)
         # conf.set("repark.display.style", …) must drive show() — not only the conf map.
@@ -423,8 +427,10 @@ class RuntimeConfig:
                 self._session._builder_config, canonical, fallback
             )
             return
-        if is_iceberg_session_write_key(key):
+        if is_iceberg_session_write_key(key) or key == DEFAULT_CATALOG_KEY:
             _native.unset_runtime_config(inner, key)
+        if key == DEFAULT_CATALOG_KEY:
+            self._session._sync_catalog_state_from_engine()
         self._store().pop(key, None)
         # Tombstone so get/getAll do not resurrect the builder snapshot value
         # (Spark SQLConf unset removes the entry entirely).

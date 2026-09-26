@@ -53,6 +53,7 @@ def spark(tmp_path: Path) -> ReparkSession:
     session = ReparkSession.builder.appName("pytest-time-travel").getOrCreate()
     session.register_memory_catalog("mem", tmp_path)
     session.sql("CREATE NAMESPACE mem.ns")
+    session.sql("USE mem")
     return session
 
 

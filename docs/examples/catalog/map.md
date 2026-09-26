@@ -29,7 +29,7 @@ catalog, and the local filesystem only — no cloud catalog, no JVM.
   and the cached frame keeps answering.
 - [set_current_names.py](set_current_names.py) — `setCurrentCatalog` /
   `set_current_catalog` and `setCurrentDatabase` / `set_current_database`:
-  register a memory catalog (currentCatalog flips to it), set both spellings
+  register a memory catalog (currentCatalog stays `spark_catalog`, CATALOG-1), set both spellings
   back and forth, read each value back, and a namespace made via
   `create_namespace`.
 - [table_exists.py](table_exists.py) — `tableExists` / `table_exists`: a temp

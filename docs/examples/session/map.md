@@ -43,7 +43,7 @@ network.
   (§7 `EX-SES-5`).
 - [register_catalog.py](register_catalog.py) —
   `SparkSession.register_memory_catalog` / `SparkSession.create_namespace`:
-  the registered catalog lists and becomes current, the namespace exists after
+  the registered catalog lists, the current catalog stays `spark_catalog` (CATALOG-1) until `setCurrentCatalog`, the namespace exists after
   creation.
 - [iceberg_tables.py](iceberg_tables.py) — `SparkSession.read_iceberg_table` /
   `SparkSession.list_iceberg_table_names` /

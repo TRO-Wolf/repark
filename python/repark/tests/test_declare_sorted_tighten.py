@@ -323,10 +323,11 @@ def test_bare_name_create_view_over_tightened_source_refuses_select_into_allowed
 ) -> None:
     """The bare-name mark qualifies the name; it never suppresses the refusal.
 
-    A one-part ``CREATE VIEW`` expands to ``glue_catalog.default.session_v``
-    carrying ``/* repark:bare-name */`` — a registered-catalog write, so over a
-    tightened source it must refuse and publish nothing. ``SELECT INTO`` a
-    session target stays allowed.
+    A one-part ``CREATE VIEW`` expands to ``spark_catalog.default.session_v`` (the
+    current catalog stays ``spark_catalog`` after ``glue_catalog`` registers,
+    catalog-1/C-001) carrying ``/* repark:bare-name */`` — a registered-catalog
+    write, so over a tightened source it must refuse and publish nothing.
+    ``SELECT INTO`` a session target stays allowed.
     """
     tight = spark_catalog.createDataFrame(SORTED_ROWS, SCHEMA).declareSorted(
         "sym", "ts", tightenNulls=True
@@ -334,7 +335,7 @@ def test_bare_name_create_view_over_tightened_source_refuses_select_into_allowed
     tight.createOrReplaceTempView("allowed_src")
     with pytest.raises(AnalysisException, match="tightenNulls"):
         spark_catalog.sql("CREATE VIEW session_v AS SELECT * FROM allowed_src")
-    views = spark_catalog.sql("SHOW VIEWS IN glue_catalog.default").collect()
+    views = spark_catalog.sql("SHOW VIEWS IN spark_catalog.default").collect()
     assert all(row["viewName"] != "session_v" for row in views)
     spark_catalog.sql("SELECT * INTO session_t FROM allowed_src").collect()
     assert spark_catalog.sql("SELECT count(*) AS n FROM session_t").collect()[0]["n"] == len(
