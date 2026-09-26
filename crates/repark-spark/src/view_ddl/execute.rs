@@ -6,6 +6,7 @@ use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
+use datafusion::sql::TableReference;
 use datafusion::sql::sqlparser::ast::{Ident, ObjectName};
 use iceberg::{Catalog, ErrorKind, NamespaceIdent, TableIdent};
 use repark_common::spark_error;
@@ -425,6 +426,9 @@ pub(crate) async fn execute_show_tblproperties(
     catalogs: &CatalogRegistry,
     statement: ShowTblpropertiesStatement,
 ) -> Option<Result<DataFrame>> {
+    if statement.name.len() == 1 && resolves_in_session(ctx, &statement.name[0]).await {
+        return Some(show_tblproperties_batch(&[]).and_then(|batch| ctx.read_batch(batch)));
+    }
     let Ok((catalog, namespace_name, view_name)) = complete_view_name(catalogs, &statement.name)
     else {
         return None;
@@ -444,15 +448,18 @@ pub(crate) async fn execute_show_tblproperties(
                 ErrorKind::ViewNotFound | ErrorKind::FeatureUnsupported
             ) =>
         {
-            return show_tblproperties_missing_error(
-                handle.as_ref(),
-                &catalog,
-                &namespace_name,
-                &view_name,
-                &ident,
-            )
-            .await
-            .map(Err);
+            return Some(
+                show_tblproperties_table_or_missing(
+                    ctx,
+                    handle.as_ref(),
+                    &catalog,
+                    &namespace_name,
+                    &view_name,
+                    &ident,
+                    statement.key.as_deref(),
+                )
+                .await,
+            );
         }
         Err(error) => return Some(Err(iceberg_err(error))),
     };
@@ -466,18 +473,41 @@ pub(crate) async fn execute_show_tblproperties(
     Some(show_tblproperties_batch(&rows).and_then(|batch| ctx.read_batch(batch)))
 }
 
-async fn show_tblproperties_missing_error(
+async fn show_tblproperties_table_or_missing(
+    ctx: &SessionContext,
     handle: &dyn Catalog,
     catalog: &str,
     namespace_name: &str,
     view_name: &str,
     ident: &TableIdent,
-) -> Option<DataFusionError> {
+    key: Option<&str>,
+) -> Result<DataFrame> {
     match handle.table_exists(ident).await {
-        Ok(true) => None,
-        Ok(false) => Some(table_or_view_not_found(catalog, namespace_name, view_name)),
-        Err(error) => Some(iceberg_err(error)),
+        Ok(true) => {
+            let table = match handle.load_table(ident).await {
+                Ok(table) => table,
+                Err(error)
+                    if matches!(
+                        error.kind(),
+                        ErrorKind::TableNotFound | ErrorKind::NamespaceNotFound
+                    ) =>
+                {
+                    return Err(table_or_view_not_found(catalog, namespace_name, view_name));
+                }
+                Err(error) => return Err(iceberg_err(error)),
+            };
+            let rows = super::show_tblproperties::table_rows(&table, catalog, ident, key);
+            show_tblproperties_batch(&rows).and_then(|batch| ctx.read_batch(batch))
+        }
+        Ok(false) => Err(table_or_view_not_found(catalog, namespace_name, view_name)),
+        Err(error) => Err(iceberg_err(error)),
     }
+}
+
+async fn resolves_in_session(ctx: &SessionContext, name: &str) -> bool {
+    ctx.table_provider(TableReference::Bare { table: name.into() })
+        .await
+        .is_ok()
 }
 
 pub(crate) fn show_tblproperties_rows(

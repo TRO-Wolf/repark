@@ -1925,7 +1925,10 @@ pins: rp-4-fork-repin/C-005, C-006
   `bucket(N, c)`, `truncate(c, W)`, `days(c)` …, `ASC|DESC NULLS FIRST|LAST`, joined by
   `, `), `identifier-fields` (`[a,b]` in Java `HashSet` iteration order, measured
   `[zz,a,id]`), then every stored key outside the Iceberg and Spark reserved sets;
-  `prop_key_is_secret` keys redact; sorted by key.
+  `prop_key_is_secret` keys redact; sorted by key. **WO TBLPROPS-1 (2026-09-26):**
+  `format_version_number` is `pub(crate)` so the SHOW TBLPROPERTIES table arm
+  (`view_ddl/show_tblproperties.rs`) reuses it instead of duplicating the mapping.
+  pins: tblprops-1/C-001
 - `metadata_tables.rs` — I2 metadata-table path rewrite (`.snapshots` → `$snapshots`);
   19 in-module tests. **RP-1:** `METADATA_TABLE_NAMES` includes `position_deletes` (16th
   `MetadataTableType` at pin `5e7b2e4`); **RP-42:** fork #332 ports the scan, so it serves

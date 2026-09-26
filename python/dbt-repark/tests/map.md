@@ -28,8 +28,10 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   `repark.sql()` on a memory catalog. `test_served_shapes_run` asserts that each served shape
   returns an Arrow result; `test_refused_shapes_fail_loud` asserts that each refused shape raises a
   `PySparkException` whose text contains the message the ledger records, and
-  `test_show_tblproperties_table_refusal_is_exact` pins `R-SHOW-TBLPROPERTIES` exactly (class,
-  condition, SQLSTATE and full text) (the `server_side_parameters` `SET` shape moved to served under SQL-SET-DOOR-1, 2026-09-15;
+  `test_show_tblproperties_table_answers_spark_rows` pins `S-SHOW-TBLPROPERTIES` (the served
+  key/value rows with the built-ins, sorted, no `owner`/`comment`, plus the keyed
+  `format-version` row; WO TBLPROPS-1, 2026-09-26 — the `R-SHOW-TBLPROPERTIES` refusal moved
+  to served) (the `server_side_parameters` `SET` shape moved to served under SQL-SET-DOOR-1, 2026-09-15;
   the `CLUSTERED BY (…) INTO n BUCKETS` CTAS shape moved to served under IPI-26/27 round 1,
   2026-09-20 — INDEX-19 rewrites it to a `bucket(n, col)` partition transform; the `LOCATION`,
   table-`COMMENT`, and comment-after-`TBLPROPERTIES` shapes moved to served under IPI-26/27
@@ -64,6 +66,9 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   four-column row (`to_pylist()`), including the full information text; `R-SHOW-TBLPROPERTIES` stays
   refused, pinned exactly by `test_show_tblproperties_table_refusal_is_exact` (`AnalysisException`,
   condition `None`, SQLSTATE `None`, full `Error during planning: SHOW [VARIABLE] ...` text).
+  **WO TBLPROPS-1 (2026-09-26):** `R-SHOW-TBLPROPERTIES` moves to served as
+  `S-SHOW-TBLPROPERTIES`, and `test_show_tblproperties_table_answers_spark_rows` pins the
+  served rows (`DBT-TBLPROPS-1` FIXED).
   **U4 PR B (WO-B12, 2026-09-24):** `test_show_table_extended_answers_spark_shape` expects the
   session `Owner: <user>` line (helper `_session_owner()`: `USER`, else `USERNAME`, else
   `"unknown"`) between `Provider:` and `Table Properties:`, as Spark 4.1.2 stamps the creating

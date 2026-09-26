@@ -69,14 +69,31 @@ async fn show_table_extended_near_misses_keep_their_existing_paths() {
         tables_extended,
         "Expected: end of statement, found: EXTENDED at Line: 1, Column: 13",
     );
-    let properties = outcome(&ctx, &catalogs, "SHOW TBLPROPERTIES ice.sales.pl")
-        .await
-        .expect_err("SHOW TBLPROPERTIES must keep its current refusal");
-    assert_analysis_refusal(
-        "SHOW TBLPROPERTIES ice.sales.pl",
-        properties,
-        "SHOW [VARIABLE] is not supported unless information_schema is enabled",
-    );
+    let properties = answer_batch(&ctx, &catalogs, "SHOW TBLPROPERTIES ice.sales.pl").await;
+    let expected_properties = RecordBatch::try_new(
+        Arc::new(Schema::new(vec![
+            Field::new("key", DataType::Utf8, false),
+            Field::new("value", DataType::Utf8, false),
+        ])),
+        vec![
+            Arc::new(StringArray::from(vec![
+                "current-snapshot-id",
+                "format",
+                "format-version",
+                "k",
+                "write.parquet.compression-codec",
+            ])),
+            Arc::new(StringArray::from(vec![
+                "none",
+                "iceberg/parquet",
+                "2",
+                "v",
+                "zstd",
+            ])),
+        ],
+    )
+    .unwrap();
+    assert_eq!(properties, expected_properties, "pins: tblprops-1/C-001");
     for sql in ["SHOW TABLE", "SHOW TABLE ice.sales.pl"] {
         let error = outcome(&ctx, &catalogs, sql)
             .await

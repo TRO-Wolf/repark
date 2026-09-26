@@ -4,6 +4,17 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [tblprops-1-ledger.md](tblprops-1-ledger.md) —
+  **WO TBLPROPS-1 (2026-09-26), in flight:** `SHOW TBLPROPERTIES` on an Iceberg table
+  answers Spark's rows — the fresh five (C-001), the decimal snapshot id after insert
+  (C-002), the post-SET seven with `format=iceberg/orc` (C-003), the v1 single version
+  (C-004), `comment`/`owner` never rows (C-005), keyed hits and case-sensitive misses
+  (C-006), short names after `USE` (C-007), the empty temp-view frame (C-008), the kept
+  not-found refusal (C-009), the fall-through sweep (C-010), and the stored codec win
+  with the post-`UNSET` default (C-011); both cells replay EQUAL and `DBT-TBLPROPS-1` is
+  FIXED.
+  `risk_tier: standard`. Branch `feat/tblprops-1`.
+  pins: tblprops-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
 - [partname-1-ledger.md](partname-1-ledger.md) —
   **WO PARTNAME-1 (2026-09-26), in flight:** partition-field names pinned per door
   against Spark's measured answers — the CREATE door omits the width (C-001), the

@@ -140,8 +140,31 @@ async fn bare_name_completes_from_use_session_defaults() {
     assert_eq!(show_rows(frame).await, reserved_and_stored_rows());
 }
 
+async fn ctas_table_rows(catalogs: &CatalogRegistry, catalog: &str) -> Vec<(String, String)> {
+    let id = catalogs[catalog]
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "t".to_string(),
+        ))
+        .await
+        .expect("load table")
+        .metadata()
+        .current_snapshot_id()
+        .expect("snapshot id")
+        .to_string();
+    vec![
+        ("current-snapshot-id".to_string(), id),
+        ("format".to_string(), "iceberg/parquet".to_string()),
+        ("format-version".to_string(), "2".to_string()),
+        (
+            "write.parquet.compression-codec".to_string(),
+            "zstd".to_string(),
+        ),
+    ]
+}
+
 #[tokio::test]
-async fn viewless_catalog_table_falls_through_after_one_view_probe() {
+async fn viewless_catalog_table_answers_after_one_view_probe() {
     let warehouse = TempDir::new().expect("temp warehouse");
     let (ctx, mut catalogs) = setup(&warehouse).await;
     run(
@@ -160,13 +183,20 @@ async fn viewless_catalog_table_falls_through_after_one_view_probe() {
         ViewFaults::default(),
     );
     register_catalog(&ctx, &mut catalogs, catalog, &warehouse).await;
-    let result = execute_show_tblproperties(&ctx, &catalogs, statement("fault", "t")).await;
-    assert!(result.is_none());
+    let frame = execute_show_tblproperties(&ctx, &catalogs, statement("fault", "t"))
+        .await
+        .expect("table must be handled")
+        .expect("table must answer");
+    assert_eq!(
+        show_rows(frame).await,
+        ctas_table_rows(&catalogs, "fault").await,
+        "pins: tblprops-1/C-001"
+    );
     assert_eq!(view_calls.load(Ordering::SeqCst), 1);
 }
 
 #[tokio::test]
-async fn missing_view_with_existing_table_falls_through() {
+async fn missing_view_with_existing_table_answers() {
     let warehouse = TempDir::new().expect("temp warehouse");
     let (ctx, mut catalogs) = setup(&warehouse).await;
     run(
@@ -187,8 +217,15 @@ async fn missing_view_with_existing_table_falls_through() {
         },
     );
     register_catalog(&ctx, &mut catalogs, catalog, &warehouse).await;
-    let result = execute_show_tblproperties(&ctx, &catalogs, statement("fault", "t")).await;
-    assert!(result.is_none());
+    let frame = execute_show_tblproperties(&ctx, &catalogs, statement("fault", "t"))
+        .await
+        .expect("table must be handled")
+        .expect("table must answer");
+    assert_eq!(
+        show_rows(frame).await,
+        ctas_table_rows(&catalogs, "fault").await,
+        "pins: tblprops-1/C-001"
+    );
     assert_eq!(view_calls.load(Ordering::SeqCst), 1);
     assert_eq!(table_calls.load(Ordering::SeqCst), 1);
 }
@@ -293,7 +330,7 @@ async fn invalid_name_and_missing_catalog_fall_through_before_view_probe() {
 }
 
 #[tokio::test]
-async fn router_preserves_show_parse_error_and_table_fallthrough() {
+async fn router_preserves_show_parse_error_and_answers_table() {
     let warehouse = TempDir::new().expect("temp warehouse");
     let (ctx, catalogs) = setup(&warehouse).await;
     let error = execute(&ctx, &catalogs, "SHOW TBLPROPERTIES")
@@ -307,16 +344,25 @@ async fn router_preserves_show_parse_error_and_table_fallthrough() {
     run(
         &ctx,
         &catalogs,
-        "CREATE TABLE ice.sales.t AS SELECT * FROM src",
+        "CREATE TABLE ice.sales.t (id BIGINT) USING iceberg TBLPROPERTIES ('k'='v')",
     )
     .await;
-    let error = execute(&ctx, &catalogs, "SHOW TBLPROPERTIES ice.sales.t")
+    let frame = execute(&ctx, &catalogs, "SHOW TBLPROPERTIES ice.sales.t")
         .await
-        .expect_err("table must reach upstream SHOW refusal");
-    assert!(matches!(error, DataFusionError::Plan(_)));
+        .expect("table must answer");
     assert_eq!(
-        error.to_string(),
-        "Error during planning: SHOW [VARIABLE] is not supported unless information_schema is enabled"
+        show_rows(frame).await,
+        vec![
+            ("current-snapshot-id".to_string(), "none".to_string()),
+            ("format".to_string(), "iceberg/parquet".to_string()),
+            ("format-version".to_string(), "2".to_string()),
+            ("k".to_string(), "v".to_string()),
+            (
+                "write.parquet.compression-codec".to_string(),
+                "zstd".to_string()
+            ),
+        ],
+        "pins: tblprops-1/C-001"
     );
     run(
         &ctx,
