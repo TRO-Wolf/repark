@@ -884,6 +884,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   → `ID`; `join(…, 'ID')` → `ID`, `data`, `w`; `unionByName` of `ID, data` and `id, Data` →
   `ID`, `data` with four rows. Spark shapes: `target/probe-u11-edge-1/vx-spark.json`,
   `vx2-spark.json`. Red on 102ab9d0 (4 failed). pins: u11-edge-1/C-017, C-018, C-019, C-020
+  Round 4 (2026-09-26, V-001/V-003): `test_qualified_drop_binds_through_its_relation` —
+  `q = SELECT ID, data FROM t t`: `drop(F.col('t.ID'))` and `drop(F.col('t.id'))` → `data`;
+  `drop('t.ID')`, `drop('u.id')`, `drop(F.col('u.id'))` keep `ID`, `data` and both rows; on
+  `SELECT a.id, b.ID FROM t a JOIN t b`, `drop(F.col('b.id'))` → `id`, `drop(F.col('A.ID'))` →
+  `ID`. Spark shapes: `target/probe-u11-edge-1/vz-spark.json`. Red on 5e2a68b8
+  (`red-r4-facade.txt`). pins: u11-edge-1/C-022
 - [test_u11_edge_partition_field.py](test_u11_edge_partition_field.py) — **U11-EDGE-1
   (2026-09-26), cell `E-CASE-PARTITION-FIELD`:** partition sources bind case-sensitively under
   either `spark.sql.caseSensitive`: `ADD PARTITION FIELD CAT`, `bucket(4, ID)` and

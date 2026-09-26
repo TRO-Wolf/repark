@@ -1,10 +1,13 @@
 use std::collections::{BTreeSet, HashSet};
 
+use datafusion::arrow::datatypes::Field;
 use datafusion::common::tree_node::{Transformed, TreeNode};
 use datafusion::common::{Column, DFSchema, Result, TableReference, plan_err};
 use datafusion::dataframe::DataFrame;
 use datafusion::logical_expr::expr::Alias;
 use datafusion::logical_expr::{Expr, JoinType, LogicalPlanBuilder};
+
+type Hit<'a> = (Option<&'a TableReference>, &'a Field);
 
 pub(super) fn bind_case_insensitive(expr: Expr, frame_schema: &DFSchema) -> Result<Expr> {
     expr.transform(|node| {
@@ -24,6 +27,20 @@ pub(super) fn bind_case_insensitive(expr: Expr, frame_schema: &DFSchema) -> Resu
         })
     })
     .map(|transformed| transformed.data)
+}
+
+fn case_hits<'a>(column: &Column, schemas: impl IntoIterator<Item = &'a DFSchema>) -> Vec<Hit<'a>> {
+    schemas
+        .into_iter()
+        .flat_map(DFSchema::iter)
+        .filter(|(qualifier, field)| {
+            field.name().eq_ignore_ascii_case(&column.name)
+                && column.relation.as_ref().is_none_or(|written| {
+                    qualifier.is_some_and(|held| same_relation(written, held))
+                })
+        })
+        .map(|(qualifier, field)| (qualifier, field.as_ref()))
+        .collect()
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -66,20 +83,12 @@ fn unique_case_match(column: &Column, frame_schema: &DFSchema) -> Option<Column>
     if exact {
         return None;
     }
-    let mut hits = frame_schema
-        .iter()
-        .filter(|(qualifier, field)| {
-            field.name().eq_ignore_ascii_case(&column.name)
-                && column.relation.as_ref().is_none_or(|written| {
-                    qualifier.is_some_and(|held| same_relation(written, held))
-                })
-        })
-        .map(|(qualifier, field)| Column::new(qualifier.cloned(), field.name()));
-    let first = hits.next()?;
-    if hits.any(|other| other != first) {
-        return None;
-    }
-    Some(first)
+    let hits = case_hits(column, [frame_schema]);
+    let (first_qualifier, first_field) = hits.first()?;
+    let first = Column::new(first_qualifier.cloned(), first_field.name());
+    hits.iter()
+        .all(|(qualifier, field)| Column::new(qualifier.cloned(), field.name()) == first)
+        .then_some(first)
 }
 
 fn same_relation(written: &TableReference, held: &TableReference) -> bool {
@@ -108,21 +117,25 @@ fn bind_name(schema: &DFSchema, name: &str) -> Column {
 }
 
 #[allow(clippy::missing_errors_doc)]
-pub fn drop_named_columns(frame: DataFrame, names: &[String]) -> Result<DataFrame> {
-    let mut targets: Vec<Column> = Vec::new();
-    for name in names {
-        let before = targets.len();
-        targets.extend(
-            frame
-                .schema()
+pub fn drop_named_columns(
+    frame: DataFrame,
+    names: &[String],
+    references: &[String],
+) -> Result<DataFrame> {
+    let written = names
+        .iter()
+        .map(|name| Column::new_unqualified(name.as_str()))
+        .chain(
+            references
                 .iter()
-                .filter(|(_, field)| field.name().eq_ignore_ascii_case(name))
-                .map(|(qualifier, field)| Column::new(qualifier.cloned(), field.name())),
-        );
-        if targets.len() == before {
-            targets.push(Column::from(name.as_str()));
-        }
-    }
+                .map(Column::from_qualified_name_ignore_case),
+        )
+        .collect::<Vec<_>>();
+    let targets = written
+        .iter()
+        .flat_map(|column| case_hits(column, [frame.schema()]))
+        .map(|(qualifier, field)| Column::new(qualifier.cloned(), field.name()))
+        .collect::<Vec<_>>();
     frame.drop_columns(&targets)
 }
 
@@ -339,12 +352,36 @@ mod tests {
     #[tokio::test]
     async fn drop_removes_every_folded_match() {
         let frame = spelled(r#"SELECT 1 AS "ID", 'a' AS data"#).await;
-        let dropped = drop_named_columns(frame.clone(), &["id".to_string()]).unwrap();
+        let dropped = drop_named_columns(frame.clone(), &["id".to_string()], &[]).unwrap();
         assert_eq!(names(&dropped), vec!["data".to_string()]);
         let both = ["ID".to_string(), "DATA".to_string()];
-        assert!(names(&drop_named_columns(frame.clone(), &both).unwrap()).is_empty());
-        let absent = drop_named_columns(frame, &["nope".to_string()]).unwrap();
+        assert!(names(&drop_named_columns(frame.clone(), &both, &[]).unwrap()).is_empty());
+        let absent = drop_named_columns(frame, &["nope".to_string()], &[]).unwrap();
         assert_eq!(names(&absent), vec!["ID".to_string(), "data".to_string()]);
+    }
+
+    #[tokio::test]
+    async fn qualified_drop_binds_through_its_relation() {
+        let frame = spelled(r#"SELECT "ID", data FROM (SELECT 1 AS "ID", 'a' AS data) t"#).await;
+        let whole = vec!["ID".to_string(), "data".to_string()];
+        for written in ["t.ID", "t.id", "T.Id"] {
+            let dropped = drop_named_columns(frame.clone(), &[], &[written.to_string()]).unwrap();
+            assert_eq!(names(&dropped), vec!["data".to_string()]);
+        }
+        for written in ["t.ID", "u.id"] {
+            let named = drop_named_columns(frame.clone(), &[written.to_string()], &[]).unwrap();
+            assert_eq!(names(&named), whole);
+        }
+        let unmatched = drop_named_columns(frame, &[], &["u.id".to_string()]).unwrap();
+        assert_eq!(names(&unmatched), whole);
+        let joined = spelled(
+            r#"SELECT a.id, b."ID" FROM (SELECT 1 AS id, 1 AS "ID") a JOIN (SELECT 1 AS id, 1 AS "ID") b ON a.id = b.id"#,
+        )
+        .await;
+        let right = drop_named_columns(joined.clone(), &[], &["b.id".to_string()]).unwrap();
+        assert_eq!(names(&right), vec!["id".to_string()]);
+        let left = drop_named_columns(joined, &[], &["A.ID".to_string()]).unwrap();
+        assert_eq!(names(&left), vec!["ID".to_string()]);
     }
 
     #[tokio::test]

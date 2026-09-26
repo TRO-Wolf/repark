@@ -191,3 +191,19 @@ def test_union_by_name_matches_names_case_insensitively(spark: ReparkSession) ->
     left = _spelled(spark, "SELECT ID, data FROM sc.ns.t")
     unioned = left.unionByName(spark.sql("SELECT id, Data FROM sc.ns.t"))
     assert _shape(unioned) == (["ID", "data"], [(1, "a"), (1, "a"), (2, "b"), (2, "b")])
+
+
+def test_qualified_drop_binds_through_its_relation(spark: ReparkSession) -> None:
+    """A qualified Column drop binds through its relation; an unmatched drop is a no-op.
+
+    pins: u11-edge-1/C-022
+    """
+    frame = _spelled(spark, "SELECT ID, data FROM sc.ns.t t")
+    whole = (["ID", "data"], [(1, "a"), (2, "b")])
+    assert _shape(frame.drop(col("t.ID"))) == (["data"], [("a",), ("b",)])
+    assert _shape(frame.drop(col("t.id"))) == (["data"], [("a",), ("b",)])
+    for target in ("t.ID", "u.id", col("u.id")):
+        assert _shape(frame.drop(target)) == whole
+    joined = spark.sql("SELECT a.id, b.ID FROM sc.ns.t a JOIN sc.ns.t b ON a.id = b.id")
+    assert _shape(joined.drop(col("b.id"))) == (["id"], [(1,), (2,)])
+    assert _shape(joined.drop(col("A.ID"))) == (["ID"], [(1,), (2,)])

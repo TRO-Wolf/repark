@@ -1355,3 +1355,7 @@ U11-EDGE-1 round 2 (2026-09-26, V-004): `core.py`'s `union_by_name` no longer de
 column match; it passes `allowMissingColumns` to the native `union_by_name`, whose Rust binder
 pairs names case-insensitively, keeps the left spelling and raises the mismatch refusal.
 `core.py` 3991 → 3981. pins: u11-edge-1/C-020
+U11-EDGE-1 round 4 (2026-09-26, V-001/V-003): `core.py`'s `drop` sends string targets and
+Column targets apart to the native `drop_frame_columns`, so a qualified Column binds through its
+relation in Rust and an unmatched string or Column is a no-op; the line cost is paid by the
+docstring, `core.py` stays at 3981. pins: u11-edge-1/C-022
