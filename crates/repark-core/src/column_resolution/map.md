@@ -63,6 +63,23 @@ pins: ice-error-conditions-1/C-011
   repark-spark's re-planning temp-view scan grows the stack the same way; removing that wrapper
   overflows the 100-level temp-view chain pins. pins: ice-views-1/C-018
 - `tests.rs` — the battery below.
+- `display.rs` — **U11-EDGE-1 (2026-09-26):** the query-spelling display rewrite. Under the
+  default `caseSensitive=false`, `display_rewrite` compares the planned output names with the
+  projection as written (the left branch of a set operation) and re-plans once with quoted
+  aliases for every plain or compound reference whose written spelling differs (`SELECT ID` →
+  `ID`, `SELECT t.ID` → `ID`, `SELECT s.A` → `A`, an unquoted alias keeps its case); `*` keeps
+  the stored names; a spelling written twice is left to the planner. `GROUP BY` / `HAVING` /
+  `ORDER BY` references to a re-quoted alias follow it. `strict_case_check` refuses a bare
+  wrong-case reference under `caseSensitive=true` on a single-table query with Spark's
+  `UNRESOLVED_COLUMN.WITH_SUGGESTION` text (`` `ID` `` and the stored names as suggestions).
+  `count(*)` keeps DataFusion's `count(*)` name (Spark says `count(1)`; out of the unit).
+  Measured: `target/probe-u11-edge-1/spark_case.json`, `spark_r2.json`.
+  pins: u11-edge-1/C-001, C-003, C-005, C-006, C-007
+  Rust pins in `tests.rs`: `display_rewrite_keeps_the_written_spelling`,
+  `wrong_case_select_filters_orders_and_reads_rows`, `quoted_wrong_case_and_qualified_resolve`,
+  `group_by_wrong_case_groups`, `sensitive_session_refuses_folded_names_and_keeps_backticks`;
+  `dataframe_filter_binds_projection_alias` binds the now case-kept alias `Id` by its schema
+  name (DataFusion's `col()` folds to `id`).
 
 ## Purpose
 

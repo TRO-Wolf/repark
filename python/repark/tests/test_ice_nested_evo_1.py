@@ -520,10 +520,6 @@ def test_required_nested_child_message_matches_spark(
     assert _REQUIRED_CHILD_MESSAGE in str(outcome["error"]), str(outcome["error"])
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="EX-COL-2 BACKLOG: RePark names an unaliased `s.a` projection `<table>.s[a]`",
-)
 def test_unaliased_nested_projection_names_like_spark() -> None:
     """`SELECT id, s.a, s.b` names its columns `id, a, b` as Spark does (EX-COL-2)."""
     spark = _session()

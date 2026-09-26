@@ -236,6 +236,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `resolve_scoped_expr` / `resolve_subquery_plan` for the binding layer.
   pins: df-subquery-1/C-001, C-002, C-004
 - `tests/df_guard.rs` — the nine `df_guards.rs` pins, split out of `tests.rs` when the DEFECT-2
+  **U11-EDGE-1 (2026-09-26):** `df_guards.rs` also declares `df_guards/case_bind.rs`
+  (row in `df_guards/map.md`). pins: u11-edge-1/C-015
+- `tests/df_guard.rs` — the seven `df_guards.rs` pins, split out of `tests.rs` when the DEFECT-2
   cohort pushed that file past the 1500-line ceiling (the sanctioned "split the module" out, not
   an EXCEPTIONS row). Guard 1: a bare no-extension session carries the scalar-subquery config
   default. Guard 2, six pins: the `enable_leaf_expression_pushdown` flag stays ENABLED (the

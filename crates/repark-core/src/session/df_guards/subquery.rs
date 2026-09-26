@@ -27,6 +27,7 @@ const EXISTS_COUNT_ALIAS: &str = "__repark_exists_count";
 
 #[allow(clippy::missing_errors_doc)]
 pub fn resolve_bound_expr(expr: Expr, frame_schema: &DFSchema) -> Result<Expr> {
+    let expr = super::case_bind::bind_case_insensitive(expr, frame_schema)?;
     let scopes = vec![Arc::new(frame_schema.clone())];
     resolve_expr(expr, &scopes, scopes.len())
 }

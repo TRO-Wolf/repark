@@ -490,7 +490,7 @@ async fn reserved_word_positions_follow_spark() {
          ORDER BY 1",
     )
     .await;
-    assert_eq!(field_names(&rows), vec!["s[_deleted]"], "B7");
+    assert_eq!(field_names(&rows), vec!["_deleted"], "B7");
     assert_eq!(i64s(&rows, 0), vec![1, 2], "B7");
     let rows = batches(
         &session,

@@ -1,0 +1,135 @@
+"""E-CASE-SELECT facade pins: SELECT output columns keep the query spelling."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from repark import ReparkSession
+from repark.spark.functions import col
+
+
+@pytest.fixture()
+def spark(tmp_path: Path) -> ReparkSession:
+    session = ReparkSession.builder.appName("pytest-u11-edge-case-select").getOrCreate()
+    session.register_memory_catalog("sc", tmp_path)
+    session.sql("CREATE NAMESPACE sc.ns")
+    session.sql("CREATE TABLE sc.ns.t (id INT, Data STRING) USING iceberg")
+    session.sql("INSERT INTO sc.ns.t VALUES (1, 'a')")
+    session.sql("CREATE TEMP VIEW sv AS SELECT 1 AS id, STRUCT(5 AS a, 'z' AS b) AS s")
+    return session
+
+
+def _names(frame) -> list[str]:
+    """Return the output column names of a frame."""
+    return [field.name for field in frame.schema.fields]
+
+
+def test_select_keeps_written_spelling(spark: ReparkSession) -> None:
+    """SELECT ID, data names the outputs ID/data with the matching row.
+
+    pins: u11-edge-1/C-001
+    """
+    frame = spark.sql("SELECT ID, data FROM sc.ns.t WHERE DATA = 'a'")
+    assert _names(frame) == ["ID", "data"]
+    assert [tuple(row) for row in frame.collect()] == [(1, "a")]
+
+
+def test_select_mixed_case_single_column(spark: ReparkSession) -> None:
+    """SELECT Data names the output Data.
+
+    pins: u11-edge-1/C-002
+    """
+    assert _names(spark.sql("SELECT Data FROM sc.ns.t")) == ["Data"]
+
+
+def test_select_alias_wins(spark: ReparkSession) -> None:
+    """SELECT id AS X names the output X.
+
+    pins: u11-edge-1/C-003
+    """
+    assert _names(spark.sql("SELECT id AS X FROM sc.ns.t")) == ["X"]
+
+
+def test_select_star_keeps_stored_names(spark: ReparkSession) -> None:
+    """SELECT * names the outputs with the stored column names.
+
+    pins: u11-edge-1/C-004
+    """
+    assert _names(spark.sql("SELECT * FROM sc.ns.t")) == ["id", "Data"]
+
+
+def test_select_qualified_and_struct_field(spark: ReparkSession) -> None:
+    """Qualified t.ID names the output ID; struct field s.A names it A.
+
+    pins: u11-edge-1/C-005
+    """
+    assert _names(spark.sql("SELECT t.ID FROM sc.ns.t t")) == ["ID"]
+    struct_frame = spark.sql("SELECT s.A FROM sv")
+    assert _names(struct_frame) == ["A"]
+    assert [tuple(row) for row in struct_frame.collect()] == [(5,)]
+
+
+def test_select_group_by_and_union(spark: ReparkSession) -> None:
+    """GROUP BY ID keeps the ID spelling and the alias; UNION takes the left branch spelling.
+
+    pins: u11-edge-1/C-006
+    """
+    grouped = spark.sql("SELECT ID, count(*) AS c FROM sc.ns.t GROUP BY ID")
+    assert _names(grouped) == ["ID", "c"]
+    assert [tuple(row) for row in grouped.collect()] == [(1, 1)]
+    union = spark.sql("SELECT ID FROM sc.ns.t UNION SELECT id FROM sc.ns.t")
+    assert _names(union) == ["ID"]
+    assert [tuple(row) for row in union.collect()] == [(1,)]
+
+
+def test_case_sensitive_select_refuses(spark: ReparkSession) -> None:
+    """SELECT ID under caseSensitive=true refuses with UNRESOLVED_COLUMN.
+
+    pins: u11-edge-1/C-007
+    """
+    sensitive = ReparkSession.builder.appName("pytest-u11-edge-sensitive").getOrCreate()
+    sensitive.sql("CREATE TEMP VIEW v AS SELECT 1 AS id")
+    sensitive.sql("SET spark.sql.caseSensitive=true")
+    try:
+        with pytest.raises(Exception) as error:
+            sensitive.sql("SELECT ID FROM v").collect()
+        assert "[UNRESOLVED_COLUMN.WITH_SUGGESTION]" in str(error.value)
+        assert "with name `ID` cannot be resolved" in str(error.value)
+        assert "Did you mean one of the following? [`id`]" in str(error.value)
+        assert [field.name for field in sensitive.sql("SELECT id FROM v").schema.fields] == ["id"]
+    finally:
+        sensitive.stop()
+
+
+def test_dataframe_select_keeps_spelling(spark: ReparkSession) -> None:
+    """df.select('ID') names the output ID with the matching row.
+
+    pins: u11-edge-1/C-008
+    """
+    frame = spark.table("sc.ns.t").select("ID")
+    assert _names(frame) == ["ID"]
+    assert [tuple(row) for row in frame.collect()] == [(1,)]
+
+
+def test_dataframe_door_binds_spelled_sql_columns(spark: ReparkSession) -> None:
+    """F.col binds a spelled SQL output case-insensitively, like live Spark.
+
+    pins: u11-edge-1/C-015
+    """
+    spark.sql("INSERT INTO sc.ns.t VALUES (2, 'b')")
+    frame = spark.sql("SELECT ID, data FROM sc.ns.t")
+    for name in ("id", "ID"):
+        kept = frame.filter(col(name) > 1)
+        assert _names(kept) == ["ID", "data"]
+        assert [tuple(row) for row in kept.collect()] == [(2, "b")]
+    shifted = frame.select(col("id") + 1)
+    assert _names(shifted) == ["(id + 1)"]
+    assert sorted(tuple(row) for row in shifted.collect()) == [(2,), (3,)]
+    aliased = spark.sql("SELECT id AS Id FROM sc.ns.t").filter(col("Id") > 1)
+    assert _names(aliased) == ["Id"]
+    assert [tuple(row) for row in aliased.collect()] == [(2,)]
+    created = spark.createDataFrame([(1,), (2,)], ["Id"]).filter(col("id") > 1)
+    assert _names(created) == ["Id"]
+    assert [tuple(row) for row in created.collect()] == [(2,)]
