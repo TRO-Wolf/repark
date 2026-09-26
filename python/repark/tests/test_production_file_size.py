@@ -43,9 +43,6 @@ EXPECTED_SYMBOL_HASHES = {
     "_ARRAY_TYPECODES_SUPPORTED": (
         "2b09eac56acf91b21c9e11e31b7418f207abc8a91701f028749d38fe8c7a532c"
     ),
-    "_AUTO_MEMORY_CATALOG_KEY": (
-        "c1adb93336e4928d779efbe15cc2807d8f0a9a944962f2df7dc2a50c368810c2"
-    ),
     "_BATCH_SIZE_KEYS": ("c6e8e092205f84da0cd4a4a713f78aa2e15cbae0ce1ef81e4b48c91d7069eb96"),
     "_CONF_GET_UNSET": ("25ba042075760c94f2215645c784f07f44559548367e879535e7b5b56659e061"),
     "_CREATE_TABLE_PREFIX_RE": ("564de7d747fbc2be2c93c99066949be908620ce8cfa54da6e5fed75d8fc38a85"),
@@ -121,7 +118,6 @@ EXPECTED_SYMBOL_HASHES = {
     ),
     "_UPDATE_PREFIX_RE": ("c4648cd4fe7322523964882afed556654dca844366eb3d9c2b556bcc968967b4"),
     "_active_session": ("42f1cae2431da56af3fdcc6c9e96134a73146a0e10492fe56a10912b8dcd4086"),
-    "_alias_catalog_name": ("045854c59387461de24fa461c590f491b87e631c07abf65e7efc7b880246cbe5"),
     "_apply_builder_datafusion_conf": (
         "a45aebf3f9dbc663ea8893754b07aea6452e2d5edf769bb3488b94210cf1fad5"
     ),
@@ -153,15 +149,9 @@ EXPECTED_SYMBOL_HASHES = {
     ),
     "_arrow_type_is_nested": ("d444bf00f930013dddb015316cfa3b7b8407febbb23aa72149f7d865c525e6f6"),
     "_arrow_type_merge_label": ("92fac695bb138a1b6db0429bbef68d9aff58b17a493218eaa72c5ec997476c1e"),
-    "_auto_memory_catalog_wanted": (
-        "b9c26fc6f01a564a85f68939fbfd93158a2ee7306cf8fb283f86bb243d0c9bde"
-    ),
     "_bind_named_row": ("7b718090cccb37aa44f49729e9f07f40f90e263f4ba1dbfb9e7f83b045e85f65"),
     "_builder_has_memory_limit_key": (
         "0e9a4c88189ff345fa6fc2069f533610dac813e001233009988c1dcba31fb9f2"
-    ),
-    "_catalog_names_from_builder_config": (
-        "6ab06485bcd352be62a28a615e46a5d6c96419652c578e7618b7c2731b1739e7"
     ),
     "_coerce_schema_names": ("dd46fb2f33b15b065cb8fb3688eb2728b7bd86a17186884699e82dc91b72aa52"),
     "_collect_cte_names": ("bb8cd10df6e3bdf058a4524f279ef444fa7d5ec8331c21b95273e227c50ad5cd"),
@@ -178,9 +168,6 @@ EXPECTED_SYMBOL_HASHES = {
     "_data_type_to_sql_type": ("11700558ed382c6afd246a844a563658cd22374aa53ea4922760f4fa251391b7"),
     "_datetime64_unit_from_dtype": (
         "addd824624710a22a898d6f94862268f5e06e8f6d3c482674ee44e425765e04f"
-    ),
-    "_default_catalog_from_builder_config": (
-        "21f16722a4af5429a0766b90cb71d1a7f49862e79cdd4668498919c238d90776"
     ),
     "_default_namespace_from_builder_config": (
         "153a6db07dd94da4931b14c6708c46b99503bfea486e9260c893da402c6ed034"
@@ -411,12 +398,11 @@ EXPECTED_SYMBOL_HASHES = {
     "default_display_style": ("43547a84b8832b0627850b825fc9bc1ef099cb546ad7f69d7a7710161b3aa78e"),
     "logger": ("fa49a10e7315bca551601a1c6c048afadc925fcc6a050e5bfcd74012a380f91e"),
     "normalize_display_style": ("8b1e207bfcb7f37f433f026942124dd695674b14369d7a18bf3dbcc6b311b9ec"),
-    "resolve_table_name": ("6450b57013df334a7c72a8a0a0258b51b8fd6c6d665d65bda275241a2c2ea4c5"),
+    "resolve_table_name": ("d41f2fee989092381c7d5be4a599809e1c0508bb9b34d02399f14e893c88f920"),
 }
 
 EXPECTED_OWNERS = {
     "_ARRAY_TYPECODES_SUPPORTED": "create_dataframe_values",
-    "_AUTO_MEMORY_CATALOG_KEY": "catalog_resolution",
     "_BATCH_SIZE_KEYS": "session_configuration",
     "_CONF_GET_UNSET": "session_configuration",
     "_CREATE_TABLE_PREFIX_RE": "sql_relations",
@@ -462,7 +448,6 @@ EXPECTED_OWNERS = {
     "_UNSUPPORTED_SEMANTIC_READER_OPTIONS": "reader_support",
     "_UPDATE_PREFIX_RE": "sql_relations",
     "_active_session": "session_state",
-    "_alias_catalog_name": "catalog_resolution",
     "_apply_builder_datafusion_conf": "session_configuration",
     "_apply_permutation": "create_dataframe_schema",
     "_array_typecodes_supported": "create_dataframe_values",
@@ -476,10 +461,8 @@ EXPECTED_OWNERS = {
     "_arrow_type_for_typed_null_sql": "create_dataframe_tuples",
     "_arrow_type_is_nested": "create_dataframe_inference",
     "_arrow_type_merge_label": "create_dataframe_inference",
-    "_auto_memory_catalog_wanted": "catalog_resolution",
     "_bind_named_row": "create_dataframe_rows",
     "_builder_has_memory_limit_key": "session_configuration",
-    "_catalog_names_from_builder_config": "catalog_resolution",
     "_coerce_schema_names": "create_dataframe_values",
     "_collect_cte_names": "sql_relations",
     "_column_null_sql_from_raw_tuples": "create_dataframe_schema",
@@ -488,7 +471,6 @@ EXPECTED_OWNERS = {
     "_create_dataframe_from_rows_inner": "create_dataframe_rows",
     "_data_type_to_sql_type": "create_dataframe_values",
     "_datetime64_unit_from_dtype": "create_dataframe_schema",
-    "_default_catalog_from_builder_config": "catalog_resolution",
     "_default_namespace_from_builder_config": "catalog_resolution",
     "_drop_cdf_temp_view": "create_dataframe_rows",
     "_empty_frame_sql": "create_dataframe_rows",
@@ -593,6 +575,7 @@ EXPECTED_RUNTIME_NAMES = (
     "AnalysisException",
     "Any",
     "Catalog",
+    "DEFAULT_CATALOG_KEY",
     "DEFAULT_CATALOG_NAME",
     "DEFAULT_DATABASE_NAME",
     "DEFAULT_SESSION_TIME_ZONE",
@@ -609,7 +592,6 @@ EXPECTED_RUNTIME_NAMES = (
     "TIMESTAMP_TYPE_KEY",
     "TYPE_CHECKING",
     "_ARRAY_TYPECODES_SUPPORTED",
-    "_AUTO_MEMORY_CATALOG_KEY",
     "_BATCH_SIZE_KEYS",
     "_CONF_GET_UNSET",
     "_CREATE_TABLE_PREFIX_RE",
@@ -655,7 +637,6 @@ EXPECTED_RUNTIME_NAMES = (
     "_UNSUPPORTED_SEMANTIC_READER_OPTIONS",
     "_UPDATE_PREFIX_RE",
     "_active_session",
-    "_alias_catalog_name",
     "_apply_builder_datafusion_conf",
     "_apply_permutation",
     "_array_typecodes_supported",
@@ -669,10 +650,8 @@ EXPECTED_RUNTIME_NAMES = (
     "_arrow_type_for_typed_null_sql",
     "_arrow_type_is_nested",
     "_arrow_type_merge_label",
-    "_auto_memory_catalog_wanted",
     "_bind_named_row",
     "_builder_has_memory_limit_key",
-    "_catalog_names_from_builder_config",
     "_coerce_schema_names",
     "_collect_cte_names",
     "_column_null_sql_from_raw_tuples",
@@ -681,7 +660,6 @@ EXPECTED_RUNTIME_NAMES = (
     "_create_dataframe_from_rows_inner",
     "_data_type_to_sql_type",
     "_datetime64_unit_from_dtype",
-    "_default_catalog_from_builder_config",
     "_default_namespace_from_builder_config",
     "_drop_cdf_temp_view",
     "_empty_frame_sql",

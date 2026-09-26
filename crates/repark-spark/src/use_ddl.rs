@@ -49,11 +49,7 @@ pub(crate) fn set_session_defaults(
 
 #[must_use]
 pub(crate) fn default_namespace_for_catalog(catalog: &str) -> &str {
-    if catalog == "spark_catalog" {
-        "default"
-    } else {
-        ""
-    }
+    CatalogRegistry::default_namespace_for(catalog)
 }
 
 #[allow(clippy::missing_errors_doc)]

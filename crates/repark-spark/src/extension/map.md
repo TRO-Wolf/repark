@@ -48,6 +48,8 @@ function-registry + analyzer-rule installation + the composed
   installs the post-coercion rules minus the subsumed late
   `spark_integer_literal`.
   pins: sql-literal-typing-1/L-001, L-002
+- `session_catalog.rs` — **CATALOG-1 (2026-09-26):** `with_configured_defaults` (the build
+  carrier from `spark.sql.defaultCatalog`). pins: catalog-1/C-003
 
 ## Pointers
 

@@ -365,13 +365,16 @@ def test_show_namespaces_bare_uses_current_catalog(spark: ReparkSession) -> None
         assert [[row["namespace"]] for row in rows] == [["ns"]]
 
 
-def test_show_namespaces_bare_at_session_start_follows_box_not_current_catalog(
+def test_show_namespaces_bare_at_session_start_lists_the_session_catalog(
     spark: ReparkSession,
 ) -> None:
-    """C-018: at session start bare SHOW NAMESPACES follows the registry box,
-    not current_catalog()."""
+    """C-018: at session start bare SHOW NAMESPACES and current_catalog() agree.
+
+    Registering ``sc`` no longer moves the current catalog, so both answer from
+    ``spark_catalog`` as Spark does (catalog-1/C-001 retires the H-01 split).
+    """
     rows = spark.sql("SHOW NAMESPACES").to_arrow().to_pylist()
-    assert [[row["namespace"]] for row in rows] == [["ns"]]
+    assert [[row["namespace"]] for row in rows] == [["default"]]
     answered = spark.sql("SELECT current_catalog()").to_arrow().to_pylist()
     assert [[row["current_catalog()"]] for row in answered] == [["spark_catalog"]]
 

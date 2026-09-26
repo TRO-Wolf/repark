@@ -13,6 +13,9 @@ The package exposes `ReparkSession`, the `SparkSession` and `ReParkSession`
 aliases, `DataFrame`, `Column`, `Catalog`, `Window`, `Row`, `Observation`, Spark data
 types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 `sql` and `types` aliases preserve common PySpark import paths.
+- `catalog.py` — **CATALOG-1 (2026-09-26):** `tableExists` / `databaseExists` /
+  `getDatabase` / `listTables` no longer alias `spark_catalog` to the current catalog.
+  pins: catalog-1/C-002
 
 ## Modules
 

@@ -38,6 +38,7 @@ mod df_guards;
 mod iceberg_caches;
 mod late_catalogs;
 mod memory_catalog;
+mod session_catalog;
 pub(crate) mod spill;
 mod temp_views;
 mod write_options;
@@ -311,7 +312,9 @@ impl ReparkSessionBuilder {
         let session = ReparkSession {
             backend: Arc::new(SingleNodeBackend::new(context)),
             dialect,
-            catalogs: Arc::new(RwLock::new(CatalogRegistry::with_cache_settings(caches))),
+            catalogs: Arc::new(RwLock::new(
+                CatalogRegistry::with_cache_settings(caches).with_session_catalogs(&self.config),
+            )),
             catalog_specs: Arc::new(catalog_specs),
             source_specs: Arc::new(self.source_specs),
             conf_dump: Arc::new(conf_dump),

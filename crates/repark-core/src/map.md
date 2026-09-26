@@ -1217,6 +1217,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   wrapping) and made the hoist preserve a `SubqueryAlias` qualifier on lifted
   outputs. `session.rs` re-exports the resolvers for the Python bindings.
   pins: df-subquery-1/C-001, C-002, C-003, C-004, C-008, C-009
+- **CATALOG-1 (2026-09-26):** `catalog_state.rs` holds the current catalog as
+  `session_catalog::CurrentCatalog` (catalog, namespace, pinned); `catalog_state/session_catalog.rs`
+  owns `with_session_catalogs` (the build-time `spark.sql.defaultCatalog`), `current_defaults`,
+  `set_defaults` (pins) and `default_namespace_for`. `session.rs` builds the registry with it and
+  declares `session/session_catalog.rs`. pins: catalog-1/C-001, C-003
 
 ## Pointers
 

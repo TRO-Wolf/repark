@@ -35,6 +35,28 @@ spark.table("t").orderBy("id").show()
 
 Opt out with `repark.sql.autoMemoryCatalog=false` on the builder if you want an empty session.
 
+`spark_catalog` is the session catalog, as in Spark, and it exists beside any catalog you
+configure: a session with a `spark.sql.catalog.prod.*` block still has `spark_catalog`, and a
+`spark.sql.catalog.spark_catalog.*` block of your own takes the auto catalog's place.
+
+### The current catalog
+
+A fresh session's current catalog is `spark_catalog` (namespace `default`), whatever other
+catalogs are configured or registered. Registering a catalog — a builder block, a runtime
+`conf.set` block, `register_memory_catalog` — makes it available and nothing else. Move the
+current catalog the way Spark does:
+
+- `spark.sql.defaultCatalog` on the builder picks the first current catalog.
+- `USE <catalog>`, `USE <catalog>.<namespace>` or `spark.catalog.setCurrentCatalog(...)` move it.
+
+A catalog other than `spark_catalog` starts with the empty namespace (`USE sc` answers `sc`,
+`""`), so name the namespace: `USE sc.ns`, or two-part names `ns.t`.
+
+`spark_catalog.ns.t` names the session catalog and no other. Before 2026-09-26 the first
+registered catalog became the current catalog and `spark_catalog.…` names aliased to it; a table
+written to `local.ns.t` is now reachable only as `local.ns.t`, exactly as in Spark (registry row
+`CAT-CURRENT-CATALOG`).
+
 ## Catalogs
 
 Four catalog kinds are recognized. Two are for AWS, one is for local work, one is not Iceberg at

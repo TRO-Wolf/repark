@@ -62,6 +62,16 @@ is the compatibility router that re-exports every prior name.
 | `timestamp_type.py` | `spark.sql.timestampType` facade half: one key spelling, default `TIMESTAMP_LTZ`, parse refuses naming both legal tokens, builder whitespace normalize, runtime `conf.set` is store-only. Engine resolves at `SparkExtension.configure`. **FACADE-4 step 1 (2026-09-14):** `default_timestamp_data_type` / `default_timestamp_arrow_type` read the shared Rust table (`default_timestamp_descriptor` + Arrow capsule); conf parsing stays here. **Round 2:** `default_timestamp_arrow_type` routes the decoded class through `repark_type_to_arrow` — the descriptor's tuple wire shape cannot feed the dict-reading capsule call. pins: facade-4/C-013, C-026 |
 | `session_time_zone.py` | `spark.sql.session.timeZone` facade half: one key spelling, `UTC` default, `normalize_session_time_zone_config` (whitespace-only, matching the engine's own trim — the engine stays the sole validator). **SET-ANSI-RUNTIME-1 (2026-09-15):** runtime set/unset validates in Rust and applies to the live session (the warn-and-swallow helper is deleted); fresh queries answer the new zone, pre-SET frames keep their analysis snapshot. pins: set-ansi-runtime-1/C-002, C-003. **R-17c-4:** the canonical companion cache (`active_session_time_zone_canonical`, alive-token, lazy native seed, refreshed on every zone mutation) feeding `_session_tzinfo` (ZoneInfo for IANA, fixed offset otherwise); runtime zone sets store trimmed. pins: set-ansi-runtime-1/C-002. The module docstring carries the user-visible statement of what the zone reaches; it ships in the wheel, so it is a lockstep obligation whenever engine coverage changes. |
 | `__init__.py` | Frozen public re-exports and shared facade-class binding. |
+- **CATALOG-1 (2026-09-26):** the facade's current catalog mirrors the engine. `session_core.py`
+  seeds `current_catalog` / `current_database` from `_native.session_defaults` and
+  `known_catalogs` from `_native.session_catalog_names`; the single-configured-catalog start, the
+  registration flip in `_note_registered_catalog` (and its native `set_session_catalog` call) and
+  the `auto_default_catalog` flag are gone; the auto session catalog registers when
+  `_native.auto_session_catalog_wanted` says so. `catalog_resolution.py` drops
+  `_alias_catalog_name`, `_auto_memory_catalog_wanted` and the builder-map catalog helpers;
+  `resolve_table_name` keeps three-part names as written. `session_configuration.DEFAULT_CATALOG_KEY`
+  names `spark.sql.defaultCatalog`, which the `getOrCreate` reuse path routes through
+  `RuntimeConfig.set`. pins: catalog-1/C-001, C-002
 
 ## The column-wise createDataFrame path (PERF-FACADE-CDF-1)
 

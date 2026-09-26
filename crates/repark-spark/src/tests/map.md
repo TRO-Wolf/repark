@@ -2090,6 +2090,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `create_table_options_refusal_keeps_plain_and_with_drops_options` pins the
   narrowed refusal arm on parsed ASTs: `WITH` and plain refuse on the message
   that no longer names `OPTIONS`, the `Options` variant no longer refuses.
+- `session_catalog.rs` — **CATALOG-1 (2026-09-26):** a harness-shaped Spark-door session
+  (`hc` configured, `sc` and `spark_catalog` registered): the fresh current catalog and SHOW
+  CATALOGS, and `spark_catalog` not an alias. pins: catalog-1/C-001, C-002
 
 ## Mapping rule
 

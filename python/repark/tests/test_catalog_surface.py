@@ -187,10 +187,13 @@ def test_clear_cache_and_drop_temp_view_aliases(spark: ReparkSession) -> None:
 # R-CURCAT — current catalog / database / list* success pins
 
 
-def test_current_catalog_defaults_then_tracks_register(spark: ReparkSession) -> None:
-    """After register_memory_catalog, currentCatalog is the registered catalog (facade flip)."""
-    assert spark.catalog.currentCatalog() == "glue_catalog"
-    assert spark.catalog.current_catalog() == "glue_catalog"
+def test_current_catalog_stays_spark_catalog_after_register(spark: ReparkSession) -> None:
+    """register_memory_catalog registers only; currentCatalog stays ``spark_catalog``.
+
+    The old facade flip to the first registered catalog is gone (catalog-1/C-001).
+    """
+    assert spark.catalog.currentCatalog() == "spark_catalog"
+    assert spark.catalog.current_catalog() == "spark_catalog"
     assert spark.catalog.currentDatabase() == "default"
 
 
@@ -301,8 +304,8 @@ def test_get_database_bare_and_qualified_shape(spark: ReparkSession) -> None:
     assert bare == expected
     assert qualified == expected
     assert bare._fields == ("name", "catalog", "description", "locationUri")
-    aliased = spark.catalog.getDatabase("spark_catalog.ns1")
-    assert aliased == expected
+    with pytest.raises(AnalysisException):
+        spark.catalog.getDatabase("spark_catalog.ns1")
 
 
 def test_get_database_returns_location_and_comment(tmp_path: Path) -> None:
@@ -446,7 +449,7 @@ def test_list_tables_no_arg_uses_current_database(spark: ReparkSession) -> None:
 
 
 def test_default_catalog_from_builder_config(tmp_path: Path) -> None:
-    """spark.sql.defaultCatalog builder conf seeds currentCatalog before register."""
+    """spark.sql.defaultCatalog builder conf seeds currentCatalog (catalog-1/C-003)."""
     session = (
         ReparkSession.builder.appName("default-cat")
         .config("spark.sql.defaultCatalog", "glue_catalog")

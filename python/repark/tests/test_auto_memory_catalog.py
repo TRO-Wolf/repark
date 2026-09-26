@@ -1,12 +1,16 @@
 """R-AUTO-MEMCAT — the bare-session default memory catalog (duckdb ``:memory:`` analogue).
 
-A bare ``builder.getOrCreate()`` auto-registers a session-scoped in-memory Iceberg catalog
-under ``spark_catalog`` with the ``default`` namespace seeded, so first-session bare-name
-flows work with zero config. Suppressed by explicit catalog config, an explicit different
-``spark.sql.defaultCatalog``, or ``repark.sql.autoMemoryCatalog=false``. The temp warehouse
-dies with ``stop()``.
+A ``builder.getOrCreate()`` auto-registers a session-scoped in-memory Iceberg catalog under
+``spark_catalog`` with the ``default`` namespace seeded, so first-session bare-name flows work
+with zero config. Since catalog-1 the session catalog always exists, like Spark's: it registers
+beside configured catalog blocks and beside a different ``spark.sql.defaultCatalog``. A user
+``spark.sql.catalog.spark_catalog.*`` block takes its place, and
+``repark.sql.autoMemoryCatalog=false`` turns it off. The decision is the engine's
+(``auto_session_catalog_wanted``). The temp warehouse dies with ``stop()``.
 
-MUTATION: drop the ``_auto_memory_catalog_wanted`` call →
+pins: catalog-1/C-002
+
+MUTATION: drop the ``auto_session_catalog_wanted`` call →
 ``test_bare_session_bare_name_round_trip`` red.
 MUTATION: drop the ``create_namespace`` seed → same test red (no ``default`` namespace).
 MUTATION: drop the stop() cleanup → ``test_stop_removes_auto_warehouse`` red.
@@ -46,15 +50,40 @@ def test_bare_session_bare_name_round_trip(_fresh_session_slot: None) -> None:
     spark.stop()
 
 
-def test_explicit_catalog_config_suppresses_auto(_fresh_session_slot: None, tmp_path: Path) -> None:
-    """A builder-configured catalog gets exactly the configured catalogs — no auto entry."""
+def test_configured_catalogs_sit_beside_the_session_catalog(
+    _fresh_session_slot: None, tmp_path: Path
+) -> None:
+    """A builder-configured catalog registers beside ``spark_catalog``; current stays there."""
     spark = (
         ReparkSession.builder.config("spark.sql.catalog.mine", "memory")
         .config("spark.sql.catalog.mine.warehouse", str(tmp_path))
         .getOrCreate()
     )
     names = [c.name for c in spark.catalog.listCatalogs()]
-    assert names == ["mine"]
+    assert names == ["mine", "spark_catalog"]
+    assert spark.catalog.currentCatalog() == "spark_catalog"
+    spark.range(2).write.saveAsTable("beside_t")
+    assert spark.catalog.tableExists("spark_catalog.default.beside_t")
+    spark.stop()
+
+
+def test_a_user_session_catalog_block_takes_the_auto_catalog_place(
+    _fresh_session_slot: None, tmp_path: Path
+) -> None:
+    """``spark.sql.catalog.spark_catalog.*`` is the session catalog; no temp warehouse."""
+    spark = (
+        ReparkSession.builder.config(
+            "spark.sql.catalog.spark_catalog.catalog-impl",
+            "org.apache.iceberg.inmemory.InMemoryCatalog",
+        )
+        .config("spark.sql.catalog.spark_catalog.warehouse", str(tmp_path))
+        .getOrCreate()
+    )
+    assert [c.name for c in spark.catalog.listCatalogs()] == ["spark_catalog"]
+    assert "auto_catalog_warehouse" not in spark._alive_token
+    spark.sql("CREATE NAMESPACE spark_catalog.user_ns")
+    spark.sql("CREATE TABLE spark_catalog.user_ns.t (id INT) USING iceberg")
+    assert any(tmp_path.rglob("*.metadata.json"))
     spark.stop()
 
 
@@ -65,10 +94,10 @@ def test_opt_out_knob_suppresses_auto(_fresh_session_slot: None) -> None:
     spark.stop()
 
 
-def test_foreign_default_catalog_suppresses_auto(_fresh_session_slot: None) -> None:
-    """An explicit different defaultCatalog is the user's to provide — no auto seeding."""
+def test_a_foreign_default_catalog_keeps_the_session_catalog(_fresh_session_slot: None) -> None:
+    """A default naming no configured catalog still gets ``spark_catalog`` registered."""
     spark = ReparkSession.builder.config("spark.sql.defaultCatalog", "glue").getOrCreate()
-    assert [c.name for c in spark.catalog.listCatalogs()] == []
+    assert [c.name for c in spark.catalog.listCatalogs()] == ["spark_catalog"]
     assert spark.catalog.currentCatalog() == "glue"
     spark.stop()
 

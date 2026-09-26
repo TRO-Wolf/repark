@@ -1014,6 +1014,9 @@ both tables with the script baselines (backtick-disclosure retire). pins: fnp-4b
   untouched, XML attributes, longest-prefix-wins ordering, malformed-input loud failures, plain
   text passthrough, in-place rewrite idempotence, and the CLI exit codes.
   Stamp pin moved to `_Last updated: 2026-09-10._` with the REVIEW-FIX-4 departure truth-up (2026-09-10). PERF-DESCRIBE-1 (2026-09-12): the helper-call inventory briefly gained `statistics.py` for the literal VALUES grid of the single-pass `describe`; the remediation round moved the unpivot into a lazy `mapInArrow` bridge, so `statistics.py` carries no SQL-literal helper call and the inventory row is gone again.
+- `test_cap_1_source_file_line_cap.py` — **CATALOG-1 (2026-09-26):** the mirror rows ratchet
+  `session_core.py` 2325 → 2293 and `writer_readwriter.py` 1029 → 1023 with
+  `scripts/check_lib_py.py`. pins: catalog-1/C-011
 
 ## Pointers
 

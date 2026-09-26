@@ -46,18 +46,12 @@ def _resolve_writer_table(dataframe: DataFrame, name: str) -> tuple[str, str]:
         state = {
             "current_catalog": DEFAULT_CATALOG_NAME,
             "current_database": DEFAULT_DATABASE_NAME,
-            "known_catalogs": set(),
         }
-    known = state.get("known_catalogs") or set()
-    if not isinstance(known, set):
-        known = set(known)
     qualified = resolve_table_name(
         name,
         current_catalog=str(state.get("current_catalog", DEFAULT_CATALOG_NAME)),
         current_database=str(state.get("current_database", DEFAULT_DATABASE_NAME)),
-        known_catalogs=known,
         prefer_temp_view=False,
-        default_catalog_is_auto=bool(state.get("auto_default_catalog")),
     )
     return qualified, _sql_table_ref(qualified)
 

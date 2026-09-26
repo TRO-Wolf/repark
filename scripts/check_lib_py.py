@@ -75,7 +75,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split transform families along their existing plan-node boundaries.",
     ),
     "python/repark/src/repark/spark/dataframe/writer_readwriter.py": (
-        1029,
+        1023,
         "DataFrameWriter and DataFrameReader facade methods share one region.",
         "Split writer and reader bindings into separate cohesive modules.",
     ),
@@ -100,7 +100,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split transformers by feature family with stable public re-exports.",
     ),
     "python/repark/src/repark/spark/session/session_core.py": (
-        2325,
+        2293,
         "SparkSession lifecycle and query entry points share one facade module.",
         "Split construction and configuration from query and catalog methods.",
     ),

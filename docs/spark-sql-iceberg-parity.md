@@ -8755,6 +8755,31 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   OVERWRITE and the metadata-column projections were added 2026-09-26 (C-013, 22 steps in
   groups `uuid-write` / `uuid-overwrite`, `crates/repark-spark/src/tests/u9_uuid_void_writes.rs`).
 
+### CAT-CURRENT-CATALOG — a fresh session's current catalog was the first registered catalog — **FIXED 2026-09-26 (WO CATALOG-1)**
+
+- **repark** — a fresh session's current catalog is `spark_catalog` (namespace `default`), with
+  catalog blocks configured or with none. Registering a catalog — a builder block, a runtime
+  `conf.set` block, `register_memory_catalog` — registers it and moves nothing. `spark_catalog`
+  always exists as the session catalog: the auto memory catalog registers beside configured
+  blocks, a user `spark.sql.catalog.spark_catalog.*` block takes its place, and
+  `repark.sql.autoMemoryCatalog=false` turns it off. `spark_catalog.ns.t` names that catalog and
+  no other. Before, a session with one configured catalog started there, the first registered
+  catalog took the facade's current catalog, and `spark_catalog.ns.t` was an alias of it — so a
+  table written to `local.ns.t` was reachable as `spark_catalog.ns.t`; it is not now, exactly as
+  in Spark (the behavior change is recorded in `task/ledgers/staging/catalog-1-ledger.md`).
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-26 (recorded,
+  `target/probe-catalog-1/spark-main.json`): `SELECT current_catalog()` answers
+  `[["spark_catalog"]]` on the harness session (`hc` configured, `sc` configured), and
+  `SELECT * FROM spark_catalog.ns.t0` refuses `TABLE_OR_VIEW_NOT_FOUND` when `ns` exists only
+  in `sc`.
+- **Pin** — `python/repark/tests/test_catalog_1.py::test_current_catalog_cell_is_spark_catalog`,
+  `…::test_register_memory_catalog_registers_and_nothing_else`,
+  `…::test_spark_catalog_is_not_an_alias_of_another_catalog`,
+  `crates/repark-spark/src/tests/session_catalog.rs::a_fresh_session_is_in_spark_catalog_beside_configured_and_registered_catalogs`,
+  `crates/repark-core/src/session/tests/session_catalog.rs::the_session_catalog_is_wanted_beside_other_catalog_blocks`.
+  pins: catalog-1/C-001, C-002
+- **Rationale** — owner ruling R1 / R5 (2026-09-26): no carve-out; the cell replays EQUAL.
+
 ### CUTOVER-CTAS-REQ-1 — parquet CTAS keeps source non-null fields required; Spark makes every column optional
 
 - **repark** — **FIXED 2026-09-04 (CUTOVER-SCHEMA-1).** The same CTAS stores every field

@@ -7119,6 +7119,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_sem1_spark_log.py` — **SEM-1 (2026-08-31):** Spark-door `log` kernel, `F.log` two-arg,
   native ANSI base-10 control, `log2`/`log1p`/`ln` incidentals. Oracle live PySpark 4.1.2.
   pins: sem-1-spark-answer-parity/C-004, C-006, C-007, C-010
+- [test_catalog_1.py](test_catalog_1.py) — **WO CATALOG-1 (2026-09-26):** the current-catalog
+  cell on a harness-shaped session (`hc` built, `sc` registered), the fresh current catalog of bare
+  and one-block sessions, registration moving nothing, SHOW CATALOGS, and `spark_catalog` not an
+  alias. Tests rewritten for the change (named in the ledger): the fixtures of
+  `test_f1_sql_expander.py`, `test_g1_stat_and_expander.py`, `test_e2_readwriter.py`,
+  `test_iceberg_load_path.py`, `test_time_travel.py` now `USE` their catalog; the alias and flip
+  pins of `test_e2_readwriter.py`, `test_catalog_surface.py`, `test_auto_memory_catalog.py`,
+  `test_ice_catalog_session_1.py`, `test_ice_views_4_showprops.py`,
+  `test_declare_sorted_tighten.py` state the new meaning; `test_production_file_size.py` drops the
+  five removed session symbols. pins: catalog-1/C-001, C-002
 
 ## I want to...
 

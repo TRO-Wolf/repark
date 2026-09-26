@@ -61,7 +61,8 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(unset_runtime_config, module)?)?;
     module.add_function(wrap_pyfunction!(session_zone_canonical, module)?)?;
     module.add_function(wrap_pyfunction!(session_defaults, module)?)?;
-    module.add_function(wrap_pyfunction!(set_session_catalog, module)?)?;
+    module.add_function(wrap_pyfunction!(auto_session_catalog_wanted, module)?)?;
+    module.add_function(wrap_pyfunction!(session_catalog_names, module)?)?;
     module.add_function(wrap_pyfunction!(register_late_catalog_block, module)?)?;
     Ok(())
 }
@@ -74,19 +75,17 @@ pub fn session_defaults(session: &PyReparkSession) -> PyResult<(String, String)>
 }
 
 #[pyfunction]
-pub fn set_session_catalog(session: &PyReparkSession, catalog: &str) -> PyResult<()> {
-    fenced_span!("py.session", "set_session_catalog", {
-        let namespace = if catalog == "spark_catalog" {
-            "default"
-        } else {
-            ""
-        };
-        session
-            .session
-            .catalogs_snapshot()
-            .set_defaults(catalog, namespace);
-        Ok(())
-    })
+#[allow(clippy::needless_pass_by_value)]
+pub fn auto_session_catalog_wanted(config: HashMap<String, String>) -> bool {
+    ReparkSession::auto_session_catalog_wanted(&config)
+}
+
+#[pyfunction]
+pub fn session_catalog_names(session: &PyReparkSession) -> Vec<String> {
+    session
+        .session
+        .catalogs_snapshot()
+        .registered_catalog_names()
 }
 
 #[pyfunction]
