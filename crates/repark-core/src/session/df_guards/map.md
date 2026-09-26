@@ -22,6 +22,29 @@ wrapped optimizer rule) and declares this directory.
   could not be filtered or projected by `F.col`. Live Spark answers all of these
   (`target/probe-u11-edge-1/spark_r3.json`). Rust pins in the file's own test module.
   pins: u11-edge-1/C-015
+  **Round 2 (2026-09-26, V-001..V-004):** the file is the DataFrame door's one name binder
+  (`pub mod`, re-exported as `repark_core::frame_names`). Rule, under the default
+  `caseSensitive=false` (the door does not read the setting, like the round-1 hook): an exact
+  name wins; otherwise the single case-insensitive match binds. A qualified column binds the
+  same way within the fields whose relation matches the written qualifier part by part from
+  the right (`t.id` → `(t, ID)`, `x.id` stays unbound). An alias that spells the qualified
+  column (`F.col("t.ID")` arrives as `t.id AS "t.ID"`) is renamed to the written segment
+  (`ID`), as Spark names it. `bind_projection_expr` (the select path) keeps the written
+  spelling of a bare column it rebinds (`F.col("t.id")` on `ID` → `id`). `drop_named_columns`
+  drops every case-insensitive match of each name (a name with none falls back to
+  DataFusion's parse, so an absent name stays a no-op); `join_on_named_keys` binds each key on
+  each side, joins on the bound columns and keeps one key column per folded key (semi/anti
+  keep the left columns); `union_by_folded_name` respells the right frame's fields to the
+  left spelling, refuses a strict mismatch with the facade's former text (`Union can only be
+  performed … mismatched columns: [...]`, now listing folded mismatches only) and unions by
+  name. Spark shapes: `target/probe-u11-edge-1/vx-spark.json`, `vx2-spark.json` (the
+  verifier's probes). Rust pins in the file's test module:
+  `qualified_reference_binds_through_its_relation`, `qualified_alias_names_the_written_segment`,
+  `projection_keeps_the_written_spelling`, `drop_removes_every_folded_match`,
+  `join_binds_each_side_and_keeps_one_key`, `union_respells_the_right_and_refuses_a_mismatch`;
+  the round-1 `exact_ambiguous_and_qualified_references_stay` became
+  `exact_and_ambiguous_references_stay` (a qualified exact hit stays).
+  pins: u11-edge-1/C-017, C-018, C-019, C-020
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside

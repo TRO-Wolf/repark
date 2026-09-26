@@ -36,14 +36,15 @@ async fn finish_with_display(
         .map(|field| field.name().clone())
         .collect::<Vec<_>>();
     let Some(rewritten) = display::display_rewrite(&original, &folded, &planned) else {
-        return Ok(plan);
+        return display::keep_ref_qualifiers(&original, plan);
     };
-    Box::pin(plan_with_repair(
+    let replanned = Box::pin(plan_with_repair(
         state,
         datafusion::sql::parser::Statement::Statement(Box::new(rewritten)),
         true,
     ))
-    .await
+    .await?;
+    display::keep_ref_qualifiers(&original, replanned)
 }
 
 async fn strict_case_guard(state: &SessionState, inner: &Statement) -> Result<()> {

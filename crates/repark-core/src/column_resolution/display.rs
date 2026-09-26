@@ -1,7 +1,9 @@
 use std::collections::{HashMap, HashSet};
 use std::ops::ControlFlow;
 
+use datafusion::common::Column;
 use datafusion::error::{DataFusionError, Result};
+use datafusion::logical_expr::{Distinct, Expr, LogicalPlan, Projection};
 use datafusion::sql::sqlparser::ast::{
     Expr as SqlExpr, GroupByExpr, Ident, ObjectName, OrderBy, OrderByKind, Query, Select,
     SelectItem, SetExpr, Statement, TableFactor, Visit, Visitor,
@@ -25,6 +27,73 @@ pub(super) fn display_rewrite(
         return None;
     }
     Some(Statement::Query(Box::new(rewritten)))
+}
+
+pub(super) fn keep_ref_qualifiers(original: &Statement, plan: LogicalPlan) -> Result<LogicalPlan> {
+    let Statement::Query(query) = original else {
+        return Ok(plan);
+    };
+    let SetExpr::Select(select) = query.body.as_ref() else {
+        return Ok(plan);
+    };
+    let unnamed = select
+        .projection
+        .iter()
+        .map(|item| match item {
+            SelectItem::UnnamedExpr(SqlExpr::Identifier(_) | SqlExpr::CompoundIdentifier(_)) => {
+                Some(true)
+            }
+            SelectItem::UnnamedExpr(_) | SelectItem::ExprWithAlias { .. } => Some(false),
+            _ => None,
+        })
+        .collect::<Option<Vec<bool>>>();
+    match unnamed {
+        Some(unnamed) if unnamed.contains(&true) => requalify(plan, &unnamed),
+        _ => Ok(plan),
+    }
+}
+
+fn requalify(plan: LogicalPlan, unnamed: &[bool]) -> Result<LogicalPlan> {
+    match plan {
+        LogicalPlan::Projection(projection) if projection.expr.len() == unnamed.len() => {
+            let exprs = projection
+                .expr
+                .into_iter()
+                .zip(unnamed)
+                .map(|(expr, keep)| requalify_alias(expr, *keep))
+                .collect();
+            Ok(LogicalPlan::Projection(Projection::try_new(
+                exprs,
+                projection.input,
+            )?))
+        }
+        LogicalPlan::Sort(_) | LogicalPlan::Limit(_) | LogicalPlan::Distinct(Distinct::All(_)) => {
+            let Some(child) = plan.inputs().first().map(|input| (*input).clone()) else {
+                return Ok(plan);
+            };
+            let child = requalify(child, unnamed)?;
+            plan.with_new_exprs(plan.expressions(), vec![child])
+        }
+        other => Ok(other),
+    }
+}
+
+fn requalify_alias(expr: Expr, keep: bool) -> Expr {
+    match expr {
+        Expr::Alias(mut alias) if keep && alias.relation.is_none() => {
+            if let Expr::Column(Column {
+                relation: Some(relation),
+                name,
+                ..
+            }) = alias.expr.as_ref()
+                && name.eq_ignore_ascii_case(&alias.name)
+            {
+                alias.relation = Some(relation.clone());
+            }
+            Expr::Alias(alias)
+        }
+        other => other,
+    }
 }
 
 fn set_written(body: &SetExpr, width: usize) -> Option<Vec<Option<String>>> {

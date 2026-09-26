@@ -3078,17 +3078,7 @@ class DataFrame:
         :class:`~repark.errors.AnalysisException`. When ``True``, a column
         present on only one side is filled with NULL on the other.
         """
-        if not allowMissingColumns:
-            this_columns = set(self.columns)
-            other_columns = set(other.columns)
-            if this_columns != other_columns:
-                missing = (this_columns | other_columns) - (this_columns & other_columns)
-                raise AnalysisException(
-                    "Union can only be performed on inputs with the same columns unless "
-                    "allowMissingColumns=True; mismatched columns: "
-                    f"{sorted(missing)}"
-                )
-        return self._spawn(self._plan().union(other._plan(), True), other)
+        return self._spawn(self._plan().union_by_name(other._plan(), allowMissingColumns), other)
 
     unionByName = union_by_name  # noqa: N815 — deliberate PySpark-compatible camelCase alias
 

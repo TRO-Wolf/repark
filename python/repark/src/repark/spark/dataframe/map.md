@@ -1350,3 +1350,8 @@ and when two spellings coexist the last one set wins (runtime layer over builder
   `writer_readwriter.py` ratchets 1091 → 1077 as both copies of
   `_by_name_projection` collapse into the shared one.
   pins: ipi-19-56-37-schema-evolution-write/C-001, C-002
+
+U11-EDGE-1 round 2 (2026-09-26, V-004): `core.py`'s `union_by_name` no longer decides the
+column match; it passes `allowMissingColumns` to the native `union_by_name`, whose Rust binder
+pairs names case-insensitively, keeps the left spelling and raises the mismatch refusal.
+`core.py` 3991 → 3981. pins: u11-edge-1/C-020

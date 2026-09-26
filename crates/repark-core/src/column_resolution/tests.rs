@@ -821,3 +821,27 @@ fn s22b_stack_estimate_counts_every_union_level_inside_a_subquery() {
     assert!(stack::stack_bytes_for(&shallow) < 512 * 1024);
     assert!(stack::stack_bytes_for(&deep) >= 1000 * 32 * 1024);
 }
+
+#[tokio::test]
+async fn respelled_plain_references_keep_their_relation() {
+    let state = mixed_state();
+    let dialect = state.config().options().sql_parser.dialect;
+    let sql = "SELECT USERID, eventname, 1 AS k FROM t AS T";
+    let statement = state.sql_to_statement(sql, &dialect).unwrap();
+    let plan = plan_statement_with_column_repair(&state, statement, true)
+        .await
+        .unwrap();
+    let fields = plan
+        .schema()
+        .iter()
+        .map(|(qualifier, field)| (qualifier.map(ToString::to_string), field.name().clone()))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        fields,
+        vec![
+            (Some("t".to_string()), "USERID".to_string()),
+            (Some("t".to_string()), "eventname".to_string()),
+            (None, "k".to_string()),
+        ]
+    );
+}
