@@ -1119,10 +1119,11 @@ class DataFrame:
             return merged
         projected: list[Any] = []
         seen_display: set[str] = set()
+        folded = {name.casefold(): name for name in colsMap}
         for bound in self._iter_bound_columns():
-            display = bound._projection_name or bound.spark_display_part()
-            seen_display.add(display)
-            if display in colsMap:
+            written = bound._projection_name or bound.spark_display_part()
+            seen_display.add(written.casefold())
+            if (display := folded.get(written.casefold())) is not None:
                 replacement = colsMap[display]
                 if isinstance(replacement, Column):
                     replacement = self._rebind_origin_column(replacement)
@@ -1151,7 +1152,7 @@ class DataFrame:
             else:
                 projected.append(bound)
         for name, column in colsMap.items():
-            if name not in seen_display:
+            if name.casefold() not in seen_display:
                 if isinstance(column, Column):
                     projected.append(self._rebind_origin_column(column).alias(name))
                 else:
@@ -1768,8 +1769,11 @@ class DataFrame:
         name_counts: dict[str, int] = {}
         for column in projected:
             expr_sql = column.join_sql_part()
+            held = self._origin_map.get((column._origin_plan_id, column._origin_field))
+            if held is not None and expr_sql == _quote_ident(held):
+                expr_sql = _quote_ident(_native.attribute_copy_name(held))
             if "__REPARK_QCOL_" in expr_sql:
-                expr_sql = _rewrite_qcol_tokens_local(expr_sql, self)
+                expr_sql = _rewrite_qcol_tokens_local(expr_sql, self, _native.attribute_copy_name)
                 if "__REPARK_QCOL_" in expr_sql:
                     return None
             display = (
@@ -1801,7 +1805,7 @@ class DataFrame:
                 origin_map[(column._origin_plan_id, column._origin_field)] = engine
 
         view = scratch_view_name(self._session, "_repark_h1_sel_")
-        self._session.create_or_replace_temp_view(view, self._plan())
+        self._session.create_or_replace_temp_view(view, _native.attribute_copies(self._plan()))
         try:
             planned = self._session.sql(f"SELECT {', '.join(proj_parts)} FROM {view}")
             child = self._spawn(planned)
@@ -1823,11 +1827,7 @@ class DataFrame:
             self._session.drop_temp_view(view)
 
     def _bind_engine_display_column(self, display: str, engine: str) -> Column:
-        """Bind a multi-name display and engine pair without ambiguous lookup.
-
-        Used by ``select("*")`` expansion and other positional projections on frames that
-        carry Spark-legal duplicate display names.
-        """
+        """Bind a display and engine pair by attribute for positional re-projections."""
         from repark.spark._idents import quote_ident as _quote_ident
 
         quoted = _quote_ident(engine)
@@ -1852,10 +1852,7 @@ class DataFrame:
         )
 
     def _iter_bound_columns(self) -> list[Column]:
-        """Bind every column by position, preserving duplicate display names.
-
-        Multi-name frames use engine/display pairs; ordinary frames bind by name.
-        """
+        """Bind every column by position; multi-name frames bind engine/display pairs."""
         if self._display_names is not None and self._engine_names is not None:
             return [
                 self._bind_engine_display_column(display, engine)

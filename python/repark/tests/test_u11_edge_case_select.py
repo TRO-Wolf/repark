@@ -8,7 +8,7 @@ import pytest
 
 from repark import ReparkSession
 from repark.errors import AnalysisException
-from repark.spark.functions import col, lit
+from repark.spark.functions import col, lit, when
 
 
 @pytest.fixture()
@@ -145,6 +145,12 @@ def _spelled(spark: ReparkSession, sql: str):
 def _shape(frame) -> tuple[list[str], list[tuple]]:
     """Return a frame's names and its sorted rows."""
     return _names(frame), sorted(tuple(row) for row in frame.collect())
+
+
+def _typed(frame) -> tuple[list[tuple[str, str]], list[tuple]]:
+    """Return a frame's names with their simple types and its sorted rows."""
+    fields = [(field.name, field.dataType.simpleString()) for field in frame.schema.fields]
+    return fields, sorted(tuple(row) for row in frame.collect())
 
 
 def test_drop_binds_spelled_names(spark: ReparkSession) -> None:
@@ -323,3 +329,27 @@ def test_column_drop_matching_two_fields_is_ambiguous(spark: ReparkSession) -> N
         assert _ambiguous("id", options) in str(excinfo.value)
     assert _shape(created.drop("id")) == ([], [()])
     assert _shape(joined.drop("id")) == ([], [(), ()])
+
+
+def test_compound_origin_columns_keep_their_attribute_binding(spark: ReparkSession) -> None:
+    """Arithmetic, cast, alias, when and withColumn over origin Columns bind their side.
+
+    pins: u11-edge-1/C-027
+    """
+    left = spark.sql("SELECT ID, data FROM sc.ns.t")
+    right = spark.sql("SELECT 1 AS id, 'q' AS w")
+    joined = left.join(right, left["ID"] == right["id"])
+    assert _typed(joined.select(right["id"] + 1)) == ([("(id + 1)", "int")], [(2,)])
+    assert _typed(joined.select(right["id"].cast("string"))) == ([("id", "string")], [("1",)])
+    cast = joined.select((right["id"] + 1).cast("string").alias("n"))
+    assert _typed(cast) == ([("n", "string")], [("2",)])
+    picked = joined.select(when(left["ID"] > 0, right["w"]).alias("r"))
+    assert _typed(picked) == ([("r", "string")], [("q",)])
+    assert _shape(joined.withColumn("id", right["id"] + 1)) == (
+        ["id", "data", "id", "w"],
+        [(2, "a", 2, "q")],
+    )
+    with pytest.raises(AnalysisException) as excinfo:
+        joined.select(right["w"], col("id") + 1).collect()
+    assert "[AMBIGUOUS_REFERENCE]" in str(excinfo.value)
+    assert "_repark_" not in str(excinfo.value)

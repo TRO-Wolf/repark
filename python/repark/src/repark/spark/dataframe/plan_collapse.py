@@ -808,11 +808,11 @@ def _replace_local_qcol_token(
     return _quote_ident_sql(engine)
 
 
-def _rewrite_qcol_tokens_local(join_sql: str, frame: DataFrame) -> str:
-    """Rewrite QCOL tokens to quoted engine fields on one post-join frame."""
-    origin_map = frame._origin_map
-    if origin_map is None:
+def _rewrite_qcol_tokens_local(join_sql: str, frame: DataFrame, spell: Any = str) -> str:
+    """Rewrite QCOL tokens to quoted engine fields, or their ``spell`` names, on one frame."""
+    if frame._origin_map is None:
         return join_sql
+    origin_map = {key: spell(engine) for key, engine in frame._origin_map.items()}
     return _QCOL_TOKEN_RE.sub(
         functools.partial(_replace_local_qcol_token, origin_map=origin_map, frame=frame),
         join_sql,

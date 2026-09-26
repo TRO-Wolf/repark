@@ -92,6 +92,15 @@ wrapped optimizer rule) and declares this directory.
   `attribute_drop_is_exact_and_a_two_hit_reference_refuses`. Spark shapes:
   `target/probe-u11-edge-1/vw/fold-spark.json`, `fold2-spark.json`. pins: u11-edge-1/C-024,
   C-025, C-026
+  Round 6 (2026-09-26, V-001): `with_attribute_copies(frame)` re-projects every held column and
+  adds one exact copy per uniquely named field, named `attribute_copy_name(field)`
+  (`__repark_attr_` plus the name's bytes in hex, so case twins never collide); the facade's SQL
+  select route reads origin Columns through those copies, so a compound over an origin Column
+  keeps its exact binding through arithmetic, cast, alias, `when`, `isin` and comparison.
+  `is_scratch_relation` names the `_repark_*` / `__repark_*` relations every ambiguity renderer
+  leaves unqualified. Rust pin (in `../../column_resolution/tests.rs`)
+  `attribute_copies_bind_case_twins_exactly_and_scratch_relations_render_unqualified`.
+  pins: u11-edge-1/C-027
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside

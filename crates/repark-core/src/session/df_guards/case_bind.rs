@@ -1,4 +1,5 @@
-use std::collections::{BTreeSet, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
+use std::fmt::Write;
 use std::ops::ControlFlow;
 
 use datafusion::arrow::datatypes::Field;
@@ -29,6 +30,43 @@ pub fn attribute_reference(name: &str) -> Expr {
         name: name.to_string(),
         spans: Spans(vec![Span::new(ATTRIBUTE_MARK, ATTRIBUTE_MARK)]),
     })
+}
+
+#[must_use]
+pub fn attribute_copy_name(name: &str) -> String {
+    name.bytes()
+        .fold(String::from("__repark_attr_"), |mut spelled, byte| {
+            let _ = write!(spelled, "{byte:02x}");
+            spelled
+        })
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn with_attribute_copies(frame: DataFrame) -> Result<DataFrame> {
+    let schema = frame.schema();
+    let mut counts: HashMap<&str, usize> = HashMap::new();
+    for field in schema.fields() {
+        *counts.entry(field.name().as_str()).or_default() += 1;
+    }
+    let held = schema
+        .iter()
+        .map(|(qualifier, field)| (Column::new(qualifier.cloned(), field.name()), field.name()))
+        .collect::<Vec<_>>();
+    let copies = held
+        .iter()
+        .filter(|(_, name)| counts.get(name.as_str()) == Some(&1))
+        .map(|(column, name)| Expr::Column(column.clone()).alias(attribute_copy_name(name)));
+    let projection = held
+        .iter()
+        .map(|(column, _)| Expr::Column(column.clone()))
+        .chain(copies)
+        .collect::<Vec<_>>();
+    frame.select(projection)
+}
+
+#[must_use]
+pub fn is_scratch_relation(table: &str) -> bool {
+    table.starts_with("_repark_") || table.starts_with("__repark_")
 }
 
 fn is_attribute(column: &Column) -> bool {
@@ -77,9 +115,7 @@ fn case_hits<'a>(column: &Column, schemas: impl IntoIterator<Item = &'a DFSchema
 }
 
 fn sql_id(relation: Option<&TableReference>, name: &str) -> String {
-    let spelled = relation.filter(|relation| {
-        !relation.table().starts_with("_repark_") && !relation.table().starts_with("__repark_")
-    });
+    let spelled = relation.filter(|relation| !is_scratch_relation(relation.table()));
     let parts = spelled.map_or_else(Vec::new, |relation| {
         [
             relation.catalog(),

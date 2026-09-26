@@ -697,6 +697,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 - `column_resolution/tests.rs` — the fold's unit battery (statement cells, fragment
   scoping, ambiguity shape, backticked exact under `true`, DataFrame filter alias
   binding). Split from `column_resolution.rs` under the file-size gate.
+- `column_resolution.rs` — **U11-EDGE-1 round 6 (2026-09-26, V-001):** the SQL audit's
+  ambiguity candidates drop a scratch relation (`frame_names::is_scratch_relation`), so a
+  `_repark_h1_sel_*` view renders its candidates unqualified. pins: u11-edge-1/C-027
 - `column_resolution/display.rs` — **U11-EDGE-1 (2026-09-26):** output columns keep the
   query's spelling; `plan_with_repair` hands every successful insensitive plan to
   `finish_with_display` (boxed, like the strict guard, so the repair future stays small for

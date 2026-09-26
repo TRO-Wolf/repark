@@ -497,6 +497,7 @@ fn audit_column(column: &Column, twins: &Twins<'_>, written: &WrittenRefs) -> Re
         .iter()
         .map(|(candidate, _)| {
             candidate
+                .filter(|candidate| !crate::frame_names::is_scratch_relation(candidate.table()))
                 .map(|candidate| written.relation_parts(candidate))
                 .unwrap_or_default()
         })
