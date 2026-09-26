@@ -929,6 +929,13 @@ repark-core's error map.
   the old I7 accept pin became `partition_spec_add_wrong_case_source_refuses_like_spark`
   (line-neutral). Measured: `target/probe-u11-edge-1/spark_r2.json`.
   pins: u11-edge-1/C-009, C-012, C-013
+  **Round 2 (2026-09-26, V-005, V-012):** `java_struct_text` appends ` (doc)` after a field's
+  type when the field has a doc and renders a decimal as Java's `decimal(10, 2)` (with the
+  space), as Spark printed for `id BIGINT NOT NULL COMMENT 'the key', d DECIMAL(10,2)`
+  (`target/probe-u11-edge-1/vx3-spark.json`). The file declares `#[cfg(test)] mod tests;`
+  (`partition_spec/tests.rs`, row in [partition_spec/map.md](partition_spec/map.md)), which
+  carries the struct-text pin and the Rust pins for the `ReplaceField` /
+  `ReplaceFieldByTransform` arms of the source check. pins: u11-edge-1/C-012, C-021
 - `sort_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** `apply_write_order`, the one-transaction
   write-layout primitive over the fork's `Transaction::replace_sort_order` plus an optional
   `write.distribution-mode` property set: column names resolve case-insensitively against the

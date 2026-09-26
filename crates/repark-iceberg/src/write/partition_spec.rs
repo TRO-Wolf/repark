@@ -1,4 +1,4 @@
-use iceberg::spec::{NestedFieldRef, Transform, Type};
+use iceberg::spec::{NestedFieldRef, PrimitiveType, Transform, Type};
 use iceberg::table::Table;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::{Catalog, Error, ErrorKind, Result, TableIdent};
@@ -167,8 +167,13 @@ fn java_struct_text(fields: &[NestedFieldRef]) -> String {
             } else {
                 "optional"
             };
+            let doc = field
+                .doc
+                .as_ref()
+                .map(|doc| format!(" ({doc})"))
+                .unwrap_or_default();
             format!(
-                "{}: {}: {required} {}",
+                "{}: {}: {required} {}{doc}",
                 field.id,
                 field.name,
                 java_type_text(&field.field_type)
@@ -181,6 +186,9 @@ fn java_struct_text(fields: &[NestedFieldRef]) -> String {
 
 fn java_type_text(data_type: &Type) -> String {
     match data_type {
+        Type::Primitive(PrimitiveType::Decimal { precision, scale }) => {
+            format!("decimal({precision}, {scale})")
+        }
         Type::Primitive(primitive) => primitive.to_string(),
         Type::Struct(struct_type) => java_struct_text(struct_type.fields()),
         Type::List(list) => format!("list<{}>", java_type_text(&list.element_field.field_type)),
@@ -241,3 +249,6 @@ fn resolve_field_by_transform(
             )
         })
 }
+
+#[cfg(test)]
+mod tests;
