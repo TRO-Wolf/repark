@@ -29,6 +29,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`. Branch `feat/u9-types-1`.
   pins: u9-types-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-011, C-012
   pins: u9-types-1/C-013, C-014, C-015, C-016
+- [u11-edge-1-ledger.md](u11-edge-1-ledger.md) —
+  **U11-EDGE-1 (2026-09-26), in flight:** `E-CASE-SELECT` (output columns keep the query's
+  spelling; `F.col` binds a spelled frame on the DataFrame door) and `E-CASE-PARTITION-FIELD`
+  (partition sources bind case-sensitively with Iceberg's `ValidationException` text) replay
+  EQUAL / both-refuse; `TP-FORMAT-V1-DELETE` recorded EQUAL with no code change;
+  `E-CATALOG-LISTDATABASES` moved to the catalog unit (2026-09-25). Residues R-1…R-4.
+  `risk_tier: standard`. Branch `feat/u11-edge-1`.
 - [u8-write-sql-ledger.md](u8-write-sql-ledger.md) —
   **U8 WRITE-SQL PR1 (2026-09-24), in flight:** `INSERT INTO … REPLACE WHERE` as Spark's
   overwrite by filter, `INSERT INTO … PARTITION (…)` static and dynamic keys, and positional

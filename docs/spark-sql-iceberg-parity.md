@@ -2172,6 +2172,66 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   (scoreboard cell `W-INSERT-BUCKETED`). `BY NAME` and accept-any-schema writes keep their
   names. pins: u8-write-sql/C-011
 
+### E-CASE-SELECT — output columns keep the query's spelling — **FIXED 2026-09-26 (U11-EDGE-1)**
+
+- **repark** — under the default `spark.sql.caseSensitive=false` the SQL door names every plain
+  or compound reference as written: `SELECT ID, data` over `(id INT, Data STRING)` answers
+  columns `ID`, `data`; `SELECT Data` → `Data`; `SELECT id AS X` → `X`; `SELECT *` → the stored
+  `id`, `Data`; `SELECT t.ID FROM … t` → `ID`; a struct field `s.A` → `A`; a `UNION` takes the
+  left branch's spelling; `GROUP BY ID` keeps `ID`. Before, it answered the stored case (`id`)
+  and lower-cased unquoted aliases (`x`). Under `caseSensitive=true` a wrong-case reference
+  on a single-table query refuses `[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or
+  function parameter with name `ID` cannot be resolved. Did you mean one of the following?
+  [`id`, `Data`].` On the DataFrame door `F.col` binds a spelled output case-insensitively
+  (`spark.sql("SELECT ID …").filter(F.col("id") > 1)`, `createDataFrame(…, ["Id"])`). Residues:
+  `count(*)` keeps DataFusion's name `count(*)` where Spark says `count(1)`, and
+  `SELECT ID, id` refuses under ID-3 where Spark answers `ID`, `id`.
+- **Apache Spark** — the names above. *(oracle: recorded — PySpark 4.1.2 + Iceberg 1.11,
+  2026-09-25/26, `target/probe-u11-edge-1/spark_case.json`, `spark_r2.json`, `spark_r3.json` in
+  the lane clone; scoreboard cell `E-CASE-SELECT`.)*
+- **Pin** — `python/repark/tests/test_u11_edge_case_select.py`;
+  `crates/repark-core/src/column_resolution/tests.rs::display_rewrite_keeps_the_written_spelling`;
+  `crates/repark-core/src/session/df_guards/case_bind.rs::tests`. pins: u11-edge-1/C-001
+- **Rationale** — FIXED; the cell replays EQUAL on every observation.
+
+### E-CASE-PARTITION-FIELD — partition sources bind case-sensitively — **FIXED 2026-09-26 (U11-EDGE-1)**
+
+- **repark** — `ALTER TABLE t ADD PARTITION FIELD CAT` on a `(id INT, cat STRING)` table
+  refuses `org.apache.iceberg.exceptions.ValidationException: Cannot find field 'CAT' in
+  struct: struct<1: id: optional int, 2: cat: optional string>` and leaves the spec unchanged,
+  under either `caseSensitive`; so do `bucket(4, ID)` and `REPLACE PARTITION FIELD cat WITH
+  CAT`. Before, the source bound case-insensitively and the field was added. The class is
+  RePark's `PySparkException` behind a `DataInvalid => ` prefix, where Spark raises
+  `Py4JJavaError` (the scoreboard counts both refusals as agreeing). Residues (unit ledger R-1,
+  R-2): `DROP PARTITION FIELD CAT` with an identity field `cat` drops it where Spark refuses
+  `Cannot find partition field to remove: CAT`, and `WRITE ORDERED BY CAT` under
+  `caseSensitive=true` answers where Spark refuses the same `ValidationException`.
+- **Apache Spark** — the refusals above, from Iceberg's `NamedReference.bind`. *(oracle:
+  recorded — PySpark 4.1.2 + Iceberg 1.11, 2026-09-26, `target/probe-u11-edge-1/spark_r2.json`;
+  scoreboard cell `E-CASE-PARTITION-FIELD`.)*
+- **Pin** — `python/repark/tests/test_u11_edge_partition_field.py`;
+  `crates/repark-iceberg/src/write/alter.rs::tests::partition_spec_add_wrong_case_source_refuses_like_spark`.
+  pins: u11-edge-1/C-009
+- **Rationale** — FIXED; both engines refuse on replay.
+
+### TP-FORMAT-V1-DELETE — copy-on-write DELETE on a format-version 1 table — **EQUAL 2026-09-26 (U11-EDGE-1, record only)**
+
+- **repark** — answers the cell as Spark does on every observation (data `[[1,a,x],[3,c,x]]`,
+  format-version 1, `main` at the third snapshot, `overwrite` with zero delete files); the
+  work landed with D-CREATE-V1 (WO U5 PR2b). No code change in U11-EDGE-1.
+- **Apache Spark** — the same. *(oracle: recorded — scoreboard 2026-09-25, `spark-props.json`.)*
+- **Pin** — `crates/repark-spark/src/tests/create_format_version_one.rs`. pins: u11-edge-1/C-016
+- **Rationale** — EQUAL on replay (`target/probe-u11-edge-1/replay-r2-v1.json`).
+
+### E-CATALOG-LISTDATABASES — `listDatabases()` after a catalog-qualified call — **moved to the catalog unit, 2026-09-25**
+
+- **repark** — lists the registered Iceberg catalog's namespaces (`["ns"]`).
+- **Apache Spark** — lists the session catalog (`[]`). *(oracle: recorded — scoreboard
+  2026-09-25, `spark-edge.json`.)*
+- **Pin** — none in U11-EDGE-1; the orchestrator moved the cell to the catalog unit on
+  2026-09-25 and this unit reverted its draft change.
+- **Rationale** — BACKLOG, owned by the catalog unit.
+
 ---
 
 ## 4. Type and value semantics (DECLARED)
@@ -12611,6 +12671,9 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   and `p` in Spark (values and the `int64` type agree on both). The
   inspect-table pins therefore alias every nested projection (`partition.p AS
   p`); the aliased reads are Spark-equal row for row.
+- **Note 2026-09-26 (U11-EDGE-1).** The SQL door's unaliased struct-field name converged:
+  `SELECT s.a` names the column `a` as Spark does (E-CASE-SELECT); the DataFrame `getField`
+  arm above is unchanged.
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-17 measurement. The example keeps the
   aliased read, where the engines agree; `getField` teaches its bare-name arm only after repark
   projects `r.a`.
