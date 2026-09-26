@@ -878,6 +878,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   output case-insensitively on the DataFrame door. Spark shapes:
   `target/probe-u11-edge-1/spark_case.json`, `spark_r2.json`, `spark_r3.json`.
   pins: u11-edge-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-015
+- [test_u11_edge_partition_field.py](test_u11_edge_partition_field.py) — **U11-EDGE-1
+  (2026-09-26), cell `E-CASE-PARTITION-FIELD`:** partition sources bind case-sensitively under
+  either `spark.sql.caseSensitive`: `ADD PARTITION FIELD CAT`, `bucket(4, ID)` and
+  `REPLACE PARTITION FIELD cat WITH CAT` refuse Iceberg's `ValidationException: Cannot find
+  field … in struct: struct<1: id: optional int, 2: cat: optional string>` with the spec
+  unchanged; `DROP PARTITION FIELD CAT` with no such field refuses `Cannot find partition
+  field to remove: CAT`; `WRITE ORDERED BY CAT` answers under the default `false`. Spark
+  shapes: `target/probe-u11-edge-1/spark_r2.json`.
+  pins: u11-edge-1/C-009, C-010, C-011, C-012, C-013, C-014
 - [test_ice_ddl_alter_2.py](test_ice_ddl_alter_2.py) — **WO U5 PR2a (2026-09-24):** facade
   pins for `ALTER COLUMN … COMMENT`. The docs land in the current Iceberg metadata file and in
   `DESCRIBE TABLE`'s comment column (top level, nested, empty string, `CHANGE COLUMN`). dbt's

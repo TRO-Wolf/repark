@@ -918,6 +918,17 @@ repark-core's error map.
   `DataInvalid` before anything commits. Measured Spark answer for
   `REPLACE PARTITION FIELD days(ts) WITH hours(ts)`: spec `[["ts_hour","hour","ts"]]`,
   spec-count 2.
+  **U11-EDGE-1 (2026-09-26):** the new source of `AddField`, `ReplaceField` and
+  `ReplaceFieldByTransform` binds case-SENSITIVELY against the current schema before the
+  transaction, under either `spark.sql.caseSensitive`, as Iceberg's `NamedReference.bind`
+  does in Spark: a miss refuses `DataInvalid` with Java's text
+  `org.apache.iceberg.exceptions.ValidationException: Cannot find field 'CAT' in struct:
+  struct<1: id: optional int, 2: cat: optional string>` (`java_struct_text` renders the
+  schema as Java's `StructType.toString`) and nothing commits. Drop and rename by partition
+  name keep their case-insensitive lookup (residue R-1 of the unit ledger). In `alter.rs`
+  the old I7 accept pin became `partition_spec_add_wrong_case_source_refuses_like_spark`
+  (line-neutral). Measured: `target/probe-u11-edge-1/spark_r2.json`.
+  pins: u11-edge-1/C-009, C-012, C-013
 - `sort_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** `apply_write_order`, the one-transaction
   write-layout primitive over the fork's `Transaction::replace_sort_order` plus an optional
   `write.distribution-mode` property set: column names resolve case-insensitively against the
