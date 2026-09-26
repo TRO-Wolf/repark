@@ -6579,78 +6579,7 @@
       ]
      ]
     ]
-   ],
-   "residue": {
-    "id": "R-26",
-    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
-    "repark": [
-     [
-      "fields",
-      [
-       [
-        [
-         "id",
-         1
-        ],
-        [
-         "name",
-         "id"
-        ],
-        [
-         "required",
-         false
-        ],
-        [
-         "type",
-         "int"
-        ]
-       ],
-       [
-        [
-         "id",
-         2
-        ],
-        [
-         "name",
-         "u"
-        ],
-        [
-         "required",
-         false
-        ],
-        [
-         "type",
-         "uuid"
-        ]
-       ]
-      ]
-     ],
-     [
-      "spec",
-      [
-       [
-        [
-         "field-id",
-         1000
-        ],
-        [
-         "name",
-         "u_bucket"
-        ],
-        [
-         "source-id",
-         2
-        ],
-        [
-         "transform",
-         "bucket[4]"
-        ]
-       ]
-      ]
-     ]
-    ],
-    "note": "2026-09-26: the bucket spec over the uuid column commits, reads and partitions on both engines; only the generated field name differs: u_bucket_4 on Spark, u_bucket on RePark (RePark's established col_bucket convention, unchanged by this unit)."
-   }
+   ]
   },
   {
    "group": "uuid",

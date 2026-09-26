@@ -259,9 +259,9 @@ def add_bucket_uuid_table(session: Any, table: str, engine: str) -> str:
         loaded_spec.updateSpec().addField(bucket).commit()
         session.sql(f"REFRESH TABLE {table}")
     else:
-        session.sql(
-            f"CREATE TABLE {table} (id INT, u UUID) USING iceberg PARTITIONED BY (bucket(4, u))"
-        ).collect()
+        session.sql(f"CREATE TABLE {table} (id INT) USING iceberg").collect()
+        session.sql(f"ALTER TABLE {table} ADD COLUMN u UUID").collect()
+        session.sql(f"ALTER TABLE {table} ADD PARTITION FIELD bucket(4, u)").collect()
     return "ok"
 
 
