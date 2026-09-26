@@ -53,6 +53,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   names a scratch relation (C-027). Residue R-22 dated 2026-09-26 (pre-existing on main: exact-duplicate
   plain frames refuse their re-projections, a two-`id` join's `dropna` answers, a `a.b` column's
   `dropna` answers).
+  Round 7 (2026-09-26): a projection of a twin join writes back into its own table (the SQL
+  audit no longer walks a named view's body, C-028); no scratch name in a suggestion list,
+  `F.col("*")` expands to the presented fields (C-029); attribute copies never collide with a
+  user field (C-030). Residues R-23…R-27 dated 2026-09-26 for CASESENS-1 (`F.struct("*")`, the
+  `__repark_sel_q_<n>` name through a view and unionByName, AMBIGUOUS on grouping and sort by
+  origin Columns, `withColumns` case duplicates, the overwrite refusal class and the suggestion
+  order).
   `risk_tier: standard`. Branch `feat/u11-edge-1`.
 - [u8-write-sql-ledger.md](u8-write-sql-ledger.md) —
   **U8 WRITE-SQL PR1 (2026-09-24), in flight:** `INSERT INTO … REPLACE WHERE` as Spark's
