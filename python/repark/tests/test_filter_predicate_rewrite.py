@@ -133,24 +133,24 @@ def test_colliding_name_inside_a_string_literal_does_not_refuse(
 
 
 @pytest.mark.parametrize("entry_point", ["filter", "where"])
-def test_column_entry_point_bypasses_the_ambiguity_refusal(
+def test_column_entry_point_refuses_the_ambiguity_like_spark(
     spark: ReparkSession, entry_point: str
 ) -> None:
-    """DISCLOSED DIVERGENCE (not a fix): the ``Column`` form never reaches the rewriter, so it
-    resolves **exact-case-first** and does not refuse. Live PySpark 4.1.2 raises
-    ``AMBIGUOUS_REFERENCE`` for ``df.filter(df["id"] > 0)``. Characterized so a later
-    ``_resolve_getitem_column_name`` refactor cannot flip it in either direction unobserved (live
-    leg: ``filter_case_collision_bypasses``).
+    """FIXED 2026-09-26 (U11-EDGE-1 round 4): the ``Column`` form refuses like Spark 4.1.2.
+
+    ``df.filter(df["id"] > 1)`` on a frame holding ``id`` and ``ID`` raises
+    ``[AMBIGUOUS_REFERENCE] Reference `id` is ambiguous, could be: [`id`, `id`]``, the reference
+    spelled as written (probe ``target/probe-u11-edge-1/vz2-spark.json``; live leg
+    ``filter_case_collision_bypasses``). pins: u11-edge-1/C-023
     """
     df = _collides(spark)
-    lower = getattr(df, entry_point)(df["id"] > 1).to_arrow()
-    upper = getattr(df, entry_point)(df["ID"] > 1).to_arrow()
-
-    # `id` is 1 and `ID` is 2 — the predicate discriminates WHICH column each spelling bound to.
-    assert lower.to_pylist() == []
-    assert upper.to_pylist() == [{"id": 1, "ID": 2, "other": 3}]
-    assert upper.schema.field("id").type == pa.int64()
-    assert upper.schema.field("ID").type == pa.int64()
+    for written in ("id", "ID"):
+        with pytest.raises(AnalysisException) as excinfo:
+            getattr(df, entry_point)(df[written] > 1).to_arrow()
+        assert (
+            f"[AMBIGUOUS_REFERENCE] Reference `{written}` is ambiguous, could be: "
+            f"[`{written}`, `{written}`]. SQLSTATE: 42704"
+        ) in str(excinfo.value)
 
 
 @pytest.mark.parametrize("entry_point", ["filter", "where"])

@@ -1164,6 +1164,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   (`overwrite`, zero delete files). CTAS and `'01'` write v1 too. The refusals pin full text:
   `v5` and `abc` as IllegalArgumentException, `0`/`-1`/`4` as not implemented, and the fork's
   downgrade text for `CREATE OR REPLACE` v2 → v1 (Spark says `Cannot downgrade v2 table to v1`).
+  U11-EDGE-1 (2026-09-26): these pins also hold `TP-FORMAT-V1-DELETE`, which replays EQUAL on
+  every observation with no code change in that unit. pins: u11-edge-1/C-016
   The v1 refusal pins it replaced now read `4`: `create_table.rs` dropped its v1 block and
   `ctas.rs::ctas_format_version_two_consumed_others_rejected` rejects `'format-version' = 4`.
   **Round 2 (2026-09-25):** `merge_on_read_row_level_writes_on_a_v1_table_refuse_like_spark` pins
@@ -1746,7 +1748,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   derived-table alias answer `[1, 2]`; `7 AS _pos` and `v AS _file` answer; A9
   `_deleted AS d` refuses. `reserved_word_positions_follow_spark` pins B1–B10 and R3:
   `GROUP BY 1`, `t(_deleted)`, a backticked alias, a string literal, a struct field
-  (field `s[_deleted]`, general DataFusion naming), `AS _file` and a `_spec_id` filter
+  (field `_deleted` since U11-EDGE-1 — a struct field names its written spelling, as live
+  Spark names `s.A` `A`; `s[_deleted]` before; pins: u11-edge-1/C-005), `AS _file` and a `_spec_id` filter
   answer; `_deleted(id)` refuses `[UNRESOLVED_ROUTINE]` as Spark does; `FROM … AS t`
   reading `_deleted` and `SELECT *, _spec_id` refuse `[_deleted]`; `GROUP BY _deleted`
   over the alias keeps RePark's aggregate-validation error (KNOWN DIVERGENCE B2).

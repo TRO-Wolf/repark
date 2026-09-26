@@ -14,6 +14,7 @@ import uuid
 from collections.abc import Callable, Iterator
 from typing import TYPE_CHECKING, Any, overload
 
+from repark import _native
 from repark.errors import (
     AnalysisException,
     IllegalArgumentException,
@@ -1118,10 +1119,11 @@ class DataFrame:
             return merged
         projected: list[Any] = []
         seen_display: set[str] = set()
+        folded = {name.casefold(): name for name in colsMap}
         for bound in self._iter_bound_columns():
-            display = bound._projection_name or bound.spark_display_part()
-            seen_display.add(display)
-            if display in colsMap:
+            written = bound._projection_name or bound.spark_display_part()
+            seen_display.add(written.casefold())
+            if (display := folded.get(written.casefold())) is not None:
                 replacement = colsMap[display]
                 if isinstance(replacement, Column):
                     replacement = self._rebind_origin_column(replacement)
@@ -1150,7 +1152,7 @@ class DataFrame:
             else:
                 projected.append(bound)
         for name, column in colsMap.items():
-            if name not in seen_display:
+            if name.casefold() not in seen_display:
                 if isinstance(column, Column):
                     projected.append(self._rebind_origin_column(column).alias(name))
                 else:
@@ -1200,21 +1202,21 @@ class DataFrame:
         DataFusion's case-sensitive unquoted fold. Live PySpark 4.1.2 keeps
         ``filter("X > 0")`` working).
 
-        **Case-collision refusal — SQL-string form only.** In a bare SQL predicate, a token
-        naming a column that collides only by case with another (``id`` / ``ID``) raises
+        **Case-collision refusal.** In a bare SQL predicate, a token naming a column that
+        collides only by case with another (``id`` / ``ID``) raises
         :class:`~repark.errors.AnalysisException` with Spark's ``[AMBIGUOUS_REFERENCE]``
-        condition tag; naming any unambiguous column of that same frame still works. Two accepted
-        spellings **bypass** that refusal and diverge from live PySpark 4.1.2, which raises
-        ``AMBIGUOUS_REFERENCE`` for both (verified against the live oracle, disclosed not fixed —
-        pinned in ``test_filter_predicate_rewrite.py`` and re-checked by the live tier's
-        ``filter_case_collision_bypasses`` disclosure):
+        condition tag; naming any unambiguous column of that same frame still works. The
+        :class:`Column` form refuses too since U11-EDGE-1 round 4: the native binder raises
+        ``AMBIGUOUS_REFERENCE`` for a reference matching two fields ignoring case, the exact
+        spelling included, like live PySpark 4.1.2 (pinned in
+        ``test_filter_predicate_rewrite.py``; live tier ``filter_case_collision_bypasses``).
 
-        * the :class:`Column` form — ``df.filter(df["id"] > 0)`` resolves **exact-case-first** and
-        returns rows (``df["ID"]`` binds the other column) instead of refusing;
-        * an explicitly double-quoted ident is passed through untouched and
-          DataFusion resolves it case-sensitively.
-          Spark reads ``"ID"`` as a string *literal*,
-        not an identifier, so the two engines disagree about that span regardless of collisions.)
+        An explicitly double-quoted span is not an identifier: the Databricks lexer reads
+        ``"ID"`` as a string *literal*, as Spark does, so comparing it to a number is loud on
+        both doors (FNP-4B). Only the refusal text differs: DataFusion's planning prefix on
+        the ambiguity, and the Arrow cast error where ANSI Spark raises
+        ``CAST_INVALID_INPUT``.
+        The rewriter never touches a quoted span.
         """
         if isinstance(condition, Column):
             _reject_partition_transform(condition)
@@ -1277,14 +1279,8 @@ class DataFrame:
         for item in cols:
             if isinstance(item, RegexColumn):
                 expanded.extend(expand_col_regex(self, item))
-            elif isinstance(item, str) and item == "*":
-                if self._display_names is not None and self._engine_names is not None:
-                    for display, engine in zip(
-                        self._display_names, self._engine_names, strict=True
-                    ):
-                        expanded.append(self._bind_engine_display_column(display, engine))
-                else:
-                    expanded.extend(self.columns)
+            elif item == "*" if isinstance(item, str) else _column_fields.is_bare_star(item):
+                expanded.extend(self._iter_bound_columns())
             else:
                 expanded.append(item)
         stacked = select_with_stack_if_present(self, expanded)
@@ -1758,13 +1754,13 @@ class DataFrame:
         """Project Columns whose ``join_sql_part`` still has QCOL tokens.
 
         Registers this frame as a temp view, rewrites tokens to quoted engine fields, runs
-        ``SELECT … FROM view``, drops the view. Returns ``None`` if any token cannot be
-        resolved (caller falls through / fails engine-side).
+        ``SELECT … FROM view``, drops the view; ``None`` if any token cannot be resolved.
         """
         from repark.spark._idents import quote_ident as _quote_ident
 
         if self._origin_map is None:
             return None
+        copy_name = functools.partial(_native.attribute_copy_name, self._plan())
 
         proj_parts: list[str] = []
         display_names: list[str] = []
@@ -1773,8 +1769,11 @@ class DataFrame:
         name_counts: dict[str, int] = {}
         for column in projected:
             expr_sql = column.join_sql_part()
+            held = self._origin_map.get((column._origin_plan_id, column._origin_field))
+            if held is not None and expr_sql == _quote_ident(held):
+                expr_sql = _quote_ident(copy_name(held))
             if "__REPARK_QCOL_" in expr_sql:
-                expr_sql = _rewrite_qcol_tokens_local(expr_sql, self)
+                expr_sql = _rewrite_qcol_tokens_local(expr_sql, self, copy_name)
                 if "__REPARK_QCOL_" in expr_sql:
                     return None
             display = (
@@ -1806,7 +1805,7 @@ class DataFrame:
                 origin_map[(column._origin_plan_id, column._origin_field)] = engine
 
         view = scratch_view_name(self._session, "_repark_h1_sel_")
-        self._session.create_or_replace_temp_view(view, self._plan())
+        self._session.create_or_replace_temp_view(view, _native.attribute_copies(self._plan()))
         try:
             planned = self._session.sql(f"SELECT {', '.join(proj_parts)} FROM {view}")
             child = self._spawn(planned)
@@ -1828,16 +1827,11 @@ class DataFrame:
             self._session.drop_temp_view(view)
 
     def _bind_engine_display_column(self, display: str, engine: str) -> Column:
-        """Bind a multi-name display and engine pair without ambiguous lookup.
-
-        Used by ``select("*")`` expansion and other positional projections on frames that
-        carry Spark-legal duplicate display names.
-        """
-        from repark import _native
+        """Bind a display and engine pair by attribute for positional re-projections."""
         from repark.spark._idents import quote_ident as _quote_ident
 
         quoted = _quote_ident(engine)
-        native = _native.PyColumn.column(quoted)
+        native = _native.attribute_column(engine)
         origin_plan_id = self._plan_id
         origin_field = display
         if self._origin_map is not None:
@@ -1858,10 +1852,7 @@ class DataFrame:
         )
 
     def _iter_bound_columns(self) -> list[Column]:
-        """Bind every column by position, preserving duplicate display names.
-
-        Multi-name frames use engine/display pairs; ordinary frames bind by name.
-        """
+        """Bind every column by position; multi-name frames bind engine/display pairs."""
         if self._display_names is not None and self._engine_names is not None:
             return [
                 self._bind_engine_display_column(display, engine)
@@ -1952,11 +1943,10 @@ class DataFrame:
         engine = self._origin_map.get(key)
         if engine is None:
             return column
-        from repark import _native
         from repark.spark._idents import quote_ident as _quote_ident
 
         quoted = _quote_ident(engine)
-        native = _native.PyColumn.column(quoted)
+        native = _native.attribute_column(engine)
         display = column._projection_name or column._origin_field
         return Column(
             native.alias(display),
@@ -1978,13 +1968,15 @@ class DataFrame:
 
         Preserve the requested display spelling and attach origin metadata for joins.
         """
-        from repark import _native
         from repark.spark._idents import quote_ident as _quote_ident
 
-        canonical = self._resolve_getitem_column_name(name) if canonical is None else canonical
+        written = canonical is None
+        canonical = self._resolve_getitem_column_name(name) if written else canonical
         engine_field = self._engine_field_for_display(canonical)
         quoted = _quote_ident(engine_field)
-        native = _native.PyColumn.column(quoted)
+        native = (
+            _native.PyColumn.column(quoted) if written else _native.attribute_column(engine_field)
+        )
         return Column(
             native.alias(name),
             spark_display=name,
@@ -2559,13 +2551,13 @@ class DataFrame:
     def drop(self, *cols: Column | str) -> DataFrame:
         """Drop columns by name or :class:`Column` (PySpark ``DataFrame.drop``).
 
-        An absent name is a no-op. A :class:`Column` argument drops by its resolved
-        field name (simple ``col("x")`` / ``df.x`` form). When the Column carries
-        origin identity and this frame has an origin map (post-join), drop targets the
-        correct side's engine field only, not every display-name match. Dropping an
+        A name matching no field is a no-op; a qualified :class:`Column` binds through its
+        relation; an origin Column on a post-join frame drops that side's field only, and an
         unemitted semi/anti right origin is a Spark 4.1.2 no-op.
         """
         engine_drop: list[str] = []
+        references: list[str] = []
+        attributes: list[str] = []
         for item in cols:
             if (
                 isinstance(item, Column)
@@ -2577,7 +2569,7 @@ class DataFrame:
                 if self._origin_map is not None:
                     key = (item._origin_plan_id, item._origin_field)
                     if key in self._origin_map:
-                        engine_drop.append(self._origin_map[key])
+                        attributes.append(self._origin_map[key])
                         continue
             name = self._name_of(item)
             if self._display_names is not None and self._engine_names is not None:
@@ -2585,18 +2577,15 @@ class DataFrame:
                     if display == name:
                         engine_drop.append(engine)
             else:
-                engine_drop.append(name)
-        child = self._spawn(self._plan().drop(engine_drop))
+                (references if isinstance(item, Column) else engine_drop).append(name)
+        plan = _native.drop_frame_columns(self._plan(), engine_drop, references, attributes)
+        child = self._spawn(plan)
         if self._display_names is not None and self._engine_names is not None:
-            dropped = set(engine_drop)
-            new_display: list[str] = []
-            new_engine: list[str] = []
-            for display, engine in zip(self._display_names, self._engine_names, strict=True):
-                if engine not in dropped:
-                    new_display.append(display)
-                    new_engine.append(engine)
-            child._display_names = new_display
-            child._engine_names = new_engine
+            dropped = {*engine_drop, *attributes}
+            pairs = zip(self._display_names, self._engine_names, strict=True)
+            kept = [(display, engine) for display, engine in pairs if engine not in dropped]
+            child._display_names = [display for display, _ in kept]
+            child._engine_names = [engine for _, engine in kept]
             if self._origin_map is not None:
                 child._origin_map = {
                     key: engine for key, engine in self._origin_map.items() if engine not in dropped
@@ -2774,6 +2763,7 @@ class DataFrame:
                 left_alias=left_alias,
                 right_alias=right_alias,
             )
+            _native.refuse_ambiguous_join_condition(self._plan(), other._plan(), on_sql)
             left_cols = list(self.columns)
             right_cols = list(other.columns)
             all_display = left_cols if left_only else left_cols + right_cols
@@ -2817,7 +2807,8 @@ class DataFrame:
                     f"SELECT {', '.join(proj_parts)} FROM {left_alias} "
                     f"{how_sql} JOIN {right_alias} ON {on_sql}"
                 )
-            planned = self._session.sql(join_sql)
+            sides = (self._plan(), None if left_only else other._plan())
+            planned = _native.requalify_join_sides(self._session.sql(join_sql), *sides)
             child = self._spawn(planned, other)
             child._display_names = display_names
             child._engine_names = engine_names
@@ -3078,17 +3069,7 @@ class DataFrame:
         :class:`~repark.errors.AnalysisException`. When ``True``, a column
         present on only one side is filled with NULL on the other.
         """
-        if not allowMissingColumns:
-            this_columns = set(self.columns)
-            other_columns = set(other.columns)
-            if this_columns != other_columns:
-                missing = (this_columns | other_columns) - (this_columns & other_columns)
-                raise AnalysisException(
-                    "Union can only be performed on inputs with the same columns unless "
-                    "allowMissingColumns=True; mismatched columns: "
-                    f"{sorted(missing)}"
-                )
-        return self._spawn(self._plan().union(other._plan(), True), other)
+        return self._spawn(self._plan().union_by_name(other._plan(), allowMissingColumns), other)
 
     unionByName = union_by_name  # noqa: N815 — deliberate PySpark-compatible camelCase alias
 
@@ -3205,7 +3186,8 @@ class DataFrame:
                     resolved.append(self._resolve_getitem_column_name(self._name_of(item)))
         else:
             for item in names:
-                resolved.append(self._resolve_getitem_column_name(self._name_of(item)))
+                held = self._resolve_getitem_column_name(self._name_of(item)).casefold()
+                resolved.extend(name for name in self.columns if name.casefold() == held)
         all_engine = (
             list(self._engine_names) if self._engine_names is not None else list(self.columns)
         )
@@ -3223,7 +3205,7 @@ class DataFrame:
                 display = engine_to_display.get(engine, engine)
                 order_cols.append(self._bind_engine_display_column(display, engine))
         else:
-            order_cols = [self._bind_schema_column(name) for name in resolved]
+            order_cols = [self._bind_schema_column(name, name) for name in resolved]
         window = Window.partitionBy(*order_cols).orderBy(*order_cols)
         ranked = self.with_column("__repark_dd_rn", F.row_number().over(window))
         filtered = ranked.filter(F.col("__repark_dd_rn") == F.lit(1))

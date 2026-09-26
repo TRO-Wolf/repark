@@ -269,6 +269,8 @@ class DataFrameNaFunctions:
         if names is not None and not names:
             return self._dataframe
         # Match subset names against the display overlay, including ambiguous sides.
+        if names is None and self._dataframe._display_names is None:
+            names = list(self._dataframe.columns)
         if names is None:
             bound_cols = self._dataframe._iter_bound_columns()
         elif (

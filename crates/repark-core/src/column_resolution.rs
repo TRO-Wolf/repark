@@ -23,16 +23,88 @@ pub async fn plan_statement_with_column_repair(
     stack::on_grown_stack(bytes, plan_with_repair(state, statement, case_insensitive)).await
 }
 
+async fn finish_with_display(
+    state: &SessionState,
+    original: Box<Statement>,
+    folded: Box<Statement>,
+    plan: LogicalPlan,
+) -> Result<LogicalPlan> {
+    let planned = plan
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect::<Vec<_>>();
+    let Some(rewritten) = display::display_rewrite(&original, &folded, &planned) else {
+        return display::keep_ref_qualifiers(&original, plan);
+    };
+    let replanned = Box::pin(plan_with_repair(
+        state,
+        datafusion::sql::parser::Statement::Statement(Box::new(rewritten)),
+        true,
+    ))
+    .await?;
+    display::keep_ref_qualifiers(&original, replanned)
+}
+
+fn boxed_finish(
+    state: &SessionState,
+    original: Box<Statement>,
+    folded: Box<Statement>,
+    plan: LogicalPlan,
+) -> std::pin::Pin<Box<impl std::future::Future<Output = Result<LogicalPlan>> + '_>> {
+    Box::pin(finish_with_display(state, original, folded, plan))
+}
+
+fn boxed_case_sensitive(
+    state: &SessionState,
+    statement: datafusion::sql::parser::Statement,
+) -> std::pin::Pin<Box<impl std::future::Future<Output = Result<LogicalPlan>> + '_>> {
+    Box::pin(plan_case_sensitive(state, statement))
+}
+
+async fn plan_case_sensitive(
+    state: &SessionState,
+    statement: datafusion::sql::parser::Statement,
+) -> Result<LogicalPlan> {
+    if let datafusion::sql::parser::Statement::Statement(inner) = &statement {
+        strict_case_guard(state, inner).await?;
+    }
+    state
+        .statement_to_plan(statement)
+        .await
+        .map_err(stamp_unresolved_column)
+}
+
+async fn strict_case_guard(state: &SessionState, inner: &Statement) -> Result<()> {
+    if !display::should_strict_check(inner) {
+        return Ok(());
+    }
+    let Some((name, alias)) = display::strict_single_table(inner) else {
+        return Ok(());
+    };
+    let Some(parts) = fold::normalized_parts(&name) else {
+        return Ok(());
+    };
+    let Some(fields) = catalog_fields(state, inner).await.get(&parts).cloned() else {
+        return Ok(());
+    };
+    let relation = alias.as_deref().unwrap_or_else(|| {
+        name.0
+            .last()
+            .and_then(|part| part_value(part))
+            .unwrap_or_default()
+    });
+    display::strict_case_check(&fields, relation, inner)
+}
+
 async fn plan_with_repair(
     state: &SessionState,
     statement: datafusion::sql::parser::Statement,
     case_insensitive: bool,
 ) -> Result<LogicalPlan> {
     if !case_insensitive {
-        return state
-            .statement_to_plan(statement)
-            .await
-            .map_err(stamp_unresolved_column);
+        return boxed_case_sensitive(state, statement).await;
     }
     let datafusion::sql::parser::Statement::Statement(mut inner) = statement else {
         return state
@@ -40,6 +112,7 @@ async fn plan_with_repair(
             .await
             .map_err(stamp_unresolved_column);
     };
+    let original = inner.clone();
     let first = state
         .statement_to_plan(datafusion::sql::parser::Statement::Statement(inner.clone()))
         .await;
@@ -53,7 +126,7 @@ async fn plan_with_repair(
             if plan_has_upper_ascii_field(&plan) {
                 audit_plan_for_ambiguity(&plan, &written_references(&inner, defaults))?;
             }
-            return Ok(plan);
+            return boxed_finish(state, original, inner, plan).await;
         }
         Err(error) => error,
     };
@@ -94,7 +167,7 @@ async fn plan_with_repair(
         {
             Ok(plan) => {
                 audit_plan_for_ambiguity(&plan, &written)?;
-                return Ok(plan);
+                return boxed_finish(state, original, inner, plan).await;
             }
             Err(next) => error = next,
         }
@@ -185,7 +258,14 @@ fn stamp_unresolved_column(error: DataFusionError) -> DataFusionError {
     }
     let missing = field.name.as_str();
     let column_name = format!("`{missing}`");
-    let suggestions = valid
+    let shown = valid
+        .iter()
+        .filter(|column| !crate::frame_names::is_scratch_relation(&column.name))
+        .collect::<Vec<_>>();
+    if shown.is_empty() {
+        return error;
+    }
+    let suggestions = shown
         .iter()
         .map(|column| {
             let candidate = column.name.as_str();
@@ -219,6 +299,7 @@ struct WrittenRefs {
     qualified: HashSet<(String, String)>,
     projection: HashSet<String>,
     relations: Vec<(String, Vec<String>)>,
+    views: HashSet<String>,
     defaults: [String; 2],
 }
 
@@ -251,6 +332,8 @@ fn written_references(statement: &Statement, defaults: [String; 2]) -> WrittenRe
         qualified: HashSet<(String, String)>,
         projection: HashSet<String>,
         relations: Vec<(String, Vec<String>)>,
+        ctes: HashSet<String>,
+        named: Vec<(String, String)>,
     }
     impl datafusion::sql::sqlparser::ast::Visitor for Collector {
         type Break = std::convert::Infallible;
@@ -258,6 +341,9 @@ fn written_references(statement: &Statement, defaults: [String; 2]) -> WrittenRe
             &mut self,
             query: &datafusion::sql::sqlparser::ast::Query,
         ) -> ControlFlow<Self::Break> {
+            for cte in query.with.iter().flat_map(|with| &with.cte_tables) {
+                self.ctes.insert(cte.alias.name.value.to_ascii_lowercase());
+            }
             if let datafusion::sql::sqlparser::ast::SetExpr::Select(select) = query.body.as_ref() {
                 for item in &select.projection {
                     match item {
@@ -287,6 +373,13 @@ fn written_references(statement: &Statement, defaults: [String; 2]) -> WrittenRe
                     .iter()
                     .filter_map(|part| part_value(part).map(str::to_string))
                     .collect::<Vec<_>>();
+                self.named.push((
+                    written.last().cloned().unwrap_or_default(),
+                    alias.as_ref().map_or_else(
+                        || written.last().cloned().unwrap_or_default(),
+                        |alias| alias.name.value.clone(),
+                    ),
+                ));
                 let entry = match alias {
                     Some(alias) => (alias.name.value.clone(), vec![alias.name.value.clone()]),
                     None => (written.last().cloned().unwrap_or_default(), written),
@@ -315,6 +408,8 @@ fn written_references(statement: &Statement, defaults: [String; 2]) -> WrittenRe
         qualified: HashSet::new(),
         projection: HashSet::new(),
         relations: Vec::new(),
+        ctes: HashSet::new(),
+        named: Vec::new(),
     };
     let _ = datafusion::sql::sqlparser::ast::Visit::visit(statement, &mut collector);
     WrittenRefs {
@@ -322,6 +417,14 @@ fn written_references(statement: &Statement, defaults: [String; 2]) -> WrittenRe
         qualified: collector.qualified,
         projection: collector.projection,
         relations: collector.relations,
+        views: collector
+            .named
+            .into_iter()
+            .filter(|(written, _)| {
+                !written.is_empty() && !collector.ctes.contains(&written.to_ascii_lowercase())
+            })
+            .map(|(_, visible)| visible.to_ascii_lowercase())
+            .collect(),
         defaults,
     }
 }
@@ -330,6 +433,13 @@ type Twins<'a> = HashMap<String, Vec<(Option<&'a TableReference>, &'a str)>>;
 
 fn audit_plan_for_ambiguity(plan: &LogicalPlan, written: &WrittenRefs) -> Result<()> {
     plan.apply_with_subqueries(|node| {
+        if let LogicalPlan::SubqueryAlias(alias) = node
+            && written
+                .views
+                .contains(&alias.alias.table().to_ascii_lowercase())
+        {
+            return Ok(TreeNodeRecursion::Jump);
+        }
         let twins = input_twins(node);
         if twins.is_empty() {
             return Ok(TreeNodeRecursion::Continue);
@@ -447,6 +557,7 @@ fn audit_column(column: &Column, twins: &Twins<'_>, written: &WrittenRefs) -> Re
         .iter()
         .map(|(candidate, _)| {
             candidate
+                .filter(|candidate| !crate::frame_names::is_scratch_relation(candidate.table()))
                 .map(|candidate| written.relation_parts(candidate))
                 .unwrap_or_default()
         })
@@ -796,6 +907,7 @@ fn direct_tables(statement: &Statement) -> Vec<(String, TableReference)> {
     collector.tables
 }
 
+mod display;
 mod fold;
 mod stack;
 

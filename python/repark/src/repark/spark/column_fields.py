@@ -64,6 +64,14 @@ def dataframe_str(frame: Any) -> str:
     return f"DataFrame[{', '.join(parts)}]"
 
 
+def is_bare_star(column: Any) -> bool:
+    """Return whether ``column`` is an unaliased ``F.col("*")``."""
+    return (getattr(column, "_sql_expr", None), getattr(column, "_projection_name", None)) == (
+        "`*`",
+        "*",
+    )
+
+
 def column_window_spec(column: Any) -> Any | None:
     """Return the window specification retained by a column, if any."""
     return getattr(column, "_window_spec", None)

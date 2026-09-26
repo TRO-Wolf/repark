@@ -127,6 +127,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   deleted — `withField` / `dropFields` are native `update_fields` expressions, so no
   boundary rewrite runs. pins: column-parity-1/C-002, C-004, C-005, C-008
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
+  U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
+  its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`
+  (multi-name frames keep their display/engine binds). pins: u11-edge-1/C-024
   IO-DECLARED-1 (2026-09-14): `replace` joins the missing-data surface as the exact
   `DataFrame.replace` delegation with the same no-value sentinel
   (`replace_expr._NO_VALUE`) — PySpark's `<no value>` default — so `na.replace(x)`
@@ -1350,3 +1353,42 @@ and when two spellings coexist the last one set wins (runtime layer over builder
   `writer_readwriter.py` ratchets 1091 → 1077 as both copies of
   `_by_name_projection` collapse into the shared one.
   pins: ipi-19-56-37-schema-evolution-write/C-001, C-002
+
+U11-EDGE-1 round 2 (2026-09-26, V-004): `core.py`'s `union_by_name` no longer decides the
+column match; it passes `allowMissingColumns` to the native `union_by_name`, whose Rust binder
+pairs names case-insensitively, keeps the left spelling and raises the mismatch refusal.
+`core.py` 3991 → 3981. pins: u11-edge-1/C-020
+U11-EDGE-1 round 4 (2026-09-26, V-001/V-003): `core.py`'s `drop` sends string targets and
+Column targets apart to the native `drop_frame_columns`, so a qualified Column binds through its
+relation in Rust and an unmatched string or Column is a no-op; the line cost is paid by the
+docstring, `core.py` stays at 3981. pins: u11-edge-1/C-022
+U11-EDGE-1 round 4 (2026-09-26, V-002): `_join_on_condition_h1` calls the native
+`refuse_ambiguous_join_condition` on the rewritten ON text before planning, and passes the
+planned join through `requalify_join_sides` so the output carries each side's relations;
+`drop`'s display bookkeeping is compressed to pay for the two lines and the `filter`
+docstring now states the Column form refuses like Spark (line-neutral). `core.py`
+3981 → 3979. pins: u11-edge-1/C-023
+U11-EDGE-1 round 5 (2026-09-26, V-001..V-004): attribute references are declared where the
+facade already knows the exact field — `_bind_engine_display_column`, `_rebind_origin_column` and
+`_bind_schema_column(name, canonical)` with an explicit canonical (`_iter_bound_columns`,
+`colRegex`) build `_native.attribute_column(engine)`; a written name (`canonical=None`: string
+`select`, `df["x"]`, `F.col` rebinds) stays a plain column and keeps the ambiguity rule.
+`select("*")` expands through `_iter_bound_columns`, so `selectExpr("*")`, `withColumn(s)`,
+`toDF` and `fillna` re-project by attribute; `dropDuplicates(subset)` keys every field matching a
+subset name ignoring case, as Spark does, bound by attribute; `drop` sends an origin Column's
+engine name as an exact attribute. `core.py` 3979 → 3976. pins: u11-edge-1/C-024, C-025, C-026
+U11-EDGE-1 round 6 (2026-09-26, V-001): `_select_via_qcol_sql` registers its scratch view over
+`_native.attribute_copies(plan)` and rewrites each resolved QCOL token — and each rebound bare
+origin Column whose SQL is its quoted engine name — to that engine's exact copy
+(`_native.attribute_copy_name`, passed to `plan_collapse._rewrite_qcol_tokens_local` as `spell`),
+so a compound origin Column on a case-twin join (`b["id"] + 1`, a cast, an alias, `when`, `isin`,
+a comparison) binds its side instead of refusing. `with_columns` matches its targets ignoring
+case, as Spark's resolver does: `withColumn("id", …)` replaces `ID` and `id` and names both `id`.
+`core.py` 3976 → 3973. pins: u11-edge-1/C-027
+U11-EDGE-1 round 7 (2026-09-26, V-002, V-003): `select` expands an unaliased `F.col("*")`
+(`column_fields.is_bare_star`) through `_iter_bound_columns` like the string `"*"`, so on a
+twin-join frame `select(b["id"] + 1, F.col("*"))` answers the presented fields `ID`, `data`,
+`id`, `w`, not the scratch view's copies. `_select_via_qcol_sql` spells copies through
+`functools.partial(_native.attribute_copy_name, self._plan())`, the collision-free name the
+native copy projection gave each field. `core.py` stays 3973 (the docstring gave the line).
+pins: u11-edge-1/C-029, C-030

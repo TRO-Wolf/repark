@@ -1486,8 +1486,8 @@ def _collision_frame(engine: Engine) -> Any:
 
 def _disc_filter_case_collision_bypasses_repark(engine: Engine) -> None:
     src = _collision_frame(engine)
-    assert engine.arrow_of(src.filter(src["ID"] > 1)).num_rows == 1, "Column form binds `ID`"
-    assert engine.arrow_of(src.filter(src["id"] > 1)).num_rows == 0, "Column form binds `id`"
+    _expect_raises(lambda: engine.arrow_of(src.filter(src["ID"] > 1)), needle="AMBIGUOUS")
+    _expect_raises(lambda: engine.arrow_of(src.filter(src["id"] > 1)), needle="AMBIGUOUS")
     _expect_raises(lambda: engine.arrow_of(src.filter('"ID" > 1')), needle="ID")
     _expect_raises(lambda: engine.arrow_of(src.filter('"id" > 1')), needle="id")
 
@@ -1688,12 +1688,12 @@ DISCLOSURES: list[Disclosure] = [
         "filter_case_collision_bypasses",
         _disc_filter_case_collision_bypasses_repark,
         _disc_filter_case_collision_bypasses_spark,
-        "repark's case-collision refusal covers the bare SQL-string form only: the Column form "
-        "(df[ID]) resolves exact-case-first and still returns rows; an explicitly double-quoted "
-        "span reads as a string literal since FNP-4B and comparing it to a number is loud on "
-        "both doors (BL-1 raise-vs-raise precedent). Spark 4.1.2 raises AMBIGUOUS_REFERENCE "
-        "for the Column form and CAST_INVALID_INPUT for the quoted form under ANSI. Audit G2 "
-        "plus FNP-4B — the Column-form remainder is disclosed, not fixed.",
+        "the Column form (df[ID]) refuses AMBIGUOUS_REFERENCE on both engines since "
+        "U11-EDGE-1 round 4, repark's text behind DataFusion's planning prefix; an explicitly "
+        "double-quoted span reads as a string literal since FNP-4B and comparing it to a "
+        "number is loud on both doors (BL-1 raise-vs-raise precedent), repark with the Arrow "
+        "cast error where ANSI Spark 4.1.2 raises CAST_INVALID_INPUT. Audit G2 plus FNP-4B; "
+        "the remaining divergence is the refusal text, disclosed, not fixed.",
     ),
     Disclosure(
         "sum_catastrophic_cancellation_fixture",
