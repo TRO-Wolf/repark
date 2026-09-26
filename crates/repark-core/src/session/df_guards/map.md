@@ -54,6 +54,29 @@ wrapped optimizer rule) and declares this directory.
   field is a no-op on both, as Spark answers (`drop("t.ID")`, `drop("u.id")`,
   `drop(F.col("u.id"))`). Spark shapes: `target/probe-u11-edge-1/vz-spark.json` (`q_drop_*`,
   `j_drop_*`). Rust pin `qualified_drop_binds_through_its_relation`. pins: u11-edge-1/C-022
+  **Round 4 (2026-09-26, verifier round 2 V-002/V-008):** the binder's final rule, under
+  `caseSensitive=false`: a column reference collects every field whose name matches it ignoring
+  case (`case_hits`; a qualified reference first narrows to the fields whose relation matches the
+  written qualifier part by part from the right). Two or more hits refuse Spark's
+  `[AMBIGUOUS_REFERENCE] Reference <ref> is ambiguous, could be: [<candidates>]. SQLSTATE: 42704`
+  — an exact spelling among them does not win; one hit binds (an exact one stays as written);
+  none leaves the column for DataFusion's own error. `ambiguous_reference` renders the reference
+  as written and each candidate as its relation parts plus the reference's spelling, backticked
+  and sorted the way Spark sorts the list (measured: `[`a`.`id`, `b`.`id`]` for either frame
+  order, `[`id`, `sc`.`ns`.`t_vz_1`.`id`]` with the unqualified side first); a RePark scratch
+  relation (`_repark_*`, `__repark_*`) renders unqualified, as Spark has no relation there
+  (`createDataFrame` twins → `[`id`, `id`]`). `refuse_ambiguous_condition` applies the rule to the
+  bare identifiers of a condition join's rewritten ON text across both sides (origin-qualified
+  tokens are compound and skipped), and `requalify_join_sides` re-projects a condition join's
+  output under each side's own relations so later references see Spark's candidates, not the
+  scratch views; it keeps the join as is when the field counts differ or the re-projection does
+  not plan. The error is a DataFusion `Plan` error, so the facade raises `AnalysisException` with
+  the `Error during planning: ` prefix the SQL door's L-08 refusal carries. The kept
+  `exact_and_ambiguous_references_stay` now asserts the three refusals (V-008). Rust pins:
+  `exact_and_ambiguous_references_stay`, `ambiguous_candidates_render_sorted_like_spark`,
+  `unqualified_and_catalog_candidates_render_like_spark`,
+  `requalified_join_carries_each_side_relation`. Spark shapes:
+  `target/probe-u11-edge-1/vz-spark.json`, `vz2-spark.json`. pins: u11-edge-1/C-023
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside

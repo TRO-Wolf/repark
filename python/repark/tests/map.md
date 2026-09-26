@@ -890,6 +890,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `SELECT a.id, b.ID FROM t a JOIN t b`, `drop(F.col('b.id'))` → `id`, `drop(F.col('A.ID'))` →
   `ID`. Spark shapes: `target/probe-u11-edge-1/vz-spark.json`. Red on 5e2a68b8
   (`red-r4-facade.txt`). pins: u11-edge-1/C-022
+  Round 4 (V-002): `test_bare_reference_matching_two_fields_is_ambiguous` — on
+  `j = SELECT a.id, b.ID FROM t a JOIN t b`: `j.select('id')` refuses Spark's
+  `[AMBIGUOUS_REFERENCE] Reference `id` is ambiguous, could be: [`a`.`id`, `b`.`id`]. SQLSTATE: 42704`,
+  `j.select(F.col('ID'))` the same for `ID`; `a.join(b, a['ID'] == b['id']).select('id')` →
+  `[`id`, `sc`.`ns`.`t`.`id`]`; `a.join(b, F.col('ID') == F.col('id'))` refuses at build with
+  `ID` and `[`ID`, `sc`.`ns`.`t`.`ID`]` (and the mirrored `b.join(a, …)` with `id`);
+  `j.filter(F.col('Id') > 1)` refuses the class only (RePark spells the reference `id`, residue
+  R-15); `j.select(F.col('a.Id'))` → `Id`. Spark shapes: `vz-spark.json` (table `t_vz_1`). Red
+  on 5e2a68b8 (`red-r4-facade.txt`). pins: u11-edge-1/C-023
 - [test_u11_edge_partition_field.py](test_u11_edge_partition_field.py) — **U11-EDGE-1
   (2026-09-26), cell `E-CASE-PARTITION-FIELD`:** partition sources bind case-sensitively under
   either `spark.sql.caseSensitive`: `ADD PARTITION FIELD CAT`, `bucket(4, ID)` and
@@ -5580,6 +5589,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   survival) are **hand-derived from that same oracle session with no standing live leg**.
   **SQL-LITERAL-TYPING-1 (2026-09-16):** the `year`/`YEAR` pins read Int32
   (fixture literals narrow; Spark-equal).
+  **U11-EDGE-1 round 4 (2026-09-26):** the Column-form disclosure pin flipped to
+  `test_column_entry_point_refuses_the_ambiguity_like_spark` — `df.filter(df['id'] > 1)` and
+  `df['ID']` refuse `[AMBIGUOUS_REFERENCE] Reference `id` is ambiguous, could be: [`id`, `id`].
+  SQLSTATE: 42704` (Spark's text, measured in `target/probe-u11-edge-1/vz2-spark.json`, behind
+  DataFusion's planning prefix); `_live_parity.py`'s `filter_case_collision_bypasses` repark leg
+  now expects both Column refusals and its note names the remaining text divergence; the live
+  leg passed against Spark 4.1.2. pins: u11-edge-1/C-023
   **Disclosed divergences characterized here** (behaviour fixes are out of charter) — the
   semantics live in the divergence registry, this map links:
   [`../../../docs/spark-sql-iceberg-parity.md`](../../../docs/spark-sql-iceberg-parity.md) §3

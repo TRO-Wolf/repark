@@ -7,6 +7,8 @@ use crate::fence::fenced;
 
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(drop_frame_columns, module)?)?;
+    module.add_function(wrap_pyfunction!(refuse_ambiguous_join_condition, module)?)?;
+    module.add_function(wrap_pyfunction!(requalify_join_sides, module)?)?;
     Ok(())
 }
 
@@ -25,5 +27,37 @@ fn drop_frame_columns(
         )
         .map_err(datafusion_to_py_err)?;
         Ok(PyDataFrame::new(df, frame.runtime_handle()))
+    })
+}
+
+#[allow(clippy::missing_errors_doc)]
+#[pyfunction]
+fn refuse_ambiguous_join_condition(
+    left: &PyDataFrame,
+    right: &PyDataFrame,
+    condition_sql: &str,
+) -> PyResult<()> {
+    fenced!("dataframe_names.refuse_ambiguous_join_condition", {
+        repark_core::frame_names::refuse_ambiguous_condition(
+            condition_sql,
+            &[left.inner().schema(), right.inner().schema()],
+        )
+        .map_err(datafusion_to_py_err)
+    })
+}
+
+#[allow(clippy::missing_errors_doc)]
+#[pyfunction]
+fn requalify_join_sides(
+    joined: &PyDataFrame,
+    left: &PyDataFrame,
+    right: Option<&PyDataFrame>,
+) -> PyResult<PyDataFrame> {
+    fenced!("dataframe_names.requalify_join_sides", {
+        let mut sides = vec![left.inner().schema()];
+        sides.extend(right.map(|frame| frame.inner().schema()));
+        let df = repark_core::frame_names::requalify_join_sides(joined.inner().clone(), &sides)
+            .map_err(datafusion_to_py_err)?;
+        Ok(PyDataFrame::new(df, joined.runtime_handle()))
     })
 }

@@ -41,7 +41,11 @@ repo.
   weekly `fork-sync-drift` drift report with its thresholds, and the dated **pin-history**
   table (one row per dedicated bump PR; started 2026-08-15; live pin RP-11 `189a73ed` on 2026-09-04).
 - [spark-sql-iceberg-parity.md](spark-sql-iceberg-parity.md) — the **divergence registry**: the
-  single home for how repark differs from Apache Spark. **ICE-METADATA-COLS-1 (2026-09-20):**
+  single home for how repark differs from Apache Spark. **U11-EDGE-1 round 4 (2026-09-26):**
+  ID-2's `Column` half is FIXED — `df.filter(df["ID"] > 1)` on an `id`/`ID` frame refuses
+  Spark's `AMBIGUOUS_REFERENCE` text behind DataFusion's planning prefix; the pin is renamed
+  `test_column_entry_point_refuses_the_ambiguity_like_spark`. pins: u11-edge-1/C-023
+  **ICE-METADATA-COLS-1 (2026-09-20):**
   row `ICE-MC-FILEPOS-1` filed BACKLOG in §7 — `_file` / `_pos` answer Spark-equal,
   `_spec_id` / `_partition` / `_deleted` refuse `[ICE-MC-1]` until the PR-2 fork unit.
   **DESCRIBE-COLUMN-1 (2026-09-23):** `DESC-1` records Spark-equal column rows and the
