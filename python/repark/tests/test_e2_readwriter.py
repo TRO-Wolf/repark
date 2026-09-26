@@ -281,6 +281,21 @@ def test_spark_catalog_writer_paths_land_in_the_session_catalog(spark: ReparkSes
         {"id": 1, "name": "a"}
     ]
 
+    spark.createDataFrame([(1, "a")], ["id", "name"]).write.saveAsTable("alias_merge")
+    source = spark.createDataFrame([(1, "A"), (2, "b")], ["id", "name"])
+    with pytest.raises(AnalysisException):
+        (
+            source.mergeInto("spark_catalog.default.alias_merge", "id")
+            .whenMatched()
+            .updateAll()
+            .whenNotMatched()
+            .insertAll()
+            .merge()
+        )
+    assert spark.table("glue_catalog.default.alias_merge").to_arrow().to_pylist() == [
+        {"id": 1, "name": "a"}
+    ]
+
 
 def test_write_to_re_resolves_after_set_current_database(spark: ReparkSession) -> None:
     """writeTo action uses NS at create(), not frozen at construction."""

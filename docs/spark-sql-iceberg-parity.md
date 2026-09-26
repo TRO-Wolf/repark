@@ -8779,7 +8779,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `crates/repark-core/src/session/tests/session_catalog.rs::the_session_catalog_is_wanted_beside_other_catalog_blocks`.
   pins: catalog-1/C-001, C-002
 - **Rationale** — owner ruling R1 / R5 (2026-09-26): no carve-out; the cell replays EQUAL.
-
+  Residue (2026-09-26, ledger R-2): RePark's refusal for `spark_catalog.ns.t0` reads `Error during planning: table 'spark_catalog.ns.t0' not found` where Spark's is the `TABLE_OR_VIEW_NOT_FOUND` text; the pins assert the refusal, the text is a follow-up.
 ### CAT-DEFAULT-CATALOG — `spark.sql.defaultCatalog` was not honoured — **FIXED 2026-09-26 (WO CATALOG-1)**
 
 - **repark** — `spark.sql.defaultCatalog` on the builder sets the first current catalog; `conf.set` / `conf.unset` at runtime move it

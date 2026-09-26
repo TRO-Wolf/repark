@@ -1,6 +1,6 @@
 # Unit ledger — WO CATALOG-1 · the session catalog is `spark_catalog`; `spark.sql.defaultCatalog`; `USE`; `type=memory` refuses like Spark; toml `session.default_catalog`
 
-**Date:** 2026-09-26 · **Branch:** `feat/catalog-1` · **Base:** `f28a122f`
+**Date:** 2026-09-26 · **Branch:** `feat/catalog-1` · **Base:** `269f2268` (rebased from `f28a122f` on 2026-09-26)
 (`origin/main`) **Model:** Claude Opus 5.5 (`claude-opus-5-5`) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard** (session catalog resolution; no write-path change).
 
@@ -48,3 +48,11 @@ DataFrame door (`table`, `writeTo`, `saveAsTable`) follows the runtime default l
 | C-009 | `spark.catalog.listDatabases("ns*")` on the harness session answers `[]`; `listDatabases()` answers `["default"]`; after `setCurrentCatalog("sc")` it answers `["ns"]`. | The cell replay. | OPEN (lands with this unit's E-CATALOG-LISTDATABASES commit) | Facade `test_list_databases_cell_lists_the_session_catalog`. Cell `E-CATALOG-LISTDATABASES` replays EQUAL. |
 | C-010 | `repark.toml`: a catalog block's `type = "memory"` is rewritten to `catalog-impl = "org.apache.iceberg.inmemory.InMemoryCatalog"`, replacing `type` (a memory-kind `catalog-impl` already present is kept; a non-memory one keeps both keys for C-007); `[<profile>.session] default_catalog` (a string) emits `spark.sql.defaultCatalog`; the typed mirror `repark.config.SessionConfig` carries `default_catalog`. The owner's shape (`impl`, `type = "memory"`, `warehouse`) loads unchanged, the session starts in `spark_catalog`, and `default_catalog = "local"` starts it in `local`. | Emitted key sets; session builds from a file on the Rust and Python doors. | OPEN (lands with this unit's toml keys commit) | Rust `config_file::tests::session_catalog::*` (7 tests), `native_type_catalog_blocks_match_the_flat_config_path`, `file_built_session_registers_the_same_catalogs_as_config_calls`; facade `test_the_owner_toml_loads_and_starts_in_spark_catalog`, `test_session_default_catalog_in_toml_moves_the_first_current_catalog`, `test_the_typed_session_table_renders_default_catalog_for_the_engine`. |
 | C-011 | Every existing test that relied on the auto-flip, the single-catalog start, the alias or a bare `type=memory` is rewritten to say what it now means (none deleted); the list is below. | The facade, dbt, parity and Rust suites green. | OPEN (lands with this unit's CAT-TYPE-MEMORY commit) | Section "Tests rewritten"; `python/repark/tests/map.md`, `python/dbt-repark/tests/map.md` CATALOG-1 rows. |
+
+## Residues
+
+| id | text |
+|---|---|
+| R-1 | Dated 2026-09-26 (verifier round 1, class residue). A `spark.sql.defaultCatalog` naming no configured catalog: RePark's first use raises `AnalysisException`; Spark raises a Py4J-wrapped `CatalogNotFoundException` (the registry row CAT-DEFAULT-CATALOG carries both texts). Same message shape, different class; pinned as a divergence. |
+| R-2 | Dated 2026-09-26 (verifier round 1 V-002; `target/verify/probe1.py` `sc_ns_t_select`, `target/probe-catalog-1/spark-main.json` `spark_catalog_ns_t_select`). `SELECT * FROM spark_catalog.ns.t0` when `ns` exists only in `sc`: Spark `[TABLE_OR_VIEW_NOT_FOUND] The table or view `spark_catalog`.`ns`.`t0` cannot be found. …`; RePark `Error during planning: table 'spark_catalog.ns.t0' not found`. Both refuse; the text differs (the registered `Error during planning:` prefix class plus the bare `table … not found` shape). The pins assert the refusal class; the text is a CATALOG-1B or CASESENS follow-up. |
+| R-3 | Dated 2026-09-26 (verifier round 1 V-002). `CREATE TABLE spark_catalog.ns.t0 (id INT) USING iceberg` when `ns` exists only in `sc`: Spark `IllegalArgumentException: Cannot open table: path is not set`; RePark `NamespaceNotFound => No such namespace: NamespaceIdent(["ns"])`. Both refuse; different class and text; not worked in this unit. |

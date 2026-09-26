@@ -189,6 +189,21 @@ def test_use_pins_the_current_catalog_against_the_default_conf(spark: ReparkSess
     assert _current(spark) == [["spark_catalog", "default"]]
 
 
+def test_set_current_catalog_pins_against_the_default_conf(spark: ReparkSession) -> None:
+    """``setCurrentCatalog`` pins the current catalog like ``USE`` against the default conf.
+
+    pins: catalog-1/C-003
+    """
+    spark.catalog.setCurrentCatalog("sc")
+    assert _current(spark)[0][0] == "sc"
+    spark.conf.set("spark.sql.defaultCatalog", "hc")
+    assert _current(spark)[0][0] == "sc"
+    spark.conf.unset("spark.sql.defaultCatalog")
+    assert _current(spark)[0][0] == "sc"
+    spark.sql("USE spark_catalog.default")
+    assert _current(spark) == [["spark_catalog", "default"]]
+
+
 def test_the_default_catalog_conf_at_build_is_the_first_current_catalog(tmp_path: Path) -> None:
     """``spark.sql.defaultCatalog`` on the builder sets the first current catalog.
 
