@@ -238,6 +238,8 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 - `tests/df_guard.rs` — the nine `df_guards.rs` pins, split out of `tests.rs` when the DEFECT-2
   **U11-EDGE-1 (2026-09-26):** `df_guards.rs` also declares `df_guards/case_bind.rs`
   (row in `df_guards/map.md`). pins: u11-edge-1/C-015
+  Round 2 (2026-09-26): `case_bind` is `pub` and `session.rs` re-exports it as
+  `frame_names`. pins: u11-edge-1/C-017, C-018, C-019, C-020
 - `tests/df_guard.rs` — the seven `df_guards.rs` pins, split out of `tests.rs` when the DEFECT-2
   cohort pushed that file past the 1500-line ceiling (the sanctioned "split the module" out, not
   an EXCEPTIONS row). Guard 1: a bare no-extension session carries the scalar-subquery config

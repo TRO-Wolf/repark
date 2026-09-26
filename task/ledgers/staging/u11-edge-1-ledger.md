@@ -4,6 +4,14 @@
 **Model:** Claude Opus 5.5 (`claude-opus-5-5`), triage-and-salvage of a Muse round ·
 **Policy:** [../../../AGENTS.md](../../../AGENTS.md). **Path:** STANDARD. **risk_tier: standard.**
 
+**Round 2 (2026-09-26, fixer, Claude Opus 5.5):** the verifier measured that the respelled SQL
+frame broke four DataFrame-door operations that worked on main (V-001 drop, V-002 qualified
+references, V-003 join on a name, V-004 unionByName). The fix is one Rust binder
+(`df_guards/case_bind.rs`, re-exported as `repark_core::frame_names`) that every one of those
+paths calls, plus the relation kept on respelled references (`column_resolution/display.rs`);
+C-017…C-020. Output names are not re-lower-cased: `E-CASE-SELECT` replays EQUAL on every `obs`
+key (`target/probe-u11-edge-1/replay-r3-case.json`).
+
 **Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
 
 **Why now.** Four scoreboard cells of the 2026-09-25 run: `E-CASE-SELECT` answered the stored
@@ -62,7 +70,12 @@ the same `ValidationException` under `true`.
 | C-015 | The DataFrame door binds an unqualified `F.col` to the single frame field that matches it case-insensitively when the frame lacks the exact name: `spark.sql("SELECT ID, data …").filter(F.col("id") > 1)` and `F.col("ID")` → `ID`, `data`, `[[2, b]]`; `select(F.col("id") + 1)` → `(id + 1)`; `SELECT id AS Id` filtered by `F.col("Id")` → `Id`, `[[2]]`; `createDataFrame(…, ["Id"]).filter(F.col("id") > 1)` → `[[2]]` (main refused this one too). An exact hit, a case twin or a qualified column is left as it is. | Facade rows and names; kernel pins. | PROVEN | `test_dataframe_door_binds_spelled_sql_columns`; Rust `case_bind::tests::folded_reference_binds_the_single_spelled_field`, `exact_ambiguous_and_qualified_references_stay`; `test_perf_facade_logical_names.py` green again. Probe `spark_r3.json`. |
 | C-016 | `TP-FORMAT-V1-DELETE` replays EQUAL on every observation with no code change in this unit (the work is D-CREATE-V1, WO U5 PR2b). | Replay against the record. | PROVEN | `target/probe-u11-edge-1/replay-v1.json` (Muse round) and `replay-r2-v1.json` (this tree): every `obs` key equal to `spark-props.json`. The standing pins are `create_format_version_one.rs`. |
 
-VERDICT (2026-09-26): 16 clauses, 16 PROVEN, 0 OPEN, 0 REJECTED. `E-CATALOG-LISTDATABASES` is not a clause of this unit (moved, 2026-09-25).
+| C-017 | Round 2 (V-001). On `f = spark.sql("SELECT ID, data FROM t")` over rows `(1,'a'),(2,'b')`: `f.drop("ID")`, `f.drop("id")` and `f.drop(F.col("ID"))` answer `data` with `[[a],[b]]`; `f.drop("ID", "data")` answers no columns and two empty rows; `f.drop("data")` answers `ID`. The PR head dropped nothing for the first three and left `ID` for the pair. | Facade names and rows; the kernel pin. | PROVEN | `test_drop_binds_spelled_names`; Rust `case_bind::tests::drop_removes_every_folded_match`. Spark: `vx2-spark.json` `s_drop_colID`, `s_drop_two`, `s_drop_data`; `vx-spark.json` `sql_drop_ID`, `sql_drop_id`. |
+| C-018 | Round 2 (V-002). On `q = spark.sql("SELECT ID, data FROM t t")`: `q.select(F.col("t.ID"))` → `ID`, `[[1],[2]]`; `q.select(F.col("t.id"))` → `id`; `q.filter(F.col("t.id") > 1)` → `ID`, `data`, `[[2, b]]`; `spark.sql("SELECT id FROM t t").select(F.col("t.id"))` → `id`; `spark.table(t).alias("t").select(F.col("t.ID"))` → `ID`. The respelled reference keeps its relation on the SQL frame and a qualified column binds case-insensitively within it; the output is named by the written segment. | Facade names and rows; kernel pins for the qualifier, the qualified bind, the written-segment alias and the projection spelling. | PROVEN | `test_qualified_references_bind_spelled_names`; Rust `respelled_plain_references_keep_their_relation`, `case_bind::tests::qualified_reference_binds_through_its_relation`, `qualified_alias_names_the_written_segment`, `projection_keeps_the_written_spelling`. Spark: `vx2-spark.json` `s_q_col_tID`, `s_q_filter_tid`, `e_q_col_tid`; `vx-spark.json` `qual_t_ID`, `qual_t_id`, `alias_qual` (the PR head named the last one `t.ID`). |
+| C-019 | Round 2 (V-003). `spark.sql("SELECT ID, data FROM t").join(spark.sql("SELECT 1 AS ID, 'q' AS w"), "ID")` → `ID`, `data`, `w` with `[[1, a, q]]`: each key binds on each side case-insensitively and one key column stays. | Facade names and rows; the kernel pin. | PROVEN | `test_join_on_a_spelled_key`; Rust `case_bind::tests::join_binds_each_side_and_keeps_one_key`. Spark: `vx2-spark.json` `s_join_ID`. |
+| C-020 | Round 2 (V-004). `spark.sql("SELECT ID, data FROM t").unionByName(spark.sql("SELECT id, Data FROM t"))` → `ID`, `data` with four rows: names pair case-insensitively and the left spelling wins. The column match moved from `core.py` into Rust. | Facade names and rows; the kernel pin (respelling, strict mismatch, allow-missing). | PROVEN | `test_union_by_name_matches_names_case_insensitively`; Rust `case_bind::tests::union_respells_the_right_and_refuses_a_mismatch`. Spark: `vx2-spark.json` `s_union`. |
+
+VERDICT (2026-09-26, round 2): 20 clauses, 20 PROVEN, 0 OPEN, 0 REJECTED. `E-CATALOG-LISTDATABASES` is not a clause of this unit (moved, 2026-09-25).
 
 ## Mutation record (2026-09-26)
 
@@ -74,6 +87,11 @@ Each line was broken, the named tests ran, and the file was restored.
 | M2 | `strict_case_guard` returns early | Rust `sensitive_session_refuses_folded_names_and_keeps_backticks`, `display_rewrite_keeps_the_written_spelling` |
 | M3 | `bind_case_insensitive` never binds | Rust `case_bind::tests::folded_reference_binds_the_single_spelled_field` |
 | M4 | the partition-source check uses `field_by_name_case_insensitive` | Rust `partition_spec_add_wrong_case_source_refuses_like_spark` |
+| M5 | round 2: `same_relation` always false | Rust `qualified_reference_binds_through_its_relation`, `qualified_alias_names_the_written_segment` |
+| M6 | round 2: `written_segment` always `None` | Rust `qualified_alias_names_the_written_segment` |
+| M7 | round 2: `union_by_folded_name` never respells the right frame | Rust `union_respells_the_right_and_refuses_a_mismatch` |
+| M8 | round 2: the join key projection compares keys case-sensitively | Rust `join_binds_each_side_and_keeps_one_key` |
+| M9 | round 2: `requalify_alias` leaves the relation off | Rust `respelled_plain_references_keep_their_relation` |
 
 ## Coverage
 
@@ -109,7 +127,7 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-core/src/column_resolution.rs, python/repark/tests/test_ice_views_1.py]
     - id: AT-8
       status: ATTACKED
-      evidence: Every decision is in Rust (column_resolution/display.rs, df_guards/case_bind.rs, write/partition_spec.rs); no Python source file changes; no ceiling moves (alter.rs stays at 1607, router.rs untouched); no code comments.
+      evidence: Every decision is in Rust (column_resolution/display.rs, df_guards/case_bind.rs, write/partition_spec.rs); round 2 moves the unionByName column match out of core.py into the Rust binder (the only Python source change, a shrink); ceilings only ratchet down (dataframe.rs 1017 → 1016, core.py 3991 → 3981, mirrored in CAP-1; alter.rs stays at 1607, router.rs untouched); no code comments.
       artifacts: [crates/repark-core/src/column_resolution/display.rs, crates/repark-iceberg/src/write/alter.rs]
     - id: AT-9
       status: ATTACKED

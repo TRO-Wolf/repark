@@ -133,3 +133,61 @@ def test_dataframe_door_binds_spelled_sql_columns(spark: ReparkSession) -> None:
     created = spark.createDataFrame([(1,), (2,)], ["Id"]).filter(col("id") > 1)
     assert _names(created) == ["Id"]
     assert [tuple(row) for row in created.collect()] == [(2,)]
+
+
+def _spelled(spark: ReparkSession, sql: str):
+    """Seed the second row and return the spelled SQL frame."""
+    spark.sql("INSERT INTO sc.ns.t VALUES (2, 'b')")
+    return spark.sql(sql)
+
+
+def _shape(frame) -> tuple[list[str], list[tuple]]:
+    """Return a frame's names and its sorted rows."""
+    return _names(frame), sorted(tuple(row) for row in frame.collect())
+
+
+def test_drop_binds_spelled_names(spark: ReparkSession) -> None:
+    """drop('ID'), drop('id') and drop(F.col('ID')) remove the spelled ID; drop of both empties.
+
+    pins: u11-edge-1/C-017
+    """
+    frame = _spelled(spark, "SELECT ID, data FROM sc.ns.t")
+    for target in ("ID", "id", col("ID")):
+        assert _shape(frame.drop(target)) == (["data"], [("a",), ("b",)])
+    assert _shape(frame.drop("ID", "data")) == ([], [(), ()])
+    assert _shape(frame.drop("data")) == (["ID"], [(1,), (2,)])
+
+
+def test_qualified_references_bind_spelled_names(spark: ReparkSession) -> None:
+    """t.ID and t.id resolve through the relation alias and name the output as written.
+
+    pins: u11-edge-1/C-018
+    """
+    frame = _spelled(spark, "SELECT ID, data FROM sc.ns.t t")
+    assert _shape(frame.select(col("t.ID"))) == (["ID"], [(1,), (2,)])
+    assert _shape(frame.select(col("t.id"))) == (["id"], [(1,), (2,)])
+    assert _shape(frame.filter(col("t.id") > 1)) == (["ID", "data"], [(2, "b")])
+    stored = spark.sql("SELECT id FROM sc.ns.t t").select(col("t.id"))
+    assert _shape(stored) == (["id"], [(1,), (2,)])
+    aliased = spark.table("sc.ns.t").alias("t").select(col("t.ID"))
+    assert _shape(aliased) == (["ID"], [(1,), (2,)])
+
+
+def test_join_on_a_spelled_key(spark: ReparkSession) -> None:
+    """join(…, 'ID') binds the spelled key on both sides and keeps one key column.
+
+    pins: u11-edge-1/C-019
+    """
+    frame = _spelled(spark, "SELECT ID, data FROM sc.ns.t")
+    joined = frame.join(spark.sql("SELECT 1 AS ID, 'q' AS w"), "ID")
+    assert _shape(joined) == (["ID", "data", "w"], [(1, "a", "q")])
+
+
+def test_union_by_name_matches_names_case_insensitively(spark: ReparkSession) -> None:
+    """unionByName pairs ID/id and data/Data and keeps the left spelling.
+
+    pins: u11-edge-1/C-020
+    """
+    left = _spelled(spark, "SELECT ID, data FROM sc.ns.t")
+    unioned = left.unionByName(spark.sql("SELECT id, Data FROM sc.ns.t"))
+    assert _shape(unioned) == (["ID", "data"], [(1, "a"), (1, "a"), (2, "b"), (2, "b")])

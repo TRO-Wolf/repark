@@ -80,6 +80,11 @@ pins: ice-error-conditions-1/C-011
   `group_by_wrong_case_groups`, `sensitive_session_refuses_folded_names_and_keeps_backticks`;
   `dataframe_filter_binds_projection_alias` binds the now case-kept alias `Id` by its schema
   name (DataFusion's `col()` folds to `id`).
+  **Round 2 (2026-09-26, V-002):** `keep_ref_qualifiers` gives a plain or compound reference
+  that the repair or the display rewrite aliased (`t.id AS "ID"`, `t.Data AS data`) its
+  relation back on the top projection (through `Sort` / `Limit` / `DISTINCT`), so a later
+  DataFrame `F.col("t.ID")` still finds `t`; an explicit `AS` alias stays unqualified as in
+  Spark. Pin `respelled_plain_references_keep_their_relation`. pins: u11-edge-1/C-018
 
 ## Purpose
 

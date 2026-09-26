@@ -878,6 +878,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   output case-insensitively on the DataFrame door. Spark shapes:
   `target/probe-u11-edge-1/spark_case.json`, `spark_r2.json`, `spark_r3.json`.
   pins: u11-edge-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-015
+  Round 2 (2026-09-26): the DataFrame door on spelled SQL frames — `drop('ID')`, `drop('id')`,
+  `drop(F.col('ID'))` → `data`, `drop('ID', 'data')` → no columns; `F.col('t.ID')` → `ID`,
+  `F.col('t.id')` → `id`, `filter(F.col('t.id') > 1)`, `table.alias('t').select(F.col('t.ID'))`
+  → `ID`; `join(…, 'ID')` → `ID`, `data`, `w`; `unionByName` of `ID, data` and `id, Data` →
+  `ID`, `data` with four rows. Spark shapes: `target/probe-u11-edge-1/vx-spark.json`,
+  `vx2-spark.json`. Red on 102ab9d0 (4 failed). pins: u11-edge-1/C-017, C-018, C-019, C-020
 - [test_u11_edge_partition_field.py](test_u11_edge_partition_field.py) — **U11-EDGE-1
   (2026-09-26), cell `E-CASE-PARTITION-FIELD`:** partition sources bind case-sensitively under
   either `spark.sql.caseSensitive`: `ADD PARTITION FIELD CAT`, `bucket(4, ID)` and
