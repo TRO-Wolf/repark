@@ -11,6 +11,7 @@ use datafusion::arrow::compute::{CastOptions, cast_with_options};
 use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema, SchemaRef};
 use datafusion::error::{DataFusionError, Result};
 
+use crate::catalog::uuid_presentation::{convert_uuid_column, presents_uuid};
 use crate::write::name_resolution::{CaseInsensitiveColumnIndex, SourceMatch};
 use crate::write::store_assign::refuse_unless_write_store_assignable;
 
@@ -200,6 +201,9 @@ pub(crate) fn conform_batch(
 }
 
 pub(crate) fn promoted_scan_column(column: &ArrayRef, target: &DataType) -> Result<ArrayRef> {
+    if presents_uuid(column.data_type(), target) {
+        return convert_uuid_column(column, target);
+    }
     let promotion = match (column.data_type(), target) {
         (DataType::Int32, DataType::Int64) | (DataType::Float32, DataType::Float64) => true,
         (

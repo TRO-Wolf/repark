@@ -458,6 +458,12 @@ repark-core's error map.
   check and the cast kernel. This is the bulk-append hot path and the identity case is the common
   one; the guard and the strict cast still run for every pair that actually differs.
   pins: v3-cov-statement-coverage/C-004
+- `conform.rs`, `overwrite.rs`, `partition_overwrite.rs` — **WO U9-TYPES-1 round-1 fixer
+  (2026-09-26):** `promoted_scan_column` renders a presented uuid through
+  `../catalog/uuid_presentation.rs`; `INSERT OVERWRITE` (both forms, and the DataFrame
+  `overwritePartitions` that lowers to it) maps its source onto `presented_arrow_schema`, so a
+  `STRING` source store-assigns to a uuid column, and `store_presented_batch` parses it to
+  bytes before the writer. pins: u9-types-1/C-013
 - `concurrency.rs` — **PERF-ICE-WRITEPATH-1 round 2 (2026-09-05):** on the CTAS write node
   `repark.write.max-concurrent-files` is **binary, not a cap** — 1 writes one data file through a
   `CoalescePartitionsExec`, 2 or more writes one data file per DataFusion partition. Measured at

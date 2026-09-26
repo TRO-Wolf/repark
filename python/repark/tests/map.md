@@ -91,6 +91,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `bucket(4, u)` table through the `bucket_uuid` step kind, ALTER to STRING, invalid literals,
   append, DELETE / UPDATE smoke, `.files` metrics), 25 EQUAL; R-15 retires and R-25..R-28
   hold the rest. pins: u9-types-1/C-010
+  **WO U9-TYPES-1 round-1 fixer (2026-09-26):** the oracle of `test_u9_types_1.py` gains 22 steps in two groups, measured on Spark 4.1.2 + Iceberg 1.11.0 by
+  `target/probe-u9-types-2/measure.py` (which replays the same `run_step`): `uuid-write` (MERGE
+  on a source column, an upper-case source, a literal, an upper-case INSERT and `UPDATE SET u`,
+  `_file` / `_pos` beside `u`), `uuid-overwrite` (`INSERT OVERWRITE` whole table and static
+  partition, `overwritePartitions` of a `STRING` column, `_partition.p` beside `u`).
+  New step kinds `overwrite_partitions` and `df_create` share `write_dataframe` with `append`.
+  pins: u9-types-1/C-013
 - [test_ice_error_conditions_1.py](test_ice_error_conditions_1.py) —
   **ICE-ERROR-CONDITIONS-1 / IPI-51 PR1 (2026-09-20):** constructor pins for the native
   error-condition parser — `getCondition`/`getErrorClass`/`getSqlState` on the PyO3

@@ -442,6 +442,21 @@ Source comments retain only API and safety contracts; implementation narration i
   applies it, for the full snapshot and the scoped namespace rebuild alike, so every
   catalog-path door (scan, INSERT, DELETE / UPDATE / MERGE, the DataFrame writer, metadata
   tables) sees `uuid` as `Utf8`. pins: u9-types-1/C-010
+- `uuid_presentation.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** the one place that
+  turns an Iceberg schema into the presented Arrow schema. `presented_arrow_schema` is the
+  fork's `schema_to_arrow_schema` with every `uuid` field (found by its field id, at any
+  depth) advertised as `Utf8`, the same mapping the fork applies under `with_uuid_as_string`
+  (its helpers are crate-private at `08735de9`, so the mapping and Java's `UUID.fromString`
+  parser are mirrored here); `stored_arrow_schema` is its inverse for a writer.
+  `convert_uuid_column` is the one batch kernel both ways: `FixedSizeBinary(16)` renders
+  canonical lower-case text, text parses to bytes (`DataInvalid => Invalid UUID string: …` on
+  bad text, upper case stored lower case), nested struct / list / map children recurse, and
+  every other pair falls back to the strict cast. Callers: MERGE (`write/merge/mod.rs` write
+  schema, `session_staging.rs` store, `conform.rs::promoted_scan_column` target scan), `INSERT
+  OVERWRITE` (`write/overwrite.rs`, `write/partition_overwrite.rs`), `metadata_columns.rs`,
+  `scan_batches.rs` (`lineage_columns.rs`, `changelog.rs`, `incremental_append.rs`), and
+  repark-spark `describe_column.rs` / `show_table_extended.rs`. pins: u9-types-1/C-013
+  pins: u9-types-1/C-010
 - `provider.rs` — `ReparkCatalogProvider` (mutable namespace→schema map) +
   `invalidate_catalog_namespaces` / `drop_catalog_namespace_from_provider` /
   `rebuild_catalog_provider`. Product DDL rebuilds only the touched namespace; empty invalidate

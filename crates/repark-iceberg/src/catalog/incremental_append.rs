@@ -12,13 +12,14 @@ use datafusion::physical_plan::ExecutionPlan;
 use datafusion::physical_plan::stream::RecordBatchStreamAdapter;
 use datafusion::physical_plan::streaming::{PartitionStream, StreamingTableExec};
 use futures::TryStreamExt;
-use iceberg::arrow::{ArrowReaderBuilder, schema_to_arrow_schema};
+use iceberg::arrow::ArrowReaderBuilder;
 use iceberg::expr::Predicate;
 use iceberg::scan::IncrementalAppendScan;
 use iceberg::table::Table;
 
 use crate::catalog::iceberg_to_datafusion;
 use crate::catalog::scan_batches::{conform_batch, iceberg_predicate_from_filters};
+use crate::catalog::uuid_presentation::presented_arrow_schema;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct AppendWindow {
@@ -54,7 +55,7 @@ impl IncrementalAppendTableProvider {
                 None => Arc::clone(metadata.current_schema()),
             },
         };
-        let arrow = schema_to_arrow_schema(&schema).map_err(iceberg_to_datafusion)?;
+        let arrow = presented_arrow_schema(&schema).map_err(iceberg_to_datafusion)?;
         Ok(Self {
             table,
             window,

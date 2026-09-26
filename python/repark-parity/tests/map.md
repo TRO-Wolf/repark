@@ -204,6 +204,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 - `test_cap_1_source_file_line_cap.py` — **IPI-51 PR4 (2026-09-20):**
   mirror row ratchets `repark-spark/src/alter.rs` 1449 → 1446 with
   `scripts/check_rust_file_size.py`, shrink-only. pins: ice-error-conditions-1/C-011
+- `test_cap_1_source_file_line_cap.py` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** the
+  `repark-iceberg/src/write/merge/mod.rs` mirror row ratchets 1628 → 1622 with
+  `scripts/check_rust_file_size.py`, shrink-only. pins: u9-types-1/C-013
 - `test_cap_1_source_file_line_cap.py` — **ICE-RDF-SORT-PARSE-1 (2026-09-20, run 26a):**
   mirror row ratchets `repark-spark/src/tests/call.rs` 1303 → 1287 with
   `scripts/check_rust_file_size.py`, shrink-only. pins: ice-rdf-sort-parse-1/C-004

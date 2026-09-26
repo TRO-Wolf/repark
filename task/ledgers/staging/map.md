@@ -15,8 +15,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   R-16 (invalid LTZ literal text) and R-17 (ANSI door `WITH TIME ZONE` is naive).
   Round r3: map assignments refuse unsafe key and value casts with Spark's text (C-011), map
   comparison and ordering refuse (C-012); residues R-18..R-20.
+  Round-1 fixer of PR2 (2026-09-26): uuid through MERGE, INSERT OVERWRITE and the
+  metadata-column projections (C-013).
   `risk_tier: standard`. Branch `feat/u9-types-1`.
   pins: u9-types-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-011, C-012
+  pins: u9-types-1/C-013
 - [u8-write-sql-ledger.md](u8-write-sql-ledger.md) —
   **U8 WRITE-SQL PR1 (2026-09-24), in flight:** `INSERT INTO … REPLACE WHERE` as Spark's
   overwrite by filter, `INSERT INTO … PARTITION (…)` static and dynamic keys, and positional

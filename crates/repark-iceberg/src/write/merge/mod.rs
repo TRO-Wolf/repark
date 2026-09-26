@@ -57,6 +57,7 @@ pub(crate) use target_scan::{
     residual_join_key_filter,
 };
 
+use crate::catalog::uuid_presentation::{convert_uuid_column, presented_arrow_schema};
 use crate::write::concurrency::{WriteConcurrency, concurrency_from_ctx};
 use crate::write::conflict_filter::from_merge_on;
 use crate::write::conform::{conform_batch_retaining_unmapped_columns, write_default_column_names};
@@ -105,7 +106,7 @@ pub async fn execute_merge(
     };
 
     let write_schema =
-        Arc::new(schema_to_arrow_schema(table.metadata().current_schema()).map_err(iceberg_err)?);
+        Arc::new(presented_arrow_schema(table.metadata().current_schema()).map_err(iceberg_err)?);
     reserved_name_guard(&write_schema)?;
     let spec = expand_star_clauses(ctx, spec, &write_schema).await?;
     let spec = spec.as_ref();
@@ -1369,14 +1370,7 @@ pub(super) fn cast_one_batch_to_write_schema(
     let columns = write_schema
         .fields()
         .iter()
-        .map(|field| {
-            let column = named_column(batch, field.name())?;
-            Ok(cast_with_options(
-                column,
-                field.data_type(),
-                &strict_cast(),
-            )?)
-        })
+        .map(|field| convert_uuid_column(named_column(batch, field.name())?, field.data_type()))
         .collect::<Result<Vec<_>>>()?;
     Ok(RecordBatch::try_new(write_schema.clone(), columns)?)
 }

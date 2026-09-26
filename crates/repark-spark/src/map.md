@@ -1034,6 +1034,10 @@ pins: rp-4-fork-repin/C-005, C-006
   `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] … Cannot safely cast `c` "INT" to "VOID".
   SQLSTATE: KD000`, naming the value's Spark type. `spark_ast.rs`'s passthrough calls both.
   pins: u9-types-1/C-009
+- `describe_column.rs`, `show_table_extended.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):**
+  both read the schema through repark-iceberg `presented_arrow_schema`, so a uuid column
+  describes as `string` (`DESCRIBE t u`, `SHOW TABLE EXTENDED`), as Spark measured.
+  pins: u9-types-1/C-013
 - `cast_gate.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** the unit's one cast hook, a single
   call in `spark_ast.rs`'s passthrough: the `CAST(NULL AS VOID)` rewrite (`void_type.rs`)
   and the `CAST(x AS UUID)` refusal (`uuid_cast.rs`). pins: u9-types-1/C-009, C-010

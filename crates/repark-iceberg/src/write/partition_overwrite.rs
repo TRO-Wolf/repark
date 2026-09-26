@@ -308,8 +308,10 @@ pub(crate) fn static_injected_stream<'a>(
     columns: &[String],
 ) -> Result<impl futures::Stream<Item = Result<RecordBatch>> + Unpin + use<'a>> {
     let write_schema: SchemaRef = Arc::new(
-        iceberg::arrow::schema_to_arrow_schema(table.metadata().current_schema())
-            .map_err(iceberg_err)?,
+        crate::catalog::uuid_presentation::presented_arrow_schema(
+            table.metadata().current_schema(),
+        )
+        .map_err(iceberg_err)?,
     );
     let plan = StaticPartitionPlan::new(Arc::clone(&write_schema), equalities, table)?
         .with_columns(columns)?;

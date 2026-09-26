@@ -282,6 +282,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   lower-case text, and refuses invalid text; `CAST(x AS UUID)` refuses with Spark's text;
   `ALTER COLUMN u TYPE STRING` keeps `uuid`; DELETE / UPDATE through uuid text.
   pins: u9-types-1/C-010
+- [u9_uuid_void_writes.rs](u9_uuid_void_writes.rs) — **WO U9-TYPES-1 round-1 fixer
+  (2026-09-26):** one pin per path. MERGE joins on uuid text (source column and literal),
+  inserts and updates an upper-case string that stores lower case, and refuses `nope` with
+  `Invalid UUID string: nope`; `INSERT OVERWRITE` (whole table, static `PARTITION (p = 2)`, and
+  the column-list form the DataFrame `overwritePartitions` lowers to) stores upper-case text
+  lower case; `_file` projects beside `u` as text with a text filter. Red before the fix (each
+  test fails at the old refusal). pins: u9-types-1/C-013
 - [alter_write_order_transform.rs](alter_write_order_transform.rs) — **WO U5 PR2b
   (2026-09-24):** D-WRITE-ORDERED-TRANSFORM. Seventeen measured `WRITE ORDERED BY` specs land
   the sort order Spark wrote (rendered as `transform source direction nulls`) with `range`;

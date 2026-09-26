@@ -5,7 +5,7 @@ group, and its observation must equal Spark's measured answer. A step whose RePa
 dated residue carries ``residue = {id, repark}``; the replay holds RePark to that recorded answer,
 so a residue that moves reds. The generator is ``target/probe-u9-types-1/build_oracle.py``.
 
-pins: u9-types-1/C-001, C-002, C-003, C-005, C-006, C-007, C-008
+pins: u9-types-1/C-001, C-002, C-003, C-005, C-006, C-007, C-008, C-013
 """
 
 from __future__ import annotations
@@ -151,10 +151,8 @@ def run_step(session: Any, step: dict[str, Any], warehouse: Path, engine: str) -
         if kind == "conf":
             session.conf.set(step["setting"], step["value"])
             return "ok"
-        if kind == "append":
-            rows = [tuple(decode(value) for value in row) for row in step["rows"]]
-            session.createDataFrame(rows, step["schema"]).writeTo(step["table"]).append()
-            return "ok"
+        if kind in ("append", "overwrite_partitions", "df_create"):
+            return write_dataframe(session, step)
         if kind == "add_uuid":
             return add_uuid_column(session, step["table"], engine)
         if kind == "bucket_uuid":
@@ -164,6 +162,21 @@ def run_step(session: Any, step: dict[str, Any], warehouse: Path, engine: str) -
         return observe_query(session, step)
     except Exception as error:
         return error_observation(error, warehouse)
+
+
+def write_dataframe(session: Any, step: dict[str, Any]) -> str:
+    """Write the step's rows through ``writeTo``: append, overwritePartitions or create."""
+    rows = [tuple(decode(value) for value in row) for row in step["rows"]]
+    writer = session.createDataFrame(rows, step["schema"]).writeTo(step["table"])
+    if step["do"] == "append":
+        writer.append()
+    elif step["do"] == "overwrite_partitions":
+        writer.overwritePartitions()
+    else:
+        for key, value in step.get("props", {}).items():
+            writer = writer.tableProperty(key, value)
+        writer.create()
+    return "ok"
 
 
 def add_uuid_column(session: Any, table: str, engine: str) -> str:

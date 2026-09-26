@@ -92,6 +92,12 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
 - `namespace_scoped.rs` — G17 wrapper pins for `NamespaceScopedCatalog`.
   pins: rp-1-fork-repin/C-003
   pins: rp-4-fork-repin/C-002
+- `uuid_presentation.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** kernel pins for
+  `../uuid_presentation.rs`: only `uuid` fields (not `fixed[16]`) present as `Utf8`, at top
+  level and inside a struct, and store back to the fork's schema; the parser is Java's
+  `UUID.fromString` (upper case equals lower case, `1-2-3-4-5` accepted, `nope` and the
+  undashed form refused `Invalid UUID string: …`); a nested uuid round-trips text → bytes →
+  lower-case text; bad text refuses with the fork's `DataInvalid` text. pins: u9-types-1/C-013
 - `memory_props_span.rs` — **PR-B class sweep (2026-09-24):** the
   `catalog.memory_catalog_cached_with_props` span records exactly `warehouse`,
   `metadata_cache`, `manifest_cache_bytes` and `footer_cache`. No field value carries a prop

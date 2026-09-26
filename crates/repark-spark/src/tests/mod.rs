@@ -121,6 +121,7 @@ mod transform_overwrite;
 mod truncate;
 mod u9_map;
 mod u9_timestamp_ltz;
+mod u9_uuid_void_writes;
 mod u9_void_uuid;
 mod unset_tblproperties;
 mod update_cast;

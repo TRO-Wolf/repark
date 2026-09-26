@@ -15,7 +15,7 @@ use datafusion::physical_plan::ExecutionPlan;
 use datafusion::physical_plan::stream::RecordBatchStreamAdapter;
 use datafusion::physical_plan::streaming::{PartitionStream, StreamingTableExec};
 use futures::TryStreamExt;
-use iceberg::arrow::{ArrowReaderBuilder, schema_to_arrow_schema};
+use iceberg::arrow::ArrowReaderBuilder;
 use iceberg::expr::Predicate;
 use iceberg::metadata_columns::{
     RESERVED_COL_NAME_LAST_UPDATED_SEQUENCE_NUMBER, RESERVED_COL_NAME_ROW_ID,
@@ -27,6 +27,7 @@ use parquet::arrow::PARQUET_FIELD_ID_META_KEY;
 
 use crate::catalog::iceberg_to_datafusion;
 use crate::catalog::scan_batches::{conform_batch, iceberg_predicate_from_filters};
+use crate::catalog::uuid_presentation::presented_arrow_schema;
 
 /// Whether `table` is format-v3 and must serve the two lineage metadata columns.
 #[must_use]
@@ -62,7 +63,7 @@ impl LineageColumnsTableProvider {
     /// # Errors
     /// Arrow conversion of the Iceberg schema fails.
     pub fn try_new(table: Table) -> Result<Self> {
-        let user = schema_to_arrow_schema(table.metadata().current_schema())
+        let user = presented_arrow_schema(table.metadata().current_schema())
             .map_err(iceberg_to_datafusion)?;
         let schema = append_lineage_fields(&user);
         Ok(Self {
