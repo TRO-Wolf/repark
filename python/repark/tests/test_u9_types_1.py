@@ -5,7 +5,7 @@ group, and its observation must equal Spark's measured answer. A step whose RePa
 dated residue carries ``residue = {id, repark}``; the replay holds RePark to that recorded answer,
 so a residue that moves reds. The generator is ``target/probe-u9-types-1/build_oracle.py``.
 
-pins: u9-types-1/C-001, C-002, C-003, C-005, C-006, C-007, C-008, C-013
+pins: u9-types-1/C-001, C-002, C-003, C-005, C-006, C-007, C-008, C-013, C-014, C-015
 """
 
 from __future__ import annotations

@@ -1,6 +1,7 @@
 use std::convert::Infallible;
 use std::ops::ControlFlow;
 
+use datafusion::arrow::datatypes::DataType as ArrowType;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
@@ -11,6 +12,7 @@ use datafusion::sql::sqlparser::tokenizer::Span;
 use iceberg::spec::{PrimitiveType, Type};
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
+use repark_iceberg::write::void_store::refuse_void_writes;
 
 use crate::catalog_ops::name_parts;
 use crate::write_to_branch::qualify_table_parts;
@@ -86,12 +88,12 @@ async fn refuse_non_null_void_values(
         return Ok(());
     };
     let values = match source.body.as_ref() {
-        SetExpr::Values(values) => values,
+        SetExpr::Values(values) => Some(values),
         SetExpr::Query(query) => match query.body.as_ref() {
-            SetExpr::Values(values) => values,
-            _ => return Ok(()),
+            SetExpr::Values(values) => Some(values),
+            _ => None,
         },
-        _ => return Ok(()),
+        _ => None,
     };
     let parts = qualify_table_parts(ctx, name_parts(name));
     if parts.len() < 3 {
@@ -118,6 +120,17 @@ async fn refuse_non_null_void_values(
     }
     let case_insensitive = crate::spark_door_case_insensitive(ctx.state().config().options());
     let display = crate::catalog_ops::quoted_table_display(&parts);
+    let Some(values) = values else {
+        return refuse_void_query(
+            ctx,
+            fields,
+            &display,
+            source,
+            &insert.columns,
+            case_insensitive,
+        )
+        .await;
+    };
     for row in &values.rows {
         check_void_row(
             ctx,
@@ -130,6 +143,51 @@ async fn refuse_non_null_void_values(
         .await?;
     }
     Ok(())
+}
+
+async fn refuse_void_query(
+    ctx: &SessionContext,
+    fields: &[std::sync::Arc<iceberg::spec::NestedField>],
+    display: &str,
+    source: &datafusion::sql::sqlparser::ast::Query,
+    columns: &[datafusion::sql::sqlparser::ast::ObjectName],
+    case_insensitive: bool,
+) -> Result<()> {
+    let targets: Option<Vec<&iceberg::spec::NestedField>> = if columns.is_empty() {
+        Some(fields.iter().map(AsRef::as_ref).collect())
+    } else {
+        columns
+            .iter()
+            .map(|column| {
+                let name = column_name(column);
+                fields
+                    .iter()
+                    .find(|field| {
+                        field.name == name
+                            || (case_insensitive && field.name.eq_ignore_ascii_case(&name))
+                    })
+                    .map(AsRef::as_ref)
+            })
+            .collect()
+    };
+    let Some(targets) = targets else {
+        return Ok(());
+    };
+    let Ok(frame) = ctx.sql(&source.to_string()).await else {
+        return Ok(());
+    };
+    let types: Vec<ArrowType> = targets
+        .iter()
+        .map(|field| match field.field_type.as_ref() {
+            Type::Primitive(PrimitiveType::Unknown) => ArrowType::Null,
+            _ => ArrowType::Boolean,
+        })
+        .collect();
+    let pairs = targets
+        .iter()
+        .zip(&types)
+        .map(|(field, data_type)| (field.name.as_str(), data_type));
+    refuse_void_writes(ctx, display, frame.logical_plan(), pairs)
 }
 
 async fn check_void_row(
@@ -155,9 +213,9 @@ async fn check_void_row(
     for (value, column) in row.iter().zip(columns.iter()) {
         let Some(field) = fields.iter().find(|field| {
             if case_insensitive {
-                field.name.eq_ignore_ascii_case(&column.to_string())
+                field.name.eq_ignore_ascii_case(&column_name(column))
             } else {
-                field.name == column.to_string()
+                field.name == column_name(column)
             }
         }) else {
             continue;
@@ -176,7 +234,7 @@ async fn refuse_void_value(
     if !matches!(
         field.field_type.as_ref(),
         Type::Primitive(PrimitiveType::Unknown)
-    ) || is_null_valued(value)
+    ) || is_bare_null(value)
     {
         return Ok(());
     }
@@ -188,6 +246,22 @@ async fn refuse_void_value(
          the table {display}: Cannot safely cast `{}` \"{source}\" to \"VOID\". SQLSTATE: KD000",
         field.name
     )))
+}
+
+fn column_name(column: &datafusion::sql::sqlparser::ast::ObjectName) -> String {
+    column
+        .0
+        .last()
+        .and_then(|part| part.as_ident())
+        .map_or_else(|| column.to_string(), |ident| ident.value.clone())
+}
+
+fn is_bare_null(expr: &Expr) -> bool {
+    match expr {
+        Expr::Value(value) => matches!(value.value, Value::Null),
+        Expr::Nested(inner) => is_bare_null(inner),
+        _ => false,
+    }
 }
 
 async fn void_source_type_name(ctx: &SessionContext, value: &Expr) -> Option<String> {

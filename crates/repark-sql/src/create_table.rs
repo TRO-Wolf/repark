@@ -18,6 +18,7 @@ use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
 use repark_common::spark_error;
 use repark_core::{CatalogRegistry, EngineContext, LocationPolicy};
 use repark_functions::cardinality::repark_sql_settings_from_options;
+use repark_iceberg::write::void_store::arrow_schema_to_iceberg_with_unknown;
 
 use crate::partitioning::build_partition_spec;
 use crate::properties::{TableProperties, parse_with_options};
@@ -123,8 +124,7 @@ pub(crate) async fn execute_create_table(
     } else {
         arrow_schema.as_ref()
     };
-    let iceberg_schema =
-        arrow_schema_to_schema_auto_assign_ids(ctas_schema).map_err(iceberg_err)?;
+    let iceberg_schema = arrow_schema_to_iceberg_with_unknown(ctas_schema).map_err(iceberg_err)?;
     let (iceberg_schema, existing) =
         replacement_if_existed(&target, existed, iceberg_schema).await?;
     let partition_spec = build_partition_spec(&iceberg_schema, &properties.partitioning)?;

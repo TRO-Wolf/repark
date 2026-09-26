@@ -203,3 +203,104 @@ async fn metadata_column_projection_presents_uuid_text() {
         )
     );
 }
+
+#[tokio::test]
+async fn a_value_into_void_refuses_cannot_safely_cast_on_every_door() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.vw (id INT, c VOID) USING iceberg TBLPROPERTIES \
+         ('format-version'='3')",
+    )
+    .await;
+    run(&ctx, &catalogs, "INSERT INTO ice.sales.vw VALUES (7, NULL)").await;
+    let named = "`ice`.`sales`.`vw`";
+    let cases = [
+        ("INSERT INTO ice.sales.vw SELECT 7, 1", named, "INT"),
+        ("INSERT INTO ice.sales.vw SELECT 8, 'x'", named, "STRING"),
+        (
+            "INSERT INTO ice.sales.vw (id, c) SELECT id, id FROM ice.sales.vw",
+            named,
+            "INT",
+        ),
+        (
+            "INSERT INTO ice.sales.vw VALUES (3, CAST(NULL AS INT))",
+            named,
+            "INT",
+        ),
+        (
+            "MERGE INTO ice.sales.vw t USING (SELECT 7 AS id) s ON t.id = s.id \
+             WHEN NOT MATCHED THEN INSERT (id, c) VALUES (10, 5)",
+            "``",
+            "INT",
+        ),
+        (
+            "MERGE INTO ice.sales.vw t USING (SELECT 7 AS id) s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET c = 5",
+            "``",
+            "INT",
+        ),
+        ("UPDATE ice.sales.vw SET c = 3 WHERE id = 7", "``", "INT"),
+    ];
+    for (sql, table, source) in cases {
+        let text = refusal(&ctx, &catalogs, sql).await;
+        let expected = format!(
+            "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for \
+             the table {table}: Cannot safely cast `c` \"{source}\" to \"VOID\". SQLSTATE: KD000"
+        );
+        assert!(text.ends_with(&expected), "{sql}: {text}");
+    }
+    run(&ctx, &catalogs, "INSERT INTO ice.sales.vw SELECT 11, NULL").await;
+    assert_eq!(
+        rendered(&ctx, &catalogs, "SELECT * FROM ice.sales.vw ORDER BY id").await,
+        "+----+---+\n| id | c |\n+----+---+\n| 7  |   |\n| 11 |   |\n+----+---+"
+    );
+}
+
+#[tokio::test]
+async fn ctas_of_a_null_column_is_unknown_on_v3_and_refuses_on_v2() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.vc3 USING iceberg TBLPROPERTIES ('format-version'='3') \
+         AS SELECT 1 AS id, NULL AS c",
+    )
+    .await;
+    let fields: Vec<(String, String)> = load_sales_table(&catalogs, "vc3")
+        .await
+        .metadata()
+        .current_schema()
+        .as_struct()
+        .fields()
+        .iter()
+        .map(|field| (field.name.clone(), field.field_type.to_string()))
+        .collect();
+    assert_eq!(
+        fields,
+        vec![
+            ("id".to_string(), "int".to_string()),
+            ("c".to_string(), "unknown".to_string())
+        ]
+    );
+    assert_eq!(
+        rendered(&ctx, &catalogs, "SELECT * FROM ice.sales.vc3").await,
+        "+----+---+\n| id | c |\n+----+---+\n| 1  |   |\n+----+---+"
+    );
+    let text = refusal(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.vc2 USING iceberg TBLPROPERTIES ('format-version'='2') \
+         AS SELECT 1 AS id, NULL AS c",
+    )
+    .await;
+    assert!(
+        text.ends_with(
+            "Invalid schema for v2:\n- Invalid type for c: unknown is not supported until v3"
+        ),
+        "v2 CTAS of a NULL column must refuse with the ADD COLUMN door's text: {text}"
+    );
+}

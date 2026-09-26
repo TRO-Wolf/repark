@@ -2,7 +2,7 @@
  "generator": "target/probe-u9-types-1/build_oracle.py + merge_oracle.py",
  "engine": "Spark 4.1.2 + Iceberg 1.11.0 (local[1], InMemoryCatalog sc, session zone UTC)",
  "measured": "2026-09-25",
- "revised": "r4 2026-09-26: +24 steps void printschema/cast-rows/files-metrics/delete and uuid dtypes/printschema/order/bucket-part/alter-to-string/invalid-literals/append/delete/update/files-metrics for U9-TYPES-1 PR2 (VOID and UUID-as-string end to end); R-14/R-15 retired, R-22..R-28 recorded; r5 2026-09-26 (round-1 fixer): +22 steps uuid-write / uuid-overwrite (MERGE, INSERT OVERWRITE both forms, overwritePartitions and _file/_pos/_partition projections over uuid), generator target/probe-u9-types-2/measure.py",
+ "revised": "r4 2026-09-26: +24 steps void printschema/cast-rows/files-metrics/delete and uuid dtypes/printschema/order/bucket-part/alter-to-string/invalid-literals/append/delete/update/files-metrics for U9-TYPES-1 PR2 (VOID and UUID-as-string end to end); R-14/R-15 retired, R-22..R-28 recorded; r5 2026-09-26 (round-1 fixer): +41 steps uuid-write / uuid-overwrite / void-write / void-create (MERGE, INSERT OVERWRITE both forms, overwritePartitions and _file/_pos/_partition projections over uuid; a value into VOID on INSERT SELECT, VALUES CAST, DataFrame append, MERGE and UPDATE; DataFrame create and CTAS of a NULL column on v3 and v2), generator target/probe-u9-types-2/measure.py",
  "steps": [
   {
    "group": "ltz",
@@ -7293,6 +7293,545 @@
      "323e4567-e89b-12d3-a456-4266141740aa"
     ]
    ]
+  },
+  {
+   "group": "void-write",
+   "key": "void/w/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.vw (id INT, c VOID) USING iceberg TBLPROPERTIES ('format-version'='3')",
+   "spark": "ok"
+  },
+  {
+   "group": "void-write",
+   "key": "void/w/insert-null",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.vw VALUES (7, NULL)",
+   "spark": "ok"
+  },
+  {
+   "group": "void-write",
+   "key": "void/w/insert-select-int",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.vw SELECT 7, 1",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`vw`: Cannot safely cast `c` \"INT\" to \"VOID\". SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-23",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`vw`: Cannot safely cast `c` \"INT\" to \"VOID\". SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void-write",
+   "key": "void/w/insert-select-string",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.vw SELECT 8, 'x'",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`vw`: Cannot safely cast `c` \"STRING\" to \"VOID\". SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-23",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`vw`: Cannot safely cast `c` \"STRING\" to \"VOID\". SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void-write",
+   "key": "void/w/insert-values-cast-int",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.vw VALUES (3, CAST(NULL AS INT))",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`vw`: Cannot safely cast `c` \"INT\" to \"VOID\". SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-23",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`vw`: Cannot safely cast `c` \"INT\" to \"VOID\". SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void-write",
+   "key": "void/w/df-append-int",
+   "do": "append",
+   "table": "sc.ns.vw",
+   "schema": "id INT, c INT",
+   "rows": [
+    [
+     9,
+     1
+    ]
+   ],
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`vw`: Cannot safely cast `c` \"INT\" to \"VOID\". SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-23",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`vw`: Cannot safely cast `c` \"INT\" to \"VOID\". SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void-write",
+   "key": "void/w/merge-insert-value",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.vw t USING (SELECT 7 AS id) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, c) VALUES (10, 5)",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c` \"INT\" to \"VOID\". SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-23",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c` \"INT\" to \"VOID\". SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void-write",
+   "key": "void/w/merge-update-value",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.vw t USING (SELECT 7 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET c = 5",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c` \"INT\" to \"VOID\". SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-23",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c` \"INT\" to \"VOID\". SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void-write",
+   "key": "void/w/update-value",
+   "do": "sql",
+   "sql": "UPDATE sc.ns.vw SET c = 3 WHERE id = 7",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c` \"INT\" to \"VOID\". SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-23",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c` \"INT\" to \"VOID\". SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void-write",
+   "key": "void/w/insert-select-null",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.vw SELECT 11, NULL",
+   "spark": "ok"
+  },
+  {
+   "group": "void-write",
+   "key": "void/w/rows",
+   "do": "ordered",
+   "sql": "SELECT * FROM sc.ns.vw ORDER BY id",
+   "spark": [
+    [
+     7,
+     null
+    ],
+    [
+     11,
+     null
+    ]
+   ]
+  },
+  {
+   "group": "void-create",
+   "key": "void/c/df-create-v3",
+   "do": "df_create",
+   "table": "sc.ns.vdf3",
+   "schema": "id INT, c VOID",
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "props": {
+    "format-version": "3"
+   },
+   "spark": "ok"
+  },
+  {
+   "group": "void-create",
+   "key": "void/c/df-create-v3-rows",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.vdf3",
+   "spark": [
+    [
+     1,
+     null
+    ]
+   ]
+  },
+  {
+   "group": "void-create",
+   "key": "void/c/df-create-v3-cols",
+   "do": "cols",
+   "sql": "SELECT * FROM sc.ns.vdf3",
+   "spark": [
+    [
+     "id",
+     "int"
+    ],
+    [
+     "c",
+     "void"
+    ]
+   ]
+  },
+  {
+   "group": "void-create",
+   "key": "void/c/ctas-v3",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.vct3 USING iceberg TBLPROPERTIES ('format-version'='3') AS SELECT 1 AS id, NULL AS c",
+   "spark": "ok"
+  },
+  {
+   "group": "void-create",
+   "key": "void/c/ctas-v3-rows",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.vct3",
+   "spark": [
+    [
+     1,
+     null
+    ]
+   ]
+  },
+  {
+   "group": "void-create",
+   "key": "void/c/ctas-v3-cols",
+   "do": "cols",
+   "sql": "SELECT * FROM sc.ns.vct3",
+   "spark": [
+    [
+     "id",
+     "int"
+    ],
+    [
+     "c",
+     "void"
+    ]
+   ]
+  },
+  {
+   "group": "void-create",
+   "key": "void/c/df-create-v2",
+   "do": "df_create",
+   "table": "sc.ns.vdf2",
+   "schema": "id INT, c VOID",
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "props": {
+    "format-version": "2"
+   },
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o267.create.\n: java.lang.IllegalStateException: Invalid schema for v2:\n- Invalid type for c: unknown is not supported until v3"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-22",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "DataInvalid => Invalid schema for v2:\n- Invalid type for c: unknown is not supported until v3"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void-create",
+   "key": "void/c/ctas-v2",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.vct2 USING iceberg TBLPROPERTIES ('format-version'='2') AS SELECT 1 AS id, NULL AS c",
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o56.sql.\n: java.lang.IllegalStateException: Invalid schema for v2:\n- Invalid type for c: unknown is not supported until v3"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-22",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "DataInvalid => Invalid schema for v2:\n- Invalid type for c: unknown is not supported until v3"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
   }
  ]
 }

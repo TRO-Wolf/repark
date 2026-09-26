@@ -68,8 +68,6 @@
    "R-16": [
     "U-missing-top",
     "U-table-qualified",
-    "U2-order",
-    "U2-order2",
     "M2-two-clauses"
    ],
    "R-18": [
@@ -1949,34 +1947,7 @@
       "b": "q"
      }
     ]
-   ],
-   "residue": {
-    "id": "R-16",
-    "repark": {
-     "step": {
-      "type": "AnalysisException",
-      "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
-      "sqlstate": "KD000",
-      "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `<T>`: Cannot safely cast `id` \"STRING\" to \"BIGINT\". SQLSTATE: KD000"
-     },
-     "rows": [
-      [
-       1,
-       {
-        "a": 1,
-        "b": "p"
-       }
-      ],
-      [
-       2,
-       {
-        "a": 2,
-        "b": "q"
-       }
-      ]
-     ]
-    }
-   }
+   ]
   },
   "pr2/U2-order2": {
    "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
@@ -2008,34 +1979,7 @@
       "b": "q"
      }
     ]
-   ],
-   "residue": {
-    "id": "R-16",
-    "repark": {
-     "step": {
-      "type": "AnalysisException",
-      "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
-      "sqlstate": "KD000",
-      "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `<T>`: Cannot safely cast `id` \"STRING\" to \"BIGINT\". SQLSTATE: KD000"
-     },
-     "rows": [
-      [
-       1,
-       {
-        "a": 1,
-        "b": "p"
-       }
-      ],
-      [
-       2,
-       {
-        "a": 2,
-        "b": "q"
-       }
-      ]
-     ]
-    }
-   }
+   ]
   },
   "pr2/U2-quoted-field": {
    "columns": "id BIGINT, st STRUCT<`b c`: INT, d: INT>",

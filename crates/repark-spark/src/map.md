@@ -1038,6 +1038,16 @@ pins: rp-4-fork-repin/C-005, C-006
   both read the schema through repark-iceberg `presented_arrow_schema`, so a uuid column
   describes as `string` (`DESCRIBE t u`, `SHOW TABLE EXTENDED`), as Spark measured.
   pins: u9-types-1/C-013
+- `void_type.rs`, `update_cast.rs`, `ctas.rs` —
+  **WO U9-TYPES-1 round-1 fixer (2026-09-26):** `refuse_insert_void_values` now also judges an
+  `INSERT … SELECT` source (and so the DataFrame `writeTo(...).append()`, which lowers to one)
+  through repark-iceberg `write/void_store.rs::refuse_void_writes`, resolves back-quoted column
+  lists by their identifier, and treats only a bare `NULL` as null (`CAST(NULL AS INT)` is an
+  `INT` value, as Spark says). The UPDATE door prints the table as `` (Spark's rendering,
+  measured for `SET id = 'x'` and `SET c = 3` on VOID alike) and asks the same VOID gate with
+  the analyzer's literal types. `ctas.rs` converts its schema through
+  `arrow_schema_to_iceberg_with_unknown`, so `AS SELECT …, NULL AS c` makes `c` `unknown` on v3.
+  pins: u9-types-1/C-014, C-015
 - `cast_gate.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** the unit's one cast hook, a single
   call in `spark_ast.rs`'s passthrough: the `CAST(NULL AS VOID)` rewrite (`void_type.rs`)
   and the `CAST(x AS UUID)` refusal (`uuid_cast.rs`). pins: u9-types-1/C-009, C-010

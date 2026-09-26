@@ -273,6 +273,9 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   `session_staging.rs` casts each output batch onto `stored_arrow_schema` through
   `cast_one_batch_to_write_schema`, whose kernel is `convert_uuid_column`.
   pins: u9-types-1/C-013
+- `insert.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** the MERGE INSERT and UPDATE SET
+  gates call `../void_store.rs::refuse_void_writes` with table `` before the ANSI matrix, so a
+  value into a `VOID` column refuses with Spark's text. pins: u9-types-1/C-014
 - `insert.rs` — **U8 WRITE-SQL PR2 (2026-09-25):** `store_assignment_then_sql` delegates to
   `../update_cast.rs`'s `store_assignment_cast_sql`, so a struct target casts to its type
   without Iceberg field ids. With the struct-aware gate in `../store_assign.rs`, whole-struct

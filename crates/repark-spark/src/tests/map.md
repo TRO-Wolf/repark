@@ -289,6 +289,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   the column-list form the DataFrame `overwritePartitions` lowers to) stores upper-case text
   lower case; `_file` projects beside `u` as text with a text filter. Red before the fix (each
   test fails at the old refusal). pins: u9-types-1/C-013
+  VOID (C-014, C-015): a value into `VOID` refuses Spark's `CANNOT_SAFELY_CAST` text on INSERT …
+  SELECT (literal, string, column), `VALUES (…, CAST(NULL AS INT))`, MERGE INSERT, MERGE UPDATE
+  and UPDATE (table `` on the last three); a CTAS of `NULL AS c` is `unknown` on v3 and refuses
+  on v2; both red before the fix. pins: u9-types-1/C-014, C-015
 - [alter_write_order_transform.rs](alter_write_order_transform.rs) — **WO U5 PR2b
   (2026-09-24):** D-WRITE-ORDERED-TRANSFORM. Seventeen measured `WRITE ORDERED BY` specs land
   the sort order Spark wrote (rendered as `transform source direction nulls`) with `range`;
