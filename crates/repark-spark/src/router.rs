@@ -285,7 +285,7 @@ async fn execute_inner(
     sql: &str,
     write_options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
-    crate::view_ddl::read::ensure_view_wrappers(ctx, catalogs)?;
+    crate::extension::session_catalog::guard_statement(ctx, catalogs, sql)?;
     let rewritten_sql = rewrite_sql_for_execute(sql, catalogs);
     let sql = rewritten_sql.as_str();
     let evolving = merge::schema_evolution::strip_schema_evolution(sql);

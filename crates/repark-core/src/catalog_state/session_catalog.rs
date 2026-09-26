@@ -2,6 +2,8 @@ use std::collections::HashMap;
 use std::hash::BuildHasher;
 use std::sync::{PoisonError, RwLock};
 
+use repark_common::Error;
+
 use super::CatalogRegistry;
 
 pub const SESSION_CATALOG_NAME: &str = "spark_catalog";
@@ -27,6 +29,14 @@ impl CurrentCatalog {
             pinned: false,
         }
     }
+}
+
+#[must_use]
+pub fn catalog_not_found_message(name: &str) -> String {
+    format!(
+        "[CATALOG_NOT_FOUND] The catalog `{name}` not found. Consider to set the SQL config \
+         \"spark.sql.catalog.{name}\" to a catalog plugin. SQLSTATE: 42P08"
+    )
 }
 
 impl CatalogRegistry {
@@ -78,5 +88,28 @@ impl CatalogRegistry {
                 namespace: namespace.to_string(),
                 pinned: true,
             };
+    }
+
+    #[must_use]
+    pub fn apply_default_catalog(&self, name: Option<&str>) -> Option<(String, String)> {
+        let mut current =
+            RwLock::write(&self.session_defaults).unwrap_or_else(PoisonError::into_inner);
+        if current.pinned {
+            return None;
+        }
+        *current = CurrentCatalog::unpinned(name.unwrap_or(SESSION_CATALOG_NAME));
+        Some((current.catalog.clone(), current.namespace.clone()))
+    }
+
+    #[must_use]
+    pub fn current_catalog_error(&self) -> Option<Error> {
+        let current = RwLock::read(&self.session_defaults)
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone();
+        let known = current.pinned
+            || current.catalog == SESSION_CATALOG_NAME
+            || self.is_registered(&current.catalog)
+            || self.read_only_catalogs.contains(&current.catalog);
+        (!known).then(|| Error::Analysis(catalog_not_found_message(&current.catalog)))
     }
 }

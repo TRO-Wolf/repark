@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::hash::BuildHasher;
 
+use repark_common::Result;
+
 use crate::catalog_state::session_catalog::SESSION_CATALOG_NAME;
 use crate::session::ReparkSession;
 
@@ -32,5 +34,14 @@ impl ReparkSession {
                 )
         });
         !switched_off && !config.keys().any(|key| names_session_catalog(key))
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub fn current_catalog_checked(&self) -> Result<(String, String)> {
+        let catalogs = self.catalogs_snapshot();
+        match catalogs.current_catalog_error() {
+            Some(error) => Err(error),
+            None => Ok(catalogs.current_defaults()),
+        }
     }
 }

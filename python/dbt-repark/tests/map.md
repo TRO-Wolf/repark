@@ -116,9 +116,9 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   pins: dbt-1-adapter/C-005
   pins: ice-gold-twice-1/C-003, C-004, C-005, C-006
 - **CATALOG-1 (2026-09-26):** registering a memory catalog no longer makes it current, so the
-  statement-surface session runs `USE` on the fixture catalog; the served shapes are unchanged.
-  The adapter qualifies every relation, so `test_gold_models.py` and `test_cursor.py` need no
-  change. pins: catalog-1/C-001
+  statement-surface session sets `spark.sql.defaultCatalog` to the fixture catalog, as a Spark
+  profile does; the served shapes are unchanged. The adapter qualifies every relation, so
+  `test_gold_models.py` and `test_cursor.py` need no change. pins: catalog-1/C-011
 
 ## I want to...
 

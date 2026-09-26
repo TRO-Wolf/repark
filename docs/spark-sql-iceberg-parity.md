@@ -8780,6 +8780,32 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   pins: catalog-1/C-001, C-002
 - **Rationale** — owner ruling R1 / R5 (2026-09-26): no carve-out; the cell replays EQUAL.
 
+### CAT-DEFAULT-CATALOG — `spark.sql.defaultCatalog` was not honoured — **FIXED 2026-09-26 (WO CATALOG-1)**
+
+- **repark** — `spark.sql.defaultCatalog` on the builder sets the first current catalog; `conf.set` / `conf.unset` at runtime move it
+  until `USE` or `setCurrentCatalog` pins the current catalog, after which neither moves it. A
+  non-`spark_catalog` current catalog starts with the empty namespace, as Spark's Iceberg
+  catalogs do. SQL two-part names and the DataFrame door (`table`, `writeTo`, `saveAsTable`,
+  `tableExists`, `listDatabases`, `listTables`) follow it. A default that names no configured
+  catalog builds; `SELECT 1` runs; `current_catalog()`, bare `SHOW NAMESPACES`, a two-part
+  `CREATE TABLE`, a one-part `USE`, `currentCatalog()` and `listDatabases()` answer `[CATALOG_NOT_FOUND]
+  The catalog `nope` not found. Consider to set the SQL config "spark.sql.catalog.nope" to a
+  catalog plugin. SQLSTATE: 42P08` as `AnalysisException` (Spark raises it as a Java
+  `CatalogNotFoundException` through Py4J; the class differs, the text is Spark's). Before, the
+  runtime conf was stored and ignored, and the two-part `CREATE TABLE ns.dc_t` landed outside
+  `sc.ns`.
+- **Apache Spark** — measured 2026-09-26 (recorded, `target/probe-catalog-1/spark-rt-default.json`,
+  `spark-build-default-sc.json`, `spark-build-default-missing.json`, `spark-main.json` keys
+  `m1_*`).
+- **Pin** — `python/repark/tests/test_catalog_1.py::test_default_catalog_cell_follows_the_runtime_conf`,
+  `…::test_the_runtime_default_catalog_drives_the_dataframe_door`,
+  `…::test_use_pins_the_current_catalog_against_the_default_conf`,
+  `…::test_the_default_catalog_conf_at_build_is_the_first_current_catalog`,
+  `…::test_a_default_catalog_naming_no_catalog_answers_catalog_not_found`,
+  `crates/repark-spark/src/tests/session_catalog.rs::the_runtime_default_catalog_moves_current_until_use_pins_it`.
+  pins: catalog-1/C-003, C-004
+- **Rationale** — owner ruling R1 (2026-09-26); the cell replays EQUAL.
+
 ### CUTOVER-CTAS-REQ-1 — parquet CTAS keeps source non-null fields required; Spark makes every column optional
 
 - **repark** — **FIXED 2026-09-04 (CUTOVER-SCHEMA-1).** The same CTAS stores every field

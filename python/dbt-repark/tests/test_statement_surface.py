@@ -280,15 +280,15 @@ def statement_warehouse(tmp_path_factory: pytest.TempPathFactory) -> Path:
 def seeded_session(statement_warehouse: Path) -> Iterator[Any]:
     """A memory-catalog session holding the S6 silver fixture the gold models join.
 
-    ``USE`` makes the memory catalog current; registering a catalog no longer moves the
-    current catalog (catalog-1/C-001).
+    ``spark.sql.defaultCatalog`` makes the memory catalog current, as a Spark profile does;
+    registering a catalog no longer moves the current catalog (catalog-1/C-001, C-003).
     """
     from repark import ReparkSession
 
     warehouse = statement_warehouse
     session = ReparkSession.builder.appName("dbt-1-statement-surface").getOrCreate()
     session.register_memory_catalog(CATALOG, warehouse)
-    session.sql(f"USE {CATALOG}")
+    session.conf.set("spark.sql.defaultCatalog", CATALOG)
     session.sql(f"CREATE NAMESPACE {CATALOG}.{NAMESPACE} LOCATION '{warehouse / NAMESPACE}'")
     for statement in _seed_gold_sql(_names(), PROPERTIES):
         session.sql(statement)

@@ -142,8 +142,9 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   `LIMIT 1` stays untouched.
   pins: df-subquery-1/C-001, C-002, C-004
 - `session_catalog.rs` — **CATALOG-1 (2026-09-26):** the auto-catalog decision, the fresh
-  current catalog with a configured block, and `spark.sql.defaultCatalog` at build.
-  pins: catalog-1/C-001, C-002, C-003
+  current catalog with a configured block, `spark.sql.defaultCatalog` at build, the missing
+  default's `CATALOG_NOT_FOUND`, and the USE pin against `apply_default_catalog`.
+  pins: catalog-1/C-001, C-002, C-003, C-004
 
 ## Pointers
 

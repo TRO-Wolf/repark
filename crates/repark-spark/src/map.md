@@ -2036,10 +2036,14 @@ pins: rp-4-fork-repin/C-005, C-006
 registry holds the semantics of each of those gaps (repark's behavior, Apache Spark's, the pin,
 the rationale); this map links, it does not restate. A refusal message that cites a section is
 part of that section's pin — changing either one changes both.
-- **CATALOG-1 (2026-09-26):** `lib.rs` re-exports the `session_catalog` module through the
-  existing `extension` use line (156 lines kept); `extension.rs` installs the `current_catalog()`
-  carrier from `spark.sql.defaultCatalog`; `use_ddl.rs` takes the default namespace from
-  `CatalogRegistry::default_namespace_for`. pins: catalog-1/C-003
+- **CATALOG-1 (2026-09-26):** `router.rs::execute_inner` calls
+  `extension::session_catalog::guard_statement` in place of `ensure_view_wrappers` (the guard calls
+  it first), so `router.rs` stays at 1000 lines. `lib.rs` re-exports the `session_catalog` module
+  through the existing `extension` use line (156 lines kept). `use_ddl.rs` splits
+  `write_session_defaults_carrier` out of `set_session_defaults`, takes the default namespace from
+  `CatalogRegistry::default_namespace_for`, and `complete_name` answers `CATALOG_NOT_FOUND` for
+  one- and two-part names when the current catalog does not resolve. `extension.rs` installs the
+  `current_catalog()` carrier from `spark.sql.defaultCatalog`. pins: catalog-1/C-003, C-004
 
 
 ## I want to...

@@ -4,7 +4,7 @@ Every expected text is Spark 4.1.2 + Iceberg 1.11, measured 2026-09-26 (probes u
 ``target/probe-catalog-1/``). The harness-shaped session configures ``hc`` through the builder
 and registers ``sc`` after build, as the scoreboard's RePark leg does.
 
-pins: catalog-1/C-001, C-002
+pins: catalog-1/C-001, C-002, C-003, C-004
 """
 
 from __future__ import annotations
@@ -18,6 +18,10 @@ from repark.errors import AnalysisException
 from repark.spark.session import _reset_active_session_for_tests
 
 IN_MEMORY_CATALOG = "org.apache.iceberg.inmemory.InMemoryCatalog"
+CATALOG_NOT_FOUND_NOPE = (
+    "[CATALOG_NOT_FOUND] The catalog `nope` not found. Consider to set the SQL config "
+    '"spark.sql.catalog.nope" to a catalog plugin. SQLSTATE: 42P08'
+)
 
 
 def _build(tmp_path: Path, pairs: dict[str, str] | None = None) -> ReparkSession:
@@ -124,3 +128,111 @@ def test_spark_catalog_is_not_an_alias_of_another_catalog(spark: ReparkSession) 
     with pytest.raises(AnalysisException):
         spark.sql("SELECT * FROM ns.t0").collect()
     assert spark.catalog.tableExists("spark_catalog.ns.t0") is False
+
+
+def test_default_catalog_cell_follows_the_runtime_conf(spark: ReparkSession) -> None:
+    """CAT-DEFAULT-CATALOG: a runtime default moves two-part names, then unset restores.
+
+    pins: catalog-1/C-003
+    """
+    spark.conf.set("spark.sql.defaultCatalog", "sc")
+    try:
+        assert _current(spark) == [["sc", ""]]
+        spark.sql("CREATE TABLE ns.dc_t (id INT) USING iceberg")
+        assert _rows(spark, "SELECT count(*) FROM sc.ns.dc_t") == [[0]]
+    finally:
+        spark.conf.unset("spark.sql.defaultCatalog")
+    assert _current(spark) == [["spark_catalog", "default"]]
+    with pytest.raises(AnalysisException):
+        spark.sql("SELECT count(*) FROM ns.dc_t").collect()
+
+
+def test_the_runtime_default_catalog_drives_the_dataframe_door(spark: ReparkSession) -> None:
+    """table / writeTo / saveAsTable / tableExists / listDatabases follow the runtime default.
+
+    pins: catalog-1/C-003
+    """
+    spark.conf.set("spark.sql.defaultCatalog", "sc")
+    try:
+        assert spark.catalog.currentCatalog() == "sc"
+        assert spark.catalog.currentDatabase() == ""
+        spark.sql("CREATE TABLE ns.dc_t (id INT) USING iceberg")
+        assert spark.table("ns.dc_t").count() == 0
+        spark.createDataFrame([(1,)], "id INT").writeTo("ns.dc_w").create()
+        assert _rows(spark, "SELECT * FROM sc.ns.dc_w") == [[1]]
+        spark.createDataFrame([(2,)], "id INT").write.format("iceberg").saveAsTable("ns.dc_s")
+        assert _rows(spark, "SELECT * FROM sc.ns.dc_s") == [[2]]
+        assert spark.catalog.tableExists("ns.dc_t") is True
+        assert sorted(d.name for d in spark.catalog.listDatabases()) == ["ns"]
+        assert sorted(t.name for t in spark.catalog.listTables("ns")) == ["dc_s", "dc_t", "dc_w"]
+        assert _rows(spark, "SHOW NAMESPACES") == [["ns"]]
+    finally:
+        spark.conf.unset("spark.sql.defaultCatalog")
+
+
+def test_use_pins_the_current_catalog_against_the_default_conf(spark: ReparkSession) -> None:
+    """After ``USE`` the default conf no longer moves the current catalog, set or unset.
+
+    pins: catalog-1/C-003
+    """
+    spark.sql("USE hc.ns")
+    assert _current(spark) == [["hc", "ns"]]
+    spark.conf.set("spark.sql.defaultCatalog", "sc")
+    assert _current(spark) == [["hc", "ns"]]
+    spark.conf.unset("spark.sql.defaultCatalog")
+    assert _current(spark) == [["hc", "ns"]]
+    spark.sql("USE sc")
+    assert _current(spark) == [["sc", ""]]
+    spark.conf.unset("spark.sql.defaultCatalog")
+    assert _current(spark) == [["sc", ""]]
+    spark.sql("USE spark_catalog.default")
+    assert _current(spark) == [["spark_catalog", "default"]]
+
+
+def test_the_default_catalog_conf_at_build_is_the_first_current_catalog(tmp_path: Path) -> None:
+    """``spark.sql.defaultCatalog`` on the builder sets the first current catalog.
+
+    pins: catalog-1/C-003
+    """
+    session = _build(tmp_path, {"spark.sql.defaultCatalog": "sc"})
+    try:
+        assert _current(session) == [["sc", ""]]
+        assert _rows(session, "SHOW NAMESPACES") == [["ns"]]
+        session.sql("CREATE TABLE ns.bt (id INT) USING iceberg")
+        assert _rows(session, "SELECT count(*) FROM sc.ns.bt") == [[0]]
+        assert session.catalog.currentCatalog() == "sc"
+        assert sorted(d.name for d in session.catalog.listDatabases()) == ["ns"]
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()
+
+
+def test_a_default_catalog_naming_no_catalog_answers_catalog_not_found(tmp_path: Path) -> None:
+    """A default that names no catalog builds; its first resolution is CATALOG_NOT_FOUND.
+
+    pins: catalog-1/C-004
+    """
+    session = _build(tmp_path, {"spark.sql.defaultCatalog": "nope"})
+    try:
+        assert _rows(session, "SELECT 1") == [[1]]
+        assert _rows(session, "SHOW CATALOGS") == [["hc"], ["sc"], ["spark_catalog"]]
+        for sql in (
+            "SELECT current_catalog()",
+            "SHOW NAMESPACES",
+            "CREATE TABLE ns.mt (id INT) USING iceberg",
+            "USE sc",
+        ):
+            with pytest.raises(AnalysisException) as caught:
+                session.sql(sql).collect()
+            assert CATALOG_NOT_FOUND_NOPE in str(caught.value), sql
+        for call in (session.catalog.currentCatalog, session.catalog.listDatabases):
+            with pytest.raises(AnalysisException) as caught:
+                call()
+            assert str(caught.value) == CATALOG_NOT_FOUND_NOPE
+        session.sql("CREATE TABLE sc.ns.three (id INT) USING iceberg")
+        assert _rows(session, "SELECT count(*) FROM sc.ns.three") == [[0]]
+        session.conf.unset("spark.sql.defaultCatalog")
+        assert _current(session) == [["spark_catalog", "default"]]
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()

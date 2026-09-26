@@ -11,9 +11,11 @@ per-statement snapshots) shares one current catalog. See [../map.md](../map.md).
 - `session_catalog.rs` — **CATALOG-1 (2026-09-26):** `CurrentCatalog` (catalog, namespace,
   pinned). `CatalogRegistry::with_session_catalogs` (build: an unpinned current catalog from
   `spark.sql.defaultCatalog`), `current_defaults`, `set_defaults` (`USE` and the planner-default
-  mirror; pins the current catalog), `default_namespace_for` (`default` for `spark_catalog`,
-  `""` otherwise, as Spark's Iceberg catalogs answer) and `configured_default_catalog`.
-  pins: catalog-1/C-001, C-003
+  mirror; pins the current catalog), `apply_default_catalog` (the runtime conf; a no-op once
+  pinned, `None` means `spark_catalog`), `default_namespace_for` (`default` for `spark_catalog`,
+  `""` otherwise, as Spark's Iceberg catalogs answer), `configured_default_catalog`, and
+  `current_catalog_error` (Spark's `CATALOG_NOT_FOUND` text for
+  an unpinned name that is neither `spark_catalog` nor registered; `USE` validates what it pins). pins: catalog-1/C-001, C-003, C-004
 
 ## Pointers
 

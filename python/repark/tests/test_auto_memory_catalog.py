@@ -8,7 +8,7 @@ beside configured catalog blocks and beside a different ``spark.sql.defaultCatal
 ``repark.sql.autoMemoryCatalog=false`` turns it off. The decision is the engine's
 (``auto_session_catalog_wanted``). The temp warehouse dies with ``stop()``.
 
-pins: catalog-1/C-002
+pins: catalog-1/C-002, C-004
 
 MUTATION: drop the ``auto_session_catalog_wanted`` call →
 ``test_bare_session_bare_name_round_trip`` red.
@@ -22,6 +22,7 @@ from pathlib import Path
 
 import pytest
 
+from repark.errors import AnalysisException
 from repark.spark.session import ReparkSession
 
 
@@ -95,10 +96,12 @@ def test_opt_out_knob_suppresses_auto(_fresh_session_slot: None) -> None:
 
 
 def test_a_foreign_default_catalog_keeps_the_session_catalog(_fresh_session_slot: None) -> None:
-    """A default naming no configured catalog still gets ``spark_catalog`` registered."""
+    """A default naming no configured catalog keeps ``spark_catalog`` and answers not-found."""
     spark = ReparkSession.builder.config("spark.sql.defaultCatalog", "glue").getOrCreate()
     assert [c.name for c in spark.catalog.listCatalogs()] == ["spark_catalog"]
-    assert spark.catalog.currentCatalog() == "glue"
+    with pytest.raises(AnalysisException, match=r"^\[CATALOG_NOT_FOUND\] The catalog `glue`"):
+        spark.catalog.currentCatalog()
+    assert spark.sql("SELECT 1 AS one").collect()[0]["one"] == 1
     spark.stop()
 
 

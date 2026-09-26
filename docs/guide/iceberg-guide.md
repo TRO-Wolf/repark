@@ -46,11 +46,15 @@ catalogs are configured or registered. Registering a catalog — a builder block
 `conf.set` block, `register_memory_catalog` — makes it available and nothing else. Move the
 current catalog the way Spark does:
 
-- `spark.sql.defaultCatalog` on the builder picks the first current catalog.
-- `USE <catalog>`, `USE <catalog>.<namespace>` or `spark.catalog.setCurrentCatalog(...)` move it.
+- `spark.sql.defaultCatalog` on the builder picks the first current catalog; `spark.conf.set` /
+  `spark.conf.unset` of the same key move it at runtime.
+- `USE <catalog>`, `USE <catalog>.<namespace>` or `spark.catalog.setCurrentCatalog(...)` pin it.
+  After a pin, setting or unsetting `spark.sql.defaultCatalog` no longer moves it.
 
 A catalog other than `spark_catalog` starts with the empty namespace (`USE sc` answers `sc`,
-`""`), so name the namespace: `USE sc.ns`, or two-part names `ns.t`.
+`""`), so name the namespace: `USE sc.ns`, or two-part names `ns.t`. A default that names no
+configured catalog builds, and its first use answers Spark's `[CATALOG_NOT_FOUND] The catalog
+`nope` not found. …`.
 
 `spark_catalog.ns.t` names the session catalog and no other. Before 2026-09-26 the first
 registered catalog became the current catalog and `spark_catalog.…` names aliased to it; a table

@@ -48,8 +48,13 @@ function-registry + analyzer-rule installation + the composed
   installs the post-coercion rules minus the subsumed late
   `spark_integer_literal`.
   pins: sql-literal-typing-1/L-001, L-002
-- `session_catalog.rs` — **CATALOG-1 (2026-09-26):** `with_configured_defaults` (the build
-  carrier from `spark.sql.defaultCatalog`). pins: catalog-1/C-003
+- `session_catalog.rs` — **CATALOG-1 (2026-09-26):** `apply_default_catalog(session, name)`
+  (registry and carrier, a no-op once `USE` pinned the current catalog),
+  `with_configured_defaults` (the build carrier from `spark.sql.defaultCatalog`),
+  `to_datafusion_error`, and `guard_statement`: when the current catalog does not resolve, one
+  token pass refuses a dotted first part equal to it, a `current_catalog()` / `current_database()`
+  / `current_schema()` call, a bare `SHOW NAMESPACES|DATABASES|SCHEMAS|TABLES|VIEWS|FUNCTIONS`, or
+  a one-part `USE`. Otherwise it returns before tokenizing. pins: catalog-1/C-003, C-004
 
 ## Pointers
 

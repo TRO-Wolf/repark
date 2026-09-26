@@ -1,7 +1,10 @@
 use repark_core::{ErrorClass, ReparkSession};
 
 use super::common::*;
-use crate::{SparkDialect, SparkExtension};
+use crate::{SparkDialect, SparkExtension, session_catalog};
+
+const CATALOG_NOT_FOUND_NOPE: &str = "[CATALOG_NOT_FOUND] The catalog `nope` not found. Consider \
+     to set the SQL config \"spark.sql.catalog.nope\" to a catalog plugin. SQLSTATE: 42P08";
 
 async fn harness_session(wh: &TempDir, extra: &[(&str, &str)]) -> ReparkSession {
     let root = wh.path().to_str().unwrap();
@@ -68,6 +71,10 @@ async fn refusal(session: &ReparkSession, sql: &str) -> repark_core::Error {
     }
 }
 
+fn current(session: &ReparkSession) -> (String, String) {
+    session.catalogs_snapshot().current_defaults()
+}
+
 fn pair(catalog: &str, namespace: &str) -> Vec<Vec<String>> {
     vec![vec![catalog.to_string(), namespace.to_string()]]
 }
@@ -87,10 +94,93 @@ async fn a_fresh_session_is_in_spark_catalog_beside_configured_and_registered_ca
 }
 
 #[tokio::test]
+async fn the_default_catalog_conf_at_build_is_the_first_current_catalog() {
+    let wh = TempDir::new().unwrap();
+    let session = harness_session(&wh, &[("spark.sql.defaultCatalog", "hc")]).await;
+    assert_eq!(
+        rows(&session, "SELECT current_catalog(), current_database()").await,
+        pair("hc", "")
+    );
+    rows(&session, "CREATE TABLE ns.bt (id INT) USING iceberg").await;
+    assert_eq!(
+        rows(&session, "SELECT count(*) FROM hc.ns.bt").await,
+        [["0"]].map(|row| vec![row[0].to_string()])
+    );
+}
+
+#[tokio::test]
+async fn the_runtime_default_catalog_moves_current_until_use_pins_it() {
+    let wh = TempDir::new().unwrap();
+    let session = harness_session(&wh, &[]).await;
+    session_catalog::apply_default_catalog(&session, Some("sc"));
+    assert_eq!(
+        rows(&session, "SELECT current_catalog(), current_database()").await,
+        pair("sc", "")
+    );
+    rows(&session, "CREATE TABLE ns.dc_t (id INT) USING iceberg").await;
+    assert_eq!(
+        rows(&session, "SELECT count(*) FROM sc.ns.dc_t").await,
+        [["0"]].map(|row| vec![row[0].to_string()])
+    );
+    session_catalog::apply_default_catalog(&session, None);
+    assert_eq!(
+        rows(&session, "SELECT current_catalog(), current_database()").await,
+        pair("spark_catalog", "default")
+    );
+    rows(&session, "USE hc.ns").await;
+    session_catalog::apply_default_catalog(&session, Some("sc"));
+    assert_eq!(
+        rows(&session, "SELECT current_catalog(), current_database()").await,
+        pair("hc", "ns")
+    );
+    session_catalog::apply_default_catalog(&session, None);
+    assert_eq!(current(&session), ("hc".to_string(), "ns".to_string()));
+    rows(&session, "USE sc").await;
+    session_catalog::apply_default_catalog(&session, None);
+    assert_eq!(current(&session), ("sc".to_string(), String::new()));
+}
+
+#[tokio::test]
 async fn spark_catalog_names_the_session_catalog_only() {
     let wh = TempDir::new().unwrap();
     let session = harness_session(&wh, &[]).await;
     rows(&session, "CREATE TABLE sc.ns.t0 (id INT) USING iceberg").await;
     let error = refusal(&session, "SELECT * FROM spark_catalog.ns.t0").await;
     assert_eq!(error.exception_class(), ErrorClass::Analysis, "{error}");
+}
+
+#[tokio::test]
+async fn a_default_catalog_that_names_no_catalog_refuses_where_spark_resolves_it() {
+    let wh = TempDir::new().unwrap();
+    let session = harness_session(&wh, &[("spark.sql.defaultCatalog", "nope")]).await;
+    assert_eq!(rows(&session, "SELECT 1").await.len(), 1);
+    rows(
+        &session,
+        "CREATE TABLE sc.ns.three_part (id INT) USING iceberg",
+    )
+    .await;
+    assert_eq!(
+        rows(&session, "SELECT count(*) FROM sc.ns.three_part").await,
+        [["0"]].map(|row| vec![row[0].to_string()])
+    );
+    for sql in [
+        "SELECT current_catalog()",
+        "SELECT current_database()",
+        "SHOW NAMESPACES",
+        "SHOW TABLES",
+        "CREATE TABLE ns.t (id INT) USING iceberg",
+        "USE sc",
+        "SELECT * FROM nope.ns.t",
+    ] {
+        let error = refusal(&session, sql).await;
+        assert_eq!(
+            error.exception_class(),
+            ErrorClass::Analysis,
+            "{sql}: {error}"
+        );
+        assert!(
+            error.to_string().contains(CATALOG_NOT_FOUND_NOPE),
+            "{sql}: {error}"
+        );
+    }
 }

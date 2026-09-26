@@ -33,6 +33,10 @@ pub(crate) fn set_session_defaults(
     namespace: &str,
 ) {
     catalogs.set_defaults(catalog, namespace);
+    write_session_defaults_carrier(ctx, catalog, namespace);
+}
+
+pub(crate) fn write_session_defaults_carrier(ctx: &SessionContext, catalog: &str, namespace: &str) {
     let state = ctx.state_ref();
     let mut guard = state.write();
     let options = guard.config_mut().options_mut();
@@ -69,6 +73,11 @@ pub(crate) fn schema_not_found(parts: &[&str]) -> DataFusionError {
 
 #[allow(clippy::missing_errors_doc)]
 pub(crate) fn complete_name(catalogs: &CatalogRegistry, parts: &[String]) -> Result<Vec<String>> {
+    if parts.len() < 3
+        && let Some(error) = catalogs.current_catalog_error()
+    {
+        return Err(crate::session_catalog::to_datafusion_error(error));
+    }
     let (default_catalog, default_schema) = session_defaults(catalogs);
     match parts {
         [table] => {

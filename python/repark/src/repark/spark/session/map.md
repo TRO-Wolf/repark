@@ -69,9 +69,10 @@ is the compatibility router that re-exports every prior name.
   the `auto_default_catalog` flag are gone; the auto session catalog registers when
   `_native.auto_session_catalog_wanted` says so. `catalog_resolution.py` drops
   `_alias_catalog_name`, `_auto_memory_catalog_wanted` and the builder-map catalog helpers;
-  `resolve_table_name` keeps three-part names as written. `session_configuration.DEFAULT_CATALOG_KEY`
-  names `spark.sql.defaultCatalog`, which the `getOrCreate` reuse path routes through
-  `RuntimeConfig.set`. pins: catalog-1/C-001, C-002
+  `resolve_table_name` keeps three-part names as written. `builder_conf.py` forwards `conf.set` /
+  `conf.unset` of `spark.sql.defaultCatalog` (`session_configuration.DEFAULT_CATALOG_KEY`) to the
+  engine and re-syncs; the `getOrCreate` reuse path applies the key the same way.
+  pins: catalog-1/C-001, C-002, C-003
 
 ## The column-wise createDataFrame path (PERF-FACADE-CDF-1)
 

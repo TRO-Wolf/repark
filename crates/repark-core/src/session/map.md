@@ -374,8 +374,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 - `session_catalog.rs` — **CATALOG-1 (2026-09-26):** `ReparkSession::auto_session_catalog_wanted`
   (the session catalog is wanted unless `repark.sql.autoMemoryCatalog` is `false` / `0` / `no`
   or a `spark.sql.catalog.spark_catalog[.*]` / `repark.sql.catalog.spark_catalog[.*]` key is
-  present — other blocks and a different `spark.sql.defaultCatalog` no longer suppress it).
-  pins: catalog-1/C-002
+  present — other blocks and a different `spark.sql.defaultCatalog` no longer suppress it) and
+  `current_catalog_checked` (the current catalog, or `CATALOG_NOT_FOUND`). pins: catalog-1/C-002,
+  C-004
 
 ## Pointers
 

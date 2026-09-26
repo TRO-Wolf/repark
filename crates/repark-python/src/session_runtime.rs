@@ -17,6 +17,8 @@ use repark_functions::merge_schema::{
 use repark_functions::session_time_zone::SessionTimeZoneConfig;
 
 use crate::fence::fenced_span;
+
+const DEFAULT_CATALOG_KEY: &str = repark_core::CatalogRegistry::DEFAULT_CATALOG_KEY;
 use crate::session::PyReparkSession;
 use crate::to_py_err;
 
@@ -45,7 +47,10 @@ pub fn restore_runtime_config(
 #[pyfunction]
 pub fn unset_runtime_config(session: PyRef<'_, PyReparkSession>, key: &str) -> PyResult<()> {
     fenced_span!("py.session", "unset_runtime_config", {
-        if session.session.unset_iceberg_session_write_conf(key) {
+        if key == DEFAULT_CATALOG_KEY {
+            apply_default_catalog(&session.session, None);
+            Ok(())
+        } else if session.session.unset_iceberg_session_write_conf(key) {
             Ok(())
         } else {
             Err(to_py_err(Error::IllegalArgument(format!(
@@ -61,6 +66,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(unset_runtime_config, module)?)?;
     module.add_function(wrap_pyfunction!(session_zone_canonical, module)?)?;
     module.add_function(wrap_pyfunction!(session_defaults, module)?)?;
+    module.add_function(wrap_pyfunction!(current_catalog_checked, module)?)?;
     module.add_function(wrap_pyfunction!(auto_session_catalog_wanted, module)?)?;
     module.add_function(wrap_pyfunction!(session_catalog_names, module)?)?;
     module.add_function(wrap_pyfunction!(register_late_catalog_block, module)?)?;
@@ -71,6 +77,13 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
 pub fn session_defaults(session: &PyReparkSession) -> PyResult<(String, String)> {
     fenced_span!("py.session", "session_defaults", {
         Ok(session.session.catalogs_snapshot().current_defaults())
+    })
+}
+
+#[pyfunction]
+pub fn current_catalog_checked(session: &PyReparkSession) -> PyResult<(String, String)> {
+    fenced_span!("py.session", "current_catalog_checked", {
+        session.session.current_catalog_checked().map_err(to_py_err)
     })
 }
 
@@ -86,6 +99,11 @@ pub fn session_catalog_names(session: &PyReparkSession) -> Vec<String> {
         .session
         .catalogs_snapshot()
         .registered_catalog_names()
+}
+
+fn apply_default_catalog(session: &ReparkSession, value: Option<&str>) {
+    let name = value.filter(|name| !name.is_empty());
+    repark_spark::session_catalog::apply_default_catalog(session, name);
 }
 
 #[pyfunction]
@@ -155,6 +173,10 @@ fn apply_runtime_config(
         let mode = repark_core::parse_partition_overwrite_mode(value)
             .map_err(|error| Error::IllegalArgument(configuration_message(error)))?;
         write_overwrite_mode(session, mode)?;
+        return Ok(());
+    }
+    if key == DEFAULT_CATALOG_KEY {
+        apply_default_catalog(session, Some(value));
         return Ok(());
     }
     if session.set_iceberg_session_write_conf(key, value) {

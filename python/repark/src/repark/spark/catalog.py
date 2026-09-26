@@ -12,6 +12,7 @@ import re
 from collections import namedtuple
 from typing import TYPE_CHECKING, Any
 
+from repark import _native
 from repark.errors import AnalysisException, PySparkTypeError
 from repark.spark._idents import quote_ident_if_needed as _quote_ident
 from repark.spark._idents import quote_multipart as _quote_multipart_ssot
@@ -258,9 +259,13 @@ class Catalog:
     # ===========================================================================================
 
     def current_catalog(self) -> str:
-        """The session's current catalog name (PySpark ``currentCatalog``)."""
-        self._session._ensure_alive()
-        return str(self._session._catalog_state()["current_catalog"])
+        """The session's current catalog name (PySpark ``currentCatalog``).
+
+        Reads the engine's current catalog. A ``spark.sql.defaultCatalog`` that names no
+        configured catalog raises ``CATALOG_NOT_FOUND``; a refused catalog raises its refusal.
+        """
+        catalog, _namespace = _native.current_catalog_checked(self._session._ensure_alive())
+        return str(catalog)
 
     currentCatalog = current_catalog  # noqa: N815
 
