@@ -127,6 +127,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   deleted — `withField` / `dropFields` are native `update_fields` expressions, so no
   boundary rewrite runs. pins: column-parity-1/C-002, C-004, C-005, C-008
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
+  U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
+  its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`
+  (multi-name frames keep their display/engine binds). pins: u11-edge-1/C-024
   IO-DECLARED-1 (2026-09-14): `replace` joins the missing-data surface as the exact
   `DataFrame.replace` delegation with the same no-value sentinel
   (`replace_expr._NO_VALUE`) — PySpark's `<no value>` default — so `na.replace(x)`
@@ -1365,3 +1368,12 @@ planned join through `requalify_join_sides` so the output carries each side's re
 `drop`'s display bookkeeping is compressed to pay for the two lines and the `filter`
 docstring now states the Column form refuses like Spark (line-neutral). `core.py`
 3981 → 3979. pins: u11-edge-1/C-023
+U11-EDGE-1 round 5 (2026-09-26, V-001..V-004): attribute references are declared where the
+facade already knows the exact field — `_bind_engine_display_column`, `_rebind_origin_column` and
+`_bind_schema_column(name, canonical)` with an explicit canonical (`_iter_bound_columns`,
+`colRegex`) build `_native.attribute_column(engine)`; a written name (`canonical=None`: string
+`select`, `df["x"]`, `F.col` rebinds) stays a plain column and keeps the ambiguity rule.
+`select("*")` expands through `_iter_bound_columns`, so `selectExpr("*")`, `withColumn(s)`,
+`toDF` and `fillna` re-project by attribute; `dropDuplicates(subset)` keys every field matching a
+subset name ignoring case, as Spark does, bound by attribute; `drop` sends an origin Column's
+engine name as an exact attribute. `core.py` 3979 → 3976. pins: u11-edge-1/C-024, C-025, C-026

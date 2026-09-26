@@ -8,7 +8,7 @@ import pytest
 
 from repark import ReparkSession
 from repark.errors import AnalysisException
-from repark.spark.functions import col
+from repark.spark.functions import col, lit
 
 
 @pytest.fixture()
@@ -249,3 +249,77 @@ def test_bare_reference_matching_two_fields_is_ambiguous(spark: ReparkSession) -
     with pytest.raises(AnalysisException, match=r"^Error during planning: \[AMBIGUOUS_REFERENCE\]"):
         joined.filter(col("Id") > 1).collect()
     assert _shape(joined.select(col("a.Id"))) == (["Id"], [(1,), (2,)])
+
+
+def _twins(spark: ReparkSession):
+    """Return the joined twin frame and a createDataFrame twin frame."""
+    joined = _spelled(spark, "SELECT a.id, b.ID FROM sc.ns.t a JOIN sc.ns.t b ON a.id = b.id")
+    return joined, spark.createDataFrame([(1, 2)], ["id", "ID"])
+
+
+def test_whole_frame_projections_bind_by_attribute(spark: ReparkSession) -> None:
+    """The facade's own re-projections of a twin frame answer like Spark; written refs refuse.
+
+    pins: u11-edge-1/C-024
+    """
+    joined, created = _twins(spark)
+    both = (["id", "ID"], [(1, 2)])
+    assert _shape(created.withColumn("z", lit(1))) == (["id", "ID", "z"], [(1, 2, 1)])
+    assert _shape(created.withColumns({"z": lit(1)})) == (["id", "ID", "z"], [(1, 2, 1)])
+    assert _shape(created.toDF("p", "q")) == (["p", "q"], [(1, 2)])
+    for frame in (
+        created.select("*"),
+        created.selectExpr("*"),
+        created.fillna(0),
+        created.dropDuplicates(["id"]),
+        created.dropDuplicates(["ID"]),
+    ):
+        assert _shape(frame) == both
+    keyed = spark.createDataFrame([(1, 2), (1, 3)], ["id", "ID"]).dropDuplicates(["id"])
+    assert _shape(keyed) == (["id", "ID"], [(1, 2), (1, 3)])
+    pairs = [(1, 1), (2, 2)]
+    assert _shape(joined.select("*")) == (["id", "ID"], pairs)
+    assert _shape(joined.dropDuplicates(["id"])) == (["id", "ID"], pairs)
+    assert _shape(joined.withColumn("z", lit(1))) == (["id", "ID", "z"], [(1, 1, 1), (2, 2, 1)])
+    assert _shape(joined.toDF("p", "q")) == (["p", "q"], pairs)
+    for build in (
+        lambda: created.select("id"),
+        lambda: created.select(col("id")),
+        lambda: created.withColumn("z", col("id")),
+        lambda: created.dropna(),
+    ):
+        with pytest.raises(AnalysisException) as excinfo:
+            build().collect()
+        assert _ambiguous("id", "`id`, `id`") in str(excinfo.value)
+
+
+def test_origin_columns_bind_their_own_side(spark: ReparkSession) -> None:
+    """Origin Columns select, filter and drop their own side's field after a join.
+
+    pins: u11-edge-1/C-025
+    """
+    left = spark.sql("SELECT ID, data FROM sc.ns.t")
+    right = spark.sql("SELECT 1 AS id, 'q' AS w")
+    joined = left.join(right, left["ID"] == right["id"])
+    assert _shape(joined.select(right["id"])) == (["id"], [(1,)])
+    assert _shape(joined.select(left["ID"])) == (["ID"], [(1,)])
+    three = joined.select(left["data"], right["w"], right["id"])
+    assert _shape(three) == (["data", "w", "id"], [("a", "q", 1)])
+    whole = (["ID", "data", "id", "w"], [(1, "a", 1, "q")])
+    assert _shape(joined.filter(right["id"] > 0)) == whole
+    assert _shape(joined.drop(right["id"])) == (["ID", "data", "w"], [(1, "a", "q")])
+    assert _shape(joined.drop(left["ID"])) == (["data", "id", "w"], [("a", 1, "q")])
+
+
+def test_column_drop_matching_two_fields_is_ambiguous(spark: ReparkSession) -> None:
+    """drop(F.col('id')) on twins refuses like select; the string form drops every twin.
+
+    pins: u11-edge-1/C-026
+    """
+    joined, created = _twins(spark)
+    for frame, options in ((created, "`id`, `id`"), (joined, "`a`.`id`, `b`.`id`")):
+        with pytest.raises(AnalysisException) as excinfo:
+            frame.drop(col("id")).collect()
+        assert _ambiguous("id", options) in str(excinfo.value)
+    assert _shape(created.drop("id")) == ([], [()])
+    assert _shape(joined.drop("id")) == ([], [(), ()])

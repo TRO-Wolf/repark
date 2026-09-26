@@ -1279,13 +1279,7 @@ class DataFrame:
             if isinstance(item, RegexColumn):
                 expanded.extend(expand_col_regex(self, item))
             elif isinstance(item, str) and item == "*":
-                if self._display_names is not None and self._engine_names is not None:
-                    for display, engine in zip(
-                        self._display_names, self._engine_names, strict=True
-                    ):
-                        expanded.append(self._bind_engine_display_column(display, engine))
-                else:
-                    expanded.extend(self.columns)
+                expanded.extend(self._iter_bound_columns())
             else:
                 expanded.append(item)
         stacked = select_with_stack_if_present(self, expanded)
@@ -1834,11 +1828,10 @@ class DataFrame:
         Used by ``select("*")`` expansion and other positional projections on frames that
         carry Spark-legal duplicate display names.
         """
-        from repark import _native
         from repark.spark._idents import quote_ident as _quote_ident
 
         quoted = _quote_ident(engine)
-        native = _native.PyColumn.column(quoted)
+        native = _native.attribute_column(engine)
         origin_plan_id = self._plan_id
         origin_field = display
         if self._origin_map is not None:
@@ -1953,11 +1946,10 @@ class DataFrame:
         engine = self._origin_map.get(key)
         if engine is None:
             return column
-        from repark import _native
         from repark.spark._idents import quote_ident as _quote_ident
 
         quoted = _quote_ident(engine)
-        native = _native.PyColumn.column(quoted)
+        native = _native.attribute_column(engine)
         display = column._projection_name or column._origin_field
         return Column(
             native.alias(display),
@@ -1979,13 +1971,15 @@ class DataFrame:
 
         Preserve the requested display spelling and attach origin metadata for joins.
         """
-        from repark import _native
         from repark.spark._idents import quote_ident as _quote_ident
 
-        canonical = self._resolve_getitem_column_name(name) if canonical is None else canonical
+        written = canonical is None
+        canonical = self._resolve_getitem_column_name(name) if written else canonical
         engine_field = self._engine_field_for_display(canonical)
         quoted = _quote_ident(engine_field)
-        native = _native.PyColumn.column(quoted)
+        native = (
+            _native.PyColumn.column(quoted) if written else _native.attribute_column(engine_field)
+        )
         return Column(
             native.alias(name),
             spark_display=name,
@@ -2566,6 +2560,7 @@ class DataFrame:
         """
         engine_drop: list[str] = []
         references: list[str] = []
+        attributes: list[str] = []
         for item in cols:
             if (
                 isinstance(item, Column)
@@ -2577,7 +2572,7 @@ class DataFrame:
                 if self._origin_map is not None:
                     key = (item._origin_plan_id, item._origin_field)
                     if key in self._origin_map:
-                        engine_drop.append(self._origin_map[key])
+                        attributes.append(self._origin_map[key])
                         continue
             name = self._name_of(item)
             if self._display_names is not None and self._engine_names is not None:
@@ -2586,9 +2581,10 @@ class DataFrame:
                         engine_drop.append(engine)
             else:
                 (references if isinstance(item, Column) else engine_drop).append(name)
-        child = self._spawn(_native.drop_frame_columns(self._plan(), engine_drop, references))
+        plan = _native.drop_frame_columns(self._plan(), engine_drop, references, attributes)
+        child = self._spawn(plan)
         if self._display_names is not None and self._engine_names is not None:
-            dropped = set(engine_drop)
+            dropped = {*engine_drop, *attributes}
             pairs = zip(self._display_names, self._engine_names, strict=True)
             kept = [(display, engine) for display, engine in pairs if engine not in dropped]
             child._display_names = [display for display, _ in kept]
@@ -3193,7 +3189,8 @@ class DataFrame:
                     resolved.append(self._resolve_getitem_column_name(self._name_of(item)))
         else:
             for item in names:
-                resolved.append(self._resolve_getitem_column_name(self._name_of(item)))
+                held = self._resolve_getitem_column_name(self._name_of(item)).casefold()
+                resolved.extend(name for name in self.columns if name.casefold() == held)
         all_engine = (
             list(self._engine_names) if self._engine_names is not None else list(self.columns)
         )
@@ -3211,7 +3208,7 @@ class DataFrame:
                 display = engine_to_display.get(engine, engine)
                 order_cols.append(self._bind_engine_display_column(display, engine))
         else:
-            order_cols = [self._bind_schema_column(name) for name in resolved]
+            order_cols = [self._bind_schema_column(name, name) for name in resolved]
         window = Window.partitionBy(*order_cols).orderBy(*order_cols)
         ranked = self.with_column("__repark_dd_rn", F.row_number().over(window))
         filtered = ranked.filter(F.col("__repark_dd_rn") == F.lit(1))

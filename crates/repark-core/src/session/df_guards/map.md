@@ -77,6 +77,21 @@ wrapped optimizer rule) and declares this directory.
   `unqualified_and_catalog_candidates_render_like_spark`,
   `requalified_join_carries_each_side_relation`. Spark shapes:
   `target/probe-u11-edge-1/vz-spark.json`, `vz2-spark.json`. pins: u11-edge-1/C-023
+  **Round 5 (2026-09-26, verifier round 3 V-001..V-004):** the ambiguity rule is for references
+  the user wrote; Spark resolves the facade's own re-projections and origin Columns by
+  attribute. `attribute_reference(name)` builds an unqualified `Expr::Column` for an exact engine
+  field and marks it with a sentinel span (`ATTRIBUTE_MARK`, line and column `u64::MAX`, a
+  location the SQL parser never produces; `Spans` takes no part in `Column` equality or hashing,
+  so the mark changes no plan). `bind_case_insensitive` leaves a marked column exactly as held —
+  never folded, never refused — and the mark survives aliases, casts and compounds because it
+  rides the column node. `drop_named_columns(frame, names, references, attributes)` drops
+  `attributes` by exact field name, and a Column target (`references`) with two or more hits
+  refuses with the same `ambiguous_reference` text select uses (`drop(F.col("id"))` on twins →
+  `[`id`, `id`]`, on the self-join → `[`a`.`id`, `b`.`id`]`); string targets keep dropping every
+  folded twin. Rust pins `attribute_reference_binds_exactly_where_a_written_one_refuses`,
+  `attribute_drop_is_exact_and_a_two_hit_reference_refuses`. Spark shapes:
+  `target/probe-u11-edge-1/vw/fold-spark.json`, `fold2-spark.json`. pins: u11-edge-1/C-024,
+  C-025, C-026
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside

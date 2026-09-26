@@ -1505,3 +1505,5 @@ U11-EDGE-1 round 2 (2026-09-26): `check_rust_file_size.py` ratchets `repark-pyth
 U11-EDGE-1 round 4 (2026-09-26): `check_rust_file_size.py` ratchets `repark-python/src/dataframe.rs` 1016 → 1005 (the `drop` method moves to the new `dataframe_names.rs` binding), shrink-only; the CAP-1 mirror moves with it. pins: u11-edge-1/C-022
 
 U11-EDGE-1 round 4, V-002 (2026-09-26): `check_lib_py.py` ratchets `dataframe/core.py` 3981 → 3979 (the join's ambiguity check and requalification paid for by the compressed `drop` bookkeeping), shrink-only; the CAP-1 mirror moves with it. pins: u11-edge-1/C-023
+
+U11-EDGE-1 round 5 (2026-09-26): `check_lib_py.py` ratchets `dataframe/core.py` 3979 → 3976 (the `select("*")` expansion folds into `_iter_bound_columns`), shrink-only; the CAP-1 mirror moves with it. pins: u11-edge-1/C-024

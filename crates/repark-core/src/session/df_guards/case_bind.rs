@@ -4,7 +4,8 @@ use std::ops::ControlFlow;
 use datafusion::arrow::datatypes::Field;
 use datafusion::common::tree_node::{Transformed, TreeNode};
 use datafusion::common::{
-    Column, DFSchema, DataFusionError, Result, TableReference, plan_datafusion_err, plan_err,
+    Column, DFSchema, DataFusionError, Location, Result, Span, Spans, TableReference,
+    plan_datafusion_err, plan_err,
 };
 use datafusion::dataframe::DataFrame;
 use datafusion::logical_expr::expr::Alias;
@@ -16,9 +17,28 @@ use repark_common::spark_error;
 
 type Hit<'a> = (Option<&'a TableReference>, &'a Field);
 
+const ATTRIBUTE_MARK: Location = Location {
+    line: u64::MAX,
+    column: u64::MAX,
+};
+
+#[must_use]
+pub fn attribute_reference(name: &str) -> Expr {
+    Expr::Column(Column {
+        relation: None,
+        name: name.to_string(),
+        spans: Spans(vec![Span::new(ATTRIBUTE_MARK, ATTRIBUTE_MARK)]),
+    })
+}
+
+fn is_attribute(column: &Column) -> bool {
+    column.spans.iter().any(|span| span.start == ATTRIBUTE_MARK)
+}
+
 pub(super) fn bind_case_insensitive(expr: Expr, frame_schema: &DFSchema) -> Result<Expr> {
     expr.transform(|node| {
         Ok(match node {
+            Expr::Column(column) if is_attribute(&column) => Transformed::no(Expr::Column(column)),
             Expr::Column(column) => {
                 let hits = case_hits(&column, [frame_schema]);
                 if hits.len() > 1 {
@@ -219,19 +239,31 @@ pub fn drop_named_columns(
     frame: DataFrame,
     names: &[String],
     references: &[String],
+    attributes: &[String],
 ) -> Result<DataFrame> {
-    let written = names
+    let schema = frame.schema();
+    let mut hits = names
         .iter()
-        .map(|name| Column::new_unqualified(name.as_str()))
-        .chain(
-            references
-                .iter()
-                .map(Column::from_qualified_name_ignore_case),
-        )
+        .flat_map(|name| case_hits(&Column::new_unqualified(name.as_str()), [schema]))
         .collect::<Vec<_>>();
-    let targets = written
+    for reference in references
         .iter()
-        .flat_map(|column| case_hits(column, [frame.schema()]))
+        .map(Column::from_qualified_name_ignore_case)
+    {
+        let found = case_hits(&reference, [schema]);
+        if found.len() > 1 {
+            return Err(ambiguous_reference(&reference, &found));
+        }
+        hits.extend(found);
+    }
+    hits.extend(
+        schema
+            .iter()
+            .filter(|(_, field)| attributes.contains(field.name()))
+            .map(|(qualifier, field)| (qualifier, field.as_ref())),
+    );
+    let targets = hits
+        .into_iter()
         .map(|(qualifier, field)| Column::new(qualifier.cloned(), field.name()))
         .collect::<Vec<_>>();
     frame.drop_columns(&targets)
@@ -345,8 +377,8 @@ mod tests {
     use datafusion::prelude::SessionContext;
 
     use super::{
-        bind_case_insensitive, bind_projection_expr, drop_named_columns, join_on_named_keys,
-        refuse_ambiguous_condition, requalify_join_sides, union_by_folded_name,
+        attribute_reference, bind_case_insensitive, bind_projection_expr, drop_named_columns,
+        join_on_named_keys, refuse_ambiguous_condition, requalify_join_sides, union_by_folded_name,
     };
 
     fn frame(names: &[(&str, &str)]) -> DFSchema {
@@ -560,6 +592,24 @@ mod tests {
         assert_eq!(bind_projection_expr(held.clone(), &schema).unwrap(), held);
     }
 
+    #[test]
+    fn attribute_reference_binds_exactly_where_a_written_one_refuses() {
+        let twins = frame(&[("t", "id"), ("t", "ID")]);
+        let attribute = attribute_reference("ID");
+        assert_eq!(
+            bind_case_insensitive(attribute.clone(), &twins).unwrap(),
+            attribute
+        );
+        assert_eq!(
+            bind_projection_expr(attribute.clone(), &twins).unwrap(),
+            attribute
+        );
+        assert_eq!(
+            refusal(Expr::Column(Column::new_unqualified("ID")), &twins),
+            ambiguous("`ID`", "`t`.`ID`, `t`.`ID`")
+        );
+    }
+
     async fn spelled(sql: &str) -> DataFrame {
         SessionContext::new().sql(sql).await.unwrap()
     }
@@ -580,11 +630,11 @@ mod tests {
     #[tokio::test]
     async fn drop_removes_every_folded_match() {
         let frame = spelled(r#"SELECT 1 AS "ID", 'a' AS data"#).await;
-        let dropped = drop_named_columns(frame.clone(), &["id".to_string()], &[]).unwrap();
+        let dropped = drop_named_columns(frame.clone(), &["id".to_string()], &[], &[]).unwrap();
         assert_eq!(names(&dropped), vec!["data".to_string()]);
         let both = ["ID".to_string(), "DATA".to_string()];
-        assert!(names(&drop_named_columns(frame.clone(), &both, &[]).unwrap()).is_empty());
-        let absent = drop_named_columns(frame, &["nope".to_string()], &[]).unwrap();
+        assert!(names(&drop_named_columns(frame.clone(), &both, &[], &[]).unwrap()).is_empty());
+        let absent = drop_named_columns(frame, &["nope".to_string()], &[], &[]).unwrap();
         assert_eq!(names(&absent), vec!["ID".to_string(), "data".to_string()]);
     }
 
@@ -593,23 +643,38 @@ mod tests {
         let frame = spelled(r#"SELECT "ID", data FROM (SELECT 1 AS "ID", 'a' AS data) t"#).await;
         let whole = vec!["ID".to_string(), "data".to_string()];
         for written in ["t.ID", "t.id", "T.Id"] {
-            let dropped = drop_named_columns(frame.clone(), &[], &[written.to_string()]).unwrap();
+            let dropped =
+                drop_named_columns(frame.clone(), &[], &[written.to_string()], &[]).unwrap();
             assert_eq!(names(&dropped), vec!["data".to_string()]);
         }
         for written in ["t.ID", "u.id"] {
-            let named = drop_named_columns(frame.clone(), &[written.to_string()], &[]).unwrap();
+            let named =
+                drop_named_columns(frame.clone(), &[written.to_string()], &[], &[]).unwrap();
             assert_eq!(names(&named), whole);
         }
-        let unmatched = drop_named_columns(frame, &[], &["u.id".to_string()]).unwrap();
+        let unmatched = drop_named_columns(frame, &[], &["u.id".to_string()], &[]).unwrap();
         assert_eq!(names(&unmatched), whole);
         let joined = spelled(
             r#"SELECT a.id, b."ID" FROM (SELECT 1 AS id, 1 AS "ID") a JOIN (SELECT 1 AS id, 1 AS "ID") b ON a.id = b.id"#,
         )
         .await;
-        let right = drop_named_columns(joined.clone(), &[], &["b.id".to_string()]).unwrap();
+        let right = drop_named_columns(joined.clone(), &[], &["b.id".to_string()], &[]).unwrap();
         assert_eq!(names(&right), vec!["id".to_string()]);
-        let left = drop_named_columns(joined, &[], &["A.ID".to_string()]).unwrap();
+        let left = drop_named_columns(joined, &[], &["A.ID".to_string()], &[]).unwrap();
         assert_eq!(names(&left), vec!["ID".to_string()]);
+    }
+
+    #[tokio::test]
+    async fn attribute_drop_is_exact_and_a_two_hit_reference_refuses() {
+        let twins = spelled(r#"SELECT 1 AS id, 2 AS "ID""#).await;
+        let exact = drop_named_columns(twins.clone(), &[], &[], &["ID".to_string()]).unwrap();
+        assert_eq!(names(&exact), vec!["id".to_string()]);
+        let error = drop_named_columns(twins.clone(), &[], &["id".to_string()], &[])
+            .unwrap_err()
+            .to_string();
+        assert_eq!(error, ambiguous("`id`", "`id`, `id`"));
+        let named = drop_named_columns(twins, &["id".to_string()], &[], &[]).unwrap();
+        assert!(names(&named).is_empty());
     }
 
     #[tokio::test]

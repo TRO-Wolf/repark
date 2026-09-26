@@ -899,6 +899,18 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `j.filter(F.col('Id') > 1)` refuses the class only (RePark spells the reference `id`, residue
   R-15); `j.select(F.col('a.Id'))` → `Id`. Spark shapes: `vz-spark.json` (table `t_vz_1`). Red
   on 5e2a68b8 (`red-r4-facade.txt`). pins: u11-edge-1/C-023
+  Round 5 (2026-09-26, V-001..V-004): `test_whole_frame_projections_bind_by_attribute` —
+  twins `createDataFrame([(1, 2)], ['id', 'ID'])` and the self-join `j` keep answering Spark's
+  shapes for `withColumn('z', lit(1))`, `withColumns`, `toDF('p', 'q')`, `select('*')`,
+  `selectExpr('*')`, `fillna(0)`, `dropDuplicates(['id'])` / `(['ID'])` (keys every twin:
+  `[(1, 2), (1, 3)]` keeps both rows), while `select('id')`, `select(F.col('id'))`,
+  `withColumn('z', F.col('id'))` and `dropna()` refuse `[`id`, `id`]`;
+  `test_origin_columns_bind_their_own_side` — `a.join(b, a['ID'] == b['id'])` selects, filters
+  and drops `b['id']` / `a['ID']` on their own side (`drop(b['id'])` → `ID`, `data`, `w`);
+  `test_column_drop_matching_two_fields_is_ambiguous` — `drop(F.col('id'))` refuses on both twin
+  frames, `drop('id')` empties them. Spark shapes: `target/probe-u11-edge-1/vw/fold-spark.json`,
+  `fold2-spark.json`. Red on 50e96af6 (`red-r5-facade.txt`, 3 failed). pins: u11-edge-1/C-024,
+  C-025, C-026
 - [test_u11_edge_partition_field.py](test_u11_edge_partition_field.py) — **U11-EDGE-1
   (2026-09-26), cell `E-CASE-PARTITION-FIELD`:** partition sources bind case-sensitively under
   either `spark.sql.caseSensitive`: `ADD PARTITION FIELD CAT`, `bucket(4, ID)` and
