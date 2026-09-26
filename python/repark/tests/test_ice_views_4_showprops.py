@@ -202,12 +202,11 @@ def test_three_part_name_ignores_use(spark: ReparkSession) -> None:
     assert _show_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v ('k')")) == [["k", "v"]]
 
 
-def test_bare_table_after_use_falls_through(spark: ReparkSession) -> None:
-    """Near-miss — a bare table name after USE keeps the upstream SHOW refusal."""
+def test_bare_table_after_use_answers_the_table_rows(spark: ReparkSession) -> None:
+    """Near-miss — a bare table name after USE answers Spark's table rows (TBLPROPS-1)."""
     spark.sql("USE sc.ns")
-    with pytest.raises(AnalysisException) as caught:
-        spark.sql("SHOW TBLPROPERTIES t ('k')")
-    _assert_refusal(caught.value, f"Error during planning: {SHOW_VARIABLE_UNSUPPORTED}", None, None)
+    rows = [list(row) for row in spark.sql("SHOW TBLPROPERTIES t ('k')").collect()]
+    assert rows == [["k", "Table sc.ns.t does not have property: k"]]
 
 
 def test_bare_missing_name_after_use_is_table_or_view_not_found(spark: ReparkSession) -> None:
@@ -231,17 +230,17 @@ def test_bare_name_without_use_falls_through(spark: ReparkSession) -> None:
     _assert_refusal(caught.value, f"Error during planning: {SHOW_VARIABLE_UNSUPPORTED}", None, None)
 
 
-def test_show_tblproperties_on_a_table_falls_through(spark: ReparkSession) -> None:
-    """Near-miss a — a table keeps the upstream SHOW planning refusal."""
-    for tail in ("", " ('k')"):
-        with pytest.raises(AnalysisException) as caught:
-            spark.sql(f"SHOW TBLPROPERTIES sc.ns.t{tail}")
-        _assert_refusal(
-            caught.value,
-            f"Error during planning: {SHOW_VARIABLE_UNSUPPORTED}",
-            NO_CONDITION,
-            NO_CONDITION,
-        )
+def test_show_tblproperties_on_a_table_answers_sparks_rows(spark: ReparkSession) -> None:
+    """Near-miss a — a table answers Spark's rows, no longer the upstream SHOW refusal."""
+    rows = [list(row) for row in spark.sql("SHOW TBLPROPERTIES sc.ns.t").collect()]
+    assert rows[0][0] == "current-snapshot-id" and rows[0][1].isdigit()
+    assert rows[1:] == [
+        ["format", "iceberg/parquet"],
+        ["format-version", "2"],
+        ["write.parquet.compression-codec", "zstd"],
+    ]
+    keyed = [list(row) for row in spark.sql("SHOW TBLPROPERTIES sc.ns.t ('k')").collect()]
+    assert keyed == [["k", "Table sc.ns.t does not have property: k"]]
 
 
 def test_show_views_and_show_tables_unchanged(spark: ReparkSession) -> None:
