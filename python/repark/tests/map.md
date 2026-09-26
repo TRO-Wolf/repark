@@ -67,6 +67,23 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_u9_types_1.py](test_u9_types_1.py) + `u9_types_1_spark_oracle.json` — **WO U9-TYPES-1
+  (2026-09-25):** replays every measured step of the oracle through the facade, one session
+  per group, in order; each observation (rows, schema surfaces, metadata fields, Python value
+  types, refusal class/condition/SQLSTATE/text) equals Spark's, or its residue record when the
+  step names one (the ledger's residue table is cross-checked). Group `ltz`: 88 steps, 76
+  EQUAL. pins: u9-types-1/C-001, C-002, C-003, C-005
+  Group `map`: 87 steps, 69 EQUAL (r2 added UPDATE / MERGE `map()`, back-quoted `` `map`() ``
+  and `element_at(map(), …)`, R-13). pins: u9-types-1/C-006, C-007, C-008
+  r3 grows `map` to 128 steps, 83 EQUAL: `map/assign/*` (four refusing map shapes on UPDATE,
+  MERGE matched and NOT MATCHED INSERT; residue R-18) and `map/cmp/*` (map comparison,
+  ordering, `DISTINCT`, `GROUP BY`, UPDATE / DELETE `WHERE`, MERGE `ON`; residues R-6, R-19).
+  pins: u9-types-1/C-011, C-012
+  Group `void`: 21 steps, 3 EQUAL; the rest hold RePark's refusal as residue R-14 until the
+  fork writes `unknown` (C-009 OPEN), so the fix reds them on purpose. Group `uuid`: 12
+  steps, 1 EQUAL; the rest hold residue R-15 until the uuid-as-string ruling (C-010 OPEN);
+  its `add_uuid` step adds the column through the Iceberg API on Spark and through
+  `ALTER TABLE … ADD COLUMN u UUID` on RePark, as the scoreboard cell does.
 - [test_ice_error_conditions_1.py](test_ice_error_conditions_1.py) —
   **ICE-ERROR-CONDITIONS-1 / IPI-51 PR1 (2026-09-20):** constructor pins for the native
   error-condition parser — `getCondition`/`getErrorClass`/`getSqlState` on the PyO3
@@ -7271,6 +7288,10 @@ alike — a disclosed round-8 residual, deliberately unpinned.
 FNP-8 SQL-text error cells also execute column-free `F.expr`; `fnp8_repark_errors.json`
 records both paths against `fnp8_error_oracle.json`. The empty untyped map diagnostic
 keeps Spark collect separate from its Arrow export refusal.
+**U9-TYPES-1 (2026-09-25):** error cells 52 and 53 (`transform_keys(map(), (k, v) -> k)`)
+record RePark's collected empty map on the SQL door: Spark's `collect()` answers `{}` and only
+PySpark's Arrow export fails, so the RePark disposition is the collected value. `F.expr` does not
+lower `map()`, so `52-expr` and `53-expr` keep the planning refusal (ledger R-21).
 **FNP-8-REVIEW (2026-09-07):** the F-Y10-1 registry note cites the wrap pin and the
 idx-25/idx-51 dispositions (F7). pins: fnp-8-review/C-007
 **FNP-8-REVIEW (2026-09-07):** `test_fnp_8_sql_door.py` pins table-backed and

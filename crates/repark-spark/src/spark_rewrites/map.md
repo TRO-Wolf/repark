@@ -17,6 +17,13 @@ path stay in `spark_literals.rs`.
   and call-base struct field access. **WO-A5 (2026-09-23):** the
   `INVALID_NUMERIC_LITERAL_RANGE` producer has a direct `engine_err` pin for its complete
   bracketed parse message.
+- `timestamp_ltz_literal.rs` — **WO U9-TYPES-1 (2026-09-25):**
+  `plan_timestamp_ltz_literal_regions` rewrites an unquoted `TIMESTAMP_LTZ` word that a
+  single- or double-quoted string follows (whitespace allowed; the Spark door lexes `"…"` as a
+  string, r2 V-005) into `TIMESTAMP`, the Spark door's LTZ
+  literal. `mod.rs` `plan_keyword_regions` runs it after the DROP TEMPORARY planner. A cast
+  target, a quoted name and a bare identifier stay untouched (unit pins in the file).
+  pins: u9-types-1/C-002
 - `create_options.rs` — **D-5 (2026-09-21):** the `OPTIONS` → `TBLPROPERTIES`
   seam. Recognizes `CREATE [OR REPLACE] TABLE [IF NOT EXISTS] name [(cols)]
   USING iceberg` and rewrites its single well-formed `OPTIONS (k=v, …)` clause

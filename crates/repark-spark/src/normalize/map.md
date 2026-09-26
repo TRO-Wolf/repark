@@ -8,6 +8,13 @@ here and is re-exported in one line.
 
 ## Contents
 
+- `map_ordering.rs` — **WO U9-TYPES-1 r3 (2026-09-25):** `refuse_map_ordering` walks the
+  planned statement in `../spark_ast.rs`'s passthrough (SELECT, and the UPDATE / DELETE that land
+  there) and refuses a map operand of `=`, `<>`, `<`, `<=`, `>`, `>=`, `<=>`, `IN` and
+  `ORDER BY` with Spark's `DATATYPE_MISMATCH.INVALID_ORDERING_TYPE` text, and `SELECT
+  DISTINCT` over a map column with `UNSUPPORTED_FEATURE.SET_OPERATION_ON_MAP_TYPE` (verifier
+  V-003). A MERGE `ON` and `GROUP BY` do not pass through it (residue R-19).
+  pins: u9-types-1/C-012
 - `replace_table.rs` — **IPI-25 (2026-09-20):** `REPLACE TABLE [AS SELECT]` is Spark's elided
   spelling of `CREATE OR REPLACE TABLE`, and the behaviour behind it already shipped (registry
   `RTAS-OPS-1`). `rewrite_replace_table` inserts `CREATE OR` before the leading `REPLACE`, and it

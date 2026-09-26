@@ -8543,6 +8543,119 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `python/repark/tests/test_ice_catalog_session_1.py::test_rename_across_catalogs_reads_a_namespace_like_spark`.
   pins: ice-nested-evo-1/C-059
 
+### TY-TIMESTAMP-LTZ — a `TIMESTAMP_LTZ` column refused at CREATE — **FIXED 2026-09-25 (WO U9-TYPES-1)**
+
+- **repark** — the Spark door maps the type name `TIMESTAMP_LTZ` to Iceberg `timestamptz` on
+  format v2 and v3, at CREATE, `ADD COLUMN` and inside `STRUCT` / `ARRAY` / `MAP`, whatever
+  `spark.sql.timestampType` says; the column reads as Spark `timestamp` (`DESCRIBE`,
+  `dtypes`, `printSchema`, `simpleString`). `TIMESTAMP_LTZ '…'` is Spark's session-zone
+  instant literal. Rows, filters, ordering, `CAST … AS STRING`, a DataFrame append, `.files`
+  metrics and `days` / `hours` / identity / `months` partitioning answer as Spark. Before, the
+  CREATE refused `column type TIMESTAMP_LTZ is not supported yet for Iceberg tables` and the
+  literal did not parse. The ANSI door keeps refusing the Spark spelling. Residues (ledger
+  R-1..R-5 and R-16, each held by its oracle record): a STRING literal writes into the column where
+  Spark refuses `CANNOT_SAFELY_CAST` (as for `TIMESTAMP`); the `TIMESTAMP_NTZ` name stays
+  refused (TZ-6); `ALTER COLUMN … TYPE` refusals keep RePark's class and `DataInvalid =>`
+  prefix; `collect()` in a non-UTC session answers the session-zone wall (TZ-7 Q12); a bare
+  `TIMESTAMP` under `spark.sql.timestampType=TIMESTAMP_NTZ` stays `timestamptz` (TZ-6 Q10);
+  an invalid literal (`TIMESTAMP_LTZ 'garbage'`) fails at execution with `[CAST_INVALID_INPUT] …
+  cannot be cast to "TIMESTAMP" … SQLSTATE: 22018` where Spark raises `ParseException`
+  `[INVALID_TYPED_LITERAL] The value of the typed literal "TIMESTAMP_LTZ" is invalid: 'garbage'.
+  SQLSTATE: 42604` (R-16, dated 2026-09-25, as for `TIMESTAMP 'garbage'`). The double-quoted
+  `TIMESTAMP_LTZ "…"` is the same literal.
+- **ANSI door (residue R-17, measured 2026-09-25, no code)** — `TIMESTAMP(6) WITH TIME ZONE`
+  stores Iceberg `timestamp` (naive), reads `Timestamp(µs)` with no zone, and stores a
+  `TIMESTAMP '2024-01-01 00:00:00+05:00'` value as the UTC wall `2023-12-31T19:00:00`; a bare
+  `TIMESTAMP WITH TIME ZONE` refuses as nanosecond precision (9). The Spark door's
+  `TIMESTAMP_LTZ` column is `timestamptz`.
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25 (88 steps in
+  `python/repark/tests/u9_types_1_spark_oracle.json`, group `ltz`; scoreboard cell
+  `TY-TIMESTAMP-LTZ`, replayed EQUAL).
+- **Pin** — `python/repark/tests/test_u9_types_1.py`,
+  `crates/repark-spark/src/tests/u9_timestamp_ltz.rs`,
+  `crates/repark-spark/src/spark_rewrites/timestamp_ltz_literal.rs` (unit pins),
+  `crates/repark-sql/tests/ansi_door_u9_types.rs`.
+
+### TY-MAP — the empty map literal `map()` refused, so a `MAP` column could not take it — **FIXED 2026-09-25 (WO U9-TYPES-1)**
+
+- **repark** — the Spark door reads an unqualified zero-argument `map()` (bare or back-quoted) as Spark's empty
+  `map<void,void>` (`{}`), so `INSERT … VALUES (0, map('k', 1)), (1, map())` into a
+  `MAP<STRING, INT>` column writes and reads back `[[0, [["k", 1]]], [1, []]]` as Spark does,
+  also through `INSERT … SELECT`, a typed `CAST`, a nested map value, `CASE`, `UNION ALL`,
+  `map_concat`, `UPDATE … SET c = map()` and every MERGE clause that assigns it (matched
+  update, not-matched insert, not-matched-by-source update). The rest of the measured `MAP` column surface (schema surfaces, lookups,
+  `element_at`, `map_keys` / `map_values`, `size`, map-to-map casts, DataFrame appends, `.files`
+  counts, `ADD COLUMN`, `ALTER COLUMN c.value TYPE`, struct and map values) already answered
+  as Spark and is now pinned. Before, `map()` raised `Function 'map' expected at least one
+  argument but received 0`. The ANSI door keeps `MAP(ARRAY[], ARRAY[])` and refuses `MAP()`.
+  Round r3 (2026-09-25): `UPDATE … SET c = <map>` and MERGE `UPDATE SET` / `INSERT` refuse a
+  map key or value that cannot store-assign with Spark's `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]
+  Cannot write incompatible data for the table ``: Cannot safely cast `c`.`key` "STRING" to "INT".
+  SQLSTATE: KD000` (and `` `c`.`value` `` "DATE" to "INT"; `CANNOT_FIND_DATA` … `` `c`.`value`.`b` ``
+  for a struct value missing a field); before, UPDATE committed `{1: 'x'}` and `{'a': 19723}`.
+  A map operand of `=`, `<>`, `<`, `>=`, `<=>`, `IN` and `ORDER BY` (SELECT, UPDATE and DELETE
+  `WHERE`) refuses with Spark's `[DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve
+  "(c = map(a, 1))" due to data type mismatch: The `=` does not support ordering on type
+  "MAP<STRING, INT>". SQLSTATE: 42K09`, and `SELECT DISTINCT` over a map with
+  `[UNSUPPORTED_FEATURE.SET_OPERATION_ON_MAP_TYPE] … SQLSTATE: 0A000`.
+  Residues (ledger R-6..R-13, R-18..R-20, each held by its oracle record): the map ordering and
+  assignment refusals carry RePark's `Error during planning: ` prefix (and lack Spark's
+  position and plan tail); a MERGE `ON` over maps commits and `GROUP BY <map>` fails at
+  execution where Spark refuses / answers; a struct inside a map value collects as a `dict`
+  where PySpark answers a `Row`; `CAST(<map> AS STRING)` refuses where Spark renders
+  `{k -> 1}`; two refusal texts differ only in rendering; invalid map values and map
+  partitioning refuse with DataFusion's / the fork's texts; `ALTER COLUMN c TYPE MAP<…>`
+  refuses; `c['k'].a` refuses; `map()` does not unify inside `coalesce`, `if`, `array` or a
+  `VALUES` table, and `element_at(map(), 'a')` refuses DataFusion's `Failed to coerce arguments
+  to satisfy a call to 'element_at' function …` where Spark answers `NULL` typed `void` (dated
+  2026-09-25).
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25 (128 steps after r3 in
+  `python/repark/tests/u9_types_1_spark_oracle.json`, group `map`; scoreboard cell `TY-MAP`,
+  replayed EQUAL).
+- **Pin** — `python/repark/tests/test_u9_types_1.py`, `crates/repark-spark/src/tests/u9_map.rs`,
+  `crates/repark-spark/src/keyword_lower.rs` (unit pin), `crates/repark-iceberg/src/write/update_cast.rs`
+  (unit pins),
+  `crates/repark-sql/tests/ansi_door_u9_types.rs`.
+
+### TY-UNKNOWN-VOID — OPEN (measured 2026-09-25): a `VOID` column (Iceberg v3 `unknown`) refused at CREATE
+
+- **repark** — the Spark door refuses `VOID` at CREATE and `ADD COLUMN` (`column type `VOID` is
+  not supported yet for Iceberg tables`) and `CAST(NULL AS VOID)` (`Unsupported SQL type VOID`).
+  The refusal stays until the owned fork writes `unknown`: with the type mapped, every INSERT
+  fails in the fork's parquet writer (`FeatureUnsupported => Writing the unknown column 'c' is
+  not supported yet`) and `.files` fails in its `readable_metrics`, so accepting the DDL would
+  create tables no INSERT can write.
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25 (21 steps, group
+  `void` of `python/repark/tests/u9_types_1_spark_oracle.json`): v3 CREATE / ADD COLUMN store
+  `unknown`; `INSERT … VALUES (0, NULL)` writes; the column reads NULL and describes as `void`;
+  `INSERT … VALUES (2, 1)` refuses `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] … Cannot
+  safely cast `c` "INT" to "VOID". SQLSTATE: KD000`; v1 and v2 refuse `IllegalStateException:
+  Invalid schema for v<N>: - Invalid type for c: unknown is not supported until v3`.
+- **Pin** — `python/repark/tests/test_u9_types_1.py` (group `void`, residue R-14 of
+  `task/ledgers/staging/u9-types-1-ledger.md`).
+- **Rationale** — OPEN, dated 2026-09-25, WO U9-TYPES-1 clause C-009 and hand-back question Q1
+  (the fork change: the parquet writer omits `unknown` columns, `readable_metrics` answers a
+  null metrics row).
+
+### TY-UUID-READ — OPEN (measured 2026-09-25): an Iceberg `uuid` column does not read as `string`
+
+- **repark** — the Spark door refuses `UUID` at CREATE and `ADD COLUMN` (`column type `UUID` is
+  not supported yet for Iceberg tables`) and in `CAST` (`Unsupported SQL type UUID`). The
+  fork's table provider advertises `uuid` as Arrow `FixedSizeBinary(16)` (its
+  `schema_to_arrow_schema`), not `Utf8`.
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25 (12 steps, group
+  `uuid` of `python/repark/tests/u9_types_1_spark_oracle.json`; the wider sweep in the lane's
+  `target/probe-u9-types-1/spark.json`): SQL refuses the type name (`[UNSUPPORTED_DATATYPE]
+  Unsupported data type "UUID". SQLSTATE: 0A000`); a column added through the Iceberg API reads
+  as `string` with canonical lower-case values, takes string literals (upper case stored lower
+  case, an invalid string refused at the task with `IllegalArgumentException: Invalid UUID
+  string: …`) and DataFrame `STRING` appends.
+- **Pin** — `python/repark/tests/test_u9_types_1.py` (group `uuid`, residue R-15 of
+  `task/ledgers/staging/u9-types-1-ledger.md`).
+- **Rationale** — OPEN, dated 2026-09-25, WO U9-TYPES-1 clause C-010 and hand-back question Q2
+  (where the uuid ↔ string conversion lives, and whether the door accepts the `UUID` name that
+  Spark refuses).
+
 ### CUTOVER-CTAS-REQ-1 — parquet CTAS keeps source non-null fields required; Spark makes every column optional
 
 - **repark** — **FIXED 2026-09-04 (CUTOVER-SCHEMA-1).** The same CTAS stores every field

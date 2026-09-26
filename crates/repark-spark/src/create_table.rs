@@ -394,7 +394,7 @@ fn sql_type_to_iceberg_nested(
         SqlDataType::Timestamp(_, _) => PrimitiveType::Timestamptz,
         SqlDataType::Binary(_) | SqlDataType::Varbinary(_) => PrimitiveType::Binary,
         other => {
-            if let Some(primitive) = iceberg_v3_named_primitive(other) {
+            if let Some(primitive) = iceberg_named_primitive(other) {
                 primitive
             } else {
                 if geospatial_sql_type(other) {
@@ -444,8 +444,9 @@ fn geospatial_sql_type(data_type: &SqlDataType) -> bool {
     head == "GEOMETRY" || head == "GEOGRAPHY"
 }
 
-fn iceberg_v3_named_primitive(data_type: &SqlDataType) -> Option<PrimitiveType> {
+fn iceberg_named_primitive(data_type: &SqlDataType) -> Option<PrimitiveType> {
     match data_type.to_string().to_ascii_lowercase().as_str() {
+        "timestamp_ltz" => Some(PrimitiveType::Timestamptz),
         "timestamp_ns" => Some(PrimitiveType::TimestampNs),
         "timestamptz_ns" => Some(PrimitiveType::TimestamptzNs),
         _ => None,

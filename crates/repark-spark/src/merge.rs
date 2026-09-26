@@ -55,9 +55,9 @@ pub(crate) async fn execute_merge_statement(
         ));
     }
     let lowered;
-    let merge = if crate::keyword_lower::has_timestamp_ns_cast(merge) {
+    let merge = if crate::keyword_lower::has_empty_map_or_timestamp_ns_cast(merge) {
         let mut owned = merge.clone();
-        crate::keyword_lower::lower_timestamp_ns_casts(&mut owned);
+        crate::keyword_lower::lower_empty_maps_and_timestamp_ns_casts(&mut owned);
         lowered = owned;
         &lowered
     } else {

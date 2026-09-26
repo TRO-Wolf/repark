@@ -841,6 +841,15 @@ pins: rp-4-fork-repin/C-005, C-006
   cell is left for the µs rule and widened like `INSERT … SELECT`. Both hooks return a
   non-insert plan without moving it. Rust tests: `tests/v3_timestamp_ns_door.rs`.
   pins: ice-tsns-sql-1/C-002, C-010
+- `keyword_lower.rs` — **WO U9-TYPES-1 (2026-09-25):** `lower_expression` rewrites an
+  unqualified zero-argument `map()` (no `OVER`, no `FILTER`) into
+  `map(make_array(), make_array())`, Spark's empty `map<void,void>` (cell `TY-MAP`). The name
+  matches on the identifier value, so the back-quoted `` `map`() `` lowers too (r2, V-003).
+  `lower_empty_map_calls` is that rewrite alone: `spark_ast.rs` applies it before the
+  identity-DML path so `UPDATE … SET c = map()` plans (V-001); a MERGE runs
+  `lower_empty_maps_and_timestamp_ns_casts` when `has_empty_map_or_timestamp_ns_cast` finds
+  either, so every MERGE clause takes `map()`.
+  pins: u9-types-1/C-006
 - `keyword_lower.rs` — **SPARK-SQL-GRAMMAR-1 C-003/C-004/C-005 (2026-09-16):**
   Spark-only keyword lowerings onto registered kernels. `x RLIKE p` becomes
   `regexp_like(x, p)` (`NOT RLIKE` becomes `NOT regexp_like`); `CAST(x AS
@@ -855,7 +864,7 @@ pins: rp-4-fork-repin/C-005, C-006
   `::` included, `TRY_CAST` not) lowers to the embedded `__repark_cast_timestamp_ns__` /
   `__repark_cast_timestamptz_ns__` calls; `lower_timestamp_ns_casts` is the same lowering alone,
   applied by `router.rs` to a MERGE's source, `ON` and clauses (MERGE plans its rendered pieces
-  outside the passthrough) only when `has_timestamp_ns_cast` finds one, and by `spark_ast.rs` to
+  outside the passthrough) only when `has_empty_map_or_timestamp_ns_cast` finds one, and by `spark_ast.rs` to
   the statement an `EXPLAIN` wraps. pins: ice-tsns-sql-1/C-001, C-011
   **UNRESOLVED-ROUTINE-1 (2026-09-16):** `unrelated_errors_pass_through` now
   fixtures a genuinely unrelated `Plan` error — unknown names reshape in
@@ -957,6 +966,10 @@ pins: rp-4-fork-repin/C-005, C-006
   `USING iceberg`, `WITH`/plain variants, malformed pairs, and DataFusion-style
   no-eq pairs stay untouched. Cells `D-CREATE-OPTIONS`, `D-CTAS-OPTIONS`.
   Details: [spark_rewrites/map.md](spark_rewrites/map.md).
+- `spark_rewrites/mod.rs` + `spark_rewrites/timestamp_ltz_literal.rs` — **WO U9-TYPES-1
+  (2026-09-25):** `plan_keyword_regions` (the one call `spark_literals.rs` makes, in place of
+  `plan_drop_temporary_regions`) adds `TIMESTAMP_LTZ '…'` → `TIMESTAMP '…'`, Spark's LTZ
+  literal. pins: u9-types-1/C-002
 - `spark_rewrites/mod.rs` — **FNP-4B (2026-09-15):** numeric suffixes (BD precision/scale from
   digits; D/F as CAST of a decimal operand so the planner keeps them non-null; `1e3L` /
   `0x1D` as identifiers; `128Y`/`40000S` refuse `[INVALID_NUMERIC_LITERAL_RANGE]`),
@@ -1002,6 +1015,14 @@ pins: rp-4-fork-repin/C-005, C-006
   inner. Inner renames are out of scope:
   analysis runs twice and outer references would go stale.
   pins: fnp-4b/C-012, C-014, C-015, C-019, C-020, C-021, C-022
+- `spark_ast.rs` — **WO U9-TYPES-1 r3 (2026-09-25):** the passthrough runs every planned
+  statement through `normalize/map_ordering.rs`'s `refuse_map_ordering` before analysis, so a
+  map comparison, `ORDER BY` or `DISTINCT` refuses as Spark does (verifier V-003).
+  pins: u9-types-1/C-012
+- `create_table.rs` — **WO U9-TYPES-1 (2026-09-25):** `iceberg_named_primitive` (renamed from
+  `iceberg_v3_named_primitive`) maps the Spark type name `TIMESTAMP_LTZ` to Iceberg
+  `timestamptz` whatever `spark.sql.timestampType` says, at CREATE, ADD COLUMN and nested
+  (cell `TY-TIMESTAMP-LTZ`). pins: u9-types-1/C-001
 - `create_table.rs` — **WO U5 PR3 (2026-09-25):** a hive-style typed `PARTITIONED BY` column
   (D-X-PARTITIONED-COLDEF) joins the schema after the declared columns and gets an identity
   field; `typed_partition_columns` raises Spark's `Cannot mix partition expressions and

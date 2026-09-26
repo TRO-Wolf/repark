@@ -261,6 +261,11 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   pins: rp-5-fork-repin/C-004
   **ICE-CATALOG-SESSION-1 S9 (2026-09-20):** `quote_scratch_name` is `pub(crate)` so
   predicate DML quotes 3-part scratch names per segment like the MERGE SQL builders.
+- `insert.rs` — **WO U9-TYPES-1 r3 (2026-09-25):** the MERGE store-assignment refusal asks
+  `../update_cast.rs`'s `incompatible_nested_message` first when either side is a map, so
+  `UPDATE SET` and `NOT MATCHED INSERT` refuse a map key or value with Spark's
+  `CANNOT_SAFELY_CAST` / `CANNOT_FIND_DATA` text, the same text as UPDATE (verifier V-002).
+  pins: u9-types-1/C-011
 - `insert.rs` — **U8 WRITE-SQL PR2 (2026-09-25):** `store_assignment_then_sql` delegates to
   `../update_cast.rs`'s `store_assignment_cast_sql`, so a struct target casts to its type
   without Iceberg field ids. With the struct-aware gate in `../store_assign.rs`, whole-struct

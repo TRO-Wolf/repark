@@ -119,6 +119,8 @@ mod temp_view_routing;
 mod time_travel;
 mod transform_overwrite;
 mod truncate;
+mod u9_map;
+mod u9_timestamp_ltz;
 mod unset_tblproperties;
 mod update_cast;
 mod use_ddl;

@@ -847,3 +847,45 @@ async fn sql_door_lambda_body_overflow_divergence_wraps() {
         vec![Some(-294_967_296)]
     );
 }
+
+#[tokio::test]
+async fn sql_door_map_kernels_over_the_empty_map_answer_the_empty_map() {
+    for ansi_enabled in [true, false] {
+        let (ctx, catalogs) = hof_ctx_with_ansi(ansi_enabled);
+        for sql in [
+            "SELECT transform_keys(map(), (k, v) -> k) AS r",
+            "SELECT transform_keys(map(), (k, v) -> v) AS r",
+            "SELECT transform_values(map(), (k, v) -> v) AS r",
+            "SELECT map_filter(map(), (k, v) -> v IS NULL) AS r",
+            "SELECT map_zip_with(map(), map(), (k, a, b) -> a) AS r",
+        ] {
+            let batch = collect_one(&ctx, &catalogs, sql).await;
+            assert_eq!(batch.num_rows(), 1, "{sql}");
+            let maps = batch.column(0).as_map();
+            assert!(maps.is_valid(0), "{sql}");
+            assert_eq!(maps.value_length(0), 0, "{sql}");
+        }
+    }
+}
+
+#[tokio::test]
+async fn sql_door_transform_keys_to_a_null_key_still_refuses() {
+    let (ctx, catalogs) = hof_ctx();
+    for sql in [
+        "SELECT transform_keys(map('a', 1), (k, v) -> NULL) AS r",
+        "SELECT transform_keys(map('a', 1), (k, v) -> CAST(NULL AS STRING)) AS r",
+    ] {
+        let error = crate::execute(&ctx, &catalogs, sql)
+            .await
+            .unwrap_or_else(|error| panic!("{sql}: {error}"))
+            .collect()
+            .await
+            .expect_err(sql);
+        assert!(
+            error
+                .to_string()
+                .ends_with("[NULL_MAP_KEY] Cannot use null as map key. SQLSTATE: 2200E"),
+            "{sql}: {error}"
+        );
+    }
+}

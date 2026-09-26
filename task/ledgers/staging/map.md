@@ -4,6 +4,19 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [u9-types-1-ledger.md](u9-types-1-ledger.md) —
+  **WO U9-TYPES-1 (2026-09-25), in flight:** four column types end to end on the Spark door,
+  measured against Spark 4.1.2 + Iceberg 1.11 and replayed step by step from
+  `python/repark/tests/u9_types_1_spark_oracle.json`. `TIMESTAMP_LTZ` columns and typed
+  literals (C-001..C-005); `MAP` columns and the empty `map()` literal (C-006..C-008);
+  `VOID` (v3 `unknown`) measured and held OPEN on the fork's write refusal (C-009, R-14);
+  `uuid` read as string measured and held OPEN for a design ruling (C-010, R-15). Verifier
+  round r2: `map()` in UPDATE / MERGE and back-quoted, double-quoted LTZ literals; residues
+  R-16 (invalid LTZ literal text) and R-17 (ANSI door `WITH TIME ZONE` is naive).
+  Round r3: map assignments refuse unsafe key and value casts with Spark's text (C-011), map
+  comparison and ordering refuse (C-012); residues R-18..R-20.
+  `risk_tier: standard`. Branch `feat/u9-types-1`.
+  pins: u9-types-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-011, C-012
 - [u8-write-sql-ledger.md](u8-write-sql-ledger.md) —
   **U8 WRITE-SQL PR1 (2026-09-24), in flight:** `INSERT INTO … REPLACE WHERE` as Spark's
   overwrite by filter, `INSERT INTO … PARTITION (…)` static and dynamic keys, and positional

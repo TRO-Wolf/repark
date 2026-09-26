@@ -232,6 +232,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **FNP-8-REVIEW (2026-09-07):** the exists/forall three-valued pin gains the
   null-predicate legs (`exists`/`forall` over `make_array(1, NULL, 3)` answer NULL, F6).
   pins: fnp-8-review/C-006
+  **U9-TYPES-1 (2026-09-25):** `transform_keys`, `transform_values`, `map_filter` and
+  `map_zip_with` over `map()` answer the empty map on ANSI on and off, and a produced null key
+  (`NULL` or a typed null) still refuses with Spark's exact `NULL_MAP_KEY` text (ledger R-21).
 - `list_null_compound.rs` — **ICE-LIST-NULL-2 (2026-09-19):** copy-on-write DELETE with a
   compound predicate over a nested column answers Spark through the Spark door — one pin per
   nested kind (list, map, struct) per compound shape (`id > 1 AND xs IS NULL` keeps
@@ -256,6 +259,21 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   input '<EOF>'` / `','` / `')'` text and a `metadata_file_count` assertion, because every
   earlier head committed the order typed before a trailing comma.
   pins: ice-nested-evo-1/C-055
+- [u9_map.rs](u9_map.rs) — **WO U9-TYPES-1 (2026-09-25):** `map()` / `MAP()` is an empty
+  map of `Null` keys and values; a `MAP<STRING, INT>` column and a nested map column take
+  `map('k', 1)`, `map()`, `NULL` and `SELECT … map()` and read back with lookups; the
+  back-quoted `` `map`() `` is the same map, and `UPDATE` plus the three MERGE assigning
+  clauses write `map()` (r2).
+  pins: u9-types-1/C-006
+  r3: UPDATE and both MERGE assigning clauses refuse a map key, a map value and a struct value
+  missing a field with Spark's exact text and write nothing; a map operand of a comparison,
+  `IN`, `ORDER BY` (SELECT, UPDATE and DELETE `WHERE`) and `SELECT DISTINCT` refuse with
+  Spark's text. pins: u9-types-1/C-011, C-012
+- [u9_timestamp_ltz.rs](u9_timestamp_ltz.rs) — **WO U9-TYPES-1 (2026-09-25):** a
+  `TIMESTAMP_LTZ` column is `timestamptz` on v2 and v3, in a struct and at ADD COLUMN; it
+  writes, filters on a `TIMESTAMP_LTZ '…'` literal and partitions by `days`; the typed literal
+  is a zoned instant, double-quoted too (r2); a `timestamp_ltz` identifier keeps its meaning.
+  pins: u9-types-1/C-001, C-002, C-003
 - [alter_write_order_transform.rs](alter_write_order_transform.rs) — **WO U5 PR2b
   (2026-09-24):** D-WRITE-ORDERED-TRANSFORM. Seventeen measured `WRITE ORDERED BY` specs land
   the sort order Spark wrote (rendered as `transform source direction nulls`) with `range`;

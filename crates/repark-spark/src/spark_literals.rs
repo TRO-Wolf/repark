@@ -285,7 +285,7 @@ fn canonical_rewrite(sql: &str, keep_verbatim: bool) -> Result<Option<CanonicalR
         &tokens, sql,
     ));
     regions.extend(crate::spark_rewrites::plan_delete_from_regions(&tokens));
-    regions.extend(crate::spark_rewrites::plan_drop_temporary_regions(&tokens));
+    regions.extend(crate::spark_rewrites::plan_keyword_regions(&tokens));
     regions.extend(crate::spark_rewrites::plan_wildcard_except_regions(&tokens));
     regions.extend(crate::spark_rewrites::plan_insert_partition_column_list_regions(&tokens, sql));
     crate::spark_rewrites::plan_struct_field_regions(&tokens, sql, &mut regions);

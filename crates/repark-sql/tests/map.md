@@ -14,6 +14,11 @@ holds behavior observed from outside the crate.
 
 ## Contents
 
+- `ansi_door_u9_types.rs` — **WO U9-TYPES-1 (2026-09-25):** the native door's row for the
+  Spark door's new type spellings: `TIMESTAMP_LTZ` in a column definition refuses
+  `Unsupported SQL type TIMESTAMP_LTZ` and creates nothing. pins: u9-types-1/C-004
+  The empty map is `MAP(ARRAY[], ARRAY[])` here and the Spark `MAP()` refuses.
+  pins: u9-types-1/C-008
 - `ansi_meta_delete.rs` — **ICE-META-DELETE-1 (2026-09-19):** the native door's end of Spark's
   metadata delete. A whole-file `DELETE` removes the file in ONE `delete` snapshot with no
   delete file, on both `write.delete.mode` values; a no-match commits the empty `delete`
