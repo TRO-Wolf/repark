@@ -11,7 +11,7 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
 ## Contents
 
 - `mod.rs` — module wiring: `parse` / `execute` / `read` / `describe` / `show_create` /
-  `temp_parse` / `temp_ddl` / `temp_view`.
+  `show_tblproperties` / `temp_parse` / `temp_ddl` / `temp_view`.
 - `parse.rs` — grammar only: `CREATE [OR REPLACE] [IF NOT EXISTS] VIEW` with
   alias/COMMENT/TBLPROPERTIES forms and verbatim body capture,
   `is_create_view_statement` (the durable head sniff the router skip uses),
@@ -83,6 +83,22 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   `complete_view_name(catalogs, …)` from `use_ddl::session_defaults`, so
   they follow `USE` like ALTER VIEW.
   pins: ice-views-1/C-017
+  **WO TBLPROPS-1 (2026-09-26):** tables no longer fall through —
+  `execute_show_tblproperties` answers a session-resolved bare name with the
+  empty frame, keeps the view arm, and loads a table through
+  `show_tblproperties.rs` once the view arm misses; the missing-name refusal
+  is unchanged. pins: tblprops-1/C-001, C-008, C-009, C-010
+- `show_tblproperties.rs` — **WO TBLPROPS-1 (2026-09-26):** the `SHOW
+  TBLPROPERTIES` table arm. `table_rows` builds Spark's sorted `key, value`
+  list from the loaded table's metadata: the `current-snapshot-id` / `format`
+  / `format-version` built-ins, the stored properties except `comment`,
+  `owner` and the built-in names, and the `zstd` compression-codec default
+  when no stored value wins; a key selects one row and a miss renders Spark's
+  `Table <catalog>.<namespace>.<table> does not have property: <key>` text.
+  Called from `execute.rs` once the view arm misses; the frame still comes
+  from `show_tblproperties_batch`.
+  pins: [`../tests/show_tblproperties.rs`](../tests/show_tblproperties.rs)
+  pins: tblprops-1/C-001, C-002, C-003, C-004, C-005, C-006, C-011
 - `temp_parse.rs` — **IPI-40 PR6** grammar for `CREATE [OR REPLACE] [GLOBAL]
   TEMP|TEMPORARY VIEW`: `try_parse_create_temp_view` (verbatim body, column
   aliases with COMMENT, view COMMENT accepted) and the Spark-measured parse

@@ -1695,6 +1695,61 @@ perfectly good read.
   is fork work (GAP_MATRIX R130) and is not on the v1.0 slate. The pin holds the honest
   current behavior so a later encryption landing reds it on purpose.
 
+#### D-SHOW-TBLPROPERTIES — `SHOW TBLPROPERTIES t` answers Spark's rows on Iceberg tables — **FIXED 2026-09-26**
+
+- **Before** — `SHOW TBLPROPERTIES cat.ns.t` on a table fell through to DataFusion and
+  failed with `SHOW [VARIABLE] is not supported unless information_schema is enabled`
+  (cell `D-SHOW-TBLPROPERTIES`); only catalog views answered (D-VIEW-SHOWPROPS-1).
+- **repark** — `SHOW TBLPROPERTIES [cat.][ns.]t` on an Iceberg table answers Spark's
+  `key, value` frame (both `string`, neither nullable): `current-snapshot-id` (the current snapshot
+  id as decimal text, `none` with no snapshot), `format` (`iceberg/` plus the effective
+  `write.format.default`, default `parquet`), `format-version`, the stored properties, and
+  `write.parquet.compression-codec` (the stored value, else Spark's default `zstd`), sorted
+  by key. Never rows: `comment`, RePark's stored `owner` stamp, and stored keys the
+  built-ins already answer. A fresh `k=v` table answers the five measured rows; after
+  `INSERT` the snapshot cell is the id; after `SET TBLPROPERTIES ('k2'='v2',
+  'write.format.default'='orc')` the seven measured rows with `format=iceberg/orc`; a v1
+  table reports `format-version=1` once; a partitioned table created with an explicit
+  `zstd` codec and a `comment` answers its four measured rows. Two-part and one-part names
+  answer the same rows after `USE`. A temporary view answers the two columns with no rows.
+  A missing table — and a wrong-case name the case-sensitive catalog does not hold — keeps
+  the `[TABLE_OR_VIEW_NOT_FOUND]` / `42P01` refusal with the registered `Error during
+  planning: ` prefix. Catalog views keep their existing rows (D-VIEW-SHOWPROPS-1).
+- **Apache Spark** — the same lists, measured 2026-09-26 on Spark 4.1.2 + Iceberg 1.11:
+  `fresh_all`, `after_insert_all`, `after_set_all`, `v1_all`, `partitioned_all`, `two_part`,
+  `one_part`, `temp_view`, `missing_table` and `mixed_case_table` in
+  `tblprops-spark-2026-09-26.json` (probe `tblprops-probe.py` beside it).
+- **Pin** — `python/repark/tests/test_tblprops_1.py` (every row list above `==`, the temp
+  view, the missing and wrong-case refusals, and the fall-through sweep);
+  `crates/repark-spark/src/tests/show_tblproperties.rs` (the same contract on the Rust
+  door); the updated `show_tblproperties_routing.rs`, `show_create.rs` and
+  `show_table_extended_near_miss.rs` table arms.
+  pins: tblprops-1/C-001, C-002, C-003, C-004, C-005, C-007, C-008, C-009, C-010, C-011
+- **Rationale** — FIXED 2026-09-26 (WO TBLPROPS-1). Two declared residues: the missing-name
+  text keeps the `Error during planning: ` prefix (the registered residue class) and omits
+  Spark's plan tail (the origin-tail convention).
+
+#### D-SHOW-TBLPROPERTIES-KEY — `SHOW TBLPROPERTIES t ('k')` answers the one row — **FIXED 2026-09-26**
+
+- **Before** — the keyed form fell through with the same `information_schema` refusal as
+  the listing (cell `D-SHOW-TBLPROPERTIES-KEY`).
+- **repark** — `SHOW TBLPROPERTIES [cat.][ns.]t ('key')` answers the single `[key, value]`
+  row against the same list the listing prints, so built-ins hit: `('k')`, `('format-version')`
+  and `('current-snapshot-id')` answer their values. A missing key answers
+  `[key, "Table <catalog>.<namespace>.<table> does not have property: <key>"]` with the
+  resolved three-part name unquoted; lookup is case-sensitive, so `('K')` misses. Excluded
+  properties (`comment`, `owner`) read as missing under a keyed lookup, consistent with
+  the listing.
+- **Apache Spark** — the same one-row answers, measured 2026-09-26 on Spark 4.1.2 +
+  Iceberg 1.11: `fresh_key`, `fresh_builtin_key`, `fresh_snapshot_key`, `fresh_missing_key`
+  and `key_upper` in `tblprops-spark-2026-09-26.json` (probe `tblprops-probe.py` beside it).
+- **Pin** — `python/repark/tests/test_tblprops_1.py::test_keyed_lookup_hits_value_and_builtins`
+  and `::test_keyed_lookup_misses_loudly_and_case_sensitively`;
+  `crates/repark-spark/src/tests/show_tblproperties.rs::keyed_lookup_hits_builtins_and_misses_loudly`.
+  pins: tblprops-1/C-006
+- **Rationale** — FIXED 2026-09-26 (WO TBLPROPS-1). The miss text names the resolved table;
+  no residue.
+
 ---
 
 ### 2.5 Statement shapes dbt emits
@@ -1762,28 +1817,29 @@ is `python/dbt-repark/tests/test_statement_surface.py`.
   surfaces (same reading as `ST-1`); the adapter keeps reading them rather than parsing
   `DESCRIBE` text, which is now Spark-shaped but still a diagnostic report, not a contract.
 
-#### DBT-TBLPROPS-1 — `SHOW TBLPROPERTIES` refuses; `SHOW TABLE EXTENDED` answers
+#### DBT-TBLPROPS-1 — `SHOW TBLPROPERTIES` and `SHOW TABLE EXTENDED` answer — **FIXED 2026-09-26**
 
-- **repark** — **2026-09-23:** `SHOW TABLE EXTENDED IN ns LIKE '*'` now answers Spark's
+- **repark** — **2026-09-26:** `SHOW TBLPROPERTIES cat.ns.t` on an Iceberg table answers
+  Spark's `key, value` rows — the three built-ins, the stored properties except `comment` and
+  `owner`, and the `zstd` compression-codec default, sorted by key (cells
+  `D-SHOW-TBLPROPERTIES`, `D-SHOW-TBLPROPERTIES-KEY`; WO TBLPROPS-1). **2026-09-23:**
+  `SHOW TABLE EXTENDED IN ns LIKE '*'` now answers Spark's
   four-column rows for Iceberg tables: `namespace`, `tableName`, `isTemporary`, and `information`.
   It does not list session temporary views; that is the remaining residue. RePark omits Spark's
   `Owner:` line (residue R-U4-16); owner stamping lands with the DESCRIBE owner-stamp PR.
-  `SHOW TBLPROPERTIES
-  cat.ns.t` still refuses with `AnalysisException: Error during planning: SHOW [VARIABLE] is not
-  supported unless information_schema is enabled` on a table until the next slice; a view answers
-  `SHOW TBLPROPERTIES` (IPI-40 PR4; D-VIEW-SHOWPROPS-1). The existing dbt adapter
+  A view answers `SHOW TBLPROPERTIES` (IPI-40 PR4; D-VIEW-SHOWPROPS-1). The existing dbt adapter
   `list_relations_without_caching` override is unchanged.
 - **Apache Spark** — Spark 4.1.2 answers `SHOW TABLE EXTENDED` on an Iceberg v2 table with its
   four-column relation detail row (measured 2026-09-23). `SHOW TBLPROPERTIES` lists the table's
-  properties.
+  properties (the measured row lists are under `D-SHOW-TBLPROPERTIES` /
+  `D-SHOW-TBLPROPERTIES-KEY`).
 - **Pin** —
   `python/dbt-repark/tests/test_statement_surface.py::test_served_shapes_run[S-SHOW-TABLE-EXTENDED]`,
-  `test_show_table_extended_answers_spark_shape`, and
-  `test_show_tblproperties_table_refusal_is_exact` (exact class, condition, SQLSTATE and full
-  text; `test_refused_shapes_fail_loud[R-SHOW-TBLPROPERTIES]` checks that the text contains the
-  recorded message)
-- **Rationale** — `SHOW TBLPROPERTIES` remains DECLARED for the next slice. `SHOW TABLE EXTENDED`
-  now serves catalog Iceberg tables, while session temporary views remain outside its row set.
+  `test_show_table_extended_answers_spark_shape`,
+  `test_served_shapes_run[S-SHOW-TBLPROPERTIES]`, and
+  `test_show_tblproperties_table_answers_spark_rows`
+- **Rationale** — FIXED 2026-09-26 (WO TBLPROPS-1). Both shapes now serve catalog Iceberg
+  tables, while session temporary views remain outside the `SHOW TABLE EXTENDED` row set.
 
 #### DBT-CREATENS-1 — namespace DDL refuses a one-part name
 

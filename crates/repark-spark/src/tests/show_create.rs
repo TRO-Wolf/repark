@@ -800,7 +800,7 @@ async fn show_columns_matches_the_complete_spark_row_and_schema() {
 }
 
 #[tokio::test]
-async fn show_tblproperties_keeps_its_current_analysis_refusal() {
+async fn show_tblproperties_answers_table_rows() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     run(
@@ -809,10 +809,56 @@ async fn show_tblproperties_keeps_its_current_analysis_refusal() {
         "CREATE TABLE ice.sales.t (id BIGINT) USING iceberg TBLPROPERTIES ('k'='v')",
     )
     .await;
-    let sql = "SHOW TBLPROPERTIES ice.sales.t";
+    let frame = execute(&ctx, &catalogs, "SHOW TBLPROPERTIES ice.sales.t")
+        .await
+        .expect("table must answer");
+    let batches = frame.collect().await.expect("collect properties");
+    assert_eq!(batches.len(), 1);
+    let batch = batches.first().expect("one batch");
     assert_eq!(
-        plan_error_message(&execution_error(&ctx, &catalogs, sql).await, sql),
-        "SHOW [VARIABLE] is not supported unless information_schema is enabled"
+        batch
+            .schema()
+            .fields()
+            .iter()
+            .map(|field| (
+                field.name().as_str(),
+                field.data_type(),
+                field.is_nullable()
+            ))
+            .collect::<Vec<_>>(),
+        vec![
+            ("key", &DataType::Utf8, false),
+            ("value", &DataType::Utf8, false)
+        ]
+    );
+    let keys = batch
+        .column(0)
+        .as_any()
+        .downcast_ref::<StringArray>()
+        .expect("keys");
+    let values = batch
+        .column(1)
+        .as_any()
+        .downcast_ref::<StringArray>()
+        .expect("values");
+    assert_eq!(
+        (0..batch.num_rows())
+            .map(|index| (
+                keys.value(index).to_string(),
+                values.value(index).to_string()
+            ))
+            .collect::<Vec<_>>(),
+        vec![
+            ("current-snapshot-id".to_string(), "none".to_string()),
+            ("format".to_string(), "iceberg/parquet".to_string()),
+            ("format-version".to_string(), "2".to_string()),
+            ("k".to_string(), "v".to_string()),
+            (
+                "write.parquet.compression-codec".to_string(),
+                "zstd".to_string()
+            ),
+        ],
+        "pins: tblprops-1/C-001"
     );
 }
 

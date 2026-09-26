@@ -135,6 +135,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `ts_year`, `ts_month`, `ts_hour`, `id_bucket_16`, `s_trunc_4`, `my_month`), DROP removes
   and REPLACE lands `s_trunc_5` on a fresh id, and `bucket(4, u)` over uuid is `u_bucket_4`.
   pins: partname-1/C-001, C-002, C-003
+- [test_tblprops_1.py](test_tblprops_1.py) — **WO TBLPROPS-1 (2026-09-26):**
+  `D-SHOW-TBLPROPERTIES` / `D-SHOW-TBLPROPERTIES-KEY` — every Spark-measured row list
+  `==`: fresh, post-insert, post-`SET TBLPROPERTIES`, v1, partitioned-with-comment,
+  keyed hits and case-sensitive misses, two/one-part names after `USE`, the empty temp-view
+  frame, a stored codec beating `zstd` and the default after `UNSET`, and the
+  missing/wrong-case refusals with the fall-through sweep.
+  pins: tblprops-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
 - [test_ice_error_conditions_1.py](test_ice_error_conditions_1.py) —
   **ICE-ERROR-CONDITIONS-1 / IPI-51 PR1 (2026-09-20):** constructor pins for the native
   error-condition parser — `getCondition`/`getErrorClass`/`getSqlState` on the PyO3

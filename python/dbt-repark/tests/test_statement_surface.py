@@ -88,6 +88,12 @@ def _served() -> tuple[Shape, ...]:
             None,
         ),
         Shape(
+            "S-SHOW-TBLPROPERTIES",
+            "fetch_tbl_properties",
+            f"show tblproperties {survey}",
+            None,
+        ),
+        Shape(
             "S-SET-CONF",
             "server_side_parameters",
             "set spark.sql.shuffle.partitions = 2",
@@ -242,12 +248,6 @@ def _refused() -> tuple[Shape, ...]:
             "expected a two-part `catalog.namespace` name",
         ),
         Shape(
-            "R-SHOW-TBLPROPERTIES",
-            "fetch_tbl_properties",
-            f"show tblproperties {fact}",
-            "SHOW [VARIABLE] is not supported unless information_schema is enabled",
-        ),
-        Shape(
             "R-RENAME-TWO-PART",
             "spark__rename_relation",
             f"alter table ghost.{STEM}_survey rename to ghost.renamed",
@@ -315,20 +315,22 @@ def test_refused_shapes_fail_loud(seeded_session: Any, shape: Shape) -> None:
     assert shape.refusal in str(caught.value)
 
 
-def test_show_tblproperties_table_refusal_is_exact(seeded_session: Any) -> None:
-    """R-SHOW-TBLPROPERTIES pins the exact class, condition, SQLSTATE and full refusal text."""
-    from repark.errors import AnalysisException
-
+def test_show_tblproperties_table_answers_spark_rows(seeded_session: Any) -> None:
+    """S-SHOW-TBLPROPERTIES pins the served key/value rows. pins: tblprops-1/C-001."""
     fact = f"{CATALOG}.{NAMESPACE}.{STEM}_survey"
-    with pytest.raises(AnalysisException) as caught:
-        seeded_session.sql(f"show tblproperties {fact}").to_arrow()
-    assert type(caught.value) is AnalysisException
-    assert caught.value.getCondition() is None
-    assert caught.value.getSqlState() is None
-    assert str(caught.value) == (
-        "Error during planning: SHOW [VARIABLE] is not supported unless information_schema "
-        "is enabled"
-    )
+    shown = seeded_session.sql(f"show tblproperties {fact}").to_arrow()
+    assert shown.column_names == ["key", "value"]
+    rows = shown.to_pylist()
+    assert [row["key"] for row in rows] == sorted(row["key"] for row in rows)
+    by_key = {row["key"]: row["value"] for row in rows}
+    assert by_key["format"] == "iceberg/parquet"
+    assert by_key["format-version"] == "2"
+    assert by_key["current-snapshot-id"].isdigit()
+    assert by_key["write.parquet.compression-codec"] == "zstd"
+    assert "owner" not in by_key
+    assert "comment" not in by_key
+    keyed = seeded_session.sql(f"show tblproperties {fact} ('format-version')").to_arrow()
+    assert keyed.to_pylist() == [{"key": "format-version", "value": "2"}]
 
 
 def test_temporary_view_shape_stages_the_source_rows(seeded_session: Any) -> None:

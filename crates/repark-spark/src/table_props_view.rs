@@ -79,7 +79,7 @@ fn is_reserved_property(key: &str) -> bool {
     ICEBERG_RESERVED_PROPERTIES.contains(&key) || SPARK_RESERVED_PROPERTIES.contains(&key)
 }
 
-fn format_version_number(version: FormatVersion) -> u8 {
+pub(crate) fn format_version_number(version: FormatVersion) -> u8 {
     match version {
         FormatVersion::V1 => 1,
         FormatVersion::V2 => 2,
