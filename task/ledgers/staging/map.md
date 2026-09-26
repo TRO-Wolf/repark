@@ -50,7 +50,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   eager getitem refusal, twin rename and replace, star forms).
   Round 6 (2026-09-26): compound origin Columns keep their side's exact binding through
   arithmetic, cast, alias, `when` and `withColumn` on a case-twin join, and no ambiguity text
-  names a scratch relation (C-027).
+  names a scratch relation (C-027). Residue R-22 dated 2026-09-26 (pre-existing on main: exact-duplicate
+  plain frames refuse their re-projections, a two-`id` join's `dropna` answers, a `a.b` column's
+  `dropna` answers).
   `risk_tier: standard`. Branch `feat/u11-edge-1`.
 - [u8-write-sql-ledger.md](u8-write-sql-ledger.md) —
   **U8 WRITE-SQL PR1 (2026-09-24), in flight:** `INSERT INTO … REPLACE WHERE` as Spark's
