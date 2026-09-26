@@ -31,18 +31,13 @@ EXEMPT_PATHS: tuple[tuple[str, ...], ...] = (("tests", "goldens"), ("tests", "fi
 # Every row retires when its file reaches DEFAULT_CEILING. A baseline increase
 # requires explicit owner approval; ordinary edits only ratchet rows down.
 EXCEPTIONS: dict[str, tuple[int, str, str]] = {
-    "crates/repark-core/src/catalog_config.rs": (
-        1006,
-        "Session catalog configuration still owns every backend shape.",
-        "Split backend-specific option parsing from shared session installation.",
-    ),
     "crates/repark-core/src/dynamic_flatten/tests.rs": (
         1442,
         "Dynamic-flatten behavior and refusal scenarios share one test module.",
         "Split structural cases from list and refusal cases with an identity check.",
     ),
     "crates/repark-core/src/session/tests/session.rs": (
-        1407,
+        1406,
         "Session behavior scenarios remain in one file-backed test module.",
         "Split by configuration, planning, and execution scenario families.",
     ),

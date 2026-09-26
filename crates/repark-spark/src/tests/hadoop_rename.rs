@@ -11,6 +11,7 @@ async fn configured_session(catalog_type: &str, warehouse: &Path) -> ReparkSessi
     let session = ReparkSession::builder()
         .with_extension(Arc::new(SparkExtension))
         .with_sql_dialect(Arc::new(SparkDialect))
+        .config("repark.sql.catalogExtensions", "true")
         .config("spark.sql.catalog.ice.type", catalog_type)
         .config(
             "spark.sql.catalog.ice.warehouse",

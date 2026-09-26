@@ -454,7 +454,7 @@ def test_default_catalog_from_builder_config(tmp_path: Path) -> None:
         ReparkSession.builder.appName("default-cat")
         .config("spark.sql.defaultCatalog", "glue_catalog")
         .config("spark.sql.catalog.glue_catalog", "org.apache.iceberg.spark.SparkCatalog")
-        .config("spark.sql.catalog.glue_catalog.type", "memory")
+        .config("spark.sql.catalog.glue_catalog.type", "hadoop")
         .config("spark.sql.catalog.glue_catalog.warehouse", str(tmp_path))
         .getOrCreate()
     )

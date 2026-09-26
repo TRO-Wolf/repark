@@ -8880,6 +8880,31 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   pins: catalog-1/C-005
 - **Rationale** — the cell replays EQUAL.
 
+### CAT-TYPE-MEMORY — a `type=memory` block answered `ok` instead of refusing — **FIXED 2026-09-26 (WO CATALOG-1)**
+
+- **repark** — a catalog block whose kind comes only from `type=memory` builds quietly,
+  is not listed, and raises Spark's `UnsupportedOperationException`
+  `Unknown catalog type: memory` at every first use (a statement naming it, `USE`,
+  `SHOW … IN/FROM`, `setCurrentCatalog`, `tableExists`); a later long-form block replaces
+  the refusal. A block with both `type` and `catalog-impl` raises Spark's
+  `IllegalArgumentException` `Cannot create catalog <name>, both type and catalog-impl are
+  set: …` with raw values. The opt-in `repark.sql.catalogExtensions=true` restores the old
+  memory kind and the old both-keys rule.
+- **Apache Spark** — measured 2026-09-26 (recorded, `target/probe-catalog-1/spark-main.json`
+  keys `c_mem_*` / `c_both_*`; `target/probe-catalog-1b/spark-open.json`: the `type` match
+  is case-insensitive and echoes the raw value, the both-keys text is general).
+- **Pin** — `python/repark/tests/test_catalog_1.py::test_type_memory_cell_refuses_at_first_use`,
+  `…::test_type_memory_on_the_builder_door_builds_and_refuses_at_first_use`,
+  `…::test_both_kind_keys_refuse_at_first_use_on_both_doors`,
+  `…::test_the_catalog_extensions_opt_in_restores_the_memory_type`,
+  `crates/repark-spark/src/tests/session_catalog.rs::a_bare_memory_type_refuses_every_first_use_with_sparks_text`,
+  `…::both_kind_keys_refuse_every_first_use_as_illegal_argument`,
+  `…::the_catalog_impl_long_form_and_the_opt_in_stay_catalogs`,
+  `crates/repark-core/src/catalog_config/refusal_tests.rs`,
+  `crates/repark-core/src/session/tests/session_catalog.rs`.
+  pins: catalog-1/C-006, C-007, C-008
+- **Rationale** — the cell replays EQUAL (the identical error record).
+
 ### CUTOVER-CTAS-REQ-1 — parquet CTAS keeps source non-null fields required; Spark makes every column optional
 
 - **repark** — **FIXED 2026-09-04 (CUTOVER-SCHEMA-1).** The same CTAS stores every field

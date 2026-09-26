@@ -53,7 +53,12 @@ fn repark_spelling_of_hadoop_type_selects_hadoop_naming() {
 
 #[test]
 fn memory_type_adds_no_metadata_naming() {
-    let spec = single_spec(&memory_block(&[("type", "memory")]));
+    let mut block = memory_block(&[("type", "memory")]);
+    block.insert(
+        "repark.sql.catalogExtensions".to_string(),
+        "true".to_string(),
+    );
+    let spec = single_spec(&block);
     assert_eq!(spec.kind, CatalogKind::Memory);
     assert!(!spec.props.contains_key(NAMING), "{spec:?}");
 }
@@ -76,7 +81,12 @@ fn explicit_metadata_naming_wins_over_hadoop_type() {
 
 #[test]
 fn explicit_metadata_naming_passes_through_verbatim() {
-    let spec = single_spec(&memory_block(&[("type", "memory"), (NAMING, "Hadoop")]));
+    let mut block = memory_block(&[("type", "memory"), (NAMING, "Hadoop")]);
+    block.insert(
+        "repark.sql.catalogExtensions".to_string(),
+        "true".to_string(),
+    );
+    let spec = single_spec(&block);
     assert_eq!(spec.props.get(NAMING).map(String::as_str), Some("Hadoop"));
 }
 

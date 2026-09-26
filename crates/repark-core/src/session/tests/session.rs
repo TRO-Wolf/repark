@@ -598,7 +598,7 @@ async fn late_catalog_registration_adds_new_names_and_skips_existing() {
     let wh_a = TempDir::new().unwrap();
     let wh_b = TempDir::new().unwrap();
     let spark = ReparkSession::builder()
-        .config("spark.sql.catalog.cat_a.type", "memory")
+        .config("spark.sql.catalog.cat_a.type", "hadoop")
         .config(
             "spark.sql.catalog.cat_a.warehouse",
             wh_a.path().to_str().unwrap(),
@@ -612,7 +612,7 @@ async fn late_catalog_registration_adds_new_names_and_skips_existing() {
     let late = HashMap::from([
         (
             "spark.sql.catalog.cat_a.type".to_string(),
-            "memory".to_string(),
+            "hadoop".to_string(),
         ),
         (
             "spark.sql.catalog.cat_a.warehouse".to_string(),
@@ -620,7 +620,7 @@ async fn late_catalog_registration_adds_new_names_and_skips_existing() {
         ),
         (
             "spark.sql.catalog.cat_b.type".to_string(),
-            "memory".to_string(),
+            "hadoop".to_string(),
         ),
         (
             "spark.sql.catalog.cat_b.warehouse".to_string(),
@@ -662,7 +662,7 @@ async fn late_catalog_registration_adds_new_names_and_skips_existing() {
     let err = spark
         .register_late_configured_catalogs(&HashMap::from([(
             "spark.sql.catalog.cat_c.type".to_string(),
-            "memory".to_string(),
+            "hadoop".to_string(),
         )]))
         .await
         .expect_err("malformed late block must error");
@@ -1383,7 +1383,6 @@ async fn register_memory_catalog_fallback_root_is_the_warehouse() {
     assert_eq!(catalogs.warehouse_layout_root("ice"), Some(root));
 }
 
-/// A13: the `spark.sql.catalog.*.type=memory` config path uses the same warehouse root.
 #[tokio::test]
 async fn configured_memory_catalog_fallback_root_is_the_warehouse() {
     use tempfile::TempDir;
@@ -1393,7 +1392,7 @@ async fn configured_memory_catalog_fallback_root_is_the_warehouse() {
     let warehouse = TempDir::new().unwrap();
     let warehouse_str = warehouse.path().to_str().unwrap();
     let session = ReparkSession::builder()
-        .config("spark.sql.catalog.mem.type", "memory")
+        .config("spark.sql.catalog.mem.type", "hadoop")
         .config("spark.sql.catalog.mem.warehouse", warehouse_str)
         .build()
         .unwrap();

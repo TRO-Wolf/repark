@@ -47,6 +47,9 @@ pub(crate) fn catalog_handle<'a>(
     catalogs: &'a CatalogRegistry,
     name: &str,
 ) -> Result<&'a Arc<dyn Catalog>> {
+    if let Some(refusal) = catalogs.refusal(name) {
+        return Err(crate::session_catalog::to_datafusion_error(refusal.error()));
+    }
     if let Some(handle) = catalogs.get(name) {
         return Ok(handle);
     }

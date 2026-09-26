@@ -12,7 +12,7 @@ use crate::ReparkSession;
 async fn offline_session_finalize_never_resolves_aws_sdk_config() {
     let wh = TempDir::new().unwrap();
     let session = ReparkSession::builder()
-        .config("spark.sql.catalog.ice.type", "memory")
+        .config("spark.sql.catalog.ice.type", "hadoop")
         .config(
             "spark.sql.catalog.ice.warehouse",
             wh.path().to_string_lossy().to_string(),

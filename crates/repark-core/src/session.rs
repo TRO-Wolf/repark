@@ -541,6 +541,10 @@ impl ReparkSession {
                  registered)",
                 spec.name
             ))),
+            CatalogKind::Refused => {
+                self.note_catalog_refusal(spec);
+                Ok(())
+            }
         }
     }
 
@@ -594,6 +598,7 @@ impl ReparkSession {
 
     /// The registered iceberg handle for `catalog`, or a targeted unknown-catalog error.
     fn catalog_handle(&self, catalog: &str) -> Result<Arc<dyn Catalog>> {
+        self.check_catalog_refusal(catalog)?;
         self.catalogs
             .read()
             .unwrap_or_else(std::sync::PoisonError::into_inner)

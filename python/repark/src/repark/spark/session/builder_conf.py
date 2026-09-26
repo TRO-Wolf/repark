@@ -44,6 +44,8 @@ _CACHE_BYTE_BUDGET_KEYS_LOWER: frozenset[str] = frozenset(
 
 _CATALOG_KEY_PREFIXES: tuple[str, str] = ("spark.sql.catalog.", "repark.sql.catalog.")
 
+_CATALOG_EXTENSIONS_KEY_LOWER = "repark.sql.catalogextensions"
+
 
 def _late_catalog_block_name(key: str) -> str | None:
     """The catalog name a ``spark.sql.catalog.*`` key belongs to, else ``None``."""
@@ -64,6 +66,24 @@ def _late_catalog_block_keys(store: dict[str, str], name: str) -> dict[str, str]
             if key == f"{prefix}{name}" or key.startswith(f"{prefix}{name}."):
                 block[key] = value
     return block
+
+
+def _catalog_extensions_entry(
+    store: Mapping[str, str], builder: Mapping[str, str | None], tombs: set[str]
+) -> tuple[str, str] | None:
+    """The effective ``repark.sql.catalogExtensions`` entry, if set (any key case)."""
+    lowered_tombs = {tomb.lower() for tomb in tombs}
+    for key, value in store.items():
+        if key.lower() == _CATALOG_EXTENSIONS_KEY_LOWER:
+            return key, value
+    for key, value in builder.items():
+        if (
+            value is not None
+            and key.lower() == _CATALOG_EXTENSIONS_KEY_LOWER
+            and key.lower() not in lowered_tombs
+        ):
+            return key, value
+    return None
 
 
 class SparkContext:
@@ -285,14 +305,19 @@ class RuntimeConfig:
 
         Incomplete blocks stay silent; a first complete parse registers and later
         sets only update the catalog side map. A complete block that cannot build
-        raises from the engine.
+        raises from the engine. The effective ``repark.sql.catalogExtensions`` value
+        rides along so the engine parses the block under the same opt-in.
         """
         store = {
             key: value for key, value in self._store().items() if key not in self._unset_keys()
         }
-        if _native.register_late_catalog_block(
-            self._session._ensure_alive(), _late_catalog_block_keys(store, name)
-        ):
+        block = _late_catalog_block_keys(store, name)
+        forwarded = _catalog_extensions_entry(
+            store, self._session._builder_config, self._unset_keys()
+        )
+        if forwarded is not None:
+            block[forwarded[0]] = forwarded[1]
+        if _native.register_late_catalog_block(self._session._ensure_alive(), block):
             self._session._note_registered_catalog(name)
 
     def get(

@@ -12,6 +12,7 @@ const HADOOP_RENAME_REFUSAL: &str = "Cannot rename Hadoop tables";
 async fn configured_session(catalog_type: &str, warehouse: &TempDir) -> ReparkSession {
     let session = ReparkSession::builder()
         .with_sql_dialect(Arc::new(AnsiDialect))
+        .config("repark.sql.catalogExtensions", "true")
         .config("spark.sql.catalog.ice.type", catalog_type)
         .config(
             "spark.sql.catalog.ice.warehouse",

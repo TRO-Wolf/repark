@@ -409,12 +409,21 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   (cross-spelling duplicates collapse when identical, fail loud otherwise). Rules: bare
   `…catalog.<name>` = the Spark catalog class or a short kind; `<name>.catalog-impl` ending
   `GlueCatalog`→`Glue` / `S3TablesCatalog`→`S3Tables` / `InMemoryCatalog`→`Memory`;
-  `<name>.type` = `glue`/`s3tables`/`memory`/`hadoop` (`memory` requires `warehouse`,
-  `hadoop` aliases to it per INDEX 25); `<name>.io-impl` dropped; every other prop passes
+  `<name>.type` = `glue`/`s3tables`/`memory`/`hadoop` (`memory` on its own resolves to the
+  refused kind, like Spark; `hadoop` aliases to `Memory` per INDEX 25 and still requires
+  `warehouse`); `<name>.io-impl` dropped; every other prop passes
   through verbatim (an S3 Tables `warehouse` ARN is carried into `table_bucket_arn` when the
   latter is absent). Fail-loud `Error::Config` naming the exact key. Registration policy: Glue
   `RequireExplicitLocation`; S3 Tables `ServiceManagedLocation`; memory keeps the temp
   fallback. `CatalogSpec` hand-written `Debug` redacts secret-like prop values.
+  **CATALOG-1 (2026-09-26):** a block whose kind comes only from `type=memory`, or that sets
+  both `type` and `catalog-impl`, resolves to `CatalogKind::Refused` carrying Spark's refusal
+  text (`catalog_config/refusal.rs`: `CatalogRefusal`, the `repark.sql.catalogExtensions`
+  opt-in read, the raw-value message builders). The opt-in restores the old memory kind and
+  the old both-keys rule. The touched inline tests share an `entry` helper and class-name
+  consts; the parse pins live in
+  [catalog_config/refusal_tests.rs](catalog_config/map.md); the file drops 1006 → 965 and
+  its size row retires. pins: catalog-1/C-006, C-007, C-008
   **ICE-CATALOG-SESSION-1 S7 (2026-09-20):** `kind_from_type` + `kind_from_catalog_impl`
   move to `catalog_kind.rs` (1028 → 1007, ratcheted); the accepted sets gain `hadoop` and
   `InMemoryCatalog` (both → `Memory`), with the refusal texts updated.

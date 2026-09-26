@@ -16,7 +16,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - `catalog.py` — **CATALOG-1 (2026-09-26):** `currentCatalog()` reads the engine
   (`_native.current_catalog_checked`: `CATALOG_NOT_FOUND` raises), and `tableExists` /
   `databaseExists` / `getDatabase` / `listTables` no longer alias `spark_catalog` to the current
-  catalog. pins: catalog-1/C-002, C-004
+  catalog. `_catalog_is_registered` re-raises a refused catalog's refusal instead of
+  answering `False`. pins: catalog-1/C-002, C-004, C-006, C-007
 
 ## Modules
 

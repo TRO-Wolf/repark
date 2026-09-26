@@ -61,6 +61,8 @@ BALLISTA-M2-B adds `predicate_expr.rs` (typed `Predicate` → `Expr`) behind tha
   unknown tag refuses loud. Rebuild looks up the Iceberg table from the session catalog.
   File-group rewrite stays the fallback for a node with no codec entry.
   pins: ballista-m1-d/C-001, C-002, ballista-m2-b/C-001, C-002, C-004
+  **CATALOG-1 (2026-09-26):** the kind codec maps the refused kind (round-trips; refused
+  specs never travel the wire) and the spec literals carry `refusal: None`.
 
 ## Pointers
 

@@ -180,10 +180,12 @@ def test_config_driven_catalog_publish_flow(tmp_path: Path) -> None:
     `io-impl`) but swaps `type = memory` for the real Glue `catalog-impl`, so the config map
     alone registers the catalog at `getOrCreate` — no `register_memory_catalog` call — proving
     the `spark.sql.catalog.<name>.*` mapping drives a real catalog end to end (namespace →
-    CTAS → MERGE round-trip).
+    CTAS → MERGE round-trip). The memory spelling needs the `repark.sql.catalogExtensions`
+    opt-in (catalog-1/C-008).
     """
     spark = (
         ReparkSession.builder.appName("process-silver")
+        .config("repark.sql.catalogExtensions", "true")
         .config("spark.sql.catalog.glue_alt", "org.apache.iceberg.spark.SparkCatalog")
         .config("spark.sql.catalog.glue_alt.type", "memory")
         .config("spark.sql.catalog.glue_alt.warehouse", str(tmp_path))
@@ -230,6 +232,7 @@ def test_repark_prefixed_catalog_config_registers_identically(tmp_path: Path) ->
     # path as the Spark spelling — CTAS round-trip proves it.
     spark = (
         ReparkSession.builder.appName("repark-native-config")
+        .config("repark.sql.catalogExtensions", "true")
         .config("repark.sql.catalog.native_cat.type", "memory")
         .config("repark.sql.catalog.native_cat.warehouse", str(tmp_path))
         .getOrCreate()

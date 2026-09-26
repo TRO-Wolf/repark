@@ -2,7 +2,8 @@ use std::collections::HashMap;
 
 use repark_common::Result;
 
-use crate::catalog_config::{self, CatalogKind};
+use crate::catalog_config::refusal::CatalogRefusal;
+use crate::catalog_config::{self, CatalogKind, CatalogSpec};
 use crate::resolve_s3_region_override;
 use crate::session::{AWS_ENABLE_CONFIG_KEY, ReparkSession};
 
@@ -39,7 +40,9 @@ impl ReparkSession {
                 skipped.push(spec.name.clone());
             } else {
                 self.register_catalog_spec(spec).await?;
-                added.push(spec.name.clone());
+                if spec.refusal.is_none() {
+                    added.push(spec.name.clone());
+                }
             }
         }
         added.sort();
@@ -52,6 +55,28 @@ impl ReparkSession {
             .write()
             .unwrap_or_else(std::sync::PoisonError::into_inner)
             .merge_table_props(name, props);
+    }
+
+    pub(super) fn note_catalog_refusal(&self, spec: &CatalogSpec) {
+        if let Some(refusal) = spec.refusal.clone() {
+            self.catalogs
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .insert_refusal(spec.name.clone(), refusal);
+        }
+    }
+
+    pub(super) fn check_catalog_refusal(&self, name: &str) -> Result<()> {
+        if let Some(error) = self
+            .catalogs
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .refusal(name)
+            .map(CatalogRefusal::error)
+        {
+            return Err(error);
+        }
+        Ok(())
     }
 
     fn is_catalog_registered(&self, name: &str) -> bool {
@@ -83,6 +108,9 @@ impl ReparkSession {
             self.resolve_aws_sdk_config_if(true).await;
         }
         self.register_catalog_spec(&spec).await?;
+        if spec.refusal.is_some() {
+            return Ok(false);
+        }
         self.note_catalog_table_props(&spec.name, &spec.props);
         Ok(true)
     }

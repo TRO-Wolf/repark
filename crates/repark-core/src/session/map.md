@@ -169,6 +169,11 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   loop too, one line).
   pins: ice-catalog-session-1/C-024
   S7 strips the `///` docs (comment-ban zero); the semantics above stand.
+  **CATALOG-1 (2026-09-26):** `note_catalog_refusal` / `check_catalog_refusal`
+  (the refused-kind placeholder: stored beside the entries, never listed, every use raises
+  its refusal; a later long-form block replaces it). The singular late path reports a
+  refusal as `false`; the plural path reports refused names in neither list.
+  pins: catalog-1/C-006, C-007, C-008
   **CSV-INFER-PERF-1 (2026-09-06):** `read_csv` body moved to `read_options.rs`;
   `session.rs` 1002 → 988 and the CAP-1 exception retired (under the default ceiling).
   pins: csv-infer-perf-1/C-006

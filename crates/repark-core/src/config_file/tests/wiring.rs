@@ -315,7 +315,7 @@ async fn file_built_session_registers_the_same_catalogs_as_config_calls() {
     let warehouse = TempDir::new().expect("warehouse fixture");
     let warehouse_text = warehouse.path().to_str().expect("utf8 warehouse");
     let (_directory, path) = staged_file(&format!(
-        "[default.catalog.m]\ntype = \"memory\"\nwarehouse = \"{warehouse_text}\"\n"
+        "[default.catalog.m]\ntype = \"hadoop\"\nwarehouse = \"{warehouse_text}\"\n"
     ));
     let from_file = ReparkSessionBuilder::default()
         .from_config_file(Some(path))
@@ -328,7 +328,7 @@ async fn file_built_session_registers_the_same_catalogs_as_config_calls() {
     let (_empty_directory, empty_path) = staged_file("");
     let from_calls = ReparkSessionBuilder::default()
         .from_config_file(Some(empty_path))
-        .config("repark.sql.catalog.m.type", "memory")
+        .config("repark.sql.catalog.m.type", "hadoop")
         .config("repark.sql.catalog.m.warehouse", warehouse_text)
         .build()
         .expect("config build");

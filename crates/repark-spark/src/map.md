@@ -1980,7 +1980,8 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: u9-types-1/C-010
 - `local_fs_ddl.rs` — SEC-02 local-filesystem DDL gate; 9 in-module tests.
 - `catalog_ops.rs` — catalog lookup, P11 refusals, `iceberg_err`, path-escape rejection, and
-  `reregister*` provider invalidation. It is also the home of the v2-command intercepts
+  `reregister*` provider invalidation. **CATALOG-1 (2026-09-26):** `catalog_handle` raises a
+  refused catalog's refusal before the unknown-catalog error. It is also the home of the v2-command intercepts
   `v2_json_preparse` / `v2_tail_preparse` and their `v2_command_outcome` helper, next to
   `not_supported_command_for_v2_table`. **IPI-21/IPI-25 (2026-09-20):** `table_or_view_not_found`
   is the single home of Spark's `[TABLE_OR_VIEW_NOT_FOUND]` text for a three-part name, condition
