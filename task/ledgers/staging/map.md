@@ -40,7 +40,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   R-1…R-10 (R-5…R-10 dated 2026-09-26, candidates for CASESENS-1). Round 4 (2026-09-26): a qualified
   Column drop binds through its relation and an unmatched drop is a no-op (C-022); a bare
   reference matching two fields ignoring case refuses AMBIGUOUS_REFERENCE, exact spelling
-  included (C-023).
+  included (C-023). Residues R-11…R-15 dated 2026-09-26 for CASESENS-1 (qualified string
+  names in select, the `(t.id + 1)` name, the ANSI positional INT/STRING union, the missing
+  relation text, the folded reference spelling on compound Columns).
   `risk_tier: standard`. Branch `feat/u11-edge-1`.
 - [u8-write-sql-ledger.md](u8-write-sql-ledger.md) —
   **U8 WRITE-SQL PR1 (2026-09-24), in flight:** `INSERT INTO … REPLACE WHERE` as Spark's
