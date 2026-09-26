@@ -21,10 +21,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   uuid reads, F-UUID-STATIC-1), R-30, R-31. Round-2 fixer (2026-09-26): RP-52 static and catalog
   uuid options — snapshot-pinned reads present uuid as text (R-29 retired, group `uuid-snap`) and
   the catalog option replaces the `UuidTextSchemaProvider` shim. The UPDATE table rendering retires two u8-write-sql
-  R-16 keys.
+  R-16 keys. Round-3 fixer (2026-09-26): a binary source into a uuid column is text and nested
+  `STRUCT<u: uuid>` assignments type as text (C-016, groups `uuid-binary` and `uuid-nested`).
   `risk_tier: standard`. Branch `feat/u9-types-1`.
   pins: u9-types-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-011, C-012
-  pins: u9-types-1/C-013, C-014, C-015
+  pins: u9-types-1/C-013, C-014, C-015, C-016
 - [u8-write-sql-ledger.md](u8-write-sql-ledger.md) —
   **U8 WRITE-SQL PR1 (2026-09-24), in flight:** `INSERT INTO … REPLACE WHERE` as Spark's
   overwrite by filter, `INSERT INTO … PARTITION (…)` static and dynamic keys, and positional

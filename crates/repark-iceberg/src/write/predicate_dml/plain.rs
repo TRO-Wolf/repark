@@ -80,14 +80,24 @@ pub async fn plain_identity_needs_fork(
     }
     spec.assignments.as_ref().is_some_and(|assignments| {
         assignments.iter().any(|(name, _)| {
-            top_level_field(schema, name).is_some_and(|field| {
-                matches!(
-                    field.field_type.as_ref(),
-                    Type::Primitive(PrimitiveType::Uuid)
-                )
-            })
+            top_level_field(schema, name).is_some_and(|field| carries_uuid(&field.field_type))
         })
     })
+}
+
+fn carries_uuid(field_type: &Type) -> bool {
+    match field_type {
+        Type::Primitive(primitive) => matches!(primitive, PrimitiveType::Uuid),
+        Type::Struct(fields) => fields
+            .fields()
+            .iter()
+            .any(|field| carries_uuid(&field.field_type)),
+        Type::List(list) => carries_uuid(&list.element_field.field_type),
+        Type::Map(map) => {
+            carries_uuid(&map.key_field.field_type) || carries_uuid(&map.value_field.field_type)
+        }
+        Type::Variant => false,
+    }
 }
 
 struct ColumnRefs<'a> {

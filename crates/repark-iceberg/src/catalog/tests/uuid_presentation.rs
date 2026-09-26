@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Array, ArrayRef, AsArray, StringArray, StructArray};
+use datafusion::arrow::array::{
+    Array, ArrayRef, AsArray, BinaryArray, LargeBinaryArray, StringArray, StructArray,
+};
 use datafusion::arrow::datatypes::{DataType, Field};
 use iceberg::spec::{NestedField, PrimitiveType, Schema, StructType, Type};
 
@@ -102,4 +104,34 @@ fn an_invalid_text_refuses_with_the_fork_text() {
         error.to_string(),
         "External error: DataInvalid => Invalid UUID string: nope"
     );
+}
+
+#[test]
+fn a_binary_source_is_decoded_text_like_spark() {
+    let raw = [
+        0x12, 0x3e, 0x45, 0x67, 0xe8, 0x9b, 0x12, 0xd3, 0xa4, 0x56, 0x42, 0x66, 0x14, 0x17, 0x40,
+        0x00,
+    ];
+    let bytes: ArrayRef = Arc::new(BinaryArray::from(vec![Some(&raw[..])]));
+    let error = convert_uuid_column(&bytes, &DataType::FixedSizeBinary(16)).expect_err("refuses");
+    assert_eq!(
+        error.to_string(),
+        "External error: DataInvalid => Invalid UUID string: \u{12}>Eg\u{fffd}\u{12}\u{4e4}VBf\u{14}\u{17}@\u{0}"
+    );
+    let canonical = b"223e4567-e89b-12d3-a456-426614174001";
+    for text in [
+        Arc::new(BinaryArray::from(vec![Some(&canonical[..]), None])) as ArrayRef,
+        Arc::new(LargeBinaryArray::from(vec![Some(&canonical[..]), None])) as ArrayRef,
+    ] {
+        let stored = convert_uuid_column(&text, &DataType::FixedSizeBinary(16)).expect("stores");
+        let stored = stored.as_fixed_size_binary();
+        assert_eq!(
+            uuid::Uuid::from_slice(stored.value(0))
+                .expect("uuid")
+                .hyphenated()
+                .to_string(),
+            "223e4567-e89b-12d3-a456-426614174001"
+        );
+        assert!(stored.is_null(1));
+    }
 }

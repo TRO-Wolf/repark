@@ -695,7 +695,10 @@ async fn merge_target_schema(
     let catalog = catalogs.get(catalog)?;
     let ident = TableIdent::new(NamespaceIdent::new(namespace.clone()), table_name.clone());
     let loaded = catalog.load_table(&ident).await.ok()?;
-    iceberg::arrow::schema_to_arrow_schema(loaded.metadata().current_schema()).ok()
+    repark_iceberg::catalog::uuid_presentation::presented_arrow_schema(
+        loaded.metadata().current_schema(),
+    )
+    .ok()
 }
 
 pub(crate) async fn fold_merge_clauses(

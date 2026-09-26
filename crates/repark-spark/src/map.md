@@ -1077,6 +1077,11 @@ pins: rp-4-fork-repin/C-005, C-006
   it grew that frame until a debug build segfaulted at the 34th nested `CREATE VIEW`
   (`test_ice_views_1.py::test_nested_view_depth_guard`); boxed, the debug wheel reaches main's
   depth again. pins: u9-types-1/C-014
+- `update_cast.rs` — **WO U9-TYPES-1 round-3 fixer (2026-09-26):** the UPDATE target loads
+  through repark-iceberg `presented_arrow_schema`, so `UPDATE t SET s.u = '…'` folds a
+  `STRUCT<u: uuid>` field as text; with `write/predicate_dml/plain.rs` sending any assignment
+  that carries a uuid to the fork path, `SET s.u = '…'` and `SET s = named_struct('u', '…')`
+  commit like Spark. pins: u9-types-1/C-016
 - `create_table.rs` — **WO U5 PR3 (2026-09-25):** a hive-style typed `PARTITIONED BY` column
   (D-X-PARTITIONED-COLDEF) joins the schema after the declared columns and gets an identity
   field; `typed_partition_columns` raises Spark's `Cannot mix partition expressions and

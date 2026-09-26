@@ -2,7 +2,7 @@
  "generator": "target/probe-u9-types-1/build_oracle.py + merge_oracle.py",
  "engine": "Spark 4.1.2 + Iceberg 1.11.0 (local[1], InMemoryCatalog sc, session zone UTC)",
  "measured": "2026-09-25",
- "revised": "r4 2026-09-26: +24 steps void printschema/cast-rows/files-metrics/delete and uuid dtypes/printschema/order/bucket-part/alter-to-string/invalid-literals/append/delete/update/files-metrics for U9-TYPES-1 PR2 (VOID and UUID-as-string end to end); R-14/R-15 retired, R-22..R-28 recorded; r5 2026-09-26 (round-1 fixer): +41 steps uuid-write / uuid-overwrite / void-write / void-create (MERGE, INSERT OVERWRITE both forms, overwritePartitions and _file/_pos/_partition projections over uuid; a value into VOID on INSERT SELECT, VALUES CAST, DataFrame append, MERGE and UPDATE; DataFrame create and CTAS of a NULL column on v3 and v2), generator target/probe-u9-types-2/measure.py; r6 2026-09-26 (round-2 fixer): +27 steps uuid-snap (VERSION AS OF a snapshot id, TIMESTAMP AS OF, VERSION AS OF a tag, the .branch_b1 SQL read and the branch read option before and after a branch INSERT, a WAP-staged snapshot read, each with a uuid-literal filter; snapshot ids resolve from {ref:<table>:<ref>} / {wap:<table>:<wap id>} tokens), generator target/probe-u9-types-2/measure_r6.py",
+ "revised": "r4 2026-09-26: +24 steps void printschema/cast-rows/files-metrics/delete and uuid dtypes/printschema/order/bucket-part/alter-to-string/invalid-literals/append/delete/update/files-metrics for U9-TYPES-1 PR2 (VOID and UUID-as-string end to end); R-14/R-15 retired, R-22..R-28 recorded; r5 2026-09-26 (round-1 fixer): +41 steps uuid-write / uuid-overwrite / void-write / void-create (MERGE, INSERT OVERWRITE both forms, overwritePartitions and _file/_pos/_partition projections over uuid; a value into VOID on INSERT SELECT, VALUES CAST, DataFrame append, MERGE and UPDATE; DataFrame create and CTAS of a NULL column on v3 and v2), generator target/probe-u9-types-2/measure.py; r6 2026-09-26 (round-2 fixer): +27 steps uuid-snap (VERSION AS OF a snapshot id, TIMESTAMP AS OF, VERSION AS OF a tag, the .branch_b1 SQL read and the branch read option before and after a branch INSERT, a WAP-staged snapshot read, each with a uuid-literal filter; snapshot ids resolve from {ref:<table>:<ref>} / {wap:<table>:<wap id>} tokens), generator target/probe-u9-types-2/measure_r6.py; r7 2026-09-26 (round-3 fixer): +40 steps uuid-binary (a sixteen-byte BINARY source into a uuid column refuses as its UTF-8 text, a 36-byte canonical text commits, on MERGE INSERT VALUES / INSERT * / UPDATE SET) and uuid-nested (STRUCT<u: uuid> assignments: MERGE UPDATE SET t.s.u from a column and a literal, SET s = a struct, UPDATE SET s.u and SET s = named_struct, and an invalid nested text), generator target/probe-u9-types-2/measure_r7.py",
  "steps": [
   {
    "group": "ltz",
@@ -8226,6 +8226,488 @@
     ],
     [
      7
+    ]
+   ]
+  },
+  {
+   "group": "uuid-binary",
+   "key": "uuid/bin/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.ub (id INT, name STRING) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-binary",
+   "key": "uuid/bin/add-uuid",
+   "do": "add_uuid",
+   "table": "sc.ns.ub",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-binary",
+   "key": "uuid/bin/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.ub VALUES (1, 'a', '123e4567-e89b-12d3-a456-426614174000')",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-binary",
+   "key": "uuid/bin/merge-raw16-values",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.ub t USING (SELECT 40 AS id, X'123e4567e89b12d3a456426614174000' AS u) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, name, u) VALUES (s.id, 'bin', s.u)",
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o56.sql.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 1.0 failed 1 times, most recent failure: Lost task 0.0 in stage 1.0 (TID 1) (localhost executor driver): java.lang.IllegalArgumentException: Invalid UUID string: \u0012>Eg�\u0012ӤVBf\u0014\u0017@\u0000"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-27",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "DataInvalid => Invalid UUID string: \u0012>Eg�\u0012ӤVBf\u0014\u0017@\u0000"
+     ],
+     [
+      "state",
+      null
+     ]
+    ],
+    "note": "2026-09-26 (round-3 fixer): Spark fails the task with java.lang.IllegalArgumentException: Invalid UUID string: <text> inside a volatile Py4JJavaError stage wrapper; RePark refuses with the fork's DataInvalid => Invalid UUID string: <text>, the same core text, and no row lands on either engine"
+   }
+  },
+  {
+   "group": "uuid-binary",
+   "key": "uuid/bin/merge-raw16-star",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.ub t USING (SELECT 43 AS id, 'bs' AS name, X'123e4567e89b12d3a456426614174000' AS u) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *",
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o56.sql.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 2.0 failed 1 times, most recent failure: Lost task 0.0 in stage 2.0 (TID 2) (localhost executor driver): java.lang.IllegalArgumentException: Invalid UUID string: \u0012>Eg�\u0012ӤVBf\u0014\u0017@\u0000"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-27",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "DataInvalid => Invalid UUID string: \u0012>Eg�\u0012ӤVBf\u0014\u0017@\u0000"
+     ],
+     [
+      "state",
+      null
+     ]
+    ],
+    "note": "2026-09-26 (round-3 fixer): Spark fails the task with java.lang.IllegalArgumentException: Invalid UUID string: <text> inside a volatile Py4JJavaError stage wrapper; RePark refuses with the fork's DataInvalid => Invalid UUID string: <text>, the same core text, and no row lands on either engine"
+   }
+  },
+  {
+   "group": "uuid-binary",
+   "key": "uuid/bin/raw16-rows",
+   "do": "ordered",
+   "sql": "SELECT id, name, u FROM sc.ns.ub ORDER BY id",
+   "spark": [
+    [
+     1,
+     "a",
+     "123e4567-e89b-12d3-a456-426614174000"
+    ]
+   ]
+  },
+  {
+   "group": "uuid-binary",
+   "key": "uuid/bin/merge-text36-values",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.ub t USING (SELECT 41 AS id, X'32323365343536372d653839622d313264332d613435362d343236363134313734303031' AS u) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, name, u) VALUES (s.id, 'b8', s.u)",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-binary",
+   "key": "uuid/bin/merge-text36-star",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.ub t USING (SELECT 44 AS id, 'b9' AS name, X'32323365343536372d653839622d313264332d613435362d343236363134313734303031' AS u) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-binary",
+   "key": "uuid/bin/merge-text36-update",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.ub t USING (SELECT 1 AS id, X'32323365343536372d653839622d313264332d613435362d343236363134313734303031' AS u) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET u = s.u",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-binary",
+   "key": "uuid/bin/text36-rows",
+   "do": "ordered",
+   "sql": "SELECT id, name, u FROM sc.ns.ub ORDER BY id",
+   "spark": [
+    [
+     1,
+     "a",
+     "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    [
+     41,
+     "b8",
+     "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    [
+     44,
+     "b9",
+     "223e4567-e89b-12d3-a456-426614174001"
+    ]
+   ]
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-field-col/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.sn0 (id INT) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-field-col/add-struct",
+   "do": "add_uuid",
+   "table": "sc.ns.sn0",
+   "struct": "s",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-field-col/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.sn0 VALUES (1, named_struct('u', '123e4567-e89b-12d3-a456-426614174000')), (2, named_struct('u', '123e4567-e89b-12d3-a456-426614174000'))",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-field-col",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.sn0 t USING (SELECT 1 AS id, '223e4567-e89b-12d3-a456-426614174001' AS v) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.s.u = s.v",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-field-col/rows",
+   "do": "ordered",
+   "sql": "SELECT id, s.u FROM sc.ns.sn0 ORDER BY id",
+   "spark": [
+    [
+     1,
+     "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    [
+     2,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ]
+   ]
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-field-lit/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.sn1 (id INT) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-field-lit/add-struct",
+   "do": "add_uuid",
+   "table": "sc.ns.sn1",
+   "struct": "s",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-field-lit/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.sn1 VALUES (1, named_struct('u', '123e4567-e89b-12d3-a456-426614174000')), (2, named_struct('u', '123e4567-e89b-12d3-a456-426614174000'))",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-field-lit",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.sn1 t USING (SELECT 1 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.s.u = '223e4567-e89b-12d3-a456-426614174001'",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-field-lit/rows",
+   "do": "ordered",
+   "sql": "SELECT id, s.u FROM sc.ns.sn1 ORDER BY id",
+   "spark": [
+    [
+     1,
+     "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    [
+     2,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ]
+   ]
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-whole/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.sn2 (id INT) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-whole/add-struct",
+   "do": "add_uuid",
+   "table": "sc.ns.sn2",
+   "struct": "s",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-whole/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.sn2 VALUES (1, named_struct('u', '123e4567-e89b-12d3-a456-426614174000')), (2, named_struct('u', '123e4567-e89b-12d3-a456-426614174000'))",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-whole",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.sn2 t USING (SELECT 1 AS id, named_struct('u', '223E4567-E89B-12D3-A456-426614174001') AS ns) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET s = s.ns",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-whole/rows",
+   "do": "ordered",
+   "sql": "SELECT id, s.u FROM sc.ns.sn2 ORDER BY id",
+   "spark": [
+    [
+     1,
+     "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    [
+     2,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ]
+   ]
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-field/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.sn3 (id INT) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-field/add-struct",
+   "do": "add_uuid",
+   "table": "sc.ns.sn3",
+   "struct": "s",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-field/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.sn3 VALUES (1, named_struct('u', '123e4567-e89b-12d3-a456-426614174000')), (2, named_struct('u', '123e4567-e89b-12d3-a456-426614174000'))",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-field",
+   "do": "sql",
+   "sql": "UPDATE sc.ns.sn3 SET s.u = '223e4567-e89b-12d3-a456-426614174001' WHERE id = 2",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-field/rows",
+   "do": "ordered",
+   "sql": "SELECT id, s.u FROM sc.ns.sn3 ORDER BY id",
+   "spark": [
+    [
+     1,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ],
+    [
+     2,
+     "223e4567-e89b-12d3-a456-426614174001"
+    ]
+   ]
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-whole/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.sn4 (id INT) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-whole/add-struct",
+   "do": "add_uuid",
+   "table": "sc.ns.sn4",
+   "struct": "s",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-whole/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.sn4 VALUES (1, named_struct('u', '123e4567-e89b-12d3-a456-426614174000')), (2, named_struct('u', '123e4567-e89b-12d3-a456-426614174000'))",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-whole",
+   "do": "sql",
+   "sql": "UPDATE sc.ns.sn4 SET s = named_struct('u', '223e4567-e89b-12d3-a456-426614174001') WHERE id = 1",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-whole/rows",
+   "do": "ordered",
+   "sql": "SELECT id, s.u FROM sc.ns.sn4 ORDER BY id",
+   "spark": [
+    [
+     1,
+     "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    [
+     2,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ]
+   ]
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-field-invalid/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.sn5 (id INT) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-field-invalid/add-struct",
+   "do": "add_uuid",
+   "table": "sc.ns.sn5",
+   "struct": "s",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-field-invalid/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.sn5 VALUES (1, named_struct('u', '123e4567-e89b-12d3-a456-426614174000')), (2, named_struct('u', '123e4567-e89b-12d3-a456-426614174000'))",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-field-invalid",
+   "do": "sql",
+   "sql": "UPDATE sc.ns.sn5 SET s.u = 'nope' WHERE id = 2",
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o56.sql.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 80.0 failed 1 times, most recent failure: Lost task 0.0 in stage 80.0 (TID 63) (localhost executor driver): java.lang.IllegalArgumentException: Invalid UUID string: nope"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-27",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "DataInvalid => Invalid UUID string: nope"
+     ],
+     [
+      "state",
+      null
+     ]
+    ],
+    "note": "2026-09-26 (round-3 fixer): Spark fails the task with java.lang.IllegalArgumentException: Invalid UUID string: <text> inside a volatile Py4JJavaError stage wrapper; RePark refuses with the fork's DataInvalid => Invalid UUID string: <text>, the same core text, and no row lands on either engine"
+   }
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-field-invalid/rows",
+   "do": "ordered",
+   "sql": "SELECT id, s.u FROM sc.ns.sn5 ORDER BY id",
+   "spark": [
+    [
+     1,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ],
+    [
+     2,
+     "123e4567-e89b-12d3-a456-426614174000"
     ]
    ]
   }

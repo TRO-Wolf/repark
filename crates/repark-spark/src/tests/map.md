@@ -297,6 +297,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `VERSION AS OF <id>`, `TIMESTAMP AS OF`, `VERSION AS OF 't1'` and `.branch_b1` as uuid text and
   filters `u = '…'` on each; red before the static-provider switch (bytes, then
   `FixedSizeBinary(16) = Utf8`). pins: u9-types-1/C-010
+  **WO U9-TYPES-1 round-3 fixer (2026-09-26):** `a_binary_source_into_uuid_is_decoded_text_like_spark`
+  (a sixteen-byte `X'…'` MERGE source refuses `Invalid UUID string: <its UTF-8 text>` on
+  `INSERT (…) VALUES` and `INSERT *`; a 36-byte canonical text commits on both and on
+  `UPDATE SET u = s.u`) and `nested_uuid_assignments_type_as_text_like_spark` (the five
+  `STRUCT<u: uuid>` assignments, each against Spark's measured rows). Both red before the fix
+  (a committed raw-byte row, then the store-assign refusal). pins: u9-types-1/C-016
 - [alter_write_order_transform.rs](alter_write_order_transform.rs) — **WO U5 PR2b
   (2026-09-24):** D-WRITE-ORDERED-TRANSFORM. Seventeen measured `WRITE ORDERED BY` specs land
   the sort order Spark wrote (rendered as `transform source direction nulls`) with `range`;

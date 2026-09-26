@@ -98,6 +98,9 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
   `UUID.fromString` (upper case equals lower case, `1-2-3-4-5` accepted, `nope` and the
   undashed form refused `Invalid UUID string: …`); a nested uuid round-trips text → bytes →
   lower-case text; bad text refuses with the fork's `DataInvalid` text. pins: u9-types-1/C-013
+  **WO U9-TYPES-1 round-3 fixer (2026-09-26):** `a_binary_source_is_decoded_text_like_spark`
+  pins the sixteen-byte refusal text Spark printed and a 36-byte canonical text (Binary and
+  LargeBinary) storing the uuid; red before the binary arm. pins: u9-types-1/C-016
 - `memory_props_span.rs` — **PR-B class sweep (2026-09-24):** the
   `catalog.memory_catalog_cached_with_props` span records exactly `warehouse`,
   `metadata_cache`, `manifest_cache_bytes` and `footer_cache`. No field value carries a prop

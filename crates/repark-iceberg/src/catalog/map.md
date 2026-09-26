@@ -449,6 +449,11 @@ Source comments retain only API and safety contracts; implementation narration i
   OVERWRITE` (`write/overwrite.rs`, `write/partition_overwrite.rs`), `metadata_columns.rs`,
   `scan_batches.rs` (`lineage_columns.rs`, `changelog.rs`, `incremental_append.rs`), and
   repark-spark `describe_column.rs` / `show_table_extended.rs`. pins: u9-types-1/C-013
+  **WO U9-TYPES-1 round-3 fixer (2026-09-26):** a `Binary` / `LargeBinary` / `BinaryView`
+  source into a `uuid` column is decoded as UTF-8 text (invalid sequences become U+FFFD, as
+  Java's `new String(bytes, UTF_8)` does) and parsed like `Utf8`, never reinterpreted as the 16
+  bytes: sixteen raw bytes refuse `Invalid UUID string: <decoded text>`, a 36-byte canonical
+  text stores the uuid, as Spark measured. pins: u9-types-1/C-016
   pins: u9-types-1/C-010
 - `provider.rs` — `ReparkCatalogProvider` (mutable namespace→schema map) +
   `invalidate_catalog_namespaces` / `drop_catalog_namespace_from_provider` /

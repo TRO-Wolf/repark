@@ -1,3 +1,5 @@
+use std::fmt::Write as _;
+
 use datafusion::arrow::util::pretty::pretty_format_batches;
 
 use super::super::*;
@@ -363,6 +365,157 @@ async fn snapshot_pinned_reads_present_uuid_text_and_filter_on_it() {
             .await,
             first,
             "{pinned}"
+        );
+    }
+}
+
+fn id_u_rows(rows: &[(i32, &str)]) -> String {
+    let rule = "+----+--------------------------------------+";
+    let mut out = format!("{rule}\n| id | u                                    |\n{rule}\n");
+    for (id, u) in rows {
+        let _ = writeln!(out, "| {id:<2} | {u} |");
+    }
+    out.push_str(rule);
+    out
+}
+
+#[tokio::test]
+async fn a_binary_source_into_uuid_is_decoded_text_like_spark() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    uuid_table(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.ub (id INT, name STRING) USING iceberg",
+        "ub",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        &format!("INSERT INTO ice.sales.ub VALUES (1, 'a', '{A}')"),
+    )
+    .await;
+    let raw = "X'123e4567e89b12d3a456426614174000'";
+    for insert in ["INSERT (id, name, u) VALUES (s.id, 'bin', s.u)", "INSERT *"] {
+        let text = refusal(
+            &ctx,
+            &catalogs,
+            &format!(
+                "MERGE INTO ice.sales.ub t USING (SELECT 40 AS id, 'bs' AS name, {raw} AS u) s \
+                 ON t.id = s.id WHEN NOT MATCHED THEN {insert}"
+            ),
+        )
+        .await;
+        assert!(
+            text.contains(
+                "Invalid UUID string: \u{12}>Eg\u{fffd}\u{12}\u{4e4}VBf\u{14}\u{17}@\u{0}"
+            ),
+            "{insert}: sixteen raw bytes must refuse as their UTF-8 text like Spark: {text:?}"
+        );
+    }
+    let hex = B.bytes().fold(String::new(), |mut hex, byte| {
+        let _ = write!(hex, "{byte:02x}");
+        hex
+    });
+    let statements = [
+        format!(
+            "MERGE INTO ice.sales.ub t USING (SELECT 41 AS id, X'{hex}' AS u) s ON t.id = s.id \
+             WHEN NOT MATCHED THEN INSERT (id, name, u) VALUES (s.id, 'b8', s.u)"
+        ),
+        format!(
+            "MERGE INTO ice.sales.ub t USING (SELECT 44 AS id, 'b9' AS name, X'{hex}' AS u) s \
+             ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+        ),
+        format!(
+            "MERGE INTO ice.sales.ub t USING (SELECT 1 AS id, X'{hex}' AS u) s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET u = s.u"
+        ),
+    ];
+    for statement in &statements {
+        run(&ctx, &catalogs, statement).await;
+    }
+    assert_eq!(
+        rendered(
+            &ctx,
+            &catalogs,
+            "SELECT id, u FROM ice.sales.ub ORDER BY id"
+        )
+        .await,
+        id_u_rows(&[(1, B), (41, B), (44, B)])
+    );
+}
+
+#[tokio::test]
+async fn nested_uuid_assignments_type_as_text_like_spark() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    let upper = B.to_uppercase();
+    let cases = [
+        (
+            format!(
+                "MERGE INTO {{t}} t USING (SELECT 1 AS id, '{B}' AS v) s ON t.id = s.id \
+                 WHEN MATCHED THEN UPDATE SET t.s.u = s.v"
+            ),
+            [(1, B), (2, A)],
+        ),
+        (
+            format!(
+                "MERGE INTO {{t}} t USING (SELECT 1 AS id) s ON t.id = s.id \
+                 WHEN MATCHED THEN UPDATE SET t.s.u = '{B}'"
+            ),
+            [(1, B), (2, A)],
+        ),
+        (
+            format!(
+                "MERGE INTO {{t}} t USING (SELECT 1 AS id, named_struct('u', '{upper}') AS ns) s \
+                 ON t.id = s.id WHEN MATCHED THEN UPDATE SET s = s.ns"
+            ),
+            [(1, B), (2, A)],
+        ),
+        (
+            format!("UPDATE {{t}} SET s.u = '{B}' WHERE id = 2"),
+            [(1, A), (2, B)],
+        ),
+        (
+            format!("UPDATE {{t}} SET s = named_struct('u', '{B}') WHERE id = 1"),
+            [(1, B), (2, A)],
+        ),
+    ];
+    for (index, (statement, expected)) in cases.iter().enumerate() {
+        let table = format!("ice.sales.sn{index}");
+        run(
+            &ctx,
+            &catalogs,
+            &format!("CREATE TABLE {table} (id INT) USING iceberg"),
+        )
+        .await;
+        run(
+            &ctx,
+            &catalogs,
+            &format!("ALTER TABLE {table} ADD COLUMN s STRUCT<u: UUID>"),
+        )
+        .await;
+        run(
+            &ctx,
+            &catalogs,
+            &format!(
+                "INSERT INTO {table} VALUES (1, named_struct('u', '{A}')), \
+                 (2, named_struct('u', '{A}'))"
+            ),
+        )
+        .await;
+        let statement = statement.replace("{t}", &table);
+        run(&ctx, &catalogs, &statement).await;
+        assert_eq!(
+            rendered(
+                &ctx,
+                &catalogs,
+                &format!("SELECT id, s.u AS u FROM {table} ORDER BY id")
+            )
+            .await,
+            id_u_rows(expected),
+            "{statement}"
         );
     }
 }

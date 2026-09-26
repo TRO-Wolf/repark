@@ -118,6 +118,10 @@ pub(crate) fn convert_uuid_column(column: &ArrayRef, target: &DataType) -> Resul
             DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View,
             DataType::FixedSizeBinary(16),
         ) => store_uuid_text(column),
+        (
+            DataType::Binary | DataType::LargeBinary | DataType::BinaryView,
+            DataType::FixedSizeBinary(16),
+        ) => store_uuid_text(&binary_as_text(column)),
         (DataType::FixedSizeBinary(16), DataType::Utf8) => Ok(render_uuid_text(column)),
         (DataType::Struct(_), DataType::Struct(_))
         | (DataType::List(_), DataType::List(_))
@@ -191,6 +195,17 @@ fn render_uuid_text(column: &ArrayRef) -> ArrayRef {
         })
         .collect();
     Arc::new(rendered)
+}
+
+fn binary_as_text(column: &ArrayRef) -> ArrayRef {
+    let decode =
+        |value: Option<&[u8]>| value.map(|bytes| String::from_utf8_lossy(bytes).into_owned());
+    let text: StringArray = match column.data_type() {
+        DataType::LargeBinary => column.as_binary::<i64>().iter().map(decode).collect(),
+        DataType::BinaryView => column.as_binary_view().iter().map(decode).collect(),
+        _ => column.as_binary::<i32>().iter().map(decode).collect(),
+    };
+    Arc::new(text)
 }
 
 fn store_uuid_text(column: &ArrayRef) -> Result<ArrayRef> {

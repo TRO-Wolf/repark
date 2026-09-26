@@ -108,6 +108,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the snapshot id (read from `.refs` / `.snapshots` on either engine); step kind `option_read`
   collects a reader with options. Red before the static-provider switch on 13 steps.
   pins: u9-types-1/C-010
+  **WO U9-TYPES-1 round-3 fixer (2026-09-26):** 40 more steps, measured on Spark 4.1.2 by
+  `target/probe-u9-types-2/measure_r7.py`: `uuid-binary` (a sixteen-byte `X'…'` MERGE source
+  refuses as its UTF-8 text, a 36-byte canonical text commits on `INSERT (…) VALUES`,
+  `INSERT *` and `UPDATE SET u = s.u`) and `uuid-nested` (five `STRUCT<u: uuid>` assignments
+  and an invalid nested text). `add_uuid` takes an optional `struct` name and adds
+  `<name> STRUCT<u: uuid>`. The three invalid-text refusals carry R-27. pins: u9-types-1/C-016
   The VOID groups: `void-write` (a value into VOID on every door; R-23) and `void-create`
   (DataFrame create and CTAS of a NULL column on v3; v2 refuses, R-22). pins: u9-types-1/C-014,
   C-015

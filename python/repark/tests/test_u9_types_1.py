@@ -183,7 +183,7 @@ def run_step(session: Any, step: dict[str, Any], warehouse: Path, engine: str) -
         if kind in ("append", "overwrite_partitions", "df_create"):
             return write_dataframe(session, step)
         if kind == "add_uuid":
-            return add_uuid_column(session, step["table"], engine)
+            return add_uuid_column(session, step["table"], engine, step.get("struct"))
         if kind == "bucket_uuid":
             return add_bucket_uuid_table(session, step["table"], engine)
         if kind == "md":
@@ -208,16 +208,26 @@ def write_dataframe(session: Any, step: dict[str, Any]) -> str:
     return "ok"
 
 
-def add_uuid_column(session: Any, table: str, engine: str) -> str:
-    """Add ``u uuid`` to ``table``: Spark through the Iceberg API, RePark through its SQL door."""
+def add_uuid_column(session: Any, table: str, engine: str, struct: str | None = None) -> str:
+    """Add ``u uuid`` (or ``<struct> STRUCT<u: uuid>``) to ``table`` on either engine.
+
+    Spark goes through the Iceberg API, RePark through its SQL door.
+    """
     if engine == "spark":
         jvm = session._jvm
         loaded = jvm.org.apache.iceberg.spark.Spark3Util.loadIcebergTable(
             session._jsparkSession, table
         )
-        uuid_type = jvm.org.apache.iceberg.types.Types.UUIDType.get()
-        loaded.updateSchema().addColumn("u", uuid_type).commit()
+        types = jvm.org.apache.iceberg.types.Types
+        column_type = types.UUIDType.get()
+        if struct is not None:
+            fields = jvm.java.util.ArrayList()
+            fields.add(types.NestedField.optional(999, "u", column_type))
+            column_type = types.StructType.of(fields)
+        loaded.updateSchema().addColumn(struct or "u", column_type).commit()
         session.sql(f"REFRESH TABLE {table}")
+    elif struct is not None:
+        session.sql(f"ALTER TABLE {table} ADD COLUMN {struct} STRUCT<u: UUID>").collect()
     else:
         session.sql(f"ALTER TABLE {table} ADD COLUMN u UUID").collect()
     return "ok"

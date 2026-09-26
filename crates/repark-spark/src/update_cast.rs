@@ -6,6 +6,7 @@ use datafusion::sql::sqlparser::ast::{
 };
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
+use repark_iceberg::catalog::uuid_presentation::presented_arrow_schema;
 use repark_iceberg::write::void_store::refuse_void_writes;
 
 use crate::merge::nested_assign::{self, AssignmentScope};
@@ -32,8 +33,7 @@ async fn load_update_target(
     let namespace = NamespaceIdent::from_vec(qualified[1..qualified.len() - 1].to_vec()).ok()?;
     let ident = TableIdent::new(namespace, qualified[qualified.len() - 1].clone());
     let table = catalog.load_table(&ident).await.ok()?;
-    let arrow_schema =
-        iceberg::arrow::schema_to_arrow_schema(table.metadata().current_schema()).ok()?;
+    let arrow_schema = presented_arrow_schema(table.metadata().current_schema()).ok()?;
     Some(UpdateTarget { arrow_schema })
 }
 
