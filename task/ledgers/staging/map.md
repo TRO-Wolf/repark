@@ -34,7 +34,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   spelling; `F.col` binds a spelled frame on the DataFrame door) and `E-CASE-PARTITION-FIELD`
   (partition sources bind case-sensitively with Iceberg's `ValidationException` text) replay
   EQUAL / both-refuse; `TP-FORMAT-V1-DELETE` recorded EQUAL with no code change;
-  `E-CATALOG-LISTDATABASES` moved to the catalog unit (2026-09-25). Residues R-1…R-4.
+  `E-CATALOG-LISTDATABASES` moved to the catalog unit (2026-09-25). Round 2 (2026-09-26):
+  the DataFrame door's one case-insensitive binder (drop, qualified refs, join on names,
+  unionByName, C-017…C-020), Java's struct text (C-021) and the replace-arm pins. Residues
+  R-1…R-10 (R-5…R-10 dated 2026-09-26, candidates for CASESENS-1).
   `risk_tier: standard`. Branch `feat/u11-edge-1`.
 - [u8-write-sql-ledger.md](u8-write-sql-ledger.md) —
   **U8 WRITE-SQL PR1 (2026-09-24), in flight:** `INSERT INTO … REPLACE WHERE` as Spark's
