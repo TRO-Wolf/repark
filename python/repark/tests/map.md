@@ -7137,7 +7137,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_e2_readwriter.py`, `test_catalog_surface.py`, `test_auto_memory_catalog.py`,
   `test_ice_catalog_session_1.py`, `test_ice_views_4_showprops.py`,
   `test_declare_sorted_tighten.py` state the new meaning; `test_production_file_size.py` drops the
-  five removed session symbols. pins: catalog-1/C-001, C-002, C-003, C-004
+  five removed session symbols. The USE-forms pins (`test_use_catalog_ns_cell_and_the_final_reset`,
+  `test_use_forms_answer_as_spark`) land with C-005. pins: catalog-1/C-001, C-002, C-003, C-004,
+  C-005
 
 ## I want to...
 

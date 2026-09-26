@@ -222,6 +222,56 @@ def test_the_default_catalog_conf_at_build_is_the_first_current_catalog(tmp_path
         _reset_active_session_for_tests()
 
 
+def test_use_catalog_ns_cell_and_the_final_reset(spark: ReparkSession) -> None:
+    """CAT-USE-CATALOG-NS: ``USE sc.ns``, unqualified CREATE/SHOW, the final reset works.
+
+    pins: catalog-1/C-005
+    """
+    spark.sql("USE sc.ns")
+    try:
+        spark.sql("CREATE TABLE uc_t (id INT) USING iceberg")
+        assert _rows(spark, "SHOW TABLES LIKE 'uc_t'") == [["ns", "uc_t", False]]
+        assert _current(spark) == [["sc", "ns"]]
+    finally:
+        spark.sql("USE spark_catalog.default")
+    assert _current(spark) == [["spark_catalog", "default"]]
+
+
+def test_use_forms_answer_as_spark(spark: ReparkSession) -> None:
+    """Every ``USE`` form lands where Spark lands; bad forms refuse SCHEMA_NOT_FOUND.
+
+    pins: catalog-1/C-005
+    """
+    for sql, catalog, namespace in (
+        ("USE sc", "sc", ""),
+        ("USE sc.ns", "sc", "ns"),
+        ("USE ns", "sc", "ns"),
+        ("USE sc", "sc", "ns"),
+        ("USE hc", "hc", ""),
+        ("USE ns", "hc", "ns"),
+        ("USE spark_catalog", "spark_catalog", "default"),
+        ("USE sc.ns", "sc", "ns"),
+        ("USE spark_catalog.default", "spark_catalog", "default"),
+    ):
+        spark.sql(sql)
+        assert _current(spark) == [[catalog, namespace]], sql
+    for sql, rendered in (
+        ("USE zz.yy", "`spark_catalog`.`zz`.`yy`"),
+        ("USE zz", "`spark_catalog`.`zz`"),
+        ("USE zz.yy.xx", "`spark_catalog`.`zz`.`yy`.`xx`"),
+        ("USE sc.nope", "`sc`.`nope`"),
+        ("USE hc.ns.x", "`hc`.`ns`.`x`"),
+    ):
+        with pytest.raises(AnalysisException) as caught:
+            spark.sql(sql).collect()
+        assert f"[SCHEMA_NOT_FOUND] The schema {rendered} cannot be found." in str(caught.value), (
+            sql
+        )
+        assert caught.value.getCondition() == "SCHEMA_NOT_FOUND", sql
+        assert caught.value.getSqlState() == "42704", sql
+    assert _current(spark) == [["spark_catalog", "default"]]
+
+
 def test_a_default_catalog_naming_no_catalog_answers_catalog_not_found(tmp_path: Path) -> None:
     """A default that names no catalog builds; its first resolution is CATALOG_NOT_FOUND.
 

@@ -141,6 +141,61 @@ async fn the_runtime_default_catalog_moves_current_until_use_pins_it() {
 }
 
 #[tokio::test]
+async fn use_forms_answer_as_spark() {
+    let wh = TempDir::new().unwrap();
+    let session = harness_session(&wh, &[]).await;
+    session
+        .create_namespace("spark_catalog", "otherns", HashMap::new())
+        .await
+        .unwrap();
+    for (sql, catalog, namespace) in [
+        ("USE sc", "sc", ""),
+        ("USE sc.ns", "sc", "ns"),
+        ("USE ns", "sc", "ns"),
+        ("USE sc", "sc", "ns"),
+        ("USE hc", "hc", ""),
+        ("USE ns", "hc", "ns"),
+        ("USE spark_catalog", "spark_catalog", "default"),
+        ("USE spark_catalog.otherns", "spark_catalog", "otherns"),
+        ("USE spark_catalog", "spark_catalog", "otherns"),
+        ("USE sc.ns", "sc", "ns"),
+        ("USE spark_catalog.default", "spark_catalog", "default"),
+    ] {
+        rows(&session, sql).await;
+        assert_eq!(
+            rows(&session, "SELECT current_catalog(), current_database()").await,
+            pair(catalog, namespace),
+            "{sql}"
+        );
+    }
+    for (sql, rendered) in [
+        ("USE zz.yy", "`spark_catalog`.`zz`.`yy`"),
+        ("USE zz", "`spark_catalog`.`zz`"),
+        ("USE zz.yy.xx", "`spark_catalog`.`zz`.`yy`.`xx`"),
+        ("USE sc.nope", "`sc`.`nope`"),
+        ("USE hc.ns.x", "`hc`.`ns`.`x`"),
+    ] {
+        let error = refusal(&session, sql).await;
+        assert_eq!(
+            error.exception_class(),
+            ErrorClass::Analysis,
+            "{sql}: {error}"
+        );
+        let message = error.to_string();
+        assert!(
+            message.contains(&format!(
+                "[SCHEMA_NOT_FOUND] The schema {rendered} cannot be found."
+            )) && message.contains("SQLSTATE: 42704"),
+            "{sql}: {message}"
+        );
+    }
+    assert_eq!(
+        current(&session),
+        ("spark_catalog".to_string(), "default".to_string())
+    );
+}
+
+#[tokio::test]
 async fn spark_catalog_names_the_session_catalog_only() {
     let wh = TempDir::new().unwrap();
     let session = harness_session(&wh, &[]).await;

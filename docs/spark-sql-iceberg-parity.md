@@ -8862,6 +8862,24 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   pins: catalog-1/C-003, C-004
 - **Rationale** — owner ruling R1 (2026-09-26); the cell replays EQUAL.
 
+### CAT-USE-CATALOG-NS — the final `USE spark_catalog.default` refused — **FIXED 2026-09-26 (WO CATALOG-1)**
+
+- **repark** — `USE c` moves to (`c`, `""`) from another catalog and keeps the namespace on the
+  same catalog; `USE c.ns` and `USE ns` land in the named namespace; `USE spark_catalog` and
+  `USE spark_catalog.default` land in (`spark_catalog`, `default`). The five bad forms refuse
+  Spark's `[SCHEMA_NOT_FOUND] The schema <rendered> cannot be found.` (`SCHEMA_NOT_FOUND` /
+  `42704`) with Spark's rendering and leave the current catalog alone. Before, the final
+  `USE spark_catalog.default` refused `` `sc`.`spark_catalog`.`default` `` because
+  `spark_catalog` was not registered; R5 registers it, so the two-part form resolves.
+- **Apache Spark** — measured 2026-09-26 (recorded, `target/probe-catalog-1/spark-main.json`
+  keys `use_*`; `target/probe-catalog-1b/spark-open.json` keys `use_sc_from_same_cur`,
+  `use_session_from_same_cur`).
+- **Pin** — `python/repark/tests/test_catalog_1.py::test_use_catalog_ns_cell_and_the_final_reset`,
+  `…::test_use_forms_answer_as_spark`,
+  `crates/repark-spark/src/tests/session_catalog.rs::use_forms_answer_as_spark`.
+  pins: catalog-1/C-005
+- **Rationale** — the cell replays EQUAL.
+
 ### CUTOVER-CTAS-REQ-1 — parquet CTAS keeps source non-null fields required; Spark makes every column optional
 
 - **repark** — **FIXED 2026-09-04 (CUTOVER-SCHEMA-1).** The same CTAS stores every field

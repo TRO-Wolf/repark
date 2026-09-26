@@ -2094,8 +2094,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `session_catalog.rs` — **CATALOG-1 (2026-09-26):** a harness-shaped Spark-door session
   (`hc` configured, `sc` and `spark_catalog` registered): the fresh current catalog and SHOW
   CATALOGS, `spark.sql.defaultCatalog` at build and at runtime with the USE pin, `spark_catalog`
-  not an alias, and the missing default's `CATALOG_NOT_FOUND`. pins: catalog-1/C-001, C-002,
-  C-003, C-004
+  not an alias, the missing default's `CATALOG_NOT_FOUND`, and the USE forms with the five
+  `SCHEMA_NOT_FOUND` renderings. pins: catalog-1/C-001, C-002, C-003, C-004, C-005
 
 ## Mapping rule
 
