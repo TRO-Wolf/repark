@@ -29,12 +29,13 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   plans the row filter `d = 2024-01-01` and `'2024-13-45'` refuses with the Arrow cast text;
   an empty dynamic stage skips the commit (`replace_partitions_is_noop`).
   pins: ice-overwrite-mode-1/C-011, C-013, C-014
-- `v1_ref_writes.rs` — **WO U5 PR2b round 2 (2026-09-25):** the kernel pin for C-053. On a
-  format v1 table, `create_branch_on_empty_table`, `commit_append_to(…, Some("b1"))` and
-  `create_snapshot_ref(Tag)` refuse with the named v1 text; `commit_append_to(…, Some("main"))`
-  commits, and a reload holds no non-main ref. Red-first: each refusal reported success with the
-  kernel forced to `Ok`.
-  pins: ice-nested-evo-1/C-053
+- `v1_ref_writes.rs` — **WO RP50-A (2026-09-26):** the v1 ref-commit pin for C-060 (it
+  replaces the round-2 C-053 kernel pin). On a format v1 table, `create_branch_on_empty_table`
+  commits `b0` with no `main`, `commit_append_to(…, Some("main"))` seeds main,
+  `create_snapshot_ref` commits branch `b1` and tag `t1` at the seed, and
+  `commit_append_to(…, Some("b1"))` moves only the branch; a reload holds every ref on
+  format-version 1. Red-first: the pin failed on the unfixed tree with the removed guard's text.
+  pins: ice-nested-evo-1/C-060
 - `merge_append_series.rs` — **ICE-MERGE-APPEND-1 (2026-09-19):** replays the recorded Spark
   4.1.2 / Iceberg 1.11.0 manifest series (`../../../../python/repark/tests/ice_merge_append_1_truth.json`)
   through `write::commit_append` — 120 sequential single-file appends per variant, probed at

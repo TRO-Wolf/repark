@@ -35,7 +35,7 @@ pub async fn commit_overwrite_replace_all_to(
             action = action.validate_from_snapshot(snapshot_id);
         }
     }
-    let action = maybe_to_branch(table, action, branch, |action, name| action.to_branch(name))?;
+    let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
     let tx = action.apply(tx).map_err(iceberg_err)?;
     commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
 }

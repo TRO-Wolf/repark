@@ -92,11 +92,10 @@ and measured-parity contract would grow `call.rs` beyond its exact
   pin for its complete bracketed parse message.
   pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-007, C-010
   pins: ice-branch-ops-1/C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
-  **WO U5 PR2b round 2 (2026-09-25):** `execute_fast_forward` calls
-  `refuse_ref_write_on_format_v1` for the target branch, so a fast-forward that would create a
-  non-main ref on a format v1 table refuses before it commits. `rewrite_data_files.rs` does the
-  same for its `branch` argument.
-  pins: ice-nested-evo-1/C-053
+  **WO RP50-A (2026-09-26):** the round-2 v1 refusal calls are removed from
+  `execute_fast_forward` and from `rewrite_data_files.rs`, so a fast-forward that creates a
+  non-main ref on a format v1 table commits, as does a rewrite on a v1 branch.
+  pins: ice-nested-evo-1/C-053, C-060
 - `rewrite_data_files.rs` — **rewrite_data_files options (2026-08-31):** v2 `where` is wired
   through the fork's `RewriteDataFiles::filter` (file-selection, no residual). `strategy`
   `binpack` runs. Unknown

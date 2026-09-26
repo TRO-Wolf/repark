@@ -402,6 +402,11 @@ repark-core's error map.
   optional named branch, mirroring `commit_overwrite_replace_all_to`; the Spark door's
   `INSERT … BY NAME` staged append commits through it. Like its sibling it carries
   `#[allow(clippy::missing_errors_doc)]` rather than a doc comment.
+  **WO RP50-A (2026-09-26):** `maybe_to_branch` takes `(action, branch, to_branch)` and returns
+  the action, not a `Result` — the table it took and the refusal it raised for a v1 branch
+  went with the removed kernel. All eleven call sites (append, overwrite, partition
+  overwrite, write options, MERGE) drop the table argument and the `?`.
+  pins: ice-nested-evo-1/C-060
 - **ICE-MERGE-APPEND-1 (2026-09-19):** every append commit site in this directory —
   `append.rs::commit_append`, `commit_target.rs::commit_append_to`,
   `write_options.rs::commit_append_with_summary` — commits through the fork's
@@ -956,18 +961,20 @@ repark-core's error map.
   `to_branch(name)`. The `engine.operation-id` snapshot property is what lets the fork's
   empty-commit guard pass, so no data file is needed. Retention is a second commit, because
   the fork checks a retention update against the base table, where the branch is still absent.
-  **WO U5 PR2b round 2 (2026-09-25):** `refuse_ref_write_on_format_v1` is the one kernel that
-  keeps a non-main ref out of format v1 metadata, which the fork writes without refs (fork unit
-  F-V1-REFS-1). It returns UnsupportedOperationException `<KIND> on the format v1 table
-  <ns>.<table> is not supported: the Iceberg fork writes v1 metadata without its refs, so the new
-  ref would be lost` for a branch or tag other than `main`, and for `main` with retention. The
-  ref-writing helpers (`create_snapshot_ref[_with_retention]`, `replace_snapshot_ref`,
-  `create_or_replace_snapshot_ref`, `create_branch_on_empty_table`) call it after they load the
-  table and now return DataFusion `Result`, so both doors inherit the refusal;
-  `testing_create_ref` keeps its `iceberg::Result` by folding the error back.
-  `commit_target::maybe_to_branch` takes the table and calls it for every RePark branch commit
-  (append, overwrite, partition overwrite, write options, MERGE).
-  pins: ice-nested-evo-1/C-053
+  **WO U5 PR2b round 2 (2026-09-25):** the ref-writing helpers
+  (`create_snapshot_ref[_with_retention]`, `replace_snapshot_ref`,
+  `create_or_replace_snapshot_ref`, `create_branch_on_empty_table`) return DataFusion `Result`,
+  so both doors inherit their errors; `testing_create_ref` keeps its `iceberg::Result` by
+  folding the error back.
+  **WO RP50-A (2026-09-26):** the round-2 `refuse_ref_write_on_format_v1` kernel is removed
+  with every call (the ref helpers above, `commit_target::maybe_to_branch`, `fast_forward`,
+  `rewrite_data_files` on a branch, the `write_to_branch` selector door): fork F-V1-REFS-1
+  keeps v1 refs, so v1 ref writes commit like Spark. `maybe_to_branch` keeps its routing shape
+  minus the table and the `Result`. Re-verify duty: every fork repin re-runs the v1 ref pins
+  in `../tests/v1_ref_writes.rs` and the Spark door's `v1_ref_writes.rs` plus the
+  `ref_branch_on_empty.rs` v1 cases — a fork regression that drops v1 refs again must go red
+  there, not silent.
+  pins: ice-nested-evo-1/C-053, C-060
 - `testing_support.rs` — `testing_create_ref` (wraps `create_snapshot_ref`) for fixtures only;
   product SQL routes via `snapshot_refs`.
 - `concurrency.rs` — `repark.write.max-concurrent-files` (default 4, ≥1 or loud): DataFusion

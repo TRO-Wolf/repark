@@ -216,14 +216,6 @@ async fn create_branch_on_a_table_with_a_snapshot_keeps_the_current_snapshot() {
     }
 }
 
-pub(super) fn v1_ref_refusal(kind: &str, table: &str) -> String {
-    format!(
-        "This feature is not implemented: {kind} on the format v1 table {table} is not \
-         supported: the Iceberg fork writes v1 metadata without its refs, so the new ref would be \
-         lost"
-    )
-}
-
 pub(super) fn metadata_file_count(table: &iceberg::table::Table) -> usize {
     let location = table.metadata().location();
     let directory =
@@ -242,33 +234,59 @@ pub(super) fn metadata_file_count(table: &iceberg::table::Table) -> usize {
 }
 
 #[tokio::test]
-async fn branch_and_tag_on_a_v1_table_refuse_until_the_fork_keeps_v1_refs() {
+async fn branch_on_an_empty_v1_table_commits_without_main_like_spark() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     empty_table(&ctx, &catalogs, 1).await;
-    let branch = v1_ref_refusal("BRANCH", "sales.be");
-    let tag = v1_ref_refusal("TAG", "sales.be");
-    let empty_tag = "Cannot complete create or replace tag operation on sales.be, main has no \
-                     snapshot"
-        .to_string();
-    for (sql, expected) in [
-        ("ALTER TABLE ice.sales.be CREATE BRANCH b1", &branch),
-        (
-            "ALTER TABLE ice.sales.be CREATE BRANCH IF NOT EXISTS b1",
-            &branch,
-        ),
-        (
-            "ALTER TABLE ice.sales.be CREATE OR REPLACE BRANCH b1",
-            &branch,
-        ),
-        ("ALTER TABLE ice.sales.be CREATE TAG t1", &empty_tag),
-    ] {
-        let error = refusal(&ctx, &catalogs, sql).await;
-        assert!(
-            error.to_string().ends_with(expected.as_str()),
-            "{sql}: {error}"
-        );
-    }
+    run(&ctx, &catalogs, "ALTER TABLE ice.sales.be CREATE BRANCH b1").await;
+    let json = metadata_json(&load_sales_table(&catalogs, "be").await);
+    assert_eq!(json["format-version"], 1);
+    let mut names: Vec<&str> = json["refs"]
+        .as_object()
+        .unwrap()
+        .keys()
+        .map(String::as_str)
+        .collect();
+    names.sort_unstable();
+    assert_eq!(names, vec!["b1"]);
+    assert_eq!(
+        rows(&ctx, &catalogs, "SELECT * FROM ice.sales.be.branch_b1").await,
+        0
+    );
+    assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM ice.sales.be").await, 0);
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.be.branch_b1 VALUES (1, 'a')",
+    )
+    .await;
+    assert_eq!(
+        rows(&ctx, &catalogs, "SELECT * FROM ice.sales.be.branch_b1").await,
+        1
+    );
+    assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM ice.sales.be").await, 0);
+}
+
+#[tokio::test]
+async fn tag_on_an_empty_v1_table_refuses_like_spark() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    empty_table(&ctx, &catalogs, 1).await;
+    run(&ctx, &catalogs, "ALTER TABLE ice.sales.be CREATE BRANCH b1").await;
+    assert_illegal_argument(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.be CREATE TAG t1",
+        "Cannot complete create or replace tag operation on sales.be, main has no snapshot",
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn branch_and_tag_on_a_seeded_v1_table_commit_like_spark() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    empty_table(&ctx, &catalogs, 1).await;
     run(&ctx, &catalogs, "INSERT INTO ice.sales.be VALUES (1, 'a')").await;
     let seeded = load_sales_table(&catalogs, "be").await;
     let snapshot_id = seeded.metadata().current_snapshot_id().unwrap();
@@ -276,35 +294,34 @@ async fn branch_and_tag_on_a_v1_table_refuse_until_the_fork_keeps_v1_refs() {
     let as_of_branch =
         format!("ALTER TABLE ice.sales.be CREATE BRANCH b2 AS OF VERSION {snapshot_id}");
     let as_of_tag = format!("ALTER TABLE ice.sales.be CREATE TAG t2 AS OF VERSION {snapshot_id}");
-    for (sql, expected) in [
-        ("ALTER TABLE ice.sales.be CREATE BRANCH b1", &branch),
-        (
-            "ALTER TABLE ice.sales.be CREATE BRANCH IF NOT EXISTS b1",
-            &branch,
-        ),
-        (
-            "ALTER TABLE ice.sales.be CREATE OR REPLACE BRANCH b1",
-            &branch,
-        ),
-        ("ALTER TABLE ice.sales.be REPLACE BRANCH b1", &branch),
-        (
-            "ALTER TABLE ice.sales.be REPLACE BRANCH main WITH SNAPSHOT RETENTION 2 SNAPSHOTS",
-            &branch,
-        ),
-        (as_of_branch.as_str(), &branch),
-        ("ALTER TABLE ice.sales.be CREATE TAG t1", &tag),
-        ("ALTER TABLE ice.sales.be CREATE TAG IF NOT EXISTS t1", &tag),
-        ("ALTER TABLE ice.sales.be CREATE OR REPLACE TAG t1", &tag),
-        ("ALTER TABLE ice.sales.be REPLACE TAG t1", &tag),
-        (as_of_tag.as_str(), &tag),
+    for sql in [
+        "ALTER TABLE ice.sales.be CREATE BRANCH b1",
+        "ALTER TABLE ice.sales.be CREATE BRANCH IF NOT EXISTS b1",
+        "ALTER TABLE ice.sales.be CREATE OR REPLACE BRANCH b1",
+        "ALTER TABLE ice.sales.be REPLACE BRANCH b1",
+        "ALTER TABLE ice.sales.be REPLACE BRANCH main WITH SNAPSHOT RETENTION 2 SNAPSHOTS",
+        as_of_branch.as_str(),
+        "ALTER TABLE ice.sales.be CREATE TAG t1",
+        "ALTER TABLE ice.sales.be CREATE TAG IF NOT EXISTS t1",
+        "ALTER TABLE ice.sales.be CREATE OR REPLACE TAG t1",
+        "ALTER TABLE ice.sales.be REPLACE TAG t1",
+        as_of_tag.as_str(),
     ] {
-        let error = execute(&ctx, &catalogs, sql).await.expect_err(sql);
-        assert_eq!(&error.to_string(), expected, "{sql}");
+        run(&ctx, &catalogs, sql).await;
     }
     let table = load_sales_table(&catalogs, "be").await;
-    assert_eq!(metadata_file_count(&table), files);
+    assert!(metadata_file_count(&table) > files);
     assert_eq!(table.metadata().snapshots().count(), 1);
-    assert!(table.metadata().snapshot_for_ref("b1").is_none());
+    for name in ["b1", "b2", "t1", "t2", "main"] {
+        assert_eq!(
+            table
+                .metadata()
+                .snapshot_for_ref(name)
+                .map(|snapshot| snapshot.snapshot_id()),
+            Some(snapshot_id),
+            "{name}"
+        );
+    }
 
     run(
         &ctx,

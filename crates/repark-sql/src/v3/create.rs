@@ -548,27 +548,26 @@ async fn format_version_one_creates_v1_and_deletes_copy_on_write() {
 }
 
 #[tokio::test]
-async fn ref_ddl_on_a_v1_table_refuses_before_the_ref_is_lost() {
+async fn ref_ddl_on_a_v1_table_commits_like_spark() {
     let door = door_with_schema().await;
     door.ok("CREATE TABLE ice.sales.v1r (id INT) WITH (format_version = 1)")
         .await;
     door.ok("INSERT INTO ice.sales.v1r VALUES (1)").await;
-    for (sql, kind) in [
-        ("ALTER TABLE ice.sales.v1r CREATE BRANCH audit", "BRANCH"),
-        ("ALTER TABLE ice.sales.v1r CREATE TAG t1", "TAG"),
-    ] {
-        let err = door.err(sql).await;
-        assert!(
-            err.ends_with(&format!(
-                "{kind} on the format v1 table sales.v1r is not supported: the Iceberg fork \
-                 writes v1 metadata without its refs, so the new ref would be lost"
-            )),
-            "{sql}: {err}"
+    door.ok("ALTER TABLE ice.sales.v1r CREATE BRANCH audit")
+        .await;
+    door.ok("ALTER TABLE ice.sales.v1r CREATE TAG t1").await;
+    let table = door.table("sales", "v1r").await;
+    let current = table.metadata().current_snapshot_id();
+    for name in ["audit", "t1"] {
+        assert_eq!(
+            table
+                .metadata()
+                .snapshot_for_ref(name)
+                .map(|snapshot| snapshot.snapshot_id()),
+            current,
+            "{name}"
         );
     }
-    let table = door.table("sales", "v1r").await;
-    assert!(table.metadata().snapshot_for_ref("audit").is_none());
-    assert!(table.metadata().snapshot_for_ref("t1").is_none());
 }
 
 #[tokio::test]

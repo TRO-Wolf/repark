@@ -80,24 +80,15 @@ pub fn snapshot_id_for_commit(table: &Table, branch: Option<&str>) -> Option<i64
     }
 }
 
-#[allow(clippy::missing_errors_doc)]
+#[must_use]
 pub fn maybe_to_branch<A>(
-    table: &Table,
     action: A,
     branch: Option<&str>,
     to_branch: impl FnOnce(A, &str) -> A,
-) -> Result<A> {
+) -> A {
     match branch {
-        Some(name) => {
-            crate::write::snapshot_refs::refuse_ref_write_on_format_v1(
-                table,
-                crate::write::snapshot_refs::SnapshotRefKind::Branch,
-                name,
-                crate::write::snapshot_refs::SnapshotRefRetention::default(),
-            )?;
-            Ok(to_branch(action, name))
-        }
-        None => Ok(action),
+        Some(name) => to_branch(action, name),
+        None => action,
     }
 }
 
@@ -114,7 +105,7 @@ pub async fn commit_append_to(
         .merge_append()
         .add_data_files(new_files)
         .set_snapshot_properties(summary);
-    let action = maybe_to_branch(table, action, branch, |action, name| action.to_branch(name))?;
+    let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
     let tx = action
         .apply(tx)
         .map_err(crate::catalog::iceberg_to_datafusion)?;

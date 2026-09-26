@@ -345,8 +345,8 @@ Supported surface, for reference:
   with time travel` / `Cannot modify table with time travel` for UPDATE/DELETE/MERGE). A write
   naming a missing branch refuses `Cannot use branch (does not exist): <name>` and does not
   create the branch (Spark 4.1.2 + Iceberg 1.11.0, 2026-09-01; on a format v1 table too,
-  re-measured 2026-09-25 for INSERT, DELETE, UPDATE, MERGE and INSERT OVERWRITE — the
-  missing-branch check runs before the v1 ref kernel of D-CREATE-V1, WO U5 PR2b round 3).
+  re-measured 2026-09-25 for INSERT, DELETE, UPDATE, MERGE and INSERT OVERWRITE and kept by
+  WO RP50-A after the v1 ref guard was removed).
   RePark raises it as AnalysisException after its `Error during planning: ` prefix, where Spark
   raises ValidationException (pre-existing, R-U5-PR2B-PLANNING-PREFIX). Fork-executed families
   (`INSERT`/`UPDATE`/`DELETE`) use `IcebergTableProvider::with_commit_branch`; RePark-owned
@@ -8416,31 +8416,24 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   IllegalArgumentException that RePark does not define; `' 1 '` is trimmed where Spark raises
   `For input string: " 1 "`; `CREATE OR REPLACE` v2 → v1 answers the fork's `Cannot downgrade
   FormatVersion from v2 to v1` where Spark says `Cannot downgrade v2 table to v1`; the fork
-  omits an empty `snapshots` array and never writes `refs` into v1 metadata (Java writes both);
-  after a v1 → v2 upgrade the fork writes `sequence-number 0` on each legacy snapshot, where Java
-  omits the key. Because the fork drops v1 refs (fork unit F-V1-REFS-1), every path that would
-  write a non-main ref into v1 metadata refuses before it writes, through one repark-iceberg
-  kernel (`refuse_ref_write_on_format_v1`): UnsupportedOperationException `This feature is not
-  implemented: BRANCH on the format v1 table <ns>.<table> is not supported: the Iceberg fork
-  writes v1 metadata without its refs, so the new ref would be lost` (`TAG …` for a tag). It
-  covers branch and tag DDL on both doors (including IF NOT EXISTS, OR REPLACE, REPLACE and
-  AS OF VERSION, and `main` with retention), a session WAP branch write, every RePark branch
-  commit through `commit_target::maybe_to_branch` (MERGE, overwrite, the session WAP branch),
-  `CALL fast_forward` to a new branch and `rewrite_data_files` on a branch. A write into
-  `t.branch_x` answers REF-1's missing-branch text first (round 3, 2026-09-25: `INSERT`,
-  `DELETE`, `UPDATE`, `MERGE` and `INSERT OVERWRITE` into a missing branch on v1 raise `Cannot
-  use branch (does not exist): x`, as Spark does). The kernel call behind that check is
-  belt-and-braces on this branch (round 4, 2026-09-25): the v1 reader drops every non-main ref
-  until F-V1-REFS-1 lands (repin repark#836), so an existing-branch selector write on v1 cannot
-  occur — a registered v1 metadata file carrying refs `main`, `b` and `t` lists `main` only, and
-  every selector write into `branch_b` answers the missing-branch text with nothing written,
-  where Spark 4.1.2 writes to `b` (R-U5-PR2B-V1-REFS). `writeTo().option('branch', …)` does not reach
-  the kernel on this branch: the Python facade refuses it first with the pre-existing
+  omits an empty `snapshots` array (Java writes it); after a v1 → v2 upgrade the fork writes
+  `sequence-number 0` on each legacy snapshot, where Java omits the key. Since the RP-50 repin
+  (repark#836, fork F-V1-REFS-1) the fork keeps `refs` in v1 metadata, so every v1 ref write
+  commits like Spark: branch and tag DDL on both doors (including IF NOT EXISTS, OR REPLACE,
+  REPLACE and AS OF VERSION, and `main` with retention), `INSERT` into `t.branch_b1`, a session
+  WAP branch write on a seeded and on an empty v1 table, every RePark branch commit through
+  `commit_target::maybe_to_branch` (MERGE, overwrite, the session WAP branch), `CALL
+  fast_forward` (including to a new branch) and `rewrite_data_files` with and without a branch.
+  A write into a missing `t.branch_x` still answers REF-1's missing-branch text first
+  (`INSERT`, `DELETE`, `UPDATE`, `MERGE` and `INSERT OVERWRITE`, as Spark does). A tag on an
+  empty v1 table answers Spark's `Cannot complete create or replace tag operation on
+  <ns>.<table>, main has no snapshot`. `writeTo().option('branch', …)` does not reach
+  the branch-commit path on this branch: the Python facade refuses it first with the pre-existing
   UnsupportedOperationException `writing to an Iceberg branch is not supported — repark write
   path is current-snapshot only (I1 / R-TIME-TRAVEL)`, where Spark 4.1.2 ignores the option and
   appends to `main` (measured 2026-09-25, R-U5-PR2B-WRITETO-BRANCH-OPTION); U7 PR2 slice 1
   (repark#835) removes that facade refusal, after which the write takes the `maybe_to_branch`
-  path the kernel pin covers. Commits that move only `main` (`set_current_snapshot`,
+  branch-commit path. Commits that move only `main` (`set_current_snapshot`,
   `cherrypick_snapshot`, `REPLACE BRANCH main`) keep working. Round 2 (2026-09-25):
   merge-on-read DELETE, UPDATE and MERGE on a v1 table raise
   IllegalArgumentException `Deletes are supported in V2 and above`, as Spark does, and the
@@ -8452,11 +8445,11 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   (`target/probe-u5-pr2b/spark.out` in the lane clone; scoreboard cell `D-CREATE-V1`).
 - **Pin** — `crates/repark-spark/src/tests/create_format_version_one.rs`,
   `crates/repark-sql/src/v3/create.rs::format_version_one_creates_v1_and_deletes_copy_on_write`,
-  `python/repark/tests/test_ice_ddl_alter_2.py`; the v1 ref-write refusal:
+  `python/repark/tests/test_ice_ddl_alter_2.py`; the v1 ref writes:
   `crates/repark-iceberg/src/tests/v1_ref_writes.rs`, `crates/repark-spark/src/tests/v1_ref_writes.rs`,
-  `ref_branch_on_empty.rs::branch_and_tag_on_a_v1_table_refuse_until_the_fork_keeps_v1_refs`,
-  `crates/repark-sql/src/v3/create.rs::ref_ddl_on_a_v1_table_refuses_before_the_ref_is_lost`,
-  `test_ice_ddl_alter_2.py::test_a_wap_branch_write_on_a_v1_table_refuses_and_writes_no_ref`;
+  `ref_branch_on_empty.rs` (the v1 branch/tag cases),
+  `crates/repark-sql/src/v3/create.rs::ref_ddl_on_a_v1_table_commits_like_spark`,
+  `test_ice_ddl_alter_2.py::test_a_wap_branch_write_on_a_v1_table_commits_on_the_branch`;
   the downgrade: `crates/repark-spark/src/tests/v3_upgrade.rs`, `python/repark/tests/test_v3_upgrade.py`.
 
 ### D-REF-BRANCH-ON-EMPTY — `CREATE BRANCH` on a snapshot-less table refused — **FIXED 2026-09-24 (WO U5 PR2b)**
@@ -8482,8 +8475,9 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   the branch stays without retention and the statement raises. No cell compares the metadata-log
   (the cell sets `snaps=False`). The empty append also carries RePark's `engine.operation-id`
   summary key, where Spark writes `app-id`/`app-name`/`engine-name`/`engine-version`/
-  `iceberg-version`; no cell compares those keys. Branch and tag DDL on a format v1 table
-  refuses with the named v1 text (D-CREATE-V1). The ANSI door keeps its `needs AS OF VERSION`
+  `iceberg-version`; no cell compares those keys. Branch DDL on a format v1 table commits
+  (an empty v1 table gets `refs` `[b1]` with no `main`); a tag on an empty v1 table answers
+  Spark's `main has no snapshot` (D-CREATE-V1). The ANSI door keeps its `needs AS OF VERSION`
   refusal.
 - **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-24
   (`target/probe-u5-pr2b/spark.out`, `spark2.out`; scoreboard cell `D-REF-BRANCH-ON-EMPTY`).

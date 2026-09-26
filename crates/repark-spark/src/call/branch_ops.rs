@@ -184,12 +184,6 @@ pub(super) async fn execute_fast_forward(
             Some(existing.snapshot_id)
         }
     };
-    repark_iceberg::write::refuse_ref_write_on_format_v1(
-        &table,
-        repark_iceberg::write::SnapshotRefKind::Branch,
-        &branch,
-        repark_iceberg::write::SnapshotRefRetention::default(),
-    )?;
     let tx = Transaction::new(&table);
     let action = tx.manage_snapshots().fast_forward(&branch, &target);
     let tx = action.apply(tx).map_err(iceberg_err)?;

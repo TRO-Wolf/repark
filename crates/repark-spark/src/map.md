@@ -501,11 +501,10 @@ pins: rp-4-fork-repin/C-005, C-006
   set and no explicit branch, a plain INSERT carrying only session snapshot properties
   stages a snapshot stamped `wap.id` instead of committing on main.
   pins: ice-wap-branch-1/C-002, C-004, C-005, C-012
-  **WO U5 PR2b round 2 (2026-09-25):** `commit_write_on_branch` calls
-  `refuse_ref_write_on_format_v1` right after it loads the table, so a WAP branch write, an
-  `INSERT`/`DELETE` into `t.branch_x` and the fork-provider commit refuse on a format v1 table
-  before any ref or data is written.
-  pins: ice-nested-evo-1/C-053
+  **WO RP50-A (2026-09-26):** the round-2 v1 refusal call is removed from
+  `commit_write_on_branch`, so a WAP branch write, an `INSERT`/`DELETE` into `t.branch_x` and
+  the fork-provider commit land on a format v1 table like Spark.
+  pins: ice-nested-evo-1/C-053, C-060
 - `wap.rs` — **IPI-05 (2026-09-21):** `wap_id_for_table` is the read half for the id, the twin of
   `wap_branch_for_table`: it answers the conf's `spark.wap.id` only for a `write.wap.enabled=true`
   table and refuses both keys together first, and `WAP_ID_SNAPSHOT_PROPERTY` (`wap.id`) is the one
@@ -546,10 +545,10 @@ pins: rp-4-fork-repin/C-005, C-006
   empty append through `create_branch_on_empty_table`, an `IF NOT EXISTS` on an existing branch
   is a no-op, and a tag, a replace of an existing branch, bare `REPLACE` and a duplicate raise
   Spark's IllegalArgumentException texts (`main_has_no_snapshot`, `Ref <name> already exists`).
-  Round 2 (2026-09-25): the door-only v1 guard is gone; the ref helpers call the repark-iceberg
-  kernel `refuse_ref_write_on_format_v1` (C-053), so a v1 refusal names its kind (`BRANCH`/`TAG`)
-  and a tag on an empty v1 table answers Spark's `main has no snapshot` first.
-  pins: ice-nested-evo-1/C-053, C-056
+  **WO RP50-A (2026-09-26):** the repark-iceberg v1 kernel is gone too, so ref DDL on a
+  v1 table commits through the ref helpers; a tag on an empty v1 table still answers Spark's
+  `main has no snapshot`.
+  pins: ice-nested-evo-1/C-053, C-056, C-060
   Its 14 in-module tests are file-backed in
   [ref_ddl/map.md](ref_ddl/map.md); the module path, and so every pin name, is unchanged.
   `parse_if_not_exists` / `parse_if_exists` take a token index and answer `(matched, next_index)`,
@@ -761,10 +760,10 @@ pins: rp-4-fork-repin/C-005, C-006
   snapshot properties nor a codec — `QS-BRANCH-*`, `QZ-BRANCH-*`).
   pins: ice-session-write-conf-1/C-038, C-039, C-040
   **WO U5 PR2b round 3 (2026-09-25):** `commit_write_on_branch` checks that an explicit
-  `t.branch_x` target exists before the v1 ref kernel, so a missing branch on a format v1 table
-  answers REF-1's `Cannot use branch (does not exist): x` (Spark's text) and the kernel answers
-  only for a branch that exists; the session WAP path still meets the kernel first.
-  pins: ice-nested-evo-1/C-053
+  `t.branch_x` target exists, so a missing branch on a format v1 table answers REF-1's `Cannot
+  use branch (does not exist): x` (Spark's text). WO RP50-A keeps the check with the v1 kernel
+  removed.
+  pins: ice-nested-evo-1/C-053, C-060
 - `time_travel.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the ref-selector scan
   skips the `FROM` that names a `DELETE` target, so `DELETE FROM t.branch_b …` is a write to
   the branch and not a read pinned to it (the pin turned the target into a read-only temp
