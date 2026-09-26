@@ -47,7 +47,7 @@ DataFrame door (`table`, `writeTo`, `saveAsTable`) follows the runtime default l
 | C-008 | `repark.sql.catalogExtensions=true` (builder; any case of the key, value `true`) makes `type=memory` the memory kind on the builder and runtime doors and keeps the old both-keys rule (agreeing pair accepted, disagreeing pair refused at build). Default off. | Rust and facade opt-in pins. | PROVEN | Facade `test_the_catalog_extensions_opt_in_restores_the_memory_type`; Rust `the_catalog_impl_long_form_and_the_opt_in_stay_catalogs`, `refusal_tests::the_catalog_extensions_opt_in_keeps_the_memory_type_and_the_agreeing_pair`, `…::the_opt_in_reads_only_a_true_value`, core `the_catalog_extensions_opt_in_makes_the_memory_type_a_catalog_on_both_doors`. The facade forwards the effective opt-in value with each late block, so a builder-set opt-in also covers runtime blocks (a runtime-set one works the same way). |
 | C-009 | `spark.catalog.listDatabases("ns*")` on the harness session answers `[]`; `listDatabases()` answers `["default"]`; after `setCurrentCatalog("sc")` it answers `["ns"]`. | The cell replay. | PROVEN | Facade `test_list_databases_cell_lists_the_session_catalog`. Cell `E-CATALOG-LISTDATABASES` replays EQUAL (`target/probe-catalog-1b/replay-E-CATALOG-LISTDATABASES.json`). Pin-only (the cell already replayed EQUAL); bite-proven by mutation (a `listDatabases` pinned to `sc` fails the pin). |
 | C-010 | `repark.toml`: a catalog block's `type = "memory"` is rewritten to `catalog-impl = "org.apache.iceberg.inmemory.InMemoryCatalog"`, replacing `type` (a memory-kind `catalog-impl` already present is kept; a non-memory one keeps both keys for C-007); `[<profile>.session] default_catalog` (a string) emits `spark.sql.defaultCatalog`; the typed mirror `repark.config.SessionConfig` carries `default_catalog`. The owner's shape (`impl`, `type = "memory"`, `warehouse`) loads unchanged, the session starts in `spark_catalog`, and `default_catalog = "local"` starts it in `local`. | Emitted key sets; session builds from a file on the Rust and Python doors. | PROVEN | Rust `config_file::tests::session_catalog::*` (7 tests: the long-form rewrite across `memory`/`MEMORY`/`Memory` casings with the toml-Memory versus flat-Refused split, the kept memory-kind impl, both-keys with the `IllegalArgument` text, the `spark.sql.defaultCatalog` emission, the non-string refusal, the owner shape starting in `spark_catalog`, `default_catalog = "local"` starting in `local`), `native_type_catalog_blocks_match_the_flat_config_path` (the memory arm is now the still-matching `hadoop` arm), `file_built_session_registers_the_same_catalogs_as_config_calls` (new `type=memory`-file versus long-form-calls arm); facade `test_the_owner_toml_loads_and_starts_in_spark_catalog`, `test_session_default_catalog_in_toml_moves_the_first_current_catalog`, `test_the_typed_session_table_renders_default_catalog_for_the_engine`; `docs/guide/repark-toml.md` documents `session.default_catalog`, the rewrite and `repark.sql.catalogExtensions`. |
-| C-011 | Every existing test that relied on the auto-flip, the single-catalog start, the alias or a bare `type=memory` is rewritten to say what it now means (none deleted); the list is below. | The facade, dbt, parity and Rust suites green. | OPEN (lands with this unit's CAT-TYPE-MEMORY commit) | Section "Tests rewritten"; `python/repark/tests/map.md`, `python/dbt-repark/tests/map.md` CATALOG-1 rows. |
+| C-011 | Every existing test that relied on the auto-flip, the single-catalog start, the alias or a bare `type=memory` is rewritten to say what it now means (none deleted); the list is below. | The facade, dbt, parity and Rust suites green. | PROVEN | The C-011 sweep ran the whole facade suite (13792 passed, 481 skipped, 149 xfailed, 0 failed), the dbt suite (64 passed, 1 skipped), the parity suite (785 passed, 3 skipped, 12 xfailed) and `check_example_coverage.py --require-execute` green: no suite test needed a rewrite beyond the earlier commits' list below (none deleted anywhere), and the three docs examples that assumed the flip were rewritten the same way (`docs/examples/session/register_catalog.py`, `docs/examples/catalog/set_current_names.py`, `docs/examples/catalog/list_tables.py`). |
 
 ## Residues
 
@@ -59,8 +59,10 @@ DataFrame door (`table`, `writeTo`, `saveAsTable`) follows the runtime default l
 
 ## Tests rewritten
 
-Seeded by the CAT-TYPE-MEMORY commit (bare `type=memory` / both-keys rewrites); the C-011
-commit completes the sweep.
+Seeded by the CAT-TYPE-MEMORY commit (bare `type=memory` / both-keys rewrites), extended by
+the C-010 toml-keys commit, and completed by the C-011 sweep: the sweep itself rewrote no
+suite test (every failure the earlier commits' rewrites had already covered stayed green;
+none deleted anywhere) and rewrote the three docs examples below the same way.
 
 - `crates/repark-core/src/catalog_config.rs` (inline): `cross_prefix_duplicates_merge_or_fail_loud`
   (the merged memory block now parses to the refused kind),
@@ -117,3 +119,70 @@ commit completes the sweep.
   `crates/repark-core/src/config_file/tests/wiring.rs`
   `file_built_session_registers_the_same_catalogs_as_config_calls` (new `type=memory`-file
   versus long-form-calls arm).
+- The part-1 auto-flip and alias rewrites (commits `59fff2e5`, `9d9290a8`), recorded here
+  for the complete list: the fixtures of `python/repark/tests/test_f1_sql_expander.py`,
+  `test_g1_stat_and_expander.py`, `test_e2_readwriter.py`, `test_iceberg_load_path.py`,
+  `test_time_travel.py` now `USE` their catalog; the alias and flip pins of
+  `test_e2_readwriter.py`, `test_catalog_surface.py`, `test_auto_memory_catalog.py`,
+  `test_ice_catalog_session_1.py`, `test_ice_views_4_showprops.py`,
+  `test_declare_sorted_tighten.py` state the new meaning;
+  `test_production_file_size.py` drops the five removed session symbols; the dbt
+  `test_statement_surface.py` session sets `spark.sql.defaultCatalog` to the fixture
+  catalog.
+- The C-011 sweep rewrote no suite test and deleted none; it rewrote three docs examples
+  the same way: `docs/examples/session/register_catalog.py` (current stays
+  `spark_catalog` after register; the example moves there explicitly),
+  `docs/examples/catalog/set_current_names.py` (register stays put; `setCurrentCatalog`
+  moves), `docs/examples/catalog/list_tables.py` (sets the registered catalog current
+  before the one-part listings).
+
+## Coverage attestation (lane xc-catalog2, 2026-09-26)
+
+Filed at the C-011 close, when the last OPEN clause flipped. Residues R-1 and R-2 stand
+as recorded in C-004 and C-006.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: catalog-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Each clause was checked against its measured Spark text or shape, never a paraphrase, and the five scoreboard cells plus CAT-IMPL-INMEMORY, CAT-TYPE-HADOOP, CAT-SHOW-CATALOGS, E-CATALOG-LISTDATABASES and P-CALL-NO-CATALOG replay EQUAL through the harness.
+      artifacts: [task/ledgers/staging/catalog-1-ledger.md, python/repark/tests/test_catalog_1.py, target/probe-catalog-1c/replay-CAT-TYPE-MEMORY.json]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Case variants of the memory type, both-keys raw-value echo, unknown and empty default catalogs, non-string toml values, missing warehouses, dotted catalog names and empty blocks are all exercised on the builder, runtime and file doors.
+      artifacts: [crates/repark-core/src/catalog_config/refusal_tests.rs, crates/repark-core/src/config_file/tests/session_catalog.rs]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Refused catalogs raise on every use with the current catalog unchanged, a later long-form block replaces the refusal, and a default naming no catalog fails only at first resolution with the CATALOG_NOT_FOUND text.
+      artifacts: [python/repark/tests/test_catalog_1.py::test_type_memory_cell_refuses_at_first_use, python/repark/tests/test_catalog_1.py::test_a_default_catalog_naming_no_catalog_answers_catalog_not_found]
+    - id: AT-4
+      status: ATTACKED
+      evidence: The USE pin against later conf set and unset, the runtime block replacement order, and the builder-versus-runtime door split are pinned step by step, and the current catalog lives in the one engine registry both doors read.
+      artifacts: [python/repark/tests/test_catalog_1.py::test_use_pins_the_current_catalog_against_the_default_conf, crates/repark-core/src/session/tests/session_catalog.rs]
+    - id: AT-5
+      status: N/A
+      justification: No authentication, secret, deserialization or path handling is added. Warehouse paths flow through the existing scheme validation and toml parse errors still redact source lines.
+    - id: AT-6
+      status: ATTACKED
+      evidence: The spark_catalog alias removal is pinned as the documented behavior change, existing toml files load unchanged through the rewrite, and refused specs never cross the distributed scan wire.
+      artifacts: [python/repark/tests/test_catalog_1.py::test_spark_catalog_is_not_an_alias_of_another_catalog, crates/repark-core/src/config_file/tests/session_catalog.rs::the_owner_toml_shape_loads_and_starts_in_spark_catalog]
+    - id: AT-7
+      status: N/A
+      justification: No hot path, unbounded growth or new query-time work is added. A refused catalog is one registry placeholder whose uses raise without I/O.
+    - id: AT-8
+      status: ATTACKED
+      evidence: Every Spark-visible text was measured on Spark 4.1.2 plus Iceberg 1.11.0 before it was pinned, and both error classes exist on the Rust and Python doors with condition and SQLSTATE pinned.
+      artifacts: [target/probe-catalog-1/spark_probe.py, crates/repark-spark/src/tests/session_catalog.rs]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Every failure surface carries its diagnosing text verbatim in the pin, the conf dump keeps an origin per merged file key, and the cloud-catalog discovery warning is unchanged.
+      artifacts: [crates/repark-core/src/catalog_config/refusal_tests.rs, crates/repark-core/src/config_file/tests/wiring.rs]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Every clause pins per entry point on the Arrow path with bite-proving mutations recorded in C-005, C-006 and C-009, every added branch has a nameable flipping input, and the facade, dbt, parity and config_file suites are green with no deletion.
+      artifacts: [python/repark/tests/test_catalog_1.py, crates/repark-core/src/config_file/tests/session_catalog.rs, crates/repark-spark/src/tests/session_catalog.rs]
+  reattested: []
+  complete: true
+```

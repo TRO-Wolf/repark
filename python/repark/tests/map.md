@@ -7152,8 +7152,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_list_databases_cell_lists_the_session_catalog` lands with C-009.
   The toml pins (`test_the_owner_toml_loads_and_starts_in_spark_catalog`,
   `test_session_default_catalog_in_toml_moves_the_first_current_catalog`) land with C-010.
-  pins: catalog-1/C-001, C-002, C-003, C-004,
-  C-005, C-006, C-007, C-008, C-009, C-010
+  The C-011 sweep ran the whole suite green with no further rewrite (none deleted); the
+  three docs examples that assumed the flip were rewritten the same way (named in the
+  ledger). pins: catalog-1/C-001, C-002, C-003, C-004,
+  C-005, C-006, C-007, C-008, C-009, C-010, C-011
 
 ## I want to...
 

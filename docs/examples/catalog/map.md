@@ -32,6 +32,9 @@ catalog, and the local filesystem only — no cloud catalog, no JVM.
   register a memory catalog (currentCatalog stays `spark_catalog`, CATALOG-1), set both spellings
   back and forth, read each value back, and a namespace made via
   `create_namespace`.
+  register a memory catalog (currentCatalog stays `spark_catalog`), set both
+  spellings back and forth, read each value back, and a namespace made via
+  `create_namespace`. pins: catalog-1/C-011
 - [table_exists.py](table_exists.py) — `tableExists` / `table_exists`: a temp
   view answers True, a missing name answers False, both spellings.
 - [register_function.py](register_function.py) — `registerFunction` /
@@ -42,7 +45,8 @@ catalog, and the local filesystem only — no cloud catalog, no JVM.
   diverges — §7 `EX-SES-1`.
 - [list_tables.py](list_tables.py) — `list_tables`: the exact `MANAGED` row
   for a memory-catalog Iceberg table, the `TEMPORARY` view row, the bare arm,
-  and an exact-pattern arm.
+  and an exact-pattern arm (the example sets the registered catalog current
+  first). pins: catalog-1/C-011
 - [get_table.py](get_table.py) — CATALOG-SURFACE-1 metadata arms: `getTable` /
   `get_table` (the `MANAGED` Iceberg row and the `TEMPORARY` view row),
   `listColumns` / `list_columns` (table and view column rows in order),
