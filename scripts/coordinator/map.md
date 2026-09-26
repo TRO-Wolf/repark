@@ -118,6 +118,10 @@ reads the worker's `handback.json`. Workers do not delegate; lanes do not start 
   before rulings), the toolbox, the order of work for a unit, and the standing rules whose evidence
   is in `lessons.md`. Audited 2026-09-23 against Opus 5.5: rules name tiers and launchers, never
   model ids, and carry no incident narrative — that lives in the ledger.
+- `bands.md` — the executor bands (owner ruling 2026-09-26): each engine's Terminal-Bench 4.0 score,
+  pulled weekly with the pull date in the heading, mapped to self-directed (50 and above), guided
+  (25 to 49) or clerk (below 25), and the guided-execution checklist a work order passes before a
+  guided engine launches. The handbook's EXECUTOR BANDS rule points here.
 - `addendum-muse.md` — per-engine additions from the lessons ledger, appended to the handbook for
   that engine only (`drive.sh` loads `addendum-<engine>.md` when it exists). The GLM addenda went
   with the GLM tiers (replaced by `luna`, 2026-09-23); a trait claim written for a retired engine

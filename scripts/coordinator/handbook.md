@@ -83,6 +83,11 @@ packet says otherwise. Keep at most TWO executor rounds running at once.
   every other tier's work order states its trailer — `Authored-By: Muse Spark (muse-spark-1.3-contributor) <noreply@meta.ai>`,
   `Authored-By: Devin SWE-2 (swe-2-high) <noreply@cognition.ai>`, `Authored-By: GPT-5.6 Terra (gpt-5.6-terra) <noreply@openai.com>`
   (Sol and Luna likewise, with their model ids). The PR script rejects any other attribution trailer.
+- EXECUTOR BANDS: before any executor launch, look the engine up in {{HERE}}/bands.md. Self-directed engines get the
+  ordinary work order; guided engines get an order that passes the guided-execution checklist there (rulings pre-made,
+  one cell per round with the recorded Spark answer pasted in, a design sketch for multi-crate work, the file-ceiling
+  escape pre-named, halt within the first hour on a question); clerk engines get mechanical work only. An engine the
+  table does not score runs guided.
 - RULINGS: a ruling that contradicts a measurement or another claims line is challenged with the evidence, once,
   before any work order is cut on it.
 - WORK-ORDER SIZE: one work order = one behaviour, about five files, sized for ONE 400-step round. A round that ends
