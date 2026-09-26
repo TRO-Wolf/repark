@@ -871,3 +871,29 @@ async fn attribute_copies_bind_case_twins_exactly_and_scratch_relations_render_u
     assert_eq!(names, vec!["n", "r", "i"]);
     assert_eq!(rows, text_rows(&[&["2", "1", "true"]]));
 }
+
+#[tokio::test]
+async fn a_view_body_is_not_audited_against_the_outer_statement() {
+    let ctx = measured_ctx();
+    let body = ctx
+        .table("tw")
+        .await
+        .unwrap()
+        .select(vec![
+            Expr::Column(Column::new_unqualified("ID")).alias("id"),
+            Expr::Column(Column::new_unqualified("id")).alias("Data"),
+        ])
+        .unwrap();
+    ctx.register_table("vj", body.into_view()).unwrap();
+    let (names, rows) = measured_rows(&ctx, "SELECT id, Data FROM vj").await;
+    assert_eq!(names, vec!["id", "Data"]);
+    assert_eq!(rows, text_rows(&[&["0", "1"]]));
+    for sql in [
+        "WITH c AS (SELECT id FROM tw) SELECT * FROM c",
+        "WITH c AS (SELECT id FROM tw) SELECT * FROM c AS z",
+        "SELECT * FROM (SELECT id FROM tw) AS d",
+    ] {
+        let error = plan_error(&ctx.state(), sql, true).await;
+        assert!(error.contains("[AMBIGUOUS_REFERENCE]"), "{sql}: {error}");
+    }
+}

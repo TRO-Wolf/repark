@@ -353,3 +353,49 @@ def test_compound_origin_columns_keep_their_attribute_binding(spark: ReparkSessi
         joined.select(right["w"], col("id") + 1).collect()
     assert "[AMBIGUOUS_REFERENCE]" in str(excinfo.value)
     assert "_repark_" not in str(excinfo.value)
+
+
+def _projections(spark: ReparkSession):
+    """Return the plain and the twin-expression projections of the joined frame."""
+    left = spark.sql("SELECT ID, data FROM sc.ns.t")
+    right = spark.sql("SELECT 1 AS id, 'q' AS w")
+    joined = left.join(right, left["ID"] == right["id"])
+    return (
+        joined.select(left["ID"].alias("id"), left["data"].alias("Data")),
+        joined.select((right["id"] + 1).alias("id"), left["data"].alias("Data")),
+    )
+
+
+def _table(spark: ReparkSession) -> list[tuple]:
+    """Return the sorted rows of sc.ns.t."""
+    return sorted(tuple(row) for row in spark.sql("SELECT * FROM sc.ns.t").collect())
+
+
+def test_projection_of_a_twin_join_writes_back_into_its_table(spark: ReparkSession) -> None:
+    """Appending, inserting or overwriting a projection of a twin join into t works like Spark.
+
+    pins: u11-edge-1/C-028
+    """
+    spark.sql("INSERT INTO sc.ns.t VALUES (2, 'b')")
+    writes = (
+        lambda frame: frame.writeTo("sc.ns.t").append(),
+        lambda frame: frame.write.mode("append").saveAsTable("sc.ns.t"),
+        lambda frame: (
+            frame.createOrReplaceTempView("jv"),
+            spark.sql("INSERT INTO sc.ns.t SELECT id, Data FROM jv"),
+        ),
+    )
+    for write in writes:
+        write(_projections(spark)[0])
+        assert _table(spark) == [(1, "a"), (1, "a"), (2, "b")]
+        write(_projections(spark)[1])
+        assert _table(spark) == [(1, "a"), (1, "a"), (2, "a"), (2, "a"), (2, "b")]
+        spark.sql("DELETE FROM sc.ns.t WHERE Data = 'a'")
+        spark.sql("INSERT INTO sc.ns.t VALUES (1, 'a')")
+    plain, _ = _projections(spark)
+    plain.writeTo("sc.ns.t").overwrite(col("id") >= 1)
+    assert _table(spark) == [(1, "a")]
+    spark.sql("INSERT INTO sc.ns.t VALUES (2, 'b')")
+    _, twin = _projections(spark)
+    twin.writeTo("sc.ns.t").overwrite(col("id") >= 1)
+    assert _table(spark) == [(2, "a")]

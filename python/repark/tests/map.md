@@ -920,6 +920,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   AMBIGUOUS_REFERENCE and no rendering names a `_repark_` relation. Spark shapes: the verifier's
   `v5-spark.json` / `v5b-spark.json` (copied to `target/probe-u11-edge-1/v5/`). Red on 503b2e0c
   (`red-r6-facade.txt`). pins: u11-edge-1/C-027
+  Round 7 (2026-09-26, V-001): `test_projection_of_a_twin_join_writes_back_into_its_table` —
+  `jn.select(a['ID'].alias('id'), a['data'].alias('Data'))` and the `(b['id'] + 1).alias('id')`
+  projection written back into `t` through `writeTo(t).append()`, `write.mode('append')
+  .saveAsTable(t)` and `INSERT INTO t SELECT id, Data FROM <temp view>` → `[(1,'a'), (1,'a'),
+  (2,'b')]` after the plain one and `[(1,'a'), (1,'a'), (2,'a'), (2,'a'), (2,'b')]` after both;
+  `writeTo(t).overwrite(col('id') >= 1)` → `[(1,'a')]` and `[(2,'a')]`. Spark shapes:
+  `target/probe-u11-edge-1/f3-spark.json`; the verifier's `v6b-spark.json` V6-5. Red on d3993f87
+  (`red-r7-facade.txt`). pins: u11-edge-1/C-028
 - [test_u11_edge_partition_field.py](test_u11_edge_partition_field.py) — **U11-EDGE-1
   (2026-09-26), cell `E-CASE-PARTITION-FIELD`:** partition sources bind case-sensitively under
   either `spark.sql.caseSensitive`: `ADD PARTITION FIELD CAT`, `bucket(4, ID)` and

@@ -269,6 +269,7 @@ struct WrittenRefs {
     qualified: HashSet<(String, String)>,
     projection: HashSet<String>,
     relations: Vec<(String, Vec<String>)>,
+    views: HashSet<String>,
     defaults: [String; 2],
 }
 
@@ -301,6 +302,8 @@ fn written_references(statement: &Statement, defaults: [String; 2]) -> WrittenRe
         qualified: HashSet<(String, String)>,
         projection: HashSet<String>,
         relations: Vec<(String, Vec<String>)>,
+        ctes: HashSet<String>,
+        named: Vec<(String, String)>,
     }
     impl datafusion::sql::sqlparser::ast::Visitor for Collector {
         type Break = std::convert::Infallible;
@@ -308,6 +311,9 @@ fn written_references(statement: &Statement, defaults: [String; 2]) -> WrittenRe
             &mut self,
             query: &datafusion::sql::sqlparser::ast::Query,
         ) -> ControlFlow<Self::Break> {
+            for cte in query.with.iter().flat_map(|with| &with.cte_tables) {
+                self.ctes.insert(cte.alias.name.value.to_ascii_lowercase());
+            }
             if let datafusion::sql::sqlparser::ast::SetExpr::Select(select) = query.body.as_ref() {
                 for item in &select.projection {
                     match item {
@@ -337,6 +343,13 @@ fn written_references(statement: &Statement, defaults: [String; 2]) -> WrittenRe
                     .iter()
                     .filter_map(|part| part_value(part).map(str::to_string))
                     .collect::<Vec<_>>();
+                self.named.push((
+                    written.last().cloned().unwrap_or_default(),
+                    alias.as_ref().map_or_else(
+                        || written.last().cloned().unwrap_or_default(),
+                        |alias| alias.name.value.clone(),
+                    ),
+                ));
                 let entry = match alias {
                     Some(alias) => (alias.name.value.clone(), vec![alias.name.value.clone()]),
                     None => (written.last().cloned().unwrap_or_default(), written),
@@ -365,6 +378,8 @@ fn written_references(statement: &Statement, defaults: [String; 2]) -> WrittenRe
         qualified: HashSet::new(),
         projection: HashSet::new(),
         relations: Vec::new(),
+        ctes: HashSet::new(),
+        named: Vec::new(),
     };
     let _ = datafusion::sql::sqlparser::ast::Visit::visit(statement, &mut collector);
     WrittenRefs {
@@ -372,6 +387,14 @@ fn written_references(statement: &Statement, defaults: [String; 2]) -> WrittenRe
         qualified: collector.qualified,
         projection: collector.projection,
         relations: collector.relations,
+        views: collector
+            .named
+            .into_iter()
+            .filter(|(written, _)| {
+                !written.is_empty() && !collector.ctes.contains(&written.to_ascii_lowercase())
+            })
+            .map(|(_, visible)| visible.to_ascii_lowercase())
+            .collect(),
         defaults,
     }
 }
@@ -380,6 +403,14 @@ type Twins<'a> = HashMap<String, Vec<(Option<&'a TableReference>, &'a str)>>;
 
 fn audit_plan_for_ambiguity(plan: &LogicalPlan, written: &WrittenRefs) -> Result<()> {
     plan.apply_with_subqueries(|node| {
+        if let LogicalPlan::SubqueryAlias(alias) = node {
+            if written
+                .views
+                .contains(&alias.alias.table().to_ascii_lowercase())
+            {
+                return Ok(TreeNodeRecursion::Jump);
+            }
+        }
         let twins = input_twins(node);
         if twins.is_empty() {
             return Ok(TreeNodeRecursion::Continue);

@@ -95,3 +95,7 @@ U11-EDGE-1 round 6 (2026-09-26, V-001): `tests.rs` gains
 `_repark_h1_sel_*` view over the `tw` case twins refuses a written `id` with unqualified
 candidates, and its attribute copies answer a cast, a `CASE WHEN` and an `IN` exactly.
 pins: u11-edge-1/C-027
+Round 7 (2026-09-26, V-001): `a_view_body_is_not_audited_against_the_outer_statement` — a
+view over the `tw` case twins projecting `ID AS id` answers `SELECT id, Data FROM vj`, while a
+CTE (plain and aliased) and a derived table over the twins still refuse. Red on d3993f87
+(`target/probe-u11-edge-1/red-r7-rust.txt`). pins: u11-edge-1/C-028
