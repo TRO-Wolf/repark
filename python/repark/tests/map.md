@@ -4889,6 +4889,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `auto_register = false`, loads through the Rust loader, and lists with
   `auto_register=False`; a non-bool value refuses as `ValidationError`, and the key
   stays absent when unset. pins: cfg-2/C-018
+  **WO CATALOG-1 C-010 (2026-09-26):** `test_the_typed_session_table_renders_default_catalog_for_the_engine`
+  renders `default_catalog` and builds a session starting in it. pins: catalog-1/C-010
 - `test_session_sources.py` — **CFG-2 step 2 (2026-09-13):** the named-source facade
   pins — `sources()` lists the declared source as a `SourceMetadata` row with
   `password` masked `***`, `source(name).ping()` raises `UnsupportedOperationException`
@@ -7148,8 +7150,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_catalog_surface.py`, `test_getorcreate_catalogs.py`, `test_ice_catalog_session_1.py`
   ride the same commit (named in the ledger).
   `test_list_databases_cell_lists_the_session_catalog` lands with C-009.
+  The toml pins (`test_the_owner_toml_loads_and_starts_in_spark_catalog`,
+  `test_session_default_catalog_in_toml_moves_the_first_current_catalog`) land with C-010.
   pins: catalog-1/C-001, C-002, C-003, C-004,
-  C-005, C-006, C-007, C-008, C-009
+  C-005, C-006, C-007, C-008, C-009, C-010
 
 ## I want to...
 

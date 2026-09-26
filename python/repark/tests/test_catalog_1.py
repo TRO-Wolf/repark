@@ -4,7 +4,7 @@ Every expected text is Spark 4.1.2 + Iceberg 1.11, measured 2026-09-26 (probes u
 ``target/probe-catalog-1/``). The harness-shaped session configures ``hc`` through the builder
 and registers ``sc`` after build, as the scoreboard's RePark leg does.
 
-pins: catalog-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+pins: catalog-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 """
 
 from __future__ import annotations
@@ -71,6 +71,16 @@ def _both_kinds_message(
     return (
         f"Cannot create catalog {name}, both type and catalog-impl are set: "
         f"type={type_value}, catalog-impl={impl}"
+    )
+
+
+def _build_from_toml(tmp_path: Path, text: str) -> ReparkSession:
+    """A session built from one forced ``repark.toml`` text."""
+    path = tmp_path / "repark.toml"
+    path.write_text(text, encoding="utf-8")
+    _reset_active_session_for_tests()
+    return (
+        ReparkSession.builder.appName("pytest-catalog-1-toml").configFile(str(path)).getOrCreate()
     )
 
 
@@ -514,6 +524,55 @@ def test_a_default_catalog_naming_no_catalog_answers_catalog_not_found(tmp_path:
         assert _rows(session, "SELECT count(*) FROM sc.ns.three") == [[0]]
         session.conf.unset("spark.sql.defaultCatalog")
         assert _current(session) == [["spark_catalog", "default"]]
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()
+
+
+def test_the_owner_toml_loads_and_starts_in_spark_catalog(tmp_path: Path) -> None:
+    """The owner's toml shape loads; the session starts in ``spark_catalog``.
+
+    pins: catalog-1/C-010
+    """
+    session = _build_from_toml(
+        tmp_path,
+        "[default.catalog.local]\n"
+        'impl = "org.apache.iceberg.spark.SparkCatalog"\n'
+        'type = "memory"\n'
+        f'warehouse = "{tmp_path / "local"}"\n',
+    )
+    try:
+        assert _current(session) == [["spark_catalog", "default"]]
+        assert "local" in {catalog.name for catalog in session.catalog.listCatalogs()}
+        session.sql("CREATE NAMESPACE local.ns")
+        session.sql("CREATE TABLE local.ns.t (id INT) USING iceberg")
+        assert _rows(session, "SELECT count(*) FROM local.ns.t") == [[0]]
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()
+
+
+def test_session_default_catalog_in_toml_moves_the_first_current_catalog(
+    tmp_path: Path,
+) -> None:
+    """``session.default_catalog`` in toml sets the first current catalog.
+
+    pins: catalog-1/C-010
+    """
+    session = _build_from_toml(
+        tmp_path,
+        "[default.session]\n"
+        'default_catalog = "local"\n'
+        "[default.catalog.local]\n"
+        'type = "memory"\n'
+        f'warehouse = "{tmp_path / "local"}"\n',
+    )
+    try:
+        assert _current(session) == [["local", ""]]
+        assert session.catalog.currentCatalog() == "local"
+        session.sql("CREATE NAMESPACE local.ns")
+        session.sql("CREATE TABLE ns.t (id INT) USING iceberg")
+        assert _rows(session, "SELECT count(*) FROM local.ns.t") == [[0]]
     finally:
         session.stop()
         _reset_active_session_for_tests()

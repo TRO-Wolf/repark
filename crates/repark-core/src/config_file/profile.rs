@@ -13,7 +13,12 @@ const PROFILE_TABLE_KEYS: &[&str] = &[
     "session",
 ];
 const DISPLAY_KEYS: &[&str] = &["max_cols", "max_rows", "str_len", "style"];
-const SESSION_KEYS: &[&str] = &["batch_size", "memory_limit_gb", "target_partitions"];
+const SESSION_KEYS: &[&str] = &[
+    "batch_size",
+    "default_catalog",
+    "memory_limit_gb",
+    "target_partitions",
+];
 
 pub(crate) fn profile_from_table(name: &str, table: &toml::Table) -> Result<Profile> {
     let mut profile = Profile::default();

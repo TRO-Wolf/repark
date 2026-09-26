@@ -1,3 +1,4 @@
+mod session_catalog;
 mod wiring;
 
 use std::collections::{BTreeMap, HashMap};
@@ -482,17 +483,17 @@ warehouse = "{arn}"
 
 #[test]
 fn native_type_catalog_blocks_match_the_flat_config_path() {
-    let memory_flat = HashMap::from([
-        ("spark.sql.catalog.m.type".to_string(), "memory".to_string()),
+    let hadoop_flat = HashMap::from([
+        ("spark.sql.catalog.m.type".to_string(), "hadoop".to_string()),
         (
             "spark.sql.catalog.m.warehouse".to_string(),
             "/tmp/wh".to_string(),
         ),
     ]);
-    let memory_toml = single_profile(
+    let hadoop_toml = single_profile(
         r#"
 [default.catalog.m]
-type = "memory"
+type = "hadoop"
 warehouse = "/tmp/wh"
 "#,
     );
@@ -521,10 +522,10 @@ password = "s3cret"
 "#,
     );
     assert_eq!(
-        profile_sources("default", &memory_toml)
-            .expect("memory")
+        profile_sources("default", &hadoop_toml)
+            .expect("hadoop")
             .catalogs,
-        parse_catalog_specs(&memory_flat).expect("flat memory")
+        parse_catalog_specs(&hadoop_flat).expect("flat hadoop")
     );
     assert_eq!(
         profile_sources("default", &postgres_toml)
