@@ -4,6 +4,15 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [partname-1-ledger.md](partname-1-ledger.md) —
+  **WO PARTNAME-1 (2026-09-26), in flight:** partition-field names pinned per door
+  against Spark's measured answers — the CREATE door omits the width (C-001), the
+  UPDATE door keeps it with DROP and REPLACE (C-002); the U9 `bucket_uuid` step runs
+  both engines through the UPDATE door so `uuid/part/md` replays EQUAL and U9 R-26
+  retires (C-003); the redundancy divergence is a dated fork residue (R-1) with card
+  F-PARTSPEC-REDUNDANT-1. No product code changes.
+  `risk_tier: standard`. Branch `feat/partname-1`.
+  pins: partname-1/C-001, C-002, C-003
 - [u9-types-1-ledger.md](u9-types-1-ledger.md) —
   **WO U9-TYPES-1 (2026-09-25), in flight:** four column types end to end on the Spark door,
   measured against Spark 4.1.2 + Iceberg 1.11 and replayed step by step from

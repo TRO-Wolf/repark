@@ -124,6 +124,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   The VOID groups: `void-write` (a value into VOID on every door; R-23) and `void-create`
   (DataFrame create and CTAS of a NULL column on v3; v2 refuses, R-22). pins: u9-types-1/C-014,
   C-015
+  **WO PARTNAME-1 (2026-09-26):** the RePark branch of `add_bucket_uuid_table` takes the
+  UPDATE door like Spark's Java API (CREATE, ADD COLUMN, ADD PARTITION FIELD), so
+  `uuid/part/md` replays EQUAL at `u_bucket_4` with no residue; group `uuid` is 26 of 30
+  EQUAL and U9 R-26 retires. pins: u9-types-1/C-010
+- [test_partname_1.py](test_partname_1.py) — **WO PARTNAME-1 (2026-09-26):** partition-field
+  names pinned per door against Spark's measured answers, read from each table's latest
+  metadata JSON: the CREATE door omits the width (`id_bucket`, `s_trunc`, `ts_hour`,
+  `id_bucket` beside `id`), the UPDATE door keeps it (`id_bucket_8`, `s_trunc_2`, `ts_day`,
+  `ts_year`, `ts_month`, `ts_hour`, `id_bucket_16`, `s_trunc_4`, `my_month`), DROP removes
+  and REPLACE lands `s_trunc_5` on a fresh id, and `bucket(4, u)` over uuid is `u_bucket_4`.
+  pins: partname-1/C-001, C-002, C-003
 - [test_ice_error_conditions_1.py](test_ice_error_conditions_1.py) —
   **ICE-ERROR-CONDITIONS-1 / IPI-51 PR1 (2026-09-20):** constructor pins for the native
   error-condition parser — `getCondition`/`getErrorClass`/`getSqlState` on the PyO3
