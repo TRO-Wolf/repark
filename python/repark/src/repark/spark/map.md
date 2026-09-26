@@ -193,6 +193,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `column_outer` (`Expr::OuterReferenceColumn`), and `column_or_str_error` is the
   shared `NOT_COLUMN_OR_STR` raise `_column_of` uses for `TableArg` and other
   non-column arguments. pins: df-subquery-1/C-003, C-005
+  **U11-EDGE-1 round 7 (2026-09-26, V-002):** `is_bare_star(column)` — whether a Column is an
+  unaliased `F.col("*")` (SQL text `` `*` ``, projection name `*`; `lit("*")` and
+  `col("*").alias(…)` are not), so `DataFrame.select` expands it like the string `"*"`.
+  pins: u11-edge-1/C-029
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
   unsupported operations fail explicitly.

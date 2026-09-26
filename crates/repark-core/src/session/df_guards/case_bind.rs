@@ -41,6 +41,15 @@ pub fn attribute_copy_name(name: &str) -> String {
         })
 }
 
+#[must_use]
+pub fn attribute_copy_name_in(schema: &DFSchema, name: &str) -> String {
+    let mut spelled = attribute_copy_name(name);
+    while schema.fields().iter().any(|field| *field.name() == spelled) {
+        spelled.push('_');
+    }
+    spelled
+}
+
 #[allow(clippy::missing_errors_doc)]
 pub fn with_attribute_copies(frame: DataFrame) -> Result<DataFrame> {
     let schema = frame.schema();
@@ -55,7 +64,9 @@ pub fn with_attribute_copies(frame: DataFrame) -> Result<DataFrame> {
     let copies = held
         .iter()
         .filter(|(_, name)| counts.get(name.as_str()) == Some(&1))
-        .map(|(column, name)| Expr::Column(column.clone()).alias(attribute_copy_name(name)));
+        .map(|(column, name)| {
+            Expr::Column(column.clone()).alias(attribute_copy_name_in(schema, name))
+        });
     let projection = held
         .iter()
         .map(|(column, _)| Expr::Column(column.clone()))

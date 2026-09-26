@@ -101,6 +101,15 @@ wrapped optimizer rule) and declares this directory.
   leaves unqualified. Rust pin (in `../../column_resolution/tests.rs`)
   `attribute_copies_bind_case_twins_exactly_and_scratch_relations_render_unqualified`.
   pins: u11-edge-1/C-027
+  Round 7 (2026-09-26, V-003): `attribute_copy_name_in(schema, name)` spells the copy
+  `attribute_copy_name(name)` and appends `_` until no field of `schema` carries it; the hex
+  spelling holds no `_`, so two copies never meet. `with_attribute_copies` names every copy
+  through it, so a user field literally named `__repark_attr_6964` keeps its value beside the
+  `id` copy (`__repark_attr_6964_`) instead of refusing `Projections require unique expression
+  names`. `is_scratch_relation` also filters the SQL door's `UNRESOLVED_COLUMN` suggestions
+  (field names, V-002). Rust pin (in `../../column_resolution/tests.rs`)
+  `attribute_copies_never_collide_and_suggestions_hide_scratch_names`. pins: u11-edge-1/C-029,
+  C-030
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside
