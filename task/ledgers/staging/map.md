@@ -23,6 +23,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   the catalog option replaces the `UuidTextSchemaProvider` shim. The UPDATE table rendering retires two u8-write-sql
   R-16 keys. Round-3 fixer (2026-09-26): a binary source into a uuid column is text and nested
   `STRUCT<u: uuid>` assignments type as text (C-016, groups `uuid-binary` and `uuid-nested`).
+  Residues: R-27 names four more invalid-text doors; R-32 (nested NULL in a CTAS / DataFrame
+  create, pre-existing), R-33 (path `versionAsOf`, `_partition` as dict, pre-existing), R-34 (the
+  other raw-binary uuid doors and the MERGE-source `CAST AS BINARY` refusal).
   `risk_tier: standard`. Branch `feat/u9-types-1`.
   pins: u9-types-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-011, C-012
   pins: u9-types-1/C-013, C-014, C-015, C-016
