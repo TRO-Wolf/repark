@@ -235,7 +235,14 @@ fn stamp_unresolved_column(error: DataFusionError) -> DataFusionError {
     }
     let missing = field.name.as_str();
     let column_name = format!("`{missing}`");
-    let suggestions = valid
+    let shown = valid
+        .iter()
+        .filter(|column| !crate::frame_names::is_scratch_relation(&column.name))
+        .collect::<Vec<_>>();
+    if shown.is_empty() {
+        return error;
+    }
+    let suggestions = shown
         .iter()
         .map(|column| {
             let candidate = column.name.as_str();

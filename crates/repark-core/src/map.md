@@ -708,6 +708,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `jn.select(a['ID'].alias('id'), …)` refused `[`sc`.`ns`.`t`.`id`, `id`]` — the by-name write
   binding of `writeTo(t).append()` and `INSERT INTO t SELECT id, Data FROM v` both plan through
   it. CTE bodies and derived tables are still audited. pins: u11-edge-1/C-028
+  **Round 7 (V-002):** `stamp_unresolved_column` leaves every `_repark_*` / `__repark_*` field
+  out of the `UNRESOLVED_COLUMN.WITH_SUGGESTION` list (the round-2 relation rule extended to
+  field names; a list left empty keeps DataFusion's error), so a twin-join frame's attribute
+  copies and join scratch names never reach a suggestion. A user field spelled with that prefix
+  is left out too. pins: u11-edge-1/C-029
 - `column_resolution/display.rs` — **U11-EDGE-1 (2026-09-26):** output columns keep the
   query's spelling; `plan_with_repair` hands every successful insensitive plan to
   `finish_with_display` (boxed, like the strict guard, so the repair future stays small for

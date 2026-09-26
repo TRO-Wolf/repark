@@ -928,6 +928,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `writeTo(t).overwrite(col('id') >= 1)` → `[(1,'a')]` and `[(2,'a')]`. Spark shapes:
   `target/probe-u11-edge-1/f3-spark.json`; the verifier's `v6b-spark.json` V6-5. Red on d3993f87
   (`red-r7-facade.txt`). pins: u11-edge-1/C-028
+  Round 7 (V-002, V-003): `test_star_column_and_suggestions_show_presented_fields_only` —
+  `jn.select(b['id'] + 1, col('*'))` → `(id + 1)`, `ID`, `data`, `id`, `w` with
+  `[(2, 1, 'a', 1, 'q')]`; `jn.select(b['id'] + 1, col('nope'))` refuses
+  `UNRESOLVED_COLUMN.WITH_SUGGESTION` naming `ID`, `data`, `id`, `w` and no `repark` name;
+  `test_attribute_copies_never_collide_with_a_user_field` — a left side carrying
+  `7 AS __repark_attr_6964` answers `select(b['id'] + 1, a['data'])` → `[(2, 'a')]` and keeps
+  the user field `[(2, 'a', 7)]`. Spark shapes: `target/probe-u11-edge-1/f3-spark.json`
+  (`star_col`, `unresolved_nope`, `collision`, `collision_kept`), the verifier's
+  `v6c-spark.json`. Red on d3993f87 (`red-r7-facade.txt`). pins: u11-edge-1/C-029, C-030
 - [test_u11_edge_partition_field.py](test_u11_edge_partition_field.py) — **U11-EDGE-1
   (2026-09-26), cell `E-CASE-PARTITION-FIELD`:** partition sources bind case-sensitively under
   either `spark.sql.caseSensitive`: `ADD PARTITION FIELD CAT`, `bucket(4, ID)` and

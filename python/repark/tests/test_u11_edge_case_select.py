@@ -399,3 +399,41 @@ def test_projection_of_a_twin_join_writes_back_into_its_table(spark: ReparkSessi
     _, twin = _projections(spark)
     twin.writeTo("sc.ns.t").overwrite(col("id") >= 1)
     assert _table(spark) == [(2, "a")]
+
+
+def test_star_column_and_suggestions_show_presented_fields_only(spark: ReparkSession) -> None:
+    """col('*') over a twin-join projection expands like Spark; no scratch name is suggested.
+
+    pins: u11-edge-1/C-029
+    """
+    left = spark.sql("SELECT ID, data FROM sc.ns.t")
+    right = spark.sql("SELECT 1 AS id, 'q' AS w")
+    joined = left.join(right, left["ID"] == right["id"])
+    assert _typed(joined.select(right["id"] + 1, col("*"))) == (
+        [("(id + 1)", "int"), ("ID", "int"), ("data", "string"), ("id", "int"), ("w", "string")],
+        [(2, 1, "a", 1, "q")],
+    )
+    with pytest.raises(AnalysisException) as excinfo:
+        joined.select(right["id"] + 1, col("nope")).collect()
+    assert "[UNRESOLVED_COLUMN.WITH_SUGGESTION]" in str(excinfo.value)
+    assert all(f"`{name}`" in str(excinfo.value) for name in ("ID", "data", "id", "w"))
+    assert "repark" not in str(excinfo.value)
+
+
+def test_attribute_copies_never_collide_with_a_user_field(spark: ReparkSession) -> None:
+    """A user field spelled like an attribute copy keeps its value beside the copy.
+
+    pins: u11-edge-1/C-030
+    """
+    left = spark.sql("SELECT ID, data, 7 AS __repark_attr_6964 FROM sc.ns.t")
+    right = spark.sql("SELECT 1 AS id, 'q' AS w")
+    joined = left.join(right, left["ID"] == right["id"])
+    assert _typed(joined.select(right["id"] + 1, left["data"])) == (
+        [("(id + 1)", "int"), ("data", "string")],
+        [(2, "a")],
+    )
+    kept = joined.select(right["id"] + 1, left["data"], left["__repark_attr_6964"])
+    assert _typed(kept) == (
+        [("(id + 1)", "int"), ("data", "string"), ("__repark_attr_6964", "int")],
+        [(2, "a", 7)],
+    )

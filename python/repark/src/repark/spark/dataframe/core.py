@@ -1279,7 +1279,7 @@ class DataFrame:
         for item in cols:
             if isinstance(item, RegexColumn):
                 expanded.extend(expand_col_regex(self, item))
-            elif isinstance(item, str) and item == "*":
+            elif item == "*" if isinstance(item, str) else _column_fields.is_bare_star(item):
                 expanded.extend(self._iter_bound_columns())
             else:
                 expanded.append(item)
@@ -1754,13 +1754,13 @@ class DataFrame:
         """Project Columns whose ``join_sql_part`` still has QCOL tokens.
 
         Registers this frame as a temp view, rewrites tokens to quoted engine fields, runs
-        ``SELECT … FROM view``, drops the view. Returns ``None`` if any token cannot be
-        resolved (caller falls through / fails engine-side).
+        ``SELECT … FROM view``, drops the view; ``None`` if any token cannot be resolved.
         """
         from repark.spark._idents import quote_ident as _quote_ident
 
         if self._origin_map is None:
             return None
+        copy_name = functools.partial(_native.attribute_copy_name, self._plan())
 
         proj_parts: list[str] = []
         display_names: list[str] = []
@@ -1771,9 +1771,9 @@ class DataFrame:
             expr_sql = column.join_sql_part()
             held = self._origin_map.get((column._origin_plan_id, column._origin_field))
             if held is not None and expr_sql == _quote_ident(held):
-                expr_sql = _quote_ident(_native.attribute_copy_name(held))
+                expr_sql = _quote_ident(copy_name(held))
             if "__REPARK_QCOL_" in expr_sql:
-                expr_sql = _rewrite_qcol_tokens_local(expr_sql, self, _native.attribute_copy_name)
+                expr_sql = _rewrite_qcol_tokens_local(expr_sql, self, copy_name)
                 if "__REPARK_QCOL_" in expr_sql:
                     return None
             display = (

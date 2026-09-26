@@ -37,8 +37,8 @@ fn attribute_copies(frame: &PyDataFrame) -> PyResult<PyDataFrame> {
 }
 
 #[pyfunction]
-fn attribute_copy_name(name: &str) -> String {
-    repark_core::frame_names::attribute_copy_name(name)
+fn attribute_copy_name(frame: &PyDataFrame, name: &str) -> String {
+    repark_core::frame_names::attribute_copy_name_in(frame.inner().schema(), name)
 }
 
 #[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]

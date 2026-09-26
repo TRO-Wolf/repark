@@ -99,3 +99,8 @@ Round 7 (2026-09-26, V-001): `a_view_body_is_not_audited_against_the_outer_state
 view over the `tw` case twins projecting `ID AS id` answers `SELECT id, Data FROM vj`, while a
 CTE (plain and aliased) and a derived table over the twins still refuse. Red on d3993f87
 (`target/probe-u11-edge-1/red-r7-rust.txt`). pins: u11-edge-1/C-028
+Round 7 (V-002, V-003): `attribute_copies_never_collide_and_suggestions_hide_scratch_names` — a
+frame holding `id`, `__repark_attr_6964` and `__repark_attr_6964_` gets its `id` copy as
+`__repark_attr_6964__`, answers `copy + 1` and the user field's `7`, and a missing name's
+suggestion list is `[`id`]`. Red with the copy collision and with the filter off
+(`red-r7-rust.txt`, mutation M19). pins: u11-edge-1/C-029, C-030

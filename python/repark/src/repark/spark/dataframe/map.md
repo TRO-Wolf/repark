@@ -1385,3 +1385,10 @@ so a compound origin Column on a case-twin join (`b["id"] + 1`, a cast, an alias
 a comparison) binds its side instead of refusing. `with_columns` matches its targets ignoring
 case, as Spark's resolver does: `withColumn("id", …)` replaces `ID` and `id` and names both `id`.
 `core.py` 3976 → 3973. pins: u11-edge-1/C-027
+U11-EDGE-1 round 7 (2026-09-26, V-002, V-003): `select` expands an unaliased `F.col("*")`
+(`column_fields.is_bare_star`) through `_iter_bound_columns` like the string `"*"`, so on a
+twin-join frame `select(b["id"] + 1, F.col("*"))` answers the presented fields `ID`, `data`,
+`id`, `w`, not the scratch view's copies. `_select_via_qcol_sql` spells copies through
+`functools.partial(_native.attribute_copy_name, self._plan())`, the collision-free name the
+native copy projection gave each field. `core.py` stays 3973 (the docstring gave the line).
+pins: u11-edge-1/C-029, C-030

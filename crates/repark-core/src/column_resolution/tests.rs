@@ -897,3 +897,34 @@ async fn a_view_body_is_not_audited_against_the_outer_statement() {
         assert!(error.contains("[AMBIGUOUS_REFERENCE]"), "{sql}: {error}");
     }
 }
+
+#[tokio::test]
+async fn attribute_copies_never_collide_and_suggestions_hide_scratch_names() {
+    use crate::frame_names::{attribute_copy_name, attribute_copy_name_in, with_attribute_copies};
+    let ctx = measured_ctx();
+    let clash = attribute_copy_name("id");
+    let taken = format!("{clash}_");
+    let user = ctx
+        .sql(&format!(
+            "SELECT \"userId\" AS id, 7 AS {clash}, 8 AS {taken} FROM mc WHERE \"userId\" = 1"
+        ))
+        .await
+        .unwrap();
+    let copied = with_attribute_copies(user.clone()).unwrap();
+    let spelled = attribute_copy_name_in(user.schema(), "id");
+    assert_eq!(spelled, format!("{clash}__"));
+    ctx.register_table("_repark_h1_sel_c", copied.into_view())
+        .unwrap();
+    let (names, rows) = measured_rows(
+        &ctx,
+        &format!("SELECT {spelled} + 1 AS n, {clash} AS k FROM _repark_h1_sel_c"),
+    )
+    .await;
+    assert_eq!(names, vec!["n", "k"]);
+    assert_eq!(rows, text_rows(&[&["2", "7"]]));
+    let error = plan_error(&ctx.state(), "SELECT nope FROM _repark_h1_sel_c", true).await;
+    assert!(
+        error.contains("Did you mean one of the following? [`id`]"),
+        "{error}"
+    );
+}
