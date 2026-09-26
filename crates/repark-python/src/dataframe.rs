@@ -363,17 +363,6 @@ impl PyDataFrame {
         })
     }
 
-    /// Drop columns by name (PySpark `DataFrame.drop`).
-    /// # Errors
-    /// Returns `RuntimeError` if the resulting plan cannot be built.
-    pub fn drop(&self, names: Vec<String>) -> PyResult<Self> {
-        fenced!("PyDataFrame.drop", {
-            let df = repark_core::frame_names::drop_named_columns(self.df.clone(), &names)
-                .map_err(datafusion_to_py_err)?;
-            Ok(Self::new(df, Arc::clone(&self.runtime)))
-        })
-    }
-
     /// Order rows by the given columns (PySpark `DataFrame.orderBy` / `sort`).
     /// # Errors
     /// Returns `ValueError` on vector length mismatch; plan failures use the engine classifier.

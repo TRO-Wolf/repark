@@ -14,6 +14,7 @@ import uuid
 from collections.abc import Callable, Iterator
 from typing import TYPE_CHECKING, Any, overload
 
+from repark import _native
 from repark.errors import (
     AnalysisException,
     IllegalArgumentException,
@@ -2559,13 +2560,12 @@ class DataFrame:
     def drop(self, *cols: Column | str) -> DataFrame:
         """Drop columns by name or :class:`Column` (PySpark ``DataFrame.drop``).
 
-        An absent name is a no-op. A :class:`Column` argument drops by its resolved
-        field name (simple ``col("x")`` / ``df.x`` form). When the Column carries
-        origin identity and this frame has an origin map (post-join), drop targets the
-        correct side's engine field only, not every display-name match. Dropping an
+        A name matching no field is a no-op; a qualified :class:`Column` binds through its
+        relation; an origin Column on a post-join frame drops that side's field only, and an
         unemitted semi/anti right origin is a Spark 4.1.2 no-op.
         """
         engine_drop: list[str] = []
+        references: list[str] = []
         for item in cols:
             if (
                 isinstance(item, Column)
@@ -2585,8 +2585,8 @@ class DataFrame:
                     if display == name:
                         engine_drop.append(engine)
             else:
-                engine_drop.append(name)
-        child = self._spawn(self._plan().drop(engine_drop))
+                (references if isinstance(item, Column) else engine_drop).append(name)
+        child = self._spawn(_native.drop_frame_columns(self._plan(), engine_drop, references))
         if self._display_names is not None and self._engine_names is not None:
             dropped = set(engine_drop)
             new_display: list[str] = []

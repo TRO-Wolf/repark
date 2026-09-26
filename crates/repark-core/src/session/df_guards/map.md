@@ -45,6 +45,15 @@ wrapped optimizer rule) and declares this directory.
   the round-1 `exact_ambiguous_and_qualified_references_stay` became
   `exact_and_ambiguous_references_stay` (a qualified exact hit stays).
   pins: u11-edge-1/C-017, C-018, C-019, C-020
+  **Round 4 (2026-09-26, verifier round 2 V-001/V-003):** `drop_named_columns(frame, names,
+  references)` takes the string targets and the Column targets apart. A string matches a field
+  by its whole text ignoring case (`drop("t.ID")` matches no field); a Column target parses with
+  `Column::from_qualified_name_ignore_case` and binds through `case_hits`, the one match rule
+  select and filter use (a qualified target narrows by `same_relation` from the right, so
+  `F.col("t.ID")` drops `(t, ID)` and `F.col("b.id")` drops `(b, ID)`). A target matching no
+  field is a no-op on both, as Spark answers (`drop("t.ID")`, `drop("u.id")`,
+  `drop(F.col("u.id"))`). Spark shapes: `target/probe-u11-edge-1/vz-spark.json` (`q_drop_*`,
+  `j_drop_*`). Rust pin `qualified_drop_binds_through_its_relation`. pins: u11-edge-1/C-022
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside
