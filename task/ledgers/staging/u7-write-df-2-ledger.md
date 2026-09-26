@@ -402,7 +402,9 @@ Each load-bearing line was broken, its named test run, and the source restored.
   `partitionBy('data')` over a `cat`-partitioned table, RePark wrote `[spec 1, spec 0]` and
   Spark `[spec 0, spec 1]`. Ids, fields, `default-spec-id` and `last-partition-id` are equal.
   The order varies run to run and SQL cannot observe it, so the pins compare the sorted ids.
-  This is a fork change (hand-back Q1).
+  This is a fork change (hand-back Q1). RETIRED 2026-09-26 by RP50-B: the fork serializes all
+  three lists in ascending id order at the RP-50 pin, and `test_ice_write_df_2.py` compares
+  the `partition-specs` list `==` Spark's.
 - The fork's `StagedTableTransaction::begin_replace` does not run Java's `assignFreshIds`
   itself; RePark calls the fork's port before staging (hand-back Q1).
 - A frame missing a column that carries a `write-default` writes NULL through

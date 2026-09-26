@@ -660,13 +660,14 @@ pins: rp-4-fork-repin/C-005, C-006
   Details: [call/map.md](call/map.md).
   pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-007, C-010
 - `ctas.rs` — **U7 PR2 slice-1 round 2 (2026-09-25):** a replace loads the existing table
-  before the schema is built, and `repark_iceberg::write::replacement_schema` re-keys the
-  query's fresh-id schema by name against the table's current schema (Java's RTAS) before the
-  partition spec is built from it; the staging reuses the loaded table. The AS-SELECT doors
-  (`saveAsTable` overwrite, `createOrReplace`, `replace`, SQL `CREATE OR REPLACE … AS
-  SELECT`) keep their column ids, so an older ref still reads its rows; round 3 (2026-09-25)
-  brings the column-def doors in `create_table.rs` and the native door in `repark-sql` onto
-  the same kernel, so every `begin_replace` caller keeps them. pins: u7-write-df-2/C-011
+  before the schema is built and the fork's `begin_replace` re-keys the query's fresh-id
+  schema by name against the table's current schema (Java's RTAS); the staging reuses the
+  loaded table. The AS-SELECT doors (`saveAsTable` overwrite, `createOrReplace`, `replace`,
+  SQL `CREATE OR REPLACE … AS SELECT`) keep their column ids, so an older ref still reads
+  its rows; round 3 (2026-09-25) brings the column-def doors in `create_table.rs` and the
+  native door in `repark-sql` onto the same kernel, so every `begin_replace` caller keeps
+  them. **WO RP50-B (2026-09-26):** the re-keying moved into the fork (#354) and RePark's
+  `replace_schema.rs` is deleted. pins: u7-write-df-2/C-011
   **U7 PR2 slice-2 round 3 (2026-09-25, critic r3 V-001..V-005):** `execute_ctas` refuses an unknown
   `isolation-level` option (`none` included) on the replace arm (`or_replace`) before any
   catalog read, as Spark's RTAS does with or without a table; a plain CTAS ignores it.
@@ -1096,9 +1097,10 @@ pins: rp-4-fork-repin/C-005, C-006
   (`NOT`, `COMMENT` with no string, `NOT NULL NULL`) refuses with RePark's own token text,
   residue R-U5-PR3-OPTION-TAIL-TEXT. pins: ice-nested-evo-1/C-058
 - `create_table.rs` — **U7 PR2 slice-1 round 3 (2026-09-25):** a column-def `CREATE OR
-  REPLACE` / `REPLACE TABLE` loads the existing table first and re-keys the declared schema
-  through `repark_iceberg::write::replacement_schema` before the partition spec is built, so
-  the column ids stay by name as on Spark. pins: u7-write-df-2/C-011
+  REPLACE` / `REPLACE TABLE` loads the existing table first and the fork's `begin_replace`
+  re-keys the declared schema by name, so the column ids stay by name as on Spark.
+  **WO RP50-B (2026-09-26):** the re-keying moved into the fork (#354) and RePark's
+  `replace_schema.rs` is deleted. pins: u7-write-df-2/C-011
 - `create_table.rs` — column-def `CREATE TABLE` (I5 schema-only staged create) + the
   Spark-SQL→iceberg type mapping; **V3-2:** `iceberg_create_format_version` (session opt-in;
   `Model: Grok 4.6 xHigh`);

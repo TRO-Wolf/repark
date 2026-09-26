@@ -181,7 +181,7 @@ def _ids(metadata: dict[str, Any]) -> dict[str, Any]:
             [field["source-id"], field["field-id"], field["name"], field["transform"]]
             for field in spec["fields"]
         ],
-        "spec_ids": sorted(spec["spec-id"] for spec in metadata["partition-specs"]),
+        "spec_ids": [spec["spec-id"] for spec in metadata["partition-specs"]],
     }
 
 
