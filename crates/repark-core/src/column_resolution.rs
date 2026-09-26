@@ -47,6 +47,35 @@ async fn finish_with_display(
     display::keep_ref_qualifiers(&original, replanned)
 }
 
+fn boxed_finish(
+    state: &SessionState,
+    original: Box<Statement>,
+    folded: Box<Statement>,
+    plan: LogicalPlan,
+) -> std::pin::Pin<Box<impl std::future::Future<Output = Result<LogicalPlan>> + '_>> {
+    Box::pin(finish_with_display(state, original, folded, plan))
+}
+
+fn boxed_case_sensitive(
+    state: &SessionState,
+    statement: datafusion::sql::parser::Statement,
+) -> std::pin::Pin<Box<impl std::future::Future<Output = Result<LogicalPlan>> + '_>> {
+    Box::pin(plan_case_sensitive(state, statement))
+}
+
+async fn plan_case_sensitive(
+    state: &SessionState,
+    statement: datafusion::sql::parser::Statement,
+) -> Result<LogicalPlan> {
+    if let datafusion::sql::parser::Statement::Statement(inner) = &statement {
+        strict_case_guard(state, inner).await?;
+    }
+    state
+        .statement_to_plan(statement)
+        .await
+        .map_err(stamp_unresolved_column)
+}
+
 async fn strict_case_guard(state: &SessionState, inner: &Statement) -> Result<()> {
     if !display::should_strict_check(inner) {
         return Ok(());
@@ -75,13 +104,7 @@ async fn plan_with_repair(
     case_insensitive: bool,
 ) -> Result<LogicalPlan> {
     if !case_insensitive {
-        if let datafusion::sql::parser::Statement::Statement(inner) = &statement {
-            Box::pin(strict_case_guard(state, inner)).await?;
-        }
-        return state
-            .statement_to_plan(statement)
-            .await
-            .map_err(stamp_unresolved_column);
+        return boxed_case_sensitive(state, statement).await;
     }
     let datafusion::sql::parser::Statement::Statement(mut inner) = statement else {
         return state
@@ -103,7 +126,7 @@ async fn plan_with_repair(
             if plan_has_upper_ascii_field(&plan) {
                 audit_plan_for_ambiguity(&plan, &written_references(&inner, defaults))?;
             }
-            return Box::pin(finish_with_display(state, original, inner, plan)).await;
+            return boxed_finish(state, original, inner, plan).await;
         }
         Err(error) => error,
     };
@@ -144,7 +167,7 @@ async fn plan_with_repair(
         {
             Ok(plan) => {
                 audit_plan_for_ambiguity(&plan, &written)?;
-                return Box::pin(finish_with_display(state, original, inner, plan)).await;
+                return boxed_finish(state, original, inner, plan).await;
             }
             Err(next) => error = next,
         }

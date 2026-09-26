@@ -715,9 +715,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   is left out too. pins: u11-edge-1/C-029
 - `column_resolution/display.rs` — **U11-EDGE-1 (2026-09-26):** output columns keep the
   query's spelling; `plan_with_repair` hands every successful insensitive plan to
-  `finish_with_display` (boxed, like the strict guard, so the repair future stays small for
-  the nested-view and deep-union stacks) and runs `strict_case_guard` first under
-  `caseSensitive=true`. Row in `column_resolution/map.md`. pins: u11-edge-1/C-001, C-007
+  `finish_with_display` (boxed through `boxed_finish`, so the repair future stays small for
+  the nested-view and deep-union stacks) and plans `caseSensitive=true` in its own boxed
+  `plan_case_sensitive`, which runs `strict_case_guard` first. Row in `column_resolution/map.md`. pins: u11-edge-1/C-001, C-007
   Round 2 (2026-09-26): `finish_with_display` also runs `display::keep_ref_qualifiers`, and
   `lib.rs` re-exports the DataFrame door's binder as `frame_names` (row in
   `session/df_guards/map.md`). pins: u11-edge-1/C-018

@@ -12,6 +12,8 @@ paths calls, plus the relation kept on respelled references (`column_resolution/
 C-017…C-020. Output names are not re-lower-cased: `E-CASE-SELECT` replays EQUAL on every `obs`
 key (`target/probe-u11-edge-1/replay-r3-case.json`).
 
+**Round 9 (2026-09-26, fixer, Claude Opus 5.5):** CI job "build + import smoke (debug, host)" on `d2e2520f` segfaulted `test_nested_view_depth_guard` (stack overflow in the view-body parse of the 458 752-byte grown segment, measured under gdb); `plan_with_repair` builds its boxed futures through `boxed_finish` and `boxed_case_sensitive`, so its debug poll frame drops from 18 792 to 14 696 bytes (main 15 720) and the debug wheel reads `w99` and trips at `w100` (2 passed).
+
 **Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
 
 **Why now.** Four scoreboard cells of the 2026-09-25 run: `E-CASE-SELECT` answered the stored
