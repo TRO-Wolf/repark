@@ -1,1 +1,2 @@
 - Open the PR as soon as the FIRST work order's gate is all zeros — never batch work orders into one late PR — and run LINT BEFORE PUSH every time. An inherited oversized work order is split on your first tick (keep the sound commits it left in the clone).
+- Muse Spark 1.3 is a GUIDED engine ({{HERE}}/bands.md, 33.3 on Terminal-Bench 4.0): every Muse work order passes the guided-execution checklist before launch. Evidence: the U11 round of 2026-09-25 halted on rulings the order had left open and landed nothing in six hours.
