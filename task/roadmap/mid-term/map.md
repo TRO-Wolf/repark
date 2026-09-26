@@ -115,6 +115,11 @@ declines it (a dated ruling in the intake, then the archive).
   main per Q-R13-14) and ARRAY-NULL-1 (#581: null-preserving `array_append`/`array_prepend`, Spark's recursive element
   coercion measured on the oracle, session-zone µs temporal widening, S2-21 bars re-measured by the orchestrator).
   Rulings applied, decisions R14b-D-1..13, incidents, owner questions Q-R14b-1..6 with recommendations.
+- [f-partspec-redundant-1-2026-09-26.md](f-partspec-redundant-1-2026-09-26.md) — **card
+  F-PARTSPEC-REDUNDANT-1 (2026-09-26, filed by WO PARTNAME-1):** the fork's partition-spec
+  update path allows distinct transforms on one source and refuses only exact duplicates
+  like Java's `BaseUpdatePartitionSpec`, with Java's texts; the CREATE-door redundant-time
+  and bucket+bucket texts are the second item. Closes PARTNAME-1 residue R-1 on its repin.
 - [tz-offset-seconds-1-card-2026-09-16.md](tz-offset-seconds-1-card-2026-09-16.md) — **card TZ-OFFSET-SECONDS-1
   (2026-09-16, 1.6, ruling Q-17c-1):** sub-minute fixed session offsets (`+05:30:30`) carried as seconds east of UTC
   in a typed zone instead of an Arrow `Tz` string; closes the dated declaration SET-ANSI-RUNTIME-4. No 1.5 code.
