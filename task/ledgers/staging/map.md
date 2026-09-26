@@ -17,8 +17,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   comparison and ordering refuse (C-012); residues R-18..R-20.
   Round-1 fixer of PR2 (2026-09-26): uuid through MERGE, INSERT OVERWRITE and the
   metadata-column projections (C-013), a value into VOID refuses on every door (C-014), a
-  CTAS / DataFrame create of a NULL column is v3 `unknown` (C-015). The UPDATE table
-  rendering retires two u8-write-sql R-16 keys.
+  CTAS / DataFrame create of a NULL column is v3 `unknown` (C-015); residues R-29 (snapshot-pinned
+  uuid reads, F-UUID-STATIC-1), R-30, R-31. The UPDATE table rendering retires two u8-write-sql
+  R-16 keys.
   `risk_tier: standard`. Branch `feat/u9-types-1`.
   pins: u9-types-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-011, C-012
   pins: u9-types-1/C-013, C-014, C-015

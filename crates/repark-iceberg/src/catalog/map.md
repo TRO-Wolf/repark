@@ -439,9 +439,19 @@ Source comments retain only API and safety contracts; implementation narration i
   sits over the fork's schema provider and hands out the fork's own `IcebergTableProvider`
   with its `with_uuid_as_string(true)` switch on (F-UUID-STRING-1, fork #355); the table
   provider itself is not wrapped. `provider.rs::present_fork_schema` is the one site that
-  applies it, for the full snapshot and the scoped namespace rebuild alike, so every
-  catalog-path door (scan, INSERT, DELETE / UPDATE / MERGE, the DataFrame writer, metadata
-  tables) sees `uuid` as `Utf8`. pins: u9-types-1/C-010
+  applies it, for the full snapshot and the scoped namespace rebuild alike. **Corrected
+  2026-09-26 (round-1 fixer, verifier V-005):** the switch covers exactly the doors that read
+  or write THROUGH that provider — the current-snapshot scan, `INSERT INTO` (SQL and the
+  DataFrame append), and the identity `DELETE` / `UPDATE` that take the fork path. The
+  RePark-owned writers and readers that build their own Arrow schema (MERGE, `INSERT
+  OVERWRITE` both forms, `overwritePartitions`, the `_file` / `_pos` / `_row_id` / changelog
+  projections, `DESCRIBE t col`, `SHOW TABLE EXTENDED`) present uuid through
+  `uuid_presentation.rs` instead. Two dated gaps remain: F-UUID-STATIC-1 (snapshot-pinned
+  reads — `VERSION AS OF`, `TIMESTAMP AS OF`, tag, branch and WAP-staged reads — build
+  `IcebergStaticTableProvider`, which has no switch at fork `08735de9`, and still show bytes;
+  ledger R-29) and F-UUID-CATALOG-OPTION-1 (this shim is removed once the fork carries an
+  `IcebergCatalogProvider::with_uuid_as_string` that propagates through `resolve_table`).
+  pins: u9-types-1/C-010
 - `uuid_presentation.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** the one place that
   turns an Iceberg schema into the presented Arrow schema. `presented_arrow_schema` is the
   fork's `schema_to_arrow_schema` with every `uuid` field (found by its field id, at any

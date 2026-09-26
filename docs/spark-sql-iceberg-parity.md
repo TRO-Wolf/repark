@@ -8625,7 +8625,11 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   the column reads NULL and describes as `void` on every surface (`cols`, `DESCRIBE`,
   `dtypes`, `printSchema`); a non-NULL value refuses Spark's `CANNOT_SAFELY_CAST` text;
   `CAST(NULL AS VOID)` is a typed null; `.files` `readable_metrics.c` is all null; a
-  copy-on-write DELETE keeps the column absent.
+  copy-on-write DELETE keeps the column absent. Since 2026-09-26 (C-014, C-015) the value
+  refusal holds on every door through one gate (`crates/repark-iceberg/src/write/void_store.rs`):
+  `INSERT … SELECT`, `VALUES (…, CAST(NULL AS INT))`, the DataFrame append (table
+  `sc`.`ns`.`t`), MERGE INSERT / UPDATE SET and UPDATE (table ``, as Spark prints); a CTAS or
+  DataFrame `create()` of a `NULL` column stores `unknown` on v3 and refuses on v2.
 - **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25 (21 steps) and
   2026-09-26 (+6 steps: printSchema, cast rows, file metrics, CoW DELETE; group `void` of
   `python/repark/tests/u9_types_1_spark_oracle.json`): v3 CREATE / ADD COLUMN store
@@ -8638,7 +8642,9 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `crates/repark-spark/src/tests/u9_void_uuid.rs`.
 - **Rationale** — EQUAL, dated 2026-09-26, WO U9-TYPES-1 clause C-009 (PROVEN). Remaining
   dated divergences: the v1/v2 refusal class and volatile Py4J wrapper line (R-22, R-24) and
-  the planning prefix on the value refusal (R-23).
+  the planning prefix on the value refusal (R-23, also on the seven `void-write` refusals);
+  `ALTER COLUMN c TYPE …` on VOID raises a different class around the same text (R-30); a
+  VOID-only struct or array fails its write with the fork's own text (R-31).
 
 ### TY-UUID-READ — EQUAL (2026-09-26): an Iceberg `uuid` column reads and writes as `string`
 
@@ -8647,8 +8653,18 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `CAST(x AS UUID)` keeps Spark's `[UNSUPPORTED_DATATYPE]` refusal byte for byte). Every
   provider RePark builds for an Iceberg table in the catalog path sets the fork's own
   `with_uuid_as_string(true)` switch (`UuidTextSchemaProvider`), so `uuid` advertises
-  `Utf8` on scan, INSERT, DELETE / UPDATE / MERGE, the DataFrame writer and metadata tables;
-  identity DML that references a uuid column takes the fork path. Reads render canonical
+  `Utf8` on the current-snapshot scan, `INSERT INTO` (SQL and the DataFrame append) and the
+  identity DELETE / UPDATE that reference a uuid column and take the fork path. The
+  RePark-owned paths present it through one schema presentation
+  (`crates/repark-iceberg/src/catalog/uuid_presentation.rs`, 2026-09-26): MERGE (`ON t.u =
+  s.u`, `ON t.u = '…'`, `INSERT` / `UPDATE SET u` of an upper-case string), `INSERT
+  OVERWRITE` whole-table and static-partition, `overwritePartitions`, the `_file` / `_pos` /
+  `_partition` / `_row_id` / changelog projections, `DESCRIBE t u` and `SHOW TABLE EXTENDED`.
+  Two gaps stay dated: snapshot-pinned reads (`VERSION AS OF`, `TIMESTAMP AS OF`, tag,
+  branch and WAP-staged reads) build the fork's `IcebergStaticTableProvider`, which has no
+  switch at `08735de9`, and show bytes (R-29, fork card F-UUID-STATIC-1); the shim itself
+  goes when the fork's `IcebergCatalogProvider::with_uuid_as_string` propagates through
+  `resolve_table` (F-UUID-CATALOG-OPTION-1). Reads render canonical
   lower case, upper-case literals store lower case, NULL writes, `u = '…'` filters and
   prunes, a DataFrame append of a `STRING` column writes, `'not-a-uuid'` and `7` refuse
   `Invalid UUID string: …`, `ORDER BY u` sorts, `bucket(4, u)` partitions, and `ALTER COLUMN
@@ -8667,7 +8683,9 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 - **Rationale** — EQUAL, dated 2026-09-26, WO U9-TYPES-1 clause C-010 (PROVEN). Remaining
   dated divergences: the RePark-extension `UUID` spelling commit (R-25), the bucket field
   name (R-26), the volatile task wrappers on invalid literals (R-27) and on files metrics
-  (R-28).
+  (R-28), snapshot-pinned reads showing bytes (R-29, F-UUID-STATIC-1). MERGE, INSERT
+  OVERWRITE and the metadata-column projections were added 2026-09-26 (C-013, 22 steps in
+  groups `uuid-write` / `uuid-overwrite`, `crates/repark-spark/src/tests/u9_uuid_void_writes.rs`).
 
 ### CUTOVER-CTAS-REQ-1 — parquet CTAS keeps source non-null fields required; Spark makes every column optional
 
