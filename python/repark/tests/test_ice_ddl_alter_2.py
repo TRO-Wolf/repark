@@ -879,7 +879,7 @@ def test_write_ordered_by_a_long_width_literal_lands_like_spark(
     assert _default_order(_metadata(tmp_path, "wo")) == [["bucket[4]", 1, "asc", "nulls-first"]]
 
 
-def test_a_wap_branch_write_on_a_v1_table_refuses_and_writes_no_ref(
+def test_a_wap_branch_write_on_a_v1_table_commits_on_the_branch(
     spark: ReparkSession, tmp_path: Path
 ) -> None:
     spark.sql(
@@ -887,21 +887,18 @@ def test_a_wap_branch_write_on_a_v1_table_refuses_and_writes_no_ref(
         "TBLPROPERTIES ('format-version'='1', 'write.wap.enabled'='true')"
     )
     spark.sql("INSERT INTO sc.ns.w1 VALUES (1)")
-    files = _metadata_files(tmp_path, "w1")
     spark.conf.set("spark.wap.branch", "w1")
     try:
-        caught = _refusal(spark, "INSERT INTO sc.ns.w1 VALUES (2)")
+        spark.sql("INSERT INTO sc.ns.w1 VALUES (9)")
+        on = spark.sql("SELECT id FROM sc.ns.w1 ORDER BY id").to_arrow().to_pylist()
+        assert on == [{"id": 1}, {"id": 9}]
     finally:
         spark.conf.unset("spark.wap.branch")
-    assert type(caught) is UnsupportedOperationException
-    assert str(caught) == (
-        "This feature is not implemented: BRANCH on the format v1 table ns.w1 is not supported: "
-        "the Iceberg fork writes v1 metadata without its refs, so the new ref would be lost"
-    )
-    assert _metadata_files(tmp_path, "w1") == files
-    refs = spark.sql("SELECT name FROM sc.ns.w1.refs ORDER BY name").collect()
-    assert [row[0] for row in refs] == ["main"]
-    assert spark.sql("SELECT id FROM sc.ns.w1").to_arrow().to_pylist() == [{"id": 1}]
+    off = spark.sql("SELECT id FROM sc.ns.w1 ORDER BY id").to_arrow().to_pylist()
+    assert off == [{"id": 1}]
+    branch = spark.sql("SELECT id FROM sc.ns.w1.branch_w1 ORDER BY id").to_arrow().to_pylist()
+    assert branch == [{"id": 1}, {"id": 9}]
+    assert sorted(_metadata(tmp_path, "w1")["refs"]) == ["main", "w1"]
 
 
 def _schema_and_spec(warehouse: Path, table: str) -> tuple[list[list[Any]], list[list[Any]]]:

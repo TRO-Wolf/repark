@@ -186,9 +186,9 @@ pub(crate) async fn commit_overwrite_on_ref(
             action = action.validate_from_snapshot(pin);
         }
         let action =
-            crate::write::commit_target::maybe_to_branch(table, action, branch, |action, name| {
+            crate::write::commit_target::maybe_to_branch(action, branch, |action, name| {
                 action.to_branch(name)
-            })?;
+            });
         action.apply(tx).map_err(iceberg_err)?
     } else {
         let mut action = tx
@@ -206,9 +206,9 @@ pub(crate) async fn commit_overwrite_on_ref(
             action = action.validate_from_snapshot(pin);
         }
         let action =
-            crate::write::commit_target::maybe_to_branch(table, action, branch, |action, name| {
+            crate::write::commit_target::maybe_to_branch(action, branch, |action, name| {
                 action.to_branch(name)
-            })?;
+            });
         action.apply(tx).map_err(iceberg_err)?
     };
     match tx.commit(catalog.as_ref()).await {
@@ -426,10 +426,9 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
     if let Some(pin) = snapshot_id {
         action = action.validate_from_snapshot(pin);
     }
-    let action =
-        crate::write::commit_target::maybe_to_branch(table, action, branch, |action, name| {
-            action.to_branch(name)
-        })?;
+    let action = crate::write::commit_target::maybe_to_branch(action, branch, |action, name| {
+        action.to_branch(name)
+    });
     let tx = action.apply(tx).map_err(iceberg_err)?;
     match tx
         .commit(catalog.as_ref())
