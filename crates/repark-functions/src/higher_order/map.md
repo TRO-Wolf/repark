@@ -33,7 +33,9 @@ pins: fnp-4c-higher-order-kernels/C-007, C-008, C-009, C-010, C-011, C-013, C-01
   **FNP-8-REVIEW (2026-09-07):** lambda parameters are nullable (either side can
   pad nulls, F2) and the result element derives from the lambda's nullability
   (F3). pins: fnp-8-review/C-002, C-003
-- `map_common.rs` — flatten/rebuild, `NULL_MAP_KEY`, `DUPLICATED_MAP_KEY`.
+- `map_common.rs` — flatten/rebuild, `NULL_MAP_KEY`, `DUPLICATED_MAP_KEY`. `NULL_MAP_KEY`
+  refuses exactly when a key is null (`logical_null_count`), so an empty `Null`-typed key array
+  (the keys of `map()`) passes (U9-TYPES-1, 2026-09-25).
 - `transform_keys.rs` / `transform_values.rs` / `map_filter.rs` / `map_zip_with.rs`.
 
 ## Pointers

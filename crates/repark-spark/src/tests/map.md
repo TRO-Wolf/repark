@@ -232,6 +232,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **FNP-8-REVIEW (2026-09-07):** the exists/forall three-valued pin gains the
   null-predicate legs (`exists`/`forall` over `make_array(1, NULL, 3)` answer NULL, F6).
   pins: fnp-8-review/C-006
+  **U9-TYPES-1 (2026-09-25):** `transform_keys`, `transform_values`, `map_filter` and
+  `map_zip_with` over `map()` answer the empty map on ANSI on and off, and a produced null key
+  (`NULL` or a typed null) still refuses with Spark's exact `NULL_MAP_KEY` text (ledger R-21).
 - `list_null_compound.rs` — **ICE-LIST-NULL-2 (2026-09-19):** copy-on-write DELETE with a
   compound predicate over a nested column answers Spark through the Spark door — one pin per
   nested kind (list, map, struct) per compound shape (`id > 1 AND xs IS NULL` keeps

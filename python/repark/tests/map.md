@@ -7288,6 +7288,10 @@ alike — a disclosed round-8 residual, deliberately unpinned.
 FNP-8 SQL-text error cells also execute column-free `F.expr`; `fnp8_repark_errors.json`
 records both paths against `fnp8_error_oracle.json`. The empty untyped map diagnostic
 keeps Spark collect separate from its Arrow export refusal.
+**U9-TYPES-1 (2026-09-25):** error cells 52 and 53 (`transform_keys(map(), (k, v) -> k)`)
+record RePark's collected empty map on the SQL door: Spark's `collect()` answers `{}` and only
+PySpark's Arrow export fails, so the RePark disposition is the collected value. `F.expr` does not
+lower `map()`, so `52-expr` and `53-expr` keep the planning refusal (ledger R-21).
 **FNP-8-REVIEW (2026-09-07):** the F-Y10-1 registry note cites the wrap pin and the
 idx-25/idx-51 dispositions (F7). pins: fnp-8-review/C-007
 **FNP-8-REVIEW (2026-09-07):** `test_fnp_8_sql_door.py` pins table-backed and

@@ -480,16 +480,24 @@
     "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
   },
   "52-sql": {
-    "error_type": "AnalysisException",
-    "error": "Error during planning: Function 'map' expected at least one argument but received 0"
+    "rows": [
+      {
+        "r": []
+      }
+    ],
+    "schema_base64": "/////wABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAcP///wAAABEUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAZP///5j///8AAAANGAAAACAAAAAEAAAAAgAAAGAAAAAkAAAABwAAAGVudHJpZXMAlP///xAAFAAIAAYABwAMAAAAEAAQAAAAAAABARAAAAAYAAAABAAAAAAAAAAFAAAAdmFsdWUAAADM////EAAUAAgAAAAHAAwAAAAQABAAAAAAAAABEAAAABgAAAAEAAAAAAAAAAMAAABrZXkABAAEAAQAAAAAAAAA"
   },
   "52-expr": {
     "error_type": "AnalysisException",
     "error": "Error during planning: Function 'map' expected at least one argument but received 0"
   },
   "53-sql": {
-    "error_type": "AnalysisException",
-    "error": "Error during planning: Function 'map' expected at least one argument but received 0"
+    "rows": [
+      {
+        "r": []
+      }
+    ],
+    "schema_base64": "/////wABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAcP///wAAABEUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAZP///5j///8AAAANGAAAACAAAAAEAAAAAgAAAGAAAAAkAAAABwAAAGVudHJpZXMAlP///xAAFAAIAAYABwAMAAAAEAAQAAAAAAABARAAAAAYAAAABAAAAAAAAAAFAAAAdmFsdWUAAADM////EAAUAAgAAAAHAAwAAAAQABAAAAAAAAABEAAAABgAAAAEAAAAAAAAAAMAAABrZXkABAAEAAQAAAAAAAAA"
   },
   "53-expr": {
     "error_type": "AnalysisException",
