@@ -13,6 +13,15 @@ wrapped optimizer rule) and declares this directory.
   [../map.md](../map.md); its pins are `../tests/window_rescan.rs` and
   `python/repark/tests/test_win_slide_1.py`.
   pins: win-slide-1/C-001, C-005
+- `case_bind.rs` — **U11-EDGE-1 (2026-09-26):** `bind_case_insensitive`, run first by
+  `subquery.rs`'s `resolve_bound_expr` (the DataFrame door's one binding hook). An
+  unqualified column the frame schema does not hold exactly binds to the single field that
+  matches it case-insensitively; an exact hit, a case twin, or a qualified column stays as
+  it is. DataFusion's `col()` folds `F.col("ID")` to `id`, so without it a spelled SQL
+  output (`SELECT ID` → `ID`, `SELECT id AS Id` → `Id`) or a `createDataFrame` column `Id`
+  could not be filtered or projected by `F.col`. Live Spark answers all of these
+  (`target/probe-u11-edge-1/spark_r3.json`). Rust pins in the file's own test module.
+  pins: u11-edge-1/C-015
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside

@@ -697,6 +697,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 - `column_resolution/tests.rs` — the fold's unit battery (statement cells, fragment
   scoping, ambiguity shape, backticked exact under `true`, DataFrame filter alias
   binding). Split from `column_resolution.rs` under the file-size gate.
+- `column_resolution/display.rs` — **U11-EDGE-1 (2026-09-26):** output columns keep the
+  query's spelling; `plan_with_repair` hands every successful insensitive plan to
+  `finish_with_display` (boxed, like the strict guard, so the repair future stays small for
+  the nested-view and deep-union stacks) and runs `strict_case_guard` first under
+  `caseSensitive=true`. Row in `column_resolution/map.md`. pins: u11-edge-1/C-001, C-007
 - `idents.rs` — table-identifier segment parse + path-escape refuse
   (`reject_path_escape_segment` delegates to `repark_iceberg::write::idents::path_escape_kind`
   — shared needles). **FNP-4B (2026-09-15):** segment unescaping generalized to the quote

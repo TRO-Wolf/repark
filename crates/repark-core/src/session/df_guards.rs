@@ -14,6 +14,7 @@ use repark_common::Error;
 
 use crate::extension::SessionExtension;
 
+mod case_bind;
 pub(super) mod subquery;
 mod window_rescan;
 

@@ -354,33 +354,32 @@ _EXPECTED_TYPES: dict[str, str] = {
 def _assert_success(table: pa.Table, cell_id: str, flag: str) -> None:
     """A RePark Arrow output equals the recorded Spark answer: order, rows, types.
 
-    Column-name case is compared case-insensitively: Spark echoes the requested
-    spelling while the SQL door outputs the stored name (declared in the module
-    docstring); ``test_sql_door_wrong_case_outputs_stored_names`` pins that.
+    Column names equal the recorded Spark spelling exactly (the SQL door echoes the
+    requested spelling since U11-EDGE-1); types look up case-insensitively against the
+    stored-name keyed table.
     """
     recorded = _expected(cell_id, flag)
     assert "rows" in recorded, f"{cell_id} (caseSensitive={flag}) must succeed on Spark"
-    assert [name.lower() for name in table.column_names] == [
-        name.lower() for name in recorded["columns"]
-    ]
+    assert table.column_names == recorded["columns"]
     actual_rows = [tuple(row.values()) for row in table.to_pylist()]
     assert actual_rows == [tuple(row) for row in recorded["rows"]]
+    by_fold = {name.casefold(): name for name in _EXPECTED_TYPES}
     for name in table.column_names:
-        assert str(table.schema.field(name).type) == _EXPECTED_TYPES[name], name
+        assert str(table.schema.field(name).type) == _EXPECTED_TYPES[by_fold[name.casefold()]], name
 
 
-def test_sql_door_wrong_case_outputs_stored_names(session: ReparkSession) -> None:
-    """Wrong-case references resolve but the SQL door outputs the stored name.
+def test_sql_door_wrong_case_outputs_requested_spelling(session: ReparkSession) -> None:
+    """Wrong-case references resolve and the SQL door echoes the requested spelling.
 
-    Spark echoes the requested spelling (``USERID``); RePark outputs ``userId``.
-    This pins the declared divergence until output naming converges.
+    The recorded Spark oracle returns the query spelling (``userid``, ``EVENTNAME``),
+    not the stored name; RePark output naming converged to that in U11-EDGE-1.
     """
     table = session.sql(f"SELECT userid, EVENTNAME FROM {_FQ_TABLE} WHERE USERID = 1").to_arrow()
-    assert table.column_names == ["userId", "eventName"]
+    assert table.column_names == ["userid", "EVENTNAME"]
     grouped = session.sql(
         f"SELECT EVENTNAME, COUNT(*) AS c FROM {_FQ_TABLE} GROUP BY EVENTNAME ORDER BY EVENTNAME"
     ).to_arrow()
-    assert grouped.column_names == ["eventName", "c"]
+    assert grouped.column_names == ["EVENTNAME", "c"]
 
 
 @pytest.mark.parametrize("cell_id", _READ_CELLS + _MUTATING_CELLS)
@@ -478,8 +477,8 @@ def test_sql_set_statement_drives_case_sensitive(session: ReparkSession) -> None
     finally:
         session.sql("SET spark.sql.caseSensitive = false").collect()
     table = session.sql(f"SELECT USERID FROM {_FQ_TABLE} ORDER BY USERID").to_arrow()
-    assert table.column_names == ["userId"]
-    assert table.to_pylist() == [{"userId": 1}, {"userId": 2}]
+    assert table.column_names == ["USERID"]
+    assert table.to_pylist() == [{"USERID": 1}, {"USERID": 2}]
 
 
 def test_dataframe_door_cells_unchanged(session: ReparkSession) -> None:

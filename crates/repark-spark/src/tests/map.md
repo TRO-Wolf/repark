@@ -1746,7 +1746,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   derived-table alias answer `[1, 2]`; `7 AS _pos` and `v AS _file` answer; A9
   `_deleted AS d` refuses. `reserved_word_positions_follow_spark` pins B1–B10 and R3:
   `GROUP BY 1`, `t(_deleted)`, a backticked alias, a string literal, a struct field
-  (field `s[_deleted]`, general DataFusion naming), `AS _file` and a `_spec_id` filter
+  (field `_deleted` since U11-EDGE-1 — a struct field names its written spelling, as live
+  Spark names `s.A` `A`; `s[_deleted]` before; pins: u11-edge-1/C-005), `AS _file` and a `_spec_id` filter
   answer; `_deleted(id)` refuses `[UNRESOLVED_ROUTINE]` as Spark does; `FROM … AS t`
   reading `_deleted` and `SELECT *, _spec_id` refuse `[_deleted]`; `GROUP BY _deleted`
   over the alias keeps RePark's aggregate-validation error (KNOWN DIVERGENCE B2).
