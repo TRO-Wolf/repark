@@ -224,12 +224,6 @@ pub(crate) async fn execute_ctas(
         ),
         _ => None,
     };
-    let iceberg_schema = match &existing {
-        Some(table) => {
-            repark_iceberg::write::replacement_schema(table.metadata(), &iceberg_schema)?
-        }
-        None => iceberg_schema,
-    };
     let partition_spec = build_partition_spec(
         &iceberg_schema,
         &ctas.partition_fields,

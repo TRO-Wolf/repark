@@ -496,20 +496,18 @@ async fn replaced_table(
     catalog: &dyn Catalog,
     table_ident: &TableIdent,
     existed: bool,
-    create: &mut SchemaCreate,
 ) -> Result<Option<iceberg::table::Table>> {
     if !existed {
         return Ok(None);
     }
     let table = catalog.load_table(table_ident).await.map_err(iceberg_err)?;
-    create.schema = repark_iceberg::write::replacement_schema(table.metadata(), &create.schema)?;
     Ok(Some(table))
 }
 
 async fn execute_schema_create(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
-    mut create: SchemaCreate,
+    create: SchemaCreate,
 ) -> Result<DataFrame> {
     let catalog = catalog_handle(catalogs, &create.catalog)?;
     let table_ident = TableIdent::new(create.namespace.clone(), create.table.clone());
@@ -536,7 +534,7 @@ async fn execute_schema_create(
         "column-def CREATE",
     )?;
 
-    let existing = replaced_table(catalog.as_ref(), &table_ident, existed, &mut create).await?;
+    let existing = replaced_table(catalog.as_ref(), &table_ident, existed).await?;
     let partition_spec = build_partition_spec(
         &create.schema,
         &create.partition_fields,
