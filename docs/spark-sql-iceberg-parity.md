@@ -8905,6 +8905,16 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   pins: catalog-1/C-006, C-007, C-008
 - **Rationale** — the cell replays EQUAL (the identical error record).
 
+### E-CATALOG-LISTDATABASES — `listDatabases` after a USE-free call with a catalog pattern — **FIXED 2026-09-26 (WO CATALOG-1)**
+
+- **repark** — `listDatabases("ns*")` on the harness session answers `[]`,
+  `listDatabases()` answers `["default"]`, and after `setCurrentCatalog("sc")` it answers
+  `["ns"]`: the call reads the session catalog until the current catalog moves.
+- **Apache Spark** — the cell replay (`out/spark-edge.json`).
+- **Pin** — `python/repark/tests/test_catalog_1.py::test_list_databases_cell_lists_the_session_catalog`.
+  pins: catalog-1/C-009
+- **Rationale** — the cell replays EQUAL.
+
 ### CUTOVER-CTAS-REQ-1 — parquet CTAS keeps source non-null fields required; Spark makes every column optional
 
 - **repark** — **FIXED 2026-09-04 (CUTOVER-SCHEMA-1).** The same CTAS stores every field

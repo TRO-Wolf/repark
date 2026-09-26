@@ -4,7 +4,7 @@ Every expected text is Spark 4.1.2 + Iceberg 1.11, measured 2026-09-26 (probes u
 ``target/probe-catalog-1/``). The harness-shaped session configures ``hc`` through the builder
 and registers ``sc`` after build, as the scoreboard's RePark leg does.
 
-pins: catalog-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+pins: catalog-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 """
 
 from __future__ import annotations
@@ -475,6 +475,17 @@ def test_the_catalog_extensions_opt_in_restores_the_memory_type(tmp_path: Path) 
                 "spark.sql.catalog.c_bad.warehouse": str(tmp_path / "c_bad"),
             },
         )
+
+
+def test_list_databases_cell_lists_the_session_catalog(spark: ReparkSession) -> None:
+    """E-CATALOG-LISTDATABASES: ``listDatabases`` reads the session catalog until moved.
+
+    pins: catalog-1/C-009
+    """
+    assert [d.name for d in spark.catalog.listDatabases("ns*")] == []
+    assert [d.name for d in spark.catalog.listDatabases()] == ["default"]
+    spark.catalog.setCurrentCatalog("sc")
+    assert [d.name for d in spark.catalog.listDatabases()] == ["ns"]
 
 
 def test_a_default_catalog_naming_no_catalog_answers_catalog_not_found(tmp_path: Path) -> None:

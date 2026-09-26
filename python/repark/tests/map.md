@@ -7146,8 +7146,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_the_catalog_extensions_opt_in_restores_the_memory_type`) land with C-006, C-007,
   C-008; the `type=memory` / `type=hadoop` rewrites of `test_catalog_flow.py`,
   `test_catalog_surface.py`, `test_getorcreate_catalogs.py`, `test_ice_catalog_session_1.py`
-  ride the same commit (named in the ledger). pins: catalog-1/C-001, C-002, C-003, C-004,
-  C-005, C-006, C-007, C-008
+  ride the same commit (named in the ledger).
+  `test_list_databases_cell_lists_the_session_catalog` lands with C-009.
+  pins: catalog-1/C-001, C-002, C-003, C-004,
+  C-005, C-006, C-007, C-008, C-009
 
 ## I want to...
 
