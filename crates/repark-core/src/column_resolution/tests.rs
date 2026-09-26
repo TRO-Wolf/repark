@@ -845,3 +845,29 @@ async fn respelled_plain_references_keep_their_relation() {
         ]
     );
 }
+
+#[tokio::test]
+async fn attribute_copies_bind_case_twins_exactly_and_scratch_relations_render_unqualified() {
+    use crate::frame_names::{attribute_copy_name, with_attribute_copies};
+    let ctx = measured_ctx();
+    let twins = ctx.table("tw").await.unwrap();
+    ctx.register_table(
+        "_repark_h1_sel_x",
+        with_attribute_copies(twins).unwrap().into_view(),
+    )
+    .unwrap();
+    let error = plan_error(&ctx.state(), "SELECT id + 1 FROM _repark_h1_sel_x", true).await;
+    assert!(
+        error.contains("Reference `id` is ambiguous, could be: [`id`, `id`]"),
+        "{error}"
+    );
+    let lower = attribute_copy_name("id");
+    let upper = attribute_copy_name("ID");
+    let sql = format!(
+        "SELECT CAST({lower} + 1 AS STRING) AS n, CASE WHEN {upper} >= 0 THEN {lower} END AS r, \
+         {lower} IN (1, 2) AS i FROM _repark_h1_sel_x"
+    );
+    let (names, rows) = measured_rows(&ctx, &sql).await;
+    assert_eq!(names, vec!["n", "r", "i"]);
+    assert_eq!(rows, text_rows(&[&["2", "1", "true"]]));
+}

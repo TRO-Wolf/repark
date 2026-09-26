@@ -911,6 +911,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   frames, `drop('id')` empties them. Spark shapes: `target/probe-u11-edge-1/vw/fold-spark.json`,
   `fold2-spark.json`. Red on 50e96af6 (`red-r5-facade.txt`, 3 failed). pins: u11-edge-1/C-024,
   C-025, C-026
+  Round 6 (2026-09-26, V-001): `test_compound_origin_columns_keep_their_attribute_binding` —
+  on `jn = a.join(b, a['ID'] == b['id'])` (`a = SELECT ID, data FROM t`, `b = SELECT 1 AS id,
+  'q' AS w`): `select(b['id'] + 1)` → `(id + 1)` int `[[2]]`; `select(b['id'].cast('string'))`
+  → `id` string `[['1']]`; `select((b['id'] + 1).cast('string').alias('n'))` → `n` `[['2']]`;
+  `select(when(a['ID'] > 0, b['w']).alias('r'))` → `r` `[['q']]`; `withColumn('id', b['id'] + 1)`
+  → `id`, `data`, `id`, `w` `[[2, 'a', 2, 'q']]`; a written twin reference still refuses
+  AMBIGUOUS_REFERENCE and no rendering names a `_repark_` relation. Spark shapes: the verifier's
+  `v5-spark.json` / `v5b-spark.json` (copied to `target/probe-u11-edge-1/v5/`). Red on 503b2e0c
+  (`red-r6-facade.txt`). pins: u11-edge-1/C-027
 - [test_u11_edge_partition_field.py](test_u11_edge_partition_field.py) — **U11-EDGE-1
   (2026-09-26), cell `E-CASE-PARTITION-FIELD`:** partition sources bind case-sensitively under
   either `spark.sql.caseSensitive`: `ADD PARTITION FIELD CAT`, `bucket(4, ID)` and

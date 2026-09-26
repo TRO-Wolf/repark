@@ -90,3 +90,8 @@ pins: ice-error-conditions-1/C-011
 
 Unit tests for the Spark-door case-insensitive column fold. The implementation
 stays in `../column_resolution.rs`; this directory holds only the battery.
+U11-EDGE-1 round 6 (2026-09-26, V-001): `tests.rs` gains
+`attribute_copies_bind_case_twins_exactly_and_scratch_relations_render_unqualified` — a
+`_repark_h1_sel_*` view over the `tw` case twins refuses a written `id` with unqualified
+candidates, and its attribute copies answer a cast, a `CASE WHEN` and an `IN` exactly.
+pins: u11-edge-1/C-027

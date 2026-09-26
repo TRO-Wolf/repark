@@ -1377,3 +1377,11 @@ facade already knows the exact field — `_bind_engine_display_column`, `_rebind
 `toDF` and `fillna` re-project by attribute; `dropDuplicates(subset)` keys every field matching a
 subset name ignoring case, as Spark does, bound by attribute; `drop` sends an origin Column's
 engine name as an exact attribute. `core.py` 3979 → 3976. pins: u11-edge-1/C-024, C-025, C-026
+U11-EDGE-1 round 6 (2026-09-26, V-001): `_select_via_qcol_sql` registers its scratch view over
+`_native.attribute_copies(plan)` and rewrites each resolved QCOL token — and each rebound bare
+origin Column whose SQL is its quoted engine name — to that engine's exact copy
+(`_native.attribute_copy_name`, passed to `plan_collapse._rewrite_qcol_tokens_local` as `spell`),
+so a compound origin Column on a case-twin join (`b["id"] + 1`, a cast, an alias, `when`, `isin`,
+a comparison) binds its side instead of refusing. `with_columns` matches its targets ignoring
+case, as Spark's resolver does: `withColumn("id", …)` replaces `ID` and `id` and names both `id`.
+`core.py` 3976 → 3973. pins: u11-edge-1/C-027

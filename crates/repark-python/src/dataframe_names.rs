@@ -8,6 +8,8 @@ use crate::fence::fenced;
 
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(attribute_column, module)?)?;
+    module.add_function(wrap_pyfunction!(attribute_copies, module)?)?;
+    module.add_function(wrap_pyfunction!(attribute_copy_name, module)?)?;
     module.add_function(wrap_pyfunction!(drop_frame_columns, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_join_condition, module)?)?;
     module.add_function(wrap_pyfunction!(requalify_join_sides, module)?)?;
@@ -22,6 +24,21 @@ fn attribute_column(name: &str) -> PyResult<PyColumn> {
             repark_core::frame_names::attribute_reference(name),
         ))
     })
+}
+
+#[allow(clippy::missing_errors_doc)]
+#[pyfunction]
+fn attribute_copies(frame: &PyDataFrame) -> PyResult<PyDataFrame> {
+    fenced!("dataframe_names.attribute_copies", {
+        let df = repark_core::frame_names::with_attribute_copies(frame.inner().clone())
+            .map_err(datafusion_to_py_err)?;
+        Ok(PyDataFrame::new(df, frame.runtime_handle()))
+    })
+}
+
+#[pyfunction]
+fn attribute_copy_name(name: &str) -> String {
+    repark_core::frame_names::attribute_copy_name(name)
 }
 
 #[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
