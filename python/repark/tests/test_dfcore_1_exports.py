@@ -123,6 +123,9 @@ pins: df-subquery-1/C-007
 U7 PR1 (2026-09-24): the package gains exactly the one new module name
 ``writer_save`` (bound by ``writer_readwriter`` importing it); no ``DataFrame``
 member, slot, alias, or core-surface name changes.
+U11-EDGE-1 (2026-09-26) binds ``_native`` at module level on ``core`` for the DataFrame-door
+attribute binder (``attribute_column`` / ``attribute_copies``), so ``EXPECTED_NEW_CORE_SUBMODULES``
+and ``EXPECTED_NEW_PACKAGE_SUBMODULES`` each gain exactly ``_native``.
 """
 
 from __future__ import annotations
