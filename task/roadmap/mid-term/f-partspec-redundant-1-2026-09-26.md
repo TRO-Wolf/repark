@@ -27,8 +27,10 @@ The fork refuses every distinct time-transform pair on one source as redundant:
 
 - Fork today: `DataInvalid => Cannot add redundant partition with source id `3`
   and transform `time`. A partition with the same source id and transform already
-  exists with name `ts_day`` (respectively `ts_year`, `ts_month` for the other
-  pairs)
+  exists with name `ts_day`` for `days`+`months` and `days`+`hours`; the same
+  template ends `… with name `ts_year`` for `years`+`hours` and `years`+`months`,
+  and `… with name `ts_month`` for `months`+`days` (measured on RePark main,
+  2026-09-26)
 - Fork today on the exact duplicate: `DataInvalid => Cannot add duplicate
   partition field, conflicts with existing field: ts_day`
 
@@ -42,7 +44,8 @@ texts:
   conflicts with 1001: ts_month: month(0)`)
 - Fork today: `DataInvalid => Cannot add redundant partition with source id `1`
   and transform `time`. A partition with the same source id and transform already
-  exists with name `ts_year``
+  exists with name `ts_year`` for `(years(ts), months(ts))`, and the same template
+  ending `… with name `ts_day`` for `(days(ts), months(ts))`
 
 Spark refuses `(bucket(4, id), bucket(8, id))` on CREATE with `AnalysisException`:
 `Found duplicate column(s) in the partitioning: id`; RePark's measured answer is
@@ -67,9 +70,11 @@ only the redundancy rules and their texts diverge.
    ts_day: day(3)`).
 2. The CREATE-door texts match Java: the redundant-time refusal carries
    `Cannot add redundant partition: 1000: ts_year: year(0) conflicts with 1001:
-   ts_month: month(0)` (and the `ts_day` form), and `(bucket(4, id), bucket(8,
-   id))` refuses with Spark's `Found duplicate column(s) in the partitioning:
-   id`.
+   ts_month: month(0)` (and the `ts_day` form). The `(bucket(4, id), bucket(8,
+   id))` refusal `Found duplicate column(s) in the partitioning: id` is Spark's
+   own `AnalysisException` from its SQL analyzer, not a Java Iceberg text: that
+   item belongs to RePark's Spark-door partition parsing, not to the fork, and
+   is listed here only so the two doors are read together.
 
 ## Oracle cells to re-measure on the day
 
