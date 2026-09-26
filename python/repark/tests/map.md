@@ -3876,6 +3876,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `decimal(38,0)`-rung vs `double`-infer split; A9–A11 pin the `timestamp[s]`,
   Arrow `string` and 39-digit-literal agrees.
   pins: facade-4/C-017
+  **WO U9-TYPES-1 round-2 fixer (2026-09-26):** D21's reader leg answers type key `void`, not `Null`: commit
+  `194336e5` made `type_table.rs` name Arrow `Null` with Spark's spelling of the type.
 - `test_facade_4_step1_remediation.py` — **FACADE-4 step-1 remediation round 2
   (2026-09-14):** byte-identity repro pins for the critic-logic findings
   L-001..L-005 and the Python-reviewer agreement checks — a 25-class

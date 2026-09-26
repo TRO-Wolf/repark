@@ -720,7 +720,8 @@ def _build_rows() -> list[tuple[str, str, list[tuple[str, str, Any]]]]:
         ),
         (
             "D21",
-            "Arrow null",
+            "Arrow null (reader type key void since U9-TYPES-1: type_table.rs names Arrow Null "
+            "with Spark's spelling of the type)",
             [
                 ("arrow_in", pa.null(), "NullType:void"),
                 ("arrow_out", _pa_null_hint(), "null"),
@@ -728,7 +729,7 @@ def _build_rows() -> list[tuple[str, str, list[tuple[str, str, Any]]]]:
                 (
                     "reader",
                     _pa(pa.null()),
-                    ([("c", "Null", True)], "struct<c:void>", [("c", "void")]),
+                    ([("c", "void", True)], "struct<c:void>", [("c", "void")]),
                 ),
             ],
         ),
