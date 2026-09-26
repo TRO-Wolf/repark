@@ -410,13 +410,12 @@ type Twins<'a> = HashMap<String, Vec<(Option<&'a TableReference>, &'a str)>>;
 
 fn audit_plan_for_ambiguity(plan: &LogicalPlan, written: &WrittenRefs) -> Result<()> {
     plan.apply_with_subqueries(|node| {
-        if let LogicalPlan::SubqueryAlias(alias) = node {
-            if written
+        if let LogicalPlan::SubqueryAlias(alias) = node
+            && written
                 .views
                 .contains(&alias.alias.table().to_ascii_lowercase())
-            {
-                return Ok(TreeNodeRecursion::Jump);
-            }
+        {
+            return Ok(TreeNodeRecursion::Jump);
         }
         let twins = input_twins(node);
         if twins.is_empty() {
