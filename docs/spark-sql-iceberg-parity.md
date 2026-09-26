@@ -2134,22 +2134,26 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
 
 - **repark** — on a frame carrying both `id` and `ID`, the SQL-string predicate
   `filter("id > 1")` refuses with an ambiguity error. The `Column` entry point
-  (`df.filter(df["ID"] > 1)`) still resolves exact-case-first and returns rows. A
+  (`df.filter(df["ID"] > 1)`) refuses `[AMBIGUOUS_REFERENCE] Reference `ID` is ambiguous,
+  could be: [`ID`, `ID`]. SQLSTATE: 42704` behind DataFusion's `Error during planning: `
+  prefix since U11-EDGE-1 round 4 (2026-09-26, probe `vz2-spark.json`). A
   double-quoted span is now a STRING literal (FNP-4B): `filter('"ID" > 1')` and
   `spark.sql('SELECT "ID" = 1')` raise loud (Arrow cast / `CAST_INVALID_INPUT` class,
   cell `L9-dq-ident-compare`).
 - **Apache Spark** — raises `AMBIGUOUS_REFERENCE` for the `Column` form, and reads a
   double-quoted span as a string **literal**, raising `CAST_INVALID_INPUT` under ANSI when it is
   compared to a number. *(oracle: live; cell `L9-dq-ident-compare`.)*
-- **Pin** — `python/repark/tests/test_filter_predicate_rewrite.py::test_column_entry_point_bypasses_the_ambiguity_refusal`
+- **Pin** — `python/repark/tests/test_filter_predicate_rewrite.py::test_column_entry_point_refuses_the_ambiguity_like_spark`
   and `python/repark/tests/test_filter_predicate_rewrite.py::test_explicitly_double_quoted_span_is_a_string_literal`
   (renamed from `test_explicitly_double_quoted_ident_bypasses_the_ambiguity_refusal`),
   with the guarded half in the same module's
   `test_ambiguous_reference_raises_analysis_exception`
 - `live-mirror: filter_case_collision_bypasses`
-- **Rationale** — DECLARED for the `Column` bypass (ID-1 still declines engine-wide
-  exact-case resolution). The double-quoted-span half is FIXED 2026-09-15 (FNP-4B): it is a
-  STRING literal, matching Spark's `CAST_INVALID_INPUT` raise-vs-raise. pins: fnp-4b/C-018
+- **Rationale** — the `Column` half is FIXED 2026-09-26 (U11-EDGE-1 round 4): the DataFrame
+  door's binder refuses a reference that matches two fields ignoring case, exact spelling
+  included; the text differs only by the planning prefix. The double-quoted-span half is FIXED
+  2026-09-15 (FNP-4B): it is a STRING literal, matching Spark's `CAST_INVALID_INPUT`
+  raise-vs-raise. pins: fnp-4b/C-018; u11-edge-1/C-023
 
 ### ID-3 — exact duplicate column names are refused at construction
 

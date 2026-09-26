@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from repark import ReparkSession
+from repark.errors import AnalysisException
 from repark.spark.functions import col
 
 
@@ -207,3 +208,44 @@ def test_qualified_drop_binds_through_its_relation(spark: ReparkSession) -> None
     joined = spark.sql("SELECT a.id, b.ID FROM sc.ns.t a JOIN sc.ns.t b ON a.id = b.id")
     assert _shape(joined.drop(col("b.id"))) == (["id"], [(1,), (2,)])
     assert _shape(joined.drop(col("A.ID"))) == (["ID"], [(1,), (2,)])
+
+
+def _ambiguous(reference: str, options: str) -> str:
+    """Return Spark's AMBIGUOUS_REFERENCE sentence."""
+    return (
+        f"[AMBIGUOUS_REFERENCE] Reference `{reference}` is ambiguous, could be: [{options}]. "
+        "SQLSTATE: 42704"
+    )
+
+
+def test_bare_reference_matching_two_fields_is_ambiguous(spark: ReparkSession) -> None:
+    """A bare reference matching two fields ignoring case refuses, exact spelling included.
+
+    pins: u11-edge-1/C-023
+    """
+    joined = _spelled(spark, "SELECT a.id, b.ID FROM sc.ns.t a JOIN sc.ns.t b ON a.id = b.id")
+    left = spark.sql("SELECT ID, data FROM sc.ns.t")
+    right = spark.sql("SELECT 1 AS id, 'q' AS w")
+    refusals = [
+        (lambda: joined.select("id"), _ambiguous("id", "`a`.`id`, `b`.`id`")),
+        (lambda: joined.select(col("ID")), _ambiguous("ID", "`a`.`ID`, `b`.`ID`")),
+        (
+            lambda: left.join(right, left["ID"] == right["id"]).select("id"),
+            _ambiguous("id", "`id`, `sc`.`ns`.`t`.`id`"),
+        ),
+        (
+            lambda: left.join(right, col("ID") == col("id")),
+            _ambiguous("ID", "`ID`, `sc`.`ns`.`t`.`ID`"),
+        ),
+        (
+            lambda: right.join(left, col("id") == col("ID")),
+            _ambiguous("id", "`id`, `sc`.`ns`.`t`.`id`"),
+        ),
+    ]
+    for build, sentence in refusals:
+        with pytest.raises(AnalysisException) as excinfo:
+            build().collect()
+        assert sentence in str(excinfo.value)
+    with pytest.raises(AnalysisException, match=r"^Error during planning: \[AMBIGUOUS_REFERENCE\]"):
+        joined.filter(col("Id") > 1).collect()
+    assert _shape(joined.select(col("a.Id"))) == (["Id"], [(1,), (2,)])

@@ -257,6 +257,8 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   pins: u11-edge-1/C-019, C-020
   Round 4 (2026-09-26): the `dataframe.rs` row ratchets 1016 → 1005 with
   `scripts/check_rust_file_size.py`. pins: u11-edge-1/C-022
+  Round 4, V-002: the `dataframe/core.py` row ratchets 3981 → 3979 with
+  `scripts/check_lib_py.py`. pins: u11-edge-1/C-023
 - `test_cap_1_source_file_line_cap.py` — **ICE-WRITE-OPTIONS-1 round 4 (2026-09-17):**
   mirror rows ratchet `crates/repark-iceberg/src/write/append.rs` 1882 → 1819,
   `dataframe/core.py` 4015 → 3991 and `dataframe/writer_readwriter.py` 1101 → 1093

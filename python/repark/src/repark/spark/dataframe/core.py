@@ -1201,21 +1201,21 @@ class DataFrame:
         DataFusion's case-sensitive unquoted fold. Live PySpark 4.1.2 keeps
         ``filter("X > 0")`` working).
 
-        **Case-collision refusal — SQL-string form only.** In a bare SQL predicate, a token
-        naming a column that collides only by case with another (``id`` / ``ID``) raises
+        **Case-collision refusal.** In a bare SQL predicate, a token naming a column that
+        collides only by case with another (``id`` / ``ID``) raises
         :class:`~repark.errors.AnalysisException` with Spark's ``[AMBIGUOUS_REFERENCE]``
-        condition tag; naming any unambiguous column of that same frame still works. Two accepted
-        spellings **bypass** that refusal and diverge from live PySpark 4.1.2, which raises
-        ``AMBIGUOUS_REFERENCE`` for both (verified against the live oracle, disclosed not fixed —
-        pinned in ``test_filter_predicate_rewrite.py`` and re-checked by the live tier's
-        ``filter_case_collision_bypasses`` disclosure):
+        condition tag; naming any unambiguous column of that same frame still works. The
+        :class:`Column` form refuses too since U11-EDGE-1 round 4: the native binder raises
+        ``AMBIGUOUS_REFERENCE`` for a reference matching two fields ignoring case, the exact
+        spelling included, like live PySpark 4.1.2 (pinned in
+        ``test_filter_predicate_rewrite.py``; live tier ``filter_case_collision_bypasses``).
 
-        * the :class:`Column` form — ``df.filter(df["id"] > 0)`` resolves **exact-case-first** and
-        returns rows (``df["ID"]`` binds the other column) instead of refusing;
-        * an explicitly double-quoted ident is passed through untouched and
-          DataFusion resolves it case-sensitively.
-          Spark reads ``"ID"`` as a string *literal*,
-        not an identifier, so the two engines disagree about that span regardless of collisions.)
+        An explicitly double-quoted span is not an identifier: the Databricks lexer reads
+        ``"ID"`` as a string *literal*, as Spark does, so comparing it to a number is loud on
+        both doors (FNP-4B). Only the refusal text differs: DataFusion's planning prefix on
+        the ambiguity, and the Arrow cast error where ANSI Spark raises
+        ``CAST_INVALID_INPUT``.
+        The rewriter never touches a quoted span.
         """
         if isinstance(condition, Column):
             _reject_partition_transform(condition)
@@ -2589,14 +2589,10 @@ class DataFrame:
         child = self._spawn(_native.drop_frame_columns(self._plan(), engine_drop, references))
         if self._display_names is not None and self._engine_names is not None:
             dropped = set(engine_drop)
-            new_display: list[str] = []
-            new_engine: list[str] = []
-            for display, engine in zip(self._display_names, self._engine_names, strict=True):
-                if engine not in dropped:
-                    new_display.append(display)
-                    new_engine.append(engine)
-            child._display_names = new_display
-            child._engine_names = new_engine
+            pairs = zip(self._display_names, self._engine_names, strict=True)
+            kept = [(display, engine) for display, engine in pairs if engine not in dropped]
+            child._display_names = [display for display, _ in kept]
+            child._engine_names = [engine for _, engine in kept]
             if self._origin_map is not None:
                 child._origin_map = {
                     key: engine for key, engine in self._origin_map.items() if engine not in dropped
@@ -2774,6 +2770,7 @@ class DataFrame:
                 left_alias=left_alias,
                 right_alias=right_alias,
             )
+            _native.refuse_ambiguous_join_condition(self._plan(), other._plan(), on_sql)
             left_cols = list(self.columns)
             right_cols = list(other.columns)
             all_display = left_cols if left_only else left_cols + right_cols
@@ -2817,7 +2814,8 @@ class DataFrame:
                     f"SELECT {', '.join(proj_parts)} FROM {left_alias} "
                     f"{how_sql} JOIN {right_alias} ON {on_sql}"
                 )
-            planned = self._session.sql(join_sql)
+            sides = (self._plan(), None if left_only else other._plan())
+            planned = _native.requalify_join_sides(self._session.sql(join_sql), *sides)
             child = self._spawn(planned, other)
             child._display_names = display_names
             child._engine_names = engine_names

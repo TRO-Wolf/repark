@@ -1,21 +1,34 @@
 use std::collections::{BTreeSet, HashSet};
+use std::ops::ControlFlow;
 
 use datafusion::arrow::datatypes::Field;
 use datafusion::common::tree_node::{Transformed, TreeNode};
-use datafusion::common::{Column, DFSchema, Result, TableReference, plan_err};
+use datafusion::common::{
+    Column, DFSchema, DataFusionError, Result, TableReference, plan_datafusion_err, plan_err,
+};
 use datafusion::dataframe::DataFrame;
 use datafusion::logical_expr::expr::Alias;
 use datafusion::logical_expr::{Expr, JoinType, LogicalPlanBuilder};
+use datafusion::sql::sqlparser::ast::{Expr as SqlExpr, visit_expressions};
+use datafusion::sql::sqlparser::dialect::DatabricksDialect;
+use datafusion::sql::sqlparser::parser::Parser;
+use repark_common::spark_error;
 
 type Hit<'a> = (Option<&'a TableReference>, &'a Field);
 
 pub(super) fn bind_case_insensitive(expr: Expr, frame_schema: &DFSchema) -> Result<Expr> {
     expr.transform(|node| {
         Ok(match node {
-            Expr::Column(column) => match unique_case_match(&column, frame_schema) {
-                Some(bound) => Transformed::yes(Expr::Column(bound)),
-                None => Transformed::no(Expr::Column(column)),
-            },
+            Expr::Column(column) => {
+                let hits = case_hits(&column, [frame_schema]);
+                if hits.len() > 1 {
+                    return Err(ambiguous_reference(&column, &hits));
+                }
+                match unique_case_match(&column, frame_schema) {
+                    Some(bound) => Transformed::yes(Expr::Column(bound)),
+                    None => Transformed::no(Expr::Column(column)),
+                }
+            }
             Expr::Alias(alias) => match written_segment(&alias.expr, &alias.name) {
                 Some(segment) => Transformed::yes(Expr::Alias(Alias {
                     name: segment,
@@ -41,6 +54,91 @@ fn case_hits<'a>(column: &Column, schemas: impl IntoIterator<Item = &'a DFSchema
         })
         .map(|(qualifier, field)| (qualifier, field.as_ref()))
         .collect()
+}
+
+fn sql_id(relation: Option<&TableReference>, name: &str) -> String {
+    let spelled = relation.filter(|relation| {
+        !relation.table().starts_with("_repark_") && !relation.table().starts_with("__repark_")
+    });
+    let parts = spelled.map_or_else(Vec::new, |relation| {
+        [
+            relation.catalog(),
+            relation.schema(),
+            Some(relation.table()),
+        ]
+        .into_iter()
+        .flatten()
+        .collect()
+    });
+    parts
+        .into_iter()
+        .chain(std::iter::once(name))
+        .map(|part| format!("`{}`", part.replace('`', "``")))
+        .collect::<Vec<_>>()
+        .join(".")
+}
+
+fn ambiguous_reference(column: &Column, hits: &[Hit<'_>]) -> DataFusionError {
+    let mut options = hits
+        .iter()
+        .map(|(qualifier, _)| sql_id(*qualifier, &column.name))
+        .collect::<Vec<_>>();
+    options.sort();
+    let reference = sql_id(column.relation.as_ref(), &column.name);
+    plan_datafusion_err!(
+        "{}",
+        spark_error::message(
+            spark_error::AMBIGUOUS_REFERENCE,
+            &[("reference", &reference), ("options", &options.join(", "))],
+        )
+    )
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn refuse_ambiguous_condition(condition_sql: &str, sides: &[&DFSchema]) -> Result<()> {
+    let Ok(condition) = Parser::new(&DatabricksDialect {})
+        .try_with_sql(condition_sql)
+        .and_then(|mut parser| parser.parse_expr())
+    else {
+        return Ok(());
+    };
+    let refusal = visit_expressions(&condition, |node| match node {
+        SqlExpr::Identifier(ident) => {
+            let column = Column::new_unqualified(ident.value.as_str());
+            let hits = case_hits(&column, sides.iter().copied());
+            if hits.len() > 1 {
+                ControlFlow::Break(ambiguous_reference(&column, &hits))
+            } else {
+                ControlFlow::Continue(())
+            }
+        }
+        _ => ControlFlow::Continue(()),
+    });
+    match refusal {
+        ControlFlow::Break(error) => Err(error),
+        ControlFlow::Continue(()) => Ok(()),
+    }
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn requalify_join_sides(joined: DataFrame, sides: &[&DFSchema]) -> Result<DataFrame> {
+    let held = sides
+        .iter()
+        .flat_map(|side| side.iter())
+        .collect::<Vec<_>>();
+    if held.len() != joined.schema().fields().len() {
+        return Ok(joined);
+    }
+    let projection = joined
+        .schema()
+        .iter()
+        .zip(held)
+        .map(|((qualifier, field), (side, _))| {
+            Expr::Column(Column::new(qualifier.cloned(), field.name()))
+                .alias_qualified(side.cloned(), field.name())
+        })
+        .collect::<Vec<_>>();
+    Ok(joined.clone().select(projection).unwrap_or(joined))
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -241,14 +339,14 @@ mod tests {
     use std::sync::Arc;
 
     use datafusion::arrow::datatypes::{DataType, Field};
-    use datafusion::common::{Column, DFSchema, JoinType};
+    use datafusion::common::{Column, DFSchema, JoinType, TableReference};
     use datafusion::dataframe::DataFrame;
     use datafusion::logical_expr::{Expr, col, lit};
     use datafusion::prelude::SessionContext;
 
     use super::{
         bind_case_insensitive, bind_projection_expr, drop_named_columns, join_on_named_keys,
-        union_by_folded_name,
+        refuse_ambiguous_condition, requalify_join_sides, union_by_folded_name,
     };
 
     fn frame(names: &[(&str, &str)]) -> DFSchema {
@@ -274,20 +372,150 @@ mod tests {
         );
     }
 
+    fn refusal(expr: Expr, schema: &DFSchema) -> String {
+        bind_case_insensitive(expr, schema).unwrap_err().to_string()
+    }
+
+    fn ambiguous(reference: &str, options: &str) -> String {
+        format!(
+            "Error during planning: [AMBIGUOUS_REFERENCE] Reference {reference} is ambiguous, \
+             could be: [{options}]. SQLSTATE: 42704"
+        )
+    }
+
     #[test]
     fn exact_and_ambiguous_references_stay() {
         let schema = frame(&[("t", "id"), ("u", "ID")]);
         assert_eq!(
-            bind_case_insensitive(col("id"), &schema).unwrap(),
-            col("id")
+            refusal(col("id"), &schema),
+            ambiguous("`id`", "`t`.`id`, `u`.`id`")
         );
         let twins = frame(&[("t", "Id"), ("u", "ID")]);
-        assert_eq!(bind_case_insensitive(col("id"), &twins).unwrap(), col("id"));
+        assert_eq!(
+            refusal(col("id"), &twins),
+            ambiguous("`id`", "`t`.`id`, `u`.`id`")
+        );
         let qualified = Expr::Column(Column::new(Some("t"), "id"));
         let exact = frame(&[("t", "id"), ("t", "ID")]);
         assert_eq!(
-            bind_case_insensitive(qualified.clone(), &exact).unwrap(),
-            qualified
+            refusal(qualified, &exact),
+            ambiguous("`t`.`id`", "`t`.`id`, `t`.`id`")
+        );
+    }
+
+    #[test]
+    fn ambiguous_candidates_render_sorted_like_spark() {
+        let joined = frame(&[("a", "id"), ("b", "ID")]);
+        assert_eq!(
+            refusal(col("id"), &joined),
+            ambiguous("`id`", "`a`.`id`, `b`.`id`")
+        );
+        assert_eq!(
+            refusal(
+                Expr::Column(Column::new_unqualified("ID")).gt(lit(1i64)),
+                &joined
+            ),
+            ambiguous("`ID`", "`a`.`ID`, `b`.`ID`")
+        );
+        let scratch = frame(&[("__repark_cdf_54fd", "id"), ("__repark_cdf_54fd", "ID")]);
+        assert_eq!(
+            refusal(col("id"), &scratch),
+            ambiguous("`id`", "`id`, `id`")
+        );
+        let reversed = frame(&[("b", "id"), ("a", "ID")]);
+        assert_eq!(
+            refusal(col("id"), &reversed),
+            ambiguous("`id`", "`a`.`id`, `b`.`id`")
+        );
+        let narrowed = Expr::Column(Column::new(Some("a"), "Id"));
+        assert_eq!(
+            bind_case_insensitive(narrowed, &joined).unwrap(),
+            Expr::Column(Column::new(Some("a"), "id"))
+        );
+    }
+
+    fn sides() -> (DFSchema, DFSchema) {
+        let held = TableReference::full("sc", "ns", "t_vz_1");
+        let left = DFSchema::new_with_metadata(
+            vec![
+                (
+                    Some(held.clone()),
+                    Arc::new(Field::new("ID", DataType::Int32, true)),
+                ),
+                (
+                    Some(held),
+                    Arc::new(Field::new("data", DataType::Utf8, true)),
+                ),
+            ],
+            std::collections::HashMap::new(),
+        )
+        .unwrap();
+        let right = DFSchema::from_unqualified_fields(
+            vec![
+                Field::new("id", DataType::Int64, false),
+                Field::new("w", DataType::Utf8, false),
+            ]
+            .into(),
+            std::collections::HashMap::new(),
+        )
+        .unwrap();
+        (left, right)
+    }
+
+    #[test]
+    fn unqualified_and_catalog_candidates_render_like_spark() {
+        let (left, right) = sides();
+        let joined = left.join(&right).unwrap();
+        assert_eq!(
+            refusal(col("id"), &joined),
+            ambiguous("`id`", "`id`, `sc`.`ns`.`t_vz_1`.`id`")
+        );
+        assert_eq!(
+            refuse_ambiguous_condition("(`ID` = `id`)", &[&left, &right])
+                .unwrap_err()
+                .to_string(),
+            ambiguous("`ID`", "`ID`, `sc`.`ns`.`t_vz_1`.`ID`")
+        );
+        assert_eq!(
+            refuse_ambiguous_condition("(`id` = `ID`)", &[&right, &left])
+                .unwrap_err()
+                .to_string(),
+            ambiguous("`id`", "`id`, `sc`.`ns`.`t_vz_1`.`id`")
+        );
+        assert!(refuse_ambiguous_condition("(l.`ID` = r.`id`)", &[&left, &right]).is_ok());
+        assert!(refuse_ambiguous_condition("(`data` = `w`)", &[&left, &right]).is_ok());
+    }
+
+    #[tokio::test]
+    async fn requalified_join_carries_each_side_relation() {
+        let context = SessionContext::new();
+        let left = context
+            .sql(r#"SELECT "ID", data FROM (SELECT 1 AS "ID", 'a' AS data) t"#)
+            .await
+            .unwrap();
+        let right = context.sql("SELECT 1 AS id, 'q' AS w").await.unwrap();
+        let joined = context
+            .sql(r#"SELECT l."ID", l.data, r.id, r.w FROM (SELECT 1 AS "ID", 'a' AS data) l CROSS JOIN (SELECT 1 AS id, 'q' AS w) r"#)
+            .await
+            .unwrap();
+        let requalified = requalify_join_sides(joined, &[left.schema(), right.schema()]).unwrap();
+        let qualifiers = requalified
+            .schema()
+            .iter()
+            .map(|(qualifier, field)| (qualifier.map(ToString::to_string), field.name().clone()))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            qualifiers,
+            vec![
+                (Some("t".to_string()), "ID".to_string()),
+                (Some("t".to_string()), "data".to_string()),
+                (None, "id".to_string()),
+                (None, "w".to_string()),
+            ]
+        );
+        assert_eq!(
+            refusal(col("id"), requalified.schema()),
+            ambiguous("`id`", "`id`, `t`.`id`")
         );
     }
 

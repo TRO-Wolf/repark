@@ -1359,3 +1359,9 @@ U11-EDGE-1 round 4 (2026-09-26, V-001/V-003): `core.py`'s `drop` sends string ta
 Column targets apart to the native `drop_frame_columns`, so a qualified Column binds through its
 relation in Rust and an unmatched string or Column is a no-op; the line cost is paid by the
 docstring, `core.py` stays at 3981. pins: u11-edge-1/C-022
+U11-EDGE-1 round 4 (2026-09-26, V-002): `_join_on_condition_h1` calls the native
+`refuse_ambiguous_join_condition` on the rewritten ON text before planning, and passes the
+planned join through `requalify_join_sides` so the output carries each side's relations;
+`drop`'s display bookkeeping is compressed to pay for the two lines and the `filter`
+docstring now states the Column form refuses like Spark (line-neutral). `core.py`
+3981 → 3979. pins: u11-edge-1/C-023
