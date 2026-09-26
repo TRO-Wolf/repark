@@ -1164,6 +1164,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   (`overwrite`, zero delete files). CTAS and `'01'` write v1 too. The refusals pin full text:
   `v5` and `abc` as IllegalArgumentException, `0`/`-1`/`4` as not implemented, and the fork's
   downgrade text for `CREATE OR REPLACE` v2 → v1 (Spark says `Cannot downgrade v2 table to v1`).
+  U11-EDGE-1 (2026-09-26): these pins also hold `TP-FORMAT-V1-DELETE`, which replays EQUAL on
+  every observation with no code change in that unit. pins: u11-edge-1/C-016
   The v1 refusal pins it replaced now read `4`: `create_table.rs` dropped its v1 block and
   `ctas.rs::ctas_format_version_two_consumed_others_rejected` rejects `'format-version' = 4`.
   **Round 2 (2026-09-25):** `merge_on_read_row_level_writes_on_a_v1_table_refuse_like_spark` pins
