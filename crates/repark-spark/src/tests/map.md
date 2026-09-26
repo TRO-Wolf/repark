@@ -2175,27 +2175,27 @@ above.
   branch, `RETAIN … WITH SNAPSHOT RETENTION`) each add their own snapshot with the measured ref
   retention, and `CREATE BRANCH main` sets the current snapshot. The refusal table pins Spark's
   IllegalArgumentException texts (tag forms, replace forms, a duplicate) and that nothing
-  commits. A seeded table keeps the old path, and v1 tables refuse branch and tag DDL loud
-  because the fork drops v1 refs.
-  **Round 2 (2026-09-25):** the v1 test pins the kernel text per kind (`BRANCH`/`TAG`) on the
-  empty and the seeded table, adding IF NOT EXISTS, CREATE OR REPLACE TAG, REPLACE TAG, both
-  AS OF VERSION forms and `REPLACE BRANCH main WITH SNAPSHOT RETENTION`, with the metadata file
-  count unchanged; a tag on the empty v1 table answers Spark's `main has no snapshot`, and a
-  plain `REPLACE BRANCH main` commits. `v1_ref_refusal` and `metadata_file_count` are shared
-  with `v1_ref_writes.rs`.
-  pins: ice-nested-evo-1/C-053, C-056
-- [v1_ref_writes.rs](v1_ref_writes.rs) — **WO U5 PR2b round 2 (2026-09-25):** the Spark-door
-  C-053 pins. A session WAP branch write on a seeded and on an empty format v1 table,
-  `INSERT`/`DELETE` into `t.branch_b1`, `CALL fast_forward` to a new branch and
-  `rewrite_data_files(branch => …)` each refuse with the `BRANCH` v1 text, with no metadata file,
-  snapshot or ref written. `set_current_snapshot` and `fast_forward('main', 'main')` keep
-  working. `wap_branch.rs::set_wap` is `pub(super)` for these pins.
-  **Round 3 (2026-09-25):** `writes_into_a_missing_branch_on_a_v1_table_answer_the_missing_branch_text`
-  replaces the `t.branch_b1` kernel pin: `INSERT`, `DELETE`, `MERGE INTO` and `INSERT OVERWRITE`
-  into a missing branch on the seeded v1 table answer the full mapped REF-1 text
-  (`Error during planning: Cannot use branch (does not exist): b1`) with no metadata file,
-  snapshot or ref written and the seed row intact.
-  pins: ice-nested-evo-1/C-053
+  commits. A seeded table keeps the old path, and v1 tables commit branch and tag DDL
+  like Spark since WO RP50-A.
+  **WO RP50-A (2026-09-26):** the v1 cases pin C-060 commits, not the removed C-053
+  refusal: a branch on the empty v1 table commits with `refs` `[b1]` and no `main`, and a write
+  to `branch_b1` stays on the branch; a tag on the empty v1 table answers Spark's `main has no
+  snapshot`; every seeded-table form (IF NOT EXISTS, CREATE OR REPLACE, REPLACE, both AS OF
+  VERSION forms, `REPLACE BRANCH main WITH SNAPSHOT RETENTION`) commits at the seed snapshot.
+  `metadata_file_count` is shared with `v1_ref_writes.rs`.
+  pins: ice-nested-evo-1/C-053, C-056, C-060
+- [v1_ref_writes.rs](v1_ref_writes.rs) — **WO RP50-A (2026-09-26):** the Spark-door C-060
+  pins (they replace the round-2 C-053 refusal pins). A session WAP branch write on a seeded
+  and on an empty format v1 table commits on the branch (the session's plain read follows the
+  branch while the conf is set); branch/tag DDL, a branch write, and `fast_forward` commit with
+  Spark's reads, refs rows and CALL shape; `fast_forward` to a new branch, `rewrite_data_files`
+  on a branch and on main, and a retained branch all commit like Spark.
+  `writes_into_a_missing_branch_on_a_v1_table_answer_the_missing_branch_text` stays:
+  `INSERT`, `DELETE`, `MERGE INTO` and `INSERT OVERWRITE` into a missing branch on the seeded
+  v1 table answer the full mapped REF-1 text with no metadata file, snapshot or ref written.
+  `set_current_snapshot` and `fast_forward('main', 'main')` keep working.
+  `wap_branch.rs::set_wap` is `pub(super)` for these pins.
+  pins: ice-nested-evo-1/C-053, C-060
 - `ref_ddl.rs` — **IPI-42 (2026-09-20):**
   `ref_guards_are_conditional_and_never_move_an_existing_ref` is the mutation-proof half the four
   recorded cells cannot be: it pins `b1` at the OLDER of two snapshots before the guarded

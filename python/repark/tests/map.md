@@ -917,11 +917,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   with no metadata written. D-REF-BRANCH-ON-EMPTY: the empty append's summary, the `b1` ref, an
   empty branch read, `IF NOT EXISTS` and retention, the tag, replace and duplicate refusals,
   `CREATE BRANCH main`, and a seeded table's unchanged refs.
-  **Round 2 (2026-09-25):** `test_a_wap_branch_write_on_a_v1_table_refuses_and_writes_no_ref`
-  sets `spark.wap.branch` on a v1 WAP table: the INSERT raises UnsupportedOperationException
-  with the `BRANCH` v1 text, no metadata file is written, `refs` lists only `main` and the data
-  is unchanged. The refusal table adds `short-width` and `empty-arguments`;
+  **Round 2 (2026-09-25):** the refusal table adds `short-width` and `empty-arguments`;
   `test_write_ordered_by_a_long_width_literal_lands_like_spark` lands `bucket(4L, id)`.
+  **WO RP50-A (2026-09-26):** `test_a_wap_branch_write_on_a_v1_table_commits_on_the_branch`
+  replaces the round-2 refusal pin: the INSERT under `spark.wap.branch` commits on the branch,
+  the session read follows it while the conf is set, `main` keeps `[1]` after unset, the
+  branch reads `[1, 9]`, and metadata `refs` holds `main` and `w1`.
+  pins: ice-nested-evo-1/C-060
   days-on-long moved to `test_write_ordered_by_bind_refusal_keeps_the_fork_text_residue`, a
   residue pin (R-U5-PR2B-BIND-TEXT), not a parity pin.
   **WO U5 PR3 (2026-09-25):** D-X-PARTITIONED-COLDEF.

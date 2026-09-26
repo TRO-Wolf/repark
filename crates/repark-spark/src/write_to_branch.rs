@@ -552,12 +552,6 @@ async fn commit_write_on_branch<'a>(
     {
         return Err(missing_branch_error(&target.branch));
     }
-    repark_iceberg::write::refuse_ref_write_on_format_v1(
-        &table,
-        repark_iceberg::write::SnapshotRefKind::Branch,
-        &target.branch,
-        repark_iceberg::write::SnapshotRefRetention::default(),
-    )?;
     if !target.require_existing_branch {
         create_wap_branch_from_main(catalog.as_ref(), &ident, &table, &target.branch).await?;
     }

@@ -78,7 +78,7 @@ pub use schema_evolution::{
 pub use snapshot_refs::{
     SnapshotRefKind, SnapshotRefRetention, create_branch_on_empty_table,
     create_or_replace_snapshot_ref, create_snapshot_ref, create_snapshot_ref_with_retention,
-    drop_snapshot_ref, list_snapshot_refs, refuse_ref_write_on_format_v1, replace_snapshot_ref,
+    drop_snapshot_ref, list_snapshot_refs, replace_snapshot_ref,
 };
 pub use testing_support::testing_create_ref;
 pub use unsupported::{UnsupportedMarker, unsupported_error, unsupported_message_error};

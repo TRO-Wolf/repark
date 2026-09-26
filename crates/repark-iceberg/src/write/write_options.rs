@@ -414,7 +414,7 @@ pub async fn commit_append_with_summary(
         .merge_append()
         .add_data_files(new_files)
         .set_snapshot_properties(summary);
-    let action = maybe_to_branch(table, action, branch, |action, name| action.to_branch(name))?;
+    let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
     let tx = action.apply(tx).map_err(iceberg_err)?;
     commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
 }
@@ -485,7 +485,7 @@ pub async fn commit_overwrite_replace_all_with_summary(
             action = action.validate_from_snapshot(snapshot_id);
         }
     }
-    let action = maybe_to_branch(table, action, branch, |action, name| action.to_branch(name))?;
+    let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
     let tx = action.apply(tx).map_err(iceberg_err)?;
     commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
 }
@@ -547,7 +547,7 @@ pub async fn commit_overwrite_by_row_filter_with_summary(
             action = action.validate_from_snapshot(snapshot_id);
         }
     }
-    let action = maybe_to_branch(table, action, branch, |action, name| action.to_branch(name))?;
+    let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
     let tx = action.apply(tx).map_err(iceberg_err)?;
     commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
 }
@@ -601,7 +601,7 @@ pub async fn commit_replace_partitions_with_summary(
             action = action.validate_from_snapshot(snapshot_id);
         }
     }
-    let action = maybe_to_branch(table, action, branch, |action, name| action.to_branch(name))?;
+    let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
     let tx = action.apply(tx).map_err(iceberg_err)?;
     commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
 }
