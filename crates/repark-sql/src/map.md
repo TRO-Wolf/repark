@@ -186,7 +186,9 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `Placement::StagedReplace { existing }` carries it into `execute_staged_create`, so the ids are
   keyed against the same metadata `begin_replace` stages on (a commit landing between two loads
   can no longer split them). **WO RP50-B (2026-09-26):** the re-keying moved into the fork
-  (#354) and RePark's `replace_schema.rs` is deleted. Pinned by the two partitioned-replace
+  (#354) and RePark's `replace_schema.rs` is deleted; `replacement_if_existed` still takes and
+  returns the schema unchanged (a vestigial pass-through, verifier round 1 V-001) — drop the
+  parameter on the next touch of this file. Pinned by the two partitioned-replace
   tests in [create_table/map.md](create_table/map.md). pins: u7-write-df-2/C-011
 - `create_table.rs` — **PERF-ICE-WRITEPATH-1 (2026-09-05):** the CTAS arm's `write_stream` is now
   `write_query`, handing the SELECT's physical plan to

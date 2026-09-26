@@ -1023,6 +1023,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (critic V-007); the `nested` seed serves `oc_nested_field`. Round 3 (2026-09-25): the
   `notnull` seed (the named seed under `id BIGINT NOT NULL`) serves `oc_null_into_not_null`.
   pins: u7-write-df-2/C-001, C-002, C-003, C-004, C-005, C-011, C-012
+  **RP50-B (2026-09-26):** `schema_ids` and `spec_ids` are compared as plain lists against the oracle (residue R-10, the fork's list order, retired at the RP-50 pin); the field-id shapes hold on the fork's own by-name re-keying now that RePark's `replace_schema.rs` is gone.
 - [test_ice_write_df_2_overwrite.py](test_ice_write_df_2_overwrite.py) — **U7 PR2 slice 2
   (2026-09-24, rebased 2026-09-25):** `DataFrameWriterV2.overwrite(condition)` on the helpers of
   `test_ice_write_df_2.py` (split out when the merged pin file crossed the 1000-line ceiling):
