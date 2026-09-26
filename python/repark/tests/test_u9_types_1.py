@@ -23,6 +23,7 @@ import pytest
 
 from repark import ReparkSession
 
+SNAPSHOT_TOKEN = re.compile(r"\{(ref|wap):([^}:]+):([^}]+)\}")
 ORACLE_PATH = Path(__file__).with_name("u9_types_1_spark_oracle.json")
 ORACLE: dict[str, Any] = json.loads(ORACLE_PATH.read_text(encoding="utf-8"))
 GROUPS: list[str] = sorted({step["group"] for step in ORACLE["steps"]})
@@ -105,6 +106,30 @@ def metadata_observation(metadata: dict[str, Any]) -> dict[str, Any]:
     return {"fields": schema["fields"], "spec": spec["fields"]}
 
 
+def snapshot_token(session: Any, match: re.Match[str]) -> str:
+    """Return the snapshot id one ``{ref:<table>:<ref>}`` or ``{wap:<table>:<wap id>}`` names."""
+    table, name = match.group(2), match.group(3)
+    if match.group(1) == "ref":
+        refs = session.sql(f"SELECT name, snapshot_id FROM {table}.refs").collect()
+        return str(next(row[1] for row in refs if row[0] == name))
+    snapshots = session.sql(f"SELECT snapshot_id, summary FROM {table}.snapshots").collect()
+    return str(next(row[0] for row in snapshots if (row[1] or {}).get("wap.id") == name))
+
+
+def resolve_snapshots(text: str, session: Any) -> str:
+    """Replace every snapshot token of ``text`` with the snapshot id the table holds now."""
+    return SNAPSHOT_TOKEN.sub(lambda match: snapshot_token(session, match), text)
+
+
+def option_read(session: Any, step: dict[str, Any]) -> list[Any]:
+    """Collect ``step["cols"]`` of a reader over ``step["table"]`` with the step's read options."""
+    reader = session.read
+    for key, value in step["options"].items():
+        reader = reader.option(key, resolve_snapshots(value, session))
+    frame = reader.table(step["table"])
+    return [normalize(list(row)) for row in frame.select(*step["cols"]).orderBy("id").collect()]
+
+
 def collected_rows(session: Any, sql: str, ordered: bool) -> list[Any]:
     """Collect ``sql`` and normalize its rows, sorted unless the step is ordered."""
     rows = [normalize(list(row)) for row in session.sql(sql).collect()]
@@ -122,6 +147,8 @@ def printed_schema(session: Any, sql: str) -> str:
 def observe_query(session: Any, step: dict[str, Any]) -> Any:
     """Answer the query-shaped step kinds."""
     kind = step["do"]
+    if kind == "option_read":
+        return option_read(session, step)
     sql = step["sql"]
     if kind in ("rows", "ordered"):
         return collected_rows(session, sql, kind == "ordered")
@@ -144,6 +171,8 @@ def observe_query(session: Any, step: dict[str, Any]) -> Any:
 def run_step(session: Any, step: dict[str, Any], warehouse: Path, engine: str) -> Any:
     """Run one oracle step and return its observation (an error is an observation too)."""
     try:
+        if "sql" in step:
+            step = {**step, "sql": resolve_snapshots(step["sql"], session)}
         kind = step["do"]
         if kind == "sql":
             session.sql(step["sql"]).collect()

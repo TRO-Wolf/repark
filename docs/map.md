@@ -200,6 +200,8 @@ repo.
   `test_served_shapes_run[S-CTAS-LOCATION]`, `[S-TABLE-COMMENT]`,
   `[S-TABLE-COMMENT-AFTER-TBLPROPERTIES]`, `test_gold_models.py` inverted acceptance tests);
   the statement-surface table stands at seventeen served / eleven refused.
+  **WO U9-TYPES-1 round-2 fixer (2026-09-26):** TY-UUID-READ names the fork catalog option and the snapshot-pinned reads
+  (RP-52, R-29 retired).
 - [design/](design/map.md) — settled design documents, one per deliberate design pass
   ([design/session-api.md](design/session-api.md): the phase-1 Session API — crate layout,
   seams, forced-edit ledger, omissions ledger, server landing map;

@@ -278,6 +278,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   the provider goes straight to `SessionContext::read_table` — no registration is left
   behind and no time-travel or incremental option reaches the path route.
   pins: dfload-1/C-002, C-003, C-004, C-005, C-007, C-008, C-009, C-010
+  **WO U9-TYPES-1 round-2 fixer (2026-09-26):** the static provider sets the fork's `with_uuid_as_string(true)`
+  (RP-52 `b61c82b8`), so a path read presents `uuid` as text like the catalog path.
+  pins: u9-types-1/C-010
 - `plan_canonical.rs` — **DF-PLAN-INTROSPECT-1 (2026-09-15, round 4):** the
   expression-canonicalization half of the hash, split out when the expression
   family outgrew `plan_introspect.rs`. `RelTable` numbers scans and subquery
@@ -1073,6 +1076,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   for a tag) after `resolve_snapshot_id`, so the reader-options branch read tracks the live
   schema and unknown refs keep the pinned refusal.
   pins: ipi-07-branch-read-schema-1/C-002, C-006
+  **WO U9-TYPES-1 round-2 fixer (2026-09-26):** both pinned `IcebergStaticTableProvider` builds in
+  `read_table_at` (ref and snapshot) set `with_uuid_as_string(true)` (RP-52 `b61c82b8`), so a
+  reader-option snapshot, tag or branch read presents `uuid` as text and filters on it.
+  pins: u9-types-1/C-010
 - `sorted_view.rs` — SE-1 declared-sorted temp views: `verify_batches_sorted` (the O(n)
   adjacent-pair lexicographic check, ASC NULLS LAST, cross-batch) + `declared_sort_order`
   (`Column::from_name`, never ident-parsing `col()` — the U-DF-1 lowercase-fold class)

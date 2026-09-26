@@ -537,6 +537,9 @@ pins: rp-4-fork-repin/C-005, C-006
   `spark.wap.id` on its own takes the staged route recorded under IPI-05 above. `set_value` carries `#[allow(clippy::missing_errors_doc)]` — the
   sanctioned form for the pedantic lint under the comment ban.
   pins: ice-wap-branch-1/C-001, C-003, C-006, C-007, C-010, C-011
+  **WO U9-TYPES-1 round-2 fixer (2026-09-26):** the WAP read redirect's static provider sets `with_uuid_as_string(true)`
+  (RP-52 `b61c82b8`), so a redirected read presents `uuid` as text.
+  pins: u9-types-1/C-010
 - `ref_ddl.rs` — I5 snapshot-ref DDL (CREATE/DROP/REPLACE BRANCH|TAG, retention) + the
   write-to-branch sniff. **WO U5 PR2b (2026-09-24):** with no `AS OF` and no current snapshot,
   `create_ref_on_empty_table` follows Spark's `CreateOrReplaceBranchExec`: a new branch commits an
@@ -1955,6 +1958,11 @@ pins: rp-4-fork-repin/C-005, C-006
   the RePark resolution gatekeeper, so unknown refs keep the pinned refusal; snapshot-id
   and timestamp spans keep `try_new_from_table_snapshot`.
   pins: ipi-07-branch-read-schema-1/C-001, C-003, C-004, C-005, C-006, C-008
+  **WO U9-TYPES-1 round-2 fixer (2026-09-26):** the SQL-door static provider (ref and snapshot builds) sets
+  `with_uuid_as_string(true)` (RP-52 `b61c82b8`): `VERSION AS OF` an id or a tag, `TIMESTAMP AS OF`
+  and `t.branch_<b>` present `uuid` as text and `u = '…'` filters on it like Spark (ledger R-29
+  retired).
+  pins: u9-types-1/C-010
 - `local_fs_ddl.rs` — SEC-02 local-filesystem DDL gate; 9 in-module tests.
 - `catalog_ops.rs` — catalog lookup, P11 refusals, `iceberg_err`, path-escape rejection, and
   `reregister*` provider invalidation. It is also the home of the v2-command intercepts

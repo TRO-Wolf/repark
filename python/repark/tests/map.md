@@ -98,6 +98,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   partition, `overwritePartitions` of a `STRING` column, `_partition.p` beside `u`).
   New step kinds `overwrite_partitions` and `df_create` share `write_dataframe` with `append`.
   pins: u9-types-1/C-013
+  **WO U9-TYPES-1 round-2 fixer (2026-09-26):** 27 more steps in group `uuid-snap`, measured by
+  `target/probe-u9-types-2/measure_r6.py`: `VERSION AS OF` a snapshot id, `TIMESTAMP AS OF`,
+  `VERSION AS OF 't1'`, `.branch_b1` and the `branch` read option before and after a branch
+  INSERT, and a WAP-staged `VERSION AS OF`, each with a uuid-literal filter. SQL may carry
+  `{ref:<table>:<ref>}` / `{wap:<table>:<wap id>}` tokens that `resolve_snapshots` turns into
+  the snapshot id (read from `.refs` / `.snapshots` on either engine); step kind `option_read`
+  collects a reader with options. Red before the static-provider switch on 13 steps.
+  pins: u9-types-1/C-010
   The VOID groups: `void-write` (a value into VOID on every door; R-23) and `void-create`
   (DataFrame create and CTAS of a NULL column on v3; v2 refuses, R-22). pins: u9-types-1/C-014,
   C-015

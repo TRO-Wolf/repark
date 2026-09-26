@@ -350,13 +350,15 @@ pub async fn read_table_at(
                 Arc::new(
                     IcebergStaticTableProvider::try_new_from_table_ref(table, name)
                         .await
-                        .map_err(iceberg_err)?,
+                        .map_err(iceberg_err)?
+                        .with_uuid_as_string(true),
                 )
             } else {
                 Arc::new(
                     IcebergStaticTableProvider::try_new_from_table_snapshot(table, snapshot_id)
                         .await
-                        .map_err(iceberg_err)?,
+                        .map_err(iceberg_err)?
+                        .with_uuid_as_string(true),
                 )
             }
         }

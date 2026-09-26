@@ -226,7 +226,8 @@ async fn snapshot_all_schemas(
 ) -> Result<HashMap<String, Arc<dyn SchemaProvider>>> {
     let iceberg = IcebergCatalogProvider::try_new(catalog)
         .await
-        .map_err(super::iceberg_to_datafusion)?;
+        .map_err(super::iceberg_to_datafusion)?
+        .with_uuid_as_string(true);
     let mut schemas = HashMap::new();
     for name in iceberg.schema_names() {
         if let Some(schema) = iceberg.schema(&name) {
@@ -289,7 +290,8 @@ async fn build_namespace_schema(
         Arc::new(NamespaceScopedCatalog::new(catalog, namespace.clone()));
     let iceberg = IcebergCatalogProvider::try_new(scoped)
         .await
-        .map_err(super::iceberg_to_datafusion)?;
+        .map_err(super::iceberg_to_datafusion)?
+        .with_uuid_as_string(true);
     let schema = iceberg.schema(&schema_name).ok_or_else(|| {
         DataFusionError::Plan(format!(
             "namespace `{schema_name}` exists in the Iceberg catalog but produced no DF schema \
@@ -301,9 +303,7 @@ async fn build_namespace_schema(
 
 async fn present_fork_schema(schema: Arc<dyn SchemaProvider>) -> Result<Arc<dyn SchemaProvider>> {
     freeze_fork_name_directory(schema.as_ref()).await?;
-    Ok(super::uuid_text_schema::UuidTextSchemaProvider::wrap(
-        schema,
-    ))
+    Ok(schema)
 }
 
 /// Name used only to drive [`SchemaProvider::table`] through the fork's `ensure_tables_listed`.

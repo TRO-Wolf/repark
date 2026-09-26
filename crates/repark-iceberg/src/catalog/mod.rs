@@ -25,7 +25,6 @@ mod provider;
 mod scan_batches;
 mod snapshot_metadata_table;
 pub mod uuid_presentation;
-pub(crate) mod uuid_text_schema;
 
 // Public product surface (order: provider → builders → location).
 pub use provider::{

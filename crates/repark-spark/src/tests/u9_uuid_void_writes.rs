@@ -304,3 +304,65 @@ async fn ctas_of_a_null_column_is_unknown_on_v3_and_refuses_on_v2() {
         "v2 CTAS of a NULL column must refuse with the ADD COLUMN door's text: {text}"
     );
 }
+
+#[tokio::test]
+async fn snapshot_pinned_reads_present_uuid_text_and_filter_on_it() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    uuid_table(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.us (id INT, name STRING) USING iceberg",
+        "us",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        &format!("INSERT INTO ice.sales.us VALUES (1, 'a', '{A}'), (2, 'b', '{B}')"),
+    )
+    .await;
+    let snapshot = load_sales_table(&catalogs, "us")
+        .await
+        .metadata()
+        .current_snapshot_id()
+        .unwrap();
+    run(&ctx, &catalogs, "ALTER TABLE ice.sales.us CREATE BRANCH b1").await;
+    run(&ctx, &catalogs, "ALTER TABLE ice.sales.us CREATE TAG t1").await;
+    let both = format!(
+        "+----+--------------------------------------+\n\
+         | id | u                                    |\n\
+         +----+--------------------------------------+\n\
+         | 1  | {A} |\n\
+         | 2  | {B} |\n\
+         +----+--------------------------------------+"
+    );
+    let first = "+----+\n| id |\n+----+\n| 1  |\n+----+";
+    for pinned in [
+        format!("ice.sales.us VERSION AS OF {snapshot}"),
+        "ice.sales.us TIMESTAMP AS OF '2099-01-01 00:00:00'".to_string(),
+        "ice.sales.us VERSION AS OF 't1'".to_string(),
+        "ice.sales.us.branch_b1".to_string(),
+    ] {
+        assert_eq!(
+            rendered(
+                &ctx,
+                &catalogs,
+                &format!("SELECT id, u FROM {pinned} ORDER BY id")
+            )
+            .await,
+            both,
+            "{pinned}"
+        );
+        assert_eq!(
+            rendered(
+                &ctx,
+                &catalogs,
+                &format!("SELECT id FROM {pinned} WHERE u = '{A}'")
+            )
+            .await,
+            first,
+            "{pinned}"
+        );
+    }
+}

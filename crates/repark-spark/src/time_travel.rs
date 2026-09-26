@@ -147,7 +147,8 @@ pub async fn prepare_time_travel_sql(
             IcebergStaticTableProvider::try_new_from_table_snapshot(table, snapshot_id)
                 .await
                 .map_err(iceberg_err)?
-        };
+        }
+        .with_uuid_as_string(true);
         let replacement = register_time_travel_provider(ctx, pinned, Arc::new(provider))?;
         tokens.splice(span.table_start..span.clause_end, replacement);
     }

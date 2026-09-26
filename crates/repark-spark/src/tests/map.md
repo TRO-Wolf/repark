@@ -293,6 +293,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   SELECT (literal, string, column), `VALUES (…, CAST(NULL AS INT))`, MERGE INSERT, MERGE UPDATE
   and UPDATE (table `` on the last three); a CTAS of `NULL AS c` is `unknown` on v3 and refuses
   on v2; both red before the fix. pins: u9-types-1/C-014, C-015
+  **WO U9-TYPES-1 round-2 fixer (2026-09-26):** `snapshot_pinned_reads_present_uuid_text_and_filter_on_it` reads
+  `VERSION AS OF <id>`, `TIMESTAMP AS OF`, `VERSION AS OF 't1'` and `.branch_b1` as uuid text and
+  filters `u = '…'` on each; red before the static-provider switch (bytes, then
+  `FixedSizeBinary(16) = Utf8`). pins: u9-types-1/C-010
 - [alter_write_order_transform.rs](alter_write_order_transform.rs) — **WO U5 PR2b
   (2026-09-24):** D-WRITE-ORDERED-TRANSFORM. Seventeen measured `WRITE ORDERED BY` specs land
   the sort order Spark wrote (rendered as `transform source direction nulls`) with `range`;
@@ -2368,7 +2372,8 @@ name. Fix round 3 adds `star_and_inserted_struct_values_resolve_by_name` (`UPDAT
 matched and NOT MATCHED BY SOURCE refuses Spark's `Multiple assignments` text).
 `nested_assign_oracle.rs` replays
 [`python/repark/tests/u8_write_sql_nested_spark_oracle.json`](../../../../python/repark/tests/u8_write_sql_nested_spark_oracle.json)
-(read with `include_str!`). It covers 150 of its 177 keys, counted exactly: every key without a
+(read with `include_str!`). It covers 152 of its 177 keys (150 until U9-TYPES-1 retired the
+`U2-order` / `U2-order2` R-16 residues, 2026-09-26), counted exactly: every key without a
 residue record and without an ARRAY or MAP column. The Rust test context has no Spark `array` /
 `map` constructors, and the facade replays every key. Each case runs on the test context rebuilt
 with a core `ReparkSession`'s optimizer rules (fix round 4), so the DataFusion 54.1 guards apply

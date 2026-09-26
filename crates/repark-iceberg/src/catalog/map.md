@@ -435,23 +435,6 @@ Source comments retain only API and safety contracts; implementation narration i
   metadata-table `projection` and lists catalog entries only. Pins remain in
   `crates/repark-spark/src/tests/metadata_tables.rs`.
   pins: rp-5-fork-repin/C-003
-- `uuid_text_schema.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** `UuidTextSchemaProvider`
-  sits over the fork's schema provider and hands out the fork's own `IcebergTableProvider`
-  with its `with_uuid_as_string(true)` switch on (F-UUID-STRING-1, fork #355); the table
-  provider itself is not wrapped. `provider.rs::present_fork_schema` is the one site that
-  applies it, for the full snapshot and the scoped namespace rebuild alike. **Corrected
-  2026-09-26 (round-1 fixer, verifier V-005):** the switch covers exactly the doors that read
-  or write THROUGH that provider — the current-snapshot scan, `INSERT INTO` (SQL and the
-  DataFrame append), and the identity `DELETE` / `UPDATE` that take the fork path. The
-  RePark-owned writers and readers that build their own Arrow schema (MERGE, `INSERT
-  OVERWRITE` both forms, `overwritePartitions`, the `_file` / `_pos` / `_row_id` / changelog
-  projections, `DESCRIBE t col`, `SHOW TABLE EXTENDED`) present uuid through
-  `uuid_presentation.rs` instead. Two dated gaps remain: F-UUID-STATIC-1 (snapshot-pinned
-  reads — `VERSION AS OF`, `TIMESTAMP AS OF`, tag, branch and WAP-staged reads — build
-  `IcebergStaticTableProvider`, which has no switch at fork `08735de9`, and still show bytes;
-  ledger R-29) and F-UUID-CATALOG-OPTION-1 (this shim is removed once the fork carries an
-  `IcebergCatalogProvider::with_uuid_as_string` that propagates through `resolve_table`).
-  pins: u9-types-1/C-010
 - `uuid_presentation.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** the one place that
   turns an Iceberg schema into the presented Arrow schema. `presented_arrow_schema` is the
   fork's `schema_to_arrow_schema` with every `uuid` field (found by its field id, at any
@@ -477,6 +460,13 @@ Source comments retain only API and safety contracts; implementation narration i
   residual). Hosts `NamespaceScopedCatalog` (G17 closed): 14 required
   + 13 of 16 defaulted `Catalog` methods are explicit forwards; 3 composition defaults are
   stated omissions at pin `5e7b2e4` (see crate-root map "Known limitations").
+  **U9-TYPES-1 round-2 fixer (2026-09-26):** both catalog constructions (`snapshot_all_schemas`
+  and the scoped `build_namespace_schema`) set the fork catalog option
+  `IcebergCatalogProvider::with_uuid_as_string(true)` (RP-52 `b61c82b8`, F-UUID-STATIC-1), so
+  every resolved `IcebergTableProvider` presents `uuid` as `Utf8` on the current-snapshot scan,
+  `INSERT INTO` and the fork-path identity DELETE / UPDATE; the `UuidTextSchemaProvider` shim
+  (`uuid_text_schema.rs`) is deleted, its F-UUID-CATALOG-OPTION-1 removal condition met.
+  pins: u9-types-1/C-010
 - **PERF-ICE-SCAN-1 (2026-09-05):** `count(*)` folds and small tables scan in parallel,
   both fork-side (F-27) and consumed here through the unchanged `IcebergTableScan` path — no
   code in this directory changed. The fork reads row counts through an empty projection mask,

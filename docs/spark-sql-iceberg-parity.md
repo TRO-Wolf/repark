@@ -8652,7 +8652,8 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   Iceberg `uuid` column (a RePark extension: RePark's API door is that spelling, while
   `CAST(x AS UUID)` keeps Spark's `[UNSUPPORTED_DATATYPE]` refusal byte for byte). Every
   provider RePark builds for an Iceberg table in the catalog path sets the fork's own
-  `with_uuid_as_string(true)` switch (`UuidTextSchemaProvider`), so `uuid` advertises
+  `with_uuid_as_string(true)` switch (the fork catalog option
+  `IcebergCatalogProvider::with_uuid_as_string`, RP-52, 2026-09-26), so `uuid` advertises
   `Utf8` on the current-snapshot scan, `INSERT INTO` (SQL and the DataFrame append) and the
   identity DELETE / UPDATE that reference a uuid column and take the fork path. The
   RePark-owned paths present it through one schema presentation
@@ -8660,11 +8661,10 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   s.u`, `ON t.u = '…'`, `INSERT` / `UPDATE SET u` of an upper-case string), `INSERT
   OVERWRITE` whole-table and static-partition, `overwritePartitions`, the `_file` / `_pos` /
   `_partition` / `_row_id` / changelog projections, `DESCRIBE t u` and `SHOW TABLE EXTENDED`.
-  Two gaps stay dated: snapshot-pinned reads (`VERSION AS OF`, `TIMESTAMP AS OF`, tag,
-  branch and WAP-staged reads) build the fork's `IcebergStaticTableProvider`, which has no
-  switch at `08735de9`, and show bytes (R-29, fork card F-UUID-STATIC-1); the shim itself
-  goes when the fork's `IcebergCatalogProvider::with_uuid_as_string` propagates through
-  `resolve_table` (F-UUID-CATALOG-OPTION-1). Reads render canonical
+  Snapshot-pinned reads (`VERSION AS OF`, `TIMESTAMP AS OF`, tag, branch before and after a
+  branch INSERT, WAP-staged reads) build the fork's `IcebergStaticTableProvider` with the same
+  switch (RP-52 `b61c82b8`, F-UUID-STATIC-1; R-29 retired 2026-09-26), so they render text
+  and filter on `u = '…'`. Reads render canonical
   lower case, upper-case literals store lower case, NULL writes, `u = '…'` filters and
   prunes, a DataFrame append of a `STRING` column writes, `'not-a-uuid'` and `7` refuse
   `Invalid UUID string: …`, `ORDER BY u` sorts, `bucket(4, u)` partitions, and `ALTER COLUMN
@@ -8683,7 +8683,8 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 - **Rationale** — EQUAL, dated 2026-09-26, WO U9-TYPES-1 clause C-010 (PROVEN). Remaining
   dated divergences: the RePark-extension `UUID` spelling commit (R-25), the bucket field
   name (R-26), the volatile task wrappers on invalid literals (R-27) and on files metrics
-  (R-28), snapshot-pinned reads showing bytes (R-29, F-UUID-STATIC-1). MERGE, INSERT
+  (R-28). Snapshot-pinned reads were added 2026-09-26 (R-29 retired, 27 steps in group
+  `uuid-snap`, Rust `snapshot_pinned_reads_present_uuid_text_and_filter_on_it`). MERGE, INSERT
   OVERWRITE and the metadata-column projections were added 2026-09-26 (C-013, 22 steps in
   groups `uuid-write` / `uuid-overwrite`, `crates/repark-spark/src/tests/u9_uuid_void_writes.rs`).
 
