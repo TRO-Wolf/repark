@@ -97,8 +97,9 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   (`iceberg::plan_commit_base_load` / `CommitBaseLoadPlan`).
 - `v3_types.rs` — **V3-6 C-001:** fork pin `00cdde0` (RP-5) read/write measurement for
   `timestamp_ns` / `timestamptz_ns` (parquet round-trip), `unknown` (Arrow Null;
-  parquet write refuses `Writing the unknown column 'u' is not supported yet` —
-  `fork_unknown_write_refuses_naming_the_column`; RP-5 C-006 / R91 `#246`), and binary `variant` (parquet builder
+  since RP-51 the parquet write omits the column and the scan reads NULL —
+  `fork_unknown_write_omits_the_column_and_reads_null`; RP-5 C-006 / R91 `#246` recorded
+  the refusal the fork `#356` retired), and binary `variant` (parquet builder
   refuse). **C-002:** `fork_variant_scan_refuses_naming_the_type` — a real data file plus a
   variant projection refuses at the fork's reader guard (empty table streams cleanly);
   the §4 registry row `V3-VARIANT-SHRED-1` cites these pins and the STATUS v3 block
