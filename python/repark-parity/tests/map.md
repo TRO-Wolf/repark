@@ -1081,6 +1081,10 @@ RP-42 fork pin bump (2026-09-20, run 27): `test_v3_cov_docs.py` holds its own co
   `crates/repark-sql/tests/cross_door.rs` row 1254 → 1253, to the measured files and
   `scripts/check_rust_file_size.py` (the `RENAME TO` cross-catalog refusal is deleted, and the
   cross-door rename spells each door's target). No other row moves.
+- `test_cap_1_source_file_line_cap.py` — **WO U9-TYPES-1 PR2 (2026-09-26):** the
+  `crates/repark-spark/src/alter.rs` mirror row ratchets 1353 → 1272 to the measured file and
+  `scripts/check_rust_file_size.py` (`ALTER COLUMN … TYPE` moved to `alter_column_type.rs`).
+  No other row moves. pins: u9-types-1/C-010
 - `test_cap_1_source_file_line_cap.py` — **U5 PR2a ALTER COLUMN COMMENT (2026-09-24):** the `crates/repark-spark/src/alter.rs` mirror row ratchets 1382 → 1354 and the `crates/repark-spark/src/tests/alter.rs` row 1184 → 1182, to the measured files and `scripts/check_rust_file_size.py` (the residual `ALTER COLUMN … COMMENT` refusal is deleted and its refusal pin flips to a landed doc). No other row moves.
 - `test_cap_1_source_file_line_cap.py` — **U7 PR1 writer surface (2026-09-24):** the `python/repark/src/repark/spark/dataframe/writer_readwriter.py` mirror row ratchets 1077 → 1073 to the measured file and `scripts/check_lib_py.py`. No other row moves.
 - `test_cap_1_source_file_line_cap.py` — **U7 PR1 writer surface (2026-09-24):** the `python/repark/src/repark/spark/dataframe/writer_readwriter.py` mirror row ratchets 1077 → 1073 to the measured file and `scripts/check_lib_py.py`. No other row moves. Round 2 (2026-09-24): the same row ratchets 1073 → 1039 in lockstep with the gate. U7 PR2 (2026-09-24): 1039 → 1033 in lockstep with the gate (the `DataFrameWriterV2.option` branch/tag refusal leaves).

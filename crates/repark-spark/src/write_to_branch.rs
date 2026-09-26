@@ -467,6 +467,7 @@ async fn commit_write_staged<'a>(
         IcebergTableProvider::try_new(catalog, ident.namespace().clone(), ident.name().to_string())
             .await
             .map_err(iceberg_err)?
+            .with_uuid_as_string(true)
             .with_stage_only(true)
             .with_snapshot_properties(HashMap::from([(
                 crate::wap::WAP_ID_SNAPSHOT_PROPERTY.to_string(),
@@ -583,6 +584,7 @@ async fn commit_write_on_branch<'a>(
         IcebergTableProvider::try_new(catalog, ident.namespace().clone(), ident.name().to_string())
             .await
             .map_err(iceberg_err)?
+            .with_uuid_as_string(true)
             .with_commit_branch(target.branch);
     redirect_write_to_temp_view(ctx, pinned, tokens, span, provider, "branch-commit")
         .map(Cow::Owned)

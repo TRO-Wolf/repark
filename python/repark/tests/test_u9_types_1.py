@@ -157,6 +157,8 @@ def run_step(session: Any, step: dict[str, Any], warehouse: Path, engine: str) -
             return "ok"
         if kind == "add_uuid":
             return add_uuid_column(session, step["table"], engine)
+        if kind == "bucket_uuid":
+            return add_bucket_uuid_table(session, step["table"], engine)
         if kind == "md":
             return metadata_observation(latest_metadata(warehouse, step["table"]))
         return observe_query(session, step)
@@ -176,6 +178,29 @@ def add_uuid_column(session: Any, table: str, engine: str) -> str:
         session.sql(f"REFRESH TABLE {table}")
     else:
         session.sql(f"ALTER TABLE {table} ADD COLUMN u UUID").collect()
+    return "ok"
+
+
+def add_bucket_uuid_table(session: Any, table: str, engine: str) -> str:
+    """Create ``table`` with a ``bucket(4, u)`` spec over a ``uuid`` column on both engines."""
+    if engine == "spark":
+        session.sql(f"CREATE TABLE {table} (id INT) USING iceberg").collect()
+        jvm = session._jvm
+        loaded = jvm.org.apache.iceberg.spark.Spark3Util.loadIcebergTable(
+            session._jsparkSession, table
+        )
+        uuid_type = jvm.org.apache.iceberg.types.Types.UUIDType.get()
+        loaded.updateSchema().addColumn("u", uuid_type).commit()
+        loaded_spec = jvm.org.apache.iceberg.spark.Spark3Util.loadIcebergTable(
+            session._jsparkSession, table
+        )
+        bucket = jvm.org.apache.iceberg.expressions.Expressions.bucket("u", 4)
+        loaded_spec.updateSpec().addField(bucket).commit()
+        session.sql(f"REFRESH TABLE {table}")
+    else:
+        session.sql(
+            f"CREATE TABLE {table} (id INT, u UUID) USING iceberg PARTITIONED BY (bucket(4, u))"
+        ).collect()
     return "ok"
 
 

@@ -230,8 +230,7 @@ async fn snapshot_all_schemas(
     let mut schemas = HashMap::new();
     for name in iceberg.schema_names() {
         if let Some(schema) = iceberg.schema(&name) {
-            freeze_fork_name_directory(schema.as_ref()).await?;
-            schemas.insert(name, schema);
+            schemas.insert(name, present_fork_schema(schema).await?);
         }
     }
     Ok(schemas)
@@ -297,8 +296,14 @@ async fn build_namespace_schema(
              provider after scoped rebuild"
         ))
     })?;
+    present_fork_schema(schema).await
+}
+
+async fn present_fork_schema(schema: Arc<dyn SchemaProvider>) -> Result<Arc<dyn SchemaProvider>> {
     freeze_fork_name_directory(schema.as_ref()).await?;
-    Ok(schema)
+    Ok(super::uuid_text_schema::UuidTextSchemaProvider::wrap(
+        schema,
+    ))
 }
 
 /// Name used only to drive [`SchemaProvider::table`] through the fork's `ensure_tables_listed`.

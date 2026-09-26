@@ -2,7 +2,7 @@
  "generator": "target/probe-u9-types-1/build_oracle.py + merge_oracle.py",
  "engine": "Spark 4.1.2 + Iceberg 1.11.0 (local[1], InMemoryCatalog sc, session zone UTC)",
  "measured": "2026-09-25",
- "revised": "r4 2026-09-26: +6 steps void printschema/cast-rows/files-metrics/delete for U9-TYPES-1 PR2 (VOID end to end); R-14 retired, R-22..R-24 recorded",
+ "revised": "r4 2026-09-26: +24 steps void printschema/cast-rows/files-metrics/delete and uuid dtypes/printschema/order/bucket-part/alter-to-string/invalid-literals/append/delete/update/files-metrics for U9-TYPES-1 PR2 (VOID and UUID-as-string end to end); R-14/R-15 retired, R-22..R-28 recorded",
  "steps": [
   {
    "group": "ltz",
@@ -6285,25 +6285,10 @@
     ]
    ],
    "residue": {
-    "id": "R-15",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "UnsupportedOperationException"
-     ],
-     [
-      "msg",
-      "This feature is not implemented: column type `UUID` is not supported yet for Iceberg tables"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
+    "id": "R-25",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
+    "repark": "ok",
+    "note": "2026-09-26: Spark refuses the UUID spelling in SQL ([UNSUPPORTED_DATATYPE], ParseException); RePark accepts UUID on CREATE / ADD COLUMN as an Iceberg uuid column by design (orchestrator ruling 2026-09-25, a RePark extension documented in the TY-UUID-READ registry row and the design map), so RePark commits where Spark refuses."
    }
   },
   {
@@ -6328,28 +6313,7 @@
      "state",
      "0A000"
     ]
-   ],
-   "residue": {
-    "id": "R-15",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "UnsupportedOperationException"
-     ],
-     [
-      "msg",
-      "This feature is not implemented: Unsupported SQL type UUID"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "uuid",
@@ -6363,28 +6327,7 @@
    "key": "uuid/v2/add-uuid",
    "do": "add_uuid",
    "table": "sc.ns.u2",
-   "spark": "ok",
-   "residue": {
-    "id": "R-15",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "UnsupportedOperationException"
-     ],
-     [
-      "msg",
-      "This feature is not implemented: column type `UUID` is not supported yet for Iceberg tables"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   "spark": "ok"
   },
   {
    "group": "uuid",
@@ -6400,44 +6343,14 @@
      "u",
      "string"
     ]
-   ],
-   "residue": {
-    "id": "R-15",
-    "repark": [
-     [
-      "id",
-      "int"
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "uuid",
    "key": "uuid/v2/insert",
    "do": "sql",
    "sql": "INSERT INTO sc.ns.u2 VALUES (1, '123e4567-e89b-12d3-a456-426614174000'), (2, NULL)",
-   "spark": "ok",
-   "residue": {
-    "id": "R-15",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: Inconsistent data length across values list: got 2 values in row 0 but expected 1"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   "spark": "ok"
   },
   {
    "group": "uuid",
@@ -6453,11 +6366,7 @@
      2,
      null
     ]
-   ],
-   "residue": {
-    "id": "R-15",
-    "repark": []
-   }
+   ]
   },
   {
    "group": "uuid",
@@ -6473,16 +6382,7 @@
      "u",
      "string"
     ]
-   ],
-   "residue": {
-    "id": "R-15",
-    "repark": [
-     [
-      "id",
-      "int"
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "uuid",
@@ -6496,28 +6396,7 @@
     [
      "NoneType"
     ]
-   ],
-   "residue": {
-    "id": "R-15",
-    "repark": [
-     [
-      "cond",
-      "UNRESOLVED_COLUMN.WITH_SUGGESTION"
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `u` cannot be resolved. Did you mean one of the following? [`id`]. SQLSTATE: 42703"
-     ],
-     [
-      "state",
-      "42703"
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "uuid",
@@ -6528,56 +6407,14 @@
     [
      1
     ]
-   ],
-   "residue": {
-    "id": "R-15",
-    "repark": [
-     [
-      "cond",
-      "UNRESOLVED_COLUMN.WITH_SUGGESTION"
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `u` cannot be resolved. Did you mean one of the following? [`id`]. SQLSTATE: 42703"
-     ],
-     [
-      "state",
-      "42703"
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "uuid",
    "key": "uuid/v2/insert-upper",
    "do": "sql",
    "sql": "INSERT INTO sc.ns.u2 VALUES (4, '123E4567-E89B-12D3-A456-4266141740FF')",
-   "spark": "ok",
-   "residue": {
-    "id": "R-15",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: Inconsistent data length across values list: got 2 values in row 0 but expected 1"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   "spark": "ok"
   },
   {
    "group": "uuid",
@@ -6597,10 +6434,547 @@
      4,
      "123e4567-e89b-12d3-a456-4266141740ff"
     ]
+   ]
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/dtypes",
+   "do": "dtypes",
+   "sql": "SELECT * FROM sc.ns.u2",
+   "spark": [
+    [
+     "id",
+     "int"
+    ],
+    [
+     "u",
+     "string"
+    ]
+   ]
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/printschema",
+   "do": "printschema",
+   "sql": "SELECT * FROM sc.ns.u2",
+   "spark": "root\n |-- id: integer (nullable = true)\n |-- u: string (nullable = true)\n\n"
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/order",
+   "do": "ordered",
+   "sql": "SELECT id, u FROM sc.ns.u2 ORDER BY u",
+   "spark": [
+    [
+     2,
+     null
+    ],
+    [
+     1,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ],
+    [
+     4,
+     "123e4567-e89b-12d3-a456-4266141740ff"
+    ]
+   ]
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/part/prepare",
+   "do": "bucket_uuid",
+   "table": "sc.ns.up",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/part/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.up VALUES (1, '123e4567-e89b-12d3-a456-426614174000'), (2, NULL)",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/part/select",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.up",
+   "spark": [
+    [
+     1,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ],
+    [
+     2,
+     null
+    ]
+   ]
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/part/md",
+   "do": "md",
+   "table": "sc.ns.up",
+   "spark": [
+    [
+     "fields",
+     [
+      [
+       [
+        "id",
+        1
+       ],
+       [
+        "name",
+        "id"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "int"
+       ]
+      ],
+      [
+       [
+        "id",
+        2
+       ],
+       [
+        "name",
+        "u"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "uuid"
+       ]
+      ]
+     ]
+    ],
+    [
+     "spec",
+     [
+      [
+       [
+        "field-id",
+        1000
+       ],
+       [
+        "name",
+        "u_bucket_4"
+       ],
+       [
+        "source-id",
+        2
+       ],
+       [
+        "transform",
+        "bucket[4]"
+       ]
+      ]
+     ]
+    ]
    ],
    "residue": {
-    "id": "R-15",
-    "repark": []
+    "id": "R-26",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
+    "repark": [
+     [
+      "fields",
+      [
+       [
+        [
+         "id",
+         1
+        ],
+        [
+         "name",
+         "id"
+        ],
+        [
+         "required",
+         false
+        ],
+        [
+         "type",
+         "int"
+        ]
+       ],
+       [
+        [
+         "id",
+         2
+        ],
+        [
+         "name",
+         "u"
+        ],
+        [
+         "required",
+         false
+        ],
+        [
+         "type",
+         "uuid"
+        ]
+       ]
+      ]
+     ],
+     [
+      "spec",
+      [
+       [
+        [
+         "field-id",
+         1000
+        ],
+        [
+         "name",
+         "u_bucket"
+        ],
+        [
+         "source-id",
+         2
+        ],
+        [
+         "transform",
+         "bucket[4]"
+        ]
+       ]
+      ]
+     ]
+    ],
+    "note": "2026-09-26: the bucket spec over the uuid column commits, reads and partitions on both engines; only the generated field name differs: u_bucket_4 on Spark, u_bucket on RePark (RePark's established col_bucket convention, unchanged by this unit)."
+   }
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/alter-to-string",
+   "do": "sql",
+   "sql": "ALTER TABLE sc.ns.u2 ALTER COLUMN u TYPE STRING",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/md-after-alter",
+   "do": "md",
+   "table": "sc.ns.u2",
+   "spark": [
+    [
+     "fields",
+     [
+      [
+       [
+        "id",
+        1
+       ],
+       [
+        "name",
+        "id"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "int"
+       ]
+      ],
+      [
+       [
+        "id",
+        2
+       ],
+       [
+        "name",
+        "u"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "uuid"
+       ]
+      ]
+     ]
+    ],
+    [
+     "spec",
+     []
+    ]
+   ]
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/insert-invalid",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.u2 VALUES (5, 'not-a-uuid')",
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o45.sql.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 18.0 failed 1 times, most recent failure: Lost task 0.0 in stage 18.0 (TID 19) (localhost executor driver): java.lang.IllegalArgumentException: Invalid UUID string: not-a-uuid"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-27",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "DataInvalid => Invalid UUID string: not-a-uuid"
+     ],
+     [
+      "state",
+      null
+     ]
+    ],
+    "note": "2026-09-26: Spark fails the task with java.lang.IllegalArgumentException: Invalid UUID string: not-a-uuid inside a volatile Py4JJavaError stage wrapper (stage 18.0, TID 19 on 2026-09-26); RePark refuses loud with the fork's DataInvalid text carrying the same Invalid UUID string: <value> core."
+   }
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/insert-int",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.u2 VALUES (5, 7)",
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o45.sql.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 19.0 failed 1 times, most recent failure: Lost task 0.0 in stage 19.0 (TID 20) (localhost executor driver): java.lang.IllegalArgumentException: Invalid UUID string: 7"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-27",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "DataInvalid => Invalid UUID string: 7"
+     ],
+     [
+      "state",
+      null
+     ]
+    ],
+    "note": "2026-09-26: the INT door of R-27: Spark stringifies 7 then refuses Invalid UUID string: 7 (stage 19.0, TID 20); RePark refuses the same core text through the fork."
+   }
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/append",
+   "do": "append",
+   "table": "sc.ns.u2",
+   "schema": "id INT, u STRING",
+   "rows": [
+    [
+     6,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ]
+   ],
+   "spark": "ok"
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/rows-after-append",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.u2",
+   "spark": [
+    [
+     1,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     4,
+     "123e4567-e89b-12d3-a456-4266141740ff"
+    ],
+    [
+     6,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ]
+   ]
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/delete",
+   "do": "sql",
+   "sql": "DELETE FROM sc.ns.u2 WHERE u = '123e4567-e89b-12d3-a456-426614174000'",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/rows-after-delete",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.u2",
+   "spark": [
+    [
+     2,
+     null
+    ],
+    [
+     4,
+     "123e4567-e89b-12d3-a456-4266141740ff"
+    ]
+   ]
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/update",
+   "do": "sql",
+   "sql": "UPDATE sc.ns.u2 SET id = 20 WHERE u IS NULL",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/rows-after-update",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.u2",
+   "spark": [
+    [
+     20,
+     null
+    ],
+    [
+     4,
+     "123e4567-e89b-12d3-a456-4266141740ff"
+    ]
+   ]
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/files-metrics",
+   "do": "rows",
+   "sql": "SELECT readable_metrics.u FROM sc.ns.u2.files",
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o259.collectToPython.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 30.0 failed 1 times, most recent failure: Lost task 0.0 in stage 30.0 (TID 30) (localhost executor driver): java.lang.ClassCastException: Cannot cast java.util.UUID to java.lang.CharSequence"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-28",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
+    "repark": [
+     [
+      [
+       [
+        "column_size",
+        32
+       ],
+       [
+        "lower_bound",
+        null
+       ],
+       [
+        "nan_value_count",
+        null
+       ],
+       [
+        "null_value_count",
+        1
+       ],
+       [
+        "upper_bound",
+        null
+       ],
+       [
+        "value_count",
+        1
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "column_size",
+        48
+       ],
+       [
+        "lower_bound",
+        "0x123e4567e89b12d3a4564266141740ff"
+       ],
+       [
+        "nan_value_count",
+        null
+       ],
+       [
+        "null_value_count",
+        0
+       ],
+       [
+        "upper_bound",
+        "0x123e4567e89b12d3a4564266141740ff"
+       ],
+       [
+        "value_count",
+        1
+       ]
+      ]
+     ]
+    ],
+    "note": "2026-09-26: Spark fails readable_metrics over a uuid column with ClassCastException (volatile Py4JJavaError wrapper, stage 30.0); the fork answers byte bounds, which RePark surfaces. Recorded RePark answer held as the residue."
    }
   },
   {

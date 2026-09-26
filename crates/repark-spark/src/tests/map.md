@@ -278,6 +278,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `unknown` on v3 at CREATE and ADD COLUMN and refuses below v3; `INSERT … VALUES (0, NULL)`
   writes and a value refuses `CANNOT_SAFELY_CAST`; `CAST(NULL AS VOID)` is a typed null.
   pins: u9-types-1/C-009
+  A `UUID` column advertises `Utf8` through the catalog provider, reads and writes canonical
+  lower-case text, and refuses invalid text; `CAST(x AS UUID)` refuses with Spark's text;
+  `ALTER COLUMN u TYPE STRING` keeps `uuid`; DELETE / UPDATE through uuid text.
+  pins: u9-types-1/C-010
 - [alter_write_order_transform.rs](alter_write_order_transform.rs) — **WO U5 PR2b
   (2026-09-24):** D-WRITE-ORDERED-TRANSFORM. Seventeen measured `WRITE ORDERED BY` specs land
   the sort order Spark wrote (rendered as `transform source direction nulls`) with `range`;

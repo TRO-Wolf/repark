@@ -8640,24 +8640,34 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   dated divergences: the v1/v2 refusal class and volatile Py4J wrapper line (R-22, R-24) and
   the planning prefix on the value refusal (R-23).
 
-### TY-UUID-READ — OPEN (measured 2026-09-25): an Iceberg `uuid` column does not read as `string`
+### TY-UUID-READ — EQUAL (2026-09-26): an Iceberg `uuid` column reads and writes as `string`
 
-- **repark** — the Spark door refuses `UUID` at CREATE and `ADD COLUMN` (`column type `UUID` is
-  not supported yet for Iceberg tables`) and in `CAST` (`Unsupported SQL type UUID`). The
-  fork's table provider advertises `uuid` as Arrow `FixedSizeBinary(16)` (its
-  `schema_to_arrow_schema`), not `Utf8`.
-- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25 (12 steps, group
-  `uuid` of `python/repark/tests/u9_types_1_spark_oracle.json`; the wider sweep in the lane's
-  `target/probe-u9-types-1/spark.json`): SQL refuses the type name (`[UNSUPPORTED_DATATYPE]
-  Unsupported data type "UUID". SQLSTATE: 0A000`); a column added through the Iceberg API reads
-  as `string` with canonical lower-case values, takes string literals (upper case stored lower
-  case, an invalid string refused at the task with `IllegalArgumentException: Invalid UUID
-  string: …`) and DataFrame `STRING` appends.
-- **Pin** — `python/repark/tests/test_u9_types_1.py` (group `uuid`, residue R-15 of
-  `task/ledgers/staging/u9-types-1-ledger.md`).
-- **Rationale** — OPEN, dated 2026-09-25, WO U9-TYPES-1 clause C-010 and hand-back question Q2
-  (where the uuid ↔ string conversion lives, and whether the door accepts the `UUID` name that
-  Spark refuses).
+- **repark** — the Spark door accepts the `UUID` spelling on CREATE / ADD COLUMN as an
+  Iceberg `uuid` column (a RePark extension: RePark's API door is that spelling, while
+  `CAST(x AS UUID)` keeps Spark's `[UNSUPPORTED_DATATYPE]` refusal byte for byte). Every
+  provider RePark builds for an Iceberg table in the catalog path sets the fork's own
+  `with_uuid_as_string(true)` switch (`UuidTextSchemaProvider`), so `uuid` advertises
+  `Utf8` on scan, INSERT, DELETE / UPDATE / MERGE, the DataFrame writer and metadata tables;
+  identity DML that references a uuid column takes the fork path. Reads render canonical
+  lower case, upper-case literals store lower case, NULL writes, `u = '…'` filters and
+  prunes, a DataFrame append of a `STRING` column writes, `'not-a-uuid'` and `7` refuse
+  `Invalid UUID string: …`, `ORDER BY u` sorts, `bucket(4, u)` partitions, and `ALTER COLUMN
+  u TYPE STRING` is a no-op commit.
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25 (12 steps) and
+  2026-09-26 (+18 steps: dtypes, printSchema, order, bucket partition, alter-to-string,
+  invalid literals, append, DELETE / UPDATE smoke, files metrics; group `uuid` of
+  `python/repark/tests/u9_types_1_spark_oracle.json`): SQL refuses the type name
+  (`[UNSUPPORTED_DATATYPE] Unsupported data type "UUID". SQLSTATE: 0A000`); a column added
+  through the Iceberg API reads as `string` with canonical lower-case values, takes string
+  literals (upper case stored lower case, an invalid string refused at the task with
+  `IllegalArgumentException: Invalid UUID string: …`) and DataFrame `STRING` appends.
+- **Pin** — `python/repark/tests/test_u9_types_1.py` (group `uuid`, residues R-25, R-26,
+  R-27, R-28 of `task/ledgers/staging/u9-types-1-ledger.md`) and
+  `crates/repark-spark/src/tests/u9_void_uuid.rs`.
+- **Rationale** — EQUAL, dated 2026-09-26, WO U9-TYPES-1 clause C-010 (PROVEN). Remaining
+  dated divergences: the RePark-extension `UUID` spelling commit (R-25), the bucket field
+  name (R-26), the volatile task wrappers on invalid literals (R-27) and on files metrics
+  (R-28).
 
 ### CUTOVER-CTAS-REQ-1 — parquet CTAS keeps source non-null fields required; Spark makes every column optional
 

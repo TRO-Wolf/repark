@@ -3,12 +3,12 @@
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{
-    AlterColumnOperation, AlterTableOperation, ColumnDef, ColumnOption, Ident, MySQLColumnPosition,
-    ObjectName, RenameTableNameKind,
+    AlterTableOperation, ColumnDef, ColumnOption, MySQLColumnPosition, ObjectName,
+    RenameTableNameKind,
 };
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::tokenizer::{Token, Word};
-use iceberg::spec::{PrimitiveType, Transform};
+use iceberg::spec::Transform;
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
 use repark_iceberg::write::alter::{ColumnPosition, PartitionSpecChange, SchemaChange};
@@ -108,12 +108,18 @@ pub(crate) async fn execute_alter_table(
                 schema_dirty = true;
             }
             AlterTableOperation::AlterColumn { column_name, op } => {
-                schema_batch.push(schema_change_from_alter_column(
+                if crate::alter_column_type::push_alter_column_change(
+                    handle.as_ref(),
+                    &ident,
                     column_name,
                     op,
                     timestamp_type,
-                )?);
-                schema_dirty = true;
+                    &mut schema_batch,
+                )
+                .await?
+                {
+                    schema_dirty = true;
+                }
             }
             other => {
                 flush_schema_batch(handle.as_ref(), &ident, &mut schema_batch).await?;
@@ -221,83 +227,6 @@ fn schema_change_from_add_column(
         required: false,
         position,
     })
-}
-
-pub(crate) fn schema_change_from_alter_column(
-    column_name: &Ident,
-    op: &AlterColumnOperation,
-    timestamp_type: SparkTimestampType,
-) -> Result<SchemaChange> {
-    match op {
-        AlterColumnOperation::SetDataType {
-            data_type, using, ..
-        } => {
-            if using.is_some() {
-                return Err(DataFusionError::NotImplemented(
-                    "ALTER COLUMN … TYPE … USING is not supported (Iceberg promotions are \
-                     metadata-only; no row rewrite)"
-                        .into(),
-                ));
-            }
-            let iceberg_type = sql_type_to_iceberg_with_timestamp_type(data_type, timestamp_type)?;
-            let iceberg::spec::Type::Primitive(new_type) = iceberg_type else {
-                return Err(DataFusionError::NotImplemented(format!(
-                    "ALTER COLUMN `{}` TYPE to a non-primitive is not supported",
-                    column_name.value
-                )));
-            };
-            // Only promotion-shaped targets are accepted at the SQL boundary too.
-            if !is_iceberg_promotion_target(&new_type) {
-                return Err(DataFusionError::Plan(format!(
-                    "ALTER COLUMN `{}` TYPE `{data_type}` is not an Iceberg type promotion \
-                     target — only int→long, float→double, and decimal(p,s)→decimal(p2,s) with \
-                     p2≥p (same scale) are allowed; narrowing refuses loud",
-                    column_name.value
-                )));
-            }
-            Ok(SchemaChange::UpdateColumnType {
-                name: column_name.value.clone(),
-                new_type,
-            })
-        }
-        AlterColumnOperation::DropNotNull => Ok(SchemaChange::MakeColumnOptional {
-            name: column_name.value.clone(),
-        }),
-        AlterColumnOperation::SetNotNull => Err(DataFusionError::NotImplemented(format!(
-            "ALTER COLUMN `{}` SET NOT NULL is not supported — making a column required is an \
-             Iceberg incompatible change (existing nulls cannot be backfilled without a default)",
-            column_name.value
-        ))),
-        AlterColumnOperation::SetDefault { .. } | AlterColumnOperation::DropDefault => {
-            Err(DataFusionError::NotImplemented(format!(
-                "ALTER COLUMN `{}` SET/DROP DEFAULT is not supported yet",
-                column_name.value
-            )))
-        }
-        AlterColumnOperation::AddGenerated { .. } => Err(DataFusionError::NotImplemented(format!(
-            "ALTER COLUMN `{}` ADD GENERATED is not supported",
-            column_name.value
-        ))),
-    }
-}
-
-/// Targets that *can* appear on the right-hand side of an Iceberg promotion.
-fn is_iceberg_promotion_target(new_type: &PrimitiveType) -> bool {
-    matches!(
-        new_type,
-        PrimitiveType::Long
-            | PrimitiveType::Double
-            | PrimitiveType::Decimal { .. }
-            // Identity promotions are allowed by the fork.
-            | PrimitiveType::Int
-            | PrimitiveType::Float
-            | PrimitiveType::Boolean
-            | PrimitiveType::String
-            | PrimitiveType::Date
-            | PrimitiveType::Timestamp
-            | PrimitiveType::Timestamptz
-            | PrimitiveType::Binary
-    )
 }
 
 fn unsupported_alter_op(other: &AlterTableOperation, table_display: &str) -> DataFusionError {
@@ -1206,16 +1135,6 @@ mod tests {
             SqlParser::parse_sql(&generic_dialect, sql)
                 .unwrap_or_else(|error| panic!("{sql}: {error}"));
         }
-    }
-
-    #[test]
-    fn is_promotion_target_accepts_long_double_decimal() {
-        assert!(is_iceberg_promotion_target(&PrimitiveType::Long));
-        assert!(is_iceberg_promotion_target(&PrimitiveType::Double));
-        assert!(is_iceberg_promotion_target(&PrimitiveType::Decimal {
-            precision: 10,
-            scale: 2
-        }));
     }
 
     #[test]

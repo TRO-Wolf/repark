@@ -809,14 +809,14 @@ pub(crate) async fn execute_nested_column_ddl(
                 using: None,
                 had_set: false,
             };
-            let change: SchemaChange = crate::alter::schema_change_from_alter_column(
+            let change = crate::alter_column_type::schema_change_from_alter_column(
                 &Ident::new(resolved),
                 &operation,
                 timestamp_type,
+                None,
             )?;
-            apply_schema_changes_on_table(handle.as_ref(), &table, &[change])
-                .await
-                .map_err(iceberg_err)?;
+            crate::alter_column_type::apply_nested_alter_type(handle.as_ref(), &table, change)
+                .await?;
         }
         NestedColumnOperation::Comment(specs) => {
             let changes = column_doc_changes(&table, &catalog_name, specs)?;

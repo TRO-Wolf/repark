@@ -450,6 +450,7 @@ fn iceberg_named_primitive(data_type: &SqlDataType) -> Option<PrimitiveType> {
         "timestamp_ns" => Some(PrimitiveType::TimestampNs),
         "timestamptz_ns" => Some(PrimitiveType::TimestamptzNs),
         "void" => Some(PrimitiveType::Unknown),
+        "uuid" => Some(PrimitiveType::Uuid),
         _ => None,
     }
 }

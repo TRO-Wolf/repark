@@ -87,6 +87,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   PR2 (2026-09-26): group `void` grows to 27 steps (printSchema, cast rows, `.files`
   metrics, copy-on-write DELETE), 23 EQUAL; R-14 retires and R-22, R-23, R-24 hold the
   v1 / v2 refusal class and the planning prefix. pins: u9-types-1/C-009
+  PR2 (2026-09-26): group `uuid` grows to 30 steps (dtypes, printSchema, ORDER BY, a
+  `bucket(4, u)` table through the `bucket_uuid` step kind, ALTER to STRING, invalid literals,
+  append, DELETE / UPDATE smoke, `.files` metrics), 25 EQUAL; R-15 retires and R-25..R-28
+  hold the rest. pins: u9-types-1/C-010
 - [test_ice_error_conditions_1.py](test_ice_error_conditions_1.py) —
   **ICE-ERROR-CONDITIONS-1 / IPI-51 PR1 (2026-09-20):** constructor pins for the native
   error-condition parser — `getCondition`/`getErrorClass`/`getSqlState` on the PyO3

@@ -65,7 +65,7 @@ async fn execute_passthrough_inner(
             crate::refuse_collation_in_statement(inner)?;
             crate::refuse_declared_function_in_statement(inner)?;
             crate::keyword_lower::lower_empty_map_calls(inner);
-            crate::void_type::rewrite_cast_null_to_void(inner);
+            crate::cast_gate::rewrite_and_refuse_casts(sql, inner)?;
             if let Some(done) = try_execute_identity_dml(ctx, catalogs, inner).await? {
                 return Ok(done);
             }

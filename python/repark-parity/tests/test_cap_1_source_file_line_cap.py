@@ -42,7 +42,7 @@ _RUST_BASELINES: tuple[tuple[str, int], ...] = (
     ("crates/repark-python/src/column/mod.rs", 1012),
     ("crates/repark-python/src/dataframe.rs", 1017),
     ("crates/repark-python/src/session.rs", 1122),
-    ("crates/repark-spark/src/alter.rs", 1353),
+    ("crates/repark-spark/src/alter.rs", 1272),
     ("crates/repark-spark/src/metadata_tables.rs", 1059),
     ("crates/repark-spark/src/tests/alter.rs", 1182),
     ("crates/repark-spark/src/tests/call.rs", 1287),

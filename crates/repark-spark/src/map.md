@@ -1034,6 +1034,26 @@ pins: rp-4-fork-repin/C-005, C-006
   `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] … Cannot safely cast `c` "INT" to "VOID".
   SQLSTATE: KD000`, naming the value's Spark type. `spark_ast.rs`'s passthrough calls both.
   pins: u9-types-1/C-009
+- `cast_gate.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** the unit's one cast hook, a single
+  call in `spark_ast.rs`'s passthrough: the `CAST(NULL AS VOID)` rewrite (`void_type.rs`)
+  and the `CAST(x AS UUID)` refusal (`uuid_cast.rs`). pins: u9-types-1/C-009, C-010
+- `uuid_cast.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** `CAST(x AS UUID)` refuses with Spark's
+  `[UNSUPPORTED_DATATYPE] Unsupported data type "UUID". SQLSTATE: 0A000` and its measured
+  `== SQL (line, position) ==` window (`uuid/sql/cast`). pins: u9-types-1/C-010
+- `create_table.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** `iceberg_named_primitive` maps the
+  type name `UUID` to an Iceberg `uuid` column at CREATE and ADD COLUMN — a RePark extension
+  (orchestrator ruling 2026-09-25, residue R-25): Spark refuses the SQL spelling, RePark's API
+  door is that spelling. `describe_show.rs` renders DESCRIBE from the catalog provider's Arrow
+  schema, so a `uuid` column describes as `string`; `write_to_branch.rs` sets the fork's
+  `with_uuid_as_string(true)` on its two direct `IcebergTableProvider` builds (stage-only and
+  branch commit). pins: u9-types-1/C-010
+- `alter_column_type.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** `ALTER COLUMN … TYPE` leaves
+  `alter.rs` (1353 → 1272 lines): `schema_change_from_alter_column`,
+  `is_iceberg_promotion_target`, `push_alter_column_change` (reads the column's current type)
+  and `apply_nested_alter_type` (for `nested_column_ddl.rs`). `ALTER COLUMN u TYPE STRING` on a
+  `uuid` column succeeds and leaves the type `uuid`, as Spark's does. `lib.rs` holds its
+  156-line ceiling with the unit's four new `mod` lines by deleting four section-marker
+  comments. pins: u9-types-1/C-010
 - `create_table.rs` — **WO U5 PR3 (2026-09-25):** a hive-style typed `PARTITIONED BY` column
   (D-X-PARTITIONED-COLDEF) joins the schema after the declared columns and gets an identity
   field; `typed_partition_columns` raises Spark's `Cannot mix partition expressions and

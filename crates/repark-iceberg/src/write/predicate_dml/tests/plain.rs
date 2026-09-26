@@ -5,7 +5,7 @@ use datafusion::sql::sqlparser::dialect::GenericDialect;
 use datafusion::sql::sqlparser::parser::Parser;
 use iceberg::spec::{ListType, MapType, NestedField, PrimitiveType, Schema, StructType, Type};
 
-use super::super::plain::{selection_refs_non_primitive, try_allowed_plain_identity};
+use super::super::plain::{selection_refs_needs_fork, try_allowed_plain_identity};
 
 fn parse_statement(sql: &str) -> Statement {
     Parser::parse_sql(&GenericDialect {}, sql)
@@ -64,7 +64,7 @@ fn needs_fork(sql: &str, schema: &Schema) -> bool {
     let allowed = try_allowed_plain_identity(&parse_statement(sql))
         .unwrap_or_else(|error| panic!("{sql:?}: {error}"))
         .expect("plain delete must claim the predicate");
-    selection_refs_non_primitive(
+    selection_refs_needs_fork(
         &allowed.spec.selection_sql,
         &allowed.spec.target_alias,
         schema,

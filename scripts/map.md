@@ -1,5 +1,7 @@
 # map — scripts/
 
+WO U9-TYPES-1 PR2 (2026-09-26): `check_rust_file_size.py` ratchets `repark-spark/src/alter.rs` 1353 → 1272 (`ALTER COLUMN … TYPE` moved to `alter_column_type.rs`). pins: u9-types-1/C-010
+
 WO U5 PR3 (2026-09-25): `check_rust_file_size.py` ratchets `repark-spark/src/alter.rs` 1354 → 1353 and `repark-sql/tests/cross_door.rs` 1254 → 1253. The `RENAME TO` cross-catalog refusal is deleted: the target is read inside the source catalog (`use_ddl::rename_dest`, `use_ddl::rename_error`). Shrink-only. pins: ice-nested-evo-1/C-059
 
 WO U5 PR2b round 2 (2026-09-25): `check_rust_file_size.py` ratchets `repark-iceberg/src/write/merge/mod.rs` 1630 → 1628 (the merge-on-read v1 refusal became Spark's two-line `Deletes are supported in V2 and above`) and `repark-spark/src/tests/ctas.rs` 1357 → 1356 (a stale `pins:` line removed). Shrink-only. pins: ice-nested-evo-1/C-057

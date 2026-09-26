@@ -435,6 +435,13 @@ Source comments retain only API and safety contracts; implementation narration i
   metadata-table `projection` and lists catalog entries only. Pins remain in
   `crates/repark-spark/src/tests/metadata_tables.rs`.
   pins: rp-5-fork-repin/C-003
+- `uuid_text_schema.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** `UuidTextSchemaProvider`
+  sits over the fork's schema provider and hands out the fork's own `IcebergTableProvider`
+  with its `with_uuid_as_string(true)` switch on (F-UUID-STRING-1, fork #355); the table
+  provider itself is not wrapped. `provider.rs::present_fork_schema` is the one site that
+  applies it, for the full snapshot and the scoped namespace rebuild alike, so every
+  catalog-path door (scan, INSERT, DELETE / UPDATE / MERGE, the DataFrame writer, metadata
+  tables) sees `uuid` as `Utf8`. pins: u9-types-1/C-010
 - `provider.rs` — `ReparkCatalogProvider` (mutable namespace→schema map) +
   `invalidate_catalog_namespaces` / `drop_catalog_namespace_from_provider` /
   `rebuild_catalog_provider`. Product DDL rebuilds only the touched namespace; empty invalidate
