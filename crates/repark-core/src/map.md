@@ -697,6 +697,30 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 - `column_resolution/tests.rs` — the fold's unit battery (statement cells, fragment
   scoping, ambiguity shape, backticked exact under `true`, DataFrame filter alias
   binding). Split from `column_resolution.rs` under the file-size gate.
+- `column_resolution.rs` — **U11-EDGE-1 round 6 (2026-09-26, V-001):** the SQL audit's
+  ambiguity candidates drop a scratch relation (`frame_names::is_scratch_relation`), so a
+  `_repark_h1_sel_*` view renders its candidates unqualified. pins: u11-edge-1/C-027
+  **Round 7 (2026-09-26, V-001):** `audit_plan_for_ambiguity` does not descend into a view
+  the statement names: `written_references` collects the named table factors that are not a
+  CTE of the statement (`WrittenRefs::views`, the alias when one is written), and the walk
+  jumps over a `SubqueryAlias` carrying one of those names. The outer statement's written
+  references belonged to the view body before, so `SELECT id, Data FROM v` over a temp view of
+  `jn.select(a['ID'].alias('id'), …)` refused `[`sc`.`ns`.`t`.`id`, `id`]` — the by-name write
+  binding of `writeTo(t).append()` and `INSERT INTO t SELECT id, Data FROM v` both plan through
+  it. CTE bodies and derived tables are still audited. pins: u11-edge-1/C-028
+  **Round 7 (V-002):** `stamp_unresolved_column` leaves every `_repark_*` / `__repark_*` field
+  out of the `UNRESOLVED_COLUMN.WITH_SUGGESTION` list (the round-2 relation rule extended to
+  field names; a list left empty keeps DataFusion's error), so a twin-join frame's attribute
+  copies and join scratch names never reach a suggestion. A user field spelled with that prefix
+  is left out too. pins: u11-edge-1/C-029
+- `column_resolution/display.rs` — **U11-EDGE-1 (2026-09-26):** output columns keep the
+  query's spelling; `plan_with_repair` hands every successful insensitive plan to
+  `finish_with_display` (boxed, like the strict guard, so the repair future stays small for
+  the nested-view and deep-union stacks) and runs `strict_case_guard` first under
+  `caseSensitive=true`. Row in `column_resolution/map.md`. pins: u11-edge-1/C-001, C-007
+  Round 2 (2026-09-26): `finish_with_display` also runs `display::keep_ref_qualifiers`, and
+  `lib.rs` re-exports the DataFrame door's binder as `frame_names` (row in
+  `session/df_guards/map.md`). pins: u11-edge-1/C-018
 - `idents.rs` — table-identifier segment parse + path-escape refuse
   (`reject_path_escape_segment` delegates to `repark_iceberg::write::idents::path_escape_kind`
   — shared needles). **FNP-4B (2026-09-15):** segment unescaping generalized to the quote

@@ -1,4 +1,4 @@
-use iceberg::spec::Transform;
+use iceberg::spec::{NestedFieldRef, PrimitiveType, Transform, Type};
 use iceberg::table::Table;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::{Catalog, Error, ErrorKind, Result, TableIdent};
@@ -49,6 +49,19 @@ pub async fn apply_partition_spec_changes(
         return Ok(());
     }
     let table = catalog.load_table(ident).await?;
+    let schema = table.metadata().current_schema();
+    for source_name in changes.iter().filter_map(PartitionSpecChange::bound_source) {
+        if schema.field_by_name(source_name).is_none() {
+            return Err(Error::new(
+                ErrorKind::DataInvalid,
+                format!(
+                    "org.apache.iceberg.exceptions.ValidationException: Cannot find field \
+                     '{source_name}' in struct: {}",
+                    java_struct_text(schema.as_struct().fields())
+                ),
+            ));
+        }
+    }
     let mut known_field_names: Vec<String> = table
         .metadata()
         .default_partition_spec()
@@ -130,6 +143,64 @@ pub async fn apply_partition_spec_changes(
     Ok(())
 }
 
+impl PartitionSpecChange {
+    fn bound_source(&self) -> Option<&str> {
+        match self {
+            PartitionSpecChange::AddField { source_name, .. }
+            | PartitionSpecChange::ReplaceField { source_name, .. }
+            | PartitionSpecChange::ReplaceFieldByTransform { source_name, .. } => {
+                Some(source_name.as_str())
+            }
+            PartitionSpecChange::RemoveFieldByName { .. }
+            | PartitionSpecChange::RemoveFieldByTransform { .. }
+            | PartitionSpecChange::RenameField { .. } => None,
+        }
+    }
+}
+
+fn java_struct_text(fields: &[NestedFieldRef]) -> String {
+    let fields = fields
+        .iter()
+        .map(|field| {
+            let required = if field.required {
+                "required"
+            } else {
+                "optional"
+            };
+            let doc = field
+                .doc
+                .as_ref()
+                .map(|doc| format!(" ({doc})"))
+                .unwrap_or_default();
+            format!(
+                "{}: {}: {required} {}{doc}",
+                field.id,
+                field.name,
+                java_type_text(&field.field_type)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!("struct<{fields}>")
+}
+
+fn java_type_text(data_type: &Type) -> String {
+    match data_type {
+        Type::Primitive(PrimitiveType::Decimal { precision, scale }) => {
+            format!("decimal({precision}, {scale})")
+        }
+        Type::Primitive(primitive) => primitive.to_string(),
+        Type::Struct(struct_type) => java_struct_text(struct_type.fields()),
+        Type::List(list) => format!("list<{}>", java_type_text(&list.element_field.field_type)),
+        Type::Map(map) => format!(
+            "map<{}, {}>",
+            java_type_text(&map.key_field.field_type),
+            java_type_text(&map.value_field.field_type)
+        ),
+        Type::Variant => String::from("variant"),
+    }
+}
+
 fn forget_field_name(known_field_names: &mut Vec<String>, name: &str) {
     known_field_names.retain(|existing| !existing.eq_ignore_ascii_case(name));
 }
@@ -178,3 +249,6 @@ fn resolve_field_by_transform(
             )
         })
 }
+
+#[cfg(test)]
+mod tests;

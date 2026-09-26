@@ -1353,12 +1353,11 @@ mod tests {
         );
     }
 
-    /// I7 — case-insensitive source column on ADD (Spark caseSensitive=false).
     #[tokio::test]
-    async fn partition_spec_add_case_insensitive_source() {
+    async fn partition_spec_add_wrong_case_source_refuses_like_spark() {
         let wh = TempDir::new().unwrap();
         let (catalog, ident) = setup(&wh).await;
-        apply_partition_spec_changes(
+        let error = apply_partition_spec_changes(
             catalog.as_ref(),
             &ident,
             &[PartitionSpecChange::AddField {
@@ -1368,11 +1367,12 @@ mod tests {
             }],
         )
         .await
-        .unwrap();
-        assert_eq!(
-            default_partition_field_names(&catalog, &ident).await,
-            vec!["id_part".to_string()]
-        );
+        .expect_err("a wrong-case source must refuse");
+        let expected =
+            "ValidationException: Cannot find field 'ID' in struct: struct<1: id: required int>";
+        assert!(error.to_string().ends_with(expected), "{error}");
+        let names = default_partition_field_names(&catalog, &ident).await;
+        assert!(names.is_empty(), "{names:?}");
     }
 
     /// I7 — ADD unknown source refuses loud.

@@ -29,6 +29,38 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`. Branch `feat/u9-types-1`.
   pins: u9-types-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-011, C-012
   pins: u9-types-1/C-013, C-014, C-015, C-016
+- [u11-edge-1-ledger.md](u11-edge-1-ledger.md) —
+  **U11-EDGE-1 (2026-09-26), in flight:** `E-CASE-SELECT` (output columns keep the query's
+  spelling; `F.col` binds a spelled frame on the DataFrame door) and `E-CASE-PARTITION-FIELD`
+  (partition sources bind case-sensitively with Iceberg's `ValidationException` text) replay
+  EQUAL / both-refuse; `TP-FORMAT-V1-DELETE` recorded EQUAL with no code change;
+  `E-CATALOG-LISTDATABASES` moved to the catalog unit (2026-09-25). Round 2 (2026-09-26):
+  the DataFrame door's one case-insensitive binder (drop, qualified refs, join on names,
+  unionByName, C-017…C-020), Java's struct text (C-021) and the replace-arm pins. Residues
+  R-1…R-10 (R-5…R-10 dated 2026-09-26, candidates for CASESENS-1). Round 4 (2026-09-26): a qualified
+  Column drop binds through its relation and an unmatched drop is a no-op (C-022); a bare
+  reference matching two fields ignoring case refuses AMBIGUOUS_REFERENCE, exact spelling
+  included (C-023). Residues R-11…R-15 dated 2026-09-26 for CASESENS-1 (qualified string
+  names in select, the `(t.id + 1)` name, the ANSI positional INT/STRING union, the missing
+  relation text, the folded reference spelling on compound Columns). Round 5 (2026-09-26):
+  the facade's own re-projections and origin Columns bind by attribute, exactly (C-024, C-025),
+  and a Column drop matching two fields refuses AMBIGUOUS_REFERENCE (C-026).
+  Residues R-16…R-21 dated 2026-09-26 for CASESENS-1 (orderBy's UNRESOLVED class on twins,
+  candidate rendering on selectExpr / string filter / SQL subquery, aliased and USING joins,
+  eager getitem refusal, twin rename and replace, star forms).
+  Round 6 (2026-09-26): compound origin Columns keep their side's exact binding through
+  arithmetic, cast, alias, `when` and `withColumn` on a case-twin join, and no ambiguity text
+  names a scratch relation (C-027). Residue R-22 dated 2026-09-26 (pre-existing on main: exact-duplicate
+  plain frames refuse their re-projections, a two-`id` join's `dropna` answers, a `a.b` column's
+  `dropna` answers).
+  Round 7 (2026-09-26): a projection of a twin join writes back into its own table (the SQL
+  audit no longer walks a named view's body, C-028); no scratch name in a suggestion list,
+  `F.col("*")` expands to the presented fields (C-029); attribute copies never collide with a
+  user field (C-030). Residues R-23…R-27 dated 2026-09-26 for CASESENS-1 (`F.struct("*")`, the
+  `__repark_sel_q_<n>` name through a view and unionByName, AMBIGUOUS on grouping and sort by
+  origin Columns, `withColumns` case duplicates, the overwrite refusal class and the suggestion
+  order).
+  `risk_tier: standard`. Branch `feat/u11-edge-1`.
 - [u8-write-sql-ledger.md](u8-write-sql-ledger.md) —
   **U8 WRITE-SQL PR1 (2026-09-24), in flight:** `INSERT INTO … REPLACE WHERE` as Spark's
   overwrite by filter, `INSERT INTO … PARTITION (…)` static and dynamic keys, and positional

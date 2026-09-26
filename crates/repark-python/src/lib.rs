@@ -10,6 +10,7 @@ mod collect_rows;
 mod column;
 mod dataframe;
 mod dataframe_fill;
+mod dataframe_names;
 mod dataframe_stack;
 mod dataframe_stats;
 mod fence;
@@ -160,6 +161,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
         module.py().get_type::<CommitStateUnknownException>(),
     )?;
     dataframe_fill::register(module)?;
+    dataframe_names::register(module)?;
     dataframe_stack::register(module)?;
     dataframe_stats::register(module)?;
     module.add_function(wrap_pyfunction!(

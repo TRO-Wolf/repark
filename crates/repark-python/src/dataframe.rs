@@ -1,7 +1,6 @@
 //! Python-facing wrapper over a DataFusion [`DataFrame`].
 
 use std::cell::Cell;
-use std::collections::HashSet;
 use std::ffi::CStr;
 use std::sync::{Arc, OnceLock};
 
@@ -10,7 +9,7 @@ use arrow::datatypes::{DataType as ArrowDataType, SchemaRef};
 use arrow::ffi::FFI_ArrowSchema;
 use arrow::ffi_stream::FFI_ArrowArrayStream;
 use arrow::util::pretty::pretty_format_batches;
-use datafusion::common::{Column, JoinType};
+use datafusion::common::JoinType;
 use datafusion::dataframe::DataFrame;
 use datafusion::logical_expr::Expr;
 use datafusion::prelude::col;
@@ -65,27 +64,6 @@ fn join_type_from_str(how: &str) -> PyResult<JoinType> {
              'leftsemi', 'leftanti')"
         ))),
     }
-}
-
-/// Whether a join returns only the left input columns.
-fn join_keeps_only_left_columns(join_type: JoinType) -> bool {
-    matches!(join_type, JoinType::LeftSemi | JoinType::LeftAnti)
-}
-
-/// Build Spark's one-key-column projection for a named equi-join.
-fn spark_join_projection(joined: &DataFrame, keys: &[String]) -> Vec<Expr> {
-    let mut projection = Vec::new();
-    let mut seen_keys = HashSet::new();
-    for (qualifier, field) in joined.schema().iter() {
-        let name = field.name();
-        let is_key = keys.iter().any(|key| key == name);
-        if is_key && !seen_keys.insert(name.clone()) {
-            // Spark exposes one copy of each join key.
-            continue;
-        }
-        projection.push(Expr::Column(Column::new(qualifier.cloned(), name.clone())));
-    }
-    projection
 }
 
 /// The Python-facing immutable `DataFrame` plan and its shared runtime.
@@ -363,27 +341,23 @@ impl PyDataFrame {
         fenced!("PyDataFrame.select", {
             let expressions: Vec<Expr> = columns
                 .iter()
-                .map(|column| self.bound(column))
+                .map(|column| {
+                    column
+                        .expr()
+                        .resolve_lambda_variables(self.df.schema())
+                        .and_then(|expr| {
+                            repark_core::frame_names::bind_projection_expr(
+                                expr.data,
+                                self.df.schema(),
+                            )
+                        })
+                        .map_err(datafusion_to_py_err)
+                })
                 .collect::<PyResult<_>>()?;
             let df = self
                 .df
                 .clone()
                 .select(expressions)
-                .map_err(datafusion_to_py_err)?;
-            Ok(Self::new(df, Arc::clone(&self.runtime)))
-        })
-    }
-
-    /// Drop columns by name (PySpark `DataFrame.drop`).
-    /// # Errors
-    /// Returns `RuntimeError` if the resulting plan cannot be built.
-    pub fn drop(&self, names: Vec<String>) -> PyResult<Self> {
-        fenced!("PyDataFrame.drop", {
-            let name_refs: Vec<&str> = names.iter().map(String::as_str).collect();
-            let df = self
-                .df
-                .clone()
-                .drop_columns(&name_refs)
                 .map_err(datafusion_to_py_err)?;
             Ok(Self::new(df, Arc::clone(&self.runtime)))
         })
@@ -432,18 +406,13 @@ impl PyDataFrame {
     ) -> PyResult<Self> {
         fenced!("PyDataFrame.join_on_names", {
             let join_type = join_type_from_str(how)?;
-            let on_refs: Vec<&str> = on.iter().map(String::as_str).collect();
-            let joined = self
-                .df
-                .clone()
-                .join(right.df.clone(), join_type, &on_refs, &on_refs, None)
-                .map_err(datafusion_to_py_err)?;
-            let df = if join_keeps_only_left_columns(join_type) {
-                joined
-            } else {
-                let projection = spark_join_projection(&joined, &on);
-                joined.select(projection).map_err(datafusion_to_py_err)?
-            };
+            let df = repark_core::frame_names::join_on_named_keys(
+                self.df.clone(),
+                right.df.clone(),
+                &on,
+                join_type,
+            )
+            .map_err(datafusion_to_py_err)?;
             Ok(Self::new(df, Arc::clone(&self.runtime)))
         })
     }
@@ -494,12 +463,31 @@ impl PyDataFrame {
     /// # Errors
     /// Returns `RuntimeError` if the two frames cannot be unioned (e.g.
     pub fn union(&self, other: PyRef<'_, PyDataFrame>, by_name: bool) -> PyResult<Self> {
+        if by_name {
+            return self.union_by_name(other, true);
+        }
         fenced!("PyDataFrame.union", {
-            let unioned = if by_name {
-                self.df.clone().union_by_name(other.df.clone())
-            } else {
-                self.df.clone().union(other.df.clone())
-            }
+            let unioned = self
+                .df
+                .clone()
+                .union(other.df.clone())
+                .map_err(datafusion_to_py_err)?;
+            Ok(Self::new(unioned, Arc::clone(&self.runtime)))
+        })
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub fn union_by_name(
+        &self,
+        other: PyRef<'_, PyDataFrame>,
+        allow_missing: bool,
+    ) -> PyResult<Self> {
+        fenced!("PyDataFrame.union_by_name", {
+            let unioned = repark_core::frame_names::union_by_folded_name(
+                self.df.clone(),
+                other.df.clone(),
+                allow_missing,
+            )
             .map_err(datafusion_to_py_err)?;
             Ok(Self::new(unioned, Arc::clone(&self.runtime)))
         })

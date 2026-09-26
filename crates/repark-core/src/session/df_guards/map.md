@@ -13,6 +13,103 @@ wrapped optimizer rule) and declares this directory.
   [../map.md](../map.md); its pins are `../tests/window_rescan.rs` and
   `python/repark/tests/test_win_slide_1.py`.
   pins: win-slide-1/C-001, C-005
+- `case_bind.rs` — **U11-EDGE-1 (2026-09-26):** `bind_case_insensitive`, run first by
+  `subquery.rs`'s `resolve_bound_expr` (the DataFrame door's one binding hook). An
+  unqualified column the frame schema does not hold exactly binds to the single field that
+  matches it case-insensitively; an exact hit, a case twin, or a qualified column stays as
+  it is. DataFusion's `col()` folds `F.col("ID")` to `id`, so without it a spelled SQL
+  output (`SELECT ID` → `ID`, `SELECT id AS Id` → `Id`) or a `createDataFrame` column `Id`
+  could not be filtered or projected by `F.col`. Live Spark answers all of these
+  (`target/probe-u11-edge-1/spark_r3.json`). Rust pins in the file's own test module.
+  pins: u11-edge-1/C-015
+  **Round 2 (2026-09-26, V-001..V-004):** the file is the DataFrame door's one name binder
+  (`pub mod`, re-exported as `repark_core::frame_names`). Rule, under the default
+  `caseSensitive=false` (the door does not read the setting, like the round-1 hook): an exact
+  name wins; otherwise the single case-insensitive match binds. A qualified column binds the
+  same way within the fields whose relation matches the written qualifier part by part from
+  the right (`t.id` → `(t, ID)`, `x.id` stays unbound). An alias that spells the qualified
+  column (`F.col("t.ID")` arrives as `t.id AS "t.ID"`) is renamed to the written segment
+  (`ID`), as Spark names it. `bind_projection_expr` (the select path) keeps the written
+  spelling of a bare column it rebinds (`F.col("t.id")` on `ID` → `id`). `drop_named_columns`
+  drops every case-insensitive match of each name (a name with none falls back to
+  DataFusion's parse, so an absent name stays a no-op); `join_on_named_keys` binds each key on
+  each side, joins on the bound columns and keeps one key column per folded key (semi/anti
+  keep the left columns); `union_by_folded_name` respells the right frame's fields to the
+  left spelling, refuses a strict mismatch with the facade's former text (`Union can only be
+  performed … mismatched columns: [...]`, now listing folded mismatches only) and unions by
+  name. Spark shapes: `target/probe-u11-edge-1/vx-spark.json`, `vx2-spark.json` (the
+  verifier's probes). Rust pins in the file's test module:
+  `qualified_reference_binds_through_its_relation`, `qualified_alias_names_the_written_segment`,
+  `projection_keeps_the_written_spelling`, `drop_removes_every_folded_match`,
+  `join_binds_each_side_and_keeps_one_key`, `union_respells_the_right_and_refuses_a_mismatch`;
+  the round-1 `exact_ambiguous_and_qualified_references_stay` became
+  `exact_and_ambiguous_references_stay` (a qualified exact hit stays).
+  pins: u11-edge-1/C-017, C-018, C-019, C-020
+  **Round 4 (2026-09-26, verifier round 2 V-001/V-003):** `drop_named_columns(frame, names,
+  references)` takes the string targets and the Column targets apart. A string matches a field
+  by its whole text ignoring case (`drop("t.ID")` matches no field); a Column target parses with
+  `Column::from_qualified_name_ignore_case` and binds through `case_hits`, the one match rule
+  select and filter use (a qualified target narrows by `same_relation` from the right, so
+  `F.col("t.ID")` drops `(t, ID)` and `F.col("b.id")` drops `(b, ID)`). A target matching no
+  field is a no-op on both, as Spark answers (`drop("t.ID")`, `drop("u.id")`,
+  `drop(F.col("u.id"))`). Spark shapes: `target/probe-u11-edge-1/vz-spark.json` (`q_drop_*`,
+  `j_drop_*`). Rust pin `qualified_drop_binds_through_its_relation`. pins: u11-edge-1/C-022
+  **Round 4 (2026-09-26, verifier round 2 V-002/V-008):** the binder's final rule, under
+  `caseSensitive=false`: a column reference collects every field whose name matches it ignoring
+  case (`case_hits`; a qualified reference first narrows to the fields whose relation matches the
+  written qualifier part by part from the right). Two or more hits refuse Spark's
+  `[AMBIGUOUS_REFERENCE] Reference <ref> is ambiguous, could be: [<candidates>]. SQLSTATE: 42704`
+  — an exact spelling among them does not win; one hit binds (an exact one stays as written);
+  none leaves the column for DataFusion's own error. `ambiguous_reference` renders the reference
+  as written and each candidate as its relation parts plus the reference's spelling, backticked
+  and sorted the way Spark sorts the list (measured: `[`a`.`id`, `b`.`id`]` for either frame
+  order, `[`id`, `sc`.`ns`.`t_vz_1`.`id`]` with the unqualified side first); a RePark scratch
+  relation (`_repark_*`, `__repark_*`) renders unqualified, as Spark has no relation there
+  (`createDataFrame` twins → `[`id`, `id`]`). `refuse_ambiguous_condition` applies the rule to the
+  bare identifiers of a condition join's rewritten ON text across both sides (origin-qualified
+  tokens are compound and skipped), and `requalify_join_sides` re-projects a condition join's
+  output under each side's own relations so later references see Spark's candidates, not the
+  scratch views; it keeps the join as is when the field counts differ or the re-projection does
+  not plan. The error is a DataFusion `Plan` error, so the facade raises `AnalysisException` with
+  the `Error during planning: ` prefix the SQL door's L-08 refusal carries. The kept
+  `exact_and_ambiguous_references_stay` now asserts the three refusals (V-008). Rust pins:
+  `exact_and_ambiguous_references_stay`, `ambiguous_candidates_render_sorted_like_spark`,
+  `unqualified_and_catalog_candidates_render_like_spark`,
+  `requalified_join_carries_each_side_relation`. Spark shapes:
+  `target/probe-u11-edge-1/vz-spark.json`, `vz2-spark.json`. pins: u11-edge-1/C-023
+  **Round 5 (2026-09-26, verifier round 3 V-001..V-004):** the ambiguity rule is for references
+  the user wrote; Spark resolves the facade's own re-projections and origin Columns by
+  attribute. `attribute_reference(name)` builds an unqualified `Expr::Column` for an exact engine
+  field and marks it with a sentinel span (`ATTRIBUTE_MARK`, line and column `u64::MAX`, a
+  location the SQL parser never produces; `Spans` takes no part in `Column` equality or hashing,
+  so the mark changes no plan). `bind_case_insensitive` leaves a marked column exactly as held —
+  never folded, never refused — and the mark survives aliases, casts and compounds because it
+  rides the column node. `drop_named_columns(frame, names, references, attributes)` drops
+  `attributes` by exact field name, and a Column target (`references`) with two or more hits
+  refuses with the same `ambiguous_reference` text select uses (`drop(F.col("id"))` on twins →
+  `[`id`, `id`]`, on the self-join → `[`a`.`id`, `b`.`id`]`); string targets keep dropping every
+  folded twin. Rust pins `attribute_reference_binds_exactly_where_a_written_one_refuses`,
+  `attribute_drop_is_exact_and_a_two_hit_reference_refuses`. Spark shapes:
+  `target/probe-u11-edge-1/vw/fold-spark.json`, `fold2-spark.json`. pins: u11-edge-1/C-024,
+  C-025, C-026
+  Round 6 (2026-09-26, V-001): `with_attribute_copies(frame)` re-projects every held column and
+  adds one exact copy per uniquely named field, named `attribute_copy_name(field)`
+  (`__repark_attr_` plus the name's bytes in hex, so case twins never collide); the facade's SQL
+  select route reads origin Columns through those copies, so a compound over an origin Column
+  keeps its exact binding through arithmetic, cast, alias, `when`, `isin` and comparison.
+  `is_scratch_relation` names the `_repark_*` / `__repark_*` relations every ambiguity renderer
+  leaves unqualified. Rust pin (in `../../column_resolution/tests.rs`)
+  `attribute_copies_bind_case_twins_exactly_and_scratch_relations_render_unqualified`.
+  pins: u11-edge-1/C-027
+  Round 7 (2026-09-26, V-003): `attribute_copy_name_in(schema, name)` spells the copy
+  `attribute_copy_name(name)` and appends `_` until no field of `schema` carries it; the hex
+  spelling holds no `_`, so two copies never meet. `with_attribute_copies` names every copy
+  through it, so a user field literally named `__repark_attr_6964` keeps its value beside the
+  `id` copy (`__repark_attr_6964_`) instead of refusing `Projections require unique expression
+  names`. `is_scratch_relation` also filters the SQL door's `UNRESOLVED_COLUMN` suggestions
+  (field names, V-002). Rust pin (in `../../column_resolution/tests.rs`)
+  `attribute_copies_never_collide_and_suggestions_hide_scratch_names`. pins: u11-edge-1/C-029,
+  C-030
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside

@@ -18,7 +18,7 @@ IPI-40 PR3 critic r1 (2026-09-23): `test_ice_views_3_alter.py` pins full refusal
 
 U1-MEM-LAYOUT-1 (2026-09-23): the maintenance sweep test name now describes the memory table at `<warehouse>/ns/events`. pins: u1-mem-layout-1/C-021
 
-ICE-MIXED-CASE-1 (2026-09-17): `test_ice_mixed_case_1.py` pins the Spark-door case-insensitive column resolution cells against `ice_mixed_case_1_spark_oracle.json` (live PySpark 4.1.2 recording); `_record_ice_mixed_case_1.py` is the recorder driver, not a collected test. Round 3: the WHERE-cell ids read `MC-WHERE-*` (typos gate); the record script stays ruff-clean; the moved-symbol baseline carries the new `_SQLCONF_DEFAULTS` hash for the `spark.sql.caseSensitive` default row. Run 21b: the oracle JSON gains `measured_21b` (the orchestrator's `probe_mc.py` recording, verbatim) and the pin file gains the V-01 / V-02 / V-04 / L-08 cells on a `measured` memory-catalog fixture, the twin-adoption declared refusal and the 42704 ambiguity sentence. The measured V-04 INSERT cell is `xfail(strict=True)` on fork ask F-DML-FIELD-ID-1 (the pre-existing join-INSERT field-id misroute, ledger §7, registry ID-1); `test_join_using_insert_folds_and_writes_the_left_columns` keeps the fold green. Run 21b round 2 (2026-09-18): the oracle gains `measured_21b_r2` (the orchestrator's `probe_mc2.py` cells, copied from its log — the probe stopped before writing JSON); Q-21b-11 pins the three correlated IN-subquery spellings (Spark answers `[[1],[2]]`, RePark refuses loud at physical planning — declared, the same refusal as an all-lowercase schema) and the scalar-subquery cell (both refuse). N-02: the case-twin reference pin gains a correlated EXISTS cell (`t.ID` from inside the subquery refuses 42704). Q-21b-12: `test_star_over_a_case_twin_frame_answers_both_columns_declared` pins the declared `SELECT *` answer on a twin frame beside the two recorded Spark 42711 cells. `test_live_spark_matches_the_round_2_recording` re-derives every `measured_21b_r2` cell on live Spark under `REPARK_PARITY_LIVE=1` (one hadoop catalog per cell). Run 22b (N-04): each correlated IN-subquery cell also asserts Spark's recorded output column name, the requested spelling. Run 22b (the debug-wheel segfault): `test_five_thousand_branch_union_all_plans_on_the_spark_door` plans (no collect) a 5,000-branch `UNION ALL` count under the default `caseSensitive=false` — segfaulted before the grown-stack fix; about 62 s on the debug wheel (DataFusion's quadratic per-level span walk), C-022. The module docstring's `pins:` line cites C-019…C-021 explicitly (the ledger-grammar citation reads comma lists). pins: ice-mixed-case-1/C-001…C-016
+ICE-MIXED-CASE-1 (2026-09-17): `test_ice_mixed_case_1.py` pins the Spark-door case-insensitive column resolution cells against `ice_mixed_case_1_spark_oracle.json` (live PySpark 4.1.2 recording); `_record_ice_mixed_case_1.py` is the recorder driver, not a collected test. Round 3: the WHERE-cell ids read `MC-WHERE-*` (typos gate); the record script stays ruff-clean; the moved-symbol baseline carries the new `_SQLCONF_DEFAULTS` hash for the `spark.sql.caseSensitive` default row. Run 21b: the oracle JSON gains `measured_21b` (the orchestrator's `probe_mc.py` recording, verbatim) and the pin file gains the V-01 / V-02 / V-04 / L-08 cells on a `measured` memory-catalog fixture, the twin-adoption declared refusal and the 42704 ambiguity sentence. The measured V-04 INSERT cell is `xfail(strict=True)` on fork ask F-DML-FIELD-ID-1 (the pre-existing join-INSERT field-id misroute, ledger §7, registry ID-1); `test_join_using_insert_folds_and_writes_the_left_columns` keeps the fold green. Run 21b round 2 (2026-09-18): the oracle gains `measured_21b_r2` (the orchestrator's `probe_mc2.py` cells, copied from its log — the probe stopped before writing JSON); Q-21b-11 pins the three correlated IN-subquery spellings (Spark answers `[[1],[2]]`, RePark refuses loud at physical planning — declared, the same refusal as an all-lowercase schema) and the scalar-subquery cell (both refuse). N-02: the case-twin reference pin gains a correlated EXISTS cell (`t.ID` from inside the subquery refuses 42704). Q-21b-12: `test_star_over_a_case_twin_frame_answers_both_columns_declared` pins the declared `SELECT *` answer on a twin frame beside the two recorded Spark 42711 cells. `test_live_spark_matches_the_round_2_recording` re-derives every `measured_21b_r2` cell on live Spark under `REPARK_PARITY_LIVE=1` (one hadoop catalog per cell). Run 22b (N-04): each correlated IN-subquery cell also asserts Spark's recorded output column name, the requested spelling. Run 22b (the debug-wheel segfault): `test_five_thousand_branch_union_all_plans_on_the_spark_door` plans (no collect) a 5,000-branch `UNION ALL` count under the default `caseSensitive=false` — segfaulted before the grown-stack fix; about 62 s on the debug wheel (DataFusion's quadratic per-level span walk), C-022. The module docstring's `pins:` line cites C-019…C-021 explicitly (the ledger-grammar citation reads comma lists). U11-EDGE-1 (2026-09-26): the SQL door now names outputs with the query's spelling, so `_assert_success` compares the recorded Spark names exactly, the stored-name divergence pin became `test_sql_door_wrong_case_outputs_requested_spelling` (`userid`, `EVENTNAME`) and the `SET spark.sql.caseSensitive` leg reads `USERID`. pins: ice-mixed-case-1/C-001…C-016
 
 ICE-MIXED-CASE-1 note, U9-TYPES-1 round-3 fixer (2026-09-26): `test_measured_join_using_insert_answers_spark` (the V-04 INSERT cell) is green, its strict xfail on F-DML-FIELD-ID-1 removed; it asserts the recorded `V04_join_using_insert` Spark rows. The uuid-as-text catalog switch routes every `insert_into` through the fork's `UuidTextToBytesExec`, which rebuilds each batch against the target schema, so the right-side join column is no longer written NULL; switching it off turns the cell back to an xfail. pins: ice-mixed-case-1/C-015
 
@@ -822,8 +822,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   fork PR #292 (F-NESTED-EVO-1), in the workspace pin since RP-25 — green with no override
   (measured 2026-09-18, run 22b). The leaf read runs
   aliased (`s.a AS a`) and the DataFrame twin spells `getField(...).alias(...)`: the unaliased
-  name (`<table>.s[a]`, strict-xfail `test_unaliased_nested_projection_names_like_spark`) is
-  EX-COL-2 and the dotted `col("s.a")` is COL-DOTTED-FIELD-1, both BACKLOG outside the unit.
+  name answers `a` like Spark since U11-EDGE-1 (2026-09-26; the strict-xfail on
+  `test_unaliased_nested_projection_names_like_spark` is retired, EX-COL-2's SQL arm closes)
+  and the dotted `col("s.a")` is COL-DOTTED-FIELD-1, BACKLOG outside the unit.
   pins: ice-nested-evo-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
   pins: ice-nested-evo-1/C-010, C-011, C-012, C-013
   **Round 3 (2026-09-18, run 22b, V-002):** the two CTAS cells (`… AS SELECT * FROM src WHERE
@@ -868,6 +869,83 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`COMMENT "x.y"`, `COMMENT "c"`, `COMMENT "x.y" FIRST` on a nested child) run on the same
   three tests; red before the V-001 fix: 18 failed (refused `PARSE_SYNTAX_ERROR`).
   pins: ice-nested-evo-1/C-021
+- [test_u11_edge_case_select.py](test_u11_edge_case_select.py) — **U11-EDGE-1 (2026-09-26),
+  cell `E-CASE-SELECT`:** output columns keep the query's spelling — `SELECT ID, data` →
+  `ID`, `data`; `Data`; an alias `X`; `*` the stored `id`, `Data`; `t.ID` → `ID`; a struct
+  field `s.A` → `A` (row `[5]`); `GROUP BY ID` with `count(*) AS c`; a `UNION` takes the left
+  spelling; `caseSensitive=true` refuses `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` naming `` `ID` ``
+  with suggestions `` [`id`] ``; `df.select('ID')` → `ID`; and `F.col` binds a spelled
+  output case-insensitively on the DataFrame door. Spark shapes:
+  `target/probe-u11-edge-1/spark_case.json`, `spark_r2.json`, `spark_r3.json`.
+  pins: u11-edge-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-015
+  Round 2 (2026-09-26): the DataFrame door on spelled SQL frames — `drop('ID')`, `drop('id')`,
+  `drop(F.col('ID'))` → `data`, `drop('ID', 'data')` → no columns; `F.col('t.ID')` → `ID`,
+  `F.col('t.id')` → `id`, `filter(F.col('t.id') > 1)`, `table.alias('t').select(F.col('t.ID'))`
+  → `ID`; `join(…, 'ID')` → `ID`, `data`, `w`; `unionByName` of `ID, data` and `id, Data` →
+  `ID`, `data` with four rows. Spark shapes: `target/probe-u11-edge-1/vx-spark.json`,
+  `vx2-spark.json`. Red on 102ab9d0 (4 failed). pins: u11-edge-1/C-017, C-018, C-019, C-020
+  Round 4 (2026-09-26, V-001/V-003): `test_qualified_drop_binds_through_its_relation` —
+  `q = SELECT ID, data FROM t t`: `drop(F.col('t.ID'))` and `drop(F.col('t.id'))` → `data`;
+  `drop('t.ID')`, `drop('u.id')`, `drop(F.col('u.id'))` keep `ID`, `data` and both rows; on
+  `SELECT a.id, b.ID FROM t a JOIN t b`, `drop(F.col('b.id'))` → `id`, `drop(F.col('A.ID'))` →
+  `ID`. Spark shapes: `target/probe-u11-edge-1/vz-spark.json`. Red on 5e2a68b8
+  (`red-r4-facade.txt`). pins: u11-edge-1/C-022
+  Round 4 (V-002): `test_bare_reference_matching_two_fields_is_ambiguous` — on
+  `j = SELECT a.id, b.ID FROM t a JOIN t b`: `j.select('id')` refuses Spark's
+  `[AMBIGUOUS_REFERENCE] Reference `id` is ambiguous, could be: [`a`.`id`, `b`.`id`]. SQLSTATE: 42704`,
+  `j.select(F.col('ID'))` the same for `ID`; `a.join(b, a['ID'] == b['id']).select('id')` →
+  `[`id`, `sc`.`ns`.`t`.`id`]`; `a.join(b, F.col('ID') == F.col('id'))` refuses at build with
+  `ID` and `[`ID`, `sc`.`ns`.`t`.`ID`]` (and the mirrored `b.join(a, …)` with `id`);
+  `j.filter(F.col('Id') > 1)` refuses the class only (RePark spells the reference `id`, residue
+  R-15); `j.select(F.col('a.Id'))` → `Id`. Spark shapes: `vz-spark.json` (table `t_vz_1`). Red
+  on 5e2a68b8 (`red-r4-facade.txt`). pins: u11-edge-1/C-023
+  Round 5 (2026-09-26, V-001..V-004): `test_whole_frame_projections_bind_by_attribute` —
+  twins `createDataFrame([(1, 2)], ['id', 'ID'])` and the self-join `j` keep answering Spark's
+  shapes for `withColumn('z', lit(1))`, `withColumns`, `toDF('p', 'q')`, `select('*')`,
+  `selectExpr('*')`, `fillna(0)`, `dropDuplicates(['id'])` / `(['ID'])` (keys every twin:
+  `[(1, 2), (1, 3)]` keeps both rows), while `select('id')`, `select(F.col('id'))`,
+  `withColumn('z', F.col('id'))` and `dropna()` refuse `[`id`, `id`]`;
+  `test_origin_columns_bind_their_own_side` — `a.join(b, a['ID'] == b['id'])` selects, filters
+  and drops `b['id']` / `a['ID']` on their own side (`drop(b['id'])` → `ID`, `data`, `w`);
+  `test_column_drop_matching_two_fields_is_ambiguous` — `drop(F.col('id'))` refuses on both twin
+  frames, `drop('id')` empties them. Spark shapes: `target/probe-u11-edge-1/vw/fold-spark.json`,
+  `fold2-spark.json`. Red on 50e96af6 (`red-r5-facade.txt`, 3 failed). pins: u11-edge-1/C-024,
+  C-025, C-026
+  Round 6 (2026-09-26, V-001): `test_compound_origin_columns_keep_their_attribute_binding` —
+  on `jn = a.join(b, a['ID'] == b['id'])` (`a = SELECT ID, data FROM t`, `b = SELECT 1 AS id,
+  'q' AS w`): `select(b['id'] + 1)` → `(id + 1)` int `[[2]]`; `select(b['id'].cast('string'))`
+  → `id` string `[['1']]`; `select((b['id'] + 1).cast('string').alias('n'))` → `n` `[['2']]`;
+  `select(when(a['ID'] > 0, b['w']).alias('r'))` → `r` `[['q']]`; `withColumn('id', b['id'] + 1)`
+  → `id`, `data`, `id`, `w` `[[2, 'a', 2, 'q']]`; a written twin reference still refuses
+  AMBIGUOUS_REFERENCE and no rendering names a `_repark_` relation. Spark shapes: the verifier's
+  `v5-spark.json` / `v5b-spark.json` (copied to `target/probe-u11-edge-1/v5/`). Red on 503b2e0c
+  (`red-r6-facade.txt`). pins: u11-edge-1/C-027
+  Round 7 (2026-09-26, V-001): `test_projection_of_a_twin_join_writes_back_into_its_table` —
+  `jn.select(a['ID'].alias('id'), a['data'].alias('Data'))` and the `(b['id'] + 1).alias('id')`
+  projection written back into `t` through `writeTo(t).append()`, `write.mode('append')
+  .saveAsTable(t)` and `INSERT INTO t SELECT id, Data FROM <temp view>` → `[(1,'a'), (1,'a'),
+  (2,'b')]` after the plain one and `[(1,'a'), (1,'a'), (2,'a'), (2,'a'), (2,'b')]` after both;
+  `writeTo(t).overwrite(col('id') >= 1)` → `[(1,'a')]` and `[(2,'a')]`. Spark shapes:
+  `target/probe-u11-edge-1/f3-spark.json`; the verifier's `v6b-spark.json` V6-5. Red on d3993f87
+  (`red-r7-facade.txt`). pins: u11-edge-1/C-028
+  Round 7 (V-002, V-003): `test_star_column_and_suggestions_show_presented_fields_only` —
+  `jn.select(b['id'] + 1, col('*'))` → `(id + 1)`, `ID`, `data`, `id`, `w` with
+  `[(2, 1, 'a', 1, 'q')]`; `jn.select(b['id'] + 1, col('nope'))` refuses
+  `UNRESOLVED_COLUMN.WITH_SUGGESTION` naming `ID`, `data`, `id`, `w` and no `repark` name;
+  `test_attribute_copies_never_collide_with_a_user_field` — a left side carrying
+  `7 AS __repark_attr_6964` answers `select(b['id'] + 1, a['data'])` → `[(2, 'a')]` and keeps
+  the user field `[(2, 'a', 7)]`. Spark shapes: `target/probe-u11-edge-1/f3-spark.json`
+  (`star_col`, `unresolved_nope`, `collision`, `collision_kept`), the verifier's
+  `v6c-spark.json`. Red on d3993f87 (`red-r7-facade.txt`). pins: u11-edge-1/C-029, C-030
+- [test_u11_edge_partition_field.py](test_u11_edge_partition_field.py) — **U11-EDGE-1
+  (2026-09-26), cell `E-CASE-PARTITION-FIELD`:** partition sources bind case-sensitively under
+  either `spark.sql.caseSensitive`: `ADD PARTITION FIELD CAT`, `bucket(4, ID)` and
+  `REPLACE PARTITION FIELD cat WITH CAT` refuse Iceberg's `ValidationException: Cannot find
+  field … in struct: struct<1: id: optional int, 2: cat: optional string>` with the spec
+  unchanged; `DROP PARTITION FIELD CAT` with no such field refuses `Cannot find partition
+  field to remove: CAT`; `WRITE ORDERED BY CAT` answers under the default `false`. Spark
+  shapes: `target/probe-u11-edge-1/spark_r2.json`.
+  pins: u11-edge-1/C-009, C-010, C-011, C-012, C-013, C-014
 - [test_ice_ddl_alter_2.py](test_ice_ddl_alter_2.py) — **WO U5 PR2a (2026-09-24):** facade
   pins for `ALTER COLUMN … COMMENT`. The docs land in the current Iceberg metadata file and in
   `DESCRIBE TABLE`'s comment column (top level, nested, empty string, `CHANGE COLUMN`). dbt's
@@ -5549,6 +5627,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   survival) are **hand-derived from that same oracle session with no standing live leg**.
   **SQL-LITERAL-TYPING-1 (2026-09-16):** the `year`/`YEAR` pins read Int32
   (fixture literals narrow; Spark-equal).
+  **U11-EDGE-1 round 4 (2026-09-26):** the Column-form disclosure pin flipped to
+  `test_column_entry_point_refuses_the_ambiguity_like_spark` — `df.filter(df['id'] > 1)` and
+  `df['ID']` refuse `[AMBIGUOUS_REFERENCE] Reference `id` is ambiguous, could be: [`id`, `id`].
+  SQLSTATE: 42704` (Spark's text, measured in `target/probe-u11-edge-1/vz2-spark.json`, behind
+  DataFusion's planning prefix); `_live_parity.py`'s `filter_case_collision_bypasses` repark leg
+  now expects both Column refusals and its note names the remaining text divergence; the live
+  leg passed against Spark 4.1.2. pins: u11-edge-1/C-023
   **Disclosed divergences characterized here** (behaviour fixes are out of charter) — the
   semantics live in the divergence registry, this map links:
   [`../../../docs/spark-sql-iceberg-parity.md`](../../../docs/spark-sql-iceberg-parity.md) §3

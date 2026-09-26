@@ -69,7 +69,7 @@ async fn wrong_case_select_filters_orders_and_reads_rows() {
             true
         )
         .await,
-        vec!["userId".to_string(), "eventName".to_string()]
+        vec!["USERID".to_string(), "EVENTNAME".to_string()]
     );
     let ctx = SessionContext::new_with_state(state);
     let batches = sql_with_column_repair(
@@ -96,11 +96,11 @@ async fn quoted_wrong_case_and_qualified_resolve() {
     let state = mixed_state();
     assert_eq!(
         plan_names(&state, "SELECT `USERID` FROM t", true).await,
-        vec!["userId".to_string()]
+        vec!["USERID".to_string()]
     );
     assert_eq!(
         plan_names(&state, "SELECT T.USERID FROM t AS T", true).await,
-        vec!["userId".to_string()]
+        vec!["USERID".to_string()]
     );
 }
 
@@ -114,7 +114,7 @@ async fn group_by_wrong_case_groups() {
             true,
         )
         .await,
-        vec!["eventName".to_string(), "c".to_string()]
+        vec!["EVENTNAME".to_string(), "c".to_string()]
     );
 }
 
@@ -189,7 +189,10 @@ async fn join_collision_on_bare_reference_raises() {
 async fn sensitive_session_refuses_folded_names_and_keeps_backticks() {
     let state = mixed_state();
     let error = plan_error(&state, "SELECT USERID FROM t", false).await;
-    assert!(error.contains("userid"), "unexpected message: {error}");
+    assert!(
+        error.contains("`USERID`") && error.contains("[`userId`, `eventName`]"),
+        "unexpected message: {error}"
+    );
     let error = plan_error(&state, "SELECT userId FROM t", false).await;
     assert!(error.contains("userid"), "unexpected message: {error}");
     assert_eq!(
@@ -264,7 +267,8 @@ fn fragment_rewrite_scopes_bare_references_to_one_side() {
 
 #[tokio::test]
 async fn dataframe_filter_binds_projection_alias() {
-    use datafusion::logical_expr::{col, lit};
+    use datafusion::common::Column;
+    use datafusion::logical_expr::{Expr, lit};
     for case_insensitive in [false, true] {
         let ctx = SessionContext::new_with_state(repair_state());
         let schema = Arc::new(Schema::new(vec![Field::new("id", DataType::Int64, true)]));
@@ -277,9 +281,10 @@ async fn dataframe_filter_binds_projection_alias() {
         .unwrap();
         let frame = sql_with_column_repair(&ctx, "SELECT id AS Id FROM nums", case_insensitive)
             .await
-            .unwrap()
-            .filter(col("Id").gt(lit(1i64)))
             .unwrap();
+        let name = frame.schema().field(0).name().clone();
+        let predicate = Expr::Column(Column::from_name(name)).gt(lit(1i64));
+        let frame = frame.filter(predicate).unwrap();
         let batches = frame.collect().await.unwrap();
         assert_eq!(batches.iter().map(RecordBatch::num_rows).sum::<usize>(), 1);
     }
@@ -338,8 +343,41 @@ async fn unresolved_stamp_keeps_folded_select() {
     let state = mixed_state();
     assert_eq!(
         plan_names(&state, "SELECT USERID FROM t", true).await,
-        vec!["userId".to_string()]
+        vec!["USERID".to_string()]
     );
+}
+
+#[tokio::test]
+async fn display_rewrite_keeps_the_written_spelling() {
+    let state = mixed_state();
+    assert_eq!(
+        plan_names(&state, "SELECT userid FROM t", true).await,
+        vec!["userid".to_string()]
+    );
+    assert_eq!(
+        plan_names(&state, "SELECT userId AS ID FROM t", true).await,
+        vec!["ID".to_string()]
+    );
+    assert_eq!(
+        plan_names(&state, "SELECT * FROM t", true).await,
+        vec!["userId".to_string(), "eventName".to_string()]
+    );
+    assert_eq!(
+        plan_names(
+            &state,
+            "SELECT EVENTNAME FROM t UNION SELECT eventname FROM t",
+            true
+        )
+        .await,
+        vec!["EVENTNAME".to_string()]
+    );
+    let error = plan_error(&state, "SELECT USERID, USERID FROM t", true).await;
+    assert!(
+        error.contains("unique expression names"),
+        "unexpected message: {error}"
+    );
+    let error = plan_error(&state, "SELECT T.USERID FROM t AS T", false).await;
+    assert!(error.contains("`T.USERID`"), "unexpected message: {error}");
 }
 
 #[tokio::test]
@@ -541,7 +579,7 @@ async fn v02_outer_spelling_is_not_rewritten_into_an_inner_scope() {
         "SELECT userid FROM mc WHERE userid IN (SELECT userid FROM ids)",
     )
     .await;
-    assert_eq!(names, vec!["userId".to_string()]);
+    assert_eq!(names, vec!["userid".to_string()]);
     assert_eq!(rows, text_rows(&[&["2"]]));
 }
 
@@ -754,7 +792,7 @@ fn s22b_thousand_branch_union_folds_wrong_case_on_a_two_mebibyte_stack() {
     let sql = union_all("SELECT USERID FROM t", 1000);
     assert_eq!(
         plan_on_default_stack(mixed_state(), sql, true).unwrap(),
-        ["userId"]
+        ["USERID"]
     );
 }
 
@@ -782,4 +820,111 @@ fn s22b_stack_estimate_counts_every_union_level_inside_a_subquery() {
     let deep = state.sql_to_statement(&deep_sql, &dialect).unwrap();
     assert!(stack::stack_bytes_for(&shallow) < 512 * 1024);
     assert!(stack::stack_bytes_for(&deep) >= 1000 * 32 * 1024);
+}
+
+#[tokio::test]
+async fn respelled_plain_references_keep_their_relation() {
+    let state = mixed_state();
+    let dialect = state.config().options().sql_parser.dialect;
+    let sql = "SELECT USERID, eventname, 1 AS k FROM t AS T";
+    let statement = state.sql_to_statement(sql, &dialect).unwrap();
+    let plan = plan_statement_with_column_repair(&state, statement, true)
+        .await
+        .unwrap();
+    let fields = plan
+        .schema()
+        .iter()
+        .map(|(qualifier, field)| (qualifier.map(ToString::to_string), field.name().clone()))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        fields,
+        vec![
+            (Some("t".to_string()), "USERID".to_string()),
+            (Some("t".to_string()), "eventname".to_string()),
+            (None, "k".to_string()),
+        ]
+    );
+}
+
+#[tokio::test]
+async fn attribute_copies_bind_case_twins_exactly_and_scratch_relations_render_unqualified() {
+    use crate::frame_names::{attribute_copy_name, with_attribute_copies};
+    let ctx = measured_ctx();
+    let twins = ctx.table("tw").await.unwrap();
+    ctx.register_table(
+        "_repark_h1_sel_x",
+        with_attribute_copies(twins).unwrap().into_view(),
+    )
+    .unwrap();
+    let error = plan_error(&ctx.state(), "SELECT id + 1 FROM _repark_h1_sel_x", true).await;
+    assert!(
+        error.contains("Reference `id` is ambiguous, could be: [`id`, `id`]"),
+        "{error}"
+    );
+    let lower = attribute_copy_name("id");
+    let upper = attribute_copy_name("ID");
+    let sql = format!(
+        "SELECT CAST({lower} + 1 AS STRING) AS n, CASE WHEN {upper} >= 0 THEN {lower} END AS r, \
+         {lower} IN (1, 2) AS i FROM _repark_h1_sel_x"
+    );
+    let (names, rows) = measured_rows(&ctx, &sql).await;
+    assert_eq!(names, vec!["n", "r", "i"]);
+    assert_eq!(rows, text_rows(&[&["2", "1", "true"]]));
+}
+
+#[tokio::test]
+async fn a_view_body_is_not_audited_against_the_outer_statement() {
+    let ctx = measured_ctx();
+    let body = ctx
+        .table("tw")
+        .await
+        .unwrap()
+        .select(vec![
+            Expr::Column(Column::new_unqualified("ID")).alias("id"),
+            Expr::Column(Column::new_unqualified("id")).alias("Data"),
+        ])
+        .unwrap();
+    ctx.register_table("vj", body.into_view()).unwrap();
+    let (names, rows) = measured_rows(&ctx, "SELECT id, Data FROM vj").await;
+    assert_eq!(names, vec!["id", "Data"]);
+    assert_eq!(rows, text_rows(&[&["0", "1"]]));
+    for sql in [
+        "WITH c AS (SELECT id FROM tw) SELECT * FROM c",
+        "WITH c AS (SELECT id FROM tw) SELECT * FROM c AS z",
+        "SELECT * FROM (SELECT id FROM tw) AS d",
+    ] {
+        let error = plan_error(&ctx.state(), sql, true).await;
+        assert!(error.contains("[AMBIGUOUS_REFERENCE]"), "{sql}: {error}");
+    }
+}
+
+#[tokio::test]
+async fn attribute_copies_never_collide_and_suggestions_hide_scratch_names() {
+    use crate::frame_names::{attribute_copy_name, attribute_copy_name_in, with_attribute_copies};
+    let ctx = measured_ctx();
+    let clash = attribute_copy_name("id");
+    let taken = format!("{clash}_");
+    let user = ctx
+        .sql(&format!(
+            "SELECT \"userId\" AS id, 7 AS {clash}, 8 AS {taken} FROM mc WHERE \"userId\" = 1"
+        ))
+        .await
+        .unwrap();
+    let copied = with_attribute_copies(user.clone()).unwrap();
+    let spelled = attribute_copy_name_in(user.schema(), "id");
+    assert_eq!(spelled, format!("{clash}__"));
+    ctx.register_table("_repark_h1_sel_c", copied.into_view())
+        .unwrap();
+    let (names, rows) = measured_rows(
+        &ctx,
+        &format!("SELECT {spelled} + 1 AS n, {clash} AS k FROM _repark_h1_sel_c"),
+    )
+    .await;
+    assert_eq!(names, vec!["n", "k"]);
+    assert_eq!(rows, text_rows(&[&["2", "7"]]));
+    let error = plan_error(&ctx.state(), "SELECT nope FROM _repark_h1_sel_c", true).await;
+    assert!(
+        error.contains("Did you mean one of the following? [`id`]"),
+        "{error}"
+    );
 }

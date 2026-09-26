@@ -63,8 +63,44 @@ pins: ice-error-conditions-1/C-011
   repark-spark's re-planning temp-view scan grows the stack the same way; removing that wrapper
   overflows the 100-level temp-view chain pins. pins: ice-views-1/C-018
 - `tests.rs` — the battery below.
+- `display.rs` — **U11-EDGE-1 (2026-09-26):** the query-spelling display rewrite. Under the
+  default `caseSensitive=false`, `display_rewrite` compares the planned output names with the
+  projection as written (the left branch of a set operation) and re-plans once with quoted
+  aliases for every plain or compound reference whose written spelling differs (`SELECT ID` →
+  `ID`, `SELECT t.ID` → `ID`, `SELECT s.A` → `A`, an unquoted alias keeps its case); `*` keeps
+  the stored names; a spelling written twice is left to the planner. `GROUP BY` / `HAVING` /
+  `ORDER BY` references to a re-quoted alias follow it. `strict_case_check` refuses a bare
+  wrong-case reference under `caseSensitive=true` on a single-table query with Spark's
+  `UNRESOLVED_COLUMN.WITH_SUGGESTION` text (`` `ID` `` and the stored names as suggestions).
+  `count(*)` keeps DataFusion's `count(*)` name (Spark says `count(1)`; out of the unit).
+  Measured: `target/probe-u11-edge-1/spark_case.json`, `spark_r2.json`.
+  pins: u11-edge-1/C-001, C-003, C-005, C-006, C-007
+  Rust pins in `tests.rs`: `display_rewrite_keeps_the_written_spelling`,
+  `wrong_case_select_filters_orders_and_reads_rows`, `quoted_wrong_case_and_qualified_resolve`,
+  `group_by_wrong_case_groups`, `sensitive_session_refuses_folded_names_and_keeps_backticks`;
+  `dataframe_filter_binds_projection_alias` binds the now case-kept alias `Id` by its schema
+  name (DataFusion's `col()` folds to `id`).
+  **Round 2 (2026-09-26, V-002):** `keep_ref_qualifiers` gives a plain or compound reference
+  that the repair or the display rewrite aliased (`t.id AS "ID"`, `t.Data AS data`) its
+  relation back on the top projection (through `Sort` / `Limit` / `DISTINCT`), so a later
+  DataFrame `F.col("t.ID")` still finds `t`; an explicit `AS` alias stays unqualified as in
+  Spark. Pin `respelled_plain_references_keep_their_relation`. pins: u11-edge-1/C-018
 
 ## Purpose
 
 Unit tests for the Spark-door case-insensitive column fold. The implementation
 stays in `../column_resolution.rs`; this directory holds only the battery.
+U11-EDGE-1 round 6 (2026-09-26, V-001): `tests.rs` gains
+`attribute_copies_bind_case_twins_exactly_and_scratch_relations_render_unqualified` — a
+`_repark_h1_sel_*` view over the `tw` case twins refuses a written `id` with unqualified
+candidates, and its attribute copies answer a cast, a `CASE WHEN` and an `IN` exactly.
+pins: u11-edge-1/C-027
+Round 7 (2026-09-26, V-001): `a_view_body_is_not_audited_against_the_outer_statement` — a
+view over the `tw` case twins projecting `ID AS id` answers `SELECT id, Data FROM vj`, while a
+CTE (plain and aliased) and a derived table over the twins still refuse. Red on d3993f87
+(`target/probe-u11-edge-1/red-r7-rust.txt`). pins: u11-edge-1/C-028
+Round 7 (V-002, V-003): `attribute_copies_never_collide_and_suggestions_hide_scratch_names` — a
+frame holding `id`, `__repark_attr_6964` and `__repark_attr_6964_` gets its `id` copy as
+`__repark_attr_6964__`, answers `copy + 1` and the user field's `7`, and a missing name's
+suggestion list is `[`id`]`. Red with the copy collision and with the filter off
+(`red-r7-rust.txt`, mutation M19). pins: u11-edge-1/C-029, C-030

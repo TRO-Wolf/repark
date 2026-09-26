@@ -1499,3 +1499,13 @@ IPI-19 + IPI-37 (2026-09-20): `check_lib_py.py` ratchets
 `dataframe/writer_readwriter.py` 1091 → 1077 (both `_by_name_projection`
 bodies collapse into `dataframe/writer_schema.py`), shrink-only.
 pins: ipi-19-56-37-schema-evolution-write/C-001
+
+U11-EDGE-1 round 2 (2026-09-26): `check_rust_file_size.py` ratchets `repark-python/src/dataframe.rs` 1017 → 1016 and `check_lib_py.py` ratchets `dataframe/core.py` 3991 → 3981 (the join projection and the unionByName match move into `repark_core::frame_names`), both shrink-only; the CAP-1 mirror moves with them. pins: u11-edge-1/C-019, C-020
+
+U11-EDGE-1 round 4 (2026-09-26): `check_rust_file_size.py` ratchets `repark-python/src/dataframe.rs` 1016 → 1005 (the `drop` method moves to the new `dataframe_names.rs` binding), shrink-only; the CAP-1 mirror moves with it. pins: u11-edge-1/C-022
+
+U11-EDGE-1 round 4, V-002 (2026-09-26): `check_lib_py.py` ratchets `dataframe/core.py` 3981 → 3979 (the join's ambiguity check and requalification paid for by the compressed `drop` bookkeeping), shrink-only; the CAP-1 mirror moves with it. pins: u11-edge-1/C-023
+
+U11-EDGE-1 round 5 (2026-09-26): `check_lib_py.py` ratchets `dataframe/core.py` 3979 → 3976 (the `select("*")` expansion folds into `_iter_bound_columns`), shrink-only; the CAP-1 mirror moves with it. pins: u11-edge-1/C-024
+
+U11-EDGE-1 round 6 (2026-09-26): `check_lib_py.py` ratchets `dataframe/core.py` 3976 → 3973 (two docstrings condensed pay for the attribute-copy route), shrink-only; the CAP-1 mirror moves with it. pins: u11-edge-1/C-027
