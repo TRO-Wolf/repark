@@ -222,9 +222,14 @@ def test_bare_missing_name_after_use_is_table_or_view_not_found(spark: ReparkSes
     )
 
 
-def test_bare_name_without_use_falls_through(spark: ReparkSession) -> None:
-    """Near-miss — without USE the namespace default is empty, so a bare name falls through."""
+def test_bare_name_without_a_current_namespace_falls_through(spark: ReparkSession) -> None:
+    """Near-miss — after ``USE sc`` the namespace is empty, so a bare name falls through.
+
+    ``USE sc`` answers (``sc``, ``""``) as in Spark; registering ``sc`` no longer makes it the
+    current catalog (catalog-1/C-001).
+    """
     spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v') AS SELECT id FROM sc.ns.t")
+    spark.sql("USE sc")
     with pytest.raises(AnalysisException) as caught:
         spark.sql("SHOW TBLPROPERTIES v ('k')")
     _assert_refusal(caught.value, f"Error during planning: {SHOW_VARIABLE_UNSUPPORTED}", None, None)

@@ -32,6 +32,7 @@ PARTITION_OVERWRITE_MODE_KEY = "spark.sql.sources.partitionOverwriteMode"
 
 
 SPARK_SQL_CASE_SENSITIVE_KEY = "spark.sql.caseSensitive"
+DEFAULT_CATALOG_KEY = "spark.sql.defaultCatalog"
 
 
 WAP_BRANCH_KEY = "spark.wap.branch"

@@ -23,6 +23,7 @@ def spark(tmp_path: Path) -> ReparkSession:
     )
     session.register_memory_catalog("glue_catalog", tmp_path)
     session.create_namespace("glue_catalog", "default")
+    session.sql("USE glue_catalog.default")
     yield session
     session.stop()
     _reset_active_session_for_tests()

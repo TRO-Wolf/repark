@@ -30,6 +30,7 @@ def spark(tmp_path: Path) -> ReparkSession:
     session = ReparkSession.builder.appName("pytest-e2-readwriter").getOrCreate()
     session.register_memory_catalog("glue_catalog", tmp_path)
     session.create_namespace("glue_catalog", "default")
+    session.sql("USE glue_catalog.default")
     yield session
     session.stop()
     _reset_active_session_for_tests()
@@ -37,13 +38,11 @@ def spark(tmp_path: Path) -> ReparkSession:
 
 # Bare / default-namespace resolution (shared layer)
 def test_resolve_table_name_one_two_three_part() -> None:
-    known = {"glue_catalog"}
     assert (
         resolve_table_name(
             "t",
             current_catalog="glue_catalog",
             current_database="default",
-            known_catalogs=known,
         )
         == "glue_catalog.default.t"
     )
@@ -52,7 +51,6 @@ def test_resolve_table_name_one_two_three_part() -> None:
             "ns.t",
             current_catalog="glue_catalog",
             current_database="default",
-            known_catalogs=known,
         )
         == "glue_catalog.ns.t"
     )
@@ -61,22 +59,20 @@ def test_resolve_table_name_one_two_three_part() -> None:
             "glue_catalog.ns.t",
             current_catalog="glue_catalog",
             current_database="default",
-            known_catalogs=known,
         )
         == "glue_catalog.ns.t"
     )
 
 
-def test_resolve_spark_catalog_alias() -> None:
-    known = {"glue_catalog"}
+def test_resolve_spark_catalog_names_the_session_catalog_only() -> None:
+    """``spark_catalog.ns.t`` is not an alias of the current catalog (catalog-1/C-002)."""
     assert (
         resolve_table_name(
             "spark_catalog.ns.t",
             current_catalog="glue_catalog",
             current_database="default",
-            known_catalogs=known,
         )
-        == "glue_catalog.ns.t"
+        == "spark_catalog.ns.t"
     )
 
 
@@ -87,13 +83,11 @@ def test_resolve_prefer_temp_view() -> None:
     ``datafusion.catalog.default_catalog``, so the probe must answer the home segments (or
     ``None``).
     """
-    known = {"glue_catalog"}
     assert (
         resolve_table_name(
             "v",
             current_catalog="glue_catalog",
             current_database="default",
-            known_catalogs=known,
             prefer_temp_view=True,
             temp_view_home_ref=lambda name: ["datafusion", "public", name] if name == "v" else None,
         )
@@ -105,7 +99,6 @@ def test_resolve_prefer_temp_view() -> None:
             "v",
             current_catalog="glue_catalog",
             current_database="default",
-            known_catalogs=known,
             prefer_temp_view=True,
             temp_view_home_ref=lambda name: None,
         )
@@ -115,13 +108,11 @@ def test_resolve_prefer_temp_view() -> None:
 
 def test_resolve_quoted_dotted_segments_survive_rejoin() -> None:
     """Dotted quoted segments must not re-split after resolve → _sql_table_ref."""
-    known = {"glue_catalog"}
     three_part = 'glue_catalog."analytics.v2".events'
     resolved_three = resolve_table_name(
         three_part,
         current_catalog="glue_catalog",
         current_database="default",
-        known_catalogs=known,
     )
     assert _parse_table_identifier_segments(resolved_three) == [
         "glue_catalog",
@@ -139,7 +130,6 @@ def test_resolve_quoted_dotted_segments_survive_rejoin() -> None:
         bare_dotted,
         current_catalog="glue_catalog",
         current_database="default",
-        known_catalogs=known,
     )
     assert _parse_table_identifier_segments(resolved_bare) == [
         "glue_catalog",
@@ -195,15 +185,13 @@ def test_format_iceberg_load_does_not_prefer_temp_view(spark: ReparkSession) -> 
     assert spark.table("shadow_iceberg_load").to_arrow().to_pylist() == [{"id": 99}]
 
 
-def test_list_tables_spark_catalog_alias(spark: ReparkSession) -> None:
-    """listTables two-part catalog.db aliases spark_catalog like tableExists."""
+def test_list_tables_spark_catalog_lists_the_session_catalog(spark: ReparkSession) -> None:
+    """``listTables("spark_catalog.default")`` lists the session catalog (catalog-1/C-002)."""
     spark.createDataFrame([(1,)], ["id"]).write.saveAsTable("listed_t")
     names_real = {table.name for table in spark.catalog.listTables("glue_catalog.default")}
-    names_alias = {table.name for table in spark.catalog.listTables("spark_catalog.default")}
+    names_session = {table.name for table in spark.catalog.listTables("spark_catalog.default")}
     assert "listed_t" in names_real
-    assert "listed_t" in names_alias
-    # Alias must not raise SCHEMA_NOT_FOUND while the real catalog.db lists.
-    assert names_alias == names_real or "listed_t" in names_alias
+    assert "listed_t" not in names_session
 
 
 def test_read_table_time_travel_resolves_bare_name(spark: ReparkSession) -> None:
@@ -215,10 +203,10 @@ def test_read_table_time_travel_resolves_bare_name(spark: ReparkSession) -> None
     frame = spark.read.option("versionAsOf", str(snapshot_id)).table("tt_bare")
     rows = frame.to_arrow().to_pylist()
     assert rows == [{"id": 1, "name": "a"}]
-    frame_alias = spark.read.option("versionAsOf", str(snapshot_id)).table(
-        "spark_catalog.default.tt_bare"
-    )
-    assert frame_alias.to_arrow().to_pylist() == [{"id": 1, "name": "a"}]
+    with pytest.raises(AnalysisException):
+        spark.read.option("versionAsOf", str(snapshot_id)).table(
+            "spark_catalog.default.tt_bare"
+        ).to_arrow()
 
 
 def test_bare_write_to_create(spark: ReparkSession) -> None:
@@ -251,62 +239,62 @@ def test_bare_merge_into(spark: ReparkSession) -> None:
     assert rows == [{"id": 1, "name": "A"}, {"id": 2, "name": "b"}]
 
 
-def test_spark_catalog_alias_table_exists(spark: ReparkSession) -> None:
-    """tableExists aliases spark_catalog like table()/writers."""
+def test_spark_catalog_table_exists_names_the_session_catalog(spark: ReparkSession) -> None:
+    """tableExists / databaseExists on ``spark_catalog.*`` probe the session catalog.
+
+    A table written to ``glue_catalog.default`` is not reachable as ``spark_catalog.default``,
+    exactly as in Spark (catalog-1/C-002).
+    """
     spark.createDataFrame([(1,)], ["id"]).write.saveAsTable("alias_t")
     assert spark.catalog.tableExists("glue_catalog.default.alias_t")
-    assert spark.catalog.tableExists("spark_catalog.default.alias_t") is True
-    assert spark.table("spark_catalog.default.alias_t").count() == 1
-    # databaseExists two-part form must alias too (not soft-False while table loads).
+    assert spark.catalog.tableExists("spark_catalog.default.alias_t") is False
+    with pytest.raises(AnalysisException):
+        spark.table("spark_catalog.default.alias_t").count()
     assert spark.catalog.databaseExists("spark_catalog.default") is True
     assert spark.catalog.databaseExists("glue_catalog.default") is True
 
 
-def test_spark_catalog_alias_writer_paths(spark: ReparkSession) -> None:
-    """saveAsTable / writeTo / insertInto / MERGE honor spark_catalog.* end-to-end.
+def test_spark_catalog_writer_paths_land_in_the_session_catalog(spark: ReparkSession) -> None:
+    """saveAsTable / writeTo on ``spark_catalog.*`` write the session catalog (catalog-1/C-002).
 
-    Bare-name pins alone stay green if ``_resolve_writer_table`` drops ``known_catalogs``
-    (empty set → ``spark_catalog`` no longer aliases), so these four writer entry points must
-    land under the real catalog and read back via both spellings.
+    insertInto / MERGE into ``spark_catalog.default.x`` do not reach ``glue_catalog.default.x``.
     """
     spark.createDataFrame([(1, "a")], ["id", "name"]).write.saveAsTable(
         "spark_catalog.default.alias_sat"
     )
-    assert spark.catalog.tableExists("glue_catalog.default.alias_sat")
-    assert spark.table("glue_catalog.default.alias_sat").to_arrow().to_pylist() == [
+    assert spark.catalog.tableExists("spark_catalog.default.alias_sat")
+    assert not spark.catalog.tableExists("glue_catalog.default.alias_sat")
+    assert spark.table("spark_catalog.default.alias_sat").to_arrow().to_pylist() == [
         {"id": 1, "name": "a"}
     ]
-    assert spark.table("spark_catalog.default.alias_sat").count() == 1
 
     spark.createDataFrame([(9,)], ["id"]).writeTo("spark_catalog.default.alias_wt").create()
-    assert spark.catalog.tableExists("glue_catalog.default.alias_wt")
-    assert spark.table("glue_catalog.default.alias_wt").to_arrow().to_pylist() == [{"id": 9}]
+    assert spark.table("spark_catalog.default.alias_wt").to_arrow().to_pylist() == [{"id": 9}]
+    assert not spark.catalog.tableExists("glue_catalog.default.alias_wt")
 
     spark.createDataFrame([(1, "a")], ["id", "name"]).write.saveAsTable("alias_ins")
-    spark.createDataFrame([(2, "b")], ["id", "name"]).write.insertInto(
-        "spark_catalog.default.alias_ins"
-    )
-    insert_rows = sorted(
-        spark.table("glue_catalog.default.alias_ins").to_arrow().to_pylist(),
-        key=lambda row: row["id"],
-    )
-    assert insert_rows == [{"id": 1, "name": "a"}, {"id": 2, "name": "b"}]
+    with pytest.raises(AnalysisException):
+        spark.createDataFrame([(2, "b")], ["id", "name"]).write.insertInto(
+            "spark_catalog.default.alias_ins"
+        )
+    assert spark.table("glue_catalog.default.alias_ins").to_arrow().to_pylist() == [
+        {"id": 1, "name": "a"}
+    ]
 
     spark.createDataFrame([(1, "a")], ["id", "name"]).write.saveAsTable("alias_merge")
     source = spark.createDataFrame([(1, "A"), (2, "b")], ["id", "name"])
-    (
-        source.mergeInto("spark_catalog.default.alias_merge", "id")
-        .whenMatched()
-        .updateAll()
-        .whenNotMatched()
-        .insertAll()
-        .merge()
-    )
-    merge_rows = sorted(
-        spark.table("glue_catalog.default.alias_merge").to_arrow().to_pylist(),
-        key=lambda row: row["id"],
-    )
-    assert merge_rows == [{"id": 1, "name": "A"}, {"id": 2, "name": "b"}]
+    with pytest.raises(AnalysisException):
+        (
+            source.mergeInto("spark_catalog.default.alias_merge", "id")
+            .whenMatched()
+            .updateAll()
+            .whenNotMatched()
+            .insertAll()
+            .merge()
+        )
+    assert spark.table("glue_catalog.default.alias_merge").to_arrow().to_pylist() == [
+        {"id": 1, "name": "a"}
+    ]
 
 
 def test_write_to_re_resolves_after_set_current_database(spark: ReparkSession) -> None:
@@ -403,11 +391,12 @@ def test_default_namespace_seeds_current_database(tmp_path: Path) -> None:
     )
     try:
         session.register_memory_catalog("glue_catalog", tmp_path)
+        assert session.catalog.currentCatalog() == "spark_catalog"
         assert session.catalog.currentDatabase() == "analytics"
-        # Memory catalog does NOT auto-create current NS (honest residual — callers create).
-        session.create_namespace("glue_catalog", "analytics")
+        session.create_namespace("spark_catalog", "analytics")
         session.createDataFrame([(1,)], ["id"]).write.saveAsTable("t_ns")
-        assert session.catalog.tableExists("glue_catalog.analytics.t_ns")
+        assert session.catalog.tableExists("spark_catalog.analytics.t_ns")
+        assert not session.catalog.tableExists("glue_catalog.analytics.t_ns")
     finally:
         session.stop()
         _reset_active_session_for_tests()

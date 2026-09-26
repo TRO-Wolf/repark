@@ -59,18 +59,11 @@ class ReparkSession:
         self._builder_config: dict[str, str | None] = dict(builder_config or {})
         # Shared with every DataFrame this session mints; stop() flips alive→False;
         # display_style rides the same box so show() sees runtime updates (R-DISPLAY).
-        # R-CURCAT-FACADE: catalog state is facade-only; dies with stop(), never engine USE state.
-        known_catalogs = _catalog_names_from_builder_config(self._builder_config)
-        default_catalog = _default_catalog_from_builder_config(self._builder_config)
-        if default_catalog is None and len(known_catalogs) == 1:
-            # Single configured catalog → start currentCatalog there (dogfood-friendly).
-            default_catalog = next(iter(known_catalogs))
-        if default_catalog is None:
-            default_catalog = DEFAULT_CATALOG_NAME
-        # spark.sql.defaultNamespace seeds currentDatabase (else Spark's ``default``).
+        default_catalog, engine_namespace = _native.session_defaults(inner)
+        known_catalogs = set(_native.session_catalog_names(inner))
         default_namespace = _default_namespace_from_builder_config(self._builder_config)
         if default_namespace is None:
-            default_namespace = DEFAULT_DATABASE_NAME
+            default_namespace = engine_namespace
         self._alive_token: dict[str, Any] = {
             "alive": True,
             "display_style": normalize_display_style(display_style),
@@ -162,8 +155,8 @@ class ReparkSession:
         ``UPDATE``, ``DELETE FROM``, ``TRUNCATE TABLE``, ``DESCRIBE``,
         ``SELECT``/``WITH`` FROM/JOIN) expand under the session default catalog +
         namespace at this entry point via :meth:`resolve_table_name` — not by
-        call-site string surgery. Auto-memory-catalog sticky alias semantics apply
-        unchanged.
+        call-site string surgery. ``spark_catalog.ns.t`` names the session catalog and no
+        other catalog.
 
         Only registered Python UDFs (via :meth:`spark.udf.register`) are considered —
         never a generic ``ident(`` scan. SELECT-list forms (simple, expression-wrapped,
@@ -217,7 +210,6 @@ class ReparkSession:
         product read paths missed a view ``tableExists`` reported present.
         """
         state = self._catalog_state()
-        known: set[str] = state.get("known_catalogs") or set()
         probe = None
         if prefer_temp_view:
             probe = functools.partial(_temp_view_home_ref, self._ensure_alive())
@@ -226,10 +218,8 @@ class ReparkSession:
             table_name,
             current_catalog=str(state["current_catalog"]),
             current_database=str(state["current_database"]),
-            known_catalogs=known,
             prefer_temp_view=prefer_temp_view,
             temp_view_home_ref=probe,
-            default_catalog_is_auto=bool(state.get("auto_default_catalog")),
         )
 
     def _expand_bare_table_names_in_sql(self, query: str) -> str:
@@ -1301,28 +1291,9 @@ class ReparkSession:
         state["information_schema_enabled"] = True
 
     def _note_registered_catalog(self, name: str) -> None:
-        """Track a newly registered catalog on the facade current-catalog state."""
-        state = self._catalog_state()
-        known: set[str] = state["known_catalogs"]
+        """Track a newly registered catalog name; the current catalog does not move."""
+        known: set[str] = self._catalog_state()["known_catalogs"]
         known.add(name)
-        # If current catalog is still the default and spark_catalog is unregistered or only
-        # the AUTO-registered fallback (R-AUTO-MEMCAT — not a user choice), flip to the first
-        # user-registered catalog so listDatabases works without setCurrentCatalog.
-        current = str(state["current_catalog"])
-        default_is_auto_only = bool(state.get("auto_default_catalog"))
-        if (
-            name != DEFAULT_CATALOG_NAME
-            and current == DEFAULT_CATALOG_NAME
-            and (
-                DEFAULT_CATALOG_NAME not in known
-                or (default_is_auto_only and not state.get("auto_flip_done"))
-            )
-        ):
-            state["current_catalog"] = name
-            _native.set_session_catalog(self._ensure_alive(), name)
-            # One flip only; `auto_default_catalog` itself stays sticky so spark_catalog
-            # refs keep aliasing to the user catalog (the auto catalog never blocks).
-            state["auto_flip_done"] = True
 
     def register_memory_catalog(self, name: str, warehouse: str | Path) -> None:
         """Register the AWS-free in-memory Iceberg catalog under ``name`` (a RePark extension).
@@ -1336,8 +1307,8 @@ class ReparkSession:
             spark.register_memory_catalog("glue_catalog", "/tmp/warehouse")
             spark.sql("CREATE NAMESPACE glue_catalog.example_silver")
 
-        Bare-name resolution still qualifies to ``name.currentDatabase.t``; the namespace must
-        exist for writes.
+        Registering does not change the current catalog, which stays ``spark_catalog`` until
+        ``USE``, :meth:`Catalog.setCurrentCatalog` or ``spark.sql.defaultCatalog`` moves it.
         """
         self._ensure_alive().register_memory_catalog(name, str(warehouse))
         self._note_registered_catalog(name)
@@ -1359,9 +1330,6 @@ class ReparkSession:
             self.register_memory_catalog(DEFAULT_CATALOG_NAME, tmpdir.name)
             # Tie warehouse lifetime to the session; stop() cleans it (R-AUTO-MEMCAT).
             self._alive_token["auto_catalog_warehouse"] = tmpdir
-            # Auto ≠ user choice: the first USER-registered catalog may still take
-            # currentCatalog (see _note_registered_catalog).
-            self._catalog_state()["auto_default_catalog"] = True
             # Spark's `default` database always exists — seed it so first writes work.
             self.create_namespace(DEFAULT_CATALOG_NAME, DEFAULT_DATABASE_NAME)
         except Exception as error:  # pragma: no cover — engine/filesystem edge
@@ -2201,7 +2169,10 @@ class ReparkSession:
                     # datafusion.* is runtime-mutable on the live engine — fold via
                     # RuntimeConfig.set so SQL SET forwards (not store-only). Lookalike
                     # mixed-case / padded keys refuse-loud inside set.
-                    if key == PARTITION_OVERWRITE_MODE_KEY or _looks_like_datafusion_conf_key(key):
+                    if key in (
+                        PARTITION_OVERWRITE_MODE_KEY,
+                        DEFAULT_CATALOG_KEY,
+                    ) or _looks_like_datafusion_conf_key(key):
                         RuntimeConfig(_sf._active_session).set(key, text)
                         _sf._active_session._builder_config[key] = text
                         continue
@@ -2277,10 +2248,7 @@ class ReparkSession:
             # already sized the FairSpillPool; datafusion.runtime.memory_limit alone (no
             # repark twin — dual-set refused above) re-sizes that same pool here.
             _apply_builder_datafusion_conf(session, self._config)
-            # R-AUTO-MEMCAT: a bare session gets a working spark_catalog + default namespace
-            # (the duckdb :memory: analogue) — skipped when the builder configured catalogs,
-            # named a different defaultCatalog, or set repark.sql.autoMemoryCatalog=false.
-            if _auto_memory_catalog_wanted(session._builder_config):
+            if _native.auto_session_catalog_wanted(native_config):
                 session._register_auto_memory_catalog()
             _sf._active_session = session
             return session

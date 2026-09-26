@@ -1363,6 +1363,10 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 `test_lock_gate.sh` (uv lock-gate detector self-test — a lock-gate change that needs it),
 `generate_excel_fixtures.py` (synthetic .xlsx fixtures — the deferred `repark-excel` reader; see
 [../STATUS.md](../STATUS.md) "Deferred capabilities").
+- `check_lib_py.py` — **CATALOG-1 (2026-09-26):** exact baselines ratchet down:
+  `python/repark/src/repark/spark/session/session_core.py` 2325 → 2293 and
+  `python/repark/src/repark/spark/dataframe/writer_readwriter.py` 1029 → 1023 (the facade
+  auto-flip and alias removal). pins: catalog-1/C-011
 
 ## I want to...
 
