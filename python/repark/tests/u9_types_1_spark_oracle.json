@@ -2,7 +2,7 @@
  "generator": "target/probe-u9-types-1/build_oracle.py + merge_oracle.py",
  "engine": "Spark 4.1.2 + Iceberg 1.11.0 (local[1], InMemoryCatalog sc, session zone UTC)",
  "measured": "2026-09-25",
- "revised": "r3 2026-09-25: +41 steps map/assign/* and map/cmp/* measured on Spark; RePark re-recorded on every group",
+ "revised": "r4 2026-09-26: +24 steps void printschema/cast-rows/files-metrics/delete and uuid dtypes/printschema/order/bucket-part/alter-to-string/invalid-literals/append/delete/update/files-metrics for U9-TYPES-1 PR2 (VOID and UUID-as-string end to end); R-14/R-15 retired, R-22..R-28 recorded; r5 2026-09-26 (round-1 fixer): +41 steps uuid-write / uuid-overwrite / void-write / void-create (MERGE, INSERT OVERWRITE both forms, overwritePartitions and _file/_pos/_partition projections over uuid; a value into VOID on INSERT SELECT, VALUES CAST, DataFrame append, MERGE and UPDATE; DataFrame create and CTAS of a NULL column on v3 and v2), generator target/probe-u9-types-2/measure.py; r6 2026-09-26 (round-2 fixer): +27 steps uuid-snap (VERSION AS OF a snapshot id, TIMESTAMP AS OF, VERSION AS OF a tag, the .branch_b1 SQL read and the branch read option before and after a branch INSERT, a WAP-staged snapshot read, each with a uuid-literal filter; snapshot ids resolve from {ref:<table>:<ref>} / {wap:<table>:<wap id>} tokens), generator target/probe-u9-types-2/measure_r6.py; r7 2026-09-26 (round-3 fixer): +40 steps uuid-binary (a sixteen-byte BINARY source into a uuid column refuses as its UTF-8 text, a 36-byte canonical text commits, on MERGE INSERT VALUES / INSERT * / UPDATE SET) and uuid-nested (STRUCT<u: uuid> assignments: MERGE UPDATE SET t.s.u from a column and a literal, SET s = a struct, UPDATE SET s.u and SET s = named_struct, and an invalid nested text), generator target/probe-u9-types-2/measure_r7.py; r8 2026-09-26 (round-4 fold, verifier V-004/V-005/V-007): +16 steps uuid-binary-doors (the undashed uuid literal; sixteen raw bytes into a uuid column through INSERT SELECT of a BINARY column, CAST(b AS STRING), writeTo().append(), write.insertInto, write.saveAsTable and INSERT VALUES X'…'; a positional struct literal into STRUCT<u: STRING>), generator target/probe-u9-types-2/measure_r8.py",
  "steps": [
   {
    "group": "ltz",
@@ -5831,28 +5831,7 @@
    "key": "void/v3/create",
    "do": "sql",
    "sql": "CREATE TABLE sc.ns.v3 (id INT, c VOID) USING iceberg TBLPROPERTIES ('format-version'='3')",
-   "spark": "ok",
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "UnsupportedOperationException"
-     ],
-     [
-      "msg",
-      "This feature is not implemented: column type `VOID` is not supported yet for Iceberg tables"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   "spark": "ok"
   },
   {
    "group": "void",
@@ -5878,7 +5857,8 @@
     ]
    ],
    "residue": {
-    "id": "R-14",
+    "id": "R-22",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
     "repark": [
      [
       "cond",
@@ -5886,17 +5866,18 @@
      ],
      [
       "error",
-      "UnsupportedOperationException"
+      "PySparkException"
      ],
      [
       "msg",
-      "This feature is not implemented: column type `VOID` is not supported yet for Iceberg tables"
+      "DataInvalid => Invalid schema for v2:\n- Invalid type for c: unknown is not supported until v3"
      ],
      [
       "state",
       null
      ]
-    ]
+    ],
+    "note": "2026-09-26: Spark answers Py4JJavaError wrapping java.lang.IllegalStateException: Invalid schema for v2 (volatile o-id call prefix o56 on 2026-09-25, o45 on 2026-09-26); RePark has no JVM, so the fork refuses the commit with its Java-mirrored DataInvalid text, carried as PySparkException. The Java core text matches; the class and the volatile Py4J wrapper line differ. Probe key void/v2/create-reconfirm."
    }
   },
   {
@@ -5923,7 +5904,8 @@
     ]
    ],
    "residue": {
-    "id": "R-14",
+    "id": "R-22",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
     "repark": [
      [
       "cond",
@@ -5931,17 +5913,18 @@
      ],
      [
       "error",
-      "UnsupportedOperationException"
+      "PySparkException"
      ],
      [
       "msg",
-      "This feature is not implemented: column type `VOID` is not supported yet for Iceberg tables"
+      "DataInvalid => Invalid schema for v1:\n- Invalid type for c: unknown is not supported until v3"
      ],
      [
       "state",
       null
      ]
-    ]
+    ],
+    "note": "2026-09-26: v1 door of R-22; Spark text measured with o45 on 2026-09-26, o56 on 2026-09-25. Probe key void/v1/create-reconfirm."
    }
   },
   {
@@ -5949,28 +5932,7 @@
    "key": "void/v3/insert",
    "do": "sql",
    "sql": "INSERT INTO sc.ns.v3 VALUES (0, NULL), (1, NULL)",
-   "spark": "ok",
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: table 'sc.ns.v3' not found"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   "spark": "ok"
   },
   {
    "group": "void",
@@ -5986,28 +5948,7 @@
      1,
      null
     ]
-   ],
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: table 'sc.ns.v3' not found"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "void",
@@ -6060,28 +6001,7 @@
      "spec",
      []
     ]
-   ],
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "FileNotFoundError"
-     ],
-     [
-      "msg",
-      "no metadata for sc.ns.v3"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "void",
@@ -6097,28 +6017,7 @@
      "c",
      "void"
     ]
-   ],
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: table 'sc.ns.v3' not found"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "void",
@@ -6134,28 +6033,7 @@
      "c",
      "void"
     ]
-   ],
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      "cond",
-      "TABLE_OR_VIEW_NOT_FOUND"
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`ns`.`v3` cannot be found. Verify the spelling and correctness of the schema and catalog. If you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
-     ],
-     [
-      "state",
-      "42P01"
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "void",
@@ -6171,28 +6049,7 @@
      "c",
      "void"
     ]
-   ],
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: table 'sc.ns.v3' not found"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "void",
@@ -6206,56 +6063,14 @@
     [
      "NoneType"
     ]
-   ],
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: table 'sc.ns.v3' not found"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "void",
    "key": "void/v3/filter-notnull",
    "do": "rows",
    "sql": "SELECT id FROM sc.ns.v3 WHERE c IS NOT NULL",
-   "spark": [],
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: table 'sc.ns.v3' not found"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   "spark": []
   },
   {
    "group": "void",
@@ -6281,11 +6096,12 @@
     ]
    ],
    "residue": {
-    "id": "R-14",
+    "id": "R-23",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
     "repark": [
      [
       "cond",
-      null
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
      ],
      [
       "error",
@@ -6293,13 +6109,14 @@
      ],
      [
       "msg",
-      "Error during planning: table 'sc.ns.v3' not found"
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`v3`: Cannot safely cast `c` \"INT\" to \"VOID\". SQLSTATE: KD000"
      ],
      [
       "state",
-      null
+      "KD000"
      ]
-    ]
+    ],
+    "note": "2026-09-26: class, condition, SQLSTATE and message body match Spark; the facade keeps RePark's Error during planning: prefix, which Spark has no equivalent of on this path."
    }
   },
   {
@@ -6307,28 +6124,25 @@
    "key": "void/v3/insert-omit",
    "do": "sql",
    "sql": "INSERT INTO sc.ns.v3 (id) VALUES (6)",
-   "spark": "ok",
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: table 'sc.ns.v3' not found"
-     ],
-     [
-      "state",
-      null
-     ]
+   "spark": "ok"
+  },
+  {
+   "group": "void",
+   "key": "void/v3/printschema",
+   "do": "printschema",
+   "sql": "SELECT * FROM sc.ns.v3",
+   "spark": "root\n |-- id: integer (nullable = true)\n |-- c: void (nullable = true)\n\n"
+  },
+  {
+   "group": "void",
+   "key": "void/v3/files-metrics",
+   "do": "rows",
+   "sql": "SELECT count(*) FROM sc.ns.v3.files WHERE readable_metrics.c.value_count IS NOT NULL OR readable_metrics.c.lower_bound IS NOT NULL OR readable_metrics.c.upper_bound IS NOT NULL",
+   "spark": [
+    [
+     0
     ]
-   }
+   ]
   },
   {
    "group": "void",
@@ -6340,28 +6154,18 @@
      "x",
      "void"
     ]
-   ],
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "UnsupportedOperationException"
-     ],
-     [
-      "msg",
-      "This feature is not implemented: Unsupported SQL type VOID"
-     ],
-     [
-      "state",
-      null
-     ]
+   ]
+  },
+  {
+   "group": "void",
+   "key": "void/v3/cast-null-void-rows",
+   "do": "rows",
+   "sql": "SELECT CAST(NULL AS VOID) AS x",
+   "spark": [
+    [
+     null
     ]
-   }
+   ]
   },
   {
    "group": "void",
@@ -6382,28 +6186,7 @@
    "key": "void/v3/addcol-alter",
    "do": "sql",
    "sql": "ALTER TABLE sc.ns.v3b ADD COLUMN c VOID",
-   "spark": "ok",
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "UnsupportedOperationException"
-     ],
-     [
-      "msg",
-      "This feature is not implemented: column type `VOID` is not supported yet for Iceberg tables"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   "spark": "ok"
   },
   {
    "group": "void",
@@ -6415,43 +6198,14 @@
      1,
      null
     ]
-   ],
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      1
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "void",
    "key": "void/v3/addcol-insert-after",
    "do": "sql",
    "sql": "INSERT INTO sc.ns.v3b VALUES (2, NULL)",
-   "spark": "ok",
-   "residue": {
-    "id": "R-14",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: Inconsistent data length across values list: got 2 values in row 0 but expected 1"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   "spark": "ok"
   },
   {
    "group": "void",
@@ -6484,7 +6238,8 @@
     ]
    ],
    "residue": {
-    "id": "R-14",
+    "id": "R-24",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
     "repark": [
      [
       "cond",
@@ -6492,17 +6247,18 @@
      ],
      [
       "error",
-      "UnsupportedOperationException"
+      "PySparkException"
      ],
      [
       "msg",
-      "This feature is not implemented: column type `VOID` is not supported yet for Iceberg tables"
+      "DataInvalid => Invalid schema for v2:\n- Invalid type for c: unknown is not supported until v3"
      ],
      [
       "state",
       null
      ]
-    ]
+    ],
+    "note": "2026-09-26: the ADD COLUMN door of R-22: the fork refuses the v2 schema update with the same Java-mirrored text."
    }
   },
   {
@@ -6529,25 +6285,10 @@
     ]
    ],
    "residue": {
-    "id": "R-15",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "UnsupportedOperationException"
-     ],
-     [
-      "msg",
-      "This feature is not implemented: column type `UUID` is not supported yet for Iceberg tables"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
+    "id": "R-25",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
+    "repark": "ok",
+    "note": "2026-09-26: Spark refuses the UUID spelling in SQL ([UNSUPPORTED_DATATYPE], ParseException); RePark accepts UUID on CREATE / ADD COLUMN as an Iceberg uuid column by design (orchestrator ruling 2026-09-25, a RePark extension documented in the TY-UUID-READ registry row and the design map), so RePark commits where Spark refuses."
    }
   },
   {
@@ -6572,28 +6313,7 @@
      "state",
      "0A000"
     ]
-   ],
-   "residue": {
-    "id": "R-15",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "UnsupportedOperationException"
-     ],
-     [
-      "msg",
-      "This feature is not implemented: Unsupported SQL type UUID"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "uuid",
@@ -6607,28 +6327,7 @@
    "key": "uuid/v2/add-uuid",
    "do": "add_uuid",
    "table": "sc.ns.u2",
-   "spark": "ok",
-   "residue": {
-    "id": "R-15",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "UnsupportedOperationException"
-     ],
-     [
-      "msg",
-      "This feature is not implemented: column type `UUID` is not supported yet for Iceberg tables"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   "spark": "ok"
   },
   {
    "group": "uuid",
@@ -6644,44 +6343,14 @@
      "u",
      "string"
     ]
-   ],
-   "residue": {
-    "id": "R-15",
-    "repark": [
-     [
-      "id",
-      "int"
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "uuid",
    "key": "uuid/v2/insert",
    "do": "sql",
    "sql": "INSERT INTO sc.ns.u2 VALUES (1, '123e4567-e89b-12d3-a456-426614174000'), (2, NULL)",
-   "spark": "ok",
-   "residue": {
-    "id": "R-15",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: Inconsistent data length across values list: got 2 values in row 0 but expected 1"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   "spark": "ok"
   },
   {
    "group": "uuid",
@@ -6697,11 +6366,7 @@
      2,
      null
     ]
-   ],
-   "residue": {
-    "id": "R-15",
-    "repark": []
-   }
+   ]
   },
   {
    "group": "uuid",
@@ -6717,16 +6382,7 @@
      "u",
      "string"
     ]
-   ],
-   "residue": {
-    "id": "R-15",
-    "repark": [
-     [
-      "id",
-      "int"
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "uuid",
@@ -6740,28 +6396,7 @@
     [
      "NoneType"
     ]
-   ],
-   "residue": {
-    "id": "R-15",
-    "repark": [
-     [
-      "cond",
-      "UNRESOLVED_COLUMN.WITH_SUGGESTION"
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `u` cannot be resolved. Did you mean one of the following? [`id`]. SQLSTATE: 42703"
-     ],
-     [
-      "state",
-      "42703"
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "uuid",
@@ -6772,56 +6407,14 @@
     [
      1
     ]
-   ],
-   "residue": {
-    "id": "R-15",
-    "repark": [
-     [
-      "cond",
-      "UNRESOLVED_COLUMN.WITH_SUGGESTION"
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `u` cannot be resolved. Did you mean one of the following? [`id`]. SQLSTATE: 42703"
-     ],
-     [
-      "state",
-      "42703"
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "uuid",
    "key": "uuid/v2/insert-upper",
    "do": "sql",
    "sql": "INSERT INTO sc.ns.u2 VALUES (4, '123E4567-E89B-12D3-A456-4266141740FF')",
-   "spark": "ok",
-   "residue": {
-    "id": "R-15",
-    "repark": [
-     [
-      "cond",
-      null
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: Inconsistent data length across values list: got 2 values in row 0 but expected 1"
-     ],
-     [
-      "state",
-      null
-     ]
-    ]
-   }
+   "spark": "ok"
   },
   {
    "group": "uuid",
@@ -6841,10 +6434,2748 @@
      4,
      "123e4567-e89b-12d3-a456-4266141740ff"
     ]
+   ]
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/dtypes",
+   "do": "dtypes",
+   "sql": "SELECT * FROM sc.ns.u2",
+   "spark": [
+    [
+     "id",
+     "int"
+    ],
+    [
+     "u",
+     "string"
+    ]
+   ]
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/printschema",
+   "do": "printschema",
+   "sql": "SELECT * FROM sc.ns.u2",
+   "spark": "root\n |-- id: integer (nullable = true)\n |-- u: string (nullable = true)\n\n"
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/order",
+   "do": "ordered",
+   "sql": "SELECT id, u FROM sc.ns.u2 ORDER BY u",
+   "spark": [
+    [
+     2,
+     null
+    ],
+    [
+     1,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ],
+    [
+     4,
+     "123e4567-e89b-12d3-a456-4266141740ff"
+    ]
+   ]
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/part/prepare",
+   "do": "bucket_uuid",
+   "table": "sc.ns.up",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/part/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.up VALUES (1, '123e4567-e89b-12d3-a456-426614174000'), (2, NULL)",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/part/select",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.up",
+   "spark": [
+    [
+     1,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ],
+    [
+     2,
+     null
+    ]
+   ]
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/part/md",
+   "do": "md",
+   "table": "sc.ns.up",
+   "spark": [
+    [
+     "fields",
+     [
+      [
+       [
+        "id",
+        1
+       ],
+       [
+        "name",
+        "id"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "int"
+       ]
+      ],
+      [
+       [
+        "id",
+        2
+       ],
+       [
+        "name",
+        "u"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "uuid"
+       ]
+      ]
+     ]
+    ],
+    [
+     "spec",
+     [
+      [
+       [
+        "field-id",
+        1000
+       ],
+       [
+        "name",
+        "u_bucket_4"
+       ],
+       [
+        "source-id",
+        2
+       ],
+       [
+        "transform",
+        "bucket[4]"
+       ]
+      ]
+     ]
+    ]
    ],
    "residue": {
-    "id": "R-15",
-    "repark": []
+    "id": "R-26",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
+    "repark": [
+     [
+      "fields",
+      [
+       [
+        [
+         "id",
+         1
+        ],
+        [
+         "name",
+         "id"
+        ],
+        [
+         "required",
+         false
+        ],
+        [
+         "type",
+         "int"
+        ]
+       ],
+       [
+        [
+         "id",
+         2
+        ],
+        [
+         "name",
+         "u"
+        ],
+        [
+         "required",
+         false
+        ],
+        [
+         "type",
+         "uuid"
+        ]
+       ]
+      ]
+     ],
+     [
+      "spec",
+      [
+       [
+        [
+         "field-id",
+         1000
+        ],
+        [
+         "name",
+         "u_bucket"
+        ],
+        [
+         "source-id",
+         2
+        ],
+        [
+         "transform",
+         "bucket[4]"
+        ]
+       ]
+      ]
+     ]
+    ],
+    "note": "2026-09-26: the bucket spec over the uuid column commits, reads and partitions on both engines; only the generated field name differs: u_bucket_4 on Spark, u_bucket on RePark (RePark's established col_bucket convention, unchanged by this unit)."
+   }
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/alter-to-string",
+   "do": "sql",
+   "sql": "ALTER TABLE sc.ns.u2 ALTER COLUMN u TYPE STRING",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/md-after-alter",
+   "do": "md",
+   "table": "sc.ns.u2",
+   "spark": [
+    [
+     "fields",
+     [
+      [
+       [
+        "id",
+        1
+       ],
+       [
+        "name",
+        "id"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "int"
+       ]
+      ],
+      [
+       [
+        "id",
+        2
+       ],
+       [
+        "name",
+        "u"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "uuid"
+       ]
+      ]
+     ]
+    ],
+    [
+     "spec",
+     []
+    ]
+   ]
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/insert-invalid",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.u2 VALUES (5, 'not-a-uuid')",
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o45.sql.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 18.0 failed 1 times, most recent failure: Lost task 0.0 in stage 18.0 (TID 19) (localhost executor driver): java.lang.IllegalArgumentException: Invalid UUID string: not-a-uuid"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-27",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "DataInvalid => Invalid UUID string: not-a-uuid"
+     ],
+     [
+      "state",
+      null
+     ]
+    ],
+    "note": "2026-09-26: Spark fails the task with java.lang.IllegalArgumentException: Invalid UUID string: not-a-uuid inside a volatile Py4JJavaError stage wrapper (stage 18.0, TID 19 on 2026-09-26); RePark refuses loud with the fork's DataInvalid text carrying the same Invalid UUID string: <value> core."
+   }
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/insert-int",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.u2 VALUES (5, 7)",
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o45.sql.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 19.0 failed 1 times, most recent failure: Lost task 0.0 in stage 19.0 (TID 20) (localhost executor driver): java.lang.IllegalArgumentException: Invalid UUID string: 7"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-27",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "DataInvalid => Invalid UUID string: 7"
+     ],
+     [
+      "state",
+      null
+     ]
+    ],
+    "note": "2026-09-26: the INT door of R-27: Spark stringifies 7 then refuses Invalid UUID string: 7 (stage 19.0, TID 20); RePark refuses the same core text through the fork."
+   }
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/append",
+   "do": "append",
+   "table": "sc.ns.u2",
+   "schema": "id INT, u STRING",
+   "rows": [
+    [
+     6,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ]
+   ],
+   "spark": "ok"
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/rows-after-append",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.u2",
+   "spark": [
+    [
+     1,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     4,
+     "123e4567-e89b-12d3-a456-4266141740ff"
+    ],
+    [
+     6,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ]
+   ]
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/delete",
+   "do": "sql",
+   "sql": "DELETE FROM sc.ns.u2 WHERE u = '123e4567-e89b-12d3-a456-426614174000'",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/rows-after-delete",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.u2",
+   "spark": [
+    [
+     2,
+     null
+    ],
+    [
+     4,
+     "123e4567-e89b-12d3-a456-4266141740ff"
+    ]
+   ]
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/update",
+   "do": "sql",
+   "sql": "UPDATE sc.ns.u2 SET id = 20 WHERE u IS NULL",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/rows-after-update",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.u2",
+   "spark": [
+    [
+     20,
+     null
+    ],
+    [
+     4,
+     "123e4567-e89b-12d3-a456-4266141740ff"
+    ]
+   ]
+  },
+  {
+   "group": "uuid",
+   "key": "uuid/v2/files-metrics",
+   "do": "rows",
+   "sql": "SELECT readable_metrics.u FROM sc.ns.u2.files",
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o259.collectToPython.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 30.0 failed 1 times, most recent failure: Lost task 0.0 in stage 30.0 (TID 30) (localhost executor driver): java.lang.ClassCastException: Cannot cast java.util.UUID to java.lang.CharSequence"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-28",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
+    "repark": [
+     [
+      [
+       [
+        "column_size",
+        32
+       ],
+       [
+        "lower_bound",
+        null
+       ],
+       [
+        "nan_value_count",
+        null
+       ],
+       [
+        "null_value_count",
+        1
+       ],
+       [
+        "upper_bound",
+        null
+       ],
+       [
+        "value_count",
+        1
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        "column_size",
+        48
+       ],
+       [
+        "lower_bound",
+        "0x123e4567e89b12d3a4564266141740ff"
+       ],
+       [
+        "nan_value_count",
+        null
+       ],
+       [
+        "null_value_count",
+        0
+       ],
+       [
+        "upper_bound",
+        "0x123e4567e89b12d3a4564266141740ff"
+       ],
+       [
+        "value_count",
+        1
+       ]
+      ]
+     ]
+    ],
+    "note": "2026-09-26: Spark fails readable_metrics over a uuid column with ClassCastException (volatile Py4JJavaError wrapper, stage 30.0); the fork answers byte bounds, which RePark surfaces. Recorded RePark answer held as the residue."
+   }
+  },
+  {
+   "group": "void",
+   "key": "void/v3/delete",
+   "do": "sql",
+   "sql": "DELETE FROM sc.ns.v3 WHERE id = 0",
+   "spark": "ok"
+  },
+  {
+   "group": "void",
+   "key": "void/v3/rows-after-delete",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.v3",
+   "spark": [
+    [
+     1,
+     null
+    ],
+    [
+     6,
+     null
+    ]
+   ]
+  },
+  {
+   "group": "void",
+   "key": "void/v3/files-metrics-after-delete",
+   "do": "rows",
+   "sql": "SELECT count(*) FROM sc.ns.v3.files WHERE readable_metrics.c.value_count IS NOT NULL OR readable_metrics.c.lower_bound IS NOT NULL OR readable_metrics.c.upper_bound IS NOT NULL",
+   "spark": [
+    [
+     0
+    ]
+   ]
+  },
+  {
+   "group": "uuid-write",
+   "key": "uuid/merge/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.uw (id INT, name STRING) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-write",
+   "key": "uuid/merge/add-uuid",
+   "do": "add_uuid",
+   "table": "sc.ns.uw",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-write",
+   "key": "uuid/merge/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.uw VALUES (1, 'a', '123e4567-e89b-12d3-a456-426614174000'), (2, 'b', '223e4567-e89b-12d3-a456-426614174001'), (3, 'c', NULL)",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-write",
+   "key": "uuid/merge/on-source",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.uw t USING (SELECT 2 AS id, '223e4567-e89b-12d3-a456-426614174001' AS u) s ON t.u = s.u WHEN MATCHED THEN UPDATE SET name = 'm' WHEN NOT MATCHED THEN INSERT (id, name, u) VALUES (s.id, 'n', s.u)",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-write",
+   "key": "uuid/merge/on-source-upper",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.uw t USING (SELECT 4 AS id, '223E4567-E89B-12D3-A456-426614174001' AS u) s ON t.u = s.u WHEN MATCHED THEN UPDATE SET name = 'mu' WHEN NOT MATCHED THEN INSERT (id, name, u) VALUES (s.id, 'nu', s.u)",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-write",
+   "key": "uuid/merge/rows-1",
+   "do": "ordered",
+   "sql": "SELECT id, name, u FROM sc.ns.uw ORDER BY id",
+   "spark": [
+    [
+     1,
+     "a",
+     "123e4567-e89b-12d3-a456-426614174000"
+    ],
+    [
+     2,
+     "m",
+     "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    [
+     3,
+     "c",
+     null
+    ],
+    [
+     4,
+     "nu",
+     "223e4567-e89b-12d3-a456-426614174001"
+    ]
+   ]
+  },
+  {
+   "group": "uuid-write",
+   "key": "uuid/merge/on-literal",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.uw t USING (SELECT 7 AS id) s ON t.u = '223e4567-e89b-12d3-a456-426614174001' WHEN MATCHED THEN UPDATE SET name = 'q'",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-write",
+   "key": "uuid/merge/insert-upper",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.uw t USING (SELECT 8 AS id, '123E4567-E89B-12D3-A456-426614174000' AS u) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, name, u) VALUES (s.id, 'x', s.u)",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-write",
+   "key": "uuid/merge/update-set-upper",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.uw t USING (SELECT 3 AS id, '323E4567-E89B-12D3-A456-4266141740AA' AS u) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET u = s.u",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-write",
+   "key": "uuid/merge/rows-2",
+   "do": "ordered",
+   "sql": "SELECT id, name, u FROM sc.ns.uw ORDER BY id",
+   "spark": [
+    [
+     1,
+     "a",
+     "123e4567-e89b-12d3-a456-426614174000"
+    ],
+    [
+     2,
+     "q",
+     "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    [
+     3,
+     "c",
+     "323e4567-e89b-12d3-a456-4266141740aa"
+    ],
+    [
+     4,
+     "q",
+     "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    [
+     8,
+     "x",
+     "123e4567-e89b-12d3-a456-426614174000"
+    ]
+   ]
+  },
+  {
+   "group": "uuid-write",
+   "key": "uuid/merge/meta-cols",
+   "do": "ordered",
+   "sql": "SELECT _file IS NOT NULL, _pos IS NOT NULL, u FROM sc.ns.uw ORDER BY id",
+   "spark": [
+    [
+     true,
+     true,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ],
+    [
+     true,
+     true,
+     "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    [
+     true,
+     true,
+     "323e4567-e89b-12d3-a456-4266141740aa"
+    ],
+    [
+     true,
+     true,
+     "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    [
+     true,
+     true,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ]
+   ]
+  },
+  {
+   "group": "uuid-write",
+   "key": "uuid/merge/meta-cols-types",
+   "do": "cols",
+   "sql": "SELECT _file, u FROM sc.ns.uw",
+   "spark": [
+    [
+     "_file",
+     "string"
+    ],
+    [
+     "u",
+     "string"
+    ]
+   ]
+  },
+  {
+   "group": "uuid-overwrite",
+   "key": "uuid/ow/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.uo (id INT, p INT) USING iceberg PARTITIONED BY (p)",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-overwrite",
+   "key": "uuid/ow/add-uuid",
+   "do": "add_uuid",
+   "table": "sc.ns.uo",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-overwrite",
+   "key": "uuid/ow/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.uo VALUES (1, 1, '123e4567-e89b-12d3-a456-426614174000'), (2, 2, '223e4567-e89b-12d3-a456-426614174001')",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-overwrite",
+   "key": "uuid/ow/overwrite-all",
+   "do": "sql",
+   "sql": "INSERT OVERWRITE sc.ns.uo SELECT 3, 1, '223E4567-E89B-12D3-A456-426614174001'",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-overwrite",
+   "key": "uuid/ow/rows-1",
+   "do": "ordered",
+   "sql": "SELECT id, p, u FROM sc.ns.uo ORDER BY id",
+   "spark": [
+    [
+     3,
+     1,
+     "223e4567-e89b-12d3-a456-426614174001"
+    ]
+   ]
+  },
+  {
+   "group": "uuid-overwrite",
+   "key": "uuid/ow/overwrite-static",
+   "do": "sql",
+   "sql": "INSERT OVERWRITE sc.ns.uo PARTITION (p = 2) SELECT 4, '123E4567-E89B-12D3-A456-426614174000'",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-overwrite",
+   "key": "uuid/ow/rows-2",
+   "do": "ordered",
+   "sql": "SELECT id, p, u FROM sc.ns.uo ORDER BY id",
+   "spark": [
+    [
+     3,
+     1,
+     "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    [
+     4,
+     2,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ]
+   ]
+  },
+  {
+   "group": "uuid-overwrite",
+   "key": "uuid/ow/overwrite-partitions",
+   "do": "overwrite_partitions",
+   "table": "sc.ns.uo",
+   "schema": "id INT, p INT, u STRING",
+   "rows": [
+    [
+     5,
+     1,
+     "323E4567-E89B-12D3-A456-4266141740AA"
+    ]
+   ],
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-overwrite",
+   "key": "uuid/ow/rows-3",
+   "do": "ordered",
+   "sql": "SELECT id, p, u FROM sc.ns.uo ORDER BY id",
+   "spark": [
+    [
+     4,
+     2,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ],
+    [
+     5,
+     1,
+     "323e4567-e89b-12d3-a456-4266141740aa"
+    ]
+   ]
+  },
+  {
+   "group": "uuid-overwrite",
+   "key": "uuid/ow/meta-cols",
+   "do": "ordered",
+   "sql": "SELECT _file IS NOT NULL, _partition.p, u FROM sc.ns.uo ORDER BY id",
+   "spark": [
+    [
+     true,
+     2,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ],
+    [
+     true,
+     1,
+     "323e4567-e89b-12d3-a456-4266141740aa"
+    ]
+   ]
+  },
+  {
+   "group": "void-write",
+   "key": "void/w/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.vw (id INT, c VOID) USING iceberg TBLPROPERTIES ('format-version'='3')",
+   "spark": "ok"
+  },
+  {
+   "group": "void-write",
+   "key": "void/w/insert-null",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.vw VALUES (7, NULL)",
+   "spark": "ok"
+  },
+  {
+   "group": "void-write",
+   "key": "void/w/insert-select-int",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.vw SELECT 7, 1",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`vw`: Cannot safely cast `c` \"INT\" to \"VOID\". SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-23",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`vw`: Cannot safely cast `c` \"INT\" to \"VOID\". SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void-write",
+   "key": "void/w/insert-select-string",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.vw SELECT 8, 'x'",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`vw`: Cannot safely cast `c` \"STRING\" to \"VOID\". SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-23",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`vw`: Cannot safely cast `c` \"STRING\" to \"VOID\". SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void-write",
+   "key": "void/w/insert-values-cast-int",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.vw VALUES (3, CAST(NULL AS INT))",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`vw`: Cannot safely cast `c` \"INT\" to \"VOID\". SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-23",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`vw`: Cannot safely cast `c` \"INT\" to \"VOID\". SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void-write",
+   "key": "void/w/df-append-int",
+   "do": "append",
+   "table": "sc.ns.vw",
+   "schema": "id INT, c INT",
+   "rows": [
+    [
+     9,
+     1
+    ]
+   ],
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`vw`: Cannot safely cast `c` \"INT\" to \"VOID\". SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-23",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`vw`: Cannot safely cast `c` \"INT\" to \"VOID\". SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void-write",
+   "key": "void/w/merge-insert-value",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.vw t USING (SELECT 7 AS id) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, c) VALUES (10, 5)",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c` \"INT\" to \"VOID\". SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-23",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c` \"INT\" to \"VOID\". SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void-write",
+   "key": "void/w/merge-update-value",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.vw t USING (SELECT 7 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET c = 5",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c` \"INT\" to \"VOID\". SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-23",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c` \"INT\" to \"VOID\". SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void-write",
+   "key": "void/w/update-value",
+   "do": "sql",
+   "sql": "UPDATE sc.ns.vw SET c = 3 WHERE id = 7",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c` \"INT\" to \"VOID\". SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-23",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c` \"INT\" to \"VOID\". SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void-write",
+   "key": "void/w/insert-select-null",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.vw SELECT 11, NULL",
+   "spark": "ok"
+  },
+  {
+   "group": "void-write",
+   "key": "void/w/rows",
+   "do": "ordered",
+   "sql": "SELECT * FROM sc.ns.vw ORDER BY id",
+   "spark": [
+    [
+     7,
+     null
+    ],
+    [
+     11,
+     null
+    ]
+   ]
+  },
+  {
+   "group": "void-create",
+   "key": "void/c/df-create-v3",
+   "do": "df_create",
+   "table": "sc.ns.vdf3",
+   "schema": "id INT, c VOID",
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "props": {
+    "format-version": "3"
+   },
+   "spark": "ok"
+  },
+  {
+   "group": "void-create",
+   "key": "void/c/df-create-v3-rows",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.vdf3",
+   "spark": [
+    [
+     1,
+     null
+    ]
+   ]
+  },
+  {
+   "group": "void-create",
+   "key": "void/c/df-create-v3-cols",
+   "do": "cols",
+   "sql": "SELECT * FROM sc.ns.vdf3",
+   "spark": [
+    [
+     "id",
+     "int"
+    ],
+    [
+     "c",
+     "void"
+    ]
+   ]
+  },
+  {
+   "group": "void-create",
+   "key": "void/c/ctas-v3",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.vct3 USING iceberg TBLPROPERTIES ('format-version'='3') AS SELECT 1 AS id, NULL AS c",
+   "spark": "ok"
+  },
+  {
+   "group": "void-create",
+   "key": "void/c/ctas-v3-rows",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.vct3",
+   "spark": [
+    [
+     1,
+     null
+    ]
+   ]
+  },
+  {
+   "group": "void-create",
+   "key": "void/c/ctas-v3-cols",
+   "do": "cols",
+   "sql": "SELECT * FROM sc.ns.vct3",
+   "spark": [
+    [
+     "id",
+     "int"
+    ],
+    [
+     "c",
+     "void"
+    ]
+   ]
+  },
+  {
+   "group": "void-create",
+   "key": "void/c/df-create-v2",
+   "do": "df_create",
+   "table": "sc.ns.vdf2",
+   "schema": "id INT, c VOID",
+   "rows": [
+    [
+     1,
+     null
+    ]
+   ],
+   "props": {
+    "format-version": "2"
+   },
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o267.create.\n: java.lang.IllegalStateException: Invalid schema for v2:\n- Invalid type for c: unknown is not supported until v3"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-22",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "DataInvalid => Invalid schema for v2:\n- Invalid type for c: unknown is not supported until v3"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "void-create",
+   "key": "void/c/ctas-v2",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.vct2 USING iceberg TBLPROPERTIES ('format-version'='2') AS SELECT 1 AS id, NULL AS c",
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o56.sql.\n: java.lang.IllegalStateException: Invalid schema for v2:\n- Invalid type for c: unknown is not supported until v3"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-22",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "DataInvalid => Invalid schema for v2:\n- Invalid type for c: unknown is not supported until v3"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "uuid-snap",
+   "key": "uuid/snap/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.us (id INT, name STRING) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-snap",
+   "key": "uuid/snap/add-uuid",
+   "do": "add_uuid",
+   "table": "sc.ns.us",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-snap",
+   "key": "uuid/snap/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.us VALUES (1, 'a', '123e4567-e89b-12d3-a456-426614174000'), (2, 'b', '223e4567-e89b-12d3-a456-426614174001'), (3, 'c', NULL)",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-snap",
+   "key": "uuid/snap/version-as-of",
+   "do": "ordered",
+   "sql": "SELECT id, u FROM sc.ns.us VERSION AS OF {ref:sc.ns.us:main} ORDER BY id",
+   "spark": [
+    [
+     1,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ],
+    [
+     2,
+     "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "group": "uuid-snap",
+   "key": "uuid/snap/version-as-of-cols",
+   "do": "cols",
+   "sql": "SELECT id, u FROM sc.ns.us VERSION AS OF {ref:sc.ns.us:main}",
+   "spark": [
+    [
+     "id",
+     "int"
+    ],
+    [
+     "u",
+     "string"
+    ]
+   ]
+  },
+  {
+   "group": "uuid-snap",
+   "key": "uuid/snap/version-as-of-where",
+   "do": "rows",
+   "sql": "SELECT id FROM sc.ns.us VERSION AS OF {ref:sc.ns.us:main} WHERE u = '123e4567-e89b-12d3-a456-426614174000'",
+   "spark": [
+    [
+     1
+    ]
+   ]
+  },
+  {
+   "group": "uuid-snap",
+   "key": "uuid/snap/version-as-of-where-upper",
+   "do": "rows",
+   "sql": "SELECT id FROM sc.ns.us VERSION AS OF {ref:sc.ns.us:main} WHERE u = '123E4567-E89B-12D3-A456-426614174000'",
+   "spark": []
+  },
+  {
+   "group": "uuid-snap",
+   "key": "uuid/snap/version-as-of-in",
+   "do": "rows",
+   "sql": "SELECT id FROM sc.ns.us VERSION AS OF {ref:sc.ns.us:main} WHERE u IN ('123e4567-e89b-12d3-a456-426614174000', '223e4567-e89b-12d3-a456-426614174001')",
+   "spark": [
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  {
+   "group": "uuid-snap",
+   "key": "uuid/snap/timestamp-as-of",
+   "do": "ordered",
+   "sql": "SELECT id, u FROM sc.ns.us TIMESTAMP AS OF '2099-01-01 00:00:00' ORDER BY id",
+   "spark": [
+    [
+     1,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ],
+    [
+     2,
+     "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "group": "uuid-snap",
+   "key": "uuid/snap/timestamp-as-of-where",
+   "do": "rows",
+   "sql": "SELECT id FROM sc.ns.us TIMESTAMP AS OF '2099-01-01 00:00:00' WHERE u = '223e4567-e89b-12d3-a456-426614174001'",
+   "spark": [
+    [
+     2
+    ]
+   ]
+  },
+  {
+   "group": "uuid-snap",
+   "key": "uuid/snap/option-snapshot-id",
+   "do": "option_read",
+   "table": "sc.ns.us",
+   "options": {
+    "snapshot-id": "{ref:sc.ns.us:main}"
+   },
+   "cols": [
+    "id",
+    "u"
+   ],
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "IllegalArgumentException"
+    ],
+    [
+     "msg",
+     "Time travel option `snapshot-id` is no longer supported, use Spark built-in `versionAsOf` instead"
+    ],
+    [
+     "state",
+     null
+    ]
+   ]
+  },
+  {
+   "group": "uuid-snap",
+   "key": "uuid/snap/branch-create",
+   "do": "sql",
+   "sql": "ALTER TABLE sc.ns.us CREATE BRANCH b1",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-snap",
+   "key": "uuid/snap/branch-read-sql",
+   "do": "ordered",
+   "sql": "SELECT id, u FROM sc.ns.us.branch_b1 ORDER BY id",
+   "spark": [
+    [
+     1,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ],
+    [
+     2,
+     "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "group": "uuid-snap",
+   "key": "uuid/snap/branch-read-option",
+   "do": "option_read",
+   "table": "sc.ns.us",
+   "options": {
+    "branch": "b1"
+   },
+   "cols": [
+    "id",
+    "u"
+   ],
+   "spark": [
+    [
+     1,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ],
+    [
+     2,
+     "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "group": "uuid-snap",
+   "key": "uuid/snap/branch-where",
+   "do": "rows",
+   "sql": "SELECT id FROM sc.ns.us.branch_b1 WHERE u = '223e4567-e89b-12d3-a456-426614174001'",
+   "spark": [
+    [
+     2
+    ]
+   ]
+  },
+  {
+   "group": "uuid-snap",
+   "key": "uuid/snap/branch-insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.us.branch_b1 VALUES (9, 'z', '223E4567-E89B-12D3-A456-426614174001')",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-snap",
+   "key": "uuid/snap/branch-read-after",
+   "do": "ordered",
+   "sql": "SELECT id, u FROM sc.ns.us.branch_b1 ORDER BY id",
+   "spark": [
+    [
+     1,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ],
+    [
+     2,
+     "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     9,
+     "223e4567-e89b-12d3-a456-426614174001"
+    ]
+   ]
+  },
+  {
+   "group": "uuid-snap",
+   "key": "uuid/snap/branch-read-option-after",
+   "do": "option_read",
+   "table": "sc.ns.us",
+   "options": {
+    "branch": "b1"
+   },
+   "cols": [
+    "id",
+    "u"
+   ],
+   "spark": [
+    [
+     1,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ],
+    [
+     2,
+     "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     9,
+     "223e4567-e89b-12d3-a456-426614174001"
+    ]
+   ]
+  },
+  {
+   "group": "uuid-snap",
+   "key": "uuid/snap/tag-create",
+   "do": "sql",
+   "sql": "ALTER TABLE sc.ns.us CREATE TAG t1",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-snap",
+   "key": "uuid/snap/tag-read",
+   "do": "ordered",
+   "sql": "SELECT id, u FROM sc.ns.us VERSION AS OF 't1' ORDER BY id",
+   "spark": [
+    [
+     1,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ],
+    [
+     2,
+     "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "group": "uuid-snap",
+   "key": "uuid/snap/tag-where",
+   "do": "rows",
+   "sql": "SELECT id FROM sc.ns.us VERSION AS OF 't1' WHERE u = '123e4567-e89b-12d3-a456-426614174000'",
+   "spark": [
+    [
+     1
+    ]
+   ]
+  },
+  {
+   "group": "uuid-snap",
+   "key": "uuid/snap/wap-enable",
+   "do": "sql",
+   "sql": "ALTER TABLE sc.ns.us SET TBLPROPERTIES ('write.wap.enabled'='true')",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-snap",
+   "key": "uuid/snap/wap-id",
+   "do": "conf",
+   "setting": "spark.wap.id",
+   "value": "w1",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-snap",
+   "key": "uuid/snap/wap-insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.us VALUES (7, 'w', '123e4567-e89b-12d3-a456-426614174000')",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-snap",
+   "key": "uuid/snap/wap-main-rows",
+   "do": "ordered",
+   "sql": "SELECT id, u FROM sc.ns.us ORDER BY id",
+   "spark": [
+    [
+     1,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ],
+    [
+     2,
+     "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "group": "uuid-snap",
+   "key": "uuid/snap/wap-staged-read",
+   "do": "ordered",
+   "sql": "SELECT id, u FROM sc.ns.us VERSION AS OF {wap:sc.ns.us:w1} ORDER BY id",
+   "spark": [
+    [
+     1,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ],
+    [
+     2,
+     "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     7,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ]
+   ]
+  },
+  {
+   "group": "uuid-snap",
+   "key": "uuid/snap/wap-staged-where",
+   "do": "rows",
+   "sql": "SELECT id FROM sc.ns.us VERSION AS OF {wap:sc.ns.us:w1} WHERE u = '123e4567-e89b-12d3-a456-426614174000'",
+   "spark": [
+    [
+     1
+    ],
+    [
+     7
+    ]
+   ]
+  },
+  {
+   "group": "uuid-binary",
+   "key": "uuid/bin/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.ub (id INT, name STRING) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-binary",
+   "key": "uuid/bin/add-uuid",
+   "do": "add_uuid",
+   "table": "sc.ns.ub",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-binary",
+   "key": "uuid/bin/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.ub VALUES (1, 'a', '123e4567-e89b-12d3-a456-426614174000')",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-binary",
+   "key": "uuid/bin/merge-raw16-values",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.ub t USING (SELECT 40 AS id, X'123e4567e89b12d3a456426614174000' AS u) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, name, u) VALUES (s.id, 'bin', s.u)",
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o56.sql.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 1.0 failed 1 times, most recent failure: Lost task 0.0 in stage 1.0 (TID 1) (localhost executor driver): java.lang.IllegalArgumentException: Invalid UUID string: \u0012>Eg�\u0012ӤVBf\u0014\u0017@\u0000"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-27",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "DataInvalid => Invalid UUID string: \u0012>Eg�\u0012ӤVBf\u0014\u0017@\u0000"
+     ],
+     [
+      "state",
+      null
+     ]
+    ],
+    "note": "2026-09-26 (round-3 fixer): Spark fails the task with java.lang.IllegalArgumentException: Invalid UUID string: <text> inside a volatile Py4JJavaError stage wrapper; RePark refuses with the fork's DataInvalid => Invalid UUID string: <text>, the same core text, and no row lands on either engine"
+   }
+  },
+  {
+   "group": "uuid-binary",
+   "key": "uuid/bin/merge-raw16-star",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.ub t USING (SELECT 43 AS id, 'bs' AS name, X'123e4567e89b12d3a456426614174000' AS u) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *",
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o56.sql.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 2.0 failed 1 times, most recent failure: Lost task 0.0 in stage 2.0 (TID 2) (localhost executor driver): java.lang.IllegalArgumentException: Invalid UUID string: \u0012>Eg�\u0012ӤVBf\u0014\u0017@\u0000"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-27",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "DataInvalid => Invalid UUID string: \u0012>Eg�\u0012ӤVBf\u0014\u0017@\u0000"
+     ],
+     [
+      "state",
+      null
+     ]
+    ],
+    "note": "2026-09-26 (round-3 fixer): Spark fails the task with java.lang.IllegalArgumentException: Invalid UUID string: <text> inside a volatile Py4JJavaError stage wrapper; RePark refuses with the fork's DataInvalid => Invalid UUID string: <text>, the same core text, and no row lands on either engine"
+   }
+  },
+  {
+   "group": "uuid-binary",
+   "key": "uuid/bin/raw16-rows",
+   "do": "ordered",
+   "sql": "SELECT id, name, u FROM sc.ns.ub ORDER BY id",
+   "spark": [
+    [
+     1,
+     "a",
+     "123e4567-e89b-12d3-a456-426614174000"
+    ]
+   ]
+  },
+  {
+   "group": "uuid-binary",
+   "key": "uuid/bin/merge-text36-values",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.ub t USING (SELECT 41 AS id, X'32323365343536372d653839622d313264332d613435362d343236363134313734303031' AS u) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, name, u) VALUES (s.id, 'b8', s.u)",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-binary",
+   "key": "uuid/bin/merge-text36-star",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.ub t USING (SELECT 44 AS id, 'b9' AS name, X'32323365343536372d653839622d313264332d613435362d343236363134313734303031' AS u) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-binary",
+   "key": "uuid/bin/merge-text36-update",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.ub t USING (SELECT 1 AS id, X'32323365343536372d653839622d313264332d613435362d343236363134313734303031' AS u) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET u = s.u",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-binary",
+   "key": "uuid/bin/text36-rows",
+   "do": "ordered",
+   "sql": "SELECT id, name, u FROM sc.ns.ub ORDER BY id",
+   "spark": [
+    [
+     1,
+     "a",
+     "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    [
+     41,
+     "b8",
+     "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    [
+     44,
+     "b9",
+     "223e4567-e89b-12d3-a456-426614174001"
+    ]
+   ]
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-field-col/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.sn0 (id INT) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-field-col/add-struct",
+   "do": "add_uuid",
+   "table": "sc.ns.sn0",
+   "struct": "s",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-field-col/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.sn0 VALUES (1, named_struct('u', '123e4567-e89b-12d3-a456-426614174000')), (2, named_struct('u', '123e4567-e89b-12d3-a456-426614174000'))",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-field-col",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.sn0 t USING (SELECT 1 AS id, '223e4567-e89b-12d3-a456-426614174001' AS v) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.s.u = s.v",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-field-col/rows",
+   "do": "ordered",
+   "sql": "SELECT id, s.u FROM sc.ns.sn0 ORDER BY id",
+   "spark": [
+    [
+     1,
+     "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    [
+     2,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ]
+   ]
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-field-lit/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.sn1 (id INT) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-field-lit/add-struct",
+   "do": "add_uuid",
+   "table": "sc.ns.sn1",
+   "struct": "s",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-field-lit/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.sn1 VALUES (1, named_struct('u', '123e4567-e89b-12d3-a456-426614174000')), (2, named_struct('u', '123e4567-e89b-12d3-a456-426614174000'))",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-field-lit",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.sn1 t USING (SELECT 1 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.s.u = '223e4567-e89b-12d3-a456-426614174001'",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-field-lit/rows",
+   "do": "ordered",
+   "sql": "SELECT id, s.u FROM sc.ns.sn1 ORDER BY id",
+   "spark": [
+    [
+     1,
+     "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    [
+     2,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ]
+   ]
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-whole/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.sn2 (id INT) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-whole/add-struct",
+   "do": "add_uuid",
+   "table": "sc.ns.sn2",
+   "struct": "s",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-whole/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.sn2 VALUES (1, named_struct('u', '123e4567-e89b-12d3-a456-426614174000')), (2, named_struct('u', '123e4567-e89b-12d3-a456-426614174000'))",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-whole",
+   "do": "sql",
+   "sql": "MERGE INTO sc.ns.sn2 t USING (SELECT 1 AS id, named_struct('u', '223E4567-E89B-12D3-A456-426614174001') AS ns) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET s = s.ns",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/merge-whole/rows",
+   "do": "ordered",
+   "sql": "SELECT id, s.u FROM sc.ns.sn2 ORDER BY id",
+   "spark": [
+    [
+     1,
+     "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    [
+     2,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ]
+   ]
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-field/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.sn3 (id INT) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-field/add-struct",
+   "do": "add_uuid",
+   "table": "sc.ns.sn3",
+   "struct": "s",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-field/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.sn3 VALUES (1, named_struct('u', '123e4567-e89b-12d3-a456-426614174000')), (2, named_struct('u', '123e4567-e89b-12d3-a456-426614174000'))",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-field",
+   "do": "sql",
+   "sql": "UPDATE sc.ns.sn3 SET s.u = '223e4567-e89b-12d3-a456-426614174001' WHERE id = 2",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-field/rows",
+   "do": "ordered",
+   "sql": "SELECT id, s.u FROM sc.ns.sn3 ORDER BY id",
+   "spark": [
+    [
+     1,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ],
+    [
+     2,
+     "223e4567-e89b-12d3-a456-426614174001"
+    ]
+   ]
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-whole/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.sn4 (id INT) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-whole/add-struct",
+   "do": "add_uuid",
+   "table": "sc.ns.sn4",
+   "struct": "s",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-whole/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.sn4 VALUES (1, named_struct('u', '123e4567-e89b-12d3-a456-426614174000')), (2, named_struct('u', '123e4567-e89b-12d3-a456-426614174000'))",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-whole",
+   "do": "sql",
+   "sql": "UPDATE sc.ns.sn4 SET s = named_struct('u', '223e4567-e89b-12d3-a456-426614174001') WHERE id = 1",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-whole/rows",
+   "do": "ordered",
+   "sql": "SELECT id, s.u FROM sc.ns.sn4 ORDER BY id",
+   "spark": [
+    [
+     1,
+     "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    [
+     2,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ]
+   ]
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-field-invalid/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.sn5 (id INT) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-field-invalid/add-struct",
+   "do": "add_uuid",
+   "table": "sc.ns.sn5",
+   "struct": "s",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-field-invalid/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.sn5 VALUES (1, named_struct('u', '123e4567-e89b-12d3-a456-426614174000')), (2, named_struct('u', '123e4567-e89b-12d3-a456-426614174000'))",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-field-invalid",
+   "do": "sql",
+   "sql": "UPDATE sc.ns.sn5 SET s.u = 'nope' WHERE id = 2",
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o56.sql.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 80.0 failed 1 times, most recent failure: Lost task 0.0 in stage 80.0 (TID 63) (localhost executor driver): java.lang.IllegalArgumentException: Invalid UUID string: nope"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-27",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "DataInvalid => Invalid UUID string: nope"
+     ],
+     [
+      "state",
+      null
+     ]
+    ],
+    "note": "2026-09-26 (round-3 fixer): Spark fails the task with java.lang.IllegalArgumentException: Invalid UUID string: <text> inside a volatile Py4JJavaError stage wrapper; RePark refuses with the fork's DataInvalid => Invalid UUID string: <text>, the same core text, and no row lands on either engine"
+   }
+  },
+  {
+   "group": "uuid-nested",
+   "key": "uuid/nested/update-field-invalid/rows",
+   "do": "ordered",
+   "sql": "SELECT id, s.u FROM sc.ns.sn5 ORDER BY id",
+   "spark": [
+    [
+     1,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ],
+    [
+     2,
+     "123e4567-e89b-12d3-a456-426614174000"
+    ]
+   ]
+  },
+  {
+   "group": "uuid-binary-doors",
+   "key": "uuid/bd/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.ubd (id INT, name STRING) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-binary-doors",
+   "key": "uuid/bd/add-uuid",
+   "do": "add_uuid",
+   "table": "sc.ns.ubd",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-binary-doors",
+   "key": "uuid/bd/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.ubd VALUES (1, 'a', '123e4567-e89b-12d3-a456-426614174000')",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-binary-doors",
+   "key": "uuid/bd/insert-undashed",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.ubd VALUES (2, 'undashed', '123e4567e89b12d3a456426614174000')",
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o56.sql.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 1.0 failed 1 times, most recent failure: Lost task 0.0 in stage 1.0 (TID 1) (localhost executor driver): java.lang.IllegalArgumentException: Invalid UUID string: 123e4567e89b12d3a456426614174000"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-27",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "DataInvalid => Invalid UUID string: 123e4567e89b12d3a456426614174000"
+     ],
+     [
+      "state",
+      null
+     ]
+    ],
+    "note": "2026-09-26 (round-4 fold, verifier V-005): Spark fails the task with java.lang.IllegalArgumentException: Invalid UUID string: 123e4567e89b12d3a456426614174000 inside a volatile Py4JJavaError stage wrapper; RePark refuses with the fork's DataInvalid => Invalid UUID string: <value>, the same core text, and no row lands on either engine"
+   }
+  },
+  {
+   "group": "uuid-binary-doors",
+   "key": "uuid/bd/src-create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.ubs (id INT, b BINARY) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-binary-doors",
+   "key": "uuid/bd/src-insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.ubs VALUES (3, X'123e4567e89b12d3a456426614174000')",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-binary-doors",
+   "key": "uuid/bd/insert-select-binary",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.ubd SELECT id, 'sel', b FROM sc.ns.ubs",
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o56.sql.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 3.0 failed 1 times, most recent failure: Lost task 0.0 in stage 3.0 (TID 3) (localhost executor driver): java.lang.IllegalArgumentException: Invalid UUID string: \u0012>Eg�\u0012ӤVBf\u0014\u0017@\u0000"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-35",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "datafusion engine error: Arrow error: Invalid argument error: Encountered non UTF-8 data: invalid utf-8 sequence of 2 bytes from index 4"
+     ],
+     [
+      "state",
+      null
+     ]
+    ],
+    "note": "2026-09-26 (round-4 fold, verifier V-004): Spark fails the task with java.lang.IllegalArgumentException: Invalid UUID string: <the UTF-8 text of the sixteen bytes> inside a volatile Py4JJavaError stage wrapper; RePark refuses before the write with Arrow's non UTF-8 text; no row lands on either engine"
+   }
+  },
+  {
+   "group": "uuid-binary-doors",
+   "key": "uuid/bd/insert-select-cast-string",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.ubd SELECT id, 'cast', CAST(b AS STRING) FROM sc.ns.ubs",
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o56.sql.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 4.0 failed 1 times, most recent failure: Lost task 0.0 in stage 4.0 (TID 4) (localhost executor driver): java.lang.IllegalArgumentException: Invalid UUID string: \u0012>Eg�\u0012ӤVBf\u0014\u0017@\u0000"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-35",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "datafusion engine error: Arrow error: Invalid argument error: Encountered non UTF-8 data: invalid utf-8 sequence of 2 bytes from index 4"
+     ],
+     [
+      "state",
+      null
+     ]
+    ],
+    "note": "2026-09-26 (round-4 fold, verifier V-004): Spark fails the task with java.lang.IllegalArgumentException: Invalid UUID string: <the UTF-8 text of the sixteen bytes> inside a volatile Py4JJavaError stage wrapper; RePark refuses before the write with Arrow's non UTF-8 text; no row lands on either engine"
+   }
+  },
+  {
+   "group": "uuid-binary-doors",
+   "key": "uuid/bd/df-writeto-append",
+   "do": "append",
+   "table": "sc.ns.ubd",
+   "schema": "id INT, name STRING, u BINARY",
+   "rows": [
+    [
+     4,
+     "df-append",
+     {
+      "bytes": "123e4567e89b12d3a456426614174000"
+     }
+    ]
+   ],
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o115.append.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 5.0 failed 1 times, most recent failure: Lost task 0.0 in stage 5.0 (TID 5) (localhost executor driver): java.lang.IllegalArgumentException: Invalid UUID string: \u0012>Eg�\u0012ӤVBf\u0014\u0017@\u0000"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-35",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "datafusion engine error: Arrow error: Invalid argument error: Encountered non UTF-8 data: invalid utf-8 sequence of 2 bytes from index 4"
+     ],
+     [
+      "state",
+      null
+     ]
+    ],
+    "note": "2026-09-26 (round-4 fold, verifier V-004): Spark fails the task with java.lang.IllegalArgumentException: Invalid UUID string: <the UTF-8 text of the sixteen bytes> inside a volatile Py4JJavaError stage wrapper; RePark refuses before the write with Arrow's non UTF-8 text; no row lands on either engine"
+   }
+  },
+  {
+   "group": "uuid-binary-doors",
+   "key": "uuid/bd/df-insert-into",
+   "do": "insert_into",
+   "table": "sc.ns.ubd",
+   "schema": "id INT, name STRING, u BINARY",
+   "rows": [
+    [
+     5,
+     "df-insertinto",
+     {
+      "bytes": "123e4567e89b12d3a456426614174000"
+     }
+    ]
+   ],
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o135.insertInto.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 6.0 failed 1 times, most recent failure: Lost task 0.0 in stage 6.0 (TID 6) (localhost executor driver): java.lang.IllegalArgumentException: Invalid UUID string: \u0012>Eg�\u0012ӤVBf\u0014\u0017@\u0000"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-35",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "datafusion engine error: Arrow error: Invalid argument error: Encountered non UTF-8 data: invalid utf-8 sequence of 2 bytes from index 4"
+     ],
+     [
+      "state",
+      null
+     ]
+    ],
+    "note": "2026-09-26 (round-4 fold, verifier V-004): Spark fails the task with java.lang.IllegalArgumentException: Invalid UUID string: <the UTF-8 text of the sixteen bytes> inside a volatile Py4JJavaError stage wrapper; RePark refuses before the write with Arrow's non UTF-8 text; no row lands on either engine"
+   }
+  },
+  {
+   "group": "uuid-binary-doors",
+   "key": "uuid/bd/df-save-as-table",
+   "do": "save_as_table",
+   "table": "sc.ns.ubd",
+   "schema": "id INT, name STRING, u BINARY",
+   "rows": [
+    [
+     6,
+     "df-saveastable",
+     {
+      "bytes": "123e4567e89b12d3a456426614174000"
+     }
+    ]
+   ],
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o155.saveAsTable.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 7.0 failed 1 times, most recent failure: Lost task 0.0 in stage 7.0 (TID 7) (localhost executor driver): java.lang.IllegalArgumentException: Invalid UUID string: \u0012>Eg�\u0012ӤVBf\u0014\u0017@\u0000"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-35",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "datafusion engine error: Arrow error: Invalid argument error: Encountered non UTF-8 data: invalid utf-8 sequence of 2 bytes from index 4"
+     ],
+     [
+      "state",
+      null
+     ]
+    ],
+    "note": "2026-09-26 (round-4 fold, verifier V-004): Spark fails the task with java.lang.IllegalArgumentException: Invalid UUID string: <the UTF-8 text of the sixteen bytes> inside a volatile Py4JJavaError stage wrapper; RePark refuses before the write with Arrow's non UTF-8 text; no row lands on either engine"
+   }
+  },
+  {
+   "group": "uuid-binary-doors",
+   "key": "uuid/bd/insert-values-binary",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.ubd VALUES (7, 'lit', X'123e4567e89b12d3a456426614174000')",
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o56.sql.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 8.0 failed 1 times, most recent failure: Lost task 0.0 in stage 8.0 (TID 8) (localhost executor driver): java.lang.IllegalArgumentException: Invalid UUID string: \u0012>Eg�\u0012ӤVBf\u0014\u0017@\u0000"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-35",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "datafusion engine error: Optimizer rule 'simplify_expressions' failed\ncaused by\nArrow error: Invalid argument error: Encountered non UTF-8 data: invalid utf-8 sequence of 2 bytes from index 4"
+     ],
+     [
+      "state",
+      null
+     ]
+    ],
+    "note": "2026-09-26 (round-4 fold, verifier V-004): Spark fails the task with java.lang.IllegalArgumentException: Invalid UUID string: <the UTF-8 text of the sixteen bytes> inside a volatile Py4JJavaError stage wrapper; RePark refuses before the write with Arrow's non UTF-8 text; no row lands on either engine"
+   }
+  },
+  {
+   "group": "uuid-binary-doors",
+   "key": "uuid/bd/rows",
+   "do": "ordered",
+   "sql": "SELECT id, name, u FROM sc.ns.ubd ORDER BY id",
+   "spark": [
+    [
+     1,
+     "a",
+     "123e4567-e89b-12d3-a456-426614174000"
+    ]
+   ]
+  },
+  {
+   "group": "uuid-binary-doors",
+   "key": "uuid/bd/struct-create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.ubst (id INT, s STRUCT<u: STRING>) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "uuid-binary-doors",
+   "key": "uuid/bd/struct-positional-insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.ubst VALUES (1, struct('x'))",
+   "spark": "ok",
+   "residue": {
+    "id": "R-36",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "UnsupportedOperationException"
+     ],
+     [
+      "msg",
+      "This feature is not implemented: Unsupported CAST from Struct(\"c0\": Utf8) to Struct(\"u\": Utf8)"
+     ],
+     [
+      "state",
+      null
+     ]
+    ],
+    "note": "2026-09-26 (round-4 fold, verifier V-007): Spark stores Row(u='x') from a positional struct literal into STRUCT<u: STRING>; RePark refuses Unsupported CAST from Struct(\"c0\": Utf8) to Struct(\"u\": Utf8); outside this unit (positional struct literal cast, generic)"
+   }
+  },
+  {
+   "group": "uuid-binary-doors",
+   "key": "uuid/bd/struct-rows",
+   "do": "ordered",
+   "sql": "SELECT id, s FROM sc.ns.ubst ORDER BY id",
+   "spark": [
+    [
+     1,
+     [
+      [
+       "u",
+       "x"
+      ]
+     ]
+    ]
+   ],
+   "residue": {
+    "id": "R-36",
+    "ledger": "task/ledgers/staging/u9-types-1-ledger.md",
+    "repark": [],
+    "note": "2026-09-26 (round-4 fold, verifier V-007): the row Spark stored from the positional struct literal; RePark stored none"
    }
   }
  ]

@@ -7,6 +7,7 @@ use datafusion::arrow::array::{RecordBatch, StringArray};
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
+use datafusion::sql::TableReference;
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::parser::{Parser, ParserError};
@@ -348,11 +349,33 @@ pub(crate) async fn execute_describe_table(
     if describe.column.is_some() {
         return crate::describe_column::execute_describe_column(ctx, &describe, &table);
     }
-    ctx.read_batch(describe_table_batch(&describe, &table)?)
+    let presentation = presentation_arrow_schema(ctx, &describe).await;
+    ctx.read_batch(describe_table_batch(
+        &describe,
+        &table,
+        presentation.as_ref(),
+    )?)
 }
 
-pub(crate) fn describe_table_batch(describe: &DescribeTable, table: &Table) -> Result<RecordBatch> {
-    let rows = describe_table_rows(describe, table)?;
+async fn presentation_arrow_schema(
+    ctx: &SessionContext,
+    describe: &DescribeTable,
+) -> Option<Schema> {
+    let reference = TableReference::full(
+        describe.catalog.clone(),
+        describe.namespace.clone(),
+        describe.table.clone(),
+    );
+    let provider = ctx.table_provider(reference).await.ok()?;
+    Some(provider.schema().as_ref().clone())
+}
+
+pub(crate) fn describe_table_batch(
+    describe: &DescribeTable,
+    table: &Table,
+    presentation: Option<&Schema>,
+) -> Result<RecordBatch> {
+    let rows = describe_table_rows(describe, table, presentation)?;
     let mut names = Vec::with_capacity(rows.len());
     let mut types = Vec::with_capacity(rows.len());
     let mut comments = Vec::with_capacity(rows.len());
@@ -379,11 +402,14 @@ pub(crate) fn describe_table_batch(describe: &DescribeTable, table: &Table) -> R
 fn describe_table_rows(
     describe: &DescribeTable,
     table: &Table,
+    presentation: Option<&Schema>,
 ) -> Result<Vec<(String, String, Option<String>)>> {
     let metadata = table.metadata();
     let iceberg_schema = metadata.current_schema();
-    let arrow_schema =
-        iceberg::arrow::schema_to_arrow_schema(iceberg_schema).map_err(iceberg_err)?;
+    let arrow_schema = match presentation {
+        Some(schema) => schema.clone(),
+        None => iceberg::arrow::schema_to_arrow_schema(iceberg_schema).map_err(iceberg_err)?,
+    };
     let mut rows = Vec::new();
     for (iceberg_field, arrow_field) in iceberg_schema
         .as_struct()

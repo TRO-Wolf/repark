@@ -58,6 +58,15 @@ works, so the attribute is gone rather than documented.
   selections stay on the identity path with no behaviour or performance change.
   pins: ice-list-null-2/C-001, C-003
 - [tests/](tests/map.md) — DELETE and identity UPDATE batteries.
+- `plain.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** `selection_refs_non_primitive` becomes
+  `selection_refs_needs_fork`: a `uuid` column in the `WHERE` joins the non-primitive ones on
+  the fork path, and `plain_identity_needs_fork` also sends an UPDATE that assigns a `uuid`
+  column there, so uuid text parses through the fork's uuid-as-string DML.
+  pins: u9-types-1/C-010
+  **WO U9-TYPES-1 round-3 fixer (2026-09-26):** `carries_uuid` looks through struct, list and
+  map children, so an UPDATE assigning a `STRUCT<u: uuid>` column (whole or one field) takes
+  the fork path too, where it was planned as a UNION of stored bytes and presented text.
+  pins: u9-types-1/C-016
 - `plain.rs` (branch) — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** `split_branch_parts`
   reads a four-part `<catalog>.<ns>.<table>.branch_<name>` DML target into the table plus the
   ref, which lands on `PredicateDmlSpec.branch`; the executor scans that ref's snapshot and

@@ -6,11 +6,12 @@ use datafusion::sql::sqlparser::ast::{
 };
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
+use repark_iceberg::catalog::uuid_presentation::presented_arrow_schema;
+use repark_iceberg::write::void_store::refuse_void_writes;
 
 use crate::merge::nested_assign::{self, AssignmentScope};
 
 struct UpdateTarget {
-    qualified: Vec<String>,
     arrow_schema: ArrowSchema,
 }
 
@@ -32,12 +33,8 @@ async fn load_update_target(
     let namespace = NamespaceIdent::from_vec(qualified[1..qualified.len() - 1].to_vec()).ok()?;
     let ident = TableIdent::new(namespace, qualified[qualified.len() - 1].clone());
     let table = catalog.load_table(&ident).await.ok()?;
-    let arrow_schema =
-        iceberg::arrow::schema_to_arrow_schema(table.metadata().current_schema()).ok()?;
-    Some(UpdateTarget {
-        qualified,
-        arrow_schema,
-    })
+    let arrow_schema = presented_arrow_schema(table.metadata().current_schema()).ok()?;
+    Some(UpdateTarget { arrow_schema })
 }
 
 pub(crate) async fn refuse_cast_then_fold_nested(
@@ -94,12 +91,6 @@ async fn refuse_incompatible_update_cast(
     object_name: &ObjectName,
     update: &Update,
 ) -> Result<()> {
-    let table_name = target
-        .qualified
-        .iter()
-        .map(|part| format!("`{part}`"))
-        .collect::<Vec<_>>()
-        .join(".");
     let table_sql = object_name.to_string();
     for assignment in &update.assignments {
         let AssignmentTarget::ColumnName(name) = &assignment.target else {
@@ -131,11 +122,13 @@ async fn refuse_incompatible_update_cast(
         let Ok(frame) = ctx.sql(&probe_sql).await else {
             return Ok(());
         };
+        let pair = [(column.as_str(), field.data_type())];
+        refuse_void_writes(ctx, "``", frame.logical_plan(), pair)?;
         let Some(source_field) = frame.schema().fields().first() else {
             return Ok(());
         };
         if let Some(text) = repark_iceberg::write::update_cast::incompatible_update_message(
-            &table_name,
+            "``",
             &format!("`{column}`"),
             source_field.data_type(),
             field.data_type(),

@@ -537,6 +537,9 @@ pins: rp-4-fork-repin/C-005, C-006
   `spark.wap.id` on its own takes the staged route recorded under IPI-05 above. `set_value` carries `#[allow(clippy::missing_errors_doc)]` — the
   sanctioned form for the pedantic lint under the comment ban.
   pins: ice-wap-branch-1/C-001, C-003, C-006, C-007, C-010, C-011
+  **WO U9-TYPES-1 round-2 fixer (2026-09-26):** the WAP read redirect's static provider sets `with_uuid_as_string(true)`
+  (RP-52 `b61c82b8`), so a redirected read presents `uuid` as text.
+  pins: u9-types-1/C-010
 - `ref_ddl.rs` — I5 snapshot-ref DDL (CREATE/DROP/REPLACE BRANCH|TAG, retention) + the
   write-to-branch sniff. **WO U5 PR2b (2026-09-24):** with no `AS OF` and no current snapshot,
   `create_ref_on_empty_table` follows Spark's `CreateOrReplaceBranchExec`: a new branch commits an
@@ -1023,6 +1026,62 @@ pins: rp-4-fork-repin/C-005, C-006
   `iceberg_v3_named_primitive`) maps the Spark type name `TIMESTAMP_LTZ` to Iceberg
   `timestamptz` whatever `spark.sql.timestampType` says, at CREATE, ADD COLUMN and nested
   (cell `TY-TIMESTAMP-LTZ`). pins: u9-types-1/C-001
+- `create_table.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** `iceberg_named_primitive` maps the
+  Spark type name `VOID` to Iceberg `unknown` at CREATE and ADD COLUMN (cell
+  `TY-UNKNOWN-VOID`); v3 commits, v1 / v2 refuse at the fork's schema choke point with its
+  Java-mirrored `Invalid schema for v<N>` text. `type_table.rs` names Arrow `Null` `void` on
+  every schema surface. pins: u9-types-1/C-009
+- `void_type.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** `rewrite_cast_null_to_void` turns
+  `CAST(NULL AS VOID)` into a typed null; `refuse_insert_void_values` refuses a non-NULL
+  `INSERT … VALUES` value into an `unknown` column with Spark's
+  `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] … Cannot safely cast `c` "INT" to "VOID".
+  SQLSTATE: KD000`, naming the value's Spark type. `spark_ast.rs`'s passthrough calls both.
+  pins: u9-types-1/C-009
+- `describe_column.rs`, `show_table_extended.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):**
+  both read the schema through repark-iceberg `presented_arrow_schema`, so a uuid column
+  describes as `string` (`DESCRIBE t u`, `SHOW TABLE EXTENDED`), as Spark measured.
+  pins: u9-types-1/C-013
+- `void_type.rs`, `update_cast.rs`, `ctas.rs` —
+  **WO U9-TYPES-1 round-1 fixer (2026-09-26):** `refuse_insert_void_values` now also judges an
+  `INSERT … SELECT` source (and so the DataFrame `writeTo(...).append()`, which lowers to one)
+  through repark-iceberg `write/void_store.rs::refuse_void_writes`, resolves back-quoted column
+  lists by their identifier, and treats only a bare `NULL` as null (`CAST(NULL AS INT)` is an
+  `INT` value, as Spark says). The UPDATE door prints the table as `` (Spark's rendering,
+  measured for `SET id = 'x'` and `SET c = 3` on VOID alike) and asks the same VOID gate with
+  the analyzer's literal types. `ctas.rs` converts its schema through
+  `arrow_schema_to_iceberg_with_unknown`, so `AS SELECT …, NULL AS c` makes `c` `unknown` on v3.
+  pins: u9-types-1/C-014, C-015
+- `cast_gate.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** the unit's one cast hook, a single
+  call in `spark_ast.rs`'s passthrough: the `CAST(NULL AS VOID)` rewrite (`void_type.rs`)
+  and the `CAST(x AS UUID)` refusal (`uuid_cast.rs`). pins: u9-types-1/C-009, C-010
+- `uuid_cast.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** `CAST(x AS UUID)` refuses with Spark's
+  `[UNSUPPORTED_DATATYPE] Unsupported data type "UUID". SQLSTATE: 0A000` and its measured
+  `== SQL (line, position) ==` window (`uuid/sql/cast`). pins: u9-types-1/C-010
+- `create_table.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** `iceberg_named_primitive` maps the
+  type name `UUID` to an Iceberg `uuid` column at CREATE and ADD COLUMN — a RePark extension
+  (orchestrator ruling 2026-09-25, residue R-25): Spark refuses the SQL spelling, RePark's API
+  door is that spelling. `describe_show.rs` renders DESCRIBE from the catalog provider's Arrow
+  schema, so a `uuid` column describes as `string`; `write_to_branch.rs` sets the fork's
+  `with_uuid_as_string(true)` on its two direct `IcebergTableProvider` builds (stage-only and
+  branch commit). pins: u9-types-1/C-010
+- `alter_column_type.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** `ALTER COLUMN … TYPE` leaves
+  `alter.rs` (1353 → 1272 lines): `schema_change_from_alter_column`,
+  `is_iceberg_promotion_target`, `push_alter_column_change` (reads the column's current type)
+  and `apply_nested_alter_type` (for `nested_column_ddl.rs`). `ALTER COLUMN u TYPE STRING` on a
+  `uuid` column succeeds and leaves the type `uuid`, as Spark's does. `lib.rs` holds its
+  156-line ceiling with the unit's four new `mod` lines by deleting four section-marker
+  comments. pins: u9-types-1/C-010
+- `spark_ast.rs` — **WO U9-TYPES-1 round-3 fixer (2026-09-26):** the passthrough awaits
+  `refuse_insert_void_values` through `Box::pin`, so its future stays off the frame that view
+  expansion recurses through (`read.rs` `expand_view_body` → `execute_view_body_query`). Inline,
+  it grew that frame until a debug build segfaulted at the 34th nested `CREATE VIEW`
+  (`test_ice_views_1.py::test_nested_view_depth_guard`); boxed, the debug wheel reaches main's
+  depth again. pins: u9-types-1/C-014
+- `update_cast.rs` — **WO U9-TYPES-1 round-3 fixer (2026-09-26):** the UPDATE target loads
+  through repark-iceberg `presented_arrow_schema`, so `UPDATE t SET s.u = '…'` folds a
+  `STRUCT<u: uuid>` field as text; with `write/predicate_dml/plain.rs` sending any assignment
+  that carries a uuid to the fork path, `SET s.u = '…'` and `SET s = named_struct('u', '…')`
+  commit like Spark. pins: u9-types-1/C-016
 - `create_table.rs` — **WO U5 PR3 (2026-09-25):** a hive-style typed `PARTITIONED BY` column
   (D-X-PARTITIONED-COLDEF) joins the schema after the declared columns and gets an identity
   field; `typed_partition_columns` raises Spark's `Cannot mix partition expressions and
@@ -1910,6 +1969,11 @@ pins: rp-4-fork-repin/C-005, C-006
   the RePark resolution gatekeeper, so unknown refs keep the pinned refusal; snapshot-id
   and timestamp spans keep `try_new_from_table_snapshot`.
   pins: ipi-07-branch-read-schema-1/C-001, C-003, C-004, C-005, C-006, C-008
+  **WO U9-TYPES-1 round-2 fixer (2026-09-26):** the SQL-door static provider (ref and snapshot builds) sets
+  `with_uuid_as_string(true)` (RP-52 `b61c82b8`): `VERSION AS OF` an id or a tag, `TIMESTAMP AS OF`
+  and `t.branch_<b>` present `uuid` as text and `u = '…'` filters on it like Spark (ledger R-29
+  retired).
+  pins: u9-types-1/C-010
 - `local_fs_ddl.rs` — SEC-02 local-filesystem DDL gate; 9 in-module tests.
 - `catalog_ops.rs` — catalog lookup, P11 refusals, `iceberg_err`, path-escape rejection, and
   `reregister*` provider invalidation. It is also the home of the v2-command intercepts

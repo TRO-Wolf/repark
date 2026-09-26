@@ -16,6 +16,7 @@ use datafusion::sql::sqlparser::ast::{
     VisitorMut, WindowType,
 };
 
+use crate::void_type::refuse_insert_void_values;
 use crate::{local_fs_ddl, window_range};
 use repark_core::CatalogRegistry;
 use repark_iceberg::write::insert_defaults;
@@ -65,6 +66,7 @@ async fn execute_passthrough_inner(
             crate::refuse_collation_in_statement(inner)?;
             crate::refuse_declared_function_in_statement(inner)?;
             crate::keyword_lower::lower_empty_map_calls(inner);
+            crate::cast_gate::rewrite_and_refuse_casts(sql, inner)?;
             if let Some(done) = try_execute_identity_dml(ctx, catalogs, inner).await? {
                 return Ok(done);
             }
@@ -77,6 +79,7 @@ async fn execute_passthrough_inner(
             crate::bare_unit::rewrite_bare_datetime_units(inner)?;
             crate::bare_nullary::demote_refusing_nullary_calls(inner);
             crate::keyword_lower::lower_spark_keywords(inner);
+            Box::pin(refuse_insert_void_values(ctx, catalogs, inner)).await?;
             // R1: DataFusion accepts only SingleQuotedString inside INTERVAL frame bounds.
             window_range::quote_unquoted_interval_range_bounds(inner);
             may_have_bare_range_bound = window_range::statement_has_bare_range_bound(inner);

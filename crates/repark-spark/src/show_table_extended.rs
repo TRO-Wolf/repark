@@ -11,6 +11,7 @@ use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use iceberg::spec::TableMetadata;
 use iceberg::{ErrorKind, NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
+use repark_iceberg::catalog::uuid_presentation::presented_arrow_schema;
 
 use crate::catalog_ops::{
     iceberg_err, name_parts, partition_management_unsupported, quoted_table_display,
@@ -232,8 +233,7 @@ fn show_table_information(
         "Table Properties: {}",
         spark_character_properties(table)
     ));
-    let arrow_schema =
-        iceberg::arrow::schema_to_arrow_schema(table.current_schema()).map_err(iceberg_err)?;
+    let arrow_schema = presented_arrow_schema(table.current_schema()).map_err(iceberg_err)?;
     lines.push(format!(
         "Schema: {}",
         spark_tree_string(arrow_schema.as_ref())

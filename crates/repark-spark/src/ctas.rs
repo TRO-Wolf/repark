@@ -7,13 +7,13 @@ use std::sync::Arc;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{CreateTable, CreateTableOptions, SqlOption};
-use iceberg::arrow::arrow_schema_to_schema_auto_assign_ids;
 use iceberg::io::FileIO;
 use iceberg::spec::UnboundPartitionSpec;
 use iceberg::transaction::{
     ApplyTransactionAction, StagedTableMode, StagedTableTransaction, Transaction,
 };
 use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
+use repark_iceberg::write::void_store::arrow_schema_to_iceberg_with_unknown;
 
 use repark_core::{CatalogRegistry, LocationPolicy};
 
@@ -214,7 +214,7 @@ pub(crate) async fn execute_ctas(
         .map_err(|error| DataFusionError::Plan(error.to_string()))?;
     let derived_schema = repark_core::relax_schema_to_nullable(arrow_schema.as_ref());
     let iceberg_schema =
-        arrow_schema_to_schema_auto_assign_ids(&derived_schema).map_err(iceberg_err)?;
+        arrow_schema_to_iceberg_with_unknown(&derived_schema).map_err(iceberg_err)?;
     let existing = match mode {
         CtasMode::Replace => Some(
             catalog

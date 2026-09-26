@@ -5,7 +5,7 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::sql::sqlparser::ast::{Expr, Statement, Visit, Visitor};
 use datafusion::sql::sqlparser::dialect::GenericDialect;
 use datafusion::sql::sqlparser::parser::Parser;
-use iceberg::spec::{Schema, Type};
+use iceberg::spec::{PrimitiveType, Schema, Type};
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
 
 use super::{
@@ -41,11 +41,7 @@ pub fn try_allowed_plain_identity(statement: &Statement) -> Result<Option<Allowe
 }
 
 #[must_use]
-pub fn selection_refs_non_primitive(
-    selection_sql: &str,
-    target_alias: &str,
-    schema: &Schema,
-) -> bool {
+pub fn selection_refs_needs_fork(selection_sql: &str, target_alias: &str, schema: &Schema) -> bool {
     let mut refs = ColumnRefs {
         target_alias,
         names: Vec::new(),
@@ -61,8 +57,13 @@ pub fn selection_refs_non_primitive(
     };
     let _ = selection.visit(&mut refs);
     refs.names.iter().any(|name| {
-        top_level_field(schema, name)
-            .is_some_and(|field| !matches!(field.field_type.as_ref(), Type::Primitive(_)))
+        top_level_field(schema, name).is_some_and(|field| {
+            !matches!(field.field_type.as_ref(), Type::Primitive(_))
+                || matches!(
+                    field.field_type.as_ref(),
+                    Type::Primitive(PrimitiveType::Uuid)
+                )
+        })
     })
 }
 
@@ -73,11 +74,30 @@ pub async fn plain_identity_needs_fork(
     let Ok(table) = catalog.load_table(&spec.target).await else {
         return false;
     };
-    selection_refs_non_primitive(
-        &spec.selection_sql,
-        &spec.target_alias,
-        table.metadata().current_schema(),
-    )
+    let schema = table.metadata().current_schema();
+    if selection_refs_needs_fork(&spec.selection_sql, &spec.target_alias, schema) {
+        return true;
+    }
+    spec.assignments.as_ref().is_some_and(|assignments| {
+        assignments.iter().any(|(name, _)| {
+            top_level_field(schema, name).is_some_and(|field| carries_uuid(&field.field_type))
+        })
+    })
+}
+
+fn carries_uuid(field_type: &Type) -> bool {
+    match field_type {
+        Type::Primitive(primitive) => matches!(primitive, PrimitiveType::Uuid),
+        Type::Struct(fields) => fields
+            .fields()
+            .iter()
+            .any(|field| carries_uuid(&field.field_type)),
+        Type::List(list) => carries_uuid(&list.element_field.field_type),
+        Type::Map(map) => {
+            carries_uuid(&map.key_field.field_type) || carries_uuid(&map.value_field.field_type)
+        }
+        Type::Variant => false,
+    }
 }
 
 struct ColumnRefs<'a> {

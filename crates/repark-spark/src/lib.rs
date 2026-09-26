@@ -1,12 +1,14 @@
 //! repark-spark — the Spark SQL door.
 
 mod alter;
+mod alter_column_type;
 mod alter_write_order;
 mod append_with_options;
 mod bare_nullary;
 mod bare_unit;
 mod call;
 mod call_args;
+mod cast_gate;
 mod catalog_ops;
 mod collation;
 mod column_move;
@@ -55,12 +57,13 @@ mod truncate;
 pub mod type_table;
 mod update_cast;
 mod use_ddl;
+mod uuid_cast;
 pub mod view_ddl;
+mod void_type;
 pub mod wap;
 mod window_range;
 pub(crate) mod write_options;
 mod write_to_branch;
-// --- Router entrypoints.
 pub use router::{
     execute, execute_static_overwrite, execute_with_read_only, execute_with_statement_options,
 };
@@ -90,17 +93,14 @@ pub(crate) fn spark_door_case_insensitive(
     !repark_functions::case_sensitive::spark_case_sensitive_from_options(options)
 }
 
-// --- Session seam adapter.
 pub use dialect::SparkDialect;
 pub use repark_functions::integer_spark::install_integer_overflow;
 
-// --- Crate-root public surface.
 pub use catalog_ops::{postgres_read_only_dml_message, reregister_catalog_provider};
 pub use metadata_tables::{
     canonical_metadata_table_name, is_metadata_table_name, sql_may_have_metadata_table_path,
 };
 
-// Domain-module re-exports keep sibling paths stable.
 pub(crate) use append_with_options::execute_append_with_options;
 pub(crate) use catalog_ops::{
     catalog_handle, iceberg_err, name_parts, namespace_schema_name, passthrough_after_p11,

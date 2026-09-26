@@ -20,6 +20,8 @@ U1-MEM-LAYOUT-1 (2026-09-23): the maintenance sweep test name now describes the 
 
 ICE-MIXED-CASE-1 (2026-09-17): `test_ice_mixed_case_1.py` pins the Spark-door case-insensitive column resolution cells against `ice_mixed_case_1_spark_oracle.json` (live PySpark 4.1.2 recording); `_record_ice_mixed_case_1.py` is the recorder driver, not a collected test. Round 3: the WHERE-cell ids read `MC-WHERE-*` (typos gate); the record script stays ruff-clean; the moved-symbol baseline carries the new `_SQLCONF_DEFAULTS` hash for the `spark.sql.caseSensitive` default row. Run 21b: the oracle JSON gains `measured_21b` (the orchestrator's `probe_mc.py` recording, verbatim) and the pin file gains the V-01 / V-02 / V-04 / L-08 cells on a `measured` memory-catalog fixture, the twin-adoption declared refusal and the 42704 ambiguity sentence. The measured V-04 INSERT cell is `xfail(strict=True)` on fork ask F-DML-FIELD-ID-1 (the pre-existing join-INSERT field-id misroute, ledger §7, registry ID-1); `test_join_using_insert_folds_and_writes_the_left_columns` keeps the fold green. Run 21b round 2 (2026-09-18): the oracle gains `measured_21b_r2` (the orchestrator's `probe_mc2.py` cells, copied from its log — the probe stopped before writing JSON); Q-21b-11 pins the three correlated IN-subquery spellings (Spark answers `[[1],[2]]`, RePark refuses loud at physical planning — declared, the same refusal as an all-lowercase schema) and the scalar-subquery cell (both refuse). N-02: the case-twin reference pin gains a correlated EXISTS cell (`t.ID` from inside the subquery refuses 42704). Q-21b-12: `test_star_over_a_case_twin_frame_answers_both_columns_declared` pins the declared `SELECT *` answer on a twin frame beside the two recorded Spark 42711 cells. `test_live_spark_matches_the_round_2_recording` re-derives every `measured_21b_r2` cell on live Spark under `REPARK_PARITY_LIVE=1` (one hadoop catalog per cell). Run 22b (N-04): each correlated IN-subquery cell also asserts Spark's recorded output column name, the requested spelling. Run 22b (the debug-wheel segfault): `test_five_thousand_branch_union_all_plans_on_the_spark_door` plans (no collect) a 5,000-branch `UNION ALL` count under the default `caseSensitive=false` — segfaulted before the grown-stack fix; about 62 s on the debug wheel (DataFusion's quadratic per-level span walk), C-022. The module docstring's `pins:` line cites C-019…C-021 explicitly (the ledger-grammar citation reads comma lists). pins: ice-mixed-case-1/C-001…C-016
 
+ICE-MIXED-CASE-1 note, U9-TYPES-1 round-3 fixer (2026-09-26): `test_measured_join_using_insert_answers_spark` (the V-04 INSERT cell) is green, its strict xfail on F-DML-FIELD-ID-1 removed; it asserts the recorded `V04_join_using_insert` Spark rows. The uuid-as-text catalog switch routes every `insert_into` through the fork's `UuidTextToBytesExec`, which rebuilds each batch against the target schema, so the right-side join column is no longer written NULL; switching it off turns the cell back to an xfail. pins: ice-mixed-case-1/C-015
+
 ICE-MIXED-CASE-1 round 5 (2026-09-17, Q-20b-2): the `true` cells pin the declared contract — backticked exact-case succeeds against the recorded `true` oracle rows (`_TRUE_BACKTICK_SQL`), unquoted exact-case refuses. pins: ice-mixed-case-1/C-006
 
 CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
@@ -36,7 +38,7 @@ U8 WRITE-SQL PR1 rounds 2-3 (2026-09-25): `u8_write_sql_spark_oracle.json` is th
 
 U8 WRITE-SQL PR1 round 4 (2026-09-25, critic r3): the oracle adds the critic's `r3/…` .. `r3e/…` and `r3fix/…` (584 cases after round 5, sha256 237118c9…; round 5 adds the verifier's `r4/…`, fractional comparisons rendered in refusal texts); a case whose RePark answer is a named residue carries `residue = {id, repark: {step, rows}}`. The facade replay covers 27 prefixes (451 cases, `r2fix/A-` and the `r3…` keys added) and skips none: every refusal compares its exact class, condition, SQLSTATE and message (R-1 by base class and Iceberg's `Cannot delete file …` text), and a residue case is held to RePark's recorded answer (an R-2 case also to Spark's rows). DECIMAL and DATE cells compare as their text. pins: u8-write-sql/C-015, C-019, C-021, C-022, C-023, C-024
 
-U8 WRITE-SQL PR2 (2026-09-25): `u8_write_sql_nested_spark_oracle.json` is the PR's Spark oracle (177 keys `pr2/…`, sha256 a4557506…, generator `target/probe-u8-pr2/build_oracle.py`, sources `target/probe-u8-pr2/spark*.json`). It covers nested struct-field assignment in UPDATE and MERGE: the two scoreboard cells, casts, refusals, conflicts, map and array targets, MoR tables and the whole-struct near misses. Fix round 2 adds the 14 `pr2/U4-…` / `M4-…` keys (`probe4.py`, whole-struct values of UPDATE and MERGE resolved by name, C-032) and retires R-17. Fix round 3 (critic V-001, V-002) adds the 24 `pr2/M5-…` / `U5-…` keys (`probe5.py`, `spark5.json` sha256 f36f21bb…): star-expanded and inserted struct values resolved by name (C-030) and repeated top-level keys (C-029). Fix round 4 (verifier V-001..V-005) adds the 30 `pr2/C6-…` / `N6-…` / `E6-…` / `B6-…` keys (`probe6.py`, `spark6.json` sha256 fd331448…): re-cased `INSERT *`, every shape under both `spark.sql.caseSensitive` values (a key's `conf`, set before the statement and reset after), reordered structs into a `NOT NULL` sub-field (an empty `seed`), schema-evolution stars and repeated INSERT keys. Fix round 5 (verifier V-001..V-003) adds the 16 `pr2/K-ci-…` / `K-cs-…` keys (`probe7.py`, `spark7.json` sha256 3049fc8b…): SET keys and INSERT column lists under both `spark.sql.caseSensitive` values and the star suggestion order. Its `provenance` block names the normalization and the residue keys (R-13 .. R-16 and R-18, 18 keys). Each residue key carries RePark's recorded answer. `test_ice_write_sql_1.py` pins the cells `W-UPDATE-NESTED-FIELD` and `W-MERGE-NESTED` (rows, schema, snapshot summary). `test_the_nested_oracle_holds_every_measurement` asserts the 161 keys, and `test_the_nested_assignment_measurements_replay_as_spark_answered` replays every key through `spark.sql` and compares the exception class name, condition, SQLSTATE, normalized message and rows. pins: u8-write-sql/C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032, C-033
+U8 WRITE-SQL PR2 (2026-09-25): `u8_write_sql_nested_spark_oracle.json` is the PR's Spark oracle (177 keys `pr2/…`, sha256 a4557506…, generator `target/probe-u8-pr2/build_oracle.py`, sources `target/probe-u8-pr2/spark*.json`). It covers nested struct-field assignment in UPDATE and MERGE: the two scoreboard cells, casts, refusals, conflicts, map and array targets, MoR tables and the whole-struct near misses. Fix round 2 adds the 14 `pr2/U4-…` / `M4-…` keys (`probe4.py`, whole-struct values of UPDATE and MERGE resolved by name, C-032) and retires R-17. Fix round 3 (critic V-001, V-002) adds the 24 `pr2/M5-…` / `U5-…` keys (`probe5.py`, `spark5.json` sha256 f36f21bb…): star-expanded and inserted struct values resolved by name (C-030) and repeated top-level keys (C-029). Fix round 4 (verifier V-001..V-005) adds the 30 `pr2/C6-…` / `N6-…` / `E6-…` / `B6-…` keys (`probe6.py`, `spark6.json` sha256 fd331448…): re-cased `INSERT *`, every shape under both `spark.sql.caseSensitive` values (a key's `conf`, set before the statement and reset after), reordered structs into a `NOT NULL` sub-field (an empty `seed`), schema-evolution stars and repeated INSERT keys. Fix round 5 (verifier V-001..V-003) adds the 16 `pr2/K-ci-…` / `K-cs-…` keys (`probe7.py`, `spark7.json` sha256 3049fc8b…): SET keys and INSERT column lists under both `spark.sql.caseSensitive` values and the star suggestion order. Its `provenance` block names the normalization and the residue keys (R-13 .. R-16 and R-18, 16 keys since `pr2/U2-order` / `U2-order2` left R-16 on 2026-09-26, WO U9-TYPES-1 round-1 fixer: the UPDATE door now prints `` as Spark does). Each residue key carries RePark's recorded answer. `test_ice_write_sql_1.py` pins the cells `W-UPDATE-NESTED-FIELD` and `W-MERGE-NESTED` (rows, schema, snapshot summary). `test_the_nested_oracle_holds_every_measurement` asserts the 161 keys, and `test_the_nested_assignment_measurements_replay_as_spark_answered` replays every key through `spark.sql` and compares the exception class name, condition, SQLSTATE, normalized message and rows. pins: u8-write-sql/C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032, C-033
 
 ## Purpose
 
@@ -84,6 +86,44 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   steps, 1 EQUAL; the rest hold residue R-15 until the uuid-as-string ruling (C-010 OPEN);
   its `add_uuid` step adds the column through the Iceberg API on Spark and through
   `ALTER TABLE … ADD COLUMN u UUID` on RePark, as the scoreboard cell does.
+  PR2 (2026-09-26): group `void` grows to 27 steps (printSchema, cast rows, `.files`
+  metrics, copy-on-write DELETE), 23 EQUAL; R-14 retires and R-22, R-23, R-24 hold the
+  v1 / v2 refusal class and the planning prefix. pins: u9-types-1/C-009
+  PR2 (2026-09-26): group `uuid` grows to 30 steps (dtypes, printSchema, ORDER BY, a
+  `bucket(4, u)` table through the `bucket_uuid` step kind, ALTER to STRING, invalid literals,
+  append, DELETE / UPDATE smoke, `.files` metrics), 25 EQUAL; R-15 retires and R-25..R-28
+  hold the rest. pins: u9-types-1/C-010
+  **WO U9-TYPES-1 round-1 fixer (2026-09-26):** the oracle of `test_u9_types_1.py` gains 41 steps in four groups (22 uuid, 19 VOID), measured on Spark 4.1.2 + Iceberg 1.11.0 by
+  `target/probe-u9-types-2/measure.py` (which replays the same `run_step`): `uuid-write` (MERGE
+  on a source column, an upper-case source, a literal, an upper-case INSERT and `UPDATE SET u`,
+  `_file` / `_pos` beside `u`), `uuid-overwrite` (`INSERT OVERWRITE` whole table and static
+  partition, `overwritePartitions` of a `STRING` column, `_partition.p` beside `u`).
+  New step kinds `overwrite_partitions` and `df_create` share `write_dataframe` with `append`.
+  pins: u9-types-1/C-013
+  **WO U9-TYPES-1 round-2 fixer (2026-09-26):** 27 more steps in group `uuid-snap`, measured by
+  `target/probe-u9-types-2/measure_r6.py`: `VERSION AS OF` a snapshot id, `TIMESTAMP AS OF`,
+  `VERSION AS OF 't1'`, `.branch_b1` and the `branch` read option before and after a branch
+  INSERT, and a WAP-staged `VERSION AS OF`, each with a uuid-literal filter. SQL may carry
+  `{ref:<table>:<ref>}` / `{wap:<table>:<wap id>}` tokens that `resolve_snapshots` turns into
+  the snapshot id (read from `.refs` / `.snapshots` on either engine); step kind `option_read`
+  collects a reader with options. Red before the static-provider switch on 13 steps.
+  pins: u9-types-1/C-010
+  **WO U9-TYPES-1 round-3 fixer (2026-09-26):** 40 more steps, measured on Spark 4.1.2 by
+  `target/probe-u9-types-2/measure_r7.py`: `uuid-binary` (a sixteen-byte `X'…'` MERGE source
+  refuses as its UTF-8 text, a 36-byte canonical text commits on `INSERT (…) VALUES`,
+  `INSERT *` and `UPDATE SET u = s.u`) and `uuid-nested` (five `STRUCT<u: uuid>` assignments
+  and an invalid nested text). `add_uuid` takes an optional `struct` name and adds
+  `<name> STRUCT<u: uuid>`. The three invalid-text refusals carry R-27. pins: u9-types-1/C-016
+  **WO U9-TYPES-1 round-4 fold (2026-09-26, verifier V-004/V-005/V-007):** 16 more steps in
+  group `uuid-binary-doors`, measured by `target/probe-u9-types-2/measure_r8.py`: the undashed
+  uuid literal (R-27), sixteen raw bytes through INSERT SELECT of a `BINARY` column,
+  `CAST(b AS STRING)`, `writeTo().append()`, `insertInto`, `saveAsTable` and `INSERT VALUES
+  X'…'` (R-35), and a positional struct literal (R-36). New step kinds `insert_into` and
+  `save_as_table` share `write_dataframe`; `decode` reads `{"bytes": <hex>}` as a `bytearray`.
+  pins: u9-types-1/C-016
+  The VOID groups: `void-write` (a value into VOID on every door; R-23) and `void-create`
+  (DataFrame create and CTAS of a NULL column on v3; v2 refuses, R-22). pins: u9-types-1/C-014,
+  C-015
 - [test_ice_error_conditions_1.py](test_ice_error_conditions_1.py) —
   **ICE-ERROR-CONDITIONS-1 / IPI-51 PR1 (2026-09-20):** constructor pins for the native
   error-condition parser — `getCondition`/`getErrorClass`/`getSqlState` on the PyO3
@@ -3851,6 +3891,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `decimal(38,0)`-rung vs `double`-infer split; A9–A11 pin the `timestamp[s]`,
   Arrow `string` and 39-digit-literal agrees.
   pins: facade-4/C-017
+  **WO U9-TYPES-1 round-2 fixer (2026-09-26):** D21's reader leg answers type key `void`, not `Null`: commit
+  `194336e5` made `type_table.rs` name Arrow `Null` with Spark's spelling of the type.
 - `test_facade_4_step1_remediation.py` — **FACADE-4 step-1 remediation round 2
   (2026-09-14):** byte-identity repro pins for the critic-logic findings
   L-001..L-005 and the Python-reviewer agreement checks — a 25-class
@@ -4448,6 +4490,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   it never belonged to the RTAS row). The live
   replay cell (`test_live_oracle_fixture_reproduces`) skips without a
   `/tmp/sparkenv` interpreter.
+  **WO U9-TYPES-1 round-3 fixer (2026-09-26):** `test_dataframe_writeto_appends_by_name` is
+  green, its strict xfail removed: Spark 4.1.2 measured `[('Ann', 'Smith', 1)]` the same day
+  (`target/probe-u9-types-2/p9.py`, key `writeto-rows`). The catalog provider's uuid-as-text
+  switch (U9-TYPES-1) wraps every `insert_into` input in the fork's `UuidTextToBytesExec`, which
+  rebuilds each batch against the target schema, so the source's `PARQUET:field_id` no longer
+  routes the write; turning the switch off turns it back to an xfail. F-DML-FIELD-ID-1 stays
+  open for a root fix in the fork. pins: ice-rtas-byname-1/C-001
+  **WO U9-TYPES-1 round-4 fold (2026-09-26, verifier V-006):** the pin compares against
+  `FIXTURE["insert_by_name"]["by_name"]["rows"]`, the measured rows it equals, not a
+  literal. pins: ice-rtas-byname-1/C-001
   **ICE-RTAS-OPS-2 (2026-09-18):** the four RTAS snapshot-operation pins
   (`test_rtas_replace_records_overwrite`, `test_rtas_new_table_records_overwrite`,
   `test_rtas_empty_new_records_delete`, `test_rtas_empty_twice_records_two_deletes`)

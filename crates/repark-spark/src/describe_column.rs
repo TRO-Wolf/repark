@@ -10,6 +10,7 @@ use datafusion::sql::sqlparser::tokenizer::Token;
 use iceberg::spec::{PartitionField, Schema as IcebergSchema, Transform};
 use iceberg::table::Table;
 use repark_common::spark_error;
+use repark_iceberg::catalog::uuid_presentation::presented_arrow_schema;
 
 use crate::catalog_ops::{iceberg_err, name_parts};
 use crate::describe_show::DescribeTable;
@@ -356,8 +357,7 @@ fn describe_column_batch(describe: &DescribeTable, table: &Table) -> Result<Reco
             fields.iter().map(|field| field.name.clone()),
         ));
     };
-    let arrow_schema =
-        iceberg::arrow::schema_to_arrow_schema(iceberg_schema).map_err(iceberg_err)?;
+    let arrow_schema = presented_arrow_schema(iceberg_schema).map_err(iceberg_err)?;
     let arrow_field = arrow_schema.fields().get(index).ok_or_else(|| {
         DataFusionError::Internal(
             "Iceberg and Arrow schemas have different field counts".to_string(),

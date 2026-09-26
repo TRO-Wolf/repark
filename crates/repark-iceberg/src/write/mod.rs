@@ -62,6 +62,7 @@ pub mod unsupported;
 #[cfg(test)]
 mod unsupported_tests;
 pub mod update_cast;
+pub mod void_store;
 pub mod write_options;
 pub mod writer_partitioning;
 pub mod writer_plan;

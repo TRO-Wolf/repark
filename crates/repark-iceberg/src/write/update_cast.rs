@@ -117,6 +117,7 @@ fn spark_update_type_name(data_type: &DataType) -> Option<&'static str> {
         DataType::Date32 | DataType::Date64 => Some("DATE"),
         DataType::Timestamp(_, _) => Some("TIMESTAMP"),
         DataType::Binary | DataType::LargeBinary | DataType::BinaryView => Some("BINARY"),
+        DataType::Null => Some("VOID"),
         _ => None,
     }
 }

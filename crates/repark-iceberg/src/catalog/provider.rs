@@ -226,12 +226,12 @@ async fn snapshot_all_schemas(
 ) -> Result<HashMap<String, Arc<dyn SchemaProvider>>> {
     let iceberg = IcebergCatalogProvider::try_new(catalog)
         .await
-        .map_err(super::iceberg_to_datafusion)?;
+        .map_err(super::iceberg_to_datafusion)?
+        .with_uuid_as_string(true);
     let mut schemas = HashMap::new();
     for name in iceberg.schema_names() {
         if let Some(schema) = iceberg.schema(&name) {
-            freeze_fork_name_directory(schema.as_ref()).await?;
-            schemas.insert(name, schema);
+            schemas.insert(name, present_fork_schema(schema).await?);
         }
     }
     Ok(schemas)
@@ -290,13 +290,18 @@ async fn build_namespace_schema(
         Arc::new(NamespaceScopedCatalog::new(catalog, namespace.clone()));
     let iceberg = IcebergCatalogProvider::try_new(scoped)
         .await
-        .map_err(super::iceberg_to_datafusion)?;
+        .map_err(super::iceberg_to_datafusion)?
+        .with_uuid_as_string(true);
     let schema = iceberg.schema(&schema_name).ok_or_else(|| {
         DataFusionError::Plan(format!(
             "namespace `{schema_name}` exists in the Iceberg catalog but produced no DF schema \
              provider after scoped rebuild"
         ))
     })?;
+    present_fork_schema(schema).await
+}
+
+async fn present_fork_schema(schema: Arc<dyn SchemaProvider>) -> Result<Arc<dyn SchemaProvider>> {
     freeze_fork_name_directory(schema.as_ref()).await?;
     Ok(schema)
 }

@@ -3,7 +3,6 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use datafusion::arrow::compute::{CastOptions, cast_with_options};
 use datafusion::arrow::datatypes::{DataType, Field, Schema, SchemaRef};
 use datafusion::arrow::record_batch::{RecordBatch, RecordBatchOptions};
 use datafusion::catalog::Session;
@@ -15,7 +14,7 @@ use datafusion::physical_plan::ExecutionPlan;
 use datafusion::physical_plan::stream::RecordBatchStreamAdapter;
 use datafusion::physical_plan::streaming::{PartitionStream, StreamingTableExec};
 use futures::TryStreamExt;
-use iceberg::arrow::{schema_to_arrow_schema, type_to_arrow_type};
+use iceberg::arrow::type_to_arrow_type;
 use iceberg::metadata_columns::{
     RESERVED_COL_NAME_DELETED, RESERVED_COL_NAME_FILE,
     RESERVED_COL_NAME_LAST_UPDATED_SEQUENCE_NUMBER, RESERVED_COL_NAME_PARTITION,
@@ -30,6 +29,7 @@ use parquet::arrow::PARQUET_FIELD_ID_META_KEY;
 
 use crate::catalog::iceberg_to_datafusion;
 use crate::catalog::lineage_columns::{table_serves_row_lineage, user_field_names};
+use crate::catalog::uuid_presentation::{convert_uuid_column, presented_arrow_schema};
 
 pub const METADATA_COLUMN_NAMES: [&str; 5] = [
     RESERVED_COL_NAME_FILE,
@@ -54,7 +54,7 @@ pub struct MetadataColumnsTableProvider {
 impl MetadataColumnsTableProvider {
     #[allow(clippy::missing_errors_doc)]
     pub fn try_new(table: Table) -> Result<Self> {
-        let user = schema_to_arrow_schema(table.metadata().current_schema())
+        let user = presented_arrow_schema(table.metadata().current_schema())
             .map_err(iceberg_to_datafusion)?;
         let schema = Arc::new(append_metadata_fields(&user, &table)?);
         Ok(Self {
@@ -327,14 +327,7 @@ fn conform_batch(
             columns.push(Arc::clone(column));
             continue;
         }
-        columns.push(cast_with_options(
-            column,
-            field.data_type(),
-            &CastOptions {
-                safe: false,
-                ..CastOptions::default()
-            },
-        )?);
+        columns.push(convert_uuid_column(column, field.data_type())?);
     }
     RecordBatch::try_new(Arc::clone(schema), columns).map_err(|error| {
         DataFusionError::Internal(format!(

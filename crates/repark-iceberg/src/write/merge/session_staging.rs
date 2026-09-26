@@ -17,6 +17,7 @@ use iceberg::writer::{IcebergWriter, IcebergWriterBuilder};
 use uuid::Uuid;
 
 use super::{cast_one_batch_to_write_schema, iceberg_err};
+use crate::catalog::uuid_presentation::stored_arrow_schema;
 use crate::write::append::fanout_conformed_stream_with_concurrency;
 use crate::write::concurrency::WriteConcurrency;
 use crate::write::conform::{conform_batch, write_default_column_names};
@@ -38,7 +39,7 @@ where
             concurrency.max_concurrent_files
         )));
     }
-    let write_schema = Arc::clone(write_schema);
+    let write_schema = stored_arrow_schema(write_schema, table.metadata().current_schema());
     let cast_stream = stream.try_filter_map(move |batch| {
         let write_schema = Arc::clone(&write_schema);
         async move {

@@ -106,7 +106,7 @@ by the goldens.
 | D18 | Iceberg `Float32` column read back | — | — | `DESCRIBE` `float` vs `session.table(...).dtypes` `double` — two surfaces inside (iii) disagree with each other |
 | D19 | Iceberg `Binary` column read back | — | — | `DESCRIBE` `binary` vs `session.table(...).dtypes` `string` |
 | D20 | Arrow `dictionary` | `StringType` | — | (not probed end-to-end; `arrow_type_key` retains the dictionary value type) |
-| D21 | Arrow `null` | `NullType` (`void`) | — | type_key `Null`; `df.schema`/`dtypes` `void` |
+| D21 | Arrow `null` | `NullType` (`void`) | — | type_key `Null` (`void` since U9-TYPES-1, 2026-09-26: `type_table.rs` names Arrow `Null` with Spark's spelling; census pin updated); `df.schema`/`dtypes` `void` |
 | D22 | Arrow `uint64` | `StringType` | — | `bigint` (type_key `long`; df.schema `bigint`) |
 | D23 | csv literal `'2024-01-02 03:04:05+05:00'` (offset timestamp) | — | `string` rung → `StringType` | csv infer → `timestamp` |
 | D24 | csv literal 38-digit integer | — | `decimal128` rung → `DecimalType(38,0)` | csv infer → `double` |

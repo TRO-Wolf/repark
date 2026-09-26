@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use datafusion::arrow::compute::{CastOptions, cast_with_options};
 use datafusion::arrow::datatypes::SchemaRef;
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::common::ScalarValue;
@@ -9,6 +8,8 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::{Expr, Operator};
 use iceberg::expr::{Predicate, Reference};
 use iceberg::spec::Datum;
+
+use crate::catalog::uuid_presentation::convert_uuid_column;
 
 #[allow(clippy::missing_errors_doc)]
 pub fn resolve_projection(batch: &RecordBatch, schema: &SchemaRef) -> Result<Vec<usize>> {
@@ -55,14 +56,7 @@ pub fn conform_batch(
             columns.push(Arc::clone(column));
             continue;
         }
-        columns.push(cast_with_options(
-            column,
-            field.data_type(),
-            &CastOptions {
-                safe: false,
-                ..CastOptions::default()
-            },
-        )?);
+        columns.push(convert_uuid_column(column, field.data_type())?);
     }
     RecordBatch::try_new(Arc::clone(schema), columns).map_err(|error| {
         DataFusionError::Internal(format!("iceberg scan could not rebuild batch: {error}"))

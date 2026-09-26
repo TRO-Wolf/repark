@@ -12,6 +12,7 @@ use super::{InsertAction, InsertClause, MatchedAction, quote_ident};
 use crate::write::insert_defaults::{ColumnDefaults, column_defaults, schema_has_primitive_fill};
 use crate::write::name_resolution::{dedup_key, resolve_arrow_field, resolve_write_column};
 use crate::write::store_assign::{self, MERGE_SPARK_CLASS};
+use crate::write::void_store::refuse_void_writes;
 use iceberg::table::Table;
 
 pub(super) fn table_projection(
@@ -109,6 +110,9 @@ pub(super) async fn insert_stream_checked(
 ) -> Result<impl Stream<Item = Result<RecordBatch>> + Unpin + use<>> {
     super::note_logical_target_sql_pass();
     let dataframe = ctx.sql(sql).await?;
+    let targets = write_schema.fields().iter();
+    let targets = targets.map(|field| (field.name().as_str(), field.data_type()));
+    refuse_void_writes(ctx, "``", dataframe.logical_plan(), targets)?;
     validate_insert_store_assignment(dataframe.schema().fields(), write_schema)?;
     dataframe.execute_stream().await
 }
@@ -180,6 +184,11 @@ async fn gate_update_probe(
     target_columns: Vec<String>,
 ) -> Result<()> {
     let dataframe = ctx.sql(probe_sql).await?;
+    let targets = target_columns.iter().filter_map(|name| {
+        let field = write_schema.field_with_name(name).ok()?;
+        Some((name.as_str(), field.data_type()))
+    });
+    refuse_void_writes(ctx, "``", dataframe.logical_plan(), targets)?;
     let planned = dataframe.schema().fields();
     if planned.len() != target_columns.len() {
         return Err(DataFusionError::Internal(format!(

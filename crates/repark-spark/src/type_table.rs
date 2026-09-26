@@ -197,6 +197,7 @@ pub fn arrow_name_at_depth(
                 .collect();
             format!("struct<{}>", parts.join(","))
         }
+        ArrowDataType::Null => "void".to_string(),
         other => format!("{other:?}"),
     }
 }

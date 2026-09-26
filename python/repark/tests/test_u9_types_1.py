@@ -5,7 +5,7 @@ group, and its observation must equal Spark's measured answer. A step whose RePa
 dated residue carries ``residue = {id, repark}``; the replay holds RePark to that recorded answer,
 so a residue that moves reds. The generator is ``target/probe-u9-types-1/build_oracle.py``.
 
-pins: u9-types-1/C-001, C-002, C-003, C-005, C-006, C-007, C-008
+pins: u9-types-1/C-001, C-002, C-003, C-005, C-006, C-007, C-008, C-013, C-014, C-015
 """
 
 from __future__ import annotations
@@ -23,6 +23,7 @@ import pytest
 
 from repark import ReparkSession
 
+SNAPSHOT_TOKEN = re.compile(r"\{(ref|wap):([^}:]+):([^}]+)\}")
 ORACLE_PATH = Path(__file__).with_name("u9_types_1_spark_oracle.json")
 ORACLE: dict[str, Any] = json.loads(ORACLE_PATH.read_text(encoding="utf-8"))
 GROUPS: list[str] = sorted({step["group"] for step in ORACLE["steps"]})
@@ -71,6 +72,8 @@ def decode(value: Any) -> Any:
         return datetime.datetime.fromisoformat(value["datetime"])
     if isinstance(value, dict) and set(value) == {"map"}:
         return dict(value["map"])
+    if isinstance(value, dict) and set(value) == {"bytes"}:
+        return bytearray.fromhex(value["bytes"])
     if isinstance(value, list):
         return [decode(item) for item in value]
     return value
@@ -105,6 +108,30 @@ def metadata_observation(metadata: dict[str, Any]) -> dict[str, Any]:
     return {"fields": schema["fields"], "spec": spec["fields"]}
 
 
+def snapshot_token(session: Any, match: re.Match[str]) -> str:
+    """Return the snapshot id one ``{ref:<table>:<ref>}`` or ``{wap:<table>:<wap id>}`` names."""
+    table, name = match.group(2), match.group(3)
+    if match.group(1) == "ref":
+        refs = session.sql(f"SELECT name, snapshot_id FROM {table}.refs").collect()
+        return str(next(row[1] for row in refs if row[0] == name))
+    snapshots = session.sql(f"SELECT snapshot_id, summary FROM {table}.snapshots").collect()
+    return str(next(row[0] for row in snapshots if (row[1] or {}).get("wap.id") == name))
+
+
+def resolve_snapshots(text: str, session: Any) -> str:
+    """Replace every snapshot token of ``text`` with the snapshot id the table holds now."""
+    return SNAPSHOT_TOKEN.sub(lambda match: snapshot_token(session, match), text)
+
+
+def option_read(session: Any, step: dict[str, Any]) -> list[Any]:
+    """Collect ``step["cols"]`` of a reader over ``step["table"]`` with the step's read options."""
+    reader = session.read
+    for key, value in step["options"].items():
+        reader = reader.option(key, resolve_snapshots(value, session))
+    frame = reader.table(step["table"])
+    return [normalize(list(row)) for row in frame.select(*step["cols"]).orderBy("id").collect()]
+
+
 def collected_rows(session: Any, sql: str, ordered: bool) -> list[Any]:
     """Collect ``sql`` and normalize its rows, sorted unless the step is ordered."""
     rows = [normalize(list(row)) for row in session.sql(sql).collect()]
@@ -122,6 +149,8 @@ def printed_schema(session: Any, sql: str) -> str:
 def observe_query(session: Any, step: dict[str, Any]) -> Any:
     """Answer the query-shaped step kinds."""
     kind = step["do"]
+    if kind == "option_read":
+        return option_read(session, step)
     sql = step["sql"]
     if kind in ("rows", "ordered"):
         return collected_rows(session, sql, kind == "ordered")
@@ -144,6 +173,8 @@ def observe_query(session: Any, step: dict[str, Any]) -> Any:
 def run_step(session: Any, step: dict[str, Any], warehouse: Path, engine: str) -> Any:
     """Run one oracle step and return its observation (an error is an observation too)."""
     try:
+        if "sql" in step:
+            step = {**step, "sql": resolve_snapshots(step["sql"], session)}
         kind = step["do"]
         if kind == "sql":
             session.sql(step["sql"]).collect()
@@ -151,12 +182,12 @@ def run_step(session: Any, step: dict[str, Any], warehouse: Path, engine: str) -
         if kind == "conf":
             session.conf.set(step["setting"], step["value"])
             return "ok"
-        if kind == "append":
-            rows = [tuple(decode(value) for value in row) for row in step["rows"]]
-            session.createDataFrame(rows, step["schema"]).writeTo(step["table"]).append()
-            return "ok"
+        if kind in ("append", "overwrite_partitions", "df_create", "insert_into", "save_as_table"):
+            return write_dataframe(session, step)
         if kind == "add_uuid":
-            return add_uuid_column(session, step["table"], engine)
+            return add_uuid_column(session, step["table"], engine, step.get("struct"))
+        if kind == "bucket_uuid":
+            return add_bucket_uuid_table(session, step["table"], engine)
         if kind == "md":
             return metadata_observation(latest_metadata(warehouse, step["table"]))
         return observe_query(session, step)
@@ -164,18 +195,73 @@ def run_step(session: Any, step: dict[str, Any], warehouse: Path, engine: str) -
         return error_observation(error, warehouse)
 
 
-def add_uuid_column(session: Any, table: str, engine: str) -> str:
-    """Add ``u uuid`` to ``table``: Spark through the Iceberg API, RePark through its SQL door."""
+def write_dataframe(session: Any, step: dict[str, Any]) -> str:
+    """Write the step's rows: ``writeTo`` append, overwritePartitions or create, or ``write``."""
+    rows = [tuple(decode(value) for value in row) for row in step["rows"]]
+    frame = session.createDataFrame(rows, step["schema"])
+    if step["do"] == "insert_into":
+        frame.write.mode("append").insertInto(step["table"])
+        return "ok"
+    if step["do"] == "save_as_table":
+        frame.write.mode("append").saveAsTable(step["table"])
+        return "ok"
+    writer = frame.writeTo(step["table"])
+    if step["do"] == "append":
+        writer.append()
+    elif step["do"] == "overwrite_partitions":
+        writer.overwritePartitions()
+    else:
+        for key, value in step.get("props", {}).items():
+            writer = writer.tableProperty(key, value)
+        writer.create()
+    return "ok"
+
+
+def add_uuid_column(session: Any, table: str, engine: str, struct: str | None = None) -> str:
+    """Add ``u uuid`` (or ``<struct> STRUCT<u: uuid>``) to ``table`` on either engine.
+
+    Spark goes through the Iceberg API, RePark through its SQL door.
+    """
     if engine == "spark":
+        jvm = session._jvm
+        loaded = jvm.org.apache.iceberg.spark.Spark3Util.loadIcebergTable(
+            session._jsparkSession, table
+        )
+        types = jvm.org.apache.iceberg.types.Types
+        column_type = types.UUIDType.get()
+        if struct is not None:
+            fields = jvm.java.util.ArrayList()
+            fields.add(types.NestedField.optional(999, "u", column_type))
+            column_type = types.StructType.of(fields)
+        loaded.updateSchema().addColumn(struct or "u", column_type).commit()
+        session.sql(f"REFRESH TABLE {table}")
+    elif struct is not None:
+        session.sql(f"ALTER TABLE {table} ADD COLUMN {struct} STRUCT<u: UUID>").collect()
+    else:
+        session.sql(f"ALTER TABLE {table} ADD COLUMN u UUID").collect()
+    return "ok"
+
+
+def add_bucket_uuid_table(session: Any, table: str, engine: str) -> str:
+    """Create ``table`` with a ``bucket(4, u)`` spec over a ``uuid`` column on both engines."""
+    if engine == "spark":
+        session.sql(f"CREATE TABLE {table} (id INT) USING iceberg").collect()
         jvm = session._jvm
         loaded = jvm.org.apache.iceberg.spark.Spark3Util.loadIcebergTable(
             session._jsparkSession, table
         )
         uuid_type = jvm.org.apache.iceberg.types.Types.UUIDType.get()
         loaded.updateSchema().addColumn("u", uuid_type).commit()
+        loaded_spec = jvm.org.apache.iceberg.spark.Spark3Util.loadIcebergTable(
+            session._jsparkSession, table
+        )
+        bucket = jvm.org.apache.iceberg.expressions.Expressions.bucket("u", 4)
+        loaded_spec.updateSpec().addField(bucket).commit()
         session.sql(f"REFRESH TABLE {table}")
     else:
-        session.sql(f"ALTER TABLE {table} ADD COLUMN u UUID").collect()
+        session.sql(
+            f"CREATE TABLE {table} (id INT, u UUID) USING iceberg PARTITIONED BY (bucket(4, u))"
+        ).collect()
     return "ok"
 
 

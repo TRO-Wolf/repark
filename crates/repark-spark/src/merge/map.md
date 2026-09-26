@@ -63,6 +63,10 @@ and the star-sentinel rewrite live here instead of in it.
   ALTER texts). Spark reads the same spellings in a SET key as value extraction with other
   refusals, and the rebuild needs the Arrow types.
   pins: u8-write-sql/C-025, C-026, C-027, C-028, C-029, C-030, C-032, C-033
+  **WO U9-TYPES-1 round-3 fixer (2026-09-26):** `merge_target_schema` reads the target through
+  repark-iceberg `presented_arrow_schema`, so a `STRUCT<u: uuid>` field folds as `Utf8`:
+  `MERGE … UPDATE SET t.s.u = s.v`, `SET t.s.u = '…'` and `SET s = s.ns` commit like Spark
+  instead of refusing `Struct("u": FixedSizeBinary(16))` store-assign. pins: u9-types-1/C-016
 
 ## Pointers
 

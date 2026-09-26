@@ -35,7 +35,8 @@ impl ReparkSession {
         let provider: Arc<dyn TableProvider> = Arc::new(
             IcebergStaticTableProvider::try_new_from_table(table)
                 .await
-                .map_err(iceberg_err)?,
+                .map_err(iceberg_err)?
+                .with_uuid_as_string(true),
         );
         self.context().read_table(provider).map_err(engine_err)
     }

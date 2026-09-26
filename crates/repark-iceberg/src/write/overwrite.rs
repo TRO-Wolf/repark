@@ -5,14 +5,14 @@ use std::sync::Arc;
 use datafusion::arrow::array::RecordBatch;
 use datafusion::arrow::datatypes::SchemaRef;
 use datafusion::error::{DataFusionError, Result};
-use futures::Stream;
-use futures::StreamExt;
 use futures::future::ready;
-use futures::stream::TryStreamExt;
-use iceberg::arrow::schema_to_arrow_schema;
+use futures::{Stream, StreamExt, TryStreamExt};
 use iceberg::spec::DataFile;
 use iceberg::table::Table;
 
+use crate::catalog::uuid_presentation::{
+    presented_arrow_schema, store_presented_batch, stored_arrow_schema,
+};
 use crate::write::append::write_partitioned_data_files_from_stream_with_concurrency;
 use crate::write::concurrency::WriteConcurrency;
 use crate::write::merge::write_data_files_from_stream_with_concurrency;
@@ -63,12 +63,13 @@ pub async fn write_overwrite_staged_files_from_stream<S>(
 where
     S: Stream<Item = Result<RecordBatch>> + Unpin,
 {
-    let write_schema: SchemaRef =
-        Arc::new(schema_to_arrow_schema(table.metadata().current_schema()).map_err(iceberg_err)?);
+    let current = table.metadata().current_schema();
+    let write_schema: SchemaRef = Arc::new(presented_arrow_schema(current).map_err(iceberg_err)?);
+    let stored = stored_arrow_schema(&write_schema, current);
     let mapped = stream
         .map(move |item| {
-            let batch = item?;
-            positional_map_overwrite_batch(&batch, &write_schema, &column_names)
+            let batch = positional_map_overwrite_batch(&item?, &write_schema, &column_names)?;
+            store_presented_batch(&batch, &stored)
         })
         .try_filter(|batch| ready(batch.num_rows() > 0));
     if table.metadata().default_partition_spec().is_unpartitioned() {
@@ -116,7 +117,6 @@ pub fn positional_map_overwrite_batch(
     } else {
         positional_map_column_list(batch, table_schema, column_names, field_count, &strict)?
     };
-    // Table field names + types (positional D9).
     let fields: Vec<Field> = table_schema
         .fields()
         .iter()

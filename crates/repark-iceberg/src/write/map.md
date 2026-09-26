@@ -340,6 +340,20 @@ repark-core's error map.
   `ansi_store_assignable` predicate (never a second matrix) with uppercase Spark type
   names; an unlisted type falls through to `None`. Both doors call it before executing
   a positional UPDATE. pins: ipi-51/W-UPDATE-TYPE-ERR
+- `update_cast.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** `spark_update_type_name`
+  names Arrow `Null` `VOID`, so `incompatible_update_message` renders a value written into a
+  `VOID` column with Spark's `CANNOT_SAFELY_CAST` text, `"INT"` to `"VOID"`. pins: u9-types-1/C-014
+- `void_store.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** `refuse_void_writes` is the
+  one VOID store gate: given a planned source and its target columns, it does nothing unless a
+  target is Arrow `Null`; then it runs the session analyzer (so an integer literal types `INT`
+  as Spark's does) and refuses the first non-NULL source through `incompatible_update_message`
+  with the caller's table display (`sc`.`ns`.`t` on INSERT / the DataFrame append, `` on
+  MERGE and UPDATE, as Spark prints). Callers: `merge/insert.rs` (INSERT and UPDATE SET gates),
+  repark-spark `void_type.rs` (INSERT … SELECT and the DataFrame append) and `update_cast.rs`.
+  `arrow_schema_to_iceberg_with_unknown` converts a CTAS / DataFrame-create Arrow schema whose
+  top-level column is `Null` (Spark `void`) to an Iceberg `unknown` field, which the fork then
+  accepts on v3 and refuses on v1 / v2 with the ADD COLUMN door's text; callers repark-spark
+  `ctas.rs` and repark-sql `create_table.rs`. pins: u9-types-1/C-014, C-015
 - `conflict_filter.rs` — **ICE-OCC-SCOPED-1 (2026-09-17):** the conflict-detection filter a DML
   commit hands the fork's serializable validation (Java `SparkScan.filterExpression()` threaded into
   `RowDelta` / `OverwriteFiles.conflictDetectionFilter` by `SparkPositionDeltaWrite` /
@@ -458,6 +472,12 @@ repark-core's error map.
   check and the cast kernel. This is the bulk-append hot path and the identity case is the common
   one; the guard and the strict cast still run for every pair that actually differs.
   pins: v3-cov-statement-coverage/C-004
+- `conform.rs`, `overwrite.rs`, `partition_overwrite.rs` — **WO U9-TYPES-1 round-1 fixer
+  (2026-09-26):** `promoted_scan_column` renders a presented uuid through
+  `../catalog/uuid_presentation.rs`; `INSERT OVERWRITE` (both forms, and the DataFrame
+  `overwritePartitions` that lowers to it) maps its source onto `presented_arrow_schema`, so a
+  `STRING` source store-assigns to a uuid column, and `store_presented_batch` parses it to
+  bytes before the writer. pins: u9-types-1/C-013
 - `concurrency.rs` — **PERF-ICE-WRITEPATH-1 round 2 (2026-09-05):** on the CTAS write node
   `repark.write.max-concurrent-files` is **binary, not a cap** — 1 writes one data file through a
   `CoalescePartitionsExec`, 2 or more writes one data file per DataFusion partition. Measured at

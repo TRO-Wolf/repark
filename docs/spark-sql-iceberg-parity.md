@@ -1438,8 +1438,12 @@ perfectly good read.
   `crates/repark-spark/src/tests/service_managed_ctas.rs::ctas_service_managed_rtas_creating_the_table_records_overwrite`,
   `…::ctas_service_managed_empty_rtas_records_delete_then_delete`,
   `…::ctas_service_managed_plain_ctas_records_append` (C-019). The suite's remaining xfail,
-  `test_dataframe_writeto_appends_by_name`, belongs to fork ask
-  F-DML-FIELD-ID-1, not this row (orchestrator ruling Q-21c-1).
+  `test_dataframe_writeto_appends_by_name`, belonged to fork ask
+  F-DML-FIELD-ID-1, not this row (orchestrator ruling Q-21c-1). Green since 2026-09-26
+  (U9-TYPES-1 round 3): the catalog provider's uuid-as-text switch wraps every `insert_into`
+  input in the fork's `UuidTextToBytesExec`, which rebuilds each batch against the target
+  schema, so the swapped-order frame lands by name (`[('Ann', 'Smith', 1)]`, measured on
+  Spark 4.1.2 the same day).
 - **Rationale** — FIXED by the fork's `with_replace_write` opt-in (F-RTAS-OPS-1)
   plus the RePark-side call on both doors (ICE-RTAS-OPS-2 round 2 added the native
   door and the service-managed new-table arms): replace mode with files stages
@@ -1966,9 +1970,14 @@ ambiguity SQLSTATE to the measured `42704` (Q-21b-1).
   `test_measured_query_cells_answer_spark[V01_* / V02_* / V04_join_using_select]` and
   `test_join_using_insert_folds_and_writes_the_left_columns`, plus the Rust
   `crates/repark-core/src/column_resolution/tests.rs` `v01_*`, `v02_*`, `v04_*`.
-  `test_measured_join_using_insert_answers_spark` (the V-04 INSERT cell) is
-  `xfail(strict=True)` on fork ask F-DML-FIELD-ID-1: the fold plans, but the right-side join
-  column of an INSERT from two Iceberg scans is written NULL (pre-existing on `origin/main`).
+  `test_measured_join_using_insert_answers_spark` (the V-04 INSERT cell) was
+  `xfail(strict=True)` on fork ask F-DML-FIELD-ID-1: the fold planned, but the right-side join
+  column of an INSERT from two Iceberg scans was written NULL. Green since 2026-09-26
+  (U9-TYPES-1 round 3) against the recorded `V04_join_using_insert` Spark rows: the catalog
+  provider's uuid-as-text switch routes every `insert_into` through the fork's
+  `UuidTextToBytesExec`, which rebuilds each batch against the target schema, so the source's
+  `PARQUET:field_id` no longer routes the write on this door; the fork ask stays open for a
+  root fix.
 - **Rationale** — FIXED on the Spark door under `false` (ICE-MIXED-CASE-1, 2026-09-17); the
   `true` unquoted-exact refusal and the stored-name output echo are DECLARED splits with pins.
   INTENDED split on the ANSI door per G11 Option A. The old declared-divergence pin reddened
@@ -8617,44 +8626,76 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   (unit pins),
   `crates/repark-sql/tests/ansi_door_u9_types.rs`.
 
-### TY-UNKNOWN-VOID — OPEN (measured 2026-09-25): a `VOID` column (Iceberg v3 `unknown`) refused at CREATE
+### TY-UNKNOWN-VOID — EQUAL (2026-09-26): a `VOID` column (Iceberg v3 `unknown`) end to end
 
-- **repark** — the Spark door refuses `VOID` at CREATE and `ADD COLUMN` (`column type `VOID` is
-  not supported yet for Iceberg tables`) and `CAST(NULL AS VOID)` (`Unsupported SQL type VOID`).
-  The refusal stays until the owned fork writes `unknown`: with the type mapped, every INSERT
-  fails in the fork's parquet writer (`FeatureUnsupported => Writing the unknown column 'c' is
-  not supported yet`) and `.files` fails in its `readable_metrics`, so accepting the DDL would
-  create tables no INSERT can write.
-- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25 (21 steps, group
-  `void` of `python/repark/tests/u9_types_1_spark_oracle.json`): v3 CREATE / ADD COLUMN store
+- **repark** — the Spark door maps `VOID` to `PrimitiveType::Unknown` on CREATE and `ADD
+  COLUMN` (and the ANSI door on CREATE); v3 commits, v1 / v2 refuse at the fork's schema
+  choke point. `INSERT … VALUES (0, NULL)` writes (the Parquet file carries no `c` column),
+  the column reads NULL and describes as `void` on every surface (`cols`, `DESCRIBE`,
+  `dtypes`, `printSchema`); a non-NULL value refuses Spark's `CANNOT_SAFELY_CAST` text;
+  `CAST(NULL AS VOID)` is a typed null; `.files` `readable_metrics.c` is all null; a
+  copy-on-write DELETE keeps the column absent. Since 2026-09-26 (C-014, C-015) the value
+  refusal holds on every door through one gate (`crates/repark-iceberg/src/write/void_store.rs`):
+  `INSERT … SELECT`, `VALUES (…, CAST(NULL AS INT))`, the DataFrame append (table
+  `sc`.`ns`.`t`), MERGE INSERT / UPDATE SET and UPDATE (table ``, as Spark prints); a CTAS or
+  DataFrame `create()` of a `NULL` column stores `unknown` on v3 and refuses on v2.
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25 (21 steps) and
+  2026-09-26 (+6 steps: printSchema, cast rows, file metrics, CoW DELETE; group `void` of
+  `python/repark/tests/u9_types_1_spark_oracle.json`): v3 CREATE / ADD COLUMN store
   `unknown`; `INSERT … VALUES (0, NULL)` writes; the column reads NULL and describes as `void`;
   `INSERT … VALUES (2, 1)` refuses `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] … Cannot
   safely cast `c` "INT" to "VOID". SQLSTATE: KD000`; v1 and v2 refuse `IllegalStateException:
   Invalid schema for v<N>: - Invalid type for c: unknown is not supported until v3`.
-- **Pin** — `python/repark/tests/test_u9_types_1.py` (group `void`, residue R-14 of
-  `task/ledgers/staging/u9-types-1-ledger.md`).
-- **Rationale** — OPEN, dated 2026-09-25, WO U9-TYPES-1 clause C-009 and hand-back question Q1
-  (the fork change: the parquet writer omits `unknown` columns, `readable_metrics` answers a
-  null metrics row).
+- **Pin** — `python/repark/tests/test_u9_types_1.py` (group `void`, residues R-22, R-23, R-24
+  of `task/ledgers/staging/u9-types-1-ledger.md`) and
+  `crates/repark-spark/src/tests/u9_void_uuid.rs`.
+- **Rationale** — EQUAL, dated 2026-09-26, WO U9-TYPES-1 clause C-009 (PROVEN). Remaining
+  dated divergences: the v1/v2 refusal class and volatile Py4J wrapper line (R-22, R-24) and
+  the planning prefix on the value refusal (R-23, also on the seven `void-write` refusals);
+  `ALTER COLUMN c TYPE …` on VOID raises a different class around the same text (R-30); a
+  VOID-only struct or array fails its write with the fork's own text (R-31).
 
-### TY-UUID-READ — OPEN (measured 2026-09-25): an Iceberg `uuid` column does not read as `string`
+### TY-UUID-READ — EQUAL (2026-09-26): an Iceberg `uuid` column reads and writes as `string`
 
-- **repark** — the Spark door refuses `UUID` at CREATE and `ADD COLUMN` (`column type `UUID` is
-  not supported yet for Iceberg tables`) and in `CAST` (`Unsupported SQL type UUID`). The
-  fork's table provider advertises `uuid` as Arrow `FixedSizeBinary(16)` (its
-  `schema_to_arrow_schema`), not `Utf8`.
-- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25 (12 steps, group
-  `uuid` of `python/repark/tests/u9_types_1_spark_oracle.json`; the wider sweep in the lane's
-  `target/probe-u9-types-1/spark.json`): SQL refuses the type name (`[UNSUPPORTED_DATATYPE]
-  Unsupported data type "UUID". SQLSTATE: 0A000`); a column added through the Iceberg API reads
-  as `string` with canonical lower-case values, takes string literals (upper case stored lower
-  case, an invalid string refused at the task with `IllegalArgumentException: Invalid UUID
-  string: …`) and DataFrame `STRING` appends.
-- **Pin** — `python/repark/tests/test_u9_types_1.py` (group `uuid`, residue R-15 of
-  `task/ledgers/staging/u9-types-1-ledger.md`).
-- **Rationale** — OPEN, dated 2026-09-25, WO U9-TYPES-1 clause C-010 and hand-back question Q2
-  (where the uuid ↔ string conversion lives, and whether the door accepts the `UUID` name that
-  Spark refuses).
+- **repark** — the Spark door accepts the `UUID` spelling on CREATE / ADD COLUMN as an
+  Iceberg `uuid` column (a RePark extension: RePark's API door is that spelling, while
+  `CAST(x AS UUID)` keeps Spark's `[UNSUPPORTED_DATATYPE]` refusal byte for byte). Every
+  provider RePark builds for an Iceberg table in the catalog path sets the fork's own
+  `with_uuid_as_string(true)` switch (the fork catalog option
+  `IcebergCatalogProvider::with_uuid_as_string`, RP-52, 2026-09-26), so `uuid` advertises
+  `Utf8` on the current-snapshot scan, `INSERT INTO` (SQL and the DataFrame append) and the
+  identity DELETE / UPDATE that reference a uuid column and take the fork path. The
+  RePark-owned paths present it through one schema presentation
+  (`crates/repark-iceberg/src/catalog/uuid_presentation.rs`, 2026-09-26): MERGE (`ON t.u =
+  s.u`, `ON t.u = '…'`, `INSERT` / `UPDATE SET u` of an upper-case string), `INSERT
+  OVERWRITE` whole-table and static-partition, `overwritePartitions`, the `_file` / `_pos` /
+  `_partition` / `_row_id` / changelog projections, `DESCRIBE t u` and `SHOW TABLE EXTENDED`.
+  Snapshot-pinned reads (`VERSION AS OF`, `TIMESTAMP AS OF`, tag, branch before and after a
+  branch INSERT, WAP-staged reads) build the fork's `IcebergStaticTableProvider` with the same
+  switch (RP-52 `b61c82b8`, F-UUID-STATIC-1; R-29 retired 2026-09-26), so they render text
+  and filter on `u = '…'`. Reads render canonical
+  lower case, upper-case literals store lower case, NULL writes, `u = '…'` filters and
+  prunes, a DataFrame append of a `STRING` column writes, `'not-a-uuid'` and `7` refuse
+  `Invalid UUID string: …`, `ORDER BY u` sorts, `bucket(4, u)` partitions, and `ALTER COLUMN
+  u TYPE STRING` is a no-op commit.
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25 (12 steps) and
+  2026-09-26 (+18 steps: dtypes, printSchema, order, bucket partition, alter-to-string,
+  invalid literals, append, DELETE / UPDATE smoke, files metrics; group `uuid` of
+  `python/repark/tests/u9_types_1_spark_oracle.json`): SQL refuses the type name
+  (`[UNSUPPORTED_DATATYPE] Unsupported data type "UUID". SQLSTATE: 0A000`); a column added
+  through the Iceberg API reads as `string` with canonical lower-case values, takes string
+  literals (upper case stored lower case, an invalid string refused at the task with
+  `IllegalArgumentException: Invalid UUID string: …`) and DataFrame `STRING` appends.
+- **Pin** — `python/repark/tests/test_u9_types_1.py` (group `uuid`, residues R-25, R-26,
+  R-27, R-28 of `task/ledgers/staging/u9-types-1-ledger.md`) and
+  `crates/repark-spark/src/tests/u9_void_uuid.rs`.
+- **Rationale** — EQUAL, dated 2026-09-26, WO U9-TYPES-1 clause C-010 (PROVEN). Remaining
+  dated divergences: the RePark-extension `UUID` spelling commit (R-25), the bucket field
+  name (R-26), the volatile task wrappers on invalid literals (R-27) and on files metrics
+  (R-28). Snapshot-pinned reads were added 2026-09-26 (R-29 retired, 27 steps in group
+  `uuid-snap`, Rust `snapshot_pinned_reads_present_uuid_text_and_filter_on_it`). MERGE, INSERT
+  OVERWRITE and the metadata-column projections were added 2026-09-26 (C-013, 22 steps in
+  groups `uuid-write` / `uuid-overwrite`, `crates/repark-spark/src/tests/u9_uuid_void_writes.rs`).
 
 ### CUTOVER-CTAS-REQ-1 — parquet CTAS keeps source non-null fields required; Spark makes every column optional
 

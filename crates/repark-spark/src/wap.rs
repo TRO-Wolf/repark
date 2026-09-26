@@ -219,7 +219,8 @@ pub(crate) async fn apply_wap_read_redirect(
             })?;
         let provider = IcebergStaticTableProvider::try_new_from_table_snapshot(table, snapshot_id)
             .await
-            .map_err(iceberg_err)?;
+            .map_err(iceberg_err)?
+            .with_uuid_as_string(true);
         let temp_name = next_temp_view_name();
         let home_catalog = "datafusion".to_string();
         let home_schema = "public".to_string();

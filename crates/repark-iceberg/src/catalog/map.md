@@ -435,6 +435,26 @@ Source comments retain only API and safety contracts; implementation narration i
   metadata-table `projection` and lists catalog entries only. Pins remain in
   `crates/repark-spark/src/tests/metadata_tables.rs`.
   pins: rp-5-fork-repin/C-003
+- `uuid_presentation.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** the one place that
+  turns an Iceberg schema into the presented Arrow schema. `presented_arrow_schema` is the
+  fork's `schema_to_arrow_schema` with every `uuid` field (found by its field id, at any
+  depth) advertised as `Utf8`, the same mapping the fork applies under `with_uuid_as_string`
+  (its helpers are crate-private at `08735de9`, so the mapping and Java's `UUID.fromString`
+  parser are mirrored here); `stored_arrow_schema` is its inverse for a writer.
+  `convert_uuid_column` is the one batch kernel both ways: `FixedSizeBinary(16)` renders
+  canonical lower-case text, text parses to bytes (`DataInvalid => Invalid UUID string: …` on
+  bad text, upper case stored lower case), nested struct / list / map children recurse, and
+  every other pair falls back to the strict cast. Callers: MERGE (`write/merge/mod.rs` write
+  schema, `session_staging.rs` store, `conform.rs::promoted_scan_column` target scan), `INSERT
+  OVERWRITE` (`write/overwrite.rs`, `write/partition_overwrite.rs`), `metadata_columns.rs`,
+  `scan_batches.rs` (`lineage_columns.rs`, `changelog.rs`, `incremental_append.rs`), and
+  repark-spark `describe_column.rs` / `show_table_extended.rs`. pins: u9-types-1/C-013
+  **WO U9-TYPES-1 round-3 fixer (2026-09-26):** a `Binary` / `LargeBinary` / `BinaryView`
+  source into a `uuid` column is decoded as UTF-8 text (invalid sequences become U+FFFD, as
+  Java's `new String(bytes, UTF_8)` does) and parsed like `Utf8`, never reinterpreted as the 16
+  bytes: sixteen raw bytes refuse `Invalid UUID string: <decoded text>`, a 36-byte canonical
+  text stores the uuid, as Spark measured. pins: u9-types-1/C-016
+  pins: u9-types-1/C-010
 - `provider.rs` — `ReparkCatalogProvider` (mutable namespace→schema map) +
   `invalidate_catalog_namespaces` / `drop_catalog_namespace_from_provider` /
   `rebuild_catalog_provider`. Product DDL rebuilds only the touched namespace; empty invalidate
@@ -445,6 +465,13 @@ Source comments retain only API and safety contracts; implementation narration i
   residual). Hosts `NamespaceScopedCatalog` (G17 closed): 14 required
   + 13 of 16 defaulted `Catalog` methods are explicit forwards; 3 composition defaults are
   stated omissions at pin `5e7b2e4` (see crate-root map "Known limitations").
+  **U9-TYPES-1 round-2 fixer (2026-09-26):** both catalog constructions (`snapshot_all_schemas`
+  and the scoped `build_namespace_schema`) set the fork catalog option
+  `IcebergCatalogProvider::with_uuid_as_string(true)` (RP-52 `b61c82b8`, F-UUID-STATIC-1), so
+  every resolved `IcebergTableProvider` presents `uuid` as `Utf8` on the current-snapshot scan,
+  `INSERT INTO` and the fork-path identity DELETE / UPDATE; the `UuidTextSchemaProvider` shim
+  (`uuid_text_schema.rs`) is deleted, its F-UUID-CATALOG-OPTION-1 removal condition met.
+  pins: u9-types-1/C-010
 - **PERF-ICE-SCAN-1 (2026-09-05):** `count(*)` folds and small tables scan in parallel,
   both fork-side (F-27) and consumed here through the unchanged `IcebergTableScan` path — no
   code in this directory changed. The fork reads row counts through an empty projection mask,
