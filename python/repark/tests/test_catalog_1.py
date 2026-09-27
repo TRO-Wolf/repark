@@ -638,7 +638,6 @@ def test_facade_two_part_sql_on_a_refused_catalog_raises_like_spark(
         "DESCRIBE c_mem.t",
         "SELECT * FROM (SELECT * FROM c_mem.t) q",
         "SELECT * FROM `c_mem`.t",
-        "SELECT * FROM C_MEM.t",
     ):
         with pytest.raises(UnsupportedOperationException) as caught:
             spark.sql(sql).collect()
@@ -647,6 +646,33 @@ def test_facade_two_part_sql_on_a_refused_catalog_raises_like_spark(
         assert caught.value.getSqlState() is None, sql
         assert _current(spark) == [["spark_catalog", "default"]], sql
     assert spark.catalog.currentCatalog() == "spark_catalog"
+
+
+def test_facade_upper_case_spelling_of_a_refused_catalog_is_not_refused(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """A case-differing spelling of a refused catalog is not refused, like Spark.
+
+    pins: catalog-1/C-014
+    """
+    spark.conf.set("spark.sql.catalog.c_mem", "org.apache.iceberg.spark.SparkCatalog")
+    spark.conf.set("spark.sql.catalog.c_mem.type", "memory")
+    spark.conf.set("spark.sql.catalog.c_mem.warehouse", str(tmp_path / "c_mem"))
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql("SELECT * FROM C_MEM.t").collect()
+    assert "Unknown catalog type" not in str(caught.value)
+    with pytest.raises(UnsupportedOperationException) as refused:
+        spark.sql("SELECT * FROM c_mem.t").collect()
+    assert str(refused.value) == "Unknown catalog type: memory"
+    spark.sql("CREATE NAMESPACE spark_catalog.c_mem")
+    spark.sql("CREATE TABLE spark_catalog.c_mem.t (id INT) USING iceberg")
+    spark.sql("INSERT INTO spark_catalog.c_mem.t VALUES (7)")
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql("SELECT * FROM C_MEM.t").collect()
+    assert "Unknown catalog type" not in str(caught.value)
+    with pytest.raises(UnsupportedOperationException) as refused:
+        spark.sql("SELECT * FROM c_mem.t").collect()
+    assert str(refused.value) == "Unknown catalog type: memory"
 
 
 def test_spark_table_on_a_refused_catalog_raises_like_spark(tmp_path: Path) -> None:

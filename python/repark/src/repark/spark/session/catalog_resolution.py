@@ -65,12 +65,10 @@ def _temp_view_home_ref(inner: Any, name: str) -> list[str] | None:
 
 
 def _refused_spelling(inner: Any, name: str) -> str | None:
-    """Registered spelling of refused catalog ``name`` (case-insensitive), else ``None``."""
+    """Registered spelling of refused catalog ``name`` (exact match), else ``None``."""
     names = _native.session_refused_catalog_names(inner)
-    lowered = name.lower()
-    for candidate in names:
-        if candidate.lower() == lowered:
-            return candidate
+    if name in names:
+        return name
     return None
 
 
@@ -104,7 +102,7 @@ def resolve_table_name(
       ``temp_view_home_ref`` answers segments), else ``currentCatalog.currentDatabase.t``
 
     * **two-part** ``ns.t`` → ``currentCatalog.ns.t`` — unless ``ns`` names a refused
-      catalog (case-insensitive), which passes through in its registered spelling so
+      catalog (exact match), which passes through so
       the engine refusal raises
 
     * **three-part** ``cat.ns.t`` → as-is (``spark_catalog`` names the session catalog only)

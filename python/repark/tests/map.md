@@ -7161,7 +7161,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`test_facade_two_part_sql_on_a_refused_catalog_raises_like_spark`,
   `test_spark_table_on_a_refused_catalog_raises_like_spark`,
   `test_two_part_name_on_a_registered_catalog_still_expands`) land with C-014; the
-  `resolve_table_name` symbol hash moves in `test_production_file_size.py`.
+  `resolve_table_name` symbol hash moves in `test_production_file_size.py`. The V-011
+  fold pin (`test_facade_upper_case_spelling_of_a_refused_catalog_is_not_refused`)
+  lands with C-014; the `C_MEM.t` arm leaves the refusal loop.
   pins: catalog-1/C-001, C-002, C-003, C-004,
   C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
 
