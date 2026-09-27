@@ -261,3 +261,10 @@ name the final Procedure/Reference/history homes; all other rows verified unchan
 Trued up 2026-09-27 (round c2): G-001–021/024 name the final intro/Procedure/Reference homes
 (G-005/022/023/025 verified unchanged). All 211 rows homed; zero unhomed.
 
+Superseded 2026-09-27 (owner ruling, one Critic by default — a change of review semantics, made
+after and apart from the read-path split): the rows above record the CCC skill as the split
+found it. G-003, G-004, G-011 (rules 1 and 3), G-013 (the handoffs), G-016, G-020, G-021 and
+G-023 now read as the skill states them: four lenses of one pass, targeted re-review, one
+independent pass at high tier. Their homes are unchanged; the record of the ruling is the CCC
+[history.md](../../../.agents/skills/critic-critic-critic/history.md).
+

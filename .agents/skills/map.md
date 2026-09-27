@@ -29,9 +29,10 @@ See [../../.claude/map.md](../../.claude/map.md).
   machine + scope-audit gate + adversarial Actor–Critic) and its binding manifest, the one file
   mapping SEPMO's abstract roles to this repo. Invoked deliberately for non-trivial work — its
   description says when not to — never auto-run on a conversational turn.
-- [critic-critic-critic/](critic-critic-critic/map.md) — **CCC**, the bound Critic engine: three
-  specialised adversarial Critics (quality + crates contracts → security/safety → pure logic) plus
-  a claims Critic, each with a context break, a coverage attestation and a findings ledger;
+- [critic-critic-critic/](critic-critic-critic/map.md) — **CCC**, the bound Critic engine: one
+  adversarial Critic working four lenses (quality + crates contracts → security/safety → pure
+  logic → claims) in one pass behind a context break, a coverage attestation per lens, one
+  findings report, and one independent pass on a high-risk change;
   review-only by default; `CCC-CONVERGED` is never Delivery. Its SEPMO binding and tier effort live
   in the manifest; it can also run alone on a diff.
 - [engineering-method/](engineering-method/map.md) — the portable, agent-agnostic working method

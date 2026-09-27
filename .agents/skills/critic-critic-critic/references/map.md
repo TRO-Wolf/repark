@@ -2,8 +2,8 @@
 
 ## Purpose
 
-The four Critic role prompts. Each is loaded by exactly one phase of [../SKILL.md](../SKILL.md)
-and carries that Critic's context-break preamble, role prompt, attack taxonomy, required coverage
+The four Critic role prompts. Each is loaded by exactly one lens of [../SKILL.md](../SKILL.md)'s
+one pass and carries that lens's context-break preamble, role prompt, attack taxonomy, required coverage
 attestation, finding-id prefixes, severity guidance, verdict form and grep signals.
 
 ## Contents

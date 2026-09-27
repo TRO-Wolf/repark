@@ -10,7 +10,7 @@ every future session acts on.
 other critics. Spawn as `explore` (needs `git log`); never `capability_mode: read-only` if the
 prompt orders git. Default **on** for ledger-bearing units (COMPLETE, unit ledger, map.md
 claim, STATUS-class record, §6 registry row). Opt-out only by explicit `claims_critic=false`.
-When on, joins every findings triad as a quad under the same mutual-exclusion rules.
+When on, it is the fourth lens of the one Critic pass, under the same evidence rules.
 
 ## Method — claims are guilty until evidenced
 
