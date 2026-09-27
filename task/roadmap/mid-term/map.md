@@ -51,6 +51,11 @@ declines it (a dated ruling in the intake, then the archive).
 - [ice-streaming-1-6.md](ice-streaming-1-6.md) — **card ICE-STREAMING (2026-09-19, v1.6.0, owner ruling C-1):**
   structured streaming read and write of Iceberg tables leaves the v1.5.0 parity gate (3 inventory cells, IPI-47) and
   is scheduled with the connectors minor; step 0 is a recorded Spark oracle, then six design questions to rule.
+- [ice-variant-1-6.md](ice-variant-1-6.md) — **card ICE-VARIANT (2026-09-27, v1.6.0, owner ruling C-4):**
+  the `variant` type leaves the v1.5.0 gate (cell `TY-VARIANT-V3`, shredded Parquet in the Spark leg, fork issue
+  R88 open) and is scheduled as integration of the upstream `parquet-variant*` crates the fork already links
+  (schema mapping, unshred on scan, shred on write, CREATE on the three doors, four SQL functions, repin);
+  step 0 is the recorded shapes dump, size 4–6 executor rounds.
 - [day-report-2026-09-19-24a.md](day-report-2026-09-19-24a.md) — **run 24a (read-performance unit 0, the RePark
   halves, the perf bumps):** the bench bed with counted I/O and the R-3 size flag, page pruning, the catalog cache and
   the footer cache on main (RP-36 → RP-38); the local re-measure gate table; `count(*)` fold held as a draft; the AWS
