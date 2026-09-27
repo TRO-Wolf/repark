@@ -10,14 +10,12 @@ MERGING append producer and every Spark batch write uses it
 site is a merging-append site, and the three ``commit.manifest*`` table
 properties must take effect exactly as they do in Spark.
 
-One half of the parity is DECLARED rather than fixed here, with a strict xfail
-that flips the moment the fork lands it. The other flipped at RP-40: fork #322
-stamps the ``manifests-created`` / ``-kept`` / ``-replaced`` snapshot summary
-keys on every operation, so that pin is a plain assertion now.
-
-* the bare ``INSERT INTO`` statement, which falls through to DataFusion and
-  commits inside the fork's ``IcebergCommitExec`` (``fast_append``), a commit
-  site this repository cannot reach at fork pin ``44834673``.
+Both halves of the parity are plain assertions now. The summary-keys half flipped
+at RP-40: fork #322 stamps the ``manifests-created`` / ``-kept`` / ``-replaced``
+snapshot summary keys on every operation. The bare-``INSERT INTO`` half flips at
+RP-54: fork #361 routes the ``IcebergCommitExec`` ``InsertOp::Append`` arm
+through the merging append, so the bare statement merges exactly like RePark's
+own append path.
 
 pins: ice-merge-append-1/C-002, C-003, C-004, C-005, C-006, C-009
 """
@@ -37,12 +35,6 @@ _CATALOG = "ma"
 _NAMESPACE = "ns"
 _VARIANTS = ("defaults", "min_count_5", "merge_disabled")
 _SUMMARY_KEYS = ("manifests-created", "manifests-kept", "manifests-replaced")
-_FORK_INSERT_ASK = (
-    "fork ask ICE-MERGE-APPEND-COMMITEXEC: a bare INSERT INTO plans on the fork's "
-    "IcebergCommitExec, whose InsertOp::Append arm commits through fast_append(); the exec is "
-    "pub(crate), so RePark cannot route it at pin 44834673. DECLARED in "
-    "docs/spark-sql-iceberg-parity.md as ICE-MERGE-APPEND-INSERT-1."
-)
 
 
 def _table_properties(variant: str) -> str:
@@ -153,22 +145,21 @@ def test_merging_commit_stamps_the_manifests_summary_keys(session: ReparkSession
     assert [summary.get(key) for key in _SUMMARY_KEYS] == ["1", "0", "4"]
 
 
-def test_bare_insert_into_still_commits_through_the_fork_commit_exec(
+def test_bare_insert_into_now_merges_through_the_fork_commit_exec(
     session: ReparkSession,
 ) -> None:
-    """Today's fork-side behaviour, pinned so the fork's fix reds this on purpose."""
+    """Fork #361: the bare INSERT INTO still plans on IcebergCommitExec, which now merges."""
     table = f"{_CATALOG}.{_NAMESPACE}.t_bare"
     _create(session, table, "defaults")
     for step in range(1, 101):
         session.sql(f"INSERT INTO {table} VALUES ({step}, 'v{step}')").collect()
-    assert _counts(session, table) == (100, 100)
+    assert _counts(session, table) == (1, 100)
     plan = session.sql(f"EXPLAIN INSERT INTO {table} VALUES (101, 'v101')").collect()
     assert any("IcebergCommitExec" in str(row[1]) for row in plan)
 
 
-@pytest.mark.xfail(strict=True, reason=_FORK_INSERT_ASK)
 def test_bare_insert_into_merges_like_spark(session: ReparkSession) -> None:
-    """Spark's bare INSERT INTO merges at the hundredth append; RePark's does not."""
+    """Spark's bare INSERT INTO merges at the hundredth append; RePark's does too."""
     table = f"{_CATALOG}.{_NAMESPACE}.t_bare_spark"
     _create(session, table, "defaults")
     for step in range(1, 101):

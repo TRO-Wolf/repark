@@ -215,8 +215,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   legs) and the three C-028 agreement pins. S7 adds the `hadoop` / `InMemoryCatalog`
   registration pins. S8 adds the Spark oracle JSON, the eleven cell replays, and the
   session-start pin `test_show_namespaces_bare_at_session_start_follows_box_not_current_catalog`
-  (41 passed; divergences EAGER-1, HADOOP-1 stay pinned in the registry; bare
-  `SHOW NAMESPACES` follows the registry box while `SELECT current_catalog()` stays `spark_catalog`).
+  (41 passed; EAGER-1 stays pinned in the registry; the HADOOP-1 pin now asserts versioned
+  metadata names plus the version-hint (RP-54, fork #359); bare `SHOW NAMESPACES` follows
+  the registry box while `SELECT current_catalog()` stays `spark_catalog`).
   pins: ice-catalog-session-1/C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026, C-027, C-028
   **WO U5 PR3 (2026-09-25):** `test_rename_across_catalogs_reads_a_namespace_like_spark`
   replaces C-022's cross-catalog refusal: `RENAME TO hc.ns.t2` from `sc` is namespace `hc.ns`
@@ -2305,10 +2306,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (100 default appends → ONE manifest, 100 files, 100 rows) and the escape hatch. **RP-40 (2026-09-20):** fork #322 stamps
   `manifests-created`/`-kept`/`-replaced` on every operation, so that pin is a plain assertion
   (five appends at `min-count-to-merge=5` stamp `1 / 0 / 4`) and registry row
-  ICE-MERGE-APPEND-SUMMARY-1 is FIXED. One strict xfail is left, naming its fork ask: the bare
-  `INSERT INTO` statement, which plans on the fork's
-  `IcebergCommitExec` (`fast_append`) and cannot be routed from this repository at pin
-  `44834673`; today's fork-side number is pinned beside it so the fork's fix reds it.
+  ICE-MERGE-APPEND-SUMMARY-1 is FIXED. **RP-54 (2026-09-26):** fork #361 routes the
+  `IcebergCommitExec` append arm through the merging append, so the strict xfail is a plain
+  assertion now (100 bare appends → ONE manifest) and the fork-side pin asserts the merged
+  number beside the `IcebergCommitExec` plan node.
   The C-005 regression half lives here too: a v3 table's `_row_id` stays contiguous and its
   rows intact across the merging hundredth append, and a merged manifest still reads every
   row of every append in order.

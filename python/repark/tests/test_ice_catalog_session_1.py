@@ -526,8 +526,8 @@ def test_show_catalogs_lists_untouched_configured_catalog(tmp_path: Path) -> Non
     assert "hc" in _catalog_names(spark)
 
 
-def test_hadoop_alias_writes_uuid_metadata_names(tmp_path: Path) -> None:
-    """HADOOP-1 pin: the aliased catalog writes UUID metadata names, no version-hint."""
+def test_hadoop_alias_writes_versioned_metadata_names(tmp_path: Path) -> None:
+    """HADOOP-1 pin: the aliased catalog writes versioned metadata names plus the hint."""
     import re
 
     spark = ReparkSession.builder.appName("pytest-ice-catalog-session-1-hd").getOrCreate()
@@ -540,12 +540,5 @@ def test_hadoop_alias_writes_uuid_metadata_names(tmp_path: Path) -> None:
     metas = sorted(warehouse.rglob("*.metadata.json"))
     assert len(metas) >= 1
     for meta in metas:
-        assert (
-            re.fullmatch(
-                r"[0-9]+-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
-                r"\.metadata\.json",
-                meta.name,
-            )
-            is not None
-        )
-    assert list(warehouse.rglob("version-hint*")) == []
+        assert re.fullmatch(r"v[0-9]+\.metadata\.json", meta.name) is not None
+    assert list(warehouse.rglob("version-hint*")) != []

@@ -254,15 +254,14 @@ def test_part_mor_nocache_matches_cached(tmp_path: Path, version: str) -> None:
 def test_evolved_spec_default_is_a_no_op(tmp_path: Path, version: str) -> None:
     """The default call on the evolved table answers zeros and commits nothing.
 
-    The layout is RePark's own, not Spark's: Spark's recorded before-state holds the five
-    live spec-0 data files in ONE manifest, RePark holds them in the three append manifests
-    its metadata delete rewrote in place. Registry row MANIFEST-4 carries the difference.
+    The before-layout holds the five live spec-0 data files in ONE manifest through the
+    fork's merging append (fork #361); the no-op call keeps it.
     """
     session = _session(tmp_path)
     table = f"mem.ns.evolved_spec_v{version}"
     _replay(session, table, _BUILDS["evolved_spec"], version)
     before = _layout(session, table)
-    assert before == [(0, 0, 1, 0), (0, 0, 2, 0), (0, 0, 2, 0), (0, 1, 0, 0)], f"before: {before}"
+    assert before == [(0, 0, 5, 0), (0, 1, 0, 0)], f"before: {before}"
     before_rows = _live_ids(session, table)
     snapshots_before = _last_op(session, table)[0]
     got = _result_row(session, f"CALL mem.system.rewrite_manifests(table => '{_ref(table)}')")

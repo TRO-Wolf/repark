@@ -1,3 +1,7 @@
+# Errata — HADOOP-1 pin flips to versioned names (2026-09-26, RP-54 / fork #359)
+
+RP-54 repin: test_hadoop_alias_writes_uuid_metadata_names re-pinned to the fork-owned shape after fork #359 — renamed test_hadoop_alias_writes_versioned_metadata_names, asserts v<N>.metadata.json plus the version-hint file.
+
 # Errata — C-022 cross-catalog RENAME half superseded (2026-09-25, U5 PR3 / ice-nested-evo-1 C-059)
 
 This note sits at the top because `completed/` ledgers are frozen except a prepended errata. C-022's second half, "cross-catalog `RENAME TO` still refuses", is superseded by ice-nested-evo-1/C-059: the Spark door now reads a catalog-qualified target inside the source catalog, as Spark 4.1.2 does. `test_rename_across_catalogs_still_refuses` is replaced by `test_ice_catalog_session_1.py::test_rename_across_catalogs_reads_a_namespace_like_spark`, and `rename_three_part_dest_across_catalogs_still_refuses` by the pins in `crates/repark-spark/src/tests/use_ddl.rs` and `rename_target.rs`. The `D-RENAME-TABLE-SHORT` half stands.

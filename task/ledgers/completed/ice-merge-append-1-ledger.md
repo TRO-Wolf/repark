@@ -1,3 +1,5 @@
+> **ERRATA 2026-09-26 (RP-54).** RP-54 repin: test_bare_insert_into_still_commits_through_the_fork_commit_exec re-pinned to the fork-owned shape after fork #361 — renamed test_bare_insert_into_now_merges_through_the_fork_commit_exec, count (100,100) to (1,100), the IcebergCommitExec plan leg stands; test_bare_insert_into_merges_like_spark un-xfailed, Spark's number now plain.
+>
 > **ERRATA 2026-09-20 (RP-40).** C-006's declared half is closed. Fork #322 stamps Java's
 > `manifests-created` / `-kept` / `-replaced` on every operation, so this unit's strict xfail
 > xpassed at the RP-40 pin and is a plain assertion now: five appends at
