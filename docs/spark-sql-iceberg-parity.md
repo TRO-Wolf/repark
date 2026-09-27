@@ -10244,6 +10244,11 @@ owned fork's maintenance actions.
   so the fork's `Overwrite` arm is unreachable and S4 is deferred to R-FILEORDER-2.
   Residuals: same-bucket-same-reducer arrival ties, `write.distribution-mode` `none`/`range`
   without a sort order, multi-task writes, runtime `SET spark.sql.shuffle.partitions`.
+- Residue — `L-INSERT-OVERWRITE` carved out of the v1.5.0 gate (owner ruling C-5,
+  2026-09-27): Spark 4.1.2's own id → `_row_id` assignment flips run to run, so the
+  harness compares it order-insensitively (`row_id_unordered`) and RePark commits to a
+  single Spark-valid outcome — see the C-5 paragraph in
+  [v1-5-0-remainder-spec-2026-09-23.md](../task/roadmap/mid-term/v1-5-0-remainder-spec-2026-09-23.md).
 
 ### V3-UPGRADE-1 — FIXED (V3-10, 2026-09-02): `ALTER … format-version = '3'` upgrades v2 to v3 in place
 
