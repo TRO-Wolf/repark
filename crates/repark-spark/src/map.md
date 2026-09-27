@@ -216,8 +216,8 @@ pins: rp-4-fork-repin/C-005, C-006
   Spark 4.1.2 answers `L-INSERT-OVERWRITE` `[[2,b,5,3],[3,c,6,3],[4,d,4,3]]` on a same-JVM
   triple but splits 2–4 across six fresh-JVM runs — one combined task whose file order is
   drawn per plan — so no deterministic source order equals Spark run to run and the cell
-  goes to the orchestrator as dated carve-out C-5.
-  pins: r-fileorder-2/C-001, C-002, C-003
+  is recorded as dated carve-out C-5 (owner ruling, 2026-09-27).
+  pins: r-fileorder-2/C-001, C-002, C-003, C-004
 - `insert_overwrite.rs` — **U7 PR1 round 2 (2026-09-24):** the stage-then-swap commit picks
   replace-partitions when the dynamic write's STAGED spec is partitioned
   (`staged_spec_is_partitioned`), not the table's current spec, so `output-spec-id` naming an

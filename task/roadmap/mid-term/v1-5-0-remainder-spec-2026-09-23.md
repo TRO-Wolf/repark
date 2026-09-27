@@ -45,7 +45,7 @@ decide something before the unit can close: **none**, **orch** (the orchestratin
 | `R-MT-DESCRIBE` | repark#806 | critic, queue |
 | `V-DESCRIBE`, `V-SHOW-TBLPROPERTIES`, `V-ALTER-UNSET`, `D-VIEW-ALTER-PROPS` | views PR2 (`xb-views2`, DESCRIBE), PR3 (`xb-views3`, ALTER VIEW), PR4 (`xb-views4`, SHOW TBLPROPERTIES) — built, measured, stacked on the merged PR1 | rebase PR2 onto main, add the V-009 red-first pin (`Expr::Struct` / `Expr::Named` in the walker battery), gate, critic, queue; then PR3, PR4 |
 | `R-MT-FILES` | fork #345 merged (position-delete files carry no field counts) | RP-48 pin bump (work order drafted, `wo/rp48-pin.md`) |
-| `R-MC-ROW-ID-V3`, `L-INSERT-OVERWRITE` | fork #346 merged (session-driven commit-order hook); RePark `java_bucket_order` slice relocated into its own module per Q-55-5, on `xo55-rid` | finish the relocation round, RP-48, then the N ≥ 6 determinism proof on both cells (ruling Q-10-1) |
+| `R-MC-ROW-ID-V3`, `L-INSERT-OVERWRITE` | fork #346 merged (session-driven commit-order hook); RePark `java_bucket_order` slice relocated into its own module per Q-55-5, on `xo55-rid` | finish the relocation round, RP-48, then the N ≥ 6 determinism proof on both cells (ruling Q-10-1). 2026-09-27: `L-INSERT-OVERWRITE` is carved out (owner ruling C-5; see "Carved out" below) — the proof covers `R-MC-ROW-ID-V3` only. |
 | `V-SHOW-CREATE`, `D-TEMP-VIEW` | views PR5 / PR6 — not started | after PR4; Spark legs recorded |
 
 ### U1 — MEM-LAYOUT: the memory catalog's table layout (ruling **owner** to confirm Q-55-7; 14 cells fully or partly)
@@ -199,7 +199,7 @@ prefix the role already grants (a bronze-style target is a separate IAM grant). 
 seam) + devin (the Python writer's retreat to a forwarder); AWS spend for the oracle and the live leg
 well under the $25 cap; the 3 GB table flag does not apply (no tables).**
 
-### Carved out (6 cells: owner rulings C-1 2026-09-19, C-2 2026-09-24, C-3 2026-09-26, C-4 2026-09-27)
+### Carved out (7 cells: owner rulings C-1 2026-09-19, C-2 2026-09-24, C-3 2026-09-26, C-4 2026-09-27, C-5 2026-09-27)
 
 `R-STREAM-READ`, `R-STREAM-READ-SKIP`, `W-STREAM-WRITE-FILESRC` — structured streaming, v1.6.0
 ([ice-streaming-1-6.md](ice-streaming-1-6.md)). Not in the 718.
@@ -224,6 +224,17 @@ variant branches, `metadata` and `value` null on every row, one row group, an em
 projecting the column (fork issue R88 open) — but it already links the upstream arrow-rs
 `parquet-variant*` crates, so the v1.6.0 work is integration, not a codec: see
 [ice-variant-1-6.md](ice-variant-1-6.md).
+
+`L-INSERT-OVERWRITE` — owner ruling C-5, 2026-09-27: Spark 4.1.2's own id → `_row_id`
+assignment for this cell flips run to run (six fresh-JVM runs split 2–4: runs 1 and 4
+answer `{2:5,3:6,4:4}`, runs 2, 3, 5 and 6 answer `{2:4,3:5,4:6}`; the same-JVM triple
+is stable; each scan plans its file order independently inside one combined task), so no
+deterministic order can match it. RePark does what Spark does on every observation Spark
+can reproduce; on the one it cannot, RePark commits to a single Spark-valid outcome. The
+harness compares that one cell's id → `_row_id` assignment order-insensitively
+(`compare.py` rule `row_id_unordered`, `overrides.json` entry `L-INSERT-OVERWRITE`, key
+`lineage`); the row set, every other column, the set of assigned `_row_id`s and every
+other observation in the cell stay exact. The cell counts as EQUAL under the rule.
 
 ### Count
 

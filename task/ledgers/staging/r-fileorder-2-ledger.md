@@ -27,7 +27,7 @@ split 2–4 (C-002), each scan planning an independent file order inside one com
 | C-001 | Spark 4.1.2 answers the cell `[[2,b,5,3],[3,c,6,3],[4,d,4,3]]` on three same-JVM runs with a fresh table each run. | R1 triple, banner-quoted, lineage `_row_id` per row plus the snapshot layout each run. | PROVEN | `target/probe-fileorder-2/spark-run{1,2,3}.json`; banner `spark=4.1.2 tz=UTC`; one output file, row order 4,2,3, `_row_id` 4,5,6. |
 | C-002 | Spark's own lineage order differs across six fresh-JVM runs: runs 1 and 4 answer `{2:5,3:6,4:4}`, runs 2, 3, 5 and 6 answer `{2:4,3:5,4:6}`. | Six fresh sessions, same statements, `_row_id` per row each run. | PROVEN | `target/probe-fileorder-2/spark-partitions.json` runs 1–6; the R1 STOP condition is met. |
 | C-003 | The order is one combined task's file order, drawn per plan: every pre-scan runs on partition 0, the pre-scan and the overwrite-scan disagree inside runs 1 and 2, the plan carries no sort or exchange, and the catalog's FileIO is in-memory. | Partition ids plus file names pre-overwrite; EXPLAIN; FileIO class from the live session. | PROVEN | `target/probe-fileorder-2/spark-partitions.json` (`pre_partitions` vs `post_sorted`) and `rule-stdout.log` (`OverwriteByExpression` → `Filter` → `ColumnarToRow` → `BatchScan`; `table_io: InMemoryFileIO`). |
-| C-004 | `L-INSERT-OVERWRITE` is a dated carve-out (C-5): R3's premise (Spark reads planned splits in file order) is refuted by C-002/C-003, no deterministic RePark order equals Spark run to run, and no code change is the correct outcome. | Orchestrator ruling on this HALT's measurements. | OPEN (the carve-out is recorded orchestrator-side) | This HALT hand-back; no source file touched. |
+| C-004 | `L-INSERT-OVERWRITE` is a dated carve-out (C-5): R3's premise (Spark reads planned splits in file order) is refuted by C-002/C-003, no deterministic RePark order equals Spark run to run, and no code change is the correct outcome. | Orchestrator ruling on this HALT's measurements. | PROVEN | owner ruling C-5 2026-09-27; harness rule `row_id_unordered`; compare-only proof 705 EQUAL / 0 DIFFERENT |
 
 ## Measurements (live oracle, recorded verbatim)
 
@@ -62,3 +62,47 @@ under `target/probe-fileorder-2/` (untracked; the numbers above are the verbatim
 |---|---|
 | R-1 | Dated 2026-09-27 (owned by the orchestrator's C-5 carve-out): `L-INSERT-OVERWRITE` cannot replay EQUAL deterministically while Spark's own answer flips run to run; re-measure against a future Spark before lifting the carve-out. |
 | R-2 | Dated 2026-09-27 (report-only): the scoreboard `sc` catalog is `InMemoryCatalog` with `InMemoryFileIO` — table bytes never reach disk, so per-file row order is measurable only through Spark SQL (`input_file_name()`), never through the warehouse tree. |
+| R-3 | Dated 2026-09-27: the harness rule hides a future RePark regression in the id → `_row_id` ORDER only — the row set, values, sequence numbers and id set stay exact — so re-measure Spark's order on the next Spark or Iceberg version before lifting the rule. |
+
+## Attestation (guided round, 2026-09-27)
+
+All four clauses are PROVEN and the diff is documents only, so the block is filed now;
+every code-behavior category below is N/A with its reason rather than an attack.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: r-fileorder-2
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Each charter clause was checked against its named evidence: C-001..C-003 against the live-oracle answers recorded verbatim in Measurements, C-004 against the owner ruling C-5 wording recorded verbatim in the spec carve-out.
+      artifacts: [task/ledgers/staging/r-fileorder-2-ledger.md, task/roadmap/mid-term/v1-5-0-remainder-spec-2026-09-23.md, docs/spark-sql-iceberg-parity.md]
+    - id: AT-2
+      status: N/A
+      justification: No input domain is added; the unit records measurements and a ruling.
+    - id: AT-3
+      status: N/A
+      justification: No error, retry, timeout or cleanup path is added or changed.
+    - id: AT-4
+      status: N/A
+      justification: No ordering mechanism is added; the run-to-run order flip is the recorded finding (C-002/C-003), not a new assumption.
+    - id: AT-5
+      status: N/A
+      justification: No privileged action, secret, deserialization or path handling is added.
+    - id: AT-6
+      status: N/A
+      justification: No stored format, migration or compatibility surface is touched; one cell's assignment is compared order-insensitively under the cited rule.
+    - id: AT-7
+      status: N/A
+      justification: No performance claim is made and no hot path is touched.
+    - id: AT-8
+      status: N/A
+      justification: No API or dependency contract is added; the cited harness rule is orchestrator-owned and named, not presumed.
+    - id: AT-9
+      status: N/A
+      justification: No log, metric or alarm surface is added; the finding is diagnosed from the recorded oracle output in Measurements.
+    - id: AT-10
+      status: N/A
+      justification: No code changed, so no test pins or mutation surface are added; clause evidence is recorded live-oracle output, and the rule's refusal properties were measured orchestrator-side.
+  complete: true
+```

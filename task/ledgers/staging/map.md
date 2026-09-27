@@ -8,7 +8,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   **R-FILEORDER-2 (2026-09-27), HALT per R1:** Spark 4.1.2's own `L-INSERT-OVERWRITE`
   lineage differs between runs (the same-JVM triple agrees, C-001; six fresh-JVM runs
   split 2–4, C-002; one combined task with a per-plan file order, C-003), so no code
-  changed and the dated carve-out C-5 is the orchestrator's (C-004).
+  changed and the dated carve-out C-5 is recorded (C-004 PROVEN 2026-09-27; R-3 filed).
   `risk_tier: standard`. Branch `fix/r-fileorder-2`.
   pins: r-fileorder-2/C-001, C-002, C-003, C-004
 - [row-lineage-order-1-ledger.md](row-lineage-order-1-ledger.md) —
