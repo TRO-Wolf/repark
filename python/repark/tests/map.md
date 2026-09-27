@@ -173,6 +173,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   TYPEOF-SQL-13 spells `timestamp_ntz`, the D4 `timestampdiff` NTZ cell replays,
   and the U9 oracle retires R-2 (NTZ insert/cast now EQUAL; R-1 repark gains row 4).
   pins: ntz-1/C-001, C-002, C-003, C-004, C-005
+- [test_uuid_cast_window_1.py](test_uuid_cast_window_1.py) +
+  [uuid_cast_window_1_spark_oracle.json](uuid_cast_window_1_spark_oracle.json) —
+  **WO UUID-CAST-WINDOW-1 (2026-09-27):** the `CAST('a' AS UUID)` refusal replays
+  Spark 4.1.2's full message byte for byte on all four oracle cases — the ASCII
+  control, forty `é` before the token, the text on a previous line, and
+  thirty-four emoji with its right truncation — pinning the scalar-counted
+  position and the 32/36 UTF-16-unit window cuts.
+  pins: uuid-cast-window-1/C-001
 - [test_ice_error_conditions_1.py](test_ice_error_conditions_1.py) —
   **ICE-ERROR-CONDITIONS-1 / IPI-51 PR1 (2026-09-20):** constructor pins for the native
   error-condition parser — `getCondition`/`getErrorClass`/`getSqlState` on the PyO3

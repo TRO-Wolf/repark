@@ -4,6 +4,15 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [uuid-cast-window-1-ledger.md](uuid-cast-window-1-ledger.md) —
+  **WO UUID-CAST-WINDOW-1 (2026-09-27), in flight:** the UUID refusal's SQL window
+  counts as Spark 4.1.2 counts — the position in Unicode scalar values, the window
+  cuts at UTF-16 code-unit offsets (32 left, 36 past the token start) with `...` on
+  each cut side — and never panics on non-ASCII SQL (C-001); the four oracle
+  messages replay byte for byte, M1 reds both Rust pins, and the mid-surrogate `?`,
+  the NTZ astral question and the unscannable-token fallback are dated residues.
+  `risk_tier: standard`. Branch `fix/uuid-cast-window-1`.
+  pins: uuid-cast-window-1/C-001
 - [r-fileorder-2-ledger.md](r-fileorder-2-ledger.md) —
   **R-FILEORDER-2 (2026-09-27), HALT per R1:** Spark 4.1.2's own `L-INSERT-OVERWRITE`
   lineage differs between runs (the same-JVM triple agrees, C-001; six fresh-JVM runs

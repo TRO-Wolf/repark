@@ -1,0 +1,33 @@
+{
+  "source": "Spark 4.1.2, measured 2026-09-27, session timezone UTC; probes probe.py and probe2.py under /tmp/oc-worker/direct/wo/uuid-cast-window-1-probes/ (two JVM runs). Each message is Spark's ParseException text without PySpark's leading and trailing newline.",
+  "cases": {
+    "case1_ascii": {
+      "sql": "SELECT CAST('a' AS UUID)",
+      "error": "ParseException",
+      "condition": "UNSUPPORTED_DATATYPE",
+      "sqlstate": "0A000",
+      "message": "[UNSUPPORTED_DATATYPE] Unsupported data type \"UUID\". SQLSTATE: 0A000\n== SQL (line 1, position 20) ==\nSELECT CAST('a' AS UUID)\n                   ^^^^"
+    },
+    "case2_nonascii": {
+      "sql": "SELECT 'éééééééééééééééééééééééééééééééééééééééé' AS x, CAST('a' AS UUID)",
+      "error": "ParseException",
+      "condition": "UNSUPPORTED_DATATYPE",
+      "sqlstate": "0A000",
+      "message": "[UNSUPPORTED_DATATYPE] Unsupported data type \"UUID\". SQLSTATE: 0A000\n== SQL (line 1, position 69) ==\n...éééééééééééé' AS x, CAST('a' AS UUID)\n                                   ^^^^"
+    },
+    "case3_newline": {
+      "sql": "SELECT 'éééééééééééééééééééééééééééééééééééééééé' AS x,\nCAST('a' AS UUID)",
+      "error": "ParseException",
+      "condition": "UNSUPPORTED_DATATYPE",
+      "sqlstate": "0A000",
+      "message": "[UNSUPPORTED_DATATYPE] Unsupported data type \"UUID\". SQLSTATE: 0A000\n== SQL (line 2, position 13) ==\nCAST('a' AS UUID)\n            ^^^^"
+    },
+    "case4_emoji": {
+      "sql": "SELECT '😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀' AS x, CAST('a' AS UUID)",
+      "error": "ParseException",
+      "condition": "UNSUPPORTED_DATATYPE",
+      "sqlstate": "0A000",
+      "message": "[UNSUPPORTED_DATATYPE] Unsupported data type \"UUID\". SQLSTATE: 0A000\n== SQL (line 1, position 63) ==\n...😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀' AS x, CAST('a' AS UU...\n                                   ^^^^"
+    }
+  }
+}
