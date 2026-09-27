@@ -445,6 +445,24 @@ async fn struct_field_key_never_binds_a_same_named_column() {
 }
 
 #[tokio::test]
+async fn unqualified_key_binds_a_qualified_items_last_segment() {
+    let wh = TempDir::new().expect("tempdir");
+    let (ctx, catalogs) = setup_tz(&wh).await;
+    seed_z(&ctx, &catalogs).await;
+    let rows = batches(
+        &ctx,
+        &catalogs,
+        "SELECT st.s FROM ice.sales.z ORDER BY s, ts",
+    )
+    .await;
+    assert_eq!(field_names(&rows), vec!["s".to_string()]);
+    assert_eq!(
+        text_col(&rows, 0),
+        vec!["x".to_string(), "y".to_string(), "z".to_string()]
+    );
+}
+
+#[tokio::test]
 async fn bare_key_matching_the_display_name_sorts_the_output_column() {
     let wh = TempDir::new().expect("tempdir");
     let (ctx, catalogs) = setup_tz(&wh).await;

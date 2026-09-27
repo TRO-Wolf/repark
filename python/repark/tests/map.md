@@ -141,7 +141,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   answers `b, a, b`, C-010), and a bare key equal to a display name sorts the output
   column (`CAST(id AS STRING) … ORDER BY id` answers `10, 2, 3`, C-011), and a
   `DISTINCT` whose key binds no select item keeps main's
-  `must appear in select list` refusal byte for byte (C-012).
+  `must appear in select list` refusal byte for byte (C-012). Fold r2 pins
+  that an unqualified key binds a qualified item's last segment
+  (`SELECT st.s … ORDER BY s, ts` answers `s` with `x, y, z`, C-009).
   pins: tz-asof-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
 - [test_partname_1.py](test_partname_1.py) — **WO PARTNAME-1 (2026-09-26):** partition-field
   names pinned per door against Spark's measured answers, read from each table's latest

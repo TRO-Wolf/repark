@@ -304,6 +304,23 @@ def test_struct_field_key_never_binds_a_same_named_column(session: ReparkSession
     assert rows == [["b"], ["a"], ["b"]]
 
 
+def test_unqualified_key_binds_a_qualified_items_last_segment(
+    session: ReparkSession,
+) -> None:
+    """An unqualified key binds a qualified item's last segment like Spark.
+
+    ``ORDER BY s`` binds the ``st.s`` item's output column, so the answer is
+    ``s`` with ``x, y, z`` where main and the rewrite-off door showed
+    ``sc.ns.z.st[s]`` with ``y, z, x``.
+
+    pins: tz-asof-1/C-009
+    """
+    seed_z(session)
+    cols, rows = observed(session, "SELECT st.s FROM sc.ns.z ORDER BY s, ts")
+    assert cols == [("s", "string")]
+    assert rows == [["x"], ["y"], ["z"]]
+
+
 def test_bare_key_matching_the_display_name_sorts_the_output_column(
     session: ReparkSession,
 ) -> None:

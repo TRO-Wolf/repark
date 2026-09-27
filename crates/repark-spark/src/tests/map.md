@@ -2138,7 +2138,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   and that a bare key equal to a display name sorts the output column
   (`CAST(id AS STRING) … ORDER BY id` answers `10, 2, 3`, C-011), and that a
   `DISTINCT` whose key binds no select item keeps main's
-  `must appear in select list` refusal byte for byte (C-012).
+  `must appear in select list` refusal byte for byte (C-012). Fold r2 pins
+  that an unqualified key binds a qualified item's last segment
+  (`SELECT st.s … ORDER BY s, ts` answers `s` with `x, y, z`, C-009).
   The setup installs production's
   integer planner so `id + 1` is `Int32` as on the facade.
   pins: tz-asof-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-011, C-012
