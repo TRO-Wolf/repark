@@ -105,6 +105,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: transcript dir not found: {root}", file=sys.stderr)
         return 2
     rows = [(label_for(path), summarize(path, args.since)) for path in transcript_files(root)]
+    rows = [(label, row) for label, row in rows if row["turns"]]
     total = total_of(rows)
     if args.json:
         payload = [{"label": label, **row} for label, row in [*rows, ("total", total)]]

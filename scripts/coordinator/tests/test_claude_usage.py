@@ -106,8 +106,7 @@ def test_since_filters_old_lines(tmp_path: Path) -> None:
     rows = run_json(tmp_path, ["--since", "2026-09-26T11:30:00+00:00"])
     assert rows["abcdef01"]["turns"] == 1
     assert rows["abcdef01"]["input_tokens"] == 10
-    assert rows["agent-98765432"]["turns"] == 0
-    assert rows["agent-98765432"]["input_tokens"] == 0
+    assert "agent-98765432" not in rows
     assert rows["total"]["turns"] == 1
     assert rows["total"]["output_tokens"] == 40
 
