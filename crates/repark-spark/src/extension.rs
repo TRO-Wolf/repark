@@ -63,6 +63,12 @@ impl SessionExtension for SparkExtension {
             crate::spark_literals::escaped_string_literals_from_config_map(session.conf)?;
         let config = crate::spark_literals::with_escaped_string_literals_config(config, verbatim);
         let config = session_catalog::with_configured_defaults(config, session.conf);
+        let shuffle_partitions =
+            repark_iceberg::write::fanout_order::shuffle_partitions_from_config_map(session.conf)?;
+        let config = repark_iceberg::write::fanout_order::with_spark_fanout_commit_order(
+            config,
+            shuffle_partitions,
+        );
         Ok(repark_functions::session_time_zone::with_session_time_zone(
             config,
             session.session_time_zone.id(),

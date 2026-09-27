@@ -10151,6 +10151,15 @@ owned fork's maintenance actions.
   ordering rule everywhere.
   Revisiting this needs a new dated decision. Pins: v3-11-row-id-determinism/C-007,
   rp-8-repin-f21-f22/C-004.
+- **Reversed for the delegated door (row-lineage-order-1, 2026-09-26; owner Q-55-1
+  2026-09-22):** a plain `INSERT INTO` that commits through the fork's `IcebergCommitExec`
+  lists its files in Spark's `FanoutWriter` order — Java `HashMap` bucket of the
+  `StructLikeWrapper` hash, then Spark's shuffle reducer, then ascending partition value —
+  R-MC-ROW-ID-V3 EQUAL. RePark's own writers (`write/file_order.rs`) still order ascending,
+  and so does `INSERT OVERWRITE`: both doors commit overwrites through owned stage-then-swap,
+  so the fork's `Overwrite` arm is unreachable and S4 is deferred to R-FILEORDER-2.
+  Residuals: same-bucket-same-reducer arrival ties, `write.distribution-mode` `none`/`range`
+  without a sort order, multi-task writes, runtime `SET spark.sql.shuffle.partitions`.
 
 ### V3-UPGRADE-1 — FIXED (V3-10, 2026-09-02): `ALTER … format-version = '3'` upgrades v2 to v3 in place
 
