@@ -118,6 +118,13 @@ Source comments retain only API and safety contracts; implementation narration i
   (`catalog/glue/src/catalog.rs:253`, `catalog/s3tables/src/catalog.rs:235` at fork `43fcd243`) so
   the wrapped factory is byte-identical to today's. A fork repin re-reads those two lines.
   pins: ice-read-perf-0/C-001, C-004
+- `no_overwrite_storage.rs` — **AWS-ACCEPT-REPLACE-1 (2026-09-27):** `NoOverwriteStorageFactory`
+  wraps any fork `StorageFactory`; the `Storage` it builds (`NoOverwriteStorage`) delegates every
+  call to the inner storage except `write`, which refuses with `Unexpected` when the path already
+  exists. S3 table buckets refuse an in-place metadata rewrite with 412 while local stores accept
+  it, so the wrapper reproduces the table-bucket contract on `LocalFs` and the Spark-door OR
+  REPLACE pin commits through it. Test-only: no product path builds it.
+  pins: aws-accept-replace-1/C-001
 - `files.rs` — **ICE-PROCS-ROUTE-1 (2026-09-19):** `write_text_file(file_io, path,
   contents)` writes one small text object through the table's fork `FileIO`
   (the Spark `rewrite_table_path` copy-plan file list). The helper lives here,

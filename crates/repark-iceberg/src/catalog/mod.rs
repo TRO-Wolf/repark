@@ -21,6 +21,7 @@ mod io_stats;
 pub(crate) mod lineage_columns;
 mod location;
 mod metadata_columns;
+mod no_overwrite_storage;
 mod provider;
 mod scan_batches;
 mod snapshot_metadata_table;
@@ -71,6 +72,7 @@ pub use metadata_columns::{
     METADATA_COLUMN_NAMES, MetadataColumnsTableProvider, is_served_metadata_column,
     metadata_columns_user_field_names,
 };
+pub use no_overwrite_storage::{NoOverwriteStorage, NoOverwriteStorageFactory};
 pub use snapshot_metadata_table::{
     MetadataAsofMode, SnapshotMetadataTableProvider, as_of_snapshot_scope_refusal,
     metadata_asof_mode, snapshot_scope_refusal_text,
