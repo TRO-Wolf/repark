@@ -17,6 +17,7 @@ pins: tz-asof-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 
 from __future__ import annotations
 
+import re
 import time
 from collections.abc import Iterator
 from pathlib import Path
@@ -24,6 +25,7 @@ from pathlib import Path
 import pytest
 
 from repark import ReparkSession
+from repark.errors import AnalysisException
 
 
 @pytest.fixture()
@@ -319,3 +321,28 @@ def test_bare_key_matching_the_display_name_sorts_the_output_column(
     assert rows == [["10"], ["2"], ["3"]]
     _, rows = observed(session, "SELECT CAST(id AS STRING) FROM sc.ns.z ORDER BY id DESC")
     assert rows == [["3"], ["2"], ["10"]]
+
+
+def test_distinct_with_an_unbindable_key_keeps_the_refusal(
+    session: ReparkSession,
+) -> None:
+    """DISTINCT with a key that binds no select item keeps main's refusal.
+
+    Spark refuses ``SELECT DISTINCT s … ORDER BY ts`` with
+    ``UNRESOLVED_COLUMN``; RePark bails the rewrite and keeps main's
+    ``must appear in select list`` text byte for byte.
+
+    pins: tz-asof-1/C-012
+    """
+    seed_z(session)
+    expected = (
+        "Error during planning: For SELECT DISTINCT, ORDER BY expressions "
+        "sc.ns.z.ts must appear in select list"
+    )
+    for sql in (
+        "SELECT DISTINCT s FROM sc.ns.z ORDER BY ts",
+        "SELECT DISTINCT CAST(s AS STRING) FROM sc.ns.z ORDER BY ts",
+    ):
+        with pytest.raises(AnalysisException) as raised:
+            session.sql(sql)
+        assert str(raised.value).splitlines()[0] == expected

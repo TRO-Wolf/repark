@@ -24,8 +24,11 @@ here and is re-exported in one line.
   The rewrite also fires with no hidden key when a bare key binds a display name
   (verifier V-002: `ORDER BY id` on `CAST(id AS STRING)` sorts the output
   column's strings, matching Spark's output binding).
-  DISTINCT stays inside the derived table, so the key joins the dedup and is
-  projected away after. Set operations, stars, `ExprWithAliases`, `SELECT INTO`,
+  DISTINCT stays inside the derived table, but on a `DISTINCT` select the
+  rewrite fires only when every key binds a select item — a hidden key inside
+  the dedup would duplicate rows (verifier V-003), so `SELECT DISTINCT s …
+  ORDER BY ts` keeps main's `must appear in select list` refusal while
+  `DISTINCT CAST(ts AS STRING) … ORDER BY ts` answers through the binding. Set operations, stars, `ExprWithAliases`, `SELECT INTO`,
   `TOP`, `EXCLUDE`, `PREWHERE`, `CONNECT BY`, Hive `CLUSTER`/`DISTRIBUTE`/`SORT BY`,
   non-expression orderings, `WITH FILL`, locks, `FOR`/`SETTINGS`/`FORMAT`/pipe
   clauses, unmapped cast targets or operators, wildcard function arguments,
@@ -43,9 +46,10 @@ here and is re-exported in one line.
   key projection, options/limit placement (C-001), the aliased base key (C-002),
   expression outer names (C-003), the aggregate cast and double-cast names (C-006),
   DISTINCT placement (C-005), ordinals, projected keys, the bail set, alias keys
-  and marker collisions (C-009), the compound-key clash bail (C-010), and the
-  display-name output binding plus qualified-key column binding (C-011).
-  pins: tz-asof-1/C-001, C-002, C-003, C-005, C-006, C-009, C-010, C-011
+  and marker collisions (C-009), the compound-key clash bail (C-010), the
+  display-name output binding plus qualified-key column binding (C-011), and
+  the DISTINCT-without-bound-keys bail (C-012).
+  pins: tz-asof-1/C-001, C-002, C-003, C-005, C-006, C-009, C-010, C-011, C-012
 - `map_ordering.rs` — **WO U9-TYPES-1 r3 (2026-09-25):** `refuse_map_ordering` walks the
   planned statement in `../spark_ast.rs`'s passthrough (SELECT, and the UPDATE / DELETE that land
   there) and refuses a map operand of `=`, `<>`, `<`, `<=`, `>`, `>=`, `<=>`, `IN` and

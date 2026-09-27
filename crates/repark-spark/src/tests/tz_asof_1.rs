@@ -55,6 +55,18 @@ async fn batches(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) ->
         .unwrap_or_else(|error| panic!("`{sql}` failed to collect: {error}"))
 }
 
+async fn refusal(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) -> String {
+    let outcome = match execute(ctx, catalogs, sql).await {
+        Ok(frame) => frame.collect().await.map(|_| ()),
+        Err(error) => Err(error),
+    };
+    match outcome {
+        Ok(()) => panic!("`{sql}` must refuse"),
+        Err(DataFusionError::Plan(text)) => text,
+        Err(error) => panic!("`{sql}` must refuse at planning: {error}"),
+    }
+}
+
 fn field_names(batches: &[RecordBatch]) -> Vec<String> {
     batches[0]
         .schema()
@@ -457,5 +469,30 @@ async fn bare_key_matching_the_display_name_sorts_the_output_column() {
     assert_eq!(
         text_col(&rows, 0),
         vec!["3".to_string(), "2".to_string(), "10".to_string()]
+    );
+}
+
+#[tokio::test]
+async fn distinct_with_an_unbindable_key_keeps_the_refusal() {
+    let wh = TempDir::new().expect("tempdir");
+    let (ctx, catalogs) = setup_tz(&wh).await;
+    seed_z(&ctx, &catalogs).await;
+    assert_eq!(
+        refusal(
+            &ctx,
+            &catalogs,
+            "SELECT DISTINCT s FROM ice.sales.z ORDER BY ts"
+        )
+        .await,
+        "For SELECT DISTINCT, ORDER BY expressions ice.sales.z.ts must appear in select list"
+    );
+    assert_eq!(
+        refusal(
+            &ctx,
+            &catalogs,
+            "SELECT DISTINCT CAST(s AS STRING) FROM ice.sales.z ORDER BY ts"
+        )
+        .await,
+        "For SELECT DISTINCT, ORDER BY expressions ice.sales.z.ts must appear in select list"
     );
 }

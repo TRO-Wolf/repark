@@ -2136,10 +2136,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `ice.sales.z` and pins that a compound key whose last segment clashes with a
   select column never binds it (`ORDER BY st.s, ts` answers `b, a, b`, C-010),
   and that a bare key equal to a display name sorts the output column
-  (`CAST(id AS STRING) … ORDER BY id` answers `10, 2, 3`, C-011).
+  (`CAST(id AS STRING) … ORDER BY id` answers `10, 2, 3`, C-011), and that a
+  `DISTINCT` whose key binds no select item keeps main's
+  `must appear in select list` refusal byte for byte (C-012).
   The setup installs production's
   integer planner so `id + 1` is `Int32` as on the facade.
-  pins: tz-asof-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-011
+  pins: tz-asof-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-011, C-012
 
 ## Mapping rule
 

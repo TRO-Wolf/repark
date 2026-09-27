@@ -81,6 +81,9 @@ fn plan(query: &Query) -> Option<Planned> {
             &mut rebound,
         )?);
     }
+    if matches!(select.distinct, Some(Distinct::Distinct)) && !extra.is_empty() {
+        return None;
+    }
     if extra.is_empty() && !rebound {
         return None;
     }
@@ -667,6 +670,14 @@ mod tests {
         let out = rewritten("SELECT DISTINCT CAST(ts AS STRING) FROM t ORDER BY ts");
         assert!(out.contains("SELECT DISTINCT"), "{out}");
         assert!(out.contains("__repark_sort_sel_0 AS \"ts\""), "{out}");
+        assert!(out.contains("ORDER BY __repark_sort_sel_0"), "{out}");
+    }
+
+    #[test]
+    fn distinct_with_a_key_that_cannot_bind_bails() {
+        untouched("SELECT DISTINCT s FROM t ORDER BY ts");
+        untouched("SELECT DISTINCT CAST(s AS STRING) FROM t ORDER BY ts");
+        untouched("SELECT DISTINCT s FROM t ORDER BY st.s");
     }
 
     #[test]
