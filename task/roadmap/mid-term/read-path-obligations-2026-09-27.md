@@ -224,30 +224,30 @@ Trigger key: **O** = orchestrator / governing session, **E** = executor (unit / 
 
 | ID | Obligation | Old home | New home | Trigger |
 |----|-----------|----------|----------|---------|
-| G-001 | CCC is the taxonomy home; binders load this file + role references and do not restate them. | CCC intro | CCC P (kept) | C |
-| G-002 | Spawning is a tool mechanic; it lives in the tool adapter, never here. | CCC intro | CCC P (kept) | O, C |
-| G-003 | No Actor build phase by default; never merge roles into one pass. | CCC intro | CCC P (kept) | C |
-| G-004 | review-only runs Critics in parallel with peer reports withheld; review-and-fix runs sequential until each Critic is CLEAN; merge order 1→2→3→4. | CCC intro | CCC P (kept) | C |
-| G-005 | Four phases (quality+crates, safety/security, logic, claims/record); Critic-4 default-on for ledger-bearing units, opt-out only explicit. | CCC phase table | CCC P (kept) | C |
-| G-006 | Role prompts live in references/01–04 and are loaded per phase. | CCC references | CCC P (kept) | C |
-| G-007 | Doctrines: context-break opening line, artifact evidence, no building, null-report coverage, concrete findings, evidenced rebuttals, gates still pass, honest labels, red-on-revert pins, specialization with HANDOFF-only glare. | CCC doctrines | CCC P (kept) + R detail | C |
-| G-008 | Parse parameters (task, repo, dependency_repos, mode, max_cycles=2, severity_floor=S1, risk_tier, claims_critic, verify); ask only if ambiguous. | CCC Parameters | CCC P (kept) | C |
-| G-009 | Risk tiers (exempt/mechanical/standard/high) set CCC intensity; auto-detect from riskiest file; behavior-affecting ≥ standard; multi-step publish/commit → high. | CCC Risk tiers | CCC P (kept) | C |
-| G-010 | Severity scale S0–S3. | CCC Severity | CCC P (kept) | C |
-| G-011 | Absolute rules 1–13 (distinct phases, context break, parallel/sequential, evidenced findings/rebuttals, no secrets, repo contracts win, never weaken gates, mutation-proof tests, green≠convergence, dependency scope, crates contract, spawn contract). | CCC Absolute rules | CCC P (kept) | C |
-| G-012 | Spawn contract: Critics read+shell, never edit, always fresh; Fixer edits but never converges; shell for git/verify; scratch copy never live tree; role instructions in the prompt; commits carry repo identity. | CCC Spawn contract | CCC P (kept) + R table | O, C |
-| G-013 | Crates/library attack contract in Critic-1 for library roots (thiserror, typed errors, locks, recursion, casts, tests, async); handoffs to Critic-2/3 at the boundary. | CCC Crates contract | CCC P (pointer) + R detail | C |
-| G-014 | Convergence labels: CCC-CONVERGED vs TEST-GATED vs HALTED; never relabel TEST-GATED. | CCC Convergence | CCC P (kept) | C |
-| G-015 | Workflow: setup (params, contracts, dependency_repos, baseline, tier, slice charter); stop on ambiguous scope or exempt. | CCC Workflow | CCC P (kept) | C |
-| G-016 | Phases 1–3: context break, load reference, fresh subagent on the current diff, taxonomy + attestation + findings, skeptic/span/nulls, verdict; review-and-fix gates the next phase on CLEAN. | CCC Workflow | CCC P (kept) | C |
-| G-017 | Convergence checklist (artifacts, floor, dispositions, green, mutation-proof, enumeration, dependency_repos, logic + claims attestations); Critic-4 with CL-IDENTITY via %ae when on. | CCC Workflow | CCC P (kept) | C |
-| G-018 | Finding schema (id, severity, category, claim, evidence, disposition, rebuttal). | CCC Finding schema | CCC P (kept) | C |
-| G-019 | Final user report in the required shape. | CCC Final report | CCC P (kept) | C |
-| G-020 | Subagent guidance: role-shape table; adapter owns agent-type mapping; sequential hat-switches only when unspawnable, named as weaker. | CCC Subagent | CCC P (kept) | O, C |
-| G-021 | High tier prefers real subagents per Critic; no invented swarm. | CCC Subagent | CCC P (kept) | O, C |
+| G-001 | CCC is the taxonomy home; binders load this file + role references and do not restate them. | CCC intro | CCC intro + P (pointer) | C |
+| G-002 | Spawning is a tool mechanic; it lives in the tool adapter, never here. | CCC intro | CCC intro + P (pointer) | O, C |
+| G-003 | No Actor build phase by default; never merge roles into one pass. | CCC intro | CCC intro + P (pointer) | C |
+| G-004 | review-only runs Critics in parallel with peer reports withheld; review-and-fix runs sequential until each Critic is CLEAN; merge order 1→2→3→4. | CCC intro | CCC intro + P (pointer) | C |
+| G-005 | Four phases (quality+crates, safety/security, logic, claims/record); Critic-4 default-on for ledger-bearing units, opt-out only explicit. | CCC phase table | CCC intro (kept) | C |
+| G-006 | Role prompts live in references/01–04 and are loaded per phase. | CCC references | CCC intro + P (pointer) | C |
+| G-007 | Doctrines: context-break opening line, artifact evidence, no building, null-report coverage, concrete findings, evidenced rebuttals, gates still pass, honest labels, red-on-revert pins, specialization with HANDOFF-only glare. | CCC doctrines | CCC intro + P (pointer) | C |
+| G-008 | Parse parameters (task, repo, dependency_repos, mode, max_cycles=2, severity_floor=S1, risk_tier, claims_critic, verify); ask only if ambiguous. | CCC Parameters | CCC P (pointer) + R (rule) | C |
+| G-009 | Risk tiers (exempt/mechanical/standard/high) set CCC intensity; auto-detect from riskiest file; behavior-affecting ≥ standard; multi-step publish/commit → high. | CCC Risk tiers | CCC P (pointer) + R (rule) | C |
+| G-010 | Severity scale S0–S3. | CCC Severity | CCC P (pointer) + R (rule) | C |
+| G-011 | Absolute rules 1–13 (distinct phases, context break, parallel/sequential, evidenced findings/rebuttals, no secrets, repo contracts win, never weaken gates, mutation-proof tests, green≠convergence, dependency scope, crates contract, spawn contract). | CCC Absolute rules | CCC P (pointer) + R (rule) | C |
+| G-012 | Spawn contract: Critics read+shell, never edit, always fresh; Fixer edits but never converges; shell for git/verify; scratch copy never live tree; role instructions in the prompt; commits carry repo identity. | CCC Spawn contract | CCC P (pointer) + R (rule) | O, C |
+| G-013 | Crates/library attack contract in Critic-1 for library roots (thiserror, typed errors, locks, recursion, casts, tests, async); handoffs to Critic-2/3 at the boundary. | CCC Crates contract | CCC P (pointer) + R (rule) | C |
+| G-014 | Convergence labels: CCC-CONVERGED vs TEST-GATED vs HALTED; never relabel TEST-GATED. | CCC Convergence | CCC P (pointer) + R (rule) | C |
+| G-015 | Workflow: setup (params, contracts, dependency_repos, baseline, tier, slice charter); stop on ambiguous scope or exempt. | CCC Workflow | CCC P (pointer) + R (rule) | C |
+| G-016 | Phases 1–3: context break, load reference, fresh subagent on the current diff, taxonomy + attestation + findings, skeptic/span/nulls, verdict; review-and-fix gates the next phase on CLEAN. | CCC Workflow | CCC P (pointer) + R (rule) | C |
+| G-017 | Convergence checklist (artifacts, floor, dispositions, green, mutation-proof, enumeration, dependency_repos, logic + claims attestations); Critic-4 with CL-IDENTITY via %ae when on. | CCC Workflow | CCC P (pointer) + R (rule) | C |
+| G-018 | Finding schema (id, severity, category, claim, evidence, disposition, rebuttal). | CCC Finding schema | CCC P (pointer) + R (rule) | C |
+| G-019 | Final user report in the required shape. | CCC Final report | CCC P (pointer) + R (rule) | C |
+| G-020 | Subagent guidance: role-shape table; adapter owns agent-type mapping; sequential hat-switches only when unspawnable, named as weaker. | CCC Subagent | CCC P (pointer) + R (rule) | O, C |
+| G-021 | High tier prefers real subagents per Critic; no invented swarm. | CCC Subagent | CCC P (pointer) + R (rule) | O, C |
 | G-022 | As the SEPMO Critic engine: CCC-CONVERGED never Delivery (maps into ledger + R7 runs); LIGHT never selects it; taxonomy mapping in the manifest; tunables bind in the manifest row. | CCC SEPMO engine | CCC R engine (kept) | O, C |
 | G-023 | Anti-patterns (merged Critics, skipped crates contract, taxonomy re-runs, mislabeled convergence, hollow pins, weakened gates, bare pass, "unlikely", primary-only scope, shipping open S0/S1). | CCC Anti-patterns | CCC R anti-patterns (kept) | C |
-| G-024 | Quick-start examples. | CCC Quick start | CCC P (kept) | C |
+| G-024 | Quick-start examples. | CCC Quick start | CCC P (pointer) + R (rule) | C |
 | G-025 | Provenance (SEPMO derivation, crates contract source, 2026-08-12/25 history). | CCC Provenance | CCC history.md (moved) | C |
 
 ## Counts
@@ -257,4 +257,7 @@ rows = **211 rows**, every one with a new home. Zero rows without a home: no HAL
 
 Trued up 2026-09-27 (round c1): E-001/002/003/009/016–030/037 and S-004/013–020/027/029 now
 name the final Procedure/Reference/history homes; all other rows verified unchanged.
+
+Trued up 2026-09-27 (round c2): G-001–021/024 name the final intro/Procedure/Reference homes
+(G-005/022/023/025 verified unchanged). All 211 rows homed; zero unhomed.
 
