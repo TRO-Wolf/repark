@@ -135,6 +135,8 @@ reads the worker's `handback.json`. Workers do not delegate; lanes do not start 
   Muse equivalents, one table, plus the verbatim hand-back authority framing.
 - `lane-contract.md` — the uniform lane interface: work order, hand-back envelope, Q&A protocol,
   resume semantic, and the state file template, with the cross-family residue table.
+- `rulings-2026-09-26.md` — the improvised rulings codified, one dated row each with evidence
+  and how to apply.
 
 ## I want to…
 
