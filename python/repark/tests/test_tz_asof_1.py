@@ -17,7 +17,6 @@ pins: tz-asof-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 
 from __future__ import annotations
 
-import re
 import time
 from collections.abc import Iterator
 from pathlib import Path
