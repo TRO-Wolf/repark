@@ -4,9 +4,10 @@ use repark_common::{Error, Result};
 
 use super::Profile;
 use super::redact::redact_value;
-use crate::catalog_config::{CatalogSpec, parse_catalog_specs};
+use crate::catalog_config::{CatalogKind, CatalogSpec, parse_catalog_specs};
 
 pub(crate) const CATALOG_KEY_PREFIX: &str = "repark.sql.catalog.";
+pub(crate) const IN_MEMORY_CATALOG_CLASS: &str = "org.apache.iceberg.inmemory.InMemoryCatalog";
 const DATABASE_KIND_SPELLINGS: &[&str] = &["postgres", "sqlserver", "trino"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -92,6 +93,23 @@ pub(crate) fn profile_sources(profile_name: &str, profile: &Profile) -> Result<P
     Ok(ProfileSources { catalogs, sources })
 }
 
+pub(crate) fn memory_type_rewrite(props: &toml::Table) -> Option<String> {
+    let type_value = props.get("type")?.as_str()?;
+    if !type_value.trim().eq_ignore_ascii_case("memory") {
+        return None;
+    }
+    match props.get("catalog-impl").and_then(toml::Value::as_str) {
+        None => Some(IN_MEMORY_CATALOG_CLASS.to_string()),
+        Some(impl_value)
+            if crate::catalog_kind::kind_from_catalog_impl(impl_value)
+                == Some(CatalogKind::Memory) =>
+        {
+            Some(impl_value.to_string())
+        }
+        Some(_) => None,
+    }
+}
+
 fn catalog_specs(profile_name: &str, catalog: &toml::Table) -> Result<Vec<CatalogSpec>> {
     let mut flat = HashMap::new();
     for (name, block) in catalog {
@@ -112,13 +130,25 @@ fn catalog_specs(profile_name: &str, catalog: &toml::Table) -> Result<Vec<Catalo
                  set `type` (glue / s3tables / memory / hadoop) or `catalog-impl`"
             )));
         }
+        let rewrite = memory_type_rewrite(props);
         for (prop, value) in props {
+            if prop == "type" && rewrite.is_some() {
+                continue;
+            }
             let toml::Value::String(text) = value else {
                 return Err(Error::Config(format!(
                     "key `{profile_name}.catalog.{name}.{prop}` must be a string"
                 )));
             };
             flat.insert(format!("{CATALOG_KEY_PREFIX}{name}.{prop}"), text.clone());
+        }
+        if let Some(impl_value) = rewrite
+            && !props.contains_key("catalog-impl")
+        {
+            flat.insert(
+                format!("{CATALOG_KEY_PREFIX}{name}.catalog-impl"),
+                impl_value,
+            );
         }
     }
     parse_catalog_specs(&flat)

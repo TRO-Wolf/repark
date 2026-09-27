@@ -11,7 +11,13 @@ import weakref
 from types import MethodType
 from typing import TYPE_CHECKING, Any, NoReturn
 
-from repark.errors import AnalysisException, PySparkTypeError, PySparkValueError
+from repark.errors import (
+    AnalysisException,
+    IllegalArgumentException,
+    PySparkTypeError,
+    PySparkValueError,
+    UnsupportedOperationException,
+)
 from repark.spark._idents import quote_ident_if_needed as _quote_ident
 from repark.spark._idents import sql_string_literal
 from repark.spark._integral import (
@@ -109,15 +115,21 @@ def _known_table(session: ReparkSession, resolved: str) -> bool:
     try:
         if bool(inner.table_exists(resolved)):
             return True
+    except (UnsupportedOperationException, IllegalArgumentException):
+        raise
     except RuntimeError:
         pass
     namespace = ".".join(parts[1:-1])
     try:
         if parts[-1] in set(session.list_iceberg_table_names(parts[0], namespace)):
             return True
+    except (UnsupportedOperationException, IllegalArgumentException):
+        raise
     except Exception:
         try:
             return parts[-1] in set(session.list_df_schema_table_names(parts[0], namespace))
+        except (UnsupportedOperationException, IllegalArgumentException):
+            raise
         except Exception:
             return False
     return False

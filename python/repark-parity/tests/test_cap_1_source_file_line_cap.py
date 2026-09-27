@@ -21,9 +21,8 @@ _APPROVED_EXEMPT_PATHS: tuple[tuple[str, ...], ...] = (
     ("tests", "fixtures"),
 )
 _RUST_BASELINES: tuple[tuple[str, int], ...] = (
-    ("crates/repark-core/src/catalog_config.rs", 1006),
     ("crates/repark-core/src/dynamic_flatten/tests.rs", 1442),
-    ("crates/repark-core/src/session/tests/session.rs", 1407),
+    ("crates/repark-core/src/session/tests/session.rs", 1406),
     ("crates/repark-core/tests/declared_sorted.rs", 1348),
     ("crates/repark-functions/src/analyzer.rs", 1150),
     ("crates/repark-functions/src/analyzer/time_window/mod.rs", 1416),
@@ -180,7 +179,7 @@ def test_cap_1_exception_tables_equal_the_measured_debt() -> None:
     assert _baselines(python_gate) == python_approved
     assert rust_debt == rust_approved
     assert python_debt == python_approved
-    assert len(rust_approved) == 38
+    assert len(rust_approved) == 37
     assert len(python_approved) == 32
 
 

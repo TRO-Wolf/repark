@@ -76,6 +76,47 @@ fn calls_session_name(tokens: &[Token], index: usize, word: &Word) -> bool {
             .any(|name| word.value.eq_ignore_ascii_case(name))
 }
 
+fn names_refused_operand(tokens: &[Token], index: usize, show: bool) -> bool {
+    let previous = index.checked_sub(1).and_then(|at| tokens.get(at));
+    if keyword_is(previous, &[Keyword::USE])
+        || (show && keyword_is(previous, &[Keyword::IN, Keyword::FROM]))
+    {
+        return true;
+    }
+    matches!(tokens.get(index + 1), Some(Token::Period))
+        && matches!(tokens.get(index + 2), Some(Token::Word(_)))
+        && !matches!(previous, Some(Token::Period))
+}
+
+fn refuse_refused_catalog(catalogs: &CatalogRegistry, sql: &str) -> Result<()> {
+    if !catalogs.has_refusals() {
+        return Ok(());
+    }
+    let Ok(tokens) = Tokenizer::new(&DatabricksDialect {}, sql).tokenize() else {
+        return Ok(());
+    };
+    let tokens: Vec<Token> = tokens
+        .into_iter()
+        .filter(|token| !matches!(token, Token::Whitespace(_)))
+        .collect();
+    let show = keyword_is(tokens.first(), &[Keyword::SHOW]);
+    for (index, token) in tokens.iter().enumerate() {
+        let Token::Word(word) = token else {
+            continue;
+        };
+        if !is_name_word(word) {
+            continue;
+        }
+        let Some(refusal) = catalogs.refusal(&word.value) else {
+            continue;
+        };
+        if names_refused_operand(&tokens, index, show) {
+            return Err(to_datafusion_error(refusal.error()));
+        }
+    }
+    Ok(())
+}
+
 fn head_needs_current_catalog(tokens: &[Token]) -> bool {
     let word_at = |at: usize| match tokens.get(at) {
         Some(Token::Word(word)) if word.quote_style.is_none() => {
@@ -110,6 +151,7 @@ pub(crate) fn guard_statement(
     sql: &str,
 ) -> Result<()> {
     crate::view_ddl::read::ensure_view_wrappers(ctx, catalogs)?;
+    refuse_refused_catalog(catalogs, sql)?;
     let current_missing = catalogs.current_catalog_error().is_some();
     if !current_missing {
         return Ok(());

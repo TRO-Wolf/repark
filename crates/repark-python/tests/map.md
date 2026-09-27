@@ -11,6 +11,8 @@ C Stream value, type, and laziness behavior.
 - [`bindings.rs`](bindings.rs) contains the integration suite and Arrow stream helpers.
   CFG-1 step 3 (2026-09-09): the `config_path` seam pin (forced file, missing-path
   refusal, undiscoverable `config_file_pairs(None)` empty). pins: cfg-1/C-027
+  **CATALOG-1 (2026-09-26):** the config-driven memory-catalog pin runs under the
+  `catalogExtensions` opt-in.
 
 ## Contracts pinned
 

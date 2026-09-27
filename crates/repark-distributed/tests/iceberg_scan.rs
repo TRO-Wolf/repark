@@ -51,6 +51,7 @@ fn memory_catalog_spec(warehouse: &str) -> CatalogSpec {
         name: CATALOG_NAME.to_owned(),
         kind: CatalogKind::Memory,
         props,
+        refusal: None,
     }
 }
 

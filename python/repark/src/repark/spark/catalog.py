@@ -13,7 +13,12 @@ from collections import namedtuple
 from typing import TYPE_CHECKING, Any
 
 from repark import _native
-from repark.errors import AnalysisException, PySparkTypeError
+from repark.errors import (
+    AnalysisException,
+    IllegalArgumentException,
+    PySparkTypeError,
+    UnsupportedOperationException,
+)
 from repark.spark._idents import quote_ident_if_needed as _quote_ident
 from repark.spark._idents import quote_multipart as _quote_multipart_ssot
 from repark.spark._idents import sql_string_literal
@@ -381,6 +386,8 @@ class Catalog:
             return False
         try:
             return self._namespace_exists(catalog, name)
+        except (UnsupportedOperationException, IllegalArgumentException):
+            raise
         except Exception:
             return False
 
@@ -790,6 +797,8 @@ class Catalog:
             return True
         try:
             self._session.sql(f"SHOW NAMESPACES IN {_quote_ident(name)}").to_arrow()
+        except (UnsupportedOperationException, IllegalArgumentException):
+            raise
         except Exception:
             return False
         known.add(name)
@@ -798,6 +807,8 @@ class Catalog:
     def _namespace_exists(self, catalog: str, namespace: str) -> bool:
         try:
             table = self._session.sql(f"SHOW NAMESPACES IN {_quote_ident(catalog)}").to_arrow()
+        except (UnsupportedOperationException, IllegalArgumentException):
+            raise
         except Exception:
             return False
         for row in table.to_pylist():

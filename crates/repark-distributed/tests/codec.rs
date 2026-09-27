@@ -59,6 +59,7 @@ fn scan_spec(warehouse: &str) -> IcebergScanSpec {
             name: CATALOG_NAME.to_owned(),
             kind: CatalogKind::Memory,
             props,
+            refusal: None,
         },
         vec![
             CATALOG_NAME.to_owned(),
@@ -520,6 +521,7 @@ fn named_spec(
             name: CATALOG_NAME.to_owned(),
             kind: CatalogKind::Memory,
             props,
+            refusal: None,
         },
         vec![
             CATALOG_NAME.to_owned(),

@@ -118,7 +118,7 @@ def test_runtime_catalog_registration_then_create(
     warehouse = str(tmp_path / "rtwh")
     spark.conf.set("spark.sql.catalog.rt", "org.apache.iceberg.spark.SparkCatalog")
     assert "rt" not in _catalog_names(spark)
-    spark.conf.set("spark.sql.catalog.rt.type", "memory")
+    spark.conf.set("spark.sql.catalog.rt.type", "hadoop")
     assert "rt" not in _catalog_names(spark)
     spark.conf.set("spark.sql.catalog.rt.warehouse", warehouse)
     assert "rt" in _catalog_names(spark)
@@ -134,7 +134,7 @@ def test_late_table_default_key_lands_on_create(
     """H-02 pin: a ``table-default`` key set after registration lands on ``CREATE``."""
     spark = runtime_catalog
     spark.conf.set("spark.sql.catalog.rd", "org.apache.iceberg.spark.SparkCatalog")
-    spark.conf.set("spark.sql.catalog.rd.type", "memory")
+    spark.conf.set("spark.sql.catalog.rd.type", "hadoop")
     spark.conf.set("spark.sql.catalog.rd.warehouse", str(tmp_path / "rdwh"))
     spark.conf.set("spark.sql.catalog.rd.table-default.k1", "d1")
     spark.sql("CREATE NAMESPACE rd.ns").to_arrow()
@@ -146,7 +146,7 @@ def test_table_override_beats_user_property(runtime_catalog: ReparkSession, tmp_
     """N-12: ``table-override.k`` beats user ``TBLPROPERTIES k``."""
     spark = runtime_catalog
     spark.conf.set("spark.sql.catalog.ro", "org.apache.iceberg.spark.SparkCatalog")
-    spark.conf.set("spark.sql.catalog.ro.type", "memory")
+    spark.conf.set("spark.sql.catalog.ro.type", "hadoop")
     spark.conf.set("spark.sql.catalog.ro.warehouse", str(tmp_path / "rowh"))
     spark.conf.set("spark.sql.catalog.ro.table-override.k2", "o2")
     spark.sql("CREATE NAMESPACE ro.ns").to_arrow()
@@ -158,7 +158,7 @@ def test_user_property_beats_table_default(runtime_catalog: ReparkSession, tmp_p
     """N-12: user ``TBLPROPERTIES k`` beats ``table-default.k``."""
     spark = runtime_catalog
     spark.conf.set("spark.sql.catalog.ru", "org.apache.iceberg.spark.SparkCatalog")
-    spark.conf.set("spark.sql.catalog.ru.type", "memory")
+    spark.conf.set("spark.sql.catalog.ru.type", "hadoop")
     spark.conf.set("spark.sql.catalog.ru.warehouse", str(tmp_path / "ruwh"))
     spark.conf.set("spark.sql.catalog.ru.table-default.k1", "d1")
     spark.sql("CREATE NAMESPACE ru.ns").to_arrow()
@@ -172,7 +172,7 @@ def test_both_default_and_override_resolves_to_override(
     """N-12: default + override on one key resolves to the override."""
     spark = runtime_catalog
     spark.conf.set("spark.sql.catalog.rb", "org.apache.iceberg.spark.SparkCatalog")
-    spark.conf.set("spark.sql.catalog.rb.type", "memory")
+    spark.conf.set("spark.sql.catalog.rb.type", "hadoop")
     spark.conf.set("spark.sql.catalog.rb.warehouse", str(tmp_path / "rbwh"))
     spark.conf.set("spark.sql.catalog.rb.table-default.k1", "d1")
     spark.conf.set("spark.sql.catalog.rb.table-override.k1", "o1")
@@ -519,7 +519,7 @@ def test_show_catalogs_lists_untouched_configured_catalog(tmp_path: Path) -> Non
     """EAGER-1 pin: a build-time-configured, never-touched catalog still lists."""
     spark = (
         ReparkSession.builder.appName("pytest-ice-catalog-session-1-eager")
-        .config("spark.sql.catalog.hc.type", "memory")
+        .config("spark.sql.catalog.hc.type", "hadoop")
         .config("spark.sql.catalog.hc.warehouse", str(tmp_path / "hcwh"))
         .getOrCreate()
     )

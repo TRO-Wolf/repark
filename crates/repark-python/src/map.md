@@ -19,6 +19,9 @@ and hand execution, SQL, and ML semantics to the engine crates.
   (an empty value is unset); `current_catalog_checked`, `auto_session_catalog_wanted` and
   `session_catalog_names` (registered Iceberg catalogs) replace `set_session_catalog`.
   pins: catalog-1/C-002, C-003, C-004
+  **CATALOG-1 fold V-007 (2026-09-26):** plus `session_refused_catalog_names` (refused-kind
+  placeholder names) so the facade leaves a two-part refused-catalog name unexpanded.
+  pins: catalog-1/C-014
 
 ## Modules
 

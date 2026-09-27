@@ -25,7 +25,7 @@ def test_new_catalog_on_existing_session_registers_without_warning(tmp_path: Pat
         with warnings.catch_warnings(record=True) as record:
             warnings.simplefilter("always")
             reused = (
-                ReparkSession.builder.config("spark.sql.catalog.late_cat.type", "memory")
+                ReparkSession.builder.config("spark.sql.catalog.late_cat.type", "hadoop")
                 .config("spark.sql.catalog.late_cat.warehouse", str(tmp_path / "wh"))
                 .getOrCreate()
             )
@@ -41,7 +41,7 @@ def test_new_catalog_on_existing_session_registers_without_warning(tmp_path: Pat
 def test_repeat_getorcreate_with_the_same_added_builder_does_not_rewarn(tmp_path: Path) -> None:
     spark = ReparkSession.builder.getOrCreate()
     try:
-        builder = ReparkSession.builder.config("spark.sql.catalog.late_rep.type", "memory").config(
+        builder = ReparkSession.builder.config("spark.sql.catalog.late_rep.type", "hadoop").config(
             "spark.sql.catalog.late_rep.warehouse", str(tmp_path / "wh")
         )
         builder.getOrCreate()
@@ -60,7 +60,7 @@ def test_repeat_getorcreate_with_the_same_added_builder_does_not_rewarn(tmp_path
 def test_same_name_different_config_warns_and_keeps_the_original(tmp_path: Path) -> None:
     wh_original = tmp_path / "wh_original"
     spark = (
-        ReparkSession.builder.config("spark.sql.catalog.keep.type", "memory")
+        ReparkSession.builder.config("spark.sql.catalog.keep.type", "hadoop")
         .config("spark.sql.catalog.keep.warehouse", str(wh_original))
         .getOrCreate()
     )
@@ -71,7 +71,7 @@ def test_same_name_different_config_warns_and_keeps_the_original(tmp_path: Path)
         with warnings.catch_warnings(record=True) as record:
             warnings.simplefilter("always")
             reused = (
-                ReparkSession.builder.config("spark.sql.catalog.keep.type", "memory")
+                ReparkSession.builder.config("spark.sql.catalog.keep.type", "hadoop")
                 .config("spark.sql.catalog.keep.warehouse", str(tmp_path / "wh_other"))
                 .getOrCreate()
             )
@@ -90,6 +90,6 @@ def test_malformed_late_catalog_block_raises_like_the_build_path(tmp_path: Path)
     try:
         with pytest.raises(Exception, match="warehouse"):
             # memory kind REQUIRES a warehouse — same loud failure class as at build.
-            ReparkSession.builder.config("spark.sql.catalog.broken.type", "memory").getOrCreate()
+            ReparkSession.builder.config("spark.sql.catalog.broken.type", "hadoop").getOrCreate()
     finally:
         spark.stop()

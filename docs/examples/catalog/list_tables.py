@@ -1,6 +1,7 @@
 """List tables per database: the MANAGED Iceberg row and the TEMPORARY view row.
 
 pins: ex-21-catalog-session/C-001
+pins: catalog-1/C-011
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ def main() -> None:
     try:
         catalog = repark.catalog
         repark.register_memory_catalog("ex21_cat", str(warehouse))
+        catalog.setCurrentCatalog("ex21_cat")
         repark.sql("CREATE NAMESPACE ex21_cat.ex21_db").collect()
         repark.sql(
             "CREATE TABLE ex21_cat.ex21_db.ex21_t AS SELECT 1 AS id UNION ALL SELECT 2 AS id"

@@ -15,7 +15,11 @@ per-statement snapshots) shares one current catalog. See [../map.md](../map.md).
   pinned, `None` means `spark_catalog`), `default_namespace_for` (`default` for `spark_catalog`,
   `""` otherwise, as Spark's Iceberg catalogs answer), `configured_default_catalog`, and
   `current_catalog_error` (Spark's `CATALOG_NOT_FOUND` text for
-  an unpinned name that is neither `spark_catalog` nor registered; `USE` validates what it pins). pins: catalog-1/C-001, C-003, C-004
+  an unpinned name that is neither `spark_catalog` nor registered; `USE` validates what it pins).
+  The registry also holds the refused-kind placeholders (`insert_refusal` / `refusal` /
+  `has_refusals` on `../catalog_state.rs`; a real `insert` clears the refusal; a refusal wins
+  over `CATALOG_NOT_FOUND` in `current_catalog_error`). pins: catalog-1/C-001, C-003, C-004,
+  C-006, C-007, C-008
 
 ## Pointers
 

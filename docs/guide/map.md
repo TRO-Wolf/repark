@@ -41,6 +41,9 @@ illustrative. A claim with no verified basis does not go in.
   measured ratio and the cell it was measured on, the near-misses, the no-effect list,
   and the `batch_size` / `target_partitions` alias notes; values trace to the step-2
   CSVs. pins: profiles-1/C-009, C-011
+  **WO CATALOG-1 C-010 (2026-09-26):** the session table gains `default_catalog`, and
+  the tables section states the `type = "memory"` rewrite and the
+  `repark.sql.catalogExtensions` opt-in. pins: catalog-1/C-010
 - [maintenance-policy.md](maintenance-policy.md) — `[<profile>.maintenance]` and
   `CALL run_maintenance()` (MAINT-POLICY-1, 2026-09-10): the D-1 policy shape with
   per-table overrides, duration strings, the D-4 step order with the delete-ratio gate,

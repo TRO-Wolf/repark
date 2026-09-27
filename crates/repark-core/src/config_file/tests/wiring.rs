@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use tempfile::TempDir;
 
+use super::super::sources::IN_MEMORY_CATALOG_CLASS;
 use super::super::wiring::{FileConfig, conf_dump_rows, load_file_config};
 use super::{home_config_path, stub_environment, write_file};
 use crate::session::ReparkSessionBuilder;
@@ -315,7 +316,7 @@ async fn file_built_session_registers_the_same_catalogs_as_config_calls() {
     let warehouse = TempDir::new().expect("warehouse fixture");
     let warehouse_text = warehouse.path().to_str().expect("utf8 warehouse");
     let (_directory, path) = staged_file(&format!(
-        "[default.catalog.m]\ntype = \"memory\"\nwarehouse = \"{warehouse_text}\"\n"
+        "[default.catalog.m]\ntype = \"hadoop\"\nwarehouse = \"{warehouse_text}\"\n"
     ));
     let from_file = ReparkSessionBuilder::default()
         .from_config_file(Some(path))
@@ -328,7 +329,7 @@ async fn file_built_session_registers_the_same_catalogs_as_config_calls() {
     let (_empty_directory, empty_path) = staged_file("");
     let from_calls = ReparkSessionBuilder::default()
         .from_config_file(Some(empty_path))
-        .config("repark.sql.catalog.m.type", "memory")
+        .config("repark.sql.catalog.m.type", "hadoop")
         .config("repark.sql.catalog.m.warehouse", warehouse_text)
         .build()
         .expect("config build");
@@ -355,6 +356,41 @@ async fn file_built_session_registers_the_same_catalogs_as_config_calls() {
             .table_exists("m.missing.missing")
             .await
             .expect("config probe")
+    );
+    let rewrite_warehouse = TempDir::new().expect("rewrite warehouse fixture");
+    let rewrite_text = rewrite_warehouse.path().to_str().expect("utf8 warehouse");
+    let (_rewrite_directory, rewrite_path) = staged_file(&format!(
+        "[default.catalog.m]\ntype = \"memory\"\nwarehouse = \"{rewrite_text}\"\n"
+    ));
+    let rewritten = ReparkSessionBuilder::default()
+        .from_config_file(Some(rewrite_path))
+        .build()
+        .expect("rewrite build");
+    rewritten
+        .register_configured_catalogs()
+        .await
+        .expect("rewrite catalogs register");
+    let (_long_directory, long_path) = staged_file("");
+    let long_form = ReparkSessionBuilder::default()
+        .from_config_file(Some(long_path))
+        .config("repark.sql.catalog.m.catalog-impl", IN_MEMORY_CATALOG_CLASS)
+        .config("repark.sql.catalog.m.warehouse", rewrite_text)
+        .build()
+        .expect("long-form build");
+    long_form
+        .register_configured_catalogs()
+        .await
+        .expect("long-form catalogs register");
+    assert_eq!(paired(rewritten.conf_dump()), paired(long_form.conf_dump()));
+    assert_eq!(
+        rewritten
+            .table_exists("m.missing.missing")
+            .await
+            .expect("rewrite probe"),
+        long_form
+            .table_exists("m.missing.missing")
+            .await
+            .expect("long-form probe")
     );
 }
 

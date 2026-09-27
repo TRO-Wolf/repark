@@ -4,7 +4,8 @@ Every expected text is Spark 4.1.2 + Iceberg 1.11, measured 2026-09-26 (probes u
 ``target/probe-catalog-1/``). The harness-shaped session configures ``hc`` through the builder
 and registers ``sc`` after build, as the scoreboard's RePark leg does.
 
-pins: catalog-1/C-001, C-002, C-003, C-004
+pins: catalog-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
+    C-012, C-013, C-014
 """
 
 from __future__ import annotations
@@ -14,7 +15,11 @@ from pathlib import Path
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException
+from repark.errors import (
+    AnalysisException,
+    IllegalArgumentException,
+    UnsupportedOperationException,
+)
 from repark.spark.session import _reset_active_session_for_tests
 
 IN_MEMORY_CATALOG = "org.apache.iceberg.inmemory.InMemoryCatalog"
@@ -58,6 +63,26 @@ def _rows(spark: ReparkSession, sql: str) -> list[list[object]]:
 def _current(spark: ReparkSession) -> list[list[object]]:
     """``current_catalog()`` and ``current_database()`` as one row."""
     return _rows(spark, "SELECT current_catalog(), current_database()")
+
+
+def _both_kinds_message(
+    name: str, type_value: str = "memory", impl: str = IN_MEMORY_CATALOG
+) -> str:
+    """Spark's both-keys refusal text for one catalog block."""
+    return (
+        f"Cannot create catalog {name}, both type and catalog-impl are set: "
+        f"type={type_value}, catalog-impl={impl}"
+    )
+
+
+def _build_from_toml(tmp_path: Path, text: str) -> ReparkSession:
+    """A session built from one forced ``repark.toml`` text."""
+    path = tmp_path / "repark.toml"
+    path.write_text(text, encoding="utf-8")
+    _reset_active_session_for_tests()
+    return (
+        ReparkSession.builder.appName("pytest-catalog-1-toml").configFile(str(path)).getOrCreate()
+    )
 
 
 def test_current_catalog_cell_is_spark_catalog(spark: ReparkSession) -> None:
@@ -222,6 +247,301 @@ def test_the_default_catalog_conf_at_build_is_the_first_current_catalog(tmp_path
         _reset_active_session_for_tests()
 
 
+def test_use_catalog_ns_cell_and_the_final_reset(spark: ReparkSession) -> None:
+    """CAT-USE-CATALOG-NS: ``USE sc.ns``, unqualified CREATE/SHOW, the final reset works.
+
+    pins: catalog-1/C-005
+    """
+    spark.sql("USE sc.ns")
+    try:
+        spark.sql("CREATE TABLE uc_t (id INT) USING iceberg")
+        assert _rows(spark, "SHOW TABLES LIKE 'uc_t'") == [["ns", "uc_t", False]]
+        assert _current(spark) == [["sc", "ns"]]
+    finally:
+        spark.sql("USE spark_catalog.default")
+    assert _current(spark) == [["spark_catalog", "default"]]
+
+
+def test_use_forms_answer_as_spark(spark: ReparkSession) -> None:
+    """Every ``USE`` form lands where Spark lands; bad forms refuse SCHEMA_NOT_FOUND.
+
+    pins: catalog-1/C-005
+    """
+    for sql, catalog, namespace in (
+        ("USE sc", "sc", ""),
+        ("USE sc.ns", "sc", "ns"),
+        ("USE ns", "sc", "ns"),
+        ("USE sc", "sc", "ns"),
+        ("USE hc", "hc", ""),
+        ("USE ns", "hc", "ns"),
+        ("USE spark_catalog", "spark_catalog", "default"),
+        ("USE sc.ns", "sc", "ns"),
+        ("USE spark_catalog.default", "spark_catalog", "default"),
+    ):
+        spark.sql(sql)
+        assert _current(spark) == [[catalog, namespace]], sql
+    for sql, rendered in (
+        ("USE zz.yy", "`spark_catalog`.`zz`.`yy`"),
+        ("USE zz", "`spark_catalog`.`zz`"),
+        ("USE zz.yy.xx", "`spark_catalog`.`zz`.`yy`.`xx`"),
+        ("USE sc.nope", "`sc`.`nope`"),
+        ("USE hc.ns.x", "`hc`.`ns`.`x`"),
+    ):
+        with pytest.raises(AnalysisException) as caught:
+            spark.sql(sql).collect()
+        assert f"[SCHEMA_NOT_FOUND] The schema {rendered} cannot be found." in str(caught.value), (
+            sql
+        )
+        assert caught.value.getCondition() == "SCHEMA_NOT_FOUND", sql
+        assert caught.value.getSqlState() == "42704", sql
+    assert _current(spark) == [["spark_catalog", "default"]]
+
+
+def test_type_memory_cell_refuses_at_first_use(spark: ReparkSession, tmp_path: Path) -> None:
+    """CAT-TYPE-MEMORY: a runtime ``type=memory`` block refuses at first use, like Spark.
+
+    pins: catalog-1/C-006
+    """
+    spark.conf.set("spark.sql.catalog.c_mem", "org.apache.iceberg.spark.SparkCatalog")
+    spark.conf.set("spark.sql.catalog.c_mem.type", "memory")
+    spark.conf.set("spark.sql.catalog.c_mem.warehouse", str(tmp_path / "c_mem"))
+    assert "c_mem" not in {catalog.name for catalog in spark.catalog.listCatalogs()}
+    assert _rows(spark, "SHOW CATALOGS") == [["hc"], ["sc"], ["spark_catalog"]]
+    for sql in (
+        "CREATE NAMESPACE IF NOT EXISTS c_mem.n1",
+        "USE c_mem",
+        "USE c_mem.n1",
+        "SHOW NAMESPACES IN c_mem",
+        "SELECT * FROM c_mem.n1.t",
+    ):
+        with pytest.raises(UnsupportedOperationException) as caught:
+            spark.sql(sql).collect()
+        assert str(caught.value) == "Unknown catalog type: memory", sql
+        assert caught.value.getCondition() is None, sql
+        assert caught.value.getSqlState() is None, sql
+    with pytest.raises(UnsupportedOperationException) as caught:
+        spark.catalog.setCurrentCatalog("c_mem")
+    assert str(caught.value) == "Unknown catalog type: memory"
+    with pytest.raises(UnsupportedOperationException) as caught:
+        spark.catalog.tableExists("c_mem.n1.t")
+    assert str(caught.value) == "Unknown catalog type: memory"
+    with pytest.raises(UnsupportedOperationException) as caught:
+        spark.sql("SHOW NAMESPACES IN c_mem").collect()
+    assert str(caught.value) == "Unknown catalog type: memory"
+    assert _current(spark) == [["spark_catalog", "default"]]
+    assert spark.catalog.currentCatalog() == "spark_catalog"
+    assert sorted(d.name for d in spark.catalog.listDatabases()) == ["default"]
+
+
+def test_database_exists_on_a_refused_catalog_raises_like_spark(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """``databaseExists("c_mem.n1")`` raises Spark's exact refusal, current catalog unchanged.
+
+    pins: catalog-1/C-012
+    """
+    spark.conf.set("spark.sql.catalog.c_mem", "org.apache.iceberg.spark.SparkCatalog")
+    spark.conf.set("spark.sql.catalog.c_mem.type", "memory")
+    spark.conf.set("spark.sql.catalog.c_mem.warehouse", str(tmp_path / "c_mem"))
+    with pytest.raises(UnsupportedOperationException) as caught:
+        spark.catalog.databaseExists("c_mem.n1")
+    assert str(caught.value) == "Unknown catalog type: memory"
+    assert caught.value.getCondition() is None
+    assert caught.value.getSqlState() is None
+    assert _current(spark) == [["spark_catalog", "default"]]
+    assert spark.catalog.currentCatalog() == "spark_catalog"
+
+
+def test_list_tables_and_get_table_on_a_refused_catalog_raise_like_spark(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """``listTables("c_mem.n1")`` and ``getTable("c_mem.n1.t")`` raise Spark's exact refusal.
+
+    pins: catalog-1/C-013
+    """
+    spark.conf.set("spark.sql.catalog.c_mem", "org.apache.iceberg.spark.SparkCatalog")
+    spark.conf.set("spark.sql.catalog.c_mem.type", "memory")
+    spark.conf.set("spark.sql.catalog.c_mem.warehouse", str(tmp_path / "c_mem"))
+    with pytest.raises(UnsupportedOperationException) as caught:
+        spark.catalog.listTables("c_mem.n1")
+    assert str(caught.value) == "Unknown catalog type: memory"
+    assert caught.value.getCondition() is None
+    assert caught.value.getSqlState() is None
+    with pytest.raises(UnsupportedOperationException) as caught:
+        spark.catalog.getTable("c_mem.n1.t")
+    assert str(caught.value) == "Unknown catalog type: memory"
+    assert caught.value.getCondition() is None
+    assert caught.value.getSqlState() is None
+    assert _current(spark) == [["spark_catalog", "default"]]
+    assert spark.catalog.currentCatalog() == "spark_catalog"
+
+
+def test_type_memory_on_the_builder_door_builds_and_refuses_at_first_use(
+    tmp_path: Path,
+) -> None:
+    """A builder ``type=memory`` block builds quietly; a later long form replaces it.
+
+    pins: catalog-1/C-006
+    """
+    session = _build(
+        tmp_path,
+        {
+            "spark.sql.catalog.c_mem": "org.apache.iceberg.spark.SparkCatalog",
+            "spark.sql.catalog.c_mem.type": "memory",
+            "spark.sql.catalog.c_mem.warehouse": str(tmp_path / "c_mem"),
+        },
+    )
+    try:
+        assert "c_mem" not in {c.name for c in session.catalog.listCatalogs()}
+        for sql in ("USE c_mem", "SHOW NAMESPACES IN c_mem", "SELECT * FROM c_mem.n1.t"):
+            with pytest.raises(UnsupportedOperationException) as caught:
+                session.sql(sql).collect()
+            assert str(caught.value) == "Unknown catalog type: memory", sql
+        assert _current(session) == [["spark_catalog", "default"]]
+        session.conf.unset("spark.sql.catalog.c_mem.type")
+        session.conf.set("spark.sql.catalog.c_mem.warehouse", str(tmp_path / "c_mem"))
+        session.conf.set("spark.sql.catalog.c_mem.catalog-impl", IN_MEMORY_CATALOG)
+        session.sql("CREATE NAMESPACE c_mem.n1")
+        assert "c_mem" in {c.name for c in session.catalog.listCatalogs()}
+        assert session.catalog.tableExists("c_mem.n1.t") is False
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()
+
+
+def test_the_catalog_impl_long_form_works_on_both_doors(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """``catalog-impl=InMemoryCatalog`` registers on the runtime and builder doors.
+
+    pins: catalog-1/C-006
+    """
+    spark.conf.set("spark.sql.catalog.c_impl", "org.apache.iceberg.spark.SparkCatalog")
+    spark.conf.set("spark.sql.catalog.c_impl.catalog-impl", IN_MEMORY_CATALOG)
+    spark.conf.set("spark.sql.catalog.c_impl.warehouse", str(tmp_path / "c_impl"))
+    spark.sql("CREATE NAMESPACE c_impl.n1")
+    spark.sql("CREATE TABLE c_impl.n1.t (id INT) USING iceberg")
+    assert _rows(spark, "SELECT count(*) FROM c_impl.n1.t") == [[0]]
+    built = _build(
+        tmp_path,
+        {
+            "spark.sql.catalog.c_impl_b.catalog-impl": IN_MEMORY_CATALOG,
+            "spark.sql.catalog.c_impl_b.warehouse": str(tmp_path / "c_impl_b"),
+        },
+    )
+    try:
+        built.sql("CREATE NAMESPACE c_impl_b.n1")
+        assert "c_impl_b" in {c.name for c in built.catalog.listCatalogs()}
+    finally:
+        built.stop()
+        _reset_active_session_for_tests()
+
+
+def test_both_kind_keys_refuse_at_first_use_on_both_doors(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """``type`` beside ``catalog-impl`` refuses at first use on both doors, like Spark.
+
+    pins: catalog-1/C-007
+    """
+    spark.conf.set("spark.sql.catalog.c_both", "org.apache.iceberg.spark.SparkCatalog")
+    spark.conf.set("spark.sql.catalog.c_both.type", "memory")
+    spark.conf.set("spark.sql.catalog.c_both.catalog-impl", IN_MEMORY_CATALOG)
+    spark.conf.set("spark.sql.catalog.c_both.warehouse", str(tmp_path / "c_both"))
+    expected = _both_kinds_message("c_both")
+    for sql in (
+        "CREATE NAMESPACE IF NOT EXISTS c_both.n1",
+        "USE c_both",
+        "SHOW NAMESPACES IN c_both",
+        "SELECT * FROM c_both.n1.t",
+    ):
+        with pytest.raises(IllegalArgumentException) as caught:
+            spark.sql(sql).collect()
+        assert str(caught.value) == expected, sql
+        assert caught.value.getCondition() is None, sql
+        assert caught.value.getSqlState() is None, sql
+    with pytest.raises(IllegalArgumentException) as caught:
+        spark.catalog.setCurrentCatalog("c_both")
+    assert str(caught.value) == expected
+    with pytest.raises(IllegalArgumentException) as caught:
+        spark.catalog.tableExists("c_both.n1.t")
+    assert str(caught.value) == expected
+    assert _current(spark) == [["spark_catalog", "default"]]
+    built = _build(
+        tmp_path,
+        {
+            "spark.sql.catalog.c_both_b.type": "memory",
+            "spark.sql.catalog.c_both_b.catalog-impl": IN_MEMORY_CATALOG,
+            "spark.sql.catalog.c_both_b.warehouse": str(tmp_path / "c_both_b"),
+        },
+    )
+    try:
+        with pytest.raises(IllegalArgumentException) as caught:
+            built.sql("SHOW NAMESPACES IN c_both_b").collect()
+        assert str(caught.value) == _both_kinds_message("c_both_b")
+    finally:
+        built.stop()
+        _reset_active_session_for_tests()
+
+
+def test_the_catalog_extensions_opt_in_restores_the_memory_type(tmp_path: Path) -> None:
+    """``repark.sql.catalogExtensions=true`` makes ``type=memory`` the memory kind again.
+
+    pins: catalog-1/C-008
+    """
+    session = _build(
+        tmp_path,
+        {
+            "repark.sql.catalogExtensions": "true",
+            "spark.sql.catalog.c.type": "memory",
+            "spark.sql.catalog.c.warehouse": str(tmp_path / "c"),
+            "spark.sql.catalog.c_pair.type": "memory",
+            "spark.sql.catalog.c_pair.catalog-impl": IN_MEMORY_CATALOG,
+            "spark.sql.catalog.c_pair.warehouse": str(tmp_path / "c_pair"),
+        },
+    )
+    try:
+        session.sql("CREATE NAMESPACE c.n1")
+        session.sql("CREATE NAMESPACE c_pair.n1")
+        session.conf.set("spark.sql.catalog.c_rt.type", "memory")
+        session.conf.set("spark.sql.catalog.c_rt.warehouse", str(tmp_path / "c_rt"))
+        session.sql("CREATE NAMESPACE c_rt.n1")
+        assert "c_rt" in {c.name for c in session.catalog.listCatalogs()}
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()
+    runtime_opt_in = _build(tmp_path)
+    try:
+        runtime_opt_in.conf.set("repark.sql.catalogExtensions", "true")
+        runtime_opt_in.conf.set("spark.sql.catalog.c_rs.type", "memory")
+        runtime_opt_in.conf.set("spark.sql.catalog.c_rs.warehouse", str(tmp_path / "c_rs"))
+        runtime_opt_in.sql("CREATE NAMESPACE c_rs.n1")
+    finally:
+        runtime_opt_in.stop()
+        _reset_active_session_for_tests()
+    with pytest.raises(IllegalArgumentException, match="different catalog kinds"):
+        _build(
+            tmp_path,
+            {
+                "repark.sql.catalogExtensions": "true",
+                "spark.sql.catalog.c_bad.type": "memory",
+                "spark.sql.catalog.c_bad.catalog-impl": ("org.apache.iceberg.aws.glue.GlueCatalog"),
+                "spark.sql.catalog.c_bad.warehouse": str(tmp_path / "c_bad"),
+            },
+        )
+
+
+def test_list_databases_cell_lists_the_session_catalog(spark: ReparkSession) -> None:
+    """E-CATALOG-LISTDATABASES: ``listDatabases`` reads the session catalog until moved.
+
+    pins: catalog-1/C-009
+    """
+    assert [d.name for d in spark.catalog.listDatabases("ns*")] == []
+    assert [d.name for d in spark.catalog.listDatabases()] == ["default"]
+    spark.catalog.setCurrentCatalog("sc")
+    assert [d.name for d in spark.catalog.listDatabases()] == ["ns"]
+
+
 def test_a_default_catalog_naming_no_catalog_answers_catalog_not_found(tmp_path: Path) -> None:
     """A default that names no catalog builds; its first resolution is CATALOG_NOT_FOUND.
 
@@ -251,3 +571,147 @@ def test_a_default_catalog_naming_no_catalog_answers_catalog_not_found(tmp_path:
     finally:
         session.stop()
         _reset_active_session_for_tests()
+
+
+def test_the_owner_toml_loads_and_starts_in_spark_catalog(tmp_path: Path) -> None:
+    """The owner's toml shape loads; the session starts in ``spark_catalog``.
+
+    pins: catalog-1/C-010
+    """
+    session = _build_from_toml(
+        tmp_path,
+        "[default.catalog.local]\n"
+        'impl = "org.apache.iceberg.spark.SparkCatalog"\n'
+        'type = "memory"\n'
+        f'warehouse = "{tmp_path / "local"}"\n',
+    )
+    try:
+        assert _current(session) == [["spark_catalog", "default"]]
+        assert "local" in {catalog.name for catalog in session.catalog.listCatalogs()}
+        session.sql("CREATE NAMESPACE local.ns")
+        session.sql("CREATE TABLE local.ns.t (id INT) USING iceberg")
+        assert _rows(session, "SELECT count(*) FROM local.ns.t") == [[0]]
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()
+
+
+def test_session_default_catalog_in_toml_moves_the_first_current_catalog(
+    tmp_path: Path,
+) -> None:
+    """``session.default_catalog`` in toml sets the first current catalog.
+
+    pins: catalog-1/C-010
+    """
+    session = _build_from_toml(
+        tmp_path,
+        "[default.session]\n"
+        'default_catalog = "local"\n'
+        "[default.catalog.local]\n"
+        'type = "memory"\n'
+        f'warehouse = "{tmp_path / "local"}"\n',
+    )
+    try:
+        assert _current(session) == [["local", ""]]
+        assert session.catalog.currentCatalog() == "local"
+        session.sql("CREATE NAMESPACE local.ns")
+        session.sql("CREATE TABLE ns.t (id INT) USING iceberg")
+        assert _rows(session, "SELECT count(*) FROM local.ns.t") == [[0]]
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()
+
+
+def test_facade_two_part_sql_on_a_refused_catalog_raises_like_spark(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """Two-part SQL on a refused catalog raises Spark's exact refusal on the facade door.
+
+    pins: catalog-1/C-014
+    """
+    spark.conf.set("spark.sql.catalog.c_mem", "org.apache.iceberg.spark.SparkCatalog")
+    spark.conf.set("spark.sql.catalog.c_mem.type", "memory")
+    spark.conf.set("spark.sql.catalog.c_mem.warehouse", str(tmp_path / "c_mem"))
+    for sql in (
+        "SELECT * FROM c_mem.t",
+        "INSERT INTO c_mem.t VALUES (1)",
+        "DESCRIBE c_mem.t",
+        "SELECT * FROM (SELECT * FROM c_mem.t) q",
+        "SELECT * FROM `c_mem`.t",
+    ):
+        with pytest.raises(UnsupportedOperationException) as caught:
+            spark.sql(sql).collect()
+        assert str(caught.value) == "Unknown catalog type: memory", sql
+        assert caught.value.getCondition() is None, sql
+        assert caught.value.getSqlState() is None, sql
+        assert _current(spark) == [["spark_catalog", "default"]], sql
+    assert spark.catalog.currentCatalog() == "spark_catalog"
+
+
+def test_facade_upper_case_spelling_of_a_refused_catalog_is_not_refused(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """A case-differing spelling of a refused catalog is not refused, like Spark.
+
+    pins: catalog-1/C-014
+    """
+    spark.conf.set("spark.sql.catalog.c_mem", "org.apache.iceberg.spark.SparkCatalog")
+    spark.conf.set("spark.sql.catalog.c_mem.type", "memory")
+    spark.conf.set("spark.sql.catalog.c_mem.warehouse", str(tmp_path / "c_mem"))
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql("SELECT * FROM C_MEM.t").collect()
+    assert "Unknown catalog type" not in str(caught.value)
+    with pytest.raises(UnsupportedOperationException) as refused:
+        spark.sql("SELECT * FROM c_mem.t").collect()
+    assert str(refused.value) == "Unknown catalog type: memory"
+    spark.sql("CREATE NAMESPACE spark_catalog.c_mem")
+    spark.sql("CREATE TABLE spark_catalog.c_mem.t (id INT) USING iceberg")
+    spark.sql("INSERT INTO spark_catalog.c_mem.t VALUES (7)")
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql("SELECT * FROM C_MEM.t").collect()
+    assert "Unknown catalog type" not in str(caught.value)
+    with pytest.raises(UnsupportedOperationException) as refused:
+        spark.sql("SELECT * FROM c_mem.t").collect()
+    assert str(refused.value) == "Unknown catalog type: memory"
+
+
+def test_spark_table_on_a_refused_catalog_raises_like_spark(tmp_path: Path) -> None:
+    """``spark.table("c_mem.t")`` raises Spark's exact refusal on the builder door.
+
+    pins: catalog-1/C-014
+    """
+    session = _build(
+        tmp_path,
+        {
+            "spark.sql.catalog.c_mem": "org.apache.iceberg.spark.SparkCatalog",
+            "spark.sql.catalog.c_mem.type": "memory",
+            "spark.sql.catalog.c_mem.warehouse": str(tmp_path / "c_mem"),
+        },
+    )
+    try:
+        with pytest.raises(UnsupportedOperationException) as caught:
+            session.table("c_mem.t").collect()
+        assert str(caught.value) == "Unknown catalog type: memory"
+        assert caught.value.getCondition() is None
+        assert caught.value.getSqlState() is None
+        assert _current(session) == [["spark_catalog", "default"]]
+        assert session.catalog.currentCatalog() == "spark_catalog"
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()
+
+
+def test_two_part_name_on_a_registered_catalog_still_expands(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """A two-part name on a registered catalog still expands under the current catalog.
+
+    pins: catalog-1/C-014
+    """
+    spark.conf.set("spark.sql.catalog.c_ok", "org.apache.iceberg.spark.SparkCatalog")
+    spark.conf.set("spark.sql.catalog.c_ok.catalog-impl", IN_MEMORY_CATALOG)
+    spark.conf.set("spark.sql.catalog.c_ok.warehouse", str(tmp_path / "c_ok"))
+    spark.sql("CREATE NAMESPACE IF NOT EXISTS spark_catalog.c_ok")
+    spark.sql("CREATE TABLE spark_catalog.c_ok.t (id INT) USING iceberg")
+    assert _rows(spark, "SELECT * FROM c_ok.t") == []
+    assert _current(spark) == [["spark_catalog", "default"]]

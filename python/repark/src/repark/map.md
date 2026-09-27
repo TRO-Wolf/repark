@@ -33,6 +33,8 @@ Carve-outs that stay here: `repark._native` (maturin module-name), `repark.error
   `StrictBool | None` field (not an extra): a non-bool value refuses as
   `ValidationError`, `true`/`false` renders only when set, and every other property
   stays a string extra. pins: cfg-2/C-018
+  **WO CATALOG-1 C-010 (2026-09-26):** `SessionConfig` gains `default_catalog`
+  (`StrictStr | None`), rendered only when set. pins: catalog-1/C-010
 - `errors.py` — PySpark-shaped exception taxonomy (does not move).
   **ICE-ERROR-CONDITIONS-1 (2026-09-20):** the native classes' `getCondition` /
   `getErrorClass` / `getSqlState` parse a Spark-shaped message — at most one known

@@ -26,6 +26,7 @@ which are pure functions, plus the `ALTER COLUMN … FIRST|AFTER` move recognize
   TABLE` and two `INSERT`s. `RENAME TO` fails with `Error::NotImplemented` whose text is exactly
   "Cannot rename Hadoop tables", and the table still reads under its old name. `type=memory`
   still renames. Declared in `../alter.rs` as `#[cfg(test)] mod hadoop_rename_tests;`.
+  **CATALOG-1 (2026-09-26):** the helper builds with the `catalogExtensions` opt-in.
 - `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../alter.rs`.
   **V3-10:** `format_version` is no longer a reserved refusal here — the recognizer folds it to
   the Iceberg `format-version` key for the upgrade path (a bare number or a string literal), and

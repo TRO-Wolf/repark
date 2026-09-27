@@ -8862,6 +8862,59 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   pins: catalog-1/C-003, C-004
 - **Rationale** — owner ruling R1 (2026-09-26); the cell replays EQUAL.
 
+### CAT-USE-CATALOG-NS — the final `USE spark_catalog.default` refused — **FIXED 2026-09-26 (WO CATALOG-1)**
+
+- **repark** — `USE c` moves to (`c`, `""`) from another catalog and keeps the namespace on the
+  same catalog; `USE c.ns` and `USE ns` land in the named namespace; `USE spark_catalog` and
+  `USE spark_catalog.default` land in (`spark_catalog`, `default`). The five bad forms refuse
+  Spark's `[SCHEMA_NOT_FOUND] The schema <rendered> cannot be found.` (`SCHEMA_NOT_FOUND` /
+  `42704`) with Spark's rendering and leave the current catalog alone. Before, the final
+  `USE spark_catalog.default` refused `` `sc`.`spark_catalog`.`default` `` because
+  `spark_catalog` was not registered; R5 registers it, so the two-part form resolves.
+- **Apache Spark** — measured 2026-09-26 (recorded, `target/probe-catalog-1/spark-main.json`
+  keys `use_*`; `target/probe-catalog-1b/spark-open.json` keys `use_sc_from_same_cur`,
+  `use_session_from_same_cur`).
+- **Pin** — `python/repark/tests/test_catalog_1.py::test_use_catalog_ns_cell_and_the_final_reset`,
+  `…::test_use_forms_answer_as_spark`,
+  `crates/repark-spark/src/tests/session_catalog.rs::use_forms_answer_as_spark`.
+  pins: catalog-1/C-005
+- **Rationale** — the cell replays EQUAL.
+
+### CAT-TYPE-MEMORY — a `type=memory` block answered `ok` instead of refusing — **FIXED 2026-09-26 (WO CATALOG-1)**
+
+- **repark** — a catalog block whose kind comes only from `type=memory` builds quietly,
+  is not listed, and raises Spark's `UnsupportedOperationException`
+  `Unknown catalog type: memory` at every first use (a statement naming it, `USE`,
+  `SHOW … IN/FROM`, `setCurrentCatalog`, `tableExists`); a later long-form block replaces
+  the refusal. A block with both `type` and `catalog-impl` raises Spark's
+  `IllegalArgumentException` `Cannot create catalog <name>, both type and catalog-impl are
+  set: …` with raw values. The opt-in `repark.sql.catalogExtensions=true` restores the old
+  memory kind and the old both-keys rule.
+- **Apache Spark** — measured 2026-09-26 (recorded, `target/probe-catalog-1/spark-main.json`
+  keys `c_mem_*` / `c_both_*`; `target/probe-catalog-1b/spark-open.json`: the `type` match
+  is case-insensitive and echoes the raw value, the both-keys text is general).
+- **Pin** — `python/repark/tests/test_catalog_1.py::test_type_memory_cell_refuses_at_first_use`,
+  `…::test_type_memory_on_the_builder_door_builds_and_refuses_at_first_use`,
+  `…::test_both_kind_keys_refuse_at_first_use_on_both_doors`,
+  `…::test_the_catalog_extensions_opt_in_restores_the_memory_type`,
+  `crates/repark-spark/src/tests/session_catalog.rs::a_bare_memory_type_refuses_every_first_use_with_sparks_text`,
+  `…::both_kind_keys_refuse_every_first_use_as_illegal_argument`,
+  `…::the_catalog_impl_long_form_and_the_opt_in_stay_catalogs`,
+  `crates/repark-core/src/catalog_config/refusal_tests.rs`,
+  `crates/repark-core/src/session/tests/session_catalog.rs`.
+  pins: catalog-1/C-006, C-007, C-008
+- **Rationale** — the cell replays EQUAL (the identical error record).
+
+### E-CATALOG-LISTDATABASES — `listDatabases` after a USE-free call with a catalog pattern — **FIXED 2026-09-26 (WO CATALOG-1)**
+
+- **repark** — `listDatabases("ns*")` on the harness session answers `[]`,
+  `listDatabases()` answers `["default"]`, and after `setCurrentCatalog("sc")` it answers
+  `["ns"]`: the call reads the session catalog until the current catalog moves.
+- **Apache Spark** — the cell replay (`out/spark-edge.json`).
+- **Pin** — `python/repark/tests/test_catalog_1.py::test_list_databases_cell_lists_the_session_catalog`.
+  pins: catalog-1/C-009
+- **Rationale** — the cell replays EQUAL.
+
 ### CUTOVER-CTAS-REQ-1 — parquet CTAS keeps source non-null fields required; Spark makes every column optional
 
 - **repark** — **FIXED 2026-09-04 (CUTOVER-SCHEMA-1).** The same CTAS stores every field

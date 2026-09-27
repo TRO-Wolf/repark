@@ -20,6 +20,8 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   `v1`, `v2` and `v3`, and `version-hint.text` reads `3`. The core default dialect routes no
   Iceberg DDL, so the table is created through the catalog handle. Mutation: pass an empty map
   from the session Memory arm and the hadoop pin goes red.
+  **CATALOG-1 (2026-09-26):** the shared helper builds with the `catalogExtensions` opt-in
+  so the memory-type naming tests keep working catalogs.
   **PR-B r3 (2026-09-24, critic V-002/V-003):** `assert_uuid_metadata_names` holds the fork's
   uuid contract (`{version:0>5}-{uuid}.metadata.json`, Display of `MetadataLocation`): three
   names, versions `00000`..`00002`, lowercase 8-4-4-4-12 hex, distinct uuids, and no hint. It
@@ -143,8 +145,10 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   pins: df-subquery-1/C-001, C-002, C-004
 - `session_catalog.rs` — **CATALOG-1 (2026-09-26):** the auto-catalog decision, the fresh
   current catalog with a configured block, `spark.sql.defaultCatalog` at build, the missing
-  default's `CATALOG_NOT_FOUND`, and the USE pin against `apply_default_catalog`.
-  pins: catalog-1/C-001, C-002, C-003, C-004
+  default's `CATALOG_NOT_FOUND`, the USE pin against `apply_default_catalog`, the refused
+  kinds on both doors (builds quietly, `table_exists` raises, the long form replaces), and
+  the opt-in making the memory type a catalog on both doors.
+  pins: catalog-1/C-001, C-002, C-003, C-004, C-006, C-007, C-008
 
 ## Pointers
 

@@ -8,7 +8,7 @@ use super::interpolate::interpolate_table;
 use super::maintenance::MaintenancePolicy;
 use super::profile::{DEFAULT_PROFILE_NAME, effective_table, profile_as_table, profile_from_table};
 use super::redact::redact_value;
-use super::sources::{CATALOG_KEY_PREFIX, SourceSpec, profile_sources};
+use super::sources::{CATALOG_KEY_PREFIX, SourceSpec, memory_type_rewrite, profile_sources};
 use super::{ConfigFile, EnvironmentLookup, Profile, read_and_parse};
 
 pub(crate) const ENV_PROFILE_VARIABLE: &str = "REPARK_ENV";
@@ -202,6 +202,12 @@ fn translate_document(
         if let Some(partitions) = target_partitions {
             note(TARGET_PARTITIONS_KEY.to_string(), partitions.to_string());
         }
+        if let Some(default) = session.get("default_catalog") {
+            note(
+                crate::CatalogRegistry::DEFAULT_CATALOG_KEY.to_string(),
+                plain_string(label, "session", "default_catalog", default)?,
+            );
+        }
     }
     if let Some(conf) = profile.conf.as_ref() {
         for (key, value) in flatten_conf(label, conf)? {
@@ -209,17 +215,7 @@ fn translate_document(
         }
     }
     if let Some(catalog) = profile.catalog.as_ref() {
-        for (name, block) in catalog {
-            let Some(props) = block.as_table() else {
-                continue;
-            };
-            for (prop, value) in props {
-                note(
-                    format!("{CATALOG_KEY_PREFIX}{name}.{prop}"),
-                    plain_string(label, &format!("catalog.{name}"), prop, value)?,
-                );
-            }
-        }
+        emit_catalog_pairs(label, catalog, &mut note)?;
     }
     let warnings = discovery_warnings(path, &profile, trusted);
     Ok(FileConfig {
@@ -233,6 +229,37 @@ fn translate_document(
         source_specs: sources.sources,
         warnings,
     })
+}
+
+fn emit_catalog_pairs(
+    label: &str,
+    catalog: &toml::Table,
+    note: &mut impl FnMut(String, String),
+) -> Result<()> {
+    for (name, block) in catalog {
+        let Some(props) = block.as_table() else {
+            continue;
+        };
+        let rewrite = memory_type_rewrite(props);
+        for (prop, value) in props {
+            if prop == "type" && rewrite.is_some() {
+                continue;
+            }
+            note(
+                format!("{CATALOG_KEY_PREFIX}{name}.{prop}"),
+                plain_string(label, &format!("catalog.{name}"), prop, value)?,
+            );
+        }
+        if let Some(impl_value) = rewrite
+            && !props.contains_key("catalog-impl")
+        {
+            note(
+                format!("{CATALOG_KEY_PREFIX}{name}.catalog-impl"),
+                impl_value,
+            );
+        }
+    }
+    Ok(())
 }
 
 fn resolve_maintenance(label: &str, profile: &Profile) -> Result<Option<MaintenancePolicy>> {
@@ -346,6 +373,9 @@ fn section_keys(table: &toml::Table) -> HashSet<String> {
                 "target_partitions" => {
                     keys.insert(TARGET_PARTITIONS_KEY.to_string());
                 }
+                "default_catalog" => {
+                    keys.insert(crate::CatalogRegistry::DEFAULT_CATALOG_KEY.to_string());
+                }
                 _ => {}
             }
         }
@@ -356,11 +386,16 @@ fn section_keys(table: &toml::Table) -> HashSet<String> {
     if let Some(catalog) = table.get("catalog").and_then(toml::Value::as_table) {
         for (name, block) in catalog {
             if let Some(props) = block.as_table() {
-                keys.extend(
-                    props
-                        .keys()
-                        .map(|prop| format!("{CATALOG_KEY_PREFIX}{name}.{prop}")),
-                );
+                let rewrite = memory_type_rewrite(props);
+                keys.extend(props.keys().filter_map(|prop| {
+                    if prop == "type" && rewrite.is_some() {
+                        return None;
+                    }
+                    Some(format!("{CATALOG_KEY_PREFIX}{name}.{prop}"))
+                }));
+                if rewrite.is_some() && !props.contains_key("catalog-impl") {
+                    keys.insert(format!("{CATALOG_KEY_PREFIX}{name}.catalog-impl"));
+                }
             }
         }
     }

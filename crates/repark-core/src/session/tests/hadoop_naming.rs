@@ -9,10 +9,12 @@ use tempfile::TempDir;
 use crate::ReparkSession;
 
 async fn configured_session(props: &[(&str, &str)], warehouse: &Path) -> ReparkSession {
-    let mut builder = ReparkSession::builder().config(
-        "spark.sql.catalog.ice.warehouse",
-        warehouse.to_str().unwrap(),
-    );
+    let mut builder = ReparkSession::builder()
+        .config("repark.sql.catalogExtensions", "true")
+        .config(
+            "spark.sql.catalog.ice.warehouse",
+            warehouse.to_str().unwrap(),
+        );
     for (prop, value) in props {
         builder = builder.config(format!("spark.sql.catalog.ice.{prop}"), *value);
     }

@@ -9,6 +9,7 @@ use datafusion::catalog::SchemaProvider;
 use iceberg::Catalog;
 use repark_iceberg::catalog::{CatalogCaches, IcebergCacheSettings};
 
+use crate::catalog_config::refusal::CatalogRefusal;
 use crate::config_file::maintenance::MaintenancePolicy;
 use crate::config_file::sources::SourceSpec;
 
@@ -103,6 +104,7 @@ type ViewWrappedSchemas = HashMap<(String, String), Arc<dyn SchemaProvider>>;
 #[derive(Clone)]
 pub struct CatalogRegistry {
     entries: HashMap<String, CatalogEntry>,
+    refused: HashMap<String, CatalogRefusal>,
     database_sources: HashMap<String, Arc<SourceSpec>>,
     /// Read-only (postgres) catalog names for P11 DML routing.
     read_only_catalogs: std::collections::HashSet<String>,
@@ -119,6 +121,7 @@ impl Default for CatalogRegistry {
     fn default() -> Self {
         Self {
             entries: HashMap::new(),
+            refused: HashMap::new(),
             database_sources: HashMap::new(),
             read_only_catalogs: std::collections::HashSet::new(),
             local_warehouse_roots: Vec::new(),
@@ -171,6 +174,7 @@ impl CatalogRegistry {
 
     /// Register `catalog` under `name` with its location `policy` (replacing any prior entry).
     pub fn insert(&mut self, name: String, catalog: Arc<dyn Catalog>, policy: LocationPolicy) {
+        self.refused.remove(&name);
         self.entries.insert(
             name,
             CatalogEntry {
@@ -274,6 +278,20 @@ impl CatalogRegistry {
         self.entries.get(name).map(|entry| &entry.catalog)
     }
 
+    pub fn insert_refusal(&mut self, name: String, refusal: CatalogRefusal) {
+        self.refused.insert(name, refusal);
+    }
+
+    #[must_use]
+    pub fn refusal(&self, name: &str) -> Option<&CatalogRefusal> {
+        self.refused.get(name)
+    }
+
+    #[must_use]
+    pub fn has_refusals(&self) -> bool {
+        !self.refused.is_empty()
+    }
+
     pub(crate) fn insert_database_source(&mut self, spec: Arc<SourceSpec>) {
         self.database_sources.insert(spec.name.clone(), spec);
     }
@@ -308,6 +326,11 @@ impl CatalogRegistry {
     #[must_use]
     pub fn registered_catalog_names(&self) -> Vec<String> {
         self.entries.keys().cloned().collect()
+    }
+
+    #[must_use]
+    pub fn refused_catalog_names(&self) -> Vec<String> {
+        self.refused.keys().cloned().collect()
     }
 
     #[allow(clippy::missing_errors_doc)]

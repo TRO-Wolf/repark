@@ -31,6 +31,8 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   end-to-end, namespace-`location` on a strict catalog (ADV-1 / N5), the BUG-001 dual-key
   property pin, the `spark.catalog` metadata surface, and the config-driven memory catalog —
   all on memory/local catalogs (AWS-free).
+  **CATALOG-1 (2026-09-26):** `config_driven_memory_catalog_registers_and_runs` declares the memory
+  catalog with the `catalog-impl` long form — a bare `type=memory` now refuses at first use like Spark.
 - [dml_sessions.rs](dml_sessions.rs) — `session_sql_bare_dml_applies_eagerly` — the F-BR-2 bare-
   `INSERT` eager-apply trap through
   `session.sql` (memory catalog, AWS-free).
