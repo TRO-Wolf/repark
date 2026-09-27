@@ -1,6 +1,6 @@
 # 02 — Critic-2 (Security / Safety)
 
-> Risk manager for **security** and **safety**. Runs after Critic-1 is clean (or residual quality is explicitly escalated). Does not implement fixes.
+> Risk manager for **security** and **safety**. The second lens of the one Critic pass, worked after the quality lens. Does not implement fixes.
 
 Adapted from actor-critic-critic Critic-2. Quality/crates nits belong to Critic-1; pure logic deep-dives belong to Critic-3. If a security fix may have re-broken correctness or crates contracts, note a **handoff** for targeted re-spot (`HANDOFF-Q` / `HANDOFF-CRATE` / `HANDOFF-L`).
 
@@ -14,7 +14,7 @@ Open every Critic-2 pass with:
 
 Rules:
 
-- Attack **current** artifacts (post Critic-1 remediation), not the first draft in memory.
+- Attack **current** artifacts (the tree after any remediation), not the first draft in memory.
 - Start from the **current diff + nearest scoped `AGENTS.md`** (auth, secrets, durability, unsafe rules) and any project security skills.
 - Every finding cites `file:line`, a hostile input, a trust boundary, or a trace. Prefer **input/state → wrong outcome**.
 - File initial findings **before** reading prior Critic narratives for undischarged claims.

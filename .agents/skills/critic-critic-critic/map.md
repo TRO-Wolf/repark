@@ -2,10 +2,10 @@
 
 ## Purpose
 
-The **Critic–Critic–Critic (CCC)** review skill: three specialised adversarial Critics (quality
-and crates contracts → security and safety → pure logic) plus a fourth that attacks the change's
-own claims, each with a context break, a coverage attestation and a findings ledger. Review-only
-by default. **It is the Critic engine this repository's SEPMO binds** through the manifest's
+The **Critic–Critic–Critic (CCC)** review skill: one adversarial Critic working four lenses
+(quality and crates contracts → security and safety → pure logic → the change's own claims) in
+one pass behind a context break, with a coverage attestation per lens and one findings report;
+a high-risk change adds one independent pass (owner ruling 2026-09-27). Review-only by default. **It is the Critic engine this repository's SEPMO binds** through the manifest's
 [`critic_engine`](../sepmo/binding-manifest.md) row; it can also run alone on a diff. The manifest
 owns the binding and tier effort. This map does not restate them. Tool-neutral: how a Critic is
 spawned is each tool adapter's table.
@@ -13,13 +13,14 @@ spawned is each tool adapter's table.
 ## Contents
 
 - [SKILL.md](SKILL.md) — the skill: `## Procedure` (run-the-loop router: params, tier,
-  charter, Critics, convergence, report) over `## Reference` (parameters, risk tiers, S0–S3,
-  absolute rules, spawn contract, crates/library attack contract, convergence labels, the
-  four-phase workflow, finding schema, required report, SEPMO-engine mapping, anti-patterns,
-  quick start).
+  charter, the Critic pass, re-review, the high-tier independent pass, convergence, report)
+  over `## Reference` (parameters, risk tiers, S0–S3, absolute rules, spawn contract,
+  crates/library attack contract, convergence labels, the four-lens workflow, finding schema,
+  required report, SEPMO-engine mapping, anti-patterns, quick start).
 - [history.md](history.md) — the skill's provenance record, moved out of SKILL.md by the
-  2026-09-27 read-path split; SKILL.md points here.
-- [references/](references/map.md) — the four role prompts, one per Critic, each with its attack
+  2026-09-27 read-path split, with the 2026-09-27 one-Critic ruling and what it did not
+  measure; SKILL.md points here.
+- [references/](references/map.md) — the four role prompts, one per lens, each with its attack
   taxonomy, attestation form, finding prefixes and grep signals.
 
 ## I want to...
@@ -39,6 +40,6 @@ spawned is each tool adapter's table.
 
 ## Debug
 
-- A Critic report says "pass" with no null report per category → invalid by rule; re-run the phase.
+- A Critic report says "pass" with no null report per category → invalid by rule; re-run the lens.
 - `CCC-CONVERGED` was read as ready-to-merge → it never is; `PR_READINESS_AUDIT` still runs (R7).
 - A spawn-mechanics question (agent type, isolation, capability flags) → the adapter, not this skill.
