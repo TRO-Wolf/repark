@@ -133,6 +133,8 @@ reads the worker's `handback.json`. Workers do not delegate; lanes do not start 
   always-stop tiers plus the proposed usage-threshold table (owner to confirm).
 - `orchestrator-adapter-muse.md` — the harness adapter: Claude orchestration mechanics to their
   Muse equivalents, one table, plus the verbatim hand-back authority framing.
+- `lane-contract.md` — the uniform lane interface: work order, hand-back envelope, Q&A protocol,
+  resume semantic, and the state file template, with the cross-family residue table.
 
 ## I want to…
 
