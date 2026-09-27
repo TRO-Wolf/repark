@@ -66,10 +66,7 @@ def _temp_view_home_ref(inner: Any, name: str) -> list[str] | None:
 
 def _refused_spelling(inner: Any, name: str) -> str | None:
     """Registered spelling of refused catalog ``name`` (case-insensitive), else ``None``."""
-    try:
-        names = _native.session_refused_catalog_names(inner)
-    except Exception:
-        return None
+    names = _native.session_refused_catalog_names(inner)
     lowered = name.lower()
     for candidate in names:
         if candidate.lower() == lowered:
