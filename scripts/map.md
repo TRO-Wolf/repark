@@ -1045,7 +1045,7 @@ repark-parity slice.
   Dual-wired through `make check-owner-ruling` in `make ci` and a raw guard step in ci.yml.
   Provocations:
   `python/repark-parity/tests/test_pr_247_owner_ruling.py`.
-- `check_docs_compaction.py` (AGENTS.md ceiling 32,000 B since the 2026-08-26 owner ruling) — the **live-document gate** (DL-4, `make check-docs-compaction`, in
+- `check_docs_compaction.py` (AGENTS.md ceiling 27,816 B, ratcheted 2026-09-27 by READ-PATH-1) — the **live-document gate** (DL-4, `make check-docs-compaction`, in
   `make ci`, `make install-hooks`, `.pre-commit-config.yaml` and `ci.yml`'s guards job (wired under a
   one-time owner grant, 2026-08-25) at n=5 median 0.05 s: no closed campaign still in STATUS, no
   merged unit still on the slate, every workstream bullet inside a `ws` block, and the byte
