@@ -1,16 +1,17 @@
 ---
 name: critic-critic-critic
 description: >
-  Run a three-phase Critic–Critic–Critic review loop with no Actor build phase:
-  Critic-1 attacks bugs and code quality (including crates/library contracts:
-  thiserror, no unwrap, locks, recursion, casts, tests, async), Critic-2 attacks
-  safety and security, then Critic-3 attacks pure logic bugs (wrong results,
-  incomplete matches, silent data loss). Derived from the SEPMO Actor–Critic
-  doctrine (context-break Critics, coverage attestation, risk tiers,
-  mutation-proof pins) but review-only by default; it is the Critic engine this
-  repo binds in its SEPMO manifest. Use when the user runs /critic-critic-critic, asks
-  for "critic critic critic", "CCC loop", triple-critic review, three-pass
-  adversarial critique, or quality then security then logic review of a
+  Run the Critic review loop with no Actor build phase: one Critic, one pass,
+  one report, working four lenses — quality and bugs (including crates/library
+  contracts: thiserror, no unwrap, locks, recursion, casts, tests, async),
+  safety and security, pure logic bugs (wrong results, incomplete matches,
+  silent data loss), and the change's claims about itself on ledger-bearing
+  units. High-risk changes add one independent second pass. Derived from the
+  SEPMO Actor–Critic doctrine (context-break Critics, coverage attestation,
+  risk tiers, mutation-proof pins) but review-only by default; it is the Critic
+  engine this repo binds in its SEPMO manifest. Use when the user runs
+  /critic-critic-critic, asks for "critic critic critic", "CCC loop",
+  adversarial critique, or a quality, security and logic review of a
   diff/PR/slice without building.
 ---
 
@@ -25,21 +26,20 @@ Binders **load this file and the role references before starting** — they do n
 lists. How a Critic is *spawned* is a tool mechanic and lives in that tool's adapter
 ([../../../CLAUDE.md](../../../CLAUDE.md) for Claude), never here.
 
-**No Actor build phase** by default. **Do not merge roles** into one vague “look at the PR” pass.
+**No Actor build phase** by default. **One Critic, one pass, one report** (owner ruling
+2026-09-27) — and not one skim: the pass works every required lens's taxonomy in full and
+attests each lens separately, in the order 1 → 2 → 3 → 4. Re-review after a fix is targeted;
+high tier adds **one independent pass**.
 
-**Findings-only vs fix-then-re-attack:** `review-only` (and the SEPMO Critic stage after the Actor) spawns required Critics **in parallel**, withholds peer reports until merge. `review-and-fix`
-stays **sequential** because the tree moves — do not start the next Critic until the current
-one is CLEAN (or residuals escalate). Report merge order is always Critic-1, then 2, then 3,
-then 4 when enabled.
-
-| Phase | Role | Purpose |
+| Lens | Name | Purpose |
 |---|---|---|
 | 1 | **Critic-1 (Quality / Bugs)** | Attack code quality, library/crates contracts, maintainability, test adequacy, general bugs |
 | 2 | **Critic-2 (Safety / Security)** | Attack security and safety surfaces |
 | 3 | **Critic-3 (Logic Bugs)** | Attack pure logic correctness — wrong results, inverted predicates, silent data loss, incomplete matches |
-| 4 | **Critic-4 (Claims / Record)** | Attack every claim the change makes about itself (ledgers, maps, STATUS, docstrings, reports, author/trailer) against the TREE, by re-execution. Default **on** for ledger-bearing units; opt-out only by explicit `claims_critic=false`. Joins the triad as a quad under the same exclusion rules |
+| 4 | **Critic-4 (Claims / Record)** | Attack every claim the change makes about itself (ledgers, maps, STATUS, docstrings, reports, author/trailer) against the TREE, by re-execution. Default **on** for ledger-bearing units; opt-out only by explicit `claims_critic=false` |
 
-Reference role prompts:
+Critic-1 … Critic-4 name the four **lenses** of the one Critic. The names, the finding prefixes
+and the role references are unchanged:
 
 - [references/01-critic-quality-bugs.md](references/01-critic-quality-bugs.md)
 - [references/02-critic-security-safety.md](references/02-critic-security-safety.md)
@@ -49,9 +49,12 @@ Reference role prompts:
   overclaims, stale records, invented deviation rationales, non-replaying transcripts;
   2026-08-12 CL-IDENTITY: author-email at name resolution)*
 
+Where a reference speaks of an order between Critics, a handoff or a subagent per Critic, this
+file wins: the four are lenses of one pass, and a handoff is a finding filed under its lens.
+
 Doctrines (from the SEPMO Actor–Critic control plane, without the Actor):
 
-- **Context break** — each Critic opens with: *“Context break executed; attacking artifacts, not memory.”* Findings cite `file:line`, failing inputs, or test traces — not build-session memory. Prefer a **fresh subagent** (or sequential pass that starts from the **diff + nearest scoped `AGENTS.md`**).
+- **Context break** — the Critic opens with: *“Context break executed; attacking artifacts, not memory.”* Findings cite `file:line`, failing inputs, or test traces — not build-session memory. Prefer a **fresh subagent** (or a pass that starts from the **diff + nearest scoped `AGENTS.md`**).
 - **Author confidence is not evidence** — refute the change; do not bless it. Clean categories need attestation of what was attacked, not “looks fine.”
 - **Critics do not build** — they only attack and attest. Remediation (if requested) is a separate fix pass that does **not** declare CCC convergence.
 - **Coverage over body count** — clean category = **null report**: “attacked X, Y, Z — no break found.” Bare “pass” is invalid.
@@ -59,34 +62,37 @@ Doctrines (from the SEPMO Actor–Critic control plane, without the Actor):
 - **Resolve or rebut with evidence** — fix, or rebut with test / traced path / cited invariant. “Unlikely” is not a rebuttal.
 - **Adversarial review supplements gates** — project `pre-commit` / `pre-pr` / CI must still pass; never weaken a gate.
 - **Green tests are not convergence** — label `CCC-CONVERGED` vs `TEST-GATED` honestly.
-- **Pins must go red on revert** — hollow substring / wrong-layer monkeypatch pins are Critic-1 findings.
-- **Three Critics stay specialized** — Critic-1 owns quality + crates contracts + test adequacy; Critic-2 owns security/safety; Critic-3 owns **deep pure logic**. Cross-domain glare → short `HANDOFF-*` only, not a full steal of another taxonomy.
+- **Pins must go red on revert** — hollow substring / wrong-layer monkeypatch pins are lens 1 findings.
+- **Lenses stay specialized** — lens 1 owns quality + crates contracts + test adequacy; lens 2 owns security/safety; lens 3 owns **deep pure logic**; lens 4 owns the record. A finding is filed once, under the lens whose taxonomy it breaks.
+- **Pass count is an effort dial, not the bar** — taxonomies, attestation, floor and evidence rules did not change. What the separate passes added in unique findings was never measured ([history.md](history.md)).
 
 ---
 
 ## Procedure
 
-Run the loop; do not build. Binders load this file and the role reference for each phase
+Run the loop; do not build. Binders load this file and the role reference for each lens
 before starting, and never restate them.
 
 1. **Resolve parameters** (Parameters below): task, repo, dependency_repos, mode
    (`review-only` default), max_cycles (2), severity_floor (S1), risk_tier, claims_critic,
    verify. Stop on ambiguous scope.
 2. **Set the risk tier** from the riskiest file touched (exempt → stop with a note;
-   mechanical → Critic-1 focus; standard/high → full loop). A behavior-affecting change is
-   at least standard.
+   mechanical → lens 1 only; standard → one pass, every lens; high → that pass plus one
+   independent pass). A behavior-affecting change is at least standard.
 3. **Write the slice charter**: scope, success conditions, constraints, enumeration
-   partitions, tier, which Critics run. Discover contracts (root + nearest AGENTS.md, the
-   verify gate) and load-bearing dependency_repos first.
-4. **Run the Critics**: each opens with "Context break executed; attacking artifacts, not
-   memory.", loads its role reference, and attacks the current diff with evidence
-   (`file:line`, failing input, trace). `review-only` runs them in parallel with peer
-   reports withheld; `review-and-fix` runs sequentially — the next Critic starts only when
-   the current one is CLEAN. Merge order is always 1 → 2 → 3 → 4.
-5. **Converge honestly**: `CCC-CONVERGED` needs required-phase artifacts, nothing open at
+   partitions, tier, which lenses run, whether the independent pass runs. Discover contracts
+   (root + nearest AGENTS.md, the verify gate) and load-bearing dependency_repos first.
+4. **Run the Critic**: it opens with "Context break executed; attacking artifacts, not
+   memory.", loads the role reference of each required lens, and attacks the current diff
+   with evidence (`file:line`, failing input, trace), lens by lens. One report, one
+   attestation block per lens.
+5. **Re-review after fixes**: only the lenses the fix touched, on the current tree.
+6. **High tier only**: a fresh Critic, the first report withheld, works lenses 2 and 3 over
+   the high-risk surface.
+7. **Converge honestly**: `CCC-CONVERGED` needs required-lens artifacts, nothing open at
    or above the floor, evidenced dispositions, green verify, and complete attestations;
    anything less is `TEST-GATED` or `HALTED`. Green verify alone never converges.
-6. **Report** in the required shape below (see Quick start examples for invocations).
+8. **Report** in the required shape below (see Quick start examples for invocations).
 
 Standing lines: findings and rebuttals need evidence; no secrets in reports; repo contracts
 win and gates never weaken; Critics attack a scratch copy on a fresh context, never the live
@@ -104,12 +110,12 @@ Parse from the user message (ask only if ambiguous):
 |---|---|---|
 | **`task`** | (required) | What slice, PR, branch, or bug surface to attack |
 | **`repo`** | Current workspace | Absolute or relative project root (primary tree) |
-| **`dependency_repos`** | auto / `[]` | Extra trees Critics must attack when the slice pins/depends on them. Auto: load-bearing git-pinned siblings on disk. Explicit `[]` = primary only (**disclose**) |
-| **`mode`** | `review-only` | `review-only` = Critics only (default). `review-and-fix` = after Critic findings, a **Fixer** pass remediates, then Critics re-attest (still no blind “Actor build a new feature” phase unless user expands `task`) |
-| **`max_cycles`** | `2` | Remediation cycles in `review-and-fix` (fix → re-attack). Cap prevents infinite loops |
+| **`dependency_repos`** | auto / `[]` | Extra trees the Critic must attack when the slice pins/depends on them. Auto: load-bearing git-pinned siblings on disk. Explicit `[]` = primary only (**disclose**) |
+| **`mode`** | `review-only` | `review-only` = the Critic only (default). `review-and-fix` = after the findings, a **Fixer** pass remediates, then the Critic re-reviews (still no blind “Actor build a new feature” phase unless user expands `task`) |
+| **`max_cycles`** | `2` | Remediation cycles in `review-and-fix` (fix → re-review). Cap prevents infinite loops |
 | **`severity_floor`** | `S1` | Open findings at/above this severity block convergence (`S0`…`S3`) |
 | **`risk_tier`** | auto | `exempt` \| `mechanical` \| `standard` \| `high` — from **riskiest file touched** |
-| **`claims_critic`** | see note | Default **true** when the unit writes a COMPLETE, unit ledger, map.md claim, STATUS-class record, or §6 registry row. Otherwise false. Opt-out only by explicit `claims_critic=false`. When true, Critic-4 joins every findings pass (quad). |
+| **`claims_critic`** | see note | Default **true** when the unit writes a COMPLETE, unit ledger, map.md claim, STATUS-class record, or §6 registry row. Otherwise false. Opt-out only by explicit `claims_critic=false`. When true, lens 4 joins the pass. |
 | **`verify`** | project default | Prefer repo Makefile/CI contracts. Never invent a matrix that contradicts them |
 
 ---
@@ -118,10 +124,10 @@ Parse from the user message (ask only if ambiguous):
 
 | Tier | When | CCC intensity |
 |---|---|---|
-| **Exempt** | Docs/comments/formatting only, **no** runtime surface | Skip Critics; optional light self-check |
-| **Mechanical** | Pure renames, moves, test-only with no behavior change | Critic-1 only (crates contracts + test adequacy). Critic-2/3 N/A unless paths touch auth, parsers, unsafe, or logic-heavy code |
-| **Standard** (default) | Any behavior-affecting change | Full Critic-1 + Critic-2 + Critic-3. Critic-1 runs **test-coverage skeptic**. Critic-3 runs **logic attack taxonomy** |
-| **High** | Locking, consensus, persistence, authn/authz/crypto, on-disk/on-wire formats, public API, multi-step publish/commit/OR REPLACE, catalog pointer swaps, or nearest `AGENTS.md` high-risk | Full three Critics; **no soft N/A** on concurrency, partial-failure, compatibility when touched. Prefer independent subagents per Critic. Critic-2 **must** pressure atomicity/mid-commit. Critic-3 **must** pressure edge values and multi-writer ordering on logic paths |
+| **Exempt** | Docs/comments/formatting only, **no** runtime surface | Skip the Critic; optional light self-check |
+| **Mechanical** | Pure renames, moves, test-only with no behavior change | Lens 1 only (crates contracts + test adequacy). Lenses 2 and 3 N/A unless paths touch auth, parsers, unsafe, or logic-heavy code |
+| **Standard** (default) | Any behavior-affecting change | One pass, lenses 1 + 2 + 3 (and 4 when `claims_critic` is on). Lens 1 runs the **test-coverage skeptic**. Lens 3 runs the **logic attack taxonomy** |
+| **High** | Locking, consensus, persistence, authn/authz/crypto, on-disk/on-wire formats, public API, multi-step publish/commit/OR REPLACE, catalog pointer swaps, or nearest `AGENTS.md` high-risk | The standard pass with **no soft N/A** on concurrency, partial-failure, compatibility when touched, plus **one independent pass** over the high-risk surface: persistence, commit atomicity, concurrency, security and data-loss paths. Prefer a real subagent for the independent pass. Lens 2 **must** pressure atomicity/mid-commit. Lens 3 **must** pressure edge values and multi-writer ordering on logic paths |
 
 **Auto-detect:** walk changed paths; read nearest `AGENTS.md`; behavior-affecting → at least `standard`. Multi-step publish/commit → **high**.
 
@@ -140,18 +146,18 @@ Parse from the user message (ask only if ambiguous):
 
 ## Absolute rules
 
-1. **Distinct Critic phases** — Critic-1, Critic-2, Critic-3 (when tier requires), plus Critic-4 when `claims_critic` is on. Never merge into one pass.
-2. **Context break** before each Critic — attack **diff + artifacts**, not session memory. Load **nearest scoped `AGENTS.md`** as attack surface.
-3. **Findings-only is parallel; fix-then-re-attack is sequential.** `review-only`: spawn required Critics together, withhold peer reports, merge after. `review-and-fix`: do not start the next Critic until the current one is CLEAN (tree moved). Merge/report order stays quality → security → logic → claims.
+1. **Distinct Critic phases** are lenses of one pass — lens 1, 2, 3 (when the tier requires), plus lens 4 when `claims_critic` is on. Each lens works its own taxonomy and files its own attestation; a lens without both is a skim. A second Critic runs only as the high-tier independent pass.
+2. **Context break** before the pass and before the independent pass — attack **diff + artifacts**, not session memory. Load **nearest scoped `AGENTS.md`** as attack surface.
+3. **One pass, then targeted re-review** of the lenses a fix touched. The independent pass starts fresh and files before it reads the first report. Report order stays quality → security → logic → claims.
 4. **Findings require evidence** — path + region; *Potential* when unproven; never invent paths.
 5. **Rebuttals require evidence** — test / traced path / cited invariant.
 6. **No secrets in reports** — redact values; pattern + location only.
 7. **Repo contracts win** — root + nearest `AGENTS.md` / `CLAUDE.md` / project skills. CCC never overrides a project hard gate.
 8. **Never weaken the gate** — no skip/loosen of checks to force green.
-9. **Every behavior change needs a mutation-proof test** (Standard/High) — Critic-1 test-coverage skeptic enforces this.
+9. **Every behavior change needs a mutation-proof test** (Standard/High) — the lens 1 test-coverage skeptic enforces this.
 10. **Green verify alone is never convergence** — see [Convergence labels](#convergence-labels-hard).
 11. **Load-bearing dependency trees are in Critic scope** when clauses depend on them.
-12. **Critic-1 crates contract** — for any touch under `crates/` (or equivalent library roots), apply the [Crates / library attack contract](#crates--library-attack-contract-critic-1) in Critic-1 (full detail in the Critic-1 reference).
+12. **Critic-1 crates contract** — for any touch under `crates/` (or equivalent library roots), apply the [Crates / library attack contract](#crates--library-attack-contract-critic-1) in lens 1 (full detail in the Critic-1 reference).
 13. **Spawn contract** — apply the [Spawn contract](#spawn-contract) on every child: the invariants are here, the tool-specific mapping is in the tool's adapter.
 
 ---
@@ -164,7 +170,7 @@ adapter** — never here, never in a child prompt from memory.
 
 | Role | Needs | Must not | Context |
 |---|---|---|---|
-| Critic-1/2/3/4 and any `git` / verify probe | read the tree, run shell (`git`, the verify commands) | edit files | **fresh** — never resumed from a peer Critic or the Actor (a resumed context leaks the peer narrative the context break exists to exclude) |
+| The Critic, the independent pass and any `git` / verify probe | read the tree, run shell (`git`, the verify commands) | edit files | **fresh** — never resumed from the Actor, and the independent pass never from the first Critic (a resumed context leaks the narrative the context break exists to exclude) |
 | Setup that needs `git status` / `git diff` | read + shell | edit | n/a |
 | Fixer (`review-and-fix`) | read + shell + edit | declare convergence | same-role continuation only |
 
@@ -178,13 +184,13 @@ Hard lines:
 - **Role instructions travel in the child prompt.** A persona or role file is pasted or
   pointed at; no spawn mechanism is assumed to take one as a parameter.
 - Worktree and scratch-location mechanics are the adapter's; the identity every commit must
-  carry is the repository's (`git config` at the repo root), checked by Critic-4 at `%ae`.
+  carry is the repository's (`git config` at the repo root), checked by lens 4 at `%ae`.
 
 ---
 
 ## Crates / library attack contract (Critic-1)
 
-Applies to all paths under `crates/` (and the same rules by analogy for other pure-library roots the repo marks as library code). Critic-1 **must** attack these categories when the diff touches library code — not soft-skip as “style.”
+Applies to all paths under `crates/` (and the same rules by analogy for other pure-library roots the repo marks as library code). Lens 1 **must** attack these categories when the diff touches library code — not soft-skip as “style.”
 
 | Area | Attack rules (summary) |
 |---|---|
@@ -198,7 +204,7 @@ Applies to all paths under `crates/` (and the same rules by analogy for other pu
 
 Full checklist and finding prefixes: [references/01-critic-quality-bugs.md](references/01-critic-quality-bugs.md).
 
-**Boundary:** production panics as a *safety class*, `unsafe`, secrets, injection → Critic-2 (`HANDOFF-SEC` / `HANDOFF-SAF` if found during Critic-1). Deep multi-step logic wrongness (predicate inversion, silent wrong rows) → Critic-3 owns the deep dive; Critic-1 still files obvious logic if found, or hands off with `HANDOFF-L`.
+**Boundary:** production panics as a *safety class*, `unsafe`, secrets, injection are lens 2 findings. Deep multi-step logic wrongness (predicate inversion, silent wrong rows) is a lens 3 finding, worked with the logic taxonomy.
 
 ---
 
@@ -206,8 +212,8 @@ Full checklist and finding prefixes: [references/01-critic-quality-bugs.md](refe
 
 | Label | Meaning | Allowed when |
 |---|---|---|
-| **`CCC-CONVERGED`** | Required Critic phases ran CLEAN (or residual below floor ACCEPTED_FLAGGED); full verify green; coverage skeptic + logic attestation satisfied when applicable | Critic artifacts exist for required phases |
-| **`TEST-GATED`** | Verify/tests green but Critics incomplete or skipped | Ceremony deferred |
+| **`CCC-CONVERGED`** | Required lenses ran CLEAN (or residual below floor ACCEPTED_FLAGGED); the independent pass ran when the tier is high; full verify green; coverage skeptic + logic attestation satisfied when applicable | Critic artifacts exist for every required lens |
+| **`TEST-GATED`** | Verify/tests green but the review incomplete or skipped | Ceremony deferred |
 | **`HALTED`** | Open findings ≥ floor after `max_cycles`, or user stop | Residual ≥ floor remains |
 
 Never rewrite `TEST-GATED` as `CCC-CONVERGED`.
@@ -223,73 +229,65 @@ Never rewrite `TEST-GATED` as `CCC-CONVERGED`.
 3. **Resolve `dependency_repos`** for load-bearing pins.
 4. Baseline: branch, `git status`, **diff under attack** per tree.
 5. Set **risk tier**.
-6. Write **slice charter** (scope, success conditions, constraints, enumeration partitions, risk tier, which Critics run).
+6. Write **slice charter** (scope, success conditions, constraints, enumeration partitions, risk tier, which lenses run, whether the independent pass runs).
 
 If ambiguous scope → **stop and ask**. If `exempt` → document and stop.
 
 ---
 
-### Phase 1 — Critic-1 (Quality / Bugs + crates contracts)
+### The Critic pass
 
-**Skip if `risk_tier=exempt`. Mechanical: crates contracts + correctness/test focus; N/A others with justification.**
+**Skip if `risk_tier=exempt`.**
 
 1. Context break: *“Context break executed; attacking artifacts, not memory.”*
-2. Load [references/01-critic-quality-bugs.md](references/01-critic-quality-bugs.md).
-3. Prefer a **fresh `explore` subagent** (shell allowed, no edits — see Spawn contract). Inputs: charter, current diff(s), tests, verify, nearest `AGENTS.md` — **not** author excuses first.
-4. Work **Quality + Crates attack taxonomies**; attestation + findings (`Q-` / `CRATE-`).
-5. **Test-coverage skeptic** (Standard/High behavior changes): mutation-proof dual probe.
-6. **Enumeration span** when charter names a finite partition.
-7. Null reports for clean categories.
-8. Verdict: `CLEAN` | `NEEDS_REMEDIATION`.
-9. If remediation + `review-and-fix` + cycles remain: Fixer remediates Critic-1 findings only; re-verify; Critic-1 re-attacks. In `review-and-fix` only: **do not start Critic-2 until Critic-1 CLEAN** (or escalate residuals to user at max_cycles). In `review-only`: Critic-2 runs in parallel under the spawn contract; do not wait.
+2. Prefer a **fresh `explore` subagent** (shell allowed, no edits — see Spawn contract). Inputs: charter, current diff(s), tests, verify, nearest `AGENTS.md` — **not** author excuses first.
+3. Work the required lenses in order. For each: load its reference, work its taxonomy, file findings and the attestation, null reports for clean categories.
+4. One verdict per lens and one for the pass: `CLEAN` | `NEEDS_REMEDIATION`.
+
+| Lens | N/A when | Works | Findings |
+|---|---|---|---|
+| 1 Quality / Bugs + crates | never; mechanical narrows it to crates contracts + correctness/test focus | Quality + Crates taxonomies; **test-coverage skeptic** (mutation-proof dual probe) on Standard/High behavior changes; **enumeration span** when the charter names a finite partition | `Q-` / `CRATE-` |
+| 2 Safety / Security | mechanical with no security/safety surface | Security/Safety taxonomy; High: atomicity pressure on commit/publish | `SEC-` / `SAF-` |
+| 3 Logic Bugs | mechanical with no logic-bearing diff | Logic attack taxonomy, exhaustively — concrete edge values, silent wrong results, incomplete matches, racey wrong outcomes; crates style or secret handling only when they *cause* a wrong result | `L-` |
+| 4 Claims / Record | `claims_critic` is off | Claims taxonomy; identity claims need `%ae` across the branch (CL-IDENTITY), not the author name | `CL-` |
+
+Every N/A is written down with its justification.
 
 ---
 
-### Phase 2 — Critic-2 (Safety / Security)
+### Targeted re-review
 
-**Skip if exempt, or mechanical with no security/safety surface (document N/A).**
-
-1. Context break.
-2. Load [references/02-critic-security-safety.md](references/02-critic-security-safety.md).
-3. Fresh read-only subagent independent of Critic-1 narrative. Current diff post quality fixes.
-4. Security/Safety taxonomy; `SEC-` / `SAF-` findings; High-tier atomicity pressure on commit/publish.
-5. Verdict + remediation loop if needed. Targeted Critic-1 re-spot if fixes touch quality/crates contracts.
+After the Actor (in `review-and-fix`, the Fixer, on the filed findings only) remediates, the
+Critic re-attacks **the lenses the fix touched** — and any lens the fix may have re-broken — on
+the current tree, in the same report. Cycles count against `max_cycles`; residuals at the cap
+escalate to the user.
 
 ---
 
-### Phase 3 — Critic-3 (Logic Bugs)
+### Independent pass (high tier)
 
-**Skip if exempt. Mechanical: only if diff is logic-bearing; else N/A.**
-
-1. Context break.
-2. Load [references/03-critic-logic-bugs.md](references/03-critic-logic-bugs.md).
-3. Fresh read-only subagent independent of Critic-1/2 narratives. **Current** diff (post prior remediations).
-4. Work **Logic attack taxonomy** exhaustively — concrete edge values, silent wrong results, incomplete matches, racey wrong outcomes (logic lens, not panic/safety).
-5. Findings `L-` prefix. Do not re-litigate crates style or secret handling unless they *cause* wrong results (then file logic finding with evidence of wrong outcome).
-6. Verdict + remediation loop if needed. If logic fix re-breaks crates contracts or security, hand off targeted re-spot of Critic-1/2.
+A **fresh** Critic, the first report withheld, works lenses 2 and 3 over the high-risk surface
+the tier named. Its findings join the report under their own heading once both passes have
+filed; a finding both filed is recorded once, marked found twice.
 
 ---
 
-### Convergence (all required Critics)
+### Convergence
 
 Work is **`CCC-CONVERGED`** only when:
 
-1. Risk tier applied; required Critic phases have **artifacts** (findings + attestation)
-2. No open finding ≥ `severity_floor` on required phases
+1. Risk tier applied; required lenses have **artifacts** (findings + attestation)
+2. No open finding ≥ `severity_floor` on required lenses or the independent pass
 3. Every finding REMEDIATED / WITHDRAWN (evidence) / ACCEPTED_FLAGGED (policy)
 4. **Verify green** with full project gate when shipping
-5. Standard/High: mutation-proof tests (Critic-1 skeptic)
+5. Standard/High: mutation-proof tests (lens 1 skeptic)
 6. Enumeration partitions pin-count satisfied when applicable
 7. `dependency_repos` attacked when load-bearing
-8. Critic-3 logic attestation complete when required (Standard/High behavior)
-9. Critic-4 claims attestation complete when `claims_critic` is on (ledger-bearing default)
+8. Lens 3 logic attestation complete when required (Standard/High behavior)
+9. Lens 4 claims attestation complete when `claims_critic` is on (ledger-bearing default)
+10. High: the independent pass filed its attestation
 
-If Critics skipped → **`TEST-GATED`**. If max_cycles + open ≥ floor → **`HALTED`**.
-
-When `claims_critic` is on, after Critic-3 (or in parallel with it on `review-only`): load
-[references/04-critic-claims-record.md](references/04-critic-claims-record.md), spawn an
-`explore` Critic-4, prefix `CL-`. Identity claims require `%ae` across the branch (CL-IDENTITY),
-not the author name.
+If the review was skipped → **`TEST-GATED`**. If max_cycles + open ≥ floor → **`HALTED`**.
 
 ---
 
@@ -323,8 +321,9 @@ FINDING:
 **Convergence label:** CCC-CONVERGED | TEST-GATED | HALTED (reason)
 **Dependency repos reviewed:** <paths or none>
 **Enumeration partitions:** <list + pin count / size, or n/a>
+**Isolation:** subagent | in-session break
 
-## Critic-1 (Quality / Bugs + crates)
+## Lens 1 — Critic-1 (Quality / Bugs + crates)
 - Verdict: CLEAN | NEEDS_REMEDIATION | SKIPPED
 - Findings: count by severity
 - Top findings: …
@@ -334,28 +333,29 @@ FINDING:
 - Mutation-proof pins: ok | findings
 - Null reports: …
 
-## Critic-2 (Safety / Security)
+## Lens 2 — Critic-2 (Safety / Security)
 - Verdict: …
 - Findings: …
 - Atomicity/partial-failure (if applicable): attacked | n/a
 - Null reports: …
 
-## Critic-3 (Logic Bugs)
+## Lens 3 — Critic-3 (Logic Bugs)
 - Verdict: …
 - Findings: …
 - Edge-value / silent-wrong pressure: attacked | n/a
 - Null reports: …
 
-## Critic-4 (Claims / Record — when claims_critic)
+## Lens 4 — Critic-4 (Claims / Record — when claims_critic)
 - Verdict: …
 - Findings: …
 - CL-IDENTITY (`%ae` across branch): attacked | n/a
 - Null reports: …
 
-## High-tier role verdicts (high only; one line each)
-- Quality/crates: …
-- Security/safety: …
-- Logic: …
+## Independent pass (high only)
+- Surface: …
+- Verdict: …
+- Findings: … (mark any the first pass also filed)
+- Null reports: …
 
 ## Residual / accepted-flagged
 …
@@ -368,20 +368,16 @@ FINDING:
 
 ## Subagent guidance
 
-| Phase | Role shape | Notes |
+| Role | Role shape | Notes |
 |---|---|---|
-| Critic-1 | read-attack (shell, no edits) | Attack only; crates contract when `crates/` touched |
-| Critic-2 | read-attack | Independent of Critic-1; withhold peer reports |
-| Critic-3 | read-attack | Independent of Critic-1/2; pure logic |
-| Critic-4 (when on) | read-attack | Independent; attacks the paper including CL-IDENTITY |
+| The Critic | read-attack (shell, no edits) | Attack only; every required lens |
+| Independent pass (high) | read-attack | Fresh; the first report withheld until it files |
 | Fixer (`review-and-fix`) | build (shell + edits) | Fix filed findings only; re-verify |
 
 Which agent type each shape maps to is the tool adapter's table. If spawning is unavailable or
-not opted into (the SEPMO manifest's `context_break_mechanics` row decides): sequential
-hat-switches with explicit, declared context breaks — and the report names the weaker
-independence.
-
-**High tier:** prefer real subagents for each Critic. Do not invent a six-agent swarm by default.
+not opted into (the SEPMO manifest's `context_break_mechanics` row decides): the same session
+runs both passes behind declared context breaks — and the report names the weaker independence.
+Do not invent a swarm.
 
 ---
 
@@ -392,7 +388,7 @@ external engine ([../sepmo/references/05-critic.md](../sepmo/references/05-criti
 critic engines") apply and this section is how they are met:
 
 1. **`CCC-CONVERGED` is never Delivery.** The final report maps into the spine's instruments —
-   each Critic's coverage attestation becomes the unit ledger's `COVERAGE_ATTESTATION` rows and
+   each lens's coverage attestation becomes the unit ledger's `COVERAGE_ATTESTATION` rows and
    each `FINDING:` becomes a ledger finding — and `PR_READINESS_AUDIT` then runs exactly as
    always (R7).
 2. **LIGHT units never select this engine**; the proportionality rubric decides the path first.
@@ -405,9 +401,9 @@ critic engines") apply and this section is how they are met:
 
 ## Anti-patterns
 
-- Merging Critic-1/2/3 into one skim
+- Running the one pass as a skim — a lens with no taxonomy worked or no attestation filed
 - Skipping crates contract on `crates/` diffs (“style only”)
-- Critic-3 re-running full security taxonomy
+- Skipping the independent pass on a high-tier change, or letting it read the first report before it files
 - Declaring convergence from green verify alone (`TEST-GATED` mislabeled)
 - Hollow pins / unpinned discarded-failure paths
 - Weakening gates to force green

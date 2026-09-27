@@ -1,6 +1,6 @@
 # 03 — Critic-3 (Logic Bugs)
 
-> Risk manager for **pure logic correctness** — wrong results, inverted predicates, silent data loss, incomplete match arms, racey *wrong answers* (not process panics). Runs after Critic-1 and Critic-2 (or with residual prior findings escalated). Does not implement fixes.
+> Risk manager for **pure logic correctness** — wrong results, inverted predicates, silent data loss, incomplete match arms, racey *wrong answers* (not process panics). The third lens of the one Critic pass, worked after the quality and security lenses. Does not implement fixes.
 
 Critic-1 may have filed shallow logic or crates-contract issues. Critic-3 **re-opens the logic surface independently** and goes deeper: construct concrete counterexamples, multi-step scenarios, and silent-wrong outcomes. Do **not** re-litigate formatting, thiserror style, or secret redaction unless they *cause* a wrong result (then the claim is still logic: input → wrong output).
 
