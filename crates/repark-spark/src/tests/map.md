@@ -2140,7 +2140,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `DISTINCT` whose key binds no select item keeps main's
   `must appear in select list` refusal byte for byte (C-012). Fold r2 pins
   that an unqualified key binds a qualified item's last segment
-  (`SELECT st.s … ORDER BY s, ts` answers `s` with `x, y, z`, C-009).
+  (`SELECT st.s … ORDER BY s, ts` answers `s` with `x, y, z`, C-009) and
+  that a qualified key keeps sorting by the column
+  (`ORDER BY z.id` answers `2, 3, 10`, C-011).
   The setup installs production's
   integer planner so `id + 1` is `Int32` as on the facade.
   pins: tz-asof-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-011, C-012

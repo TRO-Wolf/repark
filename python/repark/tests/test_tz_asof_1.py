@@ -340,6 +340,23 @@ def test_bare_key_matching_the_display_name_sorts_the_output_column(
     assert rows == [["3"], ["2"], ["10"]]
 
 
+def test_qualified_key_sorts_by_the_column(session: ReparkSession) -> None:
+    """A qualified ORDER BY key keeps binding to the column, not the output.
+
+    ``z.id`` sorts by the typed column, so the string output answers
+    ``2, 3, 10`` ascending and ``10, 3, 2`` descending — main refused the
+    shape outright.
+
+    pins: tz-asof-1/C-011
+    """
+    seed_z(session)
+    cols, rows = observed(session, "SELECT CAST(id AS STRING) FROM sc.ns.z ORDER BY z.id")
+    assert cols == [("id", "string")]
+    assert rows == [["2"], ["3"], ["10"]]
+    _, rows = observed(session, "SELECT CAST(id AS STRING) FROM sc.ns.z ORDER BY z.id DESC")
+    assert rows == [["10"], ["3"], ["2"]]
+
+
 def test_distinct_with_an_unbindable_key_keeps_the_refusal(
     session: ReparkSession,
 ) -> None:
