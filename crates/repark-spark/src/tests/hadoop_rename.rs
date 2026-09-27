@@ -103,7 +103,7 @@ async fn hadoop_type_staged_create_writes_versioned_names() {
     let mut versions: Vec<&str> = names
         .iter()
         .filter(|name| name.ends_with(".metadata.json"))
-        .map(|name| name.as_str())
+        .map(String::as_str)
         .collect();
     versions.sort_unstable();
     assert_eq!(
