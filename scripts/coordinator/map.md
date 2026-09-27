@@ -137,6 +137,10 @@ reads the worker's `handback.json`. Workers do not delegate; lanes do not start 
   resume semantic, and the state file template, with the cross-family residue table.
 - `rulings-2026-09-26.md` — the improvised rulings codified, one dated row each with evidence
   and how to apply.
+- `claude_usage.py` — token accounting over transcript JSONL: per-file turns and token sums
+  plus a total row, table or `--json`, with a `--since` stamp filter.
+- `tests/` — the coordinator's own pytest dir (see `tests/map.md`); home of the
+  `test_claude_usage.py` fixture test.
 
 ## I want to…
 
