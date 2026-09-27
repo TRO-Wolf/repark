@@ -196,7 +196,7 @@ Additional rules:
 
 ## Navigation: `map.md` Convention
 
-Policy (hand-written maps, same-change lockstep, no generator) lives in
+Policy for authored maps and compiled inventories lives in
 [AGENTS.md](../../../AGENTS.md) "Hard rules". The method:
 
 1. Read the `map.md` of every directory the task will touch before editing a file there.

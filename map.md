@@ -256,3 +256,8 @@ First checks: `make ci`, then `make help` for the full target list. CI mirrors `
 
 FNP-8 (2026-09-07): STATUS links the measured residuals in the parity registry;
 implementation and oracle evidence remain in the staging unit ledger until delivery.
+
+Repository compiler: [scripts/repo-tool/map.md](scripts/repo-tool/map.md).
+
+The [worktree checks](scripts/repo-tool/CHECKS.md) run docs links and ledger grammar together
+through `make check-repo-docs`. Their named Make targets remain available separately.

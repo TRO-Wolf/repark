@@ -124,9 +124,10 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
   ANSI SQL / Spark facade) is the testing structure. A divergence-class claim pins *every* class it
   names, per entry point, on the Arrow path (`collect`/`to_arrow`, value AND type — never only
   `show`). Full contract: [docs/testing.md](docs/testing.md).
-- **`map.md` in every directory, updated in the same change** (`scripts/check_map_md.sh`; the hook
-  warns). New directory → new `map.md`, no judgment call. Maps are **hand-written**: no generator
-  exists, and the one piece of `map.md` automation only *checks* — it never writes one.
+- **`map.md` in every directory, accurate in the same change.** The
+  [map compiler](scripts/repo-tool/MAPS.md) owns marked inventories; prose stays reviewed.
+  Stable inventories need no edits. Legacy maps keep lockstep. New directories
+  need maps. No archive writes.
 - **Rust house style:** one-line comments; `// === name ===` stay; one blank line between top-level
   items; `max_width=100`, `edition=2024`; clippy `all`+`pedantic`, `-D warnings`; `thiserror`
   (libs) / `anyhow` (bins); `tracing`; no panics in prod — no `unwrap`/`expect`
@@ -156,10 +157,10 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
   - *Public-docstring presence* (`scripts/check_docstring_presence.py`) — Ruff
     `D101`/`D102`/`D103`/`D105`/`D107`; style `D` declined (facade mirrors PySpark).
   - *Structural truth* (`repo-manifest.toml` + `scripts/check_manifest.py`) — a MIRROR of the
-    crate-DAG SSOT; it checks hand-written maps and never writes one.
+    crate-DAG SSOT; it validates component maps and never writes one.
   - *parity-live dual-wire* (`scripts/check_parity_live_dual_wire.py`) — the `make` target and
     the workflow compared on load-bearing tokens; fail-closed on a parse miss.
-  - *`map.md` content* (`scripts/sync_map_md.py`) — link validity armed (`make check-map-sync`);
+  - *`map.md` content* ([map compiler](scripts/repo-tool/MAPS.md)) — link validity armed (`make check-map-sync`);
     coverage behind `--strict`. Policy: ["Markdown document lifecycle"](#markdown-document-lifecycle).
   - v1 helper scripts not yet re-homed: [scripts/map.md](scripts/map.md) "Not re-homed". Each
     returns only with a concrete driver named there.

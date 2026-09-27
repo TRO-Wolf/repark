@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "targets": [
+    "ci",
+    "verify",
+    "preflight",
+    "repo-tool-check",
+    "check-map-sync"
+  ],
+  "pins": [
+    {
+      "name": "ruff",
+      "kind": "make",
+      "path": "Makefile",
+      "key": "RUFF",
+      "expected": "uvx ruff@0.15.22"
+    },
+    {
+      "name": "edition",
+      "kind": "toml",
+      "path": "scripts/repo-tool/Cargo.toml",
+      "key": "package.edition",
+      "expected": "2024"
+    }
+  ]
+}

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -279,19 +280,18 @@ def test_finding_record_fields_are_checked(repo: Path) -> None:
 
 def test_exceptions_table_ratchets_down_only(tmp_path: Path) -> None:
     # pins: dl-2-ledger-grammar-charter/C-005
-    # The real table against the real tree: a ceiling above the measured count, or a row for a
-    # ledger in no live bin, is a finding — provoked by editing a copy of the script.
     source = _SCRIPT.read_text(encoding="utf-8")
-    assert '"fnp-0-charter-ledger.md": (12, False)' in source
-    raised = source.replace(
-        '"fnp-0-charter-ledger.md": (12, False)', '"fnp-0-charter-ledger.md": (13, False)'
+    policy = json.loads(
+        _SCRIPT.with_name("ledger_grammar_exceptions.json").read_text(encoding="utf-8")
     )
-    raised = raised.replace(
-        '"v3-0-charter-ledger.md": (0, False),',
-        '"v3-0-charter-ledger.md": (0, False),\n    "gone-ledger.md": (0, False),',
-    )
+    assert policy["fnp-0-charter-ledger.md"] == [12, False]
+    policy["fnp-0-charter-ledger.md"] = [13, False]
+    policy["gone-ledger.md"] = [0, False]
     copy = tmp_path / "raised_ceilings.py"
-    copy.write_text(raised, encoding="utf-8")
+    copy.write_text(source, encoding="utf-8")
+    copy.with_name("ledger_grammar_exceptions.json").write_text(
+        json.dumps(policy), encoding="utf-8"
+    )
     result = subprocess.run(
         [sys.executable, str(copy), "--repo", str(_REPO)],
         capture_output=True,

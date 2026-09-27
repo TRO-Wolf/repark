@@ -20,7 +20,8 @@ Quick navigation: [pickup](#1-read-this-at-pickup), [assessment](#2-assessment-a
 [agent profiles](#8-operating-profile-per-role), [runtime efficiency](#9-token-and-latency-controls),
 [verification](#10-verification-policy-proposal), [metrics](#11-measurement-contract),
 [pilot](#12-controlled-pilot), [delivery sequence](#13-recommended-delivery-sequence),
-[decisions](#14-decisions-to-resolve-during-intake).
+[decisions](#14-decisions-to-resolve-during-intake),
+[repository compiler follow-up](#16-repository-compiler-follow-up--2026-09-27).
 
 ## 1. Read this at pickup
 
@@ -563,3 +564,70 @@ External primary sources consulted for the 2026-09-04 review are linked beside t
 they support: latency and prompt caching in §9, and evaluation design in §12. Recheck those sources
 before choosing API-specific controls. No provider-specific pricing or performance guarantee is
 assumed by this proposal.
+
+
+## 16. Repository compiler follow-up — 2026-09-27
+
+**Disposition:** owner requested roadmap capture on `codex/repo-compiler`, explicitly deferring
+implementation. This section does not charter a unit or authorize live harness changes. It
+inherits this brief's retirement rule; link accepted successors or dated decline decisions here.
+
+At this inspection, the isolated branch contains a repository compiler with context, evidence
+and local workflow commands. Its [workflow contract](../../../scripts/repo-tool/WORKFLOW.md)
+defines the action intents and boundaries; it does not execute them. Implementation and
+verification evidence live in the [compiler ledger](../../ledgers/staging/repo-compiler-ledger.md)
+and [check-port ledger](../../ledgers/staging/repo-compiler-checks-ledger.md). These are branch
+artifacts, not a claim of merge or live adoption. Local command timings do not establish token
+savings. Reconcile against the actual deployed harness before starting a successor.
+
+### Priorities and acceptance evidence
+
+| Order | Candidate | Required evidence before adoption |
+|---|---|---|
+| R-1 | Extend existing usage accounting and freeze a comparison baseline. | Reconciled run records distinguish missing data from zero and include failed or abandoned attempts. Record model, policy, task class and input identity. |
+| R-2 | Integrate the compiler's workflow decisions with the lane controller in shadow mode. | Replay recorded runs; explain every difference from historical actions and adjudicate correctness against the governing rules. No worker launches or external mutations during replay. |
+| R-3 | Replace rendered-status fingerprints with stable event identities. | Elapsed time and display-only changes never trigger a model call. Completion, new evidence, explicit requests and failures are detected; duplicate events, restarts, heartbeat recovery and event batching are tested. |
+| R-4 | Compile role and remediation packets from authoritative sources. | Preserve mandatory context; include owned files, relevant maps, unresolved findings, evidence and required validation. Source changes invalidate packets. Resolve ownership between Python packet assembly and Rust context compilation. |
+| R-5 | Emit structured gate diagnostics and safe mechanical corrections. | Rule ID, path, location, observed/expected values and permitted correction lead back to complete logs. Corrections preserve policy and are idempotent; baseline increases are never automatic. |
+| R-6 | Consolidate additional mechanical checks in Rust where profiling supports it. | Start with file-size and crate-root checks sharing inventory and line counts. Require Python differential fixtures, unchanged exception semantics and measured end-to-end improvement. Consider DAG/manifest checks together afterwards. |
+
+R-1 through R-3 form the recommended first bounded follow-up, refining the earlier E-0/E-1/E-3
+sequence. Existing usage collection in `scripts/sepmo_usage.py` and packet assembly in
+`scripts/sepmo_packet.py` are reuse candidates, not missing capabilities to build again.
+R-4 through R-6 remain separately scoped work. Keep Python AST and Ruff-backed checks until
+profiling demonstrates a benefit sufficient to justify parser-compatibility work.
+
+The checked-in `scripts/coordinator/drive.sh` hashes rendered status output and defaults its
+minimum wake gap to zero as inspected on 2026-09-27. This identifies a review target; it does
+not prove the deployed harness matches it or reproduce earlier campaign wake counts. Determine
+which fields actually change and whether they require judgment before setting batching policy.
+
+### Rollout and quality boundaries
+
+1. Freeze the baseline, task sample and metrics; capture the deployed driver and policy versions.
+2. Replay with no side effects. Pin stale evidence, duplicate events, crash recovery, incomplete
+   handbacks, advisory findings, blocking findings and round-limit dispositions.
+3. After a separate implementation charter and replay review, pilot one authorized lane with a
+   tested rollback. The driver must verify artifact provenance; valid JSON alone is insufficient.
+4. Expand only after comparing quality and total resource use against the baseline. Preserve
+   independent review, required gates and existing approval boundaries throughout the pilot.
+
+Routine worker completion, gate routing and typed critic results are candidates for deterministic
+handling. Ambiguous scope, disputed findings and unexpected failures remain judgment points.
+A malformed handback should produce a precise schema failure; a missing process result should
+be classified as infrastructure failure. Neither should blindly restart implementation.
+Readiness remains distinct from permission to commit, push or merge. No broader shell permissions,
+fewer required tests, or weaker review thresholds are proposed by this roadmap entry.
+
+### Success measures
+
+Report model calls that produce no action; input, cached-input and output tokens separately;
+actor/critic rounds; infrastructure retries versus code remediation; gate queue time; and total
+elapsed time and usage per accepted unit. Include failed and abandoned work in the numerator.
+Track escaped defects, reopened findings and completeness of mandatory evidence alongside cost.
+
+Predeclare numeric targets and the observation window before the pilot. Compare similar task
+classes under recorded model and policy settings; do not claim account-limit savings from script
+timings or document byte counts. Any unauthorized action, omitted obligation or stale evidence
+accepted as current fails the pilot. A small pilot can establish feasibility, not rare-defect
+parity. Keep the existing workflow available for rollback.

@@ -36,6 +36,7 @@ or environment error.
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import subprocess
 import sys
@@ -53,8 +54,10 @@ CITATION_ROOTS: tuple[str, ...] = ("crates/", "python/", "scripts/")
 # deleted when it reaches zero and the block is filed. A ledger not listed allows zero and
 # must file its attestation.
 EXCEPTIONS: dict[str, tuple[int, bool]] = {
-    "fnp-0-charter-ledger.md": (12, False),
-    "v3-0-charter-ledger.md": (0, False),
+    name: (values[0], values[1])
+    for name, values in json.loads(
+        Path(__file__).with_name("ledger_grammar_exceptions.json").read_text(encoding="utf-8")
+    ).items()
 }
 
 VERDICTS: frozenset[str] = frozenset({"PROVEN", "OPEN", "REJECTED"})

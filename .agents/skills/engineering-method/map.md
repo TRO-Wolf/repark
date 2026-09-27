@@ -15,6 +15,7 @@ loses on any conflict.
   (router, Non-Negotiables locator, Workflow Storage, Workflow §1–§9 with the §4 done gate,
   Navigation, Pre-Flight) → `## Reference` (Mode Handling, Risk-First, Naming,
   Language-Specific Rules with commands + how-to, Function Length & Recursion, Core Principles).
+  Navigation follows the contract’s authored-map and compiled-inventory policy.
   Lessons load scoped (`grep -n <subsystem>`); in full only when orchestrating.
 
 ## I want to...

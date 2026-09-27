@@ -56,6 +56,8 @@ jobs:
       # Use the Makefile targets so local and CI keep the same clippy split and panic ban.
       - name: rustfmt
         run: make rust-fmt-check
+      - name: repository compiler
+        run: make repo-tool-check
       - name: clippy
         run: make rust-clippy
       - name: panic-ban
@@ -131,9 +133,11 @@ jobs:
           enable-cache: true
       - name: map.md guard
         if: github.event_name == 'pull_request'
+        env:
+          MAP_BASE_REF: ${{ github.base_ref }}
         run: |
-          git fetch --no-tags origin "+refs/heads/${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"
-          bash scripts/check_map_md.sh --base "origin/${{ github.base_ref }}"
+          git fetch --no-tags origin "+refs/heads/$MAP_BASE_REF:refs/remotes/origin/$MAP_BASE_REF"
+          bash scripts/check_map_md.sh --base "origin/$MAP_BASE_REF"
       # Mirror `make check-crate-dag`; scripts/check_crate_dag.py owns tiers, roles, and allowed
       # dependency kinds.
       - name: crate-DAG layering guard
@@ -155,23 +159,20 @@ jobs:
       - name: parity-live dual-wire guard
         run: ./scripts/check_parity_live_dual_wire.sh
       # Every map link must resolve. Mirror `make check-map-sync` and the pre-commit guard.
-      - name: map.md link-validity guard (sync_map_md)
-        run: python3 scripts/sync_map_md.py --check
+      - name: map.md compiler guard
+        run: make check-map-sync
       # Full history lets the ledger guard reject wrong bins, dead links, and edits to frozen
       # records. Mirror `make check-ledgers`.
       - name: ledger lifecycle guard (check_ledgers)
         run: python3 scripts/ledger_lifecycle.py check
       # Keep live ledger clauses, pins, attestations, and exception ratchets valid. Mirror
-      # `make check-ledger-grammar`.
-      - name: ledger grammar guard (check_ledger_grammar)
-        run: python3 scripts/check_ledger_grammar.py
+      # `make check-repo-docs`.
+      - name: docs links and ledger grammar guards
+        run: make check-repo-docs
       # Reject stale workstream blocks and size regressions in live state documents. Mirror
       # `make check-docs-compaction`.
       - name: live-document guard (check_docs_compaction)
         run: python3 scripts/check_docs_compaction.py
-
-      - name: docs link guard (check_docs_links)
-        run: python3 scripts/check_docs_links.py
 
       - name: owner-ruling preservation guard (check_owner_ruling)
         run: python3 scripts/check_owner_ruling.py

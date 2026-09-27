@@ -1857,3 +1857,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   residues R-15..R-18 are pinned beside Spark.
   `risk_tier: standard`. Branch `feat/u7-write-df-2b` (slice 1: `feat/u7-write-df-2a`, repark#835).
   pins: u7-write-df-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
+
+- [repo-compiler-ledger.md](repo-compiler-ledger.md) — isolated repository compiler implementation.
+- [repo-compiler-checks-ledger.md](repo-compiler-checks-ledger.md) — docs-link and ledger-grammar Rust ports.

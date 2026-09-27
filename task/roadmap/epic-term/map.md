@@ -38,7 +38,10 @@ is now the epic list from v0.6 through 3.0 (v0.7–v0.10 shifted to 1.1–1.4 wh
   — proposal opened 2026-09-04 for SEPMO token use and agent performance. Records the review,
   measured document footprint, compact role packets, evidence collection, telemetry, a controlled
   pilot, and the amendment boundaries for review and verification policy. Includes delivery
-  groups and a pickup checklist; implementation scope audit is pending.
+  groups and a pickup checklist; implementation scope audit is pending. The
+  [2026-09-27 compiler follow-up](sepmo-efficiency-implementation-brief-2026-09-04.md#16-repository-compiler-follow-up--2026-09-27)
+  records deferred controller integration, stable events, packets, diagnostics and further check
+  ports, with shadow rollout and quality/usage measures; it authorizes no implementation.
 - [rust-unification-implementation-brief-2026-09-04.md](rust-unification-implementation-brief-2026-09-04.md)
   — proposal opened 2026-09-04 for Rust-only batch, native database change capture, streaming,
   and Iceberg unification. Records the owner's JVM-free production constraint, the recommended

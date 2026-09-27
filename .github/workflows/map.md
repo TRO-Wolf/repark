@@ -91,3 +91,9 @@ First checks: reproduce with `make preflight` (the full CI surface; `make ci` fo
 Note `ci.yml`'s Rust job calls the individual Makefile targets (never `make ci` wholesale); the
 guards-job steps are raw commands — a new gate still needs **dual** Makefile + ci.yml wiring.
 Escalate to: [../map.md#debug](../map.md).
+
+The repository compiler has a standalone `make repo-tool-check` step in `rust-lint`. The
+map guard calls `make check-map-sync`, shared with local validation.
+
+The guards job runs docs-link validation and ledger grammar together through
+`make check-repo-docs`; [CHECKS.md](../../scripts/repo-tool/CHECKS.md) owns their interface.
