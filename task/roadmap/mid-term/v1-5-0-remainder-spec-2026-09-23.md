@@ -36,6 +36,23 @@ Tier: `opus` = Opus 5.5 high executor (owner 09-22), `terra` = GPT-5.6 Terra ≤
 `devin` = Devin SWE-2. Size: S ≤ half a day-lane, M = a day-lane, L = more than one. "Ruling" names who must
 decide something before the unit can close: **none**, **orch** (the orchestrating session, logged), **owner**.
 
+**2026-09-27 release-readiness note (F-2):** every unit below has landed except U12 — the
+2026-09-27 02:25 matrix (main `9aa1c185`) reads 705 EQUAL / 0 DIFFERENT, pending the evening
+rerun. Landing commits: U0 #805 `0002a7f2`, #806 `fd43f192`, #807 `07a98452` + #821 `4769ceac`,
+views #812 `d1a70b7d` / #815 `c7879a91` / #818 `a6e8bcda` / #823 `54e2da6a` / #825 `a969a5b5`,
+#854 `f6e4a949` (R-MC-ROW-ID-V3; R-MT-FILES EQUAL with no RP-48 commit on main); U1 #814
+`2de327bb` + #820 `4b1688f2` with fork #347; U2 owner ruling 2026-09-23 (`overrides.json`
+normalise rules, no code); U3 already fixed at this spec's base (`e38ad896`, `66252e20` in
+`88b6f59f`); U4 #810 `970ac11a` / #813 `458718b5` / #816 `d4caca39` + #852 `4c5c2be8`;
+U5 `6cf215bd` / #831 `64735038` / #834 `78d7d85d` / `4ae73c2c`; U6 `fb41309f`; U7 #830
+`9e3bf2dd` / #835 `f3242566` / `b55dc825`; U8 #833 `e97682ed` / `60eaa729`; U9 `f9db8472` /
+#844 `5a1c8ebd` / #856 `f09b44e5`; U10 #811 `b7a3c905` / #819 `3cf263da` / #822 `bf90513a`
+(REG-1 was a harness race, no PR); U11 #843 `4c8e6633` / #851 `fbd97ef2` / #855 `1a219450` /
+#857 `9aa1c185` / #858 `e3e35b0c`. U12 is unstarted — no `W-PATH-S3-*` cells, no commits
+(F-1: owner to rule whether it blocks v1.5.0). Full table:
+[v1-5-0-release-readiness-2026-09-27.md](v1-5-0-release-readiness-2026-09-27.md) §3. The unit
+text below is the 09-23 plan, kept as written.
+
 ### U0 — already in flight (22 cells): land what is open, nothing new to design
 
 | cells | where it is | next step |
@@ -254,6 +271,14 @@ U12 adds its `W-PATH-S3-*` cells to the inventory when step 0 records them.
 
 Decision 7 is the only one that can still *shrink* the gate (3 closed by C-2, 6 by C-4); every other item is buildable. The owner's
 09-23 decision on S3 path writes (U12) is the one that *grows* it.
+
+**2026-09-27 release-readiness note (F-3):** all seven decisions are closed — 1 (Q-55-7,
+landed #814 `2de327bb` under the run-29 override grant), 2 (U2 overrides, owner ruling
+2026-09-23 in `overrides.json`), 3 (C-2), 4 (U6 refusal parity, override-grant ruling in the
+runs-28/29 orchestrating note), 5 (TZ cells EQUAL via `e3e35b0c`, `f09b44e5`, `f9db8472`; no
+separate dated TZ ruling found in the day reports), 6 (C-4, marked above), 7 (CAT-TYPE-MEMORY,
+2026-09-26 owner ruling: refuses at first use, `repark.sql.catalogExtensions` opt-in).
+Evidence per decision: [v1-5-0-release-readiness-2026-09-27.md](v1-5-0-release-readiness-2026-09-27.md) §3.
 
 ## 3. Sequencing for the next run
 
