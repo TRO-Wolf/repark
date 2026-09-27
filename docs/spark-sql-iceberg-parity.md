@@ -7857,8 +7857,8 @@ the pin rather than obeying it.
   *(oracle: recorded — live PySpark 4.0.1 + Iceberg 1.10.0, same basis as MOR-1.)*
 - **Pin** —
   `crates/repark-spark/src/tests/call.rs::call_mor2_merge_writes_one_position_delete_per_data_file_by_default`
-  (MERGE writer). Residual: Spark SQL `DELETE`/`UPDATE` that hit the fork `TableProvider`
-  still group by partition (`fork_table_provider_delete_is_not_this_writer`).
+  (MERGE writer). Spark SQL `DELETE`/`UPDATE` that hit the fork `TableProvider` honour
+  `write.delete.granularity` since RP-54 (fork #360; `fork_table_provider_update_honours_file_granularity`).
 - **Rationale** — FIXED (MW-9) **for RePark-owned MERGE** (`write_position_deletes`).
   Heading kept as the historical anchor. SQL `DELETE`/`UPDATE` via iceberg-datafusion
   honour `write.delete.granularity`, one delete file per data file by default (fork

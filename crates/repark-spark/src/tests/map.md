@@ -624,7 +624,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   file/partition, unknown refuse on MERGE and identity UPDATE, fork DELETE/UPDATE
   residual, ALTER-then-MERGE).
   **ICE-META-DELETE-1 (2026-09-19):** the fork-residual pin now deletes ONE row of a two-row
-  file to keep a row-level DELETE in the shape (that is what has no granularity knob), and
+  file to keep a row-level DELETE in the shape (the fork honours `write.delete.granularity`
+  on that path since RP-54, fork #360), and
   asserts on the way that the whole-file `DELETE … IN (1..6)` writes no delete file at all —
   it is answered from metadata.
   pins: ice-meta-delete-1/C-001
