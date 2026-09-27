@@ -9102,6 +9102,14 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 
 ### ICE-RDF-OPTIONS-1 — `rewrite_data_files` / `rewrite_position_delete_files` options map — **FIXED 2026-09-17**
 
+- **Carve-out C-3 (owner, 2026-09-26)** — the partial-progress commit ORDER is not a parity target:
+  Spark's `BinPackRewriteFilePlanner` iterates a Guava `HashSet` of map entries keyed by the
+  partition struct hash XOR the scan-task list's identity hash, so which file group commits
+  first depends on JVM object addresses (measured x-first and y-first across runs). RePark
+  commits file groups in ascending partition order; the scoreboard compares the
+  `P-RDF-PARTIAL-PROGRESS` commit sequence order-insensitively and every other observation
+  (counts, files after, rows, snapshot summaries) exactly.
+
 - **repark** — round 2 wires every fork-owned `rewrite_data_files` key into the fork builders
   (consumes fork `F-RDF-OPTIONS-1` (#283) via the RP pin bump that follows it): `rewrite-all`,
   `partial-progress.enabled` + `partial-progress.max-commits` (groups per commit =
