@@ -2126,6 +2126,31 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   raises, the current catalog stays, the long form and the opt-in stay catalogs), the
   two-part refusal arms, and the two-part alias that still plans beside a refusal.
   pins: catalog-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-014
+  not an alias, and the missing default's `CATALOG_NOT_FOUND`. pins: catalog-1/C-001, C-002,
+  C-003, C-004
+- `tz_asof_1.rs` — **WO TZ-ASOF-1 (2026-09-26):** every `ORDER BY` shape of the
+  sort-key naming defect pinned `==` Spark 4.1.2 (columns and rows) over
+  `ice.sales.y (id INT, ts TIMESTAMP, s STRING)`: the unaliased cast over its key
+  ascending, descending and limited (C-001), both alias spellings (C-002), the
+  `(id + 1)` and `upper(s)` display names (C-003), two casts over two keys
+  (C-004), `DISTINCT` with an un-projected key (C-005), `CAST(max(ts) AS STRING)`
+  (C-006), the `.snapshots` committed-at read with Spark's trailing-zero trim
+  plus three literal rendering instants (C-007), and the no-rewrite neighbors
+  (projected keys, stars, unions, `count(*)` keeping `count(*)`, the un-ordered
+  leak name) holding today's answers (C-009). Fold r1 adds the struct-bearing
+  `ice.sales.z` and pins that a compound key whose last segment clashes with a
+  select column never binds it (`ORDER BY st.s, ts` answers `b, a, b`, C-010),
+  and that a bare key equal to a display name sorts the output column
+  (`CAST(id AS STRING) … ORDER BY id` answers `10, 2, 3`, C-011), and that a
+  `DISTINCT` whose key binds no select item keeps main's
+  `must appear in select list` refusal byte for byte (C-012). Fold r2 pins
+  that an unqualified key binds a qualified item's last segment
+  (`SELECT st.s … ORDER BY s, ts` answers `s` with `x, y, z`, C-009) and
+  that a qualified key keeps sorting by the column
+  (`ORDER BY z.id` answers `2, 3, 10`, C-011).
+  The setup installs production's
+  integer planner so `id + 1` is `Int32` as on the facade.
+  pins: tz-asof-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-011, C-012
 
 ## Mapping rule
 

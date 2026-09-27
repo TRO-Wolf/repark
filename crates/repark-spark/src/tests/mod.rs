@@ -122,6 +122,7 @@ mod temp_view_routing;
 mod time_travel;
 mod transform_overwrite;
 mod truncate;
+mod tz_asof_1;
 mod u9_map;
 mod u9_timestamp_ltz;
 mod u9_uuid_void_writes;

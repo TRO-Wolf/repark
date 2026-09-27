@@ -8,6 +8,48 @@ here and is re-exported in one line.
 
 ## Contents
 
+- `sort_key_projection.rs` — **WO TZ-ASOF-1 (2026-09-26):** `rewrite_statement`
+  runs in `../spark_ast.rs` after the ORDER BY null-placement defaults and before the
+  lowering rewrites. When a single-`SELECT` query (DISTINCT or not) carries an `ORDER BY`
+  key that is not projected — bare and compound identifiers resolved against select
+  aliases first, then select-list column references, then (unqualified keys only) the
+  select items' Spark display names, with ordinals always projected —
+  the statement selects from a derived table (`__repark_sort`) that projects every
+  select item under `__repark_sort_sel_<i>` plus every un-projected key under
+  `__repark_sort_key_<k>`, while the outer query carries the remapped `ORDER BY`,
+  the original `LIMIT`/`OFFSET`/`FETCH`, and one quoted outer alias per select item
+  holding Spark's display name (explicit alias verbatim; bare column as written;
+  `CAST(col)` → the column; `CAST(<non-column> AS T)` → the full `CAST` text;
+  parenthesized binary expressions; lower-cased calls with unqualified arguments).
+  The rewrite also fires with no hidden key when a bare key binds a display name
+  (verifier V-002: `ORDER BY id` on `CAST(id AS STRING)` sorts the output
+  column's strings, matching Spark's output binding).
+  DISTINCT stays inside the derived table, but on a `DISTINCT` select the
+  rewrite fires only when every key binds a select item — a hidden key inside
+  the dedup would duplicate rows (verifier V-003), so `SELECT DISTINCT s …
+  ORDER BY ts` keeps main's `must appear in select list` refusal while
+  `DISTINCT CAST(ts AS STRING) … ORDER BY ts` answers through the binding. Set operations, stars, `ExprWithAliases`, `SELECT INTO`,
+  `TOP`, `EXCLUDE`, `PREWHERE`, `CONNECT BY`, Hive `CLUSTER`/`DISTRIBUTE`/`SORT BY`,
+  non-expression orderings, `WITH FILL`, locks, `FOR`/`SETTINGS`/`FORMAT`/pipe
+  clauses, unmapped cast targets or operators, wildcard function arguments,
+  windowed or filtered calls, subquery/case/predicate select items, ambiguous
+  alias matches, out-of-range ordinals, a `__repark_sort` collision with user text,
+  any key expression mentioning a select alias, and a compound key whose last
+  segment names a select column without a full qualifier-chain match (verifier
+  V-001: `st.s` never binds a same-named `s`) all bail with the statement
+  untouched, as does the case-sensitive door at the call site. When the rewrite fires and
+  the rewritten statement then fails anywhere from lowering through the plan guards,
+  `../spark_ast.rs` retries the whole passthrough once with the rewrite disabled and
+  returns that outcome, so every failure is byte-identical to today and the rewrite can
+  only turn failures into successes (the retry is safe because the rewrite fires only on
+  `SELECT` queries, never on `DML`). Inline unit pins:
+  key projection, options/limit placement (C-001), the aliased base key (C-002),
+  expression outer names (C-003), the aggregate cast and double-cast names (C-006),
+  DISTINCT placement (C-005), ordinals, projected keys, the bail set, alias keys
+  and marker collisions (C-009), the compound-key clash bail (C-010), the
+  display-name output binding plus qualified-key column binding (C-011), and
+  the DISTINCT-without-bound-keys bail (C-012).
+  pins: tz-asof-1/C-001, C-002, C-003, C-005, C-006, C-009, C-010, C-011, C-012
 - `map_ordering.rs` — **WO U9-TYPES-1 r3 (2026-09-25):** `refuse_map_ordering` walks the
   planned statement in `../spark_ast.rs`'s passthrough (SELECT, and the UPDATE / DELETE that land
   there) and refuses a map operand of `=`, `<>`, `<`, `<=`, `>`, `>=`, `<=>`, `IN` and

@@ -1566,6 +1566,11 @@ pins: rp-4-fork-repin/C-005, C-006
   `PARTITIONED BY (bucket(n, col))` between the `USING` strip and the
   `PARTITIONED BY` extraction, so the bucket field lands named `{col}_bucket`
   (**IPI-26/27 round 1**, 2026-09-20, cell `D-X-CLUSTERED-BY`).
+  `sort_key_projection.rs` rewrites a single-`SELECT` with an un-projected `ORDER BY` key
+  into a derived table projecting select items plus keys under internal aliases, with the
+  outer query carrying Spark's display names (**WO TZ-ASOF-1**, 2026-09-26, cell
+  `E-TZ-TIMESTAMP-AS-OF`).
+  pins: tz-asof-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-011, C-012
 - `normalize.rs` — token normalisers (`USING` strip, `PARTITIONED BY` extraction,
   `NAMESPACE`→`SCHEMA`, the ALTER rewrites + GenericDialect switch), statement sniffers,
   the `normalize/statement_guard.rs` re-exports for multi-statement refusal (BUG-010), the MoR

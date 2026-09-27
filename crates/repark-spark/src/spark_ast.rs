@@ -29,9 +29,21 @@ pub(crate) async fn execute_passthrough(
     catalogs: &CatalogRegistry,
     sql: &str,
 ) -> Result<DataFrame> {
-    execute_passthrough_inner(ctx, catalogs, sql, false)
+    let mut sort_rewrite_fired = false;
+    match execute_passthrough_inner(ctx, catalogs, sql, false, true, &mut sort_rewrite_fired).await
+    {
+        Err(_) if sort_rewrite_fired => Box::pin(execute_passthrough_inner(
+            ctx,
+            catalogs,
+            sql,
+            false,
+            false,
+            &mut sort_rewrite_fired,
+        ))
         .await
-        .map_err(crate::keyword_lower::map_door_keyword_errors)
+        .map_err(crate::keyword_lower::map_door_keyword_errors),
+        outcome => outcome.map_err(crate::keyword_lower::map_door_keyword_errors),
+    }
 }
 
 pub(crate) async fn execute_insert_source(
@@ -39,9 +51,34 @@ pub(crate) async fn execute_insert_source(
     catalogs: &CatalogRegistry,
     sql: &str,
 ) -> Result<DataFrame> {
-    execute_passthrough_inner(ctx, catalogs, sql, true)
+    let mut sort_rewrite_fired = false;
+    match execute_passthrough_inner(ctx, catalogs, sql, true, true, &mut sort_rewrite_fired).await {
+        Err(_) if sort_rewrite_fired => Box::pin(execute_passthrough_inner(
+            ctx,
+            catalogs,
+            sql,
+            true,
+            false,
+            &mut sort_rewrite_fired,
+        ))
         .await
-        .map_err(crate::keyword_lower::map_door_keyword_errors)
+        .map_err(crate::keyword_lower::map_door_keyword_errors),
+        outcome => outcome.map_err(crate::keyword_lower::map_door_keyword_errors),
+    }
+}
+
+fn prepare_ordering(
+    allow_sort_rewrite: bool,
+    state: &SessionState,
+    inner: &mut Statement,
+    sort_rewrite_fired: &mut bool,
+) -> Result<()> {
+    apply_spark_order_by_defaults(inner);
+    crate::time_window::wrap_time_window_grouping(inner)?;
+    if allow_sort_rewrite && crate::spark_door_case_insensitive(state.config().options()) {
+        *sort_rewrite_fired = crate::normalize::sort_key_projection::rewrite_statement(inner);
+    }
+    Ok(())
 }
 
 async fn execute_passthrough_inner(
@@ -49,18 +86,20 @@ async fn execute_passthrough_inner(
     catalogs: &CatalogRegistry,
     sql: &str,
     insert_source: bool,
+    allow_sort_rewrite: bool,
+    sort_rewrite_fired: &mut bool,
 ) -> Result<DataFrame> {
-    let state = ctx.state();
+    let state = Box::new(ctx.state());
     let session_dialect = state.config().options().sql_parser.dialect;
     let dialect = crate::dialect_for_executing_parse(sql, session_dialect);
     // G15 type-position (`CAST(x AS STRING COLLATE name)`) fails `sql_to_statement`.
     crate::collation::refuse_type_position_collation_in_sql(sql)?;
-    let mut statement = state.sql_to_statement(sql, &dialect)?;
+    let mut statement = Box::new(state.sql_to_statement(sql, &dialect)?);
     let mut may_have_bare_range_bound = false;
     let mut insert_columns: Option<Vec<String>> = None;
     let mut preloaded: Option<Box<iceberg::table::Table>> = None;
     let mut timestamp_cells = Vec::new();
-    match &mut statement {
+    match statement.as_mut() {
         DfStatement::Statement(inner) => {
             // G15 — collation at the EXECUTING parse (G3-E8 altitude).
             crate::refuse_collation_in_statement(inner)?;
@@ -72,8 +111,7 @@ async fn execute_passthrough_inner(
             }
             // G3-E8 — on the EXECUTING parse, before anything else touches the statement.
             crate::refuse_dml_subquery_predicate_in_statement(inner)?;
-            apply_spark_order_by_defaults(inner);
-            crate::time_window::wrap_time_window_grouping(inner)?;
+            prepare_ordering(allow_sort_rewrite, &state, inner, sort_rewrite_fired)?;
             // SQP-1: rewrite `CAST` to `BYTEA`.
             rewrite_binary_casts(inner);
             crate::bare_unit::rewrite_bare_datetime_units(inner)?;
@@ -110,7 +148,7 @@ async fn execute_passthrough_inner(
     }
     let plan = repark_core::column_resolution::plan_statement_with_column_repair(
         &state,
-        statement,
+        *statement,
         crate::spark_door_case_insensitive(state.config().options()),
     )
     .await?;
