@@ -398,7 +398,7 @@ EXPECTED_SYMBOL_HASHES = {
     "default_display_style": ("43547a84b8832b0627850b825fc9bc1ef099cb546ad7f69d7a7710161b3aa78e"),
     "logger": ("fa49a10e7315bca551601a1c6c048afadc925fcc6a050e5bfcd74012a380f91e"),
     "normalize_display_style": ("8b1e207bfcb7f37f433f026942124dd695674b14369d7a18bf3dbcc6b311b9ec"),
-    "resolve_table_name": ("7896dd2fa247528d115056408daf0748bb48ba0eaebab5a75a26545349c977fd"),
+    "resolve_table_name": ("288d5d9d42ed8aeb750ae86edd824150ca0782cc5cd2eda96c3d49e87bf96ca6"),
 }
 
 EXPECTED_OWNERS = {
