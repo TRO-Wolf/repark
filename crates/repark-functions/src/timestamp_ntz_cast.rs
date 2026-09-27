@@ -235,6 +235,20 @@ fn literal_wall_name(arg: &Expr) -> String {
     }
 }
 
+#[must_use]
+pub(crate) fn literal_display_name(expr: &Expr) -> Option<String> {
+    let Expr::ScalarFunction(function) = expr else {
+        return None;
+    };
+    if function.func.name() == TIMESTAMP_NTZ_LITERAL_NAME {
+        return function.args.first().map(literal_wall_name);
+    }
+    if function.func.name() == crate::decimal_cast::DECIMAL_CAST_NULLABLE_NAME {
+        return function.args.first().and_then(literal_display_name);
+    }
+    None
+}
+
 impl ScalarUDFImpl for SparkTimestampNtzLiteral {
     fn name(&self) -> &str {
         TIMESTAMP_NTZ_LITERAL_NAME

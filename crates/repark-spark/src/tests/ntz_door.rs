@@ -235,17 +235,27 @@ async fn ntz_cast_refuses_numeric_sources_and_targets() {
         ),
         "{source}"
     );
-    for (target, name) in [("BIGINT", "BIGINT"), ("INT", "INT")] {
+    for (target, name) in [
+        ("BIGINT", "BIGINT"),
+        ("INT", "INT"),
+        ("DOUBLE", "DOUBLE"),
+        ("DECIMAL(10,2)", "DECIMAL(10,2)"),
+    ] {
         let refused = failure(
             &ctx,
             &catalogs,
             &format!("SELECT CAST(TIMESTAMP_NTZ'2024-01-01 00:00:00' AS {target}) AS v"),
         )
         .await;
-        assert!(
-            refused.contains("[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION]")
-                && refused.contains(&format!("cannot cast \"TIMESTAMP_NTZ\" to \"{name}\"")),
-            "{target}: {refused}"
+        assert_eq!(
+            refused,
+            format!(
+                "spark_expr_semantics\ncaused by\nError during planning: \
+                 [DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] Cannot resolve \
+                 \"CAST(TIMESTAMP_NTZ '2024-01-01 00:00:00' AS {name})\" due to data type \
+                 mismatch: cannot cast \"TIMESTAMP_NTZ\" to \"{name}\". SQLSTATE: 42K09"
+            ),
+            "{target}"
         );
     }
 }

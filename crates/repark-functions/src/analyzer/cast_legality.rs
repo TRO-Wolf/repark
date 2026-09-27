@@ -96,8 +96,10 @@ pub(super) fn refuse_spark_illegal_cast(
     }
     if is_ntz_micros(src) && is_spark_numeric(dst) {
         let to = spark_type_name(dst);
+        let rendered = crate::timestamp_ntz_cast::literal_display_name(inner)
+            .unwrap_or_else(|| inner.to_string());
         return Err(DataFusionError::Plan(format!(
-            "[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] Cannot resolve \"{}({inner} AS {to})\" \
+            "[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] Cannot resolve \"{}({rendered} AS {to})\" \
              due to data type mismatch: cannot cast \"TIMESTAMP_NTZ\" to \"{to}\". SQLSTATE: 42K09",
             keyword.spelling(),
         )));
@@ -115,7 +117,8 @@ pub(super) fn refuse_spark_illegal_cast(
 #[cfg(test)]
 mod tests {
     use datafusion::arrow::datatypes::{DataType, TimeUnit};
-    use datafusion::logical_expr::col;
+    use datafusion::logical_expr::expr::ScalarFunction;
+    use datafusion::logical_expr::{Expr, col, lit};
 
     use super::{CastKeyword, refuse_spark_illegal_cast, spark_refuses_cast};
 
@@ -251,6 +254,39 @@ mod tests {
         assert!(
             tried.contains("cannot cast \"TIMESTAMP_NTZ\" to \"DOUBLE\""),
             "{tried}"
+        );
+    }
+
+    #[test]
+    fn the_ntz_numeric_refusal_renders_a_literal_like_spark() {
+        let inner = Expr::ScalarFunction(ScalarFunction::new_udf(
+            crate::timestamp_ntz_cast::timestamp_ntz_literal_udf(),
+            vec![lit(1_704_067_200_000_000i64)],
+        ));
+        let micros = DataType::Timestamp(TimeUnit::Microsecond, None);
+        let message =
+            refuse_spark_illegal_cast(CastKeyword::Cast, &inner, &micros, &DataType::Int64)
+                .expect_err("ntz -> bigint must refuse")
+                .to_string();
+        assert_eq!(
+            message,
+            "Error during planning: [DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] Cannot resolve \
+             \"CAST(TIMESTAMP_NTZ '2024-01-01 00:00:00' AS BIGINT)\" due to data type mismatch: \
+             cannot cast \"TIMESTAMP_NTZ\" to \"BIGINT\". SQLSTATE: 42K09"
+        );
+        let wrapped = Expr::ScalarFunction(ScalarFunction::new_udf(
+            crate::decimal_cast::spark_decimal_cast_nullable_udf(),
+            vec![inner],
+        ));
+        let through =
+            refuse_spark_illegal_cast(CastKeyword::Cast, &wrapped, &micros, &DataType::Int32)
+                .expect_err("ntz -> int must refuse")
+                .to_string();
+        assert_eq!(
+            through,
+            "Error during planning: [DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] Cannot resolve \
+             \"CAST(TIMESTAMP_NTZ '2024-01-01 00:00:00' AS INT)\" due to data type mismatch: \
+             cannot cast \"TIMESTAMP_NTZ\" to \"INT\". SQLSTATE: 42K09"
         );
     }
 

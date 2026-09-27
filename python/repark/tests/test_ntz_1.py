@@ -9,12 +9,11 @@ residue: the embedded-UDF call renders where Spark renders its cast text).
 Every refusal step compares SQLSTATE plus Spark's first message line after two
 mechanical framings come off: Spark's trailing analysis position
 (``; line 1 pos 7;``) and RePark's engine prefixes (``Error during planning: ``,
-``datafusion engine error: ``, ``Execution error: ``). Two structural deltas
-stay visible. The NTZ-to-numeric
-refusal crosses the ``spark_expr_semantics`` analyzer rule, whose
-``spark_expr_semantics`` / ``caused by`` header the DATE-pair refusals already
-carry, so those steps compare the ``cannot cast`` clause rather than the full
-first line and skip the condition. The malformed-string cast raises at execution
+``datafusion engine error: ``, ``Execution error: ``) plus the
+``spark_expr_semantics`` / ``caused by`` analyzer-rule header, which the
+DATE-pair refusals already carry. Two structural deltas stay visible. The
+NTZ-to-numeric steps compare the full first line and skip only the condition
+per R-3. The malformed-string cast raises at execution
 time, where RePark has no DateTimeException and the doubled ``Execution error:``
 prefix defeats the condition parser, so that step compares SQLSTATE plus the
 core text and skips class and condition. The invalid-literal window compares
@@ -43,7 +42,6 @@ ORACLE_PATH: Path = Path(__file__).with_name("ntz_1_spark_oracle.json")
 _ORACLE: dict[str, Any] = json.loads(ORACLE_PATH.read_text(encoding="utf-8"))
 
 _SPARK_POSITION_SUFFIX: re.Pattern[str] = re.compile(r"; line \d+ pos \d+;$")
-_CANNOT_CAST: re.Pattern[str] = re.compile(r'cannot cast "[^"]*" to "[^"]*"')
 _REPARK_PREFIXES: tuple[str, ...] = (
     "Error during planning: ",
     "datafusion engine error: ",
@@ -113,13 +111,6 @@ def _repark_core(message: str) -> list[str]:
     return text.splitlines()
 
 
-def _cannot_cast_clause(first_line: str) -> str:
-    """Read the cannot-cast clause of a DATATYPE_MISMATCH first line."""
-    found = _CANNOT_CAST.search(first_line)
-    assert found is not None
-    return found.group(0)
-
-
 def _open(zone: str, warehouse: Path, version3: bool = False) -> ReparkSession:
     """Open an ANSI facade session at the zone with a memory catalog."""
     builder = (
@@ -160,10 +151,7 @@ def _assert_error(step: dict[str, Any], error: BaseException) -> None:
     assert _sql_state(error) == spark["sqlstate"]
     core = _repark_core(str(error))
     want = _spark_first_line(spark["msg"])
-    if str(error).startswith(_RULE_HEADER):
-        assert _cannot_cast_clause(core[0]) == _cannot_cast_clause(want)
-    else:
-        assert core[0] == want
+    assert core[0] == want
     if step["key"] == "lit_bad":
         assert core[1] == spark["msg"].splitlines()[1]
         assert core[2] == spark["msg"].splitlines()[2]
