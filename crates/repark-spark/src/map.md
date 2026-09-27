@@ -1570,7 +1570,7 @@ pins: rp-4-fork-repin/C-005, C-006
   into a derived table projecting select items plus keys under internal aliases, with the
   outer query carrying Spark's display names (**WO TZ-ASOF-1**, 2026-09-26, cell
   `E-TZ-TIMESTAMP-AS-OF`).
-  pins: tz-asof-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009
+  pins: tz-asof-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010
 - `normalize.rs` — token normalisers (`USING` strip, `PARTITIONED BY` extraction,
   `NAMESPACE`→`SCHEMA`, the ALTER rewrites + GenericDialect switch), statement sniffers,
   the `normalize/statement_guard.rs` re-exports for multi-statement refusal (BUG-010), the MoR

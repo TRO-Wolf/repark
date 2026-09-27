@@ -27,7 +27,9 @@ here and is re-exported in one line.
   clauses, unmapped cast targets or operators, wildcard function arguments,
   windowed or filtered calls, subquery/case/predicate select items, ambiguous
   alias matches, out-of-range ordinals, a `__repark_sort` collision with user text,
-  and any key expression mentioning a select alias all bail with the statement
+  any key expression mentioning a select alias, and a compound key whose last
+  segment names a select column without a full qualifier-chain match (verifier
+  V-001: `st.s` never binds a same-named `s`) all bail with the statement
   untouched, as does the case-sensitive door at the call site. When the rewrite fires and
   the rewritten statement then fails anywhere from lowering through the plan guards,
   `../spark_ast.rs` retries the whole passthrough once with the rewrite disabled and
@@ -37,8 +39,8 @@ here and is re-exported in one line.
   key projection, options/limit placement (C-001), the aliased base key (C-002),
   expression outer names (C-003), the aggregate cast and double-cast names (C-006),
   DISTINCT placement (C-005), ordinals, projected keys, the bail set, alias keys
-  and marker collisions (C-009).
-  pins: tz-asof-1/C-001, C-002, C-003, C-005, C-006, C-009
+  and marker collisions (C-009), and the compound-key clash bail (C-010).
+  pins: tz-asof-1/C-001, C-002, C-003, C-005, C-006, C-009, C-010
 - `map_ordering.rs` — **WO U9-TYPES-1 r3 (2026-09-25):** `refuse_map_ordering` walks the
   planned statement in `../spark_ast.rs`'s passthrough (SELECT, and the UPDATE / DELETE that land
   there) and refuses a map operand of `=`, `<>`, `<`, `<=`, `>`, `>=`, `<=>`, `IN` and

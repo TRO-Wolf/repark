@@ -2132,9 +2132,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   (C-006), the `.snapshots` committed-at read with Spark's trailing-zero trim
   plus three literal rendering instants (C-007), and the no-rewrite neighbors
   (projected keys, stars, unions, `count(*)` keeping `count(*)`, the un-ordered
-  leak name) holding today's answers (C-009). The setup installs production's
+  leak name) holding today's answers (C-009). Fold r1 adds the struct-bearing
+  `ice.sales.z` and pins that a compound key whose last segment clashes with a
+  select column never binds it (`ORDER BY st.s, ts` answers `b, a, b`, C-010).
+  The setup installs production's
   integer planner so `id + 1` is `Int32` as on the facade.
-  pins: tz-asof-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009
+  pins: tz-asof-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010
 
 ## Mapping rule
 

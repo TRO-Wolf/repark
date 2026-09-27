@@ -27,6 +27,25 @@ async fn seed(ctx: &SessionContext, catalogs: &CatalogRegistry) {
     .await;
 }
 
+async fn seed_z(ctx: &SessionContext, catalogs: &CatalogRegistry) {
+    run(
+        ctx,
+        catalogs,
+        "CREATE TABLE ice.sales.z (id INT, ts TIMESTAMP, s STRING, \
+         st STRUCT<a: INT, s: STRING>) USING iceberg",
+    )
+    .await;
+    run(
+        ctx,
+        catalogs,
+        "INSERT INTO ice.sales.z VALUES \
+         (10, TIMESTAMP '2024-01-02 00:00:00', 'b', named_struct('a', 1, 's', 'x')), \
+         (2, TIMESTAMP '2024-01-01 00:00:00', 'b', named_struct('a', 2, 's', 'z')), \
+         (3, TIMESTAMP '2024-01-03 00:00:00', 'a', named_struct('a', 3, 's', 'y'))",
+    )
+    .await;
+}
+
 async fn batches(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) -> Vec<RecordBatch> {
     execute(ctx, catalogs, sql)
         .await
@@ -393,4 +412,22 @@ async fn projected_keys_stars_and_unions_keep_todays_names() {
     )
     .await;
     assert_eq!(field_names(&rows), vec!["ice.sales.y.ts".to_string()]);
+}
+
+#[tokio::test]
+async fn struct_field_key_never_binds_a_same_named_column() {
+    let wh = TempDir::new().expect("tempdir");
+    let (ctx, catalogs) = setup_tz(&wh).await;
+    seed_z(&ctx, &catalogs).await;
+    let rows = batches(
+        &ctx,
+        &catalogs,
+        "SELECT s FROM ice.sales.z ORDER BY st.s, ts",
+    )
+    .await;
+    assert_eq!(field_names(&rows), vec!["s".to_string()]);
+    assert_eq!(
+        text_col(&rows, 0),
+        vec!["b".to_string(), "a".to_string(), "b".to_string()]
+    );
 }

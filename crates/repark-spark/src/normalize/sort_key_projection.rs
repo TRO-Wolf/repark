@@ -132,6 +132,7 @@ fn place_key(items: &[SelectItem], key: &Expr, extra: &mut Vec<Expr>) -> Option<
             match single_match(items, &parts) {
                 KeyHit::Many => None,
                 KeyHit::One(index) => Some(Placement::Select(index)),
+                KeyHit::Miss if parts.len() > 1 && key_name_clashes(items, &parts) => None,
                 KeyHit::Miss => Some(new_key(extra, key.clone())),
             }
         }
@@ -205,7 +206,7 @@ fn column_hit(item: &SelectItem, key: &[&Ident]) -> bool {
     if !item_name.value.eq_ignore_ascii_case(&key_name.value) {
         return false;
     }
-    if item_qual.is_empty() || key_qual.is_empty() {
+    if key_qual.is_empty() {
         return true;
     }
     item_qual.len() == key_qual.len()
@@ -213,6 +214,22 @@ fn column_hit(item: &SelectItem, key: &[&Ident]) -> bool {
             .iter()
             .zip(key_qual.iter())
             .all(|(left, right)| left.value.eq_ignore_ascii_case(&right.value))
+}
+
+fn key_name_clashes(items: &[SelectItem], key: &[&Ident]) -> bool {
+    let Some(key_name) = key.last() else {
+        return false;
+    };
+    items.iter().any(|item| {
+        let SelectItem::UnnamedExpr(expr) = item else {
+            return false;
+        };
+        ref_parts(unnested(expr)).is_some_and(|parts| {
+            parts
+                .last()
+                .is_some_and(|last| last.value.eq_ignore_ascii_case(&key_name.value))
+        })
+    })
 }
 
 fn ref_parts(expr: &Expr) -> Option<Vec<&Ident>> {
@@ -642,6 +659,21 @@ mod tests {
             out.contains("AS \"CAST(CAST(x AS INT) AS STRING)\""),
             "{out}"
         );
+    }
+
+    #[test]
+    fn compound_key_clashing_with_an_item_name_bails() {
+        untouched("SELECT s FROM t ORDER BY st.s, ts");
+        untouched("SELECT s FROM t ORDER BY st.s");
+        untouched("SELECT a.s FROM t ORDER BY b.s");
+    }
+
+    #[test]
+    fn compound_key_without_a_name_clash_stays_a_hidden_key() {
+        let out = rewritten("SELECT id FROM t ORDER BY st.a");
+        assert!(out.contains("st.a AS __repark_sort_key_0"), "{out}");
+        assert!(out.contains("ORDER BY __repark_sort_key_0"), "{out}");
+        untouched("SELECT s, st.s FROM t ORDER BY st.s");
     }
 
     #[test]

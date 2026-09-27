@@ -51,6 +51,20 @@ def seed_y(session: ReparkSession) -> None:
     )
 
 
+def seed_z(session: ReparkSession) -> None:
+    """Create the struct-bearing probe table with its three probe rows."""
+    session.sql(
+        "CREATE TABLE sc.ns.z (id INT, ts TIMESTAMP, s STRING, "
+        "st STRUCT<a: INT, s: STRING>) USING iceberg"
+    )
+    session.sql(
+        "INSERT INTO sc.ns.z VALUES "
+        "(10, TIMESTAMP '2024-01-02 00:00:00', 'b', named_struct('a', 1, 's', 'x')), "
+        "(2, TIMESTAMP '2024-01-01 00:00:00', 'b', named_struct('a', 2, 's', 'z')), "
+        "(3, TIMESTAMP '2024-01-03 00:00:00', 'a', named_struct('a', 3, 's', 'y'))"
+    )
+
+
 def observed(session: ReparkSession, sql: str) -> tuple[list[tuple[str, str]], list[list[object]]]:
     """Run sql and return its columns and rows in answer order."""
     frame = session.sql(sql)
@@ -272,3 +286,17 @@ def test_projected_keys_stars_and_unions_keep_todays_names(session: ReparkSessio
     assert cols == [("count(*)", "bigint")]
     cols, _ = observed(session, "SELECT CAST(ts AS STRING) FROM sc.ns.y")
     assert cols == [("sc.ns.y.ts", "string")]
+
+
+def test_struct_field_key_never_binds_a_same_named_column(session: ReparkSession) -> None:
+    """A compound ORDER BY key never binds to a same-named select column.
+
+    ``st.s`` sorts by the struct field, so the rewrite bails and the answer
+    matches main: ``b, a, b``.
+
+    pins: tz-asof-1/C-010
+    """
+    seed_z(session)
+    cols, rows = observed(session, "SELECT s FROM sc.ns.z ORDER BY st.s, ts")
+    assert cols == [("s", "string")]
+    assert rows == [["b"], ["a"], ["b"]]
