@@ -155,10 +155,10 @@ assignment plan with U5's nested ALTER. **Size M, tier terra (parser) + opus.**
 
 `TY-TIMESTAMP-NTZ`, `TY-TIMESTAMP-NTZ-V3` (`TZ-6` registered — the owner's TZ-9 question is the same
 family), `TY-TIMESTAMP-LTZ`, `TY-MAP` (`map<string,int>` end to end — read, write, DESCRIBE), `TY-VARIANT-V3`
-(`V3-VARIANT-SHRED-1` registered: the fork has no variant writer — fork work), `TY-UNKNOWN-VOID` (the v3
+(carved out — owner ruling C-4, 2026-09-27; see "Carved out" below), `TY-UNKNOWN-VOID` (the v3
 `unknown` type), `TY-UUID-READ` (a uuid column created through the Iceberg API reads as string in Spark).
-**Owner decides TZ-6/TZ-9 (timestamp without zone semantics) and whether variant is 1.5.0 or a dated
-carve-out; the other five are none.** **Size L, tier opus + fork lane.**
+**Owner decides TZ-6/TZ-9 (timestamp without zone semantics); the other five are none.** **Size L,
+tier opus + fork lane.**
 
 ### U10 — READ-REST (ruling **none**; 5 cells)
 
@@ -199,7 +199,7 @@ prefix the role already grants (a bronze-style target is a separate IAM grant). 
 seam) + devin (the Python writer's retreat to a forwarder); AWS spend for the oracle and the live leg
 well under the $25 cap; the 3 GB table flag does not apply (no tables).**
 
-### Carved out (5 cells: owner rulings C-1 2026-09-19, C-2 2026-09-24, C-3 2026-09-26)
+### Carved out (6 cells: owner rulings C-1 2026-09-19, C-2 2026-09-24, C-3 2026-09-26, C-4 2026-09-27)
 
 `R-STREAM-READ`, `R-STREAM-READ-SKIP`, `W-STREAM-WRITE-FILESRC` — structured streaming, v1.6.0
 ([ice-streaming-1-6.md](ice-streaming-1-6.md)). Not in the 718.
@@ -215,6 +215,16 @@ partition order and the harness compares that one cell's commit sequence order-i
 (`compare.py` rule `commit_order`, `overrides.json`); every other observation in the cell stays
 exact. The cell counts as EQUAL under the rule.
 
+`TY-VARIANT-V3` — variant leaves v1.5.0 for the v1.6.0 card (owner ruling C-4, 2026-09-27;
+decision 6 below is closed by it). Spark 4.1.2 + Iceberg 1.11 wrote the cell's column as
+SHREDDED Parquet: a `typed_value` struct with int / string / decimal(38,18) / array / object /
+variant branches, `metadata` and `value` null on every row, one row group, an empty
+`typed_value` variant fallback branch. The fork maps Iceberg variant to Arrow
+`struct<metadata: Binary, value: Binary>` and refuses both the Parquet write and any scan
+projecting the column (fork issue R88 open) — but it already links the upstream arrow-rs
+`parquet-variant*` crates, so the v1.6.0 work is integration, not a codec: see
+[ice-variant-1-6.md](ice-variant-1-6.md).
+
 ### Count
 
 U0 22 · U1 (overlaps U0/U2; counted once under U0/U2) · U2 5 · U3 9 · U4 10 · U5 14 · U6 7 · U7 7 · U8 5 · U9 7
@@ -228,10 +238,10 @@ U12 adds its `W-PATH-S3-*` cells to the inventory when step 0 records them.
 3. **`D-NS-NESTED`** — nested namespaces in 1.5.0 or a dated carve-out.
 4. **`TP-ACCEPT-ANY-SCHEMA-DF`** and the six refusal-parity siblings (U6) — refusal parity is the proposal.
 5. **TZ-6 / TZ-9** — timestamp-without-zone semantics (`TY-TIMESTAMP-NTZ*`, `E-TZ-TIMESTAMP-AS-OF`).
-6. **`TY-VARIANT-V3`** — fork variant writer in 1.5.0 or a dated carve-out.
+6. **`TY-VARIANT-V3`** — closed 2026-09-27 by owner ruling C-4: variant leaves v1.5.0 for the v1.6.0 card ([ice-variant-1-6.md](ice-variant-1-6.md)).
 7. **`CAT-TYPE-MEMORY`** — RePark's own catalog type stays as a dated extension, or refuses like Spark.
 
-Decisions 3, 6 and 7 are the only ones that can *shrink* the gate; every other item is buildable. The owner's
+Decision 7 is the only one that can still *shrink* the gate (3 closed by C-2, 6 by C-4); every other item is buildable. The owner's
 09-23 decision on S3 path writes (U12) is the one that *grows* it.
 
 ## 3. Sequencing for the next run

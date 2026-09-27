@@ -2790,6 +2790,8 @@ still open is `isModifiable`.
   variant is fork work (F-15 → R88) with no v1.0 consumer; binary variant consumption is
   queued fork work, not an engine invention. Reversing needs a new dated decision; the fork
   I/O landing reds the scan/write pins on purpose.
+- Residue — carved out of the v1.5.0 gate (owner ruling C-4, 2026-09-27) →
+  [ice-variant-1-6.md](../task/roadmap/mid-term/ice-variant-1-6.md).
 
 ### V3-MULTIARG-1 — multi-argument partition transforms are DECLARED out of 1.x
 
