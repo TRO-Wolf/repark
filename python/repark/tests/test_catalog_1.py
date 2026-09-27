@@ -5,7 +5,7 @@ Every expected text is Spark 4.1.2 + Iceberg 1.11, measured 2026-09-26 (probes u
 and registers ``sc`` after build, as the scoreboard's RePark leg does.
 
 pins: catalog-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
-    C-012, C-013
+    C-012, C-013, C-014
 """
 
 from __future__ import annotations
@@ -620,3 +620,72 @@ def test_session_default_catalog_in_toml_moves_the_first_current_catalog(
     finally:
         session.stop()
         _reset_active_session_for_tests()
+
+
+def test_facade_two_part_sql_on_a_refused_catalog_raises_like_spark(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """Two-part SQL on a refused catalog raises Spark's exact refusal on the facade door.
+
+    pins: catalog-1/C-014
+    """
+    spark.conf.set("spark.sql.catalog.c_mem", "org.apache.iceberg.spark.SparkCatalog")
+    spark.conf.set("spark.sql.catalog.c_mem.type", "memory")
+    spark.conf.set("spark.sql.catalog.c_mem.warehouse", str(tmp_path / "c_mem"))
+    for sql in (
+        "SELECT * FROM c_mem.t",
+        "INSERT INTO c_mem.t VALUES (1)",
+        "DESCRIBE c_mem.t",
+        "SELECT * FROM (SELECT * FROM c_mem.t) q",
+        "SELECT * FROM `c_mem`.t",
+        "SELECT * FROM C_MEM.t",
+    ):
+        with pytest.raises(UnsupportedOperationException) as caught:
+            spark.sql(sql).collect()
+        assert str(caught.value) == "Unknown catalog type: memory", sql
+        assert caught.value.getCondition() is None, sql
+        assert caught.value.getSqlState() is None, sql
+        assert _current(spark) == [["spark_catalog", "default"]], sql
+    assert spark.catalog.currentCatalog() == "spark_catalog"
+
+
+def test_spark_table_on_a_refused_catalog_raises_like_spark(tmp_path: Path) -> None:
+    """``spark.table("c_mem.t")`` raises Spark's exact refusal on the builder door.
+
+    pins: catalog-1/C-014
+    """
+    session = _build(
+        tmp_path,
+        {
+            "spark.sql.catalog.c_mem": "org.apache.iceberg.spark.SparkCatalog",
+            "spark.sql.catalog.c_mem.type": "memory",
+            "spark.sql.catalog.c_mem.warehouse": str(tmp_path / "c_mem"),
+        },
+    )
+    try:
+        with pytest.raises(UnsupportedOperationException) as caught:
+            session.table("c_mem.t").collect()
+        assert str(caught.value) == "Unknown catalog type: memory"
+        assert caught.value.getCondition() is None
+        assert caught.value.getSqlState() is None
+        assert _current(session) == [["spark_catalog", "default"]]
+        assert session.catalog.currentCatalog() == "spark_catalog"
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()
+
+
+def test_two_part_name_on_a_registered_catalog_still_expands(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """A two-part name on a registered catalog still expands under the current catalog.
+
+    pins: catalog-1/C-014
+    """
+    spark.conf.set("spark.sql.catalog.c_ok", "org.apache.iceberg.spark.SparkCatalog")
+    spark.conf.set("spark.sql.catalog.c_ok.catalog-impl", IN_MEMORY_CATALOG)
+    spark.conf.set("spark.sql.catalog.c_ok.warehouse", str(tmp_path / "c_ok"))
+    spark.sql("CREATE NAMESPACE IF NOT EXISTS spark_catalog.c_ok")
+    spark.sql("CREATE TABLE spark_catalog.c_ok.t (id INT) USING iceberg")
+    assert _rows(spark, "SELECT * FROM c_ok.t") == []
+    assert _current(spark) == [["spark_catalog", "default"]]

@@ -7157,8 +7157,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   way (named in the ledger). The fold pins
   (`test_database_exists_on_a_refused_catalog_raises_like_spark`,
   `test_list_tables_and_get_table_on_a_refused_catalog_raise_like_spark`) land with
-  C-012, C-013. pins: catalog-1/C-001, C-002, C-003, C-004,
-  C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
+  C-012, C-013. The V-007 fold pins
+  (`test_facade_two_part_sql_on_a_refused_catalog_raises_like_spark`,
+  `test_spark_table_on_a_refused_catalog_raises_like_spark`,
+  `test_two_part_name_on_a_registered_catalog_still_expands`) land with C-014; the
+  `resolve_table_name` symbol hash moves in `test_production_file_size.py`.
+  pins: catalog-1/C-001, C-002, C-003, C-004,
+  C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
 
 ## I want to...
 

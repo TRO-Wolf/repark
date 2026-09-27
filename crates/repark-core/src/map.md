@@ -1232,6 +1232,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   (moves an unpinned current catalog), `set_defaults` (pins), `current_catalog_error` (Spark's
   `CATALOG_NOT_FOUND` text) and `default_namespace_for`. `session.rs` builds the registry with it and
   declares `session/session_catalog.rs`. pins: catalog-1/C-001, C-003, C-004
+  **CATALOG-1 fold V-007 (2026-09-26):** `refused_catalog_names` lists the refused-kind
+  placeholder names beside `registered_catalog_names`. pins: catalog-1/C-014
 
 ## Pointers
 

@@ -328,6 +328,11 @@ impl CatalogRegistry {
         self.entries.keys().cloned().collect()
     }
 
+    #[must_use]
+    pub fn refused_catalog_names(&self) -> Vec<String> {
+        self.refused.keys().cloned().collect()
+    }
+
     #[allow(clippy::missing_errors_doc)]
     pub async fn is_view(
         &self,

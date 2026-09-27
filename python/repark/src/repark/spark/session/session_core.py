@@ -11,7 +11,7 @@ import repark.spark.session.session_surface as _session_surface
 from repark.spark.session._coerce import range_bound_as_int as _range_bound_as_int
 from repark.spark.session._coerce import sql_clause_end_after as _sql_clause_end_after
 from repark.spark.session.builder_conf import RuntimeConfig, SparkContext
-from repark.spark.session.catalog_resolution import _temp_view_home_ref
+from repark.spark.session.catalog_resolution import _refused_spelling, _temp_view_home_ref
 from repark.spark.session.session_configuration import (
     fold_config_file_into_builder,
     resolve_batch_size,
@@ -210,9 +210,8 @@ class ReparkSession:
         product read paths missed a view ``tableExists`` reported present.
         """
         state = self._catalog_state()
-        probe = None
-        if prefer_temp_view:
-            probe = functools.partial(_temp_view_home_ref, self._ensure_alive())
+        inner = self._ensure_alive()
+        probe = functools.partial(_temp_view_home_ref, inner) if prefer_temp_view else None
 
         return resolve_table_name(
             table_name,
@@ -220,6 +219,7 @@ class ReparkSession:
             current_database=str(state["current_database"]),
             prefer_temp_view=prefer_temp_view,
             temp_view_home_ref=probe,
+            refused_spelling=functools.partial(_refused_spelling, inner),
         )
 
     def _expand_bare_table_names_in_sql(self, query: str) -> str:
