@@ -17,7 +17,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   (`_native.current_catalog_checked`: `CATALOG_NOT_FOUND` raises), and `tableExists` /
   `databaseExists` / `getDatabase` / `listTables` no longer alias `spark_catalog` to the current
   catalog. `_catalog_is_registered` re-raises a refused catalog's refusal instead of
-  answering `False`. pins: catalog-1/C-002, C-004, C-006, C-007
+  answering `False`; `databaseExists` / `_namespace_exists` re-raise it likewise, so
+  `listTables` propagates the refusal instead of `SCHEMA_NOT_FOUND`.
+  pins: catalog-1/C-002, C-004, C-006, C-007, C-012, C-013
 
 ## Modules
 
@@ -158,6 +160,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **C1 SHOW CREATE (2026-09-23):** `_table_comment` reads the `Comment` row of the
   `# Detailed Table Information` block (Spark's measured spelling) — the shared
   Spark-visible `Table Properties` list no longer carries the reserved `comment` key.
+  **CATALOG-1 fold (2026-09-26):** `_known_table` re-raises a refused catalog's refusal
+  from each probe instead of re-mapping it to not-found, so `getTable` surfaces it
+  like Spark. pins: catalog-1/C-013
 - `column.py` — lazy expression objects, type gates, aliases, field access, generators,
   aggregates, windows, casts, and Spark-compatible operator behavior. Column identity
   metadata preserves join and duplicate-name semantics.

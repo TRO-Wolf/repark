@@ -7153,9 +7153,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   The toml pins (`test_the_owner_toml_loads_and_starts_in_spark_catalog`,
   `test_session_default_catalog_in_toml_moves_the_first_current_catalog`) land with C-010.
   The C-011 sweep ran the whole suite green with no further rewrite (none deleted); the
-  three docs examples that assumed the flip were rewritten the same way (named in the
-  ledger). pins: catalog-1/C-001, C-002, C-003, C-004,
-  C-005, C-006, C-007, C-008, C-009, C-010, C-011
+  one docs example changed on this branch that assumed the flip was rewritten the same
+  way (named in the ledger). The fold pins
+  (`test_database_exists_on_a_refused_catalog_raises_like_spark`,
+  `test_list_tables_and_get_table_on_a_refused_catalog_raise_like_spark`) land with
+  C-012, C-013. pins: catalog-1/C-001, C-002, C-003, C-004,
+  C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
 
 ## I want to...
 

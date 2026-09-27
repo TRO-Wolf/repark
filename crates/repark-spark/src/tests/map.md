@@ -2098,8 +2098,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   CATALOGS, `spark.sql.defaultCatalog` at build and at runtime with the USE pin, `spark_catalog`
   not an alias, the missing default's `CATALOG_NOT_FOUND`, and the USE forms with the five
   `SCHEMA_NOT_FOUND` renderings, plus the refused kinds on the SQL door (every first use
-  raises, the current catalog stays, the long form and the opt-in stay catalogs).
-  pins: catalog-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  raises, the current catalog stays, the long form and the opt-in stay catalogs), the
+  two-part refusal arms, and the two-part alias that still plans beside a refusal.
+  pins: catalog-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-014
 
 ## Mapping rule
 

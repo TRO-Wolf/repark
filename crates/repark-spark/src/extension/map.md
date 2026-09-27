@@ -55,9 +55,9 @@ function-registry + analyzer-rule installation + the composed
   token pass refuses a dotted first part equal to it, a `current_catalog()` / `current_database()`
   / `current_schema()` call, a bare `SHOW NAMESPACES|DATABASES|SCHEMAS|TABLES|VIEWS|FUNCTIONS`, or
   a one-part `USE`. Otherwise it returns before tokenizing. A refused catalog name in
-  `USE` / `SHOW … IN|FROM` operand position, or as the first part of a three-part name,
-  raises its refusal first (skipped entirely when no refusal is stored).
-  pins: catalog-1/C-003, C-004, C-006, C-007, C-008
+  `USE` / `SHOW … IN|FROM` operand position, or as the first part of a two- or three-part
+  dotted name, raises its refusal first (skipped entirely when no refusal is stored).
+  pins: catalog-1/C-003, C-004, C-006, C-007, C-008, C-014
 
 ## Pointers
 
