@@ -1,4 +1,4 @@
-"""WO NTZ-1 slice 1: the TIMESTAMP_NTZ literal and explicit casts replay Spark.
+"""WO NTZ-1 slices 1 and 2: TIMESTAMP_NTZ literals, casts and store assignment.
 
 The oracle is ``ntz_1_spark_oracle.json`` (Spark 4.1.2 + Iceberg 1.11.0, measured
 2026-09-26): the Slice 1 literal/cast/refusal queries with their session zone and
@@ -19,7 +19,16 @@ prefix defeats the condition parser, so that step compares SQLSTATE plus the
 core text and skips class and condition. The invalid-literal window compares
 all four lines byte for byte; the caret count is the CHAR length of the literal.
 
-pins: ntz-1/C-001, C-002, C-003, C-004, C-005
+Slice 2 stores through every door and compares against the probe SQL and Spark's
+recorded walls (``ntz-spark.json``, ``ntz2-spark.json``, ``ntz4-spark.json``,
+``ntz6-spark.json``): values read back as ``CAST(c AS STRING)`` so host-zone
+rendering never enters the comparison. The UTC UPDATE/MERGE legs are
+rule-derived (session zone UTC leaves the wall untouched) rather than
+probe-measured; every other wall below is Spark's recorded answer. Refusals
+compare class, condition, SQLSTATE and the full first line with this file's
+table name in Spark's template.
+
+pins: ntz-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 """
 
 from __future__ import annotations
@@ -158,6 +167,28 @@ def _assert_error(step: dict[str, Any], error: BaseException) -> None:
         assert core[3] == spark["msg"].splitlines()[3]
 
 
+def _walls(session: ReparkSession, table: str) -> list[list[Any]]:
+    """Read a table's id/wall rows with the wall rendered as Spark renders it."""
+    return _rows(session.sql(f"SELECT id, CAST(c AS STRING) AS s FROM {table} ORDER BY id"), "str")
+
+
+def _assert_store_refusal(session: ReparkSession, sql: str, table: str, source: str) -> None:
+    """Replay one store refusal against Spark's recorded template and class."""
+    try:
+        session.sql(sql).collect()
+    except Exception as error:
+        assert type(error).__name__ == "AnalysisException"
+        assert _condition(error) == "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+        assert _sql_state(error) == "KD000"
+        assert _repark_core(str(error))[0] == (
+            "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data "
+            f'for the table {table}: Cannot safely cast `c` "{source}" to "TIMESTAMP_NTZ". '
+            "SQLSTATE: KD000"
+        )
+    else:
+        raise AssertionError(f"{sql} answered instead of refusing")
+
+
 def _assert_select(session: ReparkSession, step: dict[str, Any]) -> None:
     """Replay one oracle SELECT against Spark's recorded answer."""
     key = step["key"]
@@ -247,5 +278,146 @@ def test_nested_cast_target_keeps_the_r4_refusal(sql: str, tmp_path: Path) -> No
             "literal and cast are. See TZ-6 (docs/spark-sql-iceberg-parity.md). "
             "SQLSTATE: 0A000"
         )
+    finally:
+        session.stop()
+
+
+def test_store_values_and_select_answer_as_spark(tmp_path: Path) -> None:
+    """TIMESTAMP, NULL and DATE store into NTZ columns as Spark's walls."""
+    session = _open("UTC", tmp_path)
+    try:
+        session.sql("CREATE TABLE sc.ns.t (id INT, c TIMESTAMP_NTZ) USING iceberg").collect()
+        session.sql("INSERT INTO sc.ns.t VALUES (1, TIMESTAMP'2024-01-01 12:00:00')").collect()
+        session.sql("INSERT INTO sc.ns.t VALUES (3, NULL)").collect()
+        session.sql("INSERT INTO sc.ns.t VALUES (30, DATE'2024-01-03')").collect()
+        assert _walls(session, "sc.ns.t") == [
+            [1, "2024-01-01 12:00:00"],
+            [3, None],
+            [30, "2024-01-03 00:00:00"],
+        ]
+        session.conf.set("spark.sql.session.timeZone", "America/New_York")
+        session.sql("INSERT INTO sc.ns.t VALUES (4, TIMESTAMP'2024-01-01 12:00:00')").collect()
+        session.sql("INSERT INTO sc.ns.t VALUES (5, TIMESTAMP'2024-01-01 12:00:00Z')").collect()
+        session.sql("INSERT INTO sc.ns.t SELECT 40, TIMESTAMP'2024-01-04 12:00:00Z'").collect()
+        session.sql("INSERT INTO sc.ns.t SELECT 41, DATE'2024-01-04'").collect()
+        assert _walls(session, "sc.ns.t") == [
+            [1, "2024-01-01 12:00:00"],
+            [3, None],
+            [4, "2024-01-01 12:00:00"],
+            [5, "2024-01-01 07:00:00"],
+            [30, "2024-01-03 00:00:00"],
+            [40, "2024-01-04 07:00:00"],
+            [41, "2024-01-04 00:00:00"],
+        ]
+    finally:
+        session.stop()
+
+
+@pytest.mark.parametrize(
+    ("zone", "update_wall", "merge_first", "merge_second"),
+    [
+        ("UTC", "2024-05-05 12:00:00", "2024-06-06 12:00:00", "2024-07-07 12:00:00"),
+        ("America/New_York", "2024-05-05 08:00:00", "2024-06-06 08:00:00", "2024-07-07 08:00:00"),
+    ],
+)
+def test_update_and_merge_store_the_session_zone_wall(
+    zone: str, update_wall: str, merge_first: str, merge_second: str, tmp_path: Path
+) -> None:
+    """UPDATE and both MERGE arms store the instant's wall in the session zone."""
+    session = _open(zone, tmp_path)
+    try:
+        session.sql("CREATE TABLE sc.ns.t (id INT, c TIMESTAMP_NTZ) USING iceberg").collect()
+        session.sql(
+            "INSERT INTO sc.ns.t VALUES (0, TIMESTAMP_NTZ'2024-01-01 00:00:00'), "
+            "(1, TIMESTAMP_NTZ'2024-01-01 00:00:00')"
+        ).collect()
+        session.sql("UPDATE sc.ns.t SET c = TIMESTAMP'2024-05-05 12:00:00Z' WHERE id = 0").collect()
+        assert _walls(session, "sc.ns.t") == [
+            [0, update_wall],
+            [1, "2024-01-01 00:00:00"],
+        ]
+        session.sql(
+            "MERGE INTO sc.ns.t t USING (SELECT 1 AS id, TIMESTAMP'2024-06-06 12:00:00Z' AS c "
+            "UNION ALL SELECT 2, TIMESTAMP'2024-07-07 12:00:00Z') s ON t.id = s.id "
+            "WHEN MATCHED THEN UPDATE SET c = s.c WHEN NOT MATCHED THEN INSERT *"
+        ).collect()
+        assert _walls(session, "sc.ns.t") == [
+            [0, update_wall],
+            [1, merge_first],
+            [2, merge_second],
+        ]
+    finally:
+        session.stop()
+
+
+def test_dataframe_append_stores_the_session_zone_wall(tmp_path: Path) -> None:
+    """A DataFrame append of a TIMESTAMP column stores the session-zone wall."""
+    session = _open("America/New_York", tmp_path)
+    try:
+        session.sql("CREATE TABLE sc.ns.t (id INT, c TIMESTAMP_NTZ) USING iceberg").collect()
+        session.sql("INSERT INTO sc.ns.t VALUES (0, TIMESTAMP_NTZ'2024-01-01 00:00:00')").collect()
+        frame = session.createDataFrame(
+            [(3, datetime.datetime(2024, 8, 8, 12, 0, tzinfo=datetime.UTC))],
+            "id INT, c TIMESTAMP",
+        )
+        frame.writeTo("sc.ns.t").append()
+        assert _walls(session, "sc.ns.t") == [
+            [0, "2024-01-01 00:00:00"],
+            [3, "2024-08-08 08:00:00"],
+        ]
+    finally:
+        session.stop()
+
+
+def test_ntz_values_store_into_timestamp_as_session_instants(tmp_path: Path) -> None:
+    """NTZ values store into a TIMESTAMP column as the session-zone instant."""
+    session = _open("America/New_York", tmp_path)
+    try:
+        session.sql("CREATE TABLE sc.ns.l (id INT, c TIMESTAMP) USING iceberg").collect()
+        session.sql("INSERT INTO sc.ns.l VALUES (0, TIMESTAMP_NTZ'2024-01-01 12:00:00')").collect()
+        assert _walls(session, "sc.ns.l") == [[0, "2024-01-01 12:00:00"]]
+        session.conf.set("spark.sql.session.timeZone", "UTC")
+        assert _walls(session, "sc.ns.l") == [[0, "2024-01-01 17:00:00"]]
+        session.sql("INSERT INTO sc.ns.l VALUES (1, TIMESTAMP_NTZ'2024-01-01 12:00:00')").collect()
+        assert _walls(session, "sc.ns.l") == [
+            [0, "2024-01-01 17:00:00"],
+            [1, "2024-01-01 12:00:00"],
+        ]
+    finally:
+        session.stop()
+
+
+def test_store_refusals_name_timestamp_ntz(tmp_path: Path) -> None:
+    """Illegal sources refuse with Spark's CANNOT_SAFELY_CAST on every door."""
+    session = _open("UTC", tmp_path)
+    try:
+        session.sql("CREATE TABLE sc.ns.t (id INT, c TIMESTAMP_NTZ) USING iceberg").collect()
+        session.sql("INSERT INTO sc.ns.t VALUES (0, TIMESTAMP_NTZ'2024-01-01 00:00:00')").collect()
+        table = "`sc`.`ns`.`t`"
+        for sql, source in [
+            ("INSERT INTO sc.ns.t VALUES (2, '2024-03-10 02:30:00')", "STRING"),
+            ("INSERT INTO sc.ns.t VALUES (5, 1)", "INT"),
+            ("INSERT INTO sc.ns.t VALUES (1, true)", "BOOLEAN"),
+            ("INSERT INTO sc.ns.t SELECT 3, '2024-01-01'", "STRING"),
+            ("INSERT INTO sc.ns.t SELECT 2, 1", "INT"),
+        ]:
+            _assert_store_refusal(session, sql, table, source)
+        for sql in [
+            "UPDATE sc.ns.t SET c = '2024-01-01 00:00:00' WHERE id = 0",
+            "MERGE INTO sc.ns.t t USING (SELECT 0 AS id, '2024-01-01 00:00:00' AS c) s ON "
+            "t.id = s.id WHEN MATCHED THEN UPDATE SET c = s.c",
+            "MERGE INTO sc.ns.t t USING (SELECT 9 AS id, '2024-01-01 00:00:00' AS c) s ON "
+            "t.id = s.id WHEN NOT MATCHED THEN INSERT *",
+        ]:
+            _assert_store_refusal(session, sql, "``", "STRING")
+        frame = session.createDataFrame([(7, "2024-01-01 00:00:00")], "id INT, c STRING")
+        try:
+            frame.writeTo("sc.ns.t").append()
+        except Exception as error:
+            assert type(error).__name__ == "AnalysisException"
+            assert _condition(error) == "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+            assert _sql_state(error) == "KD000"
+        else:
+            raise AssertionError("a STRING append answered instead of refusing")
     finally:
         session.stop()

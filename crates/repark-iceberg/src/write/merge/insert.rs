@@ -102,6 +102,33 @@ pub(super) fn insert_projection_with_defaults(
     Ok(projection.join(", "))
 }
 
+fn ntz_wrapping_stream_sql(sql: &str, write_schema: &ArrowSchema) -> Option<String> {
+    if !write_schema
+        .fields()
+        .iter()
+        .any(|field| crate::write::ntz_store::is_ntz_wall_target(field.data_type()))
+    {
+        return None;
+    }
+    let inner = "__repark_merge_insert_rows";
+    let projection = write_schema
+        .fields()
+        .iter()
+        .map(|field| {
+            let quoted = quote_ident(field.name());
+            let column = format!("{inner}.{quoted}");
+            if crate::write::ntz_store::is_ntz_wall_target(field.data_type()) {
+                let wall = crate::write::ntz_store::ntz_wall_cast_sql(&column);
+                format!("({wall}) AS {quoted}")
+            } else {
+                format!("{column} AS {quoted}")
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    Some(format!("SELECT {projection} FROM ({sql}) AS {inner}"))
+}
+
 /// Plan one insert-clause query, gate its schema through ANSI store assignment, then stream.
 pub(super) async fn insert_stream_checked(
     ctx: &SessionContext,
@@ -110,10 +137,17 @@ pub(super) async fn insert_stream_checked(
 ) -> Result<impl Stream<Item = Result<RecordBatch>> + Unpin + use<>> {
     super::note_logical_target_sql_pass();
     let dataframe = ctx.sql(sql).await?;
-    let targets = write_schema.fields().iter();
-    let targets = targets.map(|field| (field.name().as_str(), field.data_type()));
-    refuse_void_writes(ctx, "``", dataframe.logical_plan(), targets)?;
+    let targets: Vec<(&str, &DataType)> = write_schema
+        .fields()
+        .iter()
+        .map(|field| (field.name().as_str(), field.data_type()))
+        .collect();
+    refuse_void_writes(ctx, "``", dataframe.logical_plan(), targets.clone())?;
+    crate::write::ntz_store::refuse_ntz_writes(ctx, "``", dataframe.logical_plan(), targets)?;
     validate_insert_store_assignment(dataframe.schema().fields(), write_schema)?;
+    if let Some(stream_sql) = ntz_wrapping_stream_sql(sql, write_schema) {
+        return ctx.sql(&stream_sql).await?.execute_stream().await;
+    }
     dataframe.execute_stream().await
 }
 
@@ -184,11 +218,15 @@ async fn gate_update_probe(
     target_columns: Vec<String>,
 ) -> Result<()> {
     let dataframe = ctx.sql(probe_sql).await?;
-    let targets = target_columns.iter().filter_map(|name| {
-        let field = write_schema.field_with_name(name).ok()?;
-        Some((name.as_str(), field.data_type()))
-    });
-    refuse_void_writes(ctx, "``", dataframe.logical_plan(), targets)?;
+    let targets: Vec<(&str, &DataType)> = target_columns
+        .iter()
+        .filter_map(|name| {
+            let field = write_schema.field_with_name(name).ok()?;
+            Some((name.as_str(), field.data_type()))
+        })
+        .collect();
+    refuse_void_writes(ctx, "``", dataframe.logical_plan(), targets.clone())?;
+    crate::write::ntz_store::refuse_ntz_writes(ctx, "``", dataframe.logical_plan(), targets)?;
     let planned = dataframe.schema().fields();
     if planned.len() != target_columns.len() {
         return Err(DataFusionError::Internal(format!(

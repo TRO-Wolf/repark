@@ -988,6 +988,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `try_to_timestamp`) run the [`spark_string_timestamp/`](spark_string_timestamp/map.md) kernel.
   `arrow_grammar_to_timestamp_udf` keeps DataFusion's string parse for the `to_timestamp_ntz`
   path only. pins: cast-ts-string-1/C-001, C-004, C-005
+  **WO NTZ-1 slice 2 (2026-09-27):** `rewrite_cast` retargets NTZ-target casts through
+  `timestamp_ntz_cast` before the existing arms (+3 lines). pins: ntz-1/C-006
 - `timestamp_cast.rs` — **TZ-5 (2026-08-12)** plus **B-TZ-4 (2026-08-13):** the embedded UDFs
   `analyzer.rs` puts under timestamp casts. `__repark_epoch_seconds_floor__` (→ `Int64`) serves
   integer targets with exact `div_euclid` **floor** — Spark uses `Math.floorDiv`, so `-0.5 s` is
@@ -1069,6 +1071,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   integer and is named `TIMESTAMP_NTZ '<wall>'`.
   Tests in [timestamp_ntz_cast/](timestamp_ntz_cast/map.md).
   pins: ntz-1/C-001, C-002
+  **WO NTZ-1 slice 2 (2026-09-27):** `rewrite_ntz_target_cast`, which `instant_ts`
+  `rewrite_cast` calls before its LTZ arms: a `Cast` to exactly `Timestamp(µs, None)`
+  from an instant, a non-microsecond naive timestamp, a date or a string becomes the
+  embedded cast UDF (session-zone wall / midnight), replacing the peel for NTZ targets.
+  pins: ntz-1/C-006
 - `timestamp_ltz_ntz.rs` — **FNP-11B step 3 (2026-09-15):** `to_timestamp_ltz` /
   `to_timestamp_ntz` / `try_to_timestamp` on the step-2 parser (card D-1, no new
   parser). `to_timestamp_ltz` forwards both arities to the `to_timestamp` kernel;

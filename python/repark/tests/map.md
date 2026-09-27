@@ -173,6 +173,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   TYPEOF-SQL-13 spells `timestamp_ntz`, the D4 `timestampdiff` NTZ cell replays,
   and the U9 oracle retires R-2 (NTZ insert/cast now EQUAL; R-1 repark gains row 4).
   pins: ntz-1/C-001, C-002, C-003, C-004, C-005
+  **WO NTZ-1 slice 2 (2026-09-27):** store assignment replays Spark — LTZ/NULL/DATE
+  VALUES and SELECT in UTC and New York, UPDATE plus both MERGE arms in both zones, the
+  DataFrame append, NTZ values into a TIMESTAMP column, and the CANNOT_SAFELY_CAST
+  refusals (class, condition, SQLSTATE, first line) on VALUES/SELECT/UPDATE/MERGE plus
+  the STRING append. Values read back as `CAST(c AS STRING)`.
+  pins: ntz-1/C-006, C-007
 - [test_ice_error_conditions_1.py](test_ice_error_conditions_1.py) —
   **ICE-ERROR-CONDITIONS-1 / IPI-51 PR1 (2026-09-20):** constructor pins for the native
   error-condition parser — `getCondition`/`getErrorClass`/`getSqlState` on the PyO3

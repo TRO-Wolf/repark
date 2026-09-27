@@ -1,17 +1,18 @@
 use std::convert::Infallible;
 use std::ops::ControlFlow;
 
-use datafusion::arrow::datatypes::DataType as ArrowType;
+use datafusion::arrow::datatypes::{DataType as ArrowType, TimeUnit};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
-    CastKind, DataType, Expr, Insert, SetExpr, Statement, TableObject, Value, ValueWithSpan,
-    VisitMut, VisitorMut,
+    CastKind, DataType, Expr, Insert, ObjectName, SetExpr, Statement, TableObject, Value,
+    ValueWithSpan, VisitMut, VisitorMut,
 };
 use datafusion::sql::sqlparser::tokenizer::Span;
-use iceberg::spec::{PrimitiveType, Type};
+use iceberg::spec::{NestedField, PrimitiveType, Type};
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
+use repark_iceberg::write::ntz_store::refuse_ntz_writes;
 use repark_iceberg::write::void_store::refuse_void_writes;
 
 use crate::catalog_ops::name_parts;
@@ -113,7 +114,7 @@ async fn refuse_non_null_void_values(
     if !fields.iter().any(|field| {
         matches!(
             field.field_type.as_ref(),
-            Type::Primitive(PrimitiveType::Unknown)
+            Type::Primitive(PrimitiveType::Unknown | PrimitiveType::Timestamp)
         )
     }) {
         return Ok(());
@@ -141,8 +142,81 @@ async fn refuse_non_null_void_values(
             case_insensitive,
         )
         .await?;
+        check_ntz_row(
+            ctx,
+            fields,
+            &display,
+            &row.content,
+            &insert.columns,
+            case_insensitive,
+        )
+        .await?;
     }
     Ok(())
+}
+
+async fn check_ntz_row(
+    ctx: &SessionContext,
+    fields: &[std::sync::Arc<NestedField>],
+    display: &str,
+    row: &[Expr],
+    columns: &[ObjectName],
+    case_insensitive: bool,
+) -> Result<()> {
+    let positions: Vec<(&NestedField, &Expr)> = if columns.is_empty() {
+        if row.len() != fields.len() {
+            return Ok(());
+        }
+        fields.iter().map(AsRef::as_ref).zip(row.iter()).collect()
+    } else {
+        if row.len() != columns.len() {
+            return Ok(());
+        }
+        row.iter()
+            .zip(columns.iter())
+            .filter_map(|(value, column)| {
+                fields
+                    .iter()
+                    .find(|field| {
+                        if case_insensitive {
+                            field.name.eq_ignore_ascii_case(&column_name(column))
+                        } else {
+                            field.name == column_name(column)
+                        }
+                    })
+                    .map(|field| (field.as_ref(), value))
+            })
+            .collect()
+    };
+    if !positions.iter().any(|(field, _)| {
+        matches!(
+            field.field_type.as_ref(),
+            Type::Primitive(PrimitiveType::Timestamp)
+        )
+    }) {
+        return Ok(());
+    }
+    let probe = format!(
+        "SELECT {}",
+        positions
+            .iter()
+            .map(|(_, value)| value.to_string())
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
+    let Ok(frame) = ctx.sql(&probe).await else {
+        return Ok(());
+    };
+    let naive = ArrowType::Timestamp(TimeUnit::Microsecond, None);
+    let dummy = ArrowType::Boolean;
+    let pairs = positions.iter().map(|(field, _)| {
+        let target = match field.field_type.as_ref() {
+            Type::Primitive(PrimitiveType::Timestamp) => &naive,
+            _ => &dummy,
+        };
+        (field.name.as_str(), target)
+    });
+    refuse_ntz_writes(ctx, display, frame.logical_plan(), pairs)
 }
 
 async fn refuse_void_query(
@@ -180,6 +254,9 @@ async fn refuse_void_query(
         .iter()
         .map(|field| match field.field_type.as_ref() {
             Type::Primitive(PrimitiveType::Unknown) => ArrowType::Null,
+            Type::Primitive(PrimitiveType::Timestamp) => {
+                ArrowType::Timestamp(TimeUnit::Microsecond, None)
+            }
             _ => ArrowType::Boolean,
         })
         .collect();
@@ -187,7 +264,12 @@ async fn refuse_void_query(
         .iter()
         .zip(&types)
         .map(|(field, data_type)| (field.name.as_str(), data_type));
-    refuse_void_writes(ctx, display, frame.logical_plan(), pairs)
+    refuse_void_writes(ctx, display, frame.logical_plan(), pairs)?;
+    let pairs = targets
+        .iter()
+        .zip(&types)
+        .map(|(field, data_type)| (field.name.as_str(), data_type));
+    refuse_ntz_writes(ctx, display, frame.logical_plan(), pairs)
 }
 
 async fn check_void_row(

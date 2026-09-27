@@ -566,6 +566,9 @@ fn rewrite_cast(
     if timestamp_type.is_ntz() {
         return rewrite_cast_as_ntz(expr, schema);
     }
+    if let Some(ntz) = crate::timestamp_ntz_cast::rewrite_ntz_target_cast(&expr, schema) {
+        return Transformed::yes(ntz);
+    }
     if let Some(rewritten) = rewrite_string_try_cast(&expr, schema, zone) {
         return Transformed::yes(rewritten);
     }

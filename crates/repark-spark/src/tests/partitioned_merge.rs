@@ -122,7 +122,6 @@ async fn merge_partitioned_mixed_upsert_stamps_partition_values() {
              WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name)",
     )
     .await;
-
     // The matched row took the source value.
     assert_eq!(
         table_rows(&ctx, &catalogs, "ice.sales.pt").await,
@@ -140,7 +139,6 @@ async fn merge_partitioned_mixed_upsert_stamps_partition_values() {
         BTreeMap::from([(1, 1), (2, 1), (3, 1), (4, 1)]),
         "one record per partition slot 1..4 (rewrite + insert both correctly partitioned)"
     );
-
     // The inserted row prunes to exactly the new partition's file; ditto the rewritten row.
     let handle = loaded_table(&catalogs, "pt").await;
     assert_eq!(
@@ -816,6 +814,7 @@ async fn merge_days_partitioned_upsert() {
     const DAY: i64 = 86_400_000_000;
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
+    repark_functions::register_all(&ctx);
     register_ts_source(&ctx, "dbase", &[(1, "a", 0), (2, "b", DAY)]);
     run(
         &ctx,
@@ -932,6 +931,7 @@ async fn merge_days_partitioned_mor_delete_and_insert() {
     const DAY: i64 = 86_400_000_000;
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
+    repark_functions::register_all(&ctx);
     register_ts_source(&ctx, "dbase", &[(1, "a", 0), (2, "b", DAY)]);
     run(
         &ctx,

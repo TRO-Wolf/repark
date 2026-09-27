@@ -7,6 +7,7 @@ use datafusion::sql::sqlparser::ast::{
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
 use repark_iceberg::catalog::uuid_presentation::presented_arrow_schema;
+use repark_iceberg::write::ntz_store::refuse_ntz_writes;
 use repark_iceberg::write::void_store::refuse_void_writes;
 
 use crate::merge::nested_assign::{self, AssignmentScope};
@@ -124,6 +125,8 @@ async fn refuse_incompatible_update_cast(
         };
         let pair = [(column.as_str(), field.data_type())];
         refuse_void_writes(ctx, "``", frame.logical_plan(), pair)?;
+        let pair = [(column.as_str(), field.data_type())];
+        refuse_ntz_writes(ctx, "``", frame.logical_plan(), pair)?;
         let Some(source_field) = frame.schema().fields().first() else {
             return Ok(());
         };

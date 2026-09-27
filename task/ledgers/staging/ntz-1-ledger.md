@@ -41,8 +41,8 @@ on Spark and stays a refusal on RePark (the R4 text, C-005).
 | C-003 | The DataFrame door's `cast("timestamp_ntz")` and `cast(TimestampNTZType())` answer as the SQL cast. | One facade test through the same UDF, value and dtype. | PROVEN | `test_ntz_1.py` `test_dataframe_door_casts_answer_as_spark`. |
 | C-004 | The literal and the cast reach INSERT VALUES, INSERT … SELECT, UPDATE, DELETE, MERGE and CTAS; cells `TY-TIMESTAMP-NTZ` and `TY-TIMESTAMP-NTZ-V3` replay EQUAL on every `obs` key. | One DML door test plus the harness replay of both cells (and three neighbours unchanged). | PROVEN | `ntz_door.rs` `ntz_literal_reaches_every_dml_door`; `test_ntz_1.py` v2/v3 cell tests; scoreboard `compare.py` 2026-09-27: `TY-TIMESTAMP-NTZ` EQUAL, `TY-TIMESTAMP-NTZ-V3` EQUAL, `TY-TIMESTAMP` EQUAL, `TY-TIMESTAMP-LTZ` EQUAL, `TY-PROMOTE-DATE-TS` SPARK-CANNOT both refuse (same ALTER COLUMN step, registered class). |
 | C-005 | A nested cast target carrying `TIMESTAMP_NTZ` refuses with the R4 text (residue, dated, both texts). | The refusal text is pinned on two doors; the residue carries both texts. | PROVEN | `ntz_door.rs` `nested_ntz_cast_target_keeps_the_r4_refusal`; `test_ntz_1.py` `test_nested_cast_target_keeps_the_r4_refusal`; `keyword_lower.rs` `ntz_refusal_names_the_registry_row`; R-2. |
-| C-006 | `TIMESTAMP` and `DATE` values store into a `TIMESTAMP_NTZ` column as the session-zone wall / midnight on VALUES, INSERT … SELECT, UPDATE, MERGE and the DataFrame append; `TIMESTAMP_NTZ` values store into a `TIMESTAMP` column as the session-zone instant. | Slice 2. | OPEN | Slice 2. Side effect measured 2026-09-27 (V-004, Slice 1 already): the LTZ-column INSERT of an NTZ literal stores the session-zone instant (unix 1704128400 under America/New_York, equal to Spark); the NTZ-column direction untouched. |
-| C-007 | STRING, INT and BOOLEAN sources into a `TIMESTAMP_NTZ` column refuse with Spark's `INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST` text naming `"TIMESTAMP_NTZ"` on VALUES and INSERT … SELECT. | Slice 2. | OPEN | Slice 2. |
+| C-006 | `TIMESTAMP` and `DATE` values store into a `TIMESTAMP_NTZ` column as the session-zone wall / midnight on VALUES, INSERT … SELECT, UPDATE, MERGE and the DataFrame append; `TIMESTAMP_NTZ` values store into a `TIMESTAMP` column as the session-zone instant. | Slice 2. | PROVEN | Slice 2 (2026-09-27): the S2-1 cast retarget (`rewrite_cast` → `rewrite_ntz_target_cast`) converts VALUES, INSERT … SELECT and the DataFrame append (which lowers to one); the SQL-site wall-cast wrap converts the identity UPDATE projection (`update_projection_sql`), the MERGE UPDATE arms (`store_assignment_cast_sql`) and the MERGE INSERT arm (`insert_stream_checked` converting subquery). Rust pins `ntz_store.rs` (`ltz_values_store_their_session_zone_wall`, `update_and_merge_store_the_session_zone_wall` UTC+NY, `date_values_store_midnight`, `ntz_values_store_into_a_timestamp_column_as_session_instants`) and facade `test_ntz_1.py` (`test_store_values_and_select_answer_as_spark`, `test_update_and_merge_store_the_session_zone_wall` UTC+NY with rule-derived UTC legs, `test_dataframe_append_stores_the_session_zone_wall`, `test_ntz_values_store_into_timestamp_as_session_instants`) replay the probe SQL and Spark's recorded walls; probe6 repark `sel` byte-EQUAL to `ntz6-spark.json`, probe2 `sel`/`sel_after_dml` EQUAL. Zero TZ pins changed answer under S2-1 (40+23+571 before and after). V-004 side effect now pinned by `ntz_values_store_into_a_timestamp_column_as_session_instants`. |
+| C-007 | STRING, INT and BOOLEAN sources into a `TIMESTAMP_NTZ` column refuse with Spark's `INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST` text naming `"TIMESTAMP_NTZ"` on VALUES and INSERT … SELECT. | Slice 2. | PROVEN | Slice 2 (2026-09-27): new `write/ntz_store.rs::refuse_ntz_writes` in the void-gate shape, called beside every `refuse_void_writes` (VALUES rows via a row probe, INSERT … SELECT, UPDATE SET, both MERGE arms, and so the DataFrame append); `spark_update_type_name` answers `TIMESTAMP_NTZ` for naive timestamps. The gate judges pre-wrap types on every path and fires before WI-2. Rust pin `ntz_refusals_name_timestamp_ntz` (VALUES/SELECT STRING+INT+BOOLEAN plus UPDATE and MERGE STRING rows) and facade `test_store_refusals_name_timestamp_ntz` (plus the STRING append) assert class, condition, SQLSTATE and Spark's first line. |
 | C-008 | Partition transforms, `.partitions`, `.files` bounds, pruning, v3, CTAS, DDL presentation and a Spark-written NTZ table answer Spark's measured values. | Slice 3. | OPEN | Slice 3. |
 | C-009 | TZ-6 states Spark's contract; the R2 residues are dated with both texts; no `UNSUPPORTED_TIMESTAMP_NTZ` text remains reachable for a scalar literal or cast (grep the tree). | Slice 3. | OPEN | Slice 3. |
 
@@ -56,8 +56,9 @@ Each line was broken, the named tests ran red, and the file was restored byte-id
 | M2 | Unlocalize in UTC instead of the session zone (`ntz_single` binds `zone` to UTC). | `ntz_cast_sources_answer_as_spark` reds on the New York legs (answers the UTC wall), restored green. |
 | M3 | Remove the S1-5 gate (the NTZ arm of `spark_refuses_cast`). | `ntz_cast_refuses_numeric_sources_and_targets` reds (TZ-5 leaks epoch seconds instead of refusing), restored green. The first attempt left the message-branch check in place and stayed green, so the gate was restructured to the single matrix predicate before this verification. |
 | M4 | Wire the cast lowering only into `lower_spark_keywords` (drop the `TimestampNsCastLower::post_visit_expr` arm). | `ntz_literal_reaches_every_dml_door` reds on the MERGE row (`NotImplemented("Unsupported SQL type TIMESTAMP_NTZ")`), restored green. |
-| M5 | Slice 2: remove the S2-1 arm → the VALUES / UPDATE New York pins red. | Pending slice 2. |
-| M6 | Slice 2: remove the NTZ gate call → the INT VALUES pin reds. | Pending slice 2. |
+| M5a | Slice 2: remove the S2-1 arm → the VALUES / INSERT … SELECT New York pins red. | `ltz_values_store_their_session_zone_wall` reds, restored green (2026-09-27). |
+| M5b | Slice 2: remove the SQL-site wrap (`ntz_wall_cast_sql` renders the raw expression) → the UPDATE and MERGE New York pins red. | `update_and_merge_store_the_session_zone_wall` reds (stores 12:00), restored green (2026-09-27). |
+| M6 | Slice 2: remove the NTZ gate call → the INT VALUES pin reds. | `ntz_refusals_name_timestamp_ntz` reds (answers instead of refusing), restored green (2026-09-27). |
 
 ## Tests rewritten
 
@@ -71,6 +72,8 @@ Each line was broken, the named tests ran red, and the file was restored byte-id
 - `cast_legality.rs::tests::adjacent_temporal_and_numeric_pairs_are_untouched`: the micros→Int non-refusal asserts give way to nanos/LTZ non-refusal asserts (the intended inversion — micros→Int now refuses), plus a micros→Boolean leg.
 - `test_fnp11a_r2.py` `_ntz_call` literal rewrite stays (still passes); removable — a later round may route it through the real literal.
 - `test_u9_types_1.py` oracle (`u9_types_1_spark_oracle.json`): residue R-2 retired — `ltz/v2|v3/side-insert-ntz` and `ltz/v2/cast-ntz` now answer Spark (`ok`, the four cast rows); `side-select` R-1 repark gains row `[4, "2024-04-01T00:00:00"]` (Spark's value; R-1 stands for the row-3 STRING write).
+- Slice 2 (2026-09-27): `partitioned_merge.rs::merge_days_partitioned_upsert` and `::merge_days_partitioned_mor_delete_and_insert` gain `repark_functions::register_all(&ctx)` in setup — MERGE into the tests' naive-microsecond `ts` column now emits the wall-cast UDF call, which needs the production registration; assertions unchanged. The file sits at its exact size baseline, so two blank lines between statements in `merge_partitioned_mixed_upsert_stamps_partition_values` come out as the line-neutral offset (comments untouched).
+- Slice 2 (2026-09-27): no other existing test was rewritten; the TZ pin set (571 pytest + 40 functions + 23 `session_timezone`) answers identically before and after S2-1.
 
 ## Coverage
 
@@ -80,16 +83,16 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Each Slice 1 clause is walked against Spark's measured answer on the same door; the new facade suite replays 25 oracle queries plus v2/v3 cells, and the Rust door suite pins values, types, names and refusal texts.
-      artifacts: [python/repark/tests/test_ntz_1.py, python/repark/tests/ntz_1_spark_oracle.json, crates/repark-spark/src/tests/ntz_door.rs]
+      evidence: Each Slice 1 clause is walked against Spark's measured answer on the same door; the new facade suite replays 25 oracle queries plus v2/v3 cells, and the Rust door suite pins values, types, names and refusal texts. Slice 2 (2026-09-27): each store clause is walked against the probe SQL and Spark's recorded walls/refusals on the same door; probe6 sel is byte-EQUAL and probe2 value steps EQUAL.
+      artifacts: [python/repark/tests/test_ntz_1.py, python/repark/tests/ntz_1_spark_oracle.json, crates/repark-spark/src/tests/ntz_door.rs, crates/repark-spark/src/tests/ntz_store.rs]
     - id: AT-2
       status: ATTACKED
-      evidence: Every named behavior is pinned per door (literal walls and truncation, string/date/NULL/instant/NTZ cast sources, try_cast NULL, the DML reach, CTAS type); the rewritten grammar/typeof/temporal pins hold their recorded answers.
-      artifacts: [python/repark/tests/test_ntz_1.py, crates/repark-spark/src/tests/ntz_door.rs]
+      evidence: Every named behavior is pinned per door (literal walls and truncation, string/date/NULL/instant/NTZ cast sources, try_cast NULL, the DML reach, CTAS type); the rewritten grammar/typeof/temporal pins hold their recorded answers. Slice 2 (2026-09-27): every store door is pinned per zone (VALUES/SELECT/UPDATE/MERGE/append walls, midnight, session instants) in UTC and New York; the TZ pin set answers identically before and after.
+      artifacts: [python/repark/tests/test_ntz_1.py, crates/repark-spark/src/tests/ntz_door.rs, crates/repark-spark/src/tests/ntz_store.rs]
     - id: AT-3
       status: ATTACKED
-      evidence: Every refusal text is pinned (INVALID_TYPED_LITERAL with the SQL window, DATATYPE_MISMATCH both directions, CAST_INVALID_INPUT, R4 nested) with class, SQLSTATE and first line where the engine framing allows; the M1–M4 mutations break one mechanism each and the named tests red before restore.
-      artifacts: [python/repark/tests/test_ntz_1.py, crates/repark-spark/src/tests/ntz_door.rs]
+      evidence: Every refusal text is pinned (INVALID_TYPED_LITERAL with the SQL window, DATATYPE_MISMATCH both directions, CAST_INVALID_INPUT, R4 nested) with class, SQLSTATE and first line where the engine framing allows; the M1–M4 mutations break one mechanism each and the named tests red before restore. Slice 2 (2026-09-27): the CANNOT_SAFELY_CAST store refusals are pinned on VALUES/SELECT/UPDATE/MERGE plus the append with class, condition, SQLSTATE and first line; M5a/M5b/M6 red before restore.
+      artifacts: [python/repark/tests/test_ntz_1.py, crates/repark-spark/src/tests/ntz_door.rs, crates/repark-spark/src/tests/ntz_store.rs]
     - id: AT-4
       status: N/A
       justification: No commit, isolation or concurrency surface; each pin runs on a fresh warehouse in one session.
@@ -105,15 +108,15 @@ COVERAGE_ATTESTATION:
       justification: No performance claim; the literal UDF is Immutable so filters prune, pinned only by value.
     - id: AT-8
       status: ATTACKED
-      evidence: No dependency, no Cargo.toml edit, no new crate edge (repark-spark and repark-python already depend on repark-functions); new code lives in the pre-named modules and every touched file holds its size gate.
-      artifacts: [crates/repark-functions/src/timestamp_ntz_cast.rs, crates/repark-spark/src/spark_rewrites/timestamp_ntz_literal.rs, crates/repark-spark/src/keyword_lower/ntz_cast_lower.rs]
+      evidence: No dependency, no Cargo.toml edit, no new crate edge (repark-spark and repark-python already depend on repark-functions); new code lives in the pre-named modules and every touched file holds its size gate. Slice 2 (2026-09-27): still no dependency or Cargo.toml edit (the UDF-name const is mirrored, pinned equal); the Q2 INSERT-arm shape moved into insert_stream_checked to honor merge/mod.rs's exact baseline, and every touched file holds its size gate.
+      artifacts: [crates/repark-functions/src/timestamp_ntz_cast.rs, crates/repark-spark/src/spark_rewrites/timestamp_ntz_literal.rs, crates/repark-spark/src/keyword_lower/ntz_cast_lower.rs, crates/repark-iceberg/src/write/ntz_store.rs]
     - id: AT-9
       status: N/A
       justification: No registry change in slice 1; TZ-6 and the TY rows are slice 3 (C-009).
     - id: AT-10
       status: ATTACKED
-      evidence: Each pin asserts exact values, types or texts; M1–M4 break one expectation each and the named tests red before restore.
-      artifacts: [python/repark/tests/test_ntz_1.py, crates/repark-spark/src/tests/ntz_door.rs]
+      evidence: Each pin asserts exact values, types or texts; M1–M4 break one expectation each and the named tests red before restore. Slice 2 (2026-09-27): each store pin asserts exact walls, instants or refusal texts; M5a/M5b/M6 break one mechanism each and the named tests red before restore.
+      artifacts: [python/repark/tests/test_ntz_1.py, crates/repark-spark/src/tests/ntz_door.rs, crates/repark-spark/src/tests/ntz_store.rs]
   complete: true
 ```
 
@@ -126,6 +129,9 @@ COVERAGE_ATTESTATION:
 | R-3 | Dated 2026-09-26 (pre-existing engine framing, shared with the DATE pairs — not NTZ-specific): the malformed-string cast raises at execution time, so RePark reports `PySparkException` with condition `None` where Spark reports `DateTimeException` with condition `CAST_INVALID_INPUT` (SQLSTATE `22018` and the core text are EQUAL); the NTZ→numeric refusal crosses the `spark_expr_semantics` rule header, so its parsed condition is `None` (the `cannot cast "TIMESTAMP_NTZ" to "<T>"` clause and SQLSTATE `42K09` are EQUAL). |
 | R-4 | Dated 2026-09-26 (MERGE error path bypasses the R4 mapper; out of the S1 fence, `merge.rs` is frozen): a nested NTZ cast target inside MERGE answers `UnsupportedOperationException: This feature is not implemented: Unsupported SQL type TIMESTAMP_NTZ` where the same construct on SELECT/UPDATE answers the R4 text `[UNSUPPORTED_TIMESTAMP_NTZ] TIMESTAMP_NTZ inside a nested cast target (ARRAY, STRUCT or MAP) is not supported yet; the scalar TIMESTAMP_NTZ literal and cast are. See TZ-6 (docs/spark-sql-iceberg-parity.md). SQLSTATE: 0A000`. |
 | R-5 | Dated 2026-09-27 (V-003; no product change this round): Spark types `SELECT CAST('2024-01-01 00:00:00' AS TIMESTAMP_NTZ)` nullable (`ntz5-nullable-spark.json`: True under ANSI off and on); RePark folds the literal-only cell to non-null (False under both fixtures). |
+| R-NTZ-S2-1 | Dated 2026-09-27 (orchestrator ruling Q3; S1 lowering-reach follow-up, no Slice 2 code change): `UPDATE … SET c = CAST(… AS TIMESTAMP_NTZ)` refuses with the R4 nested-target text because identity interception (`spark_ast.rs:109`) embeds the SET value before `lower_spark_keywords` (`:119`) runs, so the embedded SELECT carries unlowered door syntax; literals work via the earlier token layer. No probe uses an explicit cast in SET. |
+| R-NTZ-S2-2 | Dated 2026-09-27 (for its own unit; no Slice 2 code change): `INSERT … VALUES (0, 1)` into a `TIMESTAMP` (LTZ) column — Spark refuses `CANNOT_SAFELY_CAST` INT → TIMESTAMP (`ntz4-spark.json` `ins_l_int`), RePark writes `1970-01-01 00:00:00.000001`. |
+| R-NTZ-S2-3 | Dated 2026-09-27 (comparison semantics, out of the S2 store fence; no Slice 2 code change): `t.filter(F.col("c") == F.lit(datetime.datetime(2031, 1, 1)))` on an NTZ column answers `[Row(id=1)]` where Spark answers `[]` (`ntz2-spark.json` `dfapi.filter_lit_naive_dt`). The plan casts the NTZ side up to LTZ (`to_timestamp(c@1) = 1924992000000`) with no naive-target cast, so S2-1 is provably inert here and main's `[]` was vacuous (main could not load NTZ rows); the divergence predates the unit and needs a dedicated DataFrame-door literal/comparison probe. |
 
 ## Fold r1 (2026-09-27)
 
@@ -184,3 +190,57 @@ history.
   '2024-01-02 03:04:05' AS v` and `ntz5-nullable-spark.json` says
   nullable False under ANSI off and on (Spark 4.1.2, re-measured
   2026-09-27 through `jvm-lock.sh`); the PG-ntz-lit docstring cites it.
+
+## Slice 2 (2026-09-27)
+
+Branch `feat/ntz-1-s2`, base `origin/main`, model Muse Spark
+(`muse-spark-1.3-contributor`). One commit; C-008 and C-009 stay OPEN.
+
+- S2-1 as ordered: `instant_ts.rs` `rewrite_cast` calls
+  `timestamp_ntz_cast::rewrite_ntz_target_cast` before its LTZ arms (+3 lines;
+  file 972 → 975, inside the +8 unit cap). A `Cast` to exactly `Timestamp(µs, None)`
+  from an instant, a non-microsecond naive timestamp, a date or a string becomes the
+  embedded cast UDF; a microsecond-naive source keeps the cast and everything else
+  falls to the existing arms. The whole TZ pin set ran before any edit
+  (`target/ntz-s2/before.txt`) and again after: zero pins changed answer (40
+  `repark-functions`, 23 `session_timezone`, 571 pytest).
+- The mandated S2-3 re-measure showed S2-1 fixing VALUES, INSERT … SELECT, the
+  DataFrame append (it lowers to SELECT, so `conform_batch` stays untouched) and the
+  NTZ-into-TIMESTAMP direction — but the probe-shaped UPDATE (`WHERE id = 0`) and
+  both MERGE arms still stored the UTC wall. Traces proved S2-1 structurally cannot
+  reach them: the identity UPDATE path projects the raw SET value with no planned
+  cast and its rewrite UNION coerces naive → LTZ with the batch cast reinterpreting
+  downstream; MERGE UPDATE arms wrap values in `arrow_cast`, which simplifies to a
+  reinterpret cast in the optimizer, after the analyzer ran; MERGE INSERT arms
+  project plain LTZ into the same reinterpret. Only the fork-path UPDATE (no WHERE)
+  was fixed by S2-1. First HALT with Q1–Q3; the orchestrator ruled shape (a) for the
+  identity UPDATE and UDF emission at the SQL-generation sites for MERGE, with the
+  const in the S2-2 module and the gate firing before the wrap on every path.
+- The Q2 INSERT-arm shape deviates from the ruling's named site, recorded as-is: the
+  ruling named `table_projection`, but threading a wrap flag through the projection
+  plus a dual-SQL split costs +14 lines in `merge/mod.rs`, which sits at its exact
+  size baseline (1622), and the tree law needs owner approval for growth. Instead
+  `insert_stream_checked` gates the raw INSERT SQL (unchanged text, byte-identical
+  plans for tables without NTZ columns) and only streams through a converting
+  subquery that wraps NTZ target columns — the same const, the same gate-before-wrap
+  order, zero lines in `merge/mod.rs`, zero test-signature churn. M5 splits into M5a
+  (VALUES/SELECT) and M5b (UPDATE/MERGE) per the ruling; all three mutations ran red
+  and restored green.
+- S2-2 as ruled: new `write/ntz_store.rs` (gate in the void shape, the one home of
+  `NTZ_WALL_CAST_UDF_NAME` — pinned equal to the registered UDF — and its renderer),
+  called beside every `refuse_void_writes`; `spark_update_type_name` answers
+  `TIMESTAMP_NTZ` for naive timestamps. MERGE matched-UPDATE validation only runs
+  when files are affected, so the refusal pins seed a matching row (pre-existing
+  executor behavior, not new).
+- Probe re-runs after Slice 2: probe6 repark `sel` byte-EQUAL to `ntz6-spark.json`
+  (all four 08:00 walls, append ok); probe2 32/53 byte-equal with every remaining
+  DIFF classified — DDL/DML ack shapes and the R2 naming class (pre-existing), the
+  S1 `lit_bad`/`cast_int`/`cast_ntz_bigint` framings (unchanged), the S2
+  `ins_ansi_int` refusal template-equal — except `dfapi.filter_lit_naive_dt`,
+  recorded as R-NTZ-S2-3. Scoreboard replay holds: `TY-TIMESTAMP-NTZ`,
+  `TY-TIMESTAMP-NTZ-V3`, `TY-TIMESTAMP`, `TY-TIMESTAMP-LTZ` ok,
+  `TY-PROMOTE-DATE-TS` errors as recorded. Done-gate deviation, recorded as-is: the
+  order names `test_update_cast_parity.py` and `test_merge_parity.py`, which do not
+  exist in the tree; the neighbouring `test_insert_store_assign.py`,
+  `test_merge_store_assign.py`, `test_merge_into.py` and `test_ice_write_df_2_doors.py`
+  ran instead (644 passed with the named eight).

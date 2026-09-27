@@ -5,11 +5,11 @@ use arrow::compute::kernels::cast_utils::string_to_datetime;
 use chrono::{DateTime, Utc};
 use datafusion::arrow::array::{Array, AsArray, TimestampMicrosecondArray};
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Int64Type, TimeUnit};
-use datafusion::common::{DataFusionError, Result, ScalarValue};
+use datafusion::common::{DFSchema, DataFusionError, Result, ScalarValue};
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{
-    ColumnarValue, Expr, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
-    Volatility,
+    ColumnarValue, Expr, ExprSchemable, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF,
+    ScalarUDFImpl, Signature, Volatility,
 };
 
 use crate::ansi::spark_ansi_enabled_from_options;
@@ -47,6 +47,31 @@ pub fn timestamp_ntz_cast_expr(expr: Expr, try_cast: bool) -> Expr {
 #[must_use]
 pub fn timestamp_ntz_literal_udf() -> Arc<ScalarUDF> {
     Arc::clone(&TIMESTAMP_NTZ_LITERAL)
+}
+
+#[must_use]
+pub(crate) fn rewrite_ntz_target_cast(expr: &Expr, schema: &DFSchema) -> Option<Expr> {
+    let Expr::Cast(cast) = expr else {
+        return None;
+    };
+    if !matches!(
+        cast.field.data_type(),
+        DataType::Timestamp(TimeUnit::Microsecond, None)
+    ) {
+        return None;
+    }
+    let source = cast.expr.get_type(schema).ok()?;
+    let retarget = match &source {
+        DataType::Timestamp(unit, None) => !matches!(unit, TimeUnit::Microsecond),
+        DataType::Timestamp(_, Some(_))
+        | DataType::Date32
+        | DataType::Date64
+        | DataType::Utf8
+        | DataType::LargeUtf8
+        | DataType::Utf8View => true,
+        _ => false,
+    };
+    retarget.then(|| timestamp_ntz_cast_expr((*cast.expr).clone(), false))
 }
 
 #[must_use]
