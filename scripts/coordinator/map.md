@@ -131,6 +131,8 @@ reads the worker's `handback.json`. Workers do not delegate; lanes do not start 
   next run's start, never mid-run. Rows keep the pre-rename names; its header says how they map.
 - `latitude-ladder.md` — the orchestrator latitude ladder: do-unprompted / batch-for-approval /
   always-stop tiers plus the proposed usage-threshold table (owner to confirm).
+- `orchestrator-adapter-muse.md` — the harness adapter: Claude orchestration mechanics to their
+  Muse equivalents, one table, plus the verbatim hand-back authority framing.
 
 ## I want to…
 
