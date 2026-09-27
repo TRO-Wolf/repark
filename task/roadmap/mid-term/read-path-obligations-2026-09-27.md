@@ -143,43 +143,43 @@ Trigger key: **O** = orchestrator / governing session, **E** = executor (unit / 
 
 | ID | Obligation | Old home | New home | Trigger |
 |----|-----------|----------|----------|---------|
-| E-001 | Operate as a senior Rust/Python engineer; boring, obvious solutions over clever ones. | EM Identity | EM P (kept, one line) | E, C |
-| E-002 | Priority order: correctness → clarity → production-readiness. | EM Identity | EM R Identity (kept) | E, C |
-| E-003 | Read AGENTS.md before this skill; AGENTS.md wins on any conflict; do not load for navigation/Q&A/status. | EM Identity | EM P (kept) | E, C |
+| E-001 | Operate as a senior Rust/Python engineer; boring, obvious solutions over clever ones. | EM Identity | EM top intro (kept) | E, C |
+| E-002 | Priority order: correctness → clarity → production-readiness. | EM Identity | EM top intro (kept) | E, C |
+| E-003 | Read AGENTS.md before this skill; AGENTS.md wins on any conflict; do not load for navigation/Q&A/status. | EM Identity | EM P router + top intro (kept) | E, C |
 | E-004 | Non-negotiables: no destructive SQL/AWS/IAM; tests same commit; no prod panics; parity case per new op; plan files only; no dependency edits unapproved. | EM Non-Negotiables | EM P (kept, locator) | E, C |
 | E-005 | Interactive mode: reason, record the plan, check in before complex implementation (§1), confirm scope changes. | EM Mode Handling | EM R Mode Handling (kept) | E |
 | E-006 | Delegated mode: never block on approval; surface blockers/assumptions/decisions in the final report; ambiguity that changes outcome still stops. | EM Mode Handling | EM R Mode Handling (kept) | E |
 | E-007 | Delegated §1 becomes document-plan-proceed-flag; reviewer corrections go to lessons per §2. | EM Mode Handling | EM R Mode Handling (kept) | E |
 | E-008 | Plan in the unit ledger (or task/todo.md for quick work); lessons in task/lessons.md; pickup via STATUS + ledger. | EM Workflow Storage | EM P (kept) | E |
-| E-009 | Read the lessons entries for subsystems you touch (`grep -n <subsystem> task/lessons.md`); in full only when orchestrating. | EM Workflow Storage + §2 + Pre-Flight | EM P + R §2 (scoped) | O (full), E (scoped) |
+| E-009 | Read the lessons entries for subsystems you touch (`grep -n <subsystem> task/lessons.md`); in full only when orchestrating. | EM Workflow Storage + §2 + Pre-Flight | EM P (scoped: storage, §2, Pre-Flight) | O (full), E (scoped) |
 | E-010 | Ask "what can go wrong with what I build?" at design, implementation, and test time. | EM Risk-First | EM P (kept) + R detail | E, C |
 | E-011 | Design risk pass: preconditions, failing deps, invariants, partial failure, silent-bug cost, edge validation, double-execution. | EM Risk-First | EM R Risk-First (kept) | E |
 | E-012 | Implementation risk pass: unwrap/expect, bare except, TOCTOU, off-by-one, overflow/NaN, concurrency, destructive paths. | EM Risk-First | EM R Risk-First (kept) | E |
 | E-013 | Testing risk pass: every test names its risk; negative per happy path; named numeric regressions; guards tested shut; races tested directly. | EM Risk-First | EM R Risk-First (kept) | E |
 | E-014 | Keep the project risk surface (parity, numerics, snapshot atomicity, destructive SQL, map drift) in front of mind. | EM Risk-First | EM R Risk-First (kept) | E |
 | E-015 | Risk-First is naming failure modes, not defensive programming. | EM Risk-First | EM R Risk-First (kept) | E |
-| E-016 | Single-agent default; delegated fan-out only for search/mechanical/narrow work; tiers live in the tool adapter. | EM Workflow intro | EM R Workflow intro (kept) | O, E |
-| E-017 | §1: reason before acting on non-trivial tasks (contract, edges, simplest approach, prep-refactor, plan in tracker, check in). | EM §1 | EM P (steps) + R §1 | E |
-| E-018 | §1 while working: re-read plan + scoped lessons per step; sub-bullets on complexity; STOP and re-plan on surprise; flip boxes; record why. | EM §1 | EM P (steps) + R §1 | E |
-| E-019 | §2: after ANY user correction, append a dated DO/DO NOT lesson immediately; iterate; supersede, never mutate. | EM §2 | EM P (kept) + R §2 | E |
-| E-020 | §2: review lessons before each implementation step; never use code placeholders — write complete functions. | EM §2 | EM R §2 (kept) | E |
-| E-021 | §3: re-read any file before editing and after editing; re-read on long conversations; never trust memory of file state. | EM §3 | EM P (kept) + R §3 | E |
-| E-022 | §4: read docs/testing.md before any code change; tests-with-code is a hard block; names are specifications; parity + f64::to_bits regressions. | EM §4 | EM P (done gate) + R §4 | E |
-| E-023 | §4 done gate: all boxes checked (tests, names, risks, happy+negative, fail-without-change, parity, compile, green, schema, nulls, logs, imports, verify commands). | EM §4 | EM P (done gate) + R §4 | E |
-| E-024 | §5: pause for elegance on non-trivial changes; correct and clear first; profiled bottlenecks only; right complexity up front. | EM §5 | EM R §5 (kept) | E |
-| E-025 | §6 scope boundaries: plan files only; no drive-by cleanup/renames/features/signature changes; unexpected file → STOP/report; flag out-of-scope finds. | EM §6 | EM P (kept) + R §6 | E |
-| E-026 | §7: verify external library APIs current; record corrected usage in lessons; Arrow for the long term; exact signatures; no dependency edits unapproved. | EM §7 | EM R §7 (kept) | E |
-| E-027 | §8 debugging protocol in order: read error, reproduce, isolate, hypothesize, fix smallest, verify, regression-check. | EM §8 | EM P (kept) + R §8 | E |
-| E-028 | §8: no unrelated refactors; one change at a time; two failed fixes → re-read from disk; consult map.md#debug first. | EM §8 | EM R §8 (kept) | E |
-| E-029 | §9 quality gates: no magic numbers; docstrings per AGENTS.md; actionable errors; explicit types; unrepresentable illegal states; immutable-first; rule of three; delete dead code; <100-line functions. | EM §9 | EM R §9 (kept) | E |
-| E-030 | Navigation: read touched map.md first; use I-want-to/Pointers; code beats map (fix map same change); Debug before §8. | EM Navigation | EM P (kept) + R Navigation | E |
+| E-016 | Single-agent default; delegated fan-out only for search/mechanical/narrow work; tiers live in the tool adapter. | EM Workflow intro | EM P Workflow intro (kept) | O, E |
+| E-017 | §1: reason before acting on non-trivial tasks (contract, edges, simplest approach, prep-refactor, plan in tracker, check in). | EM §1 | EM P §1 (kept) | E |
+| E-018 | §1 while working: re-read plan + scoped lessons per step; sub-bullets on complexity; STOP and re-plan on surprise; flip boxes; record why. | EM §1 | EM P §1 (kept) | E |
+| E-019 | §2: after ANY user correction, append a dated DO/DO NOT lesson immediately; iterate; supersede, never mutate. | EM §2 | EM P §2 (kept) | E |
+| E-020 | §2: review lessons before each implementation step; never use code placeholders — write complete functions. | EM §2 | EM P §2 (kept) | E |
+| E-021 | §3: re-read any file before editing and after editing; re-read on long conversations; never trust memory of file state. | EM §3 | EM P §3 (kept) | E |
+| E-022 | §4: read docs/testing.md before any code change; tests-with-code is a hard block; names are specifications; parity + f64::to_bits regressions. | EM §4 | EM P §4 done gate (kept) | E |
+| E-023 | §4 done gate: all boxes checked (tests, names, risks, happy+negative, fail-without-change, parity, compile, green, schema, nulls, logs, imports, verify commands). | EM §4 | EM P §4 done gate (kept) | E |
+| E-024 | §5: pause for elegance on non-trivial changes; correct and clear first; profiled bottlenecks only; right complexity up front. | EM §5 | EM P §5 (kept) | E |
+| E-025 | §6 scope boundaries: plan files only; no drive-by cleanup/renames/features/signature changes; unexpected file → STOP/report; flag out-of-scope finds. | EM §6 | EM P §6 (kept) | E |
+| E-026 | §7: verify external library APIs current; record corrected usage in lessons; Arrow for the long term; exact signatures; no dependency edits unapproved. | EM §7 | EM P §7 (kept) | E |
+| E-027 | §8 debugging protocol in order: read error, reproduce, isolate, hypothesize, fix smallest, verify, regression-check. | EM §8 | EM P §8 (kept) | E |
+| E-028 | §8: no unrelated refactors; one change at a time; two failed fixes → re-read from disk; consult map.md#debug first. | EM §8 | EM P §8 (kept) | E |
+| E-029 | §9 quality gates: no magic numbers; docstrings per AGENTS.md; actionable errors; explicit types; unrepresentable illegal states; immutable-first; rule of three; delete dead code; <100-line functions. | EM §9 | EM P §9 (kept) | E |
+| E-030 | Navigation: read touched map.md first; use I-want-to/Pointers; code beats map (fix map same change); Debug before §8. | EM Navigation | EM P Navigation (kept) | E |
 | E-031 | Naming: spell it out; allowed acronyms only; no casual abbreviations; no single letters; boolean questions; verbs/nouns/plurals. | EM Naming | EM R Naming (kept) | E |
 | E-032 | Verification commands canonical list (Rust make verify + cargo roster; Python ruff + pytest + conventions check). | EM Language Rules | EM R Language Rules (kept) | E |
 | E-033 | Rust panic-ban how-to: with_context/?, ok_or_else/?, log-and-exit only in main; tests prefer .expect("context"). | EM Language Rules | EM R Language Rules (kept) | E |
 | E-034 | Library thiserror enums, binaries anyhow, Error::source, tracing without secrets; try_into over `as`; iterators; FFI validation at boundary; lock-order and async rules. | EM Language Rules | EM R Language Rules (kept) | E |
 | E-035 | Python how-to: polars default, frozen models, noqa with rule + reason. | EM Language Rules | EM R Language Rules (kept) | E |
 | E-036 | Function length/recursion: <100 lines, extract on name-worthiness; recursion only for recursive data + bounded + clearer; max_depth or Vec stack on user-influenced input. | EM Func Length | EM R Func Length (kept) | E |
-| E-037 | Pre-Flight checklist before starting; §4 done gate before declaring complete. | EM Pre-Flight | EM P (checklist) + R detail | E |
+| E-037 | Pre-Flight checklist before starting; §4 done gate before declaring complete. | EM Pre-Flight | EM P Pre-Flight (kept) | E |
 | E-038 | Core principles TL;DR (simplicity, read-before-write, no assumptions, risk-first, names, no panics, iterate, small functions, types, edges, measure, minimal impact). | EM Core Principles | EM R Core Principles (kept) | E |
 
 ## sepmo SKILL.md (S-001…)

@@ -11,10 +11,11 @@ loses on any conflict.
 
 ## Contents
 
-- [SKILL.md](SKILL.md) — the method (v1.1): Identity & Priority Stack → Non-Negotiables
-  (locator) → Mode Handling → Risk-First → Workflow §1–§9 → Navigation (`map.md`, pointer at
-  AGENTS.md) → Naming → Language-Specific Rules (commands + how-to; invariants in AGENTS.md) →
-  Function Length & Recursion → Pre-Flight → Core Principles (TL;DR).
+- [SKILL.md](SKILL.md) — the method (v1.2): Identity → `## Procedure — read this first`
+  (router, Non-Negotiables locator, Workflow Storage, Workflow §1–§9 with the §4 done gate,
+  Navigation, Pre-Flight) → `## Reference` (Mode Handling, Risk-First, Naming,
+  Language-Specific Rules with commands + how-to, Function Length & Recursion, Core Principles).
+  Lessons load scoped (`grep -n <subsystem>`); in full only when orchestrating.
 
 ## I want to...
 
