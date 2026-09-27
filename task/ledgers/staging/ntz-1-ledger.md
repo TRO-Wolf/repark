@@ -169,3 +169,13 @@ history.
   facade `lit_bad_wide` oracle step; `TIMESTAMP_NTZ'é'` pins 16 carets in
   `a_non_ascii_literal_gets_sixteen_carets`. The V-001 pin text and the
   `test_ntz_1.py` docstring now say the CHAR length of the literal.
+- V-008: a nested NTZ cast renders Spark's text in the numeric refusal —
+  `literal_display_name` also maps the cast-to-NTZ UDFs to
+  `CAST(<arg> AS TIMESTAMP_NTZ)` / `TRY_CAST(<arg> AS TIMESTAMP_NTZ)`,
+  rendering a Utf8 literal argument unquoted and a column by its Spark
+  name. Pinned byte-equal by
+  `the_ntz_numeric_refusal_renders_a_nested_cast_like_spark`,
+  `nested_ntz_cast_renders_like_spark_in_the_numeric_refusal` and the
+  facade `cast_nested_ntz_bigint` step (`CAST(CAST(2024-01-01 AS
+  TIMESTAMP_NTZ) AS BIGINT)`); the measured-EQUAL `TRY_CAST` and column
+  shapes are pinned beside them (`ntz6-nested-spark.json`).

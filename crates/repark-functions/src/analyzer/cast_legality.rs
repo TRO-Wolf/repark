@@ -291,6 +291,51 @@ mod tests {
     }
 
     #[test]
+    fn the_ntz_numeric_refusal_renders_a_nested_cast_like_spark() {
+        let nested = Expr::ScalarFunction(ScalarFunction::new_udf(
+            crate::timestamp_ntz_cast::timestamp_ntz_cast_udf(false),
+            vec![lit("2024-01-01")],
+        ));
+        let micros = DataType::Timestamp(TimeUnit::Microsecond, None);
+        let message =
+            refuse_spark_illegal_cast(CastKeyword::Cast, &nested, &micros, &DataType::Int64)
+                .expect_err("ntz -> bigint must refuse")
+                .to_string();
+        assert_eq!(
+            message,
+            "Error during planning: [DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] Cannot resolve \
+             \"CAST(CAST(2024-01-01 AS TIMESTAMP_NTZ) AS BIGINT)\" due to data type mismatch: \
+             cannot cast \"TIMESTAMP_NTZ\" to \"BIGINT\". SQLSTATE: 42K09"
+        );
+        let over_column = Expr::ScalarFunction(ScalarFunction::new_udf(
+            crate::timestamp_ntz_cast::timestamp_ntz_cast_udf(false),
+            vec![col("c")],
+        ));
+        let columned =
+            refuse_spark_illegal_cast(CastKeyword::Cast, &over_column, &micros, &DataType::Int64)
+                .expect_err("ntz -> bigint must refuse")
+                .to_string();
+        assert!(
+            columned.contains("Cannot resolve \"CAST(CAST(c AS TIMESTAMP_NTZ) AS BIGINT)\""),
+            "{columned}"
+        );
+        let tried_inner = Expr::ScalarFunction(ScalarFunction::new_udf(
+            crate::timestamp_ntz_cast::timestamp_ntz_cast_udf(true),
+            vec![lit("2024-01-01")],
+        ));
+        let tried =
+            refuse_spark_illegal_cast(CastKeyword::Cast, &tried_inner, &micros, &DataType::Int64)
+                .expect_err("ntz -> bigint must refuse")
+                .to_string();
+        assert!(
+            tried.contains(
+                "Cannot resolve \"CAST(TRY_CAST(2024-01-01 AS TIMESTAMP_NTZ) AS BIGINT)\""
+            ),
+            "{tried}"
+        );
+    }
+
+    #[test]
     fn the_reverse_direction_names_date_from_unix_date() {
         let message = refuse_spark_illegal_cast(
             CastKeyword::Cast,

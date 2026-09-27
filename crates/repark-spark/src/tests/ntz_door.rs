@@ -261,6 +261,37 @@ async fn ntz_cast_refuses_numeric_sources_and_targets() {
 }
 
 #[tokio::test]
+async fn nested_ntz_cast_renders_like_spark_in_the_numeric_refusal() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_ntz(&warehouse).await;
+    for (sql, rendered) in [
+        (
+            "SELECT CAST(CAST('2024-01-01' AS TIMESTAMP_NTZ) AS BIGINT) AS v",
+            "CAST(CAST(2024-01-01 AS TIMESTAMP_NTZ) AS BIGINT)",
+        ),
+        (
+            "SELECT TRY_CAST(TIMESTAMP_NTZ'2024-01-01 00:00:00' AS BIGINT) AS v",
+            "TRY_CAST(TIMESTAMP_NTZ '2024-01-01 00:00:00' AS BIGINT)",
+        ),
+        (
+            "SELECT CAST(c AS BIGINT) FROM (SELECT TIMESTAMP_NTZ'2024-01-01 00:00:00' AS c)",
+            "CAST(c AS BIGINT)",
+        ),
+    ] {
+        let refused = failure(&ctx, &catalogs, sql).await;
+        assert_eq!(
+            refused,
+            format!(
+                "spark_expr_semantics\ncaused by\nError during planning: \
+                 [DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] Cannot resolve \"{rendered}\" due \
+                 to data type mismatch: cannot cast \"TIMESTAMP_NTZ\" to \"BIGINT\". SQLSTATE: 42K09"
+            ),
+            "{sql}"
+        );
+    }
+}
+
+#[tokio::test]
 async fn ltz_numeric_cast_stays_epoch_seconds() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_ntz(&warehouse).await;

@@ -115,7 +115,7 @@
   }
  ],
  "provenance": {
-  "sources": "ntz-spark.json, ntz2-spark.json, ntz4-spark.json, ntz7-spark.json, ntz7c-spark.json under /tmp/oc-worker/direct/wo/ntz-1-probes/ (probes ntz_probe.py, ntz_probe2.py, ntz_probe4.py, ntz_probe7.py, ntz_probe7c.py); lit_bad msg+condition from ntz4 ntz_lit_bad; cast_str_zone_ny and try_cast_bad schema names re-measured live in ntz7c (probe1 quoted/lowercase spellings do not reproduce on Spark 4.1.2); RePark answers dropped; lit_bad_wide from ntz6-nested-spark.json (the win leg of target/verify/sp.py, Spark 4.1.2, measured 2026-09-27)",
+  "sources": "ntz-spark.json, ntz2-spark.json, ntz4-spark.json, ntz7-spark.json, ntz7c-spark.json under /tmp/oc-worker/direct/wo/ntz-1-probes/ (probes ntz_probe.py, ntz_probe2.py, ntz_probe4.py, ntz_probe7.py, ntz_probe7c.py); lit_bad msg+condition from ntz4 ntz_lit_bad; cast_str_zone_ny and try_cast_bad schema names re-measured live in ntz7c (probe1 quoted/lowercase spellings do not reproduce on Spark 4.1.2); RePark answers dropped; lit_bad_wide from ntz6-nested-spark.json (the win leg of target/verify/sp.py, Spark 4.1.2, measured 2026-09-27); cast_nested_ntz_bigint, try_cast_ntz_bigint and cast_ntz_col_bigint from ntz6-nested-spark.json (the nested/try/col legs of target/verify/sp.py, Spark 4.1.2, measured 2026-09-27)",
   "spark": "Apache Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-26",
   "value_styles": "norm = probe norm() (datetime isoformat + |tz=); str = probe4 str(v)"
  },
@@ -363,6 +363,48 @@
     "sqlstate": "42K09"
    },
    "sql": "SELECT CAST(TIMESTAMP_NTZ'2024-01-01 00:00:00' AS INT) AS v",
+   "style": "norm",
+   "zone": "UTC"
+  },
+  {
+   "key": "cast_nested_ntz_bigint",
+   "spark": {
+    "class_match": true,
+    "condition": "DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION",
+    "condition_match": false,
+    "error": "AnalysisException",
+    "msg": "[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] Cannot resolve \"CAST(CAST(2024-01-01 AS TIMESTAMP_NTZ) AS BIGINT)\" due to data type mismatch: cannot cast \"TIMESTAMP_NTZ\" to \"BIGINT\". SQLSTATE: 42K09; line 1 pos 7;",
+    "sqlstate": "42K09"
+   },
+   "sql": "SELECT CAST(CAST('2024-01-01' AS TIMESTAMP_NTZ) AS BIGINT)",
+   "style": "norm",
+   "zone": "UTC"
+  },
+  {
+   "key": "try_cast_ntz_bigint",
+   "spark": {
+    "class_match": true,
+    "condition": "DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION",
+    "condition_match": false,
+    "error": "AnalysisException",
+    "msg": "[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] Cannot resolve \"TRY_CAST(TIMESTAMP_NTZ '2024-01-01 00:00:00' AS BIGINT)\" due to data type mismatch: cannot cast \"TIMESTAMP_NTZ\" to \"BIGINT\". SQLSTATE: 42K09; line 1 pos 7;",
+    "sqlstate": "42K09"
+   },
+   "sql": "SELECT TRY_CAST(TIMESTAMP_NTZ'2024-01-01 00:00:00' AS BIGINT)",
+   "style": "norm",
+   "zone": "UTC"
+  },
+  {
+   "key": "cast_ntz_col_bigint",
+   "spark": {
+    "class_match": true,
+    "condition": "DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION",
+    "condition_match": false,
+    "error": "AnalysisException",
+    "msg": "[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] Cannot resolve \"CAST(c AS BIGINT)\" due to data type mismatch: cannot cast \"TIMESTAMP_NTZ\" to \"BIGINT\". SQLSTATE: 42K09; line 1 pos 7;",
+    "sqlstate": "42K09"
+   },
+   "sql": "SELECT CAST(c AS BIGINT) FROM (SELECT TIMESTAMP_NTZ'2024-01-01 00:00:00' AS c)",
    "style": "norm",
    "zone": "UTC"
   },

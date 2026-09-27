@@ -246,7 +246,28 @@ pub(crate) fn literal_display_name(expr: &Expr) -> Option<String> {
     if function.func.name() == crate::decimal_cast::DECIMAL_CAST_NULLABLE_NAME {
         return function.args.first().and_then(literal_display_name);
     }
-    None
+    let keyword = if function.func.name() == TIMESTAMP_NTZ_CAST_NAME {
+        "CAST"
+    } else if function.func.name() == TRY_TIMESTAMP_NTZ_CAST_NAME {
+        "TRY_CAST"
+    } else {
+        return None;
+    };
+    let arg = function.args.first().and_then(cast_arg_name)?;
+    Some(format!("{keyword}({arg} AS TIMESTAMP_NTZ)"))
+}
+
+fn cast_arg_name(arg: &Expr) -> Option<String> {
+    match arg {
+        Expr::Literal(
+            ScalarValue::Utf8(Some(text))
+            | ScalarValue::LargeUtf8(Some(text))
+            | ScalarValue::Utf8View(Some(text)),
+            _,
+        ) => Some(text.clone()),
+        Expr::Column(column) => Some(column.name.clone()),
+        _ => None,
+    }
 }
 
 impl ScalarUDFImpl for SparkTimestampNtzLiteral {
