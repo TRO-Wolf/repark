@@ -2283,6 +2283,25 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
 - **Pin** — `crates/repark-spark/src/tests/create_format_version_one.rs`. pins: u11-edge-1/C-016
 - **Rationale** — EQUAL on replay (`target/probe-u11-edge-1/replay-r2-v1.json`).
 
+### E-TZ-TIMESTAMP-AS-OF — an expression named like its ORDER BY key plans — **FIXED 2026-09-26 (TZ-ASOF-1)**
+
+- **repark** — `SELECT CAST(committed_at AS STRING) FROM t.snapshots ORDER BY
+  committed_at` answers columns `[committed_at/string]` in commit order, and the first row
+  feeds back through `SELECT * FROM t TIMESTAMP AS OF '<that text>'` to the first snapshot's
+  rows (`[[1]]`); the same holds for every `SELECT CAST(col AS STRING) … ORDER BY col`
+  shape, `DISTINCT` with an un-projected key, and the `(id + 1)` / `upper(s)` /
+  `CAST(max(ts) AS STRING)` display names. The Spark-door passthrough wraps a single-`SELECT`
+  with an un-projected `ORDER BY` key in a derived table projecting select items plus keys
+  under internal aliases, with the outer query carrying Spark's display names
+  (`crates/repark-spark/src/normalize/sort_key_projection.rs`).
+- **Apache Spark** — the same columns and rows on every shape. *(oracle: recorded — scoreboard
+  2026-09-26, `out/spark-edge.json` for the cell; `tz-order-spark-2026-09-26.json` for the
+  eleven `ORDER BY` shapes.)*
+- **Pin** — `crates/repark-spark/src/tests/tz_asof_1.rs`,
+  `python/repark/tests/test_tz_asof_1.py`. pins: tz-asof-1/C-001, C-002, C-003, C-004, C-005,
+  C-006, C-007, C-008, C-009
+- **Rationale** — EQUAL on replay (`target/probe-tz-asof-1/replay.json`).
+
 ### E-CATALOG-LISTDATABASES — `listDatabases()` after a catalog-qualified call — **moved to the catalog unit, 2026-09-25**
 
 - **repark** — lists the registered Iceberg catalog's namespaces (`["ns"]`).

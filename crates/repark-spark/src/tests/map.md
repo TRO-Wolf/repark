@@ -2121,6 +2121,20 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   raises, the current catalog stays, the long form and the opt-in stay catalogs), the
   two-part refusal arms, and the two-part alias that still plans beside a refusal.
   pins: catalog-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-014
+  not an alias, and the missing default's `CATALOG_NOT_FOUND`. pins: catalog-1/C-001, C-002,
+  C-003, C-004
+- `tz_asof_1.rs` — **WO TZ-ASOF-1 (2026-09-26):** every `ORDER BY` shape of the
+  sort-key naming defect pinned `==` Spark 4.1.2 (columns and rows) over
+  `ice.sales.y (id INT, ts TIMESTAMP, s STRING)`: the unaliased cast over its key
+  ascending, descending and limited (C-001), both alias spellings (C-002), the
+  `(id + 1)` and `upper(s)` display names (C-003), two casts over two keys
+  (C-004), `DISTINCT` with an un-projected key (C-005), `CAST(max(ts) AS STRING)`
+  (C-006), the `.snapshots` committed-at read with Spark's trailing-zero trim
+  plus three literal rendering instants (C-007), and the no-rewrite neighbors
+  (projected keys, stars, unions, `count(*)` keeping `count(*)`, the un-ordered
+  leak name) holding today's answers (C-009). The setup installs production's
+  integer planner so `id + 1` is `Int32` as on the facade.
+  pins: tz-asof-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009
 
 ## Mapping rule
 

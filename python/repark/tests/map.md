@@ -128,6 +128,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   UPDATE door like Spark's Java API (CREATE, ADD COLUMN, ADD PARTITION FIELD), so
   `uuid/part/md` replays EQUAL at `u_bucket_4` with no residue; group `uuid` is 26 of 30
   EQUAL and U9 R-26 retires. pins: u9-types-1/C-010
+- [test_tz_asof_1.py](test_tz_asof_1.py) — **WO TZ-ASOF-1 (2026-09-26):** every
+  `ORDER BY` shape of the sort-key naming defect pinned `==` Spark 4.1.2 (columns and rows)
+  over `sc.ns.y (id INT, ts TIMESTAMP, s STRING)`: the unaliased cast over its key ascending,
+  descending and limited (C-001), both alias spellings (C-002), the `(id + 1)` and `upper(s)`
+  display names (C-003), two casts over two keys (C-004), `DISTINCT` with an un-projected key
+  (C-005), `CAST(max(ts) AS STRING)` (C-006), the `.snapshots` committed-at read with Spark's
+  trailing-zero trim plus three literal rendering instants (C-007), the cell's own
+  `TIMESTAMP AS OF` leg answering `[[1]]` (C-008), and the no-rewrite neighbors holding
+  today's answers (C-009).
+  pins: tz-asof-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [test_partname_1.py](test_partname_1.py) — **WO PARTNAME-1 (2026-09-26):** partition-field
   names pinned per door against Spark's measured answers, read from each table's latest
   metadata JSON: the CREATE door omits the width (`id_bucket`, `s_trunc`, `ts_hour`,

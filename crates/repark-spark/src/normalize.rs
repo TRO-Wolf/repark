@@ -27,6 +27,7 @@ pub(crate) mod clustered_by;
 pub(crate) mod create_clauses;
 pub(crate) mod map_ordering;
 pub(crate) mod replace_table;
+pub(crate) mod sort_key_projection;
 pub(crate) mod statement_guard;
 
 pub(crate) use statement_guard::{

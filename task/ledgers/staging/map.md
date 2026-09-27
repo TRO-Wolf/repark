@@ -34,6 +34,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (C-006, C-007) and the storage surface with TZ-6 (C-008, C-009) are later
   slices. `risk_tier: standard`. Branch `feat/ntz-1`.
   pins: ntz-1/C-001, C-002, C-003, C-004, C-005
+- [tz-asof-1-ledger.md](tz-asof-1-ledger.md) —
+  **WO TZ-ASOF-1 (2026-09-26), in flight:** an expression whose Spark display name
+  equals its ORDER BY key plans — the Spark-door passthrough projects un-projected
+  sort keys under internal aliases in a derived table and carries Spark's display
+  names on the outer query (C-001..C-007, C-009), so cell E-TZ-TIMESTAMP-AS-OF
+  replays EQUAL (C-008).
+  `risk_tier: standard`. Branch `feat/tz-asof-1`.
+  pins: tz-asof-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [partname-1-ledger.md](partname-1-ledger.md) —
   **WO PARTNAME-1 (2026-09-26), in flight:** partition-field names pinned per door
   against Spark's measured answers — the CREATE door omits the width (C-001), the
