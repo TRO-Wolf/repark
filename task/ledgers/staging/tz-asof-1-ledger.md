@@ -1,7 +1,8 @@
 # Unit ledger — WO TZ-ASOF-1 · an expression named like its ORDER BY key plans
 
-**Date:** 2026-09-26 · **Branch:** `feat/tz-asof-1` · **Base:** `fbd97ef2`
-(`origin/main`) **Model:** Muse Spark (`muse-spark-1.3-contributor`) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+**Date:** 2026-09-26 · **Branch:** `feat/tz-asof-1` · **Base:** `4c5c2be8`
+(`origin/main`) · **Commit:** the branch commit (rebased) ·
+**Model:** Muse Spark (`muse-spark-1.3-contributor`) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 
 **Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
@@ -62,6 +63,9 @@ with the rewrite disabled and returns that outcome, so the rewrite can only turn
 failures into successes, never change a failure (caught by
 `u9_map::a_map_operand_refuses_comparison_ordering_and_distinct_as_spark_does`, whose
 MAP-ordering refusal quoted the internal key name before the fallback).
+No user-visible name changes except the measured Spark-equal display names
+listed in C-009 (fold r1, verifier V-004 — the parity goal itself; main leaked
+qualified names on shapes that already planned).
 
 ## Plan
 
@@ -86,7 +90,7 @@ MAP-ordering refusal quoted the internal key name before the fallback).
 | C-006 | `SELECT CAST(max(ts) AS STRING) … GROUP BY s ORDER BY max(ts)` answers columns `[CAST(max(ts) AS STRING)/string]` with Spark's rows. | Rust + facade pins `==` Spark's `agg_order`. | PROVEN | `tz_asof_1.rs::cast_of_aggregate_names_the_full_cast`, facade twin |
 | C-007 | `SELECT CAST(committed_at AS STRING) FROM y.snapshots ORDER BY committed_at` plans with columns `[committed_at/string]`; RePark's timestamp-to-string rendering trims trailing fractional zeros like Spark (`.56`, full micros kept, whole seconds bare). | Rust + facade pins; rendering pins on literal instants. | PROVEN | `tz_asof_1.rs::snapshots_cast_orders_and_trims_like_spark`, `test_tz_asof_1.py::test_snapshots_cast_orders_and_trims_like_spark` + `::test_timestamp_rendering_trims_like_spark`; no rendering fix needed |
 | C-008 | Scoreboard cell `E-TZ-TIMESTAMP-AS-OF` replays EQUAL on every `obs` key. | Harness replay vs `out/spark-edge.json`. | PROVEN | `target/probe-tz-asof-1/replay.json` EQUAL on `obs.rows`; facade twin `test_timestamp_as_of_cell_shape_answers_first_snapshot` |
-| C-009 | Shapes outside the trigger keep byte-identical behavior: projected keys, stars, unions, ordinals, the case-sensitive door, and unnameable select items. | Neighbor pins asserting today's names/rows/errors. | PROVEN | `tz_asof_1.rs::projected_keys_stars_and_unions_keep_todays_names`, facade twin, 13 inline AST unit tests, plus the retry fallback in `spark_ast.rs` (any post-rewrite failure replays the passthrough once with the rewrite off) held by `u9_map::a_map_operand_refuses_comparison_ordering_and_distinct_as_spark_does`, which reds quoting `__repark_sort_key_0` without it |
+| C-009 | Shapes outside the trigger keep byte-identical behavior: projected keys, stars, unions, ordinals, the case-sensitive door, and unnameable select items. No user-visible name changes except the measured Spark-equal display names on three shapes that already planned on main (fold r1, verifier V-004 — rows unchanged, names now `==` Spark): `SELECT CAST(id AS STRING) FROM sc.ns.z ORDER BY st.a DESC NULLS LAST` shows `id` not `sc.ns.z.id` (probe `nulls`), `SELECT CAST(ts AS STRING) FROM sc.ns.z ORDER BY st.a` shows `ts` not `sc.ns.z.ts` (probe `struct_order_cast`), and `SELECT id + 1 FROM sc.ns.y ORDER BY id` shows `(id + 1)` not `sc.ns.y.id + Int64(1)` (WO `expr_order`). | Neighbor pins asserting today's names/rows/errors; probe diffs for the three named shapes. | PROVEN | `tz_asof_1.rs::projected_keys_stars_and_unions_keep_todays_names`, facade twin, 13 inline AST unit tests, probe `target/verify/repark.json` EQUAL to `spark.json` on `nulls`/`struct_order_cast` (names) and `arithmetic_projection_names_the_paren_form` for `(id + 1)`, plus the retry fallback in `spark_ast.rs` (any post-rewrite failure replays the passthrough once with the rewrite off) held by `u9_map::a_map_operand_refuses_comparison_ordering_and_distinct_as_spark_does`, which reds quoting `__repark_sort_key_0` without it |
 | C-010 | A compound (multi-part) `ORDER BY` key binds to a select item only when the item's qualifier chain matches in full; an unqualified item never matches, and a compound key whose last segment clashes with a select column without a full match bails the rewrite. `SELECT s FROM z ORDER BY st.s, ts` keeps main's answer `b, a, b` (verifier finding V-001, probe `struct_field_name_clash`). | AST bail pins + Rust and facade row pins `==` Spark. | PROVEN | `sort_key_projection.rs::compound_key_clashing_with_an_item_name_bails` + `::compound_key_without_a_name_clash_stays_a_hidden_key`, `tz_asof_1.rs::struct_field_key_never_binds_a_same_named_column`, `test_tz_asof_1.py::test_struct_field_key_never_binds_a_same_named_column` |
 | C-011 | An unqualified bare-identifier `ORDER BY` key equal to a select item's display name binds to the output column like Spark: `SELECT CAST(id AS STRING) FROM z ORDER BY id` answers `10, 2, 3` and `… DESC` answers `3, 2, 10` (string order, verifier finding V-002, probes `cast_id_order_id`/`cast_id_order_id_desc`); a qualified key keeps binding to the column. | AST binding pins + Rust and facade row pins `==` Spark. | PROVEN | `sort_key_projection.rs::bare_key_matching_a_display_name_binds_the_output_column` + `::qualified_key_keeps_binding_the_column`, `tz_asof_1.rs::bare_key_matching_the_display_name_sorts_the_output_column`, facade twin |
 | C-012 | On `SELECT DISTINCT` the rewrite bails unless every `ORDER BY` key binds a select item by name, so a hidden key can never join the dedup: `SELECT DISTINCT s FROM z ORDER BY ts` keeps main's refusal `For SELECT DISTINCT, ORDER BY expressions sc.ns.z.ts must appear in select list` byte for byte where Spark refuses `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` (verifier finding V-003, probes `distinct_dup`/`distinct_cast_dup`); `DISTINCT CAST(ts AS STRING) … ORDER BY ts` still answers through the C-011 binding. | AST bail pins + byte-for-byte refusal pins in Rust and on the facade. | PROVEN | `sort_key_projection.rs::distinct_with_a_key_that_cannot_bind_bails`, `tz_asof_1.rs::distinct_with_an_unbindable_key_keeps_the_refusal`, facade twin |
@@ -117,11 +121,11 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_tz_asof_1.py, crates/repark-spark/src/normalize/sort_key_projection.rs]
     - id: AT-3
       status: ATTACKED
-      evidence: Every failure stays byte-identical to today: any post-rewrite failure retries the passthrough once with the rewrite disabled and returns that outcome, held by the u9_map MAP-ordering pin (reds quoting the internal key without the fallback); bails preserve today's errors (out-of-range ordinals, alias keys, marker collisions) at AST level.
+      evidence: "Every failure stays byte-identical to today: any post-rewrite failure retries the passthrough once with the rewrite disabled and returns that outcome, held by the u9_map MAP-ordering pin (reds quoting the internal key without the fallback); bails preserve today's errors (out-of-range ordinals, alias keys, marker collisions) at AST level."
       artifacts: [crates/repark-spark/src/spark_ast.rs, crates/repark-spark/src/tests/u9_map.rs]
     - id: AT-4
       status: N/A
-      justification: No shared or mutable state, no concurrency: one pure AST rewrite per statement, and the retry replays planning sequentially on failure only.
+      justification: "No shared or mutable state, no concurrency: one pure AST rewrite per statement, and the retry replays planning sequentially on failure only."
     - id: AT-5
       status: N/A
       justification: No privileged action, credential, deserialization or path handling; SQL text only.
@@ -138,7 +142,7 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-spark/src/normalize/sort_key_projection.rs, crates/repark-spark/src/spark_ast.rs]
     - id: AT-9
       status: ATTACKED
-      evidence: Refusal texts are pinned, not presumed: the MAP-ordering text is byte-identical through the fallback, and M2/M3 red with the exact unresolved-column and DISTINCT texts.
+      evidence: "Refusal texts are pinned, not presumed: the MAP-ordering text is byte-identical through the fallback, and M2/M3 red with the exact unresolved-column and DISTINCT texts."
       artifacts: [crates/repark-spark/src/tests/u9_map.rs, crates/repark-spark/src/tests/tz_asof_1.rs]
     - id: AT-10
       status: ATTACKED
