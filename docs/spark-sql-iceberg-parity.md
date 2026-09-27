@@ -4290,7 +4290,7 @@ the pin rather than obeying it.
   than their absence, so the row waited for #322 and the pin flipped at the bump that carries it.
   pins: ice-merge-append-1/C-006
 
-### ICE-MERGE-APPEND-INSERT-1 — a bare `INSERT INTO` still commits through `fast_append` — **BACKLOG 2026-09-19**
+### ICE-MERGE-APPEND-INSERT-1 — a bare `INSERT INTO` still commits through `fast_append` — **FIXED 2026-09-26 (RP-54, fork #361)**
 
 - **repark** — a bare `INSERT INTO cat.ns.t VALUES (…)` (and the facade's `insertInto` /
   `saveAsTable(mode="append")`, which lower to it) falls through to DataFusion and plans on the
@@ -4303,12 +4303,13 @@ the pin rather than obeying it.
 - **Apache Spark** — the bare `INSERT INTO` **is** `SparkWrite$BatchAppend`, the merging producer:
   the hundredth default append leaves ONE manifest. *(oracle: recorded, live PySpark 4.1.2 +
   Iceberg 1.11.0, 2026-09-19.)*
-- **Pin** — `python/repark/tests/test_ice_merge_append_1.py::test_bare_insert_into_still_commits_through_the_fork_commit_exec`
-  (codifies today's 100 manifests and the `IcebergCommitExec` plan node) and
-  `…::test_bare_insert_into_merges_like_spark` (strict xfail on Spark's number)
-- **Rationale** — BACKLOG, fork-routed. TRIGGER: **fork ask
-  `ICE-MERGE-APPEND-COMMITEXEC`** — route `IcebergCommitExec`'s `InsertOp::Append` arm through
-  `merge_append()`, the same mapping this unit justified from the Spark bytecode. Do NOT fix it
+- **Pin** — `python/repark/tests/test_ice_merge_append_1.py::test_bare_insert_into_now_merges_through_the_fork_commit_exec`
+  (Spark's ONE manifest after the hundredth append, beside the kept `IcebergCommitExec` plan node) and
+  `…::test_bare_insert_into_merges_like_spark` (un-xfailed at RP-54)
+- **Rationale** — FIXED by the fork ask **`ICE-MERGE-APPEND-COMMITEXEC`** (fork #361,
+  F-MANIFEST-MERGE-1, carried by RP-54): `IcebergCommitExec`'s `InsertOp::Append` arm now commits
+  through `merge_append()`, the same mapping this unit justified from the Spark bytecode. The
+  earlier text stands as the history of the route taken. Do NOT fix it
   by intercepting `INSERT INTO` in the RePark routers and re-staging through the write-options
   path: that would change distribution, file layout and the conform path for every insert in the
   engine to buy one commit-site swap.
