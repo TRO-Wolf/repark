@@ -179,6 +179,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   refusals (class, condition, SQLSTATE, first line) on VALUES/SELECT/UPDATE/MERGE plus
   the STRING append. Values read back as `CAST(c AS STRING)`.
   pins: ntz-1/C-006, C-007
+  **WO NTZ-1 slice 3 (2026-09-27):** the storage surface replays Spark — the six
+  partition transforms (`.partitions` rows, pruning, `.files` bounds, the New York
+  `days` insert), identity/bucket partitions, the filter/ORDER BY/min/max/interval
+  legs, v3 DML, CTAS, `ADD COLUMN`, `SHOW CREATE TABLE`, `printSchema`, `dtypes`,
+  `collect()`/`toArrow()` types, and the Spark-written `xc.ns.x` fixture
+  ([`fixtures/ntz_1_spark_table/`](fixtures/ntz_1_spark_table/map.md), recorded by
+  [_record_ntz_1_spark_table.py](_record_ntz_1_spark_table.py)) with reads, bounds
+  and re-insert. TZ-6 states Spark's contract and the TY-TIMESTAMP-NTZ rows go
+  EQUAL beside it.
+  pins: ntz-1/C-008, C-009
 - [test_ice_error_conditions_1.py](test_ice_error_conditions_1.py) —
   **ICE-ERROR-CONDITIONS-1 / IPI-51 PR1 (2026-09-20):** constructor pins for the native
   error-condition parser — `getCondition`/`getErrorClass`/`getSqlState` on the PyO3
