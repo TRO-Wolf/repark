@@ -129,6 +129,8 @@ reads the worker's `handback.json`. Workers do not delegate; lanes do not start 
 - `critic-brief-template.md` — the brief a lane fills and hands to `review.sh`.
 - `lessons.md` — the ledger: observed pattern → evidence → the instruction it became. Applied at the
   next run's start, never mid-run. Rows keep the pre-rename names; its header says how they map.
+- `latitude-ladder.md` — the orchestrator latitude ladder: do-unprompted / batch-for-approval /
+  always-stop tiers plus the proposed usage-threshold table (owner to confirm).
 
 ## I want to…
 
