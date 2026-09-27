@@ -486,6 +486,20 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   gains the `SELECT * FROM (SELECT 1 AS ID)` leg (answers `ID`; unmeasured —
   no probe key records an expression-alias output name). pins:
   casesens-1/C-001, C-002, C-003, C-004
+- `casesens_true.rs` — **WO CASESENS-1 slice 2 (2026-09-27):** the
+  `caseSensitive=true` SQL-door pins over `(id, Data, s)` + `(id, Data)` probe
+  tables: wrong-case refuses in every scope (the join legs name `` `a`.`ID` ``;
+  `cs_order_ID`, `cs_rel_alias_upper` and `cs_order_alias` pin RePark's
+  recorded rendering with ledger residues R-CS1-2/3/5), exact mixed-case
+  answers (star and exact-insert legs read the struct-less table; the UPPER
+  leg pins the pre-existing qualified name with R-CS1-6), relation/CTE/temp
+  names refuse (unstamped `not found` texts pinned, R-CS1-7; temp views via
+  `ctx.register_table` — SQL `CREATE TEMPORARY VIEW` needs a session home),
+  DML refuses with Spark's byte-exact text (MERGE per R6) leaving the table,
+  the default session keeps folding, and `SNAPSHOTS` answers under both.
+  `enable_case_sensitive` moved from `create_typed_partition.rs` into
+  `common.rs` (deleted at the source).
+  pins: casesens-1/C-005, C-006, C-007, C-008
 - `decimal.rs` — the Spark-door decimal128 pins at `i128` precision: result `(p,s)`, value,
   and nullability for the G2/G13 corpus shapes. **CUTOVER-SCHEMA-1 (2026-09-04):**
   `pin_int_times_decimal_is_12_2_i128` and `pin_mul_single_digit_nullability_non_null_i128`

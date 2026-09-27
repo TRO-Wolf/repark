@@ -23,6 +23,7 @@ ICE-MIXED-CASE-1 (2026-09-17): `test_ice_mixed_case_1.py` pins the Spark-door ca
 ICE-MIXED-CASE-1 note, U9-TYPES-1 round-3 fixer (2026-09-26): `test_measured_join_using_insert_answers_spark` (the V-04 INSERT cell) is green, its strict xfail on F-DML-FIELD-ID-1 removed; it asserts the recorded `V04_join_using_insert` Spark rows. The uuid-as-text catalog switch routes every `insert_into` through the fork's `UuidTextToBytesExec`, which rebuilds each batch against the target schema, so the right-side join column is no longer written NULL; switching it off turns the cell back to an xfail. pins: ice-mixed-case-1/C-015
 
 ICE-MIXED-CASE-1 round 5 (2026-09-17, Q-20b-2): the `true` cells pin the declared contract — backticked exact-case succeeds against the recorded `true` oracle rows (`_TRUE_BACKTICK_SQL`), unquoted exact-case refuses. pins: ice-mixed-case-1/C-006
+WO CASESENS-1 slice 2 (2026-09-27): the ID-1 declared refusal converged — unquoted exact-case answers, so `test_sql_door_unquoted_exact_case_refuses_case_sensitive` became `..._succeeds_case_sensitive` asserting the recorded `true` rows and the `test_sql_set_statement_drives_case_sensitive` exact leg answers; registry ID-1 rewritten in the same change. pins: casesens-1/C-006
 
 CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
 accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
@@ -170,6 +171,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_s1_catalog_view_keeps_its_spelling` replays the `vc` catalog-view keys
   including `r5_view_describe` (C-003 PROVEN).
   pins: casesens-1/C-001, C-002, C-003, C-004
+  **WO CASESENS-1 slice 2 (2026-09-27):**
+  `test_s2_sql_door_is_exact_under_case_sensitive` replays the true-mode legs
+  (per-key struct/plain setups; DML legs snapshot `u`; the three recorded-
+  rendering legs compare against `_s2_expect_msg`; relation/struct/UPPER legs
+  assert the refusal or rows with RePark's text) and
+  `test_s2_default_session_unchanged` replays the false-mode legs plus the
+  `SELECT ID` spelling. Candidate sets strip relation qualification.
+  `p3/cs_temp_view_upper` stays unpinned (R-CS1-8, hand-back Q2).
+  pins: casesens-1/C-005, C-006, C-007, C-008
 - [test_ntz_1.py](test_ntz_1.py) + `ntz_1_spark_oracle.json` — **WO NTZ-1 slice 1
   (2026-09-26):** the `TIMESTAMP_NTZ` literal and explicit casts replay Spark's measured
   answers — 29 literal/cast/refusal queries in UTC and New York sessions, the v2/v3

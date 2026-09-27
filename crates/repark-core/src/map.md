@@ -697,7 +697,15 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   folded statement's inner scopes (`column_resolution/inner_scopes.rs`) and
   re-plans once on change, falling back to the pre-respell plan when the
   respelled statement fails (ledger D1); the repair loop itself is untouched.
+  **WO CASESENS-1 slice 2 (2026-09-27):** `plan_case_sensitive` plans on a
+  cloned state with identifier normalization off (the guard stays first), and
+  `stamp_unresolved_column` renders a missing column DataFusion reports with a
+  relation as its backticked parts (`` `a`.`ID` ``); candidates keep the bare
+  rendering. `tests.rs`
+  `sensitive_session_refuses_folded_names_and_keeps_backticks` now answers
+  unquoted exact `userId` (Spark's `cs_sel_Data` shape; ledger Tests rewritten).
   pins: ice-mixed-case-1/C-001, C-002, C-007, C-013, C-014, C-015, C-016, C-017, C-021, C-022
+  pins: casesens-1/C-005, C-006, C-007, C-008
   pins: ice-error-conditions-1/C-011
   pins: casesens-1/C-001, C-002
 - `column_resolution/stack.rs` — run 22b: `stack_bytes_for` (a `Visit` walk: open

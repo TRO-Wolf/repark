@@ -2011,11 +2011,13 @@ ambiguity SQLSTATE to the measured `42704` (Q-21b-1).
   an ASCII case twin in its input refuses, exact case included (row
   [ID-1a](#id-1a--ascii-case-twin-columns-refuse-every-reference)). Output columns keep stored
   names where Spark echoes the requested spelling (pinned, not converged).
-- **repark, Spark door, `caseSensitive=true` (DECLARED split)** — resolution is exact, and the
-  parser fold is lossy: an unquoted mixed-case spelling arrives lowercased, so even exact-case
-  unquoted `userId` refuses where Spark resolves it. Backticked exact-case (`` `userId` ``)
-  resolves. The refusal is loud (`AnalysisException`, `No field named`), never a silent wrong
-  answer; the backticked success answers the recorded `true` oracle rows.
+- **repark, Spark door, `caseSensitive=true`** — resolution is exact: the
+  statement plans with identifier normalization off (CASESENS-1 slice 2,
+  2026-09-27), so unquoted exact-case `userId` resolves where it refused
+  before — the declared split converged. Wrong-case refuses loud
+  (`UNRESOLVED_COLUMN.WITH_SUGGESTION`, Spark's text), never a silent wrong
+  answer; backticked exact-case (`` `userId` ``) resolves as before. Both
+  answer the recorded `true` oracle rows. Full contract: E-CASE-SENSITIVE-SQL.
 - **Apache Spark** — resolves every spelling case-**insensitively** by default
   (`spark.sql.caseSensitive = false` applies to quoted names too), so `` `ID` `` finds `id`;
   under `true` both quoted and unquoted exact-case resolve.
@@ -2025,7 +2027,8 @@ ambiguity SQLSTATE to the measured `42704` (Q-21b-1).
 - **Pin** — `crates/repark-sql/tests/cross_door.rs::cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted`
   (ANSI refuses, Spark resolves) plus `python/repark/tests/test_ice_mixed_case_1.py` (both
   doors, both flag values, DML fragments, the ambiguity shape, the backticked-`true` success,
-  the unquoted-`true` declared refusal, and the live tier). The run-21b cells are
+  the unquoted-`true` success (was the declared refusal until CASESENS-1 slice 2),
+  and the live tier). The run-21b cells are
   `test_measured_query_cells_answer_spark[V01_* / V02_* / V04_join_using_select]` and
   `test_join_using_insert_folds_and_writes_the_left_columns`, plus the Rust
   `crates/repark-core/src/column_resolution/tests.rs` `v01_*`, `v02_*`, `v04_*`.
@@ -2037,8 +2040,9 @@ ambiguity SQLSTATE to the measured `42704` (Q-21b-1).
   `UuidTextToBytesExec`, which rebuilds each batch against the target schema, so the source's
   `PARQUET:field_id` no longer routes the write on this door; the fork ask stays open for a
   root fix.
-- **Rationale** — FIXED on the Spark door under `false` (ICE-MIXED-CASE-1, 2026-09-17); the
-  `true` unquoted-exact refusal and the stored-name output echo are DECLARED splits with pins.
+- **Rationale** — FIXED on the Spark door under `false` (ICE-MIXED-CASE-1, 2026-09-17)
+  and for unquoted exact-case under `true` (CASESENS-1 slice 2, 2026-09-27); the stored-name
+  output echo stays a DECLARED split with its pin.
   INTENDED split on the ANSI door per G11 Option A. The old declared-divergence pin reddened
   exactly as designed when the Spark half converged, and this row was rewritten in the same
   change.
@@ -2243,7 +2247,7 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   `id`, `Data`; `SELECT t.ID FROM … t` → `ID`; a struct field `s.A` → `A`; a `UNION` takes the
   left branch's spelling; `GROUP BY ID` keeps `ID`. Before, it answered the stored case (`id`)
   and lower-cased unquoted aliases (`x`). Under `caseSensitive=true` a wrong-case reference
-  on a single-table query refuses `[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or
+  in any scope refuses (E-CASE-SENSITIVE-SQL) `[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or
   function parameter with name `ID` cannot be resolved. Did you mean one of the following?
   [`id`, `Data`].` On the DataFrame door `F.col` binds a spelled output case-insensitively
   (`spark.sql("SELECT ID …").filter(F.col("id") > 1)`, `createDataFrame(…, ["Id"])`). Residues:
@@ -2278,6 +2282,39 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   `crates/repark-core/src/column_resolution/inner_scopes.rs::tests`. pins: casesens-1/C-001, C-002, C-003, C-004
 - **Rationale** — FIXED; the cell replays EQUAL on every observation, the
   CTE-outer and catalog-view shapes included (S1b).
+
+### E-CASE-SENSITIVE-SQL — spark.sql.caseSensitive=true is exact on the SQL door — **FIXED 2026-09-27 (CASESENS-1)**
+
+- **repark** — under `spark.sql.caseSensitive=true` the SQL door plans each
+  statement with identifier normalization off, so every wrong-case reference
+  refuses `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` naming the written spelling,
+  qualified as written (`` `a`.`ID` `` over a join): select list, join
+  condition, derived table, CTE, WHERE, ORDER BY, GROUP BY, alias and
+  backticks. Exact mixed-case spellings answer named as written (`Data`,
+  `` `Data` ``, `Id`/`id` twins, `SELECT *`), function names still fold
+  (`UPPER(Data)` binds), and relation aliases and CTE names match exactly.
+  INSERT column lists, UPDATE, DELETE and MERGE fragments with
+  a wrong-case column refuse and leave the table unchanged; MERGE reproduces
+  Spark's suggestion list byte-exact
+  (``[`t`.`id`, `t`.`Data`, `s`.`id`, `s`.`Data`]``). Metadata-table suffixes
+  still fold under both settings. Known rendering residues (unit ledger
+  R-CS1-2 … R-CS1-8, all dated 2026-09-27): the single-table guard names
+  `` `T.id` `` where Spark names `` `T`.`id` ``; ORDER BY scopes list the whole
+  table where Spark narrows; join candidates stay bare where Spark qualifies;
+  struct fields report DataFusion's text where Spark stamps `FIELD_NOT_FOUND`;
+  missing relations report `not found` where Spark stamps
+  `TABLE_OR_VIEW_NOT_FOUND`; function outputs keep DataFusion's qualified name;
+  and temp-view reads still fold (unpinned, awaiting the placement ruling).
+- **Apache Spark** — the refusals and answers above. *(oracle: recorded —
+  PySpark 4.1.2 + Iceberg 1.11, 2026-09-27, `casesens_1_spark_oracle.json`
+  (210 steps) beside the facade pin.)*
+- **Pin** — `python/repark/tests/test_casesens_1.py`
+  (`test_s2_sql_door_is_exact_under_case_sensitive`,
+  `test_s2_default_session_unchanged`);
+  `crates/repark-spark/src/tests/casesens_true.rs`;
+  `crates/repark-common/src/names.rs::tests`. pins: casesens-1/C-005, C-006, C-007, C-008
+- **Rationale** — FIXED; every true-mode refusal is Spark's measured text or
+  its head with the candidate set, and the default session is unchanged.
 
 ### E-CASE-PARTITION-FIELD — partition sources bind case-sensitively — **FIXED 2026-09-26 (U11-EDGE-1)**
 

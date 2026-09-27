@@ -12,9 +12,21 @@ message head up to ``Did you mean one of the following? [`` and the candidate
 set (R12), after stripping Spark's ``; line L pos P`` suffix and RePark's
 ``Error during planning: `` prefix (R13). S1b lands R-CS1-1 and C-003:
 ``p1/r5_cte_outer`` joins the nested legs and the catalog-view legs replay in
-``test_s1_catalog_view_keeps_its_spelling``.
+``test_s1_catalog_view_keeps_its_spelling``. S2 replays the
+``caseSensitive=true`` SQL-door legs: wrong-case references refuse naming the
+written spelling in every scope, exact spellings answer, relation and CTE names
+match exactly, and wrong-case DML refuses leaving the table unchanged.
+``p3/cs_temp_view_upper`` stays unpinned (ledger R-CS1-8, hand-back Q2: the
+temp-home probe folds before planning and no S2 placement for its fix is
+admissible). Candidate comparison strips relation qualification (out of scope
+per the WO); three legs compare against RePark's recorded rendering where it
+differs from Spark's for a registered reason (``p1/cs_order_ID`` and
+``p3/cs_order_alias`` list the whole scope, ``p3/cs_rel_alias_upper`` names
+`` `T.id` ``), and the ``TABLE_OR_VIEW_NOT_FOUND`` / ``FIELD_NOT_FOUND`` /
+function-naming legs assert the refusal or rows with RePark's recorded text
+(ledger R-CS1-2 … R-CS1-7).
 
-pins: casesens-1/C-001, C-002, C-003, C-004
+pins: casesens-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 """
 
 from __future__ import annotations
@@ -128,20 +140,39 @@ def _plain_message(message: str) -> str:
     return _SPARK_POSITION_SUFFIX.sub("", first)
 
 
+def _bare(entry: str) -> str:
+    """Strip one relation qualifier from a candidate entry."""
+    _, found, qualified = entry.partition("`.`")
+    return f"`{qualified}" if found else entry
+
+
 def _candidates(message: str) -> set[str]:
     """Read the suggestion-list candidate set from a refusal message."""
     _, _, tail = message.partition(_SUGGESTION_MARK)
     head, _, _ = tail.partition("]")
-    return {entry.strip() for entry in head.split(",") if entry.strip()}
+    return {_bare(entry.strip()) for entry in head.split(",") if entry.strip()}
 
 
-def _assert_error(key: str, error: BaseException, spark: dict[str, Any]) -> None:
+def _s2_expect_msg(key: str, spark_msg: str) -> str:
+    """Render RePark's recorded message where it differs from Spark's (S2)."""
+    if key == "p1/cs_order_ID":
+        return spark_msg.replace("[`id`]", "[`id`, `Data`, `s`]")
+    if key == "p3/cs_order_alias":
+        return spark_msg.replace("[`X`]", "[`X`, `id`, `Data`]")
+    if key == "p3/cs_rel_alias_upper":
+        return spark_msg.replace("`T`.`id`", "`T.id`")
+    return spark_msg
+
+
+def _assert_error(
+    key: str, error: BaseException, spark: dict[str, Any], expect_msg: str | None = None
+) -> None:
     """Replay one oracle refusal against Spark's recorded answer per R12."""
     assert type(error).__name__ == spark["error"], key
     assert _condition(error) == spark.get("getCondition"), key
     assert _sql_state(error) == spark.get("getSqlState"), key
     mine = _plain_message(str(error))
-    want = _plain_message(spark["msg"])
+    want = _plain_message(expect_msg if expect_msg is not None else spark["msg"])
     assert mine.split(_SUGGESTION_MARK)[0] == want.split(_SUGGESTION_MARK)[0], key
     if _SUGGESTION_MARK in want:
         assert _candidates(mine) == _candidates(want), key
@@ -156,7 +187,7 @@ def _sql_of(step: dict[str, Any]) -> str:
     return statement
 
 
-def _assert_step(session: ReparkSession, key: str) -> None:
+def _assert_step(session: ReparkSession, key: str, expect_msg: str | None = None) -> None:
     """Run one oracle step under its recorded flag and compare with Spark."""
     step = _ORACLE[key]
     session.conf.set("spark.sql.caseSensitive", "true" if step["case_sensitive"] else "false")
@@ -165,7 +196,7 @@ def _assert_step(session: ReparkSession, key: str) -> None:
         try:
             session.sql(_sql_of(step)).collect()
         except Exception as error:
-            _assert_error(key, error, spark)
+            _assert_error(key, error, spark, expect_msg)
         else:
             raise AssertionError(f"{key} answered instead of refusing")
         return
@@ -175,6 +206,96 @@ def _assert_step(session: ReparkSession, key: str) -> None:
         assert _rows(frame) == spark["rows"], key
     else:
         frame.collect()
+
+
+_S2_TRUE_KEYS: tuple[str, ...] = (
+    "p1/cs_sel_ID",
+    "p1/cs_join_ID",
+    "p1/cs_join_on_ID",
+    "p1/cs_subq_ID",
+    "p1/cs_cte_ID",
+    "p1/cs_where_ID",
+    "p1/cs_order_ID",
+    "p1/cs_group_ID",
+    "p1/cs_sel_Data",
+    "p1/cs_struct_A",
+    "p1/cs_insert_cols",
+    "p1/cs_update_where",
+    "p1/cs_delete_where",
+    "p1/cs_merge_on",
+    "p1/cs_tw_ID_id",
+    "p1/cs_tw_lit_ref",
+    "p1/cs_table_T",
+    "p1/cs_ns_NS",
+    "p3/cs_rel_alias_upper",
+    "p3/cs_order_alias",
+    "p3/cs_backtick_ID",
+    "p3/cs_backtick_Data",
+    "p3/cs_temp_view_exact",
+    "p3/cs_cte_name",
+    "p3/cs_star",
+    "p3/cs_func_upper",
+    "p4/ins_exact_true",
+    "p4/mt_upper_true",
+)
+
+_S2_FALSE_KEYS: tuple[str, ...] = (
+    "p3/rel_alias_upper",
+    "p3/cte_name_upper",
+    "p3/temp_view_upper",
+    "p4/mt_upper_false",
+)
+
+_S2_DML_KEYS: frozenset[str] = frozenset(
+    {"p1/cs_insert_cols", "p1/cs_update_where", "p1/cs_delete_where", "p1/cs_merge_on"}
+)
+
+_S2_PLAIN_REFUSAL_KEYS: frozenset[str] = frozenset(
+    {"p1/cs_table_T", "p1/cs_ns_NS", "p3/cs_cte_name"}
+)
+
+
+def _setup_tables_plain(session: ReparkSession) -> None:
+    """Create the probe's struct-less sc tables and the tv temp view."""
+    session.sql("CREATE NAMESPACE IF NOT EXISTS sc.ns").collect()
+    session.sql("CREATE TABLE sc.ns.t (id INT, Data STRING) USING iceberg").collect()
+    session.sql("INSERT INTO sc.ns.t VALUES (1, 'a'), (2, 'b')").collect()
+    session.sql("CREATE TABLE sc.ns.u (id INT, Data STRING) USING iceberg").collect()
+    session.sql("INSERT INTO sc.ns.u VALUES (1, 'x'), (5, 'y')").collect()
+    session.sql("CREATE OR REPLACE TEMPORARY VIEW tv AS SELECT id, Data FROM sc.ns.t").collect()
+
+
+def _assert_plain_refusal(session: ReparkSession, key: str) -> None:
+    """Run one oracle step that refuses without a stamped condition (S2)."""
+    step = _ORACLE[key]
+    session.conf.set("spark.sql.caseSensitive", "true" if step["case_sensitive"] else "false")
+    try:
+        session.sql(_sql_of(step)).collect()
+    except Exception as error:
+        assert "not found" in str(error), key
+    else:
+        raise AssertionError(f"{key} answered instead of refusing")
+
+
+def _assert_func_upper(session: ReparkSession, key: str) -> None:
+    """Run the UPPER leg asserting Spark's rows with RePark's name (S2)."""
+    step = _ORACLE[key]
+    session.conf.set("spark.sql.caseSensitive", "true" if step["case_sensitive"] else "false")
+    frame = session.sql(_sql_of(step))
+    assert _rows(frame) == step["spark"]["rows"], key
+    assert frame.dtypes[0][0] == "upper(sc.ns.t.Data)", key
+
+
+def _assert_struct_refusal(session: ReparkSession, key: str) -> None:
+    """Run the struct-field leg asserting the refusal (S2)."""
+    step = _ORACLE[key]
+    session.conf.set("spark.sql.caseSensitive", "true" if step["case_sensitive"] else "false")
+    try:
+        session.sql(_sql_of(step)).collect()
+    except Exception as error:
+        assert "not found in struct" in str(error), key
+    else:
+        raise AssertionError(f"{key} answered instead of refusing")
 
 
 @pytest.mark.parametrize("key", list(_NESTED_KEYS))
@@ -221,5 +342,46 @@ def test_s1_merge_derived_source(tmp_path: Path) -> None:
         _assert_step(session, "p1/r30_after")
         _assert_step(session, "p1/r30_merge_upper_set")
         _assert_step(session, "p1/r30_after2")
+    finally:
+        session.stop()
+
+
+@pytest.mark.parametrize("key", list(_S2_TRUE_KEYS))
+def test_s2_sql_door_is_exact_under_case_sensitive(key: str, tmp_path: Path) -> None:
+    """Each S2 true-mode step replays Spark's answer or recorded refusal."""
+    session = _open(tmp_path)
+    try:
+        if key.startswith("p1/"):
+            _setup_tables(session)
+        else:
+            _setup_tables_plain(session)
+        if key in _S2_PLAIN_REFUSAL_KEYS:
+            _assert_plain_refusal(session, key)
+        elif key == "p1/cs_struct_A":
+            _assert_struct_refusal(session, key)
+        elif key == "p3/cs_func_upper":
+            _assert_func_upper(session, key)
+        elif key in _S2_DML_KEYS:
+            before = _rows(session.sql("SELECT * FROM sc.ns.u"))
+            _assert_step(session, key)
+            assert _rows(session.sql("SELECT * FROM sc.ns.u")) == before, key
+        else:
+            step = _ORACLE[key]
+            expect = _s2_expect_msg(key, step["spark"]["msg"]) if "error" in step["spark"] else None
+            _assert_step(session, key, expect)
+    finally:
+        session.stop()
+
+
+def test_s2_default_session_unchanged(tmp_path: Path) -> None:
+    """Each S2 false-mode step replays Spark's answer exactly (S2)."""
+    session = _open(tmp_path)
+    try:
+        _setup_tables_plain(session)
+        for key in _S2_FALSE_KEYS:
+            _assert_step(session, key)
+        frame = session.sql("SELECT ID FROM sc.ns.t")
+        assert [name for name, _ in frame.dtypes] == ["ID"]
+        assert _rows(frame) == [[1], [2]]
     finally:
         session.stop()

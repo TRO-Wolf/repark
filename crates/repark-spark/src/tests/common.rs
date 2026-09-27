@@ -764,3 +764,16 @@ pub(super) async fn asof_rendered(
         .unwrap()
         .to_string()
 }
+
+pub(super) fn enable_case_sensitive(ctx: &SessionContext) {
+    let state = ctx.state_ref();
+    let mut state = state.write();
+    if let Some(carrier) = state
+        .config_mut()
+        .options_mut()
+        .extensions
+        .get_mut::<repark_functions::case_sensitive::SparkCaseSensitiveConfig>()
+    {
+        carrier.enabled = true;
+    }
+}

@@ -70,7 +70,11 @@ pins: ice-error-conditions-1/C-011
   are public through `column_resolution` (`on_grown_stack` passes one value for both) so
   repark-spark's re-planning temp-view scan grows the stack the same way; removing that wrapper
   overflows the 100-level temp-view chain pins. pins: ice-views-1/C-018
-- `tests.rs` — the battery below.
+- `tests.rs` — the battery below. **WO CASESENS-1 slice 2 (2026-09-27):**
+  `sensitive_session_refuses_folded_names_and_keeps_backticks` answers unquoted
+  exact `userId` where it refused `userid` (normalization-off exactness, net-zero
+  lines under the no-growth ceiling; ledger Tests rewritten).
+  pins: casesens-1/C-006
 - `inner_scopes.rs` — **WO CASESENS-1 slice 1 (2026-09-27):** the inner-scope
   spelling pass. `respell_inner_scopes` collects the written projections of the
   original statement's derived tables and CTE bodies in visit order (the leftmost

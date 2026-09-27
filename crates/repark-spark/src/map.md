@@ -216,6 +216,14 @@ pins: rp-4-fork-repin/C-005, C-006
   (`column_resolution::fold_query_text`) before the fragment rewrite, so its
   another-case names bind. pins: ice-mixed-case-1/C-004, C-018
   pins: casesens-1/C-004
+  **WO CASESENS-1 slice 2 (2026-09-27):** `rewrite_merge_fragments` takes a
+  `NameRule` and runs the same seven seats through the fold (`IgnoreCase`) or
+  [`merge_fragments/exact.rs`](merge_fragments/exact.rs) (`Exact`, R6: an exact
+  hit is backtick-quoted as written, a case-only hit refuses
+  `UNRESOLVED_COLUMN.WITH_SUGGESTION` with every scope field listed target
+  first, no hit is left alone); the derived-source probe plans with
+  normalization off under `true` so scope fields keep their written case.
+  pins: casesens-1/C-008
 - `insert_overwrite.rs` — **R-FILEORDER-2 (2026-09-27, HALT, no code change):**
   Spark 4.1.2 answers `L-INSERT-OVERWRITE` `[[2,b,5,3],[3,c,6,3],[4,d,4,3]]` on a same-JVM
   triple but splits 2–4 across six fresh-JVM runs — one combined task whose file order is
@@ -789,6 +797,17 @@ pins: rp-4-fork-repin/C-005, C-006
   refused where Spark answers (MC-UPD-01/02). No unique case-insensitive match leaves the
   requested spelling alone, so the ambiguity and missing-column refusals still fire there.
   pins: ice-session-write-conf-1/C-063
+- `spark_ast.rs` — **WO CASESENS-1 slice 2 (2026-09-27):**
+  `try_execute_identity_dml` runs the `false` branch through
+  `canonicalize_identity_selection` as before and the `true` branch through the
+  new `check_identity_selection_exact`, which checks the selection and each SET
+  *value* with `merge_fragments/exact.rs` `check_identity_exact` (single
+  target scope, bare candidates — Spark's
+  `cs_update_where` / `cs_delete_where` text byte-exact). Plain UPDATE/DELETE
+  bypass `plan_case_sensitive` through this owned route, so without the check
+  the `ctx.sql` identity scan folds `WHERE ID` under `true`. SET *targets*
+  stay with `validate_update_assignments`, which already reads the flag.
+  pins: casesens-1/C-008
 - `spark_ast.rs` — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):** `execute_insert_source`
   is `execute_passthrough` stopped one step short — same parse, same rewrites, same analysis,
   but it executes the insert's INPUT instead of the insert. One pipeline answers both routes,

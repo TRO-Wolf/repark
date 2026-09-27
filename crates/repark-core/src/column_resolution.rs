@@ -80,7 +80,13 @@ async fn plan_case_sensitive(
     if let datafusion::sql::parser::Statement::Statement(inner) = &statement {
         strict_case_guard(state, inner).await?;
     }
-    state
+    let mut exact = state.clone();
+    exact
+        .config_mut()
+        .options_mut()
+        .sql_parser
+        .enable_ident_normalization = false;
+    exact
         .statement_to_plan(statement)
         .await
         .map_err(stamp_unresolved_column)
@@ -267,7 +273,10 @@ fn stamp_unresolved_column(error: DataFusionError) -> DataFusionError {
         return error;
     }
     let missing = field.name.as_str();
-    let column_name = format!("`{missing}`");
+    let column_name = match field.relation.as_ref() {
+        Some(relation) => quoted(&reference_parts(relation), missing),
+        None => format!("`{missing}`"),
+    };
     let shown = valid
         .iter()
         .filter(|column| !crate::frame_names::is_scratch_relation(&column.name))
