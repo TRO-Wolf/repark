@@ -7,9 +7,18 @@
 > [.agents/](.agents/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-09-12._
+_Last updated: 2026-09-27._
 
 ## Release state
+
+**v1.5.0 (2026-09-27) — the Spark–Iceberg parity minor.** The v1.5.0 gate is met: zero non-EQUAL cells that Spark
+4.1.2 answers on the 842-cell Spark + Iceberg matrix, except dated owner carve-outs — **705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT** on the fresh-build rerun of 2026-09-27 (main `f7422565`).
+Carved out: C-1 structured streaming and C-2 nested namespaces (v1.6.0 cards), C-4 the v3 variant type; C-3 and C-5
+count EQUAL under dated harness rules (commit order, `_row_id` order). It covers inspection and nested DDL,
+metadata-table and time-travel reads, DataFrame and SQL writes, MERGE/UPDATE/DELETE, procedures and table
+properties, `TIMESTAMP_NTZ` literals and casts; the UUID refusal no longer panics on non-ASCII SQL. S3 path writes
+(U12) moved to v1.5.1. Additive under the API freeze. Notes:
+[v1-5-0-release-notes-draft-2026-09-27.md](task/roadmap/mid-term/v1-5-0-release-notes-draft-2026-09-27.md).
 
 **v1.4.2 (2026-09-15) — the second patch on 1.4.0, cut so DECIMAL-CACHE-1 (#632) reaches PyPI.**
 Decimal arithmetic that overflows 38 digits now types like PySpark 4.1.2 (`decimal(38,10) * 5` →
@@ -26,27 +35,7 @@ Carries everything since 1.4.0, additive under the freeze.
 name or required parameter changed). Roadmap 1.4 closes: the maintenance policy shipped in 1.2 and
 its adaptive-partitioning half lands here.
 
-- **Adaptive partitioning, closed (AP-1/AP-2/AP-3, AP-1-CLOSE-1):** `CALL plan_partitioning()`
-  ranks candidates from footer statistics and `CALL apply_partitioning()` executes a printed plan
-  one commit per step, dry-run by default ([docs/guide/maintenance-policy.md](docs/guide/maintenance-policy.md)).
-  `projected_files_at_target` multiplies the uncompressed footer sum by the measured `byte_ratio`
-  and is an **upper bound**, pinned on the three AP-0 beds after four re-measures (S2-23, S2-27).
-- **Compaction is a net-size win on zstd tables** at fork pin `9e3522e3` (RP-16/17/18): `INSERT`,
-  the maintenance rewrite and the position-delete writers honour `write.parquet.compression-codec`
-  (default zstd, level 3 like Java), the rewrite decides dictionary encoding per column from the
-  input footers instead of writing dead dictionary pages, and the decision footers are fused into
-  the scan (one footer fetch per input file) — fork #276/#278/#280.
-- **Configuration profiles (PROFILES-1):** the measured `read` profile (`batch_size` 16384,
-  `target_partitions` 32, `repartition_joins` off) and a `write` profile that is the defaults, every
-  value traced to a sweep row ([docs/guide/repark-toml.md](docs/guide/repark-toml.md),
-  [docs/perf/config-profiles-2026-09-12.md](docs/perf/config-profiles-2026-09-12.md)).
-- **DataFrame fixes measured against Spark 4.1.2:** `describe()`/`summary()` answer Spark's shape on
-  string columns in Spark's row order and aggregate in one lazy pass (DF-DESCRIBE-STR-1,
-  PERF-DESCRIBE-1); `colRegex` expands every match and strips backticks (DF-COLREGEX-1);
-  BALLISTA-M2-B's typed `IcebergTableScan` rebuild behind the `cluster` feature.
-- **The example campaign closes (EX-29…31):** the inventory is exact — 920 public names, 806 covered
-  by runnable examples, 112 on the backlog each with a measured stay row, 2 network exceptions,
-  seven engine-plumbing names excluded by name ([briefs/example-backfill.md](briefs/example-backfill.md)).
+Adaptive partitioning closed (`plan_partitioning` / `apply_partitioning`, [maintenance-policy.md](docs/guide/maintenance-policy.md)); compaction became a net-size win on zstd tables (fork RP-16/17/18); measured `read`/`write` configuration profiles ([repark-toml.md](docs/guide/repark-toml.md)); `describe`/`summary`/`colRegex` answer Spark 4.1.2; the example campaign closed ([briefs/example-backfill.md](briefs/example-backfill.md)).
 
 **v1.3.0 (2026-09-11) — the Never-OOM minor:** the spill-coverage matrix — nine operators at
 2/4/8× a 1 GB limit, 24 of 27 cells stable, `hash_join` at 4× and two 2× cells named with their
@@ -334,6 +323,6 @@ Recorded, not built. Each names the trigger that would start it.
 
 ## Release blockers
 
-**None.** v1.4.2 cut 2026-09-15; the tag history is in [Release state](#release-state).
+**None.** v1.5.0 cut 2026-09-27; the tag history is in [Release state](#release-state).
 Future tags follow [docs/release.md](docs/release.md) (version SSOT at the Cargo workspace;
 wheel-only; crates.io publishing structurally deferred).
