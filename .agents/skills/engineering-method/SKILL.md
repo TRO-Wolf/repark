@@ -1,6 +1,6 @@
 ---
 name: engineering-method
-version: "1.1"
+version: "1.2"
 description: >-
   The portable working method for any implementation or review session in this
   repo — risk-first design, the reason-plan-verify workflow, naming, the
@@ -21,11 +21,21 @@ Operate as a senior software engineer specializing in **Rust** and **Python**, w
 
 **Authority order:** [AGENTS.md](../../../AGENTS.md) (the authoritative contract) > this skill's portable defaults. Read AGENTS.md **before** this skill; it holds the precedence chain, the hard rules, and the change-location guide, and it wins on any conflict. This skill records the working *method*; the rule of record for every project fact stays in the spine.
 
-**How this skill is organized:** every rule has exactly one canonical home; other sections point to it rather than restate it. There are two checklists only — **Pre-Flight** (before you start) and the **§4 Done gate** (before you declare complete). If something looks unstated, it is in its one home, not missing.
+**How this skill is organized:** every rule has exactly one canonical home; other sections point to it rather than restate it. Start at `## Procedure`; rules live under `## Reference`. There are two checklists only — **Pre-Flight** (before you start) and the **§4 Done gate** (before you declare complete). If something looks unstated, it is in its one home, not missing.
 
 > **A note on the XML tags below.** Four load-bearing sections are wrapped in semantic tags — `<non_negotiables>`, `<risk_first>`, `<verification_gate>`, `<scope_boundaries>`. They mark the must-not-skip / must-not-violate regions so any agent can locate and obey each as a unit; the tags carry no meaning beyond that.
 
 ---
+
+## Procedure — read this first
+
+Read [AGENTS.md](../../../AGENTS.md) before this skill; it wins on any conflict. Know your mode
+in Mode Handling (Reference), then work in order.
+
+1. **Pre-Flight** (below): plan file, touched maps, scoped lessons, verify commands; ask what
+   can go wrong with the build first.
+2. **Reason, plan, capture, read** (§1–§3); **scope, libraries, debug** (§6–§8).
+3. **Done gate** (§4): every box checked; tests ship with the change, no skips.
 
 <non_negotiables>
 
@@ -44,25 +54,6 @@ These are irreversible or hard-block. Violating one means permanent loss or an a
 
 ---
 
-## Mode Handling
-
-This skill is written for two modes of operation. Determine which you are in before applying it.
-
-### Interactive mode
-A human is driving the session. Apply this skill verbatim — reason through inputs and edge cases first, record the plan (see Workflow Storage below), check in with the user before implementing complex changes per §1, and confirm scope changes when §6 (Scope Boundaries) is at risk.
-
-### Delegated mode (sub-agent, no interactive user)
-You were invoked by another agent or pipeline; there is no human to check in with mid-task. The workflow rules adapt:
-
-- Still reason first; still record the plan.
-- **Do not block waiting for approval.** Proceed on the documented plan.
-- Surface every blocker, assumption, and decision that *would* have been a check-in **in your final report to the caller** — not as an in-flight question that nobody will answer.
-- Ambiguity that changes the outcome is still a stop condition. Report it (and stop) rather than guessing — Core Principles: "No Assumptions," "Fail Loudly."
-- The §1 "check in before implementing" rule becomes "document the plan, proceed, and flag deviations in the final report."
-- If a reviewer comes back later with corrections, treat them as standard user feedback and capture them in [task/lessons.md](../../../task/lessons.md) per §2.
-
-The delegated standing rules and approval boundaries live in [AGENTS.md](../../../AGENTS.md) "Delegated-agent standing rules" / "Delegated work"; this section is the method they run under. The plan + lessons files apply in both modes — keep them updated per §2 regardless.
-
 ### Workflow Storage
 
 The plan / lessons workflow uses durable files as the source of truth, edited in the same session as the work:
@@ -71,59 +62,8 @@ The plan / lessons workflow uses durable files as the source of truth, edited in
 |---|---|
 | "write the plan" / "track the plan" | the unit's ledger under [task/ledgers/staging/](../../../task/ledgers/map.md) for governed units; [task/todo.md](../../../task/todo.md) (a pointer to the live backlog in [STATUS.md](../../../STATUS.md)) for quick untracked work — flip `[ ]` → `[x]` as items complete |
 | "capture a lesson" / "update lessons" | [task/lessons.md](../../../task/lessons.md) — append a date-stamped entry; supersede outdated rules with a note + date |
-| "read lessons in full at session start" | read [task/lessons.md](../../../task/lessons.md) |
+| "read the lessons entries for subsystems you touch" | `grep -n <subsystem> task/lessons.md`; read in full only when orchestrating |
 | "pick up in-flight work" | read [STATUS.md](../../../STATUS.md) + the unit's ledger |
-
----
-
-<risk_first>
-
-## Risk-First Mindset
-
-**The single question that drives every step: "What can go wrong with what I build?"**
-
-Ask it before writing code (it shapes the design), while writing code (it shapes the implementation), and when writing tests (it shapes the test surface). Risk-First is the lens for everything else in this skill — every step of [Workflow Orchestration](#workflow-orchestration) below is an expression of it. If you ever find yourself reaching for "this'll probably work" or "the happy path is fine," stop and ask the question again.
-
-### During design — what would break the contract?
-
-- What inputs would violate the function's preconditions? (empty, malformed, NaN, negative, zero, very large, concurrent, race-prone)
-- What dependencies could fail or behave unexpectedly? (DB connection drop, S3 throttling, IAM token expiry, library panic, OOM, network partition)
-- What invariants must hold across the call? (transactions atomic, locks released, row count / schema preserved across a write, Iceberg snapshot refs consistent, FK relationships preserved)
-- What happens on partial failure mid-operation? (committed half a write, sent half a message, claimed half a task batch)
-- What correctness consequence would a silent bug carry? (a Spark-semantics divergence returns wrong rows that look plausible; a dtype/decimal-precision mismatch survives until query results diverge from Spark; a wrong null/ordering rule corrupts downstream joins)
-- What crosses a system boundary here, and is it validated at the edge? Treat everything from outside — user input, API responses, file contents, env vars, queue messages, another service's writes, even your own DB if others write it — as hostile until parsed. Parse it into a typed value at the door, validate once, then trust it inside (the construction side of "make illegal states unrepresentable", §9). For anything touching SQL, shell, file paths, or deserialization, injection is the default threat: parameterized queries, no string-built commands, normalized paths.
-- What does a double-execution do? Networks retry, schedulers re-run, users double-click, queues deliver at-least-once — something *will* run the operation twice. For anything that writes, mutates, charges, or sends, design the repeat to be harmless: idempotency keys, `INSERT … ON CONFLICT` / UPSERT, set-to-target over apply-a-delta, optimistic-concurrency retry on Iceberg commits. Keep new mutating paths in that mold.
-
-### During implementation — what risk is this line carrying?
-
-- Bare `.unwrap()` or any `.expect()` in production, bare `except Exception`, swallowed errors, default-on-error fallbacks
-- Time-of-check vs time-of-use windows — especially DB read-then-write, S3 head-then-get, claim-then-renew
-- Off-by-one in loops, ranges, slice indices, or window sizes
-- Integer overflow, float precision drift, NaN propagation through aggregations
-- Concurrency: shared mutable state, ordering assumptions, await points where state can move under you, lock acquisition order
-- Destructive operations: any code path that could `DROP`, `TRUNCATE`, `DELETE` without `WHERE`, or mutate IAM — forbidden per [AGENTS.md](../../../AGENTS.md) "Safety" (Non-Negotiables); if you're tempted to write one, stop
-
-### During testing — what failure mode does each test pin?
-
-- Every test should answer "what risk does this catch?" If you can't name it, the test is weak — rewrite it with a sharper name or delete it.
-- For each happy-path test, write at least one negative / edge / error-path test (per §4).
-- For numeric / Spark-parity-sensitive code (decimal & float casts, aggregations, date/time semantics, null ordering), name the specific `f64::to_bits` or exact-value regression you're guarding against — vague "matches expected" assertions hide bit-level drift.
-- For destructive-operation guards (DB writes, S3 deletes, IAM mutations), test that the prohibited shape **fails** as expected — not just that the allowed shape succeeds. A guard that lets the bad case through silently is worse than no guard.
-- For concurrency, test the race window directly (`Barrier`, contention loop) — not just sequential happy paths.
-
-### Project-specific risk surface to keep in front of mind
-
-| Surface | Why it bites silently | Rules live in |
-|---|---|---|
-| **Spark-semantics parity** | A DataFrame op or SQL function that diverges from Spark returns plausible-but-wrong rows; the bug surfaces only when output is compared against real Spark. Every new op needs a parity case. | [docs/testing.md](../../../docs/testing.md) (entry-point matrix + divergence-class claims) |
-| **Numeric / type correctness** | Decimal/float casts, aggregation order, and date/time rules drift silently until results diverge — pin with `f64::to_bits` / exact-value fixtures. | [docs/testing.md](../../../docs/testing.md) |
-| **Iceberg snapshot atomicity** | A write that isn't a clean snapshot commit (or skips the optimistic-concurrency retry) can corrupt table state or lose a concurrent writer's commit. | [AGENTS.md](../../../AGENTS.md) "Hard rules" + [docs/adr/0001-own-iceberg-fork.md](../../../docs/adr/0001-own-iceberg-fork.md) |
-| **Destructive SQL / IAM** | `DROP`, `TRUNCATE`, `aws iam *` mutations — permanent data loss, no rollback. Layered defense exists because the cost is irreversible. | [AGENTS.md](../../../AGENTS.md) "Safety — destructive / outward-facing operations" |
-| **`map.md` drift from code** | A stale `map.md` misdirects the next session and compounds with every change that trusts it. Strict same-change rule. | [AGENTS.md](../../../AGENTS.md) "Hard rules" (`map.md` in every directory) |
-
-**Risk-First is not "defensive programming."** It is the discipline of *naming* the failure mode before mitigating it, then testing the mitigation. Code that catches every conceivable failure but doesn't name them is harder to audit than code that catches only the named ones with intent.
-
-</risk_first>
 
 ---
 
@@ -156,7 +96,7 @@ This step is mandatory even when the answer feels obvious — pattern-matching t
 - After ANY correction from the user: append a date-stamped DO / DO NOT entry to [task/lessons.md](../../../task/lessons.md) immediately.
 - Write lessons as concrete DO or DO NOT statements with brief context or an example — the rule, the *why*, and how to apply it.
 - Iterate ruthlessly on these lessons until the mistake rate drops; supersede outdated ones with a date-stamped note (e.g. "_superseded 2026-05-25: see ..._") rather than mutating the original.
-- At the start of every session, read [task/lessons.md](../../../task/lessons.md) in full before doing anything else.
+- Read the lessons entries for subsystems you touch; read [task/lessons.md](../../../task/lessons.md) in full only when orchestrating.
 - Review lessons before each implementation step, not just at session start.
 - NEVER use placeholders like `// rest of code`, `...`, or `# existing code unchanged` — write complete functions. If a function is too long for one response, say so explicitly and split across responses with each section complete.
 
@@ -266,6 +206,96 @@ Policy (hand-written maps, same-change lockstep, no generator) lives in
 
 ---
 
+## Pre-Flight Checklist — before you start
+
+- [ ] Read [AGENTS.md](../../../AGENTS.md) and follow your role's row in its "Read first" table.
+- [ ] Read the Procedure section above, then the lessons entries for subsystems you touch (§2; in full only when orchestrating).
+- [ ] Read [STATUS.md](../../../STATUS.md) + the unit's ledger (or [task/todo.md](../../../task/todo.md)) to pick up mid-flight work.
+- [ ] Read the `map.md` of every directory your task will touch (Navigation section).
+- [ ] Know your mode (interactive vs. delegated) and how its check-in rule applies.
+- [ ] Asked "what can go wrong with what I build?" for the work ahead — design, implementation, and tests (Risk-First Mindset).
+- [ ] Reasoned through inputs, edge cases, and failure modes per §1.
+- [ ] Plan recorded in the tracker (Workflow Storage); in interactive mode, checked in with the user.
+- [ ] Know the verification commands for the area you're changing (Language-Specific Rules).
+
+When done, run the **§4 Done gate** before declaring complete.
+
+---
+
+## Reference
+
+## Mode Handling
+
+This skill is written for two modes of operation. Determine which you are in before applying it.
+
+### Interactive mode
+A human is driving the session. Apply this skill verbatim — reason through inputs and edge cases first, record the plan (see Workflow Storage below), check in with the user before implementing complex changes per §1, and confirm scope changes when §6 (Scope Boundaries) is at risk.
+
+### Delegated mode (sub-agent, no interactive user)
+You were invoked by another agent or pipeline; there is no human to check in with mid-task. The workflow rules adapt:
+
+- Still reason first; still record the plan.
+- **Do not block waiting for approval.** Proceed on the documented plan.
+- Surface every blocker, assumption, and decision that *would* have been a check-in **in your final report to the caller** — not as an in-flight question that nobody will answer.
+- Ambiguity that changes the outcome is still a stop condition. Report it (and stop) rather than guessing — Core Principles: "No Assumptions," "Fail Loudly."
+- The §1 "check in before implementing" rule becomes "document the plan, proceed, and flag deviations in the final report."
+- If a reviewer comes back later with corrections, treat them as standard user feedback and capture them in [task/lessons.md](../../../task/lessons.md) per §2.
+
+The delegated standing rules and approval boundaries live in [AGENTS.md](../../../AGENTS.md) "Delegated-agent standing rules" / "Delegated work"; this section is the method they run under. The plan + lessons files apply in both modes — keep them updated per §2 regardless.
+
+---
+
+<risk_first>
+
+## Risk-First Mindset
+
+**The single question that drives every step: "What can go wrong with what I build?"**
+
+Ask it before writing code (it shapes the design), while writing code (it shapes the implementation), and when writing tests (it shapes the test surface). Risk-First is the lens for everything else in this skill — every step of [Workflow Orchestration](#workflow-orchestration) below is an expression of it. If you ever find yourself reaching for "this'll probably work" or "the happy path is fine," stop and ask the question again.
+
+### During design — what would break the contract?
+
+- What inputs would violate the function's preconditions? (empty, malformed, NaN, negative, zero, very large, concurrent, race-prone)
+- What dependencies could fail or behave unexpectedly? (DB connection drop, S3 throttling, IAM token expiry, library panic, OOM, network partition)
+- What invariants must hold across the call? (transactions atomic, locks released, row count / schema preserved across a write, Iceberg snapshot refs consistent, FK relationships preserved)
+- What happens on partial failure mid-operation? (committed half a write, sent half a message, claimed half a task batch)
+- What correctness consequence would a silent bug carry? (a Spark-semantics divergence returns wrong rows that look plausible; a dtype/decimal-precision mismatch survives until query results diverge from Spark; a wrong null/ordering rule corrupts downstream joins)
+- What crosses a system boundary here, and is it validated at the edge? Treat everything from outside — user input, API responses, file contents, env vars, queue messages, another service's writes, even your own DB if others write it — as hostile until parsed. Parse it into a typed value at the door, validate once, then trust it inside (the construction side of "make illegal states unrepresentable", §9). For anything touching SQL, shell, file paths, or deserialization, injection is the default threat: parameterized queries, no string-built commands, normalized paths.
+- What does a double-execution do? Networks retry, schedulers re-run, users double-click, queues deliver at-least-once — something *will* run the operation twice. For anything that writes, mutates, charges, or sends, design the repeat to be harmless: idempotency keys, `INSERT … ON CONFLICT` / UPSERT, set-to-target over apply-a-delta, optimistic-concurrency retry on Iceberg commits. Keep new mutating paths in that mold.
+
+### During implementation — what risk is this line carrying?
+
+- Bare `.unwrap()` or any `.expect()` in production, bare `except Exception`, swallowed errors, default-on-error fallbacks
+- Time-of-check vs time-of-use windows — especially DB read-then-write, S3 head-then-get, claim-then-renew
+- Off-by-one in loops, ranges, slice indices, or window sizes
+- Integer overflow, float precision drift, NaN propagation through aggregations
+- Concurrency: shared mutable state, ordering assumptions, await points where state can move under you, lock acquisition order
+- Destructive operations: any code path that could `DROP`, `TRUNCATE`, `DELETE` without `WHERE`, or mutate IAM — forbidden per [AGENTS.md](../../../AGENTS.md) "Safety" (Non-Negotiables); if you're tempted to write one, stop
+
+### During testing — what failure mode does each test pin?
+
+- Every test should answer "what risk does this catch?" If you can't name it, the test is weak — rewrite it with a sharper name or delete it.
+- For each happy-path test, write at least one negative / edge / error-path test (per §4).
+- For numeric / Spark-parity-sensitive code (decimal & float casts, aggregations, date/time semantics, null ordering), name the specific `f64::to_bits` or exact-value regression you're guarding against — vague "matches expected" assertions hide bit-level drift.
+- For destructive-operation guards (DB writes, S3 deletes, IAM mutations), test that the prohibited shape **fails** as expected — not just that the allowed shape succeeds. A guard that lets the bad case through silently is worse than no guard.
+- For concurrency, test the race window directly (`Barrier`, contention loop) — not just sequential happy paths.
+
+### Project-specific risk surface to keep in front of mind
+
+| Surface | Why it bites silently | Rules live in |
+|---|---|---|
+| **Spark-semantics parity** | A DataFrame op or SQL function that diverges from Spark returns plausible-but-wrong rows; the bug surfaces only when output is compared against real Spark. Every new op needs a parity case. | [docs/testing.md](../../../docs/testing.md) (entry-point matrix + divergence-class claims) |
+| **Numeric / type correctness** | Decimal/float casts, aggregation order, and date/time rules drift silently until results diverge — pin with `f64::to_bits` / exact-value fixtures. | [docs/testing.md](../../../docs/testing.md) |
+| **Iceberg snapshot atomicity** | A write that isn't a clean snapshot commit (or skips the optimistic-concurrency retry) can corrupt table state or lose a concurrent writer's commit. | [AGENTS.md](../../../AGENTS.md) "Hard rules" + [docs/adr/0001-own-iceberg-fork.md](../../../docs/adr/0001-own-iceberg-fork.md) |
+| **Destructive SQL / IAM** | `DROP`, `TRUNCATE`, `aws iam *` mutations — permanent data loss, no rollback. Layered defense exists because the cost is irreversible. | [AGENTS.md](../../../AGENTS.md) "Safety — destructive / outward-facing operations" |
+| **`map.md` drift from code** | A stale `map.md` misdirects the next session and compounds with every change that trusts it. Strict same-change rule. | [AGENTS.md](../../../AGENTS.md) "Hard rules" (`map.md` in every directory) |
+
+**Risk-First is not "defensive programming."** It is the discipline of *naming* the failure mode before mitigating it, then testing the mitigation. Code that catches every conceivable failure but doesn't name them is harder to audit than code that catches only the named ones with intent.
+
+</risk_first>
+
+---
+
 ## Naming Conventions — All Names Must Carry Meaning
 
 Names are the primary interface between the writer and the reader. Bad names cost more than bad logic because they spread silently through the codebase.
@@ -367,22 +397,6 @@ f-strings, no bare `except`) live in [AGENTS.md](../../../AGENTS.md) "Hard rules
 When recursion is used, add a doc comment explaining (a) why iteration was rejected, (b) the depth bound, (c) any tail-call assumptions. Rust and Python do **not** guarantee tail-call optimization — deep recursion will overflow the stack. Python's default recursion limit is 1000 (do not rely on raising it); in Rust, prefer an explicit `Vec`-based stack for tree walks when depth could exceed a few hundred.
 
 **Any user-influenced hierarchy — a SQL parse tree, a nested-type schema, parsed nested input (JSON, etc.) — must enforce a `max_depth` limit or use an explicit `Vec` stack.** A corrupted or malicious input must not be able to overflow the thread stack. Treat unbounded recursion over external data as a denial-of-service vector, not just a style issue.
-
----
-
-## Pre-Flight Checklist — before you start
-
-- [ ] Read [AGENTS.md](../../../AGENTS.md) and follow its "Read first" path (README → STATUS → ARCHITECTURE → DEVELOPMENT → AGENTS.md → docs/testing.md).
-- [ ] Read this skill, then read [task/lessons.md](../../../task/lessons.md) in full (§2).
-- [ ] Read [STATUS.md](../../../STATUS.md) + the unit's ledger (or [task/todo.md](../../../task/todo.md)) to pick up mid-flight work.
-- [ ] Read the `map.md` of every directory your task will touch (Navigation section).
-- [ ] Know your mode (interactive vs. delegated) and how its check-in rule applies.
-- [ ] Asked "what can go wrong with what I build?" for the work ahead — design, implementation, and tests (Risk-First Mindset).
-- [ ] Reasoned through inputs, edge cases, and failure modes per §1.
-- [ ] Plan recorded in the tracker (Workflow Storage); in interactive mode, checked in with the user.
-- [ ] Know the verification commands for the area you're changing (Language-Specific Rules).
-
-When done, run the **§4 Done gate** before declaring complete.
 
 ---
 
