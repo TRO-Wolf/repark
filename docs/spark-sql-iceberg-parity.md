@@ -2298,13 +2298,12 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   Spark's suggestion list byte-exact
   (``[`t`.`id`, `t`.`Data`, `s`.`id`, `s`.`Data`]``). Metadata-table suffixes
   still fold under both settings. Known rendering residues (unit ledger
-  R-CS1-2 … R-CS1-8, all dated 2026-09-27): the single-table guard names
+  R-CS1-2 … R-CS1-7, all dated 2026-09-27): the single-table guard names
   `` `T.id` `` where Spark names `` `T`.`id` ``; ORDER BY scopes list the whole
   table where Spark narrows; join candidates stay bare where Spark qualifies;
   struct fields report DataFusion's text where Spark stamps `FIELD_NOT_FOUND`;
   missing relations report `not found` where Spark stamps
-  `TABLE_OR_VIEW_NOT_FOUND`; function outputs keep DataFusion's qualified name;
-  and temp-view reads still fold (unpinned, awaiting the placement ruling).
+  `TABLE_OR_VIEW_NOT_FOUND`; function outputs keep DataFusion's qualified name.
 - **Apache Spark** — the refusals and answers above. *(oracle: recorded —
   PySpark 4.1.2 + Iceberg 1.11, 2026-09-27, `casesens_1_spark_oracle.json`
   (210 steps) beside the facade pin.)*
@@ -2315,6 +2314,45 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   `crates/repark-common/src/names.rs::tests`. pins: casesens-1/C-005, C-006, C-007, C-008
 - **Rationale** — FIXED; every true-mode refusal is Spark's measured text or
   its head with the candidate set, and the default session is unchanged.
+
+### E-CASE-SENSITIVE-DF — spark.sql.caseSensitive=true is exact on the DataFrame door — **FIXED 2026-09-27 (CASESENS-1)**
+
+- **repark** — under `spark.sql.caseSensitive=true` the DataFrame door binds
+  through the session rule wherever written names reach Rust: `F.col` keeps
+  its written spelling into the binder, so `filter`, `describe`, the window
+  leg and `selectExpr` refuse `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` naming
+  the written spelling (candidate order unreproducible, R12);
+  `join(on=)` refuses Spark's `UNRESOLVED_USING_COLUMN_FOR_JOIN` text
+  byte-exact; `unionByName` refuses Spark's legacy
+  `Cannot resolve column name …` text byte-exact; `drop` of a missing
+  spelling is a no-op; exact-hit selects answer. `describe` with explicit
+  columns resolves one name per call in Rust and labels the output with the
+  written spelling. Temp-view reads match exactly under `true` and fold
+  under `false` (the S2 placement ruling's leg; misses report `not found`).
+  Under `false` every name answers labelled as written. Residues (unit
+  ledger, dated 2026-09-27): the union refusal carries no condition where
+  Spark reports `_LEGACY_ERROR_TEMP_1201` (R-CS1-9, the pin asserts class
+  and exact message); six pre-bound legs (select string / `F.col` /
+  lowercase-data, `orderBy`, `groupBy`, string `filter`) still answer
+  (R-CS1-10, descoped to CASESENS-2 — the facade pre-binds them in
+  `dataframe/core.py` before Rust sees the written name).
+- **Apache Spark** — the refusals and answers above. *(oracle: recorded —
+  PySpark 4.1.2 + Iceberg 1.11, 2026-09-27, `casesens_1_spark_oracle.json`
+  (210 steps) beside the facade pin.)*
+- **Pin** — `python/repark/tests/test_casesens_1.py`
+  (`test_s3_dataframe_door_is_exact_under_case_sensitive`,
+  `test_s3_dataframe_union_refuses_the_missing_name`,
+  `test_s3_default_door_binds_and_names_as_written`,
+  `test_s3_describe_resolves_one_name_per_call`,
+  `test_s3_temp_view_name_is_exact_under_case_sensitive`);
+  `crates/repark-core/src/session/df_guards/case_bind.rs::tests`
+  (`exact_rule_refuses_a_case_only_match`,
+  `ignore_case_rule_is_unchanged`, `frame_functions_follow_the_rule`);
+  `crates/repark-python/src/column/door_parity_tests.rs::column_keeps_the_written_spelling`.
+  pins: casesens-1/C-009, C-010
+- **Rationale** — FIXED; every true-mode refusal is Spark's measured text, its
+  head with the candidate set, or the recorded legacy text, and the default
+  session is unchanged.
 
 ### E-CASE-PARTITION-FIELD — partition sources bind case-sensitively — **FIXED 2026-09-26 (U11-EDGE-1)**
 

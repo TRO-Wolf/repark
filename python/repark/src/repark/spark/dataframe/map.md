@@ -345,6 +345,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   Engine aliases stay unique; the facade overlays Spark-legal display names
   afterwards.
   pins: df-describe-str-1/C-001, perf-describe-1/C-002, perf-unpivot-1/C-008
+  **CASESENS-1 S3 (2026-09-27):** explicit columns resolve through
+  `_native.resolve_frame_names` (one `(written, engine)` pair per name, bound by
+  the session rule in Rust), replacing the display/engine zip.
+  pins: casesens-1/C-010
   `approxQuantile` validates `relativeError` first (non-numeric is a type error, NaN or
   negative is a value error — NaN is not `< 0` in IEEE so it needs an explicit check)
   and treats out-of-range probabilities as value errors, not type errors. DFCORE-5

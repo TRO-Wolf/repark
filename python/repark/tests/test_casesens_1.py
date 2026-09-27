@@ -16,17 +16,28 @@ set (R12), after stripping Spark's ``; line L pos P`` suffix and RePark's
 ``caseSensitive=true`` SQL-door legs: wrong-case references refuse naming the
 written spelling in every scope, exact spellings answer, relation and CTE names
 match exactly, and wrong-case DML refuses leaving the table unchanged.
-``p3/cs_temp_view_upper`` stays unpinned (ledger R-CS1-8, hand-back Q2: the
-temp-home probe folds before planning and no S2 placement for its fix is
-admissible). Candidate comparison strips relation qualification (out of scope
+Candidate comparison strips relation qualification (out of scope
 per the WO); three legs compare against RePark's recorded rendering where it
 differs from Spark's for a registered reason (``p1/cs_order_ID`` and
 ``p3/cs_order_alias`` list the whole scope, ``p3/cs_rel_alias_upper`` names
 `` `T.id` ``), and the ``TABLE_OR_VIEW_NOT_FOUND`` / ``FIELD_NOT_FOUND`` /
 function-naming legs assert the refusal or rows with RePark's recorded text
-(ledger R-CS1-2 … R-CS1-7).
+(ledger R-CS1-2 … R-CS1-7). S3 replays the ``caseSensitive=true``
+DataFrame-door legs where written names reach Rust: ``filter``, ``describe``,
+``join(on=)``, ``unionByName``, ``drop``, exact-hit ``select``, the window
+leg and ``selectExpr`` refuse or answer per the oracle, and the four
+``false`` legs answer named with the written spelling; ``describe`` with
+explicit columns resolves one name per call. The six pre-bound legs (select
+string / ``F.col`` / lowercase-data, ``orderBy``, ``groupBy``, string
+``filter``) stay unpinned (ledger R-CS1-10, descoped to CASESENS-2: the
+facade pre-binds them in ``dataframe/core.py`` before Rust sees the written
+name). The ``unionByName`` pin asserts the class and the byte-exact message
+and records the condition gap (ledger R-CS1-9: Spark reports
+``_LEGACY_ERROR_TEMP_1201``, RePark carries none). S3 also pins
+``p3/cs_temp_view_upper`` (ledger R-CS1-8 closed: the rule-aware probe
+refuses; the exact and ``false`` legs answer).
 
-pins: casesens-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+pins: casesens-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 """
 
 from __future__ import annotations
@@ -39,6 +50,7 @@ from typing import Any
 import pytest
 
 from repark import ReparkSession
+from repark.spark import functions
 
 ORACLE_PATH: Path = Path(__file__).with_name("casesens_1_spark_oracle.json")
 _ORACLE: dict[str, Any] = json.loads(ORACLE_PATH.read_text(encoding="utf-8"))["steps"]
@@ -383,5 +395,134 @@ def test_s2_default_session_unchanged(tmp_path: Path) -> None:
         frame = session.sql("SELECT ID FROM sc.ns.t")
         assert [name for name, _ in frame.dtypes] == ["ID"]
         assert _rows(frame) == [[1], [2]]
+    finally:
+        session.stop()
+
+
+_S3_TRUE_KEYS: tuple[str, ...] = (
+    "p1/cs_df_filter_ID",
+    "p1/cs_df_describe_ID",
+    "p1/cs_df_selectExpr_ID",
+    "p1/cs_df_select_Data",
+    "p1/cs_df_drop_ID",
+    "p1/cs_df_join_on_ID",
+    "p4/df_window_ID_true",
+)
+
+_S3_FALSE_NAME_KEYS: tuple[str, ...] = (
+    "p4/df_col_ID_false",
+    "p4/df_select_str_ID_false",
+    "p4/df_expr_ID_false",
+    "p4/df_window_ID_false",
+)
+
+
+def _run_df(session: ReparkSession, statement: str) -> Any:
+    """Run a recorded dataframe-door lambda against the session (S3)."""
+    namespace: dict[str, Any] = {"S": session, "F": functions, "ENGINE": "repark"}
+    return eval(statement, namespace)()
+
+
+def _assert_df_step(session: ReparkSession, key: str) -> None:
+    """Run one dataframe-door oracle step under its recorded flag (S3)."""
+    step = _ORACLE[key]
+    session.conf.set("spark.sql.caseSensitive", "true" if step["case_sensitive"] else "false")
+    spark = step["spark"]
+    if "error" in spark:
+        try:
+            _run_df(session, step["statement"]).collect()
+        except Exception as error:
+            _assert_error(key, error, spark)
+        else:
+            raise AssertionError(f"{key} answered instead of refusing")
+        return
+    frame = _run_df(session, step["statement"])
+    if spark["cols"]:
+        assert _dtypes(frame) == spark["cols"], key
+        assert _rows(frame) == spark["rows"], key
+    else:
+        frame.collect()
+
+
+def _assert_union_refusal(session: ReparkSession, key: str) -> None:
+    """Run the unionByName leg asserting class and exact message (S3).
+
+    Spark reports condition ``_LEGACY_ERROR_TEMP_1201`` for this legacy text;
+    RePark carries no condition (ledger R-CS1-9), so the pin asserts the class
+    and the byte-exact message and records both conditions.
+    """
+    step = _ORACLE[key]
+    session.conf.set("spark.sql.caseSensitive", "true" if step["case_sensitive"] else "false")
+    spark = step["spark"]
+    try:
+        _run_df(session, step["statement"]).collect()
+    except Exception as error:
+        assert type(error).__name__ == spark["error"], key
+        assert spark.get("getCondition") == "_LEGACY_ERROR_TEMP_1201", key
+        assert _condition(error) is None, key
+        assert _plain_message(str(error)) == _plain_message(spark["msg"]), key
+    else:
+        raise AssertionError(f"{key} answered instead of refusing")
+
+
+@pytest.mark.parametrize("key", list(_S3_TRUE_KEYS))
+def test_s3_dataframe_door_is_exact_under_case_sensitive(key: str, tmp_path: Path) -> None:
+    """Each S3 true-mode dataframe leg replays Spark's answer or refusal."""
+    session = _open(tmp_path)
+    try:
+        if key.startswith("p1/"):
+            _setup_tables(session)
+        else:
+            _setup_tables_plain(session)
+        _assert_df_step(session, key)
+    finally:
+        session.stop()
+
+
+def test_s3_dataframe_union_refuses_the_missing_name(tmp_path: Path) -> None:
+    """unionByName refuses Spark's legacy text with no condition attached."""
+    session = _open(tmp_path)
+    try:
+        _setup_tables(session)
+        _assert_union_refusal(session, "p1/cs_df_unionByName")
+    finally:
+        session.stop()
+
+
+@pytest.mark.parametrize("key", list(_S3_FALSE_NAME_KEYS))
+def test_s3_default_door_binds_and_names_as_written(key: str, tmp_path: Path) -> None:
+    """Each S3 false-mode name leg answers named with the written spelling."""
+    session = _open(tmp_path)
+    try:
+        _setup_tables_plain(session)
+        _assert_df_step(session, key)
+    finally:
+        session.stop()
+
+
+def test_s3_describe_resolves_one_name_per_call(tmp_path: Path) -> None:
+    """Explicit describe columns resolve and label with the written spelling."""
+    struct_session = _open(tmp_path / "struct")
+    try:
+        _setup_tables(struct_session)
+        _assert_df_step(struct_session, "p1/r7_describe_ID")
+    finally:
+        struct_session.stop()
+    plain_session = _open(tmp_path / "plain")
+    try:
+        _setup_tables_plain(plain_session)
+        _assert_df_step(plain_session, "p3/n_df_describe_two")
+    finally:
+        plain_session.stop()
+
+
+def test_s3_temp_view_name_is_exact_under_case_sensitive(tmp_path: Path) -> None:
+    """Temp-view reads match exactly under true and fold under false (S3)."""
+    session = _open(tmp_path)
+    try:
+        _setup_tables_plain(session)
+        _assert_plain_refusal(session, "p3/cs_temp_view_upper")
+        _assert_step(session, "p3/cs_temp_view_exact")
+        _assert_step(session, "p3/temp_view_upper")
     finally:
         session.stop()

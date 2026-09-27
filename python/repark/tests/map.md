@@ -178,8 +178,19 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   assert the refusal or rows with RePark's text) and
   `test_s2_default_session_unchanged` replays the false-mode legs plus the
   `SELECT ID` spelling. Candidate sets strip relation qualification.
-  `p3/cs_temp_view_upper` stays unpinned (R-CS1-8, hand-back Q2).
   pins: casesens-1/C-005, C-006, C-007, C-008
+  **WO CASESENS-1 slice 3 (2026-09-27):**
+  `test_s3_dataframe_door_is_exact_under_case_sensitive` replays the true-mode
+  dataframe legs where written names reach Rust (filter, describe, selectExpr,
+  exact-hit select, drop no-op, join, window) plus
+  `test_s3_dataframe_union_refuses_the_missing_name` (class + exact message,
+  R-CS1-9 condition gap recorded);
+  `test_s3_default_door_binds_and_names_as_written` replays the four false-mode
+  name legs; `test_s3_describe_resolves_one_name_per_call` replays the two
+  explicit-column describe legs; `test_s3_temp_view_name_is_exact_under_case_sensitive`
+  pins `p3/cs_temp_view_upper` (R-CS1-8 closed) with the exact and false legs.
+  The six pre-bound legs stay unpinned (R-CS1-10, CASESENS-2).
+  pins: casesens-1/C-009, C-010
 - [test_ntz_1.py](test_ntz_1.py) + `ntz_1_spark_oracle.json` — **WO NTZ-1 slice 1
   (2026-09-26):** the `TIMESTAMP_NTZ` literal and explicit casts replay Spark's measured
   answers — 29 literal/cast/refusal queries in UTC and New York sessions, the v2/v3

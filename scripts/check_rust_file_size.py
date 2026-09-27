@@ -121,11 +121,6 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "PyO3 Column methods remain grouped in one binding module.",
         "Extract the remaining date or window method family.",
     ),
-    "crates/repark-python/src/dataframe.rs": (
-        1005,
-        "PyO3 DataFrame methods share one binding surface.",
-        "Split action methods from plan-building methods without moving row work to Python.",
-    ),
     "crates/repark-python/src/session.rs": (
         1122,
         "PyO3 session construction and query entry points share one module.",

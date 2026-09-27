@@ -1,5 +1,7 @@
 # map — scripts/
 
+WO CASESENS-1 S3 (2026-09-27): `check_rust_file_size.py` retires the `repark-python/src/dataframe.rs` row (1005 → 976, under the default; the case-bind helpers moved to `dataframe_names.rs`). pins: casesens-1/C-009
+
 WO CATALOG-1 (2026-09-26): `check_rust_file_size.py` retires the `catalog_config.rs` row (1006 → 965, under the default) and ratchets `session/tests/session.rs` 1407 → 1406, shrink-only. pins: catalog-1/C-006
 
 WO U9-TYPES-1 round-1 fixer (2026-09-26): `check_rust_file_size.py` ratchets `repark-iceberg/src/write/merge/mod.rs` 1628 → 1622 (the MERGE batch cast became one `convert_uuid_column` call), shrink-only. pins: u9-types-1/C-013

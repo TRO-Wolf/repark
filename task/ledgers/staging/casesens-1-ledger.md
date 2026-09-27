@@ -157,10 +157,10 @@ refuses naming `ID` (Spark's text byte-exact).
 | C-004 | A MERGE whose derived source or clauses spell columns in another case answers as Spark: `p1/r30_merge_derived`, `r30_merge_upper_set` (tables after each as recorded), and UPDATE / DELETE / INSERT column lists spelled in another case answer (`dml_*`). | Rust door pins plus the facade merge replay assert the tables after each statement; M2 breaks the fold. | PROVEN | `casesens_scopes.rs` `merge_with_a_derived_source_spelled_in_another_case` is the red-on-main proof (baseline fails `No field named data`); `dml_spelled_in_another_case_answers` stays as a regression pin and is not cited as red-on-main evidence; `test_casesens_1.py` `test_s1_merge_derived_source`; M2. Probe `r30_after` / `dml_after` still differ downstream of S2 scope: the `true`-mode `cs_*` DML steps mutate `u` on RePark (C-008) while Spark refuses them, so the probe's `u` is `(1,m)` at `r30` time; the hermetic pins assert Spark's recorded tables. |
 | C-005 | Under `caseSensitive=true` a reference whose exact spelling is not held refuses `UNRESOLVED_COLUMN.WITH_SUGGESTION` (42703) naming the reference as written, qualified as written, in every scope (select list, join condition, derived table, CTE, WHERE, ORDER BY, GROUP BY, alias, backticks), and a wrong-case struct field refuses (`p1/cs_struct_A`: Spark `FIELD_NOT_FOUND` 42704). | Slice 2. | PROVEN | `casesens_true.rs` `wrong_case_refuses_in_every_scope_under_case_sensitive` (11 legs + struct; join legs name `` `a`.`ID` `` per R3; M3 red) + `test_casesens_1.py` `test_s2_sql_door_is_exact_under_case_sensitive`. Rendering residues where RePark's text differs from Spark's for a registered reason: R-CS1-2 (`cs_order_ID` whole-table list), R-CS1-3 (`` `T.id` `` vs `` `T`.`id` ``), R-CS1-4 (`cs_struct_A` raw text vs `FIELD_NOT_FOUND`), R-CS1-5 (`cs_order_alias` wide list); join candidates stay bare (WO out of scope). |
 | C-006 | Under `caseSensitive=true` an exact mixed-case spelling answers and is named as written (`p1/cs_sel_Data`, `p3/cs_backtick_Data`, `cs_temp_view_exact`, `p1/cs_tw_ID_id`, `cs_tw_lit_ref`, `p3/cs_star`, `cs_func_upper`), and function names stay case-insensitive. | Slice 2. | PROVEN | `casesens_true.rs` `exact_mixed_case_answers_under_case_sensitive` (7 legs; star + exact-insert legs read the struct-less table; M3 red on a fold) + the facade S2 legs. `cs_func_upper` binds exactly with Spark's rows; its output name keeps DataFusion's qualification (R-CS1-6, OD-1 expression-naming follow-up). Unquoted exact `userId` answers (the ID-1 declared refusal is overturned; `tests.rs` leg rewritten, MC-SEL-01/MC-UPD-01/MC-MRG-01 flipped to the recorded `true` oracle rows — see Tests rewritten). |
-| C-007 | Under `caseSensitive=true` relation aliases, CTE names and temp-view names match exactly (`p1/cs_table_T`, `cs_ns_NS`, `p3/cs_cte_name`, `cs_temp_view_upper`, `cs_rel_alias_upper` refuse); under `false` they fold (`p3/rel_alias_upper`, `cte_name_upper`, `temp_view_upper` answer); metadata-table suffixes fold under both (`p4/mt_upper_true`, `mt_upper_false`). | Slice 2. | OPEN (partial: temp-view-name leg blocked on hand-back Q2) | Proven: `casesens_true.rs` `relation_cte_and_view_names_match_exactly_under_case_sensitive` + `default_session_keeps_folding` + `metadata_table_names_ignore_case_under_both_settings` and the facade S2 legs — relation aliases, CTE names, false-mode folding and both metadata suffixes behave per the clause (relation misses report unstamped `not found`, R-CS1-7). Blocked: `p3/cs_temp_view_upper` still answers (the temp-home probe folds before planning; R-CS1-8, hand-back Q2); it stays unpinned in the facade while the Rust planner-level leg refuses. |
+| C-007 | Under `caseSensitive=true` relation aliases, CTE names and temp-view names match exactly (`p1/cs_table_T`, `cs_ns_NS`, `p3/cs_cte_name`, `cs_temp_view_upper`, `cs_rel_alias_upper` refuse); under `false` they fold (`p3/rel_alias_upper`, `cte_name_upper`, `temp_view_upper` answer); metadata-table suffixes fold under both (`p4/mt_upper_true`, `mt_upper_false`). | Slice 2. | PROVEN | S2 proved every leg except the temp-view-name read; S3 lands it (Q2): `resolve_temp_view_home_ref_exact` + the `temp_view_names` door module refuse `SELECT * FROM TV` over registered `tv` under `true` (unstamped `not found`, R-CS1-7 class; R-CS1-8 closed), while `tv` under `true` and `TV` under `false` answer. Pinned by the facade S3 temp-view legs. |
 | C-008 | Under `caseSensitive=true` INSERT column lists, UPDATE, DELETE and MERGE fragments with a wrong-case column refuse and leave the table unchanged (`p1/cs_insert_cols`, `cs_update_where`, `cs_delete_where`, `cs_merge_on` with Spark's full text); the exact column list answers (`p4/ins_exact_true`). | Slice 2. | PROVEN | `casesens_true.rs` `dml_wrong_case_refuses_and_leaves_the_table_under_case_sensitive` (INSERT/UPDATE/DELETE byte-exact, MERGE R6 byte-exact, `u` snapshotted unchanged after each, exact INSERT answers) + the facade S2 DML legs with the same unchanged checks. UPDATE/DELETE refuse through the new identity-DML exact check (the WO's "statement path" does not cover them). |
-| C-009 | Under `caseSensitive=true` the DataFrame door's `F.col`, string names, `filter`, `orderBy`, `groupBy`, `selectExpr`, string `filter`, `describe`, `join(on=)`, `unionByName` and `drop` resolve exactly with Spark's measured refusal texts (`p1/cs_df_*` listed in S3, `p4/df_window_ID_true`); under `false` `F.col("ID")`, `select("ID")`, `F.col("ID") + 1` and a window ordered by `F.col("ID")` answer and are named as written (`p4/df_col_ID_false`, `df_select_str_ID_false`, `df_expr_ID_false`, `df_window_ID_false`). | Slice 3. | OPEN | Slice 3. |
-| C-010 | `describe` / `summary` columns bind by the session rule in Rust and name the output with the written spelling (`p1/r7_describe_ID`, `p3/n_df_describe_two`). | Slice 3. | OPEN | Slice 3. |
+| C-009 | Under `caseSensitive=true` the DataFrame door's `F.col`, string names, `filter`, `orderBy`, `groupBy`, `selectExpr`, string `filter`, `describe`, `join(on=)`, `unionByName` and `drop` resolve exactly with Spark's measured refusal texts (`p1/cs_df_*` listed in S3, `p4/df_window_ID_true`); under `false` `F.col("ID")`, `select("ID")`, `F.col("ID") + 1` and a window ordered by `F.col("ID")` answer and are named as written (`p4/df_col_ID_false`, `df_select_str_ID_false`, `df_expr_ID_false`, `df_window_ID_false`). | Slice 3. | PROVEN-partial | S3 proves: `filter(F.col)` (`cs_df_filter_ID`, R12-only), `describe` (`cs_df_describe_ID`, R12-only), `join(on=)` (`cs_df_join_on_ID`, byte-exact), `unionByName` (`cs_df_unionByName`, message byte-exact, R-CS1-9), `drop` no-op (`cs_df_drop_ID`), exact-hit select (`cs_df_select_Data`), window (`df_window_ID_true`), `selectExpr` (R12-only, via the SQL door), and all four `false` name legs. Descoped to CASESENS-2 per the S3 ruling (R-CS1-10, unpinned): select string, select `F.col`, select lowercase-data, `orderBy`, `groupBy`, string `filter`. |
+| C-010 | `describe` / `summary` columns bind by the session rule in Rust and name the output with the written spelling (`p1/r7_describe_ID`, `p3/n_df_describe_two`). | Slice 3. | PROVEN | S3 (R8): explicit columns resolve through `resolve_frame_names` — `r7_describe_ID` and `n_df_describe_two` answer with written-spelling labels under `false`, `cs_df_describe_ID` refuses `UNRESOLVED_COLUMN.WITH_SUGGESTION` under `true` (R12-only). Pinned by the facade S3 describe legs. |
 | C-011 | Under `caseSensitive=false` case-twin outputs answer with both spellings (`p1/tw_ID_id`, `tw_Id_ID`, `tw_star_ID`, `tw_lit`, `p3/tw_subq_star`); a reference into the twins refuses `AMBIGUOUS_REFERENCE` (42704) (`p1/tw_lit_ref`); exact duplicates keep ID-3's refusal. | Slice 4. | OPEN | Slice 4. |
 | C-012 | Under `caseSensitive=false` `CREATE TABLE`, CTAS, `CREATE VIEW` and `CREATE TEMPORARY VIEW` with case-twin columns refuse `[COLUMN_ALREADY_EXISTS] The column `a` already exists. Choose another name or rename the existing column. SQLSTATE: 42711` and create nothing (`p1/tw_ctas`, `tw_create`, `p3/tw_view`, `tw_temp_view`, `tw_temp_view_read`); a positional INSERT from twins answers (`p3/tw_insert_into_run`, `tw_insert_after`). | Slice 4. | OPEN | Slice 4. Baseline note: `tw_create` already refuses on main (`Cannot build lower case index: a and A collide`). |
 | C-013 | Partition field names bind exactly under both settings: `DROP` / `REPLACE PARTITION FIELD` by a name that differs in case refuses `Cannot find partition field to remove: <written>` with the spec unchanged (`p2/pt_drop_CAT_present`, `pt_replace_CAT_by_name`, `pt_drop_named_lower`), and the exact name answers (`pt_drop_cat_present`). | Slice 5. | OPEN | Slice 5. |
@@ -226,4 +226,85 @@ Spark answers unquoted exact-case under `true`):
 | R-CS1-5 | **OPEN 2026-09-27** (S2): `p3/cs_order_alias` (`SELECT id AS X FROM t ORDER BY x` under `true`): Spark narrows the candidates to the output (``[`X`]``); DataFusion reports the output plus the inputs, so RePark lists ``[`X`, `id`, `Data`]`` (``[`X`, `id`, `Data`, `s`]`` over the struct table). Class, condition, SQLSTATE, head and written name match. Home: UNRESOLVED-TEXT. |
 | R-CS1-6 | **OPEN 2026-09-27** (S2): `p3/cs_func_upper` binds exactly with Spark's rows but names the output `upper(sc.ns.t.Data)` (DataFusion's qualified rendering, pre-existing under `false` too) where Spark names it `upper(Data)`. The pin asserts rows plus RePark's name. Home: the OD-1 expression-naming follow-up. |
 | R-CS1-7 | **OPEN 2026-09-27** (S2): `p1/cs_table_T`, `cs_ns_NS`, `p3/cs_cte_name` (and the planner-level `TV` read): Spark stamps `[TABLE_OR_VIEW_NOT_FOUND]` (42P01); RePark refuses with DataFusion's raw `table '…' not found` (CTE/temp names surface as `table 'datafusion.public.<name>' not found`). The refusal is pinned; both texts recorded per the WO's relation-name recipe. Home: UNRESOLVED-TEXT. |
-| R-CS1-8 | **OPEN 2026-09-27** (S2, blocked on hand-back Q2): `p3/cs_temp_view_upper` (`SELECT * FROM TV` over registered `tv`, under `true`) answers where Spark refuses `TABLE_OR_VIEW_NOT_FOUND`: the temp-home probe (`temp_view_ref_from_segment`) folds the name before planning, so normalization-off never sees `TV`. Before S2 it refused spuriously on the view body (`UNRESOLVED `data`` — the body `SELECT id, Data` folded under normalization-on); S2 fixed the body binding, the name still folds. Every fix placement breaks a hard rule (Python facade unnamed by S2; `repark-python` is S3's crate and `session.rs` sits exactly at its ceiling; `repark-core` cannot read the flag). Unpinned in the facade; the Rust planner-level leg (via `ctx.register_table`) refuses. |
+| R-CS1-8 | **CLOSED 2026-09-27** (S3 lands the S2-Q2 leg): `p3/cs_temp_view_upper` now refuses `table 'spark_catalog.default.TV' not found` (R-CS1-7 class: unstamped, the refusal itself is pinned). The rule-aware probe (`resolve_temp_view_home_ref_exact` + `temp_view_names`) resolves exactly under `true` and folds under `false`. Prior record: the temp-home probe folded the name before planning, so normalization-off never saw `TV`; unpinned in the facade while the Rust planner-level leg refused. |
+| R-CS1-9 | **OPEN 2026-09-27** (S3, needs an orchestrator ruling — see S3 halt note): `p1/cs_df_unionByName` refuses with the byte-exact Spark message (`Cannot resolve column name "ID" among (id).`) but RePark surfaces condition `None` where Spark reports `_LEGACY_ERROR_TEMP_1201` (Spark's internal fallback id for legacy errors). Minting that id would corrupt the byte-exact message, so per R14 the pin (when written) asserts type + message only. Home: UNRESOLVED-TEXT. |
+| R-CS1-10 | **OPEN 2026-09-27** (S3 ruling: six C-009 legs descoped to CASESENS-2, unpinned): the facade pre-binds bare names in `dataframe/core.py` before Rust sees the written spelling, so under `true` RePark answers where Spark refuses `UNRESOLVED_COLUMN.WITH_SUGGESTION` (42703). `cs_df_select_ID`: Spark refuses naming `` `ID` `` ([`` `s` ``, `` `id` ``, `` `Data` ``]); RePark answers cols `[[ID, int]]` rows `[[1], [2]]`. `cs_df_select_col_ID`: same on both sides. `cs_df_select_data`: Spark refuses naming `` `data` `` ([`` `Data` ``, `` `id` ``, `` `s` ``]); RePark answers `[[data, string]]` `[[a], [b]]`. `cs_df_orderBy_ID`: Spark refuses naming `` `ID` ``; RePark answers `[[id, int]]` `[[1], [2]]`. `cs_df_groupBy_ID`: Spark refuses naming `` `ID` ``; RePark answers `[[ID, int], [count, bigint]]` `[[1, 1], [2, 1]]`. `cs_df_filter_str_ID`: Spark refuses naming `` `ID` ``; RePark answers `[[id, int]]` `[[2]]`. Home: CASESENS-2 (DataFrame-door names move to Rust; OD-1), 2026-09-27. |
+
+## S3 round (2026-09-27, lane `xs-cs1`, landed per the S3 rulings)
+
+- S3-1: re-ran `cs_probe1/4.py repark` before editing. No `cs_df_*` key went exact
+  via S2 except the exact-hit `cs_df_select_Data` (EQUAL already); the WO's
+  "may already be exact" hypothesis is false for the df door (df plans do not
+  lower through `plan_with_repair`), except `cs_df_selectExpr_ID`, which lowers
+  through the SQL door and already refuses with an R12-only candidate-order
+  DIFF. Answer shapes at baseline: `withColumn`/`drop`/`renamed` fold,
+  `join`/`unionByName` answer.
+- Landed in the worktree (verified, uncommitted): R7 `written_column` +
+  `PyColumn::column` (net-zero in `column/mod.rs`, stays 1012);
+  `bind_names(expr, schema, rule)` + `resolve_bound_expr_with` +
+  rule params on drop/join/union + `resolve_written_names`;
+  `frame_rule`/`bound_column`/`bound_projection`/`filter_frame_with_sql`/
+  `join_on_keys`/`union_frames`/`resolve_frame_names` in `dataframe_names.rs`;
+  `dataframe.rs` delegates (976, exception row retired);
+  `UNRESOLVED_USING_COLUMN_FOR_JOIN` condition (43 conditions);
+  Q2 `resolve_temp_view_home_ref_exact` + new `temp_view_names` module +
+  one-line facade probe swaps; R8 `statistics.py` explicit columns via
+  `resolve_frame_names`.
+- Verified: `repark-core --lib` 832 passed; `repark-python --lib` 82 passed;
+  `repark-common` 31 passed; `cross_door` 23 passed (ANSI unchanged);
+  facade `test_casesens_1` + describe + filter-rewrite 121 passed, temp views
+  244 passed, df-path sweep 170 passed — zero existing pins changed.
+  Clippy (gate flags), fmt, `check_rust_file_size`, `check_lib_rs` (190,
+  net-zero via two import compressions), `check_lib_py`, DAG (no new edge),
+  panic-ban, docstring-presence, conventions, docs-links all green.
+  M5 reddens `exact_rule_refuses_a_case_only_match`; M5b (frame fns ignore
+  the rule) reddens `frame_functions_follow_the_rule`; M6 reddens
+  `column_keeps_the_written_spelling`. All mutations reverted (verified).
+- Changed-key audit S2→S3 (halt rule 2 SATISFIED): 9 keys changed, all `true`
+  keys or named S3 describe legs — `cs_df_filter_ID`, `cs_df_describe_ID`,
+  `cs_df_join_on_ID` (USING text byte-exact), `cs_df_drop_ID` (no-op),
+  `r7_describe_ID` + `n_df_describe_two` (answer), `cs_df_unionByName`
+  (legacy text byte-exact, R-CS1-9), `df_window_ID_true` (refuses),
+  `cs_temp_view_upper` (Q2: refuses `table 'spark_catalog.default.TV'
+  not found`, R-CS1-7 class; `cs_temp_view_exact` and the `false` leg answer).
+  `cs_df_filter_ID`/`cs_df_describe_ID`/`cs_df_selectExpr_ID` are R12-only
+  DIFFs (order unreproducible).
+- S3 ruling Q1 (was a halt-rule-3 contradiction): six C-009 legs —
+  `cs_df_select_ID`, `cs_df_select_col_ID`, `cs_df_select_data`,
+  `cs_df_orderBy_ID`, `cs_df_groupBy_ID`, `cs_df_filter_str_ID` — still answer.
+  The facade pre-binds them case-insensitively in `dataframe/core.py`
+  (`_resolve_getitem_column_name`, `_bind_schema_column`,
+  `_rebind_stable_name_column`, `_quote_filter_idents_in_fragment`) before
+  Rust sees the written name; the rebound `Alias(Column{engine}, written)` is
+  byte-identical to a user alias, so no Rust step can recover the written
+  spelling. The WO requires these legs (C-009 + S3 pins) yet forbids touching
+  `core.py` (3973, "untouched") and defers its matcher family to CASESENS-2
+  (OD-1). Proof the native side is ready: user-backticked
+  `filter("`ID` > 1")` (quoter passes it through) refuses with the exact Spark
+  text. Ruling (2026-09-27): Q1 descopes the six legs to CASESENS-2
+  (R-CS1-10, unpinned; C-009 PROVEN-partial); Q2 accepts R-CS1-9 as a dated
+  text-only residue (pin asserts class + exact message). M6 bites only through
+  the Rust spelling pin: the WO's facade tripwire premise does not hold in
+  this tree (pre-binding names as-written with or without the fold).
+- Adaptations recorded: (1) Q1's composition reaches `repark-python` as
+  `repark_core::frame_names::NameRule` (a `pub use` in `case_bind.rs`;
+  `repark-common` is dev-only there, so the literal path does not resolve —
+  no new edge, no Cargo change). (2) `resolve_bound_expr_with` is re-exported
+  through `frame_names`, not `repark_core::` root (`session.rs` sits exactly
+  at 1000 and `lib.rs` is untouched). (3) `bind_projection_expr` takes the
+  rule (the WO's "two frame-function calls" omits the select path, which
+  cannot refuse without it). (4) The join keep-one-key projection dedupes by
+  matched-key spelling instead of lowercased field names (equivalent under
+  `IgnoreCase`, exact under `Exact`; removes the old `to_ascii_lowercase`
+  rather than adding a comparison). (5) `filter_sql` parses with a
+  normalization-off cloned state under `Exact` and routes a `FieldNotFound`
+  miss through `resolve_bound_expr_with` for the Spark refusal (a folded
+  parse cannot be rebound — the written spelling is already lost).
+  (6) `cs_df_select_data` (lowercase `data`) belongs in the S3 facade pin
+  though the WO's pin list omits it.
+- Observed, out of scope: `cs_df_getitem_ID`, `cs_df_withColumn_ID`,
+  `cs_df_renamed_ID`, `df_fillna_true`, `df_dropDuplicates_true`,
+  `r7_selfjoin` unchanged (still diverge as before); temp-view
+  REGISTRATION still folds unquoted names under `true` (unmeasured —
+  `SELECT * FROM TV` over a view registered as quoted `"TV"` would refuse
+  where Spark answers; no probe covers it).

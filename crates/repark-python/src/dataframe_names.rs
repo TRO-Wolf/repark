@@ -1,10 +1,15 @@
+use datafusion::dataframe::DataFrame;
+use datafusion::logical_expr::{Expr, JoinType};
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
 use crate::column::PyColumn;
+use crate::column::expr_build::{parse_canonical_predicate, parse_canonical_predicate_exact};
 use crate::dataframe::PyDataFrame;
 use crate::datafusion_to_py_err;
 use crate::fence::fenced;
+use repark_core::frame_names::NameRule;
+use repark_functions::case_sensitive::spark_case_sensitive_from_options;
 
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(attribute_column, module)?)?;
@@ -13,7 +18,82 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(drop_frame_columns, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_join_condition, module)?)?;
     module.add_function(wrap_pyfunction!(requalify_join_sides, module)?)?;
+    module.add_function(wrap_pyfunction!(resolve_frame_names, module)?)?;
     Ok(())
+}
+
+pub(crate) fn frame_rule(frame: &DataFrame) -> NameRule {
+    NameRule::from_case_sensitive(spark_case_sensitive_from_options(
+        frame.task_ctx().session_config().options(),
+    ))
+}
+
+pub(crate) fn bound_column(frame: &DataFrame, column: &PyColumn) -> PyResult<Expr> {
+    column
+        .expr()
+        .resolve_lambda_variables(frame.schema())
+        .and_then(|expr| {
+            repark_core::frame_names::resolve_bound_expr_with(
+                expr.data,
+                frame.schema(),
+                frame_rule(frame),
+            )
+        })
+        .map_err(datafusion_to_py_err)
+}
+
+pub(crate) fn bound_projection(frame: &DataFrame, column: &PyColumn) -> PyResult<Expr> {
+    column
+        .expr()
+        .resolve_lambda_variables(frame.schema())
+        .and_then(|expr| {
+            repark_core::frame_names::bind_projection_expr(
+                expr.data,
+                frame.schema(),
+                frame_rule(frame),
+            )
+        })
+        .map_err(datafusion_to_py_err)
+}
+
+pub(crate) fn filter_frame_with_sql(frame: &DataFrame, predicate: &str) -> PyResult<DataFrame> {
+    repark_spark::refuse_sql_fragment(predicate).map_err(datafusion_to_py_err)?;
+    let parsed = match frame_rule(frame) {
+        NameRule::Exact => parse_canonical_predicate_exact(frame, predicate),
+        NameRule::IgnoreCase => parse_canonical_predicate(frame, predicate),
+    }
+    .map_err(|error| crate::unknown_routine_to_py_err(predicate, error))?;
+    frame.clone().filter(parsed).map_err(datafusion_to_py_err)
+}
+
+pub(crate) fn join_on_keys(
+    left: &DataFrame,
+    right: &DataFrame,
+    on: &[String],
+    join_type: JoinType,
+) -> PyResult<DataFrame> {
+    repark_core::frame_names::join_on_named_keys(
+        left.clone(),
+        right.clone(),
+        on,
+        join_type,
+        frame_rule(left),
+    )
+    .map_err(datafusion_to_py_err)
+}
+
+pub(crate) fn union_frames(
+    left: &DataFrame,
+    right: &DataFrame,
+    allow_missing: bool,
+) -> PyResult<DataFrame> {
+    repark_core::frame_names::union_by_folded_name(
+        left.clone(),
+        right.clone(),
+        allow_missing,
+        frame_rule(left),
+    )
+    .map_err(datafusion_to_py_err)
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -55,6 +135,7 @@ fn drop_frame_columns(
             &names,
             &references,
             &attributes,
+            frame_rule(frame.inner()),
         )
         .map_err(datafusion_to_py_err)?;
         Ok(PyDataFrame::new(df, frame.runtime_handle()))
@@ -90,5 +171,18 @@ fn requalify_join_sides(
         let df = repark_core::frame_names::requalify_join_sides(joined.inner().clone(), &sides)
             .map_err(datafusion_to_py_err)?;
         Ok(PyDataFrame::new(df, joined.runtime_handle()))
+    })
+}
+
+#[allow(clippy::missing_errors_doc)]
+#[pyfunction]
+fn resolve_frame_names(frame: &PyDataFrame, names: Vec<String>) -> PyResult<Vec<(String, String)>> {
+    fenced!("dataframe_names.resolve_frame_names", {
+        repark_core::frame_names::resolve_written_names(
+            frame.inner().schema(),
+            &names,
+            frame_rule(frame.inner()),
+        )
+        .map_err(datafusion_to_py_err)
     })
 }

@@ -39,6 +39,7 @@ def _summary(
             f"summary statistics not supported yet: {bad} "
             f"(supported: {sorted(supported)}; percentiles are an engine gap)"
         )
+    from repark import _native
     from repark.errors import PySparkValueError
     from repark.spark.types import (
         ByteType,
@@ -51,14 +52,9 @@ def _summary(
         StringType,
     )
 
+    plan = frame._plan()
     if _columns:
-        target_pairs: list[tuple[str, str]] = [(name, name) for name in _columns]
-        if frame._display_names is not None and frame._engine_names is not None:
-            target_pairs = []
-            want = set(_columns)
-            for display, engine in zip(frame._display_names, frame._engine_names, strict=True):
-                if display in want:
-                    target_pairs.append((display, engine))
+        target_pairs: list[tuple[str, str]] = _native.resolve_frame_names(plan, list(_columns))
     elif frame._display_names is not None and frame._engine_names is not None:
         target_pairs = list(zip(frame._display_names, frame._engine_names, strict=True))
     else:
@@ -98,7 +94,6 @@ def _summary(
         ]
     if not target_pairs:
         raise AnalysisException("summary/describe on a zero-column frame is undefined")
-    from repark import _native
     from repark.spark import functions as spark_functions
     from repark.spark.column import Column
 
@@ -110,7 +105,6 @@ def _summary(
         "max": spark_functions.max,
     }
     needed = list(dict.fromkeys(stats))
-    plan = frame._plan()
     cell_position: dict[tuple[int, str], int] = {}
     chunk_plans: list[Any] = []
     position = 0

@@ -410,6 +410,9 @@ First checks: `cargo test -p repark-core session`. Escalate to: [../map.md#debug
 `resolve_temp_view_home_ref`, the two lookups the Python facade uses so a product read path never
 emits a BARE reference for a session-local view (a bare one is re-resolved against the LIVE
 `datafusion.catalog.default_catalog`). Both go through `assert_home_intact` first.
+**CASESENS-1 S3 (2026-09-27):** plus `resolve_temp_view_home_ref_exact` (no fold; the
+rule-aware door probe calls it under `caseSensitive=true`), sharing the existence check
+through `home_ref_if_exists`. pins: casesens-1/C-007
 
 **ICE-TT-RESOLVE-1 (2026-09-19):** the reader-options path resolves through the shared
 `time_travel::resolve_reader_spec` with the session zone; the production write path builds

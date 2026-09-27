@@ -138,6 +138,34 @@ fn facade_udf(name: &str, arity: usize) -> Option<Arc<ScalarUDF>> {
 }
 
 #[test]
+fn column_keeps_the_written_spelling() {
+    let bare = super::expr_build::written_column("ID");
+    let Expr::Column(column) = bare else {
+        panic!("written_column must build a column reference");
+    };
+    assert!(column.relation.is_none());
+    assert_eq!(column.name, "ID");
+    let qualified = super::expr_build::written_column("t.ID");
+    let Expr::Column(column) = qualified else {
+        panic!("written_column must build a column reference");
+    };
+    assert_eq!(
+        column
+            .relation
+            .map(|relation| relation.to_string())
+            .as_deref(),
+        Some("t")
+    );
+    assert_eq!(column.name, "ID");
+    let dotted = super::expr_build::written_column("`a.b`");
+    let Expr::Column(column) = dotted else {
+        panic!("written_column must build a column reference");
+    };
+    assert!(column.relation.is_none());
+    assert_eq!(column.name, "a.b");
+}
+
+#[test]
 fn every_scalar_spelling_resolves_the_same_kernel_on_both_doors() {
     let ctx = registered_session();
     let mut disagreements = Vec::new();

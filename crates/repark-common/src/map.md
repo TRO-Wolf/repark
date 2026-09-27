@@ -39,6 +39,9 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   `VIEW_EXCEED_MAX_NESTED_DEPTH` (54K00) — with
   byte-exact unit pins; `template()` carries `#[allow(clippy::too_many_lines)]` as a lookup
   table. pins: ice-views-1/C-018
+  **CASESENS-1 S3 (2026-09-27):** the `UNRESOLVED_USING_COLUMN_FOR_JOIN` row
+  (42703), measured on live Spark (`USING column … on the left side …`), with
+  catalogue + template-param pins (43 conditions). pins: casesens-1/C-009
 
 - `names.rs` — **WO CASESENS-1 slice 2 (2026-09-27):** the one
   name-matching rule every binder calls. `NameRule { Exact, IgnoreCase }`

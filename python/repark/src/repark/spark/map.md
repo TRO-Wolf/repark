@@ -101,6 +101,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - `_temp_views.py` — temporary-view ownership and cleanup helpers.
   **FNP-4B (2026-09-15):** `local_view_name` also strips backtick quoting (handles are
   backticked since the D-2 quoter move). pins: fnp-4b/C-008
+  **CASESENS-1 S3 (2026-09-27):** `home_view_ref` probes through
+  `_native.resolve_temp_view_home_ref_for_session` (exact under `true`, folded
+  under `false`). pins: casesens-1/C-007
 - `_pyarrow.py` — **FACADE-1 (2026-09-12):** `require_pyarrow()` imports pyarrow or raises
   `ImportError` naming `repark[pyarrow]`. Package import does not load pyarrow.
   pins: facade-1/C-002
