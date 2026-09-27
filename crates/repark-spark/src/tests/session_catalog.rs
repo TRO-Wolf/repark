@@ -223,6 +223,9 @@ async fn a_bare_memory_type_refuses_every_first_use_with_sparks_text() {
         "SHOW TABLES IN c_mem",
         "CREATE NAMESPACE IF NOT EXISTS c_mem.n1",
         "SELECT * FROM c_mem.n1.t",
+        "SELECT * FROM c_mem.t",
+        "INSERT INTO c_mem.t VALUES (1)",
+        "DESCRIBE c_mem.t",
     ] {
         let error = refusal(&session, sql).await;
         assert_eq!(
@@ -232,6 +235,37 @@ async fn a_bare_memory_type_refuses_every_first_use_with_sparks_text() {
         );
         assert_eq!(error.to_string(), "Unknown catalog type: memory", "{sql}");
     }
+    assert_eq!(
+        current(&session),
+        ("spark_catalog".to_string(), "default".to_string())
+    );
+}
+
+#[tokio::test]
+async fn a_two_part_alias_on_the_default_catalog_still_plans_beside_a_refusal() {
+    let wh = TempDir::new().unwrap();
+    let mem_wh = format!("{}/c_mem", wh.path().to_str().unwrap());
+    let session = harness_session(
+        &wh,
+        &[
+            (
+                "spark.sql.catalog.c_mem",
+                "org.apache.iceberg.spark.SparkCatalog",
+            ),
+            ("spark.sql.catalog.c_mem.type", "memory"),
+            ("spark.sql.catalog.c_mem.warehouse", mem_wh.as_str()),
+        ],
+    )
+    .await;
+    rows(
+        &session,
+        "CREATE TABLE spark_catalog.default.t (x INT) USING iceberg",
+    )
+    .await;
+    assert_eq!(
+        rows(&session, "SELECT s.x FROM spark_catalog.default.t s").await,
+        Vec::<Vec<String>>::new()
+    );
     assert_eq!(
         current(&session),
         ("spark_catalog".to_string(), "default".to_string())

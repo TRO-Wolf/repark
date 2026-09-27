@@ -85,7 +85,6 @@ fn names_refused_operand(tokens: &[Token], index: usize, show: bool) -> bool {
     }
     matches!(tokens.get(index + 1), Some(Token::Period))
         && matches!(tokens.get(index + 2), Some(Token::Word(_)))
-        && matches!(tokens.get(index + 3), Some(Token::Period))
         && !matches!(previous, Some(Token::Period))
 }
 
