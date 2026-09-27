@@ -4,7 +4,8 @@ Every expected text is Spark 4.1.2 + Iceberg 1.11, measured 2026-09-26 (probes u
 ``target/probe-catalog-1/``). The harness-shaped session configures ``hc`` through the builder
 and registers ``sc`` after build, as the scoreboard's RePark leg does.
 
-pins: catalog-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+pins: catalog-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
+    C-012
 """
 
 from __future__ import annotations
@@ -330,6 +331,25 @@ def test_type_memory_cell_refuses_at_first_use(spark: ReparkSession, tmp_path: P
     assert _current(spark) == [["spark_catalog", "default"]]
     assert spark.catalog.currentCatalog() == "spark_catalog"
     assert sorted(d.name for d in spark.catalog.listDatabases()) == ["default"]
+
+
+def test_database_exists_on_a_refused_catalog_raises_like_spark(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """``databaseExists("c_mem.n1")`` raises Spark's exact refusal, current catalog unchanged.
+
+    pins: catalog-1/C-012
+    """
+    spark.conf.set("spark.sql.catalog.c_mem", "org.apache.iceberg.spark.SparkCatalog")
+    spark.conf.set("spark.sql.catalog.c_mem.type", "memory")
+    spark.conf.set("spark.sql.catalog.c_mem.warehouse", str(tmp_path / "c_mem"))
+    with pytest.raises(UnsupportedOperationException) as caught:
+        spark.catalog.databaseExists("c_mem.n1")
+    assert str(caught.value) == "Unknown catalog type: memory"
+    assert caught.value.getCondition() is None
+    assert caught.value.getSqlState() is None
+    assert _current(spark) == [["spark_catalog", "default"]]
+    assert spark.catalog.currentCatalog() == "spark_catalog"
 
 
 def test_type_memory_on_the_builder_door_builds_and_refuses_at_first_use(

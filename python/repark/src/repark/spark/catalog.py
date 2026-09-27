@@ -386,6 +386,8 @@ class Catalog:
             return False
         try:
             return self._namespace_exists(catalog, name)
+        except (UnsupportedOperationException, IllegalArgumentException):
+            raise
         except Exception:
             return False
 
@@ -805,6 +807,8 @@ class Catalog:
     def _namespace_exists(self, catalog: str, namespace: str) -> bool:
         try:
             table = self._session.sql(f"SHOW NAMESPACES IN {_quote_ident(catalog)}").to_arrow()
+        except (UnsupportedOperationException, IllegalArgumentException):
+            raise
         except Exception:
             return False
         for row in table.to_pylist():
