@@ -287,7 +287,8 @@ so they still exercise the thing they were written for:
 - `crates/repark-spark/src/tests/delete_granularity.rs::fork_table_provider_delete_is_not_this_writer`
   (MW-9/C-005) deleted six one-row files and asserted one delete file. That DELETE is now
   answered from metadata, as Spark answers it. The pin now deletes ONE row of a two-row file —
-  a genuinely row-level DELETE, which is what has no granularity knob — and asserts on the way
+  a genuinely row-level DELETE — the fork honours `write.delete.granularity` on that path
+  since RP-54 (fork #360) — and asserts on the way
   that the whole-file `DELETE … IN (1..6)` writes no delete file at all.
 - `python/repark/tests/test_rdf_schema_evo_1.py::test_rewrite_v3_deletion_vectors_after_evolution_matches_spark`
   (RDF-SCHEMA-EVO-1) needed a live deletion vector for `rewrite_data_files` to drop, and made

@@ -621,8 +621,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `where => 'part = 0'` drops only that vector and keeps the sibling live.
   pins: v3-5-dv-compaction/C-002, C-003, C-005
 - `delete_granularity.rs` — **MW-9:** Spark-door `write.delete.granularity` (explicit
-  file/partition, unknown refuse on MERGE and identity UPDATE, fork DELETE/UPDATE
-  residual, ALTER-then-MERGE).
+  file/partition, unknown refuse on MERGE and identity UPDATE,
+  `fork_table_provider_update_honours_file_granularity`, ALTER-then-MERGE).
   **ICE-META-DELETE-1 (2026-09-19):** the fork-residual pin now deletes ONE row of a two-row
   file to keep a row-level DELETE in the shape (the fork honours `write.delete.granularity`
   on that path since RP-54, fork #360), and
@@ -745,11 +745,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   cover a whole data file, so RePark now enters the procedure with Spark's own data-only
   before-state — and `part_mor_real_v3`, whose replay carries one empty delete manifest (as
   Spark's recorded before does) and answers `(7, 2)` with a two-file delete manifest after.
-  Two cells keep a rule shape over RePark's own measured before-state and say why:
-  `evolved_spec_v2/v3` (Spark holds the five live spec-0 data files in ONE manifest, RePark
-  in the three append manifests its metadata delete rewrote in place — registry MANIFEST-4)
-  and `part_mor_real_v2` (a third position-delete file where Spark rewrites the superseded
-  one — registry ICE-META-DELETE-1-D1). `non_current_spec_rewrites_that_spec` has no Spark
+  One cell keeps a rule shape over RePark's own measured before-state and says why:
+  `part_mor_real_v2` (a third position-delete file where Spark rewrites the superseded
+  one — registry ICE-META-DELETE-1-D1). `evolved_spec_v2/v3` now assert the merged shape
+  (registry MANIFEST-4, FIXED 2026-09-26). `non_current_spec_rewrites_that_spec` has no Spark
   cell and asserts RePark's own answer. Every partitioned pin reads the live rows BEFORE and
   AFTER the CALL and asserts they are equal, so a rewrite that lost or resurrected a delete
   cannot pass. Layout tuples sort order-insensitively before comparison.

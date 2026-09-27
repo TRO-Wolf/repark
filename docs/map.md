@@ -76,9 +76,9 @@ repo.
   pins: ice-catalog-session-1/C-016, C-018, C-022 **ICE-MERGE-APPEND-1 (2026-09-19):**
   `ICE-MERGE-APPEND-1` FIXED in §7 — every RePark-owned append commit site now uses the fork's
   `merge_append()` (Java `newAppend`), so the three `commit.manifest*` properties take effect —
-  with two fork-routed BACKLOG residues beside it: `ICE-MERGE-APPEND-SUMMARY-1` (the
-  `manifests-*` summary keys, fork #322) and `ICE-MERGE-APPEND-INSERT-1` (a bare `INSERT INTO`
-  plans on the fork's `pub(crate)` `IcebergCommitExec`, which still calls `fast_append`).
+  with both fork-routed residues FIXED beside it: `ICE-MERGE-APPEND-SUMMARY-1` at RP-40 (the
+  `manifests-*` summary keys, fork #322) and `ICE-MERGE-APPEND-INSERT-1` at RP-54 (the bare
+  `INSERT INTO`'s `IcebergCommitExec` merges, fork #361).
   **ICE-TT-RESOLVE-1 (2026-09-19):**
   row `ICE-TT-RESOLVE-1` FIXED beside the MT-1 time-travel rows (shared resolver, 94-cell pins,
   IPI-18 boundary). **Run 17c registry pass (2026-09-16):** `TZ-3`,
