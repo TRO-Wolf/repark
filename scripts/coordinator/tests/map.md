@@ -6,6 +6,7 @@ directly with pytest, not through the workspace suites.
 ## Contents
 
 - `test_claude_usage.py` — pytest for `../claude_usage.py`: builds a two-file transcript fixture
-  in `tmp_path` (one main session, one sub-agent), asserts per-file sums with a total row, the
-  `--since` stamp filter, and the default table mode. Run:
+  in `tmp_path` (one main session, one sub-agent, with one idle and one non-idle turn),
+  asserts per-file sums with a total row, the `--since` stamp filter, the idle-turn
+  columns, and the default table mode. Run:
   `python3 -m pytest -q scripts/coordinator/tests/test_claude_usage.py`.

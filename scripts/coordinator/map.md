@@ -138,7 +138,12 @@ reads the worker's `handback.json`. Workers do not delegate; lanes do not start 
 - `rulings-2026-09-26.md` — the improvised rulings codified, one dated row each with evidence
   and how to apply.
 - `claude_usage.py` — token accounting over transcript JSONL: per-file turns and token sums
-  plus a total row, table or `--json`, with a `--since` stamp filter.
+  plus a total row, table or `--json`, with a `--since` stamp filter. `idle_turns` counts
+  assistant turns with no state change and no decision: every tool call names Read, Grep,
+  Glob, ToolSearch, ListAgents, ReadNotifications or Monitor, or is a Bash call whose
+  command starts with `cat `, `tail `, `head `, `ls `, `grep `, `wc `,
+  `systemctl --user list-units`, `git log` or `git status`, and the text is under 200
+  characters; `idle_pct` is `idle_turns / turns`.
 - `tests/` — the coordinator's own pytest dir (see `tests/map.md`); home of the
   `test_claude_usage.py` fixture test.
 
