@@ -275,6 +275,35 @@ repark-core's error map.
   that path as well.
   pins: v3-11-row-id-determinism/C-001, C-003, C-006, C-007
   pins: rp-8-repin-f21-f22/C-004
+- `fanout_order.rs` — **WO ROW-LINEAGE-ORDER-1 (2026-09-26):** Spark's `FanoutWriter`
+  commit order for the delegated `INSERT`, installed on the fork's `DataFileCommitOrder`
+  hook (fork #346). `spark_fanout_commit_order` stable-sorts one commit's distinct
+  partition keys by Java `HashMap` bucket, then Spark shuffle reducer, then first-seen
+  input order, and emits each key's files in input order; with 0 or 1 keys it returns
+  its input unchanged. The Java struct hash is `JavaHashes$StructLikeHash.hash`
+  (`r = 97`; `r = 41*r + nFields`; per field `r = 41*r + fieldHash`): null 0, Int the
+  value, Long `(int)(v ^ v>>>32)`, String `r = 177` then `r = 31*r + UTF-16 unit`,
+  Boolean 1231/1237. The bucket is `(h ^ h>>>16) & (cap-1)` with cap doubling from 16
+  while `n > cap*3/4`. The reducer is `pmod(spark_murmur3(partition, seed 42),
+  spark.sql.shuffle.partitions)` (default 200): null fields skipped, Int `hashInt`, Long
+  low word then high word with `fmix` length 8, Boolean `hashInt(1|0)`, String
+  `hashUnsafeBytes` over UTF-8 with each tail byte sign-extended. Three fallbacks return
+  the input unchanged: any file stamped with a non-zero `sort_order_id` (a sorted table
+  takes Spark's clustered writer), any non-null/Int/Long/String/Boolean literal, any
+  bucket holding 8 or more keys (Java treeifies). Decoded with `javap -p -c` over
+  `iceberg-spark-runtime-4.1_2.13-1.11.0.jar`: `SparkWriteConf.useFanoutWriter` selects
+  `FanoutWriter` when the table has no ordering; `closeWriters` walks the
+  `Maps.newHashMap` `writers` map's `StructLikeMap.values()` (`wrapperMap.values()`
+  directly, no identity-hash term, so the writer order is deterministic where the
+  rewrite planner's `entrySet` copy is not). `shuffle_partitions_from_config_map` reads
+  the builder conf (absent 200, a positive integer taken, anything else a
+  `Configuration` error naming key and value); `with_spark_fanout_commit_order` installs
+  the hook. RePark's own writers keep `file_order.rs` ascending (R-FILEORDER-2).
+  pins: row-lineage-order-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- `fanout_order_tests.rs` — the unit pins for the rule above: the Java goldens (U1),
+  the murmur goldens (U2), the recorded orders at shuffle 4 (U3), the reducer ties
+  (U4), the shuffle-1 registry rows (U4b), the fallbacks (U5) and the conf parse (U6).
+  pins: row-lineage-order-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - `conform.rs` — batch conforming for the append write path (name resolution, WI-1 store
   assignment, strict casts), split from `append.rs` (file-size ratchet, 2026-09-01;
   append.rs baseline 1886). A missing

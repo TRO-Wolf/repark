@@ -444,6 +444,18 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   in the remediation round that renamed them off `sparks_..._order`; the other three hashes are
   untouched.
   pins: v3-11-row-id-determinism/C-002, C-003, C-006
+- `v3_fanout_order.rs` — **WO ROW-LINEAGE-ORDER-1 (2026-09-26):** the delegated-`INSERT`
+  end-to-end pins for Spark's fanout-writer file order through the fork's
+  `DataFileCommitOrder` hook. The scoreboard cell verbatim (S1, `[(2,0,1),(3,3,2),
+  (4,2,1)]`, red before as `[(2,2,1),(3,3,2),(4,1,1)]`), seven keys at shuffle 4
+  (S2, file order `y,z,w,x,q,a1,b1`), the one-bucket tie at shuffle 4 and at the
+  default (S3, `[2,3,1,4]` and `[1,3,2,4]`), the unpartitioned guard (S5) and the
+  `WRITE ORDERED BY` guard (S6, ascending via the sort-order fallback). Sessions are
+  `ReparkSession` with `SparkExtension` (the `setup_*` helpers never install the
+  hook). S4 (`INSERT OVERWRITE`) is deferred to R-FILEORDER-2: both doors commit
+  overwrites through owned stage-then-swap, so the fork's `Overwrite` arm is
+  unreachable.
+  pins: row-lineage-order-1/C-008, C-009, C-010, C-011, C-012
 - `declared_refuse.rs` — **FNP-15/16:** Spark-door parse-altitude refusals for the six
   unreachable names and the sketch family; passthrough attach pin.
   pins: fnp-15-16/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008

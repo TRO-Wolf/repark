@@ -12,6 +12,7 @@ pub(crate) mod conflict_filter;
 pub(crate) mod conform;
 pub mod data_format;
 pub(crate) mod distribution;
+pub mod fanout_order;
 pub(crate) mod file_order;
 pub mod file_scoped_rewrite;
 pub mod format_version;

@@ -132,6 +132,7 @@ mod v1_ref_writes;
 mod v3_cow;
 mod v3_cow_lift;
 mod v3_dml_scan;
+mod v3_fanout_order;
 mod v3_legacy_delete;
 mod v3_lineage;
 mod v3_mor_dml;

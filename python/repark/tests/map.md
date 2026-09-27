@@ -8185,14 +8185,16 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   **ICE-ROWID-ORDER-1 (2026-09-18, RP-31):** one statement's v3 row ids are
   deterministic — twelve runs of each a/b/c shape (INSERT INTO SELECT, literal
   VALUES, CTAS) on fresh RePark memory-catalog tables give one mapping and it
-  equals Spark's recorded a:0, b:100, c:200 (VALUES a:0, b:2, c:4); twelve runs
-  of the eight-category shape give one ascending mapping. A fifth pin holds the
-  DECLARED divergence: Spark's recorded default-configuration file order
-  (`z, x, m, a, q, b, c, d`) differs from ascending, so a future convergence reds
-  it. Red on the old pin by the orchestrator's six-distinct-mappings probe.
-  Truth in
+  equals Spark's recorded a:0, b:100, c:200 (VALUES a:0, b:2, c:4).
+  **ROW-LINEAGE-ORDER-1 (2026-09-26):** the eight-category pin now reads
+  `spark_rowid_order_oracle.json` at `spark.sql.shuffle.partitions = 4` — a
+  delegated INSERT commits through the fork's `DataFileCommitOrder` hook, which
+  RePark installs with Spark's fanout-writer order, so twelve runs give one
+  mapping equal to Spark's recorded `z, x, m, a, q, b, c, d` with minima `50*i`;
+  the DECLARED-divergence pin stays and still holds the oracle's fact that
+  Spark's recorded default-configuration order is not ascending. Truth in
   [../../repark-parity/fixtures/torture/data/ice_rowid_order_1/](../../repark-parity/fixtures/torture/data/ice_rowid_order_1/map.md).
-  pins: ice-rowid-order-1/C-003, C-004, C-005, C-006, C-007, C-008
+  pins: ice-rowid-order-1/C-003, C-004, C-005, C-006, C-007, C-008; row-lineage-order-1/C-013
 - [test_ice_drop_ns_1.py](test_ice_drop_ns_1.py) +
   [ice_drop_ns_1_spark_oracle.json](ice_drop_ns_1_spark_oracle.json) +
   [_record_ice_drop_ns_1_oracle.py](_record_ice_drop_ns_1_oracle.py) —

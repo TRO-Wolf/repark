@@ -9,17 +9,17 @@ pin repeats its shape twelve times on fresh RePark memory-catalog tables and
 asserts all twelve runs give one mapping and it equals Spark's recorded one.
 
 The eight-category cell reads its expected answer from
-``spark_rowid_order_oracle.json``: under the default configuration Spark's file
-order is its hash-partitioner task order ``z, x, m, a, q, b, c, d``, deterministic
-per configuration but not partition-value order. RePark appends a statement's data
-files in ascending partition value, then write-task index (fork #300
-F-ROWID-ORDER-1), so the pin asserts twelve runs give one ascending mapping and,
-as a DECLARED divergence, that Spark's recorded default-configuration order
-differs from it: a future convergence reds the pin. Row ids stay spec-correct on
+``spark_rowid_order_oracle.json``: at ``spark.sql.shuffle.partitions = 4`` Spark's
+file order is ``z, x, m, a, q, b, c, d``, deterministic per configuration but not
+partition-value order. A delegated ``INSERT`` commits through the fork's
+``DataFileCommitOrder`` hook, which RePark installs with Spark's fanout-writer
+order (row-lineage-order-1), so the pin asserts twelve runs at that setting give
+one mapping and it equals Spark's recorded one. Row ids stay spec-correct on
 both engines either way: contiguous, unique, every file's ``first_row_id`` the
 running sum.
 
 pins: ice-rowid-order-1/C-003, C-004, C-005, C-006
+pins: row-lineage-order-1/C-013
 """
 
 from __future__ import annotations
@@ -50,11 +50,12 @@ _ORDER_ASCENDING = ["a", "b", "c", "d", "m", "q", "x", "z"]
 _ORDER_SPARK_DEFAULT = ["z", "x", "m", "a", "q", "b", "c", "d"]
 
 
-def _session(warehouse: Path) -> ReparkSession:
+def _session(warehouse: Path, shuffle_partitions: str | None = None) -> ReparkSession:
     """Return a RePark session with a memory catalog at `warehouse`, v3 CREATE allowed."""
-    session = (
-        ReparkSession.builder.appName("ice-rowid-order-1").config(_ALLOW_V3, "true").getOrCreate()
-    )
+    builder = ReparkSession.builder.appName("ice-rowid-order-1").config(_ALLOW_V3, "true")
+    if shuffle_partitions is not None:
+        builder = builder.config("spark.sql.shuffle.partitions", shuffle_partitions)
+    session = builder.getOrCreate()
     session.register_memory_catalog(_CATALOG, warehouse)
     session.sql(f"CREATE NAMESPACE IF NOT EXISTS {_CATALOG}.{_NAMESPACE}")
     return session
@@ -156,9 +157,9 @@ def test_ctas_mapping_is_one_and_matches_spark(tmp_path: Path) -> None:
     assert mappings[0] == _ABC_SELECT_MAPPING, mappings[0]
 
 
-def test_eight_category_mapping_is_one_and_ascending(tmp_path: Path) -> None:
-    """Twelve eight-category runs give one mapping: ascending partition value."""
-    session = _session(tmp_path / "wh")
+def test_eight_category_mapping_is_one_and_matches_spark(tmp_path: Path) -> None:
+    """Twelve eight-category runs give one mapping: Spark's recorded order."""
+    session = _session(tmp_path / "wh", "4")
     try:
         source = f"{_CATALOG}.{_NAMESPACE}.osrc"
         session.sql(
@@ -176,7 +177,7 @@ def test_eight_category_mapping_is_one_and_ascending(tmp_path: Path) -> None:
     finally:
         session.stop()
     assert len({json.dumps(mapping) for mapping in mappings}) == 1, mappings
-    assert [row[0] for row in mappings[0]] == _ORDER_ASCENDING, mappings[0]
+    assert [row[0] for row in mappings[0]] == _ORDER_SPARK_DEFAULT, mappings[0]
     assert [row[1] for row in mappings[0]] == [50 * index for index in range(8)], mappings[0]
 
 

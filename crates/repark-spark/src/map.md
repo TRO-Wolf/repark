@@ -1541,7 +1541,9 @@ pins: rp-4-fork-repin/C-005, C-006
   after integer-literal narrowing), and composed `TaExtension`. It also
   carries the session timezone, Spark decimal settings, the case-sensitivity
   carrier (`repark_functions::case_sensitive`, default false) and the
-  partition-overwrite-mode knob (**ICE-DYN-OVERWRITE-1**, 2026-09-17). Tests:
+  partition-overwrite-mode knob (**ICE-DYN-OVERWRITE-1**, 2026-09-17). It installs
+  the Spark fanout commit order on the fork's `DataFileCommitOrder` hook
+  (row-lineage-order-1). Tests:
   [extension/map.md](extension/map.md) and [../tests/session_timezone.rs](../tests/session_timezone.rs).
   **FNP-8 (2026-09-07):** its analyzer-configuration hook inserts the shared HOF preparation rule
   before core's first default type-coercion rule. pins: fnp-8/C-003, C-004
