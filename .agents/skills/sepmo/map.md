@@ -10,17 +10,17 @@ binds to it. SEPMO governs *lifecycle only*; it cedes every engineering decision
 
 ## Contents
 
-- [SKILL.md](SKILL.md) — the **spine** (versioned canon, frontmatter `version: "2.3"` + changelog;
-  verbatim and portable): the Iron State Machine (T1–T12), the ledger gate with the v2.2
-  **enumeration obligation** for quantified clauses, the S0–S3 scale, sub-machine rules R1–R13
-  (v2.1: R7 two-tier green + R10 environment drift; v2.2: R2 per-element pinning + domain-growth
-  inheritance, R3 fresh-execution with the novelty standard, incident retrospectives + asymmetric
-  feed-forward; v2.3: R11 executable contingencies, R12 recorded dispositions, R13 remand, and
-  machinery-incident retrospectives — every version a user-approved canon amendment), Invariant V, doctrines D1–D6, the
-  agent roster, and the routing map to `references/`. **Do not edit** — portable canon; project
-  facts belong in the manifest; spine defects are filed to the user (D2), never patched here. The
-  master home is the operator's SEPMO canon repository outside this repo — canon lands there and
-  propagates here byte-identical.
+- [SKILL.md](SKILL.md) — the **spine** (versioned canon, frontmatter `version: "2.3"`;
+  the changelog now lives in [history.md](history.md)): `## Procedure` (state locator +
+  next-action router) over `## Reference` (the Iron State Machine (T1–T12), the ledger gate
+  with the v2.2 **enumeration obligation**, the S0–S3 scale, sub-machine rules R1–R13,
+  Invariant V, doctrines D1–D6, the agent roster, and the routing map to `references/`).
+  Presentation split only — owner-authorized 2026-09-27, semantics, stages, floor, and cap
+  unchanged. Otherwise **do not edit** — portable canon; project facts belong in the manifest;
+  spine defects are filed to the user (D2), never patched here. The master home is the
+  operator's SEPMO canon repository outside this repo.
+- [history.md](history.md) — the spine's canon changelog (v2.0–v2.3), moved out of SKILL.md by
+  the 2026-09-27 read-path split; SKILL.md points here.
 - [binding-manifest.template.md](binding-manifest.template.md) — the portable install template
   (ships with the distribution, spine v2.3+): `> Fill:` protocol, role rows, tunables incl.
   `s0_fresh_execution` and `taxonomy_extensions`, and the I-1…I-10 instantiation checklist.

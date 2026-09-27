@@ -64,6 +64,38 @@ Doctrines (from the SEPMO Actor–Critic control plane, without the Actor):
 
 ---
 
+## Procedure
+
+Run the loop; do not build. Binders load this file and the role reference for each phase
+before starting, and never restate them.
+
+1. **Resolve parameters** (Parameters below): task, repo, dependency_repos, mode
+   (`review-only` default), max_cycles (2), severity_floor (S1), risk_tier, claims_critic,
+   verify. Stop on ambiguous scope.
+2. **Set the risk tier** from the riskiest file touched (exempt → stop with a note;
+   mechanical → Critic-1 focus; standard/high → full loop). A behavior-affecting change is
+   at least standard.
+3. **Write the slice charter**: scope, success conditions, constraints, enumeration
+   partitions, tier, which Critics run. Discover contracts (root + nearest AGENTS.md, the
+   verify gate) and load-bearing dependency_repos first.
+4. **Run the Critics**: each opens with "Context break executed; attacking artifacts, not
+   memory.", loads its role reference, and attacks the current diff with evidence
+   (`file:line`, failing input, trace). `review-only` runs them in parallel with peer
+   reports withheld; `review-and-fix` runs sequentially — the next Critic starts only when
+   the current one is CLEAN. Merge order is always 1 → 2 → 3 → 4.
+5. **Converge honestly**: `CCC-CONVERGED` needs required-phase artifacts, nothing open at
+   or above the floor, evidenced dispositions, green verify, and complete attestations;
+   anything less is `TEST-GATED` or `HALTED`. Green verify alone never converges.
+6. **Report** in the required shape below (see Quick start examples for invocations).
+
+Standing lines: findings and rebuttals need evidence; no secrets in reports; repo contracts
+win and gates never weaken; Critics attack a scratch copy on a fresh context, never the live
+tree; role-to-spawn mapping lives in the tool adapter.
+
+---
+
+## Reference
+
 ## Parameters
 
 Parse from the user message (ask only if ambiguous):
@@ -399,13 +431,5 @@ critic engines") apply and this section is how they are met:
 
 ## Provenance
 
-- Core loop: the SEPMO context-break Critics, coverage attestation, risk tiers, mutation-proof
-  pins, multi-tree Critic scope ([../sepmo/references/05-critic.md](../sepmo/references/05-critic.md)).
-- Critic-1 crates contract: library design / errors / concurrency / recursion / casts / testing /
-  async (owner-supplied crates instructions, 2026-07-19).
-- **2026-08-12:** taxonomy home; findings-only parallel; `claims_critic` default-on for
-  ledger-bearing units; CL-IDENTITY.
-- **2026-08-25:** imported into this repository from the owner's tool-local skill set at that
-  revision (owner ruling: one Critic engine, in the tree, for every tool). The tool-specific
-  spawn table left for the tool adapters; the identity literal in ref 04 became a pointer at the
-  repository's own git configuration.
+Moved to [history.md](history.md): where the loop and its contract came from now lives
+beside the skill.

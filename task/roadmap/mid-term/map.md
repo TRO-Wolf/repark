@@ -6,6 +6,9 @@ measurements behind it; it leaves when the owner charters it (a brief under `bri
 declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
+- [read-path-obligations-2026-09-27.md](read-path-obligations-2026-09-27.md) — **WO READ-PATH-1
+  (2026-09-27):** the obligations inventory — all 211 binding sentences from AGENTS.md, CLAUDE.md
+  and the three skills, each with its old home, new home and role trigger. Closes when the PR merges.
 - [day-report-2026-09-22-27-orchestrating-note.md](day-report-2026-09-22-27-orchestrating-note.md) — **run 27, night of
   09-21 and day of 09-22, orchestrating note:** the scoreboard, the owner's rulings (file order emulated, orphan defaults
   Spark's, Opus 5.5 orchestrators and executors, the Codex sandbox opened), the session's rulings, the 5.5 comparison

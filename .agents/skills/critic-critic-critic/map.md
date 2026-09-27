@@ -12,10 +12,13 @@ spawned is each tool adapter's table.
 
 ## Contents
 
-- [SKILL.md](SKILL.md) — the skill: parameters, risk tiers, the S0–S3 severity scale, the absolute
-  rules, the tool-neutral spawn contract, the crates/library attack contract, convergence labels,
-  the four-phase workflow, the finding schema, the required report, and how it serves as the SEPMO
-  Critic engine.
+- [SKILL.md](SKILL.md) — the skill: `## Procedure` (run-the-loop router: params, tier,
+  charter, Critics, convergence, report) over `## Reference` (parameters, risk tiers, S0–S3,
+  absolute rules, spawn contract, crates/library attack contract, convergence labels, the
+  four-phase workflow, finding schema, required report, SEPMO-engine mapping, anti-patterns,
+  quick start).
+- [history.md](history.md) — the skill's provenance record, moved out of SKILL.md by the
+  2026-09-27 read-path split; SKILL.md points here.
 - [references/](references/map.md) — the four role prompts, one per Critic, each with its attack
   taxonomy, attestation form, finding prefixes and grep signals.
 
