@@ -115,7 +115,7 @@
   }
  ],
  "provenance": {
-  "sources": "ntz-spark.json, ntz2-spark.json, ntz4-spark.json, ntz7-spark.json, ntz7c-spark.json under /tmp/oc-worker/direct/wo/ntz-1-probes/ (probes ntz_probe.py, ntz_probe2.py, ntz_probe4.py, ntz_probe7.py, ntz_probe7c.py); lit_bad msg+condition from ntz4 ntz_lit_bad; cast_str_zone_ny and try_cast_bad schema names re-measured live in ntz7c (probe1 quoted/lowercase spellings do not reproduce on Spark 4.1.2); RePark answers dropped",
+  "sources": "ntz-spark.json, ntz2-spark.json, ntz4-spark.json, ntz7-spark.json, ntz7c-spark.json under /tmp/oc-worker/direct/wo/ntz-1-probes/ (probes ntz_probe.py, ntz_probe2.py, ntz_probe4.py, ntz_probe7.py, ntz_probe7c.py); lit_bad msg+condition from ntz4 ntz_lit_bad; cast_str_zone_ny and try_cast_bad schema names re-measured live in ntz7c (probe1 quoted/lowercase spellings do not reproduce on Spark 4.1.2); RePark answers dropped; lit_bad_wide from ntz6-nested-spark.json (the win leg of target/verify/sp.py, Spark 4.1.2, measured 2026-09-27)",
   "spark": "Apache Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-26",
   "value_styles": "norm = probe norm() (datetime isoformat + |tz=); str = probe4 str(v)"
  },
@@ -269,6 +269,20 @@
     "sqlstate": "42604"
    },
    "sql": "SELECT TIMESTAMP_NTZ'x'",
+   "style": "norm",
+   "zone": "UTC"
+  },
+  {
+   "key": "lit_bad_wide",
+   "spark": {
+    "class_match": true,
+    "condition": "INVALID_TYPED_LITERAL",
+    "condition_match": true,
+    "error": "ParseException",
+    "msg": "[INVALID_TYPED_LITERAL] The value of the typed literal \"TIMESTAMP_NTZ\" is invalid: 'x'. SQLSTATE: 42604\n== SQL (line 1, position 42) ==\n...ééééééééééééééééééééééééééééé', TIMESTAMP_NTZ'x'\n                                   ^^^^^^^^^^^^^^^^",
+    "sqlstate": "42604"
+   },
+   "sql": "SELECT 'éééééééééééééééééééééééééééééé', TIMESTAMP_NTZ'x'",
    "style": "norm",
    "zone": "UTC"
   },

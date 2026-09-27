@@ -152,3 +152,20 @@ TIMESTAMP_NTZ literals and CAST ... AS TIMESTAMP_NTZ answer as Spark on both
 doors — Slice 1` where the order named `feat(ntz-1): TIMESTAMP_NTZ literals
 and CAST … AS TIMESTAMP_NTZ answer as Spark on both doors — TY-TIMESTAMP-NTZ
 and TY-TIMESTAMP-NTZ-V3 EQUAL`.
+
+## Fold r2 (2026-09-27)
+
+Verifier r2 passed V-001..V-006 and filed V-007..V-010 with Spark 4.1.2
+measured the same day (`target/verify/sp.py`, outputs copied verbatim to
+`ntz-1-probes/ntz6-nested-spark.json`); folded here without rewriting
+history.
+
+- V-007/V-009: the invalid-literal position, 32-char window start, pad and
+  caret width count CHARS, slicing only at char boundaries. Spark's
+  measured answer for `SELECT '` + é×30 + `', TIMESTAMP_NTZ'x'` is
+  INVALID_TYPED_LITERAL at position 42 with window `...` + é×29 +
+  `', TIMESTAMP_NTZ'x'`, a 35-space pad and 16 carets — pinned byte for
+  byte by `the_window_and_carets_count_chars_before_non_ascii_sql` and the
+  facade `lit_bad_wide` oracle step; `TIMESTAMP_NTZ'é'` pins 16 carets in
+  `a_non_ascii_literal_gets_sixteen_carets`. The V-001 pin text and the
+  `test_ntz_1.py` docstring now say the CHAR length of the literal.

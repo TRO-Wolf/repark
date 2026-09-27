@@ -144,9 +144,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: tblprops-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
 - [test_ntz_1.py](test_ntz_1.py) + `ntz_1_spark_oracle.json` — **WO NTZ-1 slice 1
   (2026-09-26):** the `TIMESTAMP_NTZ` literal and explicit casts replay Spark's measured
-  answers — 25 literal/cast/refusal queries in UTC and New York sessions, the v2/v3
+  answers — 26 literal/cast/refusal queries in UTC and New York sessions, the v2/v3
   one-row cell shapes (rows, cols, metadata schema, filters), the DataFrame-door
   `cast("timestamp_ntz")` / `cast(TimestampNTZType())`, and the nested-target R4 refusal.
+  The wide invalid-literal leg pins the CHAR-counted window, pad and carets.
   Unaliased CAST names and the execution/rule error framing stay as residues per the
   module docstring. Rewritten beside it: the grammar PG-ntz pins answer the wall,
   TYPEOF-SQL-13 spells `timestamp_ntz`, the D4 `timestampdiff` NTZ cell replays,

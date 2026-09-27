@@ -17,7 +17,7 @@ per R-3. The malformed-string cast raises at execution
 time, where RePark has no DateTimeException and the doubled ``Execution error:``
 prefix defeats the condition parser, so that step compares SQLSTATE plus the
 core text and skips class and condition. The invalid-literal window compares
-all four lines byte for byte; the caret count is the literal byte length.
+all four lines byte for byte; the caret count is the CHAR length of the literal.
 
 pins: ntz-1/C-001, C-002, C-003, C-004, C-005
 """
@@ -152,7 +152,7 @@ def _assert_error(step: dict[str, Any], error: BaseException) -> None:
     core = _repark_core(str(error))
     want = _spark_first_line(spark["msg"])
     assert core[0] == want
-    if step["key"] == "lit_bad":
+    if step["key"] in ("lit_bad", "lit_bad_wide"):
         assert core[1] == spark["msg"].splitlines()[1]
         assert core[2] == spark["msg"].splitlines()[2]
         assert core[3] == spark["msg"].splitlines()[3]

@@ -61,15 +61,18 @@ fn invalid_literal_message(sql: &str, word: Location, end: Location, text: &str)
     let end_offset = byte_offset(&starts, sql, end).unwrap_or(offset);
     let line_start = sql[..offset].rfind('\n').map_or(0, |index| index + 1);
     let line = sql[line_start..].split('\n').next().unwrap_or("");
-    let column = offset - line_start + 1;
+    let column = sql[line_start..offset].chars().count() + 1;
     let window_start = column.saturating_sub(1).saturating_sub(32);
     let shown = if window_start > 0 {
-        format!("...{}", &line[window_start..])
+        let tail: String = line.chars().skip(window_start).collect();
+        format!("...{tail}")
     } else {
         line.to_string()
     };
     let caret_pad = if window_start > 0 { 35 } else { column - 1 };
-    let width = end_offset.saturating_sub(offset);
+    let width = sql
+        .get(offset..end_offset)
+        .map_or(0, |span| span.chars().count());
     let caret = format!("{}{}", " ".repeat(caret_pad), "^".repeat(width));
     format!(
         "[INVALID_TYPED_LITERAL] The value of the typed literal \"TIMESTAMP_NTZ\" is invalid: \
@@ -162,7 +165,7 @@ mod tests {
     }
 
     #[test]
-    fn the_caret_count_is_the_literal_byte_length() {
+    fn the_caret_count_is_the_char_length_of_the_literal() {
         let literal = "TIMESTAMP_NTZ'2024-13-45'";
         let failure = planned(&format!("SELECT {literal}"))
             .err()
@@ -177,9 +180,59 @@ mod tests {
         assert_eq!(shown.len(), 4);
         assert_eq!(shown[3], "       ^^^^^^^^^^^^^^^^^^^^^^^^^");
         assert_eq!(
-            shown[3].trim_start_matches(' ').len(),
-            literal.len(),
-            "V-001: the caret count is the byte length of the literal"
+            shown[3].trim_start_matches(' ').chars().count(),
+            literal.chars().count(),
+            "V-001: the caret count is the CHAR length of the literal"
+        );
+    }
+
+    #[test]
+    fn the_window_and_carets_count_chars_before_non_ascii_sql() {
+        let sql = format!("SELECT '{}', TIMESTAMP_NTZ'x'", "é".repeat(30));
+        let failure = planned(&sql).err().expect("x refuses");
+        let DataFusionError::SQL(error, _) = failure else {
+            panic!("a parse error, got {failure}");
+        };
+        let ParserError::ParserError(message) = *error else {
+            panic!("a parser message, got {error}");
+        };
+        let shown: Vec<&str> = message.lines().collect();
+        assert_eq!(shown.len(), 4);
+        assert_eq!(
+            shown[0],
+            "[INVALID_TYPED_LITERAL] The value of the typed literal \"TIMESTAMP_NTZ\" is \
+             invalid: 'x'. SQLSTATE: 42604"
+        );
+        assert_eq!(shown[1], "== SQL (line 1, position 42) ==");
+        assert_eq!(
+            shown[2],
+            format!("...{}', TIMESTAMP_NTZ'x'", "é".repeat(29)),
+            "V-007: the window starts at a char boundary"
+        );
+        assert_eq!(
+            shown[3],
+            format!("{}^^^^^^^^^^^^^^^^", " ".repeat(35)),
+            "V-007: the pad and the caret count are chars"
+        );
+    }
+
+    #[test]
+    fn a_non_ascii_literal_gets_sixteen_carets() {
+        let failure = planned("SELECT TIMESTAMP_NTZ'é'").err().expect("é refuses");
+        let DataFusionError::SQL(error, _) = failure else {
+            panic!("a parse error, got {failure}");
+        };
+        let ParserError::ParserError(message) = *error else {
+            panic!("a parser message, got {error}");
+        };
+        let shown: Vec<&str> = message.lines().collect();
+        assert_eq!(shown.len(), 4);
+        assert_eq!(shown[1], "== SQL (line 1, position 8) ==");
+        assert_eq!(shown[2], "SELECT TIMESTAMP_NTZ'é'");
+        assert_eq!(
+            shown[3].trim_start_matches(' ').chars().count(),
+            16,
+            "V-009: the caret count is the CHAR length of the literal"
         );
     }
 }
