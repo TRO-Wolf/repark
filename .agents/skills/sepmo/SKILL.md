@@ -43,6 +43,34 @@ that phase — the spine tells you *when* and *why*; the reference tells you
 
 ---
 
+## Procedure
+
+Name your state on the machine, load that state's reference file, then act.
+The spine routes; the reference instructs; the manifest binds the project facts.
+
+| If you are at... | Load | Next required action |
+|---|---|---|
+| PROPOSAL — a project idea | — | Write the brief; route to the Scope Auditor. |
+| AGGRESSIVE_LOGIC_SCOPE_AUDIT | `references/01-scope-auditor.md` | File the proposition ledger: every clause `PROVEN`, `OPEN` (with its closing question), or `REJECTED`; quantified clauses carry their enumeration. |
+| APPROVAL_GATE | `references/01-scope-auditor.md` | Pass iff zero `OPEN`/`REJECTED` and the user explicitly confirms; else rewrite. |
+| PRE_EXECUTION_REVIEW | `references/02-orchestrator.md`, `03-self-logic-review.md` | Log the one-time whole-plan review (`PROCEED`); gaps route backward. |
+| ORCHESTRATED_EXECUTION | `references/02`, `04`, `05` | Carve PR units and path-assign each (`LIGHT` only when all six rubric criteria hold); per unit: green clause-pinned build (R2) → self-review → context break (R3) → Critic attestation (R4) → remediate with regression proof (R5) or dispute to termination (R6) → Critic-declared convergence → readiness audit (R7) → assemble with evidence (R8). |
+| DELIVERY (per PR) | `references/07-delivery.md` | Verify the PR against ledger, attestation, findings, and flags; hand off. A rejection reopens the unit (T9) or re-audits scope (T10). |
+| RETROSPECTIVE | `references/08-retrospective.md` | File learnings and the metrics ledger. |
+| Drift, a new requirement, or an unledgered claim | `references/06-vigilance.md` | Raise the alarm: back to audit (T8/T11). Escaped defects and machinery incidents file an incident retrospective now. |
+
+Standing rules while you work: every gate is a checkable artifact — a claim without its
+artifact is a defect; run a minimum one-cycle frontier–frontier loop per unit (R1); run the
+Self Logic Review before every action (D3); escalate
+uncertainty and disputes, never guess (D1/D2/R6); the severity floor is S1 (the manifest
+may raise it, never lower it); the transition table under Reference is normative. Roles,
+doctrines, and conventions live under Reference; the reference map lists each instrument's
+canonical home.
+
+---
+
+## Reference
+
 ## Model assumption — frontier on the critical path
 
 SEPMO is *designed* to run a **frontier model on every critical-path step** —
@@ -625,62 +653,5 @@ routes to them.
 
 ## Canon changelog
 
-- **v2.3 — 2026-07-26.** The disposition discipline lands: **R11**
-  (contingencies must be executable — additive-by-construction or
-  sign-off-pre-authorized, verified at PRE_EXECUTION_REVIEW), **R12** (every
-  unit and assembly group ends in a recorded disposition — CONVERGED /
-  REMOVED / REMANDED; an unsettled disposition blocks the line, and logging a
-  breach is not settling it), **R13** (remand to the assembly's closing
-  authority: explicit record with enumerated findings, recorded disjoint-scope
-  rule for downstream work, item-by-item closing disposition, user decisions
-  as named PR merge gates). The spine's *Incident retrospectives* section
-  widens its trigger to **lifecycle-machinery incidents** (Amendment D) —
-  machinery failures file the same immediate `kind: incident` section whether
-  or not a product defect escaped. Promoted from a consuming project's
-  incident retrospective: a bundle group parked on an open finding, its
-  destructive parking contingency proved unexecutable under the live
-  permission regime, downstream groups consumed the unsettled state, and the
-  bundle-scope closing Critic caught the breach and improvised what R13 now
-  legalizes. *Reference amendments required by this version:* ref 02 —
-  PRE_EXECUTION_REVIEW checklist gains contingency-executability; *Cycle-cap
-  escalation* gains the REMOVED/REMANDED dispositions and the
-  multi-unit-assembly binding; ref 03 — the review format gains a
-  contingency-executability line; ref 05 — the bundle-scope closing Critic's
-  item-by-item remand duty AND the external-critic-engine constraints
-  (Amendment E); ref 06 — new watch item at each lineage's next unused id
-  (**W9** in the master's references): unsettled-disposition consumption /
-  invalid contingency; ref 08 — mirrors Amendment D (canonical rule stays in
-  the spine); the template — the optional `critic_engine` binding row
-  (Amendment E, runtime-neutral).
-- **v2.2 — 2026-07-13.** The quantifier discipline lands: the ledger gains
-  the **enumeration obligation** (a quantified proposition is `OPEN` until
-  its domain is a finite, attackable partition) and R2 pins **per enumerated
-  element**, with domain growth inheriting the obligation in the unit that
-  causes it. R3's procedural break gains the **fresh-execution compensation**
-  for silently-wrong-results claims — a Critic-chosen, novel, fully cited
-  input through the public surface — with its surface, standing detector, and
-  masking paths bound via `s0_fresh_execution`. **Incident retrospectives**
-  added: escaped defects file metrics immediately, and feed-forward becomes
-  asymmetric — bar-raising lands now, bar-lowering waits for the project
-  boundary. Both rules promoted from a consuming project's post-mortem of a
-  silently-wrong-results regression at a facade/FFI boundary. *Reference
-  amendments required by this version:* ref 01 adds the enumeration
-  obligation to its proof-obligation format and worked examples; ref 04 adds
-  the per-element pinning procedure; ref 05 adds the span check and the
-  fresh-execution attestation step; ref 08's feed-forward rule gains the
-  incident path and the raise/lower asymmetry.
-- **v2.1 — 2026-07-10.** R7 gains the two-tier green rule: named unit and
-  pre-merge gates, the CI-only exception record with mandatory residual
-  gaps, and silent-skip-as-binding-defect. R10 added: environment-drift
-  classification proven by the base-ref reproduction test, recorded as
-  `environment_drift_events`. Global conventions gain canon versioning and
-  the navigation rule. Both R-rules were promoted from a consuming project's
-  retrospective feed-forward — the amendment loop this version formalizes,
-  working before it was named. *Reference amendments required by this
-  version:* ref 08 adds the `environment_drift_events` counter (distinct
-  from `escaped_defects_by_origin`); ref 02's readiness checklist names the
-  pre-merge gate and verifies the exception record.
-- **v2.0.** Initial ledger-gate spine: proposition-ledger approval gate,
-  coverage-attested convergence, the context break, regression-proof
-  remediation, the dispute terminal rule, the LIGHT rubric, transition table
-  T1–T12, Invariant V, and the quantitative retrospective.
+Moved to [history.md](history.md): the version-by-version amendment rationale now lives
+beside the spine.

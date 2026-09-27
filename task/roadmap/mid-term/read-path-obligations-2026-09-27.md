@@ -189,7 +189,7 @@ Trigger key: **O** = orchestrator / governing session, **E** = executor (unit / 
 | S-001 | Every gate is a checkable artifact, not a self-report. | S spine intro | S P (kept) | O |
 | S-002 | Load the reference file for your phase before acting; the spine routes, the reference instructs. | S spine intro | S P (kept) | O |
 | S-003 | Frontier model on every critical-path step; tier/governance resolves via the binding manifest; this repo runs single-agent default with procedural context break. | S Model assumption | S R Model assumption (kept) | O |
-| S-004 | Every sequence of work converges on a PR; carve by logical coherence, never bundle or split a logical change. | S PR unit | S P (kept) | O |
+| S-004 | Every sequence of work converges on a PR; carve by logical coherence, never bundle or split a logical change. | S PR unit | S P (pointer) + R (rule) | O |
 | S-005 | Severity scale S0–S3 is global vocabulary; default floor S1; manifest may raise, never lower. | S Severity | S P (floor) + R scale | O, C |
 | S-006 | Iron state machine in order; backward transitions allowed, skipping forward forbidden; the transition table is normative. | S State machine | S P (map) + R table | O |
 | S-007 | Proposition ledger with PROVEN/OPEN/REJECTED verdicts; quantified clauses carry the enumeration obligation. | S Ledger gate | S P (kept) + R detail | O |
@@ -198,23 +198,23 @@ Trigger key: **O** = orchestrator / governing session, **E** = executor (unit / 
 | S-010 | Invariant V is a standing invariant from gate pass to retrospective; it owns the T8 drift alarm. | S Invariant V | S R Invariant V (kept) | O |
 | S-011 | Escaped defects and lifecycle-machinery incidents trigger an immediate incident retrospective with asymmetric feed-forward. | S Incidents | S R Incidents (kept) | O |
 | S-012 | Per-PR sub-machine stages with owners and exit guards (scoping → build → SLR → break → Critic → remediate → convergence → readiness → assemble). | S Sub-machine | S P (order) + R stages | O |
-| S-013 | R1: minimum one sequential frontier–frontier cycle per PR unit. | S R1–R13 | S P (kept) | O |
-| S-014 | R2: green exit (build, tests, static checks per manifest); every clause pinned; quantified clauses pinned per enumerated element; domain growth inherits the obligation same-unit. | S R1–R13 | S P (kept) | O, E |
-| S-015 | R3: context break before every Critic (restricted inputs, findings before self-review, artifact evidence, fresh context preferred; procedural break compensated by novel fresh execution on silently-wrong claims). | S R1–R13 | S P (kept) + R detail | O, C |
-| S-016 | R4: convergence is complete coverage attestation + no open/sustained-disputed findings at/above floor; the Critic's call, never the Actor's. | S R1–R13 | S P (kept) | O, C |
-| S-017 | R5: remediation needs regression proof (failed-before/pass-after test) or a one-line justification; "fixed" without proof is OPEN. | S R1–R13 | S P (kept) | O, E |
-| S-018 | R6: disputes terminate (WITHDRAWN/sustained); sustained at/above floor halts the unit; below floor ships ACCEPTED_FLAGGED in PR + retro; nothing silently dropped. | S R1–R13 | S P (kept) | O |
-| S-019 | R7: readiness audit is light but real; mergeable means CI green; unit gate + pre-merge gate bound; CI-only exceptions name residual gaps; silent skip is a binding defect. | S R1–R13 | S P (kept) | O |
-| S-020 | R8: the PR embeds trace, attestation summary, findings ledger, and shipped flags. | S R1–R13 | S P (kept) | O |
+| S-013 | R1: minimum one sequential frontier–frontier cycle per PR unit. | S R1–R13 | S P (minimum) + R (rule) | O |
+| S-014 | R2: green exit (build, tests, static checks per manifest); every clause pinned; quantified clauses pinned per enumerated element; domain growth inherits the obligation same-unit. | S R1–R13 | S P (gloss) + R (rule) | O, E |
+| S-015 | R3: context break before every Critic (restricted inputs, findings before self-review, artifact evidence, fresh context preferred; procedural break compensated by novel fresh execution on silently-wrong claims). | S R1–R13 | S P (gloss) + R (rule) | O, C |
+| S-016 | R4: convergence is complete coverage attestation + no open/sustained-disputed findings at/above floor; the Critic's call, never the Actor's. | S R1–R13 | S P (gloss) + R (rule) | O, C |
+| S-017 | R5: remediation needs regression proof (failed-before/pass-after test) or a one-line justification; "fixed" without proof is OPEN. | S R1–R13 | S P (gloss) + R (rule) | O, E |
+| S-018 | R6: disputes terminate (WITHDRAWN/sustained); sustained at/above floor halts the unit; below floor ships ACCEPTED_FLAGGED in PR + retro; nothing silently dropped. | S R1–R13 | S P (gloss) + R (rule) | O |
+| S-019 | R7: readiness audit is light but real; mergeable means CI green; unit gate + pre-merge gate bound; CI-only exceptions name residual gaps; silent skip is a binding defect. | S R1–R13 | S P (gloss) + R (rule) | O |
+| S-020 | R8: the PR embeds trace, attestation summary, findings ledger, and shipped flags. | S R1–R13 | S P (gloss) + R (rule) | O |
 | S-021 | R9: DELIVERY is per-PR. | S R1–R13 | S R rules (kept) | O |
 | S-022 | R10: environment drift proven by the base-ref reproduction test; base-red is its own unit; recorded as environment_drift_events. | S R1–R13 | S R rules (kept) | O |
 | S-023 | R11: contingencies must be executable by their trigger role (additive by construction or pre-authorized destructive). | S R1–R13 | S R rules (kept) | O |
 | S-024 | R12: every unit ends CONVERGED/REMOVED/REMANDED; unsettled dispositions block the line even when logged. | S R1–R13 | S R rules (kept) | O |
 | S-025 | R13: remand is explicit with enumerated findings; downstream proceeds only on recorded disjoint scope; closing authority dispositions item by item; user decisions are named merge gates. | S R1–R13 | S R rules (kept) | O |
 | S-026 | Proportionality: LIGHT only when all six rubric criteria hold (else STANDARD); bar never scales, only process amount. | S Proportionality | S P (rubric) + R detail | O |
-| S-027 | Doctrines D1–D5 bind every agent in every state via their canonical homes (pointers route, never restate); D6 adversarial-by-construction with executed attack. | S Doctrines | S P (list) + R detail | O |
+| S-027 | Doctrines D1–D5 bind every agent in every state via their canonical homes (pointers route, never restate); D6 adversarial-by-construction with executed attack. | S Doctrines | S P (pointer) + R (rule) | O |
 | S-028 | Stricter interpretation wins on doctrine conflict; doctrines never trade against velocity. | S Doctrines | S R Doctrines (kept) | O |
-| S-029 | Agent roster: one job and boundary per agent; Orchestrator holds the whole picture. | S Roster | S P (table) + R detail | O |
+| S-029 | Agent roster: one job and boundary per agent; Orchestrator holds the whole picture. | S Roster | S P (pointer) + R roster | O |
 | S-030 | How-to-use: locate state, load reference, run SLRs, honor gates as artifacts, think in PRs, fall back without shame. | S How-to-use | S P (kept) | O |
 | S-031 | Global conventions: frozen charter, PR delivery, addressable outputs, global severity, machine-readable verdicts, escalate-never-guess, mandatory metrics, versioned canon + manifest binding, manifest-bound navigation. | S Conventions | S R Conventions (kept) | O |
 | S-032 | Reference map: each reference is the canonical home of its instruments. | S Reference map | S P (kept) | O |
@@ -254,4 +254,7 @@ Trigger key: **O** = orchestrator / governing session, **E** = executor (unit / 
 
 101 AGENTS.md rows + 14 CLAUDE.md rows + 38 engineering-method rows + 33 SEPMO rows + 25 CCC
 rows = **211 rows**, every one with a new home. Zero rows without a home: no HALT.
+
+Trued up 2026-09-27 (round c1): E-001/002/003/009/016–030/037 and S-004/013–020/027/029 now
+name the final Procedure/Reference/history homes; all other rows verified unchanged.
 
