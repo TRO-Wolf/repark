@@ -17,9 +17,8 @@ carry, so those steps compare the ``cannot cast`` clause rather than the full
 first line and skip the condition. The malformed-string cast raises at execution
 time, where RePark has no DateTimeException and the doubled ``Execution error:``
 prefix defeats the condition parser, so that step compares SQLSTATE plus the
-core text and skips class and condition. The invalid-literal window keeps
-Spark's first line and position line (the Rust pin holds the full four-line
-window, including RePark's four-caret shape).
+core text and skips class and condition. The invalid-literal window compares
+all four lines byte for byte; the caret count is the literal byte length.
 
 pins: ntz-1/C-001, C-002, C-003, C-004, C-005
 """
@@ -167,6 +166,8 @@ def _assert_error(step: dict[str, Any], error: BaseException) -> None:
         assert core[0] == want
     if step["key"] == "lit_bad":
         assert core[1] == spark["msg"].splitlines()[1]
+        assert core[2] == spark["msg"].splitlines()[2]
+        assert core[3] == spark["msg"].splitlines()[3]
 
 
 def _assert_select(session: ReparkSession, step: dict[str, Any]) -> None:

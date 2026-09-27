@@ -33,24 +33,32 @@ pub(crate) fn plan_timestamp_ntz_literal_regions(
                 end,
                 replacement: format!("{TIMESTAMP_NTZ_LITERAL_NAME}({wall})"),
             }),
-            None => return Err(invalid_literal(sql, with_span.span.start, text)),
+            None => {
+                return Err(invalid_literal(
+                    sql,
+                    with_span.span.start,
+                    candidate.span.end,
+                    text,
+                ));
+            }
         }
     }
     Ok(regions)
 }
 
-fn invalid_literal(sql: &str, word: Location, text: &str) -> DataFusionError {
+fn invalid_literal(sql: &str, word: Location, end: Location, text: &str) -> DataFusionError {
     DataFusionError::SQL(
         Box::new(ParserError::ParserError(invalid_literal_message(
-            sql, word, text,
+            sql, word, end, text,
         ))),
         None,
     )
 }
 
-fn invalid_literal_message(sql: &str, word: Location, text: &str) -> String {
+fn invalid_literal_message(sql: &str, word: Location, end: Location, text: &str) -> String {
     let starts = line_starts(sql);
     let offset = byte_offset(&starts, sql, word).unwrap_or(0);
+    let end_offset = byte_offset(&starts, sql, end).unwrap_or(offset);
     let line_start = sql[..offset].rfind('\n').map_or(0, |index| index + 1);
     let line = sql[line_start..].split('\n').next().unwrap_or("");
     let column = offset - line_start + 1;
@@ -61,7 +69,8 @@ fn invalid_literal_message(sql: &str, word: Location, text: &str) -> String {
         line.to_string()
     };
     let caret_pad = if window_start > 0 { 35 } else { column - 1 };
-    let caret = format!("{}^^^^", " ".repeat(caret_pad));
+    let width = end_offset.saturating_sub(offset);
+    let caret = format!("{}{}", " ".repeat(caret_pad), "^".repeat(width));
     format!(
         "[INVALID_TYPED_LITERAL] The value of the typed literal \"TIMESTAMP_NTZ\" is invalid: \
          '{text}'. SQLSTATE: 42604\n== SQL (line {line_number}, position {column}) \
@@ -149,6 +158,28 @@ mod tests {
             "== SQL (line 1, position 8) =="
         );
         assert_eq!(lines.next().unwrap_or_default(), "SELECT TIMESTAMP_NTZ'x'");
-        assert_eq!(lines.next().unwrap_or_default(), "       ^^^^");
+        assert_eq!(lines.next().unwrap_or_default(), "       ^^^^^^^^^^^^^^^^");
+    }
+
+    #[test]
+    fn the_caret_count_is_the_literal_byte_length() {
+        let literal = "TIMESTAMP_NTZ'2024-13-45'";
+        let failure = planned(&format!("SELECT {literal}"))
+            .err()
+            .expect("2024-13-45 refuses");
+        let DataFusionError::SQL(error, _) = failure else {
+            panic!("a parse error, got {failure}");
+        };
+        let ParserError::ParserError(message) = *error else {
+            panic!("a parser message, got {error}");
+        };
+        let shown: Vec<&str> = message.lines().collect();
+        assert_eq!(shown.len(), 4);
+        assert_eq!(shown[3], "       ^^^^^^^^^^^^^^^^^^^^^^^^^");
+        assert_eq!(
+            shown[3].trim_start_matches(' ').len(),
+            literal.len(),
+            "V-001: the caret count is the byte length of the literal"
+        );
     }
 }
