@@ -9,12 +9,13 @@ use datafusion::sql::sqlparser::ast::{
     TableFactor, TableObject, TableWithJoins, UpdateTableFromKind, VisitMut, VisitorMut,
 };
 
+use super::scope_fields::{normalized_ident, query_outputs};
 use super::{WrittenRefs, ambiguous_message, part_value, reference_parts};
 
 #[derive(Default)]
 pub(super) struct Known {
-    tables: HashMap<Vec<String>, Vec<String>>,
-    derived: HashMap<String, Vec<String>>,
+    pub(super) tables: HashMap<Vec<String>, Vec<String>>,
+    pub(super) derived: HashMap<String, Vec<String>>,
     loose: Vec<(Vec<String>, String)>,
 }
 
@@ -81,7 +82,7 @@ enum Lookup {
 fn relations_of(
     tables: &[TableWithJoins],
     known: &Known,
-    ctes: &[String],
+    ctes: &[(String, Option<Vec<String>>)],
     into: &mut Vec<Relation>,
 ) {
     for table in tables {
@@ -96,7 +97,7 @@ fn table_relation(
     name: &ObjectName,
     alias: Option<&Ident>,
     known: &Known,
-    ctes: &[String],
+    ctes: &[(String, Option<Vec<String>>)],
 ) -> Relation {
     let written = name
         .0
@@ -104,22 +105,29 @@ fn table_relation(
         .filter_map(|part| part_value(part).map(str::to_string))
         .collect::<Vec<_>>();
     let last = written.last().cloned().unwrap_or_default();
-    let shadowed = written.len() == 1 && ctes.iter().any(|cte| cte.eq_ignore_ascii_case(&last));
+    let cte = if written.len() == 1 {
+        ctes.iter()
+            .rfind(|(cte, _)| cte.eq_ignore_ascii_case(&last))
+    } else {
+        None
+    };
     let (relation_name, display) = match alias {
         Some(alias) => (alias.value.clone(), vec![alias.value.clone()]),
         None => (last, written),
     };
-    let catalog = if shadowed {
+    let catalog = if cte.is_some() {
         None
     } else {
         normalized_parts(name).and_then(|parts| known.tables.get(&parts).cloned())
     };
-    let fields = catalog.or_else(|| {
-        known
-            .derived
-            .get(&relation_name.to_ascii_lowercase())
-            .cloned()
-    });
+    let fields = catalog
+        .or_else(|| cte.and_then(|(_, fields)| fields.clone()))
+        .or_else(|| {
+            known
+                .derived
+                .get(&relation_name.to_ascii_lowercase())
+                .cloned()
+        });
     Relation {
         name: relation_name,
         display,
@@ -127,7 +135,12 @@ fn table_relation(
     }
 }
 
-fn relation_of(factor: &TableFactor, known: &Known, ctes: &[String], into: &mut Vec<Relation>) {
+fn relation_of(
+    factor: &TableFactor,
+    known: &Known,
+    ctes: &[(String, Option<Vec<String>>)],
+    into: &mut Vec<Relation>,
+) {
     match factor {
         TableFactor::Table { name, alias, .. } => {
             into.push(table_relation(
@@ -137,16 +150,26 @@ fn relation_of(factor: &TableFactor, known: &Known, ctes: &[String], into: &mut 
                 ctes,
             ));
         }
-        TableFactor::Derived { alias, .. } => {
+        TableFactor::Derived {
+            subquery, alias, ..
+        } => {
             let name = alias
                 .as_ref()
                 .map(|alias| alias.name.value.clone())
                 .unwrap_or_default();
-            let fields = if name.is_empty() {
-                None
-            } else {
-                known.derived.get(&name.to_ascii_lowercase()).cloned()
-            };
+            let columns = alias
+                .as_ref()
+                .filter(|alias| !alias.columns.is_empty())
+                .map(|alias| {
+                    alias
+                        .columns
+                        .iter()
+                        .map(|column| normalized_ident(&column.name))
+                        .collect::<Vec<_>>()
+                });
+            let fields = columns
+                .or_else(|| known.derived.get(&name.to_ascii_lowercase()).cloned())
+                .or_else(|| query_outputs(subquery, known, ctes));
             into.push(Relation {
                 display: vec![name.clone()],
                 name,
@@ -174,20 +197,29 @@ enum Slot {
 struct Level {
     selects: Vec<Vec<Relation>>,
     aliases: Vec<String>,
-    ctes: Vec<String>,
+    ctes: Vec<(String, Option<Vec<String>>)>,
     slots: HashMap<*const SqlExpr, (usize, Slot)>,
     active: Vec<(*const SqlExpr, usize, Slot)>,
 }
 
 impl Level {
-    fn of(query: &Query, known: &Known, outer_ctes: &[String]) -> Self {
+    fn of(query: &Query, known: &Known, outer_ctes: &[(String, Option<Vec<String>>)]) -> Self {
         let mut ctes = outer_ctes.to_vec();
         if let Some(with) = query.with.as_ref() {
-            ctes.extend(
-                with.cte_tables
-                    .iter()
-                    .map(|cte| cte.alias.name.value.clone()),
-            );
+            for cte in &with.cte_tables {
+                let fields = if cte.alias.columns.is_empty() {
+                    query_outputs(&cte.query, known, &ctes)
+                } else {
+                    Some(
+                        cte.alias
+                            .columns
+                            .iter()
+                            .map(|column| normalized_ident(&column.name))
+                            .collect(),
+                    )
+                };
+                ctes.push((cte.alias.name.value.clone(), fields));
+            }
         }
         let mut level = Self {
             selects: Vec::new(),
@@ -521,7 +553,7 @@ impl CaseFold<'_> {
         }
     }
 
-    fn outer_ctes(&self) -> Vec<String> {
+    fn outer_ctes(&self) -> Vec<(String, Option<Vec<String>>)> {
         self.levels
             .last()
             .map(|level| level.ctes.clone())
@@ -638,6 +670,8 @@ pub(super) fn fold_statement(
     known: &Known,
     written: &WrittenRefs,
 ) -> Result<bool> {
+    let mut inject = super::scope_fields::InjectAliases { changed: false };
+    let _ = statement.visit(&mut inject);
     let mut fold = CaseFold {
         known,
         written,
@@ -651,5 +685,5 @@ pub(super) fn fold_statement(
     if let Some(error) = fold.error {
         return Err(error);
     }
-    Ok(fold.changed)
+    Ok(fold.changed || inject.changed)
 }

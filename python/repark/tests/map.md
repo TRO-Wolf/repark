@@ -165,10 +165,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **WO CASESENS-1 slice 1 (2026-09-27):** the nested-scope SELECT legs, the MERGE
   derived source and the catalog-view reads replay Spark's recorded names and
   rows under each step's `caseSensitive` (success legs compare exactly; DML/DDL
-  legs assert success only; refusals compare per R12/R13). `p1/r5_cte_outer` is
-  excluded per ruling (ledger R-CS1-1); the catalog-view legs are not in this
-  file (C-003 OPEN, homed with R-CS1-1 to S1b).
-  pins: casesens-1/C-001, C-002, C-004
+  legs assert success only; refusals compare per R12/R13). **S1b (2026-09-27):**
+  `p1/r5_cte_outer` joins the nested legs (R-CS1-1 closed) and
+  `test_s1_catalog_view_keeps_its_spelling` replays the `vc` catalog-view keys
+  including `r5_view_describe` (C-003 PROVEN).
+  pins: casesens-1/C-001, C-002, C-003, C-004
 - [test_ntz_1.py](test_ntz_1.py) + `ntz_1_spark_oracle.json` — **WO NTZ-1 slice 1
   (2026-09-26):** the `TIMESTAMP_NTZ` literal and explicit casts replay Spark's measured
   answers — 29 literal/cast/refusal queries in UTC and New York sessions, the v2/v3

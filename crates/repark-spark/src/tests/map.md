@@ -475,9 +475,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   keep the written spelling — derived and CTE projections (`r5_subq_inner_ID`,
   `r5_cte_ID`, `r5_cte_mixed`, `r5_union_subq`, `n_nested2`, `n_join_derived`),
   the column-alias list (`Kay`), the already-equal shapes (incl. `r5_subq_both`
-  through the D1 fallback; `r5_cte_outer` excluded per ruling, ledger R-CS1-1),
-  the MERGE derived source (`r30_*`) and another-case DML — names and rows each.
-  pins: casesens-1/C-001, C-002, C-004
+  through the D1 fallback), the MERGE derived source (`r30_*`) and another-case
+  DML — names and rows each. **S1b (2026-09-27):**
+  `cte_outer_reference_in_another_case_binds` (`r5_cte_outer`),
+  `catalog_view_body_keeps_its_spelling` (`r5_view_star`, `r5_view_lower`,
+  `r5_view2_upper`; `r5_view_describe` unchanged) and
+  `twin_cte_outputs_still_refuse` (the `SELECT 1 AS a, 2 AS A` CTE body keeps
+  its refusal; the shape is unmeasured against Spark). pins: casesens-1/C-001,
+  C-002, C-003, C-004
 - `decimal.rs` — the Spark-door decimal128 pins at `i128` precision: result `(p,s)`, value,
   and nullability for the G2/G13 corpus shapes. **CUTOVER-SCHEMA-1 (2026-09-04):**
   `pin_int_times_decimal_is_12_2_i128` and `pin_mul_single_digit_nullability_non_null_i128`

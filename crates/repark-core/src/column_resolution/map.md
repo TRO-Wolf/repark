@@ -52,7 +52,15 @@ pins: ice-error-conditions-1/C-011
   `CaseFold` visitor, JOIN USING folded per query level in `pre_visit_query` (step 4, V-04),
   run 22b: set-operation branches walked with an explicit stack, no recursion,
   `fold_statement`). Split from `../column_resolution.rs`
-  under the file-size gate. pins: ice-mixed-case-1/C-013, C-014
+  under the file-size gate. **WO CASESENS-1 S1b (2026-09-27):** a `Level` carries
+  its CTEs' syntactic output names (computed by `scope_fields::query_outputs`),
+  a CTE-shadowed `FROM` name and a derived-table alias get scope fields, so an
+  outer reference binds a case-differing output; `fold_statement` first runs
+  `scope_fields::InjectAliases`, which folds a column-alias list `x("ID", …)`
+  into the body as `AS` items where the body's own clauses cannot
+  reference them (DataFusion's alias-list path resolves `col(field.name())`
+  through its normalizer and cannot see stored case). pins:
+  ice-mixed-case-1/C-013, C-014, casesens-1/C-003
 - `stack.rs` — run 22b: the nesting-depth stack estimate and the grown-stack future that
   `plan_statement_with_column_repair` polls the repair through. The per-level 32 KiB is
   about 1.9× the measured debug cost of the derived `SetExpr::clone` (17,216 B per `UNION`
@@ -76,6 +84,19 @@ pins: ice-error-conditions-1/C-011
   pre-respell plan when the respelled statement fails (ledger D1: `r5_subq_both`
   keeps main's answer). Unit battery inline.
   pins: casesens-1/C-001, C-002
+- `scope_fields.rs` — **WO CASESENS-1 S1b (2026-09-27):** the syntactic scope
+  outputs the repair fold needs before a plan exists. `query_outputs` reads a
+  query's projection the way DataFusion names it (a plain or compound reference
+  keeps its written segment, an `AS` alias and a column-alias list normalize as
+  the planner's identifier normalizer does, a set operation takes the left
+  branch, a plain `*` or `t.*` expands the statement's own relations), returning
+  `None` where a shape is not computable so the scope stays opaque rather than
+  guessed. `InjectAliases` rewrites `WITH c(cols) AS` and `(query) AS x(cols)`
+  by moving the alias columns into the body as `AS` items, bail-out on every
+  clause that can reference projection aliases (`ORDER BY`, `GROUP BY`,
+  `HAVING`, `QUALIFY`, `SORT/CLUSTER/DISTRIBUTE BY`, lateral views, window
+  clauses) so a bound name is never renamed.
+  pins: casesens-1/C-003, casesens-1/R-CS1-1
 - `fold_text.rs` — **WO CASESENS-1 slice 1 (2026-09-27):** `fold_query_text`
   runs the repair fold loop over a query text (plan, absorb `FieldNotFound`
   valid fields, `fold_statement`, re-plan, one pass per distinct miss) and

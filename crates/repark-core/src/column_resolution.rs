@@ -921,6 +921,7 @@ mod display;
 mod fold;
 mod fold_text;
 mod inner_scopes;
+mod scope_fields;
 mod stack;
 
 pub use fold_text::fold_query_text;

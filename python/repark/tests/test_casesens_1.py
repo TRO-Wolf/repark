@@ -10,13 +10,11 @@ where Spark answers ``[]``, a count row for INSERT) predates this unit and is
 out of its fence. Refusal steps compare the class, condition, SQLSTATE, the
 message head up to ``Did you mean one of the following? [`` and the candidate
 set (R12), after stripping Spark's ``; line L pos P`` suffix and RePark's
-``Error during planning: `` prefix (R13). ``p1/r5_cte_outer`` is excluded: it
-refuses on main and S1's success-path respell cannot reach it (ledger R-CS1-1).
-The catalog-view legs (C-003) are not in this file: view reads still refuse
-(the S1-3 record is in the ledger); C-003 and R-CS1-1 are homed to CASESENS-1
-S1b, the repair-loop round next after Slice 1.
+``Error during planning: `` prefix (R13). S1b lands R-CS1-1 and C-003:
+``p1/r5_cte_outer`` joins the nested legs and the catalog-view legs replay in
+``test_s1_catalog_view_keeps_its_spelling``.
 
-pins: casesens-1/C-001, C-002, C-004
+pins: casesens-1/C-001, C-002, C-003, C-004
 """
 
 from __future__ import annotations
@@ -36,6 +34,7 @@ _ORACLE: dict[str, Any] = json.loads(ORACLE_PATH.read_text(encoding="utf-8"))["s
 _NESTED_KEYS: tuple[str, ...] = (
     "p1/r5_subq_inner_ID",
     "p1/r5_cte_ID",
+    "p1/r5_cte_outer",
     "p1/r5_cte_mixed",
     "p1/r5_union_subq",
     "p1/r5_subq_ID",
@@ -185,6 +184,28 @@ def test_s1_nested_scopes_keep_the_written_spelling(key: str, tmp_path: Path) ->
     try:
         _setup_tables(session)
         _assert_step(session, key)
+    finally:
+        session.stop()
+
+
+def test_s1_catalog_view_keeps_its_spelling(tmp_path: Path) -> None:
+    """Each C-003 catalog-view step replays Spark's names and rows (S1b)."""
+    session = _open(tmp_path)
+    try:
+        _setup_tables(session)
+        session.register_memory_catalog("vc", tmp_path / "vc")
+        for key in (
+            "p1/vc_ns",
+            "p1/vc_t",
+            "p1/vc_t_ins",
+            "p1/r5_view_create",
+            "p1/r5_view_star",
+            "p1/r5_view_lower",
+            "p1/r5_view_describe",
+            "p1/r5_view2_create",
+            "p1/r5_view2_upper",
+        ):
+            _assert_step(session, key)
     finally:
         session.stop()
 

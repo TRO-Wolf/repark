@@ -202,6 +202,20 @@ async fn already_equal_nested_shapes_stay() {
     .await;
     assert_eq!(names, vec!["DATA".to_string()]);
     assert_eq!(rows, vec![vec!["a".to_string()], vec!["b".to_string()]]);
+    let (names, rows) = names_and_rows(
+        &ctx,
+        &catalogs,
+        "WITH c AS (SELECT id, Data FROM ice.sales.t) SELECT ID, DATA FROM c",
+    )
+    .await;
+    assert_eq!(names, vec!["ID".to_string(), "DATA".to_string()]);
+    assert_eq!(
+        rows,
+        vec![
+            vec!["1".to_string(), "a".to_string()],
+            vec!["2".to_string(), "b".to_string()],
+        ]
+    );
 }
 
 #[tokio::test]
@@ -249,6 +263,108 @@ async fn merge_with_a_derived_source_spelled_in_another_case() {
             vec!["2".to_string(), "x".to_string()],
             vec!["6".to_string(), "y".to_string()],
         ]
+    );
+}
+
+#[tokio::test]
+async fn cte_outer_reference_in_another_case_binds() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    create_probe_tables(&ctx, &catalogs).await;
+    let (names, rows) = names_and_rows(
+        &ctx,
+        &catalogs,
+        "WITH c AS (SELECT id, Data FROM ice.sales.t) SELECT ID, DATA FROM c",
+    )
+    .await;
+    assert_eq!(names, vec!["ID".to_string(), "DATA".to_string()]);
+    assert_eq!(
+        rows,
+        vec![
+            vec!["1".to_string(), "a".to_string()],
+            vec!["2".to_string(), "b".to_string()],
+        ]
+    );
+}
+
+#[tokio::test]
+async fn catalog_view_body_keeps_its_spelling() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    create_probe_tables(&ctx, &catalogs).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.v AS SELECT ID, DATA FROM ice.sales.t",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.v2 AS SELECT id, Data FROM ice.sales.t",
+    )
+    .await;
+    let (names, rows) = names_and_rows(&ctx, &catalogs, "SELECT * FROM ice.sales.v").await;
+    assert_eq!(names, vec!["ID".to_string(), "DATA".to_string()]);
+    assert_eq!(
+        rows,
+        vec![
+            vec!["1".to_string(), "a".to_string()],
+            vec!["2".to_string(), "b".to_string()],
+        ]
+    );
+    let (names, rows) = names_and_rows(&ctx, &catalogs, "SELECT id, data FROM ice.sales.v").await;
+    assert_eq!(names, vec!["id".to_string(), "data".to_string()]);
+    assert_eq!(
+        rows,
+        vec![
+            vec!["1".to_string(), "a".to_string()],
+            vec!["2".to_string(), "b".to_string()],
+        ]
+    );
+    let (names, rows) = names_and_rows(&ctx, &catalogs, "SELECT ID, DATA FROM ice.sales.v2").await;
+    assert_eq!(names, vec!["ID".to_string(), "DATA".to_string()]);
+    assert_eq!(
+        rows,
+        vec![
+            vec!["1".to_string(), "a".to_string()],
+            vec!["2".to_string(), "b".to_string()],
+        ]
+    );
+    let (names, rows) = names_and_rows(&ctx, &catalogs, "DESCRIBE ice.sales.v").await;
+    assert_eq!(
+        names,
+        vec![
+            "col_name".to_string(),
+            "data_type".to_string(),
+            "comment".to_string()
+        ]
+    );
+    assert_eq!(
+        rows,
+        vec![
+            vec!["DATA".to_string(), "string".to_string(), String::new()],
+            vec!["ID".to_string(), "int".to_string(), String::new()],
+        ]
+    );
+}
+
+#[tokio::test]
+async fn twin_cte_outputs_still_refuse() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    create_probe_tables(&ctx, &catalogs).await;
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "WITH c AS (SELECT 1 AS a, 2 AS A) SELECT A FROM c",
+    )
+    .await
+    .err()
+    .unwrap();
+    assert!(
+        error.to_string().contains("unique expression names"),
+        "{error}"
     );
 }
 
