@@ -82,7 +82,10 @@ pins: ice-error-conditions-1/C-011
   alone, and an upper-case column-alias list is quoted. Wired into
   `finish_with_display`, which re-plans once on change and falls back to the
   pre-respell plan when the respelled statement fails (ledger D1: `r5_subq_both`
-  keeps main's answer). Unit battery inline.
+  keeps main's answer). Unit battery inline. **Fold round (2026-09-27):** the
+  battery pins the twice-written spelling in another case, the unequal scope
+  walks, the quoted value, the upper-case expression alias and the scalar
+  subquery, each red under its guard's removal (ledger M14–M18).
   pins: casesens-1/C-001, C-002
 - `scope_fields.rs` — **WO CASESENS-1 S1b (2026-09-27):** the syntactic scope
   outputs the repair fold needs before a plan exists. `query_outputs` reads a

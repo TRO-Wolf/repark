@@ -149,6 +149,9 @@ async fn derived_and_cte_projections_keep_the_written_spelling() {
             vec!["2".to_string(), "2".to_string()],
         ]
     );
+    let (names, rows) = names_and_rows(&ctx, &catalogs, "SELECT * FROM (SELECT 1 AS ID)").await;
+    assert_eq!(names, vec!["ID".to_string()]);
+    assert_eq!(rows, vec![vec!["1".to_string()]]);
 }
 
 #[tokio::test]

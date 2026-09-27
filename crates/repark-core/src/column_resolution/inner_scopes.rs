@@ -333,6 +333,12 @@ mod tests {
             text,
             "SELECT * FROM (SELECT * FROM (SELECT `id` AS \"ID\" FROM t))"
         );
+        let (text, changed) = respelled(
+            "SELECT * FROM (SELECT 1 AS ID)",
+            "SELECT * FROM (SELECT 1 AS ID)",
+        );
+        assert!(changed);
+        assert_eq!(text, "SELECT * FROM (SELECT 1 AS \"ID\")");
     }
 
     #[test]
@@ -355,6 +361,13 @@ mod tests {
             text,
             "SELECT * FROM t WHERE EXISTS (SELECT 1 FROM (SELECT ID FROM u) dt)"
         );
+        let sql = "SELECT ID FROM t WHERE ID = (SELECT ID FROM (SELECT ID FROM u) dt)";
+        let (text, changed) = respelled(sql, sql);
+        assert!(!changed);
+        assert_eq!(
+            text,
+            "SELECT ID FROM t WHERE ID = (SELECT ID FROM (SELECT ID FROM u) dt)"
+        );
     }
 
     #[test]
@@ -371,5 +384,44 @@ mod tests {
         let (text, changed) = respelled(sql, sql);
         assert!(!changed);
         assert_eq!(text, "SELECT * FROM (SELECT id, id FROM t)");
+    }
+
+    #[test]
+    fn leaves_a_spelling_written_twice_in_another_case() {
+        let (text, changed) = respelled(
+            "SELECT * FROM (SELECT ID, ID FROM t)",
+            "SELECT * FROM (SELECT `id`, `id` FROM t)",
+        );
+        assert!(!changed);
+        assert_eq!(text, "SELECT * FROM (SELECT `id`, `id` FROM t)");
+    }
+
+    #[test]
+    fn refuses_unequal_scope_walks() {
+        let (text, changed) = respelled(
+            "SELECT * FROM (SELECT ID FROM t) a",
+            "SELECT * FROM (SELECT `id` FROM t) a, (SELECT `id` FROM u) b",
+        );
+        assert!(!changed);
+        assert_eq!(
+            text,
+            "SELECT * FROM (SELECT `id` FROM t) a, (SELECT `id` FROM u) b"
+        );
+    }
+
+    #[test]
+    fn keeps_a_quoted_value() {
+        let (text, changed) = respelled(
+            "SELECT * FROM (SELECT data FROM t)",
+            "SELECT * FROM (SELECT `Data` FROM t)",
+        );
+        assert!(changed);
+        assert_eq!(text, "SELECT * FROM (SELECT `Data` AS \"data\" FROM t)");
+        let (text, changed) = respelled(
+            "SELECT * FROM (SELECT Data FROM t)",
+            "SELECT * FROM (SELECT `Data` FROM t)",
+        );
+        assert!(!changed);
+        assert_eq!(text, "SELECT * FROM (SELECT `Data` FROM t)");
     }
 }

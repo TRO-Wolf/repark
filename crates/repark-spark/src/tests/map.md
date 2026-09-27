@@ -481,8 +481,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `catalog_view_body_keeps_its_spelling` (`r5_view_star`, `r5_view_lower`,
   `r5_view2_upper`; `r5_view_describe` unchanged) and
   `twin_cte_outputs_still_refuse` (the `SELECT 1 AS a, 2 AS A` CTE body keeps
-  its refusal; the shape is unmeasured against Spark). pins: casesens-1/C-001,
-  C-002, C-003, C-004
+  its refusal; the shape is unmeasured against Spark). **Fold round
+  (2026-09-27):** `derived_and_cte_projections_keep_the_written_spelling`
+  gains the `SELECT * FROM (SELECT 1 AS ID)` leg (answers `ID`; unmeasured —
+  no probe key records an expression-alias output name). pins:
+  casesens-1/C-001, C-002, C-003, C-004
 - `decimal.rs` — the Spark-door decimal128 pins at `i128` precision: result `(p,s)`, value,
   and nullability for the G2/G13 corpus shapes. **CUTOVER-SCHEMA-1 (2026-09-04):**
   `pin_int_times_decimal_is_12_2_i128` and `pin_mul_single_digit_nullability_non_null_i128`
