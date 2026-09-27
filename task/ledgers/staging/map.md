@@ -4,6 +4,16 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [row-lineage-order-1-ledger.md](row-lineage-order-1-ledger.md) —
+  **WO F-ROW-LINEAGE-ORDER-1 (2026-09-26), in flight:** a delegated `INSERT` commits
+  its data files in Spark's fanout-writer order through the fork's `DataFileCommitOrder`
+  hook — the Java struct hash (C-001), the shuffle murmur3 (C-002), the recorded orders
+  (C-003..C-005), the fallbacks (C-006) and the conf parse (C-007) as unit pins; the
+  scoreboard cell (C-008), seven keys (C-009) and the reducer tie (C-010) as SQL pins
+  with the unpartitioned (C-011) and sorted-table (C-012) guards; the eight-category
+  facade pin (C-013). S4 is OPEN, deferred to R-FILEORDER-2 (C-014).
+  `risk_tier: standard`. Branch `feat/row-lineage-order-1`.
+  pins: row-lineage-order-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
 - [tblprops-1-ledger.md](tblprops-1-ledger.md) —
   **WO TBLPROPS-1 (2026-09-26), in flight:** `SHOW TBLPROPERTIES` on an Iceberg table
   answers Spark's rows — the fresh five (C-001), the decimal snapshot id after insert
