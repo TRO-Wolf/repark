@@ -123,7 +123,8 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
 - **CATALOG-1 (2026-09-26):** registering a memory catalog no longer makes it current, so the
   statement-surface session sets `spark.sql.defaultCatalog` to the fixture catalog, as a Spark
   profile does; the served shapes are unchanged. The adapter qualifies every relation, so
-  `test_gold_models.py` and `test_cursor.py` need no change. pins: catalog-1/C-011
+  `test_gold_models.py` and `test_cursor.py` need no change. The C-011 sweep ran this suite
+  green with no further rewrite. pins: catalog-1/C-011
 
 ## I want to...
 

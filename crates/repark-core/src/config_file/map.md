@@ -25,6 +25,8 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   alone; an unknown `REPARK_ENV` profile refuses naming it and the known list). Nothing here
   reads the process `REPARK_ENV`; step 3 passes it in. Step 1.
   pins: cfg-1/C-004, C-005
+  **WO CATALOG-1 C-010 (2026-09-26):** the session allowlist gains `default_catalog`.
+  pins: catalog-1/C-010
 - `interpolate.rs` — `${VAR}` expansion over the effective table's strings (nested tables and
   arrays included, scalars untouched); a missing variable refuses naming the key path and the
   variable; `$` without `{` stays verbatim; `$$` escapes a literal `$`, so `$${NAME}` renders
@@ -47,6 +49,10 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   families; a collision refuses naming both key paths. Wrong shapes refuse naming the key
   path: a non-string prop, a non-table slot, an empty catalog block, and a dotted catalog
   name that would silently re-split through the flat-key bridge. Step 2.
+  **WO CATALOG-1 C-010 (2026-09-26):** `memory_type_rewrite` maps a block's
+  `type = "memory"` to the `InMemoryCatalog` long form, replacing `type` (a memory-kind
+  `catalog-impl` beside it is kept and `type` dropped; a non-memory one keeps both keys).
+  pins: catalog-1/C-010
   **CFG-2 step 1 (2026-09-13):** `SourceSpec` also carries `profile` and
   `auto_register` — a per-entry TOML boolean defaulting to true, refused non-boolean
   naming `<profile>.database.<kind>.<name>.auto_register`, and kept out of `props`
@@ -70,11 +76,14 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   registry at build (MAINT-POLICY-1 step 3, 2026-09-10; a loaded file always names its
   profile, `None` policy when the table is absent; no file leaves the build unstamped),
   `session` knobs →
-  typed fallbacks plus `repark.*` knob-key pairs, `conf` flattened with dot joins
+  typed fallbacks plus `repark.*` knob-key pairs (`default_catalog` emits
+  `spark.sql.defaultCatalog` since WO CATALOG-1 C-010, 2026-09-26), `conf` flattened with
+  dot joins
   (TOML nests dotted keys; a quoted-plus-nested collision refuses) in sorted-key order
   (the `toml::Table` here is `BTreeMap`-backed, so file order is not recoverable — pinned
   as sorted, ledger C-024 carries the D-1 wording), `catalog` blocks → the same
-  `repark.sql.catalog.*` keys `parse_catalog_specs` reads. `profile_sources` still runs on
+  `repark.sql.catalog.*` keys `parse_catalog_specs` reads (with the C-010
+  `type = "memory"` rewrite applied). `profile_sources` still runs on
   every load (collision and shape refusals stay single-implementation), and since CFG-2
   step 1 the parsed `SourceSpec`s ride `FileConfig.source_specs` into the built session —
   the CFG-1 load-time refusal is retired, and a non-empty `[<profile>.database]` table
@@ -94,6 +103,7 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   **REVIEW-FIX-2 (2026-09-10):** the C-023 control session builds from a forced empty
   staged file, so no discovered file can reach the control side on any machine.
   pins: review-fix-2/C-002
+  pins: catalog-1/C-010
 - `maintenance.rs` — `MaintenancePolicy` (the six D-1 profile-level keys plus the
   `tables` map of per-table `TablePolicy` entries) with `from_table` (unknown keys refuse
   naming the `name.maintenance.key` path; `adaptive_partitioning` refuses as not yet
@@ -130,6 +140,12 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   `load()`, so no pin reads the developer's `HOME`; the suite passes under a stub
   `HOME` carrying a visible `repark.toml`.
   pins: review-fix-2/C-001, C-002
+  **WO CATALOG-1 C-010 (2026-09-26):** `tests/session_catalog.rs` carries the seven
+  rewrite and `default_catalog` pins; `native_type_catalog_blocks_match_the_flat_config_path`
+  pins the still-matching `hadoop` arm, and
+  `file_built_session_registers_the_same_catalogs_as_config_calls` gains the
+  `type=memory`-file versus long-form-calls arm.
+  pins: catalog-1/C-010
 
 ## Pointers
 

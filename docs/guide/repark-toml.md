@@ -1,8 +1,8 @@
 # `repark.toml` — file-based session configuration
 
 One file holds the session configuration that `.config(...)` calls would otherwise repeat on
-every builder chain: catalog blocks, free-form conf pairs, the display style, and the three
-engine knobs. If you have not built a session yet, start with
+every builder chain: catalog blocks, free-form conf pairs, the display style, and the session
+table (three engine knobs plus the default catalog). If you have not built a session yet, start with
 [getting-started.md](getting-started.md); the builder semantics underneath are in
 [session-and-conf.md](session-and-conf.md).
 
@@ -113,9 +113,9 @@ polars
 
 Unknown keys refuse at construction: `DisplayConfig(style="spark", nonesuch="x")` raises
 `pydantic.ValidationError`, as does any key outside `memory_limit_gb` / `batch_size` /
-`target_partitions` in the session table, any database kind outside `postgres` /
-`sqlserver` / `trino`, a dotted catalog name, an empty catalog block, and a name carried by
-both a catalog and a database source.
+`target_partitions` / `default_catalog` in the session table, any database kind outside
+`postgres` / `sqlserver` / `trino`, a dotted catalog name, an empty catalog block, and a name
+carried by both a catalog and a database source.
 
 ### Named database sources
 
@@ -245,13 +245,14 @@ Each profile carries six optional tables. `[<profile>.display]` takes `style`, `
 `max_cols`, `str_len` — the four `repark.display.*` keys from
 [session-and-conf.md](session-and-conf.md) — with string values verbatim and integers
 stringified. `[<profile>.session]` takes `memory_limit_gb`, `batch_size`,
-`target_partitions` as integers or integer strings; anything else refuses naming the key
-path. `[<profile>.conf]` takes any key with a string or integer value; nested tables
-flatten with dot joins, so the natural `spark.sql.x = "v"` spelling works, and a
-quoted-plus-nested collision refuses. `[<profile>.catalog.<name>]` blocks carry `type`
-(`memory`, `glue`, `s3tables`, or a `catalog-impl` class name) plus string properties, and
-parse into the same spec the equivalent `.config()` keys produce — the catalog keys
-themselves are in [iceberg-guide.md](iceberg-guide.md). `[<profile>.maintenance]` takes
+`target_partitions` as integers or integer strings, plus `default_catalog` as the name of
+the catalog the session starts in (emitted as `spark.sql.defaultCatalog`); anything else
+refuses naming the key path. `[<profile>.conf]` takes any key with a string or integer
+value; nested tables flatten with dot joins, so the natural `spark.sql.x = "v"` spelling
+works, and a quoted-plus-nested collision refuses. `[<profile>.catalog.<name>]` blocks
+carry `type` (`memory`, `glue`, `s3tables`, or a `catalog-impl` class name) plus string
+properties, and parse into the same spec the equivalent `.config()` keys produce — the
+catalog keys themselves are in [iceberg-guide.md](iceberg-guide.md). `[<profile>.maintenance]` takes
 `target_file_size_bytes`, `snapshot_retain_last`, `snapshot_older_than`,
 `orphan_older_than`, `rewrite_manifests`, `position_delete_ratio`, plus a
 `tables."<catalog>.<db>.<table>"` entry per override — every key optional, durations
@@ -259,6 +260,16 @@ as `"<n>d"`, `"<n>h"`, or `"<n>m"`, unknown keys refusing loud with the key path
 The full shape, the step order it drives, and the `CALL run_maintenance()` door are
 in [maintenance-policy.md](maintenance-policy.md). Unknown keys inside `display` and
 `session` refuse loud; `conf` accepts any key.
+
+A catalog block's `type = "memory"` is rewritten on load to
+`catalog-impl = "org.apache.iceberg.inmemory.InMemoryCatalog"`, replacing `type`: the bare
+`type=memory` spelling refuses at first use on the builder and runtime doors (like Spark),
+so the file keeps the working long form and an existing file loads unchanged. A memory-kind
+`catalog-impl` beside `type` keeps the impl and drops `type`; a non-memory `catalog-impl`
+beside `type` keeps both keys, so first use refuses. The opt-in
+`repark.sql.catalogExtensions=true` (on the builder or under `[<profile>.conf]`, default
+off) restores the old meaning instead: `type=memory` is the memory kind on the builder and
+runtime doors, and an agreeing `type` + `catalog-impl` pair is accepted.
 
 ## The measured `read` and `write` profiles
 

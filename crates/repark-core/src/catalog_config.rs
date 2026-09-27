@@ -5,6 +5,8 @@ use std::hash::BuildHasher;
 
 use repark_common::{Error, Result};
 
+pub mod refusal;
+
 /// The config-key prefix Spark uses for a per-catalog configuration block.
 const CATALOG_PREFIX: &str = "spark.sql.catalog.";
 
@@ -28,6 +30,7 @@ pub enum CatalogKind {
     Memory,
     /// PostgreSQL read catalog.
     Postgres,
+    Refused,
 }
 
 /// A catalog parsed from a `spark.sql.catalog.<name>.*` block: name, kind, and builder props.
@@ -39,6 +42,7 @@ pub struct CatalogSpec {
     pub kind: CatalogKind,
     /// Builder properties, passed through verbatim (`warehouse` included).
     pub props: HashMap<String, String>,
+    pub refusal: Option<refusal::CatalogRefusal>,
 }
 
 impl std::fmt::Debug for CatalogSpec {
@@ -60,6 +64,7 @@ impl std::fmt::Debug for CatalogSpec {
             .field("name", &self.name)
             .field("kind", &self.kind)
             .field("props", &props)
+            .field("refusal", &self.refusal)
             .finish()
     }
 }
@@ -90,14 +95,16 @@ pub fn prop_key_is_secret(key: &str) -> bool {
 
 /// The in-progress state accumulated for one catalog name while scanning the config map.
 #[derive(Default)]
-struct Block {
+pub(crate) struct Block {
     /// The kind resolved from a `catalog-impl` value, if that key was present.
-    kind_from_impl: Option<CatalogKind>,
+    pub(crate) kind_from_impl: Option<CatalogKind>,
     /// The kind resolved from a `type` value, if that key was present.
-    kind_from_type: Option<CatalogKind>,
+    pub(crate) kind_from_type: Option<CatalogKind>,
+    pub(crate) type_value: Option<String>,
+    pub(crate) impl_value: Option<String>,
     /// Passthrough builder properties (kind indicators consumed, `io-impl` dropped).
-    props: HashMap<String, String>,
-    hadoop_type: bool,
+    pub(crate) props: HashMap<String, String>,
+    pub(crate) hadoop_type: bool,
 }
 
 /// Parse a Spark / repark config map into one [`CatalogSpec`] per configured catalog.
@@ -155,9 +162,10 @@ pub fn parse_catalog_specs<S: BuildHasher>(
         }
     }
 
+    let extensions = refusal::catalog_extensions_enabled(config);
     blocks
         .into_iter()
-        .map(|(name, block)| block.into_spec(name))
+        .map(|(name, block)| block.into_spec(name, extensions))
         .collect()
 }
 
@@ -175,6 +183,7 @@ fn is_s3tables_arn_shape(value: &str) -> bool {
 fn apply_prop(block: &mut Block, name: &str, prop: &str, value: &str) -> Result<()> {
     match prop {
         "catalog-impl" => {
+            block.impl_value = Some(value.trim().to_string());
             block.kind_from_impl = Some(
                 crate::catalog_kind::kind_from_catalog_impl(value).ok_or_else(|| {
                     Error::Config(format!(
@@ -188,6 +197,7 @@ fn apply_prop(block: &mut Block, name: &str, prop: &str, value: &str) -> Result<
         }
         "type" => {
             block.hadoop_type = crate::catalog_kind::is_hadoop_type(value);
+            block.type_value = Some(value.trim().to_string());
             block.kind_from_type =
                 Some(crate::catalog_kind::kind_from_type(value).ok_or_else(|| {
                     Error::Config(format!(
@@ -207,7 +217,10 @@ fn apply_prop(block: &mut Block, name: &str, prop: &str, value: &str) -> Result<
 
 impl Block {
     /// Finalize the block into a `CatalogSpec`, resolving kind and enforcing per-kind requirements.
-    fn into_spec(self, name: String) -> Result<CatalogSpec> {
+    fn into_spec(self, name: String, extensions: bool) -> Result<CatalogSpec> {
+        if let Some(refusal) = self.refusal_for(&name, extensions) {
+            return Ok(self.refused_spec(name, refusal));
+        }
         let kind = match (self.kind_from_impl, self.kind_from_type) {
             (Some(from_impl), Some(from_type)) if from_impl != from_type => {
                 return Err(Error::Config(format!(
@@ -257,7 +270,12 @@ impl Block {
             translate_s3tables_arn(&name, &mut props)?;
         }
 
-        Ok(CatalogSpec { name, kind, props })
+        Ok(CatalogSpec {
+            name,
+            kind,
+            props,
+            refusal: None,
+        })
     }
 }
 
@@ -302,10 +320,20 @@ fn translate_s3tables_arn(name: &str, props: &mut HashMap<String, String>) -> Re
 
 #[cfg(test)]
 mod hadoop_naming_tests;
+#[cfg(test)]
+mod refusal_tests;
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    const GLUE_CLASS: &str = "org.apache.iceberg.aws.glue.GlueCatalog";
+    const IN_MEMORY_CLASS: &str = "org.apache.iceberg.inmemory.InMemoryCatalog";
+    const SPARK_CLASS: &str = "org.apache.iceberg.spark.SparkCatalog";
+
+    fn entry(key: &str, value: &str) -> (String, String) {
+        (key.to_string(), value.to_string())
+    }
 
     /// The verbatim measured source publish job catalog block.
     fn measured_glue_block() -> HashMap<String, String> {
@@ -373,32 +401,19 @@ mod tests {
     #[test]
     fn cross_prefix_duplicates_merge_or_fail_loud() {
         let consistent = HashMap::from([
-            ("spark.sql.catalog.c.type".to_string(), "memory".to_string()),
-            (
-                "repark.sql.catalog.c.type".to_string(),
-                "memory".to_string(),
-            ),
-            (
-                "repark.sql.catalog.c.warehouse".to_string(),
-                "/tmp/wh".to_string(),
-            ),
+            entry("spark.sql.catalog.c.type", "memory"),
+            entry("repark.sql.catalog.c.type", "memory"),
+            entry("repark.sql.catalog.c.warehouse", "/tmp/wh"),
         ]);
         let specs = parse_catalog_specs(&consistent).unwrap();
         assert_eq!(specs.len(), 1);
-        assert_eq!(specs[0].kind, CatalogKind::Memory);
+        assert_eq!(specs[0].kind, CatalogKind::Refused);
 
         let conflicting = HashMap::from([
-            (
-                "spark.sql.catalog.c.warehouse".to_string(),
-                "/tmp/a".to_string(),
-            ),
-            (
-                "repark.sql.catalog.c.warehouse".to_string(),
-                "/tmp/b".to_string(),
-            ),
+            entry("spark.sql.catalog.c.warehouse", "/tmp/a"),
+            entry("repark.sql.catalog.c.warehouse", "/tmp/b"),
         ]);
-        let err = parse_catalog_specs(&conflicting).unwrap_err();
-        let message = err.to_string();
+        let message = parse_catalog_specs(&conflicting).unwrap_err().to_string();
         assert!(
             message.contains("spark.sql.catalog.c.warehouse")
                 && message.contains("repark.sql.catalog.c.warehouse"),
@@ -435,11 +450,8 @@ mod tests {
     #[test]
     fn type_short_forms_resolve_each_kind() {
         let glue = HashMap::from([
-            ("spark.sql.catalog.c.type".to_string(), "glue".to_string()),
-            (
-                "spark.sql.catalog.c.warehouse".to_string(),
-                "s3://bucket/wh".to_string(),
-            ),
+            entry("spark.sql.catalog.c.type", "glue"),
+            entry("spark.sql.catalog.c.warehouse", "s3://bucket/wh"),
         ]);
         assert_eq!(
             parse_catalog_specs(&glue).unwrap()[0].kind,
@@ -448,10 +460,7 @@ mod tests {
 
         let arn = "arn:aws:s3tables:us-east-1:123456789012:bucket/my-bucket";
         let s3tables = HashMap::from([
-            (
-                "spark.sql.catalog.c.type".to_string(),
-                "s3tables".to_string(),
-            ),
+            entry("spark.sql.catalog.c.type", "s3tables"),
             ("spark.sql.catalog.c.warehouse".to_string(), arn.to_string()),
         ]);
         assert_eq!(
@@ -460,15 +469,12 @@ mod tests {
         );
 
         let memory = HashMap::from([
-            ("spark.sql.catalog.c.type".to_string(), "memory".to_string()),
-            (
-                "spark.sql.catalog.c.warehouse".to_string(),
-                "/tmp/wh".to_string(),
-            ),
+            entry("spark.sql.catalog.c.type", "memory"),
+            entry("spark.sql.catalog.c.warehouse", "/tmp/wh"),
         ]);
         assert_eq!(
             parse_catalog_specs(&memory).unwrap()[0].kind,
-            CatalogKind::Memory
+            CatalogKind::Refused
         );
     }
 
@@ -690,10 +696,8 @@ mod tests {
     /// A `memory` catalog without a warehouse fails loud, naming the warehouse key.
     #[test]
     fn memory_without_warehouse_names_the_warehouse_key() {
-        let config =
-            HashMap::from([("spark.sql.catalog.m.type".to_string(), "memory".to_string())]);
-        let err = parse_catalog_specs(&config).unwrap_err();
-        let msg = err.to_string();
+        let config = HashMap::from([entry("spark.sql.catalog.m.catalog-impl", IN_MEMORY_CLASS)]);
+        let msg = parse_catalog_specs(&config).unwrap_err().to_string();
         assert!(msg.contains("memory catalog 'm'"), "{msg}");
         assert!(msg.contains("spark.sql.catalog.m.warehouse"), "{msg}");
     }
@@ -702,35 +706,22 @@ mod tests {
     #[test]
     fn memory_with_blank_warehouse_is_rejected() {
         let config = HashMap::from([
-            ("spark.sql.catalog.m.type".to_string(), "memory".to_string()),
-            (
-                "spark.sql.catalog.m.warehouse".to_string(),
-                "   ".to_string(),
-            ),
+            entry("spark.sql.catalog.m.catalog-impl", IN_MEMORY_CLASS),
+            entry("spark.sql.catalog.m.warehouse", "   "),
         ]);
-        assert!(
-            parse_catalog_specs(&config)
-                .unwrap_err()
-                .to_string()
-                .contains("warehouse")
-        );
+        let msg = parse_catalog_specs(&config).unwrap_err().to_string();
+        assert!(msg.contains("warehouse"), "{msg}");
     }
 
-    /// `catalog-impl` and `type` that disagree is a conflict error naming both keys.
     #[test]
     fn conflicting_impl_and_type_errors() {
         let config = HashMap::from([
-            (
-                "spark.sql.catalog.c.catalog-impl".to_string(),
-                "org.apache.iceberg.aws.glue.GlueCatalog".to_string(),
-            ),
-            (
-                "spark.sql.catalog.c.type".to_string(),
-                "s3tables".to_string(),
-            ),
+            entry("repark.sql.catalogExtensions", "true"),
+            entry("spark.sql.catalog.c.catalog-impl", GLUE_CLASS),
+            entry("spark.sql.catalog.c.type", "s3tables"),
         ]);
-        let err = parse_catalog_specs(&config).unwrap_err();
-        assert!(err.to_string().contains("different catalog kinds"), "{err}");
+        let msg = parse_catalog_specs(&config).unwrap_err().to_string();
+        assert!(msg.contains("different catalog kinds"), "{msg}");
     }
 
     /// Non-catalog `spark.*` keys (engine knobs, app name) produce no specs.
@@ -768,6 +759,7 @@ mod tests {
         let spec = CatalogSpec {
             name: "glue_alt".to_string(),
             kind: CatalogKind::Glue,
+            refusal: None,
             props: HashMap::from([
                 ("warehouse".to_string(), "s3://bucket/wh".to_string()),
                 ("aws_secret_access_key".to_string(), secret.to_string()),
@@ -852,22 +844,16 @@ mod tests {
     #[test]
     fn i5_catalog_config_acceptance_matrix_ok() {
         let bare_memory = HashMap::from([
-            ("spark.sql.catalog.m".to_string(), "memory".to_string()),
-            (
-                "spark.sql.catalog.m.warehouse".to_string(),
-                "/tmp/wh".to_string(),
-            ),
+            entry("spark.sql.catalog.m", "memory"),
+            entry("spark.sql.catalog.m.warehouse", "/tmp/wh"),
         ]);
         assert_eq!(
             parse_catalog_specs(&bare_memory).unwrap()[0].kind,
             CatalogKind::Memory
         );
         let repark_bare_memory = HashMap::from([
-            ("repark.sql.catalog.m".to_string(), "memory".to_string()),
-            (
-                "repark.sql.catalog.m.warehouse".to_string(),
-                "/tmp/wh".to_string(),
-            ),
+            entry("repark.sql.catalog.m", "memory"),
+            entry("repark.sql.catalog.m.warehouse", "/tmp/wh"),
         ]);
         assert_eq!(
             parse_catalog_specs(&repark_bare_memory).unwrap()[0].kind,
@@ -875,19 +861,13 @@ mod tests {
         );
 
         let spark_memory = HashMap::from([
-            (
-                "spark.sql.catalog.m".to_string(),
-                "org.apache.iceberg.spark.SparkCatalog".to_string(),
-            ),
-            ("spark.sql.catalog.m.type".to_string(), "memory".to_string()),
-            (
-                "spark.sql.catalog.m.warehouse".to_string(),
-                "/tmp/wh".to_string(),
-            ),
+            entry("spark.sql.catalog.m", SPARK_CLASS),
+            entry("spark.sql.catalog.m.type", "memory"),
+            entry("spark.sql.catalog.m.warehouse", "/tmp/wh"),
         ]);
         assert_eq!(
             parse_catalog_specs(&spark_memory).unwrap()[0].kind,
-            CatalogKind::Memory
+            CatalogKind::Refused
         );
 
         let glue = parse_catalog_specs(&measured_glue_block()).unwrap();
@@ -895,11 +875,8 @@ mod tests {
         assert!(glue[0].props.contains_key(WAREHOUSE_PROP));
 
         let glue_type = HashMap::from([
-            ("spark.sql.catalog.g.type".to_string(), "glue".to_string()),
-            (
-                "spark.sql.catalog.g.warehouse".to_string(),
-                "s3://bucket/wh".to_string(),
-            ),
+            entry("spark.sql.catalog.g.type", "glue"),
+            entry("spark.sql.catalog.g.warehouse", "s3://bucket/wh"),
         ]);
         assert_eq!(
             parse_catalog_specs(&glue_type).unwrap()[0].kind,
@@ -908,9 +885,9 @@ mod tests {
 
         let arn = "arn:aws:s3tables:us-east-1:123456789012:bucket/my-bucket";
         let s3t_impl = HashMap::from([
-            (
-                "spark.sql.catalog.tb.catalog-impl".to_string(),
-                "org.apache.iceberg.aws.s3tables.S3TablesCatalog".to_string(),
+            entry(
+                "spark.sql.catalog.tb.catalog-impl",
+                "org.apache.iceberg.aws.s3tables.S3TablesCatalog",
             ),
             (
                 "spark.sql.catalog.tb.table_bucket_arn".to_string(),
@@ -923,10 +900,7 @@ mod tests {
         );
 
         let s3t_type = HashMap::from([
-            (
-                "spark.sql.catalog.tb.type".to_string(),
-                "s3tables".to_string(),
-            ),
+            entry("spark.sql.catalog.tb.type", "s3tables"),
             (
                 "spark.sql.catalog.tb.warehouse".to_string(),
                 arn.to_string(),
@@ -946,10 +920,7 @@ mod tests {
     /// Acceptance matrix for missing, conflicting, and unknown catalog kinds; config only.
     #[test]
     fn i5_catalog_config_acceptance_matrix_loud() {
-        let bare_class = HashMap::from([(
-            "spark.sql.catalog.x".to_string(),
-            "org.apache.iceberg.spark.SparkCatalog".to_string(),
-        )]);
+        let bare_class = HashMap::from([entry("spark.sql.catalog.x", SPARK_CLASS)]);
         assert!(
             parse_catalog_specs(&bare_class)
                 .unwrap_err()
@@ -957,35 +928,24 @@ mod tests {
                 .contains("no kind")
         );
 
-        let mem_no_wh =
-            HashMap::from([("spark.sql.catalog.m.type".to_string(), "memory".to_string())]);
-        assert!(
-            parse_catalog_specs(&mem_no_wh)
-                .unwrap_err()
-                .to_string()
-                .contains("warehouse")
+        let mem_no_wh = HashMap::from([entry("spark.sql.catalog.m.type", "memory")]);
+        assert_eq!(
+            parse_catalog_specs(&mem_no_wh).unwrap()[0].kind,
+            CatalogKind::Refused
         );
 
         let conflict = HashMap::from([
-            (
-                "spark.sql.catalog.c.catalog-impl".to_string(),
-                "org.apache.iceberg.aws.glue.GlueCatalog".to_string(),
-            ),
-            (
-                "spark.sql.catalog.c.type".to_string(),
-                "s3tables".to_string(),
-            ),
+            entry("spark.sql.catalog.c.catalog-impl", GLUE_CLASS),
+            entry("spark.sql.catalog.c.type", "s3tables"),
         ]);
-        assert!(
-            parse_catalog_specs(&conflict)
-                .unwrap_err()
-                .to_string()
-                .contains("different catalog kinds")
+        assert_eq!(
+            parse_catalog_specs(&conflict).unwrap()[0].kind,
+            CatalogKind::Refused
         );
 
-        let unknown_impl = HashMap::from([(
-            "spark.sql.catalog.x.catalog-impl".to_string(),
-            "com.example.MysteryCatalog".to_string(),
+        let unknown_impl = HashMap::from([entry(
+            "spark.sql.catalog.x.catalog-impl",
+            "com.example.MysteryCatalog",
         )]);
         assert!(
             parse_catalog_specs(&unknown_impl)
@@ -994,8 +954,7 @@ mod tests {
                 .contains("MysteryCatalog")
         );
 
-        let unknown_type =
-            HashMap::from([("spark.sql.catalog.x.type".to_string(), "hive".to_string())]);
+        let unknown_type = HashMap::from([entry("spark.sql.catalog.x.type", "hive")]);
         assert!(
             parse_catalog_specs(&unknown_type)
                 .unwrap_err()

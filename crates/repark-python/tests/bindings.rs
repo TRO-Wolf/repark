@@ -67,6 +67,10 @@ fn config_driven_memory_catalog_registers_through_the_constructor() {
         std::fs::create_dir_all(&warehouse).expect("warehouse dir");
         let config = HashMap::from([
             (
+                "repark.sql.catalogExtensions".to_string(),
+                "true".to_string(),
+            ),
+            (
                 "spark.sql.catalog.glue_alt".to_string(),
                 "org.apache.iceberg.spark.SparkCatalog".to_string(),
             ),

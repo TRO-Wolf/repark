@@ -21,6 +21,7 @@ const KIND_GLUE: u8 = 0;
 const KIND_S3_TABLES: u8 = 1;
 const KIND_MEMORY: u8 = 2;
 const KIND_POSTGRES: u8 = 3;
+const KIND_REFUSED: u8 = 4;
 const FILTER_TAG_SQL: u8 = 0;
 const FILTER_TAG_EXPR: u8 = 1;
 pub(crate) const ICEBERG_TABLE_SCAN: &str = "IcebergTableScan";
@@ -157,6 +158,7 @@ impl IcebergScanSpec {
                 name: catalog_name,
                 kind,
                 props,
+                refusal: None,
             },
             table_identifier,
             snapshot_id,
@@ -306,6 +308,7 @@ const fn kind_code(kind: CatalogKind) -> u8 {
         CatalogKind::S3Tables => KIND_S3_TABLES,
         CatalogKind::Memory => KIND_MEMORY,
         CatalogKind::Postgres => KIND_POSTGRES,
+        CatalogKind::Refused => KIND_REFUSED,
     }
 }
 
@@ -315,6 +318,7 @@ fn kind_from_code(code: u8) -> Result<CatalogKind> {
         KIND_S3_TABLES => Ok(CatalogKind::S3Tables),
         KIND_MEMORY => Ok(CatalogKind::Memory),
         KIND_POSTGRES => Ok(CatalogKind::Postgres),
+        KIND_REFUSED => Ok(CatalogKind::Refused),
         other => Err(codec_err(format!(
             "Iceberg scan spec catalog kind {other} is unknown"
         ))),
@@ -790,6 +794,7 @@ fn catalog_spec_from_debug(name: &str, debug: &str) -> Result<CatalogSpec> {
         name: name.to_owned(),
         kind,
         props,
+        refusal: None,
     })
 }
 

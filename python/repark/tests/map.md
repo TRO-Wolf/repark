@@ -4889,6 +4889,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `auto_register = false`, loads through the Rust loader, and lists with
   `auto_register=False`; a non-bool value refuses as `ValidationError`, and the key
   stays absent when unset. pins: cfg-2/C-018
+  **WO CATALOG-1 C-010 (2026-09-26):** `test_the_typed_session_table_renders_default_catalog_for_the_engine`
+  renders `default_catalog` and builds a session starting in it. pins: catalog-1/C-010
 - `test_session_sources.py` — **CFG-2 step 2 (2026-09-13):** the named-source facade
   pins — `sources()` lists the declared source as a `SourceMetadata` row with
   `password` masked `***`, `source(name).ping()` raises `UnsupportedOperationException`
@@ -7137,7 +7139,33 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_e2_readwriter.py`, `test_catalog_surface.py`, `test_auto_memory_catalog.py`,
   `test_ice_catalog_session_1.py`, `test_ice_views_4_showprops.py`,
   `test_declare_sorted_tighten.py` state the new meaning; `test_production_file_size.py` drops the
-  five removed session symbols. pins: catalog-1/C-001, C-002, C-003, C-004
+  five removed session symbols. The USE-forms pins (`test_use_catalog_ns_cell_and_the_final_reset`,
+  `test_use_forms_answer_as_spark`) land with C-005. The refused-kind pins
+  (`test_type_memory_cell_refuses_at_first_use`,
+  `test_type_memory_on_the_builder_door_builds_and_refuses_at_first_use`,
+  `test_the_catalog_impl_long_form_works_on_both_doors`,
+  `test_both_kind_keys_refuse_at_first_use_on_both_doors`,
+  `test_the_catalog_extensions_opt_in_restores_the_memory_type`) land with C-006, C-007,
+  C-008; the `type=memory` / `type=hadoop` rewrites of `test_catalog_flow.py`,
+  `test_catalog_surface.py`, `test_getorcreate_catalogs.py`, `test_ice_catalog_session_1.py`
+  ride the same commit (named in the ledger).
+  `test_list_databases_cell_lists_the_session_catalog` lands with C-009.
+  The toml pins (`test_the_owner_toml_loads_and_starts_in_spark_catalog`,
+  `test_session_default_catalog_in_toml_moves_the_first_current_catalog`) land with C-010.
+  The C-011 sweep ran the whole suite green with no further rewrite (none deleted); the
+  one docs example changed on this branch that assumed the flip was rewritten the same
+  way (named in the ledger). The fold pins
+  (`test_database_exists_on_a_refused_catalog_raises_like_spark`,
+  `test_list_tables_and_get_table_on_a_refused_catalog_raise_like_spark`) land with
+  C-012, C-013. The V-007 fold pins
+  (`test_facade_two_part_sql_on_a_refused_catalog_raises_like_spark`,
+  `test_spark_table_on_a_refused_catalog_raises_like_spark`,
+  `test_two_part_name_on_a_registered_catalog_still_expands`) land with C-014; the
+  `resolve_table_name` symbol hash moves in `test_production_file_size.py`. The V-011
+  fold pin (`test_facade_upper_case_spelling_of_a_refused_catalog_is_not_refused`)
+  lands with C-014; the `C_MEM.t` arm leaves the refusal loop.
+  pins: catalog-1/C-001, C-002, C-003, C-004,
+  C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
 
 ## I want to...
 

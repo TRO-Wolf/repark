@@ -69,6 +69,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(current_catalog_checked, module)?)?;
     module.add_function(wrap_pyfunction!(auto_session_catalog_wanted, module)?)?;
     module.add_function(wrap_pyfunction!(session_catalog_names, module)?)?;
+    module.add_function(wrap_pyfunction!(session_refused_catalog_names, module)?)?;
     module.add_function(wrap_pyfunction!(register_late_catalog_block, module)?)?;
     Ok(())
 }
@@ -99,6 +100,11 @@ pub fn session_catalog_names(session: &PyReparkSession) -> Vec<String> {
         .session
         .catalogs_snapshot()
         .registered_catalog_names()
+}
+
+#[pyfunction]
+pub fn session_refused_catalog_names(session: &PyReparkSession) -> Vec<String> {
+    session.session.catalogs_snapshot().refused_catalog_names()
 }
 
 fn apply_default_catalog(session: &ReparkSession, value: Option<&str>) {

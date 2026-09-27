@@ -91,13 +91,14 @@ class DisplayConfig(BaseModel):
 
 
 class SessionConfig(BaseModel):
-    """One [<profile>.session] table (the three builder knobs)."""
+    """One [<profile>.session] table (the three builder knobs plus the default catalog)."""
 
     model_config = ConfigDict(extra="forbid")
 
     memory_limit_gb: int | str | None = Field(default=None)
     batch_size: int | str | None = Field(default=None)
     target_partitions: int | str | None = Field(default=None)
+    default_catalog: StrictStr | None = Field(default=None)
 
     @field_validator("memory_limit_gb", "batch_size", "target_partitions", mode="before")
     @classmethod
@@ -123,6 +124,7 @@ class SessionConfig(BaseModel):
             ("memory_limit_gb", self.memory_limit_gb),
             ("batch_size", self.batch_size),
             ("target_partitions", self.target_partitions),
+            ("default_catalog", self.default_catalog),
         )
         for key, value in entries:
             if value is None:

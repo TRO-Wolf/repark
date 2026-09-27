@@ -1333,6 +1333,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `hadoop_type_rename_refuses_every_target_shape` pins the refusal for one-, two-, three- and
   four-part targets and a missing namespace). Mutation: map the rename error through `iceberg_err`
   and the pin reads `FeatureUnsupported => Cannot rename Hadoop tables`.
+  **CATALOG-1 (2026-09-26):** the helper builds with the `catalogExtensions` opt-in so the
+  `type=memory` arm keeps a working catalog.
   `hadoop_type_staged_create_still_writes_uuid_names_divergence` pins the known gap. This
   door's `CREATE TABLE` goes through `commit_staged_schema_only`, so on a hadoop catalog it
   still writes `00000`..`00002` uuid names and no hint. The staged-create slice (out of scope
@@ -2106,8 +2108,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `session_catalog.rs` — **CATALOG-1 (2026-09-26):** a harness-shaped Spark-door session
   (`hc` configured, `sc` and `spark_catalog` registered): the fresh current catalog and SHOW
   CATALOGS, `spark.sql.defaultCatalog` at build and at runtime with the USE pin, `spark_catalog`
-  not an alias, and the missing default's `CATALOG_NOT_FOUND`. pins: catalog-1/C-001, C-002,
-  C-003, C-004
+  not an alias, the missing default's `CATALOG_NOT_FOUND`, and the USE forms with the five
+  `SCHEMA_NOT_FOUND` renderings, plus the refused kinds on the SQL door (every first use
+  raises, the current catalog stays, the long form and the opt-in stay catalogs), the
+  two-part refusal arms, and the two-part alias that still plans beside a refusal.
+  pins: catalog-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-014
 
 ## Mapping rule
 

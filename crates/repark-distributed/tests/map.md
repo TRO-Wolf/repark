@@ -52,7 +52,8 @@ The crate-root `lib.rs` gate forbids inline `#[cfg(test)]` modules, so the pins 
   RANGE-TVF-ID-1 (2026-09-18): the long-range seed reads the `id` column.
   pins: ballista-m1-c/C-001, C-003, C-004
 - `iceberg_scan.rs` (`feature = "cluster"`) — BALLISTA-M1-D: `IcebergScanSpec` round-trip
-  of catalog config, table identifier, snapshot id, projection, and filters; truncated
+  of catalog config, table identifier, snapshot id, projection, and filters (**CATALOG-1
+  (2026-09-26):** the spec literals carry `refusal: None`); truncated
   payload refuses; rebuild of the Iceberg provider from a RePark session that registered
   the memory catalog, with a vanilla `SessionContext` refusing (no ambient catalog);
   two-executor pin: a memory-catalog table with 8 files answers the same `count(*)`

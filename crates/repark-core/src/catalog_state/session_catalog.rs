@@ -106,6 +106,9 @@ impl CatalogRegistry {
         let current = RwLock::read(&self.session_defaults)
             .unwrap_or_else(PoisonError::into_inner)
             .clone();
+        if let Some(refusal) = self.refusal(&current.catalog) {
+            return Some(refusal.error());
+        }
         let known = current.pinned
             || current.catalog == SESSION_CATALOG_NAME
             || self.is_registered(&current.catalog)

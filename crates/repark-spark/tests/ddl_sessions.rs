@@ -258,7 +258,10 @@ async fn config_driven_memory_catalog_registers_and_runs() {
             "spark.sql.catalog.glue_alt",
             "org.apache.iceberg.spark.SparkCatalog",
         )
-        .config("spark.sql.catalog.glue_alt.type", "memory")
+        .config(
+            "spark.sql.catalog.glue_alt.catalog-impl",
+            "org.apache.iceberg.inmemory.InMemoryCatalog",
+        )
         .config("spark.sql.catalog.glue_alt.warehouse", &warehouse)
         .config(
             "spark.sql.catalog.glue_alt.io-impl",

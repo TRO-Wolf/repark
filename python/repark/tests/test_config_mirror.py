@@ -235,3 +235,30 @@ def test_config_mirror_auto_register_non_bool_refuses() -> None:
         }
     )
     assert "auto_register" not in built.to_toml()
+
+
+def test_the_typed_session_table_renders_default_catalog_for_the_engine(
+    tmp_path: Path,
+) -> None:
+    """``SessionConfig(default_catalog=...)`` renders the key the engine reads.
+
+    pins: catalog-1/C-010
+    """
+    built = ReparkConfig(
+        profiles={
+            "default": ProfileConfig(
+                session=SessionConfig(default_catalog="local"),
+                catalog={"local": {"type": "memory", "warehouse": str(tmp_path / "local")}},
+            )
+        }
+    )
+    text = built.to_toml()
+    assert 'default_catalog = "local"' in text
+    path = built.save(tmp_path / "repark.toml")
+    spark = ReparkSession.builder.configFile(str(path)).getOrCreate()
+    try:
+        rows = [list(row) for row in spark.sql("SELECT current_catalog()").collect()]
+    finally:
+        spark.stop()
+    assert rows == [["local"]]
+    assert SessionConfig.model_validate({}).default_catalog is None

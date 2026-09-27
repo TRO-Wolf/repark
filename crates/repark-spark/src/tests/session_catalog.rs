@@ -141,6 +141,236 @@ async fn the_runtime_default_catalog_moves_current_until_use_pins_it() {
 }
 
 #[tokio::test]
+async fn use_forms_answer_as_spark() {
+    let wh = TempDir::new().unwrap();
+    let session = harness_session(&wh, &[]).await;
+    session
+        .create_namespace("spark_catalog", "otherns", HashMap::new())
+        .await
+        .unwrap();
+    for (sql, catalog, namespace) in [
+        ("USE sc", "sc", ""),
+        ("USE sc.ns", "sc", "ns"),
+        ("USE ns", "sc", "ns"),
+        ("USE sc", "sc", "ns"),
+        ("USE hc", "hc", ""),
+        ("USE ns", "hc", "ns"),
+        ("USE spark_catalog", "spark_catalog", "default"),
+        ("USE spark_catalog.otherns", "spark_catalog", "otherns"),
+        ("USE spark_catalog", "spark_catalog", "otherns"),
+        ("USE sc.ns", "sc", "ns"),
+        ("USE spark_catalog.default", "spark_catalog", "default"),
+    ] {
+        rows(&session, sql).await;
+        assert_eq!(
+            rows(&session, "SELECT current_catalog(), current_database()").await,
+            pair(catalog, namespace),
+            "{sql}"
+        );
+    }
+    for (sql, rendered) in [
+        ("USE zz.yy", "`spark_catalog`.`zz`.`yy`"),
+        ("USE zz", "`spark_catalog`.`zz`"),
+        ("USE zz.yy.xx", "`spark_catalog`.`zz`.`yy`.`xx`"),
+        ("USE sc.nope", "`sc`.`nope`"),
+        ("USE hc.ns.x", "`hc`.`ns`.`x`"),
+    ] {
+        let error = refusal(&session, sql).await;
+        assert_eq!(
+            error.exception_class(),
+            ErrorClass::Analysis,
+            "{sql}: {error}"
+        );
+        let message = error.to_string();
+        assert!(
+            message.contains(&format!(
+                "[SCHEMA_NOT_FOUND] The schema {rendered} cannot be found."
+            )) && message.contains("SQLSTATE: 42704"),
+            "{sql}: {message}"
+        );
+    }
+    assert_eq!(
+        current(&session),
+        ("spark_catalog".to_string(), "default".to_string())
+    );
+}
+
+#[tokio::test]
+async fn a_bare_memory_type_refuses_every_first_use_with_sparks_text() {
+    let wh = TempDir::new().unwrap();
+    let mem_wh = format!("{}/c_mem", wh.path().to_str().unwrap());
+    let session = harness_session(
+        &wh,
+        &[
+            (
+                "spark.sql.catalog.c_mem",
+                "org.apache.iceberg.spark.SparkCatalog",
+            ),
+            ("spark.sql.catalog.c_mem.type", "memory"),
+            ("spark.sql.catalog.c_mem.warehouse", mem_wh.as_str()),
+        ],
+    )
+    .await;
+    assert_eq!(
+        rows(&session, "SHOW CATALOGS").await,
+        [["hc"], ["sc"], ["spark_catalog"]].map(|row| vec![row[0].to_string()])
+    );
+    for sql in [
+        "USE c_mem",
+        "USE c_mem.n1",
+        "SHOW NAMESPACES IN c_mem",
+        "SHOW NAMESPACES IN c_mem",
+        "SHOW TABLES IN c_mem",
+        "CREATE NAMESPACE IF NOT EXISTS c_mem.n1",
+        "SELECT * FROM c_mem.n1.t",
+        "SELECT * FROM c_mem.t",
+        "INSERT INTO c_mem.t VALUES (1)",
+        "DESCRIBE c_mem.t",
+    ] {
+        let error = refusal(&session, sql).await;
+        assert_eq!(
+            error.exception_class(),
+            ErrorClass::Unsupported,
+            "{sql}: {error}"
+        );
+        assert_eq!(error.to_string(), "Unknown catalog type: memory", "{sql}");
+    }
+    assert_eq!(
+        current(&session),
+        ("spark_catalog".to_string(), "default".to_string())
+    );
+}
+
+#[tokio::test]
+async fn a_two_part_alias_on_the_default_catalog_still_plans_beside_a_refusal() {
+    let wh = TempDir::new().unwrap();
+    let mem_wh = format!("{}/c_mem", wh.path().to_str().unwrap());
+    let session = harness_session(
+        &wh,
+        &[
+            (
+                "spark.sql.catalog.c_mem",
+                "org.apache.iceberg.spark.SparkCatalog",
+            ),
+            ("spark.sql.catalog.c_mem.type", "memory"),
+            ("spark.sql.catalog.c_mem.warehouse", mem_wh.as_str()),
+        ],
+    )
+    .await;
+    rows(
+        &session,
+        "CREATE TABLE spark_catalog.default.t (x INT) USING iceberg",
+    )
+    .await;
+    assert_eq!(
+        rows(&session, "SELECT s.x FROM spark_catalog.default.t s").await,
+        Vec::<Vec<String>>::new()
+    );
+    assert_eq!(
+        current(&session),
+        ("spark_catalog".to_string(), "default".to_string())
+    );
+}
+
+#[tokio::test]
+async fn both_kind_keys_refuse_every_first_use_as_illegal_argument() {
+    let wh = TempDir::new().unwrap();
+    let both_wh = format!("{}/c_both", wh.path().to_str().unwrap());
+    let session = harness_session(
+        &wh,
+        &[
+            ("spark.sql.catalog.c_both.type", "memory"),
+            (
+                "spark.sql.catalog.c_both.catalog-impl",
+                "org.apache.iceberg.inmemory.InMemoryCatalog",
+            ),
+            ("spark.sql.catalog.c_both.warehouse", both_wh.as_str()),
+        ],
+    )
+    .await;
+    for sql in [
+        "USE c_both",
+        "SHOW NAMESPACES IN c_both",
+        "CREATE NAMESPACE IF NOT EXISTS c_both.n1",
+        "SELECT * FROM c_both.n1.t",
+    ] {
+        let error = refusal(&session, sql).await;
+        assert_eq!(
+            error.exception_class(),
+            ErrorClass::IllegalArgument,
+            "{sql}: {error}"
+        );
+        assert_eq!(
+            error.to_string(),
+            "Cannot create catalog c_both, both type and catalog-impl are set: type=memory, \
+             catalog-impl=org.apache.iceberg.inmemory.InMemoryCatalog",
+            "{sql}"
+        );
+    }
+    assert_eq!(
+        current(&session),
+        ("spark_catalog".to_string(), "default".to_string())
+    );
+}
+
+#[tokio::test]
+async fn the_catalog_impl_long_form_and_the_opt_in_stay_catalogs() {
+    let wh = TempDir::new().unwrap();
+    let root = wh.path().to_str().unwrap();
+    let impl_wh = format!("{root}/c_impl");
+    let session = harness_session(
+        &wh,
+        &[
+            (
+                "spark.sql.catalog.c_impl.catalog-impl",
+                "org.apache.iceberg.inmemory.InMemoryCatalog",
+            ),
+            ("spark.sql.catalog.c_impl.warehouse", impl_wh.as_str()),
+        ],
+    )
+    .await;
+    rows(&session, "CREATE NAMESPACE c_impl.n1").await;
+    rows(&session, "CREATE TABLE c_impl.n1.t (id INT) USING iceberg").await;
+    assert_eq!(
+        rows(&session, "SELECT count(*) FROM c_impl.n1.t").await,
+        [["0"]].map(|row| vec![row[0].to_string()])
+    );
+    let rt_wh = format!("{root}/c_rt");
+    let refused = session
+        .register_late_catalog_block(&HashMap::from([
+            (
+                "spark.sql.catalog.c_rt.type".to_string(),
+                "memory".to_string(),
+            ),
+            (
+                "spark.sql.catalog.c_rt.warehouse".to_string(),
+                rt_wh.clone(),
+            ),
+        ]))
+        .await
+        .unwrap();
+    assert!(!refused);
+    let error = refusal(&session, "SHOW NAMESPACES IN c_rt").await;
+    assert_eq!(error.to_string(), "Unknown catalog type: memory");
+    let registered = session
+        .register_late_catalog_block(&HashMap::from([
+            (
+                "repark.sql.catalogExtensions".to_string(),
+                "true".to_string(),
+            ),
+            (
+                "spark.sql.catalog.c_rt.type".to_string(),
+                "memory".to_string(),
+            ),
+            ("spark.sql.catalog.c_rt.warehouse".to_string(), rt_wh),
+        ]))
+        .await
+        .unwrap();
+    assert!(registered);
+    rows(&session, "CREATE NAMESPACE c_rt.n1").await;
+}
+
+#[tokio::test]
 async fn spark_catalog_names_the_session_catalog_only() {
     let wh = TempDir::new().unwrap();
     let session = harness_session(&wh, &[]).await;

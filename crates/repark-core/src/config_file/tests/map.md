@@ -20,7 +20,10 @@ the battery passed the 1,000-line file ceiling — stage pins versus wiring pins
   dot-join flattening, the builder-profile-default precedence table, the redacted
   source-column dump, the byte-identical catalog done condition, the database-source
   block that loads since CFG-2 step 1). Tempdir fixtures with stub environments
-  throughout, so no pin mutates the process environment. **MAINT-POLICY-1 step 3 (2026-09-10):** three stamp pins (file
+  throughout, so no pin mutates the process environment. **CATALOG-1 (2026-09-26):** the
+  file-vs-calls catalog test runs on `type=hadoop` (a bare `type=memory` refuses at first
+  use now; C-010 extends the test for the toml rewrite).
+  **MAINT-POLICY-1 step 3 (2026-09-10):** three stamp pins (file
   policy resolves with its profile name, `REPARK_ENV` names a non-default stamp with and
   without a table, the file-built session carries the stamp on its registry).
   **REVIEW-FIX-7 step 1 (2026-09-10):** `mod.rs` gains the parse-error sanitization pin
