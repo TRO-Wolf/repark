@@ -605,7 +605,7 @@ async fn rm_deletes_evolved_spec_v2() {
     .await;
     assert_eq!(
         layout(&catalogs, "rm_e2").await,
-        vec![(0, 0, 1, 0), (0, 0, 2, 0), (0, 0, 2, 0), (0, 1, 0, 0)]
+        vec![(0, 0, 5, 0), (0, 1, 0, 0)]
     );
     assert_eq!(
         live_ids(&ctx, &catalogs, "rm_e2").await,
@@ -624,7 +624,7 @@ async fn rm_deletes_evolved_spec_v2() {
     assert_eq!(snapshot_total(&catalogs, "rm_e2").await, snapshots_before);
     assert_eq!(
         layout(&catalogs, "rm_e2").await,
-        vec![(0, 0, 1, 0), (0, 0, 2, 0), (0, 0, 2, 0), (0, 1, 0, 0)]
+        vec![(0, 0, 5, 0), (0, 1, 0, 0)]
     );
     assert_eq!(
         live_ids(&ctx, &catalogs, "rm_e2").await,
@@ -647,7 +647,7 @@ async fn rm_deletes_evolved_spec_v3() {
     .await;
     assert_eq!(
         layout(&catalogs, "rm_e3").await,
-        vec![(0, 0, 1, 0), (0, 0, 2, 0), (0, 0, 2, 0), (0, 1, 0, 0)]
+        vec![(0, 0, 5, 0), (0, 1, 0, 0)]
     );
     assert_eq!(
         live_ids(&ctx, &catalogs, "rm_e3").await,
@@ -666,7 +666,7 @@ async fn rm_deletes_evolved_spec_v3() {
     assert_eq!(snapshot_total(&catalogs, "rm_e3").await, snapshots_before);
     assert_eq!(
         layout(&catalogs, "rm_e3").await,
-        vec![(0, 0, 1, 0), (0, 0, 2, 0), (0, 0, 2, 0), (0, 1, 0, 0)]
+        vec![(0, 0, 5, 0), (0, 1, 0, 0)]
     );
     assert_eq!(
         live_ids(&ctx, &catalogs, "rm_e3").await,
@@ -678,15 +678,24 @@ async fn rm_deletes_evolved_spec_v3() {
 async fn rm_deletes_non_current_spec_rewrites_that_spec() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_version(&wh, "2").await;
-    replay(
+    run(
         &ctx,
         &catalogs,
-        "rm_o2",
-        PART,
-        "2",
-        &[DELETE_1, EVOLVE, INSERT_9, DELETE_9],
+        "CREATE TABLE ice.sales.rm_o2 (id INT, cat STRING, v STRING) USING iceberg \
+         PARTITIONED BY (cat) TBLPROPERTIES ('format-version' = '2', \
+         'write.delete.mode' = 'merge-on-read', 'commit.manifest-merge.enabled' = 'false')",
     )
     .await;
+    for seed in [
+        "INSERT INTO ice.sales.rm_o2 VALUES (1, 'x', 'a'), (2, 'y', 'b')",
+        "INSERT INTO ice.sales.rm_o2 VALUES (3, 'x', 'c'), (4, 'y', 'd')",
+        "INSERT INTO ice.sales.rm_o2 VALUES (5, 'x', 'e'), (6, 'z', 'f')",
+    ] {
+        run(&ctx, &catalogs, seed).await;
+    }
+    for stmt in [DELETE_1, EVOLVE, INSERT_9, DELETE_9] {
+        run(&ctx, &catalogs, &stmt.replace("{table}", "rm_o2")).await;
+    }
     assert_eq!(
         layout(&catalogs, "rm_o2").await,
         vec![(0, 0, 1, 0), (0, 0, 2, 0), (0, 0, 2, 0), (0, 1, 0, 0)]

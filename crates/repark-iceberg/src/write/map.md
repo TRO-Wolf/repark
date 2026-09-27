@@ -441,8 +441,8 @@ repark-core's error map.
   `.target-size-bytes`) therefore take effect as they do in Spark: with defaults the
   hundredth append replaces 99 manifests with 1. The overwrite, replace-partitions and
   row-delta sites are untouched — Spark never merges there. A bare `INSERT INTO` does NOT
-  reach these functions: it plans on the fork's `IcebergCommitExec`, which is
-  `pub(crate)` and still calls `fast_append` (DECLARED, `ICE-MERGE-APPEND-INSERT-1`).
+  reach these functions: it plans on the fork's `IcebergCommitExec`, which merges since
+  RP-54 (fork #361; `ICE-MERGE-APPEND-INSERT-1` FIXED).
   `append.rs` carries no module banner and `commit_append` no summary doc line under the
   comment ban: the merge contract is stated here instead.
   The routing needs no dependency movement: `Transaction::merge_append()` is already in the

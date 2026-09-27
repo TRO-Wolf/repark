@@ -415,8 +415,8 @@ async fn call_rewrite_manifests_rewrites_only_the_current_spec() {
     let ident = sales("evolve");
     assert_eq!(
         manifest_shape(catalogs["ice"].as_ref(), &ident).await,
-        (3, 0, 5),
-        "fixture must hold three current-spec manifests and two at the old spec"
+        (3, 0, 4),
+        "fixture must hold three current-spec manifests and one at the old spec"
     );
     let live_before = rows(&ctx, &catalogs, "SELECT * FROM ice.sales.evolve").await;
 
@@ -440,9 +440,9 @@ async fn call_rewrite_manifests_rewrites_only_the_current_spec() {
 
     assert_eq!(
         manifest_shape(catalogs["ice"].as_ref(), &ident).await,
-        (1, 0, 3),
-        "the current spec merged to one manifest; both old-spec manifests are kept, as Spark \
-         keeps them"
+        (1, 0, 2),
+        "the current spec merged to one manifest; the old-spec manifest is kept, as Spark \
+         keeps it"
     );
     assert_eq!(
         rows(&ctx, &catalogs, "SELECT * FROM ice.sales.evolve").await,

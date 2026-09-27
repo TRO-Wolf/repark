@@ -217,3 +217,7 @@ COVERAGE_ATTESTATION:
 ## Hand-back
 
 (TBD step 6.)
+
+## RP-54 note (2026-09-26)
+
+RP-54 repin: test_evolved_spec_default_is_a_no_op re-pinned to the fork-owned shape after fork #361 — before-layout is the merged [(0,0,5,0),(0,1,0,0)], the (0,0) no-op call, snapshot and row pins stand.

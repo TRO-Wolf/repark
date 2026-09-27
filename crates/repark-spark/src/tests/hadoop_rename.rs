@@ -88,7 +88,7 @@ async fn hadoop_type_rename_refuses_every_target_shape() {
 }
 
 #[tokio::test]
-async fn hadoop_type_staged_create_still_writes_uuid_names_divergence() {
+async fn hadoop_type_staged_create_writes_versioned_names() {
     let warehouse = TempDir::new().unwrap();
     let session = configured_session("hadoop", warehouse.path()).await;
     create_and_insert_twice(&session).await;
@@ -97,14 +97,18 @@ async fn hadoop_type_staged_create_still_writes_uuid_names_divergence() {
         .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
         .collect();
     assert!(
-        !names.iter().any(|name| name == "version-hint.text"),
+        names.iter().any(|name| name == "version-hint.text"),
         "{names:?}"
     );
     let mut versions: Vec<&str> = names
         .iter()
         .filter(|name| name.ends_with(".metadata.json"))
-        .map(|name| name.split('-').next().unwrap())
+        .map(String::as_str)
         .collect();
     versions.sort_unstable();
-    assert_eq!(versions, ["00000", "00001", "00002"], "{names:?}");
+    assert_eq!(
+        versions,
+        ["v1.metadata.json", "v2.metadata.json", "v3.metadata.json"],
+        "staged create publishes versioned names, no uuid names: {names:?}"
+    );
 }

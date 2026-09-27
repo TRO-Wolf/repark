@@ -4216,16 +4216,17 @@ the pin rather than obeying it.
   per catalog, and the leniency only ever shows more names, never fewer.
   pins: ice-catalog-session-1/C-015
 
-### ICE-CATALOG-SESSION-HADOOP-1 — `type=hadoop` aliases to a memory catalog (UUID metadata names, no version-hint file)
+### ICE-CATALOG-SESSION-HADOOP-1 — `type=hadoop` aliases to a memory catalog (UUID metadata names, no version-hint file) — **FIXED 2026-09-26 (RP-54, fork #359)**
 
-- **repark** — `type=hadoop` registers a memory catalog: metadata files take
-  `<version>-<uuid>.metadata.json` names and no `version-hint.text` is written.
+- **repark** — `type=hadoop` registers a memory catalog: since RP-54 (fork #359) metadata
+  files take versioned `v<N>.metadata.json` names and `version-hint.text` is written, like
+  a Hadoop catalog (before: `<version>-<uuid>.metadata.json` names, no hint).
 - **Apache Spark** — a Hadoop catalog writes `version-hint.text` and `vN.metadata.json`
   names; that naming is load-bearing for `rewrite_table_path` (ipi-30-31 A-8).
 - **Pin** —
-  `python/repark/tests/test_ice_catalog_session_1.py::test_hadoop_alias_writes_uuid_metadata_names`
-- **Rationale** — BACKLOG, deliberate (INDEX 25): card a real `Hadoop` kind if the `vN`
-  naming turns out to matter elsewhere.
+  `python/repark/tests/test_ice_catalog_session_1.py::test_hadoop_alias_writes_versioned_metadata_names`
+- **Rationale** — FIXED 2026-09-26 (RP-54, fork #359). BACKLOG, deliberate (INDEX 25): the
+  `vN` naming mattered for `rewrite_table_path` (ipi-30-31 A-8), and the fork now publishes it.
   pins: ice-catalog-session-1/C-025
 
 ### ICE-CATALOG-MEM-LAYOUT-1 — a memory catalog's location-less create lands at `<warehouse>/<ns>/<table>` — **FIXED 2026-09-23** (Q-55-7)
@@ -4309,7 +4310,7 @@ the pin rather than obeying it.
   than their absence, so the row waited for #322 and the pin flipped at the bump that carries it.
   pins: ice-merge-append-1/C-006
 
-### ICE-MERGE-APPEND-INSERT-1 — a bare `INSERT INTO` still commits through `fast_append` — **BACKLOG 2026-09-19**
+### ICE-MERGE-APPEND-INSERT-1 — a bare `INSERT INTO` still commits through `fast_append` — **FIXED 2026-09-26 (RP-54, fork #361)** (heading kept as the historical anchor; merges since RP-54)
 
 - **repark** — a bare `INSERT INTO cat.ns.t VALUES (…)` (and the facade's `insertInto` /
   `saveAsTable(mode="append")`, which lower to it) falls through to DataFusion and plans on the
@@ -4322,12 +4323,13 @@ the pin rather than obeying it.
 - **Apache Spark** — the bare `INSERT INTO` **is** `SparkWrite$BatchAppend`, the merging producer:
   the hundredth default append leaves ONE manifest. *(oracle: recorded, live PySpark 4.1.2 +
   Iceberg 1.11.0, 2026-09-19.)*
-- **Pin** — `python/repark/tests/test_ice_merge_append_1.py::test_bare_insert_into_still_commits_through_the_fork_commit_exec`
-  (codifies today's 100 manifests and the `IcebergCommitExec` plan node) and
-  `…::test_bare_insert_into_merges_like_spark` (strict xfail on Spark's number)
-- **Rationale** — BACKLOG, fork-routed. TRIGGER: **fork ask
-  `ICE-MERGE-APPEND-COMMITEXEC`** — route `IcebergCommitExec`'s `InsertOp::Append` arm through
-  `merge_append()`, the same mapping this unit justified from the Spark bytecode. Do NOT fix it
+- **Pin** — `python/repark/tests/test_ice_merge_append_1.py::test_bare_insert_into_now_merges_through_the_fork_commit_exec`
+  (Spark's ONE manifest after the hundredth append, beside the kept `IcebergCommitExec` plan node) and
+  `…::test_bare_insert_into_merges_like_spark` (un-xfailed at RP-54)
+- **Rationale** — FIXED by the fork ask **`ICE-MERGE-APPEND-COMMITEXEC`** (fork #361,
+  F-MANIFEST-MERGE-1, carried by RP-54): `IcebergCommitExec`'s `InsertOp::Append` arm now commits
+  through `merge_append()`, the same mapping this unit justified from the Spark bytecode. The
+  earlier text stands as the history of the route taken. Do NOT fix it
   by intercepting `INSERT INTO` in the RePark routers and re-staging through the write-options
   path: that would change distribution, file layout and the conform path for every insert in the
   engine to buy one commit-site swap.
@@ -7876,11 +7878,12 @@ the pin rather than obeying it.
   *(oracle: recorded — live PySpark 4.0.1 + Iceberg 1.10.0, same basis as MOR-1.)*
 - **Pin** —
   `crates/repark-spark/src/tests/call.rs::call_mor2_merge_writes_one_position_delete_per_data_file_by_default`
-  (MERGE writer). Residual: Spark SQL `DELETE`/`UPDATE` that hit the fork `TableProvider`
-  still group by partition (`fork_table_provider_delete_is_not_this_writer`).
+  (MERGE writer). Spark SQL `DELETE`/`UPDATE` that hit the fork `TableProvider` honour
+  `write.delete.granularity` since RP-54 (fork #360; `fork_table_provider_update_honours_file_granularity`).
 - **Rationale** — FIXED (MW-9) **for RePark-owned MERGE** (`write_position_deletes`).
   Heading kept as the historical anchor. SQL `DELETE`/`UPDATE` via iceberg-datafusion
-  have no granularity knob (fork ENGINE_CONTRACT §7). Contents are unaffected.
+  honour `write.delete.granularity`, one delete file per data file by default (fork
+  ENGINE_CONTRACT §7). Contents are unaffected.
 
 ### RDF-1 — `rewrite_data_files` never selects a delete-laden file, so its dead rows are retained forever
 
@@ -9361,11 +9364,11 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   deletes where Spark's cells answer from metadata, so the two engines entered the procedure
   with different tables and those pins asserted Spark's two-leg RULE over RePark's own
   before-state. ICE-META-DELETE-1 removed that cause and the six now assert the cell.
-  Two cells keep RePark's measured before-state and say why: `evolved_spec_v2/v3`
-  ([MANIFEST-4](#manifest-4--an-append-after-a-partition-spec-evolution-does-not-merge-the-old-spec-manifests--declared-2026-09-19))
-  and `part_mor_real_v2`
+  One cell keeps RePark's measured before-state and says why: `part_mor_real_v2`
   ([ICE-META-DELETE-1-D1](#ice-meta-delete-1-d1--v2-merge-on-read-adds-a-second-position-delete-file-where-spark-rewrites-the-first--declared-2026-09-19)
-  — never named in this row before, and unchanged by either unit).
+  — never named in this row before, and unchanged by either unit). `evolved_spec_v2/v3`
+  now assert the merged shape
+  ([MANIFEST-4](#manifest-4--an-append-after-a-partition-spec-evolution-does-not-merge-the-old-spec-manifests--fixed-2026-09-26-rp-54-fork-361)).
 - **Rationale** — FIXED 2026-09-20 (ICE-RM-DELETES-1, IPI-11 RePark half, on fork `44834673`
   carrying the delete-manifest opt-in, fork #318). The fork's
   `RewriteManifestsAction::rewrite_delete_manifests(true)` joins Spark's second leg in the same
@@ -9560,17 +9563,16 @@ owned fork's maintenance actions.
   the PR2 sort slice is closed, pinned by `P-RM-SORT-BY`.
   pins: ice-procedures-1/C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019,
   C-020, C-021, C-022
-### MANIFEST-4 — an append after a partition-spec evolution does not merge the old-spec manifests — **DECLARED 2026-09-19**
+### MANIFEST-4 — an append after a partition-spec evolution does not merge the old-spec manifests — **FIXED 2026-09-26 (RP-54, fork #361)**
 
-- **repark** — on a table whose partition spec has evolved, an `INSERT` writes its new
-  spec-1 manifest and leaves every old spec-0 manifest exactly where it was. The recorded
-  `evolved_spec` shape (three two-file appends, a whole-file DELETE, `ADD PARTITION FIELD
-  bucket(2, id)`, one more `INSERT`, one more whole-file DELETE) ends with FOUR manifests —
-  `[(0,0,1,0), (0,0,2,0), (0,0,2,0), (0,1,0,0)]`, five live spec-0 data files spread over the
-  three append manifests. The live rows, the file count, the spec ids and the empty spec-1
-  manifest are Spark's; only how many manifests hold them differs. `CALL
-  rewrite_manifests(spec_id => 0)` produces Spark's layout exactly —
-  `[(0,0,5,0), (0,1,0,0)]` — so nothing but the merge is missing.
+- **repark** — **FIXED 2026-09-26 (RP-54, fork #361):** on a table whose partition spec
+  has evolved, an `INSERT` now merges like Spark at the append after the evolution. The
+  recorded `evolved_spec` shape (three two-file appends, a whole-file DELETE,
+  `ADD PARTITION FIELD bucket(2, id)`, one more `INSERT`, one more whole-file DELETE) ends
+  with TWO manifests — `[(0,0,5,0), (0,1,0,0)]`, the five live spec-0 data files in ONE
+  (before RP-54 it ended with FOUR, the files spread over the three append manifests, and
+  only the explicit `spec_id => 0` rewrite reached Spark's two). The live rows, the file
+  count, the spec ids and the empty spec-1 manifest are Spark's, as before.
 - **Apache Spark** — the same shape ends with TWO manifests, the five live spec-0 data files
   in ONE. The merge happens **at the append after the evolution**, not at either DELETE: that
   `append` snapshot records `manifests-created: 2, manifests-kept: 0, manifests-replaced: 3`,
@@ -9582,11 +9584,11 @@ owned fork's maintenance actions.
 - **Pin** —
   `crates/repark-spark/src/tests/call_rm_deletes.rs::rm_deletes_evolved_spec_v2` / `_v3` and
   `python/repark/tests/test_ice_rm_deletes_1.py::test_evolved_spec_default_is_a_no_op`
-  assert RePark's four-manifest layout, and
-  `::rm_deletes_non_current_spec_rewrites_that_spec` asserts that an explicit `spec_id => 0`
-  reaches Spark's two-manifest layout.
+  assert the merged `[(0,0,5,0), (0,1,0,0)]`, and
+  `::rm_deletes_non_current_spec_rewrites_that_spec` reaches the three-manifest layout only
+  with `commit.manifest-merge.enabled=false`.
   pins: ice-meta-delete-1/C-009
-- **Rationale** — DECLARED 2026-09-19 (ICE-META-DELETE-1 round 2). This is the second half of
+- **Rationale** — FIXED 2026-09-26 (RP-54, fork #361). DECLARED 2026-09-19 (ICE-META-DELETE-1 round 2) as the second half of
   the parity-inventory row IPI-11 — "manifest merging: `commit.manifest.min-count-to-merge` /
   merge-on-commit is not applied", inventory token `TP-MANIFEST-MIN-MERGE`. ICE-RM-DELETES-1
   fixed the first half (`P-RM-DELETE-MANIFESTS`,
@@ -9594,11 +9596,11 @@ owned fork's maintenance actions.
   this half was there before it and is untouched by it and by ICE-META-DELETE-1 — the
   metadata-delete routing changed only that the two delete manifests no longer stand beside
   the three. **Contents are unaffected**: the live row set, the live data files and the
-  procedure's own answer (`0, 0`, no snapshot committed) are identical either way. Fixing it
-  is fork work in the snapshot producer's manifest-merge path, where the exact Java trigger
-  (`min-count-to-merge` is 100 by default, yet Spark merged three manifests here — a
-  non-current-spec group looks to be merged regardless) still has to be read off the
-  bytecode before a unit is scoped.
+  procedure's own answer (`0, 0`, no snapshot committed) are identical either way. The fix
+  was fork work in the snapshot producer's manifest-merge path: fork #361 read the exact
+  Java trigger off the bytecode (`min-count-to-merge` is 100 by default, yet Spark merged
+  three manifests here — a non-current-spec group is merged regardless), and the merge now
+  happens at the append.
 
 ### UNIX-1 — SQL-door `from_unixtime` returns TIMESTAMP, not STRING — **FIXED 2026-09-05, TYPES-1**
 

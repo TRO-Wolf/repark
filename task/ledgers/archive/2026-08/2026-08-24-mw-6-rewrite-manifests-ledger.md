@@ -1,3 +1,5 @@
+> **Errata (2026-09-26, RP-54):** RP-54 repin: call_rewrite_manifests_rewrites_only_the_current_spec re-pinned to the fork-owned shape after fork #361 — fixture (3,0,4) and post-rewrite (1,0,2), one old-spec manifest survives the merging append.
+
 # MW-6 — `CALL system.rewrite_manifests`
 
 **Date:** 2026-08-23 · **Branch:** `feat/mw6-wave` · **Base:** `c8553d3` (`main`, post-#228) ·
