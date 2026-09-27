@@ -211,7 +211,11 @@ pins: rp-4-fork-repin/C-005, C-006
   `current_schema()`), and a named source reads its `TableProvider` schema; only
   a subquery source (`USING (SELECT …) AS s`) still plans one `SELECT * … LIMIT
   0`, because no metadata exists for it. `merge.rs` resolves the catalog handle
-  before the fragment rewrite. pins: ice-mixed-case-1/C-004, C-018
+  before the fragment rewrite. **WO CASESENS-1 slice 1 (2026-09-27):** a
+  parenthesized derived source is folded as text
+  (`column_resolution::fold_query_text`) before the fragment rewrite, so its
+  another-case names bind. pins: ice-mixed-case-1/C-004, C-018
+  pins: casesens-1/C-004
 - `insert_overwrite.rs` — **R-FILEORDER-2 (2026-09-27, HALT, no code change):**
   Spark 4.1.2 answers `L-INSERT-OVERWRITE` `[[2,b,5,3],[3,c,6,3],[4,d,4,3]]` on a same-JVM
   triple but splits 2–4 across six fresh-JVM runs — one combined task whose file order is

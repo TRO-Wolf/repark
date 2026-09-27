@@ -63,6 +63,25 @@ pins: ice-error-conditions-1/C-011
   repark-spark's re-planning temp-view scan grows the stack the same way; removing that wrapper
   overflows the 100-level temp-view chain pins. pins: ice-views-1/C-018
 - `tests.rs` — the battery below.
+- `inner_scopes.rs` — **WO CASESENS-1 slice 1 (2026-09-27):** the inner-scope
+  spelling pass. `respell_inner_scopes` collects the written projections of the
+  original statement's derived tables and CTE bodies in visit order (the leftmost
+  `SELECT` of a set-operation body; expression subqueries never collected) and
+  applies them to the folded statement paired by index, refusing to guess on a
+  length mismatch. An unaliased plain or compound reference whose written last
+  segment differs from DataFusion's name for it gains `AS "<written>"`, an
+  unquoted non-lowercase alias is double-quoted, a twice-written spelling is left
+  alone, and an upper-case column-alias list is quoted. Wired into
+  `finish_with_display`, which re-plans once on change and falls back to the
+  pre-respell plan when the respelled statement fails (ledger D1: `r5_subq_both`
+  keeps main's answer). Unit battery inline.
+  pins: casesens-1/C-001, C-002
+- `fold_text.rs` — **WO CASESENS-1 slice 1 (2026-09-27):** `fold_query_text`
+  runs the repair fold loop over a query text (plan, absorb `FieldNotFound`
+  valid fields, `fold_statement`, re-plan, one pass per distinct miss) and
+  returns the folded text, unchanged when the first plan succeeds; the MERGE
+  door folds a parenthesized derived source with it before the fragment rewrite.
+  pins: casesens-1/C-004
 - `display.rs` — **U11-EDGE-1 (2026-09-26):** the query-spelling display rewrite. Under the
   default `caseSensitive=false`, `display_rewrite` compares the planned output names with the
   projection as written (the left branch of a set operation) and re-plans once with quoted

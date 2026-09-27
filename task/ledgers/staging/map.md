@@ -13,6 +13,18 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   the NTZ astral question and the unscannable-token fallback are dated residues.
   `risk_tier: standard`. Branch `fix/uuid-cast-window-1`.
   pins: uuid-cast-window-1/C-001
+- [casesens-1-ledger.md](casesens-1-ledger.md) —
+  **WO CASESENS-1 (2026-09-27), in flight:** names resolve the way Spark resolves
+  them under `spark.sql.caseSensitive` false and true. Slice 1: nested SQL scopes
+  keep the written spelling (derived tables, CTEs, the leftmost set-operation
+  branch, column-alias lists; C-001, C-002) and a MERGE with a derived source
+  spelled in another case answers (C-004); the catalog view (C-003) stays OPEN
+  with its S1-3 record, homed with R-CS1-1 to S1b. Later slices: `true` exact
+  on the SQL door (C-005…C-008), the
+  DataFrame door and `describe` (C-009, C-010), case twins (C-011, C-012), Iceberg
+  DDL exactness (C-013…C-016); one rule (C-017) and no regressions (C-018) flip
+  last. `risk_tier: high`. Branch `feat/casesens-1-s1`.
+  pins: casesens-1/C-001, C-002, C-004
 - [r-fileorder-2-ledger.md](r-fileorder-2-ledger.md) —
   **R-FILEORDER-2 (2026-09-27), HALT per R1:** Spark 4.1.2's own `L-INSERT-OVERWRITE`
   lineage differs between runs (the same-JVM triple agrees, C-001; six fresh-JVM runs

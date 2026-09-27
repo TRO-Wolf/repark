@@ -161,6 +161,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   frame, a stored codec beating `zstd` and the default after `UNSET`, and the
   missing/wrong-case refusals with the fall-through sweep.
   pins: tblprops-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+- [test_casesens_1.py](test_casesens_1.py) + `casesens_1_spark_oracle.json` —
+  **WO CASESENS-1 slice 1 (2026-09-27):** the nested-scope SELECT legs, the MERGE
+  derived source and the catalog-view reads replay Spark's recorded names and
+  rows under each step's `caseSensitive` (success legs compare exactly; DML/DDL
+  legs assert success only; refusals compare per R12/R13). `p1/r5_cte_outer` is
+  excluded per ruling (ledger R-CS1-1); the catalog-view legs are not in this
+  file (C-003 OPEN, homed with R-CS1-1 to S1b).
+  pins: casesens-1/C-001, C-002, C-004
 - [test_ntz_1.py](test_ntz_1.py) + `ntz_1_spark_oracle.json` — **WO NTZ-1 slice 1
   (2026-09-26):** the `TIMESTAMP_NTZ` literal and explicit casts replay Spark's measured
   answers — 29 literal/cast/refusal queries in UTC and New York sessions, the v2/v3

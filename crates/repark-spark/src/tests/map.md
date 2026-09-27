@@ -471,6 +471,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   off; `CAST_WITH_CONF_SUGGESTION` plus the conf remedy for integrals when ANSI is on;
   `CAST_WITHOUT_SUGGESTION` for the never-castable sources in both modes and for `TRY_CAST`.
   pins: bl-11-numeric-binary/C-001, C-002, C-003
+- `casesens_scopes.rs` — **WO CASESENS-1 slice 1 (2026-09-27):** nested scopes
+  keep the written spelling — derived and CTE projections (`r5_subq_inner_ID`,
+  `r5_cte_ID`, `r5_cte_mixed`, `r5_union_subq`, `n_nested2`, `n_join_derived`),
+  the column-alias list (`Kay`), the already-equal shapes (incl. `r5_subq_both`
+  through the D1 fallback; `r5_cte_outer` excluded per ruling, ledger R-CS1-1),
+  the MERGE derived source (`r30_*`) and another-case DML — names and rows each.
+  pins: casesens-1/C-001, C-002, C-004
 - `decimal.rs` — the Spark-door decimal128 pins at `i128` precision: result `(p,s)`, value,
   and nullability for the G2/G13 corpus shapes. **CUTOVER-SCHEMA-1 (2026-09-04):**
   `pin_int_times_decimal_is_12_2_i128` and `pin_mul_single_digit_nullability_non_null_i128`
