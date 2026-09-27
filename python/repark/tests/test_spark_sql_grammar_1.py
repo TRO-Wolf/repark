@@ -283,7 +283,9 @@ def test_pg_ntz_literal_answers_the_wall(spark: ReparkSession) -> None:
 def test_pg_ntz_cast_answers_the_wall(spark: ReparkSession) -> None:
     """PG-ntz-cast: ``CAST(x AS TIMESTAMP_NTZ)`` answers the naive wall.
 
-    pins: ntz-1/C-002.
+    pins: ntz-1/C-002. Spark types the literal-only cell nullable
+    (``ntz5-nullable-spark.json``: True under ANSI off and on); RePark folds
+    it to non-null (ntz-1 R-5).
     """
     table = _table(spark, "SELECT CAST('2024-01-02 03:04:05' AS TIMESTAMP_NTZ) AS v")
     assert table.column("v").to_pylist() == [datetime.datetime(2024, 1, 2, 3, 4, 5)]
