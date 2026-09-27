@@ -270,9 +270,10 @@ def test_pg_ltz_cast_nullable_frame(spark: ReparkSession) -> None:
 def test_pg_ntz_literal_answers_the_wall(spark: ReparkSession) -> None:
     """PG-ntz-lit: the ``TIMESTAMP_NTZ`` literal answers its naive wall.
 
-    pins: ntz-1/C-001. Spark folds the literal-only cell to non-null and so
-    does RePark (unlike the folded-literal precedent: the wall literal rides
-    a non-null integer).
+    pins: ntz-1/C-001. Spark folds the literal-only cell to non-null
+    (``ntz5-nullable-spark.json``: False under ANSI off and on, measured via
+    ``ntz5_nullable_probe.py``) and so does RePark (unlike the
+    folded-literal precedent: the wall literal rides a non-null integer).
     """
     table = _table(spark, "SELECT TIMESTAMP_NTZ '2024-01-02 03:04:05' AS v")
     assert table.column("v").to_pylist() == [datetime.datetime(2024, 1, 2, 3, 4, 5)]

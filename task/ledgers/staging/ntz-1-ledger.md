@@ -179,3 +179,8 @@ history.
   facade `cast_nested_ntz_bigint` step (`CAST(CAST(2024-01-01 AS
   TIMESTAMP_NTZ) AS BIGINT)`); the measured-EQUAL `TRY_CAST` and column
   shapes are pinned beside them (`ntz6-nested-spark.json`).
+- V-010: the literal nullability leg is measured, not assumed —
+  `ntz5_nullable_probe.py` now also records `SELECT TIMESTAMP_NTZ
+  '2024-01-02 03:04:05' AS v` and `ntz5-nullable-spark.json` says
+  nullable False under ANSI off and on (Spark 4.1.2, re-measured
+  2026-09-27 through `jvm-lock.sh`); the PG-ntz-lit docstring cites it.
