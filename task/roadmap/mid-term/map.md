@@ -48,7 +48,7 @@ declines it (a dated ruling in the intake, then the archive).
 - [night-report-2026-09-20-25e.md](night-report-2026-09-20-25e.md) — **run 25e (the plan packets):** thirteen
   execution packets for the large parity units, 222 cells; four units found to need no fork work.
 - [s3-path-write-1-5-0.md](s3-path-write-1-5-0.md) — **card S3-PATH-WRITE-1 (filed 2026-09-22 as a v1.5.1 card; owner
-  2026-09-23: in the v1.5.0 target):** plain Parquet, CSV and JSON path writes to `s3://` — reads reach S3, Iceberg
+  2026-09-23: in the v1.5.0 target; owner 2026-09-27: back to v1.5.1):** plain Parquet, CSV and JSON path writes to `s3://` — reads reach S3, Iceberg
   tables on S3 write, but the path writer is a local staging-and-rename protocol; step 0 is a recorded Spark oracle
   (`W-PATH-S3-*` cells join the gate), then six design questions ruled Rust-first, one day lane, no fork work.
 - [ice-streaming-1-6.md](ice-streaming-1-6.md) — **card ICE-STREAMING (2026-09-19, v1.6.0, owner ruling C-1):**

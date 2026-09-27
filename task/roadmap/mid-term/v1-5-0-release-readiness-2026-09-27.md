@@ -9,7 +9,7 @@ harness rule: **705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFEREN
 — pending the evening rerun wherever stated as final below. **The gate:** zero non-EQUAL cells
 that Spark answers, except the dated carve-outs C-1 to C-5.
 
-This file closes when the owner rules on finding F-1 (U12) and the evening rerun lands.
+The owner ruled on finding F-1 on 2026-09-27: U12 returns to v1.5.1. This file closes when the evening rerun lands.
 
 ## 1. Matrix against the record
 
@@ -65,7 +65,7 @@ pending the evening rerun.
 | U9 TYPES | PR1 `f9db8472` (LTZ + empty map), PR2 #844 `5a1c8ebd` (VOID + UUID), NTZ-1 slice 1 #856 `f09b44e5`; TY-VARIANT-V3 by C-4 | Partly — the C-4 line (158) is current; the rest reads open (lines 173–178). Stale (F-2); pointer note added. |
 | U10 READ-REST | #811 `b7a3c905` (input_file_name), #819 `3cf263da` + #822 `bf90513a` (path loads, _deleted); REG-1 was a harness timing race, no PR ([run-28 opus58 report](day-report-2026-09-23-28-opus58.md) lines 8, 73–78) | Yes — "REG-1 first … Then …" (lines 182–186). Stale (F-2); pointer note added. |
 | U11 PROPS/EDGE/CATALOG | #843 `4c8e6633` (U11-EDGE-1), #851 `fbd97ef2` + #855 `1a219450` (CATALOG-1), #857 `9aa1c185` (RP-54: manifest merge, delete granularity), #858 `e3e35b0c` (TZ-ASOF-1) | Yes — "RePark today" table (lines 190–199). Stale (F-2); pointer note added. Decision 7 closed by the 2026-09-26 owner ruling (type=memory refuses at first use, `repark.sql.catalogExtensions` opt-in). |
-| U12 S3-PATH-WRITE | **Nothing:** no `W-PATH-S3-*` cells in `matrix.json` (still 842 cells), no commits, no day-report mention since the card | The spec (§U12, lines 203–217) and the [card](s3-path-write-1-5-0.md) (line 10: "the gate waits on them") read as open in-target work — and the work is unstarted. **FINDING F-1:** owner to rule whether U12 blocks v1.5.0 or returns to v1.5.1. Not fixed: a ruling, not a note. |
+| U12 S3-PATH-WRITE | **Nothing:** no `W-PATH-S3-*` cells in `matrix.json` (still 842 cells), no commits, no day-report mention since the card | The spec (§U12, lines 203–217) and the [card](s3-path-write-1-5-0.md) (line 10: "the gate waits on them") read as open in-target work — and the work is unstarted. **FINDING F-1:** owner ruled 2026-09-27: U12 returns to v1.5.1; dated notes added to the spec and the card. |
 
 Spec §2 decisions: 1 (Q-55-7, landed #814 under the run-29 override grant), 2 (U2 overrides,
 owner ruling 2026-09-23 in `overrides.json`), 3 (C-2), 4 (U6 refusal parity, override-grant
@@ -95,12 +95,13 @@ Not edited, per the work order. Read 2026-09-27 against the tree.
 | CAT-TYPE-MEMORY three-part upper case (`SELECT * FROM C_MEM.n1.t` text differs) | `task/ledgers/staging/catalog-1-ledger.md` R-7 (line 67) and the 09-26 "Next" (line 149) |
 | The C-4 variant build | [ice-variant-1-6.md](ice-variant-1-6.md), card ICE-VARIANT, v1.6.0 |
 | The C-1 streaming card | [ice-streaming-1-6.md](ice-streaming-1-6.md), card ICE-STREAMING, v1.6.0 |
+| U12 S3 path writes | [s3-path-write-1-5-0.md](s3-path-write-1-5-0.md), card S3-PATH-WRITE-1, v1.5.1 (owner ruling 2026-09-27) |
 
 ## 6. Findings
 
 | # | Finding | File to fix | Fixed this round? |
 |---|---|---|---|
-| F-1 | U12 (S3 path writes) is unstarted while the spec and card say the gate waits on it — owner to rule: blocks v1.5.0 or returns to v1.5.1 | ruling, then the spec + card | No — needs the owner |
+| F-1 | U12 (S3 path writes) is unstarted while the spec and card say the gate waits on it | the spec + card | Yes — owner ruling 2026-09-27: U12 returns to v1.5.1; dated notes in both |
 | F-2 | Spec §1 units U0–U11 read as open work though all landed (matrix green pending the evening rerun) | `task/roadmap/mid-term/v1-5-0-remainder-spec-2026-09-23.md` | Yes — dated pointer note, no rewrite, no deletion |
 | F-3 | Spec §2 decisions 1, 2, 4, 5, 7 read open though all closed | same spec | Yes — dated pointer note |
 | F-4 | SES-DECL-readStream/streams rows lack the C-1 carve-out citation and card link | `docs/spark-sql-iceberg-parity.md` | Yes — dated pointer notes on both rows |

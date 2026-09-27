@@ -202,6 +202,9 @@ through the fork's static table). **Size M, tier opus.**
 
 ### U12 — S3-PATH-WRITE: plain Parquet, CSV and JSON path writes to `s3://` (ruling **owner, made 2026-09-23**; cells to be recorded)
 
+**Owner ruling 2026-09-27:** U12 returns to v1.5.1 and no longer gates v1.5.0 (release-readiness finding F-1,
+[v1-5-0-release-readiness-2026-09-27.md](v1-5-0-release-readiness-2026-09-27.md)). The text below is the v1.5.1 plan.
+
 Filed on 09-22 as a v1.5.1 card and moved into the 1.5.0 target by the owner on 09-23
 ([s3-path-write-1-5-0.md](s3-path-write-1-5-0.md)). Today `DataFrameWriter.parquet/csv/json` is a local
 staging-and-rename protocol that fails on an `s3://` destination before the `COPY` runs, while reads and

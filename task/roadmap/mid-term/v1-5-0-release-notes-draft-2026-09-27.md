@@ -154,5 +154,6 @@ run; RePark commits to one Spark-valid outcome.
 NTZ-1 slices 2 (store assignment) and 3 (storage surface, TZ-6); the `uuid_cast.rs`
 byte-offset window bug (card proposed); CASESENS-1 (the U11-EDGE and namespace-case
 residues); the three-part upper-case catalog text (`C_MEM.n1.t`); the ICE-VARIANT build;
-the ICE-STREAMING card. Records: §5 of the
+the ICE-STREAMING card; S3 path writes (U12, card S3-PATH-WRITE-1), moved to v1.5.1 by the owner on
+2026-09-27. Records: §5 of the
 [release-readiness report](v1-5-0-release-readiness-2026-09-27.md).
