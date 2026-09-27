@@ -16,7 +16,9 @@
 
 **What Spark does (measured 2026-09-26, Spark 4.1.2 + Iceberg 1.11.0).** The probe is
 `target/probe-catalog-1/spark_probe.py` (modes `main`, `rt-default`, `build-default-sc`,
-`build-default-missing`); answers `target/probe-catalog-1/spark-*.json`; the owner's probe
+`build-default-missing`, restored verbatim from the Muse run log on 2026-09-26, see AT-8);
+answers `target/probe-catalog-1/spark-*.json` (surviving as the log's per-key dump beside
+the restored script); the owner's probe
 `/tmp/oc-worker/direct/probes/cat-mem-spark-2026-09-26.json`. A fresh session's current catalog
 is `spark_catalog` / `default` whatever catalogs are configured. `spark.sql.defaultCatalog`
 decides the current catalog until `USE` or `setCurrentCatalog` pins a name; after that neither
@@ -50,7 +52,7 @@ DataFrame door (`table`, `writeTo`, `saveAsTable`) follows the runtime default l
 | C-011 | Every existing test that relied on the auto-flip, the single-catalog start, the alias or a bare `type=memory` is rewritten to say what it now means (none deleted); the list is below. | The facade, dbt, parity and Rust suites green. | PROVEN | The C-011 sweep ran the whole facade suite (13792 passed, 481 skipped, 149 xfailed, 0 failed), the dbt suite (64 passed, 1 skipped), the parity suite (785 passed, 3 skipped, 12 xfailed) and `check_example_coverage.py --require-execute` green: no suite test needed a rewrite beyond the earlier commits' list below (none deleted anywhere), and the one docs example changed on this branch that assumed the flip was rewritten the same way (`docs/examples/catalog/list_tables.py` — sets the registered catalog current before the one-part listings); `docs/examples/session/register_catalog.py` and `docs/examples/catalog/set_current_names.py` were rewritten by part 1 on main. |
 | C-012 | `spark.catalog.databaseExists("c_mem.n1")` on a refused `type=memory` catalog raises `UnsupportedOperationException` `Unknown catalog type: memory` (condition and SQLSTATE `None`) instead of answering `False`; the current catalog stays. | Measured `databaseExists` key. | PROVEN | Facade `test_database_exists_on_a_refused_catalog_raises_like_spark` (fails on the old catch-all, which swallowed the refusal and answered `False`). Oracle `target/probe-catalog-1b/spark_mem.json` `databaseExists` (probe `spark_mem.py` beside it). |
 | C-013 | `spark.catalog.listTables("c_mem.n1")` and `spark.catalog.getTable("c_mem.n1.t")` on a refused catalog raise the same refusal instead of `[SCHEMA_NOT_FOUND]` / `[TABLE_OR_VIEW_NOT_FOUND]`; the catalog part routes through the same refusal check the other doors use and the native refusal propagates unmapped; the current catalog stays. | Measured `listTables_db`, `getTable` keys. | PROVEN | Facade `test_list_tables_and_get_table_on_a_refused_catalog_raise_like_spark` (fails on the old re-mapping). Oracle `target/probe-catalog-1b/spark_mem.json` `listTables_db`, `getTable`. |
-| C-014 | A two-part SQL name on a refused catalog (`SELECT * FROM c_mem.t`, `INSERT INTO c_mem.t`, `DESCRIBE c_mem.t`) refuses `UnsupportedOperationException` `Unknown catalog type: memory` on the engine door instead of planning `spark_catalog.c_mem.t`; a two-part name whose first word names no refused catalog still plans. | Measured `select_2part` key. | PROVEN | Rust `a_bare_memory_type_refuses_every_first_use_with_sparks_text` (three new two-part arms) and `a_two_part_alias_on_the_default_catalog_still_plans_beside_a_refusal` (fails an implementation that refuses every two-part name). Oracle `target/probe-catalog-1b/spark_mem.json` `select_2part`. |
+| C-014 | A two-part SQL name on a refused catalog (`SELECT * FROM c_mem.t`, `INSERT INTO c_mem.t`, `DESCRIBE c_mem.t`) refuses `UnsupportedOperationException` `Unknown catalog type: memory` on the engine door instead of planning `spark_catalog.c_mem.t`; a two-part name whose first word names no refused catalog still plans. | Measured `select_2part` key. | PROVEN | Rust `a_bare_memory_type_refuses_every_first_use_with_sparks_text` (three new two-part arms) and `a_two_part_alias_on_the_default_catalog_still_plans_beside_a_refusal` (fails an implementation that refuses every two-part name). Oracle `target/probe-catalog-1b/spark_mem.json` `select_2part`. Facade `test_facade_two_part_sql_on_a_refused_catalog_raises_like_spark` (SELECT, INSERT, DESCRIBE, subquery, quoted and upper-case shapes, each with the exact text, no condition/SQLSTATE, current catalog unchanged; fails the pre-fold facade, which expanded every two-part name), `test_spark_table_on_a_refused_catalog_raises_like_spark` (the `spark.table` door on the builder door) and `test_two_part_name_on_a_registered_catalog_still_expands` (a two-part name on a registered catalog still expands). |
 
 ## Residues
 
@@ -60,6 +62,7 @@ DataFrame door (`table`, `writeTo`, `saveAsTable`) follows the runtime default l
 | R-2 | Dated 2026-09-26 (verifier round 1 V-002; `target/verify/probe1.py` `sc_ns_t_select`, `target/probe-catalog-1/spark-main.json` `spark_catalog_ns_t_select`). `SELECT * FROM spark_catalog.ns.t0` when `ns` exists only in `sc`: Spark `[TABLE_OR_VIEW_NOT_FOUND] The table or view `spark_catalog`.`ns`.`t0` cannot be found. …`; RePark `Error during planning: table 'spark_catalog.ns.t0' not found`. Both refuse; the text differs (the registered `Error during planning:` prefix class plus the bare `table … not found` shape). The pins assert the refusal class; the text is a CATALOG-1B or CASESENS follow-up. |
 | R-3 | Dated 2026-09-26 (verifier round 1 V-002). `CREATE TABLE spark_catalog.ns.t0 (id INT) USING iceberg` when `ns` exists only in `sc`: Spark `IllegalArgumentException: Cannot open table: path is not set`; RePark `NamespaceNotFound => No such namespace: NamespaceIdent(["ns"])`. Both refuse; different class and text; not worked in this unit. |
 | R-4 | Dated 2026-09-26 (fold round; `target/probe-catalog-1b/spark-poison-default.json` `poison_default_api_current` vs `poison_default_current`). A `spark.sql.defaultCatalog` naming a refused catalog: Spark's `catalog.currentCatalog()` API answers `spark_catalog` while its SQL (`SELECT current_catalog()`) refuses `UnsupportedOperationException` `Unknown catalog type: memory`; RePark refuses on both. Same SQL refusal; the API answer differs. |
+| R-5 | Dated 2026-09-26 (fold round 2, verifier V-008; `target/verify/r2_probe.py` shape `SELECT c_mem.x FROM t c_mem`). A table alias equal to a refused catalog's name is refused falsely: the native token pass refuses any `<refused>.<word>` outside a period chain while Spark resolves it as a column reference. Narrow edge (the alias must equal a refused catalog name); Spark's text unmeasured; no code change this round. |
 
 ## Tests rewritten
 
@@ -67,7 +70,9 @@ Seeded by the CAT-TYPE-MEMORY commit (bare `type=memory` / both-keys rewrites), 
 the C-010 toml-keys commit, and completed by the C-011 sweep: the sweep itself rewrote no
 suite test (every failure the earlier commits' rewrites had already covered stayed green;
 none deleted anywhere) and rewrote the one docs example changed on this branch below the
-same way.
+same way. Commit hashes below are the branch hashes of 2026-09-26 (the fold round
+re-cited the two that a rebase had orphaned; the orchestrator adds no further rebase
+before the PR unless main moves).
 
 - `crates/repark-core/src/catalog_config.rs` (inline): `cross_prefix_duplicates_merge_or_fail_loud`
   (the merged memory block now parses to the refused kind),
@@ -105,7 +110,7 @@ same way.
   plus the opt-in).
 - `crates/repark-distributed/tests/codec.rs` and
   `crates/repark-distributed/tests/iceberg_scan.rs`: `CatalogSpec` literals gain
-  `refusal: None` (two sites in `codec.rs`, one in `iceberg_scan.rs`, commit `8fbf5cf2`);
+  `refusal: None` (two sites in `codec.rs`, one in `iceberg_scan.rs`, commit `a8c24c33`);
   the scan codec maps the refused kind (round-trips; refused specs never travel the wire).
 - `python/repark/tests/test_catalog_flow.py`: `test_config_driven_catalog_publish_flow`,
   `test_repark_prefixed_catalog_config_registers_identically` (the measured blocks plus
@@ -128,7 +133,7 @@ same way.
   versus long-form-calls arm).
 - `crates/repark-spark/tests/ddl_sessions.rs`:
   `config_driven_memory_catalog_registers_and_runs` declares the `catalog-impl` long form
-  instead of the bare `type=memory` (commit `af93a027`).
+  instead of the bare `type=memory` (commit `c25129dc`).
 - The part-1 auto-flip and alias rewrites (commits `59fff2e5`, `9d9290a8`), recorded here
   for the complete list: the fixtures of `python/repark/tests/test_f1_sql_expander.py`,
   `test_g1_stat_and_expander.py`, `test_e2_readwriter.py`, `test_iceberg_load_path.py`,
@@ -148,8 +153,8 @@ same way.
 
 ## Coverage attestation (lane xc-catalog2, 2026-09-26)
 
-Filed at the C-011 close, when the last OPEN clause flipped. Residues R-1, R-2, R-3
-and R-4 stand as recorded below (R-1 in C-004, R-4 in C-006).
+Filed at the C-011 close, when the last OPEN clause flipped. Residues R-1, R-2, R-3,
+R-4 and R-5 stand as recorded below (R-1 in C-004, R-4 in C-006, R-5 stands alone).
 
 ```yaml
 COVERAGE_ATTESTATION:
@@ -183,8 +188,8 @@ COVERAGE_ATTESTATION:
       justification: No hot path, unbounded growth or new query-time work is added. A refused catalog is one registry placeholder whose uses raise without I/O.
     - id: AT-8
       status: ATTACKED
-      evidence: Every Spark-visible text was measured on Spark 4.1.2 plus Iceberg 1.11.0 before it was pinned, and both error classes exist on the Rust and Python doors with condition and SQLSTATE pinned.
-      artifacts: [target/probe-catalog-1/spark_probe.py, crates/repark-spark/src/tests/session_catalog.rs]
+      evidence: Every Spark-visible text was measured on Spark 4.1.2 plus Iceberg 1.11.0 before it was pinned, and both error classes exist on the Rust and Python doors with condition and SQLSTATE pinned. The part-1 probe script was restored verbatim into target/probe-catalog-1/ from the Muse run log (/tmp/muse-worker/xc-catalog2/20260926T175327Z/out.jsonl, the log's two read halves, junction-verified, 245 lines); the full spark-*.json answers survive there only as the log's per-key dump (answers-dump-verbatim.txt beside the script, values truncated at 300 chars by the dumping command).
+      artifacts: [target/probe-catalog-1/spark_probe.py, target/probe-catalog-1/answers-dump-verbatim.txt, crates/repark-spark/src/tests/session_catalog.rs]
     - id: AT-9
       status: ATTACKED
       evidence: Every failure surface carries its diagnosing text verbatim in the pin, the conf dump keeps an origin per merged file key, and the cloud-catalog discovery warning is unchanged.
