@@ -70,11 +70,18 @@ fn plan(query: &Query) -> Option<Planned> {
         names.push(select_display_name(item)?);
     }
     let mut extra: Vec<Expr> = Vec::new();
+    let mut rebound = false;
     let mut placed = Vec::with_capacity(keys.len());
     for key in keys {
-        placed.push(place_key(&select.projection, &key.expr, &mut extra)?);
+        placed.push(place_key(
+            &select.projection,
+            &names,
+            &key.expr,
+            &mut extra,
+            &mut rebound,
+        )?);
     }
-    if extra.is_empty() {
+    if extra.is_empty() && !rebound {
         return None;
     }
     if query.to_string().contains(SORT_SUBQUERY_ALIAS) {
@@ -114,7 +121,13 @@ fn select_shape_ok(select: &Select) -> bool {
         && matches!(select.flavor, SelectFlavor::Standard)
 }
 
-fn place_key(items: &[SelectItem], key: &Expr, extra: &mut Vec<Expr>) -> Option<Placement> {
+fn place_key(
+    items: &[SelectItem],
+    names: &[String],
+    key: &Expr,
+    extra: &mut Vec<Expr>,
+    rebound: &mut bool,
+) -> Option<Placement> {
     let bare = unnested(key);
     match bare {
         Expr::Value(literal) => match &literal.value {
@@ -132,8 +145,21 @@ fn place_key(items: &[SelectItem], key: &Expr, extra: &mut Vec<Expr>) -> Option<
             match single_match(items, &parts) {
                 KeyHit::Many => None,
                 KeyHit::One(index) => Some(Placement::Select(index)),
-                KeyHit::Miss if parts.len() > 1 && key_name_clashes(items, &parts) => None,
-                KeyHit::Miss => Some(new_key(extra, key.clone())),
+                KeyHit::Miss if parts.len() > 1 => {
+                    if key_name_clashes(items, &parts) {
+                        None
+                    } else {
+                        Some(new_key(extra, key.clone()))
+                    }
+                }
+                KeyHit::Miss => match display_hit(names, &parts[0].value) {
+                    KeyHit::Many => None,
+                    KeyHit::One(index) => {
+                        *rebound = true;
+                        Some(Placement::Select(index))
+                    }
+                    KeyHit::Miss => Some(new_key(extra, key.clone())),
+                },
             }
         }
         _ => {
@@ -214,6 +240,19 @@ fn column_hit(item: &SelectItem, key: &[&Ident]) -> bool {
             .iter()
             .zip(key_qual.iter())
             .all(|(left, right)| left.value.eq_ignore_ascii_case(&right.value))
+}
+
+fn display_hit(names: &[String], key: &str) -> KeyHit {
+    let mut hits = names
+        .iter()
+        .enumerate()
+        .filter(|(_, name)| name.eq_ignore_ascii_case(key))
+        .map(|(index, _)| index);
+    match (hits.next(), hits.next()) {
+        (Some(_), Some(_)) => KeyHit::Many,
+        (Some(index), None) => KeyHit::One(index),
+        (None, _) => KeyHit::Miss,
+    }
 }
 
 fn key_name_clashes(items: &[SelectItem], key: &[&Ident]) -> bool {
@@ -561,14 +600,30 @@ mod tests {
     }
 
     #[test]
-    fn cast_over_its_key_projects_the_key_inside() {
+    fn cast_over_its_key_binds_the_output_column() {
         let out = rewritten("SELECT CAST(ts AS STRING) FROM t ORDER BY ts");
         assert!(
             out.contains("CAST(ts AS STRING) AS __repark_sort_sel_0"),
             "{out}"
         );
-        assert!(out.contains("ts AS __repark_sort_key_0"), "{out}");
+        assert!(!out.contains("__repark_sort_key"), "{out}");
         assert!(out.contains("__repark_sort_sel_0 AS \"ts\""), "{out}");
+        assert!(out.contains("ORDER BY __repark_sort_sel_0"), "{out}");
+    }
+
+    #[test]
+    fn bare_key_matching_a_display_name_binds_the_output_column() {
+        let out = rewritten("SELECT CAST(id AS STRING) FROM t ORDER BY id");
+        assert!(!out.contains("__repark_sort_key"), "{out}");
+        assert!(out.contains("ORDER BY __repark_sort_sel_0"), "{out}");
+        let out = rewritten("SELECT CAST(id AS STRING) FROM t ORDER BY id DESC");
+        assert!(out.contains("ORDER BY __repark_sort_sel_0 DESC"), "{out}");
+    }
+
+    #[test]
+    fn qualified_key_keeps_binding_the_column() {
+        let out = rewritten("SELECT CAST(id AS STRING) FROM t ORDER BY t.id");
+        assert!(out.contains("t.id AS __repark_sort_key_0"), "{out}");
         assert!(out.contains("ORDER BY __repark_sort_key_0"), "{out}");
     }
 
@@ -576,7 +631,7 @@ mod tests {
     fn order_options_and_limit_stay_on_the_outer_query() {
         let out = rewritten("SELECT CAST(ts AS STRING) FROM t ORDER BY ts DESC NULLS LAST LIMIT 1");
         assert!(
-            out.contains("ORDER BY __repark_sort_key_0 DESC NULLS LAST LIMIT 1"),
+            out.contains("ORDER BY __repark_sort_sel_0 DESC NULLS LAST LIMIT 1"),
             "{out}"
         );
     }

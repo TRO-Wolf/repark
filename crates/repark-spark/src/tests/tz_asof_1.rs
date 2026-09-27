@@ -431,3 +431,31 @@ async fn struct_field_key_never_binds_a_same_named_column() {
         vec!["b".to_string(), "a".to_string(), "b".to_string()]
     );
 }
+
+#[tokio::test]
+async fn bare_key_matching_the_display_name_sorts_the_output_column() {
+    let wh = TempDir::new().expect("tempdir");
+    let (ctx, catalogs) = setup_tz(&wh).await;
+    seed_z(&ctx, &catalogs).await;
+    let rows = batches(
+        &ctx,
+        &catalogs,
+        "SELECT CAST(id AS STRING) FROM ice.sales.z ORDER BY id",
+    )
+    .await;
+    assert_eq!(field_names(&rows), vec!["id".to_string()]);
+    assert_eq!(
+        text_col(&rows, 0),
+        vec!["10".to_string(), "2".to_string(), "3".to_string()]
+    );
+    let rows = batches(
+        &ctx,
+        &catalogs,
+        "SELECT CAST(id AS STRING) FROM ice.sales.z ORDER BY id DESC",
+    )
+    .await;
+    assert_eq!(
+        text_col(&rows, 0),
+        vec!["3".to_string(), "2".to_string(), "10".to_string()]
+    );
+}

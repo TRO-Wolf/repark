@@ -300,3 +300,22 @@ def test_struct_field_key_never_binds_a_same_named_column(session: ReparkSession
     cols, rows = observed(session, "SELECT s FROM sc.ns.z ORDER BY st.s, ts")
     assert cols == [("s", "string")]
     assert rows == [["b"], ["a"], ["b"]]
+
+
+def test_bare_key_matching_the_display_name_sorts_the_output_column(
+    session: ReparkSession,
+) -> None:
+    """An unqualified key equal to a display name sorts by the output column.
+
+    Spark binds ``ORDER BY id`` to the ``CAST(id AS STRING)`` output, so the
+    string order answers ``10, 2, 3`` where the column order would be
+    ``2, 3, 10``; DESC reverses to ``3, 2, 10``.
+
+    pins: tz-asof-1/C-011
+    """
+    seed_z(session)
+    cols, rows = observed(session, "SELECT CAST(id AS STRING) FROM sc.ns.z ORDER BY id")
+    assert cols == [("id", "string")]
+    assert rows == [["10"], ["2"], ["3"]]
+    _, rows = observed(session, "SELECT CAST(id AS STRING) FROM sc.ns.z ORDER BY id DESC")
+    assert rows == [["3"], ["2"], ["10"]]

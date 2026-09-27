@@ -138,8 +138,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `TIMESTAMP AS OF` leg answering `[[1]]` (C-008), and the no-rewrite neighbors holding
   today's answers (C-009). Fold r1 adds `sc.ns.z` with a struct column: a compound key
   whose last segment clashes with a select column never binds it (`ORDER BY st.s, ts`
-  answers `b, a, b`, C-010).
-  pins: tz-asof-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+  answers `b, a, b`, C-010), and a bare key equal to a display name sorts the output
+  column (`CAST(id AS STRING) … ORDER BY id` answers `10, 2, 3`, C-011).
+  pins: tz-asof-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
 - [test_partname_1.py](test_partname_1.py) — **WO PARTNAME-1 (2026-09-26):** partition-field
   names pinned per door against Spark's measured answers, read from each table's latest
   metadata JSON: the CREATE door omits the width (`id_bucket`, `s_trunc`, `ts_hour`,
