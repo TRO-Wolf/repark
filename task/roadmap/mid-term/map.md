@@ -59,6 +59,13 @@ declines it (a dated ruling in the intake, then the archive).
   R88 open) and is scheduled as integration of the upstream `parquet-variant*` crates the fork already links
   (schema mapping, unshred on scan, shred on write, CREATE on the three doors, four SQL functions, repin);
   step 0 is the recorded shapes dump, size 4–6 executor rounds.
+- [ns-nested-1-6.md](ns-nested-1-6.md) — **card NS-NESTED (2026-09-27, v1.6.0, owner ruling C-2):**
+  nested namespaces leave the v1.5.0 gate (cell `D-NS-NESTED`, registry row NS-2; Spark leg recorded,
+  RePark refusing on the two-part name) and are scheduled with the recorded Spark child-listing row,
+  eight shapes still to measure (table in `sc.a.b`, DROP plain and CASCADE, the non-empty refusal,
+  all four again one level deeper), then five
+  design questions to rule (session-catalog scope, four-part resolution, DDL arity, DROP semantics,
+  per-catalog coverage); size M, 3–5 rounds, tier terra + opus. Closes readiness finding F-6.
 - [day-report-2026-09-19-24a.md](day-report-2026-09-19-24a.md) — **run 24a (read-performance unit 0, the RePark
   halves, the perf bumps):** the bench bed with counted I/O and the R-3 size flag, page pruning, the catalog cache and
   the footer cache on main (RP-36 → RP-38); the local re-measure gate table; `count(*)` fold held as a draft; the AWS

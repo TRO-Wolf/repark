@@ -106,4 +106,4 @@ Not edited, per the work order. Read 2026-09-27 against the tree.
 | F-3 | Spec §2 decisions 1, 2, 4, 5, 7 read open though all closed | same spec | Yes — dated pointer note |
 | F-4 | SES-DECL-readStream/streams rows lack the C-1 carve-out citation and card link | `docs/spark-sql-iceberg-parity.md` | Yes — dated pointer notes on both rows |
 | F-5 | NS-2 row lacks the C-2 carve-out citation | `docs/spark-sql-iceberg-parity.md` | Yes — dated pointer note |
-| F-6 | No v1.6.0 follow-up card for C-2 nested namespaces, though the spec promises "the v1.6.0 card" | new card (out of this round's edits) | No — needs a card-writing round |
+| F-6 | No v1.6.0 follow-up card for C-2 nested namespaces, though the spec promises "the v1.6.0 card" | [ns-nested-1-6.md](ns-nested-1-6.md) | Yes — card filed 2026-09-27 (WO NS-NESTED-CARD) |
