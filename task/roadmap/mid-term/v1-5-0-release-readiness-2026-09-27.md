@@ -20,17 +20,17 @@ fixed in this round.
 
 | Cell | Verdict (`reg_hint`) | Cover | Spec record | Parity-doc record |
 |---|---|---|---|---|
-| `R-STREAM-READ` | REFUSED-REGISTERED (`SES-DECL-readStream`) | Carve-out C-1 (owner, 2026-09-19) | [v1-5-0-remainder-spec-2026-09-23.md](v1-5-0-remainder-spec-2026-09-23.md) "Carved out" ¶1 (lines 221–222) | [§SES-DECL-readStream](../../docs/spark-sql-iceberg-parity.md) (line 3271); C-1 citation added 2026-09-27 (F-4) |
+| `R-STREAM-READ` | REFUSED-REGISTERED (`SES-DECL-readStream`) | Carve-out C-1 (owner, 2026-09-19) | [v1-5-0-remainder-spec-2026-09-23.md](v1-5-0-remainder-spec-2026-09-23.md) "Carved out" ¶1 (lines 221–222) | [§SES-DECL-readStream](../../../docs/spark-sql-iceberg-parity.md) (line 3271); C-1 citation added 2026-09-27 (F-4) |
 | `R-STREAM-READ-SKIP` | REFUSED-REGISTERED (`SES-DECL-readStream`) | Carve-out C-1 (owner, 2026-09-19) | same spec ¶1 (lines 221–222) | same row (line 3271); C-1 citation added 2026-09-27 (F-4) |
-| `W-STREAM-WRITE-FILESRC` | REFUSED-REGISTERED (`SES-DECL-streams`) | Carve-out C-1 (owner, 2026-09-19) | same spec ¶1 (lines 221–222) | [§SES-DECL-streams](../../docs/spark-sql-iceberg-parity.md) (line 3286); C-1 citation added 2026-09-27 (F-4) |
-| `D-NS-NESTED` | REFUSED-REGISTERED (`NS-2`) | Carve-out C-2 (owner, 2026-09-24) | spec U5 owner item (lines 133–135) and "Carved out" ¶2 (lines 224–225) | [§NS-2](../../docs/spark-sql-iceberg-parity.md) (line 1478); C-2 citation added 2026-09-27 (F-5) |
-| `TY-VARIANT-V3` | REFUSED-REGISTERED (`V3-VARIANT-SHRED-1`) | Carve-out C-4 (owner, 2026-09-27) | spec U9 (line 175) and "Carved out" ¶4 (lines 235–243); decision 6 closed (line 269) | [§V3-VARIANT-SHRED-1](../../docs/spark-sql-iceberg-parity.md) (line 2769), residue line 2796 → [ice-variant-1-6.md](ice-variant-1-6.md) |
+| `W-STREAM-WRITE-FILESRC` | REFUSED-REGISTERED (`SES-DECL-streams`) | Carve-out C-1 (owner, 2026-09-19) | same spec ¶1 (lines 221–222) | [§SES-DECL-streams](../../../docs/spark-sql-iceberg-parity.md) (line 3286); C-1 citation added 2026-09-27 (F-4) |
+| `D-NS-NESTED` | REFUSED-REGISTERED (`NS-2`) | Carve-out C-2 (owner, 2026-09-24) | spec U5 owner item (lines 133–135) and "Carved out" ¶2 (lines 224–225) | [§NS-2](../../../docs/spark-sql-iceberg-parity.md) (line 1478); C-2 citation added 2026-09-27 (F-5) |
+| `TY-VARIANT-V3` | REFUSED-REGISTERED (`V3-VARIANT-SHRED-1`) | Carve-out C-4 (owner, 2026-09-27) | spec U9 (line 175) and "Carved out" ¶4 (lines 235–243); decision 6 closed (line 269) | [§V3-VARIANT-SHRED-1](../../../docs/spark-sql-iceberg-parity.md) (line 2769), residue line 2796 → [ice-variant-1-6.md](ice-variant-1-6.md) |
 
 Two further cells count as EQUAL only under a dated harness rule (both recorded, no finding):
 
 | Cell | Verdict | Cover | Spec record | Parity-doc record |
 |---|---|---|---|---|
-| `P-RDF-PARTIAL-PROGRESS` | EQUAL under `commit_order` | Carve-out C-3 (owner, 2026-09-26) | spec "Carved out" ¶3 (lines 227–233) | [§ICE-RDF-OPTIONS-1](../../docs/spark-sql-iceberg-parity.md) (line 9114) |
+| `P-RDF-PARTIAL-PROGRESS` | EQUAL under `commit_order` | Carve-out C-3 (owner, 2026-09-26) | spec "Carved out" ¶3 (lines 227–233) | [§ICE-RDF-OPTIONS-1](../../../docs/spark-sql-iceberg-parity.md) (line 9114) |
 | `L-INSERT-OVERWRITE` | EQUAL under `row_id_unordered` | Carve-out C-5 (owner, 2026-09-27) | spec U0 row (line 65) and "Carved out" ¶5 (lines 245–254) | row-lineage residue (line 10254) |
 
 ## 2. Carve-outs
