@@ -199,10 +199,21 @@ prefix the role already grants (a bronze-style target is a separate IAM grant). 
 seam) + devin (the Python writer's retreat to a forwarder); AWS spend for the oracle and the live leg
 well under the $25 cap; the 3 GB table flag does not apply (no tables).**
 
-### Carved out (3 cells, owner ruling C-1, 2026-09-19)
+### Carved out (5 cells: owner rulings C-1 2026-09-19, C-2 2026-09-24, C-3 2026-09-26)
 
 `R-STREAM-READ`, `R-STREAM-READ-SKIP`, `W-STREAM-WRITE-FILESRC` — structured streaming, v1.6.0
 ([ice-streaming-1-6.md](ice-streaming-1-6.md)). Not in the 718.
+
+`D-NS-NESTED` — nested namespaces leave v1.5.0 for the v1.6.0 card (owner ruling C-2, 2026-09-24;
+decision 3 below is closed by it).
+
+`P-RDF-PARTIAL-PROGRESS` — owner ruling C-3, 2026-09-26: Spark's partial-progress commit
+sequence is JVM-identity-hash dependent (`BinPackRewriteFilePlanner` iterates a Guava `HashSet`
+keyed by the struct hash XOR the value's identity hash; measured x-first and y-first across runs
+on 2026-09-26), so no deterministic order can match it; RePark commits file groups in ascending
+partition order and the harness compares that one cell's commit sequence order-insensitively
+(`compare.py` rule `commit_order`, `overrides.json`); every other observation in the cell stays
+exact. The cell counts as EQUAL under the rule.
 
 ### Count
 
