@@ -145,8 +145,8 @@ async fn fork_table_provider_delete_is_not_this_writer() {
     assert_eq!(
         delete_file_count(&ctx, &catalogs, "del").await,
         1,
-        "a row-level SQL DELETE goes through iceberg-datafusion, which has no granularity knob \
-         (ENGINE_CONTRACT §7); MW-9 is the RePark MERGE writer"
+        "a row-level SQL DELETE goes through iceberg-datafusion, which honours \
+         write.delete.granularity (file by default); MW-9 is the RePark MERGE writer"
     );
     run(
         &ctx,
@@ -247,7 +247,7 @@ async fn unknown_granularity_refuses_identity_update_before_any_write() {
 
 /// pins: mw-9-delete-granularity/C-005
 #[tokio::test]
-async fn fork_table_provider_update_is_not_this_writer() {
+async fn fork_table_provider_update_honours_file_granularity() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     run(
@@ -266,9 +266,9 @@ async fn fork_table_provider_update_is_not_this_writer() {
     .await;
     assert_eq!(
         delete_file_count(&ctx, &catalogs, "updf").await,
-        1,
-        "SQL UPDATE with a literal IN list goes through iceberg-datafusion, which has no \
-         granularity knob (ENGINE_CONTRACT §7); MW-9 is the RePark MERGE / identity writer"
+        6,
+        "SQL UPDATE with a literal IN list goes through iceberg-datafusion, which honours \
+         write.delete.granularity (file by default): one delete file per touched data file"
     );
     assert_eq!(
         rows(&ctx, &catalogs, "SELECT * FROM ice.sales.updf").await,

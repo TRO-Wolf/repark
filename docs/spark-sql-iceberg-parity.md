@@ -7861,7 +7861,8 @@ the pin rather than obeying it.
   still group by partition (`fork_table_provider_delete_is_not_this_writer`).
 - **Rationale** — FIXED (MW-9) **for RePark-owned MERGE** (`write_position_deletes`).
   Heading kept as the historical anchor. SQL `DELETE`/`UPDATE` via iceberg-datafusion
-  have no granularity knob (fork ENGINE_CONTRACT §7). Contents are unaffected.
+  honour `write.delete.granularity`, one delete file per data file by default (fork
+  ENGINE_CONTRACT §7). Contents are unaffected.
 
 ### RDF-1 — `rewrite_data_files` never selects a delete-laden file, so its dead rows are retained forever
 

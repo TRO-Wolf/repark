@@ -1339,6 +1339,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   door's `CREATE TABLE` goes through `commit_staged_schema_only`, so on a hadoop catalog it
   still writes `00000`..`00002` uuid names and no hint. The staged-create slice (out of scope
   for PR-B) flips this pin.
+  `hadoop_type_staged_create_writes_versioned_names` pins the Java shape. This door's
+  `CREATE TABLE` goes through `commit_staged_schema_only`, so on a hadoop catalog it publishes
+  `v1`..`vN` metadata names and the version hint; the uuid-names divergence is closed by the
+  RP-54 repin (fork #359 F-HADOOP-STAGED-CREATE-1, the staged-create slice out of scope for
+  PR-B).
 - [mem_layout.rs](mem_layout.rs) — **U1-MEM-LAYOUT-1 (2026-09-23):** CTAS, column-definition CREATE, explicit and namespace location precedence, nested namespaces, legacy fallback, path escape rejection, and file URI normalization. pins: u1-mem-layout-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-010
   **Layout-r8 (2026-09-23):** `mem_layout_refuses_path_escape_identifiers` pins the complete
   refusal for a `..` and an `x/y` table, namespace (top level and nested) and catalog name, each

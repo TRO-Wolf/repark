@@ -1,3 +1,5 @@
+> **Errata (2026-09-26, RP-54):** RP-54 repin: fork_table_provider_update_is_not_this_writer re-pinned to the fork-owned shape after fork #360 — renamed fork_table_provider_update_honours_file_granularity, count 1 to 6, the provider honours file granularity by default.
+
 # MW-9 — honor `write.delete.granularity` (close MOR-2)
 
 **Date:** 2026-08-24 · **Branch:** `feat/mw-9-delete-granularity` · **Base:** `70026af` (`origin/main`, #232) ·
