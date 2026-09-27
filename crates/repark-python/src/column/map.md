@@ -151,6 +151,9 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `repark_functions::cast_map::cast_map_expr` and every other one to `parse_data_type`;
   `plan_expr_column` runs the shared map-cast rewrite, so `F.expr` spells it too.
   pins: cast-map-spell-1/C-004
+  **WO NTZ-1 slice 1 (2026-09-26):** `cast_to` routes `timestamp_ntz` to the embedded
+  `timestamp_ntz_cast_expr`, so the DataFrame door answers as the SQL cast.
+  pins: ntz-1/C-003
   **SQL-LITERAL-TYPING-1 remediation round 1 (2026-09-16):** `build_expr_context`
   seats the early integral-literal rule through the shared
   `insert_literal_rule_before_coercion` and installs the post-coercion rules

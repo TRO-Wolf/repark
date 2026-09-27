@@ -1874,6 +1874,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `nan_ids`, `scan_predicates`, `planned_predicates`, `assert_unary_nan`) stay
   in `nan_pushdown.rs`; only that leaf uses them.
   pins: ice-nan-pushdown-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- `ntz_door.rs` — **WO NTZ-1 slice 1 (2026-09-26):** the `TIMESTAMP_NTZ` literal and
+  explicit casts on the Spark door — the naive-wall literal (value, Arrow type,
+  `TIMESTAMP_NTZ '<wall>'` name), the zone-suffix drop and microsecond truncation, the
+  `INVALID_TYPED_LITERAL` parse error, cast sources (string, date, NULL, UTC and New
+  York instants via `common.rs` `setup_at_zone`, NTZ identity), try_cast NULL on
+  garbage, numeric-source/target refusals, the LTZ epoch-seconds guard, the nested R4
+  refusal, and the literal reaching INSERT VALUES / INSERT SELECT / UPDATE / DELETE /
+  MERGE / CTAS. pins: ntz-1/C-001, C-002, C-004, C-005
 
 - `describe_table.rs` — **SQL-DESCRIBE-1 (2026-09-09):** `DESCRIBE|DESC [TABLE]
   [EXTENDED|FORMATTED] catalog.namespace.table` against a memory-catalog table built like the

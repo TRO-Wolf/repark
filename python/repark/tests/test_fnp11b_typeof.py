@@ -139,14 +139,16 @@ def test_typeof_wrong_arity_raises_spark_condition(cell_id: str) -> None:
     assert body in str(caught.value)
 
 
-def test_typeof_ntz_literal_is_blocked_on_the_dialect_seam() -> None:
-    """TYPEOF-SQL-13 stays blocked: the TIMESTAMP_NTZ literal is 17c's dialect seam."""
+def test_typeof_ntz_literal_spells_timestamp_ntz() -> None:
+    """TYPEOF-SQL-13 answers: the literal spells the recorded type name.
+
+    pins: ntz-1/C-001.
+    """
     cell = _cell_by_id("TYPEOF-SQL-13")
     assert cell["typeof"] == "timestamp_ntz"
     session = _session()
-    with pytest.raises(Exception, match="TIMESTAMP_NTZ") as caught:
-        session.sql(cell["expr"]).toArrow()
-    assert "[UNSUPPORTED_TIMESTAMP_NTZ]" in str(caught.value)
+    table = session.sql(cell["expr"]).toArrow()
+    assert _typeof_value(table) == cell["typeof"]
 
 
 def test_typeof_binary_function_owner_is_recorded() -> None:

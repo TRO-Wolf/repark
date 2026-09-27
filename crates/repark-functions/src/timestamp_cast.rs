@@ -717,7 +717,7 @@ fn wall_clock_from_ticks(
 }
 
 /// Spark `CAST(ts AS STRING)` is `yyyy-MM-dd HH:mm:ss` plus a fraction without trailing zeros.
-fn format_spark_timestamp_string(wall: NaiveDateTime) -> String {
+pub(crate) fn format_spark_timestamp_string(wall: NaiveDateTime) -> String {
     let date = format_iso_local_date(wall.date());
     let time = format!(
         "{:02}:{:02}:{:02}",

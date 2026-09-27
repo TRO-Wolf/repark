@@ -41,7 +41,10 @@ under its `check_rust_file_size` ceiling and each matrix has one home.
   `{Date32, Date64} ↔ {Int8, Int16, Int32, Int64}`. Refusals are `DataFusionError::Plan` with
   `[DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION]`, both Spark type names, and the applicable
   `UNIX_DATE` / `DATE_FROM_UNIX_DATE` remedy; `CastKeyword` preserves `CAST` or `TRY_CAST`.
-  Legality is independent of ANSI evaluation mode.
+  **WO NTZ-1 slice 1 (2026-09-27):** `Timestamp(µs, None)` → integer / float / decimal
+  denies with `CAST_WITHOUT_SUGGESTION` naming `TIMESTAMP_NTZ`; the microsecond-naive
+  source only, so TZ-5 `CAST(TIMESTAMP … AS BIGINT)` epoch seconds stay green.
+  pins: ntz-1/C-002. Legality is independent of ANSI evaluation mode.
 
 Deliberately NOT here: the ANSI **store-assignment** matrix
 (`crates/repark-iceberg/src/write/store_assign.rs`). It answers a different question and is laxer

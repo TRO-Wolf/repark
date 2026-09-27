@@ -141,7 +141,8 @@ impl ScalarUDFImpl for SparkToTimestampNtz {
         if arrays.len() == 2 && is_utf8_type(arrays[0].data_type()) {
             return ntz_with_format(&arrays[0], &arrays[1], &args);
         }
-        ntz_single(&arrays[0], &args)
+        let ansi = spark_ansi_enabled_from_options(args.config_options.as_ref());
+        ntz_single(&arrays[0], &args, !ansi)
     }
 }
 
@@ -317,7 +318,7 @@ fn salvage_strings(texts: &StringArray, args: &ScalarFunctionArgs) -> Result<Arr
     Ok(Arc::new(builder.finish().with_timezone("UTC")))
 }
 
-fn wall_without_zone(text: &str) -> &str {
+pub(crate) fn wall_without_zone(text: &str) -> &str {
     let trimmed = text.trim();
     if trimmed.is_empty() {
         return text;
@@ -384,7 +385,11 @@ fn all_null_ntz(rows: usize) -> ArrayRef {
     Arc::new(TimestampMicrosecondArray::from(vec![None::<i64>; rows]))
 }
 
-fn ntz_single(input: &ArrayRef, args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
+pub(crate) fn ntz_single(
+    input: &ArrayRef,
+    args: &ScalarFunctionArgs,
+    tolerate: bool,
+) -> Result<ColumnarValue> {
     let zone = session_zone(args.config_options.as_ref())?;
     match input.data_type() {
         DataType::Null => Ok(ColumnarValue::Array(all_null_ntz(input.len()))),
@@ -401,9 +406,8 @@ fn ntz_single(input: &ArrayRef, args: &ScalarFunctionArgs) -> Result<ColumnarVal
                 }
             }
             let stripped = stripped.finish();
-            let ansi = spark_ansi_enabled_from_options(args.config_options.as_ref());
-            let instants =
-                ltz_of_strings(&stripped, args, !ansi).map_err(|error| retarget_to_ntz(&error))?;
+            let instants = ltz_of_strings(&stripped, args, tolerate)
+                .map_err(|error| retarget_to_ntz(&error))?;
             Ok(ColumnarValue::Array(unlocalize_to_walls(&instants, zone)?))
         }
         DataType::Date32 | DataType::Date64 => {

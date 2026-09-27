@@ -84,6 +84,7 @@ mod nested_assign;
 mod nested_assign_oracle;
 mod nested_column_ddl;
 mod normalize;
+mod ntz_door;
 mod overwrite_mode;
 mod parquet_dictionary;
 mod partition_append;

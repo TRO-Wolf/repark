@@ -26,7 +26,13 @@ pub fn map_cast_target(type_text: &str) -> Option<ArrowDataType> {
 
 #[must_use]
 pub fn map_cast_token(type_text: &str) -> Option<String> {
-    map_cast_target(type_text).map(|target| spark_sql_name(&target))
+    if let Some(target) = map_cast_target(type_text) {
+        return Some(spark_sql_name(&target));
+    }
+    if type_text.trim().eq_ignore_ascii_case("timestamp_ntz") {
+        return Some("TIMESTAMP_NTZ".to_string());
+    }
+    None
 }
 
 fn arrow_type(sql_type: &SqlDataType, depth: usize) -> Option<ArrowDataType> {

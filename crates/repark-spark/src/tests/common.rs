@@ -66,6 +66,7 @@ pub(super) async fn setup_with_sql_settings(
         ansi_enabled,
         settings,
         repark_core::session_owner_snapshot(),
+        "UTC",
     )
     .await
 }
@@ -79,6 +80,18 @@ pub(super) async fn setup_with_owner(
         true,
         repark_functions::cardinality::ReparkSqlSettings::default(),
         owner.to_string(),
+        "UTC",
+    )
+    .await
+}
+
+pub(super) async fn setup_at_zone(wh: &TempDir, zone: &str) -> (SessionContext, CatalogRegistry) {
+    setup_with_owner_and_settings(
+        wh,
+        true,
+        repark_functions::cardinality::ReparkSqlSettings::default(),
+        repark_core::session_owner_snapshot(),
+        zone,
     )
     .await
 }
@@ -88,6 +101,7 @@ async fn setup_with_owner_and_settings(
     ansi_enabled: bool,
     settings: repark_functions::cardinality::ReparkSqlSettings,
     owner: String,
+    zone: &str,
 ) -> (SessionContext, CatalogRegistry) {
     let warehouse = wh.path().to_str().unwrap().to_string();
     let catalog: Arc<dyn Catalog> = Arc::new(
@@ -110,6 +124,7 @@ async fn setup_with_owner_and_settings(
         settings,
     );
     let config = repark_functions::ansi::with_spark_ansi_config(config, ansi_enabled);
+    let config = repark_functions::session_time_zone::with_session_time_zone(config, zone);
     let config = repark_core::with_session_owner(config, owner);
     let config = repark_functions::case_sensitive::with_spark_case_sensitive_config(config, false);
     let ctx = SessionContext::new_with_config(config);

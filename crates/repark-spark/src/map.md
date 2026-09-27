@@ -863,6 +863,10 @@ pins: rp-4-fork-repin/C-005, C-006
   map chains after the nullary map around the whole passthrough. 6 in-module
   tests.
   pins: spark-sql-grammar-1/C-003, C-004, C-005
+  **WO NTZ-1 slice 1 (2026-09-26):** the scalar `TIMESTAMP_NTZ` literal and cast no
+  longer refuse: `CAST` / `::` / `TRY_CAST` to `TIMESTAMP_NTZ` lower first (see
+  [keyword_lower/](keyword_lower/map.md)) and only a nested target still refuses, with
+  the R4 text. pins: ntz-1/C-002, C-005
   **ICE-TSNS-SQL-1 (2026-09-17):** `CAST(x AS timestamp_ns)` / `timestamptz_ns` (any case,
   `::` included, `TRY_CAST` not) lowers to the embedded `__repark_cast_timestamp_ns__` /
   `__repark_cast_timestamptz_ns__` calls; `lower_timestamp_ns_casts` is the same lowering alone,
@@ -973,6 +977,9 @@ pins: rp-4-fork-repin/C-005, C-006
   (2026-09-25):** `plan_keyword_regions` (the one call `spark_literals.rs` makes, in place of
   `plan_drop_temporary_regions`) adds `TIMESTAMP_LTZ '…'` → `TIMESTAMP '…'`, Spark's LTZ
   literal. pins: u9-types-1/C-002
+  **WO NTZ-1 slice 1 (2026-09-26):** it also runs
+  [spark_rewrites/timestamp_ntz_literal.rs](spark_rewrites/timestamp_ntz_literal.rs) and
+  returns `Result` (an unparsable NTZ literal refuses there). pins: ntz-1/C-001
 - `spark_rewrites/mod.rs` — **FNP-4B (2026-09-15):** numeric suffixes (BD precision/scale from
   digits; D/F as CAST of a decimal operand so the planner keeps them non-null; `1e3L` /
   `0x1D` as identifiers; `128Y`/`40000S` refuse `[INVALID_NUMERIC_LITERAL_RANGE]`),

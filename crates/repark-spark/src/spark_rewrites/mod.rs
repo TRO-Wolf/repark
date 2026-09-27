@@ -435,12 +435,18 @@ pub(crate) fn plan_delete_from_regions(tokens: &[TokenWithSpan]) -> Vec<LiteralR
     }]
 }
 
-pub(crate) fn plan_keyword_regions(tokens: &[TokenWithSpan]) -> Vec<LiteralRegion> {
+pub(crate) fn plan_keyword_regions(
+    tokens: &[TokenWithSpan],
+    sql: &str,
+) -> Result<Vec<LiteralRegion>> {
     let mut regions = plan_drop_temporary_regions(tokens);
     regions.extend(timestamp_ltz_literal::plan_timestamp_ltz_literal_regions(
         tokens,
     ));
-    regions
+    regions.extend(timestamp_ntz_literal::plan_timestamp_ntz_literal_regions(
+        tokens, sql,
+    )?);
+    Ok(regions)
 }
 
 fn plan_drop_temporary_regions(tokens: &[TokenWithSpan]) -> Vec<LiteralRegion> {
@@ -795,7 +801,7 @@ fn skip_whitespace(tokens: &[TokenWithSpan], mut index: usize) -> usize {
     index
 }
 
-fn line_starts(sql: &str) -> Vec<usize> {
+pub(crate) fn line_starts(sql: &str) -> Vec<usize> {
     let mut starts = vec![0];
     for (offset, character) in sql.char_indices() {
         if character == '\n' {
@@ -805,7 +811,7 @@ fn line_starts(sql: &str) -> Vec<usize> {
     starts
 }
 
-fn byte_offset(starts: &[usize], sql: &str, location: Location) -> Option<usize> {
+pub(crate) fn byte_offset(starts: &[usize], sql: &str, location: Location) -> Option<usize> {
     let line_start = *starts.get(usize::try_from(location.line).ok()?.checked_sub(1)?)?;
     let column = usize::try_from(location.column).ok()?.checked_sub(1)?;
     if column == 0 {
@@ -932,6 +938,7 @@ fn starts_insert_source(token: Option<&Token>) -> bool {
 
 pub(crate) mod create_options;
 pub(crate) mod timestamp_ltz_literal;
+pub(crate) mod timestamp_ntz_literal;
 
 #[cfg(test)]
 mod tests {

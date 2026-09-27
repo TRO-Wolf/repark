@@ -10,6 +10,8 @@ use datafusion::sql::sqlparser::ast::{
 use datafusion::sql::sqlparser::tokenizer::Span;
 use repark_functions::timestamp_ns_cast::{TIMESTAMP_NS_CAST_NAME, TIMESTAMPTZ_NS_CAST_NAME};
 
+mod ntz_cast_lower;
+
 fn null_expr() -> Expr {
     Expr::Value(ValueWithSpan {
         value: Value::Null,
@@ -109,7 +111,10 @@ fn lower_empty_map_call(node: &mut Expr) -> bool {
 }
 
 fn lower_expression(node: &mut Expr) {
-    if lower_timestamp_ns_cast(node) || lower_empty_map_call(node) {
+    if ntz_cast_lower::lower_timestamp_ntz_cast(node)
+        || lower_timestamp_ns_cast(node)
+        || lower_empty_map_call(node)
+    {
         return;
     }
     if let Expr::RLike {
@@ -163,7 +168,10 @@ impl VisitorMut for TimestampNsCastLower {
     type Break = Infallible;
 
     fn post_visit_expr(&mut self, expr: &mut Expr) -> ControlFlow<Self::Break> {
-        if !lower_timestamp_ns_cast(expr) && self.empty_maps {
+        if !ntz_cast_lower::lower_timestamp_ntz_cast(expr)
+            && !lower_timestamp_ns_cast(expr)
+            && self.empty_maps
+        {
             lower_empty_map_call(expr);
         }
         ControlFlow::Continue(())
@@ -207,6 +215,15 @@ impl Visitor for TimestampNsCastProbe {
                 format: None,
                 ..
             } if timestamp_ns_cast_name(data_type).is_some() => ControlFlow::Break(()),
+            Expr::Cast {
+                data_type: DataType::TimestampNtz(_),
+                array: false,
+                format: None,
+                ..
+            } => ControlFlow::Break(()),
+            Expr::TypedString(typed) if matches!(typed.data_type, DataType::TimestampNtz(_)) => {
+                ControlFlow::Break(())
+            }
             _ if is_empty_map_call(expr) => ControlFlow::Break(()),
             _ => ControlFlow::Continue(()),
         }
@@ -224,8 +241,8 @@ pub(crate) fn map_unsupported_timestamp_ntz(error: DataFusionError) -> DataFusio
         .contains("Unsupported SQL type TIMESTAMP_NTZ")
     {
         DataFusionError::Plan(
-            "[UNSUPPORTED_TIMESTAMP_NTZ] The data type TIMESTAMP_NTZ is not a SQL-door type: \
-             declare TIMESTAMP instead. The naive/instant contract is TZ-6 \
+            "[UNSUPPORTED_TIMESTAMP_NTZ] TIMESTAMP_NTZ inside a nested cast target (ARRAY, STRUCT \
+             or MAP) is not supported yet; the scalar TIMESTAMP_NTZ literal and cast are. See TZ-6 \
              (docs/spark-sql-iceberg-parity.md). SQLSTATE: 0A000"
                 .to_string(),
         )
@@ -306,7 +323,7 @@ mod tests {
     }
 
     #[test]
-    fn the_probe_finds_only_ns_casts_and_empty_map_calls() {
+    fn the_probe_finds_ns_and_ntz_casts_and_empty_map_calls() {
         let parse = |sql: &str| {
             Parser::parse_sql(&DatabricksDialect {}, sql)
                 .unwrap()
@@ -323,6 +340,18 @@ mod tests {
         )));
         assert!(!has_empty_map_or_timestamp_ns_cast(&parse(
             "SELECT TRY_CAST('x' AS timestamp_ns) AS v"
+        )));
+        assert!(has_empty_map_or_timestamp_ns_cast(&parse(
+            "SELECT CAST('2024-01-01' AS TIMESTAMP_NTZ) AS v"
+        )));
+        assert!(has_empty_map_or_timestamp_ns_cast(&parse(
+            "SELECT TRY_CAST('x' AS timestamp_ntz) AS v"
+        )));
+        assert!(has_empty_map_or_timestamp_ns_cast(&parse(
+            "SELECT TIMESTAMP_NTZ '2024-01-01 00:00:00' AS v"
+        )));
+        assert!(!has_empty_map_or_timestamp_ns_cast(&parse(
+            "SELECT CAST(a AS ARRAY<TIMESTAMP_NTZ>) AS v"
         )));
         assert!(has_empty_map_or_timestamp_ns_cast(&parse(
             "UPDATE t SET c = `MAP`() WHERE id = 0"
@@ -351,7 +380,11 @@ mod tests {
         ));
         let text = mapped.to_string();
         assert!(
-            text.contains("[UNSUPPORTED_TIMESTAMP_NTZ]") && text.contains("TZ-6"),
+            text.contains("[UNSUPPORTED_TIMESTAMP_NTZ]")
+                && text.contains("nested cast target")
+                && text.contains("the scalar TIMESTAMP_NTZ literal and cast are")
+                && text.contains("TZ-6")
+                && text.contains("SQLSTATE: 0A000"),
             "{text}"
         );
     }

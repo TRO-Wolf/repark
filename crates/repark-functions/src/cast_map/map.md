@@ -31,7 +31,8 @@ the module's tests.
   `type_table::arrow_type_from_spark` would build; a target that does not parse or names no map
   is left for the parser to refuse as before. `map_cast_token` is the DataFrame door's Spark
   token (`MAP<STRING, BIGINT>`), rendered from the parsed type, never from the input.
-  pins: cast-map-spell-1/C-004, C-005
+  **WO NTZ-1 slice 1 (2026-09-26):** it also answers `TIMESTAMP_NTZ` for
+  `timestamp_ntz`. pins: cast-map-spell-1/C-004, C-005; ntz-1/C-003
 - `tests.rs` — the module's `#[cfg(test)]` suite: target parsing across case, spacing and
   nesting; malformed and map-free targets rejected; statements without a map cast untouched
   (string literals and comments included); the splice keeps surrounding text, nested and

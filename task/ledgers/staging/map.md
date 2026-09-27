@@ -25,6 +25,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   FIXED.
   `risk_tier: standard`. Branch `feat/tblprops-1`.
   pins: tblprops-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+- [ntz-1-ledger.md](ntz-1-ledger.md) —
+  **WO NTZ-1 (2026-09-26), in flight:** `TIMESTAMP_NTZ` literals, casts and
+  store assignment answer as Spark. Slice 1 (this commit): the literal and the
+  explicit casts on both doors — the wall literal and its refusal (C-001), the
+  casts and numeric refusals (C-002), the DataFrame door (C-003), the DML reach
+  and both cells EQUAL (C-004), the nested R4 refusal (C-005); store assignment
+  (C-006, C-007) and the storage surface with TZ-6 (C-008, C-009) are later
+  slices. `risk_tier: standard`. Branch `feat/ntz-1`.
+  pins: ntz-1/C-001, C-002, C-003, C-004, C-005
 - [partname-1-ledger.md](partname-1-ledger.md) —
   **WO PARTNAME-1 (2026-09-26), in flight:** partition-field names pinned per door
   against Spark's measured answers — the CREATE door omits the width (C-001), the

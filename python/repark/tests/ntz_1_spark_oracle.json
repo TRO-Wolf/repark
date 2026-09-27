@@ -1,0 +1,596 @@
+{
+ "cells": [
+  {
+   "cols": [
+    [
+     "id",
+     "int"
+    ],
+    [
+     "c",
+     "timestamp_ntz"
+    ]
+   ],
+   "create": "CREATE TABLE sc.ns.t (id INT, c TIMESTAMP_NTZ) USING iceberg TBLPROPERTIES ('format-version'='2')",
+   "filter": [
+    [
+     0
+    ]
+   ],
+   "filter_sql": "SELECT id FROM sc.ns.t WHERE c IS NOT NULL",
+   "insert": "INSERT INTO sc.ns.t VALUES (0, TIMESTAMP_NTZ'2024-01-01 12:34:56.123456')",
+   "meta": [
+    [
+     "id",
+     "int",
+     false
+    ],
+    [
+     "c",
+     "timestamp",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     0,
+     "2024-01-01T12:34:56.123456|tz=None"
+    ]
+   ],
+   "rows_sql": "SELECT * FROM sc.ns.t",
+   "version": 2,
+   "where_lit": [
+    [
+     0
+    ]
+   ],
+   "where_lit_sql": "SELECT id FROM sc.ns.t WHERE c = TIMESTAMP_NTZ'2024-01-01 12:34:56.123456'"
+  },
+  {
+   "cols": [
+    [
+     "id",
+     "int"
+    ],
+    [
+     "c",
+     "timestamp_ntz"
+    ]
+   ],
+   "create": "CREATE TABLE sc.ns.t (id INT, c TIMESTAMP_NTZ) USING iceberg TBLPROPERTIES ('format-version'='3')",
+   "filter": [
+    [
+     0
+    ]
+   ],
+   "filter_sql": "SELECT id FROM sc.ns.t WHERE c IS NOT NULL",
+   "insert": "INSERT INTO sc.ns.t VALUES (0, TIMESTAMP_NTZ'2024-01-01 12:34:56.123456')",
+   "meta": [
+    [
+     "id",
+     "int",
+     false
+    ],
+    [
+     "c",
+     "timestamp",
+     false
+    ]
+   ],
+   "rows": [
+    [
+     0,
+     "2024-01-01T12:34:56.123456|tz=None"
+    ]
+   ],
+   "rows_sql": "SELECT * FROM sc.ns.t",
+   "version": 3,
+   "where_lit": [
+    [
+     0
+    ]
+   ],
+   "where_lit_sql": "SELECT id FROM sc.ns.t WHERE c = TIMESTAMP_NTZ'2024-01-01 12:34:56.123456'"
+  }
+ ],
+ "dataframe": [
+  {
+   "key": "lit_cast_ntz",
+   "literal": "2024-01-01 00:00:00",
+   "spark_rows": [
+    {
+     "v": "2024-01-01T00:00:00|tz=None"
+    }
+   ]
+  },
+  {
+   "key": "lit_cast_ntz_type",
+   "literal": "2024-01-01 00:00:00",
+   "spark_dtypes": [
+    [
+     "v",
+     "timestamp_ntz"
+    ]
+   ]
+  }
+ ],
+ "provenance": {
+  "sources": "ntz-spark.json, ntz2-spark.json, ntz4-spark.json, ntz7-spark.json, ntz7c-spark.json under /tmp/oc-worker/direct/wo/ntz-1-probes/ (probes ntz_probe.py, ntz_probe2.py, ntz_probe4.py, ntz_probe7.py, ntz_probe7c.py); lit_bad msg+condition from ntz4 ntz_lit_bad; cast_str_zone_ny and try_cast_bad schema names re-measured live in ntz7c (probe1 quoted/lowercase spellings do not reproduce on Spark 4.1.2); RePark answers dropped",
+  "spark": "Apache Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-26",
+  "value_styles": "norm = probe norm() (datetime isoformat + |tz=); str = probe4 str(v)"
+ },
+ "selects": [
+  {
+   "key": "lit",
+   "spark": {
+    "rows": [
+     [
+      "2024-01-01T12:34:56.123456|tz=None"
+     ]
+    ],
+    "schema": [
+     [
+      "TIMESTAMP_NTZ '2024-01-01 12:34:56.123456'",
+      "timestamp_ntz"
+     ]
+    ]
+   },
+   "sql": "SELECT TIMESTAMP_NTZ'2024-01-01 12:34:56.123456'",
+   "style": "norm",
+   "zone": "UTC"
+  },
+  {
+   "key": "lit_zone",
+   "spark": {
+    "rows": [
+     [
+      "2024-01-01T12:00:00|tz=None"
+     ]
+    ],
+    "schema": [
+     [
+      "TIMESTAMP_NTZ '2024-01-01 12:00:00'",
+      "timestamp_ntz"
+     ]
+    ]
+   },
+   "sql": "SELECT TIMESTAMP_NTZ'2024-01-01 12:00:00+05:00'",
+   "style": "norm",
+   "zone": "UTC"
+  },
+  {
+   "key": "lit_date_only",
+   "spark": {
+    "rows": [
+     [
+      "2024-01-01T00:00:00|tz=None"
+     ]
+    ],
+    "schema": [
+     [
+      "TIMESTAMP_NTZ '2024-01-01 00:00:00'",
+      "timestamp_ntz"
+     ]
+    ]
+   },
+   "sql": "SELECT TIMESTAMP_NTZ'2024-01-01'",
+   "style": "norm",
+   "zone": "UTC"
+  },
+  {
+   "key": "lit_7digits",
+   "spark": {
+    "rows": [
+     [
+      "2024-01-01T12:34:56.123456|tz=None"
+     ]
+    ],
+    "schema": [
+     [
+      "TIMESTAMP_NTZ '2024-01-01 12:34:56.123456'",
+      "timestamp_ntz"
+     ]
+    ]
+   },
+   "sql": "SELECT TIMESTAMP_NTZ'2024-01-01 12:34:56.1234567'",
+   "style": "norm",
+   "zone": "UTC"
+  },
+  {
+   "key": "lit_named",
+   "spark": {
+    "rows": [
+     [
+      "2024-01-01T00:00:00|tz=None"
+     ]
+    ],
+    "schema": [
+     [
+      "TIMESTAMP_NTZ '2024-01-01 00:00:00'",
+      "timestamp_ntz"
+     ]
+    ]
+   },
+   "sql": "SELECT TIMESTAMP_NTZ'2024-01-01 00:00:00'",
+   "style": "norm",
+   "zone": "UTC"
+  },
+  {
+   "key": "lit_alias",
+   "spark": {
+    "rows": [
+     [
+      "2024-01-01T00:00:00|tz=None",
+      "timestamp_ntz"
+     ]
+    ],
+    "schema": [
+     [
+      "v",
+      "timestamp_ntz"
+     ],
+     [
+      "t",
+      "string"
+     ]
+    ]
+   },
+   "sql": "SELECT TIMESTAMP_NTZ'2024-01-01 00:00:00' AS v, typeof(TIMESTAMP_NTZ'2024-01-01 00:00:00') AS t",
+   "style": "norm",
+   "zone": "UTC"
+  },
+  {
+   "key": "lit_lower",
+   "spark": {
+    "rows": [
+     [
+      "2024-01-01T00:00:00|tz=None"
+     ]
+    ],
+    "schema": [
+     [
+      "v",
+      "timestamp_ntz"
+     ]
+    ]
+   },
+   "sql": "SELECT timestamp_ntz'2024-01-01 00:00:00' AS v",
+   "style": "norm",
+   "zone": "UTC"
+  },
+  {
+   "key": "lit_bad",
+   "spark": {
+    "class_match": true,
+    "condition": "INVALID_TYPED_LITERAL",
+    "condition_match": true,
+    "error": "ParseException",
+    "msg": "[INVALID_TYPED_LITERAL] The value of the typed literal \"TIMESTAMP_NTZ\" is invalid: 'x'. SQLSTATE: 42604\n== SQL (line 1, position 8) ==\nSELECT TIMESTAMP_NTZ'x'\n       ^^^^^^^^^^^^^^^^",
+    "sqlstate": "42604"
+   },
+   "sql": "SELECT TIMESTAMP_NTZ'x'",
+   "style": "norm",
+   "zone": "UTC"
+  },
+  {
+   "key": "coloncolon",
+   "spark": {
+    "rows": [
+     [
+      "2024-01-01T12:34:56.123456|tz=None"
+     ]
+    ],
+    "schema": [
+     [
+      "v",
+      "timestamp_ntz"
+     ]
+    ]
+   },
+   "sql": "SELECT '2024-01-01 12:34:56.123456'::timestamp_ntz AS v",
+   "style": "norm",
+   "zone": "UTC"
+  },
+  {
+   "key": "cast_date",
+   "spark": {
+    "rows": [
+     [
+      "2024-01-02T00:00:00|tz=None"
+     ]
+    ],
+    "schema": [
+     [
+      "v",
+      "timestamp_ntz"
+     ]
+    ]
+   },
+   "sql": "SELECT CAST(DATE'2024-01-02' AS TIMESTAMP_NTZ) AS v",
+   "style": "norm",
+   "zone": "UTC"
+  },
+  {
+   "key": "cast_int",
+   "spark": {
+    "class_match": true,
+    "condition": "DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION",
+    "condition_match": true,
+    "error": "AnalysisException",
+    "msg": "[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] Cannot resolve \"CAST(1 AS TIMESTAMP_NTZ)\" due to data type mismatch: cannot cast \"INT\" to \"TIMESTAMP_NTZ\". SQLSTATE: 42K09; line 1 pos 7;",
+    "sqlstate": "42K09"
+   },
+   "sql": "SELECT CAST(1 AS TIMESTAMP_NTZ) AS v",
+   "style": "norm",
+   "zone": "UTC"
+  },
+  {
+   "key": "cast_ntz_bigint",
+   "spark": {
+    "class_match": true,
+    "condition": "DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION",
+    "condition_match": false,
+    "error": "AnalysisException",
+    "msg": "[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] Cannot resolve \"CAST(TIMESTAMP_NTZ '2024-01-01 00:00:00' AS BIGINT)\" due to data type mismatch: cannot cast \"TIMESTAMP_NTZ\" to \"BIGINT\". SQLSTATE: 42K09; line 1 pos 7;",
+    "sqlstate": "42K09"
+   },
+   "sql": "SELECT CAST(TIMESTAMP_NTZ'2024-01-01 00:00:00' AS BIGINT) AS v",
+   "style": "norm",
+   "zone": "UTC"
+  },
+  {
+   "key": "cast_ntz_int",
+   "spark": {
+    "class_match": true,
+    "condition": "DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION",
+    "condition_match": false,
+    "error": "AnalysisException",
+    "msg": "[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] Cannot resolve \"CAST(TIMESTAMP_NTZ '2024-01-01 00:00:00' AS INT)\" due to data type mismatch: cannot cast \"TIMESTAMP_NTZ\" to \"INT\". SQLSTATE: 42K09; line 1 pos 7;\n'Project [cast(2024-01-01 00:00:00 as int) AS v#5]\n+- OneRowRelation",
+    "sqlstate": "42K09"
+   },
+   "sql": "SELECT CAST(TIMESTAMP_NTZ'2024-01-01 00:00:00' AS INT) AS v",
+   "style": "norm",
+   "zone": "UTC"
+  },
+  {
+   "key": "cast_ntz_date",
+   "spark": {
+    "rows": [
+     [
+      "2024-01-01"
+     ]
+    ],
+    "schema": [
+     [
+      "v",
+      "date"
+     ]
+    ]
+   },
+   "sql": "SELECT CAST(TIMESTAMP_NTZ'2024-01-01 23:00:00' AS DATE) AS v",
+   "style": "norm",
+   "zone": "UTC"
+  },
+  {
+   "key": "cast_ntz_string_frac",
+   "spark": {
+    "rows": [
+     [
+      "2024-01-01 12:34:56.1234"
+     ]
+    ],
+    "schema": [
+     [
+      "v",
+      "string"
+     ]
+    ]
+   },
+   "sql": "SELECT CAST(TIMESTAMP_NTZ'2024-01-01 12:34:56.123400' AS STRING) AS v",
+   "style": "str",
+   "zone": "UTC"
+  },
+  {
+   "key": "cast_null",
+   "spark": {
+    "rows": [
+     [
+      null,
+      "timestamp_ntz"
+     ]
+    ],
+    "schema": [
+     [
+      "v",
+      "timestamp_ntz"
+     ],
+     [
+      "t",
+      "string"
+     ]
+    ]
+   },
+   "sql": "SELECT CAST(NULL AS TIMESTAMP_NTZ) AS v, typeof(CAST(NULL AS TIMESTAMP_NTZ)) AS t",
+   "style": "norm",
+   "zone": "UTC"
+  },
+  {
+   "key": "cast_str_zone_ny",
+   "spark": {
+    "names_match": false,
+    "rows": [
+     [
+      "2024-01-01T12:00:00|tz=None",
+      "2024-01-01T00:00:00|tz=None"
+     ]
+    ],
+    "schema": [
+     [
+      "CAST(2024-01-01 12:00:00+05:00 AS TIMESTAMP_NTZ)",
+      "timestamp_ntz"
+     ],
+     [
+      "CAST(2024-01-01 AS TIMESTAMP_NTZ)",
+      "timestamp_ntz"
+     ]
+    ]
+   },
+   "sql": "SELECT CAST('2024-01-01 12:00:00+05:00' AS TIMESTAMP_NTZ), CAST('2024-01-01' AS TIMESTAMP_NTZ)",
+   "style": "norm",
+   "zone": "America/New_York"
+  },
+  {
+   "key": "cast_bad",
+   "spark": {
+    "class_match": false,
+    "condition": "CAST_INVALID_INPUT",
+    "condition_match": false,
+    "error": "DateTimeException",
+    "msg": "[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"TIMESTAMP_NTZ\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018",
+    "sqlstate": "22018"
+   },
+   "sql": "SELECT CAST('2024-01-01 12:00:00+05:00' AS TIMESTAMP_NTZ), CAST('x' AS TIMESTAMP_NTZ)",
+   "style": "norm",
+   "zone": "UTC"
+  },
+  {
+   "key": "try_cast_bad",
+   "spark": {
+    "names_match": false,
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "TRY_CAST(x AS TIMESTAMP_NTZ)",
+      "timestamp_ntz"
+     ]
+    ]
+   },
+   "sql": "SELECT try_cast('x' AS TIMESTAMP_NTZ)",
+   "style": "norm",
+   "zone": "UTC"
+  },
+  {
+   "key": "ntz_eq_ltz_lit_utc",
+   "spark": {
+    "rows": [
+     [
+      true
+     ]
+    ],
+    "schema": [
+     [
+      "v",
+      "boolean"
+     ]
+    ]
+   },
+   "sql": "SELECT TIMESTAMP_NTZ'2024-01-01 12:00:00' = TIMESTAMP'2024-01-01 12:00:00Z' AS v",
+   "style": "norm",
+   "zone": "UTC"
+  },
+  {
+   "key": "ntz_eq_ltz_lit_ny",
+   "spark": {
+    "rows": [
+     [
+      true
+     ]
+    ],
+    "schema": [
+     [
+      "v",
+      "boolean"
+     ]
+    ]
+   },
+   "sql": "SELECT TIMESTAMP_NTZ'2024-01-01 07:00:00' = TIMESTAMP'2024-01-01 12:00:00Z' AS v",
+   "style": "norm",
+   "zone": "America/New_York"
+  },
+  {
+   "key": "cast_ntz_to_ltz_str_ny",
+   "spark": {
+    "rows": [
+     [
+      "2024-01-01 12:00:00"
+     ]
+    ],
+    "schema": [
+     [
+      "v",
+      "string"
+     ]
+    ]
+   },
+   "sql": "SELECT CAST(CAST(TIMESTAMP_NTZ'2024-01-01 12:00:00' AS TIMESTAMP) AS STRING) AS v",
+   "style": "norm",
+   "zone": "America/New_York"
+  },
+  {
+   "key": "cast_ltz_to_ntz_str_ny",
+   "spark": {
+    "rows": [
+     [
+      "2024-01-01 07:00:00"
+     ]
+    ],
+    "schema": [
+     [
+      "v",
+      "string"
+     ]
+    ]
+   },
+   "sql": "SELECT CAST(CAST(TIMESTAMP'2024-01-01 12:00:00Z' AS TIMESTAMP_NTZ) AS STRING) AS v",
+   "style": "norm",
+   "zone": "America/New_York"
+  },
+  {
+   "key": "dst_gap_ny",
+   "spark": {
+    "rows": [
+     [
+      "2024-03-10 03:30:00"
+     ]
+    ],
+    "schema": [
+     [
+      "v",
+      "string"
+     ]
+    ]
+   },
+   "sql": "SELECT CAST(CAST(TIMESTAMP_NTZ'2024-03-10 02:30:00' AS TIMESTAMP) AS STRING) AS v",
+   "style": "norm",
+   "zone": "America/New_York"
+  },
+  {
+   "key": "dst_overlap_ny",
+   "spark": {
+    "rows": [
+     [
+      "2024-11-03 01:30:00",
+      "1730611800"
+     ]
+    ],
+    "schema": [
+     [
+      "v",
+      "string"
+     ],
+     [
+      "u",
+      "string"
+     ]
+    ]
+   },
+   "sql": "SELECT CAST(CAST(TIMESTAMP_NTZ'2024-11-03 01:30:00' AS TIMESTAMP) AS STRING) AS v, CAST(unix_timestamp(CAST(TIMESTAMP_NTZ'2024-11-03 01:30:00' AS TIMESTAMP)) AS STRING) AS u",
+   "style": "str",
+   "zone": "America/New_York"
+  }
+ ]
+}

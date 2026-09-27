@@ -396,6 +396,9 @@ pub(super) fn cast_to(expr: Expr, spec: &str, try_cast: bool) -> Result<Expr, St
             expr, &target, try_cast,
         ));
     }
+    if spec.trim() == "timestamp_ntz" {
+        return Ok(repark_functions::timestamp_ntz_cast::timestamp_ntz_cast_expr(expr, try_cast));
+    }
     let data_type = parse_data_type(spec)?;
     Ok(if try_cast {
         Expr::TryCast(datafusion::logical_expr::TryCast::new(

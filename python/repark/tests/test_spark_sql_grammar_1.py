@@ -267,16 +267,28 @@ def test_pg_ltz_cast_nullable_frame(spark: ReparkSession) -> None:
     assert table.schema.field("v").nullable is True
 
 
-def test_pg_ntz_literal_refuses(spark: ReparkSession) -> None:
-    """PG-ntz-lit: the ``TIMESTAMP_NTZ`` literal refuses loud naming TZ-6."""
-    with pytest.raises(AnalysisException, match=r"\[UNSUPPORTED_TIMESTAMP_NTZ\]"):
-        _table(spark, "SELECT TIMESTAMP_NTZ '2024-01-02 03:04:05' AS v")
+def test_pg_ntz_literal_answers_the_wall(spark: ReparkSession) -> None:
+    """PG-ntz-lit: the ``TIMESTAMP_NTZ`` literal answers its naive wall.
+
+    pins: ntz-1/C-001. Spark folds the literal-only cell to non-null and so
+    does RePark (unlike the folded-literal precedent: the wall literal rides
+    a non-null integer).
+    """
+    table = _table(spark, "SELECT TIMESTAMP_NTZ '2024-01-02 03:04:05' AS v")
+    assert table.column("v").to_pylist() == [datetime.datetime(2024, 1, 2, 3, 4, 5)]
+    assert table.schema.field("v").type == pa.timestamp("us")
+    assert table.schema.field("v").nullable is False
 
 
-def test_pg_ntz_cast_refuses(spark: ReparkSession) -> None:
-    """PG-ntz-cast: ``CAST(x AS TIMESTAMP_NTZ)`` refuses loud naming TZ-6."""
-    with pytest.raises(AnalysisException, match=r"\[UNSUPPORTED_TIMESTAMP_NTZ\]"):
-        _table(spark, "SELECT CAST('2024-01-02 03:04:05' AS TIMESTAMP_NTZ) AS v")
+def test_pg_ntz_cast_answers_the_wall(spark: ReparkSession) -> None:
+    """PG-ntz-cast: ``CAST(x AS TIMESTAMP_NTZ)`` answers the naive wall.
+
+    pins: ntz-1/C-002.
+    """
+    table = _table(spark, "SELECT CAST('2024-01-02 03:04:05' AS TIMESTAMP_NTZ) AS v")
+    assert table.column("v").to_pylist() == [datetime.datetime(2024, 1, 2, 3, 4, 5)]
+    assert table.schema.field("v").type == pa.timestamp("us")
+    assert table.schema.field("v").nullable is False
 
 
 def test_pg_struct_dot(spark: ReparkSession) -> None:

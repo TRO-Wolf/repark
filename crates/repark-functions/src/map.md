@@ -803,6 +803,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (legality is a check on the type PAIR, not the eval mode). It is deliberately NOT
   the store-assignment matrix (`repark-iceberg`'s `write/store_assign.rs`) — the two answer
   different questions and each is laxer than the other somewhere.
+  **WO NTZ-1 slice 1 (2026-09-26):** the matrix also denies microsecond-naive
+  `Timestamp` → any integer / float / decimal, refusing with
+  `[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION]` naming `TIMESTAMP_NTZ` (the DATE pairs
+  keep `_WITH_FUNC_SUGGESTION`). pins: ntz-1/C-002
 - `analyzer.rs` — `SparkExprSemantics`: integer `/` → always-double division; division/modulo-by-zero
   follows `spark.sql.ansi.enabled` (raise when TRUE, NULL otherwise); `[]` array subscript →
   0-based with invalid-index → NULL (rewrites the planner's
@@ -1054,6 +1058,17 @@ scalars live under [`try_invert/`](try_invert/map.md).
   checked cast; both ns casts are one shared UDF instance each.
   Tests in [timestamp_ns_cast/](timestamp_ns_cast/map.md).
   pins: ice-tsns-sql-1/C-001, C-002, C-009
+- `timestamp_ntz_cast.rs` — **WO NTZ-1 slice 1 (2026-09-26):** the embedded Spark-door
+  casts `__repark_cast_timestamp_ntz__` / `__repark_try_cast_timestamp_ntz__` (→
+  `Timestamp(µs, None)`) and the wall literal `__repark_timestamp_ntz__`, registered
+  through `instant_ts::functions()` and reached only through the SQL door's literal and
+  cast lowering and the DataFrame-door cast. The cast delegates to `ntz_single` (strings
+  with the zone suffix dropped, ANSI raise retargeted at `"TIMESTAMP_NTZ"`, dates to
+  midnight, instants to the session-zone wall) and refuses non-temporal sources at
+  planning with `[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION]`; the literal folds a wall
+  integer and is named `TIMESTAMP_NTZ '<wall>'`.
+  Tests in [timestamp_ntz_cast/](timestamp_ntz_cast/map.md).
+  pins: ntz-1/C-001, C-002
 - `timestamp_ltz_ntz.rs` — **FNP-11B step 3 (2026-09-15):** `to_timestamp_ltz` /
   `to_timestamp_ntz` / `try_to_timestamp` on the step-2 parser (card D-1, no new
   parser). `to_timestamp_ltz` forwards both arities to the `to_timestamp` kernel;
