@@ -44,9 +44,7 @@ ORACLE_PATH: Path = Path(__file__).with_name("fnp11_spark_oracle.json")
 FRAME_VIEW: str = "fnp11a_frame"
 BOX_ZONE: str = "America/New_York"
 TM_TOKEN: re.Pattern[str] = re.compile(r"\btm\b")
-D4_BLOCKED_SQL: frozenset[str] = frozenset(
-    {"timestampdiff(DAY, ntz, TIMESTAMP_NTZ'2024-03-11 01:00:00')"}
-)
+D4_BLOCKED_SQL: frozenset[str] = frozenset()
 FRAME_TOKEN: re.Pattern[str] = re.compile(
     r"\b(y|mo|d|h|mi|s|ts_str|dt|ts|tz|t_str|fmt_str|n|ntz|d1|d2)\b"
 )

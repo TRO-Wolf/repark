@@ -181,28 +181,7 @@
    "key": "ltz/v2/side-insert-ntz",
    "do": "sql",
    "sql": "INSERT INTO sc.ns.lx2 VALUES (4, TIMESTAMP_NTZ'2024-04-01 00:00:00')",
-   "spark": "ok",
-   "residue": {
-    "id": "R-2",
-    "repark": [
-     [
-      "cond",
-      "UNSUPPORTED_TIMESTAMP_NTZ"
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: [UNSUPPORTED_TIMESTAMP_NTZ] The data type TIMESTAMP_NTZ is not a SQL-door type: declare TIMESTAMP instead. The naive/instant contract is TZ-6 (docs/spark-sql-iceberg-parity.md). SQLSTATE: 0A000"
-     ],
-     [
-      "state",
-      "0A000"
-     ]
-    ]
-   }
+   "spark": "ok"
   },
   {
    "group": "ltz",
@@ -232,6 +211,10 @@
      [
       3,
       "2024-03-01T01:02:03"
+     ],
+     [
+      4,
+      "2024-04-01T00:00:00"
      ],
      [
       6,
@@ -465,28 +448,7 @@
      5,
      "2024-05-01T00:00:00"
     ]
-   ],
-   "residue": {
-    "id": "R-2",
-    "repark": [
-     [
-      "cond",
-      "UNSUPPORTED_TIMESTAMP_NTZ"
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: [UNSUPPORTED_TIMESTAMP_NTZ] The data type TIMESTAMP_NTZ is not a SQL-door type: declare TIMESTAMP instead. The naive/instant contract is TZ-6 (docs/spark-sql-iceberg-parity.md). SQLSTATE: 0A000"
-     ],
-     [
-      "state",
-      "0A000"
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "ltz",
@@ -1299,28 +1261,7 @@
    "key": "ltz/v3/side-insert-ntz",
    "do": "sql",
    "sql": "INSERT INTO sc.ns.lx3 VALUES (4, TIMESTAMP_NTZ'2024-04-01 00:00:00')",
-   "spark": "ok",
-   "residue": {
-    "id": "R-2",
-    "repark": [
-     [
-      "cond",
-      "UNSUPPORTED_TIMESTAMP_NTZ"
-     ],
-     [
-      "error",
-      "AnalysisException"
-     ],
-     [
-      "msg",
-      "Error during planning: [UNSUPPORTED_TIMESTAMP_NTZ] The data type TIMESTAMP_NTZ is not a SQL-door type: declare TIMESTAMP instead. The naive/instant contract is TZ-6 (docs/spark-sql-iceberg-parity.md). SQLSTATE: 0A000"
-     ],
-     [
-      "state",
-      "0A000"
-     ]
-    ]
-   }
+   "spark": "ok"
   },
   {
    "group": "ltz",
@@ -1350,6 +1291,10 @@
      [
       3,
       "2024-03-01T01:02:03"
+     ],
+     [
+      4,
+      "2024-04-01T00:00:00"
      ],
      [
       6,

@@ -24,6 +24,13 @@ path stay in `spark_literals.rs`.
   literal. `mod.rs` `plan_keyword_regions` runs it after the DROP TEMPORARY planner. A cast
   target, a quoted name and a bare identifier stay untouched (unit pins in the file).
   pins: u9-types-1/C-002
+- `timestamp_ntz_literal.rs` — **WO NTZ-1 slice 1 (2026-09-26):**
+  `plan_timestamp_ntz_literal_regions` rewrites an unquoted `TIMESTAMP_NTZ` word that a
+  single- or double-quoted string follows (whitespace allowed) into one region spanning
+  word through string, replaced by `__repark_timestamp_ntz__(<wall µs>)`; an unparsable
+  string refuses Spark's `INVALID_TYPED_LITERAL` with the `== SQL` window at plan time.
+  A cast target, a quoted name and a bare identifier stay untouched (unit pins in the
+  file). pins: ntz-1/C-001
 - `create_options.rs` — **D-5 (2026-09-21):** the `OPTIONS` → `TBLPROPERTIES`
   seam. Recognizes `CREATE [OR REPLACE] TABLE [IF NOT EXISTS] name [(cols)]
   USING iceberg` and rewrites its single well-formed `OPTIONS (k=v, …)` clause
