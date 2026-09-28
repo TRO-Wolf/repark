@@ -59,6 +59,16 @@ impl NoOverwriteStorage {
     pub fn new(inner: Arc<dyn Storage>) -> Self {
         Self { inner }
     }
+
+    async fn refuse_if_exists(&self, path: &str) -> Result<()> {
+        if self.inner.exists(path).await? {
+            return Err(iceberg::Error::new(
+                iceberg::ErrorKind::Unexpected,
+                format!("second write of an existing path refused: {path}"),
+            ));
+        }
+        Ok(())
+    }
 }
 
 impl Serialize for NoOverwriteStorage {
@@ -88,12 +98,7 @@ impl Storage for NoOverwriteStorage {
     }
 
     async fn write(&self, path: &str, bs: Bytes) -> Result<()> {
-        if self.inner.exists(path).await? {
-            return Err(iceberg::Error::new(
-                iceberg::ErrorKind::Unexpected,
-                format!("second write of an existing path refused: {path}"),
-            ));
-        }
+        self.refuse_if_exists(path).await?;
         self.inner.write(path, bs).await
     }
 
@@ -102,6 +107,7 @@ impl Storage for NoOverwriteStorage {
     }
 
     async fn writer(&self, path: &str) -> Result<Box<dyn FileWrite>> {
+        self.refuse_if_exists(path).await?;
         self.inner.writer(path).await
     }
 

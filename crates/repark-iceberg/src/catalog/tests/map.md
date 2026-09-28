@@ -112,6 +112,10 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
 - `lineage_columns.rs` — **V3-4 critic:** stored `_row_id` wins over `first_row_id +` pos;
   `WHERE id = lit` keeps matching lineage rows; `try_new_with_snapshot` is absent.
   pins: v3-4-serve-lineage-columns/C-017, C-019, C-020
+- `no_overwrite.rs` — **RP-55 fold (2026-09-27, critic V-001):** a first `writer()` on a fresh
+  path succeeds; a second `writer()` on an existing path fails `Unexpected` with the same text
+  `write()` refuses with.
+  pins: aws-accept-replace-1/C-001
 
 ## Pointers
 
