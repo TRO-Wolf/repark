@@ -29,11 +29,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   **WO CASESENS-2 (2026-09-28), in flight:** the DataFrame door resolves names
   in Rust — `true` exact on every name API, qualified strings bind,
   `withColumn(s)` / renames / `fillna` / `dropDuplicates` follow the rule.
-  Slice 1: bare names resolve in Rust (C-001 PROVEN), the R-11 qualified
-  strings bind (C-003 PROVEN-partial; `r7_selfjoin` and toggle-reuse re-homed
-  per the 2026-09-28 ruling); C-002, C-004, C-005 land in S2/S3; C-006, C-007,
-  C-008 flip last. `risk_tier: high`. Branch `feat/casesens-2-s1`.
-  pins: casesens-2/C-001, C-003
+  Slices 1–3: C-001, C-002, C-004…C-008 PROVEN. Slice 4 (branch
+  `feat/casesens-2-s4`): the self-join halves bind (C-003 PROVEN, R-CS2-1
+  CLOSED per the owner ruling); the p10 non-join overlay shapes pin the
+  `true` misses, the R4 refusals, and the R-CS2-7 answer-gaps.
+  `risk_tier: high`.
+  pins: casesens-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [r-fileorder-2-ledger.md](r-fileorder-2-ledger.md) —
   **R-FILEORDER-2 (2026-09-27), HALT per R1:** Spark 4.1.2's own `L-INSERT-OVERWRITE`
   lineage differs between runs (the same-JVM triple agrees, C-001; six fresh-JVM runs

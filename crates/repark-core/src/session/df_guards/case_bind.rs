@@ -19,6 +19,7 @@ use repark_common::spark_error;
 pub use super::subquery::resolve_bound_expr_with;
 pub use super::written_names::{Disposition, refuse_folded_duplicate_keys, unresolved_subset_name};
 pub use super::written_names::{match_display_names, match_subset_names, resolve_df_names};
+pub use super::written_names::{resolve_qualified_display_names, rewrite_join_condition_aliases};
 pub use repark_common::names::{NameHit, NameRule};
 
 type Hit<'a> = (Option<&'a TableReference>, &'a Field);
@@ -623,10 +624,9 @@ mod tests {
             refusal(col("id"), &twins),
             ambiguous("`id`", "`t`.`id`, `u`.`id`")
         );
-        let qualified = Expr::Column(Column::new(Some("t"), "id"));
         let exact = frame(&[("t", "id"), ("t", "ID")]);
         assert_eq!(
-            refusal(qualified, &exact),
+            refusal(Expr::Column(Column::new(Some("t"), "id")), &exact),
             ambiguous("`t`.`id`", "`t`.`id`, `t`.`id`")
         );
     }

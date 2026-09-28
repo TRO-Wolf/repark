@@ -2754,12 +2754,8 @@ class DataFrame:
         self._session.create_or_replace_temp_view(left_alias, self._plan())
         self._session.create_or_replace_temp_view(right_alias, other._plan())
         try:
-            on_sql = _rewrite_join_qcol_sql(
-                condition.join_sql_part(),
-                left=self,
-                right=other,
-                left_alias=left_alias,
-                right_alias=right_alias,
+            on_sql = written_names._rewrite_join_condition(
+                self, other, condition, left_alias, right_alias
             )
             _native.refuse_ambiguous_join_condition(self._plan(), other._plan(), on_sql)
             left_cols = list(self.columns)
@@ -3888,7 +3884,6 @@ from repark.spark.dataframe.plan_collapse import (  # noqa: E402, I001
     _output_field_would_persist_required,
     _parse_list_element_sql_type,
     _reject_non_numeric_range_order,
-    _rewrite_join_qcol_sql,
     _rewrite_qcol_tokens_local,
     _same_object_qcol_alternation_safe,
     _spark_array_element_to_sql,

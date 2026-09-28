@@ -1,7 +1,11 @@
 use std::collections::HashMap;
+use std::ops::ControlFlow;
 
 use datafusion::arrow::datatypes::{DataType, Field};
 use datafusion::common::{Column, DFSchema, DataFusionError, Result, TableReference};
+use datafusion::sql::sqlparser::ast::{Expr as SqlExpr, Ident, visit_expressions_mut};
+use datafusion::sql::sqlparser::dialect::DatabricksDialect;
+use datafusion::sql::sqlparser::parser::Parser;
 use repark_common::names::{NameRule, column_already_exists, folded_duplicate};
 
 use super::case_bind::unresolved_column;
@@ -46,6 +50,61 @@ pub fn match_subset_names(
     written
         .iter()
         .map(|name| match_one_subset(name, held, rule))
+        .collect()
+}
+
+#[must_use]
+pub fn rewrite_join_condition_aliases(
+    left_schema: &DFSchema,
+    right_schema: &DFSchema,
+    condition_sql: &str,
+    left_view: &str,
+    right_view: &str,
+    rule: NameRule,
+) -> String {
+    let Ok(mut condition) = Parser::new(&DatabricksDialect {})
+        .try_with_sql(condition_sql)
+        .and_then(|mut parser| parser.parse_expr())
+    else {
+        return condition_sql.to_string();
+    };
+    let mut rewritten = false;
+    let _ = visit_expressions_mut(&mut condition, |node| {
+        if let SqlExpr::CompoundIdentifier(parts) = node
+            && let [qualifier, name] = parts.as_slice()
+            && let Some((view, engine)) = join_alias_target(
+                left_schema,
+                right_schema,
+                qualifier.value.as_str(),
+                name.value.as_str(),
+                left_view,
+                right_view,
+                rule,
+            )
+        {
+            *node =
+                SqlExpr::CompoundIdentifier(vec![Ident::new(view), Ident::with_quote('`', engine)]);
+            rewritten = true;
+        }
+        ControlFlow::<()>::Continue(())
+    });
+    if rewritten {
+        condition.to_string()
+    } else {
+        condition_sql.to_string()
+    }
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn resolve_qualified_display_names(
+    frame_schema: &DFSchema,
+    displays: &[String],
+    names: &[String],
+    rule: NameRule,
+) -> Result<Vec<(String, String, Disposition)>> {
+    names
+        .iter()
+        .map(|written| resolve_one_display(frame_schema, displays, written, rule))
         .collect()
 }
 
@@ -151,6 +210,80 @@ fn qualifier_matches(written: &TableReference, held: &TableReference, rule: Name
         })
 }
 
+fn join_alias_target<'a>(
+    left_schema: &DFSchema,
+    right_schema: &DFSchema,
+    qualifier: &str,
+    name: &str,
+    left_view: &'a str,
+    right_view: &'a str,
+    rule: NameRule,
+) -> Option<(&'a str, String)> {
+    let want = TableReference::Bare {
+        table: qualifier.into(),
+    };
+    match (
+        side_engine(left_schema, &want, name, rule),
+        side_engine(right_schema, &want, name, rule),
+    ) {
+        (Some(engine), None) => Some((left_view, engine)),
+        (None, Some(engine)) => Some((right_view, engine)),
+        _ => None,
+    }
+}
+
+fn side_engine(
+    schema: &DFSchema,
+    want: &TableReference,
+    name: &str,
+    rule: NameRule,
+) -> Option<String> {
+    let mut hits = schema
+        .iter()
+        .filter(|(held, field)| {
+            held.as_ref()
+                .is_some_and(|held| qualifier_matches(want, held, rule))
+                && rule.matches(name, field.name())
+        })
+        .map(|(_, field)| field.name().clone());
+    let engine = hits.next()?;
+    hits.next().is_none().then_some(engine)
+}
+
+fn resolve_one_display(
+    frame_schema: &DFSchema,
+    displays: &[String],
+    written: &str,
+    rule: NameRule,
+) -> Result<(String, String, Disposition)> {
+    let paired = frame_schema.fields().len() == displays.len();
+    let Some((qualifier, last_segment)) = written.rsplit_once('.') else {
+        return Ok((written.to_string(), String::new(), Disposition::Missing));
+    };
+    let want = TableReference::Bare {
+        table: qualifier.into(),
+    };
+    let hit = paired.then(|| {
+        frame_schema
+            .iter()
+            .zip(displays.iter())
+            .find(|((held, _), display)| {
+                held.as_ref()
+                    .is_some_and(|held| qualifier_matches(&want, held, rule))
+                    && rule.matches(last_segment, display)
+            })
+            .map(|((_, field), _)| field.name().clone())
+    });
+    match hit {
+        Some(Some(engine)) => Ok((written.to_string(), engine, Disposition::Bound)),
+        Some(None) if matches!(rule, NameRule::Exact) => Err(unresolved_display_miss(
+            &Column::new(Some(want), last_segment),
+            displays,
+        )),
+        _ => Ok((written.to_string(), String::new(), Disposition::Missing)),
+    }
+}
+
 fn settle(
     frame_schema: &DFSchema,
     column: &Column,
@@ -195,12 +328,15 @@ fn match_one_display(
         _ => Disposition::Ambiguous,
     };
     if matches!(rule, NameRule::Exact) && !matches!(disposition, Disposition::Bound) {
-        return Err(unresolved_display_miss(name, held));
+        return Err(unresolved_display_miss(
+            &Column::new_unqualified(name),
+            held,
+        ));
     }
     Ok((name.to_string(), hits, disposition))
 }
 
-fn unresolved_display_miss(name: &str, held: &[String]) -> DataFusionError {
+fn unresolved_display_miss(column: &Column, held: &[String]) -> DataFusionError {
     let mut seen: Vec<&str> = Vec::new();
     for candidate in held {
         if !seen.contains(&candidate.as_str()) {
@@ -212,7 +348,7 @@ fn unresolved_display_miss(name: &str, held: &[String]) -> DataFusionError {
         .map(|candidate| Field::new(candidate, DataType::Null, true))
         .collect::<Vec<_>>();
     match DFSchema::from_unqualified_fields(fields.into(), HashMap::new()) {
-        Ok(schema) => unresolved_column(&Column::new_unqualified(name), &schema),
+        Ok(schema) => unresolved_column(column, &schema),
         Err(error) => error,
     }
 }
@@ -227,7 +363,8 @@ mod tests {
 
     use super::{
         Disposition, match_display_names, match_subset_names, refuse_folded_duplicate_keys,
-        resolve_df_names, unresolved_subset_name,
+        resolve_df_names, resolve_qualified_display_names, rewrite_join_condition_aliases,
+        unresolved_subset_name,
     };
     use repark_common::names::NameRule::{Exact, IgnoreCase};
 
@@ -407,6 +544,209 @@ mod tests {
             error,
             "Error during planning: Cannot resolve column name \"NOPE\" among (id, Data, s)."
         );
+    }
+
+    #[test]
+    fn join_condition_aliases_rebind_through_the_side_schemas() {
+        let left = schema(&[("l", "id"), ("l", "Data")]);
+        let right = schema(&[("r", "id"), ("r", "Data")]);
+        let folded = rewrite_join_condition_aliases(
+            &left,
+            &right,
+            "(`l`.`ID` = `r`.`ID`)",
+            "JL",
+            "JR",
+            IgnoreCase,
+        );
+        assert_eq!(folded, "(JL.`id` = JR.`id`)");
+        let folded_qualifier = rewrite_join_condition_aliases(
+            &left,
+            &right,
+            "(`L`.`ID` = `R`.`ID`)",
+            "JL",
+            "JR",
+            IgnoreCase,
+        );
+        assert_eq!(folded_qualifier, "(JL.`id` = JR.`id`)");
+        let exact = rewrite_join_condition_aliases(
+            &left,
+            &right,
+            "(`l`.`id` = `r`.`id`)",
+            "JL",
+            "JR",
+            Exact,
+        );
+        assert_eq!(exact, "(JL.`id` = JR.`id`)");
+        assert_eq!(
+            rewrite_join_condition_aliases(
+                &left,
+                &right,
+                "(`l`.`ID` = `r`.`ID`)",
+                "JL",
+                "JR",
+                Exact
+            ),
+            "(`l`.`ID` = `r`.`ID`)"
+        );
+        assert_eq!(
+            rewrite_join_condition_aliases(
+                &left,
+                &right,
+                "(`L`.`id` = `r`.`id`)",
+                "JL",
+                "JR",
+                Exact
+            ),
+            "(`L`.`id` = JR.`id`)"
+        );
+        assert_eq!(
+            rewrite_join_condition_aliases(
+                &left,
+                &right,
+                "(`L`.`id` = `r`.`id`)",
+                "JL",
+                "JR",
+                IgnoreCase
+            ),
+            "(JL.`id` = JR.`id`)"
+        );
+        for rule in [Exact, IgnoreCase] {
+            assert_eq!(
+                rewrite_join_condition_aliases(
+                    &left,
+                    &right,
+                    "(`x`.`id` = `r`.`id`)",
+                    "JL",
+                    "JR",
+                    rule
+                ),
+                "(`x`.`id` = JR.`id`)"
+            );
+        }
+        let shared_only = schema(&[("x", "id")]);
+        assert_eq!(
+            rewrite_join_condition_aliases(
+                &shared_only,
+                &shared_only,
+                "(`x`.`id` = `x`.`id`)",
+                "JL",
+                "JR",
+                IgnoreCase
+            ),
+            "(`x`.`id` = `x`.`id`)"
+        );
+    }
+
+    #[test]
+    fn join_condition_aliases_leave_other_references_untouched() {
+        let left = schema(&[("l", "id"), ("l", "Data")]);
+        let right = schema(&[("r", "id"), ("r", "Data")]);
+        for rule in [Exact, IgnoreCase] {
+            for untouched in ["(`id` = `Data`)", "(JL.`id` = JR.`id`)", "(`l`.`id` ="] {
+                assert_eq!(
+                    rewrite_join_condition_aliases(&left, &right, untouched, "JL", "JR", rule),
+                    untouched
+                );
+            }
+        }
+        let twins = schema(&[("l", "id"), ("l", "ID")]);
+        assert_eq!(
+            rewrite_join_condition_aliases(
+                &twins,
+                &right,
+                "(`l`.`id` = `r`.`id`)",
+                "JL",
+                "JR",
+                IgnoreCase
+            ),
+            "(`l`.`id` = JR.`id`)"
+        );
+    }
+
+    #[test]
+    fn qualified_display_names_pair_schema_positions_with_displays() {
+        let child = schema(&[("l", "e0"), ("l", "e1"), ("r", "e2"), ("r", "e3")]);
+        let displays = ["id", "Data", "id", "Data"]
+            .into_iter()
+            .map(str::to_string)
+            .collect::<Vec<_>>();
+        let bound = resolve_qualified_display_names(
+            &child,
+            &displays,
+            &["l.ID".to_string(), "r.data".to_string()],
+            IgnoreCase,
+        )
+        .unwrap();
+        assert_eq!(
+            bound,
+            vec![
+                ("l.ID".to_string(), "e0".to_string(), Disposition::Bound),
+                ("r.data".to_string(), "e3".to_string(), Disposition::Bound),
+            ]
+        );
+        let missing = resolve_qualified_display_names(
+            &child,
+            &displays,
+            &["x.id".to_string(), "l.nope".to_string(), "id".to_string()],
+            IgnoreCase,
+        )
+        .unwrap();
+        assert!(missing.iter().all(|row| row.2 == Disposition::Missing));
+        let exact =
+            resolve_qualified_display_names(&child, &displays, &["l.id".to_string()], Exact)
+                .unwrap();
+        assert_eq!(
+            exact,
+            vec![("l.id".to_string(), "e0".to_string(), Disposition::Bound)]
+        );
+        let error =
+            resolve_qualified_display_names(&child, &displays, &["l.ID".to_string()], Exact)
+                .unwrap_err()
+                .to_string();
+        assert_eq!(error, unresolved("`l`.`ID`", "`id`, `Data`"));
+        let dupes = schema(&[("l", "e0"), ("l", "e1")]);
+        let twin_displays = ["id".to_string(), "id".to_string()];
+        let first = resolve_qualified_display_names(
+            &dupes,
+            &twin_displays,
+            &["l.id".to_string()],
+            IgnoreCase,
+        )
+        .unwrap();
+        assert_eq!(
+            first,
+            vec![("l.id".to_string(), "e0".to_string(), Disposition::Bound)]
+        );
+        let unqualified = DFSchema::from_unqualified_fields(
+            vec![
+                Field::new("e0", DataType::Int64, true),
+                Field::new("e1", DataType::Int64, true),
+            ]
+            .into(),
+            HashMap::new(),
+        )
+        .unwrap();
+        let missing = resolve_qualified_display_names(
+            &unqualified,
+            &twin_displays,
+            &["l.id".to_string()],
+            IgnoreCase,
+        )
+        .unwrap();
+        assert_eq!(missing[0].2, Disposition::Missing);
+        let error = resolve_qualified_display_names(
+            &unqualified,
+            &twin_displays,
+            &["l.ID".to_string()],
+            Exact,
+        )
+        .unwrap_err()
+        .to_string();
+        assert_eq!(error, unresolved("`l`.`ID`", "`id`"));
+        let short = ["id".to_string()];
+        let unpaired =
+            resolve_qualified_display_names(&child, &short, &["l.id".to_string()], Exact).unwrap();
+        assert_eq!(unpaired[0].2, Disposition::Missing);
     }
 
     #[test]

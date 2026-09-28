@@ -173,13 +173,72 @@ mixed hit-and-miss `dropDuplicates` subset on overlay frames now refuses
 (was a silent skip when some display hit exactly): aligned with the plain
 path, which always refused; unmeasured, no pin.
 
+## Slice 4 (2026-09-28, this round; branch `feat/casesens-2-s4`, base `63acd9bb`)
+
+Owner ruling 2026-09-28 ("Lets get the self join fixed"): residue R-CS2-1 is
+fixed in v1.5.1, not re-homed. Q1 ruling (orchestrator, same day): EXTEND —
+S4 lands both halves as one R4 mechanism (condition rewrite plus
+qualified-display select routing, ≈110 product lines, size wire raised to
+~130 for this slice only). Q2 ruling (same day): ACCEPT the non-join
+refuse→answer flips on measurement — `cs_probe10.py` (9 cells, Spark 4.1.2
+UTC banner, then RePark) pins every non-join shape; a Spark-refuses shape
+the routing would answer narrows the routing to join children only.
+
+S4-0 measured (2026-09-28): Spark answers `alias_dupe_sel` / `_fold` /
+`_true` (multi-hit qualified binds), refuses `alias_wc_sel*` /
+`alias_dupe_sel_first*` naming the qualifier (projected expressions lose
+it) and `wrongqual` / `fold_true` with `UNRESOLVED_COLUMN.WITH_SUGGESTION`.
+RePark's select/withColumn children carry unqualified native schemas (the
+alias qualifier is lost, verified live), so schema-qualifier routing binds
+only on join children (H1 `requalify_join_sides` keeps `l`/`r`) — the Q2
+narrowing falls out of the mechanism, no Spark-refuses shape flips. The
+S1 "string half binds" note in R-CS2-1 is corrected: qualified strings
+refused on every overlay frame until S4; join children bind now, other
+overlay children stay refusing (residue R-CS2-7).
+
+Plan: p10 oracle keys plus red-first pins; `written_names.rs` gains
+`rewrite_join_condition_aliases` (Databricks parse, two-part compounds
+rebind through the side schemas, byte-identical passthrough otherwise) and
+`resolve_qualified_display_names` (positional schema-qualifier plus
+display pairing, first hit binds, Exact raises the qualified
+`unresolved_column`); `dataframe_names.rs` exposes both;
+`written_names.py` gains `_rewrite_join_condition` and
+`_bind_qualified_display_column`; `core.py` swaps the six-line QCOL call
+for the wrapper (shrinks; ceilings ratchet).
+
+Landed 2026-09-28: `r7_selfjoin` and `r18_alias_join` answer Spark's
+names and rows byte-equal; `selfjoin_true` keeps refusing Spark's text;
+the wrong-case alias qualifier refuses 42703; the p10 true misses match
+head plus candidates; the p10 false shapes keep the R4 facade text and
+the three answer-shapes stay refuse-pinned (R-CS2-7). The probe re-run
+flips exactly `r7_selfjoin` (p1) and `r18_alias_join` (p6); p4 zero
+flips; the scoreboard replay is identical to S3 modulo timing. Red-first:
+`test_s4_selfjoin_answers_as_spark`,
+`test_s4_probe10_true_qualified_misses_match` and
+`test_s4_probe10_true_gap_stays_pinned` fail on `63acd9bb`, the two
+behavior-preserving pins pass on arrival.
+
+Adaptations recorded: A12 the written qualifier builds
+`TableReference::Bare` directly — `TableReference::from` lowercases
+(`parse_str_normalized`), which bound wrong-case qualifiers under
+`Exact` (caught by the new unit test, not the facade pin). A13 the
+rewritten view qualifier is bare (`Ident::new`) with a backticked engine
+field, the QCOL shape — a backticked view does not resolve the scratch
+temp view (verified live). A14 the third `frame_names` re-export line is
+funded by inlining one single-use test `let` (`case_bind.rs` stays
+exactly 1000). A15 the multi-hit select binds the first positional hit —
+unobservable in every S4 pin (multi-hit values are identical wherever
+RePark binds); same-alias joins stay unmeasured. The condition half
+binds single-hit only (twin conditions keep today's refusal,
+unmeasured).
+
 ## Clauses
 
 | Clause | Statement | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
 | C-001 | Under `caseSensitive=true` the bare-name legs refuse `UNRESOLVED_COLUMN.WITH_SUGGESTION` (42703) naming the written spelling: `p1/cs_df_select_ID`, `cs_df_select_col_ID`, `cs_df_select_data`, `cs_df_orderBy_ID`, `cs_df_groupBy_ID`, `cs_df_filter_str_ID`, `cs_df_getitem_ID`. | Facade replay asserts class, condition, SQLSTATE, head and candidate set per key. | PROVEN | `test_casesens_2.py::test_s1_true_door_refuses_bare_names` (7/7 green); M2 reds it. |
 | C-002 | Under `caseSensitive=true` the name APIs follow the rule: `withColumn` appends (`p1/cs_df_withColumn_ID`), `withColumnRenamed` no-ops (`p1/cs_df_renamed_ID`), `fillna` subset refuses (`p4/df_fillna_true`), `dropDuplicates` refuses the legacy text (`p4/df_dropDuplicates_true`); the p6 miss, twin and qualified cells (`sel_nope_true`, `getitem_nope_true`, `order_nope_true`, `group_nope_true`, `filter_str_nope_true`, `wcs_true`, `wcs_true_exact`, `wcrn_plural_true`, `wcr_twin_true`, `wc_twin_true`, `fill_null_true`, `fill_subset_nope_true`, `dropna_subset_true`, `dd_exact_true`, `dd_nope_true`, `qs_sel_t_id_true`, `qs_sel_t_ID_exact_true`, `selfjoin_true`) answer Spark's recorded cells. | Slice 3. | PROVEN | `test_casesens_2.py::test_s3_fillna_follows_the_rule` (`p4/df_fillna_true`, `fill_null_false`, `fill_null_true`, `fill_subset_nope_true`), `test_s3_dropna_follows_the_rule` (`dropna_subset_false`, `dropna_subset_true`, the overlay legs), `test_s3_drop_duplicates_follows_the_rule` (`p4/df_dropDuplicates_true`, `r7_dropDuplicates_ID`, `dd_exact_true`, `dd_nope_true`, `dd_nope_false`, legacy legs type plus message per R8); M6 reds the legacy legs. |
-| C-003 | Under `caseSensitive=false` qualified df-door strings bind: `p1/r7_selfjoin` answers `ID`, `data` `[[1,a],[2,b]]`, and p6 `qs_sel_t_id`, `qs_sel_t_ID`, `qs_alias_sel` answer Spark's recorded names and rows; `r18_alias_join` is pinned if it falls out, else a dated residue. | Facade replay asserts names and rows per key. | PROVEN (partial: `qs_sel_t_id`, `qs_sel_t_ID`, `qs_alias_sel`, `qs_sel_t_ID_exact_true`, `selfjoin_true` pin green in `test_s1_qualified_strings_bind`; M3 reds it) | `r7_selfjoin` re-homed to the join-origin follow-up per the Q1 ruling (R-CS2-1, both answers recorded, not pinned). `r18_alias_join` is dated residue R-CS2-1 (condition refuses naming `` `l`.`id` ``, both answers recorded). |
+| C-003 | Under `caseSensitive=false` qualified df-door strings bind: `p1/r7_selfjoin` answers `ID`, `data` `[[1,a],[2,b]]`, and p6 `qs_sel_t_id`, `qs_sel_t_ID`, `qs_alias_sel` answer Spark's recorded names and rows; `r18_alias_join` is pinned if it falls out, else a dated residue. | Facade replay asserts names and rows per key. | PROVEN | S1 legs in `test_s1_qualified_strings_bind` (M3 reds); S4 adds `r7_selfjoin` and `r18_alias_join` in `test_s4_selfjoin_answers_as_spark` (M8/M9 red; both byte-equal Spark) per the 2026-09-28 owner ruling fixing R-CS2-1 in v1.5.1. |
 | C-004 | Under `caseSensitive=false` `withColumn` replaces and renames fan out: `p1/r7_withColumn_ID`, `r7_withColumnRenamed_ID`, p6 `r20_wcr_twin`, `r20_wc_twin` answer Spark's recorded frames, and p6 `r26_wcs_dup` refuses `[COLUMN_ALREADY_EXISTS]` 42711. | Facade replay asserts names, rows and the 42711 refusal per key. | PROVEN | `test_casesens_2.py::test_s2_withcolumn_follows_the_rule`, `test_s2_renamed_follows_the_rule`, `test_s2_folded_keys_refuse` (12/12 legs green); M4 reds the r20 legs, M5 reds the r26 leg. |
 | C-005 | Under `caseSensitive=false` `na` subsets match ignoring case over nulls (p6 `fill_null_false`, `dropna_subset_false`) and the `dropDuplicates` miss raises Spark's legacy text (p6 `dd_nope_false`). | Slice 3. | PROVEN | `test_s3_fillna_follows_the_rule` (`fill_null_false`), `test_s3_dropna_follows_the_rule` (`dropna_subset_false` plain plus the overlay leg), `test_s3_drop_duplicates_follows_the_rule` (`dd_nope_false`, type plus message per R8). |
 | C-006 | The `false` path is otherwise byte-identical: `p1/r7_orderBy_ID`, `r7_groupBy_DATA`, `r7_dropDuplicates_ID`, `r7_fillna_subset`, `r7_sort_col_ID`, the S3 `df_*_false` legs, today's facade miss/ambiguous texts, the quoter battery and R-19's lazy timing all guard-pinned. | Guard pins plus the facade sweep. | PROVEN | S1 partial: `test_s1_false_door_byte_identical` green (r7 guards, S3 false legs, miss text, R-19 timing, quoter spot); M7 reds it. S2 partial: the S1 guard pins stay green and `test_s2_overlay_replace_unchanged` pins the R7 overlay replace set. S3: PROVEN — the S1/S2 pins stay green, the 281-test facade sweep passes, and the probe re-run flips exactly the six S3 legs (p1 zero flips). |
@@ -220,6 +279,16 @@ The S3 break ran red and the file was restored byte-identical.
 
 Not run in S3: M1 (S1 rationale stands).
 
+## Mutation record (2026-09-28, S4)
+
+Each line was broken, the named tests ran red, and the file was restored byte-identical.
+
+| # | Mutation | Red |
+|---|---|---|
+| M8 | The alias rewrite call removed from `_rewrite_join_condition` (QCOL text passes through). | `test_s4_selfjoin_answers_as_spark` red (`r7_selfjoin`, `r18_alias_join` refuse); restored green. |
+| M9 | `_bind_qualified_display_column` returns `None` always. | `test_s4_selfjoin_answers_as_spark` red (select half misses), `test_s4_probe10_true_qualified_misses_match` red (whole-string head), `test_s4_probe10_true_gap_stays_pinned` red; restored green. |
+| M10 | The rewrite rule forced `IgnoreCase` (native rebuild). | `test_s4_wrongcase_alias_qualifier_refuses_under_true` red (answers); `selfjoin_true` stays green via the select-half refusal; restored green. |
+
 ## Tests rewritten
 
 None in slice 1: every existing pin keeps its answer (sweep evidence in the S1 hand-back).
@@ -228,16 +297,19 @@ None in slice 2: every existing pin keeps its answer (sweep evidence in the S2 h
 
 None in slice 3: every existing pin keeps its answer (281-test sweep, probe re-run flips exactly the six S3 legs).
 
+None in slice 4: every existing pin keeps its answer (378-test sweep, probe re-run flips exactly `r7_selfjoin` and `r18_alias_join`, scoreboard replay identical to S3 modulo timing).
+
 ## Residues
 
 | # | Residue |
 |---|---|
-| R-CS2-1 | **OPEN 2026-09-28** (S1): `p6/r18_alias_join` — the aliased-join condition `F.col("l.id") == F.col("r.id")` refuses `UNRESOLVED_COLUMN` naming `` `l`.`id` `` before `select("l.id")` runs (RePark) where Spark answers `id` `[[1],[2]]`. The string half binds through S1's qualified routing; the condition half belongs to the join-origin follow-up with R-CS1-10's condition shapes. |
+| R-CS2-1 | **CLOSED 2026-09-28** (S4, owner ruling "Lets get the self join fixed"): `p6/r18_alias_join` and `p1/r7_selfjoin` answer Spark's names and rows byte-equal (`test_s4_selfjoin_answers_as_spark`). The S1 note erred: the string half refused on overlay frames too — both halves bind now through one R4 mechanism. |
 | R-CS2-2 | **OPEN 2026-09-28** (S1): toggle-reuse staleness — a frame built under `false` and reused under `true` (`p6/qs_sel_t_id_true`: Q answers `id` where Spark refuses naming `` `t`.`id` ``) because `frame_rule` reads the frame's captured `task_ctx`. Re-homed per the Q3 ruling (2026-09-28); the fresh-frame `true` legs stay pinned. |
 | R-CS2-3 | **OPEN 2026-09-28** (S1): `F.col("nope")` under `true` keeps the engine's raw miss text (R2 returns the input unchanged, and the native binder passes total misses through) — no p6 cell covers it; UNRESOLVED-TEXT owns suggestion texts. |
 | R-CS2-4 | **CLOSED 2026-09-28** (S1): superseded by the Q2 ruling — the written-path body moved to `written_names.py`, `core.py` stays 3973, no ceiling edit. |
 | R-CS2-5 | **OPEN 2026-09-28** (S3): `fillna` over mixed-type duplicate-display frames refuses with the engine cast error (observed: `[ID, ID]` overlay over the null table, subset matching both, `Cannot cast string 'z' to Int32`). Pre-existing mechanism — `_fill_scalar` matches by display spelling, untouched by this unit — reached by more spellings once subsets fold. R-22 corner; the origin/attribute follow-up owns exact-duplicate frames. |
 | R-CS2-6 | **OPEN 2026-09-28** (S3, Q1 ruling (a)): `_resolve_getitem_column_name` keeps four callers outside this unit's named sites — `core.py` `declare_sorted`, `colregex.col_regex_column`, `surface_a.withMetadata`, `replace_expr._resolve_subset_targets` (the `na.replace` subset) — whose Exact-mode behaviour is unmeasured, so the helper stays until they migrate. Homed to "CASESENS follow-up: remaining Python-matched name sites (probe first)". |
+| R-CS2-7 | **OPEN 2026-09-28** (S4): qualified select on non-join overlay children refuses where Spark answers (`p10/alias_dupe_sel`, `_fold`, `_true`: Spark answers, RePark refuses) because RePark's select/withColumn children lose the alias qualifier from the native schema. Needs plan-level qualifier propagation; the H1 join children bind (their schemas stay qualified). Refuse-pinned in `test_s4_probe10_false_shapes_refuse` / `test_s4_probe10_true_gap_stays_pinned` with Spark's answers recorded. |
 
 ## Coverage attestation
 
@@ -248,7 +320,7 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: All 8 clauses walked one by one against behavior — the p6 oracle measured on live PySpark 4.1.2 + Iceberg 1.11.0 plus the recorded p1/p4 legs, hermetic Rust pins plus the facade replay per clause, mutations M2-M7 red-then-green (M1 declined with rationale, covered by M2/M3).
+      evidence: All 8 clauses walked one by one against behavior — the p6 oracle measured on live PySpark 4.1.2 + Iceberg 1.11.0 plus the recorded p1/p4 legs, hermetic Rust pins plus the facade replay per clause, mutations M2-M10 red-then-green (M1 declined with rationale, covered by M2/M3; S4 adds C-003 full via the p10-measured self-join halves, M8-M10).
       artifacts: [task/ledgers/staging/casesens-2-ledger.md, python/repark/tests/test_casesens_2.py, crates/repark-core/src/session/df_guards/written_names.rs]
     - id: AT-2
       status: ATTACKED
@@ -267,15 +339,15 @@ COVERAGE_ATTESTATION:
       justification: No privileged action, no secret, no injection or deserialization surface — name matching over closed schema and display-name lists.
     - id: AT-6
       status: ATTACKED
-      evidence: Arrow value AND type pinned per leg (dtypes plus rows); divergences recorded as dated residues R-CS2-1…R-CS2-3, R-CS2-5, R-CS2-6 with homes, never absorbed.
+      evidence: Arrow value AND type pinned per leg (dtypes plus rows); divergences recorded as dated residues R-CS2-2, R-CS2-3, R-CS2-5…R-CS2-7 with homes, never absorbed (S4 closes R-CS2-1, opens R-CS2-7).
       artifacts: [python/repark/tests/test_casesens_2.py, task/ledgers/staging/casesens-2-ledger.md]
     - id: AT-7
       status: ATTACKED
-      evidence: Planning-only changes — no row path, no hot loop; the facade sweep, the three probes and the scoreboard replay ran in normal time; file-size baselines ratcheted DOWN only (core.py 3973 -> 3968; case_bind.rs held 1000).
+      evidence: Planning-only changes — no row path, no hot loop; the facade sweep, the three probes and the scoreboard replay ran in normal time; file-size baselines ratcheted DOWN only (core.py 3973 -> 3968 -> 3963; case_bind.rs held 1000).
       artifacts: [scripts/check_lib_py.py, scripts/check_rust_file_size.py]
     - id: AT-8
       status: ATTACKED
-      evidence: The session rule reaches every touched site through frame_rule (M2); the crate DAG is unchanged (re-export inside the existing pub use line, no new edge); ceilings ratcheted DOWN only with map.md lockstep in every touched directory.
+      evidence: The session rule reaches every touched site through frame_rule (M2); the crate DAG is unchanged (re-exports inside existing pub use lines, S4's third line funded in-file, no new edge); ceilings ratcheted DOWN only with map.md lockstep in every touched directory.
       artifacts: [crates/repark-core/src/session/df_guards/case_bind.rs, scripts/check_lib_py.py]
     - id: AT-9
       status: ATTACKED
@@ -283,6 +355,6 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_casesens_2.py]
     - id: AT-10
       status: ATTACKED
-      evidence: Red-first held — every new pin fails pre-change (S1/S2/S3 red runs recorded in the slice hand-backs) and the pre-change answers are recorded in the after-sN probe diffs; no dead branch ships (each new arm has a named pin).
-      artifacts: [task/ledgers/staging/casesens-2-ledger.md, target/casesens-2/after-s3/p6-repark.json]
+      evidence: Red-first held — every new pin fails pre-change (S1/S2/S3 red runs recorded in the slice hand-backs; S4 red run recorded in the Slice 4 section) and the pre-change answers are recorded in the after-sN probe diffs; no dead branch ships (each new arm has a named pin).
+      artifacts: [task/ledgers/staging/casesens-2-ledger.md, target/casesens-2/after-s4/p6-repark.json]
 ```
