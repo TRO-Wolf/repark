@@ -445,3 +445,16 @@ async fn unaliased_set_operation_and_window_bodies_audit_as_nested() {
         assert_ambiguous(&ctx, &catalogs, sql).await;
     }
 }
+
+#[tokio::test]
+async fn lateral_body_twins_audit_as_nested_scopes() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    create_ambiguity_tables(&ctx, &catalogs).await;
+    assert_ambiguous(
+        &ctx,
+        &catalogs,
+        "SELECT * FROM ice.sales.t CROSS JOIN LATERAL (SELECT data FROM ice.sales.l JOIN ice.sales.u ON l.id = u.id WHERE l.id = t.id)",
+    )
+    .await;
+}

@@ -55,12 +55,8 @@ def _summary(
     plan = frame._plan()
     target_pairs: list[tuple[str, str]]
     if _columns:
-        if (
-            frame._display_names is not None
-            and frame._engine_names is not None
-            and not _case_sensitive(plan)
-        ):
-            target_pairs = _display_target_pairs(frame, plan, list(_columns))
+        if frame._display_names is not None and frame._engine_names is not None:
+            target_pairs = _display_target_pairs(frame, plan, list(_columns), _case_sensitive(plan))
         else:
             target_pairs = _native.resolve_frame_names(plan, list(_columns))
     elif frame._display_names is not None and frame._engine_names is not None:
@@ -163,14 +159,17 @@ def _case_sensitive(plan: Any) -> bool:
     return bool(_native.frame_case_sensitive(plan))
 
 
-def _display_target_pairs(frame: DataFrame, plan: Any, columns: list[str]) -> list[tuple[str, str]]:
+def _display_target_pairs(
+    frame: DataFrame, plan: Any, columns: list[str], exact: bool
+) -> list[tuple[str, str]]:
     """Resolve explicit describe columns against display names (VC-4).
 
     Frames whose display names differ from engine names (transpose output,
     duplicate-display selects, condition joins) match each written name against
     the display list ignoring case: one hit binds its engine field, several hits
     refuse ambiguous like Spark, and no hit falls back to engine resolution so a
-    genuinely missing column keeps the unresolved-column refusal.
+    genuinely missing column keeps the unresolved-column refusal. Under
+    case-sensitive sessions the display match is exact (RC-4).
     """
     from repark import _native
 
@@ -179,9 +178,12 @@ def _display_target_pairs(frame: DataFrame, plan: Any, columns: list[str]) -> li
     pairs: list[tuple[str, str]] = []
     for written in columns:
         folded = written.casefold()
-        hits: list[int] = [
-            index for index, display in enumerate(displays) if display.casefold() == folded
-        ]
+        if exact:
+            hits: list[int] = [
+                index for index, display in enumerate(displays) if display == written
+            ]
+        else:
+            hits = [index for index, display in enumerate(displays) if display.casefold() == folded]
         if len(hits) > 1:
             candidates = ", ".join(f"`{displays[index]}`" for index in hits)
             raise AnalysisException(

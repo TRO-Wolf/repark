@@ -353,7 +353,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `false` (rule read live via `frame_case_sensitive`), `_display_target_pairs`
   binds each written name against displays ignoring case, refuses duplicate
   displays ambiguous like Spark, and falls back to engine resolution on a miss;
-  the `true` path is untouched.
+  the `true` path is untouched. **Re-verify (2026-09-28, RC-4):** the display
+  path also runs under `true`, matching exactly
+  (`test_describe_resolves_display_names_under_case_sensitive`).
   `approxQuantile` validates `relativeError` first (non-numeric is a type error, NaN or
   negative is a value error — NaN is not `< 0` in IEEE so it needs an explicit check)
   and treats out-of-range probabilities as value errors, not type errors. DFCORE-5

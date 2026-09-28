@@ -159,7 +159,7 @@ async fn expand_view_body(
     )
     .await?;
     let aliased = apply_view_aliases(&prepared, &spec.column_names);
-    let frame = plan_prepared_body(ctx, catalogs, &aliased, &pins, true).await?;
+    let frame = plan_prepared_body(ctx, catalogs, &aliased, &pins).await?;
     Ok(frame.logical_plan().clone())
 }
 
@@ -254,11 +254,8 @@ pub(crate) async fn plan_prepared_body(
     catalogs: &CatalogRegistry,
     sql: &str,
     pins: &PinnedViews,
-    skip_eager_analysis: bool,
 ) -> Result<DataFrame> {
-    let frame =
-        crate::view_dispatch::execute_view_body_query(ctx, catalogs, sql, skip_eager_analysis)
-            .await;
+    let frame = crate::view_dispatch::execute_view_body_query(ctx, catalogs, sql).await;
     pins.release(ctx);
     frame
 }

@@ -617,6 +617,135 @@ async fn dml_spelled_in_another_case_answers() {
 }
 
 #[tokio::test]
+async fn lateral_and_scalar_outer_references_to_derived_spellings_bind() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    create_probe_tables(&ctx, &catalogs).await;
+    for sql in [
+        "SELECT * FROM (SELECT Id FROM ice.sales.t) a, LATERAL (SELECT DATA FROM ice.sales.u WHERE u.id = a.Id) b",
+        "SELECT * FROM (SELECT Id FROM ice.sales.t) a, LATERAL (SELECT DATA FROM ice.sales.u WHERE u.id = a.id) b",
+        "WITH c AS (SELECT Id FROM ice.sales.t) SELECT * FROM c, LATERAL (SELECT DATA FROM ice.sales.u WHERE u.id = c.Id) b",
+    ] {
+        let (names, rows) = names_and_rows(&ctx, &catalogs, sql).await;
+        assert_eq!(names, vec!["Id".to_string(), "DATA".to_string()], "{sql}");
+        assert_eq!(rows, vec![vec!["1".to_string(), "x".to_string()]], "{sql}");
+    }
+    let frame = execute(
+        &ctx,
+        &catalogs,
+        "SELECT (SELECT max(DATA) FROM ice.sales.u WHERE u.id = a.Id) AS m FROM (SELECT Id FROM ice.sales.t) a",
+    )
+    .await
+    .unwrap();
+    let names = frame
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect::<Vec<_>>();
+    assert_eq!(names, vec!["m".to_string()]);
+    let batches = frame.collect().await.unwrap();
+    let mut found = false;
+    for batch in &batches {
+        let values = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .unwrap();
+        for row in 0..batch.num_rows() {
+            if !values.is_null(row) && values.value(row) == "x" {
+                found = true;
+            }
+        }
+    }
+    assert!(found, "scalar lateral shape must answer x");
+}
+
+#[tokio::test]
+async fn view_arithmetic_over_division_column_answers_double() {
+    use datafusion::arrow::array::Float64Array;
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t (id INT) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t VALUES (1), (2), (3)",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.vh AS SELECT id, id / 2 AS h FROM ice.sales.t",
+    )
+    .await;
+    let frame = execute(&ctx, &catalogs, "SELECT h + 1 FROM ice.sales.vh")
+        .await
+        .unwrap();
+    assert_eq!(frame.schema().field(0).data_type(), &DataType::Float64);
+    let batches = frame.collect().await.unwrap();
+    let mut values = Vec::new();
+    for batch in &batches {
+        let column = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Float64Array>()
+            .unwrap();
+        for row in 0..batch.num_rows() {
+            values.push(column.value(row).to_string());
+        }
+    }
+    values.sort();
+    assert_eq!(
+        values,
+        vec!["1.5".to_string(), "2".to_string(), "2.5".to_string()]
+    );
+}
+
+#[tokio::test]
+async fn view_over_view_stores_double_for_division_arithmetic() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t (id INT) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t VALUES (1), (2), (3)",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.vh AS SELECT id, id / 2 AS h FROM ice.sales.t",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.vh2 AS SELECT h * 2 AS h2, h + 1 AS h1 FROM ice.sales.vh",
+    )
+    .await;
+    let (_, rows) = names_and_rows(&ctx, &catalogs, "DESCRIBE ice.sales.vh2").await;
+    assert_eq!(
+        rows,
+        vec![
+            vec!["h1".to_string(), "double".to_string(), String::new()],
+            vec!["h2".to_string(), "double".to_string(), String::new()],
+        ]
+    );
+}
+
+#[tokio::test]
 async fn hundred_nested_views_read_and_the_101st_refuses() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;

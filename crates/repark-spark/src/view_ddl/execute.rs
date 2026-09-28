@@ -49,7 +49,7 @@ pub(crate) async fn execute_create_view(
     let namespace = NamespaceIdent::new(namespace_name.clone());
     let (prepared, pins) =
         prepare_view_body_sql(ctx, catalogs, &catalog, &namespace, &statement.body_sql).await?;
-    let frame = plan_prepared_body(ctx, catalogs, &prepared, &pins, false).await?;
+    let frame = plan_prepared_body(ctx, catalogs, &prepared, &pins).await?;
     pins.release(ctx);
     if crate::spark_door_case_insensitive(ctx.state().config().options()) {
         let outputs = frame

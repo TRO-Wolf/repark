@@ -211,6 +211,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (VC-3: cast/try_cast keep the child name on createDataFrame and Iceberg frames),
   `test_describe_resolves_display_names_under_case_insensitive` and
   `test_describe_refuses_duplicate_display_names_as_ambiguous` (VC-4).
+  **Re-verify (2026-09-28):** `test_nested_cast_of_a_column_keeps_the_written_child_name`
+  (RC-3) and `test_describe_resolves_display_names_under_case_sensitive` (RC-4).
   pins: casesens-1/C-009, C-010
 - [test_ntz_1.py](test_ntz_1.py) + `ntz_1_spark_oracle.json` — **WO NTZ-1 slice 1
   (2026-09-26):** the `TIMESTAMP_NTZ` literal and explicit casts replay Spark's measured

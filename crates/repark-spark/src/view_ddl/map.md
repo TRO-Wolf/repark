@@ -142,10 +142,7 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   through the physical planner at every level, about 95 KiB of debug stack per level),
   with `read.rs`'s `VIEW_EXPANSION_STACK_RED_ZONE` (1 MiB) and
   `VIEW_EXPANSION_STACK_SEGMENT` (8 MiB), so a 100-level chain reads on the caller's stack.
-  **CASESENS-1 CI fix 2 (2026-09-28):** `plan_definition` keeps analyzing
-  (creation stores the schema and rescan conforms to it — both need analyzed
-  types, per the `temp_view_errors` pins).
-  pins: ice-views-1/C-018, casesens-1/C-018
+  pins: ice-views-1/C-018
 - `read.rs` — `ViewSchemaProvider` (`table` tries inner, then `load_view`,
   and returns a read-only provider planning the stored SQL under the stored
   defaults with aliases applied; `table_names` stays tables-only);
@@ -156,10 +153,7 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   temp-view CREATE, the captured map at re-plan) so bare temp names qualify
   to their home first; `refuse_write_query_body` answers PARSE_SYNTAX_ERROR
   for a `WITH … INSERT/UPDATE/DELETE/MERGE` temp body; `nested_depth_refusal`
-  is shared with `temp_view.rs`. **CASESENS-1 CI fix 2 (2026-09-28):**
-  `plan_prepared_body` takes `skip_eager_analysis` — catalog nested expansion
-  skips the analyzer (collect analyzes the final plan), creation analyzes for
-  the stored schema. pins: casesens-1/C-018
+  is shared with `temp_view.rs`.
 - `describe.rs` — **PR2 (2026-09-22, V-DESCRIBE):** `describe_view_frame`
   is the view probe on the `TableNotFound` arm of `execute_describe_table`
   (`../describe_show.rs`): a loaded view answers, `ViewNotFound` and

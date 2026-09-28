@@ -744,3 +744,36 @@ def test_describe_refuses_duplicate_display_names_as_ambiguous(tmp_path: Path) -
             frame.describe("id")
     finally:
         session.stop()
+
+
+def test_nested_cast_of_a_column_keeps_the_written_child_name(tmp_path: Path) -> None:
+    """Nested casts of F.col keep the child name, never the engine path (RC-3)."""
+    session = _open(tmp_path)
+    try:
+        frame = session.createDataFrame([(1, "a", 2.5)], ["id", "Data", "Amount"])
+        assert frame.select(functions.col("Amount").cast("int").cast("string")).columns == [
+            "Amount"
+        ]
+        assert frame.select(functions.col("Amount").try_cast("int").cast("string")).columns == [
+            "Amount"
+        ]
+        assert frame.select(
+            functions.col("Data").cast("string").cast("string").cast("string")
+        ).columns == ["Data"]
+    finally:
+        session.stop()
+
+
+def test_describe_resolves_display_names_under_case_sensitive(tmp_path: Path) -> None:
+    """Describe with explicit columns binds transpose display names under true (RC-4)."""
+    session = _open(tmp_path)
+    try:
+        session.conf.set("spark.sql.caseSensitive", "true")
+        frame = session.createDataFrame([("k1", 1), ("k2", 2)], ["key", "v"])
+        described = frame.transpose().describe("k1")
+        assert described.columns == ["summary", "k1"]
+        rows = {row[0]: row[1] for row in described.collect()}
+        assert rows["count"] == "1"
+        assert rows["max"] == "1"
+    finally:
+        session.stop()

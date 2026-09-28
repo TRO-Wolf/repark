@@ -75,7 +75,6 @@ pins: ice-error-conditions-1/C-011
   exact `userId` where it refused `userid` (normalization-off exactness, net-zero
   lines under the no-growth ceiling; ledger Tests rewritten).
   pins: casesens-1/C-006
-- `tests.rs` — the battery below.
 - `inner_scopes.rs` — **WO CASESENS-1 slice 1 (2026-09-27):** the inner-scope
   spelling pass. `respell_inner_scopes` collects the written projections of the
   original statement's derived tables and CTE bodies in visit order (the leftmost
@@ -98,12 +97,16 @@ pins: ice-error-conditions-1/C-011
   pins: casesens-1/C-001, C-002
 - `scope_fields.rs` — **WO CASESENS-1 S1b (2026-09-27):** the syntactic scope
   outputs the repair fold needs before a plan exists. `query_outputs` reads a
-  query's projection the way DataFusion names it (a plain or compound reference
-  keeps its written segment, an `AS` alias and a column-alias list normalize as
-  the planner's identifier normalizer does, a set operation takes the left
-  branch, a plain `*` or `t.*` expands the statement's own relations), returning
-  `None` where a shape is not computable so the scope stays opaque rather than
-  guessed. `InjectAliases` rewrites `WITH c(cols) AS` and `(query) AS x(cols)`
+  query's projection the way the repaired plan names it (a plain or compound
+  reference resolves to the stored field it binds to in the query's own `FROM`
+  scope, falling back to the planner's identifier normalization on ambiguity or
+  no match; an `AS` alias and a column-alias list normalize as the planner's
+  identifier normalizer does, a set operation takes the left branch, a plain `*`
+  or `t.*` expands the statement's own relations), returning `None` where a
+  shape is not computable so the scope stays opaque rather than guessed.
+  **Re-verify (2026-09-28, RC-2):** the stored-name resolution lets outer
+  references from LATERAL bodies and correlated scalars bind to derived and CTE
+  outputs. `InjectAliases` rewrites `WITH c(cols) AS` and `(query) AS x(cols)`
   by moving the alias columns into the body as `AS` items, bail-out on every
   clause that can reference projection aliases (`ORDER BY`, `GROUP BY`,
   `HAVING`, `QUALIFY`, `SORT/CLUSTER/DISTRIBUTE BY`, lateral views, window

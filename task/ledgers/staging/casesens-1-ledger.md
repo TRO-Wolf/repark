@@ -285,6 +285,7 @@ CI fix 2 (2026-09-28, PR #876, 1 pin, VC-3 adopted, Spark wins):
 | R-CS1-11 | **OPEN 2026-09-27** (S4 shape, recorded in the S5 round per the WO's `tw_order_by` recipe): `p3/tw_order_by` (`SELECT ID, id FROM t ORDER BY id` under `false`): Spark answers `ID`, `id` rows `[[1, 1], [2, 2]]`; RePark refuses `[AMBIGUOUS_REFERENCE]` through `audit_plan_for_ambiguity`, and the rendering is nondeterministic run to run on one tree (``Reference `id` … [`id`, `sc`.`ns`.`t`.`id`]`` vs ``Reference `ID` … [`ID`, `sc`.`ns`.`t`.`ID`]``, 2 and 2 over 4 trials on the S5 tree). Home: follow-up (the WO forbids changing the audit here). |
 | R-CS1-12 | **OPEN 2026-09-28** (final fold): twin-column creation under `caseSensitive=true` — R10 says twins are legal under `true`, but CREATE TABLE, CTAS and CREATE VIEW with `a`/`A` refuse `DataInvalid => Cannot build lower case index: a and A collide` (the fork's `Schema::build` parity check, Java `TypeUtil.indexByLowerCaseName`; the session-gated twin check correctly skips, the fork refuses past it). Only CREATE TEMPORARY VIEW succeeds. No probe measures Spark's under-`true` creation answer, so no pin lands either way; if Spark also refuses with Java's text, RePark is equal and the refusal should be pinned. Home: owner ruling (measure Spark under-`true` creation, then pin or fix). |
 | R-CS1-13 | **OPEN 2026-09-28** (verifier fold, VC-5): the S4 twin respell (`R9`) runs only when the first planning error is DataFusion's unique-name error. `SELECT Data, data FROM t` (stored `Data`) refuses `Projections require unique expression names … ice.sales.t.Data …`, and `SELECT id AS a, Data AS A FROM t` refuses on the fold path, where Spark answers both (duplicate output names are legal); base refuses too, so this is not a regression. C-011's pinned keys all use all-lower stored columns. Home: follow-up (also try `respell_case_twins` when a fold re-plan fails with the unique-name error). |
+| R-CS1-14 | **OPEN 2026-09-28** (re-verify, RC-4 residue, needs probe): `t.join(u, t.id == u.id).describe('Data')` under `caseSensitive=true` answered both columns at base and now refuses `UNRESOLVED_COLUMN` with empty suggestions; Spark is expected to refuse `AMBIGUOUS_REFERENCE`. Unpinned pending a live Spark probe. Home: follow-up. |
 
 ## S3 round (2026-09-27, lane `xs-cs1`, landed per the S3 rulings)
 
@@ -511,6 +512,73 @@ nested Iceberg views, w50/w99 read, w100 read and w101 create refuse
 `VIEW_NESTED_DEPTH_LIMIT`) passes in 41 s. Observed, untouched: exact-uppercase
 view chains re-plan per level through the respell/display finish (ratio 3.0 per
 level, pre-existing, no pin covers it — CASESENS-2).
+
+## Re-verify (2026-09-28, lane `xs-cs1f`, RC-1..RC-6)
+
+RC-1: the `9f9ade04` nested-view analysis skip is reverted entirely —
+`execute_passthrough_for_view_body`, `maybe_analyze_eagerly` and the
+`skip_eager_analysis` thread through `plan_prepared_body` /
+`execute_view_body_query` are gone; every view body analyzes as before the
+skip. The skip gave wrong answers: `SELECT h + 1 FROM vh` (view `SELECT id,
+id / 2 AS h`) answered BIGINT 1, 2, 2 instead of DOUBLE 1.5, 2.0, 2.5, and the
+wrong types persisted into view-over-view metadata, CTAS and INSERT. Pins
+`view_arithmetic_over_division_column_answers_double` and
+`view_over_view_stores_double_for_division_arithmetic` (both red at
+`fb3c799c`, green after the revert).
+
+Profiling (100-nested-view chain, CREATE x100 then read `w99`): `f2d3d220` CI
+green, `167d07a9` CI timed out (run 36438217085). Local Rust depth-30 reads
+are byte-identical (`f2d3d220` 1.37 s / 13.73 s vs `167d07a9` 1.37 s /
+13.75 s, CI-fix-2 measurement): every `167d07a9` change is off the
+all-lowercase view path (the ambiguity audit is gated off by
+`plan_has_upper_ascii_field`, the fold serves wrong-case refs only), so
+`167d07a9` did not slow the chain and no audit-walk fix lands here. The CI
+timeout is load variance on the pre-existing quadratic eager analysis, not a
+regression. Revert timings (this box, debug): Rust
+`hundred_nested_views_read_and_the_101st_refuses` passes in 496.79 s (vs 41 s
+with the skip — the skip's speedup is forfeited for correct types); the
+pre-skip full-chain regime was CREATE x100 329.6 s + w50 2.96 s + w99 9.96 s
+on a faster box. The facade `test_nested_view_depth_guard` time is recorded
+with the gates.
+
+RC-2: LATERAL and correlated scalar subqueries referencing a derived or CTE
+column projected as `Id` refused `UNRESOLVED_COLUMN` where base answered
+`(1|x)`. Root cause in the slice-1 fold: `scope_fields::query_outputs`
+returned the written projection spelling (`Id`) as the derived scope's field,
+so the fold quoted the outer reference to `"Id"` while the repaired plan
+actually outputs lowercase `id` (valid fields never mention the outer scope
+under LATERAL, so the second repair iteration could not recover). Fix:
+`query_outputs` resolves plain and compound references to the stored field
+they bind to in the query's own `FROM` scope, falling back to identifier
+normalization on ambiguity or no match. Pin
+`lateral_and_scalar_outer_references_to_derived_spellings_bind` (`a.Id`,
+`a.id`, the CTE form, the scalar form) answers base's rows.
+
+RC-3: `cast_child_name` recurses through nested `Cast`/`TryCast` chains, so
+`F.col('Amount').cast('int').cast('string')` answers `['Amount']`. Pin
+`test_nested_cast_of_a_column_keeps_the_written_child_name`.
+
+RC-4: the `not _case_sensitive(plan)` guard is gone; `_display_target_pairs`
+runs under both settings, matching exactly under `true` (duplicate exact
+displays still refuse ambiguous). Pin
+`test_describe_resolves_display_names_under_case_sensitive`
+(`transpose().describe('k1')` under `true` answers). The join-describe
+refusal class (`t.join(u, ...).describe('Data')` under `true`: base answered,
+head refuses `UNRESOLVED`, Spark would refuse ambiguous) is recorded as
+R-CS1-14 (needs probe).
+
+RC-5: pin `lateral_body_twins_audit_as_nested_scopes` covers the
+`LogicalPlan::Subquery` arm (red with the arm removed).
+
+RC-6: `tests/map.md` loses the duplicated 546-548 fragment and the VC-2
+paragraph moves back into the `casesens_scopes` entry;
+`column_resolution/map.md:78` loses the duplicate bullet.
+
+Out of scope observed: the pre-existing derived-table/CTE division defect
+(`SELECT h * 2 FROM (SELECT id / 2 AS h FROM t)` answers Int64 0, 2, 2 and
+`WITH c AS (...) SELECT h + 1 FROM c` answers 1, 2, 2 on base, main and head;
+Spark answers double 1.0, 2.0, 3.0 / 1.5, 2.0, 2.5) is unchanged by this
+round; the orchestrator files a card.
 
 ## Coverage attestation
 

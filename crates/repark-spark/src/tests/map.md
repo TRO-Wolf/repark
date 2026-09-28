@@ -498,11 +498,25 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   refuses Spark's `AMBIGUOUS_REFERENCE` 42704 instead). **Fold round
   (2026-09-27):** `derived_and_cte_projections_keep_the_written_spelling`
   gains the `SELECT * FROM (SELECT 1 AS ID)` leg (answers `ID`; unmeasured —
-  no probe key records an expression-alias output name). **CI fix 2
+  no probe key records an expression-alias output name). **Verifier fold
+  (2026-09-28, VC-2):** four pins keep a `VALUES` body from shifting later
+  scopes — `values_derived_table_first_keeps_later_spellings`,
+  `values_cte_keeps_later_spellings`,
+  `values_body_in_the_middle_keeps_later_spellings` and
+  `values_left_set_operation_keeps_later_spellings`, names and rows each.
+  On the #876 stack the fold adds `swapped_spellings_stay_with_their_scope`
+  (`[x, id, ID]`) and the Spark-confirmed `VC-6`
+  `natural_join_over_case_differing_derived_outputs_cross_joins`. **CI fix 2
   (2026-09-28):** `hundred_nested_views_read_and_the_101st_refuses` builds 100
   nested Iceberg views, reads w50/w99, and pins the typed
-  `VIEW_NESTED_DEPTH_LIMIT` refusal on the w100 read and the w101 create. pins:
-  casesens-1/C-001, C-002, C-003, C-004, C-018
+  `VIEW_NESTED_DEPTH_LIMIT` refusal on the w100 read and the w101 create.
+  **Re-verify (2026-09-28, RC-1):** `view_arithmetic_over_division_column_answers_double`
+  (`SELECT h + 1 FROM vh` answers 1.5/2.0/2.5 as double) and
+  `view_over_view_stores_double_for_division_arithmetic` (the view over `vh`
+  stores double); both red under the reverted skip. **Re-verify (2026-09-28,
+  RC-2):** `lateral_and_scalar_outer_references_to_derived_spellings_bind`
+  (LATERAL `a.Id`/`a.id`, the CTE form and the correlated scalar answer base's
+  rows). pins: casesens-1/C-001, C-002, C-003, C-004, C-018
 - `casesens_true.rs` — **WO CASESENS-1 slice 2 (2026-09-27):** the
   `caseSensitive=true` SQL-door pins over `(id, Data, s)` + `(id, Data)` probe
   tables: wrong-case refuses in every scope (the join legs name `` `a`.`ID` ``;
@@ -541,21 +555,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `unaliased_derived_insert_refuses_and_writes_nothing` (refusal plus the
   unchanged table), `unaliased_set_operation_and_window_bodies_audit_as_nested`
   and the `aliased_cte_and_top_level_ambiguity_still_refuse` guards, all
-  `AMBIGUOUS_REFERENCE` 42704.
+  `AMBIGUOUS_REFERENCE` 42704. **Re-verify (2026-09-28, RC-5):**
+  `lateral_body_twins_audit_as_nested_scopes` pins the `Subquery` arm (red with
+  the arm removed).
   pins: casesens-1/C-011
-  its refusal; the shape is unmeasured against Spark). **Fold round
-  (2026-09-27):** `derived_and_cte_projections_keep_the_written_spelling`
-  gains the `SELECT * FROM (SELECT 1 AS ID)` leg (answers `ID`; unmeasured —
-  no probe key records an expression-alias output name). **Verifier fold
-  (2026-09-28, VC-2):** four pins keep a `VALUES` body from shifting later
-  scopes — `values_derived_table_first_keeps_later_spellings`,
-  `values_cte_keeps_later_spellings`,
-  `values_body_in_the_middle_keeps_later_spellings` and
-  `values_left_set_operation_keeps_later_spellings`, names and rows each.
-  On the #876 stack the fold adds `swapped_spellings_stay_with_their_scope`
-  (`[x, id, ID]`) and the Spark-confirmed `VC-6`
-  `natural_join_over_case_differing_derived_outputs_cross_joins`.
-  pins: casesens-1/C-001, C-002, C-003, C-004
 - `decimal.rs` — the Spark-door decimal128 pins at `i128` precision: result `(p,s)`, value,
   and nullability for the G2/G13 corpus shapes. **CUTOVER-SCHEMA-1 (2026-09-04):**
   `pin_int_times_decimal_is_12_2_i128` and `pin_mul_single_digit_nullability_non_null_i128`
