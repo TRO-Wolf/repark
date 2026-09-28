@@ -1865,3 +1865,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   residues R-15..R-18 are pinned beside Spark.
   `risk_tier: standard`. Branch `feat/u7-write-df-2b` (slice 1: `feat/u7-write-df-2a`, repark#835).
   pins: u7-write-df-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
+- [s3-path-write-1-ledger.md](s3-path-write-1-ledger.md) —
+  **U12 S3-PATH-WRITE-1 step 0 (2026-09-28), measurement + design round, no product code:**
+  Spark 4.1.2 path-write behaviour on S3 recorded in 38 `W-PATH-S3-*` cells against a local
+  moto emulator (C-001..C-005), repark 1.5.0 writes nothing and refuses locally (C-006), and
+  design questions 1–5 answered with recommendations awaiting the orchestrator ruling
+  (C-007..C-011 OPEN). Evidence in [u12-probes/](u12-probes/map.md).
+  `risk_tier: standard`. Branch `feat/s3-path-write-1`.
+  pins: s3-path-write-1/C-001, C-002, C-003, C-004, C-005, C-006

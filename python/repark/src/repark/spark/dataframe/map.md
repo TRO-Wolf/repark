@@ -11,6 +11,10 @@ joins, grouping, exports, UDF bridges, and writers. Engine computation stays in 
 callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - `writer_readwriter.py` — **CATALOG-1 (2026-09-26):** `_resolve_writer_table` passes only the
   current catalog and database to `resolve_table_name` (no known-catalog alias). pins: catalog-1/C-002
+- `writer_readwriter.py` — **S3-PATH-WRITE-1 step 0 (2026-09-28, oracle, no code change):**
+  Spark 4.1.2 path-write behaviour on S3 recorded in 38 `W-PATH-S3-*` cells against a local
+  moto emulator; the evidence and the design answers live in `task/ledgers/staging/u12-probes/`.
+  pins: s3-path-write-1/C-001, C-002, C-003, C-004, C-005, C-006
 
 ## Modules
 
