@@ -91,13 +91,9 @@ fn retarget_dml_input(statement: DmlStatement) -> Result<LogicalPlan> {
     if projection.expr.len() != targets.fields().len() {
         return Ok(LogicalPlan::Dml(statement));
     }
-    let inner = match projection.input.as_ref() {
-        LogicalPlan::Values(values) => Arc::new(LogicalPlan::Values(Values {
-            schema: Arc::clone(&values.schema),
-            values: retarget_rows(&values.values),
-        })),
-        _ => Arc::clone(&projection.input),
-    };
+    let inner = retarget_values_source(projection.input.as_ref())
+        .map(Arc::new)
+        .unwrap_or_else(|| Arc::clone(&projection.input));
     let mut schema = DFSchema::empty();
     schema.merge(inner.schema());
     let expr = projection
@@ -119,12 +115,50 @@ fn retarget_dml_input(statement: DmlStatement) -> Result<LogicalPlan> {
     }))
 }
 
-fn retarget_rows(rows: &[Vec<Expr>]) -> Vec<Vec<Expr>> {
+fn retarget_values_source(plan: &LogicalPlan) -> Option<LogicalPlan> {
+    match plan {
+        LogicalPlan::Values(values) => Some(LogicalPlan::Values(Values {
+            schema: Arc::clone(&values.schema),
+            values: retarget_rows(&values.values, values.schema.as_ref()),
+        })),
+        LogicalPlan::SubqueryAlias(_) => rebuild_over_retargeted_input(plan),
+        LogicalPlan::Projection(inner) if inner.expr.iter().all(is_passthrough_column) => {
+            rebuild_over_retargeted_input(plan)
+        }
+        _ => None,
+    }
+}
+
+fn rebuild_over_retargeted_input(plan: &LogicalPlan) -> Option<LogicalPlan> {
+    let inputs = plan.inputs();
+    if inputs.len() != 1 {
+        return None;
+    }
+    let rebuilt = retarget_values_source(inputs[0])?;
+    plan.with_new_exprs(plan.expressions(), vec![rebuilt]).ok()
+}
+
+fn is_passthrough_column(expr: &Expr) -> bool {
+    match expr {
+        Expr::Column(_) => true,
+        Expr::Alias(alias) => matches!(alias.expr.as_ref(), Expr::Column(_)),
+        _ => false,
+    }
+}
+
+fn retarget_rows(rows: &[Vec<Expr>], values_schema: &DFSchema) -> Vec<Vec<Expr>> {
     let schema = DFSchema::empty();
     rows.iter()
         .map(|row| {
             row.iter()
-                .map(|item| retarget_top(item.clone(), &schema, false))
+                .zip(values_schema.fields())
+                .map(|(item, field)| {
+                    let ntz = matches!(
+                        field.data_type(),
+                        DataType::Timestamp(TimeUnit::Microsecond, None)
+                    );
+                    retarget_top(item.clone(), &schema, ntz)
+                })
                 .collect()
         })
         .collect()
@@ -153,11 +187,17 @@ fn retarget_top(expr: Expr, schema: &DFSchema, wrap_bare: bool) -> Expr {
 }
 
 fn store_wrap(expr: Expr, wrap_bare: bool) -> Expr {
-    if wrap_bare {
-        timestamp_ntz_cast_expr(expr, false)
-    } else {
-        expr
+    if !wrap_bare || is_ntz_cast_call(&expr) {
+        return expr;
     }
+    timestamp_ntz_cast_expr(expr, false)
+}
+
+fn is_ntz_cast_call(expr: &Expr) -> bool {
+    matches!(
+        expr,
+        Expr::ScalarFunction(function) if function.func.name() == TIMESTAMP_NTZ_CAST_NAME
+    )
 }
 
 #[must_use]

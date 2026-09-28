@@ -1076,16 +1076,17 @@ scalars live under [`try_invert/`](try_invert/map.md).
   from an instant, a non-microsecond naive timestamp, a date or a string becomes the
   embedded cast UDF (session-zone wall / midnight), replacing the peel for NTZ targets.
   pins: ntz-1/C-006
-  **WO NTZ-1 verifier fold (2026-09-28):** the retarget fires only inside a DML plan
-  (`plan_contains_dml`), so `from_utc_timestamp` / `to_utc_timestamp` coercions in
-  plain SELECT statements keep the base behavior while every store shape keeps the wall.
-  pins: ntz-1/C-006
   **WO NTZ-1 verifier fold part 2 (2026-09-28):** `retarget_dml_store_casts` runs
   before the generic traversal and retargets only whole-expression casts of the
   Projection under each Dml node and of VALUES rows, wrapping bare expressions at
   positional TIMESTAMP_NTZ targets (arity-guarded); nested function-argument casts
   keep the base behavior. The `plan_contains_dml` gate is gone.
   pins: ntz-1/C-006
+  **WO NTZ-1 re-verify fold (2026-09-28):** VALUES cells at naive-microsecond
+  VALUES-schema fields wrap in the store cast too, through direct VALUES and
+  pass-through subquery nests, so `from_utc_timestamp` / `to_utc_timestamp` /
+  `date_trunc` cells store the session wall again; the wrap skips an
+  already-wrapped expression. pins: ntz-1/C-006
 - `timestamp_ltz_ntz.rs` — **FNP-11B step 3 (2026-09-15):** `to_timestamp_ltz` /
   `to_timestamp_ntz` / `try_to_timestamp` on the step-2 parser (card D-1, no new
   parser). `to_timestamp_ltz` forwards both arities to the `to_timestamp` kernel;
