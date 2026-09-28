@@ -178,6 +178,11 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `coalesce(array_agg(x) IGNORE NULLS, make_array())`, so `over()` used to refuse them outright;
   the group-by spelling is untouched, and two aggregates in one expression still refuse (there is
   no single window to push). pins: win-slide-1/C-002
+  **CASESENS-2 S1 (2026-09-28):** `parse_canonical_predicate_exact` routes a
+  total-miss filter field through `frame_names::resolve_df_names`, so a
+  filter string naming no column refuses Spark's `UNRESOLVED_COLUMN` text
+  instead of the raw engine miss (the probe already covered case-only hits).
+  pins: casesens-2/C-002
   **PERF-APPROXPCT-1 (2026-09-05):** `percentile_approx_scalar_expr` (new) and
   `percentile_approx_list_expr` take `Option<i64>` accuracy and build the two- or three-arg
   UDAF call. pins: perf-approxpct-1/C-002

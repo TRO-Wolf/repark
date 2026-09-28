@@ -2343,9 +2343,21 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   lowercase-data, `orderBy`, `groupBy`, string `filter`) still answer
   (R-CS1-10, descoped to CASESENS-2 — the facade pre-binds them in
   `dataframe/core.py` before Rust sees the written name).
+  **CASESENS-2 S1 (2026-09-28):** R-CS1-10 closed — bare names resolve in Rust,
+  so the six legs plus `df["ID"]` refuse naming the written spelling and total
+  misses refuse the same way; qualified strings bind under `false`
+  (`q.select("t.id")` / `"t.ID"`, the aliased-table shape) naming the output
+  with the written last segment, the exact qualified shape answers under
+  `true`, and the self-join shape refuses naming `` `l`.`ID` ``. The `false`
+  door is otherwise byte-identical (r7 guards, S3 false legs, legacy
+  miss/ambiguity texts, R-19 lazy timing, the quoter battery). Re-homed per
+  the 2026-09-28 ruling, unit ledger: the `r7_selfjoin` condition refuses
+  first (R-CS2-1, join-origin follow-up) and a false-built frame reused under
+  `true` reads its captured rule (R-CS2-2).
 - **Apache Spark** — the refusals and answers above. *(oracle: recorded —
   PySpark 4.1.2 + Iceberg 1.11, 2026-09-27, `casesens_1_spark_oracle.json`
-  (210 steps) beside the facade pin.)*
+  (210 steps) beside the facade pin; 2026-09-28, `casesens_2_spark_oracle.json`
+  (34 steps) beside the S1 pin.)*
 - **Pin** — `python/repark/tests/test_casesens_1.py`
   (`test_s3_dataframe_door_is_exact_under_case_sensitive`,
   `test_s3_dataframe_union_refuses_the_missing_name`,
@@ -2357,6 +2369,14 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   `ignore_case_rule_is_unchanged`, `frame_functions_follow_the_rule`);
   `crates/repark-python/src/column/door_parity_tests.rs::column_keeps_the_written_spelling`.
   pins: casesens-1/C-009, C-010
+  **CASESENS-2 S1 (2026-09-28):** `python/repark/tests/test_casesens_2.py`
+  (`test_s1_true_door_refuses_bare_names`, `test_s1_true_misses_refuse`,
+  `test_s1_qualified_strings_bind`, `test_s1_false_door_byte_identical`);
+  `crates/repark-core/src/session/df_guards/written_names.rs::tests`
+  (`select_names_bind_and_refuse_by_rule`,
+  `qualified_names_split_on_the_last_dot`,
+  `display_names_fan_out_and_the_subset_text_is_legacy`).
+  pins: casesens-2/C-001, C-002, C-003, C-006
 - **Rationale** — FIXED; every true-mode refusal is Spark's measured text, its
   head with the candidate set, or the recorded legacy text, and the default
   session is unchanged.

@@ -1,0 +1,629 @@
+{
+ "source": "Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-28",
+ "steps": {
+  "p6/setup_ns": {
+   "door": "sql",
+   "statement": "CREATE NAMESPACE IF NOT EXISTS sc.ns",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p6/setup_t": {
+   "door": "sql",
+   "statement": "CREATE TABLE sc.ns.t (id INT, Data STRING, s STRUCT<a: INT>) USING iceberg",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p6/setup_t_ins": {
+   "door": "sql",
+   "statement": "INSERT INTO sc.ns.t VALUES (1, 'a', named_struct('a', 5)), (2, 'b', named_struct('a', 6))",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p6/setup_tn": {
+   "door": "sql",
+   "statement": "CREATE TABLE sc.ns.tn (id INT, Data STRING) USING iceberg",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p6/setup_tn_ins": {
+   "door": "sql",
+   "statement": "INSERT INTO sc.ns.tn VALUES (1, NULL), (NULL, 'b')",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p6/qs_sel_t_id": {
+   "door": "dataframe",
+   "statement": "lambda: S.sql(\"SELECT ID, data FROM sc.ns.t t\").select(\"t.id\")",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ]
+   }
+  },
+  "p6/qs_sel_t_ID": {
+   "door": "dataframe",
+   "statement": "lambda: S.sql(\"SELECT ID, data FROM sc.ns.t t\").select(\"t.ID\")",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ]
+   }
+  },
+  "p6/qs_alias_sel": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").alias(\"t\").select(\"t.ID\")",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ]
+   }
+  },
+  "p6/qs_star_t": {
+   "door": "dataframe",
+   "statement": "lambda: S.sql(\"SELECT ID, data FROM sc.ns.t t\").select(\"t.*\")",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ],
+     [
+      "data",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ]
+    ]
+   }
+  },
+  "p6/r20_wcr_twin": {
+   "door": "dataframe",
+   "statement": "lambda: twins().withColumnRenamed(\"id\", \"z\")",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "z",
+      "bigint"
+     ],
+     [
+      "z",
+      "bigint"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  "p6/r20_wc_twin": {
+   "door": "dataframe",
+   "statement": "lambda: twins().withColumn(\"id\", F.lit(9))",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "id",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      9,
+      9
+     ]
+    ]
+   }
+  },
+  "p6/r26_wcs_dup": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").withColumns({\"ID\": F.lit(9), \"id\": F.lit(8)})",
+   "case_sensitive": false,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[COLUMN_ALREADY_EXISTS] The column `id` already exists. Choose another name or rename the existing column. SQLSTATE: 42711",
+    "getCondition": "COLUMN_ALREADY_EXISTS",
+    "getSqlState": "42711"
+   }
+  },
+  "p6/dd_nope_false": {
+   "door": "dataframe",
+   "statement": "lambda: twins().dropDuplicates([\"nope\"])",
+   "case_sensitive": false,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "Cannot resolve column name \"nope\" among (id, ID).",
+    "getCondition": "_LEGACY_ERROR_TEMP_1201",
+    "getSqlState": null
+   }
+  },
+  "p6/fill_null_false": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.tn\").fillna(\"z\", subset=[\"DATA\"])",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "Data",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      "z"
+     ],
+     [
+      null,
+      "b"
+     ]
+    ]
+   }
+  },
+  "p6/dropna_subset_false": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.tn\").dropna(subset=[\"DATA\"])",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "Data",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      null,
+      "b"
+     ]
+    ]
+   }
+  },
+  "p6/r18_alias_join": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").alias(\"l\").join(S.table(\"sc.ns.t\").alias(\"r\"), F.col(\"l.id\") == F.col(\"r.id\")).select(\"l.id\")",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ]
+   }
+  },
+  "p6/qs_sel_t_id_true": {
+   "door": "dataframe",
+   "statement": "lambda: Q.select(\"t.id\")",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `t`.`id` cannot be resolved. Did you mean one of the following? [`t`.`ID`, `t`.`data`]. SQLSTATE: 42703;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p6/qs_sel_t_ID_exact_true": {
+   "door": "dataframe",
+   "statement": "lambda: Q.select(\"t.ID\")",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ]
+   }
+  },
+  "p6/selfjoin_true": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").alias(\"l\").join(S.table(\"sc.ns.t\").alias(\"r\"), F.col(\"l.ID\") == F.col(\"r.ID\")).select(\"l.ID\", \"r.data\")",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `l`.`ID` cannot be resolved. Did you mean one of the following? [`l`.`s`, `l`.`id`, `r`.`s`, `l`.`Data`, `r`.`id`]. SQLSTATE: 42703;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p6/sel_nope_true": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").select(\"nope\")",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `nope` cannot be resolved. Did you mean one of the following? [`id`, `s`, `Data`]. SQLSTATE: 42703;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p6/getitem_nope_true": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").select(S.table(\"sc.ns.t\")[\"nope\"])",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `nope` cannot be resolved. Did you mean one of the following? [`id`, `Data`, `s`]. SQLSTATE: 42703",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p6/order_nope_true": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").orderBy(\"nope\").select(\"id\")",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `nope` cannot be resolved. Did you mean one of the following? [`id`, `s`, `Data`]. SQLSTATE: 42703;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p6/group_nope_true": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").groupBy(\"nope\").count()",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `nope` cannot be resolved. Did you mean one of the following? [`id`, `s`, `Data`]. SQLSTATE: 42703;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p6/filter_str_nope_true": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").filter(\"nope > 1\").select(\"id\")",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `nope` cannot be resolved. Did you mean one of the following? [`id`, `s`, `Data`]. SQLSTATE: 42703; line 1 pos 0;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p6/wcs_true": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").withColumns({\"ID\": F.lit(9), \"ZZ\": F.lit(8)})",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "Data",
+      "string"
+     ],
+     [
+      "s",
+      "struct<a:int>"
+     ],
+     [
+      "ID",
+      "int"
+     ],
+     [
+      "ZZ",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      "a",
+      {
+       "a": 5
+      },
+      9,
+      8
+     ],
+     [
+      2,
+      "b",
+      {
+       "a": 6
+      },
+      9,
+      8
+     ]
+    ]
+   }
+  },
+  "p6/wcs_true_exact": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").withColumns({\"id\": F.lit(9)})",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "Data",
+      "string"
+     ],
+     [
+      "s",
+      "struct<a:int>"
+     ]
+    ],
+    "rows": [
+     [
+      9,
+      "a",
+      {
+       "a": 5
+      }
+     ],
+     [
+      9,
+      "b",
+      {
+       "a": 6
+      }
+     ]
+    ]
+   }
+  },
+  "p6/wcrn_plural_true": {
+   "door": "dataframe",
+   "statement": "lambda: twins().withColumnsRenamed({\"ID\": \"z\", \"id\": \"y\"})",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [
+     [
+      "y",
+      "bigint"
+     ],
+     [
+      "z",
+      "bigint"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  "p6/wcr_twin_true": {
+   "door": "dataframe",
+   "statement": "lambda: twins().withColumnRenamed(\"id\", \"z\")",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [
+     [
+      "z",
+      "bigint"
+     ],
+     [
+      "ID",
+      "bigint"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  "p6/wc_twin_true": {
+   "door": "dataframe",
+   "statement": "lambda: twins().withColumn(\"id\", F.lit(9))",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "ID",
+      "bigint"
+     ]
+    ],
+    "rows": [
+     [
+      9,
+      2
+     ]
+    ]
+   }
+  },
+  "p6/fill_null_true": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.tn\").fillna(\"z\")",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "Data",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      "z"
+     ],
+     [
+      null,
+      "b"
+     ]
+    ]
+   }
+  },
+  "p6/fill_subset_nope_true": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").fillna(\"z\", subset=[\"NOPE\"])",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `NOPE` cannot be resolved. Did you mean one of the following? [`id`, `Data`, `s`]. SQLSTATE: 42703",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p6/dropna_subset_true": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.tn\").dropna(subset=[\"DATA\"])",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `DATA` cannot be resolved. Did you mean one of the following? [`id`, `Data`]. SQLSTATE: 42703",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p6/dd_exact_true": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").dropDuplicates([\"id\"])",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "Data",
+      "string"
+     ],
+     [
+      "s",
+      "struct<a:int>"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      "a",
+      {
+       "a": 5
+      }
+     ],
+     [
+      2,
+      "b",
+      {
+       "a": 6
+      }
+     ]
+    ]
+   }
+  },
+  "p6/dd_nope_true": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").dropDuplicates([\"NOPE\"])",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "Cannot resolve column name \"NOPE\" among (id, Data, s).",
+    "getCondition": "_LEGACY_ERROR_TEMP_1201",
+    "getSqlState": null
+   }
+  }
+ }
+}

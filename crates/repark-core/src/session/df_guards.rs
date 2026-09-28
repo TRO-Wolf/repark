@@ -22,6 +22,7 @@ pub(crate) mod self_join;
 pub(crate) mod sort_names;
 pub(super) mod subquery;
 mod window_rescan;
+mod written_names;
 
 /// DataFusion's own name for the pass-2 leaf-projection rule.
 const LEAF_PUSHDOWN_RULE_NAME: &str = "push_down_leaf_projections";

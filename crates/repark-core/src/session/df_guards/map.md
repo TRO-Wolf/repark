@@ -556,6 +556,21 @@ wrapped optimizer rule) and declares this directory.
   `IgnoreCase`) and gains the sibling `resolve_bound_expr_with(expr, schema, rule)`,
   re-exported through `frame_names` (`session.rs` sits exactly at its ceiling, so the root
   re-export cannot grow). pins: casesens-1/C-009
+- `written_names.rs` — **CASESENS-2 S1 (2026-09-28):** the DataFrame door's
+  written-name matchers (R5). `resolve_df_names(schema, names, rule)` matches
+  whole-first, then splits qualified strings on the last dot (the qualifier
+  through the local `qualifier_matches`, the segment through `NameRule`),
+  returning `(written, qualifier, engine, Disposition)`; `match_display_names`
+  matches caller-passed candidates with full fan-out. Under `Exact` both raise
+  `unresolved_column` instead of returning `Ambiguous`/`Missing`;
+  `unresolved_subset_name` renders the legacy drop-subset text for S3. The
+  qualifier comparison is local (not `same_relation`) because widening that
+  signature costs 4 reformatted lines the 1000-line `case_bind.rs` ceiling
+  cannot spare. Re-exported through `frame_names` (2 `pub use` lines).
+  Rust pins in the file's test module: `select_names_bind_and_refuse_by_rule`,
+  `qualified_names_split_on_the_last_dot`,
+  `display_names_fan_out_and_the_subset_text_is_legacy`.
+  pins: casesens-2/C-001, C-003
 
 ## Pointers
 

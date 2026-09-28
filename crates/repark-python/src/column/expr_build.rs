@@ -66,10 +66,19 @@ pub(crate) fn parse_canonical_predicate_exact(
         Ok(expr) => Ok(expr),
         Err(error) => {
             if let Some((relation, name)) = missing_column(&error) {
+                let written = match &relation {
+                    Some(table) => format!("{table}.{name}"),
+                    None => name.clone(),
+                };
                 let probe = Expr::Column(Column::new(relation, name));
                 repark_core::frame_names::resolve_bound_expr_with(
                     probe,
                     frame.schema(),
+                    repark_core::frame_names::NameRule::Exact,
+                )?;
+                repark_core::frame_names::resolve_df_names(
+                    frame.schema(),
+                    &[written],
                     repark_core::frame_names::NameRule::Exact,
                 )?;
             }

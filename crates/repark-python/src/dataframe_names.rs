@@ -16,7 +16,7 @@ use crate::dataframe::PyDataFrame;
 use crate::datafusion_to_py_err;
 use crate::fence::fenced;
 use crate::frame_lineage::PyFrameNode;
-use repark_core::frame_names::{AttrId, FrameNode, NameRule, Resolution, SortShape};
+use repark_core::frame_names::{AttrId, Disposition, FrameNode, NameRule, Resolution, SortShape};
 use repark_functions::case_sensitive::spark_case_sensitive_from_options;
 
 #[allow(clippy::missing_errors_doc)]
@@ -40,10 +40,13 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(grandchild_key_status, module)?)?;
     module.add_function(wrap_pyfunction!(projection_source_ids, module)?)?;
     module.add_function(wrap_pyfunction!(java_fold_hits, module)?)?;
+    module.add_function(wrap_pyfunction!(frame_is_exact, module)?)?;
+    module.add_function(wrap_pyfunction!(match_display_names, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_join_condition, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_free_names, module)?)?;
     module.add_function(wrap_pyfunction!(requalify_join_sides, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_display_name, module)?)?;
+    module.add_function(wrap_pyfunction!(resolve_df_names, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_frame_names, module)?)?;
     module.add_function(wrap_pyfunction!(sort_child_shape, module)?)?;
     module.add_function(wrap_pyfunction!(stamp_attribute_ids, module)?)?;
@@ -253,12 +256,67 @@ pub(crate) fn requalify_join_sides(
 
 #[pyfunction]
 fn frame_case_sensitive(frame: &PyDataFrame) -> bool {
+    frame_is_exact(frame)
+}
+
+#[pyfunction]
+fn frame_is_exact(frame: &PyDataFrame) -> bool {
     matches!(frame_rule(frame.inner()), NameRule::Exact)
 }
 
 #[pyfunction]
 fn frame_is_relation(frame: &PyDataFrame) -> bool {
     repark_core::frame_names::plan_is_relation(frame.inner().logical_plan())
+}
+
+fn disposition_text(disposition: Disposition) -> String {
+    match disposition {
+        Disposition::Bound => "bound",
+        Disposition::Ambiguous => "ambiguous",
+        Disposition::Missing => "missing",
+    }
+    .to_string()
+}
+
+#[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
+#[pyfunction]
+fn resolve_df_names(
+    frame: &PyDataFrame,
+    names: Vec<String>,
+) -> PyResult<Vec<(String, String, String, String)>> {
+    fenced!("dataframe_names.resolve_df_names", {
+        repark_core::frame_names::resolve_df_names(
+            frame.inner().schema(),
+            &names,
+            frame_rule(frame.inner()),
+        )
+        .map(|rows| {
+            rows.into_iter()
+                .map(|(written, qualifier, engine, disposition)| {
+                    (written, qualifier, engine, disposition_text(disposition))
+                })
+                .collect()
+        })
+        .map_err(datafusion_to_py_err)
+    })
+}
+
+#[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
+#[pyfunction]
+fn match_display_names(
+    frame: &PyDataFrame,
+    written: Vec<String>,
+    held: Vec<String>,
+) -> PyResult<Vec<(String, Vec<String>, String)>> {
+    fenced!("dataframe_names.match_display_names", {
+        repark_core::frame_names::match_display_names(&written, &held, frame_rule(frame.inner()))
+            .map(|rows| {
+                rows.into_iter()
+                    .map(|(name, hits, disposition)| (name, hits, disposition_text(disposition)))
+                    .collect()
+            })
+            .map_err(datafusion_to_py_err)
+    })
 }
 
 #[allow(clippy::missing_errors_doc)]
