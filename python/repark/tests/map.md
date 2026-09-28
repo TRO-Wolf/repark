@@ -177,6 +177,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Rows sort by repr except the ORDER BY cells. The SQLSTATE of the overflow refusals is not
   compared (residue R-INTDIV-4).
   pins: intdiv-1/C-001, C-003
+  **R-INTDIV-1 fold (2026-09-28):** the `st-big`, `st-int`, `st-small` and `st-tiny` groups
+  replay Spark's store cells — a fractional quotient into BIGINT/INT columns (SMALLINT and
+  TINYINT read back as Iceberg `int`) through INSERT SELECT, a negative quotient, derived
+  table, CTE, VALUES, INSERT OVERWRITE, UPDATE and MERGE, plus genuine DOUBLE and integral
+  controls; the range/NaN/Infinity cells assert refusal only (`refusal_text_waived`,
+  R-INTDIV-9) and an empty read-back.
+  pins: intdiv-1/C-004
 - [test_casesens_1.py](test_casesens_1.py) + `casesens_1_spark_oracle.json` —
   **WO CASESENS-1 slice 1 (2026-09-27):** the nested-scope SELECT legs, the MERGE
   derived source and the catalog-view reads replay Spark's recorded names and

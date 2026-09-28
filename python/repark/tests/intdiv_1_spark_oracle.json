@@ -4485,6 +4485,2292 @@
      11.5
     ]
    ]
+  },
+  "st-big/plain-create": {
+   "sql": "CREATE TABLE sc.ns.s_big_plain (id BIGINT, v BIGINT) USING iceberg",
+   "statement": true
+  },
+  "st-big/plain-stmt": {
+   "sql": "INSERT INTO sc.ns.s_big_plain SELECT id, id / 2 FROM sc.ns.t",
+   "statement": true
+  },
+  "st-big/plain-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_big_plain ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "bigint"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     0,
+     "bigint"
+    ],
+    [
+     2,
+     1,
+     "bigint"
+    ],
+    [
+     3,
+     1,
+     "bigint"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-big/neg-create": {
+   "sql": "CREATE TABLE sc.ns.s_big_neg (id BIGINT, v BIGINT) USING iceberg",
+   "statement": true
+  },
+  "st-big/neg-stmt": {
+   "sql": "INSERT INTO sc.ns.s_big_neg SELECT id, -id / 2 FROM sc.ns.t",
+   "statement": true
+  },
+  "st-big/neg-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_big_neg ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "bigint"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     0,
+     "bigint"
+    ],
+    [
+     2,
+     -1,
+     "bigint"
+    ],
+    [
+     3,
+     -1,
+     "bigint"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-big/derived-create": {
+   "sql": "CREATE TABLE sc.ns.s_big_derived (id BIGINT, v BIGINT) USING iceberg",
+   "statement": true
+  },
+  "st-big/derived-stmt": {
+   "sql": "INSERT INTO sc.ns.s_big_derived SELECT id, h + 1 FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s",
+   "statement": true
+  },
+  "st-big/derived-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_big_derived ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "bigint"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "bigint"
+    ],
+    [
+     2,
+     2,
+     "bigint"
+    ],
+    [
+     3,
+     2,
+     "bigint"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-big/derived_mul-create": {
+   "sql": "CREATE TABLE sc.ns.s_big_derived_mul (id BIGINT, v BIGINT) USING iceberg",
+   "statement": true
+  },
+  "st-big/derived_mul-stmt": {
+   "sql": "INSERT INTO sc.ns.s_big_derived_mul SELECT id, h * 3 FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s",
+   "statement": true
+  },
+  "st-big/derived_mul-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_big_derived_mul ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "bigint"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "bigint"
+    ],
+    [
+     2,
+     3,
+     "bigint"
+    ],
+    [
+     3,
+     4,
+     "bigint"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-big/cte-create": {
+   "sql": "CREATE TABLE sc.ns.s_big_cte (id BIGINT, v BIGINT) USING iceberg",
+   "statement": true
+  },
+  "st-big/cte-stmt": {
+   "sql": "INSERT INTO sc.ns.s_big_cte WITH s AS (SELECT id, id / 2 AS h FROM sc.ns.t) SELECT id, h + 1 FROM s",
+   "statement": true
+  },
+  "st-big/cte-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_big_cte ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "bigint"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "bigint"
+    ],
+    [
+     2,
+     2,
+     "bigint"
+    ],
+    [
+     3,
+     2,
+     "bigint"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-big/values-create": {
+   "sql": "CREATE TABLE sc.ns.s_big_values (id BIGINT, v BIGINT) USING iceberg",
+   "statement": true
+  },
+  "st-big/values-stmt": {
+   "sql": "INSERT INTO sc.ns.s_big_values VALUES (10, 7 / 2), (11, -7 / 2)",
+   "statement": true
+  },
+  "st-big/values-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_big_values ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "bigint"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     10,
+     3,
+     "bigint"
+    ],
+    [
+     11,
+     -3,
+     "bigint"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-big/overwrite-create": {
+   "sql": "CREATE TABLE sc.ns.s_big_overwrite (id BIGINT, v BIGINT) USING iceberg",
+   "statement": true
+  },
+  "st-big/overwrite-seed": {
+   "sql": "INSERT INTO sc.ns.s_big_overwrite VALUES (1, 0), (2, 0), (3, 0)",
+   "statement": true
+  },
+  "st-big/overwrite-stmt": {
+   "sql": "INSERT OVERWRITE sc.ns.s_big_overwrite SELECT id, id / 2 + 1 FROM sc.ns.t",
+   "statement": true
+  },
+  "st-big/overwrite-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_big_overwrite ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "bigint"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "bigint"
+    ],
+    [
+     2,
+     2,
+     "bigint"
+    ],
+    [
+     3,
+     2,
+     "bigint"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-big/update-create": {
+   "sql": "CREATE TABLE sc.ns.s_big_update (id BIGINT, v BIGINT) USING iceberg",
+   "statement": true
+  },
+  "st-big/update-seed": {
+   "sql": "INSERT INTO sc.ns.s_big_update VALUES (1, 0), (2, 0), (3, 0)",
+   "statement": true
+  },
+  "st-big/update-stmt": {
+   "sql": "UPDATE sc.ns.s_big_update SET v = id / 2 + 1",
+   "statement": true
+  },
+  "st-big/update-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_big_update ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "bigint"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "bigint"
+    ],
+    [
+     2,
+     2,
+     "bigint"
+    ],
+    [
+     3,
+     2,
+     "bigint"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-big/merge-create": {
+   "sql": "CREATE TABLE sc.ns.s_big_merge (id BIGINT, v BIGINT) USING iceberg",
+   "statement": true
+  },
+  "st-big/merge-seed": {
+   "sql": "INSERT INTO sc.ns.s_big_merge VALUES (1, 0)",
+   "statement": true
+  },
+  "st-big/merge-stmt": {
+   "sql": "MERGE INTO sc.ns.s_big_merge x USING (SELECT id, id / 2 AS h FROM sc.ns.t) s ON x.id = s.id WHEN MATCHED THEN UPDATE SET v = s.h * 3 WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.h)",
+   "statement": true
+  },
+  "st-big/merge-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_big_merge ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "bigint"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "bigint"
+    ],
+    [
+     2,
+     1,
+     "bigint"
+    ],
+    [
+     3,
+     1,
+     "bigint"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-big/range-create": {
+   "sql": "CREATE TABLE sc.ns.s_big_range (id BIGINT, v BIGINT) USING iceberg",
+   "statement": true
+  },
+  "st-big/range-stmt": {
+   "sql": "INSERT INTO sc.ns.s_big_range SELECT 100, 1e20 / 2",
+   "condition": "CAST_OVERFLOW_IN_TABLE_INSERT",
+   "sql_state": "22003",
+   "message_head": "[CAST_OVERFLOW_IN_TABLE_INSERT] Fail to assign a value of \"DOUBLE\" type to the \"BIGINT\" type column or variable `v` due to an overflow",
+   "refusal_text_waived": "R-INTDIV-9"
+  },
+  "st-big/range-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_big_range ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "bigint"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [],
+   "ordered": true
+  },
+  "st-big/nan-create": {
+   "sql": "CREATE TABLE sc.ns.s_big_nan (id BIGINT, v BIGINT) USING iceberg",
+   "statement": true
+  },
+  "st-big/nan-stmt": {
+   "sql": "INSERT INTO sc.ns.s_big_nan SELECT 101, CAST('NaN' AS DOUBLE) / 2",
+   "condition": "CAST_OVERFLOW_IN_TABLE_INSERT",
+   "sql_state": "22003",
+   "message_head": "[CAST_OVERFLOW_IN_TABLE_INSERT] Fail to assign a value of \"DOUBLE\" type to the \"BIGINT\" type column or variable `v` due to an overflow",
+   "refusal_text_waived": "R-INTDIV-9"
+  },
+  "st-big/nan-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_big_nan ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "bigint"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [],
+   "ordered": true
+  },
+  "st-big/inf-create": {
+   "sql": "CREATE TABLE sc.ns.s_big_inf (id BIGINT, v BIGINT) USING iceberg",
+   "statement": true
+  },
+  "st-big/inf-stmt": {
+   "sql": "INSERT INTO sc.ns.s_big_inf SELECT 102, CAST('Infinity' AS DOUBLE) / 2",
+   "condition": "CAST_OVERFLOW_IN_TABLE_INSERT",
+   "sql_state": "22003",
+   "message_head": "[CAST_OVERFLOW_IN_TABLE_INSERT] Fail to assign a value of \"DOUBLE\" type to the \"BIGINT\" type column or variable `v` due to an overflow",
+   "refusal_text_waived": "R-INTDIV-9"
+  },
+  "st-big/inf-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_big_inf ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "bigint"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [],
+   "ordered": true
+  },
+  "st-big/double-create": {
+   "sql": "CREATE TABLE sc.ns.s_big_double (id BIGINT, v BIGINT) USING iceberg",
+   "statement": true
+  },
+  "st-big/double-stmt": {
+   "sql": "INSERT INTO sc.ns.s_big_double SELECT id, CAST(id AS DOUBLE) * 1.5 FROM sc.ns.t",
+   "statement": true
+  },
+  "st-big/double-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_big_double ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "bigint"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "bigint"
+    ],
+    [
+     2,
+     3,
+     "bigint"
+    ],
+    [
+     3,
+     4,
+     "bigint"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-big/int_ctl-create": {
+   "sql": "CREATE TABLE sc.ns.s_big_int_ctl (id BIGINT, v BIGINT) USING iceberg",
+   "statement": true
+  },
+  "st-big/int_ctl-stmt": {
+   "sql": "INSERT INTO sc.ns.s_big_int_ctl SELECT id, id * 2 FROM sc.ns.t",
+   "statement": true
+  },
+  "st-big/int_ctl-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_big_int_ctl ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "bigint"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     2,
+     "bigint"
+    ],
+    [
+     2,
+     4,
+     "bigint"
+    ],
+    [
+     3,
+     6,
+     "bigint"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-int/plain-create": {
+   "sql": "CREATE TABLE sc.ns.s_int_plain (id BIGINT, v INT) USING iceberg",
+   "statement": true
+  },
+  "st-int/plain-stmt": {
+   "sql": "INSERT INTO sc.ns.s_int_plain SELECT id, id / 2 FROM sc.ns.t",
+   "statement": true
+  },
+  "st-int/plain-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_int_plain ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     0,
+     "int"
+    ],
+    [
+     2,
+     1,
+     "int"
+    ],
+    [
+     3,
+     1,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-int/neg-create": {
+   "sql": "CREATE TABLE sc.ns.s_int_neg (id BIGINT, v INT) USING iceberg",
+   "statement": true
+  },
+  "st-int/neg-stmt": {
+   "sql": "INSERT INTO sc.ns.s_int_neg SELECT id, -id / 2 FROM sc.ns.t",
+   "statement": true
+  },
+  "st-int/neg-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_int_neg ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     0,
+     "int"
+    ],
+    [
+     2,
+     -1,
+     "int"
+    ],
+    [
+     3,
+     -1,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-int/derived-create": {
+   "sql": "CREATE TABLE sc.ns.s_int_derived (id BIGINT, v INT) USING iceberg",
+   "statement": true
+  },
+  "st-int/derived-stmt": {
+   "sql": "INSERT INTO sc.ns.s_int_derived SELECT id, h + 1 FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s",
+   "statement": true
+  },
+  "st-int/derived-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_int_derived ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "int"
+    ],
+    [
+     2,
+     2,
+     "int"
+    ],
+    [
+     3,
+     2,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-int/derived_mul-create": {
+   "sql": "CREATE TABLE sc.ns.s_int_derived_mul (id BIGINT, v INT) USING iceberg",
+   "statement": true
+  },
+  "st-int/derived_mul-stmt": {
+   "sql": "INSERT INTO sc.ns.s_int_derived_mul SELECT id, h * 3 FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s",
+   "statement": true
+  },
+  "st-int/derived_mul-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_int_derived_mul ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "int"
+    ],
+    [
+     2,
+     3,
+     "int"
+    ],
+    [
+     3,
+     4,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-int/cte-create": {
+   "sql": "CREATE TABLE sc.ns.s_int_cte (id BIGINT, v INT) USING iceberg",
+   "statement": true
+  },
+  "st-int/cte-stmt": {
+   "sql": "INSERT INTO sc.ns.s_int_cte WITH s AS (SELECT id, id / 2 AS h FROM sc.ns.t) SELECT id, h + 1 FROM s",
+   "statement": true
+  },
+  "st-int/cte-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_int_cte ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "int"
+    ],
+    [
+     2,
+     2,
+     "int"
+    ],
+    [
+     3,
+     2,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-int/values-create": {
+   "sql": "CREATE TABLE sc.ns.s_int_values (id BIGINT, v INT) USING iceberg",
+   "statement": true
+  },
+  "st-int/values-stmt": {
+   "sql": "INSERT INTO sc.ns.s_int_values VALUES (10, 7 / 2), (11, -7 / 2)",
+   "statement": true
+  },
+  "st-int/values-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_int_values ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     10,
+     3,
+     "int"
+    ],
+    [
+     11,
+     -3,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-int/overwrite-create": {
+   "sql": "CREATE TABLE sc.ns.s_int_overwrite (id BIGINT, v INT) USING iceberg",
+   "statement": true
+  },
+  "st-int/overwrite-seed": {
+   "sql": "INSERT INTO sc.ns.s_int_overwrite VALUES (1, 0), (2, 0), (3, 0)",
+   "statement": true
+  },
+  "st-int/overwrite-stmt": {
+   "sql": "INSERT OVERWRITE sc.ns.s_int_overwrite SELECT id, id / 2 + 1 FROM sc.ns.t",
+   "statement": true
+  },
+  "st-int/overwrite-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_int_overwrite ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "int"
+    ],
+    [
+     2,
+     2,
+     "int"
+    ],
+    [
+     3,
+     2,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-int/update-create": {
+   "sql": "CREATE TABLE sc.ns.s_int_update (id BIGINT, v INT) USING iceberg",
+   "statement": true
+  },
+  "st-int/update-seed": {
+   "sql": "INSERT INTO sc.ns.s_int_update VALUES (1, 0), (2, 0), (3, 0)",
+   "statement": true
+  },
+  "st-int/update-stmt": {
+   "sql": "UPDATE sc.ns.s_int_update SET v = id / 2 + 1",
+   "statement": true
+  },
+  "st-int/update-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_int_update ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "int"
+    ],
+    [
+     2,
+     2,
+     "int"
+    ],
+    [
+     3,
+     2,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-int/merge-create": {
+   "sql": "CREATE TABLE sc.ns.s_int_merge (id BIGINT, v INT) USING iceberg",
+   "statement": true
+  },
+  "st-int/merge-seed": {
+   "sql": "INSERT INTO sc.ns.s_int_merge VALUES (1, 0)",
+   "statement": true
+  },
+  "st-int/merge-stmt": {
+   "sql": "MERGE INTO sc.ns.s_int_merge x USING (SELECT id, id / 2 AS h FROM sc.ns.t) s ON x.id = s.id WHEN MATCHED THEN UPDATE SET v = s.h * 3 WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.h)",
+   "statement": true
+  },
+  "st-int/merge-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_int_merge ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "int"
+    ],
+    [
+     2,
+     1,
+     "int"
+    ],
+    [
+     3,
+     1,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-int/range-create": {
+   "sql": "CREATE TABLE sc.ns.s_int_range (id BIGINT, v INT) USING iceberg",
+   "statement": true
+  },
+  "st-int/range-stmt": {
+   "sql": "INSERT INTO sc.ns.s_int_range SELECT 100, 10000000000 / 2",
+   "condition": "CAST_OVERFLOW_IN_TABLE_INSERT",
+   "sql_state": "22003",
+   "message_head": "[CAST_OVERFLOW_IN_TABLE_INSERT] Fail to assign a value of \"DOUBLE\" type to the \"INT\" type column or variable `v` due to an overflow",
+   "refusal_text_waived": "R-INTDIV-9"
+  },
+  "st-int/range-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_int_range ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [],
+   "ordered": true
+  },
+  "st-int/nan-create": {
+   "sql": "CREATE TABLE sc.ns.s_int_nan (id BIGINT, v INT) USING iceberg",
+   "statement": true
+  },
+  "st-int/nan-stmt": {
+   "sql": "INSERT INTO sc.ns.s_int_nan SELECT 101, CAST('NaN' AS DOUBLE) / 2",
+   "condition": "CAST_OVERFLOW_IN_TABLE_INSERT",
+   "sql_state": "22003",
+   "message_head": "[CAST_OVERFLOW_IN_TABLE_INSERT] Fail to assign a value of \"DOUBLE\" type to the \"INT\" type column or variable `v` due to an overflow",
+   "refusal_text_waived": "R-INTDIV-9"
+  },
+  "st-int/nan-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_int_nan ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [],
+   "ordered": true
+  },
+  "st-int/inf-create": {
+   "sql": "CREATE TABLE sc.ns.s_int_inf (id BIGINT, v INT) USING iceberg",
+   "statement": true
+  },
+  "st-int/inf-stmt": {
+   "sql": "INSERT INTO sc.ns.s_int_inf SELECT 102, CAST('Infinity' AS DOUBLE) / 2",
+   "condition": "CAST_OVERFLOW_IN_TABLE_INSERT",
+   "sql_state": "22003",
+   "message_head": "[CAST_OVERFLOW_IN_TABLE_INSERT] Fail to assign a value of \"DOUBLE\" type to the \"INT\" type column or variable `v` due to an overflow",
+   "refusal_text_waived": "R-INTDIV-9"
+  },
+  "st-int/inf-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_int_inf ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [],
+   "ordered": true
+  },
+  "st-int/double-create": {
+   "sql": "CREATE TABLE sc.ns.s_int_double (id BIGINT, v INT) USING iceberg",
+   "statement": true
+  },
+  "st-int/double-stmt": {
+   "sql": "INSERT INTO sc.ns.s_int_double SELECT id, CAST(id AS DOUBLE) * 1.5 FROM sc.ns.t",
+   "statement": true
+  },
+  "st-int/double-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_int_double ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "int"
+    ],
+    [
+     2,
+     3,
+     "int"
+    ],
+    [
+     3,
+     4,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-int/int_ctl-create": {
+   "sql": "CREATE TABLE sc.ns.s_int_int_ctl (id BIGINT, v INT) USING iceberg",
+   "statement": true
+  },
+  "st-int/int_ctl-stmt": {
+   "sql": "INSERT INTO sc.ns.s_int_int_ctl SELECT id, id * 2 FROM sc.ns.t",
+   "statement": true
+  },
+  "st-int/int_ctl-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_int_int_ctl ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     2,
+     "int"
+    ],
+    [
+     2,
+     4,
+     "int"
+    ],
+    [
+     3,
+     6,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-small/plain-create": {
+   "sql": "CREATE TABLE sc.ns.s_small_plain (id BIGINT, v SMALLINT) USING iceberg",
+   "statement": true
+  },
+  "st-small/plain-stmt": {
+   "sql": "INSERT INTO sc.ns.s_small_plain SELECT id, id / 2 FROM sc.ns.t",
+   "statement": true
+  },
+  "st-small/plain-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_small_plain ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     0,
+     "int"
+    ],
+    [
+     2,
+     1,
+     "int"
+    ],
+    [
+     3,
+     1,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-small/neg-create": {
+   "sql": "CREATE TABLE sc.ns.s_small_neg (id BIGINT, v SMALLINT) USING iceberg",
+   "statement": true
+  },
+  "st-small/neg-stmt": {
+   "sql": "INSERT INTO sc.ns.s_small_neg SELECT id, -id / 2 FROM sc.ns.t",
+   "statement": true
+  },
+  "st-small/neg-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_small_neg ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     0,
+     "int"
+    ],
+    [
+     2,
+     -1,
+     "int"
+    ],
+    [
+     3,
+     -1,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-small/derived-create": {
+   "sql": "CREATE TABLE sc.ns.s_small_derived (id BIGINT, v SMALLINT) USING iceberg",
+   "statement": true
+  },
+  "st-small/derived-stmt": {
+   "sql": "INSERT INTO sc.ns.s_small_derived SELECT id, h + 1 FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s",
+   "statement": true
+  },
+  "st-small/derived-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_small_derived ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "int"
+    ],
+    [
+     2,
+     2,
+     "int"
+    ],
+    [
+     3,
+     2,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-small/derived_mul-create": {
+   "sql": "CREATE TABLE sc.ns.s_small_derived_mul (id BIGINT, v SMALLINT) USING iceberg",
+   "statement": true
+  },
+  "st-small/derived_mul-stmt": {
+   "sql": "INSERT INTO sc.ns.s_small_derived_mul SELECT id, h * 3 FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s",
+   "statement": true
+  },
+  "st-small/derived_mul-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_small_derived_mul ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "int"
+    ],
+    [
+     2,
+     3,
+     "int"
+    ],
+    [
+     3,
+     4,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-small/cte-create": {
+   "sql": "CREATE TABLE sc.ns.s_small_cte (id BIGINT, v SMALLINT) USING iceberg",
+   "statement": true
+  },
+  "st-small/cte-stmt": {
+   "sql": "INSERT INTO sc.ns.s_small_cte WITH s AS (SELECT id, id / 2 AS h FROM sc.ns.t) SELECT id, h + 1 FROM s",
+   "statement": true
+  },
+  "st-small/cte-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_small_cte ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "int"
+    ],
+    [
+     2,
+     2,
+     "int"
+    ],
+    [
+     3,
+     2,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-small/values-create": {
+   "sql": "CREATE TABLE sc.ns.s_small_values (id BIGINT, v SMALLINT) USING iceberg",
+   "statement": true
+  },
+  "st-small/values-stmt": {
+   "sql": "INSERT INTO sc.ns.s_small_values VALUES (10, 7 / 2), (11, -7 / 2)",
+   "statement": true
+  },
+  "st-small/values-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_small_values ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     10,
+     3,
+     "int"
+    ],
+    [
+     11,
+     -3,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-small/overwrite-create": {
+   "sql": "CREATE TABLE sc.ns.s_small_overwrite (id BIGINT, v SMALLINT) USING iceberg",
+   "statement": true
+  },
+  "st-small/overwrite-seed": {
+   "sql": "INSERT INTO sc.ns.s_small_overwrite VALUES (1, 0), (2, 0), (3, 0)",
+   "statement": true
+  },
+  "st-small/overwrite-stmt": {
+   "sql": "INSERT OVERWRITE sc.ns.s_small_overwrite SELECT id, id / 2 + 1 FROM sc.ns.t",
+   "statement": true
+  },
+  "st-small/overwrite-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_small_overwrite ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "int"
+    ],
+    [
+     2,
+     2,
+     "int"
+    ],
+    [
+     3,
+     2,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-small/update-create": {
+   "sql": "CREATE TABLE sc.ns.s_small_update (id BIGINT, v SMALLINT) USING iceberg",
+   "statement": true
+  },
+  "st-small/update-seed": {
+   "sql": "INSERT INTO sc.ns.s_small_update VALUES (1, 0), (2, 0), (3, 0)",
+   "statement": true
+  },
+  "st-small/update-stmt": {
+   "sql": "UPDATE sc.ns.s_small_update SET v = id / 2 + 1",
+   "statement": true
+  },
+  "st-small/update-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_small_update ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "int"
+    ],
+    [
+     2,
+     2,
+     "int"
+    ],
+    [
+     3,
+     2,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-small/merge-create": {
+   "sql": "CREATE TABLE sc.ns.s_small_merge (id BIGINT, v SMALLINT) USING iceberg",
+   "statement": true
+  },
+  "st-small/merge-seed": {
+   "sql": "INSERT INTO sc.ns.s_small_merge VALUES (1, 0)",
+   "statement": true
+  },
+  "st-small/merge-stmt": {
+   "sql": "MERGE INTO sc.ns.s_small_merge x USING (SELECT id, id / 2 AS h FROM sc.ns.t) s ON x.id = s.id WHEN MATCHED THEN UPDATE SET v = s.h * 3 WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.h)",
+   "statement": true
+  },
+  "st-small/merge-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_small_merge ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "int"
+    ],
+    [
+     2,
+     1,
+     "int"
+    ],
+    [
+     3,
+     1,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-small/range-create": {
+   "sql": "CREATE TABLE sc.ns.s_small_range (id BIGINT, v SMALLINT) USING iceberg",
+   "statement": true
+  },
+  "st-small/range-stmt": {
+   "sql": "INSERT INTO sc.ns.s_small_range SELECT 100, 100000 / 2",
+   "statement": true
+  },
+  "st-small/range-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_small_range ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     100,
+     50000,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-small/nan-create": {
+   "sql": "CREATE TABLE sc.ns.s_small_nan (id BIGINT, v SMALLINT) USING iceberg",
+   "statement": true
+  },
+  "st-small/nan-stmt": {
+   "sql": "INSERT INTO sc.ns.s_small_nan SELECT 101, CAST('NaN' AS DOUBLE) / 2",
+   "condition": "CAST_OVERFLOW_IN_TABLE_INSERT",
+   "sql_state": "22003",
+   "message_head": "[CAST_OVERFLOW_IN_TABLE_INSERT] Fail to assign a value of \"DOUBLE\" type to the \"INT\" type column or variable `v` due to an overflow",
+   "refusal_text_waived": "R-INTDIV-9"
+  },
+  "st-small/nan-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_small_nan ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [],
+   "ordered": true
+  },
+  "st-small/inf-create": {
+   "sql": "CREATE TABLE sc.ns.s_small_inf (id BIGINT, v SMALLINT) USING iceberg",
+   "statement": true
+  },
+  "st-small/inf-stmt": {
+   "sql": "INSERT INTO sc.ns.s_small_inf SELECT 102, CAST('Infinity' AS DOUBLE) / 2",
+   "condition": "CAST_OVERFLOW_IN_TABLE_INSERT",
+   "sql_state": "22003",
+   "message_head": "[CAST_OVERFLOW_IN_TABLE_INSERT] Fail to assign a value of \"DOUBLE\" type to the \"INT\" type column or variable `v` due to an overflow",
+   "refusal_text_waived": "R-INTDIV-9"
+  },
+  "st-small/inf-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_small_inf ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [],
+   "ordered": true
+  },
+  "st-small/double-create": {
+   "sql": "CREATE TABLE sc.ns.s_small_double (id BIGINT, v SMALLINT) USING iceberg",
+   "statement": true
+  },
+  "st-small/double-stmt": {
+   "sql": "INSERT INTO sc.ns.s_small_double SELECT id, CAST(id AS DOUBLE) * 1.5 FROM sc.ns.t",
+   "statement": true
+  },
+  "st-small/double-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_small_double ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "int"
+    ],
+    [
+     2,
+     3,
+     "int"
+    ],
+    [
+     3,
+     4,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-small/int_ctl-create": {
+   "sql": "CREATE TABLE sc.ns.s_small_int_ctl (id BIGINT, v SMALLINT) USING iceberg",
+   "statement": true
+  },
+  "st-small/int_ctl-stmt": {
+   "sql": "INSERT INTO sc.ns.s_small_int_ctl SELECT id, id * 2 FROM sc.ns.t",
+   "statement": true
+  },
+  "st-small/int_ctl-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_small_int_ctl ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     2,
+     "int"
+    ],
+    [
+     2,
+     4,
+     "int"
+    ],
+    [
+     3,
+     6,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-tiny/plain-create": {
+   "sql": "CREATE TABLE sc.ns.s_tiny_plain (id BIGINT, v TINYINT) USING iceberg",
+   "statement": true
+  },
+  "st-tiny/plain-stmt": {
+   "sql": "INSERT INTO sc.ns.s_tiny_plain SELECT id, id / 2 FROM sc.ns.t",
+   "statement": true
+  },
+  "st-tiny/plain-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_tiny_plain ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     0,
+     "int"
+    ],
+    [
+     2,
+     1,
+     "int"
+    ],
+    [
+     3,
+     1,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-tiny/neg-create": {
+   "sql": "CREATE TABLE sc.ns.s_tiny_neg (id BIGINT, v TINYINT) USING iceberg",
+   "statement": true
+  },
+  "st-tiny/neg-stmt": {
+   "sql": "INSERT INTO sc.ns.s_tiny_neg SELECT id, -id / 2 FROM sc.ns.t",
+   "statement": true
+  },
+  "st-tiny/neg-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_tiny_neg ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     0,
+     "int"
+    ],
+    [
+     2,
+     -1,
+     "int"
+    ],
+    [
+     3,
+     -1,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-tiny/derived-create": {
+   "sql": "CREATE TABLE sc.ns.s_tiny_derived (id BIGINT, v TINYINT) USING iceberg",
+   "statement": true
+  },
+  "st-tiny/derived-stmt": {
+   "sql": "INSERT INTO sc.ns.s_tiny_derived SELECT id, h + 1 FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s",
+   "statement": true
+  },
+  "st-tiny/derived-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_tiny_derived ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "int"
+    ],
+    [
+     2,
+     2,
+     "int"
+    ],
+    [
+     3,
+     2,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-tiny/derived_mul-create": {
+   "sql": "CREATE TABLE sc.ns.s_tiny_derived_mul (id BIGINT, v TINYINT) USING iceberg",
+   "statement": true
+  },
+  "st-tiny/derived_mul-stmt": {
+   "sql": "INSERT INTO sc.ns.s_tiny_derived_mul SELECT id, h * 3 FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s",
+   "statement": true
+  },
+  "st-tiny/derived_mul-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_tiny_derived_mul ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "int"
+    ],
+    [
+     2,
+     3,
+     "int"
+    ],
+    [
+     3,
+     4,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-tiny/cte-create": {
+   "sql": "CREATE TABLE sc.ns.s_tiny_cte (id BIGINT, v TINYINT) USING iceberg",
+   "statement": true
+  },
+  "st-tiny/cte-stmt": {
+   "sql": "INSERT INTO sc.ns.s_tiny_cte WITH s AS (SELECT id, id / 2 AS h FROM sc.ns.t) SELECT id, h + 1 FROM s",
+   "statement": true
+  },
+  "st-tiny/cte-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_tiny_cte ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "int"
+    ],
+    [
+     2,
+     2,
+     "int"
+    ],
+    [
+     3,
+     2,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-tiny/values-create": {
+   "sql": "CREATE TABLE sc.ns.s_tiny_values (id BIGINT, v TINYINT) USING iceberg",
+   "statement": true
+  },
+  "st-tiny/values-stmt": {
+   "sql": "INSERT INTO sc.ns.s_tiny_values VALUES (10, 7 / 2), (11, -7 / 2)",
+   "statement": true
+  },
+  "st-tiny/values-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_tiny_values ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     10,
+     3,
+     "int"
+    ],
+    [
+     11,
+     -3,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-tiny/overwrite-create": {
+   "sql": "CREATE TABLE sc.ns.s_tiny_overwrite (id BIGINT, v TINYINT) USING iceberg",
+   "statement": true
+  },
+  "st-tiny/overwrite-seed": {
+   "sql": "INSERT INTO sc.ns.s_tiny_overwrite VALUES (1, 0), (2, 0), (3, 0)",
+   "statement": true
+  },
+  "st-tiny/overwrite-stmt": {
+   "sql": "INSERT OVERWRITE sc.ns.s_tiny_overwrite SELECT id, id / 2 + 1 FROM sc.ns.t",
+   "statement": true
+  },
+  "st-tiny/overwrite-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_tiny_overwrite ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "int"
+    ],
+    [
+     2,
+     2,
+     "int"
+    ],
+    [
+     3,
+     2,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-tiny/update-create": {
+   "sql": "CREATE TABLE sc.ns.s_tiny_update (id BIGINT, v TINYINT) USING iceberg",
+   "statement": true
+  },
+  "st-tiny/update-seed": {
+   "sql": "INSERT INTO sc.ns.s_tiny_update VALUES (1, 0), (2, 0), (3, 0)",
+   "statement": true
+  },
+  "st-tiny/update-stmt": {
+   "sql": "UPDATE sc.ns.s_tiny_update SET v = id / 2 + 1",
+   "statement": true
+  },
+  "st-tiny/update-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_tiny_update ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "int"
+    ],
+    [
+     2,
+     2,
+     "int"
+    ],
+    [
+     3,
+     2,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-tiny/merge-create": {
+   "sql": "CREATE TABLE sc.ns.s_tiny_merge (id BIGINT, v TINYINT) USING iceberg",
+   "statement": true
+  },
+  "st-tiny/merge-seed": {
+   "sql": "INSERT INTO sc.ns.s_tiny_merge VALUES (1, 0)",
+   "statement": true
+  },
+  "st-tiny/merge-stmt": {
+   "sql": "MERGE INTO sc.ns.s_tiny_merge x USING (SELECT id, id / 2 AS h FROM sc.ns.t) s ON x.id = s.id WHEN MATCHED THEN UPDATE SET v = s.h * 3 WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.h)",
+   "statement": true
+  },
+  "st-tiny/merge-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_tiny_merge ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "int"
+    ],
+    [
+     2,
+     1,
+     "int"
+    ],
+    [
+     3,
+     1,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-tiny/range-create": {
+   "sql": "CREATE TABLE sc.ns.s_tiny_range (id BIGINT, v TINYINT) USING iceberg",
+   "statement": true
+  },
+  "st-tiny/range-stmt": {
+   "sql": "INSERT INTO sc.ns.s_tiny_range SELECT 100, 1000 / 2",
+   "statement": true
+  },
+  "st-tiny/range-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_tiny_range ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     100,
+     500,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-tiny/nan-create": {
+   "sql": "CREATE TABLE sc.ns.s_tiny_nan (id BIGINT, v TINYINT) USING iceberg",
+   "statement": true
+  },
+  "st-tiny/nan-stmt": {
+   "sql": "INSERT INTO sc.ns.s_tiny_nan SELECT 101, CAST('NaN' AS DOUBLE) / 2",
+   "condition": "CAST_OVERFLOW_IN_TABLE_INSERT",
+   "sql_state": "22003",
+   "message_head": "[CAST_OVERFLOW_IN_TABLE_INSERT] Fail to assign a value of \"DOUBLE\" type to the \"INT\" type column or variable `v` due to an overflow",
+   "refusal_text_waived": "R-INTDIV-9"
+  },
+  "st-tiny/nan-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_tiny_nan ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [],
+   "ordered": true
+  },
+  "st-tiny/inf-create": {
+   "sql": "CREATE TABLE sc.ns.s_tiny_inf (id BIGINT, v TINYINT) USING iceberg",
+   "statement": true
+  },
+  "st-tiny/inf-stmt": {
+   "sql": "INSERT INTO sc.ns.s_tiny_inf SELECT 102, CAST('Infinity' AS DOUBLE) / 2",
+   "condition": "CAST_OVERFLOW_IN_TABLE_INSERT",
+   "sql_state": "22003",
+   "message_head": "[CAST_OVERFLOW_IN_TABLE_INSERT] Fail to assign a value of \"DOUBLE\" type to the \"INT\" type column or variable `v` due to an overflow",
+   "refusal_text_waived": "R-INTDIV-9"
+  },
+  "st-tiny/inf-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_tiny_inf ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [],
+   "ordered": true
+  },
+  "st-tiny/double-create": {
+   "sql": "CREATE TABLE sc.ns.s_tiny_double (id BIGINT, v TINYINT) USING iceberg",
+   "statement": true
+  },
+  "st-tiny/double-stmt": {
+   "sql": "INSERT INTO sc.ns.s_tiny_double SELECT id, CAST(id AS DOUBLE) * 1.5 FROM sc.ns.t",
+   "statement": true
+  },
+  "st-tiny/double-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_tiny_double ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1,
+     "int"
+    ],
+    [
+     2,
+     3,
+     "int"
+    ],
+    [
+     3,
+     4,
+     "int"
+    ]
+   ],
+   "ordered": true
+  },
+  "st-tiny/int_ctl-create": {
+   "sql": "CREATE TABLE sc.ns.s_tiny_int_ctl (id BIGINT, v TINYINT) USING iceberg",
+   "statement": true
+  },
+  "st-tiny/int_ctl-stmt": {
+   "sql": "INSERT INTO sc.ns.s_tiny_int_ctl SELECT id, id * 2 FROM sc.ns.t",
+   "statement": true
+  },
+  "st-tiny/int_ctl-read": {
+   "sql": "SELECT id, v, typeof(v) AS tv FROM sc.ns.s_tiny_int_ctl ORDER BY id",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "int"
+    ],
+    [
+     "tv",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     2,
+     "int"
+    ],
+    [
+     2,
+     4,
+     "int"
+    ],
+    [
+     3,
+     6,
+     "int"
+    ]
+   ],
+   "ordered": true
   }
  },
  "dataframe": {

@@ -1,10 +1,15 @@
 use datafusion::arrow::datatypes::DataType;
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
-use datafusion::common::{DFSchema, Result};
+use std::sync::Arc;
+
+use datafusion::common::{Column, DFSchema, Result, TableReference};
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
-use datafusion::logical_expr::{BinaryExpr, Cast, Expr, ExprSchemable, LogicalPlan, Operator};
+use datafusion::logical_expr::{
+    BinaryExpr, Cast, Expr, ExprSchemable, LogicalPlan, LogicalPlanBuilder, Operator, Projection,
+    WriteOp,
+};
 use datafusion::optimizer::AnalyzerRule;
 
 use super::{INTEGER_ADD_NAME, INTEGER_MUL_NAME, INTEGER_SUB_NAME, contains_lambda_variable};
@@ -52,7 +57,92 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
         let rewritten = expr.transform_up(|node| Ok(rewrite_expr(node, &schema)))?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
-    transformed.map_data(LogicalPlan::recompute_schema)
+    let retyped = if transformed.transformed && matches!(transformed.data, LogicalPlan::Values(_)) {
+        transformed.map_data(rebuild_values)?
+    } else {
+        transformed.map_data(LogicalPlan::recompute_schema)?
+    };
+    retyped.transform_data(conform_integer_store)
+}
+
+fn rebuild_values(plan: LogicalPlan) -> Result<LogicalPlan> {
+    match plan {
+        LogicalPlan::Values(values) => LogicalPlanBuilder::values(values.values)?.build(),
+        other => Ok(other),
+    }
+}
+
+fn conform_integer_store(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+    let LogicalPlan::Dml(mut dml) = plan else {
+        return Ok(Transformed::no(plan));
+    };
+    let target = dml.target.schema();
+    let source = dml.input.schema();
+    let stale = matches!(dml.op, WriteOp::Insert(_) | WriteOp::Update)
+        && target.fields().len() == source.fields().len()
+        && target
+            .fields()
+            .iter()
+            .zip(source.fields())
+            .any(|(target, source)| {
+                fractional_into_integer(source.data_type(), target.data_type())
+            });
+    if !stale {
+        return Ok(Transformed::no(LogicalPlan::Dml(dml)));
+    }
+    let (exprs, input) = match dml.input.as_ref() {
+        LogicalPlan::Projection(projection) => {
+            (projection.expr.clone(), Arc::clone(&projection.input))
+        }
+        other => (
+            source
+                .iter()
+                .map(|(qualifier, field)| {
+                    Expr::Column(Column::new(qualifier.cloned(), field.name()))
+                })
+                .collect(),
+            Arc::new(other.clone()),
+        ),
+    };
+    let conformed = exprs
+        .into_iter()
+        .zip(source.iter())
+        .zip(target.fields())
+        .map(|((expr, (qualifier, field)), target)| {
+            conform_store_expr(
+                expr,
+                qualifier,
+                field.data_type(),
+                target.data_type(),
+                field.name(),
+            )
+        })
+        .collect();
+    dml.input = Arc::new(LogicalPlan::Projection(Projection::try_new(
+        conformed, input,
+    )?));
+    Ok(Transformed::yes(LogicalPlan::Dml(dml)))
+}
+
+fn conform_store_expr(
+    expr: Expr,
+    qualifier: Option<&TableReference>,
+    source: &DataType,
+    target: &DataType,
+    name: &str,
+) -> Expr {
+    if !fractional_into_integer(source, target) {
+        return expr;
+    }
+    let inner = match expr {
+        Expr::Alias(alias) => *alias.expr,
+        other => other,
+    };
+    Expr::Cast(Cast::new(Box::new(inner), target.clone())).alias_qualified(qualifier.cloned(), name)
+}
+
+fn fractional_into_integer(source: &DataType, target: &DataType) -> bool {
+    source.is_floating() && target.is_integer()
 }
 
 fn rewrite_expr(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
@@ -388,6 +478,90 @@ mod tests {
         assert!(
             overflow.contains("ARITHMETIC_OVERFLOW") && overflow.contains("long overflow"),
             "{overflow}"
+        );
+    }
+
+    fn with_store(ctx: &SessionContext, name: &str, value_type: DataType) {
+        let schema = Arc::new(Schema::new(vec![
+            Field::new("id", DataType::Int64, true),
+            Field::new("v", value_type, true),
+        ]));
+        let table = datafusion::datasource::MemTable::try_new(schema, vec![vec![]])
+            .expect("empty store table");
+        ctx.register_table(name, Arc::new(table))
+            .expect("register store table");
+    }
+
+    async fn stored_i64(ctx: &SessionContext, insert: &str, table: &str) -> Vec<Option<i64>> {
+        batches(ctx, insert).await;
+        i64_column_at(ctx, &format!("SELECT v FROM {table} ORDER BY id"), 0).await
+    }
+
+    #[tokio::test]
+    async fn fractional_quotient_stores_into_bigint_like_spark() {
+        let ctx = prod_like_ctx();
+        let inner = "SELECT id, id / 2 AS h FROM t";
+        for (name, insert, want) in [
+            ("plain", "SELECT id, id / 2 FROM t".to_string(), [0, 1, 1]),
+            ("neg", "SELECT id, -id / 2 FROM t".to_string(), [0, -1, -1]),
+            (
+                "derived",
+                format!("SELECT id, h + 1 FROM ({inner}) s"),
+                [1, 2, 2],
+            ),
+            (
+                "derived_mul",
+                format!("SELECT id, h * 3 FROM ({inner}) s"),
+                [1, 3, 4],
+            ),
+            (
+                "cte",
+                format!("WITH s AS ({inner}) SELECT id, h + 1 FROM s"),
+                [1, 2, 2],
+            ),
+            ("ctl", "SELECT id, id * 2 FROM t".to_string(), [2, 4, 6]),
+        ] {
+            let table = format!("store_{name}");
+            with_store(&ctx, &table, DataType::Int64);
+            let stored = stored_i64(&ctx, &format!("INSERT INTO {table} {insert}"), &table).await;
+            assert_eq!(stored, want.map(Some).to_vec(), "{name}");
+        }
+        with_store(&ctx, "store_values", DataType::Int64);
+        let stored = stored_i64(
+            &ctx,
+            "INSERT INTO store_values VALUES (10, 7 / 2), (11, -7 / 2)",
+            "store_values",
+        )
+        .await;
+        assert_eq!(stored, vec![Some(3), Some(-3)]);
+    }
+
+    #[tokio::test]
+    async fn fractional_quotient_stores_into_int_unchanged() {
+        let ctx = prod_like_ctx();
+        with_store(&ctx, "store_int", DataType::Int32);
+        batches(
+            &ctx,
+            "INSERT INTO store_int SELECT id, h + 1 FROM (SELECT id, id / 2 AS h FROM t) s",
+        )
+        .await;
+        let sql = "SELECT CAST(v AS BIGINT) FROM store_int ORDER BY id";
+        assert_eq!(i64_column(&ctx, sql).await, vec![Some(1), Some(2), Some(2)]);
+    }
+
+    #[tokio::test]
+    async fn out_of_range_quotient_refuses_and_stores_nothing() {
+        let ctx = prod_like_ctx();
+        with_store(&ctx, "store_range", DataType::Int64);
+        let message = error_text(
+            &ctx,
+            "INSERT INTO store_range SELECT id, id * 1e19 / 1 FROM t",
+        )
+        .await;
+        assert!(message.contains("Int64"), "{message}");
+        assert_eq!(
+            i64_column(&ctx, "SELECT count(*) FROM store_range").await,
+            vec![Some(0)]
         );
     }
 }

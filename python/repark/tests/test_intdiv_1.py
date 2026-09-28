@@ -68,6 +68,9 @@ def _mismatch(session: ReparkSession, key: str) -> str | None:
     if cell.get("statement"):
         session.sql(cell["sql"]).collect()
         return None
+    if "refusal_text_waived" in cell:
+        got = _refusal(session, cell["sql"])
+        return None if "answered" not in got else f"{key}: answered instead of refusing"
     if "condition" in cell:
         got = _refusal(session, cell["sql"])
         head_ok = cell["message_head"] in got.get("message", "")

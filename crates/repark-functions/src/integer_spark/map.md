@@ -30,3 +30,15 @@ here so `integer_spark.rs` stays under its `check_rust_file_size` ceiling.
   the production analyzer order (the pre-coercion seat plus `analyzer_rules()`) over a
   BIGINT/INT fixture and pin Spark's recorded values and types.
   pins: intdiv-1/C-001, C-002, C-003
+  **R-INTDIV-1 fold (2026-09-28, owner ruling):** after each node's rewrite the rule rebuilds a
+  `Values` node whose rows it retyped (`LogicalPlanBuilder::values`, so the node's schema
+  reports DOUBLE), and re-conforms a `Dml` INSERT or UPDATE whose input column is now
+  fractional while the target column is an integer: the input projection's expression (or a new
+  projection over a bare input) gets `CAST(expr AS <column type>)` under its original name.
+  DataFusion's INSERT/UPDATE planning had chosen that cast from the plan-time integer type of
+  `/`, so it planned none when the types were equal, and the BIGINT store failed inside the
+  writer. The cast is Spark's toward-zero store assignment; out-of-range, NaN and Infinity
+  refuse (message class residue R-INTDIV-9). Only integer targets fed by a floating source in
+  a plan that contains `/` are touched, so integral→integral and string stores are unchanged.
+  Inline pins store into BIGINT and INT `MemTable`s.
+  pins: intdiv-1/C-004
