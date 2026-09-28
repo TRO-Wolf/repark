@@ -9,6 +9,11 @@ against Spark yet; step 0 is the measurement.
 v1.5.0 remainder ([v1-5-0-remainder-spec-2026-09-23.md](v1-5-0-remainder-spec-2026-09-23.md)); the
 `W-PATH-S3-*` cells recorded in step 0 join the gate inventory, and the gate waits on them.
 
+**Owner, 2026-09-27:** U12 returns to **v1.5.1**; it no longer gates v1.5.0. The work was unstarted when the
+release-readiness audit ran (finding F-1 of
+[v1-5-0-release-readiness-2026-09-27.md](v1-5-0-release-readiness-2026-09-27.md)). The card's content stands as the
+v1.5.1 plan; the `W-PATH-S3-*` cells join the inventory when step 0 records them, after the v1.5.0 tag.
+
 ## What is true on main today (read from the tree, 2026-09-22)
 
 - **Reads reach S3.** `Session::read_parquet`, `read_csv` and `read_json` call

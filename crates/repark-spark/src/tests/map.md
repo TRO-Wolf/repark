@@ -1103,6 +1103,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `ctas_service_managed_plain_ctas_records_append` (`[append]`). The first two go red
   when the `ctas.or_replace` branch in `execute_ctas_service_managed` is reverted.
   pins: ice-rtas-ops-2/C-019
+  **AWS-ACCEPT-REPLACE-1 (2026-09-27):** `setup_wrapped_with_factory` threads the
+  `MemoryCatalogBuilder` storage factory through the service-managed setup;
+  `replace_existing_table_writes_each_metadata_file_once` seeds a CTAS then runs
+  `CREATE OR REPLACE` on the existing table over the no-overwrite store, expecting Ok,
+  1 row, and ops `[append, overwrite]`. The pin is red at fork `0d3f2b4f` (the staged
+  replace rewrites `00002-<uuid>.metadata.json` in place) and green at `6e937f49`.
+  pins: aws-accept-replace-1/C-001
   **WO-B14 (2026-09-24):** `service_managed_create_and_ctas_stamp_the_session_owner` installs
   a session owner and checks the stored `owner` of a service-managed CTAS and a
   service-managed schema CREATE; removing either stamp turns it red.

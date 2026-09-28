@@ -7,4 +7,5 @@ mod lineage_columns;
 mod memory_props_span;
 mod namespace_drop;
 mod namespace_scoped;
+mod no_overwrite;
 mod uuid_presentation;

@@ -1,0 +1,160 @@
+<title>v1.5.0 Release Day</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --ground:#F2F5F7; --card:#FFFFFF; --ink:#16232B; --ink-2:#4A5D68; --line:#D8E2E8;
+    --teal:#0E6C88; --teal-2:#0B5065; --chip-green-bg:#E3F2E8; --chip-green-ink:#1E6B3A;
+    --chip-amber-bg:#FBF0DC; --chip-amber-ink:#8A5E0C; --chip-hold-bg:#E8E3F2; --chip-hold-ink:#4A3A8A;
+    --chip-guard-bg:#F2E3E3; --chip-guard-ink:#8A2E2E; --mono-bg:#EAF1F5; --bar:#CFE6EE;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --ground:#0E1418; --card:#162027; --ink:#E4ECF1; --ink-2:#9AB0BC; --line:#243440;
+      --teal:#4DB1CF; --teal-2:#7CC7DD; --chip-green-bg:#173324; --chip-green-ink:#7CD9A0;
+      --chip-amber-bg:#332A14; --chip-amber-ink:#E5C071; --chip-hold-bg:#221D38; --chip-hold-ink:#B0A2E8;
+      --chip-guard-bg:#331B1B; --chip-guard-ink:#E89B9B; --mono-bg:#1B2830; --bar:#1F3A45;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --ground:#0E1418; --card:#162027; --ink:#E4ECF1; --ink-2:#9AB0BC; --line:#243440;
+    --teal:#4DB1CF; --teal-2:#7CC7DD; --chip-green-bg:#173324; --chip-green-ink:#7CD9A0;
+    --chip-amber-bg:#332A14; --chip-amber-ink:#E5C071; --chip-hold-bg:#221D38; --chip-hold-ink:#B0A2E8;
+    --chip-guard-bg:#331B1B; --chip-guard-ink:#E89B9B; --mono-bg:#1B2830; --bar:#1F3A45;
+  }
+  body{background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:15px;line-height:1.55;padding-inline:16px;padding-block:24px 48px;}
+  .wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:28px;}
+  h1,h2,h3{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;text-wrap:balance;line-height:1.15;margin:0;}
+  h1{font-size:34px;font-weight:700;}
+  h2{font-size:22px;font-weight:600;}
+  p{margin:0;max-width:70ch;}
+  .kicker{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);}
+  .lede{color:var(--ink-2);font-size:16px;}
+  section{display:flex;flex-direction:column;gap:12px;}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;}
+  .stat .n{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:30px;line-height:1;color:var(--teal);font-variant-numeric:tabular-nums;}
+  .stat .l{font-size:13px;color:var(--ink-2);}
+  .tablebox{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:8px;}
+  table{border-collapse:collapse;width:100%;min-width:620px;font-size:14px;}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  th{font-family:"IBM Plex Sans Condensed",sans-serif;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2);background:var(--card);}
+  td.num{font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .mono,code{font-family:"IBM Plex Mono",monospace;font-size:13px;background:var(--mono-bg);padding:1px 5px;border-radius:4px;}
+  .chip{display:inline-block;font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:600;font-size:12px;letter-spacing:.03em;padding:1px 8px;border-radius:10px;white-space:nowrap;}
+  .g{background:var(--chip-green-bg);color:var(--chip-green-ink);}
+  .a{background:var(--chip-amber-bg);color:var(--chip-amber-ink);}
+  .h{background:var(--chip-hold-bg);color:var(--chip-hold-ink);}
+  .r{background:var(--chip-guard-bg);color:var(--chip-guard-ink);}
+  .matrix{display:flex;height:22px;border-radius:5px;overflow:hidden;border:1px solid var(--line);}
+  .matrix span{display:block;height:100%;}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--ink-2);}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px;}
+  ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:75ch;}
+  .two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:10px;}
+  footer{font-size:13px;color:var(--ink-2);border-top:1px solid var(--line);padding-top:14px;}
+  a{color:var(--teal);}
+</style>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:10px">
+    <div class="kicker">RePark · 2026-09-27 → 28 · day and overnight</div>
+    <h1>v1.5.0 shipped: the Spark–Iceberg parity minor</h1>
+    <p class="lede">Tag <span class="mono">v1.5.0</span> on <span class="mono">9392dbc3</span>, five wheels on PyPI, and a clean gate on a fresh build. Overnight, the AWS acceptance failure was traced to the iceberg-rust fork, fixed and repinned, and the nightly run is green again.</p>
+  </header>
+
+  <section>
+    <div class="stats">
+      <div class="stat"><span class="n">0</span><span class="l">DIFFERENT cells, 842-cell matrix, fresh build</span></div>
+      <div class="stat"><span class="n">705</span><span class="l">EQUAL (132 Spark-cannot, 5 carved out)</span></div>
+      <div class="stat"><span class="n">1.5.0</span><span class="l">on PyPI — 5 cp312-abi3 wheels</span></div>
+      <div class="stat"><span class="n">11</span><span class="l">PRs merged, RePark 9 + fork 2</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>The gate</h2>
+    <div class="matrix" role="img" aria-label="705 equal, 132 Spark cannot, 5 refused-registered, 0 different, of 842 cells">
+      <span style="width:83.7%;background:var(--teal)"></span>
+      <span style="width:15.7%;background:var(--bar)"></span>
+      <span style="width:0.6%;background:var(--chip-hold-ink)"></span>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--teal)"></i>EQUAL 705</span>
+      <span><i style="background:var(--bar)"></i>SPARK-CANNOT 132</span>
+      <span><i style="background:var(--chip-hold-ink)"></i>REFUSED-REGISTERED 5 (C-1 streaming ×3, C-2 nested namespaces, C-4 v3 variant)</span>
+      <span>DIFFERENT 0</span>
+    </div>
+    <p>Measured twice on fresh release builds: on <span class="mono">f7422565</span> before the tag, and again overnight on <span class="mono">abdeae41</span> after the rp-55 fork repin. The results were identical, so the repin introduced no regression. C-3 and C-5 count as EQUAL under their dated harness rules. U12 (S3 path writes) moved to v1.5.1 by owner ruling.</p>
+  </section>
+
+  <section>
+    <h2>Merged</h2>
+    <div class="tablebox"><table>
+      <thead><tr><th>PR</th><th>What</th><th>State</th></tr></thead>
+      <tbody>
+        <tr><td class="num">#853</td><td>Orchestrator doctrine</td><td><span class="chip g">merged</span></td></tr>
+        <tr><td class="num">#862</td><td>Read-path compaction (shorter onboarding)</td><td><span class="chip g">merged</span></td></tr>
+        <tr><td class="num">#865</td><td>One Critic by default; an independent pass at high tier (replaced the auto-closed #863)</td><td><span class="chip g">merged</span></td></tr>
+        <tr><td class="num">#864</td><td>v1.5.0 readiness audit and notes draft; U12 moved to v1.5.1</td><td><span class="chip g">merged</span></td></tr>
+        <tr><td class="num">#868</td><td>The UUID refusal no longer panics on non-ASCII SQL; it counts position like Spark (scalar values, UTF-16 window)</td><td><span class="chip g">in v1.5.0</span></td></tr>
+        <tr><td class="num">#869</td><td>v1.6.0 card for nested namespaces (C-2)</td><td><span class="chip g">merged</span></td></tr>
+        <tr><td class="num">#871</td><td><strong>release: v1.5.0</strong>; tag pushed; owner-approved deployment</td><td><span class="chip g">released</span></td></tr>
+        <tr><td class="num">fork #362</td><td>A staged replace writes its metadata file once, at commit (the S3 Tables 412 root cause)</td><td><span class="chip g">merged</span></td></tr>
+        <tr><td class="num">fork #363</td><td>Tests: retry freshness and race integrity for the single-write replace</td><td><span class="chip g">merged</span></td></tr>
+        <tr><td class="num">#872</td><td>rp-55: repin to fork <span class="mono">6e937f49</span> and add the no-overwrite regression pin</td><td><span class="chip g">merged</span></td></tr>
+        <tr><td class="num">#873</td><td>Post-release truth-up; final v1.5.0 release notes</td><td><span class="chip g">merged</span></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>AWS acceptance</h2>
+    <p>It had been red every night since 2026-09-19, and always on the same test: <span class="mono">test_create_or_replace_twice_against_s3tables</span>, where S3 answered 412 <span class="mono">ConditionNotMatch</span>. The cause was fork rp-26, which wrote a replace's metadata file at begin and rewrote the same key at commit. S3 table buckets refuse the overwrite; Glue buckets and local stores accept it. The chain from there:</p>
+    <ul>
+      <li>A Muse round reproduced the failure locally.</li>
+      <li>Fork #362 fixed it.</li>
+      <li>#872 repinned RePark to the fixed fork and added a regression pin that fails at the old pin and passes at the new one.</li>
+    </ul>
+    <p>Live confirmation: the scheduled run on 2026-09-28 (run 36400422783, main <span class="mono">abdeae41</span>) passed 10 of 10, including <span class="mono">test_create_or_replace_twice_against_s3tables</span>, plus dbt gold 1 of 1. It is the first green nightly since 2026-09-18. <span class="chip g" id="aws-state">green</span></p>
+  </section>
+
+  <section>
+    <h2>Open for the owner (v1.5.1)</h2>
+    <div class="tablebox"><table>
+      <thead><tr><th>PR</th><th>What</th><th>Review state</th></tr></thead>
+      <tbody>
+        <tr><td class="num">#866</td><td>NTZ-1 Slice 2: TIMESTAMP and DATE values store into TIMESTAMP_NTZ columns as the session-zone wall on every door</td><td><span class="chip a">Grok critic void; refuted by mutation</span></td></tr>
+        <tr><td class="num">#867</td><td>NTZ-1 Slice 3: the storage surface pinned; TZ-6 matches Spark's contract (stacked on #866)</td><td><span class="chip h">retarget before #866 merges</span></td></tr>
+        <tr><td class="num">#870</td><td>CASESENS-1 Slice 1 + S1b: nested scopes, CTE outputs and catalog views keep the written column spelling</td><td><span class="chip a">Grok critic void; probe clean</span></td></tr>
+        <tr><td class="num">#876</td><td>CASESENS-1 Slices 2–5: <span class="mono">caseSensitive</span> resolves names like Spark on the SQL and DataFrame doors, for case twins and for Iceberg DDL names (stacked on #870)</td><td><span class="chip g">Muse critics; fold green</span></td></tr>
+        <tr><td class="num">#875</td><td>An INT stored into a TIMESTAMP column refuses <span class="mono">CANNOT_SAFELY_CAST</span>, as Spark does</td><td><span class="chip g">critic finding folded</span></td></tr>
+      </tbody>
+    </table></div>
+    <p>The scoped Opus verifier for these product-Rust PRs is the owner's call. The next unit is a fork change for R-CS1-12: under <span class="mono">caseSensitive=true</span>, Spark with Iceberg accepts twin columns (measured overnight), but the fork's eager lower-case index refuses them.</p>
+  </section>
+
+  <section class="two">
+    <div class="panel">
+      <h3>What worked</h3>
+      <ul>
+        <li>Muse at max effort as the executor on 20+ rounds. Its halts were real contradictions, and its diagnoses found root causes: the AWS fork double write, the UUID window measured against Spark, and the NTZ UPDATE and MERGE paths.</li>
+        <li>Muse 1.3 critics at xhigh. They made real citations, re-ran the gates with exit codes, and found real gaps (a missed OD-3 pin, <span class="mono">writer()</span> bypassing the no-overwrite store, typed decimals).</li>
+        <li>The guarded fork merge. It refused a real file-size failure that was hiding behind the known image-pull failure.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>What to change</h3>
+      <ul>
+        <li><strong>Grok 4.7 critics</strong>: 3 of 4 runs were one-turn hallucinations. Critics moved to Muse (owner ruling).</li>
+        <li><strong>Muse cannot see its step count</strong>: three rounds exited with no hand-back. Briefs now say to commit first and write a provisional hand-back, and every silent exit gets a tree inspection.</li>
+        <li><strong>Targeted test filters miss regressions</strong>: full lib sweeps caught a missed OD-3 pin and three TIMESTAMP_NS breaks. Product gates now run the crate's full lib suite.</li>
+        <li>Docs gates now include the link checker, after #864 went red on five relative links.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>Orchestrated by Claude (claude-opus-5-5); executors on Muse Spark 1.3 (max), Devin SWE-2 for one round; critics on Muse 1.3 (xhigh), Grok 4.7 earlier in the day. Sources: <span class="mono">/tmp/oc-worker/run29/claims.txt</span>, <span class="mono">scoreboard/2026-09-26/compare.txt</span>, and PyPI <span class="mono">repark/1.5.0</span>.</footer>
+</div>
