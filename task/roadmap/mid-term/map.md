@@ -47,6 +47,7 @@ declines it (a dated ruling in the intake, then the archive).
   rows found and fixed; container accessors a draft hand-over.
 - [night-report-2026-09-20-25e.md](night-report-2026-09-20-25e.md) — **run 25e (the plan packets):** thirteen
   execution packets for the large parity units, 222 cells; four units found to need no fork work.
+- [csv-header-default-1.md](csv-header-default-1.md) — **card CSV-HEADER-DEFAULT-1 (filed 2026-09-28 on the owner's ruling, option B):** `df.write.csv(path)` writes a header by default where Spark 4.1.2 does not; 9 of U12's 16 residues (`R-S3-CSV-HEADER`); RePark 1.5.x keeps today's default, the change waits for a minor release with a release note.
 - [s3-path-write-1-5-0.md](s3-path-write-1-5-0.md) — **card S3-PATH-WRITE-1 (filed 2026-09-22 as a v1.5.1 card; owner
   2026-09-23: in the v1.5.0 target; owner 2026-09-27: back to v1.5.1):** plain Parquet, CSV and JSON path writes to `s3://` — reads reach S3, Iceberg
   tables on S3 write, but the path writer is a local staging-and-rename protocol; step 0 is a recorded Spark oracle
