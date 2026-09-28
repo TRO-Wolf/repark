@@ -12,6 +12,7 @@ mod namespace_create;
 mod nlj_tight_pool;
 mod path_write;
 mod pool_refusals;
+mod s3_prefix_read;
 mod session;
 mod session_catalog;
 mod subquery;

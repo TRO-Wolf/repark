@@ -153,7 +153,9 @@ honestly"). SQL routing and session-build registration are seam-inverted
   `AwsConfigCredentialProvider` (aws-config default chain → `object_store::CredentialProvider`),
   `build_amazon_s3_store`, `register_bucket_store` (one store under BOTH scheme URLs),
   `parse_s3_bucket` / `is_s3_scheme`. Round 1 (2026-09-28) adds the `s3a` endpoint keys
-  on the read and write side; absent keys change nothing.
+  on the read and write side; absent keys change nothing. Round 2 (2026-09-28)
+  adds the slashless-prefix directory read (`resolve_s3_prefix_for_read`),
+  wired into `read_parquet` / `read_csv` / `read_json`.
 - `src/dynamic_flatten.rs` — DF1 `dynamic_flatten` plan rewrite (free function +
   `DynamicFlattenOptions`; re-exported at the crate root). List-of-map and
   ListView refuse LOUD; Dictionary-of-List is cast before Unnest; LargeList /

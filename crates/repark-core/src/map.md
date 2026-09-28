@@ -161,6 +161,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   live-buffer seed (`live_cache_buffer_set`) live in `session/temp_views.rs` and
   `session/cache_budget.rs` — this file is unchanged.
   pins: eager-budget-1/C-005, C-007
+  **S3-PATH-WRITE-1 round 2 (2026-09-28):** `read_json` resolves the S3 prefix
+  once per call through `object_store_s3` (parquet and csv resolve inside their
+  reader bodies, so this file grows by one line and stays under its ceiling).
+  pins: s3-path-write-1/C-013
 - `session_owner.rs` — the session-built DESCRIBE owner: `DescribeOwnerConfig`
   (`repark.describe` prefix, `owner`, default `unknown`), the build-time
   `session_owner_snapshot` (`USER`, then `USERNAME`, then `unknown`), and the
@@ -477,6 +481,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   pins: nullability-2/C-006
   pins: csv-infer-perf-1/C-002, C-005
   pins: torture-1/C-018, C-020
+  **S3-PATH-WRITE-1 round 2 (2026-09-28):** `read_csv_path` resolves the S3
+  prefix once per call through `object_store_s3`, so both the first read and
+  the `utf8_columns` re-read share the directory spelling.
+  pins: s3-path-write-1/C-013
 - `text_scan.rs` — **IO-TEXT-1 (2026-09-14):** the Spark `text` scan. **IO-TEXT-1 (2026-09-15, orchestrator):** `text_scan.rs` carries no doc comments (the unit's workers are briefed comment-free); the two public `Result` entry points take `#[allow(clippy::missing_errors_doc)]` instead.
   A `TableProvider` over sorted local files, plain dirs (hidden `_`/`.` skipped,
   `key=value` dirs descended), and Hadoop globs (see `text_glob.rs`), serving one
@@ -646,6 +654,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   column does not become int32 on write. `drop_null_lists=True` still drops `List(Null)`
   that never went through this reader.
   pins: dynflatten-listnull-1/C-002, C-006
+  **S3-PATH-WRITE-1 round 2 (2026-09-28):** `read_parquet_nullable` resolves
+  the S3 prefix once per call through `object_store_s3`, so the infer read and
+  the relaxed-schema re-read share the directory spelling.
+  pins: s3-path-write-1/C-013
 - `column_resolution.rs` — **ICE-MIXED-CASE-1 (2026-09-17, Q-20b-2):** Spark-door
   case-insensitive column fold with normalization ON
   (`plan_statement_with_column_repair` / `sql_with_column_repair` fold the parsed
@@ -750,6 +762,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   spark and repark spellings, dual keys must agree) resolve from the session config dump
   at store-build time on the read and write side; absent keys leave the builder untouched.
   pins: s3-path-write-1/C-010, C-012
+  **S3-PATH-WRITE-1 round 2 (2026-09-28):** `resolve_s3_prefix_for_read` — a
+  slashless `s3://` / `s3a://` path that names no exact object but has objects
+  under `<path>/` reads as a directory prefix (the Spark and local-door rule);
+  exact keys keep single-file reads, and missing keys, sibling prefixes and
+  lookup failures keep the original spelling so downstream errors are unchanged.
+  Wired once per call into `read_parquet` / `read_csv` / `read_json`.
+  pins: s3-path-write-1/C-013
 - `orc_footer.rs` — **IO-ORC-1 (2026-09-16):** the ORC footer attributes orc-rust drops:
   tail/postscript parse, block-framed decompress in all five codecs, and a minimal
   protobuf field walk returning per-column `spark.sql.catalyst.type` values plus the

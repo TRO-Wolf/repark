@@ -342,21 +342,27 @@ refusal separately) and normalise part names (note `R-S3-PART-NAME`).
   parts, `_SUCCESS`); the read-back drops the partition columns (`[id]`
   instead of `[id, grp]`). The local door drops them identically (measured
   2026-09-28), so this is a pre-existing engine-wide read gap, not S3
-  behaviour.
+  behaviour. Candidate follow-up card (2026-09-28): "hive partition discovery
+  on path reads".
 - **R-S3-SLASH-READ** — read method for all 38 cells, pinned separately.
-  Oracle reads slashless prefixes (`s3a://bucket/p`). Repark refuses them:
-  `PySparkException` "File path ... does not match the expected extension
-  '.parquet'" (DataFusion treats a slashless S3 path as a single file). With
-  a trailing slash the same reads return the oracle rows and column types
-  (`id: bigint`, `grp: string`). The pins read with a trailing slash; the
-  `test_slashless_prefix_read_refuses` pin records the refusal verbatim.
+  Oracle reads slashless prefixes (`s3a://bucket/p`). Repark refused them in
+  round 1: `PySparkException` "File path ... does not match the expected
+  extension '.parquet'" (DataFusion treats a slashless S3 path as a single
+  file). **Round 2 (2026-09-28, RETIRED by orchestrator ruling):** the card's
+  "no change to read_*" is overridden for this one gap. A slashless `s3://` /
+  `s3a://` path that names no exact object but has objects under `<path>/`
+  reads as a directory prefix; exact keys keep single-file reads. All 38 pins
+  read slashless; `test_trailing_slash_prefix_read_still_works` keeps the
+  trailing-slash spelling green.
 - **R-S3-PART-NAME** — normalisation note, all cells. Spark names parts
   `part-00000-<UUID>-c000.snappy.parquet`; DataFusion names them
   `{write_id}_{n}.parquet` with a per-statement random id. The pins normalise
   both to `part.<ext>` and compare counts, hive dirs, `_SUCCESS`, sizes, and
   the `_SUCCESS`-last ordering.
-- **R-S3-OVERWRITE-WINDOW** — failure path, no oracle cell. Spark stages an
-  overwrite and keeps the old objects when the write fails. The ruled
+- **R-S3-OVERWRITE-WINDOW** — failure path, no oracle cell. Reworded
+  2026-09-28: the earlier "Spark keeps the old objects when the write fails"
+  was unmeasured — no oracle cell fails an overwrite mid-write — and is
+  withdrawn; Spark's failed-overwrite residue is unmeasured. The ruled
   delete-then-write overwrite deletes the prefix first: probe F4 below shows
   a seeded prefix wiped to empty when the `COPY` fails. Accepted by the Q2
   ruling (direct parts plus best-effort cleanup); recorded here so a later
@@ -417,3 +423,46 @@ refusal separately) and normalise part names (note `R-S3-PART-NAME`).
 - Late `SET` of the endpoint keys (after session build) neither applies nor
   signals, matching the late region override. Only builder/file config feeds
   the S3 store.
+
+## Round 2 implementation (2026-09-28)
+
+The orchestrator overrode the card's "no change to read_*" for
+`R-S3-SLASH-READ` alone: without it no S3 write/read round trip holds.
+`object_store_s3.rs` gains `resolve_s3_prefix_for_read`: a trailing-slash
+path, a bucket root, and any non-S3 path pass through untouched; otherwise
+the registered store is probed — an exact object keeps the spelling
+(single-file read), objects under `<path>/` append one `/` (directory read,
+the Spark and local-door rule), and anything else (missing keys, sibling
+prefixes, unregistered buckets, lookup failures) keeps the original spelling
+so downstream errors are byte-identical. The probe rides the store DataFusion
+lists through, so the memory, moto and real-S3 list semantics agree (the S3
+list prefixes `<path>/`; the memory list is delimiter-aware and excludes the
+exact key). `read_parquet` (inside `read_parquet_nullable`), `read_csv`
+(inside `read_csv_path`) and `read_json` resolve once per call, so the
+double-read shapes probe once.
+
+The 38 moto pins read slashless, as Spark does; no cell verdict moves (every
+cell already passed through the trailing-slash spelling). The refusal pin is
+replaced by a slashless round-trip pin, a trailing-slash pin, and an
+exact-key pin per format. `R-S3-HIVE-READ` stays a residue and is named above
+as the candidate follow-up card "hive partition discovery on path reads";
+`R-S3-CSV-HEADER` stays (owner decision); `R-S3-OVERWRITE-WINDOW` is reworded
+— Spark's failed-overwrite residue is unmeasured.
+
+## Round 2 verification (2026-09-28)
+
+- Rust: `cargo test -p repark-core --lib` full (852 passed, 1 ignored: the
+  845 round-1 tests plus the 4 `object_store_s3` prefix-resolution pins and
+  the 3 `session::tests::s3_prefix_read` round-trip pins); `cargo clippy -p
+  repark-core --all-targets` with `-D warnings -A clippy::disallowed_methods`
+  and workspace `make rust-panic-ban` green; `cargo fmt -- --check` green.
+- Python: `test_s3_path_write_1.py` (44 passed: 38 slashless cells plus the
+  slashless, trailing-slash, 3 exact-key and no-local-IO pins) on
+  `moto_server` from `target/u12/moto-venv`; every read-path file from
+  `grep -l "read.parquet\|read.csv\|read.json"` (35 files, `-n 8`): 847
+  passed, 30 skipped, zero pin changes.
+- Gates: `comment_ban.py` over `origin/main...HEAD`, `check_lib_rs`,
+  `check_rust_file_size.py` (948 files; `session.rs` 997 under the 1000
+  ceiling), `check_lib_py.py`, `check_ledger_grammar.py`,
+  `check_docs_links.py`, `check_map_md.sh --base origin/main`, ruff check
+  and format checks on the touched test file.

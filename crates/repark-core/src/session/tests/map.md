@@ -18,6 +18,11 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   pins on an in-memory store (no AWS): mode matrix, marker-last commit order,
   exists-any-object, overwrite delete-then-write, bucket-root refusal.
   pins: s3-path-write-1/C-007, C-008, C-009, C-015
+- `s3_prefix_read.rs` — **S3-PATH-WRITE-1 round 2 (2026-09-28):** slashless S3
+  prefix reads on an in-memory store (no AWS): a written prefix reads back
+  slashless for parquet, csv and json; exact part URLs keep single-file reads
+  for all three; the trailing-slash and `s3a://` spellings read the same rows.
+  pins: s3-path-write-1/C-013
 - `hadoop_naming.rs` — **PR-B hadoop naming (2026-09-24):** a catalog configured through the
   config map with `type=hadoop` over a LocalFs tempdir warehouse: create through the registered
   handle, then two SQL `INSERT`s. The `*.metadata.json` names in `db/t/metadata/` are exactly

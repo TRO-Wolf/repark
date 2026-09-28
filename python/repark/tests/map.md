@@ -3593,6 +3593,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `W-PATH-S3-*` moto cells (22 EQUAL, 16 dated residues in 5 families) plus the
   slashless-scheme and no-local-IO pins. The tier-2 live leg lives in
   `test_aws_acceptance.py` and skips locally.
+  **S3-PATH-WRITE-1 round 2 (2026-09-28):** the 38 cells read slashless, as
+  Spark does (`R-S3-SLASH-READ` retired, no verdict moves); the refusal pin is
+  a slashless round-trip pin, a trailing-slash pin, and an exact-key pin per
+  format.
   pins: s3-path-write-1/C-007, C-008, C-009, C-012, C-013, C-014, C-015
 - `test_e2_readwriter.py` — E2 R-CENSUS-READWRITER: bare-name resolution
   (`resolve_table_name` / saveAsTable / table / writeTo / insertInto / MERGE /

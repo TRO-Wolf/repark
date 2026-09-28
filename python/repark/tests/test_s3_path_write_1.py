@@ -1,11 +1,12 @@
 """Moto pins for the 38 W-PATH-S3-* oracle cells in ``u12-spark.json``.
 
 Each cell replays on ``moto_server``: write outcome, normalised listing, and
-read-back rows. Behaviour that diverges from the oracle pins actual repark
-output; the ledger classifies it: ``R-S3-CSV-HEADER`` (csv header default),
-``R-S3-READBACK-NOFILES`` / ``R-S3-READBACK-FOREIGN`` (read-back errors),
-``R-S3-SLASH-READ`` (slashless S3 prefix reads refuse, so pins read with a
-trailing slash), ``R-S3-PART-NAME`` (part filename shape, normalised away).
+read-back rows through the same slashless prefix Spark reads. Behaviour that
+diverges from the oracle pins actual repark output; the ledger classifies it:
+``R-S3-CSV-HEADER`` (csv header default), ``R-S3-READBACK-NOFILES`` /
+``R-S3-READBACK-FOREIGN`` (read-back errors), ``R-S3-PART-NAME`` (part filename
+shape, normalised away). Round 2 retired ``R-S3-SLASH-READ``: a slashless S3
+prefix with objects under ``<path>/`` reads as a directory.
 
 pins: s3-path-write-1/C-007, C-008, C-009, C-012, C-013
 """
@@ -23,7 +24,7 @@ from typing import Any
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException, PySparkException
+from repark.errors import AnalysisException
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 MOTOPY = REPO_ROOT / "target" / "u12" / "moto-venv" / "bin" / "python"
@@ -278,9 +279,9 @@ def _read_back(spark: Any, url: str, cell: dict[str, Any]) -> dict[str, Any]:
     reader = getattr(spark.read, cell["format"])
     try:
         if cell["format"] == "csv" and cell.get("csv_header_read"):
-            frame = reader(url + "/", header=True)
+            frame = reader(url, header=True)
         else:
-            frame = reader(url + "/")
+            frame = reader(url)
         rows = [[_norm_value(value) for value in row] for row in frame.collect()]
         cols = [[field.name, field.dataType.simpleString()] for field in frame.schema.fields]
         return {"status": "ok", "cols": cols, "count": len(rows), "rows": rows}
@@ -380,14 +381,40 @@ def test_oracle_cell(spark: Any, moto_endpoint: str, key: str) -> None:
     _assert_readback_equal(actual, expected)
 
 
-def test_slashless_prefix_read_refuses(spark: Any, moto_endpoint: str) -> None:
-    """Slashless S3 prefix reads refuse; the pins read with a trailing slash."""
+def test_slashless_prefix_reads_the_written_parts(spark: Any, moto_endpoint: str) -> None:
+    """A slashless S3 prefix reads as a directory, the Spark spelling of the round trip."""
     url = f"s3a://{BUCKET}/slashless/p"
     _s3_reset(moto_endpoint, "slashless/p")
     spark.createDataFrame(ROWS, COLUMNS).write.mode("overwrite").parquet(url)
-    with pytest.raises(PySparkException) as caught:
-        spark.read.parquet(url).collect()
-    assert "does not match the expected extension" in str(caught.value)
+    frame = spark.read.parquet(url)
+    assert sorted(map(list, frame.collect())) == sorted(map(list, ROWS))
+
+
+def test_trailing_slash_prefix_read_still_works(spark: Any, moto_endpoint: str) -> None:
+    """The trailing-slash read keeps working beside the slashless spelling."""
+    url = f"s3a://{BUCKET}/trailingslash/p"
+    _s3_reset(moto_endpoint, "trailingslash/p")
+    spark.createDataFrame(ROWS, COLUMNS).write.mode("overwrite").parquet(url)
+    slashed = spark.read.parquet(url + "/")
+    assert slashed.count() == len(ROWS)
+
+
+@pytest.mark.parametrize("extension", ["parquet", "csv", "json"])
+def test_exact_object_url_reads_one_file(spark: Any, moto_endpoint: str, extension: str) -> None:
+    """An exact S3 key with an extension reads as one file, never as a prefix."""
+    prefix = f"exact-{extension}/p"
+    _s3_reset(moto_endpoint, prefix)
+    url = f"s3a://{BUCKET}/{prefix}"
+    spark.createDataFrame(ROWS, COLUMNS).write.mode("overwrite").format(extension).save(url)
+    objects = _s3_list(moto_endpoint, prefix)
+    parts = [found["key"] for found in objects if found["key"].endswith(f".{extension}")]
+    assert len(parts) == 1
+    reader = getattr(spark.read, extension)
+    if extension == "csv":
+        frame = reader(f"s3a://{BUCKET}/{parts[0]}", header=True)
+    else:
+        frame = reader(f"s3a://{BUCKET}/{parts[0]}")
+    assert frame.count() == len(ROWS)
 
 
 def test_s3_write_makes_no_local_filesystem_calls(

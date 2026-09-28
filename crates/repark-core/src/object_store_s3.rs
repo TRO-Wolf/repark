@@ -6,10 +6,14 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use aws_config::SdkConfig;
 use aws_credential_types::provider::{ProvideCredentials, SharedCredentialsProvider};
+use datafusion::execution::object_store::ObjectStoreUrl;
 use datafusion::prelude::SessionContext;
+use futures::StreamExt;
 use object_store::CredentialProvider;
 use object_store::ObjectStore;
+use object_store::ObjectStoreExt;
 use object_store::aws::{AmazonS3Builder, AwsCredential};
+use object_store::path::Path as ObjectPath;
 use url::Url;
 
 use repark_common::{Error, Result};
@@ -149,6 +153,39 @@ pub(crate) fn parse_s3_bucket(path: &str) -> Option<(String, String)> {
     Some((scheme.to_string(), bucket.to_string()))
 }
 
+pub(crate) async fn resolve_s3_prefix_for_read(context: &SessionContext, path: &str) -> String {
+    if path.ends_with('/') {
+        return path.to_string();
+    }
+    let Some((_scheme, bucket)) = parse_s3_bucket(path) else {
+        return path.to_string();
+    };
+    let Ok(url) = Url::parse(path) else {
+        return path.to_string();
+    };
+    let prefix_text = url.path().trim_matches('/').to_string();
+    if prefix_text.is_empty() {
+        return path.to_string();
+    }
+    let Ok(prefix) = ObjectPath::from_url_path(&prefix_text) else {
+        return path.to_string();
+    };
+    let Ok(store_url) = ObjectStoreUrl::parse(format!("s3://{bucket}")) else {
+        return path.to_string();
+    };
+    let Ok(store) = context.runtime_env().object_store(&store_url) else {
+        return path.to_string();
+    };
+    if store.head(&prefix).await.is_ok() {
+        return path.to_string();
+    }
+    let mut listed = store.list(Some(&prefix));
+    match listed.next().await {
+        Some(Ok(_)) => format!("{path}/"),
+        _ => path.to_string(),
+    }
+}
+
 /// Bridges the resolved `aws-config` credential provider into `object_store`.
 #[derive(Debug)]
 pub(crate) struct AwsConfigCredentialProvider {
@@ -263,6 +300,8 @@ pub(crate) fn register_bucket_store(
 mod tests {
     use super::*;
     use aws_credential_types::Credentials;
+    use object_store::PutPayload;
+    use object_store::memory::InMemory;
 
     /// A static credentials provider for the adapter unit test.
     fn static_provider() -> SharedCredentialsProvider {
@@ -441,6 +480,83 @@ mod tests {
         assert_eq!(resolved.endpoint.as_deref(), Some("http://127.0.0.1:5599"));
         assert_eq!(resolved.path_style_access, None);
         assert_eq!(resolved.ssl_enabled, Some(false));
+    }
+
+    async fn prefix_context(keys: &[&str]) -> SessionContext {
+        let context = SessionContext::new();
+        let store: Arc<dyn ObjectStore> = Arc::new(InMemory::new());
+        for key in keys {
+            store
+                .put(&ObjectPath::from(*key), PutPayload::from(vec![1u8]))
+                .await
+                .unwrap();
+        }
+        register_bucket_store(&context, "bucket", &store).unwrap();
+        context
+    }
+
+    #[tokio::test]
+    async fn slashless_prefix_with_children_reads_as_a_directory() {
+        let context = prefix_context(&["cell/p/part-0.parquet"]).await;
+        assert_eq!(
+            resolve_s3_prefix_for_read(&context, "s3://bucket/cell/p").await,
+            "s3://bucket/cell/p/"
+        );
+        assert_eq!(
+            resolve_s3_prefix_for_read(&context, "s3a://bucket/cell/p").await,
+            "s3a://bucket/cell/p/"
+        );
+    }
+
+    #[tokio::test]
+    async fn exact_object_reads_keep_their_spelling() {
+        let context = prefix_context(&["cell/p/part-0.parquet", "cell/exact.csv"]).await;
+        assert_eq!(
+            resolve_s3_prefix_for_read(&context, "s3://bucket/cell/p/part-0.parquet").await,
+            "s3://bucket/cell/p/part-0.parquet"
+        );
+        assert_eq!(
+            resolve_s3_prefix_for_read(&context, "s3a://bucket/cell/exact.csv").await,
+            "s3a://bucket/cell/exact.csv"
+        );
+    }
+
+    #[tokio::test]
+    async fn exact_object_wins_over_children_with_the_same_prefix() {
+        let context = prefix_context(&["cell/p", "cell/p/part-0.parquet"]).await;
+        assert_eq!(
+            resolve_s3_prefix_for_read(&context, "s3://bucket/cell/p").await,
+            "s3://bucket/cell/p"
+        );
+    }
+
+    #[tokio::test]
+    async fn sibling_prefixes_missing_keys_and_non_s3_paths_stay_untouched() {
+        let context = prefix_context(&["cell/p2/part-0.parquet"]).await;
+        assert_eq!(
+            resolve_s3_prefix_for_read(&context, "s3://bucket/cell/p").await,
+            "s3://bucket/cell/p"
+        );
+        assert_eq!(
+            resolve_s3_prefix_for_read(&context, "s3://bucket/nowhere").await,
+            "s3://bucket/nowhere"
+        );
+        assert_eq!(
+            resolve_s3_prefix_for_read(&context, "s3://other/cell/p").await,
+            "s3://other/cell/p"
+        );
+        assert_eq!(
+            resolve_s3_prefix_for_read(&context, "s3://bucket/cell/p/").await,
+            "s3://bucket/cell/p/"
+        );
+        assert_eq!(
+            resolve_s3_prefix_for_read(&context, "s3://bucket").await,
+            "s3://bucket"
+        );
+        assert_eq!(
+            resolve_s3_prefix_for_read(&context, "/tmp/cell/p").await,
+            "/tmp/cell/p"
+        );
     }
 
     #[tokio::test]
