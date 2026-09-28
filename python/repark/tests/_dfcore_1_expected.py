@@ -701,6 +701,7 @@ EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
     "writer_save",
     "writer_schema",
     "writer_text",
+    "written_names",
     "_native",
 }
 
@@ -718,5 +719,6 @@ EXPECTED_NEW_CORE_SUBMODULES: set[str] = {
     "surface_b",
     "udf_projection",
     "udf_window_projection",
+    "written_names",
     "_native",
 }

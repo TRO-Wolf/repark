@@ -210,6 +210,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_describe_resolves_display_names_under_case_insensitive` and
   `test_describe_refuses_duplicate_display_names_as_ambiguous` (VC-4).
   pins: casesens-1/C-009, C-010
+- [test_casesens_2.py](test_casesens_2.py) + `casesens_2_spark_oracle.json` —
+  **WO CASESENS-2 slice 1 (2026-09-28):** the R-CS1-10 true-door refusals plus
+  getitem (class, condition, SQLSTATE, head, candidate set per leg), the five
+  true-mode p6 misses, the qualified-string legs (R-11 answer, exact-qualified
+  answers under `true`, the self-join shape refuses naming `` `l`.`ID` ``),
+  and the false-door guards (r7 legs, S3 false legs, legacy miss text, R-19
+  lazy timing, quoter spot). `r7_selfjoin` and `qs_sel_t_id_true` stay
+  unpinned (re-homed per the 2026-09-28 ruling). p1/p4 legs read
+  `casesens_1_spark_oracle.json`.
+  pins: casesens-2/C-001, C-002, C-003, C-006
 - [test_ntz_1.py](test_ntz_1.py) + `ntz_1_spark_oracle.json` — **WO NTZ-1 slice 1
   (2026-09-26):** the `TIMESTAMP_NTZ` literal and explicit casts replay Spark's measured
   answers — 29 literal/cast/refusal queries in UTC and New York sessions, the v2/v3

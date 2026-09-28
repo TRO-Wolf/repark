@@ -39,6 +39,7 @@ from repark.spark.dataframe import (
     subquery,
     surface_a,
     surface_b,
+    written_names,
 )
 from repark.spark.dataframe.cache_handle import _warn_storage_level_cosmetic_once
 from repark.spark.dataframe.explain import _EXPLAIN_SECTION_PLAN, _render_explain_sections
@@ -1229,6 +1230,8 @@ class DataFrame:
             predicate = self._rebind_origin_column(condition)
             return self._spawn_preserving_identity(self._plan().filter(predicate._inner))
         if isinstance(condition, str):
+            if _native.frame_is_exact(self._plan()):
+                return self._spawn_preserving_identity(self._plan().filter_sql(condition))
             quoted = self._quote_filter_sql_identifiers(condition)
             return self._spawn_preserving_identity(self._plan().filter_sql(quoted))
         raise PySparkTypeError(
@@ -1964,29 +1967,24 @@ class DataFrame:
         )
 
     def _bind_schema_column(self, name: str, canonical: str | None = None) -> Column:
-        """Bind a name case-insensitively and quote its canonical engine identifier.
+        """Bind a name by the session rule and quote its canonical engine identifier.
 
         Preserve the requested display spelling and attach origin metadata for joins.
         """
-        from repark.spark._idents import quote_ident as _quote_ident
-
-        written = canonical is None
-        canonical = self._resolve_getitem_column_name(name) if written else canonical
-        engine_field = self._engine_field_for_display(canonical)
-        quoted = _quote_ident(engine_field)
-        native = (
-            _native.PyColumn.column(quoted) if written else _native.attribute_column(engine_field)
-        )
-        return Column(
-            native.alias(name),
-            spark_display=name,
-            projection_name=name,
-            stable_name=True,
-            has_free_attribute=True,
-            sql_expr=quoted,
-            origin_plan_id=self._plan_id,
-            origin_field=canonical,
-        )
+        if canonical is not None:
+            engine_field = self._engine_field_for_display(canonical)
+            quoted = _quote_ident_sql(engine_field)
+            return Column(
+                _native.attribute_column(engine_field).alias(name),
+                spark_display=name,
+                projection_name=name,
+                stable_name=True,
+                has_free_attribute=True,
+                sql_expr=quoted,
+                origin_plan_id=self._plan_id,
+                origin_field=canonical,
+            )
+        return written_names._bind_written_column(self, name)
 
     def _quote_filter_sql_identifiers(self, sql: str) -> str:
         """Quote schema-bound identifiers in a SQL filter predicate.
@@ -2042,6 +2040,8 @@ class DataFrame:
         must not re-resolve by bare display name — multi-name frames raise
         ``AMBIGUOUS_REFERENCE`` on that path.
         """
+        if _native.frame_is_exact(self._plan()):
+            return column
         if not column._stable_name:
             return column
         if column._origin_plan_id is not None and column._origin_field is not None:

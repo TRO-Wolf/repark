@@ -128,6 +128,20 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   **Critic round (2026-09-14, R-4):** the select/filter struct-edit resolve hooks are
   deleted — `withField` / `dropFields` are native `update_fields` expressions, so no
   boundary rewrite runs. pins: column-parity-1/C-002, C-004, C-005, C-008
+  CASESENS-2 S1 (2026-09-28): `_bind_schema_column` keeps the engine branch and
+  delegates the written path to `written_names._bind_written_column` (one-line
+  call site); `_rebind_stable_name_column` returns its input under `Exact`, and
+  string `filter` skips the quoter under `Exact`. `core` binds `written_names`,
+  so the package and core surfaces gain exactly that module name. `core.py`
+  stays 3973 (the extracted method funds the two gates and the module binding).
+  pins: casesens-2/C-001, C-003, C-006
+- `written_names.py` owns the CASESENS-2 S1 written-name body
+  `_bind_written_column(frame, name)` behind the `_bind_schema_column` call site:
+  exact-or-raise under `Exact`, the exact-membership fast path plus the native
+  R5 match and the legacy miss/ambiguity renderers under `IgnoreCase`, and
+  qualified strings riding the proven `F.col` path. Every string site shares
+  getitem's R-19 laziness (C-023 pins lazy `select` on twins).
+  pins: casesens-2/C-001, C-003, C-006
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`

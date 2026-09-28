@@ -17,6 +17,8 @@ use datafusion::sql::sqlparser::parser::Parser;
 use repark_common::spark_error;
 
 pub use super::subquery::resolve_bound_expr_with;
+pub use super::written_names::{Disposition, unresolved_subset_name};
+pub use super::written_names::{match_display_names, resolve_df_names};
 pub use repark_common::names::{NameHit, NameRule};
 
 type Hit<'a> = (Option<&'a TableReference>, &'a Field);
@@ -178,7 +180,7 @@ fn ambiguous_reference(column: &Column, hits: &[Hit<'_>]) -> DataFusionError {
     )
 }
 
-fn unresolved_column(column: &Column, frame_schema: &DFSchema) -> DataFusionError {
+pub(super) fn unresolved_column(column: &Column, frame_schema: &DFSchema) -> DataFusionError {
     let reference = sql_id(column.relation.as_ref(), &column.name);
     let suggestions = frame_schema
         .iter()
