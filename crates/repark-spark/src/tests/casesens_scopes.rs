@@ -155,6 +155,115 @@ async fn derived_and_cte_projections_keep_the_written_spelling() {
 }
 
 #[tokio::test]
+async fn values_derived_table_first_keeps_later_spellings() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    create_probe_tables(&ctx, &catalogs).await;
+    let (names, rows) = names_and_rows(
+        &ctx,
+        &catalogs,
+        "SELECT * FROM (VALUES (7)) AS v(x) \
+         CROSS JOIN (SELECT id FROM ice.sales.t) a \
+         CROSS JOIN (SELECT Data FROM ice.sales.u) b",
+    )
+    .await;
+    assert_eq!(
+        names,
+        vec!["x".to_string(), "id".to_string(), "Data".to_string()]
+    );
+    assert_eq!(
+        rows,
+        vec![
+            vec!["7".to_string(), "1".to_string(), "x".to_string()],
+            vec!["7".to_string(), "1".to_string(), "y".to_string()],
+            vec!["7".to_string(), "2".to_string(), "x".to_string()],
+            vec!["7".to_string(), "2".to_string(), "y".to_string()],
+        ]
+    );
+}
+
+#[tokio::test]
+async fn values_cte_keeps_later_spellings() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    create_probe_tables(&ctx, &catalogs).await;
+    let (names, rows) = names_and_rows(
+        &ctx,
+        &catalogs,
+        "WITH v(x) AS (VALUES (7)), a AS (SELECT id FROM ice.sales.t), \
+         b AS (SELECT Data FROM ice.sales.u) SELECT * FROM v, a, b",
+    )
+    .await;
+    assert_eq!(
+        names,
+        vec!["x".to_string(), "id".to_string(), "Data".to_string()]
+    );
+    assert_eq!(
+        rows,
+        vec![
+            vec!["7".to_string(), "1".to_string(), "x".to_string()],
+            vec!["7".to_string(), "1".to_string(), "y".to_string()],
+            vec!["7".to_string(), "2".to_string(), "x".to_string()],
+            vec!["7".to_string(), "2".to_string(), "y".to_string()],
+        ]
+    );
+}
+
+#[tokio::test]
+async fn values_body_in_the_middle_keeps_later_spellings() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    create_probe_tables(&ctx, &catalogs).await;
+    let (names, rows) = names_and_rows(
+        &ctx,
+        &catalogs,
+        "SELECT * FROM (SELECT ID FROM ice.sales.t) a \
+         CROSS JOIN (VALUES (7)) AS v(x) \
+         CROSS JOIN (SELECT DATA FROM ice.sales.u) b",
+    )
+    .await;
+    assert_eq!(
+        names,
+        vec!["ID".to_string(), "x".to_string(), "DATA".to_string()]
+    );
+    assert_eq!(
+        rows,
+        vec![
+            vec!["1".to_string(), "7".to_string(), "x".to_string()],
+            vec!["1".to_string(), "7".to_string(), "y".to_string()],
+            vec!["2".to_string(), "7".to_string(), "x".to_string()],
+            vec!["2".to_string(), "7".to_string(), "y".to_string()],
+        ]
+    );
+}
+
+#[tokio::test]
+async fn values_left_set_operation_keeps_later_spellings() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    create_probe_tables(&ctx, &catalogs).await;
+    let (names, rows) = names_and_rows(
+        &ctx,
+        &catalogs,
+        "SELECT * FROM (VALUES (7) UNION ALL SELECT id FROM ice.sales.t) AS v(x) \
+         CROSS JOIN (SELECT ID FROM ice.sales.u) b",
+    )
+    .await;
+    assert_eq!(names, vec!["x".to_string(), "ID".to_string()]);
+    assert_eq!(
+        rows,
+        vec![
+            vec!["1".to_string(), "1".to_string()],
+            vec!["1".to_string(), "5".to_string()],
+            vec!["2".to_string(), "1".to_string()],
+            vec!["2".to_string(), "5".to_string()],
+            vec!["7".to_string(), "1".to_string()],
+            vec!["7".to_string(), "5".to_string()],
+        ]
+    );
+}
+
+#[tokio::test]
 async fn column_alias_list_keeps_its_spelling() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;

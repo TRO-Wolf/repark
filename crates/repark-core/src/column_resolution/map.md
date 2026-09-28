@@ -86,6 +86,10 @@ pins: ice-error-conditions-1/C-011
   battery pins the twice-written spelling in another case, the unequal scope
   walks, the quoted value, the upper-case expression alias and the scalar
   subquery, each red under its guard's removal (ledger M14–M18).
+  **Verifier fold (2026-09-28, VC-2):** a body that is not a `SELECT`
+  (`VALUES`, a set operation whose leftmost leg is `VALUES`) collects an
+  explicit empty scope, so the collector and the applier walk the same shape
+  and later scopes keep their own spelling.
   pins: casesens-1/C-001, C-002
 - `scope_fields.rs` — **WO CASESENS-1 S1b (2026-09-27):** the syntactic scope
   outputs the repair fold needs before a plan exists. `query_outputs` reads a

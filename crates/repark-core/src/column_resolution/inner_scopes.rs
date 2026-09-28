@@ -34,6 +34,13 @@ struct WrittenScope {
 }
 
 impl WrittenScope {
+    fn empty() -> Self {
+        Self {
+            items: Vec::new(),
+            counts: HashMap::new(),
+        }
+    }
+
     fn of(projection: &[SelectItem]) -> Self {
         let mut items = Vec::with_capacity(projection.len());
         let mut counts: HashMap<String, usize> = HashMap::new();
@@ -88,7 +95,10 @@ impl Collector {
                 SetExpr::SetOperation { left, .. } => {
                     node = left.as_ref();
                 }
-                _ => return,
+                _ => {
+                    self.scopes.push(WrittenScope::empty());
+                    return;
+                }
             }
         }
     }
