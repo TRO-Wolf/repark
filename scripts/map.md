@@ -1,5 +1,7 @@
 # map — scripts/
 
+CASESENS-2 (2026-09-28, PR #881): `check_lib_py.py` ratchets `spark/dataframe/core.py` 3973 → 3957 (the S1–S3 name bindings move to Rust), with the CAP-1 mirror, shrink-only. pins: casesens-2/C-007
+
 WO CASESENS-1 S5 (2026-09-27): `check_rust_file_size.py` ratchets `repark-iceberg/src/write/alter.rs` 1607 → 1606 (the DROP/REPLACE name pin is rewritten to the exact refusal without its comments), shrink-only. pins: casesens-1/C-013
 
 WO CASESENS-1 S3 (2026-09-27): `check_rust_file_size.py` retires the `repark-python/src/dataframe.rs` row (1005 → 976, under the default; the case-bind helpers moved to `dataframe_names.rs`). pins: casesens-1/C-009
