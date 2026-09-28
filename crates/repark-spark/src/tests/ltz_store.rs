@@ -208,3 +208,58 @@ async fn legal_sources_into_timestamp_still_store() {
         ]
     );
 }
+
+#[tokio::test]
+async fn typed_numeric_values_into_timestamp_refuse() {
+    let (_warehouse, ctx, catalogs) = door().await;
+    for target in [
+        "TINYINT",
+        "SMALLINT",
+        "INT",
+        "BIGINT",
+        "FLOAT",
+        "DOUBLE",
+        "DECIMAL(10,2)",
+    ] {
+        let sql = format!("INSERT INTO ice.sales.l VALUES (0, CAST(1 AS {target}))");
+        let refused = plan_err(&ctx, &catalogs, &sql).await;
+        assert!(
+            refused.contains("[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]"),
+            "{sql}: {refused}"
+        );
+        assert!(refused.contains("SQLSTATE: KD000"), "{sql}: {refused}");
+    }
+    for cell in ["DECIMAL '1.5'", "1L"] {
+        let sql = format!("INSERT INTO ice.sales.l VALUES (0, {cell})");
+        let refused = plan_err(&ctx, &catalogs, &sql).await;
+        assert!(
+            refused.contains("[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]"),
+            "{sql}: {refused}"
+        );
+        assert!(refused.contains("SQLSTATE: KD000"), "{sql}: {refused}");
+    }
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.l VALUES (1, CAST(NULL AS DECIMAL(10,2)))",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.l VALUES (2, CAST(NULL AS INT))",
+    )
+    .await;
+    let mixed = plan_err(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.l VALUES (3, TIMESTAMP '2024-03-03 00:00:00'), (4, 5)",
+    )
+    .await;
+    assert!(
+        mixed.contains("[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]"),
+        "{mixed}"
+    );
+    assert!(mixed.contains("SQLSTATE: KD000"), "{mixed}");
+    assert_eq!(id_and_c(&ctx, &catalogs).await, vec![(1, None), (2, None)]);
+}

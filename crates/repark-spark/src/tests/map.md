@@ -2062,6 +2062,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   equals Spark's recorded `ins_l_int` refusal on the test catalog, and the refused
   statements leave the seeded row intact — while NULL, DATE, TIMESTAMP, TIMESTAMP_NTZ,
   explicit-CAST and column-list VALUES rows still store with their exact read-backs.
+  **Fold 2026-09-28 (critic V-001):** the `typed_numeric_values_into_timestamp_refuse`
+  sibling pins every numeric CAST, `DECIMAL '1.5'`, `1L`, two `CAST(NULL …)` rows and
+  a mixed multi-row refusal that writes nothing.
   pins: ltz-store-int-1/C-001
 - `use_ddl.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the `USE` behavior pins over
   one- and two-catalog memory setups: two-part set, v2 clear-to-empty, session-catalog

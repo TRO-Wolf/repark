@@ -1,13 +1,15 @@
-use datafusion::arrow::datatypes::{DataType, Schema as ArrowSchema};
+use datafusion::arrow::datatypes::{DataType, Schema as ArrowSchema, TimeUnit};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
-    Expr, Insert, ObjectName, SetExpr, TableObject, UnaryOperator, Value,
+    DataType as SqlDataType, ExactNumberInfo, Expr, Insert, ObjectName, SetExpr, TableObject,
+    TypedString, UnaryOperator, Value,
 };
 use iceberg::{NamespaceIdent, TableIdent};
+use repark_common::spark_error;
 use repark_core::CatalogRegistry;
 
-use super::column_name;
+use super::{column_name, is_null_valued};
 use crate::catalog_ops::{name_parts, quoted_table_display};
 use crate::write_to_branch::qualify_table_parts;
 
@@ -58,7 +60,7 @@ pub(crate) async fn refuse_unassignable_ltz_values(
     if !presented
         .fields()
         .iter()
-        .any(|field| is_ltz(field.data_type()))
+        .any(|field| is_microsecond_ltz(field.data_type()))
     {
         return Ok(());
     }
@@ -121,7 +123,7 @@ async fn refuse_value(
     target: &DataType,
     value: &Expr,
 ) -> Result<()> {
-    if !is_ltz(target) {
+    if is_null_valued(value) || !is_microsecond_ltz(target) {
         return Ok(());
     }
     let source = if let Some(data_type) = literal_source_type(value) {
@@ -140,17 +142,40 @@ async fn refuse_value(
     ) {
         return Err(DataFusionError::Plan(text));
     }
+    if source.is_numeric() {
+        return Err(DataFusionError::Plan(numeric_refusal(
+            display, column, &source, target,
+        )));
+    }
     Ok(())
 }
 
-fn is_ltz(data_type: &DataType) -> bool {
-    matches!(data_type, DataType::Timestamp(_, Some(_)))
+fn numeric_refusal(display: &str, column: &str, source: &DataType, target: &DataType) -> String {
+    let from = crate::spark_type_names::spark_ddl_type_name(source).to_uppercase();
+    let to = crate::spark_type_names::spark_ddl_type_name(target).to_uppercase();
+    let column = format!("`{column}`");
+    spark_error::message(
+        spark_error::INCOMPATIBLE_DATA_FOR_TABLE_CANNOT_SAFELY_CAST,
+        &[
+            ("tableName", display),
+            ("columnName", column.as_str()),
+            ("fromType", from.as_str()),
+            ("toType", to.as_str()),
+        ],
+    )
+}
+
+fn is_microsecond_ltz(data_type: &DataType) -> bool {
+    matches!(
+        data_type,
+        DataType::Timestamp(TimeUnit::Microsecond, Some(_))
+    )
 }
 
 fn literal_source_type(value: &Expr) -> Option<DataType> {
     match value {
         Expr::Value(literal) => match &literal.value {
-            Value::Number(text, _) => Some(number_text_type(text)),
+            Value::Number(text, long) => Some(number_text_type(text, *long)),
             Value::SingleQuotedString(_)
             | Value::NationalStringLiteral(_)
             | Value::TripleSingleQuotedString(_) => Some(DataType::Utf8),
@@ -167,24 +192,79 @@ fn literal_source_type(value: &Expr) -> Option<DataType> {
             while let Expr::Nested(inner) = peeled {
                 peeled = inner;
             }
-            if let Expr::Value(literal) = peeled
-                && let Value::Number(text, _) = &literal.value
-            {
-                Some(number_text_type(text))
-            } else {
-                None
+            match peeled {
+                Expr::Value(literal) => match &literal.value {
+                    Value::Number(text, long) => Some(number_text_type(text, *long)),
+                    _ => None,
+                },
+                Expr::TypedString(typed) => decimal_typed_string(typed),
+                _ => None,
             }
         }
+        Expr::Cast {
+            data_type: SqlDataType::Decimal(info),
+            ..
+        } => Some(decimal_info_type(info)),
+        Expr::TypedString(typed) => decimal_typed_string(typed),
         _ => None,
     }
 }
 
-fn number_text_type(text: &str) -> DataType {
-    if text.bytes().all(|byte| byte.is_ascii_digit()) {
+fn number_text_type(text: &str, long: bool) -> DataType {
+    if long {
+        DataType::Int64
+    } else if text.bytes().all(|byte| byte.is_ascii_digit()) {
         DataType::Int32
     } else {
         DataType::Float64
     }
+}
+
+fn decimal_info_type(info: &ExactNumberInfo) -> DataType {
+    match info {
+        ExactNumberInfo::None => DataType::Decimal128(10, 0),
+        ExactNumberInfo::Precision(precision) => {
+            DataType::Decimal128(u8::try_from(*precision).unwrap_or(38), 0)
+        }
+        ExactNumberInfo::PrecisionAndScale(precision, scale) => DataType::Decimal128(
+            u8::try_from(*precision).unwrap_or(38),
+            i8::try_from(*scale).unwrap_or(0),
+        ),
+    }
+}
+
+fn decimal_typed_string(typed: &TypedString) -> Option<DataType> {
+    let SqlDataType::Decimal(info) = &typed.data_type else {
+        return None;
+    };
+    match info {
+        ExactNumberInfo::None => match &typed.value.value {
+            Value::SingleQuotedString(text)
+            | Value::NationalStringLiteral(text)
+            | Value::TripleSingleQuotedString(text) => decimal_text_type(text),
+            _ => None,
+        },
+        _ => Some(decimal_info_type(info)),
+    }
+}
+
+fn decimal_text_type(text: &str) -> Option<DataType> {
+    let (head, tail) = match text.split_once('.') {
+        Some((head, tail)) => (head, tail),
+        None => (text, ""),
+    };
+    if head.is_empty() && tail.is_empty() {
+        return None;
+    }
+    if !head.bytes().all(|byte| byte.is_ascii_digit())
+        || !tail.bytes().all(|byte| byte.is_ascii_digit())
+    {
+        return None;
+    }
+    Some(DataType::Decimal128(
+        u8::try_from(head.len() + tail.len()).unwrap_or(38),
+        i8::try_from(tail.len()).unwrap_or(0),
+    ))
 }
 
 async fn probe_source_type(ctx: &SessionContext, value: &Expr) -> Option<DataType> {
@@ -221,9 +301,19 @@ mod tests {
     }
 
     #[test]
-    fn bare_and_signed_integers_read_as_int() {
-        let row = values_row("INSERT INTO t VALUES (1, -1, +2, (3))");
-        assert_eq!(typed(&row), vec![Some(DataType::Int32); 4], "{row:?}");
+    fn bare_signed_and_long_integers_read_as_int_and_bigint() {
+        let row = values_row("INSERT INTO t VALUES (1, -1, +2, (3), 1L)");
+        assert_eq!(
+            typed(&row),
+            vec![
+                Some(DataType::Int32),
+                Some(DataType::Int32),
+                Some(DataType::Int32),
+                Some(DataType::Int32),
+                Some(DataType::Int64),
+            ],
+            "{row:?}"
+        );
     }
 
     #[test]
@@ -246,5 +336,21 @@ mod tests {
         let row =
             values_row("INSERT INTO t VALUES (CAST(1 AS TIMESTAMP), DATE '2024-01-04', abs(-1))");
         assert_eq!(typed(&row), vec![None, None, None], "{row:?}");
+    }
+
+    #[test]
+    fn decimal_casts_and_typed_strings_read_as_decimal() {
+        let row = values_row(
+            "INSERT INTO t VALUES (CAST(1 AS DECIMAL(10,2)), DECIMAL '1.5', -DECIMAL '1.5')",
+        );
+        assert_eq!(
+            typed(&row),
+            vec![
+                Some(DataType::Decimal128(10, 2)),
+                Some(DataType::Decimal128(2, 1)),
+                Some(DataType::Decimal128(2, 1)),
+            ],
+            "{row:?}"
+        );
     }
 }

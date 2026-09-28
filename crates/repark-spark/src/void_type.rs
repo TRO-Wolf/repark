@@ -58,7 +58,7 @@ fn is_void_spelling(data_type: &DataType) -> bool {
     }
 }
 
-fn is_null_valued(expr: &Expr) -> bool {
+pub(crate) fn is_null_valued(expr: &Expr) -> bool {
     match expr {
         Expr::Value(value) => matches!(value.value, Value::Null),
         Expr::Nested(inner) => is_null_valued(inner),

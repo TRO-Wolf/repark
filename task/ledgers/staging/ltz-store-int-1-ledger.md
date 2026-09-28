@@ -41,6 +41,23 @@ BOOLEAN SELECT which dies in DataFusion's own `Cannot automatically convert`
 plan error. So the one site is the VALUES door, and the fix is one gate plus
 two lines at the existing void VALUES gate site.
 
+**Fold (2026-09-28, critic V-001).** The critic's 36-shape probe found typed
+decimals (`CAST(x AS DECIMAL(p,s))`, `DECIMAL '1.5'`) still writing epoch micros
+through VALUES while SELECT refused them: the shared gate returns None for
+sources with no Spark name, and the VALUES gate read None as pass. The fold
+stays in the same gate: null-valued cells pass (`CAST(NULL AS …)` is legal);
+every numeric source refuses even when the shared gate cannot name it, with the
+DDL-name fallback carrying the class, condition and SQLSTATE; `1L` reads
+`BIGINT`; DECIMAL casts and typed literals read by declared type. The fold also
+scopes the gate to microsecond targets: the base unit's `Timestamp(_, Some(_))`
+predicate refused the TIMESTAMP_NS door's pinned 9-digit strings, reds the
+`session_write_conf` typing pin and two `v3_timestamp_ns_door` pins on
+`15b50e3b`, and the fold heals them. Pins: the
+`typed_numeric_values_into_timestamp_refuse` sibling (every numeric CAST,
+`DECIMAL '1.5'`, `1L`, two `CAST(NULL …)` rows, a mixed multi-row refusal that
+writes nothing) plus two classifier tests; the sibling reds with the fold
+stashed (M2). V-002 is residue R-LTZ-1 below, owned by NTZ-1.
+
 ## Clauses
 
 | Clause | Statement | Proof obligation | Verdict | Evidence |
@@ -51,7 +68,8 @@ two lines at the existing void VALUES gate site.
 
 | # | Mutation | Red |
 |---|---|---|
-| M1 | Bypass the gate for LTZ targets (`is_ltz` returns false) | `int_into_timestamp_refuses_on_every_door` reds (VALUES writes epoch micros), restored green |
+| M1 | Bypass the gate for LTZ targets (the unit predicate returns false) | `int_into_timestamp_refuses_on_every_door` reds (VALUES writes epoch micros), restored green |
+| M2 | Stash the V-001 fold's gate change, keep the sibling pin | `typed_numeric_values_into_timestamp_refuse` reds (decimals write), restored green |
 
 ## Coverage
 
@@ -103,4 +121,5 @@ COVERAGE_ATTESTATION:
 
 | # | Residue |
 |---|---|
+| R-LTZ-1 | Dated 2026-09-27 (critic V-002, owned by NTZ-1 #866's NTZ store gate, not this unit): an INT into a TIMESTAMP_NTZ cell beside an LTZ one still writes (`VALUES (0, TIMESTAMP '…', 1)` into `(id INT, c TIMESTAMP, n TIMESTAMP_NTZ)` commits one row); Spark refuses INT to NTZ (recorded `ins_n_sel_int` on the SELECT door). The gate deliberately skips non-LTZ targets, and the mixed table's LTZ cell still refuses. |
 | R-1 | Dated 2026-09-28 (out of scope, separate work orders): the VALUES residual stays open for every non-LTZ target (`VALUES (true)` into INT still writes `1`); partitioned VALUES inserts into TIMESTAMP columns are not judged; `INSERT OVERWRITE … VALUES` and BY NAME evolution VALUES bypass the `spark_ast` gate site and stay silent; BOOLEAN SELECT dies in DataFusion's own plan error without the class; a decimal literal (`1.5`) into TIMESTAMP stores through UPDATE because `spark_update_type_name` has no DECIMAL name; MERGE over an empty target passes as a no-op where Spark refuses at analysis; the native `repark.sql` door has no store-assignment gate at all. |
