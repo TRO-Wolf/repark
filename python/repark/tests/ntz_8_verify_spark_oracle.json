@@ -1,0 +1,250 @@
+{
+ "source": "target/ntz-verify/ntz8-spark.json (Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-28, session zone America/New_York)",
+ "steps": [
+  {
+   "key": "ns",
+   "sql": "CREATE NAMESPACE IF NOT EXISTS sc.ns"
+  },
+  {
+   "key": "create_l",
+   "sql": "CREATE TABLE sc.ns.l (id INT, ts TIMESTAMP) USING iceberg"
+  },
+  {
+   "key": "create_n",
+   "sql": "CREATE TABLE sc.ns.n (id INT, ts TIMESTAMP_NTZ) USING iceberg"
+  },
+  {
+   "key": "w_from_utc_ins",
+   "sql": "INSERT INTO sc.ns.l SELECT 1, from_utc_timestamp('2024-01-01 12:00:00','Asia/Tokyo')"
+  },
+  {
+   "dtypes": [
+    "int",
+    "bigint",
+    "string"
+   ],
+   "key": "w_from_utc_read",
+   "rows": [
+    [
+     1,
+     1704160800,
+     "2024-01-01 21:00:00"
+    ]
+   ],
+   "sql": "SELECT id, unix_timestamp(ts) AS u, CAST(ts AS STRING) AS s FROM sc.ns.l ORDER BY id"
+  },
+  {
+   "key": "w_to_utc_ins",
+   "sql": "INSERT INTO sc.ns.l SELECT 2, to_utc_timestamp('2024-01-01 12:00:00','Asia/Tokyo')"
+  },
+  {
+   "dtypes": [
+    "int",
+    "bigint",
+    "string"
+   ],
+   "key": "w_to_utc_read",
+   "rows": [
+    [
+     1,
+     1704160800,
+     "2024-01-01 21:00:00"
+    ],
+    [
+     2,
+     1704096000,
+     "2024-01-01 03:00:00"
+    ]
+   ],
+   "sql": "SELECT id, unix_timestamp(ts) AS u, CAST(ts AS STRING) AS s FROM sc.ns.l ORDER BY id"
+  },
+  {
+   "key": "w_from_utc_upd",
+   "sql": "UPDATE sc.ns.l SET ts = from_utc_timestamp('2024-01-01 12:00:00','Asia/Tokyo') WHERE id = 1"
+  },
+  {
+   "dtypes": [
+    "int",
+    "bigint",
+    "string"
+   ],
+   "key": "w_from_utc_upd_read",
+   "rows": [
+    [
+     1,
+     1704160800,
+     "2024-01-01 21:00:00"
+    ],
+    [
+     2,
+     1704096000,
+     "2024-01-01 03:00:00"
+    ]
+   ],
+   "sql": "SELECT id, unix_timestamp(ts) AS u, CAST(ts AS STRING) AS s FROM sc.ns.l ORDER BY id"
+  },
+  {
+   "key": "w_to_utc_merge",
+   "sql": "MERGE INTO sc.ns.l USING (SELECT 1 AS id) AS s ON sc.ns.l.id = s.id WHEN MATCHED THEN UPDATE SET ts = to_utc_timestamp('2024-01-01 12:00:00','Asia/Tokyo')"
+  },
+  {
+   "dtypes": [
+    "int",
+    "bigint",
+    "string"
+   ],
+   "key": "w_to_utc_merge_read",
+   "rows": [
+    [
+     1,
+     1704096000,
+     "2024-01-01 03:00:00"
+    ],
+    [
+     2,
+     1704096000,
+     "2024-01-01 03:00:00"
+    ]
+   ],
+   "sql": "SELECT id, unix_timestamp(ts) AS u, CAST(ts AS STRING) AS s FROM sc.ns.l ORDER BY id"
+  },
+  {
+   "key": "w_from_utc_ntz",
+   "sql": "INSERT INTO sc.ns.n SELECT 1, from_utc_timestamp('2024-01-01 12:00:00','Asia/Tokyo')"
+  },
+  {
+   "dtypes": [
+    "int",
+    "string"
+   ],
+   "key": "w_from_utc_ntz_read",
+   "rows": [
+    [
+     1,
+     "2024-01-01 21:00:00"
+    ]
+   ],
+   "sql": "SELECT id, CAST(ts AS STRING) AS s FROM sc.ns.n ORDER BY id"
+  },
+  {
+   "key": "w_from_utc_dst_ins",
+   "sql": "INSERT INTO sc.ns.l SELECT 11, from_utc_timestamp('2024-03-31 00:30:00','Europe/London')"
+  },
+  {
+   "dtypes": [
+    "int",
+    "bigint",
+    "string"
+   ],
+   "key": "w_from_utc_dst_read",
+   "rows": [
+    [
+     11,
+     1711863000,
+     "2024-03-31 01:30:00"
+    ]
+   ],
+   "sql": "SELECT id, unix_timestamp(ts) AS u, CAST(ts AS STRING) AS s FROM sc.ns.l WHERE id = 11"
+  },
+  {
+   "key": "w_to_utc_dst_ins",
+   "sql": "INSERT INTO sc.ns.l SELECT 12, to_utc_timestamp('2024-03-31 00:30:00','Europe/London')"
+  },
+  {
+   "dtypes": [
+    "int",
+    "bigint",
+    "string"
+   ],
+   "key": "w_to_utc_dst_read",
+   "rows": [
+    [
+     12,
+     1711855800,
+     "2024-03-30 23:30:00"
+    ]
+   ],
+   "sql": "SELECT id, unix_timestamp(ts) AS u, CAST(ts AS STRING) AS s FROM sc.ns.l WHERE id = 12"
+  },
+  {
+   "key": "w_from_utc_dst_upd",
+   "sql": "UPDATE sc.ns.l SET ts = from_utc_timestamp('2024-03-31 00:30:00','Europe/London') WHERE id = 11"
+  },
+  {
+   "dtypes": [
+    "int",
+    "bigint",
+    "string"
+   ],
+   "key": "w_from_utc_dst_upd_read",
+   "rows": [
+    [
+     11,
+     1711863000,
+     "2024-03-31 01:30:00"
+    ]
+   ],
+   "sql": "SELECT id, unix_timestamp(ts) AS u, CAST(ts AS STRING) AS s FROM sc.ns.l WHERE id = 11"
+  },
+  {
+   "key": "w_to_utc_dst_merge",
+   "sql": "MERGE INTO sc.ns.l USING (SELECT 12 AS id) AS s ON sc.ns.l.id = s.id WHEN MATCHED THEN UPDATE SET ts = to_utc_timestamp('2024-03-31 00:30:00','Europe/London')"
+  },
+  {
+   "dtypes": [
+    "int",
+    "bigint",
+    "string"
+   ],
+   "key": "w_to_utc_dst_merge_read",
+   "rows": [
+    [
+     12,
+     1711855800,
+     "2024-03-30 23:30:00"
+    ]
+   ],
+   "sql": "SELECT id, unix_timestamp(ts) AS u, CAST(ts AS STRING) AS s FROM sc.ns.l WHERE id = 12"
+  },
+  {
+   "key": "w_cast_control",
+   "sql": "INSERT INTO sc.ns.l SELECT 3, CAST('2024-01-01 12:00:00' AS TIMESTAMP)"
+  },
+  {
+   "dtypes": [
+    "int",
+    "bigint",
+    "string"
+   ],
+   "key": "w_cast_control_read",
+   "rows": [
+    [
+     1,
+     1704096000,
+     "2024-01-01 03:00:00"
+    ],
+    [
+     2,
+     1704096000,
+     "2024-01-01 03:00:00"
+    ],
+    [
+     3,
+     1704128400,
+     "2024-01-01 12:00:00"
+    ],
+    [
+     11,
+     1711863000,
+     "2024-03-31 01:30:00"
+    ],
+    [
+     12,
+     1711855800,
+     "2024-03-30 23:30:00"
+    ]
+   ],
+   "sql": "SELECT id, unix_timestamp(ts) AS u, CAST(ts AS STRING) AS s FROM sc.ns.l ORDER BY id"
+  }
+ ]
+}

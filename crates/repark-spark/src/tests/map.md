@@ -1103,6 +1103,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `ctas_service_managed_plain_ctas_records_append` (`[append]`). The first two go red
   when the `ctas.or_replace` branch in `execute_ctas_service_managed` is reverted.
   pins: ice-rtas-ops-2/C-019
+  **AWS-ACCEPT-REPLACE-1 (2026-09-27):** `setup_wrapped_with_factory` threads the
+  `MemoryCatalogBuilder` storage factory through the service-managed setup;
+  `replace_existing_table_writes_each_metadata_file_once` seeds a CTAS then runs
+  `CREATE OR REPLACE` on the existing table over the no-overwrite store, expecting Ok,
+  1 row, and ops `[append, overwrite]`. The pin is red at fork `0d3f2b4f` (the staged
+  replace rewrites `00002-<uuid>.metadata.json` in place) and green at `6e937f49`.
+  pins: aws-accept-replace-1/C-001
   **WO-B14 (2026-09-24):** `service_managed_create_and_ctas_stamp_the_session_owner` installs
   a session owner and checks the stored `owner` of a service-managed CTAS and a
   service-managed schema CREATE; removing either stamp turns it red.
@@ -1896,6 +1903,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   session instants into a `TIMESTAMP` column, STRING/INT/BOOLEAN refusals naming
   `"TIMESTAMP_NTZ"` on VALUES/SELECT/UPDATE/MERGE, and the wall-cast UDF name pinned
   equal to the registered UDF. pins: ntz-1/C-006, C-007
+  **WO NTZ-1 verifier fold (2026-09-28):** `update_refusal_names_a_timestamp_literal_source_as_timestamp`
+  pins the UPDATE-door refusal naming a `TIMESTAMP'…'` source `"TIMESTAMP"`.
+  pins: ntz-1/C-007
 
 - `describe_table.rs` — **SQL-DESCRIBE-1 (2026-09-09):** `DESCRIBE|DESC [TABLE]
   [EXTENDED|FORMATTED] catalog.namespace.table` against a memory-catalog table built like the

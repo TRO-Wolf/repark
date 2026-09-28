@@ -189,6 +189,31 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and re-insert. TZ-6 states Spark's contract and the TY-TIMESTAMP-NTZ rows go
   EQUAL beside it.
   pins: ntz-1/C-008, C-009
+- [test_ntz_7_verify.py](test_ntz_7_verify.py) + `ntz_7_verify_spark_oracle.json` —
+  **WO NTZ-1 verifier fold (2026-09-28):** `from_utc_timestamp` / `to_utc_timestamp`
+  over strings and a STRING column keep Spark's TIMESTAMP in a New York session —
+  seven recorded cells replay rows and dtypes (unaliased names stay out per R2).
+  pins: ntz-1/C-006
+- [test_ntz_8_verify.py](test_ntz_8_verify.py) + `ntz_8_verify_spark_oracle.json` —
+  **WO NTZ-1 verifier fold part 2 (2026-09-28):** zone-shift calls inside INSERT,
+  UPDATE and MERGE store Spark's instant in a New York session — the 23-step
+  recorded write sequence replays (writes run, 10 reads assert rows and dtypes);
+  the DST INSERT reads were red at 0a61bc02.
+  pins: ntz-1/C-006
+- [test_ntz_9_verify.py](test_ntz_9_verify.py) + `ntz_9_verify_spark_oracle.json` —
+  **WO NTZ-1 re-verify fold (2026-09-28):** VALUES cells computed in LTZ store
+  Spark's session wall again in a New York session — the 39-step recorded
+  sequence replays (writes run, 11 reads assert rows and dtypes); 3 divergence
+  steps pin the widening row and both refusal texts beside Spark's.
+  pins: ntz-1/C-006
+- [test_uuid_cast_window_1.py](test_uuid_cast_window_1.py) +
+  [uuid_cast_window_1_spark_oracle.json](uuid_cast_window_1_spark_oracle.json) —
+  **WO UUID-CAST-WINDOW-1 (2026-09-27):** the `CAST('a' AS UUID)` refusal replays
+  Spark 4.1.2's full message byte for byte on all four oracle cases — the ASCII
+  control, forty `é` before the token, the text on a previous line, and
+  thirty-four emoji with its right truncation — pinning the scalar-counted
+  position and the 32/36 UTF-16-unit window cuts.
+  pins: uuid-cast-window-1/C-001
 - [test_ice_error_conditions_1.py](test_ice_error_conditions_1.py) —
   **ICE-ERROR-CONDITIONS-1 / IPI-51 PR1 (2026-09-20):** constructor pins for the native
   error-condition parser — `getCondition`/`getErrorClass`/`getSqlState` on the PyO3

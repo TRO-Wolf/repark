@@ -371,6 +371,9 @@ repark-core's error map.
   refusals name Spark's type; `store_assignment_cast_sql` emits the `ntz_store` wall-cast
   UDF call for a naive-microsecond target instead of `arrow_cast` (every other target
   keeps `arrow_cast`). pins: ntz-1/C-006, C-007
+  **WO NTZ-1 verifier fold (2026-09-28):** only microsecond-naive timestamps name
+  `TIMESTAMP_NTZ`; the nanosecond zoneless form of an unlocalized `TIMESTAMP'…'`
+  literal names `TIMESTAMP` again. pins: ntz-1/C-007
 - `ntz_store.rs` — **WO NTZ-1 slice 2 (2026-09-27):** the NTZ store gate in the
   `void_store` shape: `refuse_ntz_writes` runs the session analyzer over the planned
   write and refuses, for a `Timestamp(µs, None)` target, any source the ANSI matrix

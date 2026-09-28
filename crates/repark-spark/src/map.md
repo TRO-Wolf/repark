@@ -1077,6 +1077,10 @@ pins: rp-4-fork-repin/C-005, C-006
 - `uuid_cast.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** `CAST(x AS UUID)` refuses with Spark's
   `[UNSUPPORTED_DATATYPE] Unsupported data type "UUID". SQLSTATE: 0A000` and its measured
   `== SQL (line, position) ==` window (`uuid/sql/cast`). pins: u9-types-1/C-010
+  **WO UUID-CAST-WINDOW-1 (2026-09-27):** the window counts as Spark 4.1.2 counts —
+  the position in Unicode scalar values, the 32/36 cuts at UTF-16 code-unit offsets
+  with `...` on each cut side and a `?` for a split surrogate pair — so non-ASCII SQL
+  never panics the byte slice. pins: uuid-cast-window-1/C-001
 - `create_table.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** `iceberg_named_primitive` maps the
   type name `UUID` to an Iceberg `uuid` column at CREATE and ADD COLUMN — a RePark extension
   (orchestrator ruling 2026-09-25, residue R-25): Spark refuses the SQL spelling, RePark's API

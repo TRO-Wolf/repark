@@ -244,6 +244,33 @@ async fn ntz_values_store_into_a_timestamp_column_as_session_instants() {
 }
 
 #[tokio::test]
+async fn update_refusal_names_a_timestamp_literal_source_as_timestamp() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_ntz(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.ltz (id INT, c TIMESTAMP) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.ltz VALUES (1, TIMESTAMP'2024-01-01 00:00:00')",
+    )
+    .await;
+    let text = failure(
+        &ctx,
+        &catalogs,
+        "UPDATE ice.sales.ltz SET id = TIMESTAMP'2024-01-01 12:00:00' WHERE id = 1",
+    )
+    .await;
+    let expected = "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible \
+         data for the table ``: Cannot safely cast `id` \"TIMESTAMP\" to \"INT\". SQLSTATE: KD000";
+    assert!(text.ends_with(expected), "{text}");
+}
+
+#[tokio::test]
 async fn ntz_refusals_name_timestamp_ntz() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_ntz(&warehouse).await;
@@ -290,4 +317,137 @@ async fn ntz_refusals_name_timestamp_ntz() {
              SQLSTATE: KD000";
         assert!(text.ends_with(expected), "{sql}: {text}");
     }
+}
+
+#[tokio::test]
+async fn values_from_utc_stores_the_session_wall() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_ntz_at(&warehouse, "America/New_York").await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.vfun (id INT, c TIMESTAMP_NTZ) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.vfun VALUES (1, \
+         from_utc_timestamp('2024-01-01 12:00:00','Asia/Tokyo'))",
+    )
+    .await;
+    assert_eq!(
+        walls(&ctx, &catalogs, "ice.sales.vfun").await,
+        vec![(1, Some("2024-01-01 21:00:00".to_string()))]
+    );
+}
+
+#[tokio::test]
+async fn values_dst_from_utc_store_the_session_walls() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_ntz_at(&warehouse, "America/New_York").await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.vdst (id INT, c TIMESTAMP_NTZ) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.vdst VALUES \
+         (1, from_utc_timestamp('2024-03-10 06:30:00','America/New_York')), \
+         (2, from_utc_timestamp('2024-03-10 07:30:00','America/New_York')), \
+         (3, from_utc_timestamp('2024-11-03 05:30:00','America/New_York')), \
+         (4, from_utc_timestamp('2024-11-03 06:30:00','America/New_York'))",
+    )
+    .await;
+    assert_eq!(
+        walls(&ctx, &catalogs, "ice.sales.vdst").await,
+        vec![
+            (1, Some("2024-03-10 01:30:00".to_string())),
+            (2, Some("2024-03-10 03:30:00".to_string())),
+            (3, Some("2024-11-03 01:30:00".to_string())),
+            (4, Some("2024-11-03 01:30:00".to_string())),
+        ]
+    );
+}
+
+#[tokio::test]
+async fn select_star_from_values_from_utc_stores_the_session_wall() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_ntz_at(&warehouse, "America/New_York").await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.vsub (id INT, c TIMESTAMP_NTZ) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.vsub SELECT * FROM \
+         (VALUES (1, from_utc_timestamp('2024-01-01 12:00:00','Asia/Tokyo'))) AS v(id, c)",
+    )
+    .await;
+    assert_eq!(
+        walls(&ctx, &catalogs, "ice.sales.vsub").await,
+        vec![(1, Some("2024-01-01 21:00:00".to_string()))]
+    );
+}
+
+#[tokio::test]
+async fn nested_values_from_utc_into_ltz_stores_the_instant() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_ntz_at(&warehouse, "America/New_York").await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.vln (id INT, c TIMESTAMP) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.vln SELECT * FROM \
+         (VALUES (1, from_utc_timestamp('2024-01-01 12:00:00','Asia/Tokyo'))) AS v(id, c)",
+    )
+    .await;
+    let out = execute(
+        &ctx,
+        &catalogs,
+        "SELECT id, unix_timestamp(c) AS u FROM ice.sales.vln ORDER BY id",
+    )
+    .await
+    .unwrap()
+    .collect()
+    .await
+    .unwrap();
+    let ticks = out[0]
+        .column(1)
+        .as_primitive::<datafusion::arrow::datatypes::Int64Type>();
+    assert_eq!(ticks.value(0), 1_704_160_800);
+}
+
+#[tokio::test]
+async fn select_from_utc_into_ntz_keeps_the_bare_value_wrap() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_ntz_at(&warehouse, "America/New_York").await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.vsel (id INT, c TIMESTAMP_NTZ) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.vsel SELECT 1, \
+         from_utc_timestamp('2024-01-01 12:00:00','Asia/Tokyo')",
+    )
+    .await;
+    assert_eq!(
+        walls(&ctx, &catalogs, "ice.sales.vsel").await,
+        vec![(1, Some("2024-01-01 21:00:00".to_string()))]
+    );
 }

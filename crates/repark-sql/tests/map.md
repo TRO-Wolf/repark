@@ -103,6 +103,12 @@ holds behavior observed from outside the crate.
   the backticked column and `"STRING"`/`"BIGINT"`; numeric and string-to-string UPDATE
   statements succeed; a missing table keeps its own error.
   pins: ipi-51/W-UPDATE-TYPE-ERR
+- `ansi_ntz_wall_cast.rs` — **WO NTZ-1 verifier fold (2026-09-28):** the ANSI door
+  resolves the NTZ wall-cast UDF its UPDATE/MERGE wrap sites emit: UPDATE and MERGE
+  into a naive `TIMESTAMP(6)` column store the walls (matched, unmatched and inserted
+  rows) and the column stays naive; both pins red without the `on_session_built`
+  registration (`UNRESOLVED_ROUTINE`).
+  pins: ntz-1/C-006
 
 - `session_timestamp_type_ansi_door.rs` — **Q10:** ANSI-door cell of
   `spark.sql.timestampType=TIMESTAMP_NTZ` on a Spark-extended session

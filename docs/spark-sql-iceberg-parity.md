@@ -1486,6 +1486,10 @@ perfectly good read.
 - **Rationale** — DECLARED. repark namespaces are single-level today; an empty frame would read as
   "no children exist" rather than "nested listing is unsupported". Loud refusal keeps that
   ambiguity from laundering into a false empty result.
+- Residue — carved out of the v1.5.0 gate (owner ruling C-2, 2026-09-24); the v1.6.0 card the
+  spec names is not yet filed (readiness finding F-6, 2026-09-27) — see the C-2 paragraph in
+  [v1-5-0-remainder-spec-2026-09-23.md](../task/roadmap/mid-term/v1-5-0-remainder-spec-2026-09-23.md).
+  Card filed 2026-09-27: [ns-nested-1-6.md](../task/roadmap/mid-term/ns-nested-1-6.md), closing F-6.
 
 #### ICE-DROP-NS-1 — `DROP NAMESPACE` on a non-empty namespace refuses — **FIXED 2026-09-19**
 
@@ -3278,6 +3282,8 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `hasattr(spark, "readStream")` raises `NOT_IMPLEMENTED` rather than answering `False` —
   the same shape classic's `client` property already has (it raises
   `ONLY_SUPPORTED_WITH_SPARK_CONNECT`, not `AttributeError`).
+- Residue — carved out of the v1.5.0 gate (owner ruling C-1, 2026-09-19) →
+  [ice-streaming-1-6.md](../task/roadmap/mid-term/ice-streaming-1-6.md).
 ### SES-DECL-streams — no `StreamingQueryManager` without a streaming engine
 - **repark** — `spark.streams` raises `PySparkNotImplementedError` with condition
   `NOT_IMPLEMENTED` and parameters `{"feature": "streams"}`.
@@ -3288,6 +3294,8 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Rationale** — DECLARED 2026-09-14. Same engine gap as `readStream`; an `active == []`
   facade would be a silent lie about query lifecycle support. The R-5 `hasattr`
   consequence from the `readStream` row applies identically here.
+- Residue — carved out of the v1.5.0 gate (owner ruling C-1, 2026-09-19) →
+  [ice-streaming-1-6.md](../task/roadmap/mid-term/ice-streaming-1-6.md).
 ### SES-DECL-dataSource — the Python data source API is deferred
 - **repark** — `spark.dataSource` raises `PySparkNotImplementedError` with condition
   `NOT_IMPLEMENTED` and parameters `{"feature": "dataSource"}`.
