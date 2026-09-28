@@ -764,6 +764,31 @@ async fn n03_star_over_a_case_twin_refuses_column_already_exists() {
     );
 }
 
+#[tokio::test]
+async fn vr3_derived_cte_and_join_twin_stars_answer() {
+    let ctx = measured_ctx();
+    for (sql, names) in [
+        (
+            "SELECT * FROM (SELECT 1 AS a, 2 AS \"A\") s",
+            ["a".to_string(), "A".to_string()],
+        ),
+        (
+            "SELECT s.* FROM (SELECT 1 AS a, 2 AS \"A\") s",
+            ["a".to_string(), "A".to_string()],
+        ),
+        (
+            "WITH c AS (SELECT 1 AS a, 2 AS \"A\") SELECT * FROM c",
+            ["a".to_string(), "A".to_string()],
+        ),
+        (
+            "SELECT * FROM (SELECT x AS u FROM ja) a JOIN (SELECT y AS \"U\" FROM jb) b ON a.u = b.U",
+            ["u".to_string(), "U".to_string()],
+        ),
+    ] {
+        assert_eq!(plan_names(&ctx.state(), sql, true).await, names, "{sql}");
+    }
+}
+
 fn plan_on_default_stack(
     state: SessionState,
     sql: String,

@@ -8,7 +8,8 @@ use datafusion::sql::sqlparser::dialect::SparkSqlDialect;
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::parser::{Parser, ParserError};
 use datafusion::sql::sqlparser::tokenizer::Token;
-use iceberg::ErrorKind;
+use iceberg::table::Table;
+use iceberg::{Catalog, ErrorKind};
 use repark_core::CatalogRegistry;
 use repark_functions::timestamp_type::{SparkTimestampType, spark_timestamp_type_from_options};
 use repark_iceberg::write::alter::{
@@ -770,6 +771,56 @@ fn mixed_comment_list(path: &[String]) -> DataFusionError {
     ))
 }
 
+async fn execute_nested_drop(
+    ctx: &SessionContext,
+    handle: &dyn Catalog,
+    table: &Table,
+    paths: &[Vec<String>],
+    if_exists: bool,
+    case_sensitive: bool,
+) -> Result<Option<DataFrame>> {
+    let schema = table.metadata().current_schema();
+    let mut changes = Vec::with_capacity(paths.len());
+    for path in paths {
+        let name = path.join(".");
+        if if_exists {
+            let known = if case_sensitive {
+                schema.field_by_name(&name).is_some()
+            } else {
+                schema
+                    .try_field_by_name_case_insensitive(&name)
+                    .map_err(iceberg_err)?
+                    .is_some()
+            };
+            if !known {
+                continue;
+            }
+        }
+        changes.push(ColumnPathChange::Drop { path: name });
+    }
+    if changes.is_empty() {
+        return Ok(Some(ctx.read_empty()?));
+    }
+    apply_column_path_changes(handle, table, &changes, case_sensitive)
+        .await
+        .map_err(iceberg_err)?;
+    Ok(None)
+}
+
+fn refuse_bad_nested_add(
+    table: &Table,
+    changes: &[ColumnPathChange],
+    case_sensitive: bool,
+) -> Result<()> {
+    if let Some(message) =
+        nested_add_refusal(table.metadata().current_schema(), changes, case_sensitive)
+            .map_err(iceberg_err)?
+    {
+        return Err(DataFusionError::Plan(message));
+    }
+    Ok(())
+}
+
 pub(crate) async fn execute_nested_column_ddl(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -787,6 +838,7 @@ pub(crate) async fn execute_nested_column_ddl(
         }
         iceberg_err(error)
     })?;
+    let case_sensitive = !crate::spark_door_case_insensitive(ctx.state().config().options());
     match &ddl.operation {
         NestedColumnOperation::AlterType { path, data_type } => {
             let data_type = &spark_default_target_type(data_type);
@@ -836,13 +888,11 @@ pub(crate) async fn execute_nested_column_ddl(
                 .iter()
                 .map(|column| path_change_for_add(column, timestamp_type))
                 .collect::<Result<Vec<_>>>()?;
-            if let Some(message) = nested_add_refusal(table.metadata().current_schema(), &changes) {
-                return Err(DataFusionError::Plan(message));
-            }
+            refuse_bad_nested_add(&table, &changes, case_sensitive)?;
             if let Some(message) = nested_required_add_refusal(&changes) {
                 return Err(DataFusionError::Execution(message));
             }
-            apply_column_path_changes(handle.as_ref(), &table, &changes)
+            apply_column_path_changes(handle.as_ref(), &table, &changes, case_sensitive)
                 .await
                 .map_err(iceberg_err)?;
         }
@@ -851,24 +901,23 @@ pub(crate) async fn execute_nested_column_ddl(
                 path: from.join("."),
                 to: to.clone(),
             }];
-            apply_column_path_changes(handle.as_ref(), &table, &changes)
+            apply_column_path_changes(handle.as_ref(), &table, &changes, case_sensitive)
                 .await
                 .map_err(iceberg_err)?;
         }
         NestedColumnOperation::Drop { paths, if_exists } => {
-            let schema = table.metadata().current_schema();
-            let changes = paths
-                .iter()
-                .map(|path| path.join("."))
-                .filter(|name| !*if_exists || schema.field_by_name_case_insensitive(name).is_some())
-                .map(|path| ColumnPathChange::Drop { path })
-                .collect::<Vec<_>>();
-            if changes.is_empty() {
-                return ctx.read_empty();
+            if let Some(empty) = execute_nested_drop(
+                ctx,
+                handle.as_ref(),
+                &table,
+                paths,
+                *if_exists,
+                case_sensitive,
+            )
+            .await?
+            {
+                return Ok(empty);
             }
-            apply_column_path_changes(handle.as_ref(), &table, &changes)
-                .await
-                .map_err(iceberg_err)?;
         }
     }
     reregister(ctx, handle.clone(), &catalog_name, &namespace).await?;

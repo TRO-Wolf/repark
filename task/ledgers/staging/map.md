@@ -18,7 +18,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   lower-case index refuses only on a case-insensitive lookup, as Java does) and
   carries the Spark-door twin pins under `caseSensitive=true` (CREATE and CTAS,
   red at `6e937f49`, green at `e1d74bef`, C-001) plus the bare-name refusal under
-  `false`; the false-door CREATE acceptance is a dated residue (R-1).
+  `false`; the false-door CREATE acceptance is a dated residue (R-1). The Opus-verifier
+  fold (2026-09-28, VR-1..VR-5) scopes the star refusal to catalog-table scans, routes
+  nested DDL by the session flag (C-002/C-003), and records R-6…R-9.
   `risk_tier: standard`. Branch `chore/rp-56-case-twin-schema`.
   pins: rp-56/C-001
 - [ltz-store-int-1-ledger.md](ltz-store-int-1-ledger.md) —

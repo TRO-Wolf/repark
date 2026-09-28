@@ -804,6 +804,9 @@ pins: rp-4-fork-repin/C-005, C-006
   the branch and not a read pinned to it (the pin turned the target into a read-only temp
   view; every other `FROM`, including a subquery's, still pins).
   pins: ice-session-write-conf-1/C-038
+  **RP-56 verifier fold (2026-09-28):** branch-selector spans refuse 42711 under `false` when
+  the pinned provider schema has top-level twins (p9 `f_branch_table`); `VERSION`/`TIMESTAMP
+  AS OF` keeps answering through the scratch skip.
 - `spark_ast.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):**
   `canonicalize_identity_selection` canonicalises the selection and each SET *value* through
   `rewrite_fragment_case` (a SQL fragment in, a SQL fragment out — the repair backticks a
@@ -1427,6 +1430,10 @@ pins: rp-4-fork-repin/C-005, C-006
   `residual_column_comment_refusal`, which `router.rs` calls where the deleted I6 refusal ran,
   names every other unclaimed `ALTER COLUMN … COMMENT '<literal>'` statement.
   pins: ice-nested-evo-1/C-049, C-050, C-051
+  **RP-56 verifier fold (2026-09-28):** the DROP existence check resolves exact under `true`
+  and `try_` under `false`, and the nested apply commits with the session's case-sensitivity,
+  so nested DROP/ADD/DROP-IF-EXISTS answer on twin tables under `true` and refuse loud under
+  `false` (p9 t-cells).
 - `alter_write_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** the `ALTER TABLE …
   WRITE …` pre-parse intercept (sqlparser carries none of these forms): `WRITE ORDERED BY`
   (sort order + `write.distribution-mode = range`), `WRITE LOCALLY ORDERED BY` (sort order,

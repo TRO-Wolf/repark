@@ -869,8 +869,10 @@ repark-core's error map.
 - `nested_column.rs` — **ICE-NESTED-EVO-1 (2026-09-17):** `ColumnPathChange` (`Add` under an
   optional dotted parent — a struct, or a list or map whose element or value struct the fork
   resolves — with `FIRST` / `AFTER` sibling positions; `Rename` and `Drop` by dotted path) and
-  `apply_column_path_changes`, which folds them into ONE case-insensitive fork `UpdateSchema`
-  on an already-loaded table. Both doors' nested `ALTER TABLE` intercepts commit through it.
+  `apply_column_path_changes`, which folds them into ONE fork `UpdateSchema` whose
+  case-sensitivity the caller passes (Spark door: the session flag; SQL door: insensitive).
+  Both doors' nested `ALTER TABLE` intercepts commit through it. RP-56 verifier fold
+  (2026-09-28): `nested_add_refusal` routes exact/`try_` by the same flag.
   A sibling of `alter.rs` rather than a new `SchemaChange` arm because `alter.rs` sits at its
   exact file-size ceiling. 2 in-module tests (children evolve by field id; a required child
   without a default refuses and the schema id stays).

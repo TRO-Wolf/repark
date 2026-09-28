@@ -29,6 +29,11 @@ RP-56 fold (2026-09-28, C-020 closed): `refuse_star_twins` in `../column_resolut
 a written star over a non-scratch twin relation with Spark's recorded 42711 sentence (renamed
 `n03_star_over_a_case_twin_refuses_column_already_exists`, refusal under `false` plus the
 `true` answer); scratch relations keep answering so the DataFrame lowerings stay green.
+RP-56 verifier fold (2026-09-28): the refusal additionally requires the twin key inside one
+non-scratch table scan in the projection scope (`scan_twin_keys`), so derived/CTE/join/temp-view
+stars answer per p9/p9b (`vr3_derived_cte_and_join_twin_stars_answer`) while wrapped twin-table
+stars still refuse; `../column_resolution.rs` sits at its 1000-line default ceiling.
+pins: rp-56/C-002
 Run 22b (2026-09-18, the debug-wheel segfault): `s22b_*` plan a 1,000-branch `UNION ALL`
 (plain and wrong-case fold) and a 5,000-branch one (both case modes) through
 `plan_statement_with_column_repair` on a thread with a 2 MiB stack — the tokio worker default.

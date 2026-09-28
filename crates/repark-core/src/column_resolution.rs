@@ -490,14 +490,15 @@ fn audit_plan_for_ambiguity(plan: &LogicalPlan, written: &WrittenRefs) -> Result
         if written.has_star
             && let LogicalPlan::Projection(projection) = node
         {
-            refuse_star_twins(&projection.expr, &twins)?;
+            refuse_star_twins(node, &projection.expr, &twins)?;
         }
         Ok(TreeNodeRecursion::Continue)
     })
     .map(|_| ())
 }
 
-fn refuse_star_twins(exprs: &[Expr], twins: &Twins<'_>) -> Result<()> {
+fn refuse_star_twins(scope: &LogicalPlan, exprs: &[Expr], twins: &Twins<'_>) -> Result<()> {
+    let keys = scan_twin_keys(scope);
     for expr in exprs {
         let Expr::Column(column) = expr else {
             continue;
@@ -513,7 +514,8 @@ fn refuse_star_twins(exprs: &[Expr], twins: &Twins<'_>) -> Result<()> {
         };
         if sharing.iter().any(|(candidate, name)| {
             candidate.is_some_and(|owner| *owner == *relation) && *name != column.name.as_str()
-        }) {
+        }) && keys.contains(column.name.to_ascii_lowercase().as_str())
+        {
             let name = column.name.as_str();
             return Err(DataFusionError::Plan(format!(
                 "[COLUMN_ALREADY_EXISTS] The column `{name}` already exists. Choose another name or rename the existing column. SQLSTATE: 42711"
@@ -521,6 +523,32 @@ fn refuse_star_twins(exprs: &[Expr], twins: &Twins<'_>) -> Result<()> {
         }
     }
     Ok(())
+}
+
+fn scan_twin_keys(plan: &LogicalPlan) -> HashSet<String> {
+    let mut keys = HashSet::new();
+    let _ = plan.apply(|node| {
+        if let LogicalPlan::TableScan(scan) = node
+            && !crate::frame_names::is_scratch_relation(scan.table_name.table())
+        {
+            let mut seen: HashMap<String, &str> = HashMap::new();
+            for (_, field) in scan.projected_schema.iter() {
+                let name = field.name().as_str();
+                let folded = name.to_ascii_lowercase();
+                match seen.get(&folded) {
+                    Some(first) if *first != name => {
+                        keys.insert(folded);
+                    }
+                    None => {
+                        seen.insert(folded, name);
+                    }
+                    _ => {}
+                }
+            }
+        }
+        Ok(TreeNodeRecursion::Continue)
+    });
+    keys
 }
 
 fn plan_has_upper_ascii_field(plan: &LogicalPlan) -> bool {

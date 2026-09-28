@@ -33,6 +33,8 @@ unit hand-back).
 | Clause | Statement | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
 | C-001 | Under caseSensitive=true a table with case-twin columns creates and reads back as Spark does. | The Spark-door pins create `(a INT, A INT)` and CTAS `SELECT 1 AS a, 2 AS "A"` under `caseSensitive=true`, expecting columns `a`/`A` with the recorded rows, and refuse a bare-name `SELECT a` under `false`. | PROVEN | `case_twin_create_reads_both_columns_under_case_sensitive_true`, `case_twin_ctas_reads_both_values_under_case_sensitive_true`, `case_twin_bare_name_select_refuses_under_case_sensitive_false`: RED at fork `6e937f49` (all three fail at CREATE on `Cannot build lower case index: a and A collide`), GREEN at fork `e1d74bef` (3 passed, 0 failed). The CTAS pin quotes `"A"` because the unquoted twin-alias spelling refuses in DataFusion's projection-uniqueness check before reaching the fork (R-2). The false-door refusal text is recorded verbatim in R-3 and asserted only as a refusal. |
+| C-002 | Under `caseSensitive=false` a written star refuses 42711 exactly when twin columns trace to a non-scratch table scan: derived, CTE, join and temp-view stars answer, pinned time-travel reads answer, and branch-name reads refuse. | The new pins assert the answered shapes (columns and rows) and the refused shapes (the recorded 42711 sentence); the temp-view refusal pin is rewritten to the answer. | PROVEN | `test_derived_cte_and_join_twin_stars_answer`, `test_star_over_a_case_twin_frame_answers_like_spark`, `test_branch_read_refuses_and_time_travel_answers`, `test_group_by_window_refuses_on_twin_table`, `test_exists_star_refuses_on_twin_table`, `vr3_derived_cte_and_join_twin_stars_answer`: pre-fix RePark refused the derived/temp-view shapes (42711) and answered the branch read; post-fix every cell matches Spark 4.1.2 `casesens-1-probes/p9-spark.json` + `p9b-spark.json`. `n03_star_over_a_case_twin_refuses_column_already_exists` and the `_repark_ow_tgt` pin refuse as before. |
+| C-003 | Nested DDL lookups are case-routed: under `true` the existence checks resolve exactly and the nested schema updates run case-sensitive; under `false` a collided schema refuses loud with the fork text, never silently skips. | Pins drop, add and rewrite-where on the twin table under `true` (DESCRIBE-asserted) and assert the loud collision refusal under `false`. | PROVEN | `test_nested_drop_if_exists_drops_and_add_answers_under_true`, `test_rewrite_where_refuses_under_false_and_answers_under_true`: pre-fix the IF EXISTS drop reported OK and dropped nothing, ADD refused UNRESOLVED, rewrite-where parse-failed; post-fix the true-door cells match Spark 4.1.2 `casesens-1-probes/p9-spark.json` and the false-door cells refuse loud with the collision text. |
 
 ## Mutation record (2026-09-28)
 
@@ -141,3 +143,57 @@ COVERAGE_ATTESTATION:
 | R-3 | Dated 2026-09-28 (observed refusal text, asserted only as a refusal): a bare-name `SELECT a FROM` a twin table under `caseSensitive=false` fails with `Error during planning: [AMBIGUOUS_REFERENCE] Reference \`a\` is ambiguous, could be: [\`ice\`.\`sales\`.\`twf\`.\`a\`, \`ice\`.\`sales\`.\`twf\`.\`a\`]. SQLSTATE: 42704` (both candidates render lowercase). Spark has recorded no false-door SELECT-on-twins answer, so the pin asserts refusal only. |
 | R-4 | Dated 2026-09-28 (unchanged lookups): eight `field_by_name_case_insensitive` sites stay infallible — the two `DROP COLUMN IF EXISTS` existence filters (tolerant semantics; a collided schema skips rather than refuses), the nested-describe error-path lookup (already a refusal, different message), `rewrite_where` (Spark-side ambiguity, unrecorded), `evolve_merge_schema` (the skip defers to the fork apply, which refuses), `name_known` (boolean guard; fallibility would ripple through move resolution), and the two `nested_add_refusal` lookups (the already-exists arm falls through to the fork refusal; the parent arm's Spark answer is unrecorded). Revisit when CASESENS-1 records those doors. |
 | R-5 | Dated 2026-09-28 (owned by ICE-MIXED-CASE-1): that unit's C-016 evidence cites `test_measured_case_twin_table_refuses_at_adoption[L08_*]` and its adoption-refusal clause; both are superseded by this repin (adoption succeeds, references refuse at resolution). This unit does not edit another unit's ledger; the owning unit truths up at its next pickup. |
+| R-6 | Dated 2026-09-28 (R-4 correction, verifier fold VR-1/VR-4): five of R-4's eight sites now route by the session flag — the two `DROP COLUMN IF EXISTS` filters (exact under `true`, `try_` under `false`; the SQL door uses exact-or-`try_`), the two `nested_add_refusal` lookups (same routing), and `rewrite_where` (exact-first plus a `try_` collision gate under `false`); the nested schema updates they guard run `case_sensitive` under the Spark door. Three sites stay infallible: the nested-describe error path (DESCRIBE-nested-on-twin unmeasured on Spark), `evolve_merge_schema` (no session at the call depth; Spark Java-fails MERGE on twins anyway, p9 `f_merge`), `name_known` (fallibility ripples through move resolution plus the shared top-level apply; Spark answers the move, p9 `t_move_tw2`). R-4's "a collided schema skips rather than refuses" no longer holds anywhere: every collided path now refuses loud or answers. |
+| R-7 | Dated 2026-09-28 (follow-up unit): non-star reads of a twin table under `caseSensitive=false` — `SELECT count(*)`, `SELECT b`, post-DML reads (p9 `f_count`, `f_select_b`, `f_post_b`, `f_ins_sel_read`) — refuse `COLUMN_ALREADY_EXISTS` on Spark but answer on RePark. Matching Spark needs a read-level (non-star) twin refusal; the fold's guard is star-scoped by brief. |
+| R-8 | Dated 2026-09-28 (follow-up unit): top-level DDL on a twin table under `caseSensitive=true` — `RENAME COLUMN b TO c`, `ALTER COLUMN b AFTER s`, top-level DROP (p9 `t_rename`, `t_move_tw2`; top-level DROP measured by the verifier, unmeasured in p9) — answer on Spark (exact `SchemaUpdate`) but refuse on RePark (fork collision text / `UNRESOLVED_COLUMN`). Threading the flag through the shared top-level apply (`apply_schema_changes`, `resolve_batch_move_names`, all doors) exceeds the fold's local-fix budget. |
+| R-9 | Dated 2026-09-28 (fork/Java parity question): `UPDATE`/`MERGE` on a twin table under `false` fail on Spark with Java's `Multiple entries with same key` (Guava immutable map, p9 `f_update`/`f_merge`) while RePark answers. Whether the fork should mirror the Java failure is a fork-side decision, not this fold. |
+
+## RP-56 verifier fold (2026-09-28)
+
+The Opus verifier returned NEEDS_REMEDIATION (one S1, two S2: VR-1..VR-6). Step 0
+measured `casesens-1-probes/cs_probe9.py` (54 cells, Spark 4.1.2 banner version
+`4.1.2`, session time zone `UTC`, and RePark at `0216bef8`) plus `cs_probe9b.py`
+(backticked twin-star shapes; Spark rejects double-quoted aliases with
+`PARSE_SYNTAX_ERROR`, so the supplement uses the spelling both doors share).
+
+Spark's answers, per cell family: derived-table, `s.*`, CTE, join and DataFrame
+temp-view twin stars answer (`f_subq_star`, `f_twv_read`, all five `p9b`
+cells); pinned time-travel reads (`VERSION AS OF` branch and snapshot id,
+`TIMESTAMP AS OF`, `FOR SYSTEM_TIME AS OF`) answer; branch-name reads
+(`.branch_br`), CTAS/`INSERT ... SELECT *`, `EXISTS (SELECT * ...)`, and
+`GROUP BY window(...)` refuse 42711; every `caseSensitive=true` DDL cell
+answers (nested drop, `DROP COLUMN IF EXISTS s.x`, nested add, rename, move,
+`rewrite_data_files` with `where`). Two measurements fell outside the brief's
+fix list and are residues: non-star twin reads refuse on Spark (R-7), and
+`UPDATE`/`MERGE` fail Java-side (R-9). The unquoted twin-alias cells
+(`f_subq_star` et al.) hit R-2's door-folding mechanism on RePark, unchanged.
+
+The verifier's VR-2 premise ("time-travel reads refuse too") held only for the
+branch-name spelling, so the fold implements Spark's measured split instead of
+the briefed one: the scratch-name skip stays (pinned reads answer through
+`__repark_tt_*`), and branch-selector reads refuse at rewrite time against the
+pinned provider's schema. VR-6 (scratch-prefix dodge) stays accepted as the
+verifier left it. `tag_`/`snapshot_id_`/`at_timestamp_` selectors are
+unmeasured and unchanged.
+
+Fixes, by finding. VR-3: `refuse_star_twins` additionally requires the twin
+key to occur inside one non-scratch table scan in the projection scope
+(`scan_twin_keys`), so derived/CTE/join/temp-view shapes answer while wrapped
+twin-table stars, EXISTS/window/CTAS/INSERT stars still refuse. VR-2: branch
+spans carry a marker and refuse 42711 under `false` when the pinned schema has
+top-level twins. VR-1/VR-4: the two nested DROP filters, `nested_add_refusal`,
+`rewrite_where`, and the nested apply path route by the session flag (R-6).
+VR-5 needed no product change: the window inner star, the polars join prefix
+(backed by scratch `__repark_cdf_*` scans) and the EXISTS star all follow from
+the scan rule, and the measured cells are pinned.
+
+Tests rewritten (one existing pin):
+`test_star_over_a_case_twin_frame_refuses_column_already_exists` becomes
+`test_star_over_a_case_twin_frame_answers_like_spark` (p9 `f_twv_read`). New
+pins: `vr3_derived_cte_and_join_twin_stars_answer` (bite-proven: red with the
+old guard restored, green with the fix) and six tests in
+`python/repark/tests/test_ice_case_twin_1.py` (C-002/C-003). Unchanged and
+green: `n03_star_over_a_case_twin_refuses_column_already_exists`,
+`test_case_twin_table_star_answers_under_true_and_refuses_under_false`, the
+`_repark_ow_tgt` ambiguity pin, and the full insert_overwrite / case_twin /
+insert_by_name / partition_append / merge suites.

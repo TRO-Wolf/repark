@@ -110,36 +110,48 @@ pub fn nested_required_add_refusal(changes: &[ColumnPathChange]) -> Option<Strin
     })
 }
 
-#[must_use]
-pub fn nested_add_refusal(schema: &Schema, changes: &[ColumnPathChange]) -> Option<String> {
-    changes.iter().find_map(|change| {
+#[allow(clippy::missing_errors_doc)]
+pub fn nested_add_refusal(
+    schema: &Schema,
+    changes: &[ColumnPathChange],
+    case_sensitive: bool,
+) -> Result<Option<String>> {
+    let known = |name: &str| {
+        if case_sensitive {
+            Ok(schema.field_by_name(name).is_some())
+        } else {
+            schema
+                .try_field_by_name_case_insensitive(name)
+                .map(|field| field.is_some())
+        }
+    };
+    for change in changes {
         let ColumnPathChange::Add {
             parent: Some(parent),
             name,
             ..
         } = change
         else {
-            return None;
+            continue;
         };
-        if schema.field_by_name_case_insensitive(parent).is_none() {
-            return Some(unresolved_column(parent, &top_level_names(schema)));
+        if !known(parent)? {
+            return Ok(Some(unresolved_column(parent, &top_level_names(schema))));
         }
-        schema
-            .field_by_name_case_insensitive(&full_name(Some(parent), name))
-            .map(|_| {
-                let rendered = parent
-                    .split('.')
-                    .chain(std::iter::once(name.as_str()))
-                    .map(|part| format!("`{part}`"))
-                    .collect::<Vec<_>>()
-                    .join(".");
-                format!(
-                    "[FIELD_ALREADY_EXISTS] Cannot add column, because {rendered} already exists \
-                     in \"{}\". SQLSTATE: 42710",
-                    spark_sql_struct(schema.as_struct().fields())
-                )
-            })
-    })
+        if known(&full_name(Some(parent), name))? {
+            let rendered = parent
+                .split('.')
+                .chain(std::iter::once(name.as_str()))
+                .map(|part| format!("`{part}`"))
+                .collect::<Vec<_>>()
+                .join(".");
+            return Ok(Some(format!(
+                "[FIELD_ALREADY_EXISTS] Cannot add column, because {rendered} already exists \
+                 in \"{}\". SQLSTATE: 42710",
+                spark_sql_struct(schema.as_struct().fields())
+            )));
+        }
+    }
+    Ok(None)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -552,12 +564,13 @@ pub async fn apply_column_path_changes(
     catalog: &dyn Catalog,
     table: &Table,
     changes: &[ColumnPathChange],
+    case_sensitive: bool,
 ) -> Result<()> {
     if changes.is_empty() {
         return Ok(());
     }
     let tx = Transaction::new(table);
-    let mut action = tx.update_schema().case_sensitive(false);
+    let mut action = tx.update_schema().case_sensitive(case_sensitive);
     for change in changes {
         action = match change {
             ColumnPathChange::Add {
@@ -682,18 +695,23 @@ mod tests {
         let (catalog, ident) = nested_table(&warehouse).await;
         let table = catalog.load_table(&ident).await.unwrap();
         let schema = table.metadata().current_schema();
-        assert_eq!(nested_add_refusal(schema, &[add("s", "c", false)]), None);
+        assert_eq!(
+            nested_add_refusal(schema, &[add("s", "c", false)], false).unwrap(),
+            None
+        );
         assert_eq!(nested_required_add_refusal(&[add("s", "c", false)]), None);
         assert_eq!(
             nested_required_add_refusal(&[add("s", "c", false), add("s", "r", true)]).as_deref(),
             Some("Unsupported table change: Incompatible change: cannot add required column: r")
         );
         assert_eq!(
-            nested_add_refusal(schema, &[add("arrs.element", "y", false)]),
+            nested_add_refusal(schema, &[add("arrs.element", "y", false)], false).unwrap(),
             None
         );
         assert_eq!(
-            nested_add_refusal(schema, &[add("s", "c", false), add("S", "A", false)]).as_deref(),
+            nested_add_refusal(schema, &[add("s", "c", false), add("S", "A", false)], false)
+                .unwrap()
+                .as_deref(),
             Some(
                 "[FIELD_ALREADY_EXISTS] Cannot add column, because `S`.`A` already exists in \
                  \"STRUCT<id: INT, s: STRUCT<a: INT, b: STRING>, arrs: ARRAY<STRUCT<x: INT>>>\". \
@@ -701,7 +719,9 @@ mod tests {
             )
         );
         assert_eq!(
-            nested_add_refusal(schema, &[add("nope", "z", false)]).as_deref(),
+            nested_add_refusal(schema, &[add("nope", "z", false)], false)
+                .unwrap()
+                .as_deref(),
             Some(
                 "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter \
                  with name `nope` cannot be resolved. Did you mean one of the following? \
@@ -746,7 +766,7 @@ mod tests {
                 path: "s.b".to_string(),
             },
         ];
-        apply_column_path_changes(catalog.as_ref(), &table, &changes)
+        apply_column_path_changes(catalog.as_ref(), &table, &changes, false)
             .await
             .unwrap();
         let schema = catalog
@@ -767,9 +787,10 @@ mod tests {
         let warehouse = TempDir::new().unwrap();
         let (catalog, ident) = nested_table(&warehouse).await;
         let table = catalog.load_table(&ident).await.unwrap();
-        let refused = apply_column_path_changes(catalog.as_ref(), &table, &[add("s", "r", true)])
-            .await
-            .expect_err("a required add without a default is incompatible");
+        let refused =
+            apply_column_path_changes(catalog.as_ref(), &table, &[add("s", "r", true)], false)
+                .await
+                .expect_err("a required add without a default is incompatible");
         assert!(
             refused
                 .to_string()

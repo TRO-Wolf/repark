@@ -695,7 +695,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   stamped `UNRESOLVED_COLUMN.WITH_SUGGESTION` / `42703`.
   **RP-56 (2026-09-28):** `audit_plan_for_ambiguity` also refuses a written `*` over a
   non-scratch twin relation under `false` (Spark's `COLUMN_ALREADY_EXISTS` / `42711`,
-  first twin named); scratch relations and the `true` door keep answering. See
+  first twin named); scratch relations and the `true` door keep answering. Verifier fold
+  (2026-09-28): the refusal is scan-scoped — the twin key must occur inside one non-scratch
+  table scan — so derived/CTE/join/temp-view stars answer. See
   [column_resolution/map.md](column_resolution/map.md).
   pins: ice-mixed-case-1/C-001, C-002, C-007, C-013, C-014, C-015, C-016, C-017, C-021, C-022
   pins: ice-error-conditions-1/C-011

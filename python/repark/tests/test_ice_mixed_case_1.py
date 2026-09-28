@@ -776,26 +776,25 @@ def test_correlated_scalar_subquery_select_list_refuses_like_spark(
             measured.sql(statement).to_arrow()
 
 
-def test_star_over_a_case_twin_frame_refuses_column_already_exists(
+def test_star_over_a_case_twin_frame_answers_like_spark(
     measured: ReparkSession,
 ) -> None:
-    """Q-21b-12 closed by RP-56: ``SELECT *`` over a twin frame refuses like Spark.
+    """Q-21b-12 reopened by the RP-56 verifier fold: the twin-frame star answers.
 
-    Spark refuses the star over the twin Iceberg table (``L08_star_twin``) and
-    the twin temp view's creation (``N03_star_twin_view_create``) with
-    ``[COLUMN_ALREADY_EXISTS]``. The resolution audit now refuses a written star
-    over any non-scratch twin relation with the recorded sentence; scratch
-    relations keep answering, so the DataFrame ``filter`` and ``table`` paths
-    still serve the calls Spark answers.
+    p9 ``f_twv_read`` (Spark 4.1.2, 2026-09-28): the DataFrame temp-view star
+    answers ``[a, A]`` with the row — only the scan of a twin catalog table
+    refuses (``L08_star_twin``). The SQL-text twin view still refuses at
+    creation (``N03_star_twin_view_create``, DataFusion's unique-names error).
     """
-    for cell in (_MEASURED_CELLS["L08_star_twin"], _ROUND_2_CELLS["N03_star_twin_view_create"]):
-        assert cell["outcome"] == "error"
-        assert "[COLUMN_ALREADY_EXISTS]" in cell["message"][0]
-        assert "SQLSTATE: 42711" in cell["message"][0]
+    assert _MEASURED_CELLS["L08_star_twin"]["outcome"] == "error"
     measured.sql("SELECT 1 AS id, 0 AS `ID`").createOrReplaceTempView("twv")
-    with pytest.raises(AnalysisException) as caught:
-        measured.sql("SELECT * FROM twv").to_arrow()
-    assert _MEASURED_CELLS["L08_star_twin"]["message"][0] in str(caught.value)
+    table = measured.sql("SELECT * FROM twv").to_arrow()
+    assert table.column_names == ["id", "ID"]
+    assert _sorted_rows(table) == [[1, 0]]
+    measured.createDataFrame([(1, 2)], ["a", "A"]).createOrReplaceTempView("twv_df")
+    df_table = measured.sql("SELECT * FROM twv_df").to_arrow()
+    assert df_table.column_names == ["a", "A"]
+    assert _sorted_rows(df_table) == [[1, 2]]
     with pytest.raises(AnalysisException, match="Projections require unique expression names"):
         measured.sql(_ROUND_2_CELLS["N03_star_twin_view_create"]["sql"]).collect()
 
