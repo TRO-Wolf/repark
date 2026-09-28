@@ -1,0 +1,3919 @@
+{
+ "meta": {
+  "engine": "Spark 4.1.2 + Iceberg 1.11.0",
+  "measured": "2026-09-28",
+  "probe": "intdiv_probe.py",
+  "session": "local[1], ANSI default (on), UTC, hadoop catalog sc",
+  "table": "sc.ns.t (id BIGINT, i INT, d DECIMAL(10,2)) VALUES (1,1,1.00),(2,2,2.00),(3,3,3.00)",
+  "rows": "sorted by repr unless ordered"
+ },
+ "setup": [
+  "CREATE NAMESPACE IF NOT EXISTS sc.ns",
+  "CREATE TABLE sc.ns.t (id BIGINT, i INT, d DECIMAL(10,2)) USING iceberg",
+  "INSERT INTO sc.ns.t VALUES (1, 1, 1.00), (2, 2, 2.00), (3, 3, 3.00)",
+  "CREATE OR REPLACE TEMPORARY VIEW tv_big AS SELECT id, id / 2 AS h FROM sc.ns.t",
+  "CREATE VIEW default.sv_big AS SELECT id, id / 2 AS h FROM sc.ns.t",
+  "CREATE OR REPLACE TEMPORARY VIEW tv_int AS SELECT id, i / 2 AS h FROM sc.ns.t",
+  "CREATE VIEW default.sv_int AS SELECT id, i / 2 AS h FROM sc.ns.t"
+ ],
+ "cells": {
+  "big/flat/h": {
+   "sql": "SELECT id / 2 AS v, typeof(id / 2) AS t FROM sc.ns.t",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "big/flat/add1": {
+   "sql": "SELECT id / 2 + 1 AS v, typeof(id / 2 + 1) AS t FROM sc.ns.t",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.5,
+     "double"
+    ],
+    [
+     2.0,
+     "double"
+    ],
+    [
+     2.5,
+     "double"
+    ]
+   ]
+  },
+  "big/flat/mul2": {
+   "sql": "SELECT id / 2 * 2 AS v, typeof(id / 2 * 2) AS t FROM sc.ns.t",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.0,
+     "double"
+    ],
+    [
+     2.0,
+     "double"
+    ],
+    [
+     3.0,
+     "double"
+    ]
+   ]
+  },
+  "big/derived/h": {
+   "sql": "SELECT h AS v, typeof(h) AS t FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "big/derived/mul2": {
+   "sql": "SELECT h * 2 AS v, typeof(h * 2) AS t FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.0,
+     "double"
+    ],
+    [
+     2.0,
+     "double"
+    ],
+    [
+     3.0,
+     "double"
+    ]
+   ]
+  },
+  "big/derived/add1": {
+   "sql": "SELECT h + 1 AS v, typeof(h + 1) AS t FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.5,
+     "double"
+    ],
+    [
+     2.0,
+     "double"
+    ],
+    [
+     2.5,
+     "double"
+    ]
+   ]
+  },
+  "big/derived/sub1": {
+   "sql": "SELECT h - 1 AS v, typeof(h - 1) AS t FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     -0.5,
+     "double"
+    ],
+    [
+     0.0,
+     "double"
+    ],
+    [
+     0.5,
+     "double"
+    ]
+   ]
+  },
+  "big/derived/neg": {
+   "sql": "SELECT -h AS v, typeof(-h) AS t FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     -0.5,
+     "double"
+    ],
+    [
+     -1.0,
+     "double"
+    ],
+    [
+     -1.5,
+     "double"
+    ]
+   ]
+  },
+  "big/derived/abs": {
+   "sql": "SELECT abs(h) AS v, typeof(abs(h)) AS t FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "big/derived/div2": {
+   "sql": "SELECT h / 2 AS v, typeof(h / 2) AS t FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.25,
+     "double"
+    ],
+    [
+     0.5,
+     "double"
+    ],
+    [
+     0.75,
+     "double"
+    ]
+   ]
+  },
+  "big/derived/mod2": {
+   "sql": "SELECT h % 2 AS v, typeof(h % 2) AS t FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "big/derived/cast_int": {
+   "sql": "SELECT CAST(h AS INT) AS v, typeof(CAST(h AS INT)) AS t FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s",
+   "cols": [
+    [
+     "v",
+     "int"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0,
+     "int"
+    ],
+    [
+     1,
+     "int"
+    ],
+    [
+     1,
+     "int"
+    ]
+   ]
+  },
+  "big/derived/where": {
+   "sql": "SELECT id, h AS v FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s WHERE h + 1 = 1.5",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     0.5
+    ]
+   ]
+  },
+  "big/derived/order": {
+   "sql": "SELECT id, h AS v FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s ORDER BY h + 0 DESC",
+   "ordered": true,
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     3,
+     1.5
+    ],
+    [
+     2,
+     1.0
+    ],
+    [
+     1,
+     0.5
+    ]
+   ]
+  },
+  "big/derived/sum": {
+   "sql": "SELECT sum(h) AS v, typeof(sum(h)) AS t FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     3.0,
+     "double"
+    ]
+   ]
+  },
+  "big/derived/avg": {
+   "sql": "SELECT avg(h) AS v, typeof(avg(h)) AS t FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.0,
+     "double"
+    ]
+   ]
+  },
+  "big/cte/h": {
+   "sql": "WITH s AS (SELECT id, id / 2 AS h FROM sc.ns.t) SELECT h AS v, typeof(h) AS t FROM s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "big/cte/mul2": {
+   "sql": "WITH s AS (SELECT id, id / 2 AS h FROM sc.ns.t) SELECT h * 2 AS v, typeof(h * 2) AS t FROM s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.0,
+     "double"
+    ],
+    [
+     2.0,
+     "double"
+    ],
+    [
+     3.0,
+     "double"
+    ]
+   ]
+  },
+  "big/cte/add1": {
+   "sql": "WITH s AS (SELECT id, id / 2 AS h FROM sc.ns.t) SELECT h + 1 AS v, typeof(h + 1) AS t FROM s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.5,
+     "double"
+    ],
+    [
+     2.0,
+     "double"
+    ],
+    [
+     2.5,
+     "double"
+    ]
+   ]
+  },
+  "big/cte/sub1": {
+   "sql": "WITH s AS (SELECT id, id / 2 AS h FROM sc.ns.t) SELECT h - 1 AS v, typeof(h - 1) AS t FROM s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     -0.5,
+     "double"
+    ],
+    [
+     0.0,
+     "double"
+    ],
+    [
+     0.5,
+     "double"
+    ]
+   ]
+  },
+  "big/cte/neg": {
+   "sql": "WITH s AS (SELECT id, id / 2 AS h FROM sc.ns.t) SELECT -h AS v, typeof(-h) AS t FROM s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     -0.5,
+     "double"
+    ],
+    [
+     -1.0,
+     "double"
+    ],
+    [
+     -1.5,
+     "double"
+    ]
+   ]
+  },
+  "big/cte/abs": {
+   "sql": "WITH s AS (SELECT id, id / 2 AS h FROM sc.ns.t) SELECT abs(h) AS v, typeof(abs(h)) AS t FROM s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "big/cte/div2": {
+   "sql": "WITH s AS (SELECT id, id / 2 AS h FROM sc.ns.t) SELECT h / 2 AS v, typeof(h / 2) AS t FROM s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.25,
+     "double"
+    ],
+    [
+     0.5,
+     "double"
+    ],
+    [
+     0.75,
+     "double"
+    ]
+   ]
+  },
+  "big/cte/mod2": {
+   "sql": "WITH s AS (SELECT id, id / 2 AS h FROM sc.ns.t) SELECT h % 2 AS v, typeof(h % 2) AS t FROM s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "big/cte/cast_int": {
+   "sql": "WITH s AS (SELECT id, id / 2 AS h FROM sc.ns.t) SELECT CAST(h AS INT) AS v, typeof(CAST(h AS INT)) AS t FROM s",
+   "cols": [
+    [
+     "v",
+     "int"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0,
+     "int"
+    ],
+    [
+     1,
+     "int"
+    ],
+    [
+     1,
+     "int"
+    ]
+   ]
+  },
+  "big/cte/where": {
+   "sql": "WITH s AS (SELECT id, id / 2 AS h FROM sc.ns.t) SELECT id, h AS v FROM s WHERE h + 1 = 1.5",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     0.5
+    ]
+   ]
+  },
+  "big/cte/order": {
+   "sql": "WITH s AS (SELECT id, id / 2 AS h FROM sc.ns.t) SELECT id, h AS v FROM s ORDER BY h + 0 DESC",
+   "ordered": true,
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     3,
+     1.5
+    ],
+    [
+     2,
+     1.0
+    ],
+    [
+     1,
+     0.5
+    ]
+   ]
+  },
+  "big/cte/sum": {
+   "sql": "WITH s AS (SELECT id, id / 2 AS h FROM sc.ns.t) SELECT sum(h) AS v, typeof(sum(h)) AS t FROM s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     3.0,
+     "double"
+    ]
+   ]
+  },
+  "big/cte/avg": {
+   "sql": "WITH s AS (SELECT id, id / 2 AS h FROM sc.ns.t) SELECT avg(h) AS v, typeof(avg(h)) AS t FROM s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.0,
+     "double"
+    ]
+   ]
+  },
+  "big/tempview/h": {
+   "sql": "SELECT h AS v, typeof(h) AS t FROM tv_big",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "big/tempview/mul2": {
+   "sql": "SELECT h * 2 AS v, typeof(h * 2) AS t FROM tv_big",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.0,
+     "double"
+    ],
+    [
+     2.0,
+     "double"
+    ],
+    [
+     3.0,
+     "double"
+    ]
+   ]
+  },
+  "big/tempview/add1": {
+   "sql": "SELECT h + 1 AS v, typeof(h + 1) AS t FROM tv_big",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.5,
+     "double"
+    ],
+    [
+     2.0,
+     "double"
+    ],
+    [
+     2.5,
+     "double"
+    ]
+   ]
+  },
+  "big/tempview/sub1": {
+   "sql": "SELECT h - 1 AS v, typeof(h - 1) AS t FROM tv_big",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     -0.5,
+     "double"
+    ],
+    [
+     0.0,
+     "double"
+    ],
+    [
+     0.5,
+     "double"
+    ]
+   ]
+  },
+  "big/tempview/neg": {
+   "sql": "SELECT -h AS v, typeof(-h) AS t FROM tv_big",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     -0.5,
+     "double"
+    ],
+    [
+     -1.0,
+     "double"
+    ],
+    [
+     -1.5,
+     "double"
+    ]
+   ]
+  },
+  "big/tempview/abs": {
+   "sql": "SELECT abs(h) AS v, typeof(abs(h)) AS t FROM tv_big",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "big/tempview/div2": {
+   "sql": "SELECT h / 2 AS v, typeof(h / 2) AS t FROM tv_big",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.25,
+     "double"
+    ],
+    [
+     0.5,
+     "double"
+    ],
+    [
+     0.75,
+     "double"
+    ]
+   ]
+  },
+  "big/tempview/mod2": {
+   "sql": "SELECT h % 2 AS v, typeof(h % 2) AS t FROM tv_big",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "big/tempview/cast_int": {
+   "sql": "SELECT CAST(h AS INT) AS v, typeof(CAST(h AS INT)) AS t FROM tv_big",
+   "cols": [
+    [
+     "v",
+     "int"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0,
+     "int"
+    ],
+    [
+     1,
+     "int"
+    ],
+    [
+     1,
+     "int"
+    ]
+   ]
+  },
+  "big/tempview/where": {
+   "sql": "SELECT id, h AS v FROM tv_big WHERE h + 1 = 1.5",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     0.5
+    ]
+   ]
+  },
+  "big/tempview/order": {
+   "sql": "SELECT id, h AS v FROM tv_big ORDER BY h + 0 DESC",
+   "ordered": true,
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     3,
+     1.5
+    ],
+    [
+     2,
+     1.0
+    ],
+    [
+     1,
+     0.5
+    ]
+   ]
+  },
+  "big/tempview/sum": {
+   "sql": "SELECT sum(h) AS v, typeof(sum(h)) AS t FROM tv_big",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     3.0,
+     "double"
+    ]
+   ]
+  },
+  "big/tempview/avg": {
+   "sql": "SELECT avg(h) AS v, typeof(avg(h)) AS t FROM tv_big",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.0,
+     "double"
+    ]
+   ]
+  },
+  "big/sessview/h": {
+   "sql": "SELECT h AS v, typeof(h) AS t FROM default.sv_big",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "big/sessview/mul2": {
+   "sql": "SELECT h * 2 AS v, typeof(h * 2) AS t FROM default.sv_big",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.0,
+     "double"
+    ],
+    [
+     2.0,
+     "double"
+    ],
+    [
+     3.0,
+     "double"
+    ]
+   ]
+  },
+  "big/sessview/add1": {
+   "sql": "SELECT h + 1 AS v, typeof(h + 1) AS t FROM default.sv_big",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.5,
+     "double"
+    ],
+    [
+     2.0,
+     "double"
+    ],
+    [
+     2.5,
+     "double"
+    ]
+   ]
+  },
+  "big/sessview/sub1": {
+   "sql": "SELECT h - 1 AS v, typeof(h - 1) AS t FROM default.sv_big",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     -0.5,
+     "double"
+    ],
+    [
+     0.0,
+     "double"
+    ],
+    [
+     0.5,
+     "double"
+    ]
+   ]
+  },
+  "big/sessview/neg": {
+   "sql": "SELECT -h AS v, typeof(-h) AS t FROM default.sv_big",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     -0.5,
+     "double"
+    ],
+    [
+     -1.0,
+     "double"
+    ],
+    [
+     -1.5,
+     "double"
+    ]
+   ]
+  },
+  "big/sessview/abs": {
+   "sql": "SELECT abs(h) AS v, typeof(abs(h)) AS t FROM default.sv_big",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "big/sessview/div2": {
+   "sql": "SELECT h / 2 AS v, typeof(h / 2) AS t FROM default.sv_big",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.25,
+     "double"
+    ],
+    [
+     0.5,
+     "double"
+    ],
+    [
+     0.75,
+     "double"
+    ]
+   ]
+  },
+  "big/sessview/mod2": {
+   "sql": "SELECT h % 2 AS v, typeof(h % 2) AS t FROM default.sv_big",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "big/sessview/cast_int": {
+   "sql": "SELECT CAST(h AS INT) AS v, typeof(CAST(h AS INT)) AS t FROM default.sv_big",
+   "cols": [
+    [
+     "v",
+     "int"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0,
+     "int"
+    ],
+    [
+     1,
+     "int"
+    ],
+    [
+     1,
+     "int"
+    ]
+   ]
+  },
+  "big/sessview/where": {
+   "sql": "SELECT id, h AS v FROM default.sv_big WHERE h + 1 = 1.5",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     0.5
+    ]
+   ]
+  },
+  "big/sessview/order": {
+   "sql": "SELECT id, h AS v FROM default.sv_big ORDER BY h + 0 DESC",
+   "ordered": true,
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     3,
+     1.5
+    ],
+    [
+     2,
+     1.0
+    ],
+    [
+     1,
+     0.5
+    ]
+   ]
+  },
+  "big/sessview/sum": {
+   "sql": "SELECT sum(h) AS v, typeof(sum(h)) AS t FROM default.sv_big",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     3.0,
+     "double"
+    ]
+   ]
+  },
+  "big/sessview/avg": {
+   "sql": "SELECT avg(h) AS v, typeof(avg(h)) AS t FROM default.sv_big",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.0,
+     "double"
+    ]
+   ]
+  },
+  "big/nested/h": {
+   "sql": "SELECT h AS v, typeof(h) AS t FROM (SELECT id, h FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s1) s2",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "big/nested/mul2": {
+   "sql": "SELECT h * 2 AS v, typeof(h * 2) AS t FROM (SELECT id, h FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s1) s2",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.0,
+     "double"
+    ],
+    [
+     2.0,
+     "double"
+    ],
+    [
+     3.0,
+     "double"
+    ]
+   ]
+  },
+  "big/nested/add1": {
+   "sql": "SELECT h + 1 AS v, typeof(h + 1) AS t FROM (SELECT id, h FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s1) s2",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.5,
+     "double"
+    ],
+    [
+     2.0,
+     "double"
+    ],
+    [
+     2.5,
+     "double"
+    ]
+   ]
+  },
+  "big/nested/sub1": {
+   "sql": "SELECT h - 1 AS v, typeof(h - 1) AS t FROM (SELECT id, h FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s1) s2",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     -0.5,
+     "double"
+    ],
+    [
+     0.0,
+     "double"
+    ],
+    [
+     0.5,
+     "double"
+    ]
+   ]
+  },
+  "big/nested/neg": {
+   "sql": "SELECT -h AS v, typeof(-h) AS t FROM (SELECT id, h FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s1) s2",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     -0.5,
+     "double"
+    ],
+    [
+     -1.0,
+     "double"
+    ],
+    [
+     -1.5,
+     "double"
+    ]
+   ]
+  },
+  "big/nested/abs": {
+   "sql": "SELECT abs(h) AS v, typeof(abs(h)) AS t FROM (SELECT id, h FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s1) s2",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "big/nested/div2": {
+   "sql": "SELECT h / 2 AS v, typeof(h / 2) AS t FROM (SELECT id, h FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s1) s2",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.25,
+     "double"
+    ],
+    [
+     0.5,
+     "double"
+    ],
+    [
+     0.75,
+     "double"
+    ]
+   ]
+  },
+  "big/nested/mod2": {
+   "sql": "SELECT h % 2 AS v, typeof(h % 2) AS t FROM (SELECT id, h FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s1) s2",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "big/nested/cast_int": {
+   "sql": "SELECT CAST(h AS INT) AS v, typeof(CAST(h AS INT)) AS t FROM (SELECT id, h FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s1) s2",
+   "cols": [
+    [
+     "v",
+     "int"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0,
+     "int"
+    ],
+    [
+     1,
+     "int"
+    ],
+    [
+     1,
+     "int"
+    ]
+   ]
+  },
+  "big/nested/where": {
+   "sql": "SELECT id, h AS v FROM (SELECT id, h FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s1) s2 WHERE h + 1 = 1.5",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     0.5
+    ]
+   ]
+  },
+  "big/nested/order": {
+   "sql": "SELECT id, h AS v FROM (SELECT id, h FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s1) s2 ORDER BY h + 0 DESC",
+   "ordered": true,
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     3,
+     1.5
+    ],
+    [
+     2,
+     1.0
+    ],
+    [
+     1,
+     0.5
+    ]
+   ]
+  },
+  "big/nested/sum": {
+   "sql": "SELECT sum(h) AS v, typeof(sum(h)) AS t FROM (SELECT id, h FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s1) s2",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     3.0,
+     "double"
+    ]
+   ]
+  },
+  "big/nested/avg": {
+   "sql": "SELECT avg(h) AS v, typeof(avg(h)) AS t FROM (SELECT id, h FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s1) s2",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.0,
+     "double"
+    ]
+   ]
+  },
+  "big/chain/mul_add": {
+   "sql": "SELECT g + 1 AS v, typeof(g + 1) AS t FROM (SELECT h * 2 AS g FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s1) s2",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     2.0,
+     "double"
+    ],
+    [
+     3.0,
+     "double"
+    ],
+    [
+     4.0,
+     "double"
+    ]
+   ]
+  },
+  "int/flat/h": {
+   "sql": "SELECT i / 2 AS v, typeof(i / 2) AS t FROM sc.ns.t",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "int/flat/add1": {
+   "sql": "SELECT i / 2 + 1 AS v, typeof(i / 2 + 1) AS t FROM sc.ns.t",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.5,
+     "double"
+    ],
+    [
+     2.0,
+     "double"
+    ],
+    [
+     2.5,
+     "double"
+    ]
+   ]
+  },
+  "int/flat/mul2": {
+   "sql": "SELECT i / 2 * 2 AS v, typeof(i / 2 * 2) AS t FROM sc.ns.t",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.0,
+     "double"
+    ],
+    [
+     2.0,
+     "double"
+    ],
+    [
+     3.0,
+     "double"
+    ]
+   ]
+  },
+  "int/derived/h": {
+   "sql": "SELECT h AS v, typeof(h) AS t FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "int/derived/mul2": {
+   "sql": "SELECT h * 2 AS v, typeof(h * 2) AS t FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.0,
+     "double"
+    ],
+    [
+     2.0,
+     "double"
+    ],
+    [
+     3.0,
+     "double"
+    ]
+   ]
+  },
+  "int/derived/add1": {
+   "sql": "SELECT h + 1 AS v, typeof(h + 1) AS t FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.5,
+     "double"
+    ],
+    [
+     2.0,
+     "double"
+    ],
+    [
+     2.5,
+     "double"
+    ]
+   ]
+  },
+  "int/derived/sub1": {
+   "sql": "SELECT h - 1 AS v, typeof(h - 1) AS t FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     -0.5,
+     "double"
+    ],
+    [
+     0.0,
+     "double"
+    ],
+    [
+     0.5,
+     "double"
+    ]
+   ]
+  },
+  "int/derived/neg": {
+   "sql": "SELECT -h AS v, typeof(-h) AS t FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     -0.5,
+     "double"
+    ],
+    [
+     -1.0,
+     "double"
+    ],
+    [
+     -1.5,
+     "double"
+    ]
+   ]
+  },
+  "int/derived/abs": {
+   "sql": "SELECT abs(h) AS v, typeof(abs(h)) AS t FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "int/derived/div2": {
+   "sql": "SELECT h / 2 AS v, typeof(h / 2) AS t FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.25,
+     "double"
+    ],
+    [
+     0.5,
+     "double"
+    ],
+    [
+     0.75,
+     "double"
+    ]
+   ]
+  },
+  "int/derived/mod2": {
+   "sql": "SELECT h % 2 AS v, typeof(h % 2) AS t FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "int/derived/cast_int": {
+   "sql": "SELECT CAST(h AS INT) AS v, typeof(CAST(h AS INT)) AS t FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s",
+   "cols": [
+    [
+     "v",
+     "int"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0,
+     "int"
+    ],
+    [
+     1,
+     "int"
+    ],
+    [
+     1,
+     "int"
+    ]
+   ]
+  },
+  "int/derived/where": {
+   "sql": "SELECT id, h AS v FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s WHERE h + 1 = 1.5",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     0.5
+    ]
+   ]
+  },
+  "int/derived/order": {
+   "sql": "SELECT id, h AS v FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s ORDER BY h + 0 DESC",
+   "ordered": true,
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     3,
+     1.5
+    ],
+    [
+     2,
+     1.0
+    ],
+    [
+     1,
+     0.5
+    ]
+   ]
+  },
+  "int/derived/sum": {
+   "sql": "SELECT sum(h) AS v, typeof(sum(h)) AS t FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     3.0,
+     "double"
+    ]
+   ]
+  },
+  "int/derived/avg": {
+   "sql": "SELECT avg(h) AS v, typeof(avg(h)) AS t FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.0,
+     "double"
+    ]
+   ]
+  },
+  "int/cte/h": {
+   "sql": "WITH s AS (SELECT id, i / 2 AS h FROM sc.ns.t) SELECT h AS v, typeof(h) AS t FROM s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "int/cte/mul2": {
+   "sql": "WITH s AS (SELECT id, i / 2 AS h FROM sc.ns.t) SELECT h * 2 AS v, typeof(h * 2) AS t FROM s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.0,
+     "double"
+    ],
+    [
+     2.0,
+     "double"
+    ],
+    [
+     3.0,
+     "double"
+    ]
+   ]
+  },
+  "int/cte/add1": {
+   "sql": "WITH s AS (SELECT id, i / 2 AS h FROM sc.ns.t) SELECT h + 1 AS v, typeof(h + 1) AS t FROM s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.5,
+     "double"
+    ],
+    [
+     2.0,
+     "double"
+    ],
+    [
+     2.5,
+     "double"
+    ]
+   ]
+  },
+  "int/cte/sub1": {
+   "sql": "WITH s AS (SELECT id, i / 2 AS h FROM sc.ns.t) SELECT h - 1 AS v, typeof(h - 1) AS t FROM s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     -0.5,
+     "double"
+    ],
+    [
+     0.0,
+     "double"
+    ],
+    [
+     0.5,
+     "double"
+    ]
+   ]
+  },
+  "int/cte/neg": {
+   "sql": "WITH s AS (SELECT id, i / 2 AS h FROM sc.ns.t) SELECT -h AS v, typeof(-h) AS t FROM s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     -0.5,
+     "double"
+    ],
+    [
+     -1.0,
+     "double"
+    ],
+    [
+     -1.5,
+     "double"
+    ]
+   ]
+  },
+  "int/cte/abs": {
+   "sql": "WITH s AS (SELECT id, i / 2 AS h FROM sc.ns.t) SELECT abs(h) AS v, typeof(abs(h)) AS t FROM s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "int/cte/div2": {
+   "sql": "WITH s AS (SELECT id, i / 2 AS h FROM sc.ns.t) SELECT h / 2 AS v, typeof(h / 2) AS t FROM s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.25,
+     "double"
+    ],
+    [
+     0.5,
+     "double"
+    ],
+    [
+     0.75,
+     "double"
+    ]
+   ]
+  },
+  "int/cte/mod2": {
+   "sql": "WITH s AS (SELECT id, i / 2 AS h FROM sc.ns.t) SELECT h % 2 AS v, typeof(h % 2) AS t FROM s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "int/cte/cast_int": {
+   "sql": "WITH s AS (SELECT id, i / 2 AS h FROM sc.ns.t) SELECT CAST(h AS INT) AS v, typeof(CAST(h AS INT)) AS t FROM s",
+   "cols": [
+    [
+     "v",
+     "int"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0,
+     "int"
+    ],
+    [
+     1,
+     "int"
+    ],
+    [
+     1,
+     "int"
+    ]
+   ]
+  },
+  "int/cte/where": {
+   "sql": "WITH s AS (SELECT id, i / 2 AS h FROM sc.ns.t) SELECT id, h AS v FROM s WHERE h + 1 = 1.5",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     0.5
+    ]
+   ]
+  },
+  "int/cte/order": {
+   "sql": "WITH s AS (SELECT id, i / 2 AS h FROM sc.ns.t) SELECT id, h AS v FROM s ORDER BY h + 0 DESC",
+   "ordered": true,
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     3,
+     1.5
+    ],
+    [
+     2,
+     1.0
+    ],
+    [
+     1,
+     0.5
+    ]
+   ]
+  },
+  "int/cte/sum": {
+   "sql": "WITH s AS (SELECT id, i / 2 AS h FROM sc.ns.t) SELECT sum(h) AS v, typeof(sum(h)) AS t FROM s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     3.0,
+     "double"
+    ]
+   ]
+  },
+  "int/cte/avg": {
+   "sql": "WITH s AS (SELECT id, i / 2 AS h FROM sc.ns.t) SELECT avg(h) AS v, typeof(avg(h)) AS t FROM s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.0,
+     "double"
+    ]
+   ]
+  },
+  "int/tempview/h": {
+   "sql": "SELECT h AS v, typeof(h) AS t FROM tv_int",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "int/tempview/mul2": {
+   "sql": "SELECT h * 2 AS v, typeof(h * 2) AS t FROM tv_int",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.0,
+     "double"
+    ],
+    [
+     2.0,
+     "double"
+    ],
+    [
+     3.0,
+     "double"
+    ]
+   ]
+  },
+  "int/tempview/add1": {
+   "sql": "SELECT h + 1 AS v, typeof(h + 1) AS t FROM tv_int",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.5,
+     "double"
+    ],
+    [
+     2.0,
+     "double"
+    ],
+    [
+     2.5,
+     "double"
+    ]
+   ]
+  },
+  "int/tempview/sub1": {
+   "sql": "SELECT h - 1 AS v, typeof(h - 1) AS t FROM tv_int",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     -0.5,
+     "double"
+    ],
+    [
+     0.0,
+     "double"
+    ],
+    [
+     0.5,
+     "double"
+    ]
+   ]
+  },
+  "int/tempview/neg": {
+   "sql": "SELECT -h AS v, typeof(-h) AS t FROM tv_int",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     -0.5,
+     "double"
+    ],
+    [
+     -1.0,
+     "double"
+    ],
+    [
+     -1.5,
+     "double"
+    ]
+   ]
+  },
+  "int/tempview/abs": {
+   "sql": "SELECT abs(h) AS v, typeof(abs(h)) AS t FROM tv_int",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "int/tempview/div2": {
+   "sql": "SELECT h / 2 AS v, typeof(h / 2) AS t FROM tv_int",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.25,
+     "double"
+    ],
+    [
+     0.5,
+     "double"
+    ],
+    [
+     0.75,
+     "double"
+    ]
+   ]
+  },
+  "int/tempview/mod2": {
+   "sql": "SELECT h % 2 AS v, typeof(h % 2) AS t FROM tv_int",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "int/tempview/cast_int": {
+   "sql": "SELECT CAST(h AS INT) AS v, typeof(CAST(h AS INT)) AS t FROM tv_int",
+   "cols": [
+    [
+     "v",
+     "int"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0,
+     "int"
+    ],
+    [
+     1,
+     "int"
+    ],
+    [
+     1,
+     "int"
+    ]
+   ]
+  },
+  "int/tempview/where": {
+   "sql": "SELECT id, h AS v FROM tv_int WHERE h + 1 = 1.5",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     0.5
+    ]
+   ]
+  },
+  "int/tempview/order": {
+   "sql": "SELECT id, h AS v FROM tv_int ORDER BY h + 0 DESC",
+   "ordered": true,
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     3,
+     1.5
+    ],
+    [
+     2,
+     1.0
+    ],
+    [
+     1,
+     0.5
+    ]
+   ]
+  },
+  "int/tempview/sum": {
+   "sql": "SELECT sum(h) AS v, typeof(sum(h)) AS t FROM tv_int",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     3.0,
+     "double"
+    ]
+   ]
+  },
+  "int/tempview/avg": {
+   "sql": "SELECT avg(h) AS v, typeof(avg(h)) AS t FROM tv_int",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.0,
+     "double"
+    ]
+   ]
+  },
+  "int/sessview/h": {
+   "sql": "SELECT h AS v, typeof(h) AS t FROM default.sv_int",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "int/sessview/mul2": {
+   "sql": "SELECT h * 2 AS v, typeof(h * 2) AS t FROM default.sv_int",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.0,
+     "double"
+    ],
+    [
+     2.0,
+     "double"
+    ],
+    [
+     3.0,
+     "double"
+    ]
+   ]
+  },
+  "int/sessview/add1": {
+   "sql": "SELECT h + 1 AS v, typeof(h + 1) AS t FROM default.sv_int",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.5,
+     "double"
+    ],
+    [
+     2.0,
+     "double"
+    ],
+    [
+     2.5,
+     "double"
+    ]
+   ]
+  },
+  "int/sessview/sub1": {
+   "sql": "SELECT h - 1 AS v, typeof(h - 1) AS t FROM default.sv_int",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     -0.5,
+     "double"
+    ],
+    [
+     0.0,
+     "double"
+    ],
+    [
+     0.5,
+     "double"
+    ]
+   ]
+  },
+  "int/sessview/neg": {
+   "sql": "SELECT -h AS v, typeof(-h) AS t FROM default.sv_int",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     -0.5,
+     "double"
+    ],
+    [
+     -1.0,
+     "double"
+    ],
+    [
+     -1.5,
+     "double"
+    ]
+   ]
+  },
+  "int/sessview/abs": {
+   "sql": "SELECT abs(h) AS v, typeof(abs(h)) AS t FROM default.sv_int",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "int/sessview/div2": {
+   "sql": "SELECT h / 2 AS v, typeof(h / 2) AS t FROM default.sv_int",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.25,
+     "double"
+    ],
+    [
+     0.5,
+     "double"
+    ],
+    [
+     0.75,
+     "double"
+    ]
+   ]
+  },
+  "int/sessview/mod2": {
+   "sql": "SELECT h % 2 AS v, typeof(h % 2) AS t FROM default.sv_int",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "int/sessview/cast_int": {
+   "sql": "SELECT CAST(h AS INT) AS v, typeof(CAST(h AS INT)) AS t FROM default.sv_int",
+   "cols": [
+    [
+     "v",
+     "int"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0,
+     "int"
+    ],
+    [
+     1,
+     "int"
+    ],
+    [
+     1,
+     "int"
+    ]
+   ]
+  },
+  "int/sessview/where": {
+   "sql": "SELECT id, h AS v FROM default.sv_int WHERE h + 1 = 1.5",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     0.5
+    ]
+   ]
+  },
+  "int/sessview/order": {
+   "sql": "SELECT id, h AS v FROM default.sv_int ORDER BY h + 0 DESC",
+   "ordered": true,
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     3,
+     1.5
+    ],
+    [
+     2,
+     1.0
+    ],
+    [
+     1,
+     0.5
+    ]
+   ]
+  },
+  "int/sessview/sum": {
+   "sql": "SELECT sum(h) AS v, typeof(sum(h)) AS t FROM default.sv_int",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     3.0,
+     "double"
+    ]
+   ]
+  },
+  "int/sessview/avg": {
+   "sql": "SELECT avg(h) AS v, typeof(avg(h)) AS t FROM default.sv_int",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.0,
+     "double"
+    ]
+   ]
+  },
+  "int/nested/h": {
+   "sql": "SELECT h AS v, typeof(h) AS t FROM (SELECT id, h FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s1) s2",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "int/nested/mul2": {
+   "sql": "SELECT h * 2 AS v, typeof(h * 2) AS t FROM (SELECT id, h FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s1) s2",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.0,
+     "double"
+    ],
+    [
+     2.0,
+     "double"
+    ],
+    [
+     3.0,
+     "double"
+    ]
+   ]
+  },
+  "int/nested/add1": {
+   "sql": "SELECT h + 1 AS v, typeof(h + 1) AS t FROM (SELECT id, h FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s1) s2",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.5,
+     "double"
+    ],
+    [
+     2.0,
+     "double"
+    ],
+    [
+     2.5,
+     "double"
+    ]
+   ]
+  },
+  "int/nested/sub1": {
+   "sql": "SELECT h - 1 AS v, typeof(h - 1) AS t FROM (SELECT id, h FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s1) s2",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     -0.5,
+     "double"
+    ],
+    [
+     0.0,
+     "double"
+    ],
+    [
+     0.5,
+     "double"
+    ]
+   ]
+  },
+  "int/nested/neg": {
+   "sql": "SELECT -h AS v, typeof(-h) AS t FROM (SELECT id, h FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s1) s2",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     -0.5,
+     "double"
+    ],
+    [
+     -1.0,
+     "double"
+    ],
+    [
+     -1.5,
+     "double"
+    ]
+   ]
+  },
+  "int/nested/abs": {
+   "sql": "SELECT abs(h) AS v, typeof(abs(h)) AS t FROM (SELECT id, h FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s1) s2",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "int/nested/div2": {
+   "sql": "SELECT h / 2 AS v, typeof(h / 2) AS t FROM (SELECT id, h FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s1) s2",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.25,
+     "double"
+    ],
+    [
+     0.5,
+     "double"
+    ],
+    [
+     0.75,
+     "double"
+    ]
+   ]
+  },
+  "int/nested/mod2": {
+   "sql": "SELECT h % 2 AS v, typeof(h % 2) AS t FROM (SELECT id, h FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s1) s2",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double"
+    ],
+    [
+     1.0,
+     "double"
+    ],
+    [
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "int/nested/cast_int": {
+   "sql": "SELECT CAST(h AS INT) AS v, typeof(CAST(h AS INT)) AS t FROM (SELECT id, h FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s1) s2",
+   "cols": [
+    [
+     "v",
+     "int"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     0,
+     "int"
+    ],
+    [
+     1,
+     "int"
+    ],
+    [
+     1,
+     "int"
+    ]
+   ]
+  },
+  "int/nested/where": {
+   "sql": "SELECT id, h AS v FROM (SELECT id, h FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s1) s2 WHERE h + 1 = 1.5",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     0.5
+    ]
+   ]
+  },
+  "int/nested/order": {
+   "sql": "SELECT id, h AS v FROM (SELECT id, h FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s1) s2 ORDER BY h + 0 DESC",
+   "ordered": true,
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     3,
+     1.5
+    ],
+    [
+     2,
+     1.0
+    ],
+    [
+     1,
+     0.5
+    ]
+   ]
+  },
+  "int/nested/sum": {
+   "sql": "SELECT sum(h) AS v, typeof(sum(h)) AS t FROM (SELECT id, h FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s1) s2",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     3.0,
+     "double"
+    ]
+   ]
+  },
+  "int/nested/avg": {
+   "sql": "SELECT avg(h) AS v, typeof(avg(h)) AS t FROM (SELECT id, h FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s1) s2",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.0,
+     "double"
+    ]
+   ]
+  },
+  "int/chain/mul_add": {
+   "sql": "SELECT g + 1 AS v, typeof(g + 1) AS t FROM (SELECT h * 2 AS g FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s1) s2",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     2.0,
+     "double"
+    ],
+    [
+     3.0,
+     "double"
+    ],
+    [
+     4.0,
+     "double"
+    ]
+   ]
+  },
+  "ctl/int_mul_add": {
+   "sql": "SELECT a + 1 AS v, typeof(a + 1) AS t FROM (SELECT id * 2 AS a FROM sc.ns.t) s",
+   "cols": [
+    [
+     "v",
+     "bigint"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     3,
+     "bigint"
+    ],
+    [
+     5,
+     "bigint"
+    ],
+    [
+     7,
+     "bigint"
+    ]
+   ]
+  },
+  "ctl/int_mul_add_int": {
+   "sql": "SELECT a + 1 AS v, typeof(a + 1) AS t FROM (SELECT i * 2 AS a FROM sc.ns.t) s",
+   "cols": [
+    [
+     "v",
+     "int"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     3,
+     "int"
+    ],
+    [
+     5,
+     "int"
+    ],
+    [
+     7,
+     "int"
+    ]
+   ]
+  },
+  "ctl/cte_int_add": {
+   "sql": "WITH s AS (SELECT i + 1 AS a FROM sc.ns.t) SELECT a * 3 AS v, typeof(a * 3) AS t FROM s",
+   "cols": [
+    [
+     "v",
+     "int"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     12,
+     "int"
+    ],
+    [
+     6,
+     "int"
+    ],
+    [
+     9,
+     "int"
+    ]
+   ]
+  },
+  "ctl/big_overflow": {
+   "sql": "SELECT a + 1 AS v FROM (SELECT 9223372036854775807 AS a) s",
+   "condition": "ARITHMETIC_OVERFLOW",
+   "sql_state": "22003",
+   "message_head": "[ARITHMETIC_OVERFLOW] long overflow"
+  },
+  "ctl/big_overflow_cte": {
+   "sql": "WITH s AS (SELECT 9223372036854775807 AS a) SELECT a + 1 AS v FROM s",
+   "condition": "ARITHMETIC_OVERFLOW",
+   "sql_state": "22003",
+   "message_head": "[ARITHMETIC_OVERFLOW] long overflow"
+  },
+  "ctl/int_overflow_col": {
+   "sql": "SELECT a * 2147483647 AS v FROM (SELECT i * 2 AS a FROM sc.ns.t) s",
+   "condition": "ARITHMETIC_OVERFLOW",
+   "sql_state": "22003",
+   "message_head": "[ARITHMETIC_OVERFLOW] integer overflow"
+  },
+  "ctl/mod_int": {
+   "sql": "SELECT a + 1 AS v, typeof(a + 1) AS t FROM (SELECT id % 2 AS a FROM sc.ns.t) s",
+   "cols": [
+    [
+     "v",
+     "bigint"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     "bigint"
+    ],
+    [
+     2,
+     "bigint"
+    ],
+    [
+     2,
+     "bigint"
+    ]
+   ]
+  },
+  "ctl/big_div_overflow": {
+   "sql": "SELECT h + 9223372036854775807 AS v, typeof(h + 9223372036854775807) AS t FROM (SELECT id / 2 AS h FROM sc.ns.t) s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     9.223372036854776e+18,
+     "double"
+    ],
+    [
+     9.223372036854776e+18,
+     "double"
+    ],
+    [
+     9.223372036854776e+18,
+     "double"
+    ]
+   ]
+  },
+  "store/ctas": {
+   "sql": "CREATE TABLE sc.ns.c1 USING iceberg AS SELECT h * 2 AS v, h + 1 AS w FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s",
+   "statement": true
+  },
+  "store/ctas_desc": {
+   "sql": "DESCRIBE TABLE sc.ns.c1",
+   "cols": [
+    [
+     "col_name",
+     "string"
+    ],
+    [
+     "data_type",
+     "string"
+    ],
+    [
+     "comment",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     "v",
+     "double",
+     null
+    ],
+    [
+     "w",
+     "double",
+     null
+    ]
+   ]
+  },
+  "store/ctas_vals": {
+   "sql": "SELECT v, w FROM sc.ns.c1",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "w",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     1.0,
+     1.5
+    ],
+    [
+     2.0,
+     2.0
+    ],
+    [
+     3.0,
+     2.5
+    ]
+   ]
+  },
+  "store/ins_double_tbl": {
+   "sql": "CREATE TABLE sc.ns.c2 (v DOUBLE, w DOUBLE) USING iceberg",
+   "statement": true
+  },
+  "store/ins_double": {
+   "sql": "INSERT INTO sc.ns.c2 SELECT h * 2, h + 1 FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s",
+   "statement": true
+  },
+  "store/ins_double_read": {
+   "sql": "SELECT v, w FROM sc.ns.c2",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "w",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     1.0,
+     1.5
+    ],
+    [
+     2.0,
+     2.0
+    ],
+    [
+     3.0,
+     2.5
+    ]
+   ]
+  }
+ },
+ "dataframe": {
+  "df/select_mul2": {
+   "cols": [
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     1.0
+    ],
+    [
+     2.0
+    ],
+    [
+     3.0
+    ]
+   ]
+  },
+  "df/selectexpr_add1": {
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.5,
+     "double"
+    ],
+    [
+     2.0,
+     "double"
+    ],
+    [
+     2.5,
+     "double"
+    ]
+   ]
+  },
+  "df/filter": {
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "h",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     0.5
+    ]
+   ]
+  },
+  "df/withcol": {
+   "cols": [
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     1.5
+    ],
+    [
+     2.0
+    ],
+    [
+     2.5
+    ]
+   ]
+  },
+  "df/flat_int_add1": {
+   "cols": [
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     1.5
+    ],
+    [
+     2.0
+    ],
+    [
+     2.5
+    ]
+   ]
+  },
+  "df/flat_big_mul2": {
+   "cols": [
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     1.0
+    ],
+    [
+     2.0
+    ],
+    [
+     3.0
+    ]
+   ]
+  },
+  "df/int_sum": {
+   "cols": [
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     3.0
+    ]
+   ]
+  },
+  "df/int_derived_add1": {
+   "cols": [
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     1.5
+    ],
+    [
+     2.0
+    ],
+    [
+     2.5
+    ]
+   ]
+  }
+ }
+}

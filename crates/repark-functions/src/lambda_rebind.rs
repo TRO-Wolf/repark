@@ -35,13 +35,17 @@ pub fn analyzer_rules_with_higher_order_preparation(
             "Spark higher-order preparation requires the default type_coercion analyzer rule"
         );
     };
-    rules.insert(position, Arc::new(HigherOrderPreparation));
     rules.insert(
-        position + 1,
+        position,
+        Arc::new(crate::integer_spark::fractional_division::SparkFractionalDivision),
+    );
+    rules.insert(position + 1, Arc::new(HigherOrderPreparation));
+    rules.insert(
+        position + 2,
         Arc::new(crate::java_double::SparkFloatStringify),
     );
     rules.insert(
-        position + 2,
+        position + 3,
         Arc::new(crate::decimal_precision::SparkDecimalPrecision),
     );
     Ok(rules)

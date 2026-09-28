@@ -12,6 +12,17 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   AWS acceptance rerun is an owner residue (R-1).
   `risk_tier: standard`. Branch `chore/rp-55-staged-single-write`.
   pins: aws-accept-replace-1/C-001
+- [intdiv-1-ledger.md](intdiv-1-ledger.md) —
+  **WO INTDIV-1 (2026-09-28), in flight:** arithmetic over an integer `/` answers
+  Spark's DOUBLE type and values in every scope — same scope, derived table, CTE, temp
+  and session views, nested and chained scopes, `WHERE`, `ORDER BY`, `sum`/`avg`, CTAS
+  and INSERT into DOUBLE (C-001) — through one pre-coercion rule seated before
+  `higher_order_preparation` (C-002), leaving genuinely integral arithmetic and its
+  ANSI overflow unchanged (C-003); the INSERT-into-BIGINT internal error, decimal
+  division precision, `div`, the overflow SQLSTATE and the derived INT literal are
+  dated residues R-INTDIV-1..7.
+  `risk_tier: standard`. Branch `fix/derived-int-division`.
+  pins: intdiv-1/C-001, C-002, C-003
 - [ltz-store-int-1-ledger.md](ltz-store-int-1-ledger.md) —
   **WO LTZ-STORE-INT-1 (2026-09-28), in flight:** an INT stored into a
   `TIMESTAMP` (LTZ) column refuses with Spark's recorded `ins_l_int` answer on
