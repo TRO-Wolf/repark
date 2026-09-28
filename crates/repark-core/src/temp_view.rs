@@ -66,6 +66,17 @@ pub(crate) fn temp_view_ref_from_segment(
     TableReference::full(home.catalog.clone(), home.schema.clone(), table)
 }
 
+pub(crate) fn temp_view_ref_from_segment_exact(
+    home: &TempViewHome,
+    segment: &str,
+) -> TableReference {
+    TableReference::full(
+        home.catalog.clone(),
+        home.schema.clone(),
+        segment.to_string(),
+    )
+}
+
 /// Resolve a caller's temp-view `name` against `home`.
 /// # Errors
 /// Fails with [`Error::Analysis`] when `name` is not a single-part or home-qualified ident.

@@ -322,6 +322,8 @@ async fn try_execute_identity_dml(
     allowed.spec.case_insensitive = case_insensitive;
     if case_insensitive {
         canonicalize_identity_selection(catalogs, &allowed.catalog_name, &mut allowed.spec).await?;
+    } else {
+        check_identity_selection_exact(catalogs, &allowed.catalog_name, &mut allowed.spec).await?;
     }
     crate::refuse_mor_unpartitioned_multi_spec_dml(ctx, catalogs, object_name, kind).await?;
     let handle = crate::catalog_handle(catalogs, &allowed.catalog_name)?;
@@ -359,6 +361,40 @@ async fn canonicalize_identity_selection(
             *target = canonical_assignment_target(target, &fields);
             *value =
                 repark_core::column_resolution::rewrite_fragment_case(value, &scopes, true, home)?;
+        }
+    }
+    Ok(())
+}
+
+async fn check_identity_selection_exact(
+    catalogs: &CatalogRegistry,
+    catalog_name: &str,
+    spec: &mut repark_iceberg::write::predicate_dml::PredicateDmlSpec,
+) -> Result<()> {
+    let handle = crate::catalog_handle(catalogs, catalog_name)?;
+    let table = handle
+        .load_table(&spec.target)
+        .await
+        .map_err(crate::iceberg_err)?;
+    let schema = iceberg::arrow::schema_to_arrow_schema(table.metadata().current_schema())
+        .map_err(crate::iceberg_err)?;
+    let fields = schema
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect::<Vec<_>>();
+    spec.selection_sql = crate::merge_fragments::exact::check_identity_exact(
+        &spec.selection_sql,
+        spec.target_alias.as_str(),
+        fields.as_slice(),
+    )?;
+    if let Some(assignments) = spec.assignments.as_mut() {
+        for (_, value) in assignments {
+            *value = crate::merge_fragments::exact::check_identity_exact(
+                value,
+                spec.target_alias.as_str(),
+                fields.as_slice(),
+            )?;
         }
     }
     Ok(())

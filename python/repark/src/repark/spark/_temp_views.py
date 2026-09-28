@@ -11,6 +11,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
+from repark import _native
 from repark.spark._idents import quote_ident
 
 
@@ -58,7 +59,7 @@ def home_view_ref(session: Any, name: str) -> str:
     back to the quoted bare name when the session has no home left or no such view exists.
     """
     try:
-        segments = session.resolve_temp_view_home_ref(name)
+        segments = _native.resolve_temp_view_home_ref_for_session(session, name)
     except Exception:
         segments = None
     if not segments:

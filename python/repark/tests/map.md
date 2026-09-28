@@ -23,6 +23,7 @@ ICE-MIXED-CASE-1 (2026-09-17): `test_ice_mixed_case_1.py` pins the Spark-door ca
 ICE-MIXED-CASE-1 note, U9-TYPES-1 round-3 fixer (2026-09-26): `test_measured_join_using_insert_answers_spark` (the V-04 INSERT cell) is green, its strict xfail on F-DML-FIELD-ID-1 removed; it asserts the recorded `V04_join_using_insert` Spark rows. The uuid-as-text catalog switch routes every `insert_into` through the fork's `UuidTextToBytesExec`, which rebuilds each batch against the target schema, so the right-side join column is no longer written NULL; switching it off turns the cell back to an xfail. pins: ice-mixed-case-1/C-015
 
 ICE-MIXED-CASE-1 round 5 (2026-09-17, Q-20b-2): the `true` cells pin the declared contract — backticked exact-case succeeds against the recorded `true` oracle rows (`_TRUE_BACKTICK_SQL`), unquoted exact-case refuses. pins: ice-mixed-case-1/C-006
+WO CASESENS-1 slice 2 (2026-09-27): the ID-1 declared refusal converged — unquoted exact-case answers, so `test_sql_door_unquoted_exact_case_refuses_case_sensitive` became `..._succeeds_case_sensitive` asserting the recorded `true` rows and the `test_sql_set_statement_drives_case_sensitive` exact leg answers; registry ID-1 rewritten in the same change. pins: casesens-1/C-006
 
 CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
 accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
@@ -172,6 +173,47 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_s1_catalog_view_keeps_its_spelling` replays the `vc` catalog-view keys
   including `r5_view_describe` (C-003 PROVEN).
   pins: casesens-1/C-001, C-002, C-003, C-004
+  **WO CASESENS-1 slice 2 (2026-09-27):**
+  `test_s2_sql_door_is_exact_under_case_sensitive` replays the true-mode legs
+  (per-key struct/plain setups; DML legs snapshot `u`; the three recorded-
+  rendering legs compare against `_s2_expect_msg`; relation/struct/UPPER legs
+  assert the refusal or rows with RePark's text) and
+  `test_s2_default_session_unchanged` replays the false-mode legs plus the
+  `SELECT ID` spelling. Candidate sets strip relation qualification.
+  pins: casesens-1/C-005, C-006, C-007, C-008
+  **WO CASESENS-1 slice 3 (2026-09-27):**
+  `test_s3_dataframe_door_is_exact_under_case_sensitive` replays the true-mode
+  dataframe legs where written names reach Rust (filter, describe, selectExpr,
+  exact-hit select, drop no-op, join, window) plus
+  `test_s3_dataframe_union_refuses_the_missing_name` (class + exact message,
+  R-CS1-9 condition gap recorded);
+  `test_s3_default_door_binds_and_names_as_written` replays the four false-mode
+  name legs; `test_s3_describe_resolves_one_name_per_call` replays the two
+  explicit-column describe legs; `test_s3_temp_view_name_is_exact_under_case_sensitive`
+  pins `p3/cs_temp_view_upper` (R-CS1-8 closed) with the exact and false legs.
+  The six pre-bound legs stay unpinned (R-CS1-10, CASESENS-2).
+  pins: casesens-1/C-009, C-010
+  **WO CASESENS-1 slice 4 (2026-09-27):** `test_s4_case_twins` replays the
+  case-twin legs (twin outputs answer; the twin reference refuses
+  `AMBIGUOUS_REFERENCE` byte-exact; the four creations refuse 42711 — the
+  `tw_view` leg strips Spark's recorded trailing `;`; the positional insert
+  answers and `writeTo` routes through CTAS into the same refusal) plus the
+  un-stamped `tw_temp_view_read` refusal.
+  pins: casesens-1/C-011, C-012
+  **WO CASESENS-1 slice 5 (2026-09-27):**
+  `test_s5_iceberg_ddl_binds_exactly` replays the p2 DDL legs in probe order with
+  the p3 identifier/sort legs: partition names and transform sources refuse exactly
+  under both settings, the write order follows the flag, identifier SET/DROP refuse
+  exactly, and each `_meta` step asserts the recorded spec/sort/identifier triples
+  from the table's metadata file (prefix legs compare after `DataInvalid => `).
+  pins: casesens-1/C-013, C-014, C-015, C-016
+  **Verifier fold (2026-09-28):** `test_cast_of_a_column_keeps_the_written_child_name`
+  (VC-3: cast/try_cast keep the child name on createDataFrame and Iceberg frames),
+  `test_describe_resolves_display_names_under_case_insensitive` and
+  `test_describe_refuses_duplicate_display_names_as_ambiguous` (VC-4).
+  **Re-verify (2026-09-28):** `test_nested_cast_of_a_column_keeps_the_written_child_name`
+  (RC-3) and `test_describe_resolves_display_names_under_case_sensitive` (RC-4).
+  pins: casesens-1/C-009, C-010
 - [test_ntz_1.py](test_ntz_1.py) + `ntz_1_spark_oracle.json` — **WO NTZ-1 slice 1
   (2026-09-26):** the `TIMESTAMP_NTZ` literal and explicit casts replay Spark's measured
   answers — 29 literal/cast/refusal queries in UTC and New York sessions, the v2/v3
@@ -2069,7 +2111,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and hides the private SSOT names `test_qi1_idents.py` pins; imports sorted);
   the two divergence pins for the Column-a example batch —
   `test_col_cast_qualified_projection_name`: a bare `F.col("v").cast("double")`
-  select names the CDF-qualified column where Spark answers `v` (EX-COL-1), and
+  select keeps the child name `v` like Spark (EX-COL-1, CLOSED 2026-09-28 by
+  CASESENS-1 VC-3), and
   `test_get_field_bare_projection_name`: an unaliased `getField` projects `r['a']`
   where Spark answers `r.a` (EX-COL-2). EX-29 (2026-09-11) measured the six
   engine-plumbing names (`for_select`, `join_sql_part`, `spark_display_part`,
@@ -3545,7 +3588,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   schema-eq + read-after (added→NULL, rename data intact), ADD COLUMNS plural + FIRST, TYPE
   widen + narrow-refuse twin (int→long + float→double + decimal — octo C3), case-insensitive
   DROP (octo C5), DROP NOT NULL; I7 ADD/DROP PARTITION FIELD + write-after-evo + VERSION AS OF
-  pre-evo pin (octo I7-C5) + case-insensitive DROP name, REPLACE PARTITION FIELD, REPLACE
+  pre-evo pin (octo I7-C5) + OD-3 exact DROP name (CI fix round 2026-09-28: `DROP PARTITION
+  FIELD CAT` over stored `cat` refuses `Cannot find partition field to remove: CAT`, then the
+  exact `cat` drops; pins: casesens-1/C-013), REPLACE PARTITION FIELD, REPLACE
   COLUMNS drop-and-re-add (**ICE-REPLACE-COLUMNS-1, 2026-09-19** — the identity-trap twin is
   gone: a same-named column gets a fresh id and reads NULL, and a re-typed name is answered,
   not refused; the measured cells are in `test_ice_replace_columns_1.py`); residual refuse
@@ -3924,8 +3969,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   re-recorded for 8 getitem/getfield `join_sql` `"` → backtick moves, display
   fields byte-identical.
   `isinstance(c, repark.Column)` is pinned. Cast/try_cast
-  of a named attribute currently answers `select` with a
-  `datafusion.public.__repark_cdf_<id>.<field>` qualifier; the golden stores the
+  of a named attribute answers `select` with the child name since 2026-09-28
+  (CASESENS-1 VC-3 closed the `datafusion.public.__repark_cdf_<id>.<field>`
+  qualifier leak, EX-COL-1); the golden stores the
   trailing field only (the UUID is session-local, not a display-string contract).
   **FNP-4B (2026-09-15):** the `sql_expr` / `sql_expr_without_alias` / `join_sql` fields
   re-recorded in backtick form through record mode; every display field verified

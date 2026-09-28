@@ -2,6 +2,7 @@ use iceberg::spec::{NestedFieldRef, PrimitiveType, Transform, Type};
 use iceberg::table::Table;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::{Catalog, Error, ErrorKind, Result, TableIdent};
+use repark_common::names::{NameHit, NameRule};
 
 #[derive(Debug, Clone)]
 pub enum PartitionSpecChange {
@@ -50,7 +51,7 @@ pub async fn apply_partition_spec_changes(
     }
     let table = catalog.load_table(ident).await?;
     let schema = table.metadata().current_schema();
-    for source_name in changes.iter().filter_map(PartitionSpecChange::bound_source) {
+    for source_name in changes.iter().flat_map(PartitionSpecChange::bound_sources) {
         if schema.field_by_name(source_name).is_none() {
             return Err(Error::new(
                 ErrorKind::DataInvalid,
@@ -69,13 +70,6 @@ pub async fn apply_partition_spec_changes(
         .iter()
         .map(|field| field.name.clone())
         .collect();
-    let resolve_field_name = |known: &[String], requested: &str| -> String {
-        known
-            .iter()
-            .find(|name| name.eq_ignore_ascii_case(requested))
-            .cloned()
-            .unwrap_or_else(|| requested.to_string())
-    };
     let tx = Transaction::new(&table);
     let mut action = tx.update_partition_spec().case_sensitive(false);
     for change in changes {
@@ -92,7 +86,7 @@ pub async fn apply_partition_spec_changes(
                 action.add_field_with_transform(name.as_deref(), source_name, *transform)
             }
             PartitionSpecChange::RemoveFieldByName { name } => {
-                let resolved = resolve_field_name(&known_field_names, name);
+                let resolved = resolve_known_field(&known_field_names, name)?;
                 forget_field_name(&mut known_field_names, &resolved);
                 action.remove_field(&resolved)
             }
@@ -106,7 +100,7 @@ pub async fn apply_partition_spec_changes(
                 transform,
                 new_name,
             } => {
-                let resolved_old = resolve_field_name(&known_field_names, old_name);
+                let resolved_old = resolve_known_field(&known_field_names, old_name)?;
                 note_new_field_name(&mut known_field_names, &resolved_old, new_name.as_deref());
                 action.remove_field(&resolved_old).add_field_with_transform(
                     new_name.as_deref(),
@@ -131,7 +125,7 @@ pub async fn apply_partition_spec_changes(
                 )
             }
             PartitionSpecChange::RenameField { name, new_name } => {
-                let resolved = resolve_field_name(&known_field_names, name);
+                let resolved = resolve_known_field(&known_field_names, name)?;
                 forget_field_name(&mut known_field_names, &resolved);
                 known_field_names.push(new_name.clone());
                 action.rename_field(&resolved, new_name)
@@ -144,21 +138,39 @@ pub async fn apply_partition_spec_changes(
 }
 
 impl PartitionSpecChange {
-    fn bound_source(&self) -> Option<&str> {
+    fn bound_sources(&self) -> Vec<&str> {
         match self {
             PartitionSpecChange::AddField { source_name, .. }
             | PartitionSpecChange::ReplaceField { source_name, .. }
-            | PartitionSpecChange::ReplaceFieldByTransform { source_name, .. } => {
-                Some(source_name.as_str())
+            | PartitionSpecChange::RemoveFieldByTransform { source_name, .. } => {
+                vec![source_name.as_str()]
             }
+            PartitionSpecChange::ReplaceFieldByTransform {
+                old_source_name,
+                source_name,
+                ..
+            } => vec![old_source_name.as_str(), source_name.as_str()],
             PartitionSpecChange::RemoveFieldByName { .. }
-            | PartitionSpecChange::RemoveFieldByTransform { .. }
-            | PartitionSpecChange::RenameField { .. } => None,
+            | PartitionSpecChange::RenameField { .. } => Vec::new(),
         }
     }
 }
 
-fn java_struct_text(fields: &[NestedFieldRef]) -> String {
+fn resolve_known_field(known: &[String], requested: &str) -> Result<String> {
+    match NameRule::Exact.lookup(requested, known) {
+        NameHit::One(hit) => Ok(hit.to_string()),
+        _ => Err(missing_partition_field(requested)),
+    }
+}
+
+fn missing_partition_field(name: &str) -> Error {
+    Error::new(
+        ErrorKind::DataInvalid,
+        format!("Cannot find partition field to remove: {name}"),
+    )
+}
+
+pub(crate) fn java_struct_text(fields: &[NestedFieldRef]) -> String {
     let fields = fields
         .iter()
         .map(|field| {
@@ -202,7 +214,7 @@ fn java_type_text(data_type: &Type) -> String {
 }
 
 fn forget_field_name(known_field_names: &mut Vec<String>, name: &str) {
-    known_field_names.retain(|existing| !existing.eq_ignore_ascii_case(name));
+    known_field_names.retain(|existing| !NameRule::Exact.matches(existing, name));
 }
 
 fn note_new_field_name(
@@ -223,14 +235,18 @@ fn resolve_field_by_transform(
     transform: Transform,
 ) -> Result<String> {
     let metadata = table.metadata();
-    let source_id = metadata
-        .current_schema()
-        .field_by_name_case_insensitive(source_name)
+    let schema = metadata.current_schema();
+    let source_id = schema
+        .field_by_name(source_name)
         .map(|field| field.id)
         .ok_or_else(|| {
             Error::new(
                 ErrorKind::DataInvalid,
-                format!("Cannot find source column in schema: {source_name}"),
+                format!(
+                    "org.apache.iceberg.exceptions.ValidationException: Cannot find field \
+                 '{source_name}' in struct: {}",
+                    java_struct_text(schema.as_struct().fields())
+                ),
             )
         })?;
     metadata

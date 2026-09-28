@@ -78,11 +78,7 @@ pub struct PyDataFrame {
 impl PyDataFrame {
     /// Bind a column's lambda variables to this frame schema before planning.
     fn bound(&self, column: &PyColumn) -> PyResult<Expr> {
-        column
-            .expr()
-            .resolve_lambda_variables(self.df.schema())
-            .and_then(|expr| repark_core::resolve_bound_expr(expr.data, self.df.schema()))
-            .map_err(datafusion_to_py_err)
+        crate::dataframe_names::bound_column(&self.df, column)
     }
 
     /// Wrap a planned [`DataFrame`].
@@ -326,10 +322,7 @@ impl PyDataFrame {
     /// This path bypasses the statement router, so it applies the parse-altitude valves here.
     pub fn filter_sql(&self, predicate: &str) -> PyResult<Self> {
         fenced!("PyDataFrame.filter_sql", {
-            repark_spark::refuse_sql_fragment(predicate).map_err(datafusion_to_py_err)?;
-            let expr = crate::column::expr_build::parse_canonical_predicate(&self.df, predicate)
-                .map_err(|error| crate::unknown_routine_to_py_err(predicate, error))?;
-            let df = self.df.clone().filter(expr).map_err(datafusion_to_py_err)?;
+            let df = crate::dataframe_names::filter_frame_with_sql(&self.df, predicate)?;
             Ok(Self::new(df, Arc::clone(&self.runtime)))
         })
     }
@@ -341,18 +334,7 @@ impl PyDataFrame {
         fenced!("PyDataFrame.select", {
             let expressions: Vec<Expr> = columns
                 .iter()
-                .map(|column| {
-                    column
-                        .expr()
-                        .resolve_lambda_variables(self.df.schema())
-                        .and_then(|expr| {
-                            repark_core::frame_names::bind_projection_expr(
-                                expr.data,
-                                self.df.schema(),
-                            )
-                        })
-                        .map_err(datafusion_to_py_err)
-                })
+                .map(|column| crate::dataframe_names::bound_projection(&self.df, column))
                 .collect::<PyResult<_>>()?;
             let df = self
                 .df
@@ -406,13 +388,7 @@ impl PyDataFrame {
     ) -> PyResult<Self> {
         fenced!("PyDataFrame.join_on_names", {
             let join_type = join_type_from_str(how)?;
-            let df = repark_core::frame_names::join_on_named_keys(
-                self.df.clone(),
-                right.df.clone(),
-                &on,
-                join_type,
-            )
-            .map_err(datafusion_to_py_err)?;
+            let df = crate::dataframe_names::join_on_keys(&self.df, &right.df, &on, join_type)?;
             Ok(Self::new(df, Arc::clone(&self.runtime)))
         })
     }
@@ -483,12 +459,7 @@ impl PyDataFrame {
         allow_missing: bool,
     ) -> PyResult<Self> {
         fenced!("PyDataFrame.union_by_name", {
-            let unioned = repark_core::frame_names::union_by_folded_name(
-                self.df.clone(),
-                other.df.clone(),
-                allow_missing,
-            )
-            .map_err(datafusion_to_py_err)?;
+            let unioned = crate::dataframe_names::union_frames(&self.df, &other.df, allow_missing)?;
             Ok(Self::new(unioned, Arc::clone(&self.runtime)))
         })
     }

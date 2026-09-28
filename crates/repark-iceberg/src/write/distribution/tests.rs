@@ -222,9 +222,15 @@ pub(super) async fn declare_order(
     fields: Vec<crate::write::sort_order::WriteSortField>,
 ) -> Table {
     let ident = TableIdent::new(NamespaceIdent::new("ns".into()), name.into());
-    crate::write::sort_order::apply_write_order(catalog.as_ref(), &ident, &fields, None)
-        .await
-        .expect("declare sort order");
+    crate::write::sort_order::apply_write_order(
+        catalog.as_ref(),
+        &ident,
+        &fields,
+        None,
+        repark_common::names::NameRule::IgnoreCase,
+    )
+    .await
+    .expect("declare sort order");
     catalog.load_table(&ident).await.expect("reload table")
 }
 

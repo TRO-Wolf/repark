@@ -264,6 +264,81 @@ async fn values_left_set_operation_keeps_later_spellings() {
 }
 
 #[tokio::test]
+async fn natural_join_over_case_differing_derived_outputs_cross_joins() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    create_probe_tables(&ctx, &catalogs).await;
+    let (names, rows) = names_and_rows(
+        &ctx,
+        &catalogs,
+        "SELECT * FROM (SELECT ID FROM ice.sales.t) a NATURAL JOIN (SELECT id FROM ice.sales.u) b",
+    )
+    .await;
+    assert_eq!(names, vec!["ID".to_string(), "id".to_string()]);
+    assert_eq!(
+        rows,
+        vec![
+            vec!["1".to_string(), "1".to_string()],
+            vec!["1".to_string(), "5".to_string()],
+            vec!["2".to_string(), "1".to_string()],
+            vec!["2".to_string(), "5".to_string()],
+        ]
+    );
+    let (names, rows) = names_and_rows(
+        &ctx,
+        &catalogs,
+        "SELECT count(*) AS c FROM (SELECT ID FROM ice.sales.t) a NATURAL JOIN (SELECT id FROM ice.sales.u) b",
+    )
+    .await;
+    assert_eq!(names, vec!["c".to_string()]);
+    assert_eq!(rows, vec![vec!["4".to_string()]]);
+    let (names, rows) = names_and_rows(
+        &ctx,
+        &catalogs,
+        "WITH a AS (SELECT ID FROM ice.sales.t), b AS (SELECT id FROM ice.sales.u) SELECT * FROM a NATURAL JOIN b",
+    )
+    .await;
+    assert_eq!(names, vec!["ID".to_string(), "id".to_string()]);
+    assert_eq!(
+        rows,
+        vec![
+            vec!["1".to_string(), "1".to_string()],
+            vec!["1".to_string(), "5".to_string()],
+            vec!["2".to_string(), "1".to_string()],
+            vec!["2".to_string(), "5".to_string()],
+        ]
+    );
+}
+
+#[tokio::test]
+async fn swapped_spellings_stay_with_their_scope() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    create_probe_tables(&ctx, &catalogs).await;
+    let (names, rows) = names_and_rows(
+        &ctx,
+        &catalogs,
+        "SELECT * FROM (VALUES (7)) AS v(x) \
+         CROSS JOIN (SELECT id FROM ice.sales.t) a \
+         CROSS JOIN (SELECT ID FROM ice.sales.u) b",
+    )
+    .await;
+    assert_eq!(
+        names,
+        vec!["x".to_string(), "id".to_string(), "ID".to_string()]
+    );
+    assert_eq!(
+        rows,
+        vec![
+            vec!["7".to_string(), "1".to_string(), "1".to_string()],
+            vec!["7".to_string(), "1".to_string(), "5".to_string()],
+            vec!["7".to_string(), "2".to_string(), "1".to_string()],
+            vec!["7".to_string(), "2".to_string(), "5".to_string()],
+        ]
+    );
+}
+
+#[tokio::test]
 async fn column_alias_list_keeps_its_spelling() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
@@ -474,9 +549,12 @@ async fn twin_cte_outputs_still_refuse() {
     .await
     .err()
     .unwrap();
+    let message = error.to_string();
     assert!(
-        error.to_string().contains("unique expression names"),
-        "{error}"
+        message.contains("[AMBIGUOUS_REFERENCE]")
+            && message.contains("Reference `A` is ambiguous")
+            && message.contains("SQLSTATE: 42704"),
+        "{message}"
     );
 }
 
@@ -535,5 +613,213 @@ async fn dml_spelled_in_another_case_answers() {
             vec!["6".to_string(), "y".to_string()],
             vec!["8".to_string(), "i".to_string()],
         ]
+    );
+}
+
+#[tokio::test]
+async fn lateral_and_scalar_outer_references_to_derived_spellings_bind() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    create_probe_tables(&ctx, &catalogs).await;
+    for sql in [
+        "SELECT * FROM (SELECT Id FROM ice.sales.t) a, LATERAL (SELECT DATA FROM ice.sales.u WHERE u.id = a.Id) b",
+        "SELECT * FROM (SELECT Id FROM ice.sales.t) a, LATERAL (SELECT DATA FROM ice.sales.u WHERE u.id = a.id) b",
+        "WITH c AS (SELECT Id FROM ice.sales.t) SELECT * FROM c, LATERAL (SELECT DATA FROM ice.sales.u WHERE u.id = c.Id) b",
+    ] {
+        let (names, rows) = names_and_rows(&ctx, &catalogs, sql).await;
+        assert_eq!(names, vec!["Id".to_string(), "DATA".to_string()], "{sql}");
+        assert_eq!(rows, vec![vec!["1".to_string(), "x".to_string()]], "{sql}");
+    }
+    let frame = execute(
+        &ctx,
+        &catalogs,
+        "SELECT (SELECT max(DATA) FROM ice.sales.u WHERE u.id = a.Id) AS m FROM (SELECT Id FROM ice.sales.t) a",
+    )
+    .await
+    .unwrap();
+    let names = frame
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect::<Vec<_>>();
+    assert_eq!(names, vec!["m".to_string()]);
+    let batches = frame.collect().await.unwrap();
+    let mut found = false;
+    for batch in &batches {
+        let values = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .unwrap();
+        for row in 0..batch.num_rows() {
+            if !values.is_null(row) && values.value(row) == "x" {
+                found = true;
+            }
+        }
+    }
+    assert!(found, "scalar lateral shape must answer x");
+}
+
+#[tokio::test]
+async fn view_arithmetic_over_division_column_answers_double() {
+    use datafusion::arrow::array::Float64Array;
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t (id INT) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t VALUES (1), (2), (3)",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.vh AS SELECT id, id / 2 AS h FROM ice.sales.t",
+    )
+    .await;
+    let frame = execute(&ctx, &catalogs, "SELECT h + 1 FROM ice.sales.vh")
+        .await
+        .unwrap();
+    assert_eq!(frame.schema().field(0).data_type(), &DataType::Float64);
+    let batches = frame.collect().await.unwrap();
+    let mut values = Vec::new();
+    for batch in &batches {
+        let column = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Float64Array>()
+            .unwrap();
+        for row in 0..batch.num_rows() {
+            values.push(column.value(row).to_string());
+        }
+    }
+    values.sort();
+    assert_eq!(
+        values,
+        vec!["1.5".to_string(), "2".to_string(), "2.5".to_string()]
+    );
+}
+
+#[tokio::test]
+async fn view_over_view_stores_double_for_division_arithmetic() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t (id INT) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t VALUES (1), (2), (3)",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.vh AS SELECT id, id / 2 AS h FROM ice.sales.t",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.vh2 AS SELECT h * 2 AS h2, h + 1 AS h1 FROM ice.sales.vh",
+    )
+    .await;
+    let (_, rows) = names_and_rows(&ctx, &catalogs, "DESCRIBE ice.sales.vh2").await;
+    assert_eq!(
+        rows,
+        vec![
+            vec!["h1".to_string(), "double".to_string(), String::new()],
+            vec!["h2".to_string(), "double".to_string(), String::new()],
+        ]
+    );
+}
+
+#[tokio::test]
+async fn hundred_nested_views_read_and_the_101st_refuses() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t (id INT, data STRING) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t VALUES (1, 'd1'), (2, 'd2'), (0, 'd0')",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.w0 AS SELECT id FROM ice.sales.t",
+    )
+    .await;
+    for level in 1..100 {
+        run(
+            &ctx,
+            &catalogs,
+            &format!(
+                "CREATE VIEW ice.sales.w{level} AS SELECT id FROM ice.sales.w{}",
+                level - 1
+            ),
+        )
+        .await;
+    }
+    let (_, rows) = names_and_rows(&ctx, &catalogs, "SELECT * FROM ice.sales.w50").await;
+    assert_eq!(
+        rows,
+        vec![
+            vec!["0".to_string()],
+            vec!["1".to_string()],
+            vec!["2".to_string()],
+        ]
+    );
+    let (_, rows) = names_and_rows(&ctx, &catalogs, "SELECT * FROM ice.sales.w99").await;
+    assert_eq!(
+        rows,
+        vec![
+            vec!["0".to_string()],
+            vec!["1".to_string()],
+            vec!["2".to_string()],
+        ]
+    );
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.w100 AS SELECT id FROM ice.sales.w99",
+    )
+    .await;
+    let error = execute(&ctx, &catalogs, "SELECT * FROM ice.sales.w100")
+        .await
+        .err()
+        .unwrap_or_else(|| panic!("reading w100 must refuse"));
+    assert!(
+        error.to_string().contains("VIEW_NESTED_DEPTH_LIMIT"),
+        "{error:?}"
+    );
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.w101 AS SELECT id FROM ice.sales.w100",
+    )
+    .await
+    .err()
+    .unwrap_or_else(|| panic!("creating w101 must refuse"));
+    assert!(
+        error.to_string().contains("VIEW_NESTED_DEPTH_LIMIT"),
+        "{error:?}"
     );
 }

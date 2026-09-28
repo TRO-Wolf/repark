@@ -1526,9 +1526,8 @@ mod tests {
         );
     }
 
-    /// DROP/REPLACE partition field names are case-insensitive (Spark default).
     #[tokio::test]
-    async fn partition_spec_drop_replace_field_name_case_insensitive() {
+    async fn partition_spec_drop_replace_field_name_is_exact() {
         let wh = TempDir::new().unwrap();
         let (catalog, ident) = setup(&wh).await;
         apply_schema_changes(
@@ -1555,27 +1554,22 @@ mod tests {
         )
         .await
         .unwrap();
-        // DROP with different case than stored field name.
-        apply_partition_spec_changes(
+        let error = apply_partition_spec_changes(
             catalog.as_ref(),
             &ident,
             &[PartitionSpecChange::RemoveFieldByName { name: "CAT".into() }],
         )
         .await
-        .expect("DROP PARTITION FIELD name must be case-insensitive");
+        .expect_err("DROP PARTITION FIELD CAT must refuse");
+        let message = error.to_string();
         assert!(
-            catalog
-                .load_table(&ident)
-                .await
-                .unwrap()
-                .metadata()
-                .default_partition_spec()
-                .is_unpartitioned()
-                || default_partition_field_names(&catalog, &ident)
-                    .await
-                    .is_empty()
+            message.ends_with("Cannot find partition field to remove: CAT"),
+            "{error}"
         );
-
+        assert_eq!(
+            default_partition_field_names(&catalog, &ident).await,
+            vec!["cat".to_string()]
+        );
         apply_partition_spec_changes(
             catalog.as_ref(),
             &ident,
@@ -1587,7 +1581,7 @@ mod tests {
         )
         .await
         .unwrap();
-        apply_partition_spec_changes(
+        let error = apply_partition_spec_changes(
             catalog.as_ref(),
             &ident,
             &[PartitionSpecChange::ReplaceField {
@@ -1598,10 +1592,15 @@ mod tests {
             }],
         )
         .await
-        .expect("REPLACE PARTITION FIELD old name must be case-insensitive");
+        .expect_err("REPLACE PARTITION FIELD ID_B4 must refuse");
+        let message = error.to_string();
+        assert!(
+            message.ends_with("Cannot find partition field to remove: ID_B4"),
+            "{error}"
+        );
         assert_eq!(
             default_partition_field_names(&catalog, &ident).await,
-            vec!["id_b8".to_string()]
+            vec!["cat".to_string(), "id_b4".to_string()]
         );
     }
 }

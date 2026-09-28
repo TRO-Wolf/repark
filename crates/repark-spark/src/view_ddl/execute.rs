@@ -9,7 +9,10 @@ use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::TableReference;
 use datafusion::sql::sqlparser::ast::{Ident, ObjectName};
 use iceberg::{Catalog, ErrorKind, NamespaceIdent, TableIdent};
-use repark_common::spark_error;
+use repark_common::{
+    names::{column_already_exists, folded_duplicate},
+    spark_error,
+};
 use repark_core::{CatalogRegistry, LocationPolicy, TempViewSession};
 use repark_iceberg::view::{
     ViewDefinition, ViewTarget, create_or_replace_view, drop_catalog_view, list_catalog_views,
@@ -48,6 +51,26 @@ pub(crate) async fn execute_create_view(
         prepare_view_body_sql(ctx, catalogs, &catalog, &namespace, &statement.body_sql).await?;
     let frame = plan_prepared_body(ctx, catalogs, &prepared, &pins).await?;
     pins.release(ctx);
+    if crate::spark_door_case_insensitive(ctx.state().config().options()) {
+        let outputs = frame
+            .schema()
+            .fields()
+            .iter()
+            .map(|field| field.name().as_str())
+            .collect::<Vec<_>>();
+        let effective: Vec<&str> = if statement.aliases.is_empty() {
+            outputs
+        } else {
+            statement
+                .aliases
+                .iter()
+                .map(|(alias, _)| alias.as_str())
+                .collect()
+        };
+        if let Some(twin) = folded_duplicate(&effective) {
+            return Err(DataFusionError::Plan(column_already_exists(&twin)));
+        }
+    }
     repark_core::refuse_iceberg_create_of_tightened_plan(frame.logical_plan())
         .map_err(|error| DataFusionError::Plan(error.to_string()))?;
     let view_display = format!("{catalog}.{namespace_name}.{view_name}");
@@ -129,6 +152,17 @@ pub(crate) async fn execute_create_temp_view(
     }
     refuse_recursive_temp_view(ctx, &view).await?;
     let frame = ctx.read_table(view)?;
+    if crate::spark_door_case_insensitive(ctx.state().config().options()) {
+        let names = frame
+            .schema()
+            .fields()
+            .iter()
+            .map(|field| field.name().as_str())
+            .collect::<Vec<_>>();
+        if let Some(twin) = folded_duplicate(&names) {
+            return Err(DataFusionError::Plan(column_already_exists(&twin)));
+        }
+    }
     temp_views
         .create_or_replace_temp_view_from(&name, &frame)
         .map_err(temp_view_err)?;

@@ -635,20 +635,18 @@ async fn alter_partition_transforms_drop_by_transform_and_replace_required_refus
     let (ctx, catalogs) = setup(&wh).await;
 
     // truncate[W]
-    execute(
+    run(
         &ctx,
         &catalogs,
         "CREATE TABLE ice.sales.ptrunc (id INT, label STRING) USING iceberg",
     )
-    .await
-    .unwrap();
-    execute(
+    .await;
+    run(
         &ctx,
         &catalogs,
         "ALTER TABLE ice.sales.ptrunc ADD PARTITION FIELD truncate(2, label) AS lab_t2",
     )
-    .await
-    .unwrap();
+    .await;
     let names = {
         let table = load_sales_table(&catalogs, "ptrunc").await;
         table
@@ -668,13 +666,12 @@ async fn alter_partition_transforms_drop_by_transform_and_replace_required_refus
     );
 
     // DROP by transform form (not bare name).
-    execute(
+    run(
         &ctx,
         &catalogs,
         "ALTER TABLE ice.sales.ptrunc DROP PARTITION FIELD truncate(2, label)",
     )
-    .await
-    .unwrap();
+    .await;
     let table = load_sales_table(&catalogs, "ptrunc").await;
     assert!(
         table.metadata().default_partition_spec().is_unpartitioned()
@@ -686,20 +683,18 @@ async fn alter_partition_transforms_drop_by_transform_and_replace_required_refus
     );
 
     // year(ts) temporal
-    execute(
+    run(
         &ctx,
         &catalogs,
         "CREATE TABLE ice.sales.pyear (id INT, ts TIMESTAMP) USING iceberg",
     )
-    .await
-    .unwrap();
-    execute(
+    .await;
+    run(
         &ctx,
         &catalogs,
         "ALTER TABLE ice.sales.pyear ADD PARTITION FIELD year(ts)",
     )
-    .await
-    .unwrap();
+    .await;
     let year_fields = {
         let table = load_sales_table(&catalogs, "pyear").await;
         table
@@ -717,28 +712,34 @@ async fn alter_partition_transforms_drop_by_transform_and_replace_required_refus
         "year partition field auto-name expected, got {year_fields:?}"
     );
 
-    // Case-insensitive DROP of partition field name via SQL.
-    execute(
+    run(
         &ctx,
         &catalogs,
         "CREATE TABLE ice.sales.pcase (id INT, region STRING) USING iceberg",
     )
-    .await
-    .unwrap();
-    execute(
+    .await;
+    run(
         &ctx,
         &catalogs,
         "ALTER TABLE ice.sales.pcase ADD PARTITION FIELD region AS reg",
     )
-    .await
-    .unwrap();
-    execute(
+    .await;
+    let error = execute(
         &ctx,
         &catalogs,
         "ALTER TABLE ice.sales.pcase DROP PARTITION FIELD REG",
     )
     .await
-    .expect("DROP PARTITION FIELD name must be case-insensitive at SQL");
+    .expect_err("DROP PARTITION FIELD REG over stored reg must refuse");
+    let message = error.to_string();
+    assert!(
+        message.contains("Cannot find partition field to remove: REG"),
+        "got: {message}"
+    );
+    let table = load_sales_table(&catalogs, "pcase").await;
+    let fields = table.metadata().default_partition_spec().fields();
+    assert_eq!(fields.len(), 1);
+    assert_eq!(fields[0].name, "reg");
 
     // REPLACE COLUMNS required-new refuse twin.
     execute(
@@ -762,20 +763,18 @@ async fn alter_partition_transforms_drop_by_transform_and_replace_required_refus
     );
 
     // Identity transform form and optional-to-required refusal.
-    execute(
+    run(
         &ctx,
         &catalogs,
         "CREATE TABLE ice.sales.pid (id INT, k STRING) USING iceberg",
     )
-    .await
-    .unwrap();
-    execute(
+    .await;
+    run(
         &ctx,
         &catalogs,
         "ALTER TABLE ice.sales.pid ADD PARTITION FIELD identity(k) AS k_id",
     )
-    .await
-    .unwrap();
+    .await;
     let id_names = {
         let table = load_sales_table(&catalogs, "pid").await;
         table
