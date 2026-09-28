@@ -242,9 +242,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   true-mode p6 misses, the qualified-string legs (R-11 answer, exact-qualified
   answers under `true`, the self-join shape refuses naming `` `l`.`ID` ``),
   and the false-door guards (r7 legs, S3 false legs, legacy miss text, R-19
-  lazy timing, quoter spot). `r7_selfjoin` and `qs_sel_t_id_true` stay
-  unpinned (re-homed per the 2026-09-28 ruling). p1/p4 legs read
-  `casesens_1_spark_oracle.json`.
+  lazy timing, quoter spot). `qs_sel_t_id_true` stays unpinned (re-homed
+  per the 2026-09-28 ruling); `r7_selfjoin` pins in slice 4. p1/p4 legs
+  read `casesens_1_spark_oracle.json`.
   pins: casesens-2/C-001, C-002, C-003, C-006
   **WO CASESENS-2 slice 2 (2026-09-28):** `withColumn(s)` and renames follow
   the rule (folded keys append and folded renames no-op under `true`; replace
@@ -258,6 +258,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   with the `na` overlay path pinned beside the plain path. The sweep and
   replay evidence below covers the no-regressions clause.
   pins: casesens-2/C-002, C-005, C-006, C-008
+  **WO CASESENS-2 slice 4 (2026-09-28):** DataFrame-alias qualified names
+  bind in join conditions and on the join child (`r7_selfjoin` and
+  `r18_alias_join` answer, `selfjoin_true` refuses, wrong-case alias
+  qualifier refuses 42703), and the nine p10 non-join overlay cells pin
+  the two `true` qualified misses, the R4 facade refusals, and the three
+  R-CS2-7 answer-gaps. The oracle gains the p10 keys (existing keys
+  byte-equal).
+  pins: casesens-2/C-003, C-008
 - [test_ntz_1.py](test_ntz_1.py) + `ntz_1_spark_oracle.json` — **WO NTZ-1 slice 1
   (2026-09-26):** the `TIMESTAMP_NTZ` literal and explicit casts replay Spark's measured
   answers — 29 literal/cast/refusal queries in UTC and New York sessions, the v2/v3

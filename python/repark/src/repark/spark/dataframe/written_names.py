@@ -8,9 +8,59 @@ from repark import _native
 from repark.errors import AnalysisException
 from repark.spark._idents import quote_ident as _quote_ident
 from repark.spark.column import Column
+from repark.spark.dataframe.plan_collapse import _rewrite_join_qcol_sql
 
 if TYPE_CHECKING:
     from repark.spark.dataframe.core import DataFrame
+
+
+def _bind_qualified_display_column(frame: DataFrame, name: str) -> Column | None:
+    """Bind a dotted name on an overlay frame through schema qualifiers.
+
+    Pair each native schema qualifier with its display positionally; the
+    first hit binds and keeps the written last segment. A miss returns
+    None under IgnoreCase and refuses natively under Exact.
+    """
+    plan = frame._plan()
+    displays = list(frame._display_names or [])
+    _written, engine, disposition = _native.resolve_qualified_display_names(plan, displays, [name])[
+        0
+    ]
+    if disposition != "bound":
+        return None
+    last_segment = name.rsplit(".", 1)[1]
+    return Column(
+        _native.attribute_column(engine).alias(last_segment),
+        spark_display=last_segment,
+        projection_name=last_segment,
+        stable_name=True,
+        has_free_attribute=True,
+        sql_expr=_quote_ident(engine),
+    )
+
+
+def _rewrite_join_condition(
+    left: DataFrame,
+    right: DataFrame,
+    condition: Column,
+    left_alias: str,
+    right_alias: str,
+) -> str:
+    """Rewrite a condition-join ON text through origins then alias qualifiers.
+
+    Origin tokens bind their side first; surviving alias-qualified
+    references rebind through the side schemas by the session rule.
+    """
+    rewritten = _rewrite_join_qcol_sql(
+        condition.join_sql_part(),
+        left=left,
+        right=right,
+        left_alias=left_alias,
+        right_alias=right_alias,
+    )
+    return _native.rewrite_join_condition_aliases(
+        left._plan(), right._plan(), rewritten, left_alias, right_alias
+    )
 
 
 def _bind_written_column(frame: DataFrame, name: str) -> Column:
@@ -25,6 +75,11 @@ def _bind_written_column(frame: DataFrame, name: str) -> Column:
     if _native.frame_is_exact(plan):
         if "." in name and name not in columns and frame._display_names is None:
             _native.resolve_df_names(plan, [name])
+        elif "." in name and name not in columns:
+            bound = _bind_qualified_display_column(frame, name)
+            if bound is not None:
+                return bound
+            _native.match_display_names(plan, [name], columns)
         else:
             _native.match_display_names(plan, [name], columns)
         if frame._display_names is None:
@@ -41,6 +96,10 @@ def _bind_written_column(frame: DataFrame, name: str) -> Column:
             and _native.resolve_df_names(plan, [name])[0][3] == "bound"
         ):
             return _written_col(name)
+        if disposition == "missing" and "." in name and frame._display_names is not None:
+            bound = _bind_qualified_display_column(frame, name)
+            if bound is not None:
+                return bound
         if disposition == "missing":
             raise AnalysisException(
                 f"A column with name `{name}` cannot be resolved; available columns: {columns}"

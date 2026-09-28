@@ -53,6 +53,8 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(sort_child_shape, module)?)?;
     module.add_function(wrap_pyfunction!(stamp_attribute_ids, module)?)?;
     module.add_function(wrap_pyfunction!(strip_attribute_ids, module)?)?;
+    module.add_function(wrap_pyfunction!(resolve_qualified_display_names, module)?)?;
+    module.add_function(wrap_pyfunction!(rewrite_join_condition_aliases, module)?)?;
     Ok(())
 }
 
@@ -705,6 +707,31 @@ pub(crate) fn grandchild_qualified_key(
     })
 }
 
+#[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
+#[pyfunction]
+fn resolve_qualified_display_names(
+    frame: &PyDataFrame,
+    displays: Vec<String>,
+    names: Vec<String>,
+) -> PyResult<Vec<(String, String, String)>> {
+    fenced!("dataframe_names.resolve_qualified_display_names", {
+        repark_core::frame_names::resolve_qualified_display_names(
+            frame.inner().schema(),
+            &displays,
+            &names,
+            frame_rule(frame.inner()),
+        )
+        .map(|rows| {
+            rows.into_iter()
+                .map(|(written, engine, disposition)| {
+                    (written, engine, disposition_text(disposition))
+                })
+                .collect()
+        })
+        .map_err(datafusion_to_py_err)
+    })
+}
+
 #[pyfunction]
 pub(crate) fn join_output_sources(frame: &PyDataFrame) -> Vec<Vec<(bool, usize)>> {
     repark_core::frame_names::join_output_sources(frame.inner().logical_plan())
@@ -745,4 +772,22 @@ pub(crate) fn copy_attribute_ids(
             frame.runtime_handle(),
         ))
     })
+}
+
+#[pyfunction]
+fn rewrite_join_condition_aliases(
+    left: &PyDataFrame,
+    right: &PyDataFrame,
+    condition_sql: &str,
+    left_view: &str,
+    right_view: &str,
+) -> String {
+    repark_core::frame_names::rewrite_join_condition_aliases(
+        left.inner().schema(),
+        right.inner().schema(),
+        condition_sql,
+        left_view,
+        right_view,
+        frame_rule(left.inner()),
+    )
 }

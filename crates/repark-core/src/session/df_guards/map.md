@@ -582,6 +582,20 @@ wrapped optimizer rule) and declares this directory.
   `pub use` line (`case_bind.rs` stays 1000); pin
   `subset_names_fan_out_and_miss_with_the_legacy_text`.
   pins: casesens-2/C-002, C-005
+  **CASESENS-2 S4 (2026-09-28):** `rewrite_join_condition_aliases`
+  (Databricks parse; two-part compounds rebind through the single side
+  whose qualifier matches and the single field whose name matches,
+  emitting a bare view plus a backticked engine field; anything else
+  passes byte-identical) and `resolve_qualified_display_names`
+  (positional schema-qualifier plus display pairing, first hit binds,
+  `Exact` raises the qualified `unresolved_column`); the written
+  qualifier builds `TableReference::Bare` directly because
+  `TableReference::from` lowercases. Re-exported on a third `pub use`
+  line funded by an inlined test `let` (`case_bind.rs` stays 1000).
+  Pins `join_condition_aliases_rebind_through_the_side_schemas`,
+  `join_condition_aliases_leave_other_references_untouched`,
+  `qualified_display_names_pair_schema_positions_with_displays`.
+  pins: casesens-2/C-003
 
 ## Pointers
 

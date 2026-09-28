@@ -1,5 +1,5 @@
 {
- "source": "Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-28",
+ "source": "Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-28; p10 measured 2026-09-28 (S4)",
  "steps": {
   "p6/setup_ns": {
    "door": "sql",
@@ -623,6 +623,135 @@
     "msg": "Cannot resolve column name \"NOPE\" among (id, Data, s).",
     "getCondition": "_LEGACY_ERROR_TEMP_1201",
     "getSqlState": null
+   }
+  },
+  "p10/alias_dupe_sel": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").alias(\"l\").select(\"id\", \"id\").select(\"l.id\")",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ]
+   }
+  },
+  "p10/alias_dupe_sel_fold": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").alias(\"l\").select(\"id\", \"id\").select(\"l.ID\")",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ]
+   }
+  },
+  "p10/alias_dupe_sel_wrongqual": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").alias(\"l\").select(\"id\", \"id\").select(\"x.id\")",
+   "case_sensitive": false,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `x`.`id` cannot be resolved. Did you mean one of the following? [`l`.`id`]. SQLSTATE: 42703;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p10/alias_wc_sel": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").alias(\"l\").withColumn(\"ID\", F.lit(9)).select(\"l.ID\")",
+   "case_sensitive": false,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `l`.`ID` cannot be resolved. Did you mean one of the following? [`ID`, `l`.`s`, `l`.`Data`]. SQLSTATE: 42703;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p10/alias_wc_sel_lower": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").alias(\"l\").withColumn(\"ID\", F.lit(9)).select(\"l.id\")",
+   "case_sensitive": false,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `l`.`id` cannot be resolved. Did you mean one of the following? [`ID`, `l`.`s`, `l`.`Data`]. SQLSTATE: 42703;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p10/alias_dupe_sel_first": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").alias(\"l\").select(F.lit(1).alias(\"x\"), F.lit(2).alias(\"x\")).select(\"l.x\")",
+   "case_sensitive": false,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `l`.`x` cannot be resolved. Did you mean one of the following? [`x`, `x`]. SQLSTATE: 42703;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p10/alias_dupe_sel_true": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").alias(\"l\").select(\"id\", \"id\").select(\"l.id\")",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ]
+   }
+  },
+  "p10/alias_dupe_sel_fold_true": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").alias(\"l\").select(\"id\", \"id\").select(\"l.ID\")",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `l`.`ID` cannot be resolved. Did you mean one of the following? [`l`.`id`]. SQLSTATE: 42703;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p10/alias_dupe_sel_first_true": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").alias(\"l\").select(F.lit(1).alias(\"x\"), F.lit(2).alias(\"x\")).select(\"l.x\")",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `l`.`x` cannot be resolved. Did you mean one of the following? [`x`, `x`]. SQLSTATE: 42703;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
    }
   }
  }

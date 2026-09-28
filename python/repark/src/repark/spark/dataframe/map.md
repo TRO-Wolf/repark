@@ -248,6 +248,14 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   3973 → 3968 (ceilings ratcheted; the helper stays per the 2026-09-28
   ruling, residue R-CS2-6). The unit diff adds zero matchers (grep).
   pins: casesens-2/C-002, C-005, C-006, C-007
+  CASESENS-2 S4 (2026-09-28): the alias-qualified body behind the join
+  call site — `_rewrite_join_condition` (QCOL tokens then the native
+  alias rewrite) and `_bind_qualified_display_column` (dotted names on
+  overlay frames through the native pairing, written last segment kept,
+  `None` under `IgnoreCase` so the caller keeps today's refusal).
+  `core.py` 3968 → 3963 (ceilings ratcheted; the frozen surfaces lose
+  exactly `_rewrite_join_qcol_sql`, which keeps its `plan_collapse`
+  home). pins: casesens-2/C-003, C-008
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`

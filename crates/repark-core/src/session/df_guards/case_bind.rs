@@ -40,6 +40,7 @@ pub use super::sort_names::{qualifier_star_positions, sort_shape, union_dup_belo
 pub use super::subquery::resolve_bound_expr_with;
 pub use super::written_names::{Disposition, refuse_folded_duplicate_keys, unresolved_subset_name};
 pub use super::written_names::{match_display_names, match_subset_names, resolve_df_names};
+pub use super::written_names::{resolve_qualified_display_names, rewrite_join_condition_aliases};
 pub use repark_common::names::{NameHit, NameRule};
 
 pub(crate) type Hit<'a> = (Option<&'a TableReference>, &'a Field);
