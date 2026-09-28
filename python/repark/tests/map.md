@@ -73,8 +73,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (2026-09-25):** replays every measured step of the oracle through the facade, one session
   per group, in order; each observation (rows, schema surfaces, metadata fields, Python value
   types, refusal class/condition/SQLSTATE/text) equals Spark's, or its residue record when the
-  step names one (the ledger's residue table is cross-checked). Group `ltz`: 88 steps, 76
-  EQUAL. pins: u9-types-1/C-001, C-002, C-003, C-005
+  step names one (the ledger's residue table is cross-checked). Group `ltz`: 88 steps, 81
+  EQUAL (LTZ-STORE-INT-1, 2026-09-28, closes R-1: both `side-select` rows EQUAL, the two
+  `side-insert-string` refusals hold the planning prefix as R-37). pins: u9-types-1/C-001,
+  C-002, C-003, C-005
   Group `map`: 87 steps, 69 EQUAL (r2 added UPDATE / MERGE `map()`, back-quoted `` `map`() ``
   and `element_at(map(), …)`, R-13). pins: u9-types-1/C-006, C-007, C-008
   r3 grows `map` to 128 steps, 83 EQUAL: `map/assign/*` (four refusing map shapes on UPDATE,

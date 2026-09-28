@@ -62,8 +62,6 @@ def test_dataframe_append_int_into_timestamp_refuses(
 ) -> None:
     """A DataFrame append of INT into TIMESTAMP refuses and writes nothing."""
     frame = spark.createDataFrame([(0, 1)], ["id", "c"])
-    with pytest.raises(
-        AnalysisException, match=r"INCOMPATIBLE_DATA_FOR_TABLE\.CANNOT_SAFELY_CAST"
-    ):
+    with pytest.raises(AnalysisException, match=r"INCOMPATIBLE_DATA_FOR_TABLE\.CANNOT_SAFELY_CAST"):
         frame.writeTo(FQ).append()
     assert _rows(spark) == []
