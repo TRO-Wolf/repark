@@ -18,7 +18,12 @@ re-homed per the 2026-09-28 ruling (R-CS2-1/R-CS2-2): the join condition
 refuses first, and a false-built frame reused under ``true`` reads its
 captured rule.
 
-pins: casesens-2/C-001, C-002, C-003, C-006
+Slice 2 (same file): ``withColumn(s)`` and ``withColumnRenamed`` follow the
+rule. Under ``true`` a folded key appends and a folded rename no-ops; under
+``false`` renames fan out to twins and folded ``withColumns`` keys refuse
+``COLUMN_ALREADY_EXISTS``. The overlay pin guards display-spelling replace.
+
+pins: casesens-2/C-001, C-002, C-003, C-004, C-006
 """
 
 from __future__ import annotations
@@ -64,6 +69,23 @@ _S3_FALSE_KEYS: tuple[str, ...] = (
     "p4/df_select_str_ID_false",
     "p4/df_expr_ID_false",
     "p4/df_window_ID_false",
+)
+
+_S2_WITHCOLUMN_KEYS: tuple[str, ...] = (
+    "p1/cs_df_withColumn_ID",
+    "p1/r7_withColumn_ID",
+    "p6/wcs_true",
+    "p6/wcs_true_exact",
+    "p6/wc_twin_true",
+    "p6/r20_wc_twin",
+)
+
+_S2_RENAMED_KEYS: tuple[str, ...] = (
+    "p1/cs_df_renamed_ID",
+    "p1/r7_withColumnRenamed_ID",
+    "p6/wcrn_plural_true",
+    "p6/wcr_twin_true",
+    "p6/r20_wcr_twin",
 )
 
 _SPARK_POSITION_SUFFIX = "; line "
@@ -179,9 +201,20 @@ def _oracle(key: str) -> dict[str, Any]:
     return _ORACLE1[key]
 
 
+def _twins(session: ReparkSession) -> Any:
+    """Build the probe's twin frame ``(id, ID)`` holding ``(1, 2)`` (S2)."""
+    return session.createDataFrame([(1, 2)], ["id", "ID"])
+
+
 def _run_df(session: ReparkSession, statement: str, frame: Any = None) -> Any:
     """Run a recorded dataframe-door lambda against the session (S1)."""
-    namespace: dict[str, Any] = {"S": session, "F": functions, "ENGINE": "repark", "Q": frame}
+    namespace: dict[str, Any] = {
+        "S": session,
+        "F": functions,
+        "ENGINE": "repark",
+        "Q": frame,
+        "twins": lambda: _twins(session),
+    }
     return eval(statement, namespace)()
 
 
@@ -289,3 +322,51 @@ def test_s1_false_door_byte_identical(tmp_path: Path) -> None:
             _assert_df_step(plain_session, key)
     finally:
         plain_session.stop()
+
+
+def test_s2_withcolumn_follows_the_rule(tmp_path: Path) -> None:
+    """Folded keys append under true and replace (every twin) under false."""
+    session = _open(tmp_path)
+    try:
+        _setup_tables(session)
+        for key in _S2_WITHCOLUMN_KEYS:
+            _assert_df_step(session, key)
+    finally:
+        session.stop()
+
+
+def test_s2_renamed_follows_the_rule(tmp_path: Path) -> None:
+    """Folded renames no-op under true and fan out to twins under false."""
+    session = _open(tmp_path)
+    try:
+        _setup_tables(session)
+        for key in _S2_RENAMED_KEYS:
+            _assert_df_step(session, key)
+    finally:
+        session.stop()
+
+
+def test_s2_folded_keys_refuse(tmp_path: Path) -> None:
+    """Folded withColumns keys refuse COLUMN_ALREADY_EXISTS under false."""
+    session = _open(tmp_path)
+    try:
+        _setup_tables(session)
+        _assert_df_step(session, "p6/r26_wcs_dup")
+    finally:
+        session.stop()
+
+
+def test_s2_overlay_replace_unchanged(tmp_path: Path) -> None:
+    """withColumn on an overlay frame replaces by display spelling (R7)."""
+    session = _open(tmp_path)
+    try:
+        _setup_tables(session)
+        session.conf.set("spark.sql.caseSensitive", "false")
+        table = session.table("sc.ns.t")
+        overlay = table.select(functions.col("id").alias("ID"), functions.col("Data").alias("ID"))
+        assert overlay.columns == ["ID", "ID"]
+        replaced = overlay.withColumn("id", functions.lit(9))
+        assert _dtypes(replaced) == [["id", "int"], ["id", "int"]]
+        assert _rows(replaced) == [[9, 9], [9, 9]]
+    finally:
+        session.stop()

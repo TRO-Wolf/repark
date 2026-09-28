@@ -91,18 +91,48 @@ ceiling change — the written-path body moved to `written_names.py` (A5) and
 `true` still reads `IgnoreCase`; the forbidden files and the facade conf read
 stay untouched, and the fresh-frame `true` legs stay pinned.
 
+## Slice 2 (2026-09-28, this round; branch `feat/casesens-2-s2`, base `5b730b0c`)
+
+OD-3 adopted 2026-09-28 (renames fan out, folded `withColumns` keys refuse).
+`written_names.rs` gains `refuse_folded_duplicate_keys` (Exact answers ok,
+IgnoreCase raises Spark's 42711 text through the S3-tested error mapping),
+re-exported through `frame_names` inside the existing `pub use` line
+(`case_bind.rs` stays exactly 1000); `dataframe_names.rs` exposes the
+`refuse_folded_duplicate_keys(frame, keys)` pyfunction (252 → 262).
+`written_names.py` gains the S2 body (71 → 145): `_refuse_folded_with_columns_keys`,
+`_match_with_columns_keys`, `_locate_rename_targets`, `_rewrite_running_names`;
+`core.py` keeps the Column construction and the duplicate-name check and calls
+them (26 insertions, 26 deletions — holds 3973, no ceiling or table edit, the
+S1 A5 precedent). The red-first run on `5b730b0c` fails exactly the differing
+legs (`cs_df_withColumn_ID`, `cs_df_renamed_ID`, `r26_wcs_dup`); the overlay
+pin is green on arrival.
+
+Adaptations recorded: A6 the Exact arm matches with Python `==` behind the
+native `frame_is_exact` gate while the IgnoreCase arm calls native
+`match_display_names` — R5's matcher raises (not Missing) under Exact, and
+these sites append/no-op on a miss, so the raising entry cannot serve them;
+the grep holds (zero new `casefold`/`lower`/`eq_ignore_ascii_case`). A7 the
+plural duplicate-name check stays: a fanned-out twin collision
+(`{"id":"z"}` on twins → `[z,z]`) raises under the disclosed EX-DF-18 rule
+while the singular fans out per OD-3 — unmeasured (no p6 cell), no pin moves.
+A8 the folded-key refusal runs before the window-layer merge attempt, so the
+call's own keys are refused per Spark's rule; a folded cross-collision between
+the prior layer and the new keys refuses in the combined recursive call (loud,
+unmeasured, no pin). Exact-duplicate frames keep today's silent no-op on the
+singular rename path (R-22, out of scope).
+
 ## Clauses
 
 | Clause | Statement | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
 | C-001 | Under `caseSensitive=true` the bare-name legs refuse `UNRESOLVED_COLUMN.WITH_SUGGESTION` (42703) naming the written spelling: `p1/cs_df_select_ID`, `cs_df_select_col_ID`, `cs_df_select_data`, `cs_df_orderBy_ID`, `cs_df_groupBy_ID`, `cs_df_filter_str_ID`, `cs_df_getitem_ID`. | Facade replay asserts class, condition, SQLSTATE, head and candidate set per key. | PROVEN | `test_casesens_2.py::test_s1_true_door_refuses_bare_names` (7/7 green); M2 reds it. |
-| C-002 | Under `caseSensitive=true` the name APIs follow the rule: `withColumn` appends (`p1/cs_df_withColumn_ID`), `withColumnRenamed` no-ops (`p1/cs_df_renamed_ID`), `fillna` subset refuses (`p4/df_fillna_true`), `dropDuplicates` refuses the legacy text (`p4/df_dropDuplicates_true`); the p6 miss, twin and qualified cells (`sel_nope_true`, `getitem_nope_true`, `order_nope_true`, `group_nope_true`, `filter_str_nope_true`, `wcs_true`, `wcs_true_exact`, `wcrn_plural_true`, `wcr_twin_true`, `wc_twin_true`, `fill_null_true`, `fill_subset_nope_true`, `dropna_subset_true`, `dd_exact_true`, `dd_nope_true`, `qs_sel_t_id_true`, `qs_sel_t_ID_exact_true`, `selfjoin_true`) answer Spark's recorded cells. | Slice 3. | OPEN | S1 partial: the five miss legs pin green (`test_s1_true_misses_refuse`); `qs_sel_t_id_true` is re-homed per the Q3 ruling (R-CS2-2); the twin/`na`/`dropDuplicates` legs are S2/S3. |
+| C-002 | Under `caseSensitive=true` the name APIs follow the rule: `withColumn` appends (`p1/cs_df_withColumn_ID`), `withColumnRenamed` no-ops (`p1/cs_df_renamed_ID`), `fillna` subset refuses (`p4/df_fillna_true`), `dropDuplicates` refuses the legacy text (`p4/df_dropDuplicates_true`); the p6 miss, twin and qualified cells (`sel_nope_true`, `getitem_nope_true`, `order_nope_true`, `group_nope_true`, `filter_str_nope_true`, `wcs_true`, `wcs_true_exact`, `wcrn_plural_true`, `wcr_twin_true`, `wc_twin_true`, `fill_null_true`, `fill_subset_nope_true`, `dropna_subset_true`, `dd_exact_true`, `dd_nope_true`, `qs_sel_t_id_true`, `qs_sel_t_ID_exact_true`, `selfjoin_true`) answer Spark's recorded cells. | Slice 3. | OPEN | S1 partial: the five miss legs pin green (`test_s1_true_misses_refuse`); `qs_sel_t_id_true` is re-homed per the Q3 ruling (R-CS2-2); the twin/`na`/`dropDuplicates` legs are S2/S3. S2 partial: the true-mode `withColumn`/rename legs pin green (`test_s2_withcolumn_follows_the_rule`, `test_s2_renamed_follows_the_rule`); the `na`/`dropDuplicates` legs are S3. |
 | C-003 | Under `caseSensitive=false` qualified df-door strings bind: `p1/r7_selfjoin` answers `ID`, `data` `[[1,a],[2,b]]`, and p6 `qs_sel_t_id`, `qs_sel_t_ID`, `qs_alias_sel` answer Spark's recorded names and rows; `r18_alias_join` is pinned if it falls out, else a dated residue. | Facade replay asserts names and rows per key. | PROVEN (partial: `qs_sel_t_id`, `qs_sel_t_ID`, `qs_alias_sel`, `qs_sel_t_ID_exact_true`, `selfjoin_true` pin green in `test_s1_qualified_strings_bind`; M3 reds it) | `r7_selfjoin` re-homed to the join-origin follow-up per the Q1 ruling (R-CS2-1, both answers recorded, not pinned). `r18_alias_join` is dated residue R-CS2-1 (condition refuses naming `` `l`.`id` ``, both answers recorded). |
-| C-004 | Under `caseSensitive=false` `withColumn` replaces and renames fan out: `p1/r7_withColumn_ID`, `r7_withColumnRenamed_ID`, p6 `r20_wcr_twin`, `r20_wc_twin` answer Spark's recorded frames, and p6 `r26_wcs_dup` refuses `[COLUMN_ALREADY_EXISTS]` 42711. | Slice 2. | OPEN | |
+| C-004 | Under `caseSensitive=false` `withColumn` replaces and renames fan out: `p1/r7_withColumn_ID`, `r7_withColumnRenamed_ID`, p6 `r20_wcr_twin`, `r20_wc_twin` answer Spark's recorded frames, and p6 `r26_wcs_dup` refuses `[COLUMN_ALREADY_EXISTS]` 42711. | Facade replay asserts names, rows and the 42711 refusal per key. | PROVEN | `test_casesens_2.py::test_s2_withcolumn_follows_the_rule`, `test_s2_renamed_follows_the_rule`, `test_s2_folded_keys_refuse` (12/12 legs green); M4 reds the r20 legs, M5 reds the r26 leg. |
 | C-005 | Under `caseSensitive=false` `na` subsets match ignoring case over nulls (p6 `fill_null_false`, `dropna_subset_false`) and the `dropDuplicates` miss raises Spark's legacy text (p6 `dd_nope_false`). | Slice 3. | OPEN | |
-| C-006 | The `false` path is otherwise byte-identical: `p1/r7_orderBy_ID`, `r7_groupBy_DATA`, `r7_dropDuplicates_ID`, `r7_fillna_subset`, `r7_sort_col_ID`, the S3 `df_*_false` legs, today's facade miss/ambiguous texts, the quoter battery and R-19's lazy timing all guard-pinned. | Guard pins plus the facade sweep. | OPEN | S1 partial: `test_s1_false_door_byte_identical` green (r7 guards, S3 false legs, miss text, R-19 timing, quoter spot); M7 reds it. Flips in S3. |
-| C-007 | One rule: every site this unit touches matches through `repark_common::names::NameRule`; no `casefold` / `lower` / `eq_ignore_ascii_case` name comparison is added (grep of the unit's diff); `core.py` shrinks in every slice and `_resolve_getitem_column_name` is deleted. | Grep of the unit diff; S3 deletes the matcher. | OPEN | S1 partial: the S1 diff adds zero `casefold`/`lower`/`eq_ignore_ascii_case` (grep verified); `_resolve_getitem_column_name` keeps its S2/S3 callers (`declare_sorted`, `drop_duplicates`, `with_column_renamed` — note `declare_sorted` is outside S2/S3's named sites, S3 halt-rule-6 input). `core.py` stays 3973 in S1 (written-path body moved out per the Q2 ruling); flips in S3. |
-| C-008 | Nothing regresses: the U11-EDGE-1 V-001 … V-004 pins, the `case_bind` and `column_resolution` batteries, the S3 `true` legs, the U8 C-033 keys and the ANSI door stay green; cells `E-CASE-SELECT`, `E-CASE-ALTER`, `E-CASE-INSERT-BY-NAME`, `E-CASE-MERGE`, `E-CASE-PARTITION-FIELD`, `E-CASE-TABLE-NAME`, `R-MT-CASE`, `P-CALL-UPPERCASE` replay unchanged. | Full lib sweeps, the facade sweep, the probe re-run and the scoreboard replay. | OPEN | S1 partial: the WO gate batteries green (evidence in the S1 hand-back); zero existing pins changed. Flips in S3. |
+| C-006 | The `false` path is otherwise byte-identical: `p1/r7_orderBy_ID`, `r7_groupBy_DATA`, `r7_dropDuplicates_ID`, `r7_fillna_subset`, `r7_sort_col_ID`, the S3 `df_*_false` legs, today's facade miss/ambiguous texts, the quoter battery and R-19's lazy timing all guard-pinned. | Guard pins plus the facade sweep. | OPEN | S1 partial: `test_s1_false_door_byte_identical` green (r7 guards, S3 false legs, miss text, R-19 timing, quoter spot); M7 reds it. S2 partial: the S1 guard pins stay green and `test_s2_overlay_replace_unchanged` pins the R7 overlay replace set. Flips in S3. |
+| C-007 | One rule: every site this unit touches matches through `repark_common::names::NameRule`; no `casefold` / `lower` / `eq_ignore_ascii_case` name comparison is added (grep of the unit's diff); `core.py` shrinks in every slice and `_resolve_getitem_column_name` is deleted. | Grep of the unit diff; S3 deletes the matcher. | OPEN | S1 partial: the S1 diff adds zero `casefold`/`lower`/`eq_ignore_ascii_case` (grep verified); `_resolve_getitem_column_name` keeps its S2/S3 callers (`declare_sorted`, `drop_duplicates`, `with_column_renamed` — note `declare_sorted` is outside S2/S3's named sites, S3 halt-rule-6 input). `core.py` stays 3973 in S1 (written-path body moved out per the Q2 ruling). S2 partial: the S2 diff adds zero `casefold`/`lower`/`eq_ignore_ascii_case` (grep verified); the `with_column_renamed` caller is gone, remaining callers are `declare_sorted` and `drop_duplicates`; `core.py` holds 3973 (26/26, call sites plus docstrings fund the folded loops). Flips in S3. |
+| C-008 | Nothing regresses: the U11-EDGE-1 V-001 … V-004 pins, the `case_bind` and `column_resolution` batteries, the S3 `true` legs, the U8 C-033 keys and the ANSI door stay green; cells `E-CASE-SELECT`, `E-CASE-ALTER`, `E-CASE-INSERT-BY-NAME`, `E-CASE-MERGE`, `E-CASE-PARTITION-FIELD`, `E-CASE-TABLE-NAME`, `R-MT-CASE`, `P-CALL-UPPERCASE` replay unchanged. | Full lib sweeps, the facade sweep, the probe re-run and the scoreboard replay. | OPEN | S1 partial: the WO gate batteries green (evidence in the S1 hand-back); zero existing pins changed. S2 partial: the WO gate batteries green (evidence in the S2 hand-back); zero existing pins changed. Flips in S3. |
 
 ## Mutation record (2026-09-28, S1)
 
@@ -117,9 +147,22 @@ Each line was broken, the named tests ran red, and the file was restored byte-id
 Not run in S1: M1 (`resolve_df_names` returns `Missing` for a folded hit —
 needs a Rust rebuild cycle; M2/M3 cover the same pins), M4–M6 (S2/S3 scope).
 
+## Mutation record (2026-09-28, S2)
+
+Each line was broken, the named tests ran red, and the file was restored byte-identical.
+
+| # | Mutation | Red |
+|---|---|---|
+| M4 | `match_display_names` hits truncated to one under `IgnoreCase`. | `test_s2_withcolumn_follows_the_rule` red (`p6/r20_wc_twin`) and `test_s2_renamed_follows_the_rule` red (`p6/r20_wcr_twin`); restored green. |
+| M5 | `folded_duplicate` keys not refused (the `with_columns` refuse call removed). | `test_s2_folded_keys_refuse` red (`p6/r26_wcs_dup` answers); restored green. |
+
+Not run in S2: M1 (S1 rationale stands), M6 (S3 scope).
+
 ## Tests rewritten
 
 None in slice 1: every existing pin keeps its answer (sweep evidence in the S1 hand-back).
+
+None in slice 2: every existing pin keeps its answer (sweep evidence in the S2 hand-back).
 
 ## Residues
 

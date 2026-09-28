@@ -2353,6 +2353,11 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   the 2026-09-28 ruling, unit ledger: the `r7_selfjoin` condition refuses
   first (R-CS2-1, join-origin follow-up) and a false-built frame reused under
   `true` reads its captured rule (R-CS2-2).
+  **CASESENS-2 S2 (2026-09-28):** `withColumn(s)` and renames follow the rule —
+  under `true` a folded key appends and a folded rename no-ops, under `false`
+  `withColumn` replaces (every twin) and renames fan out to twins, and folded
+  `withColumns` keys refuse `[COLUMN_ALREADY_EXISTS]` 42711. The overlay
+  replace set is display-spelled, as before.
 - **Apache Spark** — the refusals and answers above. *(oracle: recorded —
   PySpark 4.1.2 + Iceberg 1.11, 2026-09-27, `casesens_1_spark_oracle.json`
   (210 steps) beside the facade pin; 2026-09-28, `casesens_2_spark_oracle.json`
@@ -2376,6 +2381,12 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   `qualified_names_split_on_the_last_dot`,
   `display_names_fan_out_and_the_subset_text_is_legacy`).
   pins: casesens-2/C-001, C-002, C-003, C-006
+  **CASESENS-2 S2 (2026-09-28):** `python/repark/tests/test_casesens_2.py`
+  (`test_s2_withcolumn_follows_the_rule`, `test_s2_renamed_follows_the_rule`,
+  `test_s2_folded_keys_refuse`, `test_s2_overlay_replace_unchanged`);
+  `crates/repark-core/src/session/df_guards/written_names.rs::tests`
+  (`display_match_fans_out_under_ignore_case_and_is_exact_under_exact`).
+  pins: casesens-2/C-002, C-004, C-006
 - **Rationale** — FIXED; every true-mode refusal is Spark's measured text, its
   head with the candidate set, or the recorded legacy text, and the default
   session is unchanged.

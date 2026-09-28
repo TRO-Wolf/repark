@@ -20,6 +20,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(frame_is_exact, module)?)?;
     module.add_function(wrap_pyfunction!(match_display_names, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_join_condition, module)?)?;
+    module.add_function(wrap_pyfunction!(refuse_folded_duplicate_keys, module)?)?;
     module.add_function(wrap_pyfunction!(requalify_join_sides, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_df_names, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_frame_names, module)?)?;
@@ -159,6 +160,15 @@ fn refuse_ambiguous_join_condition(
             &[left.inner().schema(), right.inner().schema()],
         )
         .map_err(datafusion_to_py_err)
+    })
+}
+
+#[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
+#[pyfunction]
+fn refuse_folded_duplicate_keys(frame: &PyDataFrame, keys: Vec<String>) -> PyResult<()> {
+    fenced!("dataframe_names.refuse_folded_duplicate_keys", {
+        repark_core::frame_names::refuse_folded_duplicate_keys(&keys, frame_rule(frame.inner()))
+            .map_err(datafusion_to_py_err)
     })
 }
 

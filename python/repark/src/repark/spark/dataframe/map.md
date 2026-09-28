@@ -142,6 +142,13 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   qualified strings riding the proven `F.col` path. Every string site shares
   getitem's R-19 laziness (C-023 pins lazy `select` on twins).
   pins: casesens-2/C-001, C-003, C-006
+  CASESENS-2 S2 (2026-09-28): the withColumn/rename body behind the three
+  `core.py` call sites — `_refuse_folded_with_columns_keys`,
+  `_match_with_columns_keys`, `_locate_rename_targets`,
+  `_rewrite_running_names`: native fan-out under `IgnoreCase`, exact `==`
+  behind the `frame_is_exact` gate under `Exact` (the raising R5 matcher
+  cannot serve append/no-op sites), exact-duplicate hits left alone (R-22).
+  `core.py` holds 3973. pins: casesens-2/C-002, C-004, C-006
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`

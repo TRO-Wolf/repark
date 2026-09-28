@@ -17,7 +17,7 @@ use datafusion::sql::sqlparser::parser::Parser;
 use repark_common::spark_error;
 
 pub use super::subquery::resolve_bound_expr_with;
-pub use super::written_names::{Disposition, unresolved_subset_name};
+pub use super::written_names::{Disposition, refuse_folded_duplicate_keys, unresolved_subset_name};
 pub use super::written_names::{match_display_names, resolve_df_names};
 pub use repark_common::names::{NameHit, NameRule};
 

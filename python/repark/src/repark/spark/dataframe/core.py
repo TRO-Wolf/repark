@@ -1118,17 +1118,15 @@ class DataFrame:
         merged = self._try_merge_adjacent_window_layer(colsMap)
         if merged is not None:
             return merged
+        written_names._refuse_folded_with_columns_keys(self, list(colsMap))
+        matches, appends = written_names._match_with_columns_keys(self, list(colsMap))
         projected: list[Any] = []
-        seen_display: set[str] = set()
-        folded = {name.casefold(): name for name in colsMap}
-        for bound in self._iter_bound_columns():
-            written = bound._projection_name or bound.spark_display_part()
-            seen_display.add(written.casefold())
-            if (display := folded.get(written.casefold())) is not None:
-                replacement = colsMap[display]
+        for bound, key in zip(self._iter_bound_columns(), matches, strict=True):
+            if key is not None:
+                replacement = colsMap[key]
                 if isinstance(replacement, Column):
                     replacement = self._rebind_origin_column(replacement)
-                aliased = replacement.alias(display)
+                aliased = replacement.alias(key)
                 if (
                     isinstance(replacement, Column)
                     and replacement._origin_plan_id is not None
@@ -1137,8 +1135,8 @@ class DataFrame:
                     projected.append(
                         Column(
                             aliased._inner,
-                            spark_display=display,
-                            projection_name=display,
+                            spark_display=key,
+                            projection_name=key,
                             stable_name=True,
                             has_free_attribute=True,
                             origin_plan_id=bound._origin_plan_id,
@@ -1152,12 +1150,12 @@ class DataFrame:
                     projected.append(aliased)
             else:
                 projected.append(bound)
-        for name, column in colsMap.items():
-            if name.casefold() not in seen_display:
-                if isinstance(column, Column):
-                    projected.append(self._rebind_origin_column(column).alias(name))
-                else:
-                    projected.append(column.alias(name))
+        for name in appends:
+            column = colsMap[name]
+            if isinstance(column, Column):
+                projected.append(self._rebind_origin_column(column).alias(name))
+            else:
+                projected.append(column.alias(name))
         child = self.select(*projected)
         child._collapse_base = self
         child._layer_map = dict(colsMap)
@@ -3217,8 +3215,9 @@ class DataFrame:
         """Rename a column (PySpark ``DataFrame.withColumnRenamed``).
 
         Renaming a column that does not exist is a silent no-op (Spark semantics).
-        Empty-string *target* names are rejected. Name resolution is
-        case-insensitive (Spark ``caseSensitive=false``); the rename is applied via quoted
+        Empty-string *target* names are rejected. Name resolution follows
+        ``spark.sql.caseSensitive`` (exact under ``true``, case-insensitive with
+        twin fan-out under ``false``); the rename is applied via quoted
         schema bind +:meth:`select` so mixed-case fields after a requested-spelling projection
         actually rename (native DataFusion ``with_column_renamed`` silently no-ops on
         case-preserved fields).
@@ -3232,14 +3231,13 @@ class DataFrame:
                 "withColumnRenamed target names must be non-empty "
                 "(empty/whitespace names are rejected — Group F / octo r3)"
             )
-        try:
-            canonical = self._resolve_getitem_column_name(existing)
-        except AnalysisException:
+        positions = written_names._locate_rename_targets(self, existing)
+        if not positions:
             return self
+        wanted = set(positions)
         projected: list[Column] = []
-        for bound in self._iter_bound_columns():
-            display = bound._projection_name or bound.spark_display_part()
-            if display == canonical:
+        for index, bound in enumerate(self._iter_bound_columns()):
+            if index in wanted:
                 projected.append(bound.alias(new))
             else:
                 projected.append(bound)
@@ -3253,7 +3251,9 @@ class DataFrame:
         Name rewrites are applied **sequentially** in dict insertion order against a running
         name list (live PySpark 4.1.2). Probe: ``{"a": "b", "b": "c"}`` on ``[a, b]`` rewrites
         to ``[c, c]`` (``a→b`` → ``[b, b]``, then every ``b→c``). A missing old name is a
-        silent no-op per the singular rule.
+        silent no-op per the singular rule. Matching follows
+        ``spark.sql.caseSensitive`` (exact under ``true``, case-insensitive with
+        twin fan-out under ``false``).
 
         repark cannot materialize **duplicate column names** (DataFusion projections require
         unique names). When a rename map would leave two columns with the same final name,
@@ -3282,7 +3282,7 @@ class DataFrame:
                     "withColumnsRenamed target names must be non-empty "
                     "(empty/whitespace names are rejected — Group F / octo r3)"
                 )
-            names = [new_name if name == old_name else name for name in names]
+        names = written_names._rewrite_running_names(self, colsMap, names)
         multi_name = self._display_names is not None and self._engine_names is not None
         if not multi_name and len(names) != len(set(names)):
             raise AnalysisException(
