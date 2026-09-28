@@ -178,7 +178,7 @@ def test_cap_1_exception_tables_equal_the_measured_debt() -> None:
     assert _baselines(python_gate) == python_approved
     assert rust_debt == rust_approved
     assert python_debt == python_approved
-    assert len(rust_approved) == 37
+    assert len(rust_approved) == 36
     assert len(python_approved) == 32
 
 
