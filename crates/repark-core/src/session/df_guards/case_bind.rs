@@ -309,6 +309,8 @@ pub fn bind_projection_expr(expr: Expr, frame_schema: &DFSchema, rule: NameRule)
 fn cast_child_name(expr: &Expr) -> Option<String> {
     match expr {
         Expr::Column(column) => Some(column.name.clone()),
+        Expr::Cast(cast) => cast_child_name(&cast.expr),
+        Expr::TryCast(cast) => cast_child_name(&cast.expr),
         _ => None,
     }
 }

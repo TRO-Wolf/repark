@@ -74,11 +74,6 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Plan-collapse transforms share one planner support module.",
         "Split transform families along their existing plan-node boundaries.",
     ),
-    "python/repark/src/repark/spark/dataframe/writer_readwriter.py": (
-        1023,
-        "DataFrameWriter and DataFrameReader facade methods share one region.",
-        "Split writer and reader bindings into separate cohesive modules.",
-    ),
     "python/repark/src/repark/spark/functions.py": (
         1984,
         "Facade function exports and wrappers remain consolidated.",

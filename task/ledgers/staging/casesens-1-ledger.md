@@ -168,7 +168,7 @@ refuses naming `ID` (Spark's text byte-exact).
 | C-015 | `WRITE ORDERED BY` / `WRITE LOCALLY ORDERED BY` / `WRITE DISTRIBUTED BY PARTITION … ORDERED BY` bind by the session rule: under `false` any case answers with the measured source ids; under `true` a wrong-case column, nested field or transform source refuses `ValidationException: Cannot find field '<written>' in struct: …`; an unknown column refuses that text under either setting (`p2/so_*`, `p3/so_false_missing`). | Slice 5. | PROVEN | `casesens_ddl.rs` `write_order_follows_the_case_rule` (`false` answers with source ids 2, 4, 1, 1; `true` refusals commit no order; exact `cat` answers; `nope` refuses); facade S5 `so_*` legs plus the `o1` / `o2` metas; the two rewritten transform legs; M11. |
 | C-016 | `SET` / `DROP IDENTIFIER FIELDS` bind exactly under both settings (`p2/id_false_ID`, `id_true_ID`, `id_true_id`, `p3/id_drop_ID`). | Slice 5. | PROVEN | `casesens_ddl.rs` `identifier_fields_are_exact_under_both_settings` (wrong-case SET and DROP refuse Iceberg's recorded texts with the set unchanged; exact `id` sets identifier `[1]`); facade S5 `id_*` legs plus the `o1` / `o2` metas (all three refusal legs replay EQUAL); M12. |
 | C-017 | One rule: every site this unit touches compares names through `repark_common::names::NameRule`; no `eq_ignore_ascii_case` / `to_ascii_lowercase` name comparison is added (grep of the unit's diff); the SQL door's `true` path turns identifier normalization off per statement only. | Last slice that lands. | PROVEN | Final grep reading 2026-09-27 (`git diff origin/main`, S5 head): the unit diff adds 24 comparison lines, all classified — 4 in `names.rs` (the rule's own `IgnoreCase` implementation and `folded_duplicate`); the S1/S1b fixed false-path fold machinery (`inner_scopes` R4 rendering, `fold` / `scope_fields` CTE and derived lookups); the S4 twin-detection machinery (`twins.rs` / `ambiguity.rs` folded-equality detection, false-only by construction). Every session-rule dispatch site (S2 `exact.rs`, S3 `bind_names` and the frame functions, S5 `resolve_known_field`, `bound_sources`, `resolve_field_by_transform`, `resolve_sort_field`, `struct_child` / `field_child`) compares only through `NameRule::matches` / `lookup`. S5 adds 0 and removes 8. The SQL `true` path is the per-statement normalization-off clone in `plan_case_sensitive` only (M3/M4). |
-| C-018 | Nothing regresses: the U11-EDGE-1 V-001 … V-004 pins, the `case_bind` and `column_resolution` batteries, the U8 C-033 case-sensitive oracle keys and the ANSI door stay green; cells `E-CASE-SELECT`, `E-CASE-ALTER`, `E-CASE-INSERT-BY-NAME`, `E-CASE-MERGE`, `R-MT-CASE` replay EQUAL and `E-CASE-PARTITION-FIELD`, `E-CASE-TABLE-NAME` both-refuse. | Last slice that lands. | PROVEN | S5 2026-09-27: facade sweep 1063 passed + 47 skipped, zero facade pins changed (V-001…V-004, U8 C-033 keys, `test_nested_view_depth_guard` in the sweep); Rust `repark-iceberg --lib` 35/35, `repark-spark --lib` 83/83 (new pins plus the rewritten transform legs), `repark-sql --lib` 57/57 partition, `cross_door` 23/23. Probes `after-s5`: p1 47/84 (= s4), p2 17/63 (+2 EQUAL: `id_false_ID`, `id_true_ID`), p3 22/34 (+1: `id_drop_ID`), p4 9/15 (= s4); every changed key is an S5 key except the `tw_order_by` rendering flake (R-CS1-11, nondeterministic on one tree). Replay `replay-s5.json`: 7/7 cells byte-identical to `replay-s2.json`, `P-CALL-UPPERCASE` ok byte-equal to Spark. Whole-unit existing-pin changes, all Spark-wins rewrites: S2 5 (ID-1), S4 1 (twin-view creation text), S5 3 (the `alter.rs` pin, 2 transform legs). Final fold (2026-09-28, correcting the S5 record): the SQL-door `tests/alter.rs` REG DROP leg asserted the pre-OD-3 case-insensitive DROP and went red at the S5 head; rewritten to Spark's refusal (see Tests rewritten), so the count grows by one — S2 5, S4 1, S5 3, final fold 1. CI fix round (2026-09-28, PR #876): the Python-door `test_alter_table.py` CAT DROP leg asserted the same pre-OD-3 answer and went red on CI; rewritten to Spark's refusal (see Tests rewritten) — S2 5, S4 1, S5 3, final fold 1, CI fix round 1. Verifier fold (2026-09-28): zero — VC-1…VC-4 land with no existing pin changing its answer on any door. |
+| C-018 | Nothing regresses: the U11-EDGE-1 V-001 … V-004 pins, the `case_bind` and `column_resolution` batteries, the U8 C-033 case-sensitive oracle keys and the ANSI door stay green; cells `E-CASE-SELECT`, `E-CASE-ALTER`, `E-CASE-INSERT-BY-NAME`, `E-CASE-MERGE`, `R-MT-CASE` replay EQUAL and `E-CASE-PARTITION-FIELD`, `E-CASE-TABLE-NAME` both-refuse. | Last slice that lands. | PROVEN | S5 2026-09-27: facade sweep 1063 passed + 47 skipped, zero facade pins changed (V-001…V-004, U8 C-033 keys, `test_nested_view_depth_guard` in the sweep); Rust `repark-iceberg --lib` 35/35, `repark-spark --lib` 83/83 (new pins plus the rewritten transform legs), `repark-sql --lib` 57/57 partition, `cross_door` 23/23. Probes `after-s5`: p1 47/84 (= s4), p2 17/63 (+2 EQUAL: `id_false_ID`, `id_true_ID`), p3 22/34 (+1: `id_drop_ID`), p4 9/15 (= s4); every changed key is an S5 key except the `tw_order_by` rendering flake (R-CS1-11, nondeterministic on one tree). Replay `replay-s5.json`: 7/7 cells byte-identical to `replay-s2.json`, `P-CALL-UPPERCASE` ok byte-equal to Spark. Whole-unit existing-pin changes, all Spark-wins rewrites: S2 5 (ID-1), S4 1 (twin-view creation text), S5 3 (the `alter.rs` pin, 2 transform legs). Final fold (2026-09-28, correcting the S5 record): the SQL-door `tests/alter.rs` REG DROP leg asserted the pre-OD-3 case-insensitive DROP and went red at the S5 head; rewritten to Spark's refusal (see Tests rewritten), so the count grows by one — S2 5, S4 1, S5 3, final fold 1. CI fix round (2026-09-28, PR #876): the Python-door `test_alter_table.py` CAT DROP leg asserted the same pre-OD-3 answer and went red on CI; rewritten to Spark's refusal (see Tests rewritten) — S2 5, S4 1, S5 3, final fold 1, CI fix round 1. Verifier fold (2026-09-28): zero claimed — VC-1…VC-4 land with no existing pin changing its answer on any door. CI fix 2 (2026-09-28) corrects the count by one: VC-3 intentionally changed the EX-COL-1 bare-cast answer to Spark's `v`, and the pin the fold's sweep missed flipped in this round (see Tests rewritten) — S2 5, S4 1, S5 3, final fold 1, CI fix round 1, CI fix 2 1. |
 
 ## Mutation record (2026-09-27)
 
@@ -254,7 +254,19 @@ CI fix round (2026-09-28, PR #876, 1 pin, OD-3 adopted, Spark wins):
 
 Verifier fold (2026-09-28, 0 pins): VC-1…VC-4 land with no existing pin changing
 its answer on any door (full core/spark/iceberg lib suites plus the facade sweep
-green, see the fold section).
+green, see the fold section). CI fix 2 (2026-09-28) corrects the record: VC-3
+intentionally changed the bare-cast answer, and the EX-COL-1 pin the fold's sweep
+missed went red on CI (which builds the module fresh); it flipped below.
+
+CI fix 2 (2026-09-28, PR #876, 1 pin, VC-3 adopted, Spark wins):
+- `python/repark/tests/test_examples_column_a.py::test_col_cast_qualified_projection_name`:
+  before, a bare `F.col("v").cast("double")` select named
+  `datafusion.public.__repark_cdf_<plan-id>.v` (EX-COL-1, Spark answers `v`); after
+  VC-3 it answers `v`, and the pin asserts `["v"]`. Sibling sweep
+  (`__repark_cdf_` across the facade suite): hygiene pins assert absence (unaffected),
+  the display goldens normalize the qualifier away (unaffected), and the remaining
+  qualified-name pins cover binary-op and struct-update expressions VC-3 did not touch.
+  EX-COL-1 CLOSED in the §7 registry in the same commit.
 
 ## Residues
 
@@ -273,6 +285,7 @@ green, see the fold section).
 | R-CS1-11 | **OPEN 2026-09-27** (S4 shape, recorded in the S5 round per the WO's `tw_order_by` recipe): `p3/tw_order_by` (`SELECT ID, id FROM t ORDER BY id` under `false`): Spark answers `ID`, `id` rows `[[1, 1], [2, 2]]`; RePark refuses `[AMBIGUOUS_REFERENCE]` through `audit_plan_for_ambiguity`, and the rendering is nondeterministic run to run on one tree (``Reference `id` … [`id`, `sc`.`ns`.`t`.`id`]`` vs ``Reference `ID` … [`ID`, `sc`.`ns`.`t`.`ID`]``, 2 and 2 over 4 trials on the S5 tree). Home: follow-up (the WO forbids changing the audit here). |
 | R-CS1-12 | **OPEN 2026-09-28** (final fold): twin-column creation under `caseSensitive=true` — R10 says twins are legal under `true`, but CREATE TABLE, CTAS and CREATE VIEW with `a`/`A` refuse `DataInvalid => Cannot build lower case index: a and A collide` (the fork's `Schema::build` parity check, Java `TypeUtil.indexByLowerCaseName`; the session-gated twin check correctly skips, the fork refuses past it). Only CREATE TEMPORARY VIEW succeeds. No probe measures Spark's under-`true` creation answer, so no pin lands either way; if Spark also refuses with Java's text, RePark is equal and the refusal should be pinned. Home: owner ruling (measure Spark under-`true` creation, then pin or fix). |
 | R-CS1-13 | **OPEN 2026-09-28** (verifier fold, VC-5): the S4 twin respell (`R9`) runs only when the first planning error is DataFusion's unique-name error. `SELECT Data, data FROM t` (stored `Data`) refuses `Projections require unique expression names … ice.sales.t.Data …`, and `SELECT id AS a, Data AS A FROM t` refuses on the fold path, where Spark answers both (duplicate output names are legal); base refuses too, so this is not a regression. C-011's pinned keys all use all-lower stored columns. Home: follow-up (also try `respell_case_twins` when a fold re-plan fails with the unique-name error). |
+| R-CS1-14 | **OPEN 2026-09-28** (re-verify, RC-4 residue, needs probe): `t.join(u, t.id == u.id).describe('Data')` under `caseSensitive=true` answered both columns at base and now refuses `UNRESOLVED_COLUMN` with empty suggestions; Spark is expected to refuse `AMBIGUOUS_REFERENCE`. Unpinned pending a live Spark probe. Home: follow-up. |
 
 ## S3 round (2026-09-27, lane `xs-cs1`, landed per the S3 rulings)
 
@@ -463,6 +476,109 @@ pin changes its answer (see Tests rewritten; C-018).
   Spark names the raw cell `count(1)`, RePark `count(*)` — rows equal, the
   name gap is the R-3 expression-naming class (OD-1 out of scope), which is
   why the pin aliases the count.
+
+## CI fix 2 (2026-09-28, lane `xs-cs1f`)
+
+CI on the verifier fold (`167d07a9`, run 36438217085) failed
+`test_nested_view_depth_guard` and `test_col_cast_qualified_projection_name`. The
+cast pin is the VC-3 answer change (EX-COL-1, flipped under Tests rewritten). The
+views failure is not a verifier-fold regression: every `167d07a9` code change is
+off the failing path (the ambiguity audit is gated off for all-lowercase plans,
+`bind_projection_expr` serves the DataFrame door only, `frame_case_sensitive` is
+a new export, `statistics.py` runs on describe only), and the Rust depth-30 read
+times `f2d3d220` and the fold byte-identical (1.37 s / 13.73 s vs 1.37 s /
+13.75 s). The local pre-fix full run passes slowly (CREATE ×100 329.6 s, w50
+2.96 s, w99 9.96 s, both depth refusals fire), so the CI worker crash is the
+~6-minute quadratic planning under load, not a wrong answer.
+
+Mechanism (pre-existing): catalog view bodies plan through
+`spark_ast::execute_passthrough`, which ran `analyze_eagerly` — DataFusion's
+full analyzer — on the inlined plan at every expansion level, so an n-deep read
+re-analyzed O(n²) nodes (measured: per-level exclusive cost grows with depth;
+gate and map-guard walks are ~0.3 ms of ~25 ms per level). Fix: catalog nested
+expansion skips eager analysis — `collect` analyzes the final plan anyway — via
+the new `execute_passthrough_for_view_body`, threaded through
+`plan_prepared_body`/`execute_view_body_query` with `skip_eager_analysis`. The
+flag stays false wherever the frame schema is consumed uncollected: catalog
+creation (`execute_create_view`) still analyzes, because the stored schema must
+carry Spark-adjusted types (`SELECT 1 AS id` stores `int`, and two
+`describe_near_miss` pins caught the first revision that skipped it), and temp
+creation and rescan still analyze (rescan conforms to the analyzed creation
+schema — two `temp_view_errors` pins caught that revision); DML/Copy plus every
+top-level statement still analyze exactly as before. Post-fix: CREATE ×100 16.9 s, w50 0.67 s, w99
+1.20 s, the facade depth test passes in 19.75 s, and the Rust pin
+`casesens_scopes.rs::hundred_nested_views_read_and_the_101st_refuses` (100
+nested Iceberg views, w50/w99 read, w100 read and w101 create refuse
+`VIEW_NESTED_DEPTH_LIMIT`) passes in 41 s. Observed, untouched: exact-uppercase
+view chains re-plan per level through the respell/display finish (ratio 3.0 per
+level, pre-existing, no pin covers it — CASESENS-2).
+
+## Re-verify (2026-09-28, lane `xs-cs1f`, RC-1..RC-6)
+
+RC-1: the `9f9ade04` nested-view analysis skip is reverted entirely —
+`execute_passthrough_for_view_body`, `maybe_analyze_eagerly` and the
+`skip_eager_analysis` thread through `plan_prepared_body` /
+`execute_view_body_query` are gone; every view body analyzes as before the
+skip. The skip gave wrong answers: `SELECT h + 1 FROM vh` (view `SELECT id,
+id / 2 AS h`) answered BIGINT 1, 2, 2 instead of DOUBLE 1.5, 2.0, 2.5, and the
+wrong types persisted into view-over-view metadata, CTAS and INSERT. Pins
+`view_arithmetic_over_division_column_answers_double` and
+`view_over_view_stores_double_for_division_arithmetic` (both red at
+`fb3c799c`, green after the revert).
+
+Profiling (100-nested-view chain, CREATE x100 then read `w99`): `f2d3d220` CI
+green, `167d07a9` CI timed out (run 36438217085). Local Rust depth-30 reads
+are byte-identical (`f2d3d220` 1.37 s / 13.73 s vs `167d07a9` 1.37 s /
+13.75 s, CI-fix-2 measurement): every `167d07a9` change is off the
+all-lowercase view path (the ambiguity audit is gated off by
+`plan_has_upper_ascii_field`, the fold serves wrong-case refs only), so
+`167d07a9` did not slow the chain and no audit-walk fix lands here. The CI
+timeout is load variance on the pre-existing quadratic eager analysis, not a
+regression. Revert timings (this box, debug): Rust
+`hundred_nested_views_read_and_the_101st_refuses` passes in 496.79 s (vs 41 s
+with the skip — the skip's speedup is forfeited for correct types); the
+pre-skip full-chain regime was CREATE x100 329.6 s + w50 2.96 s + w99 9.96 s
+on a faster box. The facade `test_nested_view_depth_guard` time is recorded
+with the gates.
+
+RC-2: LATERAL and correlated scalar subqueries referencing a derived or CTE
+column projected as `Id` refused `UNRESOLVED_COLUMN` where base answered
+`(1|x)`. Root cause in the slice-1 fold: `scope_fields::query_outputs`
+returned the written projection spelling (`Id`) as the derived scope's field,
+so the fold quoted the outer reference to `"Id"` while the repaired plan
+actually outputs lowercase `id` (valid fields never mention the outer scope
+under LATERAL, so the second repair iteration could not recover). Fix:
+`query_outputs` resolves plain and compound references to the stored field
+they bind to in the query's own `FROM` scope, falling back to identifier
+normalization on ambiguity or no match. Pin
+`lateral_and_scalar_outer_references_to_derived_spellings_bind` (`a.Id`,
+`a.id`, the CTE form, the scalar form) answers base's rows.
+
+RC-3: `cast_child_name` recurses through nested `Cast`/`TryCast` chains, so
+`F.col('Amount').cast('int').cast('string')` answers `['Amount']`. Pin
+`test_nested_cast_of_a_column_keeps_the_written_child_name`.
+
+RC-4: the `not _case_sensitive(plan)` guard is gone; `_display_target_pairs`
+runs under both settings, matching exactly under `true` (duplicate exact
+displays still refuse ambiguous). Pin
+`test_describe_resolves_display_names_under_case_sensitive`
+(`transpose().describe('k1')` under `true` answers). The join-describe
+refusal class (`t.join(u, ...).describe('Data')` under `true`: base answered,
+head refuses `UNRESOLVED`, Spark would refuse ambiguous) is recorded as
+R-CS1-14 (needs probe).
+
+RC-5: pin `lateral_body_twins_audit_as_nested_scopes` covers the
+`LogicalPlan::Subquery` arm (red with the arm removed).
+
+RC-6: `tests/map.md` loses the duplicated 546-548 fragment and the VC-2
+paragraph moves back into the `casesens_scopes` entry;
+`column_resolution/map.md:78` loses the duplicate bullet.
+
+Out of scope observed: the pre-existing derived-table/CTE division defect
+(`SELECT h * 2 FROM (SELECT id / 2 AS h FROM t)` answers Int64 0, 2, 2 and
+`WITH c AS (...) SELECT h + 1 FROM c` answers 1, 2, 2 on base, main and head;
+Spark answers double 1.0, 2.0, 3.0 / 1.5, 2.0, 2.5) is unchanged by this
+round; the orchestrator files a card.
 
 ## Coverage attestation
 

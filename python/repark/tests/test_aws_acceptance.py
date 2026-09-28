@@ -78,7 +78,7 @@ from _sql_harden_cutover_run import (
 )
 
 from repark import ReparkSession, Window, functions
-from repark.errors import PySparkException
+from repark.errors import AnalysisException, PySparkException
 from repark.spark import types
 
 pytestmark = pytest.mark.skipif(
@@ -555,3 +555,48 @@ def test_create_or_replace_twice_against_s3tables() -> None:
     table_name = f"{ACCEPTANCE_TABLE_PREFIX}replace2_{uuid.uuid4().hex[:12]}"
     outcome = run_create_or_replace_twice(spark, S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE, table_name)
     assert_replace_twice_outcome(outcome, exact_counts=False)
+
+
+def test_u12_s3_path_write_against_scratch_prefix() -> None:
+    """U12-S3-PATH-WRITE-1: DataFrame path writes on the real tier-2 scratch prefix.
+
+    pins: s3-path-write-1/C-011, C-016
+
+    One prefix per (format, scenario) under a per-run uuid stem; nothing is
+    deleted afterwards (harness rule: cleanup is the user's manual call).
+    Layout (parts, ``_SUCCESS``) is pinned on moto; this leg proves real-AWS
+    reachability: save modes, partitionBy, and empty frames per format, with
+    read-back rows through trailing-slash reads.
+    """
+    assert_real_buckets_configured()
+    spark = (
+        ReparkSession.builder.appName("u12-s3-path-write-live")
+        .config("repark.aws.enable", "true")
+        .getOrCreate()
+    )
+    stem = f"{GLUE_WAREHOUSE.rstrip('/')}/{ACCEPTANCE_NAMESPACE}/u12s3path_{uuid.uuid4().hex[:12]}"
+    rows = [(1, "a"), (2, "b"), (3, "a")]
+    columns = ["id", "grp"]
+    for format_name in ("parquet", "csv", "json"):
+        base = f"{stem}/{format_name}"
+        frame = spark.createDataFrame(rows, columns)
+        probe = f"{base}/modes"
+        getattr(frame.write.mode("error"), format_name)(probe)
+        with pytest.raises(AnalysisException, match="PATH_ALREADY_EXISTS"):
+            getattr(frame.write.mode("error"), format_name)(probe)
+        getattr(frame.write.mode("ignore"), format_name)(probe)
+        getattr(frame.write.mode("append"), format_name)(probe)
+        read_options = {"header": True} if format_name == "csv" else {}
+        got = getattr(spark.read, format_name)(probe + "/", **read_options).collect()
+        assert len(got) == 4, f"{format_name} append must add a fresh part"
+        getattr(frame.write.mode("overwrite"), format_name)(probe)
+        got = getattr(spark.read, format_name)(probe + "/", **read_options).collect()
+        assert len(got) == 3, f"{format_name} overwrite must replace"
+        partitioned = f"{base}/part"
+        getattr(frame.write.mode("overwrite").partitionBy("grp"), format_name)(partitioned)
+        got = getattr(spark.read, format_name)(partitioned + "/", **read_options).collect()
+        assert len(got) == 3
+        empty = f"{base}/empty"
+        getattr(frame.limit(0).write.mode("overwrite"), format_name)(empty)
+        got = getattr(spark.read, format_name)(empty + "/", **read_options).collect()
+        assert len(got) == 0

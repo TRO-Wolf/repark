@@ -74,8 +74,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (2026-09-25):** replays every measured step of the oracle through the facade, one session
   per group, in order; each observation (rows, schema surfaces, metadata fields, Python value
   types, refusal class/condition/SQLSTATE/text) equals Spark's, or its residue record when the
-  step names one (the ledger's residue table is cross-checked). Group `ltz`: 88 steps, 76
-  EQUAL. pins: u9-types-1/C-001, C-002, C-003, C-005
+  step names one (the ledger's residue table is cross-checked). Group `ltz`: 88 steps, 81
+  EQUAL (LTZ-STORE-INT-1, 2026-09-28, closes R-1: both `side-select` rows EQUAL, the two
+  `side-insert-string` refusals hold the planning prefix as R-37). pins: u9-types-1/C-001,
+  C-002, C-003, C-005
   Group `map`: 87 steps, 69 EQUAL (r2 added UPDATE / MERGE `map()`, back-quoted `` `map`() ``
   and `element_at(map(), …)`, R-13). pins: u9-types-1/C-006, C-007, C-008
   r3 grows `map` to 128 steps, 83 EQUAL: `map/assign/*` (four refusing map shapes on UPDATE,
@@ -209,6 +211,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (VC-3: cast/try_cast keep the child name on createDataFrame and Iceberg frames),
   `test_describe_resolves_display_names_under_case_insensitive` and
   `test_describe_refuses_duplicate_display_names_as_ambiguous` (VC-4).
+  **Re-verify (2026-09-28):** `test_nested_cast_of_a_column_keeps_the_written_child_name`
+  (RC-3) and `test_describe_resolves_display_names_under_case_sensitive` (RC-4).
   pins: casesens-1/C-009, C-010
 - [test_casesens_2.py](test_casesens_2.py) + `casesens_2_spark_oracle.json` —
   **WO CASESENS-2 slice 1 (2026-09-28):** the R-CS1-10 true-door refusals plus
@@ -252,6 +256,39 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   TYPEOF-SQL-13 spells `timestamp_ntz`, the D4 `timestampdiff` NTZ cell replays,
   and the U9 oracle retires R-2 (NTZ insert/cast now EQUAL; R-1 repark gains row 4).
   pins: ntz-1/C-001, C-002, C-003, C-004, C-005
+  **WO NTZ-1 slice 2 (2026-09-27):** store assignment replays Spark — LTZ/NULL/DATE
+  VALUES and SELECT in UTC and New York, UPDATE plus both MERGE arms in both zones, the
+  DataFrame append, NTZ values into a TIMESTAMP column, and the CANNOT_SAFELY_CAST
+  refusals (class, condition, SQLSTATE, first line) on VALUES/SELECT/UPDATE/MERGE plus
+  the STRING append. Values read back as `CAST(c AS STRING)`.
+  pins: ntz-1/C-006, C-007
+  **WO NTZ-1 slice 3 (2026-09-27):** the storage surface replays Spark — the six
+  partition transforms (`.partitions` rows, pruning, `.files` bounds, the New York
+  `days` insert), identity/bucket partitions, the filter/ORDER BY/min/max/interval
+  legs, v3 DML, CTAS, `ADD COLUMN`, `SHOW CREATE TABLE`, `printSchema`, `dtypes`,
+  `collect()`/`toArrow()` types, and the Spark-written `xc.ns.x` fixture
+  ([`fixtures/ntz_1_spark_table/`](fixtures/ntz_1_spark_table/map.md), recorded by
+  [_record_ntz_1_spark_table.py](_record_ntz_1_spark_table.py)) with reads, bounds
+  and re-insert. TZ-6 states Spark's contract and the TY-TIMESTAMP-NTZ rows go
+  EQUAL beside it.
+  pins: ntz-1/C-008, C-009
+- [test_ntz_7_verify.py](test_ntz_7_verify.py) + `ntz_7_verify_spark_oracle.json` —
+  **WO NTZ-1 verifier fold (2026-09-28):** `from_utc_timestamp` / `to_utc_timestamp`
+  over strings and a STRING column keep Spark's TIMESTAMP in a New York session —
+  seven recorded cells replay rows and dtypes (unaliased names stay out per R2).
+  pins: ntz-1/C-006
+- [test_ntz_8_verify.py](test_ntz_8_verify.py) + `ntz_8_verify_spark_oracle.json` —
+  **WO NTZ-1 verifier fold part 2 (2026-09-28):** zone-shift calls inside INSERT,
+  UPDATE and MERGE store Spark's instant in a New York session — the 23-step
+  recorded write sequence replays (writes run, 10 reads assert rows and dtypes);
+  the DST INSERT reads were red at 0a61bc02.
+  pins: ntz-1/C-006
+- [test_ntz_9_verify.py](test_ntz_9_verify.py) + `ntz_9_verify_spark_oracle.json` —
+  **WO NTZ-1 re-verify fold (2026-09-28):** VALUES cells computed in LTZ store
+  Spark's session wall again in a New York session — the 39-step recorded
+  sequence replays (writes run, 11 reads assert rows and dtypes); 3 divergence
+  steps pin the widening row and both refusal texts beside Spark's.
+  pins: ntz-1/C-006
 - [test_uuid_cast_window_1.py](test_uuid_cast_window_1.py) +
   [uuid_cast_window_1_spark_oracle.json](uuid_cast_window_1_spark_oracle.json) —
   **WO UUID-CAST-WINDOW-1 (2026-09-27):** the `CAST('a' AS UUID)` refusal replays
@@ -2104,7 +2141,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and hides the private SSOT names `test_qi1_idents.py` pins; imports sorted);
   the two divergence pins for the Column-a example batch —
   `test_col_cast_qualified_projection_name`: a bare `F.col("v").cast("double")`
-  select names the CDF-qualified column where Spark answers `v` (EX-COL-1), and
+  select keeps the child name `v` like Spark (EX-COL-1, CLOSED 2026-09-28 by
+  CASESENS-1 VC-3), and
   `test_get_field_bare_projection_name`: an unaliased `getField` projects `r['a']`
   where Spark answers `r.a` (EX-COL-2). EX-29 (2026-09-11) measured the six
   engine-plumbing names (`for_select`, `join_sql_part`, `spark_display_part`,
@@ -3670,6 +3708,24 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   keeps double + csc empty; overlay float pos type error; **octo C3:** mutation-proof
   combo (map+empty scalar+overlay+F1 nested WITH); **octo C4/C5:** lit numpy Integral/Real
   + homogeneous np.int64 list normalize; **octo C8:** ruff format pin asserts.
+- `test_s3_path_write_1.py` — **S3-PATH-WRITE-1 round 1 (2026-09-28):** the 38
+  `W-PATH-S3-*` moto cells (22 EQUAL, 16 dated residues in 5 families) plus the
+  slashless-scheme and no-local-IO pins. The tier-2 live leg lives in
+  `test_aws_acceptance.py` and skips locally.
+  **S3-PATH-WRITE-1 round 2 (2026-09-28):** the 38 cells read slashless, as
+  Spark does (`R-S3-SLASH-READ` retired, no verdict moves); the refusal pin is
+  a slashless round-trip pin, a trailing-slash pin, and an exact-key pin per
+  format.
+  **S3-PATH-WRITE-1 verifier fold (2026-09-28):** the VU-1..VU-9 moto pins
+  replaying `u12-spark-2.json` (extension directories, exact-key save modes,
+  self-overwrite refusal, literal `#`/`?` keys, bare-host and explicit-http
+  endpoints, endpoint booleans, text refusal, URL spellings, the `p2/`
+  sibling); the oracle comparator now checks column names, types and order.
+  pins: s3-path-write-1/C-007, C-008, C-009, C-012, C-013, C-014, C-015
+  **S3-PATH-WRITE-1 re-verify (2026-09-28):** the RU-1..RU-4 moto pins
+  (subquery self-overwrite refusals, encoded-key refusals with sibling /
+  other-bucket / local pass-throughs, exact-object append refusal,
+  trailing-slash reads of `#` / `?` / `%` keys).
 - `test_e2_readwriter.py` — E2 R-CENSUS-READWRITER: bare-name resolution
   (`resolve_table_name` / saveAsTable / table / writeTo / insertInto / MERGE /
   DROP TABLE SQL expander), `spark.sql.defaultNamespace` seed, parquet save/load +
@@ -3943,8 +3999,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   re-recorded for 8 getitem/getfield `join_sql` `"` → backtick moves, display
   fields byte-identical.
   `isinstance(c, repark.Column)` is pinned. Cast/try_cast
-  of a named attribute currently answers `select` with a
-  `datafusion.public.__repark_cdf_<id>.<field>` qualifier; the golden stores the
+  of a named attribute answers `select` with the child name since 2026-09-28
+  (CASESENS-1 VC-3 closed the `datafusion.public.__repark_cdf_<id>.<field>`
+  qualifier leak, EX-COL-1); the golden stores the
   trailing field only (the UUID is session-local, not a display-string contract).
   **FNP-4B (2026-09-15):** the `sql_expr` / `sql_expr_without_alias` / `join_sql` fields
   re-recorded in backtick form through record mode; every display field verified
@@ -4510,7 +4567,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   still writes (Spark treats it as the user's intent), and the honest residual: a literal
   `INSERT INTO … VALUES` row conforms inside the `Values` node where the synthesized and explicit
   casts are byte-identical, so `VALUES (true)` into an `INT` column still writes `1` while
-  `VALUES (DATE '…')` is refused by the G6-3 CAST gate instead. Arrow path.
+  `VALUES (DATE '…')` is refused by the G6-3 CAST gate instead.
+  **LTZ-STORE-INT-1 (2026-09-28)** closes the residual for `TIMESTAMP` (LTZ) targets at
+  the existing void VALUES gate site, before planning; every other target stays residual.
+  Arrow path.
+- `test_ltz_store_int_1.py` — **WO LTZ-STORE-INT-1 (2026-09-28):** `INSERT INTO sc.ns.l
+  VALUES (0, 1)` refuses with the recorded Spark `ins_l_int` answer — error class,
+  condition, SQLSTATE and the message body, with the RePark-only planning prefix
+  pinned separately — and a DataFrame append of INT into TIMESTAMP refuses; both
+  leave the table empty. **Fold 2026-09-28 (verifier VL-1..VL-6):** `nvl` and
+  `ifnull` over DATE and TIMESTAMP store.
+  pins: ltz-store-int-1/C-001
 - `test_merge_semantics_audit.py` — **MERGE-audit corpus** (2026-08-14 audit gap-map rows
   c/d/g/n/o): null-safe `<=>` / `eqNullSafe` ON matches NULL keys (both doors); builder-door
   `=` NULL keys do not match; self-merge (target as source) updates once per row; join-key
@@ -6879,6 +6946,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   registry/inventory rows naming the refusal are stamped FIXED at `edc38c6a` in this change).
   pins: ice-gold-twice-1/C-002
   pins: rp-20/C-001, C-002, C-003
+  **U12 round 1 (2026-09-28):** `test_u12_s3_path_write_against_scratch_prefix` — loose
+  path writes under a `u12-path-write-<uuid>` scratch prefix, every save mode, direct
+  parts plus a last `_SUCCESS`; skips with the module when `REPARK_AWS_ACCEPTANCE`
+  is unset. pins: s3-path-write-1/C-016
 
 - `test_two_door_kernel_parity.py` — **FNP-1 (2026-08-20):** charter clause C-012 at the facade
   layer. Pins that a name reachable from both doors returns the same Arrow **type and value**

@@ -1489,6 +1489,7 @@ perfectly good read.
 - Residue — carved out of the v1.5.0 gate (owner ruling C-2, 2026-09-24); the v1.6.0 card the
   spec names is not yet filed (readiness finding F-6, 2026-09-27) — see the C-2 paragraph in
   [v1-5-0-remainder-spec-2026-09-23.md](../task/roadmap/mid-term/v1-5-0-remainder-spec-2026-09-23.md).
+  Card filed 2026-09-27: [ns-nested-1-6.md](../task/roadmap/mid-term/ns-nested-1-6.md), closing F-6.
 
 #### ICE-DROP-NS-1 — `DROP NAMESPACE` on a non-empty namespace refuses — **FIXED 2026-09-19**
 
@@ -6189,7 +6190,7 @@ the pin rather than obeying it.
 > The X-1 TIMESTAMP→INT split flipped to a **nullability-only** disclosure; see
 > [G6-4](#g6-4--timestampint-nullability-only-after-tz-5).
 
-### TZ-6 — every TIMESTAMP is an instant; there is no `TIMESTAMP_NTZ`
+### TZ-6 — `TIMESTAMP_NTZ` is a wall clock (Iceberg `timestamp`); `TIMESTAMP` is an instant (Iceberg `timestamptz`) — FIXED 2026-09-27 (WO NTZ-1)
 
 > **TZ-6 — `TIMESTAMP` vs `TIMESTAMP_NTZ` are distinct — FIXED (2026-08-13, TZ-4 PR-2).**
 > `TimestampType` / default `TIMESTAMP` is Arrow `timestamp[us, tz=UTC]` (Iceberg `timestamptz`);
@@ -6218,6 +6219,41 @@ the pin rather than obeying it.
 > and this unit does not touch that skip set.
 > **Pin:** `python/repark/tests/test_spark_sql_grammar_1.py::test_pg_ntz_literal_refuses`
 > and `…::test_pg_ntz_cast_refuses`.
+>
+> **TZ-6 — the scalar `TIMESTAMP_NTZ` literal and cast answer Spark's wall clock —
+> FIXED (2026-09-27, WO NTZ-1).** `TIMESTAMP_NTZ '<s>'` is the naive wall: a zone
+> suffix is dropped, a date-only text is midnight, fractions truncate to micros, the
+> unaliased name is `TIMESTAMP_NTZ '<wall>'` and the type is `timestamp_ntz`; an
+> unparsable text is Spark's `ParseException` `INVALID_TYPED_LITERAL` (42604).
+> `CAST` / `::` / `TRY_CAST` to `TIMESTAMP_NTZ` answer Spark's value for STRING, DATE,
+> NULL, `TIMESTAMP` (the session-zone wall) and NTZ sources, refuse numeric sources and
+> targets with `DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION` (42K09), and
+> `CAST(TIMESTAMP … AS BIGINT)` stays epoch seconds. `TIMESTAMP` and `DATE` store into
+> an NTZ column as the session-zone wall / midnight on VALUES, `INSERT … SELECT`,
+> UPDATE, MERGE and the DataFrame append (and NTZ values store into a `TIMESTAMP`
+> column as the session-zone instant); every other source refuses Spark's
+> `INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST` naming `"TIMESTAMP_NTZ"`. Slice 1
+> (the literal and explicit casts, both cells EQUAL), slice 2 (store assignment),
+> slice 3 (the storage surface: partitions, `.files` bounds, v3, CTAS, DDL
+> presentation, a Spark-written table).
+> **Pins:** `python/repark/tests/test_ntz_1.py` (clauses C-001..C-008),
+> `crates/repark-spark/src/tests/ntz_door.rs`, `…/ntz_store.rs`.
+> **Residues** (ledger `task/ledgers/staging/ntz-1-ledger.md`, dated 2026-09-27, both
+> texts): `spark.sql.timestampType=TIMESTAMP_NTZ` leaves bare `TIMESTAMP` DDL and
+> literals tz-aware (Spark stores Iceberg `timestamp` and types `timestamp_ntz`;
+> RePark stores `timestamptz` and types `timestamp`; R-NTZ-S3-1, its own unit); a nested
+> cast target carrying `TIMESTAMP_NTZ` keeps the R4 refusal (Spark answers a value;
+> R-NTZ-S3-2); `typeof(date_trunc('DAY', ntz))` answers `timestamp_ntz` (Spark answers
+> `timestamp`, the value is EQUAL; R-NTZ-S3-3); `toPandas()` answers `datetime64[us]`
+> (Spark answers `datetime64[ns]`, the value is EQUAL; R-NTZ-S3-4); `toArrow()` carries
+> `PARQUET:field_id` metadata (Spark's schema is bare; R-NTZ-S3-5); unaliased CAST
+> names render RePark's embedded-UDF call (Spark renders its cast text; R-2);
+> `ALTER COLUMN c TYPE …` keeps RePark's `DataInvalid =>` class (Spark raises
+> `SparkException: Unsupported table change`; R-NTZ-S3-7); the WI-2 refusal text stays
+> for non-NTZ targets (R-NTZ-S3-8); `INSERT … VALUES (0, 1)` into a `TIMESTAMP` column
+> writes silently (Spark refuses; R-NTZ-S2-2, its own unit); the RePark catalog does not
+> adopt a Spark `type=hadoop` warehouse (registered ICE-CATALOG-SESSION-HADOOP-1;
+> R-NTZ-S3-6).
 
 ### TZ-7 — a zoneless TIMESTAMP input is read as UTC, not as a session-zone wall clock
 
@@ -8865,8 +8901,9 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   CREATE refused `column type TIMESTAMP_LTZ is not supported yet for Iceberg tables` and the
   literal did not parse. The ANSI door keeps refusing the Spark spelling. Residues (ledger
   R-1..R-5 and R-16, each held by its oracle record): a STRING literal writes into the column where
-  Spark refuses `CANNOT_SAFELY_CAST` (as for `TIMESTAMP`); the `TIMESTAMP_NTZ` name stays
-  refused (TZ-6); `ALTER COLUMN … TYPE` refusals keep RePark's class and `DataInvalid =>`
+  Spark refuses `CANNOT_SAFELY_CAST` (as for `TIMESTAMP`); the `TIMESTAMP_NTZ` contract
+  is FIXED (see TZ-6, WO NTZ-1); `ALTER COLUMN … TYPE` refusals keep RePark's
+  class and `DataInvalid =>`
   prefix; `collect()` in a non-UTC session answers the session-zone wall (TZ-7 Q12); a bare
   `TIMESTAMP` under `spark.sql.timestampType=TIMESTAMP_NTZ` stays `timestamptz` (TZ-6 Q10);
   an invalid literal (`TIMESTAMP_LTZ 'garbage'`) fails at execution with `[CAST_INVALID_INPUT] …
@@ -8886,6 +8923,50 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `crates/repark-spark/src/tests/u9_timestamp_ltz.rs`,
   `crates/repark-spark/src/spark_rewrites/timestamp_ltz_literal.rs` (unit pins),
   `crates/repark-sql/tests/ansi_door_u9_types.rs`.
+
+### TY-TIMESTAMP-NTZ — EQUAL (2026-09-27): a `TIMESTAMP_NTZ` column (Iceberg `timestamp`) end to end
+
+- **repark** — the Spark door lowers `TIMESTAMP_NTZ '…'` to the naive wall at the token
+  layer (a zone suffix is dropped, a date-only text is midnight, fractions truncate to
+  micros; an unparsable text is Spark's `INVALID_TYPED_LITERAL`) and `CAST` / `::` /
+  `TRY_CAST` to `TIMESTAMP_NTZ` onto a dedicated UDF (STRING, DATE, NULL, instant and
+  NTZ sources answer Spark's value; numeric sources and targets refuse
+  `DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION`). The literal and the cast reach every
+  DML door and CTAS; `TIMESTAMP` and `DATE` store as the session-zone wall / midnight
+  and every other source refuses Spark's `CANNOT_SAFELY_CAST` naming `"TIMESTAMP_NTZ"`.
+  Rows, filters, ordering, min/max, `CAST … AS STRING`, interval arithmetic, a
+  DataFrame append, `days` / `hours` / `months` / `years` / identity / `bucket`
+  partitioning with `.partitions`, `.files` bounds and pruning, `DESCRIBE`,
+  `SHOW CREATE TABLE`, `dtypes`, `printSchema`, `collect()` and `toArrow()` types, and
+  a Spark-written table (reads, bounds, re-insert) answer as Spark. Before, the first
+  INSERT refused `UNSUPPORTED_TIMESTAMP_NTZ`. The ANSI door keeps refusing the Spark
+  spelling. Residues: the TZ-6 FIXED note's R-2, R-NTZ-S2-2 and R-NTZ-S3-1..R-NTZ-S3-8
+  (each held by its ledger record).
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-26
+  (`ntz-spark.json`, `ntz2-spark.json`, `ntz4-spark.json`, `ntz5-spark.json`,
+  `ntz6-spark.json`; session zone UTC unless stated, probe host America/New_York) and
+  2026-09-27 (`ntz-xc-spark.json`: the Spark-written `xc.ns.x` reads, `.files` bounds,
+  re-insert and the three `ALTER COLUMN … TYPE` refusal texts); scoreboard cell
+  `TY-TIMESTAMP-NTZ`, replayed EQUAL.
+- **Pin** — `python/repark/tests/test_ntz_1.py` (+ `ntz_1_spark_oracle.json`),
+  `crates/repark-spark/src/tests/ntz_door.rs`, `…/ntz_store.rs`,
+  `python/repark/tests/_record_ntz_1_spark_table.py` and the
+  `python/repark/tests/fixtures/ntz_1_spark_table/` fixture.
+- **Rationale** — EQUAL, dated 2026-09-27, WO NTZ-1 clauses C-001..C-008 (PROVEN).
+
+### TY-TIMESTAMP-NTZ-V3 — EQUAL (2026-09-27): a `TIMESTAMP_NTZ` column at format-version 3
+
+- **repark** — the v3 cell replays Spark's rows, columns, Iceberg schema and filter, and
+  a v3 table takes literals through INSERT, UPDATE, DELETE and MERGE; `ADD COLUMN`
+  stores Iceberg `timestamp`; the DataFrame door creates and appends. The scalar
+  literal, cast, store and partition surface is the v2 one (TY-TIMESTAMP-NTZ).
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-26
+  (`ntz-spark.json` `create_v3` / `ins_v3` / `select_v3` / `meta_v3`,
+  `ntz2-spark.json` DML legs; the v3 DML walls are rule-derived from the measured v2
+  legs); scoreboard cell `TY-TIMESTAMP-NTZ-V3`, replayed EQUAL.
+- **Pin** — `python/repark/tests/test_ntz_1.py::test_table_cells_replay_spark[3]` and
+  `…::test_v3_round_trip_answers_as_spark`.
+- **Rationale** — EQUAL, dated 2026-09-27, WO NTZ-1 clauses C-004 and C-008 (PROVEN).
 
 ### TY-MAP — the empty map literal `map()` refused, so a `MAP` column could not take it — **FIXED 2026-09-25 (WO U9-TYPES-1)**
 
@@ -13003,7 +13084,14 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   this row records the struct-field representation until collect returns nested Rows the way
   Spark does.
 
-### EX-COL-1 — a bare `F.col(...).cast(...)` select names the engine-qualified column; Spark keeps the child name
+### EX-COL-1 — FIXED (CASESENS-1 VC-3, 2026-09-28): a bare `F.col(...).cast(...)` select names the engine-qualified column; Spark keeps the child name
+
+> **CLOSED 2026-09-28 (CASESENS-1 verifier fold VC-3).** The select boundary now
+> aliases a `Cast`/`TryCast` over a column reference to the written child name, so the
+> bare arm answers `v` like Spark on createDataFrame, temp-view, and Iceberg frames,
+> lowercase names included. The pin
+> `python/repark/tests/test_examples_column_a.py::test_col_cast_qualified_projection_name`
+> flipped to `["v"]` in the same change. Retired per §6.
 
 - **repark** — `df.select(F.col("v").cast("double"))` names the output column
   `datafusion.public.__repark_cdf_<plan-id>.v`: the cast of a door-built column falls to the

@@ -6,10 +6,17 @@ the tag, the version bump and the release PR; this report audits the record and 
 but words. **Inputs:** the compare-only matrix of 2026-09-27 02:25 on main `9aa1c185`
 (`/tmp/oc-worker/scoreboard/2026-09-26/matrix.json`, `compare.txt`, read-only) plus the C-5
 harness rule: **705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT, 842 cells**
-— pending the evening rerun wherever stated as final below. **The gate:** zero non-EQUAL cells
+— the evening rerun of 2026-09-27 (fresh build on main `f7422565`) re-measures the same
+verdicts; see the closing note below. **The gate:** zero non-EQUAL cells
 that Spark answers, except the dated carve-outs C-1 to C-5.
 
 The owner ruled on finding F-1 on 2026-09-27: U12 returns to v1.5.1. This file closes when the evening rerun lands.
+
+**Closed 2026-09-27:** the evening rerun landed with the same matrix (705 EQUAL /
+132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT on `f7422565`), and v1.5.0
+shipped as tag `v1.5.0` (release PR #871, squash `9392dbc3`; PyPI `repark 1.5.0`).
+This file is now a record; the shipped notes are the
+[final v1.5.0 release notes](v1-5-0-release-notes-draft-2026-09-27.md).
 
 ## 1. Matrix against the record
 
@@ -49,7 +56,7 @@ PR numbers come from the [runs-28/29 orchestrating note](night-report-2026-09-23
 the [09-25](day-report-2026-09-25-direct.md) and [09-26](day-report-2026-09-26-direct.md) day reports,
 and `git log origin/main --oneline`; hashes are the squash-merge commits on `origin/main`. All
 units except U12 replay EQUAL (or both-refuse SPARK-CANNOT) on the 2026-09-27 02:25 matrix,
-pending the evening rerun.
+confirmed by the evening rerun on `f7422565` (same verdicts — see the closing note).
 
 | Unit | Landed by | Spec still reads open? |
 |---|---|---|
@@ -65,7 +72,7 @@ pending the evening rerun.
 | U9 TYPES | PR1 `f9db8472` (LTZ + empty map), PR2 #844 `5a1c8ebd` (VOID + UUID), NTZ-1 slice 1 #856 `f09b44e5`; TY-VARIANT-V3 by C-4 | Partly — the C-4 line (158) is current; the rest reads open (lines 173–178). Stale (F-2); pointer note added. |
 | U10 READ-REST | #811 `b7a3c905` (input_file_name), #819 `3cf263da` + #822 `bf90513a` (path loads, _deleted); REG-1 was a harness timing race, no PR ([run-28 opus58 report](day-report-2026-09-23-28-opus58.md) lines 8, 73–78) | Yes — "REG-1 first … Then …" (lines 182–186). Stale (F-2); pointer note added. |
 | U11 PROPS/EDGE/CATALOG | #843 `4c8e6633` (U11-EDGE-1), #851 `fbd97ef2` + #855 `1a219450` (CATALOG-1), #857 `9aa1c185` (RP-54: manifest merge, delete granularity), #858 `e3e35b0c` (TZ-ASOF-1) | Yes — "RePark today" table (lines 190–199). Stale (F-2); pointer note added. Decision 7 closed by the 2026-09-26 owner ruling (type=memory refuses at first use, `repark.sql.catalogExtensions` opt-in). |
-| U12 S3-PATH-WRITE | **Nothing:** no `W-PATH-S3-*` cells in `matrix.json` (still 842 cells), no commits, no day-report mention since the card | The spec (§U12, lines 203–217) and the [card](s3-path-write-1-5-0.md) (line 10: "the gate waits on them") read as open in-target work — and the work is unstarted. **FINDING F-1:** owner ruled 2026-09-27: U12 returns to v1.5.1; dated notes added to the spec and the card. |
+| U12 S3-PATH-WRITE | **Nothing:** no `W-PATH-S3-*` cells in `matrix.json` (still 842 cells), no commits, no day-report mention since the card | The spec (§U12, lines 203–217) and the [card](s3-path-write-1-5-0.md) (line 10, quoted at audit time; the card now carries the 2026-09-27 owner note) read as open in-target work — and the work is unstarted. **FINDING F-1:** owner ruled 2026-09-27: U12 returns to v1.5.1; dated notes added to the spec and the card. |
 
 Spec §2 decisions: 1 (Q-55-7, landed #814 under the run-29 override grant), 2 (U2 overrides,
 owner ruling 2026-09-23 in `overrides.json`), 3 (C-2), 4 (U6 refusal parity, override-grant
@@ -101,9 +108,9 @@ Not edited, per the work order. Read 2026-09-27 against the tree.
 
 | # | Finding | File to fix | Fixed this round? |
 |---|---|---|---|
-| F-1 | U12 (S3 path writes) is unstarted while the spec and card say the gate waits on it | the spec + card | Yes — owner ruling 2026-09-27: U12 returns to v1.5.1; dated notes in both |
-| F-2 | Spec §1 units U0–U11 read as open work though all landed (matrix green pending the evening rerun) | `task/roadmap/mid-term/v1-5-0-remainder-spec-2026-09-23.md` | Yes — dated pointer note, no rewrite, no deletion |
+| F-1 | U12 (S3 path writes) is unstarted while the spec and card still gated v1.5.0 on it at audit time | the spec + card | Yes — owner ruling 2026-09-27: U12 returns to v1.5.1; dated notes in both |
+| F-2 | Spec §1 units U0–U11 read as open work though all landed (matrix green; confirmed by the 2026-09-27 evening rerun on `f7422565`) | `task/roadmap/mid-term/v1-5-0-remainder-spec-2026-09-23.md` | Yes — dated pointer note, no rewrite, no deletion |
 | F-3 | Spec §2 decisions 1, 2, 4, 5, 7 read open though all closed | same spec | Yes — dated pointer note |
 | F-4 | SES-DECL-readStream/streams rows lack the C-1 carve-out citation and card link | `docs/spark-sql-iceberg-parity.md` | Yes — dated pointer notes on both rows |
 | F-5 | NS-2 row lacks the C-2 carve-out citation | `docs/spark-sql-iceberg-parity.md` | Yes — dated pointer note |
-| F-6 | No v1.6.0 follow-up card for C-2 nested namespaces, though the spec promises "the v1.6.0 card" | new card (out of this round's edits) | No — needs a card-writing round |
+| F-6 | No v1.6.0 follow-up card for C-2 nested namespaces, though the spec promises "the v1.6.0 card" | [ns-nested-1-6.md](ns-nested-1-6.md) | Yes — card filed 2026-09-27 (WO NS-NESTED-CARD) |

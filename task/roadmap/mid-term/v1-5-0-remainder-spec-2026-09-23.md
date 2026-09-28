@@ -225,7 +225,7 @@ well under the $25 cap; the 3 GB table flag does not apply (no tables).**
 ([ice-streaming-1-6.md](ice-streaming-1-6.md)). Not in the 718.
 
 `D-NS-NESTED` — nested namespaces leave v1.5.0 for the v1.6.0 card (owner ruling C-2, 2026-09-24;
-decision 3 below is closed by it).
+decision 3 below is closed by it). Card filed 2026-09-27: [ns-nested-1-6.md](ns-nested-1-6.md).
 
 `P-RDF-PARTIAL-PROGRESS` — owner ruling C-3, 2026-09-26: Spark's partial-progress commit
 sequence is JVM-identity-hash dependent (`BinPackRewriteFilePlanner` iterates a Guava `HashSet`

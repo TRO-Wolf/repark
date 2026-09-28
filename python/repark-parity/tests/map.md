@@ -188,6 +188,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   PR #876):** the `crates/repark-spark/src/tests/alter.rs` mirror row ratchets
   1182 → 1181 with the script baseline (the final fold's shrink). No other row moves.
   pins: casesens-1/C-013
+- `test_cap_1_source_file_line_cap.py` — **S3-PATH-WRITE-1 round 1 (2026-09-28):**
+  the `writer_readwriter.py` mirror row leaves with the script row (1093 → 996, under
+  the default); python_approved 32 → 31. pins: s3-path-write-1/C-007
 - `test_cap_1_source_file_line_cap.py` — **FNP-MATH-1 step 4 (2026-09-16, run 18a):**
   mirror row ratchets `functions_expr.py` 2198 → 2195 with the script baseline.
   pins: fnp-math-1/C-001, C-005

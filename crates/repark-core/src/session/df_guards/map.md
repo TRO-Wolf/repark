@@ -131,6 +131,8 @@ wrapped optimizer rule) and declares this directory.
   qualified engine name (the all-lowercase leak goes with it). Pinned through
   the facade (`test_cast_of_a_column_keeps_the_written_child_name`) — the file
   sits 12 lines under the size ceiling, so no unit test lands here.
+  **Re-verify (2026-09-28, RC-3):** the child-name lookup recurses through
+  nested casts (`test_nested_cast_of_a_column_keeps_the_written_child_name`).
   pins: casesens-1/C-009
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /

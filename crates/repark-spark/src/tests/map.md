@@ -498,8 +498,25 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   refuses Spark's `AMBIGUOUS_REFERENCE` 42704 instead). **Fold round
   (2026-09-27):** `derived_and_cte_projections_keep_the_written_spelling`
   gains the `SELECT * FROM (SELECT 1 AS ID)` leg (answers `ID`; unmeasured —
-  no probe key records an expression-alias output name). pins:
-  casesens-1/C-001, C-002, C-003, C-004
+  no probe key records an expression-alias output name). **Verifier fold
+  (2026-09-28, VC-2):** four pins keep a `VALUES` body from shifting later
+  scopes — `values_derived_table_first_keeps_later_spellings`,
+  `values_cte_keeps_later_spellings`,
+  `values_body_in_the_middle_keeps_later_spellings` and
+  `values_left_set_operation_keeps_later_spellings`, names and rows each.
+  On the #876 stack the fold adds `swapped_spellings_stay_with_their_scope`
+  (`[x, id, ID]`) and the Spark-confirmed `VC-6`
+  `natural_join_over_case_differing_derived_outputs_cross_joins`. **CI fix 2
+  (2026-09-28):** `hundred_nested_views_read_and_the_101st_refuses` builds 100
+  nested Iceberg views, reads w50/w99, and pins the typed
+  `VIEW_NESTED_DEPTH_LIMIT` refusal on the w100 read and the w101 create.
+  **Re-verify (2026-09-28, RC-1):** `view_arithmetic_over_division_column_answers_double`
+  (`SELECT h + 1 FROM vh` answers 1.5/2.0/2.5 as double) and
+  `view_over_view_stores_double_for_division_arithmetic` (the view over `vh`
+  stores double); both red under the reverted skip. **Re-verify (2026-09-28,
+  RC-2):** `lateral_and_scalar_outer_references_to_derived_spellings_bind`
+  (LATERAL `a.Id`/`a.id`, the CTE form and the correlated scalar answer base's
+  rows). pins: casesens-1/C-001, C-002, C-003, C-004, C-018
 - `casesens_true.rs` — **WO CASESENS-1 slice 2 (2026-09-27):** the
   `caseSensitive=true` SQL-door pins over `(id, Data, s)` + `(id, Data)` probe
   tables: wrong-case refuses in every scope (the join legs name `` `a`.`ID` ``;
@@ -538,18 +555,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `unaliased_derived_insert_refuses_and_writes_nothing` (refusal plus the
   unchanged table), `unaliased_set_operation_and_window_bodies_audit_as_nested`
   and the `aliased_cte_and_top_level_ambiguity_still_refuse` guards, all
-  `AMBIGUOUS_REFERENCE` 42704.
+  `AMBIGUOUS_REFERENCE` 42704. **Re-verify (2026-09-28, RC-5):**
+  `lateral_body_twins_audit_as_nested_scopes` pins the `Subquery` arm (red with
+  the arm removed).
   pins: casesens-1/C-011
-  no probe key records an expression-alias output name). **Verifier fold
-  (2026-09-28, VC-2):** four pins keep a `VALUES` body from shifting later
-  scopes — `values_derived_table_first_keeps_later_spellings`,
-  `values_cte_keeps_later_spellings`,
-  `values_body_in_the_middle_keeps_later_spellings` and
-  `values_left_set_operation_keeps_later_spellings`, names and rows each.
-  On the #876 stack the fold adds `swapped_spellings_stay_with_their_scope`
-  (`[x, id, ID]`) and the Spark-confirmed `VC-6`
-  `natural_join_over_case_differing_derived_outputs_cross_joins`.
-  pins: casesens-1/C-001, C-002, C-003, C-004
 - `decimal.rs` — the Spark-door decimal128 pins at `i128` precision: result `(p,s)`, value,
   and nullability for the G2/G13 corpus shapes. **CUTOVER-SCHEMA-1 (2026-09-04):**
   `pin_int_times_decimal_is_12_2_i128` and `pin_mul_single_digit_nullability_non_null_i128`
@@ -1188,6 +1197,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `ctas_service_managed_plain_ctas_records_append` (`[append]`). The first two go red
   when the `ctas.or_replace` branch in `execute_ctas_service_managed` is reverted.
   pins: ice-rtas-ops-2/C-019
+  **AWS-ACCEPT-REPLACE-1 (2026-09-27):** `setup_wrapped_with_factory` threads the
+  `MemoryCatalogBuilder` storage factory through the service-managed setup;
+  `replace_existing_table_writes_each_metadata_file_once` seeds a CTAS then runs
+  `CREATE OR REPLACE` on the existing table over the no-overwrite store, expecting Ok,
+  1 row, and ops `[append, overwrite]`. The pin is red at fork `0d3f2b4f` (the staged
+  replace rewrites `00002-<uuid>.metadata.json` in place) and green at `6e937f49`.
+  pins: aws-accept-replace-1/C-001
   **WO-B14 (2026-09-24):** `service_managed_create_and_ctas_stamp_the_session_owner` installs
   a session owner and checks the stored `owner` of a service-managed CTAS and a
   service-managed schema CREATE; removing either stamp turns it red.
@@ -1975,6 +1991,16 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   refusal, and the literal reaching INSERT VALUES / INSERT SELECT / UPDATE / DELETE /
   MERGE / CTAS. pins: ntz-1/C-001, C-002, C-004, C-005
 
+- `ntz_store.rs` — **WO NTZ-1 slice 2 (2026-09-27):** store assignment into `TIMESTAMP_NTZ`
+  columns — LTZ VALUES/SELECT storing the session-zone wall (UTC and New York), UPDATE
+  plus both MERGE arms storing it, DATE values storing midnight, NTZ values storing
+  session instants into a `TIMESTAMP` column, STRING/INT/BOOLEAN refusals naming
+  `"TIMESTAMP_NTZ"` on VALUES/SELECT/UPDATE/MERGE, and the wall-cast UDF name pinned
+  equal to the registered UDF. pins: ntz-1/C-006, C-007
+  **WO NTZ-1 verifier fold (2026-09-28):** `update_refusal_names_a_timestamp_literal_source_as_timestamp`
+  pins the UPDATE-door refusal naming a `TIMESTAMP'…'` source `"TIMESTAMP"`.
+  pins: ntz-1/C-007
+
 - `describe_table.rs` — **SQL-DESCRIBE-1 (2026-09-09):** `DESCRIBE|DESC [TABLE]
   [EXTENDED|FORMATTED] catalog.namespace.table` against a memory-catalog table built like the
   step-1 live capture (commented `bigint` column, `string`, `timestamp`, `days(ts)`,
@@ -2135,6 +2161,22 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   statements succeed; a missing table keeps its own error and INSERT keeps the other
   cell's prose.
   pins: ipi-51/W-UPDATE-TYPE-ERR
+- [ltz_store.rs](ltz_store.rs) — **WO LTZ-STORE-INT-1 (2026-09-28):** INT into a
+  `TIMESTAMP` (LTZ) column refuses on VALUES, SELECT, UPDATE and MERGE — the VALUES text
+  equals Spark's recorded `ins_l_int` refusal on the test catalog, and the refused
+  statements leave the seeded row intact — while NULL, DATE, TIMESTAMP, TIMESTAMP_NTZ,
+  explicit-CAST and column-list VALUES rows still store with their exact read-backs.
+  **Fold 2026-09-28 (critic V-001):** the `typed_numeric_values_into_timestamp_refuse`
+  sibling pins every numeric CAST, `DECIMAL '1.5'`, `1L`, two `CAST(NULL …)` rows and
+  a mixed multi-row refusal that writes nothing.
+  **Fold 2026-09-28 (verifier VL-1..VL-6):** the sibling pins the two typed-NULL
+  refusals with Spark's exact text; the mixed multi-row refusal moves to its own
+  residue pin (Spark answers `INVALID_INLINE_TABLE`); `nvl`/`ifnull` over DATE and
+  TIMESTAMP store with exact read-backs plus the `coalesce` control; `1.5` and
+  `12345678901` refusals name `DECIMAL(2,1)` and `BIGINT`.
+  **Fold 2026-09-28 (re-verify RL-1..RL-3):** STRING-valued functions refuse
+  with the `ins_l_str` body; `0.05` names `DECIMAL(2,2)`.
+  pins: ltz-store-int-1/C-001
 - `use_ddl.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the `USE` behavior pins over
   one- and two-catalog memory setups: two-part set, v2 clear-to-empty, session-catalog
   default restore, self-`USE` keep, catalog-first one-part (probe P-1), namespace-only

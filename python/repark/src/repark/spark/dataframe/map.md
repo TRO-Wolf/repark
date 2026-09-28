@@ -11,6 +11,19 @@ joins, grouping, exports, UDF bridges, and writers. Engine computation stays in 
 callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - `writer_readwriter.py` — **CATALOG-1 (2026-09-26):** `_resolve_writer_table` passes only the
   current catalog and database to `resolve_table_name` (no known-catalog alias). pins: catalog-1/C-002
+- `writer_readwriter.py` — **S3-PATH-WRITE-1 step 0 (2026-09-28, oracle, no code change):**
+  Spark 4.1.2 path-write behaviour on S3 recorded in 38 `W-PATH-S3-*` cells against a local
+  moto emulator; the evidence and the design answers live in `task/ledgers/staging/u12-probes/`.
+  pins: s3-path-write-1/C-001, C-002, C-003, C-004, C-005, C-006
+- `writer_s3.py` — **S3-PATH-WRITE-1 round 1 (2026-09-28):** the S3 path-write
+  forward. `is_s3_url` detects the scheme without filesystem calls;
+  `write_s3_path` carries writer state to the `session_write_path` binding,
+  which owns save mode, layout and commit. The local branch is untouched and
+  `note_local_write_root` never runs for a URL. `_apply_path_write` routes
+  `s3://` / `s3a://` here; the partition-clause helper moved unchanged to
+  `writer_layout.partitioned_by_sql_clause`, retiring
+  `writer_readwriter.py`'s size exception (996 lines).
+  pins: s3-path-write-1/C-007, C-008, C-009, C-012, C-013, C-014, C-015
 
 ## Modules
 
@@ -390,7 +403,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `false` (rule read live via `frame_case_sensitive`), `_display_target_pairs`
   binds each written name against displays ignoring case, refuses duplicate
   displays ambiguous like Spark, and falls back to engine resolution on a miss;
-  the `true` path is untouched.
+  the `true` path is untouched. **Re-verify (2026-09-28, RC-4):** the display
+  path also runs under `true`, matching exactly
+  (`test_describe_resolves_display_names_under_case_sensitive`).
   `approxQuantile` validates `relativeError` first (non-numeric is a type error, NaN or
   negative is a value error — NaN is not `< 0` in IEEE so it needs an explicit check)
   and treats out-of-range probabilities as value errors, not type errors. DFCORE-5

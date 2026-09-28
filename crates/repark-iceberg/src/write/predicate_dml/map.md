@@ -28,6 +28,10 @@ works, so the attribute is gone rather than documented.
   one per row (600k rows on one file: 31.0 → 11.5 ms, 66,000,000 → 110 B retained). It lives
   here rather than in the parent because `predicate_dml.rs` sits at an exact line ceiling (1142 since RP-7). **RP-7 (2026-09-02):** `push_pairs_from_batch` moved here for the same reason; both identity collectors now stream and call it once per arriving batch.
   pins: v3-8-subquery-where-lineage/C-002; v3-9-mor-predicate-dml-dv/C-009
+- `lineage.rs` — **WO NTZ-1 slice 2 (2026-09-27):** `update_projection_sql` wraps an
+  assigned value whose target is `Timestamp(µs, None)` in the `ntz_store` wall-cast UDF
+  call, so an identity UPDATE stores the session-zone wall; every other target keeps
+  the raw projection. pins: ntz-1/C-006
 - `residual.rs` — **RP-7 (2026-09-02):** `identity_scan_residual`, the key-bounds residual the
   identity DML scratch scan carries. Re-parses `selection_sql` (the spec carries SQL, not an AST)
   and matches only a POSITIVE uncorrelated `IN` or a positive `EXISTS` whose correlation is one

@@ -1,0 +1,527 @@
+{
+ "engine": "spark",
+ "endpoint": "http://127.0.0.1:58693",
+ "bucket": "u12spark2",
+ "version": "4.1.2",
+ "cells": {
+  "VU1-EXT-APPEND-parquet": {
+   "url": "s3a://u12spark2/vu1-parquet/t.parquet",
+   "overwrite": {
+    "status": "ok"
+   },
+   "list_after_overwrite": [
+    {
+     "key": "t.parquet/_SUCCESS",
+     "size": 0
+    },
+    {
+     "key": "t.parquet/part-00000-d44e8cb9-f22c-428a-8263-dccd833d4144-c000.snappy.parquet",
+     "size": 743
+    }
+   ],
+   "append": {
+    "status": "ok"
+   },
+   "list_after_append": [
+    {
+     "key": "t.parquet/_SUCCESS",
+     "size": 0
+    },
+    {
+     "key": "t.parquet/part-00000-48057943-db20-4ee3-8954-e83417a1d688-c000.snappy.parquet",
+     "size": 704
+    },
+    {
+     "key": "t.parquet/part-00000-d44e8cb9-f22c-428a-8263-dccd833d4144-c000.snappy.parquet",
+     "size": 743
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 5,
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      10,
+      "x"
+     ],
+     [
+      11,
+      "y"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
+   }
+  },
+  "VU1-EXT-APPEND-csv": {
+   "url": "s3a://u12spark2/vu1-csv/t.csv",
+   "overwrite": {
+    "status": "ok"
+   },
+   "list_after_overwrite": [
+    {
+     "key": "t.csv/_SUCCESS",
+     "size": 0
+    },
+    {
+     "key": "t.csv/part-00000-333998a5-76ae-4a95-94ac-a517caf01c80-c000.csv",
+     "size": 12
+    }
+   ],
+   "append": {
+    "status": "ok"
+   },
+   "list_after_append": [
+    {
+     "key": "t.csv/_SUCCESS",
+     "size": 0
+    },
+    {
+     "key": "t.csv/part-00000-333998a5-76ae-4a95-94ac-a517caf01c80-c000.csv",
+     "size": 12
+    },
+    {
+     "key": "t.csv/part-00000-b5561bf1-8272-490b-95bc-f0bac9678a83-c000.csv",
+     "size": 10
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "1",
+      "string"
+     ],
+     [
+      "a",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      "11",
+      "y"
+     ],
+     [
+      "2",
+      "b"
+     ],
+     [
+      "3",
+      "a"
+     ]
+    ]
+   }
+  },
+  "VU1-EXT-APPEND-json": {
+   "url": "s3a://u12spark2/vu1-json/t.json",
+   "overwrite": {
+    "status": "ok"
+   },
+   "list_after_overwrite": [
+    {
+     "key": "t.json/_SUCCESS",
+     "size": 0
+    },
+    {
+     "key": "t.json/part-00000-34a21e7a-57e7-48b9-916a-3485c61f4b0a-c000.json",
+     "size": 57
+    }
+   ],
+   "append": {
+    "status": "ok"
+   },
+   "list_after_append": [
+    {
+     "key": "t.json/_SUCCESS",
+     "size": 0
+    },
+    {
+     "key": "t.json/part-00000-28dc4410-69a1-4ad7-93fb-b3905d98227b-c000.json",
+     "size": 40
+    },
+    {
+     "key": "t.json/part-00000-34a21e7a-57e7-48b9-916a-3485c61f4b0a-c000.json",
+     "size": 57
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "grp",
+      "string"
+     ],
+     [
+      "id",
+      "bigint"
+     ]
+    ],
+    "count": 5,
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "a",
+      3
+     ],
+     [
+      "b",
+      2
+     ],
+     [
+      "x",
+      10
+     ],
+     [
+      "y",
+      11
+     ]
+    ]
+   }
+  },
+  "VU2-EXACT-KEY-error": {
+   "url": "s3a://u12spark2/vu2-error/solo.parquet",
+   "seed_head": {
+    "found": true,
+    "size": 743
+   },
+   "write": {
+    "status": "error",
+    "error": "AnalysisException",
+    "msg": "[PATH_ALREADY_EXISTS] Path s3a://u12spark2/vu2-error/solo.parquet already exists. Set mode as \"overwrite\" to overwrite the existing path. SQLSTATE: 42K04",
+    "getCondition": "PATH_ALREADY_EXISTS",
+    "getSqlState": "42K04"
+   },
+   "write_full": "[PATH_ALREADY_EXISTS] Path s3a://u12spark2/vu2-error/solo.parquet already exists. Set mode as \"overwrite\" to overwrite the existing path. SQLSTATE: 42K04",
+   "list_after": [
+    {
+     "key": "solo.parquet",
+     "size": 743
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
+   }
+  },
+  "VU2-EXACT-KEY-ignore": {
+   "url": "s3a://u12spark2/vu2-ignore/solo.parquet",
+   "seed_head": {
+    "found": true,
+    "size": 743
+   },
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "solo.parquet",
+     "size": 743
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
+   }
+  },
+  "VU2-EXACT-KEY-overwrite": {
+   "url": "s3a://u12spark2/vu2-overwrite/solo.parquet",
+   "seed_head": {
+    "found": true,
+    "size": 743
+   },
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "",
+     "size": 0
+    },
+    {
+     "key": "solo.parquet/_SUCCESS",
+     "size": 0
+    },
+    {
+     "key": "solo.parquet/part-00000-3b0f47c0-7bec-4a8d-a5a3-8a17581a500f-c000.snappy.parquet",
+     "size": 704
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 2,
+    "rows": [
+     [
+      10,
+      "x"
+     ],
+     [
+      11,
+      "y"
+     ]
+    ]
+   }
+  },
+  "VU3-SELF-OVERWRITE": {
+   "url": "s3a://u12spark2/vu3/src",
+   "seed": {
+    "status": "ok"
+   },
+   "write": {
+    "status": "error",
+    "error": "Py4JJavaError",
+    "msg": "An error occurred while calling o401.parquet.",
+    "java": ": org.apache.spark.SparkException: [FAILED_READ_FILE.FILE_NOT_EXIST] Encountered error while reading file s3a://u12spark2/vu3/src/part-00000-a622a0c4-92eb-40b0-941e-59b31d2c3cd2-c000.snappy.parquet. File does not exist. It is possible the underlying files have been updated."
+   },
+   "write_full": "An error occurred while calling o401.parquet.\n: org.apache.spark.SparkException: [FAILED_READ_FILE.FILE_NOT_EXIST] Encountered error while reading file s3a://u12spark2/vu3/src/part-00000-a622a0c4-92eb-40b0-941e-59b31d2c3cd2-c000.snappy.parquet. File does not exist. It is possible the underlying files have been updated.\nYou can explicitly invalidate the cache in Spark by running 'REFRESH TABLE tableName' command in SQL or by recreating the Dataset/DataFrame involved. SQLSTATE: KD001\n\tat org.apache.spark.sql.errors.QueryExecutionErrors$.fileNotExistError(QueryExecutionErrors.scala:873)\n\tat org.apache.spark.sql.execution.datasources.v2.FileDataSourceV2$.attachFilePath(FileDataSourceV2.scala:140)\n\tat org.apache.spark.sql.execution.datasources.FileScanRDD$$anon$1.hasNext(FileScanRDD.scala:141)\n\tat org.apache.spark.sql.execution.FileSourceScanExec$$anon$1.hasNext(DataSourceScanExec.scala:773)\n\tat org.apache.spark.sql.catalyst.expressions.GeneratedClass$GeneratedIteratorForCodegenStage1.columnartorow_nextBatch_0$(Unknown Source)\n\tat org.apache.spark.sql.catalyst.expressions.GeneratedClass$GeneratedIteratorForCodegenStage1.processNext(Unknown Source)\n\tat org.apache.spark.sql.execution.BufferedRowIterator.hasNext(BufferedRowIterator.java:43)\n\tat org.apache.spark.sql.execution.WholeStageCodegenEvaluatorFactory$WholeStageCodegenPartitionEvaluator$$anon$1.hasNext(WholeStageCodegenEvaluatorFactory.scala:50)\n\tat org.apache.spark.sql.execution.datasources.FileFormatDataWriter.writeWithIterator(FileFormatDataWriter.scala:110)\n\tat org.apache.spark.sql.execution.datasources.FileFormatWriter$.$anonfun$executeTask$1(FileFormatWriter.scala:406)\n\tat org.apache.spark.util.Utils$.tryWithSafeFinallyAndFailureCallbacks(Utils.scala:1337)\n\tat org.apache.spark.sql.execution.datasources.FileFormatWriter$.executeTask(FileFormatWriter.scala:418)\n\tat org.apache.spark.sql.execution.datasources.WriteFilesExec.$anonfun$doExecuteWrite$1(WriteFiles.scala:107)\n\tat org.apache.spark.rdd.RDD.$anonfun$mapPartitionsInternal$2(RDD.scala:901)\n\tat org.apache.spark.rdd.RDD.$anonfun$mapPartitionsInternal$2$adapted(RDD.scala:901)\n\tat org.apache.spark.rdd.MapPartitionsRDD.compute(MapPartitionsRDD.scala:52)\n\tat org.apache.spark.rdd.RDD.computeOrReadCheckpoint(RDD.scala:374)\n\tat org.apache.spark.rdd.RDD.iterator(RDD.scala:338)\n\tat org.apache.spark.scheduler.ResultTask.runTask(ResultTask.scala:93)\n\tat org.apache.spark.TaskContext.runTaskWithListeners(TaskContext.scala:180)\n\tat org.apache.spark.scheduler.Task.run(Task.scala:147)\n\tat org.apache.spark.executor.Executor$TaskRunner.$anonfun$run$4(Executor.scala:873)\n\tat org.apache.spark.util.SparkErrorUtils.tryWithSafeFinally(SparkErrorUtils.scala:86)\n\tat org.apache.spark.util.SparkErrorUtils.tryWithSafeFinally$(SparkErrorUtils.scala:83)\n\tat org.apache.spark.util.Utils$.tryWithSafeFinally(Utils.scala:97)\n\tat org.apache.spark.executor.Executor$TaskRunner.run(Executor.scala:876)\n\tat java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)\n\tat java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)\n\tat java.base/java.lang.Thread.run(Thread.java:840)\n\tat org.apache.spark.scheduler.DAGScheduler.runJob(DAGScheduler.scala:1017)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:2496)\n\tat org.apache.spark.sql.execution.datasources.FileFormatWriter$.$anonfun$executeWrite$4(FileFormatWriter.scala:309)\n\tat org.apache.spark.sql.execution.datasources.FileFormatWriter$.writeAndCommit(FileFormatWriter.scala:270)\n\tat org.apache.spark.sql.execution.datasources.FileFormatWriter$.executeWrite(FileFormatWriter.scala:306)\n\tat org.apache.spark.sql.execution.datasources.FileFormatWriter$.write(FileFormatWriter.scala:189)\n\tat org.apache.spark.sql.execution.datasources.InsertIntoHadoopFsRelationCommand.run(InsertIntoHadoopFsRelationCommand.scala:195)\n\tat org.apache.spark.sql.execution.command.DataWritingCommandExec.sideEffectResult$lzycompute(commands.scala:117)\n\tat org.apache.spark.s",
+   "list_after": [
+    {
+     "key": "",
+     "size": 0
+    },
+    {
+     "key": "src/",
+     "size": 0
+    }
+   ],
+   "readback": {
+    "status": "error",
+    "error": "AnalysisException",
+    "msg": "[UNABLE_TO_INFER_SCHEMA] Unable to infer schema for Parquet. It must be specified manually. SQLSTATE: 42KD9",
+    "getCondition": "UNABLE_TO_INFER_SCHEMA",
+    "getSqlState": "42KD9"
+   }
+  },
+  "VU4-HASH": {
+   "data_url": "s3a://u12spark2/vu4-datahv2/data",
+   "weird_url": "s3a://u12spark2/vu4-datahv2/data#v2",
+   "seed": {
+    "status": "ok"
+   },
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "data#v2/_SUCCESS",
+     "size": 0
+    },
+    {
+     "key": "data#v2/part-00000-d29e07ac-a022-49da-a6ec-ea07a627be8b-c000.snappy.parquet",
+     "size": 704
+    },
+    {
+     "key": "data/_SUCCESS",
+     "size": 0
+    },
+    {
+     "key": "data/part-00000-2327ae62-853c-4ca3-9f3a-75f01c594365-c000.snappy.parquet",
+     "size": 743
+    }
+   ],
+   "data_readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
+   }
+  },
+  "VU4-QUERY": {
+   "data_url": "s3a://u12spark2/vu4-dataqve2/data",
+   "weird_url": "s3a://u12spark2/vu4-dataqve2/data?v=2",
+   "seed": {
+    "status": "ok"
+   },
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "data/_SUCCESS",
+     "size": 0
+    },
+    {
+     "key": "data/part-00000-19ee1b12-b82c-45ad-9c7f-dae60a497c44-c000.snappy.parquet",
+     "size": 743
+    },
+    {
+     "key": "data?v=2/_SUCCESS",
+     "size": 0
+    },
+    {
+     "key": "data?v=2/part-00000-5f88e5f4-73a4-4238-a036-4a81fdcc938f-c000.snappy.parquet",
+     "size": 704
+    }
+   ],
+   "data_readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
+   }
+  },
+  "VU7-TEXT": {
+   "url": "s3a://u12spark2/vu7/txt",
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "txt/_SUCCESS",
+     "size": 0
+    },
+    {
+     "key": "txt/part-00000-75b0644a-b27a-44d4-a7ed-cd27d52cc99a-c000.txt",
+     "size": 9
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "value",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      "l1"
+     ],
+     [
+      "l2"
+     ],
+     [
+      "l3"
+     ]
+    ]
+   }
+  }
+ }
+}
