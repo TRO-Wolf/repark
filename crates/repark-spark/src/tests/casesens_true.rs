@@ -409,6 +409,121 @@ async fn default_session_keeps_folding() {
 }
 
 #[tokio::test]
+async fn same_session_toggle_true_false_true_keeps_folding() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    create_probe_tables(&ctx, &catalogs).await;
+    enable_case_sensitive(&ctx);
+    assert_unresolved(
+        &ctx,
+        &catalogs,
+        "SELECT ID FROM ice.sales.t",
+        "`ID`",
+        &["`s`", "`id`", "`Data`"],
+    )
+    .await;
+    disable_case_sensitive(&ctx);
+    let (names, rows) = names_and_rows(&ctx, &catalogs, "SELECT ID FROM ice.sales.t").await;
+    assert_eq!(names, vec!["ID".to_string()]);
+    assert_eq!(rows, vec![vec!["1".to_string()], vec!["2".to_string()]]);
+    enable_case_sensitive(&ctx);
+    assert_unresolved(
+        &ctx,
+        &catalogs,
+        "SELECT ID FROM ice.sales.t",
+        "`ID`",
+        &["`s`", "`id`", "`Data`"],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn exact_fragment_identifiers_quote_and_plan_under_case_sensitive() {
+    use crate::merge_fragments::exact::{check_fragment_exact, check_identity_exact};
+    let target = ["id".to_string(), "Data".to_string()];
+    let source = ["id".to_string(), "Data".to_string()];
+    let scopes = [("t", target.as_slice()), ("s", source.as_slice())];
+    let quoted = check_fragment_exact("t.Data = s.id", &scopes, None).unwrap();
+    assert!(quoted.contains("`Data`"), "{quoted}");
+    assert!(quoted.contains("`id`"), "{quoted}");
+    let error = check_fragment_exact("t.ID = s.id", &scopes, None).unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("[UNRESOLVED_COLUMN.WITH_SUGGESTION]"),
+        "{error}"
+    );
+    let fields = ["id".to_string(), "Data".to_string()];
+    let quoted = check_identity_exact("Data = 'w'", "u", &fields).unwrap();
+    assert!(quoted.contains("`Data`"), "{quoted}");
+    let error = check_identity_exact("ID = 1", "u", &fields).unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("[UNRESOLVED_COLUMN.WITH_SUGGESTION]"),
+        "{error}"
+    );
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    create_probe_tables(&ctx, &catalogs).await;
+    enable_case_sensitive(&ctx);
+    run(
+        &ctx,
+        &catalogs,
+        "MERGE INTO ice.sales.u t USING (SELECT 1 AS id, 'm' AS \"Data\") s \
+         ON t.Data = s.Data WHEN MATCHED THEN UPDATE SET Data = s.Data",
+    )
+    .await;
+    assert_u_unchanged(&ctx, &catalogs).await;
+}
+
+#[test]
+fn missing_fragment_identifiers_pass_through_to_the_planner() {
+    use crate::merge_fragments::exact::{check_fragment_exact, check_identity_exact};
+    let target = ["id".to_string(), "Data".to_string()];
+    let source = ["id".to_string(), "Data".to_string()];
+    let scopes = [("t", target.as_slice()), ("s", source.as_slice())];
+    let passed = check_fragment_exact("nope = 1", &scopes, None).unwrap();
+    assert!(!passed.contains('`'), "{passed}");
+    assert!(passed.contains("nope"), "{passed}");
+    let fields = ["id".to_string(), "Data".to_string()];
+    let passed = check_identity_exact("nope = 1", "u", &fields).unwrap();
+    assert!(!passed.contains('`'), "{passed}");
+    assert!(passed.contains("nope"), "{passed}");
+}
+
+#[tokio::test]
+async fn update_set_targets_match_exactly_under_case_sensitive() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    create_probe_tables(&ctx, &catalogs).await;
+    enable_case_sensitive(&ctx);
+    assert_unresolved(
+        &ctx,
+        &catalogs,
+        "UPDATE ice.sales.u SET DATA = 'w' WHERE id = 1",
+        "`DATA`",
+        &["`id`", "`Data`"],
+    )
+    .await;
+    assert_u_unchanged(&ctx, &catalogs).await;
+    run(
+        &ctx,
+        &catalogs,
+        "UPDATE ice.sales.u SET Data = 'w' WHERE id = 1",
+    )
+    .await;
+    let (_, rows) = names_and_rows(&ctx, &catalogs, "SELECT * FROM ice.sales.u").await;
+    assert_eq!(
+        rows,
+        vec![
+            vec!["1".to_string(), "w".to_string()],
+            vec!["5".to_string(), "y".to_string()],
+        ]
+    );
+}
+
+#[tokio::test]
 async fn metadata_table_names_ignore_case_under_both_settings() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;

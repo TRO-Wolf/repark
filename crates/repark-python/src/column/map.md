@@ -251,6 +251,13 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   **CASESENS-1 S3 (2026-09-27):** `column_keeps_the_written_spelling` pins
   `written_column` (`ID` bare, `t.ID` qualified, `` `a.b` `` dotted).
   pins: casesens-1/C-009
+  **CASESENS-1 final fold (2026-09-28):** `exact_predicate_refuses_a_case_only_match`
+  pins `parse_canonical_predicate_exact` (`ID > 1` refuses `UNRESOLVED_COLUMN`
+  naming `` `ID` ``, `Data = 'a'` binds — red if the predicate folds),
+  `describe_with_twin_columns_refuses_ambiguous` pins the `Many` branch and
+  `describe_with_missing_column_refuses_unresolved` pins the `None` branch of
+  `resolve_written_names` under both rules.
+  pins: casesens-1/C-009, C-010
 
 ## Contracts
 

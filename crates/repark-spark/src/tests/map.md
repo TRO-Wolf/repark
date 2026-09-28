@@ -512,7 +512,16 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   DML refuses with Spark's byte-exact text (MERGE per R6) leaving the table,
   the default session keeps folding, and `SNAPSHOTS` answers under both.
   `enable_case_sensitive` moved from `create_typed_partition.rs` into
-  `common.rs` (deleted at the source).
+  `common.rs` (deleted at the source). **Final fold (2026-09-28):**
+  `same_session_toggle_true_false_true_keeps_folding` (true refuses, false
+  folds, true refuses again in one session — the per-statement clone never
+  leaks), `exact_fragment_identifiers_quote_and_plan_under_case_sensitive`
+  (exact MERGE and identity-DML hits are backtick-quoted, wrong-case hits
+  refuse, and a quoted no-op MERGE plans with the table unchanged),
+  `missing_fragment_identifiers_pass_through_to_the_planner` and
+  `update_set_targets_match_exactly_under_case_sensitive` (wrong-case SET
+  refuses `UNRESOLVED_COLUMN` naming `` `DATA` ``, exact SET answers and
+  lands; unmeasured — no oracle key covers a wrong-case SET target).
   pins: casesens-1/C-005, C-006, C-007, C-008
 - `casesens_twins.rs` — **WO CASESENS-1 slice 4 (2026-09-27):** the
   case-twin pins over struct-less probe tables: twin outputs answer with both
@@ -837,6 +846,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `crate::extension::apply_spark_float_as_decimal` so Spark-door unit fixtures match
   production `configure`. **R-2:** those fixtures plus `setup_with_ansi` also call
   `register_spark_decimal_planner`; shared helpers use `pub(super)` visibility and re-exports.
+  CASESENS-1 final fold (2026-09-28): `disable_case_sensitive` mirrors
+  `enable_case_sensitive` for the same-session toggle pin. pins: casesens-1/C-005
 - `create_table.rs` pins `ts TIMESTAMP` → `Timestamptz`;
   `ctas_of_instant_producers_stores_timestamptz` (SQL `current_timestamp` / `to_timestamp(Z)`
   / identity-partitioned CTAS).
@@ -853,7 +864,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `alter` (WO U5 PR1: bare UNSET and UNSET IF EXISTS on a missing key both preserve table
   metadata. pins: ice-nested-evo-1/C-025, C-028. WO U5 PR2a: the old `ALTER COLUMN … COMMENT`
   refusal pin becomes `alter_comment_lands_and_after_missing_refuses`, which reads the landed
-  doc. pins: ice-nested-evo-1/C-037),
+  doc. pins: ice-nested-evo-1/C-037. CASESENS-1 final fold (2026-09-28):
+  `alter_partition_transforms_drop_by_transform_and_replace_required_refuse` rewrites the
+  REG DROP leg to Spark's `Cannot find partition field to remove: REG` refusal with the spec
+  unchanged (OD-3, oracle `p2/pt_drop_CAT_present`); seven setup legs compress `execute` to
+  `run`, file 1182 → 1181. pins: casesens-1/C-013),
   `catalog_ops` (IPI-51, 2026-09-20: DROP-missing pins `[TABLE_OR_VIEW_NOT_FOUND]`/`42P01`,
   CREATE/CTAS-exists pins `[TABLE_OR_VIEW_ALREADY_EXISTS]`/`42P07`; IPI-51 PR4 (2026-09-20):
   the `partition_management_unsupported` unit pin asserts the condition prefix, the table

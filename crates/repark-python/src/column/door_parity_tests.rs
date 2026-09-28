@@ -137,6 +137,74 @@ fn facade_udf(name: &str, arity: usize) -> Option<Arc<ScalarUDF>> {
     }
 }
 
+#[tokio::test]
+async fn exact_predicate_refuses_a_case_only_match() {
+    let ctx = SessionContext::new();
+    let frame = ctx.sql("SELECT 1 AS id, 'a' AS \"Data\"").await.unwrap();
+    let error = super::expr_build::parse_canonical_predicate_exact(&frame, "ID > 1")
+        .unwrap_err()
+        .to_string();
+    assert!(
+        error.contains("[UNRESOLVED_COLUMN.WITH_SUGGESTION]"),
+        "{error}"
+    );
+    assert!(error.contains("`ID`"), "{error}");
+    let bound = super::expr_build::parse_canonical_predicate_exact(&frame, "Data = 'a'").unwrap();
+    assert!(format!("{bound}").contains("Data"), "{bound}");
+}
+
+#[test]
+fn describe_with_twin_columns_refuses_ambiguous() {
+    use datafusion::arrow::datatypes::{DataType, Field};
+    use datafusion::common::DFSchema;
+    let schema = DFSchema::from_unqualified_fields(
+        vec![
+            Field::new("a", DataType::Int64, true),
+            Field::new("A", DataType::Int64, true),
+        ]
+        .into(),
+        std::collections::HashMap::new(),
+    )
+    .unwrap();
+    let error = repark_core::frame_names::resolve_written_names(
+        &schema,
+        &["a".to_string()],
+        repark_core::frame_names::NameRule::IgnoreCase,
+    )
+    .unwrap_err()
+    .to_string();
+    assert!(error.contains("[AMBIGUOUS_REFERENCE]"), "{error}");
+}
+
+#[test]
+fn describe_with_missing_column_refuses_unresolved() {
+    use datafusion::arrow::datatypes::{DataType, Field};
+    use datafusion::common::DFSchema;
+    let schema = DFSchema::from_unqualified_fields(
+        vec![
+            Field::new("id", DataType::Int64, true),
+            Field::new("Data", DataType::Utf8, true),
+        ]
+        .into(),
+        std::collections::HashMap::new(),
+    )
+    .unwrap();
+    for rule in [
+        repark_core::frame_names::NameRule::Exact,
+        repark_core::frame_names::NameRule::IgnoreCase,
+    ] {
+        let error =
+            repark_core::frame_names::resolve_written_names(&schema, &["nope".to_string()], rule)
+                .unwrap_err()
+                .to_string();
+        assert!(
+            error.contains("[UNRESOLVED_COLUMN.WITH_SUGGESTION]"),
+            "{rule:?}: {error}"
+        );
+        assert!(error.contains("`nope`"), "{rule:?}: {error}");
+    }
+}
+
 #[test]
 fn column_keeps_the_written_spelling() {
     let bare = super::expr_build::written_column("ID");
