@@ -11,7 +11,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException, UnsupportedOperationException
+from repark.errors import AnalysisException, PySparkException, UnsupportedOperationException
 
 
 @pytest.fixture
@@ -144,9 +144,11 @@ def test_alter_add_drop_partition_field_and_write_after(spark: ReparkSession) ->
     # Still readable after DROP (files keep their own spec-ids).
     still = spark.sql("SELECT id FROM mem.ns.pevo ORDER BY id").to_arrow()
     assert still.column("id").to_pylist() == [1, 2, 3]
-    # Case-insensitive DROP name — re-ADD then DROP with different case.
     spark.sql("ALTER TABLE mem.ns.pevo ADD PARTITION FIELD category AS cat")
-    spark.sql("ALTER TABLE mem.ns.pevo DROP PARTITION FIELD CAT")
+    with pytest.raises(PySparkException) as caught:
+        spark.sql("ALTER TABLE mem.ns.pevo DROP PARTITION FIELD CAT")
+    assert "Cannot find partition field to remove: CAT" in str(caught.value)
+    spark.sql("ALTER TABLE mem.ns.pevo DROP PARTITION FIELD cat")
 
 
 def test_alter_replace_partition_field_and_replace_columns(spark: ReparkSession) -> None:

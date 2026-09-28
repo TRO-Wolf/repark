@@ -3545,7 +3545,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   schema-eq + read-after (added→NULL, rename data intact), ADD COLUMNS plural + FIRST, TYPE
   widen + narrow-refuse twin (int→long + float→double + decimal — octo C3), case-insensitive
   DROP (octo C5), DROP NOT NULL; I7 ADD/DROP PARTITION FIELD + write-after-evo + VERSION AS OF
-  pre-evo pin (octo I7-C5) + case-insensitive DROP name, REPLACE PARTITION FIELD, REPLACE
+  pre-evo pin (octo I7-C5) + OD-3 exact DROP name (CI fix round 2026-09-28: `DROP PARTITION
+  FIELD CAT` over stored `cat` refuses `Cannot find partition field to remove: CAT`, then the
+  exact `cat` drops; pins: casesens-1/C-013), REPLACE PARTITION FIELD, REPLACE
   COLUMNS drop-and-re-add (**ICE-REPLACE-COLUMNS-1, 2026-09-19** — the identity-trap twin is
   gone: a same-named column gets a fresh id and reads NULL, and a re-typed name is answered,
   not refused; the measured cells are in `test_ice_replace_columns_1.py`); residual refuse
