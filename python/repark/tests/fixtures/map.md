@@ -14,3 +14,7 @@ oracle (`.crc` sidecars skipped).
 - [`ice_page_prune_1/`](ice_page_prune_1/map.md) — **ICE-PAGE-PRUNE-1
   (2026-09-19, round 1):** the five Spark-written page-prune warehouses plus
   the compacted `truth.json`. pins: ice-page-prune-1/C-001, C-002
+- [`ntz_1_spark_table/`](ntz_1_spark_table/map.md) — **WO NTZ-1 slice 3
+  (2026-09-27):** the Spark-written one-row `xc.ns.x`
+  (`TIMESTAMP_NTZ` + `TIMESTAMP`) warehouse behind `ntz-xc-spark.json`.
+  pins: ntz-1/C-008

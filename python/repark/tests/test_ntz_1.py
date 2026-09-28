@@ -1,4 +1,4 @@
-"""WO NTZ-1 slices 1 and 2: TIMESTAMP_NTZ literals, casts and store assignment.
+"""WO NTZ-1 slices 1 to 3: TIMESTAMP_NTZ literals, casts, store and storage.
 
 The oracle is ``ntz_1_spark_oracle.json`` (Spark 4.1.2 + Iceberg 1.11.0, measured
 2026-09-26): the Slice 1 literal/cast/refusal queries with their session zone and
@@ -28,18 +28,44 @@ probe-measured; every other wall below is Spark's recorded answer. Refusals
 compare class, condition, SQLSTATE and the full first line with this file's
 table name in Spark's template.
 
-pins: ntz-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+Slice 3 pins the storage surface through SQL literals against the same probe
+JSONs (``ntz-spark.json``, ``ntz2-spark.json``): the six partition transforms
+(``.partitions`` rows, pruning, ``.files`` bounds, the New York ``days``
+insert), identity and bucket partitions, v3 DML, CTAS, ``ADD COLUMN``,
+``SHOW CREATE TABLE``, ``printSchema``, ``dtypes``, ``collect()`` and
+``toArrow()`` types, and the filter / ORDER BY / min / max / interval legs.
+``.partitions`` structs compare probe-normalized (dates render ISO, naive walls
+keep no zone); unaliased expression names do not compare (the R2 naming class).
+The single INSERT writes one file per partition, so on months/years the two
+dated rows bound one file; the per-file walls follow Spark's measured days
+pattern (work-order line 30).
+The ``date_trunc`` typeof leg compares the value only (residue: Spark answers
+``timestamp``, RePark ``timestamp_ntz``). The ``toArrow()`` legs compare field
+types only (residue: RePark carries ``PARQUET:field_id`` metadata). The last
+test adopts the Spark-written ``xc.ns.x`` fixture (one row
+``2024-01-01 12:34:56.123456``, ``ntz-xc-spark.json`` beside the probes) at its
+canonical path and replays Spark's reads, ``.files`` bounds and re-insert; the
+``z`` bound compares as ``CAST … AS STRING`` in a UTC session, which is the
+recorded instant rendering.
+
+pins: ntz-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 """
 
 from __future__ import annotations
 
 import datetime
+import io
 import json
 import re
+import shutil
+import time
+from collections.abc import Iterator
+from contextlib import contextmanager, redirect_stdout, suppress
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
@@ -49,6 +75,9 @@ from repark.spark.types import TimestampNTZType
 
 ORACLE_PATH: Path = Path(__file__).with_name("ntz_1_spark_oracle.json")
 _ORACLE: dict[str, Any] = json.loads(ORACLE_PATH.read_text(encoding="utf-8"))
+_XC_SRC: Path = Path(__file__).resolve().parent / "fixtures" / "ntz_1_spark_table"
+_XC_ROOT: Path = Path("/tmp/repark-ntz-1-spark-table/wh")
+_XC_WALL: str = "2024-01-01 12:34:56.123456"
 
 _SPARK_POSITION_SUFFIX: re.Pattern[str] = re.compile(r"; line \d+ pos \d+;$")
 _REPARK_PREFIXES: tuple[str, ...] = (
@@ -421,3 +450,439 @@ def test_store_refusals_name_timestamp_ntz(tmp_path: Path) -> None:
             raise AssertionError("a STRING append answered instead of refusing")
     finally:
         session.stop()
+
+
+class _DirLock:
+    """Cross-process lock so concurrent facade tests do not clobber the fixture copy."""
+
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        started = time.monotonic()
+        while True:
+            try:
+                self.path.mkdir()
+                return
+            except FileExistsError:
+                if time.monotonic() - started > 120:
+                    raise TimeoutError(
+                        f"fixture lock {path} held for 2 minutes (no steal)"
+                    ) from None
+                time.sleep(0.025)
+
+    def close(self) -> None:
+        with suppress(OSError):
+            self.path.rmdir()
+
+
+@contextmanager
+def _materialize_xc() -> Iterator[Path]:
+    """Copy the Spark-written table to its canonical path; yield newest metadata file."""
+    dest = _XC_ROOT / "ns" / "x"
+    lock = _DirLock(Path(str(dest) + ".lock"))
+    try:
+        if dest.exists():
+            shutil.rmtree(dest)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(_XC_SRC, dest, ignore=shutil.ignore_patterns("*.crc", "map.md"))
+        versions = sorted(
+            (dest / "metadata").glob("v*.metadata.json"),
+            key=lambda path: int(path.name[1:].split(".", 1)[0]),
+        )
+        assert versions, f"no Hadoop metadata under {dest}/metadata"
+        yield versions[-1]
+    finally:
+        with suppress(OSError):
+            if dest.exists():
+                shutil.rmtree(dest)
+        lock.close()
+
+
+def _seed_filter_table(session: ReparkSession) -> None:
+    """Create the five-row probe2 table through literals, the New York leg included."""
+    session.sql("CREATE TABLE sc.ns.t (id INT, c TIMESTAMP_NTZ) USING iceberg").collect()
+    session.sql(
+        "INSERT INTO sc.ns.t VALUES (0, TIMESTAMP_NTZ'2024-01-01 12:34:56.123456'), "
+        "(1, TIMESTAMP_NTZ'2024-01-02 00:00:00'), (2, NULL)"
+    ).collect()
+    session.sql("INSERT INTO sc.ns.t VALUES (3, DATE'2024-01-03')").collect()
+    session.conf.set("spark.sql.session.timeZone", "America/New_York")
+    session.sql("INSERT INTO sc.ns.t SELECT 4, TIMESTAMP'2024-01-04 12:00:00Z'").collect()
+    session.conf.set("spark.sql.session.timeZone", "UTC")
+
+
+@pytest.mark.parametrize(
+    ("transform", "struct", "partitions", "bounds"),
+    [
+        (
+            "days",
+            "struct<c_day:date>",
+            [[{"c_day": None}, 1], [{"c_day": "2024-01-01"}, 1], [{"c_day": "2024-01-02"}, 1]],
+            [
+                [None, None],
+                ["2024-01-01T23:30:00|tz=None", "2024-01-01T23:30:00|tz=None"],
+                ["2024-01-02T00:30:00|tz=None", "2024-01-02T00:30:00|tz=None"],
+            ],
+        ),
+        (
+            "hours",
+            "struct<c_hour:int>",
+            [[{"c_hour": None}, 1], [{"c_hour": 473375}, 1], [{"c_hour": 473376}, 1]],
+            [
+                [None, None],
+                ["2024-01-01T23:30:00|tz=None", "2024-01-01T23:30:00|tz=None"],
+                ["2024-01-02T00:30:00|tz=None", "2024-01-02T00:30:00|tz=None"],
+            ],
+        ),
+        (
+            "months",
+            "struct<c_month:int>",
+            [[{"c_month": None}, 1], [{"c_month": 648}, 2]],
+            [
+                [None, None],
+                ["2024-01-01T23:30:00|tz=None", "2024-01-02T00:30:00|tz=None"],
+            ],
+        ),
+        (
+            "years",
+            "struct<c_year:int>",
+            [[{"c_year": None}, 1], [{"c_year": 54}, 2]],
+            [
+                [None, None],
+                ["2024-01-01T23:30:00|tz=None", "2024-01-02T00:30:00|tz=None"],
+            ],
+        ),
+    ],
+)
+def test_partition_transforms_answer_as_spark(
+    transform: str,
+    struct: str,
+    partitions: list[list[Any]],
+    bounds: list[list[Any]],
+    tmp_path: Path,
+) -> None:
+    """Each time transform's partitions, pruning and file bounds replay Spark."""
+    session = _open("UTC", tmp_path)
+    try:
+        table = f"sc.ns.p_{transform}"
+        session.sql(
+            f"CREATE TABLE {table} (id INT, c TIMESTAMP_NTZ) USING iceberg "
+            f"PARTITIONED BY ({transform}(c))"
+        ).collect()
+        session.sql(
+            f"INSERT INTO {table} VALUES (0, TIMESTAMP_NTZ'2024-01-01 23:30:00'), "
+            "(1, TIMESTAMP_NTZ'2024-01-02 00:30:00'), (2, NULL)"
+        ).collect()
+        frame = session.sql(
+            f"SELECT partition, record_count FROM {table}.partitions "
+            "ORDER BY record_count, partition"
+        )
+        assert _rows(frame, "norm") == partitions
+        assert _dtypes(frame) == [["partition", struct], ["record_count", "bigint"]]
+        assert _rows(
+            session.sql(f"SELECT id FROM {table} WHERE c >= TIMESTAMP_NTZ'2024-01-02 00:00:00'"),
+            "norm",
+        ) == [[1]]
+        files = session.sql(
+            f"SELECT readable_metrics.c.lower_bound, readable_metrics.c.upper_bound "
+            f"FROM {table}.files ORDER BY readable_metrics.c.lower_bound NULLS FIRST"
+        )
+        assert _rows(files, "norm") == bounds
+        assert _dtypes(files) == [
+            ["lower_bound", "timestamp_ntz"],
+            ["upper_bound", "timestamp_ntz"],
+        ]
+        assert _rows(
+            session.sql(
+                f"SELECT typeof(readable_metrics.c.lower_bound) FROM {table}.files LIMIT 1"
+            ),
+            "norm",
+        ) == [["timestamp_ntz"]]
+        if transform == "days":
+            session.conf.set("spark.sql.session.timeZone", "America/New_York")
+            session.sql(
+                f"INSERT INTO {table} VALUES (3, TIMESTAMP_NTZ'2024-01-01 23:30:00')"
+            ).collect()
+            session.conf.set("spark.sql.session.timeZone", "UTC")
+            assert _rows(
+                session.sql(
+                    f"SELECT partition, record_count FROM {table}.partitions "
+                    "ORDER BY record_count, partition"
+                ),
+                "norm",
+            ) == [[{"c_day": None}, 1], [{"c_day": "2024-01-02"}, 1], [{"c_day": "2024-01-01"}, 2]]
+    finally:
+        session.stop()
+
+
+def test_identity_and_bucket_partitions_answer_as_spark(tmp_path: Path) -> None:
+    """Identity and bucket partitions of an NTZ column replay Spark."""
+    session = _open("UTC", tmp_path)
+    try:
+        session.sql(
+            "CREATE TABLE sc.ns.pid (id INT, c TIMESTAMP_NTZ) USING iceberg PARTITIONED BY (c)"
+        ).collect()
+        session.sql(
+            "INSERT INTO sc.ns.pid VALUES (0, TIMESTAMP_NTZ'2024-01-01 12:00:00')"
+        ).collect()
+        identity = session.sql("SELECT partition, record_count FROM sc.ns.pid.partitions")
+        assert _rows(identity, "norm") == [[{"c": "2024-01-01T12:00:00|tz=None"}, 1]]
+        assert _dtypes(identity) == [
+            ["partition", "struct<c:timestamp_ntz>"],
+            ["record_count", "bigint"],
+        ]
+        session.sql(
+            "CREATE TABLE sc.ns.pb (id INT, c TIMESTAMP_NTZ) USING iceberg "
+            "PARTITIONED BY (bucket(4, c))"
+        ).collect()
+        session.sql(
+            "INSERT INTO sc.ns.pb VALUES (0, TIMESTAMP_NTZ'2024-01-01 12:00:00'), "
+            "(1, TIMESTAMP_NTZ'2024-06-01 00:00:00')"
+        ).collect()
+        bucket = session.sql(
+            "SELECT partition, record_count FROM sc.ns.pb.partitions ORDER BY partition"
+        )
+        assert _rows(bucket, "norm") == [[{"c_bucket": 2}, 1], [{"c_bucket": 3}, 1]]
+        assert _dtypes(bucket) == [
+            ["partition", "struct<c_bucket:int>"],
+            ["record_count", "bigint"],
+        ]
+    finally:
+        session.stop()
+
+
+def test_filters_order_and_minmax_answer_as_spark(tmp_path: Path) -> None:
+    """Filters, ORDER BY, min/max and interval arithmetic replay Spark's rows."""
+    session = _open("UTC", tmp_path)
+    try:
+        _seed_filter_table(session)
+        assert _walls(session, "sc.ns.t") == [
+            [0, "2024-01-01 12:34:56.123456"],
+            [1, "2024-01-02 00:00:00"],
+            [2, None],
+            [3, "2024-01-03 00:00:00"],
+            [4, "2024-01-04 07:00:00"],
+        ]
+        legs = [
+            ("SELECT id FROM sc.ns.t WHERE c = TIMESTAMP_NTZ'2024-01-01 12:34:56.123456'", [[0]]),
+            (
+                "SELECT id FROM sc.ns.t WHERE c > '2024-01-01 12:00:00' ORDER BY id",
+                [[0], [1], [3], [4]],
+            ),
+            ("SELECT id FROM sc.ns.t WHERE c >= DATE'2024-01-02' ORDER BY id", [[1], [3], [4]]),
+            (
+                "SELECT id FROM sc.ns.t WHERE c BETWEEN TIMESTAMP_NTZ'2024-01-01 00:00:00' "
+                "AND TIMESTAMP_NTZ'2024-01-02 00:00:00' ORDER BY id",
+                [[0], [1]],
+            ),
+            (
+                "SELECT id FROM sc.ns.t WHERE c IN (TIMESTAMP_NTZ'2024-01-02 00:00:00', "
+                "TIMESTAMP_NTZ'2024-01-03 00:00:00') ORDER BY id",
+                [[1], [3]],
+            ),
+            ("SELECT id FROM sc.ns.t WHERE c = TIMESTAMP'2024-01-02 00:00:00' ORDER BY id", [[1]]),
+            ("SELECT id FROM sc.ns.t ORDER BY c NULLS FIRST, id", [[2], [0], [1], [3], [4]]),
+        ]
+        for sql, want in legs:
+            assert _rows(session.sql(sql), "norm") == want, sql
+        session.conf.set("spark.sql.session.timeZone", "America/New_York")
+        for sql in [
+            "SELECT id FROM sc.ns.t WHERE c = TIMESTAMP'2024-01-02 00:00:00' ORDER BY id",
+            "SELECT id FROM sc.ns.t WHERE c = TIMESTAMP'2024-01-02 05:00:00Z' ORDER BY id",
+        ]:
+            assert _rows(session.sql(sql), "norm") == [[1]], sql
+        session.conf.set("spark.sql.session.timeZone", "UTC")
+        assert _rows(
+            session.sql(
+                "SELECT CAST(min(c) AS STRING), CAST(max(c) AS STRING), typeof(max(c)) FROM sc.ns.t"
+            ),
+            "norm",
+        ) == [["2024-01-01 12:34:56.123456", "2024-01-04 07:00:00", "timestamp_ntz"]]
+        assert _rows(
+            session.sql(
+                "SELECT CAST(c + INTERVAL 1 DAY AS STRING), typeof(c + INTERVAL 1 DAY) "
+                "FROM sc.ns.t WHERE id = 0"
+            ),
+            "norm",
+        ) == [["2024-01-02 12:34:56.123456", "timestamp_ntz"]]
+        assert _rows(
+            session.sql(
+                "SELECT hour(c), CAST(date_trunc('DAY', c) AS STRING), CAST(c AS DATE) "
+                "FROM sc.ns.t WHERE id = 0"
+            ),
+            "norm",
+        ) == [[12, "2024-01-01 00:00:00", "2024-01-01"]]
+        assert _rows(
+            session.sql(
+                "SELECT typeof(c), typeof(TIMESTAMP_NTZ'2024-01-01 00:00:00') "
+                "FROM sc.ns.t WHERE id = 0"
+            ),
+            "norm",
+        ) == [["timestamp_ntz", "timestamp_ntz"]]
+    finally:
+        session.stop()
+
+
+def test_ctas_add_column_and_presentation_answer_as_spark(tmp_path: Path) -> None:
+    """CTAS, ADD COLUMN and the DDL presentation replay Spark."""
+    session = _open("UTC", tmp_path)
+    try:
+        session.sql("CREATE TABLE sc.ns.t (id INT, c TIMESTAMP_NTZ) USING iceberg").collect()
+        session.sql(
+            "INSERT INTO sc.ns.t VALUES (0, TIMESTAMP_NTZ'2024-01-01 12:34:56.123456')"
+        ).collect()
+        session.sql(
+            "CREATE TABLE sc.ns.ctas USING iceberg AS "
+            "SELECT TIMESTAMP_NTZ'2024-01-01 12:00:00' AS c"
+        ).collect()
+        session.sql(
+            "CREATE TABLE sc.ns.ctas2 USING iceberg AS "
+            "SELECT CAST('2024-01-01 00:00:00' AS TIMESTAMP_NTZ) AS c"
+        ).collect()
+        for table in ("sc.ns.ctas", "sc.ns.ctas2"):
+            assert _table_schema(tmp_path, table) == [["c", "timestamp", False]]
+            assert _rows(session.sql(f"DESCRIBE TABLE {table}"), "norm") == [
+                ["c", "timestamp_ntz", None]
+            ]
+        session.sql("ALTER TABLE sc.ns.t ADD COLUMN c2 TIMESTAMP_NTZ").collect()
+        assert _table_schema(tmp_path, "sc.ns.t") == [
+            ["id", "int", False],
+            ["c", "timestamp", False],
+            ["c2", "timestamp", False],
+        ]
+        assert _rows(session.sql("DESCRIBE TABLE sc.ns.t"), "norm") == [
+            ["id", "int", None],
+            ["c", "timestamp_ntz", None],
+            ["c2", "timestamp_ntz", None],
+        ]
+        create = session.sql("SHOW CREATE TABLE sc.ns.t").collect()[0][0]
+        assert "c TIMESTAMP_NTZ" in create
+        assert "USING iceberg" in create
+        assert "'format-version' = '2'" in create
+        session.sql("ALTER TABLE sc.ns.t ALTER COLUMN c TYPE TIMESTAMP_NTZ").collect()
+        assert _table_schema(tmp_path, "sc.ns.t") == [
+            ["id", "int", False],
+            ["c", "timestamp", False],
+            ["c2", "timestamp", False],
+        ]
+        assert _dtypes(session.sql("SELECT * FROM sc.ns.t")) == [
+            ["id", "int"],
+            ["c", "timestamp_ntz"],
+            ["c2", "timestamp_ntz"],
+        ]
+        assert _rows(session.sql("SELECT c FROM sc.ns.t WHERE id = 0"), "norm") == [
+            ["2024-01-01T12:34:56.123456|tz=None"]
+        ]
+        arrow = session.sql("SELECT id, c FROM sc.ns.t WHERE id = 0").to_arrow()
+        assert arrow.schema.field("id").type == pa.int32()
+        assert arrow.schema.field("c").type == pa.timestamp("us")
+    finally:
+        session.stop()
+
+
+def test_printschema_spells_timestamp_ntz(tmp_path: Path) -> None:
+    """printSchema renders the NTZ column exactly as Spark does."""
+    session = _open("UTC", tmp_path)
+    try:
+        session.sql("CREATE TABLE sc.ns.t (id INT, c TIMESTAMP_NTZ) USING iceberg").collect()
+        buffer = io.StringIO()
+        with redirect_stdout(buffer):
+            session.table("sc.ns.t").printSchema()
+        assert buffer.getvalue() == (
+            "root\n |-- id: integer (nullable = true)\n |-- c: timestamp_ntz (nullable = true)\n\n"
+        )
+    finally:
+        session.stop()
+
+
+def test_v3_round_trip_answers_as_spark(tmp_path: Path) -> None:
+    """A v3 table takes literals through INSERT, UPDATE, DELETE and MERGE."""
+    session = _open("UTC", tmp_path, version3=True)
+    try:
+        session.sql(
+            "CREATE TABLE sc.ns.t3 (id INT, c TIMESTAMP_NTZ) USING iceberg "
+            "TBLPROPERTIES ('format-version'='3')"
+        ).collect()
+        session.sql(
+            "INSERT INTO sc.ns.t3 VALUES (0, TIMESTAMP_NTZ'2024-01-01 12:34:56.123456'), (1, NULL)"
+        ).collect()
+        assert _table_schema(tmp_path, "sc.ns.t3") == [
+            ["id", "int", False],
+            ["c", "timestamp", False],
+        ]
+        assert _walls(session, "sc.ns.t3") == [[0, "2024-01-01 12:34:56.123456"], [1, None]]
+        session.sql(
+            "UPDATE sc.ns.t3 SET c = TIMESTAMP_NTZ'2025-05-05 05:05:05' WHERE id = 0"
+        ).collect()
+        session.sql("DELETE FROM sc.ns.t3 WHERE id = 1").collect()
+        session.sql(
+            "MERGE INTO sc.ns.t3 t USING "
+            "(SELECT 9 AS id, TIMESTAMP_NTZ'2030-01-01 00:00:00' AS c) s "
+            "ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+        ).collect()
+        assert _walls(session, "sc.ns.t3") == [
+            [0, "2025-05-05 05:05:05"],
+            [9, "2030-01-01 00:00:00"],
+        ]
+    finally:
+        session.stop()
+
+
+def test_spark_written_table_reads_and_reinserts_as_spark(tmp_path: Path) -> None:
+    """The Spark-written xc.ns.x fixture reads, bounds and re-inserts as Spark."""
+    with _materialize_xc() as metadata_file:
+        session = _open("UTC", tmp_path)
+        try:
+            session.sql(
+                "CALL sc.system.register_table("
+                f"table => 'ns.x', metadata_file => '{metadata_file}')"
+            ).collect()
+            assert _table_schema(_XC_ROOT, "sc.ns.x") == [
+                ["id", "int", False],
+                ["c", "timestamp", False],
+                ["z", "timestamptz", False],
+            ]
+            frame = session.sql(
+                "SELECT id, CAST(c AS STRING) AS c, CAST(z AS STRING) AS z FROM sc.ns.x ORDER BY id"
+            )
+            assert _rows(frame, "str") == [[0, _XC_WALL, _XC_WALL]]
+            assert _dtypes(frame) == [["id", "int"], ["c", "string"], ["z", "string"]]
+            assert _rows(session.sql("SELECT id FROM sc.ns.x WHERE c IS NOT NULL"), "norm") == [[0]]
+            assert _rows(
+                session.sql("SELECT CAST(c AS STRING), CAST(z AS STRING), hour(c) FROM sc.ns.x"),
+                "str",
+            ) == [[_XC_WALL, _XC_WALL, 12]]
+            assert _dtypes(session.table("sc.ns.x")) == [
+                ["id", "int"],
+                ["c", "timestamp_ntz"],
+                ["z", "timestamp"],
+            ]
+            arrow = session.table("sc.ns.x").to_arrow()
+            assert arrow.schema.field("id").type == pa.int32()
+            assert arrow.schema.field("c").type == pa.timestamp("us")
+            assert arrow.schema.field("z").type == pa.timestamp("us", tz="UTC")
+            bounds = session.sql(
+                "SELECT readable_metrics.c.lower_bound AS c_lo, "
+                "readable_metrics.c.upper_bound AS c_hi, "
+                "readable_metrics.z.lower_bound AS z_lo, "
+                "readable_metrics.z.upper_bound AS z_hi FROM sc.ns.x.files"
+            )
+            assert _rows(bounds, "str") == [
+                [_XC_WALL, _XC_WALL, _XC_WALL, _XC_WALL],
+            ]
+            assert _dtypes(bounds) == [
+                ["c_lo", "timestamp_ntz"],
+                ["c_hi", "timestamp_ntz"],
+                ["z_lo", "timestamp"],
+                ["z_hi", "timestamp"],
+            ]
+            session.sql("INSERT INTO sc.ns.x SELECT id + 1, c, z FROM sc.ns.x").collect()
+            assert _rows(
+                session.sql(
+                    "SELECT id, CAST(c AS STRING) AS c, CAST(z AS STRING) AS z "
+                    "FROM sc.ns.x ORDER BY id"
+                ),
+                "str",
+            ) == [[0, _XC_WALL, _XC_WALL], [1, _XC_WALL, _XC_WALL]]
+        finally:
+            session.stop()
