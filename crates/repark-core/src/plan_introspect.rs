@@ -4,7 +4,7 @@ use std::hash::{BuildHasher, Hasher};
 use std::sync::Arc;
 
 use datafusion::common::TableReference;
-use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
+use datafusion::common::tree_node::TreeNodeRecursion;
 use datafusion::datasource::default_table_source::source_as_provider;
 use datafusion::datasource::listing::{ListingTable, ListingTableUrl};
 use datafusion::datasource::memory::MemTable;
@@ -67,7 +67,7 @@ fn render_uri(object_store_url: &ObjectStoreUrl, location: &ObjectPath) -> Strin
 
 pub(crate) fn plan_reads_s3_prefix(plan: &LogicalPlan, bucket: &str, prefix: &str) -> bool {
     let mut found = false;
-    let _ = plan.apply(|node| {
+    let _ = plan.apply_with_subqueries(|node| {
         if let LogicalPlan::TableScan(scan) = node
             && let Ok(provider) = source_as_provider(&scan.source)
             && let Some(table) = provider.downcast_ref::<ListingTable>()
@@ -84,15 +84,14 @@ pub(crate) fn plan_reads_s3_prefix(plan: &LogicalPlan, bucket: &str, prefix: &st
 }
 
 fn scan_url_hits_prefix(url: &ListingTableUrl, bucket: &str, prefix: &str) -> bool {
-    let Some((_, scan_bucket, scan_key)) = crate::object_store_s3::split_s3_url_raw(url.as_str())
-    else {
-        return false;
-    };
-    if scan_bucket != bucket {
+    let store = url.object_store();
+    let store_url: &Url = store.as_ref();
+    if store_url.host_str() != Some(bucket) {
         return false;
     }
     let dest = prefix.trim_matches('/');
-    let scan = scan_key.trim_matches('/');
+    let scan: &str = url.prefix().as_ref();
+    let scan = scan.trim_matches('/');
     if dest.is_empty() || scan.is_empty() {
         return false;
     }

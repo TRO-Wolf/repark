@@ -811,6 +811,13 @@ impl ReparkSession {
                     .await?;
             }
             SaveMode::Append => {
+                if !at_root && exact_key_exists(&store, &prefix, url).await? {
+                    return Err(Error::Analysis(format!(
+                        "cannot append to path {url}: an object already exists at the exact \
+                         destination key, and the appended rows would be invisible through \
+                         that path"
+                    )));
+                }
                 let existing = list_part_keys(&store, scope, format.extension(), url).await?;
                 if !existing.is_empty() {
                     let part_urls: Vec<String> = existing

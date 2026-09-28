@@ -219,6 +219,15 @@ pub(crate) async fn resolve_s3_prefix_for_read(
     path: &str,
 ) -> Result<String> {
     if path.ends_with('/') {
+        if let Some((scheme, bucket, key)) = split_s3_url_raw(path) {
+            if key.is_empty() {
+                return Ok(path.to_string());
+            }
+            return Ok(format!(
+                "{scheme}://{bucket}/{}/",
+                encode_s3_key_for_url(&key)
+            ));
+        }
         return Ok(path.to_string());
     }
     let Some((scheme, bucket, key)) = split_s3_url_raw(path) else {
@@ -237,7 +246,10 @@ pub(crate) async fn resolve_s3_prefix_for_read(
         return Ok(path.to_string());
     };
     if store.head(&prefix).await.is_ok() {
-        return Ok(path.to_string());
+        return Ok(format!(
+            "{scheme}://{bucket}/{}",
+            encode_s3_key_for_url(&key)
+        ));
     }
     let mut listed = store.list(Some(&prefix));
     match listed.next().await {
@@ -591,6 +603,40 @@ mod tests {
                 .await
                 .unwrap(),
             "s3a://bucket/cell/data%23v2/"
+        );
+    }
+
+    #[tokio::test]
+    async fn trailing_slash_reads_encode_hash_query_and_percent() {
+        let context = prefix_context(&["cell/data#v2/part-0.parquet"]).await;
+        assert_eq!(
+            resolve_s3_prefix_for_read(&context, "s3a://bucket/cell/data#v2/")
+                .await
+                .unwrap(),
+            "s3a://bucket/cell/data%23v2/"
+        );
+        assert_eq!(
+            resolve_s3_prefix_for_read(&context, "s3a://bucket/cell/data?v=2/")
+                .await
+                .unwrap(),
+            "s3a://bucket/cell/data%3Fv=2/"
+        );
+        assert_eq!(
+            resolve_s3_prefix_for_read(&context, "s3a://bucket/cell/a%20b/")
+                .await
+                .unwrap(),
+            "s3a://bucket/cell/a%2520b/"
+        );
+    }
+
+    #[tokio::test]
+    async fn exact_object_reads_encode_hash_query_and_percent() {
+        let context = prefix_context(&["cell/data#v2/exact.parquet"]).await;
+        assert_eq!(
+            resolve_s3_prefix_for_read(&context, "s3a://bucket/cell/data#v2/exact.parquet")
+                .await
+                .unwrap(),
+            "s3a://bucket/cell/data%23v2/exact.parquet"
         );
     }
 

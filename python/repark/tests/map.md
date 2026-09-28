@@ -3603,6 +3603,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   endpoints, endpoint booleans, text refusal, URL spellings, the `p2/`
   sibling); the oracle comparator now checks column names, types and order.
   pins: s3-path-write-1/C-007, C-008, C-009, C-012, C-013, C-014, C-015
+  **S3-PATH-WRITE-1 re-verify (2026-09-28):** the RU-1..RU-4 moto pins
+  (subquery self-overwrite refusals, encoded-key refusals with sibling /
+  other-bucket / local pass-throughs, exact-object append refusal,
+  trailing-slash reads of `#` / `?` / `%` keys).
 - `test_e2_readwriter.py` — E2 R-CENSUS-READWRITER: bare-name resolution
   (`resolve_table_name` / saveAsTable / table / writeTo / insertInto / MERGE /
   DROP TABLE SQL expander), `spark.sql.defaultNamespace` seed, parquet save/load +

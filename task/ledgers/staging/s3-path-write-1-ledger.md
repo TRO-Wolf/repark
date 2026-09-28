@@ -367,6 +367,13 @@ refusal separately) and normalise part names (note `R-S3-PART-NAME`).
   a seeded prefix wiped to empty when the `COPY` fails. Accepted by the Q2
   ruling (direct parts plus best-effort cleanup); recorded here so a later
   round can stage overwrites if the window matters.
+- **R-S3-APPEND-EXACT** — no oracle cell (re-verify RU-3, 2026-09-28).
+  Appending onto a destination that is an exact object refuses loud
+  (`AnalysisException` "cannot append to path ..."), because the exact
+  object wins the read and appended rows would land invisibly beside it.
+  `u12-spark-2.json` covers exact-key error/ignore/overwrite only; Spark's
+  append answer is unmeasured (S3A `mkdirs` under a file is expected to
+  fail). A Spark cell decides whether the refusal stands.
 
 ## Fault record (2026-09-28, moto)
 
@@ -423,6 +430,11 @@ refusal separately) and normalise part names (note `R-S3-PART-NAME`).
 - Late `SET` of the endpoint keys (after session build) neither applies nor
   signals, matching the late region override. Only builder/file config feeds
   the S3 store.
+- Appending a parquet-read frame (`Utf8View`) onto a dataset written from
+  `createDataFrame` (`Utf8`), or the reverse, leaves the dataset unreadable
+  ("Fail to merge schema ... Utf8 vs Utf8View"). The local door does the same
+  (measured 2026-09-28 on the re-verify wheel), and the S3 fold never touched
+  the `COPY` data path. Separate card.
 
 ## Round 2 implementation (2026-09-28)
 
@@ -535,6 +547,45 @@ the success-path loss only.
   file that reads or writes parquet/csv/json/text plus
   `test_dfcore_1_exports.py` (43 files, `-n 8`): 1374 passed, 27 skipped,
   zero local-path pin changes.
+- Gates: `comment_ban.py` over `origin/main...HEAD`, `check_lib_rs`,
+  `check_rust_file_size.py`, `check_lib_py.py`, `check_ledger_grammar.py`,
+  `check_docs_links.py`, `check_map_md.sh --base origin/main`, ruff check
+  and format checks on the touched Python files.
+
+## Re-verify fold RU-1..RU-4 (2026-09-28)
+
+The Opus re-verify at b04ee90e confirmed VU-1, VU-2 and VU-4..VU-9 fixed and
+charged four findings: two S1 silent data-loss shapes in the VU-3
+self-overwrite refusal, and two S3 loud-but-wrong shapes. All four land here.
+
+Dispositions. RU-1: `plan_reads_s3_prefix` walks with
+`apply_with_subqueries`, so IN, EXISTS and scalar subqueries (nested
+included) count as reads; each shape pins a moto refusal with the listing
+unchanged. RU-2: `scan_url_hits_prefix` compares the decoded scan key
+(`ListingTableUrl::prefix`) and the `object_store` bucket against the
+destination instead of re-splitting the percent-encoded `as_str`, so `a b`,
+`a%20b`, `d#v2` and `données` self-overwrites refuse; the `src2`→`src`,
+`srcx`→`src`, other-bucket and local-source pass-throughs stay green. RU-3:
+the append branch `HEAD`s the exact key and refuses loud when an object sits
+at the destination (`R-S3-APPEND-EXACT`; Spark unmeasured). RU-4: the
+trailing-slash and exact-object read branches encode through
+`split_s3_url_raw` + `encode_s3_key_for_url` like the slashless branch, so
+`data#v2/` and its `?`/`%` siblings read the rows.
+
+## Re-verify-fold verification (2026-09-28)
+
+- Rust: `cargo test -p repark-core --lib` full green (864 passed, 1
+  ignored), including the 2 new `object_store_s3` pins (trailing-slash and
+  exact-object reads encode `#`/`?`/`%`); `cargo clippy -p repark-core -p
+  repark-python --all-targets` with `-D warnings -A
+  clippy::disallowed_methods` and workspace `make rust-panic-ban` green;
+  `cargo fmt --check` green.
+- Python: `test_s3_path_write_1.py` (84 passed: the 71 verifier-fold pins
+  plus 3 RU-1 subquery, 6 RU-2 encoded-key and pass-through, 1 RU-3
+  exact-append and 3 RU-4 trailing-slash pins, every S1 red at b04ee90e) on
+  `moto_server` from `target/u12/moto-venv`; every facade file that reads or
+  writes parquet/csv/json/text plus `test_dfcore_1_exports.py` (43 files,
+  `-n 8`): all green, zero local-path pin changes.
 - Gates: `comment_ban.py` over `origin/main...HEAD`, `check_lib_rs`,
   `check_rust_file_size.py`, `check_lib_py.py`, `check_ledger_grammar.py`,
   `check_docs_links.py`, `check_map_md.sh --base origin/main`, ruff check

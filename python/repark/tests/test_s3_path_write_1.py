@@ -11,7 +11,8 @@ prefix with objects under ``<path>/`` reads as a directory.
 pins: s3-path-write-1/C-007, C-008, C-009, C-012, C-013
 
 The VU-1..VU-9 verifier pins below replay the ``u12-spark-2.json`` cells: every
-S1 pin is red at aa471249 and green after the fold.
+S1 pin is red at aa471249 and green after the fold. The RU-1..RU-4 re-verify
+pins below are red at b04ee90e and green after the re-verify fold.
 """
 
 from __future__ import annotations
@@ -671,6 +672,129 @@ def test_vu7_text_write_to_s3_refuses_without_local_shadow(
 def test_vu8_s3_url_spellings(path: str, expected: bool) -> None:
     """VU-8: only ``s3://`` and ``s3a://`` spellings route to S3."""
     assert is_s3_url(path) is expected
+
+
+def _subquery_frame(spark: Any, shape: str) -> Any:
+    """Build the RU-1 IN / EXISTS / scalar frame over two temp views."""
+    if shape == "in":
+        return spark.sql("select * from ru1base where id in (select id from ru1view)")
+    if shape == "exists":
+        return spark.sql(
+            "select * from ru1base b where exists (select 1 from ru1view s where s.id = b.id)"
+        )
+    return spark.sql("select * from ru1base where id <= (select max(id) from ru1view)")
+
+
+@pytest.mark.parametrize("shape", ["in", "exists", "scalar"])
+def test_ru1_subquery_self_overwrite_refuses(spark: Any, moto_endpoint: str, shape: str) -> None:
+    """RU-1: a subquery read of the destination refuses the overwrite, source intact."""
+    prefix = f"ru1-{shape}"
+    url = f"s3a://{BUCKET}/{prefix}/dst"
+    _s3_reset(moto_endpoint, prefix)
+    spark.createDataFrame(ROWS, COLUMNS).write.mode("overwrite").parquet(url)
+    spark.read.parquet(url).createOrReplaceTempView("ru1view")
+    spark.createDataFrame(ROWS, COLUMNS).createOrReplaceTempView("ru1base")
+    frame = _subquery_frame(spark, shape)
+    grown = frame.withColumn("id", frame["id"] + 100)
+    before = _exact_keys(moto_endpoint, f"{prefix}/dst")
+    with pytest.raises(AnalysisException, match="UNSUPPORTED_OVERWRITE"):
+        grown.write.mode("overwrite").parquet(url)
+    assert _exact_keys(moto_endpoint, f"{prefix}/dst") == before
+    assert _collect_sorted(spark.read.parquet(url)) == _collect_sorted(
+        spark.createDataFrame(ROWS, COLUMNS)
+    )
+
+
+def _ru_tag(leaf: str) -> str:
+    """Map an RU-2 / RU-4 leaf to a distinct S3-safe prefix tag."""
+    return "".join(char if char.isalnum() else "_" for char in leaf)
+
+
+@pytest.mark.parametrize("leaf", ["a b", "a%20b", "d#v2", "données"])
+def test_ru2_encoded_key_self_overwrite_refuses(spark: Any, moto_endpoint: str, leaf: str) -> None:
+    """RU-2: self-overwrite of a key needing percent-encoding refuses, source intact."""
+    prefix = f"ru2-{_ru_tag(leaf)}"
+    url = f"s3a://{BUCKET}/{prefix}/{leaf}"
+    _s3_reset(moto_endpoint, prefix)
+    spark.createDataFrame(ROWS, COLUMNS).write.mode("overwrite").parquet(url)
+    frame = spark.read.parquet(url)
+    grown = frame.withColumn("id", frame["id"] + 100)
+    before = _exact_keys(moto_endpoint, f"{prefix}/{leaf}")
+    with pytest.raises(AnalysisException, match="UNSUPPORTED_OVERWRITE"):
+        grown.write.mode("overwrite").parquet(url)
+    assert _exact_keys(moto_endpoint, f"{prefix}/{leaf}") == before
+    assert _collect_sorted(spark.read.parquet(url)) == _collect_sorted(
+        spark.createDataFrame(ROWS, COLUMNS)
+    )
+
+
+def test_ru2_sibling_prefix_overwrite_passes_through(spark: Any, moto_endpoint: str) -> None:
+    """RU-2: reading ``src2`` or ``srcx`` while overwriting ``src`` succeeds."""
+    prefix = "ru2pass"
+    _s3_reset(moto_endpoint, prefix)
+    for leaf in ("src", "src2", "srcx"):
+        spark.createDataFrame(ROWS, COLUMNS).write.mode("overwrite").parquet(
+            f"s3a://{BUCKET}/{prefix}/{leaf}"
+        )
+    grown_rows = [(row[0] + 100, row[1]) for row in ROWS]
+    for leaf in ("src2", "srcx"):
+        frame = spark.read.parquet(f"s3a://{BUCKET}/{prefix}/{leaf}")
+        frame.withColumn("id", frame["id"] + 100).write.mode("overwrite").parquet(
+            f"s3a://{BUCKET}/{prefix}/src"
+        )
+        assert _collect_sorted(spark.read.parquet(f"s3a://{BUCKET}/{prefix}/src")) == (
+            _collect_sorted(spark.createDataFrame(grown_rows, COLUMNS))
+        )
+        assert _collect_sorted(spark.read.parquet(f"s3a://{BUCKET}/{prefix}/{leaf}")) == (
+            _collect_sorted(spark.createDataFrame(ROWS, COLUMNS))
+        )
+
+
+def test_ru2_other_bucket_and_local_source_pass_through(
+    spark: Any, moto_endpoint: str, tmp_path: Path
+) -> None:
+    """RU-2: the same key on another bucket and a local source overwrite cleanly."""
+    _boto(moto_endpoint, "s3.create_bucket(Bucket='u12cell2')\nprint('null')")
+    other = "s3a://u12cell2/ru2other/src"
+    dest = f"s3a://{BUCKET}/ru2other/dst"
+    _s3_reset(moto_endpoint, "ru2other")
+    spark.createDataFrame(ROWS, COLUMNS).write.mode("overwrite").parquet(other)
+    spark.read.parquet(other).write.mode("overwrite").parquet(dest)
+    assert _collect_sorted(spark.read.parquet(dest)) == _collect_sorted(
+        spark.createDataFrame(ROWS, COLUMNS)
+    )
+    local = tmp_path / "ru2local"
+    spark.createDataFrame(ROWS2, COLUMNS).write.mode("overwrite").parquet(str(local))
+    spark.read.parquet(str(local)).write.mode("overwrite").parquet(dest)
+    assert _collect_sorted(spark.read.parquet(dest)) == _collect_sorted(
+        spark.createDataFrame(ROWS2, COLUMNS)
+    )
+
+
+def test_ru3_append_onto_exact_object_refuses(spark: Any, moto_endpoint: str) -> None:
+    """RU-3: append onto a destination that is an exact object refuses loud."""
+    prefix = "ru3exact"
+    key = f"{prefix}/solo.parquet"
+    url = f"s3a://{BUCKET}/{key}"
+    _seed_exact_parquet_object(spark, moto_endpoint, prefix, key)
+    with pytest.raises(AnalysisException, match="cannot append"):
+        spark.createDataFrame(ROWS2, COLUMNS).write.mode("append").parquet(url)
+    assert _exact_keys(moto_endpoint, key) == [key]
+    assert _collect_sorted(spark.read.parquet(url)) == _collect_sorted(
+        spark.createDataFrame(ROWS, COLUMNS)
+    )
+
+
+@pytest.mark.parametrize("leaf", ["data#v2", "data?v=2", "a%20b"])
+def test_ru4_trailing_slash_read_of_encoded_key(spark: Any, moto_endpoint: str, leaf: str) -> None:
+    """RU-4: a trailing-slash read of a ``#`` / ``?`` / ``%`` key reads the rows."""
+    prefix = f"ru4-{_ru_tag(leaf)}"
+    url = f"s3a://{BUCKET}/{prefix}/{leaf}"
+    _s3_reset(moto_endpoint, prefix)
+    spark.createDataFrame(ROWS, COLUMNS).write.mode("overwrite").parquet(url)
+    assert _collect_sorted(spark.read.parquet(url + "/")) == _collect_sorted(
+        spark.createDataFrame(ROWS, COLUMNS)
+    )
 
 
 def test_vu9_sibling_prefix_survives_every_mode(spark: Any, moto_endpoint: str) -> None:

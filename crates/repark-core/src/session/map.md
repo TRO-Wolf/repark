@@ -164,6 +164,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   under the prefix, and `overwrite` lists and deletes the whole prefix. Bucket root
   refuses loud.
   pins: s3-path-write-1/C-007, C-008, C-009, C-013, C-015
+  **S3-PATH-WRITE-1 re-verify (2026-09-28):** the append branch `HEAD`s the
+  exact key and refuses loud when an object sits at the destination
+  (`R-S3-APPEND-EXACT`), since the exact object would win the read.
 - `late_catalogs.rs` — `register_late_configured_catalogs`, moved out of `session.rs` under the
   CAP-1 rule that a file at its ceiling grows by splitting; behavior is byte-identical and the
   `session.rs` baseline ratcheted 1039 → 1002.

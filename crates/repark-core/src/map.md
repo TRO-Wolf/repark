@@ -329,6 +329,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   (2026-09-15, release module, round 4). The Iceberg scan exec exposes table and snapshot
   only, never materialized data files, so Iceberg frames answer empty.
   pins: df-plan-introspect-1/C-001, C-002, C-006, C-007, C-008, C-009, C-010, C-011, C-013, C-014
+  **S3-PATH-WRITE-1 re-verify (2026-09-28):** `plan_reads_s3_prefix` walks with
+  `apply_with_subqueries` (IN / EXISTS / scalar subqueries count as reads) and
+  `scan_url_hits_prefix` compares the decoded `ListingTableUrl::prefix` plus
+  the `object_store` bucket, so percent-encoded keys refuse self-overwrite.
 - `error_map.rs` — `engine_err` (pub — the single `DataFusionError → repark_common::Error`
   classifier): `SQL` → `Parse`, `Plan`/`SchemaError` → `Analysis`, `NotImplemented` →
   `NotImplemented`, `External` downcast first to repark-iceberg's `CommitStateUnknownError`
@@ -769,6 +773,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   lookup failures keep the original spelling so downstream errors are unchanged.
   Wired once per call into `read_parquet` / `read_csv` / `read_json`.
   pins: s3-path-write-1/C-013
+  **S3-PATH-WRITE-1 re-verify (2026-09-28):** the trailing-slash and
+  exact-object branches encode through `split_s3_url_raw` +
+  `encode_s3_key_for_url` like the slashless branch, so `#` / `?` / `%`
+  keys read under every spelling.
 - `orc_footer.rs` — **IO-ORC-1 (2026-09-16):** the ORC footer attributes orc-rust drops:
   tail/postscript parse, block-framed decompress in all five codecs, and a minimal
   protobuf field walk returning per-column `spark.sql.catalyst.type` values plus the
