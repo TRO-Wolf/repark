@@ -169,3 +169,135 @@ obtain independent readiness review, then publish. Main advanced by one release-
 (9392dbc3); no engine implementation changed. The integration checkout is isolated and has
 approximately 1.1 TB free. Conflict resolution must preserve both release metadata and compiler
 navigation. No destructive reset or hook bypass is part of recovery; retain the branch on failure.
+
+## Findings index reconstructed for readiness — 2026-09-27
+
+The prior review recorded reproduced defects in prose. This index assigns stable identifiers
+and severities during PR preparation; it does not invent a new review cycle or claim retained
+red logs where none were preserved. Each regression below is in the enforced compiler suite.
+
+```yaml
+FINDING:
+  id: F-compiler-1
+  severity: S1
+  category: AT-2
+  clause: C-002
+  disposition: REMEDIATED
+  summary: Fenced map examples could be treated as managed blocks and overwrite authored prose.
+  regression: scripts/repo-tool/tests/maps.rs::fenced_markers_preserve_authored_example
+```
+
+```yaml
+FINDING:
+  id: F-compiler-2
+  severity: S1
+  category: AT-6
+  clause: C-002
+  disposition: REMEDIATED
+  summary: Reference links and missing definitions were not fully validated.
+  regression: scripts/repo-tool/tests/maps.rs::reference_links_validate_targets_and_missing_definitions
+```
+
+```yaml
+FINDING:
+  id: F-compiler-3
+  severity: S1
+  category: AT-4
+  clause: C-004, C-008
+  disposition: REMEDIATED
+  summary: Gate evidence could be presented as critic evidence and falsely advance readiness.
+  regression: scripts/repo-tool/tests/workflow.rs::gate_evidence_cannot_advance_critic_stage
+```
+
+```yaml
+FINDING:
+  id: F-compiler-4
+  severity: S1
+  category: AT-4
+  clause: C-004, C-008
+  disposition: REMEDIATED
+  summary: A critic could lower the requirements roster accepted by the preceding gate.
+  regression: scripts/repo-tool/tests/workflow.rs::critic_cannot_lower_coverage_roster_after_gate
+```
+
+```yaml
+FINDING:
+  id: F-compiler-5
+  severity: S1
+  category: AT-1
+  clause: C-005
+  disposition: REMEDIATED
+  summary: An empty trace or fenced citation could be accepted as a valid explicit trace.
+  regression: scripts/repo-tool/tests/trace.rs::trace_requires_clause_rows_and_unfenced_pin_citations
+```
+
+```yaml
+FINDING:
+  id: F-compiler-6
+  severity: S1
+  category: AT-6
+  clause: C-006
+  disposition: REMEDIATED
+  summary: Unclosed lifecycle markers were not rejected.
+  regression: scripts/repo-tool/tests/state.rs::state_rejects_unclosed_markers_and_keeps_archived_unit
+```
+
+```yaml
+FINDING:
+  id: F-compiler-7
+  severity: S1
+  category: AT-6
+  clause: C-003
+  disposition: REMEDIATED
+  summary: Fenced headings could be selected as real context sections.
+  regression: scripts/repo-tool/tests/context.rs::context_never_selects_heading_inside_mixed_or_long_fence
+```
+
+```yaml
+FINDING:
+  id: F-compiler-8
+  severity: S1
+  category: AT-4
+  clause: C-008
+  disposition: REMEDIATED
+  summary: A duplicate event could return ready after tracked inputs changed.
+  regression: scripts/repo-tool/tests/workflow.rs::duplicate_event_cannot_report_ready_for_changed_inputs
+```
+
+The independent readiness auditor rechecks this index against the final test source and results.
+No compiler finding remains open or accepted-flagged. The check-port error normalization flag
+is recorded separately in that unit ledger.
+
+## Publication verification — 2026-09-27
+
+The owner authorized commit, push and PR creation. The branch rebased cleanly onto release
+commit 9392dbc3; source implementation is cc2f891d. Installed commit hooks were explicitly
+invoked and passed before the first commit, then fired on the commit itself.
+
+Full `make -k preflight` exited 0: 5,954 Rust/compiler tests passed, 8 ignored; facade
+13,875 passed, 481 skipped, 147 expected failures; parity-cap 23 passed; dbt 64 passed,
+1 skipped. Rust/Python dependency audits and workflow parsing/security checks passed.
+The full log is `/tmp/repo-compiler-preflight.log`. Prior 36 Python differential-reference
+regression tests also passed. No engine source was changed during publication preparation.
+
+Independent readiness auditor `sol_pr_readiness` confirmed scope, complete coverage, finding
+dispositions and clause trace. Remote PR-head CI remains a separate publication requirement;
+this record does not claim CI success, merge or delivery acceptance. Final departure changes
+are ledger relocation, link repairs and the matching context-preset path. They receive scoped
+compiler, context, documentation and lifecycle validation after relocation.
+
+Implementation disposition: CONVERGED. The user accepted the work and requested publication;
+the implementation ledger now moves to completed in the departure commit. PR review and
+merge remain pending. Earlier staging/authorization statements describe their dated phase
+and are superseded by this publication record. No live harness dispatch is authorized.
+
+Disk checks before and during preflight found approximately 1.1 TB free. The isolated checkout,
+its build caches and validation logs remain for PR review; only task-owned disposable
+collection cache files are removed. No other task's checkout or artifacts were touched.
+
+```yaml
+SHIPPED_FLAG_REGISTER:
+  pr_unit: repo-compiler
+  flags: []
+  count: 0
+```

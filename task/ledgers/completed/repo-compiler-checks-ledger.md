@@ -202,3 +202,41 @@ Timing samples and validation logs are retained under `/tmp/`.
 Implementation is verified and staged on `codex/repo-compiler`. The original working tree was
 not modified. No commit, push or live harness dispatch occurred. This ledger stays in staging
 until owner acceptance and an authorized commit; verification does not imply delivery or merge.
+
+## Publication verification — 2026-09-27
+
+The owner authorized commit, push and PR creation. The branch rebased cleanly onto release
+commit 9392dbc3; source implementation is cc2f891d. Installed commit hooks were explicitly
+invoked and passed before the first commit, then fired on the commit itself.
+
+Full `make -k preflight` exited 0: 5,954 Rust/compiler tests passed, 8 ignored; facade
+13,875 passed, 481 skipped, 147 expected failures; parity-cap 23 passed; dbt 64 passed,
+1 skipped. Rust/Python dependency audits and workflow parsing/security checks passed.
+The full log is `/tmp/repo-compiler-preflight.log`. Prior 36 Python differential-reference
+regression tests also passed. No engine source was changed during publication preparation.
+
+Independent readiness auditor `sol_pr_readiness` confirmed scope, complete coverage, finding
+dispositions and clause trace. Remote PR-head CI remains a separate publication requirement;
+this record does not claim CI success, merge or delivery acceptance. Final departure changes
+are ledger relocation, link repairs and the matching context-preset path. They receive scoped
+compiler, context, documentation and lifecycle validation after relocation.
+
+Implementation disposition: CONVERGED. The user accepted the work and requested publication;
+the implementation ledger now moves to completed in the departure commit. PR review and
+merge remain pending. Earlier staging/authorization statements describe their dated phase
+and are superseded by this publication record. No live harness dispatch is authorized.
+
+Disk checks before and during preflight found approximately 1.1 TB free. The isolated checkout,
+its build caches and validation logs remain for PR review; only task-owned disposable
+collection cache files are removed. No other task's checkout or artifacts were touched.
+
+```yaml
+SHIPPED_FLAG_REGISTER:
+  pr_unit: repo-compiler-checks
+  flags:
+    - finding_id: F-checks-5
+      severity: S2
+      rationale: Both implementations refuse symlink cycles; Rust uses the documented environment-error exit instead of a legacy traceback.
+      user_surfaced: CONFIRMED (disclosed in the implementation handoff before the owner requested PR creation)
+  count: 1
+```

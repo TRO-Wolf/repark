@@ -8,7 +8,7 @@ context, diagnostics and local workflow decisions. They have no engine dependenc
 ## Contract
 
 Snapshot commands use explicit Git inputs. The checks command validates the current worktree. Generated views do not prove behavioral claims.
-The [unit ledger](../../task/ledgers/staging/repo-compiler-ledger.md) records delivery evidence.
+The [unit ledger](../../task/ledgers/completed/repo-compiler-ledger.md) records delivery evidence.
 `context.json` approves source lists. `gates.json` declares target and pin checks.
 
 [CHECKS.md](CHECKS.md) records docs-link and ledger-grammar compatibility.

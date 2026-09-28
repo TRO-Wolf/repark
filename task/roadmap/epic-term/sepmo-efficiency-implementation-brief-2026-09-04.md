@@ -575,8 +575,8 @@ inherits this brief's retirement rule; link accepted successors or dated decline
 At this inspection, the isolated branch contains a repository compiler with context, evidence
 and local workflow commands. Its [workflow contract](../../../scripts/repo-tool/WORKFLOW.md)
 defines the action intents and boundaries; it does not execute them. Implementation and
-verification evidence live in the [compiler ledger](../../ledgers/staging/repo-compiler-ledger.md)
-and [check-port ledger](../../ledgers/staging/repo-compiler-checks-ledger.md). These are branch
+verification evidence live in the [compiler ledger](../../ledgers/completed/repo-compiler-ledger.md)
+and [check-port ledger](../../ledgers/completed/repo-compiler-checks-ledger.md). These are branch
 artifacts, not a claim of merge or live adoption. Local command timings do not establish token
 savings. Reconcile against the actual deployed harness before starting a successor.
 

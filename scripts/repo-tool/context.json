@@ -31,7 +31,7 @@
   "units": {
     "repo-compiler": [
       {
-        "path": "task/ledgers/staging/repo-compiler-ledger.md",
+        "path": "task/ledgers/completed/repo-compiler-ledger.md",
         "section": "Charter"
       },
       {
