@@ -1,0 +1,95 @@
+{
+ "cells": {
+  "v_from_utc_col": {
+   "dtypes": [
+    "string",
+    "string"
+   ],
+   "rows": [
+    [
+     "2024-01-01 21:00:00",
+     "timestamp"
+    ]
+   ],
+   "sql": "SELECT CAST(from_utc_timestamp(s,'Asia/Tokyo') AS STRING) AS v, typeof(from_utc_timestamp(s,'Asia/Tokyo')) AS t FROM sc.ns.vs",
+   "zone": "America/New_York"
+  },
+  "v_from_utc_str": {
+   "dtypes": [
+    "string"
+   ],
+   "rows": [
+    [
+     "2024-03-31 01:30:00"
+    ]
+   ],
+   "sql": "SELECT CAST(from_utc_timestamp('2024-03-31 00:30:00','Europe/London') AS STRING)",
+   "zone": "America/New_York"
+  },
+  "v_from_utc_type": {
+   "dtypes": [
+    "string"
+   ],
+   "rows": [
+    [
+     "timestamp"
+    ]
+   ],
+   "sql": "SELECT typeof(from_utc_timestamp('2024-01-01 12:00:00','Asia/Tokyo'))",
+   "zone": "America/New_York"
+  },
+  "v_from_utc_unix": {
+   "dtypes": [
+    "bigint"
+   ],
+   "rows": [
+    [
+     1704160800
+    ]
+   ],
+   "sql": "SELECT unix_timestamp(from_utc_timestamp('2024-01-01 12:00:00','Asia/Tokyo'))",
+   "zone": "America/New_York"
+  },
+  "v_to_utc_str": {
+   "dtypes": [
+    "string"
+   ],
+   "rows": [
+    [
+     "2024-03-30 23:30:00"
+    ]
+   ],
+   "sql": "SELECT CAST(to_utc_timestamp('2024-03-31 00:30:00','Europe/London') AS STRING)",
+   "zone": "America/New_York"
+  },
+  "v_to_utc_type": {
+   "dtypes": [
+    "string"
+   ],
+   "rows": [
+    [
+     "timestamp"
+    ]
+   ],
+   "sql": "SELECT typeof(to_utc_timestamp('2024-01-01 12:00:00','Asia/Tokyo'))",
+   "zone": "America/New_York"
+  },
+  "v_to_utc_unix": {
+   "dtypes": [
+    "bigint"
+   ],
+   "rows": [
+    [
+     1704096000
+    ]
+   ],
+   "sql": "SELECT unix_timestamp(to_utc_timestamp('2024-01-01 12:00:00','Asia/Tokyo'))",
+   "zone": "America/New_York"
+  }
+ },
+ "setup": [
+  "CREATE TABLE sc.ns.vs (id INT, s STRING) USING iceberg",
+  "INSERT INTO sc.ns.vs VALUES (0, '2024-01-01 12:00:00')"
+ ],
+ "source": "target/ntz-verify/ntz7-spark.json (Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-28, session zone America/New_York)"
+}

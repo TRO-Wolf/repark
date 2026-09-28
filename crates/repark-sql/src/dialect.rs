@@ -14,6 +14,11 @@ impl SqlDialect for AnsiDialect {
         repark_functions::integer_spark::install_integer_overflow(ctx);
         repark_functions::spark_log1p::register(ctx);
         repark_functions::cast_map::register(ctx);
+        ctx.register_udf(
+            repark_functions::timestamp_ntz_cast::timestamp_ntz_cast_udf(false)
+                .as_ref()
+                .clone(),
+        );
     }
 
     async fn execute(

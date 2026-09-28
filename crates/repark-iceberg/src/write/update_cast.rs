@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use datafusion::arrow::datatypes::{DataType, Field, Fields};
+use datafusion::arrow::datatypes::{DataType, Field, Fields, TimeUnit};
 use repark_common::spark_error;
 
 use super::store_assign::{
@@ -9,6 +9,9 @@ use super::store_assign::{
 
 #[must_use]
 pub fn store_assignment_cast_sql(expr: &str, target: &DataType) -> String {
+    if super::ntz_store::is_ntz_wall_target(target) {
+        return super::ntz_store::ntz_wall_cast_sql(expr);
+    }
     let type_name = without_field_metadata(target)
         .to_string()
         .replace('\'', "''");
@@ -115,6 +118,7 @@ fn spark_update_type_name(data_type: &DataType) -> Option<&'static str> {
         DataType::Float64 => Some("DOUBLE"),
         DataType::Boolean => Some("BOOLEAN"),
         DataType::Date32 | DataType::Date64 => Some("DATE"),
+        DataType::Timestamp(TimeUnit::Microsecond, None) => Some("TIMESTAMP_NTZ"),
         DataType::Timestamp(_, _) => Some("TIMESTAMP"),
         DataType::Binary | DataType::LargeBinary | DataType::BinaryView => Some("BINARY"),
         DataType::Null => Some("VOID"),

@@ -148,6 +148,9 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   pins: log1p-1-precise-kernels/C-002
   **CAST-MAP-SPELL-1 (2026-09-19):** `on_session_built` also registers
   `cast_map::register`, the UDFs the router's map-cast rewrite calls.
+  **WO NTZ-1 verifier fold (2026-09-28):** it also registers the non-try NTZ cast
+  UDF, which the shared UPDATE/MERGE wall-cast wrap emits for naive targets.
+  pins: ntz-1/C-006
   pins: cast-map-spell-1/C-005
 - `guards.rs` — the guard set: multi-statement refuse (quote-aware, FIRST), P11 read-only
   catalog DML (generic message), write-to-branch, the BUG-001 MoR valve (async wrapper over the

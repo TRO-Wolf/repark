@@ -73,8 +73,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (2026-09-25):** replays every measured step of the oracle through the facade, one session
   per group, in order; each observation (rows, schema surfaces, metadata fields, Python value
   types, refusal class/condition/SQLSTATE/text) equals Spark's, or its residue record when the
-  step names one (the ledger's residue table is cross-checked). Group `ltz`: 88 steps, 76
-  EQUAL. pins: u9-types-1/C-001, C-002, C-003, C-005
+  step names one (the ledger's residue table is cross-checked). Group `ltz`: 88 steps, 81
+  EQUAL (LTZ-STORE-INT-1, 2026-09-28, closes R-1: both `side-select` rows EQUAL, the two
+  `side-insert-string` refusals hold the planning prefix as R-37). pins: u9-types-1/C-001,
+  C-002, C-003, C-005
   Group `map`: 87 steps, 69 EQUAL (r2 added UPDATE / MERGE `map()`, back-quoted `` `map`() ``
   and `element_at(map(), …)`, R-13). pins: u9-types-1/C-006, C-007, C-008
   r3 grows `map` to 128 steps, 83 EQUAL: `map/assign/*` (four refusing map shapes on UPDATE,
@@ -161,6 +163,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   frame, a stored codec beating `zstd` and the default after `UNSET`, and the
   missing/wrong-case refusals with the fall-through sweep.
   pins: tblprops-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+- [test_casesens_1.py](test_casesens_1.py) + `casesens_1_spark_oracle.json` —
+  **WO CASESENS-1 slice 1 (2026-09-27):** the nested-scope SELECT legs, the MERGE
+  derived source and the catalog-view reads replay Spark's recorded names and
+  rows under each step's `caseSensitive` (success legs compare exactly; DML/DDL
+  legs assert success only; refusals compare per R12/R13). **S1b (2026-09-27):**
+  `p1/r5_cte_outer` joins the nested legs (R-CS1-1 closed) and
+  `test_s1_catalog_view_keeps_its_spelling` replays the `vc` catalog-view keys
+  including `r5_view_describe` (C-003 PROVEN).
+  pins: casesens-1/C-001, C-002, C-003, C-004
 - [test_ntz_1.py](test_ntz_1.py) + `ntz_1_spark_oracle.json` — **WO NTZ-1 slice 1
   (2026-09-26):** the `TIMESTAMP_NTZ` literal and explicit casts replay Spark's measured
   answers — 29 literal/cast/refusal queries in UTC and New York sessions, the v2/v3
@@ -173,6 +184,39 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   TYPEOF-SQL-13 spells `timestamp_ntz`, the D4 `timestampdiff` NTZ cell replays,
   and the U9 oracle retires R-2 (NTZ insert/cast now EQUAL; R-1 repark gains row 4).
   pins: ntz-1/C-001, C-002, C-003, C-004, C-005
+  **WO NTZ-1 slice 2 (2026-09-27):** store assignment replays Spark — LTZ/NULL/DATE
+  VALUES and SELECT in UTC and New York, UPDATE plus both MERGE arms in both zones, the
+  DataFrame append, NTZ values into a TIMESTAMP column, and the CANNOT_SAFELY_CAST
+  refusals (class, condition, SQLSTATE, first line) on VALUES/SELECT/UPDATE/MERGE plus
+  the STRING append. Values read back as `CAST(c AS STRING)`.
+  pins: ntz-1/C-006, C-007
+  **WO NTZ-1 slice 3 (2026-09-27):** the storage surface replays Spark — the six
+  partition transforms (`.partitions` rows, pruning, `.files` bounds, the New York
+  `days` insert), identity/bucket partitions, the filter/ORDER BY/min/max/interval
+  legs, v3 DML, CTAS, `ADD COLUMN`, `SHOW CREATE TABLE`, `printSchema`, `dtypes`,
+  `collect()`/`toArrow()` types, and the Spark-written `xc.ns.x` fixture
+  ([`fixtures/ntz_1_spark_table/`](fixtures/ntz_1_spark_table/map.md), recorded by
+  [_record_ntz_1_spark_table.py](_record_ntz_1_spark_table.py)) with reads, bounds
+  and re-insert. TZ-6 states Spark's contract and the TY-TIMESTAMP-NTZ rows go
+  EQUAL beside it.
+  pins: ntz-1/C-008, C-009
+- [test_ntz_7_verify.py](test_ntz_7_verify.py) + `ntz_7_verify_spark_oracle.json` —
+  **WO NTZ-1 verifier fold (2026-09-28):** `from_utc_timestamp` / `to_utc_timestamp`
+  over strings and a STRING column keep Spark's TIMESTAMP in a New York session —
+  seven recorded cells replay rows and dtypes (unaliased names stay out per R2).
+  pins: ntz-1/C-006
+- [test_ntz_8_verify.py](test_ntz_8_verify.py) + `ntz_8_verify_spark_oracle.json` —
+  **WO NTZ-1 verifier fold part 2 (2026-09-28):** zone-shift calls inside INSERT,
+  UPDATE and MERGE store Spark's instant in a New York session — the 23-step
+  recorded write sequence replays (writes run, 10 reads assert rows and dtypes);
+  the DST INSERT reads were red at 0a61bc02.
+  pins: ntz-1/C-006
+- [test_ntz_9_verify.py](test_ntz_9_verify.py) + `ntz_9_verify_spark_oracle.json` —
+  **WO NTZ-1 re-verify fold (2026-09-28):** VALUES cells computed in LTZ store
+  Spark's session wall again in a New York session — the 39-step recorded
+  sequence replays (writes run, 11 reads assert rows and dtypes); 3 divergence
+  steps pin the widening row and both refusal texts beside Spark's.
+  pins: ntz-1/C-006
 - [test_uuid_cast_window_1.py](test_uuid_cast_window_1.py) +
   [uuid_cast_window_1_spark_oracle.json](uuid_cast_window_1_spark_oracle.json) —
   **WO UUID-CAST-WINDOW-1 (2026-09-27):** the `CAST('a' AS UUID)` refusal replays
@@ -4447,7 +4491,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   still writes (Spark treats it as the user's intent), and the honest residual: a literal
   `INSERT INTO … VALUES` row conforms inside the `Values` node where the synthesized and explicit
   casts are byte-identical, so `VALUES (true)` into an `INT` column still writes `1` while
-  `VALUES (DATE '…')` is refused by the G6-3 CAST gate instead. Arrow path.
+  `VALUES (DATE '…')` is refused by the G6-3 CAST gate instead.
+  **LTZ-STORE-INT-1 (2026-09-28)** closes the residual for `TIMESTAMP` (LTZ) targets at
+  the existing void VALUES gate site, before planning; every other target stays residual.
+  Arrow path.
+- `test_ltz_store_int_1.py` — **WO LTZ-STORE-INT-1 (2026-09-28):** `INSERT INTO sc.ns.l
+  VALUES (0, 1)` refuses with the recorded Spark `ins_l_int` answer — error class,
+  condition, SQLSTATE and the message body, with the RePark-only planning prefix
+  pinned separately — and a DataFrame append of INT into TIMESTAMP refuses; both
+  leave the table empty. **Fold 2026-09-28 (verifier VL-1..VL-6):** `nvl` and
+  `ifnull` over DATE and TIMESTAMP store.
+  pins: ltz-store-int-1/C-001
 - `test_merge_semantics_audit.py` — **MERGE-audit corpus** (2026-08-14 audit gap-map rows
   c/d/g/n/o): null-safe `<=>` / `eqNullSafe` ON matches NULL keys (both doors); builder-door
   `=` NULL keys do not match; self-merge (target as source) updates once per row; join-key

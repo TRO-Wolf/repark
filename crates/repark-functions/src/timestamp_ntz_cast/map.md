@@ -16,6 +16,9 @@ reached only through the SQL door's literal and cast lowering and the DataFrame-
   try_cast, numeric sources refusing with Spark's `DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION`
   class and names, and the literal answering a naive wall named `TIMESTAMP_NTZ '<wall>'`.
   pins: ntz-1/C-001, C-002
+  **WO NTZ-1 re-verify fold (2026-09-28):** the store-wrap idempotence pin
+  (an already-wrapped expression keeps a single wrap; `wrap_bare=false`
+  leaves the expression alone). pins: ntz-1/C-006
 
 ## Pointers
 

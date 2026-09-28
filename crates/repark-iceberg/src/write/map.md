@@ -366,6 +366,21 @@ repark-core's error map.
 - `update_cast.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** `spark_update_type_name`
   names Arrow `Null` `VOID`, so `incompatible_update_message` renders a value written into a
   `VOID` column with Spark's `CANNOT_SAFELY_CAST` text, `"INT"` to `"VOID"`. pins: u9-types-1/C-014
+- `update_cast.rs` — **WO NTZ-1 slice 2 (2026-09-27):** `spark_update_type_name` answers
+  `TIMESTAMP_NTZ` for a naive timestamp and `TIMESTAMP` for a zoned one, so NTZ store
+  refusals name Spark's type; `store_assignment_cast_sql` emits the `ntz_store` wall-cast
+  UDF call for a naive-microsecond target instead of `arrow_cast` (every other target
+  keeps `arrow_cast`). pins: ntz-1/C-006, C-007
+  **WO NTZ-1 verifier fold (2026-09-28):** only microsecond-naive timestamps name
+  `TIMESTAMP_NTZ`; the nanosecond zoneless form of an unlocalized `TIMESTAMP'…'`
+  literal names `TIMESTAMP` again. pins: ntz-1/C-007
+- `ntz_store.rs` — **WO NTZ-1 slice 2 (2026-09-27):** the NTZ store gate in the
+  `void_store` shape: `refuse_ntz_writes` runs the session analyzer over the planned
+  write and refuses, for a `Timestamp(µs, None)` target, any source the ANSI matrix
+  rejects, through `incompatible_update_message` (Spark's text). Also the one home of
+  the wall-cast UDF name (`NTZ_WALL_CAST_UDF_NAME`, pinned equal to the registered UDF)
+  and its `ntz_wall_cast_sql` renderer, used by the identity-UPDATE projection, the
+  MERGE INSERT projection and `store_assignment_cast_sql`. pins: ntz-1/C-006, C-007
 - `void_store.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** `refuse_void_writes` is the
   one VOID store gate: given a planned source and its target columns, it does nothing unless a
   target is Arrow `Null`; then it runs the session analyzer (so an integer literal types `INT`
@@ -757,7 +772,11 @@ repark-core's error map.
   synthesized, while a user-written explicit `CAST` (legal Spark — the user's stated intent)
   reaches this projection already conformed, as a bare column, and is invisible to the rule.
   Named residual: `Cast(Literal, …)` inside a `Values` node, where the synthesized and explicit
-  forms are byte-identical. Ledger:
+  forms are byte-identical. LTZ-STORE-INT-1 (2026-09-28) closes the residual for
+  `TIMESTAMP` (LTZ) targets one stage earlier, at the Spark door's existing
+  `refuse_insert_void_values` gate site
+  (`repark-spark/src/void_type/ltz_values_store.rs`); every other target stays residual.
+  Ledger:
   [`../../../../task/wi2-g6-cast-integrity-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-16-wi2-g6-cast-integrity-ledger.md).
 - `insert_defaults.rs` — **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** the ONE home for
   filling omitted columns from `write_default` on every write path: `column_defaults`
