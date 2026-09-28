@@ -29,6 +29,16 @@ async fn finish_with_display(
     folded: Box<Statement>,
     plan: LogicalPlan,
 ) -> Result<LogicalPlan> {
+    let mut respelled = folded.clone();
+    let (folded, plan) = if inner_scopes::respell_inner_scopes(&original, &mut respelled) {
+        let statement = datafusion::sql::parser::Statement::Statement(respelled.clone());
+        match Box::pin(plan_with_repair(state, statement, true)).await {
+            Ok(replanned) => (respelled, replanned),
+            Err(_) => (folded, plan),
+        }
+    } else {
+        (folded, plan)
+    };
     let planned = plan
         .schema()
         .fields()
@@ -909,8 +919,12 @@ fn direct_tables(statement: &Statement) -> Vec<(String, TableReference)> {
 
 mod display;
 mod fold;
+mod fold_text;
+mod inner_scopes;
+mod scope_fields;
 mod stack;
 
+pub use fold_text::fold_query_text;
 pub use stack::{GrownStack, on_grown_stack_with};
 
 #[cfg(test)]
