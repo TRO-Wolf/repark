@@ -1871,5 +1871,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   moto emulator (C-001..C-005), repark 1.5.0 writes nothing and refuses locally (C-006), and
   design questions 1–5 answered with recommendations awaiting the orchestrator ruling
   (C-007..C-011 OPEN). Evidence in [u12-probes/](u12-probes/map.md).
+  Round 1 (2026-09-28, RULED): the Rust seam owns the save-mode protocol (C-007..C-009),
+  parts land direct with the marker last (C-009), exists means any object (C-008), the
+  `s3a` endpoint keys ship on both doors (C-010), the moto pins carry 38 cells
+  (C-012..C-015), and the tier-2 leg is written and skipped locally (C-016; C-017 OPEN
+  awaits the owner run on real AWS).
   `risk_tier: standard`. Branch `feat/s3-path-write-1`.
-  pins: s3-path-write-1/C-001, C-002, C-003, C-004, C-005, C-006
+  pins: s3-path-write-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016

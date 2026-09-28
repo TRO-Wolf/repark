@@ -1,5 +1,6 @@
 //! Register `s3://` and `s3a://` object stores for `read_parquet`.
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -21,6 +22,113 @@ pub(crate) const S3A_REGION_CONFIG_KEY: &str = "spark.hadoop.fs.s3a.endpoint.reg
 
 /// The repark-native spelling of the same override, accepted as a synonym.
 pub(crate) const REPARK_S3A_REGION_CONFIG_KEY: &str = "repark.hadoop.fs.s3a.endpoint.region";
+
+pub(crate) const S3A_ENDPOINT_CONFIG_KEY: &str = "spark.hadoop.fs.s3a.endpoint";
+
+pub(crate) const REPARK_S3A_ENDPOINT_CONFIG_KEY: &str = "repark.hadoop.fs.s3a.endpoint";
+
+pub(crate) const S3A_PATH_STYLE_CONFIG_KEY: &str = "spark.hadoop.fs.s3a.path.style.access";
+
+pub(crate) const REPARK_S3A_PATH_STYLE_CONFIG_KEY: &str = "repark.hadoop.fs.s3a.path.style.access";
+
+pub(crate) const S3A_SSL_ENABLED_CONFIG_KEY: &str = "spark.hadoop.fs.s3a.connection.ssl.enabled";
+
+pub(crate) const REPARK_S3A_SSL_ENABLED_CONFIG_KEY: &str =
+    "repark.hadoop.fs.s3a.connection.ssl.enabled";
+
+#[derive(Debug)]
+pub(crate) struct S3EndpointConfig {
+    pub(crate) endpoint: Option<String>,
+    pub(crate) path_style_access: Option<bool>,
+    pub(crate) ssl_enabled: Option<bool>,
+}
+
+fn dual_key_raw(
+    config: &HashMap<String, String>,
+    repark_key: &str,
+    spark_key: &str,
+) -> Result<Option<String>> {
+    let repark = config.get(repark_key);
+    let spark = config.get(spark_key);
+    match (repark, spark) {
+        (Some(left), Some(right)) if left != right => Err(Error::Config(format!(
+            "conflicting S3 config: `{repark_key}` and `{spark_key}` set different values"
+        ))),
+        (Some(value), _) | (_, Some(value)) => Ok(Some(value.clone())),
+        (None, None) => Ok(None),
+    }
+}
+
+fn parse_endpoint_bool(key: &str, raw: &str) -> Result<bool> {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "true" | "1" | "yes" | "t" | "y" => Ok(true),
+        "false" | "0" | "no" | "f" | "n" => Ok(false),
+        _ => Err(Error::Config(format!(
+            "S3 config `{key}` expects a boolean, got {raw:?}"
+        ))),
+    }
+}
+
+pub(crate) fn resolve_endpoint_config(
+    config: &HashMap<String, String>,
+) -> Result<Option<S3EndpointConfig>> {
+    let endpoint = dual_key_raw(
+        config,
+        REPARK_S3A_ENDPOINT_CONFIG_KEY,
+        S3A_ENDPOINT_CONFIG_KEY,
+    )?;
+    let path_style = dual_key_raw(
+        config,
+        REPARK_S3A_PATH_STYLE_CONFIG_KEY,
+        S3A_PATH_STYLE_CONFIG_KEY,
+    )?;
+    let ssl = dual_key_raw(
+        config,
+        REPARK_S3A_SSL_ENABLED_CONFIG_KEY,
+        S3A_SSL_ENABLED_CONFIG_KEY,
+    )?;
+    if endpoint.is_none() && path_style.is_none() && ssl.is_none() {
+        return Ok(None);
+    }
+    let path_key = config
+        .get(REPARK_S3A_PATH_STYLE_CONFIG_KEY)
+        .map_or(S3A_PATH_STYLE_CONFIG_KEY, |_| {
+            REPARK_S3A_PATH_STYLE_CONFIG_KEY
+        });
+    let ssl_key = config
+        .get(REPARK_S3A_SSL_ENABLED_CONFIG_KEY)
+        .map_or(S3A_SSL_ENABLED_CONFIG_KEY, |_| {
+            REPARK_S3A_SSL_ENABLED_CONFIG_KEY
+        });
+    Ok(Some(S3EndpointConfig {
+        endpoint,
+        path_style_access: path_style
+            .map(|raw| parse_endpoint_bool(path_key, &raw))
+            .transpose()?,
+        ssl_enabled: ssl
+            .map(|raw| parse_endpoint_bool(ssl_key, &raw))
+            .transpose()?,
+    }))
+}
+
+pub(crate) fn resolve_endpoint_from_dump(
+    rows: &[(String, String, String)],
+) -> Result<Option<S3EndpointConfig>> {
+    let config: HashMap<String, String> = rows
+        .iter()
+        .map(|row| (row.0.clone(), row.1.clone()))
+        .collect();
+    resolve_endpoint_config(&config)
+}
+
+pub(crate) fn has_s3_endpoint_keys(config: &HashMap<String, String>) -> bool {
+    config.contains_key(S3A_ENDPOINT_CONFIG_KEY)
+        || config.contains_key(REPARK_S3A_ENDPOINT_CONFIG_KEY)
+        || config.contains_key(S3A_PATH_STYLE_CONFIG_KEY)
+        || config.contains_key(REPARK_S3A_PATH_STYLE_CONFIG_KEY)
+        || config.contains_key(S3A_SSL_ENABLED_CONFIG_KEY)
+        || config.contains_key(REPARK_S3A_SSL_ENABLED_CONFIG_KEY)
+}
 
 /// Whether `scheme` is one `RePark` routes to an S3 object store.
 pub(crate) fn is_s3_scheme(scheme: &str) -> bool {
@@ -82,6 +190,7 @@ impl CredentialProvider for AwsConfigCredentialProvider {
 pub(crate) fn build_amazon_s3_store(
     bucket: &str,
     region_override: Option<&str>,
+    endpoint: Option<&S3EndpointConfig>,
     sdk_config: &SdkConfig,
 ) -> Result<Arc<dyn ObjectStore>> {
     let region = region_override
@@ -107,16 +216,26 @@ pub(crate) fn build_amazon_s3_store(
     })?;
     let bridge = Arc::new(AwsConfigCredentialProvider::new(credentials_provider));
 
-    let store = AmazonS3Builder::new()
+    let mut builder = AmazonS3Builder::new()
         .with_bucket_name(bucket)
         .with_region(region)
-        .with_credentials(bridge)
-        .build()
-        .map_err(|source| {
-            Error::DataFusion(format!(
-                "failed to build s3 store for bucket '{bucket}': {source}"
-            ))
-        })?;
+        .with_credentials(bridge);
+    if let Some(config) = endpoint {
+        if let Some(url) = &config.endpoint {
+            builder = builder.with_endpoint(url);
+        }
+        if let Some(path_style) = config.path_style_access {
+            builder = builder.with_virtual_hosted_style_request(!path_style);
+        }
+        if let Some(ssl_enabled) = config.ssl_enabled {
+            builder = builder.with_allow_http(!ssl_enabled);
+        }
+    }
+    let store = builder.build().map_err(|source| {
+        Error::DataFusion(format!(
+            "failed to build s3 store for bucket '{bucket}': {source}"
+        ))
+    })?;
     Ok(Arc::new(store))
 }
 
@@ -189,6 +308,139 @@ mod tests {
         assert_eq!(parse_s3_bucket("gs://bucket/x.parquet"), None);
         // A host-less s3 URL has no bucket to register.
         assert_eq!(parse_s3_bucket("s3:///x.parquet"), None);
+    }
+
+    #[test]
+    fn endpoint_config_absent_without_keys() {
+        let config = HashMap::new();
+        assert!(resolve_endpoint_config(&config).unwrap().is_none());
+        assert!(!has_s3_endpoint_keys(&config));
+        assert!(resolve_endpoint_from_dump(&[]).unwrap().is_none());
+    }
+
+    #[test]
+    fn endpoint_config_reads_spark_spellings() {
+        let config = HashMap::from([
+            (
+                S3A_ENDPOINT_CONFIG_KEY.to_string(),
+                "http://127.0.0.1:5599".to_string(),
+            ),
+            (S3A_PATH_STYLE_CONFIG_KEY.to_string(), "true".to_string()),
+            (S3A_SSL_ENABLED_CONFIG_KEY.to_string(), "false".to_string()),
+        ]);
+        assert!(has_s3_endpoint_keys(&config));
+        let resolved = resolve_endpoint_config(&config).unwrap().unwrap();
+        assert_eq!(resolved.endpoint.as_deref(), Some("http://127.0.0.1:5599"));
+        assert_eq!(resolved.path_style_access, Some(true));
+        assert_eq!(resolved.ssl_enabled, Some(false));
+    }
+
+    #[test]
+    fn endpoint_config_reads_repark_spellings() {
+        let config = HashMap::from([
+            (
+                REPARK_S3A_ENDPOINT_CONFIG_KEY.to_string(),
+                "http://minio:9000".to_string(),
+            ),
+            (
+                REPARK_S3A_PATH_STYLE_CONFIG_KEY.to_string(),
+                "TRUE".to_string(),
+            ),
+            (
+                REPARK_S3A_SSL_ENABLED_CONFIG_KEY.to_string(),
+                "False".to_string(),
+            ),
+        ]);
+        let resolved = resolve_endpoint_config(&config).unwrap().unwrap();
+        assert_eq!(resolved.endpoint.as_deref(), Some("http://minio:9000"));
+        assert_eq!(resolved.path_style_access, Some(true));
+        assert_eq!(resolved.ssl_enabled, Some(false));
+    }
+
+    #[test]
+    fn endpoint_config_partial_keys_leave_rest_unset() {
+        let config = HashMap::from([(
+            S3A_ENDPOINT_CONFIG_KEY.to_string(),
+            "https://s3.example.com".to_string(),
+        )]);
+        let resolved = resolve_endpoint_config(&config).unwrap().unwrap();
+        assert_eq!(resolved.endpoint.as_deref(), Some("https://s3.example.com"));
+        assert_eq!(resolved.path_style_access, None);
+        assert_eq!(resolved.ssl_enabled, None);
+    }
+
+    #[test]
+    fn endpoint_config_conflicting_dual_keys_refuse() {
+        for (repark_key, spark_key) in [
+            (REPARK_S3A_ENDPOINT_CONFIG_KEY, S3A_ENDPOINT_CONFIG_KEY),
+            (REPARK_S3A_PATH_STYLE_CONFIG_KEY, S3A_PATH_STYLE_CONFIG_KEY),
+            (
+                REPARK_S3A_SSL_ENABLED_CONFIG_KEY,
+                S3A_SSL_ENABLED_CONFIG_KEY,
+            ),
+        ] {
+            let config = HashMap::from([
+                (repark_key.to_string(), "left".to_string()),
+                (spark_key.to_string(), "right".to_string()),
+            ]);
+            let error = resolve_endpoint_config(&config).unwrap_err();
+            let message = error.to_string();
+            assert!(message.contains(repark_key), "got: {message}");
+            assert!(message.contains(spark_key), "got: {message}");
+        }
+    }
+
+    #[test]
+    fn endpoint_config_matching_dual_keys_agree() {
+        let config = HashMap::from([
+            (
+                REPARK_S3A_PATH_STYLE_CONFIG_KEY.to_string(),
+                "true".to_string(),
+            ),
+            (S3A_PATH_STYLE_CONFIG_KEY.to_string(), "true".to_string()),
+        ]);
+        let resolved = resolve_endpoint_config(&config).unwrap().unwrap();
+        assert_eq!(resolved.path_style_access, Some(true));
+    }
+
+    #[test]
+    fn endpoint_config_garbage_bool_refuses_naming_key() {
+        let config = HashMap::from([(
+            S3A_SSL_ENABLED_CONFIG_KEY.to_string(),
+            "sometimes".to_string(),
+        )]);
+        let error = resolve_endpoint_config(&config).unwrap_err();
+        let message = error.to_string();
+        assert!(
+            message.contains(S3A_SSL_ENABLED_CONFIG_KEY),
+            "got: {message}"
+        );
+        assert!(message.contains("sometimes"), "got: {message}");
+    }
+
+    #[test]
+    fn endpoint_config_resolves_from_conf_dump_rows() {
+        let rows = vec![
+            (
+                "spark.sql.session.timeZone".to_string(),
+                "UTC".to_string(),
+                "builder".to_string(),
+            ),
+            (
+                REPARK_S3A_ENDPOINT_CONFIG_KEY.to_string(),
+                "http://127.0.0.1:5599".to_string(),
+                "builder".to_string(),
+            ),
+            (
+                S3A_SSL_ENABLED_CONFIG_KEY.to_string(),
+                "false".to_string(),
+                "builder".to_string(),
+            ),
+        ];
+        let resolved = resolve_endpoint_from_dump(&rows).unwrap().unwrap();
+        assert_eq!(resolved.endpoint.as_deref(), Some("http://127.0.0.1:5599"));
+        assert_eq!(resolved.path_style_access, None);
+        assert_eq!(resolved.ssl_enabled, Some(false));
     }
 
     #[tokio::test]

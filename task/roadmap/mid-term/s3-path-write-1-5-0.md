@@ -66,6 +66,13 @@ inventory as `W-PATH-S3-*` and every design question below is answered from them
 
 ## Done condition
 
+**Round 1, 2026-09-28 (RULED design, step-0 oracle recorded):** the 38 `W-PATH-S3-*`
+cells hold two empty-frame cells (parquet and csv; there is no `json-empty-df`), five
+questions are ruled with the `s3a` endpoint keys shipping on both doors, and 22 cells
+are EQUAL with 16 dated residues. The `read_*` freeze of question 6 stands: the
+endpoint keys ride the store the read side registers, so read behaviour with absent
+keys is byte-identical.
+
 Every `W-PATH-S3-*` cell EQUAL on a recorded oracle with one live leg in the tier-2 workflow; the local
 path-write pins unchanged; the Python writer free of filesystem calls; one ledger; a verification critic
 before the product-Rust merge. Size: one day lane, one PR, no fork work, no Cargo.toml change (the

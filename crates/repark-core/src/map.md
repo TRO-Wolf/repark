@@ -745,6 +745,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   region + credentials into an `AmazonS3` (the ONLY AWS-touching fn); `register_bucket_store`
   puts one store under BOTH `s3://bucket` and `s3a://bucket`; `parse_s3_bucket` /
   `is_s3_scheme` route paths. Tests register an `InMemory` store to prove routing AWS-free.
+  **S3-PATH-WRITE-1 round 1 (2026-09-28):** the `s3a` endpoint keys
+  (`fs.s3a.endpoint`, `fs.s3a.path.style.access`, `fs.s3a.connection.ssl.enabled`,
+  spark and repark spellings, dual keys must agree) resolve from the session config dump
+  at store-build time on the read and write side; absent keys leave the builder untouched.
+  pins: s3-path-write-1/C-010, C-012
 - `orc_footer.rs` — **IO-ORC-1 (2026-09-16):** the ORC footer attributes orc-rust drops:
   tail/postscript parse, block-framed decompress in all five codecs, and a minimal
   protobuf field walk returning per-column `spark.sql.catalyst.type` values plus the

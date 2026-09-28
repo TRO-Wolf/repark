@@ -15,6 +15,15 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   Spark 4.1.2 path-write behaviour on S3 recorded in 38 `W-PATH-S3-*` cells against a local
   moto emulator; the evidence and the design answers live in `task/ledgers/staging/u12-probes/`.
   pins: s3-path-write-1/C-001, C-002, C-003, C-004, C-005, C-006
+- `writer_s3.py` — **S3-PATH-WRITE-1 round 1 (2026-09-28):** the S3 path-write
+  forward. `is_s3_url` detects the scheme without filesystem calls;
+  `write_s3_path` carries writer state to the `session_write_path` binding,
+  which owns save mode, layout and commit. The local branch is untouched and
+  `note_local_write_root` never runs for a URL. `_apply_path_write` routes
+  `s3://` / `s3a://` here; the partition-clause helper moved unchanged to
+  `writer_layout.partitioned_by_sql_clause`, retiring
+  `writer_readwriter.py`'s size exception (996 lines).
+  pins: s3-path-write-1/C-007, C-008, C-009, C-012, C-013, C-014, C-015
 
 ## Modules
 

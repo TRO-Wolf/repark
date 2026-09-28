@@ -361,6 +361,38 @@ def _merge_path_write_tree(staging: Any, destination: Any) -> None:
         shutil.move(str(item), str(target))
 
 
+def partitioned_by_sql_clause(frame_columns: list[str], partition_columns: list[str]) -> str:
+    """Build the path ``PARTITIONED BY`` clause for configured identity columns."""
+    if not partition_columns:
+        return ""
+    frame_by_case = {column.casefold(): column for column in frame_columns}
+    resolved: list[str] = []
+    seen_casefold: set[str] = set()
+    for column in partition_columns:
+        name = str(column)
+        matched = frame_by_case.get(name.casefold())
+        if matched is None:
+            raise AnalysisException(
+                f"partitionBy column {name!r} is not in the DataFrame columns "
+                f"{list(frame_columns)}; path partitionBy requires identity columns present "
+                "on the frame (Spark-shaped)"
+            )
+        if not matched.isidentifier():
+            raise AnalysisException(
+                f"partitionBy column {matched!r} is not a simple SQL identifier; "
+                "repark path partitionBy supports simple column names only"
+            )
+        key = matched.casefold()
+        if key in seen_casefold:
+            raise AnalysisException(
+                f"duplicate partitionBy column {matched!r}; "
+                "path partitionBy requires unique column names"
+            )
+        seen_casefold.add(key)
+        resolved.append(matched)
+    return " PARTITIONED BY (" + ", ".join(resolved) + ")"
+
+
 def table_of_ref_target(qualified: str) -> str:
     """Strip a trailing ``branch_<name>`` / ``tag_<name>`` selector from a write target.
 

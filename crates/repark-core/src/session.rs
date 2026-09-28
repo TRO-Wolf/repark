@@ -38,6 +38,7 @@ mod df_guards;
 mod iceberg_caches;
 mod late_catalogs;
 mod memory_catalog;
+mod path_write;
 mod session_catalog;
 pub(crate) mod spill;
 mod temp_views;
@@ -237,6 +238,7 @@ impl ReparkSessionBuilder {
             .iter()
             .any(|spec| matches!(spec.kind, CatalogKind::Glue | CatalogKind::S3Tables))
             || s3_region_override.is_some()
+            || object_store_s3::has_s3_endpoint_keys(&self.config)
             || self
                 .config
                 .get(AWS_ENABLE_CONFIG_KEY)
@@ -760,14 +762,6 @@ impl ReparkSession {
             .await
     }
 
-    /// Mark a local path as a trusted write root for the SEC-02 local-filesystem DDL gate.
-    pub fn note_local_write_root(&self, path: &str) {
-        self.catalogs
-            .write()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .note_local_warehouse_root(path.to_string());
-    }
-
     /// Read a Parquet file or directory into a [`DataFrame`].
     /// # Errors
     /// Returns [`Error::DataFusion`] if the S3 store cannot be built (region/credentials), or if
@@ -951,7 +945,7 @@ impl ReparkSession {
         // E-2 gate: the store build consumes the FINALIZE-resolved SDK config.
         let Some(sdk_config) = self.aws_sdk_config.get() else {
             return Err(Error::DataFusion(format!(
-                "S3 read for bucket '{bucket}' refused: this session never resolved its AWS SDK \
+                "S3 access for bucket '{bucket}' refused: this session never resolved its AWS SDK \
                  config. Call register_configured_catalogs() after signaling AWS use — an \
                  AWS-backed catalog (spark.sql.catalog.*), the \
                  '{}' / '{}' region conf, or the explicit opt-in \
@@ -960,9 +954,11 @@ impl ReparkSession {
                 object_store_s3::S3A_REGION_CONFIG_KEY,
             )));
         };
+        let endpoint = object_store_s3::resolve_endpoint_from_dump(&self.conf_dump)?;
         let store = object_store_s3::build_amazon_s3_store(
             bucket,
             self.s3_region_override.as_deref(),
+            endpoint.as_ref(),
             sdk_config,
         )?;
         let mut registered = self

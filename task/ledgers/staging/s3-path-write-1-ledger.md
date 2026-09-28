@@ -28,11 +28,17 @@ refusals, never outbound calls.
 | C-004 | Layout: flat `part-00000-<UUID>-c000.<ext>` files, `key=value/` hive dirs under `partitionBy`, a trailing 0-byte `_SUCCESS` on every successful write, no `_temporary/` residue in any cell, and a part file even for empty frames. | Listings of all 38 cells. | PROVEN | `list_after` of every cell in [u12-spark.json](u12-probes/u12-spark.json). |
 | C-005 | The `s3://` and `s3a://` spellings write identical objects and read back identical rows. | The two scheme cells. | PROVEN | `W-PATH-S3-parquet-scheme-{s3,s3a}` in [u12-spark.json](u12-probes/u12-spark.json). |
 | C-006 | RePark 1.5.0 writes no S3 object: every path write fails with `No suitable object store`, every S3 read-back refuses locally for lack of SDK config, and the read side honours no endpoint override. | The 38 repark cells plus the store builder source. | PROVEN | [u12-repark.json](u12-probes/u12-repark.json); [object_store_s3.rs](../../../crates/repark-core/src/object_store_s3.rs). |
-| C-007 | Design question 1 rules that `Session::write_path` in `repark-core` owns the protocol for every scheme and the Python writer forwards to it. | Orchestrator ruling on the recommendation in Design answers. | OPEN | Recommendation under question 1; the oracle cells it must satisfy. |
-| C-008 | Design question 2 rules the S3 commit shape (direct part files plus trailing `_SUCCESS`) and failed-write cleanup. | Orchestrator ruling on the recommendation in Design answers. | OPEN | Recommendation under question 2; C-004. |
-| C-009 | Design question 3 rules the save-mode probes (existence LIST, overwrite list-and-delete, append plain write). | Orchestrator ruling on the recommendation in Design answers. | OPEN | Recommendation under question 3; C-002, C-003. |
-| C-010 | Design question 4 rules credential and region resolution (reuse the read chain unchanged, no endpoint option in the product round). | Orchestrator ruling on the recommendation in Design answers. | OPEN | Recommendation under question 4; C-006. |
-| C-011 | Design question 5 rules the live leg under the tier-2 scratch prefix on the existing grants. | Orchestrator ruling on the recommendation in Design answers. | OPEN | Recommendation under question 5; Live-leg plan. |
+| C-007 | Design question 1 rules that `Session::write_path` in `repark-core` owns the protocol for every scheme and the Python writer forwards to it. | Orchestrator ruling on the recommendation in Design answers. | PROVEN (RULED 2026-09-28) | Q1 ADOPTED in Orchestrator rulings; local stays in Python this round. |
+| C-008 | Design question 2 rules the S3 commit shape (direct part files plus trailing `_SUCCESS`) and failed-write cleanup. | Orchestrator ruling on the recommendation in Design answers. | PROVEN (RULED 2026-09-28) | Q2 ADOPTED in Orchestrator rulings; Fault record. |
+| C-009 | Design question 3 rules the save-mode probes (existence LIST, overwrite list-and-delete, append plain write). | Orchestrator ruling on the recommendation in Design answers. | PROVEN (RULED 2026-09-28) | Q3 ADOPTED in Orchestrator rulings; C-002, C-003. |
+| C-010 | Design question 4 rules credential and region resolution (reuse the read chain unchanged, no endpoint option in the product round). | Orchestrator ruling on the recommendation in Design answers. | PROVEN (RULED 2026-09-28) | Q4 OVERRIDDEN in Orchestrator rulings: the endpoint keys ship; C-012. |
+| C-011 | Design question 5 rules the live leg under the tier-2 scratch prefix on the existing grants. | Orchestrator ruling on the recommendation in Design answers. | PROVEN (RULED 2026-09-28) | Q5 ADOPTED in Orchestrator rulings; C-016, C-017. |
+| C-012 | The `s3a` endpoint keys (`fs.s3a.endpoint`, `fs.s3a.path.style.access`, `fs.s3a.connection.ssl.enabled`, both spellings) are honoured on the read and write side; absent keys leave behaviour byte-identical. | Unit tests for parsing plus moto reads and writes through a custom endpoint. | PROVEN | `endpoint_config_*` in [object_store_s3.rs](../../../crates/repark-core/src/object_store_s3.rs); Round 1 verification. |
+| C-013 | Every one of the 38 `W-PATH-S3-*` cells replays on moto: write outcome, normalised listing and read-back rows are EQUAL, or a dated residue below records both answers. | The moto pins plus the residue entries. | PROVEN | [test_s3_path_write_1.py](../../../python/repark/tests/test_s3_path_write_1.py); Residues. |
+| C-014 | The local path is bit-for-bit unchanged: the local pins stay green and no existing pin changes. | The writer suites in the round gate. | PROVEN | Round 1 verification; the suites listed there. |
+| C-015 | Failed-write cleanup is best effort and the residue of each failure shape is recorded. | The fault-injection probe output below. | PROVEN | Fault record F1-F5. |
+| C-016 | The live leg is written in the module the plan named, skipped unless the tier-2 marker is present, with no workflow change. | The skipped test in the acceptance module. | PROVEN | `test_u12_s3_path_write_against_scratch_prefix` in [test_aws_acceptance.py](../../../python/repark/tests/test_aws_acceptance.py). |
+| C-017 | The live leg runs green on real AWS under the tier-2 scratch prefix. | The owner runs it; moto cannot prove real-AWS reachability. | OPEN | C-016; the owner run is pending. |
 
 ## Oracle setup
 
@@ -248,3 +254,166 @@ a per-run `testing_<uuid>` stem in the scratch namespace off
 empty frame, asserts the object layout from C-004 and the row read-backs, and
 needs no new grant: the scratch-prefix `PutObject`/`DeleteObject` pair (OD-3)
 already covers it. Bronze stays untouched.
+
+## Orchestrator rulings (2026-09-28)
+
+- **Q1 ADOPTED.** `Session::write_path(df, url, format, mode, options)` in
+  `repark-core` owns save mode, staging and commit; the Python writer forwards
+  to it and makes no filesystem calls for a URL. The local scheme keeps
+  today's staging-and-rename behaviour bit for bit. Taken up: the local path
+  stays in Python this round and only `s3://` / `s3a://` route to Rust.
+- **Q2 ADOPTED.** Part objects go directly under the destination and
+  `_SUCCESS` is written last. Failed-write cleanup is best effort; the Fault
+  record below probes it and records what is left.
+- **Q3 ADOPTED.** "Exists" means any object under the prefix, `_SUCCESS`-only
+  and foreign objects included. `overwrite` lists and deletes the whole
+  prefix. `append` preserves.
+- **Q4 OVERRIDDEN — the endpoint keys ship.** Honoured on both the read and
+  the write side in `object_store_s3.rs`: `spark.hadoop.fs.s3a.endpoint` /
+  `repark.hadoop.fs.s3a.endpoint`, `…fs.s3a.path.style.access`, and
+  `…fs.s3a.connection.ssl.enabled`. Absent keys leave today's behaviour
+  byte-identical. Nothing is read from the environment beyond what the
+  aws-config chain already reads. See C-012.
+- **Q5 ADOPTED.** The live leg runs under the tier-2 scratch prefix on the
+  existing grants, in the module the plan named, skipped unless the tier-2
+  environment marker is present. The owner runs it. No `.github/` change. See
+  C-016 and C-017.
+
+## Round 1 implementation (2026-09-28)
+
+Rust owns the S3 protocol in `crates/repark-core/src/session/path_write.rs`:
+`ReparkSession::write_path` parses format and mode, validates `partitionBy`
+and writer options (mirroring the Python writer message for message),
+runs the Q3 save-mode protocol over the registered S3 store, executes one
+`COPY` with a per-call temp view, materialises an empty part when `COPY`
+writes none (parquet via the `datafusion::parquet` re-export, so no new
+dependency), and puts a 0-byte `_SUCCESS` last. It returns the part count
+present after the write. `COPY` names are per-statement random
+(`{id}_{n}.parquet`), so `append` writes directly with no staging and no
+collision window. Append validation reads destination part *files* (prefix
+reads refuse without a trailing slash, residue `R-S3-SLASH-READ`) and treats
+the string/binary view family as one logical type, since the engine reads
+parquet strings back as `Utf8View`. Overwrite at a bucket root refuses loud
+rather than deleting a whole bucket.
+
+The endpoint keys resolve from the session config dump at store-build time on
+both doors, so late `SET` keys neither apply nor signal (consistent with the
+late region override, which is signal-only). A present key always applies;
+an absent key leaves the builder call out, which keeps the object_store
+defaults (path-style URLs) exactly as before.
+
+Python is a thin forward: `writer_s3.py` detects the scheme and calls the
+`session_write_path` binding with the writer state. The local branch is
+untouched; `note_local_write_root` is never called for a URL, and a pin
+asserts S3 writes leave the local directory empty. The partition-clause
+helper moved from `writer_readwriter.py` to `writer_layout.py` unchanged so
+the S3 branch fits the file-size ceiling; the move retired that file's
+exception row (996 lines).
+
+Cell verdicts: 22 EQUAL; 16 residues in 5 families below. The pins read back
+through trailing-slash URLs (residue `R-S3-SLASH-READ` pins the slashless
+refusal separately) and normalise part names (note `R-S3-PART-NAME`).
+
+## Residues (2026-09-28)
+
+- **R-S3-CSV-HEADER** — 9 cells (`W-PATH-S3-csv-*`). Repark writes csv with a
+  header row by default; Spark writes none. Oracle bytes for
+  `csv-error-empty` are one headerless part plus `_SUCCESS`, read back as 3
+  rows under `_c0`, `_c1`. Repark bytes are one headed part plus `_SUCCESS`,
+  read back as 3 rows under `id`, `grp` with `header=true`, or 4 rows under
+  `_c0`, `_c1` with the default headerless read (each part contributes its
+  header line as a data row). The empty-frame csv part carries the header
+  line (`>0` bytes) where Spark writes 0 bytes. Root cause is the pre-existing
+  local write default, pinned locally and out of scope for this round.
+- **R-S3-READBACK-NOFILES** — 4 cells (`success-only-error`,
+  `success-only-ignore`, `foreign-error`, `foreign-ignore`). Reading a prefix
+  with no part files refuses on both engines, with different text. Oracle:
+  `AnalysisException` `UNABLE_TO_INFER_SCHEMA`, "Unable to infer schema for
+  Parquet. It must be specified manually." Repark: `AnalysisException` "No
+  files found at ... Cannot infer schema from an empty location; either add
+  data files or declare an explicit schema for the table." (no Spark error
+  class). Same refusal reason, read-side wording.
+- **R-S3-READBACK-FOREIGN** — 1 cell (`parquet-foreign-append`). Oracle errors
+  the read-back (`SparkException`, Spark tries to open `foreign.txt` as
+  parquet). Repark lists only `*.parquet` parts, skips the foreign object,
+  and reads back the 3 appended rows. Robustness divergence, read-side.
+- **R-S3-HIVE-READ** — 2 cells (`parquet-partitionby-1col`,
+  `parquet-partitionby-2col`). Writes and listings are EQUAL (hive dirs,
+  parts, `_SUCCESS`); the read-back drops the partition columns (`[id]`
+  instead of `[id, grp]`). The local door drops them identically (measured
+  2026-09-28), so this is a pre-existing engine-wide read gap, not S3
+  behaviour.
+- **R-S3-SLASH-READ** — read method for all 38 cells, pinned separately.
+  Oracle reads slashless prefixes (`s3a://bucket/p`). Repark refuses them:
+  `PySparkException` "File path ... does not match the expected extension
+  '.parquet'" (DataFusion treats a slashless S3 path as a single file). With
+  a trailing slash the same reads return the oracle rows and column types
+  (`id: bigint`, `grp: string`). The pins read with a trailing slash; the
+  `test_slashless_prefix_read_refuses` pin records the refusal verbatim.
+- **R-S3-PART-NAME** — normalisation note, all cells. Spark names parts
+  `part-00000-<UUID>-c000.snappy.parquet`; DataFusion names them
+  `{write_id}_{n}.parquet` with a per-statement random id. The pins normalise
+  both to `part.<ext>` and compare counts, hive dirs, `_SUCCESS`, sizes, and
+  the `_SUCCESS`-last ordering.
+- **R-S3-OVERWRITE-WINDOW** — failure path, no oracle cell. Spark stages an
+  overwrite and keeps the old objects when the write fails. The ruled
+  delete-then-write overwrite deletes the prefix first: probe F4 below shows
+  a seeded prefix wiped to empty when the `COPY` fails. Accepted by the Q2
+  ruling (direct parts plus best-effort cleanup); recorded here so a later
+  round can stage overwrites if the window matters.
+
+## Fault record (2026-09-28, moto)
+
+- **F1** — `error`-mode write onto a seeded prefix refuses
+  `[PATH_ALREADY_EXISTS]`; the listing afterwards is byte-identical (part
+  plus `_SUCCESS`, sizes unchanged).
+- **F2** — append with a mismatched schema refuses `column sets differ`; the
+  listing afterwards is identical.
+- **F3** — a frame that fails before the sink runs (`CAST('x' AS INT)`,
+  rejected while optimising) in `error` mode on an empty prefix leaves the
+  prefix empty with no `_SUCCESS`.
+- **F4** — the same failing frame in `overwrite` mode on a seeded prefix
+  deletes the seed and writes nothing: the residue is the empty prefix. See
+  `R-S3-OVERWRITE-WINDOW`.
+- **F5** — SIGKILL between the first completed part PUT and the `_SUCCESS`
+  PUT leaves 4 complete part files (432608, 397717, 216761 and 194749 bytes)
+  and no `_SUCCESS`. Parts are complete-or-absent; the marker is last.
+
+## Round 1 verification (2026-09-28)
+
+- Rust: `cargo test -p repark-core --lib` full (845 passed), `cargo test -p
+  repark-core --lib -- session::tests::path_write` (15 passed),
+  `object_store_s3` (12 passed); clippy `-p repark-core --all-targets` and
+  `-p repark-python --all-targets` with `-D warnings
+  -A clippy::disallowed_methods`; `cargo fmt -- --check`.
+- Python: `test_s3_path_write_1.py` (40 passed: 38 cells plus the slashless
+  and no-local-IO pins) on `moto_server` from `target/u12/moto-venv`;
+  `test_e2_readwriter.py`, `test_r2_read_formats2.py`,
+  `test_r1_read_formats.py`, `test_examples_io_session.py`,
+  `test_io_text_1.py`, `test_io_text_2.py`, `test_df_plan_introspect_1.py`,
+  `test_df_surface_a_1.py`, `test_df_surface_b_1.py`,
+  `test_io_bucket_cluster_1.py`, `test_logical_width_1.py`,
+  `test_mapinarrow.py`, `test_nullability_2.py`, `test_time_travel.py`,
+  `test_writer_v2.py` all green with zero pin changes;
+  `test_production_file_size.py`,
+  `test_ex_0_example_coverage.py`,
+  `test_cap_1_source_file_line_cap.py` green; `test_aws_acceptance.py`
+  collects 11 skipped without the tier-2 marker.
+- Gates: `comment_ban.py`, `check_lib_rs`, `check_rust_file_size.py`,
+  `check_lib_py.py`, `check_ledger_grammar.py`, `check_docs_links.py`,
+  `check_map_md.sh --base origin/main`, ruff check and format checks. The
+  `writer_readwriter.py` line-count exception retired (996 lines).
+
+## Out of scope observed (2026-09-28)
+
+- The card's cell arithmetic reads "24 + 3 + 4 + 4 + 2 + 2" but claims 38
+  cells; the oracle holds 38 cells with 2 empty-frame cells (no
+  `json-empty-df`). The card carries a dated correction; the product covers
+  the empty-json shape anyway (Rust protocol test).
+- The csv/json refuse-loud messages point at `task/r2-read-formats2-ledger.md`,
+  a path that no longer exists (ledgers live under `task/ledgers/`). The Rust
+  mirror repeats the pointer verbatim so both doors refuse identically; the
+  pointer itself is left for its owner.
+- Late `SET` of the endpoint keys (after session build) neither applies nor
+  signals, matching the late region override. Only builder/file config feeds
+  the S3 store.

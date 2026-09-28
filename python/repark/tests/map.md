@@ -3589,6 +3589,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   keeps double + csc empty; overlay float pos type error; **octo C3:** mutation-proof
   combo (map+empty scalar+overlay+F1 nested WITH); **octo C4/C5:** lit numpy Integral/Real
   + homogeneous np.int64 list normalize; **octo C8:** ruff format pin asserts.
+- `test_s3_path_write_1.py` — **S3-PATH-WRITE-1 round 1 (2026-09-28):** the 38
+  `W-PATH-S3-*` moto cells (22 EQUAL, 16 dated residues in 5 families) plus the
+  slashless-scheme and no-local-IO pins. The tier-2 live leg lives in
+  `test_aws_acceptance.py` and skips locally.
+  pins: s3-path-write-1/C-007, C-008, C-009, C-012, C-013, C-014, C-015
 - `test_e2_readwriter.py` — E2 R-CENSUS-READWRITER: bare-name resolution
   (`resolve_table_name` / saveAsTable / table / writeTo / insertInto / MERGE /
   DROP TABLE SQL expander), `spark.sql.defaultNamespace` seed, parquet save/load +
@@ -6798,6 +6803,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   registry/inventory rows naming the refusal are stamped FIXED at `edc38c6a` in this change).
   pins: ice-gold-twice-1/C-002
   pins: rp-20/C-001, C-002, C-003
+  **U12 round 1 (2026-09-28):** `test_u12_s3_path_write_against_scratch_prefix` — loose
+  path writes under a `u12-path-write-<uuid>` scratch prefix, every save mode, direct
+  parts plus a last `_SUCCESS`; skips with the module when `REPARK_AWS_ACCEPTANCE`
+  is unset. pins: s3-path-write-1/C-016
 
 - `test_two_door_kernel_parity.py` — **FNP-1 (2026-08-20):** charter clause C-012 at the facade
   layer. Pins that a name reachable from both doors returns the same Arrow **type and value**
