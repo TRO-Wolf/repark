@@ -2070,6 +2070,22 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   statements succeed; a missing table keeps its own error and INSERT keeps the other
   cell's prose.
   pins: ipi-51/W-UPDATE-TYPE-ERR
+- [ltz_store.rs](ltz_store.rs) — **WO LTZ-STORE-INT-1 (2026-09-28):** INT into a
+  `TIMESTAMP` (LTZ) column refuses on VALUES, SELECT, UPDATE and MERGE — the VALUES text
+  equals Spark's recorded `ins_l_int` refusal on the test catalog, and the refused
+  statements leave the seeded row intact — while NULL, DATE, TIMESTAMP, TIMESTAMP_NTZ,
+  explicit-CAST and column-list VALUES rows still store with their exact read-backs.
+  **Fold 2026-09-28 (critic V-001):** the `typed_numeric_values_into_timestamp_refuse`
+  sibling pins every numeric CAST, `DECIMAL '1.5'`, `1L`, two `CAST(NULL …)` rows and
+  a mixed multi-row refusal that writes nothing.
+  **Fold 2026-09-28 (verifier VL-1..VL-6):** the sibling pins the two typed-NULL
+  refusals with Spark's exact text; the mixed multi-row refusal moves to its own
+  residue pin (Spark answers `INVALID_INLINE_TABLE`); `nvl`/`ifnull` over DATE and
+  TIMESTAMP store with exact read-backs plus the `coalesce` control; `1.5` and
+  `12345678901` refusals name `DECIMAL(2,1)` and `BIGINT`.
+  **Fold 2026-09-28 (re-verify RL-1..RL-3):** STRING-valued functions refuse
+  with the `ins_l_str` body; `0.05` names `DECIMAL(2,2)`.
+  pins: ltz-store-int-1/C-001
 - `use_ddl.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the `USE` behavior pins over
   one- and two-catalog memory setups: two-part set, v2 clear-to-empty, session-catalog
   default restore, self-`USE` keep, catalog-first one-part (probe P-1), namespace-only

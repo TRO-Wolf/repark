@@ -17,6 +17,8 @@ use repark_iceberg::write::void_store::refuse_void_writes;
 use crate::catalog_ops::name_parts;
 use crate::write_to_branch::qualify_table_parts;
 
+mod ltz_values_store;
+
 pub(crate) fn rewrite_cast_null_to_void(statement: &mut Statement) {
     let _ = statement.visit(&mut CastNullToVoid);
 }
@@ -56,7 +58,7 @@ fn is_void_spelling(data_type: &DataType) -> bool {
     }
 }
 
-fn is_null_valued(expr: &Expr) -> bool {
+pub(crate) fn is_null_valued(expr: &Expr) -> bool {
     match expr {
         Expr::Value(value) => matches!(value.value, Value::Null),
         Expr::Nested(inner) => is_null_valued(inner),
@@ -73,6 +75,7 @@ pub(crate) async fn refuse_insert_void_values(
     let Statement::Insert(insert) = statement else {
         return Ok(());
     };
+    ltz_values_store::refuse_unassignable_ltz_values(ctx, catalogs, insert).await?;
     refuse_non_null_void_values(ctx, catalogs, insert).await
 }
 
@@ -248,7 +251,7 @@ async fn refuse_void_value(
     )))
 }
 
-fn column_name(column: &datafusion::sql::sqlparser::ast::ObjectName) -> String {
+pub(crate) fn column_name(column: &datafusion::sql::sqlparser::ast::ObjectName) -> String {
     column
         .0
         .last()

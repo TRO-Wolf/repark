@@ -21,6 +21,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `false`; the false-door CREATE acceptance is a dated residue (R-1).
   `risk_tier: standard`. Branch `chore/rp-56-case-twin-schema`.
   pins: rp-56/C-001
+- [ltz-store-int-1-ledger.md](ltz-store-int-1-ledger.md) —
+  **WO LTZ-STORE-INT-1 (2026-09-28), in flight:** an INT stored into a
+  `TIMESTAMP` (LTZ) column refuses with Spark's recorded `ins_l_int` answer on
+  VALUES and with the `CANNOT_SAFELY_CAST` class on SELECT, UPDATE, MERGE and
+  DataFrame append, while NULL, DATE, TIMESTAMP and TIMESTAMP_NTZ sources still
+  store (C-001); the VALUES residual stays open for every other target (R-1).
+  `risk_tier: standard`. Branch `fix/ltz-store-int-1`.
+  pins: ltz-store-int-1/C-001
 - [uuid-cast-window-1-ledger.md](uuid-cast-window-1-ledger.md) —
   **WO UUID-CAST-WINDOW-1 (2026-09-27), in flight:** the UUID refusal's SQL window
   counts as Spark 4.1.2 counts — the position in Unicode scalar values, the window

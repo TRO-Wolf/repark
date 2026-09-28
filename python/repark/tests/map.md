@@ -73,8 +73,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (2026-09-25):** replays every measured step of the oracle through the facade, one session
   per group, in order; each observation (rows, schema surfaces, metadata fields, Python value
   types, refusal class/condition/SQLSTATE/text) equals Spark's, or its residue record when the
-  step names one (the ledger's residue table is cross-checked). Group `ltz`: 88 steps, 76
-  EQUAL. pins: u9-types-1/C-001, C-002, C-003, C-005
+  step names one (the ledger's residue table is cross-checked). Group `ltz`: 88 steps, 81
+  EQUAL (LTZ-STORE-INT-1, 2026-09-28, closes R-1: both `side-select` rows EQUAL, the two
+  `side-insert-string` refusals hold the planning prefix as R-37). pins: u9-types-1/C-001,
+  C-002, C-003, C-005
   Group `map`: 87 steps, 69 EQUAL (r2 added UPDATE / MERGE `map()`, back-quoted `` `map`() ``
   and `element_at(map(), …)`, R-13). pins: u9-types-1/C-006, C-007, C-008
   r3 grows `map` to 128 steps, 83 EQUAL: `map/assign/*` (four refusing map shapes on UPDATE,
@@ -4431,7 +4433,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   still writes (Spark treats it as the user's intent), and the honest residual: a literal
   `INSERT INTO … VALUES` row conforms inside the `Values` node where the synthesized and explicit
   casts are byte-identical, so `VALUES (true)` into an `INT` column still writes `1` while
-  `VALUES (DATE '…')` is refused by the G6-3 CAST gate instead. Arrow path.
+  `VALUES (DATE '…')` is refused by the G6-3 CAST gate instead.
+  **LTZ-STORE-INT-1 (2026-09-28)** closes the residual for `TIMESTAMP` (LTZ) targets at
+  the existing void VALUES gate site, before planning; every other target stays residual.
+  Arrow path.
+- `test_ltz_store_int_1.py` — **WO LTZ-STORE-INT-1 (2026-09-28):** `INSERT INTO sc.ns.l
+  VALUES (0, 1)` refuses with the recorded Spark `ins_l_int` answer — error class,
+  condition, SQLSTATE and the message body, with the RePark-only planning prefix
+  pinned separately — and a DataFrame append of INT into TIMESTAMP refuses; both
+  leave the table empty. **Fold 2026-09-28 (verifier VL-1..VL-6):** `nvl` and
+  `ifnull` over DATE and TIMESTAMP store.
+  pins: ltz-store-int-1/C-001
 - `test_merge_semantics_audit.py` — **MERGE-audit corpus** (2026-08-14 audit gap-map rows
   c/d/g/n/o): null-safe `<=>` / `eqNullSafe` ON matches NULL keys (both doors); builder-door
   `=` NULL keys do not match; self-merge (target as source) updates once per row; join-key
