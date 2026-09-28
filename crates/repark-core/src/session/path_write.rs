@@ -11,7 +11,6 @@ use object_store::ObjectStoreExt;
 use object_store::PutPayload;
 use object_store::path::Path as ObjectPath;
 use repark_common::{Error, Result};
-use url::Url;
 
 use crate::OverwriteIntent;
 use crate::engine_err;
@@ -305,22 +304,23 @@ fn copy_options_sql(format: &WriteFormat, options: &HashMap<String, String>) -> 
     }
 }
 
-fn parse_write_destination(url: &str) -> Result<(String, String)> {
-    let parsed = Url::parse(url).map_err(|source| {
-        Error::Analysis(format!("invalid path write destination '{url}': {source}"))
-    })?;
-    if !object_store_s3::is_s3_scheme(parsed.scheme()) {
-        return Err(Error::Analysis(format!(
-            "path write destination '{url}' is not an s3:// or s3a:// URL"
-        )));
+fn parse_write_destination(url: &str) -> Result<(String, String, String)> {
+    if let Some((scheme, bucket, key)) = object_store_s3::split_s3_url_raw(url) {
+        return Ok((scheme, bucket, key));
     }
-    let bucket = parsed.host_str().unwrap_or("").to_string();
-    if bucket.is_empty() {
-        return Err(Error::Analysis(format!(
+    match url.split_once("://") {
+        Some((scheme, _)) if !object_store_s3::is_s3_scheme(&scheme.to_ascii_lowercase()) => {
+            Err(Error::Analysis(format!(
+                "path write destination '{url}' is not an s3:// or s3a:// URL"
+            )))
+        }
+        Some(_) => Err(Error::Analysis(format!(
             "path write destination '{url}' has no bucket"
-        )));
+        ))),
+        None => Err(Error::Analysis(format!(
+            "invalid path write destination '{url}'"
+        ))),
     }
-    Ok((bucket, parsed.path().trim_matches('/').to_string()))
 }
 
 fn unique_view_name() -> String {
@@ -348,6 +348,67 @@ async fn prefix_has_objects(
         ))),
         None => Ok(false),
     }
+}
+
+async fn exact_key_exists(
+    store: &dyn ObjectStore,
+    prefix: &ObjectPath,
+    origin: &str,
+) -> Result<bool> {
+    match store.head(prefix).await {
+        Ok(_) => Ok(true),
+        Err(object_store::Error::NotFound { .. }) => Ok(false),
+        Err(error) => Err(Error::DataFusion(format!(
+            "cannot probe S3 destination {origin}: {error}"
+        ))),
+    }
+}
+
+async fn destination_has_objects(
+    store: &dyn ObjectStore,
+    scope: Option<&ObjectPath>,
+    prefix: &ObjectPath,
+    at_root: bool,
+    origin: &str,
+) -> Result<bool> {
+    if prefix_has_objects(store, scope, origin).await? {
+        return Ok(true);
+    }
+    if at_root {
+        return Ok(false);
+    }
+    exact_key_exists(store, prefix, origin).await
+}
+
+async fn prepare_overwrite_destination(
+    store: &dyn ObjectStore,
+    frame: &DataFrame,
+    bucket: &str,
+    prefix_text: &str,
+    prefix: &ObjectPath,
+    url: &str,
+) -> Result<()> {
+    if prefix_text.is_empty() {
+        return Err(Error::Analysis(format!(
+            "cannot overwrite path '{url}': refusing to delete a whole bucket \
+             (overwrite needs a key prefix)"
+        )));
+    }
+    if crate::plan_introspect::plan_reads_s3_prefix(frame.logical_plan(), bucket, prefix_text) {
+        return Err(Error::Analysis(format!(
+            "[UNSUPPORTED_OVERWRITE.PATH] Cannot overwrite the path {url} that is \
+             also being read from."
+        )));
+    }
+    delete_prefix_objects(store, Some(prefix), url).await?;
+    if exact_key_exists(store, prefix, url).await? {
+        store.delete(prefix).await.map_err(|error| {
+            Error::DataFusion(format!(
+                "cannot delete S3 object {prefix} under {url}: {error}"
+            ))
+        })?;
+    }
+    Ok(())
 }
 
 async fn delete_prefix_objects(
@@ -709,7 +770,7 @@ impl ReparkSession {
     ) -> Result<usize> {
         let format = WriteFormat::parse(format)?;
         let mode = SaveMode::parse(mode)?;
-        let (bucket, prefix_text) = parse_write_destination(url)?;
+        let (scheme, bucket, prefix_text) = parse_write_destination(url)?;
         let frame_columns: Vec<String> = frame
             .schema()
             .fields()
@@ -725,13 +786,13 @@ impl ReparkSession {
             .runtime_env()
             .object_store(&store_url)
             .map_err(engine_err)?;
-        let prefix = ObjectPath::from_url_path(&prefix_text)
+        let prefix = ObjectPath::parse(&prefix_text)
             .map_err(|error| Error::DataFusion(format!("invalid S3 destination {url}: {error}")))?;
         let at_root = prefix_text.is_empty();
         let scope = if at_root { None } else { Some(&prefix) };
         match mode {
             SaveMode::ErrorIfExists => {
-                if prefix_has_objects(&store, scope, url).await? {
+                if destination_has_objects(&store, scope, &prefix, at_root, url).await? {
                     return Err(Error::Analysis(format!(
                         "[PATH_ALREADY_EXISTS] Path {url} already exists. Set mode as \
                          \"overwrite\" to overwrite the existing path."
@@ -739,27 +800,27 @@ impl ReparkSession {
                 }
             }
             SaveMode::Ignore => {
-                if prefix_has_objects(&store, scope, url).await? {
+                if destination_has_objects(&store, scope, &prefix, at_root, url).await? {
                     return Ok(list_part_keys(&store, scope, format.extension(), url)
                         .await?
                         .len());
                 }
             }
             SaveMode::Overwrite => {
-                if at_root {
-                    return Err(Error::Analysis(format!(
-                        "cannot overwrite path '{url}': refusing to delete a whole bucket \
-                         (overwrite needs a key prefix)"
-                    )));
-                }
-                delete_prefix_objects(&store, scope, url).await?;
+                prepare_overwrite_destination(&store, frame, &bucket, &prefix_text, &prefix, url)
+                    .await?;
             }
             SaveMode::Append => {
                 let existing = list_part_keys(&store, scope, format.extension(), url).await?;
                 if !existing.is_empty() {
                     let part_urls: Vec<String> = existing
                         .iter()
-                        .map(|key| format!("s3://{bucket}/{key}"))
+                        .map(|key| {
+                            format!(
+                                "s3://{bucket}/{}",
+                                object_store_s3::encode_s3_key_for_url(key.as_ref())
+                            )
+                        })
                         .collect();
                     self.validate_append(
                         &format,
@@ -773,9 +834,10 @@ impl ReparkSession {
             }
         }
         let view = unique_view_name();
+        let copy_target = object_store_s3::write_target_url(&scheme, &bucket, &prefix_text);
         let copy_sql = format!(
             "COPY (SELECT * FROM {view}) TO '{}' STORED AS {}{}{}",
-            sql_escape(url),
+            sql_escape(&copy_target),
             format.stored_as(),
             partition_clause(&resolved_partitions),
             options_clause

@@ -65,12 +65,73 @@ fn dual_key_raw(
 
 fn parse_endpoint_bool(key: &str, raw: &str) -> Result<bool> {
     match raw.trim().to_ascii_lowercase().as_str() {
-        "true" | "1" | "yes" | "t" | "y" => Ok(true),
-        "false" | "0" | "no" | "f" | "n" => Ok(false),
+        "true" => Ok(true),
+        "false" => Ok(false),
         _ => Err(Error::Config(format!(
             "S3 config `{key}` expects a boolean, got {raw:?}"
         ))),
     }
+}
+
+pub(crate) fn split_s3_url_raw(path: &str) -> Option<(String, String, String)> {
+    let (scheme, rest) = path.split_once("://")?;
+    if scheme.is_empty() || !is_s3_scheme(&scheme.to_ascii_lowercase()) {
+        return None;
+    }
+    let (bucket, key) = match rest.split_once('/') {
+        Some((bucket, key)) => (bucket, key.trim_matches('/').to_string()),
+        None => (rest, String::new()),
+    };
+    if bucket.is_empty() || bucket.contains(['/', '@', ':']) {
+        return None;
+    }
+    Some((scheme.to_string(), bucket.to_string(), key))
+}
+
+pub(crate) fn encode_s3_key_for_url(key: &str) -> String {
+    key.replace('%', "%25")
+        .replace('#', "%23")
+        .replace('?', "%3F")
+}
+
+pub(crate) fn write_target_url(scheme: &str, bucket: &str, key: &str) -> String {
+    if key.is_empty() {
+        format!("{scheme}://{bucket}/")
+    } else {
+        format!("{scheme}://{bucket}/{}/", encode_s3_key_for_url(key))
+    }
+}
+
+fn normalize_endpoint(raw: &str, ssl_enabled: Option<bool>) -> Result<String> {
+    if raw.contains("://") {
+        Url::parse(raw).map_err(|source| {
+            Error::Config(format!("S3 endpoint {raw:?} is not a valid URL: {source}"))
+        })?;
+        return Ok(raw.to_string());
+    }
+    let scheme = if ssl_enabled == Some(false) {
+        "http"
+    } else {
+        "https"
+    };
+    let normalized = format!("{scheme}://{raw}");
+    Url::parse(&normalized).map_err(|source| {
+        Error::Config(format!("S3 endpoint {raw:?} is not a valid URL: {source}"))
+    })?;
+    Ok(normalized)
+}
+
+fn endpoint_allows_http(normalized: &str, ssl_enabled: Option<bool>) -> bool {
+    let scheme = normalized
+        .split_once("://")
+        .map_or(String::new(), |(scheme, _)| scheme.to_ascii_lowercase());
+    if scheme == "http" {
+        return true;
+    }
+    if scheme == "https" {
+        return false;
+    }
+    !ssl_enabled.unwrap_or(true)
 }
 
 pub(crate) fn resolve_endpoint_config(
@@ -153,36 +214,41 @@ pub(crate) fn parse_s3_bucket(path: &str) -> Option<(String, String)> {
     Some((scheme.to_string(), bucket.to_string()))
 }
 
-pub(crate) async fn resolve_s3_prefix_for_read(context: &SessionContext, path: &str) -> String {
+pub(crate) async fn resolve_s3_prefix_for_read(
+    context: &SessionContext,
+    path: &str,
+) -> Result<String> {
     if path.ends_with('/') {
-        return path.to_string();
+        return Ok(path.to_string());
     }
-    let Some((_scheme, bucket)) = parse_s3_bucket(path) else {
-        return path.to_string();
+    let Some((scheme, bucket, key)) = split_s3_url_raw(path) else {
+        return Ok(path.to_string());
     };
-    let Ok(url) = Url::parse(path) else {
-        return path.to_string();
-    };
-    let prefix_text = url.path().trim_matches('/').to_string();
-    if prefix_text.is_empty() {
-        return path.to_string();
+    if key.is_empty() {
+        return Ok(path.to_string());
     }
-    let Ok(prefix) = ObjectPath::from_url_path(&prefix_text) else {
-        return path.to_string();
+    let Ok(prefix) = ObjectPath::parse(&key) else {
+        return Ok(path.to_string());
     };
     let Ok(store_url) = ObjectStoreUrl::parse(format!("s3://{bucket}")) else {
-        return path.to_string();
+        return Ok(path.to_string());
     };
     let Ok(store) = context.runtime_env().object_store(&store_url) else {
-        return path.to_string();
+        return Ok(path.to_string());
     };
     if store.head(&prefix).await.is_ok() {
-        return path.to_string();
+        return Ok(path.to_string());
     }
     let mut listed = store.list(Some(&prefix));
     match listed.next().await {
-        Some(Ok(_)) => format!("{path}/"),
-        _ => path.to_string(),
+        Some(Ok(_)) => Ok(format!(
+            "{scheme}://{bucket}/{}/",
+            encode_s3_key_for_url(&key)
+        )),
+        Some(Err(error)) => Err(Error::DataFusion(format!(
+            "cannot list S3 prefix {path}: {error}"
+        ))),
+        None => Ok(path.to_string()),
     }
 }
 
@@ -259,13 +325,15 @@ pub(crate) fn build_amazon_s3_store(
         .with_credentials(bridge);
     if let Some(config) = endpoint {
         if let Some(url) = &config.endpoint {
-            builder = builder.with_endpoint(url);
+            let normalized = normalize_endpoint(url, config.ssl_enabled)?;
+            builder =
+                builder.with_allow_http(endpoint_allows_http(&normalized, config.ssl_enabled));
+            builder = builder.with_endpoint(normalized);
+        } else if let Some(ssl_enabled) = config.ssl_enabled {
+            builder = builder.with_allow_http(!ssl_enabled);
         }
         if let Some(path_style) = config.path_style_access {
             builder = builder.with_virtual_hosted_style_request(!path_style);
-        }
-        if let Some(ssl_enabled) = config.ssl_enabled {
-            builder = builder.with_allow_http(!ssl_enabled);
         }
     }
     let store = builder.build().map_err(|source| {
@@ -487,7 +555,10 @@ mod tests {
         let store: Arc<dyn ObjectStore> = Arc::new(InMemory::new());
         for key in keys {
             store
-                .put(&ObjectPath::from(*key), PutPayload::from(vec![1u8]))
+                .put(
+                    &ObjectPath::parse(*key).unwrap(),
+                    PutPayload::from(vec![1u8]),
+                )
                 .await
                 .unwrap();
         }
@@ -499,12 +570,27 @@ mod tests {
     async fn slashless_prefix_with_children_reads_as_a_directory() {
         let context = prefix_context(&["cell/p/part-0.parquet"]).await;
         assert_eq!(
-            resolve_s3_prefix_for_read(&context, "s3://bucket/cell/p").await,
+            resolve_s3_prefix_for_read(&context, "s3://bucket/cell/p")
+                .await
+                .unwrap(),
             "s3://bucket/cell/p/"
         );
         assert_eq!(
-            resolve_s3_prefix_for_read(&context, "s3a://bucket/cell/p").await,
+            resolve_s3_prefix_for_read(&context, "s3a://bucket/cell/p")
+                .await
+                .unwrap(),
             "s3a://bucket/cell/p/"
+        );
+    }
+
+    #[tokio::test]
+    async fn hash_and_query_prefixes_resolve_to_encoded_directory_urls() {
+        let context = prefix_context(&["cell/data#v2/part-0.parquet"]).await;
+        assert_eq!(
+            resolve_s3_prefix_for_read(&context, "s3a://bucket/cell/data#v2")
+                .await
+                .unwrap(),
+            "s3a://bucket/cell/data%23v2/"
         );
     }
 
@@ -512,11 +598,15 @@ mod tests {
     async fn exact_object_reads_keep_their_spelling() {
         let context = prefix_context(&["cell/p/part-0.parquet", "cell/exact.csv"]).await;
         assert_eq!(
-            resolve_s3_prefix_for_read(&context, "s3://bucket/cell/p/part-0.parquet").await,
+            resolve_s3_prefix_for_read(&context, "s3://bucket/cell/p/part-0.parquet")
+                .await
+                .unwrap(),
             "s3://bucket/cell/p/part-0.parquet"
         );
         assert_eq!(
-            resolve_s3_prefix_for_read(&context, "s3a://bucket/cell/exact.csv").await,
+            resolve_s3_prefix_for_read(&context, "s3a://bucket/cell/exact.csv")
+                .await
+                .unwrap(),
             "s3a://bucket/cell/exact.csv"
         );
     }
@@ -525,7 +615,9 @@ mod tests {
     async fn exact_object_wins_over_children_with_the_same_prefix() {
         let context = prefix_context(&["cell/p", "cell/p/part-0.parquet"]).await;
         assert_eq!(
-            resolve_s3_prefix_for_read(&context, "s3://bucket/cell/p").await,
+            resolve_s3_prefix_for_read(&context, "s3://bucket/cell/p")
+                .await
+                .unwrap(),
             "s3://bucket/cell/p"
         );
     }
@@ -534,29 +626,140 @@ mod tests {
     async fn sibling_prefixes_missing_keys_and_non_s3_paths_stay_untouched() {
         let context = prefix_context(&["cell/p2/part-0.parquet"]).await;
         assert_eq!(
-            resolve_s3_prefix_for_read(&context, "s3://bucket/cell/p").await,
+            resolve_s3_prefix_for_read(&context, "s3://bucket/cell/p")
+                .await
+                .unwrap(),
             "s3://bucket/cell/p"
         );
         assert_eq!(
-            resolve_s3_prefix_for_read(&context, "s3://bucket/nowhere").await,
+            resolve_s3_prefix_for_read(&context, "s3://bucket/nowhere")
+                .await
+                .unwrap(),
             "s3://bucket/nowhere"
         );
         assert_eq!(
-            resolve_s3_prefix_for_read(&context, "s3://other/cell/p").await,
+            resolve_s3_prefix_for_read(&context, "s3://other/cell/p")
+                .await
+                .unwrap(),
             "s3://other/cell/p"
         );
         assert_eq!(
-            resolve_s3_prefix_for_read(&context, "s3://bucket/cell/p/").await,
+            resolve_s3_prefix_for_read(&context, "s3://bucket/cell/p/")
+                .await
+                .unwrap(),
             "s3://bucket/cell/p/"
         );
         assert_eq!(
-            resolve_s3_prefix_for_read(&context, "s3://bucket").await,
+            resolve_s3_prefix_for_read(&context, "s3://bucket")
+                .await
+                .unwrap(),
             "s3://bucket"
         );
         assert_eq!(
-            resolve_s3_prefix_for_read(&context, "/tmp/cell/p").await,
+            resolve_s3_prefix_for_read(&context, "/tmp/cell/p")
+                .await
+                .unwrap(),
             "/tmp/cell/p"
         );
+    }
+
+    #[test]
+    fn split_keeps_hash_query_and_percent_literal() {
+        assert_eq!(
+            split_s3_url_raw("s3a://bucket/cell/data#v2"),
+            Some((
+                "s3a".to_string(),
+                "bucket".to_string(),
+                "cell/data#v2".to_string()
+            ))
+        );
+        assert_eq!(
+            split_s3_url_raw("s3://bucket/cell/data?v=2"),
+            Some((
+                "s3".to_string(),
+                "bucket".to_string(),
+                "cell/data?v=2".to_string()
+            ))
+        );
+        assert_eq!(
+            split_s3_url_raw("s3://bucket/cell/data%23v2"),
+            Some((
+                "s3".to_string(),
+                "bucket".to_string(),
+                "cell/data%23v2".to_string()
+            ))
+        );
+        assert_eq!(
+            split_s3_url_raw("s3://bucket/cell/p"),
+            Some(("s3".to_string(), "bucket".to_string(), "cell/p".to_string()))
+        );
+        assert_eq!(
+            split_s3_url_raw("s3://bucket"),
+            Some(("s3".to_string(), "bucket".to_string(), String::new()))
+        );
+        assert_eq!(split_s3_url_raw("s3:///cell/p"), None);
+        assert_eq!(split_s3_url_raw("s3:foo"), None);
+        assert_eq!(split_s3_url_raw("/tmp/cell/p"), None);
+        assert_eq!(split_s3_url_raw("gs://bucket/cell/p"), None);
+    }
+
+    #[test]
+    fn write_target_is_a_directory_url_with_an_encoded_key() {
+        assert_eq!(
+            write_target_url("s3a", "bucket", "cell/t.parquet"),
+            "s3a://bucket/cell/t.parquet/"
+        );
+        assert_eq!(
+            write_target_url("s3", "bucket", "cell/data#v2"),
+            "s3://bucket/cell/data%23v2/"
+        );
+        assert_eq!(
+            write_target_url("s3", "bucket", "cell/data?v=2"),
+            "s3://bucket/cell/data%3Fv=2/"
+        );
+        assert_eq!(write_target_url("s3", "bucket", ""), "s3://bucket/");
+    }
+
+    #[test]
+    fn bare_host_endpoints_take_their_scheme_from_ssl_enabled() {
+        assert_eq!(
+            normalize_endpoint("127.0.0.1:5599", Some(false)).unwrap(),
+            "http://127.0.0.1:5599"
+        );
+        assert_eq!(
+            normalize_endpoint("127.0.0.1:5599", None).unwrap(),
+            "https://127.0.0.1:5599"
+        );
+        assert_eq!(
+            normalize_endpoint("http://127.0.0.1:5599", None).unwrap(),
+            "http://127.0.0.1:5599"
+        );
+        assert!(normalize_endpoint("http://[::1", None).is_err());
+        assert!(normalize_endpoint("[::1", Some(false)).is_err());
+    }
+
+    #[test]
+    fn explicit_endpoint_scheme_decides_allow_http() {
+        assert!(endpoint_allows_http("http://127.0.0.1:5599", None));
+        assert!(endpoint_allows_http("http://127.0.0.1:5599", Some(true)));
+        assert!(!endpoint_allows_http("https://s3.example.com", Some(false)));
+        assert!(!endpoint_allows_http("https://s3.example.com", None));
+        assert!(endpoint_allows_http("custom://host", Some(false)));
+        assert!(!endpoint_allows_http("custom://host", None));
+    }
+
+    #[test]
+    fn endpoint_booleans_accept_only_true_and_false() {
+        let key = S3A_SSL_ENABLED_CONFIG_KEY;
+        assert!(parse_endpoint_bool(key, "true").unwrap());
+        assert!(parse_endpoint_bool(key, "TRUE").unwrap());
+        assert!(!parse_endpoint_bool(key, "False").unwrap());
+        for raw in ["1", "0", "yes", "no", "t", "y", "sometimes", ""] {
+            assert!(
+                parse_endpoint_bool(key, raw).is_err(),
+                "spelling {raw:?} must refuse"
+            );
+        }
     }
 
     #[tokio::test]

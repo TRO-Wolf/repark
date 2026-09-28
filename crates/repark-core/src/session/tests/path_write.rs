@@ -32,7 +32,7 @@ async fn listed_names(memory: &InMemory, prefix: &str) -> Vec<String> {
     let scope = if prefix.is_empty() {
         None
     } else {
-        Some(ObjectPath::from(prefix))
+        Some(ObjectPath::parse(prefix).unwrap())
     };
     let mut listed = memory.list(scope.as_ref());
     let mut names = Vec::new();
@@ -504,4 +504,133 @@ async fn unregistered_bucket_write_hits_the_finalize_gate() {
         .await
         .unwrap_err();
     assert!(error.to_string().contains("register_configured_catalogs"));
+}
+
+#[tokio::test]
+async fn extension_destination_writes_a_directory_for_append() {
+    for format in ["parquet", "csv", "json"] {
+        let (session, memory) = write_session("write-bucket");
+        let frame = frame_of(&session, "SELECT 1 AS id, 'a' AS grp").await;
+        let url = format!("s3://write-bucket/cell/out.{format}");
+        session
+            .write_path(&frame, &url, format, "overwrite", &HashMap::new(), &[])
+            .await
+            .unwrap();
+        let count = session
+            .write_path(&frame, &url, format, "append", &HashMap::new(), &[])
+            .await
+            .unwrap();
+        assert_eq!(count, 2, "format {format}");
+        let names = listed_names(&memory, &format!("cell/out.{format}")).await;
+        assert_eq!(names.len(), 3, "format {format}: {names:?}");
+        assert!(
+            names
+                .iter()
+                .all(|name| name.starts_with(&format!("cell/out.{format}/"))),
+            "format {format}: {names:?}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn exact_key_object_is_visible_to_error_ignore_and_overwrite() {
+    let (session, memory) = write_session("write-bucket");
+    let frame = frame_of(&session, "SELECT 1 AS id, 'a' AS grp").await;
+    let url = "s3://write-bucket/cell/solo.parquet";
+    memory
+        .put(
+            &ObjectPath::from("cell/solo.parquet"),
+            object_store::PutPayload::from("seed-bytes"),
+        )
+        .await
+        .unwrap();
+    let error = session
+        .write_path(&frame, url, "parquet", "error", &HashMap::new(), &[])
+        .await
+        .unwrap_err();
+    assert!(error.to_string().contains("[PATH_ALREADY_EXISTS]"));
+    assert_eq!(
+        object_bytes(&memory, "cell/solo.parquet").await,
+        b"seed-bytes"
+    );
+    session
+        .write_path(&frame, url, "parquet", "ignore", &HashMap::new(), &[])
+        .await
+        .unwrap();
+    assert_eq!(
+        object_bytes(&memory, "cell/solo.parquet").await,
+        b"seed-bytes"
+    );
+    session
+        .write_path(&frame, url, "parquet", "overwrite", &HashMap::new(), &[])
+        .await
+        .unwrap();
+    let names = listed_names(&memory, "cell/solo.parquet").await;
+    assert!(
+        !names.iter().any(|name| name == "cell/solo.parquet"),
+        "exact object must go: {names:?}"
+    );
+    assert!(names.iter().any(|name| name.ends_with("_SUCCESS")));
+    assert!(names.iter().any(|name| has_extension(name, "parquet")));
+}
+
+#[tokio::test]
+async fn overwrite_of_prefix_the_frame_reads_refuses() {
+    let (session, memory) = write_session("write-bucket");
+    let frame = frame_of(&session, "SELECT 1 AS id, 'a' AS grp").await;
+    let url = "s3://write-bucket/cell/p";
+    session
+        .write_path(&frame, url, "parquet", "overwrite", &HashMap::new(), &[])
+        .await
+        .unwrap();
+    let back = session.read_parquet(url).await.unwrap();
+    let error = session
+        .write_path(&back, url, "parquet", "overwrite", &HashMap::new(), &[])
+        .await
+        .unwrap_err();
+    assert!(error.to_string().contains("UNSUPPORTED_OVERWRITE"));
+    let names = listed_names(&memory, "cell/p").await;
+    assert_eq!(names.len(), 2);
+    let again = session.read_parquet(url).await.unwrap();
+    assert_frame_rows(again, 1, &["1", "a"]).await;
+}
+
+#[tokio::test]
+async fn hash_key_writes_beside_the_plain_prefix() {
+    let (session, memory) = write_session("write-bucket");
+    let frame = frame_of(&session, "SELECT 1 AS id, 'a' AS grp").await;
+    let grown = frame_of(&session, "SELECT 10 AS id, 'x' AS grp").await;
+    session
+        .write_path(
+            &frame,
+            "s3://write-bucket/cell/data",
+            "parquet",
+            "overwrite",
+            &HashMap::new(),
+            &[],
+        )
+        .await
+        .unwrap();
+    session
+        .write_path(
+            &grown,
+            "s3://write-bucket/cell/data#v2",
+            "parquet",
+            "overwrite",
+            &HashMap::new(),
+            &[],
+        )
+        .await
+        .unwrap();
+    let plain = session
+        .read_parquet("s3://write-bucket/cell/data")
+        .await
+        .unwrap();
+    assert_frame_rows(plain, 1, &["1", "a"]).await;
+    let names = listed_names(&memory, "cell/data#v2").await;
+    assert_eq!(names.len(), 2, "hash keys: {names:?}");
+    assert!(
+        names.iter().all(|name| name.starts_with("cell/data#v2/")),
+        "hash keys: {names:?}"
+    );
 }

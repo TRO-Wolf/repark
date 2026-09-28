@@ -4,7 +4,9 @@ use std::hash::{BuildHasher, Hasher};
 use std::sync::Arc;
 
 use datafusion::common::TableReference;
-use datafusion::datasource::listing::ListingTable;
+use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
+use datafusion::datasource::default_table_source::source_as_provider;
+use datafusion::datasource::listing::{ListingTable, ListingTableUrl};
 use datafusion::datasource::memory::MemTable;
 use datafusion::datasource::physical_plan::FileScanConfig;
 use datafusion::datasource::source::DataSourceExec;
@@ -61,6 +63,40 @@ fn render_uri(object_store_url: &ObjectStoreUrl, location: &ObjectPath) -> Strin
     let text: &str = location.as_ref();
     let trimmed = text.trim_start_matches('/');
     format!("{base}/{trimmed}")
+}
+
+pub(crate) fn plan_reads_s3_prefix(plan: &LogicalPlan, bucket: &str, prefix: &str) -> bool {
+    let mut found = false;
+    let _ = plan.apply(|node| {
+        if let LogicalPlan::TableScan(scan) = node
+            && let Ok(provider) = source_as_provider(&scan.source)
+            && let Some(table) = provider.downcast_ref::<ListingTable>()
+        {
+            found = found
+                || table
+                    .table_paths()
+                    .iter()
+                    .any(|url| scan_url_hits_prefix(url, bucket, prefix));
+        }
+        Ok(TreeNodeRecursion::Continue)
+    });
+    found
+}
+
+fn scan_url_hits_prefix(url: &ListingTableUrl, bucket: &str, prefix: &str) -> bool {
+    let Some((_, scan_bucket, scan_key)) = crate::object_store_s3::split_s3_url_raw(url.as_str())
+    else {
+        return false;
+    };
+    if scan_bucket != bucket {
+        return false;
+    }
+    let dest = prefix.trim_matches('/');
+    let scan = scan_key.trim_matches('/');
+    if dest.is_empty() || scan.is_empty() {
+        return false;
+    }
+    scan == dest || scan.starts_with(&format!("{dest}/")) || dest.starts_with(&format!("{scan}/"))
 }
 
 pub(crate) struct Ctx<'a, S: BuildHasher> {

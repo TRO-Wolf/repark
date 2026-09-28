@@ -31,8 +31,14 @@ def write_text_path(writer: Any, path: str) -> None:
     from repark import _native
     from repark.errors import AnalysisException
     from repark.spark._integral import attach_error_condition
+    from repark.spark.dataframe.writer_s3 import is_s3_url
 
     writer._dataframe._ensure_alive()
+    if is_s3_url(path):
+        raise AnalysisException(
+            f"DataFrameWriter.text over {path!r} is not supported yet (repark text "
+            "writes are local only — refuse-loud; no local shadow is written)"
+        )
     _refuse_text_compression(writer)
     partition_columns = _text_partition_columns(writer)
     normalized_mode = "error" if writer._mode == "errorifexists" else writer._mode

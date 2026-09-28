@@ -801,7 +801,7 @@ impl ReparkSession {
         }
         let flag = crate::read_options::secret_column_flag(options)?;
         let json_options = json_read_options_from_map(options)?;
-        let resolved = object_store_s3::resolve_s3_prefix_for_read(self.context(), path).await;
+        let resolved = object_store_s3::resolve_s3_prefix_for_read(self.context(), path).await?;
         let frame = self
             .context()
             .read_json(&resolved, json_options)

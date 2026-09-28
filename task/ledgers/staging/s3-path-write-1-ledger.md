@@ -466,3 +466,76 @@ as the candidate follow-up card "hive partition discovery on path reads";
   ceiling), `check_lib_py.py`, `check_ledger_grammar.py`,
   `check_docs_links.py`, `check_map_md.sh --base origin/main`, ruff check
   and format checks on the touched test file.
+
+## Verifier fold VU-1..VU-9 (2026-09-28)
+
+The Opus verifier reproduced four silent data-loss bugs on moto at aa471249
+plus five smaller findings. Spark decides each fix: `u12_probe2.py` records
+10 `VU-*` cells on Spark 4.1.2 (`hadoop-aws` 3.4.2, UTC) against
+`moto[server]`, bucket `u12spark2`, saved as `u12-spark-2.json`; the stale
+`u12-repark.json` (round-1 capture, every read-back failing locally) is
+replaced by a current capture with the moto endpoint configured (33 writes
+ok, 5 `PATH_ALREADY_EXISTS` refusals).
+
+Spark's answers: an extension-named destination is a directory — overwrite
+3 rows then append 2 rows yields 5 rows under `t.parquet/` (parquet, csv,
+json alike). An object at the exact key counts as existing: `error` raises
+`PATH_ALREADY_EXISTS`, `ignore` no-ops, `overwrite` deletes the exact
+object and writes parts beneath. `#` and `?` stay literal in keys
+(`data#v2/`, `data?v=2/`) beside an untouched `data/`. Text writes parts
+under the destination with a `value: string` read-back. One answer
+contradicts the verifier: the read-transform-overwrite shape does NOT
+refuse upfront with `UNSUPPORTED_OVERWRITE.PATH` on Spark 4.1.2 — the job
+deletes the source mid-write and fails loud with
+`FAILED_READ_FILE.FILE_NOT_EXIST`, leaving only directory markers. The
+fold's refusal is therefore stricter than Spark: it refuses before deleting
+anything, using Spark's error class for the same condition. The message
+wording stays reviewable.
+
+Dispositions. VU-1: `COPY` always targets the directory spelling
+(`<url>/`, extension left in place) for every format; appends add parts.
+VU-2: the error, ignore and overwrite probes `HEAD` the exact key as well
+as listing `<prefix>/`; overwrite deletes the exact object. VU-3: an
+overwrite whose destination prefix is read by the frame's own plan —
+`ListingTable` scan URLs under the same bucket and prefix in either
+direction — refuses with `[UNSUPPORTED_OVERWRITE.PATH]` before any
+delete. VU-4: the destination key keeps `#`, `?` and `%` literally (the
+Hadoop rule); the `COPY` and read URLs carry the `%`-encoded form so the
+list, delete, exact-key and DataFusion keys agree. VU-5: a bare
+`host:port` endpoint takes `http://` or `https://` from
+`connection.ssl.enabled` (default `https`) and validates with `Url::parse`,
+so it never panics. VU-6: an explicit `http://`/`https://` endpoint
+decides `allow_http` regardless of the ssl key; the boolean keys accept
+only `true`/`false` (case-insensitive); a failed prefix list now fails the
+read with the store error instead of the masked extension message. VU-7:
+`df.write.text` to `s3://`/`s3a://` refuses loud — routing text through
+the S3 door needs an engine text format, a larger change. VU-8: `is_s3_url`
+is a `s3://`/`s3a://` prefix match, so `s3:foo` and leading-whitespace
+spellings stay local. VU-9: a `p2/` sibling pin (overwrite, error and
+ignore on `p` leave `p2/` intact) and column name/type/order comparison in
+the oracle comparator.
+
+No new residues. `R-S3-OVERWRITE-WINDOW` (the failure-path window between
+delete and commit) is unchanged by the VU-3 upfront refusal, which closes
+the success-path loss only.
+
+## Verifier-fold verification (2026-09-28)
+
+- Rust: `cargo test -p repark-core --lib` full green (862 passed, 1
+  ignored), including 4 new `session::tests::path_write` pins (extension
+  directories, exact-key save modes, self-overwrite refusal, `#` keys)
+  and 6 new `object_store_s3` pins (raw split, directory target, bare-host
+  normalisation, scheme-led `allow_http`, strict booleans, `#` resolve);
+  `cargo clippy -p repark-core -p repark-python --all-targets` with `-D
+  warnings -A clippy::disallowed_methods` and workspace `make
+  rust-panic-ban` green; `cargo fmt --check` green.
+- Python: `test_s3_path_write_1.py` (71 passed: 38 oracle cells with the
+  strengthened comparator plus the VU-1..VU-9 pins, every S1 red at
+  aa471249) on `moto_server` from `target/u12/moto-venv`; every facade
+  file that reads or writes parquet/csv/json/text plus
+  `test_dfcore_1_exports.py` (43 files, `-n 8`): 1374 passed, 27 skipped,
+  zero local-path pin changes.
+- Gates: `comment_ban.py` over `origin/main...HEAD`, `check_lib_rs`,
+  `check_rust_file_size.py`, `check_lib_py.py`, `check_ledger_grammar.py`,
+  `check_docs_links.py`, `check_map_md.sh --base origin/main`, ruff check
+  and format checks on the touched Python files.

@@ -1,6 +1,6 @@
 {
  "engine": "repark",
- "endpoint": "http://127.0.0.1:5599",
+ "endpoint": "http://127.0.0.1:58693",
  "bucket": "u12repark",
  "banner": {
   "version": "repark-1.5.0",
@@ -22,19 +22,45 @@
    ],
    "list_before": [],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/Iho3F6DUAb1Dm9CW_0.parquet",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
    }
   },
   "W-PATH-S3-parquet-error-existing": {
@@ -51,27 +77,54 @@
     "grp"
    ],
    "seed": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_before": [],
+   "list_before": [
+    {
+     "key": "p/6J0qJ1PpM4go1ueL_0.parquet",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
    "write": {
     "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
+    "error": "AnalysisException",
+    "msg": "[PATH_ALREADY_EXISTS] Path s3a://u12repark/W-PATH-S3-parquet-error-existing/p already exists. Set mode as \"overwrite\" to overwrite the existing path.",
+    "getCondition": "PATH_ALREADY_EXISTS",
     "getSqlState": null
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/6J0qJ1PpM4go1ueL_0.parquet",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 1,
+    "rows": [
+     [
+      0,
+      "seed"
+     ]
+    ]
    }
   },
   "W-PATH-S3-parquet-ignore-empty": {
@@ -89,19 +142,45 @@
    ],
    "list_before": [],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/mQ8gvDKiWuLDtQuD_0.parquet",
+     "size": ">0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
    }
   },
   "W-PATH-S3-parquet-ignore-existing": {
@@ -118,27 +197,50 @@
     "grp"
    ],
    "seed": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_before": [],
+   "list_before": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/xlDAonXRno3efagF_0.parquet",
+     "size": ">0"
+    }
+   ],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/xlDAonXRno3efagF_0.parquet",
+     "size": ">0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 1,
+    "rows": [
+     [
+      0,
+      "seed"
+     ]
+    ]
    }
   },
   "W-PATH-S3-parquet-overwrite-empty": {
@@ -156,19 +258,45 @@
    ],
    "list_before": [],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/QVvPAZkIDzz2lV5Y_0.parquet",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
    }
   },
   "W-PATH-S3-parquet-overwrite-existing": {
@@ -185,27 +313,58 @@
     "grp"
    ],
    "seed": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_before": [],
+   "list_before": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/rG9Ub8vuzQ1stZKg_0.parquet",
+     "size": ">0"
+    }
+   ],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/aqd8BkqP3eq0n0mL_0.parquet",
+     "size": ">0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
    }
   },
   "W-PATH-S3-parquet-append-empty": {
@@ -223,19 +382,45 @@
    ],
    "list_before": [],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/NW5KrT40MFGV5KUy_0.parquet",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
    }
   },
   "W-PATH-S3-parquet-append-existing": {
@@ -252,27 +437,66 @@
     "grp"
    ],
    "seed": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_before": [],
+   "list_before": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/d8Wqc8oCbr7iEpHX_0.parquet",
+     "size": ">0"
+    }
+   ],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/1A5gVWUfHnbU2qIu_0.parquet",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/d8Wqc8oCbr7iEpHX_0.parquet",
+     "size": ">0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 4,
+    "rows": [
+     [
+      0,
+      "seed"
+     ],
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
    }
   },
   "W-PATH-S3-csv-error-empty": {
@@ -290,19 +514,49 @@
    ],
    "list_before": [],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/Z9gg2BIKglDTTcZh_0.csv",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "_c0",
+      "string"
+     ],
+     [
+      "_c1",
+      "string"
+     ]
+    ],
+    "count": 4,
+    "rows": [
+     [
+      "1",
+      "a"
+     ],
+     [
+      "2",
+      "b"
+     ],
+     [
+      "3",
+      "a"
+     ],
+     [
+      "id",
+      "grp"
+     ]
+    ]
    }
   },
   "W-PATH-S3-csv-error-existing": {
@@ -319,27 +573,58 @@
     "grp"
    ],
    "seed": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_before": [],
+   "list_before": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/anli9sqBSW6lmTdZ_0.csv",
+     "size": ">0"
+    }
+   ],
    "write": {
     "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
+    "error": "AnalysisException",
+    "msg": "[PATH_ALREADY_EXISTS] Path s3a://u12repark/W-PATH-S3-csv-error-existing/p already exists. Set mode as \"overwrite\" to overwrite the existing path.",
+    "getCondition": "PATH_ALREADY_EXISTS",
     "getSqlState": null
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/anli9sqBSW6lmTdZ_0.csv",
+     "size": ">0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "_c0",
+      "string"
+     ],
+     [
+      "_c1",
+      "string"
+     ]
+    ],
+    "count": 2,
+    "rows": [
+     [
+      "0",
+      "seed"
+     ],
+     [
+      "id",
+      "grp"
+     ]
+    ]
    }
   },
   "W-PATH-S3-csv-ignore-empty": {
@@ -357,19 +642,49 @@
    ],
    "list_before": [],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/PJh49140jHwdIqPz_0.csv",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "_c0",
+      "string"
+     ],
+     [
+      "_c1",
+      "string"
+     ]
+    ],
+    "count": 4,
+    "rows": [
+     [
+      "1",
+      "a"
+     ],
+     [
+      "2",
+      "b"
+     ],
+     [
+      "3",
+      "a"
+     ],
+     [
+      "id",
+      "grp"
+     ]
+    ]
    }
   },
   "W-PATH-S3-csv-ignore-existing": {
@@ -386,27 +701,54 @@
     "grp"
    ],
    "seed": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_before": [],
+   "list_before": [
+    {
+     "key": "p/9GIDNGmUfhcnoXxr_0.csv",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/9GIDNGmUfhcnoXxr_0.csv",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "_c0",
+      "string"
+     ],
+     [
+      "_c1",
+      "string"
+     ]
+    ],
+    "count": 2,
+    "rows": [
+     [
+      "0",
+      "seed"
+     ],
+     [
+      "id",
+      "grp"
+     ]
+    ]
    }
   },
   "W-PATH-S3-csv-overwrite-empty": {
@@ -424,19 +766,49 @@
    ],
    "list_before": [],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/yHsfbzDJIoouXT9b_0.csv",
+     "size": ">0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "_c0",
+      "string"
+     ],
+     [
+      "_c1",
+      "string"
+     ]
+    ],
+    "count": 4,
+    "rows": [
+     [
+      "1",
+      "a"
+     ],
+     [
+      "2",
+      "b"
+     ],
+     [
+      "3",
+      "a"
+     ],
+     [
+      "id",
+      "grp"
+     ]
+    ]
    }
   },
   "W-PATH-S3-csv-overwrite-existing": {
@@ -453,27 +825,62 @@
     "grp"
    ],
    "seed": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_before": [],
+   "list_before": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/kzXcKx0Oq13MFyPE_0.csv",
+     "size": ">0"
+    }
+   ],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/fIsQZK8iQR6okpi8_0.csv",
+     "size": ">0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "_c0",
+      "string"
+     ],
+     [
+      "_c1",
+      "string"
+     ]
+    ],
+    "count": 4,
+    "rows": [
+     [
+      "1",
+      "a"
+     ],
+     [
+      "2",
+      "b"
+     ],
+     [
+      "3",
+      "a"
+     ],
+     [
+      "id",
+      "grp"
+     ]
+    ]
    }
   },
   "W-PATH-S3-csv-append-empty": {
@@ -491,19 +898,49 @@
    ],
    "list_before": [],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/H87dctmNmHWssJYF_0.csv",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "_c0",
+      "string"
+     ],
+     [
+      "_c1",
+      "string"
+     ]
+    ],
+    "count": 4,
+    "rows": [
+     [
+      "1",
+      "a"
+     ],
+     [
+      "2",
+      "b"
+     ],
+     [
+      "3",
+      "a"
+     ],
+     [
+      "id",
+      "grp"
+     ]
+    ]
    }
   },
   "W-PATH-S3-csv-append-existing": {
@@ -520,27 +957,74 @@
     "grp"
    ],
    "seed": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_before": [],
+   "list_before": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/bZPsh4ytOxPDaGnp_0.csv",
+     "size": ">0"
+    }
+   ],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/5sXm97SxB2XkZf1m_0.csv",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/bZPsh4ytOxPDaGnp_0.csv",
+     "size": ">0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "_c0",
+      "string"
+     ],
+     [
+      "_c1",
+      "string"
+     ]
+    ],
+    "count": 6,
+    "rows": [
+     [
+      "0",
+      "seed"
+     ],
+     [
+      "1",
+      "a"
+     ],
+     [
+      "2",
+      "b"
+     ],
+     [
+      "3",
+      "a"
+     ],
+     [
+      "id",
+      "grp"
+     ],
+     [
+      "id",
+      "grp"
+     ]
+    ]
    }
   },
   "W-PATH-S3-json-error-empty": {
@@ -558,19 +1042,45 @@
    ],
    "list_before": [],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/zJgWbjahbrVASupj_0.json",
+     "size": ">0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "grp",
+      "string"
+     ],
+     [
+      "id",
+      "bigint"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "a",
+      3
+     ],
+     [
+      "b",
+      2
+     ]
+    ]
    }
   },
   "W-PATH-S3-json-error-existing": {
@@ -587,27 +1097,54 @@
     "grp"
    ],
    "seed": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_before": [],
+   "list_before": [
+    {
+     "key": "p/UUsXywY8n05Pz6NT_0.json",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
    "write": {
     "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
+    "error": "AnalysisException",
+    "msg": "[PATH_ALREADY_EXISTS] Path s3a://u12repark/W-PATH-S3-json-error-existing/p already exists. Set mode as \"overwrite\" to overwrite the existing path.",
+    "getCondition": "PATH_ALREADY_EXISTS",
     "getSqlState": null
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/UUsXywY8n05Pz6NT_0.json",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "grp",
+      "string"
+     ],
+     [
+      "id",
+      "bigint"
+     ]
+    ],
+    "count": 1,
+    "rows": [
+     [
+      "seed",
+      0
+     ]
+    ]
    }
   },
   "W-PATH-S3-json-ignore-empty": {
@@ -625,19 +1162,45 @@
    ],
    "list_before": [],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/rGjdD14YLfkarMZQ_0.json",
+     "size": ">0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "grp",
+      "string"
+     ],
+     [
+      "id",
+      "bigint"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "a",
+      3
+     ],
+     [
+      "b",
+      2
+     ]
+    ]
    }
   },
   "W-PATH-S3-json-ignore-existing": {
@@ -654,27 +1217,50 @@
     "grp"
    ],
    "seed": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_before": [],
+   "list_before": [
+    {
+     "key": "p/BSNJPix5uTgrUMEJ_0.json",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/BSNJPix5uTgrUMEJ_0.json",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "grp",
+      "string"
+     ],
+     [
+      "id",
+      "bigint"
+     ]
+    ],
+    "count": 1,
+    "rows": [
+     [
+      "seed",
+      0
+     ]
+    ]
    }
   },
   "W-PATH-S3-json-overwrite-empty": {
@@ -692,19 +1278,45 @@
    ],
    "list_before": [],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/YG3aIz61ntd1y6Sk_0.json",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "grp",
+      "string"
+     ],
+     [
+      "id",
+      "bigint"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "a",
+      3
+     ],
+     [
+      "b",
+      2
+     ]
+    ]
    }
   },
   "W-PATH-S3-json-overwrite-existing": {
@@ -721,27 +1333,58 @@
     "grp"
    ],
    "seed": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_before": [],
+   "list_before": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/jSvb1K3rJ0ZAWtSZ_0.json",
+     "size": ">0"
+    }
+   ],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/Dti2pljqYU7Svlo5_0.json",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "grp",
+      "string"
+     ],
+     [
+      "id",
+      "bigint"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "a",
+      3
+     ],
+     [
+      "b",
+      2
+     ]
+    ]
    }
   },
   "W-PATH-S3-json-append-empty": {
@@ -759,19 +1402,45 @@
    ],
    "list_before": [],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/IASdjsZod19ieIdU_0.json",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "grp",
+      "string"
+     ],
+     [
+      "id",
+      "bigint"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "a",
+      3
+     ],
+     [
+      "b",
+      2
+     ]
+    ]
    }
   },
   "W-PATH-S3-json-append-existing": {
@@ -788,27 +1457,66 @@
     "grp"
    ],
    "seed": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_before": [],
+   "list_before": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/h617iSfKKQzo914Z_0.json",
+     "size": ">0"
+    }
+   ],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/0pQRC00TJzqpDY6m_0.json",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/h617iSfKKQzo914Z_0.json",
+     "size": ">0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "grp",
+      "string"
+     ],
+     [
+      "id",
+      "bigint"
+     ]
+    ],
+    "count": 4,
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "a",
+      3
+     ],
+     [
+      "b",
+      2
+     ],
+     [
+      "seed",
+      0
+     ]
+    ]
    }
   },
   "W-PATH-S3-parquet-partitionby-1col": {
@@ -828,19 +1536,42 @@
    ],
    "list_before": [],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/grp=a/yKaUXXuLlgNAe9rC.parquet",
+     "size": ">0"
+    },
+    {
+     "key": "p/grp=b/yKaUXXuLlgNAe9rC.parquet",
+     "size": ">0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      3
+     ]
+    ]
    }
   },
   "W-PATH-S3-parquet-partitionby-2col": {
@@ -862,19 +1593,46 @@
    ],
    "list_before": [],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/grp=a/id=1/wiZ0uol6dS7t68Hw.parquet",
+     "size": ">0"
+    },
+    {
+     "key": "p/grp=a/id=3/wiZ0uol6dS7t68Hw.parquet",
+     "size": ">0"
+    },
+    {
+     "key": "p/grp=b/id=2/wiZ0uol6dS7t68Hw.parquet",
+     "size": ">0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "val",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      "x"
+     ],
+     [
+      "y"
+     ],
+     [
+      "z"
+     ]
+    ]
    }
   },
   "W-PATH-S3-parquet-empty-df": {
@@ -892,19 +1650,32 @@
    ],
    "list_before": [],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/part-00000.parquet",
+     "size": ">0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 0,
+    "rows": []
    }
   },
   "W-PATH-S3-csv-empty-df": {
@@ -922,19 +1693,37 @@
    ],
    "list_before": [],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/part-00000.csv",
+     "size": ">0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "_c0",
+      "string"
+     ],
+     [
+      "_c1",
+      "string"
+     ]
+    ],
+    "count": 1,
+    "rows": [
+     [
+      "id",
+      "grp"
+     ]
+    ]
    }
   },
   "W-PATH-S3-parquet-success-only-error": {
@@ -961,9 +1750,9 @@
    ],
    "write": {
     "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
+    "error": "AnalysisException",
+    "msg": "[PATH_ALREADY_EXISTS] Path s3a://u12repark/W-PATH-S3-parquet-success-only-error/p already exists. Set mode as \"overwrite\" to overwrite the existing path.",
+    "getCondition": "PATH_ALREADY_EXISTS",
     "getSqlState": null
    },
    "list_after": [
@@ -974,8 +1763,8 @@
    ],
    "readback": {
     "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
+    "error": "AnalysisException",
+    "msg": "Error during planning: No files found at s3a://u12repark/W-PATH-S3-parquet-success-only-error/p/. Cannot infer schema from an empty location; either add data files or declare an explicit schema for the table.",
     "getCondition": null,
     "getSqlState": null
    }
@@ -1003,11 +1792,7 @@
     }
    ],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
    "list_after": [
     {
@@ -1017,8 +1802,8 @@
    ],
    "readback": {
     "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
+    "error": "AnalysisException",
+    "msg": "Error during planning: No files found at s3a://u12repark/W-PATH-S3-parquet-success-only-ignore/p/. Cannot infer schema from an empty location; either add data files or declare an explicit schema for the table.",
     "getCondition": null,
     "getSqlState": null
    }
@@ -1046,24 +1831,45 @@
     }
    ],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
    "list_after": [
     {
      "key": "p/_SUCCESS",
      "size": "0"
+    },
+    {
+     "key": "p/wbludQZFyPLzOiNu_0.parquet",
+     "size": ">0"
     }
    ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
    }
   },
   "W-PATH-S3-parquet-success-only-append": {
@@ -1089,24 +1895,45 @@
     }
    ],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
    "list_after": [
     {
      "key": "p/_SUCCESS",
      "size": "0"
+    },
+    {
+     "key": "p/m2DiSGKMpT7QDDbB_0.parquet",
+     "size": ">0"
     }
    ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
    }
   },
   "W-PATH-S3-parquet-foreign-error": {
@@ -1133,9 +1960,9 @@
    ],
    "write": {
     "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
+    "error": "AnalysisException",
+    "msg": "[PATH_ALREADY_EXISTS] Path s3a://u12repark/W-PATH-S3-parquet-foreign-error/p already exists. Set mode as \"overwrite\" to overwrite the existing path.",
+    "getCondition": "PATH_ALREADY_EXISTS",
     "getSqlState": null
    },
    "list_after": [
@@ -1146,8 +1973,8 @@
    ],
    "readback": {
     "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
+    "error": "AnalysisException",
+    "msg": "Error during planning: No files found at s3a://u12repark/W-PATH-S3-parquet-foreign-error/p/. Cannot infer schema from an empty location; either add data files or declare an explicit schema for the table.",
     "getCondition": null,
     "getSqlState": null
    }
@@ -1175,11 +2002,7 @@
     }
    ],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
    "list_after": [
     {
@@ -1189,8 +2012,8 @@
    ],
    "readback": {
     "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
+    "error": "AnalysisException",
+    "msg": "Error during planning: No files found at s3a://u12repark/W-PATH-S3-parquet-foreign-ignore/p/. Cannot infer schema from an empty location; either add data files or declare an explicit schema for the table.",
     "getCondition": null,
     "getSqlState": null
    }
@@ -1218,24 +2041,45 @@
     }
    ],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
    "list_after": [
     {
-     "key": "p/foreign.txt",
+     "key": "p/Hhln8GP1qw89OydD_0.parquet",
      "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
     }
    ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
    }
   },
   "W-PATH-S3-parquet-foreign-append": {
@@ -1261,24 +2105,49 @@
     }
    ],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
    "list_after": [
     {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
      "key": "p/foreign.txt",
+     "size": ">0"
+    },
+    {
+     "key": "p/rtMX2vN38uXmZ6Bc_0.parquet",
      "size": ">0"
     }
    ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
    }
   },
   "W-PATH-S3-parquet-scheme-s3": {
@@ -1296,19 +2165,45 @@
    ],
    "list_before": [],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/rjzB097H2yqMulmr_0.parquet",
+     "size": ">0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
    }
   },
   "W-PATH-S3-parquet-scheme-s3a": {
@@ -1326,19 +2221,45 @@
    ],
    "list_before": [],
    "write": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: Internal error: No suitable object store found for s3a:%2F. See `RuntimeEnv::register_object_store`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok"
    },
-   "list_after": [],
+   "list_after": [
+    {
+     "key": "p/51KydHqzCvj1detW_0.parquet",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
    "readback": {
-    "status": "error",
-    "error": "PySparkException",
-    "msg": "datafusion engine error: S3 read for bucket 'u12repark' refused: this session never resolved its AWS SDK config. Call register_configured_catalogs() after signaling AWS use \u2014 an AWS-backed catalog (spark.sql.catalog.*), the 'repark.hadoop.fs.s3a.endpoint.region' / 'spark.hadoop.fs.s3a.endpoint.region' region conf, or the explicit opt-in `repark.aws.enable=true`.",
-    "getCondition": null,
-    "getSqlState": null
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
    }
   }
  }

@@ -213,7 +213,7 @@ pub(crate) async fn read_csv_path(
     path: &str,
     options: &HashMap<String, String>,
 ) -> Result<DataFrame> {
-    let resolved = crate::object_store_s3::resolve_s3_prefix_for_read(context, path).await;
+    let resolved = crate::object_store_s3::resolve_s3_prefix_for_read(context, path).await?;
     let flag = secret_column_flag(options)?;
     let mut csv_options = csv_read_options_from_map(options)?;
     // nullValue: force all-Utf8 schema so the scan path never type-parses null tokens.

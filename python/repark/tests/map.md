@@ -3597,6 +3597,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Spark does (`R-S3-SLASH-READ` retired, no verdict moves); the refusal pin is
   a slashless round-trip pin, a trailing-slash pin, and an exact-key pin per
   format.
+  **S3-PATH-WRITE-1 verifier fold (2026-09-28):** the VU-1..VU-9 moto pins
+  replaying `u12-spark-2.json` (extension directories, exact-key save modes,
+  self-overwrite refusal, literal `#`/`?` keys, bare-host and explicit-http
+  endpoints, endpoint booleans, text refusal, URL spellings, the `p2/`
+  sibling); the oracle comparator now checks column names, types and order.
   pins: s3-path-write-1/C-007, C-008, C-009, C-012, C-013, C-014, C-015
 - `test_e2_readwriter.py` — E2 R-CENSUS-READWRITER: bare-name resolution
   (`resolve_table_name` / saveAsTable / table / writeTo / insertInto / MERGE /

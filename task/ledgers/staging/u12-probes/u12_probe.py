@@ -173,6 +173,10 @@ def repark_session() -> Any:
     return (
         ReparkSession.builder.appName("u12-probe")
         .config("spark.sql.session.timeZone", "UTC")
+        .config("repark.hadoop.fs.s3a.endpoint.region", "us-east-1")
+        .config("repark.hadoop.fs.s3a.endpoint", ENDPOINT)
+        .config("repark.hadoop.fs.s3a.path.style.access", "true")
+        .config("repark.hadoop.fs.s3a.connection.ssl.enabled", "false")
         .getOrCreate()
     )
 

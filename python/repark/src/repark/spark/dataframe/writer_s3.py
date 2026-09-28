@@ -3,16 +3,13 @@
 from __future__ import annotations
 
 from typing import Any
-from urllib.parse import urlsplit
 
 from repark import _native
-
-_S3_SCHEMES = frozenset({"s3", "s3a"})
 
 
 def is_s3_url(path: str) -> bool:
     """Tell whether ``path`` addresses S3 without touching the filesystem."""
-    return urlsplit(str(path)).scheme.lower() in _S3_SCHEMES
+    return str(path).lower().startswith(("s3://", "s3a://"))
 
 
 def write_s3_path(writer: Any, path: str, *, stored_as: str) -> None:
