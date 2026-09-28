@@ -2012,11 +2012,13 @@ ambiguity SQLSTATE to the measured `42704` (Q-21b-1).
   an ASCII case twin in its input refuses, exact case included (row
   [ID-1a](#id-1a--ascii-case-twin-columns-refuse-every-reference)). Output columns keep stored
   names where Spark echoes the requested spelling (pinned, not converged).
-- **repark, Spark door, `caseSensitive=true` (DECLARED split)** — resolution is exact, and the
-  parser fold is lossy: an unquoted mixed-case spelling arrives lowercased, so even exact-case
-  unquoted `userId` refuses where Spark resolves it. Backticked exact-case (`` `userId` ``)
-  resolves. The refusal is loud (`AnalysisException`, `No field named`), never a silent wrong
-  answer; the backticked success answers the recorded `true` oracle rows.
+- **repark, Spark door, `caseSensitive=true`** — resolution is exact: the
+  statement plans with identifier normalization off (CASESENS-1 slice 2,
+  2026-09-27), so unquoted exact-case `userId` resolves where it refused
+  before — the declared split converged. Wrong-case refuses loud
+  (`UNRESOLVED_COLUMN.WITH_SUGGESTION`, Spark's text), never a silent wrong
+  answer; backticked exact-case (`` `userId` ``) resolves as before. Both
+  answer the recorded `true` oracle rows. Full contract: E-CASE-SENSITIVE-SQL.
 - **Apache Spark** — resolves every spelling case-**insensitively** by default
   (`spark.sql.caseSensitive = false` applies to quoted names too), so `` `ID` `` finds `id`;
   under `true` both quoted and unquoted exact-case resolve.
@@ -2026,7 +2028,8 @@ ambiguity SQLSTATE to the measured `42704` (Q-21b-1).
 - **Pin** — `crates/repark-sql/tests/cross_door.rs::cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted`
   (ANSI refuses, Spark resolves) plus `python/repark/tests/test_ice_mixed_case_1.py` (both
   doors, both flag values, DML fragments, the ambiguity shape, the backticked-`true` success,
-  the unquoted-`true` declared refusal, and the live tier). The run-21b cells are
+  the unquoted-`true` success (was the declared refusal until CASESENS-1 slice 2),
+  and the live tier). The run-21b cells are
   `test_measured_query_cells_answer_spark[V01_* / V02_* / V04_join_using_select]` and
   `test_join_using_insert_folds_and_writes_the_left_columns`, plus the Rust
   `crates/repark-core/src/column_resolution/tests.rs` `v01_*`, `v02_*`, `v04_*`.
@@ -2038,8 +2041,9 @@ ambiguity SQLSTATE to the measured `42704` (Q-21b-1).
   `UuidTextToBytesExec`, which rebuilds each batch against the target schema, so the source's
   `PARQUET:field_id` no longer routes the write on this door; the fork ask stays open for a
   root fix.
-- **Rationale** — FIXED on the Spark door under `false` (ICE-MIXED-CASE-1, 2026-09-17); the
-  `true` unquoted-exact refusal and the stored-name output echo are DECLARED splits with pins.
+- **Rationale** — FIXED on the Spark door under `false` (ICE-MIXED-CASE-1, 2026-09-17)
+  and for unquoted exact-case under `true` (CASESENS-1 slice 2, 2026-09-27); the stored-name
+  output echo stays a DECLARED split with its pin.
   INTENDED split on the ANSI door per G11 Option A. The old declared-divergence pin reddened
   exactly as designed when the Spark half converged, and this row was rewritten in the same
   change.
@@ -2219,11 +2223,17 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
 
 - **repark** — both `createDataFrame([(…)], ["id", "id"])` and `SELECT 1 AS id, 2 AS id` refuse
   at construction / planning with an `AnalysisException` matching `unique expression names`. No
-  frame carrying exact-duplicate output names is ever materialised.
+  frame carrying exact-duplicate output names is ever materialised. Case twins are not
+  duplicates: `SELECT ID, id`, `SELECT 1 AS a, 2 AS A` and `SELECT *, ID` answer with both
+  spellings (CASESENS-1 S4, 2026-09-27), while a reference into the twins refuses
+  `AMBIGUOUS_REFERENCE` and `CREATE TABLE` / CTAS / `CREATE VIEW` / `CREATE TEMPORARY VIEW`
+  with twin columns refuse `COLUMN_ALREADY_EXISTS` under `caseSensitive=false`.
 - **Apache Spark** — accepts both constructions (e.g. `Row(id=1, id=2)`); the ambiguity surfaces
   later as `AMBIGUOUS_REFERENCE` only when the duplicate name is *referenced*. *(oracle:
   documented — PySpark 4.1.2 API / analysis semantics for duplicate output names.)*
-- **Pin** — `python/repark/tests/test_filter_predicate_rewrite.py::test_exact_duplicate_column_names_are_rejected_at_frame_construction`
+- **Pin** — `python/repark/tests/test_filter_predicate_rewrite.py::test_exact_duplicate_column_names_are_rejected_at_frame_construction`;
+  `crates/repark-spark/src/tests/casesens_twins.rs::exact_duplicates_still_refuse`;
+  `python/repark/tests/test_casesens_1.py::test_s4_case_twins`. pins: casesens-1/C-011, C-012
 - **Rationale** — DECLARED. The refusal is inherited from DataFusion's unique-output-name rule
   and is load-bearing for facade helpers that assume unique names (e.g. the filter rewriter's
   exact-duplicate defensive branch). Reproducing Spark's late raise would mean allowing illegal
@@ -2244,12 +2254,12 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   `id`, `Data`; `SELECT t.ID FROM … t` → `ID`; a struct field `s.A` → `A`; a `UNION` takes the
   left branch's spelling; `GROUP BY ID` keeps `ID`. Before, it answered the stored case (`id`)
   and lower-cased unquoted aliases (`x`). Under `caseSensitive=true` a wrong-case reference
-  on a single-table query refuses `[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or
+  in any scope refuses (E-CASE-SENSITIVE-SQL) `[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or
   function parameter with name `ID` cannot be resolved. Did you mean one of the following?
   [`id`, `Data`].` On the DataFrame door `F.col` binds a spelled output case-insensitively
-  (`spark.sql("SELECT ID …").filter(F.col("id") > 1)`, `createDataFrame(…, ["Id"])`). Residues:
-  `count(*)` keeps DataFusion's name `count(*)` where Spark says `count(1)`, and
-  `SELECT ID, id` refuses under ID-3 where Spark answers `ID`, `id`.
+  (`spark.sql("SELECT ID …").filter(F.col("id") > 1)`, `createDataFrame(…, ["Id"])`). Residue:
+  `count(*)` keeps DataFusion's name `count(*)` where Spark says `count(1)`. `SELECT ID, id`
+  answers `ID`, `id` since CASESENS-1 S4 (2026-09-27); see ID-3.
 - **Apache Spark** — the names above. *(oracle: recorded — PySpark 4.1.2 + Iceberg 1.11,
   2026-09-25/26, `target/probe-u11-edge-1/spark_case.json`, `spark_r2.json`, `spark_r3.json` in
   the lane clone; scoreboard cell `E-CASE-SELECT`.)*
@@ -2257,6 +2267,99 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   `crates/repark-core/src/column_resolution/tests.rs::display_rewrite_keeps_the_written_spelling`;
   `crates/repark-core/src/session/df_guards/case_bind.rs::tests`. pins: u11-edge-1/C-001
 - **Rationale** — FIXED; the cell replays EQUAL on every observation.
+
+### E-CASE-NESTED — derived tables, CTEs and views keep the written spelling — **FIXED 2026-09-27 (CASESENS-1)**
+
+- **repark** — under the default `spark.sql.caseSensitive=false` every nested query
+  level keeps the written spelling, not only the top one: `SELECT * FROM (SELECT ID,
+  DATA FROM t)` → `ID`, `DATA`; a CTE body and a nested derived table likewise; a
+  `UNION ALL` inside a derived table takes the left branch's spelling; a join of two
+  derived tables answers `ID`, `id`; a column-alias list `AS x(Kay)` keeps `Kay`.
+  A MERGE whose derived source spells a column in another case answers
+  (`No field named data` is gone). An outer reference to a CTE's outputs across
+  case (`WITH c AS (SELECT id, Data FROM t) SELECT ID, DATA FROM c`) answers
+  `ID`, `DATA`, and reads of a catalog view whose body spells columns in another
+  case answer with the written spelling (`SELECT * FROM v` → `ID`, `DATA`;
+  `SELECT id, data FROM v` → `id`, `data`) — both landed by S1b's repair-loop
+  scope fields (2026-09-27).
+- **Apache Spark** — the names above. *(oracle: recorded — PySpark 4.1.2 + Iceberg 1.11,
+  2026-09-27, `casesens_1_spark_oracle.json` (210 steps) beside the facade pin.)*
+- **Pin** — `python/repark/tests/test_casesens_1.py`;
+  `crates/repark-spark/src/tests/casesens_scopes.rs`;
+  `crates/repark-core/src/column_resolution/inner_scopes.rs::tests`. pins: casesens-1/C-001, C-002, C-003, C-004
+- **Rationale** — FIXED; the cell replays EQUAL on every observation, the
+  CTE-outer and catalog-view shapes included (S1b).
+
+### E-CASE-SENSITIVE-SQL — spark.sql.caseSensitive=true is exact on the SQL door — **FIXED 2026-09-27 (CASESENS-1)**
+
+- **repark** — under `spark.sql.caseSensitive=true` the SQL door plans each
+  statement with identifier normalization off, so every wrong-case reference
+  refuses `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` naming the written spelling,
+  qualified as written (`` `a`.`ID` `` over a join): select list, join
+  condition, derived table, CTE, WHERE, ORDER BY, GROUP BY, alias and
+  backticks. Exact mixed-case spellings answer named as written (`Data`,
+  `` `Data` ``, `Id`/`id` twins, `SELECT *`), function names still fold
+  (`UPPER(Data)` binds), and relation aliases and CTE names match exactly.
+  INSERT column lists, UPDATE, DELETE and MERGE fragments with
+  a wrong-case column refuse and leave the table unchanged; MERGE reproduces
+  Spark's suggestion list byte-exact
+  (``[`t`.`id`, `t`.`Data`, `s`.`id`, `s`.`Data`]``). Metadata-table suffixes
+  still fold under both settings. Known rendering residues (unit ledger
+  R-CS1-2 … R-CS1-7, all dated 2026-09-27): the single-table guard names
+  `` `T.id` `` where Spark names `` `T`.`id` ``; ORDER BY scopes list the whole
+  table where Spark narrows; join candidates stay bare where Spark qualifies;
+  struct fields report DataFusion's text where Spark stamps `FIELD_NOT_FOUND`;
+  missing relations report `not found` where Spark stamps
+  `TABLE_OR_VIEW_NOT_FOUND`; function outputs keep DataFusion's qualified name.
+- **Apache Spark** — the refusals and answers above. *(oracle: recorded —
+  PySpark 4.1.2 + Iceberg 1.11, 2026-09-27, `casesens_1_spark_oracle.json`
+  (210 steps) beside the facade pin.)*
+- **Pin** — `python/repark/tests/test_casesens_1.py`
+  (`test_s2_sql_door_is_exact_under_case_sensitive`,
+  `test_s2_default_session_unchanged`);
+  `crates/repark-spark/src/tests/casesens_true.rs`;
+  `crates/repark-common/src/names.rs::tests`. pins: casesens-1/C-005, C-006, C-007, C-008
+- **Rationale** — FIXED; every true-mode refusal is Spark's measured text or
+  its head with the candidate set, and the default session is unchanged.
+
+### E-CASE-SENSITIVE-DF — spark.sql.caseSensitive=true is exact on the DataFrame door — **FIXED 2026-09-27 (CASESENS-1)**
+
+- **repark** — under `spark.sql.caseSensitive=true` the DataFrame door binds
+  through the session rule wherever written names reach Rust: `F.col` keeps
+  its written spelling into the binder, so `filter`, `describe`, the window
+  leg and `selectExpr` refuse `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` naming
+  the written spelling (candidate order unreproducible, R12);
+  `join(on=)` refuses Spark's `UNRESOLVED_USING_COLUMN_FOR_JOIN` text
+  byte-exact; `unionByName` refuses Spark's legacy
+  `Cannot resolve column name …` text byte-exact; `drop` of a missing
+  spelling is a no-op; exact-hit selects answer. `describe` with explicit
+  columns resolves one name per call in Rust and labels the output with the
+  written spelling. Temp-view reads match exactly under `true` and fold
+  under `false` (the S2 placement ruling's leg; misses report `not found`).
+  Under `false` every name answers labelled as written. Residues (unit
+  ledger, dated 2026-09-27): the union refusal carries no condition where
+  Spark reports `_LEGACY_ERROR_TEMP_1201` (R-CS1-9, the pin asserts class
+  and exact message); six pre-bound legs (select string / `F.col` /
+  lowercase-data, `orderBy`, `groupBy`, string `filter`) still answer
+  (R-CS1-10, descoped to CASESENS-2 — the facade pre-binds them in
+  `dataframe/core.py` before Rust sees the written name).
+- **Apache Spark** — the refusals and answers above. *(oracle: recorded —
+  PySpark 4.1.2 + Iceberg 1.11, 2026-09-27, `casesens_1_spark_oracle.json`
+  (210 steps) beside the facade pin.)*
+- **Pin** — `python/repark/tests/test_casesens_1.py`
+  (`test_s3_dataframe_door_is_exact_under_case_sensitive`,
+  `test_s3_dataframe_union_refuses_the_missing_name`,
+  `test_s3_default_door_binds_and_names_as_written`,
+  `test_s3_describe_resolves_one_name_per_call`,
+  `test_s3_temp_view_name_is_exact_under_case_sensitive`);
+  `crates/repark-core/src/session/df_guards/case_bind.rs::tests`
+  (`exact_rule_refuses_a_case_only_match`,
+  `ignore_case_rule_is_unchanged`, `frame_functions_follow_the_rule`);
+  `crates/repark-python/src/column/door_parity_tests.rs::column_keeps_the_written_spelling`.
+  pins: casesens-1/C-009, C-010
+- **Rationale** — FIXED; every true-mode refusal is Spark's measured text, its
+  head with the candidate set, or the recorded legacy text, and the default
+  session is unchanged.
 
 ### E-CASE-PARTITION-FIELD — partition sources bind case-sensitively — **FIXED 2026-09-26 (U11-EDGE-1)**
 
@@ -2266,16 +2369,25 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   under either `caseSensitive`; so do `bucket(4, ID)` and `REPLACE PARTITION FIELD cat WITH
   CAT`. Before, the source bound case-insensitively and the field was added. The class is
   RePark's `PySparkException` behind a `DataInvalid => ` prefix, where Spark raises
-  `Py4JJavaError` (the scoreboard counts both refusals as agreeing). Residues (unit ledger R-1,
-  R-2): `DROP PARTITION FIELD CAT` with an identity field `cat` drops it where Spark refuses
-  `Cannot find partition field to remove: CAT`, and `WRITE ORDERED BY CAT` under
-  `caseSensitive=true` answers where Spark refuses the same `ValidationException`.
+  `Py4JJavaError` (the scoreboard counts both refusals as agreeing).
+  **CASESENS-1 S5 (2026-09-27):** the R-1/R-2 residues are closed — `DROP` / `REPLACE
+  PARTITION FIELD` by a wrong-case name refuses `Cannot find partition field to remove:
+  <written>` with the spec unchanged, transform sources bind exactly on DROP and REPLACE as
+  well as ADD, `WRITE ORDERED BY` binds by `spark.sql.caseSensitive` (a wrong-case column
+  refuses the same `ValidationException` under `true`), and `SET` / `DROP IDENTIFIER FIELDS`
+  bind exactly under both settings. The `RENAME PARTITION FIELD` extension keeps working,
+  now exact (Spark does not parse it). *(oracle: this probe set,
+  `python/repark/tests/casesens_1_spark_oracle.json`.)*
 - **Apache Spark** — the refusals above, from Iceberg's `NamedReference.bind`. *(oracle:
   recorded — PySpark 4.1.2 + Iceberg 1.11, 2026-09-26, `target/probe-u11-edge-1/spark_r2.json`;
   scoreboard cell `E-CASE-PARTITION-FIELD`.)*
 - **Pin** — `python/repark/tests/test_u11_edge_partition_field.py`;
   `crates/repark-iceberg/src/write/alter.rs::tests::partition_spec_add_wrong_case_source_refuses_like_spark`.
   pins: u11-edge-1/C-009
+  `python/repark/tests/test_casesens_1.py::test_s5_iceberg_ddl_binds_exactly`;
+  `crates/repark-spark/src/tests/casesens_ddl.rs`;
+  `crates/repark-iceberg/src/write/partition_spec/tests.rs`.
+  pins: casesens-1/C-013, C-014, C-015, C-016
 - **Rationale** — FIXED; both engines refuse on replay.
 
 ### TP-FORMAT-V1-DELETE — copy-on-write DELETE on a format-version 1 table — **EQUAL 2026-09-26 (U11-EDGE-1, record only)**
@@ -6034,7 +6146,7 @@ the pin rather than obeying it.
 > The X-1 TIMESTAMP→INT split flipped to a **nullability-only** disclosure; see
 > [G6-4](#g6-4--timestampint-nullability-only-after-tz-5).
 
-### TZ-6 — every TIMESTAMP is an instant; there is no `TIMESTAMP_NTZ`
+### TZ-6 — `TIMESTAMP_NTZ` is a wall clock (Iceberg `timestamp`); `TIMESTAMP` is an instant (Iceberg `timestamptz`) — FIXED 2026-09-27 (WO NTZ-1)
 
 > **TZ-6 — `TIMESTAMP` vs `TIMESTAMP_NTZ` are distinct — FIXED (2026-08-13, TZ-4 PR-2).**
 > `TimestampType` / default `TIMESTAMP` is Arrow `timestamp[us, tz=UTC]` (Iceberg `timestamptz`);
@@ -6063,6 +6175,41 @@ the pin rather than obeying it.
 > and this unit does not touch that skip set.
 > **Pin:** `python/repark/tests/test_spark_sql_grammar_1.py::test_pg_ntz_literal_refuses`
 > and `…::test_pg_ntz_cast_refuses`.
+>
+> **TZ-6 — the scalar `TIMESTAMP_NTZ` literal and cast answer Spark's wall clock —
+> FIXED (2026-09-27, WO NTZ-1).** `TIMESTAMP_NTZ '<s>'` is the naive wall: a zone
+> suffix is dropped, a date-only text is midnight, fractions truncate to micros, the
+> unaliased name is `TIMESTAMP_NTZ '<wall>'` and the type is `timestamp_ntz`; an
+> unparsable text is Spark's `ParseException` `INVALID_TYPED_LITERAL` (42604).
+> `CAST` / `::` / `TRY_CAST` to `TIMESTAMP_NTZ` answer Spark's value for STRING, DATE,
+> NULL, `TIMESTAMP` (the session-zone wall) and NTZ sources, refuse numeric sources and
+> targets with `DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION` (42K09), and
+> `CAST(TIMESTAMP … AS BIGINT)` stays epoch seconds. `TIMESTAMP` and `DATE` store into
+> an NTZ column as the session-zone wall / midnight on VALUES, `INSERT … SELECT`,
+> UPDATE, MERGE and the DataFrame append (and NTZ values store into a `TIMESTAMP`
+> column as the session-zone instant); every other source refuses Spark's
+> `INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST` naming `"TIMESTAMP_NTZ"`. Slice 1
+> (the literal and explicit casts, both cells EQUAL), slice 2 (store assignment),
+> slice 3 (the storage surface: partitions, `.files` bounds, v3, CTAS, DDL
+> presentation, a Spark-written table).
+> **Pins:** `python/repark/tests/test_ntz_1.py` (clauses C-001..C-008),
+> `crates/repark-spark/src/tests/ntz_door.rs`, `…/ntz_store.rs`.
+> **Residues** (ledger `task/ledgers/staging/ntz-1-ledger.md`, dated 2026-09-27, both
+> texts): `spark.sql.timestampType=TIMESTAMP_NTZ` leaves bare `TIMESTAMP` DDL and
+> literals tz-aware (Spark stores Iceberg `timestamp` and types `timestamp_ntz`;
+> RePark stores `timestamptz` and types `timestamp`; R-NTZ-S3-1, its own unit); a nested
+> cast target carrying `TIMESTAMP_NTZ` keeps the R4 refusal (Spark answers a value;
+> R-NTZ-S3-2); `typeof(date_trunc('DAY', ntz))` answers `timestamp_ntz` (Spark answers
+> `timestamp`, the value is EQUAL; R-NTZ-S3-3); `toPandas()` answers `datetime64[us]`
+> (Spark answers `datetime64[ns]`, the value is EQUAL; R-NTZ-S3-4); `toArrow()` carries
+> `PARQUET:field_id` metadata (Spark's schema is bare; R-NTZ-S3-5); unaliased CAST
+> names render RePark's embedded-UDF call (Spark renders its cast text; R-2);
+> `ALTER COLUMN c TYPE …` keeps RePark's `DataInvalid =>` class (Spark raises
+> `SparkException: Unsupported table change`; R-NTZ-S3-7); the WI-2 refusal text stays
+> for non-NTZ targets (R-NTZ-S3-8); `INSERT … VALUES (0, 1)` into a `TIMESTAMP` column
+> writes silently (Spark refuses; R-NTZ-S2-2, its own unit); the RePark catalog does not
+> adopt a Spark `type=hadoop` warehouse (registered ICE-CATALOG-SESSION-HADOOP-1;
+> R-NTZ-S3-6).
 
 ### TZ-7 — a zoneless TIMESTAMP input is read as UTC, not as a session-zone wall clock
 
@@ -8479,9 +8626,10 @@ the pin rather than obeying it.
   PySparkException `DataInvalid => Cannot bind: day cannot transform long values from 'id'`,
   where Spark raises ValidationException `Cannot bind: day cannot transform long values from
   'id'`. For a struct source the fork renders `struct<intstring>` where Spark prints
-  `struct<5: a: optional int, 6: b: optional string>`. An unknown column in a term keeps
-  RePark's `Cannot find field nope in table schema`, where Spark says `Cannot find field 'nope'
-  in struct: struct<…>` (also `id.x` and `sc.ns.wo.id`). Other malformed shapes keep RePark's
+  `struct<5: a: optional int, 6: b: optional string>`. Since CASESENS-1 S5 (2026-09-27) an
+  unknown column in a term refuses Spark's `Cannot find field 'nope' in struct: struct<…>`
+  behind RePark's `DataInvalid => ` prefix (also `id.x` and `sc.ns.wo.id`; see
+  `E-CASE-PARTITION-FIELD`). Other malformed shapes keep RePark's
   analysis texts (`bucket(`, `bucket(4, id))`, `… DESC DESC`, `… NULLS`, `… LOCALLY`), and
   `bucket(4, 0xid)` (sqlparser splits `0x` from `id`) keeps RePark's `takes column names and
   constants only` text where Spark reads one identifier and says `Cannot find field '0xid'`.
@@ -8709,8 +8857,9 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   CREATE refused `column type TIMESTAMP_LTZ is not supported yet for Iceberg tables` and the
   literal did not parse. The ANSI door keeps refusing the Spark spelling. Residues (ledger
   R-1..R-5 and R-16, each held by its oracle record): a STRING literal writes into the column where
-  Spark refuses `CANNOT_SAFELY_CAST` (as for `TIMESTAMP`); the `TIMESTAMP_NTZ` name stays
-  refused (TZ-6); `ALTER COLUMN … TYPE` refusals keep RePark's class and `DataInvalid =>`
+  Spark refuses `CANNOT_SAFELY_CAST` (as for `TIMESTAMP`); the `TIMESTAMP_NTZ` contract
+  is FIXED (see TZ-6, WO NTZ-1); `ALTER COLUMN … TYPE` refusals keep RePark's
+  class and `DataInvalid =>`
   prefix; `collect()` in a non-UTC session answers the session-zone wall (TZ-7 Q12); a bare
   `TIMESTAMP` under `spark.sql.timestampType=TIMESTAMP_NTZ` stays `timestamptz` (TZ-6 Q10);
   an invalid literal (`TIMESTAMP_LTZ 'garbage'`) fails at execution with `[CAST_INVALID_INPUT] …
@@ -8730,6 +8879,50 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `crates/repark-spark/src/tests/u9_timestamp_ltz.rs`,
   `crates/repark-spark/src/spark_rewrites/timestamp_ltz_literal.rs` (unit pins),
   `crates/repark-sql/tests/ansi_door_u9_types.rs`.
+
+### TY-TIMESTAMP-NTZ — EQUAL (2026-09-27): a `TIMESTAMP_NTZ` column (Iceberg `timestamp`) end to end
+
+- **repark** — the Spark door lowers `TIMESTAMP_NTZ '…'` to the naive wall at the token
+  layer (a zone suffix is dropped, a date-only text is midnight, fractions truncate to
+  micros; an unparsable text is Spark's `INVALID_TYPED_LITERAL`) and `CAST` / `::` /
+  `TRY_CAST` to `TIMESTAMP_NTZ` onto a dedicated UDF (STRING, DATE, NULL, instant and
+  NTZ sources answer Spark's value; numeric sources and targets refuse
+  `DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION`). The literal and the cast reach every
+  DML door and CTAS; `TIMESTAMP` and `DATE` store as the session-zone wall / midnight
+  and every other source refuses Spark's `CANNOT_SAFELY_CAST` naming `"TIMESTAMP_NTZ"`.
+  Rows, filters, ordering, min/max, `CAST … AS STRING`, interval arithmetic, a
+  DataFrame append, `days` / `hours` / `months` / `years` / identity / `bucket`
+  partitioning with `.partitions`, `.files` bounds and pruning, `DESCRIBE`,
+  `SHOW CREATE TABLE`, `dtypes`, `printSchema`, `collect()` and `toArrow()` types, and
+  a Spark-written table (reads, bounds, re-insert) answer as Spark. Before, the first
+  INSERT refused `UNSUPPORTED_TIMESTAMP_NTZ`. The ANSI door keeps refusing the Spark
+  spelling. Residues: the TZ-6 FIXED note's R-2, R-NTZ-S2-2 and R-NTZ-S3-1..R-NTZ-S3-8
+  (each held by its ledger record).
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-26
+  (`ntz-spark.json`, `ntz2-spark.json`, `ntz4-spark.json`, `ntz5-spark.json`,
+  `ntz6-spark.json`; session zone UTC unless stated, probe host America/New_York) and
+  2026-09-27 (`ntz-xc-spark.json`: the Spark-written `xc.ns.x` reads, `.files` bounds,
+  re-insert and the three `ALTER COLUMN … TYPE` refusal texts); scoreboard cell
+  `TY-TIMESTAMP-NTZ`, replayed EQUAL.
+- **Pin** — `python/repark/tests/test_ntz_1.py` (+ `ntz_1_spark_oracle.json`),
+  `crates/repark-spark/src/tests/ntz_door.rs`, `…/ntz_store.rs`,
+  `python/repark/tests/_record_ntz_1_spark_table.py` and the
+  `python/repark/tests/fixtures/ntz_1_spark_table/` fixture.
+- **Rationale** — EQUAL, dated 2026-09-27, WO NTZ-1 clauses C-001..C-008 (PROVEN).
+
+### TY-TIMESTAMP-NTZ-V3 — EQUAL (2026-09-27): a `TIMESTAMP_NTZ` column at format-version 3
+
+- **repark** — the v3 cell replays Spark's rows, columns, Iceberg schema and filter, and
+  a v3 table takes literals through INSERT, UPDATE, DELETE and MERGE; `ADD COLUMN`
+  stores Iceberg `timestamp`; the DataFrame door creates and appends. The scalar
+  literal, cast, store and partition surface is the v2 one (TY-TIMESTAMP-NTZ).
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-26
+  (`ntz-spark.json` `create_v3` / `ins_v3` / `select_v3` / `meta_v3`,
+  `ntz2-spark.json` DML legs; the v3 DML walls are rule-derived from the measured v2
+  legs); scoreboard cell `TY-TIMESTAMP-NTZ-V3`, replayed EQUAL.
+- **Pin** — `python/repark/tests/test_ntz_1.py::test_table_cells_replay_spark[3]` and
+  `…::test_v3_round_trip_answers_as_spark`.
+- **Rationale** — EQUAL, dated 2026-09-27, WO NTZ-1 clauses C-004 and C-008 (PROVEN).
 
 ### TY-MAP — the empty map literal `map()` refused, so a `MAP` column could not take it — **FIXED 2026-09-25 (WO U9-TYPES-1)**
 
@@ -12847,7 +13040,14 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   this row records the struct-field representation until collect returns nested Rows the way
   Spark does.
 
-### EX-COL-1 — a bare `F.col(...).cast(...)` select names the engine-qualified column; Spark keeps the child name
+### EX-COL-1 — FIXED (CASESENS-1 VC-3, 2026-09-28): a bare `F.col(...).cast(...)` select names the engine-qualified column; Spark keeps the child name
+
+> **CLOSED 2026-09-28 (CASESENS-1 verifier fold VC-3).** The select boundary now
+> aliases a `Cast`/`TryCast` over a column reference to the written child name, so the
+> bare arm answers `v` like Spark on createDataFrame, temp-view, and Iceberg frames,
+> lowercase names included. The pin
+> `python/repark/tests/test_examples_column_a.py::test_col_cast_qualified_projection_name`
+> flipped to `["v"]` in the same change. Retired per §6.
 
 - **repark** — `df.select(F.col("v").cast("double"))` names the output column
   `datafusion.public.__repark_cdf_<plan-id>.v`: the cast of a door-built column falls to the

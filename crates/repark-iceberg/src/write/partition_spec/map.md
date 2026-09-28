@@ -21,6 +21,13 @@ file-size ceiling, so new partition-spec pins land in this file.
   `Cannot find field 'CAT' in struct: struct<1: id: optional int, 2: cat: optional string>`
   and the default spec keeps `cat` (mutation: dropping either arm from `bound_source` turns
   both red). V-012. pins: u11-edge-1/C-012
+  **WO CASESENS-1 slice 5 (2026-09-27):** `drop_and_replace_by_name_are_exact` pins
+  the exact field-name check (`CAT` against `cat`, `kat` against `Kat` refuse
+  `Cannot find partition field to remove: <written>` with the spec unchanged; the exact
+  names drop and replace) and `transform_sources_are_exact_on_drop_and_replace` pins the
+  exact transform-source check (`bucket(4, ID)` refuses Java's `ValidationException`
+  with the full struct text on DROP and REPLACE with the spec unchanged; the exact
+  source drops). pins: casesens-1/C-013, C-014
 - `map.md` — this file.
 
 ## Pointers

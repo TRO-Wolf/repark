@@ -48,7 +48,32 @@ pub fn session_sql_with_write_options(
     })
 }
 
+#[allow(clippy::missing_errors_doc, clippy::too_many_arguments)]
+#[pyfunction]
+#[pyo3(signature = (session, frame, url, format, mode, options, partition_by))]
+pub fn session_write_path(
+    py: Python<'_>,
+    session: PyRef<'_, PyReparkSession>,
+    frame: &PyDataFrame,
+    url: &str,
+    format: &str,
+    mode: &str,
+    options: HashMap<String, String>,
+    partition_by: Vec<String>,
+) -> PyResult<usize> {
+    fenced_span!("py.write", "session_write_path", {
+        let runtime = Arc::clone(&session.runtime);
+        let inner = session.session.clone();
+        let frame = frame.inner().clone();
+        py.detach(|| {
+            runtime.block_on(inner.write_path(&frame, url, format, mode, &options, &partition_by))
+        })
+        .map_err(crate::to_py_err)
+    })
+}
+
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(session_sql_with_write_options, module)?)?;
+    module.add_function(wrap_pyfunction!(session_write_path, module)?)?;
     Ok(())
 }

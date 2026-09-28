@@ -15,6 +15,7 @@ use iceberg::transaction::{
 use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
 use repark_iceberg::write::void_store::arrow_schema_to_iceberg_with_unknown;
 
+use repark_common::names::{column_already_exists, folded_duplicate};
 use repark_core::{CatalogRegistry, LocationPolicy};
 
 use crate::catalog_ops::{
@@ -208,6 +209,16 @@ pub(crate) async fn execute_ctas(
         repark_functions::analyze_eagerly(&ctx.state(), query.logical_plan().clone())?;
     let query = ctx.execute_logical_plan(analyzed_plan).await?;
     let arrow_schema = Arc::new(query.schema().as_arrow().clone());
+    if crate::spark_door_case_insensitive(ctx.state().config().options()) {
+        let names = arrow_schema
+            .fields()
+            .iter()
+            .map(|field| field.name().as_str())
+            .collect::<Vec<_>>();
+        if let Some(twin) = folded_duplicate(&names) {
+            return Err(DataFusionError::Plan(column_already_exists(&twin)));
+        }
+    }
     repark_core::refuse_iceberg_create_of_tightened_plan(query.logical_plan())
         .map_err(|error| DataFusionError::Plan(error.to_string()))?;
     repark_core::refuse_iceberg_create_of_tightened_schema(arrow_schema.as_ref())

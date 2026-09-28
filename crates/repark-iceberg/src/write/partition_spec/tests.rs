@@ -149,3 +149,189 @@ async fn replace_by_transform_wrong_case_source_refuses_like_spark() {
     })
     .await;
 }
+
+fn spec_triples(table: &iceberg::table::Table) -> Vec<(String, Transform, i32)> {
+    table
+        .metadata()
+        .default_partition_spec()
+        .fields()
+        .iter()
+        .map(|field| (field.name.clone(), field.transform, field.source_id))
+        .collect::<Vec<_>>()
+}
+
+async fn refuses_missing_name(
+    catalog: &Arc<dyn Catalog>,
+    ident: &TableIdent,
+    change: PartitionSpecChange,
+    written: &str,
+) {
+    let error = apply_partition_spec_changes(catalog.as_ref(), ident, &[change])
+        .await
+        .expect_err("a wrong-case field name must refuse");
+    let expected = format!("Cannot find partition field to remove: {written}");
+    assert!(error.to_string().ends_with(expected.as_str()), "{error}");
+}
+
+#[tokio::test]
+async fn drop_and_replace_by_name_are_exact() {
+    let wh = TempDir::new().unwrap();
+    let (catalog, ident) = partitioned_by_cat(&wh).await;
+    apply_partition_spec_changes(
+        catalog.as_ref(),
+        &ident,
+        &[PartitionSpecChange::AddField {
+            source_name: "id".into(),
+            transform: Transform::Identity,
+            name: Some("Kat".into()),
+        }],
+    )
+    .await
+    .unwrap();
+    refuses_missing_name(
+        &catalog,
+        &ident,
+        PartitionSpecChange::RemoveFieldByName { name: "CAT".into() },
+        "CAT",
+    )
+    .await;
+    refuses_missing_name(
+        &catalog,
+        &ident,
+        PartitionSpecChange::ReplaceField {
+            old_name: "CAT".into(),
+            source_name: "id".into(),
+            transform: Transform::Bucket(2),
+            new_name: None,
+        },
+        "CAT",
+    )
+    .await;
+    refuses_missing_name(
+        &catalog,
+        &ident,
+        PartitionSpecChange::RemoveFieldByName { name: "kat".into() },
+        "kat",
+    )
+    .await;
+    let table = catalog.load_table(&ident).await.unwrap();
+    assert_eq!(
+        spec_triples(&table),
+        vec![
+            ("cat".to_string(), Transform::Identity, 2),
+            ("Kat".to_string(), Transform::Identity, 1),
+        ]
+    );
+    apply_partition_spec_changes(
+        catalog.as_ref(),
+        &ident,
+        &[PartitionSpecChange::RemoveFieldByName { name: "Kat".into() }],
+    )
+    .await
+    .unwrap();
+    apply_partition_spec_changes(
+        catalog.as_ref(),
+        &ident,
+        &[PartitionSpecChange::ReplaceField {
+            old_name: "cat".into(),
+            source_name: "id".into(),
+            transform: Transform::Bucket(2),
+            new_name: None,
+        }],
+    )
+    .await
+    .unwrap();
+    let table = catalog.load_table(&ident).await.unwrap();
+    assert_eq!(spec_triples(&table).len(), 1);
+    assert_eq!(spec_triples(&table)[0].2, 1);
+}
+
+async fn partitioned_by_bucket(wh: &TempDir, name: &str) -> (Arc<dyn Catalog>, TableIdent) {
+    let warehouse = wh.path().to_str().unwrap().to_string();
+    let catalog: Arc<dyn Catalog> = Arc::new(
+        MemoryCatalogBuilder::default()
+            .with_storage_factory(Arc::new(LocalFsStorageFactory))
+            .load(
+                "memory",
+                HashMap::from([(MEMORY_CATALOG_WAREHOUSE.to_string(), warehouse)]),
+            )
+            .await
+            .unwrap(),
+    );
+    let ns = NamespaceIdent::new("sales".to_string());
+    catalog.create_namespace(&ns, HashMap::new()).await.unwrap();
+    let inner = StructType::new(vec![
+        NestedField::optional(4, "a", primitive(PrimitiveType::Int)).into(),
+    ]);
+    let schema = Schema::builder()
+        .with_schema_id(0)
+        .with_fields(vec![
+            NestedField::required(1, "id", primitive(PrimitiveType::Int)).into(),
+            NestedField::optional(2, "cat", primitive(PrimitiveType::String)).into(),
+            NestedField::optional(3, "s", Type::Struct(inner)).into(),
+        ])
+        .build()
+        .unwrap();
+    let creation = TableCreation::builder()
+        .name(name.to_string())
+        .schema(schema)
+        .properties(HashMap::new())
+        .build();
+    catalog.create_table(&ns, creation).await.unwrap();
+    let ident = TableIdent::new(ns, name.to_string());
+    apply_partition_spec_changes(
+        catalog.as_ref(),
+        &ident,
+        &[PartitionSpecChange::AddField {
+            source_name: "id".into(),
+            transform: Transform::Bucket(4),
+            name: None,
+        }],
+    )
+    .await
+    .unwrap();
+    (catalog, ident)
+}
+
+#[tokio::test]
+async fn transform_sources_are_exact_on_drop_and_replace() {
+    let wh = TempDir::new().unwrap();
+    let (catalog, ident) = partitioned_by_bucket(&wh, "b").await;
+    let expected = "ValidationException: Cannot find field 'ID' in struct: struct<1: id: \
+                    required int, 2: cat: optional string, 3: s: optional struct<4: a: \
+                    optional int>>";
+    for change in [
+        PartitionSpecChange::RemoveFieldByTransform {
+            source_name: "ID".into(),
+            transform: Transform::Bucket(4),
+        },
+        PartitionSpecChange::ReplaceFieldByTransform {
+            old_source_name: "ID".into(),
+            old_transform: Transform::Bucket(4),
+            source_name: "cat".into(),
+            transform: Transform::Identity,
+            new_name: None,
+        },
+    ] {
+        let error = apply_partition_spec_changes(catalog.as_ref(), &ident, &[change])
+            .await
+            .expect_err("a wrong-case transform source must refuse");
+        assert!(error.to_string().ends_with(expected), "{error}");
+    }
+    let table = catalog.load_table(&ident).await.unwrap();
+    let triples = spec_triples(&table);
+    assert_eq!(triples.len(), 1);
+    assert_eq!((triples[0].1, triples[0].2), (Transform::Bucket(4), 1));
+    apply_partition_spec_changes(
+        catalog.as_ref(),
+        &ident,
+        &[PartitionSpecChange::RemoveFieldByTransform {
+            source_name: "id".into(),
+            transform: Transform::Bucket(4),
+        }],
+    )
+    .await
+    .unwrap();
+    let table = catalog.load_table(&ident).await.unwrap();
+    assert!(spec_triples(&table).is_empty());
+}

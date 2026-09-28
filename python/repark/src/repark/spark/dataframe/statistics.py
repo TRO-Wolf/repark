@@ -39,6 +39,7 @@ def _summary(
             f"summary statistics not supported yet: {bad} "
             f"(supported: {sorted(supported)}; percentiles are an engine gap)"
         )
+    from repark import _native
     from repark.errors import PySparkValueError
     from repark.spark.types import (
         ByteType,
@@ -51,14 +52,13 @@ def _summary(
         StringType,
     )
 
+    plan = frame._plan()
+    target_pairs: list[tuple[str, str]]
     if _columns:
-        target_pairs: list[tuple[str, str]] = [(name, name) for name in _columns]
         if frame._display_names is not None and frame._engine_names is not None:
-            target_pairs = []
-            want = set(_columns)
-            for display, engine in zip(frame._display_names, frame._engine_names, strict=True):
-                if display in want:
-                    target_pairs.append((display, engine))
+            target_pairs = _display_target_pairs(frame, plan, list(_columns), _case_sensitive(plan))
+        else:
+            target_pairs = _native.resolve_frame_names(plan, list(_columns))
     elif frame._display_names is not None and frame._engine_names is not None:
         target_pairs = list(zip(frame._display_names, frame._engine_names, strict=True))
     else:
@@ -98,7 +98,6 @@ def _summary(
         ]
     if not target_pairs:
         raise AnalysisException("summary/describe on a zero-column frame is undefined")
-    from repark import _native
     from repark.spark import functions as spark_functions
     from repark.spark.column import Column
 
@@ -110,7 +109,6 @@ def _summary(
         "max": spark_functions.max,
     }
     needed = list(dict.fromkeys(stats))
-    plan = frame._plan()
     cell_position: dict[tuple[int, str], int] = {}
     chunk_plans: list[Any] = []
     position = 0
@@ -152,6 +150,51 @@ def _summary(
     child._display_names = ["summary"] + [display for display, _engine in target_pairs]
     child._engine_names = field_names
     return child
+
+
+def _case_sensitive(plan: Any) -> bool:
+    """Read the live spark.sql.caseSensitive flag behind a native plan."""
+    from repark import _native
+
+    return bool(_native.frame_case_sensitive(plan))
+
+
+def _display_target_pairs(
+    frame: DataFrame, plan: Any, columns: list[str], exact: bool
+) -> list[tuple[str, str]]:
+    """Resolve explicit describe columns against display names (VC-4).
+
+    Frames whose display names differ from engine names (transpose output,
+    duplicate-display selects, condition joins) match each written name against
+    the display list ignoring case: one hit binds its engine field, several hits
+    refuse ambiguous like Spark, and no hit falls back to engine resolution so a
+    genuinely missing column keeps the unresolved-column refusal. Under
+    case-sensitive sessions the display match is exact (RC-4).
+    """
+    from repark import _native
+
+    displays = list(frame._display_names or [])
+    engines = list(frame._engine_names or [])
+    pairs: list[tuple[str, str]] = []
+    for written in columns:
+        folded = written.casefold()
+        if exact:
+            hits: list[int] = [
+                index for index, display in enumerate(displays) if display == written
+            ]
+        else:
+            hits = [index for index, display in enumerate(displays) if display.casefold() == folded]
+        if len(hits) > 1:
+            candidates = ", ".join(f"`{displays[index]}`" for index in hits)
+            raise AnalysisException(
+                f"[AMBIGUOUS_REFERENCE] Reference `{written}` is ambiguous, "
+                f"could be: [{candidates}]."
+            )
+        if hits:
+            pairs.append((displays[hits[0]], engines[hits[0]]))
+        else:
+            pairs.extend(_native.resolve_frame_names(plan, [written]))
+    return pairs
 
 
 def _approx_quantile(

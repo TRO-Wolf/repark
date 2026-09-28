@@ -5,7 +5,7 @@ use std::sync::{Arc, OnceLock};
 
 use datafusion::arrow::datatypes::{DataType, Field, TimeUnit};
 use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
-use datafusion::common::{DFSchema, SchemaError, TableReference};
+use datafusion::common::{Column, DFSchema, SchemaError, TableReference};
 use datafusion::execution::SessionStateBuilder;
 use datafusion::functions_aggregate::array_agg::array_agg_udaf;
 use datafusion::logical_expr::LogicalPlan;
@@ -33,6 +33,10 @@ pub(super) fn reciprocal_trig_or_inf(divisor: Expr) -> Expr {
     })
 }
 
+pub(crate) fn written_column(name: &str) -> Expr {
+    Expr::Column(Column::from_qualified_name_ignore_case(name))
+}
+
 pub(crate) fn parse_canonical_predicate(
     frame: &datafusion::prelude::DataFrame,
     predicate: &str,
@@ -45,6 +49,37 @@ pub(crate) fn parse_canonical_predicate(
             error,
         )
     })
+}
+
+pub(crate) fn parse_canonical_predicate_exact(
+    frame: &datafusion::prelude::DataFrame,
+    predicate: &str,
+) -> datafusion::error::Result<Expr> {
+    let canonical = repark_spark::spark_literals::canonicalize(predicate)?;
+    let (mut state, _) = frame.clone().into_parts();
+    state
+        .config_mut()
+        .options_mut()
+        .sql_parser
+        .enable_ident_normalization = false;
+    match state.create_logical_expr(canonical.as_ref(), frame.schema()) {
+        Ok(expr) => Ok(expr),
+        Err(error) => {
+            if let Some((relation, name)) = missing_column(&error) {
+                let probe = Expr::Column(Column::new(relation, name));
+                repark_core::frame_names::resolve_bound_expr_with(
+                    probe,
+                    frame.schema(),
+                    repark_core::frame_names::NameRule::Exact,
+                )?;
+            }
+            Err(repark_spark::spark_literals::translate_downstream_error(
+                predicate,
+                canonical.as_ref(),
+                error,
+            ))
+        }
+    }
 }
 
 pub(crate) async fn plan_expr_column(

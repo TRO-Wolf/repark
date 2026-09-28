@@ -7,7 +7,7 @@ accuracy contracts restored in condensed form (see the unit ledger's findings di
 
 ## Purpose
 
-File-backed modules of `../session.rs` (`ReparkSession`): the behavior modules (`temp_views.rs`, `write_options.rs`,
+File-backed modules of `../session.rs` (`ReparkSession`): the behavior modules (`temp_views.rs`, `write_options.rs`, `path_write.rs`,
 `spill.rs`, `iceberg_caches.rs`, `late_catalogs.rs`, `memory_catalog.rs`, `cache_budget.rs`, `df_guards.rs` and its `df_guards/` submodule) plus the test cohorts under `tests/` (`session.rs`,
 `session/catalog_registration.rs`, `df_guard.rs`, `aws_gate.rs`, `namespace_create.rs`, `a13.rs`,
 `conf_unread.rs`). Test cohorts are two: the E-2 gate tests
@@ -158,6 +158,15 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   catalog this session builds through the same `CatalogCaches`, so no registration path changed.
   Its counters are plain atomics (evictions from moka's listener), so unlike the metadata report
   there is no settle step before reading. pins: ice-footer-cache-1/C-006, C-007
+- `path_write.rs` — **S3-PATH-WRITE-1 round 1 (2026-09-28):** `ReparkSession::write_path`
+  owns the S3 save-mode protocol: per-call temp view, one `COPY` per part, parts land
+  direct under the destination, `_SUCCESS` is the last object, exists means any object
+  under the prefix, and `overwrite` lists and deletes the whole prefix. Bucket root
+  refuses loud.
+  pins: s3-path-write-1/C-007, C-008, C-009, C-013, C-015
+  **S3-PATH-WRITE-1 re-verify (2026-09-28):** the append branch `HEAD`s the
+  exact key and refuses loud when an object sits at the destination
+  (`R-S3-APPEND-EXACT`), since the exact object would win the read.
 - `late_catalogs.rs` — `register_late_configured_catalogs`, moved out of `session.rs` under the
   CAP-1 rule that a file at its ceiling grows by splitting; behavior is byte-identical and the
   `session.rs` baseline ratcheted 1039 → 1002.
@@ -410,6 +419,9 @@ First checks: `cargo test -p repark-core session`. Escalate to: [../map.md#debug
 `resolve_temp_view_home_ref`, the two lookups the Python facade uses so a product read path never
 emits a BARE reference for a session-local view (a bare one is re-resolved against the LIVE
 `datafusion.catalog.default_catalog`). Both go through `assert_home_intact` first.
+**CASESENS-1 S3 (2026-09-27):** plus `resolve_temp_view_home_ref_exact` (no fold; the
+rule-aware door probe calls it under `caseSensitive=true`), sharing the existence check
+through `home_ref_if_exists`. pins: casesens-1/C-007
 
 **ICE-TT-RESOLVE-1 (2026-09-19):** the reader-options path resolves through the shared
 `time_travel::resolve_reader_spec` with the session zone; the production write path builds

@@ -4,6 +4,35 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [aws-accept-replace-1-ledger.md](aws-accept-replace-1-ledger.md) —
+  **WO AWS-ACCEPT-REPLACE-1 (2026-09-27), in flight:** RP-55 repins the fork to
+  `6e937f49` (F-STAGED-SINGLE-WRITE-1 `#362` — a staged replace writes its metadata file
+  once, at commit) and carries the regression pin: the no-overwrite store plus the
+  Spark-door OR REPLACE test, red at `0d3f2b4f` and green at `6e937f49` (C-001); the live
+  AWS acceptance rerun is an owner residue (R-1).
+  `risk_tier: standard`. Branch `chore/rp-55-staged-single-write`.
+  pins: aws-accept-replace-1/C-001
+- [intdiv-1-ledger.md](intdiv-1-ledger.md) —
+  **WO INTDIV-1 (2026-09-28), in flight:** arithmetic over an integer `/` answers
+  Spark's DOUBLE type and values in every scope — same scope, derived table, CTE, temp
+  and session views, nested and chained scopes, `WHERE`, `ORDER BY`, `sum`/`avg`, CTAS
+  and INSERT into DOUBLE (C-001) — through one pre-coercion rule seated before
+  `higher_order_preparation` (C-002), leaving genuinely integral arithmetic and its
+  ANSI overflow unchanged (C-003); a fractional quotient stores into BIGINT/INT
+  columns with Spark's toward-zero store assignment on INSERT, VALUES, OVERWRITE,
+  UPDATE and MERGE (C-004, R-INTDIV-1 closed); decimal division precision, `div`,
+  the overflow SQLSTATE, the derived INT literal and the store-overflow message
+  class are dated residues.
+  `risk_tier: standard`. Branch `fix/derived-int-division`.
+  pins: intdiv-1/C-001, C-002, C-003, C-004
+- [ltz-store-int-1-ledger.md](ltz-store-int-1-ledger.md) —
+  **WO LTZ-STORE-INT-1 (2026-09-28), in flight:** an INT stored into a
+  `TIMESTAMP` (LTZ) column refuses with Spark's recorded `ins_l_int` answer on
+  VALUES and with the `CANNOT_SAFELY_CAST` class on SELECT, UPDATE, MERGE and
+  DataFrame append, while NULL, DATE, TIMESTAMP and TIMESTAMP_NTZ sources still
+  store (C-001); the VALUES residual stays open for every other target (R-1).
+  `risk_tier: standard`. Branch `fix/ltz-store-int-1`.
+  pins: ltz-store-int-1/C-001
 - [uuid-cast-window-1-ledger.md](uuid-cast-window-1-ledger.md) —
   **WO UUID-CAST-WINDOW-1 (2026-09-27), in flight:** the UUID refusal's SQL window
   counts as Spark 4.1.2 counts — the position in Unicode scalar values, the window
@@ -13,6 +42,18 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   the NTZ astral question and the unscannable-token fallback are dated residues.
   `risk_tier: standard`. Branch `fix/uuid-cast-window-1`.
   pins: uuid-cast-window-1/C-001
+- [casesens-1-ledger.md](casesens-1-ledger.md) —
+  **WO CASESENS-1 (2026-09-27), in flight:** names resolve the way Spark resolves
+  them under `spark.sql.caseSensitive` false and true. Slice 1: nested SQL scopes
+  keep the written spelling (derived tables, CTEs, the leftmost set-operation
+  branch, column-alias lists; C-001, C-002) and a MERGE with a derived source
+  spelled in another case answers (C-004); the catalog view (C-003) stays OPEN
+  with its S1-3 record, homed with R-CS1-1 to S1b. Later slices: `true` exact
+  on the SQL door (C-005…C-008), the
+  DataFrame door and `describe` (C-009, C-010), case twins (C-011, C-012), Iceberg
+  DDL exactness (C-013…C-016); one rule (C-017) and no regressions (C-018) flip
+  last. `risk_tier: high`. Branch `feat/casesens-1-s1`.
+  pins: casesens-1/C-001, C-002, C-004
 - [r-fileorder-2-ledger.md](r-fileorder-2-ledger.md) —
   **R-FILEORDER-2 (2026-09-27), HALT per R1:** Spark 4.1.2's own `L-INSERT-OVERWRITE`
   lineage differs between runs (the same-JVM triple agrees, C-001; six fresh-JVM runs
@@ -1857,3 +1898,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   residues R-15..R-18 are pinned beside Spark.
   `risk_tier: standard`. Branch `feat/u7-write-df-2b` (slice 1: `feat/u7-write-df-2a`, repark#835).
   pins: u7-write-df-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
+- [s3-path-write-1-ledger.md](s3-path-write-1-ledger.md) —
+  **U12 S3-PATH-WRITE-1 step 0 (2026-09-28), measurement + design round, no product code:**
+  Spark 4.1.2 path-write behaviour on S3 recorded in 38 `W-PATH-S3-*` cells against a local
+  moto emulator (C-001..C-005), repark 1.5.0 writes nothing and refuses locally (C-006), and
+  design questions 1–5 answered with recommendations awaiting the orchestrator ruling
+  (C-007..C-011 OPEN). Evidence in [u12-probes/](u12-probes/map.md).
+  Round 1 (2026-09-28, RULED): the Rust seam owns the save-mode protocol (C-007..C-009),
+  parts land direct with the marker last (C-009), exists means any object (C-008), the
+  `s3a` endpoint keys ship on both doors (C-010), the moto pins carry 38 cells
+  (C-012..C-015), and the tier-2 leg is written and skipped locally (C-016; C-017 OPEN
+  awaits the owner run on real AWS).
+  `risk_tier: standard`. Branch `feat/s3-path-write-1`.
+  pins: s3-path-write-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016

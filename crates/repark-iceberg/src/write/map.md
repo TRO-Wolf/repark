@@ -366,6 +366,21 @@ repark-core's error map.
 - `update_cast.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** `spark_update_type_name`
   names Arrow `Null` `VOID`, so `incompatible_update_message` renders a value written into a
   `VOID` column with Spark's `CANNOT_SAFELY_CAST` text, `"INT"` to `"VOID"`. pins: u9-types-1/C-014
+- `update_cast.rs` — **WO NTZ-1 slice 2 (2026-09-27):** `spark_update_type_name` answers
+  `TIMESTAMP_NTZ` for a naive timestamp and `TIMESTAMP` for a zoned one, so NTZ store
+  refusals name Spark's type; `store_assignment_cast_sql` emits the `ntz_store` wall-cast
+  UDF call for a naive-microsecond target instead of `arrow_cast` (every other target
+  keeps `arrow_cast`). pins: ntz-1/C-006, C-007
+  **WO NTZ-1 verifier fold (2026-09-28):** only microsecond-naive timestamps name
+  `TIMESTAMP_NTZ`; the nanosecond zoneless form of an unlocalized `TIMESTAMP'…'`
+  literal names `TIMESTAMP` again. pins: ntz-1/C-007
+- `ntz_store.rs` — **WO NTZ-1 slice 2 (2026-09-27):** the NTZ store gate in the
+  `void_store` shape: `refuse_ntz_writes` runs the session analyzer over the planned
+  write and refuses, for a `Timestamp(µs, None)` target, any source the ANSI matrix
+  rejects, through `incompatible_update_message` (Spark's text). Also the one home of
+  the wall-cast UDF name (`NTZ_WALL_CAST_UDF_NAME`, pinned equal to the registered UDF)
+  and its `ntz_wall_cast_sql` renderer, used by the identity-UPDATE projection, the
+  MERGE INSERT projection and `store_assignment_cast_sql`. pins: ntz-1/C-006, C-007
 - `void_store.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** `refuse_void_writes` is the
   one VOID store gate: given a planned source and its target columns, it does nothing unless a
   target is Arrow `Null`; then it runs the session analyzer (so an integer literal types `INT`
@@ -757,7 +772,11 @@ repark-core's error map.
   synthesized, while a user-written explicit `CAST` (legal Spark — the user's stated intent)
   reaches this projection already conformed, as a bare column, and is invisible to the rule.
   Named residual: `Cast(Literal, …)` inside a `Values` node, where the synthesized and explicit
-  forms are byte-identical. Ledger:
+  forms are byte-identical. LTZ-STORE-INT-1 (2026-09-28) closes the residual for
+  `TIMESTAMP` (LTZ) targets one stage earlier, at the Spark door's existing
+  `refuse_insert_void_values` gate site
+  (`repark-spark/src/void_type/ltz_values_store.rs`); every other target stays residual.
+  Ledger:
   [`../../../../task/wi2-g6-cast-integrity-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-16-wi2-g6-cast-integrity-ledger.md).
 - `insert_defaults.rs` — **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** the ONE home for
   filling omitted columns from `write_default` on every write path: `column_defaults`
@@ -964,10 +983,21 @@ repark-core's error map.
   (`partition_spec/tests.rs`, row in [partition_spec/map.md](partition_spec/map.md)), which
   carries the struct-text pin and the Rust pins for the `ReplaceField` /
   `ReplaceFieldByTransform` arms of the source check. pins: u11-edge-1/C-012, C-021
+  **WO CASESENS-1 slice 5 (2026-09-27, R11):** partition field names bind exactly under
+  both settings through `NameRule::Exact`: `RemoveFieldByName`, `ReplaceField` and
+  `RenameField` refuse `Cannot find partition field to remove: <written>` before the
+  transaction when the name is not held (`resolve_field_name` / `forget_field_name` are
+  exact now; R-1 closed). `bound_sources` also checks the source of
+  `RemoveFieldByTransform` and the old source of `ReplaceFieldByTransform`, and
+  `resolve_field_by_transform` resolves exactly, refusing Java's `ValidationException`
+  text (`java_struct_text` is `pub(crate)` for the sort-order seat). The fork action keeps
+  `.case_sensitive(false)`; the pre-checks make its mode moot.
+  pins: casesens-1/C-013, C-014
 - `sort_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** `apply_write_order`, the one-transaction
   write-layout primitive over the fork's `Transaction::replace_sort_order` plus an optional
-  `write.distribution-mode` property set: column names resolve case-insensitively against the
-  table schema, dotted paths through struct types included (an unknown column is a loud
+  `write.distribution-mode` property set: column names resolve against the
+  table schema by the session `NameRule` (CASESENS-1 S5; case-insensitive before),
+  dotted paths through struct types included (an unknown column is a loud
   `DataInvalid` and commits nothing), an empty field
   list resets the default to the unsorted order 0 (the fork dedups it, so no order is appended),
   and an identical order reuses its id the way Spark's sequence does. Return `iceberg::Result`.
@@ -975,6 +1005,10 @@ repark-core's error map.
   **WO U5 PR2b (2026-09-24):** `WriteSortField` carries a `Transform`, and every field goes
   through the fork's `ReplaceSortOrderAction::sort_by` (RP-46), so a transform term lands with
   the fork's void, width and bind checks. Identity fields pass `Transform::Identity`.
+  **WO CASESENS-1 slice 5 (2026-09-27, R11):** `apply_write_order` takes the session
+  `NameRule` and each dotted segment binds through it; a miss refuses Java's
+  `ValidationException: Cannot find field '<written>' in struct: …` under both rules
+  (the old `Cannot find field {name} in table schema` text is gone; R-2 closed).
 - `format_version.rs` — **V3-10:** `set_properties_and_format_version` folds the fork's
   `UpgradeFormatVersionAction` and `UpdatePropertiesAction` into ONE transaction, so an ALTER
   carrying `format-version` beside another key is one metadata commit as it is on Spark; nothing

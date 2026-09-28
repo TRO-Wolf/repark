@@ -1,3 +1,18 @@
+## Errata — 2026-09-28: integrate current main
+
+Repair commit `26e2f477` passed the validation recorded below. GitHub then reported a merge
+conflict with newer main. A normal merge of `adc26586` uses the repository's map union rules
+without manual code conflict resolution. Engine, facade, root Cargo manifest and lockfile
+match main exactly; no repair-specific engine change is introduced.
+
+On the combined tree, `make repo-tool-check py-lint py-format-check check-repo-docs
+check-map-sync check-map-md check-ledgers check-docs-compaction workflows-lint` exits 0
+(`/tmp/c874-main-integration.log`). The staged Python fallback also passes
+(`/tmp/c874-integrated-fallback.log`). The full Rust verification below belongs to the repair
+before this main integration; it is not represented as a fresh engine run on the combined
+head. Required remote CI must validate the combined head before merge. The C874-5 owner
+policy ruling is still outstanding, so the PR remains draft.
+
 ## Errata — 2026-09-28: PR #874 external review remediation
 
 ACTOR_REMEDIATE, STANDARD path. Owner requests C874-1 through C874-4 repaired and

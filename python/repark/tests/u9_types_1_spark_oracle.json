@@ -172,8 +172,25 @@
     ]
    ],
    "residue": {
-    "id": "R-1",
-    "repark": "ok"
+    "id": "R-37",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`lx2`: Cannot safely cast `c` \"STRING\" to \"TIMESTAMP\". SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
    }
   },
   {
@@ -204,24 +221,7 @@
      6,
      "2024-03-01T01:02:03"
     ]
-   ],
-   "residue": {
-    "id": "R-1",
-    "repark": [
-     [
-      3,
-      "2024-03-01T01:02:03"
-     ],
-     [
-      4,
-      "2024-04-01T00:00:00"
-     ],
-     [
-      6,
-      "2024-03-01T01:02:03"
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "ltz",
@@ -1252,8 +1252,25 @@
     ]
    ],
    "residue": {
-    "id": "R-1",
-    "repark": "ok"
+    "id": "R-37",
+    "repark": [
+     [
+      "cond",
+      "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`lx3`: Cannot safely cast `c` \"STRING\" to \"TIMESTAMP\". SQLSTATE: KD000"
+     ],
+     [
+      "state",
+      "KD000"
+     ]
+    ]
    }
   },
   {
@@ -1284,24 +1301,7 @@
      6,
      "2024-03-01T01:02:03"
     ]
-   ],
-   "residue": {
-    "id": "R-1",
-    "repark": [
-     [
-      3,
-      "2024-03-01T01:02:03"
-     ],
-     [
-      4,
-      "2024-04-01T00:00:00"
-     ],
-     [
-      6,
-      "2024-03-01T01:02:03"
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "ltz",

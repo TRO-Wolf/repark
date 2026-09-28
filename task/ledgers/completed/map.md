@@ -1063,4 +1063,4 @@ else. The next pickup's `make ledger-archive` files everything here under
 - Up: [../map.md](../map.md)
 - Policy: [../../../AGENTS.md](../../../AGENTS.md) "Markdown document lifecycle"
 
-The repository compiler ledger carries dated PR #874 external-review remediation and policy flags.
+The repository compiler ledger carries dated PR #874 external-review remediation, main integration and policy flags.

@@ -16,7 +16,10 @@ use iceberg::spec::{
 use iceberg::transaction::StagedTableTransaction;
 use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
 
-use repark_common::spark_error;
+use repark_common::{
+    names::{NameRule, column_already_exists, folded_duplicate},
+    spark_error,
+};
 use repark_core::{CatalogRegistry, LocationPolicy};
 use repark_functions::timestamp_type::{SparkTimestampType, spark_timestamp_type_from_options};
 use repark_iceberg::write::nested_type_sql::struct_field_required;
@@ -178,6 +181,13 @@ fn build_schema_create(
         .chain(&typed_columns)
         .cloned()
         .collect();
+    let names = columns
+        .iter()
+        .map(|column| column.name.value.as_str())
+        .collect::<Vec<_>>();
+    if !case_sensitive && let Some(twin) = folded_duplicate(&names) {
+        return Err(DataFusionError::Plan(column_already_exists(&twin)));
+    }
     let schema = schema_from_column_defs(&columns, timestamp_type, &table_name)?;
     let partition_spec = build_partition_spec(&schema, &partition_fields, true)?;
     // Bind partition validation early (unknown column fails before catalog I/O).
@@ -240,19 +250,16 @@ fn refuse_duplicate_partition_columns(
     typed: &[ColumnDef],
     case_sensitive: bool,
 ) -> Result<()> {
+    let rule = NameRule::from_case_sensitive(case_sensitive);
     for (index, column) in typed.iter().enumerate() {
-        let name = &column.name.value;
-        if declared.iter().chain(&typed[..index]).any(|earlier| {
-            if case_sensitive {
-                earlier.name.value == *name
-            } else {
-                earlier.name.value.eq_ignore_ascii_case(name)
-            }
-        }) {
-            return Err(DataFusionError::Plan(format!(
-                "[COLUMN_ALREADY_EXISTS] The column `{}` already exists. Choose another name or \
-                 rename the existing column. SQLSTATE: 42711",
-                name.to_lowercase()
+        let name = column.name.value.as_str();
+        let seen = declared
+            .iter()
+            .chain(&typed[..index])
+            .any(|earlier| rule.matches(earlier.name.value.as_str(), name));
+        if seen {
+            return Err(DataFusionError::Plan(column_already_exists(
+                &name.to_lowercase(),
             )));
         }
     }

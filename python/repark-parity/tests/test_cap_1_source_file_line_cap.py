@@ -30,7 +30,7 @@ _RUST_BASELINES: tuple[tuple[str, int], ...] = (
     ("crates/repark-functions/src/expr_fn.rs", 1001),
     ("crates/repark-functions/src/spark_time_window.rs", 1125),
     ("crates/repark-iceberg/src/catalog/tests/catalog.rs", 1843),
-    ("crates/repark-iceberg/src/write/alter.rs", 1607),
+    ("crates/repark-iceberg/src/write/alter.rs", 1606),
     ("crates/repark-iceberg/src/write/append.rs", 1804),
     ("crates/repark-iceberg/src/write/merge/mod.rs", 1622),
     ("crates/repark-iceberg/src/write/merge/tests/merge.rs", 1032),
@@ -39,11 +39,10 @@ _RUST_BASELINES: tuple[tuple[str, int], ...] = (
     ("crates/repark-iceberg/src/write/overwrite.rs", 1053),
     ("crates/repark-iceberg/src/write/predicate_dml/tests/predicate_dml.rs", 1435),
     ("crates/repark-python/src/column/mod.rs", 1012),
-    ("crates/repark-python/src/dataframe.rs", 1005),
     ("crates/repark-python/src/session.rs", 1122),
     ("crates/repark-spark/src/alter.rs", 1272),
     ("crates/repark-spark/src/metadata_tables.rs", 1059),
-    ("crates/repark-spark/src/tests/alter.rs", 1182),
+    ("crates/repark-spark/src/tests/alter.rs", 1181),
     ("crates/repark-spark/src/tests/call.rs", 1287),
     ("crates/repark-spark/src/tests/ctas.rs", 1356),
     ("crates/repark-spark/src/tests/dml.rs", 1154),
@@ -68,7 +67,6 @@ _PYTHON_BASELINES: tuple[tuple[str, int], ...] = (
     ("python/repark/src/repark/spark/dataframe/core.py", 3973),
     ("python/repark/src/repark/spark/dataframe/joins_columns.py", 1169),
     ("python/repark/src/repark/spark/dataframe/plan_collapse.py", 1054),
-    ("python/repark/src/repark/spark/dataframe/writer_readwriter.py", 1023),
     ("python/repark/src/repark/spark/functions.py", 1984),
     ("python/repark/src/repark/spark/functions_expr.py", 2171),
     ("python/repark/src/repark/spark/functions_udf.py", 1300),
@@ -179,8 +177,8 @@ def test_cap_1_exception_tables_equal_the_measured_debt() -> None:
     assert _baselines(python_gate) == python_approved
     assert rust_debt == rust_approved
     assert python_debt == python_approved
-    assert len(rust_approved) == 37
-    assert len(python_approved) == 32
+    assert len(rust_approved) == 36
+    assert len(python_approved) == 31
 
 
 def test_cap_1_growth_above_exact_baseline_fails(

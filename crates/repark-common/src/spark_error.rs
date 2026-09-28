@@ -7,6 +7,7 @@ pub enum Condition {
     NotSupportedCommandForV2Table,
     UnresolvedColumnWithSuggestion,
     UnresolvedColumnWithoutSuggestion,
+    UnresolvedUsingColumnForJoin,
     UnsupportedFeatureTableOperation,
     UnsupportedFeatureCatalogOperation,
     InvalidPartitionOperationPartitionManagementIsUnsupported,
@@ -52,6 +53,7 @@ pub const NOT_SUPPORTED_COMMAND_FOR_V2_TABLE: Condition = Condition::NotSupporte
 pub const UNRESOLVED_COLUMN_WITH_SUGGESTION: Condition = Condition::UnresolvedColumnWithSuggestion;
 pub const UNRESOLVED_COLUMN_WITHOUT_SUGGESTION: Condition =
     Condition::UnresolvedColumnWithoutSuggestion;
+pub const UNRESOLVED_USING_COLUMN_FOR_JOIN: Condition = Condition::UnresolvedUsingColumnForJoin;
 pub const UNSUPPORTED_FEATURE_TABLE_OPERATION: Condition =
     Condition::UnsupportedFeatureTableOperation;
 pub const UNSUPPORTED_FEATURE_CATALOG_OPERATION: Condition =
@@ -113,6 +115,7 @@ impl Condition {
             Self::NotSupportedCommandForV2Table => "NOT_SUPPORTED_COMMAND_FOR_V2_TABLE",
             Self::UnresolvedColumnWithSuggestion => "UNRESOLVED_COLUMN.WITH_SUGGESTION",
             Self::UnresolvedColumnWithoutSuggestion => "UNRESOLVED_COLUMN.WITHOUT_SUGGESTION",
+            Self::UnresolvedUsingColumnForJoin => "UNRESOLVED_USING_COLUMN_FOR_JOIN",
             Self::UnsupportedFeatureTableOperation => "UNSUPPORTED_FEATURE.TABLE_OPERATION",
             Self::UnsupportedFeatureCatalogOperation => "UNSUPPORTED_FEATURE.CATALOG_OPERATION",
             Self::InvalidPartitionOperationPartitionManagementIsUnsupported => {
@@ -184,9 +187,9 @@ impl Condition {
             | Self::UnsupportedFeatureCatalogOperation
             | Self::NotSupportedChangeColumn
             | Self::UnsupportedFeatureGeospatialDisabled => Some("0A000"),
-            Self::UnresolvedColumnWithSuggestion | Self::UnresolvedColumnWithoutSuggestion => {
-                Some("42703")
-            }
+            Self::UnresolvedColumnWithSuggestion
+            | Self::UnresolvedColumnWithoutSuggestion
+            | Self::UnresolvedUsingColumnForJoin => Some("42703"),
             Self::InvalidPartitionOperationPartitionManagementIsUnsupported
             | Self::ParseSyntaxError
             | Self::IdentifierTooManyNameParts => Some("42601"),
@@ -230,6 +233,9 @@ impl Condition {
             }
             Self::UnresolvedColumnWithoutSuggestion => {
                 "A column, variable, or function parameter with name {columnName} cannot be resolved. "
+            }
+            Self::UnresolvedUsingColumnForJoin => {
+                "USING column {column} cannot be resolved on the {side} side of the join. The {side}-side columns: [{columns}]."
             }
             Self::UnsupportedFeatureTableOperation => {
                 "The feature is not supported: Table {tableName} does not support column default value. Please check the current catalog and namespace to make sure the qualified table name is expected, and also check the catalog implementation which is configured by \"spark.sql.catalog\"."
@@ -403,6 +409,9 @@ mod tests {
         ("command", "MSCK REPAIR TABLE"),
         ("columnName", "`id`"),
         ("suggestions", "`data`, `cat`"),
+        ("column", "`ID`"),
+        ("side", "left"),
+        ("columns", "`Data`, `id`, `s`"),
         ("tableName", "`sc`.`ns`.`t`"),
         ("near", "'LIKE'"),
         ("fromType", "STRING"),
@@ -452,6 +461,7 @@ mod tests {
         NOT_SUPPORTED_COMMAND_FOR_V2_TABLE,
         UNRESOLVED_COLUMN_WITH_SUGGESTION,
         UNRESOLVED_COLUMN_WITHOUT_SUGGESTION,
+        UNRESOLVED_USING_COLUMN_FOR_JOIN,
         UNSUPPORTED_FEATURE_TABLE_OPERATION,
         UNSUPPORTED_FEATURE_CATALOG_OPERATION,
         INVALID_PARTITION_OPERATION_PARTITION_MANAGEMENT_IS_UNSUPPORTED,
@@ -493,7 +503,7 @@ mod tests {
 
     #[test]
     fn catalogue_lists_every_condition_once() {
-        assert_eq!(ALL.len(), 42);
+        assert_eq!(ALL.len(), 43);
         let mut names: Vec<&str> = ALL.iter().map(|condition| condition.name()).collect();
         names.sort_unstable();
         names.dedup();

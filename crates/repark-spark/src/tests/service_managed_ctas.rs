@@ -351,10 +351,33 @@ async fn setup_wrapped(
     CatalogRegistry,
     Arc<ServiceManagedTestCatalog>,
 ) {
+    setup_wrapped_with_factory(
+        wh,
+        injected,
+        catalog_name,
+        policy,
+        namespace_properties,
+        Arc::new(LocalFsStorageFactory),
+    )
+    .await
+}
+
+async fn setup_wrapped_with_factory(
+    wh: &TempDir,
+    injected: CommitInjection,
+    catalog_name: &str,
+    policy: LocationPolicy,
+    namespace_properties: HashMap<String, String>,
+    factory: Arc<dyn iceberg::io::StorageFactory>,
+) -> (
+    SessionContext,
+    CatalogRegistry,
+    Arc<ServiceManagedTestCatalog>,
+) {
     let warehouse = wh.path().to_str().unwrap().to_string();
     let inner: Arc<dyn Catalog> = Arc::new(
         MemoryCatalogBuilder::default()
-            .with_storage_factory(Arc::new(LocalFsStorageFactory))
+            .with_storage_factory(factory)
             .load(
                 "memory",
                 HashMap::from([(MEMORY_CATALOG_WAREHOUSE.to_string(), warehouse.clone())]),
@@ -625,6 +648,47 @@ async fn ctas_or_replace_on_service_managed_existing_table_stays_staged_replace(
         rows(&ctx, &catalogs, "SELECT * FROM svc.sales.r").await,
         1,
         "the replacement definition's rows are served"
+    );
+}
+
+#[tokio::test]
+async fn replace_existing_table_writes_each_metadata_file_once() {
+    let wh = TempDir::new().unwrap();
+    let factory: Arc<dyn iceberg::io::StorageFactory> = Arc::new(
+        repark_iceberg::catalog::NoOverwriteStorageFactory::new(Arc::new(LocalFsStorageFactory)),
+    );
+    let (ctx, catalogs, _svc) = setup_wrapped_with_factory(
+        &wh,
+        CommitInjection::None,
+        "svc",
+        LocationPolicy::ServiceManagedLocation,
+        HashMap::new(),
+        factory,
+    )
+    .await;
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE svc.sales.r USING iceberg AS SELECT * FROM src",
+    )
+    .await
+    .unwrap();
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE OR REPLACE TABLE svc.sales.r USING iceberg AS \
+             SELECT * FROM src WHERE id = 1",
+    )
+    .await
+    .expect("OR REPLACE over a no-overwrite store must commit");
+    assert_eq!(
+        rows(&ctx, &catalogs, "SELECT * FROM svc.sales.r").await,
+        1,
+        "the replacement definition's rows are served"
+    );
+    assert_eq!(
+        service_managed_ops(&catalogs, "r").await,
+        ["append", "overwrite"]
     );
 }
 
