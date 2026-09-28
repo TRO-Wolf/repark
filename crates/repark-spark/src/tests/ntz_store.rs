@@ -244,6 +244,33 @@ async fn ntz_values_store_into_a_timestamp_column_as_session_instants() {
 }
 
 #[tokio::test]
+async fn update_refusal_names_a_timestamp_literal_source_as_timestamp() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_ntz(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.ltz (id INT, c TIMESTAMP) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.ltz VALUES (1, TIMESTAMP'2024-01-01 00:00:00')",
+    )
+    .await;
+    let text = failure(
+        &ctx,
+        &catalogs,
+        "UPDATE ice.sales.ltz SET id = TIMESTAMP'2024-01-01 12:00:00' WHERE id = 1",
+    )
+    .await;
+    let expected = "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible \
+         data for the table ``: Cannot safely cast `id` \"TIMESTAMP\" to \"INT\". SQLSTATE: KD000";
+    assert!(text.ends_with(expected), "{text}");
+}
+
+#[tokio::test]
 async fn ntz_refusals_name_timestamp_ntz() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_ntz(&warehouse).await;

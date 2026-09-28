@@ -1896,6 +1896,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   session instants into a `TIMESTAMP` column, STRING/INT/BOOLEAN refusals naming
   `"TIMESTAMP_NTZ"` on VALUES/SELECT/UPDATE/MERGE, and the wall-cast UDF name pinned
   equal to the registered UDF. pins: ntz-1/C-006, C-007
+  **WO NTZ-1 verifier fold (2026-09-28):** `update_refusal_names_a_timestamp_literal_source_as_timestamp`
+  pins the UPDATE-door refusal naming a `TIMESTAMP'…'` source `"TIMESTAMP"`.
+  pins: ntz-1/C-007
 
 - `describe_table.rs` — **SQL-DESCRIBE-1 (2026-09-09):** `DESCRIBE|DESC [TABLE]
   [EXTENDED|FORMATTED] catalog.namespace.table` against a memory-catalog table built like the

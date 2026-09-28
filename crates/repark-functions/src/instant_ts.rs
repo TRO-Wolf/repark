@@ -526,7 +526,8 @@ impl AnalyzerRule for SparkLtzTimestampCast {
     fn analyze(&self, plan: LogicalPlan, config: &ConfigOptions) -> Result<LogicalPlan> {
         let zone = session_time_zone_from_options(config).to_string();
         let timestamp_type = spark_timestamp_type_from_options(config);
-        plan.transform_up_with_subqueries(|node| rewrite_plan(node, &zone, timestamp_type))
+        let store = plan_contains_dml(&plan);
+        plan.transform_up_with_subqueries(|node| rewrite_plan(node, &zone, timestamp_type, store))
             .data()
     }
 
@@ -536,10 +537,18 @@ impl AnalyzerRule for SparkLtzTimestampCast {
     }
 }
 
+fn plan_contains_dml(plan: &LogicalPlan) -> bool {
+    matches!(
+        plan.exists(|node| Ok(matches!(node, LogicalPlan::Dml(_)))),
+        Ok(true)
+    )
+}
+
 fn rewrite_plan(
     plan: LogicalPlan,
     zone: &str,
     timestamp_type: SparkTimestampType,
+    store: bool,
 ) -> Result<Transformed<LogicalPlan>> {
     let mut schema = DFSchema::empty();
     for input in plan.inputs() {
@@ -549,7 +558,7 @@ fn rewrite_plan(
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
         let rewritten =
-            expr.transform_up(|node| Ok(rewrite_cast(node, &schema, zone, timestamp_type)))?;
+            expr.transform_up(|node| Ok(rewrite_cast(node, &schema, zone, timestamp_type, store)))?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
     transformed
@@ -562,11 +571,12 @@ fn rewrite_cast(
     schema: &DFSchema,
     zone: &str,
     timestamp_type: SparkTimestampType,
+    store: bool,
 ) -> Transformed<Expr> {
     if timestamp_type.is_ntz() {
         return rewrite_cast_as_ntz(expr, schema);
     }
-    if let Some(ntz) = crate::timestamp_ntz_cast::rewrite_ntz_target_cast(&expr, schema) {
+    if store && let Some(ntz) = crate::timestamp_ntz_cast::rewrite_ntz_target_cast(&expr, schema) {
         return Transformed::yes(ntz);
     }
     if let Some(rewritten) = rewrite_string_try_cast(&expr, schema, zone) {

@@ -179,6 +179,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   refusals (class, condition, SQLSTATE, first line) on VALUES/SELECT/UPDATE/MERGE plus
   the STRING append. Values read back as `CAST(c AS STRING)`.
   pins: ntz-1/C-006, C-007
+- [test_ntz_7_verify.py](test_ntz_7_verify.py) + `ntz_7_verify_spark_oracle.json` —
+  **WO NTZ-1 verifier fold (2026-09-28):** `from_utc_timestamp` / `to_utc_timestamp`
+  over strings and a STRING column keep Spark's TIMESTAMP in a New York session —
+  seven recorded cells replay rows and dtypes (unaliased names stay out per R2).
+  pins: ntz-1/C-006
 - [test_ice_error_conditions_1.py](test_ice_error_conditions_1.py) —
   **ICE-ERROR-CONDITIONS-1 / IPI-51 PR1 (2026-09-20):** constructor pins for the native
   error-condition parser — `getCondition`/`getErrorClass`/`getSqlState` on the PyO3

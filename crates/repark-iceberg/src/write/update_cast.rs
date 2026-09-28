@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use datafusion::arrow::datatypes::{DataType, Field, Fields};
+use datafusion::arrow::datatypes::{DataType, Field, Fields, TimeUnit};
 use repark_common::spark_error;
 
 use super::store_assign::{
@@ -118,8 +118,8 @@ fn spark_update_type_name(data_type: &DataType) -> Option<&'static str> {
         DataType::Float64 => Some("DOUBLE"),
         DataType::Boolean => Some("BOOLEAN"),
         DataType::Date32 | DataType::Date64 => Some("DATE"),
-        DataType::Timestamp(_, None) => Some("TIMESTAMP_NTZ"),
-        DataType::Timestamp(_, Some(_)) => Some("TIMESTAMP"),
+        DataType::Timestamp(TimeUnit::Microsecond, None) => Some("TIMESTAMP_NTZ"),
+        DataType::Timestamp(_, _) => Some("TIMESTAMP"),
         DataType::Binary | DataType::LargeBinary | DataType::BinaryView => Some("BINARY"),
         DataType::Null => Some("VOID"),
         _ => None,
