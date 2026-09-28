@@ -800,7 +800,11 @@ def test_star_over_a_case_twin_frame_answers_both_columns_declared(
     table = measured.sql("SELECT * FROM twv").to_arrow()
     assert table.column_names == ["id", "ID"]
     assert _sorted_rows(table) == [[1, 0]]
-    with pytest.raises(AnalysisException, match="Projections require unique expression names"):
+    with pytest.raises(
+        AnalysisException,
+        match=r"\[COLUMN_ALREADY_EXISTS\] The column `id` already exists\. "
+        r"Choose another name or rename the existing column\. SQLSTATE: 42711",
+    ):
         measured.sql(_ROUND_2_CELLS["N03_star_twin_view_create"]["sql"]).collect()
 
 

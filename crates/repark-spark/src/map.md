@@ -710,6 +710,9 @@ pins: rp-4-fork-repin/C-005, C-006
   session owner through the shared `create_table::stamp_owner` helper; a user-supplied,
   exact lowercase `owner` property refuses before catalog access with a parser-kind
   error (ParseException, as Spark raises it).
+  **WO CASESENS-1 slice 4 (2026-09-27):** `execute_ctas` refuses
+  `COLUMN_ALREADY_EXISTS` 42711 on a folded duplicate in the planned source
+  schema under `caseSensitive=false` (R10), before staging. pins: casesens-1/C-012
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the staged commit resolves the
   merged session write, so CTAS stamps session snapshot properties.
   **ICE-MERGE-APPEND-1 (2026-09-19):** the staged-table append commits through
@@ -1067,6 +1070,11 @@ pins: rp-4-fork-repin/C-005, C-006
   `TY-UNKNOWN-VOID`); v3 commits, v1 / v2 refuse at the fork's schema choke point with its
   Java-mirrored `Invalid schema for v<N>` text. `type_table.rs` names Arrow `Null` `void` on
   every schema surface. pins: u9-types-1/C-009
+- `create_table.rs` — **WO CASESENS-1 slice 4 (2026-09-27):** the declared
+  plus typed column list refuses `COLUMN_ALREADY_EXISTS` 42711 on a folded
+  duplicate under `caseSensitive=false` (R10, before the schema builds);
+  `refuse_duplicate_partition_columns` compares through `NameRule` and
+  renders through the same builder, byte-identical. pins: casesens-1/C-012
 - `void_type.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** `rewrite_cast_null_to_void` turns
   `CAST(NULL AS VOID)` into a typed null; `refuse_insert_void_values` refuses a non-NULL
   `INSERT … VALUES` value into an `unknown` column with Spark's

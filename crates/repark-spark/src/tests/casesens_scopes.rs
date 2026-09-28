@@ -365,9 +365,12 @@ async fn twin_cte_outputs_still_refuse() {
     .await
     .err()
     .unwrap();
+    let message = error.to_string();
     assert!(
-        error.to_string().contains("unique expression names"),
-        "{error}"
+        message.contains("[AMBIGUOUS_REFERENCE]")
+            && message.contains("Reference `A` is ambiguous")
+            && message.contains("SQLSTATE: 42704"),
+        "{message}"
     );
 }
 

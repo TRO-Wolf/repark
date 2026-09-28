@@ -1,12 +1,13 @@
 use std::collections::{HashMap, HashSet};
 use std::ops::ControlFlow;
 
-use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
+use datafusion::common::tree_node::TreeNodeRecursion;
 use datafusion::common::{Column, SchemaError, TableReference};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::execution::SessionState;
-use datafusion::logical_expr::expr::{Exists, InSubquery, SetComparison};
-use datafusion::logical_expr::{Expr, LogicalPlan};
+#[cfg(test)]
+use datafusion::logical_expr::Expr;
+use datafusion::logical_expr::LogicalPlan;
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{
     AccessExpr, Expr as SqlExpr, Ident, ObjectNamePart, Statement, Value, VisitMut, VisitorMut,
@@ -129,9 +130,15 @@ async fn plan_with_repair(
             .map_err(stamp_unresolved_column);
     };
     let original = inner.clone();
-    let first = state
+    let mut first = state
         .statement_to_plan(datafusion::sql::parser::Statement::Statement(inner.clone()))
         .await;
+    let twin = matches!(&first, Err(error) if twins::is_unique_name_error(error));
+    if twin && twins::respell_case_twins(&mut inner) {
+        first = state
+            .statement_to_plan(datafusion::sql::parser::Statement::Statement(inner.clone()))
+            .await;
+    }
     let catalog_options = &state.config().options().catalog;
     let defaults = [
         catalog_options.default_catalog.clone(),
@@ -140,7 +147,7 @@ async fn plan_with_repair(
     let mut error = match first {
         Ok(plan) => {
             if plan_has_upper_ascii_field(&plan) {
-                audit_plan_for_ambiguity(&plan, &written_references(&inner, defaults))?;
+                ambiguity::audit_plan_for_ambiguity(&plan, &written_references(&inner, defaults))?;
             }
             return boxed_finish(state, original, inner, plan).await;
         }
@@ -182,7 +189,7 @@ async fn plan_with_repair(
             .await
         {
             Ok(plan) => {
-                audit_plan_for_ambiguity(&plan, &written)?;
+                ambiguity::audit_plan_for_ambiguity(&plan, &written)?;
                 return boxed_finish(state, original, inner, plan).await;
             }
             Err(next) => error = next,
@@ -316,6 +323,8 @@ fn missing_ambiguity(error: &DataFusionError) -> Option<&Column> {
 struct WrittenRefs {
     bare: HashSet<String>,
     qualified: HashSet<(String, String)>,
+    outer_bare: HashSet<String>,
+    outer_qualified: HashSet<(String, String)>,
     projection: HashSet<String>,
     relations: Vec<(String, Vec<String>)>,
     views: HashSet<String>,
@@ -345,95 +354,151 @@ impl WrittenRefs {
     }
 }
 
-fn written_references(statement: &Statement, defaults: [String; 2]) -> WrittenRefs {
-    struct Collector {
-        bare: HashSet<String>,
-        qualified: HashSet<(String, String)>,
-        projection: HashSet<String>,
-        relations: Vec<(String, Vec<String>)>,
-        ctes: HashSet<String>,
-        named: Vec<(String, String)>,
+#[derive(Default)]
+struct WrittenRefsCollector {
+    bare: HashSet<String>,
+    qualified: HashSet<(String, String)>,
+    outer_bare: HashSet<String>,
+    outer_qualified: HashSet<(String, String)>,
+    projection: HashSet<String>,
+    relations: Vec<(String, Vec<String>)>,
+    ctes: HashSet<String>,
+    named: Vec<(String, String)>,
+    scoped: usize,
+    barriers: Vec<usize>,
+    cte_bodies: HashSet<*const datafusion::sql::sqlparser::ast::Query>,
+}
+
+impl WrittenRefsCollector {
+    fn outer(&self) -> bool {
+        self.scoped <= self.barriers.last().copied().unwrap_or(0)
     }
-    impl datafusion::sql::sqlparser::ast::Visitor for Collector {
-        type Break = std::convert::Infallible;
-        fn pre_visit_query(
-            &mut self,
-            query: &datafusion::sql::sqlparser::ast::Query,
-        ) -> ControlFlow<Self::Break> {
-            for cte in query.with.iter().flat_map(|with| &with.cte_tables) {
-                self.ctes.insert(cte.alias.name.value.to_ascii_lowercase());
-            }
-            if let datafusion::sql::sqlparser::ast::SetExpr::Select(select) = query.body.as_ref() {
-                for item in &select.projection {
-                    match item {
-                        datafusion::sql::sqlparser::ast::SelectItem::UnnamedExpr(
-                            SqlExpr::Identifier(ident),
-                        )
-                        | datafusion::sql::sqlparser::ast::SelectItem::ExprWithAlias {
-                            expr: SqlExpr::Identifier(ident),
-                            ..
-                        } => {
-                            self.projection.insert(ident.value.clone());
-                        }
-                        _ => {}
+}
+
+impl datafusion::sql::sqlparser::ast::Visitor for WrittenRefsCollector {
+    type Break = std::convert::Infallible;
+    fn pre_visit_query(
+        &mut self,
+        query: &datafusion::sql::sqlparser::ast::Query,
+    ) -> ControlFlow<Self::Break> {
+        for cte in query.with.iter().flat_map(|with| &with.cte_tables) {
+            self.ctes.insert(cte.alias.name.value.to_ascii_lowercase());
+            self.cte_bodies
+                .insert(std::ptr::from_ref(cte.query.as_ref()));
+        }
+        if self.cte_bodies.contains(&std::ptr::from_ref(query)) {
+            self.scoped += 1;
+        }
+        if let datafusion::sql::sqlparser::ast::SetExpr::Select(select) = query.body.as_ref() {
+            for item in &select.projection {
+                match item {
+                    datafusion::sql::sqlparser::ast::SelectItem::UnnamedExpr(
+                        SqlExpr::Identifier(ident),
+                    )
+                    | datafusion::sql::sqlparser::ast::SelectItem::ExprWithAlias {
+                        expr: SqlExpr::Identifier(ident),
+                        ..
+                    } => {
+                        self.projection.insert(ident.value.clone());
                     }
+                    _ => {}
                 }
             }
-            ControlFlow::Continue(())
         }
-        fn pre_visit_table_factor(
-            &mut self,
-            factor: &datafusion::sql::sqlparser::ast::TableFactor,
-        ) -> ControlFlow<Self::Break> {
-            if let datafusion::sql::sqlparser::ast::TableFactor::Table { name, alias, .. } = factor
-            {
-                let written = name
-                    .0
-                    .iter()
-                    .filter_map(|part| part_value(part).map(str::to_string))
-                    .collect::<Vec<_>>();
-                self.named.push((
-                    written.last().cloned().unwrap_or_default(),
-                    alias.as_ref().map_or_else(
-                        || written.last().cloned().unwrap_or_default(),
-                        |alias| alias.name.value.clone(),
-                    ),
-                ));
-                let entry = match alias {
-                    Some(alias) => (alias.name.value.clone(), vec![alias.name.value.clone()]),
-                    None => (written.last().cloned().unwrap_or_default(), written),
-                };
-                self.relations.push(entry);
-            }
-            ControlFlow::Continue(())
-        }
-        fn post_visit_expr(&mut self, expr: &SqlExpr) -> ControlFlow<Self::Break> {
-            match expr {
-                SqlExpr::Identifier(ident) => {
-                    self.bare.insert(ident.value.clone());
-                }
-                SqlExpr::CompoundIdentifier(parts) if parts.len() >= 2 => {
-                    let name = parts[parts.len() - 1].value.clone();
-                    let qualifier = parts[parts.len() - 2].value.clone();
-                    self.qualified.insert((qualifier, name));
-                }
-                _ => {}
-            }
-            ControlFlow::Continue(())
-        }
+        ControlFlow::Continue(())
     }
-    let mut collector = Collector {
-        bare: HashSet::new(),
-        qualified: HashSet::new(),
-        projection: HashSet::new(),
-        relations: Vec::new(),
-        ctes: HashSet::new(),
-        named: Vec::new(),
-    };
+    fn post_visit_query(
+        &mut self,
+        query: &datafusion::sql::sqlparser::ast::Query,
+    ) -> ControlFlow<Self::Break> {
+        if self.cte_bodies.contains(&std::ptr::from_ref(query)) {
+            self.scoped = self.scoped.saturating_sub(1);
+        }
+        ControlFlow::Continue(())
+    }
+    fn pre_visit_table_factor(
+        &mut self,
+        factor: &datafusion::sql::sqlparser::ast::TableFactor,
+    ) -> ControlFlow<Self::Break> {
+        if matches!(
+            factor,
+            datafusion::sql::sqlparser::ast::TableFactor::Derived { .. }
+        ) {
+            self.scoped += 1;
+        }
+        if let datafusion::sql::sqlparser::ast::TableFactor::Table { name, alias, .. } = factor {
+            let written = name
+                .0
+                .iter()
+                .filter_map(|part| part_value(part).map(str::to_string))
+                .collect::<Vec<_>>();
+            self.named.push((
+                written.last().cloned().unwrap_or_default(),
+                alias.as_ref().map_or_else(
+                    || written.last().cloned().unwrap_or_default(),
+                    |alias| alias.name.value.clone(),
+                ),
+            ));
+            let entry = match alias {
+                Some(alias) => (alias.name.value.clone(), vec![alias.name.value.clone()]),
+                None => (written.last().cloned().unwrap_or_default(), written),
+            };
+            self.relations.push(entry);
+        }
+        ControlFlow::Continue(())
+    }
+    fn post_visit_table_factor(
+        &mut self,
+        factor: &datafusion::sql::sqlparser::ast::TableFactor,
+    ) -> ControlFlow<Self::Break> {
+        if matches!(
+            factor,
+            datafusion::sql::sqlparser::ast::TableFactor::Derived { .. }
+        ) {
+            self.scoped = self.scoped.saturating_sub(1);
+        }
+        ControlFlow::Continue(())
+    }
+    fn pre_visit_expr(&mut self, expr: &SqlExpr) -> ControlFlow<Self::Break> {
+        if inner_scopes::is_expression_subquery(expr) {
+            self.barriers.push(self.scoped);
+        }
+        ControlFlow::Continue(())
+    }
+    fn post_visit_expr(&mut self, expr: &SqlExpr) -> ControlFlow<Self::Break> {
+        if inner_scopes::is_expression_subquery(expr) {
+            self.barriers.pop();
+        }
+        let outer = self.outer();
+        match expr {
+            SqlExpr::Identifier(ident) => {
+                self.bare.insert(ident.value.clone());
+                if outer {
+                    self.outer_bare.insert(ident.value.clone());
+                }
+            }
+            SqlExpr::CompoundIdentifier(parts) if parts.len() >= 2 => {
+                let name = parts[parts.len() - 1].value.clone();
+                let qualifier = parts[parts.len() - 2].value.clone();
+                self.qualified.insert((qualifier.clone(), name.clone()));
+                if outer {
+                    self.outer_qualified.insert((qualifier, name));
+                }
+            }
+            _ => {}
+        }
+        ControlFlow::Continue(())
+    }
+}
+
+fn written_references(statement: &Statement, defaults: [String; 2]) -> WrittenRefs {
+    let mut collector = WrittenRefsCollector::default();
     let _ = datafusion::sql::sqlparser::ast::Visit::visit(statement, &mut collector);
     WrittenRefs {
         bare: collector.bare,
         qualified: collector.qualified,
+        outer_bare: collector.outer_bare,
+        outer_qualified: collector.outer_qualified,
         projection: collector.projection,
         relations: collector.relations,
         views: collector
@@ -446,45 +511,6 @@ fn written_references(statement: &Statement, defaults: [String; 2]) -> WrittenRe
             .collect(),
         defaults,
     }
-}
-
-type Twins<'a> = HashMap<String, Vec<(Option<&'a TableReference>, &'a str)>>;
-
-fn audit_plan_for_ambiguity(plan: &LogicalPlan, written: &WrittenRefs) -> Result<()> {
-    plan.apply_with_subqueries(|node| {
-        if let LogicalPlan::SubqueryAlias(alias) = node
-            && written
-                .views
-                .contains(&alias.alias.table().to_ascii_lowercase())
-        {
-            return Ok(TreeNodeRecursion::Jump);
-        }
-        let twins = input_twins(node);
-        if twins.is_empty() {
-            return Ok(TreeNodeRecursion::Continue);
-        }
-        for expr in node.expressions() {
-            expr.apply(|leaf| {
-                match leaf {
-                    Expr::Column(column) => audit_column(column, &twins, written)?,
-                    Expr::Exists(Exists { subquery, .. })
-                    | Expr::InSubquery(InSubquery { subquery, .. })
-                    | Expr::SetComparison(SetComparison { subquery, .. })
-                    | Expr::ScalarSubquery(subquery) => {
-                        for outer in &subquery.outer_ref_columns {
-                            if let Expr::OuterReferenceColumn(_, column) = outer {
-                                audit_column(column, &twins, written)?;
-                            }
-                        }
-                    }
-                    _ => {}
-                }
-                Ok(TreeNodeRecursion::Continue)
-            })?;
-        }
-        Ok(TreeNodeRecursion::Continue)
-    })
-    .map(|_| ())
 }
 
 fn plan_has_upper_ascii_field(plan: &LogicalPlan) -> bool {
@@ -513,91 +539,6 @@ fn plan_has_upper_ascii_field(plan: &LogicalPlan) -> bool {
 
 fn has_upper_ascii(name: &str) -> bool {
     name.bytes().any(|byte| byte.is_ascii_uppercase())
-}
-
-fn input_twins(node: &LogicalPlan) -> Twins<'_> {
-    let inputs = node.inputs();
-    let mut index: Twins<'_> = HashMap::new();
-    if !inputs.iter().any(|input| {
-        input
-            .schema()
-            .fields()
-            .iter()
-            .any(|field| has_upper_ascii(field.name()))
-    }) {
-        return index;
-    }
-    for input in inputs {
-        for (qualifier, field) in input.schema().iter() {
-            index
-                .entry(field.name().to_ascii_lowercase())
-                .or_default()
-                .push((qualifier, field.name().as_str()));
-        }
-    }
-    index.retain(|_, fields| fields.iter().any(|(_, name)| *name != fields[0].1));
-    index
-}
-
-fn audit_column(column: &Column, twins: &Twins<'_>, written: &WrittenRefs) -> Result<()> {
-    let Some(fields) = twins.get(&column.name.to_ascii_lowercase()) else {
-        return Ok(());
-    };
-    let relation_hit = column.relation.as_ref().and_then(|relation| {
-        written.qualified.iter().find(|(qualifier, name)| {
-            qualifier.eq_ignore_ascii_case(relation.table())
-                && name.eq_ignore_ascii_case(&column.name)
-        })
-    });
-    let bare_hit = written
-        .bare
-        .iter()
-        .find(|name| name.eq_ignore_ascii_case(&column.name));
-    let (qualifier, requested) = match (relation_hit, bare_hit) {
-        (Some((qualifier, name)), _) => (Some(qualifier.as_str()), name.as_str()),
-        (None, Some(name)) => (None, name.as_str()),
-        (None, None) => return Ok(()),
-    };
-    let matching = fields
-        .iter()
-        .filter(
-            |(candidate, _)| match (qualifier, column.relation.as_ref()) {
-                (Some(_), Some(relation)) => {
-                    candidate.is_some_and(|candidate| qualifier_matches(relation, candidate))
-                }
-                _ => true,
-            },
-        )
-        .collect::<Vec<_>>();
-    if matching.len() < 2 || matching.iter().all(|(_, name)| *name == matching[0].1) {
-        return Ok(());
-    }
-    let scopes = matching
-        .iter()
-        .map(|(candidate, _)| {
-            candidate
-                .filter(|candidate| !crate::frame_names::is_scratch_relation(candidate.table()))
-                .map(|candidate| written.relation_parts(candidate))
-                .unwrap_or_default()
-        })
-        .collect::<Vec<_>>();
-    Err(DataFusionError::Plan(ambiguous_message(
-        qualifier, requested, &scopes,
-    )))
-}
-
-fn qualifier_matches(written: &TableReference, candidate: &TableReference) -> bool {
-    written.table().eq_ignore_ascii_case(candidate.table())
-        && part_matches(written.schema(), candidate.schema())
-        && part_matches(written.catalog(), candidate.catalog())
-}
-
-fn part_matches(first: Option<&str>, second: Option<&str>) -> bool {
-    match (first, second) {
-        (None, None) => true,
-        (Some(first), Some(second)) => first.eq_ignore_ascii_case(second),
-        _ => false,
-    }
 }
 
 fn reference_parts(reference: &TableReference) -> Vec<String> {
@@ -926,12 +867,14 @@ fn direct_tables(statement: &Statement) -> Vec<(String, TableReference)> {
     collector.tables
 }
 
+mod ambiguity;
 mod display;
 mod fold;
 mod fold_text;
 mod inner_scopes;
 mod scope_fields;
 mod stack;
+mod twins;
 
 pub use fold_text::fold_query_text;
 pub use stack::{GrownStack, on_grown_stack_with};

@@ -66,9 +66,33 @@ pub enum NameHit<'a> {
     None,
 }
 
+#[must_use]
+pub fn folded_duplicate(names: &[impl AsRef<str>]) -> Option<String> {
+    let mut seen: Vec<&str> = Vec::with_capacity(names.len());
+    for name in names {
+        let name = name.as_ref();
+        if seen
+            .iter()
+            .any(|earlier| earlier.eq_ignore_ascii_case(name))
+        {
+            return Some(name.to_ascii_lowercase());
+        }
+        seen.push(name);
+    }
+    None
+}
+
+#[must_use]
+pub fn column_already_exists(name: &str) -> String {
+    format!(
+        "[COLUMN_ALREADY_EXISTS] The column `{name}` already exists. Choose another name or \
+         rename the existing column. SQLSTATE: 42711"
+    )
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{NameHit, NameRule};
+    use super::{NameHit, NameRule, column_already_exists, folded_duplicate};
 
     #[test]
     fn lookup_answers_each_rule() {
@@ -93,5 +117,22 @@ mod tests {
         assert!(NameRule::Exact.matches("ID", "ID"));
         assert!(!NameRule::Exact.matches("ID", "id"));
         assert!(NameRule::IgnoreCase.matches("ID", "id"));
+    }
+
+    #[test]
+    fn folded_duplicate_reports_the_lower_cased_twin() {
+        assert_eq!(folded_duplicate(&["a", "A"]), Some("a".to_string()));
+        assert_eq!(folded_duplicate(&["ID", "x", "id"]), Some("id".to_string()));
+        assert_eq!(folded_duplicate(&["a", "b"]), None);
+        assert_eq!(folded_duplicate(&["a", "A", "a"]), Some("a".to_string()));
+        assert_eq!(
+            folded_duplicate(&["a".to_string(), "A".to_string()]),
+            Some("a".to_string())
+        );
+        assert_eq!(
+            column_already_exists("a"),
+            "[COLUMN_ALREADY_EXISTS] The column `a` already exists. Choose another name or \
+             rename the existing column. SQLSTATE: 42711"
+        );
     }
 }

@@ -110,6 +110,26 @@ pins: ice-error-conditions-1/C-011
   returns the folded text, unchanged when the first plan succeeds; the MERGE
   door folds a parenthesized derived source with it before the fragment rewrite.
   pins: casesens-1/C-004
+- `twins.rs` — **WO CASESENS-1 slice 4 (2026-09-27):** the case-twin output
+  pass (R9). `is_unique_name_error` matches DataFusion's `Projections require
+  unique expression names` head through its wrappers; `respell_case_twins`
+  double-quotes, in every `SELECT`, each once-written item of a folded-duplicate
+  group (a `*` counts as its stored names, so a twin beside a star is quoted)
+  and leaves identical written names alone (ID-3). `plan_with_repair` re-plans
+  once on a match and continues as a first-plan success. Text battery inline.
+  pins: casesens-1/C-011
+- `ambiguity.rs` — **WO CASESENS-1 slice 4 (2026-09-27):** the ambiguity audit,
+  split out of `../column_resolution.rs` under the file-size gate. The walk
+  carries an inside-a-subquery flag (set under `SubqueryAlias`, unchanged
+  through expression subqueries, views still skipped): outer plan nodes match
+  only references written outside derived and CTE bodies (`outer_bare` /
+  `outer_qualified`), so a star over twin subquery outputs answers while an
+  explicit reference into the twins still refuses; inner nodes keep the global
+  sets, and the fold's spelling lookups are untouched. CTE bodies are always
+  wrapped, so their idents scope too; expression-subquery idents stay global
+  (correlated). No dedicated battery: the U11 audit pins plus the S4 twin
+  pins cover both sides.
+  pins: casesens-1/C-011
 - `display.rs` — **U11-EDGE-1 (2026-09-26):** the query-spelling display rewrite. Under the
   default `caseSensitive=false`, `display_rewrite` compares the planned output names with the
   projection as written (the left branch of a set operation) and re-plans once with quoted

@@ -191,6 +191,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins `p3/cs_temp_view_upper` (R-CS1-8 closed) with the exact and false legs.
   The six pre-bound legs stay unpinned (R-CS1-10, CASESENS-2).
   pins: casesens-1/C-009, C-010
+  **WO CASESENS-1 slice 4 (2026-09-27):** `test_s4_case_twins` replays the
+  case-twin legs (twin outputs answer; the twin reference refuses
+  `AMBIGUOUS_REFERENCE` byte-exact; the four creations refuse 42711 — the
+  `tw_view` leg strips Spark's recorded trailing `;`; the positional insert
+  answers and `writeTo` routes through CTAS into the same refusal) plus the
+  un-stamped `tw_temp_view_read` refusal.
+  pins: casesens-1/C-011, C-012
 - [test_ntz_1.py](test_ntz_1.py) + `ntz_1_spark_oracle.json` — **WO NTZ-1 slice 1
   (2026-09-26):** the `TIMESTAMP_NTZ` literal and explicit casts replay Spark's measured
   answers — 29 literal/cast/refusal queries in UTC and New York sessions, the v2/v3

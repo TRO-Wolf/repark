@@ -2222,11 +2222,17 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
 
 - **repark** — both `createDataFrame([(…)], ["id", "id"])` and `SELECT 1 AS id, 2 AS id` refuse
   at construction / planning with an `AnalysisException` matching `unique expression names`. No
-  frame carrying exact-duplicate output names is ever materialised.
+  frame carrying exact-duplicate output names is ever materialised. Case twins are not
+  duplicates: `SELECT ID, id`, `SELECT 1 AS a, 2 AS A` and `SELECT *, ID` answer with both
+  spellings (CASESENS-1 S4, 2026-09-27), while a reference into the twins refuses
+  `AMBIGUOUS_REFERENCE` and `CREATE TABLE` / CTAS / `CREATE VIEW` / `CREATE TEMPORARY VIEW`
+  with twin columns refuse `COLUMN_ALREADY_EXISTS` under `caseSensitive=false`.
 - **Apache Spark** — accepts both constructions (e.g. `Row(id=1, id=2)`); the ambiguity surfaces
   later as `AMBIGUOUS_REFERENCE` only when the duplicate name is *referenced*. *(oracle:
   documented — PySpark 4.1.2 API / analysis semantics for duplicate output names.)*
-- **Pin** — `python/repark/tests/test_filter_predicate_rewrite.py::test_exact_duplicate_column_names_are_rejected_at_frame_construction`
+- **Pin** — `python/repark/tests/test_filter_predicate_rewrite.py::test_exact_duplicate_column_names_are_rejected_at_frame_construction`;
+  `crates/repark-spark/src/tests/casesens_twins.rs::exact_duplicates_still_refuse`;
+  `python/repark/tests/test_casesens_1.py::test_s4_case_twins`. pins: casesens-1/C-011, C-012
 - **Rationale** — DECLARED. The refusal is inherited from DataFusion's unique-output-name rule
   and is load-bearing for facade helpers that assume unique names (e.g. the filter rewriter's
   exact-duplicate defensive branch). Reproducing Spark's late raise would mean allowing illegal
@@ -2250,9 +2256,9 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   in any scope refuses (E-CASE-SENSITIVE-SQL) `[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or
   function parameter with name `ID` cannot be resolved. Did you mean one of the following?
   [`id`, `Data`].` On the DataFrame door `F.col` binds a spelled output case-insensitively
-  (`spark.sql("SELECT ID …").filter(F.col("id") > 1)`, `createDataFrame(…, ["Id"])`). Residues:
-  `count(*)` keeps DataFusion's name `count(*)` where Spark says `count(1)`, and
-  `SELECT ID, id` refuses under ID-3 where Spark answers `ID`, `id`.
+  (`spark.sql("SELECT ID …").filter(F.col("id") > 1)`, `createDataFrame(…, ["Id"])`). Residue:
+  `count(*)` keeps DataFusion's name `count(*)` where Spark says `count(1)`. `SELECT ID, id`
+  answers `ID`, `id` since CASESENS-1 S4 (2026-09-27); see ID-3.
 - **Apache Spark** — the names above. *(oracle: recorded — PySpark 4.1.2 + Iceberg 1.11,
   2026-09-25/26, `target/probe-u11-edge-1/spark_case.json`, `spark_r2.json`, `spark_r3.json` in
   the lane clone; scoreboard cell `E-CASE-SELECT`.)*

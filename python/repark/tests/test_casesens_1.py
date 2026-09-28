@@ -35,9 +35,15 @@ name). The ``unionByName`` pin asserts the class and the byte-exact message
 and records the condition gap (ledger R-CS1-9: Spark reports
 ``_LEGACY_ERROR_TEMP_1201``, RePark carries none). S3 also pins
 ``p3/cs_temp_view_upper`` (ledger R-CS1-8 closed: the rule-aware probe
-refuses; the exact and ``false`` legs answer).
+refuses; the exact and ``false`` legs answer). S4 replays the case-twin
+legs: twin outputs answer with both spellings, a reference into the twins
+refuses ``AMBIGUOUS_REFERENCE`` byte-exact, and ``CREATE TABLE``, CTAS,
+``CREATE VIEW`` and ``CREATE TEMPORARY VIEW`` with twin columns refuse
+``COLUMN_ALREADY_EXISTS`` (the ``tw_view`` leg strips Spark's recorded
+trailing ``;``); the positional insert answers and ``writeTo`` routes through
+CTAS into the same refusal.
 
-pins: casesens-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+pins: casesens-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
 """
 
 from __future__ import annotations
@@ -524,5 +530,46 @@ def test_s3_temp_view_name_is_exact_under_case_sensitive(tmp_path: Path) -> None
         _assert_plain_refusal(session, "p3/cs_temp_view_upper")
         _assert_step(session, "p3/cs_temp_view_exact")
         _assert_step(session, "p3/temp_view_upper")
+    finally:
+        session.stop()
+
+
+_S4_KEYS: tuple[str, ...] = (
+    "p1/tw_ID_id",
+    "p1/tw_Id_ID",
+    "p1/tw_star_ID",
+    "p1/tw_lit",
+    "p1/tw_lit_ref",
+    "p1/tw_ctas",
+    "p1/tw_create",
+    "p3/tw_subq_star",
+    "p3/tw_view",
+    "p3/tw_temp_view",
+)
+
+
+def _s4_expect_msg(key: str, spark_msg: str) -> str:
+    """Render RePark's recorded message where it differs from Spark's (S4)."""
+    if key == "p3/tw_view":
+        return spark_msg.removesuffix(";")
+    return spark_msg
+
+
+def test_s4_case_twins(tmp_path: Path) -> None:
+    """Case-twin outputs answer and case-twin creations refuse 42711 (S4)."""
+    session = _open(tmp_path)
+    try:
+        _setup_tables(session)
+        session.register_memory_catalog("vc", tmp_path / "vc")
+        session.sql("CREATE NAMESPACE IF NOT EXISTS vc.ns").collect()
+        for key in _S4_KEYS:
+            step = _ORACLE[key]
+            expect = _s4_expect_msg(key, step["spark"]["msg"]) if "error" in step["spark"] else None
+            _assert_step(session, key, expect)
+        _assert_plain_refusal(session, "p3/tw_temp_view_read")
+        _assert_step(session, "p3/tw_insert_into")
+        _assert_step(session, "p3/tw_insert_into_run")
+        _assert_step(session, "p3/tw_insert_after")
+        _assert_df_step(session, "p3/tw_df_write_create")
     finally:
         session.stop()

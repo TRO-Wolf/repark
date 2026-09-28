@@ -481,7 +481,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `catalog_view_body_keeps_its_spelling` (`r5_view_star`, `r5_view_lower`,
   `r5_view2_upper`; `r5_view_describe` unchanged) and
   `twin_cte_outputs_still_refuse` (the `SELECT 1 AS a, 2 AS A` CTE body keeps
-  its refusal; the shape is unmeasured against Spark). **Fold round
+  its refusal; the shape is unmeasured against Spark;
+  **CASESENS-1 S4 (2026-09-27):** the body now plans and the outer reference
+  refuses Spark's `AMBIGUOUS_REFERENCE` 42704 instead). **Fold round
   (2026-09-27):** `derived_and_cte_projections_keep_the_written_spelling`
   gains the `SELECT * FROM (SELECT 1 AS ID)` leg (answers `ID`; unmeasured —
   no probe key records an expression-alias output name). pins:
@@ -500,6 +502,15 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `enable_case_sensitive` moved from `create_typed_partition.rs` into
   `common.rs` (deleted at the source).
   pins: casesens-1/C-005, C-006, C-007, C-008
+- `casesens_twins.rs` — **WO CASESENS-1 slice 4 (2026-09-27):** the
+  case-twin pins over struct-less probe tables: twin outputs answer with both
+  spellings (`tw_ID_id`, `tw_Id_ID`, `tw_star_ID`, `tw_lit`, `tw_subq_star`;
+  the star leg reads the struct-less table), a reference into the twins
+  refuses `AMBIGUOUS_REFERENCE` 42704 while the same shape answers under
+  `true`, exact duplicates keep ID-3's refusal, the four creations refuse
+  `COLUMN_ALREADY_EXISTS` 42711 with nothing created (temp views through a
+  `CtxTempViews` session home), and the positional insert answers.
+  pins: casesens-1/C-011, C-012
 - `decimal.rs` — the Spark-door decimal128 pins at `i128` precision: result `(p,s)`, value,
   and nullability for the G2/G13 corpus shapes. **CUTOVER-SCHEMA-1 (2026-09-04):**
   `pin_int_times_decimal_is_12_2_i128` and `pin_mul_single_digit_nullability_non_null_i128`
