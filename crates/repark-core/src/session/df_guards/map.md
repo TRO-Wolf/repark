@@ -134,6 +134,19 @@ wrapped optimizer rule) and declares this directory.
   **Re-verify (2026-09-28, RC-3):** the child-name lookup recurses through
   nested casts (`test_nested_cast_of_a_column_keeps_the_written_child_name`).
   pins: casesens-1/C-009
+  **CASESENS-2 S4 clerk (2026-09-28):** the merge pushed this file to 1002 lines, so
+  `bind_projection_expr` plus `cast_child_name` moved byte-identical to
+  `cast_names.rs` and re-export through this module; the public `frame_names` path
+  is unchanged and this file sits 25 lines under the ceiling.
+- [cast_names.rs](cast_names.rs) — **CASESENS-2 S4 clerk (2026-09-28):** the select-path
+  written-spelling helper, split byte-identical out of `case_bind.rs` when the merge
+  pushed that file past the 1000-line ceiling. `bind_projection_expr` binds through
+  `subquery::resolve_bound_expr_with` and re-aliases to the written spelling (a bare
+  column keeps its spelling; a top-level `Cast`/`TryCast` over a column child keeps the
+  child name via the recursive `cast_child_name`); re-exported through `case_bind` so
+  `repark_core::frame_names::bind_projection_expr` is unchanged. Rust pin
+  `projection_keeps_the_written_spelling` stays in `case_bind.rs`'s test module.
+  pins: casesens-1/C-009
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside

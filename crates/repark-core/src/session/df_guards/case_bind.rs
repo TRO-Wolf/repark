@@ -16,6 +16,7 @@ use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::parser::Parser;
 use repark_common::spark_error;
 
+pub use super::cast_names::bind_projection_expr;
 pub use super::subquery::resolve_bound_expr_with;
 pub use super::written_names::{Disposition, refuse_folded_duplicate_keys, unresolved_subset_name};
 pub use super::written_names::{match_display_names, match_subset_names, resolve_df_names};
@@ -285,34 +286,6 @@ pub fn requalify_join_sides(joined: DataFrame, sides: &[&DFSchema]) -> Result<Da
         })
         .collect::<Vec<_>>();
     Ok(joined.clone().select(projection).unwrap_or(joined))
-}
-
-#[allow(clippy::missing_errors_doc)]
-pub fn bind_projection_expr(expr: Expr, frame_schema: &DFSchema, rule: NameRule) -> Result<Expr> {
-    let written = match &expr {
-        Expr::Column(column) => Some(column.name.clone()),
-        Expr::Cast(cast) => cast_child_name(&cast.expr),
-        Expr::TryCast(cast) => cast_child_name(&cast.expr),
-        _ => None,
-    };
-    let bound = super::subquery::resolve_bound_expr_with(expr, frame_schema, rule)?;
-    Ok(match (written, &bound) {
-        (Some(written), Expr::Column(held)) if held.name != written => {
-            let relation = held.relation.clone();
-            bound.alias_qualified(relation, written)
-        }
-        (Some(written), Expr::Cast(_) | Expr::TryCast(_)) => bound.alias(written),
-        _ => bound,
-    })
-}
-
-fn cast_child_name(expr: &Expr) -> Option<String> {
-    match expr {
-        Expr::Column(column) => Some(column.name.clone()),
-        Expr::Cast(cast) => cast_child_name(&cast.expr),
-        Expr::TryCast(cast) => cast_child_name(&cast.expr),
-        _ => None,
-    }
 }
 
 #[allow(clippy::missing_errors_doc)]

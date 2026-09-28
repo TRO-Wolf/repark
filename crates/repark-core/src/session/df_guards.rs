@@ -15,6 +15,7 @@ use repark_common::Error;
 use crate::extension::SessionExtension;
 
 pub mod case_bind;
+mod cast_names;
 pub(super) mod subquery;
 mod window_rescan;
 mod written_names;
