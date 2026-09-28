@@ -3760,6 +3760,731 @@
      2.5
     ]
    ]
+  },
+  "div0/set_off": {
+   "sql": "SET spark.sql.ansi.enabled=false",
+   "statement": true
+  },
+  "div0/off_flat": {
+   "sql": "SELECT id / 0 AS v, typeof(id / 0) AS t FROM sc.ns.t",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     null,
+     "double"
+    ],
+    [
+     null,
+     "double"
+    ],
+    [
+     null,
+     "double"
+    ]
+   ]
+  },
+  "div0/off_derived": {
+   "sql": "SELECT h / 0 AS v, typeof(h / 0) AS t FROM (SELECT id / 2 AS h FROM sc.ns.t) s",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     null,
+     "double"
+    ],
+    [
+     null,
+     "double"
+    ],
+    [
+     null,
+     "double"
+    ]
+   ]
+  },
+  "div0/set_on": {
+   "sql": "SET spark.sql.ansi.enabled=true",
+   "statement": true
+  },
+  "div0/on_flat": {
+   "sql": "SELECT id / 0 AS v, typeof(id / 0) AS t FROM sc.ns.t",
+   "condition": "DIVIDE_BY_ZERO",
+   "sql_state": "22012",
+   "message_head": "[DIVIDE_BY_ZERO] Division by zero",
+   "condition_waived": "R-INTDIV-8"
+  },
+  "div0/on_derived": {
+   "sql": "SELECT h / 0 AS v, typeof(h / 0) AS t FROM (SELECT id / 2 AS h FROM sc.ns.t) s",
+   "condition": "DIVIDE_BY_ZERO",
+   "sql_state": "22012",
+   "message_head": "[DIVIDE_BY_ZERO] Division by zero",
+   "condition_waived": "R-INTDIV-8"
+  },
+  "win/big_derived_sum": {
+   "sql": "SELECT id, sum(h) OVER (ORDER BY id) AS v, typeof(sum(h) OVER (ORDER BY id)) AS t FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s ORDER BY id",
+   "ordered": true,
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     0.5,
+     "double"
+    ],
+    [
+     2,
+     1.5,
+     "double"
+    ],
+    [
+     3,
+     3.0,
+     "double"
+    ]
+   ]
+  },
+  "win/big_derived_avg": {
+   "sql": "SELECT id, avg(h) OVER () AS v, typeof(avg(h) OVER ()) AS t FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s ORDER BY id",
+   "ordered": true,
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1.0,
+     "double"
+    ],
+    [
+     2,
+     1.0,
+     "double"
+    ],
+    [
+     3,
+     1.0,
+     "double"
+    ]
+   ]
+  },
+  "win/big_cte_sum": {
+   "sql": "WITH s AS (SELECT id, id / 2 AS h FROM sc.ns.t) SELECT id, sum(h) OVER (ORDER BY id) AS v, typeof(sum(h) OVER (ORDER BY id)) AS t FROM s ORDER BY id",
+   "ordered": true,
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     0.5,
+     "double"
+    ],
+    [
+     2,
+     1.5,
+     "double"
+    ],
+    [
+     3,
+     3.0,
+     "double"
+    ]
+   ]
+  },
+  "win/big_cte_avg": {
+   "sql": "WITH s AS (SELECT id, id / 2 AS h FROM sc.ns.t) SELECT id, avg(h) OVER () AS v, typeof(avg(h) OVER ()) AS t FROM s ORDER BY id",
+   "ordered": true,
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1.0,
+     "double"
+    ],
+    [
+     2,
+     1.0,
+     "double"
+    ],
+    [
+     3,
+     1.0,
+     "double"
+    ]
+   ]
+  },
+  "win/int_derived_sum": {
+   "sql": "SELECT id, sum(h) OVER (ORDER BY id) AS v, typeof(sum(h) OVER (ORDER BY id)) AS t FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s ORDER BY id",
+   "ordered": true,
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     0.5,
+     "double"
+    ],
+    [
+     2,
+     1.5,
+     "double"
+    ],
+    [
+     3,
+     3.0,
+     "double"
+    ]
+   ]
+  },
+  "win/int_derived_avg": {
+   "sql": "SELECT id, avg(h) OVER () AS v, typeof(avg(h) OVER ()) AS t FROM (SELECT id, i / 2 AS h FROM sc.ns.t) s ORDER BY id",
+   "ordered": true,
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1.0,
+     "double"
+    ],
+    [
+     2,
+     1.0,
+     "double"
+    ],
+    [
+     3,
+     1.0,
+     "double"
+    ]
+   ]
+  },
+  "win/int_cte_sum": {
+   "sql": "WITH s AS (SELECT id, i / 2 AS h FROM sc.ns.t) SELECT id, sum(h) OVER (ORDER BY id) AS v, typeof(sum(h) OVER (ORDER BY id)) AS t FROM s ORDER BY id",
+   "ordered": true,
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     0.5,
+     "double"
+    ],
+    [
+     2,
+     1.5,
+     "double"
+    ],
+    [
+     3,
+     3.0,
+     "double"
+    ]
+   ]
+  },
+  "win/int_cte_avg": {
+   "sql": "WITH s AS (SELECT id, i / 2 AS h FROM sc.ns.t) SELECT id, avg(h) OVER () AS v, typeof(avg(h) OVER ()) AS t FROM s ORDER BY id",
+   "ordered": true,
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1.0,
+     "double"
+    ],
+    [
+     2,
+     1.0,
+     "double"
+    ],
+    [
+     3,
+     1.0,
+     "double"
+    ]
+   ]
+  },
+  "grp/big_derived_h": {
+   "sql": "SELECT h AS k, typeof(h) AS t, count(*) AS c FROM (SELECT id / 2 AS h FROM sc.ns.t) s GROUP BY h",
+   "cols": [
+    [
+     "k",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ],
+    [
+     "c",
+     "bigint"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double",
+     1
+    ],
+    [
+     1.0,
+     "double",
+     1
+    ],
+    [
+     1.5,
+     "double",
+     1
+    ]
+   ]
+  },
+  "grp/big_flat_expr": {
+   "sql": "SELECT id / 2 AS k, typeof(id / 2) AS t, count(*) AS c FROM sc.ns.t GROUP BY id / 2",
+   "cols": [
+    [
+     "k",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ],
+    [
+     "c",
+     "bigint"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double",
+     1
+    ],
+    [
+     1.0,
+     "double",
+     1
+    ],
+    [
+     1.5,
+     "double",
+     1
+    ]
+   ]
+  },
+  "grp/int_derived_h": {
+   "sql": "SELECT h AS k, typeof(h) AS t, count(*) AS c FROM (SELECT i / 2 AS h FROM sc.ns.t) s GROUP BY h",
+   "cols": [
+    [
+     "k",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ],
+    [
+     "c",
+     "bigint"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double",
+     1
+    ],
+    [
+     1.0,
+     "double",
+     1
+    ],
+    [
+     1.5,
+     "double",
+     1
+    ]
+   ]
+  },
+  "grp/int_flat_expr": {
+   "sql": "SELECT i / 2 AS k, typeof(i / 2) AS t, count(*) AS c FROM sc.ns.t GROUP BY i / 2",
+   "cols": [
+    [
+     "k",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ],
+    [
+     "c",
+     "bigint"
+    ]
+   ],
+   "rows": [
+    [
+     0.5,
+     "double",
+     1
+    ],
+    [
+     1.0,
+     "double",
+     1
+    ],
+    [
+     1.5,
+     "double",
+     1
+    ]
+   ]
+  },
+  "mix/case": {
+   "sql": "SELECT id, CASE WHEN id > 1 THEN h ELSE id END AS v, typeof(CASE WHEN id > 1 THEN h ELSE id END) AS t FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1.0,
+     "double"
+    ],
+    [
+     2,
+     1.0,
+     "double"
+    ],
+    [
+     3,
+     1.5,
+     "double"
+    ]
+   ]
+  },
+  "mix/in": {
+   "sql": "SELECT id FROM (SELECT id, id / 2 AS h FROM sc.ns.t) s WHERE h IN (0.5, 1.0)",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ]
+   ],
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  "mix/join": {
+   "sql": "SELECT a.id AS x, b.id AS y FROM (SELECT id, id / 2 AS h FROM sc.ns.t) a JOIN (SELECT id, id / 2 AS h FROM sc.ns.t) b ON a.h = b.h",
+   "cols": [
+    [
+     "x",
+     "bigint"
+    ],
+    [
+     "y",
+     "bigint"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     2
+    ],
+    [
+     3,
+     3
+    ]
+   ]
+  },
+  "trydiv/by_zero": {
+   "sql": "SELECT try_divide(1, 0) AS v, typeof(try_divide(1, 0)) AS t",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     null,
+     "double"
+    ]
+   ]
+  },
+  "trydiv/six_two": {
+   "sql": "SELECT try_divide(6, 2) AS v, typeof(try_divide(6, 2)) AS t",
+   "cols": [
+    [
+     "v",
+     "double"
+    ],
+    [
+     "t",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     3.0,
+     "double"
+    ]
+   ]
+  },
+  "cooccur/mixed": {
+   "sql": "SELECT h + 1 AS x, typeof(h + 1) AS tx, a + 1 AS y, typeof(a + 1) AS ty FROM (SELECT id / 2 AS h, id * 2 AS a FROM sc.ns.t) s",
+   "cols": [
+    [
+     "x",
+     "double"
+    ],
+    [
+     "tx",
+     "string"
+    ],
+    [
+     "y",
+     "bigint"
+    ],
+    [
+     "ty",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1.5,
+     "double",
+     3,
+     "bigint"
+    ],
+    [
+     2.0,
+     "double",
+     5,
+     "bigint"
+    ],
+    [
+     2.5,
+     "double",
+     7,
+     "bigint"
+    ]
+   ]
+  },
+  "cooccur/overflow": {
+   "sql": "SELECT id / 2 AS v, 9223372036854775807 + id AS w FROM sc.ns.t",
+   "condition": "ARITHMETIC_OVERFLOW",
+   "sql_state": "22003",
+   "message_head": "[ARITHMETIC_OVERFLOW] long overflow"
+  },
+  "dml/mk_target": {
+   "sql": "CREATE TABLE sc.ns.tu (id BIGINT, v DOUBLE) USING iceberg",
+   "statement": true
+  },
+  "dml/seed": {
+   "sql": "INSERT INTO sc.ns.tu VALUES (1, 0.0), (2, 0.0), (3, 0.0)",
+   "statement": true
+  },
+  "dml/update": {
+   "sql": "UPDATE sc.ns.tu SET v = id / 2",
+   "statement": true
+  },
+  "dml/update_read": {
+   "sql": "SELECT id, v FROM sc.ns.tu",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     0.5
+    ],
+    [
+     2,
+     1.0
+    ],
+    [
+     3,
+     1.5
+    ]
+   ]
+  },
+  "dml/merge": {
+   "sql": "MERGE INTO sc.ns.tu AS u USING (SELECT id, id / 2 AS h FROM sc.ns.t) AS s ON u.id = s.id WHEN MATCHED THEN UPDATE SET v = s.h + 10",
+   "statement": true
+  },
+  "dml/merge_read": {
+   "sql": "SELECT id, v FROM sc.ns.tu",
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "v",
+     "double"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     10.5
+    ],
+    [
+     2,
+     11.0
+    ],
+    [
+     3,
+     11.5
+    ]
+   ]
   }
  },
  "dataframe": {

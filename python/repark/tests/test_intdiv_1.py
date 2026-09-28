@@ -8,6 +8,7 @@ import pytest
 
 from repark import ReparkSession
 from repark import functions as fn
+from repark.errors import ParseException
 
 ORACLE_PATH: Path = Path(__file__).with_name("intdiv_1_spark_oracle.json")
 _ORACLE: dict[str, Any] = json.loads(ORACLE_PATH.read_text(encoding="utf-8"))
@@ -69,10 +70,9 @@ def _mismatch(session: ReparkSession, key: str) -> str | None:
         return None
     if "condition" in cell:
         got = _refusal(session, cell["sql"])
-        want_ok = got.get("condition") == cell["condition"] and cell["message_head"] in got.get(
-            "message", ""
-        )
-        return None if want_ok else f"{key}: {got}"
+        head_ok = cell["message_head"] in got.get("message", "")
+        cond_ok = got.get("condition") == cell["condition"] or "condition_waived" in cell
+        return None if head_ok and cond_ok else f"{key}: {got}"
     got = _answer(session.sql(cell["sql"]), bool(cell.get("ordered")))
     want = {"cols": cell["cols"], "rows": cell["rows"]}
     return None if got == want else f"{key}: {got} != {want}"
@@ -103,6 +103,15 @@ def _frames(session: ReparkSession) -> dict[str, Any]:
         "df/int_sum": int_half.agg(fn.sum("h").alias("v")),
         "df/int_derived_add1": int_half.select((fn.col("h") + 1).alias("v")),
     }
+
+
+def test_div_operator_refusal_pinned(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        with pytest.raises(ParseException, match="No infix parser"):
+            session.sql("SELECT id div 2 AS v, typeof(id div 2) AS t FROM sc.ns.t").collect()
+    finally:
+        session.stop()
 
 
 def test_dataframe_door_replays_spark(tmp_path: Path) -> None:

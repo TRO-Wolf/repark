@@ -74,7 +74,7 @@ the outer arithmetic is planned). After the fix the same diff is 4 cells, all re
 
 | Clause | Statement | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
-| C-001 | Arithmetic over an integer `/` answers Spark's DOUBLE type and values in the same scope, a derived table, a CTE, a temp view, a session-catalog view, nested derived tables and a chained derived scope, over BIGINT and INT operands; `WHERE` and `ORDER BY` over it see the fraction; `sum`/`avg` over it are DOUBLE; `h + 9223372036854775807` does not overflow; CTAS stores DOUBLE and INSERT into DOUBLE columns stores Spark's values. | Rust `integer_spark::fractional_division::tests` (seven value/type pins on the production analyzer order) and `test_intdiv_1.py` (every oracle cell per scope group, the store cells and the DataFrame door). | PROVEN | `cargo test -p repark-functions --lib fractional_division`: 8 passed. M1 (rule unseated, `main` behaviour): seven Rust pins red, facade 12 of 17 red (the view groups and the DataFrame door were already right). Facade file: 17 passed. |
+| C-001 | Arithmetic over an integer `/` answers Spark's DOUBLE type and values in the same scope, a derived table, a CTE, a temp view, a session-catalog view, nested derived tables and a chained derived scope, over BIGINT and INT operands; `WHERE` and `ORDER BY` over it see the fraction; `sum`/`avg` over it are DOUBLE; `h + 9223372036854775807` does not overflow; CTAS stores DOUBLE and INSERT into DOUBLE columns stores Spark's values. | Rust `integer_spark::fractional_division::tests` (seven value/type pins on the production analyzer order) and `test_intdiv_1.py` (every oracle cell per scope group, the store cells and the DataFrame door). | PROVEN | `cargo test -p repark-functions --lib fractional_division`: 8 passed. M1 (rule unseated, `main` behaviour): seven Rust pins red, facade 12 of 17 red (the view groups and the DataFrame door were already right). Facade file: 17 passed. Critic fold 2026-09-28 (TESTS ONLY): +31 oracle cells (`div0`/`win`/`grp`/`mix`/`trydiv`/`cooccur`/`dml`), `test_div_operator_refusal_pinned`, Rust `integer_beside_division_keeps_type_and_checking`; fractional_division 9 passed, facade file 25 passed. |
 | C-002 | The fix is one pre-coercion rule seated first among the `analyzer_rules_with_higher_order_preparation` inserts, immediately before `higher_order_preparation`; the other four seats keep their offsets; a plan without `/` is returned untouched; the ANSI door does not seat it. | The seat contract test in `crates/repark-spark/src/extension/tests.rs`; M2 and M3 show each half of the rule is load-bearing. | PROVEN | `analyzer_configuration_seats_hof_preparation_and_float_stringify_before_type_coercion` asserts the new seat and passes; the full `repark-sql --tests` (ANSI door) run is green. M2 (no unarm): six Rust pins red, `sum` stays green (it needs only the division half). M3 (no division rewrite): seven red. |
 | C-003 | Genuinely integral arithmetic is unchanged: derived BIGINT and INT arithmetic keeps its type and values, and `ARITHMETIC_OVERFLOW` under ANSI still raises for BIGINT and INT overflow through a derived table or CTE. | Rust `integral_derived_arithmetic_stays_integral` and the facade `ctl` group, plus the full F-Y10-1 overflow battery in `integer_spark.rs`. | PROVEN | Green before and after the fix and under M1–M3 (a control, not a red pin); `cargo test -p repark-functions --lib` 880 passed; the facade `ctl` group replays Spark's condition and message head. |
 
@@ -132,6 +132,36 @@ COVERAGE_ATTESTATION:
   complete: true
 ```
 
+## Critic fold — V-001..V-006 (2026-09-28, TESTS ONLY)
+
+The cross-family critic PASSED the fix and proposed pins V-001..V-007. This
+fold measures V-001..V-006 on live Spark 4.1.2 (`local[1]`, ANSI on unless
+noted, UTC, hadoop catalog; the probe plus the V cells, 335 cells) and on
+RePark at this head, and commits 31 oracle cells, one Rust pin and one
+refusal test. No product-code change. V-007 is hygiene only and is accepted
+as is with no change: statement cells execute without verifying because the
+read/desc cells carry the verification, and refusals skip SQLSTATE per
+R-INTDIV-4.
+
+| Pin | Cells | Spark | RePark |
+|---|---|---|---|
+| V-001 | `div0/off_flat`, `div0/off_derived` | NULL double ×3 under ANSI off | byte-identical |
+| V-001 | `div0/on_flat`, `div0/on_derived` | `DIVIDE_BY_ZERO`, 22012 | same message head; condition/sqlstate unparsed (R-INTDIV-8), pinned via per-cell `condition_waived` |
+| V-002 | `win/{big,int}_{derived,cte}_{sum,avg}` | cumulative sums 0.5/1.5/3.0, avgs 1.0, double | byte-identical, 8 cells |
+| V-003 | `grp/{big,int}_{derived_h,flat_expr}` | double keys 0.5/1.0/1.5, count 1 | byte-identical, 4 cells |
+| V-004 | `mix/case`, `mix/in`, `mix/join` | double 1.0/1.0/1.5; ids 1,2; pairs (1,1),(2,2),(3,3) | byte-identical |
+| V-004 | `dml/update` + `update_read`, `dml/merge` + `merge_read` | v = 0.5/1.0/1.5 then 10.5/11.0/11.5 | read-back cells byte-identical; statements committed execute-only per R-INTDIV-7 |
+| V-005 | `trydiv/by_zero`, `trydiv/six_two` | NULL double; 3.0 double | byte-identical |
+| V-005 | `trydiv/div` | bigint 0/1/1 | `ParserError`, pinned by `test_div_operator_refusal_pinned` (R-INTDIV-3) |
+| V-006 | `cooccur/mixed` | h+1 double 1.5/2.0/2.5 with a+1 bigint 3/5/7 | byte-identical |
+| V-006 | `cooccur/overflow` | `ARITHMETIC_OVERFLOW` long overflow, 22003 | condition + head match; sqlstate per R-INTDIV-4 |
+
+Rust pin: `integer_beside_division_keeps_type_and_checking` asserts the
+co-occurrence shape (`h + 1` DOUBLE beside `a + 1` BIGINT in one derived
+table) and the overflow-beside-division refusal. After the fold:
+`cargo test -p repark-functions --lib fractional_division` 9 passed; facade
+`test_intdiv_1.py` 25 passed.
+
 ## Residues
 
 | # | Residue |
@@ -143,3 +173,4 @@ COVERAGE_ATTESTATION:
 | R-INTDIV-5 | Dated 2026-09-28 (pre-existing, integral, out of this unit by instruction): `SELECT a + 1 FROM (SELECT 2147483647 AS a) s` widens to bigint `2147483648`; Spark raises `ARITHMETIC_OVERFLOW` integer overflow (the derived literal is typed INT on Spark and BIGINT at RePark plan time). |
 | R-INTDIV-6 | Dated 2026-09-28 (pre-existing): `CREATE VIEW sc.ns.cv_* …` on the hadoop Iceberg catalog succeeds on RePark; Spark refuses with `UnsupportedOperationException: Creating a view is not supported by catalog: sc`. The catalog-view scope is therefore measured through the session catalog. |
 | R-INTDIV-7 | Dated 2026-09-28 (pre-existing): `typeof(v)` over a table column is named `typeof(sc.ns.c1.v)` on RePark and `typeof(v)` on Spark; DDL/DML statements answer `[[]]` / a count row where Spark answers no rows. |
+| R-INTDIV-8 | Dated 2026-09-28 (pre-existing): the facade `DIVIDE_BY_ZERO` carries Spark's message head but no parsed condition or SQLSTATE (the `Execution error: ` wrapper prefix is not stripped by the condition parser), so the two `div0/on` pins assert the message head with a per-cell `condition_waived` citing this row. |

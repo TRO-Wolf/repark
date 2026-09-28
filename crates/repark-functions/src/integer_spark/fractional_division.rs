@@ -201,15 +201,19 @@ mod tests {
     }
 
     async fn i64_column(ctx: &SessionContext, sql: &str) -> Vec<Option<i64>> {
+        i64_column_at(ctx, sql, 0).await
+    }
+
+    async fn i64_column_at(ctx: &SessionContext, sql: &str, index: usize) -> Vec<Option<i64>> {
         let mut values = Vec::new();
         for batch in batches(ctx, sql).await {
             assert_eq!(
-                batch.schema().field(0).data_type(),
+                batch.schema().field(index).data_type(),
                 &DataType::Int64,
-                "{sql}"
+                "{sql} column {index} must be BIGINT like Spark"
             );
             let array = batch
-                .column(0)
+                .column(index)
                 .as_any()
                 .downcast_ref::<Int64Array>()
                 .expect("Int64Array");
@@ -367,6 +371,23 @@ mod tests {
                 && int_overflow.contains("integer overflow")
                 && int_overflow.contains("try_multiply"),
             "{int_overflow}"
+        );
+    }
+
+    #[tokio::test]
+    async fn integer_beside_division_keeps_type_and_checking() {
+        let ctx = prod_like_ctx();
+        let sql =
+            "SELECT h + 1, a + 1 FROM (SELECT id, id / 2 AS h, id * 2 AS a FROM t) s ORDER BY id";
+        assert_eq!(f64_column(&ctx, sql, 0).await, doubles(&[1.5, 2.0, 2.5]));
+        assert_eq!(
+            i64_column_at(&ctx, sql, 1).await,
+            vec![Some(3), Some(5), Some(7)]
+        );
+        let overflow = error_text(&ctx, "SELECT id / 2, 9223372036854775807 + id FROM t").await;
+        assert!(
+            overflow.contains("ARITHMETIC_OVERFLOW") && overflow.contains("long overflow"),
+            "{overflow}"
         );
     }
 }
