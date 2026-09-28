@@ -73,6 +73,19 @@ def test_values_nvl_and_ifnull_over_temporal_store(
     assert all(row["c"] is not None for row in rows)
 
 
+def test_values_stacked_sign_int_into_timestamp_refuses(
+    spark: ReparkSession,
+) -> None:
+    """A doubly-negated INT into TIMESTAMP refuses like the single-signed one."""
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql(f"INSERT INTO {FQ} VALUES (0, - -1)")
+    error = caught.value
+    assert type(error).__name__ == RECORDED_ERROR
+    assert error.getCondition() == RECORDED_CONDITION
+    assert error.getSqlState() == RECORDED_SQLSTATE
+    assert _rows(spark) == []
+
+
 def test_dataframe_append_int_into_timestamp_refuses(
     spark: ReparkSession,
 ) -> None:

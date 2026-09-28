@@ -304,6 +304,33 @@ async fn fractional_and_large_integer_literals_name_spark_types() {
 }
 
 #[tokio::test]
+async fn stacked_sign_numeric_literals_into_timestamp_refuse_like_single_signed() {
+    let (_warehouse, ctx, catalogs) = door().await;
+    for (cell, named) in [
+        ("- -1", "INT"),
+        ("- - -1", "INT"),
+        ("- -(1)", "INT"),
+        ("- -1.5", "DECIMAL(2,1)"),
+        ("+-1", "INT"),
+        ("-+1", "INT"),
+        ("- -1BD", "DECIMAL(1,0)"),
+    ] {
+        let sql = format!("INSERT INTO ice.sales.l VALUES (0, {cell})");
+        let refused = plan_err(&ctx, &catalogs, &sql).await;
+        assert_eq!(
+            refused,
+            format!(
+                "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data \
+                 for the table `ice`.`sales`.`l`: Cannot safely cast `c` \"{named}\" to \
+                 \"TIMESTAMP\". SQLSTATE: KD000"
+            ),
+            "{sql}"
+        );
+    }
+    assert_eq!(id_and_c(&ctx, &catalogs).await, vec![]);
+}
+
+#[tokio::test]
 async fn string_valued_functions_into_timestamp_refuse() {
     let (_warehouse, ctx, catalogs) = door().await;
     for cell in [

@@ -26,6 +26,12 @@ handling (`CAST(NULL AS VOID)` rewrite, the non-NULL VALUES refusal into
   to two-argument `nvl`/`ifnull`, probed as `coalesce(a, b)`; every other
   function is judged by its probed type; leading-zero fractions count precision
   from significant digits (six classifier tests).
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1):** the classifier peels any number of
+  unary Plus/Minus signs and parentheses, and the probe parenthesizes a leading
+  stacked-minus chain so its rendering cannot form a `--` comment; `- -1BD`
+  (an `Identifier` to this parser) refuses through the repaired probe exactly
+  as `-1BD` does (nine classifier tests). NTZ stacked cells still write: that
+  probe lives in `void_type.rs`, outside this fold.
   pins: ltz-store-int-1/C-001
 
 ## Pointers

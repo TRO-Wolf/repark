@@ -129,7 +129,8 @@ async fn refuse_value(
     let source = if let Some(data_type) = literal_source_type(value) {
         data_type
     } else {
-        let select = nvl_coalesce_text(value).unwrap_or_else(|| value.to_string());
+        let select = nvl_coalesce_text(value)
+            .unwrap_or_else(|| parenthesize_stacked_minus(value).to_string());
         let Some(probed) = probe_source_type(ctx, &select).await else {
             return Ok(());
         };
@@ -190,7 +191,12 @@ fn literal_source_type(value: &Expr) -> Option<DataType> {
             expr,
         } => {
             let mut peeled = expr.as_ref();
-            while let Expr::Nested(inner) = peeled {
+            while let Expr::Nested(inner)
+            | Expr::UnaryOp {
+                op: UnaryOperator::Plus | UnaryOperator::Minus,
+                expr: inner,
+            } = peeled
+            {
                 peeled = inner;
             }
             match peeled {
@@ -231,6 +237,33 @@ fn integer_text_type(text: &str) -> DataType {
     } else {
         DataType::Decimal128(u8::try_from(text.len()).unwrap_or(38), 0)
     }
+}
+
+fn parenthesize_stacked_minus(value: &Expr) -> Expr {
+    let mut bottom = value;
+    let mut count = 0usize;
+    while let Expr::UnaryOp {
+        op: UnaryOperator::Minus,
+        expr,
+    } = bottom
+    {
+        count += 1;
+        bottom = expr;
+    }
+    if count < 2 {
+        return value.clone();
+    }
+    let mut rebuilt = bottom.clone();
+    for level in 0..count {
+        if level > 0 {
+            rebuilt = Expr::Nested(Box::new(rebuilt));
+        }
+        rebuilt = Expr::UnaryOp {
+            op: UnaryOperator::Minus,
+            expr: Box::new(rebuilt),
+        };
+    }
+    rebuilt
 }
 
 fn nvl_coalesce_text(value: &Expr) -> Option<String> {
@@ -355,6 +388,39 @@ mod tests {
             ],
             "{row:?}"
         );
+    }
+
+    #[test]
+    fn stacked_unary_signs_read_as_their_numeric_kind() {
+        let row = values_row("INSERT INTO t VALUES (- -1, - - -1, - -(1), - -1.5, +-1, -+1)");
+        assert_eq!(
+            typed(&row),
+            vec![
+                Some(DataType::Int32),
+                Some(DataType::Int32),
+                Some(DataType::Int32),
+                Some(DataType::Decimal128(2, 1)),
+                Some(DataType::Int32),
+                Some(DataType::Int32),
+            ],
+            "{row:?}"
+        );
+    }
+
+    #[test]
+    fn signed_nulls_defer_to_the_probe() {
+        let row = values_row("INSERT INTO t VALUES (-NULL, - -NULL)");
+        assert_eq!(typed(&row), vec![None, None], "{row:?}");
+    }
+
+    #[test]
+    fn stacked_minus_probes_render_without_comment_runs() {
+        let row = values_row("INSERT INTO t VALUES (- -1, - - -1, -1, +-1)");
+        let rendered: Vec<String> = row
+            .iter()
+            .map(|value| parenthesize_stacked_minus(value).to_string())
+            .collect();
+        assert_eq!(rendered, vec!["-(-1)", "-(-(-1))", "-1", "+-1"], "{row:?}");
     }
 
     #[test]

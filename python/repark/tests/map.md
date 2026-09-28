@@ -4568,6 +4568,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pinned separately — and a DataFrame append of INT into TIMESTAMP refuses; both
   leave the table empty. **Fold 2026-09-28 (verifier VL-1..VL-6):** `nvl` and
   `ifnull` over DATE and TIMESTAMP store.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1):** `VALUES (0, - -1)` refuses with the
+  recorded class, condition and SQLSTATE, and writes nothing.
   pins: ltz-store-int-1/C-001
 - `test_merge_semantics_audit.py` — **MERGE-audit corpus** (2026-08-14 audit gap-map rows
   c/d/g/n/o): null-safe `<=>` / `eqNullSafe` ON matches NULL keys (both doors); builder-door
