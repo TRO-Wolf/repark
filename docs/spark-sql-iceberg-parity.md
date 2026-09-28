@@ -2258,6 +2258,28 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   `crates/repark-core/src/session/df_guards/case_bind.rs::tests`. pins: u11-edge-1/C-001
 - **Rationale** — FIXED; the cell replays EQUAL on every observation.
 
+### E-CASE-NESTED — derived tables, CTEs and views keep the written spelling — **FIXED 2026-09-27 (CASESENS-1)**
+
+- **repark** — under the default `spark.sql.caseSensitive=false` every nested query
+  level keeps the written spelling, not only the top one: `SELECT * FROM (SELECT ID,
+  DATA FROM t)` → `ID`, `DATA`; a CTE body and a nested derived table likewise; a
+  `UNION ALL` inside a derived table takes the left branch's spelling; a join of two
+  derived tables answers `ID`, `id`; a column-alias list `AS x(Kay)` keeps `Kay`.
+  A MERGE whose derived source spells a column in another case answers
+  (`No field named data` is gone). An outer reference to a CTE's outputs across
+  case (`WITH c AS (SELECT id, Data FROM t) SELECT ID, DATA FROM c`) answers
+  `ID`, `DATA`, and reads of a catalog view whose body spells columns in another
+  case answer with the written spelling (`SELECT * FROM v` → `ID`, `DATA`;
+  `SELECT id, data FROM v` → `id`, `data`) — both landed by S1b's repair-loop
+  scope fields (2026-09-27).
+- **Apache Spark** — the names above. *(oracle: recorded — PySpark 4.1.2 + Iceberg 1.11,
+  2026-09-27, `casesens_1_spark_oracle.json` (210 steps) beside the facade pin.)*
+- **Pin** — `python/repark/tests/test_casesens_1.py`;
+  `crates/repark-spark/src/tests/casesens_scopes.rs`;
+  `crates/repark-core/src/column_resolution/inner_scopes.rs::tests`. pins: casesens-1/C-001, C-002, C-003, C-004
+- **Rationale** — FIXED; the cell replays EQUAL on every observation, the
+  CTE-outer and catalog-view shapes included (S1b).
+
 ### E-CASE-PARTITION-FIELD — partition sources bind case-sensitively — **FIXED 2026-09-26 (U11-EDGE-1)**
 
 - **repark** — `ALTER TABLE t ADD PARTITION FIELD CAT` on a `(id INT, cat STRING)` table

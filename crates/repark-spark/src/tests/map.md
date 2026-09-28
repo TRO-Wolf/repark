@@ -471,6 +471,26 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   off; `CAST_WITH_CONF_SUGGESTION` plus the conf remedy for integrals when ANSI is on;
   `CAST_WITHOUT_SUGGESTION` for the never-castable sources in both modes and for `TRY_CAST`.
   pins: bl-11-numeric-binary/C-001, C-002, C-003
+- `casesens_scopes.rs` — **WO CASESENS-1 slice 1 (2026-09-27):** nested scopes
+  keep the written spelling — derived and CTE projections (`r5_subq_inner_ID`,
+  `r5_cte_ID`, `r5_cte_mixed`, `r5_union_subq`, `n_nested2`, `n_join_derived`),
+  the column-alias list (`Kay`), the already-equal shapes (incl. `r5_subq_both`
+  through the D1 fallback), the MERGE derived source (`r30_*`) and another-case
+  DML — names and rows each. **S1b (2026-09-27):**
+  `cte_outer_reference_in_another_case_binds` (`r5_cte_outer`),
+  `catalog_view_body_keeps_its_spelling` (`r5_view_star`, `r5_view_lower`,
+  `r5_view2_upper`; `r5_view_describe` unchanged) and
+  `twin_cte_outputs_still_refuse` (the `SELECT 1 AS a, 2 AS A` CTE body keeps
+  its refusal; the shape is unmeasured against Spark). **Fold round
+  (2026-09-27):** `derived_and_cte_projections_keep_the_written_spelling`
+  gains the `SELECT * FROM (SELECT 1 AS ID)` leg (answers `ID`; unmeasured —
+  no probe key records an expression-alias output name). **Verifier fold
+  (2026-09-28, VC-2):** four pins keep a `VALUES` body from shifting later
+  scopes — `values_derived_table_first_keeps_later_spellings`,
+  `values_cte_keeps_later_spellings`,
+  `values_body_in_the_middle_keeps_later_spellings` and
+  `values_left_set_operation_keeps_later_spellings`, names and rows each.
+  pins: casesens-1/C-001, C-002, C-003, C-004
 - `decimal.rs` — the Spark-door decimal128 pins at `i128` precision: result `(p,s)`, value,
   and nullability for the G2/G13 corpus shapes. **CUTOVER-SCHEMA-1 (2026-09-04):**
   `pin_int_times_decimal_is_12_2_i128` and `pin_mul_single_digit_nullability_non_null_i128`
@@ -2067,6 +2087,22 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   statements succeed; a missing table keeps its own error and INSERT keeps the other
   cell's prose.
   pins: ipi-51/W-UPDATE-TYPE-ERR
+- [ltz_store.rs](ltz_store.rs) — **WO LTZ-STORE-INT-1 (2026-09-28):** INT into a
+  `TIMESTAMP` (LTZ) column refuses on VALUES, SELECT, UPDATE and MERGE — the VALUES text
+  equals Spark's recorded `ins_l_int` refusal on the test catalog, and the refused
+  statements leave the seeded row intact — while NULL, DATE, TIMESTAMP, TIMESTAMP_NTZ,
+  explicit-CAST and column-list VALUES rows still store with their exact read-backs.
+  **Fold 2026-09-28 (critic V-001):** the `typed_numeric_values_into_timestamp_refuse`
+  sibling pins every numeric CAST, `DECIMAL '1.5'`, `1L`, two `CAST(NULL …)` rows and
+  a mixed multi-row refusal that writes nothing.
+  **Fold 2026-09-28 (verifier VL-1..VL-6):** the sibling pins the two typed-NULL
+  refusals with Spark's exact text; the mixed multi-row refusal moves to its own
+  residue pin (Spark answers `INVALID_INLINE_TABLE`); `nvl`/`ifnull` over DATE and
+  TIMESTAMP store with exact read-backs plus the `coalesce` control; `1.5` and
+  `12345678901` refusals name `DECIMAL(2,1)` and `BIGINT`.
+  **Fold 2026-09-28 (re-verify RL-1..RL-3):** STRING-valued functions refuse
+  with the `ins_l_str` body; `0.05` names `DECIMAL(2,2)`.
+  pins: ltz-store-int-1/C-001
 - `use_ddl.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the `USE` behavior pins over
   one- and two-catalog memory setups: two-part set, v2 clear-to-empty, session-catalog
   default restore, self-`USE` keep, catalog-first one-part (probe P-1), namespace-only

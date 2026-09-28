@@ -1,0 +1,3378 @@
+{
+ "source": "Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-27",
+ "steps": {
+  "p1/setup_ns": {
+   "door": "sql",
+   "statement": "CREATE NAMESPACE IF NOT EXISTS sc.ns",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p1/setup_t": {
+   "door": "sql",
+   "statement": "CREATE TABLE sc.ns.t (id INT, Data STRING, s STRUCT<a: INT>) USING iceberg",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p1/setup_t_ins": {
+   "door": "sql",
+   "statement": "INSERT INTO sc.ns.t VALUES (1, 'a', named_struct('a', 5)), (2, 'b', named_struct('a', 6))",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p1/setup_u": {
+   "door": "sql",
+   "statement": "CREATE TABLE sc.ns.u (id INT, Data STRING) USING iceberg",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p1/setup_u_ins": {
+   "door": "sql",
+   "statement": "INSERT INTO sc.ns.u VALUES (1, 'x'), (5, 'y')",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p1/r5_subq_ID": {
+   "door": "sql",
+   "statement": "SELECT ID FROM (SELECT id FROM sc.ns.t)",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ]
+   }
+  },
+  "p1/r5_subq_inner_ID": {
+   "door": "sql",
+   "statement": "SELECT * FROM (SELECT ID, DATA FROM sc.ns.t)",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ],
+     [
+      "DATA",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ]
+    ]
+   }
+  },
+  "p1/r5_subq_both": {
+   "door": "sql",
+   "statement": "SELECT ID FROM (SELECT ID FROM sc.ns.t)",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ]
+   }
+  },
+  "p1/r5_subq_alias_qual": {
+   "door": "sql",
+   "statement": "SELECT x.ID FROM (SELECT id FROM sc.ns.t) x",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ]
+   }
+  },
+  "p1/r5_cte_ID": {
+   "door": "sql",
+   "statement": "WITH c AS (SELECT ID, DATA FROM sc.ns.t) SELECT * FROM c",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ],
+     [
+      "DATA",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ]
+    ]
+   }
+  },
+  "p1/r5_cte_outer": {
+   "door": "sql",
+   "statement": "WITH c AS (SELECT id, Data FROM sc.ns.t) SELECT ID, DATA FROM c",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ],
+     [
+      "DATA",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ]
+    ]
+   }
+  },
+  "p1/r5_cte_mixed": {
+   "door": "sql",
+   "statement": "WITH c AS (SELECT Id FROM sc.ns.t) SELECT * FROM c WHERE ID > 1",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "Id",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      2
+     ]
+    ]
+   }
+  },
+  "p1/r5_in_subq": {
+   "door": "sql",
+   "statement": "SELECT Data FROM sc.ns.t WHERE ID IN (SELECT ID FROM sc.ns.u)",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "Data",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      "a"
+     ]
+    ]
+   }
+  },
+  "p1/r5_union_subq": {
+   "door": "sql",
+   "statement": "SELECT * FROM (SELECT ID FROM sc.ns.t UNION ALL SELECT id FROM sc.ns.u)",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      5
+     ]
+    ]
+   }
+  },
+  "p1/r5_temp_view_create": {
+   "door": "sql",
+   "statement": "CREATE OR REPLACE TEMPORARY VIEW tv AS SELECT ID, DATA FROM sc.ns.t",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p1/r5_temp_view_star": {
+   "door": "sql",
+   "statement": "SELECT * FROM tv",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ],
+     [
+      "DATA",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ]
+    ]
+   }
+  },
+  "p1/r5_temp_view_lower": {
+   "door": "sql",
+   "statement": "SELECT id, data FROM tv",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "data",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ]
+    ]
+   }
+  },
+  "p1/vc_ns": {
+   "door": "sql",
+   "statement": "CREATE NAMESPACE IF NOT EXISTS vc.ns",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p1/vc_t": {
+   "door": "sql",
+   "statement": "CREATE TABLE vc.ns.t (id INT, Data STRING) USING iceberg",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p1/vc_t_ins": {
+   "door": "sql",
+   "statement": "INSERT INTO vc.ns.t VALUES (1, 'a'), (2, 'b')",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p1/r5_view_create": {
+   "door": "sql",
+   "statement": "CREATE VIEW vc.ns.v AS SELECT ID, DATA FROM vc.ns.t",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p1/r5_view_star": {
+   "door": "sql",
+   "statement": "SELECT * FROM vc.ns.v",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ],
+     [
+      "DATA",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ]
+    ]
+   }
+  },
+  "p1/r5_view_lower": {
+   "door": "sql",
+   "statement": "SELECT id, data FROM vc.ns.v",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "data",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ]
+    ]
+   }
+  },
+  "p1/r5_view_describe": {
+   "door": "sql",
+   "statement": "DESCRIBE vc.ns.v",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "col_name",
+      "string"
+     ],
+     [
+      "data_type",
+      "string"
+     ],
+     [
+      "comment",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      "DATA",
+      "string",
+      ""
+     ],
+     [
+      "ID",
+      "int",
+      ""
+     ]
+    ]
+   }
+  },
+  "p1/r5_view2_create": {
+   "door": "sql",
+   "statement": "CREATE VIEW vc.ns.v2 AS SELECT id, Data FROM vc.ns.t",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p1/r5_view2_upper": {
+   "door": "sql",
+   "statement": "SELECT ID, DATA FROM vc.ns.v2",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ],
+     [
+      "DATA",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ]
+    ]
+   }
+  },
+  "p1/tw_ID_id": {
+   "door": "sql",
+   "statement": "SELECT ID, id FROM sc.ns.t",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ],
+     [
+      "id",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ]
+    ]
+   }
+  },
+  "p1/tw_Id_ID": {
+   "door": "sql",
+   "statement": "SELECT id AS Id, ID FROM sc.ns.t",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "Id",
+      "int"
+     ],
+     [
+      "ID",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ]
+    ]
+   }
+  },
+  "p1/tw_star_ID": {
+   "door": "sql",
+   "statement": "SELECT *, ID FROM sc.ns.t",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "Data",
+      "string"
+     ],
+     [
+      "s",
+      "struct<a:int>"
+     ],
+     [
+      "ID",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      "a",
+      {
+       "a": 5
+      },
+      1
+     ],
+     [
+      2,
+      "b",
+      {
+       "a": 6
+      },
+      2
+     ]
+    ]
+   }
+  },
+  "p1/tw_lit": {
+   "door": "sql",
+   "statement": "SELECT 1 AS a, 2 AS A",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "a",
+      "int"
+     ],
+     [
+      "A",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  "p1/tw_lit_ref": {
+   "door": "sql",
+   "statement": "SELECT a FROM (SELECT 1 AS a, 2 AS A)",
+   "case_sensitive": false,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[AMBIGUOUS_REFERENCE] Reference `a` is ambiguous, could be: [`a`, `a`]. SQLSTATE: 42704; line 1 pos 7",
+    "getCondition": "AMBIGUOUS_REFERENCE",
+    "getSqlState": "42704"
+   }
+  },
+  "p1/tw_ctas": {
+   "door": "sql",
+   "statement": "CREATE TABLE sc.ns.tw AS SELECT 1 AS a, 2 AS A",
+   "case_sensitive": false,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[COLUMN_ALREADY_EXISTS] The column `a` already exists. Choose another name or rename the existing column. SQLSTATE: 42711",
+    "getCondition": "COLUMN_ALREADY_EXISTS",
+    "getSqlState": "42711"
+   }
+  },
+  "p1/tw_create": {
+   "door": "sql",
+   "statement": "CREATE TABLE sc.ns.tw2 (a INT, A INT) USING iceberg",
+   "case_sensitive": false,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[COLUMN_ALREADY_EXISTS] The column `a` already exists. Choose another name or rename the existing column. SQLSTATE: 42711",
+    "getCondition": "COLUMN_ALREADY_EXISTS",
+    "getSqlState": "42711"
+   }
+  },
+  "p1/tw_group": {
+   "door": "sql",
+   "statement": "SELECT ID, count(*) AS c FROM sc.ns.t GROUP BY id",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ],
+     [
+      "c",
+      "bigint"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      1
+     ]
+    ]
+   }
+  },
+  "p1/cs_sel_ID": {
+   "door": "sql",
+   "statement": "SELECT ID FROM sc.ns.t",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ID` cannot be resolved. Did you mean one of the following? [`s`, `id`, `Data`]. SQLSTATE: 42703; line 1 pos 7;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p1/cs_sel_Data": {
+   "door": "sql",
+   "statement": "SELECT Data FROM sc.ns.t",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [
+     [
+      "Data",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      "a"
+     ],
+     [
+      "b"
+     ]
+    ]
+   }
+  },
+  "p1/cs_sel_data": {
+   "door": "sql",
+   "statement": "SELECT data FROM sc.ns.t",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `data` cannot be resolved. Did you mean one of the following? [`Data`, `id`, `s`]. SQLSTATE: 42703; line 1 pos 7;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p1/cs_join_ID": {
+   "door": "sql",
+   "statement": "SELECT a.ID FROM sc.ns.t a JOIN sc.ns.u b ON a.id = b.id",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `a`.`ID` cannot be resolved. Did you mean one of the following? [`a`.`s`, `a`.`id`, `a`.`Data`, `b`.`id`, `b`.`Data`]. SQLSTATE: 42703; line 1 pos 7;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p1/cs_join_on_ID": {
+   "door": "sql",
+   "statement": "SELECT a.id FROM sc.ns.t a JOIN sc.ns.u b ON a.ID = b.id",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `a`.`ID` cannot be resolved. Did you mean one of the following? [`a`.`s`, `a`.`id`, `a`.`Data`, `b`.`id`, `b`.`Data`]. SQLSTATE: 42703; line 1 pos 45;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p1/cs_subq_ID": {
+   "door": "sql",
+   "statement": "SELECT ID FROM (SELECT id FROM sc.ns.t)",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ID` cannot be resolved. Did you mean one of the following? [`id`]. SQLSTATE: 42703; line 1 pos 7;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p1/cs_cte_ID": {
+   "door": "sql",
+   "statement": "WITH c AS (SELECT id FROM sc.ns.t) SELECT ID FROM c",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ID` cannot be resolved. Did you mean one of the following? [`id`]. SQLSTATE: 42703; line 1 pos 42;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p1/cs_where_ID": {
+   "door": "sql",
+   "statement": "SELECT id FROM sc.ns.t WHERE ID = 1",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ID` cannot be resolved. Did you mean one of the following? [`s`, `id`, `Data`]. SQLSTATE: 42703; line 1 pos 29;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p1/cs_order_ID": {
+   "door": "sql",
+   "statement": "SELECT id FROM sc.ns.t ORDER BY ID",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ID` cannot be resolved. Did you mean one of the following? [`id`]. SQLSTATE: 42703; line 1 pos 32;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p1/cs_group_ID": {
+   "door": "sql",
+   "statement": "SELECT count(*) FROM sc.ns.t GROUP BY ID",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ID` cannot be resolved. Did you mean one of the following? [`s`, `id`, `Data`]. SQLSTATE: 42703; line 1 pos 38;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p1/cs_struct_A": {
+   "door": "sql",
+   "statement": "SELECT s.A FROM sc.ns.t",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[FIELD_NOT_FOUND] No such struct field `A` in `a`. SQLSTATE: 42704; line 1 pos 7",
+    "getCondition": "FIELD_NOT_FOUND",
+    "getSqlState": "42704"
+   }
+  },
+  "p1/cs_tw_lit_ref": {
+   "door": "sql",
+   "statement": "SELECT a FROM (SELECT 1 AS a, 2 AS A)",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [
+     [
+      "a",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ]
+    ]
+   }
+  },
+  "p1/cs_tw_ID_id": {
+   "door": "sql",
+   "statement": "SELECT Id, id FROM (SELECT 1 AS Id, 2 AS id)",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [
+     [
+      "Id",
+      "int"
+     ],
+     [
+      "id",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  "p1/cs_table_T": {
+   "door": "sql",
+   "statement": "SELECT id FROM sc.ns.T",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`ns`.`T` cannot be found. Verify the spelling and correctness of the schema and catalog.",
+    "getCondition": "TABLE_OR_VIEW_NOT_FOUND",
+    "getSqlState": "42P01"
+   }
+  },
+  "p1/cs_ns_NS": {
+   "door": "sql",
+   "statement": "SELECT id FROM sc.NS.t",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`NS`.`t` cannot be found. Verify the spelling and correctness of the schema and catalog.",
+    "getCondition": "TABLE_OR_VIEW_NOT_FOUND",
+    "getSqlState": "42P01"
+   }
+  },
+  "p1/cs_insert_cols": {
+   "door": "sql",
+   "statement": "INSERT INTO sc.ns.u (ID, DATA) VALUES (7, 'q')",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ID` cannot be resolved. Did you mean one of the following? [`id`, `Data`]. SQLSTATE: 42703; line 1 pos 0",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p1/cs_update_where": {
+   "door": "sql",
+   "statement": "UPDATE sc.ns.u SET Data = 'w' WHERE ID = 1",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ID` cannot be resolved. Did you mean one of the following? [`id`, `Data`]. SQLSTATE: 42703; line 1 pos 36;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p1/cs_delete_where": {
+   "door": "sql",
+   "statement": "DELETE FROM sc.ns.u WHERE ID = 5",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ID` cannot be resolved. Did you mean one of the following? [`id`, `Data`]. SQLSTATE: 42703; line 1 pos 26;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p1/cs_merge_on": {
+   "door": "sql",
+   "statement": "MERGE INTO sc.ns.u t USING (SELECT 1 AS id, 'm' AS Data) s ON t.ID = s.id WHEN MATCHED THEN UPDATE SET Data = s.Data",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `t`.`ID` cannot be resolved. Did you mean one of the following? [`t`.`id`, `t`.`Data`, `s`.`id`, `s`.`Data`]. SQLSTATE: 42703; line 1 pos 62;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p1/cs_df_select_ID": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").select(\"ID\")",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ID` cannot be resolved. Did you mean one of the following? [`s`, `id`, `Data`]. SQLSTATE: 42703;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p1/cs_df_select_col_ID": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").select(F.col(\"ID\"))",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ID` cannot be resolved. Did you mean one of the following? [`s`, `id`, `Data`]. SQLSTATE: 42703;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p1/cs_df_select_Data": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").select(\"Data\")",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [
+     [
+      "Data",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      "a"
+     ],
+     [
+      "b"
+     ]
+    ]
+   }
+  },
+  "p1/cs_df_select_data": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").select(\"data\")",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `data` cannot be resolved. Did you mean one of the following? [`Data`, `id`, `s`]. SQLSTATE: 42703;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p1/cs_df_filter_ID": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").filter(F.col(\"ID\") > 1).select(\"id\")",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ID` cannot be resolved. Did you mean one of the following? [`s`, `id`, `Data`]. SQLSTATE: 42703;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p1/cs_df_getitem_ID": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").select(S.table(\"sc.ns.t\")[\"ID\"])",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ID` cannot be resolved. Did you mean one of the following? [`id`, `Data`, `s`]. SQLSTATE: 42703",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p1/cs_df_withColumn_ID": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").withColumn(\"ID\", F.lit(9))",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "Data",
+      "string"
+     ],
+     [
+      "s",
+      "struct<a:int>"
+     ],
+     [
+      "ID",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      "a",
+      {
+       "a": 5
+      },
+      9
+     ],
+     [
+      2,
+      "b",
+      {
+       "a": 6
+      },
+      9
+     ]
+    ]
+   }
+  },
+  "p1/cs_df_drop_ID": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").drop(\"ID\")",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "Data",
+      "string"
+     ],
+     [
+      "s",
+      "struct<a:int>"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      "a",
+      {
+       "a": 5
+      }
+     ],
+     [
+      2,
+      "b",
+      {
+       "a": 6
+      }
+     ]
+    ]
+   }
+  },
+  "p1/cs_df_renamed_ID": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").withColumnRenamed(\"ID\", \"z\")",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "Data",
+      "string"
+     ],
+     [
+      "s",
+      "struct<a:int>"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      "a",
+      {
+       "a": 5
+      }
+     ],
+     [
+      2,
+      "b",
+      {
+       "a": 6
+      }
+     ]
+    ]
+   }
+  },
+  "p1/cs_df_orderBy_ID": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").orderBy(\"ID\").select(\"id\")",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ID` cannot be resolved. Did you mean one of the following? [`s`, `id`, `Data`]. SQLSTATE: 42703;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p1/cs_df_groupBy_ID": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").groupBy(\"ID\").count()",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ID` cannot be resolved. Did you mean one of the following? [`s`, `id`, `Data`]. SQLSTATE: 42703;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p1/cs_df_join_on_ID": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").join(S.sql(\"SELECT 1 AS ID, 'q' AS w\"), \"ID\")",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_USING_COLUMN_FOR_JOIN] USING column `ID` cannot be resolved on the left side of the join. The left-side columns: [`Data`, `id`, `s`]. SQLSTATE: 42703",
+    "getCondition": "UNRESOLVED_USING_COLUMN_FOR_JOIN",
+    "getSqlState": "42703"
+   }
+  },
+  "p1/cs_df_unionByName": {
+   "door": "dataframe",
+   "statement": "lambda: S.sql(\"SELECT 1 AS ID\").unionByName(S.sql(\"SELECT 2 AS id\"))",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "Cannot resolve column name \"ID\" among (id).",
+    "getCondition": "_LEGACY_ERROR_TEMP_1201",
+    "getSqlState": null
+   }
+  },
+  "p1/cs_df_selectExpr_ID": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").selectExpr(\"ID\")",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ID` cannot be resolved. Did you mean one of the following? [`s`, `id`, `Data`]. SQLSTATE: 42703; line 1 pos 0;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p1/cs_df_filter_str_ID": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").filter(\"ID > 1\").select(\"id\")",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ID` cannot be resolved. Did you mean one of the following? [`s`, `id`, `Data`]. SQLSTATE: 42703; line 1 pos 0;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p1/cs_df_describe_ID": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").describe(\"ID\")",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ID` cannot be resolved. Did you mean one of the following? [`s`, `id`, `Data`]. SQLSTATE: 42703;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p1/r7_withColumn_ID": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").withColumn(\"ID\", F.lit(9))",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ],
+     [
+      "Data",
+      "string"
+     ],
+     [
+      "s",
+      "struct<a:int>"
+     ]
+    ],
+    "rows": [
+     [
+      9,
+      "a",
+      {
+       "a": 5
+      }
+     ],
+     [
+      9,
+      "b",
+      {
+       "a": 6
+      }
+     ]
+    ]
+   }
+  },
+  "p1/r7_describe_ID": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").describe(\"ID\")",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "summary",
+      "string"
+     ],
+     [
+      "ID",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      "count",
+      "2"
+     ],
+     [
+      "max",
+      "2"
+     ],
+     [
+      "mean",
+      "1.5"
+     ],
+     [
+      "min",
+      "1"
+     ],
+     [
+      "stddev",
+      "0.7071067811865476"
+     ]
+    ]
+   }
+  },
+  "p1/r7_selfjoin": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").alias(\"l\").join(S.table(\"sc.ns.t\").alias(\"r\"), F.col(\"l.ID\") == F.col(\"r.ID\")).select(\"l.ID\", \"r.data\")",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ],
+     [
+      "data",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ]
+    ]
+   }
+  },
+  "p1/r7_withColumnRenamed_ID": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").withColumnRenamed(\"ID\", \"z\")",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "z",
+      "int"
+     ],
+     [
+      "Data",
+      "string"
+     ],
+     [
+      "s",
+      "struct<a:int>"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      "a",
+      {
+       "a": 5
+      }
+     ],
+     [
+      2,
+      "b",
+      {
+       "a": 6
+      }
+     ]
+    ]
+   }
+  },
+  "p1/r7_orderBy_ID": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").orderBy(\"ID\").select(\"id\")",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ]
+   }
+  },
+  "p1/r7_groupBy_DATA": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").groupBy(\"DATA\").count()",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "DATA",
+      "string"
+     ],
+     [
+      "count",
+      "bigint"
+     ]
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "b",
+      1
+     ]
+    ]
+   }
+  },
+  "p1/r7_dropDuplicates_ID": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").dropDuplicates([\"ID\"]).select(\"id\")",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ]
+   }
+  },
+  "p1/r7_fillna_subset": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").fillna(\"z\", subset=[\"DATA\"]).select(\"Data\")",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "Data",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      "a"
+     ],
+     [
+      "b"
+     ]
+    ]
+   }
+  },
+  "p1/r7_sort_col_ID": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").sort(F.col(\"ID\").desc()).select(\"id\")",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ]
+   }
+  },
+  "p1/r30_m_create": {
+   "door": "sql",
+   "statement": "CREATE TABLE sc.ns.m (id INT, Data STRING) USING iceberg",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p1/r30_m_ins": {
+   "door": "sql",
+   "statement": "INSERT INTO sc.ns.m VALUES (1, 'p')",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p1/r30_merge_derived": {
+   "door": "sql",
+   "statement": "MERGE INTO sc.ns.m t USING (SELECT id + 1 AS id, Data FROM sc.ns.u) AS src ON t.id = src.id WHEN NOT MATCHED THEN INSERT *",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p1/r30_after": {
+   "door": "sql",
+   "statement": "SELECT * FROM sc.ns.m",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "Data",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      "p"
+     ],
+     [
+      2,
+      "x"
+     ],
+     [
+      6,
+      "y"
+     ]
+    ]
+   }
+  },
+  "p1/r30_merge_upper_set": {
+   "door": "sql",
+   "statement": "MERGE INTO sc.ns.m t USING (SELECT 1 AS ID, 'Q' AS DATA) AS src ON t.ID = src.ID WHEN MATCHED THEN UPDATE SET t.DATA = src.DATA",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p1/r30_after2": {
+   "door": "sql",
+   "statement": "SELECT * FROM sc.ns.m",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "Data",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      "Q"
+     ],
+     [
+      2,
+      "x"
+     ],
+     [
+      6,
+      "y"
+     ]
+    ]
+   }
+  },
+  "p1/dml_update_upper": {
+   "door": "sql",
+   "statement": "UPDATE sc.ns.m SET DATA = 'U' WHERE ID = 1",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p1/dml_delete_upper": {
+   "door": "sql",
+   "statement": "DELETE FROM sc.ns.m WHERE DATA = 'U'",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p1/dml_after": {
+   "door": "sql",
+   "statement": "SELECT * FROM sc.ns.m",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "Data",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      2,
+      "x"
+     ],
+     [
+      6,
+      "y"
+     ]
+    ]
+   }
+  },
+  "p1/dml_insert_cols_upper": {
+   "door": "sql",
+   "statement": "INSERT INTO sc.ns.m (ID, DATA) VALUES (8, 'i')",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p1/dml_after2": {
+   "door": "sql",
+   "statement": "SELECT * FROM sc.ns.m",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "Data",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      2,
+      "x"
+     ],
+     [
+      6,
+      "y"
+     ],
+     [
+      8,
+      "i"
+     ]
+    ]
+   }
+  },
+  "p2/setup_ns": {
+   "door": "sql",
+   "statement": "CREATE NAMESPACE IF NOT EXISTS sc.ns",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p2/pt_drop_CAT_present": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.p1 DROP PARTITION FIELD CAT",
+   "case_sensitive": false,
+   "spark": {
+    "error": "IllegalArgumentException",
+    "msg": "Cannot find partition field to remove: CAT",
+    "getCondition": null,
+    "getSqlState": null
+   }
+  },
+  "p2/pt_drop_cat_present": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.p1 DROP PARTITION FIELD cat",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p2/pt_replace_CAT_by_name": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.p2 REPLACE PARTITION FIELD CAT WITH bucket(2, id)",
+   "case_sensitive": false,
+   "spark": {
+    "error": "IllegalArgumentException",
+    "msg": "Cannot find partition field to remove: CAT",
+    "getCondition": null,
+    "getSqlState": null
+   }
+  },
+  "p2/pt_rename_CAT": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.p2 RENAME PARTITION FIELD CAT TO c2",
+   "case_sensitive": false,
+   "spark": {
+    "error": "ParseException",
+    "msg": "",
+    "getCondition": "PARSE_SYNTAX_ERROR",
+    "getSqlState": "42601"
+   }
+  },
+  "p2/pt_drop_bucket_ID": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.p3 DROP PARTITION FIELD bucket(4, ID)",
+   "case_sensitive": false,
+   "spark": {
+    "error": "Py4JJavaError",
+    "msg": "An error occurred while calling o48.sql.",
+    "java": ": org.apache.iceberg.exceptions.ValidationException: Cannot find field 'ID' in struct: struct<1: id: required int, 2: cat: optional string, 3: s: optional struct<4: a: optional int>>"
+   }
+  },
+  "p2/pt_drop_field_upper": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.p3 DROP PARTITION FIELD ID_BUCKET_4",
+   "case_sensitive": false,
+   "spark": {
+    "error": "IllegalArgumentException",
+    "msg": "Cannot find partition field to remove: ID_BUCKET_4",
+    "getCondition": null,
+    "getSqlState": null
+   }
+  },
+  "p2/pt_replace_bucket_ID": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.p3 REPLACE PARTITION FIELD bucket(4, ID) WITH cat",
+   "case_sensitive": false,
+   "spark": {
+    "error": "Py4JJavaError",
+    "msg": "An error occurred while calling o48.sql.",
+    "java": ": org.apache.iceberg.exceptions.ValidationException: Cannot find field 'ID' in struct: struct<1: id: required int, 2: cat: optional string, 3: s: optional struct<4: a: optional int>>"
+   }
+  },
+  "p2/pt_add_named_upper": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.p4 ADD PARTITION FIELD cat AS Kat",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p2/pt_drop_named_lower": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.p4 DROP PARTITION FIELD kat",
+   "case_sensitive": false,
+   "spark": {
+    "error": "IllegalArgumentException",
+    "msg": "Cannot find partition field to remove: kat",
+    "getCondition": null,
+    "getSqlState": null
+   }
+  },
+  "p2/pt_add_nested_A": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.p4 ADD PARTITION FIELD s.A",
+   "case_sensitive": false,
+   "spark": {
+    "error": "Py4JJavaError",
+    "msg": "An error occurred while calling o48.sql.",
+    "java": ": org.apache.iceberg.exceptions.ValidationException: Cannot find field 's.A' in struct: struct<1: id: required int, 2: cat: optional string, 3: s: optional struct<4: a: optional int>>"
+   }
+  },
+  "p2/pt_add_nested_a": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.p4 ADD PARTITION FIELD s.a",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p2/so_false_CAT": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.o1 WRITE ORDERED BY CAT",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p2/so_false_nested_A": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.o1 WRITE ORDERED BY s.A",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p2/so_false_local_ID": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.o1 WRITE LOCALLY ORDERED BY ID",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p2/so_false_dist_ID": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.o1 WRITE DISTRIBUTED BY PARTITION LOCALLY ORDERED BY ID DESC",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p2/id_false_ID": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.o1 SET IDENTIFIER FIELDS ID",
+   "case_sensitive": false,
+   "spark": {
+    "error": "IllegalArgumentException",
+    "msg": "Cannot add field ID as an identifier field: not found in current schema or added columns",
+    "getCondition": null,
+    "getSqlState": null
+   }
+  },
+  "p2/so_true_CAT": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.o2 WRITE ORDERED BY CAT",
+   "case_sensitive": true,
+   "spark": {
+    "error": "Py4JJavaError",
+    "msg": "An error occurred while calling o48.sql.",
+    "java": ": org.apache.iceberg.exceptions.ValidationException: Cannot find field 'CAT' in struct: struct<1: id: required int, 2: cat: optional string, 3: s: optional struct<4: a: optional int>>"
+   }
+  },
+  "p2/so_true_cat": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.o2 WRITE ORDERED BY cat",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p2/so_true_local_ID": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.o2 WRITE LOCALLY ORDERED BY ID",
+   "case_sensitive": true,
+   "spark": {
+    "error": "Py4JJavaError",
+    "msg": "An error occurred while calling o48.sql.",
+    "java": ": org.apache.iceberg.exceptions.ValidationException: Cannot find field 'ID' in struct: struct<1: id: required int, 2: cat: optional string, 3: s: optional struct<4: a: optional int>>"
+   }
+  },
+  "p2/so_true_nested_A": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.o2 WRITE ORDERED BY s.A",
+   "case_sensitive": true,
+   "spark": {
+    "error": "Py4JJavaError",
+    "msg": "An error occurred while calling o48.sql.",
+    "java": ": org.apache.iceberg.exceptions.ValidationException: Cannot find field 's.A' in struct: struct<1: id: required int, 2: cat: optional string, 3: s: optional struct<4: a: optional int>>"
+   }
+  },
+  "p2/so_true_bucket_ID": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.o2 WRITE ORDERED BY bucket(4, ID)",
+   "case_sensitive": true,
+   "spark": {
+    "error": "Py4JJavaError",
+    "msg": "An error occurred while calling o48.sql.",
+    "java": ": org.apache.iceberg.exceptions.ValidationException: Cannot find field 'ID' in struct: struct<1: id: required int, 2: cat: optional string, 3: s: optional struct<4: a: optional int>>"
+   }
+  },
+  "p2/id_true_ID": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.o2 SET IDENTIFIER FIELDS ID",
+   "case_sensitive": true,
+   "spark": {
+    "error": "IllegalArgumentException",
+    "msg": "Cannot add field ID as an identifier field: not found in current schema or added columns",
+    "getCondition": null,
+    "getSqlState": null
+   }
+  },
+  "p2/id_true_id": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.o2 SET IDENTIFIER FIELDS id",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p2/pt_true_drop_bucket_ID": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.o2 ADD PARTITION FIELD bucket(4, id)",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p2/pt_true_drop_bucket_ID2": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.o2 DROP PARTITION FIELD bucket(4, ID)",
+   "case_sensitive": true,
+   "spark": {
+    "error": "Py4JJavaError",
+    "msg": "An error occurred while calling o48.sql.",
+    "java": ": org.apache.iceberg.exceptions.ValidationException: Cannot find field 'ID' in struct: struct<1: id: required int, 2: cat: optional string, 3: s: optional struct<4: a: optional int>>"
+   }
+  },
+  "p2/cat_t": {
+   "door": "sql",
+   "statement": "CREATE TABLE sc.ns.k (id INT) USING iceberg",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p2/cat_t_ins": {
+   "door": "sql",
+   "statement": "INSERT INTO sc.ns.k VALUES (7)",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p2/cat_ns_upper": {
+   "door": "sql",
+   "statement": "SELECT * FROM sc.NS.k",
+   "case_sensitive": false,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`NS`.`k` cannot be found. Verify the spelling and correctness of the schema and catalog.",
+    "getCondition": "TABLE_OR_VIEW_NOT_FOUND",
+    "getSqlState": "42P01"
+   }
+  },
+  "p2/cat_tbl_upper": {
+   "door": "sql",
+   "statement": "SELECT * FROM sc.ns.K",
+   "case_sensitive": false,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`ns`.`K` cannot be found. Verify the spelling and correctness of the schema and catalog.",
+    "getCondition": "TABLE_OR_VIEW_NOT_FOUND",
+    "getSqlState": "42P01"
+   }
+  },
+  "p2/cat_catalog_upper": {
+   "door": "sql",
+   "statement": "SELECT * FROM SC.ns.k",
+   "case_sensitive": false,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[REQUIRES_SINGLE_PART_NAMESPACE] spark_catalog requires a single-part namespace, but got `SC`.`ns`. SQLSTATE: 42K05",
+    "getCondition": "REQUIRES_SINGLE_PART_NAMESPACE",
+    "getSqlState": "42K05"
+   }
+  },
+  "p2/cat_show_tables_upper": {
+   "door": "sql",
+   "statement": "SHOW TABLES IN sc.NS",
+   "case_sensitive": false,
+   "spark": {
+    "error": "Py4JJavaError",
+    "msg": "An error occurred while calling o48.sql.",
+    "java": ": org.apache.iceberg.exceptions.NoSuchNamespaceException: Namespace does not exist: NS"
+   }
+  },
+  "p2/cat_create_upper_ns": {
+   "door": "sql",
+   "statement": "CREATE NAMESPACE sc.Mixed",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p2/cat_show_ns": {
+   "door": "sql",
+   "statement": "SHOW NAMESPACES IN sc",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "namespace",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      "Mixed"
+     ],
+     [
+      "ns"
+     ]
+    ]
+   }
+  },
+  "p2/cat_create_upper_tbl": {
+   "door": "sql",
+   "statement": "CREATE TABLE sc.ns.MixedT (id INT) USING iceberg",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p2/cat_show_tables": {
+   "door": "sql",
+   "statement": "SHOW TABLES IN sc.ns",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "namespace",
+      "string"
+     ],
+     [
+      "tableName",
+      "string"
+     ],
+     [
+      "isTemporary",
+      "boolean"
+     ]
+    ],
+    "rows": [
+     [
+      "ns",
+      "MixedT",
+      false
+     ],
+     [
+      "ns",
+      "k",
+      false
+     ],
+     [
+      "ns",
+      "o1",
+      false
+     ],
+     [
+      "ns",
+      "o2",
+      false
+     ],
+     [
+      "ns",
+      "p1",
+      false
+     ],
+     [
+      "ns",
+      "p2",
+      false
+     ],
+     [
+      "ns",
+      "p3",
+      false
+     ],
+     [
+      "ns",
+      "p4",
+      false
+     ]
+    ]
+   }
+  },
+  "p2/cat_mixed_lower": {
+   "door": "sql",
+   "statement": "SELECT * FROM sc.ns.mixedt",
+   "case_sensitive": false,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`ns`.`mixedt` cannot be found. Verify the spelling and correctness of the schema and catalog.",
+    "getCondition": "TABLE_OR_VIEW_NOT_FOUND",
+    "getSqlState": "42P01"
+   }
+  },
+  "p2/sess_db": {
+   "door": "sql",
+   "statement": "CREATE DATABASE db1",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p2/sess_t": {
+   "door": "sql",
+   "statement": "CREATE TABLE db1.t0 (id INT) USING parquet",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p2/sess_t_ins": {
+   "door": "sql",
+   "statement": "INSERT INTO db1.t0 VALUES (3)",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p2/sess_upper_2part": {
+   "door": "sql",
+   "statement": "SELECT * FROM DB1.T0",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      3
+     ]
+    ]
+   }
+  },
+  "p2/sess_upper_3part": {
+   "door": "sql",
+   "statement": "SELECT * FROM spark_catalog.DB1.T0",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      3
+     ]
+    ]
+   }
+  },
+  "p2/sess_upper_catalog": {
+   "door": "sql",
+   "statement": "SELECT * FROM SPARK_CATALOG.db1.t0",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      3
+     ]
+    ]
+   }
+  },
+  "p2/sess_3part_nonexist": {
+   "door": "sql",
+   "statement": "SELECT * FROM C_MEM.n1.t",
+   "case_sensitive": false,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[REQUIRES_SINGLE_PART_NAMESPACE] spark_catalog requires a single-part namespace, but got `C_MEM`.`n1`. SQLSTATE: 42K05",
+    "getCondition": "REQUIRES_SINGLE_PART_NAMESPACE",
+    "getSqlState": "42K05"
+   }
+  },
+  "p2/sess_create_mixed": {
+   "door": "sql",
+   "statement": "CREATE DATABASE MixedDb",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p2/sess_show_dbs": {
+   "door": "sql",
+   "statement": "SHOW DATABASES",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "namespace",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      "db1"
+     ],
+     [
+      "default"
+     ],
+     [
+      "mixeddb"
+     ]
+    ]
+   }
+  },
+  "p2/sess_create_tbl_mixed": {
+   "door": "sql",
+   "statement": "CREATE TABLE MixedDb.MixedT (id INT) USING parquet",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p2/sess_show_tables_mixed": {
+   "door": "sql",
+   "statement": "SHOW TABLES IN mixeddb",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "namespace",
+      "string"
+     ],
+     [
+      "tableName",
+      "string"
+     ],
+     [
+      "isTemporary",
+      "boolean"
+     ]
+    ],
+    "rows": [
+     [
+      "mixeddb",
+      "mixedt",
+      false
+     ]
+    ]
+   }
+  },
+  "p2/sess_true_upper_2part": {
+   "door": "sql",
+   "statement": "SELECT * FROM DB1.T0",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[TABLE_OR_VIEW_NOT_FOUND] The table or view `DB1`.`T0` cannot be found. Verify the spelling and correctness of the schema and catalog.",
+    "getCondition": "TABLE_OR_VIEW_NOT_FOUND",
+    "getSqlState": "42P01"
+   }
+  },
+  "p2/sess_true_lower": {
+   "door": "sql",
+   "statement": "SELECT * FROM db1.t0",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      3
+     ]
+    ]
+   }
+  },
+  "p2/cat_true_ns_upper": {
+   "door": "sql",
+   "statement": "SELECT * FROM sc.NS.k",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`NS`.`k` cannot be found. Verify the spelling and correctness of the schema and catalog.",
+    "getCondition": "TABLE_OR_VIEW_NOT_FOUND",
+    "getSqlState": "42P01"
+   }
+  },
+  "p2/pt_drop_CAT_present_meta": {
+   "door": "metadata",
+   "statement": "latest metadata.json of the table the previous step altered",
+   "case_sensitive": null,
+   "spark": {
+    "spec": [
+     [
+      "cat",
+      "identity",
+      2
+     ]
+    ],
+    "sort": [],
+    "identifier": []
+   }
+  },
+  "p2/pt_drop_cat_present_meta": {
+   "door": "metadata",
+   "statement": "latest metadata.json of the table the previous step altered",
+   "case_sensitive": null,
+   "spark": {
+    "spec": [],
+    "sort": [],
+    "identifier": []
+   }
+  },
+  "p2/pt_replace_CAT_by_name_meta": {
+   "door": "metadata",
+   "statement": "latest metadata.json of the table the previous step altered",
+   "case_sensitive": null,
+   "spark": {
+    "spec": [
+     [
+      "cat",
+      "identity",
+      2
+     ]
+    ],
+    "sort": [],
+    "identifier": []
+   }
+  },
+  "p2/pt_drop_bucket_ID_meta": {
+   "door": "metadata",
+   "statement": "latest metadata.json of the table the previous step altered",
+   "case_sensitive": null,
+   "spark": {
+    "spec": [
+     [
+      "id_bucket",
+      "bucket[4]",
+      1
+     ]
+    ],
+    "sort": [],
+    "identifier": []
+   }
+  },
+  "p2/pt_drop_field_upper_meta": {
+   "door": "metadata",
+   "statement": "latest metadata.json of the table the previous step altered",
+   "case_sensitive": null,
+   "spark": {
+    "spec": [
+     [
+      "id_bucket",
+      "bucket[4]",
+      1
+     ]
+    ],
+    "sort": [],
+    "identifier": []
+   }
+  },
+  "p2/pt_replace_bucket_ID_meta": {
+   "door": "metadata",
+   "statement": "latest metadata.json of the table the previous step altered",
+   "case_sensitive": null,
+   "spark": {
+    "spec": [
+     [
+      "id_bucket",
+      "bucket[4]",
+      1
+     ]
+    ],
+    "sort": [],
+    "identifier": []
+   }
+  },
+  "p2/pt_drop_named_lower_meta": {
+   "door": "metadata",
+   "statement": "latest metadata.json of the table the previous step altered",
+   "case_sensitive": null,
+   "spark": {
+    "spec": [
+     [
+      "Kat",
+      "identity",
+      2
+     ]
+    ],
+    "sort": [],
+    "identifier": []
+   }
+  },
+  "p2/pt_add_nested_a_meta": {
+   "door": "metadata",
+   "statement": "latest metadata.json of the table the previous step altered",
+   "case_sensitive": null,
+   "spark": {
+    "spec": [
+     [
+      "Kat",
+      "identity",
+      2
+     ],
+     [
+      "s.a",
+      "identity",
+      4
+     ]
+    ],
+    "sort": [],
+    "identifier": []
+   }
+  },
+  "p2/so_false_CAT_meta": {
+   "door": "metadata",
+   "statement": "latest metadata.json of the table the previous step altered",
+   "case_sensitive": null,
+   "spark": {
+    "spec": [],
+    "sort": [
+     [
+      "identity",
+      2,
+      "asc"
+     ]
+    ],
+    "identifier": []
+   }
+  },
+  "p2/so_false_nested_A_meta": {
+   "door": "metadata",
+   "statement": "latest metadata.json of the table the previous step altered",
+   "case_sensitive": null,
+   "spark": {
+    "spec": [],
+    "sort": [
+     [
+      "identity",
+      4,
+      "asc"
+     ]
+    ],
+    "identifier": []
+   }
+  },
+  "p2/id_false_ID_meta": {
+   "door": "metadata",
+   "statement": "latest metadata.json of the table the previous step altered",
+   "case_sensitive": null,
+   "spark": {
+    "spec": [],
+    "sort": [
+     [
+      "identity",
+      1,
+      "desc"
+     ]
+    ],
+    "identifier": []
+   }
+  },
+  "p2/id_true_id_meta": {
+   "door": "metadata",
+   "statement": "latest metadata.json of the table the previous step altered",
+   "case_sensitive": null,
+   "spark": {
+    "spec": [],
+    "sort": [
+     [
+      "identity",
+      2,
+      "asc"
+     ]
+    ],
+    "identifier": [
+     1
+    ]
+   }
+  },
+  "p2/pt_true_drop_bucket_ID2_meta": {
+   "door": "metadata",
+   "statement": "latest metadata.json of the table the previous step altered",
+   "case_sensitive": null,
+   "spark": {
+    "spec": [
+     [
+      "id_bucket_4",
+      "bucket[4]",
+      1
+     ]
+    ],
+    "sort": [
+     [
+      "identity",
+      2,
+      "asc"
+     ]
+    ],
+    "identifier": [
+     1
+    ]
+   }
+  },
+  "p3/setup_ns": {
+   "door": "sql",
+   "statement": "CREATE NAMESPACE IF NOT EXISTS sc.ns",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p3/setup_t": {
+   "door": "sql",
+   "statement": "CREATE TABLE sc.ns.t (id INT, Data STRING) USING iceberg",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p3/setup_t_ins": {
+   "door": "sql",
+   "statement": "INSERT INTO sc.ns.t VALUES (1, 'a'), (2, 'b')",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p3/setup_i": {
+   "door": "sql",
+   "statement": "CREATE TABLE sc.ns.i (id INT NOT NULL, cat STRING) USING iceberg",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p3/setup_i_set": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.i SET IDENTIFIER FIELDS id",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p3/id_drop_ID": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.i DROP IDENTIFIER FIELDS ID",
+   "case_sensitive": false,
+   "spark": {
+    "error": "IllegalArgumentException",
+    "msg": "Cannot complete drop identifier fields operation: field ID not found",
+    "getCondition": null,
+    "getSqlState": null
+   }
+  },
+  "p3/so_false_missing": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.i WRITE ORDERED BY nope",
+   "case_sensitive": false,
+   "spark": {
+    "error": "Py4JJavaError",
+    "msg": "An error occurred while calling o54.sql.",
+    "java": ": org.apache.iceberg.exceptions.ValidationException: Cannot find field 'nope' in struct: struct<1: id: required int, 2: cat: optional string>"
+   }
+  },
+  "p3/n_nested2": {
+   "door": "sql",
+   "statement": "SELECT * FROM (SELECT * FROM (SELECT ID FROM sc.ns.t))",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ]
+   }
+  },
+  "p3/n_join_derived": {
+   "door": "sql",
+   "statement": "SELECT * FROM (SELECT ID FROM sc.ns.t) x JOIN (SELECT id FROM sc.ns.t) y ON x.id = y.ID",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ],
+     [
+      "id",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ]
+    ]
+   }
+  },
+  "p3/n_group_having": {
+   "door": "sql",
+   "statement": "SELECT ID FROM sc.ns.t GROUP BY ID HAVING count(*) > 0",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ]
+   }
+  },
+  "p3/n_col_alias_list": {
+   "door": "sql",
+   "statement": "SELECT * FROM (SELECT id FROM sc.ns.t) AS x(Kay)",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "Kay",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ]
+   }
+  },
+  "p3/n_cte_star_outer_upper": {
+   "door": "sql",
+   "statement": "WITH c AS (SELECT * FROM sc.ns.t) SELECT DATA FROM c",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "DATA",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      "a"
+     ],
+     [
+      "b"
+     ]
+    ]
+   }
+  },
+  "p3/n_exists": {
+   "door": "sql",
+   "statement": "SELECT ID FROM sc.ns.t WHERE EXISTS (SELECT 1 FROM sc.ns.t u WHERE u.ID = sc.ns.t.id)",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ]
+   }
+  },
+  "p3/n_df_sql_subq": {
+   "door": "dataframe",
+   "statement": "lambda: S.sql(\"SELECT * FROM (SELECT ID FROM sc.ns.t)\")",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ]
+   }
+  },
+  "p3/n_df_describe_two": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").describe(\"ID\", \"DATA\")",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "summary",
+      "string"
+     ],
+     [
+      "ID",
+      "string"
+     ],
+     [
+      "DATA",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      "count",
+      "2",
+      "2"
+     ],
+     [
+      "max",
+      "2",
+      "b"
+     ],
+     [
+      "mean",
+      "1.5",
+      null
+     ],
+     [
+      "min",
+      "1",
+      "a"
+     ],
+     [
+      "stddev",
+      "0.7071067811865476",
+      null
+     ]
+    ]
+   }
+  },
+  "p3/tw_subq_star": {
+   "door": "sql",
+   "statement": "SELECT * FROM (SELECT ID, id FROM sc.ns.t)",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ],
+     [
+      "id",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ]
+    ]
+   }
+  },
+  "p3/tw_order_by": {
+   "door": "sql",
+   "statement": "SELECT ID, id FROM sc.ns.t ORDER BY id",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ],
+     [
+      "id",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ]
+    ]
+   }
+  },
+  "p3/tw_view": {
+   "door": "sql",
+   "statement": "CREATE VIEW vc.ns.vt AS SELECT 1 AS a, 2 AS A",
+   "case_sensitive": false,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[COLUMN_ALREADY_EXISTS] The column `a` already exists. Choose another name or rename the existing column. SQLSTATE: 42711;",
+    "getCondition": "COLUMN_ALREADY_EXISTS",
+    "getSqlState": "42711"
+   }
+  },
+  "p3/tw_temp_view": {
+   "door": "sql",
+   "statement": "CREATE TEMPORARY VIEW tvt AS SELECT 1 AS a, 2 AS A",
+   "case_sensitive": false,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[COLUMN_ALREADY_EXISTS] The column `a` already exists. Choose another name or rename the existing column. SQLSTATE: 42711",
+    "getCondition": "COLUMN_ALREADY_EXISTS",
+    "getSqlState": "42711"
+   }
+  },
+  "p3/tw_temp_view_read": {
+   "door": "sql",
+   "statement": "SELECT * FROM tvt",
+   "case_sensitive": false,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[TABLE_OR_VIEW_NOT_FOUND] The table or view `tvt` cannot be found. Verify the spelling and correctness of the schema and catalog.",
+    "getCondition": "TABLE_OR_VIEW_NOT_FOUND",
+    "getSqlState": "42P01"
+   }
+  },
+  "p3/tw_df_write_create": {
+   "door": "dataframe",
+   "statement": "lambda: S.sql(\"SELECT 1 AS a, 2 AS A\").writeTo(\"sc.ns.tw9\").create()",
+   "case_sensitive": false,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[COLUMN_ALREADY_EXISTS] The column `a` already exists. Choose another name or rename the existing column. SQLSTATE: 42711",
+    "getCondition": "COLUMN_ALREADY_EXISTS",
+    "getSqlState": "42711"
+   }
+  },
+  "p3/tw_insert_into": {
+   "door": "sql",
+   "statement": "CREATE TABLE sc.ns.tw8 (a INT, b INT) USING iceberg",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p3/tw_insert_into_run": {
+   "door": "sql",
+   "statement": "INSERT INTO sc.ns.tw8 SELECT 1 AS a, 2 AS A",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p3/tw_insert_after": {
+   "door": "sql",
+   "statement": "SELECT * FROM sc.ns.tw8",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "a",
+      "int"
+     ],
+     [
+      "b",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      2
+     ]
+    ]
+   }
+  },
+  "p3/tv_create": {
+   "door": "sql",
+   "statement": "CREATE OR REPLACE TEMPORARY VIEW tv AS SELECT id, Data FROM sc.ns.t",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p3/cs_rel_alias_upper": {
+   "door": "sql",
+   "statement": "SELECT T.id FROM sc.ns.t t",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `T`.`id` cannot be resolved. Did you mean one of the following? [`t`.`id`, `t`.`Data`]. SQLSTATE: 42703; line 1 pos 7;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p3/cs_func_upper": {
+   "door": "sql",
+   "statement": "SELECT UPPER(Data), COUNT(*) FROM sc.ns.t GROUP BY Data",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [
+     [
+      "upper(Data)",
+      "string"
+     ],
+     [
+      "count(1)",
+      "bigint"
+     ]
+    ],
+    "rows": [
+     [
+      "A",
+      1
+     ],
+     [
+      "B",
+      1
+     ]
+    ]
+   }
+  },
+  "p3/cs_order_alias": {
+   "door": "sql",
+   "statement": "SELECT id AS X FROM sc.ns.t ORDER BY x",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `x` cannot be resolved. Did you mean one of the following? [`X`]. SQLSTATE: 42703; line 1 pos 37;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p3/cs_cte_name": {
+   "door": "sql",
+   "statement": "WITH C AS (SELECT 1 AS a) SELECT * FROM c",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[TABLE_OR_VIEW_NOT_FOUND] The table or view `c` cannot be found. Verify the spelling and correctness of the schema and catalog.",
+    "getCondition": "TABLE_OR_VIEW_NOT_FOUND",
+    "getSqlState": "42P01"
+   }
+  },
+  "p3/cs_temp_view_upper": {
+   "door": "sql",
+   "statement": "SELECT * FROM TV",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[TABLE_OR_VIEW_NOT_FOUND] The table or view `TV` cannot be found. Verify the spelling and correctness of the schema and catalog.",
+    "getCondition": "TABLE_OR_VIEW_NOT_FOUND",
+    "getSqlState": "42P01"
+   }
+  },
+  "p3/cs_temp_view_exact": {
+   "door": "sql",
+   "statement": "SELECT Data FROM tv",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [
+     [
+      "Data",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      "a"
+     ],
+     [
+      "b"
+     ]
+    ]
+   }
+  },
+  "p3/cs_star": {
+   "door": "sql",
+   "statement": "SELECT * FROM sc.ns.t",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "Data",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ]
+    ]
+   }
+  },
+  "p3/cs_backtick_ID": {
+   "door": "sql",
+   "statement": "SELECT `ID` FROM sc.ns.t",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ID` cannot be resolved. Did you mean one of the following? [`id`, `Data`]. SQLSTATE: 42703; line 1 pos 7;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p3/cs_backtick_Data": {
+   "door": "sql",
+   "statement": "SELECT `Data` FROM sc.ns.t",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [
+     [
+      "Data",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      "a"
+     ],
+     [
+      "b"
+     ]
+    ]
+   }
+  },
+  "p3/cs_insert_by_name": {
+   "door": "sql",
+   "statement": "INSERT INTO sc.ns.t BY NAME SELECT 3 AS ID, 'c' AS Data",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_COLUMNS] Cannot write incompatible data for the table `sc`.`ns`.`t`: Cannot write extra columns `ID`. SQLSTATE: KD000",
+    "getCondition": "INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_COLUMNS",
+    "getSqlState": "KD000"
+   }
+  },
+  "p3/cs_so_sort_bucket_ok": {
+   "door": "sql",
+   "statement": "ALTER TABLE sc.ns.i WRITE ORDERED BY cat",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p3/rel_alias_upper": {
+   "door": "sql",
+   "statement": "SELECT T.id FROM sc.ns.t t",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ]
+   }
+  },
+  "p3/cte_name_upper": {
+   "door": "sql",
+   "statement": "WITH C AS (SELECT 1 AS a) SELECT * FROM c",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "a",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ]
+    ]
+   }
+  },
+  "p3/temp_view_upper": {
+   "door": "sql",
+   "statement": "SELECT * FROM TV",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "Data",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ]
+    ]
+   }
+  },
+  "p4/setup_ns": {
+   "door": "sql",
+   "statement": "CREATE NAMESPACE IF NOT EXISTS sc.ns",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p4/setup_t": {
+   "door": "sql",
+   "statement": "CREATE TABLE sc.ns.t (id INT, Data STRING) USING iceberg",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p4/setup_t_ins": {
+   "door": "sql",
+   "statement": "INSERT INTO sc.ns.t VALUES (1, 'a'), (2, 'b')",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p4/mt_upper_false": {
+   "door": "sql",
+   "statement": "SELECT count(*) AS n FROM sc.ns.t.SNAPSHOTS",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "n",
+      "bigint"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ]
+    ]
+   }
+  },
+  "p4/df_getitem_ID_false": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").select(S.table(\"sc.ns.t\")[\"ID\"])",
+   "case_sensitive": false,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"ID\" missing from \"id\", \"Data\" in operator !Project [ID#20]. Attribute(s) with the same name appear in the operation: \"ID\".",
+    "getCondition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION",
+    "getSqlState": "XX000"
+   }
+  },
+  "p4/df_attr_ID_false": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").select(S.table(\"sc.ns.t\").ID)",
+   "case_sensitive": false,
+   "spark": {
+    "error": "PySparkAttributeError",
+    "msg": "[ATTRIBUTE_NOT_SUPPORTED] Attribute `ID` is not supported.",
+    "getCondition": "ATTRIBUTE_NOT_SUPPORTED",
+    "getSqlState": null
+   }
+  },
+  "p4/df_select_str_ID_false": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").select(\"ID\")",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ]
+   }
+  },
+  "p4/df_col_ID_false": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").select(F.col(\"ID\"))",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "ID",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ]
+   }
+  },
+  "p4/df_expr_ID_false": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").select(F.col(\"ID\") + 1)",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "(ID + 1)",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      2
+     ],
+     [
+      3
+     ]
+    ]
+   }
+  },
+  "p4/df_window_ID_false": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").select(F.row_number().over(__import__(\"pyspark.sql.window\" if ENGINE == \"spark\" else \"repark.spark.window\", fromlist=[\"Window\"]).Window.orderBy(F.col(\"ID\"))).alias(\"r\"))",
+   "case_sensitive": false,
+   "spark": {
+    "cols": [
+     [
+      "r",
+      "int"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ]
+   }
+  },
+  "p4/mt_upper_true": {
+   "door": "sql",
+   "statement": "SELECT count(*) AS n FROM sc.ns.t.SNAPSHOTS",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [
+     [
+      "n",
+      "bigint"
+     ]
+    ],
+    "rows": [
+     [
+      1
+     ]
+    ]
+   }
+  },
+  "p4/ins_exact_true": {
+   "door": "sql",
+   "statement": "INSERT INTO sc.ns.t (id, Data) VALUES (3, 'c')",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [],
+    "rows": []
+   }
+  },
+  "p4/after_true": {
+   "door": "sql",
+   "statement": "SELECT * FROM sc.ns.t",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [
+     [
+      "id",
+      "int"
+     ],
+     [
+      "Data",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "c"
+     ]
+    ]
+   }
+  },
+  "p4/df_getitem_Data_true": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").select(S.table(\"sc.ns.t\")[\"Data\"])",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"Data\" missing from \"id\", \"Data\" in operator !Project [Data#94]. Attribute(s) with the same name appear in the operation: \"Data\".",
+    "getCondition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION",
+    "getSqlState": "XX000"
+   }
+  },
+  "p4/df_window_ID_true": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").select(F.row_number().over(__import__(\"pyspark.sql.window\" if ENGINE == \"spark\" else \"repark.spark.window\", fromlist=[\"Window\"]).Window.orderBy(F.col(\"ID\"))).alias(\"r\"))",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ID` cannot be resolved. Did you mean one of the following? [`id`, `Data`]. SQLSTATE: 42703;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p4/df_fillna_true": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").fillna(\"z\", subset=[\"DATA\"])",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `DATA` cannot be resolved. Did you mean one of the following? [`id`, `Data`]. SQLSTATE: 42703",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703"
+   }
+  },
+  "p4/df_dropDuplicates_true": {
+   "door": "dataframe",
+   "statement": "lambda: S.table(\"sc.ns.t\").dropDuplicates([\"ID\"])",
+   "case_sensitive": true,
+   "spark": {
+    "error": "AnalysisException",
+    "msg": "Cannot resolve column name \"ID\" among (id, Data).",
+    "getCondition": "_LEGACY_ERROR_TEMP_1201",
+    "getSqlState": null
+   }
+  },
+  "p4/set_conf_upper_key": {
+   "door": "sql",
+   "statement": "SET spark.sql.caseSensitive=false",
+   "case_sensitive": true,
+   "spark": {
+    "cols": [
+     [
+      "key",
+      "string"
+     ],
+     [
+      "value",
+      "string"
+     ]
+    ],
+    "rows": [
+     [
+      "spark.sql.caseSensitive",
+      "false"
+     ]
+    ]
+   }
+  }
+ }
+}

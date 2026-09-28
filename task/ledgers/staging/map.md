@@ -12,6 +12,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   AWS acceptance rerun is an owner residue (R-1).
   `risk_tier: standard`. Branch `chore/rp-55-staged-single-write`.
   pins: aws-accept-replace-1/C-001
+- [ltz-store-int-1-ledger.md](ltz-store-int-1-ledger.md) —
+  **WO LTZ-STORE-INT-1 (2026-09-28), in flight:** an INT stored into a
+  `TIMESTAMP` (LTZ) column refuses with Spark's recorded `ins_l_int` answer on
+  VALUES and with the `CANNOT_SAFELY_CAST` class on SELECT, UPDATE, MERGE and
+  DataFrame append, while NULL, DATE, TIMESTAMP and TIMESTAMP_NTZ sources still
+  store (C-001); the VALUES residual stays open for every other target (R-1).
+  `risk_tier: standard`. Branch `fix/ltz-store-int-1`.
+  pins: ltz-store-int-1/C-001
 - [uuid-cast-window-1-ledger.md](uuid-cast-window-1-ledger.md) —
   **WO UUID-CAST-WINDOW-1 (2026-09-27), in flight:** the UUID refusal's SQL window
   counts as Spark 4.1.2 counts — the position in Unicode scalar values, the window
@@ -21,6 +29,18 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   the NTZ astral question and the unscannable-token fallback are dated residues.
   `risk_tier: standard`. Branch `fix/uuid-cast-window-1`.
   pins: uuid-cast-window-1/C-001
+- [casesens-1-ledger.md](casesens-1-ledger.md) —
+  **WO CASESENS-1 (2026-09-27), in flight:** names resolve the way Spark resolves
+  them under `spark.sql.caseSensitive` false and true. Slice 1: nested SQL scopes
+  keep the written spelling (derived tables, CTEs, the leftmost set-operation
+  branch, column-alias lists; C-001, C-002) and a MERGE with a derived source
+  spelled in another case answers (C-004); the catalog view (C-003) stays OPEN
+  with its S1-3 record, homed with R-CS1-1 to S1b. Later slices: `true` exact
+  on the SQL door (C-005…C-008), the
+  DataFrame door and `describe` (C-009, C-010), case twins (C-011, C-012), Iceberg
+  DDL exactness (C-013…C-016); one rule (C-017) and no regressions (C-018) flip
+  last. `risk_tier: high`. Branch `feat/casesens-1-s1`.
+  pins: casesens-1/C-001, C-002, C-004
 - [r-fileorder-2-ledger.md](r-fileorder-2-ledger.md) —
   **R-FILEORDER-2 (2026-09-27), HALT per R1:** Spark 4.1.2's own `L-INSERT-OVERWRITE`
   lineage differs between runs (the same-JVM triple agrees, C-001; six fresh-JVM runs
