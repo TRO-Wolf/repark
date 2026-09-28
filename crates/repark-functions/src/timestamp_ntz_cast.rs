@@ -92,8 +92,7 @@ fn retarget_dml_input(statement: DmlStatement) -> Result<LogicalPlan> {
         return Ok(LogicalPlan::Dml(statement));
     }
     let inner = retarget_values_source(projection.input.as_ref())
-        .map(Arc::new)
-        .unwrap_or_else(|| Arc::clone(&projection.input));
+        .map_or_else(|| Arc::clone(&projection.input), Arc::new);
     let mut schema = DFSchema::empty();
     schema.merge(inner.schema());
     let expr = projection
