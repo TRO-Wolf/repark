@@ -45,7 +45,9 @@ two lines at the existing void VALUES gate site.
 decimals (`CAST(x AS DECIMAL(p,s))`, `DECIMAL '1.5'`) still writing epoch micros
 through VALUES while SELECT refused them: the shared gate returns None for
 sources with no Spark name, and the VALUES gate read None as pass. The fold
-stays in the same gate: null-valued cells pass (`CAST(NULL AS …)` is legal);
+stays in the same gate: null-valued cells pass (`CAST(NULL AS …)` is legal;
+corrected 2026-09-28 by the verifier fold: only bare NULL passes, `CAST(NULL
+AS T)` is judged by `T`);
 every numeric source refuses even when the shared gate cannot name it, with the
 DDL-name fallback carrying the class, condition and SQLSTATE; `1L` reads
 `BIGINT`; DECIMAL casts and typed literals read by declared type. The fold also
@@ -58,11 +60,28 @@ predicate refused the TIMESTAMP_NS door's pinned 9-digit strings, reds the
 writes nothing) plus two classifier tests; the sibling reds with the fold
 stashed (M2). V-002 is residue R-LTZ-1 below, owned by NTZ-1.
 
+**Fold (2026-09-28, verifier VL-1..VL-6).** The verifier's hand-back
+(`verify-ltz-opus-handback.json`, NEEDS_REMEDIATION, 1 S1) re-measured every
+finding against Spark 4.1.2 (`ltz_verify_probe.py`, outputs
+`target/ltz-verify/ltzv-{spark,repark}.json`, zone UTC, table `sc.ns.l (id
+INT, ts TIMESTAMP)`): Spark WRITES `nvl`/`ifnull` over DATE and TIMESTAMP on
+the VALUES door (VL-1, Spark agrees with the verifier); REFUSES typed NULLs by
+declared type with Spark's exact text (VL-2); answers
+`INVALID_INLINE_TABLE.INCOMPATIBLE_TYPES_IN_INLINE_TABLE`/42000 on mixed rows
+(VL-3); names `DECIMAL(2,1)` and `BIGINT` (VL-4); stores `CAST(1 AS TIMESTAMP)`
+as `1970-01-01 00:00:01` (existing pin confirmed). The fix stays in the same
+gate (~31 product lines): only bare NULL passes; a probed STRING from a
+function call defers instead of refusing, so the four `nvl`/`ifnull` VALUES
+cells store with exact read-backs; fractionals read `DECIMAL(p,s)` and
+out-of-`INT`-range integers read `BIGINT`. VL-5 and the pre-existing gaps are
+dated residues R-LTZ-2..R-LTZ-10; R-1's OVERWRITE claim is corrected; C-001 now
+claims the message body with the planning prefix held separately.
+
 ## Clauses
 
 | Clause | Statement | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
-| C-001 | INT into a `TIMESTAMP` (LTZ) column refuses with Spark's recorded `ins_l_int` answer — error class, condition, SQLSTATE and message text — on the VALUES door, and with the `CANNOT_SAFELY_CAST` class on SELECT, UPDATE, MERGE and DataFrame append; NULL, DATE, TIMESTAMP and TIMESTAMP_NTZ sources still store. | Rust `tests::ltz_store` (VALUES exact text incl. column-list, reordered and negative shapes plus the BIGINT probe wording; class on the other three doors; exact read-backs of the legal rows) and `test_ltz_store_int_1.py` (recorded-answer equality through the planning prefix; DataFrame append). | PROVEN | `cargo test -p repark-spark --lib tests::ltz_store`: 2 passed; the refuse test reds with the fix stashed (VALUES writes). Facade file: 2 passed. |
+| C-001 | INT into a `TIMESTAMP` (LTZ) column refuses with Spark's recorded `ins_l_int` answer — error class, condition, SQLSTATE and message body, the RePark-only planning prefix pinned separately (R-LTZ-3) — on the VALUES door, and with the `CANNOT_SAFELY_CAST` class on SELECT, UPDATE, MERGE and DataFrame append; NULL, DATE, TIMESTAMP and TIMESTAMP_NTZ sources still store, as do `nvl`/`ifnull` over DATE and TIMESTAMP; typed NULLs refuse by declared type. | Rust `tests::ltz_store` (VALUES exact text incl. column-list, reordered and negative shapes plus the BIGINT probe wording; class on the other three doors; exact read-backs of the legal rows; typed-NULL exact text; the mixed-rows residue pin; `nvl`/`ifnull` store read-backs; `DECIMAL(2,1)`/`BIGINT` wording) and `test_ltz_store_int_1.py` (recorded body plus the separately pinned prefix; DataFrame append; `nvl`/`ifnull` store). | PROVEN | `cargo test -p repark-spark --lib tests::ltz_store`: 6 passed; the refuse test reds with the fix stashed (VALUES writes); the three fold pins red with the fold stashed (M3). Facade file: 3 passed. |
 
 ## Mutation record (2026-09-28)
 
@@ -70,6 +89,7 @@ stashed (M2). V-002 is residue R-LTZ-1 below, owned by NTZ-1.
 |---|---|---|
 | M1 | Bypass the gate for LTZ targets (the unit predicate returns false) | `int_into_timestamp_refuses_on_every_door` reds (VALUES writes epoch micros), restored green |
 | M2 | Stash the V-001 fold's gate change, keep the sibling pin | `typed_numeric_values_into_timestamp_refuse` reds (decimals write), restored green |
+| M3 | Stash the verifier fold's gate change, keep the fold pins | `typed_numeric_values_into_timestamp_refuse`, `nvl_and_ifnull_over_temporal_values_store` and `fractional_and_large_integer_literals_name_spark_types` red, the other three green; restored green |
 
 ## Coverage
 
@@ -112,7 +132,7 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-spark/src/tests/ltz_store.rs, python/repark/tests/test_ltz_store_int_1.py]
     - id: AT-10
       status: ATTACKED
-      evidence: Every new branch has a nameable input that changes the output (classifier unit tests, mapping and probe asserts, legal read-backs); M1 bypasses the gate and the refuse pin reds; the stash check reds the same pin on unfixed code. The bail-out branches (partitioned, arity, unmapped, probe failure) are deliberately unpinned: pinning them would pin the residual hole.
+      evidence: Every new branch has a nameable input that changes the output (classifier unit tests, mapping and probe asserts, legal read-backs); M1 bypasses the gate and the refuse pin reds; the stash check reds the same pin on unfixed code; M3 stashes the verifier fold and the three fold pins red. The bail-out branches (partitioned, arity, unmapped, probe failure) are deliberately unpinned: pinning them would pin the residual hole.
       artifacts: [crates/repark-spark/src/void_type/ltz_values_store.rs, crates/repark-spark/src/tests/ltz_store.rs]
   complete: true
 ```
@@ -122,6 +142,15 @@ COVERAGE_ATTESTATION:
 | # | Residue |
 |---|---|
 | R-LTZ-1 | Dated 2026-09-27 (critic V-002, owned by NTZ-1 #866's NTZ store gate, not this unit): an INT into a TIMESTAMP_NTZ cell beside an LTZ one still writes (`VALUES (0, TIMESTAMP '…', 1)` into `(id INT, c TIMESTAMP, n TIMESTAMP_NTZ)` commits one row); Spark refuses INT to NTZ (recorded `ins_n_sel_int` on the SELECT door). The gate deliberately skips non-LTZ targets, and the mixed table's LTZ cell still refuses. |
-| R-1 | Dated 2026-09-28 (out of scope, separate work orders): the VALUES residual stays open for every non-LTZ target (`VALUES (true)` into INT still writes `1`); partitioned VALUES inserts into TIMESTAMP columns are not judged; `INSERT OVERWRITE … VALUES` and BY NAME evolution VALUES bypass the `spark_ast` gate site and stay silent; BOOLEAN SELECT dies in DataFusion's own plan error without the class; a decimal literal (`1.5`) into TIMESTAMP stores through UPDATE because `spark_update_type_name` has no DECIMAL name; MERGE over an empty target passes as a no-op where Spark refuses at analysis; the native `repark.sql` door has no store-assignment gate at all. |
+| R-LTZ-2 | Dated 2026-09-28 (verifier VL-3): `VALUES (3, TIMESTAMP '…'), (4, 5)` earns Spark's `INVALID_INLINE_TABLE.INCOMPATIBLE_TYPES_IN_INLINE_TABLE`/42000 (measured `ltzv-spark.json` key `mixed_rows`); RePark refuses `CANNOT_SAFELY_CAST`/KD000. Both write nothing. Residue pin: `mixed_timestamp_and_int_rows_refuse_without_writing`. |
+| R-LTZ-3 | Dated 2026-09-28 (verifier VL-6): the facade refusal carries the RePark-only `Error during planning: ` prefix ahead of Spark's message body. Sibling of U9 R-37, which holds the same prefix for the two STRING side-insert steps. |
+| R-LTZ-4 | Dated 2026-09-28 (verifier VL-5, no fix this round): every TIMESTAMP/DATE-literal cell pays a full `SELECT <cell>` planning probe, and every Iceberg VALUES insert loads its table twice (LTZ gate plus void gate). Measured on a debug build: 2000 TIMESTAMP-literal rows +15%, no change without an LTZ column. |
+| R-LTZ-5 | Dated 2026-09-28 (verifier probe, pre-existing): `INSERT INTO l SELECT * FROM VALUES (8, 1)` writes epoch micros; Spark refuses `CANNOT_SAFELY_CAST` naming `INT` (measured `ltzv-spark.json` key `select_star_values`). |
+| R-LTZ-6 | Dated 2026-09-28 (verifier probe, pre-existing): TIMESTAMP leaves inside STRUCT/ARRAY/MAP VALUES cells write epoch micros. Spark's answer unmeasured. |
+| R-LTZ-7 | Dated 2026-09-28 (verifier probe, pre-existing): with `caseSensitive=true`, `INSERT INTO l (ID, C) VALUES (0, 1)` skips the unmatched columns and writes epoch micros. Spark's answer unmeasured. |
+| R-LTZ-8 | Dated 2026-09-28 (verifier probe, pre-existing): `spark.sql.storeAssignmentPolicy=LEGACY` is ignored on every door; Spark disallows LEGACY on V2 tables (`_LEGACY_ERROR_TEMP_1000`, measured `ltzv-spark.json` key `legacy_values`). |
+| R-LTZ-9 | Dated 2026-09-28 (verifier VL-1 SELECT door, pre-existing on base): `nvl`/`ifnull` over temporal values via `INSERT … SELECT` refuses (`Utf8 is not ANSI-store-assignable`); Spark writes (measured `ltzv-spark.json` key `nvl_col_select`). Fixing it needs the global `nvl`/`ifnull` retype, out of this round. |
+| R-LTZ-10 | Dated 2026-09-28 (VL-1 trade-off): a VALUES cell that is a function call probing Utf8 defers to execution instead of refusing. `nvl(NULL, 's')` then fails loud at execution (`CAST_INVALID_INPUT`, SQLSTATE 22018) and writes nothing; `upper('2024-01-01')` writes, as on base. Spark's answer for function-produced strings is unmeasured. |
+| R-1 | Dated 2026-09-28 (out of scope, separate work orders): the VALUES residual stays open for every non-LTZ target (`VALUES (true)` into INT still writes `1`); partitioned VALUES inserts into TIMESTAMP columns are not judged; `INSERT OVERWRITE … VALUES` refuses through the overwrite gate with RePark's own wording rather than Spark's (corrected 2026-09-28; Spark's text unmeasured) while BY NAME evolution VALUES bypass the `spark_ast` gate site and stay silent; BOOLEAN SELECT dies in DataFusion's own plan error without the class; a decimal literal (`1.5`) into TIMESTAMP stores through UPDATE because `spark_update_type_name` has no DECIMAL name; MERGE over an empty target passes as a no-op where Spark refuses at analysis; the native `repark.sql` door has no store-assignment gate at all. |
 
 **CI fix round (2026-09-28, PR #875).** The fix also closes U9 R-1: both `side-select` rows replay EQUAL and both `side-insert-string` steps refuse with Spark's class, condition, SQLSTATE and message body; the prefix-only text difference is held as U9 R-37.

@@ -412,6 +412,10 @@ pins: rp-4-fork-repin/C-005, C-006
   partitioned inserts, and anything it cannot map. **Fold 2026-09-28 (critic
   V-001):** null-valued cells pass; numerics refuse through a DDL-name fallback;
   `1L` reads `BIGINT`; DECIMAL casts and typed literals read by declared type.
+  **Fold 2026-09-28 (verifier VL-1..VL-6):** the V-001 null rule narrows to bare
+  NULL — `CAST(NULL AS T)` is judged by `T`; a probed `STRING` from a function
+  call defers instead of refusing; fractionals read `DECIMAL(p,s)` and
+  out-of-`INT`-range integers read `BIGINT`.
   Directory map: [void_type/map.md](void_type/map.md).
   Pins: [tests/ltz_store.rs](tests/ltz_store.rs).
   pins: ltz-store-int-1/C-001

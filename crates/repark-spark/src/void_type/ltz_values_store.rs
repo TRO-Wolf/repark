@@ -9,7 +9,7 @@ use iceberg::{NamespaceIdent, TableIdent};
 use repark_common::spark_error;
 use repark_core::CatalogRegistry;
 
-use super::{column_name, is_null_valued};
+use super::{column_name, is_bare_null};
 use crate::catalog_ops::{name_parts, quoted_table_display};
 use crate::write_to_branch::qualify_table_parts;
 
@@ -123,7 +123,7 @@ async fn refuse_value(
     target: &DataType,
     value: &Expr,
 ) -> Result<()> {
-    if is_null_valued(value) || !is_microsecond_ltz(target) {
+    if is_bare_null(value) || !is_microsecond_ltz(target) {
         return Ok(());
     }
     let source = if let Some(data_type) = literal_source_type(value) {
@@ -132,6 +132,9 @@ async fn refuse_value(
         let Some(probed) = probe_source_type(ctx, value).await else {
             return Ok(());
         };
+        if is_string_type(&probed) && is_function_call(value) {
+            return Ok(());
+        }
         probed
     };
     if let Some(text) = repark_iceberg::write::update_cast::incompatible_update_message(
@@ -214,9 +217,36 @@ fn number_text_type(text: &str, long: bool) -> DataType {
     if long {
         DataType::Int64
     } else if text.bytes().all(|byte| byte.is_ascii_digit()) {
-        DataType::Int32
-    } else {
+        integer_text_type(text)
+    } else if text.bytes().any(|byte| byte == b'e' || byte == b'E') {
         DataType::Float64
+    } else {
+        decimal_text_type(text).unwrap_or(DataType::Float64)
+    }
+}
+
+fn integer_text_type(text: &str) -> DataType {
+    if text.parse::<i32>().is_ok() {
+        DataType::Int32
+    } else if text.parse::<i64>().is_ok() {
+        DataType::Int64
+    } else {
+        DataType::Decimal128(u8::try_from(text.len()).unwrap_or(38), 0)
+    }
+}
+
+fn is_string_type(data_type: &DataType) -> bool {
+    matches!(
+        data_type,
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
+    )
+}
+
+fn is_function_call(value: &Expr) -> bool {
+    match value {
+        Expr::Nested(inner) => is_function_call(inner),
+        Expr::Function(_) => true,
+        _ => false,
     }
 }
 
@@ -322,10 +352,24 @@ mod tests {
         assert_eq!(
             typed(&row),
             vec![
-                Some(DataType::Float64),
+                Some(DataType::Decimal128(2, 1)),
                 Some(DataType::Utf8),
                 Some(DataType::Boolean),
                 Some(DataType::Null),
+            ],
+            "{row:?}"
+        );
+    }
+
+    #[test]
+    fn large_integers_and_exponent_floats_read_as_bigint_and_double() {
+        let row = values_row("INSERT INTO t VALUES (12345678901, 1e3, 2147483647)");
+        assert_eq!(
+            typed(&row),
+            vec![
+                Some(DataType::Int64),
+                Some(DataType::Float64),
+                Some(DataType::Int32),
             ],
             "{row:?}"
         );

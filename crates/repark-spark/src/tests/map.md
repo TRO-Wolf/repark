@@ -2065,6 +2065,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **Fold 2026-09-28 (critic V-001):** the `typed_numeric_values_into_timestamp_refuse`
   sibling pins every numeric CAST, `DECIMAL '1.5'`, `1L`, two `CAST(NULL …)` rows and
   a mixed multi-row refusal that writes nothing.
+  **Fold 2026-09-28 (verifier VL-1..VL-6):** the sibling pins the two typed-NULL
+  refusals with Spark's exact text; the mixed multi-row refusal moves to its own
+  residue pin (Spark answers `INVALID_INLINE_TABLE`); `nvl`/`ifnull` over DATE and
+  TIMESTAMP store with exact read-backs plus the `coalesce` control; `1.5` and
+  `12345678901` refusals name `DECIMAL(2,1)` and `BIGINT`.
   pins: ltz-store-int-1/C-001
 - `use_ddl.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the `USE` behavior pins over
   one- and two-catalog memory setups: two-part set, v2 clear-to-empty, session-catalog

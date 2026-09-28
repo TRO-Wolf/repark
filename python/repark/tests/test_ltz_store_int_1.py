@@ -46,15 +46,31 @@ def _rows(spark: ReparkSession) -> list[dict[str, object]]:
 def test_values_int_into_timestamp_matches_recorded_spark_refusal(
     spark: ReparkSession,
 ) -> None:
-    """VALUES INT into TIMESTAMP refuses with Spark's recorded class and text."""
+    """VALUES INT into TIMESTAMP refuses with Spark's recorded class and body.
+
+    The planning prefix is RePark-only (ledger R-LTZ-3); the body equals Spark.
+    """
     with pytest.raises(AnalysisException) as caught:
         spark.sql(f"INSERT INTO {FQ} VALUES (0, 1)")
     error = caught.value
     assert type(error).__name__ == RECORDED_ERROR
     assert error.getCondition() == RECORDED_CONDITION
     assert error.getSqlState() == RECORDED_SQLSTATE
-    assert str(error).splitlines()[0] == f"Error during planning: {RECORDED_MSG}"
+    first = str(error).splitlines()[0]
+    assert first.endswith(RECORDED_MSG)
+    assert first[: -len(RECORDED_MSG)] == "Error during planning: "
     assert _rows(spark) == []
+
+
+def test_values_nvl_and_ifnull_over_temporal_store(
+    spark: ReparkSession,
+) -> None:
+    """nvl and ifnull over DATE and TIMESTAMP store like Spark (VL-1)."""
+    spark.sql(f"INSERT INTO {FQ} VALUES (0, nvl(NULL, DATE '2024-01-01'))")
+    spark.sql(f"INSERT INTO {FQ} VALUES (1, ifnull(NULL, TIMESTAMP '2024-01-01 00:00:00'))")
+    rows = _rows(spark)
+    assert [row["id"] for row in rows] == [0, 1]
+    assert all(row["c"] is not None for row in rows)
 
 
 def test_dataframe_append_int_into_timestamp_refuses(

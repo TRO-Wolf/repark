@@ -4437,8 +4437,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Arrow path.
 - `test_ltz_store_int_1.py` — **WO LTZ-STORE-INT-1 (2026-09-28):** `INSERT INTO sc.ns.l
   VALUES (0, 1)` refuses with the recorded Spark `ins_l_int` answer — error class,
-  condition, SQLSTATE and the message first line through the planning prefix — and a
-  DataFrame append of INT into TIMESTAMP refuses; both leave the table empty.
+  condition, SQLSTATE and the message body, with the RePark-only planning prefix
+  pinned separately — and a DataFrame append of INT into TIMESTAMP refuses; both
+  leave the table empty. **Fold 2026-09-28 (verifier VL-1..VL-6):** `nvl` and
+  `ifnull` over DATE and TIMESTAMP store.
   pins: ltz-store-int-1/C-001
 - `test_merge_semantics_audit.py` — **MERGE-audit corpus** (2026-08-14 audit gap-map rows
   c/d/g/n/o): null-safe `<=>` / `eqNullSafe` ON matches NULL keys (both doors); builder-door

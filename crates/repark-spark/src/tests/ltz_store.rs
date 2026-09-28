@@ -238,18 +238,34 @@ async fn typed_numeric_values_into_timestamp_refuse() {
         );
         assert!(refused.contains("SQLSTATE: KD000"), "{sql}: {refused}");
     }
-    run(
-        &ctx,
-        &catalogs,
-        "INSERT INTO ice.sales.l VALUES (1, CAST(NULL AS DECIMAL(10,2)))",
-    )
-    .await;
-    run(
-        &ctx,
-        &catalogs,
-        "INSERT INTO ice.sales.l VALUES (2, CAST(NULL AS INT))",
-    )
-    .await;
+    assert_eq!(
+        plan_err(
+            &ctx,
+            &catalogs,
+            "INSERT INTO ice.sales.l VALUES (1, CAST(NULL AS INT))"
+        )
+        .await,
+        "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for \
+         the table `ice`.`sales`.`l`: Cannot safely cast `c` \"INT\" to \"TIMESTAMP\". SQLSTATE: \
+         KD000"
+    );
+    assert_eq!(
+        plan_err(
+            &ctx,
+            &catalogs,
+            "INSERT INTO ice.sales.l VALUES (1, CAST(NULL AS DECIMAL(10,2)))"
+        )
+        .await,
+        "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for \
+         the table `ice`.`sales`.`l`: Cannot safely cast `c` \"DECIMAL(10,2)\" to \"TIMESTAMP\". \
+         SQLSTATE: KD000"
+    );
+    assert_eq!(id_and_c(&ctx, &catalogs).await, vec![]);
+}
+
+#[tokio::test]
+async fn mixed_timestamp_and_int_rows_refuse_without_writing() {
+    let (_warehouse, ctx, catalogs) = door().await;
     let mixed = plan_err(
         &ctx,
         &catalogs,
@@ -261,5 +277,80 @@ async fn typed_numeric_values_into_timestamp_refuse() {
         "{mixed}"
     );
     assert!(mixed.contains("SQLSTATE: KD000"), "{mixed}");
-    assert_eq!(id_and_c(&ctx, &catalogs).await, vec![(1, None), (2, None)]);
+    assert_eq!(id_and_c(&ctx, &catalogs).await, vec![]);
+}
+
+#[tokio::test]
+async fn fractional_and_large_integer_literals_name_spark_types() {
+    let (_warehouse, ctx, catalogs) = door().await;
+    assert_eq!(
+        plan_err(&ctx, &catalogs, "INSERT INTO ice.sales.l VALUES (5, 1.5)").await,
+        "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for \
+         the table `ice`.`sales`.`l`: Cannot safely cast `c` \"DECIMAL(2,1)\" to \"TIMESTAMP\". \
+         SQLSTATE: KD000"
+    );
+    assert_eq!(
+        plan_err(
+            &ctx,
+            &catalogs,
+            "INSERT INTO ice.sales.l VALUES (6, 12345678901)"
+        )
+        .await,
+        "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for \
+         the table `ice`.`sales`.`l`: Cannot safely cast `c` \"BIGINT\" to \"TIMESTAMP\". \
+         SQLSTATE: KD000"
+    );
+    assert_eq!(id_and_c(&ctx, &catalogs).await, vec![]);
+}
+
+#[tokio::test]
+async fn nvl_and_ifnull_over_temporal_values_store() {
+    let (_warehouse, ctx, catalogs) = door().await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.l VALUES (0, nvl(NULL, DATE '2024-01-01'))",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.l VALUES (1, ifnull(NULL, DATE '2024-01-01'))",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.l VALUES (2, nvl(NULL, TIMESTAMP '2024-01-01 00:00:00'))",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.l VALUES (3, ifnull(NULL, TIMESTAMP '2024-01-01 00:00:00'))",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.l VALUES (4, nvl(DATE '2024-01-02', NULL))",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.l VALUES (5, coalesce(NULL, DATE '2024-01-01'))",
+    )
+    .await;
+    assert_eq!(
+        id_and_c(&ctx, &catalogs).await,
+        vec![
+            (0, Some("2024-01-01 00:00:00".to_string())),
+            (1, Some("2024-01-01 00:00:00".to_string())),
+            (2, Some("2024-01-01 00:00:00".to_string())),
+            (3, Some("2024-01-01 00:00:00".to_string())),
+            (4, Some("2024-01-02 00:00:00".to_string())),
+            (5, Some("2024-01-01 00:00:00".to_string())),
+        ]
+    );
 }
