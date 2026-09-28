@@ -48,7 +48,7 @@ help: ## List available targets
 # ------------------------------------------------------------------------------------------------
 
 .PHONY: ci
-ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-rust-file-size check-lib-py check-python-conventions check-docstring-presence check-example-coverage check-manifest check-ledgers check-ledger-grammar check-docs-compaction check-docs-links check-owner-ruling check-parity-live-dual-wire check-matrix-test-liveness rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface py-test
+ci: repo-tool-check check-map-sync rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-rust-file-size check-lib-py check-python-conventions check-docstring-presence check-example-coverage check-manifest check-ledgers check-repo-docs check-docs-compaction check-owner-ruling check-parity-live-dual-wire check-matrix-test-liveness rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface py-test
 
 # `test` is the Rust workspace suite, and that is the whole of it — deliberately, not pending.
 # The Python suites are excluded because each needs something `cargo test` cannot give it:
@@ -70,7 +70,7 @@ test: rust-test ## Rust workspace suite only (facade: `make py-test-facade`, als
 verify: ci test ## ci + rust-test — JVM-free, native-build-free (inner-loop)
 
 .PHONY: preflight
-preflight: verify py-test-facade py-test-parity-cap py-test-dbt audit workflows-lint ## The pre-PR gate: verify + facade suite + CAP-1 parity mirror + dbt-adapter suite + security + workflow lint
+preflight: verify py-test-facade py-test py-test-parity-cap py-test-dbt audit workflows-lint ## The pre-PR gate: verify + facade suite + CAP-1 parity mirror + dbt-adapter suite + security + workflow lint
 
 .PHONY: audit
 audit: rust-audit rust-deny py-audit ## Security gates (cargo-audit + cargo-deny + pip-audit)
@@ -202,7 +202,7 @@ py-format-check: ## ruff format --check
 .PHONY: py-test
 py-test: ## Parity-harness tests (isolated env; no native build) — mirrors ci.yml python step
 	PYTHONPATH=python/repark-parity/src \
-		uv run --no-project --with pyarrow --with pytest --with 'pydantic>=2.10,<3' \
+		uv run --isolated --no-project --with pyarrow --with pytest --with 'pydantic>=2.10,<3' \
 		pytest python/repark-parity/tests -q
 
 .PHONY: parity
@@ -362,12 +362,9 @@ check-ledgers: ## Ledger lifecycle guard: bins, archive names, every ledger link
 
 .PHONY: check-ledger-grammar
 check-ledger-grammar: ## Ledger grammar guard: clause rows, pins: citations, the Critic's attestation form (DL-2)
-	@# SSOT: scripts/check_ledger_grammar.py — over task/ledgers/{staging,completed}/ (the archive
-	@# is immutable and read for citations only). Meanings stay in .agents/skills/sepmo (SKILL.md "The gate is a ledger, not a score",
-	@# references/05-critic.md); the script owns the shape. EXCEPTIONS (seeded 2026-08-23) ratchet
-	@# down only. DUAL-WIRED: the `ledger grammar guard` step in ci.yml's guards job mirrors
-	@# this target. Change one, change the other.
-	python3 scripts/check_ledger_grammar.py
+	@# Shape: scripts/repo-tool/CHECKS.md; policy stays in SEPMO and AGENTS.md.
+	@# Baselines: scripts/ledger_grammar_exceptions.json. CI runs both checks via check-repo-docs.
+	scripts/repo-tool.sh checks ledger-grammar
 
 .PHONY: ledger-archive
 ledger-archive: ## Pickup step 0: file task/ledgers/completed/ into archive/yyyy-mm/, then compact + check (zero tokens)
@@ -391,44 +388,39 @@ check-docs-compaction: ## Live-document guard: no closed campaign in STATUS, no 
 	@# Measured 2026-08-25: n=5 median 0.05 s (pure text + one `git ls-files`) — in the hook too.
 	python3 scripts/check_docs_compaction.py
 
+.PHONY: check-repo-docs
+check-repo-docs: ## Docs links and ledger grammar with one shared worktree inventory
+	scripts/repo-tool.sh checks
+
 .PHONY: check-docs-links
 check-docs-links: ## Markdown link gate over tracked *.md: relative links resolve, GitHub-style anchors match, docs: evidence cells follow the same rule (DOCS-LINKS-1)
-	python3 scripts/check_docs_links.py
+	scripts/repo-tool.sh checks docs-links
 
 .PHONY: check-map-sync
 check-map-sync: ## map.md CONTENT guard: every relative link in every map resolves (add --strict for coverage)
-	@# Companion to check-map-md: that one forces a map to be TOUCHED, this one checks what it
-	@# says. SSOT: scripts/sync_map_md.py. Link validity is armed here, on both pre-commit
-	@# paths (measured n=5 median 0.08 s over 143 maps) and — since 2026-08-23 — as the
-	@# `map.md link-validity guard` step in ci.yml's guards job. Change one, change the other. The COVERAGE rule — every mappable
-	@# tracked file mentioned by its directory's map — is behind `--strict` and NOT armed: the
-	@# tree measured 24 pre-existing unmentioned files at the arming commit (2026-08-22) — a
-	@# FLOOR, since a name counts as mentioned anywhere it appears as a whole token — and a
-	@# gate nobody can run green is not a gate. Run it by hand:
-	@#   python3 scripts/sync_map_md.py --check --strict
-	@# `--fix` is mechanical only (drop dead link rows, append TODO(describe) stubs); it never
-	@# writes a description.
-	python3 scripts/sync_map_md.py --check
+	scripts/repo-tool.sh maps --check
 
 # ------------------------------------------------------------------------------------------------
 # Security gates (mirror cargo-deny.yml / zizmor.yml)
 # ------------------------------------------------------------------------------------------------
 
 .PHONY: rust-audit
-rust-audit: ## cargo audit — RustSec CVE scan (ignores in .cargo/audit.toml)
+rust-audit: ## cargo audit — RustSec CVE scan of both Cargo lockfiles (ignores in .cargo/audit.toml)
 	@# VERSION-enforcing, not presence-checking: `command -v` alone lets local run one version
 	@# while CI runs the pin, silently breaking local==CI.
 	@[ "$$(cargo-audit --version 2>/dev/null | awk '{print $$2}')" = "$(CARGO_AUDIT_VERSION)" ] \
 		|| cargo install cargo-audit --locked --version $(CARGO_AUDIT_VERSION) --force
 	cargo audit
+	cargo audit --file scripts/repo-tool/Cargo.lock
 
 .PHONY: rust-deny
-rust-deny: ## cargo deny check all — licenses/bans/sources (deny.toml; mirrors cargo-deny.yml)
+rust-deny: ## cargo deny check all — both Cargo workspaces, licenses/bans/sources (deny.toml; mirrors cargo-deny.yml)
 	@# VERSION-enforcing — see rust-audit. Pin must match .github/workflows/cargo-deny.yml
 	@# (cargo-deny@$(CARGO_DENY_VERSION)).
 	@[ "$$(cargo-deny --version 2>/dev/null | awk '{print $$2}')" = "$(CARGO_DENY_VERSION)" ] \
 		|| cargo install cargo-deny --locked --version $(CARGO_DENY_VERSION) --force
 	cargo deny check all
+	cargo deny --manifest-path scripts/repo-tool/Cargo.toml --locked check --config deny.toml all
 
 .PHONY: workflows-lint
 workflows-lint: workflows-parse ## zizmor over .github/workflows — BLOCKING, like CI (mirrors zizmor.yml)
@@ -492,6 +484,38 @@ install-hooks: ## Wire .git/hooks/pre-commit to map.md lockstep + map.md links +
 	@# check_docstring_presence.sh joined at PYC-6: n=5 median 0.13 s (uvx ruff JSON +
 	@# ratchet compare), well inside the sub-second hook budget.
 	@# check_docs_compaction.py joined at DL-4: n=5 median 0.05 s (pure text + one `git ls-files`).
-	@printf '#!/usr/bin/env bash\nset -e\nscripts/check_map_md.sh\npython3 scripts/sync_map_md.py --check\nscripts/check_crate_dag.sh\nscripts/check_lib_rs.sh\nscripts/check_rust_file_size.sh\nscripts/check_lib_py.sh\nscripts/check_docstring_presence.sh\npython3 scripts/check_docs_compaction.py\nscripts/check_manifest.sh\ncargo fmt --check\n$(TAPLO) format --check\n$(TAPLO) lint\n$(TYPOS)\n' > .git/hooks/pre-commit
+	@printf '#!/usr/bin/env bash\nset -e\nscripts/check_map_md.sh\nscripts/repo-tool.sh --snapshot index maps --check\nscripts/repo-hook-cargo.sh dag\nscripts/check_lib_rs.sh\nscripts/check_rust_file_size.sh\nscripts/check_lib_py.sh\nscripts/check_docstring_presence.sh\npython3 scripts/check_docs_compaction.py\nscripts/check_manifest.sh\nscripts/repo-hook-cargo.sh fmt\n$(TAPLO) format --check\n$(TAPLO) lint\n$(TYPOS)\n' > .git/hooks/pre-commit
 	@chmod +x .git/hooks/pre-commit
 	@echo "installed .git/hooks/pre-commit"
+
+.PHONY: repo-tool-check maps check-maps repo-context repo-trace repo-state repo-evidence repo-workflow check-repo-gates
+repo-tool-check:
+	cargo fmt --manifest-path scripts/repo-tool/Cargo.toml --check
+	CARGO_BUILD_JOBS=2 cargo clippy --locked --manifest-path scripts/repo-tool/Cargo.toml --all-targets -- -D warnings -A clippy::disallowed_methods
+	CARGO_BUILD_JOBS=2 cargo clippy --locked --manifest-path scripts/repo-tool/Cargo.toml --lib --bin repark-repo -- -D warnings -D clippy::disallowed_methods
+	CARGO_BUILD_JOBS=2 cargo test --locked --manifest-path scripts/repo-tool/Cargo.toml
+	python3 scripts/test_repo_tool_fallback.py
+
+maps:
+	scripts/repo-tool.sh maps --write $(ARGS)
+
+check-maps:
+	scripts/repo-tool.sh maps --check $(ARGS)
+
+repo-context:
+	scripts/repo-tool.sh context $(ARGS)
+
+repo-trace:
+	scripts/repo-tool.sh trace $(ARGS)
+
+repo-state:
+	scripts/repo-tool.sh state $(ARGS)
+
+repo-evidence:
+	scripts/repo-tool.sh evidence $(ARGS)
+
+repo-workflow:
+	scripts/repo-tool.sh workflow $(ARGS)
+
+check-repo-gates:
+	scripts/repo-tool.sh gates --config scripts/repo-tool/gates.json $(ARGS)

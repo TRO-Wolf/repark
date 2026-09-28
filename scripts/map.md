@@ -1,5 +1,10 @@
 # map — scripts/
 
+The Rust [worktree checks](repo-tool/CHECKS.md) implement docs-link and ledger-grammar
+validation. `check_docs_links.py` and `check_ledger_grammar.py` remain differential references.
+[ledger_grammar_exceptions.json](ledger_grammar_exceptions.json) owns the shared grammar
+baselines. `make check-repo-docs` runs both checks with one input inventory.
+The lockstep hook retains legacy warnings when the optional managed-map compiler is absent.
 WO CASESENS-1 S5 (2026-09-27): `check_rust_file_size.py` ratchets `repark-iceberg/src/write/alter.rs` 1607 → 1606 (the DROP/REPLACE name pin is rewritten to the exact refusal without its comments), shrink-only. pins: casesens-1/C-013
 
 WO CASESENS-1 S3 (2026-09-27): `check_rust_file_size.py` retires the `repark-python/src/dataframe.rs` row (1005 → 976, under the default; the case-bind helpers moved to `dataframe_names.rs`). pins: casesens-1/C-009
@@ -961,11 +966,12 @@ repark-parity slice.
   excluded; root-level manifests map to `map.md`, not `./map.md`) require the directory's
   `map.md`. Bare mode is invoked by `.pre-commit-config.yaml` and the hook installed by
   `make install-hooks`; branch mode is invoked by `make check-map-md` (`BASE ?= origin/main`)
-  and ci.yml's `map.md guard` step on pull requests.
+  and ci.yml's `map.md guard` step on pull requests. A valid managed inventory may remain
+  unchanged; the guard checks its selected Git snapshot before granting that exception.
   pins: map-pr-gate-1/C-009, C-010, C-011, C-012
-- `sync_map_md.py` — the map.md **content** guard, companion to `check_map_md.sh` (that one
-  requires the map to change in the same pull request; this one checks what the map actually
-  says) and the SSOT for its rules.
+- `sync_map_md.py` — legacy map checker and link-parser dependency for ledger lifecycle
+  tooling. The [Rust map compiler](repo-tool/MAPS.md) now owns `make check-map-sync`,
+  staged hooks and opt-in generation. The following describes the Python compatibility tool.
   Over every tracked `map.md` (`git ls-files`, so untracked build trees are never walked):
   (1) **link validity** — every relative markdown link resolves to an existing file or directory
   (`http(s)`/`mailto` links and bare `#anchors` are out of scope, nothing local can check them;
@@ -1380,7 +1386,7 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 | I want to... | go to |
 |---|---|
 | Understand why a commit was blocked on map.md | `check_map_md.sh` |
-| Find map.md links that no longer resolve | `make check-map-sync` (`sync_map_md.py`) |
+| Find map.md links that no longer resolve | `make check-map-sync` ([Rust map compiler](repo-tool/MAPS.md)) |
 | See which files their directory's map never mentions | `python3 scripts/sync_map_md.py --check --strict` (not armed — measured 24 at 2026-08-22) |
 | Change or inspect the crate tier map | `check_crate_dag.py` (`TIERS` — the SSOT) |
 | Add / remove an internal crate dependency | `check_crate_dag.py` (`ALLOWED_EDGES` — declare the edge, its kind and a reason) |
@@ -1520,3 +1526,12 @@ U11-EDGE-1 round 4, V-002 (2026-09-26): `check_lib_py.py` ratchets `dataframe/co
 U11-EDGE-1 round 5 (2026-09-26): `check_lib_py.py` ratchets `dataframe/core.py` 3979 → 3976 (the `select("*")` expansion folds into `_iter_bound_columns`), shrink-only; the CAP-1 mirror moves with it. pins: u11-edge-1/C-024
 
 U11-EDGE-1 round 6 (2026-09-26): `check_lib_py.py` ratchets `dataframe/core.py` 3976 → 3973 (two docstrings condensed pay for the attribute-copy route), shrink-only; the CAP-1 mirror moves with it. pins: u11-edge-1/C-027
+
+- [repo-tool/map.md](repo-tool/map.md) — standalone Rust repository compiler.
+- [repo-tool.sh](repo-tool.sh) — cached release build and command entry point.
+
+## Hook fallback
+
+- [repo-tool-fallback.py](repo-tool-fallback.py) checks the active Git index with the retained Python map validator when Cargo cannot build the Rust tool. It materializes staged maps and target names in a temporary directory, so unstaged text cannot mask a staged broken link. It rejects symlinked maps, fenced managed markers, reference-definition headers, inline syntax the retained scanner cannot recognize, escaped destinations it cannot decode, and links that leave the repository after URL decoding. This conservative refusal can block a valid map until Rust is available.
+- [repo-hook-cargo.sh](repo-hook-cargo.sh) runs the crate-DAG guard for staged Cargo manifest additions, edits, or removals and formatting for staged Rust. A docs-only index does not need Cargo; relevant changes fail closed without it.
+- [test_repo_tool_fallback.py](test_repo_tool_fallback.py) pins missing Cargo, build failure, Rust checker failure, managed/reference checks, a custom index, and an installed hook handling `git commit -a`'s temporary index. The wrapper only falls back before a Rust checker runs. pins: repo-compiler/C-002, C-007

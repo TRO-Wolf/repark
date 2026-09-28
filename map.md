@@ -122,7 +122,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   `uv.lock` is checked in from phase 3 on and is validated, never rewritten, by `uv lock --locked`.
 - `Makefile` — developer command surface (`make help`). `make ci` is the canonical gate;
   `make verify` = ci + rust-test (JVM-free, native-build-free); `make preflight` = verify +
-  `py-test-facade` + `py-test-parity-cap` + `py-test-dbt` + audit + workflow lint (G14,
+  `py-test-facade` + `py-test` + `py-test-parity-cap` + `py-test-dbt` + audit + workflow lint (G14,
   2026-08-12; `py-test-dbt` joined with DBT-1, 2026-09-04; `py-test-parity-cap` with
   PREFLIGHT-PARITY-1, 2026-09-09). `check-docs-links` (DOCS-LINKS-1, 2026-09-09) joins `ci`
   beside `check-docs-compaction`: every tracked `*.md`'s relative links resolve to tracked
@@ -257,3 +257,10 @@ First checks: `make ci`, then `make help` for the full target list. CI mirrors `
 
 FNP-8 (2026-09-07): STATUS links the measured residuals in the parity registry;
 implementation and oracle evidence remain in the staging unit ledger until delivery.
+
+Repository compiler: [scripts/repo-tool/map.md](scripts/repo-tool/map.md).
+
+The [worktree checks](scripts/repo-tool/CHECKS.md) run docs links and ledger grammar together
+through `make check-repo-docs`. Their named Make targets remain available separately.
+
+The audit targets cover both Cargo workspaces, including `scripts/repo-tool/Cargo.lock`.

@@ -48,3 +48,6 @@ build/
 PROGRESS.md
 
 handback.json
+
+/scripts/repo-tool/target/
+/.repo-tool/

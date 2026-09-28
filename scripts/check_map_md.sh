@@ -5,6 +5,7 @@ if [[ "${1:-}" == "--base" ]]; then
   base="${2:?usage: check_map_md.sh [--base <ref>]}"
   changed_code="$(git diff --name-only --diff-filter=d "${base}...HEAD")"
   changed_all="$(git diff --name-only "${base}...HEAD")"
+  snapshot=HEAD
   warn_only=0
 elif [[ $# -gt 0 ]]; then
   echo "usage: check_map_md.sh [--base <ref>]" >&2
@@ -12,6 +13,7 @@ elif [[ $# -gt 0 ]]; then
 else
   changed_code="$(git diff --cached --name-only --diff-filter=d)"
   changed_all="$(git diff --cached --name-only)"
+  snapshot=index
   warn_only=1
 fi
 
@@ -35,7 +37,9 @@ while IFS= read -r file; do
     map_path="$dir/map.md"
   fi
 
-  if [[ ! -f "$map_path" ]]; then
+  map_object=":$map_path"
+  [[ "$snapshot" == HEAD ]] && map_object="HEAD:$map_path"
+  if ! git cat-file -e "$map_object" 2>/dev/null; then
     if [[ "$warn_only" == 1 ]]; then
       echo "WARNING: $dir has staged code but no map.md (every directory needs one)." >&2
     else
@@ -44,7 +48,10 @@ while IFS= read -r file; do
     missing=1
     continue
   fi
-  if ! grep -qx "$map_path" <<<"$changed_all"; then
+  if ! grep -Fxq "$map_path" <<<"$changed_all"; then
+    if [[ -x scripts/repo-tool.sh ]] && scripts/repo-tool.sh --snapshot "$snapshot" maps --check --require-managed --path "$dir" >/dev/null; then
+      continue
+    fi
     if [[ "$warn_only" == 1 ]]; then
       echo "WARNING: $map_path was not staged with $dir's code (map.md lockstep rule)." >&2
     else

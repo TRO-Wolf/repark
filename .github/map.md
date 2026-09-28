@@ -13,10 +13,11 @@ critical path. Tier 1 (every PR, no secrets, GitHub-hosted, read-only token) lan
 - [workflows/](workflows/map.md) — GitHub Actions (the gates; includes `audit.yml` cargo-audit
   CVE scanning and `cache-warm.yml`, the rust-cache pre-warmer paired with the `ci.yml`
   restore keys).
-- `dependabot.yml` — weekly grouped dependency PRs (cargo + uv + github-actions; docker added
-  later). Carries the DataFusion-family rule: never merge a bundled DF/Arrow major bump — split
-  it. Since 2026-08-13 the rule is enforced by a cargo `ignore` block (DF/arrow/parquet majors,
-  `object_store` minors, `iceberg*` entirely — the fork rev is the real source).
+- `dependabot.yml` — weekly grouped dependency PRs for the root Cargo workspace, the standalone
+  repository-tool Cargo workspace, and GitHub Actions. The root Cargo entry carries the
+  DataFusion-family rule: never merge a bundled DF/Arrow major bump — split it. Since 2026-08-13
+  the rule is enforced by its `ignore` block (DF/arrow/parquet majors, `object_store` minors,
+  `iceberg*` entirely — the fork rev is the real source).
 - `zizmor.yml` — zizmor config: accepted-risk suppressions (if any); currently empty. The gate
   is otherwise blocking.
 

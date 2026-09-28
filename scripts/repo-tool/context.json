@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "global": [
+    {
+      "path": "README.md"
+    }
+  ],
+  "roles": {
+    "executor": [
+      {
+        "path": "DEVELOPMENT.md"
+      },
+      {
+        "path": "docs/testing.md"
+      }
+    ],
+    "critic": [
+      {
+        "path": "docs/testing.md"
+      },
+      {
+        "path": "ARCHITECTURE.md"
+      }
+    ],
+    "orchestrator": [
+      {
+        "path": "STATUS.md"
+      }
+    ]
+  },
+  "units": {
+    "repo-compiler": [
+      {
+        "path": "task/ledgers/completed/repo-compiler-ledger.md",
+        "section": "Charter"
+      },
+      {
+        "path": "scripts/repo-tool/README.md"
+      }
+    ]
+  }
+}

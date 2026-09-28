@@ -31,6 +31,16 @@ updates:
       # iceberg* resolves to the fork rev via [patch.crates-io] — registry bumps are noise.
       - dependency-name: "iceberg*"
 
+  - package-ecosystem: cargo
+    directory: /scripts/repo-tool
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      repo-tool:
+        patterns: ["*"]
+
   # The `uv` package-ecosystem entry returns in phase 3, when the uv workspace members and the
   # checked-in uv.lock land — until then Dependabot would error weekly on a repo with no uv
   # dependency file.

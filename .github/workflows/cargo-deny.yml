@@ -34,3 +34,4 @@ jobs:
         with:
           tool: cargo-deny@0.19.9
       - run: cargo deny check all
+      - run: cargo deny --manifest-path scripts/repo-tool/Cargo.toml --locked check --config deny.toml all
