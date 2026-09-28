@@ -27,6 +27,7 @@ from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._temp_views import scratch_view_name
 from repark.spark.column import Column
 from repark.spark.dataframe import io_declared as _io_declared
+from repark.spark.dataframe import writer_s3 as _writer_s3
 from repark.spark.dataframe import writer_text as _writer_text
 from repark.spark.dataframe.core import DataFrame, _by_name_casefold_map, _sql_string_literal
 from repark.spark.row import Row
@@ -376,6 +377,8 @@ class DataFrameWriter:
                 f"path write mode must be one of {self._PATH_MODES}, got {self._mode!r}"
             )
         destination = Path(path)
+        if _writer_s3.is_s3_url(path):
+            return _writer_s3.write_s3_path(self, path, stored_as=stored_as)
         if destination.exists() and normalized_mode == "error":
             raise AnalysisException(
                 f"[PATH_ALREADY_EXISTS] Path {path} already exists. "
@@ -391,7 +394,9 @@ class DataFrameWriter:
                     'Use mode("overwrite") to replace the path, or write to a directory path.'
                 )
             self._validate_path_append_schema(destination, stored_as=stored_as)
-        partition_clause = self._partitioned_by_sql_clause()
+        partition_clause = writer_layout.partitioned_by_sql_clause(
+            list(self._dataframe.columns), self._partition_columns
+        )
         staging = destination.parent / (
             f"repark-staging-{uuid.uuid4().hex}-{destination.name or 'out'}"
         )
@@ -449,38 +454,6 @@ class DataFrameWriter:
                 elif staging.is_file() or staging.is_symlink():
                     staging.unlink()
             raise
-
-    def _partitioned_by_sql_clause(self) -> str:
-        """Build the path ``PARTITIONED BY`` clause for configured identity columns."""
-        if not self._partition_columns:
-            return ""
-        frame_columns = list(self._dataframe.columns)
-        frame_by_case = {column.casefold(): column for column in frame_columns}
-        resolved: list[str] = []
-        seen_casefold: set[str] = set()
-        for column in self._partition_columns:
-            name = str(column)
-            matched = frame_by_case.get(name.casefold())
-            if matched is None:
-                raise AnalysisException(
-                    f"partitionBy column {name!r} is not in the DataFrame columns "
-                    f"{frame_columns}; path partitionBy requires identity columns present "
-                    "on the frame (Spark-shaped)"
-                )
-            if not matched.isidentifier():
-                raise AnalysisException(
-                    f"partitionBy column {matched!r} is not a simple SQL identifier; "
-                    "repark path partitionBy supports simple column names only"
-                )
-            key = matched.casefold()
-            if key in seen_casefold:
-                raise AnalysisException(
-                    f"duplicate partitionBy column {matched!r}; "
-                    "path partitionBy requires unique column names"
-                )
-            seen_casefold.add(key)
-            resolved.append(matched)
-        return " PARTITIONED BY (" + ", ".join(resolved) + ")"
 
     def _validate_path_append_schema(self, destination: Any, *, stored_as: str) -> None:
         """Reject path append when source and destination schemas cannot be merged safely."""
