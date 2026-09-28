@@ -757,7 +757,11 @@ repark-core's error map.
   synthesized, while a user-written explicit `CAST` (legal Spark — the user's stated intent)
   reaches this projection already conformed, as a bare column, and is invisible to the rule.
   Named residual: `Cast(Literal, …)` inside a `Values` node, where the synthesized and explicit
-  forms are byte-identical. Ledger:
+  forms are byte-identical. LTZ-STORE-INT-1 (2026-09-28) closes the residual for
+  `TIMESTAMP` (LTZ) targets one stage earlier, at the Spark door's existing
+  `refuse_insert_void_values` gate site
+  (`repark-spark/src/void_type/ltz_values_store.rs`); every other target stays residual.
+  Ledger:
   [`../../../../task/wi2-g6-cast-integrity-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-16-wi2-g6-cast-integrity-ledger.md).
 - `insert_defaults.rs` — **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** the ONE home for
   filling omitted columns from `write_default` on every write path: `column_defaults`

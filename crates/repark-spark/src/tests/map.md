@@ -2057,6 +2057,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   statements succeed; a missing table keeps its own error and INSERT keeps the other
   cell's prose.
   pins: ipi-51/W-UPDATE-TYPE-ERR
+- [ltz_store.rs](ltz_store.rs) — **WO LTZ-STORE-INT-1 (2026-09-28):** INT into a
+  `TIMESTAMP` (LTZ) column refuses on VALUES, SELECT, UPDATE and MERGE — the VALUES text
+  equals Spark's recorded `ins_l_int` refusal on the test catalog, and the refused
+  statements leave the seeded row intact — while NULL, DATE, TIMESTAMP, TIMESTAMP_NTZ,
+  explicit-CAST and column-list VALUES rows still store with their exact read-backs.
+  pins: ltz-store-int-1/C-001
 - `use_ddl.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the `USE` behavior pins over
   one- and two-catalog memory setups: two-part set, v2 clear-to-empty, session-catalog
   default restore, self-`USE` keep, catalog-first one-part (probe P-1), namespace-only

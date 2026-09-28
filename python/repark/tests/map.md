@@ -4429,7 +4429,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   still writes (Spark treats it as the user's intent), and the honest residual: a literal
   `INSERT INTO … VALUES` row conforms inside the `Values` node where the synthesized and explicit
   casts are byte-identical, so `VALUES (true)` into an `INT` column still writes `1` while
-  `VALUES (DATE '…')` is refused by the G6-3 CAST gate instead. Arrow path.
+  `VALUES (DATE '…')` is refused by the G6-3 CAST gate instead.
+  **LTZ-STORE-INT-1 (2026-09-28)** closes the residual for `TIMESTAMP` (LTZ) targets at
+  the existing void VALUES gate site, before planning; every other target stays residual.
+  Arrow path.
+- `test_ltz_store_int_1.py` — **WO LTZ-STORE-INT-1 (2026-09-28):** `INSERT INTO sc.ns.l
+  VALUES (0, 1)` refuses with the recorded Spark `ins_l_int` answer — error class,
+  condition, SQLSTATE and the message first line through the planning prefix — and a
+  DataFrame append of INT into TIMESTAMP refuses; both leave the table empty.
+  pins: ltz-store-int-1/C-001
 - `test_merge_semantics_audit.py` — **MERGE-audit corpus** (2026-08-14 audit gap-map rows
   c/d/g/n/o): null-safe `<=>` / `eqNullSafe` ON matches NULL keys (both doors); builder-door
   `=` NULL keys do not match; self-merge (target as source) updates once per row; join-key

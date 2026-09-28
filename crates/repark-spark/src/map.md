@@ -398,6 +398,21 @@ pins: rp-4-fork-repin/C-005, C-006
   mixed-length rows, equal-or-wider VALUES, a missing table — falls through untouched.
   Pins: [tests/insert_arity.rs](tests/insert_arity.rs).
   pins: ice-error-conditions-1/C-011
+- `void_type/ltz_values_store.rs` — **WO LTZ-STORE-INT-1 (2026-09-28):** the
+  VALUES-door store-assignment gate for `TIMESTAMP` (LTZ) targets, a child module of
+  `void_type.rs` reached from `refuse_insert_void_values`, before planning conforms
+  VALUES literals inside the `Values` node where the analyzer rule can no longer see
+  them: each cell mapped to a `Timestamp(_, Some(_))` column is judged through the
+  shared `incompatible_update_message` gate — bare literals by their Spark kind (`1` is
+  `INT`, three in-module classifier tests), anything else by a `SELECT <cell>` probe —
+  so `VALUES (0, 1)` refuses with Spark's recorded
+  `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] … Cannot safely cast `c` "INT" to
+  "TIMESTAMP". SQLSTATE: KD000` while NULL, DATE, TIMESTAMP, TIMESTAMP_NTZ and explicit
+  `CAST`s still store. Skips TIMESTAMP_NTZ targets (NTZ-1 Slice 2 owns that door),
+  partitioned inserts, and anything it cannot map. Directory map:
+  [void_type/map.md](void_type/map.md).
+  Pins: [tests/ltz_store.rs](tests/ltz_store.rs).
+  pins: ltz-store-int-1/C-001
 - `write_options.rs` — **U7 PR1 (2026-09-24):** `output-spec-id` is a typed key
   (`StatementWriteOptions.output_spec_id`, parsed by `repark_iceberg::write::parse_output_spec_id`;
   a non-integer is a `NumberFormatMarker` since round 2) that `staging_overrides` hands to staging. `normalize.rs` `build_partition_spec` takes the
@@ -1049,6 +1064,8 @@ pins: rp-4-fork-repin/C-005, C-006
   `INSERT … VALUES` value into an `unknown` column with Spark's
   `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] … Cannot safely cast `c` "INT" to "VOID".
   SQLSTATE: KD000`, naming the value's Spark type. `spark_ast.rs`'s passthrough calls both.
+  **WO LTZ-STORE-INT-1 (2026-09-28):** `refuse_insert_void_values` first calls the
+  `void_type/ltz_values_store.rs` child module.
   pins: u9-types-1/C-009
 - `describe_column.rs`, `show_table_extended.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):**
   both read the schema through repark-iceberg `presented_arrow_schema`, so a uuid column
