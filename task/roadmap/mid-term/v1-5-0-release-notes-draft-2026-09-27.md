@@ -1,18 +1,21 @@
-# v1.5.0 release notes — DRAFT, not a release
+# v1.5.0 release notes — FINAL (tag `v1.5.0`, 2026-09-27)
 
-**DRAFT — not a release.** The tag, the version bump and the release PR are the owner's. This
-draft covers `origin/main` from `2c7a4d25` (release v1.4.2, 2026-09-15) to `707e8a52`
-(2026-09-27), 224 commits. Every line below comes from a commit subject in that range, the
+**Shipped 2026-09-27 as tag `v1.5.0`** (release PR #871, squash `9392dbc3`; `release.yml`
+run 36344719370 green). PyPI `repark 1.5.0` carries five `cp312-abi3` wheels: manylinux
+x86_64 and aarch64, macOS arm64 and x86_64, Windows x86_64. These notes cover
+`origin/main` from `2c7a4d25` (release v1.4.2, 2026-09-15) to the tag, 231 commits.
+Every line below comes from a commit subject in that range, the
 [v1.5.0 remainder spec](v1-5-0-remainder-spec-2026-09-23.md), a staging ledger, or the
-2026-09-27 02:25 matrix — pending the evening rerun wherever the matrix is stated as final.
+measured 2026-09-27 matrix (audit pass plus the confirming evening rerun).
 
 ## Spark–Iceberg parity: what now matches
 
-Matrix 2026-09-27 02:25 (main `9aa1c185`): **705 EQUAL / 132 SPARK-CANNOT / 5
-REFUSED-REGISTERED / 0 DIFFERENT, 842 cells** — pending the evening rerun. The five
-REFUSED-REGISTERED cells are the dated carve-outs C-1 (3 streaming cells), C-2
-(`D-NS-NESTED`) and C-4 (`TY-VARIANT-V3`); `P-RDF-PARTIAL-PROGRESS` (C-3) and
-`L-INSERT-OVERWRITE` (C-5) count as EQUAL under their dated harness rules.
+Matrix 2026-09-27, fresh build on main `f7422565`: **705 EQUAL / 132 SPARK-CANNOT / 5
+REFUSED-REGISTERED / 0 DIFFERENT, 842 cells** — the evening rerun re-measures the 02:25
+audit matrix (`9aa1c185`) with the same verdicts. The five REFUSED-REGISTERED cells are
+the dated carve-outs C-1 (3 streaming cells), C-2 (`D-NS-NESTED`) and C-4
+(`TY-VARIANT-V3`); `P-RDF-PARTIAL-PROGRESS` (C-3) and `L-INSERT-OVERWRITE` (C-5) count
+as EQUAL under their dated harness rules.
 
 Inspection DDL: `SHOW CREATE TABLE` answers Spark's text; `SHOW TBLPROPERTIES` (whole map,
 one key, missing key) answers Spark's rows; `SHOW TABLE EXTENDED` answers Spark's rows;
@@ -134,14 +137,16 @@ duplicate MERGE inserts); MERGE/UPDATE/DELETE after ADD/RENAME COLUMN; concurren
 disjoint-partition MERGE and DELETE commit as in Spark; plain-`WHERE` UPDATE storms
 commit 4/4; stale Hadoop writers raise `CatalogCommitConflicts` and lose nothing;
 nested-evolved tables read; copy-on-write DELETE with a compound predicate over a nested
-column; cross-process locks for the fixed-path test fixtures.
+column; cross-process locks for the fixed-path test fixtures; the UUID refusal's SQL
+window counts like Spark — no panic on non-ASCII SQL (#868).
 
 ## Carved out of v1.5.0
 
 In plain words, the five dated owner rulings: C-1 (2026-09-19) — structured streaming
 (`readStream`/`writeStream` over Iceberg) leaves for v1.6.0, card ICE-STREAMING. C-2
 (2026-09-24) — nested namespaces (`CREATE NAMESPACE sc.a.b`, listing inside one) leave
-for v1.6.0; the card is not yet filed (readiness finding F-6). C-3 (2026-09-26) —
+for v1.6.0, card NS-NESTED ([ns-nested-1-6.md](ns-nested-1-6.md); readiness finding
+F-6 closed). C-3 (2026-09-26) —
 `rewrite_data_files` partial-progress commit order is not compared exactly, because
 Spark's own order depends on JVM object addresses and flips run to run; RePark commits
 file groups in ascending partition order. C-4 (2026-09-27) — the `variant` type leaves
@@ -151,9 +156,10 @@ run; RePark commits to one Spark-valid outcome.
 
 ## Known follow-ups
 
-NTZ-1 slices 2 (store assignment) and 3 (storage surface, TZ-6); the `uuid_cast.rs`
-byte-offset window bug (card proposed); CASESENS-1 (the U11-EDGE and namespace-case
-residues); the three-part upper-case catalog text (`C_MEM.n1.t`); the ICE-VARIANT build;
-the ICE-STREAMING card; S3 path writes (U12, card S3-PATH-WRITE-1), moved to v1.5.1 by the owner on
-2026-09-27. Records: §5 of the
+NTZ-1 slices 2 (store assignment) and 3 (storage surface, TZ-6), open as #866/#867;
+CASESENS-1 (the U11-EDGE and namespace-case residues), open as #870 and the stack; the
+three-part upper-case catalog text (`C_MEM.n1.t`); the ICE-VARIANT build; the
+ICE-STREAMING card; S3 path writes (U12, card S3-PATH-WRITE-1), moved to v1.5.1 by the owner on
+2026-09-27. (The `uuid_cast.rs` byte-offset window bug listed here in the draft is
+fixed in this release — #868, "Fixes" above.) Records: §5 of the
 [release-readiness report](v1-5-0-release-readiness-2026-09-27.md).
