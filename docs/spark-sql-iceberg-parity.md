@@ -2358,6 +2358,13 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   `withColumn` replaces (every twin) and renames fan out to twins, and folded
   `withColumns` keys refuse `[COLUMN_ALREADY_EXISTS]` 42711. The overlay
   replace set is display-spelled, as before.
+  **CASESENS-2 S3 (2026-09-28):** `na` subsets and `dropDuplicates` follow the
+  rule — under `true` a folded or missing subset name refuses
+  (`[UNRESOLVED_COLUMN.WITH_SUGGESTION]` for `fillna` / `dropna`, Spark's
+  legacy `Cannot resolve column name …` text for `dropDuplicates`), under
+  `false` subsets match ignoring case over the null table and the
+  `dropDuplicates` miss raises the legacy text. The `na` overlay path folds
+  like the plain path.
 - **Apache Spark** — the refusals and answers above. *(oracle: recorded —
   PySpark 4.1.2 + Iceberg 1.11, 2026-09-27, `casesens_1_spark_oracle.json`
   (210 steps) beside the facade pin; 2026-09-28, `casesens_2_spark_oracle.json`
@@ -2387,6 +2394,12 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   `crates/repark-core/src/session/df_guards/written_names.rs::tests`
   (`display_match_fans_out_under_ignore_case_and_is_exact_under_exact`).
   pins: casesens-2/C-002, C-004, C-006
+  **CASESENS-2 S3 (2026-09-28):** `python/repark/tests/test_casesens_2.py`
+  (`test_s3_fillna_follows_the_rule`, `test_s3_dropna_follows_the_rule`,
+  `test_s3_drop_duplicates_follows_the_rule`);
+  `crates/repark-core/src/session/df_guards/written_names.rs::tests`
+  (`subset_names_fan_out_and_miss_with_the_legacy_text`).
+  pins: casesens-2/C-002, C-005, C-006
 - **Rationale** — FIXED; every true-mode refusal is Spark's measured text, its
   head with the candidate set, or the recorded legacy text, and the default
   session is unchanged.

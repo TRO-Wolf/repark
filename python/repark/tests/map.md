@@ -225,6 +225,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and twin fan-out under `false`), folded keys refuse 42711, and the overlay
   replace set pins display-spelled (R7).
   pins: casesens-2/C-002, C-004, C-006
+  **WO CASESENS-2 slice 3 (2026-09-28):** `fillna` / `dropna` subsets and
+  `dropDuplicates` follow the rule (folded or missing subset names refuse
+  under `true`; subsets fold under `false` over the null table and the
+  `dropDuplicates` miss raises the legacy text, type plus message per R8),
+  with the `na` overlay path pinned beside the plain path. The sweep and
+  replay evidence below covers the no-regressions clause.
+  pins: casesens-2/C-002, C-005, C-006, C-008
 - [test_ntz_1.py](test_ntz_1.py) + `ntz_1_spark_oracle.json` — **WO NTZ-1 slice 1
   (2026-09-26):** the `TIMESTAMP_NTZ` literal and explicit casts replay Spark's measured
   answers — 29 literal/cast/refusal queries in UTC and New York sessions, the v2/v3

@@ -23,7 +23,14 @@ rule. Under ``true`` a folded key appends and a folded rename no-ops; under
 ``false`` renames fan out to twins and folded ``withColumns`` keys refuse
 ``COLUMN_ALREADY_EXISTS``. The overlay pin guards display-spelling replace.
 
-pins: casesens-2/C-001, C-002, C-003, C-004, C-006
+Slice 3 (same file): ``fillna`` / ``dropna`` subsets and ``dropDuplicates``
+resolve in Rust. Under ``true`` a folded or missing subset name refuses
+(``UNRESOLVED_COLUMN`` for ``na``, Spark's legacy subset text for
+``dropDuplicates``); under ``false`` subsets match ignoring case (over the
+null table for ``na``) and the ``dropDuplicates`` miss raises the legacy
+text. Legacy legs assert type plus message only (R8).
+
+pins: casesens-2/C-001, C-002, C-003, C-004, C-005, C-006
 """
 
 from __future__ import annotations
@@ -370,3 +377,94 @@ def test_s2_overlay_replace_unchanged(tmp_path: Path) -> None:
         assert _rows(replaced) == [[9, 9], [9, 9]]
     finally:
         session.stop()
+
+
+def _setup_tables_null(session: ReparkSession) -> None:
+    """Create the probe's null table sc.ns.tn (S3)."""
+    session.sql("CREATE NAMESPACE IF NOT EXISTS sc.ns").collect()
+    session.sql("CREATE TABLE sc.ns.tn (id INT, Data STRING) USING iceberg").collect()
+    session.sql("INSERT INTO sc.ns.tn VALUES (1, NULL), (NULL, 'b')").collect()
+
+
+def _setup_tables_p4(session: ReparkSession) -> None:
+    """Create the probe-4 struct-less table sc.ns.t (S3)."""
+    session.sql("CREATE NAMESPACE IF NOT EXISTS sc.ns").collect()
+    session.sql("CREATE TABLE sc.ns.t (id INT, Data STRING) USING iceberg").collect()
+    session.sql("INSERT INTO sc.ns.t VALUES (1, 'a'), (2, 'b')").collect()
+
+
+def _assert_legacy_step(session: ReparkSession, key: str) -> None:
+    """Run one oracle step whose refusal pins type plus message only (R8, S3)."""
+    step = _oracle(key)
+    session.conf.set("spark.sql.caseSensitive", "true" if step["case_sensitive"] else "false")
+    spark = step["spark"]
+    try:
+        _run_df(session, step["statement"]).collect()
+    except Exception as error:
+        assert type(error).__name__ == spark["error"], key
+        assert _plain_message(str(error)) == _plain_message(spark["msg"]), key
+    else:
+        raise AssertionError(f"{key} answered instead of refusing")
+
+
+def test_s3_fillna_follows_the_rule(tmp_path: Path) -> None:
+    """fillna subsets fold under false and refuse under true."""
+    session = _open(tmp_path)
+    try:
+        _setup_tables(session)
+        _setup_tables_null(session)
+        _assert_df_step(session, "p6/fill_null_false")
+        _assert_df_step(session, "p6/fill_null_true")
+        _assert_df_step(session, "p6/fill_subset_nope_true")
+    finally:
+        session.stop()
+    plain_session = _open(tmp_path / "plain")
+    try:
+        _setup_tables_p4(plain_session)
+        _assert_df_step(plain_session, "p4/df_fillna_true")
+    finally:
+        plain_session.stop()
+
+
+def test_s3_dropna_follows_the_rule(tmp_path: Path) -> None:
+    """dropna subsets fold under false, on the plain and overlay paths."""
+    session = _open(tmp_path)
+    try:
+        _setup_tables_null(session)
+        _assert_df_step(session, "p6/dropna_subset_false")
+        _assert_df_step(session, "p6/dropna_subset_true")
+        session.conf.set("spark.sql.caseSensitive", "false")
+        overlay = session.table("sc.ns.tn").select(
+            functions.col("id").alias("ID"), functions.col("Data").alias("ID")
+        )
+        assert overlay.columns == ["ID", "ID"]
+        dropped = overlay.dropna(subset=["id"])
+        assert _dtypes(dropped) == [["ID", "int"], ["ID", "string"]]
+        assert _rows(dropped) == []
+        dup = session.table("sc.ns.tn").select(
+            functions.col("Data").alias("X"), functions.col("Data").alias("X")
+        )
+        filled = dup.fillna("z", subset=["x"])
+        assert _dtypes(filled) == [["X", "string"], ["X", "string"]]
+        assert _rows(filled) == [["b", "b"], ["z", "z"]]
+    finally:
+        session.stop()
+
+
+def test_s3_drop_duplicates_follows_the_rule(tmp_path: Path) -> None:
+    """dropDuplicates subsets fold under false; misses raise the legacy text."""
+    session = _open(tmp_path)
+    try:
+        _setup_tables(session)
+        _assert_df_step(session, "p1/r7_dropDuplicates_ID")
+        _assert_df_step(session, "p6/dd_exact_true")
+        _assert_legacy_step(session, "p6/dd_nope_true")
+        _assert_legacy_step(session, "p6/dd_nope_false")
+    finally:
+        session.stop()
+    plain_session = _open(tmp_path / "plain")
+    try:
+        _setup_tables_p4(plain_session)
+        _assert_legacy_step(plain_session, "p4/df_dropDuplicates_true")
+    finally:
+        plain_session.stop()

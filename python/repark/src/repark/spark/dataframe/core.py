@@ -3173,19 +3173,14 @@ class DataFrame:
         names = _normalize_subset(subset, accept_str=False, allowed_phrase="a list or tuple")
         if names is None:
             return self._spawn_preserving_identity(self._plan().distinct())
-        resolved: list[str] = []
+        subset = [self._name_of(item) for item in names]
+        matched = written_names._match_subset_names(self, subset)
         if self._display_names is not None and self._engine_names is not None:
-            want = {self._name_of(item) for item in names}
-            for display, engine in zip(self._display_names, self._engine_names, strict=True):
-                if display in want:
-                    resolved.append(engine)
-            if not resolved:
-                for item in names:
-                    resolved.append(self._resolve_getitem_column_name(self._name_of(item)))
+            want = set(matched)
+            pairs = zip(self._display_names, self._engine_names, strict=True)
+            resolved = [engine for display, engine in pairs if display in want]
         else:
-            for item in names:
-                held = self._resolve_getitem_column_name(self._name_of(item)).casefold()
-                resolved.extend(name for name in self.columns if name.casefold() == held)
+            resolved = list(matched)
         all_engine = (
             list(self._engine_names) if self._engine_names is not None else list(self.columns)
         )

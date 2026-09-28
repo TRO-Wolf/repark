@@ -149,6 +149,14 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   behind the `frame_is_exact` gate under `Exact` (the raising R5 matcher
   cannot serve append/no-op sites), exact-duplicate hits left alone (R-22).
   `core.py` holds 3973. pins: casesens-2/C-002, C-004, C-006
+  CASESENS-2 S3 (2026-09-28): the subset body behind the na and
+  `drop_duplicates` call sites — `_match_lenient_subset` (misses match
+  nothing under `IgnoreCase`, refuse natively under `Exact`) and
+  `_match_subset_names` (fan-out under `IgnoreCase`, exact hits under
+  `Exact`, the legacy subset text on a miss under both rules). `core.py`
+  3973 → 3968 (ceilings ratcheted; the helper stays per the 2026-09-28
+  ruling, residue R-CS2-6). The unit diff adds zero matchers (grep).
+  pins: casesens-2/C-002, C-005, C-006, C-007
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`

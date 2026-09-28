@@ -71,6 +71,32 @@ def _bind_written_column(frame: DataFrame, name: str) -> Column:
     )
 
 
+def _match_lenient_subset(frame: DataFrame, subset: list[str]) -> list[str]:
+    """Match na subset names against bound displays by the session rule.
+
+    Under IgnoreCase every hit matches and misses match nothing; under
+    Exact misses refuse natively.
+    """
+    plan = frame._plan()
+    matched: list[str] = []
+    for _written, hits, _disposition in _native.match_display_names(plan, subset, frame.columns):
+        matched.extend(hits)
+    return matched
+
+
+def _match_subset_names(frame: DataFrame, subset: list[str]) -> list[str]:
+    """Match dropDuplicates subset names against bound displays by the session rule.
+
+    Return every hit in subset order (fan-out under IgnoreCase, exact hits
+    under Exact). Misses refuse with Spark's legacy subset text under both rules.
+    """
+    plan = frame._plan()
+    matched: list[str] = []
+    for _written, hits in _native.match_subset_names(plan, subset, frame.columns):
+        matched.extend(hits)
+    return matched
+
+
 def _refuse_folded_with_columns_keys(frame: DataFrame, keys: list[str]) -> None:
     """Refuse folded withColumns keys under IgnoreCase (COLUMN_ALREADY_EXISTS).
 

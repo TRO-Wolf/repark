@@ -14,6 +14,7 @@ from repark.errors import (
 from repark.spark.column import Column
 from repark.spark.dataframe.core import DataFrame, _normalize_subset
 from repark.spark.dataframe.replace_expr import _NO_VALUE
+from repark.spark.dataframe.written_names import _match_lenient_subset
 from repark.spark.types import DataType, StructField, StructType
 
 logger = logging.getLogger("repark.spark.dataframe")
@@ -204,6 +205,7 @@ class DataFrameNaFunctions:
             )
         # Multi-name frames need display names for target matching and engine names for types.
         frame = self._dataframe
+        hits = set(_match_lenient_subset(frame, subset)) if subset is not None else None
         if frame._display_names is not None and frame._engine_names is not None:
             # The display overlay must not drive type lookup.
             engine_types = {
@@ -232,7 +234,7 @@ class DataFrameNaFunctions:
             }
             names_out: list[str] = []
             for display, engine in zip(frame._display_names, frame._engine_names, strict=True):
-                if subset is not None and display not in subset:
+                if hits is not None and display not in hits:
                     continue
                 type_key = engine_types.get(engine, "")
                 type_cls = key_to_cls.get(type_key.split("(")[0])
@@ -240,9 +242,8 @@ class DataFrameNaFunctions:
                     names_out.append(display)
             return names_out
         fields = frame.schema.fields
-        if subset is not None:
-            subset_set = set(subset)
-            fields = [field for field in fields if field.name in subset_set]
+        if hits is not None:
+            fields = [field for field in fields if field.name in hits]
         return [field.name for field in fields if isinstance(field.dataType, allowed)]
 
     def drop(
@@ -276,7 +277,7 @@ class DataFrameNaFunctions:
         elif (
             self._dataframe._display_names is not None and self._dataframe._engine_names is not None
         ):
-            want = set(names)
+            want = set(_match_lenient_subset(self._dataframe, names))
             bound_cols = [
                 self._dataframe._bind_engine_display_column(display, engine)
                 for display, engine in zip(
