@@ -1,3 +1,84 @@
+## Errata — 2026-09-28: PR #874 external review remediation
+
+ACTOR_REMEDIATE, STANDARD path. Owner requests C874-1 through C874-4 repaired and
+C874-5 documented for an owner ruling. No merge or policy amendment is authorized.
+The original completed record below is preserved. This erratum closes when the repair
+is reviewed and the updated PR is handed back.
+
+SLR-C874-1: PROCEED. C-001/C-002 cover tracked path handling and map link rejection;
+C-007 covers hook and dependency gate wiring. Preserve selected-index semantics, retain
+legacy rejection coverage alongside GFM parsing, and never use a reported Rust defect as
+a fallback trigger. Tests must reproduce the reported gaps before remediation. Supply-chain
+scope explicitly includes the standalone manifest, both audit workflows and Dependabot.
+Policy scope is an inventory of conflicting text only; no policy choice is inferred.
+
+C874-1 through C874-4 are REMEDIATED with the evidence below. C874-5 remains an
+owner decision flag. No policy resolution or merge readiness is claimed.
+Disk before testing: 905 GB free. Existing compiler and engine caches remain shared in this clone.
+
+### C874-5 policy decision inventory (2026-09-28)
+
+The owner requested flags only. No contract, contributor guide or skill policy is changed.
+The decision is whether an unchanged managed inventory excuses a same-change map edit.
+If approved, reconcile all these live statements together; if declined, remove the exception
+in the map lockstep guard and its tests instead. PR readiness does not settle this decision.
+
+| Home | Conflicting text or dependent behavior |
+|---|---|
+| AGENTS.md, hard rules, lines 127–130 | The new managed-map exception says stable inventories need no edits. |
+| AGENTS.md, document lifecycle, line 252 | Navigation maps require lockstep in the same commit. |
+| PROJECT.md, line 85 | Maps require lockstep with code changes. |
+| CONTRIBUTING.md, lines 32–34 | Directory maps must change in the same pull request as code. |
+| DEVELOPMENT.md, lines 47 and 110 | Branch guard and troubleshooting require the map in the same branch diff. |
+| compact-context-docs SKILL.md, lines 33–34 and 64–65 | Touched directories must update their maps in the same commit. |
+| SEPMO binding-manifest.md, line 34 | Navigation binds mandatory lockstep; line 39 also names the old Python drift-gate wiring. |
+| scripts/check_map_md.sh and compiler hook tests | Managed-inventory bypass implements the new exception and must follow the ruling. |
+
+Related stale workflow documentation is a wiring fact, not a policy ruling: the ci.yml row
+in `.github/workflows/map.md` now names the Rust combined docs/ledger target.
+
+### Remediation evidence and independent review
+
+| Finding | Disposition | Regression evidence |
+|---|---|---|
+| C874-1 (S1), C-002 | REMEDIATED | `maps_compat.rs`: Python/Rust real-tree baseline, copied real corpus with the reported table target changed, each legacy rejection class, positive controls and both Git snapshots. GFM tables are enabled; the legacy scan is retained, including Python line separators. |
+| C874-2 (S3), C-001 | REMEDIATED | `tracked_backslash_does_not_break_any_checker` compares all three checkers. POSIX backslashes are filename bytes; traversal validation remains. |
+| C874-3 (S3), C-002/C-007 | REMEDIATED | `test_repo_tool_fallback.py`: no Cargo, failed build, Rust finding without fallback, staged/unstaged and alternate/temporary indices, actual installed hook, deleted Cargo manifest, unsupported syntax and path boundaries. |
+| C874-4 (S3), C-007 | REMEDIATED | Both lockfiles pass the Make audit/deny targets. CI mirrors them; Dependabot names the standalone directory; the crate declares Apache-2.0. Configuration inspection and the actual audit/deny executions prove this wiring change. |
+| C874-5 (S3) | ACCEPTED_FLAGGED for review, owner ruling required before merge | The policy inventory above names each conflicting home. The owner requested flags, not a policy amendment. |
+
+The initial map differential run failed all three new tests on the original implementation
+(`/tmp/c874-maps-red.log`); a separate line-separator probe failed before its correction
+(`/tmp/c874-lines-red.log`). The final map suite includes four differential tests alongside
+21 existing map tests. `make repo-tool-check` passes all 85 Rust tests and 18 fallback tests.
+`/tmp/c874-final-scoped.log` also records green Python lint/format and docs/map/lifecycle gates.
+The actual staged corpus passes all 338 maps through the Python fallback
+(`/tmp/c874-fallback-real-index.log`). The complete Python harness passes 700 tests with
+5 skipped (`/tmp/c874-py-test.log`). Both Cargo workspaces pass audit/deny, and all 13 workflows
+parse with no unsuppressed security findings (`/tmp/c874-supply-chain.log`).
+
+Fresh independent Sol critics re-attested the affected paths. The map reviewer executed
+novel public CLI cases for HTML, tables, wrapped duplicate rows, staged isolation, valid
+parent traversal and all Python line separators. The fallback reviewer attacked AT-1 through
+AT-10 and found four additional S1 false-pass classes during remediation: map symlinks, fenced
+managed markers, reference definitions, and escaping links including parser-only syntax.
+Each was reproduced, fixed and pinned; the reviewer rechecked the fixes and converged with
+no open S1. Valid within-repository parent links still pass. The fallback deliberately refuses
+reference definitions and ambiguous link syntax that needs Rust; it never retries a Rust
+checker finding through Python. This is a conservative hook fallback, not a replacement for
+mandatory Rust CI checks. Existing F-checks-5 remains the previously recorded S2 flag.
+
+The 2026-09-27 full preflight remains evidence for unchanged engine/facade/dbt behavior.
+The current `make -k verify` exited 0: 5,958 Rust/compiler tests passed, 8 ignored
+(`/tmp/c874-verify.log`). The final scoped run rechecked the compiler, fallback and Python/static
+gates after the last fallback edit. Independent readiness audit `RA-C874-repair` passed the
+local scope, coverage, findings and trace checks: `READY_FOR_DRAFT_UPDATE`. Required remote CI
+on the new head and the C874-5 owner ruling remain merge gates. No merge is authorized.
+
+Final disk check: 892 GB free. Critic and test fixtures were cleaned by their owners. This
+isolated checkout, its existing build caches and validation logs remain available for PR review.
+
+
 ## Errata — 2026-09-27: PR Python integration remediation
 
 PR #874's first Python CI run found two map-guard integration regressions that the local

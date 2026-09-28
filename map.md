@@ -261,3 +261,5 @@ Repository compiler: [scripts/repo-tool/map.md](scripts/repo-tool/map.md).
 
 The [worktree checks](scripts/repo-tool/CHECKS.md) run docs links and ledger grammar together
 through `make check-repo-docs`. Their named Make targets remain available separately.
+
+The audit targets cover both Cargo workspaces, including `scripts/repo-tool/Cargo.lock`.

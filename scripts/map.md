@@ -1525,3 +1525,9 @@ U11-EDGE-1 round 6 (2026-09-26): `check_lib_py.py` ratchets `dataframe/core.py` 
 
 - [repo-tool/map.md](repo-tool/map.md) — standalone Rust repository compiler.
 - [repo-tool.sh](repo-tool.sh) — cached release build and command entry point.
+
+## Hook fallback
+
+- [repo-tool-fallback.py](repo-tool-fallback.py) checks the active Git index with the retained Python map validator when Cargo cannot build the Rust tool. It materializes staged maps and target names in a temporary directory, so unstaged text cannot mask a staged broken link. It rejects symlinked maps, fenced managed markers, reference-definition headers, inline syntax the retained scanner cannot recognize, escaped destinations it cannot decode, and links that leave the repository after URL decoding. This conservative refusal can block a valid map until Rust is available.
+- [repo-hook-cargo.sh](repo-hook-cargo.sh) runs the crate-DAG guard for staged Cargo manifest additions, edits, or removals and formatting for staged Rust. A docs-only index does not need Cargo; relevant changes fail closed without it.
+- [test_repo_tool_fallback.py](test_repo_tool_fallback.py) pins missing Cargo, build failure, Rust checker failure, managed/reference checks, a custom index, and an installed hook handling `git commit -a`'s temporary index. The wrapper only falls back before a Rust checker runs. pins: repo-compiler/C-002, C-007

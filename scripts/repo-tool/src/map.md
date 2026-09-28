@@ -6,7 +6,9 @@
 `cache.rs` retains structural results. The other modules own their named command.
 Runtime workflow evidence is explicit and cannot be replaced by a cached structural result.
 Map and context inputs have explicit scopes. Runtime evidence requires the full snapshot.
-Map link diagnostics index newline positions once per file.
+Map link diagnostics index newline positions once per file. GFM parsing and the legacy
+line scan both validate links; intermediate path components must exist as directories.
+Tracked POSIX backslashes remain filename bytes.
 
 `validation.rs` shares worktree inputs for `docs_links.rs` and `ledger_grammar.rs`.
 `ledger_records.rs` parses legacy ledger forms. Compatibility details live in

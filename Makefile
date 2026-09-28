@@ -405,20 +405,22 @@ check-map-sync: ## map.md CONTENT guard: every relative link in every map resolv
 # ------------------------------------------------------------------------------------------------
 
 .PHONY: rust-audit
-rust-audit: ## cargo audit — RustSec CVE scan (ignores in .cargo/audit.toml)
+rust-audit: ## cargo audit — RustSec CVE scan of both Cargo lockfiles (ignores in .cargo/audit.toml)
 	@# VERSION-enforcing, not presence-checking: `command -v` alone lets local run one version
 	@# while CI runs the pin, silently breaking local==CI.
 	@[ "$$(cargo-audit --version 2>/dev/null | awk '{print $$2}')" = "$(CARGO_AUDIT_VERSION)" ] \
 		|| cargo install cargo-audit --locked --version $(CARGO_AUDIT_VERSION) --force
 	cargo audit
+	cargo audit --file scripts/repo-tool/Cargo.lock
 
 .PHONY: rust-deny
-rust-deny: ## cargo deny check all — licenses/bans/sources (deny.toml; mirrors cargo-deny.yml)
+rust-deny: ## cargo deny check all — both Cargo workspaces, licenses/bans/sources (deny.toml; mirrors cargo-deny.yml)
 	@# VERSION-enforcing — see rust-audit. Pin must match .github/workflows/cargo-deny.yml
 	@# (cargo-deny@$(CARGO_DENY_VERSION)).
 	@[ "$$(cargo-deny --version 2>/dev/null | awk '{print $$2}')" = "$(CARGO_DENY_VERSION)" ] \
 		|| cargo install cargo-deny --locked --version $(CARGO_DENY_VERSION) --force
 	cargo deny check all
+	cargo deny --manifest-path scripts/repo-tool/Cargo.toml --locked check --config deny.toml all
 
 .PHONY: workflows-lint
 workflows-lint: workflows-parse ## zizmor over .github/workflows — BLOCKING, like CI (mirrors zizmor.yml)
@@ -482,7 +484,7 @@ install-hooks: ## Wire .git/hooks/pre-commit to map.md lockstep + map.md links +
 	@# check_docstring_presence.sh joined at PYC-6: n=5 median 0.13 s (uvx ruff JSON +
 	@# ratchet compare), well inside the sub-second hook budget.
 	@# check_docs_compaction.py joined at DL-4: n=5 median 0.05 s (pure text + one `git ls-files`).
-	@printf '#!/usr/bin/env bash\nset -e\nscripts/check_map_md.sh\nscripts/repo-tool.sh --snapshot index maps --check\nscripts/check_crate_dag.sh\nscripts/check_lib_rs.sh\nscripts/check_rust_file_size.sh\nscripts/check_lib_py.sh\nscripts/check_docstring_presence.sh\npython3 scripts/check_docs_compaction.py\nscripts/check_manifest.sh\ncargo fmt --check\n$(TAPLO) format --check\n$(TAPLO) lint\n$(TYPOS)\n' > .git/hooks/pre-commit
+	@printf '#!/usr/bin/env bash\nset -e\nscripts/check_map_md.sh\nscripts/repo-tool.sh --snapshot index maps --check\nscripts/repo-hook-cargo.sh dag\nscripts/check_lib_rs.sh\nscripts/check_rust_file_size.sh\nscripts/check_lib_py.sh\nscripts/check_docstring_presence.sh\npython3 scripts/check_docs_compaction.py\nscripts/check_manifest.sh\nscripts/repo-hook-cargo.sh fmt\n$(TAPLO) format --check\n$(TAPLO) lint\n$(TYPOS)\n' > .git/hooks/pre-commit
 	@chmod +x .git/hooks/pre-commit
 	@echo "installed .git/hooks/pre-commit"
 
@@ -492,6 +494,7 @@ repo-tool-check:
 	CARGO_BUILD_JOBS=2 cargo clippy --locked --manifest-path scripts/repo-tool/Cargo.toml --all-targets -- -D warnings -A clippy::disallowed_methods
 	CARGO_BUILD_JOBS=2 cargo clippy --locked --manifest-path scripts/repo-tool/Cargo.toml --lib --bin repark-repo -- -D warnings -D clippy::disallowed_methods
 	CARGO_BUILD_JOBS=2 cargo test --locked --manifest-path scripts/repo-tool/Cargo.toml
+	python3 scripts/test_repo_tool_fallback.py
 
 maps:
 	scripts/repo-tool.sh maps --write $(ARGS)

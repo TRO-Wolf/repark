@@ -34,3 +34,5 @@ jobs:
           tool: cargo-audit@0.22.1
       - name: cargo audit
         run: cargo audit
+      - name: cargo audit repository tool
+        run: cargo audit --file scripts/repo-tool/Cargo.lock

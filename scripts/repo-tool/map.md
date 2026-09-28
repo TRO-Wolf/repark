@@ -12,6 +12,8 @@ The [unit ledger](../../task/ledgers/completed/repo-compiler-ledger.md) records 
 `context.json` approves source lists. `gates.json` declares target and pin checks.
 
 [CHECKS.md](CHECKS.md) records docs-link and ledger-grammar compatibility.
+The standalone Cargo workspace has its own lockfile. `make audit` checks it alongside the engine
+workspace; Dependabot tracks both workspaces separately.
 
 ## Debug
 

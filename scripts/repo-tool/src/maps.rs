@@ -1,7 +1,7 @@
 use crate::repository::{Repository, validate_relative};
 use anyhow::{Result, bail};
 use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, percent_decode_str, utf8_percent_encode};
-use pulldown_cmark::{Event, Parser, Tag, TagEnd};
+use pulldown_cmark::{Event, Options as MarkdownOptions, Parser, Tag, TagEnd};
 use regex::Regex;
 use serde::Serialize;
 use serde_json::Value;
@@ -69,10 +69,18 @@ pub fn run(repository: &Repository, arguments: &[String]) -> Result<Value> {
     if maps.is_empty() {
         bail!("no maps in snapshot");
     }
+    let patterns = LegacyPatterns::new()?;
     let mut diagnostics = Vec::new();
     let mut written = Vec::new();
     for path in &maps {
-        process_map(repository, path, &options, &mut diagnostics, &mut written)?;
+        process_map(
+            repository,
+            path,
+            &options,
+            &patterns,
+            &mut diagnostics,
+            &mut written,
+        )?;
     }
     Ok(serde_json::to_value(Output {
         ok: diagnostics.is_empty(),
@@ -148,6 +156,7 @@ fn process_map(
     repository: &Repository,
     path: &str,
     options: &Options,
+    patterns: &LegacyPatterns,
     diagnostics: &mut Vec<String>,
     written: &mut Vec<String>,
 ) -> Result<()> {
@@ -196,7 +205,7 @@ fn process_map(
                 "{path}: managed contents differ from snapshot inventory"
             ));
         }
-        check_links(repository, path, old, diagnostics);
+        check_links(repository, path, old, patterns, diagnostics);
         if options.strict {
             check_coverage(repository, path, old, diagnostics)?;
         }
@@ -364,10 +373,11 @@ fn local_target(target: &str) -> Option<&str> {
     Some(value.split('#').next().unwrap_or(""))
 }
 
-fn resolve(map: &str, target: &str) -> std::result::Result<String, &'static str> {
-    let decoded = percent_decode_str(target)
-        .decode_utf8()
-        .map_err(|_| "invalid UTF-8 link")?;
+fn resolve(
+    repository: &Repository,
+    map: &str,
+    decoded: &str,
+) -> std::result::Result<String, &'static str> {
     if decoded.starts_with('/') {
         return Err("absolute path");
     }
@@ -375,7 +385,8 @@ fn resolve(map: &str, target: &str) -> std::result::Result<String, &'static str>
         .split('/')
         .filter(|part| !part.is_empty())
         .collect();
-    for part in decoded.split('/') {
+    let mut components = decoded.split('/').peekable();
+    while let Some(part) = components.next() {
         match part {
             "" | "." => {}
             ".." => {
@@ -385,18 +396,40 @@ fn resolve(map: &str, target: &str) -> std::result::Result<String, &'static str>
             }
             other => parts.push(other),
         }
+        if components.peek().is_some() && !parts.is_empty() {
+            let prefix = format!("{}/", parts.join("/"));
+            if !repository
+                .paths
+                .range(prefix.clone()..)
+                .next()
+                .is_some_and(|path| path.starts_with(&prefix))
+            {
+                return Err("missing or non-directory link component");
+            }
+        }
     }
     Ok(parts.join("/"))
 }
 
-fn check_links(repository: &Repository, map: &str, text: &str, diagnostics: &mut Vec<String>) {
+fn check_links(
+    repository: &Repository,
+    map: &str,
+    text: &str,
+    patterns: &LegacyPatterns,
+    diagnostics: &mut Vec<String>,
+) {
     let mut seen = BTreeMap::new();
     let managed = marker_span(text).ok().flatten();
     let mut item_stack = Vec::new();
     let line_starts: Vec<_> = std::iter::once(0)
-        .chain(text.match_indices('\n').map(|(index, _)| index + 1))
+        .chain(
+            patterns
+                .line_breaks
+                .find_iter(text)
+                .map(|delimiter| delimiter.end()),
+        )
         .collect();
-    for (event, range) in Parser::new(text).into_offset_iter() {
+    for (event, range) in Parser::new_ext(text, MarkdownOptions::ENABLE_TABLES).into_offset_iter() {
         match event {
             Event::Start(Tag::Item) => item_stack.push(false),
             Event::End(TagEnd::Item) => {
@@ -423,6 +456,9 @@ fn check_links(repository: &Repository, map: &str, text: &str, diagnostics: &mut
             _ => {}
         }
     }
+    patterns.check(repository, map, text, managed, diagnostics);
+    let mut unique = BTreeSet::new();
+    diagnostics.retain(|diagnostic| unique.insert(diagnostic.clone()));
 }
 
 fn validate_link(
@@ -435,7 +471,11 @@ fn validate_link(
     if let Some(local) = local_target(target)
         && !local.is_empty()
     {
-        match resolve(map, local) {
+        match percent_decode_str(local)
+            .decode_utf8()
+            .map_err(|_| "invalid UTF-8 link")
+            .and_then(|decoded| resolve(repository, map, &decoded))
+        {
             Ok(path) if repository.contains(&path) => {}
             Ok(_) => diagnostics.push(format!("{map}:{number}: dead link: {local}")),
             Err(problem) => {
@@ -475,4 +515,112 @@ fn check_coverage(
         }
     }
     Ok(())
+}
+
+struct LegacyPatterns {
+    links: Regex,
+    spans: Regex,
+    fence: Regex,
+    item: Regex,
+    line_breaks: Regex,
+}
+
+impl LegacyPatterns {
+    fn new() -> Result<Self> {
+        Ok(Self {
+            links: Regex::new(
+                r#"\[[^\]]*\]\(\s*(<[^<>]*>|(?:[^()\s]|\([^()]*\))*)(?:\s+"[^"]*")?\s*\)"#,
+            )?,
+            spans: Regex::new(r"`[^`]*`")?,
+            fence: Regex::new(r"^\s*(?:```|~~~)")?,
+            item: Regex::new(r"^\s*(?:[-*+]|\d+\.)\s")?,
+            line_breaks: Regex::new(r"\r\n|[\n\r\x0b\x0c\x1c-\x1e\u{85}\u{2028}\u{2029}]")?,
+        })
+    }
+
+    fn targets(&self, line: &str) -> Vec<String> {
+        let text = self.spans.replace_all(line, "");
+        self.links
+            .captures_iter(&text)
+            .filter_map(|capture| capture.get(1))
+            .map(|target| {
+                let target = target.as_str().trim();
+                target
+                    .strip_prefix('<')
+                    .and_then(|value| value.strip_suffix('>'))
+                    .unwrap_or(target)
+                    .trim()
+                    .to_owned()
+            })
+            .collect()
+    }
+
+    fn check(
+        &self,
+        repository: &Repository,
+        map: &str,
+        text: &str,
+        managed: Option<(usize, usize)>,
+        diagnostics: &mut Vec<String>,
+    ) {
+        let mut lines = Vec::new();
+        let mut start = 0;
+        for delimiter in self.line_breaks.find_iter(text) {
+            lines.push((start, &text[start..delimiter.start()]));
+            start = delimiter.end();
+        }
+        if start < text.len() {
+            lines.push((start, &text[start..]));
+        }
+        let mut fenced = false;
+        let mut seen = BTreeMap::new();
+        for (index, (offset, line)) in lines.iter().enumerate() {
+            let in_managed = managed.is_some_and(|(start, end)| (start..end).contains(offset));
+            if self.fence.is_match(line) {
+                fenced = !fenced;
+                continue;
+            }
+            if fenced || in_managed {
+                continue;
+            }
+            for target in self.targets(line) {
+                if let Some(local) = local_target(&target)
+                    && !local.is_empty()
+                {
+                    match resolve(repository, map, local) {
+                        Ok(path) if repository.contains(&path) => {}
+                        Ok(_) => {
+                            diagnostics.push(format!("{map}:{}: dead link: {local}", index + 1));
+                        }
+                        Err(problem) => diagnostics
+                            .push(format!("{map}:{}: link {local}: {problem}", index + 1)),
+                    }
+                }
+            }
+            if self.item.is_match(line) {
+                let continuation =
+                    lines[index + 1..]
+                        .iter()
+                        .map(|(_, line)| line)
+                        .take_while(|next| {
+                            !next.trim().is_empty()
+                                && next.starts_with([' ', '\t'])
+                                && !self.item.is_match(next)
+                        });
+                let target = std::iter::once(line)
+                    .chain(continuation)
+                    .find_map(|row| self.targets(row).into_iter().next());
+                if let Some(target) = target {
+                    if let Some(first) = seen.get(&target) {
+                        diagnostics.push(format!(
+                            "{map}:{}: duplicate row: {target} first appears at line {first}",
+                            index + 1
+                        ));
+                    } else {
+                        seen.insert(target, index + 1);
+                    }
+                }
+            }
+        }
+    }
 }

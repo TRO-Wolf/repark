@@ -207,7 +207,6 @@ pub fn validate_relative(path: &str) -> Result<()> {
         || path
             .split('/')
             .any(|part| part.is_empty() || part == "." || part == "..")
-        || path.contains('\\')
         || Path::new(path)
             .components()
             .any(|component| !matches!(component, Component::Normal(_)))
