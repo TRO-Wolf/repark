@@ -20,13 +20,16 @@ pub(crate) async fn read_parquet_nullable(
     context: &SessionContext,
     path: &str,
 ) -> DataFusionResult<DataFrame> {
+    let resolved = crate::object_store_s3::resolve_s3_prefix_for_read(context, path)
+        .await
+        .map_err(|error| datafusion::error::DataFusionError::External(error.to_string().into()))?;
     let inferred = context
-        .read_parquet(path, ParquetReadOptions::default())
+        .read_parquet(&resolved, ParquetReadOptions::default())
         .await?;
     let relaxed = relax_schema_to_nullable(inferred.schema().as_arrow());
     let sparked = promote_parquet_null_types(&relaxed);
     context
-        .read_parquet(path, ParquetReadOptions::default().schema(&sparked))
+        .read_parquet(&resolved, ParquetReadOptions::default().schema(&sparked))
         .await
 }
 

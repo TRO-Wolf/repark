@@ -480,6 +480,26 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   check before reaching the fork. All three pins are red at fork `6e937f49`
   (`Cannot build lower case index: a and A collide`) and green at `e1d74bef`.
   pins: rp-56/C-001
+- `casesens_scopes.rs` — **WO CASESENS-1 slice 1 (2026-09-27):** nested scopes
+  keep the written spelling — derived and CTE projections (`r5_subq_inner_ID`,
+  `r5_cte_ID`, `r5_cte_mixed`, `r5_union_subq`, `n_nested2`, `n_join_derived`),
+  the column-alias list (`Kay`), the already-equal shapes (incl. `r5_subq_both`
+  through the D1 fallback), the MERGE derived source (`r30_*`) and another-case
+  DML — names and rows each. **S1b (2026-09-27):**
+  `cte_outer_reference_in_another_case_binds` (`r5_cte_outer`),
+  `catalog_view_body_keeps_its_spelling` (`r5_view_star`, `r5_view_lower`,
+  `r5_view2_upper`; `r5_view_describe` unchanged) and
+  `twin_cte_outputs_still_refuse` (the `SELECT 1 AS a, 2 AS A` CTE body keeps
+  its refusal; the shape is unmeasured against Spark). **Fold round
+  (2026-09-27):** `derived_and_cte_projections_keep_the_written_spelling`
+  gains the `SELECT * FROM (SELECT 1 AS ID)` leg (answers `ID`; unmeasured —
+  no probe key records an expression-alias output name). **Verifier fold
+  (2026-09-28, VC-2):** four pins keep a `VALUES` body from shifting later
+  scopes — `values_derived_table_first_keeps_later_spellings`,
+  `values_cte_keeps_later_spellings`,
+  `values_body_in_the_middle_keeps_later_spellings` and
+  `values_left_set_operation_keeps_later_spellings`, names and rows each.
+  pins: casesens-1/C-001, C-002, C-003, C-004
 - `decimal.rs` — the Spark-door decimal128 pins at `i128` precision: result `(p,s)`, value,
   and nullability for the G2/G13 corpus shapes. **CUTOVER-SCHEMA-1 (2026-09-04):**
   `pin_int_times_decimal_is_12_2_i128` and `pin_mul_single_digit_nullability_non_null_i128`
@@ -1909,6 +1929,16 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   garbage, numeric-source/target refusals, the LTZ epoch-seconds guard, the nested R4
   refusal, and the literal reaching INSERT VALUES / INSERT SELECT / UPDATE / DELETE /
   MERGE / CTAS. pins: ntz-1/C-001, C-002, C-004, C-005
+
+- `ntz_store.rs` — **WO NTZ-1 slice 2 (2026-09-27):** store assignment into `TIMESTAMP_NTZ`
+  columns — LTZ VALUES/SELECT storing the session-zone wall (UTC and New York), UPDATE
+  plus both MERGE arms storing it, DATE values storing midnight, NTZ values storing
+  session instants into a `TIMESTAMP` column, STRING/INT/BOOLEAN refusals naming
+  `"TIMESTAMP_NTZ"` on VALUES/SELECT/UPDATE/MERGE, and the wall-cast UDF name pinned
+  equal to the registered UDF. pins: ntz-1/C-006, C-007
+  **WO NTZ-1 verifier fold (2026-09-28):** `update_refusal_names_a_timestamp_literal_source_as_timestamp`
+  pins the UPDATE-door refusal naming a `TIMESTAMP'…'` source `"TIMESTAMP"`.
+  pins: ntz-1/C-007
 
 - `describe_table.rs` — **SQL-DESCRIBE-1 (2026-09-09):** `DESCRIBE|DESC [TABLE]
   [EXTENDED|FORMATTED] catalog.namespace.table` against a memory-catalog table built like the

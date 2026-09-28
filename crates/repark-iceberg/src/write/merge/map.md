@@ -277,6 +277,14 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
 - `insert.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** the MERGE INSERT and UPDATE SET
   gates call `../void_store.rs::refuse_void_writes` with table `` before the ANSI matrix, so a
   value into a `VOID` column refuses with Spark's text. pins: u9-types-1/C-014
+- `insert.rs` — **WO NTZ-1 slice 2 (2026-09-27):** the MERGE INSERT and UPDATE SET gates
+  also call `../ntz_store.rs::refuse_ntz_writes` before the ANSI matrix, so an illegal
+  source into an NTZ column refuses with Spark's `CANNOT_SAFELY_CAST` text naming
+  `"TIMESTAMP_NTZ"`; `insert_stream_checked` gates the raw INSERT SQL, then streams
+  through a converting subquery that wraps NTZ target columns in the wall-cast UDF, so
+  the gate always judges pre-wrap types and a table without NTZ columns streams its
+  SQL untouched. MERGE UPDATE arms convert through `store_assignment_cast_sql`'s
+  wall-cast UDF. pins: ntz-1/C-006, C-007
 - `insert.rs` — **U8 WRITE-SQL PR2 (2026-09-25):** `store_assignment_then_sql` delegates to
   `../update_cast.rs`'s `store_assignment_cast_sql`, so a struct target casts to its type
   without Iceberg field ids. With the struct-aware gate in `../store_assign.rs`, whole-struct

@@ -1,5 +1,7 @@
 # map — scripts/
 
+U12 S3-PATH-WRITE-1 round 1 (2026-09-28): `check_lib_py.py` retires the `writer_readwriter.py` row (1093 → 996, under the default) when the partition-clause helper moves unchanged to `writer_layout.py`; exception count 32 → 31, with the CAP-1 mirror. pins: s3-path-write-1/C-007
+
 WO CATALOG-1 (2026-09-26): `check_rust_file_size.py` retires the `catalog_config.rs` row (1006 → 965, under the default) and ratchets `session/tests/session.rs` 1407 → 1406, shrink-only. pins: catalog-1/C-006
 
 WO U9-TYPES-1 round-1 fixer (2026-09-26): `check_rust_file_size.py` ratchets `repark-iceberg/src/write/merge/mod.rs` 1628 → 1622 (the MERGE batch cast became one `convert_uuid_column` call), shrink-only. pins: u9-types-1/C-013
