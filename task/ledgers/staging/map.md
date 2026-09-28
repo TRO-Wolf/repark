@@ -4,6 +4,14 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [aws-accept-replace-1-ledger.md](aws-accept-replace-1-ledger.md) —
+  **WO AWS-ACCEPT-REPLACE-1 (2026-09-27), in flight:** RP-55 repins the fork to
+  `6e937f49` (F-STAGED-SINGLE-WRITE-1 `#362` — a staged replace writes its metadata file
+  once, at commit) and carries the regression pin: the no-overwrite store plus the
+  Spark-door OR REPLACE test, red at `0d3f2b4f` and green at `6e937f49` (C-001); the live
+  AWS acceptance rerun is an owner residue (R-1).
+  `risk_tier: standard`. Branch `chore/rp-55-staged-single-write`.
+  pins: aws-accept-replace-1/C-001
 - [uuid-cast-window-1-ledger.md](uuid-cast-window-1-ledger.md) —
   **WO UUID-CAST-WINDOW-1 (2026-09-27), in flight:** the UUID refusal's SQL window
   counts as Spark 4.1.2 counts — the position in Unicode scalar values, the window
