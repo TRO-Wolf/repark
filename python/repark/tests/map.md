@@ -232,6 +232,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   refusals (class, condition, SQLSTATE, first line) on VALUES/SELECT/UPDATE/MERGE plus
   the STRING append. Values read back as `CAST(c AS STRING)`.
   pins: ntz-1/C-006, C-007
+  **WO NTZ-1 slice 3 (2026-09-27):** the storage surface replays Spark — the six
+  partition transforms (`.partitions` rows, pruning, `.files` bounds, the New York
+  `days` insert), identity/bucket partitions, the filter/ORDER BY/min/max/interval
+  legs, v3 DML, CTAS, `ADD COLUMN`, `SHOW CREATE TABLE`, `printSchema`, `dtypes`,
+  `collect()`/`toArrow()` types, and the Spark-written `xc.ns.x` fixture
+  ([`fixtures/ntz_1_spark_table/`](fixtures/ntz_1_spark_table/map.md), recorded by
+  [_record_ntz_1_spark_table.py](_record_ntz_1_spark_table.py)) with reads, bounds
+  and re-insert. TZ-6 states Spark's contract and the TY-TIMESTAMP-NTZ rows go
+  EQUAL beside it.
+  pins: ntz-1/C-008, C-009
 - [test_ntz_7_verify.py](test_ntz_7_verify.py) + `ntz_7_verify_spark_oracle.json` —
   **WO NTZ-1 verifier fold (2026-09-28):** `from_utc_timestamp` / `to_utc_timestamp`
   over strings and a STRING column keep Spark's TIMESTAMP in a New York session —
@@ -3668,6 +3678,24 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   keeps double + csc empty; overlay float pos type error; **octo C3:** mutation-proof
   combo (map+empty scalar+overlay+F1 nested WITH); **octo C4/C5:** lit numpy Integral/Real
   + homogeneous np.int64 list normalize; **octo C8:** ruff format pin asserts.
+- `test_s3_path_write_1.py` — **S3-PATH-WRITE-1 round 1 (2026-09-28):** the 38
+  `W-PATH-S3-*` moto cells (22 EQUAL, 16 dated residues in 5 families) plus the
+  slashless-scheme and no-local-IO pins. The tier-2 live leg lives in
+  `test_aws_acceptance.py` and skips locally.
+  **S3-PATH-WRITE-1 round 2 (2026-09-28):** the 38 cells read slashless, as
+  Spark does (`R-S3-SLASH-READ` retired, no verdict moves); the refusal pin is
+  a slashless round-trip pin, a trailing-slash pin, and an exact-key pin per
+  format.
+  **S3-PATH-WRITE-1 verifier fold (2026-09-28):** the VU-1..VU-9 moto pins
+  replaying `u12-spark-2.json` (extension directories, exact-key save modes,
+  self-overwrite refusal, literal `#`/`?` keys, bare-host and explicit-http
+  endpoints, endpoint booleans, text refusal, URL spellings, the `p2/`
+  sibling); the oracle comparator now checks column names, types and order.
+  pins: s3-path-write-1/C-007, C-008, C-009, C-012, C-013, C-014, C-015
+  **S3-PATH-WRITE-1 re-verify (2026-09-28):** the RU-1..RU-4 moto pins
+  (subquery self-overwrite refusals, encoded-key refusals with sibling /
+  other-bucket / local pass-throughs, exact-object append refusal,
+  trailing-slash reads of `#` / `?` / `%` keys).
 - `test_e2_readwriter.py` — E2 R-CENSUS-READWRITER: bare-name resolution
   (`resolve_table_name` / saveAsTable / table / writeTo / insertInto / MERGE /
   DROP TABLE SQL expander), `spark.sql.defaultNamespace` seed, parquet save/load +
@@ -6888,6 +6916,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   registry/inventory rows naming the refusal are stamped FIXED at `edc38c6a` in this change).
   pins: ice-gold-twice-1/C-002
   pins: rp-20/C-001, C-002, C-003
+  **U12 round 1 (2026-09-28):** `test_u12_s3_path_write_against_scratch_prefix` — loose
+  path writes under a `u12-path-write-<uuid>` scratch prefix, every save mode, direct
+  parts plus a last `_SUCCESS`; skips with the module when `REPARK_AWS_ACCEPTANCE`
+  is unset. pins: s3-path-write-1/C-016
 
 - `test_two_door_kernel_parity.py` — **FNP-1 (2026-08-20):** charter clause C-012 at the facade
   layer. Pins that a name reachable from both doors returns the same Arrow **type and value**

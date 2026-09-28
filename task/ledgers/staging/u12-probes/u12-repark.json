@@ -1,0 +1,2266 @@
+{
+ "engine": "repark",
+ "endpoint": "http://127.0.0.1:58693",
+ "bucket": "u12repark",
+ "banner": {
+  "version": "repark-1.5.0",
+  "timezone": "UTC"
+ },
+ "cells": {
+  "W-PATH-S3-parquet-error-empty": {
+   "key": "W-PATH-S3-parquet-error-empty",
+   "format": "parquet",
+   "mode": "error",
+   "pre": "empty",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-parquet-error-empty/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "list_before": [],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/Iho3F6DUAb1Dm9CW_0.parquet",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-parquet-error-existing": {
+   "key": "W-PATH-S3-parquet-error-existing",
+   "format": "parquet",
+   "mode": "error",
+   "pre": "existing",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-parquet-error-existing/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "seed": {
+    "status": "ok"
+   },
+   "list_before": [
+    {
+     "key": "p/6J0qJ1PpM4go1ueL_0.parquet",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
+   "write": {
+    "status": "error",
+    "error": "AnalysisException",
+    "msg": "[PATH_ALREADY_EXISTS] Path s3a://u12repark/W-PATH-S3-parquet-error-existing/p already exists. Set mode as \"overwrite\" to overwrite the existing path.",
+    "getCondition": "PATH_ALREADY_EXISTS",
+    "getSqlState": null
+   },
+   "list_after": [
+    {
+     "key": "p/6J0qJ1PpM4go1ueL_0.parquet",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 1,
+    "rows": [
+     [
+      0,
+      "seed"
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-parquet-ignore-empty": {
+   "key": "W-PATH-S3-parquet-ignore-empty",
+   "format": "parquet",
+   "mode": "ignore",
+   "pre": "empty",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-parquet-ignore-empty/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "list_before": [],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/mQ8gvDKiWuLDtQuD_0.parquet",
+     "size": ">0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-parquet-ignore-existing": {
+   "key": "W-PATH-S3-parquet-ignore-existing",
+   "format": "parquet",
+   "mode": "ignore",
+   "pre": "existing",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-parquet-ignore-existing/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "seed": {
+    "status": "ok"
+   },
+   "list_before": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/xlDAonXRno3efagF_0.parquet",
+     "size": ">0"
+    }
+   ],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/xlDAonXRno3efagF_0.parquet",
+     "size": ">0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 1,
+    "rows": [
+     [
+      0,
+      "seed"
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-parquet-overwrite-empty": {
+   "key": "W-PATH-S3-parquet-overwrite-empty",
+   "format": "parquet",
+   "mode": "overwrite",
+   "pre": "empty",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-parquet-overwrite-empty/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "list_before": [],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/QVvPAZkIDzz2lV5Y_0.parquet",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-parquet-overwrite-existing": {
+   "key": "W-PATH-S3-parquet-overwrite-existing",
+   "format": "parquet",
+   "mode": "overwrite",
+   "pre": "existing",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-parquet-overwrite-existing/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "seed": {
+    "status": "ok"
+   },
+   "list_before": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/rG9Ub8vuzQ1stZKg_0.parquet",
+     "size": ">0"
+    }
+   ],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/aqd8BkqP3eq0n0mL_0.parquet",
+     "size": ">0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-parquet-append-empty": {
+   "key": "W-PATH-S3-parquet-append-empty",
+   "format": "parquet",
+   "mode": "append",
+   "pre": "empty",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-parquet-append-empty/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "list_before": [],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/NW5KrT40MFGV5KUy_0.parquet",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-parquet-append-existing": {
+   "key": "W-PATH-S3-parquet-append-existing",
+   "format": "parquet",
+   "mode": "append",
+   "pre": "existing",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-parquet-append-existing/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "seed": {
+    "status": "ok"
+   },
+   "list_before": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/d8Wqc8oCbr7iEpHX_0.parquet",
+     "size": ">0"
+    }
+   ],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/1A5gVWUfHnbU2qIu_0.parquet",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/d8Wqc8oCbr7iEpHX_0.parquet",
+     "size": ">0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 4,
+    "rows": [
+     [
+      0,
+      "seed"
+     ],
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-csv-error-empty": {
+   "key": "W-PATH-S3-csv-error-empty",
+   "format": "csv",
+   "mode": "error",
+   "pre": "empty",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-csv-error-empty/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "list_before": [],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/Z9gg2BIKglDTTcZh_0.csv",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "_c0",
+      "string"
+     ],
+     [
+      "_c1",
+      "string"
+     ]
+    ],
+    "count": 4,
+    "rows": [
+     [
+      "1",
+      "a"
+     ],
+     [
+      "2",
+      "b"
+     ],
+     [
+      "3",
+      "a"
+     ],
+     [
+      "id",
+      "grp"
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-csv-error-existing": {
+   "key": "W-PATH-S3-csv-error-existing",
+   "format": "csv",
+   "mode": "error",
+   "pre": "existing",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-csv-error-existing/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "seed": {
+    "status": "ok"
+   },
+   "list_before": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/anli9sqBSW6lmTdZ_0.csv",
+     "size": ">0"
+    }
+   ],
+   "write": {
+    "status": "error",
+    "error": "AnalysisException",
+    "msg": "[PATH_ALREADY_EXISTS] Path s3a://u12repark/W-PATH-S3-csv-error-existing/p already exists. Set mode as \"overwrite\" to overwrite the existing path.",
+    "getCondition": "PATH_ALREADY_EXISTS",
+    "getSqlState": null
+   },
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/anli9sqBSW6lmTdZ_0.csv",
+     "size": ">0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "_c0",
+      "string"
+     ],
+     [
+      "_c1",
+      "string"
+     ]
+    ],
+    "count": 2,
+    "rows": [
+     [
+      "0",
+      "seed"
+     ],
+     [
+      "id",
+      "grp"
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-csv-ignore-empty": {
+   "key": "W-PATH-S3-csv-ignore-empty",
+   "format": "csv",
+   "mode": "ignore",
+   "pre": "empty",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-csv-ignore-empty/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "list_before": [],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/PJh49140jHwdIqPz_0.csv",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "_c0",
+      "string"
+     ],
+     [
+      "_c1",
+      "string"
+     ]
+    ],
+    "count": 4,
+    "rows": [
+     [
+      "1",
+      "a"
+     ],
+     [
+      "2",
+      "b"
+     ],
+     [
+      "3",
+      "a"
+     ],
+     [
+      "id",
+      "grp"
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-csv-ignore-existing": {
+   "key": "W-PATH-S3-csv-ignore-existing",
+   "format": "csv",
+   "mode": "ignore",
+   "pre": "existing",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-csv-ignore-existing/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "seed": {
+    "status": "ok"
+   },
+   "list_before": [
+    {
+     "key": "p/9GIDNGmUfhcnoXxr_0.csv",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/9GIDNGmUfhcnoXxr_0.csv",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "_c0",
+      "string"
+     ],
+     [
+      "_c1",
+      "string"
+     ]
+    ],
+    "count": 2,
+    "rows": [
+     [
+      "0",
+      "seed"
+     ],
+     [
+      "id",
+      "grp"
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-csv-overwrite-empty": {
+   "key": "W-PATH-S3-csv-overwrite-empty",
+   "format": "csv",
+   "mode": "overwrite",
+   "pre": "empty",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-csv-overwrite-empty/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "list_before": [],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/yHsfbzDJIoouXT9b_0.csv",
+     "size": ">0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "_c0",
+      "string"
+     ],
+     [
+      "_c1",
+      "string"
+     ]
+    ],
+    "count": 4,
+    "rows": [
+     [
+      "1",
+      "a"
+     ],
+     [
+      "2",
+      "b"
+     ],
+     [
+      "3",
+      "a"
+     ],
+     [
+      "id",
+      "grp"
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-csv-overwrite-existing": {
+   "key": "W-PATH-S3-csv-overwrite-existing",
+   "format": "csv",
+   "mode": "overwrite",
+   "pre": "existing",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-csv-overwrite-existing/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "seed": {
+    "status": "ok"
+   },
+   "list_before": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/kzXcKx0Oq13MFyPE_0.csv",
+     "size": ">0"
+    }
+   ],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/fIsQZK8iQR6okpi8_0.csv",
+     "size": ">0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "_c0",
+      "string"
+     ],
+     [
+      "_c1",
+      "string"
+     ]
+    ],
+    "count": 4,
+    "rows": [
+     [
+      "1",
+      "a"
+     ],
+     [
+      "2",
+      "b"
+     ],
+     [
+      "3",
+      "a"
+     ],
+     [
+      "id",
+      "grp"
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-csv-append-empty": {
+   "key": "W-PATH-S3-csv-append-empty",
+   "format": "csv",
+   "mode": "append",
+   "pre": "empty",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-csv-append-empty/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "list_before": [],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/H87dctmNmHWssJYF_0.csv",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "_c0",
+      "string"
+     ],
+     [
+      "_c1",
+      "string"
+     ]
+    ],
+    "count": 4,
+    "rows": [
+     [
+      "1",
+      "a"
+     ],
+     [
+      "2",
+      "b"
+     ],
+     [
+      "3",
+      "a"
+     ],
+     [
+      "id",
+      "grp"
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-csv-append-existing": {
+   "key": "W-PATH-S3-csv-append-existing",
+   "format": "csv",
+   "mode": "append",
+   "pre": "existing",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-csv-append-existing/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "seed": {
+    "status": "ok"
+   },
+   "list_before": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/bZPsh4ytOxPDaGnp_0.csv",
+     "size": ">0"
+    }
+   ],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/5sXm97SxB2XkZf1m_0.csv",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/bZPsh4ytOxPDaGnp_0.csv",
+     "size": ">0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "_c0",
+      "string"
+     ],
+     [
+      "_c1",
+      "string"
+     ]
+    ],
+    "count": 6,
+    "rows": [
+     [
+      "0",
+      "seed"
+     ],
+     [
+      "1",
+      "a"
+     ],
+     [
+      "2",
+      "b"
+     ],
+     [
+      "3",
+      "a"
+     ],
+     [
+      "id",
+      "grp"
+     ],
+     [
+      "id",
+      "grp"
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-json-error-empty": {
+   "key": "W-PATH-S3-json-error-empty",
+   "format": "json",
+   "mode": "error",
+   "pre": "empty",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-json-error-empty/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "list_before": [],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/zJgWbjahbrVASupj_0.json",
+     "size": ">0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "grp",
+      "string"
+     ],
+     [
+      "id",
+      "bigint"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "a",
+      3
+     ],
+     [
+      "b",
+      2
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-json-error-existing": {
+   "key": "W-PATH-S3-json-error-existing",
+   "format": "json",
+   "mode": "error",
+   "pre": "existing",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-json-error-existing/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "seed": {
+    "status": "ok"
+   },
+   "list_before": [
+    {
+     "key": "p/UUsXywY8n05Pz6NT_0.json",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
+   "write": {
+    "status": "error",
+    "error": "AnalysisException",
+    "msg": "[PATH_ALREADY_EXISTS] Path s3a://u12repark/W-PATH-S3-json-error-existing/p already exists. Set mode as \"overwrite\" to overwrite the existing path.",
+    "getCondition": "PATH_ALREADY_EXISTS",
+    "getSqlState": null
+   },
+   "list_after": [
+    {
+     "key": "p/UUsXywY8n05Pz6NT_0.json",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "grp",
+      "string"
+     ],
+     [
+      "id",
+      "bigint"
+     ]
+    ],
+    "count": 1,
+    "rows": [
+     [
+      "seed",
+      0
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-json-ignore-empty": {
+   "key": "W-PATH-S3-json-ignore-empty",
+   "format": "json",
+   "mode": "ignore",
+   "pre": "empty",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-json-ignore-empty/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "list_before": [],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/rGjdD14YLfkarMZQ_0.json",
+     "size": ">0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "grp",
+      "string"
+     ],
+     [
+      "id",
+      "bigint"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "a",
+      3
+     ],
+     [
+      "b",
+      2
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-json-ignore-existing": {
+   "key": "W-PATH-S3-json-ignore-existing",
+   "format": "json",
+   "mode": "ignore",
+   "pre": "existing",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-json-ignore-existing/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "seed": {
+    "status": "ok"
+   },
+   "list_before": [
+    {
+     "key": "p/BSNJPix5uTgrUMEJ_0.json",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/BSNJPix5uTgrUMEJ_0.json",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "grp",
+      "string"
+     ],
+     [
+      "id",
+      "bigint"
+     ]
+    ],
+    "count": 1,
+    "rows": [
+     [
+      "seed",
+      0
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-json-overwrite-empty": {
+   "key": "W-PATH-S3-json-overwrite-empty",
+   "format": "json",
+   "mode": "overwrite",
+   "pre": "empty",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-json-overwrite-empty/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "list_before": [],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/YG3aIz61ntd1y6Sk_0.json",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "grp",
+      "string"
+     ],
+     [
+      "id",
+      "bigint"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "a",
+      3
+     ],
+     [
+      "b",
+      2
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-json-overwrite-existing": {
+   "key": "W-PATH-S3-json-overwrite-existing",
+   "format": "json",
+   "mode": "overwrite",
+   "pre": "existing",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-json-overwrite-existing/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "seed": {
+    "status": "ok"
+   },
+   "list_before": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/jSvb1K3rJ0ZAWtSZ_0.json",
+     "size": ">0"
+    }
+   ],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/Dti2pljqYU7Svlo5_0.json",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "grp",
+      "string"
+     ],
+     [
+      "id",
+      "bigint"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "a",
+      3
+     ],
+     [
+      "b",
+      2
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-json-append-empty": {
+   "key": "W-PATH-S3-json-append-empty",
+   "format": "json",
+   "mode": "append",
+   "pre": "empty",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-json-append-empty/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "list_before": [],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/IASdjsZod19ieIdU_0.json",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "grp",
+      "string"
+     ],
+     [
+      "id",
+      "bigint"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "a",
+      3
+     ],
+     [
+      "b",
+      2
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-json-append-existing": {
+   "key": "W-PATH-S3-json-append-existing",
+   "format": "json",
+   "mode": "append",
+   "pre": "existing",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-json-append-existing/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "seed": {
+    "status": "ok"
+   },
+   "list_before": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/h617iSfKKQzo914Z_0.json",
+     "size": ">0"
+    }
+   ],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/0pQRC00TJzqpDY6m_0.json",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/h617iSfKKQzo914Z_0.json",
+     "size": ">0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "grp",
+      "string"
+     ],
+     [
+      "id",
+      "bigint"
+     ]
+    ],
+    "count": 4,
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "a",
+      3
+     ],
+     [
+      "b",
+      2
+     ],
+     [
+      "seed",
+      0
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-parquet-partitionby-1col": {
+   "key": "W-PATH-S3-parquet-partitionby-1col",
+   "format": "parquet",
+   "mode": "overwrite",
+   "pre": "empty",
+   "partition_by": [
+    "grp"
+   ],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-parquet-partitionby-1col/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "list_before": [],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/grp=a/yKaUXXuLlgNAe9rC.parquet",
+     "size": ">0"
+    },
+    {
+     "key": "p/grp=b/yKaUXXuLlgNAe9rC.parquet",
+     "size": ">0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      3
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-parquet-partitionby-2col": {
+   "key": "W-PATH-S3-parquet-partitionby-2col",
+   "format": "parquet",
+   "mode": "overwrite",
+   "pre": "empty",
+   "partition_by": [
+    "grp",
+    "id"
+   ],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-parquet-partitionby-2col/p",
+   "frame_columns": [
+    "id",
+    "grp",
+    "val"
+   ],
+   "list_before": [],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/grp=a/id=1/wiZ0uol6dS7t68Hw.parquet",
+     "size": ">0"
+    },
+    {
+     "key": "p/grp=a/id=3/wiZ0uol6dS7t68Hw.parquet",
+     "size": ">0"
+    },
+    {
+     "key": "p/grp=b/id=2/wiZ0uol6dS7t68Hw.parquet",
+     "size": ">0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "val",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      "x"
+     ],
+     [
+      "y"
+     ],
+     [
+      "z"
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-parquet-empty-df": {
+   "key": "W-PATH-S3-parquet-empty-df",
+   "format": "parquet",
+   "mode": "overwrite",
+   "pre": "empty",
+   "partition_by": [],
+   "empty": true,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-parquet-empty-df/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "list_before": [],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/part-00000.parquet",
+     "size": ">0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 0,
+    "rows": []
+   }
+  },
+  "W-PATH-S3-csv-empty-df": {
+   "key": "W-PATH-S3-csv-empty-df",
+   "format": "csv",
+   "mode": "overwrite",
+   "pre": "empty",
+   "partition_by": [],
+   "empty": true,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-csv-empty-df/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "list_before": [],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/part-00000.csv",
+     "size": ">0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "_c0",
+      "string"
+     ],
+     [
+      "_c1",
+      "string"
+     ]
+    ],
+    "count": 1,
+    "rows": [
+     [
+      "id",
+      "grp"
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-parquet-success-only-error": {
+   "key": "W-PATH-S3-parquet-success-only-error",
+   "format": "parquet",
+   "mode": "error",
+   "pre": "success-only",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-parquet-success-only-error/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "seed": {
+    "status": "seeded-success-only"
+   },
+   "list_before": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
+   "write": {
+    "status": "error",
+    "error": "AnalysisException",
+    "msg": "[PATH_ALREADY_EXISTS] Path s3a://u12repark/W-PATH-S3-parquet-success-only-error/p already exists. Set mode as \"overwrite\" to overwrite the existing path.",
+    "getCondition": "PATH_ALREADY_EXISTS",
+    "getSqlState": null
+   },
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
+   "readback": {
+    "status": "error",
+    "error": "AnalysisException",
+    "msg": "Error during planning: No files found at s3a://u12repark/W-PATH-S3-parquet-success-only-error/p/. Cannot infer schema from an empty location; either add data files or declare an explicit schema for the table.",
+    "getCondition": null,
+    "getSqlState": null
+   }
+  },
+  "W-PATH-S3-parquet-success-only-ignore": {
+   "key": "W-PATH-S3-parquet-success-only-ignore",
+   "format": "parquet",
+   "mode": "ignore",
+   "pre": "success-only",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-parquet-success-only-ignore/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "seed": {
+    "status": "seeded-success-only"
+   },
+   "list_before": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
+   "readback": {
+    "status": "error",
+    "error": "AnalysisException",
+    "msg": "Error during planning: No files found at s3a://u12repark/W-PATH-S3-parquet-success-only-ignore/p/. Cannot infer schema from an empty location; either add data files or declare an explicit schema for the table.",
+    "getCondition": null,
+    "getSqlState": null
+   }
+  },
+  "W-PATH-S3-parquet-success-only-overwrite": {
+   "key": "W-PATH-S3-parquet-success-only-overwrite",
+   "format": "parquet",
+   "mode": "overwrite",
+   "pre": "success-only",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-parquet-success-only-overwrite/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "seed": {
+    "status": "seeded-success-only"
+   },
+   "list_before": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/wbludQZFyPLzOiNu_0.parquet",
+     "size": ">0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-parquet-success-only-append": {
+   "key": "W-PATH-S3-parquet-success-only-append",
+   "format": "parquet",
+   "mode": "append",
+   "pre": "success-only",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-parquet-success-only-append/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "seed": {
+    "status": "seeded-success-only"
+   },
+   "list_before": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/m2DiSGKMpT7QDDbB_0.parquet",
+     "size": ">0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-parquet-foreign-error": {
+   "key": "W-PATH-S3-parquet-foreign-error",
+   "format": "parquet",
+   "mode": "error",
+   "pre": "foreign",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-parquet-foreign-error/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "seed": {
+    "status": "seeded-foreign"
+   },
+   "list_before": [
+    {
+     "key": "p/foreign.txt",
+     "size": ">0"
+    }
+   ],
+   "write": {
+    "status": "error",
+    "error": "AnalysisException",
+    "msg": "[PATH_ALREADY_EXISTS] Path s3a://u12repark/W-PATH-S3-parquet-foreign-error/p already exists. Set mode as \"overwrite\" to overwrite the existing path.",
+    "getCondition": "PATH_ALREADY_EXISTS",
+    "getSqlState": null
+   },
+   "list_after": [
+    {
+     "key": "p/foreign.txt",
+     "size": ">0"
+    }
+   ],
+   "readback": {
+    "status": "error",
+    "error": "AnalysisException",
+    "msg": "Error during planning: No files found at s3a://u12repark/W-PATH-S3-parquet-foreign-error/p/. Cannot infer schema from an empty location; either add data files or declare an explicit schema for the table.",
+    "getCondition": null,
+    "getSqlState": null
+   }
+  },
+  "W-PATH-S3-parquet-foreign-ignore": {
+   "key": "W-PATH-S3-parquet-foreign-ignore",
+   "format": "parquet",
+   "mode": "ignore",
+   "pre": "foreign",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-parquet-foreign-ignore/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "seed": {
+    "status": "seeded-foreign"
+   },
+   "list_before": [
+    {
+     "key": "p/foreign.txt",
+     "size": ">0"
+    }
+   ],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/foreign.txt",
+     "size": ">0"
+    }
+   ],
+   "readback": {
+    "status": "error",
+    "error": "AnalysisException",
+    "msg": "Error during planning: No files found at s3a://u12repark/W-PATH-S3-parquet-foreign-ignore/p/. Cannot infer schema from an empty location; either add data files or declare an explicit schema for the table.",
+    "getCondition": null,
+    "getSqlState": null
+   }
+  },
+  "W-PATH-S3-parquet-foreign-overwrite": {
+   "key": "W-PATH-S3-parquet-foreign-overwrite",
+   "format": "parquet",
+   "mode": "overwrite",
+   "pre": "foreign",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-parquet-foreign-overwrite/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "seed": {
+    "status": "seeded-foreign"
+   },
+   "list_before": [
+    {
+     "key": "p/foreign.txt",
+     "size": ">0"
+    }
+   ],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/Hhln8GP1qw89OydD_0.parquet",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-parquet-foreign-append": {
+   "key": "W-PATH-S3-parquet-foreign-append",
+   "format": "parquet",
+   "mode": "append",
+   "pre": "foreign",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-parquet-foreign-append/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "seed": {
+    "status": "seeded-foreign"
+   },
+   "list_before": [
+    {
+     "key": "p/foreign.txt",
+     "size": ">0"
+    }
+   ],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/foreign.txt",
+     "size": ">0"
+    },
+    {
+     "key": "p/rtMX2vN38uXmZ6Bc_0.parquet",
+     "size": ">0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-parquet-scheme-s3": {
+   "key": "W-PATH-S3-parquet-scheme-s3",
+   "format": "parquet",
+   "mode": "overwrite",
+   "pre": "empty",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3",
+   "url": "s3://u12repark/W-PATH-S3-parquet-scheme-s3/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "list_before": [],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    },
+    {
+     "key": "p/rjzB097H2yqMulmr_0.parquet",
+     "size": ">0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
+   }
+  },
+  "W-PATH-S3-parquet-scheme-s3a": {
+   "key": "W-PATH-S3-parquet-scheme-s3a",
+   "format": "parquet",
+   "mode": "overwrite",
+   "pre": "empty",
+   "partition_by": [],
+   "empty": false,
+   "scheme": "s3a",
+   "url": "s3a://u12repark/W-PATH-S3-parquet-scheme-s3a/p",
+   "frame_columns": [
+    "id",
+    "grp"
+   ],
+   "list_before": [],
+   "write": {
+    "status": "ok"
+   },
+   "list_after": [
+    {
+     "key": "p/51KydHqzCvj1detW_0.parquet",
+     "size": ">0"
+    },
+    {
+     "key": "p/_SUCCESS",
+     "size": "0"
+    }
+   ],
+   "readback": {
+    "status": "ok",
+    "cols": [
+     [
+      "id",
+      "bigint"
+     ],
+     [
+      "grp",
+      "string"
+     ]
+    ],
+    "count": 3,
+    "rows": [
+     [
+      1,
+      "a"
+     ],
+     [
+      2,
+      "b"
+     ],
+     [
+      3,
+      "a"
+     ]
+    ]
+   }
+  }
+ }
+}
