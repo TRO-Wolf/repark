@@ -576,6 +576,12 @@ wrapped optimizer rule) and declares this directory.
   inside the existing `pub use` line (`case_bind.rs` stays 1000); pin
   `display_match_fans_out_under_ignore_case_and_is_exact_under_exact`.
   pins: casesens-2/C-004
+  **CASESENS-2 S3 (2026-09-28):** `match_subset_names(written, held, rule)`
+  (fan-out under `IgnoreCase`, exact hits under `Exact`, Spark's legacy
+  subset text on a miss under both rules), re-exported inside the existing
+  `pub use` line (`case_bind.rs` stays 1000); pin
+  `subset_names_fan_out_and_miss_with_the_legacy_text`.
+  pins: casesens-2/C-002, C-005
 
 ## Pointers
 

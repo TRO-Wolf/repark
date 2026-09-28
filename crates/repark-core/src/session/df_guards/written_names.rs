@@ -38,6 +38,18 @@ pub fn match_display_names(
 }
 
 #[allow(clippy::missing_errors_doc)]
+pub fn match_subset_names(
+    written: &[String],
+    held: &[String],
+    rule: NameRule,
+) -> Result<Vec<(String, Vec<String>)>> {
+    written
+        .iter()
+        .map(|name| match_one_subset(name, held, rule))
+        .collect()
+}
+
+#[allow(clippy::missing_errors_doc)]
 pub fn refuse_folded_duplicate_keys(keys: &[String], rule: NameRule) -> Result<()> {
     if matches!(rule, NameRule::Exact) {
         return Ok(());
@@ -155,6 +167,18 @@ fn settle(
     Ok((written, String::new(), String::new(), disposition))
 }
 
+fn match_one_subset(name: &str, held: &[String], rule: NameRule) -> Result<(String, Vec<String>)> {
+    let hits: Vec<String> = held
+        .iter()
+        .filter(|candidate| rule.matches(name, candidate))
+        .cloned()
+        .collect();
+    if hits.len() == 1 || (matches!(rule, NameRule::IgnoreCase) && !hits.is_empty()) {
+        return Ok((name.to_string(), hits));
+    }
+    Err(unresolved_subset_name(name, held))
+}
+
 fn match_one_display(
     name: &str,
     held: &[String],
@@ -202,8 +226,8 @@ mod tests {
     use datafusion::common::DFSchema;
 
     use super::{
-        Disposition, match_display_names, refuse_folded_duplicate_keys, resolve_df_names,
-        unresolved_subset_name,
+        Disposition, match_display_names, match_subset_names, refuse_folded_duplicate_keys,
+        resolve_df_names, unresolved_subset_name,
     };
     use repark_common::names::NameRule::{Exact, IgnoreCase};
 
@@ -347,6 +371,41 @@ mod tests {
         assert_eq!(
             subset,
             "Error during planning: Cannot resolve column name \"nope\" among (id, ID)."
+        );
+    }
+
+    #[test]
+    fn subset_names_fan_out_and_miss_with_the_legacy_text() {
+        let twins = ["id".to_string(), "ID".to_string()];
+        let fanned = match_subset_names(&["id".to_string()], &twins, IgnoreCase).unwrap();
+        assert_eq!(
+            fanned,
+            vec![("id".to_string(), vec!["id".to_string(), "ID".to_string()])]
+        );
+        let error = match_subset_names(&["nope".to_string()], &twins, IgnoreCase)
+            .unwrap_err()
+            .to_string();
+        assert_eq!(
+            error,
+            "Error during planning: Cannot resolve column name \"nope\" among (id, ID)."
+        );
+        let exact = match_subset_names(&["id".to_string()], &twins, Exact).unwrap();
+        assert_eq!(exact, vec![("id".to_string(), vec!["id".to_string()])]);
+        let pair = ["id".to_string(), "Data".to_string()];
+        let error = match_subset_names(&["ID".to_string()], &pair, Exact)
+            .unwrap_err()
+            .to_string();
+        assert_eq!(
+            error,
+            "Error during planning: Cannot resolve column name \"ID\" among (id, Data)."
+        );
+        let triple = ["id".to_string(), "Data".to_string(), "s".to_string()];
+        let error = match_subset_names(&["NOPE".to_string()], &triple, Exact)
+            .unwrap_err()
+            .to_string();
+        assert_eq!(
+            error,
+            "Error during planning: Cannot resolve column name \"NOPE\" among (id, Data, s)."
         );
     }
 

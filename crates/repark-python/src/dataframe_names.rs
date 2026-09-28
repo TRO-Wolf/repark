@@ -42,6 +42,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(java_fold_hits, module)?)?;
     module.add_function(wrap_pyfunction!(frame_is_exact, module)?)?;
     module.add_function(wrap_pyfunction!(match_display_names, module)?)?;
+    module.add_function(wrap_pyfunction!(match_subset_names, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_join_condition, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_free_names, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_folded_duplicate_keys, module)?)?;
@@ -325,6 +326,19 @@ fn match_display_names(
                     .map(|(name, hits, disposition)| (name, hits, disposition_text(disposition)))
                     .collect()
             })
+            .map_err(datafusion_to_py_err)
+    })
+}
+
+#[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
+#[pyfunction]
+fn match_subset_names(
+    frame: &PyDataFrame,
+    written: Vec<String>,
+    held: Vec<String>,
+) -> PyResult<Vec<(String, Vec<String>)>> {
+    fenced!("dataframe_names.match_subset_names", {
+        repark_core::frame_names::match_subset_names(&written, &held, frame_rule(frame.inner()))
             .map_err(datafusion_to_py_err)
     })
 }
