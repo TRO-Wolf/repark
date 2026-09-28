@@ -988,10 +988,21 @@ repark-core's error map.
   **RP-56 (2026-09-28):** the by-transform pair resolution uses the fork's fallible
   case-insensitive lookup, so a case-collided schema refuses with Java's lower-case-index
   text instead of the not-found message; uncollided behaviour is unchanged.
+  **WO CASESENS-1 slice 5 (2026-09-27, R11):** partition field names bind exactly under
+  both settings through `NameRule::Exact`: `RemoveFieldByName`, `ReplaceField` and
+  `RenameField` refuse `Cannot find partition field to remove: <written>` before the
+  transaction when the name is not held (`resolve_field_name` / `forget_field_name` are
+  exact now; R-1 closed). `bound_sources` also checks the source of
+  `RemoveFieldByTransform` and the old source of `ReplaceFieldByTransform`, and
+  `resolve_field_by_transform` resolves exactly, refusing Java's `ValidationException`
+  text (`java_struct_text` is `pub(crate)` for the sort-order seat). The fork action keeps
+  `.case_sensitive(false)`; the pre-checks make its mode moot.
+  pins: casesens-1/C-013, C-014
 - `sort_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** `apply_write_order`, the one-transaction
   write-layout primitive over the fork's `Transaction::replace_sort_order` plus an optional
-  `write.distribution-mode` property set: column names resolve case-insensitively against the
-  table schema, dotted paths through struct types included (an unknown column is a loud
+  `write.distribution-mode` property set: column names resolve against the
+  table schema by the session `NameRule` (CASESENS-1 S5; case-insensitive before),
+  dotted paths through struct types included (an unknown column is a loud
   `DataInvalid` and commits nothing), an empty field
   list resets the default to the unsorted order 0 (the fork dedups it, so no order is appended),
   and an identical order reuses its id the way Spark's sequence does. Return `iceberg::Result`.
@@ -999,6 +1010,10 @@ repark-core's error map.
   **WO U5 PR2b (2026-09-24):** `WriteSortField` carries a `Transform`, and every field goes
   through the fork's `ReplaceSortOrderAction::sort_by` (RP-46), so a transform term lands with
   the fork's void, width and bind checks. Identity fields pass `Transform::Identity`.
+  **WO CASESENS-1 slice 5 (2026-09-27, R11):** `apply_write_order` takes the session
+  `NameRule` and each dotted segment binds through it; a miss refuses Java's
+  `ValidationException: Cannot find field '<written>' in struct: …` under both rules
+  (the old `Cannot find field {name} in table schema` text is gone; R-2 closed).
 - `format_version.rs` — **V3-10:** `set_properties_and_format_version` folds the fork's
   `UpgradeFormatVersionAction` and `UpdatePropertiesAction` into ONE transaction, so an ALTER
   carrying `format-version` beside another key is one metadata commit as it is on Spark; nothing

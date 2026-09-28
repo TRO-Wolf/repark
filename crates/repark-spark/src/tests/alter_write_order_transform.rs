@@ -42,6 +42,12 @@ fn distribution_mode(table: &iceberg::table::Table) -> Option<String> {
         .cloned()
 }
 
+async fn assert_order_untouched(catalogs: &CatalogRegistry) {
+    let table = load_sales_table(catalogs, "wo").await;
+    assert_eq!(table.metadata().sort_orders_iter().len(), 1);
+    assert_eq!(table.metadata().default_sort_order_id(), 0);
+}
+
 #[tokio::test]
 async fn write_ordered_by_transforms_lands_the_order_spark_measured() {
     let cases: [(&str, &[&str]); 20] = [
@@ -219,7 +225,12 @@ async fn write_ordered_by_transform_refusals_match_spark_and_commit_nothing() {
             "truncate(4, ts)",
             "Cannot bind: truncate[4] cannot transform timestamptz values from 'ts'",
         ),
-        ("bucket(4, nope)", "Cannot find field nope in table schema"),
+        (
+            "bucket(4, nope)",
+            "org.apache.iceberg.exceptions.ValidationException: Cannot find field 'nope' in \
+             struct: struct<1: id: optional long, 2: ts: optional timestamptz, 3: s: \
+             optional string, 4: d: optional date, 5: dec: optional decimal(10, 2)>",
+        ),
     ];
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = transform_door(&wh).await;
@@ -246,9 +257,8 @@ async fn write_ordered_by_transform_refusals_match_spark_and_commit_nothing() {
             "{spec}: got {mapped:?}"
         );
     }
+    assert_order_untouched(&catalogs).await;
     let table = load_sales_table(&catalogs, "wo").await;
-    assert_eq!(table.metadata().sort_orders_iter().len(), 1);
-    assert_eq!(table.metadata().default_sort_order_id(), 0);
     assert_eq!(distribution_mode(&table), None);
 }
 
@@ -468,9 +478,7 @@ async fn typed_width_literals_and_parse_shapes_answer_spark() {
             "{spec}: got {mapped:?}"
         );
     }
-    let table = load_sales_table(&catalogs, "wo").await;
-    assert_eq!(table.metadata().sort_orders_iter().len(), 1);
-    assert_eq!(table.metadata().default_sort_order_id(), 0);
+    assert_order_untouched(&catalogs).await;
 }
 
 const RENDERED_TOKEN_ROWS: &[(&str, &str)] = &[
@@ -632,10 +640,12 @@ async fn hex_quoted_and_string_tokens_render_as_spark_does() {
     let mapped = refusal(&ctx, &catalogs, &sql("bucket(4, 0x4)")).await;
     assert!(
         matches!(&mapped, repark_common::Error::Iceberg(message)
-            if message == "DataInvalid => Cannot find field 0x4 in table schema"),
+            if message
+                == "DataInvalid => org.apache.iceberg.exceptions.ValidationException: Cannot \
+                    find field '0x4' in struct: struct<1: id: optional long, 2: ts: optional \
+                    timestamptz, 3: s: optional string, 4: d: optional date, 5: dec: optional \
+                    decimal(10, 2)>"),
         "got {mapped:?}"
     );
-    let table = load_sales_table(&catalogs, "wo").await;
-    assert_eq!(table.metadata().sort_orders_iter().len(), 1);
-    assert_eq!(table.metadata().default_sort_order_id(), 0);
+    assert_order_untouched(&catalogs).await;
 }

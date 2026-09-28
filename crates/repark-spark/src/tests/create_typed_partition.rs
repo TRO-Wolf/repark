@@ -306,19 +306,6 @@ async fn untyped_and_transform_partitioning_keep_their_answers() {
     );
 }
 
-fn enable_case_sensitive(ctx: &SessionContext) {
-    let state = ctx.state_ref();
-    let mut state = state.write();
-    if let Some(carrier) = state
-        .config_mut()
-        .options_mut()
-        .extensions
-        .get_mut::<repark_functions::case_sensitive::SparkCaseSensitiveConfig>()
-    {
-        carrier.enabled = true;
-    }
-}
-
 #[tokio::test]
 async fn typed_partition_columns_differing_by_case_serve_under_case_sensitive() {
     let wh = TempDir::new().unwrap();

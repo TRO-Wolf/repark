@@ -51,10 +51,11 @@ Two bare-name arms the live oracle measured divergent are filed as §7 registry 
 ([EX-COL-1](../../spark-sql-iceberg-parity.md), EX-COL-2) with pins
 (`test_col_cast_qualified_projection_name`, `test_get_field_bare_projection_name`) in
 `python/repark/tests/test_examples_column_a.py`, while the examples keep the arms where the
-engines agree: an unaliased `select(F.col("v").cast("double"))` names its column with the
-engine qualifier where Spark answers `v` (the df-bound and aliased `cast` arms are
-Spark-equal, and `bitwise_cast.py` keeps those), and an unaliased `getField` projects
-`r['a']` where Spark answers `r.a` (`accessors.py` keeps the aliased read).
+engines agree: an unaliased `select(F.col("v").cast("double"))` keeps the child name `v`
+like Spark (EX-COL-1, CLOSED 2026-09-28 by CASESENS-1 VC-3; the df-bound and aliased `cast`
+arms were already Spark-equal, and `bitwise_cast.py` keeps those), and an unaliased
+`getField` projects `r['a']` where Spark answers `r.a` (`accessors.py` keeps the aliased
+read).
 
 ## Pointers
 

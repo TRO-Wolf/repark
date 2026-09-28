@@ -62,6 +62,10 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   registered catalog and before `create_or_replace_view` — a bare-name-marked
   target is still a catalog write, and CREATE OR REPLACE shares this site —
   so the refusal precedes any viewless-catalog refusal.
+  **WO CASESENS-1 slice 4 (2026-09-27):** both creators refuse
+  `COLUMN_ALREADY_EXISTS` 42711 on a folded duplicate in the effective output
+  names (aliases when given, else the planned body) under
+  `caseSensitive=false` (R10), before registration. pins: casesens-1/C-012
 - `parse.rs` + `execute.rs` + the router arm — **PR4 (2026-09-22,
   V-SHOW-TBLPROPERTIES):** `try_parse_show_tblproperties` (quoted, unquoted
   and dotted keys; a quoted key ends at the string; a tail that tokenizes but

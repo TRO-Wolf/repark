@@ -59,7 +59,7 @@ def _join_table_identifier_segments(segments: list[str]) -> str:
 def _temp_view_home_ref(inner: Any, name: str) -> list[str] | None:
     """The temp view's home segments, or ``None`` when it is not a temp view."""
     try:
-        return inner.resolve_temp_view_home_ref(name)
+        return _native.resolve_temp_view_home_ref_for_session(inner, name)
     except Exception:
         return None
 

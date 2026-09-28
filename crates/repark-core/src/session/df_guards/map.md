@@ -110,6 +110,30 @@ wrapped optimizer rule) and declares this directory.
   (field names, V-002). Rust pin (in `../../column_resolution/tests.rs`)
   `attribute_copies_never_collide_and_suggestions_hide_scratch_names`. pins: u11-edge-1/C-029,
   C-030
+  **CASESENS-1 S3 (2026-09-27):** the binder reads the session rule. `bind_case_insensitive`
+  becomes `bind_names(expr, schema, rule)`: under `Exact` an exact hit binds, a case-only hit
+  refuses Spark's `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` naming the written reference with the
+  frame's presented fields (scratch relations hidden), and anything else falls through to
+  DataFusion; `IgnoreCase` keeps the round-4 rule. `resolve_written_names(schema, names, rule)`
+  resolves describe's explicit columns to `(written, engine)` pairs with the same refusals
+  (`Many` keeps the ambiguous text). `drop_named_columns` / `join_on_named_keys` /
+  `union_by_folded_name` take the rule: a drop miss is a no-op, a join-key miss refuses
+  Spark's `UNRESOLVED_USING_COLUMN_FOR_JOIN` text (side columns backticked, sorted by name),
+  and a union name missing on the right refuses Spark's legacy
+  `Cannot resolve column name …` text. `NameRule`/`NameHit` re-export through `frame_names`
+  (the `repark-python` door's `repark-common` edge is dev-only, so the literal path does not
+  resolve there — no new edge). Rust pins `exact_rule_refuses_a_case_only_match`,
+  `ignore_case_rule_is_unchanged`, `frame_functions_follow_the_rule`.
+  pins: casesens-1/C-009, C-010
+  **Verifier fold (2026-09-28, VC-3):** `bind_projection_expr` aliases a bare
+  top-level `Cast`/`TryCast` over a direct column child to the written child
+  name, so `F.col(x).cast(...)` keeps the child name instead of leaking the
+  qualified engine name (the all-lowercase leak goes with it). Pinned through
+  the facade (`test_cast_of_a_column_keeps_the_written_child_name`) — the file
+  sits 12 lines under the size ceiling, so no unit test lands here.
+  **Re-verify (2026-09-28, RC-3):** the child-name lookup recurses through
+  nested casts (`test_nested_cast_of_a_column_keeps_the_written_child_name`).
+  pins: casesens-1/C-009
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside
@@ -136,6 +160,10 @@ wrapped optimizer rule) and declares this directory.
   single-row guard, the exists rewrite, the projection hoist, and the Unnest
   refusal live here in repark-core.
   pins: df-subquery-1/C-001, C-002, C-003, C-004, C-008, C-009
+  **CASESENS-1 S3 (2026-09-27):** `resolve_bound_expr` keeps its signature (it binds
+  `IgnoreCase`) and gains the sibling `resolve_bound_expr_with(expr, schema, rule)`,
+  re-exported through `frame_names` (`session.rs` sits exactly at its ceiling, so the root
+  re-export cannot grow). pins: casesens-1/C-009
 
 ## Pointers
 

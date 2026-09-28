@@ -1,7 +1,7 @@
 """ICE-MIXED-CASE-1 — the Spark door resolves mixed-case columns case-insensitively.
 
 pins: ice-mixed-case-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
-C-013, C-014, C-015, C-016, C-019, C-020, C-021, C-022
+C-013, C-014, C-015, C-016, C-019, C-020, C-021, C-022, casesens-1/C-006
 
 A Spark-created Iceberg table ``(userId BIGINT, eventName STRING,
 `Mixed Case` INT)`` adopted into RePark must answer Spark 4.1.2 on the SQL
@@ -35,12 +35,13 @@ reference under ``caseSensitive=true`` refuses loud with DataFusion's ``No
 field named`` wording — the resolution outcome matches Spark (refuse), the
 sentence stays engine-native; only the error class is pinned there.
 
-Declared ``caseSensitive=true`` divergence (registry ID-1): the parser folds
-unquoted identifiers before planning, so under ``true`` even an exact-case
-unquoted spelling (``userId``) arrives as ``userid`` and refuses. Exact case
-under ``true`` needs backticks. ``test_sql_door_unquoted_exact_case_refuses_case_sensitive``
-pins the refusal; ``test_sql_door_backticked_exact_case_succeeds_case_sensitive``
-pins the backticked success against the recorded ``true`` oracle rows.
+Unquoted exact-case under ``caseSensitive=true`` answers since CASESENS-1
+slice 2 (2026-09-27): the ``true`` door plans with identifier normalization
+off, so the registry ID-1 declared refusal converged.
+``test_sql_door_unquoted_exact_case_succeeds_case_sensitive`` pins the
+recorded ``true`` oracle rows for the unquoted form, like
+``test_sql_door_backticked_exact_case_succeeds_case_sensitive`` does for
+backticks.
 
 **Run 21b measurement.** The oracle's ``measured_21b`` block is the
 orchestrator's ``probe_mc.py`` recording (PySpark 4.1.2 + Iceberg 1.11.0,
@@ -178,7 +179,7 @@ _MUTATING_CELLS = [
 ]
 _AMBIGUOUS_CELLS = ["MC-AMB-01", "MC-AMB-02"]
 _TRUE_SUCCESS_CELLS = ["MC-SEL-04"]
-_TRUE_UNQUOTED_EXACT_REFUSES_CELLS = ["MC-SEL-01", "MC-UPD-01", "MC-MRG-01"]
+_TRUE_UNQUOTED_EXACT_CELLS = ["MC-SEL-01", "MC-UPD-01", "MC-MRG-01"]
 _TRUE_BACKTICK_SQL: dict[str, list[str]] = {
     "MC-SEL-01": ["SELECT `userId`, `eventName`, `Mixed Case` FROM {CAT}.ns.mc ORDER BY `userId`"],
     "MC-UPD-01": [
@@ -435,22 +436,24 @@ def test_sql_door_backticked_exact_case_succeeds_case_sensitive(
     _assert_success(table, cell_id, "true")
 
 
-@pytest.mark.parametrize("cell_id", _TRUE_UNQUOTED_EXACT_REFUSES_CELLS)
-def test_sql_door_unquoted_exact_case_refuses_case_sensitive(
+@pytest.mark.parametrize("cell_id", _TRUE_UNQUOTED_EXACT_CELLS)
+def test_sql_door_unquoted_exact_case_succeeds_case_sensitive(
     session: ReparkSession, cell_id: str
 ) -> None:
-    """Unquoted exact-case refuses with ``caseSensitive=true`` (declared).
+    """Unquoted exact-case answers with ``caseSensitive=true`` (was ID-1).
 
-    The parser folds unquoted identifiers before planning, so the exact case
-    never reaches resolution. Backticks are the exact-case spelling; Spark
-    resolving the unquoted form is the declared divergence (registry ID-1).
+    CASESENS-1 slice 2 plans the ``true`` door with identifier normalization
+    off, so the exact case reaches resolution and the ID-1 declared refusal
+    converged: the unquoted form answers the recorded ``true`` oracle rows
+    like its backticked twin.
     """
     session.conf.set(_CASE_SENSITIVE_KEY, "true")
     try:
-        with pytest.raises(AnalysisException):
-            _run_statements(session, cell_id, _CATALOG)
+        table = _run_statements(session, cell_id, _CATALOG)
     finally:
         session.conf.set(_CASE_SENSITIVE_KEY, "false")
+    assert table is not None
+    _assert_success(table, cell_id, "true")
 
 
 @pytest.mark.parametrize("cell_id", _TRUE_FAILURE_CELLS)
@@ -470,8 +473,8 @@ def test_sql_set_statement_drives_case_sensitive(session: ReparkSession) -> None
     try:
         with pytest.raises(AnalysisException):
             session.sql(f"SELECT userid FROM {_FQ_TABLE} WHERE USERID = 1").to_arrow()
-        with pytest.raises(AnalysisException):
-            session.sql(f"SELECT userId FROM {_FQ_TABLE} ORDER BY userId").to_arrow()
+        table = session.sql(f"SELECT userId FROM {_FQ_TABLE} ORDER BY userId").to_arrow()
+        assert table.to_pylist() == [{"userId": 1}, {"userId": 2}]
         table = session.sql(f"SELECT `userId` FROM {_FQ_TABLE} ORDER BY `userId`").to_arrow()
         assert table.to_pylist() == [{"userId": 1}, {"userId": 2}]
     finally:
@@ -784,7 +787,8 @@ def test_star_over_a_case_twin_frame_answers_like_spark(
     p9 ``f_twv_read`` (Spark 4.1.2, 2026-09-28): the DataFrame temp-view star
     answers ``[a, A]`` with the row — only the scan of a twin catalog table
     refuses (``L08_star_twin``). The SQL-text twin view still refuses at
-    creation (``N03_star_twin_view_create``, DataFusion's unique-names error).
+    creation (``N03_star_twin_view_create``, Spark's ``COLUMN_ALREADY_EXISTS``
+    sentence since CASESENS-1 slice 4).
     """
     assert _MEASURED_CELLS["L08_star_twin"]["outcome"] == "error"
     measured.sql("SELECT 1 AS id, 0 AS `ID`").createOrReplaceTempView("twv")
@@ -795,7 +799,11 @@ def test_star_over_a_case_twin_frame_answers_like_spark(
     df_table = measured.sql("SELECT * FROM twv_df").to_arrow()
     assert df_table.column_names == ["a", "A"]
     assert _sorted_rows(df_table) == [[1, 2]]
-    with pytest.raises(AnalysisException, match="Projections require unique expression names"):
+    with pytest.raises(
+        AnalysisException,
+        match=r"\[COLUMN_ALREADY_EXISTS\] The column `id` already exists\. "
+        r"Choose another name or rename the existing column\. SQLSTATE: 42711",
+    ):
         measured.sql(_ROUND_2_CELLS["N03_star_twin_view_create"]["sql"]).collect()
 
 

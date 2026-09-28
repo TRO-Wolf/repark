@@ -79,7 +79,11 @@ pins: ice-error-conditions-1/C-011
   are public through `column_resolution` (`on_grown_stack` passes one value for both) so
   repark-spark's re-planning temp-view scan grows the stack the same way; removing that wrapper
   overflows the 100-level temp-view chain pins. pins: ice-views-1/C-018
-- `tests.rs` — the battery below.
+- `tests.rs` — the battery below. **WO CASESENS-1 slice 2 (2026-09-27):**
+  `sensitive_session_refuses_folded_names_and_keeps_backticks` answers unquoted
+  exact `userId` where it refused `userid` (normalization-off exactness, net-zero
+  lines under the no-growth ceiling; ledger Tests rewritten).
+  pins: casesens-1/C-006
 - `inner_scopes.rs` — **WO CASESENS-1 slice 1 (2026-09-27):** the inner-scope
   spelling pass. `respell_inner_scopes` collects the written projections of the
   original statement's derived tables and CTE bodies in visit order (the leftmost
@@ -102,12 +106,16 @@ pins: ice-error-conditions-1/C-011
   pins: casesens-1/C-001, C-002
 - `scope_fields.rs` — **WO CASESENS-1 S1b (2026-09-27):** the syntactic scope
   outputs the repair fold needs before a plan exists. `query_outputs` reads a
-  query's projection the way DataFusion names it (a plain or compound reference
-  keeps its written segment, an `AS` alias and a column-alias list normalize as
-  the planner's identifier normalizer does, a set operation takes the left
-  branch, a plain `*` or `t.*` expands the statement's own relations), returning
-  `None` where a shape is not computable so the scope stays opaque rather than
-  guessed. `InjectAliases` rewrites `WITH c(cols) AS` and `(query) AS x(cols)`
+  query's projection the way the repaired plan names it (a plain or compound
+  reference resolves to the stored field it binds to in the query's own `FROM`
+  scope, falling back to the planner's identifier normalization on ambiguity or
+  no match; an `AS` alias and a column-alias list normalize as the planner's
+  identifier normalizer does, a set operation takes the left branch, a plain `*`
+  or `t.*` expands the statement's own relations), returning `None` where a
+  shape is not computable so the scope stays opaque rather than guessed.
+  **Re-verify (2026-09-28, RC-2):** the stored-name resolution lets outer
+  references from LATERAL bodies and correlated scalars bind to derived and CTE
+  outputs. `InjectAliases` rewrites `WITH c(cols) AS` and `(query) AS x(cols)`
   by moving the alias columns into the body as `AS` items, bail-out on every
   clause that can reference projection aliases (`ORDER BY`, `GROUP BY`,
   `HAVING`, `QUALIFY`, `SORT/CLUSTER/DISTRIBUTE BY`, lateral views, window
@@ -119,6 +127,31 @@ pins: ice-error-conditions-1/C-011
   returns the folded text, unchanged when the first plan succeeds; the MERGE
   door folds a parenthesized derived source with it before the fragment rewrite.
   pins: casesens-1/C-004
+- `twins.rs` — **WO CASESENS-1 slice 4 (2026-09-27):** the case-twin output
+  pass (R9). `is_unique_name_error` matches DataFusion's `Projections require
+  unique expression names` head through its wrappers; `respell_case_twins`
+  double-quotes, in every `SELECT`, each once-written item of a folded-duplicate
+  group (a `*` counts as its stored names, so a twin beside a star is quoted)
+  and leaves identical written names alone (ID-3). `plan_with_repair` re-plans
+  once on a match and continues as a first-plan success. Text battery inline.
+  pins: casesens-1/C-011
+- `ambiguity.rs` — **WO CASESENS-1 slice 4 (2026-09-27):** the ambiguity audit,
+  split out of `../column_resolution.rs` under the file-size gate. The walk
+  carries an inside-a-subquery flag (set under `SubqueryAlias`, unchanged
+  through expression subqueries, views still skipped): outer plan nodes match
+  only references written outside derived and CTE bodies (`outer_bare` /
+  `outer_qualified`), so a star over twin subquery outputs answers while an
+  explicit reference into the twins still refuses; inner nodes keep the global
+  sets, and the fold's spelling lookups are untouched. CTE bodies are always
+  wrapped, so their idents scope too; expression-subquery idents stay global
+  (correlated). No dedicated battery: the U11 audit pins plus the S4 twin
+  pins cover both sides.
+  **Verifier fold (2026-09-28, VC-1):** the flag also flips for a bare
+  derived-body root (`Projection`/`Union`/`Sort`/`Limit`/`Distinct` under
+  `Projection`/`Join`/`Filter`/`Aggregate`/`Window` — DataFusion emits no
+  `SubqueryAlias` for an unaliased derived table) and under `Subquery`
+  (lateral only), so every derived-table boundary audits as nested.
+  pins: casesens-1/C-011
 - `display.rs` — **U11-EDGE-1 (2026-09-26):** the query-spelling display rewrite. Under the
   default `caseSensitive=false`, `display_rewrite` compares the planned output names with the
   projection as written (the left branch of a set operation) and re-plans once with quoted

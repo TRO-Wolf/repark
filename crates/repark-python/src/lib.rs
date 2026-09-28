@@ -23,6 +23,7 @@ mod session_runtime;
 mod session_sources;
 mod session_write_options;
 mod subquery;
+mod temp_view_names;
 mod text_io;
 mod type_bridge;
 mod unresolved_routine;
@@ -31,7 +32,6 @@ mod writer_layout;
 use datafusion::error::DataFusionError;
 use pyo3::prelude::*;
 use repark_core::ErrorClass;
-use unresolved_routine::unresolved_routine;
 
 pub use column::PyColumn;
 pub use dataframe::PyDataFrame;
@@ -48,7 +48,7 @@ pub use exceptions::{
 #[allow(clippy::needless_pass_by_value)]
 pub(crate) fn to_py_err(err: repark_core::Error) -> PyErr {
     let message = err.to_string();
-    if let Some(routine) = unresolved_routine(&message) {
+    if let Some(routine) = unresolved_routine::unresolved_routine(&message) {
         return AnalysisException::new_err(format!(
             "[UNRESOLVED_ROUTINE] Cannot resolve routine `{routine}` on search path \
              [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883"
@@ -96,8 +96,7 @@ pub(crate) fn unknown_routine_to_py_err(sql: &str, err: DataFusionError) -> PyEr
 fn try_init_repark_tracing() {
     use std::sync::Once;
 
-    use tracing_subscriber::EnvFilter;
-    use tracing_subscriber::fmt::format::FmtSpan;
+    use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
 
     static INIT: Once = Once::new();
     INIT.call_once(|| {
@@ -180,6 +179,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     session_sources::register(module)?;
     session_write_options::register(module)?;
     subquery::register(module)?;
+    temp_view_names::register(module)?;
     text_io::register(module)?;
     type_bridge::register(module)?;
     writer_layout::register(module)?;

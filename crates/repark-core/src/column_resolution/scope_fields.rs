@@ -57,16 +57,44 @@ fn plain(options: &WildcardAdditionalOptions) -> bool {
         && options.opt_alias.is_none()
 }
 
+fn stored_or_normalized(
+    scope: &[(String, Option<Vec<String>>)],
+    qualifier: Option<&str>,
+    ident: &Ident,
+) -> String {
+    let mut held: Option<&str> = None;
+    for (relation, fields) in scope {
+        if qualifier.is_some_and(|scope| !relation.eq_ignore_ascii_case(scope)) {
+            continue;
+        }
+        let Some(fields) = fields else { continue };
+        for field in fields {
+            if field.eq_ignore_ascii_case(&ident.value) {
+                match held {
+                    None => held = Some(field),
+                    Some(prior) if prior == field => {}
+                    Some(_) => return normalized_ident(ident),
+                }
+            }
+        }
+    }
+    held.map_or_else(|| normalized_ident(ident), str::to_string)
+}
+
 fn select_outputs(select: &Select, known: &Known, ctes: &ScopeEnv) -> Option<Vec<String>> {
     let mut names = Vec::new();
     let mut factors: Option<Vec<(String, Option<Vec<String>>)>> = None;
     for item in &select.projection {
         match item {
             SelectItem::UnnamedExpr(SqlExpr::Identifier(ident)) => {
-                names.push(ident.value.clone());
+                let scope = factors.get_or_insert_with(|| scope_factors(&select.from, known, ctes));
+                names.push(stored_or_normalized(scope, None, ident));
             }
             SelectItem::UnnamedExpr(SqlExpr::CompoundIdentifier(parts)) => {
-                names.push(parts.last()?.value.clone());
+                let scope = factors.get_or_insert_with(|| scope_factors(&select.from, known, ctes));
+                let last = parts.last()?;
+                let qualifier = parts.get(parts.len() - 2).map(|part| part.value.as_str());
+                names.push(stored_or_normalized(scope, qualifier, last));
             }
             SelectItem::ExprWithAlias { alias, .. } => {
                 names.push(normalized_ident(alias));

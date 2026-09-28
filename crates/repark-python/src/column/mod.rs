@@ -16,7 +16,6 @@ use datafusion::logical_expr::expr::{HigherOrderFunction, Lambda, NullTreatment,
 use datafusion::logical_expr::{
     Case, Cast, Expr, ExprFunctionExt, WindowFunctionDefinition, lambda_var, lit,
 };
-use datafusion::prelude::col;
 use datafusion::scalar::ScalarValue;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -31,7 +30,7 @@ mod window;
 
 use expr_build::{
     TIMESTAMP_UNIT, collapse_identity_alias_chain, parse_data_type, percentile_approx_list_expr,
-    percentile_approx_scalar_expr, refuse_nested_higher_order,
+    percentile_approx_scalar_expr, refuse_nested_higher_order, written_column,
 };
 use function_dispatch::{
     call_scalar_expr, cast_unsigned_count_to_signed, nary_aggregate_udaf, unary_aggregate_udaf,
@@ -70,7 +69,8 @@ impl PyColumn {
     /// A column reference by name (PySpark `col(name)` / `F.col`).
     #[staticmethod]
     pub fn column(name: &str) -> PyResult<Self> {
-        fenced!("Column.column", { Ok(Self::from_expr(col(name))) })
+        let column = written_column(name);
+        fenced!("Column.column", { Ok(Self::from_expr(column)) })
     }
 
     /// A literal from a Python scalar (PySpark `lit(value)`).

@@ -193,8 +193,8 @@ async fn sensitive_session_refuses_folded_names_and_keeps_backticks() {
         error.contains("`USERID`") && error.contains("[`userId`, `eventName`]"),
         "unexpected message: {error}"
     );
-    let error = plan_error(&state, "SELECT userId FROM t", false).await;
-    assert!(error.contains("userid"), "unexpected message: {error}");
+    let names = plan_names(&state, "SELECT userId FROM t", false).await;
+    assert_eq!(names, vec!["userId".to_string()]);
     assert_eq!(
         plan_names(&state, "SELECT `userId` FROM t", false).await,
         vec!["userId".to_string()]
