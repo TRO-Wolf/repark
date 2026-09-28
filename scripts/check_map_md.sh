@@ -49,7 +49,7 @@ while IFS= read -r file; do
     continue
   fi
   if ! grep -Fxq "$map_path" <<<"$changed_all"; then
-    if scripts/repo-tool.sh --snapshot "$snapshot" maps --check --require-managed --path "$dir" >/dev/null; then
+    if [[ -x scripts/repo-tool.sh ]] && scripts/repo-tool.sh --snapshot "$snapshot" maps --check --require-managed --path "$dir" >/dev/null; then
       continue
     fi
     if [[ "$warn_only" == 1 ]]; then

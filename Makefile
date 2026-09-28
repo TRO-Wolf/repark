@@ -70,7 +70,7 @@ test: rust-test ## Rust workspace suite only (facade: `make py-test-facade`, als
 verify: ci test ## ci + rust-test — JVM-free, native-build-free (inner-loop)
 
 .PHONY: preflight
-preflight: verify py-test-facade py-test-parity-cap py-test-dbt audit workflows-lint ## The pre-PR gate: verify + facade suite + CAP-1 parity mirror + dbt-adapter suite + security + workflow lint
+preflight: verify py-test-facade py-test py-test-parity-cap py-test-dbt audit workflows-lint ## The pre-PR gate: verify + facade suite + CAP-1 parity mirror + dbt-adapter suite + security + workflow lint
 
 .PHONY: audit
 audit: rust-audit rust-deny py-audit ## Security gates (cargo-audit + cargo-deny + pip-audit)
@@ -202,7 +202,7 @@ py-format-check: ## ruff format --check
 .PHONY: py-test
 py-test: ## Parity-harness tests (isolated env; no native build) — mirrors ci.yml python step
 	PYTHONPATH=python/repark-parity/src \
-		uv run --no-project --with pyarrow --with pytest --with 'pydantic>=2.10,<3' \
+		uv run --isolated --no-project --with pyarrow --with pytest --with 'pydantic>=2.10,<3' \
 		pytest python/repark-parity/tests -q
 
 .PHONY: parity

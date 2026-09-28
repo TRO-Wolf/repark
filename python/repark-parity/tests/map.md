@@ -1119,3 +1119,7 @@ The DL-2 ratchet fixture copies the shared
 [grammar exception baseline](../../../scripts/ledger_grammar_exceptions.json) beside its
 script copy. It still provokes a raised ceiling and an exception outside every live ledger bin.
 pins: repo-compiler-checks/C-002
+
+The map-guard fixtures retain standalone legacy-hook diagnostics, verify the workflow's
+quoted branch environment variable, and require full parity-harness membership in preflight.
+pins: repo-compiler/C-002, C-007

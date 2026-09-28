@@ -4,6 +4,7 @@ The Rust [worktree checks](repo-tool/CHECKS.md) implement docs-link and ledger-g
 validation. `check_docs_links.py` and `check_ledger_grammar.py` remain differential references.
 [ledger_grammar_exceptions.json](ledger_grammar_exceptions.json) owns the shared grammar
 baselines. `make check-repo-docs` runs both checks with one input inventory.
+The lockstep hook retains legacy warnings when the optional managed-map compiler is absent.
 
 WO CATALOG-1 (2026-09-26): `check_rust_file_size.py` retires the `catalog_config.rs` row (1006 → 965, under the default) and ratchets `session/tests/session.rs` 1407 → 1406, shrink-only. pins: catalog-1/C-006
 

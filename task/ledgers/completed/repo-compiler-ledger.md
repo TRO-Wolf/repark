@@ -1,3 +1,54 @@
+## Errata — 2026-09-27: PR Python integration remediation
+
+PR #874's first Python CI run found two map-guard integration regressions that the local
+preflight roster did not exercise. The complete Python harness was missing from preflight;
+its source-cap subset was insufficient. This corrects the earlier implication that a local
+preflight pass alone covered that CI job. The original result remains an accurate run record.
+
+SLR-PR-CI-1: PROCEED. Trace C-002/C-007 and check-port C-004. Scope is the map hook,
+its existing regression fixture, preflight membership and their maps. Preserve legacy
+warning/error behavior when no executable compiler wrapper exists; the separate compiler
+and map gates remain mandatory in this repository. Retain the safer workflow environment
+variable and update the fixture to verify it. Add the full existing `py-test` target to
+preflight while retaining its named source-cap target. Explicit `uv run --isolated` prevents
+the local native virtual environment from changing that harness run. No engine or Rust compiler source changes.
+
+```yaml
+FINDING:
+  id: F-compiler-9
+  severity: S1
+  category: AT-9
+  clause: C-002
+  disposition: REMEDIATED
+  summary: Standalone legacy hook invocation emitted command-not-found noise when the optional compiler wrapper was absent; the executable check now selects the existing legacy path.
+  regression: python/repark-parity/tests/test_map_pr_gate_1.py::test_staged_mode_warns_and_exits_zero
+```
+
+```yaml
+FINDING:
+  id: F-compiler-10
+  severity: S1
+  category: AT-8
+  clause: C-007
+  disposition: REMEDIATED
+  summary: The workflow assertion retained the old inline expression, and preflight omitted the CI harness that caught it. The assertion now pins the quoted environment variable and preflight includes the full harness in an explicitly isolated environment.
+  regression: python/repark-parity/tests/test_map_pr_gate_1.py::test_ci_guard_is_pr_only_and_gitattributes_carries_union; test_preflight_runs_full_parity_harness
+```
+
+Both original CI failures reproduce locally in `/tmp/repo-compiler-map-ci-red.log`;
+all 16 map-gate tests pass after remediation in `/tmp/repo-compiler-map-ci-green.log`.
+The first full local harness attempt was interrupted after 1 pass in 271.84 seconds because
+`--no-project` selected the native virtual environment; this is not a passing result. The
+explicitly isolated rerun and scoped verification are recorded below. Independent Sol review
+found no new AT-8/AT-9 defect in the remediation. Remote CI must rerun on the new head before
+final readiness.
+
+Scoped verification exited 0: `/tmp/repo-compiler-ci-remediation-isolated.log`. The isolated
+Python harness passed 700 tests with 5 skipped; compiler tests passed all 81. Rust compiler
+lint/format, Python lint/format, docs/maps/lifecycle and workflow gates passed. The original
+full engine/facade/dbt preflight evidence remains unchanged; those suites were not rerun for
+this hook, fixture and Make wiring correction. Disk check: 1.1 TB available.
+
 # Repository compiler implementation ledger
 
 Date: 2026-09-27. Model: GPT-6 Sol implementation agents; root integration.

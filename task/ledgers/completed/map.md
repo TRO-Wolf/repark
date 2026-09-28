@@ -864,7 +864,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   `risk_tier: standard`. Branch `fix/replace-linear-1`.
   pins: replace-linear-1/C-001, C-002, C-003, C-004, C-005
 - [repo-compiler-checks-ledger.md](repo-compiler-checks-ledger.md) — Repository compiler check ports
-- [repo-compiler-ledger.md](repo-compiler-ledger.md) — Repository compiler implementation ledger
+- [repo-compiler-ledger.md](repo-compiler-ledger.md) — Repository compiler implementation ledger; dated PR integration errata at its top
 - [review-fix-1-ledger.md](review-fix-1-ledger.md) — Unit ledger — REVIEW-FIX-1 · the CFG-1 mirror agrees with the loader
 - [review-fix-10-ledger.md](review-fix-10-ledger.md) —
   **REVIEW-FIX-10 (2026-09-10), in flight:** `is_reading` parses the `Path` header field —
