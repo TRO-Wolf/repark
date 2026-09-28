@@ -9,7 +9,8 @@ use datafusion::logical_expr::expr::{Exists, InSubquery, SetComparison};
 use datafusion::logical_expr::{Expr, LogicalPlan};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{
-    AccessExpr, Expr as SqlExpr, Ident, ObjectNamePart, Statement, Value, VisitMut, VisitorMut,
+    AccessExpr, Expr as SqlExpr, Ident, ObjectNamePart, Select, SelectItem, Statement, Value,
+    VisitMut, VisitorMut,
 };
 use repark_common::spark_error;
 
@@ -300,6 +301,7 @@ struct WrittenRefs {
     projection: HashSet<String>,
     relations: Vec<(String, Vec<String>)>,
     views: HashSet<String>,
+    has_star: bool,
     defaults: [String; 2],
 }
 
@@ -323,6 +325,24 @@ impl WrittenRefs {
             }
             _ => parts,
         }
+    }
+}
+
+struct StarScan {
+    found: bool,
+}
+
+impl datafusion::sql::sqlparser::ast::Visitor for StarScan {
+    type Break = std::convert::Infallible;
+    fn pre_visit_select(&mut self, select: &Select) -> ControlFlow<Self::Break> {
+        self.found = self.found
+            || select.projection.iter().any(|item| {
+                matches!(
+                    item,
+                    SelectItem::Wildcard(_) | SelectItem::QualifiedWildcard(_, _)
+                )
+            });
+        ControlFlow::Continue(())
     }
 }
 
@@ -411,22 +431,26 @@ fn written_references(statement: &Statement, defaults: [String; 2]) -> WrittenRe
         ctes: HashSet::new(),
         named: Vec::new(),
     };
+    let mut stars = StarScan { found: false };
     let _ = datafusion::sql::sqlparser::ast::Visit::visit(statement, &mut collector);
+    let _ = datafusion::sql::sqlparser::ast::Visit::visit(statement, &mut stars);
     WrittenRefs {
         bare: collector.bare,
         qualified: collector.qualified,
         projection: collector.projection,
         relations: collector.relations,
-        views: collector
-            .named
-            .into_iter()
-            .filter(|(written, _)| {
-                !written.is_empty() && !collector.ctes.contains(&written.to_ascii_lowercase())
-            })
-            .map(|(_, visible)| visible.to_ascii_lowercase())
-            .collect(),
+        has_star: stars.found,
+        views: visible_views(collector.named, &collector.ctes),
         defaults,
     }
+}
+
+fn visible_views(named: Vec<(String, String)>, ctes: &HashSet<String>) -> HashSet<String> {
+    named
+        .into_iter()
+        .filter(|(written, _)| !written.is_empty() && !ctes.contains(&written.to_ascii_lowercase()))
+        .map(|(_, visible)| visible.to_ascii_lowercase())
+        .collect()
 }
 
 type Twins<'a> = HashMap<String, Vec<(Option<&'a TableReference>, &'a str)>>;
@@ -463,9 +487,40 @@ fn audit_plan_for_ambiguity(plan: &LogicalPlan, written: &WrittenRefs) -> Result
                 Ok(TreeNodeRecursion::Continue)
             })?;
         }
+        if written.has_star
+            && let LogicalPlan::Projection(projection) = node
+        {
+            refuse_star_twins(&projection.expr, &twins)?;
+        }
         Ok(TreeNodeRecursion::Continue)
     })
     .map(|_| ())
+}
+
+fn refuse_star_twins(exprs: &[Expr], twins: &Twins<'_>) -> Result<()> {
+    for expr in exprs {
+        let Expr::Column(column) = expr else {
+            continue;
+        };
+        let Some(relation) = column.relation.as_ref() else {
+            continue;
+        };
+        if crate::frame_names::is_scratch_relation(relation.table()) {
+            continue;
+        }
+        let Some(sharing) = twins.get(&column.name.to_ascii_lowercase()) else {
+            continue;
+        };
+        if sharing.iter().any(|(candidate, name)| {
+            candidate.is_some_and(|owner| *owner == *relation) && *name != column.name.as_str()
+        }) {
+            let name = column.name.as_str();
+            return Err(DataFusionError::Plan(format!(
+                "[COLUMN_ALREADY_EXISTS] The column `{name}` already exists. Choose another name or rename the existing column. SQLSTATE: 42711"
+            )));
+        }
+    }
+    Ok(())
 }
 
 fn plan_has_upper_ascii_field(plan: &LogicalPlan) -> bool {

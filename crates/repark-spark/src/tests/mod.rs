@@ -31,6 +31,7 @@ mod call_rewrite_options;
 mod call_rm_deletes;
 mod call_v3;
 mod call_v3_dv;
+mod case_twin_columns;
 mod cast_binary;
 mod cast_binary_ansi;
 mod catalog_cache_staleness;

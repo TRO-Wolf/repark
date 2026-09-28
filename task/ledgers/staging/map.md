@@ -12,6 +12,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   AWS acceptance rerun is an owner residue (R-1).
   `risk_tier: standard`. Branch `chore/rp-55-staged-single-write`.
   pins: aws-accept-replace-1/C-001
+- [rp-56-ledger.md](rp-56-ledger.md) —
+  **WO RP-56 (2026-09-28), in flight:** RP-56 repins the fork to
+  `e1d74bef` (F-SCHEMA-LCI-LAZY-1 `#364` — case-twin columns build; the
+  lower-case index refuses only on a case-insensitive lookup, as Java does) and
+  carries the Spark-door twin pins under `caseSensitive=true` (CREATE and CTAS,
+  red at `6e937f49`, green at `e1d74bef`, C-001) plus the bare-name refusal under
+  `false`; the false-door CREATE acceptance is a dated residue (R-1).
+  `risk_tier: standard`. Branch `chore/rp-56-case-twin-schema`.
+  pins: rp-56/C-001
 - [uuid-cast-window-1-ledger.md](uuid-cast-window-1-ledger.md) —
   **WO UUID-CAST-WINDOW-1 (2026-09-27), in flight:** the UUID refusal's SQL window
   counts as Spark 4.1.2 counts — the position in Unicode scalar values, the window

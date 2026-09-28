@@ -320,33 +320,43 @@ fn enable_case_sensitive(ctx: &SessionContext) {
 }
 
 #[tokio::test]
-async fn typed_partition_columns_differing_by_case_reach_the_fork_under_case_sensitive() {
+async fn typed_partition_columns_differing_by_case_serve_under_case_sensitive() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     enable_case_sensitive(&ctx);
-    for (table, columns, partitioning, pair) in [
+    for (table, columns, partitioning, schema, spec) in [
         (
             "cs_declared",
             "(id BIGINT, data STRING)",
             "(DATA STRING)",
-            "data and DATA",
+            vec![
+                column(1, "id", "long"),
+                column(2, "data", "string"),
+                column(3, "DATA", "string"),
+            ],
+            vec![identity("DATA", 3)],
         ),
-        ("cs_typed", "(id BIGINT)", "(p STRING, P INT)", "p and P"),
+        (
+            "cs_typed",
+            "(id BIGINT)",
+            "(p STRING, P INT)",
+            vec![
+                column(1, "id", "long"),
+                column(2, "p", "string"),
+                column(3, "P", "int"),
+            ],
+            vec![identity("p", 2), identity("P", 3)],
+        ),
     ] {
-        let error = execute(
+        run(
             &ctx,
             &catalogs,
             &format!("CREATE TABLE ice.sales.{table} {columns} USING iceberg PARTITIONED BY {partitioning}"),
         )
-        .await
-        .unwrap_err();
-        assert!(
-            error.to_string().starts_with(&format!(
-                "External error: DataInvalid => Cannot build lower case index: {pair} collide"
-            )),
-            "{table}: {error}"
-        );
-        assert!(!table_exists(&catalogs, table).await, "{table}");
+        .await;
+        let loaded = load_sales_table(&catalogs, table).await;
+        assert_eq!(schema_of(&loaded), schema, "{table}");
+        assert_eq!(spec_of(&loaded), spec, "{table}");
     }
     let error = execute(
         &ctx,

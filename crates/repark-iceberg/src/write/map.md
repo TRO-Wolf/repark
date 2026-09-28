@@ -964,6 +964,9 @@ repark-core's error map.
   (`partition_spec/tests.rs`, row in [partition_spec/map.md](partition_spec/map.md)), which
   carries the struct-text pin and the Rust pins for the `ReplaceField` /
   `ReplaceFieldByTransform` arms of the source check. pins: u11-edge-1/C-012, C-021
+  **RP-56 (2026-09-28):** the by-transform pair resolution uses the fork's fallible
+  case-insensitive lookup, so a case-collided schema refuses with Java's lower-case-index
+  text instead of the not-found message; uncollided behaviour is unchanged.
 - `sort_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** `apply_write_order`, the one-transaction
   write-layout primitive over the fork's `Transaction::replace_sort_order` plus an optional
   `write.distribution-mode` property set: column names resolve case-insensitively against the
