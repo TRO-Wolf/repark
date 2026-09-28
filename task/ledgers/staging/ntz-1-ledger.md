@@ -299,3 +299,40 @@ commit; C-008 and C-009 stay OPEN. Folds the Opus verifier's VN-1..VN-7
   asserting rows only, unrecorded UPDATE/MERGE refusal table names): Slice 3
   follow-up, no edit here.
 - No existing test was rewritten in this fold.
+
+## Fold VN part 2 (2026-09-28)
+
+Branch `feat/ntz-1-s2`, model Muse Spark (`muse-spark-1.3-contributor`). One
+commit; C-008 and C-009 stay OPEN. Scopes the part-1 DML gate to the store
+projection after the orchestrator ruled Q1 (land the structural fix; the
+~50-line bound predates the measured shapes).
+
+- Step 0 measured first: `ntz-1-probes/ntz8_verify_probe.py` (New York
+  session) ran on Spark 4.1.2 and on head `0a61bc02`
+  (`target/ntz-verify/ntz8-spark.json`, `ntz8-repark.json`). The 6 brief
+  cells (from_utc/to_utc over fixed-offset strings on INSERT, UPDATE, MERGE,
+  the NTZ store, and the CAST control) were already EQUAL at `0a61bc02`:
+  wall-then-localize coincides with localize-then-shift when the zone offset
+  is fixed. The 4 added DST cells (London, 2024-03-31) diverged on INSERT:
+  Spark stores `1711863000`/`1711855800`, head stored `1711859400` for both
+  (off by the DST hour); DST UPDATE/MERGE were already correct through the
+  wrap path. No HALT on the premise: Spark's answers match the verifier's.
+- Fix: `retarget_dml_store_casts` in `timestamp_ntz_cast.rs`, called from
+  `instant_ts::analyze` in LTZ mode before the generic traversal; the generic
+  arm is gone. It retargets only whole-expression casts (through Alias and
+  the nullability wrapper) of the Projection directly under each Dml node
+  and of VALUES rows, and wraps bare expressions at positional
+  TIMESTAMP_NTZ targets (arity-guarded) so naive-at-plan-time function
+  sources such as from_utc_timestamp still convert — without the wrap the
+  missing store cast fails at the writer with the Arrow UTC-to-naive error.
+  Cost: +89/−3 in `timestamp_ntz_cast.rs`, +7/−15 in `instant_ts.rs`
+  (net +78; every piece forced by a pin or a measured failure). Both files
+  stay under the 1000-line ceiling (451 and 977).
+- Pins: `test_ntz_8_verify.py` + `ntz_8_verify_spark_oracle.json` replay the
+  23-step recorded write sequence (10 reads assert rows and dtypes). Both
+  DST INSERT reads were red at `0a61bc02` (test run plus probe); the other
+  cells guard the mechanism. No existing test was rewritten in this fold.
+- Preserved: all 26 ntz7 cells byte-identical (VN-2 EQUAL, residues
+  R-NTZ-S2-4…R-NTZ-S2-8 untouched), SELECT * / UNION / REPLACE WHERE /
+  reordered and partial column lists still store the session wall, 7/7
+  `ntz_store`, full lib sweeps green, zero existing pins changed answer.

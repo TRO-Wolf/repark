@@ -5,11 +5,12 @@ use arrow::compute::kernels::cast_utils::string_to_datetime;
 use chrono::{DateTime, Utc};
 use datafusion::arrow::array::{Array, AsArray, TimestampMicrosecondArray};
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Int64Type, TimeUnit};
+use datafusion::common::tree_node::{Transformed, TreeNode};
 use datafusion::common::{DFSchema, DataFusionError, Result, ScalarValue};
-use datafusion::logical_expr::expr::ScalarFunction;
+use datafusion::logical_expr::expr::{Alias, ScalarFunction};
 use datafusion::logical_expr::{
-    ColumnarValue, Expr, ExprSchemable, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF,
-    ScalarUDFImpl, Signature, Volatility,
+    ColumnarValue, DmlStatement, Expr, ExprSchemable, LogicalPlan, Projection, ReturnFieldArgs,
+    ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, Values, Volatility,
 };
 
 use crate::ansi::spark_ansi_enabled_from_options;
@@ -72,6 +73,91 @@ pub(crate) fn rewrite_ntz_target_cast(expr: &Expr, schema: &DFSchema) -> Option<
         _ => false,
     };
     retarget.then(|| timestamp_ntz_cast_expr((*cast.expr).clone(), false))
+}
+
+pub(crate) fn retarget_dml_store_casts(plan: LogicalPlan) -> Result<LogicalPlan> {
+    plan.transform_up(|node| match node {
+        LogicalPlan::Dml(statement) => retarget_dml_input(statement).map(Transformed::yes),
+        node => Ok(Transformed::no(node)),
+    })
+    .map(|transformed| transformed.data)
+}
+
+fn retarget_dml_input(statement: DmlStatement) -> Result<LogicalPlan> {
+    let LogicalPlan::Projection(projection) = statement.input.as_ref() else {
+        return Ok(LogicalPlan::Dml(statement));
+    };
+    let targets = statement.target.schema();
+    if projection.expr.len() != targets.fields().len() {
+        return Ok(LogicalPlan::Dml(statement));
+    }
+    let inner = match projection.input.as_ref() {
+        LogicalPlan::Values(values) => Arc::new(LogicalPlan::Values(Values {
+            schema: Arc::clone(&values.schema),
+            values: retarget_rows(&values.values),
+        })),
+        _ => Arc::clone(&projection.input),
+    };
+    let mut schema = DFSchema::empty();
+    schema.merge(inner.schema());
+    let expr = projection
+        .expr
+        .iter()
+        .zip(targets.fields())
+        .map(|(item, field)| {
+            let ntz = matches!(
+                field.data_type(),
+                DataType::Timestamp(TimeUnit::Microsecond, None)
+            );
+            retarget_top(item.clone(), &schema, ntz)
+        })
+        .collect();
+    let rebuilt = Projection::try_new(expr, inner)?;
+    Ok(LogicalPlan::Dml(DmlStatement {
+        input: Arc::new(LogicalPlan::Projection(rebuilt)),
+        ..statement
+    }))
+}
+
+fn retarget_rows(rows: &[Vec<Expr>]) -> Vec<Vec<Expr>> {
+    let schema = DFSchema::empty();
+    rows.iter()
+        .map(|row| {
+            row.iter()
+                .map(|item| retarget_top(item.clone(), &schema, false))
+                .collect()
+        })
+        .collect()
+}
+
+fn retarget_top(expr: Expr, schema: &DFSchema, wrap_bare: bool) -> Expr {
+    match expr {
+        Expr::Alias(alias) => Expr::Alias(Alias {
+            expr: Box::new(retarget_top(*alias.expr, schema, wrap_bare)),
+            ..alias
+        }),
+        Expr::ScalarFunction(function)
+            if function.func.name() == crate::decimal_cast::SPARK_NONNULL_NAME =>
+        {
+            Expr::ScalarFunction(ScalarFunction::new_udf(
+                Arc::clone(&function.func),
+                function
+                    .args
+                    .into_iter()
+                    .map(|arg| retarget_top(arg, schema, wrap_bare))
+                    .collect(),
+            ))
+        }
+        _ => rewrite_ntz_target_cast(&expr, schema).unwrap_or_else(|| store_wrap(expr, wrap_bare)),
+    }
+}
+
+fn store_wrap(expr: Expr, wrap_bare: bool) -> Expr {
+    if wrap_bare {
+        timestamp_ntz_cast_expr(expr, false)
+    } else {
+        expr
+    }
 }
 
 #[must_use]
