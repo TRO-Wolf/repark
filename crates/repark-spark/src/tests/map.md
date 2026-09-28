@@ -2070,6 +2070,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   residue pin (Spark answers `INVALID_INLINE_TABLE`); `nvl`/`ifnull` over DATE and
   TIMESTAMP store with exact read-backs plus the `coalesce` control; `1.5` and
   `12345678901` refusals name `DECIMAL(2,1)` and `BIGINT`.
+  **Fold 2026-09-28 (re-verify RL-1..RL-3):** STRING-valued functions refuse
+  with the `ins_l_str` body; `0.05` names `DECIMAL(2,2)`.
   pins: ltz-store-int-1/C-001
 - `use_ddl.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the `USE` behavior pins over
   one- and two-catalog memory setups: two-part set, v2 clear-to-empty, session-catalog

@@ -2,8 +2,8 @@ use datafusion::arrow::datatypes::{DataType, Schema as ArrowSchema, TimeUnit};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
-    DataType as SqlDataType, ExactNumberInfo, Expr, Insert, ObjectName, SetExpr, TableObject,
-    TypedString, UnaryOperator, Value,
+    DataType as SqlDataType, ExactNumberInfo, Expr, FunctionArg, FunctionArgExpr,
+    FunctionArguments, Insert, ObjectName, SetExpr, TableObject, TypedString, UnaryOperator, Value,
 };
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_common::spark_error;
@@ -129,12 +129,10 @@ async fn refuse_value(
     let source = if let Some(data_type) = literal_source_type(value) {
         data_type
     } else {
-        let Some(probed) = probe_source_type(ctx, value).await else {
+        let select = nvl_coalesce_text(value).unwrap_or_else(|| value.to_string());
+        let Some(probed) = probe_source_type(ctx, &select).await else {
             return Ok(());
         };
-        if is_string_type(&probed) && is_function_call(value) {
-            return Ok(());
-        }
         probed
     };
     if let Some(text) = repark_iceberg::write::update_cast::incompatible_update_message(
@@ -235,19 +233,30 @@ fn integer_text_type(text: &str) -> DataType {
     }
 }
 
-fn is_string_type(data_type: &DataType) -> bool {
-    matches!(
-        data_type,
-        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
-    )
-}
-
-fn is_function_call(value: &Expr) -> bool {
-    match value {
-        Expr::Nested(inner) => is_function_call(inner),
-        Expr::Function(_) => true,
-        _ => false,
+fn nvl_coalesce_text(value: &Expr) -> Option<String> {
+    let mut peeled = value;
+    while let Expr::Nested(inner) = peeled {
+        peeled = inner;
     }
+    let Expr::Function(function) = peeled else {
+        return None;
+    };
+    let name = function.name.to_string();
+    if !name.eq_ignore_ascii_case("nvl") && !name.eq_ignore_ascii_case("ifnull") {
+        return None;
+    }
+    let FunctionArguments::List(list) = &function.args else {
+        return None;
+    };
+    let mut operands = list.args.iter().filter_map(|argument| match argument {
+        FunctionArg::Unnamed(FunctionArgExpr::Expr(operand)) => Some(operand),
+        _ => None,
+    });
+    let (Some(first), Some(second), None) = (operands.next(), operands.next(), operands.next())
+    else {
+        return None;
+    };
+    Some(format!("coalesce({first}, {second})"))
 }
 
 fn decimal_info_type(info: &ExactNumberInfo) -> DataType {
@@ -291,14 +300,16 @@ fn decimal_text_type(text: &str) -> Option<DataType> {
     {
         return None;
     }
+    let stripped = head.trim_start_matches('0');
+    let precision = (stripped.len() + tail.len()).max(tail.len()).max(1);
     Some(DataType::Decimal128(
-        u8::try_from(head.len() + tail.len()).unwrap_or(38),
+        u8::try_from(precision).unwrap_or(38),
         i8::try_from(tail.len()).unwrap_or(0),
     ))
 }
 
-async fn probe_source_type(ctx: &SessionContext, value: &Expr) -> Option<DataType> {
-    let frame = ctx.sql(&format!("SELECT {value} AS probe")).await.ok()?;
+async fn probe_source_type(ctx: &SessionContext, select: &str) -> Option<DataType> {
+    let frame = ctx.sql(&format!("SELECT {select} AS probe")).await.ok()?;
     frame
         .schema()
         .fields()
@@ -357,6 +368,16 @@ mod tests {
                 Some(DataType::Boolean),
                 Some(DataType::Null),
             ],
+            "{row:?}"
+        );
+    }
+
+    #[test]
+    fn leading_zero_fractions_count_precision_from_significant_digits() {
+        let row = values_row("INSERT INTO t VALUES (0.05)");
+        assert_eq!(
+            typed(&row),
+            vec![Some(DataType::Decimal128(2, 2))],
             "{row:?}"
         );
     }

@@ -304,6 +304,26 @@ async fn fractional_and_large_integer_literals_name_spark_types() {
 }
 
 #[tokio::test]
+async fn string_valued_functions_into_timestamp_refuse() {
+    let (_warehouse, ctx, catalogs) = door().await;
+    for cell in [
+        "upper('2024-01-01')",
+        "concat('2024','-01-01')",
+        "nvl(NULL,'2024-01-01')",
+    ] {
+        let sql = format!("INSERT INTO ice.sales.l VALUES (0, {cell})");
+        assert_eq!(
+            plan_err(&ctx, &catalogs, &sql).await,
+            "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for \
+             the table `ice`.`sales`.`l`: Cannot safely cast `c` \"STRING\" to \"TIMESTAMP\". \
+             SQLSTATE: KD000",
+            "{sql}"
+        );
+    }
+    assert_eq!(id_and_c(&ctx, &catalogs).await, vec![]);
+}
+
+#[tokio::test]
 async fn nvl_and_ifnull_over_temporal_values_store() {
     let (_warehouse, ctx, catalogs) = door().await;
     run(
