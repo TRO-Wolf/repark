@@ -526,6 +526,11 @@ impl AnalyzerRule for SparkLtzTimestampCast {
     fn analyze(&self, plan: LogicalPlan, config: &ConfigOptions) -> Result<LogicalPlan> {
         let zone = session_time_zone_from_options(config).to_string();
         let timestamp_type = spark_timestamp_type_from_options(config);
+        let plan = if timestamp_type.is_ntz() {
+            plan
+        } else {
+            crate::timestamp_ntz_cast::retarget_dml_store_casts(plan)?
+        };
         plan.transform_up_with_subqueries(|node| rewrite_plan(node, &zone, timestamp_type))
             .data()
     }

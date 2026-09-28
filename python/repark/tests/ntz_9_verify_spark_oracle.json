@@ -1,0 +1,324 @@
+{
+ "source": "target/ntz-verify/ntz9-spark.json (Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-28, session zone America/New_York)",
+ "steps": [
+  {
+   "key": "ns",
+   "sql": "CREATE NAMESPACE IF NOT EXISTS sc.ns"
+  },
+  {
+   "key": "c_from_utc",
+   "sql": "CREATE TABLE sc.ns.v_from_utc (id INT, c TIMESTAMP_NTZ) USING iceberg"
+  },
+  {
+   "key": "w_from_utc",
+   "sql": "INSERT INTO sc.ns.v_from_utc VALUES (1, from_utc_timestamp('2024-01-01 12:00:00','Asia/Tokyo'))"
+  },
+  {
+   "key": "r_from_utc",
+   "sql": "SELECT id, CAST(c AS STRING) AS s FROM sc.ns.v_from_utc ORDER BY id",
+   "rows": [
+    [
+     1,
+     "2024-01-01 21:00:00"
+    ]
+   ],
+   "dtypes": [
+    "int",
+    "string"
+   ]
+  },
+  {
+   "key": "c_to_utc",
+   "sql": "CREATE TABLE sc.ns.v_to_utc (id INT, c TIMESTAMP_NTZ) USING iceberg"
+  },
+  {
+   "key": "w_to_utc",
+   "sql": "INSERT INTO sc.ns.v_to_utc VALUES (1, to_utc_timestamp('2024-01-01 12:00:00','Asia/Tokyo'))"
+  },
+  {
+   "key": "r_to_utc",
+   "sql": "SELECT id, CAST(c AS STRING) AS s FROM sc.ns.v_to_utc ORDER BY id",
+   "rows": [
+    [
+     1,
+     "2024-01-01 03:00:00"
+    ]
+   ],
+   "dtypes": [
+    "int",
+    "string"
+   ]
+  },
+  {
+   "key": "c_trunc",
+   "sql": "CREATE TABLE sc.ns.v_trunc (id INT, c TIMESTAMP_NTZ) USING iceberg"
+  },
+  {
+   "key": "w_trunc",
+   "sql": "INSERT INTO sc.ns.v_trunc VALUES (1, date_trunc('HOUR', TIMESTAMP '2024-03-10 01:30:00'))"
+  },
+  {
+   "key": "r_trunc",
+   "sql": "SELECT id, CAST(c AS STRING) AS s FROM sc.ns.v_trunc ORDER BY id",
+   "rows": [
+    [
+     1,
+     "2024-03-10 01:00:00"
+    ]
+   ],
+   "dtypes": [
+    "int",
+    "string"
+   ]
+  },
+  {
+   "key": "c_dst",
+   "sql": "CREATE TABLE sc.ns.v_dst (id INT, c TIMESTAMP_NTZ) USING iceberg"
+  },
+  {
+   "key": "w_dst",
+   "sql": "INSERT INTO sc.ns.v_dst VALUES (1, from_utc_timestamp('2024-03-10 06:30:00','America/New_York')), (2, from_utc_timestamp('2024-03-10 07:30:00','America/New_York')), (3, from_utc_timestamp('2024-11-03 05:30:00','America/New_York')), (4, from_utc_timestamp('2024-11-03 06:30:00','America/New_York'))"
+  },
+  {
+   "key": "r_dst",
+   "sql": "SELECT id, CAST(c AS STRING) AS s FROM sc.ns.v_dst ORDER BY id",
+   "rows": [
+    [
+     1,
+     "2024-03-10 01:30:00"
+    ],
+    [
+     2,
+     "2024-03-10 03:30:00"
+    ],
+    [
+     3,
+     "2024-11-03 01:30:00"
+    ],
+    [
+     4,
+     "2024-11-03 01:30:00"
+    ]
+   ],
+   "dtypes": [
+    "int",
+    "string"
+   ]
+  },
+  {
+   "key": "c_collist",
+   "sql": "CREATE TABLE sc.ns.v_collist (id INT, c TIMESTAMP_NTZ) USING iceberg"
+  },
+  {
+   "key": "w_collist",
+   "sql": "INSERT INTO sc.ns.v_collist (c, id) VALUES (from_utc_timestamp('2024-01-01 12:00:00','Asia/Tokyo'), 1)"
+  },
+  {
+   "key": "r_collist",
+   "sql": "SELECT id, CAST(c AS STRING) AS s FROM sc.ns.v_collist ORDER BY id",
+   "rows": [
+    [
+     1,
+     "2024-01-01 21:00:00"
+    ]
+   ],
+   "dtypes": [
+    "int",
+    "string"
+   ]
+  },
+  {
+   "key": "c_mixed",
+   "sql": "CREATE TABLE sc.ns.v_mixed (id INT, c TIMESTAMP_NTZ) USING iceberg"
+  },
+  {
+   "key": "w_mixed",
+   "sql": "INSERT INTO sc.ns.v_mixed VALUES (1, from_utc_timestamp('2024-01-01 12:00:00','Asia/Tokyo')), (2, TIMESTAMP '2024-01-01 12:00:00')"
+  },
+  {
+   "key": "r_mixed",
+   "sql": "SELECT id, CAST(c AS STRING) AS s FROM sc.ns.v_mixed ORDER BY id",
+   "rows": [
+    [
+     1,
+     "2024-01-01 21:00:00"
+    ],
+    [
+     2,
+     "2024-01-01 12:00:00"
+    ]
+   ],
+   "dtypes": [
+    "int",
+    "string"
+   ]
+  },
+  {
+   "key": "c_mix",
+   "sql": "CREATE TABLE sc.ns.v_mix (id INT, n TIMESTAMP_NTZ, l TIMESTAMP) USING iceberg"
+  },
+  {
+   "key": "w_mix",
+   "sql": "INSERT INTO sc.ns.v_mix VALUES (1, from_utc_timestamp('2024-01-01 12:00:00','Asia/Tokyo'), from_utc_timestamp('2024-01-01 12:00:00','Asia/Tokyo'))"
+  },
+  {
+   "key": "r_mix",
+   "sql": "SELECT id, CAST(n AS STRING) AS n, unix_timestamp(l) AS lu, CAST(l AS STRING) AS ls FROM sc.ns.v_mix ORDER BY id",
+   "rows": [
+    [
+     1,
+     "2024-01-01 21:00:00",
+     1704160800,
+     "2024-01-01 21:00:00"
+    ]
+   ],
+   "dtypes": [
+    "int",
+    "string",
+    "bigint",
+    "string"
+   ]
+  },
+  {
+   "key": "c_subsel",
+   "sql": "CREATE TABLE sc.ns.v_subsel (id INT, c TIMESTAMP_NTZ) USING iceberg"
+  },
+  {
+   "key": "w_subsel",
+   "sql": "INSERT INTO sc.ns.v_subsel SELECT * FROM (VALUES (1, from_utc_timestamp('2024-01-01 12:00:00','Asia/Tokyo'))) AS v(id, c)"
+  },
+  {
+   "key": "r_subsel",
+   "sql": "SELECT id, CAST(c AS STRING) AS s FROM sc.ns.v_subsel ORDER BY id",
+   "rows": [
+    [
+     1,
+     "2024-01-01 21:00:00"
+    ]
+   ],
+   "dtypes": [
+    "int",
+    "string"
+   ]
+  },
+  {
+   "key": "c_wide",
+   "sql": "CREATE TABLE sc.ns.v_wide (id INT, c TIMESTAMP_NTZ) USING iceberg"
+  },
+  {
+   "key": "w_wide",
+   "sql": "INSERT INTO sc.ns.v_wide VALUES (1, TIMESTAMP '2024-01-01 12:00:00'), (5, TIMESTAMP_NTZ '2024-03-10 02:30:00')"
+  },
+  {
+   "key": "r_wide",
+   "sql": "SELECT id, CAST(c AS STRING) AS s FROM sc.ns.v_wide ORDER BY id",
+   "rows": [
+    [
+     1,
+     "2024-01-01 12:00:00"
+    ],
+    [
+     5,
+     "2024-03-10 02:30:00"
+    ]
+   ],
+   "dtypes": [
+    "int",
+    "string"
+   ],
+   "divergence": "R-NTZ-S2-11",
+   "spark_rows": [
+    [
+     1,
+     "2024-01-01 12:00:00"
+    ],
+    [
+     5,
+     "2024-03-10 03:30:00"
+    ]
+   ]
+  },
+  {
+   "key": "c_ctrl",
+   "sql": "CREATE TABLE sc.ns.v_ctrl (id INT, c TIMESTAMP_NTZ) USING iceberg"
+  },
+  {
+   "key": "w_ctrl",
+   "sql": "INSERT INTO sc.ns.v_ctrl SELECT 1, from_utc_timestamp('2024-01-01 12:00:00','Asia/Tokyo')"
+  },
+  {
+   "key": "r_ctrl",
+   "sql": "SELECT id, CAST(c AS STRING) AS s FROM sc.ns.v_ctrl ORDER BY id",
+   "rows": [
+    [
+     1,
+     "2024-01-01 21:00:00"
+    ]
+   ],
+   "dtypes": [
+    "int",
+    "string"
+   ]
+  },
+  {
+   "key": "c_ltznes",
+   "sql": "CREATE TABLE sc.ns.v_ltznes (id INT, c TIMESTAMP) USING iceberg"
+  },
+  {
+   "key": "w_ltznes",
+   "sql": "INSERT INTO sc.ns.v_ltznes SELECT * FROM (VALUES (1, from_utc_timestamp('2024-01-01 12:00:00','Asia/Tokyo'))) AS v(id, c)"
+  },
+  {
+   "key": "r_ltznes",
+   "sql": "SELECT id, unix_timestamp(c) AS u, CAST(c AS STRING) AS s FROM sc.ns.v_ltznes ORDER BY id",
+   "rows": [
+    [
+     1,
+     1704160800,
+     "2024-01-01 21:00:00"
+    ]
+   ],
+   "dtypes": [
+    "int",
+    "bigint",
+    "string"
+   ]
+  },
+  {
+   "key": "c_uint",
+   "sql": "CREATE TABLE sc.ns.u_int (id INT, c TIMESTAMP) USING iceberg"
+  },
+  {
+   "key": "w_uint_seed",
+   "sql": "INSERT INTO sc.ns.u_int VALUES (1, TIMESTAMP '2024-01-01 00:00:00')"
+  },
+  {
+   "key": "w_ref_from",
+   "sql": "UPDATE sc.ns.u_int SET id = from_utc_timestamp('2024-01-01 12:00:00','UTC') WHERE id = 1",
+   "divergence": "R-NTZ-S2-9",
+   "spark_error": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `id` \"TIMESTAMP\" to \"INT\". SQLSTATE: KD000",
+   "repark_error_contains": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `id` \"TIMESTAMP_NTZ\" to \"INT\". SQLSTATE: KD000"
+  },
+  {
+   "key": "w_ref_cast",
+   "sql": "UPDATE sc.ns.u_int SET id = CAST(c AS TIMESTAMP_NTZ) WHERE id = 1",
+   "divergence": "R-NTZ-S2-10",
+   "spark_error": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `id` \"TIMESTAMP_NTZ\" to \"INT\". SQLSTATE: KD000",
+   "repark_error_contains": "[UNSUPPORTED_TIMESTAMP_NTZ] TIMESTAMP_NTZ inside a nested cast target (ARRAY, STRUCT or MAP) is not supported yet; the scalar TIMESTAMP_NTZ literal and cast are. See TZ-6 (docs/spark-sql-iceberg-parity.md). SQLSTATE: 0A000"
+  },
+  {
+   "key": "r_uint",
+   "sql": "SELECT id, CAST(c AS STRING) AS s FROM sc.ns.u_int ORDER BY id",
+   "rows": [
+    [
+     1,
+     "2024-01-01 00:00:00"
+    ]
+   ],
+   "dtypes": [
+    "int",
+    "string"
+   ]
+  }
+ ]
+}

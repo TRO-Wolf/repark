@@ -410,6 +410,30 @@ pins: rp-4-fork-repin/C-005, C-006
   mixed-length rows, equal-or-wider VALUES, a missing table — falls through untouched.
   Pins: [tests/insert_arity.rs](tests/insert_arity.rs).
   pins: ice-error-conditions-1/C-011
+- `void_type/ltz_values_store.rs` — **WO LTZ-STORE-INT-1 (2026-09-28):** the
+  VALUES-door store-assignment gate for `TIMESTAMP` (LTZ) targets, a child module of
+  `void_type.rs` reached from `refuse_insert_void_values`, before planning conforms
+  VALUES literals inside the `Values` node where the analyzer rule can no longer see
+  them: each cell mapped to a microsecond `Timestamp` column is judged through the
+  shared `incompatible_update_message` gate — bare literals by their Spark kind (`1` is
+  `INT`, three in-module classifier tests), anything else by a `SELECT <cell>` probe —
+  so `VALUES (0, 1)` refuses with Spark's recorded
+  `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] … Cannot safely cast `c` "INT" to
+  "TIMESTAMP". SQLSTATE: KD000` while NULL, DATE, TIMESTAMP, TIMESTAMP_NTZ and explicit
+  `CAST`s still store. Skips TIMESTAMP_NTZ targets (NTZ-1 Slice 2 owns that door),
+  partitioned inserts, and anything it cannot map. **Fold 2026-09-28 (critic
+  V-001):** null-valued cells pass; numerics refuse through a DDL-name fallback;
+  `1L` reads `BIGINT`; DECIMAL casts and typed literals read by declared type.
+  **Fold 2026-09-28 (verifier VL-1..VL-6):** the V-001 null rule narrows to bare
+  NULL — `CAST(NULL AS T)` is judged by `T`; fractionals read `DECIMAL(p,s)`
+  and out-of-`INT`-range integers read `BIGINT`.
+  **Fold 2026-09-28 (re-verify RL-1..RL-3):** the VL-1 function deferral narrows
+  to two-argument `nvl`/`ifnull`, probed as `coalesce(a, b)`; every other
+  function is judged by its probed type; leading-zero fractions count precision
+  from significant digits.
+  Directory map: [void_type/map.md](void_type/map.md).
+  Pins: [tests/ltz_store.rs](tests/ltz_store.rs).
+  pins: ltz-store-int-1/C-001
 - `write_options.rs` — **U7 PR1 (2026-09-24):** `output-spec-id` is a typed key
   (`StatementWriteOptions.output_spec_id`, parsed by `repark_iceberg::write::parse_output_spec_id`;
   a non-integer is a `NumberFormatMarker` since round 2) that `staging_overrides` hands to staging. `normalize.rs` `build_partition_spec` takes the
@@ -1095,6 +1119,8 @@ pins: rp-4-fork-repin/C-005, C-006
   `INSERT … VALUES` value into an `unknown` column with Spark's
   `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] … Cannot safely cast `c` "INT" to "VOID".
   SQLSTATE: KD000`, naming the value's Spark type. `spark_ast.rs`'s passthrough calls both.
+  **WO LTZ-STORE-INT-1 (2026-09-28):** `refuse_insert_void_values` first calls the
+  `void_type/ltz_values_store.rs` child module.
   pins: u9-types-1/C-009
 - `describe_column.rs`, `show_table_extended.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):**
   both read the schema through repark-iceberg `presented_arrow_schema`, so a uuid column
@@ -1110,6 +1136,13 @@ pins: rp-4-fork-repin/C-005, C-006
   the analyzer's literal types. `ctas.rs` converts its schema through
   `arrow_schema_to_iceberg_with_unknown`, so `AS SELECT …, NULL AS c` makes `c` `unknown` on v3.
   pins: u9-types-1/C-014, C-015
+- `void_type.rs`, `update_cast.rs` — **WO NTZ-1 slice 2 (2026-09-27):** the INSERT and
+  UPDATE doors also judge NTZ targets through repark-iceberg
+  `write/ntz_store.rs::refuse_ntz_writes`: `void_type.rs` triggers on an Iceberg
+  `timestamp` column, probes each VALUES row as a SELECT, and maps NTZ targets to
+  `Timestamp(µs, None)` for the SELECT source; `update_cast.rs` calls the gate beside
+  the VOID one. Illegal sources refuse with Spark's `CANNOT_SAFELY_CAST` naming
+  `"TIMESTAMP_NTZ"`. pins: ntz-1/C-007
 - `cast_gate.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** the unit's one cast hook, a single
   call in `spark_ast.rs`'s passthrough: the `CAST(NULL AS VOID)` rewrite (`void_type.rs`)
   and the `CAST(x AS UUID)` refusal (`uuid_cast.rs`). pins: u9-types-1/C-009, C-010

@@ -29,6 +29,7 @@ pub mod meta_delete;
 mod name_resolution;
 pub mod nested_column;
 pub mod nested_type_sql;
+pub mod ntz_store;
 pub mod output_spec;
 /// OV1 exclusive full-table overwrite commit (stage-then-swap).
 pub mod overwrite;

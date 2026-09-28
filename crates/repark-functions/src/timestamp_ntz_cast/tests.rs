@@ -171,3 +171,15 @@ async fn the_literal_is_a_naive_wall_named_like_spark() {
         "TIMESTAMP_NTZ '2024-01-01 12:00:00'"
     );
 }
+
+#[test]
+fn retargeting_an_already_wrapped_store_expr_keeps_a_single_wrap() {
+    use datafusion::common::Column;
+    let bare = Expr::Column(Column::from_name("c"));
+    let schema = DFSchema::empty();
+    let once = retarget_top(bare.clone(), &schema, true);
+    assert!(is_ntz_cast_call(&once), "{once:?}");
+    let twice = retarget_top(once.clone(), &schema, true);
+    assert_eq!(twice, once);
+    assert_eq!(retarget_top(bare, &schema, false).to_string(), "c");
+}

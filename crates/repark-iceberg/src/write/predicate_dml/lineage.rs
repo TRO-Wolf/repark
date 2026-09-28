@@ -92,7 +92,12 @@ pub(super) fn update_projection_sql(
                 .iter()
                 .find(|(name, _)| name.eq_ignore_ascii_case(field.name()))
             {
-                format!("({expr_sql}) AS {quoted}")
+                if crate::write::ntz_store::is_ntz_wall_target(field.data_type()) {
+                    let wall = crate::write::ntz_store::ntz_wall_cast_sql(expr_sql);
+                    format!("({wall}) AS {quoted}")
+                } else {
+                    format!("({expr_sql}) AS {quoted}")
+                }
             } else {
                 format!("{}.{}", quote_ident(alias), quoted)
             }

@@ -75,6 +75,7 @@ pins: ice-error-conditions-1/C-011
   exact `userId` where it refused `userid` (normalization-off exactness, net-zero
   lines under the no-growth ceiling; ledger Tests rewritten).
   pins: casesens-1/C-006
+- `tests.rs` — the battery below.
 - `inner_scopes.rs` — **WO CASESENS-1 slice 1 (2026-09-27):** the inner-scope
   spelling pass. `respell_inner_scopes` collects the written projections of the
   original statement's derived tables and CTE bodies in visit order (the leftmost
