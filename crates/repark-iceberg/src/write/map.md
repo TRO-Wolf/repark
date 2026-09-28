@@ -855,13 +855,15 @@ repark-core's error map.
   **CTAS-VIEW-1 (2026-09-03):** `BinaryView` is a binary-width variant with `Binary`/`LargeBinary`
   (same class as `Utf8View` among string widths), so parquet-read binary columns store-assign.
   pins: ctas-view-1-conform-stream/C-002
-- `alter.rs` — `ALTER TABLE` primitives on iceberg-rust public API: SET/UNSET TBLPROPERTIES
+- `alter.rs` — `ALTER TABLE` primitives on iceberg-rust public API: schema evolution
+  (`apply_schema_changes` / `SchemaChange` → fork `UpdateSchema`), partition-spec evolution
+  (`apply_partition_spec_changes` / `PartitionSpecChange` → fork `UpdatePartitionSpec`).
+  Return `iceberg::Result`.
   (**V3-10:** the combined `alter_table_properties` seat moved to `format_version.rs`; the three
   atomicity tests stay here beside the `CommitFaultCatalog` harness they need and now drive
-  `set_properties_and_format_version` — one action, no half-applied state),
-  `rename_table`, schema evolution (`apply_schema_changes` / `SchemaChange` → fork
-  `UpdateSchema`), partition-spec evolution (`apply_partition_spec_changes` /
-  `PartitionSpecChange` → fork `UpdatePartitionSpec`). Return `iceberg::Result`.
+  `set_properties_and_format_version` — one action, no half-applied state.)
+  (RP-56 DIFF-PROBE fold, 2026-09-28: the SET/UNSET TBLPROPERTIES + `rename_table` family moved
+  to `table_admin.rs`, the recorded seam, re-exported here so doors keep their paths.)
   **ICE-COLUMN-REORDER-1 (2026-09-17, round 2 Q-20b-5):** `SchemaChange::MoveColumn`
   (top-level and nested paths via the fork's standalone `move_first` / `move_after`); every
   move commits through one `UpdateSchema` transaction, with batch-added names known to the
@@ -869,6 +871,10 @@ repark-core's error map.
   doors load once. The partition-spec family moved to `partition_spec.rs` in the same change
   (the size ratchet), behaviour-identical.
   pins: ice-column-reorder-1/C-001, C-002, C-003, C-004, C-005, C-008, C-010, C-011
+- `table_admin.rs` — (RP-56 DIFF-PROBE fold, 2026-09-28) the table-level
+  (non-schema) `ALTER TABLE` family split out of `alter.rs`: SET/UNSET TBLPROPERTIES and
+  `rename_table`, re-exported from `alter.rs` so every door keeps its path. Comment-free per
+  the owner ban; the fork errors propagate unchanged.
 - `column_move.rs` — **ICE-COLUMN-REORDER-1 (2026-09-17, round 2 Q-20b-5):**
   `resolve_move_names` (pure fork-index resolution: the fork's own
   `field_by_name_case_insensitive`, bare `AFTER` references qualified into the mover's

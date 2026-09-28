@@ -77,9 +77,9 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split tests by catalog backend with shared helpers kept local.",
     ),
     "crates/repark-iceberg/src/write/alter.rs": (
-        1606,
+        1556,
         "Iceberg ALTER operations share one transaction adapter.",
-        "Split property, rename, and schema-evolution operation families.",
+        "Split schema-evolution operation families; property and rename now live in table_admin.rs.",
     ),
     "crates/repark-iceberg/src/write/append.rs": (
         1804,
