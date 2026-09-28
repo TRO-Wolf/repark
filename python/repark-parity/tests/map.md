@@ -180,6 +180,10 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `docs/examples/functions/{posexplode,inline}.py` cover the four names and
   the backlog baseline ratchets 112 → 110.
   pins: fnp-gen-1/C-001, C-006
+- `test_cap_1_source_file_line_cap.py` — **WO CASESENS-1 slice 5 (2026-09-27):**
+  mirror row ratchets `repark-iceberg/src/write/alter.rs` 1607 → 1606 with the script
+  baseline and drops the retired `repark-python/src/dataframe.rs` 1005 row.
+  pins: casesens-1/C-013
 - `test_cap_1_source_file_line_cap.py` — **FNP-MATH-1 step 4 (2026-09-16, run 18a):**
   mirror row ratchets `functions_expr.py` 2198 → 2195 with the script baseline.
   pins: fnp-math-1/C-001, C-005

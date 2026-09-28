@@ -331,6 +331,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   dropped, `\Z` → U+001A, `'a\\\'b'` → `'a\''b'`); `INVALID_HEX_ROWS` pins Spark's
   INVALID_TYPED_LITERAL text for `X'4g'`, `X'é'`, `x'4g'`, `X'4G'`, `X' 4'` and `X'zz'`.
   pins: ice-nested-evo-1/C-054, C-055
+  **WO CASESENS-1 slice 5 (2026-09-27):** the unknown-field legs
+  (`write_ordered_by_transform_refusals_match_spark_and_commit_nothing`,
+  `hex_quoted_and_string_tokens_render_as_spark_does`) assert the landed
+  `ValidationException: Cannot find field '<written>' in struct: …` text (Spark wins;
+  Tests rewritten). pins: casesens-1/C-015
 - `replace_columns.rs` — **ICE-REPLACE-COLUMNS-1 (2026-09-19):** the Rust twins of the measured
   `RC-*` cells — fresh ids + all-NULL read-back on the basic, same-list and re-typed forms, the
   level-order struct ids (`s` 5, `s.a` 6, `s.b` 7, `last-column-id` 7), the kept `COMMENT`, the
@@ -471,6 +476,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   off; `CAST_WITH_CONF_SUGGESTION` plus the conf remedy for integrals when ANSI is on;
   `CAST_WITHOUT_SUGGESTION` for the never-castable sources in both modes and for `TRY_CAST`.
   pins: bl-11-numeric-binary/C-001, C-002, C-003
+- `casesens_ddl.rs` — **WO CASESENS-1 slice 5 (2026-09-27):** the Iceberg DDL
+  door pins: `write_order_follows_the_case_rule` (the `false` legs answer with the
+  measured source ids 2/4/1/1; the `true` legs refuse `Cannot find field '<written>'
+  in struct: …` with no order committed; the exact name answers; `nope` refuses under
+  `false`) and `identifier_fields_are_exact_under_both_settings` (wrong-case SET and
+  DROP refuse Iceberg's recorded texts with the set unchanged; the exact name sets
+  identifier `[1]`). pins: casesens-1/C-015, C-016
 - `casesens_scopes.rs` — **WO CASESENS-1 slice 1 (2026-09-27):** nested scopes
   keep the written spelling — derived and CTE projections (`r5_subq_inner_ID`,
   `r5_cte_ID`, `r5_cte_mixed`, `r5_union_subq`, `n_nested2`, `n_join_derived`),

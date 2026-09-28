@@ -3,6 +3,9 @@ use iceberg::spec::{
 };
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::{Catalog, Error, ErrorKind, Result, TableIdent};
+use repark_common::names::NameRule;
+
+use crate::write::partition_spec::java_struct_text;
 
 pub const DISTRIBUTION_MODE_PROPERTY: &str = "write.distribution-mode";
 
@@ -20,12 +23,13 @@ pub async fn apply_write_order(
     ident: &TableIdent,
     fields: &[WriteSortField],
     distribution_mode: Option<&str>,
+    rule: NameRule,
 ) -> Result<()> {
     let table = catalog.load_table(ident).await?;
     let schema = table.metadata().current_schema();
     let mut resolved = Vec::with_capacity(fields.len());
     for field in fields {
-        resolved.push((resolve_sort_field(schema, &field.name)?, field));
+        resolved.push((resolve_sort_field(schema, &field.name, rule)?, field));
     }
     let tx = Transaction::new(&table);
     let mut action = tx.replace_sort_order();
@@ -43,32 +47,34 @@ pub async fn apply_write_order(
     Ok(())
 }
 
-fn resolve_sort_field(schema: &IcebergSchema, name: &str) -> Result<String> {
+fn resolve_sort_field(schema: &IcebergSchema, name: &str, rule: NameRule) -> Result<String> {
     let mut scope: &StructType = schema.as_struct();
     let mut canonical: Vec<&str> = Vec::new();
     let segments: Vec<&str> = name.split('.').collect();
     for (depth, segment) in segments.iter().enumerate() {
-        let needle = segment.to_ascii_lowercase();
         let found = scope
             .fields()
             .iter()
-            .find(|existing| existing.name.to_ascii_lowercase() == needle)
-            .ok_or_else(|| {
-                Error::new(
-                    ErrorKind::DataInvalid,
-                    format!("Cannot find field {name} in table schema"),
-                )
-            })?;
+            .find(|existing| rule.matches(segment, &existing.name))
+            .ok_or_else(|| missing_sort_field(schema, name))?;
         canonical.push(found.name.as_str());
         if depth + 1 < segments.len() {
             let Type::Struct(inner) = found.field_type.as_ref() else {
-                return Err(Error::new(
-                    ErrorKind::DataInvalid,
-                    format!("Cannot find field {name} in table schema"),
-                ));
+                return Err(missing_sort_field(schema, name));
             };
             scope = inner;
         }
     }
     Ok(canonical.join("."))
+}
+
+fn missing_sort_field(schema: &IcebergSchema, name: &str) -> Error {
+    Error::new(
+        ErrorKind::DataInvalid,
+        format!(
+            "org.apache.iceberg.exceptions.ValidationException: Cannot find field '{name}' in \
+             struct: {}",
+            java_struct_text(schema.as_struct().fields())
+        ),
+    )
 }

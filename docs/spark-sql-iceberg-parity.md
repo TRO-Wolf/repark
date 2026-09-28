@@ -2368,16 +2368,25 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   under either `caseSensitive`; so do `bucket(4, ID)` and `REPLACE PARTITION FIELD cat WITH
   CAT`. Before, the source bound case-insensitively and the field was added. The class is
   RePark's `PySparkException` behind a `DataInvalid => ` prefix, where Spark raises
-  `Py4JJavaError` (the scoreboard counts both refusals as agreeing). Residues (unit ledger R-1,
-  R-2): `DROP PARTITION FIELD CAT` with an identity field `cat` drops it where Spark refuses
-  `Cannot find partition field to remove: CAT`, and `WRITE ORDERED BY CAT` under
-  `caseSensitive=true` answers where Spark refuses the same `ValidationException`.
+  `Py4JJavaError` (the scoreboard counts both refusals as agreeing).
+  **CASESENS-1 S5 (2026-09-27):** the R-1/R-2 residues are closed — `DROP` / `REPLACE
+  PARTITION FIELD` by a wrong-case name refuses `Cannot find partition field to remove:
+  <written>` with the spec unchanged, transform sources bind exactly on DROP and REPLACE as
+  well as ADD, `WRITE ORDERED BY` binds by `spark.sql.caseSensitive` (a wrong-case column
+  refuses the same `ValidationException` under `true`), and `SET` / `DROP IDENTIFIER FIELDS`
+  bind exactly under both settings. The `RENAME PARTITION FIELD` extension keeps working,
+  now exact (Spark does not parse it). *(oracle: this probe set,
+  `python/repark/tests/casesens_1_spark_oracle.json`.)*
 - **Apache Spark** — the refusals above, from Iceberg's `NamedReference.bind`. *(oracle:
   recorded — PySpark 4.1.2 + Iceberg 1.11, 2026-09-26, `target/probe-u11-edge-1/spark_r2.json`;
   scoreboard cell `E-CASE-PARTITION-FIELD`.)*
 - **Pin** — `python/repark/tests/test_u11_edge_partition_field.py`;
   `crates/repark-iceberg/src/write/alter.rs::tests::partition_spec_add_wrong_case_source_refuses_like_spark`.
   pins: u11-edge-1/C-009
+  `python/repark/tests/test_casesens_1.py::test_s5_iceberg_ddl_binds_exactly`;
+  `crates/repark-spark/src/tests/casesens_ddl.rs`;
+  `crates/repark-iceberg/src/write/partition_spec/tests.rs`.
+  pins: casesens-1/C-013, C-014, C-015, C-016
 - **Rationale** — FIXED; both engines refuse on replay.
 
 ### TP-FORMAT-V1-DELETE — copy-on-write DELETE on a format-version 1 table — **EQUAL 2026-09-26 (U11-EDGE-1, record only)**
@@ -8581,9 +8590,10 @@ the pin rather than obeying it.
   PySparkException `DataInvalid => Cannot bind: day cannot transform long values from 'id'`,
   where Spark raises ValidationException `Cannot bind: day cannot transform long values from
   'id'`. For a struct source the fork renders `struct<intstring>` where Spark prints
-  `struct<5: a: optional int, 6: b: optional string>`. An unknown column in a term keeps
-  RePark's `Cannot find field nope in table schema`, where Spark says `Cannot find field 'nope'
-  in struct: struct<…>` (also `id.x` and `sc.ns.wo.id`). Other malformed shapes keep RePark's
+  `struct<5: a: optional int, 6: b: optional string>`. Since CASESENS-1 S5 (2026-09-27) an
+  unknown column in a term refuses Spark's `Cannot find field 'nope' in struct: struct<…>`
+  behind RePark's `DataInvalid => ` prefix (also `id.x` and `sc.ns.wo.id`; see
+  `E-CASE-PARTITION-FIELD`). Other malformed shapes keep RePark's
   analysis texts (`bucket(`, `bucket(4, id))`, `… DESC DESC`, `… NULLS`, `… LOCALLY`), and
   `bucket(4, 0xid)` (sqlparser splits `0x` from `id`) keeps RePark's `takes column names and
   constants only` text where Spark reads one identifier and says `Cannot find field '0xid'`.

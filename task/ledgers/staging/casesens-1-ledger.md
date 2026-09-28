@@ -161,14 +161,14 @@ refuses naming `ID` (Spark's text byte-exact).
 | C-008 | Under `caseSensitive=true` INSERT column lists, UPDATE, DELETE and MERGE fragments with a wrong-case column refuse and leave the table unchanged (`p1/cs_insert_cols`, `cs_update_where`, `cs_delete_where`, `cs_merge_on` with Spark's full text); the exact column list answers (`p4/ins_exact_true`). | Slice 2. | PROVEN | `casesens_true.rs` `dml_wrong_case_refuses_and_leaves_the_table_under_case_sensitive` (INSERT/UPDATE/DELETE byte-exact, MERGE R6 byte-exact, `u` snapshotted unchanged after each, exact INSERT answers) + the facade S2 DML legs with the same unchanged checks. UPDATE/DELETE refuse through the new identity-DML exact check (the WO's "statement path" does not cover them). |
 | C-009 | Under `caseSensitive=true` the DataFrame door's `F.col`, string names, `filter`, `orderBy`, `groupBy`, `selectExpr`, string `filter`, `describe`, `join(on=)`, `unionByName` and `drop` resolve exactly with Spark's measured refusal texts (`p1/cs_df_*` listed in S3, `p4/df_window_ID_true`); under `false` `F.col("ID")`, `select("ID")`, `F.col("ID") + 1` and a window ordered by `F.col("ID")` answer and are named as written (`p4/df_col_ID_false`, `df_select_str_ID_false`, `df_expr_ID_false`, `df_window_ID_false`). | Slice 3. | PROVEN (partial: the Rust-reached legs; the six core.py-pre-bound legs are residue R-CS1-10, CASESENS-2) | S3 proves: `filter(F.col)` (`cs_df_filter_ID`, R12-only), `describe` (`cs_df_describe_ID`, R12-only), `join(on=)` (`cs_df_join_on_ID`, byte-exact), `unionByName` (`cs_df_unionByName`, message byte-exact, R-CS1-9), `drop` no-op (`cs_df_drop_ID`), exact-hit select (`cs_df_select_Data`), window (`df_window_ID_true`), `selectExpr` (R12-only, via the SQL door), and all four `false` name legs. Descoped to CASESENS-2 per the S3 ruling (R-CS1-10, unpinned): select string, select `F.col`, select lowercase-data, `orderBy`, `groupBy`, string `filter`. |
 | C-010 | `describe` / `summary` columns bind by the session rule in Rust and name the output with the written spelling (`p1/r7_describe_ID`, `p3/n_df_describe_two`). | Slice 3. | PROVEN | S3 (R8): explicit columns resolve through `resolve_frame_names` — `r7_describe_ID` and `n_df_describe_two` answer with written-spelling labels under `false`, `cs_df_describe_ID` refuses `UNRESOLVED_COLUMN.WITH_SUGGESTION` under `true` (R12-only). Pinned by the facade S3 describe legs. |
-| C-011 | Under `caseSensitive=false` case-twin outputs answer with both spellings (`p1/tw_ID_id`, `tw_Id_ID`, `tw_star_ID`, `tw_lit`, `p3/tw_subq_star`); a reference into the twins refuses `AMBIGUOUS_REFERENCE` (42704) (`p1/tw_lit_ref`); exact duplicates keep ID-3's refusal. | Slice 4. | OPEN | Slice 4. |
-| C-012 | Under `caseSensitive=false` `CREATE TABLE`, CTAS, `CREATE VIEW` and `CREATE TEMPORARY VIEW` with case-twin columns refuse `[COLUMN_ALREADY_EXISTS] The column `a` already exists. Choose another name or rename the existing column. SQLSTATE: 42711` and create nothing (`p1/tw_ctas`, `tw_create`, `p3/tw_view`, `tw_temp_view`, `tw_temp_view_read`); a positional INSERT from twins answers (`p3/tw_insert_into_run`, `tw_insert_after`). | Slice 4. | OPEN | Slice 4. Baseline note: `tw_create` already refuses on main (`Cannot build lower case index: a and A collide`). |
-| C-013 | Partition field names bind exactly under both settings: `DROP` / `REPLACE PARTITION FIELD` by a name that differs in case refuses `Cannot find partition field to remove: <written>` with the spec unchanged (`p2/pt_drop_CAT_present`, `pt_replace_CAT_by_name`, `pt_drop_named_lower`), and the exact name answers (`pt_drop_cat_present`). | Slice 5. | OPEN | Slice 5. |
-| C-014 | Partition transform sources bind exactly under both settings on ADD, DROP and REPLACE: `bucket(4, ID)` refuses `ValidationException: Cannot find field 'ID' in struct: …` with the spec unchanged (`p2/pt_drop_bucket_ID`, `pt_replace_bucket_ID`, `pt_true_drop_bucket_ID2`). | Slice 5. | OPEN | Slice 5. |
-| C-015 | `WRITE ORDERED BY` / `WRITE LOCALLY ORDERED BY` / `WRITE DISTRIBUTED BY PARTITION … ORDERED BY` bind by the session rule: under `false` any case answers with the measured source ids; under `true` a wrong-case column, nested field or transform source refuses `ValidationException: Cannot find field '<written>' in struct: …`; an unknown column refuses that text under either setting (`p2/so_*`, `p3/so_false_missing`). | Slice 5. | OPEN | Slice 5. |
-| C-016 | `SET` / `DROP IDENTIFIER FIELDS` bind exactly under both settings (`p2/id_false_ID`, `id_true_ID`, `id_true_id`, `p3/id_drop_ID`). | Slice 5. | OPEN | Slice 5. |
-| C-017 | One rule: every site this unit touches compares names through `repark_common::names::NameRule`; no `eq_ignore_ascii_case` / `to_ascii_lowercase` name comparison is added (grep of the unit's diff); the SQL door's `true` path turns identifier normalization off per statement only. | Last slice that lands. | OPEN | Partial 2026-09-27: S1 adds no session-rule name matching (`plan_with_repair`, the fold and the strict guard untouched; D1 changes only error propagation). The unit diff's single `to_ascii_lowercase` is `inner_scopes.rs` `planned_name`, R4's fixed DataFusion-normalization rendering (a written-vs-rendered identity check on one name: quoted value, else ASCII lower case) — not session-rule matching, which `NameRule` (S2) will own. The final grep reading must exclude R4's rendering or S2 must migrate it; flagged in the hand-back. S1b adds `eq_ignore_ascii_case` uses inside the fold's own CI machinery (`table_relation`'s CTE shadow lookup — the reformulated `shadowed` check — and `scope_fields`' relation matching), the same mechanism the fold already runs under `false`, plus `normalized_ident`'s `to_lowercase` rendering DataFusion's normalizer for `AS`/alias-list names (the `planned_name` class, not session-rule matching); flagged for the final grep. S2 2026-09-27: `names.rs` owns the rule; `exact.rs` (MERGE + identity-DML checks) compares names only through `NameRule::matches` / `lookup`; `plan_case_sensitive` matches nothing (normalization-off plans); the stamp renders without comparing. `spark_name_rule` is unplaced (hand-back Q1: no `repark-functions` → `repark-common` edge, `Cargo.toml` frozen). |
-| C-018 | Nothing regresses: the U11-EDGE-1 V-001 … V-004 pins, the `case_bind` and `column_resolution` batteries, the U8 C-033 case-sensitive oracle keys and the ANSI door stay green; cells `E-CASE-SELECT`, `E-CASE-ALTER`, `E-CASE-INSERT-BY-NAME`, `E-CASE-MERGE`, `R-MT-CASE` replay EQUAL and `E-CASE-PARTITION-FIELD`, `E-CASE-TABLE-NAME` both-refuse. | Last slice that lands. | OPEN | Partial 2026-09-27: zero existing pins changed. `column_resolution` battery 43/43 incl. `s22b_*`; `casesens_scopes merge view` 363/363; facade sweep 944 passed exit 0 (`test_u11_edge_case_select` incl. V-001…V-004, `test_ice_views_1` incl. `test_nested_view_depth_guard`, `test_ice_mixed_case_1`, `test_ice_write_sql_1`, `test_select_naming`, `test_case_insensitive_conform`, `test_ice_views_2_describe`, `test_perf_facade_logical_names`, `test_merge_into`, `test_u11_edge_partition_field`). Scoreboard replay 2026-09-27 (`target/casesens-1/replay-s1.json`): all 8 cells byte-equal to Spark's recorded `obs`/status, matrix outcomes unchanged (6 EQUAL, `E-CASE-PARTITION-FIELD` / `E-CASE-TABLE-NAME` both-refuse). S1b 2026-09-27: `repark-core` lib 826/826 (`column_resolution` 43/43 incl. `s22b_*`), `repark-spark` lib 2406/2406, facade 194 passed (`test_casesens_1` incl. the S1b legs, `test_ice_views_1` incl. `test_nested_view_depth_guard`, `test_ice_mixed_case_1`, `test_select_naming`); the `after-s1b` probe changes exactly the four target keys to EQUAL. S2 2026-09-27: 5 existing pins rewritten (all ID-1 convergence, Spark wins — see Tests rewritten); `column_resolution` battery green incl. `s22b_*`; `casesens merge create_typed_partition insert_by_name` 239/239; `cross_door` 23/23; facade sweep 1028 passed + 45 skipped with only the 4 ID-1 legs red before the rewrite (V-001…V-004, `test_nested_view_depth_guard`, U8 C-033 keys all green); M3/M4 red-then-green. Probe `after-s2` (29 changed keys): 18 true-mode SQL-door flips toward Spark (all four DML, joins, subquery, CTE, `cs_sel_Data`, twins, struct, `cs_order_alias`, `cs_temp_view_exact`, `cs_func_upper`, `cs_cte_name`, `ins_exact_true`, `cs_temp_view_upper` off its spurious body refusal), 1 df-name spelling via C-006 (`cs_df_unionByName` keeps `ID`), 9 content cascades downstream of true-DML refusals (`dml_after`, `r30_after` ×2 each, `after_true`, 4 df reads — the WO's anticipated class), and `r7_selfjoin` (S3's clause; refusal keeps outcome/class/condition/SQLSTATE/candidates, R3 qualifies the name — no pin covers it). Remaining DIFFs: later-slice clauses, R12 order-only legs, residues R-CS1-2…R-CS1-8, pre-existing DDL/DML framing; `cs_insert_by_name` EQUAL. Replay `replay-s2.json`: 7/7 cells byte-identical to S1 (`P-CALL-UPPERCASE` unrunnable — its definition is absent from the scoreboard dir). |
+| C-011 | Under `caseSensitive=false` case-twin outputs answer with both spellings (`p1/tw_ID_id`, `tw_Id_ID`, `tw_star_ID`, `tw_lit`, `p3/tw_subq_star`); a reference into the twins refuses `AMBIGUOUS_REFERENCE` (42704) (`p1/tw_lit_ref`); exact duplicates keep ID-3's refusal. | Slice 4. | PROVEN | S4 (backfilled in the S5 round): `casesens_twins.rs` `case_twin_outputs_answer_with_both_spellings` (5 legs, names and rows), `reference_to_a_case_twin_is_ambiguous` (`tw_lit_ref` 42704, the same shape answers under `true`), `exact_duplicates_still_refuse` (ID-3 kept); `test_casesens_1.py` `test_s4_case_twins`; M7. `p3/tw_order_by` stays a dated residue (R-CS1-11). |
+| C-012 | Under `caseSensitive=false` `CREATE TABLE`, CTAS, `CREATE VIEW` and `CREATE TEMPORARY VIEW` with case-twin columns refuse `[COLUMN_ALREADY_EXISTS] The column `a` already exists. Choose another name or rename the existing column. SQLSTATE: 42711` and create nothing (`p1/tw_ctas`, `tw_create`, `p3/tw_view`, `tw_temp_view`, `tw_temp_view_read`); a positional INSERT from twins answers (`p3/tw_insert_into_run`, `tw_insert_after`). | Slice 4. | PROVEN | S4 (backfilled in the S5 round): `creating_case_twin_columns_refuses` (all four creations refuse 42711 with nothing created) and `positional_insert_from_case_twins_answers`; facade `test_s4_case_twins` over the same keys plus `tw_temp_view_read`, `tw_df_write_create` (routes through CTAS into the same refusal); M8. `tw_create` refused on main with the lower-case-index text (baseline note); it now refuses Spark's `COLUMN_ALREADY_EXISTS`. |
+| C-013 | Partition field names bind exactly under both settings: `DROP` / `REPLACE PARTITION FIELD` by a name that differs in case refuses `Cannot find partition field to remove: <written>` with the spec unchanged (`p2/pt_drop_CAT_present`, `pt_replace_CAT_by_name`, `pt_drop_named_lower`), and the exact name answers (`pt_drop_cat_present`). | Slice 5. | PROVEN | `partition_spec/tests.rs` `drop_and_replace_by_name_are_exact` (`CAT` against `cat`, `kat` against `Kat` refuse with the spec unchanged; the exact names drop and replace) and the rewritten `alter.rs` `partition_spec_drop_replace_field_name_is_exact` (OD-3); `test_casesens_1.py` `test_s5_iceberg_ddl_binds_exactly` legs plus the `p1` / `p2` / `p4` metas; M9. `pt_drop_field_upper` refuses the same text through the same check. |
+| C-014 | Partition transform sources bind exactly under both settings on ADD, DROP and REPLACE: `bucket(4, ID)` refuses `ValidationException: Cannot find field 'ID' in struct: …` with the spec unchanged (`p2/pt_drop_bucket_ID`, `pt_replace_bucket_ID`, `pt_true_drop_bucket_ID2`). | Slice 5. | PROVEN | `transform_sources_are_exact_on_drop_and_replace` (DROP and REPLACE refuse with the byte-exact struct text, spec unchanged; the exact source drops); facade S5 legs over the three keys plus the `p3` / `o2` metas; M10. |
+| C-015 | `WRITE ORDERED BY` / `WRITE LOCALLY ORDERED BY` / `WRITE DISTRIBUTED BY PARTITION … ORDERED BY` bind by the session rule: under `false` any case answers with the measured source ids; under `true` a wrong-case column, nested field or transform source refuses `ValidationException: Cannot find field '<written>' in struct: …`; an unknown column refuses that text under either setting (`p2/so_*`, `p3/so_false_missing`). | Slice 5. | PROVEN | `casesens_ddl.rs` `write_order_follows_the_case_rule` (`false` answers with source ids 2, 4, 1, 1; `true` refusals commit no order; exact `cat` answers; `nope` refuses); facade S5 `so_*` legs plus the `o1` / `o2` metas; the two rewritten transform legs; M11. |
+| C-016 | `SET` / `DROP IDENTIFIER FIELDS` bind exactly under both settings (`p2/id_false_ID`, `id_true_ID`, `id_true_id`, `p3/id_drop_ID`). | Slice 5. | PROVEN | `casesens_ddl.rs` `identifier_fields_are_exact_under_both_settings` (wrong-case SET and DROP refuse Iceberg's recorded texts with the set unchanged; exact `id` sets identifier `[1]`); facade S5 `id_*` legs plus the `o1` / `o2` metas (all three refusal legs replay EQUAL); M12. |
+| C-017 | One rule: every site this unit touches compares names through `repark_common::names::NameRule`; no `eq_ignore_ascii_case` / `to_ascii_lowercase` name comparison is added (grep of the unit's diff); the SQL door's `true` path turns identifier normalization off per statement only. | Last slice that lands. | PROVEN | Final grep reading 2026-09-27 (`git diff origin/main`, S5 head): the unit diff adds 24 comparison lines, all classified — 4 in `names.rs` (the rule's own `IgnoreCase` implementation and `folded_duplicate`); the S1/S1b fixed false-path fold machinery (`inner_scopes` R4 rendering, `fold` / `scope_fields` CTE and derived lookups); the S4 twin-detection machinery (`twins.rs` / `ambiguity.rs` folded-equality detection, false-only by construction). Every session-rule dispatch site (S2 `exact.rs`, S3 `bind_names` and the frame functions, S5 `resolve_known_field`, `bound_sources`, `resolve_field_by_transform`, `resolve_sort_field`, `struct_child` / `field_child`) compares only through `NameRule::matches` / `lookup`. S5 adds 0 and removes 8. The SQL `true` path is the per-statement normalization-off clone in `plan_case_sensitive` only (M3/M4). |
+| C-018 | Nothing regresses: the U11-EDGE-1 V-001 … V-004 pins, the `case_bind` and `column_resolution` batteries, the U8 C-033 case-sensitive oracle keys and the ANSI door stay green; cells `E-CASE-SELECT`, `E-CASE-ALTER`, `E-CASE-INSERT-BY-NAME`, `E-CASE-MERGE`, `R-MT-CASE` replay EQUAL and `E-CASE-PARTITION-FIELD`, `E-CASE-TABLE-NAME` both-refuse. | Last slice that lands. | PROVEN | S5 2026-09-27: facade sweep 1063 passed + 47 skipped, zero pins changed (V-001…V-004, U8 C-033 keys, `test_nested_view_depth_guard` in the sweep); Rust `repark-iceberg --lib` 35/35, `repark-spark --lib` 83/83 (new pins plus the rewritten transform legs), `repark-sql --lib` 57/57 partition, `cross_door` 23/23. Probes `after-s5`: p1 47/84 (= s4), p2 17/63 (+2 EQUAL: `id_false_ID`, `id_true_ID`), p3 22/34 (+1: `id_drop_ID`), p4 9/15 (= s4); every changed key is an S5 key except the `tw_order_by` rendering flake (R-CS1-11, nondeterministic on one tree). Replay `replay-s5.json`: 7/7 cells byte-identical to `replay-s2.json`, `P-CALL-UPPERCASE` ok byte-equal to Spark. Whole-unit existing-pin changes, all Spark-wins rewrites: S2 5 (ID-1), S4 1 (twin-view creation text), S5 3 (the `alter.rs` pin, 2 transform legs). |
 
 ## Mutation record (2026-09-27)
 
@@ -181,14 +181,14 @@ Each line was broken, the named tests ran red, and the file was restored byte-id
 | M3 | Slice 2: normalization left on in `plan_case_sensitive`. | 2026-09-27: the four true-mode `casesens_true.rs` tests red, both false-mode tests green; restored identical, green again. |
 | M13 | S1b (the S1b order's "M3"): `query_outputs` returns `None` and `InjectAliases` is skipped. | `casesens_scopes.rs` `cte_outer_reference_in_another_case_binds` and `catalog_view_body_keeps_its_spelling` red with the recorded refusals; restored byte-identical, green again. |
 | M4 | Slice 2: normalization off for `false` too. | 2026-09-27: only `default_session_keeps_folding` red (the metadata false leg needs no fold, so it stays green); restored identical, green again. |
-| M5 | Slice 3: `bind_names` ignores the rule. | Pending slice 3. |
-| M6 | Slice 3: `written_column` folds. | Pending slice 3. |
-| M7 | Slice 4: `respell_case_twins` returns `false`. | Pending slice 4. |
-| M8 | Slice 4: `folded_duplicate` returns `None`. | Pending slice 4. |
-| M9 | Slice 5: `resolve_field_name` back to `eq_ignore_ascii_case`. | Pending slice 5. |
-| M10 | Slice 5: the transform-source pre-check removed. | Pending slice 5. |
-| M11 | Slice 5: `resolve_sort_field` ignores the rule. | Pending slice 5. |
-| M12 | Slice 5: `struct_child` back to ignore-case. | Pending slice 5. |
+| M5 | Slice 3: `bind_names` ignores the rule. | 2026-09-27 (S3 round): `exact_rule_refuses_a_case_only_match` red; frame functions ignoring the rule redden `frame_functions_follow_the_rule` (M5b); restored, green. |
+| M6 | Slice 3: `written_column` folds. | 2026-09-27 (S3 round): `column_keeps_the_written_spelling` red; restored, green. M6 bites only through the Rust spelling pin: the facade pre-binds names as written with or without the fold, so the WO's facade tripwire premise does not hold in this tree. |
+| M7 | Slice 4: `respell_case_twins` returns `false`. | 2026-09-27 (run in the S5 round for the S4 backfill): `casesens_twins.rs` `case_twin_outputs_answer_with_both_spellings` red; restored byte-identical, green again. |
+| M8 | Slice 4: `folded_duplicate` returns `None`. | 2026-09-27 (run in the S5 round for the S4 backfill): `casesens_twins.rs` `creating_case_twin_columns_refuses` red; restored byte-identical, green again. |
+| M9 | Slice 5: `resolve_field_name` back to `eq_ignore_ascii_case`. | 2026-09-27: `resolve_known_field` through `IgnoreCase` reddens `drop_and_replace_by_name_are_exact`; restored, green. |
+| M10 | Slice 5: the transform-source pre-check removed. | 2026-09-27: `bound_sources` without the DROP and old-source arms reddens `transform_sources_are_exact_on_drop_and_replace` (the DROP leg answers; the REPLACE leg still refuses through `resolve_field_by_transform`); restored, green. |
+| M11 | Slice 5: `resolve_sort_field` ignores the rule. | 2026-09-27: the rule shadowed to `IgnoreCase` reddens `write_order_follows_the_case_rule` (the `true` legs answer); restored, green. |
+| M12 | Slice 5: `struct_child` back to ignore-case. | 2026-09-27: `IgnoreCase` in `struct_child` reddens `identifier_fields_are_exact_under_both_settings`; restored, green. |
 | M14 | Fold round 2026-09-27: the twice-written counts guard `> 1` changed to `> 2`. | `inner_scopes.rs` `leaves_a_spelling_written_twice_in_another_case` red; restored green. |
 | M15 | Fold round 2026-09-27: the scope-count length check removed (zip to the shorter list). | `inner_scopes.rs` `refuses_unequal_scope_walks` red; restored green. |
 | M16 | Fold round 2026-09-27: `planned_name` always lower-cases. | `inner_scopes.rs` `keeps_a_quoted_value` red; restored green. |
@@ -215,6 +215,20 @@ Spark answers unquoted exact-case under `true`):
   2}]` instead of raising (the wrong-case `SELECT userid … WHERE USERID`
   leg still raises; the backticked twin is unchanged).
 
+Slice 4 (1 pin): `python/repark/tests/test_ice_mixed_case_1.py::test_star_over_a_case_twin_frame_answers_both_columns_declared`
+— the N03 twin-view creation refuses Spark's `[COLUMN_ALREADY_EXISTS]` text (oracle
+`p3/tw_view`) instead of `Projections require unique expression names`.
+
+Slice 5 (3 pins, OD-3 adopted, Spark wins):
+- `crates/repark-iceberg/src/write/alter.rs::partition_spec_drop_replace_field_name_case_insensitive`
+  → renamed `..._is_exact`, asserting the refusal and the unchanged spec
+  (`alter.rs` 1607 → 1606, EXCEPTIONS row lowered in the same commit).
+- `crates/repark-spark/src/tests/alter_write_order_transform.rs::write_ordered_by_transform_refusals_match_spark_and_commit_nothing`
+  (`bucket(4, nope)` leg) and `::hex_quoted_and_string_tokens_render_as_spark_does`
+  (`bucket(4, 0x4)` leg): the unknown-field text is now Spark's
+  `ValidationException: Cannot find field '<written>' in struct: …` (the shared
+  untouched-order tail moved to `assert_order_untouched` for the line ceiling).
+
 ## Residues
 
 | # | Residue |
@@ -229,6 +243,7 @@ Spark answers unquoted exact-case under `true`):
 | R-CS1-8 | **CLOSED 2026-09-27** (S3 lands the S2-Q2 leg): `p3/cs_temp_view_upper` now refuses `table 'spark_catalog.default.TV' not found` (R-CS1-7 class: unstamped, the refusal itself is pinned). The rule-aware probe (`resolve_temp_view_home_ref_exact` + `temp_view_names`) resolves exactly under `true` and folds under `false`. Prior record: the temp-home probe folded the name before planning, so normalization-off never saw `TV`; unpinned in the facade while the Rust planner-level leg refused. |
 | R-CS1-9 | **OPEN 2026-09-27** (S3, needs an orchestrator ruling — see S3 halt note): `p1/cs_df_unionByName` refuses with the byte-exact Spark message (`Cannot resolve column name "ID" among (id).`) but RePark surfaces condition `None` where Spark reports `_LEGACY_ERROR_TEMP_1201` (Spark's internal fallback id for legacy errors). Minting that id would corrupt the byte-exact message, so per R14 the pin (when written) asserts type + message only. Home: UNRESOLVED-TEXT. |
 | R-CS1-10 | **OPEN 2026-09-27** (S3 ruling: six C-009 legs descoped to CASESENS-2, unpinned): the facade pre-binds bare names in `dataframe/core.py` before Rust sees the written spelling, so under `true` RePark answers where Spark refuses `UNRESOLVED_COLUMN.WITH_SUGGESTION` (42703). `cs_df_select_ID`: Spark refuses naming `` `ID` `` ([`` `s` ``, `` `id` ``, `` `Data` ``]); RePark answers cols `[[ID, int]]` rows `[[1], [2]]`. `cs_df_select_col_ID`: same on both sides. `cs_df_select_data`: Spark refuses naming `` `data` `` ([`` `Data` ``, `` `id` ``, `` `s` ``]); RePark answers `[[data, string]]` `[[a], [b]]`. `cs_df_orderBy_ID`: Spark refuses naming `` `ID` ``; RePark answers `[[id, int]]` `[[1], [2]]`. `cs_df_groupBy_ID`: Spark refuses naming `` `ID` ``; RePark answers `[[ID, int], [count, bigint]]` `[[1, 1], [2, 1]]`. `cs_df_filter_str_ID`: Spark refuses naming `` `ID` ``; RePark answers `[[id, int]]` `[[2]]`. Home: CASESENS-2 (DataFrame-door names move to Rust; OD-1), 2026-09-27. |
+| R-CS1-11 | **OPEN 2026-09-27** (S4 shape, recorded in the S5 round per the WO's `tw_order_by` recipe): `p3/tw_order_by` (`SELECT ID, id FROM t ORDER BY id` under `false`): Spark answers `ID`, `id` rows `[[1, 1], [2, 2]]`; RePark refuses `[AMBIGUOUS_REFERENCE]` through `audit_plan_for_ambiguity`, and the rendering is nondeterministic run to run on one tree (``Reference `id` … [`id`, `sc`.`ns`.`t`.`id`]`` vs ``Reference `ID` … [`ID`, `sc`.`ns`.`t`.`ID`]``, 2 and 2 over 4 trials on the S5 tree). Home: follow-up (the WO forbids changing the audit here). |
 
 ## S3 round (2026-09-27, lane `xs-cs1`, landed per the S3 rulings)
 
@@ -308,3 +323,85 @@ Spark answers unquoted exact-case under `true`):
   REGISTRATION still folds unquoted names under `true` (unmeasured —
   `SELECT * FROM TV` over a view registered as quoted `"TV"` would refuse
   where Spark answers; no probe covers it).
+
+## Slice 4 (2026-09-27, landed as 70a9525e without ledger notes; backfilled in the S5 round)
+
+S4-1 new `crates/repark-core/src/column_resolution/twins.rs` (`respell_case_twins`,
+R9; `ambiguity.rs` carries the twin audit) wired before the fold loop in
+`plan_with_repair`. S4-2 `repark_common::names::folded_duplicate` and
+`column_already_exists` (R10), called in `create_table.rs`, `ctas.rs` and
+`view_ddl/execute.rs` under `false` only. Pins: `casesens_twins.rs` (5 tests),
+`test_casesens_1.py::test_s4_case_twins`. Registry: ID-3 edited (twins are not
+duplicates), the `E-CASE-SELECT` twin sentence retired. One existing pin
+rewritten (see Tests rewritten); the S1b `twin_cte_outputs` pin now asserts
+`AMBIGUOUS_REFERENCE` instead of the unique-names refusal (unit-owned pin, same
+slice family). M7/M8 run in the S5 round (this ledger). `p3/tw_order_by` stays a
+residue (R-CS1-11). C-011 and C-012 flipped PROVEN here.
+
+## Slice 5 (2026-09-27, this round; the last slice)
+
+S5-1 `partition_spec.rs` per R11 (`resolve_known_field` / `forget_field_name`
+exact with the pre-commit refusal, `bound_sources` covering DROP and old
+sources, `resolve_field_by_transform` exact with Java's text, `java_struct_text`
+`pub(crate)`; the fork action keeps `.case_sensitive(false)`). S5-2
+`sort_order.rs` `apply_write_order` takes the session rule with Java's miss text
+under both rules; `alter_write_order.rs` passes the S2-Q1 composition;
+`distribution/tests.rs` `declare_order` passes `IgnoreCase`. S5-3
+`table_props_ddl.rs` `struct_child` / `field_child` exact. Pins:
+`partition_spec/tests.rs` (2 tests), the rewritten `alter.rs` pin (OD-3),
+`casesens_ddl.rs` (2 tests), `test_casesens_1.py::test_s5_iceberg_ddl_binds_exactly`
+(20 DDL legs in probe order plus 12 `_meta` replays from the metadata files).
+Registry: `E-CASE-PARTITION-FIELD` closed (R-1/R-2), the `V3-COV-5` stale residue
+sentence trued up. Three existing pins rewritten (see Tests rewritten); the
+facade sweep changes zero. Mutations M9–M12 red-then-green; M7/M8 for the S4
+backfill. Probes `after-s5` change only S5 keys (plus the `tw_order_by` flake);
+replay `replay-s5.json` holds every cell. C-013 … C-018 flipped PROVEN here; no
+clause is OPEN, so the attestation below is filed.
+
+## Coverage attestation
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: casesens-1
+  complete: true
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: All 18 clauses walked one by one against behavior — the oracle measured on live PySpark 4.1.2 + Iceberg 1.11.0, hermetic Rust pins plus the facade replay per clause, every refusal snapshotting the unchanged table or spec, mutations M1-M18 red-then-green.
+      artifacts: [task/ledgers/staging/casesens-1-ledger.md, python/repark/tests/test_casesens_1.py, crates/repark-spark/src/tests/casesens_ddl.rs]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Boundaries exercised — twin spellings ID/id/Id, exact duplicates (ID-3 kept), quoted vs unquoted, dotted nested paths (s.A), transform terms (bucket(4, ID)), named fields (Kat/kat), both caseSensitive settings per seat, empty orders, unknown columns.
+      artifacts: [crates/repark-spark/src/tests/casesens_ddl.rs, crates/repark-iceberg/src/write/partition_spec/tests.rs, python/repark/tests/test_casesens_1.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Every refusal raises Spark's measured text (byte-exact, or head plus candidate set per R12/R13); wrong-case DML and DDL leave tables, specs, orders and identifier sets unchanged (snapshotted in the pins and the _meta replays).
+      artifacts: [python/repark/tests/test_casesens_1.py, crates/repark-spark/src/tests/casesens_ddl.rs]
+    - id: AT-4
+      status: ATTACKED
+      evidence: No shared or global state touched — the SQL true path clones the session state per statement only (M3/M4), each pin runs in its own session and warehouse, metadata assertions read committed files.
+      artifacts: [crates/repark-spark/src/tests/casesens_true.rs, python/repark/tests/test_casesens_1.py]
+    - id: AT-5
+      status: N/A
+      justification: No privileged action, no secret, no injection or deserialization surface — name matching over closed schema and spec field lists.
+    - id: AT-6
+      status: ATTACKED
+      evidence: Arrow value AND type pinned per leg (dtypes plus rows); display names asserted as written at every scope; divergences recorded as dated residues R-CS1-2…R-CS1-11 with homes, never absorbed.
+      artifacts: [python/repark/tests/test_casesens_1.py, task/ledgers/staging/casesens-1-ledger.md]
+    - id: AT-7
+      status: ATTACKED
+      evidence: Planning/DDL-only changes — no row path, no hot loop; the facade sweep and the four probes ran in normal time; file-size baselines ratcheted DOWN only (alter.rs 1607 -> 1606).
+      artifacts: [scripts/check_rust_file_size.py, scripts/map.md]
+    - id: AT-8
+      status: ATTACKED
+      evidence: DataFusion 54.1 normalization switch verified per statement and per mode (M3/M4); the fork action keeps its documented case_sensitive(false) with exactness owned by the pre-checks; ceilings ratcheted DOWN only with map.md lockstep in every touched directory.
+      artifacts: [crates/repark-iceberg/src/write/partition_spec.rs, crates/repark-iceberg/src/write/map.md, scripts/check_rust_file_size.py]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Every changed refusal text is pinned byte-exact (or R12/R13 head) on the door that raises it; the registered class prefixes (DataInvalid, planning prefix, line/pos suffix) are asserted, not stripped silently.
+      artifacts: [python/repark/tests/test_casesens_1.py, crates/repark-spark/src/tests/casesens_ddl.rs]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Red-first held — every new pin fails with the behavior removed (M1-M18) and the pre-change answers are recorded in the after-s4 probe diffs; no dead branch ships (each new arm has a named pin).
+      artifacts: [task/ledgers/staging/casesens-1-ledger.md, target/casesens-1/after-s5-diff-p2.txt]
+```

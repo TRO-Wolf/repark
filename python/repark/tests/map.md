@@ -198,6 +198,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   answers and `writeTo` routes through CTAS into the same refusal) plus the
   un-stamped `tw_temp_view_read` refusal.
   pins: casesens-1/C-011, C-012
+  **WO CASESENS-1 slice 5 (2026-09-27):**
+  `test_s5_iceberg_ddl_binds_exactly` replays the p2 DDL legs in probe order with
+  the p3 identifier/sort legs: partition names and transform sources refuse exactly
+  under both settings, the write order follows the flag, identifier SET/DROP refuse
+  exactly, and each `_meta` step asserts the recorded spec/sort/identifier triples
+  from the table's metadata file (prefix legs compare after `DataInvalid => `).
+  pins: casesens-1/C-013, C-014, C-015, C-016
 - [test_ntz_1.py](test_ntz_1.py) + `ntz_1_spark_oracle.json` — **WO NTZ-1 slice 1
   (2026-09-26):** the `TIMESTAMP_NTZ` literal and explicit casts replay Spark's measured
   answers — 29 literal/cast/refusal queries in UTC and New York sessions, the v2/v3

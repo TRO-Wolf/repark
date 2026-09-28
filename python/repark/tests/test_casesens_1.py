@@ -41,9 +41,17 @@ refuses ``AMBIGUOUS_REFERENCE`` byte-exact, and ``CREATE TABLE``, CTAS,
 ``CREATE VIEW`` and ``CREATE TEMPORARY VIEW`` with twin columns refuse
 ``COLUMN_ALREADY_EXISTS`` (the ``tw_view`` leg strips Spark's recorded
 trailing ``;``); the positional insert answers and ``writeTo`` routes through
-CTAS into the same refusal.
+CTAS into the same refusal. S5 replays the Iceberg DDL legs: partition field
+names and transform sources bind exactly under both settings, the write order
+follows the session rule, and identifier fields bind exactly; each ``_meta``
+step asserts the recorded spec, sort and identifier state from the table's
+metadata file. Partition-name and sort/source refusals assert RePark's
+``PySparkException`` text after its ``DataInvalid => `` prefix against Spark's
+``msg`` or ``java`` line; identifier refusals match Spark's
+``IllegalArgumentException`` text with no prefix.
 
-pins: casesens-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
+pins: casesens-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012,
+    C-013, C-014, C-015, C-016, C-017, C-018
 """
 
 from __future__ import annotations
@@ -571,5 +579,113 @@ def test_s4_case_twins(tmp_path: Path) -> None:
         _assert_step(session, "p3/tw_insert_into_run")
         _assert_step(session, "p3/tw_insert_after")
         _assert_df_step(session, "p3/tw_df_write_create")
+    finally:
+        session.stop()
+
+
+def _setup_ddl_tables(session: ReparkSession) -> None:
+    """Create the probe's p2 tables plus the p3 identifier table (S5)."""
+    session.sql("CREATE NAMESPACE IF NOT EXISTS sc.ns").collect()
+    schema = "(id INT NOT NULL, cat STRING, s STRUCT<a: INT>)"
+    session.sql(f"CREATE TABLE sc.ns.p1 {schema} USING iceberg PARTITIONED BY (cat)").collect()
+    session.sql(f"CREATE TABLE sc.ns.p2 {schema} USING iceberg PARTITIONED BY (cat)").collect()
+    session.sql(
+        f"CREATE TABLE sc.ns.p3 {schema} USING iceberg PARTITIONED BY (bucket(4, id))"
+    ).collect()
+    session.sql(f"CREATE TABLE sc.ns.p4 {schema} USING iceberg").collect()
+    session.sql(f"CREATE TABLE sc.ns.o1 {schema} USING iceberg").collect()
+    session.sql(f"CREATE TABLE sc.ns.o2 {schema} USING iceberg").collect()
+    session.sql("CREATE TABLE sc.ns.i (id INT NOT NULL, cat STRING) USING iceberg").collect()
+    session.sql("ALTER TABLE sc.ns.i SET IDENTIFIER FIELDS id").collect()
+
+
+def _assert_ddl_refusal(session: ReparkSession, key: str) -> None:
+    """Run one DDL refusal leg asserting the text after the class prefix (S5)."""
+    step = _ORACLE[key]
+    session.conf.set("spark.sql.caseSensitive", "true" if step["case_sensitive"] else "false")
+    spark = step["spark"]
+    try:
+        session.sql(_sql_of(step)).collect()
+    except Exception as error:
+        assert type(error).__name__ == "PySparkException", key
+        assert _condition(error) is None, key
+        assert _sql_state(error) is None, key
+        want = spark["java"] if "java" in spark else spark["msg"]
+        want = _plain_message(want).removeprefix(":").strip()
+        assert _plain_message(str(error)).removeprefix("DataInvalid => ") == want, key
+    else:
+        raise AssertionError(f"{key} answered instead of refusing")
+
+
+def _assert_meta(warehouse: Path, table: str, meta_key: str) -> None:
+    """Replay one _meta step from the table's latest metadata file (S5)."""
+    base = warehouse / "sc" / "ns" / table / "metadata"
+    files = sorted(base.glob("*.metadata.json"), key=lambda item: item.stat().st_mtime_ns)
+    meta = json.loads(files[-1].read_text(encoding="utf-8"))
+    spec = next(
+        entry for entry in meta["partition-specs"] if entry["spec-id"] == meta["default-spec-id"]
+    )
+    orders = [
+        entry
+        for entry in meta.get("sort-orders", [])
+        if entry["order-id"] == meta.get("default-sort-order-id")
+    ]
+    schema = next(
+        entry for entry in meta["schemas"] if entry["schema-id"] == meta["current-schema-id"]
+    )
+    got = {
+        "spec": [
+            [field["name"], field["transform"], field["source-id"]] for field in spec["fields"]
+        ],
+        "sort": [
+            [field["transform"], field["source-id"], field["direction"]]
+            for field in (orders[0]["fields"] if orders else [])
+        ],
+        "identifier": schema.get("identifier-field-ids", []),
+    }
+    assert got == _ORACLE[meta_key]["spark"], meta_key
+
+
+def test_s5_iceberg_ddl_binds_exactly(tmp_path: Path) -> None:
+    """Partition, sort and identifier names bind as Iceberg binds them (S5)."""
+    session = _open(tmp_path)
+    try:
+        _setup_ddl_tables(session)
+        _assert_ddl_refusal(session, "p2/pt_drop_CAT_present")
+        _assert_meta(tmp_path, "p1", "p2/pt_drop_CAT_present_meta")
+        _assert_step(session, "p2/pt_drop_cat_present")
+        _assert_meta(tmp_path, "p1", "p2/pt_drop_cat_present_meta")
+        _assert_ddl_refusal(session, "p2/pt_replace_CAT_by_name")
+        _assert_meta(tmp_path, "p2", "p2/pt_replace_CAT_by_name_meta")
+        _assert_ddl_refusal(session, "p2/pt_drop_bucket_ID")
+        _assert_meta(tmp_path, "p3", "p2/pt_drop_bucket_ID_meta")
+        _assert_ddl_refusal(session, "p2/pt_drop_field_upper")
+        _assert_meta(tmp_path, "p3", "p2/pt_drop_field_upper_meta")
+        _assert_ddl_refusal(session, "p2/pt_replace_bucket_ID")
+        _assert_meta(tmp_path, "p3", "p2/pt_replace_bucket_ID_meta")
+        _assert_step(session, "p2/pt_add_named_upper")
+        _assert_ddl_refusal(session, "p2/pt_drop_named_lower")
+        _assert_meta(tmp_path, "p4", "p2/pt_drop_named_lower_meta")
+        _assert_step(session, "p2/so_false_CAT")
+        _assert_meta(tmp_path, "o1", "p2/so_false_CAT_meta")
+        _assert_step(session, "p2/so_false_nested_A")
+        _assert_meta(tmp_path, "o1", "p2/so_false_nested_A_meta")
+        _assert_step(session, "p2/so_false_local_ID")
+        _assert_step(session, "p2/so_false_dist_ID")
+        _assert_step(session, "p2/id_false_ID")
+        _assert_meta(tmp_path, "o1", "p2/id_false_ID_meta")
+        _assert_ddl_refusal(session, "p2/so_true_CAT")
+        _assert_step(session, "p2/so_true_cat")
+        _assert_ddl_refusal(session, "p2/so_true_local_ID")
+        _assert_ddl_refusal(session, "p2/so_true_nested_A")
+        _assert_ddl_refusal(session, "p2/so_true_bucket_ID")
+        _assert_step(session, "p2/id_true_ID")
+        _assert_step(session, "p2/id_true_id")
+        _assert_meta(tmp_path, "o2", "p2/id_true_id_meta")
+        _assert_step(session, "p2/pt_true_drop_bucket_ID")
+        _assert_ddl_refusal(session, "p2/pt_true_drop_bucket_ID2")
+        _assert_meta(tmp_path, "o2", "p2/pt_true_drop_bucket_ID2_meta")
+        _assert_step(session, "p3/id_drop_ID")
+        _assert_ddl_refusal(session, "p3/so_false_missing")
     finally:
         session.stop()

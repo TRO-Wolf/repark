@@ -31,6 +31,7 @@ mod call_rewrite_options;
 mod call_rm_deletes;
 mod call_v3;
 mod call_v3_dv;
+mod casesens_ddl;
 mod casesens_scopes;
 mod casesens_true;
 mod casesens_twins;

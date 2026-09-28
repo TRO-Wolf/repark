@@ -1308,8 +1308,9 @@ pins: rp-4-fork-repin/C-005, C-006
   (`try_parse_set_identifier_fields_ddl` / `try_parse_drop_identifier_fields_ddl` /
   `execute_identifier_fields_ddl`, wired in `router.rs` after the column-move intercept). Every
   named field is resolved against the current schema (top-level and dotted paths,
-  case-insensitive) and SET refuses — with Iceberg's message shapes, the recorded nullable one
-  being `Cannot add field {name} as an identifier field: not a required field` — optional,
+  exact since CASESENS-1 S5, case-insensitive before) and SET refuses — with Iceberg's
+  message shapes, the recorded nullable one being
+  `Cannot add field {name} as an identifier field: not a required field` — optional,
   float/double, non-primitive and list/map-nested candidates before any transaction action is
   built; both statements refuse unknown names; `require_column` is never called. SET commits the
   fork's `UpdateSchemaAction::set_identifier_fields`; DROP replaces the set with
@@ -1317,6 +1318,9 @@ pins: rp-4-fork-repin/C-005, C-006
   is captured — `SET IDENTIFIER` (no FIELDS), parenthesized, dangling-comma and trailing-token
   variants keep the stock parser fall-through. 4 in-module tests +
   [`tests/identifier_fields.rs`](tests/identifier_fields.rs).
+  **WO CASESENS-1 slice 5 (2026-09-27, R11):** `struct_child` / `field_child` bind
+  through `NameRule::Exact` under both settings, so SET and DROP refuse a wrong-case
+  column with Iceberg's recorded texts. pins: casesens-1/C-016
   **WO U5 PR1 round 2 (2026-09-24):** `unset_if_exists_pair` (the `IF EXISTS` span the UNSET
   rewrite drops) and `unset_tblproperties_if_refusal`, a router pre-parse intercept placed after
   the comment-DDL pre-parse (the `refuse_unsupported_alter_sql` step it followed is gone since WO
@@ -1440,6 +1444,10 @@ pins: rp-4-fork-repin/C-005, C-006
   module, not an `alter.rs` arm, because that file sits at its exact ceiling. Pins:
   [tests/alter_write_order.rs](tests/alter_write_order.rs).
   pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006
+  **WO CASESENS-1 slice 5 (2026-09-27, R11):** `execute_write_order_ddl` passes the
+  session `NameRule` (the S2-Q1 composition over the context config) into
+  `apply_write_order`, so each segment binds by `spark.sql.caseSensitive`.
+  pins: casesens-1/C-015
   **WO U5 PR2b (2026-09-24):** transform terms land (D-WRITE-ORDERED-TRANSFORM).
   `parse_write_order_term` splits each `order_list_segments` segment. A `name(…)` segment is a
   transform term, checked in the order of Spark's `Spark3Util.toIcebergTerm`: zorder first

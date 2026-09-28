@@ -10,6 +10,7 @@ use crate::sort_order_parse::{
     tokenize_significant, word_at, word_eq,
 };
 use crate::{catalog_handle, iceberg_err, reregister};
+use repark_common::names::NameRule;
 use repark_iceberg::write::sort_order::WriteSortField;
 use repark_iceberg::write::unsupported_error;
 
@@ -107,11 +108,16 @@ pub(crate) async fn execute_write_order_ddl(
 ) -> Result<DataFrame> {
     let (catalog_name, ident) = table_parts_to_ident(catalogs, &ddl.table_parts)?;
     let handle = catalog_handle(catalogs, &catalog_name)?;
+    let options = ctx.copied_config();
+    let rule = NameRule::from_case_sensitive(
+        repark_functions::case_sensitive::spark_case_sensitive_from_options(options.options()),
+    );
     repark_iceberg::write::sort_order::apply_write_order(
         handle.as_ref(),
         &ident,
         &ddl.fields,
         ddl.distribution_mode.as_deref(),
+        rule,
     )
     .await
     .map_err(iceberg_err)?;

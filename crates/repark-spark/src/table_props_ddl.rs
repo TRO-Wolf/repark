@@ -10,6 +10,7 @@ use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use iceberg::spec::{NestedField, PrimitiveType, Schema, StructType, Type};
 use iceberg::table::Table;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
+use repark_common::names::NameRule;
 use repark_core::CatalogRegistry;
 use repark_iceberg::write::alter::starts_with_alter;
 
@@ -196,23 +197,22 @@ fn struct_child<'a>(struct_type: &'a StructType, part: &str) -> Option<&'a Neste
     struct_type
         .fields()
         .iter()
-        .find(|field| field.name.eq_ignore_ascii_case(part))
+        .find(|field| NameRule::Exact.matches(part, &field.name))
         .map(Arc::as_ref)
 }
 
 fn field_child<'a>(field: &'a NestedField, part: &str) -> Option<&'a NestedField> {
     match field.field_type.as_ref() {
         Type::Struct(struct_type) => struct_child(struct_type, part),
-        Type::List(list_type) => (list_type.element_field.name.eq_ignore_ascii_case(part))
+        Type::List(list_type) => NameRule::Exact
+            .matches(part, &list_type.element_field.name)
             .then_some(list_type.element_field.as_ref()),
         Type::Map(map_type) => {
-            if map_type.key_field.name.eq_ignore_ascii_case(part) {
+            if NameRule::Exact.matches(part, &map_type.key_field.name) {
                 Some(map_type.key_field.as_ref())
             } else {
-                map_type
-                    .value_field
-                    .name
-                    .eq_ignore_ascii_case(part)
+                NameRule::Exact
+                    .matches(part, &map_type.value_field.name)
                     .then_some(map_type.value_field.as_ref())
             }
         }
