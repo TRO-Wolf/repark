@@ -17,8 +17,10 @@ if TYPE_CHECKING:
 def _bind_qualified_display_column(frame: DataFrame, name: str) -> Column | None:
     """Bind a dotted name on an overlay frame through schema qualifiers.
 
-    Pair each native schema qualifier with its display positionally; the
-    first hit binds and keeps the written last segment. A miss returns
+    Pair each native schema qualifier with its display positionally; one
+    hit binds and keeps the written last segment. Hits on different
+    attributes refuse natively with Spark's ambiguous text under both
+    rules; the same attribute seen twice still binds. A miss returns
     None under IgnoreCase and refuses natively under Exact.
     """
     plan = frame._plan()

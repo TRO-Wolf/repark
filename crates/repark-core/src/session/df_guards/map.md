@@ -138,6 +138,10 @@ wrapped optimizer rule) and declares this directory.
   `bind_projection_expr` plus `cast_child_name` moved byte-identical to
   `cast_names.rs` and re-export through this module; the public `frame_names` path
   is unchanged and this file sits 25 lines under the ceiling.
+  **CASESENS-2 verifier fold (2026-09-28):** `ambiguous_reference` and the
+  `Hit` alias widen to `pub(super)` (line-neutral) so the qualified-display
+  path shares Spark's ambiguous text instead of formatting its own.
+  pins: casesens-2/C-003
 - [cast_names.rs](cast_names.rs) — **CASESENS-2 S4 clerk (2026-09-28):** the select-path
   written-spelling helper, split byte-identical out of `case_bind.rs` when the merge
   pushed that file past the 1000-line ceiling. `bind_projection_expr` binds through
@@ -216,6 +220,14 @@ wrapped optimizer rule) and declares this directory.
   Pins `join_condition_aliases_rebind_through_the_side_schemas`,
   `join_condition_aliases_leave_other_references_untouched`,
   `qualified_display_names_pair_schema_positions_with_displays`.
+  pins: casesens-2/C-003
+  **CASESENS-2 verifier fold (2026-09-28):** `resolve_one_display` collects
+  every qualifier-plus-display hit and refuses `AMBIGUOUS_REFERENCE` with
+  Spark's text (the shared `ambiguous_reference`) when a dotted name hits
+  different engine fields under either rule; the same engine seen twice
+  still binds, and misses keep their rule behavior. Pin
+  `qualified_display_multi_hit_refuses_unless_same_engine` covers the
+  ambiguous legs (both rules) and the same-engine leg.
   pins: casesens-2/C-003
 
 ## Pointers

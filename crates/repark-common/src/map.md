@@ -53,6 +53,12 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   ignoring case to an earlier one) and `column_already_exists` (Spark's
   42711 text) with the `folded_duplicate_reports_the_lower_cased_twin` pin.
   pins: casesens-1/C-005, C-006, C-007, C-008, C-012, C-017
+  **CASESENS-2 verifier fold (2026-09-28):** `IgnoreCase` matches like Java
+  `equalsIgnoreCase` (equal UTF-16 length, then per-char identity or
+  single-char upper/lower equality, so `ünï` folds to `Ünï` while `STRASSE`
+  misses `straße`) in `matches`, `lookup`, and `folded_duplicate`; pin
+  `ignore_case_folds_unicode_like_java_equals_ignore_case`.
+  pins: casesens-2/C-003, C-004, C-005
 - `lib.rs` — `Error` (variants: `NotImplemented(String)` — the deterministic scope-gate /
   unsupported-feature class (U4: no longer a scaffolding placeholder; `engine_err` folds
   `DataFusionError::NotImplemented` + iceberg `FeatureUnsupported` into it, verbatim `{0}`);

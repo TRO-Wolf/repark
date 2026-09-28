@@ -244,6 +244,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   R-CS2-7 answer-gaps. The oracle gains the p10 keys (existing keys
   byte-equal).
   pins: casesens-2/C-003, C-008
+  **CASESENS-2 verifier fold (2026-09-28):** the eight S5 pins — the unicode
+  fold legs under both doors (the DataFrame door answers, `STRASSE` misses,
+  `true` refuses), the six ambiguous shapes plus bare getitem, the
+  true-door construction refusal, the asymmetric self-join, the plural
+  fan-out, and the R-CS2-8/R-CS2-9 residue pins — with the live-measured
+  p11 values embedded (Spark 4.1.2, 2026-09-28).
+  pins: casesens-2/C-003, C-004, C-005, C-006
 - [test_ntz_1.py](test_ntz_1.py) + `ntz_1_spark_oracle.json` — **WO NTZ-1 slice 1
   (2026-09-26):** the `TIMESTAMP_NTZ` literal and explicit casts replay Spark's measured
   answers — 29 literal/cast/refusal queries in UTC and New York sessions, the v2/v3
@@ -2174,6 +2181,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_describe_non_describable_column_arms` for the measured boundary: bare
   `describe()`/`summary(...)` skip non-numeric non-string columns and naming one
   raises `PySparkValueError`.
+  **CASESENS-2 verifier fold (2026-09-28):** the EX-DF-18 divergence pin flips
+  to `test_with_columns_renamed_duplicate_names_answers` — the plural rename
+  answers Spark's duplicate-named frame.
+  pins: casesens-2/C-004
   pins: ex-19-dataframe-d-window/C-001
   pins: ex-29-class-remainder/C-002, C-003
   pins: df-describe-str-1/C-001, C-002, C-003
@@ -5860,7 +5871,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_dogfood_gaps.py` — Group F (2026-07-21 dogfood): F1 `current_timestamp` µs/UTC Arrow +
   Iceberg v2 CTAS regression; **TZ-4 PR-1:** SQL / `F.expr` `current_timestamp` ns residuals
   flipped to µs+UTC; SQL / expr CTAS reject pins flipped to v2 success. F2/F3 `sparkContext`/`version`; F4 `withColumns` atomic +
-  `withColumnsRenamed` (+ duplicate-name fail-loud); F5 `transform` signature/error class; F6
+  `withColumnsRenamed` (+ duplicate-name answers, flipped 2026-09-28 by the CASESENS-2
+  verifier fold); F5 `transform` signature/error class; F6
   DIVERGENCE-1 timestamp-LTZ collect passthrough disclosure (JVM-free). Oracles from live
   PySpark 4.1.2.
 - `test_column_access.py` — (+ 2026-07-21 review pins: getitem requested-spelling naming, copy no-recursion) **Group G1** column-access sugar (2026-07-21; octo R1 Half B + R2

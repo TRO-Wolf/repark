@@ -8,7 +8,7 @@ use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::parser::Parser;
 use repark_common::names::{NameRule, column_already_exists, folded_duplicate};
 
-use super::case_bind::unresolved_column;
+use super::case_bind::{Hit, ambiguous_reference, unresolved_column};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Disposition {
@@ -260,27 +260,37 @@ fn resolve_one_display(
     let Some((qualifier, last_segment)) = written.rsplit_once('.') else {
         return Ok((written.to_string(), String::new(), Disposition::Missing));
     };
+    if !paired {
+        return Ok((written.to_string(), String::new(), Disposition::Missing));
+    }
     let want = TableReference::Bare {
         table: qualifier.into(),
     };
-    let hit = paired.then(|| {
+    let mut distinct: Vec<Hit<'_>> = Vec::new();
+    for ((held, field), _) in
         frame_schema
             .iter()
             .zip(displays.iter())
-            .find(|((held, _), display)| {
+            .filter(|((held, _), display)| {
                 held.as_ref()
                     .is_some_and(|held| qualifier_matches(&want, held, rule))
                     && rule.matches(last_segment, display)
             })
-            .map(|((_, field), _)| field.name().clone())
-    });
-    match hit {
-        Some(Some(engine)) => Ok((written.to_string(), engine, Disposition::Bound)),
-        Some(None) if matches!(rule, NameRule::Exact) => Err(unresolved_display_miss(
-            &Column::new(Some(want), last_segment),
-            displays,
+    {
+        if !distinct.iter().any(|(_, seen)| seen.name() == field.name()) {
+            distinct.push((held, field.as_ref()));
+        }
+    }
+    let column = Column::new(Some(want), last_segment);
+    match distinct.as_slice() {
+        [] if matches!(rule, NameRule::Exact) => Err(unresolved_display_miss(&column, displays)),
+        [] => Ok((written.to_string(), String::new(), Disposition::Missing)),
+        [(_, field)] => Ok((
+            written.to_string(),
+            field.name().clone(),
+            Disposition::Bound,
         )),
-        _ => Ok((written.to_string(), String::new(), Disposition::Missing)),
+        _ => Err(ambiguous_reference(&column, &distinct)),
     }
 }
 
@@ -359,7 +369,7 @@ mod tests {
     use std::sync::Arc;
 
     use datafusion::arrow::datatypes::{DataType, Field};
-    use datafusion::common::DFSchema;
+    use datafusion::common::{DFSchema, TableReference};
 
     use super::{
         Disposition, match_display_names, match_subset_names, refuse_folded_duplicate_keys,
@@ -704,19 +714,7 @@ mod tests {
                 .unwrap_err()
                 .to_string();
         assert_eq!(error, unresolved("`l`.`ID`", "`id`, `Data`"));
-        let dupes = schema(&[("l", "e0"), ("l", "e1")]);
         let twin_displays = ["id".to_string(), "id".to_string()];
-        let first = resolve_qualified_display_names(
-            &dupes,
-            &twin_displays,
-            &["l.id".to_string()],
-            IgnoreCase,
-        )
-        .unwrap();
-        assert_eq!(
-            first,
-            vec![("l.id".to_string(), "e0".to_string(), Disposition::Bound)]
-        );
         let unqualified = DFSchema::from_unqualified_fields(
             vec![
                 Field::new("e0", DataType::Int64, true),
@@ -747,6 +745,57 @@ mod tests {
         let unpaired =
             resolve_qualified_display_names(&child, &short, &["l.id".to_string()], Exact).unwrap();
         assert_eq!(unpaired[0].2, Disposition::Missing);
+    }
+
+    #[test]
+    fn qualified_display_multi_hit_refuses_unless_same_engine() {
+        let dupes = schema(&[("l", "e0"), ("l", "e1")]);
+        let twin_displays = ["id".to_string(), "id".to_string()];
+        for rule in [IgnoreCase, Exact] {
+            let error = resolve_qualified_display_names(
+                &dupes,
+                &twin_displays,
+                &["l.id".to_string()],
+                rule,
+            )
+            .unwrap_err()
+            .to_string();
+            assert_eq!(
+                error,
+                "Error during planning: [AMBIGUOUS_REFERENCE] Reference `l`.`id` is ambiguous, \
+                 could be: [`l`.`id`, `l`.`id`]. SQLSTATE: 42704",
+                "{rule:?}"
+            );
+        }
+        let twice = DFSchema::new_with_metadata(
+            vec![
+                (
+                    Some(TableReference::Bare { table: "l".into() }),
+                    Arc::new(Field::new("e0", DataType::Int64, true)),
+                ),
+                (
+                    Some(TableReference::Full {
+                        catalog: "c".into(),
+                        schema: "s".into(),
+                        table: "l".into(),
+                    }),
+                    Arc::new(Field::new("e0", DataType::Int64, true)),
+                ),
+            ],
+            HashMap::new(),
+        )
+        .unwrap();
+        let bound = resolve_qualified_display_names(
+            &twice,
+            &twin_displays,
+            &["l.id".to_string()],
+            IgnoreCase,
+        )
+        .unwrap();
+        assert_eq!(
+            bound,
+            vec![("l.id".to_string(), "e0".to_string(), Disposition::Bound)]
+        );
     }
 
     #[test]

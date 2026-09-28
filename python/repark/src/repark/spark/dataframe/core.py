@@ -2030,7 +2030,8 @@ class DataFrame:
 
         Only pure name refs (``spark_display == projection_name`` and ``stable_name``) are
         rebound — casts (``CAST(...)`` display), true user aliases (``x AS z``), and
-        compounds keep their existing plan. Missing names fall through to the engine.
+        compounds keep their existing plan. Missing names fall through to the
+        engine; an ambiguous name refuses instead of falling through.
         Sort markers (``asc``/``desc``) from the original column are preserved so
         ``orderBy(df.x.desc())`` still sorts after schema binding.
 
@@ -2051,7 +2052,9 @@ class DataFrame:
             return column
         try:
             bound = self._bind_schema_column(name)
-        except AnalysisException:
+        except AnalysisException as error:
+            if "[AMBIGUOUS_REFERENCE]" in str(error):
+                raise
             return column
         if column._sort_ascending is None and column._sort_nulls_first is None:
             return bound
@@ -3246,11 +3249,9 @@ class DataFrame:
         ``spark.sql.caseSensitive`` (exact under ``true``, case-insensitive with
         twin fan-out under ``false``).
 
-        repark cannot materialize **duplicate column names** (DataFusion projections require
-        unique names). When a rename map would leave two columns with the same final name,
-        repark raises :class:`~repark.errors.AnalysisException` rather than producing Spark's
-        duplicate-named frame. Non-colliding maps match
-        Spark bit-for-bit on names and values.
+        A map that leaves two columns with the same final name answers
+        Spark's duplicate-named frame (twin fan-out under ``false``):
+        displays may repeat while engine names stay unique.
         """
         if not isinstance(colsMap, dict):
             raise PySparkTypeError(
@@ -3274,13 +3275,6 @@ class DataFrame:
                     "(empty/whitespace names are rejected — Group F / octo r3)"
                 )
         names = written_names._rewrite_running_names(self, colsMap, names)
-        multi_name = self._display_names is not None and self._engine_names is not None
-        if not multi_name and len(names) != len(set(names)):
-            raise AnalysisException(
-                "withColumnsRenamed produced duplicate column names "
-                f"{names}; repark requires unique column names (Spark allows duplicates — "
-                "Group F disclosure)"
-            )
         projected: list[Column] = []
         for bound, final in zip(self._iter_bound_columns(), names, strict=True):
             display = bound._projection_name or bound.spark_display_part()

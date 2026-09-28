@@ -23,7 +23,7 @@ pub use super::written_names::{match_display_names, match_subset_names, resolve_
 pub use super::written_names::{resolve_qualified_display_names, rewrite_join_condition_aliases};
 pub use repark_common::names::{NameHit, NameRule};
 
-type Hit<'a> = (Option<&'a TableReference>, &'a Field);
+pub(super) type Hit<'a> = (Option<&'a TableReference>, &'a Field);
 
 const ATTRIBUTE_MARK: Location = Location {
     line: u64::MAX,
@@ -166,7 +166,7 @@ fn sql_id(relation: Option<&TableReference>, name: &str) -> String {
         .join(".")
 }
 
-fn ambiguous_reference(column: &Column, hits: &[Hit<'_>]) -> DataFusionError {
+pub(super) fn ambiguous_reference(column: &Column, hits: &[Hit<'_>]) -> DataFusionError {
     let mut options = hits
         .iter()
         .map(|(qualifier, _)| sql_id(*qualifier, &column.name))

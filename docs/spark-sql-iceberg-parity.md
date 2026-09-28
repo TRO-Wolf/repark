@@ -13014,22 +13014,22 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-18 measurement. The refusal is disclosed
   (R-DF-BATCH2) and pinned in `test_df_batch2.py`; this row records the measured Spark answers
   and keeps the name on the example backlog until the engine grows a row-JSON exporter.
-### EX-DF-18 — `withColumnsRenamed` refuses duplicate final names; Spark answers the duplicate-named frame
+### EX-DF-18 — `withColumnsRenamed` answers duplicate final names like Spark — **FIXED 2026-09-28 (CASESENS-2)**
 
-- **repark** — a rename map whose final names collide raises
-  `AnalysisException: withColumnsRenamed produced duplicate column names ['k', 'k', 'v']; repark
-  requires unique column names (Spark allows duplicates — Group F disclosure)`. Non-colliding
-  maps — including a chain applied sequentially in dict order (`{"g": "gg", "k": "g"}` on
-  `[g, k, v]` answers `[gg, g, v]`) — match Spark bit-for-bit on names and values.
+- **repark** — a rename map whose final names collide answers Spark's duplicate-named frame
+  (twin fan-out under `caseSensitive=false`): displays may repeat while engine names stay
+  unique. Non-colliding maps — including a chain applied sequentially in dict order
+  (`{"g": "gg", "k": "g"}` on `[g, k, v]` answers `[gg, g, v]`) — match Spark bit-for-bit on
+  names and values.
 - **Apache Spark** — `withColumnsRenamed({"g": "k", "k": "k"})` on `[g, k, v]` answers the frame
   with duplicate column names `['k', 'k', 'v']`; renames apply sequentially in dict insertion
   order. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-19 DataFrame-d batch; one-row
   `g`/`k`/`v` frame.)*
 - **Pin** —
-  `python/repark/tests/test_examples_dataframe_d.py::test_with_columns_renamed_duplicate_names_divergence`
-- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-19 measurement. The name stays covered by
-  the non-colliding arms, where the engines agree; this row records the colliding-map arm until
-  repark can materialize duplicate column names the way Spark does.
+  `python/repark/tests/test_examples_dataframe_d.py::test_with_columns_renamed_duplicate_names_answers`
+- **Rationale** — FIXED 2026-09-28 by the CASESENS-2 verifier fold (V2-3): the plural refusal is
+  removed and the colliding-map arm answers through the same overlay projection the singular
+  form uses.
 
 ### EX-DF-19 — `stat.freqItems` answers the frequent-item table — **FIXED 2026-09-15 (DF-RUST-3)**
 

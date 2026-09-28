@@ -178,6 +178,13 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `core.py` 3968 → 3963 (ceilings ratcheted; the frozen surfaces lose
   exactly `_rewrite_join_qcol_sql`, which keeps its `plan_collapse`
   home). pins: casesens-2/C-003, C-008
+  CASESENS-2 verifier fold (2026-09-28): `_bind_qualified_display_column`
+  refuses natively when a dotted name hits different attributes (contract
+  only — the raise is native); `_rebind_stable_name_column` re-raises
+  `[AMBIGUOUS_REFERENCE]` instead of falling through to the engine; the
+  `withColumnsRenamed` duplicate-name refusal is removed so the plural
+  answers Spark's frame like the singular (EX-DF-18 FIXED). `core.py`
+  3963 → 3957 (ceilings ratcheted). pins: casesens-2/C-003, C-004
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`

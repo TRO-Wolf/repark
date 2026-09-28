@@ -18,7 +18,7 @@ impl NameRule {
     pub fn matches(self, written: &str, held: &str) -> bool {
         match self {
             Self::Exact => written == held,
-            Self::IgnoreCase => written.eq_ignore_ascii_case(held),
+            Self::IgnoreCase => java_equals_ignore_case(written, held),
         }
     }
 
@@ -29,7 +29,7 @@ impl NameRule {
         for candidate in held {
             if candidate == written {
                 exact.push(candidate.as_str());
-            } else if candidate.eq_ignore_ascii_case(written) {
+            } else if java_equals_ignore_case(candidate, written) {
                 folded.push(candidate.as_str());
             }
         }
@@ -73,13 +73,57 @@ pub fn folded_duplicate(names: &[impl AsRef<str>]) -> Option<String> {
         let name = name.as_ref();
         if seen
             .iter()
-            .any(|earlier| earlier.eq_ignore_ascii_case(name))
+            .any(|earlier| java_equals_ignore_case(earlier, name))
         {
             return Some(name.to_ascii_lowercase());
         }
         seen.push(name);
     }
     None
+}
+
+fn java_equals_ignore_case(left: &str, right: &str) -> bool {
+    if left == right {
+        return true;
+    }
+    if left.encode_utf16().count() != right.encode_utf16().count() {
+        return false;
+    }
+    let mut left_chars = left.chars();
+    let mut right_chars = right.chars();
+    loop {
+        match (left_chars.next(), right_chars.next()) {
+            (None, None) => return true,
+            (Some(one), Some(other)) => {
+                if !java_char_equal(one, other) {
+                    return false;
+                }
+            }
+            (None, Some(_)) | (Some(_), None) => return false,
+        }
+    }
+}
+
+fn java_char_equal(one: char, other: char) -> bool {
+    one == other
+        || single_upper(one) == single_upper(other)
+        || single_lower(one) == single_lower(other)
+}
+
+fn single_upper(value: char) -> char {
+    let mut mapped = value.to_uppercase();
+    match (mapped.next(), mapped.next()) {
+        (Some(one), None) => one,
+        _ => value,
+    }
+}
+
+fn single_lower(value: char) -> char {
+    let mut mapped = value.to_lowercase();
+    match (mapped.next(), mapped.next()) {
+        (Some(one), None) => one,
+        _ => value,
+    }
 }
 
 #[must_use]
@@ -134,5 +178,56 @@ mod tests {
             "[COLUMN_ALREADY_EXISTS] The column `a` already exists. Choose another name or \
              rename the existing column. SQLSTATE: 42711"
         );
+    }
+
+    #[test]
+    fn ignore_case_folds_unicode_like_java_equals_ignore_case() {
+        let folded: &[(&str, &str)] = &[
+            ("ünï", "Ünï"),
+            ("ÜNÏ", "Ünï"),
+            ("éte", "Éte"),
+            ("ÉTE", "Éte"),
+            ("id", "ID"),
+            ("Data", "DATA"),
+        ];
+        for (written, held) in folded {
+            assert!(
+                NameRule::IgnoreCase.matches(written, held),
+                "{written} {held}"
+            );
+            assert!(
+                NameRule::IgnoreCase.matches(held, written),
+                "{held} {written}"
+            );
+        }
+        let split: &[(&str, &str)] = &[
+            ("STRASSE", "straße"),
+            ("ß", "SS"),
+            ("ß", "S"),
+            ("id", "idx"),
+            ("ünï", "ünïx"),
+        ];
+        for (written, held) in split {
+            assert!(
+                !NameRule::IgnoreCase.matches(written, held),
+                "{written} {held}"
+            );
+        }
+        let held = ["id".to_string(), "Ünï".to_string(), "Éte".to_string()];
+        assert_eq!(
+            NameRule::IgnoreCase.lookup("ünï", &held),
+            NameHit::One("Ünï")
+        );
+        assert_eq!(
+            NameRule::IgnoreCase.lookup("ÜNÏ", &held),
+            NameHit::One("Ünï")
+        );
+        assert_eq!(
+            NameRule::IgnoreCase.lookup("éte", &held),
+            NameHit::One("Éte")
+        );
+        assert_eq!(NameRule::IgnoreCase.lookup("nope", &held), NameHit::None);
+        assert_eq!(folded_duplicate(&["Ünï", "ünï"]), Some("ünï".to_string()));
+        assert_eq!(folded_duplicate(&["straße", "STRASSE"]), None);
     }
 }

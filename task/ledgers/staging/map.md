@@ -48,7 +48,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Slices 1–3: C-001, C-002, C-004…C-008 PROVEN. Slice 4 (branch
   `feat/casesens-2-s4`): the self-join halves bind (C-003 PROVEN, R-CS2-1
   CLOSED per the owner ruling); the p10 non-join overlay shapes pin the
-  `true` misses, the R4 refusals, and the R-CS2-7 answer-gaps.
+  `true` misses, the R4 refusals, and the R-CS2-7 answer-gaps. Verifier
+  fold (same branch): the S5 unicode/ambiguity pins land and residues
+  R-CS2-8…R-CS2-12 open beside R-CS2-7.
   `risk_tier: high`.
   pins: casesens-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [r-fileorder-2-ledger.md](r-fileorder-2-ledger.md) —
