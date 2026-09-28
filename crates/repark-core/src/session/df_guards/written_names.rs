@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use datafusion::arrow::datatypes::{DataType, Field};
 use datafusion::common::{Column, DFSchema, DataFusionError, Result, TableReference};
-use repark_common::names::NameRule;
+use repark_common::names::{NameRule, column_already_exists, folded_duplicate};
 
 use super::case_bind::unresolved_column;
 
@@ -35,6 +35,17 @@ pub fn match_display_names(
         .iter()
         .map(|name| match_one_display(name, held, rule))
         .collect()
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn refuse_folded_duplicate_keys(keys: &[String], rule: NameRule) -> Result<()> {
+    if matches!(rule, NameRule::Exact) {
+        return Ok(());
+    }
+    if let Some(twin) = folded_duplicate(keys) {
+        return Err(DataFusionError::Plan(column_already_exists(&twin)));
+    }
+    Ok(())
 }
 
 #[must_use]
@@ -190,7 +201,10 @@ mod tests {
     use datafusion::arrow::datatypes::{DataType, Field};
     use datafusion::common::DFSchema;
 
-    use super::{Disposition, match_display_names, resolve_df_names, unresolved_subset_name};
+    use super::{
+        Disposition, match_display_names, refuse_folded_duplicate_keys, resolve_df_names,
+        unresolved_subset_name,
+    };
     use repark_common::names::NameRule::{Exact, IgnoreCase};
 
     fn schema(names: &[(&str, &str)]) -> DFSchema {
@@ -333,6 +347,38 @@ mod tests {
         assert_eq!(
             subset,
             "Error during planning: Cannot resolve column name \"nope\" among (id, ID)."
+        );
+    }
+
+    #[test]
+    fn display_match_fans_out_under_ignore_case_and_is_exact_under_exact() {
+        let held = ["id".to_string(), "ID".to_string()];
+        let fanned = match_display_names(&["id".to_string()], &held, IgnoreCase).unwrap();
+        assert_eq!(
+            fanned,
+            vec![(
+                "id".to_string(),
+                vec!["id".to_string(), "ID".to_string()],
+                Disposition::Ambiguous
+            )]
+        );
+        let exact = match_display_names(&["id".to_string()], &held, Exact).unwrap();
+        assert_eq!(
+            exact,
+            vec![("id".to_string(), vec!["id".to_string()], Disposition::Bound)]
+        );
+        let keys = ["ID".to_string(), "id".to_string()];
+        assert!(refuse_folded_duplicate_keys(&keys, Exact).is_ok());
+        assert!(
+            refuse_folded_duplicate_keys(&["a".to_string(), "b".to_string()], IgnoreCase).is_ok()
+        );
+        let error = refuse_folded_duplicate_keys(&keys, IgnoreCase)
+            .unwrap_err()
+            .to_string();
+        assert_eq!(
+            error,
+            "Error during planning: [COLUMN_ALREADY_EXISTS] The column `id` already exists. \
+             Choose another name or rename the existing column. SQLSTATE: 42711"
         );
     }
 }

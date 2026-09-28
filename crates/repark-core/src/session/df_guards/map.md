@@ -571,6 +571,11 @@ wrapped optimizer rule) and declares this directory.
   `qualified_names_split_on_the_last_dot`,
   `display_names_fan_out_and_the_subset_text_is_legacy`.
   pins: casesens-2/C-001, C-003
+  **CASESENS-2 S2 (2026-09-28):** `refuse_folded_duplicate_keys(keys, rule)`
+  (ok under `Exact`, Spark's 42711 text under `IgnoreCase`), re-exported
+  inside the existing `pub use` line (`case_bind.rs` stays 1000); pin
+  `display_match_fans_out_under_ignore_case_and_is_exact_under_exact`.
+  pins: casesens-2/C-004
 
 ## Pointers
 

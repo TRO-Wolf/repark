@@ -69,3 +69,77 @@ def _bind_written_column(frame: DataFrame, name: str) -> Column:
         origin_plan_id=frame._plan_id,
         origin_field=held,
     )
+
+
+def _refuse_folded_with_columns_keys(frame: DataFrame, keys: list[str]) -> None:
+    """Refuse folded withColumns keys under IgnoreCase (COLUMN_ALREADY_EXISTS).
+
+    Under Exact dict keys cannot collide, so the native entry answers ok.
+    """
+    _native.refuse_folded_duplicate_keys(frame._plan(), keys)
+
+
+def _match_with_columns_keys(
+    frame: DataFrame, keys: list[str]
+) -> tuple[list[str | None], list[str]]:
+    """Match withColumns keys against bound displays by the session rule.
+
+    Return the replacing key per bound position (None keeps the column) plus
+    the keys that append. Under IgnoreCase every hit replaces; under Exact
+    only exact hits replace.
+    """
+    plan = frame._plan()
+    displays = frame.columns
+    if _native.frame_is_exact(plan):
+        wanted = set(keys)
+        held = set(displays)
+        matches = [display if display in wanted else None for display in displays]
+        return matches, [key for key in keys if key not in held]
+    owner: dict[str, str] = {}
+    appends: list[str] = []
+    for key, hits, _disposition in _native.match_display_names(plan, keys, displays):
+        if not hits:
+            appends.append(key)
+        for hit in hits:
+            owner[hit] = key
+    return [owner.get(display) for display in displays], appends
+
+
+def _locate_rename_targets(frame: DataFrame, existing: str) -> list[int]:
+    """Return bound positions a rename rewrites by the session rule.
+
+    Under IgnoreCase every hit rewrites (twin fan-out); under Exact only exact
+    hits rewrite. Exact-duplicate hits rewrite nothing, and misses rewrite
+    nothing, so the caller keeps the frame unchanged.
+    """
+    plan = frame._plan()
+    displays = frame.columns
+    if _native.frame_is_exact(plan):
+        positions = [index for index, display in enumerate(displays) if display == existing]
+    else:
+        _written, hits, _disposition = _native.match_display_names(plan, [existing], displays)[0]
+        wanted = set(hits)
+        positions = [index for index, display in enumerate(displays) if display in wanted]
+    if len(positions) > 1 and len({displays[index] for index in positions}) == 1:
+        return []
+    return positions
+
+
+def _rewrite_running_names(
+    frame: DataFrame, renames: dict[str, str], names: list[str]
+) -> list[str]:
+    """Rewrite running names sequentially by the session rule.
+
+    Each entry rewrites every running hit (twin fan-out under IgnoreCase,
+    exact hits under Exact); misses rewrite nothing.
+    """
+    plan = frame._plan()
+    if _native.frame_is_exact(plan):
+        for old_name, new_name in renames.items():
+            names = [new_name if name == old_name else name for name in names]
+        return names
+    for old_name, new_name in renames.items():
+        _written, hits, _disposition = _native.match_display_names(plan, [old_name], names)[0]
+        wanted = set(hits)
+        names = [new_name if name in wanted else name for name in names]
+    return names

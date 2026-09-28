@@ -246,6 +246,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   unpinned (re-homed per the 2026-09-28 ruling). p1/p4 legs read
   `casesens_1_spark_oracle.json`.
   pins: casesens-2/C-001, C-002, C-003, C-006
+  **WO CASESENS-2 slice 2 (2026-09-28):** `withColumn(s)` and renames follow
+  the rule (folded keys append and folded renames no-op under `true`; replace
+  and twin fan-out under `false`), folded keys refuse 42711, and the overlay
+  replace set pins display-spelled (R7).
+  pins: casesens-2/C-002, C-004, C-006
 - [test_ntz_1.py](test_ntz_1.py) + `ntz_1_spark_oracle.json` — **WO NTZ-1 slice 1
   (2026-09-26):** the `TIMESTAMP_NTZ` literal and explicit casts replay Spark's measured
   answers — 29 literal/cast/refusal queries in UTC and New York sessions, the v2/v3
