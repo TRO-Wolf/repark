@@ -16,6 +16,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(attribute_copies, module)?)?;
     module.add_function(wrap_pyfunction!(attribute_copy_name, module)?)?;
     module.add_function(wrap_pyfunction!(drop_frame_columns, module)?)?;
+    module.add_function(wrap_pyfunction!(frame_case_sensitive, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_join_condition, module)?)?;
     module.add_function(wrap_pyfunction!(requalify_join_sides, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_frame_names, module)?)?;
@@ -172,6 +173,11 @@ fn requalify_join_sides(
             .map_err(datafusion_to_py_err)?;
         Ok(PyDataFrame::new(df, joined.runtime_handle()))
     })
+}
+
+#[pyfunction]
+fn frame_case_sensitive(frame: &PyDataFrame) -> bool {
+    matches!(frame_rule(frame.inner()), NameRule::Exact)
 }
 
 #[allow(clippy::missing_errors_doc)]

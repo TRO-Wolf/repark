@@ -532,12 +532,23 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `COLUMN_ALREADY_EXISTS` 42711 with nothing created (temp views through a
   `CtxTempViews` session home), and the positional insert answers.
   pins: casesens-1/C-011, C-012
+  **Verifier fold (2026-09-28, VC-1):** unaliased derived tables audit as
+  nested — `unaliased_derived_tables_audit_as_nested_scopes` (derived, `IN`,
+  doubly-nested `count(*)`, scalar),
+  `unaliased_derived_insert_refuses_and_writes_nothing` (refusal plus the
+  unchanged table), `unaliased_set_operation_and_window_bodies_audit_as_nested`
+  and the `aliased_cte_and_top_level_ambiguity_still_refuse` guards, all
+  `AMBIGUOUS_REFERENCE` 42704.
+  pins: casesens-1/C-011
   no probe key records an expression-alias output name). **Verifier fold
   (2026-09-28, VC-2):** four pins keep a `VALUES` body from shifting later
   scopes — `values_derived_table_first_keeps_later_spellings`,
   `values_cte_keeps_later_spellings`,
   `values_body_in_the_middle_keeps_later_spellings` and
   `values_left_set_operation_keeps_later_spellings`, names and rows each.
+  On the #876 stack the fold adds `swapped_spellings_stay_with_their_scope`
+  (`[x, id, ID]`) and the Spark-confirmed `VC-6`
+  `natural_join_over_case_differing_derived_outputs_cross_joins`.
   pins: casesens-1/C-001, C-002, C-003, C-004
 - `decimal.rs` — the Spark-door decimal128 pins at `i128` precision: result `(p,s)`, value,
   and nullability for the G2/G13 corpus shapes. **CUTOVER-SCHEMA-1 (2026-09-04):**

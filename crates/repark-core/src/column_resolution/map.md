@@ -133,6 +133,11 @@ pins: ice-error-conditions-1/C-011
   wrapped, so their idents scope too; expression-subquery idents stay global
   (correlated). No dedicated battery: the U11 audit pins plus the S4 twin
   pins cover both sides.
+  **Verifier fold (2026-09-28, VC-1):** the flag also flips for a bare
+  derived-body root (`Projection`/`Union`/`Sort`/`Limit`/`Distinct` under
+  `Projection`/`Join`/`Filter`/`Aggregate`/`Window` — DataFusion emits no
+  `SubqueryAlias` for an unaliased derived table) and under `Subquery`
+  (lateral only), so every derived-table boundary audits as nested.
   pins: casesens-1/C-011
 - `display.rs` — **U11-EDGE-1 (2026-09-26):** the query-spelling display rewrite. Under the
   default `caseSensitive=false`, `display_rewrite` compares the planned output names with the

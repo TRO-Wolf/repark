@@ -264,6 +264,81 @@ async fn values_left_set_operation_keeps_later_spellings() {
 }
 
 #[tokio::test]
+async fn natural_join_over_case_differing_derived_outputs_cross_joins() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    create_probe_tables(&ctx, &catalogs).await;
+    let (names, rows) = names_and_rows(
+        &ctx,
+        &catalogs,
+        "SELECT * FROM (SELECT ID FROM ice.sales.t) a NATURAL JOIN (SELECT id FROM ice.sales.u) b",
+    )
+    .await;
+    assert_eq!(names, vec!["ID".to_string(), "id".to_string()]);
+    assert_eq!(
+        rows,
+        vec![
+            vec!["1".to_string(), "1".to_string()],
+            vec!["1".to_string(), "5".to_string()],
+            vec!["2".to_string(), "1".to_string()],
+            vec!["2".to_string(), "5".to_string()],
+        ]
+    );
+    let (names, rows) = names_and_rows(
+        &ctx,
+        &catalogs,
+        "SELECT count(*) AS c FROM (SELECT ID FROM ice.sales.t) a NATURAL JOIN (SELECT id FROM ice.sales.u) b",
+    )
+    .await;
+    assert_eq!(names, vec!["c".to_string()]);
+    assert_eq!(rows, vec![vec!["4".to_string()]]);
+    let (names, rows) = names_and_rows(
+        &ctx,
+        &catalogs,
+        "WITH a AS (SELECT ID FROM ice.sales.t), b AS (SELECT id FROM ice.sales.u) SELECT * FROM a NATURAL JOIN b",
+    )
+    .await;
+    assert_eq!(names, vec!["ID".to_string(), "id".to_string()]);
+    assert_eq!(
+        rows,
+        vec![
+            vec!["1".to_string(), "1".to_string()],
+            vec!["1".to_string(), "5".to_string()],
+            vec!["2".to_string(), "1".to_string()],
+            vec!["2".to_string(), "5".to_string()],
+        ]
+    );
+}
+
+#[tokio::test]
+async fn swapped_spellings_stay_with_their_scope() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    create_probe_tables(&ctx, &catalogs).await;
+    let (names, rows) = names_and_rows(
+        &ctx,
+        &catalogs,
+        "SELECT * FROM (VALUES (7)) AS v(x) \
+         CROSS JOIN (SELECT id FROM ice.sales.t) a \
+         CROSS JOIN (SELECT ID FROM ice.sales.u) b",
+    )
+    .await;
+    assert_eq!(
+        names,
+        vec!["x".to_string(), "id".to_string(), "ID".to_string()]
+    );
+    assert_eq!(
+        rows,
+        vec![
+            vec!["7".to_string(), "1".to_string(), "1".to_string()],
+            vec!["7".to_string(), "1".to_string(), "5".to_string()],
+            vec!["7".to_string(), "2".to_string(), "1".to_string()],
+            vec!["7".to_string(), "2".to_string(), "5".to_string()],
+        ]
+    );
+}
+
+#[tokio::test]
 async fn column_alias_list_keeps_its_spelling() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;

@@ -349,6 +349,11 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `_native.resolve_frame_names` (one `(written, engine)` pair per name, bound by
   the session rule in Rust), replacing the display/engine zip.
   pins: casesens-1/C-010
+  **Verifier fold (2026-09-28, VC-4):** with a display/engine mapping under
+  `false` (rule read live via `frame_case_sensitive`), `_display_target_pairs`
+  binds each written name against displays ignoring case, refuses duplicate
+  displays ambiguous like Spark, and falls back to engine resolution on a miss;
+  the `true` path is untouched.
   `approxQuantile` validates `relativeError` first (non-numeric is a type error, NaN or
   negative is a value error — NaN is not `< 0` in IEEE so it needs an explicit check)
   and treats out-of-range probabilities as value errors, not type errors. DFCORE-5

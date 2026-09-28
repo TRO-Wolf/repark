@@ -64,6 +64,7 @@ from typing import Any
 import pytest
 
 from repark import ReparkSession
+from repark.errors import AnalysisException
 from repark.spark import functions
 
 ORACLE_PATH: Path = Path(__file__).with_name("casesens_1_spark_oracle.json")
@@ -687,5 +688,59 @@ def test_s5_iceberg_ddl_binds_exactly(tmp_path: Path) -> None:
         _assert_meta(tmp_path, "o2", "p2/pt_true_drop_bucket_ID2_meta")
         _assert_step(session, "p3/id_drop_ID")
         _assert_ddl_refusal(session, "p3/so_false_missing")
+    finally:
+        session.stop()
+
+
+def test_cast_of_a_column_keeps_the_written_child_name(tmp_path: Path) -> None:
+    """Cast and try_cast of F.col keep the child name, never the engine path (VC-3)."""
+    session = _open(tmp_path)
+    try:
+        _setup_tables(session)
+        frame = session.createDataFrame([(1, "a", 2.5)], ["id", "Data", "Amount"])
+        assert frame.select(functions.col("Amount").cast("int")).columns == ["Amount"]
+        assert frame.select(functions.col("Data").cast("string")).columns == ["Data"]
+        assert frame.select(functions.col("id").cast("string")).columns == ["id"]
+        assert frame.select(functions.col("ID").cast("string")).columns == ["ID"]
+        assert frame.select(functions.col("Amount").try_cast("int")).columns == ["Amount"]
+        assert frame.select(functions.col("Data").try_cast("string")).columns == ["Data"]
+        cast = frame.select(functions.col("Amount").cast("int"))
+        assert _rows(cast) == [[2]]
+        table = session.table("sc.ns.t")
+        assert table.select(functions.col("Data").cast("string")).columns == ["Data"]
+        assert table.select(functions.col("ID").cast("string")).columns == ["ID"]
+        assert table.select(functions.col("ID").try_cast("string")).columns == ["ID"]
+        assert table.select(functions.col("id").cast("string")).columns == ["id"]
+        assert table.select(functions.col("Data").try_cast("string")).columns == ["Data"]
+        rows = table.select(functions.col("ID").cast("string"))
+        assert _rows(rows) == [["1"], ["2"]]
+    finally:
+        session.stop()
+
+
+def test_describe_resolves_display_names_under_case_insensitive(tmp_path: Path) -> None:
+    """Describe with explicit columns binds transpose display names (VC-4)."""
+    session = _open(tmp_path)
+    try:
+        frame = session.createDataFrame([("k1", 1), ("k2", 2)], ["key", "v"])
+        described = frame.transpose().describe("k1")
+        assert described.columns == ["summary", "k1"]
+        rows = {row[0]: row[1] for row in described.collect()}
+        assert rows["count"] == "1"
+        assert rows["max"] == "1"
+        assert rows["mean"] == "1.0"
+        assert rows["min"] == "1"
+    finally:
+        session.stop()
+
+
+def test_describe_refuses_duplicate_display_names_as_ambiguous(tmp_path: Path) -> None:
+    """Describe over a duplicate-display frame refuses ambiguous like Spark (VC-4)."""
+    session = _open(tmp_path)
+    try:
+        _setup_tables(session)
+        frame = session.table("sc.ns.t").select("id", "id")
+        with pytest.raises(AnalysisException, match="AMBIGUOUS_REFERENCE"):
+            frame.describe("id")
     finally:
         session.stop()

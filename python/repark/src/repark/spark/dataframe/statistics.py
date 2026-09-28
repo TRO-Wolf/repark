@@ -53,8 +53,16 @@ def _summary(
     )
 
     plan = frame._plan()
+    target_pairs: list[tuple[str, str]]
     if _columns:
-        target_pairs: list[tuple[str, str]] = _native.resolve_frame_names(plan, list(_columns))
+        if (
+            frame._display_names is not None
+            and frame._engine_names is not None
+            and not _case_sensitive(plan)
+        ):
+            target_pairs = _display_target_pairs(frame, plan, list(_columns))
+        else:
+            target_pairs = _native.resolve_frame_names(plan, list(_columns))
     elif frame._display_names is not None and frame._engine_names is not None:
         target_pairs = list(zip(frame._display_names, frame._engine_names, strict=True))
     else:
@@ -146,6 +154,45 @@ def _summary(
     child._display_names = ["summary"] + [display for display, _engine in target_pairs]
     child._engine_names = field_names
     return child
+
+
+def _case_sensitive(plan: Any) -> bool:
+    """Read the live spark.sql.caseSensitive flag behind a native plan."""
+    from repark import _native
+
+    return bool(_native.frame_case_sensitive(plan))
+
+
+def _display_target_pairs(frame: DataFrame, plan: Any, columns: list[str]) -> list[tuple[str, str]]:
+    """Resolve explicit describe columns against display names (VC-4).
+
+    Frames whose display names differ from engine names (transpose output,
+    duplicate-display selects, condition joins) match each written name against
+    the display list ignoring case: one hit binds its engine field, several hits
+    refuse ambiguous like Spark, and no hit falls back to engine resolution so a
+    genuinely missing column keeps the unresolved-column refusal.
+    """
+    from repark import _native
+
+    displays = list(frame._display_names or [])
+    engines = list(frame._engine_names or [])
+    pairs: list[tuple[str, str]] = []
+    for written in columns:
+        folded = written.casefold()
+        hits: list[int] = [
+            index for index, display in enumerate(displays) if display.casefold() == folded
+        ]
+        if len(hits) > 1:
+            candidates = ", ".join(f"`{displays[index]}`" for index in hits)
+            raise AnalysisException(
+                f"[AMBIGUOUS_REFERENCE] Reference `{written}` is ambiguous, "
+                f"could be: [{candidates}]."
+            )
+        if hits:
+            pairs.append((displays[hits[0]], engines[hits[0]]))
+        else:
+            pairs.extend(_native.resolve_frame_names(plan, [written]))
+    return pairs
 
 
 def _approx_quantile(

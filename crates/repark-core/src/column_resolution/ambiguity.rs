@@ -27,12 +27,35 @@ fn audit_level(node: &LogicalPlan, written: &WrittenRefs, inside: bool) -> Resul
         audit_level(child, written, inside)?;
         Ok(TreeNodeRecursion::Continue)
     })?;
-    let child_inside = inside || matches!(node, LogicalPlan::SubqueryAlias(_));
+    let child_inside = inside
+        || matches!(
+            node,
+            LogicalPlan::SubqueryAlias(_) | LogicalPlan::Subquery(_)
+        );
     node.apply_children(|child| {
-        audit_level(child, written, child_inside)?;
+        let nested = child_inside || is_bare_derived_body(node, child);
+        audit_level(child, written, nested)?;
         Ok(TreeNodeRecursion::Continue)
     })?;
     Ok(())
+}
+
+fn is_bare_derived_body(parent: &LogicalPlan, child: &LogicalPlan) -> bool {
+    matches!(
+        parent,
+        LogicalPlan::Projection(_)
+            | LogicalPlan::Join(_)
+            | LogicalPlan::Filter(_)
+            | LogicalPlan::Aggregate(_)
+            | LogicalPlan::Window(_)
+    ) && matches!(
+        child,
+        LogicalPlan::Projection(_)
+            | LogicalPlan::Union(_)
+            | LogicalPlan::Sort(_)
+            | LogicalPlan::Limit(_)
+            | LogicalPlan::Distinct(_)
+    )
 }
 
 fn audit_node(node: &LogicalPlan, written: &WrittenRefs, inside: bool) -> Result<()> {

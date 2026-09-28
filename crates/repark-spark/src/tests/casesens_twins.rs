@@ -345,3 +345,103 @@ async fn positional_insert_from_case_twins_answers() {
     assert_eq!(names, vec!["a".to_string(), "b".to_string()]);
     assert_eq!(rows, strings(&[&["1", "2"]]));
 }
+
+async fn create_ambiguity_tables(ctx: &SessionContext, catalogs: &CatalogRegistry) {
+    create_probe_tables(ctx, catalogs).await;
+    run(
+        ctx,
+        catalogs,
+        "CREATE TABLE ice.sales.l (id INT, data STRING) USING iceberg",
+    )
+    .await;
+    run(
+        ctx,
+        catalogs,
+        "INSERT INTO ice.sales.l VALUES (1, 'p'), (2, 'q')",
+    )
+    .await;
+}
+
+async fn assert_ambiguous(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) {
+    let error = execute(ctx, catalogs, sql).await.err().unwrap();
+    let message = error.to_string();
+    assert!(
+        message.contains("[AMBIGUOUS_REFERENCE]"),
+        "unexpected message for {sql}: {message}"
+    );
+    assert!(
+        message.contains("SQLSTATE: 42704"),
+        "unexpected message for {sql}: {message}"
+    );
+    assert!(
+        message.contains("Reference `data` is ambiguous"),
+        "unexpected message for {sql}: {message}"
+    );
+}
+
+#[tokio::test]
+async fn unaliased_derived_tables_audit_as_nested_scopes() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    create_ambiguity_tables(&ctx, &catalogs).await;
+    for sql in [
+        "SELECT * FROM (SELECT data FROM ice.sales.t JOIN ice.sales.l ON t.id = l.id)",
+        "SELECT * FROM ice.sales.t WHERE id IN (SELECT id FROM (SELECT t2.id, data FROM ice.sales.t t2 JOIN ice.sales.l ON t2.id = l.id))",
+        "SELECT * FROM (SELECT count(*) FROM (SELECT data FROM ice.sales.t JOIN ice.sales.l ON t.id = l.id))",
+        "SELECT (SELECT max(x) FROM (SELECT length(data) AS x FROM ice.sales.t JOIN ice.sales.l ON t.id = l.id))",
+    ] {
+        assert_ambiguous(&ctx, &catalogs, sql).await;
+    }
+}
+
+#[tokio::test]
+async fn unaliased_derived_insert_refuses_and_writes_nothing() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    create_ambiguity_tables(&ctx, &catalogs).await;
+    let before = names_and_rows(&ctx, &catalogs, "SELECT * FROM ice.sales.u").await;
+    assert_eq!(
+        before,
+        (
+            vec!["id".to_string(), "Data".to_string()],
+            strings(&[&["1", "x"], &["5", "y"]])
+        )
+    );
+    assert_ambiguous(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.u SELECT * FROM (SELECT t.id, data FROM ice.sales.t JOIN ice.sales.l ON t.id = l.id)",
+    )
+    .await;
+    let after = names_and_rows(&ctx, &catalogs, "SELECT * FROM ice.sales.u").await;
+    assert_eq!(after, before);
+}
+
+#[tokio::test]
+async fn aliased_cte_and_top_level_ambiguity_still_refuse() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    create_ambiguity_tables(&ctx, &catalogs).await;
+    for sql in [
+        "SELECT * FROM (SELECT data FROM ice.sales.t JOIN ice.sales.l ON t.id = l.id) x",
+        "WITH c AS (SELECT data FROM ice.sales.t JOIN ice.sales.l ON t.id = l.id) SELECT * FROM c",
+        "SELECT data FROM ice.sales.t JOIN ice.sales.l ON t.id = l.id",
+    ] {
+        assert_ambiguous(&ctx, &catalogs, sql).await;
+    }
+}
+
+#[tokio::test]
+async fn unaliased_set_operation_and_window_bodies_audit_as_nested() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    create_ambiguity_tables(&ctx, &catalogs).await;
+    for sql in [
+        "SELECT * FROM (SELECT data FROM ice.sales.t JOIN ice.sales.l ON t.id = l.id UNION ALL SELECT data FROM ice.sales.t JOIN ice.sales.l ON t.id = l.id)",
+        "SELECT * FROM (SELECT data FROM ice.sales.t JOIN ice.sales.l ON t.id = l.id LIMIT 1)",
+        "SELECT * FROM (SELECT DISTINCT data FROM ice.sales.t JOIN ice.sales.l ON t.id = l.id)",
+        "SELECT rank() OVER (ORDER BY x) FROM (SELECT data AS x FROM ice.sales.t JOIN ice.sales.l ON t.id = l.id)",
+    ] {
+        assert_ambiguous(&ctx, &catalogs, sql).await;
+    }
+}

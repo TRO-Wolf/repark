@@ -288,6 +288,8 @@ pub fn requalify_join_sides(joined: DataFrame, sides: &[&DFSchema]) -> Result<Da
 pub fn bind_projection_expr(expr: Expr, frame_schema: &DFSchema, rule: NameRule) -> Result<Expr> {
     let written = match &expr {
         Expr::Column(column) => Some(column.name.clone()),
+        Expr::Cast(cast) => cast_child_name(&cast.expr),
+        Expr::TryCast(cast) => cast_child_name(&cast.expr),
         _ => None,
     };
     let bound = super::subquery::resolve_bound_expr_with(expr, frame_schema, rule)?;
@@ -296,8 +298,16 @@ pub fn bind_projection_expr(expr: Expr, frame_schema: &DFSchema, rule: NameRule)
             let relation = held.relation.clone();
             bound.alias_qualified(relation, written)
         }
+        (Some(written), Expr::Cast(_) | Expr::TryCast(_)) => bound.alias(written),
         _ => bound,
     })
+}
+
+fn cast_child_name(expr: &Expr) -> Option<String> {
+    match expr {
+        Expr::Column(column) => Some(column.name.clone()),
+        _ => None,
+    }
 }
 
 #[allow(clippy::missing_errors_doc)]

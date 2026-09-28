@@ -125,6 +125,13 @@ wrapped optimizer rule) and declares this directory.
   resolve there — no new edge). Rust pins `exact_rule_refuses_a_case_only_match`,
   `ignore_case_rule_is_unchanged`, `frame_functions_follow_the_rule`.
   pins: casesens-1/C-009, C-010
+  **Verifier fold (2026-09-28, VC-3):** `bind_projection_expr` aliases a bare
+  top-level `Cast`/`TryCast` over a direct column child to the written child
+  name, so `F.col(x).cast(...)` keeps the child name instead of leaking the
+  qualified engine name (the all-lowercase leak goes with it). Pinned through
+  the facade (`test_cast_of_a_column_keeps_the_written_child_name`) — the file
+  sits 12 lines under the size ceiling, so no unit test lands here.
+  pins: casesens-1/C-009
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside
