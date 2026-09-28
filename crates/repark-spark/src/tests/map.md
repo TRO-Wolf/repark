@@ -331,6 +331,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   dropped, `\Z` → U+001A, `'a\\\'b'` → `'a\''b'`); `INVALID_HEX_ROWS` pins Spark's
   INVALID_TYPED_LITERAL text for `X'4g'`, `X'é'`, `x'4g'`, `X'4G'`, `X' 4'` and `X'zz'`.
   pins: ice-nested-evo-1/C-054, C-055
+  **WO CASESENS-1 slice 5 (2026-09-27):** the unknown-field legs
+  (`write_ordered_by_transform_refusals_match_spark_and_commit_nothing`,
+  `hex_quoted_and_string_tokens_render_as_spark_does`) assert the landed
+  `ValidationException: Cannot find field '<written>' in struct: …` text (Spark wins;
+  Tests rewritten). pins: casesens-1/C-015
 - `replace_columns.rs` — **ICE-REPLACE-COLUMNS-1 (2026-09-19):** the Rust twins of the measured
   `RC-*` cells — fresh ids + all-NULL read-back on the basic, same-list and re-typed forms, the
   level-order struct ids (`s` 5, `s.a` 6, `s.b` 7, `last-column-id` 7), the kept `COMMENT`, the
@@ -471,6 +476,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   off; `CAST_WITH_CONF_SUGGESTION` plus the conf remedy for integrals when ANSI is on;
   `CAST_WITHOUT_SUGGESTION` for the never-castable sources in both modes and for `TRY_CAST`.
   pins: bl-11-numeric-binary/C-001, C-002, C-003
+- `casesens_ddl.rs` — **WO CASESENS-1 slice 5 (2026-09-27):** the Iceberg DDL
+  door pins: `write_order_follows_the_case_rule` (the `false` legs answer with the
+  measured source ids 2/4/1/1; the `true` legs refuse `Cannot find field '<written>'
+  in struct: …` with no order committed; the exact name answers; `nope` refuses under
+  `false`) and `identifier_fields_are_exact_under_both_settings` (wrong-case SET and
+  DROP refuse Iceberg's recorded texts with the set unchanged; the exact name sets
+  identifier `[1]`). pins: casesens-1/C-015, C-016
 - `casesens_scopes.rs` — **WO CASESENS-1 slice 1 (2026-09-27):** nested scopes
   keep the written spelling — derived and CTE projections (`r5_subq_inner_ID`,
   `r5_cte_ID`, `r5_cte_mixed`, `r5_union_subq`, `n_nested2`, `n_join_derived`),
@@ -481,7 +493,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `catalog_view_body_keeps_its_spelling` (`r5_view_star`, `r5_view_lower`,
   `r5_view2_upper`; `r5_view_describe` unchanged) and
   `twin_cte_outputs_still_refuse` (the `SELECT 1 AS a, 2 AS A` CTE body keeps
-  its refusal; the shape is unmeasured against Spark). **Fold round
+  its refusal; the shape is unmeasured against Spark;
+  **CASESENS-1 S4 (2026-09-27):** the body now plans and the outer reference
+  refuses Spark's `AMBIGUOUS_REFERENCE` 42704 instead). **Fold round
   (2026-09-27):** `derived_and_cte_projections_keep_the_written_spelling`
   gains the `SELECT * FROM (SELECT 1 AS ID)` leg (answers `ID`; unmeasured —
   no probe key records an expression-alias output name). **Verifier fold
@@ -490,7 +504,61 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `values_cte_keeps_later_spellings`,
   `values_body_in_the_middle_keeps_later_spellings` and
   `values_left_set_operation_keeps_later_spellings`, names and rows each.
-  pins: casesens-1/C-001, C-002, C-003, C-004
+  On the #876 stack the fold adds `swapped_spellings_stay_with_their_scope`
+  (`[x, id, ID]`) and the Spark-confirmed `VC-6`
+  `natural_join_over_case_differing_derived_outputs_cross_joins`. **CI fix 2
+  (2026-09-28):** `hundred_nested_views_read_and_the_101st_refuses` builds 100
+  nested Iceberg views, reads w50/w99, and pins the typed
+  `VIEW_NESTED_DEPTH_LIMIT` refusal on the w100 read and the w101 create.
+  **Re-verify (2026-09-28, RC-1):** `view_arithmetic_over_division_column_answers_double`
+  (`SELECT h + 1 FROM vh` answers 1.5/2.0/2.5 as double) and
+  `view_over_view_stores_double_for_division_arithmetic` (the view over `vh`
+  stores double); both red under the reverted skip. **Re-verify (2026-09-28,
+  RC-2):** `lateral_and_scalar_outer_references_to_derived_spellings_bind`
+  (LATERAL `a.Id`/`a.id`, the CTE form and the correlated scalar answer base's
+  rows). pins: casesens-1/C-001, C-002, C-003, C-004, C-018
+- `casesens_true.rs` — **WO CASESENS-1 slice 2 (2026-09-27):** the
+  `caseSensitive=true` SQL-door pins over `(id, Data, s)` + `(id, Data)` probe
+  tables: wrong-case refuses in every scope (the join legs name `` `a`.`ID` ``;
+  `cs_order_ID`, `cs_rel_alias_upper` and `cs_order_alias` pin RePark's
+  recorded rendering with ledger residues R-CS1-2/3/5), exact mixed-case
+  answers (star and exact-insert legs read the struct-less table; the UPPER
+  leg pins the pre-existing qualified name with R-CS1-6), relation/CTE/temp
+  names refuse (unstamped `not found` texts pinned, R-CS1-7; temp views via
+  `ctx.register_table` — SQL `CREATE TEMPORARY VIEW` needs a session home),
+  DML refuses with Spark's byte-exact text (MERGE per R6) leaving the table,
+  the default session keeps folding, and `SNAPSHOTS` answers under both.
+  `enable_case_sensitive` moved from `create_typed_partition.rs` into
+  `common.rs` (deleted at the source). **Final fold (2026-09-28):**
+  `same_session_toggle_true_false_true_keeps_folding` (true refuses, false
+  folds, true refuses again in one session — the per-statement clone never
+  leaks), `exact_fragment_identifiers_quote_and_plan_under_case_sensitive`
+  (exact MERGE and identity-DML hits are backtick-quoted, wrong-case hits
+  refuse, and a quoted no-op MERGE plans with the table unchanged),
+  `missing_fragment_identifiers_pass_through_to_the_planner` and
+  `update_set_targets_match_exactly_under_case_sensitive` (wrong-case SET
+  refuses `UNRESOLVED_COLUMN` naming `` `DATA` ``, exact SET answers and
+  lands; unmeasured — no oracle key covers a wrong-case SET target).
+  pins: casesens-1/C-005, C-006, C-007, C-008
+- `casesens_twins.rs` — **WO CASESENS-1 slice 4 (2026-09-27):** the
+  case-twin pins over struct-less probe tables: twin outputs answer with both
+  spellings (`tw_ID_id`, `tw_Id_ID`, `tw_star_ID`, `tw_lit`, `tw_subq_star`;
+  the star leg reads the struct-less table), a reference into the twins
+  refuses `AMBIGUOUS_REFERENCE` 42704 while the same shape answers under
+  `true`, exact duplicates keep ID-3's refusal, the four creations refuse
+  `COLUMN_ALREADY_EXISTS` 42711 with nothing created (temp views through a
+  `CtxTempViews` session home), and the positional insert answers.
+  pins: casesens-1/C-011, C-012
+  **Verifier fold (2026-09-28, VC-1):** unaliased derived tables audit as
+  nested — `unaliased_derived_tables_audit_as_nested_scopes` (derived, `IN`,
+  doubly-nested `count(*)`, scalar),
+  `unaliased_derived_insert_refuses_and_writes_nothing` (refusal plus the
+  unchanged table), `unaliased_set_operation_and_window_bodies_audit_as_nested`
+  and the `aliased_cte_and_top_level_ambiguity_still_refuse` guards, all
+  `AMBIGUOUS_REFERENCE` 42704. **Re-verify (2026-09-28, RC-5):**
+  `lateral_body_twins_audit_as_nested_scopes` pins the `Subquery` arm (red with
+  the arm removed).
+  pins: casesens-1/C-011
 - `decimal.rs` — the Spark-door decimal128 pins at `i128` precision: result `(p,s)`, value,
   and nullability for the G2/G13 corpus shapes. **CUTOVER-SCHEMA-1 (2026-09-04):**
   `pin_int_times_decimal_is_12_2_i128` and `pin_mul_single_digit_nullability_non_null_i128`
@@ -805,6 +873,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `crate::extension::apply_spark_float_as_decimal` so Spark-door unit fixtures match
   production `configure`. **R-2:** those fixtures plus `setup_with_ansi` also call
   `register_spark_decimal_planner`; shared helpers use `pub(super)` visibility and re-exports.
+  CASESENS-1 final fold (2026-09-28): `disable_case_sensitive` mirrors
+  `enable_case_sensitive` for the same-session toggle pin. pins: casesens-1/C-005
 - `create_table.rs` pins `ts TIMESTAMP` → `Timestamptz`;
   `ctas_of_instant_producers_stores_timestamptz` (SQL `current_timestamp` / `to_timestamp(Z)`
   / identity-partitioned CTAS).
@@ -821,7 +891,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `alter` (WO U5 PR1: bare UNSET and UNSET IF EXISTS on a missing key both preserve table
   metadata. pins: ice-nested-evo-1/C-025, C-028. WO U5 PR2a: the old `ALTER COLUMN … COMMENT`
   refusal pin becomes `alter_comment_lands_and_after_missing_refuses`, which reads the landed
-  doc. pins: ice-nested-evo-1/C-037),
+  doc. pins: ice-nested-evo-1/C-037. CASESENS-1 final fold (2026-09-28):
+  `alter_partition_transforms_drop_by_transform_and_replace_required_refuse` rewrites the
+  REG DROP leg to Spark's `Cannot find partition field to remove: REG` refusal with the spec
+  unchanged (OD-3, oracle `p2/pt_drop_CAT_present`); seven setup legs compress `execute` to
+  `run`, file 1182 → 1181. pins: casesens-1/C-013),
   `catalog_ops` (IPI-51, 2026-09-20: DROP-missing pins `[TABLE_OR_VIEW_NOT_FOUND]`/`42P01`,
   CREATE/CTAS-exists pins `[TABLE_OR_VIEW_ALREADY_EXISTS]`/`42P07`; IPI-51 PR4 (2026-09-20):
   the `partition_management_unsupported` unit pin asserts the condition prefix, the table

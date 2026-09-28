@@ -241,6 +241,14 @@ impl ReparkSession {
         ))
     }
 
+    pub(super) fn temp_view_ref_from_segment_exact(&self, segment: &str) -> Result<TableReference> {
+        crate::temp_view::assert_home_intact(self.context(), &self.temp_view_home)?;
+        Ok(crate::temp_view::temp_view_ref_from_segment_exact(
+            &self.temp_view_home,
+            segment,
+        ))
+    }
+
     /// The session's temp-view home as `[catalog, schema]`.
     /// # Errors
     /// [`Error::Analysis`] when this session has no session-local temp-view home left.
@@ -264,6 +272,22 @@ impl ReparkSession {
         };
         let quoted = name.trim().starts_with(['"', '`']);
         let reference = self.temp_view_ref_from_segment(view, quoted)?;
+        self.home_ref_if_exists(&reference)
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub fn resolve_temp_view_home_ref_exact(&self, name: &str) -> Result<Option<Vec<String>>> {
+        let Ok(parts) = crate::parse_table_identifier_segments(name) else {
+            return Ok(None);
+        };
+        let [view] = parts.as_slice() else {
+            return Ok(None);
+        };
+        let reference = self.temp_view_ref_from_segment_exact(view)?;
+        self.home_ref_if_exists(&reference)
+    }
+
+    fn home_ref_if_exists(&self, reference: &TableReference) -> Result<Option<Vec<String>>> {
         if self
             .context()
             .table_exist(reference.clone())

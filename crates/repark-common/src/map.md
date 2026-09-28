@@ -39,7 +39,20 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   `VIEW_EXCEED_MAX_NESTED_DEPTH` (54K00) — with
   byte-exact unit pins; `template()` carries `#[allow(clippy::too_many_lines)]` as a lookup
   table. pins: ice-views-1/C-018
+  **CASESENS-1 S3 (2026-09-27):** the `UNRESOLVED_USING_COLUMN_FOR_JOIN` row
+  (42703), measured on live Spark (`USING column … on the left side …`), with
+  catalogue + template-param pins (43 conditions). pins: casesens-1/C-009
 
+- `names.rs` — **WO CASESENS-1 slice 2 (2026-09-27):** the one
+  name-matching rule every binder calls. `NameRule { Exact, IgnoreCase }`
+  (`from_case_sensitive`, `matches`, `lookup` → `NameHit::{One, Many,
+  CaseOnly, None}`) with an inline table test over `["id", "Data", "ID"]`
+  under both rules. It lives at tier 0 because every crate that binds names
+  already depends on this crate. **WO CASESENS-1 slice 4 (2026-09-27):**
+  `folded_duplicate` (the lower-cased name of the first later name equal
+  ignoring case to an earlier one) and `column_already_exists` (Spark's
+  42711 text) with the `folded_duplicate_reports_the_lower_cased_twin` pin.
+  pins: casesens-1/C-005, C-006, C-007, C-008, C-012, C-017
 - `lib.rs` — `Error` (variants: `NotImplemented(String)` — the deterministic scope-gate /
   unsupported-feature class (U4: no longer a scaffolding placeholder; `engine_err` folds
   `DataFusionError::NotImplemented` + iceberg `FeatureUnsupported` into it, verbatim `{0}`);

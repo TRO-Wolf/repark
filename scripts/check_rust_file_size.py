@@ -77,7 +77,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split tests by catalog backend with shared helpers kept local.",
     ),
     "crates/repark-iceberg/src/write/alter.rs": (
-        1607,
+        1606,
         "Iceberg ALTER operations share one transaction adapter.",
         "Split property, rename, and schema-evolution operation families.",
     ),
@@ -121,11 +121,6 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "PyO3 Column methods remain grouped in one binding module.",
         "Extract the remaining date or window method family.",
     ),
-    "crates/repark-python/src/dataframe.rs": (
-        1005,
-        "PyO3 DataFrame methods share one binding surface.",
-        "Split action methods from plan-building methods without moving row work to Python.",
-    ),
     "crates/repark-python/src/session.rs": (
         1122,
         "PyO3 session construction and query entry points share one module.",
@@ -142,7 +137,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract identifier resolution from metadata plan assembly.",
     ),
     "crates/repark-spark/src/tests/alter.rs": (
-        1182,
+        1181,
         "Spark ALTER behavior cases share one test module.",
         "Split property operations from schema-evolution operations.",
     ),

@@ -216,6 +216,14 @@ pins: rp-4-fork-repin/C-005, C-006
   (`column_resolution::fold_query_text`) before the fragment rewrite, so its
   another-case names bind. pins: ice-mixed-case-1/C-004, C-018
   pins: casesens-1/C-004
+  **WO CASESENS-1 slice 2 (2026-09-27):** `rewrite_merge_fragments` takes a
+  `NameRule` and runs the same seven seats through the fold (`IgnoreCase`) or
+  [`merge_fragments/exact.rs`](merge_fragments/exact.rs) (`Exact`, R6: an exact
+  hit is backtick-quoted as written, a case-only hit refuses
+  `UNRESOLVED_COLUMN.WITH_SUGGESTION` with every scope field listed target
+  first, no hit is left alone); the derived-source probe plans with
+  normalization off under `true` so scope fields keep their written case.
+  pins: casesens-1/C-008
 - `insert_overwrite.rs` — **R-FILEORDER-2 (2026-09-27, HALT, no code change):**
   Spark 4.1.2 answers `L-INSERT-OVERWRITE` `[[2,b,5,3],[3,c,6,3],[4,d,4,3]]` on a same-JVM
   triple but splits 2–4 across six fresh-JVM runs — one combined task whose file order is
@@ -726,6 +734,9 @@ pins: rp-4-fork-repin/C-005, C-006
   session owner through the shared `create_table::stamp_owner` helper; a user-supplied,
   exact lowercase `owner` property refuses before catalog access with a parser-kind
   error (ParseException, as Spark raises it).
+  **WO CASESENS-1 slice 4 (2026-09-27):** `execute_ctas` refuses
+  `COLUMN_ALREADY_EXISTS` 42711 on a folded duplicate in the planned source
+  schema under `caseSensitive=false` (R10), before staging. pins: casesens-1/C-012
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the staged commit resolves the
   merged session write, so CTAS stamps session snapshot properties.
   **ICE-MERGE-APPEND-1 (2026-09-19):** the staged-table append commits through
@@ -813,6 +824,17 @@ pins: rp-4-fork-repin/C-005, C-006
   refused where Spark answers (MC-UPD-01/02). No unique case-insensitive match leaves the
   requested spelling alone, so the ambiguity and missing-column refusals still fire there.
   pins: ice-session-write-conf-1/C-063
+- `spark_ast.rs` — **WO CASESENS-1 slice 2 (2026-09-27):**
+  `try_execute_identity_dml` runs the `false` branch through
+  `canonicalize_identity_selection` as before and the `true` branch through the
+  new `check_identity_selection_exact`, which checks the selection and each SET
+  *value* with `merge_fragments/exact.rs` `check_identity_exact` (single
+  target scope, bare candidates — Spark's
+  `cs_update_where` / `cs_delete_where` text byte-exact). Plain UPDATE/DELETE
+  bypass `plan_case_sensitive` through this owned route, so without the check
+  the `ctx.sql` identity scan folds `WHERE ID` under `true`. SET *targets*
+  stay with `validate_update_assignments`, which already reads the flag.
+  pins: casesens-1/C-008
 - `spark_ast.rs` — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):** `execute_insert_source`
   is `execute_passthrough` stopped one step short — same parse, same rewrites, same analysis,
   but it executes the insert's INPUT instead of the insert. One pipeline answers both routes,
@@ -1072,6 +1094,11 @@ pins: rp-4-fork-repin/C-005, C-006
   `TY-UNKNOWN-VOID`); v3 commits, v1 / v2 refuse at the fork's schema choke point with its
   Java-mirrored `Invalid schema for v<N>` text. `type_table.rs` names Arrow `Null` `void` on
   every schema surface. pins: u9-types-1/C-009
+- `create_table.rs` — **WO CASESENS-1 slice 4 (2026-09-27):** the declared
+  plus typed column list refuses `COLUMN_ALREADY_EXISTS` 42711 on a folded
+  duplicate under `caseSensitive=false` (R10, before the schema builds);
+  `refuse_duplicate_partition_columns` compares through `NameRule` and
+  renders through the same builder, byte-identical. pins: casesens-1/C-012
 - `void_type.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** `rewrite_cast_null_to_void` turns
   `CAST(NULL AS VOID)` into a typed null; `refuse_insert_void_values` refuses a non-NULL
   `INSERT … VALUES` value into an `unknown` column with Spark's
@@ -1314,8 +1341,9 @@ pins: rp-4-fork-repin/C-005, C-006
   (`try_parse_set_identifier_fields_ddl` / `try_parse_drop_identifier_fields_ddl` /
   `execute_identifier_fields_ddl`, wired in `router.rs` after the column-move intercept). Every
   named field is resolved against the current schema (top-level and dotted paths,
-  case-insensitive) and SET refuses — with Iceberg's message shapes, the recorded nullable one
-  being `Cannot add field {name} as an identifier field: not a required field` — optional,
+  exact since CASESENS-1 S5, case-insensitive before) and SET refuses — with Iceberg's
+  message shapes, the recorded nullable one being
+  `Cannot add field {name} as an identifier field: not a required field` — optional,
   float/double, non-primitive and list/map-nested candidates before any transaction action is
   built; both statements refuse unknown names; `require_column` is never called. SET commits the
   fork's `UpdateSchemaAction::set_identifier_fields`; DROP replaces the set with
@@ -1323,6 +1351,9 @@ pins: rp-4-fork-repin/C-005, C-006
   is captured — `SET IDENTIFIER` (no FIELDS), parenthesized, dangling-comma and trailing-token
   variants keep the stock parser fall-through. 4 in-module tests +
   [`tests/identifier_fields.rs`](tests/identifier_fields.rs).
+  **WO CASESENS-1 slice 5 (2026-09-27, R11):** `struct_child` / `field_child` bind
+  through `NameRule::Exact` under both settings, so SET and DROP refuse a wrong-case
+  column with Iceberg's recorded texts. pins: casesens-1/C-016
   **WO U5 PR1 round 2 (2026-09-24):** `unset_if_exists_pair` (the `IF EXISTS` span the UNSET
   rewrite drops) and `unset_tblproperties_if_refusal`, a router pre-parse intercept placed after
   the comment-DDL pre-parse (the `refuse_unsupported_alter_sql` step it followed is gone since WO
@@ -1446,6 +1477,10 @@ pins: rp-4-fork-repin/C-005, C-006
   module, not an `alter.rs` arm, because that file sits at its exact ceiling. Pins:
   [tests/alter_write_order.rs](tests/alter_write_order.rs).
   pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006
+  **WO CASESENS-1 slice 5 (2026-09-27, R11):** `execute_write_order_ddl` passes the
+  session `NameRule` (the S2-Q1 composition over the context config) into
+  `apply_write_order`, so each segment binds by `spark.sql.caseSensitive`.
+  pins: casesens-1/C-015
   **WO U5 PR2b (2026-09-24):** transform terms land (D-WRITE-ORDERED-TRANSFORM).
   `parse_write_order_term` splits each `order_list_segments` segment. A `name(…)` segment is a
   transform term, checked in the order of Spark's `Spark3Util.toIcebergTerm`: zorder first

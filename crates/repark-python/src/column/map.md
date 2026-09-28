@@ -85,6 +85,9 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   names keep the two-arg Spark shape). The list call construction collapses to a `let` and
   the percentage validation folds into a named closure; both hold the file at its exact
   baseline (ratchet 1053→1052 with the accuracy import). pins: perf-approxpct-1/C-002
+  **CASESENS-1 S3 (2026-09-27):** `PyColumn::column` builds through
+  `expr_build::written_column` (the written spelling reaches the binder; net-zero, stays
+  1012). pins: casesens-1/C-009
 - [`function_dispatch.rs`](function_dispatch.rs) owns scalar and aggregate function dispatch.
   Its default arm hands the name to [`function_dispatch/`](function_dispatch/map.md) before
   refusing.
@@ -202,6 +205,11 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   **FNP-8-REVIEW (2026-09-07):** the nested-HOF refusal names the Column door as the
   refusing side and the SQL door as serving nested lambdas (F5 reword).
   pins: fnp-8-review/C-005
+  **CASESENS-1 S3 (2026-09-27):** `written_column` builds
+  `Column::from_qualified_name_ignore_case` (no fold, quoted dots kept whole);
+  `parse_canonical_predicate_exact` parses a filter fragment against a
+  normalization-off clone of the frame state and routes a `FieldNotFound` miss
+  through the rule binder for Spark's refusal. pins: casesens-1/C-009
 - [`window.rs`](window.rs) owns Spark frame conversion and unordered-window policy.
   **WIN-SLIDE-1 (2026-09-04):** a `RANGE` offset is emitted as `ScalarValue::Utf8`, not `Int64`.
   DataFusion's window-frame coercion casts a `Utf8` bound to the ORDER BY key's type (that is the
@@ -240,6 +248,16 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   pins: abs-expr-1/C-002
   **TYPES-1 (2026-09-05):** `from_unixtime` left EXPECTED_DIVERGENCES (ratchet 22 → 21).
   pins: types-1/C-006
+  **CASESENS-1 S3 (2026-09-27):** `column_keeps_the_written_spelling` pins
+  `written_column` (`ID` bare, `t.ID` qualified, `` `a.b` `` dotted).
+  pins: casesens-1/C-009
+  **CASESENS-1 final fold (2026-09-28):** `exact_predicate_refuses_a_case_only_match`
+  pins `parse_canonical_predicate_exact` (`ID > 1` refuses `UNRESOLVED_COLUMN`
+  naming `` `ID` ``, `Data = 'a'` binds — red if the predicate folds),
+  `describe_with_twin_columns_refuses_ambiguous` pins the `Many` branch and
+  `describe_with_missing_column_refuses_unresolved` pins the `None` branch of
+  `resolve_written_names` under both rules.
+  pins: casesens-1/C-009, C-010
 
 ## Contracts
 

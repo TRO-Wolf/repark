@@ -66,7 +66,7 @@ impl WrittenScope {
     }
 }
 
-fn is_expression_subquery(expr: &SqlExpr) -> bool {
+pub(super) fn is_expression_subquery(expr: &SqlExpr) -> bool {
     matches!(
         expr,
         SqlExpr::Subquery(_) | SqlExpr::InSubquery { .. } | SqlExpr::Exists { .. }

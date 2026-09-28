@@ -19,10 +19,9 @@ def spark() -> Iterator[ReparkSession]:
 
 
 def test_col_cast_qualified_projection_name(spark: ReparkSession) -> None:
-    """Bare F.col cast select names the CDF-qualified column; Spark answers v (EX-COL-1)."""
+    """Bare F.col cast select keeps the child name v, like Spark (EX-COL-1 closed)."""
     frame = spark.createDataFrame([(10.0,)], ["v"])
-    name = frame.select(F.col("v").cast("double")).columns[0]
-    assert name.startswith("datafusion.public.__repark_cdf_") and name.endswith(".v")
+    assert frame.select(F.col("v").cast("double")).columns == ["v"]
 
 
 def test_get_field_bare_projection_name(spark: ReparkSession) -> None:
