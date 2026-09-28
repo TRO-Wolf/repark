@@ -1489,6 +1489,7 @@ perfectly good read.
 - Residue — carved out of the v1.5.0 gate (owner ruling C-2, 2026-09-24); the v1.6.0 card the
   spec names is not yet filed (readiness finding F-6, 2026-09-27) — see the C-2 paragraph in
   [v1-5-0-remainder-spec-2026-09-23.md](../task/roadmap/mid-term/v1-5-0-remainder-spec-2026-09-23.md).
+  Card filed 2026-09-27: [ns-nested-1-6.md](../task/roadmap/mid-term/ns-nested-1-6.md), closing F-6.
 
 #### ICE-DROP-NS-1 — `DROP NAMESPACE` on a non-empty namespace refuses — **FIXED 2026-09-19**
 
