@@ -23,6 +23,8 @@ use datafusion::prelude::SessionContext;
 
 use crate::ansi::spark_ansi_enabled_from_options;
 
+pub(crate) mod fractional_division;
+
 pub(crate) const INTEGER_ADD_NAME: &str = "__repark_spark_int_add__";
 pub(crate) const INTEGER_SUB_NAME: &str = "__repark_spark_int_sub__";
 pub(crate) const INTEGER_MUL_NAME: &str = "__repark_spark_int_mul__";

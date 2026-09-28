@@ -190,6 +190,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `(38,8)`. The appended seat stays (sessions without this preparation, and shapes the
   early seat skips); the already-correct-`CAST` stop makes the second run a no-op.
   pins: decimal-cache-1/C-002
+  **WO INTDIV-1 (2026-09-28):** the same insertion point seats
+  `integer_spark::fractional_division::SparkFractionalDivision` first, immediately before
+  `HigherOrderPreparation`, so integer `/` is DOUBLE in every scope before `TypeCoercion`
+  and the integer overflow rule read its type (see `integer_spark/map.md`).
+  pins: intdiv-1/C-001, C-002
   **FNP-8 repair (2026-09-07):** `HigherOrderPreparation` runs only before the first default
   type-coercion pass. It narrows direct constructor literals for indexed `transform`, narrows a
   direct `aggregate`/`reduce` initial literal and its lambda-body literals, and derives direct
@@ -733,6 +738,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   is the ANSI-door hook. Ledger:
   `task/ledgers/staging/f-y10-1-int-overflow-ledger.md`.
   pins: f-y10-1-int-overflow/C-001, C-002, C-003, C-004, C-005
+  **WO INTDIV-1 (2026-09-28):** declares `pub(crate) mod fractional_division;` — the
+  pre-coercion `SparkFractionalDivision` rule in `integer_spark/` that types integer `/` as
+  DOUBLE at every nesting level and unarms a checked call whose operand turned fractional.
+  pins: intdiv-1/C-001, C-002, C-003
   (clippy implicit_clone: projection name uses `clone` on the field name)
 - `lib.rs` — `register_all(ctx)` (datafusion-spark's full set, then the date + string + collection
   + **r20 G2** `random` (Spark XORShift `rand`/`randn`/`random`) shims + **SEM-1** `spark_log`

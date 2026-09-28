@@ -164,6 +164,27 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   frame, a stored codec beating `zstd` and the default after `UNSET`, and the
   missing/wrong-case refusals with the fall-through sweep.
   pins: tblprops-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+- [test_intdiv_1.py](test_intdiv_1.py) + `intdiv_1_spark_oracle.json` —
+  **WO INTDIV-1 (2026-09-28):** arithmetic over `/` replays Spark 4.1.2 + Iceberg 1.11.0's
+  recorded names, types (`simpleString`) and rows on `sc.ns.t (id BIGINT, i INT, d
+  DECIMAL(10,2))`: `h * 2`, `h + 1`, `h - 1`, `-h`, `abs(h)`, `h / 2`, `h % 2`,
+  `CAST(h AS INT)`, `WHERE h + 1 = 1.5`, `ORDER BY h + 0 DESC`, `sum(h)`, `avg(h)` over
+  `h = id / 2` and `h = i / 2` in the same scope, a derived table, a CTE, a temp view, a
+  session-catalog view, nested derived tables and a chained derived scope; integral
+  controls (BIGINT and INT results, `ARITHMETIC_OVERFLOW` condition and message head for
+  `9223372036854775807 + 1` in a derived table and a CTE and for INT `*`); BIGINT MAX plus a
+  derived fraction answering DOUBLE; CTAS (`DESCRIBE` and values) and INSERT into DOUBLE
+  columns; and the DataFrame door (`select`, `selectExpr`, `filter`, `withColumn`, `agg`).
+  Rows sort by repr except the ORDER BY cells. The SQLSTATE of the overflow refusals is not
+  compared (residue R-INTDIV-4).
+  pins: intdiv-1/C-001, C-003
+  **R-INTDIV-1 fold (2026-09-28):** the `st-big`, `st-int`, `st-small` and `st-tiny` groups
+  replay Spark's store cells — a fractional quotient into BIGINT/INT columns (SMALLINT and
+  TINYINT read back as Iceberg `int`) through INSERT SELECT, a negative quotient, derived
+  table, CTE, VALUES, INSERT OVERWRITE, UPDATE and MERGE, plus genuine DOUBLE and integral
+  controls; the range/NaN/Infinity cells assert refusal only (`refusal_text_waived`,
+  R-INTDIV-9) and an empty read-back.
+  pins: intdiv-1/C-004
 - [test_casesens_1.py](test_casesens_1.py) + `casesens_1_spark_oracle.json` —
   **WO CASESENS-1 slice 1 (2026-09-27):** the nested-scope SELECT legs, the MERGE
   derived source and the catalog-view reads replay Spark's recorded names and

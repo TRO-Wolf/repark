@@ -48,6 +48,10 @@ function-registry + analyzer-rule installation + the composed
   installs the post-coercion rules minus the subsumed late
   `spark_integer_literal`.
   pins: sql-literal-typing-1/L-001, L-002
+  **WO INTDIV-1 (2026-09-28):** the same contract test pins a fifth pre-coercion seat,
+  `spark_fractional_division` immediately before `higher_order_preparation` (the four
+  existing offsets are unchanged), and the filter passes it through.
+  pins: intdiv-1/C-002
 - `session_catalog.rs` — **CATALOG-1 (2026-09-26):** `apply_default_catalog(session, name)`
   (registry and carrier, a no-op once `USE` pinned the current catalog),
   `with_configured_defaults` (the build carrier from `spark.sql.defaultCatalog`),
