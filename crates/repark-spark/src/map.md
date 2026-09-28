@@ -1094,6 +1094,13 @@ pins: rp-4-fork-repin/C-005, C-006
   the analyzer's literal types. `ctas.rs` converts its schema through
   `arrow_schema_to_iceberg_with_unknown`, so `AS SELECT …, NULL AS c` makes `c` `unknown` on v3.
   pins: u9-types-1/C-014, C-015
+- `void_type.rs`, `update_cast.rs` — **WO NTZ-1 slice 2 (2026-09-27):** the INSERT and
+  UPDATE doors also judge NTZ targets through repark-iceberg
+  `write/ntz_store.rs::refuse_ntz_writes`: `void_type.rs` triggers on an Iceberg
+  `timestamp` column, probes each VALUES row as a SELECT, and maps NTZ targets to
+  `Timestamp(µs, None)` for the SELECT source; `update_cast.rs` calls the gate beside
+  the VOID one. Illegal sources refuse with Spark's `CANNOT_SAFELY_CAST` naming
+  `"TIMESTAMP_NTZ"`. pins: ntz-1/C-007
 - `cast_gate.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** the unit's one cast hook, a single
   call in `spark_ast.rs`'s passthrough: the `CAST(NULL AS VOID)` rewrite (`void_type.rs`)
   and the `CAST(x AS UUID)` refusal (`uuid_cast.rs`). pins: u9-types-1/C-009, C-010
