@@ -351,7 +351,7 @@ async fn plan_definition(
         temp_homes,
     )
     .await?;
-    let frame = plan_prepared_body(ctx, catalogs, &sql, &pins).await?;
+    let frame = plan_prepared_body(ctx, catalogs, &sql, &pins, false).await?;
     apply_temp_view_aliases(frame, &definition.aliases, &definition.display)
 }
 

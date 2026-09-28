@@ -615,3 +615,82 @@ async fn dml_spelled_in_another_case_answers() {
         ]
     );
 }
+
+#[tokio::test]
+async fn hundred_nested_views_read_and_the_101st_refuses() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t (id INT, data STRING) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t VALUES (1, 'd1'), (2, 'd2'), (0, 'd0')",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.w0 AS SELECT id FROM ice.sales.t",
+    )
+    .await;
+    for level in 1..100 {
+        run(
+            &ctx,
+            &catalogs,
+            &format!(
+                "CREATE VIEW ice.sales.w{level} AS SELECT id FROM ice.sales.w{}",
+                level - 1
+            ),
+        )
+        .await;
+    }
+    let (_, rows) = names_and_rows(&ctx, &catalogs, "SELECT * FROM ice.sales.w50").await;
+    assert_eq!(
+        rows,
+        vec![
+            vec!["0".to_string()],
+            vec!["1".to_string()],
+            vec!["2".to_string()],
+        ]
+    );
+    let (_, rows) = names_and_rows(&ctx, &catalogs, "SELECT * FROM ice.sales.w99").await;
+    assert_eq!(
+        rows,
+        vec![
+            vec!["0".to_string()],
+            vec!["1".to_string()],
+            vec!["2".to_string()],
+        ]
+    );
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.w100 AS SELECT id FROM ice.sales.w99",
+    )
+    .await;
+    let error = execute(&ctx, &catalogs, "SELECT * FROM ice.sales.w100")
+        .await
+        .err()
+        .unwrap_or_else(|| panic!("reading w100 must refuse"));
+    assert!(
+        error.to_string().contains("VIEW_NESTED_DEPTH_LIMIT"),
+        "{error:?}"
+    );
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.w101 AS SELECT id FROM ice.sales.w100",
+    )
+    .await
+    .err()
+    .unwrap_or_else(|| panic!("creating w101 must refuse"));
+    assert!(
+        error.to_string().contains("VIEW_NESTED_DEPTH_LIMIT"),
+        "{error:?}"
+    );
+}

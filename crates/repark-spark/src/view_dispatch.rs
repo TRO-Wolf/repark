@@ -11,6 +11,7 @@ pub(crate) async fn execute_view_body_query(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
+    skip_eager_analysis: bool,
 ) -> Result<DataFrame> {
     crate::view_ddl::read::ensure_view_wrappers(ctx, catalogs)?;
     let rewritten_sql = rewrite_sql_for_execute(sql, catalogs);
@@ -53,7 +54,11 @@ pub(crate) async fn execute_view_body_query(
         Some(rewritten) => std::borrow::Cow::Owned(rewritten),
         None => std::borrow::Cow::Borrowed(routed_sql),
     };
-    let result = spark_ast::execute_passthrough(ctx, catalogs, sql_storage.as_ref()).await;
+    let result = if skip_eager_analysis {
+        spark_ast::execute_passthrough_for_view_body(ctx, catalogs, sql_storage.as_ref()).await
+    } else {
+        spark_ast::execute_passthrough(ctx, catalogs, sql_storage.as_ref()).await
+    };
     lineage_pins.release(ctx);
     pinned.release(ctx);
     result

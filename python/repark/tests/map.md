@@ -2074,7 +2074,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and hides the private SSOT names `test_qi1_idents.py` pins; imports sorted);
   the two divergence pins for the Column-a example batch —
   `test_col_cast_qualified_projection_name`: a bare `F.col("v").cast("double")`
-  select names the CDF-qualified column where Spark answers `v` (EX-COL-1), and
+  select keeps the child name `v` like Spark (EX-COL-1, CLOSED 2026-09-28 by
+  CASESENS-1 VC-3), and
   `test_get_field_bare_projection_name`: an unaliased `getField` projects `r['a']`
   where Spark answers `r.a` (EX-COL-2). EX-29 (2026-09-11) measured the six
   engine-plumbing names (`for_select`, `join_sql_part`, `spark_display_part`,
@@ -3913,8 +3914,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   re-recorded for 8 getitem/getfield `join_sql` `"` → backtick moves, display
   fields byte-identical.
   `isinstance(c, repark.Column)` is pinned. Cast/try_cast
-  of a named attribute currently answers `select` with a
-  `datafusion.public.__repark_cdf_<id>.<field>` qualifier; the golden stores the
+  of a named attribute answers `select` with the child name since 2026-09-28
+  (CASESENS-1 VC-3 closed the `datafusion.public.__repark_cdf_<id>.<field>`
+  qualifier leak, EX-COL-1); the golden stores the
   trailing field only (the UUID is session-local, not a display-string contract).
   **FNP-4B (2026-09-15):** the `sql_expr` / `sql_expr_without_alias` / `join_sql` fields
   re-recorded in backtick form through record mode; every display field verified

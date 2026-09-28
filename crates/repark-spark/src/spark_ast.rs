@@ -30,7 +30,16 @@ pub(crate) async fn execute_passthrough(
     sql: &str,
 ) -> Result<DataFrame> {
     let mut sort_rewrite_fired = false;
-    match execute_passthrough_inner(ctx, catalogs, sql, false, true, &mut sort_rewrite_fired).await
+    match execute_passthrough_inner(
+        ctx,
+        catalogs,
+        sql,
+        false,
+        true,
+        false,
+        &mut sort_rewrite_fired,
+    )
+    .await
     {
         Err(_) if sort_rewrite_fired => Box::pin(execute_passthrough_inner(
             ctx,
@@ -38,6 +47,39 @@ pub(crate) async fn execute_passthrough(
             sql,
             false,
             false,
+            false,
+            &mut sort_rewrite_fired,
+        ))
+        .await
+        .map_err(crate::keyword_lower::map_door_keyword_errors),
+        outcome => outcome.map_err(crate::keyword_lower::map_door_keyword_errors),
+    }
+}
+
+pub(crate) async fn execute_passthrough_for_view_body(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+) -> Result<DataFrame> {
+    let mut sort_rewrite_fired = false;
+    match execute_passthrough_inner(
+        ctx,
+        catalogs,
+        sql,
+        false,
+        true,
+        true,
+        &mut sort_rewrite_fired,
+    )
+    .await
+    {
+        Err(_) if sort_rewrite_fired => Box::pin(execute_passthrough_inner(
+            ctx,
+            catalogs,
+            sql,
+            false,
+            false,
+            true,
             &mut sort_rewrite_fired,
         ))
         .await
@@ -52,12 +94,23 @@ pub(crate) async fn execute_insert_source(
     sql: &str,
 ) -> Result<DataFrame> {
     let mut sort_rewrite_fired = false;
-    match execute_passthrough_inner(ctx, catalogs, sql, true, true, &mut sort_rewrite_fired).await {
+    match execute_passthrough_inner(
+        ctx,
+        catalogs,
+        sql,
+        true,
+        true,
+        false,
+        &mut sort_rewrite_fired,
+    )
+    .await
+    {
         Err(_) if sort_rewrite_fired => Box::pin(execute_passthrough_inner(
             ctx,
             catalogs,
             sql,
             true,
+            false,
             false,
             &mut sort_rewrite_fired,
         ))
@@ -81,12 +134,25 @@ fn prepare_ordering(
     Ok(())
 }
 
+fn maybe_analyze_eagerly(
+    state: &SessionState,
+    plan: LogicalPlan,
+    skip: bool,
+) -> Result<LogicalPlan> {
+    if skip {
+        Ok(plan)
+    } else {
+        repark_functions::analyze_eagerly(state, plan)
+    }
+}
+
 async fn execute_passthrough_inner(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
     insert_source: bool,
     allow_sort_rewrite: bool,
+    skip_eager_analysis: bool,
     sort_rewrite_fired: &mut bool,
 ) -> Result<DataFrame> {
     let state = Box::new(ctx.state());
@@ -169,7 +235,7 @@ async fn execute_passthrough_inner(
     // Spark applies commands eagerly.
     let is_eager_command = matches!(&plan, LogicalPlan::Dml(_) | LogicalPlan::Copy(_));
     // Eager analysis exposes Spark-adjusted types to Arrow export and CTAS schema derivation.
-    let plan = repark_functions::analyze_eagerly(&state, plan)?;
+    let plan = maybe_analyze_eagerly(&state, plan, skip_eager_analysis && !is_eager_command)?;
     let plan = conform_insert_narrowed_ints(ctx, plan).await?;
     let target = insert_defaults::dml_target(&plan)
         .and_then(|(name, ident)| catalogs.get(&name).map(|catalog| (catalog, ident)));

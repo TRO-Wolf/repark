@@ -498,8 +498,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   refuses Spark's `AMBIGUOUS_REFERENCE` 42704 instead). **Fold round
   (2026-09-27):** `derived_and_cte_projections_keep_the_written_spelling`
   gains the `SELECT * FROM (SELECT 1 AS ID)` leg (answers `ID`; unmeasured —
-  no probe key records an expression-alias output name). pins:
-  casesens-1/C-001, C-002, C-003, C-004
+  no probe key records an expression-alias output name). **CI fix 2
+  (2026-09-28):** `hundred_nested_views_read_and_the_101st_refuses` builds 100
+  nested Iceberg views, reads w50/w99, and pins the typed
+  `VIEW_NESTED_DEPTH_LIMIT` refusal on the w100 read and the w101 create. pins:
+  casesens-1/C-001, C-002, C-003, C-004, C-018
 - `casesens_true.rs` — **WO CASESENS-1 slice 2 (2026-09-27):** the
   `caseSensitive=true` SQL-door pins over `(id, Data, s)` + `(id, Data)` probe
   tables: wrong-case refuses in every scope (the join legs name `` `a`.`ID` ``;

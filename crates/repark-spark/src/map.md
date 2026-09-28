@@ -845,6 +845,21 @@ pins: rp-4-fork-repin/C-005, C-006
   columns from `write_default` on the planned DML (`insert_defaults`). The marker
   pass's loaded table threads into the fill call, so one INSERT loads once.
   pins: ice-v3-write-default-1/C-004, C-007
+- `spark_ast.rs` — **CASESENS-1 CI fix 2 (2026-09-28):**
+  `execute_passthrough_for_view_body` plans catalog nested expansion without the
+  eager `analyze_eagerly` pass: analysis re-ran on the inlined plan at every
+  expansion level (O(n²) nodes for n-deep reads — the
+  `test_nested_view_depth_guard` CI stall, pre-existing), while `collect`
+  analyzes the final plan anyway. Creation still analyzes (the stored schema
+  carries Spark-adjusted types), as do temp creation/rescan, DML/Copy and every
+  top-level statement.
+  pins: casesens-1/C-018
+- `view_dispatch.rs` — **CASESENS-1 CI fix 2 (2026-09-28):**
+  `execute_view_body_query` takes `skip_eager_analysis` and routes catalog
+  expansion through `execute_passthrough_for_view_body`, everything else through
+  `execute_passthrough`; `plan_prepared_body` threads the flag (catalog
+  expansion true, catalog creation and temp `plan_definition` false).
+  pins: casesens-1/C-018
 - `bare_nullary.rs` — **SPARK-SQL-GRAMMAR-1 C-010 (2026-09-16):** bare nullary
   keywords in both Spark directions. `demote_refusing_nullary_calls` lowers a
   no-paren `localtimestamp` call (the Databricks dialect parses it as a function)

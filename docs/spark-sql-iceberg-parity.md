@@ -12959,7 +12959,14 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   this row records the struct-field representation until collect returns nested Rows the way
   Spark does.
 
-### EX-COL-1 — a bare `F.col(...).cast(...)` select names the engine-qualified column; Spark keeps the child name
+### EX-COL-1 — FIXED (CASESENS-1 VC-3, 2026-09-28): a bare `F.col(...).cast(...)` select names the engine-qualified column; Spark keeps the child name
+
+> **CLOSED 2026-09-28 (CASESENS-1 verifier fold VC-3).** The select boundary now
+> aliases a `Cast`/`TryCast` over a column reference to the written child name, so the
+> bare arm answers `v` like Spark on createDataFrame, temp-view, and Iceberg frames,
+> lowercase names included. The pin
+> `python/repark/tests/test_examples_column_a.py::test_col_cast_qualified_projection_name`
+> flipped to `["v"]` in the same change. Retired per §6.
 
 - **repark** — `df.select(F.col("v").cast("double"))` names the output column
   `datafusion.public.__repark_cdf_<plan-id>.v`: the cast of a door-built column falls to the
