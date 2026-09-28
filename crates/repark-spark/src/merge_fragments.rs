@@ -17,6 +17,12 @@ pub(crate) async fn maybe_rewrite_merge_fragments(
     let case_insensitive = crate::spark_door_case_insensitive(ctx.state().config().options());
     spec.case_insensitive = case_insensitive;
     if case_insensitive {
+        if spec.source_from_sql.starts_with('(') && spec.source_from_sql.ends_with(')') {
+            let inner = spec.source_from_sql[1..spec.source_from_sql.len() - 1].to_string();
+            let folded =
+                repark_core::column_resolution::fold_query_text(&ctx.state(), &inner).await?;
+            spec.source_from_sql = format!("({folded})");
+        }
         rewrite_merge_fragments(ctx, catalog, spec).await?;
     }
     Ok(())
