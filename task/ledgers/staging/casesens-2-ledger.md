@@ -410,13 +410,27 @@ RC3-5 (S3, 34 cells) is recorded as R-CS2-17, not fixed: Rust folds with
 Unicode 16, JDK 17 Spark with Unicode 13, and the boundary moves with the
 deployment JDK.
 
-Proof (this round, head = this fold, the recorded base and Spark outputs
-of each set): see the hand-back `probe_sets` for the final counts; every
-set holds 0 REGRESSION and 0 WORSE-VERDICT outside the 34 RC3-5 Unicode
-cells, controls are unchanged, and the DIFF-PROBE corpus moves only as
-`69ea4609` did (differences are unordered group/distinct order and the
-SQL-door twin text in `p3:tw_order_by`, which alternates between runs of
-one build).
+Proof (this round, head `15a7bb9d`, the recorded base and Spark outputs
+of each set). The 2752-cell second re-verify probe: FIXED 1127,
+SAME-MATCH 999, SAME-GAP 283, GAP-MOVED 149, BOTH-MATCH-MOVED 44,
+IMPROVED-VERDICT 74, NO-SPARK 24, NO-SPARK-DIFF 18, REGRESSION 14,
+WORSE-VERDICT 20; all 34 are the RC3-5 Unicode cells; controls 40/40
+byte-identical to `69ea4609`. The cells `69ea4609` answered only by
+truncation (`p18`, `p19`, `p59`, `j4`, Spark's trailing expression
+alias) are back to main's parse error (R-CS2-18). The truncation probe
+matches Spark on 14/14 keys. The 1559-statement first re-verify probe:
+FIXED 653, SPARK-CONFIRMED 14, IMPROVED-VERDICT 30, GAP 23, NON-DIFF 9,
+REGRESSION 0, WORSE-VERDICT 0, controls 40/40; against `69ea4609` only
+`F_rb_ren_ob` moves (GAP to FIXED). The 138-statement alias probe: 0
+regressions, the same classes as `69ea4609`. The unicode (754), `np5`
+(62) and pin (36) probes match Spark on 685, 56 and 33 cells
+(`69ea4609`: 685, 55, 33; none lost). The 1890-statement DIFF-PROBE
+corpus moves 51 answers against `74af65a1`: the 48 `69ea4609` moved,
+less `p9:setup_tw` (alternates between runs), plus `dp:f_dd_all` and
+`p3:tw_order_by` (unordered output and a twin text that alternates
+between runs of one build) and `dp:t_dot_sel` / `np:n_dott_exact`, where
+the `true` refusal of ``select('`a.b`')`` now prints `` `a.b` `` as Spark
+does (Spark answers that select, R-CS2-19).
 
 ## Clauses
 
@@ -505,6 +519,18 @@ Each line was broken on the committed fold `0487afe7`, the named tests ran red, 
 | M13 | The RC2-3 split reverted: `lookup_equal` returns `java_equals_ignore_case` (native rebuild). | `test_rc2_3_lookup_lowers_and_the_resolver_folds` (`select("ıd")` answers) and `test_r4_final_sigma_refuses_unresolved_like_spark` red; restored green after the rebuild. |
 | M14 | The RC2-2 origin fix reverted: the `Exact` arm returns the bare written column when the frame has no display overlay. | `test_rc2_2_true_condition_joins_over_shared_names_answer` and `test_s5_true_attribute_join_builds_and_the_alias_select_refuses` red (the joins refuse `AMBIGUOUS_REFERENCE` at construction); restored green. |
 | M15 | The RC2-1 rebind removed from string `filter`. | `test_rc2_1_alias_qualified_filter_strings_bind_by_rule` red (`Schema error: No field named t.id`); restored green. |
+
+## Mutation record (2026-09-29, second re-verify fold)
+
+Each line was broken on `15a7bb9d`, the native module rebuilt where Rust
+changed, the named tests ran, and the file was restored with
+`git checkout` (`git status` clean after each, rebuilt green).
+
+| # | Mutation | Red |
+|---|---|---|
+| M16 | `bound_predicate` parses a prefix with `Parser::parse_expr` (no end-of-input check) instead of the engine's whole-string parse. | `test_rc3_2_predicates_keep_every_token` red (`T.id > 1 ORDER BY 1` answers instead of refusing). |
+| M17 | Struct binding dropped: the tree binder takes only two-part `CompoundIdentifier`s and skips `CompoundFieldAccess`. | `test_rc3_1_struct_and_subscript_alias_predicates_bind_on_the_tree` red (`Schema error: No field named t.s.f`). |
+| M18 | The alias-as-new-attribute rule dropped: `_twin_engine` names an aliased twin from its origin. | `test_rc3_3_an_aliased_copy_is_a_new_attribute` red (`select('v')` answers instead of refusing). |
 
 ## Tests rewritten
 
