@@ -976,6 +976,17 @@ pins: rp-4-fork-repin/C-005, C-006
   leaf; the SQP-1 leaf is byte-frozen), facade pins in
   `python/repark/tests/test_string_literal_escape_1.py`.
   pins: string-literal-escape-1/C-000, C-001, C-002, C-003, C-004
+  **DIFF-PROBE fold (2026-09-29):** verbatim keep-exact now applies only to
+  query-expression literals and `OPTIONS` values; DDL property lists
+  (`TBLPROPERTIES` / `PROPERTIES` / `DBPROPERTIES` parens) and `COMMENT`
+  literal runs in `CREATE` / `ALTER` statements take default treatment, so
+  their canonical text matches default mode exactly. Doubled `""` inside a
+  `COMMENT` double-quoted literal forces a rewrite (the borrower path refuses
+  doubles there) into single-quoted form. The statement gate keeps
+  `SELECT comment '…'` aliases on the query rule. `OPTIONS` needs no span:
+  its planner already unescapes keys from original text and splices values
+  from verbatim inners. `COMMENT ON` stays out (Spark collapses doublings
+  but preserves backslashes there — a different rule).
 - `spark_literal_typing.rs` — **SQL-LITERAL-TYPING-1 (2026-09-16):**
   `SparkIntegralLiteral` types unsuffixed integral literals as Spark does —
   Int64 fitting i32 narrows to Int32, UInt64 becomes Decimal128(digits, 0),

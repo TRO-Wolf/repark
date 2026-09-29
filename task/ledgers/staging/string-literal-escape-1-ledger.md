@@ -33,6 +33,9 @@ pre-existing, previously scoped to session doors by FNP-4B);
 | C-002 | A raw `''`/`""` ends the raw token: the head stays verbatim and the tail unescapes with the same quote's rules (`r'a''\n'` → `a`+LF, `r'a''b''c'` → `ab'c`); in verbatim mode the raw value is the opening quote plus the raw text with the first doubling removed (`r'a'` → `'a`). | The `raw_doubled_quote_splits_like_spark` Rust pins plus the raw facade rows green. | PROVEN | Split rule confirmed by discriminator cells on Spark (`r'a''\n'`, `r'\n''\t'`, `r''''` → empty); uppercase `R` splits identically. |
 | C-003 | Verbatim mode keeps the raw text exactly (backslashes AND doublings; `d-dq`-family downstream errors become values); every verbatim session-door cell matches Spark; the `F.expr`-ignores-verbatim gap is measured and disclosed, not absorbed. | The `verbatim_keeps_*` Rust pins plus `VERBATIM_CASES` facade pins green; verbatim non-expr non-`r''''` diffs are zero. | PROVEN | Post-fix verbatim: 0 non-expr diffs outside `r''''`; ~150 expr-door diffs are the pre-existing sessionless-planning gap. |
 | C-004 | Nothing else moves: every Step-0 match stays a match (zero match-to-diff transitions); the native door answers byte-identically; NTZ/LTZ and escape neighbours green; the full `repark-spark` suite green; byte-frozen files keep their hashes. | The before/after transition check, the native rerun, neighbour suites, and the freeze record green. | PROVEN | 2472 passed, 0 failed; `test_pr_245_revalidation_record.py` 11 passed; native before==after. |
+| C-005 | DIFF-PROBE fold: verbatim keep-exact covers query-expression literals and `OPTIONS` values only; DDL property lists (`TBLPROPERTIES` / `PROPERTIES` / `DBPROPERTIES`) and `COMMENT` runs in `CREATE` / `ALTER` take default treatment, so all 6 regression cells equal Spark 4.1.2. | The `verbatim_ddl_positions_take_default_treatment` Rust pins plus the 4 verbatim-DDL facade read-back pins green; the 6 cells equal their Spark oracles cell by cell. | PROVEN | `o10r`, `v_cmt`+`v_cmt_r`, `v_tb_dq_r`, `w_alter_r` (key and backslash value), `w_cmt1_r` all Spark-equal; `SELECT comment` alias guard and `OPTIONS`-value survivor pinned. |
+| C-006 | The whole-probe replay moves nothing else: 489 of 497 cells are byte-identical old-head to new-head; the 8 that move are the 5 fix read-backs plus 3 red-at-both-sides backslash cells, all 8 Spark-equal; 0 control diffs. | Old-head rerun into a separate out dir, byte-compared cell by cell; every moved cell compared against its Spark oracle. | PROVEN | New flips `v_tb_esc_r`, `v_tb_bsdoub_r`, `w_cmt2_r` Spark-equal; `v_cmt` CREATE succeeds on both heads; 43 INTENDED + 16 SPARK-CONFIRMED head values byte-identical. |
+| C-007 | Namespace `PROPERTIES` / `DBPROPERTIES` take the same DDL treatment (Spark fully unescapes there, measured both shapes); `COMMENT ON` is out of scope (Spark collapses doublings but preserves backslashes there — a different rule, verbatim doubling red recorded); default-mode `COMMENT` doubles refusal stays (pre-existing, both modes). | Facade namespace pins green; Spark oracle cells for namespace escapes, `COMMENT ON` × modes, and default `COMMENT` doubles recorded in the fold evidence. | PROVEN | Namespace doubling/backslash/`\u0041` Spark-oracled; `COMMENT ON` backslash green both modes (do-not-touch), doubling red verbatim-only; default `COMMENT "x""y"` ParseException on both heads. |
 
 ## Evidence
 
@@ -75,6 +78,46 @@ facade tests red; fix restored byte-exact (`diff` clean) and green again.
 | `r''''`, `r'''x'''`, `r'''''x'''''`, `r''''''`, `R"""x"""`, `r""""`, `r""""""` (+ verbatim twins) | ``, `x'`, `'x''`, `'`, `x"`, ``, `"` | TokenizerError / ParserError | `r`+3-quote runs take sqlparser's triple path; no fork edit allowed |
 | `F.expr` under `escapedStringLiterals=true` | verbatim values | default values | Column plans on a sessionless context; needs session-aware planning |
 | `"…"` under ANSI + `doubleQuotedIdentifiers=true` | identifier / `UNRESOLVED_COLUMN` | string literal | no carrier (measure-only per brief) |
+
+### C-005/C-006/C-007 DIFF-PROBE fold evidence (2026-09-29)
+
+Mechanism: `plan_literal_regions` computes `ddl_verbatim_spans` when
+`keep_verbatim` is set — `TBLPROPERTIES` / `PROPERTIES` / `DBPROPERTIES`
+paren ranges plus `COMMENT` maximal adjacent-literal runs, gated on
+`CREATE` / `ALTER` first words (`EXPLAIN` skipped). Literals inside take
+default treatment, so verbatim DDL canonicals are byte-identical to default
+ones; `COMMENT` doubles holding `""` force a rewrite (borrow refuses there)
+into single-quoted form. `skip_whitespace` / `matching_paren` went
+`pub(crate)` for reuse (2 words, no behavior change). `OPTIONS` takes no
+span: keys already unescape from original text, values splice from verbatim
+inners. The merger inherits the first literal's treatment; span edges always
+coincide with non-literal tokens, so a merged region never straddles a span
+boundary (verified by construction plus the alias-guard pin).
+
+Replay: 497 cells, base outputs reused, Spark oracles reused (every moved
+cell has one). Old-head rerun into `out_old/`: 489 cells byte-identical,
+the 8 that move are `o10r`, `v_cmt_r`, `v_tb_dq_r`, `w_alter_r`,
+`w_cmt1_r`, `v_tb_esc_r`, `v_tb_bsdoub_r`, `w_cmt2_r` — all 8 Spark-equal
+at value level. `v_cmt` CREATE succeeds on both heads (only its read-back
+moves). The `e` backslash value in `w_alter_r` heals as a side effect
+(canonical carries a real LF). `w_nsprop_r` / `w_nscreate_r` do not move
+(non-extended reads show no properties). bench_ratio 1.05.
+
+Fold oracle cells (Spark 4.1.2, `jvm-lock.sh`): namespace `PROPERTIES`
+doubling/backslash/`\u0041` and `DBPROPERTIES` doubling/backslash/unicode
+all fully unescape verbatim; `COMMENT ON` collapses doublings and doubles
+but preserves backslashes in both modes (RePark: backslash green both
+modes, doubling/doubles red verbatim-only — collapse-only rule, needs its
+own unit); column `COMMENT` doubles collapse both modes on Spark
+(`x"y`); default `COMMENT "x""y"` ParseException on both RePark heads.
+
+Mutation: the Rust DDL pin red without the fix, green with; 4/5 new facade
+pins red without (the `OPTIONS`-value survivor correctly stays green),
+11/11 green with. Product files: `spark_literals.rs`,
+`spark_rewrites/mod.rs`; pins: `tests/string_literal_escape_1.rs`,
+`python/repark/tests/test_string_literal_escape_1.py`;
+`python/repark/tests/map.md`, `crates/repark-spark/src/map.md`,
+`src/tests/map.md`, `src/spark_rewrites/map.md` in the same commit.
 
 ## Coverage attestation
 

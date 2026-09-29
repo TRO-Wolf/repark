@@ -201,6 +201,75 @@ async fn verbatim_keeps_doubled_quotes_and_marks_raw() {
 }
 
 #[test]
+fn verbatim_ddl_positions_take_default_treatment() {
+    let cases: &[(&str, &[&str], &[&str])] = &[
+        (
+            "CREATE TABLE t (id INT) USING iceberg TBLPROPERTIES ('a''b'='c', \"d\"\"e\"='f')",
+            &["'a''b'", "\"d\"\"e\""],
+            &["a''''b", "d\"\"\"\"e"],
+        ),
+        (
+            "CREATE TABLE t (id INT) USING iceberg TBLPROPERTIES ('ek'='a\\nb')",
+            &["'a\nb'"],
+            &["a\\nb"],
+        ),
+        (
+            "CREATE TABLE t (id INT COMMENT 'it''s') USING iceberg",
+            &["'it''s'"],
+            &["it''''s"],
+        ),
+        (
+            "CREATE TABLE t (v STRING COMMENT \"a\"\"b\") USING iceberg",
+            &["'a\"b'"],
+            &["\"a\"\"b\""],
+        ),
+        (
+            "ALTER TABLE t SET TBLPROPERTIES ('nk''k'='v', 'e'='a\\nb')",
+            &["'nk''k'", "'a\nb'"],
+            &["nk''''k"],
+        ),
+        (
+            "CREATE NAMESPACE n WITH PROPERTIES ('a''b'='c')",
+            &["'a''b'"],
+            &["a''''b"],
+        ),
+        (
+            "CREATE NAMESPACE n WITH DBPROPERTIES ('c''d'='e')",
+            &["'c''d'"],
+            &["c''''d"],
+        ),
+        ("SELECT comment 'a''b' FROM t", &["'a''''b'"], &["'a''b'"]),
+        (
+            "EXPLAIN CREATE TABLE t (id INT COMMENT 'it''s') USING iceberg",
+            &["'it''s'"],
+            &["it''''s"],
+        ),
+    ];
+    let mut failures = Vec::new();
+    for (sql, present, absent) in cases {
+        let canonical = crate::spark_literals::canonicalize_verbatim(sql, true)
+            .expect("verbatim canonicalize must succeed");
+        for needle in *present {
+            if !canonical.contains(needle) {
+                failures.push(format!("{sql} canonical lacks {needle:?}:\n{canonical}"));
+            }
+        }
+        for needle in *absent {
+            if canonical.contains(needle) {
+                failures.push(format!(
+                    "{sql} canonical keeps verbatim {needle:?}:\n{canonical}"
+                ));
+            }
+        }
+    }
+    assert!(
+        failures.is_empty(),
+        "verbatim DDL mismatches:\n{}",
+        failures.join("\n")
+    );
+}
+
+#[test]
 fn unescape_collapses_only_the_literal_quote() {
     let unescape = crate::spark_literals::unescape_spark_literal;
     assert_eq!(unescape("x\\\\\"\"y", '"'), "x\\\"y");

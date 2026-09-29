@@ -11,7 +11,9 @@ path stay in `spark_literals.rs`.
 ## Contents
 
 - `mod.rs` — the shared span helpers (`line_starts`, `byte_offset`,
-  `skip_whitespace`, `matching_paren`) and the pre-existing rewrite families:
+  `skip_whitespace`, `matching_paren`, the last two `pub(crate)` since the
+  STRING-LITERAL-ESCAPE-1 DIFF-PROBE fold (2026-09-29) so `spark_literals`
+  DDL spans reuse them) and the pre-existing rewrite families:
   numeric suffixes (**FNP-4B**), `0x` hex identifiers, FROM-less `DELETE`, DROP
   TEMPORARY, wildcard `EXCEPT`, the INSERT `PARTITION (…) (cols)` order swap,
   and call-base struct field access. **WO-A5 (2026-09-23):** the

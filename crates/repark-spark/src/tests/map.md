@@ -474,6 +474,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   raw `''`/`""` head/tail splitting, verbatim doublings kept and raw values
   marked, the escape-free-doubles borrow pin, and direct quote-awareness units.
   pins: string-literal-escape-1/C-001, C-002, C-003, C-004
+  **DIFF-PROBE fold (2026-09-29):** `verbatim_ddl_positions_take_default_treatment`
+  pins verbatim DDL canonicals (property lists borrowed, backslashes unescaped,
+  `COMMENT` doubles rewritten single-quoted, the `SELECT comment` alias guard,
+  `EXPLAIN` passthrough).
 - `cast_binary.rs` — **SQP-1 (C-009):** `CAST … AS BINARY` plans to Arrow `Binary` (B1/B8–B10/B13/
   B15), refuses illegal sources (`DATATYPE_MISMATCH`, B2–B7), keeps `VARBINARY` refusing (B12),
   leaves a `BINARY` DDL column untouched; `TRY_CAST(<int>)` refuses without the ANSI-off suggestion.

@@ -7,12 +7,13 @@ five doors under both ``escapedStringLiterals`` settings). PE-10: a doubled
 ``r"…"`` literal answers instead of refusing, and a ``''``/``""`` inside a
 raw literal ends the raw token (the tail lexes as a quoted literal).
 
-pins: string-literal-escape-1/C-001, C-002, C-003, C-004
+pins: string-literal-escape-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 """
 
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pyarrow as pa
 import pytest
@@ -114,6 +115,12 @@ def _text(table: pa.Table, name: str) -> list[str | None]:
     return table.column(name).to_pylist()
 
 
+def _props(frame: Any) -> dict[str, str]:
+    """SHOW TBLPROPERTIES answers as a plain dict with STRING types asserted."""
+    table = frame.to_arrow()
+    return dict(zip(_text(table, "key"), _text(table, "value"), strict=True))
+
+
 def test_default_literals_match_spark(spark: ReparkSession) -> None:
     """Every default-mode literal answers its Spark value as STRING."""
     for literal, expected in DEFAULT_CASES:
@@ -161,3 +168,73 @@ def test_write_round_trip_matches_spark(spark: ReparkSession, tmp_path: Path) ->
     table = spark.sql("SELECT id, v FROM sc.ns.esc ORDER BY id").to_arrow()
     assert table.column("id").to_pylist() == list(range(len(WRITE_CASES)))
     assert table.column("v").to_pylist() == [expected for _l, expected in WRITE_CASES]
+
+
+def test_verbatim_tblproperties_collapse_like_spark(
+    verbatim: ReparkSession, tmp_path: Path
+) -> None:
+    """Verbatim TBLPROPERTIES keys and values collapse doublings like Spark."""
+    verbatim.register_memory_catalog("sc", tmp_path)
+    verbatim.sql("CREATE NAMESPACE sc.ns")
+    verbatim.sql(
+        "CREATE TABLE sc.ns.props (id INT) USING iceberg TBLPROPERTIES "
+        "('a''b'='c', \"d\"\"e\"='f', 'dk'='x''y', \"dk2\"=\"p\"\"q\", 'ck'=\"m''n\")"
+    )
+    props = _props(verbatim.sql("SHOW TBLPROPERTIES sc.ns.props"))
+    assert props["a'b"] == "c"
+    assert props['d"e'] == "f"
+    assert props["dk"] == "x'y"
+    assert props["dk2"] == 'p"q'
+    assert props["ck"] == "m''n"
+
+
+def test_verbatim_comments_collapse_like_spark(verbatim: ReparkSession, tmp_path: Path) -> None:
+    """Verbatim column COMMENT text collapses doublings like Spark."""
+    verbatim.register_memory_catalog("sc", tmp_path)
+    verbatim.sql("CREATE NAMESPACE sc.ns")
+    verbatim.sql(
+        "CREATE TABLE sc.ns.cmt (id INT COMMENT 'it''s', v STRING COMMENT \"a\"\"b\") USING iceberg"
+    )
+    table = verbatim.sql("DESCRIBE TABLE sc.ns.cmt").to_arrow()
+    assert table.column("col_name").to_pylist() == ["id", "v"]
+    assert _text(table, "comment") == ["it's", 'a"b']
+
+
+def test_verbatim_alter_set_collapses_like_spark(verbatim: ReparkSession, tmp_path: Path) -> None:
+    """Verbatim ALTER SET keys collapse and backslash values unescape like Spark."""
+    verbatim.register_memory_catalog("sc", tmp_path)
+    verbatim.sql("CREATE NAMESPACE sc.ns")
+    verbatim.sql("CREATE TABLE sc.ns.alt (id INT) USING iceberg")
+    verbatim.sql("ALTER TABLE sc.ns.alt SET TBLPROPERTIES ('nk''k'='v', 'e'='a\\nb')")
+    props = _props(verbatim.sql("SHOW TBLPROPERTIES sc.ns.alt"))
+    assert props["nk'k"] == "v"
+    assert props["e"] == "a\nb"
+
+
+def test_verbatim_namespace_properties_collapse_like_spark(
+    verbatim: ReparkSession, tmp_path: Path
+) -> None:
+    """Verbatim namespace PROPERTIES and DBPROPERTIES unescape like Spark."""
+    verbatim.register_memory_catalog("sc", tmp_path)
+    verbatim.sql(
+        "CREATE NAMESPACE sc.ddlv WITH PROPERTIES ('a''b'='x''y', 'k1'='a\\nb', 'k2'='\\u0041')"
+    )
+    verbatim.sql("CREATE NAMESPACE sc.ddlv2 WITH DBPROPERTIES ('c''d'='y''z')")
+    rows = verbatim.sql("DESCRIBE NAMESPACE EXTENDED sc.ddlv").to_arrow().to_pylist()
+    properties = next(row["info_value"] for row in rows if row["info_name"] == "Properties")
+    assert "(a'b,x'y)" in properties
+    assert "(k1,a\nb)" in properties
+    assert "(k2,A)" in properties
+    rows = verbatim.sql("DESCRIBE NAMESPACE EXTENDED sc.ddlv2").to_arrow().to_pylist()
+    properties = next(row["info_value"] for row in rows if row["info_name"] == "Properties")
+    assert "(c'd,y'z)" in properties
+
+
+def test_verbatim_options_values_stay_verbatim(verbatim: ReparkSession, tmp_path: Path) -> None:
+    """Verbatim OPTIONS values keep doublings and backslashes like Spark."""
+    verbatim.register_memory_catalog("sc", tmp_path)
+    verbatim.sql("CREATE NAMESPACE sc.ns")
+    verbatim.sql("CREATE TABLE sc.ns.opt (id INT) USING iceberg OPTIONS ('k'='x''y', 'e'='a\\nb')")
+    props = _props(verbatim.sql("SHOW TBLPROPERTIES sc.ns.opt"))
+    assert props["k"] == "x''y"
+    assert props["e"] == "a\\nb"

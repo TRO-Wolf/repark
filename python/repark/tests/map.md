@@ -7005,6 +7005,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   length, Arrow type), `F.expr` / `selectExpr` / `filter`, and an
   `INSERT INTO … VALUES` round-trip.
   pins: string-literal-escape-1/C-001, C-002, C-003, C-004
+  **DIFF-PROBE fold (2026-09-29):** verbatim DDL read-back pins — TBLPROPERTIES
+  keys/values, column COMMENT text, ALTER SET, and namespace PROPERTIES/DBPROPERTIES
+  collapse like Spark; verbatim OPTIONS values stay verbatim (survivor pin).
 - `test_fnp_4b_hof_display.py` — **FNP-4B round 6 (2026-09-15):** Q3 red pin for run
   16a — selectExpr higher-order display must hide the `__repark_hof_array_field__`
   packing marker. **Round 7 (2026-09-15):** strict xfail per R-16c-10; 16a flips

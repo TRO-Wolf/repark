@@ -372,12 +372,31 @@ impl CanonicalRewrite {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum DdlSpanKind {
+    Properties,
+    Comment,
+}
+
+struct DdlSpan {
+    start: Location,
+    end: Location,
+    kind: DdlSpanKind,
+}
+
 /// Collect the literal spans that must change.
 fn plan_literal_regions(tokens: &[TokenWithSpan], keep_verbatim: bool) -> Vec<LiteralRegion> {
+    let ddl_spans = if keep_verbatim {
+        ddl_verbatim_spans(tokens)
+    } else {
+        Vec::new()
+    };
     let mut regions = Vec::new();
     let mut index = 0;
     while index < tokens.len() {
-        let Some(first_value) = literal_token_value(&tokens[index].token, keep_verbatim) else {
+        let ddl_kind = ddl_span_kind_at(&ddl_spans, tokens[index].span.start);
+        let verbatim_here = keep_verbatim && ddl_kind.is_none();
+        let Some(first_value) = literal_token_value(&tokens[index].token, verbatim_here) else {
             index += 1;
             continue;
         };
@@ -386,8 +405,9 @@ fn plan_literal_regions(tokens: &[TokenWithSpan], keep_verbatim: bool) -> Vec<Li
         let mut merged = first_value;
         let mut literal_count = 1usize;
         let single_is_double = matches!(tokens[index].token, Token::DoubleQuotedString(_));
-        let single_needs_rewrite = literal_needs_rewrite(&tokens[index].token, keep_verbatim);
-        // Absorb following literals separated only by whitespace.
+        let single_needs_rewrite = literal_needs_rewrite(&tokens[index].token, verbatim_here)
+            || ddl_kind == Some(DdlSpanKind::Comment)
+                && comment_forces_rewrite(&tokens[index].token);
         let mut cursor = index + 1;
         loop {
             let mut lookahead = cursor;
@@ -398,7 +418,7 @@ fn plan_literal_regions(tokens: &[TokenWithSpan], keep_verbatim: bool) -> Vec<Li
             }
             let Some(next_value) = tokens
                 .get(lookahead)
-                .and_then(|t| literal_token_value(&t.token, keep_verbatim))
+                .and_then(|t| literal_token_value(&t.token, verbatim_here))
             else {
                 break;
             };
@@ -422,6 +442,109 @@ fn plan_literal_regions(tokens: &[TokenWithSpan], keep_verbatim: bool) -> Vec<Li
         index = cursor;
     }
     regions
+}
+
+fn ddl_span_kind_at(spans: &[DdlSpan], location: Location) -> Option<DdlSpanKind> {
+    spans
+        .iter()
+        .find(|span| span.start <= location && location <= span.end)
+        .map(|span| span.kind)
+}
+
+fn ddl_verbatim_spans(tokens: &[TokenWithSpan]) -> Vec<DdlSpan> {
+    if !is_create_or_alter_statement(tokens) {
+        return Vec::new();
+    }
+    let mut spans = Vec::new();
+    let mut index = 0;
+    while index < tokens.len() {
+        let Token::Word(word) = &tokens[index].token else {
+            index += 1;
+            continue;
+        };
+        if word.quote_style.is_none() {
+            if word.value.eq_ignore_ascii_case("COMMENT")
+                && let Some(span) = comment_run_span(tokens, index)
+            {
+                spans.push(span);
+            } else if (word.value.eq_ignore_ascii_case("TBLPROPERTIES")
+                || word.value.eq_ignore_ascii_case("PROPERTIES")
+                || word.value.eq_ignore_ascii_case("DBPROPERTIES"))
+                && let Some(span) = properties_paren_span(tokens, index)
+            {
+                spans.push(span);
+            }
+        }
+        index += 1;
+    }
+    spans
+}
+
+fn is_create_or_alter_statement(tokens: &[TokenWithSpan]) -> bool {
+    let words = leading_significant_words(tokens, 2);
+    let matches = |word: &&str, keyword: &str| word.eq_ignore_ascii_case(keyword);
+    match words.as_slice() {
+        [first, ..] if matches(first, "CREATE") || matches(first, "ALTER") => true,
+        [explain, second] if matches(explain, "EXPLAIN") => {
+            matches(second, "CREATE") || matches(second, "ALTER")
+        }
+        _ => false,
+    }
+}
+
+fn properties_paren_span(tokens: &[TokenWithSpan], word_index: usize) -> Option<DdlSpan> {
+    let open = crate::spark_rewrites::skip_whitespace(tokens, word_index + 1);
+    if !matches!(
+        tokens.get(open).map(|with_span| &with_span.token),
+        Some(Token::LParen)
+    ) {
+        return None;
+    }
+    let close = crate::spark_rewrites::matching_paren(tokens, open)?;
+    Some(DdlSpan {
+        start: tokens[open].span.start,
+        end: tokens[close].span.end,
+        kind: DdlSpanKind::Properties,
+    })
+}
+
+fn comment_run_span(tokens: &[TokenWithSpan], word_index: usize) -> Option<DdlSpan> {
+    let mut cursor = word_index + 1;
+    let mut run_start = None;
+    let mut run_end = None;
+    loop {
+        cursor = crate::spark_rewrites::skip_whitespace(tokens, cursor);
+        let Some(with_span) = tokens.get(cursor) else {
+            break;
+        };
+        if !is_span_string_literal(&with_span.token) {
+            break;
+        }
+        if run_start.is_none() {
+            run_start = Some(with_span.span.start);
+        }
+        run_end = Some(with_span.span.end);
+        cursor += 1;
+    }
+    run_start.zip(run_end).map(|(start, end)| DdlSpan {
+        start,
+        end,
+        kind: DdlSpanKind::Comment,
+    })
+}
+
+fn is_span_string_literal(token: &Token) -> bool {
+    matches!(
+        token,
+        Token::SingleQuotedString(_)
+            | Token::DoubleQuotedString(_)
+            | Token::SingleQuotedRawStringLiteral(_)
+            | Token::DoubleQuotedRawStringLiteral(_)
+    )
+}
+
+fn comment_forces_rewrite(token: &Token) -> bool {
+    matches!(token, Token::DoubleQuotedString(raw) if raw.contains("\"\""))
 }
 
 fn literal_token_value(token: &Token, keep_verbatim: bool) -> Option<String> {
