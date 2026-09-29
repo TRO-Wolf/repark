@@ -230,6 +230,7 @@ pub(crate) async fn execute_replace_where(
         source,
     )
     .await?;
+    crate::void_type::refuse_insert_source_types(ctx, catalogs, &insert, false).await?;
     let source_df = spark_ast::execute_insert_source(ctx, catalogs, &planning_sql).await?;
     let namespace = namespace_schema_name(table.identifier().namespace());
     let base_table = format!(

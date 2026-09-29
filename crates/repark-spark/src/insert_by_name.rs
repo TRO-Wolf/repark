@@ -75,6 +75,7 @@ pub(crate) async fn execute_insert_by_name(
              `{table_sql}`"
         )));
     };
+    crate::void_type::refuse_insert_source_types(ctx, catalogs, &insert, true).await?;
     let case_sensitive = case_sensitive_insert(ctx);
     let source_names = probe_source_names(
         ctx,
@@ -212,6 +213,7 @@ async fn append_by_name_projection(
     projection_sql: &str,
 ) -> Result<DataFrame> {
     let source_df = crate::spark_ast::execute_passthrough(ctx, catalogs, projection_sql).await?;
+    let source_df = repark_iceberg::write::zone_stores_by_name(ctx, source_df, table)?;
     let arrow = iceberg::arrow::schema_to_arrow_schema(table.metadata().current_schema())
         .map_err(crate::iceberg_err)?;
     let targets: Vec<(String, datafusion::arrow::datatypes::DataType)> = arrow

@@ -73,6 +73,78 @@ def test_values_nvl_and_ifnull_over_temporal_store(
     assert all(row["c"] is not None for row in rows)
 
 
+def test_values_stacked_sign_int_into_timestamp_refuses(
+    spark: ReparkSession,
+) -> None:
+    """A doubly-negated INT into TIMESTAMP refuses like the single-signed one."""
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql(f"INSERT INTO {FQ} VALUES (0, - -1)")
+    error = caught.value
+    assert type(error).__name__ == RECORDED_ERROR
+    assert error.getCondition() == RECORDED_CONDITION
+    assert error.getSqlState() == RECORDED_SQLSTATE
+    assert _rows(spark) == []
+
+
+@pytest.mark.parametrize(
+    "cell",
+    [
+        "(- -1)",
+        "+- -1",
+        "+(- -1)",
+        "-(- -1)",
+        "- -1 + 0",
+        "abs(- -1)",
+        "CAST(- -1 AS INT)",
+    ],
+)
+def test_values_stacked_sign_shapes_into_timestamp_refuse(spark: ReparkSession, cell: str) -> None:
+    """Every VG-1/VG-2 stacked-sign shape into TIMESTAMP refuses like Spark."""
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql(f"INSERT INTO {FQ} VALUES (0, {cell})")
+    error = caught.value
+    assert type(error).__name__ == RECORDED_ERROR
+    assert error.getCondition() == RECORDED_CONDITION
+    assert error.getSqlState() == RECORDED_SQLSTATE
+    assert _rows(spark) == []
+
+
+def test_values_stacked_sign_multi_row_with_null_refuses(
+    spark: ReparkSession,
+) -> None:
+    """A multi-row VALUES with NULL and a stacked-sign INT refuses like Spark."""
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql(f"INSERT INTO {FQ} VALUES (900, NULL), (901, +- -1)")
+    error = caught.value
+    assert type(error).__name__ == RECORDED_ERROR
+    assert error.getCondition() == RECORDED_CONDITION
+    assert error.getSqlState() == RECORDED_SQLSTATE
+    assert _rows(spark) == []
+
+
+NEXT_DAY = "date_add(DATE'2024-01-01', - -1)"
+PREV_DAY = "date_add(DATE'2024-01-01', - - -1)"
+
+
+def test_values_default_and_stacked_minus_under_nvl_store(spark: ReparkSession) -> None:
+    for sql in [
+        f"INSERT INTO {FQ} VALUES (7, DEFAULT)",
+        f"INSERT INTO {FQ} (c, id) VALUES (DEFAULT, 8)",
+        f"INSERT INTO {FQ} (id, c) VALUES (9, DEFAULT)",
+        f"INSERT INTO {FQ} VALUES (2, nvl(NULL, CAST({NEXT_DAY} AS TIMESTAMP)))",
+        f"INSERT INTO {FQ} VALUES (3, ifnull(CAST({PREV_DAY} AS TIMESTAMP), NULL))",
+    ]:
+        spark.sql(sql)
+    walls = spark.sql(f"SELECT id, CAST(c AS STRING) AS c FROM {FQ} ORDER BY id").to_arrow()
+    assert walls.to_pylist() == [
+        {"id": 2, "c": "2024-01-02 00:00:00"},
+        {"id": 3, "c": "2023-12-31 00:00:00"},
+        {"id": 7, "c": None},
+        {"id": 8, "c": None},
+        {"id": 9, "c": None},
+    ]
+
+
 def test_dataframe_append_int_into_timestamp_refuses(
     spark: ReparkSession,
 ) -> None:

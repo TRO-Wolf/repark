@@ -11,6 +11,8 @@ _Last updated: 2026-09-12._
 
 ## Release state
 
+**v1.5.1 (2026-09-29) — the first patch on 1.5.0**, additive under the API freeze. S3 path writes (U12) land on `s3://` and `s3a://` with Spark's save modes, verified on live AWS. Names resolve by `spark.sql.caseSensitive` on both doors (CASESENS-1). Store assignment follows Spark between TIMESTAMP, TIMESTAMP_NTZ, DATE and numeric columns on every write door (NTZ-1, LTZ-STORE-INT-1, LTZ-STACKED-SIGN-1, STORE-TS-TO-NUMERIC-1, NTZ-STORE-DOORS-1). Integer division stays fractional (INTDIV-1). The 842-cell matrix holds at **705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT** on the fresh-build rerun of 2026-09-29 (main `8568e57a`). Notes: [v1-5-1-release-notes-2026-09-29.md](task/roadmap/mid-term/v1-5-1-release-notes-2026-09-29.md).
+
 **v1.5.0 (2026-09-27) — the Spark–Iceberg parity minor.** The v1.5.0 gate is met: zero non-EQUAL cells that Spark
 4.1.2 answers on the 842-cell Spark + Iceberg matrix, except dated owner carve-outs — **705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT** on the fresh-build rerun of 2026-09-27 (main `f7422565`).
 Carved out: C-1 structured streaming and C-2 nested namespaces (v1.6.0 cards), C-4 the v3 variant type; C-3 and C-5

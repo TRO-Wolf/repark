@@ -304,6 +304,91 @@ async fn fractional_and_large_integer_literals_name_spark_types() {
 }
 
 #[tokio::test]
+async fn stacked_sign_numeric_literals_into_timestamp_refuse_like_single_signed() {
+    let (_warehouse, ctx, catalogs) = door().await;
+    for (cell, named) in [
+        ("- -1", "INT"),
+        ("- - -1", "INT"),
+        ("- -(1)", "INT"),
+        ("- -1.5", "DECIMAL(2,1)"),
+        ("+-1", "INT"),
+        ("-+1", "INT"),
+        ("- -1BD", "DECIMAL(1,0)"),
+        ("(- -1)", "INT"),
+        ("+- -1", "INT"),
+        ("+(- -1)", "INT"),
+        ("-(- -1)", "INT"),
+        ("- -1 + 0", "BIGINT"),
+        ("abs(- -1)", "BIGINT"),
+        ("CAST(- -1 AS INT)", "INT"),
+    ] {
+        let sql = format!("INSERT INTO ice.sales.l VALUES (0, {cell})");
+        let refused = plan_err(&ctx, &catalogs, &sql).await;
+        assert_eq!(
+            refused,
+            format!(
+                "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data \
+                 for the table `ice`.`sales`.`l`: Cannot safely cast `c` \"{named}\" to \
+                 \"TIMESTAMP\". SQLSTATE: KD000"
+            ),
+            "{sql}"
+        );
+    }
+    assert_eq!(id_and_c(&ctx, &catalogs).await, vec![]);
+}
+
+#[tokio::test]
+async fn stacked_sign_multi_row_with_null_and_bad_row_refuses() {
+    let (_warehouse, ctx, catalogs) = door().await;
+    let sql = "INSERT INTO ice.sales.l VALUES (900, NULL), (901, +- -1)";
+    assert_eq!(
+        plan_err(&ctx, &catalogs, sql).await,
+        "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data \
+         for the table `ice`.`sales`.`l`: Cannot safely cast `c` \"INT\" to \"TIMESTAMP\". \
+         SQLSTATE: KD000"
+    );
+    assert_eq!(id_and_c(&ctx, &catalogs).await, vec![]);
+}
+
+#[tokio::test]
+async fn default_cells_into_timestamp_store_null() {
+    let (_warehouse, ctx, catalogs) = door().await;
+    for sql in [
+        "INSERT INTO ice.sales.l VALUES (1, DEFAULT)",
+        "INSERT INTO ice.sales.l VALUES (2, default)",
+        "INSERT INTO ice.sales.l (id, c) VALUES (3, DEFAULT)",
+        "INSERT INTO ice.sales.l (c, id) VALUES (DEFAULT, 4)",
+    ] {
+        run(&ctx, &catalogs, sql).await;
+    }
+    assert_eq!(
+        id_and_c(&ctx, &catalogs).await,
+        vec![(1, None), (2, None), (3, None), (4, None)]
+    );
+}
+
+#[tokio::test]
+async fn stacked_minus_under_nvl_probes_and_stores() {
+    let (_warehouse, ctx, catalogs) = door().await;
+    repark_functions::register_all(&ctx);
+    for sql in [
+        "INSERT INTO ice.sales.l VALUES (1, nvl(NULL, CAST(date_add(DATE'2024-01-01', - -1) AS \
+         TIMESTAMP)))",
+        "INSERT INTO ice.sales.l VALUES (2, ifnull(CAST(date_add(DATE'2024-01-01', - - -1) AS \
+         TIMESTAMP), NULL))",
+    ] {
+        run(&ctx, &catalogs, sql).await;
+    }
+    assert_eq!(
+        id_and_c(&ctx, &catalogs).await,
+        vec![
+            (1, Some("2024-01-02 00:00:00".to_string())),
+            (2, Some("2023-12-31 00:00:00".to_string())),
+        ]
+    );
+}
+
+#[tokio::test]
 async fn string_valued_functions_into_timestamp_refuse() {
     let (_warehouse, ctx, catalogs) = door().await;
     for cell in [
@@ -372,5 +457,32 @@ async fn nvl_and_ifnull_over_temporal_values_store() {
             (4, Some("2024-01-02 00:00:00".to_string())),
             (5, Some("2024-01-01 00:00:00".to_string())),
         ]
+    );
+}
+
+#[tokio::test]
+async fn backslash_quote_replace_casts_store_their_wall() {
+    let (_warehouse, ctx, catalogs) = door().await;
+    for (id, cell) in [
+        (
+            9,
+            r"CAST(replace('2024-01-02 03:04:05\\''', '\\''', '') AS TIMESTAMP)",
+        ),
+        (
+            301,
+            r"CAST(replace('2024-01-02 03:04:05a\\\\''b', 'a\\\\''b', '') AS TIMESTAMP)",
+        ),
+        (
+            302,
+            r"CAST(replace('-- x\\''y2024-01-02 03:04:05', '-- x\\''y', '') AS TIMESTAMP)",
+        ),
+    ] {
+        let sql = format!("INSERT INTO ice.sales.l VALUES ({id}, {cell})");
+        run(&ctx, &catalogs, &sql).await;
+    }
+    let wall = Some("2024-01-02 03:04:05".to_string());
+    assert_eq!(
+        id_and_c(&ctx, &catalogs).await,
+        vec![(9, wall.clone()), (301, wall.clone()), (302, wall)]
     );
 }

@@ -23,6 +23,8 @@ use crate::catalog_ops::{
 };
 use crate::spark_ast;
 
+mod assignment_types;
+
 mod store;
 
 // A non-empty source is staged before the table is replaced.
@@ -193,7 +195,7 @@ pub(crate) async fn execute_partition_overwrite(
 ) -> Result<DataFrame> {
     use repark_iceberg::write::{
         OverwritePlan, partition_overwrite_request_from_exprs, plan_overwrite,
-        static_partition_source_columns,
+        static_partition_source_columns, zone_stores,
     };
 
     let Some((catalog_name, catalog, table, branch)) =
@@ -220,6 +222,7 @@ pub(crate) async fn execute_partition_overwrite(
     )?;
     let column_names = filled.columns;
     let source_df = spark_ast::execute_passthrough(ctx, catalogs, &filled.sql).await?;
+    let source_df = zone_stores(ctx, source_df, &table, &column_names, &reserved)?;
     let (snapshot_extra, _) = options.resolve_with_session(ctx)?;
     let staged_files =
         stage_partition_overwrite_files(ctx, &table, &plan, source_df, column_names, options)
@@ -426,6 +429,7 @@ pub(crate) async fn insert_overwrite_iceberg_stage_then_swap(
     let (column_names, materialize_sql) =
         overwrite_source_with_default_fills(table, &column_names, source)?;
     let source_df = spark_ast::execute_passthrough(ctx, catalogs, &materialize_sql).await?;
+    let source_df = repark_iceberg::write::zone_stores(ctx, source_df, table, &column_names, &[])?;
     let source_df = store::conform_types(ctx, table, &column_names, source_df).await?;
     let stream = source_df.execute_stream().await?;
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
@@ -689,7 +693,7 @@ pub(crate) async fn assert_empty_overwrite_types_assignment_compatible(
         // Case-insensitive name resolve.
         let mut types = Vec::with_capacity(columns.len());
         for column in columns {
-            types.push(field_type_case_insensitive(
+            types.push(assignment_types::field_type_case_insensitive(
                 target_schema,
                 &object_name_last(column),
             )?);
@@ -711,7 +715,7 @@ pub(crate) async fn assert_empty_overwrite_types_assignment_compatible(
         if null_assignable && source_type == &DataType::Null {
             continue;
         }
-        if !assignment_types_compatible(source_type, target_type) {
+        if !assignment_types::assignment_types_compatible(source_type, target_type) {
             return Err(DataFusionError::Plan(format!(
                 "INSERT OVERWRITE empty source column {index} type {source_type} is not \
                  assignment-compatible with target type {target_type} — refusing full-table \
@@ -765,7 +769,10 @@ pub(crate) fn expr_has_unsafe_cast(expr: &DataFusionExpr, schema: &DFSchema) -> 
             DataFusionExpr::Cast(cast) => {
                 // An unresolvable input type is left to the schema/arity checks.
                 if let Ok(from_type) = cast.expr.get_type(schema)
-                    && cast_may_fail_at_runtime(&from_type, cast.field.data_type())
+                    && assignment_types::cast_may_fail_at_runtime(
+                        &from_type,
+                        cast.field.data_type(),
+                    )
                 {
                     found = true;
                     return Ok(TreeNodeRecursion::Stop);
@@ -784,217 +791,4 @@ pub(crate) fn expr_has_unsafe_cast(expr: &DataFusionExpr, schema: &DFSchema) -> 
         Ok(TreeNodeRecursion::Continue)
     });
     found
-}
-
-/// True when casting a value from `from` to `to` can raise for *some* input value.
-pub(crate) fn cast_may_fail_at_runtime(from: &DataType, to: &DataType) -> bool {
-    // Identity, UTF-8 family aliasing, and the safe integer/float widenings are total.
-    if assignment_types_compatible(from, to) {
-        return false;
-    }
-    // `NULL -> anything` is total.
-    if matches!(from, DataType::Null) {
-        return false;
-    }
-    // Rendering a scalar as text is total.
-    !(utf8_family(to) && renders_as_text_infallibly(from))
-}
-
-/// Scalar types whose cast to a UTF-8 type is total (no parse, no overflow, no rounding error).
-pub(crate) fn renders_as_text_infallibly(data_type: &DataType) -> bool {
-    use DataType::{
-        Boolean, Date32, Date64, Decimal128, Decimal256, Float16, Float32, Float64, Int8, Int16,
-        Int32, Int64, Time32, Time64, Timestamp, UInt8, UInt16, UInt32, UInt64,
-    };
-    matches!(
-        data_type,
-        Boolean
-            | Int8
-            | Int16
-            | Int32
-            | Int64
-            | UInt8
-            | UInt16
-            | UInt32
-            | UInt64
-            | Float16
-            | Float32
-            | Float64
-            | Decimal128(_, _)
-            | Decimal256(_, _)
-            | Date32
-            | Date64
-            | Time32(_)
-            | Time64(_)
-            | Timestamp(_, _)
-    )
-}
-
-/// Resolve `name` against a DataFusion schema case-insensitively (Spark default).
-pub(crate) fn field_type_case_insensitive(
-    schema: &datafusion::common::DFSchema,
-    name: &str,
-) -> Result<DataType> {
-    let mut found: Option<DataType> = None;
-    for field in schema.fields() {
-        if field.name().eq_ignore_ascii_case(name) {
-            if found.is_some() {
-                return Err(DataFusionError::Plan(format!(
-                    "INSERT OVERWRITE column `{name}` is ambiguous under case-insensitive matching"
-                )));
-            }
-            found = Some(field.data_type().clone());
-        }
-    }
-    found.ok_or_else(|| {
-        DataFusionError::Plan(format!(
-            "INSERT OVERWRITE empty source column `{name}` does not exist in the target table"
-        ))
-    })
-}
-
-/// Types that may land via empty-OW provider wipe without a value-level cast check.
-pub(crate) fn assignment_types_compatible(source: &DataType, target: &DataType) -> bool {
-    use DataType::{Float32, Float64, Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64};
-    if source == target {
-        return true;
-    }
-    if utf8_family(source) && utf8_family(target) {
-        return true;
-    }
-    matches!(
-        (source, target),
-        (Int8, Int16 | Int32 | Int64)
-            | (Int16, Int32 | Int64)
-            | (Int32, Int64)
-            | (UInt8, UInt16 | UInt32 | UInt64 | Int16 | Int32 | Int64)
-            | (UInt16, UInt32 | UInt64 | Int32 | Int64)
-            | (UInt32, UInt64 | Int64)
-            | (Float32, Float64)
-    )
-}
-
-pub(crate) fn utf8_family(data_type: &DataType) -> bool {
-    matches!(
-        data_type,
-        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
-    )
-}
-
-#[cfg(test)]
-mod assignment_type_unit_tests {
-    use super::{assignment_types_compatible, utf8_family};
-    use datafusion::arrow::datatypes::DataType;
-
-    /// Pure unit pins for the empty-OW assignment matrix.
-    #[test]
-    fn assignment_types_compatible_matrix() {
-        assert!(assignment_types_compatible(
-            &DataType::Int32,
-            &DataType::Int32
-        ));
-        assert!(assignment_types_compatible(
-            &DataType::Int32,
-            &DataType::Int64
-        ));
-        assert!(assignment_types_compatible(
-            &DataType::Utf8,
-            &DataType::LargeUtf8
-        ));
-        assert!(utf8_family(&DataType::Utf8View));
-        assert!(!assignment_types_compatible(
-            &DataType::Utf8,
-            &DataType::Int32
-        ));
-        assert!(!assignment_types_compatible(
-            &DataType::Utf8,
-            &DataType::Date32
-        ));
-        assert!(!assignment_types_compatible(
-            &DataType::Int64,
-            &DataType::Int32
-        ));
-        assert!(!assignment_types_compatible(
-            &DataType::Float64,
-            &DataType::Float32
-        ));
-    }
-
-    /// Analyzer-inserted infallible casts remain safe.
-    #[test]
-    fn cast_may_fail_at_runtime_matrix() {
-        use super::cast_may_fail_at_runtime;
-        use std::sync::Arc;
-
-        // Total: identity, UTF-8 aliasing, and the safe widenings (delegated to the matrix above).
-        assert!(!cast_may_fail_at_runtime(
-            &DataType::Int32,
-            &DataType::Int32
-        ));
-        assert!(!cast_may_fail_at_runtime(
-            &DataType::Utf8,
-            &DataType::Utf8View
-        ));
-        assert!(!cast_may_fail_at_runtime(
-            &DataType::Int32,
-            &DataType::Int64
-        ));
-        // Total: rendering a scalar as text, one assertion per `renders_as_text_infallibly` arm.
-        for from in [
-            DataType::Boolean,
-            DataType::Int8,
-            DataType::Int16,
-            DataType::Int32,
-            DataType::Int64,
-            DataType::UInt8,
-            DataType::UInt16,
-            DataType::UInt32,
-            DataType::UInt64,
-            DataType::Float16,
-            DataType::Float32,
-            DataType::Float64,
-            DataType::Decimal128(10, 2),
-            DataType::Decimal256(40, 2),
-            DataType::Date32,
-            DataType::Date64,
-            DataType::Time32(datafusion::arrow::datatypes::TimeUnit::Second),
-            DataType::Time64(datafusion::arrow::datatypes::TimeUnit::Nanosecond),
-            DataType::Timestamp(datafusion::arrow::datatypes::TimeUnit::Microsecond, None),
-        ] {
-            assert!(
-                !cast_may_fail_at_runtime(&from, &DataType::Utf8),
-                "{from} → Utf8 is total and must not block a wipe"
-            );
-        }
-        // Total: `NULL -> anything` (audit G1-H-003).
-        for to in [
-            DataType::Utf8,
-            DataType::Int32,
-            DataType::Date32,
-            DataType::Timestamp(datafusion::arrow::datatypes::TimeUnit::Microsecond, None),
-            DataType::Null,
-        ] {
-            assert!(
-                !cast_may_fail_at_runtime(&DataType::Null, &to),
-                "Null → {to} is total and must not block a wipe"
-            );
-        }
-        // Fallible: parsing text, narrowing, and anything unmodelled (fail closed).
-        assert!(cast_may_fail_at_runtime(&DataType::Utf8, &DataType::Int32));
-        assert!(cast_may_fail_at_runtime(&DataType::Utf8, &DataType::Date32));
-        assert!(cast_may_fail_at_runtime(&DataType::Int64, &DataType::Int32));
-        assert!(cast_may_fail_at_runtime(
-            &DataType::Float64,
-            &DataType::Float32
-        ));
-        // A non-scalar source has no total text rendering modelled here — fail closed.
-        assert!(cast_may_fail_at_runtime(
-            &DataType::List(Arc::new(datafusion::arrow::datatypes::Field::new(
-                "item",
-                DataType::Int32,
-                true,
-            ))),
-            &DataType::Utf8
-        ));
-    }
 }

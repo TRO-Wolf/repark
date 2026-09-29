@@ -1,16 +1,19 @@
-use datafusion::arrow::datatypes::Schema as ArrowSchema;
+use datafusion::arrow::datatypes::{DataType as ArrowDataType, Schema as ArrowSchema};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
-    AssignmentTarget, ObjectName, Statement, TableFactor, Update,
+    AssignmentTarget, Expr, ObjectName, Statement, TableFactor, UnaryOperator, Update, Value,
 };
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
 use repark_iceberg::catalog::uuid_presentation::presented_arrow_schema;
+use repark_iceberg::write::negated_null_store::refuse_negated_null_writes;
 use repark_iceberg::write::ntz_store::refuse_ntz_writes;
+use repark_iceberg::write::update_cast::{incompatible_store_message, incompatible_update_message};
 use repark_iceberg::write::void_store::refuse_void_writes;
 
 use crate::merge::nested_assign::{self, AssignmentScope};
+use crate::void_type::{is_string_type, source_type_is_reliable};
 
 struct UpdateTarget {
     arrow_schema: ArrowSchema,
@@ -86,6 +89,28 @@ pub(crate) async fn refuse_cast_then_fold_nested(
     Ok(Some(Statement::Update(folded).to_string()))
 }
 
+fn integer_literal_source_type(value: &Expr) -> Option<ArrowDataType> {
+    let mut peeled = value;
+    while let Expr::Nested(inner)
+    | Expr::UnaryOp {
+        op: UnaryOperator::Plus | UnaryOperator::Minus,
+        expr: inner,
+    } = peeled
+    {
+        peeled = inner;
+    }
+    let Expr::Value(literal) = peeled else {
+        return None;
+    };
+    let Value::Number(text, long) = &literal.value else {
+        return None;
+    };
+    match crate::void_type::number_text_type(text, *long) {
+        typed @ (ArrowDataType::Int32 | ArrowDataType::Int64) => Some(typed),
+        _ => None,
+    }
+}
+
 async fn refuse_incompatible_update_cast(
     ctx: &SessionContext,
     target: &UpdateTarget,
@@ -119,23 +144,41 @@ async fn refuse_incompatible_update_cast(
         let Some(field) = resolved else {
             continue;
         };
-        let probe_sql = format!("SELECT ({}) FROM {table_sql}", assignment.value);
+        let probe_sql = format!(
+            "SELECT ({}) FROM {table_sql}",
+            crate::void_type::parenthesize_stacked_minus(&assignment.value)
+        );
         let Ok(frame) = ctx.sql(&probe_sql).await else {
             return Ok(());
         };
         let pair = [(column.as_str(), field.data_type())];
         refuse_void_writes(ctx, "``", frame.logical_plan(), pair)?;
         let pair = [(column.as_str(), field.data_type())];
+        refuse_negated_null_writes(ctx, "``", frame.logical_plan(), pair)?;
+        let pair = [(column.as_str(), field.data_type())];
         refuse_ntz_writes(ctx, "``", frame.logical_plan(), pair)?;
+        if let Some(literal) = integer_literal_source_type(&assignment.value)
+            && let Some(text) = repark_iceberg::write::update_cast::incompatible_update_message(
+                "``",
+                &format!("`{column}`"),
+                &literal,
+                field.data_type(),
+            )
+        {
+            return Err(DataFusionError::Plan(text));
+        }
         let Some(source_field) = frame.schema().fields().first() else {
             return Ok(());
         };
-        if let Some(text) = repark_iceberg::write::update_cast::incompatible_update_message(
-            "``",
-            &format!("`{column}`"),
-            source_field.data_type(),
-            field.data_type(),
-        ) {
+        let source = source_field.data_type();
+        let column = format!("`{column}`");
+        let judged = incompatible_update_message("``", &column, source, field.data_type())
+            .is_some()
+            || (!is_string_type(source)
+                && source_type_is_reliable(&assignment.value, field.data_type()));
+        if judged
+            && let Some(text) = incompatible_store_message("``", &column, source, field.data_type())
+        {
             return Err(DataFusionError::Plan(text));
         }
     }
