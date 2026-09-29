@@ -105,9 +105,7 @@ pub fn nullifzero_expr(arg: Expr) -> Expr {
     crate::expr_fn::call(nullifzero_udf(), vec![arg])
 }
 
-/// Build the `nvl`-family expression for a dispatch name.
-/// # Errors
-/// Returns the arity mismatch when `args` has the wrong length.
+#[allow(clippy::missing_errors_doc)]
 pub fn nvl_family_expr(name: &str, args: &[Expr]) -> Result<Expr, String> {
     let got = args.len();
     match name {

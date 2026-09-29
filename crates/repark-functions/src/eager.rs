@@ -1,9 +1,7 @@
 use datafusion::execution::SessionState;
 use datafusion::logical_expr::LogicalPlan;
 
-/// Run Spark analyzer rules until schema changes reach the `TypeCoercion` fixpoint.
-/// # Errors
-/// Propagates analyzer-rule failures as [`datafusion::error::DataFusionError`].
+#[allow(clippy::missing_errors_doc)]
 pub fn analyze_eagerly(
     state: &SessionState,
     plan: LogicalPlan,
