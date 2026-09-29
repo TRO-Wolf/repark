@@ -3,7 +3,7 @@ use std::fmt::Write;
 use std::ops::ControlFlow;
 
 use datafusion::arrow::datatypes::Field;
-use datafusion::common::tree_node::{Transformed, TreeNode};
+use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
 use datafusion::common::{
     Column, DFSchema, DataFusionError, Location, Result, Span, Spans, TableReference,
     plan_datafusion_err,
@@ -106,9 +106,6 @@ pub(super) fn bind_names(expr: Expr, frame_schema: &DFSchema, rule: NameRule) ->
                     return Err(ambiguous_reference(&column, &hits));
                 }
                 if hits.is_empty() {
-                    if matches!(rule, NameRule::Exact) {
-                        return Err(unresolved_column(&column, frame_schema));
-                    }
                     if case_hits_by(
                         &column,
                         [frame_schema],
@@ -142,6 +139,19 @@ pub(super) fn bind_names(expr: Expr, frame_schema: &DFSchema, rule: NameRule) ->
         })
     })
     .map(|transformed| transformed.data)
+}
+
+pub(super) fn refuse_unresolved_exact(expr: &Expr, frame_schema: &DFSchema) -> Result<()> {
+    expr.apply(|node| {
+        if let Expr::Column(column) = node
+            && !is_attribute(column)
+            && case_hits(column, [frame_schema], NameRule::Exact).is_empty()
+        {
+            return Err(unresolved_column(column, frame_schema));
+        }
+        Ok(TreeNodeRecursion::Continue)
+    })
+    .map(|_| ())
 }
 
 fn case_hits<'a>(
@@ -799,8 +809,38 @@ mod tests {
         let held = Expr::Column(Column::new(Some("t"), "Data"));
         assert_eq!(bind_names(held.clone(), &schema, Exact).unwrap(), held);
         let unknown = col("nope");
-        let error = bind_names(unknown, &schema, Exact).unwrap_err().to_string();
+        assert_eq!(
+            bind_names(unknown.clone(), &schema, Exact).unwrap(),
+            unknown
+        );
+    }
+
+    #[test]
+    fn projection_refuses_an_exact_total_miss() {
+        let schema = frame(&[("t", "id"), ("t", "Data"), ("t", "s")]);
+        let error = bind_projection_expr(col("nope"), &schema, Exact)
+            .unwrap_err()
+            .to_string();
         assert_eq!(error, unresolved("`nope`", "`id`, `Data`, `s`"));
+        let qualified = Expr::Column(Column::from_qualified_name_ignore_case("u.nope"));
+        let error = bind_projection_expr(qualified, &schema, Exact)
+            .unwrap_err()
+            .to_string();
+        assert_eq!(error, unresolved("`u`.`nope`", "`id`, `Data`, `s`"));
+        let error = bind_projection_expr(col("nope").gt(lit(1i64)), &schema, Exact)
+            .unwrap_err()
+            .to_string();
+        assert_eq!(error, unresolved("`nope`", "`id`, `Data`, `s`"));
+        let held = Expr::Column(Column::new(Some("t"), "Data"));
+        assert_eq!(
+            bind_projection_expr(held.clone(), &schema, Exact).unwrap(),
+            held
+        );
+        let attribute = attribute_reference("nope");
+        assert_eq!(
+            bind_projection_expr(attribute.clone(), &schema, Exact).unwrap(),
+            attribute
+        );
     }
 
     #[test]

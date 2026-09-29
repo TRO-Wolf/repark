@@ -10,6 +10,9 @@ pub fn bind_projection_expr(expr: Expr, frame_schema: &DFSchema, rule: NameRule)
         Expr::TryCast(cast) => cast_child_name(&cast.expr),
         _ => None,
     };
+    if matches!(rule, NameRule::Exact) {
+        super::case_bind::refuse_unresolved_exact(&expr, frame_schema)?;
+    }
     let bound = super::subquery::resolve_bound_expr_with(expr, frame_schema, rule)?;
     Ok(match (written, &bound) {
         (Some(written), Expr::Column(held)) if held.name != written => {
