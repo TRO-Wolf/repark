@@ -212,6 +212,20 @@ async fn append_by_name_projection(
     projection_sql: &str,
 ) -> Result<DataFrame> {
     let source_df = crate::spark_ast::execute_passthrough(ctx, catalogs, projection_sql).await?;
+    let arrow = iceberg::arrow::schema_to_arrow_schema(table.metadata().current_schema())
+        .map_err(crate::iceberg_err)?;
+    let targets: Vec<(String, datafusion::arrow::datatypes::DataType)> = arrow
+        .fields()
+        .iter()
+        .map(|field| (field.name().clone(), field.data_type().clone()))
+        .collect();
+    let plan = repark_iceberg::write::store_overflow::wrap_store_outputs(
+        source_df.logical_plan().clone(),
+        &targets,
+        true,
+        true,
+    )?;
+    let source_df = ctx.execute_logical_plan(plan).await?;
     let stream = source_df.execute_stream().await?;
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
     let session = repark_iceberg::write::session_write_conf_from_ctx(ctx);

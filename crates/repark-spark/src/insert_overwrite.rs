@@ -401,6 +401,43 @@ pub(crate) async fn try_resolve_iceberg_overwrite_target(
     }
 }
 
+async fn conform_overwrite_store_types(
+    ctx: &SessionContext,
+    table: &iceberg::table::Table,
+    column_names: &[String],
+    source_df: DataFrame,
+) -> Result<DataFrame> {
+    let arrow = iceberg::arrow::schema_to_arrow_schema(table.metadata().current_schema())
+        .map_err(crate::iceberg_err)?;
+    let mut targets = Vec::new();
+    if column_names.is_empty() {
+        for field in arrow.fields() {
+            targets.push((field.name().clone(), field.data_type().clone()));
+        }
+    } else {
+        for name in column_names {
+            let mut found = None;
+            for field in arrow.fields() {
+                if field.name().eq_ignore_ascii_case(name) {
+                    found = Some(field);
+                    break;
+                }
+            }
+            let Some(field) = found else {
+                return Ok(source_df);
+            };
+            targets.push((field.name().clone(), field.data_type().clone()));
+        }
+    }
+    let plan = repark_iceberg::write::store_overflow::wrap_store_outputs(
+        source_df.logical_plan().clone(),
+        &targets,
+        false,
+        true,
+    )?;
+    ctx.execute_logical_plan(plan).await
+}
+
 /// Stream → repark-write positional stage → row-count refuse → `commit_overwrite_replace_all`.
 #[allow(clippy::too_many_arguments)] // catalogs threaded for SEC-02 passthrough gate only
 pub(crate) async fn insert_overwrite_iceberg_stage_then_swap(
@@ -424,6 +461,7 @@ pub(crate) async fn insert_overwrite_iceberg_stage_then_swap(
     let (column_names, materialize_sql) =
         overwrite_source_with_default_fills(table, &column_names, source)?;
     let source_df = spark_ast::execute_passthrough(ctx, catalogs, &materialize_sql).await?;
+    let source_df = conform_overwrite_store_types(ctx, table, &column_names, source_df).await?;
     let stream = source_df.execute_stream().await?;
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
     let session = repark_iceberg::write::session_write_conf_from_ctx(ctx);

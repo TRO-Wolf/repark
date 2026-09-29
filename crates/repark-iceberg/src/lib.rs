@@ -25,7 +25,7 @@ pub use catalog::{
 // v1 repark-write crate-root surface (names unchanged).
 pub use write::{
     ACCEPTED_CODECS, COMPRESSION_CODEC_PROP, COMPRESSION_LEVEL_PROP, DEFAULT_MAX_CONCURRENT_FILES,
-    Error, FILE_SCOPED_REWRITE_KEY, InsertStoreAssignment, MAX_CONCURRENT_FILES_KEY,
+    Error, FILE_SCOPED_REWRITE_KEY, InsertStoreAssignment, MAX_CONCURRENT_FILES_KEY, StoreOverflowCast,
     OverwriteIsolation, Result, SCAN_CONCURRENCY_LIMIT_KEY, SCAN_PRUNING_KEY, SESSION_CODEC_KEY,
     SESSION_LEVEL_KEY, SESSION_SNAPSHOT_PREFIX, ScanConcurrency, SessionWriteView, SnapshotRefKind,
     SnapshotRefRetention, WRITE_OVERWRITE_ISOLATION_LEVEL, WriteConcurrency, append, commit_append,

@@ -92,6 +92,8 @@ impl SessionExtension for SparkExtension {
         ctx.register_udf(crate::spark_typed::suffix_literal_udf().as_ref().clone());
         // WI-2: the plain-INSERT ANSI store-assignment gate, BEFORE the Spark expression semantics.
         ctx.add_analyzer_rule(Arc::new(repark_iceberg::InsertStoreAssignment));
+        ctx.add_analyzer_rule(Arc::new(repark_iceberg::StoreOverflowCast));
+        repark_iceberg::write::store_cast::register_store_cast_udfs(ctx);
         for rule in crate::spark_literal_typing::spark_door_post_coercion_rules() {
             ctx.add_analyzer_rule(rule);
         }

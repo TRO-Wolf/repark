@@ -1,7 +1,9 @@
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use datafusion::arrow::array::Array;
+use datafusion::arrow::array::{
+    Array, ArrayRef, Float32Array, Float64Array, Int16Array, Int32Array, Int64Array, Int8Array,
+};
 use datafusion::arrow::compute::{CastOptions, cast_with_options};
 use datafusion::arrow::datatypes::DataType;
 use datafusion::error::{DataFusionError, Result};
@@ -13,9 +15,11 @@ use datafusion::scalar::ScalarValue;
 
 use crate::write::store_assign::normalize_for_assignment;
 
-pub(crate) const STORE_INT32_NAME: &str = "__repark_store_int32__";
-pub(crate) const STORE_INT64_NAME: &str = "__repark_store_int64__";
-pub(crate) const STORE_INT_GUARD_NAME: &str = "__repark_store_int_guard__";
+pub const STORE_INT8_NAME: &str = "__repark_store_int8__";
+pub const STORE_INT16_NAME: &str = "__repark_store_int16__";
+pub const STORE_INT32_NAME: &str = "__repark_store_int32__";
+pub const STORE_INT64_NAME: &str = "__repark_store_int64__";
+pub const STORE_INT_GUARD_NAME: &str = "__repark_store_int_guard__";
 
 pub(crate) fn spark_store_type_name(data_type: &DataType) -> Option<String> {
     match normalize_for_assignment(data_type) {
@@ -28,6 +32,16 @@ pub(crate) fn spark_store_type_name(data_type: &DataType) -> Option<String> {
         DataType::Int16 => Some("SMALLINT".to_string()),
         DataType::Int32 => Some("INT".to_string()),
         DataType::Int64 => Some("BIGINT".to_string()),
+        _ => None,
+    }
+}
+
+pub(crate) fn store_int_target(name: &str) -> Option<DataType> {
+    match name {
+        STORE_INT8_NAME => Some(DataType::Int8),
+        STORE_INT16_NAME => Some(DataType::Int16),
+        STORE_INT32_NAME => Some(DataType::Int32),
+        STORE_INT64_NAME => Some(DataType::Int64),
         _ => None,
     }
 }
@@ -63,24 +77,6 @@ pub(crate) fn store_overflow_error(column: &str, source: &str, target: &str) -> 
     DataFusionError::Execution(store_overflow_message(column, source, target))
 }
 
-#[allow(clippy::missing_errors_doc)]
-pub(crate) fn map_store_cast_error(
-    column: &str,
-    source: &DataType,
-    target: &DataType,
-    error: datafusion::arrow::error::ArrowError,
-) -> DataFusionError {
-    if is_overflow_store_pair(source, target)
-        && let (Some(from), Some(to)) = (
-            spark_store_type_name(source),
-            spark_store_type_name(target),
-        )
-    {
-        return store_overflow_error(column, &from, &to);
-    }
-    DataFusionError::ArrowError(Box::new(error), None)
-}
-
 fn strict_options() -> CastOptions<'static> {
     CastOptions {
         safe: false,
@@ -88,46 +84,192 @@ fn strict_options() -> CastOptions<'static> {
     }
 }
 
-#[allow(clippy::missing_errors_doc)]
+fn float_store_bounds(target: &DataType) -> Option<(f64, f64)> {
+    match target {
+        DataType::Int8 => Some((i8::MIN as f64, i8::MAX as f64)),
+        DataType::Int16 => Some((i16::MIN as f64, i16::MAX as f64)),
+        DataType::Int32 => Some((i32::MIN as f64, i32::MAX as f64)),
+        DataType::Int64 => Some((i64::MIN as f64, i64::MAX as f64)),
+        _ => None,
+    }
+}
+
+fn check_float_store_value(
+    column: &str,
+    source: &str,
+    target_name: &str,
+    value: f64,
+    bounds: (f64, f64),
+) -> Result<()> {
+    if value.is_nan() || value.is_infinite() || value > bounds.1 || value < bounds.0 {
+        return Err(store_overflow_error(column, source, target_name));
+    }
+    Ok(())
+}
+
+macro_rules! float_store_array {
+    ($name:ident, $float:ident, $int:ident, $scalar:ident) => {
+        fn $name(
+            column: &str,
+            source: &str,
+            target_name: &str,
+            array: &$float,
+            bounds: (f64, f64),
+        ) -> Result<ArrayRef> {
+            let mut out = Vec::with_capacity(array.len());
+            for index in 0..array.len() {
+                if array.is_null(index) {
+                    out.push(None);
+                    continue;
+                }
+                let value: f64 = array.value(index).into();
+                check_float_store_value(column, source, target_name, value, bounds)?;
+                out.push(Some(value as $scalar));
+            }
+            Ok(Arc::new($int::from(out)))
+        }
+    };
+}
+
+float_store_array!(store_f32_to_i8, Float32Array, Int8Array, i8);
+float_store_array!(store_f32_to_i16, Float32Array, Int16Array, i16);
+float_store_array!(store_f32_to_i32, Float32Array, Int32Array, i32);
+float_store_array!(store_f32_to_i64, Float32Array, Int64Array, i64);
+float_store_array!(store_f64_to_i8, Float64Array, Int8Array, i8);
+float_store_array!(store_f64_to_i16, Float64Array, Int16Array, i16);
+float_store_array!(store_f64_to_i32, Float64Array, Int32Array, i32);
+float_store_array!(store_f64_to_i64, Float64Array, Int64Array, i64);
+
+fn cast_float_store_array(
+    column: &str,
+    source: &str,
+    target_name: &str,
+    array: &ArrayRef,
+    target: &DataType,
+) -> Result<ArrayRef> {
+    let bounds = float_store_bounds(target).ok_or_else(|| {
+        DataFusionError::Internal(format!("store cast to non-integer target {target:?}"))
+    })?;
+    if let Some(floats) = array.as_any().downcast_ref::<Float64Array>() {
+        return match target {
+            DataType::Int8 => store_f64_to_i8(column, source, target_name, floats, bounds),
+            DataType::Int16 => store_f64_to_i16(column, source, target_name, floats, bounds),
+            DataType::Int32 => store_f64_to_i32(column, source, target_name, floats, bounds),
+            DataType::Int64 => store_f64_to_i64(column, source, target_name, floats, bounds),
+            _ => Err(DataFusionError::Internal(format!(
+                "store cast to non-integer target {target:?}"
+            ))),
+        };
+    }
+    if let Some(floats) = array.as_any().downcast_ref::<Float32Array>() {
+        return match target {
+            DataType::Int8 => store_f32_to_i8(column, source, target_name, floats, bounds),
+            DataType::Int16 => store_f32_to_i16(column, source, target_name, floats, bounds),
+            DataType::Int32 => store_f32_to_i32(column, source, target_name, floats, bounds),
+            DataType::Int64 => store_f32_to_i64(column, source, target_name, floats, bounds),
+            _ => Err(DataFusionError::Internal(format!(
+                "store cast to non-integer target {target:?}"
+            ))),
+        };
+    }
+    Err(DataFusionError::Internal(format!(
+        "store cast float kernel saw {}",
+        array.data_type()
+    )))
+}
+
+fn decode_store_input(value: &ColumnarValue) -> Result<(ColumnarValue, DataType)> {
+    match value {
+        ColumnarValue::Scalar(scalar) => {
+            if matches!(scalar.data_type(), DataType::Dictionary(_, _)) {
+                let array = scalar.to_array_of_size(1).map_err(DataFusionError::from)?;
+                let decoded = cast_with_options(
+                    array.as_ref(),
+                    normalize_for_assignment(&scalar.data_type()),
+                    &strict_options(),
+                )?;
+                let back =
+                    ScalarValue::try_from_array(&decoded, 0).map_err(DataFusionError::from)?;
+                let data_type = back.data_type();
+                return Ok((ColumnarValue::Scalar(back), data_type));
+            }
+            let data_type = scalar.data_type();
+            Ok((ColumnarValue::Scalar(scalar.clone()), data_type))
+        }
+        ColumnarValue::Array(array) => {
+            if matches!(array.data_type(), DataType::Dictionary(_, _)) {
+                let decoded = cast_with_options(
+                    array.as_ref(),
+                    normalize_for_assignment(array.data_type()),
+                    &strict_options(),
+                )?;
+                let data_type = decoded.data_type().clone();
+                return Ok((ColumnarValue::Array(Arc::new(decoded)), data_type));
+            }
+            let data_type = array.data_type().clone();
+            Ok((ColumnarValue::Array(Arc::clone(array)), data_type))
+        }
+    }
+}
+
+fn typed_null_scalar(target: &DataType) -> ScalarValue {
+    match target {
+        DataType::Int8 => ScalarValue::Int8(None),
+        DataType::Int16 => ScalarValue::Int16(None),
+        DataType::Int32 => ScalarValue::Int32(None),
+        DataType::Int64 => ScalarValue::Int64(None),
+        _ => ScalarValue::Null,
+    }
+}
+
 pub(crate) fn cast_store_value(
     column: &str,
     value: &ColumnarValue,
     target: &DataType,
 ) -> Result<ColumnarValue> {
-    let source = value.data_type();
+    let (value, source) = decode_store_input(value)?;
+    let (Some(from), Some(to)) = (
+        spark_store_type_name(&source),
+        spark_store_type_name(target),
+    ) else {
+        return Err(DataFusionError::Internal(format!(
+            "store cast saw unexpected {source:?} to {target:?} for column `{column}`"
+        )));
+    };
+    if !is_overflow_store_pair(&source, target) {
+        return Err(DataFusionError::Internal(format!(
+            "store cast saw unexpected {source:?} to {target:?} for column `{column}`"
+        )));
+    }
     match value {
         ColumnarValue::Scalar(scalar) => {
             if scalar.is_null() {
-                let null = match target {
-                    DataType::Int32 => ScalarValue::Int32(None),
-                    DataType::Int64 => ScalarValue::Int64(None),
-                    _ => ScalarValue::Null,
-                };
-                return Ok(ColumnarValue::Scalar(null));
+                return Ok(ColumnarValue::Scalar(typed_null_scalar(target)));
             }
-            let source_name = spark_store_type_name(&source);
-            let target_name = spark_store_type_name(target);
             let array = scalar.to_array_of_size(1).map_err(DataFusionError::from)?;
-            let casted = cast_with_options(&array, target, &strict_options()).map_err(|error| {
-                match (source_name, target_name) {
-                    (Some(from), Some(to)) if is_overflow_store_pair(&source, target) => {
-                        store_overflow_error(column, &from, &to)
-                    }
-                    _ => DataFusionError::ArrowError(Box::new(error), None),
-                }
-            })?;
+            let casted = cast_store_array(column, &from, &to, &Arc::new(array), target)?;
             Ok(ColumnarValue::Scalar(
                 ScalarValue::try_from_array(&casted, 0).map_err(DataFusionError::from)?,
             ))
         }
-        ColumnarValue::Array(array) => {
-            let casted =
-                cast_with_options(array.as_ref(), target, &strict_options()).map_err(|error| {
-                    map_store_cast_error(column, &source, target, error)
-                })?;
-            Ok(ColumnarValue::Array(Arc::new(casted)))
-        }
+        ColumnarValue::Array(array) => Ok(ColumnarValue::Array(cast_store_array(
+            column, &from, &to, &array, target,
+        )?)),
     }
+}
+
+fn cast_store_array(
+    column: &str,
+    source: &str,
+    target_name: &str,
+    array: &ArrayRef,
+    target: &DataType,
+) -> Result<ArrayRef> {
+    if array.data_type().is_floating() {
+        return cast_float_store_array(column, source, target_name, array, target);
+    }
+    cast_with_options(array.as_ref(), target, &strict_options())
+        .map_err(|_| store_overflow_error(column, source, target_name))
 }
 
 fn utf8_lit(args: &[ColumnarValue], index: usize, what: &str) -> Result<String> {
@@ -218,6 +360,8 @@ macro_rules! store_int_cast_impl {
     };
 }
 
+store_int_cast_impl!(StoreInt8Cast, STORE_INT8_NAME, DataType::Int8);
+store_int_cast_impl!(StoreInt16Cast, STORE_INT16_NAME, DataType::Int16);
 store_int_cast_impl!(StoreInt32Cast, STORE_INT32_NAME, DataType::Int32);
 store_int_cast_impl!(StoreInt64Cast, STORE_INT64_NAME, DataType::Int64);
 
@@ -306,6 +450,14 @@ impl ScalarUDFImpl for StoreIntGuard {
     }
 }
 
+pub(crate) fn store_int8_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(StoreInt8Cast::new()))
+}
+
+pub(crate) fn store_int16_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(StoreInt16Cast::new()))
+}
+
 pub(crate) fn store_int32_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(StoreInt32Cast::new()))
 }
@@ -320,6 +472,8 @@ pub(crate) fn store_int_guard_udf() -> Arc<ScalarUDF> {
 
 pub(crate) fn store_cast_udf_for_target(target: &DataType) -> Option<Arc<ScalarUDF>> {
     match target {
+        DataType::Int8 => Some(store_int8_udf()),
+        DataType::Int16 => Some(store_int16_udf()),
         DataType::Int32 => Some(store_int32_udf()),
         DataType::Int64 => Some(store_int64_udf()),
         _ => None,
@@ -327,6 +481,8 @@ pub(crate) fn store_cast_udf_for_target(target: &DataType) -> Option<Arc<ScalarU
 }
 
 pub fn register_store_cast_udfs(ctx: &SessionContext) {
+    ctx.register_udf(store_int8_udf().as_ref().clone());
+    ctx.register_udf(store_int16_udf().as_ref().clone());
     ctx.register_udf(store_int32_udf().as_ref().clone());
     ctx.register_udf(store_int64_udf().as_ref().clone());
     ctx.register_udf(store_int_guard_udf().as_ref().clone());
@@ -334,7 +490,7 @@ pub fn register_store_cast_udfs(ctx: &SessionContext) {
 
 #[cfg(test)]
 mod tests {
-    use datafusion::arrow::array::{Float64Array, Int64Array};
+    use datafusion::arrow::array::{Float32Array, Float64Array, Int64Array};
     use datafusion::arrow::datatypes::Field;
 
     use super::*;
@@ -357,10 +513,12 @@ mod tests {
             spark_store_type_name(&DataType::Decimal128(8, 6)).as_deref(),
             Some("DECIMAL(8,6)")
         );
+        assert_eq!(spark_store_type_name(&DataType::Int8).as_deref(), Some("TINYINT"));
         assert_eq!(
-            spark_store_type_name(&DataType::Int32).as_deref(),
-            Some("INT")
+            spark_store_type_name(&DataType::Int16).as_deref(),
+            Some("SMALLINT")
         );
+        assert_eq!(spark_store_type_name(&DataType::Int32).as_deref(), Some("INT"));
         assert_eq!(
             spark_store_type_name(&DataType::Int64).as_deref(),
             Some("BIGINT")
@@ -377,6 +535,7 @@ mod tests {
             &DataType::Decimal128(38, 0),
             &DataType::Int32
         ));
+        assert!(is_overflow_store_pair(&DataType::Float64, &DataType::Int8));
         assert!(!is_overflow_store_pair(&DataType::Int64, &DataType::Int32));
         assert!(!is_overflow_store_pair(&DataType::Utf8, &DataType::Int32));
         assert!(!is_overflow_store_pair(
@@ -396,18 +555,9 @@ mod tests {
         assert!(is_overflow_store_pair(&dict, &DataType::Int64));
     }
 
-    fn arrow_error(message: &str) -> datafusion::arrow::error::ArrowError {
-        datafusion::arrow::error::ArrowError::CastError(message.to_string())
-    }
-
     #[test]
-    fn mapped_errors_carry_sparks_condition_sqlstate_and_column() {
-        let error = map_store_cast_error(
-            "v",
-            &DataType::Float64,
-            &DataType::Int64,
-            arrow_error("Can't cast value 1e19 to type Int64"),
-        );
+    fn overflow_errors_carry_sparks_condition_sqlstate_and_column() {
+        let error = store_overflow_error("v", "DOUBLE", "BIGINT");
         assert_eq!(
             error.to_string(),
             "Execution error: [CAST_OVERFLOW_IN_TABLE_INSERT] Fail to assign a value of \
@@ -415,26 +565,6 @@ mod tests {
              Use `try_cast` on the input value to tolerate overflow and return NULL instead. \
              SQLSTATE: 22003"
         );
-    }
-
-    #[test]
-    fn non_overflow_pairs_keep_the_arrow_error() {
-        for (source, target) in [
-            (DataType::Int64, DataType::Int32),
-            (DataType::Utf8, DataType::Int32),
-            (DataType::Float64, DataType::Float64),
-            (DataType::Utf8, DataType::Utf8),
-        ] {
-            let error = map_store_cast_error("v", &source, &target, arrow_error("boom"));
-            assert!(
-                error.to_string().contains("boom"),
-                "{source:?} -> {target:?}: {error}"
-            );
-            assert!(
-                !error.to_string().contains("CAST_OVERFLOW"),
-                "{source:?} -> {target:?}: {error}"
-            );
-        }
     }
 
     fn lit_utf8(text: &str) -> ColumnarValue {
@@ -446,6 +576,9 @@ mod tests {
         value: ColumnarValue,
         column: &str,
     ) -> Result<ColumnarValue> {
+        let target = udf
+            .return_type(&[DataType::Float64, DataType::Utf8])
+            .expect("store udf types");
         let args = ScalarFunctionArgs {
             args: vec![value, lit_utf8(column)],
             arg_fields: vec![
@@ -453,7 +586,7 @@ mod tests {
                 Arc::new(Field::new("c", DataType::Utf8, true)),
             ],
             number_rows: 1,
-            return_field: Arc::new(Field::new("r", DataType::Int64, true)),
+            return_field: Arc::new(Field::new("r", target, true)),
             config_options: Arc::new(datafusion::common::config::ConfigOptions::new()),
         };
         udf.invoke_with_args(args)
@@ -552,6 +685,127 @@ mod tests {
         assert_eq!((ints.value(0), ints.value(1)), (1, 2));
     }
 
+    #[test]
+    fn exact_powers_of_two_at_the_int64_edge_store_like_spark() {
+        let udf = store_int64_udf();
+        for (value, stored) in [
+            (9.223372036854776e18, i64::MAX),
+            (-9.223372036854776e18, i64::MIN),
+            (f64::from(9.223372036854776e18_f32), i64::MAX),
+        ] {
+            let ok = invoke_cast(
+                &udf,
+                ColumnarValue::Scalar(ScalarValue::Float64(Some(value))),
+                "v",
+            )
+            .expect("the edge stores");
+            assert!(
+                matches!(ok, ColumnarValue::Scalar(ScalarValue::Int64(Some(got))) if got == stored),
+                "{value}: {ok:?}"
+            );
+        }
+        let udf32 = store_int32_udf();
+        let error = invoke_cast(
+            &udf32,
+            ColumnarValue::Scalar(ScalarValue::Float64(Some(9.223372036854776e18))),
+            "v",
+        )
+        .expect_err("2^63 refuses into INT");
+        assert!(
+            error.to_string().contains("[CAST_OVERFLOW_IN_TABLE_INSERT]"),
+            "{error}"
+        );
+    }
+
+    #[test]
+    fn float32_sources_check_in_float64_like_spark() {
+        let udf = store_int64_udf();
+        let ok = invoke_cast(
+            &udf,
+            ColumnarValue::Scalar(ScalarValue::Float32(Some(9.223372e18))),
+            "v",
+        )
+        .expect("f32 2^63 stores");
+        assert!(matches!(
+            ok,
+            ColumnarValue::Scalar(ScalarValue::Int64(Some(i64::MAX)))
+        ));
+        let udf32 = store_int32_udf();
+        let error = invoke_cast(
+            &udf32,
+            ColumnarValue::Scalar(ScalarValue::Float32(Some(3.4028235e38))),
+            "v",
+        )
+        .expect_err("f32 MAX refuses into INT");
+        assert!(
+            error.to_string().contains("\"FLOAT\""),
+            "{error}"
+        );
+        assert!(error.to_string().contains("\"INT\""), "{error}");
+    }
+
+    #[test]
+    fn decimals_refuse_exactly_with_no_float_edge() {
+        let udf = store_int64_udf();
+        let error = invoke_cast(
+            &udf,
+            ColumnarValue::Scalar(ScalarValue::Decimal128(Some(9_223_372_036_854_775_808), 38, 0)),
+            "v",
+        )
+        .expect_err("decimal 2^63 refuses");
+        assert!(
+            error.to_string().contains("[CAST_OVERFLOW_IN_TABLE_INSERT]"),
+            "{error}"
+        );
+        let ok = invoke_cast(
+            &udf,
+            ColumnarValue::Scalar(ScalarValue::Decimal128(Some(9_223_372_036_854_775_807), 38, 0)),
+            "v",
+        )
+        .expect("decimal MAX stores");
+        assert!(matches!(
+            ok,
+            ColumnarValue::Scalar(ScalarValue::Int64(Some(9_223_372_036_854_775_807)))
+        ));
+    }
+
+    #[test]
+    fn tiny_targets_refuse_like_spark() {
+        let udf = store_int8_udf();
+        let error = invoke_cast(
+            &udf,
+            ColumnarValue::Scalar(ScalarValue::Float64(Some(300.0))),
+            "v",
+        )
+        .expect_err("300 refuses into TINYINT");
+        assert!(error.to_string().contains("\"TINYINT\""), "{error}");
+        let ok = invoke_cast(
+            &udf,
+            ColumnarValue::Scalar(ScalarValue::Float64(Some(42.0))),
+            "v",
+        )
+        .expect("42 stores");
+        assert!(matches!(
+            ok,
+            ColumnarValue::Scalar(ScalarValue::Int8(Some(42)))
+        ));
+    }
+
+    #[test]
+    fn float_arrays_store_rowwise() {
+        let udf = store_int32_udf();
+        let array = Arc::new(Float32Array::from(vec![Some(1.5), None, Some(-2.5)]));
+        let ok = invoke_cast(&udf, ColumnarValue::Array(array), "v").expect("stores");
+        let ColumnarValue::Array(out) = ok else {
+            panic!("arrays stay arrays");
+        };
+        let ints = out
+            .as_any()
+            .downcast_ref::<datafusion::arrow::array::Int32Array>()
+            .expect("Int32");
+        assert_eq!((ints.value(0), ints.is_null(1), ints.value(2)), (1, true, -2));
+    }
+
     fn invoke_guard(
         udf: &ScalarUDF,
         divisor: ColumnarValue,
@@ -588,6 +842,10 @@ mod tests {
         .expect_err("zero refuses");
         assert!(
             error.to_string().contains("[CAST_OVERFLOW_IN_TABLE_INSERT]"),
+            "{error}"
+        );
+        assert!(
+            error.to_string().contains("`v`"),
             "{error}"
         );
         for divisor in [
