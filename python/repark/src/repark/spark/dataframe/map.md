@@ -260,7 +260,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   and `dropna` refuse over unproven twins: the `F.col`/literal twins, the
   self-join `select(F.col('s1.v'), F.col('s2.v'))` and the alias twins of
   R-CS2-14. It also serves overlay `drop` of a Column without an origin.
-  `_hit_origins` is gone. pins: casesens-2/C-030, C-032
+  `_hit_origins` is gone. The re-verify corpora re-run against the
+  recorded main, `ca4ac687` and Spark outputs hold 0 REGRESSION and move
+  no cell that matched Spark. pins: casesens-2/C-030, C-032, C-033
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`
