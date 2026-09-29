@@ -1,19 +1,22 @@
 use std::sync::Arc;
 
-use datafusion::arrow::datatypes::DataType;
+use datafusion::arrow::datatypes::{DataType, TimeUnit};
 use datafusion::common::config::ConfigOptions;
-use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
+use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
 use datafusion::common::{DFSchema, Result, ScalarValue};
-use datafusion::functions::expr_fn::get_field;
+use datafusion::functions::expr_fn::{coalesce, get_field, nullif as df_nullif};
 use datafusion::logical_expr::conditional_expressions::CaseBuilder;
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
-use datafusion::logical_expr::{BinaryExpr, Cast, Expr, ExprSchemable, LogicalPlan, Operator};
+use datafusion::logical_expr::{
+    BinaryExpr, Cast, Expr, ExprSchemable, GroupingSet, LogicalPlan, Operator, TypeSignature,
+    Volatility,
+};
 use datafusion::optimizer::AnalyzerRule;
 
 use crate::spark_nvl::{
-    CompareRefusal, binary_op_diff_types, coalesce_data_diff_types, compare_for_nullif,
-    if_data_diff_types, invalid_ordering_type, widen_full,
+    CompareLeaf, CompareRefusal, binary_op_diff_types, coalesce_data_diff_types,
+    compare_for_nullif, if_data_diff_types, invalid_ordering_type, widen_full,
 };
 use crate::spark_nvl_udf::{
     ifnull_expr, nullif_pick_udf, nvl_cast_expr, nvl_expr, nvl2_expr, zero_scalar, zeroifnull_expr,
@@ -48,11 +51,62 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     }
     let name_preserver = NamePreserver::new(&plan);
     let transformed = plan.map_expressions(|expr| {
+        if let Expr::GroupingSet(set) = &expr {
+            return rewrite_grouping_set(set, &name_preserver, &schema);
+        }
         let saved_name = name_preserver.save(&expr);
         let rewritten = expr.transform_up(|node| rewrite_expr(node, &schema))?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
     transformed.map_data(LogicalPlan::recompute_schema)
+}
+
+fn rewrite_grouping_set(
+    set: &GroupingSet,
+    name_preserver: &NamePreserver,
+    schema: &DFSchema,
+) -> Result<Transformed<Expr>> {
+    let mut changed = false;
+    let mut rewrite_inner = |inner: &Expr| -> Result<Expr> {
+        let saved_name = name_preserver.save(inner);
+        let rewritten = inner
+            .clone()
+            .transform_up(|node| rewrite_expr(node, schema))?;
+        changed |= rewritten.transformed;
+        Ok(rewritten.update_data(|node| saved_name.restore(node)).data)
+    };
+    let rebuilt = match set {
+        GroupingSet::Rollup(inner) => {
+            let mut lowered = Vec::with_capacity(inner.len());
+            for expr in inner {
+                lowered.push(rewrite_inner(expr)?);
+            }
+            GroupingSet::Rollup(lowered)
+        }
+        GroupingSet::Cube(inner) => {
+            let mut lowered = Vec::with_capacity(inner.len());
+            for expr in inner {
+                lowered.push(rewrite_inner(expr)?);
+            }
+            GroupingSet::Cube(lowered)
+        }
+        GroupingSet::GroupingSets(sets) => {
+            let mut lowered = Vec::with_capacity(sets.len());
+            for inner in sets {
+                let mut lowered_inner = Vec::with_capacity(inner.len());
+                for expr in inner {
+                    lowered_inner.push(rewrite_inner(expr)?);
+                }
+                lowered.push(lowered_inner);
+            }
+            GroupingSet::GroupingSets(lowered)
+        }
+    };
+    Ok(Transformed::new(
+        Expr::GroupingSet(rebuilt),
+        changed,
+        TreeNodeRecursion::Continue,
+    ))
 }
 
 fn rewrite_expr(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
@@ -83,7 +137,7 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
         let rewritten = rewrite_zeroifnull(function.args[0].clone(), schema)?;
         return Ok(Transformed::yes(rewritten));
     }
-    if function.func.name() == "nullif" && function.args.len() == 2 {
+    if is_spark_nullif_call(function) && function.args.len() == 2 {
         let rewritten = rewrite_nullif(
             function.args[0].clone(),
             function.args[1].clone(),
@@ -98,6 +152,14 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
         return Ok(Transformed::yes(rewritten));
     }
     Ok(Transformed::no(expr))
+}
+
+fn is_spark_nullif_call(function: &ScalarFunction) -> bool {
+    function.func.name() == "nullif"
+        && matches!(
+            function.func.signature().type_signature,
+            TypeSignature::UserDefined
+        )
 }
 
 fn is_null_literal(expr: &Expr) -> bool {
@@ -143,11 +205,10 @@ fn rewrite_nvl(spelling: &str, first: Expr, second: Expr, schema: &DFSchema) -> 
     if is_non_null_literal(&first) {
         return Ok(nvl_cast_expr(first, &widen));
     }
-    case_when_present(
-        first.clone(),
+    Ok(coalesce(vec![
         nvl_cast_expr(first, &widen),
         nvl_cast_expr(second, &widen),
-    )
+    ]))
 }
 
 fn rewrite_nvl2(test: Expr, first: Expr, second: Expr, schema: &DFSchema) -> Result<Expr> {
@@ -188,7 +249,7 @@ fn rewrite_zeroifnull(arg: Expr, schema: &DFSchema) -> Result<Expr> {
     if is_non_null_literal(&arg) {
         return Ok(nvl_cast_expr(arg, &widen));
     }
-    case_when_present(arg.clone(), nvl_cast_expr(arg, &widen), zero)
+    Ok(coalesce(vec![nvl_cast_expr(arg, &widen), zero]))
 }
 
 fn rewrite_nullif(
@@ -205,6 +266,7 @@ fn rewrite_nullif(
         return Ok(Expr::Literal(ScalarValue::Null, None));
     }
     let first_sql = "...";
+    let from_nullifzero = second_sql.is_some();
     let second_sql = second_sql.unwrap_or("...");
     let leaves = match compare_for_nullif(&first_type, &second_type) {
         Ok(leaves) => leaves,
@@ -225,6 +287,14 @@ fn rewrite_nullif(
     }
     if is_null_literal(&first) || is_null_literal(&second) {
         return Ok(first);
+    }
+    if !from_nullifzero
+        && let [leaf] = leaves.as_slice()
+        && leaf.path_a.is_empty()
+        && leaf.path_b.is_empty()
+        && (leaf.common == first_type || is_truly_volatile(&first))
+    {
+        return Ok(single_nullif(&first, &second, leaf, &first_type));
     }
     let mut cond: Option<Expr> = None;
     for leaf in &leaves {
@@ -251,6 +321,53 @@ fn rewrite_nullif(
         nullif_pick_udf(),
         vec![cond, first],
     )))
+}
+
+fn single_nullif(first: &Expr, second: &Expr, leaf: &CompareLeaf, first_type: &DataType) -> Expr {
+    let left = shape_operand(first, &leaf.path_a, &leaf.type_a, &leaf.common);
+    let right = shape_operand(second, &leaf.path_b, &leaf.type_b, &leaf.common);
+    let compared = df_nullif(left, right);
+    if leaf.common == *first_type {
+        compared
+    } else if matches!(first_type, DataType::Timestamp(TimeUnit::Microsecond, None)) {
+        crate::timestamp_ntz_cast::timestamp_ntz_cast_expr(compared, false)
+    } else if matches!(first_type, DataType::Timestamp(TimeUnit::Nanosecond, None)) {
+        crate::timestamp_ns_cast::timestamp_ns_cast_expr(compared, false)
+    } else {
+        Expr::Cast(Cast::new(Box::new(compared), first_type.clone()))
+    }
+}
+
+fn is_truly_volatile(expr: &Expr) -> bool {
+    expr.exists(|node| {
+        Ok(matches!(node, Expr::ScalarFunction(call)
+            if call.func.signature().volatility == Volatility::Volatile
+                && !is_deterministic_vehicle(call.func.name())))
+    })
+    .unwrap_or(true)
+}
+
+fn is_deterministic_vehicle(name: &str) -> bool {
+    use crate::timestamp_ns_cast::{TIMESTAMP_NS_CAST_NAME, TIMESTAMPTZ_NS_CAST_NAME};
+    use crate::timestamp_ntz_cast::{TIMESTAMP_NTZ_CAST_NAME, TRY_TIMESTAMP_NTZ_CAST_NAME};
+    matches!(
+        name,
+        TIMESTAMP_NTZ_CAST_NAME
+            | TRY_TIMESTAMP_NTZ_CAST_NAME
+            | TIMESTAMP_NS_CAST_NAME
+            | TIMESTAMPTZ_NS_CAST_NAME
+            | "to_timestamp_ltz"
+            | "to_timestamp_ntz"
+            | "try_to_timestamp"
+            | "__repark_timestamp_to_string__"
+            | "__repark_timestamp_to_date__"
+            | "to_date"
+            | "date"
+            | "from_unixtime"
+            | "date_format"
+            | "to_char"
+            | "to_varchar"
+    )
 }
 
 fn blind_pick(first: Expr, second: Expr) -> Expr {

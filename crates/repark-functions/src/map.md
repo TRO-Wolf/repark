@@ -720,16 +720,24 @@ scalars live under [`try_invert/`](try_invert/map.md).
   raise `CAST_INVALID_INPUT`. pins: nvl-type-coercion-1/C-009, C-010
 - `spark_nvl_rule.rs` — **NVL-TYPE-COERCION-1 (2026-09-29):** the
   `SparkNvlFamilyRewrite` analyzer rule, appended last on the Spark door and
-  the `F.expr` context. `nvl`/`ifnull`/`nvl2`/`zeroifnull` lower to
-  short-circuit `CASE WHEN test IS NOT NULL` with `nvl_cast` branches, so an
-  untaken branch never evaluates (`nvl(1, 1/0)` answers) and never casts;
-  NULL-literal and non-null-literal sides fold without a `CASE`.
-  `nullif(a, b)` becomes `__repark_nullif_pick(a = b, a)` with explicit casts
-  (structs flattened field by field, positionally); a NULL-literal side
-  short-circuits to the first argument; `nullifzero(c)` expands inline.
+  the `F.expr` context. NULL-literal and non-null-literal sides fold without
+  a `CASE`. `nullifzero(c)` expands inline through the pick form, which
+  double-evaluates like Spark's own `nullifzero`.
   The widened zero emits as `CAST(0 AS W)`, never a bare literal: both doors
   analyze twice and the literal rules narrow a bare `Int64(0)` on the second
   pass. pins: nvl-type-coercion-1/C-002, C-008, C-011
+  **Re-verify (2026-09-29, VN2-1..VN2-3):** the `CASE` lowering evaluated its
+  test twice, so `nvl`/`ifnull` lower to `coalesce` of the two `nvl_cast`
+  branches and `zeroifnull` to `coalesce` with the widened zero (`nvl2` keeps
+  its `CASE`: test, branches each appear once). Scalar `nullif` lowers to
+  DataFusion's own `nullif` over the shaped operands (cast back to the first
+  type; the NTZ/ns targets use their cast UDFs because the second pass peels
+  a bare naive-`CAST` of an LTZ child); deterministic mixed-type and struct
+  compares keep the pick form, which is exact there. The rule only rewrites
+  `UserDefined`-signature `nullif` calls, so its own emitted form and the
+  division zero-guard pass through. Grouping-set inner expressions keep
+  their names across the rewrite. pins: nvl-type-coercion-1/C-012, C-013,
+  C-014
 - `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer
   rule, installed on BOTH doors via `install_shared_analyzer_rules` (defined here since FNP-11B step 3 and re-exported from the crate root, so `repark_functions::install_shared_analyzer_rules` and run 16b's `session.rs` call are unchanged; the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts; the TIME guard left for `analyzer_rules()` in remediation round 1).
   installer calls it in place of the integer-only one — same line count, so the
@@ -1169,6 +1177,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `analyzer_rules()` since remediation round 1 (both doors refuse the same
   CAST-to-TIME text at build). pins: fnp-11b/C-002, C-003, C-004, C-005;
   `time_family::tests::*`.
+  **NVL re-verify (2026-09-29, VN2-4):** `SparkTypeof::simplify` folds from
+  the planned type, but skips the fold when the argument holds
+  `greatest`/`least` over a string (the fold answered where Spark refuses).
+  pins: nvl-type-coercion-1/C-015
   **FNP-11B remediation round 1 (2026-09-16):** `interval_avg` keeps exact-width
   (`i128`) sums with the overflow flag recomputed per add/subtract/merge and
   merges every state row (L-001, L-003); `to_char` resolves its input arm once

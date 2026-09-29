@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import json
 import re
+import time
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -388,3 +389,136 @@ def test_vn3_on_refuses_cast_invalid_input(utc: ReparkSession) -> None:
 def test_vn3_typeof_nvl_abc_int_is_bigint(utc: ReparkSession) -> None:
     rows = utc.sql("SELECT typeof(nvl('abc', 2)) AS t").collect()
     assert [row.asDict() for row in rows] == [{"t": "bigint"}]
+
+
+def test_vn2_nvl_rand_evaluates_once(utc: ReparkSession) -> None:
+    rows = utc.sql(
+        "SELECT count(*) AS c FROM range(20000) "
+        "WHERE nvl(CASE WHEN rand() < 0.5 THEN NULL ELSE 1 END, 2) IS NULL"
+    ).collect()
+    assert [row.asDict() for row in rows] == [{"c": 0}]
+
+
+def test_vn2_nvl_uuid_evaluates_once(utc: ReparkSession) -> None:
+    rows = utc.sql(
+        "SELECT count(*) AS c FROM range(20000) WHERE "
+        "nvl(CASE WHEN substr(uuid(), 1, 1) < '8' THEN NULL ELSE 'a' END, 'b') IS NULL"
+    ).collect()
+    assert [row.asDict() for row in rows] == [{"c": 0}]
+
+
+def test_vn2_ifnull_rand_evaluates_once(utc: ReparkSession) -> None:
+    rows = utc.sql(
+        "SELECT count(*) AS c FROM range(20000) "
+        "WHERE ifnull(CASE WHEN rand() < 0.5 THEN NULL ELSE 1 END, 2) IS NULL"
+    ).collect()
+    assert [row.asDict() for row in rows] == [{"c": 0}]
+
+
+def test_vn2_ifnull_uuid_evaluates_once(utc: ReparkSession) -> None:
+    rows = utc.sql(
+        "SELECT count(*) AS c FROM range(20000) WHERE "
+        "ifnull(CASE WHEN substr(uuid(), 1, 1) < '8' THEN NULL ELSE 'a' END, 'b') IS NULL"
+    ).collect()
+    assert [row.asDict() for row in rows] == [{"c": 0}]
+
+
+def test_vn2_zeroifnull_rand_evaluates_once(utc: ReparkSession) -> None:
+    rows = utc.sql(
+        "SELECT count(*) AS c FROM "
+        "(SELECT zeroifnull(CASE WHEN rand() < 0.5 THEN NULL ELSE 1 END) AS v "
+        "FROM range(20000)) WHERE v IS NULL"
+    ).collect()
+    assert [row.asDict() for row in rows] == [{"c": 0}]
+
+
+def test_vn2_zeroifnull_uuid_evaluates_once(utc: ReparkSession) -> None:
+    rows = utc.sql(
+        "SELECT count(*) AS c FROM "
+        "(SELECT zeroifnull(CASE WHEN substr(uuid(), 1, 1) < '8' THEN NULL ELSE '5' END) AS v "
+        "FROM range(20000)) WHERE v IS NULL"
+    ).collect()
+    assert [row.asDict() for row in rows] == [{"c": 0}]
+
+
+def test_vn2_nullif_rand_evaluates_once(utc: ReparkSession) -> None:
+    rows = utc.sql(
+        "SELECT count(*) AS c FROM "
+        "(SELECT nullif(CASE WHEN rand() < 0.5 THEN 1 ELSE 2 END, 1) AS v "
+        "FROM range(20000)) WHERE v = 1"
+    ).collect()
+    assert [row.asDict() for row in rows] == [{"c": 0}]
+
+
+def test_vn2_nullif_uuid_evaluates_once(utc: ReparkSession) -> None:
+    rows = utc.sql(
+        "SELECT count(*) AS c FROM "
+        "(SELECT nullif(CASE WHEN substr(uuid(), 1, 1) < '8' THEN 1 ELSE 2 END, 1) AS v "
+        "FROM range(20000)) WHERE v = 1"
+    ).collect()
+    assert [row.asDict() for row in rows] == [{"c": 0}]
+
+
+def test_vn2_depth_12_nests_plan_fast(utc: ReparkSession) -> None:
+    nested_nvl = "x"
+    nested_nullif = "x"
+    for depth in range(12):
+        nested_nvl = f"nvl({nested_nvl},{depth})"
+        nested_nullif = f"nullif({nested_nullif},{100 + depth})"
+    queries = [
+        f"SELECT id, {nested_nvl} AS v FROM (SELECT 1 AS id, 1 AS x)",
+        f"SELECT id, {nested_nullif} AS v FROM (SELECT 1 AS id, 1 AS x)",
+    ]
+    for query in queries:
+        utc.sql("EXPLAIN " + query).collect()
+        started = time.perf_counter()
+        utc.sql("EXPLAIN " + query).collect()
+        assert time.perf_counter() - started < 1.0
+
+
+def test_vn2_rollup_over_nvl(utc: ReparkSession) -> None:
+    utc.sql(
+        "CREATE OR REPLACE TEMPORARY VIEW vn2_rollup_t AS SELECT * FROM VALUES "
+        "(1,'g1'),(2,'g1'),(3,'g2'),(4,'g2'),(5,NULL) AS t(id,g)"
+    ).collect()
+    rows = utc.sql(
+        "SELECT nvl(g, 'z') AS gg, count(*) AS c FROM vn2_rollup_t GROUP BY ROLLUP(nvl(g, 'z'))"
+    ).collect()
+    assert {(row["gg"], row["c"]) for row in rows} == {
+        ("g1", 2),
+        ("g2", 2),
+        ("z", 1),
+        (None, 5),
+    }
+
+
+def test_vn2_cube_over_ifnull(utc: ReparkSession) -> None:
+    utc.sql(
+        "CREATE OR REPLACE TEMPORARY VIEW vn2_cube_t AS SELECT * FROM VALUES "
+        "(1,'g1'),(2,'g1'),(3,'g2'),(4,'g2'),(5,NULL) AS t(id,g)"
+    ).collect()
+    rows = utc.sql(
+        "SELECT ifnull(g, 'z') AS gg, count(*) AS c FROM vn2_cube_t GROUP BY CUBE(ifnull(g, 'z'))"
+    ).collect()
+    assert {(row["gg"], row["c"]) for row in rows} == {
+        ("g1", 2),
+        ("g2", 2),
+        ("z", 1),
+        (None, 5),
+    }
+
+
+def test_vn2_rollup_over_nullif(utc: ReparkSession) -> None:
+    utc.sql(
+        "CREATE OR REPLACE TEMPORARY VIEW vn2_rollup_n_t AS SELECT * FROM VALUES "
+        "(1,'g1'),(2,'g1'),(3,'g2'),(4,'g2'),(5,NULL) AS t(id,g)"
+    ).collect()
+    rows = utc.sql(
+        "SELECT nullif(g, 'g1') AS gg, count(*) AS c FROM vn2_rollup_n_t "
+        "GROUP BY ROLLUP(nullif(g, 'g1'))"
+    ).collect()
+    assert {(row["gg"], row["c"]) for row in rows} == {
+        ("g2", 2),
+        (None, 3),
+        (None, 5),
+    }

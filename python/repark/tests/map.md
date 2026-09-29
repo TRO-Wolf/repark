@@ -4955,6 +4955,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   widenings, the `'on'` refusal with `CAST_INVALID_INPUT`, and
   `typeof(nvl('abc', 2))` as `bigint`. Every other expected value is the
   recorded Spark answer from the verify-nvl `hbs.txt` battery.
+  Re-verify pins (2026-09-29, VN2-1..VN2-3, same file): the `rand()` and
+  `uuid()` single-evaluation repros for `nvl`, `ifnull`, `zeroifnull` and
+  `nullif` (each asserting 0 rows), a depth-12 `nvl` and `nullif` nesting
+  that plans in under 1 s, and exact-row `ROLLUP`/`CUBE` over `nvl`,
+  `ifnull` and `nullif`.
 - `test_select_naming.py` — **Group H** select/projection display naming vs live PySpark 4.1.2:
   mutation leak accepts `Int32(1)` as well as `Int64(1)` (F-Y10-1 Python lit width);
   full matrix (`(x + 1)`, cast-of-attr → child name, cast-of-compound → `CAST(...)`,

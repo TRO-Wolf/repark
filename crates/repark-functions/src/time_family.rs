@@ -4,7 +4,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use arrow::datatypes::{DataType, Field, FieldRef, IntervalUnit, TimeUnit};
 use datafusion::common::config::ConfigOptions;
-use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
+use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
 use datafusion::common::{Result, ScalarValue, exec_err};
 use datafusion::error::DataFusionError;
 use datafusion::logical_expr::simplify::{ExprSimplifyResult, SimplifyContext};
@@ -334,6 +334,45 @@ fn typeof_unimplemented(data_type: &DataType) -> DataFusionError {
     DataFusionError::NotImplemented(format!("typeof({data_type}) is not implemented"))
 }
 
+fn has_mixed_string_choice(arg: &Expr, info: &SimplifyContext) -> Result<bool> {
+    let mut found = false;
+    arg.apply(|node| {
+        if found {
+            return Ok(TreeNodeRecursion::Stop);
+        }
+        let Expr::ScalarFunction(call) = node else {
+            return Ok(TreeNodeRecursion::Continue);
+        };
+        if call.func.name() != "greatest" && call.func.name() != "least" {
+            return Ok(TreeNodeRecursion::Continue);
+        }
+        if choice_holds_string(node, info)? {
+            found = true;
+            return Ok(TreeNodeRecursion::Stop);
+        }
+        Ok(TreeNodeRecursion::Continue)
+    })?;
+    Ok(found)
+}
+
+fn choice_holds_string(call: &Expr, info: &SimplifyContext) -> Result<bool> {
+    let mut holds = false;
+    call.apply(|node| {
+        if holds {
+            return Ok(TreeNodeRecursion::Stop);
+        }
+        if matches!(
+            info.get_data_type(node)?,
+            DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
+        ) {
+            holds = true;
+            return Ok(TreeNodeRecursion::Stop);
+        }
+        Ok(TreeNodeRecursion::Continue)
+    })?;
+    Ok(holds)
+}
+
 fn typeof_arity(arg_count: usize) -> DataFusionError {
     DataFusionError::Plan(format!(
         "[WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `typeof` requires 1 parameters but the actual \
@@ -360,6 +399,9 @@ impl ScalarUDFImpl for SparkTypeof {
         let [arg] = args.as_slice() else {
             return Err(typeof_arity(args.len()));
         };
+        if has_mixed_string_choice(arg, info)? {
+            return Ok(ExprSimplifyResult::Original(args));
+        }
         let data_type = info.get_data_type(arg)?;
         let name = spark_type_name(&data_type)?;
         Ok(ExprSimplifyResult::Simplified(Expr::Literal(
