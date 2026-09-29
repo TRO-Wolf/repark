@@ -89,8 +89,29 @@ message differences are unchanged.
 
 ## Mutation record (2026-09-28)
 
-See the unit hand-back for the rebuilt-module runs; each mutation was reverted and
-`git status` was clean before the next.
+Each mutation rebuilt the native module (`make develop`) on `55ba71bd`, ran the replay test,
+`test_ltz_store_int_1.py` and `test_insert_store_assign.py`, and was reverted; `git status`
+was clean before the next.
+
+| # | Mutation | Replay cells red | Other files |
+|---|---|---|---|
+| M1 | The VALUES gate judges LTZ targets only (`is_judged_target` returns `is_microsecond_ltz`) | 8: every C-001 VALUES refusal | `test_a_literal_values_row_refuses_like_spark` red; LTZ pins green |
+| M2 | The lineage walk never reports a negated NULL (`Negative` answers `Other`) | 17: every `-NULL` refusal, all doors and wraps | LTZ pins green |
+| M3 | The INSERT gate skips STRING → FLOAT/DOUBLE | 4: every C-003 cell | LTZ pins green |
+| M4 | `incompatible_store_message` stops naming DECIMAL | 2: `values/cast_ts/dec`, `update/str_num/dec` | LTZ pins green |
+| MALL | M1 + M2 + M3 + M4 (the new direction off) | all 30 must-change cells; every store cell stays green | `test_a_literal_values_row_refuses_like_spark` red; LTZ pins green |
+
+**Neighbours (2026-09-28).** 40 statements drawn from the diff-probe corpus
+(`ins_probe.py`, `upd_probe.py`, `ovf_probe.py`, `intdiv_probe.py`: fractional and
+overflowing quotients into BIGINT/INT through INSERT … SELECT, VALUES, OVERWRITE, UPDATE,
+MERGE and a CTE) answer the same on `adc26586` and on this unit; the one textual
+difference is the row order of an unordered `SELECT * FROM sc.ns.c` (same multiset).
+
+**Existing pins changed (2).** `test_insert_store_assign.py`'s VALUES-residual pin
+(`VALUES (true)` into INT stored `1`) becomes `test_a_literal_values_row_refuses_like_spark`;
+`tests/update_cast.rs`'s `insert_string_into_bigint_keeps_the_insert_path` (a cast-kernel
+error, explicitly not the store text) becomes `insert_string_into_bigint_refuses_like_spark`.
+Both old pins recorded answers Spark does not give.
 
 ## Coverage
 
@@ -148,5 +169,5 @@ COVERAGE_ATTESTATION:
 | R-STN-3 | Dated 2026-09-28: `- -NULL` still stores into DATE through the SQL doors. The INSERT gate plans the rendered source, and `- -NULL` renders as `--NULL`, a comment (the VG-1/VG-3 stacked-sign rendering, owned by LTZ-STACKED-SIGN-1 #882). |
 | R-STN-4 | Dated 2026-09-28: `+NULL` fails in RePark's planner (`Unary operator '+' only supports numeric…`) where Spark types it DOUBLE and refuses `CANNOT_SAFELY_CAST`; `abs(NULL)` names `"INT"` where Spark names `"DOUBLE"`. Both engines refuse; the NULL typing of functions is not store assignment. |
 | R-STN-5 | Dated 2026-09-28 (same class as R-LTZ-2): a multi-row VALUES whose rows have incompatible types (`(15, '1'), (16, 2)` into INT) refuses `CANNOT_SAFELY_CAST`/KD000 per row where Spark answers `INVALID_INLINE_TABLE.INCOMPATIBLE_TYPES_IN_INLINE_TABLE`/42000. On base these rows stored. A scalar subquery in VALUES now refuses `CANNOT_SAFELY_CAST` where Spark answers `UNSUPPORTED_SUBQUERY_EXPRESSION_CATEGORY.SCALAR_SUBQUERY_IN_VALUES`; base refused with a physical-plan error. |
-| R-STN-6 | Dated 2026-09-28 (extends R-LTZ-4): every Iceberg INSERT into a table with a DATE, BOOLEAN, TIMESTAMP, BINARY or floating-point column plans its source once more, and every VALUES insert into a table with a numeric, DATE or BOOLEAN column loads the table schema and probes each non-literal cell. |
+| R-STN-6 | Dated 2026-09-28 (extends R-LTZ-4): every Iceberg INSERT into a table with a DATE, BOOLEAN, TIMESTAMP, BINARY or floating-point column plans its source once more, and every VALUES insert into a table with a numeric, DATE or BOOLEAN column loads the table schema and probes each non-literal cell. Measured on a debug build, median of 5: 2,000 `DATE'…'` rows into DATE 3.78 s → 4.66 s (+23%); 2,000 integer rows into BIGINT 1.12 s → 1.13 s; 2,000 strings into STRING 2.33 s → 2.32 s; `INSERT … SELECT` of 100,000 rows into DATE 0.116 s → 0.103 s; one DATE row 0.061 s both. |
 | R-STN-7 | Dated 2026-09-28: the three UPDATE cells `1` into DATE, BOOLEAN and TIMESTAMP refuse naming `"BIGINT"` where Spark names `"INT"` (the UPDATE probe types an integer literal BIGINT). Unchanged from base. |
