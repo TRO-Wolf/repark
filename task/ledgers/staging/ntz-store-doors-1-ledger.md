@@ -131,7 +131,12 @@ top-level `CAST` / `::` / `TRY_CAST` to `TIMESTAMP_NTZ`, optionally plus or minu
 `INTERVAL` literals. It is an LTZ instant only if it is a `TIMESTAMP` / `TIMESTAMP_LTZ`
 literal or carries the second fold's cast marker. `DATE` and NULL cells are neutral. Every
 other cell is unknown, and one unknown non-NULL cell leaves the column on base's path with
-no normalization and no widening. No fork, `[patch]` or store-helper change.
+no normalization and no widening. The strict reading moved 232 probe cells that equalled Spark on
+`fdf98d0b` back to base, so the same fold widens the evidence only syntactically: a
+`TIMESTAMP` keyword cell may carry `± INTERVAL` literals or be a top-level `TRY_CAST`, and a
+short name table (`to_timestamp_ntz`, `make_timestamp_ntz`, `localtimestamp` as walls,
+`from_utc_timestamp`, `to_utc_timestamp` as instants) counts only when RePark's type for
+the call agrees. No fork, `[patch]` or store-helper change.
 
 ## Clauses
 

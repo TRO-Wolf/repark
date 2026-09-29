@@ -1115,18 +1115,19 @@ scalars live under [`try_invert/`](try_invert/map.md).
   pins: ntz-store-doors-1/C-008
   **WO NTZ-STORE-DOORS-1 third re-verify fold (2026-09-29, RD4-1):** the pass deviates
   from base only on positive, syntactic evidence; no cell is classified by its rewritten
-  type alone. After the `Alias` / non-null wrappers and at most one planner coercion `CAST`
-  to a naive timestamp are peeled, a cell is a naive wall only if it is a `TIMESTAMP_NTZ`
-  literal, a `CAST` / `::` / `TRY_CAST` to `TIMESTAMP_NTZ` (the three embedded NTZ calls)
-  or a naive microsecond literal, optionally plus or minus `INTERVAL` literals; it is an
-  instant only if it is a `TIMESTAMP` / `TIMESTAMP_LTZ` literal (a naive nanosecond `CAST`
-  of a string literal) or carries the second re-verify fold's double `CAST` marker, and its
-  rewritten type is the instant. A `DATE` cell and a NULL cell are neutral, as before. Every
-  other cell (`date_trunc`, `from_utc_timestamp`, `coalesce`, `if`, `greatest`, a column,
-  `current_timestamp()` and the rest) is `Other`, and one such cell leaves the whole column
-  on base's path. Under `spark.sql.timestampType=TIMESTAMP_NTZ` (`ntz_default`, passed by
-  `instant_ts`) a `TIMESTAMP` literal or marked cast is a wall, since Spark types it
-  `TIMESTAMP_NTZ` there.
+  type alone. The evidence reader is
+  [timestamp_ns_cast/values_evidence.rs](timestamp_ns_cast/map.md). A wall is a
+  `TIMESTAMP_NTZ` literal or a `CAST` / `::` / `TRY_CAST` to `TIMESTAMP_NTZ`, optionally
+  plus or minus `INTERVAL` literals, or a call to `to_timestamp_ntz`, `make_timestamp_ntz` or
+  `localtimestamp` whose own type is naive microseconds. An instant is a `TIMESTAMP` /
+  `TIMESTAMP_LTZ` literal, a marked `CAST(… AS TIMESTAMP)`, a top-level `TRY_CAST(… AS
+  TIMESTAMP)` or a `CAST(… AS TIMESTAMP)` / literal under `INTERVAL` arithmetic, or a call to
+  `from_utc_timestamp` / `to_utc_timestamp`, and its rewritten type must be the instant.
+  `DATE` and NULL cells stay neutral. Every other cell (`date_trunc`, `coalesce`, `if`,
+  `CASE`, `greatest`, a column, `current_timestamp()` and the rest) is `Other`, and one such
+  cell leaves the whole column on base's path. Under
+  `spark.sql.timestampType=TIMESTAMP_NTZ` (`ntz_default`, passed by `instant_ts`) the
+  `TIMESTAMP`-keyword forms are walls, since Spark types them `TIMESTAMP_NTZ` there.
   pins: ntz-store-doors-1/C-009
 - `timestamp_ntz_cast.rs` — **WO NTZ-1 slice 1 (2026-09-26):** the embedded Spark-door
   casts `__repark_cast_timestamp_ntz__` / `__repark_try_cast_timestamp_ntz__` (→

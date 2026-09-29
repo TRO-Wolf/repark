@@ -18,8 +18,8 @@ use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
 use datafusion::common::{DFSchema, DataFusionError, Result, ScalarValue};
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{
-    Cast, ColumnarValue, Expr, ExprSchemable, LogicalPlan, Operator, ReturnFieldArgs,
-    ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, Values, Volatility,
+    Cast, ColumnarValue, Expr, ExprSchemable, LogicalPlan, ReturnFieldArgs, ScalarFunctionArgs,
+    ScalarUDF, ScalarUDFImpl, Signature, Values, Volatility,
 };
 
 use crate::ansi::spark_ansi_enabled_from_options;
@@ -27,6 +27,7 @@ use crate::datetime::localize_wall_micros_in_zone;
 use crate::instant_ts::string_carries_timezone;
 use crate::session_time_zone::session_time_zone_from_options;
 use crate::timestamp_cast::parse_session_zone;
+use values_evidence::Evidence;
 
 pub const TIMESTAMP_NS_CAST_NAME: &str = "__repark_cast_timestamp_ns__";
 pub const TIMESTAMPTZ_NS_CAST_NAME: &str = "__repark_cast_timestamptz_ns__";
@@ -745,15 +746,17 @@ fn values_cell_class(
     wall: &DataType,
     ntz_default: bool,
 ) -> ValuesCellClass {
+    let evidence = values_evidence::values_cell_evidence(pre);
+    let timestamp = evidence == Evidence::Timestamp;
     if is_values_date_cell(pre, empty) {
         ValuesCellClass::Date
-    } else if is_values_null_cell(pre) || is_values_ntz_wall(pre) {
+    } else if is_values_null_cell(pre)
+        || evidence == Evidence::Wall
+        || (post == wall && timestamp && ntz_default)
+    {
         ValuesCellClass::Wall
-    } else if !is_values_ltz_cell(pre) {
-        ValuesCellClass::Other
-    } else if ntz_default && post == wall {
-        ValuesCellClass::Wall
-    } else if !ntz_default && post == instant {
+    } else if post == instant && (evidence == Evidence::NamedInstant || (timestamp && !ntz_default))
+    {
         ValuesCellClass::Instant
     } else {
         ValuesCellClass::Other
@@ -804,88 +807,6 @@ fn is_values_date_cell(pre: &Expr, empty: &DFSchema) -> bool {
         return true;
     }
     false
-}
-
-fn peel_naive_coercion(core: &Expr) -> Option<&Expr> {
-    match core {
-        Expr::Cast(cast) if matches!(cast.field.data_type(), DataType::Timestamp(_, None)) => {
-            Some(strip_values_wrappers(&cast.expr))
-        }
-        _ => None,
-    }
-}
-
-fn is_values_ntz_wall(pre: &Expr) -> bool {
-    let core = strip_values_wrappers(pre);
-    is_ntz_wall_core(core) || peel_naive_coercion(core).is_some_and(is_ntz_wall_core)
-}
-
-fn is_ntz_wall_core(mut expr: &Expr) -> bool {
-    loop {
-        expr = strip_values_wrappers(expr);
-        match expr {
-            Expr::BinaryExpr(binary)
-                if matches!(binary.op, Operator::Plus | Operator::Minus)
-                    && is_interval_literal(&binary.right) =>
-            {
-                expr = binary.left.as_ref();
-            }
-            Expr::BinaryExpr(binary)
-                if binary.op == Operator::Plus && is_interval_literal(&binary.left) =>
-            {
-                expr = binary.right.as_ref();
-            }
-            Expr::ScalarFunction(function) => {
-                return matches!(
-                    function.func.name(),
-                    crate::timestamp_ntz_cast::TIMESTAMP_NTZ_LITERAL_NAME
-                        | crate::timestamp_ntz_cast::TIMESTAMP_NTZ_CAST_NAME
-                        | crate::timestamp_ntz_cast::TRY_TIMESTAMP_NTZ_CAST_NAME
-                );
-            }
-            Expr::Literal(scalar, _) => {
-                return matches!(scalar, ScalarValue::TimestampMicrosecond(_, None));
-            }
-            _ => return false,
-        }
-    }
-}
-
-fn is_interval_literal(expr: &Expr) -> bool {
-    matches!(
-        strip_values_wrappers(expr),
-        Expr::Literal(
-            ScalarValue::IntervalMonthDayNano(_)
-                | ScalarValue::IntervalDayTime(_)
-                | ScalarValue::IntervalYearMonth(_),
-            _,
-        )
-    )
-}
-
-fn is_values_ltz_cell(pre: &Expr) -> bool {
-    let core = strip_values_wrappers(pre);
-    is_ltz_cell_core(core) || peel_naive_coercion(core).is_some_and(is_ltz_cell_core)
-}
-
-fn is_ltz_cell_core(expr: &Expr) -> bool {
-    let ns = DataType::Timestamp(TimeUnit::Nanosecond, None);
-    let Expr::Cast(outer) = expr else {
-        return false;
-    };
-    if outer.field.data_type() != &ns {
-        return false;
-    }
-    match strip_values_wrappers(&outer.expr) {
-        Expr::Literal(scalar, _) => matches!(
-            scalar,
-            ScalarValue::Utf8(Some(_))
-                | ScalarValue::LargeUtf8(Some(_))
-                | ScalarValue::Utf8View(Some(_))
-        ),
-        Expr::Cast(inner) => inner.field.data_type() == &ns,
-        _ => false,
-    }
 }
 
 fn values_cell_to_naive(cell: Expr, empty: &DFSchema, wall: &DataType) -> Result<Expr> {
@@ -974,6 +895,8 @@ fn values_cell_needs_rewrite(cell: &Expr) -> bool {
     .is_ok()
         && interesting
 }
+
+mod values_evidence;
 
 #[cfg(test)]
 mod tests;
