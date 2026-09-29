@@ -10,7 +10,7 @@ use repark_common::spark_error;
 use repark_core::CatalogRegistry;
 
 use super::source_leaves::{is_string_type, source_type_is_reliable};
-use super::{column_name, is_bare_null};
+use super::{column_name, is_null_or_default_cell};
 use crate::catalog_ops::{name_parts, quoted_table_display};
 use crate::write_to_branch::qualify_table_parts;
 
@@ -124,14 +124,14 @@ async fn refuse_value(
     target: &DataType,
     value: &Expr,
 ) -> Result<()> {
-    if is_bare_null(value) || !is_judged_target(target) {
+    if is_null_or_default_cell(value) || !is_judged_target(target) {
         return Ok(());
     }
     let source = if let Some(data_type) = literal_source_type(value) {
         data_type
     } else {
-        let select = nvl_coalesce_text(value).unwrap_or_else(|| value.to_string());
-        let Some(probed) = probe_source_type(ctx, &select).await else {
+        let select = nvl_coalesce_text(value).unwrap_or_else(|| super::probe_text(value));
+        let Some(probed) = probe_source_type(ctx, &select).await? else {
             return Ok(());
         };
         probed
@@ -238,7 +238,12 @@ pub(super) fn literal_source_type(value: &Expr) -> Option<DataType> {
             expr,
         } => {
             let mut peeled = expr.as_ref();
-            while let Expr::Nested(inner) = peeled {
+            while let Expr::Nested(inner)
+            | Expr::UnaryOp {
+                op: UnaryOperator::Plus | UnaryOperator::Minus,
+                expr: inner,
+            } = peeled
+            {
                 peeled = inner;
             }
             match peeled {
@@ -264,7 +269,7 @@ pub(super) fn literal_source_type(value: &Expr) -> Option<DataType> {
     }
 }
 
-fn number_text_type(text: &str, long: bool) -> DataType {
+pub(crate) fn number_text_type(text: &str, long: bool) -> DataType {
     if long {
         DataType::Int64
     } else if text.bytes().all(|byte| byte.is_ascii_digit()) {
@@ -309,7 +314,11 @@ fn nvl_coalesce_text(value: &Expr) -> Option<String> {
     else {
         return None;
     };
-    Some(format!("coalesce({first}, {second})"))
+    Some(format!(
+        "coalesce({}, {})",
+        super::probe_text(first),
+        super::probe_text(second)
+    ))
 }
 
 fn decimal_info_type(info: &ExactNumberInfo) -> DataType {
@@ -368,19 +377,19 @@ fn decimal_text_type(text: &str) -> Option<DataType> {
     ))
 }
 
-async fn probe_source_type(ctx: &SessionContext, select: &str) -> Option<DataType> {
-    let frame = ctx.sql(&format!("SELECT {select} AS probe")).await.ok()?;
-    frame
+async fn probe_source_type(ctx: &SessionContext, select: &str) -> Result<Option<DataType>> {
+    let frame = ctx.sql(&format!("SELECT {select} AS probe")).await?;
+    Ok(frame
         .schema()
         .fields()
         .first()
-        .map(|field| field.data_type().clone())
+        .map(|field| field.data_type().clone()))
 }
 
 #[cfg(test)]
 mod tests {
-    use datafusion::sql::sqlparser::ast::Statement;
-    use datafusion::sql::sqlparser::dialect::GenericDialect;
+    use datafusion::sql::sqlparser::ast::{SelectItem, Statement};
+    use datafusion::sql::sqlparser::dialect::{DatabricksDialect, Dialect, GenericDialect};
     use datafusion::sql::sqlparser::parser::Parser;
 
     use super::*;
@@ -415,6 +424,61 @@ mod tests {
             ],
             "{row:?}"
         );
+    }
+
+    #[test]
+    fn stacked_unary_signs_read_as_their_numeric_kind() {
+        let row = values_row("INSERT INTO t VALUES (- -1, - - -1, - -(1), - -1.5, +-1, -+1)");
+        assert_eq!(
+            typed(&row),
+            vec![
+                Some(DataType::Int32),
+                Some(DataType::Int32),
+                Some(DataType::Int32),
+                Some(DataType::Decimal128(2, 1)),
+                Some(DataType::Int32),
+                Some(DataType::Int32),
+            ],
+            "{row:?}"
+        );
+    }
+
+    #[test]
+    fn signed_nulls_defer_to_the_probe() {
+        let row = values_row("INSERT INTO t VALUES (-NULL, - -NULL)");
+        assert_eq!(typed(&row), vec![None, None], "{row:?}");
+    }
+
+    #[test]
+    fn stacked_minus_probes_render_without_comment_runs() {
+        let row = values_row(
+            "INSERT INTO t VALUES (- -1, - - -1, -1, +-1, (- -1), +- -1, +(- -1), -(- -1), - \
+             -1 + 0, abs(- -1), CAST(- -1 AS INT))",
+        );
+        let rendered: Vec<String> = row
+            .iter()
+            .map(|value| crate::void_type::parenthesize_stacked_minus(value).to_string())
+            .collect();
+        assert_eq!(
+            rendered,
+            vec![
+                "-(-1)",
+                "-(-(-1))",
+                "-1",
+                "+(-1)",
+                "(-(-1))",
+                "+(-(-1))",
+                "+(-(-1))",
+                "-(-(-1))",
+                "-(-1) + 0",
+                "abs(-(-1))",
+                "CAST(-(-1) AS INT)",
+            ],
+            "{row:?}"
+        );
+        for text in &rendered {
+            assert!(!text.contains("--"), "{text}");
+        }
     }
 
     #[test]
@@ -462,6 +526,41 @@ mod tests {
             "INSERT INTO t VALUES (CAST(1 AS TIMESTAMP), TIMESTAMP '2024-01-04 10:00:00', abs(-1))",
         );
         assert_eq!(typed(&row), vec![None, None, None], "{row:?}");
+    }
+
+    #[tokio::test]
+    async fn probe_that_cannot_parse_refuses_instead_of_passing() {
+        let ctx = SessionContext::new();
+        let error = probe_source_type(&ctx, "-- nothing but a comment")
+            .await
+            .expect_err("an unparsable probe must refuse");
+        assert!(error.to_string().contains("ParserError"), "{error}");
+    }
+
+    #[tokio::test]
+    async fn ntz_probe_that_cannot_parse_refuses_instead_of_passing() {
+        use iceberg::spec::{NestedField, PrimitiveType, Type};
+        let ctx = SessionContext::new();
+        let fields = [
+            std::sync::Arc::new(NestedField::optional(
+                1,
+                "id",
+                Type::Primitive(PrimitiveType::Int),
+            )),
+            std::sync::Arc::new(NestedField::optional(
+                2,
+                "n",
+                Type::Primitive(PrimitiveType::Timestamp),
+            )),
+        ];
+        let row = [
+            values_row("INSERT INTO t VALUES (1)").swap_remove(0),
+            Expr::Identifier(datafusion::sql::sqlparser::ast::Ident::new(")")),
+        ];
+        let error = super::super::check_ntz_row(&ctx, &fields, "`t`", &row, &[], false)
+            .await
+            .expect_err("an unparsable NTZ probe must refuse");
+        assert!(error.to_string().contains("ParserError"), "{error}");
     }
 
     #[test]
@@ -522,6 +621,120 @@ mod tests {
                 Some(DataType::Decimal128(2, 1)),
             ],
             "{row:?}"
+        );
+    }
+
+    #[test]
+    fn probe_strings_holding_a_quote_render_dollar_quoted() {
+        let row = values_row("INSERT INTO t VALUES ('it''s', 'a\\\\''b', 'plain')");
+        let rendered: Vec<String> = row.iter().map(crate::void_type::probe_text).collect();
+        assert_eq!(
+            rendered,
+            vec!["$p$it's$p$", "$p$a\\\\'b$p$", "'plain'"],
+            "{row:?}"
+        );
+    }
+
+    #[test]
+    fn probe_strings_without_a_quote_render_unchanged() {
+        let row = values_row("INSERT INTO t VALUES ('C:\\\\temp\\\\', 'a\\nb')");
+        let rendered: Vec<String> = row.iter().map(crate::void_type::probe_text).collect();
+        assert_eq!(rendered, vec!["'C:\\\\temp\\\\'", "'a\\nb'"], "{row:?}");
+    }
+
+    #[test]
+    fn probe_string_tag_grows_past_a_tag_collision() {
+        let row = values_row("INSERT INTO t VALUES ('$p$x''y')");
+        let rendered: Vec<String> = row.iter().map(crate::void_type::probe_text).collect();
+        assert_eq!(rendered, vec!["$pp$$p$x'y$pp$"], "{row:?}");
+    }
+
+    #[test]
+    fn probe_string_tag_grows_past_a_closer_the_value_ends_into() {
+        let row = values_row("INSERT INTO t VALUES ('it''s$p', '$p$x''y$pp', '''$p')");
+        let rendered: Vec<String> = row.iter().map(crate::void_type::probe_text).collect();
+        assert_eq!(
+            rendered,
+            vec!["$pp$it's$p$pp$", "$ppp$$p$x'y$pp$ppp$", "$pp$'$p$pp$"],
+            "{row:?}"
+        );
+    }
+
+    #[test]
+    fn probe_strings_parse_back_to_the_same_value_on_both_probe_dialects() {
+        let row = values_row(
+            "INSERT INTO t VALUES ('it''s', 'a\\\\''b', 'plain', 'C:\\\\temp\\\\', '$p$x''y', 'it''s$p', \
+             '$p$x''y$pp', '''$p', '-- x\\\\''y')",
+        );
+        let generic = GenericDialect;
+        let databricks = DatabricksDialect {};
+        let dialects: [&dyn Dialect; 2] = [&generic, &databricks];
+        for cell in &row {
+            let Expr::Value(literal) = cell else {
+                panic!("want a literal cell, got {cell:?}");
+            };
+            let Value::SingleQuotedString(want) = &literal.value else {
+                panic!("want a single-quoted cell, got {cell:?}");
+            };
+            let rendered = crate::void_type::probe_text(cell);
+            for dialect in dialects {
+                let mut statements =
+                    Parser::parse_sql(dialect, &format!("SELECT {rendered}")).unwrap();
+                let Statement::Query(query) = statements.swap_remove(0) else {
+                    panic!("want a SELECT probe, got {rendered}");
+                };
+                let SetExpr::Select(select) = query.body.as_ref() else {
+                    panic!("want a SELECT body, got {rendered}");
+                };
+                let SelectItem::UnnamedExpr(Expr::Value(got)) = &select.projection[0] else {
+                    panic!("want one literal column, got {rendered}");
+                };
+                match &got.value {
+                    Value::SingleQuotedString(got) => assert_eq!(got, want, "{rendered}"),
+                    Value::DollarQuotedString(got) => assert_eq!(&got.value, want, "{rendered}"),
+                    other => panic!("want a string literal back, got {other:?}"),
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn nvl_probe_rewrite_dollar_quotes_quoted_operands() {
+        let row = values_row("INSERT INTO t VALUES (nvl(NULL, replace('a\\\\''b', '\\\\''', '')))");
+        assert_eq!(
+            nvl_coalesce_text(&row[0]).unwrap(),
+            "coalesce(NULL, replace($p$a\\\\'b$p$, $p$\\\\'$p$, ''))",
+            "{row:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn ltz_door_passes_a_timestamp_cast_over_a_backslash_quote_replace() {
+        let ctx = SessionContext::new();
+        let row = values_row(
+            "INSERT INTO t VALUES (CAST(replace('2024-01-02 03:04:05\\\\''', '\\\\''', '') AS \
+             TIMESTAMP))",
+        );
+        let target = DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into()));
+        refuse_value(&ctx, "`t`", "c", &target, &row[0])
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn ltz_door_names_a_backslash_quote_string_cell_as_string() {
+        let ctx = SessionContext::new();
+        let row = values_row("INSERT INTO t VALUES (replace('a\\\\''b', '\\\\''', ''))");
+        let target = DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into()));
+        let error = refuse_value(&ctx, "`t`", "c", &target, &row[0])
+            .await
+            .unwrap_err();
+        let text = error.to_string();
+        assert!(
+            text.contains("CANNOT_SAFELY_CAST")
+                && text.contains("\"STRING\"")
+                && text.contains("\"TIMESTAMP\""),
+            "{text}"
         );
     }
 }

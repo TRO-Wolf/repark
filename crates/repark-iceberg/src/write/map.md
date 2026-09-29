@@ -830,6 +830,10 @@ repark-core's error map.
   `WITH` (its text carries `WITH_SUGGESTION` and the CTE's columns; RePark names none).
   `DEFAULT` inside a CTE body or derived table is never rewritten and refuses in
   planning (`No field named default`), as Spark refuses it.
+  **LTZ-STACKED-SIGN-1 re-verify fold (2026-09-28):** `is_default_marker` is `pub` so
+  the Spark door's VALUES probes (`repark-spark/src/void_type.rs`), which run before
+  marker substitution, read a `DEFAULT` cell as its column's default instead of an
+  unresolvable identifier.
   pins: ice-v3-write-default-1/C-021
   pins: ice-v3-write-default-1/C-004, C-005, C-006, C-007
   **Round 5 (2026-09-17):** `overwrite_source_with_defaults` is the one
