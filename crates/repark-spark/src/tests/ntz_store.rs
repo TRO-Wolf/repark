@@ -320,6 +320,48 @@ async fn ntz_refusals_name_timestamp_ntz() {
 }
 
 #[tokio::test]
+async fn stacked_sign_numeric_values_into_ntz_refuse_like_single_signed() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_ntz(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.ntz (id INT, c TIMESTAMP_NTZ) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.ntz VALUES (0, TIMESTAMP_NTZ'2024-01-01 00:00:00')",
+    )
+    .await;
+    for (cell, from) in [
+        ("- -1", "INT"),
+        ("- - -1", "INT"),
+        ("- -(1)", "INT"),
+        ("- -1.5", "DECIMAL(2,1)"),
+        ("+-1", "INT"),
+        ("-+1", "INT"),
+        ("- -1BD", "DECIMAL(1,0)"),
+        ("-1.5", "DECIMAL(2,1)"),
+        ("-1BD", "DECIMAL(1,0)"),
+    ] {
+        let sql = format!("INSERT INTO ice.sales.ntz VALUES (1, {cell})");
+        let text = failure(&ctx, &catalogs, &sql).await;
+        let expected = format!(
+            "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for \
+             the table `ice`.`sales`.`ntz`: Cannot safely cast `c` \"{from}\" to \"TIMESTAMP_NTZ\". \
+             SQLSTATE: KD000"
+        );
+        assert!(text.ends_with(&expected), "{sql}: {text}");
+    }
+    assert_eq!(
+        walls(&ctx, &catalogs, "ice.sales.ntz").await,
+        vec![(0, Some("2024-01-01 00:00:00".to_string()))]
+    );
+}
+
+#[tokio::test]
 async fn values_from_utc_stores_the_session_wall() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_ntz_at(&warehouse, "America/New_York").await;

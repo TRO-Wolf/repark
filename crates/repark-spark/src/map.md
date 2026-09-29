@@ -507,6 +507,14 @@ pins: rp-4-fork-repin/C-005, C-006
   fold's scope carries `spark.sql.caseSensitive`, so a re-cased whole-struct value refuses
   `CANNOT_FIND_DATA` under `true`.
   pins: u8-write-sql/C-025, C-027, C-032, C-033
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 round 2):** the SET-value probe renders
+  through `void_type.rs`'s stacked-minus parenthesizer, and integer literals
+  are judged by Spark's type (`INT` unless `L`-suffixed or out of `INT` range)
+  because DataFusion plans every negated int literal as `BIGINT`. `UPDATE …
+  SET c = - -1` refuses `CANNOT_SAFELY_CAST` naming `"INT"`, as the
+  single-signed one now does; into an NTZ column both name `"INT"` through the
+  analyzed probe. Valid stacked-sign SET values still die in the downstream
+  re-parse (`ParserError`), unchanged.
 - `write_to_branch.rs` — Spark-door write-to-branch routing: tag/missing-branch Spark-shaped
   refuse; two-part names qualify through session defaults; the MOR valve runs on the
   Iceberg ident before the temp rewrite; fork-executed INSERT/UPDATE/DELETE via
@@ -1128,6 +1136,13 @@ pins: rp-4-fork-repin/C-005, C-006
   `Timestamp(µs, None)` for the SELECT source; `update_cast.rs` calls the gate beside
   the VOID one. Illegal sources refuse with Spark's `CANNOT_SAFELY_CAST` naming
   `"TIMESTAMP_NTZ"`. pins: ntz-1/C-007
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 round 2):** `check_ntz_row` parenthesizes
+  a leading stacked-minus chain before rendering probe SQL, so `- -1` probes as
+  `-(-1)` instead of a `--` comment; each NTZ-targeted position is then judged
+  through the shared gate with a numeric fallback that names unnamable DECIMAL
+  sources `DECIMAL(p,s)`, first refusal in row order winning as before. The
+  helper lives in `void_type.rs` and `update_cast.rs` reuses it; the LTZ child
+  module keeps its own copy under the round-1 file-scope ruling.
 - `cast_gate.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** the unit's one cast hook, a single
   call in `spark_ast.rs`'s passthrough: the `CAST(NULL AS VOID)` rewrite (`void_type.rs`)
   and the `CAST(x AS UUID)` refusal (`uuid_cast.rs`). pins: u9-types-1/C-009, C-010

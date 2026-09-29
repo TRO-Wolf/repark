@@ -2000,6 +2000,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **WO NTZ-1 verifier fold (2026-09-28):** `update_refusal_names_a_timestamp_literal_source_as_timestamp`
   pins the UPDATE-door refusal naming a `TIMESTAMP'…'` source `"TIMESTAMP"`.
   pins: ntz-1/C-007
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 round 2):** the stacked-sign pin refuses
+  `- -1`, `- - -1`, `- -(1)`, `- -1.5`, `+-1`, `-+1`, `- -1BD` and the
+  single-signed `-1.5`/`-1BD` with the exact Spark body each carries, and the
+  seeded row survives alone.
 
 - `describe_table.rs` — **SQL-DESCRIBE-1 (2026-09-09):** `DESCRIBE|DESC [TABLE]
   [EXTENDED|FORMATTED] catalog.namespace.table` against a memory-catalog table built like the
@@ -2161,6 +2165,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   statements succeed; a missing table keeps its own error and INSERT keeps the other
   cell's prose.
   pins: ipi-51/W-UPDATE-TYPE-ERR
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 round 2):** `UPDATE … SET c = - -1`
+  refuses `CANNOT_SAFELY_CAST` naming `"INT"` to `"TIMESTAMP"`, and the seeded
+  row keeps its wall.
 - [ltz_store.rs](ltz_store.rs) — **WO LTZ-STORE-INT-1 (2026-09-28):** INT into a
   `TIMESTAMP` (LTZ) column refuses on VALUES, SELECT, UPDATE and MERGE — the VALUES text
   equals Spark's recorded `ins_l_int` refusal on the test catalog, and the refused

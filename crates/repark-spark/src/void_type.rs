@@ -3,10 +3,11 @@ use std::ops::ControlFlow;
 
 use datafusion::arrow::datatypes::{DataType as ArrowType, TimeUnit};
 use datafusion::error::{DataFusionError, Result};
+use datafusion::logical_expr::LogicalPlan;
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
-    CastKind, DataType, Expr, Insert, ObjectName, SetExpr, Statement, TableObject, Value,
-    ValueWithSpan, VisitMut, VisitorMut,
+    CastKind, DataType, Expr, Insert, ObjectName, SetExpr, Statement, TableObject, UnaryOperator,
+    Value, ValueWithSpan, VisitMut, VisitorMut,
 };
 use datafusion::sql::sqlparser::tokenizer::Span;
 use iceberg::spec::{NestedField, PrimitiveType, Type};
@@ -158,6 +159,100 @@ async fn refuse_non_null_void_values(
     Ok(())
 }
 
+pub(crate) fn parenthesize_stacked_minus(value: &Expr) -> Expr {
+    let mut bottom = value;
+    let mut count = 0usize;
+    while let Expr::UnaryOp {
+        op: UnaryOperator::Minus,
+        expr,
+    } = bottom
+    {
+        count += 1;
+        bottom = expr;
+    }
+    if count < 2 {
+        return value.clone();
+    }
+    let mut rebuilt = bottom.clone();
+    for level in 0..count {
+        if level > 0 {
+            rebuilt = Expr::Nested(Box::new(rebuilt));
+        }
+        rebuilt = Expr::UnaryOp {
+            op: UnaryOperator::Minus,
+            expr: Box::new(rebuilt),
+        };
+    }
+    rebuilt
+}
+
+fn numeric_ntz_refusal(
+    display: &str,
+    column: &str,
+    source: &ArrowType,
+    target: &ArrowType,
+) -> String {
+    let from = crate::spark_type_names::spark_ddl_type_name(source).to_uppercase();
+    let to = crate::spark_type_names::spark_ddl_type_name(target).to_uppercase();
+    let column = format!("`{column}`");
+    repark_common::spark_error::message(
+        repark_common::spark_error::INCOMPATIBLE_DATA_FOR_TABLE_CANNOT_SAFELY_CAST,
+        &[
+            ("tableName", display),
+            ("columnName", column.as_str()),
+            ("fromType", from.as_str()),
+            ("toType", to.as_str()),
+        ],
+    )
+}
+
+fn refuse_unassignable_ntz_positions(
+    ctx: &SessionContext,
+    display: &str,
+    plan: &LogicalPlan,
+    positions: &[(&NestedField, &Expr)],
+    naive: &ArrowType,
+) -> Result<()> {
+    let state = ctx.state();
+    let Ok(analyzed) =
+        state
+            .analyzer()
+            .execute_and_check(plan.clone(), state.config_options(), |_, _| {})
+    else {
+        return Ok(());
+    };
+    let planned = analyzed.schema().fields();
+    if planned.len() != positions.len() {
+        return Ok(());
+    }
+    for (field, (target, _)) in planned.iter().zip(positions) {
+        if !matches!(
+            target.field_type.as_ref(),
+            Type::Primitive(PrimitiveType::Timestamp)
+        ) {
+            continue;
+        }
+        let rendered = format!("`{}`", target.name);
+        if let Some(text) = repark_iceberg::write::update_cast::incompatible_update_message(
+            display,
+            &rendered,
+            field.data_type(),
+            naive,
+        ) {
+            return Err(DataFusionError::Plan(text));
+        }
+        if field.data_type().is_numeric() {
+            return Err(DataFusionError::Plan(numeric_ntz_refusal(
+                display,
+                &target.name,
+                field.data_type(),
+                naive,
+            )));
+        }
+    }
+    Ok(())
+}
+
 async fn check_ntz_row(
     ctx: &SessionContext,
     fields: &[std::sync::Arc<NestedField>],
@@ -203,7 +298,7 @@ async fn check_ntz_row(
         "SELECT {}",
         positions
             .iter()
-            .map(|(_, value)| value.to_string())
+            .map(|(_, value)| parenthesize_stacked_minus(value).to_string())
             .collect::<Vec<_>>()
             .join(", ")
     );
@@ -211,6 +306,7 @@ async fn check_ntz_row(
         return Ok(());
     };
     let naive = ArrowType::Timestamp(TimeUnit::Microsecond, None);
+    refuse_unassignable_ntz_positions(ctx, display, frame.logical_plan(), &positions, &naive)?;
     let dummy = ArrowType::Boolean;
     let pairs = positions.iter().map(|(field, _)| {
         let target = match field.field_type.as_ref() {
