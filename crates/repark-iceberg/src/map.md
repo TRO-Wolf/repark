@@ -18,6 +18,8 @@ Source comments are condensed to API and safety contracts; executable behavior i
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** also re-exports the session-write-conf
   surface (`SessionWriteView`, `resolve_write_for_session`, the `session_write_conf_from_*`
   readers, `with_session_write_conf`).
+- `lib.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** also re-exports `StoreOverflowCast`,
+  the fractional-store-overflow `AnalyzerRule` the Spark door registers.
 - `catalog/` — Glue + S3 Tables + memory catalog builders, DataFusion `CatalogProvider`
   registration, scheme-based `FileIO` selection, the hoisted `reregister_catalog_provider`
   session-refresh adapter (`catalog_ops.rs`), and V3-4 current-snapshot

@@ -1,12 +1,10 @@
 use std::sync::Arc;
 
 use datafusion::arrow::datatypes::{DataType, Schema as ArrowSchema};
-use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
 use datafusion::common::{Column, DFSchema, TableReference};
-use datafusion::error::{DataFusionError, Result};
-use datafusion::execution::context::ExecutionProps;
+use datafusion::error::Result;
 use datafusion::logical_expr::expr::{Alias, ScalarFunction};
 use datafusion::logical_expr::{
     Expr, ExprSchemable, LogicalPlan, LogicalPlanBuilder, Projection, WriteOp,
@@ -14,16 +12,18 @@ use datafusion::logical_expr::{
 use datafusion::optimizer::AnalyzerRule;
 use datafusion::scalar::ScalarValue;
 
+use super::store_fold::{
+    check_folded_store_input, expr_references_column, store_guard_expr, wrap_store_expr,
+};
 use crate::write::store_cast::{
-    cast_store_value, is_overflow_store_pair, spark_store_type_name, store_cast_udf_for_target,
-    store_int_guard_udf, store_int_target, store_overflow_message,
+    is_overflow_store_pair, spark_store_type_name, store_cast_udf_for_target, store_int_target,
 };
 
 pub const STORE_DIVISOR_GUARD_NAME: &str = "__repark_ansi_nonzero_divisor__";
 pub const STORE_DECIMAL_DIV_NAME: &str = "__repark_spark_decimal_div__";
 const ARROW_CAST_NAME: &str = "arrow_cast";
 
-const CONVERTIBLE_EVAL_HEADS: [&str; 3] = [
+pub(crate) const CONVERTIBLE_EVAL_HEADS: [&str; 3] = [
     "[DIVIDE_BY_ZERO]",
     "[ARITHMETIC_OVERFLOW]",
     "[NUMERIC_VALUE_OUT_OF_RANGE]",
@@ -43,11 +43,22 @@ impl AnalyzerRule for StoreOverflowCast {
     }
 }
 
-struct StoreIssue {
-    column: String,
-    source_name: String,
-    target: DataType,
-    target_name: String,
+pub(crate) async fn analyzed_store_source(
+    ctx: &datafusion::prelude::SessionContext,
+    sql: &str,
+) -> Result<LogicalPlan> {
+    let state = ctx.state();
+    let raw = state.create_logical_plan(sql).await?;
+    state
+        .analyzer()
+        .execute_and_check(raw, state.config_options(), |_, _| {})
+}
+
+pub(crate) struct StoreIssue {
+    pub(crate) column: String,
+    pub(crate) source_name: String,
+    pub(crate) target: DataType,
+    pub(crate) target_name: String,
 }
 
 fn store_issue(column: &str, source: &DataType, target: &DataType) -> Option<StoreIssue> {
@@ -86,8 +97,7 @@ fn transform_store_dml(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
         let LogicalPlan::Values(values) = dml.input.as_ref() else {
             return Ok(Transformed::no(LogicalPlan::Dml(dml)));
         };
-        let Some(rewritten) =
-            conform_values_rows(values, dml.target.schema().as_ref(), fold)?
+        let Some(rewritten) = conform_values_rows(values, dml.target.schema().as_ref(), fold)?
         else {
             return Ok(Transformed::no(LogicalPlan::Dml(dml)));
         };
@@ -96,8 +106,7 @@ fn transform_store_dml(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     }
     if let LogicalPlan::Projection(projection) = dml.input.as_ref()
         && let LogicalPlan::Values(values) = projection.input.as_ref()
-        && let Some(rewritten) =
-            conform_values_rows(values, dml.target.schema().as_ref(), fold)?
+        && let Some(rewritten) = conform_values_rows(values, dml.target.schema().as_ref(), fold)?
     {
         dml.input = Arc::new(LogicalPlan::Projection(Projection::try_new(
             projection.expr.clone(),
@@ -113,7 +122,9 @@ fn transform_store_dml(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
             other
                 .schema()
                 .iter()
-                .map(|(qualifier, field)| Expr::Column(Column::new(qualifier.cloned(), field.name())))
+                .map(|(qualifier, field)| {
+                    Expr::Column(Column::new(qualifier.cloned(), field.name()))
+                })
                 .collect(),
             Arc::new(other.clone()),
         ),
@@ -129,7 +140,7 @@ fn transform_store_dml(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     Ok(Transformed::yes(LogicalPlan::Dml(dml)))
 }
 
-fn split_aliases(mut expr: &Expr) -> (&Expr, Vec<(Option<TableReference>, String)>) {
+pub(crate) fn split_aliases(mut expr: &Expr) -> (&Expr, Vec<(Option<TableReference>, String)>) {
     let mut frames = Vec::new();
     while let Expr::Alias(alias) = expr {
         frames.push((alias.relation.clone(), alias.name.clone()));
@@ -183,11 +194,8 @@ fn conform_values_rows(
                     continue;
                 }
             };
-            let Some(issue) = store_issue(
-                target_field.name(),
-                &source,
-                cast.field.data_type(),
-            ) else {
+            let Some(issue) = store_issue(target_field.name(), &source, cast.field.data_type())
+            else {
                 out.push(expr.clone());
                 continue;
             };
@@ -283,14 +291,8 @@ fn conform_one_store_expr(
     {
         return Ok(None);
     }
-    let nested = rewrite_nested_arrow_casts(
-        inner.clone(),
-        schema,
-        input,
-        column,
-        target_type,
-        fold,
-    )?;
+    let nested =
+        rewrite_nested_arrow_casts(inner.clone(), schema, input, column, target_type, fold)?;
     let nested_changed = nested != *inner;
     let inner = &nested;
     let (value, source, cast_target) = store_cast_parts(inner, schema, unwrap_cast);
@@ -317,9 +319,7 @@ fn store_cast_parts(
     schema: &DFSchema,
     unwrap_cast: bool,
 ) -> (Expr, DataType, Option<DataType>) {
-    if unwrap_cast
-        && let Expr::Cast(cast) = inner
-    {
+    if unwrap_cast && let Expr::Cast(cast) = inner {
         let Ok(source) = cast.expr.get_type(schema) else {
             return (inner.clone(), DataType::Null, None);
         };
@@ -365,9 +365,7 @@ fn rewrite_nested_arrow_casts(
     inner
         .transform_up(|node| {
             Ok(match node {
-                Expr::ScalarFunction(function)
-                    if function.func.name() == ARROW_CAST_NAME =>
-                {
+                Expr::ScalarFunction(function) if function.func.name() == ARROW_CAST_NAME => {
                     match nested_arrow_cast_rewrite(
                         &function,
                         schema,
@@ -413,209 +411,18 @@ fn nested_arrow_cast_rewrite(
         return Ok(None);
     };
     if fold {
-        check_folded_store_input(&issue, function.args[0].clone(), Some(input.as_ref()), false)?;
+        check_folded_store_input(
+            &issue,
+            function.args[0].clone(),
+            Some(input.as_ref()),
+            false,
+        )?;
     }
     swap_lineage_guards_for_expr(input, &function.args[0], &issue);
     Ok(Some(wrap_store_expr(
         &issue,
         swap_guards_in_expr(function.args[0].clone(), &issue)?,
     )))
-}
-
-fn wrap_store_expr(issue: &StoreIssue, value: Expr) -> Expr {
-    let Some(udf) = store_cast_udf_for_target(&issue.target) else {
-        return value;
-    };
-    Expr::ScalarFunction(ScalarFunction::new_udf(
-        udf,
-        vec![
-            value,
-            Expr::Literal(ScalarValue::Utf8(Some(issue.column.clone())), None),
-        ],
-    ))
-}
-
-fn store_guard_expr(divisor: Expr, issue: &StoreIssue) -> Expr {
-    Expr::ScalarFunction(ScalarFunction::new_udf(
-        store_int_guard_udf(),
-        vec![
-            divisor,
-            Expr::Literal(ScalarValue::Utf8(Some(issue.column.clone())), None),
-            Expr::Literal(ScalarValue::Utf8(Some(issue.source_name.clone())), None),
-            Expr::Literal(ScalarValue::Utf8(Some(issue.target_name.clone())), None),
-        ],
-    ))
-}
-
-fn check_folded_store_input(
-    issue: &StoreIssue,
-    value: Expr,
-    input: Option<&LogicalPlan>,
-    in_values: bool,
-) -> Result<()> {
-    let resolved = match input {
-        Some(plan) => resolve_store_input(plan, &value)?,
-        None => (!expr_has_columns(&value)?).then(|| value.clone()),
-    };
-    let Some(folded) = resolved else {
-        return Ok(());
-    };
-    let scalar = match fold_scalar(&folded)? {
-        Some(Ok(scalar)) => scalar,
-        Some(Err(error)) => return convert_fold_error(issue, error, in_values),
-        None => return Ok(()),
-    };
-    if scalar.is_null() {
-        return Ok(());
-    }
-    if !(scalar.data_type().is_floating()
-        || matches!(
-            scalar.data_type(),
-            DataType::Decimal128(..) | DataType::Decimal256(..)
-        ))
-    {
-        return Ok(());
-    }
-    match cast_store_value(
-        &issue.column,
-        &datafusion::logical_expr::ColumnarValue::Scalar(scalar),
-        &issue.target,
-    ) {
-        Ok(_) => Ok(()),
-        Err(error)
-            if error.to_string().contains("[CAST_OVERFLOW_IN_TABLE_INSERT]") =>
-        {
-            Err(DataFusionError::Plan(store_overflow_message(
-                &issue.column,
-                &issue.source_name,
-                &issue.target_name,
-            )))
-        }
-        Err(error) => Err(error),
-    }
-}
-
-fn convert_fold_error(
-    issue: &StoreIssue,
-    error: DataFusionError,
-    in_values: bool,
-) -> Result<()> {
-    if !in_values
-        && CONVERTIBLE_EVAL_HEADS
-            .iter()
-            .any(|head| error.to_string().contains(head))
-    {
-        return Err(DataFusionError::Plan(store_overflow_message(
-            &issue.column,
-            &issue.source_name,
-            &issue.target_name,
-        )));
-    }
-    Ok(())
-}
-
-fn expr_has_columns(expr: &Expr) -> Result<bool> {
-    let mut found = false;
-    expr.apply(|node| match node {
-        Expr::Column(_) | Expr::OuterReferenceColumn(..) => {
-            found = true;
-            Ok(TreeNodeRecursion::Stop)
-        }
-        _ => Ok(TreeNodeRecursion::Continue),
-    })?;
-    Ok(found)
-}
-
-fn expr_references_column(expr: &Expr, column: &str) -> bool {
-    let mut found = false;
-    let _ = expr.apply(|node| match node {
-        Expr::Column(candidate) if candidate.name == column => {
-            found = true;
-            Ok(TreeNodeRecursion::Stop)
-        }
-        _ => Ok(TreeNodeRecursion::Continue),
-    });
-    found
-}
-
-fn fold_scalar(expr: &Expr) -> Result<Option<std::result::Result<ScalarValue, DataFusionError>>> {
-    let physical = match datafusion::physical_expr::create_physical_expr(
-        expr,
-        &DFSchema::empty(),
-        &ExecutionProps::new(),
-    ) {
-        Ok(physical) => physical,
-        Err(_) => return Ok(None),
-    };
-    let batch = RecordBatch::new_empty(Arc::new(ArrowSchema::empty()));
-    let value = match physical.evaluate(&batch) {
-        Ok(value) => value,
-        Err(error) => return Ok(Some(Err(error))),
-    };
-    match value {
-        datafusion::logical_expr::ColumnarValue::Scalar(scalar) => Ok(Some(Ok(scalar))),
-        datafusion::logical_expr::ColumnarValue::Array(array) if array.len() == 1 => {
-            match ScalarValue::try_from_array(array.as_ref(), 0) {
-                Ok(scalar) => Ok(Some(Ok(scalar))),
-                Err(_) => Ok(None),
-            }
-        }
-        _ => Ok(None),
-    }
-}
-
-fn resolve_store_input(input: &LogicalPlan, expr: &Expr) -> Result<Option<Expr>> {
-    if !expr_has_columns(expr)? {
-        return Ok(Some(expr.clone()));
-    }
-    let Expr::Column(column) = expr else {
-        return Ok(None);
-    };
-    let mut column = column.clone();
-    let mut plan = input;
-    loop {
-        match plan {
-            LogicalPlan::Projection(projection) => {
-                let matches: Vec<&Expr> = projection
-                    .expr
-                    .iter()
-                    .filter(|candidate| match candidate {
-                        Expr::Alias(alias) => alias.name == column.name,
-                        other => other.schema_name().to_string() == column.name,
-                    })
-                    .collect();
-                if matches.len() != 1 {
-                    return Ok(None);
-                }
-                let (core, _) = split_aliases(matches[0]);
-                match core {
-                    Expr::Column(next) => {
-                        column = next.clone();
-                        plan = &projection.input;
-                    }
-                    defining => {
-                        if expr_has_columns(defining)? {
-                            return Ok(None);
-                        }
-                        return Ok(Some((*defining).clone()));
-                    }
-                }
-            }
-            LogicalPlan::SubqueryAlias(alias) => {
-                plan = &alias.input;
-            }
-            LogicalPlan::Filter(filter) => {
-                plan = &filter.input;
-            }
-            LogicalPlan::Sort(sort) => {
-                plan = &sort.input;
-            }
-            LogicalPlan::Limit(limit) => {
-                plan = &limit.input;
-            }
-            _ => return Ok(None),
-        }
-    }
 }
 
 fn swap_lineage_guards_for_expr(input: &mut Arc<LogicalPlan>, expr: &Expr, issue: &StoreIssue) {
@@ -642,10 +449,13 @@ fn expr_list_references_column(exprs: &[Expr], column: &str) -> bool {
 fn swap_defining_project_guards(plan: &mut LogicalPlan, column: &str, issue: &StoreIssue) -> bool {
     match plan {
         LogicalPlan::Projection(projection) => {
-            let position = projection.expr.iter().position(|candidate| match candidate {
-                Expr::Alias(alias) => alias.name == *column,
-                other => other.schema_name().to_string() == *column,
-            });
+            let position = projection
+                .expr
+                .iter()
+                .position(|candidate| match candidate {
+                    Expr::Alias(alias) => alias.name == *column,
+                    other => other.schema_name().to_string() == *column,
+                });
             let Some(index) = position else {
                 return false;
             };
@@ -741,26 +551,16 @@ fn swap_guards_in_expr_owned(expr: &mut Expr, issue: &StoreIssue) -> bool {
     changed
 }
 
-fn swap_guard_call(
-    mut function: ScalarFunction,
-    issue: &StoreIssue,
-    changed: &mut bool,
-) -> Expr {
+fn swap_guard_call(mut function: ScalarFunction, issue: &StoreIssue, changed: &mut bool) -> Expr {
     if function.func.name() == STORE_DIVISOR_GUARD_NAME && function.args.len() == 1 {
         *changed = true;
         let mut args = std::mem::take(&mut function.args);
-        let divisor = std::mem::replace(
-            &mut args[0],
-            Expr::Literal(ScalarValue::Null, None),
-        );
+        let divisor = std::mem::replace(&mut args[0], Expr::Literal(ScalarValue::Null, None));
         return store_guard_expr(divisor, issue);
     }
     if function.func.name() == STORE_DECIMAL_DIV_NAME && function.args.len() == 2 {
         let mut args = std::mem::take(&mut function.args);
-        let divisor = std::mem::replace(
-            &mut args[1],
-            Expr::Literal(ScalarValue::Null, None),
-        );
+        let divisor = std::mem::replace(&mut args[1], Expr::Literal(ScalarValue::Null, None));
         args[1] = store_guard_expr(divisor, issue);
         *changed = true;
         function.args = args;
@@ -845,9 +645,7 @@ pub fn wrap_store_outputs(
     if !changed {
         return Ok(LogicalPlan::Projection(projection));
     }
-    Ok(LogicalPlan::Projection(Projection::try_new(
-        out, input,
-    )?))
+    Ok(LogicalPlan::Projection(Projection::try_new(out, input)?))
 }
 
 #[cfg(test)]
@@ -907,10 +705,7 @@ mod tests {
             message.contains("[CAST_OVERFLOW_IN_TABLE_INSERT]"),
             "{message}"
         );
-        assert!(
-            message.contains(&format!("\"{from}\" type")),
-            "{message}"
-        );
+        assert!(message.contains(&format!("\"{from}\" type")), "{message}");
         assert!(message.contains(&format!("\"{to}\" type")), "{message}");
         assert!(message.contains(&format!("`{column}`")), "{message}");
         assert!(message.contains("SQLSTATE: 22003"), "{message}");
@@ -948,9 +743,12 @@ mod tests {
     #[tokio::test]
     async fn insert_through_a_subquery_folds_like_spark() {
         let ctx = ctx();
-        let message = run(&ctx, "INSERT INTO t SELECT id, v FROM (SELECT 1 AS id, 1e19 AS v) s")
-            .await
-            .expect_err("subquery const must refuse");
+        let message = run(
+            &ctx,
+            "INSERT INTO t SELECT id, v FROM (SELECT 1 AS id, 1e19 AS v) s",
+        )
+        .await
+        .expect_err("subquery const must refuse");
         overflow_head(&message, "DOUBLE", "BIGINT", "v");
     }
 
@@ -1013,8 +811,7 @@ mod tests {
     #[tokio::test]
     async fn int_pairs_and_strings_keep_their_old_text() {
         let ctx = ctx();
-        let narrow = run(&ctx, "INSERT INTO t SELECT 10, CAST(1 AS BIGINT)")
-            .await;
+        let narrow = run(&ctx, "INSERT INTO t SELECT 10, CAST(1 AS BIGINT)").await;
         assert!(narrow.is_ok(), "widening stores");
         let message = run(&ctx, "INSERT INTO t SELECT 'abc', 'def'")
             .await
@@ -1040,7 +837,9 @@ mod tests {
 
     #[tokio::test]
     async fn divisor_guards_swap_under_a_store() {
-        use datafusion::logical_expr::{ColumnarValue, ScalarFunctionArgs, ScalarUDFImpl, Signature};
+        use datafusion::logical_expr::{
+            ColumnarValue, ScalarFunctionArgs, ScalarUDFImpl, Signature,
+        };
         #[derive(Debug, PartialEq, Eq, Hash)]
         struct DummyGuard {
             signature: Signature,
@@ -1076,5 +875,4 @@ mod tests {
         assert!(text.contains("StoreIntGuard"), "{text}");
         assert!(!text.contains("DummyGuard"), "{text}");
     }
-
 }

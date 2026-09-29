@@ -99,7 +99,12 @@ async fn insert_select_column_and_division_refuse() {
         "INSERT INTO ice.sales.srcd VALUES (1, CAST(1e19 AS DOUBLE)), (2, 42.0)",
     )
     .await;
-    let message = refusal(&ctx, &catalogs, "INSERT INTO ice.sales.cov SELECT id, d FROM ice.sales.srcd").await;
+    let message = refusal(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.cov SELECT id, d FROM ice.sales.srcd",
+    )
+    .await;
     overflow_head(&message, "DOUBLE", "BIGINT", "v");
     for sql in [
         "INSERT INTO ice.sales.cov SELECT 10, 0/0",
@@ -132,10 +137,7 @@ async fn in_range_and_boundary_values_store() {
         "INSERT INTO ice.sales.cov SELECT 12, CAST(9.223372036854776e18 AS DOUBLE)",
     )
     .await;
-    assert_eq!(
-        values_of(&ctx, &catalogs).await,
-        vec![0, 42, 1, i64::MAX]
-    );
+    assert_eq!(values_of(&ctx, &catalogs).await, vec![0, 42, 1, i64::MAX]);
 }
 
 #[tokio::test]

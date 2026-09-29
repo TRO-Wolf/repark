@@ -952,14 +952,22 @@ mod tests {
         assert_eq!(
             message(
                 CAST_OVERFLOW_IN_TABLE_INSERT,
-                &[("fromType", "DOUBLE"), ("toType", "BIGINT"), ("columnName", "`v`")]
+                &[
+                    ("fromType", "DOUBLE"),
+                    ("toType", "BIGINT"),
+                    ("columnName", "`v`")
+                ]
             ),
             "[CAST_OVERFLOW_IN_TABLE_INSERT] Fail to assign a value of \"DOUBLE\" type to the \"BIGINT\" type column or variable `v` due to an overflow. Use `try_cast` on the input value to tolerate overflow and return NULL instead. SQLSTATE: 22003"
         );
         assert_eq!(
             message(
                 CAST_OVERFLOW_IN_TABLE_INSERT,
-                &[("fromType", "DECIMAL(38,0)"), ("toType", "INT"), ("columnName", "`v`")]
+                &[
+                    ("fromType", "DECIMAL(38,0)"),
+                    ("toType", "INT"),
+                    ("columnName", "`v`")
+                ]
             ),
             "[CAST_OVERFLOW_IN_TABLE_INSERT] Fail to assign a value of \"DECIMAL(38,0)\" type to the \"INT\" type column or variable `v` due to an overflow. Use `try_cast` on the input value to tolerate overflow and return NULL instead. SQLSTATE: 22003"
         );

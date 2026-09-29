@@ -365,6 +365,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   refusal payload when one is present, else keeps the full display. pins: fnp-math-1/C-004
   **WO-A4 (2026-09-23):** a bracketed `ParserError::ParserError` payload stays a `Parse` error
   and renders verbatim; unbracketed payloads and other parser variants keep the DataFusion display.
+  **CAST-OVERFLOW-INSERT-1 (2026-09-29):** an `Execution` message headed
+  `[CAST_OVERFLOW_IN_TABLE_INSERT]` classifies `Arithmetic` and renders verbatim, beside
+  `ARITHMETIC_OVERFLOW`.
 - [unknown_routine.rs](unknown_routine.rs) — **UNRESOLVED-ROUTINE-1 (2026-09-16):** the blanket reshape
   (see [../map.md](../map.md)).
   **Remediation round 1 (2026-09-16):** token-based call-site matching (see

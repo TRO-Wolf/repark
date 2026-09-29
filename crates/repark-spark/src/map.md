@@ -224,6 +224,14 @@ pins: rp-4-fork-repin/C-005, C-006
   first, no hit is left alone); the derived-source probe plans with
   normalization off under `true` so scope fields keep their written case.
   pins: casesens-1/C-008
+- `insert_overwrite/store.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** split from
+  `insert_overwrite.rs` (file-size gate; a child module so `lib.rs` keeps its exact
+  baseline): `conform_types` resolves the positional targets and runs
+  `wrap_store_outputs` over the analyzed source plan; the stage-then-swap source passes
+  through it. See [insert_overwrite/map.md](insert_overwrite/map.md).
+- `extension.rs`, `insert_by_name.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** the
+  extension registers `repark_iceberg::StoreOverflowCast` beside `InsertStoreAssignment`
+  plus the `store_cast` UDF family; the BY NAME projection runs `wrap_store_outputs`.
 - `insert_overwrite.rs` — **R-FILEORDER-2 (2026-09-27, HALT, no code change):**
   Spark 4.1.2 answers `L-INSERT-OVERWRITE` `[[2,b,5,3],[3,c,6,3],[4,d,4,3]]` on a same-JVM
   triple but splits 2–4 across six fresh-JVM runs — one combined task whose file order is

@@ -2,7 +2,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use datafusion::arrow::array::{
-    Array, ArrayRef, Float32Array, Float64Array, Int16Array, Int32Array, Int64Array, Int8Array,
+    Array, ArrayRef, Float32Array, Float64Array, Int8Array, Int16Array, Int32Array, Int64Array,
 };
 use datafusion::arrow::compute::{CastOptions, cast_with_options};
 use datafusion::arrow::datatypes::DataType;
@@ -50,10 +50,7 @@ pub(crate) fn is_overflow_store_pair(source: &DataType, target: &DataType) -> bo
     let source = normalize_for_assignment(source);
     let float_or_decimal = matches!(
         source,
-        DataType::Float32
-            | DataType::Float64
-            | DataType::Decimal128(..)
-            | DataType::Decimal256(..)
+        DataType::Float32 | DataType::Float64 | DataType::Decimal128(..) | DataType::Decimal256(..)
     );
     float_or_decimal && target.is_integer()
 }
@@ -413,7 +410,9 @@ impl ScalarUDFImpl for StoreIntGuard {
 
     fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
         arg_types.first().cloned().ok_or_else(|| {
-            DataFusionError::Plan(format!("'{STORE_INT_GUARD_NAME}' expects a divisor argument"))
+            DataFusionError::Plan(format!(
+                "'{STORE_INT_GUARD_NAME}' expects a divisor argument"
+            ))
         })
     }
 
@@ -513,12 +512,18 @@ mod tests {
             spark_store_type_name(&DataType::Decimal128(8, 6)).as_deref(),
             Some("DECIMAL(8,6)")
         );
-        assert_eq!(spark_store_type_name(&DataType::Int8).as_deref(), Some("TINYINT"));
+        assert_eq!(
+            spark_store_type_name(&DataType::Int8).as_deref(),
+            Some("TINYINT")
+        );
         assert_eq!(
             spark_store_type_name(&DataType::Int16).as_deref(),
             Some("SMALLINT")
         );
-        assert_eq!(spark_store_type_name(&DataType::Int32).as_deref(), Some("INT"));
+        assert_eq!(
+            spark_store_type_name(&DataType::Int32).as_deref(),
+            Some("INT")
+        );
         assert_eq!(
             spark_store_type_name(&DataType::Int64).as_deref(),
             Some("BIGINT")
@@ -547,10 +552,7 @@ mod tests {
 
     #[test]
     fn dictionary_sources_name_their_value_type() {
-        let dict = DataType::Dictionary(
-            Box::new(DataType::Int32),
-            Box::new(DataType::Float64),
-        );
+        let dict = DataType::Dictionary(Box::new(DataType::Int32), Box::new(DataType::Float64));
         assert_eq!(spark_store_type_name(&dict).as_deref(), Some("DOUBLE"));
         assert!(is_overflow_store_pair(&dict, &DataType::Int64));
     }
@@ -571,11 +573,7 @@ mod tests {
         ColumnarValue::Scalar(ScalarValue::Utf8(Some(text.to_string())))
     }
 
-    fn invoke_cast(
-        udf: &ScalarUDF,
-        value: ColumnarValue,
-        column: &str,
-    ) -> Result<ColumnarValue> {
+    fn invoke_cast(udf: &ScalarUDF, value: ColumnarValue, column: &str) -> Result<ColumnarValue> {
         let target = udf
             .return_type(&[DataType::Float64, DataType::Utf8])
             .expect("store udf types");
@@ -612,7 +610,9 @@ mod tests {
         )
         .expect_err("out of range refuses");
         assert!(
-            error.to_string().contains("[CAST_OVERFLOW_IN_TABLE_INSERT]"),
+            error
+                .to_string()
+                .contains("[CAST_OVERFLOW_IN_TABLE_INSERT]"),
             "{error}"
         );
         assert!(error.to_string().contains("SQLSTATE: 22003"), "{error}");
@@ -629,7 +629,9 @@ mod tests {
             )
             .expect_err("NaN and infinities refuse");
             assert!(
-                error.to_string().contains("[CAST_OVERFLOW_IN_TABLE_INSERT]"),
+                error
+                    .to_string()
+                    .contains("[CAST_OVERFLOW_IN_TABLE_INSERT]"),
                 "{value}: {error}"
             );
         }
@@ -638,12 +640,8 @@ mod tests {
     #[test]
     fn checked_cast_passes_null_through() {
         let udf = store_int64_udf();
-        let ok = invoke_cast(
-            &udf,
-            ColumnarValue::Scalar(ScalarValue::Float64(None)),
-            "v",
-        )
-        .expect("null passes");
+        let ok = invoke_cast(&udf, ColumnarValue::Scalar(ScalarValue::Float64(None)), "v")
+            .expect("null passes");
         assert!(matches!(
             ok,
             ColumnarValue::Scalar(ScalarValue::Int64(None))
@@ -659,10 +657,7 @@ mod tests {
             "v",
         )
         .expect_err("decimal overflow refuses");
-        assert!(
-            error.to_string().contains("\"DECIMAL(38,0)\""),
-            "{error}"
-        );
+        assert!(error.to_string().contains("\"DECIMAL(38,0)\""), "{error}");
         assert!(error.to_string().contains("\"INT\""), "{error}");
     }
 
@@ -670,10 +665,11 @@ mod tests {
     fn checked_cast_arrays_fail_on_the_first_bad_row() {
         let udf = store_int64_udf();
         let array = Arc::new(Float64Array::from(vec![Some(1.0), Some(1e19)]));
-        let error = invoke_cast(&udf, ColumnarValue::Array(array), "v")
-            .expect_err("arrays refuse");
+        let error = invoke_cast(&udf, ColumnarValue::Array(array), "v").expect_err("arrays refuse");
         assert!(
-            error.to_string().contains("[CAST_OVERFLOW_IN_TABLE_INSERT]"),
+            error
+                .to_string()
+                .contains("[CAST_OVERFLOW_IN_TABLE_INSERT]"),
             "{error}"
         );
         let clean = Arc::new(Float64Array::from(vec![Some(1.5), Some(2.0)]));
@@ -712,7 +708,9 @@ mod tests {
         )
         .expect_err("2^63 refuses into INT");
         assert!(
-            error.to_string().contains("[CAST_OVERFLOW_IN_TABLE_INSERT]"),
+            error
+                .to_string()
+                .contains("[CAST_OVERFLOW_IN_TABLE_INSERT]"),
             "{error}"
         );
     }
@@ -737,10 +735,7 @@ mod tests {
             "v",
         )
         .expect_err("f32 MAX refuses into INT");
-        assert!(
-            error.to_string().contains("\"FLOAT\""),
-            "{error}"
-        );
+        assert!(error.to_string().contains("\"FLOAT\""), "{error}");
         assert!(error.to_string().contains("\"INT\""), "{error}");
     }
 
@@ -749,17 +744,27 @@ mod tests {
         let udf = store_int64_udf();
         let error = invoke_cast(
             &udf,
-            ColumnarValue::Scalar(ScalarValue::Decimal128(Some(9_223_372_036_854_775_808), 38, 0)),
+            ColumnarValue::Scalar(ScalarValue::Decimal128(
+                Some(9_223_372_036_854_775_808),
+                38,
+                0,
+            )),
             "v",
         )
         .expect_err("decimal 2^63 refuses");
         assert!(
-            error.to_string().contains("[CAST_OVERFLOW_IN_TABLE_INSERT]"),
+            error
+                .to_string()
+                .contains("[CAST_OVERFLOW_IN_TABLE_INSERT]"),
             "{error}"
         );
         let ok = invoke_cast(
             &udf,
-            ColumnarValue::Scalar(ScalarValue::Decimal128(Some(9_223_372_036_854_775_807), 38, 0)),
+            ColumnarValue::Scalar(ScalarValue::Decimal128(
+                Some(9_223_372_036_854_775_807),
+                38,
+                0,
+            )),
             "v",
         )
         .expect("decimal MAX stores");
@@ -803,7 +808,10 @@ mod tests {
             .as_any()
             .downcast_ref::<datafusion::arrow::array::Int32Array>()
             .expect("Int32");
-        assert_eq!((ints.value(0), ints.is_null(1), ints.value(2)), (1, true, -2));
+        assert_eq!(
+            (ints.value(0), ints.is_null(1), ints.value(2)),
+            (1, true, -2)
+        );
     }
 
     fn invoke_guard(
@@ -841,13 +849,12 @@ mod tests {
         )
         .expect_err("zero refuses");
         assert!(
-            error.to_string().contains("[CAST_OVERFLOW_IN_TABLE_INSERT]"),
+            error
+                .to_string()
+                .contains("[CAST_OVERFLOW_IN_TABLE_INSERT]"),
             "{error}"
         );
-        assert!(
-            error.to_string().contains("`v`"),
-            "{error}"
-        );
+        assert!(error.to_string().contains("`v`"), "{error}");
         for divisor in [
             ScalarValue::Float64(Some(2.0)),
             ScalarValue::Float64(None),

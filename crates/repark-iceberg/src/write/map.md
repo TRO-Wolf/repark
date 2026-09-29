@@ -778,6 +778,28 @@ repark-core's error map.
   (`repark-spark/src/void_type/ltz_values_store.rs`); every other target stays residual.
   Ledger:
   [`../../../../task/wi2-g6-cast-integrity-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-16-wi2-g6-cast-integrity-ledger.md).
+- `store_overflow.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** `StoreOverflowCast`, an
+  `AnalyzerRule` over `LogicalPlan::Dml` that maps out-of-range fractional/decimal stores
+  into integer columns to Spark's `CAST_OVERFLOW_IN_TABLE_INSERT` (SQLSTATE 22003), naming
+  source type, target type and column. Constants refuse at plan through `store_fold.rs`
+  evaluation; column expressions are wrapped in the checked-cast UDF from `store_cast.rs`,
+  and zero-divisor guards are swapped for the store guard so `0/0` and `1/0.0` name the
+  division type, not `DIVIDE_BY_ZERO`. `wrap_store_outputs` is the same conformance for
+  non-Dml plans (MERGE arms, the UPDATE rewrite, OVERWRITE/BY NAME sources); callers apply
+  it between eager analysis and optimization so the optimizer folds the swapped guard.
+  `analyzed_store_source` is the shared parse-plus-analyze entry for the raw-SQL internal
+  plans. pins: cast-overflow-insert-1 (python/repark/tests/test_cast_overflow_insert_1.py).
+- `store_fold.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** split from `store_overflow.rs`
+  at the plan/expression seam (file-size gate): const-input resolution and physical
+  evaluation (`check_folded_store_input`, `fold_scalar`, `resolve_store_input`) plus the
+  refusal-expression constructors (`wrap_store_expr`, `store_guard_expr`).
+- `store_cast.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** rewritten as the Spark-boundary
+  checked-cast kernel: `__repark_store_int{8,16,32,64}__` UDFs refuse NaN, infinities and
+  out-of-range floats with the overflow message and store in-range values truncated like
+  Spark; `__repark_store_int_guard__` converts a zero divisor into the same refusal.
+- `predicate_dml.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** the UPDATE scratch rewrite
+  plans through `analyzed_store_source` and `wrap_store_outputs`, so per-row fractional
+  overflow refuses with the column named.
 - `insert_defaults.rs` — **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** the ONE home for
   filling omitted columns from `write_default` on every write path: `column_defaults`
   reads the table defaults, `fill_insert_plan` rewrites a short INSERT plan, an

@@ -136,7 +136,7 @@ pub(super) async fn insert_stream_checked(
     write_schema: &ArrowSchema,
 ) -> Result<impl Stream<Item = Result<RecordBatch>> + Unpin + use<>> {
     super::note_logical_target_sql_pass();
-    let raw = ctx.state().create_logical_plan(sql).await?;
+    let raw = crate::write::store_overflow::analyzed_store_source(ctx, sql).await?;
     let targets: Vec<(&str, &DataType)> = write_schema
         .fields()
         .iter()
@@ -154,7 +154,7 @@ pub(super) async fn insert_stream_checked(
     )?;
     let dataframe = ctx.execute_logical_plan(wrapped).await?;
     let dataframe = if let Some(stream_sql) = ntz_wrapping_stream_sql(sql, write_schema) {
-        let raw = ctx.state().create_logical_plan(&stream_sql).await?;
+        let raw = crate::write::store_overflow::analyzed_store_source(ctx, &stream_sql).await?;
         let wrapped = crate::write::store_overflow::wrap_store_outputs(
             raw,
             &write_targets(write_schema),
@@ -215,7 +215,7 @@ pub(super) async fn update_stream_checked(
 ) -> Result<impl Stream<Item = Result<RecordBatch>> + Unpin + use<>> {
     validate_update_store_assignment(ctx, sql, write_schema).await?;
     super::note_logical_target_sql_pass();
-    let raw = ctx.state().create_logical_plan(rewrite_sql).await?;
+    let raw = crate::write::store_overflow::analyzed_store_source(ctx, rewrite_sql).await?;
     let wrapped = crate::write::store_overflow::wrap_store_outputs(
         raw,
         &write_targets(write_schema),

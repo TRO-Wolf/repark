@@ -55,6 +55,7 @@ mod static_value;
 /// The ANSI store-assignment matrix — ONE home for MERGE and the non-MERGE insert/append lowerings.
 pub(crate) mod store_assign;
 pub mod store_cast;
+pub(crate) mod store_fold;
 pub mod store_overflow;
 pub mod summary_collision;
 /// Test-support-only snapshot-ref helpers (`_testing_create_ref`).
@@ -106,7 +107,6 @@ pub use concurrency::{
     concurrency_from_config_map, concurrency_from_ctx, with_write_concurrency,
 };
 pub use insert_gate::InsertStoreAssignment;
-pub use store_overflow::StoreOverflowCast;
 pub use merge::{
     write_data_files, write_data_files_from_stream, write_data_files_from_stream_with_concurrency,
     write_data_files_with_concurrency,
@@ -143,6 +143,7 @@ pub use session_write_conf::{
     session_write_conf_from_options, session_write_conf_is_set, unset_session_write_key,
     with_session_write_conf,
 };
+pub use store_overflow::StoreOverflowCast;
 pub use summary_collision::EngineSummary;
 pub use truncate::{commit_truncate, commit_truncate_to};
 pub use write_options::{

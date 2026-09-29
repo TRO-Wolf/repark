@@ -399,15 +399,18 @@ async fn collect_identity_update_rows(
         alias = quote_ident(&spec.target_alias),
         selection = spec.selection_sql,
     );
-    let raw = ctx.state().create_logical_plan(&sql).await?;
+    let raw = crate::write::store_overflow::analyzed_store_source(ctx, &sql).await?;
     let targets: Vec<(String, datafusion::arrow::datatypes::DataType)> = values_schema
         .fields()
         .iter()
         .map(|field| (field.name().clone(), field.data_type().clone()))
         .collect();
-    let plan =
-        crate::write::store_overflow::wrap_store_outputs(raw, &targets, true, false)?;
-    let mut stream = ctx.execute_logical_plan(plan).await?.execute_stream().await?;
+    let plan = crate::write::store_overflow::wrap_store_outputs(raw, &targets, true, false)?;
+    let mut stream = ctx
+        .execute_logical_plan(plan)
+        .await?
+        .execute_stream()
+        .await?;
     let mut pairs = Vec::new();
     let mut data_batches = Vec::new();
     while let Some(batch) = stream.next().await {

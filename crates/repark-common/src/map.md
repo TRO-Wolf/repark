@@ -42,6 +42,9 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   **CASESENS-1 S3 (2026-09-27):** the `UNRESOLVED_USING_COLUMN_FOR_JOIN` row
   (42703), measured on live Spark (`USING column … on the left side …`), with
   catalogue + template-param pins (43 conditions). pins: casesens-1/C-009
+  **CAST-OVERFLOW-INSERT-1 (2026-09-29):** the `CAST_OVERFLOW_IN_TABLE_INSERT` row
+  (22003), measured byte-exact on live Spark 4.1.2 for DOUBLE and DECIMAL(38,0)
+  sources, with catalogue + template pins (44 conditions).
 
 - `names.rs` — **WO CASESENS-1 slice 2 (2026-09-27):** the one
   name-matching rule every binder calls. `NameRule { Exact, IgnoreCase }`
