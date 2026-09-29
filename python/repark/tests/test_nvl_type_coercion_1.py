@@ -80,6 +80,16 @@ def ny() -> ReparkSession:
     )
 
 
+@pytest.fixture
+def kolkata() -> ReparkSession:
+    return (
+        ReparkSession.builder.appName("nvl-type-coercion-1-kolkata")
+        .config("spark.sql.session.timeZone", "Asia/Kolkata")
+        .config("spark.sql.ansi.enabled", "true")
+        .getOrCreate()
+    )
+
+
 def check_select(session: ReparkSession, cell: dict[str, Any]) -> None:
     expect = cell["expect"]
     if "error" in expect:
@@ -251,3 +261,130 @@ def test_known_divergence(utc: ReparkSession, cell: dict[str, Any]) -> None:
     assert len(rows) == 1
     row = rows[0].asDict()
     assert row[cell["col"]] == cell["repark"]
+
+
+VN2_MICROS_NY = 1704474000000000
+VN2_MICROS_KOLKATA = 1704436200000000
+
+VN2_MICROS_SQL = (
+    "SELECT unix_micros(nvl(CAST(NULL AS TIMESTAMP), '2024-01-05 12:00:00')) AS m, "
+    "unix_micros(nvl2(1, '2024-01-05 12:00:00', CAST(NULL AS TIMESTAMP))) AS n"
+)
+
+VN1_PROBE_VIEW = (
+    "CREATE OR REPLACE TEMPORARY VIEW t AS SELECT * FROM VALUES "
+    "(1, 1, 0, 'a', ' 7 ', 1.5D, CAST(1 AS BIGINT)), "
+    "(2, NULL, 2, NULL, 'abc', -0.0D, NULL), "
+    "(3, 3, 0, 'c', '1.5', CAST('NaN' AS DOUBLE), CAST(3 AS BIGINT)), "
+    "(4, NULL, 5, 'd', '2024-01-05 12:00:00', 0.0D, NULL) "
+    "AS t(id, x, y, s, txt, f, k)"
+)
+
+VN3_WIDENINGS = [
+    ("CAST(NULL AS BIGINT)", "' 7 '", "bigint", "7"),
+    ("CAST(NULL AS DOUBLE)", "' 1.5 '", "double", "1.5"),
+    ("CAST(NULL AS DOUBLE)", "'1.5d'", "double", "1.5"),
+    ("CAST(NULL AS DATE)", "' 2024-01-05 '", "date", "2024-01-05"),
+    ("CAST(NULL AS DATE)", "'2024-01-05T00:00'", "date", "2024-01-05"),
+    ("CAST(NULL AS DATE)", "'2024'", "date", "2024-01-01"),
+    ("CAST(NULL AS TIMESTAMP)", "'2024-1-5 1:2:3'", "timestamp", "2024-01-05 01:02:03"),
+]
+
+VN3_IDS = ["bigint_ws", "dbl_ws", "dbl_dsuffix", "date_ws", "date_T", "date_year", "ts_short"]
+
+
+def test_vn1_nvl_skips_divide_by_zero(utc: ReparkSession) -> None:
+    rows = utc.sql("SELECT CAST(nvl(1, 1/0) AS STRING) AS v").collect()
+    assert [row.asDict() for row in rows] == [{"v": "1.0"}]
+
+
+def test_vn1_nvl2_skips_divide_by_zero(utc: ReparkSession) -> None:
+    rows = utc.sql("SELECT CAST(nvl2(1, 2, 1/0) AS STRING) AS v").collect()
+    assert [row.asDict() for row in rows] == [{"v": "2.0"}]
+
+
+def test_vn1_nvl_skips_overflow_under_ansi(utc: ReparkSession) -> None:
+    rows = utc.sql("SELECT CAST(nvl(1, 2147483647 + 1) AS STRING) AS v").collect()
+    assert [row.asDict() for row in rows] == [{"v": "1"}]
+
+
+def test_vn1_nvl_skips_failed_assert(utc: ReparkSession) -> None:
+    rows = utc.sql("SELECT CAST(nvl(1, assert_true(false)) AS STRING) AS v").collect()
+    assert [row.asDict() for row in rows] == [{"v": "1"}]
+
+
+def test_vn1_nvl_column_form_skips_divide_by_zero(utc: ReparkSession) -> None:
+    utc.sql(VN1_PROBE_VIEW).collect()
+    rows = utc.sql(
+        "SELECT id, CAST(nvl(x, 10 / y) AS STRING) AS v FROM t WHERE id IN (1,3) ORDER BY id"
+    ).collect()
+    assert [row.asDict() for row in rows] == [{"id": 1, "v": "1.0"}, {"id": 3, "v": "3.0"}]
+
+
+def test_vn1_nvl_dataframe_form_skips_divide_by_zero(utc: ReparkSession) -> None:
+    utc.sql(VN1_PROBE_VIEW).collect()
+    fallback = functions.lit(10) / functions.col("y")
+    rows = (
+        utc.table("t")
+        .where("id in (1,3)")
+        .select("id", functions.nvl("x", fallback).cast("string").alias("v"))
+        .orderBy("id")
+        .collect()
+    )
+    assert [row.asDict() for row in rows] == [{"id": 1, "v": "1.0"}, {"id": 3, "v": "3.0"}]
+
+
+def test_vn2_new_york_reads_session_zone(ny: ReparkSession) -> None:
+    rows = ny.sql(VN2_MICROS_SQL).collect()
+    assert [row.asDict() for row in rows] == [{"m": VN2_MICROS_NY, "n": VN2_MICROS_NY}]
+
+
+def test_vn2_kolkata_reads_session_zone(kolkata: ReparkSession) -> None:
+    rows = kolkata.sql(VN2_MICROS_SQL).collect()
+    assert [row.asDict() for row in rows] == [{"m": VN2_MICROS_KOLKATA, "n": VN2_MICROS_KOLKATA}]
+
+
+def test_vn2_iceberg_store_reads_session_zone(tmp_path: Path) -> None:
+    session = (
+        ReparkSession.builder.appName("nvl-type-coercion-1-vn2-ice")
+        .config("spark.sql.session.timeZone", "America/New_York")
+        .config("spark.sql.ansi.enabled", "true")
+        .getOrCreate()
+    )
+    try:
+        session.register_memory_catalog("sc", tmp_path)
+        session.sql("CREATE NAMESPACE sc.ns")
+        session.sql("CREATE TABLE sc.ns.vn2 (id INT, ts TIMESTAMP) USING iceberg")
+        session.sql(
+            "INSERT INTO sc.ns.vn2 SELECT 1, nvl(CAST(NULL AS TIMESTAMP), '2024-01-05 12:00:00')"
+        )
+        rows = session.sql("SELECT unix_micros(ts) AS m, CAST(ts AS STRING) AS s FROM sc.ns.vn2")
+        assert [row.asDict() for row in rows.collect()] == [
+            {"m": VN2_MICROS_NY, "s": "2024-01-05 12:00:00"}
+        ]
+    finally:
+        session.stop()
+
+
+@pytest.mark.parametrize(("typed_null", "text", "want_t", "want_v"), VN3_WIDENINGS, ids=VN3_IDS)
+def test_vn3_string_widens_like_spark(
+    utc: ReparkSession, typed_null: str, text: str, want_t: str, want_v: str
+) -> None:
+    rows = utc.sql(
+        f"SELECT typeof(nvl({typed_null}, {text})) AS t, "
+        f"CAST(nvl({typed_null}, {text}) AS STRING) AS v"
+    ).collect()
+    assert [row.asDict() for row in rows] == [{"t": want_t, "v": want_v}]
+
+
+def test_vn3_on_refuses_cast_invalid_input(utc: ReparkSession) -> None:
+    with pytest.raises(RAISES, match="CAST_INVALID_INPUT"):
+        utc.sql(
+            "SELECT typeof(nvl(CAST(NULL AS BOOLEAN), 'on')) AS t, "
+            "CAST(nvl(CAST(NULL AS BOOLEAN), 'on') AS STRING) AS v"
+        ).collect()
+
+
+def test_vn3_typeof_nvl_abc_int_is_bigint(utc: ReparkSession) -> None:
+    rows = utc.sql("SELECT typeof(nvl('abc', 2)) AS t").collect()
+    assert [row.asDict() for row in rows] == [{"t": "bigint"}]

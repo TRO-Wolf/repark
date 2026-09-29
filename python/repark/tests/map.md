@@ -4945,6 +4945,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   with both table reads, five known-divergence pins, and the `coalesce` guards.
   The same file is the mutation instrument (red on base) and the gate's pytest leg.
   pins: nvl-type-coercion-1/C-003, C-004, C-005, C-006, C-007
+  Verifier-fold pins (2026-09-29, VN-1..VN-3, same file — 390 lines, under the
+  1000-line ceiling): VN-1 pins the six lazy shapes (`nvl(1, 1/0)`, `nvl2(1, 2,
+  1/0)`, the ANSI overflow, the failed `assert_true`, the `nvl(x, 10/y)` column
+  form and its `F.nvl` twin) answering the first argument; VN-2 pins the
+  session-zone micros in New York (`1704474000000000`) and Kolkata
+  (`1704436200000000`, measured on live Spark 4.1.2) plus an Iceberg store and
+  micros/string read-back in New York; VN-3 pins the seven Spark string
+  widenings, the `'on'` refusal with `CAST_INVALID_INPUT`, and
+  `typeof(nvl('abc', 2))` as `bigint`. Every other expected value is the
+  recorded Spark answer from the verify-nvl `hbs.txt` battery.
 - `test_select_naming.py` — **Group H** select/projection display naming vs live PySpark 4.1.2:
   mutation leak accepts `Int32(1)` as well as `Int64(1)` (F-Y10-1 Python lit width);
   full matrix (`(x + 1)`, cast-of-attr → child name, cast-of-compound → `CAST(...)`,
