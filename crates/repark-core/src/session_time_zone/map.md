@@ -41,6 +41,9 @@ authoritative key spelling, and the resolved value reaching engine session state
     tests; the same mapping is duplicated in the functions-carrier fill
     (`repark-functions` cannot depend on this crate and the builder fill site is out of
     fence). pins: set-ansi-runtime-1/C-002
+  - **TEXT-WRITE-TIMESTAMP-ZONE-1 verifier fold (2026-09-29):** `java_display_zone_id`
+    pins (`ZoneId.of(raw, SHORT_IDS).getId()` per harness zone), time-parser-policy
+    parse pins, the carrier lazy-install pin, and the conf-dump LEGACY-detection pin.
 
 Deliberately NOT here: extraction implementation. H-1a split B owns extractor pins; this map covers
 parsing, one spelling, and resolved session state.
