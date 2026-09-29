@@ -229,3 +229,9 @@ records "empty strings stay unquoted in CSV") — or card a sink-level fix (a
 CSV writer that quotes empty-but-not-null). The fold lane committed no
 product change; the W180 pin and the full DIFF-PROBE replay ride with the
 ruling lane.
+
+**W180 ruling (orchestrator, 2026-09-29):** W180 is disposed as part of the
+pre-existing residue R-3 (the CSV sink leaves empty strings unquoted). No pin
+asserts the wrong bytes. The sink-level fix, a CSV writer that quotes empty
+but non-null fields on the local and s3a routes, is carded as
+CSV-EMPTY-QUOTE-1 for v1.5.2. It covers NQ02 and NP07 together.
