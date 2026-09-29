@@ -98,9 +98,7 @@ def test_values_stacked_sign_int_into_timestamp_refuses(
         "CAST(- -1 AS INT)",
     ],
 )
-def test_values_stacked_sign_shapes_into_timestamp_refuse(
-    spark: ReparkSession, cell: str
-) -> None:
+def test_values_stacked_sign_shapes_into_timestamp_refuse(spark: ReparkSession, cell: str) -> None:
     """Every VG-1/VG-2 stacked-sign shape into TIMESTAMP refuses like Spark."""
     with pytest.raises(AnalysisException) as caught:
         spark.sql(f"INSERT INTO {FQ} VALUES (0, {cell})")
