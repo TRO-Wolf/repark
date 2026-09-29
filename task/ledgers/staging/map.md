@@ -1911,3 +1911,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   awaits the owner run on real AWS).
   `risk_tier: standard`. Branch `feat/s3-path-write-1`.
   pins: s3-path-write-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
+- [deep-filter-chain-crash-1-ledger.md](deep-filter-chain-crash-1-ledger.md) —
+  **DEEP-FILTER-CHAIN-CRASH-1 (2026-09-29), in flight:** deep operator chains
+  answer instead of killing the interpreter — every native entry point polls on
+  a 256 MiB stacker segment and the shared runtime builds 256 MiB pool threads
+  (C-001: 1,000 filters count 50, base SIGSEGV at 610; C-002: 200 joins count 1
+  and 300 unions count 15050, base SIGSEGV at 110 joins; C-003: 120 withColumn
+  count 50 at the build-time ceiling; C-004: 1,000-deep nested SQL raises
+  `RecursionError`, flat 600-union SQL counts 601). Step 0 backtraces, mutation
+  record (both pins SIGSEGV under restored old stacks), perf (+1.4%) and the
+  VmSize/VmRSS base-vs-head record live in the ledger; residues R-1..R-4.
+  `risk_tier: standard`. Branch `fix/deep-filter-chain-crash-1`.
+  pins: deep-filter-chain-crash-1/C-001, C-002, C-003, C-004
