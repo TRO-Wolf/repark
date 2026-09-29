@@ -280,6 +280,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   sequence replays (writes run, 11 reads assert rows and dtypes); 3 divergence
   steps pin the widening row and both refusal texts beside Spark's.
   pins: ntz-1/C-006
+  **WO NTZ-STORE-DOORS-1 verifier fold (2026-09-29):** the `r_wide` step (R-NTZ-S2-11)
+  now asserts Spark's recorded rows. The mixed `VALUES` column is typed `TIMESTAMP`, so
+  the New York gap wall stores `2024-03-10 03:30:00`. Its `divergence` and `spark_rows`
+  keys are gone, and two divergence steps remain: the UPDATE refusal texts.
+  pins: ntz-store-doors-1/C-006
 - [test_ntz_store_doors_1.py](test_ntz_store_doors_1.py) +
   [ntz_store_doors_1_spark_oracle.json](ntz_store_doors_1_spark_oracle.json) —
   **WO NTZ-STORE-DOORS-1 (2026-09-28):** 66 door cells (UTC, New York, Kolkata ×

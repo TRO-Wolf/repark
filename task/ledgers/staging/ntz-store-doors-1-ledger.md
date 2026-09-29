@@ -106,6 +106,14 @@ None. No existing pin changed answer: `repark-spark` lib 2487 passed,
 fold, the facade file's partition test and the new mixed tests share one replay
 helper (`_replay_rows`). The partition test's steps and assertions are unchanged.
 
+One existing pin changed answer in the fold: NTZ-1's `test_ntz_9_verify.py` step
+`r_wide` (residue R-NTZ-S2-11). It pinned RePark's divergent `2024-03-10 02:30:00`
+beside Spark's `03:30:00` for `INSERT … VALUES (1, TIMESTAMP '2024-01-01 12:00:00'),
+(5, TIMESTAMP_NTZ '2024-03-10 02:30:00')` into an NTZ column in New York. C-006 is
+exactly that widening, so the step now asserts Spark's rows. The NTZ-1 ledger marks
+R-NTZ-S2-11 closed, and the stale divergence sentence in the test's docstring was
+deleted.
+
 ## Coverage
 
 ```yaml
