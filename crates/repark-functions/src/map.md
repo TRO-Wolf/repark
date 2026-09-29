@@ -496,6 +496,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   reaches a registered UDF, so the mode cannot be fixed at registration. Colliding keys
   after a key cast are kept, as Spark stores them.
   pins: cast-map-spell-1/C-011, C-012, C-013
+  **NVL-TYPE-COERCION-1 re-verify 3 (2026-09-29, VN4-1):** `spark_cast_legacy_zoned`
+  joins `spark_cast_ansi_zoned` as the second `Mode`-fixed entry point over the same
+  `spark_cast`, so the `nullif` kernel can cast string sources under the live ANSI mode
+  without a new parser. pins: nvl-type-coercion-1/C-019
 - `iceberg_system.rs` — **ICE-SYSTEM-FUNCTIONS-1 (2026-09-20), round 1 of 3:**
   the Iceberg `bucket(n, col)` / `truncate(w, col)` system functions as scalar
   UDFs under reserved internal names (`__iceberg_system_bucket`,
@@ -584,6 +588,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **Re-verify 2 (2026-09-29, VN3-2):** the folder also matches
   `__repark_nullif_compare(first, second)` like `nullif`, so widened const
   `nullif` still folds. pins: nvl-type-coercion-1/C-017.
+  **Re-verify 3 (2026-09-29, VN4-6):** that match is removed again — the arm is
+  plain `nullif` as on main — because the kernel compares in its compare type,
+  not as `i128`. The lossy `sequence(0L, nullif(9007199254740993L,
+  9007199254740992D))` still refuses: the ceiling folds the pre-rewrite
+  `nullif` (this rule seats before the `nvl`-family rewrite), carried from
+  main. pins: nvl-type-coercion-1/C-021.
 
 
 - **R-FN-BATCH4** aggregate expansion.
@@ -731,6 +741,13 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `first` array or NULL (widened `nullif` and every `nullifzero`; struct,
   multi-leaf and list compares stay on the pick form). pins:
   nvl-type-coercion-1/C-016, C-017
+  **Re-verify 3 (2026-09-29, VN4-1..VN4-4):** string sources cast through the
+  session-zoned Spark cast under the live ANSI mode (ANSI failures raise
+  `CAST_INVALID_INPUT`; legacy failures cast to NULL), the pick declares
+  nullable from its fallback (the engine misreports some volatile `CASE`
+  branches as non-nullable), and `Float32`/`Float64` compares normalize
+  `-0.0` before `eq` (`NaN` already equals `NaN`). pins:
+  nvl-type-coercion-1/C-019, C-020
 - `spark_nvl_rule.rs` — **NVL-TYPE-COERCION-1 (2026-09-29):** the
   `SparkNvlFamilyRewrite` analyzer rule, appended last on the Spark door and
   the `F.expr` context. NULL-literal and non-null-literal sides fold without

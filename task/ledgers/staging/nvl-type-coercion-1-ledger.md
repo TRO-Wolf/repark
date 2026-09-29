@@ -42,6 +42,9 @@ interval-literal parsing; plain `if`/`CASE`/`=`/CAST methodology probes;
 | C-016 | VN3-1: a volatile first in `nvl`/`ifnull`/`zeroifnull` evaluates once via `__repark_nvl_pick` over the widened branches; the six vacuous `IS NULL` pins are replaced by distribution pins (no NULLs, share of 1s 0.45-0.55) in SELECT, WHERE, GROUP BY and `lag()` plus `F.nvl`/`F.ifnull` twins and literal-fallback collects; non-volatile keeps `coalesce` laziness (`nvl(1, 1/0)` answers). Known gap: the volatile-first path evaluates the fallback on every row. | The 16 VN3-1 pin cases green; the R2 mutant (`coalesce` for volatile) reds them. | PROVEN | 16/16 green; R2 mutant reds 5/5 probed (2 SELECT + 1 zero SELECT + 2 literal); `nvl(1, 1/0)` answers `1.0`. |
 | C-017 | VN3-2 + VN3-3: widened scalar `nullif` and every `nullifzero` lower to `__repark_nullif_compare` (casts both sides inside, compares once, returns the original `first` array; each nesting level references its input once); same-type `nullif` keeps DataFusion's form with the cast-back branch removed. The seven volatile-first cast-back cells match Spark's values and types; depth-12 widened `nullif` (bigint, double, string) and `nullifzero` plan and run under 2 s. Struct, multi-leaf and list compares stay on the pick form (carried). | The seven cast-back pins and the depth pin green; the R1 mutant (cast-back) reds the seven. | PROVEN | 7/7 Spark-equal; depth-12 plans 0.05-0.20 s, runs under 0.1 s; R1 mutant reds 7/7; carried: struct, multi-leaf, list. |
 | C-018 | VN3-4: a no-op `nvl_cast` (argument type already the widen) is skipped; `EXPLAIN` of `nvl(nvl(nvl(id, 1), 2), 3)` shows no `__repark_nvl_cast`; the 1M-row 5-deep `nvl` chain (median of 15) runs within 1.2x the base build. | The EXPLAIN pin green; the R3 mutant (always cast) reds it; the perf ratio measured against the stated base commit. | PROVEN | EXPLAIN 0 casts; R3 mutant reds 1/1; perf 1.03x vs `adc26586` (`/tmp/xrel` DEBUG `.so`); base commit stated. |
+| C-019 | VN4-1: every string source (`Utf8`, `LargeUtf8`, `Utf8View`) in `__repark_nullif_compare` casts through the session-zoned Spark cast — `spark_cast_ansi_zoned` under ANSI on (invalid strings raise `CAST_INVALID_INPUT`), `spark_cast_legacy_zoned` under ANSI off (invalid strings cast to NULL, so `nullif` returns `first`). Whitespace-padded numerics, `d`/`f`/`D` suffixes, single-digit date/time parts, whitespace-padded timestamps, and the NY/Kolkata zones match Spark in SELECT and WHERE. | The 12-cell zone matrix (UTC/NY/Kolkata) + 8 ANSI-off cells + 4 ANSI-on refusal cells + 5 WHERE cells + 2 column cells green; each expectation measured on live Spark 4.1.2. | PROVEN | 55/55 R1 pins green; oracle table under Evidence; `' 1 '` vs INT and `'on'` vs BOOLEAN flip from Arrow errors to Spark's answers as a consequence of the same ruling. |
+| C-020 | VN4-2 + VN4-4: `__repark_nvl_pick` declares nullable from its fallback (`second.is_nullable()`), so a volatile first over a nullable column collects instead of raising the Arrow non-nullable error; `__repark_nullif_compare` normalizes `-0.0` to `+0.0` on `Float32`/`Float64` compares (`NaN` already equals `NaN`), so `nullifzero(-0.0)` answers NULL like Spark. Same-type float `nullif` keeps DataFusion's form (carried, wrong on base too). | The SQL `nvl`/`ifnull` + parquet-backed `F.nvl` fallback pins green (20000 rows, null share distinguishes single from double evaluation); the five `-0.0`/`NaN` pins green with Spark-measured types. | PROVEN | 3/3 fallback pins green (nulls ~3300, single evaluation); 5/5 float pins green; `nullif(-0.0D, 0)` still answers `-0.0` (single-`nullif` path, PRE on base). |
+| C-021 | VN4-6 + carried: `const_i128` no longer folds `__repark_nullif_compare` (the arm is plain `nullif` as on main); `sequence(0L, nullif(9007199254740993L, 9007199254740992D))` still refuses at the ceiling because the ceiling folds the pre-rewrite `nullif` (analyzer order predates this unit) — carried from main, Spark answers NULL. VN4-3 (volatile-first fallback evaluated per row), VN4-5 (struct/widened-list nests exponential) and VN4-7 (widened `nvl` chains plan 1.6-1.9x base) are carried, unchanged. | The fold line reverted; the sequence cell measured on Spark (NULL) and head (ceiling refusal, identical to pre-fold head). | PROVEN | Line reverted; sequence refusal byte-identical before/after; VN4-3/VN4-5/VN4-7 untouched (no code on those paths). |
 
 ## Evidence
 
@@ -190,6 +193,43 @@ null/non-null bigints, median of 15): head 0.179 s vs base 0.173 s =
 1.03x, inside the 1.2x bar; base build `adc26586` (`/tmp/xrel` DEBUG
 `.so`, 2026-09-29 09:46), stated because the prior fold's `0.29x base`
 could not be reproduced.
+
+### Re-verify 3 VN4-1..VN4-6 (2026-09-29)
+
+Step 0 on the lane head (`37497867`) reproduces every finding, and live
+Spark 4.1.2 (banner `4.1.2`, session zone `UTC`, ANSI on,
+`JAVA_HOME` `zulu-17-amd64` via `jvm-lock.sh`) supplies the oracle
+column: NY/Kolkata `nullif('2024-01-01 00:00:00', TIMESTAMP ...)`
+answers the string on head, NULL on Spark; `' 1 '`, `' 1.5 '`,
+`'1.5d'` vs `DOUBLE`, `'2024-1-1 0:0:0'` and whitespace-padded
+timestamps vs `TIMESTAMP` raise Arrow cast errors on head and answer
+`' 1 '` / NULL on Spark; ANSI-off `'abc'` raises on head, answers
+`'abc'` on Spark; the volatile-first `nvl` over a nullable 20000-row
+column raises the Arrow non-nullable error on head (Spark: 16693
+non-null of 20000); `nullifzero(-0.0D)` answers `-0.0` on head, NULL on
+Spark; the lossy `sequence` cell refuses at the ceiling on head, NULL
+on Spark.
+
+R1 routes every string source in `cast_to_common` through the
+session-zoned Spark cast, honoring live `spark.sql.ansi.enabled`
+(`spark_cast_ansi_zoned`, else the new one-line
+`spark_cast_legacy_zoned` over the same `spark_cast` — no new parser).
+R2 declares the pick nullable from its fallback. R3 normalizes `-0.0`
+before `eq` on `Float32`/`Float64` compares; every other type keeps
+Arrow `eq`. R4 reverts the `const_i128` arm to plain `nullif`: the
+sequence cell still refuses (the ceiling folds the pre-rewrite
+`nullif`; `ArrayCardinalityCeiling` is seated before
+`SparkNvlFamilyRewrite`, an order that predates this unit), recorded
+as carried from main. Same-type float `nullif` (`nullif(-0.0D, 0)`)
+keeps DataFusion's form and its `-0.0` answer — PRE on base, out of
+the ruled scope. VN4-3, VN4-5, VN4-7 carried untouched.
+
+All 893 pins pass (830 + 63 new VN4: 55 R1 zone/off/refusal/WHERE/
+column, 3 R2 SQL/DataFrame fallback, 5 R3 `-0.0`/`NaN`). Every
+expectation was measured on the live oracle above; the full
+cell-by-cell table is in the lane hand-back. Gate, replay, perf and
+mutation outcomes are recorded in the lane hand-back alongside this
+commit.
 
 ## Coverage attestation
 

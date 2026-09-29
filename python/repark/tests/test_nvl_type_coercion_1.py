@@ -91,6 +91,36 @@ def kolkata() -> ReparkSession:
     )
 
 
+@pytest.fixture
+def utc_off() -> ReparkSession:
+    return (
+        ReparkSession.builder.appName("nvl-type-coercion-1-off")
+        .config("spark.sql.session.timeZone", "UTC")
+        .config("spark.sql.ansi.enabled", "false")
+        .getOrCreate()
+    )
+
+
+@pytest.fixture
+def ny_off() -> ReparkSession:
+    return (
+        ReparkSession.builder.appName("nvl-type-coercion-1-ny-off")
+        .config("spark.sql.session.timeZone", "America/New_York")
+        .config("spark.sql.ansi.enabled", "false")
+        .getOrCreate()
+    )
+
+
+@pytest.fixture
+def kolkata_off() -> ReparkSession:
+    return (
+        ReparkSession.builder.appName("nvl-type-coercion-1-kolkata-off")
+        .config("spark.sql.session.timeZone", "Asia/Kolkata")
+        .config("spark.sql.ansi.enabled", "false")
+        .getOrCreate()
+    )
+
+
 def check_select(session: ReparkSession, cell: dict[str, Any]) -> None:
     expect = cell["expect"]
     if "error" in expect:
@@ -648,3 +678,283 @@ def test_vn2_rollup_over_nullif(utc: ReparkSession) -> None:
         (None, 3),
         (None, 5),
     }
+
+
+VN4_R1_SELECT: list[tuple[str, str, str, str | None]] = [
+    ("ts_lit", "nullif('2024-01-01 00:00:00', TIMESTAMP '2024-01-01 00:00:00')", "string", None),
+    ("ts_short", "nullif('2024-1-1 0:0:0', TIMESTAMP '2024-01-01 00:00:00')", "string", None),
+    ("ts_ws", "nullif(' 2024-01-01 00:00:00 ', TIMESTAMP '2024-01-01 00:00:00')", "string", None),
+    ("ws_dbl_unequal", "nullif(' 1 ', 2.5D)", "string", " 1 "),
+    ("ws_dbl_equal", "nullif(' 1.5 ', 1.5D)", "string", None),
+    ("suffix_d", "nullif('1.5d', 1.5D)", "string", None),
+    ("suffix_f", "nullif('1.5f', CAST(1.5 AS FLOAT))", "string", None),
+    ("ws_int", "nullif(' 1 ', 1)", "string", None),
+    ("ws_dec", "nullif(' 1 ', CAST(2.5 AS DECIMAL(10,2)))", "string", " 1 "),
+    ("ws_flt", "nullif(' 1 ', CAST(2.5 AS FLOAT))", "string", " 1 "),
+    ("str_dec", "nullif('1.50', CAST(1.5 AS DECIMAL(10,2)))", "string", None),
+    ("date_short", "nullif('2024-1-1', DATE '2024-01-01')", "string", None),
+]
+
+VN4_R1_SELECT_IDS = [cell[0] for cell in VN4_R1_SELECT]
+
+
+def check_vn4_select(session: ReparkSession, cell: tuple[str, str, str, str | None]) -> None:
+    rows = session.sql(f"SELECT typeof({cell[1]}) AS t, CAST({cell[1]} AS STRING) AS v").collect()
+    assert [row.asDict() for row in rows] == [{"t": cell[2], "v": cell[3]}]
+
+
+@pytest.mark.parametrize("cell", VN4_R1_SELECT, ids=VN4_R1_SELECT_IDS)
+def test_vn4_r1_select_utc(utc: ReparkSession, cell: tuple[str, str, str, str | None]) -> None:
+    check_vn4_select(utc, cell)
+
+
+@pytest.mark.parametrize("cell", VN4_R1_SELECT, ids=VN4_R1_SELECT_IDS)
+def test_vn4_r1_select_ny(ny: ReparkSession, cell: tuple[str, str, str, str | None]) -> None:
+    check_vn4_select(ny, cell)
+
+
+@pytest.mark.parametrize("cell", VN4_R1_SELECT, ids=VN4_R1_SELECT_IDS)
+def test_vn4_r1_select_kolkata(
+    kolkata: ReparkSession, cell: tuple[str, str, str, str | None]
+) -> None:
+    check_vn4_select(kolkata, cell)
+
+
+VN4_R1_OFF: list[tuple[str, str, str, str, str | None]] = [
+    (
+        "utc_off",
+        "abc_ts",
+        "SELECT typeof(nullif(a, b)) AS t, CAST(nullif(a, b) AS STRING) AS v "
+        "FROM VALUES ('abc', TIMESTAMP '2024-01-01 00:00:00') AS v(a, b)",
+        "string",
+        "abc",
+    ),
+    (
+        "utc_off",
+        "abc_dbl",
+        "SELECT typeof(nullif(a, b)) AS t, CAST(nullif(a, b) AS STRING) AS v "
+        "FROM VALUES ('abc', 1.5D) AS v(a, b)",
+        "string",
+        "abc",
+    ),
+    (
+        "utc_off",
+        "on_bool",
+        "SELECT typeof(nullif('on', true)) AS t, CAST(nullif('on', true) AS STRING) AS v",
+        "string",
+        "on",
+    ),
+    (
+        "utc_off",
+        "ws_dbl",
+        "SELECT typeof(nullif(' 1.5 ', 1.5D)) AS t, CAST(nullif(' 1.5 ', 1.5D) AS STRING) AS v",
+        "string",
+        None,
+    ),
+    (
+        "ny_off",
+        "ts_lit",
+        "SELECT typeof(nullif('2024-01-01 00:00:00', TIMESTAMP '2024-01-01 00:00:00')) AS t, "
+        "CAST(nullif('2024-01-01 00:00:00', TIMESTAMP '2024-01-01 00:00:00') AS STRING) AS v",
+        "string",
+        None,
+    ),
+    (
+        "ny_off",
+        "ts_ws",
+        "SELECT typeof(nullif(' 2024-01-01 00:00:00 ', TIMESTAMP '2024-01-01 00:00:00')) AS t, "
+        "CAST(nullif(' 2024-01-01 00:00:00 ', TIMESTAMP '2024-01-01 00:00:00') AS STRING) AS v",
+        "string",
+        None,
+    ),
+    (
+        "ny_off",
+        "abc_ts",
+        "SELECT typeof(nullif(a, b)) AS t, CAST(nullif(a, b) AS STRING) AS v "
+        "FROM VALUES ('abc', TIMESTAMP '2024-01-01 00:00:00') AS v(a, b)",
+        "string",
+        "abc",
+    ),
+    (
+        "kolkata_off",
+        "on_bool",
+        "SELECT typeof(nullif('on', true)) AS t, CAST(nullif('on', true) AS STRING) AS v",
+        "string",
+        "on",
+    ),
+]
+
+VN4_R1_OFF_IDS = [f"{cell[0]}/{cell[1]}" for cell in VN4_R1_OFF]
+
+
+@pytest.mark.parametrize("cell", VN4_R1_OFF, ids=VN4_R1_OFF_IDS)
+def test_vn4_r1_select_ansi_off(
+    request: pytest.FixtureRequest, cell: tuple[str, str, str, str, str | None]
+) -> None:
+    session = request.getfixturevalue(cell[0])
+    rows = session.sql(cell[2]).collect()
+    assert [row.asDict() for row in rows] == [{"t": cell[3], "v": cell[4]}]
+
+
+VN4_R1_ON_ERRORS: list[tuple[str, str]] = [
+    (
+        "abc_ts",
+        "SELECT CAST(nullif(a, b) AS STRING) AS v "
+        "FROM VALUES ('abc', TIMESTAMP '2024-01-01 00:00:00') AS v(a, b)",
+    ),
+    (
+        "abc_dbl",
+        "SELECT CAST(nullif(a, b) AS STRING) AS v FROM VALUES ('abc', 1.5D) AS v(a, b)",
+    ),
+    ("on_bool", "SELECT CAST(nullif('on', true) AS STRING) AS v"),
+    ("suffix_int", "SELECT CAST(nullif('1D', 1) AS STRING) AS v"),
+]
+
+VN4_R1_ON_ERROR_IDS = [cell[0] for cell in VN4_R1_ON_ERRORS]
+
+
+@pytest.mark.parametrize("cell", VN4_R1_ON_ERRORS, ids=VN4_R1_ON_ERROR_IDS)
+def test_vn4_r1_ansi_on_invalid_raises(utc: ReparkSession, cell: tuple[str, str]) -> None:
+    with pytest.raises(RAISES, match="CAST_INVALID_INPUT"):
+        utc.sql(cell[1]).collect()
+
+
+def test_vn4_r1_where_ts_utc(utc: ReparkSession) -> None:
+    rows = utc.sql(
+        "SELECT COUNT(*) AS c FROM VALUES ('2024-01-01 00:00:00'), ('2025-06-01 12:00:00') AS v(a) "
+        "WHERE nullif(a, TIMESTAMP '2024-01-01 00:00:00') IS NULL"
+    ).collect()
+    assert [row.asDict() for row in rows] == [{"c": 1}]
+
+
+def test_vn4_r1_where_ts_ny(ny: ReparkSession) -> None:
+    rows = ny.sql(
+        "SELECT COUNT(*) AS c FROM VALUES ('2024-01-01 00:00:00'), ('2025-06-01 12:00:00') AS v(a) "
+        "WHERE nullif(a, TIMESTAMP '2024-01-01 00:00:00') IS NULL"
+    ).collect()
+    assert [row.asDict() for row in rows] == [{"c": 1}]
+
+
+def test_vn4_r1_where_ts_kolkata(kolkata: ReparkSession) -> None:
+    rows = kolkata.sql(
+        "SELECT COUNT(*) AS c FROM VALUES ('2024-01-01 00:00:00'), ('2025-06-01 12:00:00') AS v(a) "
+        "WHERE nullif(a, TIMESTAMP '2024-01-01 00:00:00') IS NULL"
+    ).collect()
+    assert [row.asDict() for row in rows] == [{"c": 1}]
+
+
+def test_vn4_r1_where_dbl_utc(utc: ReparkSession) -> None:
+    rows = utc.sql(
+        "SELECT COUNT(*) AS c FROM VALUES (' 1.5 '), ('2.5') AS v(a) WHERE nullif(a, 1.5D) IS NULL"
+    ).collect()
+    assert [row.asDict() for row in rows] == [{"c": 1}]
+
+
+def test_vn4_r1_where_dbl_ansi_off(utc_off: ReparkSession) -> None:
+    rows = utc_off.sql(
+        "SELECT COUNT(*) AS c FROM VALUES ('abc'), (' 1.5 ') AS v(a) WHERE nullif(a, 1.5D) IS NULL"
+    ).collect()
+    assert [row.asDict() for row in rows] == [{"c": 1}]
+
+
+def test_vn4_r1_column_dbl(utc: ReparkSession) -> None:
+    rows = utc.sql(
+        "SELECT typeof(nullif(a, b)) AS t, CAST(nullif(a, b) AS STRING) AS v "
+        "FROM VALUES (' 1.5 ', 1.5D), ('2.5', 1.5D) AS v(a, b)"
+    ).collect()
+    assert {row["v"] for row in rows} == {None, "2.5"}
+    assert {row["t"] for row in rows} == {"string"}
+
+
+def test_vn4_r1_column_ts_ny(ny: ReparkSession) -> None:
+    rows = ny.sql(
+        "SELECT typeof(nullif(a, b)) AS t, CAST(nullif(a, b) AS STRING) AS v "
+        "FROM VALUES ('2024-01-01 00:00:00', TIMESTAMP '2024-01-01 00:00:00') AS v(a, b)"
+    ).collect()
+    assert [row.asDict() for row in rows] == [{"t": "string", "v": None}]
+
+
+VN4_VOLATILE_FIRST = "CASE WHEN rand() < 0.5 THEN NULL ELSE 1 END"
+
+
+def check_vn4_nullable_fallback(rows: list[Any]) -> None:
+    assert len(rows) == 20000
+    nulls = sum(1 for row in rows if row["v"] is None)
+    assert 2800 <= nulls <= 3900
+
+
+@pytest.mark.parametrize("fn", ["nvl", "ifnull"])
+def test_vn4_nullable_column_fallback_sql(utc: ReparkSession, fn: str) -> None:
+    utc.sql(
+        "CREATE OR REPLACE TEMPORARY VIEW vn4_big AS SELECT id, "
+        "CASE WHEN id % 3 = 0 THEN NULL ELSE id END AS x FROM range(20000)"
+    ).collect()
+    rows = utc.sql(f"SELECT {fn}({VN4_VOLATILE_FIRST}, x) AS v FROM vn4_big").collect()
+    check_vn4_nullable_fallback(rows)
+
+
+def test_vn4_nullable_column_fallback_dataframe(tmp_path: Path) -> None:
+    session = (
+        ReparkSession.builder.appName("nvl-type-coercion-1-vn4")
+        .config("spark.sql.session.timeZone", "UTC")
+        .config("spark.sql.ansi.enabled", "true")
+        .config("spark.sql.warehouse.dir", str(tmp_path / "wh"))
+        .getOrCreate()
+    )
+    try:
+        session.sql("CREATE TABLE vn4_parq (id BIGINT, x BIGINT) USING parquet")
+        session.sql(
+            "INSERT INTO vn4_parq SELECT id, CASE WHEN id % 3 = 0 THEN NULL ELSE id END AS x "
+            "FROM range(20000)"
+        )
+        frame = session.sql("SELECT id, x FROM vn4_parq")
+        picked = frame.select(
+            functions.nvl(
+                functions.when(functions.rand() < 0.5, functions.lit(None)).otherwise(
+                    functions.lit(1)
+                ),
+                functions.col("x"),
+            ).alias("v")
+        )
+        check_vn4_nullable_fallback(picked.collect())
+    finally:
+        session.stop()
+
+
+def test_vn4_nullifzero_negative_zero(utc: ReparkSession) -> None:
+    rows = utc.sql(
+        "SELECT typeof(nullifzero(-0.0D)) AS t, CAST(nullifzero(-0.0D) AS STRING) AS v"
+    ).collect()
+    assert [row.asDict() for row in rows] == [{"t": "double", "v": None}]
+
+
+def test_vn4_nullifzero_negative_zero_float(utc: ReparkSession) -> None:
+    rows = utc.sql(
+        "SELECT typeof(nullifzero(CAST(-0.0 AS FLOAT))) AS t, "
+        "CAST(nullifzero(CAST(-0.0 AS FLOAT)) AS STRING) AS v"
+    ).collect()
+    assert [row.asDict() for row in rows] == [{"t": "float", "v": None}]
+
+
+def test_vn4_nullifzero_computed_negative_zero(utc: ReparkSession) -> None:
+    rows = utc.sql(
+        "SELECT typeof(nullifzero(-1.0D * 0.0D)) AS t, "
+        "CAST(nullifzero(-1.0D * 0.0D) AS STRING) AS v"
+    ).collect()
+    assert [row.asDict() for row in rows] == [{"t": "double", "v": None}]
+
+
+def test_vn4_nullifzero_nan(utc: ReparkSession) -> None:
+    rows = utc.sql(
+        "SELECT typeof(nullifzero(CAST('NaN' AS DOUBLE))) AS t, "
+        "CAST(nullifzero(CAST('NaN' AS DOUBLE)) AS STRING) AS v"
+    ).collect()
+    assert [row.asDict() for row in rows] == [{"t": "double", "v": "NaN"}]
+
+
+def test_vn4_nullif_nan_nan(utc: ReparkSession) -> None:
+    rows = utc.sql(
+        "SELECT typeof(nullif(CAST('NaN' AS DOUBLE), CAST('NaN' AS DOUBLE))) AS t, "
+        "CAST(nullif(CAST('NaN' AS DOUBLE), CAST('NaN' AS DOUBLE)) AS STRING) AS v"
+    ).collect()
+    assert [row.asDict() for row in rows] == [{"t": "double", "v": None}]

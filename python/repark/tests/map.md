@@ -4969,6 +4969,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   depth-12 widened `nullif` (bigint, double, string) and `nullifzero` plan
   and run under 2 s; the `nvl` chain EXPLAIN shows no `__repark_nvl_cast`.
   pins: nvl-type-coercion-1/C-016, C-017, C-018
+  Re-verify 3 pins (2026-09-29, VN4-1..VN4-4, same file): the 12-cell
+  string-source `nullif` matrix (padded numerics, `d`/`f` suffixes,
+  short and padded timestamps/dates) in UTC, New York and Kolkata; 8
+  ANSI-off cells (invalid strings answer the first argument); 4 ANSI-on
+  refusal cells (`CAST_INVALID_INPUT`); 5 WHERE and 2 column cells; the
+  volatile-first `nvl`/`ifnull` over a nullable column in SQL and over a
+  parquet column through `F.nvl` (20000 rows, null share ~1/6); the
+  `-0.0`/`NaN` `nullifzero`/`nullif` cells. Every expectation measured
+  on live Spark 4.1.2. pins: nvl-type-coercion-1/C-019, C-020
 - `test_select_naming.py` — **Group H** select/projection display naming vs live PySpark 4.1.2:
   mutation leak accepts `Int32(1)` as well as `Int64(1)` (F-Y10-1 Python lit width);
   full matrix (`(x + 1)`, cast-of-attr → child name, cast-of-compound → `CAST(...)`,

@@ -263,6 +263,15 @@ pub(crate) fn spark_cast_ansi_zoned(
     spark_cast(source, target, Mode::Ansi, session_zone(zone)?, now)
 }
 
+pub(crate) fn spark_cast_legacy_zoned(
+    source: &ArrayRef,
+    target: &DataType,
+    zone: &str,
+    now: DateTime<Utc>,
+) -> Result<ArrayRef> {
+    spark_cast(source, target, Mode::Legacy, session_zone(zone)?, now)
+}
+
 fn cast_map_array(
     source: &ArrayRef,
     target: &DataType,

@@ -2,11 +2,13 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
-use datafusion::arrow::array::{Array, ArrayRef, BooleanArray, UInt32Array};
+use datafusion::arrow::array::{
+    Array, ArrayRef, AsArray, BooleanArray, Float32Array, Float64Array, UInt32Array,
+};
 use datafusion::arrow::compute::kernels::cmp::eq;
 use datafusion::arrow::compute::kernels::nullif::nullif as arrow_nullif;
 use datafusion::arrow::compute::{CastOptions, cast_with_options, concat, take};
-use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
+use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Float32Type, Float64Type};
 use datafusion::common::{Result, exec_err};
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{
@@ -14,7 +16,8 @@ use datafusion::logical_expr::{
     Volatility,
 };
 
-use crate::cast_map::spark_cast_ansi_zoned;
+use crate::ansi::spark_ansi_enabled_from_options;
+use crate::cast_map::{spark_cast_ansi_zoned, spark_cast_legacy_zoned};
 use crate::session_time_zone::session_time_zone_from_options;
 use crate::spark_nvl::wrong_num_args;
 
@@ -122,14 +125,28 @@ fn needs_spark_shaped_cast(from_type: &DataType, common: &DataType) -> bool {
     ) && matches!(common, DataType::Timestamp(_, _))
 }
 
+fn is_string_source(data_type: &DataType) -> bool {
+    matches!(
+        data_type,
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
+    )
+}
+
 fn cast_to_common(
     array: &ArrayRef,
     common: &DataType,
     zone: &str,
+    ansi: bool,
     now: DateTime<Utc>,
 ) -> Result<ArrayRef> {
     if array.data_type() == common {
         return Ok(Arc::clone(array));
+    }
+    if is_string_source(array.data_type()) {
+        if ansi {
+            return spark_cast_ansi_zoned(array, common, zone, now);
+        }
+        return spark_cast_legacy_zoned(array, common, zone, now);
     }
     if needs_spark_shaped_cast(array.data_type(), common) {
         return spark_cast_ansi_zoned(array, common, zone, now);
@@ -139,6 +156,26 @@ fn cast_to_common(
         ..CastOptions::default()
     };
     Ok(cast_with_options(array.as_ref(), common, &options)?)
+}
+
+fn without_negative_zero(array: &ArrayRef) -> ArrayRef {
+    if array.data_type() == &DataType::Float32 {
+        let values = array.as_primitive::<Float32Type>();
+        let normalized: Float32Array = values
+            .iter()
+            .map(|value| value.map(|inner| if inner == 0.0 { 0.0 } else { inner }))
+            .collect();
+        return Arc::new(normalized);
+    }
+    if array.data_type() == &DataType::Float64 {
+        let values = array.as_primitive::<Float64Type>();
+        let normalized: Float64Array = values
+            .iter()
+            .map(|value| value.map(|inner| if inner == 0.0 { 0.0 } else { inner }))
+            .collect();
+        return Arc::new(normalized);
+    }
+    Arc::clone(array)
 }
 
 #[derive(Debug)]
@@ -186,7 +223,7 @@ impl ScalarUDFImpl for NvlPick {
                 args.arg_fields.len(),
             ));
         };
-        let nullable = first.is_nullable() && second.is_nullable();
+        let nullable = second.is_nullable();
         Ok(Arc::new(Field::new(
             "__repark_nvl_pick",
             first.data_type().clone(),
@@ -291,10 +328,19 @@ impl ScalarUDFImpl for NullifCompare {
             return Ok(ColumnarValue::Array(Arc::clone(first)));
         }
         let zone = session_time_zone_from_options(args.config_options.as_ref());
+        let ansi = spark_ansi_enabled_from_options(args.config_options.as_ref());
         let now = Utc::now();
-        let left = cast_to_common(first, &self.common, zone, now)?;
-        let right = cast_to_common(second, &self.common, zone, now)?;
-        let compared: BooleanArray = eq(&left, &right)?;
+        let left = cast_to_common(first, &self.common, zone, ansi, now)?;
+        let right = cast_to_common(second, &self.common, zone, ansi, now)?;
+        let compared: BooleanArray = if matches!(self.common, DataType::Float32 | DataType::Float64)
+        {
+            eq(
+                &without_negative_zero(&left),
+                &without_negative_zero(&right),
+            )?
+        } else {
+            eq(&left, &right)?
+        };
         Ok(ColumnarValue::Array(arrow_nullif(
             first.as_ref(),
             &compared,
