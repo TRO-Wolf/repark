@@ -22,6 +22,12 @@ the module's tests.
   pins: cast-map-spell-1/C-011, C-013
   **Round 4 (2026-09-19):** `spark_trim` drops code points <= U+0020 and U+007F (DEL) only,
   as measured; U+0085 stays and fails the parse. pins: cast-map-spell-1/C-015
+  **NVL-TYPE-COERCION-1 (2026-09-29):** `leaf_cast` takes the session zone and
+  `now` and gains Spark's string → fractional / decimal / date / timestamp
+  arms (strict trims, suffixes, partial dates; failures raise
+  `CAST_INVALID_INPUT`); the timestamp arm reads the session zone through the
+  shared string-timestamp grammar. The `nvl` family reaches it through
+  `cast_map::spark_cast_ansi_zoned`. pins: nvl-type-coercion-1/C-009, C-010
 - `rewrite.rs` — `rewrite_map_casts`: tokenizes the statement with the Spark dialect (strings, quoted identifiers and
   comments, `/*! … */` hints included, stay opaque), finds each `CAST(` / `TRY_CAST(` whose top-level `AS` target names
   `MAP <`, and splices the UDF call in by byte span so every other byte of the statement stays
