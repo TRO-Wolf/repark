@@ -75,11 +75,11 @@ class DataFrameWriter:
 
     _VALID_MODES = _PATH_MODES = ("append", "overwrite", "error", "errorifexists", "ignore")
     _PATH_FORMATS = frozenset({"parquet", "csv", "json", "text"})
+    _TEMPORAL_WRITE_OPTIONS: frozenset[str] = frozenset(
+        {"dateformat", "timestampformat", "timestampntzformat"}
+    )
     _CSV_WRITE_UNSUPPORTED_OPTIONS: frozenset[str] = frozenset(
         {
-            "dateformat",
-            "timestampformat",
-            "timestampntzformat",
             "encoding",
             "linesep",
             "chartoescapequoteescaping",
@@ -90,14 +90,7 @@ class DataFrameWriter:
         }
     )
     _JSON_WRITE_UNSUPPORTED_OPTIONS: frozenset[str] = frozenset(
-        {
-            "dateformat",
-            "timestampformat",
-            "timestampntzformat",
-            "encoding",
-            "linesep",
-            "ignorenullfields",
-        }
+        {"encoding", "linesep", "ignorenullfields"}
     )
 
     def __init__(self, dataframe: DataFrame) -> None:
@@ -406,7 +399,7 @@ class DataFrameWriter:
         try:
             self._run_through_temp_view(
                 lambda view: (
-                    f"COPY (SELECT * FROM {view}) TO '{escaped_staging}' "
+                    f"COPY ({self._build_text_write_select(view)}) TO '{escaped_staging}' "
                     f"STORED AS {stored_as}{partition_clause}{options_clause}"
                 )
             )
@@ -580,6 +573,10 @@ class DataFrameWriter:
                     return
             return
 
+    def _build_text_write_select(self, view: str) -> str:
+        """Build the COPY inner SELECT with text timestamp formatting."""
+        return writer_layout.text_write_select(self, view)
+
     def _copy_options_sql(self, stored_as: str) -> str:
         """Build format-specific ``COPY`` options or reject unsupported options."""
         if not self._options:
@@ -590,6 +587,8 @@ class DataFrameWriter:
             if lowered == "path":
                 continue
             if stored_as == "CSV":
+                if lowered in self._TEMPORAL_WRITE_OPTIONS:
+                    continue
                 if lowered in self._CSV_WRITE_UNSUPPORTED_OPTIONS:
                     raise AnalysisException(
                         f"DataFrameWriter.csv option {key!r} is not supported yet "
@@ -635,6 +634,8 @@ class DataFrameWriter:
                         "(would silently change write semantics if ignored)"
                     )
             elif stored_as == "JSON":
+                if lowered in self._TEMPORAL_WRITE_OPTIONS:
+                    continue
                 if lowered in self._JSON_WRITE_UNSUPPORTED_OPTIONS:
                     raise AnalysisException(
                         f"DataFrameWriter.json option {key!r} is not supported yet "

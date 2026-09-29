@@ -72,8 +72,27 @@ pub fn session_write_path(
     })
 }
 
+#[allow(clippy::missing_errors_doc)]
+#[pyfunction]
+#[pyo3(signature = (session, frame, view, options, partition_by))]
+pub fn session_text_write_select(
+    session: PyRef<'_, PyReparkSession>,
+    frame: &PyDataFrame,
+    view: &str,
+    options: HashMap<String, String>,
+    partition_by: Vec<String>,
+) -> PyResult<String> {
+    fenced_span!("py.write", "session_text_write_select", {
+        session
+            .session
+            .text_write_select_sql(frame.inner(), view, &options, &partition_by)
+            .map_err(crate::to_py_err)
+    })
+}
+
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(session_sql_with_write_options, module)?)?;
     module.add_function(wrap_pyfunction!(session_write_path, module)?)?;
+    module.add_function(wrap_pyfunction!(session_text_write_select, module)?)?;
     Ok(())
 }

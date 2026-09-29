@@ -16,6 +16,7 @@ use crate::OverwriteIntent;
 use crate::engine_err;
 use crate::object_store_s3;
 use crate::session::ReparkSession;
+use crate::session::text_write_format::is_text_write_format_option;
 
 impl ReparkSession {
     pub fn note_local_write_root(&self, path: &str) {
@@ -189,10 +190,7 @@ fn normalize_parquet_write_compression(raw: &str) -> Result<String> {
 fn refused_csv_option(key: &str) -> bool {
     matches!(
         key,
-        "dateformat"
-            | "timestampformat"
-            | "timestampntzformat"
-            | "encoding"
+        "encoding"
             | "linesep"
             | "chartoescapequoteescaping"
             | "ignoreleadingwhitespace"
@@ -205,12 +203,7 @@ fn refused_csv_option(key: &str) -> bool {
 fn refused_json_option(key: &str) -> bool {
     matches!(
         key,
-        "dateformat"
-            | "timestampformat"
-            | "timestampntzformat"
-            | "encoding"
-            | "linesep"
-            | "ignorenullfields"
+        "encoding" | "linesep" | "ignorenullfields"
     )
 }
 
@@ -228,6 +221,9 @@ fn copy_options_sql(format: &WriteFormat, options: &HashMap<String, String>) -> 
         }
         match format {
             WriteFormat::Csv => {
+                if is_text_write_format_option(&lowered) {
+                    continue;
+                }
                 if refused_csv_option(&lowered) {
                     return Err(Error::Analysis(format!(
                         "DataFrameWriter.csv option '{key}' is not supported yet (Spark \
@@ -267,6 +263,9 @@ fn copy_options_sql(format: &WriteFormat, options: &HashMap<String, String>) -> 
                 }
             }
             WriteFormat::Json => {
+                if is_text_write_format_option(&lowered) {
+                    continue;
+                }
                 if refused_json_option(&lowered) {
                     return Err(Error::Analysis(format!(
                         "DataFrameWriter.json option '{key}' is not supported yet (would \
@@ -842,8 +841,14 @@ impl ReparkSession {
         }
         let view = unique_view_name();
         let copy_target = object_store_s3::write_target_url(&scheme, &bucket, &prefix_text);
+        let select_sql = match &format {
+            WriteFormat::Parquet => format!("SELECT * FROM {view}"),
+            WriteFormat::Csv | WriteFormat::Json => {
+                self.text_write_select_sql(frame, &view, options, &resolved_partitions)?
+            }
+        };
         let copy_sql = format!(
-            "COPY (SELECT * FROM {view}) TO '{}' STORED AS {}{}{}",
+            "COPY ({select_sql}) TO '{}' STORED AS {}{}{}",
             sql_escape(&copy_target),
             format.stored_as(),
             partition_clause(&resolved_partitions),

@@ -1,0 +1,130 @@
+use std::collections::{HashMap, HashSet};
+
+use arrow::datatypes::{DataType, SchemaRef};
+use datafusion::prelude::DataFrame;
+
+use super::{PatternKind, compile_write_pattern, pattern_failure_error, write_option_patterns};
+use crate::session::ReparkSession;
+use crate::session_time_zone::canonical_session_zone_id;
+
+fn contains_temporal(data_type: &DataType) -> bool {
+    match data_type {
+        DataType::Timestamp(_, _) | DataType::Date32 | DataType::Date64 => true,
+        DataType::List(field) | DataType::LargeList(field) | DataType::FixedSizeList(field, _) => {
+            contains_temporal(field.data_type())
+        }
+        DataType::Struct(fields) => fields
+            .iter()
+            .any(|field| contains_temporal(field.data_type())),
+        DataType::Map(field, _) => match field.data_type() {
+            DataType::Struct(entries) => entries
+                .iter()
+                .enumerate()
+                .any(|(position, entry)| position == 1 && contains_temporal(entry.data_type())),
+            _ => false,
+        },
+        _ => false,
+    }
+}
+
+fn quote_ident(name: &str) -> String {
+    format!("\"{}\"", name.replace('"', "\"\""))
+}
+
+fn quote_literal(text: &str) -> String {
+    format!("'{}'", text.replace('\'', "''"))
+}
+
+fn pattern_argument(pattern: &Option<String>) -> String {
+    match pattern {
+        Some(text) => quote_literal(text),
+        None => "NULL".to_string(),
+    }
+}
+
+fn validate_user_patterns(
+    timestamp: &Option<String>,
+    ntz: &Option<String>,
+    date: &Option<String>,
+) -> crate::Result<()> {
+    for (pattern, kind) in [
+        (timestamp, PatternKind::Timestamp),
+        (ntz, PatternKind::TimestampNtz),
+        (date, PatternKind::Date),
+    ] {
+        if let Some(text) = pattern {
+            if let Err(failure) = compile_write_pattern(text, kind) {
+                return Err(pattern_failure_error(&failure));
+            }
+        }
+    }
+    Ok(())
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn build_text_write_select(
+    schema: &SchemaRef,
+    view_sql: &str,
+    zone_id: &str,
+    options: &HashMap<String, String>,
+    partition_by: &[String],
+) -> crate::Result<String> {
+    let (timestamp, ntz, date) = write_option_patterns(options);
+    validate_user_patterns(&timestamp, &ntz, &date)?;
+    let zone = canonical_session_zone_id(zone_id);
+    let partitions: HashSet<String> = partition_by
+        .iter()
+        .map(|name| name.to_lowercase())
+        .collect();
+    let mut folded_counts: HashMap<String, usize> = HashMap::new();
+    for field in schema.fields() {
+        *folded_counts
+            .entry(field.name().to_lowercase())
+            .or_insert(0) += 1;
+    }
+    let mut items = Vec::with_capacity(schema.fields().len());
+    let mut wrapped = 0usize;
+    for field in schema.fields() {
+        let name = field.name();
+        let folded = name.to_lowercase();
+        let unique = folded_counts.get(&folded).is_some_and(|count| *count == 1);
+        if partitions.contains(&folded) || !unique || !contains_temporal(field.data_type()) {
+            items.push(quote_ident(name));
+            continue;
+        }
+        items.push(format!(
+            "{}({}, {}, {}, {}, {}) AS {}",
+            super::udf::WRITE_FORMAT_FUNCTION,
+            quote_ident(name),
+            pattern_argument(&timestamp),
+            pattern_argument(&ntz),
+            pattern_argument(&date),
+            quote_literal(&zone),
+            quote_ident(name)
+        ));
+        wrapped += 1;
+    }
+    if wrapped == 0 {
+        return Ok(format!("SELECT * FROM {view_sql}"));
+    }
+    Ok(format!("SELECT {} FROM {view_sql}", items.join(", ")))
+}
+
+impl ReparkSession {
+    #[allow(clippy::missing_errors_doc)]
+    pub fn text_write_select_sql(
+        &self,
+        frame: &DataFrame,
+        view_sql: &str,
+        options: &HashMap<String, String>,
+        partition_by: &[String],
+    ) -> crate::Result<String> {
+        build_text_write_select(
+            frame.schema().inner(),
+            view_sql,
+            self.session_time_zone().id(),
+            options,
+            partition_by,
+        )
+    }
+}

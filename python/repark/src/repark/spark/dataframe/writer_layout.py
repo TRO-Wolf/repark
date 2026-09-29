@@ -408,3 +408,16 @@ def table_of_ref_target(qualified: str) -> str:
         if last.startswith(prefix) and len(last) > len(prefix):
             return ".".join(parts[:-1])
     return qualified
+
+
+def text_write_select(writer: Any, view: str) -> str:
+    """Build the COPY inner SELECT, formatting temporal columns for CSV and JSON writes."""
+    dataframe = writer._dataframe
+    dataframe._ensure_alive()
+    return _native.session_text_write_select(
+        dataframe._session,
+        dataframe._native_for_registration(),
+        view,
+        dict(writer._options),
+        [str(column) for column in writer._partition_columns],
+    )

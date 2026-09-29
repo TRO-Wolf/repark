@@ -42,6 +42,7 @@ mod path_write;
 mod session_catalog;
 pub(crate) mod spill;
 mod temp_views;
+mod text_write_format;
 mod write_options;
 pub mod writer_layout;
 
@@ -307,6 +308,7 @@ impl ReparkSessionBuilder {
         let temp_view_home = build_temp_view_home(&context);
         ext.register(&context).map_err(engine_err)?;
         crate::range_table::register_spark_range(&context);
+        text_write_format::udf::register_text_write_format(&context);
         let dialect = self
             .sql_dialect
             .unwrap_or_else(|| Arc::new(DataFusionDialect));
