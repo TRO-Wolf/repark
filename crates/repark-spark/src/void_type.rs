@@ -3,15 +3,17 @@ use std::ops::ControlFlow;
 
 use datafusion::arrow::datatypes::{DataType as ArrowType, TimeUnit};
 use datafusion::error::{DataFusionError, Result};
+use datafusion::logical_expr::LogicalPlan;
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
-    CastKind, DataType, Expr, Insert, ObjectName, SetExpr, Statement, TableObject, Value,
-    ValueWithSpan, VisitMut, VisitorMut,
+    CastKind, DataType, DollarQuotedString, Expr, Insert, ObjectName, SetExpr, Statement,
+    TableObject, Value, ValueWithSpan, VisitMut, VisitorMut,
 };
 use datafusion::sql::sqlparser::tokenizer::Span;
 use iceberg::spec::{NestedField, PrimitiveType, Type};
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
+use repark_iceberg::write::insert_defaults::is_default_marker;
 use repark_iceberg::write::ntz_store::refuse_ntz_writes;
 use repark_iceberg::write::void_store::refuse_void_writes;
 
@@ -19,6 +21,8 @@ use crate::catalog_ops::name_parts;
 use crate::write_to_branch::qualify_table_parts;
 
 mod ltz_values_store;
+
+pub(crate) use ltz_values_store::number_text_type;
 
 pub(crate) fn rewrite_cast_null_to_void(statement: &mut Statement) {
     let _ = statement.visit(&mut CastNullToVoid);
@@ -158,6 +162,138 @@ async fn refuse_non_null_void_values(
     Ok(())
 }
 
+pub(crate) fn parenthesize_stacked_minus(value: &Expr) -> Expr {
+    let mut rewritten = value.clone();
+    let _ = rewritten.visit(&mut StackedSignParens);
+    rewritten
+}
+
+struct StackedSignParens;
+
+impl VisitorMut for StackedSignParens {
+    type Break = Infallible;
+
+    fn post_visit_expr(&mut self, expr: &mut Expr) -> ControlFlow<Self::Break> {
+        if let Expr::UnaryOp { expr: operand, .. } = expr
+            && matches!(operand.as_ref(), Expr::UnaryOp { .. })
+        {
+            let inner = operand.as_ref().clone();
+            **operand = Expr::Nested(Box::new(inner));
+        }
+        ControlFlow::Continue(())
+    }
+}
+
+pub(crate) fn probe_text(value: &Expr) -> String {
+    let mut rewritten = parenthesize_stacked_minus(value);
+    let _ = rewritten.visit(&mut DollarQuoteProbeStrings);
+    rewritten.to_string()
+}
+
+struct DollarQuoteProbeStrings;
+
+impl VisitorMut for DollarQuoteProbeStrings {
+    type Break = Infallible;
+
+    fn post_visit_expr(&mut self, expr: &mut Expr) -> ControlFlow<Self::Break> {
+        if let Expr::Value(literal) = expr
+            && let Value::SingleQuotedString(text) = &literal.value
+            && text.contains('\'')
+        {
+            let value = text.clone();
+            let tag = probe_string_tag(&value);
+            literal.value = Value::DollarQuotedString(DollarQuotedString {
+                value,
+                tag: Some(tag),
+            });
+        }
+        ControlFlow::Continue(())
+    }
+}
+
+fn probe_string_tag(value: &str) -> String {
+    let mut tag = String::from("p");
+    while format!("{value}${tag}$").find(format!("${tag}$").as_str()) != Some(value.len()) {
+        tag.push('p');
+    }
+    tag
+}
+
+fn numeric_ntz_refusal(
+    display: &str,
+    column: &str,
+    source: &ArrowType,
+    target: &ArrowType,
+) -> String {
+    let from = crate::spark_type_names::spark_ddl_type_name(source).to_uppercase();
+    let to = crate::spark_type_names::spark_ddl_type_name(target).to_uppercase();
+    let column = format!("`{column}`");
+    repark_common::spark_error::message(
+        repark_common::spark_error::INCOMPATIBLE_DATA_FOR_TABLE_CANNOT_SAFELY_CAST,
+        &[
+            ("tableName", display),
+            ("columnName", column.as_str()),
+            ("fromType", from.as_str()),
+            ("toType", to.as_str()),
+        ],
+    )
+}
+
+fn refuse_unassignable_ntz_positions(
+    ctx: &SessionContext,
+    display: &str,
+    plan: &LogicalPlan,
+    positions: &[(&NestedField, &Expr)],
+    naive: &ArrowType,
+) -> Result<()> {
+    let state = ctx.state();
+    let Ok(analyzed) =
+        state
+            .analyzer()
+            .execute_and_check(plan.clone(), state.config_options(), |_, _| {})
+    else {
+        return Ok(());
+    };
+    let planned = analyzed.schema().fields();
+    if planned.len() != positions.len() {
+        return Ok(());
+    }
+    for (field, (target, _)) in planned.iter().zip(positions) {
+        if !matches!(
+            target.field_type.as_ref(),
+            Type::Primitive(PrimitiveType::Timestamp)
+        ) {
+            continue;
+        }
+        let rendered = format!("`{}`", target.name);
+        if let Some(text) = repark_iceberg::write::update_cast::incompatible_update_message(
+            display,
+            &rendered,
+            field.data_type(),
+            naive,
+        ) {
+            return Err(DataFusionError::Plan(text));
+        }
+        if field.data_type().is_numeric() {
+            return Err(DataFusionError::Plan(numeric_ntz_refusal(
+                display,
+                &target.name,
+                field.data_type(),
+                naive,
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn ntz_probe_cell(index: usize, value: &Expr) -> String {
+    if is_default_marker(value) {
+        format!("NULL AS p{index}")
+    } else {
+        format!("{} AS p{index}", probe_text(value))
+    }
+}
+
 async fn check_ntz_row(
     ctx: &SessionContext,
     fields: &[std::sync::Arc<NestedField>],
@@ -203,14 +339,14 @@ async fn check_ntz_row(
         "SELECT {}",
         positions
             .iter()
-            .map(|(_, value)| value.to_string())
+            .enumerate()
+            .map(|(index, (_, value))| ntz_probe_cell(index, value))
             .collect::<Vec<_>>()
             .join(", ")
     );
-    let Ok(frame) = ctx.sql(&probe).await else {
-        return Ok(());
-    };
+    let frame = ctx.sql(&probe).await?;
     let naive = ArrowType::Timestamp(TimeUnit::Microsecond, None);
+    refuse_unassignable_ntz_positions(ctx, display, frame.logical_plan(), &positions, &naive)?;
     let dummy = ArrowType::Boolean;
     let pairs = positions.iter().map(|(field, _)| {
         let target = match field.field_type.as_ref() {
@@ -319,7 +455,7 @@ async fn refuse_void_value(
     if !matches!(
         field.field_type.as_ref(),
         Type::Primitive(PrimitiveType::Unknown)
-    ) || is_bare_null(value)
+    ) || is_null_or_default_cell(value)
     {
         return Ok(());
     }
@@ -339,6 +475,10 @@ pub(crate) fn column_name(column: &datafusion::sql::sqlparser::ast::ObjectName) 
         .last()
         .and_then(|part| part.as_ident())
         .map_or_else(|| column.to_string(), |ident| ident.value.clone())
+}
+
+fn is_null_or_default_cell(expr: &Expr) -> bool {
+    is_default_marker(expr) || is_bare_null(expr)
 }
 
 fn is_bare_null(expr: &Expr) -> bool {

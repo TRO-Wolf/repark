@@ -431,6 +431,21 @@ pins: rp-4-fork-repin/C-005, C-006
   to two-argument `nvl`/`ifnull`, probed as `coalesce(a, b)`; every other
   function is judged by its probed type; leading-zero fractions count precision
   from significant digits.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-1/VG-2/VG-8):** the
+  probe renders through the shared recursive parenthesizer, an unparsable probe
+  refuses instead of passing the row, and `number_text_type` is shared with
+  `update_cast.rs`.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 re-verify fold, RN2-2):** a `DEFAULT`
+  cell is skipped like a bare NULL, and the `nvl`/`ifnull` → `coalesce` probe
+  renders both operands through the shared parenthesizer, so
+  `nvl(NULL, CAST(date_add(DATE'2024-01-01', - -1) AS TIMESTAMP))` stores as
+  Spark does instead of refusing on a `--` comment.
+  **Fold 2026-09-29 (LTZ-STACKED-SIGN-1 second re-verify fold, RN3-1):** the
+  probe renders through the shared `probe_text`, which dollar-quotes a string
+  literal holding a quote with the same value: sqlparser's `Display` leaves a
+  quote after a backslash unescaped, so the probe text failed to parse and
+  refused the row. Seven in-module pins (render, both probe dialects, `nvl`
+  operands, door pass/refusal).
   Directory map: [void_type/map.md](void_type/map.md).
   Pins: [tests/ltz_store.rs](tests/ltz_store.rs).
   pins: ltz-store-int-1/C-001
@@ -507,6 +522,18 @@ pins: rp-4-fork-repin/C-005, C-006
   fold's scope carries `spark.sql.caseSensitive`, so a re-cased whole-struct value refuses
   `CANNOT_FIND_DATA` under `true`.
   pins: u8-write-sql/C-025, C-027, C-032, C-033
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 round 2):** the SET-value probe renders
+  through `void_type.rs`'s stacked-minus parenthesizer, and integer literals
+  are judged by Spark's type (`INT` unless `L`-suffixed or out of `INT` range)
+  because DataFusion plans every negated int literal as `BIGINT`. `UPDATE …
+  SET c = - -1` refuses `CANNOT_SAFELY_CAST` naming `"INT"`, as the
+  single-signed one now does; into an NTZ column both name `"INT"` through the
+  analyzed probe. Valid stacked-sign SET values still die in the downstream
+  re-parse (`ParserError`), unchanged.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-8):** the integer
+  classifier delegates digit typing to `void_type.rs`'s shared
+  `number_text_type` (integer results only, behavior unchanged) instead of
+  re-implementing it.
 - `write_to_branch.rs` — Spark-door write-to-branch routing: tag/missing-branch Spark-shaped
   refuse; two-part names qualify through session defaults; the MOR valve runs on the
   Iceberg ident before the temp rewrite; fork-executed INSERT/UPDATE/DELETE via
@@ -1128,6 +1155,40 @@ pins: rp-4-fork-repin/C-005, C-006
   `Timestamp(µs, None)` for the SELECT source; `update_cast.rs` calls the gate beside
   the VOID one. Illegal sources refuse with Spark's `CANNOT_SAFELY_CAST` naming
   `"TIMESTAMP_NTZ"`. pins: ntz-1/C-007
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 round 2):** `check_ntz_row` parenthesizes
+  a leading stacked-minus chain before rendering probe SQL, so `- -1` probes as
+  `-(-1)` instead of a `--` comment; each NTZ-targeted position is then judged
+  through the shared gate with a numeric fallback that names unnamable DECIMAL
+  sources `DECIMAL(p,s)`, first refusal in row order winning as before. The
+  helper lives in `void_type.rs` and `update_cast.rs` reuses it; the LTZ child
+  module keeps its own copy under the round-1 file-scope ruling.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-1/VG-2/VG-8):** the
+  helper is one recursive post-visit over the whole expression — the operand of
+  every unary operator is wrapped when itself unary or sign-led — used at all
+  three probe sites, so `(- -1)`, `+- -1`, `+(- -1)`, `-(- -1)`, `- -1 + 0`,
+  `abs(- -1)` and `CAST(- -1 AS INT)` probe their numeric type instead of a
+  `--` comment; a probe that still cannot parse now refuses with the analyzer's
+  own error instead of passing the row. `update_cast.rs` judges integer
+  literals through the shared `number_text_type`.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 re-verify fold, RN2-1..RN2-3):** every
+  NTZ probe position is aliased `p{n}`, so a row with two equal cells (`(1, 1, 1,
+  ts)`, `(3, NULL, NULL, ts)`, two equal NTZ literals, `7` beside `CAST(7 AS INT)`)
+  no longer trips DataFusion's unique-projection check; a `DEFAULT` cell probes as
+  `NULL` through `insert_defaults::is_default_marker`, because the probe runs
+  before marker substitution and a declared write-default fits its column by
+  construction. The fail-closed probe stays: with its own failure causes gone,
+  `(10, 1, 1, '2024-…')` and `(11, 1, 1, - -1)` refuse `CANNOT_SAFELY_CAST` as
+  Spark does, where base stored them because the duplicate-name error skipped the
+  check. The sign-led `starts_with('-')` disjunct is removed: every tree the
+  parser produces with a sign-led operand is a unary-under-unary the match
+  already wraps.
+  **Fold 2026-09-29 (LTZ-STACKED-SIGN-1 second re-verify fold, RN3-1):** the
+  shared `probe_text` (parenthesizer, then dollar-quote of string literals
+  holding a quote under a collision-free tag) renders every fail-closed VALUES
+  probe cell on both doors, so backslash-quote rows store Spark's exact values
+  and probes that still cannot parse still refuse. The fail-open probes (VOID
+  value and query, UPDATE SET, MERGE assignment) keep raw `Display`: a broken
+  rendering passes the row through there and can never refuse a valid one.
 - `cast_gate.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** the unit's one cast hook, a single
   call in `spark_ast.rs`'s passthrough: the `CAST(NULL AS VOID)` rewrite (`void_type.rs`)
   and the `CAST(x AS UUID)` refusal (`uuid_cast.rs`). pins: u9-types-1/C-009, C-010

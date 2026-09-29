@@ -264,6 +264,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and re-insert. TZ-6 states Spark's contract and the TY-TIMESTAMP-NTZ rows go
   EQUAL beside it.
   pins: ntz-1/C-008, C-009
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-1/VG-2):**
+  `test_stacked_sign_shapes_into_ntz_refuse` refuses every VG shape with the
+  exact Spark body (`- -1 + 0` names the engine's `BIGINT`), plus the
+  `(NULL, +- -1)` multi-row; the seeded row survives alone.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 re-verify fold, RN2-1/RN2-2):**
+  `test_equal_and_default_cells_store_like_spark` stores equal-cell and `DEFAULT`
+  rows with the walls Spark 4.1.2 stored in the re-verify follow-up probe, and
+  refuses `(10, 1, 1, '2024-…')` / `(11, 1, 1, - -1)` with Spark's recorded
+  bodies (`STRING`, `INT`), where base stored both.
 - [test_ntz_7_verify.py](test_ntz_7_verify.py) + `ntz_7_verify_spark_oracle.json` —
   **WO NTZ-1 verifier fold (2026-09-28):** `from_utc_timestamp` / `to_utc_timestamp`
   over strings and a STRING column keep Spark's TIMESTAMP in a New York session —
@@ -4563,12 +4572,27 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **LTZ-STORE-INT-1 (2026-09-28)** closes the residual for `TIMESTAMP` (LTZ) targets at
   the existing void VALUES gate site, before planning; every other target stays residual.
   Arrow path.
+- `test_ltz_stacked_sign_1.py` — **Fold 2026-09-29 (LTZ-STACKED-SIGN-1 second
+  re-verify fold, RN3-1):** backslash-quote strings store Spark 4.1.2's exact
+  values on both fail-closed VALUES doors — plain, column-list and map cells
+  plus `--`-holding and trailing-backslash, `\n`/`\t`, `\u00e9` controls
+  into `TIMESTAMP_NTZ`, and `replace`-casts into `TIMESTAMP` — read back on
+  the Arrow path; re-verify 3 (RN4-1) adds values ending in `$p` that
+  collided with the probe's dollar-quote closer. pins: ltz-stacked-sign-1/RN3-1
 - `test_ltz_store_int_1.py` — **WO LTZ-STORE-INT-1 (2026-09-28):** `INSERT INTO sc.ns.l
   VALUES (0, 1)` refuses with the recorded Spark `ins_l_int` answer — error class,
   condition, SQLSTATE and the message body, with the RePark-only planning prefix
   pinned separately — and a DataFrame append of INT into TIMESTAMP refuses; both
   leave the table empty. **Fold 2026-09-28 (verifier VL-1..VL-6):** `nvl` and
   `ifnull` over DATE and TIMESTAMP store.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1):** `VALUES (0, - -1)` refuses with the
+  recorded class, condition and SQLSTATE, and writes nothing.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-1/VG-2):** every VG
+  shape plus the `(NULL, +- -1)` multi-row refuses with the recorded class,
+  condition and SQLSTATE, and writes nothing.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 re-verify fold, RN2-2):** `DEFAULT` (bare
+  and in both column-list orders) stores NULL, and a stacked sign under `nvl` /
+  `ifnull` stores the day Spark 4.1.2 stored (`2024-01-02`, `2023-12-31`).
   pins: ltz-store-int-1/C-001
 - `test_merge_semantics_audit.py` — **MERGE-audit corpus** (2026-08-14 audit gap-map rows
   c/d/g/n/o): null-safe `<=>` / `eqNullSafe` ON matches NULL keys (both doors); builder-door
