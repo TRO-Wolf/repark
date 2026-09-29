@@ -496,6 +496,34 @@ state is a snapshot, so the rule cannot change under it). The verifier's
 `perf.py` measures `plain_1000` at 0.34 s (main 0.42 s, `4c2f03d4`
 0.63 s) and `exact_plain_1000` at 0.34 s (main 0.42 s).
 
+Proof (this round, head `b89a7d7f`, the recorded main and Spark outputs of
+each set, Spark 4.1.2 on JDK 17). The 3332-cell third re-verify probe
+against main: FIXED 632, SAME-MATCH 2074, SAME-GAP 504, GAP-MOVED 82,
+BOTH-MATCH-MOVED 23, IMPROVED-VERDICT 13, REGRESSION 0, WORSE-VERDICT 4
+(was FIXED 537, REGRESSION 25, WORSE-VERDICT 6); the four are the
+ANSI array-index cells of R-CS2-20. Against `69ea4609`: FIXED 314,
+SAME-MATCH 2415, SAME-GAP 550, GAP-MOVED 40, IMPROVED-VERDICT 7,
+REGRESSION 1, WORSE-VERDICT 5 (`F_bd_t_garbage`, R-CS2-18 truncation;
+`F_bd_t_arr`, R-CS2-20; the four `jn_*_adj` cells, R-CS2-19). The 915
+`false` no-alias predicate cells are byte-identical to main, and the
+40 controls are identical to `4c2f03d4` (37 same-match, 3 fixed). The
+2752-cell second re-verify probe: FIXED 1128, SAME-MATCH 999, SAME-GAP
+283, GAP-MOVED 148, BOTH-MATCH-MOVED 44, IMPROVED-VERDICT 74, NO-SPARK
+24, NO-SPARK-DIFF 18, REGRESSION 14, WORSE-VERDICT 20, all 34 the RC3-5
+Unicode cells (R-CS2-17); controls unchanged; against `4c2f03d4` one
+answer moves (`T_pred_join_j6`, 42703 to Spark's `AMBIGUOUS_REFERENCE`).
+The truncation probe matches Spark on 14/14 keys. The 1559-statement
+first re-verify probe: FIXED 653, SPARK-CONFIRMED 14, IMPROVED-VERDICT
+30, GAP 23, NON-DIFF 9, REGRESSION 0, WORSE-VERDICT 0, controls 40/40;
+the 138-statement alias probe: 0 regressions, the same classes; neither
+moves an answer against `4c2f03d4`. The 1890-statement DIFF-PROBE corpus
+moves 10 answers against `4c2f03d4`, all nondeterministic: unordered
+group and distinct output order (`dp:c_distinct`, `c_group`, `f_dd_all`,
+`f_distinct`, `f_group_agg`, `f_group_count`, `t_group_exact`), a random
+plan id in `dp:t_attr_join`'s refusal text, and the Iceberg lower-case
+index collision pair (`p9:setup_other`, `p9:setup_tw`); two runs of one
+build differ in 11 keys of the same families.
+
 ## Clauses
 
 | Clause | Statement | Proof obligation | Verdict | Evidence |
@@ -605,6 +633,18 @@ changed, the named tests ran, and the file was restored with
 | M17 | Struct binding dropped: the tree binder takes only two-part `CompoundIdentifier`s and skips `CompoundFieldAccess`. | `test_rc3_1_struct_and_subscript_alias_predicates_bind_on_the_tree` red (`Schema error: No field named t.s.f`). |
 | M18 | The alias-as-new-attribute rule dropped: `_twin_engine` names an aliased twin from its origin. | `test_rc3_3_an_aliased_copy_is_a_new_attribute` red (`select('v')` answers instead of refusing). |
 
+## Mutation record (2026-09-29, third re-verify fold)
+
+Each line was broken on `b89a7d7f`, the native module rebuilt where Rust
+changed, the named test ran, and the file was restored with
+`git checkout` (`git status` clean after each, rebuilt green).
+
+| # | Mutation | Red |
+|---|---|---|
+| M19 | The lambda-scope binding under `Exact` dropped: `bind_predicate_qualifiers` no longer quotes lambda parameters or respells the body identifiers they shadow. | `test_rc4_1_a_lambda_parameter_binds_its_own_body` red (`exists(arr, T -> T > 4)` under `true` answers `[1]`, the silent wrong rows, instead of `[1, 5]`). |
+| M20 | Sort-through-nearest-projection reverted: `nearest_projection` stops at anything but a direct `Projection`. | `test_rc4_4_sort_resolves_through_filter_limit_and_distinct` red (`UNRESOLVED_COLUMN.WITH_SUGGESTION` 42703 on the filtered twin). |
+| M21 | The alias-identity source dropped: `_twin_engine` names an aliased twin `__repark_sel_a_<i>_<n>` with no source. | `test_rc4_2_a_parent_column_reaches_through_aliased_twins` red (raw `type_coercion` on `twins.filter(d.v > 15)`). |
+
 ## Tests rewritten
 
 None in slice 1: every existing pin keeps its answer (sweep evidence in the S1 hand-back).
@@ -636,6 +676,12 @@ Three rewrites in the re-verify fold, each to a Spark-recorded answer:
 42703, head plus Spark's candidates). Stale docstrings on the flipped pins
 were deleted, not reworded.
 
+One snapshot update in the third re-verify fold: `_dfcore_1_expected.py`
+gains the `_fresh_outputs` slot in the frozen `DataFrame` slot and `dir`
+lists (`test_dfcore_1_exports.py` asks for exactly that update when a slot
+is added). Every other existing pin keeps its answer (facade sweep 14044
+passed plus the two snapshot legs after the update).
+
 ## Residues
 
 | # | Residue |
@@ -659,7 +705,7 @@ were deleted, not reworded.
 | R-CS2-17 | **OPEN 2026-09-29** (second re-verify fold, RC3-5): case pairs added in Unicode 14 to 16 (Vithkuqi `U+10570`/`U+10597`, `U+A7C0`/`U+A7C1`, `U+1C89`/`U+1C8A`, `U+A7CB`/`U+0264`) fold in RePark, whose `names.rs` uses Rust's Unicode 16 tables, but not in Spark on JDK 17 (Unicode 13): `drop`, `withColumn`, USING keys, `unionByName`, `withColumns` duplicates, `dropDuplicates` and `orderBy` answer or refuse differently (34 cells, `F_uni_{vith,u14a,u16a,u16b}_*`; select/col/get already folded on main). On JDK 21 (Unicode 15) the Unicode 14 pairs would fold and the Unicode 16 pairs would not, so the boundary belongs to the deployment JDK. Not fixed. |
 | R-CS2-18 | **OPEN 2026-09-29** (second re-verify fold, measured live this round): a sort key the projection child resolves but no bare output carries keeps `AMBIGUOUS_REFERENCE` where Spark answers through a hidden column (`d.select((d.v+1).alias('v'), (d.v+2).alias('v')).orderBy('v')`: Spark `[[11,12],[21,22]]`; main refuses too), because the facade sort binds keys against the output schema. A predicate with `ORDER BY` raises `ParseException` without Spark's `PARSE_SYNTAX_ERROR` condition, and Spark's trailing expression alias (`T.id > 1 garbage`, `p18`/`p19`/`p59`/`j4`) answers on Spark and refuses on RePark as on main (the answers at `69ea4609` came from truncation). **Narrowed 2026-09-29** (third re-verify fold): the hidden key now answers through the projection child directly and across filter, limit and sort (C-026); it keeps `AMBIGUOUS_REFERENCE` through `distinct` (`F/T_ob_twoexpr_dist_ob`), and under `true` a Column key through `distinct` on a projection twin (`select(d.v, (d.v+1).alias('v')).distinct().orderBy(F.desc('v'))`) raises DataFusion's `For SELECT DISTINCT, ORDER BY expressions v must appear in select list` where Spark answers. |
 | R-CS2-19 | **OPEN 2026-09-29** (second re-verify fold): an alias-qualified `F.expr` join condition with Spark-only literal syntax (`'a' 'b'`, `r'b'`) refuses naming the qualifier, where Spark answers; the join-condition rewriter passes a partial parse through unchanged rather than re-render a truncated prefix. Backticked string names under `false` keep the facade miss text, and `select('`x.y`')` under `true` refuses where Spark answers (both as on main). |
-| R-CS2-20 | **OPEN 2026-09-29** (third re-verify fold, measured live this round): `alias('T').filter('T.arr[1] = 5')` answers where ANSI Spark refuses `INVALID_ARRAY_INDEX` on a one-element array (`F/T_bd_{T,t}_arr`); main refused for the wrong reason (it bound `T.arr` to the `T` column), so these four cells read WORSE-VERDICT against main. The unaliased `arr[1]` has the same gap on main (DataFusion returns null out of bounds). Under `false` a bare twin name that is one attribute (`select(d.v, d.v)`, `d['v']`, `F.col('v')`) still refuses `AMBIGUOUS_REFERENCE` in a string filter where Spark answers, as on main (`F_cp_bare_{bare,get,col,getU}_filt_str`). `select(d.v.alias('v')).drop(d.v)` drops the alias where Spark keeps it (plain frame, `F/T_cp_al1_drop_parent`, as on main), and a parent Column through computed twins (`select((d.v+1).alias('v'), d.v.cast('string').alias('v')).filter(d.v > 15)`) raises a raw planning error where Spark answers. |
+| R-CS2-20 | **OPEN 2026-09-29** (third re-verify fold, measured live this round): `alias('T').filter('T.arr[1] = 5')` answers where ANSI Spark refuses `INVALID_ARRAY_INDEX` on a one-element array (`F/T_bd_{T,t}_arr`); main refused for the wrong reason (it bound `T.arr` to the `T` column), so these four cells read WORSE-VERDICT against main. The unaliased `arr[1] = 5` answers `[1]` the same way on this head (DataFusion returns null out of bounds); ANSI array-index errors are outside this unit. Under `false` a bare twin name that is one attribute (`select(d.v, d.v)`, `d['v']`, `F.col('v')`) still refuses `AMBIGUOUS_REFERENCE` in a string filter where Spark answers, as on main (`F_cp_bare_{bare,get,col,getU}_filt_str`). `select(d.v.alias('v')).drop(d.v)` drops the alias where Spark keeps it (plain frame, `F/T_cp_al1_drop_parent`, as on main), and a parent Column through computed twins (`select((d.v+1).alias('v'), d.v.cast('string').alias('v')).filter(d.v > 15)`) raises a raw planning error where Spark answers. |
 
 ## Coverage attestation
 
