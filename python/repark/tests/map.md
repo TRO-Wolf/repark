@@ -7383,7 +7383,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   segfaulted at 110 joins), 120 `withColumn` count 50 (plan-build time, 44 s at
   200 on base, caps the depth — not the stack), 1,000-deep nested SQL raises a
   catchable `RecursionError` (Spark refuses nested-deep SQL too, with
-  `FAILED_TO_PARSE_TOO_COMPLEX`), and flat 600-union SQL counts 1202.
+  `FAILED_TO_PARSE_TOO_COMPLEX`), and flat 600-union SQL counts 601.
   pins: deep-filter-chain-crash-1/C-001, C-002, C-003, C-004
 
 ## I want to...

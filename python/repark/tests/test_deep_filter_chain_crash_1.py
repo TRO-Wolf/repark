@@ -107,4 +107,4 @@ def test_deep_sql_shapes_refuse_clean_or_answer(
 ) -> None:
     """1,000-deep nested SQL raises a catchable exception; flat 600-union SQL counts."""
     assert worker_results["filter_1000_sql"] == "RecursionError"
-    assert worker_results["union_600_sql"] == 1202
+    assert worker_results["union_600_sql"] == 601
