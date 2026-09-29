@@ -130,6 +130,14 @@ fn wrap_is_not_null(child: &str) -> String {
     out
 }
 
+fn wrap_is_duplicated(child: &str) -> String {
+    let mut out = String::with_capacity(child.len() + 15);
+    out.push_str("is_duplicated(");
+    out.push_str(child);
+    out.push(')');
+    out
+}
+
 fn wrap_alias(child: &str, name: &str) -> String {
     let mut out = String::with_capacity(child.len() + name.len() + 4);
     out.push_str(child);
@@ -593,6 +601,23 @@ impl PyColumnParts {
                 wrap_is_not_null(child_display),
                 wrap_is_not_null(child_sql),
                 Some(wrap_is_not_null(child_join)),
+            ))
+        })
+    }
+
+    #[staticmethod]
+    fn is_duplicated(
+        inner: &PyColumn,
+        child_display: &str,
+        child_sql: &str,
+        child_join: &str,
+    ) -> PyResult<RenderedParts> {
+        fenced!("ColumnParts.is_duplicated", {
+            Ok((
+                PyColumn::from_expr(super::expr_build::is_duplicated_expr(inner.expr())?),
+                wrap_is_duplicated(child_display),
+                wrap_is_duplicated(child_sql),
+                Some(wrap_is_duplicated(child_join)),
             ))
         })
     }

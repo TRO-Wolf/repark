@@ -174,6 +174,10 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   (`DataFrameWriter.bucketBy`/`bucket_by`/`sortBy`/`sort_by`/`clusterBy`/`cluster_by`,
   `DataFrameWriterV2.clusterBy`/`cluster_by`); backlog and exceptions baselines hold.
   pins: io-bucket-cluster-1/C-003
+- `test_ex_0_example_coverage.py` — **POLARS-IS-DUPLICATED-1 (2026-09-28):**
+  the enumerated public surface moves 1086 → 1087 as `Column.is_duplicated`
+  joins the `Column` inventory; `docs/examples/column/is_duplicated_ext.py`
+  covers it and the snapshot gains the row. pins: polars-is-duplicated-1/C-009
 - `test_ex_0_example_coverage.py` — **FNP-GEN-1 step 2 (2026-09-16):** the
   enumerated public surface moves 1062 → 1064 as `F.inline` and
   `F.inline_outer` join `__all__` through the generator installer;

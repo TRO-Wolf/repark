@@ -307,11 +307,8 @@ impl PyDataFrame {
     /// Returns `RuntimeError` if the predicate cannot be planned.
     pub fn filter(&self, predicate: PyColumn) -> PyResult<Self> {
         fenced!("PyDataFrame.filter", {
-            let df = self
-                .df
-                .clone()
-                .filter(self.bound(&predicate)?)
-                .map_err(datafusion_to_py_err)?;
+            let predicate = self.bound(&predicate)?;
+            let df = crate::is_duplicated::filter_frame(&self.df, predicate)?;
             Ok(Self::new(df, Arc::clone(&self.runtime)))
         })
     }
@@ -336,11 +333,7 @@ impl PyDataFrame {
                 .iter()
                 .map(|column| crate::dataframe_names::bound_projection(&self.df, column))
                 .collect::<PyResult<_>>()?;
-            let df = self
-                .df
-                .clone()
-                .select(expressions)
-                .map_err(datafusion_to_py_err)?;
+            let df = crate::is_duplicated::select_frame(&self.df, expressions)?;
             Ok(Self::new(df, Arc::clone(&self.runtime)))
         })
     }

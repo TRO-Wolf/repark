@@ -210,6 +210,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   unaliased `F.col("*")` (SQL text `` `*` ``, projection name `*`; `lit("*")` and
   `col("*").alias(…)` are not), so `DataFrame.select` expands it like the string `"*"`.
   pins: u11-edge-1/C-029
+  **POLARS-IS-DUPLICATED-1 (2026-09-28):** `is_duplicated` — the thin forwarder
+  (`_reject_nested_generator`, one `PyColumnParts.is_duplicated` call, window-like
+  flags) bound on `Column`, so both `F.col` and `rp.col` carry it; `column.py`
+  stays at its exact 1529 baseline (one bind line in, one `__radd__` docstring
+  line out, net zero).
+  pins: polars-is-duplicated-1/C-001
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
   unsupported operations fail explicitly.

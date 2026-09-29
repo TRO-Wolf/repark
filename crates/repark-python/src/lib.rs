@@ -14,6 +14,7 @@ mod dataframe_names;
 mod dataframe_stack;
 mod dataframe_stats;
 mod fence;
+mod is_duplicated;
 mod logical_names;
 mod ml;
 mod orc_io;
@@ -117,7 +118,6 @@ fn try_init_repark_tracing() {
     });
 }
 
-/// The native module entry point.
 #[pymodule]
 fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     try_init_repark_tracing();

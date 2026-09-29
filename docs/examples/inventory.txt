@@ -76,6 +76,7 @@ column	Column.ilike
 column	Column.isNaN
 column	Column.isNotNull
 column	Column.isNull
+column	Column.is_duplicated
 column	Column.is_not_null
 column	Column.is_null
 column	Column.isin

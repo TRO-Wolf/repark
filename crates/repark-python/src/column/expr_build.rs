@@ -321,6 +321,27 @@ pub(super) fn percentile_approx_list_expr(
     }
 }
 
+#[allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
+pub(super) fn is_duplicated_expr(receiver: Expr) -> PyResult<Expr> {
+    let keyed = crate::is_duplicated::dup_key_udf().call(vec![receiver]);
+    let one = PyColumn::from_expr(lit(1));
+    let counted = PyColumn::count_aggregate(vec![one], false)?;
+    let counted_expr = counted.expr();
+    let windowed = super::window::build_over_expression(
+        &counted_expr,
+        super::window::OverSpec {
+            partition_by: vec![PyColumn::from_expr(keyed)],
+            order_by: Vec::new(),
+            order_ascending: Vec::new(),
+            order_nulls_first: Vec::new(),
+            frame_units: None,
+            frame_start: None,
+            frame_end: None,
+        },
+    )?;
+    Ok(crate::is_duplicated::dup_mask_udf().call(vec![windowed.gt(lit(1))]))
+}
+
 pub(super) fn window_from_aggregate(
     agg: &datafusion::logical_expr::expr::AggregateFunction,
 ) -> Expr {
