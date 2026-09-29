@@ -290,6 +290,32 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   sequence replays (writes run, 11 reads assert rows and dtypes); 3 divergence
   steps pin the widening row and both refusal texts beside Spark's.
   pins: ntz-1/C-006
+  **WO NTZ-STORE-DOORS-1 verifier fold (2026-09-29):** the `r_wide` step (R-NTZ-S2-11)
+  now asserts Spark's recorded rows. The mixed `VALUES` column is typed `TIMESTAMP`, so
+  the New York gap wall stores `2024-03-10 03:30:00`. Its `divergence` and `spark_rows`
+  keys are gone, and two divergence steps remain: the UPDATE refusal texts.
+  pins: ntz-store-doors-1/C-006
+- [test_ntz_store_doors_1.py](test_ntz_store_doors_1.py) +
+  [ntz_store_doors_1_spark_oracle.json](ntz_store_doors_1_spark_oracle.json) —
+  **WO NTZ-STORE-DOORS-1 (2026-09-28):** 66 door cells (UTC, New York, Kolkata ×
+  `TIMESTAMP` / `TIMESTAMP_NTZ` × `BY NAME`, the `INSERT OVERWRITE` family,
+  `writeTo().overwritePartitions()`, `writeTo().overwrite(cond)` and the four MERGE
+  arms) replay Spark 4.1.2's recorded reads for eleven sources, and every Spark refusal
+  asserts RePark's recorded refusal text; 12 `days`/`hours` cells replay rows,
+  `.partitions` and the equality filter.
+  pins: ntz-store-doors-1/C-001, C-002, C-003, C-004, C-005
+  **Verifier fold (2026-09-29, VD-1):**
+  [ntz_store_doors_1_mixed_spark_oracle.json](ntz_store_doors_1_mixed_spark_oracle.json)
+  (generated from `target/ntz-mix/out/m-spark.json`) adds 52 door cells and 4 SELECT
+  cells for a `VALUES` column that mixes `TIMESTAMP` and `TIMESTAMP_NTZ`. The door cells
+  cover New York and Kolkata × both target types × 13 doors: the ten SQL doors plus
+  `overwritePartitions()`, `insertInto(overwrite=True)` and `writeTo().append()`. Each
+  cell runs three sources. The SELECT cells cover UTC, New York, Kolkata and Lord Howe:
+  `typeof` and values of the mixed sources, all-NTZ and all-LTZ controls, NULL, CTE,
+  subquery, two-column, CAST and `to_timestamp` mixes, and UNION, CASE and coalesce
+  literals. Reverting the coercion reds 43 door cells and all 4 SELECT cells. The 9 cells
+  that stay green are positional-door guards that were already equal to Spark.
+  pins: ntz-store-doors-1/C-006
 - [test_uuid_cast_window_1.py](test_uuid_cast_window_1.py) +
   [uuid_cast_window_1_spark_oracle.json](uuid_cast_window_1_spark_oracle.json) —
   **WO UUID-CAST-WINDOW-1 (2026-09-27):** the `CAST('a' AS UUID)` refusal replays

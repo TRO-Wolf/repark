@@ -109,6 +109,11 @@ holds behavior observed from outside the crate.
   rows) and the column stays naive; both pins red without the `on_session_built`
   registration (`UNRESOLVED_ROUTINE`).
   pins: ntz-1/C-006
+  **WO NTZ-STORE-DOORS-1 (2026-09-28):**
+  `ansi_merge_into_an_instant_column_keeps_the_utc_reading` pins the ANSI door's MERGE
+  UPDATE and INSERT of a naive wall into a `TIMESTAMP(6) WITH TIME ZONE` column at the
+  UTC reading, green before and after the store-cast change.
+  pins: ntz-store-doors-1/C-003
 
 - `session_timestamp_type_ansi_door.rs` — **Q10:** ANSI-door cell of
   `spark.sql.timestampType=TIMESTAMP_NTZ` on a Spark-extended session

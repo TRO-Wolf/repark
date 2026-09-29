@@ -102,24 +102,50 @@ pub(super) fn insert_projection_with_defaults(
     Ok(projection.join(", "))
 }
 
-fn ntz_wrapping_stream_sql(sql: &str, write_schema: &ArrowSchema) -> Option<String> {
-    if !write_schema
-        .fields()
+fn zone_wrapping_stream_sql(
+    ctx: &SessionContext,
+    sql: &str,
+    plan: &datafusion::logical_expr::LogicalPlan,
+    write_schema: &ArrowSchema,
+) -> Option<String> {
+    use crate::write::ntz_store::{is_ltz_instant_target, is_ntz_wall_target};
+    let fields = write_schema.fields();
+    let planned = if fields
         .iter()
-        .any(|field| crate::write::ntz_store::is_ntz_wall_target(field.data_type()))
+        .any(|field| is_ltz_instant_target(field.data_type()))
+    {
+        crate::write::ntz_store::analyzed_types(ctx, plan)
+            .filter(|types| types.len() == fields.len())
+    } else {
+        None
+    };
+    let instant = |index: usize| {
+        planned.as_ref().is_some_and(|types| {
+            is_ltz_instant_target(fields[index].data_type())
+                && crate::write::ntz_store::needs_ltz_instant_cast(&types[index])
+        })
+    };
+    if !(0..fields.len())
+        .any(|index| is_ntz_wall_target(fields[index].data_type()) || instant(index))
     {
         return None;
     }
     let inner = "__repark_merge_insert_rows";
-    let projection = write_schema
-        .fields()
+    let projection = fields
         .iter()
-        .map(|field| {
+        .enumerate()
+        .map(|(index, field)| {
             let quoted = quote_ident(field.name());
             let column = format!("{inner}.{quoted}");
-            if crate::write::ntz_store::is_ntz_wall_target(field.data_type()) {
+            if is_ntz_wall_target(field.data_type()) {
                 let wall = crate::write::ntz_store::ntz_wall_cast_sql(&column);
                 format!("({wall}) AS {quoted}")
+            } else if instant(index) {
+                let cast = crate::write::update_cast::store_assignment_cast_sql(
+                    &column,
+                    field.data_type(),
+                );
+                format!("({cast}) AS {quoted}")
             } else {
                 format!("{column} AS {quoted}")
             }
@@ -151,7 +177,9 @@ pub(super) async fn insert_stream_checked(
     )?;
     crate::write::ntz_store::refuse_ntz_writes(ctx, "``", dataframe.logical_plan(), targets)?;
     validate_insert_store_assignment(dataframe.schema().fields(), write_schema)?;
-    if let Some(stream_sql) = ntz_wrapping_stream_sql(sql, write_schema) {
+    if let Some(stream_sql) =
+        zone_wrapping_stream_sql(ctx, sql, dataframe.logical_plan(), write_schema)
+    {
         return ctx.sql(&stream_sql).await?.execute_stream().await;
     }
     dataframe.execute_stream().await

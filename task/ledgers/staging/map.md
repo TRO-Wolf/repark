@@ -95,6 +95,28 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   FIXED.
   `risk_tier: standard`. Branch `feat/tblprops-1`.
   pins: tblprops-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+- [ntz-store-doors-1-ledger.md](ntz-store-doors-1-ledger.md) —
+  **WO NTZ-STORE-DOORS-1 (2026-09-28), in flight:** the remaining write doors
+  (`BY NAME`, the `INSERT OVERWRITE` family, `writeTo().overwritePartitions()`, MERGE
+  UPDATE SET / SET * / INSERT (cols) / INSERT *) store `TIMESTAMP` into
+  `TIMESTAMP_NTZ` as the session-zone wall (C-001) and `TIMESTAMP_NTZ` into
+  `TIMESTAMP` as the session-zone instant (C-002) through one seam, refusals and
+  same-type stores unchanged (C-003), `DATE` stores the session midnight (C-004),
+  partition transforms follow the stored value (C-005). The verifier fold
+  (2026-09-29) adds C-006: a `VALUES` column that mixes `TIMESTAMP` and
+  `TIMESTAMP_NTZ` is typed `TIMESTAMP` through the session zone at the `VALUES`
+  coercion site. It widens R-1 to the nested types, adds R-5 (MERGE `ON`) and
+  R-6, and closes R-4. The re-verify fold (2026-09-29) adds C-007: a `DATE` cell
+  never triggers the widening, so `DATE` + `TIMESTAMP_NTZ` stays `TIMESTAMP_NTZ`,
+  and corrects the fold's "0 moved away" claim and R-6. The second re-verify fold
+  (2026-09-29) adds C-008: a written `CAST(… AS TIMESTAMP)` `VALUES` cell is
+  `TIMESTAMP` beside a `DATE` or `TIMESTAMP_NTZ` cell, and NULL rows never make a
+  column `TIMESTAMP_NTZ`; it records R-7 (card NTZ-DST-GAP-CAST-1) to R-10. The third
+  re-verify fold (2026-09-29) adds C-009: the `VALUES` pass deviates from base only on
+  positive, syntactic evidence, so an expression cell such as `date_trunc` of an NTZ
+  beside a `DATE` keeps base's `TIMESTAMP`; it records R-11 and R-12.
+  `risk_tier: standard`. Branch `fix/ntz-store-doors-1`.
+  pins: ntz-store-doors-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [ntz-1-ledger.md](ntz-1-ledger.md) —
   **WO NTZ-1 (2026-09-26), in flight:** `TIMESTAMP_NTZ` literals, casts and
   store assignment answer as Spark. Slice 1 (this commit): the literal and the

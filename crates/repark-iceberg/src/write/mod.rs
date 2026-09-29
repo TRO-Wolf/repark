@@ -109,6 +109,7 @@ pub use merge::{
     write_data_files, write_data_files_from_stream, write_data_files_from_stream_with_concurrency,
     write_data_files_with_concurrency,
 };
+pub use ntz_store::{zone_stores, zone_stores_by_name};
 pub use output_spec::{
     parse_output_spec_id, staged_spec_is_partitioned, staging_table, validate_output_spec_id,
 };

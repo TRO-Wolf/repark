@@ -16,6 +16,10 @@ pub fn store_assignment_cast_sql(expr: &str, target: &DataType) -> String {
     let type_name = without_field_metadata(target)
         .to_string()
         .replace('\'', "''");
+    if super::ntz_store::is_ltz_instant_target(target) {
+        let instant = super::ntz_store::ltz_instant_cast_sql(expr);
+        return format!("arrow_cast(({instant}), '{type_name}')");
+    }
     format!("arrow_cast(({expr}), '{type_name}')")
 }
 
