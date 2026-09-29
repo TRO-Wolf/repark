@@ -325,6 +325,19 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: casesens-2/C-021, C-022, C-023, C-024, C-025, C-026, C-027
   The same fold adds `_fresh_outputs` to the frozen `DataFrame` slot and
   `dir` lists in `_dfcore_1_expected.py` (the new private slot, C-024).
+  **CASESENS-2 fourth re-verify fold (2026-09-29):** three `test_rc5_*`
+  pins, checked against live Spark 4.1.2 cells (the re-verify's `p5` set
+  and this round's pin probe, JDK 17). Under `true`, twins with an
+  unproven identity refuse `AMBIGUOUS_REFERENCE` 42704 in `filter`,
+  `where`, backticked names and a lambda body, in both twin orders
+  (`F.col`/literal, `F.col`/computed, `F.expr`/`F.expr`), while
+  `d.v`/`F.col('v')`, `F.col`/`F.col` and `F.expr`/`F.col` answer. Under
+  `false`, `` exists(arr, `X` -> X > 4) `` and `` X -> `X` > 4 `` answer
+  `[1, 5]`. `fillna`/`dropna` subsets over unproven twins refuse under
+  both rules, including the `false` self-join. `test_casesens_2.py`'s
+  `test_s3_dropna_follows_the_rule` flips its alias-twin legs to Spark's
+  byte-exact `AMBIGUOUS_REFERENCE` (R-CS2-14).
+  pins: casesens-2/C-030, C-031, C-032
 - [test_ntz_1.py](test_ntz_1.py) + `ntz_1_spark_oracle.json` — **WO NTZ-1 slice 1
   (2026-09-26):** the `TIMESTAMP_NTZ` literal and explicit casts replay Spark's measured
   answers — 29 literal/cast/refusal queries in UTC and New York sessions, the v2/v3

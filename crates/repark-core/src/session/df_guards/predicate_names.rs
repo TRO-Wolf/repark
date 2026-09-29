@@ -66,9 +66,7 @@ impl VisitorMut for QualifierBinder<'_> {
                 };
                 let mut names = Vec::with_capacity(params.len());
                 for param in params {
-                    if matches!(self.rule, NameRule::Exact) {
-                        param.name.quote_style = Some('`');
-                    }
+                    param.name.quote_style = Some('`');
                     names.push(param.name.value.clone());
                 }
                 self.scopes.push(names);
@@ -153,13 +151,11 @@ impl QualifierBinder<'_> {
 
     fn bound_identifier(&self, ident: &mut Ident) -> Result<()> {
         if let Some(param) = self.lambda_parameter(&ident.value) {
-            if matches!(self.rule, NameRule::Exact) {
-                *ident = Ident {
-                    value: param.clone(),
-                    quote_style: Some('`'),
-                    span: ident.span,
-                };
-            }
+            *ident = Ident {
+                value: param.clone(),
+                quote_style: Some('`'),
+                span: ident.span,
+            };
             return Ok(());
         }
         let Some(displays) = self.displays else {
@@ -179,13 +175,10 @@ impl QualifierBinder<'_> {
         let [first, _, ..] = hits.as_slice() else {
             return Ok(());
         };
-        let mut identities = hits
-            .iter()
-            .map(|index| self.attributes[*index].as_str())
-            .filter(|identity| !identity.is_empty());
+        let mut identities = hits.iter().map(|index| self.attributes[*index].as_str());
         let one = identities
             .next()
-            .is_none_or(|seen| identities.all(|identity| identity == seen));
+            .is_some_and(|seen| !seen.is_empty() && identities.all(|identity| identity == seen));
         if one {
             *ident = Ident {
                 value: self.frame_schema.field(*first).name().clone(),
@@ -396,22 +389,32 @@ mod tests {
             (
                 "exists(arr, T -> T > 4) AND T.id = 1",
                 IgnoreCase,
-                "exists(arr, T -> T > 4) AND `T`.`id` = 1",
+                "exists(arr, `T` -> `T` > 4) AND `T`.`id` = 1",
             ),
             (
                 "exists(t.arr, t -> t > 4)",
                 IgnoreCase,
-                "exists(`T`.`arr`, t -> t > 4)",
+                "exists(`T`.`arr`, `t` -> `t` > 4)",
             ),
             (
                 "exists(arr, T -> T.id > 1)",
                 IgnoreCase,
-                "exists(arr, T -> T['id'] > 1)",
+                "exists(arr, `T` -> `T`['id'] > 1)",
             ),
             (
                 "exists(arr, x -> x > T.id)",
                 IgnoreCase,
-                "exists(arr, x -> x > `T`.`id`)",
+                "exists(arr, `x` -> `x` > `T`.`id`)",
+            ),
+            (
+                "exists(arr, `X` -> X > 4)",
+                IgnoreCase,
+                "exists(arr, `X` -> `X` > 4)",
+            ),
+            (
+                "exists(arr, X -> `x` > 4)",
+                IgnoreCase,
+                "exists(arr, `X` -> `X` > 4)",
             ),
             (
                 "exists(arr, T -> T > 4)",
@@ -453,7 +456,17 @@ mod tests {
                 .map(|()| parsed.to_string())
         };
         assert_eq!(bind("v > 15", &["o", "o", "w"]).unwrap(), "`e0` > 15");
-        assert_eq!(bind("v > 15", &["", "o", "w"]).unwrap(), "`e0` > 15");
+        assert_eq!(
+            bind("v > 15", &["col:0", "col:0", "own:w"]).unwrap(),
+            "`e0` > 15"
+        );
+        for unproven in [["", "o", "w"], ["o", "", "w"], ["", "", "w"]] {
+            let error = bind("v > 15", &unproven).unwrap_err().to_string();
+            assert!(
+                error.contains("[AMBIGUOUS_REFERENCE] Reference `v` is ambiguous"),
+                "{error}"
+            );
+        }
         assert_eq!(
             bind("w > 1 AND V > 2", &["o", "a", "w"]).unwrap(),
             "w > 1 AND V > 2"

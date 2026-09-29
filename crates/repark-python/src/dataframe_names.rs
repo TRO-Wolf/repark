@@ -32,6 +32,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(resolve_qualified_display_names, module)?)?;
     module.add_function(wrap_pyfunction!(rewrite_join_condition_aliases, module)?)?;
     module.add_function(wrap_pyfunction!(same_source_fields, module)?)?;
+    module.add_function(wrap_pyfunction!(twin_identities, module)?)?;
     Ok(())
 }
 
@@ -229,6 +230,12 @@ fn child_sort_target(frame: &PyDataFrame, written: Vec<String>) -> (String, Stri
 #[pyfunction]
 fn same_source_fields(frame: &PyDataFrame, fields: Vec<String>) -> bool {
     repark_core::frame_names::same_source_fields(frame.inner().logical_plan(), &fields)
+}
+
+#[allow(clippy::needless_pass_by_value)]
+#[pyfunction]
+fn twin_identities(frame: &PyDataFrame, fresh: Vec<bool>) -> Vec<String> {
+    repark_core::frame_names::twin_identities(frame.inner().logical_plan(), &fresh)
 }
 
 #[allow(clippy::missing_errors_doc)]

@@ -931,3 +931,63 @@ def test_rc4_7_true_twin_names_dedupe_and_filter_like_spark(tmp_path: Path) -> N
             )
     finally:
         session.stop()
+
+
+def test_rc5_1_true_twins_with_an_unproven_identity_refuse(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        session.conf.set("spark.sql.caseSensitive", "true")
+        source = _twin_source(session)
+        col, lit, expr = functions.col, functions.lit, functions.expr
+        for first, second in (
+            (col("v"), lit(100).alias("v")),
+            (col("v"), (col("v") - 15).alias("v")),
+            (expr("v"), expr("v - 15").alias("v")),
+        ):
+            for twins in (source.select(first, second), source.select(second, first)):
+                for predicate in ("v > 15", "`v` > 15", "exists(array(1), e -> e < v)"):
+                    for run in (twins.filter, twins.where):
+                        _assert_refuses(
+                            lambda run=run, predicate=predicate: run(predicate),
+                            "AMBIGUOUS_REFERENCE",
+                            "42704",
+                        )
+        for proven in ((source.v, col("v")), (col("v"), col("v")), (expr("v"), col("v"))):
+            assert _rows(source.select(*proven).filter("v > 15")) == [[20, 20]]
+    finally:
+        session.stop()
+
+
+def test_rc5_2_a_quoted_lambda_parameter_binds_its_body_under_false(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        session.conf.set("spark.sql.caseSensitive", "false")
+        frame = _lambda_frame(session)
+        for predicate in ("exists(arr, `X` -> X > 4)", "exists(arr, X -> `X` > 4)"):
+            assert _ids(frame.filter(predicate)) == [1, 5], predicate
+    finally:
+        session.stop()
+
+
+def test_rc5_3_na_subsets_over_unproven_twins_refuse(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        col = functions.col
+        for setting in ("false", "true"):
+            session.conf.set("spark.sql.caseSensitive", setting)
+            source = _twin_source(session)
+            twins = source.select(col("v"), functions.lit(100).alias("v"))
+            for run in (
+                lambda twins=twins: twins.fillna(0, subset=["v"]),
+                lambda twins=twins: twins.dropna(subset=["v"]),
+            ):
+                _assert_refuses(run, "AMBIGUOUS_REFERENCE", "42704")
+            same = source.select(source.v, col("v")).fillna(0, subset=["v"])
+            assert _rows(same) == [[10, 10], [20, 20]], setting
+        session.conf.set("spark.sql.caseSensitive", "false")
+        source = _twin_source(session)
+        joined = source.alias("s1").join(source.alias("s2"), col("s1.id") == col("s2.id"))
+        bare = joined.select(col("s1.v"), col("s2.v"))
+        _assert_refuses(lambda: bare.fillna(0, subset=["v"]), "AMBIGUOUS_REFERENCE", "42704")
+    finally:
+        session.stop()

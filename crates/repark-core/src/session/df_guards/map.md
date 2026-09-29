@@ -298,6 +298,22 @@ wrapped optimizer rule) and declares this directory.
   Pins `a_lambda_parameter_shadows_names_inside_its_own_body_only`,
   `exact_bare_names_over_twin_displays_bind_one_attribute_or_refuse`.
   pins: casesens-2/C-021, C-022, C-027
+  **CASESENS-2 fourth re-verify fold (2026-09-29, RC5-1, RC5-2):** an
+  unknown identity is never a wildcard. A bare identifier over twin
+  displays binds only when every hit carries the same non-empty identity;
+  an empty identity, or two different ones, refuses
+  `AMBIGUOUS_REFERENCE` (Spark and main refuse
+  `select(F.col('v'), F.lit(100).alias('v')).filter('v > 15')`, which
+  bound the first twin at `ca4ac687`). The facade now sends the
+  plan-derived identities of `sort_names::twin_identities`, so the empty
+  string no longer reaches the binder at all. Lambda parameter quoting and
+  body respelling run under both rules: under `IgnoreCase` DataFusion
+  lowercased the unquoted body of `` exists(arr, `X` -> X > 4) `` and
+  bound the `x` column. Matching still follows the session rule.
+  Pins `a_lambda_parameter_shadows_names_inside_its_own_body_only`
+  (the `IgnoreCase` rows now quote), and
+  `exact_bare_names_over_twin_displays_bind_one_attribute_or_refuse`
+  (an empty identity refuses). pins: casesens-2/C-030, C-031
 - `sort_names.rs` — **CASESENS-2 second re-verify fold (2026-09-29, RC3-4,
   RC3-6, RC3-7):** `sort_through_child(plan, written, rule)` resolves an
   ambiguous sort key the way Spark's Sort does: on a `Projection` it
@@ -324,6 +340,16 @@ wrapped optimizer rule) and declares this directory.
   projection and projects it away. Otherwise it stays `Hidden`. Pin
   `sort_keys_resolve_through_the_nearest_projection_below`.
   pins: casesens-2/C-025, C-026
+  **CASESENS-2 fourth re-verify fold (2026-09-29, RC5-1, RC5-3):**
+  `twin_identities(plan, fresh)` gives one identity per output field. It
+  walks down through `Filter`, `Limit`, `Sort`, `SubqueryAlias` and
+  `Distinct::All` to the nearest `Projection`. A plain column reference
+  (aliases unwrapped) is `col:<input index>`, so two outputs that read
+  the same input column are one attribute. Anything else is `own:<field>`:
+  a computed output, an output the facade marks `fresh` (an aliased
+  twin, a new attribute in Spark), or every field when no projection is
+  found. Pin `twin_identities_prove_one_attribute_or_stay_distinct`.
+  pins: casesens-2/C-030, C-032
 - `resolver_names.rs` — **CASESENS-2 re-verify fold (2026-09-28):**
   `join_on_named_keys`, `union_by_folded_name` and their helpers moved
   byte-identical out of `case_bind.rs` (1000-line ceiling) with `bind_name`

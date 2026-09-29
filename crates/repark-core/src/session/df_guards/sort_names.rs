@@ -106,6 +106,45 @@ pub fn same_source_fields(plan: &LogicalPlan, fields: &[String]) -> bool {
     sources.len() == 1
 }
 
+#[must_use]
+pub fn twin_identities(plan: &LogicalPlan, fresh: &[bool]) -> Vec<String> {
+    let fields = plan.schema().fields();
+    let projection =
+        attribute_projection(plan).filter(|projection| projection.expr.len() == fields.len());
+    fields
+        .iter()
+        .enumerate()
+        .map(|(index, field)| {
+            let own = || format!("own:{}", field.name());
+            if fresh.get(index).copied().unwrap_or(false) {
+                return own();
+            }
+            projection
+                .and_then(|projection| {
+                    let source = source_column(projection.expr.get(index)?)?;
+                    let at = projection.input.schema().maybe_index_of_column(source)?;
+                    Some(format!("col:{at}"))
+                })
+                .unwrap_or_else(own)
+        })
+        .collect()
+}
+
+fn attribute_projection(plan: &LogicalPlan) -> Option<&Projection> {
+    let mut current = plan;
+    loop {
+        current = match current {
+            LogicalPlan::Projection(projection) => return Some(projection),
+            LogicalPlan::Filter(filter) => filter.input.as_ref(),
+            LogicalPlan::Limit(limit) => limit.input.as_ref(),
+            LogicalPlan::Sort(sort) => sort.input.as_ref(),
+            LogicalPlan::SubqueryAlias(alias) => alias.input.as_ref(),
+            LogicalPlan::Distinct(Distinct::All(input)) => input.as_ref(),
+            _ => return None,
+        };
+    }
+}
+
 fn output_source<'a>(projection: &'a Projection, field: &str) -> Option<&'a Column> {
     let mut outputs = projection
         .expr
@@ -167,7 +206,9 @@ mod tests {
     use datafusion::logical_expr::logical_plan::table_scan;
     use datafusion::logical_expr::{LogicalPlan, LogicalPlanBuilder, lit};
 
-    use super::{ChildSort, same_source_fields, sort_through_child, written_column};
+    use super::{
+        ChildSort, same_source_fields, sort_through_child, twin_identities, written_column,
+    };
     use repark_common::names::NameRule::{Exact, IgnoreCase};
 
     fn projected(fields: &[&str], exprs: Vec<datafusion::logical_expr::Expr>) -> LogicalPlan {
@@ -257,6 +298,48 @@ mod tests {
         let computed = projected(&["v"], vec![named("v"), (named("v") + lit(1)).alias("V")]);
         assert!(!same_source_fields(&computed, &written(&["v", "V"])));
         assert!(!same_source_fields(&pair, &written(&["v", "missing"])));
+    }
+
+    #[test]
+    fn twin_identities_prove_one_attribute_or_stay_distinct() {
+        let twins = projected(
+            &["id", "v"],
+            vec![
+                named("v").alias("e0"),
+                named("v").alias("e1"),
+                lit(100).alias("e2"),
+                (named("v") + lit(1)).alias("e3"),
+                named("id"),
+            ],
+        );
+        let above = LogicalPlanBuilder::from(twins.clone())
+            .filter(named("id").gt(lit(0)))
+            .unwrap()
+            .alias("x")
+            .unwrap()
+            .limit(0, Some(2))
+            .unwrap()
+            .build()
+            .unwrap();
+        let want = written(&["col:1", "col:1", "own:e2", "own:e3", "col:0"]);
+        assert_eq!(twin_identities(&twins, &[]), want);
+        assert_eq!(twin_identities(&above, &[false; 5]), want);
+        assert_eq!(
+            twin_identities(&twins, &[false, true]),
+            written(&["col:1", "own:e1", "own:e2", "own:e3", "col:0"])
+        );
+        let scan = table_scan(
+            Some("s"),
+            &Schema::new(vec![
+                Field::new("v", DataType::Int64, true),
+                Field::new("w", DataType::Int64, true),
+            ]),
+            None,
+        )
+        .unwrap()
+        .build()
+        .unwrap();
+        assert_eq!(twin_identities(&scan, &[]), written(&["own:v", "own:w"]));
     }
 
     #[test]

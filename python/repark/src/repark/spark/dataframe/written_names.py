@@ -289,20 +289,22 @@ def _distinct_attributes(frame: DataFrame, hits: list[str]) -> bool:
         if len(spelled) > 1 and frame._fresh_outputs.intersection(spelled):
             return True
         return len(spelled) > 1 and not _native.same_source_fields(frame._plan(), spelled)
-    return len(_hit_origins(frame, hits)) > 1
-
-
-def _hit_origins(frame: DataFrame, hits: list[str]) -> set[tuple[str, str]]:
-    if frame._display_names is None or frame._engine_names is None or not frame._origin_map:
-        return set()
+    displays = frame._display_names
+    identities = _twin_identities(frame)
+    if len(identities) != len(displays):
+        return False
     wanted = set(hits)
-    pairs = zip(frame._display_names, frame._engine_names, strict=True)
-    origins = {
-        _engine_origin(frame, engine) or _new_attribute(engine)
-        for display, engine in pairs
+    held = {
+        identity
+        for display, identity in zip(displays, identities, strict=True)
         if display in wanted
     }
-    return {origin for origin in origins if origin is not None}
+    return len(held) > 1
+
+
+def _twin_identities(frame: DataFrame) -> list[str]:
+    fresh = [_new_attribute(engine) is not None for engine in frame._engine_names or []]
+    return list(_native.twin_identities(frame._plan(), fresh))
 
 
 def _new_attribute(engine: str) -> tuple[str, str] | None:
@@ -330,14 +332,7 @@ def _predicate_attributes(frame: DataFrame) -> list[str]:
     displays, engines = frame._display_names, frame._engine_names
     if displays is None or engines is None or len(set(displays)) == len(displays):
         return []
-    identities: list[str] = []
-    for engine in engines:
-        origin = _engine_origin(frame, engine)
-        if origin is not None:
-            identities.append(f"{origin[0]}.{origin[1]}")
-        else:
-            identities.append(engine if _new_attribute(engine) is not None else "")
-    return identities
+    return _twin_identities(frame)
 
 
 def _fresh_outputs(projected: list[Column], names: list[str]) -> frozenset[str]:

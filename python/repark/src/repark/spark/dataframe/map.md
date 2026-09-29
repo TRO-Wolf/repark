@@ -246,6 +246,21 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   sets re-run against the recorded main and Spark outputs hold the
   `false` no-alias predicates byte-identical to main. pins:
   casesens-2/C-023, C-024, C-025, C-026, C-027, C-029
+  **CASESENS-2 fourth re-verify fold (2026-09-29, RC5-1, RC5-3):**
+  identities come from the plan, not from origins. `_twin_identities`
+  marks each `_a_` engine as fresh and asks the native `twin_identities`.
+  A bare bind (`F.col('v')`, `F.expr('v')`, `d.v`, `d['v']`) is its input
+  column, and an aliased or computed output is its own attribute.
+  `_predicate_attributes` sends that list under `true`, so a twin
+  without an origin no longer binds as a wildcard
+  (`select(F.col('v'), F.lit(100).alias('v')).filter('v > 15')` refuses
+  `AMBIGUOUS_REFERENCE` as Spark and main do, and
+  `select(d.v, F.col('v'))` still answers). `_distinct_attributes` on an
+  overlay frame counts distinct identities among the hits, so `fillna`
+  and `dropna` refuse over unproven twins: the `F.col`/literal twins, the
+  self-join `select(F.col('s1.v'), F.col('s2.v'))` and the alias twins of
+  R-CS2-14. It also serves overlay `drop` of a Column without an origin.
+  `_hit_origins` is gone. pins: casesens-2/C-030, C-032
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`
