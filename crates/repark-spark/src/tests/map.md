@@ -2051,6 +2051,37 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   stores the same six sources through MERGE INSERT * into a `TIMESTAMP_NTZ` column.
   Classifying an unknown cell as a naive wall again reds both pins.
   pins: ntz-store-doors-1/C-009
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 round 2):** the stacked-sign pin refuses
+  `- -1`, `- - -1`, `- -(1)`, `- -1.5`, `+-1`, `-+1`, `- -1BD` and the
+  single-signed `-1.5`/`-1BD` with the exact Spark body each carries, and the
+  seeded row survives alone.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-1/VG-2):** the pin
+  also refuses `(- -1)`, `+- -1`, `+(- -1)`, `-(- -1)`, `abs(- -1)` and
+  `CAST(- -1 AS INT)` as `INT`, plus `- -1 + 0` as `BIGINT` (the engine's own
+  `int + int` width, kept honest rather than renamed); a multi-row
+  `(NULL, +- -1)` pin refuses and writes nothing.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 re-verify fold, RN2-1/RN2-2):**
+  `equal_cells_in_one_row_store_and_bad_rows_still_refuse` stores rows whose
+  cells repeat (`(1, 1, 1, ts)`, `(3, NULL, NULL, ts)`, `7` beside
+  `CAST(7 AS INT)`, a two-row VALUES, a reordered column list, two equal NTZ
+  literals, `id` equal to `qty`) and refuses `(10, 1, 1, '2024-…')` as `STRING`,
+  `(11, 1, 1, - -1)` as `INT` and a two-string row, with Spark's body;
+  `default_cells_in_ntz_tables_store_null` stores `DEFAULT` into the NTZ column,
+  into a non-timestamp column of an NTZ table, into an LTZ column beside NTZ, with
+  and without a column list. Spark answers: re-verify `p2/spark.json`.
+  **Fold 2026-09-29 (LTZ-STACKED-SIGN-1 second re-verify fold, RN3-1):**
+  `backslash_quote_strings_store_their_exact_values` stores every re-verifier
+  string shape (plain, column-list, `map`, both `replace`-casts, both
+  in-matrix cells, trailing-backslash, `\n`/`\t`, `\u00e9`) with Spark's
+  exact values. Spark answers: re-verify2 `rn31-spark.json` plus the
+  `rn31b` live run (2026-09-29). Moved to `ntz_store_quotes.rs` when NTZ-STORE-DOORS-1
+  merged main, to keep this file under the 1,000-line ceiling.
+
+- `ntz_store_quotes.rs` — **Split 2026-09-29 (NTZ-STORE-DOORS-1 merge of main):**
+  `backslash_quote_strings_store_their_exact_values` and its `id_strings` reader,
+  moved verbatim from `ntz_store.rs`. It uses the parent's `setup_ntz`, which is now
+  `pub(super)`. The pins are LTZ-STACKED-SIGN-1's RN3-1 pins (see the `ntz_store.rs`
+  entry).
 
 - `describe_table.rs` — **SQL-DESCRIBE-1 (2026-09-09):** `DESCRIBE|DESC [TABLE]
   [EXTENDED|FORMATTED] catalog.namespace.table` against a memory-catalog table built like the
@@ -2212,6 +2243,16 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   statements succeed; a missing table keeps its own error and INSERT keeps the other
   cell's prose.
   pins: ipi-51/W-UPDATE-TYPE-ERR
+  **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** the INSERT cell now pins Spark's answer —
+  `VALUES ('notanumber', 'z')` refuses `CANNOT_SAFELY_CAST` naming `"STRING"` to
+  `"BIGINT"` at the VALUES gate, where it used to fail in the cast kernel.
+  pins: store-ts-to-numeric-1/C-001
+  **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** STRING sources return to base behaviour, so
+  the INSERT cell is back to its base pin `insert_string_into_bigint_keeps_the_insert_path`
+  (the cast-kernel error, not the store text). pins: store-ts-to-numeric-1/C-006
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 round 2):** `UPDATE … SET c = - -1`
+  refuses `CANNOT_SAFELY_CAST` naming `"INT"` to `"TIMESTAMP"`, and the seeded
+  row keeps its wall.
 - [ltz_store.rs](ltz_store.rs) — **WO LTZ-STORE-INT-1 (2026-09-28):** INT into a
   `TIMESTAMP` (LTZ) column refuses on VALUES, SELECT, UPDATE and MERGE — the VALUES text
   equals Spark's recorded `ins_l_int` refusal on the test catalog, and the refused
@@ -2227,6 +2268,23 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `12345678901` refusals name `DECIMAL(2,1)` and `BIGINT`.
   **Fold 2026-09-28 (re-verify RL-1..RL-3):** STRING-valued functions refuse
   with the `ins_l_str` body; `0.05` names `DECIMAL(2,2)`.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1):** the stacked-sign pin refuses `- -1`,
+  `- - -1`, `- -(1)`, `- -1.5`, `+-1`, `-+1` and `- -1BD` with the exact Spark
+  body each single-signed shape carries, and writes nothing.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-1/VG-2):** the pin
+  also refuses `(- -1)`, `+- -1`, `+(- -1)`, `-(- -1)` and `CAST(- -1 AS INT)`
+  as `INT`, plus `- -1 + 0` and `abs(- -1)` as `BIGINT` (this harness types
+  integer literals `Int64`; the facade pin asserts the production refusal
+  class); a multi-row `(NULL, +- -1)` pin refuses and writes nothing.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 re-verify fold, RN2-2):**
+  `default_cells_into_timestamp_store_null` stores `DEFAULT` (either case, with a
+  column list in either order) as NULL; `stacked_minus_under_nvl_probes_and_stores`
+  stores `nvl(NULL, CAST(date_add(DATE'2024-01-01', - -1) AS TIMESTAMP))` and the
+  `ifnull` twin with Spark's walls.
+  **Fold 2026-09-29 (LTZ-STACKED-SIGN-1 second re-verify fold, RN3-1):**
+  `backslash_quote_replace_casts_store_their_wall` stores the re-verifier and
+  new-string `replace`-casts into `TIMESTAMP` with Spark's wall. Spark answers:
+  re-verify2 `rn31-spark.json` plus the `rn31b` live run (2026-09-29).
   pins: ltz-store-int-1/C-001
 - `use_ddl.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the `USE` behavior pins over
   one- and two-catalog memory setups: two-part set, v2 clear-to-empty, session-catalog

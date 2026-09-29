@@ -27,6 +27,7 @@ pub mod insert_gate;
 pub mod merge;
 pub mod meta_delete;
 mod name_resolution;
+pub mod negated_null_store;
 pub mod nested_column;
 pub mod nested_type_sql;
 pub mod ntz_store;

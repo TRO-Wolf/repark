@@ -123,6 +123,12 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   answers Spark rows with an Arrow NULL comment (alias COMMENT clauses kept); SHOW
   VIEWS appends the session's temp rows. Every other target falls through to
   the catalog arms unchanged. pins: ice-views-1/C-018
+- `temp_view.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** `ReplanningTempView`
+  keeps the plan it built at CREATE (`definition_plan`), and the free function
+  `definition_plan` answers it for a provider that is one; `extension.rs` registers that
+  function as the session's `ViewDefinitionPlans` resolver so the store gates can follow a
+  `-NULL` column through a temp view. `get_logical_plan` stays unimplemented, so
+  DataFusion never inlines a replanning view. pins: store-ts-to-numeric-1/C-002
 - `temp_view.rs` — **IPI-40 PR6** `ReplanningTempView`, the provider behind
   a SQL temp view (registered through `create_or_replace_temp_view_from`): it
   re-plans the stored body at every scan under the creation-time catalog and

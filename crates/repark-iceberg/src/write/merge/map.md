@@ -292,6 +292,10 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   plan, and a table whose instant columns take instants streams its SQL untouched.
   UPDATE SET and UPDATE SET * convert through `store_assignment_cast_sql`.
   pins: ntz-store-doors-1/C-002, C-003, C-004
+- `insert.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** the MERGE INSERT and UPDATE SET
+  gates also call `../negated_null_store.rs::refuse_negated_null_writes` with table ``, so a
+  `-NULL` value (Spark's DOUBLE) into a DATE, BOOLEAN or timestamp column refuses with
+  Spark's text, through a derived source or a temp view as well. pins: store-ts-to-numeric-1/C-002
 - `insert.rs` — **U8 WRITE-SQL PR2 (2026-09-25):** `store_assignment_then_sql` delegates to
   `../update_cast.rs`'s `store_assignment_cast_sql`, so a struct target casts to its type
   without Iceberg field ids. With the struct-aware gate in `../store_assign.rs`, whole-struct

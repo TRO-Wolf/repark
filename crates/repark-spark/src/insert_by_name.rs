@@ -75,6 +75,7 @@ pub(crate) async fn execute_insert_by_name(
              `{table_sql}`"
         )));
     };
+    crate::void_type::refuse_insert_source_types(ctx, catalogs, &insert, true).await?;
     let case_sensitive = case_sensitive_insert(ctx);
     let source_names = probe_source_names(
         ctx,

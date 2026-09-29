@@ -169,6 +169,12 @@ pub(super) async fn insert_stream_checked(
         .map(|field| (field.name().as_str(), field.data_type()))
         .collect();
     refuse_void_writes(ctx, "``", dataframe.logical_plan(), targets.clone())?;
+    crate::write::negated_null_store::refuse_negated_null_writes(
+        ctx,
+        "``",
+        dataframe.logical_plan(),
+        targets.clone(),
+    )?;
     crate::write::ntz_store::refuse_ntz_writes(ctx, "``", dataframe.logical_plan(), targets)?;
     validate_insert_store_assignment(dataframe.schema().fields(), write_schema)?;
     if let Some(stream_sql) =
@@ -254,6 +260,12 @@ async fn gate_update_probe(
         })
         .collect();
     refuse_void_writes(ctx, "``", dataframe.logical_plan(), targets.clone())?;
+    crate::write::negated_null_store::refuse_negated_null_writes(
+        ctx,
+        "``",
+        dataframe.logical_plan(),
+        targets.clone(),
+    )?;
     crate::write::ntz_store::refuse_ntz_writes(ctx, "``", dataframe.logical_plan(), targets)?;
     let planned = dataframe.schema().fields();
     if planned.len() != target_columns.len() {

@@ -28,6 +28,7 @@ WO CASESENS-1 slice 2 (2026-09-27): the ID-1 declared refusal converged — unqu
 CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
 accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
 CC-2 close: S3 Tables location-guard phrase kept contiguous in `test_aws_acceptance.py`.
+U12 live-leg fix (2026-09-29): `test_u12_s3_path_write_against_scratch_prefix` expects 6 rows after error + ignore + append of a 3-row frame, not 4. The scheduled run of 2026-09-29 on adc26586 stored 6 on real S3, which is what Spark 4.1.2 answers for parquet and json (measured locally and on moto for `s3://` and `s3a://`). The later legs (overwrite 3, partitionBy 3, empty 0) were never reached on AWS before this fix; they match Spark on moto. pins: s3-path-write-1/C-011
 
 **FNP-11A D-10 (2026-09-15, orchestrator):** `test_fnp11a_temporal.py` adds `test_make_timestamp_keeps_its_frozen_signature` and the EX-FN-28 residual pin `test_make_timestamp_date_time_keywords_refused_by_the_frozen_signature`, and its cell filter skips the facade `make_timestamp(date=…)` cells; `test_functions_d.py` drops the seven implemented temporal names from its deferred census (`to_timestamp_ltz` / `to_timestamp_ntz` stay for FNP-11B); `test_fn_batch3.py` drops the `make_timestamp` stub refusal; `test_functions_split_identity.py` counts `FNP11A_EXPORTS` after the stack names; `test_functions_gt2.py` pins Spark's `'2 years'` interval string (EX-FN-19 FIXED). pins: fnp-11a/C-001, C-002
 **FNP-11B step 3 (2026-09-15, run 16a):** the deferred census is gone (`to_timestamp_ltz` / `to_timestamp_ntz` answer, presence pin in its place); `test_fn_batch3.py` answers `try_to_timestamp` instead of refusing it; the split-identity tail follows the thirteen-name installer tuple with no edit; `test_examples_functions_b.py` retires the `try_to_timestamp` refusal pin (EX-FN-20 FIXED). pins: fnp-11b/C-002, C-007
@@ -263,6 +264,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and re-insert. TZ-6 states Spark's contract and the TY-TIMESTAMP-NTZ rows go
   EQUAL beside it.
   pins: ntz-1/C-008, C-009
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-1/VG-2):**
+  `test_stacked_sign_shapes_into_ntz_refuse` refuses every VG shape with the
+  exact Spark body (`- -1 + 0` names the engine's `BIGINT`), plus the
+  `(NULL, +- -1)` multi-row; the seeded row survives alone.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 re-verify fold, RN2-1/RN2-2):**
+  `test_equal_and_default_cells_store_like_spark` stores equal-cell and `DEFAULT`
+  rows with the walls Spark 4.1.2 stored in the re-verify follow-up probe, and
+  refuses `(10, 1, 1, '2024-…')` / `(11, 1, 1, - -1)` with Spark's recorded
+  bodies (`STRING`, `INT`), where base stored both.
 - [test_ntz_7_verify.py](test_ntz_7_verify.py) + `ntz_7_verify_spark_oracle.json` —
   **WO NTZ-1 verifier fold (2026-09-28):** `from_utc_timestamp` / `to_utc_timestamp`
   over strings and a STRING column keep Spark's TIMESTAMP in a New York session —
@@ -4587,14 +4597,61 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `VALUES (DATE '…')` is refused by the G6-3 CAST gate instead.
   **LTZ-STORE-INT-1 (2026-09-28)** closes the residual for `TIMESTAMP` (LTZ) targets at
   the existing void VALUES gate site, before planning; every other target stays residual.
+  **STORE-TS-TO-NUMERIC-1 (2026-09-28)** closes it for numeric, DATE and BOOLEAN targets:
+  `test_a_literal_values_row_refuses_like_spark` pins `VALUES (true)` and
+  `VALUES (DATE '…')` into `INT` refusing with Spark's `CANNOT_SAFELY_CAST` text and
+  writing nothing. pins: store-ts-to-numeric-1/C-001
   Arrow path.
+- `test_ltz_stacked_sign_1.py` — **Fold 2026-09-29 (LTZ-STACKED-SIGN-1 second
+  re-verify fold, RN3-1):** backslash-quote strings store Spark 4.1.2's exact
+  values on both fail-closed VALUES doors — plain, column-list and map cells
+  plus `--`-holding and trailing-backslash, `\n`/`\t`, `\u00e9` controls
+  into `TIMESTAMP_NTZ`, and `replace`-casts into `TIMESTAMP` — read back on
+  the Arrow path; re-verify 3 (RN4-1) adds values ending in `$p` that
+  collided with the probe's dollar-quote closer. pins: ltz-stacked-sign-1/RN3-1
 - `test_ltz_store_int_1.py` — **WO LTZ-STORE-INT-1 (2026-09-28):** `INSERT INTO sc.ns.l
   VALUES (0, 1)` refuses with the recorded Spark `ins_l_int` answer — error class,
   condition, SQLSTATE and the message body, with the RePark-only planning prefix
   pinned separately — and a DataFrame append of INT into TIMESTAMP refuses; both
   leave the table empty. **Fold 2026-09-28 (verifier VL-1..VL-6):** `nvl` and
   `ifnull` over DATE and TIMESTAMP store.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1):** `VALUES (0, - -1)` refuses with the
+  recorded class, condition and SQLSTATE, and writes nothing.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-1/VG-2):** every VG
+  shape plus the `(NULL, +- -1)` multi-row refuses with the recorded class,
+  condition and SQLSTATE, and writes nothing.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 re-verify fold, RN2-2):** `DEFAULT` (bare
+  and in both column-list orders) stores NULL, and a stacked sign under `nvl` /
+  `ifnull` stores the day Spark 4.1.2 stored (`2024-01-02`, `2023-12-31`).
   pins: ltz-store-int-1/C-001
+- [test_store_ts_to_numeric_1.py](test_store_ts_to_numeric_1.py) +
+  `store_ts_to_numeric_1_spark_oracle.json` — **WO STORE-TS-TO-NUMERIC-1
+  (2026-09-28):** one session replays 58 cells recorded on Spark 4.1.2 + Iceberg
+  1.11.0 (UTC) in order and compares refusal (class, SQLSTATE, message body with the
+  RePark-only planning prefix allowed) and the target read-back after every
+  statement. Refusals: TIMESTAMP, STRING, BOOLEAN and INT sources on the VALUES door
+  into numeric, DATE and BOOLEAN columns (C-001); `-NULL` and `-(NULL)` into DATE,
+  BOOLEAN, TIMESTAMP and TIMESTAMP_NTZ on VALUES, OVERWRITE VALUES, UPDATE, INSERT …
+  SELECT, OVERWRITE, BY NAME, both MERGE arms and both DataFrame writers, bare,
+  through a derived table and through a temp view (C-002); STRING into FLOAT/DOUBLE on
+  INSERT … SELECT and the DataFrame writers (C-003); STRING into DECIMAL on UPDATE
+  (C-004). Stores in the same test: DATE ↔ TIMESTAMP, numeric widening, in-range
+  narrowing, explicit CAST, NULL, `-NULL` into numeric and STRING, the CTAS controls,
+  and LTZ-STORE-INT-1's INT → TIMESTAMP refusal (C-005).
+  pins: store-ts-to-numeric-1/C-001, C-002, C-003, C-004, C-005
+  **Fold 2026-09-29 (verifier VT-1):** 23 more store cells pin the mixed
+  STRING/numeric CASE, `nvl` and `nullif` shapes Spark widens to a storable type
+  (VALUES, SELECT, BY NAME, column list, OVERWRITE, `append`, `insertInto`,
+  `saveAsTable`; the runner learns the `df_saveastable` door). 81 cells total.
+  **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** the eight STRING-source refusal cells
+  (VALUES `'1'` into INT and BOOLEAN, `'2024-01-01'` into DATE, UPDATE `'1'` into
+  DECIMAL, STRING into FLOAT/DOUBLE through SELECT, a derived table, `append` over a
+  view and `insertInto`) are deleted — those shapes return to base behaviour. Six store
+  cells measured on Spark 4.1.2 pin the re-verify families: a SQL temp view over a
+  STRING/INT CASE, `writeTo().append()` and `write.insertInto()` of the same CASE, a
+  STRING/DOUBLE UNION, `max` over a STRING/DOUBLE CASE, and a STRING/TIMESTAMP CASE
+  into DATE through VALUES. 79 cells; the oracle is one cell per line and drops the
+  temp views no cell reads. pins: store-ts-to-numeric-1/C-006
 - `test_merge_semantics_audit.py` — **MERGE-audit corpus** (2026-08-14 audit gap-map rows
   c/d/g/n/o): null-safe `<=>` / `eqNullSafe` ON matches NULL keys (both doors); builder-door
   `=` NULL keys do not match; self-merge (target as source) updates once per row; join-key

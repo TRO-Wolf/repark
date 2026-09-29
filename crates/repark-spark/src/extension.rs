@@ -69,6 +69,10 @@ impl SessionExtension for SparkExtension {
             config,
             shuffle_partitions,
         );
+        let config = repark_iceberg::write::negated_null_store::with_view_definition_plans(
+            config,
+            crate::view_ddl::temp_view::definition_plan,
+        );
         Ok(repark_functions::session_time_zone::with_session_time_zone(
             config,
             session.session_time_zone.id(),
