@@ -77,6 +77,7 @@ America/New_York unless noted:
 | # | Mutation | Red |
 |---|---|---|
 | M1 | Force the SELECT builder zone to UTC (`zone = "UTC"`) | 71 facade pins red: every non-UTC LTZ bytes cell plus the CSV/JSON read-back and s3a legs; pure NTZ (`ntz0/3/6`) and DATE (`date`) cells stay green; `userdate`/`userntz` red only via their `t` column. Reverted; `git status` clean; 182 green. |
+| M2 | Restore the undoubled splice (`quote_literal` doubles quotes only) | The 3 facade VC-6 pins (`vc6-bsquote` ×2, `vc6-bspair`) plus the Rust `select_escapes_backslash_quote_in_pattern_literal` pin red (quote-adjacent backslash breaks the `COPY` literal again). Reverted; `git status` clean; 207 green. |
 
 ## Coverage
 
@@ -294,5 +295,5 @@ runs) and jshell probes against `DateTimeFormatter`, `SimpleDateFormat`, and
   WITH_SUGGESTION / lazy-`]`), NTZ downgrades (live-probed). Pins per kind.
 
 AT-2, AT-5, AT-6 evidence updated for the fold; C-001 counts 207 facade pins
-and C-004 counts 52 Rust pins. Mutation M2 (below) restores the undoubled
-splice: the VC-6 pin reds.
+and C-004 counts 52 Rust pins. The splice-restore mutation is recorded as M2
+above: the VC-6 pins red.
