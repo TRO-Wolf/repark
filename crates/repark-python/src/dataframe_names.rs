@@ -19,10 +19,13 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(frame_case_sensitive, module)?)?;
     module.add_function(wrap_pyfunction!(frame_is_exact, module)?)?;
     module.add_function(wrap_pyfunction!(match_display_names, module)?)?;
+    module.add_function(wrap_pyfunction!(match_resolver_names, module)?)?;
     module.add_function(wrap_pyfunction!(match_subset_names, module)?)?;
+    module.add_function(wrap_pyfunction!(rebind_predicate_qualifiers, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_display_name, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_join_condition, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_folded_duplicate_keys, module)?)?;
+    module.add_function(wrap_pyfunction!(refuse_unresolved_name, module)?)?;
     module.add_function(wrap_pyfunction!(requalify_join_sides, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_df_names, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_frame_names, module)?)?;
@@ -180,6 +183,7 @@ fn refuse_ambiguous_join_condition(
         repark_core::frame_names::refuse_ambiguous_condition(
             condition_sql,
             &[left.inner().schema(), right.inner().schema()],
+            frame_rule(left.inner()),
         )
         .map_err(datafusion_to_py_err)
     })
@@ -191,6 +195,16 @@ fn refuse_folded_duplicate_keys(frame: &PyDataFrame, keys: Vec<String>) -> PyRes
     fenced!("dataframe_names.refuse_folded_duplicate_keys", {
         repark_core::frame_names::refuse_folded_duplicate_keys(&keys, frame_rule(frame.inner()))
             .map_err(datafusion_to_py_err)
+    })
+}
+
+#[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
+#[pyfunction]
+fn refuse_unresolved_name(written: &str, held: Vec<String>) -> PyResult<()> {
+    fenced!("dataframe_names.refuse_unresolved_name", {
+        Err(datafusion_to_py_err(
+            repark_core::frame_names::unresolved_display_name(written, &held),
+        ))
     })
 }
 
@@ -272,6 +286,24 @@ fn match_display_names(
 
 #[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
 #[pyfunction]
+fn match_resolver_names(
+    frame: &PyDataFrame,
+    written: Vec<String>,
+    held: Vec<String>,
+) -> PyResult<Vec<(String, Vec<String>, String)>> {
+    fenced!("dataframe_names.match_resolver_names", {
+        repark_core::frame_names::match_resolver_names(&written, &held, frame_rule(frame.inner()))
+            .map(|rows| {
+                rows.into_iter()
+                    .map(|(name, hits, disposition)| (name, hits, disposition_text(disposition)))
+                    .collect()
+            })
+            .map_err(datafusion_to_py_err)
+    })
+}
+
+#[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
+#[pyfunction]
 fn match_subset_names(
     frame: &PyDataFrame,
     written: Vec<String>,
@@ -319,6 +351,21 @@ fn resolve_qualified_display_names(
         })
         .map_err(datafusion_to_py_err)
     })
+}
+
+#[allow(clippy::needless_pass_by_value)]
+#[pyfunction]
+fn rebind_predicate_qualifiers(
+    frame: &PyDataFrame,
+    displays: Vec<String>,
+    predicate: &str,
+) -> String {
+    repark_core::frame_names::rebind_predicate_qualifiers(
+        frame.inner().schema(),
+        &displays,
+        predicate,
+        frame_rule(frame.inner()),
+    )
 }
 
 #[pyfunction]

@@ -4,11 +4,7 @@ The probe over 1890 statements (2026-09-28, base ``adc26586`` vs PR #881)
 found the alias qualifier stored folded, so under ``caseSensitive=true`` a
 wrong-case qualifier hit (R2) while the exact spelling missed, and the
 overlay twin select refused with the facade text instead of Spark's
-``AMBIGUOUS_REFERENCE`` (R4). These pins replay the four must-change cells
-plus the guards the fixes flip: the exact spelling answers under true, the
-aliased self-join names qualified candidates, and the final-sigma shape
-stays refusal-pinned as residue R-CS2-13 (Spark leaves ``ς`` unresolved
-while the Java fold matches it, so the class differs).
+``AMBIGUOUS_REFERENCE`` (R4).
 
 Spark texts are verbatim live PySpark 4.1.2 (UTC): the ``np`` cells from
 ``target/diff-probe/out/spark/np-spark.json`` (DIFF-PROBE, banner 4.1.2),
@@ -284,32 +280,265 @@ def test_r4_aliased_selfjoin_names_qualified_candidates(tmp_path: Path) -> None:
         session.stop()
 
 
-def test_r4_final_sigma_refusal_stays_pinned(tmp_path: Path) -> None:
-    """The final-sigma twin refusal stays pinned as residue R-CS2-13.
-
-    Spark 4.1.2 leaves ``ς`` unresolved while the Java fold matches both
-    sigmas, so the class differs; the routing still refuses ambiguous.
-    """
+def test_r4_final_sigma_refuses_unresolved_like_spark(tmp_path: Path) -> None:
     session = _open(tmp_path)
     try:
         session.conf.set("spark.sql.caseSensitive", "false")
         frame = session.createDataFrame(
             [(1, 2, 3, 4, 5, 6, 7)],
-            ["Ünï", "Éte", "straße", "İd", "σ", "Σ", "é"],  # noqa: RUF001
+            ["\u00dcn\u00ef", "\u00c9te", "stra\u00dfe", "\u0130d", "\u03c3", "\u03a3", "\u00e9"],
         )
         try:
-            frame.select("ς").collect()
+            frame.select("\u03c2").collect()
         except Exception as error:
-            assert type(error).__name__ == "AnalysisException"
-            assert _condition(error) == "AMBIGUOUS_REFERENCE"
-            assert _sql_state(error) == "42704"
-            assert _plain_message(str(error)) == (
-                "[AMBIGUOUS_REFERENCE] Reference `ς` is ambiguous, could be: [`ς`, `ς`]. "
-                "SQLSTATE: 42704"
-            )
+            assert type(error).__name__ == _SPARK_UNI_SIGMA["error"]
+            assert _condition(error) == _SPARK_UNI_SIGMA["getCondition"]
+            assert _sql_state(error) == _SPARK_UNI_SIGMA["getSqlState"]
+            mine = _plain_message(str(error))
+            want = _plain_message(_SPARK_UNI_SIGMA["msg"])
+            assert mine.split(_SUGGESTION_MARK)[0] == want.split(_SUGGESTION_MARK)[0]
+            assert _candidates(want) <= _candidates(mine)
         else:
             raise AssertionError("final sigma answered instead of refusing")
-        assert _SPARK_UNI_SIGMA["getCondition"] == "UNRESOLVED_COLUMN.WITH_SUGGESTION"
-        assert _SPARK_UNI_SIGMA["getSqlState"] == "42703"
+    finally:
+        session.stop()
+
+
+_SPARK_DOTLESS_REFUSAL: dict[str, Any] = {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function "
+    "parameter with name `\u0131d` cannot be resolved. Did you mean one of the "
+    "following? [`id`, `v`]. SQLSTATE: 42703;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703",
+}
+
+_SPARK_WRONG_CASE_ALIAS_FILTER: dict[str, Any] = {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function "
+    "parameter with name `tb`.`id` cannot be resolved. Did you mean one of the "
+    "following? [`Tb`.`id`, `Tb`.`Val`, `Tb`.`Data`]. SQLSTATE: 42703; line 1 pos 0;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703",
+}
+
+_SPARK_TRUE_JOIN_BARE_ID: dict[str, Any] = {
+    "error": "AnalysisException",
+    "msg": "[AMBIGUOUS_REFERENCE] Reference `id` is ambiguous, could be: [`id`, `id`]. "
+    "SQLSTATE: 42704",
+    "getCondition": "AMBIGUOUS_REFERENCE",
+    "getSqlState": "42704",
+}
+
+_SPARK_ALIAS_JOIN_FILL: dict[str, Any] = {
+    "error": "AnalysisException",
+    "msg": "[AMBIGUOUS_REFERENCE] Reference `data` is ambiguous, could be: "
+    "[`L`.`data`, `R`.`data`]. SQLSTATE: 42704",
+    "getCondition": "AMBIGUOUS_REFERENCE",
+    "getSqlState": "42704",
+}
+
+_SPARK_SELF_USING: dict[str, Any] = {
+    "error": "AnalysisException",
+    "msg": "[AMBIGUOUS_REFERENCE] Reference `Data` is ambiguous, could be: "
+    "[`Data`, `Data`]. SQLSTATE: 42704",
+    "getCondition": "AMBIGUOUS_REFERENCE",
+    "getSqlState": "42704",
+}
+
+_SPARK_ALIAS_USING: dict[str, Any] = {
+    "error": "AnalysisException",
+    "msg": "[AMBIGUOUS_REFERENCE] Reference `Data` is ambiguous, could be: "
+    "[`x`.`Data`, `y`.`Data`]. SQLSTATE: 42704",
+    "getCondition": "AMBIGUOUS_REFERENCE",
+    "getSqlState": "42704",
+}
+
+_SPARK_SORT_AMBIGUITY_HEAD: str = (
+    "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter "
+    "with name `id` cannot be resolved. "
+)
+
+
+def _refusal(run: Any) -> BaseException:
+    try:
+        run()
+    except Exception as error:
+        return error
+    raise AssertionError("answered instead of refusing")
+
+
+def _base_frame(session: ReparkSession) -> Any:
+    return session.createDataFrame([(1, "a", 10), (2, "b", 20)], ["id", "Data", "Val"])
+
+
+def test_rc2_1_alias_qualified_filter_strings_bind_by_rule(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        session.conf.set("spark.sql.caseSensitive", "false")
+        frame = _base_frame(session)
+        other = session.createDataFrame([(1, "x"), (2, "y")], ["id", "W"])
+        for filtered in (
+            frame.alias("T").filter("T.id > 1"),
+            frame.alias("T").where("t.id > 1"),
+            frame.alias("Tb").where("tb.id > 1"),
+            frame.alias("T").pl.filter("T.id > 1").spark,
+        ):
+            assert filtered.columns == ["id", "Data", "Val"]
+            assert _rows(filtered) == [[2, "b", 20]]
+        joined = frame.alias("T").join(
+            other.alias("E"), functions.col("T.id") == functions.col("E.id")
+        )
+        assert _rows(joined.filter("T.Val > 10")) == [[2, "b", 20, 2, "y"]]
+        session.conf.set("spark.sql.caseSensitive", "true")
+        exact = _base_frame(session)
+        assert _rows(exact.alias("T").where("T.id > 1")) == [[2, "b", 20]]
+        wrong = _refusal(lambda: exact.alias("Tb").where("tb.id > 1").collect())
+        assert _condition(wrong) == _SPARK_WRONG_CASE_ALIAS_FILTER["getCondition"]
+        assert _sql_state(wrong) == _SPARK_WRONG_CASE_ALIAS_FILTER["getSqlState"]
+        mine = _plain_message(str(wrong)).split(_SUGGESTION_MARK)[0]
+        assert (
+            mine == _plain_message(_SPARK_WRONG_CASE_ALIAS_FILTER["msg"]).split(_SUGGESTION_MARK)[0]
+        )
+    finally:
+        session.stop()
+
+
+def test_rc2_2_true_condition_joins_over_shared_names_answer(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        session.conf.set("spark.sql.caseSensitive", "true")
+        left = session.createDataFrame([(1, "a"), (2, "b")], ["id", "v"])
+        right = session.createDataFrame([(1, "x"), (3, "y")], ["id", "w"])
+        joined = left.join(right, left.id == right.id)
+        assert joined.columns == ["id", "v", "id", "w"]
+        assert _rows(joined) == [[1, "a", 1, "x"]]
+        picked = left.join(right, left["id"] == right["id"]).select(left["id"], "v", "w")
+        assert _rows(picked) == [[1, "a", "x"]]
+        assert left.join(right, left["id"] == right["id"], "left").count() == 2
+        assert left.join(right, left.id == right.id - 1).count() == 1
+        _assert_ambiguous(_refusal(lambda: joined.select("id").collect()), _SPARK_TRUE_JOIN_BARE_ID)
+    finally:
+        session.stop()
+
+
+def test_rc2_3_lookup_lowers_and_the_resolver_folds(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        session.conf.set("spark.sql.caseSensitive", "false")
+        plain = session.createDataFrame([(1, 2)], ["id", "v"])
+        _assert_unresolved(
+            _refusal(lambda: plain.select("\u0131d").collect()), _SPARK_DOTLESS_REFUSAL
+        )
+        column = _refusal(lambda: plain.filter(functions.col("\u0131d").isNotNull()).collect())
+        assert _condition(column) == _SPARK_DOTLESS_REFUSAL["getCondition"]
+        assert _sql_state(column) == _SPARK_DOTLESS_REFUSAL["getSqlState"]
+        assert (
+            _plain_message(str(column)).split(_SUGGESTION_MARK)[0]
+            == (_plain_message(_SPARK_DOTLESS_REFUSAL["msg"]).split(_SUGGESTION_MARK)[0])
+        )
+        assert plain.withColumnRenamed("\u0131d", "z").columns == ["z", "v"]
+        sigmas = session.createDataFrame([(1, 2)], ["\u03c3", "\u03c2"])
+        assert _rows(sigmas.select("\u03c3")) == [[1]]
+        appended = plain.withColumns({"\u0131": functions.lit(1), "I": functions.lit(2)})
+        assert appended.columns == ["id", "v", "\u0131", "I"]
+        assert _rows(appended) == [[1, 2, 1, 2]]
+        for keys, twin in (
+            (("\u00dcN\u00cf", "\u00dcn\u00ef"), "\u00fcn\u00ef"),
+            (("\u0391\u03a3", "\u03b1\u03c2"), "\u03b1\u03c2"),
+        ):
+            clash = _refusal(
+                lambda keys=keys: plain.withColumns(
+                    {keys[0]: functions.lit(1), keys[1]: functions.lit(2)}
+                ).collect()
+            )
+            assert _condition(clash) == "COLUMN_ALREADY_EXISTS"
+            assert _plain_message(str(clash)) == (
+                f"[COLUMN_ALREADY_EXISTS] The column `{twin}` already exists. Choose "
+                "another name or rename the existing column. SQLSTATE: 42711"
+            )
+        upper = session.createDataFrame([(1, 2)], ["\u03a3", "v"])
+        assert _rows(upper.select("\u03c3")) == [[1]]
+        umlaut = session.createDataFrame([(1, 2)], ["\u00dcn\u00ef", "v"])
+        assert umlaut.select("\u00fcn\u00ef").columns == ["\u00fcn\u00ef"]
+        eszett = session.createDataFrame([(1, 2)], ["stra\u00dfe", "v"])
+        assert type(_refusal(lambda: eszett.select("STRASSE").collect())).__name__ == (
+            "AnalysisException"
+        )
+        assert eszett.withColumn("STRASSE", functions.lit(0)).columns == [
+            "stra\u00dfe",
+            "v",
+            "STRASSE",
+        ]
+    finally:
+        session.stop()
+
+
+def test_rc2_4_one_attribute_projected_twice_orders(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        session.conf.set("spark.sql.caseSensitive", "false")
+        frame = _base_frame(session)
+        doubled = frame.select("id", "id", "Data")
+        ordered = doubled.orderBy(functions.col("id"))
+        assert ordered.columns == ["id", "id", "Data"]
+        assert [list(row) for row in ordered.collect()] == [[1, 1, "a"], [2, 2, "b"]]
+        descending = doubled.orderBy(functions.col("id").desc())
+        assert [list(row) for row in descending.collect()] == [[2, 2, "b"], [1, 1, "a"]]
+        twins = frame.select(frame["id"], frame["id"].alias("ID"))
+        _assert_ambiguous(
+            _refusal(lambda: twins.select(functions.col("id")).collect()),
+            _SPARK_TRUE_JOIN_BARE_ID,
+        )
+    finally:
+        session.stop()
+
+
+def test_rc2_5_alias_join_children_drop_rename_and_fill(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        session.conf.set("spark.sql.caseSensitive", "false")
+        left = _base_frame(session)
+        right = session.createDataFrame([(1, "x", 7), (3, "y", 8)], ["ID", "Data", "W"])
+        joined = left.alias("L").join(
+            right.alias("R"), functions.col("L.id") == functions.col("R.ID")
+        )
+        dropped = joined.drop(functions.col("L.id"))
+        assert dropped.columns == ["Data", "Val", "ID", "Data", "W"]
+        assert _rows(dropped) == [["a", 10, 1, "x", 7]]
+        renamed = joined.withColumnRenamed("data", "z")
+        assert renamed.columns == ["id", "z", "Val", "ID", "z", "W"]
+        bare = joined.drop("id")
+        assert bare.columns == ["Data", "Val", "Data", "W"]
+        assert _rows(bare) == [["a", 10, "x", 7]]
+        _assert_ambiguous(
+            _refusal(lambda: joined.fillna("q", subset=["data"]).collect()),
+            _SPARK_ALIAS_JOIN_FILL,
+        )
+        order = _refusal(lambda: joined.orderBy(functions.col("id")).collect())
+        assert _condition(order) == "UNRESOLVED_COLUMN.WITH_SUGGESTION"
+        assert _sql_state(order) == "42703"
+        assert _plain_message(str(order)).split(_SUGGESTION_MARK)[0] == (_SPARK_SORT_AMBIGUITY_HEAD)
+    finally:
+        session.stop()
+
+
+def test_rc2_6_true_using_self_join_twins_refuse_ambiguous(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        session.conf.set("spark.sql.caseSensitive", "true")
+        frame = _base_frame(session)
+        _assert_ambiguous(
+            _refusal(lambda: frame.join(frame, "id").select("Data").collect()),
+            _SPARK_SELF_USING,
+        )
+        aliased = _refusal(
+            lambda: frame.alias("x").join(frame.alias("y"), "id").select("Data").collect()
+        )
+        assert _condition(aliased) == _SPARK_ALIAS_USING["getCondition"]
+        assert _sql_state(aliased) == _SPARK_ALIAS_USING["getSqlState"]
+        head = "[AMBIGUOUS_REFERENCE] Reference `Data` is ambiguous, could be: ["
+        assert _plain_message(str(aliased)).startswith(head)
+        assert _SPARK_ALIAS_USING["msg"].startswith(head)
     finally:
         session.stop()

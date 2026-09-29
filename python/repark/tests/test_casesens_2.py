@@ -42,19 +42,6 @@ unrecorded). The p10 cells pin the non-join overlay shapes: the two
 three shapes where Spark answers stay refuse-pinned as residue R-CS2-7
 (RePark's select/withColumn children lose the alias qualifier).
 
-Slice 5 (same file, verifier fold 2026-09-28): non-ASCII names fold like
-Java ``equalsIgnoreCase`` under ``false`` on the DataFrame door (select,
-getitem, orderBy, groupBy, dropna, dropDuplicates, fillna, withColumn,
-withColumnRenamed, withColumns) while ``STRASSE`` still misses ``straße``;
-under ``true`` the folded legs refuse. A qualified hit on two join sides
-refuses ``AMBIGUOUS_REFERENCE`` with Spark's text on every shape (select,
-groupBy, getitem, ``F.col``), and the plural rename fans out like the
-singular form. The asymmetric self-join binds each side. The SQL-door
-unicode gap, the dict-fillna gap and the exact-duplicate rename gap stay
-refuse-pinned as residues R-CS2-8 and R-CS2-9 with Spark's answers
-recorded. The p11 oracle is live PySpark 4.1.2, measured 2026-09-28
-(``cs_probe11.py`` / ``cs_probe11b.py``).
-
 pins: casesens-2/C-001, C-002, C-003, C-004, C-005, C-006, C-008
 """
 
@@ -821,26 +808,26 @@ def test_s5_aliased_join_refuses_ambiguous(tmp_path: Path) -> None:
         session.stop()
 
 
-def test_s5_true_attribute_join_refuses_at_construction(tmp_path: Path) -> None:
-    """An attribute-condition join refuses while building under true (V2-2 note).
-
-    Spark 4.1.2 builds the join and refuses the later ``j.s`` select; RePark
-    refuses at construction. Pinned loose (class plus SQLSTATE) to guard the
-    join-condition matcher the fold touches.
-    """
+def test_s5_true_attribute_join_builds_and_the_alias_select_refuses(tmp_path: Path) -> None:
     session = _open(tmp_path)
     try:
         session.conf.set("spark.sql.caseSensitive", "true")
         left = session.createDataFrame([(1, "L1")], ["id", "s"])
         right = session.createDataFrame([(2, "R2")], ["id", "s"])
+        joined = left.join(right, left["id"] == right["id"] - 1)
+        assert joined.columns == ["id", "s", "id", "s"]
+        assert _rows(joined) == [[1, "L1", 2, "R2"]]
         try:
-            left.join(right, left["id"] == right["id"] - 1)
+            joined.alias("j").select("j.s").collect()
         except Exception as error:
-            assert type(error).__name__ == "AnalysisException"
             assert _condition(error) == "AMBIGUOUS_REFERENCE"
             assert _sql_state(error) == "42704"
+            assert _plain_message(str(error)) == (
+                "[AMBIGUOUS_REFERENCE] Reference `j`.`s` is ambiguous, could be: "
+                "[`j`.`s`, `j`.`s`]. SQLSTATE: 42704"
+            )
         else:
-            raise AssertionError("true attribute join answered instead of refusing")
+            raise AssertionError("true alias twin select answered instead of refusing")
     finally:
         session.stop()
 
@@ -936,12 +923,6 @@ def test_s5_unicode_sql_door_gap_stays_pinned(tmp_path: Path) -> None:
 
 
 def test_s5_preexisting_gaps_stay_pinned(tmp_path: Path) -> None:
-    """The dict-fillna and exact-duplicate rename gaps stay pinned (R-CS2-9).
-
-    Spark 4.1.2 answers ``fillna({"ID": 5})`` with ``[[1, null], [5, "b"]]``
-    and renames both exact-duplicate displays to ``[z, z]``; RePark refuses
-    the dict subset and no-ops the rename. Both predate this stack.
-    """
     session = _open(tmp_path)
     try:
         session.conf.set("spark.sql.caseSensitive", "false")
@@ -961,7 +942,8 @@ def test_s5_preexisting_gaps_stay_pinned(tmp_path: Path) -> None:
         doubled = table.select(
             functions.col("id").alias("id"), functions.col("id").alias("id")
         ).withColumnRenamed("id", "z")
-        assert doubled.columns == ["id", "id"]
+        assert doubled.columns == ["z", "z"]
+        assert _rows(doubled) == [[1, 1], [2, 2]]
     finally:
         session.stop()
 

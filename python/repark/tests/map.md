@@ -283,6 +283,19 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   refusal stays pinned as R-CS2-13. Lives apart from
   `test_casesens_2.py`, which is at its 1000-line ceiling.
   pins: casesens-2/C-002, C-006
+  **CASESENS-2 re-verify fold (2026-09-28):** one pin per finding
+  RC2-1…RC2-6 with live Spark 4.1.2 texts (banner 4.1.2, UTC) — alias
+  qualifiers in filter strings (both rules, Polars door, alias join),
+  `true` condition joins over shared names plus the bare ambiguous
+  refusal, the lookup/resolver split (`ıd`, `σ`/`ς` twins, `withColumns`
+  keys, `ß`), one attribute projected twice, alias-join `drop` / rename /
+  `fillna` / `orderBy`, and the `true` USING self-join twins. The
+  final-sigma pin flips to Spark's 42703 (R-CS2-13 closed).
+  `test_casesens_2.py` flips two pins to Spark's recorded answers: the
+  `true` attribute join builds and its alias select refuses `` `j`.`s` ``
+  (`p11/j_sel_true`, R-CS2-12), and the exact-duplicate rename answers
+  `[z, z]` (`p11/sj2_wcr`).
+  pins: casesens-2/C-009, C-010, C-011, C-012, C-013, C-014
 - [test_ntz_1.py](test_ntz_1.py) + `ntz_1_spark_oracle.json` — **WO NTZ-1 slice 1
   (2026-09-26):** the `TIMESTAMP_NTZ` literal and explicit casts replay Spark's measured
   answers — 29 literal/cast/refusal queries in UTC and New York sessions, the v2/v3

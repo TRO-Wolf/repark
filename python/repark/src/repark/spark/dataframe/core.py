@@ -1228,10 +1228,10 @@ class DataFrame:
             predicate = self._rebind_origin_column(condition)
             return self._spawn_preserving_identity(self._plan().filter(predicate._inner))
         if isinstance(condition, str):
-            if _native.frame_is_exact(self._plan()):
-                return self._spawn_preserving_identity(self._plan().filter_sql(condition))
-            quoted = self._quote_filter_sql_identifiers(condition)
-            return self._spawn_preserving_identity(self._plan().filter_sql(quoted))
+            exact = _native.frame_is_exact(self._plan())
+            quoted = condition if exact else self._quote_filter_sql_identifiers(condition)
+            rebound = _native.rebind_predicate_qualifiers(self._plan(), self.columns, quoted)
+            return self._spawn_preserving_identity(self._plan().filter_sql(rebound))
         raise PySparkTypeError(
             errorClass="NOT_COLUMN_OR_STR",
             messageParameters={
@@ -2003,7 +2003,7 @@ class DataFrame:
         columns_by_fold: dict[str, list[str]] = {}
         for column in columns:
             columns_by_fold.setdefault(column.casefold(), []).append(column)
-        ident_pattern = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\b(?!\s*\()")
+        ident_pattern = re.compile(r"(?<!\.)\b([A-Za-z_][A-Za-z0-9_]*)\b(?!\s*\()")
 
         pieces = re.split(r"('(?:[^']|'')*')", sql)
         rebuilt: list[str] = []
@@ -2574,9 +2574,7 @@ class DataFrame:
                         continue
             name = self._name_of(item)
             if self._display_names is not None and self._engine_names is not None:
-                for display, engine in zip(self._display_names, self._engine_names, strict=True):
-                    if display == name:
-                        engine_drop.append(engine)
+                attributes.extend(written_names._overlay_drop_targets(self, item, name))
             else:
                 (references if isinstance(item, Column) else engine_drop).append(name)
         plan = _native.drop_frame_columns(self._plan(), engine_drop, references, attributes)
@@ -2604,10 +2602,7 @@ class DataFrame:
         the ``ascending`` keyword (a bool or a per-column list) overrides those. Null ordering
         follows Spark: ascending → nulls first, descending → nulls last.
         """
-        columns, ascending_flags, nulls_first_flags = self._sort_specs(cols, ascending)
-        return self._spawn_preserving_identity(
-            self._plan().sort(columns, ascending_flags, nulls_first_flags)
-        )
+        return written_names._sort_like_spark(self, cols, ascending)
 
     orderBy = order_by  # noqa: N815 — deliberate PySpark-compatible camelCase alias
     sort = order_by
