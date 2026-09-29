@@ -99,7 +99,8 @@ fn check_float_store_value(
     value: f64,
     bounds: (f64, f64),
 ) -> Result<()> {
-    if value.is_nan() || value.is_infinite() || value > bounds.1 || value < bounds.0 {
+    let truncated = value.trunc();
+    if value.is_nan() || value.is_infinite() || truncated > bounds.1 || truncated < bounds.0 {
         return Err(store_overflow_error(column, source, target_name));
     }
     Ok(())
@@ -794,6 +795,107 @@ mod tests {
         assert!(matches!(
             ok,
             ColumnarValue::Scalar(ScalarValue::Int8(Some(42)))
+        ));
+    }
+
+    #[test]
+    fn fractional_values_past_the_bound_store_the_truncated_bound() {
+        let udf8 = store_int8_udf();
+        for (value, stored) in [(127.5, 127i8), (127.999, 127), (-128.9, -128)] {
+            let ok = invoke_cast(
+                &udf8,
+                ColumnarValue::Scalar(ScalarValue::Float64(Some(value))),
+                "v",
+            )
+            .expect("the truncated bound stores");
+            assert!(
+                matches!(ok, ColumnarValue::Scalar(ScalarValue::Int8(Some(got))) if got == stored),
+                "{value}: {ok:?}"
+            );
+        }
+        for value in [128.0, -129.0] {
+            invoke_cast(
+                &udf8,
+                ColumnarValue::Scalar(ScalarValue::Float64(Some(value))),
+                "v",
+            )
+            .expect_err("the next whole value refuses");
+        }
+        let ok = invoke_cast(
+            &udf8,
+            ColumnarValue::Scalar(ScalarValue::Float32(Some(127.9_f32))),
+            "v",
+        )
+        .expect("float32 truncates too");
+        assert!(matches!(
+            ok,
+            ColumnarValue::Scalar(ScalarValue::Int8(Some(127)))
+        ));
+        let udf16 = store_int16_udf();
+        for (value, stored) in [(32767.9, 32767i16), (-32768.9, -32768)] {
+            let ok = invoke_cast(
+                &udf16,
+                ColumnarValue::Scalar(ScalarValue::Float64(Some(value))),
+                "v",
+            )
+            .expect("the truncated bound stores");
+            assert!(
+                matches!(ok, ColumnarValue::Scalar(ScalarValue::Int16(Some(got))) if got == stored),
+                "{value}: {ok:?}"
+            );
+        }
+        for value in [32768.0, -32769.0] {
+            invoke_cast(
+                &udf16,
+                ColumnarValue::Scalar(ScalarValue::Float64(Some(value))),
+                "v",
+            )
+            .expect_err("the next whole value refuses");
+        }
+        let udf32 = store_int32_udf();
+        for (value, stored) in [
+            (2_147_483_647.999_9, 2_147_483_647i32),
+            (-2_147_483_648.9, -2_147_483_648),
+        ] {
+            let ok = invoke_cast(
+                &udf32,
+                ColumnarValue::Scalar(ScalarValue::Float64(Some(value))),
+                "v",
+            )
+            .expect("the truncated bound stores");
+            assert!(
+                matches!(ok, ColumnarValue::Scalar(ScalarValue::Int32(Some(got))) if got == stored),
+                "{value}: {ok:?}"
+            );
+        }
+        for value in [2_147_483_648.0, -2_147_483_649.0] {
+            invoke_cast(
+                &udf32,
+                ColumnarValue::Scalar(ScalarValue::Float64(Some(value))),
+                "v",
+            )
+            .expect_err("the next whole value refuses");
+        }
+        let ok = invoke_cast(
+            &udf32,
+            ColumnarValue::Scalar(ScalarValue::Float32(Some(2_147_483_520.0_f32))),
+            "v",
+        )
+        .expect("float32 truncates too");
+        assert!(matches!(
+            ok,
+            ColumnarValue::Scalar(ScalarValue::Int32(Some(2_147_483_520)))
+        ));
+        let udf64 = store_int64_udf();
+        let ok = invoke_cast(
+            &udf64,
+            ColumnarValue::Scalar(ScalarValue::Float32(Some(2.0_f32.powi(63)))),
+            "v",
+        )
+        .expect("float32 2^63 stores");
+        assert!(matches!(
+            ok,
+            ColumnarValue::Scalar(ScalarValue::Int64(Some(i64::MAX)))
         ));
     }
 

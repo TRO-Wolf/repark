@@ -792,11 +792,15 @@ repark-core's error map.
 - `store_fold.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** split from `store_overflow.rs`
   at the plan/expression seam (file-size gate): const-input resolution and physical
   evaluation (`check_folded_store_input`, `fold_scalar`, `resolve_store_input`) plus the
-  refusal-expression constructors (`wrap_store_expr`, `store_guard_expr`).
+  refusal-expression constructors (`wrap_store_expr`, `store_guard_expr`). Verifier fold
+  VO-2: `lookup_store_column` stops at a `Limit` whose fetch is a literal 0, so
+  `LIMIT 0` over an overflowing constant writes nothing and never refuses, like Spark.
 - `store_cast.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** rewritten as the Spark-boundary
   checked-cast kernel: `__repark_store_int{8,16,32,64}__` UDFs refuse NaN, infinities and
   out-of-range floats with the overflow message and store in-range values truncated like
   Spark; `__repark_store_int_guard__` converts a zero divisor into the same refusal.
+  Verifier fold VO-1: the bound check judges `value.trunc()`, so a DOUBLE a fraction
+  past an integer bound stores the truncated bound, as Spark's ANSI cast does.
 - `predicate_dml.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** the UPDATE scratch rewrite
   plans through `analyzed_store_source` and `wrap_store_outputs`, so per-row fractional
   overflow refuses with the column named.

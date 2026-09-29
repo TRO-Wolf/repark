@@ -231,6 +231,12 @@ fn lookup_store_column(
                 plan = &sort.input;
             }
             LogicalPlan::Limit(limit) => {
+                if matches!(
+                    limit.get_fetch_type(),
+                    Ok(datafusion::logical_expr::FetchType::Literal(Some(0)))
+                ) {
+                    return Ok(None);
+                }
                 plan = &limit.input;
             }
             _ => return Ok(None),
