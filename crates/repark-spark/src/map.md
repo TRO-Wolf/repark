@@ -964,6 +964,11 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: fnp-4b/C-001, C-004, C-005, C-006, C-020
   `sql_may_have_insert_partition` keeps quote-free `INSERT … PARTITION` text off the
   fast path so the column-list swap runs.
+  **STRING-LITERAL-ESCAPE-1 (2026-09-29):** the file reached 999 of its 1,000
+  lines, so the literal-value engine moves verbatim to the child module
+  [spark_literals/unescape.rs](spark_literals/unescape.rs) (comments shed per
+  the owner ruling; behavior identical, callers untouched via re-export).
+  pins: string-literal-escape-1/C-000
 - `spark_literal_typing.rs` — **SQL-LITERAL-TYPING-1 (2026-09-16):**
   `SparkIntegralLiteral` types unsuffixed integral literals as Spark does —
   Int64 fitting i32 narrows to Int32, UInt64 becomes Decimal128(digits, 0),

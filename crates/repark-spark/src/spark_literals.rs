@@ -12,8 +12,9 @@ use datafusion::sql::sqlparser::dialect::{Dialect, GenericDialect};
 use datafusion::sql::sqlparser::parser::ParserError;
 use datafusion::sql::sqlparser::tokenizer::{Location, Token, TokenWithSpan, Tokenizer};
 
-/// Spark's measured replacement for an unrepresentable code point.
-const UNREPRESENTABLE: char = '\u{003F}';
+mod unescape;
+
+pub(crate) use unescape::{unescape_spark_literal, unescape_verbatim_literal};
 
 #[derive(Debug)]
 struct SparkLexDialect(GenericDialect);
@@ -447,18 +448,6 @@ fn literal_needs_rewrite(token: &Token, keep_verbatim: bool) -> bool {
     }
 }
 
-fn unescape_verbatim_literal(raw: &str) -> String {
-    let mut out = String::with_capacity(raw.len());
-    let mut characters = raw.chars().peekable();
-    while let Some(current) = characters.next() {
-        if current == '\'' && characters.peek() == Some(&'\'') {
-            characters.next();
-        }
-        out.push(current);
-    }
-    out
-}
-
 fn requote_double(value: &str) -> String {
     format!("\"{value}\"")
 }
@@ -578,176 +567,6 @@ fn ascii_digit_end(text: &str, start: usize) -> usize {
         .iter()
         .position(|byte| !byte.is_ascii_digit())
         .map_or(text.len(), |offset| start + offset)
-}
-
-/// Apply Spark 4.1.2's escape rules to the raw between-quote text `raw`.
-pub(crate) fn unescape_spark_literal(raw: &str) -> String {
-    let characters: Vec<char> = raw.chars().collect();
-    let mut out = String::with_capacity(raw.len());
-    let mut index = 0;
-    while index < characters.len() {
-        let current = characters[index];
-        if current == '\'' {
-            // A `'` here is only ever the first of a doubled `''`; a lone `'` ends the literal.
-            out.push('\'');
-            index += if characters.get(index + 1) == Some(&'\'') {
-                2
-            } else {
-                1
-            };
-            continue;
-        }
-        if current != '\\' {
-            out.push(current);
-            index += 1;
-            continue;
-        }
-        // The lexer refuses `'a\'` as unterminated before this runs.
-        let Some(&escaped) = characters.get(index + 1) else {
-            out.push('\\');
-            index += 1;
-            continue;
-        };
-        index = apply_escape(escaped, &characters, index, &mut out);
-    }
-    out
-}
-
-/// Handle one `\<escaped>` sequence starting at `index`; returns the next unconsumed index.
-fn apply_escape(escaped: char, characters: &[char], index: usize, out: &mut String) -> usize {
-    match escaped {
-        'n' => push_and_advance('\n', index, out),
-        't' => push_and_advance('\t', index, out),
-        'r' => push_and_advance('\r', index, out),
-        'b' => push_and_advance('\u{0008}', index, out),
-        'Z' => push_and_advance('\u{001A}', index, out),
-        // `\%` and `\_` keep the backslash: Spark's LIKE reads the escaped wildcard (E12).
-        '%' => push_kept_backslash('%', index, out),
-        '_' => push_kept_backslash('_', index, out),
-        'u' => apply_unicode_16(characters, index, out),
-        'U' => apply_unicode_32(characters, index, out),
-        '0'..='7' => apply_octal(escaped, characters, index, out),
-        // Any other escape drops the backslash and keeps the character.
-        other => push_and_advance(other, index, out),
-    }
-}
-
-/// Emit `character` for a two-character escape (`\` plus one) and step past both.
-fn push_and_advance(character: char, index: usize, out: &mut String) -> usize {
-    out.push(character);
-    index + 2
-}
-
-/// Emit `\<wildcard>` verbatim — the E12 rule where the backslash is kept for LIKE.
-fn push_kept_backslash(wildcard: char, index: usize, out: &mut String) -> usize {
-    out.push('\\');
-    out.push(wildcard);
-    index + 2
-}
-
-/// `\NNN` octal (E11, E27, U13).
-fn apply_octal(first: char, characters: &[char], index: usize, out: &mut String) -> usize {
-    let second = characters.get(index + 2).copied();
-    let third = characters.get(index + 3).copied();
-    if matches!(first, '0'..='1')
-        && let Some(second) = second.filter(|c| c.is_digit(8))
-        && let Some(third) = third.filter(|c| c.is_digit(8))
-    {
-        // Each digit is 0..=7 and the value is ≤ 0o177, so it is a valid ASCII byte.
-        let value = ((octal_value(first)) << 6) | (octal_value(second) << 3) | octal_value(third);
-        out.push(char::from(value));
-        return index + 4;
-    }
-    if first == '0' {
-        out.push('\0');
-        return index + 2;
-    }
-    // A single octal digit 1..=7 (or a short run) is an unknown escape: drop the backslash.
-    out.push(first);
-    index + 2
-}
-
-/// The numeric value of one ASCII octal digit (`'0'..='7'`); the caller has checked the range.
-fn octal_value(digit: char) -> u8 {
-    (digit as u8).saturating_sub(b'0')
-}
-
-/// `\uXXXX` (exactly 4 hex → a code point).
-fn apply_unicode_16(characters: &[char], index: usize, out: &mut String) -> usize {
-    let Some(high) = read_hex(characters, index + 2, 4) else {
-        out.push('u');
-        return index + 2;
-    };
-    if (0xD800..=0xDBFF).contains(&high)
-        && characters.get(index + 6) == Some(&'\\')
-        && characters.get(index + 7) == Some(&'u')
-        && let Some(low) =
-            read_hex(characters, index + 8, 4).filter(|v| (0xDC00..=0xDFFF).contains(v))
-    {
-        let combined = 0x1_0000 + ((high - 0xD800) << 10) + (low - 0xDC00);
-        push_code_point(combined, out);
-        return index + 12;
-    }
-    push_code_point(high, out);
-    index + 6
-}
-
-/// `\UXXXXXXXX` (exactly 8 hex → a code point; U5).
-fn apply_unicode_32(characters: &[char], index: usize, out: &mut String) -> usize {
-    let Some(value) = read_hex(characters, index + 2, 8) else {
-        out.push('U');
-        return index + 2;
-    };
-    push_code_point(value, out);
-    index + 10
-}
-
-/// Read exactly `count` hex digits from `start`, or `None` if fewer are present.
-fn read_hex(characters: &[char], start: usize, count: usize) -> Option<u32> {
-    let end = start.checked_add(count)?;
-    let slice = characters.get(start..end)?;
-    let mut value = 0u32;
-    for digit in slice {
-        value = value * 16 + digit.to_digit(16)?;
-    }
-    Some(value)
-}
-
-fn push_code_point(code_point: u32, out: &mut String) {
-    if let Some(character) = char::from_u32(code_point) {
-        out.push(character);
-        return;
-    }
-    if code_point <= 0xFFFF {
-        out.push(UNREPRESENTABLE);
-        return;
-    }
-    push_java_surrogate_artifact(code_point, out);
-}
-
-fn push_java_surrogate_artifact(code_point: u32, out: &mut String) {
-    let shifted = code_point.wrapping_sub(0x1_0000);
-    let high = 0xD800u32.wrapping_add((shifted.cast_signed() >> 10).cast_unsigned()) & 0xFFFF;
-    let low = 0xDC00 + (shifted & 0x3FF);
-    if (0xD800..=0xDBFF).contains(&high) && (0xDC00..=0xDFFF).contains(&low) {
-        let combined = 0x1_0000 + ((high - 0xD800) << 10) + (low - 0xDC00);
-        if let Some(character) = char::from_u32(combined) {
-            out.push(character);
-            return;
-        }
-    }
-    push_java_unit(high, out);
-    push_java_unit(low, out);
-}
-
-fn push_java_unit(unit: u32, out: &mut String) {
-    if (0xD800..=0xDFFF).contains(&unit) {
-        out.push(UNREPRESENTABLE);
-    } else if let Some(character) = char::from_u32(unit) {
-        out.push(character);
-    } else {
-        out.push(UNREPRESENTABLE);
-    }
 }
 
 pub(crate) const SPARK_SQL_PARSER_ESCAPED_STRING_LITERALS_KEY: &str =
