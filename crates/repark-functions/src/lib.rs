@@ -60,6 +60,7 @@ pub mod spark_log1p;
 pub mod spark_math;
 pub mod spark_nullability;
 pub mod spark_nvl;
+pub mod spark_nvl_eager;
 pub mod spark_nvl_rule;
 pub mod spark_nvl_udf;
 pub mod spark_regexp;
@@ -160,6 +161,7 @@ pub fn register_all(ctx: &SessionContext) {
         .chain(spark_chr::functions())
         .chain(spark_degrees::functions())
         .chain(spark_elt::functions())
+        .chain(spark_nvl_eager::functions())
         .chain(spark_nvl_udf::functions())
         .chain(spark_startswith::functions())
         .chain(spark_hash::functions())

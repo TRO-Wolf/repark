@@ -581,6 +581,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **NVL-TYPE-COERCION-1 (2026-09-29):** the const folder matches the
   `__repark_nullif_pick(Eq, value)` shape so `array_repeat` ceilings still
   fire through the rewritten `nullif`. pins: nvl-type-coercion-1/C-002.
+  **Re-verify 2 (2026-09-29, VN3-2):** the folder also matches
+  `__repark_nullif_compare(first, second)` like `nullif`, so widened const
+  `nullif` still folds. pins: nvl-type-coercion-1/C-017.
 
 
 - **R-FN-BATCH4** aggregate expansion.
@@ -718,6 +721,16 @@ scalars live under [`try_invert/`](try_invert/map.md).
   so string→timestamp reads the session zone and string leaves parse like
   Spark (trim, `d`/`f` suffix, partial dates, boolean vocabulary); failures
   raise `CAST_INVALID_INPUT`. pins: nvl-type-coercion-1/C-009, C-010
+- `spark_nvl_eager.rs` — **NVL-TYPE-COERCION-1 (2026-09-29, VN3-1..VN3-3):**
+  the two single-evaluation kernels the rule reaches for: `__repark_nvl_pick`
+  takes the two widened branches once each and picks per row (volatile-first
+  `nvl`/`ifnull`/`zeroifnull`; it evaluates the fallback on every row, a
+  recorded gap against Spark laziness that applies only there), and
+  `__repark_nullif_compare` takes `first`/`second` once each, casts both to
+  the compare type inside, compares with Arrow `eq`, and returns the original
+  `first` array or NULL (widened `nullif` and every `nullifzero`; struct,
+  multi-leaf and list compares stay on the pick form). pins:
+  nvl-type-coercion-1/C-016, C-017
 - `spark_nvl_rule.rs` — **NVL-TYPE-COERCION-1 (2026-09-29):** the
   `SparkNvlFamilyRewrite` analyzer rule, appended last on the Spark door and
   the `F.expr` context. NULL-literal and non-null-literal sides fold without
@@ -738,6 +751,14 @@ scalars live under [`try_invert/`](try_invert/map.md).
   division zero-guard pass through. Grouping-set inner expressions keep
   their names across the rewrite. pins: nvl-type-coercion-1/C-012, C-013,
   C-014
+  **Re-verify 2 (2026-09-29, VN3-1..VN3-4):** `coalesce` simplifies to
+  `CASE WHEN a IS NOT NULL`, so a volatile first now lowers to
+  `__repark_nvl_pick` over the widened branches (single evaluation; the
+  non-volatile path keeps `coalesce` and its laziness); widened scalar
+  `nullif` and every `nullifzero` lower to `__repark_nullif_compare`, which
+  returns the original value, while same-type `nullif` keeps DataFusion's
+  own form with no cast-back; a no-op `nvl_cast` (arg type already the widen)
+  is skipped. pins: nvl-type-coercion-1/C-016, C-017, C-018
 - `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer
   rule, installed on BOTH doors via `install_shared_analyzer_rules` (defined here since FNP-11B step 3 and re-exported from the crate root, so `repark_functions::install_shared_analyzer_rules` and run 16b's `session.rs` call are unchanged; the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts; the TIME guard left for `analyzer_rules()` in remediation round 1).
   installer calls it in place of the integer-only one — same line count, so the
@@ -811,7 +832,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   the ceiling did not rise.
 - `eager.rs` — **NVL-TYPE-COERCION-1 (2026-09-29):** `analyze_eagerly` moved
   here unchanged from `lib.rs` (sanctioned out (1), net-negative: the root
-  lands at 178 of its 186 ceiling with the three `spark_nvl` module decls) and
+  lands at 180 of its 186 ceiling with the four `spark_nvl` module decls) and
   re-exported at the root, so every caller keeps its path.
   pins: nvl-type-coercion-1/C-002
 - `url.rs` — Spark `parse_url` / `try_parse_url` use `java.net.URI`-shaped splitting (sibling

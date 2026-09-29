@@ -4960,6 +4960,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `nullif` (each asserting 0 rows), a depth-12 `nvl` and `nullif` nesting
   that plans in under 1 s, and exact-row `ROLLUP`/`CUBE` over `nvl`,
   `ifnull` and `nullif`.
+  Re-verify 2 pins (2026-09-29, VN3-1..VN3-4, same file): the six vacuous
+  `IS NULL` pins are replaced by distribution pins (`nvl`/`ifnull`/
+  `zeroifnull` over `range(20000)` with a nullable fallback: no NULLs, the
+  share of 1s in 0.45-0.55) in SELECT, WHERE, GROUP BY and `lag()` plus
+  `F.nvl`/`F.ifnull` twins and literal-fallback collects; the seven
+  volatile-first `nullif` cast-back cells assert Spark's original values;
+  depth-12 widened `nullif` (bigint, double, string) and `nullifzero` plan
+  and run under 2 s; the `nvl` chain EXPLAIN shows no `__repark_nvl_cast`.
+  pins: nvl-type-coercion-1/C-016, C-017, C-018
 - `test_select_naming.py` — **Group H** select/projection display naming vs live PySpark 4.1.2:
   mutation leak accepts `Int32(1)` as well as `Int64(1)` (F-Y10-1 Python lit width);
   full matrix (`(x + 1)`, cast-of-attr → child name, cast-of-compound → `CAST(...)`,

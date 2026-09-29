@@ -39,6 +39,9 @@ interval-literal parsing; plain `if`/`CASE`/`=`/CAST methodology probes;
 | C-013 | VN2-2: nested lowerings plan in linear time. Depth 4/8/12/16 plan in under 0.2 s each; the depth-12 `nvl`+`nullif` pin plans in under 1 s. | Timed `EXPLAIN` at depths 4, 8, 12, 16; the depth pin. | PROVEN | nvl 0.018/0.019/0.029/0.044 s, nullif 0.155/0.038/0.058/0.085 s (EXPLAIN, second run); depth pin green. |
 | C-014 | VN2-3: `ROLLUP`/`CUBE` over the `nvl` family plans: grouping-set inner expressions keep their names across the rewrite. | Exact-row `ROLLUP(nvl)`, `CUBE(ifnull)`, `ROLLUP(nullif)` pins; the re-verify grouping cells plan. | PROVEN | 3/3 grouping pins green with Spark-equal row sets; `gs/*` attack cells plan. |
 | C-015 | VN2-4: `typeof` skips its planned-type fold when the argument holds `greatest`/`least` over a string, restoring the refusal (`CAST_INVALID_INPUT`, as base) where Spark refuses `DATA_DIFF_TYPES`. | The three repro cells refuse; the 34 TSN `typeof\|greatest\|least` cells return to 93f5d499 behavior; no fold-created Spark win exists to lose. | PROVEN | Repro cells refuse; `greatest('1',2)`/`greatest('a','b')`/`typeof(nvl('abc',2))` still answer; TSN gained set holds no `greatest`/`least` cell. |
+| C-016 | VN3-1: a volatile first in `nvl`/`ifnull`/`zeroifnull` evaluates once via `__repark_nvl_pick` over the widened branches; the six vacuous `IS NULL` pins are replaced by distribution pins (no NULLs, share of 1s 0.45-0.55) in SELECT, WHERE, GROUP BY and `lag()` plus `F.nvl`/`F.ifnull` twins and literal-fallback collects; non-volatile keeps `coalesce` laziness (`nvl(1, 1/0)` answers). Known gap: the volatile-first path evaluates the fallback on every row. | The 16 VN3-1 pin cases green; the R2 mutant (`coalesce` for volatile) reds them. | PROVEN | 16/16 green; R2 mutant reds 5/5 probed (2 SELECT + 1 zero SELECT + 2 literal); `nvl(1, 1/0)` answers `1.0`. |
+| C-017 | VN3-2 + VN3-3: widened scalar `nullif` and every `nullifzero` lower to `__repark_nullif_compare` (casts both sides inside, compares once, returns the original `first` array; each nesting level references its input once); same-type `nullif` keeps DataFusion's form with the cast-back branch removed. The seven volatile-first cast-back cells match Spark's values and types; depth-12 widened `nullif` (bigint, double, string) and `nullifzero` plan and run under 2 s. Struct, multi-leaf and list compares stay on the pick form (carried). | The seven cast-back pins and the depth pin green; the R1 mutant (cast-back) reds the seven. | PROVEN | 7/7 Spark-equal; depth-12 plans 0.05-0.20 s, runs under 0.1 s; R1 mutant reds 7/7; carried: struct, multi-leaf, list. |
+| C-018 | VN3-4: a no-op `nvl_cast` (argument type already the widen) is skipped; `EXPLAIN` of `nvl(nvl(nvl(id, 1), 2), 3)` shows no `__repark_nvl_cast`; the 1M-row 5-deep `nvl` chain (median of 15) runs within 1.2x the base build. | The EXPLAIN pin green; the R3 mutant (always cast) reds it; the perf ratio measured against the stated base commit. | PROVEN | EXPLAIN 0 casts; R3 mutant reds 1/1; perf 1.03x vs `adc26586` (`/tmp/xrel` DEBUG `.so`); base commit stated. |
 
 ## Evidence
 
@@ -146,6 +149,47 @@ depths 4/8/12/16 answers in under 0.2 s each. Five-deep execution on
 100k rows, identical workload both trees (5 samples base, 3 head):
 base `CASE` median 0.6526 s, head `coalesce` median 0.1914 s — head runs
 at 0.29x base, inside the 1.2x envelope at 3.4x faster.
+
+### Re-verify 2 VN3-1..VN3-4 (2026-09-29)
+
+Step 0 on the lane head reproduces all four findings: `nvl` over
+`range(20000)` distributes 1=4987/2=10008/NULL=5005 with a nullable
+fallback and raises the Arrow non-nullable error with a literal fallback;
+`zeroifnull` WHERE =1 counts 4987; the seven volatile-first `nullif`
+cells answer the lossy cast-back values (`1.23456789012345664`,
+`9007199254740992`, `'1'`, `'1.5'`, `'true'`, `'2020-01-01'`,
+`'2020-01-01 00:00:00'`); depth-8 widened `nullif` plans in ~1.9 s;
+`EXPLAIN` of the `nvl` chain shows three no-op `__repark_nvl_cast`.
+Live Spark 4.1.2 (banner `4.1.2 UTC`, ANSI on, `JAVA_HOME`
+`zulu-17-amd64` via `jvm-lock.sh`) answers single evaluation (1~10000,
+2~10000, 0 NULLs; `zeroifnull` 0~9891/1~10109) and the seven original
+values (`1.23456789012345678`, `9007199254740993`, `'01'`, `'1.50'`,
+`'TRUE'`, `'2020-1-1'`, `'2020-01-01'` with `decimal(38,17)`/`bigint`/
+`string` types).
+
+The rule now lowers a volatile first in `nvl`/`ifnull`/`zeroifnull` to
+`__repark_nvl_pick` over the widened branches (new file
+`crates/repark-functions/src/spark_nvl_eager.rs`, 303 lines; the
+non-volatile path keeps `coalesce`, so `nvl(1, 1/0)` still answers) and
+every widened scalar `nullif` plus every `nullifzero` to
+`__repark_nullif_compare` (casts inside, compares with Arrow `eq`,
+returns the original `first` array; same-type `nullif` keeps
+DataFusion's form with no cast-back). A no-op `nvl_cast` is skipped.
+Known gap (R2): the volatile-first path evaluates the fallback
+expression on every row, against Spark's laziness; it applies only when
+`first` is volatile. Carried (R1): struct, multi-leaf and list compares
+stay on the pick form.
+
+All 830 pins pass (811 - 6 vacuous `IS NULL` + 25 new VN3 cases: 16
+VN3-1 distribution/position/DataFrame/collect, 7 VN3-2 cast-back, 1
+VN3-3 depth, 1 VN3-4 EXPLAIN). Mutants: R1 (cast-back) reds 7/7
+cast-back pins; R2 (`coalesce` for volatile) reds 5/5 probed
+distribution/collect pins; R3 (always cast) reds the EXPLAIN pin; each
+reverted with a clean tree. Perf (1M rows, 5-deep `nvl` over mixed
+null/non-null bigints, median of 15): head 0.179 s vs base 0.173 s =
+1.03x, inside the 1.2x bar; base build `adc26586` (`/tmp/xrel` DEBUG
+`.so`, 2026-09-29 09:46), stated because the prior fold's `0.29x base`
+could not be reproduced.
 
 ## Coverage attestation
 

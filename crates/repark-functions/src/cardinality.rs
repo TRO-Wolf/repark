@@ -425,7 +425,7 @@ fn const_i128(expr: &Expr, depth: u32) -> Option<i128> {
                         values.into_iter().min()
                     }
                 }
-                "nullif" if args.len() == 2 => {
+                "nullif" | "__repark_nullif_compare" if args.len() == 2 => {
                     let left = const_i128(&args[0], depth - 1)?;
                     let right = const_i128(&args[1], depth - 1)?;
                     if left == right { None } else { Some(left) }

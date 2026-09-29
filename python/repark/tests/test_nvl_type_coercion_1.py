@@ -391,54 +391,180 @@ def test_vn3_typeof_nvl_abc_int_is_bigint(utc: ReparkSession) -> None:
     assert [row.asDict() for row in rows] == [{"t": "bigint"}]
 
 
-def test_vn2_nvl_rand_evaluates_once(utc: ReparkSession) -> None:
+VN3_RAND_CASE = "CASE WHEN rand() < 0.5 THEN NULL ELSE 1 END"
+VN3_NULLABLE_FALLBACK = "CASE WHEN id < 0 THEN NULL ELSE 2 END"
+
+VN3_CASTBACK = [
+    (
+        "CAST(1.23456789012345678 AS DECIMAL(38,17))",
+        "1.5D",
+        Decimal("1.23456789012345678"),
+        "decimal(38,17)",
+    ),
+    ("9007199254740993L", "1.5D", 9007199254740993, "bigint"),
+    ("'01'", "5", "01", "string"),
+    ("'1.50'", "2.5D", "1.50", "string"),
+    ("'TRUE'", "false", "TRUE", "string"),
+    ("'2020-1-1'", "DATE '2021-01-01'", "2020-1-1", "string"),
+    ("'2020-01-01'", "TIMESTAMP '2021-01-01 00:00:00'", "2020-01-01", "string"),
+]
+
+VN3_CASTBACK_IDS = [
+    "decimal_double",
+    "bigint_double",
+    "str_int",
+    "str_double",
+    "str_bool",
+    "str_date",
+    "str_ts",
+]
+
+
+def check_vn3_no_null_balanced(rows: list[Any], one_value: Any, other_value: Any) -> None:
+    assert len(rows) == 20000
+    nulls = sum(1 for row in rows if row["v"] is None)
+    assert nulls == 0
+    ones = sum(1 for row in rows if row["v"] == one_value)
+    assert 0.45 <= ones / len(rows) <= 0.55
+    others = sum(1 for row in rows if row["v"] == other_value)
+    assert ones + others == len(rows)
+
+
+@pytest.mark.parametrize("fn", ["nvl", "ifnull"])
+def test_vn3_select_distributes_once(utc: ReparkSession, fn: str) -> None:
     rows = utc.sql(
-        "SELECT count(*) AS c FROM range(20000) "
-        "WHERE nvl(CASE WHEN rand() < 0.5 THEN NULL ELSE 1 END, 2) IS NULL"
+        f"SELECT {fn}({VN3_RAND_CASE}, {VN3_NULLABLE_FALLBACK}) AS v FROM range(20000)"
     ).collect()
-    assert [row.asDict() for row in rows] == [{"c": 0}]
+    check_vn3_no_null_balanced(rows, 1, 2)
 
 
-def test_vn2_nvl_uuid_evaluates_once(utc: ReparkSession) -> None:
+def test_vn3_zeroifnull_select_distributes_once(utc: ReparkSession) -> None:
+    rows = utc.sql(f"SELECT zeroifnull({VN3_RAND_CASE}) AS v FROM range(20000)").collect()
+    check_vn3_no_null_balanced(rows, 1, 0)
+
+
+@pytest.mark.parametrize("fn", ["nvl", "ifnull"])
+def test_vn3_where_sees_single_evaluation(utc: ReparkSession, fn: str) -> None:
     rows = utc.sql(
-        "SELECT count(*) AS c FROM range(20000) WHERE "
-        "nvl(CASE WHEN substr(uuid(), 1, 1) < '8' THEN NULL ELSE 'a' END, 'b') IS NULL"
+        f"SELECT count(*) AS c FROM range(20000) "
+        f"WHERE {fn}({VN3_RAND_CASE}, {VN3_NULLABLE_FALLBACK}) = 1"
     ).collect()
-    assert [row.asDict() for row in rows] == [{"c": 0}]
+    count = rows[0].asDict()["c"]
+    assert 9000 <= count <= 11000
 
 
-def test_vn2_ifnull_rand_evaluates_once(utc: ReparkSession) -> None:
+def test_vn3_zeroifnull_where_sees_single_evaluation(utc: ReparkSession) -> None:
     rows = utc.sql(
-        "SELECT count(*) AS c FROM range(20000) "
-        "WHERE ifnull(CASE WHEN rand() < 0.5 THEN NULL ELSE 1 END, 2) IS NULL"
+        f"SELECT count(*) AS c FROM range(20000) WHERE zeroifnull({VN3_RAND_CASE}) = 1"
     ).collect()
-    assert [row.asDict() for row in rows] == [{"c": 0}]
+    count = rows[0].asDict()["c"]
+    assert 9000 <= count <= 11000
 
 
-def test_vn2_ifnull_uuid_evaluates_once(utc: ReparkSession) -> None:
+@pytest.mark.parametrize("fn", ["nvl", "ifnull"])
+def test_vn3_group_by_sees_single_evaluation(utc: ReparkSession, fn: str) -> None:
     rows = utc.sql(
-        "SELECT count(*) AS c FROM range(20000) WHERE "
-        "ifnull(CASE WHEN substr(uuid(), 1, 1) < '8' THEN NULL ELSE 'a' END, 'b') IS NULL"
+        "SELECT v, count(*) AS c FROM "
+        f"(SELECT {fn}({VN3_RAND_CASE}, {VN3_NULLABLE_FALLBACK}) AS v FROM range(20000)) "
+        "GROUP BY v ORDER BY v"
     ).collect()
-    assert [row.asDict() for row in rows] == [{"c": 0}]
+    tallies = {row["v"]: row["c"] for row in rows}
+    assert set(tallies) == {1, 2}
+    assert 9000 <= tallies[1] <= 11000
+    assert 9000 <= tallies[2] <= 11000
 
 
-def test_vn2_zeroifnull_rand_evaluates_once(utc: ReparkSession) -> None:
+def test_vn3_zeroifnull_group_by_sees_single_evaluation(utc: ReparkSession) -> None:
+    rows = utc.sql(
+        "SELECT v, count(*) AS c FROM "
+        f"(SELECT zeroifnull({VN3_RAND_CASE}) AS v FROM range(20000)) "
+        "GROUP BY v ORDER BY v"
+    ).collect()
+    tallies = {row["v"]: row["c"] for row in rows}
+    assert set(tallies) == {0, 1}
+    assert 9000 <= tallies[1] <= 11000
+    assert 9000 <= tallies[0] <= 11000
+
+
+@pytest.mark.parametrize("fn", ["nvl", "ifnull"])
+def test_vn3_lag_sees_single_evaluation(utc: ReparkSession, fn: str) -> None:
     rows = utc.sql(
         "SELECT count(*) AS c FROM "
-        "(SELECT zeroifnull(CASE WHEN rand() < 0.5 THEN NULL ELSE 1 END) AS v "
-        "FROM range(20000)) WHERE v IS NULL"
+        f"(SELECT lag({fn}({VN3_RAND_CASE}, {VN3_NULLABLE_FALLBACK})) "
+        "OVER (ORDER BY id) AS w FROM range(20000)) WHERE w IS NULL"
     ).collect()
-    assert [row.asDict() for row in rows] == [{"c": 0}]
+    assert [row.asDict() for row in rows] == [{"c": 1}]
 
 
-def test_vn2_zeroifnull_uuid_evaluates_once(utc: ReparkSession) -> None:
+def test_vn3_zeroifnull_lag_sees_single_evaluation(utc: ReparkSession) -> None:
     rows = utc.sql(
         "SELECT count(*) AS c FROM "
-        "(SELECT zeroifnull(CASE WHEN substr(uuid(), 1, 1) < '8' THEN NULL ELSE '5' END) AS v "
-        "FROM range(20000)) WHERE v IS NULL"
+        f"(SELECT lag(zeroifnull({VN3_RAND_CASE})) OVER (ORDER BY id) AS w "
+        "FROM range(20000)) WHERE w IS NULL"
     ).collect()
-    assert [row.asDict() for row in rows] == [{"c": 0}]
+    assert [row.asDict() for row in rows] == [{"c": 1}]
+
+
+@pytest.mark.parametrize("fn", [functions.nvl, functions.ifnull], ids=["nvl", "ifnull"])
+def test_vn3_dataframe_distributes_once(utc: ReparkSession, fn: Any) -> None:
+    base = utc.sql("SELECT id FROM range(20000)")
+    rand_case = functions.when(functions.rand() < 0.5, None).otherwise(1)
+    fallback = functions.when(functions.col("id") < 0, None).otherwise(2)
+    rows = base.select(fn(rand_case, fallback).alias("v")).collect()
+    check_vn3_no_null_balanced(rows, 1, 2)
+
+
+@pytest.mark.parametrize("fn", ["nvl", "ifnull"])
+def test_vn3_literal_fallback_collects_without_raising(utc: ReparkSession, fn: str) -> None:
+    rows = utc.sql(f"SELECT {fn}({VN3_RAND_CASE}, 2) AS v FROM range(20000)").collect()
+    check_vn3_no_null_balanced(rows, 1, 2)
+
+
+@pytest.mark.parametrize(
+    ("first", "second", "want_v", "want_t"), VN3_CASTBACK, ids=VN3_CASTBACK_IDS
+)
+def test_vn3_nullif_volatile_returns_original(
+    utc: ReparkSession, first: str, second: str, want_v: Any, want_t: str
+) -> None:
+    rows = utc.sql(f"SELECT nullif(CASE WHEN rand() < 2 THEN {first} END, {second}) AS v").collect()
+    assert len(rows) == 1
+    assert rows[0].asDict()["v"] == want_v
+    typed = utc.sql(
+        f"SELECT typeof(nullif(CASE WHEN rand() < 2 THEN {first} END, {second})) AS t"
+    ).collect()
+    assert typed[0].asDict()["t"] == want_t
+
+
+def test_vn3_depth_12_widened_nests_plan_and_run_fast(utc: ReparkSession) -> None:
+    widened = "x"
+    doubled = "x"
+    stringed = "s"
+    zeroed = "x"
+    for depth in range(12):
+        widened = f"nullif({widened}, {100 + depth}L)"
+        doubled = f"nullif({doubled}, {100 + depth}.5D)"
+        stringed = f"nullif({stringed}, {100 + depth})"
+        zeroed = f"nullifzero({zeroed})"
+    queries = [
+        f"SELECT id, {widened} AS v FROM (SELECT 1 AS id, 1 AS x)",
+        f"SELECT id, {doubled} AS v FROM (SELECT 1 AS id, 1 AS x)",
+        f"SELECT id, {stringed} AS v FROM (SELECT 1 AS id, '5' AS s)",
+        f"SELECT id, {zeroed} AS v FROM (SELECT 1 AS id, 1 AS x)",
+    ]
+    for query in queries:
+        utc.sql("EXPLAIN " + query).collect()
+        started = time.perf_counter()
+        utc.sql("EXPLAIN " + query).collect()
+        assert time.perf_counter() - started < 2.0
+        started = time.perf_counter()
+        utc.sql(query).collect()
+        assert time.perf_counter() - started < 2.0
+
+
+def test_vn3_nvl_chain_shows_no_nvl_cast(utc: ReparkSession) -> None:
+    rows = utc.sql("EXPLAIN SELECT nvl(nvl(nvl(id, 1), 2), 3) AS v FROM range(10)").collect()
+    text = "\n".join(str(row.asDict()) for row in rows)
+    assert "__repark_nvl_cast" not in text
 
 
 def test_vn2_nullif_rand_evaluates_once(utc: ReparkSession) -> None:

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use datafusion::arrow::datatypes::{DataType, TimeUnit};
+use datafusion::arrow::datatypes::DataType;
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
 use datafusion::common::{DFSchema, Result, ScalarValue};
@@ -18,6 +18,7 @@ use crate::spark_nvl::{
     CompareLeaf, CompareRefusal, binary_op_diff_types, coalesce_data_diff_types,
     compare_for_nullif, if_data_diff_types, invalid_ordering_type, widen_full,
 };
+use crate::spark_nvl_eager::{nullif_compare_expr, nvl_pick_expr};
 use crate::spark_nvl_udf::{
     ifnull_expr, nullif_pick_udf, nvl_cast_expr, nvl_expr, nvl2_expr, zero_scalar, zeroifnull_expr,
 };
@@ -188,6 +189,14 @@ fn case_when_present(test: Expr, first: Expr, second: Expr) -> Result<Expr> {
     .end()
 }
 
+fn maybe_nvl_cast(expr: Expr, from_type: &DataType, widen: &DataType) -> Expr {
+    if from_type == widen {
+        expr
+    } else {
+        nvl_cast_expr(expr, widen)
+    }
+}
+
 fn rewrite_nvl(spelling: &str, first: Expr, second: Expr, schema: &DFSchema) -> Result<Expr> {
     let (Ok(first_type), Ok(second_type)) = (first.get_type(schema), second.get_type(schema))
     else {
@@ -200,14 +209,20 @@ fn rewrite_nvl(spelling: &str, first: Expr, second: Expr, schema: &DFSchema) -> 
     let widen = widen_full(&first_type, &second_type)
         .ok_or_else(|| coalesce_data_diff_types(&first_type, &second_type))?;
     if is_null_literal(&first) {
-        return Ok(nvl_cast_expr(second, &widen));
+        return Ok(maybe_nvl_cast(second, &second_type, &widen));
     }
     if is_non_null_literal(&first) {
-        return Ok(nvl_cast_expr(first, &widen));
+        return Ok(maybe_nvl_cast(first, &first_type, &widen));
+    }
+    if is_truly_volatile(&first) {
+        return Ok(nvl_pick_expr(
+            maybe_nvl_cast(first, &first_type, &widen),
+            maybe_nvl_cast(second, &second_type, &widen),
+        ));
     }
     Ok(coalesce(vec![
-        nvl_cast_expr(first, &widen),
-        nvl_cast_expr(second, &widen),
+        maybe_nvl_cast(first, &first_type, &widen),
+        maybe_nvl_cast(second, &second_type, &widen),
     ]))
 }
 
@@ -219,15 +234,15 @@ fn rewrite_nvl2(test: Expr, first: Expr, second: Expr, schema: &DFSchema) -> Res
     let widen = widen_full(&first_type, &second_type)
         .ok_or_else(|| if_data_diff_types(&first_type, &second_type))?;
     if is_null_literal(&test) {
-        return Ok(nvl_cast_expr(second, &widen));
+        return Ok(maybe_nvl_cast(second, &second_type, &widen));
     }
     if is_non_null_literal(&test) {
-        return Ok(nvl_cast_expr(first, &widen));
+        return Ok(maybe_nvl_cast(first, &first_type, &widen));
     }
     case_when_present(
         test,
-        nvl_cast_expr(first, &widen),
-        nvl_cast_expr(second, &widen),
+        maybe_nvl_cast(first, &first_type, &widen),
+        maybe_nvl_cast(second, &second_type, &widen),
     )
 }
 
@@ -247,9 +262,12 @@ fn rewrite_zeroifnull(arg: Expr, schema: &DFSchema) -> Result<Expr> {
         return Ok(zero);
     }
     if is_non_null_literal(&arg) {
-        return Ok(nvl_cast_expr(arg, &widen));
+        return Ok(maybe_nvl_cast(arg, &arg_type, &widen));
     }
-    Ok(coalesce(vec![nvl_cast_expr(arg, &widen), zero]))
+    if is_truly_volatile(&arg) {
+        return Ok(nvl_pick_expr(maybe_nvl_cast(arg, &arg_type, &widen), zero));
+    }
+    Ok(coalesce(vec![maybe_nvl_cast(arg, &arg_type, &widen), zero]))
 }
 
 fn rewrite_nullif(
@@ -292,9 +310,17 @@ fn rewrite_nullif(
         && let [leaf] = leaves.as_slice()
         && leaf.path_a.is_empty()
         && leaf.path_b.is_empty()
-        && (leaf.common == first_type || is_truly_volatile(&first))
+        && leaf.common == first_type
     {
-        return Ok(single_nullif(&first, &second, leaf, &first_type));
+        return Ok(single_nullif(&first, &second, leaf));
+    }
+    if let [leaf] = leaves.as_slice()
+        && leaf.path_a.is_empty()
+        && leaf.path_b.is_empty()
+        && crate::spark_nvl_eager::kernel_covers_scalar(&leaf.common)
+        && (from_nullifzero || leaf.common != first_type)
+    {
+        return Ok(nullif_compare_expr(first, second, &leaf.common));
     }
     let mut cond: Option<Expr> = None;
     for leaf in &leaves {
@@ -323,19 +349,10 @@ fn rewrite_nullif(
     )))
 }
 
-fn single_nullif(first: &Expr, second: &Expr, leaf: &CompareLeaf, first_type: &DataType) -> Expr {
+fn single_nullif(first: &Expr, second: &Expr, leaf: &CompareLeaf) -> Expr {
     let left = shape_operand(first, &leaf.path_a, &leaf.type_a, &leaf.common);
     let right = shape_operand(second, &leaf.path_b, &leaf.type_b, &leaf.common);
-    let compared = df_nullif(left, right);
-    if leaf.common == *first_type {
-        compared
-    } else if matches!(first_type, DataType::Timestamp(TimeUnit::Microsecond, None)) {
-        crate::timestamp_ntz_cast::timestamp_ntz_cast_expr(compared, false)
-    } else if matches!(first_type, DataType::Timestamp(TimeUnit::Nanosecond, None)) {
-        crate::timestamp_ns_cast::timestamp_ns_cast_expr(compared, false)
-    } else {
-        Expr::Cast(Cast::new(Box::new(compared), first_type.clone()))
-    }
+    df_nullif(left, right)
 }
 
 fn is_truly_volatile(expr: &Expr) -> bool {
@@ -420,6 +437,9 @@ mod tests {
             .build();
         let ctx = SessionContext::new_with_state(state);
         for udf in crate::spark_nvl_udf::functions() {
+            ctx.register_udf(udf.as_ref().clone());
+        }
+        for udf in crate::spark_nvl_eager::functions() {
             ctx.register_udf(udf.as_ref().clone());
         }
         ctx
@@ -508,6 +528,9 @@ mod tests {
             .build();
         let ctx = SessionContext::new_with_state(state);
         for udf in crate::spark_nvl_udf::functions() {
+            ctx.register_udf(udf.as_ref().clone());
+        }
+        for udf in crate::spark_nvl_eager::functions() {
             ctx.register_udf(udf.as_ref().clone());
         }
         let sql = "SELECT array_repeat(1, nullif(101, 0)) AS v";
