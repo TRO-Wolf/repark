@@ -4386,6 +4386,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   must-not-change legs pin the window-in-filter refusal, window select,
   isNull/isin/row_number/dropDuplicates, plain `rp.col` and the `dir` delta.
   Expectations ride `polars_is_duplicated_1_polars_oracle.json` (17 KB).
+  **DIFF-PROBE fold (2026-09-29):** 8 order pins — a sort before the mask
+  survives filter/select on both doors asc/desc, a sort after the mask matches
+  the plain-column order with every key kept (tied, constant and second-key
+  shapes), plus limit/desc-nulls-last/3-key/sortWithinPartitions shapes, a
+  repartition set check and a groupBy over the mask column.
   pins: polars-is-duplicated-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `test_pg_jdbc_options.py` — PG2 offline option pins (jdbc overloads, format aliases, XOR/caps).
   Ported minus **one** node (EC-4): `test_jdbc_num_partitions_above_cap_is_unsupported` — the

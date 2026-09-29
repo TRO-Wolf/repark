@@ -283,3 +283,144 @@ def test_dir_gains_only_is_duplicated() -> None:
     names = set(dir(F.col("c")))
     assert "is_duplicated" in names
     assert sorted(names - {"is_duplicated"}) == _FIXTURE["keep"]["keep.dir_names"]
+
+
+def test_sorted_input_order_survives_filter_on_both_doors(session: ReparkSession) -> None:
+    frame = _make_frame(session, "int")
+    asc = [row["c"] for row in _dicts(frame.orderBy("c").filter(F.col("c").is_duplicated()))]
+    assert asc == [None, None, 1, 1, 2, 2]
+    desc = [
+        row["c"]
+        for row in _dicts(frame.orderBy(F.col("c").desc()).filter(F.col("c").is_duplicated()))
+    ]
+    assert desc == [2, 2, 1, 1, None, None]
+    rp_asc = [
+        row["c"] for row in _dicts(frame.pl.sort("c").filter(rp.col("c").is_duplicated()).spark)
+    ]
+    assert rp_asc == [None, None, 1, 1, 2, 2]
+    rp_desc = [
+        row["c"]
+        for row in _dicts(
+            frame.pl.sort("c", descending=True).filter(rp.col("c").is_duplicated()).spark
+        )
+    ]
+    assert rp_desc == [None, None, 2, 2, 1, 1]
+
+
+def test_sorted_input_order_survives_select_on_both_doors(session: ReparkSession) -> None:
+    frame = _make_frame(session, "int")
+    mask = F.col("c").is_duplicated().alias("d")
+    asc = _dicts(frame.orderBy("c").select("c", mask))
+    assert [(row["c"], row["d"]) for row in asc] == [
+        (None, True),
+        (None, True),
+        (1, True),
+        (1, True),
+        (2, True),
+        (2, True),
+        (3, False),
+    ]
+    desc = _dicts(frame.orderBy(F.col("c").desc()).select("c", mask))
+    assert [(row["c"], row["d"]) for row in desc] == [
+        (3, False),
+        (2, True),
+        (2, True),
+        (1, True),
+        (1, True),
+        (None, True),
+        (None, True),
+    ]
+    rp_mask = rp.col("c").is_duplicated().alias("d")
+    rp_asc = _dicts(frame.pl.sort("c").select("c", rp_mask).spark)
+    assert [(row["c"], row["d"]) for row in rp_asc] == [
+        (None, True),
+        (None, True),
+        (1, True),
+        (1, True),
+        (2, True),
+        (2, True),
+        (3, False),
+    ]
+    rp_desc = _dicts(frame.pl.sort("c", descending=True).select("c", rp_mask).spark)
+    assert [(row["c"], row["d"]) for row in rp_desc] == [
+        (None, True),
+        (None, True),
+        (3, False),
+        (2, True),
+        (2, True),
+        (1, True),
+        (1, True),
+    ]
+
+
+def test_post_mask_sort_matches_plain_column(session: ReparkSession) -> None:
+    frame = _make_frame(session, "int")
+    expected = [(3, False), (None, True), (None, True), (1, True), (1, True), (2, True), (2, True)]
+    masked = frame.select("c", F.col("c").is_duplicated().alias("d")).orderBy("d", "c")
+    assert [(row["c"], row["d"]) for row in _dicts(masked)] == expected
+    widened = frame.withColumn("d", F.col("c").is_duplicated()).orderBy("d", "c")
+    assert [(row["c"], row["d"]) for row in _dicts(widened)] == expected
+    plain = session.createDataFrame(
+        [(1, True), (2, True), (2, True), (None, True), (None, True), (3, False), (1, True)],
+        "c INT, d BOOLEAN",
+    ).orderBy("d", "c")
+    assert [(row["c"], row["d"]) for row in _dicts(plain)] == expected
+
+
+def test_post_mask_sort_constant_mask_keeps_second_key(session: ReparkSession) -> None:
+    frame = session.createDataFrame([(2,), (None,), (1,)], "k INT")
+    ordered = frame.select("k", F.col("k").is_duplicated().alias("d")).orderBy("d", "k")
+    assert [(row["k"], row["d"]) for row in _dicts(ordered)] == [
+        (None, False),
+        (1, False),
+        (2, False),
+    ]
+
+
+def test_post_mask_sort_second_key_survives(session: ReparkSession) -> None:
+    frame = session.createDataFrame(
+        [(1, "a"), (2, "b"), (2, "c"), (None, "d"), (1, "e"), (3, None)], "k INT, v STRING"
+    )
+    ordered = frame.select("k", "v", F.col("k").is_duplicated().alias("dk")).orderBy("dk", "v")
+    assert [(row["k"], row["v"], row["dk"]) for row in _dicts(ordered)] == [
+        (3, None, False),
+        (None, "d", False),
+        (1, "a", True),
+        (2, "b", True),
+        (2, "c", True),
+        (1, "e", True),
+    ]
+
+
+def test_sorted_mask_with_limit_and_desc_nulls_last(session: ReparkSession) -> None:
+    frame = _make_frame(session, "int")
+    limited = frame.orderBy("c").filter(F.col("c").is_duplicated()).limit(3)
+    assert [row["c"] for row in _dicts(limited)] == [None, None, 1]
+    nulls_last = frame.orderBy(F.col("c").desc_nulls_last()).filter(F.col("c").is_duplicated())
+    assert [row["c"] for row in _dicts(nulls_last)] == [2, 2, 1, 1, None, None]
+
+
+def test_sorted_mask_three_keys_and_sort_within_partitions(session: ReparkSession) -> None:
+    frame = session.createDataFrame(
+        [(1, "a", 5), (1, "a", 4), (2, "b", 1), (None, "a", 2), (1, "b", 3), (None, None, 6)],
+        "a INT, b STRING, c INT",
+    )
+    tri = frame.orderBy("a", "b", "c").filter(F.col("a").is_duplicated())
+    assert [(row["a"], row["b"], row["c"]) for row in _dicts(tri)] == [
+        (None, None, 6),
+        (None, "a", 2),
+        (1, "a", 4),
+        (1, "a", 5),
+        (1, "b", 3),
+    ]
+    ints = _make_frame(session, "int")
+    within = ints.sortWithinPartitions("c").filter(F.col("c").is_duplicated())
+    assert [row["c"] for row in _dicts(within)] == [None, None, 1, 1, 2, 2]
+
+
+def test_mask_after_repartition_matches_set_and_groupagg(session: ReparkSession) -> None:
+    frame = _make_frame(session, "int")
+    repart = [row["c"] for row in _dicts(frame.repartition(4).filter(F.col("c").is_duplicated()))]
+    assert sorted(repart, key=repr) == sorted([1, 2, 2, None, None, 1], key=repr)
+    grouped = frame.select("c", F.col("c").is_duplicated().alias("d")).groupBy("d").count()
+    assert {(row["d"], row["count"]) for row in _dicts(grouped)} == {(True, 6), (False, 1)}

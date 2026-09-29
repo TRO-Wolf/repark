@@ -1175,7 +1175,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   unchanged (C-006), float normalisation lives only inside the lowering (C-007),
   both mutations go red and revert clean (C-008), and the example inventory
   carries the new name (C-009); `F.lit(1)` frame shape, join-ON refusal text and
-  nesting are dated residues (R-001..R-003).
+  nesting are dated residues (R-001..R-003); §3b folds the DIFF-PROBE order bugs
+  (a sort before/after the mask survives untouched).
   `risk_tier: standard`. Branch `feat/polars-is-duplicated-1`.
   pins: polars-is-duplicated-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [platform-1-ledger.md](platform-1-ledger.md) —

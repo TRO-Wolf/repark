@@ -11,8 +11,8 @@ use datafusion::error::Result as DFResult;
 use datafusion::functions_window::row_number::row_number_udwf;
 use datafusion::logical_expr::expr::{ScalarFunction, WindowFunction};
 use datafusion::logical_expr::{
-    ColumnarValue, Expr, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, Volatility,
-    WindowFunctionDefinition,
+    ColumnarValue, Expr, ExprFunctionExt, LogicalPlan, ScalarFunctionArgs, ScalarUDF,
+    ScalarUDFImpl, Signature, SortExpr, Volatility, WindowFrame, WindowFunctionDefinition, lit,
 };
 use datafusion::scalar::ScalarValue;
 use pyo3::prelude::*;
@@ -243,11 +243,60 @@ fn fresh_name(schema: &DFSchema, base: &str) -> String {
     }
 }
 
-fn row_index_expr() -> Expr {
+fn order_key_columns_usable(keys: &[SortExpr], schema: &DFSchema) -> bool {
+    let mut usable = true;
+    for key in keys {
+        let _ = key.expr.clone().transform(|step| {
+            match &step {
+                Expr::Column(column) => {
+                    if schema.index_of_column(column).is_err() {
+                        usable = false;
+                    }
+                }
+                Expr::WindowFunction(_)
+                | Expr::AggregateFunction(_)
+                | Expr::ScalarSubquery(_)
+                | Expr::Exists(_)
+                | Expr::InSubquery(_) => {
+                    usable = false;
+                }
+                _ => {}
+            }
+            Ok(Transformed::no(step))
+        });
+    }
+    usable
+}
+
+fn input_order_keys(plan: &LogicalPlan, schema: &DFSchema) -> Vec<SortExpr> {
+    let mut current = plan;
+    loop {
+        match current {
+            LogicalPlan::Sort(sort) => {
+                if order_key_columns_usable(&sort.expr, schema) {
+                    return sort.expr.clone();
+                }
+                return Vec::new();
+            }
+            LogicalPlan::Filter(filter) => current = &filter.input,
+            LogicalPlan::Projection(projection) => current = &projection.input,
+            LogicalPlan::SubqueryAlias(alias) => current = &alias.input,
+            LogicalPlan::Limit(limit) => current = &limit.input,
+            _ => return Vec::new(),
+        }
+    }
+}
+
+#[allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
+fn row_index_expr(order_keys: Vec<SortExpr>) -> DFResult<Expr> {
     Expr::from(WindowFunction::new(
         WindowFunctionDefinition::WindowUDF(row_number_udwf()),
         Vec::new(),
     ))
+    .partition_by(vec![lit(1)])
+    .order_by(order_keys)
+    .window_frame(WindowFrame::new(None))
+    .build()
 }
 
 #[allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
@@ -300,9 +349,13 @@ pub(crate) fn filter_frame(frame: &DataFrame, predicate: Expr) -> PyResult<DataF
                 .map_err(datafusion_to_py_err);
         }
         let index = fresh_name(frame.schema(), INDEX_BASE);
+        let order_keys = input_order_keys(frame.logical_plan(), frame.schema());
         let indexed = frame
             .clone()
-            .with_column(&index, row_index_expr())
+            .with_column(
+                &index,
+                row_index_expr(order_keys).map_err(datafusion_to_py_err)?,
+            )
             .map_err(datafusion_to_py_err)?;
         let (staged, rewritten, helpers) =
             expand_root(indexed, predicate, &mut 0).map_err(datafusion_to_py_err)?;
@@ -330,9 +383,13 @@ pub(crate) fn select_frame(frame: &DataFrame, exprs: Vec<Expr>) -> PyResult<Data
             return frame.clone().select(exprs).map_err(datafusion_to_py_err);
         }
         let index = fresh_name(frame.schema(), INDEX_BASE);
+        let order_keys = input_order_keys(frame.logical_plan(), frame.schema());
         let mut staged = frame
             .clone()
-            .with_column(&index, row_index_expr())
+            .with_column(
+                &index,
+                row_index_expr(order_keys).map_err(datafusion_to_py_err)?,
+            )
             .map_err(datafusion_to_py_err)?;
         let mut helper_count = 0;
         let mut rewritten = Vec::with_capacity(exprs.len() + 1);

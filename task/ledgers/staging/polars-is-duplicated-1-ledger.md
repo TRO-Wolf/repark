@@ -70,6 +70,34 @@ mask/filter/select/withColumn tests fail, first diff at the double frame's
 0.0/-0.0 legs. Both reverted via saved copies; `git status` clean of product
 diffs; pins rerun 13 passed; the native module rebuilt after the revert.
 
+## 3b. DIFF-PROBE fold (2026-09-29, BUG-1 + BUG-2: the mask never reorders rows)
+
+Probe `target/diff-probe` on this head: 351 non-dup neighbours identical and
+the 1M-row plain filter/select gate at 0.96–1.09×, but two silent order bugs
+on the new surface, both rooted in the `row_number() OVER ()` order index.
+BUG-1: a user sort before a mask is lost (the helper window's partition-key
+sort insertion strips the user's sort below the index window, so the index
+numbers scan order). BUG-2: a user sort after a mask loses keys touching the
+mask or partition column (the bare-`row_number` uniqueness FD is misattributed
+to the mask column when `optimize_projections` merges the stacked helper
+projections, and `eliminate_duplicated_expr` then prunes the later sort keys).
+
+Fix in `crates/repark-python/src/is_duplicated.rs`: the index window is now
+`row_number() OVER (PARTITION BY 1 ORDER BY <input sort keys>)`. The constant
+partition keeps the numbering identical while removing the uniqueness FD, so
+no later sort is ever pruned; the walked input-sort keys (top Sort through
+Filter/Projection/SubqueryAlias/Limit, used only when every key column
+resolves in the staged schema and no key nests a window, aggregate or
+subquery, else the previous unkeyed shape) make the window require the user's
+order, so the final index re-sort reproduces it. Mask values, rewrite triggers
+and every non-dup plan are unchanged.
+
+Proof: 8 new pins in `test_polars_is_duplicated_1.py` (BUG-1 filter/select ×
+F/rp × asc/desc, BUG-2 all three shapes, limit/desc-nulls-last/3-key/
+sortWithinPartitions/repartition-set/groupagg); mutation restoring the pre-fix
+index turns the 7 order pins red (the set-based pin holds by design); full
+DIFF-PROBE rerun recorded in the hand-back. 0 existing pins changed.
+
 ## 4. Residues (dated 2026-09-28, all out of the brief's cell list)
 
 - R-001: `F.lit(1).is_duplicated()` answers all-true over RePark's 7 broadcast
