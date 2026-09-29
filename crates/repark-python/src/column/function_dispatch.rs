@@ -273,7 +273,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             expr_fn::nanvl(exprs[0].clone(), exprs[1].clone())
         }
         "nvl" | "ifnull" | "nvl2" | "nullif" | "zeroifnull" | "nullifzero" => {
-            repark_functions::spark_nvl_udf::nvl_family_expr(name, exprs.clone())
+            repark_functions::spark_nvl_udf::nvl_family_expr(name, &exprs)
                 .map_err(|why| PyValueError::new_err(format!("call_scalar({name}) {why}")))?
         }
         "greatest" => {

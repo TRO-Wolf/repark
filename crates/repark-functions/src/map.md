@@ -791,6 +791,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `crate::shim_udf_boilerplate!`. File-backed rather than root-inline because
   `scripts/check_lib_rs.py` counts every `lib.rs` line and this root sits at its 175 ceiling —
   the ceiling did not rise.
+- `eager.rs` — **NVL-TYPE-COERCION-1 (2026-09-29):** `analyze_eagerly` moved
+  here unchanged from `lib.rs` (sanctioned out (1), net-negative: the root
+  lands at 178 of its 186 ceiling with the three `spark_nvl` module decls) and
+  re-exported at the root, so every caller keeps its path.
+  pins: nvl-type-coercion-1/C-002
 - `url.rs` — Spark `parse_url` / `try_parse_url` use `java.net.URI`-shaped splitting (sibling
   `java_uri.rs`).
   `datafusion-spark` 54.1 extracts with `url::Url`, a WHATWG-URL **normalizer**;

@@ -154,11 +154,10 @@ fn scalar_widen(left: &DataType, right: &DataType, strings: bool) -> Option<Data
     if let (Some((p1, s1)), Some((p2, s2))) = (
         as_decimal(left).or_else(|| integral_to_decimal(left)),
         as_decimal(right).or_else(|| integral_to_decimal(right)),
-    ) {
-        if as_decimal(left).is_some() || as_decimal(right).is_some() {
-            let (precision, scale) = decimal_wider(p1, s1, p2, s2)?;
-            return Some(DataType::Decimal128(precision, scale));
-        }
+    ) && (as_decimal(left).is_some() || as_decimal(right).is_some())
+    {
+        let (precision, scale) = decimal_wider(p1, s1, p2, s2)?;
+        return Some(DataType::Decimal128(precision, scale));
     }
     if is_text(left) && is_text(right) {
         return Some(DataType::Utf8);
@@ -205,7 +204,7 @@ pub(crate) fn decimal_wider(p1: u8, s1: i8, p2: u8, s2: i8) -> Option<(u8, i8)> 
     }
     let capped_scale = scale.min(38 - range);
     let precision = range + capped_scale;
-    if precision < 1 || precision > 38 {
+    if !(1..=38).contains(&precision) {
         return None;
     }
     let precision = u8::try_from(precision).ok()?;
@@ -240,9 +239,10 @@ fn temporal_widen(left: &DataType, right: &DataType) -> Option<DataType> {
         }
         (Some((left_unit, left_zone)), Some((right_unit, right_zone))) => {
             match (left_zone, right_zone) {
-                (Some(zone), Some(_)) | (Some(zone), None) | (None, Some(zone)) => Some(
-                    DataType::Timestamp(finer_unit(left_unit, right_unit), Some(zone)),
-                ),
+                (Some(zone), Some(_) | None) | (None, Some(zone)) => Some(DataType::Timestamp(
+                    finer_unit(left_unit, right_unit),
+                    Some(zone),
+                )),
                 (None, None) => Some(DataType::Timestamp(finer_unit(left_unit, right_unit), None)),
             }
         }
@@ -424,7 +424,7 @@ fn compare_inner(
         }]);
     }
     if matches!(left, DataType::Struct(_)) || matches!(right, DataType::Struct(_)) {
-        return compare_structs(left, right, path_a, path_b);
+        return compare_structs(left, right, &path_a, &path_b);
     }
     if list_element(left).is_some()
         || list_element(right).is_some()
@@ -475,8 +475,8 @@ fn map_common_for_compare(left: &DataType, right: &DataType) -> Option<DataType>
 fn compare_structs(
     left: &DataType,
     right: &DataType,
-    path_a: Vec<String>,
-    path_b: Vec<String>,
+    path_a: &[String],
+    path_b: &[String],
 ) -> Result<Vec<CompareLeaf>, CompareRefusal> {
     let (DataType::Struct(left_fields), DataType::Struct(right_fields)) = (left, right) else {
         return Err(CompareRefusal::BinaryOp);
@@ -486,9 +486,9 @@ fn compare_structs(
     }
     let mut leaves = Vec::new();
     for (left_field, right_field) in left_fields.iter().zip(right_fields.iter()) {
-        let mut child_a = path_a.clone();
+        let mut child_a = path_a.to_vec();
         child_a.push(left_field.name().clone());
-        let mut child_b = path_b.clone();
+        let mut child_b = path_b.to_vec();
         child_b.push(right_field.name().clone());
         let mut child = compare_inner(
             left_field.data_type(),

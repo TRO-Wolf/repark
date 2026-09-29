@@ -4943,7 +4943,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   America/New_York, ANSI on): SELECT typeof/value cells per session, struct/map
   collect cells, the 17 facade `typeof` ops, temp-view cells, one INSERT flow
   with both table reads, five known-divergence pins, and the `coalesce` guards.
-  pins: nvl-type-coercion-1/C-003, C-004, C-005
+  The same file is the mutation instrument (red on base) and the gate's pytest leg.
+  pins: nvl-type-coercion-1/C-003, C-004, C-005, C-006, C-007
 - `test_select_naming.py` — **Group H** select/projection display naming vs live PySpark 4.1.2:
   mutation leak accepts `Int32(1)` as well as `Int64(1)` (F-Y10-1 Python lit width);
   full matrix (`(x + 1)`, cast-of-attr → child name, cast-of-compound → `CAST(...)`,

@@ -191,9 +191,9 @@ mod tests {
             .with_analyzer_rules(rules)
             .build();
         let ctx = SessionContext::new_with_state(state);
-        crate::spark_nvl_udf::functions()
-            .into_iter()
-            .for_each(|udf| ctx.register_udf(udf.as_ref().clone()));
+        for udf in crate::spark_nvl_udf::functions() {
+            ctx.register_udf(udf.as_ref().clone());
+        }
         ctx
     }
 
@@ -278,9 +278,9 @@ mod tests {
             .with_analyzer_rules(rules)
             .build();
         let ctx = SessionContext::new_with_state(state);
-        crate::spark_nvl_udf::functions()
-            .into_iter()
-            .for_each(|udf| ctx.register_udf(udf.as_ref().clone()));
+        for udf in crate::spark_nvl_udf::functions() {
+            ctx.register_udf(udf.as_ref().clone());
+        }
         let sql = "SELECT array_repeat(1, nullif(101, 0)) AS v";
         let frame = ctx
             .sql(sql)

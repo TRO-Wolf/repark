@@ -84,3 +84,50 @@ New: `crates/repark-functions/src/spark_nvl.rs`, `spark_nvl_rule.rs`,
 seat), `column/door_parity_tests.rs` (`SCALAR_NAMES`),
 `functions_expr.py` (one `_scalar` per spelling), `time_family.rs`
 (`typeof` intervals).
+
+## Coverage attestation
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: nvl-type-coercion-1
+  complete: true
+  reattested: [AT-1, AT-2, AT-3, AT-6, AT-8, AT-10]
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Clauses C-001..C-007 walked one by one against behavior — the oracle matrix measured on live PySpark 4.1.2 in two session zones, the widening verified per cell, the residuals ledgered with divergence pins, the guards re-run to zero breaks, the mutation run red-first on the base tree, and the gate run as written; every clause is PROVEN and cited from the maps.
+      artifacts: [task/ledgers/staging/nvl-type-coercion-1-ledger.md, python/repark/tests/test_nvl_type_coercion_1.py]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Boundary cells actually exercised — NULL and typed-NULL on every side, uncastable strings picked and unpicked, decimal 38-cap pairs, date/timestamp/ntz in UTC and America/New_York, struct/map/array recursion, zero-arg and over-arity calls; the answer pins assert Arrow value AND type per cell.
+      artifacts: [python/repark/tests/test_nvl_type_coercion_1.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Refusal cells raise the recorded Spark classes verbatim where the engine owns the check (DATATYPE_MISMATCH, WRONG_NUM_ARGS, 101 strict pins); runtime cast failures raise while Spark names CAST_INVALID_INPUT (55 loose pins assert raises with the Spark class recorded beside); invented nulls in the kernel raise CAST_INVALID_INPUT.
+      artifacts: [python/repark/tests/test_nvl_type_coercion_1.py, crates/repark-functions/src/spark_nvl_udf.rs]
+    - id: AT-4
+      status: ATTACKED
+      evidence: The facade resolves the same kernels as the SQL door (SCALAR_NAMES ratchet, door-parity suite green); each pin session is created per fixture with explicit timeZone and ANSI settings and the INSERT leg stops its session; temporal kernel casts read the session zone from live config.
+      artifacts: [python/repark/tests/test_nvl_type_coercion_1.py, crates/repark-python/src/column/door_parity_tests.rs]
+    - id: AT-5
+      status: N/A
+      justification: No privileged action, no secret, no injection or deserialization surface — pure type widening over values already in the engine.
+    - id: AT-6
+      status: ATTACKED
+      evidence: Arrow value AND type pinned per oracle cell through collect and typeof; facade display keeps the nvl/ifnull/nvl2/nullif/zeroifnull/nullifzero spellings via one native _scalar call each; struct/map answers pinned through collected values, not the stringifying wrapper.
+      artifacts: [python/repark/tests/test_nvl_type_coercion_1.py, python/repark/src/repark/spark/functions_expr.py]
+    - id: AT-7
+      status: N/A
+      justification: No memory or performance envelope changes — the kernel takes only picked rows per side and the matrices run in seconds; no new cache, spill, or batch-atomic path.
+    - id: AT-8
+      status: ATTACKED
+      evidence: The nullif rule seats fifth before type_coercion on both doors with the contract test extended; file-size baselines move DOWN only (functions_expr.py 2171 -> 2170 with the CAP-1 mirror in lockstep); the fixture holds only asserted cells at 772 lines.
+      artifacts: [crates/repark-spark/src/extension/tests.rs, scripts/check_lib_py.py, python/repark/tests/test_nvl_type_coercion_1_spark.json]
+    - id: AT-9
+      status: N/A
+      justification: No log-format or diagnosis-path change; refusals carry Spark error classes and SQLSTATEs through the existing typed exception families.
+    - id: AT-10
+      status: ATTACKED
+      evidence: Red-first held — the headline pins failed on the base tree (typeof answered string) and pass at head; the neighbour file answers 23/25 identically with the 2 zeroifnull-SQL flips intended; no dead branch ships (every fallback returns the unshifted or uncast value by construction).
+      artifacts: [python/repark/tests/test_nvl_type_coercion_1.py, task/ledgers/staging/nvl-type-coercion-1-ledger.md]
+```

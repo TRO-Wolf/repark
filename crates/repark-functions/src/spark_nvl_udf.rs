@@ -105,10 +105,13 @@ pub fn nullifzero_expr(arg: Expr) -> Expr {
     crate::expr_fn::call(nullifzero_udf(), vec![arg])
 }
 
-pub fn nvl_family_expr(name: &str, args: Vec<Expr>) -> Result<Expr, String> {
+/// Build the `nvl`-family expression for a dispatch name.
+/// # Errors
+/// Returns the arity mismatch when `args` has the wrong length.
+pub fn nvl_family_expr(name: &str, args: &[Expr]) -> Result<Expr, String> {
     let got = args.len();
     match name {
-        "nvl" | "ifnull" => match args.as_slice() {
+        "nvl" | "ifnull" => match args {
             [first, second] => {
                 if name == "nvl" {
                     Ok(nvl_expr(first.clone(), second.clone()))
@@ -118,19 +121,19 @@ pub fn nvl_family_expr(name: &str, args: Vec<Expr>) -> Result<Expr, String> {
             }
             _ => Err(format!("expects 2 args, got {got}")),
         },
-        "nvl2" => match args.as_slice() {
+        "nvl2" => match args {
             [test, first, second] => Ok(nvl2_expr(test.clone(), first.clone(), second.clone())),
             _ => Err(format!("expects 3 args, got {got}")),
         },
-        "nullif" => match args.as_slice() {
+        "nullif" => match args {
             [first, second] => Ok(nullif_expr(first.clone(), second.clone())),
             _ => Err(format!("expects 2 args, got {got}")),
         },
-        "zeroifnull" => match args.as_slice() {
+        "zeroifnull" => match args {
             [arg] => Ok(zeroifnull_expr(arg.clone())),
             _ => Err(format!("expects 1 args, got {got}")),
         },
-        "nullifzero" => match args.as_slice() {
+        "nullifzero" => match args {
             [arg] => Ok(nullifzero_expr(arg.clone())),
             _ => Err(format!("expects 1 args, got {got}")),
         },
@@ -251,7 +254,7 @@ fn needs_zone_shift(from: &DataType, widen: &DataType) -> bool {
     from_wall && matches!(widen, DataType::Timestamp(_, Some(_)))
 }
 
-fn wall_to_instant_micros(wall: i64, zone: &Tz) -> Option<i64> {
+fn wall_to_instant_micros(wall: i64, zone: Tz) -> Option<i64> {
     let naive = chrono::DateTime::from_timestamp_micros(wall)?.naive_utc();
     let resolved = zone.from_local_datetime(&naive);
     if let Some(single) = resolved.single().or_else(|| resolved.earliest()) {
@@ -265,7 +268,7 @@ fn wall_to_instant_micros(wall: i64, zone: &Tz) -> Option<i64> {
         .map(|single| single.timestamp_micros())
 }
 
-fn timestamp_rows_micros(casted: &dyn Array, unit: &TimeUnit) -> Option<Vec<Option<i64>>> {
+fn timestamp_rows_micros(casted: &dyn Array, unit: TimeUnit) -> Option<Vec<Option<i64>>> {
     let mut rows = Vec::with_capacity(casted.len());
     match unit {
         TimeUnit::Second => {
@@ -313,17 +316,17 @@ fn timestamp_rows_micros(casted: &dyn Array, unit: &TimeUnit) -> Option<Vec<Opti
             }
         }
     }
-    if rows.iter().any(|row| row.is_none()) && casted.logical_null_count() == 0 {
+    if rows.iter().any(Option::is_none) && casted.logical_null_count() == 0 {
         return None;
     }
     Some(rows)
 }
 
-fn shift_ltz_to_session_walls(casted: &ArrayRef, widen: &DataType, zone: &Tz) -> Option<ArrayRef> {
+fn shift_ltz_to_session_walls(casted: &ArrayRef, widen: &DataType, zone: Tz) -> Option<ArrayRef> {
     let DataType::Timestamp(unit, Some(zone_name)) = widen else {
         return None;
     };
-    let rows = timestamp_rows_micros(casted.as_ref(), unit)?;
+    let rows = timestamp_rows_micros(casted.as_ref(), *unit)?;
     let mut instants = Vec::with_capacity(rows.len());
     for row in rows {
         match row {
@@ -331,7 +334,7 @@ fn shift_ltz_to_session_walls(casted: &ArrayRef, widen: &DataType, zone: &Tz) ->
             Some(wall) => instants.push(wall_to_instant_micros(wall, zone)),
         }
     }
-    if instants.iter().any(|row| row.is_none()) && casted.logical_null_count() == 0 {
+    if instants.iter().any(Option::is_none) && casted.logical_null_count() == 0 {
         return None;
     }
     let shifted = TimestampMicrosecondArray::from(instants).with_timezone(zone_name.as_ref());
@@ -358,7 +361,7 @@ fn cast_taken(
     let casted = cast_taken_strict(taken, widen, spelling)?;
     if let Some(resolved) = zone
         && needs_zone_shift(taken.data_type(), widen)
-        && let Some(shifted) = shift_ltz_to_session_walls(&casted, widen, resolved)
+        && let Some(shifted) = shift_ltz_to_session_walls(&casted, widen, *resolved)
     {
         return Ok(shifted);
     }
