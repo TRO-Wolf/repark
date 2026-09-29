@@ -232,6 +232,64 @@ RePark binds); same-alias joins stay unmeasured. The condition half
 binds single-hit only (twin conditions keep today's refusal,
 unmeasured).
 
+## DIFF-PROBE fold (2026-09-28, this round; branch `feat/casesens-2-s4`, base `746c0fd3`)
+
+The probe over 1890 statements (base `adc26586` vs PR #881 head `74af65a1`)
+found 6 regression cells from 4 mechanisms; the orchestrator rules R2 and R4
+fixed in this PR, R1/R3 disclosed under R-CS2-2, Q1 disclosed without a pin.
+
+R2 (fixed): `DataFrame.alias` stored the qualifier folded —
+`SubqueryAlias::try_new(plan, alias: &str)` converts through
+`TableReference::from`, which lowercases via `parse_str` — so under `true`
+the folded `t.id` hit and the exact `T.id` missed on an `alias("T")` frame.
+The fix builds `TableReference::Bare` directly at the single storage site
+(`crates/repark-python/src/subquery.rs`, the A12 precedent); every
+qualifier comparison already matches through `NameRule`, so under `true`
+the exact spelling binds and the wrong case refuses, and under `false` any
+case binds. `n_aT_fold` / `aliasT_qualfold_true` refuse R12 against Spark's
+recorded text (head naming `` `t`.`id` ``, class, condition, 42703, candidate
+set), and the inverses `n_aT_exact` / `aliasT_exact_true` answer `[[1],[2]]`
+as Spark does.
+
+R4 (fixed): the bare folded-ambiguous display arm of `_bind_written_column`
+raised the facade text with no condition and no SQLSTATE. It now calls the
+new native `refuse_ambiguous_display_name` (positional schema-qualifier
+pairing, rendered through the shared `ambiguous_reference`; re-exported
+through `frame_names`, served by `dataframe_names`); the facade text stays
+as the degenerate fallback. `n_fj_sel` refuses byte-exact
+``[`ID`, `ID`]`` 42704, and `f_join_eq` refuses byte-exact
+``[`sc`.`ns`.`t`.`ID`, `sc`.`ns`.`u`.`ID`]`` 42704 — Spark's catalog
+candidates, live-measured this round (banner 4.1.2, UTC, same JAR).
+Error text only: every refusing input still refuses, every answering input
+still answers.
+
+R1/R3 (no fix): `qs_sel_t_id_true` and `m_reuse_qual` stay answering (stale
+or inherited rule); R-CS2-2 below gains both keys with repros.
+
+Q1 (measured, no divergence): the premise said the true-door miss raises at
+plan construction on head but at the action on Spark. Live Spark 4.1.2
+(banner 4.1.2, UTC, this round) raises `t_lazy_ID` inside `select()`
+(`Dataset.select` → `assertAnalyzed`), the same construction timing head
+shows — verdict, class, condition, SQLSTATE and timing all match, so no
+divergence is disclosed and no pin lands per the ruling.
+
+Collateral, measured against live Spark: `n_sj2_sel_ID` moves facade text →
+``[`l`.`ID`, `r`.`ID`]`` 42704 (Spark's recorded text); `f_uni_sigma`
+moves facade text → `AMBIGUOUS_REFERENCE`, while Spark leaves `ς`
+unresolved (the Java fold matches `ς` against `σ`/`Σ`, Spark matches
+neither — a matcher gap, not a routing gap, recorded as R-CS2-13 and
+refusal-pinned). The non-ASCII `alias('Ü')` brief line cannot answer on the
+DataFrame door (the bare-identifier gate refuses under both settings
+before and after); the SQL-door unicode gap stays R-CS2-8.
+
+Proof: extras (23 cells), full `dp_probe.py` (294) and `needs_probe.py` (92)
+re-measured before and after; the flips are exactly the R2/R4 cells, the
+two R2 inverses, `n_sj2_sel_ID` and `f_uni_sigma`. Pins live in the new
+`python/repark/tests/test_casesens_2_diffprobe.py` (seven tests;
+`test_casesens_2.py` is at its 1000-line ceiling). Mutations M11/M12 below.
+One existing pin updated (Spark-mandated, see "Tests rewritten"); the rest
+keep their answers (full sweep in the hand-back).
+
 ## Clauses
 
 | Clause | Statement | Proof obligation | Verdict | Evidence |
@@ -289,6 +347,15 @@ Each line was broken, the named tests ran red, and the file was restored byte-id
 | M9 | `_bind_qualified_display_column` returns `None` always. | `test_s4_selfjoin_answers_as_spark` red (select half misses), `test_s4_probe10_true_qualified_misses_match` red (whole-string head), `test_s4_probe10_true_gap_stays_pinned` red; restored green. |
 | M10 | The rewrite rule forced `IgnoreCase` (native rebuild). | `test_s4_wrongcase_alias_qualifier_refuses_under_true` red (answers); `selfjoin_true` stays green via the select-half refusal; restored green. |
 
+## Mutation record (2026-09-28, DIFF-PROBE fold)
+
+Each line was broken, the named tests ran red, and the file was restored byte-identical.
+
+| # | Mutation | Red |
+|---|---|---|
+| M11 | The qualifier comparisons forced `IgnoreCase` (`qualifier_matches` plus `same_relation`, native rebuild). | `test_r2_folded_alias_qualifier_refuses_nt_fold` and `test_r2_folded_alias_qualifier_refuses_p6diag_fold` red (answer); the exact pin stays green; restored green. |
+| M12 | The native ambiguous call removed from `_bind_written_column` (no rebuild). | The three R4 pins plus the sigma gap pin red (facade text, no condition or SQLSTATE); restored green. |
+
 ## Tests rewritten
 
 None in slice 1: every existing pin keeps its answer (sweep evidence in the S1 hand-back).
@@ -299,12 +366,23 @@ None in slice 3: every existing pin keeps its answer (281-test sweep, probe re-r
 
 None in slice 4: every existing pin keeps its answer (378-test sweep, probe re-run flips exactly `r7_selfjoin` and `r18_alias_join`, scoreboard replay identical to S3 modulo timing).
 
+One rewrite in the DIFF-PROBE fold (Spark-mandated, surfaced as a contract
+change): `test_column_access.py::test_getitem_str_case_ambiguous_raises`
+asserted the held spellings (`Foo`, `foo`) in the getitem ambiguity text;
+live Spark 4.1.2 renders the written spelling once per hit on this exact
+shape (`n_get_tw_fold`: ``[`iD`, `iD`, `iD`]``), so the pin now asserts
+Spark's class, reference, candidates, condition and SQLSTATE while keeping
+its contract (raises naming ambiguity; exact keys still win). Every other
+existing pin keeps its answer (full sweep in the hand-back; probe re-runs
+flip exactly the R2/R4 cells, the two R2 inverses, `n_sj2_sel_ID`,
+`n_sj2_get_ID`, the `n_get_tw_fold` pair and `f_uni_sigma`).
+
 ## Residues
 
 | # | Residue |
 |---|---|
 | R-CS2-1 | **CLOSED 2026-09-28** (S4, owner ruling "Lets get the self join fixed"): `p6/r18_alias_join` and `p1/r7_selfjoin` answer Spark's names and rows byte-equal (`test_s4_selfjoin_answers_as_spark`). The S1 note erred: the string half refused on overlay frames too — both halves bind now through one R4 mechanism. |
-| R-CS2-2 | **OPEN 2026-09-28** (S1): toggle-reuse staleness — a frame built under `false` and reused under `true` (`p6/qs_sel_t_id_true`: Q answers `id` where Spark refuses naming `` `t`.`id` ``) because `frame_rule` reads the frame's captured `task_ctx`. Re-homed per the Q3 ruling (2026-09-28); the fresh-frame `true` legs stay pinned. |
+| R-CS2-2 | **OPEN 2026-09-28** (S1; extended with R1/R3 2026-09-28, DIFF-PROBE fold): toggle-reuse staleness — a frame built under `false` and reused under `true` (`p6/qs_sel_t_id_true`: Q answers `id` where Spark refuses naming `` `t`.`id` ``) because `frame_rule` reads the frame's captured `task_ctx`. Re-homed per the Q3 ruling (2026-09-28); the fresh-frame `true` legs stay pinned. New keys, same mechanism, no fix per the fold ruling: R1 `p6:qs_sel_t_id_true` (`sens(False); Q=S.sql('SELECT ID, DATA FROM sc.ns.t t'); sens(True); Q.select('t.id')` answers `[[1],[2]]`, Spark refuses naming `` `t`.`id` ``) and R3 `np2:m_reuse_qual` (`sens(False); DF=createDataFrame([(1,'a',None,1.5),(2,'b',3,None),(2,'b',3,None)],['id','Name','val','Score']); sens(True); DF.alias('t').select('t.ID')` answers `[[1],[2],[2]]`, Spark 4.1.2 refuses `` `t`.`ID` `` 42703). |
 | R-CS2-3 | **OPEN 2026-09-28** (S1): `F.col("nope")` under `true` keeps the engine's raw miss text (R2 returns the input unchanged, and the native binder passes total misses through) — no p6 cell covers it; UNRESOLVED-TEXT owns suggestion texts. |
 | R-CS2-4 | **CLOSED 2026-09-28** (S1): superseded by the Q2 ruling — the written-path body moved to `written_names.py`, `core.py` stays 3973, no ceiling edit. |
 | R-CS2-5 | **OPEN 2026-09-28** (S3): `fillna` over mixed-type duplicate-display frames refuses with the engine cast error (observed: `[ID, ID]` overlay over the null table, subset matching both, `Cannot cast string 'z' to Int32`). Pre-existing mechanism — `_fill_scalar` matches by display spelling, untouched by this unit — reached by more spellings once subsets fold. R-22 corner; the origin/attribute follow-up owns exact-duplicate frames. |
@@ -315,6 +393,7 @@ None in slice 4: every existing pin keeps its answer (378-test sweep, probe re-r
 | R-CS2-10 | **OPEN 2026-09-28** (S5 verifier fold, V2-4): newly constructible alias joins refuse qualified filter/Column shapes where Spark answers (verifier-measured 2026-09-28, `verify-cs2-opus-handback.json` V2-4 — not re-measured on Spark by this lane): `.filter(F.col("r.id") > 3)` raises bare `type_coercion` text, `.filter("r.id > 3")` raises ``[AMBIGUOUS_REFERENCE] Reference `id` ``, `.withColumn("x", F.col("r.s"))` leaks `__repark_r_*` engine fields, and a 3-way join's second condition raises UNRESOLVED. Home: qualified Column/filter binding on join children; at minimum map the bare `type_coercion` text to Spark's class. No pin (Spark's outputs not recorded verbatim here). |
 | R-CS2-11 | **OPEN 2026-09-28** (S5 verifier fold, V2-5): name binding carries a constant-factor slowdown — a full column list crosses FFI per name (verifier-measured 2026-09-28, debug builds: getitem over all folded names base/head N=250 0.023/0.094s, N=500 0.082/0.263s, N=1000 0.311/0.839s; `withColumnRenamed` x10 at N=1000 4.54/5.50s; `withColumn_replace` x10 4.55/5.43s; both sides already quadratic in N, so no new complexity class). Fix direction: bind a whole select list in one native call (`match_display_names` already takes a list) and compute `frame_is_exact` once per entry point. The 200-chained-`withColumn`-on-500-columns hang is pre-existing on both sides. |
 | R-CS2-12 | **OPEN 2026-09-28** (S5 verifier fold, V2-2 note): an attribute-condition join (`L.join(R, L.id == R.id - 1)`) refuses at construction under `true` with ``[AMBIGUOUS_REFERENCE] Reference `id` `` (live-measured 2026-09-28, `cs_probe11.py` `j_sel_true`); Spark 4.1.2 builds the join and refuses the later `j.s` select with ``[AMBIGUOUS_REFERENCE] Reference `j`.`s` ``. Pre-existing S4 gap (qualified `F.col` conditions build). Pinned loose (class plus SQLSTATE) in `test_s5_true_attribute_join_refuses_at_construction`. |
+| R-CS2-13 | **OPEN 2026-09-28** (DIFF-PROBE fold): the Java fold matches final sigma `ς` against `σ`/`Σ`, so `UNI.select("ς")` refuses `AMBIGUOUS_REFERENCE`, while Spark 4.1.2 leaves `ς` unresolved (`UNRESOLVED_COLUMN.WITH_SUGGESTION` naming `` `ς` ``, live-measured 2026-09-28, banner 4.1.2 UTC). A matcher gap, not a routing gap — the R4 routing is correct for genuine ambiguities. Refusal-pinned with Spark's text recorded in `test_r4_final_sigma_refusal_stays_pinned`. Home: Java-fold matcher follow-up (reconcile `NameRule` with Spark's resolver on `ς`, keeping the V2-1 legs green). |
 
 ## Coverage attestation
 

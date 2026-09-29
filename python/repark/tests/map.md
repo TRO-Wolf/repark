@@ -272,6 +272,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   fan-out, and the R-CS2-8/R-CS2-9 residue pins — with the live-measured
   p11 values embedded (Spark 4.1.2, 2026-09-28).
   pins: casesens-2/C-003, C-004, C-005, C-006
+- [test_casesens_2_diffprobe.py](test_casesens_2_diffprobe.py) —
+  **CASESENS-2 DIFF-PROBE fold (2026-09-28):** the R2/R4 regression pins,
+  seven tests with the live Spark 4.1.2 texts embedded (the `np` cells
+  from the DIFF-PROBE run, the catalog-join candidates and the sigma
+  refusal from this round's micro-probe): the folded qualifier refuses
+  naming `t`.`id` on both tables, the exact spelling answers under true,
+  the twin select refuses byte-exact ambiguous on cdf and catalog frames,
+  the aliased self-join names `l`/`r` candidates, and the final-sigma
+  refusal stays pinned as R-CS2-13. Lives apart from
+  `test_casesens_2.py`, which is at its 1000-line ceiling.
+  pins: casesens-2/C-002, C-006
 - [test_ntz_1.py](test_ntz_1.py) + `ntz_1_spark_oracle.json` — **WO NTZ-1 slice 1
   (2026-09-26):** the `TIMESTAMP_NTZ` literal and explicit casts replay Spark's measured
   answers — 29 literal/cast/refusal queries in UTC and New York sessions, the v2/v3
@@ -5912,6 +5923,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   rows (C2-Q-003), `select` columns `negative(x)`, `str`/`repr` `Column<'negative(x)'>`,
   `F.sum(-df.x)` → `sum(negative(x))`, double `negative(negative(x))`, nested
   `sum(negative((x + 1)))` display **and** values). JVM-free pins from live PySpark 4.1.2.
+  **CASESENS-2 DIFF-PROBE fold (2026-09-28):**
+  `test_getitem_str_case_ambiguous_raises` asserts Spark's live-measured
+  ambiguity rendering (written spelling per hit, condition, SQLSTATE)
+  instead of the held spellings; its contract is unchanged.
+  pins: casesens-2/C-006
 - `test_column_parity_1.py` + `facade_column_oracle.json` — **COLUMN-PARITY-1 step 1**
   (2026-09-14): the `Column` surface pins driven by the recorded PySpark 4.1.2 oracle
   fixture (`col.*` cells) — `isin` (list/set flattening, tuple refusal

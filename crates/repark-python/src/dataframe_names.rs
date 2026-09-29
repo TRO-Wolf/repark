@@ -20,6 +20,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(frame_is_exact, module)?)?;
     module.add_function(wrap_pyfunction!(match_display_names, module)?)?;
     module.add_function(wrap_pyfunction!(match_subset_names, module)?)?;
+    module.add_function(wrap_pyfunction!(refuse_ambiguous_display_name, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_join_condition, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_folded_duplicate_keys, module)?)?;
     module.add_function(wrap_pyfunction!(requalify_join_sides, module)?)?;
@@ -147,6 +148,24 @@ fn drop_frame_columns(
         )
         .map_err(datafusion_to_py_err)?;
         Ok(PyDataFrame::new(df, frame.runtime_handle()))
+    })
+}
+
+#[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
+#[pyfunction]
+fn refuse_ambiguous_display_name(
+    frame: &PyDataFrame,
+    written: String,
+    held: Vec<String>,
+) -> PyResult<()> {
+    fenced!("dataframe_names.refuse_ambiguous_display_name", {
+        repark_core::frame_names::refuse_ambiguous_display_name(
+            frame.inner().schema(),
+            &held,
+            &written,
+            frame_rule(frame.inner()),
+        )
+        .map_err(datafusion_to_py_err)
     })
 }
 

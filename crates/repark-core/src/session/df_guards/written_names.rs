@@ -109,6 +109,33 @@ pub fn resolve_qualified_display_names(
 }
 
 #[allow(clippy::missing_errors_doc)]
+pub fn refuse_ambiguous_display_name(
+    frame_schema: &DFSchema,
+    displays: &[String],
+    written: &str,
+    rule: NameRule,
+) -> Result<()> {
+    let paired = frame_schema.fields().len() == displays.len();
+    let column = Column::from_qualified_name_ignore_case(written);
+    let mut hits: Vec<Hit<'_>> = Vec::new();
+    for (index, display) in displays.iter().enumerate() {
+        if !rule.matches(written, display) {
+            continue;
+        }
+        if paired {
+            let (qualifier, field) = frame_schema.qualified_field(index);
+            hits.push((qualifier, field.as_ref()));
+        } else if let Some(field) = frame_schema.fields().first() {
+            hits.push((None, field.as_ref()));
+        }
+    }
+    if hits.len() < 2 {
+        return Ok(());
+    }
+    Err(ambiguous_reference(&column, &hits))
+}
+
+#[allow(clippy::missing_errors_doc)]
 pub fn refuse_folded_duplicate_keys(keys: &[String], rule: NameRule) -> Result<()> {
     if matches!(rule, NameRule::Exact) {
         return Ok(());
@@ -372,9 +399,9 @@ mod tests {
     use datafusion::common::{DFSchema, TableReference};
 
     use super::{
-        Disposition, match_display_names, match_subset_names, refuse_folded_duplicate_keys,
-        resolve_df_names, resolve_qualified_display_names, rewrite_join_condition_aliases,
-        unresolved_subset_name,
+        Disposition, match_display_names, match_subset_names, refuse_ambiguous_display_name,
+        refuse_folded_duplicate_keys, resolve_df_names, resolve_qualified_display_names,
+        rewrite_join_condition_aliases, unresolved_subset_name,
     };
     use repark_common::names::NameRule::{Exact, IgnoreCase};
 
@@ -397,6 +424,21 @@ mod tests {
              function parameter with name {reference} cannot be resolved. Did you mean one of the \
              following? [{options}]. SQLSTATE: 42703"
         )
+    }
+
+    fn ambiguous(reference: &str, options: &str) -> String {
+        format!(
+            "Error during planning: [AMBIGUOUS_REFERENCE] Reference {reference} is ambiguous, \
+             could be: [{options}]. SQLSTATE: 42704"
+        )
+    }
+
+    fn bare_schema(names: &[&str]) -> DFSchema {
+        let fields = names
+            .iter()
+            .map(|name| (None, Arc::new(Field::new(*name, DataType::Int64, true))))
+            .collect::<Vec<_>>();
+        DFSchema::new_with_metadata(fields, HashMap::new()).unwrap()
     }
 
     #[test]
@@ -451,6 +493,44 @@ mod tests {
                 Disposition::Bound
             )]
         );
+    }
+
+    #[test]
+    fn bare_twin_select_refuses_spark_ambiguous() {
+        let frame = schema(&[
+            ("__repark_cdf_left", "id"),
+            ("__repark_cdf_left", "Data"),
+            ("__repark_cdf_right", "id"),
+            ("__repark_cdf_right", "Val"),
+        ]);
+        let displays = ["id", "Data", "id", "Val"].map(str::to_string);
+        let error = refuse_ambiguous_display_name(&frame, &displays, "ID", IgnoreCase)
+            .unwrap_err()
+            .to_string();
+        assert_eq!(error, ambiguous("`ID`", "`ID`, `ID`"));
+        let single = refuse_ambiguous_display_name(&frame, &displays, "Val", IgnoreCase);
+        assert!(single.is_ok());
+        let engine = bare_schema(&["left_id", "right_id"]);
+        let twins = ["ID", "id"].map(str::to_string);
+        let error = refuse_ambiguous_display_name(&engine, &twins, "iD", IgnoreCase)
+            .unwrap_err()
+            .to_string();
+        assert_eq!(error, ambiguous("`iD`", "`iD`, `iD`"));
+        let short = bare_schema(&["left_id"]);
+        let error = refuse_ambiguous_display_name(&short, &twins, "iD", IgnoreCase)
+            .unwrap_err()
+            .to_string();
+        assert_eq!(error, ambiguous("`iD`", "`iD`, `iD`"));
+    }
+
+    #[test]
+    fn aliased_twin_select_names_qualified_candidates() {
+        let frame = schema(&[("l", "id"), ("l", "Name"), ("r", "id"), ("r", "Name")]);
+        let displays = ["id", "Name", "id", "Name"].map(str::to_string);
+        let error = refuse_ambiguous_display_name(&frame, &displays, "ID", IgnoreCase)
+            .unwrap_err()
+            .to_string();
+        assert_eq!(error, ambiguous("`ID`", "`l`.`ID`, `r`.`ID`"));
     }
 
     #[test]

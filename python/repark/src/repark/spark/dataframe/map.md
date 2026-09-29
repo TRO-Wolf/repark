@@ -185,6 +185,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `withColumnsRenamed` duplicate-name refusal is removed so the plural
   answers Spark's frame like the singular (EX-DF-18 FIXED). `core.py`
   3963 → 3957 (ceilings ratcheted). pins: casesens-2/C-003, C-004
+  CASESENS-2 DIFF-PROBE fold (2026-09-28): the bare folded-ambiguous arm
+  of `_bind_written_column` calls the native shared refusal first, so the
+  class, condition, SQLSTATE and candidate list match Spark; the facade
+  text below it stays as the degenerate fallback (fewer than two native
+  hits, or an empty schema — unreachable through the public API, kept so
+  the arm never answers silently). pins: casesens-2/C-006
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`

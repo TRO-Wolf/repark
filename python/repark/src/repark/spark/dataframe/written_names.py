@@ -112,6 +112,7 @@ def _bind_written_column(frame: DataFrame, name: str) -> Column:
                 f"[AMBIGUOUS_REFERENCE] Reference `{name}` is ambiguous, could be: [{could_be}]."
             )
         if disposition == "ambiguous":
+            _native.refuse_ambiguous_display_name(plan, name, columns)
             unique = list(dict.fromkeys(hits))
             raise AnalysisException(
                 f"A column with name `{name}` is ambiguous among case-insensitive matches: "

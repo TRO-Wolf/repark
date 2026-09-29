@@ -178,7 +178,10 @@ def test_getitem_str_case_ambiguous_raises(spark: ReparkSession) -> None:
     with pytest.raises(AnalysisException, match=r"ambiguous") as caught:
         _ = df["FOO"]
     message = str(caught.value)
-    assert "Foo" in message and "foo" in message
+    assert "[AMBIGUOUS_REFERENCE] Reference `FOO` is ambiguous" in message
+    assert "could be: [`FOO`, `FOO`]" in message
+    assert caught.value.getCondition() == "AMBIGUOUS_REFERENCE"
+    assert caught.value.getSqlState() == "42704"
     # Exact match still wins (prefer exact before CI fan-out).
     assert df["Foo"].spark_display_part() == "Foo"
     assert df["foo"].spark_display_part() == "foo"

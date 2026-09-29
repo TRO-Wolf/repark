@@ -229,6 +229,19 @@ wrapped optimizer rule) and declares this directory.
   `qualified_display_multi_hit_refuses_unless_same_engine` covers the
   ambiguous legs (both rules) and the same-engine leg.
   pins: casesens-2/C-003
+  **CASESENS-2 DIFF-PROBE fold (2026-09-28):**
+  `refuse_ambiguous_display_name(schema, displays, written, rule)` renders a
+  bare folded-ambiguous display select through the shared
+  `ambiguous_reference`: matching display positions pair with the schema
+  qualifier at the same index (scratch qualifiers render bare like Spark's
+  ``[`ID`, `ID`]``; catalog qualifiers render qualified like Spark's
+  ``[`sc`.`ns`.`t`.`ID`, `sc`.`ns`.`u`.`ID`]``), and the unpaired corner
+  pairs no qualifier. Fewer than two hits answers ok so the facade keeps
+  its text.
+  Re-exported on a fourth `pub use` line. Pins
+  `bare_twin_select_refuses_spark_ambiguous` and
+  `aliased_twin_select_names_qualified_candidates`.
+  pins: casesens-2/C-006
 
 ## Pointers
 
