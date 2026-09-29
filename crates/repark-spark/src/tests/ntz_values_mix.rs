@@ -451,3 +451,155 @@ async fn date_timestamp_mixes_keep_their_timestamp_type() {
         ]
     );
 }
+
+const CAST_LTZ_ZONES: [(&str, &str); 2] = [
+    ("America/New_York", "2024-03-10 03:30:00"),
+    ("Asia/Kolkata", "2024-03-10 02:30:00"),
+];
+
+const CAST_LTZ_SOURCES: [&str; 3] = [
+    "VALUES (1, DATE '2024-03-10'), (2, CAST(TIMESTAMP_NTZ '2024-03-10 02:30:00' AS TIMESTAMP))",
+    "VALUES (2, CAST(TIMESTAMP_NTZ '2024-03-10 02:30:00' AS TIMESTAMP)), (1, DATE '2024-03-10')",
+    "VALUES (1, CAST(DATE '2024-03-10' AS TIMESTAMP)), (2, CAST(TIMESTAMP_NTZ '2024-03-10 \
+     02:30:00' AS TIMESTAMP))",
+];
+
+fn cast_ltz_want(typed: bool, resolved: &str) -> Vec<Vec<Option<String>>> {
+    let text = |value: &str| Some(value.to_string());
+    let mut first = vec![text("1")];
+    let mut second = vec![text("2")];
+    if typed {
+        first.push(text("timestamp"));
+        second.push(text("timestamp"));
+    }
+    first.push(text("2024-03-10 00:00:00"));
+    second.push(text(resolved));
+    vec![first, second]
+}
+
+#[tokio::test]
+async fn a_written_cast_as_timestamp_types_the_column_timestamp() {
+    for (zone, resolved) in CAST_LTZ_ZONES {
+        let warehouse = TempDir::new().unwrap();
+        let (ctx, catalogs) = session_at(&warehouse, zone).await;
+        for (index, source) in CAST_LTZ_SOURCES.iter().enumerate() {
+            let got = text_rows(
+                &ctx,
+                &catalogs,
+                &format!(
+                    "SELECT CAST(id AS INT), typeof(c), CAST(c AS STRING) FROM {source} AS s(id, c)"
+                ),
+            )
+            .await;
+            assert_eq!(got, cast_ltz_want(true, resolved), "{zone} {source}");
+            let table = format!("ice.sales.ctas_{index}");
+            run(
+                &ctx,
+                &catalogs,
+                &format!(
+                    "CREATE TABLE {table} USING iceberg AS SELECT * FROM {source} AS s(id, c)"
+                ),
+            )
+            .await;
+            let got = text_rows(
+                &ctx,
+                &catalogs,
+                &format!("SELECT CAST(id AS INT), typeof(c), CAST(c AS STRING) FROM {table}"),
+            )
+            .await;
+            assert_eq!(got, cast_ltz_want(true, resolved), "ctas {zone} {source}");
+        }
+    }
+}
+
+#[tokio::test]
+async fn a_written_cast_as_timestamp_stores_sparks_walls() {
+    for (zone, resolved) in CAST_LTZ_ZONES {
+        for column_type in ["TIMESTAMP", "TIMESTAMP_NTZ"] {
+            for door in ["merge_insert_star", "insert_select"] {
+                for source in CAST_LTZ_SOURCES {
+                    let warehouse = TempDir::new().unwrap();
+                    let (ctx, catalogs) = session_at(&warehouse, zone).await;
+                    run(
+                        &ctx,
+                        &catalogs,
+                        &format!(
+                            "CREATE TABLE ice.sales.mix (id INT, c {column_type}) USING iceberg"
+                        ),
+                    )
+                    .await;
+                    let (_, sql) = door_sql(door, source);
+                    run(&ctx, &catalogs, &sql).await;
+                    let got = text_rows(
+                        &ctx,
+                        &catalogs,
+                        "SELECT id, CAST(c AS STRING) FROM ice.sales.mix",
+                    )
+                    .await;
+                    assert_eq!(
+                        got,
+                        cast_ltz_want(false, resolved),
+                        "{door} {zone} {column_type} {source}"
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn a_written_cast_as_timestamp_beside_null_stays_timestamp() {
+    let text = |value: &str| Some(value.to_string());
+    for (zone, wall, micros) in [
+        (
+            "America/New_York",
+            "2024-03-10 00:00:00",
+            "1710046800000000",
+        ),
+        ("America/Havana", "2024-03-10 01:00:00", "1710046800000000"),
+    ] {
+        let warehouse = TempDir::new().unwrap();
+        let (ctx, catalogs) = session_at(&warehouse, zone).await;
+        for (index, source) in [
+            "VALUES (1, CAST(DATE '2024-03-10' AS TIMESTAMP)), (2, NULL)",
+            "VALUES (2, NULL), (1, CAST(DATE '2024-03-10' AS TIMESTAMP))",
+        ]
+        .iter()
+        .enumerate()
+        {
+            let want = vec![
+                vec![text("1"), text("timestamp"), text(wall), text(micros)],
+                vec![text("2"), text("timestamp"), None, None],
+            ];
+            let got = text_rows(
+                &ctx,
+                &catalogs,
+                &format!(
+                    "SELECT CAST(id AS INT), typeof(c), CAST(c AS STRING), unix_micros(c) FROM \
+                     {source} AS s(id, c)"
+                ),
+            )
+            .await;
+            assert_eq!(got, want, "{zone} {source}");
+            let table = format!("ice.sales.null_{index}");
+            run(
+                &ctx,
+                &catalogs,
+                &format!(
+                    "CREATE TABLE {table} USING iceberg AS SELECT * FROM {source} AS s(id, c)"
+                ),
+            )
+            .await;
+            let got = text_rows(
+                &ctx,
+                &catalogs,
+                &format!(
+                    "SELECT CAST(id AS INT), typeof(c), CAST(c AS STRING), unix_micros(c) FROM \
+                     {table}"
+                ),
+            )
+            .await;
+            assert_eq!(got, want, "ctas {zone} {source}");
+        }
+    }
+}

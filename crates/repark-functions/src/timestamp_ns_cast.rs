@@ -646,7 +646,7 @@ fn widen_values(
             let field = &mut fields[column].1;
             *field = Arc::new(field.as_ref().clone().with_data_type(instant.clone()));
             changed = true;
-        } else if counts.instants == 0 && counts.dates > 0 && counts.walls > 0 {
+        } else if counts.instants == 0 && counts.dates > 0 && counts.walls > counts.null_walls {
             let Ok(fresh) = pres
                 .iter()
                 .map(|cell| values_cell_to_naive(cell.clone(), &empty, &wall))
@@ -691,6 +691,7 @@ enum ValuesCellClass {
 struct ValuesColumnCounts {
     dates: usize,
     walls: usize,
+    null_walls: usize,
     instants: usize,
     others: usize,
 }
@@ -715,13 +716,17 @@ fn classify_values_column(
     let mut counts = ValuesColumnCounts {
         dates: 0,
         walls: 0,
+        null_walls: 0,
         instants: 0,
         others: 0,
     };
     for (pre, post) in pres.iter().zip(&types) {
         match values_cell_class(pre, post, empty, instant, wall) {
             ValuesCellClass::Date => counts.dates += 1,
-            ValuesCellClass::Wall => counts.walls += 1,
+            ValuesCellClass::Wall => {
+                counts.walls += 1;
+                counts.null_walls += usize::from(is_values_null_cell(pre));
+            }
             ValuesCellClass::Instant => counts.instants += 1,
             ValuesCellClass::Other => counts.others += 1,
         }
@@ -761,6 +766,17 @@ fn strip_values_wrappers(mut expr: &Expr) -> &Expr {
             }
             _ => return expr,
         }
+    }
+}
+
+fn is_values_null_cell(pre: &Expr) -> bool {
+    match strip_values_wrappers(pre) {
+        Expr::Literal(scalar, _) => scalar.is_null(),
+        Expr::Cast(cast) => matches!(
+            strip_values_wrappers(&cast.expr),
+            Expr::Literal(scalar, _) if scalar.is_null()
+        ),
+        _ => false,
     }
 }
 

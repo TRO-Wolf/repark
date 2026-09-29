@@ -2031,6 +2031,18 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   keeps `DATE` + `TIMESTAMP` and `DATE` + `TIMESTAMP` + `TIMESTAMP_NTZ` at
   `timestamp` with the gap resolved.
   pins: ntz-store-doors-1/C-007
+  **WO NTZ-STORE-DOORS-1 second re-verify fold (2026-09-29, RD3-1/RD3-2):**
+  `a_written_cast_as_timestamp_types_the_column_timestamp` pins `typeof` = `timestamp`
+  and Spark's values for `DATE` + `CAST(ntz AS TIMESTAMP)` in both row orders and for
+  `CAST(date AS TIMESTAMP)` + `CAST(ntz AS TIMESTAMP)`, in a plain SELECT and through
+  CTAS, in New York (gap resolved to 03:30) and Kolkata.
+  `a_written_cast_as_timestamp_stores_sparks_walls` stores the same sources through MERGE
+  INSERT * and positional INSERT SELECT into `TIMESTAMP` and `TIMESTAMP_NTZ` columns.
+  `a_written_cast_as_timestamp_beside_null_stays_timestamp` pins
+  `CAST(date AS TIMESTAMP)` + NULL in both orders: `typeof`, the value and `unix_micros`
+  in New York and Havana, in a SELECT and through CTAS. Turning the mark off reds the
+  first two pins; turning it off and counting NULL as a wall again also reds the third.
+  pins: ntz-store-doors-1/C-008
 
 - `describe_table.rs` — **SQL-DESCRIBE-1 (2026-09-09):** `DESCRIBE|DESC [TABLE]
   [EXTENDED|FORMATTED] catalog.namespace.table` against a memory-catalog table built like the

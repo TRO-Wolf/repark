@@ -1099,6 +1099,17 @@ scalars live under [`try_invert/`](try_invert/map.md).
   beside a bare `DATE` plans identically to the coerced pair, so that exotic mix follows the
   date side; see the unit ledger's RD2-1 paragraph.
   pins: ntz-store-doors-1/C-007
+  **WO NTZ-STORE-DOORS-1 second re-verify fold (2026-09-29, RD3-1/RD3-2):** the exotic mix
+  above is no longer ambiguous. The Spark door's keyword lowering wraps a written
+  `CAST(… AS TIMESTAMP)` `VALUES` cell in a second `CAST(… AS TIMESTAMP)` (see
+  `repark-spark` [keyword_lower/](../../repark-spark/src/keyword_lower/map.md)), so the
+  cell's outer source is a nanosecond timestamp: neither the date rule nor the naive-wall
+  rule matches it, and the rewritten cell classifies as an instant. A `DATE` or
+  `TIMESTAMP_NTZ` beside it therefore takes base's `TIMESTAMP` path. NULL cells (a NULL
+  literal or a cast of one) still count as walls for the `TIMESTAMP` widening, as before,
+  but the `TIMESTAMP_NTZ` normalization now fires only when at least one non-NULL cell is a
+  naive wall (`null_walls`).
+  pins: ntz-store-doors-1/C-008
 - `timestamp_ntz_cast.rs` — **WO NTZ-1 slice 1 (2026-09-26):** the embedded Spark-door
   casts `__repark_cast_timestamp_ntz__` / `__repark_try_cast_timestamp_ntz__` (→
   `Timestamp(µs, None)`) and the wall literal `__repark_timestamp_ntz__`, registered

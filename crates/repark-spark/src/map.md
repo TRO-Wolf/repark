@@ -939,6 +939,11 @@ pins: rp-4-fork-repin/C-005, C-006
   applied by `router.rs` to a MERGE's source, `ON` and clauses (MERGE plans its rendered pieces
   outside the passthrough) only when `has_empty_map_or_timestamp_ns_cast` finds one, and by `spark_ast.rs` to
   the statement an `EXPLAIN` wraps. pins: ice-tsns-sql-1/C-001, C-011
+  **WO NTZ-STORE-DOORS-1 second re-verify fold (2026-09-29, RD3-1):** both lowering
+  visitors also mark a written `CAST(… AS TIMESTAMP)` `VALUES` cell
+  ([keyword_lower/](keyword_lower/map.md) `ltz_values_cast.rs`), and
+  `has_empty_map_or_timestamp_ns_cast` also finds such a cell, so a MERGE source gets
+  the mark. pins: ntz-store-doors-1/C-008
   **UNRESOLVED-ROUTINE-1 (2026-09-16):** `unrelated_errors_pass_through` now
   fixtures a genuinely unrelated `Plan` error — unknown names reshape in
   `repark-core::unknown_routine`, not here.

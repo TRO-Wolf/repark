@@ -4,12 +4,13 @@ use std::ops::ControlFlow;
 use datafusion::error::DataFusionError;
 use datafusion::sql::sqlparser::ast::{
     CastKind, DataType, Expr, Function, FunctionArg, FunctionArgExpr, FunctionArgumentList,
-    FunctionArguments, Ident, ObjectName, ObjectNamePart, Statement, TimezoneInfo, UnaryOperator,
-    Value, ValueWithSpan, Visit, VisitMut, Visitor, VisitorMut,
+    FunctionArguments, Ident, ObjectName, ObjectNamePart, Query, Statement, TimezoneInfo,
+    UnaryOperator, Value, ValueWithSpan, Visit, VisitMut, Visitor, VisitorMut,
 };
 use datafusion::sql::sqlparser::tokenizer::Span;
 use repark_functions::timestamp_ns_cast::{TIMESTAMP_NS_CAST_NAME, TIMESTAMPTZ_NS_CAST_NAME};
 
+mod ltz_values_cast;
 mod ntz_cast_lower;
 
 fn null_expr() -> Expr {
@@ -154,6 +155,11 @@ impl VisitorMut for KeywordLower {
         lower_expression(expr);
         ControlFlow::Continue(())
     }
+
+    fn post_visit_query(&mut self, query: &mut Query) -> ControlFlow<Self::Break> {
+        ltz_values_cast::mark_values_timestamp_casts(query);
+        ControlFlow::Continue(())
+    }
 }
 
 pub(crate) fn lower_spark_keywords(statement: &mut Statement) {
@@ -174,6 +180,11 @@ impl VisitorMut for TimestampNsCastLower {
         {
             lower_empty_map_call(expr);
         }
+        ControlFlow::Continue(())
+    }
+
+    fn post_visit_query(&mut self, query: &mut Query) -> ControlFlow<Self::Break> {
+        ltz_values_cast::mark_values_timestamp_casts(query);
         ControlFlow::Continue(())
     }
 }
@@ -205,6 +216,13 @@ struct TimestampNsCastProbe;
 
 impl Visitor for TimestampNsCastProbe {
     type Break = ();
+
+    fn pre_visit_query(&mut self, query: &Query) -> ControlFlow<Self::Break> {
+        if ltz_values_cast::has_values_timestamp_cast(query) {
+            return ControlFlow::Break(());
+        }
+        ControlFlow::Continue(())
+    }
 
     fn pre_visit_expr(&mut self, expr: &Expr) -> ControlFlow<Self::Break> {
         match expr {
