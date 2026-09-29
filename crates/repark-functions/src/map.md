@@ -708,18 +708,28 @@ scalars live under [`try_invert/`](try_invert/map.md).
   Refusals carry Spark's `DATATYPE_MISMATCH` / `WRONG_NUM_ARGS` classes.
   pins: nvl-type-coercion-1/C-001, C-002
 - `spark_nvl_udf.rs` — **NVL-TYPE-COERCION-1 (2026-09-29):** the six Spark-door
-  UDFs plus the internal `__repark_nullif_pick`. `nvl`/`ifnull`/`nvl2` validate
-  in `coerce_types` and evaluate in a lazy per-row cast-and-pick kernel
-  (unpicked branches never cast, so `nvl(1, 's')` answers; temporal casts
-  shift through the session zone; invented nulls raise `CAST_INVALID_INPUT`).
-  `zeroifnull` simplifies to CASE; `nullif`/`nullifzero` validate here and
-  execute through the rule. pins: nvl-type-coercion-1/C-002
+  UDFs plus the internal `__repark_nullif_pick` and the `nvl_cast` vehicle.
+  Validation lives in `coerce_types`/`return_type`; evaluation moved to the
+  rule in the verifier fold (below) and the kernels stay as the blind fallback.
+  `nullif`/`nullifzero` validate here and execute through the rule.
+  pins: nvl-type-coercion-1/C-002
+  **Verifier fold (2026-09-29):** `nvl_cast_expr(value, W)` routes every
+  widening cast through the session-zoned Spark cast (`spark_cast_ansi_zoned`),
+  so string→timestamp reads the session zone and string leaves parse like
+  Spark (trim, `d`/`f` suffix, partial dates, boolean vocabulary); failures
+  raise `CAST_INVALID_INPUT`. pins: nvl-type-coercion-1/C-009, C-010
 - `spark_nvl_rule.rs` — **NVL-TYPE-COERCION-1 (2026-09-29):** the
-  `SparkNullifRewrite` analyzer rule, seated before `type_coercion` on the
-  Spark door and the `F.expr` context. `nullif(a, b)` becomes
-  `__repark_nullif_pick(a = b, a)` with explicit casts (structs flattened
-  field by field, positionally); a NULL-literal side short-circuits to the
-  first argument; `nullifzero(c)` expands inline. pins: nvl-type-coercion-1/C-002
+  `SparkNvlFamilyRewrite` analyzer rule, appended last on the Spark door and
+  the `F.expr` context. `nvl`/`ifnull`/`nvl2`/`zeroifnull` lower to
+  short-circuit `CASE WHEN test IS NOT NULL` with `nvl_cast` branches, so an
+  untaken branch never evaluates (`nvl(1, 1/0)` answers) and never casts;
+  NULL-literal and non-null-literal sides fold without a `CASE`.
+  `nullif(a, b)` becomes `__repark_nullif_pick(a = b, a)` with explicit casts
+  (structs flattened field by field, positionally); a NULL-literal side
+  short-circuits to the first argument; `nullifzero(c)` expands inline.
+  The widened zero emits as `CAST(0 AS W)`, never a bare literal: both doors
+  analyze twice and the literal rules narrow a bare `Int64(0)` on the second
+  pass. pins: nvl-type-coercion-1/C-002, C-008, C-011
 - `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer
   rule, installed on BOTH doors via `install_shared_analyzer_rules` (defined here since FNP-11B step 3 and re-exported from the crate root, so `repark_functions::install_shared_analyzer_rules` and run 16b's `session.rs` call are unchanged; the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts; the TIME guard left for `analyzer_rules()` in remediation round 1).
   installer calls it in place of the integer-only one — same line count, so the

@@ -170,13 +170,18 @@ fn rewrite_nvl2(test: Expr, first: Expr, second: Expr, schema: &DFSchema) -> Res
     )
 }
 
+fn widened_zero(widen: &DataType) -> Result<Expr> {
+    let zero = Expr::Literal(zero_scalar(widen)?, None);
+    Ok(Expr::Cast(Cast::new(Box::new(zero), widen.clone())))
+}
+
 fn rewrite_zeroifnull(arg: Expr, schema: &DFSchema) -> Result<Expr> {
     let Ok(arg_type) = arg.get_type(schema) else {
         return Ok(zeroifnull_expr(arg));
     };
     let widen = widen_full(&arg_type, &DataType::Int32)
         .ok_or_else(|| coalesce_data_diff_types(&arg_type, &DataType::Int32))?;
-    let zero = Expr::Literal(zero_scalar(&widen)?, None);
+    let zero = widened_zero(&widen)?;
     if is_null_literal(&arg) {
         return Ok(zero);
     }

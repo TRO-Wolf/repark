@@ -168,8 +168,9 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   SQL exactly like the session door.
   pins: sql-literal-typing-1/L-001
   **NVL-TYPE-COERCION-1 (2026-09-29):** `build_expr_context` seats the
-  `nullif` rewrite through the shared `insert_nullif_rule_before_coercion`,
-  so the `F.expr` door rewrites `nullif` exactly like the session door.
+  family rewrite through the shared `append_nvl_family_rule` (last; the
+  verifier fold replaced the pre-coercion `nullif` seat), so the `F.expr`
+  door rewrites the family exactly like the session door.
   pins: nvl-type-coercion-1/C-002
   **FN-FIX-1:** `window_from_aggregate` copies `IGNORE NULLS`. pins: fn-fix-1-registry-rows/C-002
   **FNP-AGG-1 slice (d) (2026-09-21):** `cast_unsigned_count_to_signed` moved here

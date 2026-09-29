@@ -25,12 +25,16 @@ interval-literal parsing; plain `if`/`CASE`/`=`/CAST methodology probes;
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-001 | The oracle matrix is measured on live PySpark 4.1.2 (ANSI on, UTC + America/New_York sessions): `nvl`/`ifnull` widen like `coalesce` (incl. date+timestamp→timestamp, date+ntz→ntz, timestamp+ntz→timestamp, decimal widening, recursive complex); `nvl2` branches widen like `if`; `nullif` compares after widening and returns its first argument's type; `zeroifnull` is `coalesce(arg, 0)`; `nullifzero` is `nullif(arg, 0)`; refusals carry `DATATYPE_MISMATCH.*` / `WRONG_NUM_ARGS.*` classes. | The recorded Spark JSONs + the widening table under Evidence. | PROVEN | Measured 2026-09-28/29, PySpark 4.1.2 `local[1]`, `spark.sql.ansi.enabled=true`. Recorded beside the pins in `test_nvl_type_coercion_1_spark.json`. |
-| C-002 | The Spark door resolves the six `nvl`-family spellings to Spark-widening UDFs (`spark_nvl.rs` tables, `spark_nvl_udf.rs` kernels, `spark_nvl_rule.rs` rewrite seated before `type_coercion` on the session and `F.expr` doors); the facade calls one native `_scalar` per spelling; the headline cell answers `timestamp`. | `test_nvl_date_timestamp_headline` green; module rows in the touched `map.md` files. | PROVEN | Headline pin green; 17 facade `typeof` ops pinned; `typeof` spells intervals. |
-| C-003 | Every in-scope differing cell flips: 372 strict (type+value or refusal class) and 69 loose (both sides raise, runtime-cast class differs structurally); struct/map cells pin typeof plus collected values. | The 756 pins in `test_nvl_type_coercion_1.py` green. | PROVEN | 756 passed 2026-09-29. Loose cells assert raises; Spark classes recorded in the JSON. |
+| C-002 | The Spark door resolves the six `nvl`-family spellings to Spark-widening UDFs (`spark_nvl.rs` tables, `spark_nvl_udf.rs` UDFs, `spark_nvl_rule.rs` rewrite seated last on the session and `F.expr` doors); the facade calls one native `_scalar` per spelling; the headline cell answers `timestamp`. | `test_nvl_date_timestamp_headline` green; module rows in the touched `map.md` files. | PROVEN | Headline pin green; 17 facade `typeof` ops pinned; `typeof` spells intervals. Fold 2026-09-29: evaluation moved from the kernels into the rule's `CASE` lowering; the seat moved last. |
+| C-003 | Every in-scope differing cell flips: 372 strict (type+value or refusal class) and 69 loose (both sides raise, runtime-cast class differs structurally); struct/map cells pin typeof plus collected values. | The pins in `test_nvl_type_coercion_1.py` green. | PROVEN | 781 passed 2026-09-29 (fold keeps every strict and loose flip, adds VN pins). Loose cells assert raises; Spark classes recorded in the JSON. |
 | C-004 | Residuals outside the change surface are ledgered, not absorbed: struct/map→string CAST gap, array-timestamp-element format, interval representation + format, YearMonth-literal parse gap, plain `if`/`CASE`/`=`/CAST/interval-literal methodology probes. | This ledger's residual table + the five known-divergence pins. | PROVEN | Five `test_known_divergence` pins lock current behavior with Spark values beside. |
 | C-005 | Nothing else moves: zero guard breaks across the matrix; every `coalesce` cell keeps its base answer (95 guard pins); all shared refusals keep refusing; zero existing corpus pins change. | Rerun diff `GUARD BREAK: 0`; coalesce guards green; existing suite green. | PROVEN | The order-contract test gains the fifth pre-coercion seat (test edit, not an answer change). |
 | C-006 | The pins are genuine: the headline pins fail on the base tree, and the 25-statement neighbour file answers identically on base and head except the two intended `zeroifnull` SQL-door flips (unresolved routine → answers). | Mutation red output + neighbour diff pasted under Evidence. | PROVEN | 2 failed on base as required; neighbour 23/25 identical, 2/25 intended flips. |
 | C-007 | The lane gate is green as written. | `bash /tmp/xnvl/gate.sh` exit 0. | PROVEN | GATE GREEN (see hand-back). |
+| C-008 | VN-1: `nvl`/`ifnull`/`nvl2`/`zeroifnull` lower to short-circuit `CASE`; an untaken branch never evaluates (`nvl(1, 1/0)` answers; div-by-zero, overflow, `assert_true`, bad-cast and column forms) and never casts. | The `vn1` pins green; the verify replay lazy cells match Spark; the eager mutant goes red on exactly the lazy cells. | PROVEN | 10 `vn1` pins green; replay `lazy/*` all FIX/OK; mutant (rule emits the plain UDF call) reds 21 pins incl. all 6 `nvl` expression-lazy cells, and reds `nvl2_div0`/`zeroifnull_div0` on the verify rig. |
+| C-009 | VN-2: widening casts are session-zoned Spark casts; string→timestamp reads the session zone (UTC, America/New_York) on SELECT paths. | The zone-matrix pins green in both harness zones; the verify replay shows 0 NEW on zone cells; the diff-probe tz controls do not move. | PROVEN | Harness UTC + NY matrices green at fold head; replay 0 NEW incl. `ty/ny/*`; `x/tz_kol` unmoved (head==base). Kolkata-oracle and Iceberg-value coverage belong to the fold round, not re-measured here. |
+| C-010 | VN-3: string-leaf casts follow Spark (trim, `d`/`f` suffix, partial dates, boolean vocabulary, `on` refuses) and mistyped leaves raise `CAST_INVALID_INPUT` naming Spark's class. | The `vn3` pins green; the verify replay string-cast cells match Spark. | PROVEN | `vn3` pins green at fold head incl. `typeof(nvl('abc', 2))` and `zeroifnull` over bad strings; replay string cells FIX/OK. |
+| C-011 | The widened zero survives re-analysis: `zeroifnull` emits `CAST(0 AS W)`, and `zeroifnull`/`nullifzero` `typeof` matches Spark for every harness input type (int, bigint, double, decimal, string, date, ts, ntz, bool, nulls, tiny, small, float). | The 3 snapshot-red `zeroifnull(CAST(NULL AS STRING))` pins pass unmodified; the harness typeof sweep green; the answers match the C-001 recorded oracle. | PROVEN | 781 pins green incl. the 3 fixed pins (assertions untouched); the recorded live-Spark oracle answers `bigint`/`int`/`string`/`int` for the spot cells. |
 
 ## Evidence
 
@@ -84,6 +88,37 @@ New: `crates/repark-functions/src/spark_nvl.rs`, `spark_nvl_rule.rs`,
 seat), `column/door_parity_tests.rs` (`SCALAR_NAMES`),
 `functions_expr.py` (one `_scalar` per spelling), `time_family.rs`
 (`typeof` intervals).
+
+### Verifier fold VN-1..VN-3 + zero shield (2026-09-29)
+
+Snapshot `7882493e` (fold, CASE lowering + Spark casts) plus this round's
+`widened_zero` shield (`spark_nvl_rule.rs`: the zero emits as `CAST(0 AS W)`
+because both doors analyze twice and the literal rules narrow a bare
+`Int64(0)` on the second pass). VN-4 (`-0.0` vs `0.0` in `nullif`) and VN-5
+(double→decimal store gaps) stay residues: pre-existing, out of this fold.
+
+Replay at fold head (`probe.py` repark leg, 735 cells vs recorded base+spark):
+0 NEW, 375 FIX, 13 CHG, 142 PRE, 205 OK. The 13 CHG are all outside the
+zeroifnull zero path (5 interval-`typeof` representation cells, 1
+nullif NTZ-gap value cell, 2 `nullifzero(-0.0)` VN-4 cells, 5 Iceberg
+write-shape cells where base lacks the routine or errors first); every
+`zeroifnull` replay cell is FIX/OK/PRE and no replay cell asserts a
+bigint-zero `typeof`, so the shield moves nothing there.
+
+DIFF-PROBE at fold head (513 statements vs recorded base+spark): 0
+`REGRESSION*` verdicts; the 3 `REGRESSION-ddl?` rows are byte-identical to
+the original round's run; the 10 `NO-SPARK` rows differ in one nullability
+flag only (CASE-lowering signature, identical rows); all `zeroifnull` rows
+are `SPARK-CONFIRMED*`/`NEITHER*` with rows matching Spark.
+
+Eager mutant (rule emits the plain UDF call instead of `CASE`, widening
+kept): 21/781 pins red — all 6 `nvl` expression-lazy `vn1` cells plus 15
+`zeroifnull` answer cells — and the verify rig reds `nvl_div0`,
+`nvl2_div0_else/then`, `zeroifnull_div0` and the column forms with
+`DIVIDE_BY_ZERO`, while `coalesce`/`if`/`CASE` controls still answer. The
+two `nvl2` `vn1` pins pin cast-laziness, which the kernel shares, so that
+mutant cannot move them; the rig's `div0` cells carry the `nvl2`
+expression-laziness proof instead.
 
 ## Coverage attestation
 
