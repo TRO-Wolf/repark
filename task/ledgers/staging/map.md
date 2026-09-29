@@ -1911,3 +1911,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   awaits the owner run on real AWS).
   `risk_tier: standard`. Branch `feat/s3-path-write-1`.
   pins: s3-path-write-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
+- [string-literal-escape-1-ledger.md](string-literal-escape-1-ledger.md) —
+  **STRING-LITERAL-ESCAPE-1 (2026-09-29):** SQL string literals unescape as
+  Spark does (C-000 the 229-literal Step-0 matrix, C-001 quote-aware doubles
+  plus double-raw, C-002 raw head/tail splits, C-003 verbatim-exact values,
+  C-004 the zero-break guards).
+  `risk_tier: standard`. Branch `fix/string-literal-escape-1`.
+  pins: string-literal-escape-1/C-000, C-001, C-002, C-003, C-004
