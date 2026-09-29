@@ -1915,9 +1915,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   **DEEP-FILTER-CHAIN-CRASH-1 (2026-09-29), in flight:** deep operator chains
   answer instead of killing the interpreter — every native entry point polls on
   a 256 MiB stacker segment and the shared runtime builds 256 MiB pool threads
-  (C-001: 1,000 filters count 50, base SIGSEGV at 610; C-002: 200 joins count 1
+  (C-001: one thousand filters count 50, base SIGSEGV at 610; C-002: 200 joins count 1
   and 300 unions count 15050, base SIGSEGV at 110 joins; C-003: 120 withColumn
-  count 50 at the build-time ceiling; C-004: 1,000-deep nested SQL raises
+  count 50 at the build-time ceiling; C-004: one-thousand-deep nested SQL raises
   `RecursionError`, flat 600-union SQL counts 601). Step 0 backtraces, mutation
   record (both pins SIGSEGV under restored old stacks), perf (+1.4%) and the
   VmSize/VmRSS base-vs-head record live in the ledger; residues R-1..R-4.
