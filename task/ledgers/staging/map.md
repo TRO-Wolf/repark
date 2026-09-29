@@ -66,6 +66,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   R-CS2-8…R-CS2-12 open beside R-CS2-7. Re-verify fold (same branch,
   base `ecfffe69`): RC2-1…RC2-6 fixed, C-009…C-014 PROVEN, R-CS2-12 and
   R-CS2-13 closed with corrections, R-CS2-10 re-scoped, R-CS2-14…16 open.
+  Second re-verify fold (same branch, base `69ea4609`): RC3-1…RC3-4,
+  RC3-6, RC3-7 fixed, C-015…C-020 PROVEN, R-CS2-15 closed, R-CS2-17…19
+  open (RC3-5 recorded as R-CS2-17). Third re-verify fold (same branch,
+  base `4c2f03d4`): RC4-1…RC4-8 fixed, C-021…C-029 PROVEN, R-CS2-18
+  narrowed, R-CS2-20 open. Fourth re-verify fold (same branch, base
+  `ca4ac687`): RC5-1…RC5-3 fixed, C-030…C-033 PROVEN, R-CS2-14 narrowed,
+  R-CS2-18's RC4-5 extension and R-CS2-20 confirmed by the orchestrator,
+  R-CS2-21…23 open (RC5-6…RC5-8); RC5-5 goes to a separate card.
   `risk_tier: high`.
   pins: casesens-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [casesens-release-diff-1-ledger.md](casesens-release-diff-1-ledger.md) —
@@ -78,6 +86,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`. Branch `fix/casesens-release-diff-1`.
   pins: casesens-release-diff-1/C-001, C-002, C-003, C-004, C-005
   pins: casesens-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
+  pins: casesens-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032, C-033
 - [r-fileorder-2-ledger.md](r-fileorder-2-ledger.md) —
   **R-FILEORDER-2 (2026-09-27), HALT per R1:** Spark 4.1.2's own `L-INSERT-OVERWRITE`
   lineage differs between runs (the same-JVM triple agrees, C-001; six fresh-JVM runs

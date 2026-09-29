@@ -1,5 +1,9 @@
 # map — python/repark-parity/tests
 
+CASESENS-2 third re-verify fold (2026-09-29): the CAP-1 mirror row for `spark/dataframe/core.py` follows the script baseline 3950 → 3949. pins: casesens-2/C-023
+
+CASESENS-2 second re-verify fold (2026-09-29): the CAP-1 mirror row for `spark/dataframe/core.py` follows the script baseline 3952 → 3950 (the twin engine naming moves into `written_names.py`). pins: casesens-2/C-018
+
 CASESENS-2 re-verify fold (2026-09-28): the CAP-1 mirror row for `spark/dataframe/core.py` follows the script baseline 3957 → 3952 (the sort refusal moves into `written_names.py`). pins: casesens-2/C-012
 
 WO CATALOG-1 (2026-09-26): the CAP-1 mirror drops the retired `catalog_config.rs` row, follows `session/tests/session.rs` 1407 → 1406, and the exception count 38 → 37. pins: catalog-1/C-006

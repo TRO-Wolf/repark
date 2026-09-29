@@ -17,8 +17,9 @@ use datafusion::sql::sqlparser::parser::Parser;
 use repark_common::spark_error;
 
 pub use super::cast_names::bind_projection_expr;
-pub use super::predicate_names::rebind_predicate_qualifiers;
+pub use super::predicate_names::bind_predicate_qualifiers;
 pub use super::resolver_names::{join_on_named_keys, union_by_folded_name};
+pub use super::sort_names::{ChildSort, same_source_fields, sort_through_child, twin_identities};
 pub use super::subquery::resolve_bound_expr_with;
 pub use super::written_names::refuse_ambiguous_display_name;
 pub use super::written_names::{Disposition, refuse_folded_duplicate_keys, unresolved_subset_name};

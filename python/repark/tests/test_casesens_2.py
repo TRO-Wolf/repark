@@ -450,15 +450,23 @@ def test_s3_dropna_follows_the_rule(tmp_path: Path) -> None:
             functions.col("id").alias("ID"), functions.col("Data").alias("ID")
         )
         assert overlay.columns == ["ID", "ID"]
-        dropped = overlay.dropna(subset=["id"])
-        assert _dtypes(dropped) == [["ID", "int"], ["ID", "string"]]
-        assert _rows(dropped) == []
         dup = session.table("sc.ns.tn").select(
             functions.col("Data").alias("X"), functions.col("Data").alias("X")
         )
-        filled = dup.fillna("z", subset=["x"])
-        assert _dtypes(filled) == [["X", "string"], ["X", "string"]]
-        assert _rows(filled) == [["b", "b"], ["z", "z"]]
+        for name, run in (
+            ("id", lambda: overlay.dropna(subset=["id"])),
+            ("x", lambda: dup.fillna("z", subset=["x"])),
+        ):
+            try:
+                run().collect()
+            except Exception as error:
+                assert _condition(error) == "AMBIGUOUS_REFERENCE", name
+                assert _plain_message(str(error)) == (
+                    f"[AMBIGUOUS_REFERENCE] Reference `{name}` is ambiguous, could be: "
+                    f"[`{name}`, `{name}`]. SQLSTATE: 42704"
+                )
+            else:
+                raise AssertionError(f"{name} answered instead of refusing")
     finally:
         session.stop()
 

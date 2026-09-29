@@ -296,6 +296,48 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`p11/j_sel_true`, R-CS2-12), and the exact-duplicate rename answers
   `[z, z]` (`p11/sj2_wcr`).
   pins: casesens-2/C-009, C-010, C-011, C-012, C-013, C-014
+  **CASESENS-2 second re-verify fold (2026-09-29):** six pins against the
+  second re-verify's live Spark 4.1.2 cells (banner 4.1.2, JDK 17, UTC)
+  and this round's pin probe: struct and subscript alias predicates bind
+  on the tree under both rules (`T.s.f`, `t.s.F`, `tb.arr[0]`, alias-join
+  `L.s.f`, wrong case under `true` refuses naming `` `t`.`s`.`f` ``, the
+  `\'` escape answers what the unaliased predicate answers); predicates
+  keep every token (`'a' 'b'` rows, `r'b'`, `ORDER BY` stays a
+  `ParseException`); an aliased copy is a new attribute (select, groupBy,
+  `fillna` refuse `AMBIGUOUS_REFERENCE`, the bare twin answers); one
+  attribute under two spellings fills; the sort key resolves through the
+  projection child (ascending, three descending spellings, the union
+  twin, the case twin still 42703); sort refusals print `` `x.y` `` and
+  `` `a``b` ``. pins: casesens-2/C-015, C-016, C-017, C-018, C-019
+  **CASESENS-2 third re-verify fold (2026-09-29):** seven `test_rc4_*` pins
+  against live Spark 4.1.2 cells measured this round (JDK 17): an
+  upper-case lambda parameter binds its own body under both rules
+  (`exists(arr, T -> T > 4)` with a `T` column answers `[1, 5]`, the
+  silent wrong-row case; `X -> x > 4` binds the `x` column under `true`,
+  `T -> t > 4` refuses 42703); a lambda parameter scopes to its own body
+  (`exists(array(L.k), L -> L > 4)` on an alias join, `A.id` outside the
+  body); a parent Column filters through aliased twins and `drop(d.v)`
+  keeps them; an aliased output refuses `fillna`/`dropna` on a plain
+  frame; sort keys resolve through filter, limit and distinct; sort keys
+  on hidden twins answer through the child (the distinct leg stays
+  `AMBIGUOUS_REFERENCE`, R-CS2-18); twin names under `true` dedupe on
+  every copy and filter as one attribute or refuse `AMBIGUOUS_REFERENCE`.
+  pins: casesens-2/C-021, C-022, C-023, C-024, C-025, C-026, C-027
+  The same fold adds `_fresh_outputs` to the frozen `DataFrame` slot and
+  `dir` lists in `_dfcore_1_expected.py` (the new private slot, C-024).
+  **CASESENS-2 fourth re-verify fold (2026-09-29):** three `test_rc5_*`
+  pins, checked against live Spark 4.1.2 cells (the re-verify's `p5` set
+  and this round's pin probe, JDK 17). Under `true`, twins with an
+  unproven identity refuse `AMBIGUOUS_REFERENCE` 42704 in `filter`,
+  `where`, backticked names and a lambda body, in both twin orders
+  (`F.col`/literal, `F.col`/computed, `F.expr`/`F.expr`), while
+  `d.v`/`F.col('v')`, `F.col`/`F.col` and `F.expr`/`F.col` answer. Under
+  `false`, `` exists(arr, `X` -> X > 4) `` and `` X -> `X` > 4 `` answer
+  `[1, 5]`. `fillna`/`dropna` subsets over unproven twins refuse under
+  both rules, including the `false` self-join. `test_casesens_2.py`'s
+  `test_s3_dropna_follows_the_rule` flips its alias-twin legs to Spark's
+  byte-exact `AMBIGUOUS_REFERENCE` (R-CS2-14).
+  pins: casesens-2/C-030, C-031, C-032
 - [test_ntz_1.py](test_ntz_1.py) + `ntz_1_spark_oracle.json` — **WO NTZ-1 slice 1
   (2026-09-26):** the `TIMESTAMP_NTZ` literal and explicit casts replay Spark's measured
   answers — 29 literal/cast/refusal queries in UTC and New York sessions, the v2/v3
