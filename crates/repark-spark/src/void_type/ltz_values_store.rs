@@ -9,6 +9,7 @@ use iceberg::{NamespaceIdent, TableIdent};
 use repark_common::spark_error;
 use repark_core::CatalogRegistry;
 
+use super::source_leaves::{is_string_type, source_type_is_reliable};
 use super::{column_name, is_null_or_default_cell};
 use crate::catalog_ops::{name_parts, quoted_table_display};
 use crate::write_to_branch::qualify_table_parts;
@@ -60,7 +61,7 @@ pub(crate) async fn refuse_unassignable_ltz_values(
     if !presented
         .fields()
         .iter()
-        .any(|field| is_microsecond_ltz(field.data_type()))
+        .any(|field| is_judged_target(field.data_type()))
     {
         return Ok(());
     }
@@ -123,7 +124,7 @@ async fn refuse_value(
     target: &DataType,
     value: &Expr,
 ) -> Result<()> {
-    if is_null_or_default_cell(value) || !is_microsecond_ltz(target) {
+    if is_null_or_default_cell(value) || !is_judged_target(target) {
         return Ok(());
     }
     let source = if let Some(data_type) = literal_source_type(value) {
@@ -135,7 +136,12 @@ async fn refuse_value(
         };
         probed
     };
-    if let Some(text) = repark_iceberg::write::update_cast::incompatible_update_message(
+    if !is_microsecond_ltz(target)
+        && (is_string_type(&source) || !source_type_is_reliable(value, target))
+    {
+        return Ok(());
+    }
+    if let Some(text) = repark_iceberg::write::update_cast::incompatible_store_message(
         display,
         &format!("`{column}`"),
         &source,
@@ -143,12 +149,48 @@ async fn refuse_value(
     ) {
         return Err(DataFusionError::Plan(text));
     }
-    if source.is_numeric() {
+    if is_microsecond_ltz(target) && source.is_numeric() {
         return Err(DataFusionError::Plan(numeric_refusal(
             display, column, &source, target,
         )));
     }
     Ok(())
+}
+
+fn cast_target_type(data_type: &SqlDataType) -> Option<DataType> {
+    match data_type {
+        SqlDataType::Boolean | SqlDataType::Bool => Some(DataType::Boolean),
+        SqlDataType::TinyInt(_) => Some(DataType::Int8),
+        SqlDataType::SmallInt(_) | SqlDataType::Int2(_) => Some(DataType::Int16),
+        SqlDataType::Int(_) | SqlDataType::Int4(_) | SqlDataType::Integer(_) => {
+            Some(DataType::Int32)
+        }
+        SqlDataType::BigInt(_) | SqlDataType::Int8(_) => Some(DataType::Int64),
+        SqlDataType::Float(_) | SqlDataType::Float4 | SqlDataType::Float32 | SqlDataType::Real => {
+            Some(DataType::Float32)
+        }
+        SqlDataType::Double(_)
+        | SqlDataType::DoublePrecision
+        | SqlDataType::Float8
+        | SqlDataType::Float64 => Some(DataType::Float64),
+        SqlDataType::Numeric(info) | SqlDataType::Dec(info) => match info {
+            ExactNumberInfo::PrecisionAndScale(_, _) => Some(decimal_info_type(info)),
+            ExactNumberInfo::None | ExactNumberInfo::Precision(_) => None,
+        },
+        SqlDataType::String(_)
+        | SqlDataType::Text
+        | SqlDataType::TinyText
+        | SqlDataType::MediumText
+        | SqlDataType::LongText
+        | SqlDataType::Varchar(_)
+        | SqlDataType::Nvarchar(_)
+        | SqlDataType::Char(_)
+        | SqlDataType::Character(_)
+        | SqlDataType::CharacterVarying(_)
+        | SqlDataType::CharVarying(_) => Some(DataType::Utf8),
+        SqlDataType::Date => Some(DataType::Date32),
+        _ => None,
+    }
 }
 
 fn numeric_refusal(display: &str, column: &str, source: &DataType, target: &DataType) -> String {
@@ -166,6 +208,12 @@ fn numeric_refusal(display: &str, column: &str, source: &DataType, target: &Data
     )
 }
 
+fn is_judged_target(data_type: &DataType) -> bool {
+    is_microsecond_ltz(data_type)
+        || data_type.is_numeric()
+        || matches!(data_type, DataType::Date32 | DataType::Boolean)
+}
+
 fn is_microsecond_ltz(data_type: &DataType) -> bool {
     matches!(
         data_type,
@@ -173,7 +221,7 @@ fn is_microsecond_ltz(data_type: &DataType) -> bool {
     )
 }
 
-fn literal_source_type(value: &Expr) -> Option<DataType> {
+pub(super) fn literal_source_type(value: &Expr) -> Option<DataType> {
     match value {
         Expr::Value(literal) => match &literal.value {
             Value::Number(text, long) => Some(number_text_type(text, *long)),
@@ -211,7 +259,12 @@ fn literal_source_type(value: &Expr) -> Option<DataType> {
             data_type: SqlDataType::Decimal(info),
             ..
         } => Some(decimal_info_type(info)),
-        Expr::TypedString(typed) => decimal_typed_string(typed),
+        Expr::Cast {
+            data_type,
+            array: false,
+            ..
+        } => cast_target_type(data_type),
+        Expr::TypedString(typed) => typed_string_source_type(typed),
         _ => None,
     }
 }
@@ -279,6 +332,13 @@ fn decimal_info_type(info: &ExactNumberInfo) -> DataType {
             i8::try_from(*scale).unwrap_or(0),
         ),
     }
+}
+
+fn typed_string_source_type(typed: &TypedString) -> Option<DataType> {
+    if matches!(typed.data_type, SqlDataType::Date) {
+        return Some(DataType::Date32);
+    }
+    decimal_typed_string(typed)
 }
 
 fn decimal_typed_string(typed: &TypedString) -> Option<DataType> {
@@ -462,8 +522,9 @@ mod tests {
 
     #[test]
     fn casts_typed_strings_and_functions_defer_to_the_probe() {
-        let row =
-            values_row("INSERT INTO t VALUES (CAST(1 AS TIMESTAMP), DATE '2024-01-04', abs(-1))");
+        let row = values_row(
+            "INSERT INTO t VALUES (CAST(1 AS TIMESTAMP), TIMESTAMP '2024-01-04 10:00:00', abs(-1))",
+        );
         assert_eq!(typed(&row), vec![None, None, None], "{row:?}");
     }
 
@@ -500,6 +561,51 @@ mod tests {
             .await
             .expect_err("an unparsable NTZ probe must refuse");
         assert!(error.to_string().contains("ParserError"), "{error}");
+    }
+
+    #[test]
+    fn date_typed_strings_and_plain_casts_read_without_a_probe() {
+        let row = values_row(
+            "INSERT INTO t VALUES (DATE '2024-01-04', CAST('1.5' AS DOUBLE), CAST('x' AS INT), \
+             CAST('x' AS BOOLEAN), CAST('x' AS DATE), CAST('x' AS STRING))",
+        );
+        assert_eq!(
+            typed(&row),
+            vec![
+                Some(DataType::Date32),
+                Some(DataType::Float64),
+                Some(DataType::Int32),
+                Some(DataType::Boolean),
+                Some(DataType::Date32),
+                Some(DataType::Utf8),
+            ],
+            "{row:?}"
+        );
+    }
+
+    #[test]
+    fn numbers_dates_booleans_and_zoned_timestamps_are_judged() {
+        for data_type in [
+            DataType::Int8,
+            DataType::Int32,
+            DataType::Int64,
+            DataType::Float32,
+            DataType::Float64,
+            DataType::Decimal128(10, 2),
+            DataType::Date32,
+            DataType::Boolean,
+            DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into())),
+        ] {
+            assert!(is_judged_target(&data_type), "{data_type:?}");
+        }
+        for data_type in [
+            DataType::Utf8,
+            DataType::Binary,
+            DataType::Timestamp(TimeUnit::Microsecond, None),
+            DataType::Timestamp(TimeUnit::Nanosecond, Some("UTC".into())),
+        ] {
+            assert!(!is_judged_target(&data_type), "{data_type:?}");
+        }
     }
 
     #[test]

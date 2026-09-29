@@ -381,6 +381,27 @@ repark-core's error map.
   the wall-cast UDF name (`NTZ_WALL_CAST_UDF_NAME`, pinned equal to the registered UDF)
   and its `ntz_wall_cast_sql` renderer, used by the identity-UPDATE projection, the
   MERGE INSERT projection and `store_assignment_cast_sql`. pins: ntz-1/C-006, C-007
+- `negated_null_store.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** Spark types `-NULL`
+  (and `- -NULL`, `-(NULL)`) as DOUBLE; DataFusion plans it as Arrow `Null`, which the ANSI
+  matrix stores anywhere. `refuse_negated_null_writes(ctx, table, plan, targets)` follows
+  each `Null`-typed output column of a planned source back through projections, aliases,
+  subquery aliases, filters, sorts, limits, `DISTINCT`, joins (split by side), `VALUES` rows
+  and `UNION` branches (every row or branch NULL, at least one negated) and view scans, and
+  refuses a negated NULL into a column DOUBLE cannot store (`refuses_double`: DATE,
+  BOOLEAN, TIMESTAMP, TIMESTAMP_NTZ, BINARY) with Spark's `CANNOT_SAFELY_CAST` text naming
+  `"DOUBLE"`. A view scan resolves through `get_logical_plan`, or through the session's
+  `ViewDefinitionPlans` resolver (`with_view_definition_plans`), which the Spark door
+  registers so a replanning temp view answers its creation-time plan without DataFusion
+  inlining it. Callers: `merge/insert.rs` (INSERT and UPDATE SET gates), repark-spark
+  `update_cast.rs` and `void_type/insert_source_types.rs`. Four unit tests.
+  pins: store-ts-to-numeric-1/C-002
+  **Fold 2026-09-29 (verifier VT-1):** `definition_plan` exposes the resolver to
+  the Spark door's widening walk, which resolves views the same way.
+- `update_cast.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** `incompatible_store_message`
+  is `incompatible_update_message` with DECIMAL names (`"DECIMAL(10,2)"`), used by the Spark
+  door's VALUES, INSERT and UPDATE gates and by `negated_null_store.rs`;
+  `incompatible_update_message` keeps its answers (no DECIMAL name), so the native door and
+  the VOID, NTZ and nested-MERGE callers are unchanged. pins: store-ts-to-numeric-1/C-004
 - `void_store.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** `refuse_void_writes` is the
   one VOID store gate: given a planned source and its target columns, it does nothing unless a
   target is Arrow `Null`; then it runs the session analyzer (so an integer literal types `INT`
@@ -776,6 +797,10 @@ repark-core's error map.
   `TIMESTAMP` (LTZ) targets one stage earlier, at the Spark door's existing
   `refuse_insert_void_values` gate site
   (`repark-spark/src/void_type/ltz_values_store.rs`); every other target stays residual.
+  STORE-TS-TO-NUMERIC-1 (2026-09-28) extends that gate to numeric, DATE and BOOLEAN
+  targets; the Spark door's `spark_float_stringify` rule rewrites a STRING → FLOAT/DOUBLE
+  conform cast before this rule runs, so that pair is judged by the Spark door's INSERT
+  gate (`repark-spark/src/void_type/insert_source_types.rs`). This rule is unchanged.
   Ledger:
   [`../../../../task/wi2-g6-cast-integrity-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-16-wi2-g6-cast-integrity-ledger.md).
 - `insert_defaults.rs` — **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** the ONE home for

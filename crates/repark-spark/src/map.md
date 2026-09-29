@@ -341,6 +341,14 @@ pins: rp-4-fork-repin/C-005, C-006
   **IPI-41 WO1 (2026-09-22):** the `write-format` / `delete-format` options are
   copied into staging here, so the option door reaches `resolve_data_format`.
   pins: ice-orc-avro-1/C-005, C-006
+- `insert_by_name.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):**
+  `execute_insert_by_name` (after the target resolves) calls
+  `void_type::refuse_insert_source_types` with by-name mapping; the positional twin runs in
+  `router/insert_positional.rs`. So a `-NULL` into a DATE, BOOLEAN or timestamp column and
+  a STRING into FLOAT/DOUBLE refuse with Spark's text on every INSERT door, the DataFrame
+  writers included. pins: store-ts-to-numeric-1/C-002, C-003
+  **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** the gate now judges `-NULL` only; STRING
+  sources store as on base. pins: store-ts-to-numeric-1/C-006
 - `insert_by_name.rs` — `INSERT … BY NAME` (ICE-RTAS-BYNAME-1, 2026-09-17): the token-level
   strip (sqlparser has no `BY NAME`), the count-first Spark error rule, the positional
   projection build, the staged-append executor (stream → conform → `commit_append_to` →
@@ -431,6 +439,13 @@ pins: rp-4-fork-repin/C-005, C-006
   to two-argument `nvl`/`ifnull`, probed as `coalesce(a, b)`; every other
   function is judged by its probed type; leading-zero fractions count precision
   from significant digits.
+  **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** the VALUES gate also judges numeric,
+  DATE and BOOLEAN targets, and the sibling `void_type/insert_source_types.rs`
+  holds the INSERT gate for `-NULL` and STRING → FLOAT/DOUBLE.
+  pins: store-ts-to-numeric-1/C-001
+  **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** STRING-planned cells and branching cells whose
+  leaves are not all refused types stay silent (`void_type/source_leaves.rs`); the INSERT
+  gate keeps only `-NULL`. pins: store-ts-to-numeric-1/C-006, C-007
   **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-1/VG-2/VG-8):** the
   probe renders through the shared recursive parenthesizer, an unparsable probe
   refuses instead of passing the row, and `number_text_type` is shared with
@@ -512,6 +527,14 @@ pins: rp-4-fork-repin/C-005, C-006
   `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]`/`KD000` as `Plan`. Missing
   catalog/table, unresolvable names, and failed probes fall through. Pins:
   [tests/update_cast.rs](tests/update_cast.rs). pins: ipi-51/W-UPDATE-TYPE-ERR
+  **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** the probe also runs
+  `refuse_negated_null_writes` (a `-NULL` SET value is Spark's DOUBLE), and the final
+  check uses `incompatible_store_message`, so a STRING into a DECIMAL column refuses
+  naming `"DECIMAL(10,2)"`. pins: store-ts-to-numeric-1/C-002, C-004
+  **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** the DECIMAL-naming message applies only where
+  the base message (`incompatible_update_message`) already refuses, or where the source
+  is not STRING and `void_type::source_type_is_reliable` trusts the SET value; a STRING
+  into DECIMAL stores again as on base. pins: store-ts-to-numeric-1/C-006, C-007
   **U8 WRITE-SQL PR2 (2026-09-25):** `execute_update` now calls
   `refuse_cast_then_fold_nested`. It loads the target once (`load_update_target`), runs the
   same top-level cast refusal on it (skipped when a key repeats, so the fold's `Multiple
@@ -1697,6 +1720,9 @@ pins: rp-4-fork-repin/C-005, C-006
   [extension/map.md](extension/map.md) and [../tests/session_timezone.rs](../tests/session_timezone.rs).
   **FNP-8 (2026-09-07):** its analyzer-configuration hook inserts the shared HOF preparation rule
   before core's first default type-coercion rule. pins: fnp-8/C-003, C-004
+  **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** `configure` registers
+  `view_ddl::temp_view::definition_plan` as the session's `ViewDefinitionPlans` resolver
+  (`repark_iceberg::write::negated_null_store`). pins: store-ts-to-numeric-1/C-002
 - **FNP-8 (2026-09-07):** the executing parser selects lambda syntax only inside
   recognized higher-order calls. JSON arrows retain the session parser and its AST.
   pins: fnp-8/C-004
