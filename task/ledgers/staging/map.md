@@ -653,7 +653,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   on all nine write doors — the `StoreOverflowCast` Dml analyzer rule plus the same
   conformance applied between eager analysis and optimization on the non-Dml internal
   plans, with checked-cast boundary UDFs and a Spark-error catalog entry; R-INTDIV-9
-  closed. `risk_tier: standard`. Branch `fix/cast-overflow-insert-1`.
+  closed. Verifier fold (2026-09-29): VO-1 judges the truncated value, VO-2 stops at
+  `LIMIT 0`, and the seven S3 observations stand as residues R-VO-S3-1..7.
+  `risk_tier: standard`. Branch `fix/cast-overflow-insert-1`.
   pins: cast-overflow-insert-1/C-001, C-002, C-003, C-004
 - [cast-map-spell-1-ledger.md](cast-map-spell-1-ledger.md) —
   **CAST-MAP-SPELL-1 (2026-09-19), in flight:** `CAST(… AS MAP<…>)` and
