@@ -32,6 +32,12 @@ handling (`CAST(NULL AS VOID)` rewrite, the non-NULL VALUES refusal into
   (an `Identifier` to this parser) refuses through the repaired probe exactly
   as `-1BD` does (nine classifier tests). NTZ stacked cells still write: that
   probe lives in `void_type.rs`, outside this fold.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-1/VG-2/VG-8):** the
+  local parenthesizer is deleted in favor of the shared recursive one in
+  `void_type.rs`, used at all three probe sites; `probe_source_type` propagates
+  the analyzer error instead of passing the row when the probe cannot parse;
+  `number_text_type` is `pub(crate)` for `update_cast.rs` (ten classifier
+  tests, one asserting no `--` survives rendering).
   pins: ltz-store-int-1/C-001
 
 ## Pointers

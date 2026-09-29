@@ -431,6 +431,10 @@ pins: rp-4-fork-repin/C-005, C-006
   to two-argument `nvl`/`ifnull`, probed as `coalesce(a, b)`; every other
   function is judged by its probed type; leading-zero fractions count precision
   from significant digits.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-1/VG-2/VG-8):** the
+  probe renders through the shared recursive parenthesizer, an unparsable probe
+  refuses instead of passing the row, and `number_text_type` is shared with
+  `update_cast.rs`.
   Directory map: [void_type/map.md](void_type/map.md).
   Pins: [tests/ltz_store.rs](tests/ltz_store.rs).
   pins: ltz-store-int-1/C-001
@@ -515,6 +519,10 @@ pins: rp-4-fork-repin/C-005, C-006
   single-signed one now does; into an NTZ column both name `"INT"` through the
   analyzed probe. Valid stacked-sign SET values still die in the downstream
   re-parse (`ParserError`), unchanged.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-8):** the integer
+  classifier delegates digit typing to `void_type.rs`'s shared
+  `number_text_type` (integer results only, behavior unchanged) instead of
+  re-implementing it.
 - `write_to_branch.rs` — Spark-door write-to-branch routing: tag/missing-branch Spark-shaped
   refuse; two-part names qualify through session defaults; the MOR valve runs on the
   Iceberg ident before the temp rewrite; fork-executed INSERT/UPDATE/DELETE via
@@ -1143,6 +1151,14 @@ pins: rp-4-fork-repin/C-005, C-006
   sources `DECIMAL(p,s)`, first refusal in row order winning as before. The
   helper lives in `void_type.rs` and `update_cast.rs` reuses it; the LTZ child
   module keeps its own copy under the round-1 file-scope ruling.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-1/VG-2/VG-8):** the
+  helper is one recursive post-visit over the whole expression — the operand of
+  every unary operator is wrapped when itself unary or sign-led — used at all
+  three probe sites, so `(- -1)`, `+- -1`, `+(- -1)`, `-(- -1)`, `- -1 + 0`,
+  `abs(- -1)` and `CAST(- -1 AS INT)` probe their numeric type instead of a
+  `--` comment; a probe that still cannot parse now refuses with the analyzer's
+  own error instead of passing the row. `update_cast.rs` judges integer
+  literals through the shared `number_text_type`.
 - `cast_gate.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** the unit's one cast hook, a single
   call in `spark_ast.rs`'s passthrough: the `CAST(NULL AS VOID)` rewrite (`void_type.rs`)
   and the `CAST(x AS UUID)` refusal (`uuid_cast.rs`). pins: u9-types-1/C-009, C-010

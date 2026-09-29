@@ -86,6 +86,44 @@ def test_values_stacked_sign_int_into_timestamp_refuses(
     assert _rows(spark) == []
 
 
+@pytest.mark.parametrize(
+    "cell",
+    [
+        "(- -1)",
+        "+- -1",
+        "+(- -1)",
+        "-(- -1)",
+        "- -1 + 0",
+        "abs(- -1)",
+        "CAST(- -1 AS INT)",
+    ],
+)
+def test_values_stacked_sign_shapes_into_timestamp_refuse(
+    spark: ReparkSession, cell: str
+) -> None:
+    """Every VG-1/VG-2 stacked-sign shape into TIMESTAMP refuses like Spark."""
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql(f"INSERT INTO {FQ} VALUES (0, {cell})")
+    error = caught.value
+    assert type(error).__name__ == RECORDED_ERROR
+    assert error.getCondition() == RECORDED_CONDITION
+    assert error.getSqlState() == RECORDED_SQLSTATE
+    assert _rows(spark) == []
+
+
+def test_values_stacked_sign_multi_row_with_null_refuses(
+    spark: ReparkSession,
+) -> None:
+    """A multi-row VALUES with NULL and a stacked-sign INT refuses like Spark."""
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql(f"INSERT INTO {FQ} VALUES (900, NULL), (901, +- -1)")
+    error = caught.value
+    assert type(error).__name__ == RECORDED_ERROR
+    assert error.getCondition() == RECORDED_CONDITION
+    assert error.getSqlState() == RECORDED_SQLSTATE
+    assert _rows(spark) == []
+
+
 def test_dataframe_append_int_into_timestamp_refuses(
     spark: ReparkSession,
 ) -> None:

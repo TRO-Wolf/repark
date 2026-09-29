@@ -263,6 +263,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and re-insert. TZ-6 states Spark's contract and the TY-TIMESTAMP-NTZ rows go
   EQUAL beside it.
   pins: ntz-1/C-008, C-009
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-1/VG-2):**
+  `test_stacked_sign_shapes_into_ntz_refuse` refuses every VG shape with the
+  exact Spark body (`- -1 + 0` names the engine's `BIGINT`), plus the
+  `(NULL, +- -1)` multi-row; the seeded row survives alone.
 - [test_ntz_7_verify.py](test_ntz_7_verify.py) + `ntz_7_verify_spark_oracle.json` —
   **WO NTZ-1 verifier fold (2026-09-28):** `from_utc_timestamp` / `to_utc_timestamp`
   over strings and a STRING column keep Spark's TIMESTAMP in a New York session —
@@ -4570,6 +4574,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `ifnull` over DATE and TIMESTAMP store.
   **Fold 2026-09-28 (LTZ-STACKED-SIGN-1):** `VALUES (0, - -1)` refuses with the
   recorded class, condition and SQLSTATE, and writes nothing.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-1/VG-2):** every VG
+  shape plus the `(NULL, +- -1)` multi-row refuses with the recorded class,
+  condition and SQLSTATE, and writes nothing.
   pins: ltz-store-int-1/C-001
 - `test_merge_semantics_audit.py` — **MERGE-audit corpus** (2026-08-14 audit gap-map rows
   c/d/g/n/o): null-safe `<=>` / `eqNullSafe` ON matches NULL keys (both doors); builder-door

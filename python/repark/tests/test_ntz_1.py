@@ -452,6 +452,31 @@ def test_store_refusals_name_timestamp_ntz(tmp_path: Path) -> None:
         session.stop()
 
 
+def test_stacked_sign_shapes_into_ntz_refuse(tmp_path: Path) -> None:
+    """Every VG-1/VG-2 stacked-sign shape into TIMESTAMP_NTZ refuses like Spark."""
+    session = _open("UTC", tmp_path)
+    try:
+        session.sql("CREATE TABLE sc.ns.t (id INT, c TIMESTAMP_NTZ) USING iceberg").collect()
+        session.sql("INSERT INTO sc.ns.t VALUES (0, TIMESTAMP_NTZ'2024-01-01 00:00:00')").collect()
+        table = "`sc`.`ns`.`t`"
+        for cell, source in [
+            ("(- -1)", "INT"),
+            ("+- -1", "INT"),
+            ("+(- -1)", "INT"),
+            ("-(- -1)", "INT"),
+            ("- -1 + 0", "BIGINT"),
+            ("abs(- -1)", "INT"),
+            ("CAST(- -1 AS INT)", "INT"),
+        ]:
+            _assert_store_refusal(session, f"INSERT INTO sc.ns.t VALUES (1, {cell})", table, source)
+        _assert_store_refusal(
+            session, "INSERT INTO sc.ns.t VALUES (900, NULL), (901, +- -1)", table, "INT"
+        )
+        assert _walls(session, "sc.ns.t") == [[0, "2024-01-01 00:00:00"]]
+    finally:
+        session.stop()
+
+
 class _DirLock:
     """Cross-process lock so concurrent facade tests do not clobber the fixture copy."""
 

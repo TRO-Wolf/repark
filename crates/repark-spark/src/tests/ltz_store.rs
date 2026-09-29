@@ -314,6 +314,13 @@ async fn stacked_sign_numeric_literals_into_timestamp_refuse_like_single_signed(
         ("+-1", "INT"),
         ("-+1", "INT"),
         ("- -1BD", "DECIMAL(1,0)"),
+        ("(- -1)", "INT"),
+        ("+- -1", "INT"),
+        ("+(- -1)", "INT"),
+        ("-(- -1)", "INT"),
+        ("- -1 + 0", "BIGINT"),
+        ("abs(- -1)", "BIGINT"),
+        ("CAST(- -1 AS INT)", "INT"),
     ] {
         let sql = format!("INSERT INTO ice.sales.l VALUES (0, {cell})");
         let refused = plan_err(&ctx, &catalogs, &sql).await;
@@ -327,6 +334,19 @@ async fn stacked_sign_numeric_literals_into_timestamp_refuse_like_single_signed(
             "{sql}"
         );
     }
+    assert_eq!(id_and_c(&ctx, &catalogs).await, vec![]);
+}
+
+#[tokio::test]
+async fn stacked_sign_multi_row_with_null_and_bad_row_refuses() {
+    let (_warehouse, ctx, catalogs) = door().await;
+    let sql = "INSERT INTO ice.sales.l VALUES (900, NULL), (901, +- -1)";
+    assert_eq!(
+        plan_err(&ctx, &catalogs, sql).await,
+        "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data \
+         for the table `ice`.`sales`.`l`: Cannot safely cast `c` \"INT\" to \"TIMESTAMP\". \
+         SQLSTATE: KD000"
+    );
     assert_eq!(id_and_c(&ctx, &catalogs).await, vec![]);
 }
 

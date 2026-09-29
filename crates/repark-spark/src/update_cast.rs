@@ -102,18 +102,9 @@ fn integer_literal_source_type(value: &Expr) -> Option<ArrowDataType> {
     let Value::Number(text, long) = &literal.value else {
         return None;
     };
-    if *long {
-        return Some(ArrowDataType::Int64);
-    }
-    if !text.bytes().all(|byte| byte.is_ascii_digit()) {
-        return None;
-    }
-    if text.parse::<i32>().is_ok() {
-        Some(ArrowDataType::Int32)
-    } else if text.parse::<i64>().is_ok() {
-        Some(ArrowDataType::Int64)
-    } else {
-        None
+    match crate::void_type::number_text_type(text, *long) {
+        typed @ (ArrowDataType::Int32 | ArrowDataType::Int64) => Some(typed),
+        _ => None,
     }
 }
 

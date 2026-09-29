@@ -6,8 +6,8 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::LogicalPlan;
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
-    CastKind, DataType, Expr, Insert, ObjectName, SetExpr, Statement, TableObject, UnaryOperator,
-    Value, ValueWithSpan, VisitMut, VisitorMut,
+    CastKind, DataType, Expr, Insert, ObjectName, SetExpr, Statement, TableObject, Value,
+    ValueWithSpan, VisitMut, VisitorMut,
 };
 use datafusion::sql::sqlparser::tokenizer::Span;
 use iceberg::spec::{NestedField, PrimitiveType, Type};
@@ -20,6 +20,8 @@ use crate::catalog_ops::name_parts;
 use crate::write_to_branch::qualify_table_parts;
 
 mod ltz_values_store;
+
+pub(crate) use ltz_values_store::number_text_type;
 
 pub(crate) fn rewrite_cast_null_to_void(statement: &mut Statement) {
     let _ = statement.visit(&mut CastNullToVoid);
@@ -160,30 +162,26 @@ async fn refuse_non_null_void_values(
 }
 
 pub(crate) fn parenthesize_stacked_minus(value: &Expr) -> Expr {
-    let mut bottom = value;
-    let mut count = 0usize;
-    while let Expr::UnaryOp {
-        op: UnaryOperator::Minus,
-        expr,
-    } = bottom
-    {
-        count += 1;
-        bottom = expr;
-    }
-    if count < 2 {
-        return value.clone();
-    }
-    let mut rebuilt = bottom.clone();
-    for level in 0..count {
-        if level > 0 {
-            rebuilt = Expr::Nested(Box::new(rebuilt));
+    let mut rewritten = value.clone();
+    let _ = rewritten.visit(&mut StackedSignParens);
+    rewritten
+}
+
+struct StackedSignParens;
+
+impl VisitorMut for StackedSignParens {
+    type Break = Infallible;
+
+    fn post_visit_expr(&mut self, expr: &mut Expr) -> ControlFlow<Self::Break> {
+        if let Expr::UnaryOp { expr: operand, .. } = expr
+            && (matches!(operand.as_ref(), Expr::UnaryOp { .. })
+                || operand.to_string().starts_with('-'))
+        {
+            let inner = operand.as_ref().clone();
+            **operand = Expr::Nested(Box::new(inner));
         }
-        rebuilt = Expr::UnaryOp {
-            op: UnaryOperator::Minus,
-            expr: Box::new(rebuilt),
-        };
+        ControlFlow::Continue(())
     }
-    rebuilt
 }
 
 fn numeric_ntz_refusal(
@@ -302,9 +300,7 @@ async fn check_ntz_row(
             .collect::<Vec<_>>()
             .join(", ")
     );
-    let Ok(frame) = ctx.sql(&probe).await else {
-        return Ok(());
-    };
+    let frame = ctx.sql(&probe).await?;
     let naive = ArrowType::Timestamp(TimeUnit::Microsecond, None);
     refuse_unassignable_ntz_positions(ctx, display, frame.logical_plan(), &positions, &naive)?;
     let dummy = ArrowType::Boolean;

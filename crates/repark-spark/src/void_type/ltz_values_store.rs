@@ -130,8 +130,8 @@ async fn refuse_value(
         data_type
     } else {
         let select = nvl_coalesce_text(value)
-            .unwrap_or_else(|| parenthesize_stacked_minus(value).to_string());
-        let Some(probed) = probe_source_type(ctx, &select).await else {
+            .unwrap_or_else(|| super::parenthesize_stacked_minus(value).to_string());
+        let Some(probed) = probe_source_type(ctx, &select).await? else {
             return Ok(());
         };
         probed
@@ -217,7 +217,7 @@ fn literal_source_type(value: &Expr) -> Option<DataType> {
     }
 }
 
-fn number_text_type(text: &str, long: bool) -> DataType {
+pub(crate) fn number_text_type(text: &str, long: bool) -> DataType {
     if long {
         DataType::Int64
     } else if text.bytes().all(|byte| byte.is_ascii_digit()) {
@@ -237,33 +237,6 @@ fn integer_text_type(text: &str) -> DataType {
     } else {
         DataType::Decimal128(u8::try_from(text.len()).unwrap_or(38), 0)
     }
-}
-
-fn parenthesize_stacked_minus(value: &Expr) -> Expr {
-    let mut bottom = value;
-    let mut count = 0usize;
-    while let Expr::UnaryOp {
-        op: UnaryOperator::Minus,
-        expr,
-    } = bottom
-    {
-        count += 1;
-        bottom = expr;
-    }
-    if count < 2 {
-        return value.clone();
-    }
-    let mut rebuilt = bottom.clone();
-    for level in 0..count {
-        if level > 0 {
-            rebuilt = Expr::Nested(Box::new(rebuilt));
-        }
-        rebuilt = Expr::UnaryOp {
-            op: UnaryOperator::Minus,
-            expr: Box::new(rebuilt),
-        };
-    }
-    rebuilt
 }
 
 fn nvl_coalesce_text(value: &Expr) -> Option<String> {
@@ -341,13 +314,13 @@ fn decimal_text_type(text: &str) -> Option<DataType> {
     ))
 }
 
-async fn probe_source_type(ctx: &SessionContext, select: &str) -> Option<DataType> {
-    let frame = ctx.sql(&format!("SELECT {select} AS probe")).await.ok()?;
-    frame
+async fn probe_source_type(ctx: &SessionContext, select: &str) -> Result<Option<DataType>> {
+    let frame = ctx.sql(&format!("SELECT {select} AS probe")).await?;
+    Ok(frame
         .schema()
         .fields()
         .first()
-        .map(|field| field.data_type().clone())
+        .map(|field| field.data_type().clone()))
 }
 
 #[cfg(test)]
@@ -415,12 +388,34 @@ mod tests {
 
     #[test]
     fn stacked_minus_probes_render_without_comment_runs() {
-        let row = values_row("INSERT INTO t VALUES (- -1, - - -1, -1, +-1)");
+        let row = values_row(
+            "INSERT INTO t VALUES (- -1, - - -1, -1, +-1, (- -1), +- -1, +(- -1), -(- -1), - \
+             -1 + 0, abs(- -1), CAST(- -1 AS INT))",
+        );
         let rendered: Vec<String> = row
             .iter()
-            .map(|value| parenthesize_stacked_minus(value).to_string())
+            .map(|value| crate::void_type::parenthesize_stacked_minus(value).to_string())
             .collect();
-        assert_eq!(rendered, vec!["-(-1)", "-(-(-1))", "-1", "+-1"], "{row:?}");
+        assert_eq!(
+            rendered,
+            vec![
+                "-(-1)",
+                "-(-(-1))",
+                "-1",
+                "+(-1)",
+                "(-(-1))",
+                "+(-(-1))",
+                "+(-(-1))",
+                "-(-(-1))",
+                "-(-1) + 0",
+                "abs(-(-1))",
+                "CAST(-(-1) AS INT)",
+            ],
+            "{row:?}"
+        );
+        for text in &rendered {
+            assert!(!text.contains("--"), "{text}");
+        }
     }
 
     #[test]
@@ -467,6 +462,15 @@ mod tests {
         let row =
             values_row("INSERT INTO t VALUES (CAST(1 AS TIMESTAMP), DATE '2024-01-04', abs(-1))");
         assert_eq!(typed(&row), vec![None, None, None], "{row:?}");
+    }
+
+    #[tokio::test]
+    async fn probe_that_cannot_parse_refuses_instead_of_passing() {
+        let ctx = SessionContext::new();
+        let error = probe_source_type(&ctx, "-- nothing but a comment")
+            .await
+            .expect_err("an unparsable probe must refuse");
+        assert!(error.to_string().contains("ParserError"), "{error}");
     }
 
     #[test]

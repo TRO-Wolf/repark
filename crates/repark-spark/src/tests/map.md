@@ -2004,6 +2004,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `- -1`, `- - -1`, `- -(1)`, `- -1.5`, `+-1`, `-+1`, `- -1BD` and the
   single-signed `-1.5`/`-1BD` with the exact Spark body each carries, and the
   seeded row survives alone.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-1/VG-2):** the pin
+  also refuses `(- -1)`, `+- -1`, `+(- -1)`, `-(- -1)`, `abs(- -1)` and
+  `CAST(- -1 AS INT)` as `INT`, plus `- -1 + 0` as `BIGINT` (the engine's own
+  `int + int` width, kept honest rather than renamed); a multi-row
+  `(NULL, +- -1)` pin refuses and writes nothing.
 
 - `describe_table.rs` — **SQL-DESCRIBE-1 (2026-09-09):** `DESCRIBE|DESC [TABLE]
   [EXTENDED|FORMATTED] catalog.namespace.table` against a memory-catalog table built like the
@@ -2186,6 +2191,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **Fold 2026-09-28 (LTZ-STACKED-SIGN-1):** the stacked-sign pin refuses `- -1`,
   `- - -1`, `- -(1)`, `- -1.5`, `+-1`, `-+1` and `- -1BD` with the exact Spark
   body each single-signed shape carries, and writes nothing.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-1/VG-2):** the pin
+  also refuses `(- -1)`, `+- -1`, `+(- -1)`, `-(- -1)` and `CAST(- -1 AS INT)`
+  as `INT`, plus `- -1 + 0` and `abs(- -1)` as `BIGINT` (this harness types
+  integer literals `Int64`; the facade pin asserts the production refusal
+  class); a multi-row `(NULL, +- -1)` pin refuses and writes nothing.
   pins: ltz-store-int-1/C-001
 - `use_ddl.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the `USE` behavior pins over
   one- and two-catalog memory setups: two-part set, v2 clear-to-empty, session-catalog
