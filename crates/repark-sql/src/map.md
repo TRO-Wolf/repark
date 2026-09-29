@@ -56,6 +56,8 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   arm converts its schema through repark-iceberg `arrow_schema_to_iceberg_with_unknown`, so a
   `NULL` column (Spark `void`) becomes Iceberg `unknown` (v3 commits; v1 / v2 refuse with the
   fork's text). pins: u9-types-1/C-015
+  **RP-56 DIFF-PROBE fold (2026-09-29):** the ANSI-door staged query passes `true`
+  (insensitive) to the plan writer; the door stays case-insensitive.
 - `declared_refuse.rs` — FNP-15/16 ANSI-door parse valve (G15 dual-wire: Spark's copy lives in
   `repark-functions`). Sketches (32), CSV/XML/XPath (11), VARIANT (8), geospatial (5), and
   the XML pair `from_xml` / `schema_of_xml` (FNP-GEN-1 D-6, dated 2026-09-15, message names

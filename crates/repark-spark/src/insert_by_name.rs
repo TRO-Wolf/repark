@@ -221,6 +221,7 @@ async fn append_by_name_projection(
                 table,
                 stream,
                 concurrency,
+                true,
             )
             .await?
         } else {
@@ -228,6 +229,7 @@ async fn append_by_name_projection(
                 table,
                 stream,
                 concurrency,
+                true,
             )
             .await?
         };

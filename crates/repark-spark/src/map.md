@@ -406,6 +406,8 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: ice-write-options-1/C-001, C-003
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the by-name append commit resolves
   the merged session write.
+  **RP-56 DIFF-PROBE fold (2026-09-29):** the direct file-writer calls pass `true`
+  (insensitive, the old behavior); BY NAME keeps its resolution.
 - `insert_arity.rs` — **IPI-51 PR9 (2026-09-21):** the short-VALUES arity router
   intercept. `refuse_if_short_values` refuses a positional `INSERT INTO t VALUES (…)` whose
   VALUES width is strictly below the Iceberg target's field count with
@@ -804,6 +806,9 @@ pins: rp-4-fork-repin/C-005, C-006
   `fast_append`; the service-managed arm calls `commit_replace_write_with_summary`.
   Plain CTAS with options keeps the append summary.
   pins: ice-write-options-1/C-016
+  **RP-56 DIFF-PROBE fold (2026-09-29):** both write sites pass the session case flag
+  down — `write_ctas_query` into the plan writer, `staging.case_sensitive` into the
+  options path — so a CTAS `SELECT *` over twins answers under `caseSensitive=true`.
 - `write_to_branch.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** when the session
   write conf is set, a plain `INSERT` / `DELETE` / `UPDATE` on `<table>.branch_<name>` counts
   as an owned write head, so the statement keeps its ref-qualified name and reaches RePark's

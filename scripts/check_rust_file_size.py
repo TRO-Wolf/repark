@@ -82,14 +82,14 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split schema-evolution operation families; property and rename now live in table_admin.rs.",
     ),
     "crates/repark-iceberg/src/write/append.rs": (
-        1804,
+        1737,
         "Append planning, file writing, and commit assembly share one entry module.",
-        "Extract writer preparation from transaction commit assembly.",
+        "Extract writer preparation from transaction commit assembly; partitioned file writing now lives in partitioned_files.rs.",
     ),
     "crates/repark-iceberg/src/write/merge/mod.rs": (
-        1622,
+        1569,
         "The RePark-owned MERGE executor combines plan, COW, and MOR paths.",
-        "Split plan preparation from COW and MOR execution modules.",
+        "Split plan preparation from COW and MOR execution modules; unpartitioned file writing now lives in merge/file_sink.rs.",
     ),
     "crates/repark-iceberg/src/write/merge/tests/merge.rs": (
         1032,

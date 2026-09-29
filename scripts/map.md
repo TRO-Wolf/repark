@@ -1,5 +1,7 @@
 # map — scripts/
 
+RP-56 DIFF-PROBE fold (2026-09-29): `check_rust_file_size.py` ratchets `repark-iceberg/src/write/append.rs` 1804 → 1737 (the `write_partitioned_data_files*` family moved to `partitioned_files.rs`) and `repark-iceberg/src/write/merge/mod.rs` 1622 → 1569 (the `write_data_files*` family moved to `merge/file_sink.rs`), shrink-only.
+
 WO CASESENS-1 S5 (2026-09-27): `check_rust_file_size.py` ratchets `repark-iceberg/src/write/alter.rs` 1607 → 1606 (the DROP/REPLACE name pin is rewritten to the exact refusal without its comments), shrink-only. pins: casesens-1/C-013
 
 WO CASESENS-1 S3 (2026-09-27): `check_rust_file_size.py` retires the `repark-python/src/dataframe.rs` row (1005 → 976, under the default; the case-bind helpers moved to `dataframe_names.rs`). pins: casesens-1/C-009

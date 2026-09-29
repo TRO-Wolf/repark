@@ -56,6 +56,8 @@ repark-core's error map.
   settings map. Two suffixes that differ only in case are two properties, as they are in
   Spark, so `unset` clears the exact spelling.
   pins: ice-session-write-conf-1/C-048
+  **RP-56 DIFF-PROBE fold (2026-09-29):** `merged_staging` carries the
+  `WriterStagingOverrides.case_sensitive` bit through the merge.
 - `output_spec.rs` — **U7 PR1 (2026-09-24):** the `output-spec-id` write option.
   `parse_output_spec_id` is Java's `Integer.parseInt` (a non-integer refuses
   `NumberFormatException` `For input string: "<v>"` through `number_format_error`);
@@ -321,7 +323,8 @@ repark-core's error map.
   pins: ice-promote-read-1/C-011
   **RP-56 DIFF-PROBE fold (2026-09-29):** `conform_batch_scoped` and
   `retaining_unmapped_columns_scoped` take the session case flag so a CTAS over twins
-  resolves written names the way the door resolved them.
+  resolves written names the way the door resolved them. The unscoped retaining wrapper is
+  deleted — every caller passes the flag explicitly now.
 - `append_fanout_serial.rs` — **ICE-WRITE-OPTIONS-1 round 3 (2026-09-17):** the serial
   conformed fanout (`fanout_conformed_stream_serial[_with_abort]`), split out of
   `append.rs` under the file-size gate; re-exported there so callers keep their paths.
@@ -352,6 +355,8 @@ repark-core's error map.
   module's sorted drivers, so a declared default sort order sorts every partitioned staged
   write at no behaviour change when no order is declared.
   pins: write-order-dist-1/C-008
+  **RP-56 DIFF-PROBE fold (2026-09-29):** the `write_partitioned_data_files*`
+  family moved to `partitioned_files.rs` (re-exported here; baseline 1804 → 1737).
 - `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): `commit_truncate` is
   `commit_overwrite_replace_all` with no added files (fork stamps `Operation::Delete`).
   `commit_truncate_to` commits onto a named branch.
@@ -509,6 +514,8 @@ repark-core's error map.
   `write_overwrite_staged_files_from_stream` (positional map + **WI-1** store-assignment gate +
   stream stage) + `commit_overwrite_replace_all` + `parse_overwrite_isolation`
   (absent→snapshot | snapshot | serializable | none | invalid-loud).
+  **RP-56 DIFF-PROBE fold (2026-09-29):** the staged stream passes `true`
+  (insensitive, the old behavior) to the now-scoped file writers.
 - `conform.rs` — **DATE-FN-1 (2026-09-04):** the identity arm of
   `conform_batch_retaining_unmapped_columns` rebuilds the batch against the write schema so
   leaked Iceberg `PARQUET:field_id` metadata from a multi-table join cannot scramble CTAS
@@ -607,6 +614,9 @@ repark-core's error map.
   ([../../../../docs/fork-sync.md](../../../../docs/fork-sync.md)), so the fork half is measured
   through a temporary, never-committed path override.
   pins: perf-ice-writepath-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-011
+  **RP-56 DIFF-PROBE fold (2026-09-29):** `IcebergPartitionWriteExec` carries the
+  door's `case_insensitive` bit into the conform step, so a CTAS `SELECT *` over twins
+  under `caseSensitive=true` resolves exactly instead of refusing on the collision.
 - `distribution.rs` — **WRITE-DISTRIBUTION-1 (2026-09-06):** the hash distribution rule before a
   partitioned write, Spark's Iceberg default `write.distribution-mode = hash`. `hash_distribution`
   wraps the CTAS node's input in DataFusion's `RepartitionExec` under `Partitioning::Hash` over one
@@ -882,6 +892,10 @@ repark-core's error map.
   (non-schema) `ALTER TABLE` family split out of `alter.rs`: SET/UNSET TBLPROPERTIES and
   `rename_table`, re-exported from `alter.rs` so every door keeps its path. Comment-free per
   the owner ban; the fork errors propagate unchanged.
+- `partitioned_files.rs` — (RP-56 DIFF-PROBE fold, 2026-09-29) the
+  `write_partitioned_data_files*` family split out of `append.rs`, re-exported there so
+  every caller keeps its path. Comment-free per the owner ban; the stream writer takes the
+  door's `case_insensitive` bit (every non-CTAS caller passes `true`).
 - `column_move.rs` — **ICE-COLUMN-REORDER-1 (2026-09-17, round 2 Q-20b-5):**
   `resolve_move_names` (pure fork-index resolution: the fork's own
   `field_by_name_case_insensitive`, bare `AFTER` references qualified into the mover's
@@ -1212,6 +1226,8 @@ repark-core's error map.
   fork-derived defaults hold where it did not.
   pins: ice-session-write-conf-1/C-050
   pins: ice-writer-metrics-1/C-002
+  **RP-56 DIFF-PROBE fold (2026-09-29):** `WriterStagingOverrides` gains the
+  `case_sensitive` bit (default false, the old behavior); every stage conform call reads it.
 - `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** per-statement DataFrame
   write-option staging and commits. `WriterStagingOverrides` (codec/level/target-size,
   option over table property) feeds override-capable builders that mirror the

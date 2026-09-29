@@ -47,19 +47,6 @@ pub(crate) fn write_default_column_names(schema: &iceberg::spec::Schema) -> Hash
         .collect()
 }
 
-pub(crate) fn conform_batch_retaining_unmapped_columns(
-    write_schema: &SchemaRef,
-    write_default_columns: &HashSet<String>,
-    batch: &RecordBatch,
-) -> Result<RecordBatch> {
-    conform_batch_retaining_unmapped_columns_scoped(
-        write_schema,
-        write_default_columns,
-        batch,
-        true,
-    )
-}
-
 pub(crate) fn conform_batch_retaining_unmapped_columns_scoped(
     write_schema: &SchemaRef,
     write_default_columns: &HashSet<String>,
@@ -286,8 +273,9 @@ mod tests {
             vec![Arc::new(StringArray::from(vec!["s1"])) as ArrayRef],
         )
         .expect("batch");
-        let out = conform_batch_retaining_unmapped_columns(&write, &HashSet::new(), &batch)
-            .expect("conform");
+        let out =
+            conform_batch_retaining_unmapped_columns_scoped(&write, &HashSet::new(), &batch, true)
+                .expect("conform");
         assert_eq!(
             out.schema()
                 .field(0)
