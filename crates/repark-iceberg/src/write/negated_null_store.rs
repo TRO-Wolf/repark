@@ -25,6 +25,13 @@ pub struct ViewDefinitionPlans {
     resolve: ViewPlanResolver,
 }
 
+impl ViewDefinitionPlans {
+    #[must_use]
+    pub fn definition_plan(&self, provider: &dyn TableProvider) -> Option<LogicalPlan> {
+        (self.resolve)(provider)
+    }
+}
+
 #[must_use]
 pub fn with_view_definition_plans(
     config: SessionConfig,

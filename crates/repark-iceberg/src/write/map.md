@@ -395,6 +395,8 @@ repark-core's error map.
   inlining it. Callers: `merge/insert.rs` (INSERT and UPDATE SET gates), repark-spark
   `update_cast.rs` and `void_type/insert_source_types.rs`. Four unit tests.
   pins: store-ts-to-numeric-1/C-002
+  **Fold 2026-09-29 (verifier VT-1):** `definition_plan` exposes the resolver to
+  the Spark door's widening walk, which resolves views the same way.
 - `update_cast.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** `incompatible_store_message`
   is `incompatible_update_message` with DECIMAL names (`"DECIMAL(10,2)"`), used by the Spark
   door's VALUES, INSERT and UPDATE gates and by `negated_null_store.rs`;

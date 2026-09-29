@@ -3,6 +3,8 @@
 **Date:** 2026-09-28 · **Branch:** `fix/store-ts-to-numeric-1` · **Base:** `adc26586` (`origin/main`)
 **Model:** Claude Opus 5.5 (`claude-opus-5-5`) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
+**Fold 2026-09-29:** verifier VT-1..VT-5 folded by Muse Spark
+(`muse-spark-1.3-contributor`) on the same branch — see "Verifier fold" below.
 
 **Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
 
@@ -160,6 +162,62 @@ COVERAGE_ATTESTATION:
   complete: true
 ```
 
+## Verifier fold (2026-09-29)
+
+The scoped verifier replayed 2,941 statements plus 36 controls on `575878bc`
+against Spark 4.1.2 + Iceberg 1.11.0 and the `adc26586` base: all 391 head-vs-base
+outcome changes run store → refuse, MALL restores all 391 to base with zero other
+diffs, and the pins go red on exactly the must-change cells under MALL. Five
+findings; this fold closes VT-1, VT-2 and VT-4 and records VT-3 and VT-5.
+
+**VT-1 (S2, closed).** 23 stores Spark allows refused on head: mixed STRING and
+numeric operands in `CASE`, `nvl` and `nullif` into numeric columns. Spark widens
+those branches to a numeric type; RePark plans them STRING and both new gates
+judged the planned type. The fix judges the widened (Spark-effective) branch
+type instead of skipping every conditional or function: skipping all of them
+would also admit `CASE WHEN true THEN '1' ELSE 2 END` and `nvl('1', 2)` into
+BOOLEAN, which Spark refuses and the matrix must keep refusing, along with every
+other function-typed source (`abs`, `length`, `concat`, `max(s)`). Concretely,
+when a gate is about to refuse a STRING-planned source, `spark_widen.rs`
+collects the branch operand types — CASE/nvl/ifnull/nullif/coalesce/if/nvl2/
+greatest/least, `nullif` keeping its first argument — and skips the refusal only
+when the widened type stores into the target through the shared matrix (a
+widened numeric into an LTZ target still refuses; a still-refusing cell keeps
+naming the planned STRING). The VALUES gate reads branches from the SQL AST; the
+INSERT gate walks the planned source like the negated-NULL lineage, through
+derived tables, views and joins, with `__repark_float_to_string__` transparent
+(it only wraps FLOAT/DOUBLE — DataFrame temp views arrive inlined carrying that
+analyzer artifact on the DOUBLE operand). Operands Spark would not widen
+(BOOLEAN mixed with STRING, two disagreeing sides, `concat`, aggregates,
+subqueries, UNION branches of mixed type) keep today's judgment, as do all
+non-STRING planned sources. Proof: the verifier's full probe replays with
+exactly the 23 flipping back to store (values verified against the recorded
+Spark read-backs), every other outcome and all 36 controls unchanged; the 23
+shapes are pinned as store cells in `test_store_ts_to_numeric_1.py`, and forcing
+the widened judgment off reds exactly those 23. Evidence:
+`/tmp/oc-worker/direct/wo/verify-tsn-opus-evidence/`.
+
+**VT-2 (S3, closed).** `writeTo().overwrite(condition)` called no gate: STRING
+into DOUBLE and `-NULL` into DATE/BOOLEAN stored where Spark refuses. One
+call-site addition runs the shared INSERT gate in `execute_replace_where`
+(positions are table-ordered there); the verifier's writer cells now refuse
+with Spark's text and write nothing, and NULL, DOUBLE and CAST sources still
+store through the same door.
+
+**VT-4 (S3, closed).** The per-cell `SELECT <cell>` probe now fires only for
+values without a declared type: DATE typed strings and plain CASTs (BOOLEAN,
+DATE, integers, FLOAT/DOUBLE, STRING spellings, DECIMAL with precision and
+scale) read by declared type exactly as the probe resolved them. TIMESTAMP
+typed strings stay probed — their DataFusion unit/zone was not pinned, and a
+wrong literal type would rename pinned messages. Measured numbers are in
+R-STN-6.
+
+**Premise correction (VT-5).** The brief premise that Spark stores
+`CAST(-NULL AS DATE)` is false: Spark 4.1.2 refuses it (and `try_cast(-NULL AS
+DATE)` and the UPDATE form) with `DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION`
+because `-NULL` is DOUBLE. RePark stores these on base and head alike; the
+residue is recorded as R-STN-9, not as a regression.
+
 ## Residues
 
 | # | Residue |
@@ -169,5 +227,7 @@ COVERAGE_ATTESTATION:
 | R-STN-3 | Dated 2026-09-28: `- -NULL` still stores into DATE through the SQL doors. The INSERT gate plans the rendered source, and `- -NULL` renders as `--NULL`, a comment (the VG-1/VG-3 stacked-sign rendering, owned by LTZ-STACKED-SIGN-1 #882). |
 | R-STN-4 | Dated 2026-09-28: `+NULL` fails in RePark's planner (`Unary operator '+' only supports numeric…`) where Spark types it DOUBLE and refuses `CANNOT_SAFELY_CAST`; `abs(NULL)` names `"INT"` where Spark names `"DOUBLE"`. Both engines refuse; the NULL typing of functions is not store assignment. |
 | R-STN-5 | Dated 2026-09-28 (same class as R-LTZ-2): a multi-row VALUES whose rows have incompatible types (`(15, '1'), (16, 2)` into INT) refuses `CANNOT_SAFELY_CAST`/KD000 per row where Spark answers `INVALID_INLINE_TABLE.INCOMPATIBLE_TYPES_IN_INLINE_TABLE`/42000. On base these rows stored. A scalar subquery in VALUES now refuses `CANNOT_SAFELY_CAST` where Spark answers `UNSUPPORTED_SUBQUERY_EXPRESSION_CATEGORY.SCALAR_SUBQUERY_IN_VALUES`; base refused with a physical-plan error. |
-| R-STN-6 | Dated 2026-09-28 (extends R-LTZ-4): every Iceberg INSERT into a table with a DATE, BOOLEAN, TIMESTAMP, BINARY or floating-point column plans its source once more, and every VALUES insert into a table with a numeric, DATE or BOOLEAN column loads the table schema and probes each non-literal cell. Measured on a debug build, median of 5: 2,000 `DATE'…'` rows into DATE 3.78 s → 4.66 s (+23%); 2,000 integer rows into BIGINT 1.12 s → 1.13 s; 2,000 strings into STRING 2.33 s → 2.32 s; `INSERT … SELECT` of 100,000 rows into DATE 0.116 s → 0.103 s; one DATE row 0.061 s both. |
+| R-STN-6 | Dated 2026-09-28 (extends R-LTZ-4): every Iceberg INSERT into a table with a DATE, BOOLEAN, TIMESTAMP, BINARY or floating-point column plans its source once more, and every VALUES insert into a table with a numeric, DATE or BOOLEAN column loads the table schema and probes each non-literal cell. Measured on a debug build, median of 5: 2,000 `DATE'…'` rows into DATE 3.78 s → 4.66 s (+23%); 2,000 integer rows into BIGINT 1.12 s → 1.13 s; 2,000 strings into STRING 2.33 s → 2.32 s; `INSERT … SELECT` of 100,000 rows into DATE 0.116 s → 0.103 s; one DATE row 0.061 s both. Fold 2026-09-29 (VT-4): DATE typed strings and plain CASTs read by declared type, so those rows probe zero cells (unit-pinned); TIMESTAMP typed strings still probe. Debug medians of 3 post-fix, same box: 2,000 DATE rows 3.97 s (pre-fix 4.66 s cross-day, base 3.78 s); 10,000 `CAST(i AS DOUBLE)` rows 12.25 s; 2,000-row 7-column DATE/BOOLEAN/DOUBLE/DECIMAL/BIGINT/TIMESTAMP table 36.97 s; `INSERT … SELECT` 100k rows into DATE 0.10 s; one DATE row 0.066 s. Verifier release pre-fix (median of 5, measured twice): 2,000 DATE rows 0.293 s → 0.385 s (+32%); 10,000 DATE rows 2.67 s → 3.15 s (+18%); 10,000 `CAST(i AS DOUBLE)` rows 1.47 s → 1.98 s (+34%); 7-column table 2.00 s → 2.33 s (+16%). Release post-fix not re-measured in this fold. |
 | R-STN-7 | Dated 2026-09-28: the three UPDATE cells `1` into DATE, BOOLEAN and TIMESTAMP refuse naming `"BIGINT"` where Spark names `"INT"` (the UPDATE probe types an integer literal BIGINT). Unchanged from base. |
+| R-STN-8 | Dated 2026-09-29 (VT-3, pre-existing misses, out of scope): `-NULL` through `coalesce`, `nvl`, `if` or CASE, through GROUP BY, through a UNION or CASE with a typed DATE branch, and `-NULL`, `abs(NULL)`, `NULL + NULL` or `CAST(-NULL AS …)` into ARRAY, STRUCT or BINARY targets still store where Spark refuses. All missed on base too; R-STN-3 and R-STN-4 named only `- -NULL`, `+NULL` and `abs`. |
+| R-STN-9 | Dated 2026-09-29 (VT-5, pre-existing, out of scope): Spark refuses `CAST(-NULL AS DATE)`, `try_cast(-NULL AS DATE)` and `UPDATE … SET dt = CAST(-NULL AS DATE)` with `DATATYPE_MISMATCH` (`-NULL` is DOUBLE); RePark stores them on base and head. The brief premise that Spark stores these is corrected in "Verifier fold" above. |

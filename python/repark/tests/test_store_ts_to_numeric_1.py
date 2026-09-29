@@ -39,6 +39,8 @@ def _write(session: ReparkSession, door: str, cell: dict[str, Any]) -> dict[str,
             session.sql(cell["source"]).writeTo(cell["table"]).append()
         elif door == "df_insertinto":
             session.sql(cell["source"]).write.insertInto(cell["table"])
+        elif door == "df_saveastable":
+            session.sql(cell["source"]).write.mode("append").saveAsTable(cell["table"])
         else:
             session.sql(cell["sql"]).collect()
     except Exception as error:

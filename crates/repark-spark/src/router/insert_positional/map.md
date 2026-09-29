@@ -40,6 +40,10 @@ Rewrite or execute the INSERT forms the stock parser cannot model on the Spark d
   `prepare_source` reparses the rewritten source. The SQL door stays positional.
   pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-016, C-018, C-021, C-024;
   u7-write-df-2/C-013
+  **Fold 2026-09-29 (verifier VT-2):** `execute_replace_where` calls the shared
+  `void_type::refuse_insert_source_types` gate after the width check, so
+  `writeTo().overwrite(condition)` refuses STRING into FLOAT/DOUBLE and `-NULL`
+  into DATE/BOOLEAN with Spark's text like every other INSERT door.
 - `partition_append.rs` — `INSERT INTO … PARTITION (…)` becomes a plain positional INSERT.
   Static values (Spark's string form, checked by an Arrow cast with `safe: false`,
   `CAST_INVALID_INPUT` on failure) go in at their table positions (or after a column list),

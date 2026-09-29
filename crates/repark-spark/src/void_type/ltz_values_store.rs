@@ -9,6 +9,9 @@ use iceberg::{NamespaceIdent, TableIdent};
 use repark_common::spark_error;
 use repark_core::CatalogRegistry;
 
+use super::spark_widen::{
+    BranchShape, branch_shape, is_string_type, widen_operand_types, widened_stores,
+};
 use super::{column_name, is_bare_null};
 use crate::catalog_ops::{name_parts, quoted_table_display};
 use crate::write_to_branch::qualify_table_parts;
@@ -141,6 +144,9 @@ async fn refuse_value(
         &source,
         target,
     ) {
+        if spark_branch_stores(&source, target, value) {
+            return Ok(());
+        }
         return Err(DataFusionError::Plan(text));
     }
     if is_microsecond_ltz(target) && source.is_numeric() {
@@ -149,6 +155,116 @@ async fn refuse_value(
         )));
     }
     Ok(())
+}
+
+fn spark_branch_stores(source: &DataType, target: &DataType, value: &Expr) -> bool {
+    if !is_string_type(source) {
+        return false;
+    }
+    match spark_branch_type(value) {
+        Some(widened) => widened_stores(&widened, target),
+        None => false,
+    }
+}
+
+fn spark_branch_type(value: &Expr) -> Option<DataType> {
+    let mut peeled = value;
+    while let Expr::Nested(inner) = peeled {
+        peeled = inner;
+    }
+    match peeled {
+        Expr::Case {
+            conditions,
+            else_result,
+            ..
+        } => {
+            let mut branches = Vec::with_capacity(conditions.len() + 1);
+            for when in conditions {
+                branches.push(spark_branch_type(&when.result)?);
+            }
+            if let Some(else_result) = else_result {
+                branches.push(spark_branch_type(else_result)?);
+            }
+            widen_operand_types(&branches)
+        }
+        Expr::Function(function) => {
+            let FunctionArguments::List(list) = &function.args else {
+                return None;
+            };
+            let mut operands = Vec::with_capacity(list.args.len());
+            for argument in &list.args {
+                let FunctionArg::Unnamed(FunctionArgExpr::Expr(operand)) = argument else {
+                    return None;
+                };
+                operands.push(operand);
+            }
+            let picked = match branch_shape(&function.name.to_string(), operands.len())? {
+                BranchShape::All => &operands[..],
+                BranchShape::First => operands.get(..1)?,
+                BranchShape::AfterFirst => operands.get(1..)?,
+            };
+            let mut branches = Vec::with_capacity(picked.len());
+            for operand in picked {
+                branches.push(spark_branch_type(operand)?);
+            }
+            widen_operand_types(&branches)
+        }
+        Expr::UnaryOp {
+            op: UnaryOperator::Plus | UnaryOperator::Minus,
+            expr,
+        } => match spark_branch_type(expr) {
+            Some(DataType::Null) => Some(DataType::Float64),
+            other => other,
+        },
+        _ => literal_source_type(peeled).or_else(|| cast_target_type_of(peeled)),
+    }
+}
+
+fn cast_target_type_of(value: &Expr) -> Option<DataType> {
+    match value {
+        Expr::Cast {
+            data_type,
+            array: false,
+            ..
+        } => cast_target_type(data_type),
+        _ => None,
+    }
+}
+
+fn cast_target_type(data_type: &SqlDataType) -> Option<DataType> {
+    match data_type {
+        SqlDataType::Boolean | SqlDataType::Bool => Some(DataType::Boolean),
+        SqlDataType::TinyInt(_) => Some(DataType::Int8),
+        SqlDataType::SmallInt(_) | SqlDataType::Int2(_) => Some(DataType::Int16),
+        SqlDataType::Int(_) | SqlDataType::Int4(_) | SqlDataType::Integer(_) => {
+            Some(DataType::Int32)
+        }
+        SqlDataType::BigInt(_) | SqlDataType::Int8(_) => Some(DataType::Int64),
+        SqlDataType::Float(_) | SqlDataType::Float4 | SqlDataType::Float32 | SqlDataType::Real => {
+            Some(DataType::Float32)
+        }
+        SqlDataType::Double(_)
+        | SqlDataType::DoublePrecision
+        | SqlDataType::Float8
+        | SqlDataType::Float64 => Some(DataType::Float64),
+        SqlDataType::Numeric(info) | SqlDataType::Dec(info) => match info {
+            ExactNumberInfo::PrecisionAndScale(_, _) => Some(decimal_info_type(info)),
+            ExactNumberInfo::None | ExactNumberInfo::Precision(_) => None,
+        },
+        SqlDataType::String(_)
+        | SqlDataType::Text
+        | SqlDataType::TinyText
+        | SqlDataType::MediumText
+        | SqlDataType::LongText
+        | SqlDataType::Varchar(_)
+        | SqlDataType::Nvarchar(_)
+        | SqlDataType::Char(_)
+        | SqlDataType::Character(_)
+        | SqlDataType::CharacterVarying(_)
+        | SqlDataType::CharVarying(_) => Some(DataType::Utf8),
+        SqlDataType::Date => Some(DataType::Date32),
+        _ => None,
+    }
 }
 
 fn numeric_refusal(display: &str, column: &str, source: &DataType, target: &DataType) -> String {
@@ -212,7 +328,12 @@ fn literal_source_type(value: &Expr) -> Option<DataType> {
             data_type: SqlDataType::Decimal(info),
             ..
         } => Some(decimal_info_type(info)),
-        Expr::TypedString(typed) => decimal_typed_string(typed),
+        Expr::Cast {
+            data_type,
+            array: false,
+            ..
+        } => cast_target_type(data_type),
+        Expr::TypedString(typed) => typed_string_source_type(typed),
         _ => None,
     }
 }
@@ -276,6 +397,13 @@ fn decimal_info_type(info: &ExactNumberInfo) -> DataType {
             i8::try_from(*scale).unwrap_or(0),
         ),
     }
+}
+
+fn typed_string_source_type(typed: &TypedString) -> Option<DataType> {
+    if matches!(typed.data_type, SqlDataType::Date) {
+        return Some(DataType::Date32);
+    }
+    decimal_typed_string(typed)
 }
 
 fn decimal_typed_string(typed: &TypedString) -> Option<DataType> {
@@ -404,9 +532,75 @@ mod tests {
 
     #[test]
     fn casts_typed_strings_and_functions_defer_to_the_probe() {
-        let row =
-            values_row("INSERT INTO t VALUES (CAST(1 AS TIMESTAMP), DATE '2024-01-04', abs(-1))");
+        let row = values_row(
+            "INSERT INTO t VALUES (CAST(1 AS TIMESTAMP), TIMESTAMP '2024-01-04 10:00:00', abs(-1))",
+        );
         assert_eq!(typed(&row), vec![None, None, None], "{row:?}");
+    }
+
+    #[test]
+    fn date_typed_strings_and_plain_casts_read_without_a_probe() {
+        let row = values_row(
+            "INSERT INTO t VALUES (DATE '2024-01-04', CAST('1.5' AS DOUBLE), CAST('x' AS INT), \
+             CAST('x' AS BOOLEAN), CAST('x' AS DATE), CAST('x' AS STRING))",
+        );
+        assert_eq!(
+            typed(&row),
+            vec![
+                Some(DataType::Date32),
+                Some(DataType::Float64),
+                Some(DataType::Int32),
+                Some(DataType::Boolean),
+                Some(DataType::Date32),
+                Some(DataType::Utf8),
+            ],
+            "{row:?}"
+        );
+    }
+
+    #[test]
+    fn mixed_branches_widen_to_the_numeric_side() {
+        let row = values_row(
+            "INSERT INTO t VALUES (CASE WHEN true THEN '1' ELSE 2 END, nvl('1', 2), \
+             nullif(NULL, NULL), coalesce(NULL, 'x'), abs(1))",
+        );
+        let widened: Vec<Option<DataType>> = row.iter().map(spark_branch_type).collect();
+        assert_eq!(
+            widened,
+            vec![
+                Some(DataType::Int32),
+                Some(DataType::Int32),
+                Some(DataType::Null),
+                Some(DataType::Utf8),
+                None,
+            ],
+            "{row:?}"
+        );
+    }
+
+    #[test]
+    fn widened_branches_store_into_numerics_but_not_into_booleans() {
+        let row = values_row("INSERT INTO t VALUES (CASE WHEN true THEN '1' ELSE 2 END)");
+        assert!(spark_branch_stores(
+            &DataType::Utf8,
+            &DataType::Int32,
+            &row[0]
+        ));
+        assert!(spark_branch_stores(
+            &DataType::Utf8,
+            &DataType::Float64,
+            &row[0]
+        ));
+        assert!(!spark_branch_stores(
+            &DataType::Utf8,
+            &DataType::Boolean,
+            &row[0]
+        ));
+        assert!(!spark_branch_stores(
+            &DataType::Int32,
+            &DataType::Int32,
+            &row[0]
+        ));
     }
 
     #[test]

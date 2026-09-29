@@ -20,6 +20,7 @@ use crate::write_to_branch::qualify_table_parts;
 
 mod insert_source_types;
 mod ltz_values_store;
+mod spark_widen;
 
 pub(crate) async fn refuse_insert_source_types(
     ctx: &SessionContext,

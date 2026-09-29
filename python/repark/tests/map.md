@@ -4588,6 +4588,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   narrowing, explicit CAST, NULL, `-NULL` into numeric and STRING, the CTAS controls,
   and LTZ-STORE-INT-1's INT → TIMESTAMP refusal (C-005).
   pins: store-ts-to-numeric-1/C-001, C-002, C-003, C-004, C-005
+  **Fold 2026-09-29 (verifier VT-1):** 23 more store cells pin the mixed
+  STRING/numeric CASE, `nvl` and `nullif` shapes Spark widens to a storable type
+  (VALUES, SELECT, BY NAME, column list, OVERWRITE, `append`, `insertInto`,
+  `saveAsTable`; the runner learns the `df_saveastable` door). 81 cells total.
 - `test_merge_semantics_audit.py` — **MERGE-audit corpus** (2026-08-14 audit gap-map rows
   c/d/g/n/o): null-safe `<=>` / `eqNullSafe` ON matches NULL keys (both doors); builder-door
   `=` NULL keys do not match; self-merge (target as source) updates once per row; join-key
