@@ -2009,6 +2009,17 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `date_stores_the_session_midnight_through_every_door` pins the `DATE` rows. Every
   must-change pin is red on `adc26586`; the MERGE LTZ→NTZ pins guard NTZ-1 and are
   green there. pins: ntz-store-doors-1/C-001, C-002, C-003, C-004
+- `ntz_values_mix.rs` — **WO NTZ-STORE-DOORS-1 verifier fold (2026-09-29, VD-1):** a
+  `VALUES` list or inline table that mixes `TIMESTAMP` and `TIMESTAMP_NTZ` in one column,
+  in both row orders and with a New York DST-gap row and a NULL. One pin per SQL door
+  (positional INSERT VALUES and SELECT, INSERT OVERWRITE VALUES and SELECT, `BY NAME`
+  append and overwrite, MERGE INSERT *, INSERT (cols), UPDATE SET and UPDATE SET *) stores
+  Spark 4.1.2's walls in both `TIMESTAMP` and `TIMESTAMP_NTZ` columns in New York and
+  Kolkata. `mixed_values_type_the_column_timestamp_through_the_session_zone` pins
+  `typeof` = `timestamp` and the values of the plain SELECT. Reverting the coercion reds
+  all 11 of these pins. `unmixed_values_keep_their_timestamp_type` keeps all-NTZ and
+  all-LTZ columns as they were and stays green under that revert.
+  pins: ntz-store-doors-1/C-006
 
 - `describe_table.rs` — **SQL-DESCRIBE-1 (2026-09-09):** `DESCRIBE|DESC [TABLE]
   [EXTENDED|FORMATTED] catalog.namespace.table` against a memory-catalog table built like the

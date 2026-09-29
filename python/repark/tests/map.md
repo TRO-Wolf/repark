@@ -289,6 +289,18 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   asserts RePark's recorded refusal text; 12 `days`/`hours` cells replay rows,
   `.partitions` and the equality filter.
   pins: ntz-store-doors-1/C-001, C-002, C-003, C-004, C-005
+  **Verifier fold (2026-09-29, VD-1):**
+  [ntz_store_doors_1_mixed_spark_oracle.json](ntz_store_doors_1_mixed_spark_oracle.json)
+  (generated from `target/ntz-mix/out/m-spark.json`) adds 52 door cells and 4 SELECT
+  cells for a `VALUES` column that mixes `TIMESTAMP` and `TIMESTAMP_NTZ`. The door cells
+  cover New York and Kolkata × both target types × 13 doors: the ten SQL doors plus
+  `overwritePartitions()`, `insertInto(overwrite=True)` and `writeTo().append()`. Each
+  cell runs three sources. The SELECT cells cover UTC, New York, Kolkata and Lord Howe:
+  `typeof` and values of the mixed sources, all-NTZ and all-LTZ controls, NULL, CTE,
+  subquery, two-column, CAST and `to_timestamp` mixes, and UNION, CASE and coalesce
+  literals. Reverting the coercion reds 43 door cells and all 4 SELECT cells. The 9 cells
+  that stay green are positional-door guards that were already equal to Spark.
+  pins: ntz-store-doors-1/C-006
 - [test_uuid_cast_window_1.py](test_uuid_cast_window_1.py) +
   [uuid_cast_window_1_spark_oracle.json](uuid_cast_window_1_spark_oracle.json) —
   **WO UUID-CAST-WINDOW-1 (2026-09-27):** the `CAST('a' AS UUID)` refusal replays

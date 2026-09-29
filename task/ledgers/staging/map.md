@@ -89,9 +89,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `TIMESTAMP_NTZ` as the session-zone wall (C-001) and `TIMESTAMP_NTZ` into
   `TIMESTAMP` as the session-zone instant (C-002) through one seam, refusals and
   same-type stores unchanged (C-003), `DATE` stores the session midnight (C-004),
-  partition transforms follow the stored value (C-005).
+  partition transforms follow the stored value (C-005). The verifier fold
+  (2026-09-29) adds C-006: a `VALUES` column that mixes `TIMESTAMP` and
+  `TIMESTAMP_NTZ` is typed `TIMESTAMP` through the session zone at the `VALUES`
+  coercion site. It widens R-1 to the nested types, adds R-5 (MERGE `ON`) and
+  R-6, and closes R-4.
   `risk_tier: standard`. Branch `fix/ntz-store-doors-1`.
-  pins: ntz-store-doors-1/C-001, C-002, C-003, C-004, C-005
+  pins: ntz-store-doors-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [ntz-1-ledger.md](ntz-1-ledger.md) —
   **WO NTZ-1 (2026-09-26), in flight:** `TIMESTAMP_NTZ` literals, casts and
   store assignment answer as Spark. Slice 1 (this commit): the literal and the

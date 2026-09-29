@@ -999,6 +999,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   path only. pins: cast-ts-string-1/C-001, C-004, C-005
   **WO NTZ-1 slice 2 (2026-09-27):** `rewrite_cast` retargets NTZ-target casts through
   `timestamp_ntz_cast` before the existing arms (+3 lines). pins: ntz-1/C-006
+  **WO NTZ-STORE-DOORS-1 verifier fold (2026-09-29, VD-1):** `analyze` first runs
+  `timestamp_ns_cast::widen_mixed_values_timestamps` with `rewrite_cast` as the cell
+  rewrite, before NTZ-1's `retarget_dml_store_casts`. The DML retarget therefore sees a
+  mixed `VALUES` column already typed `TIMESTAMP` (+5 lines).
+  pins: ntz-store-doors-1/C-006
 - `timestamp_cast.rs` — **TZ-5 (2026-08-12)** plus **B-TZ-4 (2026-08-13):** the embedded UDFs
   `analyzer.rs` puts under timestamp casts. `__repark_epoch_seconds_floor__` (→ `Int64`) serves
   integer targets with exact `div_euclid` **floor** — Spark uses `Math.floorDiv`, so `-0.5 s` is
@@ -1069,6 +1074,18 @@ scalars live under [`try_invert/`](try_invert/map.md).
   checked cast; both ns casts are one shared UDF instance each.
   Tests in [timestamp_ns_cast/](timestamp_ns_cast/map.md).
   pins: ice-tsns-sql-1/C-001, C-002, C-009
+  **WO NTZ-STORE-DOORS-1 verifier fold (2026-09-29, VD-1):**
+  `widen_mixed_values_timestamps` is the `VALUES` type-coercion seam for a column that mixes
+  `TIMESTAMP` and `TIMESTAMP_NTZ`. DataFusion's union resolution types such a column naive
+  microseconds, because a `TIMESTAMP '…'` literal is still a naive `Timestamp(ns)` cast when
+  `VALUES` is planned. The pass rewrites each naive-microsecond column's cells as
+  `spark_ltz_timestamp_cast` would; when the rewritten cells are only instants and naive walls
+  with at least one of each, the column becomes `TIMESTAMP` and each wall cell a `CAST` to
+  `TIMESTAMP`, which the same rule localizes in the session zone. That is Spark's wider type,
+  the one UNION, CASE and coalesce already choose. All-NTZ and all-LTZ columns, a column with
+  any other type, and every other column keep their cells and type. Parents recompute their
+  schema only after a widening.
+  pins: ntz-store-doors-1/C-006
 - `timestamp_ntz_cast.rs` — **WO NTZ-1 slice 1 (2026-09-26):** the embedded Spark-door
   casts `__repark_cast_timestamp_ntz__` / `__repark_try_cast_timestamp_ntz__` (→
   `Timestamp(µs, None)`) and the wall literal `__repark_timestamp_ntz__`, registered

@@ -49,6 +49,28 @@ wrap only fires for timestamp and date sources, and MERGE runs its gates before
 it renders. On a session without the Spark rules (the ANSI door, bare test
 sessions) the `CAST` reads the naive wall as UTC as `arrow_cast` did.
 
+**Verifier fold (2026-09-29, VD-1).** The scoped Opus verifier found a sideways
+move. A `VALUES` list or inline table whose column mixes `TIMESTAMP` and
+`TIMESTAMP_NTZ` literals was planned `TIMESTAMP_NTZ`, and each `TIMESTAMP` row
+became its UTC wall. The seam above then converted those rows a second time. The
+repro is New York, a `TIMESTAMP` column, `INSERT OVERWRITE t VALUES (1,
+TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00')`.
+Spark stores 12:00 and 23:30. Base stored 08:00 and 23:30, and the fold's parent
+commit stored 12:00 and 2024-01-16 04:30. Spark types the column `TIMESTAMP` and
+reads the NTZ rows as session-zone walls. This is the same wider type Spark
+chooses for UNION, CASE and coalesce, which RePark already matched. The cause is
+DataFusion's `VALUES` union resolution: when `VALUES` is planned, a
+`TIMESTAMP '…'` literal is still a naive `Timestamp(ns)` cast, so the mix
+resolves to naive microseconds. The fix is at that coercion site, not in the
+store helpers. `repark-functions` `timestamp_ns_cast::widen_mixed_values_timestamps`
+runs first in `spark_ltz_timestamp_cast`. It rewrites each naive-microsecond
+`VALUES` column as the rule would. When the rewritten cells are only instants and
+naive walls with at least one of each, it types the column `TIMESTAMP` and casts
+each wall cell to `TIMESTAMP`, which the rule localizes in the session zone.
+Because it runs before NTZ-1's DML retarget, the positional doors get the same
+column type. Before the fold they differed from Spark only on a New York
+DST-gap NTZ row stored into a `TIMESTAMP_NTZ` column. No store helper changed.
+
 ## Clauses
 
 | Clause | Statement | Proof obligation | Verdict | Evidence |
@@ -57,6 +79,7 @@ sessions) the `CAST` reads the naive wall as UTC as `arrow_cast` did.
 | C-002 | A `TIMESTAMP_NTZ` stored into a `TIMESTAMP` column through the C-001 doors and through `MERGE … UPDATE SET`, `UPDATE SET *`, `INSERT (cols)` and `INSERT *` stores Spark's session-zone instant in New York and Kolkata, including the gap and overlap rows; UTC sessions store what they stored before. | One Rust pin per door and the facade replay per door and zone. | PROVEN | `ntz_store.rs` `*_stores_the_ntz_session_instant` for `by_name`, `overwrite`, `overwrite_by_name`, `overwrite_partition`, `dynamic_overwrite`, `column_list_overwrite`, `merge_update`, `merge_update_star`, `merge_insert`, `merge_insert_star` (all red on `adc26586`); `test_ntz_store_doors_1.py` cells `{utc,ny,kol}/ts/*`. |
 | C-003 | Nothing else moves: STRING and INT sources refuse with today's text on every door, NULL, same-type (NTZ→NTZ, LTZ→LTZ) and DATE→NTZ stores are unchanged, NTZ-1's doors (VALUES, SELECT, UPDATE, the MERGE LTZ→NTZ arms, the DataFrame append, `writeTo().overwrite(cond)`) are unchanged, time travel reads the pre-insert snapshot unchanged, and the ANSI door's MERGE into an instant column reads a naive wall as UTC as before. | The probe diff before/after, the refusal steps replaying RePark's recorded text, the MERGE LTZ→NTZ pins green on base, and one ANSI-door pin green on base and head. | PROVEN | Probe before/after (`out/doors-before.json`, `out/doors-after.json`): 108 statements change answer, 0 refusal texts, 0 UTC answers, 0 same-type cells; the facade cells assert 132 refusal steps by RePark's recorded text (identical before and after); `ntz_store.rs` `merge_{update,update_star,insert,insert_star}_stores_the_ltz_session_wall` green on base; repark-sql `ansi_ntz_wall_cast.rs` `ansi_merge_into_an_instant_column_keeps_the_utc_reading` green on base and head. |
 | C-004 | A `DATE` stored into a `TIMESTAMP` column through the C-002 doors stores Spark's session-zone midnight (base stored the UTC midnight there; the VALUES, SELECT, UPDATE and append doors already stored the session midnight). | The Rust pin over six doors and three zones, and the facade `date` rows. | PROVEN | `ntz_store.rs` `date_stores_the_session_midnight_through_every_door` (red on `adc26586`); `test_ntz_store_doors_1.py` `date` rows of the `ts` cells. |
+| C-006 | A `VALUES` list or inline table whose column mixes `TIMESTAMP` and `TIMESTAMP_NTZ` has Spark's type `timestamp`, and its NTZ rows are session-zone walls. A plain SELECT answers Spark's `typeof` and values in UTC, New York, Kolkata and Lord Howe. Every write door stores Spark's value in both `TIMESTAMP` and `TIMESTAMP_NTZ` columns in New York and Kolkata, including a DST-gap row and NULL, in both row orders. The doors are positional INSERT VALUES and SELECT, INSERT OVERWRITE VALUES and SELECT, `BY NAME` append and overwrite, MERGE INSERT *, INSERT (cols), UPDATE SET and UPDATE SET *, `writeTo().overwritePartitions()`, `insertInto(overwrite=True)` and `writeTo().append()`. All-NTZ and all-LTZ columns and every other type pair keep their type. No probe cell that equalled Spark moves. | The Rust pins per SQL door and for the SELECT type. The facade replay of Spark's recorded answers per door, zone, target type and source. The mutation that reverts the coercion. The verifier's full 4,504-statement probe re-run on the fold. | PROVEN | `ntz_values_mix.rs`: ten door pins and `mixed_values_type_the_column_timestamp_through_the_session_zone` are red with the coercion reverted and green with it; `unmixed_values_keep_their_timestamp_type` is green both ways. `test_ntz_store_doors_1.py` `test_mixed_values_column_stores_sparks_value` (52 cells) and `test_mixed_values_column_types_timestamp` (4 zones) replay `ntz_store_doors_1_mixed_spark_oracle.json`. The mixed probe (`target/ntz-mix/mixprobe.py`, 1,061 statements per engine) moves 314 cells to Spark's answer, and 0 move any other way. The verifier's probe moves 46 cells to EQUAL (4,003 → 4,049 of 4,504), and 0 move any other way. |
 | C-005 | On `days(v)` and `hours(v)` partitioned tables the rows, the `.partitions` values and the equality filter follow the stored value on INSERT … SELECT, `BY NAME`, `MERGE … INSERT *` and `INSERT OVERWRITE` in all three zones. | The facade replay of Spark's recorded rows, partitions and filter answers. | PROVEN | `test_ntz_store_doors_1.py` `test_partition_transforms_follow_the_stored_value[{utc,ny,kol}/{ts,ntz}/{days,hours}]`. |
 
 ## Mutation record (2026-09-28)
@@ -69,6 +92,8 @@ restored (the whole working diff hashed identical before and after).
 | M1 | Remove the BY NAME routing (`zone_stores_by_name` call in `append_by_name_projection`). | Rust `by_name_stores_the_ltz_session_wall`, `by_name_stores_the_ntz_session_instant`, `date_stores_the_session_midnight_through_every_door` (at `by_name America/New_York`); facade `{ny,kol}/{ntz,ts}/byname` and the eight non-UTC partition cells (each writes one BY NAME row). | Every other Rust pin (30 of 33 in the module) and facade cell (54 door cells, 4 UTC partition cells). |
 | M2 | Remove the MERGE INSERT routing for LTZ targets (`zone_wrapping_stream_sql` instant predicate forced false). | Rust `merge_insert_star_stores_the_ntz_session_instant`, `merge_insert_stores_the_ntz_session_instant`, `date_stores_the_session_midnight_through_every_door` (at `merge_insert_star America/New_York`); facade `{ny,kol}/ts/{merge_ins,merge_ins_star}`. | Every other Rust pin (30 of 33) and facade cell (62 of 66; run before the partition cells existed). |
 
+| M3 | Verifier fold (2026-09-29): revert the VD-1 coercion. `instant_ts.rs` and `timestamp_ns_cast.rs` go back to the fold's parent, and the facade is rebuilt. | Rust: 11 of 12 `ntz_values_mix` pins (all ten door pins and the SELECT-type pin). Facade: 43 of 52 mixed door cells and all 4 mixed SELECT cells. | Rust: `unmixed_values_keep_their_timestamp_type`. Facade: 9 positional-door cells that already equalled Spark (`{ny,kol}/ltz` and `kol/ntz` × `ins_values`, `ins_sel`, `df_append`) and every earlier cell. The working diff hashed identical before and after the revert (`319d5a19…`). |
+
 `MERGE … INSERT *` and `MERGE … INSERT (cols)` share one seam
 (`insert_stream_checked`; the star expands to explicit columns before SQL
 generation), so no mutation can remove the routing for `INSERT *` alone: M2 reds
@@ -77,7 +102,9 @@ both INSERT arms and nothing else.
 ## Tests rewritten
 
 None. No existing pin changed answer: `repark-spark` lib 2487 passed,
-`repark-iceberg` lib 759 passed, `repark-sql` all targets green.
+`repark-iceberg` lib 759 passed, `repark-sql` all targets green. In the verifier
+fold, the facade file's partition test and the new mixed tests share one replay
+helper (`_replay_rows`). The partition test's steps and assertions are unchanged.
 
 ## Coverage
 
@@ -88,7 +115,7 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every clause is walked against Spark's recorded answer on the same door and zone; the probe covers 15 doors, 11 sources, both target types and three zones, and the facade replays 66 door cells and 12 partition cells.
-      artifacts: [python/repark/tests/test_ntz_store_doors_1.py, python/repark/tests/ntz_store_doors_1_spark_oracle.json, crates/repark-spark/src/tests/ntz_store.rs]
+      artifacts: [python/repark/tests/test_ntz_store_doors_1.py, python/repark/tests/ntz_store_doors_1_spark_oracle.json, python/repark/tests/ntz_store_doors_1_mixed_spark_oracle.json, crates/repark-spark/src/tests/ntz_store.rs, crates/repark-spark/src/tests/ntz_values_mix.rs]
     - id: AT-2
       status: ATTACKED
       evidence: One Rust pin per door and direction over UTC, New York and Kolkata with the gap and overlap rows; the must-not-change cells are asserted by the probe diff and the facade refusal steps.
@@ -119,8 +146,8 @@ COVERAGE_ATTESTATION:
       justification: No registry or user-facing doc change in this unit; the ledger and the maps carry the record.
     - id: AT-10
       status: ATTACKED
-      evidence: Each pin asserts exact walls, instants or refusal texts; M1 and M2 break one routing each and the named pins red before restore.
-      artifacts: [crates/repark-spark/src/tests/ntz_store.rs, python/repark/tests/test_ntz_store_doors_1.py]
+      evidence: Each pin asserts exact walls, instants or refusal texts; M1 and M2 break one routing each and the named pins red before restore; M3 reverts the VD-1 coercion and reds 11 Rust pins and 47 facade cells.
+      artifacts: [crates/repark-spark/src/tests/ntz_store.rs, crates/repark-spark/src/tests/ntz_values_mix.rs, python/repark/tests/test_ntz_store_doors_1.py]
   complete: true
 ```
 
@@ -136,6 +163,9 @@ R-NTZ-S2-5, and the two reads after their STRING refusals, which still refuse);
 
 | # | Residue |
 |---|---|
-| R-1 | Dated 2026-09-28 (VN-6, NTZ-1 R-NTZ-S2-6, no change here): `STRUCT<t: TIMESTAMP_NTZ>` stores the UTC wall of an LTZ field on VALUES and `BY NAME` — New York Spark `2024-01-01 07:00:00`, RePark `2024-01-01 12:00:00`; Kolkata Spark `2024-01-01 17:30:00`, RePark `2024-01-01 12:00:00` (`x/{ny,kol}/struct/read`). |
+| R-1 | Dated 2026-09-28 and widened 2026-09-29 (VN-6, NTZ-1 R-NTZ-S2-6, verifier VD-2; no change here, base equals head). `STRUCT<t: TIMESTAMP_NTZ>` stores the UTC wall of an LTZ field on VALUES and `BY NAME`. New York: Spark `2024-01-01 07:00:00`, RePark `2024-01-01 12:00:00`. Kolkata: Spark `2024-01-01 17:30:00`, RePark `2024-01-01 12:00:00` (`x/{ny,kol}/struct/read`). The verifier's `b/` section shows the residue is wider: `STRUCT<TIMESTAMP>` from NTZ, `ARRAY<TIMESTAMP>`, `ARRAY<TIMESTAMP_NTZ>`, `MAP<STRING,TIMESTAMP>` and `MAP<STRING,TIMESTAMP_NTZ>` each differ from Spark on all 13 doors in New York and Kolkata, NTZ-1's VALUES, SELECT and UPDATE included. Example: `ARRAY<TIMESTAMP_NTZ>` from `array(TIMESTAMP '2024-07-01 12:00:00')` in New York, Spark `12:00:00`, RePark `16:00:00`. Same-type ARRAY stores through MERGE INSERT and UPDATE refuse (`List(Timestamp(ns))` is not store-assignable) where Spark stores. `zone_stores` and every NTZ-1 door map only top-level Iceberg `Timestamp` / `Timestamptz`. Follow-up card: nested session-zone store assignment (ARRAY, MAP, STRUCT) and the MERGE array refusal. |
 | R-2 | Dated 2026-09-28 (C-004 scope note): the work order listed DATE→`TIMESTAMP` as unchanged ("midnight walls"); base stored the UTC midnight on the PE-2 doors (New York `1710028800000000`), Spark stores the session midnight (`1710046800000000`), and the one seam converts `DATE` with the naive sources. Excluding `DATE` from `needs_ltz_instant_cast` restores base on every door but MERGE UPDATE, which would need a typed render. |
 | R-3 | Dated 2026-09-28 (wording, unchanged): STRING and INT refusals on the `BY NAME`, `INSERT OVERWRITE` and MERGE doors keep RePark's `cannot store-assign` text where Spark answers `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]` (NTZ-1 R-NTZ-S2-4/5 STRING halves; both refuse). |
+| R-4 | Closed 2026-09-29. The hand-back listed `insertInto(overwrite=True)` as measured on the facade only. The verifier measured it on Spark 4.1.2 with static and dynamic `partitionOverwriteMode`, `write.mode('overwrite').insertInto` and a table-sourced `insertInto`. All are EQUAL on the fold's parent in UTC, New York, Kolkata and Lord Howe in both directions, and C-006's `df_ii_ow` cells replay Spark on the fold. |
+| R-5 | Dated 2026-09-29 (verifier VD-3, pre-existing, base equals head, no change here). A MERGE `ON` clause comparing a `TIMESTAMP_NTZ` target column with a `TIMESTAMP` source key does not match where Spark matches. Repro, New York: `MERGE INTO m t USING (SELECT TIMESTAMP '2024-07-01 12:00:00' AS k, 9 AS nid) s ON t.v = s.k …` over the row `TIMESTAMP_NTZ '2024-07-01 12:00:00'`. Spark matches and updates `id` to 9; RePark inserts row 10 (`a/{ny,kol,lhi}/ntz/mon*`). The mirrored case, an LTZ target with an NTZ key, matches Spark. This unit does not convert the `ON` clause. Backlog card: MERGE join-key comparison coercion. |
+| R-6 | Dated 2026-09-29 (measured in the fold's mixed probe, pre-existing, unchanged). `VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, DATE '2024-01-15')` types the column `timestamp` where Spark answers `timestamp_ntz`. The values print the same in every zone. This is a different type pair, which C-006 leaves unchanged by design (`sel/*/date_ntz_mix`). In the verifier's `mx2/` section, `nvl(ntz, ts)` types `string` where Spark answers `timestamp`, and its INSERT doors store no rows. That is the `nvl` function's own coercion, not the `VALUES` seam. It is pre-existing and unchanged, and the pinned UNION, CASE, coalesce, IF and greatest mixes equal Spark. |

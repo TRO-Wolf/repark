@@ -14,10 +14,11 @@ use datafusion::arrow::datatypes::{
     TimestampNanosecondType,
 };
 use datafusion::arrow::error::ArrowError;
+use datafusion::common::tree_node::Transformed;
 use datafusion::common::{DFSchema, DataFusionError, Result, ScalarValue};
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{
-    ColumnarValue, Expr, ExprSchemable, LogicalPlan, ReturnFieldArgs, ScalarFunctionArgs,
+    Cast, ColumnarValue, Expr, ExprSchemable, LogicalPlan, ReturnFieldArgs, ScalarFunctionArgs,
     ScalarUDF, ScalarUDFImpl, Signature, Values, Volatility,
 };
 
@@ -569,6 +570,96 @@ fn values_actions(values: &Values) -> Vec<(usize, ValuesAction)> {
         }
     }
     actions
+}
+
+pub(crate) fn widen_mixed_values_timestamps(
+    plan: LogicalPlan,
+    rewrite: &dyn Fn(Expr) -> Result<Expr>,
+) -> Result<LogicalPlan> {
+    let mut widened = false;
+    plan.transform_up_with_subqueries(|node| match node {
+        LogicalPlan::Values(values) => {
+            let (node, changed) = widen_values(values, rewrite)?;
+            widened |= changed;
+            Ok(Transformed::new_transformed(node, changed))
+        }
+        node if widened => node.recompute_schema().map(Transformed::yes),
+        node => Ok(Transformed::no(node)),
+    })
+    .map(|transformed| transformed.data)
+}
+
+fn widen_values(
+    values: Values,
+    rewrite: &dyn Fn(Expr) -> Result<Expr>,
+) -> Result<(LogicalPlan, bool)> {
+    let wall = DataType::Timestamp(TimeUnit::Microsecond, None);
+    let instant = crate::instant_ts::ltz_timestamp_type();
+    let columns: Vec<usize> = values
+        .schema
+        .fields()
+        .iter()
+        .enumerate()
+        .filter(|(_, field)| field.data_type() == &wall)
+        .map(|(column, _)| column)
+        .collect();
+    if columns.is_empty() {
+        return Ok((LogicalPlan::Values(values), false));
+    }
+    let empty = DFSchema::empty();
+    let mut rows = values.values;
+    let mut fields: Vec<(Option<datafusion::common::TableReference>, FieldRef)> = values
+        .schema
+        .iter()
+        .map(|(qualifier, field)| (qualifier.cloned(), Arc::clone(field)))
+        .collect();
+    let mut changed = false;
+    for column in columns {
+        let Ok(cells) = rows
+            .iter()
+            .map(|row| rewrite(row[column].clone()))
+            .collect::<Result<Vec<Expr>>>()
+        else {
+            continue;
+        };
+        let Ok(types) = cells
+            .iter()
+            .map(|cell| cell.get_type(&empty))
+            .collect::<Result<Vec<DataType>>>()
+        else {
+            continue;
+        };
+        let instants = types.iter().filter(|found| **found == instant).count();
+        let walls = types.iter().filter(|found| **found == wall).count();
+        if instants == 0 || walls == 0 || instants + walls != types.len() {
+            continue;
+        }
+        for (row, (cell, found)) in rows.iter_mut().zip(cells.into_iter().zip(types)) {
+            row[column] = if found == wall {
+                Expr::Cast(Cast::new(Box::new(cell), instant.clone()))
+            } else {
+                cell
+            };
+        }
+        let field = &mut fields[column].1;
+        *field = Arc::new(field.as_ref().clone().with_data_type(instant.clone()));
+        changed = true;
+    }
+    let schema = if changed {
+        Arc::new(DFSchema::new_with_metadata(
+            fields,
+            values.schema.metadata().clone(),
+        )?)
+    } else {
+        values.schema
+    };
+    Ok((
+        LogicalPlan::Values(Values {
+            schema,
+            values: rows,
+        }),
+        changed,
+    ))
 }
 
 #[cfg(test)]

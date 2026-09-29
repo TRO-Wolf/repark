@@ -11,6 +11,8 @@ from repark.spark.functions import col
 
 ORACLE_PATH: Path = Path(__file__).with_name("ntz_store_doors_1_spark_oracle.json")
 _ORACLE: dict[str, Any] = json.loads(ORACLE_PATH.read_text(encoding="utf-8"))
+MIXED_ORACLE_PATH: Path = Path(__file__).with_name("ntz_store_doors_1_mixed_spark_oracle.json")
+_MIXED: dict[str, Any] = json.loads(MIXED_ORACLE_PATH.read_text(encoding="utf-8"))
 
 
 def _open(zone: str, warehouse: Path) -> ReparkSession:
@@ -42,6 +44,12 @@ def _run_step(session: ReparkSession, step: dict[str, Any]) -> list[list[Any]]:
     if door == "df_ow_cond":
         session.sql(step["sql"]).writeTo(step["table"]).overwrite(col("id") == step["id"])
         return []
+    if door == "df_ii_ow":
+        session.sql(step["sql"]).write.insertInto(step["table"], overwrite=True)
+        return []
+    if door == "df_append":
+        session.sql(step["sql"]).writeTo(step["table"]).append()
+        return []
     return [[_plain(item) for item in row] for row in session.sql(step["sql"]).collect()]
 
 
@@ -68,10 +76,8 @@ def test_write_door_stores_sparks_value(cell: str, tmp_path: Path) -> None:
         session.stop()
 
 
-@pytest.mark.parametrize("cell", sorted(_ORACLE["partitions"]))
-def test_partition_transforms_follow_the_stored_value(cell: str, tmp_path: Path) -> None:
-    spec = _ORACLE["partitions"][cell]
-    session = _open(spec["zone"], tmp_path)
+def _replay_rows(spec: dict[str, Any], warehouse: Path) -> None:
+    session = _open(spec["zone"], warehouse)
     try:
         session.sql("CREATE NAMESPACE IF NOT EXISTS sc.ns").collect()
         for step in spec["steps"]:
@@ -80,3 +86,18 @@ def test_partition_transforms_follow_the_stored_value(cell: str, tmp_path: Path)
                 assert sorted(rows, key=repr) == step["rows"], step["key"]
     finally:
         session.stop()
+
+
+@pytest.mark.parametrize("cell", sorted(_ORACLE["partitions"]))
+def test_partition_transforms_follow_the_stored_value(cell: str, tmp_path: Path) -> None:
+    _replay_rows(_ORACLE["partitions"][cell], tmp_path)
+
+
+@pytest.mark.parametrize("cell", sorted(_MIXED["cells"]))
+def test_mixed_values_column_stores_sparks_value(cell: str, tmp_path: Path) -> None:
+    _replay_rows(_MIXED["cells"][cell], tmp_path)
+
+
+@pytest.mark.parametrize("zone", sorted(_MIXED["selects"]))
+def test_mixed_values_column_types_timestamp(zone: str, tmp_path: Path) -> None:
+    _replay_rows(_MIXED["selects"][zone], tmp_path)

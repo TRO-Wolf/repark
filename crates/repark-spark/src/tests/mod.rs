@@ -91,6 +91,7 @@ mod nested_column_ddl;
 mod normalize;
 mod ntz_door;
 mod ntz_store;
+mod ntz_values_mix;
 mod overwrite_mode;
 mod parquet_dictionary;
 mod partition_append;

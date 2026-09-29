@@ -1,0 +1,5861 @@
+{
+ "source": "target/ntz-mix/out/m-spark.json (Spark 4.1.2 + Iceberg 1.11.0, hadoop catalog, measured 2026-09-29): VALUES and inline tables mixing TIMESTAMP and TIMESTAMP_NTZ in one column",
+ "cells": {
+  "ny/ltz/ins_values": {
+   "zone": "America/New_York",
+   "steps": [
+    {
+     "key": "mx/ny/ntz_first/ltz/ins_values/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_79 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/ins_values/w",
+     "sql": "INSERT INTO sc.ns.mx_ny_79 VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00')"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/ins_values/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_79",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719849600000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705379400000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/ins_values/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_105 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/ins_values/w",
+     "sql": "INSERT INTO sc.ns.mx_ny_105 VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00')"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/ins_values/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_105",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719849600000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705379400000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/edges/ltz/ins_values/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_131 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/edges/ltz/ins_values/w",
+     "sql": "INSERT INTO sc.ns.mx_ny_131 VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00')"
+    },
+    {
+     "key": "mx/ny/edges/ltz/ins_values/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_131",
+     "rows": [
+      [
+       1,
+       "2024-03-10 03:30:00",
+       1710055800000000
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00",
+       1730611800000000
+      ],
+      [
+       3,
+       null,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00",
+       1730611800000000
+      ],
+      [
+       5,
+       "2024-03-10 03:30:00",
+       1710055800000000
+      ]
+     ]
+    }
+   ]
+  },
+  "ny/ltz/ins_sel": {
+   "zone": "America/New_York",
+   "steps": [
+    {
+     "key": "mx/ny/ntz_first/ltz/ins_sel/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_80 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/ins_sel/w",
+     "sql": "INSERT INTO sc.ns.mx_ny_80 SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/ins_sel/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_80",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719849600000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705379400000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/ins_sel/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_106 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/ins_sel/w",
+     "sql": "INSERT INTO sc.ns.mx_ny_106 SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/ins_sel/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_106",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719849600000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705379400000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/edges/ltz/ins_sel/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_132 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/edges/ltz/ins_sel/w",
+     "sql": "INSERT INTO sc.ns.mx_ny_132 SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/ny/edges/ltz/ins_sel/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_132",
+     "rows": [
+      [
+       1,
+       "2024-03-10 03:30:00",
+       1710055800000000
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00",
+       1730611800000000
+      ],
+      [
+       3,
+       null,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00",
+       1730611800000000
+      ],
+      [
+       5,
+       "2024-03-10 03:30:00",
+       1710055800000000
+      ]
+     ]
+    }
+   ]
+  },
+  "ny/ltz/ow_values": {
+   "zone": "America/New_York",
+   "steps": [
+    {
+     "key": "mx/ny/ntz_first/ltz/ow_values/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_81 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/ow_values/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_ny_81 VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00')"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/ow_values/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_81",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719849600000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705379400000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/ow_values/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_107 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/ow_values/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_ny_107 VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00')"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/ow_values/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_107",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719849600000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705379400000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/edges/ltz/ow_values/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_133 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/edges/ltz/ow_values/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_ny_133 VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00')"
+    },
+    {
+     "key": "mx/ny/edges/ltz/ow_values/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_133",
+     "rows": [
+      [
+       1,
+       "2024-03-10 03:30:00",
+       1710055800000000
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00",
+       1730611800000000
+      ],
+      [
+       3,
+       null,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00",
+       1730611800000000
+      ],
+      [
+       5,
+       "2024-03-10 03:30:00",
+       1710055800000000
+      ]
+     ]
+    }
+   ]
+  },
+  "ny/ltz/ow_sel": {
+   "zone": "America/New_York",
+   "steps": [
+    {
+     "key": "mx/ny/ntz_first/ltz/ow_sel/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_82 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/ow_sel/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_ny_82 SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/ow_sel/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_82",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719849600000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705379400000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/ow_sel/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_108 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/ow_sel/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_ny_108 SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/ow_sel/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_108",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719849600000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705379400000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/edges/ltz/ow_sel/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_134 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/edges/ltz/ow_sel/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_ny_134 SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/ny/edges/ltz/ow_sel/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_134",
+     "rows": [
+      [
+       1,
+       "2024-03-10 03:30:00",
+       1710055800000000
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00",
+       1730611800000000
+      ],
+      [
+       3,
+       null,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00",
+       1730611800000000
+      ],
+      [
+       5,
+       "2024-03-10 03:30:00",
+       1710055800000000
+      ]
+     ]
+    }
+   ]
+  },
+  "ny/ltz/byname": {
+   "zone": "America/New_York",
+   "steps": [
+    {
+     "key": "mx/ny/ntz_first/ltz/byname/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_83 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/byname/w",
+     "sql": "INSERT INTO sc.ns.mx_ny_83 BY NAME SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/byname/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_83",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719849600000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705379400000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/byname/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_109 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/byname/w",
+     "sql": "INSERT INTO sc.ns.mx_ny_109 BY NAME SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/byname/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_109",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719849600000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705379400000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/edges/ltz/byname/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_135 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/edges/ltz/byname/w",
+     "sql": "INSERT INTO sc.ns.mx_ny_135 BY NAME SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/ny/edges/ltz/byname/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_135",
+     "rows": [
+      [
+       1,
+       "2024-03-10 03:30:00",
+       1710055800000000
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00",
+       1730611800000000
+      ],
+      [
+       3,
+       null,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00",
+       1730611800000000
+      ],
+      [
+       5,
+       "2024-03-10 03:30:00",
+       1710055800000000
+      ]
+     ]
+    }
+   ]
+  },
+  "ny/ltz/ow_byname": {
+   "zone": "America/New_York",
+   "steps": [
+    {
+     "key": "mx/ny/ntz_first/ltz/ow_byname/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_84 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/ow_byname/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_ny_84 BY NAME SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/ow_byname/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_84",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719849600000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705379400000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/ow_byname/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_110 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/ow_byname/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_ny_110 BY NAME SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/ow_byname/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_110",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719849600000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705379400000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/edges/ltz/ow_byname/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_136 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/edges/ltz/ow_byname/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_ny_136 BY NAME SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/ny/edges/ltz/ow_byname/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_136",
+     "rows": [
+      [
+       1,
+       "2024-03-10 03:30:00",
+       1710055800000000
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00",
+       1730611800000000
+      ],
+      [
+       3,
+       null,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00",
+       1730611800000000
+      ],
+      [
+       5,
+       "2024-03-10 03:30:00",
+       1710055800000000
+      ]
+     ]
+    }
+   ]
+  },
+  "ny/ltz/merge_ins_star": {
+   "zone": "America/New_York",
+   "steps": [
+    {
+     "key": "mx/ny/ntz_first/ltz/merge_ins_star/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_85 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/merge_ins_star/w",
+     "sql": "MERGE INTO sc.ns.mx_ny_85 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/merge_ins_star/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_85",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719849600000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705379400000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/merge_ins_star/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_111 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/merge_ins_star/w",
+     "sql": "MERGE INTO sc.ns.mx_ny_111 t USING (SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/merge_ins_star/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_111",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719849600000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705379400000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/edges/ltz/merge_ins_star/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_137 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/edges/ltz/merge_ins_star/w",
+     "sql": "MERGE INTO sc.ns.mx_ny_137 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+    },
+    {
+     "key": "mx/ny/edges/ltz/merge_ins_star/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_137",
+     "rows": [
+      [
+       1,
+       "2024-03-10 03:30:00",
+       1710055800000000
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00",
+       1730611800000000
+      ],
+      [
+       3,
+       null,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00",
+       1730611800000000
+      ],
+      [
+       5,
+       "2024-03-10 03:30:00",
+       1710055800000000
+      ]
+     ]
+    }
+   ]
+  },
+  "ny/ltz/merge_ins_cols": {
+   "zone": "America/New_York",
+   "steps": [
+    {
+     "key": "mx/ny/ntz_first/ltz/merge_ins_cols/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_86 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/merge_ins_cols/w",
+     "sql": "MERGE INTO sc.ns.mx_ny_86 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/merge_ins_cols/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_86",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719849600000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705379400000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/merge_ins_cols/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_112 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/merge_ins_cols/w",
+     "sql": "MERGE INTO sc.ns.mx_ny_112 t USING (SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/merge_ins_cols/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_112",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719849600000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705379400000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/edges/ltz/merge_ins_cols/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_138 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/edges/ltz/merge_ins_cols/w",
+     "sql": "MERGE INTO sc.ns.mx_ny_138 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+    },
+    {
+     "key": "mx/ny/edges/ltz/merge_ins_cols/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_138",
+     "rows": [
+      [
+       1,
+       "2024-03-10 03:30:00",
+       1710055800000000
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00",
+       1730611800000000
+      ],
+      [
+       3,
+       null,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00",
+       1730611800000000
+      ],
+      [
+       5,
+       "2024-03-10 03:30:00",
+       1710055800000000
+      ]
+     ]
+    }
+   ]
+  },
+  "ny/ltz/merge_upd": {
+   "zone": "America/New_York",
+   "steps": [
+    {
+     "key": "mx/ny/ntz_first/ltz/merge_upd/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_87 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/merge_upd/seed",
+     "sql": "INSERT INTO sc.ns.mx_ny_87 VALUES (1, NULL), (2, NULL)"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/merge_upd/w",
+     "sql": "MERGE INTO sc.ns.mx_ny_87 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/merge_upd/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_87",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719849600000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705379400000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/merge_upd/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_113 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/merge_upd/seed",
+     "sql": "INSERT INTO sc.ns.mx_ny_113 VALUES (1, NULL), (2, NULL)"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/merge_upd/w",
+     "sql": "MERGE INTO sc.ns.mx_ny_113 t USING (SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/merge_upd/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_113",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719849600000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705379400000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/edges/ltz/merge_upd/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_139 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/edges/ltz/merge_upd/seed",
+     "sql": "INSERT INTO sc.ns.mx_ny_139 VALUES (1, NULL), (2, NULL), (3, NULL), (4, NULL), (5, NULL)"
+    },
+    {
+     "key": "mx/ny/edges/ltz/merge_upd/w",
+     "sql": "MERGE INTO sc.ns.mx_ny_139 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v"
+    },
+    {
+     "key": "mx/ny/edges/ltz/merge_upd/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_139",
+     "rows": [
+      [
+       1,
+       "2024-03-10 03:30:00",
+       1710055800000000
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00",
+       1730611800000000
+      ],
+      [
+       3,
+       null,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00",
+       1730611800000000
+      ],
+      [
+       5,
+       "2024-03-10 03:30:00",
+       1710055800000000
+      ]
+     ]
+    }
+   ]
+  },
+  "ny/ltz/merge_upd_star": {
+   "zone": "America/New_York",
+   "steps": [
+    {
+     "key": "mx/ny/ntz_first/ltz/merge_upd_star/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_88 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/merge_upd_star/seed",
+     "sql": "INSERT INTO sc.ns.mx_ny_88 VALUES (1, NULL), (2, NULL)"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/merge_upd_star/w",
+     "sql": "MERGE INTO sc.ns.mx_ny_88 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/merge_upd_star/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_88",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719849600000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705379400000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/merge_upd_star/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_114 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/merge_upd_star/seed",
+     "sql": "INSERT INTO sc.ns.mx_ny_114 VALUES (1, NULL), (2, NULL)"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/merge_upd_star/w",
+     "sql": "MERGE INTO sc.ns.mx_ny_114 t USING (SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/merge_upd_star/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_114",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719849600000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705379400000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/edges/ltz/merge_upd_star/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_140 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/edges/ltz/merge_upd_star/seed",
+     "sql": "INSERT INTO sc.ns.mx_ny_140 VALUES (1, NULL), (2, NULL), (3, NULL), (4, NULL), (5, NULL)"
+    },
+    {
+     "key": "mx/ny/edges/ltz/merge_upd_star/w",
+     "sql": "MERGE INTO sc.ns.mx_ny_140 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+    },
+    {
+     "key": "mx/ny/edges/ltz/merge_upd_star/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_140",
+     "rows": [
+      [
+       1,
+       "2024-03-10 03:30:00",
+       1710055800000000
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00",
+       1730611800000000
+      ],
+      [
+       3,
+       null,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00",
+       1730611800000000
+      ],
+      [
+       5,
+       "2024-03-10 03:30:00",
+       1710055800000000
+      ]
+     ]
+    }
+   ]
+  },
+  "ny/ltz/df_owp": {
+   "zone": "America/New_York",
+   "steps": [
+    {
+     "key": "mx/ny/ntz_first/ltz/df_owp/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_89 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/df_owp/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "df": "df_owp",
+     "table": "sc.ns.mx_ny_89"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/df_owp/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_89",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719849600000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705379400000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/df_owp/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_115 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/df_owp/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)",
+     "df": "df_owp",
+     "table": "sc.ns.mx_ny_115"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/df_owp/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_115",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719849600000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705379400000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/edges/ltz/df_owp/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_141 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/edges/ltz/df_owp/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)",
+     "df": "df_owp",
+     "table": "sc.ns.mx_ny_141"
+    },
+    {
+     "key": "mx/ny/edges/ltz/df_owp/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_141",
+     "rows": [
+      [
+       1,
+       "2024-03-10 03:30:00",
+       1710055800000000
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00",
+       1730611800000000
+      ],
+      [
+       3,
+       null,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00",
+       1730611800000000
+      ],
+      [
+       5,
+       "2024-03-10 03:30:00",
+       1710055800000000
+      ]
+     ]
+    }
+   ]
+  },
+  "ny/ltz/df_ii_ow": {
+   "zone": "America/New_York",
+   "steps": [
+    {
+     "key": "mx/ny/ntz_first/ltz/df_ii_ow/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_90 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/df_ii_ow/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "df": "df_ii_ow",
+     "table": "sc.ns.mx_ny_90"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/df_ii_ow/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_90",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719849600000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705379400000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/df_ii_ow/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_116 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/df_ii_ow/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)",
+     "df": "df_ii_ow",
+     "table": "sc.ns.mx_ny_116"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/df_ii_ow/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_116",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719849600000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705379400000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/edges/ltz/df_ii_ow/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_142 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/edges/ltz/df_ii_ow/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)",
+     "df": "df_ii_ow",
+     "table": "sc.ns.mx_ny_142"
+    },
+    {
+     "key": "mx/ny/edges/ltz/df_ii_ow/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_142",
+     "rows": [
+      [
+       1,
+       "2024-03-10 03:30:00",
+       1710055800000000
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00",
+       1730611800000000
+      ],
+      [
+       3,
+       null,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00",
+       1730611800000000
+      ],
+      [
+       5,
+       "2024-03-10 03:30:00",
+       1710055800000000
+      ]
+     ]
+    }
+   ]
+  },
+  "ny/ltz/df_append": {
+   "zone": "America/New_York",
+   "steps": [
+    {
+     "key": "mx/ny/ntz_first/ltz/df_append/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_91 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/df_append/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "df": "df_append",
+     "table": "sc.ns.mx_ny_91"
+    },
+    {
+     "key": "mx/ny/ntz_first/ltz/df_append/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_91",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719849600000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705379400000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/df_append/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_117 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/df_append/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)",
+     "df": "df_append",
+     "table": "sc.ns.mx_ny_117"
+    },
+    {
+     "key": "mx/ny/ltz_first/ltz/df_append/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_117",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719849600000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705379400000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/edges/ltz/df_append/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_143 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/ny/edges/ltz/df_append/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)",
+     "df": "df_append",
+     "table": "sc.ns.mx_ny_143"
+    },
+    {
+     "key": "mx/ny/edges/ltz/df_append/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_ny_143",
+     "rows": [
+      [
+       1,
+       "2024-03-10 03:30:00",
+       1710055800000000
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00",
+       1730611800000000
+      ],
+      [
+       3,
+       null,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00",
+       1730611800000000
+      ],
+      [
+       5,
+       "2024-03-10 03:30:00",
+       1710055800000000
+      ]
+     ]
+    }
+   ]
+  },
+  "ny/ntz/ins_values": {
+   "zone": "America/New_York",
+   "steps": [
+    {
+     "key": "mx/ny/ntz_first/ntz/ins_values/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_92 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/ins_values/w",
+     "sql": "INSERT INTO sc.ns.mx_ny_92 VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00')"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/ins_values/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_92",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/ins_values/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_118 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/ins_values/w",
+     "sql": "INSERT INTO sc.ns.mx_ny_118 VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00')"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/ins_values/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_118",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/edges/ntz/ins_values/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_144 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/edges/ntz/ins_values/w",
+     "sql": "INSERT INTO sc.ns.mx_ny_144 VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00')"
+    },
+    {
+     "key": "mx/ny/edges/ntz/ins_values/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_144",
+     "rows": [
+      [
+       1,
+       "2024-03-10 03:30:00"
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "2024-03-10 03:30:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "ny/ntz/ins_sel": {
+   "zone": "America/New_York",
+   "steps": [
+    {
+     "key": "mx/ny/ntz_first/ntz/ins_sel/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_93 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/ins_sel/w",
+     "sql": "INSERT INTO sc.ns.mx_ny_93 SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/ins_sel/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_93",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/ins_sel/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_119 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/ins_sel/w",
+     "sql": "INSERT INTO sc.ns.mx_ny_119 SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/ins_sel/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_119",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/edges/ntz/ins_sel/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_145 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/edges/ntz/ins_sel/w",
+     "sql": "INSERT INTO sc.ns.mx_ny_145 SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/ny/edges/ntz/ins_sel/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_145",
+     "rows": [
+      [
+       1,
+       "2024-03-10 03:30:00"
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "2024-03-10 03:30:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "ny/ntz/ow_values": {
+   "zone": "America/New_York",
+   "steps": [
+    {
+     "key": "mx/ny/ntz_first/ntz/ow_values/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_94 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/ow_values/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_ny_94 VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00')"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/ow_values/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_94",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/ow_values/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_120 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/ow_values/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_ny_120 VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00')"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/ow_values/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_120",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/edges/ntz/ow_values/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_146 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/edges/ntz/ow_values/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_ny_146 VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00')"
+    },
+    {
+     "key": "mx/ny/edges/ntz/ow_values/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_146",
+     "rows": [
+      [
+       1,
+       "2024-03-10 03:30:00"
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "2024-03-10 03:30:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "ny/ntz/ow_sel": {
+   "zone": "America/New_York",
+   "steps": [
+    {
+     "key": "mx/ny/ntz_first/ntz/ow_sel/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_95 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/ow_sel/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_ny_95 SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/ow_sel/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_95",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/ow_sel/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_121 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/ow_sel/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_ny_121 SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/ow_sel/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_121",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/edges/ntz/ow_sel/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_147 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/edges/ntz/ow_sel/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_ny_147 SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/ny/edges/ntz/ow_sel/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_147",
+     "rows": [
+      [
+       1,
+       "2024-03-10 03:30:00"
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "2024-03-10 03:30:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "ny/ntz/byname": {
+   "zone": "America/New_York",
+   "steps": [
+    {
+     "key": "mx/ny/ntz_first/ntz/byname/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_96 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/byname/w",
+     "sql": "INSERT INTO sc.ns.mx_ny_96 BY NAME SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/byname/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_96",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/byname/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_122 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/byname/w",
+     "sql": "INSERT INTO sc.ns.mx_ny_122 BY NAME SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/byname/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_122",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/edges/ntz/byname/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_148 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/edges/ntz/byname/w",
+     "sql": "INSERT INTO sc.ns.mx_ny_148 BY NAME SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/ny/edges/ntz/byname/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_148",
+     "rows": [
+      [
+       1,
+       "2024-03-10 03:30:00"
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "2024-03-10 03:30:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "ny/ntz/ow_byname": {
+   "zone": "America/New_York",
+   "steps": [
+    {
+     "key": "mx/ny/ntz_first/ntz/ow_byname/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_97 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/ow_byname/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_ny_97 BY NAME SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/ow_byname/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_97",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/ow_byname/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_123 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/ow_byname/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_ny_123 BY NAME SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/ow_byname/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_123",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/edges/ntz/ow_byname/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_149 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/edges/ntz/ow_byname/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_ny_149 BY NAME SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/ny/edges/ntz/ow_byname/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_149",
+     "rows": [
+      [
+       1,
+       "2024-03-10 03:30:00"
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "2024-03-10 03:30:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "ny/ntz/merge_ins_star": {
+   "zone": "America/New_York",
+   "steps": [
+    {
+     "key": "mx/ny/ntz_first/ntz/merge_ins_star/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_98 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/merge_ins_star/w",
+     "sql": "MERGE INTO sc.ns.mx_ny_98 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/merge_ins_star/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_98",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/merge_ins_star/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_124 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/merge_ins_star/w",
+     "sql": "MERGE INTO sc.ns.mx_ny_124 t USING (SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/merge_ins_star/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_124",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/edges/ntz/merge_ins_star/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_150 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/edges/ntz/merge_ins_star/w",
+     "sql": "MERGE INTO sc.ns.mx_ny_150 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+    },
+    {
+     "key": "mx/ny/edges/ntz/merge_ins_star/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_150",
+     "rows": [
+      [
+       1,
+       "2024-03-10 03:30:00"
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "2024-03-10 03:30:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "ny/ntz/merge_ins_cols": {
+   "zone": "America/New_York",
+   "steps": [
+    {
+     "key": "mx/ny/ntz_first/ntz/merge_ins_cols/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_99 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/merge_ins_cols/w",
+     "sql": "MERGE INTO sc.ns.mx_ny_99 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/merge_ins_cols/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_99",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/merge_ins_cols/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_125 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/merge_ins_cols/w",
+     "sql": "MERGE INTO sc.ns.mx_ny_125 t USING (SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/merge_ins_cols/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_125",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/edges/ntz/merge_ins_cols/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_151 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/edges/ntz/merge_ins_cols/w",
+     "sql": "MERGE INTO sc.ns.mx_ny_151 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+    },
+    {
+     "key": "mx/ny/edges/ntz/merge_ins_cols/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_151",
+     "rows": [
+      [
+       1,
+       "2024-03-10 03:30:00"
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "2024-03-10 03:30:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "ny/ntz/merge_upd": {
+   "zone": "America/New_York",
+   "steps": [
+    {
+     "key": "mx/ny/ntz_first/ntz/merge_upd/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_100 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/merge_upd/seed",
+     "sql": "INSERT INTO sc.ns.mx_ny_100 VALUES (1, NULL), (2, NULL)"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/merge_upd/w",
+     "sql": "MERGE INTO sc.ns.mx_ny_100 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/merge_upd/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_100",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/merge_upd/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_126 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/merge_upd/seed",
+     "sql": "INSERT INTO sc.ns.mx_ny_126 VALUES (1, NULL), (2, NULL)"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/merge_upd/w",
+     "sql": "MERGE INTO sc.ns.mx_ny_126 t USING (SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/merge_upd/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_126",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/edges/ntz/merge_upd/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_152 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/edges/ntz/merge_upd/seed",
+     "sql": "INSERT INTO sc.ns.mx_ny_152 VALUES (1, NULL), (2, NULL), (3, NULL), (4, NULL), (5, NULL)"
+    },
+    {
+     "key": "mx/ny/edges/ntz/merge_upd/w",
+     "sql": "MERGE INTO sc.ns.mx_ny_152 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v"
+    },
+    {
+     "key": "mx/ny/edges/ntz/merge_upd/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_152",
+     "rows": [
+      [
+       1,
+       "2024-03-10 03:30:00"
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "2024-03-10 03:30:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "ny/ntz/merge_upd_star": {
+   "zone": "America/New_York",
+   "steps": [
+    {
+     "key": "mx/ny/ntz_first/ntz/merge_upd_star/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_101 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/merge_upd_star/seed",
+     "sql": "INSERT INTO sc.ns.mx_ny_101 VALUES (1, NULL), (2, NULL)"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/merge_upd_star/w",
+     "sql": "MERGE INTO sc.ns.mx_ny_101 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/merge_upd_star/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_101",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/merge_upd_star/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_127 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/merge_upd_star/seed",
+     "sql": "INSERT INTO sc.ns.mx_ny_127 VALUES (1, NULL), (2, NULL)"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/merge_upd_star/w",
+     "sql": "MERGE INTO sc.ns.mx_ny_127 t USING (SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/merge_upd_star/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_127",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/edges/ntz/merge_upd_star/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_153 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/edges/ntz/merge_upd_star/seed",
+     "sql": "INSERT INTO sc.ns.mx_ny_153 VALUES (1, NULL), (2, NULL), (3, NULL), (4, NULL), (5, NULL)"
+    },
+    {
+     "key": "mx/ny/edges/ntz/merge_upd_star/w",
+     "sql": "MERGE INTO sc.ns.mx_ny_153 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+    },
+    {
+     "key": "mx/ny/edges/ntz/merge_upd_star/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_153",
+     "rows": [
+      [
+       1,
+       "2024-03-10 03:30:00"
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "2024-03-10 03:30:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "ny/ntz/df_owp": {
+   "zone": "America/New_York",
+   "steps": [
+    {
+     "key": "mx/ny/ntz_first/ntz/df_owp/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_102 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/df_owp/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "df": "df_owp",
+     "table": "sc.ns.mx_ny_102"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/df_owp/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_102",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/df_owp/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_128 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/df_owp/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)",
+     "df": "df_owp",
+     "table": "sc.ns.mx_ny_128"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/df_owp/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_128",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/edges/ntz/df_owp/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_154 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/edges/ntz/df_owp/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)",
+     "df": "df_owp",
+     "table": "sc.ns.mx_ny_154"
+    },
+    {
+     "key": "mx/ny/edges/ntz/df_owp/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_154",
+     "rows": [
+      [
+       1,
+       "2024-03-10 03:30:00"
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "2024-03-10 03:30:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "ny/ntz/df_ii_ow": {
+   "zone": "America/New_York",
+   "steps": [
+    {
+     "key": "mx/ny/ntz_first/ntz/df_ii_ow/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_103 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/df_ii_ow/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "df": "df_ii_ow",
+     "table": "sc.ns.mx_ny_103"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/df_ii_ow/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_103",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/df_ii_ow/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_129 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/df_ii_ow/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)",
+     "df": "df_ii_ow",
+     "table": "sc.ns.mx_ny_129"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/df_ii_ow/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_129",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/edges/ntz/df_ii_ow/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_155 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/edges/ntz/df_ii_ow/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)",
+     "df": "df_ii_ow",
+     "table": "sc.ns.mx_ny_155"
+    },
+    {
+     "key": "mx/ny/edges/ntz/df_ii_ow/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_155",
+     "rows": [
+      [
+       1,
+       "2024-03-10 03:30:00"
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "2024-03-10 03:30:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "ny/ntz/df_append": {
+   "zone": "America/New_York",
+   "steps": [
+    {
+     "key": "mx/ny/ntz_first/ntz/df_append/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_104 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/df_append/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "df": "df_append",
+     "table": "sc.ns.mx_ny_104"
+    },
+    {
+     "key": "mx/ny/ntz_first/ntz/df_append/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_104",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/df_append/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_130 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/df_append/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)",
+     "df": "df_append",
+     "table": "sc.ns.mx_ny_130"
+    },
+    {
+     "key": "mx/ny/ltz_first/ntz/df_append/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_130",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/ny/edges/ntz/df_append/create",
+     "sql": "CREATE TABLE sc.ns.mx_ny_156 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/ny/edges/ntz/df_append/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)",
+     "df": "df_append",
+     "table": "sc.ns.mx_ny_156"
+    },
+    {
+     "key": "mx/ny/edges/ntz/df_append/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_ny_156",
+     "rows": [
+      [
+       1,
+       "2024-03-10 03:30:00"
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "2024-03-10 03:30:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "kol/ltz/ins_values": {
+   "zone": "Asia/Kolkata",
+   "steps": [
+    {
+     "key": "mx/kol/ntz_first/ltz/ins_values/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_157 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/ins_values/w",
+     "sql": "INSERT INTO sc.ns.mx_kol_157 VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00')"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/ins_values/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_157",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719815400000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705341600000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/ins_values/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_183 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/ins_values/w",
+     "sql": "INSERT INTO sc.ns.mx_kol_183 VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00')"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/ins_values/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_183",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719815400000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705341600000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/edges/ltz/ins_values/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_209 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/edges/ltz/ins_values/w",
+     "sql": "INSERT INTO sc.ns.mx_kol_209 VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00')"
+    },
+    {
+     "key": "mx/kol/edges/ltz/ins_values/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_209",
+     "rows": [
+      [
+       1,
+       "2024-03-10 02:30:00",
+       1710018000000000
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00",
+       1730577600000000
+      ],
+      [
+       3,
+       null,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00",
+       1730577600000000
+      ],
+      [
+       5,
+       "2024-03-10 02:30:00",
+       1710018000000000
+      ]
+     ]
+    }
+   ]
+  },
+  "kol/ltz/ins_sel": {
+   "zone": "Asia/Kolkata",
+   "steps": [
+    {
+     "key": "mx/kol/ntz_first/ltz/ins_sel/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_158 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/ins_sel/w",
+     "sql": "INSERT INTO sc.ns.mx_kol_158 SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/ins_sel/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_158",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719815400000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705341600000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/ins_sel/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_184 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/ins_sel/w",
+     "sql": "INSERT INTO sc.ns.mx_kol_184 SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/ins_sel/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_184",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719815400000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705341600000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/edges/ltz/ins_sel/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_210 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/edges/ltz/ins_sel/w",
+     "sql": "INSERT INTO sc.ns.mx_kol_210 SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/kol/edges/ltz/ins_sel/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_210",
+     "rows": [
+      [
+       1,
+       "2024-03-10 02:30:00",
+       1710018000000000
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00",
+       1730577600000000
+      ],
+      [
+       3,
+       null,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00",
+       1730577600000000
+      ],
+      [
+       5,
+       "2024-03-10 02:30:00",
+       1710018000000000
+      ]
+     ]
+    }
+   ]
+  },
+  "kol/ltz/ow_values": {
+   "zone": "Asia/Kolkata",
+   "steps": [
+    {
+     "key": "mx/kol/ntz_first/ltz/ow_values/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_159 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/ow_values/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_kol_159 VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00')"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/ow_values/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_159",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719815400000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705341600000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/ow_values/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_185 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/ow_values/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_kol_185 VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00')"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/ow_values/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_185",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719815400000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705341600000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/edges/ltz/ow_values/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_211 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/edges/ltz/ow_values/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_kol_211 VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00')"
+    },
+    {
+     "key": "mx/kol/edges/ltz/ow_values/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_211",
+     "rows": [
+      [
+       1,
+       "2024-03-10 02:30:00",
+       1710018000000000
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00",
+       1730577600000000
+      ],
+      [
+       3,
+       null,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00",
+       1730577600000000
+      ],
+      [
+       5,
+       "2024-03-10 02:30:00",
+       1710018000000000
+      ]
+     ]
+    }
+   ]
+  },
+  "kol/ltz/ow_sel": {
+   "zone": "Asia/Kolkata",
+   "steps": [
+    {
+     "key": "mx/kol/ntz_first/ltz/ow_sel/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_160 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/ow_sel/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_kol_160 SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/ow_sel/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_160",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719815400000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705341600000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/ow_sel/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_186 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/ow_sel/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_kol_186 SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/ow_sel/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_186",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719815400000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705341600000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/edges/ltz/ow_sel/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_212 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/edges/ltz/ow_sel/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_kol_212 SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/kol/edges/ltz/ow_sel/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_212",
+     "rows": [
+      [
+       1,
+       "2024-03-10 02:30:00",
+       1710018000000000
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00",
+       1730577600000000
+      ],
+      [
+       3,
+       null,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00",
+       1730577600000000
+      ],
+      [
+       5,
+       "2024-03-10 02:30:00",
+       1710018000000000
+      ]
+     ]
+    }
+   ]
+  },
+  "kol/ltz/byname": {
+   "zone": "Asia/Kolkata",
+   "steps": [
+    {
+     "key": "mx/kol/ntz_first/ltz/byname/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_161 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/byname/w",
+     "sql": "INSERT INTO sc.ns.mx_kol_161 BY NAME SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/byname/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_161",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719815400000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705341600000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/byname/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_187 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/byname/w",
+     "sql": "INSERT INTO sc.ns.mx_kol_187 BY NAME SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/byname/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_187",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719815400000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705341600000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/edges/ltz/byname/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_213 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/edges/ltz/byname/w",
+     "sql": "INSERT INTO sc.ns.mx_kol_213 BY NAME SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/kol/edges/ltz/byname/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_213",
+     "rows": [
+      [
+       1,
+       "2024-03-10 02:30:00",
+       1710018000000000
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00",
+       1730577600000000
+      ],
+      [
+       3,
+       null,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00",
+       1730577600000000
+      ],
+      [
+       5,
+       "2024-03-10 02:30:00",
+       1710018000000000
+      ]
+     ]
+    }
+   ]
+  },
+  "kol/ltz/ow_byname": {
+   "zone": "Asia/Kolkata",
+   "steps": [
+    {
+     "key": "mx/kol/ntz_first/ltz/ow_byname/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_162 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/ow_byname/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_kol_162 BY NAME SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/ow_byname/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_162",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719815400000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705341600000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/ow_byname/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_188 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/ow_byname/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_kol_188 BY NAME SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/ow_byname/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_188",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719815400000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705341600000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/edges/ltz/ow_byname/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_214 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/edges/ltz/ow_byname/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_kol_214 BY NAME SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/kol/edges/ltz/ow_byname/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_214",
+     "rows": [
+      [
+       1,
+       "2024-03-10 02:30:00",
+       1710018000000000
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00",
+       1730577600000000
+      ],
+      [
+       3,
+       null,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00",
+       1730577600000000
+      ],
+      [
+       5,
+       "2024-03-10 02:30:00",
+       1710018000000000
+      ]
+     ]
+    }
+   ]
+  },
+  "kol/ltz/merge_ins_star": {
+   "zone": "Asia/Kolkata",
+   "steps": [
+    {
+     "key": "mx/kol/ntz_first/ltz/merge_ins_star/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_163 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/merge_ins_star/w",
+     "sql": "MERGE INTO sc.ns.mx_kol_163 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/merge_ins_star/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_163",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719815400000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705341600000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/merge_ins_star/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_189 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/merge_ins_star/w",
+     "sql": "MERGE INTO sc.ns.mx_kol_189 t USING (SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/merge_ins_star/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_189",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719815400000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705341600000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/edges/ltz/merge_ins_star/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_215 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/edges/ltz/merge_ins_star/w",
+     "sql": "MERGE INTO sc.ns.mx_kol_215 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+    },
+    {
+     "key": "mx/kol/edges/ltz/merge_ins_star/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_215",
+     "rows": [
+      [
+       1,
+       "2024-03-10 02:30:00",
+       1710018000000000
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00",
+       1730577600000000
+      ],
+      [
+       3,
+       null,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00",
+       1730577600000000
+      ],
+      [
+       5,
+       "2024-03-10 02:30:00",
+       1710018000000000
+      ]
+     ]
+    }
+   ]
+  },
+  "kol/ltz/merge_ins_cols": {
+   "zone": "Asia/Kolkata",
+   "steps": [
+    {
+     "key": "mx/kol/ntz_first/ltz/merge_ins_cols/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_164 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/merge_ins_cols/w",
+     "sql": "MERGE INTO sc.ns.mx_kol_164 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/merge_ins_cols/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_164",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719815400000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705341600000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/merge_ins_cols/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_190 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/merge_ins_cols/w",
+     "sql": "MERGE INTO sc.ns.mx_kol_190 t USING (SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/merge_ins_cols/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_190",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719815400000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705341600000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/edges/ltz/merge_ins_cols/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_216 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/edges/ltz/merge_ins_cols/w",
+     "sql": "MERGE INTO sc.ns.mx_kol_216 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+    },
+    {
+     "key": "mx/kol/edges/ltz/merge_ins_cols/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_216",
+     "rows": [
+      [
+       1,
+       "2024-03-10 02:30:00",
+       1710018000000000
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00",
+       1730577600000000
+      ],
+      [
+       3,
+       null,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00",
+       1730577600000000
+      ],
+      [
+       5,
+       "2024-03-10 02:30:00",
+       1710018000000000
+      ]
+     ]
+    }
+   ]
+  },
+  "kol/ltz/merge_upd": {
+   "zone": "Asia/Kolkata",
+   "steps": [
+    {
+     "key": "mx/kol/ntz_first/ltz/merge_upd/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_165 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/merge_upd/seed",
+     "sql": "INSERT INTO sc.ns.mx_kol_165 VALUES (1, NULL), (2, NULL)"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/merge_upd/w",
+     "sql": "MERGE INTO sc.ns.mx_kol_165 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/merge_upd/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_165",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719815400000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705341600000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/merge_upd/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_191 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/merge_upd/seed",
+     "sql": "INSERT INTO sc.ns.mx_kol_191 VALUES (1, NULL), (2, NULL)"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/merge_upd/w",
+     "sql": "MERGE INTO sc.ns.mx_kol_191 t USING (SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/merge_upd/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_191",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719815400000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705341600000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/edges/ltz/merge_upd/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_217 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/edges/ltz/merge_upd/seed",
+     "sql": "INSERT INTO sc.ns.mx_kol_217 VALUES (1, NULL), (2, NULL), (3, NULL), (4, NULL), (5, NULL)"
+    },
+    {
+     "key": "mx/kol/edges/ltz/merge_upd/w",
+     "sql": "MERGE INTO sc.ns.mx_kol_217 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v"
+    },
+    {
+     "key": "mx/kol/edges/ltz/merge_upd/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_217",
+     "rows": [
+      [
+       1,
+       "2024-03-10 02:30:00",
+       1710018000000000
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00",
+       1730577600000000
+      ],
+      [
+       3,
+       null,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00",
+       1730577600000000
+      ],
+      [
+       5,
+       "2024-03-10 02:30:00",
+       1710018000000000
+      ]
+     ]
+    }
+   ]
+  },
+  "kol/ltz/merge_upd_star": {
+   "zone": "Asia/Kolkata",
+   "steps": [
+    {
+     "key": "mx/kol/ntz_first/ltz/merge_upd_star/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_166 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/merge_upd_star/seed",
+     "sql": "INSERT INTO sc.ns.mx_kol_166 VALUES (1, NULL), (2, NULL)"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/merge_upd_star/w",
+     "sql": "MERGE INTO sc.ns.mx_kol_166 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/merge_upd_star/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_166",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719815400000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705341600000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/merge_upd_star/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_192 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/merge_upd_star/seed",
+     "sql": "INSERT INTO sc.ns.mx_kol_192 VALUES (1, NULL), (2, NULL)"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/merge_upd_star/w",
+     "sql": "MERGE INTO sc.ns.mx_kol_192 t USING (SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/merge_upd_star/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_192",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719815400000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705341600000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/edges/ltz/merge_upd_star/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_218 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/edges/ltz/merge_upd_star/seed",
+     "sql": "INSERT INTO sc.ns.mx_kol_218 VALUES (1, NULL), (2, NULL), (3, NULL), (4, NULL), (5, NULL)"
+    },
+    {
+     "key": "mx/kol/edges/ltz/merge_upd_star/w",
+     "sql": "MERGE INTO sc.ns.mx_kol_218 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+    },
+    {
+     "key": "mx/kol/edges/ltz/merge_upd_star/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_218",
+     "rows": [
+      [
+       1,
+       "2024-03-10 02:30:00",
+       1710018000000000
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00",
+       1730577600000000
+      ],
+      [
+       3,
+       null,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00",
+       1730577600000000
+      ],
+      [
+       5,
+       "2024-03-10 02:30:00",
+       1710018000000000
+      ]
+     ]
+    }
+   ]
+  },
+  "kol/ltz/df_owp": {
+   "zone": "Asia/Kolkata",
+   "steps": [
+    {
+     "key": "mx/kol/ntz_first/ltz/df_owp/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_167 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/df_owp/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "df": "df_owp",
+     "table": "sc.ns.mx_kol_167"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/df_owp/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_167",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719815400000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705341600000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/df_owp/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_193 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/df_owp/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)",
+     "df": "df_owp",
+     "table": "sc.ns.mx_kol_193"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/df_owp/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_193",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719815400000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705341600000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/edges/ltz/df_owp/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_219 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/edges/ltz/df_owp/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)",
+     "df": "df_owp",
+     "table": "sc.ns.mx_kol_219"
+    },
+    {
+     "key": "mx/kol/edges/ltz/df_owp/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_219",
+     "rows": [
+      [
+       1,
+       "2024-03-10 02:30:00",
+       1710018000000000
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00",
+       1730577600000000
+      ],
+      [
+       3,
+       null,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00",
+       1730577600000000
+      ],
+      [
+       5,
+       "2024-03-10 02:30:00",
+       1710018000000000
+      ]
+     ]
+    }
+   ]
+  },
+  "kol/ltz/df_ii_ow": {
+   "zone": "Asia/Kolkata",
+   "steps": [
+    {
+     "key": "mx/kol/ntz_first/ltz/df_ii_ow/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_168 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/df_ii_ow/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "df": "df_ii_ow",
+     "table": "sc.ns.mx_kol_168"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/df_ii_ow/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_168",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719815400000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705341600000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/df_ii_ow/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_194 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/df_ii_ow/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)",
+     "df": "df_ii_ow",
+     "table": "sc.ns.mx_kol_194"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/df_ii_ow/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_194",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719815400000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705341600000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/edges/ltz/df_ii_ow/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_220 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/edges/ltz/df_ii_ow/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)",
+     "df": "df_ii_ow",
+     "table": "sc.ns.mx_kol_220"
+    },
+    {
+     "key": "mx/kol/edges/ltz/df_ii_ow/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_220",
+     "rows": [
+      [
+       1,
+       "2024-03-10 02:30:00",
+       1710018000000000
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00",
+       1730577600000000
+      ],
+      [
+       3,
+       null,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00",
+       1730577600000000
+      ],
+      [
+       5,
+       "2024-03-10 02:30:00",
+       1710018000000000
+      ]
+     ]
+    }
+   ]
+  },
+  "kol/ltz/df_append": {
+   "zone": "Asia/Kolkata",
+   "steps": [
+    {
+     "key": "mx/kol/ntz_first/ltz/df_append/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_169 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/df_append/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "df": "df_append",
+     "table": "sc.ns.mx_kol_169"
+    },
+    {
+     "key": "mx/kol/ntz_first/ltz/df_append/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_169",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719815400000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705341600000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/df_append/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_195 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/df_append/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)",
+     "df": "df_append",
+     "table": "sc.ns.mx_kol_195"
+    },
+    {
+     "key": "mx/kol/ltz_first/ltz/df_append/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_195",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00",
+       1719815400000000
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00",
+       1705341600000000
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/edges/ltz/df_append/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_221 (id INT, v TIMESTAMP) USING iceberg"
+    },
+    {
+     "key": "mx/kol/edges/ltz/df_append/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)",
+     "df": "df_append",
+     "table": "sc.ns.mx_kol_221"
+    },
+    {
+     "key": "mx/kol/edges/ltz/df_append/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s, unix_micros(v) FROM sc.ns.mx_kol_221",
+     "rows": [
+      [
+       1,
+       "2024-03-10 02:30:00",
+       1710018000000000
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00",
+       1730577600000000
+      ],
+      [
+       3,
+       null,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00",
+       1730577600000000
+      ],
+      [
+       5,
+       "2024-03-10 02:30:00",
+       1710018000000000
+      ]
+     ]
+    }
+   ]
+  },
+  "kol/ntz/ins_values": {
+   "zone": "Asia/Kolkata",
+   "steps": [
+    {
+     "key": "mx/kol/ntz_first/ntz/ins_values/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_170 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/ins_values/w",
+     "sql": "INSERT INTO sc.ns.mx_kol_170 VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00')"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/ins_values/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_170",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/ins_values/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_196 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/ins_values/w",
+     "sql": "INSERT INTO sc.ns.mx_kol_196 VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00')"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/ins_values/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_196",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/edges/ntz/ins_values/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_222 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/edges/ntz/ins_values/w",
+     "sql": "INSERT INTO sc.ns.mx_kol_222 VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00')"
+    },
+    {
+     "key": "mx/kol/edges/ntz/ins_values/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_222",
+     "rows": [
+      [
+       1,
+       "2024-03-10 02:30:00"
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "2024-03-10 02:30:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "kol/ntz/ins_sel": {
+   "zone": "Asia/Kolkata",
+   "steps": [
+    {
+     "key": "mx/kol/ntz_first/ntz/ins_sel/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_171 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/ins_sel/w",
+     "sql": "INSERT INTO sc.ns.mx_kol_171 SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/ins_sel/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_171",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/ins_sel/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_197 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/ins_sel/w",
+     "sql": "INSERT INTO sc.ns.mx_kol_197 SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/ins_sel/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_197",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/edges/ntz/ins_sel/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_223 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/edges/ntz/ins_sel/w",
+     "sql": "INSERT INTO sc.ns.mx_kol_223 SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/kol/edges/ntz/ins_sel/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_223",
+     "rows": [
+      [
+       1,
+       "2024-03-10 02:30:00"
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "2024-03-10 02:30:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "kol/ntz/ow_values": {
+   "zone": "Asia/Kolkata",
+   "steps": [
+    {
+     "key": "mx/kol/ntz_first/ntz/ow_values/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_172 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/ow_values/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_kol_172 VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00')"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/ow_values/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_172",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/ow_values/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_198 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/ow_values/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_kol_198 VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00')"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/ow_values/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_198",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/edges/ntz/ow_values/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_224 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/edges/ntz/ow_values/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_kol_224 VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00')"
+    },
+    {
+     "key": "mx/kol/edges/ntz/ow_values/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_224",
+     "rows": [
+      [
+       1,
+       "2024-03-10 02:30:00"
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "2024-03-10 02:30:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "kol/ntz/ow_sel": {
+   "zone": "Asia/Kolkata",
+   "steps": [
+    {
+     "key": "mx/kol/ntz_first/ntz/ow_sel/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_173 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/ow_sel/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_kol_173 SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/ow_sel/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_173",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/ow_sel/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_199 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/ow_sel/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_kol_199 SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/ow_sel/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_199",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/edges/ntz/ow_sel/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_225 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/edges/ntz/ow_sel/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_kol_225 SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/kol/edges/ntz/ow_sel/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_225",
+     "rows": [
+      [
+       1,
+       "2024-03-10 02:30:00"
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "2024-03-10 02:30:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "kol/ntz/byname": {
+   "zone": "Asia/Kolkata",
+   "steps": [
+    {
+     "key": "mx/kol/ntz_first/ntz/byname/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_174 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/byname/w",
+     "sql": "INSERT INTO sc.ns.mx_kol_174 BY NAME SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/byname/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_174",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/byname/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_200 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/byname/w",
+     "sql": "INSERT INTO sc.ns.mx_kol_200 BY NAME SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/byname/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_200",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/edges/ntz/byname/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_226 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/edges/ntz/byname/w",
+     "sql": "INSERT INTO sc.ns.mx_kol_226 BY NAME SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/kol/edges/ntz/byname/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_226",
+     "rows": [
+      [
+       1,
+       "2024-03-10 02:30:00"
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "2024-03-10 02:30:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "kol/ntz/ow_byname": {
+   "zone": "Asia/Kolkata",
+   "steps": [
+    {
+     "key": "mx/kol/ntz_first/ntz/ow_byname/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_175 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/ow_byname/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_kol_175 BY NAME SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/ow_byname/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_175",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/ow_byname/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_201 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/ow_byname/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_kol_201 BY NAME SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/ow_byname/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_201",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/edges/ntz/ow_byname/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_227 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/edges/ntz/ow_byname/w",
+     "sql": "INSERT OVERWRITE sc.ns.mx_kol_227 BY NAME SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)"
+    },
+    {
+     "key": "mx/kol/edges/ntz/ow_byname/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_227",
+     "rows": [
+      [
+       1,
+       "2024-03-10 02:30:00"
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "2024-03-10 02:30:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "kol/ntz/merge_ins_star": {
+   "zone": "Asia/Kolkata",
+   "steps": [
+    {
+     "key": "mx/kol/ntz_first/ntz/merge_ins_star/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_176 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/merge_ins_star/w",
+     "sql": "MERGE INTO sc.ns.mx_kol_176 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/merge_ins_star/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_176",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/merge_ins_star/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_202 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/merge_ins_star/w",
+     "sql": "MERGE INTO sc.ns.mx_kol_202 t USING (SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/merge_ins_star/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_202",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/edges/ntz/merge_ins_star/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_228 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/edges/ntz/merge_ins_star/w",
+     "sql": "MERGE INTO sc.ns.mx_kol_228 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+    },
+    {
+     "key": "mx/kol/edges/ntz/merge_ins_star/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_228",
+     "rows": [
+      [
+       1,
+       "2024-03-10 02:30:00"
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "2024-03-10 02:30:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "kol/ntz/merge_ins_cols": {
+   "zone": "Asia/Kolkata",
+   "steps": [
+    {
+     "key": "mx/kol/ntz_first/ntz/merge_ins_cols/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_177 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/merge_ins_cols/w",
+     "sql": "MERGE INTO sc.ns.mx_kol_177 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/merge_ins_cols/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_177",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/merge_ins_cols/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_203 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/merge_ins_cols/w",
+     "sql": "MERGE INTO sc.ns.mx_kol_203 t USING (SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/merge_ins_cols/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_203",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/edges/ntz/merge_ins_cols/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_229 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/edges/ntz/merge_ins_cols/w",
+     "sql": "MERGE INTO sc.ns.mx_kol_229 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+    },
+    {
+     "key": "mx/kol/edges/ntz/merge_ins_cols/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_229",
+     "rows": [
+      [
+       1,
+       "2024-03-10 02:30:00"
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "2024-03-10 02:30:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "kol/ntz/merge_upd": {
+   "zone": "Asia/Kolkata",
+   "steps": [
+    {
+     "key": "mx/kol/ntz_first/ntz/merge_upd/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_178 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/merge_upd/seed",
+     "sql": "INSERT INTO sc.ns.mx_kol_178 VALUES (1, NULL), (2, NULL)"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/merge_upd/w",
+     "sql": "MERGE INTO sc.ns.mx_kol_178 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/merge_upd/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_178",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/merge_upd/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_204 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/merge_upd/seed",
+     "sql": "INSERT INTO sc.ns.mx_kol_204 VALUES (1, NULL), (2, NULL)"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/merge_upd/w",
+     "sql": "MERGE INTO sc.ns.mx_kol_204 t USING (SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/merge_upd/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_204",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/edges/ntz/merge_upd/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_230 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/edges/ntz/merge_upd/seed",
+     "sql": "INSERT INTO sc.ns.mx_kol_230 VALUES (1, NULL), (2, NULL), (3, NULL), (4, NULL), (5, NULL)"
+    },
+    {
+     "key": "mx/kol/edges/ntz/merge_upd/w",
+     "sql": "MERGE INTO sc.ns.mx_kol_230 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.v"
+    },
+    {
+     "key": "mx/kol/edges/ntz/merge_upd/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_230",
+     "rows": [
+      [
+       1,
+       "2024-03-10 02:30:00"
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "2024-03-10 02:30:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "kol/ntz/merge_upd_star": {
+   "zone": "Asia/Kolkata",
+   "steps": [
+    {
+     "key": "mx/kol/ntz_first/ntz/merge_upd_star/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_179 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/merge_upd_star/seed",
+     "sql": "INSERT INTO sc.ns.mx_kol_179 VALUES (1, NULL), (2, NULL)"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/merge_upd_star/w",
+     "sql": "MERGE INTO sc.ns.mx_kol_179 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/merge_upd_star/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_179",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/merge_upd_star/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_205 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/merge_upd_star/seed",
+     "sql": "INSERT INTO sc.ns.mx_kol_205 VALUES (1, NULL), (2, NULL)"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/merge_upd_star/w",
+     "sql": "MERGE INTO sc.ns.mx_kol_205 t USING (SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/merge_upd_star/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_205",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/edges/ntz/merge_upd_star/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_231 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/edges/ntz/merge_upd_star/seed",
+     "sql": "INSERT INTO sc.ns.mx_kol_231 VALUES (1, NULL), (2, NULL), (3, NULL), (4, NULL), (5, NULL)"
+    },
+    {
+     "key": "mx/kol/edges/ntz/merge_upd_star/w",
+     "sql": "MERGE INTO sc.ns.mx_kol_231 t USING (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+    },
+    {
+     "key": "mx/kol/edges/ntz/merge_upd_star/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_231",
+     "rows": [
+      [
+       1,
+       "2024-03-10 02:30:00"
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "2024-03-10 02:30:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "kol/ntz/df_owp": {
+   "zone": "Asia/Kolkata",
+   "steps": [
+    {
+     "key": "mx/kol/ntz_first/ntz/df_owp/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_180 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/df_owp/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "df": "df_owp",
+     "table": "sc.ns.mx_kol_180"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/df_owp/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_180",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/df_owp/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_206 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/df_owp/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)",
+     "df": "df_owp",
+     "table": "sc.ns.mx_kol_206"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/df_owp/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_206",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/edges/ntz/df_owp/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_232 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/edges/ntz/df_owp/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)",
+     "df": "df_owp",
+     "table": "sc.ns.mx_kol_232"
+    },
+    {
+     "key": "mx/kol/edges/ntz/df_owp/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_232",
+     "rows": [
+      [
+       1,
+       "2024-03-10 02:30:00"
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "2024-03-10 02:30:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "kol/ntz/df_ii_ow": {
+   "zone": "Asia/Kolkata",
+   "steps": [
+    {
+     "key": "mx/kol/ntz_first/ntz/df_ii_ow/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_181 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/df_ii_ow/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "df": "df_ii_ow",
+     "table": "sc.ns.mx_kol_181"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/df_ii_ow/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_181",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/df_ii_ow/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_207 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/df_ii_ow/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)",
+     "df": "df_ii_ow",
+     "table": "sc.ns.mx_kol_207"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/df_ii_ow/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_207",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/edges/ntz/df_ii_ow/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_233 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/edges/ntz/df_ii_ow/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)",
+     "df": "df_ii_ow",
+     "table": "sc.ns.mx_kol_233"
+    },
+    {
+     "key": "mx/kol/edges/ntz/df_ii_ow/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_233",
+     "rows": [
+      [
+       1,
+       "2024-03-10 02:30:00"
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "2024-03-10 02:30:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "kol/ntz/df_append": {
+   "zone": "Asia/Kolkata",
+   "steps": [
+    {
+     "key": "mx/kol/ntz_first/ntz/df_append/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_182 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/df_append/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "df": "df_append",
+     "table": "sc.ns.mx_kol_182"
+    },
+    {
+     "key": "mx/kol/ntz_first/ntz/df_append/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_182",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/df_append/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_208 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/df_append/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)",
+     "df": "df_append",
+     "table": "sc.ns.mx_kol_208"
+    },
+    {
+     "key": "mx/kol/ltz_first/ntz/df_append/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_208",
+     "rows": [
+      [
+       1,
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "mx/kol/edges/ntz/df_append/create",
+     "sql": "CREATE TABLE sc.ns.mx_kol_234 (id INT, v TIMESTAMP_NTZ) USING iceberg"
+    },
+    {
+     "key": "mx/kol/edges/ntz/df_append/w",
+     "sql": "SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)",
+     "df": "df_append",
+     "table": "sc.ns.mx_kol_234"
+    },
+    {
+     "key": "mx/kol/edges/ntz/df_append/r",
+     "sql": "SELECT id, CAST(v AS STRING) AS v_s FROM sc.ns.mx_kol_234",
+     "rows": [
+      [
+       1,
+       "2024-03-10 02:30:00"
+      ],
+      [
+       2,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       null
+      ],
+      [
+       4,
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "2024-03-10 02:30:00"
+      ]
+     ]
+    }
+   ]
+  }
+ },
+ "selects": {
+  "utc": {
+   "zone": "UTC",
+   "steps": [
+    {
+     "key": "sel/utc/src/ntz_first",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/utc/src/ltz_first",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/utc/src/edges",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-03-10 02:30:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       "timestamp",
+       null
+      ],
+      [
+       4,
+       "timestamp",
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "timestamp",
+       "2024-03-10 02:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/utc/all_ntz",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp_ntz",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp_ntz",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/utc/all_ltz",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/utc/ntz_null",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, NULL) AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp_ntz",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp_ntz",
+       null
+      ]
+     ]
+    },
+    {
+     "key": "sel/utc/ltz_null",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, NULL) AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       null
+      ]
+     ]
+    },
+    {
+     "key": "sel/utc/cast_ntz_mix",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, CAST('2024-07-01 12:00:00' AS TIMESTAMP_NTZ)), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/utc/to_ts_mix",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, to_timestamp('2024-01-15 23:30:00')) AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/utc/two_cols",
+     "sql": "SELECT id, typeof(a), CAST(a AS STRING), typeof(b), CAST(b AS STRING) FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00', TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00', TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, a, b)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00",
+       "timestamp_ntz",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00",
+       "timestamp_ntz",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/utc/subquery",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)) q WHERE id > 0",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/utc/cte",
+     "sql": "WITH c AS (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)) SELECT id, typeof(v), CAST(v AS STRING) FROM c",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/utc/unix",
+     "sql": "SELECT id, unix_micros(v) FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       1719835200000000
+      ],
+      [
+       2,
+       1705361400000000
+      ]
+     ]
+    },
+    {
+     "key": "sel/utc/union_lit",
+     "sql": "SELECT typeof(v), CAST(v AS STRING) FROM (SELECT TIMESTAMP_NTZ '2024-07-01 12:00:00' AS v UNION ALL SELECT TIMESTAMP '2024-01-15 23:30:00')",
+     "rows": [
+      [
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ],
+      [
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/utc/case_lit",
+     "sql": "SELECT typeof(x), CAST(x AS STRING) FROM (SELECT CASE WHEN id = 1 THEN TIMESTAMP_NTZ '2024-07-01 12:00:00' ELSE TIMESTAMP '2024-01-15 23:30:00' END AS x FROM VALUES (1), (2) AS s(id))",
+     "rows": [
+      [
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ],
+      [
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/utc/coalesce_lit",
+     "sql": "SELECT typeof(x), CAST(x AS STRING) FROM (SELECT coalesce(TIMESTAMP_NTZ '2024-07-01 12:00:00', TIMESTAMP '2024-01-15 23:30:00') AS x)",
+     "rows": [
+      [
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/utc/date_ltz_mix",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, DATE '2024-01-15') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 00:00:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "ny": {
+   "zone": "America/New_York",
+   "steps": [
+    {
+     "key": "sel/ny/src/ntz_first",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/ny/src/ltz_first",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/ny/src/edges",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-03-10 03:30:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       "timestamp",
+       null
+      ],
+      [
+       4,
+       "timestamp",
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "timestamp",
+       "2024-03-10 03:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/ny/all_ntz",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp_ntz",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp_ntz",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/ny/all_ltz",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/ny/ntz_null",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, NULL) AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp_ntz",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp_ntz",
+       null
+      ]
+     ]
+    },
+    {
+     "key": "sel/ny/ltz_null",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, NULL) AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       null
+      ]
+     ]
+    },
+    {
+     "key": "sel/ny/cast_ntz_mix",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, CAST('2024-07-01 12:00:00' AS TIMESTAMP_NTZ)), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/ny/to_ts_mix",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, to_timestamp('2024-01-15 23:30:00')) AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/ny/two_cols",
+     "sql": "SELECT id, typeof(a), CAST(a AS STRING), typeof(b), CAST(b AS STRING) FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00', TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00', TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, a, b)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00",
+       "timestamp_ntz",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00",
+       "timestamp_ntz",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/ny/subquery",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)) q WHERE id > 0",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/ny/cte",
+     "sql": "WITH c AS (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)) SELECT id, typeof(v), CAST(v AS STRING) FROM c",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/ny/unix",
+     "sql": "SELECT id, unix_micros(v) FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       1719849600000000
+      ],
+      [
+       2,
+       1705379400000000
+      ]
+     ]
+    },
+    {
+     "key": "sel/ny/union_lit",
+     "sql": "SELECT typeof(v), CAST(v AS STRING) FROM (SELECT TIMESTAMP_NTZ '2024-07-01 12:00:00' AS v UNION ALL SELECT TIMESTAMP '2024-01-15 23:30:00')",
+     "rows": [
+      [
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ],
+      [
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/ny/case_lit",
+     "sql": "SELECT typeof(x), CAST(x AS STRING) FROM (SELECT CASE WHEN id = 1 THEN TIMESTAMP_NTZ '2024-07-01 12:00:00' ELSE TIMESTAMP '2024-01-15 23:30:00' END AS x FROM VALUES (1), (2) AS s(id))",
+     "rows": [
+      [
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ],
+      [
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/ny/coalesce_lit",
+     "sql": "SELECT typeof(x), CAST(x AS STRING) FROM (SELECT coalesce(TIMESTAMP_NTZ '2024-07-01 12:00:00', TIMESTAMP '2024-01-15 23:30:00') AS x)",
+     "rows": [
+      [
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/ny/date_ltz_mix",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, DATE '2024-01-15') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 00:00:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "kol": {
+   "zone": "Asia/Kolkata",
+   "steps": [
+    {
+     "key": "sel/kol/src/ntz_first",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/kol/src/ltz_first",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/kol/src/edges",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-03-10 02:30:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       "timestamp",
+       null
+      ],
+      [
+       4,
+       "timestamp",
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "timestamp",
+       "2024-03-10 02:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/kol/all_ntz",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp_ntz",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp_ntz",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/kol/all_ltz",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/kol/ntz_null",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, NULL) AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp_ntz",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp_ntz",
+       null
+      ]
+     ]
+    },
+    {
+     "key": "sel/kol/ltz_null",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, NULL) AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       null
+      ]
+     ]
+    },
+    {
+     "key": "sel/kol/cast_ntz_mix",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, CAST('2024-07-01 12:00:00' AS TIMESTAMP_NTZ)), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/kol/to_ts_mix",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, to_timestamp('2024-01-15 23:30:00')) AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/kol/two_cols",
+     "sql": "SELECT id, typeof(a), CAST(a AS STRING), typeof(b), CAST(b AS STRING) FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00', TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00', TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, a, b)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00",
+       "timestamp_ntz",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00",
+       "timestamp_ntz",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/kol/subquery",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)) q WHERE id > 0",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/kol/cte",
+     "sql": "WITH c AS (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)) SELECT id, typeof(v), CAST(v AS STRING) FROM c",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/kol/unix",
+     "sql": "SELECT id, unix_micros(v) FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       1719815400000000
+      ],
+      [
+       2,
+       1705341600000000
+      ]
+     ]
+    },
+    {
+     "key": "sel/kol/union_lit",
+     "sql": "SELECT typeof(v), CAST(v AS STRING) FROM (SELECT TIMESTAMP_NTZ '2024-07-01 12:00:00' AS v UNION ALL SELECT TIMESTAMP '2024-01-15 23:30:00')",
+     "rows": [
+      [
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ],
+      [
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/kol/case_lit",
+     "sql": "SELECT typeof(x), CAST(x AS STRING) FROM (SELECT CASE WHEN id = 1 THEN TIMESTAMP_NTZ '2024-07-01 12:00:00' ELSE TIMESTAMP '2024-01-15 23:30:00' END AS x FROM VALUES (1), (2) AS s(id))",
+     "rows": [
+      [
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ],
+      [
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/kol/coalesce_lit",
+     "sql": "SELECT typeof(x), CAST(x AS STRING) FROM (SELECT coalesce(TIMESTAMP_NTZ '2024-07-01 12:00:00', TIMESTAMP '2024-01-15 23:30:00') AS x)",
+     "rows": [
+      [
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/kol/date_ltz_mix",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, DATE '2024-01-15') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 00:00:00"
+      ]
+     ]
+    }
+   ]
+  },
+  "lhi": {
+   "zone": "Australia/Lord_Howe",
+   "steps": [
+    {
+     "key": "sel/lhi/src/ntz_first",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/lhi/src/ltz_first",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/lhi/src/edges",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (2, TIMESTAMP '2024-11-03 01:30:00'), (3, NULL), (4, TIMESTAMP_NTZ '2024-11-03 01:30:00'), (5, TIMESTAMP '2024-03-10 02:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-03-10 02:30:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-11-03 01:30:00"
+      ],
+      [
+       3,
+       "timestamp",
+       null
+      ],
+      [
+       4,
+       "timestamp",
+       "2024-11-03 01:30:00"
+      ],
+      [
+       5,
+       "timestamp",
+       "2024-03-10 02:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/lhi/all_ntz",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp_ntz",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp_ntz",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/lhi/all_ltz",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/lhi/ntz_null",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, NULL) AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp_ntz",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp_ntz",
+       null
+      ]
+     ]
+    },
+    {
+     "key": "sel/lhi/ltz_null",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, NULL) AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       null
+      ]
+     ]
+    },
+    {
+     "key": "sel/lhi/cast_ntz_mix",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, CAST('2024-07-01 12:00:00' AS TIMESTAMP_NTZ)), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/lhi/to_ts_mix",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, to_timestamp('2024-01-15 23:30:00')) AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/lhi/two_cols",
+     "sql": "SELECT id, typeof(a), CAST(a AS STRING), typeof(b), CAST(b AS STRING) FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00', TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00', TIMESTAMP_NTZ '2024-01-15 23:30:00') AS s(id, a, b)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00",
+       "timestamp_ntz",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00",
+       "timestamp_ntz",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/lhi/subquery",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)) q WHERE id > 0",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/lhi/cte",
+     "sql": "WITH c AS (SELECT * FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)) SELECT id, typeof(v), CAST(v AS STRING) FROM c",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/lhi/unix",
+     "sql": "SELECT id, unix_micros(v) FROM VALUES (1, TIMESTAMP_NTZ '2024-07-01 12:00:00'), (2, TIMESTAMP '2024-01-15 23:30:00') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       1719797400000000
+      ],
+      [
+       2,
+       1705321800000000
+      ]
+     ]
+    },
+    {
+     "key": "sel/lhi/union_lit",
+     "sql": "SELECT typeof(v), CAST(v AS STRING) FROM (SELECT TIMESTAMP_NTZ '2024-07-01 12:00:00' AS v UNION ALL SELECT TIMESTAMP '2024-01-15 23:30:00')",
+     "rows": [
+      [
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ],
+      [
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/lhi/case_lit",
+     "sql": "SELECT typeof(x), CAST(x AS STRING) FROM (SELECT CASE WHEN id = 1 THEN TIMESTAMP_NTZ '2024-07-01 12:00:00' ELSE TIMESTAMP '2024-01-15 23:30:00' END AS x FROM VALUES (1), (2) AS s(id))",
+     "rows": [
+      [
+       "timestamp",
+       "2024-01-15 23:30:00"
+      ],
+      [
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/lhi/coalesce_lit",
+     "sql": "SELECT typeof(x), CAST(x AS STRING) FROM (SELECT coalesce(TIMESTAMP_NTZ '2024-07-01 12:00:00', TIMESTAMP '2024-01-15 23:30:00') AS x)",
+     "rows": [
+      [
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ]
+     ]
+    },
+    {
+     "key": "sel/lhi/date_ltz_mix",
+     "sql": "SELECT id, typeof(v), CAST(v AS STRING) FROM VALUES (1, TIMESTAMP '2024-07-01 12:00:00'), (2, DATE '2024-01-15') AS s(id, v)",
+     "rows": [
+      [
+       1,
+       "timestamp",
+       "2024-07-01 12:00:00"
+      ],
+      [
+       2,
+       "timestamp",
+       "2024-01-15 00:00:00"
+      ]
+     ]
+    }
+   ]
+  }
+ }
+}
