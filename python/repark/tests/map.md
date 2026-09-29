@@ -6997,6 +6997,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   render from value text on `spark.sql` / `selectExpr` / `F.expr`, explicit
   aliases stay.
   pins: fnp-4b/C-001, C-003, C-014, C-015, C-029
+- `test_string_literal_escape_1.py` — **STRING-LITERAL-ESCAPE-1 (2026-09-29):**
+  PE-10 facade pins over the live PySpark 4.1.2 oracle — doubled `""` collapse
+  inside double-quoted literals, `r"…"` literals answering, raw `''`/`""`
+  splitting into head plus quoted tail, verbatim mode keeping doublings and
+  marking raw values with the opening quote — each on `spark.sql` (value,
+  length, Arrow type), `F.expr` / `selectExpr` / `filter`, and an
+  `INSERT INTO … VALUES` round-trip.
+  pins: string-literal-escape-1/C-001, C-002, C-003, C-004
 - `test_fnp_4b_hof_display.py` — **FNP-4B round 6 (2026-09-15):** Q3 red pin for run
   16a — selectExpr higher-order display must hide the `__repark_hof_array_field__`
   packing marker. **Round 7 (2026-09-15):** strict xfail per R-16c-10; 16a flips

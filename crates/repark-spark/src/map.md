@@ -968,7 +968,13 @@ pins: rp-4-fork-repin/C-005, C-006
   lines, so the literal-value engine moves verbatim to the child module
   [spark_literals/unescape.rs](spark_literals/unescape.rs) (comments shed per
   the owner ruling; behavior identical, callers untouched via re-export).
-  pins: string-literal-escape-1/C-000
+  The follow-up fix makes the value engine quote-aware: `""` collapses in
+  double-quoted literals (PE-10), `r"…"` answers, raw `''`/`""` splits head
+  from quoted tail, and verbatim keeps doublings. `create_options.rs` option
+  keys unescape with their own quote type. Rust pins in
+  [tests/spark_string_literals.rs](tests/spark_string_literals.rs), facade
+  pins in `python/repark/tests/test_string_literal_escape_1.py`.
+  pins: string-literal-escape-1/C-000, C-001, C-002, C-003, C-004
 - `spark_literal_typing.rs` — **SQL-LITERAL-TYPING-1 (2026-09-16):**
   `SparkIntegralLiteral` types unsuffixed integral literals as Spark does —
   Int64 fitting i32 narrows to Int32, UInt64 becomes Decimal128(digits, 0),

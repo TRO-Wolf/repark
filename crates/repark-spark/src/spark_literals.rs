@@ -14,7 +14,7 @@ use datafusion::sql::sqlparser::tokenizer::{Location, Token, TokenWithSpan, Toke
 
 mod unescape;
 
-pub(crate) use unescape::{unescape_spark_literal, unescape_verbatim_literal};
+pub(crate) use unescape::unescape_spark_literal;
 
 #[derive(Debug)]
 struct SparkLexDialect(GenericDialect);
@@ -425,25 +425,28 @@ fn plan_literal_regions(tokens: &[TokenWithSpan], keep_verbatim: bool) -> Vec<Li
 }
 
 fn literal_token_value(token: &Token, keep_verbatim: bool) -> Option<String> {
-    let unescape = |raw: &String| {
-        if keep_verbatim {
-            unescape_verbatim_literal(raw)
-        } else {
-            unescape_spark_literal(raw)
-        }
-    };
     match token {
-        Token::SingleQuotedString(raw) | Token::DoubleQuotedString(raw) => Some(unescape(raw)),
-        Token::SingleQuotedRawStringLiteral(raw) => Some(raw.clone()),
+        Token::SingleQuotedString(raw) => Some(unescape::literal_value(raw, '\'', keep_verbatim)),
+        Token::DoubleQuotedString(raw) => Some(unescape::literal_value(raw, '"', keep_verbatim)),
+        Token::SingleQuotedRawStringLiteral(raw) => {
+            Some(unescape::raw_value(raw, '\'', keep_verbatim))
+        }
+        Token::DoubleQuotedRawStringLiteral(raw) => {
+            Some(unescape::raw_value(raw, '"', keep_verbatim))
+        }
         _ => None,
     }
 }
 
 fn literal_needs_rewrite(token: &Token, keep_verbatim: bool) -> bool {
     match token {
-        Token::SingleQuotedString(raw) => raw.contains('\\'),
-        Token::DoubleQuotedString(raw) => !keep_verbatim && raw.contains('\\'),
-        Token::SingleQuotedRawStringLiteral(_) => true,
+        Token::SingleQuotedString(raw) => {
+            raw.contains('\\') || (keep_verbatim && raw.contains("''"))
+        }
+        Token::DoubleQuotedString(raw) => {
+            raw.contains('\\') || (keep_verbatim && raw.contains("\"\""))
+        }
+        Token::SingleQuotedRawStringLiteral(_) | Token::DoubleQuotedRawStringLiteral(_) => true,
         _ => false,
     }
 }

@@ -1,26 +1,46 @@
 const UNREPRESENTABLE: char = '\u{003F}';
 
-pub(crate) fn unescape_verbatim_literal(raw: &str) -> String {
-    let mut out = String::with_capacity(raw.len());
-    let mut characters = raw.chars().peekable();
-    while let Some(current) = characters.next() {
-        if current == '\'' && characters.peek() == Some(&'\'') {
-            characters.next();
-        }
-        out.push(current);
+pub(crate) fn literal_value(raw: &str, quote: char, keep_verbatim: bool) -> String {
+    if keep_verbatim {
+        raw.to_owned()
+    } else {
+        unescape_spark_literal(raw, quote)
     }
-    out
 }
 
-pub(crate) fn unescape_spark_literal(raw: &str) -> String {
+pub(crate) fn raw_value(raw: &str, quote: char, keep_verbatim: bool) -> String {
+    let (head, tail) = split_raw_head(raw, quote);
+    if keep_verbatim {
+        let mut out = String::with_capacity(raw.len() + 1);
+        out.push(quote);
+        out.push_str(head);
+        out.push_str(tail);
+        out
+    } else {
+        let mut out = String::with_capacity(raw.len());
+        out.push_str(head);
+        out.push_str(&unescape_spark_literal(tail, quote));
+        out
+    }
+}
+
+fn split_raw_head(raw: &str, quote: char) -> (&str, &str) {
+    let doubled = if quote == '"' { "\"\"" } else { "''" };
+    match raw.find(doubled) {
+        Some(position) => (&raw[..position], &raw[position + 2..]),
+        None => (raw, ""),
+    }
+}
+
+pub(crate) fn unescape_spark_literal(raw: &str, quote: char) -> String {
     let characters: Vec<char> = raw.chars().collect();
     let mut out = String::with_capacity(raw.len());
     let mut index = 0;
     while index < characters.len() {
         let current = characters[index];
-        if current == '\'' {
-            out.push('\'');
-            index += if characters.get(index + 1) == Some(&'\'') {
+        if current == quote {
+            out.push(quote);
+            index += if characters.get(index + 1) == Some(&quote) {
                 2
             } else {
                 1
