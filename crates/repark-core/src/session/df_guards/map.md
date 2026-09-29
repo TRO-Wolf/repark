@@ -150,6 +150,14 @@ wrapped optimizer rule) and declares this directory.
   `Hit` alias widen to `pub(super)` (line-neutral) so the qualified-display
   path shares Spark's ambiguous text instead of formatting its own.
   pins: casesens-2/C-003
+  **CASESENS-2 re-verify fold (2026-09-28) on `case_bind.rs`:** `bind_names`
+  refuses Spark's 42703 under either rule when the lookup misses but the
+  resolver fold would hit (the RC2-3 split's `ı`/`ς` legs); a total miss
+  still passes through. `refuse_ambiguous_condition` takes the frame rule
+  (RC2-2), `case_hits_by` / `unique_case_match` take the comparison, and
+  `drop_named_columns` matches string names by `resolver_matches` and
+  Column references by lookup (Spark's `drop(str)` vs `drop(Column)`).
+  pins: casesens-2/C-009, C-011
 - [cast_names.rs](cast_names.rs) — **CASESENS-2 S4 clerk (2026-09-28):** the select-path
   written-spelling helper, split byte-identical out of `case_bind.rs` when the merge
   pushed that file past the 1000-line ceiling. `bind_projection_expr` binds through
@@ -236,7 +244,45 @@ wrapped optimizer rule) and declares this directory.
   still binds, and misses keep their rule behavior. Pin
   `qualified_display_multi_hit_refuses_unless_same_engine` covers the
   ambiguous legs (both rules) and the same-engine leg.
+  **CASESENS-2 re-verify fold (2026-09-28):** `match_resolver_names` serves
+  the resolver-direct sites through `NameRule::resolver_matches` (RC2-3),
+  `match_subset_names` matches the same way, `unresolved_display_name`
+  renders Spark's 42703 refusal over a display list, and
+  `qualifier_matches` is shared with `predicate_names.rs`. The predicate
+  rebind moved out to keep this file under 1000. Pin
+  `resolver_names_keep_equals_ignore_case_where_lookup_lowers`.
+  pins: casesens-2/C-009, C-012
+- `predicate_names.rs` — **CASESENS-2 re-verify fold (2026-09-28, RC2-1):**
+  `rebind_predicate_qualifiers(schema, displays, predicate, rule)` parses a
+  SQL-string predicate (Databricks), and for each qualified compound whose
+  qualifier and name (display-paired when the display list lines up with
+  the schema) hit exactly one qualified field by the rule, respells it as
+  the backticked held qualifier plus engine field; unchanged text passes
+  byte-identical. The read spelling of an unquoted part is its ASCII
+  lowercase under `IgnoreCase` (DataFusion normalizes) and itself under
+  `Exact`. Pin `predicate_qualifiers_rebind_to_the_held_spelling_by_rule`.
+  pins: casesens-2/C-010
+- `resolver_names.rs` — **CASESENS-2 re-verify fold (2026-09-28):**
+  `join_on_named_keys`, `union_by_folded_name` and their helpers moved
+  byte-identical out of `case_bind.rs` (1000-line ceiling) with `bind_name`
+  matching through `NameRule::resolver_matches` (Spark's USING keys and
+  `unionByName` use the resolver). Re-exported through `frame_names`;
+  their tests stay in `case_bind.rs`.
+  pins: casesens-2/C-009
   pins: casesens-2/C-003
+  **CASESENS-2 DIFF-PROBE fold (2026-09-28):**
+  `refuse_ambiguous_display_name(schema, displays, written, rule)` renders a
+  bare folded-ambiguous display select through the shared
+  `ambiguous_reference`: matching display positions pair with the schema
+  qualifier at the same index (scratch qualifiers render bare like Spark's
+  ``[`ID`, `ID`]``; catalog qualifiers render qualified like Spark's
+  ``[`sc`.`ns`.`t`.`ID`, `sc`.`ns`.`u`.`ID`]``), and the unpaired corner
+  pairs no qualifier. Fewer than two hits answers ok so the facade keeps
+  its text.
+  Re-exported on a fourth `pub use` line. Pins
+  `bare_twin_select_refuses_spark_ambiguous` and
+  `aliased_twin_select_names_qualified_candidates`.
+  pins: casesens-2/C-006
 
 ## Pointers
 

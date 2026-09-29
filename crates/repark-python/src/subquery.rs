@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use datafusion::arrow::datatypes::{DataType, Field};
 use datafusion::common::tree_node::{Transformed, TreeNode};
-use datafusion::common::{Column, JoinConstraint, NullEquality, Spans};
+use datafusion::common::{Column, JoinConstraint, NullEquality, Spans, TableReference};
 use datafusion::dataframe::DataFrame;
 use datafusion::logical_expr::expr::Exists;
 use datafusion::logical_expr::{
@@ -77,7 +77,13 @@ fn subquery_alias(frame: &PyDataFrame, alias: &str) -> PyResult<PyDataFrame> {
     fenced!("subquery.subquery_alias", {
         let (state, plan) = frame.df.clone().into_parts();
         let aliased = LogicalPlan::SubqueryAlias(
-            SubqueryAlias::try_new(Arc::new(plan), alias).map_err(datafusion_to_py_err)?,
+            SubqueryAlias::try_new(
+                Arc::new(plan),
+                TableReference::Bare {
+                    table: alias.into(),
+                },
+            )
+            .map_err(datafusion_to_py_err)?,
         );
         Ok(PyDataFrame::new(
             DataFrame::new(state, aliased),

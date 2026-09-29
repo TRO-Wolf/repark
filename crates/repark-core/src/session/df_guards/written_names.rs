@@ -42,6 +42,18 @@ pub fn match_display_names(
 }
 
 #[allow(clippy::missing_errors_doc)]
+pub fn match_resolver_names(
+    written: &[String],
+    held: &[String],
+    rule: NameRule,
+) -> Result<Vec<(String, Vec<String>, Disposition)>> {
+    written
+        .iter()
+        .map(|name| match_one_display_by(name, held, rule, NameRule::resolver_matches))
+        .collect()
+}
+
+#[allow(clippy::missing_errors_doc)]
 pub fn match_subset_names(
     written: &[String],
     held: &[String],
@@ -109,6 +121,33 @@ pub fn resolve_qualified_display_names(
 }
 
 #[allow(clippy::missing_errors_doc)]
+pub fn refuse_ambiguous_display_name(
+    frame_schema: &DFSchema,
+    displays: &[String],
+    written: &str,
+    rule: NameRule,
+) -> Result<()> {
+    let paired = frame_schema.fields().len() == displays.len();
+    let column = Column::from_qualified_name_ignore_case(written);
+    let mut hits: Vec<Hit<'_>> = Vec::new();
+    for (index, display) in displays.iter().enumerate() {
+        if !rule.matches(written, display) {
+            continue;
+        }
+        if paired {
+            let (qualifier, field) = frame_schema.qualified_field(index);
+            hits.push((qualifier, field.as_ref()));
+        } else if let Some(field) = frame_schema.fields().first() {
+            hits.push((None, field.as_ref()));
+        }
+    }
+    if hits.len() < 2 {
+        return Ok(());
+    }
+    Err(ambiguous_reference(&column, &hits))
+}
+
+#[allow(clippy::missing_errors_doc)]
 pub fn refuse_folded_duplicate_keys(keys: &[String], rule: NameRule) -> Result<()> {
     if matches!(rule, NameRule::Exact) {
         return Ok(());
@@ -117,6 +156,11 @@ pub fn refuse_folded_duplicate_keys(keys: &[String], rule: NameRule) -> Result<(
         return Err(DataFusionError::Plan(column_already_exists(&twin)));
     }
     Ok(())
+}
+
+#[must_use]
+pub fn unresolved_display_name(written: &str, held: &[String]) -> DataFusionError {
+    unresolved_display_miss(&Column::from_qualified_name_ignore_case(written), held)
 }
 
 #[must_use]
@@ -198,7 +242,11 @@ fn resolve_one_name(
     }
 }
 
-fn qualifier_matches(written: &TableReference, held: &TableReference, rule: NameRule) -> bool {
+pub(super) fn qualifier_matches(
+    written: &TableReference,
+    held: &TableReference,
+    rule: NameRule,
+) -> bool {
     let want = [written.catalog(), written.schema(), Some(written.table())];
     let held = [held.catalog(), held.schema(), Some(held.table())];
     want.into_iter()
@@ -313,7 +361,7 @@ fn settle(
 fn match_one_subset(name: &str, held: &[String], rule: NameRule) -> Result<(String, Vec<String>)> {
     let hits: Vec<String> = held
         .iter()
-        .filter(|candidate| rule.matches(name, candidate))
+        .filter(|candidate| rule.resolver_matches(name, candidate))
         .cloned()
         .collect();
     if hits.len() == 1 || (matches!(rule, NameRule::IgnoreCase) && !hits.is_empty()) {
@@ -327,9 +375,18 @@ fn match_one_display(
     held: &[String],
     rule: NameRule,
 ) -> Result<(String, Vec<String>, Disposition)> {
+    match_one_display_by(name, held, rule, NameRule::matches)
+}
+
+fn match_one_display_by(
+    name: &str,
+    held: &[String],
+    rule: NameRule,
+    same: fn(NameRule, &str, &str) -> bool,
+) -> Result<(String, Vec<String>, Disposition)> {
     let hits: Vec<String> = held
         .iter()
-        .filter(|candidate| rule.matches(name, candidate))
+        .filter(|candidate| same(rule, name, candidate))
         .cloned()
         .collect();
     let disposition = match hits.len() {
@@ -372,9 +429,9 @@ mod tests {
     use datafusion::common::{DFSchema, TableReference};
 
     use super::{
-        Disposition, match_display_names, match_subset_names, refuse_folded_duplicate_keys,
-        resolve_df_names, resolve_qualified_display_names, rewrite_join_condition_aliases,
-        unresolved_subset_name,
+        Disposition, match_display_names, match_resolver_names, match_subset_names,
+        refuse_ambiguous_display_name, refuse_folded_duplicate_keys, resolve_df_names,
+        resolve_qualified_display_names, rewrite_join_condition_aliases, unresolved_subset_name,
     };
     use repark_common::names::NameRule::{Exact, IgnoreCase};
 
@@ -397,6 +454,21 @@ mod tests {
              function parameter with name {reference} cannot be resolved. Did you mean one of the \
              following? [{options}]. SQLSTATE: 42703"
         )
+    }
+
+    fn ambiguous(reference: &str, options: &str) -> String {
+        format!(
+            "Error during planning: [AMBIGUOUS_REFERENCE] Reference {reference} is ambiguous, \
+             could be: [{options}]. SQLSTATE: 42704"
+        )
+    }
+
+    fn bare_schema(names: &[&str]) -> DFSchema {
+        let fields = names
+            .iter()
+            .map(|name| (None, Arc::new(Field::new(*name, DataType::Int64, true))))
+            .collect::<Vec<_>>();
+        DFSchema::new_with_metadata(fields, HashMap::new()).unwrap()
     }
 
     #[test]
@@ -451,6 +523,44 @@ mod tests {
                 Disposition::Bound
             )]
         );
+    }
+
+    #[test]
+    fn bare_twin_select_refuses_spark_ambiguous() {
+        let frame = schema(&[
+            ("__repark_cdf_left", "id"),
+            ("__repark_cdf_left", "Data"),
+            ("__repark_cdf_right", "id"),
+            ("__repark_cdf_right", "Val"),
+        ]);
+        let displays = ["id", "Data", "id", "Val"].map(str::to_string);
+        let error = refuse_ambiguous_display_name(&frame, &displays, "ID", IgnoreCase)
+            .unwrap_err()
+            .to_string();
+        assert_eq!(error, ambiguous("`ID`", "`ID`, `ID`"));
+        let single = refuse_ambiguous_display_name(&frame, &displays, "Val", IgnoreCase);
+        assert!(single.is_ok());
+        let engine = bare_schema(&["left_id", "right_id"]);
+        let twins = ["ID", "id"].map(str::to_string);
+        let error = refuse_ambiguous_display_name(&engine, &twins, "iD", IgnoreCase)
+            .unwrap_err()
+            .to_string();
+        assert_eq!(error, ambiguous("`iD`", "`iD`, `iD`"));
+        let short = bare_schema(&["left_id"]);
+        let error = refuse_ambiguous_display_name(&short, &twins, "iD", IgnoreCase)
+            .unwrap_err()
+            .to_string();
+        assert_eq!(error, ambiguous("`iD`", "`iD`, `iD`"));
+    }
+
+    #[test]
+    fn aliased_twin_select_names_qualified_candidates() {
+        let frame = schema(&[("l", "id"), ("l", "Name"), ("r", "id"), ("r", "Name")]);
+        let displays = ["id", "Name", "id", "Name"].map(str::to_string);
+        let error = refuse_ambiguous_display_name(&frame, &displays, "ID", IgnoreCase)
+            .unwrap_err()
+            .to_string();
+        assert_eq!(error, ambiguous("`ID`", "`l`.`ID`, `r`.`ID`"));
     }
 
     #[test]
@@ -828,5 +938,19 @@ mod tests {
             "Error during planning: [COLUMN_ALREADY_EXISTS] The column `id` already exists. \
              Choose another name or rename the existing column. SQLSTATE: 42711"
         );
+    }
+
+    #[test]
+    fn resolver_names_keep_equals_ignore_case_where_lookup_lowers() {
+        let held = ["id".to_string(), "v".to_string()];
+        let resolver = match_resolver_names(&["ıd".to_string()], &held, IgnoreCase).unwrap();
+        assert_eq!(
+            resolver,
+            vec![("ıd".to_string(), vec!["id".to_string()], Disposition::Bound)]
+        );
+        let lookup = match_display_names(&["ıd".to_string()], &held, IgnoreCase).unwrap();
+        assert_eq!(lookup[0].2, Disposition::Missing);
+        let subset = match_subset_names(&["ıd".to_string()], &held, IgnoreCase).unwrap();
+        assert_eq!(subset, vec![("ıd".to_string(), vec!["id".to_string()])]);
     }
 }

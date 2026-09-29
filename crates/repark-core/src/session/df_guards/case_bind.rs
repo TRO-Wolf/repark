@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt::Write;
 use std::ops::ControlFlow;
 
@@ -6,20 +6,24 @@ use datafusion::arrow::datatypes::Field;
 use datafusion::common::tree_node::{Transformed, TreeNode};
 use datafusion::common::{
     Column, DFSchema, DataFusionError, Location, Result, Span, Spans, TableReference,
-    plan_datafusion_err, plan_err,
+    plan_datafusion_err,
 };
 use datafusion::dataframe::DataFrame;
+use datafusion::logical_expr::Expr;
 use datafusion::logical_expr::expr::Alias;
-use datafusion::logical_expr::{Expr, JoinType, LogicalPlanBuilder};
 use datafusion::sql::sqlparser::ast::{Expr as SqlExpr, visit_expressions};
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::parser::Parser;
 use repark_common::spark_error;
 
 pub use super::cast_names::bind_projection_expr;
+pub use super::predicate_names::rebind_predicate_qualifiers;
+pub use super::resolver_names::{join_on_named_keys, union_by_folded_name};
 pub use super::subquery::resolve_bound_expr_with;
+pub use super::written_names::refuse_ambiguous_display_name;
 pub use super::written_names::{Disposition, refuse_folded_duplicate_keys, unresolved_subset_name};
 pub use super::written_names::{match_display_names, match_subset_names, resolve_df_names};
+pub use super::written_names::{match_resolver_names, unresolved_display_name};
 pub use super::written_names::{resolve_qualified_display_names, rewrite_join_condition_aliases};
 pub use repark_common::names::{NameHit, NameRule};
 
@@ -100,15 +104,30 @@ pub(super) fn bind_names(expr: Expr, frame_schema: &DFSchema, rule: NameRule) ->
                 if hits.len() > 1 {
                     return Err(ambiguous_reference(&column, &hits));
                 }
-                match rule {
-                    NameRule::Exact if hits.is_empty() => {
+                if hits.is_empty() {
+                    if matches!(rule, NameRule::Exact) {
                         return Err(unresolved_column(&column, frame_schema));
                     }
+                    if case_hits_by(
+                        &column,
+                        [frame_schema],
+                        NameRule::IgnoreCase,
+                        NameRule::resolver_matches,
+                    )
+                    .is_empty()
+                    {
+                        return Ok(Transformed::no(Expr::Column(column)));
+                    }
+                    return Err(unresolved_column(&column, frame_schema));
+                }
+                match rule {
                     NameRule::Exact => Transformed::no(Expr::Column(column)),
-                    NameRule::IgnoreCase => match unique_case_match(&column, frame_schema) {
-                        Some(bound) => Transformed::yes(Expr::Column(bound)),
-                        None => Transformed::no(Expr::Column(column)),
-                    },
+                    NameRule::IgnoreCase => {
+                        match unique_case_match(&column, frame_schema, NameRule::matches) {
+                            Some(bound) => Transformed::yes(Expr::Column(bound)),
+                            None => Transformed::no(Expr::Column(column)),
+                        }
+                    }
                 }
             }
             Expr::Alias(alias) => match written_segment(&alias.expr, &alias.name) {
@@ -129,11 +148,20 @@ fn case_hits<'a>(
     schemas: impl IntoIterator<Item = &'a DFSchema>,
     rule: NameRule,
 ) -> Vec<Hit<'a>> {
+    case_hits_by(column, schemas, rule, NameRule::matches)
+}
+
+fn case_hits_by<'a>(
+    column: &Column,
+    schemas: impl IntoIterator<Item = &'a DFSchema>,
+    rule: NameRule,
+    same: fn(NameRule, &str, &str) -> bool,
+) -> Vec<Hit<'a>> {
     schemas
         .into_iter()
         .flat_map(DFSchema::iter)
         .filter(|(qualifier, field)| {
-            rule.matches(&column.name, field.name())
+            same(rule, &column.name, field.name())
                 && column.relation.as_ref().is_none_or(|written| {
                     qualifier.is_some_and(|held| same_relation(written, held, rule))
                 })
@@ -142,7 +170,7 @@ fn case_hits<'a>(
         .collect()
 }
 
-fn sql_id(relation: Option<&TableReference>, name: &str) -> String {
+pub(super) fn sql_id(relation: Option<&TableReference>, name: &str) -> String {
     let spelled = relation.filter(|relation| !is_scratch_relation(relation.table()));
     let parts = spelled.map_or_else(Vec::new, |relation| {
         [
@@ -198,47 +226,12 @@ pub(super) fn unresolved_column(column: &Column, frame_schema: &DFSchema) -> Dat
     )
 }
 
-fn unresolved_join_key(key: &str, side: &str, schema: &DFSchema) -> DataFusionError {
-    let mut columns: Vec<&str> = schema
-        .fields()
-        .iter()
-        .map(|field| field.name().as_str())
-        .collect();
-    columns.sort_unstable();
-    let rendered = columns
-        .iter()
-        .map(|name| sql_id(None, name))
-        .collect::<Vec<_>>()
-        .join(", ");
-    let column = sql_id(None, key);
-    plan_datafusion_err!(
-        "{}",
-        spark_error::message(
-            spark_error::UNRESOLVED_USING_COLUMN_FOR_JOIN,
-            &[
-                ("column", column.as_str()),
-                ("side", side),
-                ("columns", rendered.as_str()),
-            ],
-        )
-    )
-}
-
-fn unresolved_union_name(name: &str, right: &DataFrame) -> DataFusionError {
-    let held = right
-        .schema()
-        .fields()
-        .iter()
-        .map(|field| field.name().clone())
-        .collect::<Vec<_>>()
-        .join(", ");
-    DataFusionError::Plan(format!(
-        "Cannot resolve column name \"{name}\" among ({held})."
-    ))
-}
-
 #[allow(clippy::missing_errors_doc)]
-pub fn refuse_ambiguous_condition(condition_sql: &str, sides: &[&DFSchema]) -> Result<()> {
+pub fn refuse_ambiguous_condition(
+    condition_sql: &str,
+    sides: &[&DFSchema],
+    rule: NameRule,
+) -> Result<()> {
     let Ok(condition) = Parser::new(&DatabricksDialect {})
         .try_with_sql(condition_sql)
         .and_then(|mut parser| parser.parse_expr())
@@ -248,7 +241,7 @@ pub fn refuse_ambiguous_condition(condition_sql: &str, sides: &[&DFSchema]) -> R
     let refusal = visit_expressions(&condition, |node| match node {
         SqlExpr::Identifier(ident) => {
             let column = Column::new_unqualified(ident.value.as_str());
-            let hits = case_hits(&column, sides.iter().copied(), NameRule::IgnoreCase);
+            let hits = case_hits(&column, sides.iter().copied(), rule);
             if hits.len() > 1 {
                 ControlFlow::Break(ambiguous_reference(&column, &hits))
             } else {
@@ -329,7 +322,11 @@ fn written_segment(expr: &Expr, alias: &str) -> Option<String> {
         .then(|| written.to_string())
 }
 
-fn unique_case_match(column: &Column, frame_schema: &DFSchema) -> Option<Column> {
+pub(super) fn unique_case_match(
+    column: &Column,
+    frame_schema: &DFSchema,
+    same: fn(NameRule, &str, &str) -> bool,
+) -> Option<Column> {
     let exact = match &column.relation {
         Some(_) => frame_schema.has_column(column),
         None => frame_schema.has_column_with_unqualified_name(&column.name),
@@ -337,7 +334,7 @@ fn unique_case_match(column: &Column, frame_schema: &DFSchema) -> Option<Column>
     if exact {
         return None;
     }
-    let hits = case_hits(column, [frame_schema], NameRule::IgnoreCase);
+    let hits = case_hits_by(column, [frame_schema], NameRule::IgnoreCase, same);
     let (first_qualifier, first_field) = hits.first()?;
     let first = Column::new(first_qualifier.cloned(), first_field.name());
     hits.iter()
@@ -360,17 +357,6 @@ fn same_relation(written: &TableReference, held: &TableReference, rule: NameRule
         )
 }
 
-fn bind_name(schema: &DFSchema, name: &str, rule: NameRule) -> Column {
-    let bare = Column::new_unqualified(name);
-    if schema.has_column_with_unqualified_name(name) {
-        return bare;
-    }
-    match rule {
-        NameRule::Exact => bare,
-        NameRule::IgnoreCase => unique_case_match(&bare, schema).unwrap_or(bare),
-    }
-}
-
 #[allow(clippy::missing_errors_doc)]
 pub fn drop_named_columns(
     frame: DataFrame,
@@ -382,7 +368,14 @@ pub fn drop_named_columns(
     let schema = frame.schema();
     let mut hits = names
         .iter()
-        .flat_map(|name| case_hits(&Column::new_unqualified(name.as_str()), [schema], rule))
+        .flat_map(|name| {
+            case_hits_by(
+                &Column::new_unqualified(name.as_str()),
+                [schema],
+                rule,
+                NameRule::resolver_matches,
+            )
+        })
         .collect::<Vec<_>>();
     for reference in references
         .iter()
@@ -405,122 +398,6 @@ pub fn drop_named_columns(
         .map(|(qualifier, field)| Column::new(qualifier.cloned(), field.name()))
         .collect::<Vec<_>>();
     frame.drop_columns(&targets)
-}
-
-#[allow(clippy::missing_errors_doc)]
-pub fn join_on_named_keys(
-    left: DataFrame,
-    right: DataFrame,
-    keys: &[String],
-    join_type: JoinType,
-    rule: NameRule,
-) -> Result<DataFrame> {
-    if matches!(rule, NameRule::Exact) {
-        for key in keys {
-            if !left.schema().has_column_with_unqualified_name(key) {
-                return Err(unresolved_join_key(key, "left", left.schema()));
-            }
-            if !right.schema().has_column_with_unqualified_name(key) {
-                return Err(unresolved_join_key(key, "right", right.schema()));
-            }
-        }
-    }
-    let left_keys: Vec<Column> = keys
-        .iter()
-        .map(|key| bind_name(left.schema(), key, rule))
-        .collect();
-    let right_keys: Vec<Column> = keys
-        .iter()
-        .map(|key| bind_name(right.schema(), key, rule))
-        .collect();
-    let (state, left_plan) = left.into_parts();
-    let plan = LogicalPlanBuilder::from(left_plan)
-        .join(
-            right.into_unoptimized_plan(),
-            join_type,
-            (left_keys, right_keys),
-            None,
-        )?
-        .build()?;
-    let joined = DataFrame::new(state, plan);
-    if matches!(join_type, JoinType::LeftSemi | JoinType::LeftAnti) {
-        return Ok(joined);
-    }
-    let mut seen: HashSet<String> = HashSet::new();
-    let projection: Vec<Expr> = joined
-        .schema()
-        .iter()
-        .filter(|(_, field)| {
-            let matched = keys.iter().find(|key| rule.matches(key, field.name()));
-            matched.is_none_or(|key| seen.insert(key.clone()))
-        })
-        .map(|(qualifier, field)| Expr::Column(Column::new(qualifier.cloned(), field.name())))
-        .collect();
-    joined.select(projection)
-}
-
-#[allow(clippy::missing_errors_doc)]
-pub fn union_by_folded_name(
-    left: DataFrame,
-    right: DataFrame,
-    allow_missing: bool,
-    rule: NameRule,
-) -> Result<DataFrame> {
-    if matches!(rule, NameRule::Exact) && !allow_missing {
-        for name in left.schema().fields().iter().map(|field| field.name()) {
-            if !right.schema().has_column_with_unqualified_name(name) {
-                return Err(unresolved_union_name(name, &right));
-            }
-        }
-    }
-    let respelled: Vec<(Expr, bool)> = right
-        .schema()
-        .iter()
-        .map(|(qualifier, field)| {
-            let held = Expr::Column(Column::new(qualifier.cloned(), field.name()));
-            let bound = bind_name(left.schema(), field.name(), rule);
-            if bound.name == *field.name() {
-                (held, false)
-            } else {
-                (held.alias(bound.name), true)
-            }
-        })
-        .collect();
-    let right = if respelled.iter().any(|(_, renamed)| *renamed) {
-        right.select(
-            respelled
-                .into_iter()
-                .map(|(expr, _)| expr)
-                .collect::<Vec<_>>(),
-        )?
-    } else {
-        right
-    };
-    if !allow_missing {
-        let left_names = field_names(&left);
-        let right_names = field_names(&right);
-        if left_names != right_names {
-            let mismatched = left_names
-                .symmetric_difference(&right_names)
-                .map(|name| format!("'{name}'"))
-                .collect::<Vec<_>>()
-                .join(", ");
-            return plan_err!(
-                "Union can only be performed on inputs with the same columns unless \
-                 allowMissingColumns=True; mismatched columns: [{mismatched}]"
-            );
-        }
-    }
-    left.union_by_name(right)
-}
-
-fn field_names(frame: &DataFrame) -> BTreeSet<String> {
-    frame
-        .schema()
-        .fields()
-        .iter()
-        .map(|field| field.name().clone())
-        .collect()
 }
 
 #[cfg(test)]
@@ -670,19 +547,30 @@ mod tests {
             ambiguous("`id`", "`id`, `sc`.`ns`.`t_vz_1`.`id`")
         );
         assert_eq!(
-            refuse_ambiguous_condition("(`ID` = `id`)", &[&left, &right])
+            refuse_ambiguous_condition("(`ID` = `id`)", &[&left, &right], IgnoreCase)
                 .unwrap_err()
                 .to_string(),
             ambiguous("`ID`", "`ID`, `sc`.`ns`.`t_vz_1`.`ID`")
         );
         assert_eq!(
-            refuse_ambiguous_condition("(`id` = `ID`)", &[&right, &left])
+            refuse_ambiguous_condition("(`id` = `ID`)", &[&right, &left], IgnoreCase)
                 .unwrap_err()
                 .to_string(),
             ambiguous("`id`", "`id`, `sc`.`ns`.`t_vz_1`.`id`")
         );
-        assert!(refuse_ambiguous_condition("(l.`ID` = r.`id`)", &[&left, &right]).is_ok());
-        assert!(refuse_ambiguous_condition("(`data` = `w`)", &[&left, &right]).is_ok());
+        for rule in [IgnoreCase, Exact] {
+            assert!(
+                refuse_ambiguous_condition("(l.`ID` = r.`id`)", &[&left, &right], rule).is_ok()
+            );
+            assert!(refuse_ambiguous_condition("(`data` = `w`)", &[&left, &right], rule).is_ok());
+        }
+        assert!(refuse_ambiguous_condition("(`ID` = `w`)", &[&left, &right], Exact).is_ok());
+        assert_eq!(
+            refuse_ambiguous_condition("(`id` = `w`)", &[&right, &right], Exact)
+                .unwrap_err()
+                .to_string(),
+            ambiguous("`id`", "`id`, `id`")
+        );
     }
 
     #[tokio::test]

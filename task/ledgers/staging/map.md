@@ -63,7 +63,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   CLOSED per the owner ruling); the p10 non-join overlay shapes pin the
   `true` misses, the R4 refusals, and the R-CS2-7 answer-gaps. Verifier
   fold (same branch): the S5 unicode/ambiguity pins land and residues
-  R-CS2-8…R-CS2-12 open beside R-CS2-7.
+  R-CS2-8…R-CS2-12 open beside R-CS2-7. Re-verify fold (same branch,
+  base `ecfffe69`): RC2-1…RC2-6 fixed, C-009…C-014 PROVEN, R-CS2-12 and
+  R-CS2-13 closed with corrections, R-CS2-10 re-scoped, R-CS2-14…16 open.
   `risk_tier: high`.
   pins: casesens-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [casesens-release-diff-1-ledger.md](casesens-release-diff-1-ledger.md) —
@@ -75,6 +77,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   text while false-path misses stay byte-identical (C-001…C-005).
   `risk_tier: standard`. Branch `fix/casesens-release-diff-1`.
   pins: casesens-release-diff-1/C-001, C-002, C-003, C-004, C-005
+  pins: casesens-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
 - [r-fileorder-2-ledger.md](r-fileorder-2-ledger.md) —
   **R-FILEORDER-2 (2026-09-27), HALT per R1:** Spark 4.1.2's own `L-INSERT-OVERWRITE`
   lineage differs between runs (the same-JVM triple agrees, C-001; six fresh-JVM runs

@@ -1,5 +1,7 @@
 # map — python/repark-parity/tests
 
+CASESENS-2 re-verify fold (2026-09-28): the CAP-1 mirror row for `spark/dataframe/core.py` follows the script baseline 3957 → 3952 (the sort refusal moves into `written_names.py`). pins: casesens-2/C-012
+
 WO CATALOG-1 (2026-09-26): the CAP-1 mirror drops the retired `catalog_config.rs` row, follows `session/tests/session.rs` 1407 → 1406, and the exception count 38 → 37. pins: catalog-1/C-006
 
 U1-MEM-LAYOUT-1 layout-r7 (2026-09-23): the CAP-1 mirror row for `crates/repark-spark/src/tests/ctas.rs` follows the Rust gate's 1357 baseline; it still named 1361 and reddened the Python job.

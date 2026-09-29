@@ -58,6 +58,15 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   single-char upper/lower equality, so `ünï` folds to `Ünï` while `STRASSE`
   misses `straße`) in `matches`, `lookup`, and `folded_duplicate`; pin
   `ignore_case_folds_unicode_like_java_equals_ignore_case`.
+  **CASESENS-2 re-verify fold (2026-09-28, RC2-3):** the fold splits by
+  site, measured on live Spark 4.1.2. `matches` / `lookup` (Spark's
+  `AttributeSeq` lookup) require equal `to_lowercase()` keys and Java
+  `equalsIgnoreCase`, so `ıd` misses `id`, `ς` misses `σ`/`Σ`, and `i̇d`
+  misses `İd`; `resolver_matches` keeps `equalsIgnoreCase` for the
+  resolver-direct sites; `folded_duplicate` compares `to_lowercase()`
+  keys and reports the lowered key (`ünï`, `ας`). Pin
+  `lookup_lowers_like_spark_and_the_resolver_keeps_equals_ignore_case`.
+  pins: casesens-2/C-009
   pins: casesens-2/C-003, C-004, C-005
 - `lib.rs` — `Error` (variants: `NotImplemented(String)` — the deterministic scope-gate /
   unsupported-feature class (U4: no longer a scaffolding placeholder; `engine_err` folds

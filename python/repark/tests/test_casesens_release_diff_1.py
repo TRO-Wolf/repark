@@ -306,7 +306,7 @@ def test_non_ascii_twins_follow_spark(tmp_path: Path) -> None:
             assert _condition(error) == _ORACLE["uni_eac"]["cond"]
             assert _sql_state(error) == _ORACLE["uni_eac"]["sqlstate"]
             assert _plain(str(error)) == (
-                "[COLUMN_ALREADY_EXISTS] The column `É` already exists. Choose another "
+                "[COLUMN_ALREADY_EXISTS] The column `é` already exists. Choose another "
                 "name or rename the existing column. SQLSTATE: 42711"
             )
         else:

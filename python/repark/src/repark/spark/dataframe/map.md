@@ -193,6 +193,27 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `withColumnsRenamed` duplicate-name refusal is removed so the plural
   answers Spark's frame like the singular (EX-DF-18 FIXED). `core.py`
   3963 → 3957 (ceilings ratcheted). pins: casesens-2/C-003, C-004
+  CASESENS-2 DIFF-PROBE fold (2026-09-28): the bare folded-ambiguous arm
+  of `_bind_written_column` calls the native shared refusal first, so the
+  class, condition, SQLSTATE and candidate list match Spark; the facade
+  text below it stays as the degenerate fallback (fewer than two native
+  hits, or an empty schema — unreachable through the public API, kept so
+  the arm never answers silently). pins: casesens-2/C-006
+  CASESENS-2 re-verify fold (2026-09-28): the `Exact` arm of
+  `_bind_written_column` attaches the origin metadata the `IgnoreCase` arm
+  does (RC2-2, condition joins requalify per side) and refuses exact
+  display twins through the native ambiguous refusal (RC2-6); a lookup miss
+  the resolver fold would hit raises Spark's 42703 (RC2-3); hits that share
+  one origin bind that attribute (`_shared_origin_column`, RC2-4). The
+  withColumn/rename matchers call `match_resolver_names`; na subsets refuse
+  hits on distinct attributes (`_distinct_attributes`); overlay `drop`
+  binds dotted Columns through the qualified display pairing, unqualified
+  Columns by lookup, strings by the resolver, and drops engine fields
+  exactly (`_overlay_drop_targets`); renames rewrite every hit
+  (RC2-5). `_sort_like_spark` owns `orderBy` and turns an ambiguity into
+  Spark's Sort refusal (42703). `core.py` routes string `filter` through
+  `rebind_predicate_qualifiers` (RC2-1), stops quoting tokens after a dot,
+  and ratchets 3957 → 3952. pins: casesens-2/C-009, C-010, C-011, C-012, C-013
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`
