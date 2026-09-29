@@ -972,8 +972,9 @@ pins: rp-4-fork-repin/C-005, C-006
   double-quoted literals (PE-10), `r"…"` answers, raw `''`/`""` splits head
   from quoted tail, and verbatim keeps doublings. `create_options.rs` option
   keys unescape with their own quote type. Rust pins in
-  [tests/spark_string_literals.rs](tests/spark_string_literals.rs), facade
-  pins in `python/repark/tests/test_string_literal_escape_1.py`.
+  [tests/string_literal_escape_1.rs](tests/string_literal_escape_1.rs) (own
+  leaf; the SQP-1 leaf is byte-frozen), facade pins in
+  `python/repark/tests/test_string_literal_escape_1.py`.
   pins: string-literal-escape-1/C-000, C-001, C-002, C-003, C-004
 - `spark_literal_typing.rs` — **SQL-LITERAL-TYPING-1 (2026-09-16):**
   `SparkIntegralLiteral` types unsuffixed integral literals as Spark does —

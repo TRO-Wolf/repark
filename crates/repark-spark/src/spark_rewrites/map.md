@@ -48,3 +48,6 @@ path stay in `spark_literals.rs`.
   cells `D-CREATE-OPTIONS` / `D-CTAS-OPTIONS` in
   [tests/create_table_options.rs](../tests/create_table_options.rs) and
   [python/repark/tests/test_ice_ddl_clauses_1.py](../../../../python/repark/tests/test_ice_ddl_clauses_1.py).
+  **STRING-LITERAL-ESCAPE-1 (2026-09-29):** pair keys unescape with their own
+  quote type (single- and double-quoted arms), matching the quote-aware value
+  engine. pins: string-literal-escape-1/C-001

@@ -468,6 +468,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   C-012): the escape domain, `\'`/unpaired-backslash lexing, adjacency + the DataFusion-native
   `OPTIONS` carve-out, quote-runs-are-not-triple-quotes, raw strings, LIKE/RLIKE/backtick controls,
   exactly-once-on-every-path, the one-caller grep pin, the Generic-dialect honesty pin.
+- `string_literal_escape_1.rs` — **STRING-LITERAL-ESCAPE-1 (2026-09-29):** the
+  PE-10 pins in their own leaf (the SQP-1 leaf is byte-frozen, so nothing lands
+  there): doubled-`""` collapse in double-quoted literals, `r"…"` answering,
+  raw `''`/`""` head/tail splitting, verbatim doublings kept and raw values
+  marked, the escape-free-doubles borrow pin, and direct quote-awareness units.
+  pins: string-literal-escape-1/C-001, C-002, C-003, C-004
 - `cast_binary.rs` — **SQP-1 (C-009):** `CAST … AS BINARY` plans to Arrow `Binary` (B1/B8–B10/B13/
   B15), refuses illegal sources (`DATATYPE_MISMATCH`, B2–B7), keeps `VARBINARY` refusing (B12),
   leaves a `BINARY` DDL column untouched; `TRY_CAST(<int>)` refuses without the ANSI-off suggestion.

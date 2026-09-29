@@ -123,6 +123,7 @@ mod show_tblproperties_routing;
 mod sort_order_parse;
 mod spark_dialect;
 mod spark_string_literals;
+mod string_literal_escape_1;
 mod temp_view_errors;
 mod temp_view_routing;
 mod time_travel;
