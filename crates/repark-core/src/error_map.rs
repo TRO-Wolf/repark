@@ -37,6 +37,7 @@ pub(crate) enum EngineErrorKind<'a> {
 pub(crate) const MAX_ERROR_PEEL_DEPTH: usize = 32;
 
 const ARITHMETIC_OVERFLOW_HEAD: &str = "[ARITHMETIC_OVERFLOW]";
+const CAST_OVERFLOW_IN_TABLE_INSERT_HEAD: &str = "[CAST_OVERFLOW_IN_TABLE_INSERT]";
 const CAUSED_BY_SEPARATOR: &str = "\ncaused by\n";
 const COERCION_FAILED_MARKER: &str = "user-defined coercion failed with: ";
 const GROUPING_MISMATCH_HEAD: &str = "[GROUPING_ID_COLUMN_MISMATCH]";
@@ -145,7 +146,8 @@ pub(crate) fn classify_datafusion_error(error: &DataFusionError) -> EngineErrorK
                 None => return EngineErrorKind::Other,
             },
             DataFusionError::Execution(message)
-                if message.starts_with(ARITHMETIC_OVERFLOW_HEAD) =>
+                if message.starts_with(ARITHMETIC_OVERFLOW_HEAD)
+                    || message.starts_with(CAST_OVERFLOW_IN_TABLE_INSERT_HEAD) =>
             {
                 return EngineErrorKind::ArithmeticOverflow(message);
             }
@@ -300,6 +302,19 @@ mod tests {
     fn arithmetic_overflow_execution_maps_to_arithmetic_verbatim() {
         let message = "[ARITHMETIC_OVERFLOW] conv overflow. If necessary set \"spark.sql.ansi.enabled\" \
              to \"false\" to bypass this error. SQLSTATE: 22003";
+        let error = engine_err(DataFusionError::Execution(message.to_string()));
+        assert_eq!(
+            error.exception_class(),
+            repark_common::ErrorClass::Arithmetic
+        );
+        assert!(matches!(error, Error::Arithmetic(text) if text == message));
+    }
+
+    #[test]
+    fn cast_overflow_in_table_insert_maps_to_arithmetic_verbatim() {
+        let message = "[CAST_OVERFLOW_IN_TABLE_INSERT] Fail to assign a value of \"DOUBLE\" type \
+             to the \"BIGINT\" type column or variable `v` due to an overflow. Use `try_cast` on \
+             the input value to tolerate overflow and return NULL instead. SQLSTATE: 22003";
         let error = engine_err(DataFusionError::Execution(message.to_string()));
         assert_eq!(
             error.exception_class(),

@@ -45,6 +45,7 @@ pub enum Condition {
     IncompatibleViewSchemaChange,
     CannotUpCastDatatype,
     ViewExceedMaxNestedDepth,
+    CastOverflowInTableInsert,
 }
 
 pub const TABLE_OR_VIEW_NOT_FOUND: Condition = Condition::TableOrViewNotFound;
@@ -105,6 +106,7 @@ pub const RECURSIVE_VIEW: Condition = Condition::RecursiveView;
 pub const INCOMPATIBLE_VIEW_SCHEMA_CHANGE: Condition = Condition::IncompatibleViewSchemaChange;
 pub const CANNOT_UP_CAST_DATATYPE: Condition = Condition::CannotUpCastDatatype;
 pub const VIEW_EXCEED_MAX_NESTED_DEPTH: Condition = Condition::ViewExceedMaxNestedDepth;
+pub const CAST_OVERFLOW_IN_TABLE_INSERT: Condition = Condition::CastOverflowInTableInsert;
 
 impl Condition {
     #[must_use]
@@ -167,6 +169,7 @@ impl Condition {
             Self::IncompatibleViewSchemaChange => "INCOMPATIBLE_VIEW_SCHEMA_CHANGE",
             Self::CannotUpCastDatatype => "CANNOT_UP_CAST_DATATYPE",
             Self::ViewExceedMaxNestedDepth => "VIEW_EXCEED_MAX_NESTED_DEPTH",
+            Self::CastOverflowInTableInsert => "CAST_OVERFLOW_IN_TABLE_INSERT",
         }
     }
 
@@ -214,6 +217,7 @@ impl Condition {
             | Self::DatatypeMismatchUnexpectedInputType => Some("42K09"),
             Self::WrongNumArgsWithoutSuggestion => Some("42605"),
             Self::InvalidConfValueTimeZone => Some("22022"),
+            Self::CastOverflowInTableInsert => Some("22003"),
             Self::CannotMergeSchemas => None,
         }
     }
@@ -339,6 +343,9 @@ impl Condition {
             }
             Self::ViewExceedMaxNestedDepth => {
                 "The depth of view {viewName} exceeds the maximum view resolution depth ({maxNestedDepth}).\nAnalysis is aborted to avoid errors. If you want to work around this, please try to increase the value of \"spark.sql.view.maxNestedViewDepth\"."
+            }
+            Self::CastOverflowInTableInsert => {
+                "Fail to assign a value of \"{fromType}\" type to the \"{toType}\" type column or variable {columnName} due to an overflow. Use `try_cast` on the input value to tolerate overflow and return NULL instead."
             }
         }
     }
@@ -499,11 +506,12 @@ mod tests {
         INCOMPATIBLE_VIEW_SCHEMA_CHANGE,
         CANNOT_UP_CAST_DATATYPE,
         VIEW_EXCEED_MAX_NESTED_DEPTH,
+        CAST_OVERFLOW_IN_TABLE_INSERT,
     ];
 
     #[test]
     fn catalogue_lists_every_condition_once() {
-        assert_eq!(ALL.len(), 43);
+        assert_eq!(ALL.len(), 44);
         let mut names: Vec<&str> = ALL.iter().map(|condition| condition.name()).collect();
         names.sort_unstable();
         names.dedup();
@@ -936,6 +944,24 @@ mod tests {
                 &[("viewName", "`d0`"), ("maxNestedDepth", "100")]
             ),
             "[VIEW_EXCEED_MAX_NESTED_DEPTH] The depth of view `d0` exceeds the maximum view resolution depth (100).\nAnalysis is aborted to avoid errors. If you want to work around this, please try to increase the value of \"spark.sql.view.maxNestedViewDepth\". SQLSTATE: 54K00"
+        );
+    }
+
+    #[test]
+    fn cast_overflow_in_table_insert_reproduces_the_live_probe_bytes() {
+        assert_eq!(
+            message(
+                CAST_OVERFLOW_IN_TABLE_INSERT,
+                &[("fromType", "DOUBLE"), ("toType", "BIGINT"), ("columnName", "`v`")]
+            ),
+            "[CAST_OVERFLOW_IN_TABLE_INSERT] Fail to assign a value of \"DOUBLE\" type to the \"BIGINT\" type column or variable `v` due to an overflow. Use `try_cast` on the input value to tolerate overflow and return NULL instead. SQLSTATE: 22003"
+        );
+        assert_eq!(
+            message(
+                CAST_OVERFLOW_IN_TABLE_INSERT,
+                &[("fromType", "DECIMAL(38,0)"), ("toType", "INT"), ("columnName", "`v`")]
+            ),
+            "[CAST_OVERFLOW_IN_TABLE_INSERT] Fail to assign a value of \"DECIMAL(38,0)\" type to the \"INT\" type column or variable `v` due to an overflow. Use `try_cast` on the input value to tolerate overflow and return NULL instead. SQLSTATE: 22003"
         );
     }
 
