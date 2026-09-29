@@ -647,6 +647,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `fix/cast-ts-string-1`.
   pins: cast-ts-string-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010, C-011, C-012
+- [cast-overflow-insert-1-ledger.md](cast-overflow-insert-1-ledger.md) —
+  **CAST-OVERFLOW-INSERT-1 (2026-09-29), in flight:** out-of-range DOUBLE, FLOAT and
+  DECIMAL stores into integer columns refuse Spark 4.1.2's `CAST_OVERFLOW_IN_TABLE_INSERT`
+  on all nine write doors — the `StoreOverflowCast` Dml analyzer rule plus the same
+  conformance applied between eager analysis and optimization on the non-Dml internal
+  plans, with checked-cast boundary UDFs and a Spark-error catalog entry; R-INTDIV-9
+  closed. `risk_tier: standard`. Branch `fix/cast-overflow-insert-1`.
+  pins: cast-overflow-insert-1/C-001, C-002, C-003, C-004
 - [cast-map-spell-1-ledger.md](cast-map-spell-1-ledger.md) —
   **CAST-MAP-SPELL-1 (2026-09-19), in flight:** `CAST(… AS MAP<…>)` and
   `.cast(MapType)` answer Spark 4.1.2 on every door — a cast-UDF plus token-rewrite
