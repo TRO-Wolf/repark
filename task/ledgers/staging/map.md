@@ -75,6 +75,17 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   R-CS2-18's RC4-5 extension and R-CS2-20 confirmed by the orchestrator,
   R-CS2-21…23 open (RC5-6…RC5-8); RC5-5 goes to a separate card.
   `risk_tier: high`.
+  pins: casesens-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [casesens-release-diff-1-ledger.md](casesens-release-diff-1-ledger.md) —
+  **WO CASESENS-RELEASE-DIFF-1 (2026-09-28), in flight:** the two v1.5.1
+  release-differential regressions — twin parquet/json path writes refuse
+  `COLUMN_ALREADY_EXISTS` before every save mode on the local and S3 doors
+  (csv keeps writing, orc keeps its declared refusal, nothing refuses under
+  true), and exact-mode `F.col` misses raise `UNRESOLVED_COLUMN` with Spark's
+  text while false-path misses stay byte-identical (C-001…C-005).
+  `risk_tier: standard`. Branch `fix/casesens-release-diff-1`.
+  pins: casesens-release-diff-1/C-001, C-002, C-003, C-004, C-005
+  pins: casesens-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
   pins: casesens-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032, C-033
 - [r-fileorder-2-ledger.md](r-fileorder-2-ledger.md) —
   **R-FILEORDER-2 (2026-09-27), HALT per R1:** Spark 4.1.2's own `L-INSERT-OVERWRITE`

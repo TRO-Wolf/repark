@@ -125,6 +125,16 @@ wrapped optimizer rule) and declares this directory.
   resolve there — no new edge). Rust pins `exact_rule_refuses_a_case_only_match`,
   `ignore_case_rule_is_unchanged`, `frame_functions_follow_the_rule`.
   pins: casesens-1/C-009, C-010
+  **CASESENS-RELEASE-DIFF-1 (2026-09-28, RD-2):** under `Exact` a total miss
+  in a projection refuses `UNRESOLVED_COLUMN.WITH_SUGGESTION` through
+  `unresolved_column` instead of falling through to DataFusion's raw
+  `No field named` text. The refusal lives in `bind_projection_expr`
+  (`refuse_unresolved_exact`, select-only) rather than the shared `bind_names`,
+  so sort keys keep their pass-through and resolve through the projection
+  child; safe for subquery-inner columns because the traversal treats
+  subqueries as leaves, and attribute columns pass through. `IgnoreCase`
+  still falls through. Rust pin `projection_refuses_an_exact_total_miss`.
+  pins: casesens-release-diff-1/C-004
   **Verifier fold (2026-09-28, VC-3):** `bind_projection_expr` aliases a bare
   top-level `Cast`/`TryCast` over a direct column child to the written child
   name, so `F.col(x).cast(...)` keeps the child name instead of leaking the
@@ -156,9 +166,13 @@ wrapped optimizer rule) and declares this directory.
   `subquery::resolve_bound_expr_with` and re-aliases to the written spelling (a bare
   column keeps its spelling; a top-level `Cast`/`TryCast` over a column child keeps the
   child name via the recursive `cast_child_name`); re-exported through `case_bind` so
-  `repark_core::frame_names::bind_projection_expr` is unchanged. Rust pin
-  `projection_keeps_the_written_spelling` stays in `case_bind.rs`'s test module.
-  pins: casesens-1/C-009
+  `repark_core::frame_names::bind_projection_expr` is unchanged. Under `Exact` it
+  first runs `case_bind::refuse_unresolved_exact`, so a projection total miss
+  refuses `UNRESOLVED_COLUMN` at the select door while shared `bind_names` keeps
+  its pass-through for sort-through-child. Rust pins
+  `projection_keeps_the_written_spelling` and `projection_refuses_an_exact_total_miss`
+  stay in `case_bind.rs`'s test module.
+  pins: casesens-1/C-009, casesens-release-diff-1/C-004
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside
