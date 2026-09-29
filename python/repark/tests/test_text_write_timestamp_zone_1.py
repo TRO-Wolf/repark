@@ -136,6 +136,54 @@ def test_parquet_temporal_round_trip_keeps_types(spark: ReparkSession, tmp_path:
     assert rows[0]["d"] == datetime.date(2024, 6, 15)
 
 
+def test_legacy_policy_refuses_temporal_csv_write(spark: ReparkSession, tmp_path: Path) -> None:
+    """LEGACY policy refuses a temporal CSV write instead of mis-rendering it."""
+    spark.conf.set("spark.sql.session.timeZone", "America/New_York")
+    spark.conf.set("spark.sql.legacy.timeParserPolicy", "LEGACY")
+    with pytest.raises(
+        PySparkException,
+        match=re.escape("timeParserPolicy=LEGACY are not supported yet"),
+    ):
+        spark.sql("SELECT 1 AS id, TIMESTAMP '1850-06-01 10:00:00' AS t").write.mode(
+            "overwrite"
+        ).option("header", "true").csv(str(tmp_path / "out"))
+
+
+def test_legacy_policy_refuses_pattern_write(spark: ReparkSession, tmp_path: Path) -> None:
+    """LEGACY policy refuses a user-pattern write on a pre-1582 instant."""
+    spark.conf.set("spark.sql.session.timeZone", "America/New_York")
+    spark.conf.set("spark.sql.legacy.timeParserPolicy", "LEGACY")
+    with pytest.raises(
+        PySparkException,
+        match=re.escape("timeParserPolicy=LEGACY are not supported yet"),
+    ):
+        spark.sql("SELECT 1 AS id, TIMESTAMP '1500-06-15 12:00:00' AS t").write.mode(
+            "overwrite"
+        ).option("timestampFormat", "XXX").json(str(tmp_path / "out"))
+
+
+def test_legacy_policy_allows_non_temporal_write(spark: ReparkSession, tmp_path: Path) -> None:
+    """LEGACY policy stays inert when the write carries no temporal value."""
+    spark.conf.set("spark.sql.session.timeZone", "America/New_York")
+    spark.conf.set("spark.sql.legacy.timeParserPolicy", "LEGACY")
+    dest = tmp_path / "out"
+    spark.sql("SELECT 1 AS id").write.mode("overwrite").option("header", "true").csv(str(dest))
+    assert _part_text(dest, ".csv") == "id\n1\n"
+
+
+def test_lmt_offset_seconds_csv_schema_read_refuses_loud(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """CSV schema-read of LMT offset-seconds refuses; card CSV-READ-OFFSET-SECONDS-1."""
+    spark.conf.set("spark.sql.session.timeZone", "America/New_York")
+    dest = tmp_path / "out"
+    spark.sql("SELECT 1 AS id, TIMESTAMP '1850-06-01 10:00:00' AS t").write.mode(
+        "overwrite"
+    ).option("header", "true").csv(str(dest))
+    with pytest.raises(Exception, match=r"Invalid timezone"):
+        spark.read.option("header", "true").schema("id INT, t TIMESTAMP").csv(str(dest)).collect()
+
+
 def test_json_read_back_keeps_written_string(spark: ReparkSession, tmp_path: Path) -> None:
     """A JSON read-back keeps the written bytes; CAST recovers the instant."""
     spark.conf.set("spark.sql.session.timeZone", "America/New_York")

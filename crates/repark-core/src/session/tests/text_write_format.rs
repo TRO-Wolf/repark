@@ -532,3 +532,137 @@ fn fixed_offset_renders_default_shape() {
         "2024-01-05T03:04:05.006+05:30"
     );
 }
+
+#[test]
+fn quote_run_four_renders_single_quote() {
+    let micros = utc_micros(2024, 3, 5, 7, 8, 9);
+    assert_eq!(
+        render_instant("yyyy''''MM", micros, "America/New_York").expect("renders"),
+        "2024'03"
+    );
+    assert_eq!(
+        render_instant("''''yyyy", micros, "America/New_York").expect("renders"),
+        "'2024"
+    );
+}
+
+#[test]
+fn quote_run_eight_renders_three_quotes() {
+    let micros = utc_micros(2024, 3, 5, 7, 8, 9);
+    assert_eq!(
+        render_instant("''''''''", micros, "America/New_York").expect("renders"),
+        "'''"
+    );
+    assert_eq!(
+        render_instant("''''''", micros, "America/New_York").expect("renders"),
+        "''"
+    );
+    assert_eq!(
+        render_instant("'''a'''", micros, "America/New_York").expect("renders"),
+        "'a'"
+    );
+    assert_eq!(
+        render_instant("yyyy'''' ''", micros, "America/New_York").expect("renders"),
+        "2024' '"
+    );
+}
+
+#[test]
+fn year_run_seven_refuses_per_kind() {
+    assert_eq!(
+        failure_message("yyyyyyy", PatternKind::Timestamp),
+        recognition_message("yyyyyyy")
+    );
+    assert_eq!(
+        failure_message("yyyyyyy", PatternKind::TimestampNtz),
+        suggestion_message("yyyyyyy")
+    );
+    assert_eq!(
+        failure_message("yyyyyyy", PatternKind::Date),
+        recognition_message("yyyyyyy")
+    );
+    for kind in [
+        PatternKind::Timestamp,
+        PatternKind::TimestampNtz,
+        PatternKind::Date,
+    ] {
+        compile_write_pattern("yyyyyy", kind).expect("six years stay valid");
+    }
+}
+
+#[test]
+fn proleptic_year_matches_spark_without_era() {
+    assert_eq!(render_date("yyyy", 0, 1, 1).expect("renders"), "0000");
+    assert_eq!(render_date("y", 0, 1, 1).expect("renders"), "0");
+    assert_eq!(render_date("yy", 0, 1, 1).expect("renders"), "00");
+    assert_eq!(render_date("yyyy", -1, 6, 15).expect("renders"), "-0001");
+    assert_eq!(render_date("y", -1, 6, 15).expect("renders"), "-1");
+    assert_eq!(render_date("yy", -1, 6, 15).expect("renders"), "01");
+    assert_eq!(render_date("yyyy", -1000, 6, 15).expect("renders"), "-1000");
+    assert_eq!(
+        render_date("yyyy", 10_000, 6, 15).expect("renders"),
+        "+10000"
+    );
+    assert_eq!(
+        render_wall("yyyy", utc_micros(0, 6, 15, 12, 0, 0)).expect("renders"),
+        "0000"
+    );
+}
+
+#[test]
+fn year_of_era_applies_only_with_era_letter() {
+    assert_eq!(render_date("G yyyy", 0, 1, 1).expect("renders"), "BC 0001");
+    assert_eq!(
+        render_date("G yyyy", 10_000, 6, 15).expect("renders"),
+        "AD +10000"
+    );
+}
+
+#[test]
+fn timestamp_trailing_close_class_depends_on_legacy_letters() {
+    assert_eq!(
+        failure_message("yyyy]", PatternKind::Timestamp),
+        recognition_message("yyyy]")
+    );
+    assert_eq!(
+        failure_message("xxx]", PatternKind::Timestamp),
+        suggestion_message("xxx]")
+    );
+}
+
+#[test]
+fn date_trailing_close_recognized_for_legacy_letters() {
+    assert_eq!(
+        failure_message("yyyy]", PatternKind::Date),
+        recognition_message("yyyy]")
+    );
+}
+
+#[test]
+fn select_escapes_backslash_quote_in_pattern_literal() {
+    let schema = schema_of(vec![timestamp_field("t")]);
+    let mut options = HashMap::new();
+    options.insert("timestampFormat".to_string(), "'\\'yyyy".to_string());
+    let select =
+        build_text_write_select(&schema, "v", "UTC", &options, &[]).expect("select builds");
+    assert!(
+        select.contains("'''\\\\''yyyy'"),
+        "backslash doubled before quote doubling: {select}"
+    );
+}
+
+#[test]
+fn select_wraps_case_duplicate_temporal_columns() {
+    let schema = schema_of(vec![timestamp_field("T"), timestamp_field("t")]);
+    let options = HashMap::new();
+    let select =
+        build_text_write_select(&schema, "v", "America/New_York", &options, &[]).expect("builds");
+    assert!(
+        select.contains("repark_write_format_text(`T`"),
+        "upper twin wrapped: {select}"
+    );
+    assert!(
+        select.contains("repark_write_format_text(`t`"),
+        "lower twin wrapped: {select}"
+    );
+}

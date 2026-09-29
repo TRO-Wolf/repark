@@ -34,6 +34,10 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the funnel also merges the session
   write conf (`session_write_conf_from_ctx`) into the statement options, so the
   session codec and snapshot properties ride `EngineContext` to every door.
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 verifier fold (2026-09-29):**
+  `ReparkSession::set_time_parser_policy` (runtime `LEGACY`/`CORRECTED`/`EXCEPTION`
+  setter; lazily installs the policy carrier, so no builder install exists;
+  invalid values refuse with `INVALID_CONF_VALUE.OUT_OF_RANGE_OF_OPTIONS`).
 - `writer_layout.rs` — **U7 PR1 (2026-09-24), round 2:** `ReparkSession::plan_table_write`,
   the one entry the Python binding calls, so `repark-python` keeps no `repark-iceberg` edge
   (the module is public and re-exports the kernel's `WriterAction`, `WriterLayout`,
@@ -178,6 +182,10 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   messages), the micros-to-wall/zone conversions, and the option-key helpers.
   Child: [`text_write_format/`](text_write_format/map.md).
   pins: text-write-timestamp-zone-1/C-004
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 verifier fold (2026-09-29):** Java quote-run
+  scan, `y` runs past 6 refused, and the trailing-`]` class (RECOGNITION for
+  LTZ/DATE when every letter is a legacy `SimpleDateFormat` letter, measured
+  against the JDK; NTZ downgrades).
 - `late_catalogs.rs` — `register_late_configured_catalogs`, moved out of `session.rs` under the
   CAP-1 rule that a file at its ceiling grows by splitting; behavior is byte-identical and the
   `session.rs` baseline ratcheted 1039 → 1002.

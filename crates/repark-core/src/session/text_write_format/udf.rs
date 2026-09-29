@@ -24,6 +24,7 @@ use super::{
     CompiledPattern, PatternKind, compile_write_pattern, micros_to_naive_wall, micros_to_wall_zone,
     pattern_failure_datafusion,
 };
+use crate::session_time_zone::{canonical_session_zone_id, java_display_zone_id};
 
 pub const WRITE_FORMAT_FUNCTION: &str = "repark_write_format_text";
 
@@ -49,6 +50,18 @@ fn spec_from_value(text: Option<&str>, kind: PatternKind) -> Result<FormatSpec> 
             .map(FormatSpec::Compiled)
             .map_err(|failure| pattern_failure_datafusion(&failure)),
     }
+}
+
+fn halve_backslashes(text: &str) -> String {
+    let mut output = String::with_capacity(text.len());
+    let mut characters = text.chars().peekable();
+    while let Some(current) = characters.next() {
+        if current == '\\' && characters.peek() == Some(&'\\') {
+            characters.next();
+        }
+        output.push(current);
+    }
+    output
 }
 
 fn fraction_nanos(micros: i64) -> u32 {
@@ -466,10 +479,10 @@ impl ScalarUDFImpl for WriteFormatText {
             }
             Ok(Some(strings.value(0).to_string()))
         };
-        let timestamp = pattern_at(1)?;
-        let ntz = pattern_at(2)?;
-        let date = pattern_at(3)?;
-        let zone_id = pattern_at(4)?.ok_or_else(|| {
+        let timestamp = pattern_at(1)?.map(|text| halve_backslashes(&text));
+        let ntz = pattern_at(2)?.map(|text| halve_backslashes(&text));
+        let date = pattern_at(3)?.map(|text| halve_backslashes(&text));
+        let zone_raw = pattern_at(4)?.ok_or_else(|| {
             DataFusionError::Execution(format!(
                 "'{WRITE_FORMAT_FUNCTION}' expects a session zone id, got NULL"
             ))
@@ -479,15 +492,17 @@ impl ScalarUDFImpl for WriteFormatText {
             ntz: spec_from_value(ntz.as_deref(), PatternKind::TimestampNtz)?,
             date: spec_from_value(date.as_deref(), PatternKind::Date)?,
         };
-        let zone = Tz::from_str(zone_id.as_str()).map_err(|error| {
+        let canonical = canonical_session_zone_id(zone_raw.as_str());
+        let zone = Tz::from_str(canonical.as_str()).map_err(|error| {
             DataFusionError::Execution(format!(
-                "session timezone {zone_id:?} could not be resolved at query time ({error})"
+                "session timezone {zone_raw:?} could not be resolved at query time ({error})"
             ))
         })?;
+        let display = java_display_zone_id(zone_raw.as_str());
         let context = FormatContext {
             specs: &specs,
             zone,
-            zone_id: zone_id.as_str(),
+            zone_id: display.as_str(),
         };
         format_array(value.clone(), &context).map(ColumnarValue::Array)
     }

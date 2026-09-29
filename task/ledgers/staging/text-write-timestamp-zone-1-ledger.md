@@ -25,8 +25,9 @@ kind, and per-kind refusal classes for bad patterns.
 **Fix.** One shared Rust formatter at the writer's formatting step, no sink change. CSV and
 JSON `COPY` statements (local and s3a) build their inner `SELECT` in
 `text_write_format::select`, which wraps every temporal column in the volatile
-`repark_write_format_text` UDF carrying the three user patterns plus the canonical session
-zone id; the UDF renders each value (`render.rs`) and the sink writes plain strings.
+`repark_write_format_text` UDF carrying the three user patterns plus the raw session
+zone id; the UDF canonicalizes the zone for offsets, resolves the Java display id for
+`VV`, and renders each value (`render.rs`) while the sink writes plain strings.
 Non-temporal frames keep byte-identical `SELECT *`; partition columns stay unwrapped;
 parquet/ORC/Iceberg and every read path are untouched. Bad patterns refuse eagerly with
 Spark's class (`INVALID_DATETIME_PATTERN.*`, NTZ downgrades, `DATETIME_*_RECOGNITION` /
@@ -64,10 +65,10 @@ America/New_York unless noted:
 
 | Clause | Statement | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
-| C-001 | CSV and JSON LTZ bytes equal Spark's default `timestampFormat` in the session zone (gap, overlap, frac 0/3/6, pre-1900 LMT seconds, every probe zone); NTZ and DATE render zone-free defaults; struct/array nesting formats in JSON; a same-zone read-back returns the original values. | Facade bytes cells + read-back legs in `test_text_write_timestamp_zone_1.py` over the committed fixture. | PROVEN | 182 passed (179 fixture cells incl. 4-zone matrix, CSV/JSON read-back, s3a). Full 616-cell oracle replay: 562 byte-or-class exact, 54 classified with zero flips. |
+| C-001 | CSV and JSON LTZ bytes equal Spark's default `timestampFormat` in the session zone (gap, overlap, frac 0/3/6, pre-1900 LMT seconds, every probe zone); NTZ and DATE render zone-free defaults; struct/array nesting formats in JSON; a same-zone read-back returns the original values. | Facade bytes cells + read-back legs in `test_text_write_timestamp_zone_1.py` over the committed fixture. | PROVEN | 207 passed (199 fixture cells incl. 4-zone matrix, verifier-fold cells, CSV/JSON read-back, LEGACY legs, s3a). Full 616-cell oracle replay: 562 byte-or-class exact, 54 classified with zero flips. |
 | C-002 | User `timestampFormat` / `timestampNTZFormat` / `dateFormat` are honored exactly as Spark honors them (per-kind semantics, cross-kind ignored), on CSV and JSON, local and s3a. | Facade user-format cells + the three flipped R2 honored pins + the Rust honored pin. | PROVEN | Same 182 green; `test_r2_read_formats2.py` honored trio green; `temporal_write_options_are_honored_on_csv_path_write` green. |
 | C-003 | Unsupported patterns refuse with Spark's error class, never silently: eager `INVALID_DATETIME_PATTERN.*` / `DATETIME_*` classes per kind, lazy `Unsupported field` / `Unable to extract ZoneId` / structural messages at execution. | Facade error-token cells + Rust validator unit pins. | PROVEN | 25 error-token cells green; Rust validator suite green (every class per kind). |
-| C-004 | The Rust compiler, validator, renderer and SELECT builder match the oracle cell by cell, including the offset-letter matrix with LMT seconds, the `''` quote escape, section skip, and the star fast path / partition skip / eager rejection of the builder. | `session::tests::text_write_format` unit pins. | PROVEN | `cargo test -p repark-core --lib session::tests::text_write_format`: 43 passed. |
+| C-004 | The Rust compiler, validator, renderer and SELECT builder match the oracle cell by cell, including the offset-letter matrix with LMT seconds, the `''` quote escape, section skip, and the star fast path / partition skip / eager rejection of the builder. | `session::tests::text_write_format` unit pins. | PROVEN | `cargo test -p repark-core --lib session::tests::text_write_format`: 52 passed (verifier fold adds quote runs, year width/sign, trailing-`]` class, backslash escape, case twins). |
 | C-005 | The s3a route formats identically (moto, fake creds only) and read-back round-trips the instant. | The moto s3a leg + the CSV/JSON read-back legs. | PROVEN | `test_s3a_csv_write_matches_spark` green; CSV read-back returns the instant, JSON keeps the bytes and `CAST` recovers it. |
 | C-006 | Nothing else changes: parquet/ORC/Iceberg writes, non-temporal CSV/JSON bytes, the CSV header default, and every read path are untouched; the 25-statement neighbour diff reports no unintended change; the only pin flips are the four mandated refusal-to-honored flips. | Neighbour base-vs-head diff + the flip census + the untouched-path suites. | PROVEN | 25-statement base-vs-head diff: 1 change, the intended `n22` zone wall; multi-part order and random names normalized. Flip census: 3 R2 + 1 Rust refusal pins flipped (all mandated); 0 UTC-wall asserts; 0 unexpected. Temporal + csv/json suites green (237, 459, 801 passed). |
 
@@ -89,7 +90,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_text_write_timestamp_zone_1.py, python/repark/tests/text_write_timestamp_zone_1_fixture.json]
     - id: AT-2
       status: ATTACKED
-      evidence: CSV and JSON doors, local and s3a routes, LTZ/NTZ/DATE value kinds, struct/list/map recursion, partition-column exclusion, duplicate/case-folded names left unwrapped; parquet/ORC/Iceberg and reads verified untouched by the neighbour diff.
+      evidence: CSV and JSON doors, local and s3a routes, LTZ/NTZ/DATE value kinds, struct/list/map recursion, partition-column exclusion, case-duplicate temporal columns all wrapped (quoted identifiers resolve case-sensitively; verifier fold VC-8); parquet/ORC/Iceberg and reads verified untouched by the neighbour diff.
       artifacts: [crates/repark-core/src/session/text_write_format.rs, crates/repark-core/src/session/text_write_format/select.rs, crates/repark-core/src/session/text_write_format/udf.rs]
     - id: AT-3
       status: ATTACKED
@@ -100,11 +101,11 @@ COVERAGE_ATTESTATION:
       justification: Pure function of (value, pattern, zone); no shared or mutable state; the UDF holds no cache.
     - id: AT-5
       status: ATTACKED
-      evidence: The s3a leg runs against moto with fake credentials only; no AWS access, no secret in output; zone ids and patterns are quoted as literals/identifiers in generated SQL (backticks parse on both doors).
+      evidence: The s3a leg runs against moto with fake credentials only; no AWS access, no secret in output; zone ids ride quoted identifiers and patterns ride string literals that double every backslash before doubling quotes (the COPY tokenizer passes backslash pairs verbatim and treats backslash-quote as an escape, so undoubled input would break the literal; the UDF halves the pairs back — ordinal-probed round-trip, verifier fold VC-6).
       artifacts: [python/repark/tests/test_text_write_timestamp_zone_1.py]
     - id: AT-6
       status: ATTACKED
-      evidence: Written bytes round-trip the instant on same-zone read-back (CSV infers timestamp; JSON keeps the string and CAST recovers it); the s3a object bytes equal the local bytes.
+      evidence: Written bytes round-trip the instant on same-zone read-back (CSV infers timestamp; JSON keeps the string and CAST recovers it); the s3a object bytes equal the local bytes. Explicit-schema CSV read-back of LMT offset-seconds refuses loud (Arrow parser gap, residue R-6, card CSV-READ-OFFSET-SECONDS-1; verifier fold VC-7).
       artifacts: [python/repark/tests/test_text_write_timestamp_zone_1.py]
     - id: AT-7
       status: N/A
@@ -148,6 +149,17 @@ COVERAGE_ATTESTATION:
 - R-5 (JSON inference, pre-existing): a JSON read-back infers the written
   timestamp as STRING (Spark infers timestamp); `CAST` recovers the instant.
   Pinned as string-equality plus cast.
+- R-6 (CSV read, carded CSV-READ-OFFSET-SECONDS-1): an explicit-schema CSV
+  read-back of a written LMT offset with seconds (`-04:56:02`) refuses loud
+  (the Arrow timestamp parser rejects `±HH:MM:SS`); infer-schema and JSON
+  schema reads work. The writer's bytes equal Spark's; only the schema-read
+  leg cannot reingest them. Accepting seconds needs a read-path cast the fold
+  scoped out (>60 lines). Pinned as the loud refusal.
+- R-7 (LEGACY policy, carded TEXT-WRITE-LEGACY-POLICY-1): CSV/JSON writes
+  carrying temporal columns or temporal options refuse loud under
+  `spark.sql.legacy.timeParserPolicy=LEGACY` (legacy `SimpleDateFormat` /
+  hybrid-calendar rendering is not implemented); non-temporal writes proceed.
+  Pinned as the refusal plus the inert leg.
 
 ## Neighbours
 
@@ -235,3 +247,52 @@ pre-existing residue R-3 (the CSV sink leaves empty strings unquoted). No pin
 asserts the wrong bytes. The sink-level fix, a CSV writer that quotes empty
 but non-null fields on the local and s3a routes, is carded as
 CSV-EMPTY-QUOTE-1 for v1.5.2. It covers NQ02 and NP07 together.
+
+## Opus verifier fold (2026-09-29, Muse worker lane `/tmp/xcsvts`)
+
+Folded findings VC-1..VC-9 from `verify-csvts-opus-handback.json` (Opus
+verifier, ~1470-cell harness). Oracle-first: saved `out/*-spark.json` cells
+plus live Spark 4.1.2 probes for the gaps (trailing-`]` classes, backslash
+runs) and jshell probes against `DateTimeFormatter`, `SimpleDateFormat`, and
+`ZoneId.of(id, SHORT_IDS)`.
+
+- VC-1 (quotes): the scan and tokenizer now port Java's literal scan (on `'`,
+  scan to the closing quote treating `''` as escape; empty content yields one
+  quote). The finding's `8 quotes -> 2` example is a typo: the oracle says 3
+  across all three kinds (`p2*39`), and the port renders 3. Pins: 4/6/8-run
+  and mixed cells.
+- VC-2 (`y` width): runs past 6 refuse (RECOGNITION for LTZ/DATE,
+  WITH_SUGGESTION for NTZ); 6 stays accepted. Pins per kind.
+- VC-3 (years): `y` renders the signed proleptic year (`-0001`, `00`,
+  `+10000`) unless an unquoted `G` selects year-of-era (`BC 0001`).
+  Pins from the `ext` oracle rows.
+- VC-4 (`VV`): the UDF takes the raw zone and resolves
+  `ZoneId.of(raw, SHORT_IDS).getId()` for `VV` (offsets/walls stay canonical).
+  The full `SHORT_IDS` table is jshell-verified, including the tzdb-region
+  overrides (`EST5EDT` stays verbatim). PST-as-session-zone still refuses at
+  `conf.set` (pre-existing, identical at base; not a VC finding).
+- VC-5 (LEGACY): `spark.sql.legacy.timeParserPolicy` is a real session knob
+  (lazily installed carrier + runtime set/unset + facade forward, default
+  `EXCEPTION`; builder-seeded values are read back from the conf dump, since a
+  builder install has no room under the `lib.rs`/`session.rs` ceilings);
+  temporal-bearing CSV/JSON writes refuse loud under `LEGACY`. The LEGACY
+  formatter is carded as TEXT-WRITE-LEGACY-POLICY-1 (residue R-7).
+- VC-6 (backslash splice): literals double every backslash before doubling
+  quotes and the UDF halves the pairs back. The COPY tokenizer passes `\\`
+  through verbatim and treats `\'` as an escaped quote (ordinal-probed), so
+  pure quote-doubling broke quote-adjacent backslashes; the pair round-trips
+  every shape 1:1. The finding's Expr suggestion was weighed and declined:
+  `COPY` executes as one SQL string on both routes, so an Expr projection
+  would replace the commit machinery for no byte gain. Pins: quote-backslash
+  and backslash-pair cells on CSV and JSON.
+- VC-7 (offset-seconds read): scoped out as residue R-6
+  (card CSV-READ-OFFSET-SECONDS-1); the round-trip leg pins the loud refusal.
+- VC-8 (case twins): the case-folded uniqueness skip is gone; every temporal
+  column wraps. Pinned `T,t` bytes cell.
+- VC-9 (trailing `]`): LTZ/DATE take RECOGNITION when every letter is a
+  legacy `SimpleDateFormat` letter (jshell-measured set; `xxx]` stays
+  WITH_SUGGESTION / lazy-`]`), NTZ downgrades (live-probed). Pins per kind.
+
+AT-2, AT-5, AT-6 evidence updated for the fold; C-001 counts 207 facade pins
+and C-004 counts 52 Rust pins. Mutation M2 (below) restores the undoubled
+splice: the VC-6 pin reds.

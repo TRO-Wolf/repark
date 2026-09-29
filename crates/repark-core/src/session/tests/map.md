@@ -28,6 +28,9 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   offset-letter matrix, and the SELECT builder (star fast path, wrapping,
   partition skip, eager rejection).
   pins: text-write-timestamp-zone-1/C-004
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 verifier fold (2026-09-29):** quote-run,
+  year-width, proleptic-year, trailing-`]`-class, backslash-escape, and
+  case-twin pins (52 total).
 - `s3_prefix_read.rs` — **S3-PATH-WRITE-1 round 2 (2026-09-28):** slashless S3
   prefix reads on an in-memory store (no AWS): a written prefix reads back
   slashless for parquet, csv and json; exact part URLs keep single-file reads

@@ -220,20 +220,32 @@ fn render_era(year: i32, count: usize) -> &'static str {
     }
 }
 
-fn render_year(year: i32, count: usize) -> String {
-    let era_year = if year <= 0 {
-        1i64 - i64::from(year)
+fn render_year(year: i32, count: usize, has_era: bool) -> String {
+    let proleptic = i64::from(year);
+    let value = if has_era && proleptic <= 0 {
+        1 - proleptic
     } else {
-        i64::from(year)
+        proleptic
     };
     if count == 2 {
-        return format!("{:02}", era_year.rem_euclid(100));
+        return format!("{:02}", value.abs() % 100);
     }
     if count == 1 {
-        return era_year.to_string();
+        return value.to_string();
     }
+    let digits = value.abs().to_string();
     let width = count.max(1);
-    format!("{era_year:0width$}")
+    let mut text = String::new();
+    if value < 0 {
+        text.push('-');
+    } else if count >= 4 && digits.len() > count {
+        text.push('+');
+    }
+    for _ in digits.len()..width {
+        text.push('0');
+    }
+    text.push_str(&digits);
+    text
 }
 
 fn render_fraction(nanos: u32, count: usize) -> String {
@@ -248,9 +260,10 @@ fn render_date_field(
     count: usize,
     date: NaiveDate,
     epoch_day: i64,
+    has_era: bool,
 ) -> Option<String> {
     match letter {
-        'y' => Some(render_year(date.year(), count)),
+        'y' => Some(render_year(date.year(), count, has_era)),
         'M' | 'L' => Some(match count {
             1 => date.month().to_string(),
             2 => format!("{:02}", date.month()),
@@ -329,6 +342,7 @@ fn render_field(
     letter: char,
     count: usize,
     value: &RenderValue,
+    has_era: bool,
 ) -> std::result::Result<String, String> {
     let (date, wall, nanos) = match value {
         RenderValue::Instant { wall, nanos, .. } | RenderValue::Wall { wall, nanos } => {
@@ -340,7 +354,7 @@ fn render_field(
         .and_utc()
         .timestamp()
         .div_euclid(86_400);
-    if let Some(text) = render_date_field(letter, count, date, epoch_day) {
+    if let Some(text) = render_date_field(letter, count, date, epoch_day, has_era) {
         return Ok(text);
     }
     if let Some(wall_value) = wall {
@@ -371,6 +385,10 @@ pub fn render_compiled(
 ) -> std::result::Result<String, String> {
     let mut output = String::new();
     let mut section_starts: Vec<(usize, usize)> = Vec::new();
+    let has_era = compiled
+        .tokens
+        .iter()
+        .any(|token| matches!(token, PatternToken::Field { letter: 'G', .. }));
     let mut index = 0usize;
     while index < compiled.tokens.len() {
         match &compiled.tokens[index] {
@@ -386,22 +404,24 @@ pub fn render_compiled(
                 section_starts.pop();
                 index += 1;
             }
-            PatternToken::Field { letter, count } => match render_field(*letter, *count, value) {
-                Ok(text) => {
-                    output.push_str(&text);
-                    index += 1;
-                }
-                Err(failure) => {
-                    if let Some((open, start_len)) = section_starts.pop() {
-                        output.truncate(start_len);
-                        index =
-                            compiled.matching[open].map_or(compiled.tokens.len(), |end| end + 1);
-                        section_starts.retain(|(position, _)| *position < open);
-                    } else {
-                        return Err(failure);
+            PatternToken::Field { letter, count } => {
+                match render_field(*letter, *count, value, has_era) {
+                    Ok(text) => {
+                        output.push_str(&text);
+                        index += 1;
+                    }
+                    Err(failure) => {
+                        if let Some((open, start_len)) = section_starts.pop() {
+                            output.truncate(start_len);
+                            index = compiled.matching[open]
+                                .map_or(compiled.tokens.len(), |end| end + 1);
+                            section_starts.retain(|(position, _)| *position < open);
+                        } else {
+                            return Err(failure);
+                        }
                     }
                 }
-            },
+            }
         }
     }
     Ok(output)

@@ -2,10 +2,13 @@ use std::collections::{HashMap, HashSet};
 
 use arrow::datatypes::{DataType, SchemaRef};
 use datafusion::prelude::DataFrame;
+use repark_common::Error;
 
 use super::{PatternKind, compile_write_pattern, pattern_failure_error, write_option_patterns};
 use crate::session::ReparkSession;
-use crate::session_time_zone::canonical_session_zone_id;
+use crate::session_time_zone::{
+    TimeParserPolicy, TimeParserPolicyConfig, conf_dump_selects_legacy_policy,
+};
 
 fn contains_temporal(data_type: &DataType) -> bool {
     match data_type {
@@ -32,7 +35,7 @@ fn quote_ident(name: &str) -> String {
 }
 
 fn quote_literal(text: &str) -> String {
-    format!("'{}'", text.replace('\'', "''"))
+    format!("'{}'", text.replace('\\', "\\\\").replace('\'', "''"))
 }
 
 fn pattern_argument(pattern: Option<&String>) -> String {
@@ -71,24 +74,16 @@ pub fn build_text_write_select(
 ) -> crate::Result<String> {
     let (timestamp, ntz, date) = write_option_patterns(options);
     validate_user_patterns(timestamp.as_ref(), ntz.as_ref(), date.as_ref())?;
-    let zone = canonical_session_zone_id(zone_id);
     let partitions: HashSet<String> = partition_by
         .iter()
         .map(|name| name.to_lowercase())
         .collect();
-    let mut folded_counts: HashMap<String, usize> = HashMap::new();
-    for field in schema.fields() {
-        *folded_counts
-            .entry(field.name().to_lowercase())
-            .or_insert(0) += 1;
-    }
     let mut items = Vec::with_capacity(schema.fields().len());
     let mut wrapped = 0usize;
     for field in schema.fields() {
         let name = field.name();
         let folded = name.to_lowercase();
-        let unique = folded_counts.get(&folded).is_some_and(|count| *count == 1);
-        if partitions.contains(&folded) || !unique || !contains_temporal(field.data_type()) {
+        if partitions.contains(&folded) || !contains_temporal(field.data_type()) {
             items.push(quote_ident(name));
             continue;
         }
@@ -99,7 +94,7 @@ pub fn build_text_write_select(
             pattern_argument(timestamp.as_ref()),
             pattern_argument(ntz.as_ref()),
             pattern_argument(date.as_ref()),
-            quote_literal(&zone),
+            quote_literal(zone_id),
             quote_ident(name)
         ));
         wrapped += 1;
@@ -119,6 +114,35 @@ impl ReparkSession {
         options: &HashMap<String, String>,
         partition_by: &[String],
     ) -> crate::Result<String> {
+        let live = self
+            .context()
+            .copied_config()
+            .options()
+            .extensions
+            .get::<TimeParserPolicyConfig>()
+            .map(|carrier| carrier.policy);
+        let legacy = live.map_or_else(
+            || conf_dump_selects_legacy_policy(&self.conf_dump()),
+            TimeParserPolicy::is_legacy,
+        );
+        if legacy {
+            let (timestamp, ntz, date) = write_option_patterns(options);
+            let temporal_options = timestamp.is_some() || ntz.is_some() || date.is_some();
+            let temporal_columns = frame
+                .schema()
+                .inner()
+                .fields()
+                .iter()
+                .any(|field| contains_temporal(field.data_type()));
+            if temporal_options || temporal_columns {
+                return Err(Error::Analysis(
+                    "CSV/JSON text writes with spark.sql.legacy.timeParserPolicy=LEGACY are not \
+                     supported yet (legacy SimpleDateFormat rendering is not implemented; unset \
+                     the policy or set it to CORRECTED)"
+                        .to_string(),
+                ));
+            }
+        }
         build_text_write_select(
             frame.schema().inner(),
             view_sql,

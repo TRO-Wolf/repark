@@ -1,10 +1,13 @@
 //! Session timezone configuration, resolved once during session construction.
 
+use std::any::Any;
 use std::collections::HashMap;
 use std::hash::BuildHasher;
 use std::str::FromStr;
 
 use arrow::array::timezone::Tz;
+use datafusion::common::config::{ConfigEntry, ConfigExtension, ExtensionOptions};
+use datafusion::error::{DataFusionError, Result as DataFusionResult};
 use repark_common::{Error, Result, spark_error};
 
 /// The ONE conf key the engine reads for the session timezone.
@@ -169,6 +172,75 @@ pub fn canonical_session_zone_id(raw: &str) -> String {
     trimmed.to_string()
 }
 
+fn java_short_id(trimmed: &str) -> Option<&'static str> {
+    match trimmed {
+        "ACT" => Some("Australia/Darwin"),
+        "AET" => Some("Australia/Sydney"),
+        "AGT" => Some("America/Argentina/Buenos_Aires"),
+        "ART" => Some("Africa/Cairo"),
+        "AST" => Some("America/Anchorage"),
+        "BET" => Some("America/Sao_Paulo"),
+        "BST" => Some("Asia/Dhaka"),
+        "CAT" => Some("Africa/Harare"),
+        "CNT" => Some("America/St_Johns"),
+        "CST" => Some("America/Chicago"),
+        "CTT" => Some("Asia/Shanghai"),
+        "EAT" => Some("Africa/Addis_Ababa"),
+        "ECT" => Some("Europe/Paris"),
+        "EST" => Some("-05:00"),
+        "HST" => Some("-10:00"),
+        "IET" => Some("America/Indiana/Indianapolis"),
+        "IST" => Some("Asia/Kolkata"),
+        "JST" => Some("Asia/Tokyo"),
+        "MIT" => Some("Pacific/Apia"),
+        "MST" => Some("-07:00"),
+        "NET" => Some("Asia/Yerevan"),
+        "NST" => Some("Pacific/Auckland"),
+        "PLT" => Some("Asia/Karachi"),
+        "PNT" => Some("America/Phoenix"),
+        "PRT" => Some("America/Puerto_Rico"),
+        "PST" => Some("America/Los_Angeles"),
+        "SST" => Some("Pacific/Guadalcanal"),
+        "VST" => Some("Asia/Ho_Chi_Minh"),
+        _ => None,
+    }
+}
+
+#[must_use]
+pub fn java_display_zone_id(raw: &str) -> String {
+    let trimmed = raw.trim();
+    if matches!(trimmed, "EST5EDT" | "CST6CDT" | "MST7MDT" | "PST8PDT") {
+        return trimmed.to_string();
+    }
+    if let Some(mapped) = java_short_id(trimmed) {
+        return mapped.to_string();
+    }
+    if trimmed == "Z" {
+        return "Z".to_string();
+    }
+    for prefix in ["GMT", "UTC", "UT"] {
+        if !trimmed.starts_with(prefix) {
+            continue;
+        }
+        if trimmed.len() == prefix.len() {
+            return trimmed.to_string();
+        }
+        let rest = &trimmed[prefix.len()..];
+        if matches!(rest.as_bytes().first(), Some(b'+' | b'-')) {
+            return format!("{prefix}{}", normalize_java_offset(rest));
+        }
+        return trimmed.to_string();
+    }
+    if matches!(trimmed.as_bytes().first(), Some(b'+' | b'-')) && is_java_offset_zone(trimmed) {
+        let normalized = normalize_java_offset(trimmed);
+        if normalized == "+00:00" || normalized == "-00:00" {
+            return "Z".to_string();
+        }
+        return normalized;
+    }
+    trimmed.to_string()
+}
+
 fn normalize_java_offset(signed: &str) -> String {
     let body = &signed.as_bytes()[1..];
     let (hours, minutes) = match body.len() {
@@ -222,6 +294,80 @@ fn decimal_pair(body: &[u8], offset: usize, width: usize) -> u32 {
         number = number * 10 + u32::from(byte - b'0');
     }
     number
+}
+
+pub const TIME_PARSER_POLICY_KEY: &str = "spark.sql.legacy.timeParserPolicy";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TimeParserPolicy {
+    Legacy,
+    Corrected,
+    #[default]
+    Exception,
+}
+
+impl TimeParserPolicy {
+    #[must_use]
+    pub fn is_legacy(self) -> bool {
+        self == Self::Legacy
+    }
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn parse_time_parser_policy(raw: &str) -> DataFusionResult<TimeParserPolicy> {
+    match raw.to_ascii_uppercase().as_str() {
+        "LEGACY" => Ok(TimeParserPolicy::Legacy),
+        "CORRECTED" => Ok(TimeParserPolicy::Corrected),
+        "EXCEPTION" => Ok(TimeParserPolicy::Exception),
+        _ => Err(DataFusionError::Configuration(format!(
+            "[INVALID_CONF_VALUE.OUT_OF_RANGE_OF_OPTIONS] The value '{raw}' in the config \
+             \"{TIME_PARSER_POLICY_KEY}\" is invalid. It should be one of 'LEGACY, CORRECTED, \
+             EXCEPTION'. SQLSTATE: 22022"
+        ))),
+    }
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct TimeParserPolicyConfig {
+    pub policy: TimeParserPolicy,
+}
+
+impl ConfigExtension for TimeParserPolicyConfig {
+    const PREFIX: &'static str = "repark.timeparser";
+}
+
+impl ExtensionOptions for TimeParserPolicyConfig {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn cloned(&self) -> Box<dyn ExtensionOptions> {
+        Box::new(self.clone())
+    }
+
+    fn set(&mut self, key: &str, _value: &str) -> DataFusionResult<()> {
+        Err(DataFusionError::Configuration(format!(
+            "`{}.{key}` is not a settable option: the time parser policy is set with \
+             `{TIME_PARSER_POLICY_KEY}` on the session builder; change it at runtime with \
+             `SET {TIME_PARSER_POLICY_KEY}`",
+            Self::PREFIX
+        )))
+    }
+
+    fn entries(&self) -> Vec<ConfigEntry> {
+        Vec::new()
+    }
+}
+
+#[must_use]
+pub fn conf_dump_selects_legacy_policy(dump: &[(String, String, String)]) -> bool {
+    dump.iter().any(|(key, value, _)| {
+        key == TIME_PARSER_POLICY_KEY && value.eq_ignore_ascii_case("legacy")
+    })
 }
 
 #[cfg(test)]

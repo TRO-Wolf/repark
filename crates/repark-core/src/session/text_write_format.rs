@@ -137,6 +137,21 @@ struct PatternScan {
     section_char: bool,
 }
 
+fn closing_quote(characters: &[char], open: usize) -> Option<usize> {
+    let mut index = open + 1;
+    while index < characters.len() {
+        if characters[index] == '\'' {
+            if characters.get(index + 1) == Some(&'\'') {
+                index += 2;
+                continue;
+            }
+            return Some(index + 1);
+        }
+        index += 1;
+    }
+    None
+}
+
 fn scan_pattern(pattern: &str) -> PatternScan {
     let characters: Vec<char> = pattern.chars().collect();
     let mut runs = Vec::new();
@@ -146,25 +161,15 @@ fn scan_pattern(pattern: &str) -> PatternScan {
     let mut section_char = false;
     let mut depth = 0usize;
     let mut index = 0usize;
-    let mut in_quote = false;
     while index < characters.len() {
         let current = characters[index];
         if current == '\'' {
-            if !in_quote && characters.get(index + 1) == Some(&'\'') {
-                index += 2;
+            if let Some(end) = closing_quote(&characters, index) {
+                index = end;
                 continue;
             }
-            if in_quote && characters.get(index + 1) == Some(&'\'') {
-                index += 2;
-                continue;
-            }
-            in_quote = !in_quote;
-            index += 1;
-            continue;
-        }
-        if in_quote {
-            index += 1;
-            continue;
+            unclosed_quote = true;
+            break;
         }
         if current == '[' {
             depth += 1;
@@ -195,9 +200,6 @@ fn scan_pattern(pattern: &str) -> PatternScan {
             continue;
         }
         index += 1;
-    }
-    if in_quote {
-        unclosed_quote = true;
     }
     PatternScan {
         runs,
@@ -257,6 +259,7 @@ fn legacy_recognition_triggered(scan: &PatternScan, bare_close: bool) -> bool {
         'D' => *count > 3,
         'd' | 'h' | 'H' | 'm' | 's' | 'K' | 'k' => *count > 2,
         'Z' => *count > 5,
+        'y' => *count > 6,
         _ => false,
     })
 }
@@ -268,8 +271,14 @@ fn is_unknown_letter(letter: char) -> bool {
     )
 }
 
+fn legacy_close_recognized(scan: &PatternScan) -> bool {
+    scan.runs.iter().all(|(letter, _)| {
+        is_simple_date_format_letter(*letter) || matches!(letter, 'Y' | 'L' | 'u' | 'X')
+    })
+}
+
 fn structural_timestamp_failure(scan: &PatternScan) -> bool {
-    if scan.unclosed_quote || scan.unmatched_close {
+    if scan.unclosed_quote {
         return true;
     }
     for (letter, count) in &scan.runs {
@@ -329,6 +338,12 @@ fn validate_timestamp_pattern(pattern: &str, scan: &PatternScan) -> Option<Patte
     if let Some(failure) = shared_legacy_failure(pattern, scan) {
         return Some(failure);
     }
+    if scan.unmatched_close {
+        if legacy_close_recognized(scan) {
+            return Some(PatternFailure::recognition(pattern));
+        }
+        return Some(PatternFailure::invalid_suggestion(pattern));
+    }
     if structural_timestamp_failure(scan) {
         return Some(PatternFailure::invalid_suggestion(pattern));
     }
@@ -360,24 +375,20 @@ fn validate_date_pattern(pattern: &str, scan: &PatternScan) -> Option<PatternFai
     if let Some(failure) = shared_legacy_failure(pattern, scan) {
         return Some(failure);
     }
+    if scan.unmatched_close && legacy_close_recognized(scan) {
+        return Some(PatternFailure::recognition(pattern));
+    }
     let characters: Vec<char> = pattern.chars().collect();
     let mut index = 0usize;
-    let mut in_quote = false;
     let mut depth = 0usize;
     while index < characters.len() {
         let current = characters[index];
         if current == '\'' {
-            if characters.get(index + 1) == Some(&'\'') {
-                index += 2;
+            if let Some(end) = closing_quote(&characters, index) {
+                index = end;
                 continue;
             }
-            in_quote = !in_quote;
-            index += 1;
-            continue;
-        }
-        if in_quote {
-            index += 1;
-            continue;
+            break;
         }
         if current == '[' {
             depth += 1;
@@ -443,27 +454,19 @@ fn compile_tokens(pattern: &str) -> CompiledPattern {
     while index < characters.len() {
         let current = characters[index];
         if current == '\'' {
-            if characters.get(index + 1) == Some(&'\'') {
-                tokens.push(PatternToken::Literal("'".to_string()));
-                index += 2;
+            if let Some(end) = closing_quote(&characters, index) {
+                let inner: String = characters[index + 1..end - 1].iter().collect();
+                if inner.is_empty() {
+                    tokens.push(PatternToken::Literal("'".to_string()));
+                } else {
+                    tokens.push(PatternToken::Literal(inner.replace("''", "'")));
+                }
+                index = end;
                 continue;
             }
-            index += 1;
-            let mut literal = String::new();
-            while index < characters.len() {
-                if characters[index] == '\'' {
-                    if characters.get(index + 1) == Some(&'\'') {
-                        literal.push('\'');
-                        index += 2;
-                        continue;
-                    }
-                    index += 1;
-                    break;
-                }
-                literal.push(characters[index]);
-                index += 1;
-            }
-            tokens.push(PatternToken::Literal(literal));
+            let rest: String = characters[index + 1..].iter().collect();
+            tokens.push(PatternToken::Literal(rest.replace("''", "'")));
+            index = characters.len();
             continue;
         }
         if current == '[' {

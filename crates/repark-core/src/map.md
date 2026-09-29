@@ -1228,6 +1228,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   clones; `session_time_zone` now returns the snapshot `Arc`). Pedantic-clean (nested
   or-patterns, method-ref digit checks).
   pins: set-ansi-runtime-1/C-002
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 verifier fold (2026-09-29):** `java_display_zone_id`
+  (`ZoneId.of(raw, SHORT_IDS).getId()` semantics for `VV`, jshell-verified) and the
+  `spark.sql.legacy.timeParserPolicy` carrier (`TimeParserPolicyConfig`, lazily
+  installed by the `ReparkSession` setter; only the key rides the crate root so
+  `lib.rs` holds its ceiling; builder-seeded values are read back from the conf
+  dump).
 - `temp_view.rs` (+ `temp_view/tests.rs`) — **the temp-view NAME choke point (round 6, R6-1):**
   `TempViewHome` (the build-time `catalog.schema` a session's temp views live in, snapshotted
   once), `build_temp_view_home` (the one `build()`-time capture, moved here from `session.rs`
