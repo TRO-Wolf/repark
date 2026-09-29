@@ -20,6 +20,7 @@ use tokio::runtime::Runtime;
 
 use crate::arrow_export::StreamingBatchReader;
 use crate::column::PyColumn;
+use crate::deep_stack::block_on;
 use crate::fence::{fenced, fenced_span};
 use crate::{datafusion_to_py_err, to_py_err};
 
@@ -143,7 +144,7 @@ impl PyDataFrame {
     /// Returns `RuntimeError` if the engine fails to execute the count.
     pub fn count(&self, py: Python<'_>) -> PyResult<usize> {
         fenced_span!("py.action", "PyDataFrame.count", {
-            py.detach(|| self.runtime.block_on(self.df.clone().count()))
+            py.detach(|| block_on(&self.runtime, self.df.clone().count()))
                 .map_err(datafusion_to_py_err)
         })
     }
@@ -242,9 +243,7 @@ impl PyDataFrame {
                 .limit(0, Some(n))
                 .map_err(datafusion_to_py_err)?;
             let batches = py.detach(|| {
-                self.runtime
-                    .block_on(limited.collect())
-                    .map_err(datafusion_to_py_err)
+                block_on(&self.runtime, limited.collect()).map_err(datafusion_to_py_err)
             })?;
             pretty_format_batches(&batches)
                 .map(|table| table.to_string())
@@ -270,7 +269,7 @@ impl PyDataFrame {
             let schema = crate::arrow_export::coerced_export_schema(&schema);
             // Open a lazy batch stream — the physical plan build runs with the GIL released.
             let stream = py
-                .detach(|| self.runtime.block_on(self.df.clone().execute_stream()))
+                .detach(|| block_on(&self.runtime, self.df.clone().execute_stream()))
                 .map_err(datafusion_to_py_err)?;
             let reader: Box<dyn RecordBatchReader + Send> = Box::new(
                 StreamingBatchReader::new(Arc::clone(&self.runtime), stream, schema)

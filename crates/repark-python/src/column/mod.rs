@@ -2,8 +2,8 @@
 //! Constructors resolve literals and standalone SQL expressions; `DataFrame` methods resolve
 //! expressions against their input schema.
 
-use crate::AnalysisException;
-use crate::fence::fenced;
+use crate::deep_stack::block_on;
+use crate::{AnalysisException, fence::fenced};
 use datafusion::arrow::datatypes::DataType;
 use datafusion::functions_aggregate::count::count_udaf;
 use datafusion::functions_window::cume_dist::cume_dist_udwf;
@@ -225,7 +225,7 @@ impl PyColumn {
                 .map_err(crate::datafusion_to_py_err)?;
             let runtime = crate::session::shared_runtime()?;
             let planned = expr_build::plan_expr_column(&context, canonical.as_ref(), sql);
-            let expr = runtime.block_on(planned)?;
+            let expr = block_on(&runtime, planned)?;
             Ok(Self::from_expr(expr))
         })
     }

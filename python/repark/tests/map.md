@@ -7374,6 +7374,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   lands with C-014; the `C_MEM.t` arm leaves the refusal loop.
   pins: catalog-1/C-001, C-002, C-003, C-004,
   C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
+- [test_deep_filter_chain_crash_1.py](test_deep_filter_chain_crash_1.py) —
+  **DEEP-FILTER-CHAIN-CRASH-1 (2026-09-29):** deep operator chains answer instead
+  of killing the interpreter. One module-scoped fixture drives the whole battery
+  in a single isolated interpreter (a crash fails the fixture, never pytest):
+  1,000 chained filters count 50 on the DataFrame door (Spark 4.1.2 oracle 50;
+  base segfaulted at 610), 200 joins count 1 and 300 unions count 15050 (base
+  segfaulted at 110 joins), 120 `withColumn` count 50 (plan-build time, 44 s at
+  200 on base, caps the depth — not the stack), 1,000-deep nested SQL raises a
+  catchable `RecursionError` (Spark refuses nested-deep SQL too, with
+  `FAILED_TO_PARSE_TOO_COMPLEX`), and flat 600-union SQL counts 1202.
+  pins: deep-filter-chain-crash-1/C-001, C-002, C-003, C-004
 
 ## I want to...
 

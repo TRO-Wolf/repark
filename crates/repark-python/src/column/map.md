@@ -88,6 +88,10 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   **CASESENS-1 S3 (2026-09-27):** `PyColumn::column` builds through
   `expr_build::written_column` (the written spelling reaches the binder; net-zero, stays
   1012). pins: casesens-1/C-009
+  **DEEP-FILTER-CHAIN-CRASH-1 (2026-09-29):** `Column.sql` drives its planned
+  expression through `deep_stack::block_on` (grown-stack entry point; net-zero: two
+  `use` lines join to pay for the import, stays 1012).
+  pins: deep-filter-chain-crash-1/C-001
 - [`function_dispatch.rs`](function_dispatch.rs) owns scalar and aggregate function dispatch.
   Its default arm hands the name to [`function_dispatch/`](function_dispatch/map.md) before
   refusing.

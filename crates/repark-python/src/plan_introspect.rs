@@ -5,6 +5,7 @@ use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
 use crate::dataframe::PyDataFrame;
+use crate::deep_stack::block_on;
 use crate::fence::{fenced, fenced_span};
 use crate::{datafusion_to_py_err, to_py_err};
 
@@ -20,11 +21,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
 fn input_files(py: Python<'_>, frame: &PyDataFrame) -> PyResult<Vec<String>> {
     fenced_span!("py.action", "plan_introspect.input_files", {
         let plan = py
-            .detach(|| {
-                frame
-                    .runtime
-                    .block_on(frame.df.clone().create_physical_plan())
-            })
+            .detach(|| block_on(&frame.runtime, frame.df.clone().create_physical_plan()))
             .map_err(datafusion_to_py_err)?;
         Ok(repark_core::input_files(&plan))
     })

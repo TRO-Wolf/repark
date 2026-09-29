@@ -13,6 +13,7 @@ mod dataframe_fill;
 mod dataframe_names;
 mod dataframe_stack;
 mod dataframe_stats;
+mod deep_stack;
 mod fence;
 mod logical_names;
 mod ml;
@@ -33,9 +34,8 @@ use datafusion::error::DataFusionError;
 use pyo3::prelude::*;
 use repark_core::ErrorClass;
 
-pub use column::PyColumn;
-pub use dataframe::PyDataFrame;
 pub use session::PyReparkSession;
+pub use {column::PyColumn, dataframe::PyDataFrame};
 
 /// The exception taxonomy lives in [`exceptions`]; see that module for the lint expectation.
 mod exceptions;

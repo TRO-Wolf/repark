@@ -20,6 +20,7 @@ use repark_ml::{
 use tokio::runtime::Runtime;
 
 use crate::dataframe::PyDataFrame;
+use crate::deep_stack::block_on;
 use crate::fence::fenced;
 use crate::{IllegalArgumentException, UnsupportedOperationException};
 
@@ -41,8 +42,7 @@ fn ml_to_py_err(err: MlError) -> PyErr {
 
 /// Open `execute_stream` on a clone of the held plan without collecting it.
 fn open_stream(plan: &DataFrame, runtime: &Runtime) -> Result<SendableRecordBatchStream, MlError> {
-    runtime
-        .block_on(plan.clone().execute_stream())
+    block_on(runtime, plan.clone().execute_stream())
         .map_err(|err| MlError::IllegalArgument(format!("execute_stream: {err}")))
 }
 
@@ -56,7 +56,7 @@ where
     F: FnMut(&RecordBatch) -> Result<(), MlError>,
 {
     loop {
-        match runtime.block_on(stream.next()) {
+        match block_on(runtime, stream.next()) {
             None => break,
             Some(Ok(batch)) => on_batch(&batch)?,
             Some(Err(err)) => {

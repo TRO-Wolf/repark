@@ -16,6 +16,7 @@ use repark_core::{PoolRefusalLog, REFUSAL_CONTAINMENT_NOTE};
 use tokio::runtime::Runtime;
 
 use crate::dataframe::STREAM_POLL_NO_DETACH;
+use crate::deep_stack::block_on;
 use crate::fence::{fence_stream_poll, fenced_panic_detail};
 use crate::to_py_err;
 
@@ -116,9 +117,9 @@ impl Iterator for StreamingBatchReader {
         let item = fence_stream_poll("PyDataFrame.__arrow_c_stream__.next", || {
             let no_detach = STREAM_POLL_NO_DETACH.with(Cell::get);
             let polled = if no_detach {
-                runtime.block_on(stream.next())
+                block_on(runtime, stream.next())
             } else {
-                Python::attach(|python| python.detach(|| runtime.block_on(stream.next())))
+                Python::attach(|python| python.detach(|| block_on(runtime, stream.next())))
             };
             polled.map(|batch| {
                 batch
