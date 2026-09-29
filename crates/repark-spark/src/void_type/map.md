@@ -38,6 +38,12 @@ handling (`CAST(NULL AS VOID)` rewrite, the non-NULL VALUES refusal into
   the analyzer error instead of passing the row when the probe cannot parse;
   `number_text_type` is `pub(crate)` for `update_cast.rs` (ten classifier
   tests, one asserting no `--` survives rendering).
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 re-verify fold, RN2-2/RN2-3):** a
+  `DEFAULT` cell is skipped like a bare NULL (`is_null_or_default_cell` in the
+  parent), and both `nvl`/`ifnull` operands render through the shared
+  parenthesizer. `ntz_probe_that_cannot_parse_refuses_instead_of_passing` is the
+  NTZ door's twin of the fail-closed pin: it drives the parent's `check_ntz_row`
+  with an unparsable cell and expects the `ParserError` back (eleven tests).
   pins: ltz-store-int-1/C-001
 
 ## Pointers

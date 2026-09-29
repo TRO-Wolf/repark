@@ -477,6 +477,43 @@ def test_stacked_sign_shapes_into_ntz_refuse(tmp_path: Path) -> None:
         session.stop()
 
 
+def test_equal_and_default_cells_store_like_spark(tmp_path: Path) -> None:
+    session = _open("UTC", tmp_path)
+    try:
+        session.sql(
+            "CREATE TABLE sc.ns.d_int (id INT, a INT, b INT, c TIMESTAMP_NTZ) USING iceberg"
+        ).collect()
+        session.sql(
+            "CREATE TABLE sc.ns.d_idn (id INT, c TIMESTAMP_NTZ, qty INT) USING iceberg"
+        ).collect()
+        ts = "TIMESTAMP_NTZ'2024-01-02 03:04:05'"
+        for sql in [
+            f"INSERT INTO sc.ns.d_int VALUES (1, 1, 1, {ts})",
+            f"INSERT INTO sc.ns.d_int VALUES (3, NULL, NULL, {ts})",
+            f"INSERT INTO sc.ns.d_int VALUES (6, 7, CAST(7 AS INT), {ts})",
+            f"INSERT INTO sc.ns.d_idn VALUES (1, {ts}, 1)",
+            "INSERT INTO sc.ns.d_idn VALUES (6, DEFAULT, 1)",
+            f"INSERT INTO sc.ns.d_idn VALUES (7, {ts}, DEFAULT)",
+            "INSERT INTO sc.ns.d_idn (id, c) VALUES (20, DEFAULT)",
+        ]:
+            session.sql(sql).collect()
+        table = "`sc`.`ns`.`d_int`"
+        _assert_store_refusal(
+            session,
+            "INSERT INTO sc.ns.d_int VALUES (10, 1, 1, '2024-01-02 03:04:05')",
+            table,
+            "STRING",
+        )
+        _assert_store_refusal(
+            session, "INSERT INTO sc.ns.d_int VALUES (11, 1, 1, - -1)", table, "INT"
+        )
+        wall = "2024-01-02 03:04:05"
+        assert _walls(session, "sc.ns.d_int") == [[1, wall], [3, wall], [6, wall]]
+        assert _walls(session, "sc.ns.d_idn") == [[1, wall], [6, None], [7, wall], [20, None]]
+    finally:
+        session.stop()
+
+
 class _DirLock:
     """Cross-process lock so concurrent facade tests do not clobber the fixture copy."""
 

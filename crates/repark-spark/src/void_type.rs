@@ -13,6 +13,7 @@ use datafusion::sql::sqlparser::tokenizer::Span;
 use iceberg::spec::{NestedField, PrimitiveType, Type};
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
+use repark_iceberg::write::insert_defaults::is_default_marker;
 use repark_iceberg::write::ntz_store::refuse_ntz_writes;
 use repark_iceberg::write::void_store::refuse_void_writes;
 
@@ -174,8 +175,7 @@ impl VisitorMut for StackedSignParens {
 
     fn post_visit_expr(&mut self, expr: &mut Expr) -> ControlFlow<Self::Break> {
         if let Expr::UnaryOp { expr: operand, .. } = expr
-            && (matches!(operand.as_ref(), Expr::UnaryOp { .. })
-                || operand.to_string().starts_with('-'))
+            && matches!(operand.as_ref(), Expr::UnaryOp { .. })
         {
             let inner = operand.as_ref().clone();
             **operand = Expr::Nested(Box::new(inner));
@@ -251,6 +251,14 @@ fn refuse_unassignable_ntz_positions(
     Ok(())
 }
 
+fn ntz_probe_cell(index: usize, value: &Expr) -> String {
+    if is_default_marker(value) {
+        format!("NULL AS p{index}")
+    } else {
+        format!("{} AS p{index}", parenthesize_stacked_minus(value))
+    }
+}
+
 async fn check_ntz_row(
     ctx: &SessionContext,
     fields: &[std::sync::Arc<NestedField>],
@@ -296,7 +304,8 @@ async fn check_ntz_row(
         "SELECT {}",
         positions
             .iter()
-            .map(|(_, value)| parenthesize_stacked_minus(value).to_string())
+            .enumerate()
+            .map(|(index, (_, value))| ntz_probe_cell(index, value))
             .collect::<Vec<_>>()
             .join(", ")
     );
@@ -411,7 +420,7 @@ async fn refuse_void_value(
     if !matches!(
         field.field_type.as_ref(),
         Type::Primitive(PrimitiveType::Unknown)
-    ) || is_bare_null(value)
+    ) || is_null_or_default_cell(value)
     {
         return Ok(());
     }
@@ -431,6 +440,10 @@ pub(crate) fn column_name(column: &datafusion::sql::sqlparser::ast::ObjectName) 
         .last()
         .and_then(|part| part.as_ident())
         .map_or_else(|| column.to_string(), |ident| ident.value.clone())
+}
+
+fn is_null_or_default_cell(expr: &Expr) -> bool {
+    is_default_marker(expr) || is_bare_null(expr)
 }
 
 fn is_bare_null(expr: &Expr) -> bool {

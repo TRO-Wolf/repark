@@ -267,6 +267,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_stacked_sign_shapes_into_ntz_refuse` refuses every VG shape with the
   exact Spark body (`- -1 + 0` names the engine's `BIGINT`), plus the
   `(NULL, +- -1)` multi-row; the seeded row survives alone.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 re-verify fold, RN2-1/RN2-2):**
+  `test_equal_and_default_cells_store_like_spark` stores equal-cell and `DEFAULT`
+  rows with the walls Spark 4.1.2 stored in the re-verify follow-up probe, and
+  refuses `(10, 1, 1, '2024-…')` / `(11, 1, 1, - -1)` with Spark's recorded
+  bodies (`STRING`, `INT`), where base stored both.
 - [test_ntz_7_verify.py](test_ntz_7_verify.py) + `ntz_7_verify_spark_oracle.json` —
   **WO NTZ-1 verifier fold (2026-09-28):** `from_utc_timestamp` / `to_utc_timestamp`
   over strings and a STRING column keep Spark's TIMESTAMP in a New York session —
@@ -4577,6 +4582,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-1/VG-2):** every VG
   shape plus the `(NULL, +- -1)` multi-row refuses with the recorded class,
   condition and SQLSTATE, and writes nothing.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 re-verify fold, RN2-2):** `DEFAULT` (bare
+  and in both column-list orders) stores NULL, and a stacked sign under `nvl` /
+  `ifnull` stores the day Spark 4.1.2 stored (`2024-01-02`, `2023-12-31`).
   pins: ltz-store-int-1/C-001
 - `test_merge_semantics_audit.py` — **MERGE-audit corpus** (2026-08-14 audit gap-map rows
   c/d/g/n/o): null-safe `<=>` / `eqNullSafe` ON matches NULL keys (both doors); builder-door

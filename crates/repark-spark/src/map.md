@@ -435,6 +435,11 @@ pins: rp-4-fork-repin/C-005, C-006
   probe renders through the shared recursive parenthesizer, an unparsable probe
   refuses instead of passing the row, and `number_text_type` is shared with
   `update_cast.rs`.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 re-verify fold, RN2-2):** a `DEFAULT`
+  cell is skipped like a bare NULL, and the `nvl`/`ifnull` → `coalesce` probe
+  renders both operands through the shared parenthesizer, so
+  `nvl(NULL, CAST(date_add(DATE'2024-01-01', - -1) AS TIMESTAMP))` stores as
+  Spark does instead of refusing on a `--` comment.
   Directory map: [void_type/map.md](void_type/map.md).
   Pins: [tests/ltz_store.rs](tests/ltz_store.rs).
   pins: ltz-store-int-1/C-001
@@ -1159,6 +1164,18 @@ pins: rp-4-fork-repin/C-005, C-006
   `--` comment; a probe that still cannot parse now refuses with the analyzer's
   own error instead of passing the row. `update_cast.rs` judges integer
   literals through the shared `number_text_type`.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 re-verify fold, RN2-1..RN2-3):** every
+  NTZ probe position is aliased `p{n}`, so a row with two equal cells (`(1, 1, 1,
+  ts)`, `(3, NULL, NULL, ts)`, two equal NTZ literals, `7` beside `CAST(7 AS INT)`)
+  no longer trips DataFusion's unique-projection check; a `DEFAULT` cell probes as
+  `NULL` through `insert_defaults::is_default_marker`, because the probe runs
+  before marker substitution and a declared write-default fits its column by
+  construction. The fail-closed probe stays: with its own failure causes gone,
+  `(10, 1, 1, '2024-…')` and `(11, 1, 1, - -1)` refuse `CANNOT_SAFELY_CAST` as
+  Spark does, where base stored them because the duplicate-name error skipped the
+  check. The sign-led `starts_with('-')` disjunct is removed: every tree the
+  parser produces with a sign-led operand is a unary-under-unary the match
+  already wraps.
 - `cast_gate.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** the unit's one cast hook, a single
   call in `spark_ast.rs`'s passthrough: the `CAST(NULL AS VOID)` rewrite (`void_type.rs`)
   and the `CAST(x AS UUID)` refusal (`uuid_cast.rs`). pins: u9-types-1/C-009, C-010

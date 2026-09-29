@@ -9,7 +9,7 @@ use iceberg::{NamespaceIdent, TableIdent};
 use repark_common::spark_error;
 use repark_core::CatalogRegistry;
 
-use super::{column_name, is_bare_null};
+use super::{column_name, is_null_or_default_cell};
 use crate::catalog_ops::{name_parts, quoted_table_display};
 use crate::write_to_branch::qualify_table_parts;
 
@@ -123,7 +123,7 @@ async fn refuse_value(
     target: &DataType,
     value: &Expr,
 ) -> Result<()> {
-    if is_bare_null(value) || !is_microsecond_ltz(target) {
+    if is_null_or_default_cell(value) || !is_microsecond_ltz(target) {
         return Ok(());
     }
     let source = if let Some(data_type) = literal_source_type(value) {
@@ -262,7 +262,11 @@ fn nvl_coalesce_text(value: &Expr) -> Option<String> {
     else {
         return None;
     };
-    Some(format!("coalesce({first}, {second})"))
+    Some(format!(
+        "coalesce({}, {})",
+        super::parenthesize_stacked_minus(first),
+        super::parenthesize_stacked_minus(second)
+    ))
 }
 
 fn decimal_info_type(info: &ExactNumberInfo) -> DataType {
@@ -470,6 +474,32 @@ mod tests {
         let error = probe_source_type(&ctx, "-- nothing but a comment")
             .await
             .expect_err("an unparsable probe must refuse");
+        assert!(error.to_string().contains("ParserError"), "{error}");
+    }
+
+    #[tokio::test]
+    async fn ntz_probe_that_cannot_parse_refuses_instead_of_passing() {
+        use iceberg::spec::{NestedField, PrimitiveType, Type};
+        let ctx = SessionContext::new();
+        let fields = [
+            std::sync::Arc::new(NestedField::optional(
+                1,
+                "id",
+                Type::Primitive(PrimitiveType::Int),
+            )),
+            std::sync::Arc::new(NestedField::optional(
+                2,
+                "n",
+                Type::Primitive(PrimitiveType::Timestamp),
+            )),
+        ];
+        let row = [
+            values_row("INSERT INTO t VALUES (1)").swap_remove(0),
+            Expr::Identifier(datafusion::sql::sqlparser::ast::Ident::new(")")),
+        ];
+        let error = super::super::check_ntz_row(&ctx, &fields, "`t`", &row, &[], false)
+            .await
+            .expect_err("an unparsable NTZ probe must refuse");
         assert!(error.to_string().contains("ParserError"), "{error}");
     }
 

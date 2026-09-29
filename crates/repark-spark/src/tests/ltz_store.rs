@@ -351,6 +351,44 @@ async fn stacked_sign_multi_row_with_null_and_bad_row_refuses() {
 }
 
 #[tokio::test]
+async fn default_cells_into_timestamp_store_null() {
+    let (_warehouse, ctx, catalogs) = door().await;
+    for sql in [
+        "INSERT INTO ice.sales.l VALUES (1, DEFAULT)",
+        "INSERT INTO ice.sales.l VALUES (2, default)",
+        "INSERT INTO ice.sales.l (id, c) VALUES (3, DEFAULT)",
+        "INSERT INTO ice.sales.l (c, id) VALUES (DEFAULT, 4)",
+    ] {
+        run(&ctx, &catalogs, sql).await;
+    }
+    assert_eq!(
+        id_and_c(&ctx, &catalogs).await,
+        vec![(1, None), (2, None), (3, None), (4, None)]
+    );
+}
+
+#[tokio::test]
+async fn stacked_minus_under_nvl_probes_and_stores() {
+    let (_warehouse, ctx, catalogs) = door().await;
+    repark_functions::register_all(&ctx);
+    for sql in [
+        "INSERT INTO ice.sales.l VALUES (1, nvl(NULL, CAST(date_add(DATE'2024-01-01', - -1) AS \
+         TIMESTAMP)))",
+        "INSERT INTO ice.sales.l VALUES (2, ifnull(CAST(date_add(DATE'2024-01-01', - - -1) AS \
+         TIMESTAMP), NULL))",
+    ] {
+        run(&ctx, &catalogs, sql).await;
+    }
+    assert_eq!(
+        id_and_c(&ctx, &catalogs).await,
+        vec![
+            (1, Some("2024-01-02 00:00:00".to_string())),
+            (2, Some("2023-12-31 00:00:00".to_string())),
+        ]
+    );
+}
+
+#[tokio::test]
 async fn string_valued_functions_into_timestamp_refuse() {
     let (_warehouse, ctx, catalogs) = door().await;
     for cell in [
