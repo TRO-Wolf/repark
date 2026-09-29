@@ -2,7 +2,8 @@ use std::ops::ControlFlow;
 
 use datafusion::common::{Column, DFSchema, DataFusionError, Result, TableReference};
 use datafusion::sql::sqlparser::ast::{
-    AccessExpr, Expr as SqlExpr, Ident, Query, VisitMut, VisitorMut, visit_expressions,
+    AccessExpr, Expr as SqlExpr, Ident, LambdaFunctionParameter, OneOrManyWithParens, Query,
+    Subscript, Value, VisitMut, VisitorMut,
 };
 use repark_common::names::NameRule;
 
@@ -13,21 +14,16 @@ use super::written_names::qualifier_matches;
 pub fn bind_predicate_qualifiers(
     predicate: &mut SqlExpr,
     frame_schema: &DFSchema,
-    displays: &[String],
+    displays: Option<&[String]>,
+    attributes: &[String],
     rule: NameRule,
 ) -> Result<()> {
-    let mut lambda_names = Vec::new();
-    let _ = visit_expressions(predicate, |node| {
-        if let SqlExpr::Lambda(lambda) = node {
-            lambda_names.extend(lambda.params.iter().map(|param| param.name.value.clone()));
-        }
-        ControlFlow::<()>::Continue(())
-    });
     let mut binder = QualifierBinder {
         frame_schema,
         displays,
+        attributes,
         rule,
-        lambda_names,
+        scopes: Vec::new(),
         query_depth: 0,
     };
     match predicate.visit(&mut binder) {
@@ -38,9 +34,10 @@ pub fn bind_predicate_qualifiers(
 
 struct QualifierBinder<'a> {
     frame_schema: &'a DFSchema,
-    displays: &'a [String],
+    displays: Option<&'a [String]>,
+    attributes: &'a [String],
     rule: NameRule,
-    lambda_names: Vec<String>,
+    scopes: Vec<Vec<String>>,
     query_depth: usize,
 }
 
@@ -62,7 +59,49 @@ impl VisitorMut for QualifierBinder<'_> {
             return ControlFlow::Continue(());
         }
         let mut parts: Vec<&mut Ident> = match expr {
-            SqlExpr::CompoundIdentifier(parts) => parts.iter_mut().collect(),
+            SqlExpr::Lambda(lambda) => {
+                let params: Vec<&mut LambdaFunctionParameter> = match &mut lambda.params {
+                    OneOrManyWithParens::One(param) => vec![param],
+                    OneOrManyWithParens::Many(params) => params.iter_mut().collect(),
+                };
+                let mut names = Vec::with_capacity(params.len());
+                for param in params {
+                    if matches!(self.rule, NameRule::Exact) {
+                        param.name.quote_style = Some('`');
+                    }
+                    names.push(param.name.value.clone());
+                }
+                self.scopes.push(names);
+                return ControlFlow::Continue(());
+            }
+            SqlExpr::Identifier(ident) => {
+                return match self.bound_identifier(ident) {
+                    Ok(()) => ControlFlow::Continue(()),
+                    Err(error) => ControlFlow::Break(error),
+                };
+            }
+            SqlExpr::CompoundIdentifier(parts) => {
+                if let Some((first, rest)) = parts.split_first()
+                    && self.lambda_parameter(&first.value).is_some()
+                {
+                    *expr = SqlExpr::CompoundFieldAccess {
+                        root: Box::new(SqlExpr::Identifier(first.clone())),
+                        access_chain: rest
+                            .iter()
+                            .map(|part| {
+                                AccessExpr::Subscript(Subscript::Index {
+                                    index: SqlExpr::Value(
+                                        Value::SingleQuotedString(part.value.clone())
+                                            .with_empty_span(),
+                                    ),
+                                })
+                            })
+                            .collect(),
+                    };
+                    return ControlFlow::Continue(());
+                }
+                parts.iter_mut().collect()
+            }
             SqlExpr::CompoundFieldAccess { root, access_chain } => {
                 let SqlExpr::Identifier(root) = root.as_mut() else {
                     return ControlFlow::Continue(());
@@ -76,6 +115,9 @@ impl VisitorMut for QualifierBinder<'_> {
             }
             _ => return ControlFlow::Continue(()),
         };
+        if self.displays.is_none() {
+            return ControlFlow::Continue(());
+        }
         match self.bound_parts(&parts) {
             Ok(Some(respelled)) => {
                 for (part, held) in parts.iter_mut().zip(respelled) {
@@ -91,18 +133,85 @@ impl VisitorMut for QualifierBinder<'_> {
             Err(error) => ControlFlow::Break(error),
         }
     }
+
+    fn post_visit_expr(&mut self, expr: &mut SqlExpr) -> ControlFlow<Self::Break> {
+        if self.query_depth == 0 && matches!(expr, SqlExpr::Lambda(_)) {
+            self.scopes.pop();
+        }
+        ControlFlow::Continue(())
+    }
 }
 
 impl QualifierBinder<'_> {
+    fn lambda_parameter(&self, written: &str) -> Option<&String> {
+        self.scopes
+            .iter()
+            .rev()
+            .flatten()
+            .find(|name| self.rule.matches(written, name))
+    }
+
+    fn bound_identifier(&self, ident: &mut Ident) -> Result<()> {
+        if let Some(param) = self.lambda_parameter(&ident.value) {
+            if matches!(self.rule, NameRule::Exact) {
+                *ident = Ident {
+                    value: param.clone(),
+                    quote_style: Some('`'),
+                    span: ident.span,
+                };
+            }
+            return Ok(());
+        }
+        let Some(displays) = self.displays else {
+            return Ok(());
+        };
+        if self.attributes.len() != displays.len()
+            || self.frame_schema.fields().len() != displays.len()
+        {
+            return Ok(());
+        }
+        let hits: Vec<usize> = displays
+            .iter()
+            .enumerate()
+            .filter(|(_, display)| self.rule.matches(&ident.value, display))
+            .map(|(index, _)| index)
+            .collect();
+        let [first, _, ..] = hits.as_slice() else {
+            return Ok(());
+        };
+        let mut identities = hits
+            .iter()
+            .map(|index| self.attributes[*index].as_str())
+            .filter(|identity| !identity.is_empty());
+        let one = identities
+            .next()
+            .is_none_or(|seen| identities.all(|identity| identity == seen));
+        if one {
+            *ident = Ident {
+                value: self.frame_schema.field(*first).name().clone(),
+                quote_style: Some('`'),
+                span: ident.span,
+            };
+            return Ok(());
+        }
+        let found: Vec<Hit<'_>> = hits
+            .iter()
+            .map(|index| {
+                let (qualifier, field) = self.frame_schema.qualified_field(*index);
+                (qualifier, field.as_ref())
+            })
+            .collect();
+        Err(ambiguous_reference(
+            &Column::new_unqualified(ident.value.as_str()),
+            &found,
+        ))
+    }
+
     fn bound_parts(&self, parts: &[&mut Ident]) -> Result<Option<Vec<String>>> {
         let Some(first) = parts.first() else {
             return Ok(None);
         };
-        if self
-            .lambda_names
-            .iter()
-            .any(|name| NameRule::IgnoreCase.matches(name, &first.value))
-        {
+        if self.lambda_parameter(&first.value).is_some() {
             return Ok(None);
         }
         for width in (1..parts.len().min(4)).rev() {
@@ -131,11 +240,12 @@ impl QualifierBinder<'_> {
     }
 
     fn hits(&self, want: &TableReference, name: &str) -> Vec<Hit<'_>> {
-        let paired = self.frame_schema.fields().len() == self.displays.len();
+        let displays = self.displays.unwrap_or_default();
+        let paired = self.frame_schema.fields().len() == displays.len();
         let mut found: Vec<Hit<'_>> = Vec::new();
         for (index, (held, field)) in self.frame_schema.iter().enumerate() {
             let display = if paired {
-                self.displays[index].as_str()
+                displays[index].as_str()
             } else {
                 field.name().as_str()
             };
@@ -201,7 +311,7 @@ mod tests {
         let mut parsed = parser.parse_expr().unwrap();
         assert_eq!(parser.peek_token().token, Token::EOF, "{sql}");
         let displays: Vec<String> = displays.iter().map(|name| (*name).to_string()).collect();
-        bind_predicate_qualifiers(&mut parsed, schema, &displays, rule).unwrap();
+        bind_predicate_qualifiers(&mut parsed, schema, Some(&displays), &[], rule).unwrap();
         parsed.to_string()
     }
 
@@ -229,13 +339,7 @@ mod tests {
             bound(&frame, &names, "(T.Val = 1) OR t.id IN (3, 4)", IgnoreCase),
             "(`T`.`Val` = 1) OR `T`.`id` IN (3, 4)"
         );
-        for untouched in [
-            "id > 1",
-            "x.id > 1",
-            "s.f > 1",
-            "T.nope > 1",
-            "exists(arr, T -> T.f > 1)",
-        ] {
+        for untouched in ["id > 1", "x.id > 1", "s.f > 1", "T.nope > 1"] {
             assert_eq!(bound(&frame, &names, untouched, IgnoreCase), untouched);
         }
         assert_eq!(
@@ -273,7 +377,8 @@ mod tests {
             .unwrap()
             .parse_expr()
             .unwrap();
-        let error = bind_predicate_qualifiers(&mut parsed, &twins, &[], IgnoreCase).unwrap_err();
+        let error =
+            bind_predicate_qualifiers(&mut parsed, &twins, Some(&[]), &[], IgnoreCase).unwrap_err();
         assert!(
             error
                 .to_string()
@@ -281,5 +386,87 @@ mod tests {
             "{error}"
         );
         assert_eq!(bound(&twins, &[], "T.ID > 1", Exact), "`T`.`ID` > 1");
+    }
+
+    #[test]
+    fn a_lambda_parameter_shadows_names_inside_its_own_body_only() {
+        let frame = held_schema(&[("T", "id"), ("T", "arr"), ("T", "k")]);
+        let names = ["id", "arr", "k"];
+        for (sql, rule, want) in [
+            (
+                "exists(arr, T -> T > 4) AND T.id = 1",
+                IgnoreCase,
+                "exists(arr, T -> T > 4) AND `T`.`id` = 1",
+            ),
+            (
+                "exists(t.arr, t -> t > 4)",
+                IgnoreCase,
+                "exists(`T`.`arr`, t -> t > 4)",
+            ),
+            (
+                "exists(arr, T -> T.id > 1)",
+                IgnoreCase,
+                "exists(arr, T -> T['id'] > 1)",
+            ),
+            (
+                "exists(arr, x -> x > T.id)",
+                IgnoreCase,
+                "exists(arr, x -> x > `T`.`id`)",
+            ),
+            (
+                "exists(arr, T -> T > 4)",
+                Exact,
+                "exists(arr, `T` -> `T` > 4)",
+            ),
+            (
+                "exists(arr, T -> t > 4)",
+                Exact,
+                "exists(arr, `T` -> t > 4)",
+            ),
+            (
+                "exists(arr, T -> exists(arr, t -> T > t)) AND T.k > 0",
+                Exact,
+                "exists(arr, `T` -> exists(arr, `t` -> `T` > `t`)) AND `T`.`k` > 0",
+            ),
+            (
+                "aggregate(arr, 0, (Acc, X) -> Acc + X) = 18",
+                Exact,
+                "aggregate(arr, 0, (`Acc`, `X`) -> `Acc` + `X`) = 18",
+            ),
+        ] {
+            assert_eq!(bound(&frame, &names, sql, rule), want, "{sql}");
+        }
+    }
+
+    #[test]
+    fn exact_bare_names_over_twin_displays_bind_one_attribute_or_refuse() {
+        let twins = held_schema(&[("P", "e0"), ("P", "e1"), ("P", "w")]);
+        let displays: Vec<String> = ["v", "v", "w"].map(str::to_string).to_vec();
+        let bind = |sql: &str, attributes: &[&str]| {
+            let mut parsed = Parser::new(&DatabricksDialect {})
+                .try_with_sql(sql)
+                .unwrap()
+                .parse_expr()
+                .unwrap();
+            let attributes: Vec<String> = attributes.iter().map(|a| (*a).to_string()).collect();
+            bind_predicate_qualifiers(&mut parsed, &twins, Some(&displays), &attributes, Exact)
+                .map(|()| parsed.to_string())
+        };
+        assert_eq!(bind("v > 15", &["o", "o", "w"]).unwrap(), "`e0` > 15");
+        assert_eq!(bind("v > 15", &["", "o", "w"]).unwrap(), "`e0` > 15");
+        assert_eq!(
+            bind("w > 1 AND V > 2", &["o", "a", "w"]).unwrap(),
+            "w > 1 AND V > 2"
+        );
+        assert_eq!(
+            bind("exists(arr, v -> v > 1)", &["o", "a", "w"]).unwrap(),
+            "exists(arr, `v` -> `v` > 1)"
+        );
+        let error = bind("v > 15", &["o", "a", "w"]).unwrap_err().to_string();
+        assert!(
+            error.contains("[AMBIGUOUS_REFERENCE] Reference `v` is ambiguous"),
+            "{error}"
+        );
+        assert_eq!(bind("v > 15", &[]).unwrap(), "v > 15");
     }
 }

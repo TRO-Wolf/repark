@@ -223,6 +223,29 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   direction, `unresolved` refuses Spark's 42703 with the parsed name parts
   (RC3-7), `hidden` keeps the ambiguity (RC3-6). `core.py` ratchets
   3952 → 3950. pins: casesens-2/C-016, C-017, C-018, C-019
+  **CASESENS-2 third re-verify fold (2026-09-29):** an aliased twin whose
+  source is a bare origin column is named
+  `__repark_sel_a_<i>_<n>_<pid>_<field>`: still a new attribute for name
+  lookups and ambiguity (`_new_attribute`), but `_filter_qcol_sql` maps a
+  parent Column's origin to the first such twin, so `twins.filter(d.v >
+  15)` answers through the alias like Spark's missing-attribute resolution
+  (RC4-2). `drop` of an origin Column on a duplicate-display frame drops
+  only outputs that are not new attributes (`_origin_drop_targets`), so
+  `select(d.v.alias('v'), d.v.alias('v')).drop(d.v)` keeps both. `select`
+  records the aliased output names in `_fresh_outputs` (carried by
+  `_inherit_plan_metadata`), and `_distinct_attributes` on a plain frame
+  counts an aliased output as its own attribute before asking
+  `same_source_fields` (RC4-3). `_sort_like_spark` resolves each
+  ambiguous key in turn (at most one pass per key) and accepts `child`
+  from `child_sort_target`, sorting by the projection input column
+  (RC4-4, RC4-5). Under `true` string `filter` passes
+  `_predicate_attributes` (origin, new-attribute or unknown identity per
+  display) so a bare twin name binds one attribute or refuses
+  `AMBIGUOUS_REFERENCE` (RC4-7). `core.py` stays under 3950 (a garbled
+  docstring fragment in `filter` is deleted). The four re-verify probe
+  sets re-run against the recorded main and Spark outputs hold the
+  `false` no-alias predicates byte-identical to main. pins:
+  casesens-2/C-023, C-024, C-025, C-026, C-027, C-029
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`

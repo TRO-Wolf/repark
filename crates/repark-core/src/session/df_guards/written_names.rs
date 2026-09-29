@@ -379,10 +379,10 @@ fn match_one_subset(name: &str, held: &[String], rule: NameRule) -> Result<(Stri
         .filter(|candidate| rule.resolver_matches(name, candidate))
         .cloned()
         .collect();
-    if hits.len() == 1 || (matches!(rule, NameRule::IgnoreCase) && !hits.is_empty()) {
-        return Ok((name.to_string(), hits));
+    if hits.is_empty() {
+        return Err(unresolved_subset_name(name, held));
     }
-    Err(unresolved_subset_name(name, held))
+    Ok((name.to_string(), hits))
 }
 
 fn match_one_display(
@@ -665,6 +665,9 @@ mod tests {
         );
         let exact = match_subset_names(&["id".to_string()], &twins, Exact).unwrap();
         assert_eq!(exact, vec![("id".to_string(), vec!["id".to_string()])]);
+        let doubled = ["v".to_string(), "v".to_string()];
+        let exact_twins = match_subset_names(&["v".to_string()], &doubled, Exact).unwrap();
+        assert_eq!(exact_twins, vec![("v".to_string(), doubled.to_vec())]);
         let pair = ["id".to_string(), "Data".to_string()];
         let error = match_subset_names(&["ID".to_string()], &pair, Exact)
             .unwrap_err()

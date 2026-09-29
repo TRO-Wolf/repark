@@ -1,5 +1,7 @@
 # map — scripts/
 
+CASESENS-2 third re-verify fold (2026-09-29, PR #881): `check_lib_py.py` ratchets `spark/dataframe/core.py` 3950 → 3949 (a garbled `filter` docstring fragment is deleted and the parent-Column filter rewrite moves into `written_names.py`), with the CAP-1 mirror, shrink-only. pins: casesens-2/C-023
+
 CASESENS-2 second re-verify fold (2026-09-29, PR #881): `check_lib_py.py` ratchets `spark/dataframe/core.py` 3952 → 3950 (the twin engine naming moves into `written_names.py`), with the CAP-1 mirror, shrink-only. pins: casesens-2/C-018
 
 CASESENS-2 re-verify fold (2026-09-28, PR #881): `check_lib_py.py` ratchets `spark/dataframe/core.py` 3957 → 3952 (the sort refusal moves into `written_names.py`), with the CAP-1 mirror, shrink-only. pins: casesens-2/C-012

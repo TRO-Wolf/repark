@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use datafusion::common::{Column, TableReference};
-use datafusion::logical_expr::{Expr, LogicalPlan, Projection};
+use datafusion::logical_expr::{Distinct, Expr, LogicalPlan, Projection};
 use repark_common::names::NameRule;
 
 use super::written_names::qualifier_matches;
@@ -9,13 +9,14 @@ use super::written_names::qualifier_matches;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ChildSort {
     Bound(String),
+    Child(String),
     Hidden,
     Unresolved,
 }
 
 #[must_use]
 pub fn sort_through_child(plan: &LogicalPlan, written: &[String], rule: NameRule) -> ChildSort {
-    let LogicalPlan::Projection(projection) = plan else {
+    let Some((projection, distinct)) = nearest_projection(plan) else {
         return ChildSort::Unresolved;
     };
     let Some((name, qualifier)) = written.split_last() else {
@@ -32,9 +33,8 @@ pub fn sort_through_child(plan: &LogicalPlan, written: &[String], rule: NameRule
         )),
         _ => return ChildSort::Unresolved,
     };
-    let hits: Vec<Column> = projection
-        .input
-        .schema()
+    let input = projection.input.schema();
+    let hits: Vec<Column> = input
         .iter()
         .filter(|(held, field)| {
             rule.matches(name, field.name())
@@ -47,14 +47,42 @@ pub fn sort_through_child(plan: &LogicalPlan, written: &[String], rule: NameRule
     let [child] = hits.as_slice() else {
         return ChildSort::Unresolved;
     };
-    projection
+    if let Some((_, field)) = projection
         .expr
         .iter()
         .zip(projection.schema.fields())
         .find(|(expr, _)| source_column(expr).is_some_and(|source| same_column(source, child)))
-        .map_or(ChildSort::Hidden, |(_, field)| {
-            ChildSort::Bound(field.name().clone())
-        })
+    {
+        return ChildSort::Bound(field.name().clone());
+    }
+    let named = |fields: &datafusion::arrow::datatypes::Fields| {
+        fields
+            .iter()
+            .filter(|field| *field.name() == child.name)
+            .count()
+    };
+    if distinct || named(projection.schema.fields()) > 0 || named(input.fields()) != 1 {
+        return ChildSort::Hidden;
+    }
+    ChildSort::Child(child.name.clone())
+}
+
+fn nearest_projection(plan: &LogicalPlan) -> Option<(&Projection, bool)> {
+    let mut current = plan;
+    let mut distinct = false;
+    loop {
+        current = match current {
+            LogicalPlan::Projection(projection) => return Some((projection, distinct)),
+            LogicalPlan::Filter(filter) => filter.input.as_ref(),
+            LogicalPlan::Limit(limit) => limit.input.as_ref(),
+            LogicalPlan::Sort(sort) => sort.input.as_ref(),
+            LogicalPlan::Distinct(Distinct::All(input)) => {
+                distinct = true;
+                input.as_ref()
+            }
+            _ => return None,
+        };
+    }
 }
 
 #[must_use]
@@ -137,7 +165,7 @@ mod tests {
     use datafusion::arrow::datatypes::{DataType, Field, Schema};
     use datafusion::common::Column;
     use datafusion::logical_expr::logical_plan::table_scan;
-    use datafusion::logical_expr::{LogicalPlan, lit};
+    use datafusion::logical_expr::{LogicalPlan, LogicalPlanBuilder, lit};
 
     use super::{ChildSort, same_source_fields, sort_through_child, written_column};
     use repark_common::names::NameRule::{Exact, IgnoreCase};
@@ -244,5 +272,59 @@ mod tests {
             (Some("L".to_string()), "x.y".to_string())
         );
         assert_eq!(render("`unclosed"), (None, "`unclosed".to_string()));
+    }
+
+    #[test]
+    fn sort_keys_resolve_through_the_nearest_projection_below() {
+        let bound = ChildSort::Bound("t1".to_string());
+        let twins = projected(
+            &["id", "v"],
+            vec![named("v").alias("t1"), (named("v") + lit(1)).alias("t2")],
+        );
+        let hidden = projected(
+            &["id", "v"],
+            vec![
+                (named("v") + lit(1)).alias("t1"),
+                (named("v") + lit(2)).alias("t2"),
+            ],
+        );
+        let over = |plan: &LogicalPlan, distinct: bool| {
+            let builder = LogicalPlanBuilder::from(plan.clone())
+                .filter(lit(true))
+                .unwrap()
+                .limit(0, Some(10))
+                .unwrap();
+            let builder = if distinct {
+                builder.distinct().unwrap()
+            } else {
+                builder
+            };
+            builder.build().unwrap()
+        };
+        let key = written(&["v"]);
+        assert_eq!(
+            sort_through_child(&over(&twins, false), &key, IgnoreCase),
+            bound
+        );
+        assert_eq!(sort_through_child(&over(&twins, true), &key, Exact), bound);
+        let child = ChildSort::Child("v".to_string());
+        assert_eq!(sort_through_child(&hidden, &key, IgnoreCase), child);
+        assert_eq!(
+            sort_through_child(&over(&hidden, false), &key, Exact),
+            child
+        );
+        assert_eq!(
+            sort_through_child(&over(&hidden, true), &key, IgnoreCase),
+            ChildSort::Hidden
+        );
+        let aliased = LogicalPlanBuilder::from(hidden)
+            .alias("q")
+            .unwrap()
+            .build()
+            .unwrap();
+        assert_eq!(
+            sort_through_child(&aliased, &key, IgnoreCase),
+            ChildSort::Unresolved
+        );
     }
 }

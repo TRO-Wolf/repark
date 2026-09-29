@@ -68,9 +68,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   R-CS2-13 closed with corrections, R-CS2-10 re-scoped, R-CS2-14…16 open.
   Second re-verify fold (same branch, base `69ea4609`): RC3-1…RC3-4,
   RC3-6, RC3-7 fixed, C-015…C-020 PROVEN, R-CS2-15 closed, R-CS2-17…19
-  open (RC3-5 recorded as R-CS2-17).
+  open (RC3-5 recorded as R-CS2-17). Third re-verify fold (same branch,
+  base `4c2f03d4`): RC4-1…RC4-8 fixed, C-021…C-029 PROVEN, R-CS2-18
+  narrowed, R-CS2-20 open.
   `risk_tier: high`.
-  pins: casesens-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
+  pins: casesens-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026, C-027, C-028, C-029
 - [r-fileorder-2-ledger.md](r-fileorder-2-ledger.md) —
   **R-FILEORDER-2 (2026-09-27), HALT per R1:** Spark 4.1.2's own `L-INSERT-OVERWRITE`
   lineage differs between runs (the same-JVM triple agrees, C-001; six fresh-JVM runs

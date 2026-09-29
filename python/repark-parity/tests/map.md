@@ -1,5 +1,7 @@
 # map — python/repark-parity/tests
 
+CASESENS-2 third re-verify fold (2026-09-29): the CAP-1 mirror row for `spark/dataframe/core.py` follows the script baseline 3950 → 3949. pins: casesens-2/C-023
+
 CASESENS-2 second re-verify fold (2026-09-29): the CAP-1 mirror row for `spark/dataframe/core.py` follows the script baseline 3952 → 3950 (the twin engine naming moves into `written_names.py`). pins: casesens-2/C-018
 
 CASESENS-2 re-verify fold (2026-09-28): the CAP-1 mirror row for `spark/dataframe/core.py` follows the script baseline 3957 → 3952 (the sort refusal moves into `written_names.py`). pins: casesens-2/C-012

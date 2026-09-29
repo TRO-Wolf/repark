@@ -744,3 +744,190 @@ def test_rc3_7_sort_refusals_print_names_as_spark(tmp_path: Path) -> None:
                 assert message == head.format(name=name), setting
     finally:
         session.stop()
+
+
+def _lambda_frame(session: ReparkSession) -> Any:
+    return session.createDataFrame(
+        [(1, [1, 5], 9, 0), (2, [2], 0, 2), (5, [5, 6, 7], 1, 7)],
+        "id INT, arr ARRAY<INT>, T INT, x INT",
+    )
+
+
+def _assert_refuses(run: Any, condition: str, state: str | None) -> None:
+    refusal = _refusal(lambda: run().collect())
+    assert _condition(refusal) == condition, str(refusal)
+    assert state is None or _sql_state(refusal) == state
+
+
+def test_rc4_1_a_lambda_parameter_binds_its_own_body(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        for setting in ("false", "true"):
+            session.conf.set("spark.sql.caseSensitive", setting)
+            frame = _lambda_frame(session)
+            for predicate in (
+                "exists(arr, T -> T > 4)",
+                "exists(arr, X -> X > 4)",
+                "exists(arr, Id -> Id > 4)",
+                "exists(arr, T -> T > 4) AND T > 0",
+                "exists(arr, `T` -> T > 4)",
+            ):
+                assert _ids(frame.filter(predicate)) == [1, 5], (setting, predicate)
+            assert _ids(frame.filter("aggregate(arr, 0, (Acc, X) -> Acc + X) = 18")) == [5]
+            assert _ids(frame.alias("A").filter("exists(arr, T -> T > A.id)")) == [1, 5]
+        assert _ids(frame.filter("exists(arr, X -> x > 4)")) == [5]
+        assert _ids(frame.filter("exists(arr, t -> T > 4)")) == [1]
+        assert _ids(frame.filter("exists(arr, T -> exists(arr, t -> T > t))")) == [1, 5]
+        assert _ids(frame.alias("A").filter("exists(arr, a -> A.id > 1)")) == [2, 5]
+        _assert_refuses(
+            lambda: frame.filter("exists(arr, T -> t > 4)"),
+            "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+            "42703",
+        )
+        session.conf.set("spark.sql.caseSensitive", "false")
+        folded = _lambda_frame(session)
+        assert _ids(folded.filter("exists(arr, T -> exists(arr, t -> T > t))")) == []
+        assert _ids(folded.filter("exists(arr, X -> x > 4)")) == [1, 5]
+    finally:
+        session.stop()
+
+
+def test_rc4_6_a_lambda_parameter_scopes_to_its_own_body(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        for setting in ("false", "true"):
+            session.conf.set("spark.sql.caseSensitive", setting)
+            aliased = _lambda_frame(session).alias("A")
+            assert _ids(aliased.filter("exists(arr, A -> A > 4) AND A.id = 1")) == [1]
+            assert _ids(aliased.filter("exists(A.arr, A -> A > 4)")) == [1, 5]
+            left = session.createDataFrame([(1, 5), (2, 3)], "id INT, k INT")
+            right = session.createDataFrame([(1, 7), (2, 8)], "id INT, m INT")
+            joined = left.alias("L").join(
+                right.alias("R"), functions.col("L.id") == functions.col("R.id")
+            )
+            lifted = joined.filter("exists(array(L.k), L -> L > 4)")
+            assert sorted(row[0] for row in lifted.collect()) == [1], setting
+        session.conf.set("spark.sql.caseSensitive", "false")
+        aliased = _lambda_frame(session).alias("A")
+        _refusal(lambda: aliased.filter("exists(arr, a -> A.id > 1)").collect())
+    finally:
+        session.stop()
+
+
+def test_rc4_2_a_parent_column_reaches_through_aliased_twins(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        for setting in ("false", "true"):
+            session.conf.set("spark.sql.caseSensitive", setting)
+            source = _twin_source(session)
+            twins = source.select(source.v.alias("v"), source.v.alias("v"))
+            assert _rows(twins.filter(source.v > 15)) == [[20, 20]], setting
+            assert _rows(twins.filter(source.v.isNotNull())) == [[10, 10], [20, 20]]
+            kept = twins.drop(source.v)
+            assert kept.columns == ["v", "v"]
+            assert _rows(kept) == [[10, 10], [20, 20]]
+            mixed = source.select(source.v, source.v.alias("v"))
+            assert _rows(mixed.filter(source.v > 15)) == [[20, 20]]
+            dropped = mixed.drop(source.v)
+            assert dropped.columns == ["v"]
+            assert _rows(dropped) == [[10], [20]]
+    finally:
+        session.stop()
+
+
+def test_rc4_3_an_aliased_output_is_its_own_attribute_on_a_plain_frame(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        session.conf.set("spark.sql.caseSensitive", "false")
+        source = _twin_source(session)
+        aliased = source.select(source.v, source.v.alias("V"))
+        for run in (
+            lambda: aliased.fillna(0, subset=["v"]),
+            lambda: aliased.dropna(subset=["v"]),
+        ):
+            _assert_refuses(run, "AMBIGUOUS_REFERENCE", "42704")
+        spelled = source.select(source.v, source["V"]).fillna(0, subset=["v"])
+        assert _rows(spelled) == [[10, 10], [20, 20]]
+    finally:
+        session.stop()
+
+
+def test_rc4_4_sort_resolves_through_filter_limit_and_distinct(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        steps = (
+            lambda frame: frame.filter(functions.lit(True)),
+            lambda frame: frame.limit(10),
+            lambda frame: frame.distinct(),
+            lambda frame: frame.filter(functions.lit(True)).limit(5),
+        )
+        for setting in ("false", "true"):
+            session.conf.set("spark.sql.caseSensitive", setting)
+            source = _twin_source(session)
+            for shape in (
+                source.select(source.v, (source.v + 1).alias("v")),
+                source.select(source.v.alias("v"), (source.v + 1).alias("v")),
+            ):
+                for step in steps:
+                    ordered = [list(row) for row in step(shape).orderBy("v").collect()]
+                    assert ordered == [[10, 11], [20, 21]], setting
+        session.conf.set("spark.sql.caseSensitive", "false")
+        source = _twin_source(session)
+        shape = source.select(source.v, (source.v + 1).alias("v")).distinct()
+        for descending in (
+            shape.orderBy(functions.desc("v")),
+            shape.orderBy(functions.col("v").desc()),
+        ):
+            assert [list(row) for row in descending.collect()] == [[20, 21], [10, 11]]
+    finally:
+        session.stop()
+
+
+def test_rc4_5_sort_keys_on_hidden_twins_answer_through_the_child(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        for setting in ("false", "true"):
+            session.conf.set("spark.sql.caseSensitive", setting)
+            source = _twin_source(session)
+            hidden = source.select((source.v + 1).alias("v"), (source.v * -1).alias("v"))
+            ascending = [[11, -10], [21, -20]]
+            for ordered, want in (
+                (hidden.orderBy("v"), ascending),
+                (hidden.orderBy(functions.desc("v")), ascending[::-1]),
+                (hidden.orderBy(functions.col("v").desc()), ascending[::-1]),
+                (hidden.sort(functions.col("v")), ascending),
+                (hidden.filter(functions.lit(True)).orderBy("v"), ascending),
+            ):
+                assert [list(row) for row in ordered.collect()] == want, setting
+            _assert_refuses(
+                lambda hidden=hidden: hidden.distinct().orderBy("v"), "AMBIGUOUS_REFERENCE", None
+            )
+    finally:
+        session.stop()
+
+
+def test_rc4_7_true_twin_names_dedupe_and_filter_like_spark(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        session.conf.set("spark.sql.caseSensitive", "true")
+        source = _twin_source(session)
+        same = (
+            source.select(source.v, source.v),
+            source.select(source.v, source["v"]),
+            source.select(source.v, functions.col("v")),
+        )
+        fresh = (
+            source.select(source.v.alias("v"), source.v.alias("v")),
+            source.select(source.v, source.v.alias("v")),
+            source.select(source.v, source.v.name("v")),
+        )
+        for twins in (*same, *fresh):
+            assert _rows(twins.dropDuplicates(["v"])) == [[10, 10], [20, 20]]
+        for twins in same:
+            assert _rows(twins.filter("v > 15")) == [[20, 20]]
+        for twins in fresh:
+            _assert_refuses(
+                lambda twins=twins: twins.filter("v > 15"), "AMBIGUOUS_REFERENCE", "42704"
+            )
+    finally:
+        session.stop()

@@ -254,6 +254,12 @@ wrapped optimizer rule) and declares this directory.
   `written_column`. Pin
   `join_condition_aliases_leave_other_references_untouched` (partial-parse
   legs). pins: casesens-2/C-019, C-020
+  **CASESENS-2 third re-verify fold (2026-09-29, RC4-7):** `match_subset_names`
+  keeps every hit under both rules (Spark's `dropDuplicates` matches all
+  outputs by the resolver), so an exact twin name under `Exact` dedupes on
+  both copies; a miss still raises the legacy subset text. Pin
+  `subset_names_fan_out_and_miss_with_the_legacy_text` (exact-twin leg).
+  pins: casesens-2/C-027
 - `predicate_names.rs` — **CASESENS-2 second re-verify fold (2026-09-29, RC3-1, RC3-2):**
   the text rewriter is gone. `bind_predicate_qualifiers(expr, schema,
   displays, rule)` walks the sqlparser tree the engine's own parser built
@@ -271,6 +277,27 @@ wrapped optimizer rule) and declares this directory.
   Pins `alias_qualifiers_bind_on_the_parsed_tree_by_rule`,
   `two_attributes_under_one_qualifier_refuse_ambiguous`.
   pins: casesens-2/C-010, C-015
+  **CASESENS-2 third re-verify fold (2026-09-29, RC4-1, RC4-6, RC4-7):**
+  `bind_predicate_qualifiers(expr, schema, displays: Option<_>,
+  attributes, rule)` keeps a stack of lambda scopes, pushed on entering an
+  `Expr::Lambda` and popped on leaving it, so a lambda parameter shadows
+  names only inside its own body and matches by the session rule; a
+  compound outside the body binds as if the lambda did not exist
+  (`exists(array(L.k), L -> L > 4)`, `exists(t.arr, t -> ...)`). Under
+  `Exact` each parameter and each body identifier it shadows is
+  backtick-quoted with the parameter's spelling, because DataFusion
+  lowercases unquoted parameters even with identifier normalization off
+  (`exists(arr, T -> T > 4)` compared the `T` column). A compound rooted at
+  an in-scope parameter becomes a named-field subscript on the lambda
+  variable (`T.id` inside `T -> …` extracts from `T`, as Spark does). With
+  a non-empty `attributes` list (one identity per display, the facade
+  sends it under `Exact` on duplicate-display frames) a bare identifier
+  hitting two or more displays binds the first engine field when the hits
+  share one identity (empty identities do not count) and refuses
+  `AMBIGUOUS_REFERENCE` otherwise. `displays = None` binds lambdas only.
+  Pins `a_lambda_parameter_shadows_names_inside_its_own_body_only`,
+  `exact_bare_names_over_twin_displays_bind_one_attribute_or_refuse`.
+  pins: casesens-2/C-021, C-022, C-027
 - `sort_names.rs` — **CASESENS-2 second re-verify fold (2026-09-29, RC3-4,
   RC3-6, RC3-7):** `sort_through_child(plan, written, rule)` resolves an
   ambiguous sort key the way Spark's Sort does: on a `Projection` it
@@ -286,6 +313,17 @@ wrapped optimizer rule) and declares this directory.
   `one_source_column_is_one_attribute`,
   `written_names_render_as_spark_prints_them`.
   pins: casesens-2/C-017, C-018, C-019
+  **CASESENS-2 third re-verify fold (2026-09-29, RC4-4, RC4-5):**
+  `sort_through_child` walks down through `Filter`, `Limit`, `Sort` and
+  `Distinct::All` to the nearest `Projection` (Spark resolves missing sort
+  attributes through unary nodes); anything else below the sort is
+  `Unresolved` as before. A child hit no output carries is
+  `Child(name)` when no output field has that name, the name is unique in
+  the projection input and no `Distinct` sits in between: the facade sorts
+  by that input column and DataFusion's sort builder adds it through the
+  projection and projects it away. Otherwise it stays `Hidden`. Pin
+  `sort_keys_resolve_through_the_nearest_projection_below`.
+  pins: casesens-2/C-025, C-026
 - `resolver_names.rs` — **CASESENS-2 re-verify fold (2026-09-28):**
   `join_on_named_keys`, `union_by_folded_name` and their helpers moved
   byte-identical out of `case_bind.rs` (1000-line ceiling) with `bind_name`

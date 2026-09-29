@@ -73,12 +73,13 @@ pub struct PyDataFrame {
     pub(crate) runtime: Arc<Runtime>,
     /// Cached analyzed Arrow schema.
     analyzed_schema: OnceLock<SchemaRef>,
+    name_rule: OnceLock<repark_core::frame_names::NameRule>,
 }
 
 impl PyDataFrame {
     /// Bind a column's lambda variables to this frame schema before planning.
     fn bound(&self, column: &PyColumn) -> PyResult<Expr> {
-        crate::dataframe_names::bound_column(&self.df, column)
+        crate::dataframe_names::bound_column(&self.df, column, self.name_rule())
     }
 
     /// Wrap a planned [`DataFrame`].
@@ -87,7 +88,14 @@ impl PyDataFrame {
             df,
             runtime,
             analyzed_schema: OnceLock::new(),
+            name_rule: OnceLock::new(),
         }
+    }
+
+    pub(crate) fn name_rule(&self) -> repark_core::frame_names::NameRule {
+        *self
+            .name_rule
+            .get_or_init(|| crate::dataframe_names::frame_rule(&self.df))
     }
 
     /// The held plan for session operations and ML streams.
@@ -322,7 +330,7 @@ impl PyDataFrame {
     /// This path bypasses the statement router, so it applies the parse-altitude valves here.
     pub fn filter_sql(&self, predicate: &str) -> PyResult<Self> {
         fenced!("PyDataFrame.filter_sql", {
-            let df = crate::dataframe_names::filter_frame_with_sql(&self.df, predicate, None)?;
+            let df = crate::dataframe_names::filter_frame_with_sql(&self.df, predicate, None, &[])?;
             Ok(Self::new(df, Arc::clone(&self.runtime)))
         })
     }
@@ -334,7 +342,9 @@ impl PyDataFrame {
         fenced!("PyDataFrame.select", {
             let expressions: Vec<Expr> = columns
                 .iter()
-                .map(|column| crate::dataframe_names::bound_projection(&self.df, column))
+                .map(|column| {
+                    crate::dataframe_names::bound_projection(&self.df, column, self.name_rule())
+                })
                 .collect::<PyResult<_>>()?;
             let df = self
                 .df

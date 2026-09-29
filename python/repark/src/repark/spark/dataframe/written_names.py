@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import re
 from typing import TYPE_CHECKING
 
@@ -9,7 +10,11 @@ from repark import _native
 from repark.errors import AnalysisException
 from repark.spark._idents import quote_ident as _quote_ident
 from repark.spark.column import Column
-from repark.spark.dataframe.plan_collapse import _rewrite_join_qcol_sql
+from repark.spark.dataframe.plan_collapse import (
+    _QCOL_TOKEN_RE,
+    _replace_local_qcol_token,
+    _rewrite_join_qcol_sql,
+)
 
 if TYPE_CHECKING:
     from repark.spark.dataframe.core import DataFrame
@@ -154,27 +159,30 @@ _AMBIGUOUS_REFERENCE = re.compile(
 def _sort_like_spark(
     frame: DataFrame, cols: tuple[Column | str, ...], ascending: bool | list[bool] | None
 ) -> DataFrame:
-    try:
-        columns, directions, nulls_first = frame._sort_specs(cols, ascending)
-        return frame._spawn_preserving_identity(
-            frame._plan().sort(columns, directions, nulls_first)
-        )
-    except AnalysisException as error:
-        found = _AMBIGUOUS_REFERENCE.search(str(error))
-        if found is None:
-            raise
-        parts = [
-            part.replace("``", "`") for part in re.findall(r"`((?:[^`]|``)*)`", found.group(1))
-        ]
-        disposition, engine = _native.child_sort_target(frame._plan(), parts)
-        if disposition == "unresolved":
-            _native.refuse_unresolved_name(parts, frame.columns)
-        if disposition != "bound":
-            raise
-        rebound = tuple(_child_sort_key(frame, item, found.group(1), engine) for item in cols)
-        if all(key is item for key, item in zip(rebound, cols, strict=True)):
-            raise
-    columns, directions, nulls_first = frame._sort_specs(rebound, ascending)
+    keys = cols
+    for _attempt in range(len(cols)):
+        try:
+            columns, directions, nulls_first = frame._sort_specs(keys, ascending)
+            return frame._spawn_preserving_identity(
+                frame._plan().sort(columns, directions, nulls_first)
+            )
+        except AnalysisException as error:
+            found = _AMBIGUOUS_REFERENCE.search(str(error))
+            if found is None:
+                raise
+            parts = [
+                part.replace("``", "`") for part in re.findall(r"`((?:[^`]|``)*)`", found.group(1))
+            ]
+            disposition, engine = _native.child_sort_target(frame._plan(), parts)
+            if disposition == "unresolved":
+                _native.refuse_unresolved_name(parts, frame.columns)
+            if disposition not in ("bound", "child"):
+                raise
+            rebound = tuple(_child_sort_key(frame, item, found.group(1), engine) for item in keys)
+            if all(key is item for key, item in zip(rebound, keys, strict=True)):
+                raise
+            keys = rebound
+    columns, directions, nulls_first = frame._sort_specs(keys, ascending)
     return frame._spawn_preserving_identity(frame._plan().sort(columns, directions, nulls_first))
 
 
@@ -209,7 +217,9 @@ def _child_sort_key(
 def _twin_engine(column: Column, position: int, count: int) -> tuple[str, tuple[str, str] | None]:
     plan_id, field = column._origin_plan_id, column._origin_field
     if column._spark_display != column._projection_name:
-        return f"__repark_sel_a_{position}_{count}", None
+        if plan_id is None or field is None or column._join_sql_expr is not None:
+            return f"__repark_sel_a_{position}_{count}", None
+        return f"__repark_sel_a_{position}_{count}_{plan_id}_{field}", None
     if plan_id is None or field is None:
         return f"__repark_sel_h2_{position}_{count}", None
     return f"__repark_sel_{plan_id}_{field}_{count}", (plan_id, field)
@@ -276,6 +286,8 @@ def _match_lenient_subset(frame: DataFrame, subset: list[str]) -> list[str]:
 def _distinct_attributes(frame: DataFrame, hits: list[str]) -> bool:
     if frame._display_names is None:
         spelled = sorted(set(hits))
+        if len(spelled) > 1 and frame._fresh_outputs.intersection(spelled):
+            return True
         return len(spelled) > 1 and not _native.same_source_fields(frame._plan(), spelled)
     return len(_hit_origins(frame, hits)) > 1
 
@@ -294,7 +306,46 @@ def _hit_origins(frame: DataFrame, hits: list[str]) -> set[tuple[str, str]]:
 
 
 def _new_attribute(engine: str) -> tuple[str, str] | None:
-    return ("", engine) if re.fullmatch(r"__repark_sel_a_[0-9]+_[0-9]+", engine) else None
+    return ("", engine) if _NEW_ATTRIBUTE.fullmatch(engine) else None
+
+
+_NEW_ATTRIBUTE = re.compile(r"__repark_sel_a_[0-9]+_[0-9]+(?:_([0-9a-f]{12})_(.+))?", re.DOTALL)
+
+
+def _filter_qcol_sql(frame: DataFrame, join_sql: str) -> str | None:
+    if "__REPARK_QCOL_" not in join_sql:
+        return None
+    origin_map = dict(frame._origin_map or {})
+    for engine in frame._engine_names or []:
+        found = _NEW_ATTRIBUTE.fullmatch(engine)
+        if found is not None and found.group(1) is not None:
+            origin_map.setdefault((found.group(1), found.group(2)), engine)
+    if not origin_map:
+        return None
+    replace = functools.partial(_replace_local_qcol_token, origin_map=origin_map, frame=frame)
+    return _QCOL_TOKEN_RE.sub(replace, join_sql)
+
+
+def _predicate_attributes(frame: DataFrame) -> list[str]:
+    displays, engines = frame._display_names, frame._engine_names
+    if displays is None or engines is None or len(set(displays)) == len(displays):
+        return []
+    identities: list[str] = []
+    for engine in engines:
+        origin = _engine_origin(frame, engine)
+        if origin is not None:
+            identities.append(f"{origin[0]}.{origin[1]}")
+        else:
+            identities.append(engine if _new_attribute(engine) is not None else "")
+    return identities
+
+
+def _fresh_outputs(projected: list[Column], names: list[str]) -> frozenset[str]:
+    return frozenset(
+        name
+        for column, name in zip(projected, names, strict=True)
+        if column._spark_display != column._projection_name
+    )
 
 
 def _overlay_drop_targets(frame: DataFrame, item: Column | str, name: str) -> list[str]:
@@ -317,6 +368,8 @@ def _overlay_drop_targets(frame: DataFrame, item: Column | str, name: str) -> li
             hits = [display for display in displays if display == name]
         else:
             hits = _native.match_display_names(plan, [name], displays)[0][1]
+        if item._origin_plan_id is not None and item._origin_field is not None:
+            return _origin_drop_targets(frame, set(hits), name)
         if _distinct_attributes(frame, hits):
             _native.refuse_ambiguous_display_name(plan, name, displays)
         wanted = set(hits)
@@ -325,6 +378,16 @@ def _overlay_drop_targets(frame: DataFrame, item: Column | str, name: str) -> li
     else:
         wanted = set(_native.match_resolver_names(plan, [name], displays)[0][1])
     return [engine for display, engine in zip(displays, engines, strict=True) if display in wanted]
+
+
+def _origin_drop_targets(frame: DataFrame, wanted: set[str], name: str) -> list[str]:
+    pairs = zip(frame._display_names or [], frame._engine_names or [], strict=True)
+    engines = [
+        engine for display, engine in pairs if display in wanted and _new_attribute(engine) is None
+    ]
+    if len({_engine_origin(frame, engine) for engine in engines} - {None}) > 1:
+        _native.refuse_ambiguous_display_name(frame._plan(), name, list(frame._display_names or []))
+    return engines
 
 
 def _match_subset_names(frame: DataFrame, subset: list[str]) -> list[str]:

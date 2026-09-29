@@ -223,6 +223,19 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   parsed tree through `frame_names::bind_predicate_qualifiers` between the
   two when `displays` is `Some`. `None` (the Column-path `filter_sql` and
   the door-parity pins) plans exactly as before. pins: casesens-2/C-015, C-016
+  **CASESENS-2 third re-verify fold (2026-09-29, RC4-1, RC4-8):**
+  `predicate_parts(frame, predicate, displays, attributes)` replaces
+  `parse_canonical_predicate`: it takes the frame state once
+  (`into_parts`), reads the rule from that state's options (no
+  `TaskContext`), plans the predicate through `planned_predicate`, and
+  hands back the state and plan for the caller to filter, so one filter
+  clones the session state once instead of twice. Under `Exact`
+  `planned_predicate` turns identifier normalization off for the parse and
+  restores it before the state is reused; the `FieldNotFound` probe and
+  the downstream translation are unchanged. `bound_predicate` always runs
+  `bind_predicate_qualifiers` (lambda scopes need it with `displays =
+  None` too). `parse_canonical_predicate_exact` stays for the door-parity
+  pins only (`cfg(test)`). pins: casesens-2/C-021, C-028
 - [`window.rs`](window.rs) owns Spark frame conversion and unordered-window policy.
   **WIN-SLIDE-1 (2026-09-04):** a `RANGE` offset is emitted as `ScalarValue::Utf8`, not `Int64`.
   DataFusion's window-frame coercion casts a `Utf8` bound to the ORDER BY key's type (that is the
