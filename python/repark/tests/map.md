@@ -3758,6 +3758,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (subquery self-overwrite refusals, encoded-key refusals with sibling /
   other-bucket / local pass-throughs, exact-object append refusal,
   trailing-slash reads of `#` / `?` / `%` keys).
+- `test_casesens_release_diff_1.py` — **CASESENS-RELEASE-DIFF-1 (2026-09-28):**
+  the RD-1/RD-2 pins against `casesens_release_diff_1_spark.json` (24 Spark
+  4.1.2 cells, local plus moto s3a): twin parquet/json path writes refuse
+  `COLUMN_ALREADY_EXISTS` before every save mode with nothing written, twin csv
+  writes keep writing with pinned bytes and read-back per header setting, twin
+  orc keeps `NOT_IMPLEMENTED`, under-true twin writes land, é/É refuses while
+  ß/SS writes, saveAsTable/CTAS locks, the partition twin and respell cells,
+  the moto s3a refusal cell, and the exact `F.col` misses with Spark's
+  `UNRESOLVED_COLUMN` text beside byte-identical false-path misses.
+  pins: casesens-release-diff-1/C-001, C-002, C-003, C-004, C-005
 - `test_e2_readwriter.py` — E2 R-CENSUS-READWRITER: bare-name resolution
   (`resolve_table_name` / saveAsTable / table / writeTo / insertInto / MERGE /
   DROP TABLE SQL expander), `spark.sql.defaultNamespace` seed, parquet save/load +

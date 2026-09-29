@@ -66,6 +66,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   R-CS2-8…R-CS2-12 open beside R-CS2-7.
   `risk_tier: high`.
   pins: casesens-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [casesens-release-diff-1-ledger.md](casesens-release-diff-1-ledger.md) —
+  **WO CASESENS-RELEASE-DIFF-1 (2026-09-28), in flight:** the two v1.5.1
+  release-differential regressions — twin parquet/json path writes refuse
+  `COLUMN_ALREADY_EXISTS` before every save mode on the local and S3 doors
+  (csv keeps writing, orc keeps its declared refusal, nothing refuses under
+  true), and exact-mode `F.col` misses raise `UNRESOLVED_COLUMN` with Spark's
+  text while false-path misses stay byte-identical (C-001…C-005).
+  `risk_tier: standard`. Branch `fix/casesens-release-diff-1`.
+  pins: casesens-release-diff-1/C-001, C-002, C-003, C-004, C-005
 - [r-fileorder-2-ledger.md](r-fileorder-2-ledger.md) —
   **R-FILEORDER-2 (2026-09-27), HALT per R1:** Spark 4.1.2's own `L-INSERT-OVERWRITE`
   lineage differs between runs (the same-JVM triple agrees, C-001; six fresh-JVM runs

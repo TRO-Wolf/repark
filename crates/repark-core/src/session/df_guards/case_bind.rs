@@ -102,11 +102,7 @@ pub(super) fn bind_names(expr: Expr, frame_schema: &DFSchema, rule: NameRule) ->
                 }
                 match rule {
                     NameRule::Exact if hits.is_empty() => {
-                        if case_hits(&column, [frame_schema], NameRule::IgnoreCase).is_empty() {
-                            Transformed::no(Expr::Column(column))
-                        } else {
-                            return Err(unresolved_column(&column, frame_schema));
-                        }
+                        return Err(unresolved_column(&column, frame_schema));
                     }
                     NameRule::Exact => Transformed::no(Expr::Column(column)),
                     NameRule::IgnoreCase => match unique_case_match(&column, frame_schema) {
@@ -914,10 +910,8 @@ mod tests {
         let held = Expr::Column(Column::new(Some("t"), "Data"));
         assert_eq!(bind_names(held.clone(), &schema, Exact).unwrap(), held);
         let unknown = col("nope");
-        assert_eq!(
-            bind_names(unknown.clone(), &schema, Exact).unwrap(),
-            unknown
-        );
+        let error = bind_names(unknown, &schema, Exact).unwrap_err().to_string();
+        assert_eq!(error, unresolved("`nope`", "`id`, `Data`, `s`"));
     }
 
     #[test]

@@ -361,6 +361,12 @@ def _merge_path_write_tree(staging: Any, destination: Any) -> None:
         shutil.move(str(item), str(target))
 
 
+def refuse_path_write_twins(frame: DataFrame, stored_as: str) -> None:
+    """Refuse twin columns on parquet/json path writes under ``caseSensitive=false``."""
+    if stored_as in ("PARQUET", "JSON"):
+        _native.refuse_folded_duplicate_keys(frame._plan(), list(frame.columns))
+
+
 def partitioned_by_sql_clause(frame_columns: list[str], partition_columns: list[str]) -> str:
     """Build the path ``PARTITIONED BY`` clause for configured identity columns."""
     if not partition_columns:

@@ -371,6 +371,7 @@ class DataFrameWriter:
         """
         import shutil
 
+        writer_layout.refuse_path_write_twins(self._dataframe, stored_as)
         normalized_mode = "error" if self._mode == "errorifexists" else self._mode
         if normalized_mode not in self._PATH_MODES:
             raise AnalysisException(

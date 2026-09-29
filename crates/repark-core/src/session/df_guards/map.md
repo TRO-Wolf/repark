@@ -125,6 +125,14 @@ wrapped optimizer rule) and declares this directory.
   resolve there — no new edge). Rust pins `exact_rule_refuses_a_case_only_match`,
   `ignore_case_rule_is_unchanged`, `frame_functions_follow_the_rule`.
   pins: casesens-1/C-009, C-010
+  **CASESENS-RELEASE-DIFF-1 (2026-09-28, RD-2):** under `Exact` a total miss
+  also refuses `UNRESOLVED_COLUMN.WITH_SUGGESTION` through `unresolved_column`
+  instead of falling through to DataFusion's raw `No field named` text; safe
+  for subquery-inner columns because `Expr::transform` treats subqueries as
+  leaves. `IgnoreCase` still falls through. Rust pin
+  `exact_rule_refuses_a_case_only_match` (the `nope` leg now asserts the
+  `UNRESOLVED_COLUMN` text).
+  pins: casesens-release-diff-1/C-004
   **Verifier fold (2026-09-28, VC-3):** `bind_projection_expr` aliases a bare
   top-level `Cast`/`TryCast` over a direct column child to the written child
   name, so `F.col(x).cast(...)` keeps the child name instead of leaking the

@@ -24,6 +24,14 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `writer_layout.partitioned_by_sql_clause`, retiring
   `writer_readwriter.py`'s size exception (996 lines).
   pins: s3-path-write-1/C-007, C-008, C-009, C-012, C-013, C-014, C-015
+- `writer_layout.py` — **CASESENS-RELEASE-DIFF-1 (2026-09-28):**
+  `refuse_path_write_twins` refuses case-twin columns on parquet/json path
+  writes under `caseSensitive=false` through the existing
+  `refuse_folded_duplicate_keys` native entry (the CTAS/views matcher, no new
+  matcher); `_apply_path_write` calls it first, so local and S3 share one call
+  site and the refusal precedes every save mode. csv keeps writing, orc keeps
+  its declared refusal, nothing refuses under true.
+  pins: casesens-release-diff-1/C-001, C-002, C-003
 
 ## Modules
 
