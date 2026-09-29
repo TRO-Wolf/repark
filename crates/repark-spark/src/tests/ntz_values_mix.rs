@@ -603,3 +603,70 @@ async fn a_written_cast_as_timestamp_beside_null_stays_timestamp() {
         }
     }
 }
+
+const EXPRESSION_CELLS: [(&str, &str); 3] = [
+    (
+        "date_trunc('HOUR', TIMESTAMP_NTZ '2024-03-10 02:30:00')",
+        "2024-03-10 03:00:00",
+    ),
+    (
+        "coalesce(CAST(TIMESTAMP_NTZ '2024-03-10 02:30:00' AS TIMESTAMP), TIMESTAMP_NTZ \
+         '2024-03-10 02:30:00')",
+        "2024-03-10 03:30:00",
+    ),
+    (
+        "from_utc_timestamp(TIMESTAMP_NTZ '2024-03-10 02:30:00', 'UTC')",
+        "2024-03-10 03:30:00",
+    ),
+];
+
+fn expression_cell_sources(cell: &str) -> [String; 2] {
+    [
+        format!("VALUES (1, DATE '2024-03-10'), (2, {cell})"),
+        format!("VALUES (2, {cell}), (1, DATE '2024-03-10')"),
+    ]
+}
+
+#[tokio::test]
+async fn an_expression_cell_beside_a_date_keeps_the_timestamp_type() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = session_at(&warehouse, "America/New_York").await;
+    for (cell, resolved) in EXPRESSION_CELLS {
+        for source in expression_cell_sources(cell) {
+            let got = text_rows(
+                &ctx,
+                &catalogs,
+                &format!(
+                    "SELECT CAST(id AS INT), typeof(c), CAST(c AS STRING) FROM {source} AS s(id, c)"
+                ),
+            )
+            .await;
+            assert_eq!(got, cast_ltz_want(true, resolved), "{source}");
+        }
+    }
+}
+
+#[tokio::test]
+async fn an_expression_cell_beside_a_date_stores_sparks_walls() {
+    for (cell, resolved) in EXPRESSION_CELLS {
+        for source in expression_cell_sources(cell) {
+            let warehouse = TempDir::new().unwrap();
+            let (ctx, catalogs) = session_at(&warehouse, "America/New_York").await;
+            run(
+                &ctx,
+                &catalogs,
+                "CREATE TABLE ice.sales.mix (id INT, c TIMESTAMP_NTZ) USING iceberg",
+            )
+            .await;
+            let (_, sql) = door_sql("merge_insert_star", &source);
+            run(&ctx, &catalogs, &sql).await;
+            let got = text_rows(
+                &ctx,
+                &catalogs,
+                "SELECT id, CAST(c AS STRING) FROM ice.sales.mix",
+            )
+            .await;
+            assert_eq!(got, cast_ltz_want(false, resolved), "{source}");
+        }
+    }
+}

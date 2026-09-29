@@ -18,8 +18,8 @@ use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
 use datafusion::common::{DFSchema, DataFusionError, Result, ScalarValue};
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{
-    Cast, ColumnarValue, Expr, ExprSchemable, LogicalPlan, ReturnFieldArgs, ScalarFunctionArgs,
-    ScalarUDF, ScalarUDFImpl, Signature, Values, Volatility,
+    Cast, ColumnarValue, Expr, ExprSchemable, LogicalPlan, Operator, ReturnFieldArgs,
+    ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, Values, Volatility,
 };
 
 use crate::ansi::spark_ansi_enabled_from_options;
@@ -575,11 +575,12 @@ fn values_actions(values: &Values) -> Vec<(usize, ValuesAction)> {
 pub(crate) fn widen_mixed_values_timestamps(
     plan: LogicalPlan,
     rewrite: &dyn Fn(Expr) -> Result<Expr>,
+    ntz_default: bool,
 ) -> Result<LogicalPlan> {
     let mut widened = false;
     plan.transform_up_with_subqueries(|node| match node {
         LogicalPlan::Values(values) => {
-            let (node, changed) = widen_values(values, rewrite)?;
+            let (node, changed) = widen_values(values, rewrite, ntz_default)?;
             widened |= changed;
             Ok(Transformed::new_transformed(node, changed))
         }
@@ -592,6 +593,7 @@ pub(crate) fn widen_mixed_values_timestamps(
 fn widen_values(
     values: Values,
     rewrite: &dyn Fn(Expr) -> Result<Expr>,
+    ntz_default: bool,
 ) -> Result<(LogicalPlan, bool)> {
     let wall = DataType::Timestamp(TimeUnit::Microsecond, None);
     let wall_ns = DataType::Timestamp(TimeUnit::Nanosecond, None);
@@ -628,7 +630,7 @@ fn widen_values(
             continue;
         }
         let Some((counts, cells, types)) =
-            classify_values_column(&pres, rewrite, &empty, &instant, &wall)
+            classify_values_column(&pres, rewrite, &empty, &instant, &wall, ntz_default)
         else {
             continue;
         };
@@ -702,6 +704,7 @@ fn classify_values_column(
     empty: &DFSchema,
     instant: &DataType,
     wall: &DataType,
+    ntz_default: bool,
 ) -> Option<(ValuesColumnCounts, Vec<Expr>, Vec<DataType>)> {
     let cells = pres
         .iter()
@@ -721,7 +724,7 @@ fn classify_values_column(
         others: 0,
     };
     for (pre, post) in pres.iter().zip(&types) {
-        match values_cell_class(pre, post, empty, instant, wall) {
+        match values_cell_class(pre, post, empty, instant, wall, ntz_default) {
             ValuesCellClass::Date => counts.dates += 1,
             ValuesCellClass::Wall => {
                 counts.walls += 1;
@@ -740,15 +743,18 @@ fn values_cell_class(
     empty: &DFSchema,
     instant: &DataType,
     wall: &DataType,
+    ntz_default: bool,
 ) -> ValuesCellClass {
     if is_values_date_cell(pre, empty) {
         ValuesCellClass::Date
-    } else if is_values_naive_cell(pre, empty) {
+    } else if is_values_null_cell(pre) || is_values_ntz_wall(pre) {
         ValuesCellClass::Wall
-    } else if post == instant {
+    } else if !is_values_ltz_cell(pre) {
+        ValuesCellClass::Other
+    } else if ntz_default && post == wall {
+        ValuesCellClass::Wall
+    } else if !ntz_default && post == instant {
         ValuesCellClass::Instant
-    } else if post == wall {
-        ValuesCellClass::Wall
     } else {
         ValuesCellClass::Other
     }
@@ -800,37 +806,86 @@ fn is_values_date_cell(pre: &Expr, empty: &DFSchema) -> bool {
     false
 }
 
-fn is_values_naive_cell(pre: &Expr, empty: &DFSchema) -> bool {
+fn peel_naive_coercion(core: &Expr) -> Option<&Expr> {
+    match core {
+        Expr::Cast(cast) if matches!(cast.field.data_type(), DataType::Timestamp(_, None)) => {
+            Some(strip_values_wrappers(&cast.expr))
+        }
+        _ => None,
+    }
+}
+
+fn is_values_ntz_wall(pre: &Expr) -> bool {
     let core = strip_values_wrappers(pre);
-    if let Expr::ScalarFunction(function) = core {
-        return matches!(
-            function.func.name(),
-            crate::timestamp_ntz_cast::TIMESTAMP_NTZ_LITERAL_NAME
-                | crate::timestamp_ntz_cast::TIMESTAMP_NTZ_CAST_NAME
-                | crate::timestamp_ntz_cast::TRY_TIMESTAMP_NTZ_CAST_NAME
-        );
+    is_ntz_wall_core(core) || peel_naive_coercion(core).is_some_and(is_ntz_wall_core)
+}
+
+fn is_ntz_wall_core(mut expr: &Expr) -> bool {
+    loop {
+        expr = strip_values_wrappers(expr);
+        match expr {
+            Expr::BinaryExpr(binary)
+                if matches!(binary.op, Operator::Plus | Operator::Minus)
+                    && is_interval_literal(&binary.right) =>
+            {
+                expr = binary.left.as_ref();
+            }
+            Expr::BinaryExpr(binary)
+                if binary.op == Operator::Plus && is_interval_literal(&binary.left) =>
+            {
+                expr = binary.right.as_ref();
+            }
+            Expr::ScalarFunction(function) => {
+                return matches!(
+                    function.func.name(),
+                    crate::timestamp_ntz_cast::TIMESTAMP_NTZ_LITERAL_NAME
+                        | crate::timestamp_ntz_cast::TIMESTAMP_NTZ_CAST_NAME
+                        | crate::timestamp_ntz_cast::TRY_TIMESTAMP_NTZ_CAST_NAME
+                );
+            }
+            Expr::Literal(scalar, _) => {
+                return matches!(scalar, ScalarValue::TimestampMicrosecond(_, None));
+            }
+            _ => return false,
+        }
     }
-    if let Expr::Literal(scalar, _) = core {
-        return matches!(
-            scalar,
-            ScalarValue::Null
-                | ScalarValue::TimestampNanosecond(None, _)
-                | ScalarValue::TimestampMicrosecond(None, _)
-                | ScalarValue::TimestampMillisecond(None, _)
-                | ScalarValue::TimestampSecond(None, _)
-                | ScalarValue::TimestampMicrosecond(_, None)
-        );
-    }
-    if let Expr::Cast(cast) = core
-        && matches!(cast.field.data_type(), DataType::Timestamp(_, None))
-        && matches!(
-            cast.expr.get_type(empty),
-            Ok(DataType::Timestamp(TimeUnit::Microsecond, None) | DataType::Null)
+}
+
+fn is_interval_literal(expr: &Expr) -> bool {
+    matches!(
+        strip_values_wrappers(expr),
+        Expr::Literal(
+            ScalarValue::IntervalMonthDayNano(_)
+                | ScalarValue::IntervalDayTime(_)
+                | ScalarValue::IntervalYearMonth(_),
+            _,
         )
-    {
-        return true;
+    )
+}
+
+fn is_values_ltz_cell(pre: &Expr) -> bool {
+    let core = strip_values_wrappers(pre);
+    is_ltz_cell_core(core) || peel_naive_coercion(core).is_some_and(is_ltz_cell_core)
+}
+
+fn is_ltz_cell_core(expr: &Expr) -> bool {
+    let ns = DataType::Timestamp(TimeUnit::Nanosecond, None);
+    let Expr::Cast(outer) = expr else {
+        return false;
+    };
+    if outer.field.data_type() != &ns {
+        return false;
     }
-    false
+    match strip_values_wrappers(&outer.expr) {
+        Expr::Literal(scalar, _) => matches!(
+            scalar,
+            ScalarValue::Utf8(Some(_))
+                | ScalarValue::LargeUtf8(Some(_))
+                | ScalarValue::Utf8View(Some(_))
+        ),
+        Expr::Cast(inner) => inner.field.data_type() == &ns,
+        _ => false,
+    }
 }
 
 fn values_cell_to_naive(cell: Expr, empty: &DFSchema, wall: &DataType) -> Result<Expr> {

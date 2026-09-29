@@ -2043,6 +2043,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   in New York and Havana, in a SELECT and through CTAS. Turning the mark off reds the
   first two pins; turning it off and counting NULL as a wall again also reds the third.
   pins: ntz-store-doors-1/C-008
+  **WO NTZ-STORE-DOORS-1 third re-verify fold (2026-09-29, RD4-1):**
+  `an_expression_cell_beside_a_date_keeps_the_timestamp_type` pins `typeof` = `timestamp`
+  and Spark's values in New York for a `DATE` beside `date_trunc('HOUR', ntz)` (03:00),
+  `coalesce(CAST(ntz AS TIMESTAMP), ntz)` (03:30) and `from_utc_timestamp(ntz, 'UTC')`
+  (03:30), each in both row orders. `an_expression_cell_beside_a_date_stores_sparks_walls`
+  stores the same six sources through MERGE INSERT * into a `TIMESTAMP_NTZ` column.
+  Classifying an unknown cell as a naive wall again reds both pins.
+  pins: ntz-store-doors-1/C-009
 
 - `describe_table.rs` — **SQL-DESCRIBE-1 (2026-09-09):** `DESCRIBE|DESC [TABLE]
   [EXTENDED|FORMATTED] catalog.namespace.table` against a memory-catalog table built like the

@@ -527,10 +527,14 @@ impl AnalyzerRule for SparkLtzTimestampCast {
         let zone = session_time_zone_from_options(config).to_string();
         let timestamp_type = spark_timestamp_type_from_options(config);
         let empty = DFSchema::empty();
-        let plan = crate::timestamp_ns_cast::widen_mixed_values_timestamps(plan, &|cell: Expr| {
-            cell.transform_up(|node| Ok(rewrite_cast(node, &empty, &zone, timestamp_type)))
-                .data()
-        })?;
+        let plan = crate::timestamp_ns_cast::widen_mixed_values_timestamps(
+            plan,
+            &|cell: Expr| {
+                cell.transform_up(|node| Ok(rewrite_cast(node, &empty, &zone, timestamp_type)))
+                    .data()
+            },
+            timestamp_type.is_ntz(),
+        )?;
         let plan = if timestamp_type.is_ntz() {
             plan
         } else {

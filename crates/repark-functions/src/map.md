@@ -1004,6 +1004,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   rewrite, before NTZ-1's `retarget_dml_store_casts`. The DML retarget therefore sees a
   mixed `VALUES` column already typed `TIMESTAMP` (+5 lines).
   pins: ntz-store-doors-1/C-006
+  **WO NTZ-STORE-DOORS-1 third re-verify fold (2026-09-29, RD4-1):** the call also passes
+  `timestamp_type.is_ntz()`, so the pass reads a `TIMESTAMP` literal by the session's
+  default timestamp type. pins: ntz-store-doors-1/C-009
 - `timestamp_cast.rs` — **TZ-5 (2026-08-12)** plus **B-TZ-4 (2026-08-13):** the embedded UDFs
   `analyzer.rs` puts under timestamp casts. `__repark_epoch_seconds_floor__` (→ `Int64`) serves
   integer targets with exact `div_euclid` **floor** — Spark uses `Math.floorDiv`, so `-0.5 s` is
@@ -1110,6 +1113,21 @@ scalars live under [`try_invert/`](try_invert/map.md).
   but the `TIMESTAMP_NTZ` normalization now fires only when at least one non-NULL cell is a
   naive wall (`null_walls`).
   pins: ntz-store-doors-1/C-008
+  **WO NTZ-STORE-DOORS-1 third re-verify fold (2026-09-29, RD4-1):** the pass deviates
+  from base only on positive, syntactic evidence; no cell is classified by its rewritten
+  type alone. After the `Alias` / non-null wrappers and at most one planner coercion `CAST`
+  to a naive timestamp are peeled, a cell is a naive wall only if it is a `TIMESTAMP_NTZ`
+  literal, a `CAST` / `::` / `TRY_CAST` to `TIMESTAMP_NTZ` (the three embedded NTZ calls)
+  or a naive microsecond literal, optionally plus or minus `INTERVAL` literals; it is an
+  instant only if it is a `TIMESTAMP` / `TIMESTAMP_LTZ` literal (a naive nanosecond `CAST`
+  of a string literal) or carries the second re-verify fold's double `CAST` marker, and its
+  rewritten type is the instant. A `DATE` cell and a NULL cell are neutral, as before. Every
+  other cell (`date_trunc`, `from_utc_timestamp`, `coalesce`, `if`, `greatest`, a column,
+  `current_timestamp()` and the rest) is `Other`, and one such cell leaves the whole column
+  on base's path. Under `spark.sql.timestampType=TIMESTAMP_NTZ` (`ntz_default`, passed by
+  `instant_ts`) a `TIMESTAMP` literal or marked cast is a wall, since Spark types it
+  `TIMESTAMP_NTZ` there.
+  pins: ntz-store-doors-1/C-009
 - `timestamp_ntz_cast.rs` — **WO NTZ-1 slice 1 (2026-09-26):** the embedded Spark-door
   casts `__repark_cast_timestamp_ntz__` / `__repark_try_cast_timestamp_ntz__` (→
   `Timestamp(µs, None)`) and the wall literal `__repark_timestamp_ntz__`, registered
