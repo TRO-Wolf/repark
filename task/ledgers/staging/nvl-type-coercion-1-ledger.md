@@ -124,17 +124,40 @@ two `nvl2` `vn1` pins pin cast-laziness, which the kernel shares, so that
 mutant cannot move them; the rig's `div0` cells carry the `nvl2`
 expression-laziness proof instead.
 
+### Re-verify VN2-1..VN2-4 (2026-09-29)
+
+The rule lowers `nvl`/`ifnull` to `coalesce` of the two `nvl_cast`
+branches, `zeroifnull` to `coalesce` with the widened zero, scalar
+`nullif` to DataFusion's own `nullif` over shaped operands, while `nvl2`
+keeps its single-use `CASE`; grouping-set inner expressions rewrite
+with names kept, and `typeof` skips its fold under `greatest`/`least`
+over a string. All 811 pins pass, including the 12 new VN2 pins (8
+`rand()`/`uuid()` single-evaluation repros, 1 depth-12 nesting pin, 3
+`ROLLUP`/`CUBE` grouping pins).
+
+Single-evaluation mutant (rule restored to `CASE` lowering): reds 7 of
+the 8 VN2-1 pins. `nullif`+`rand()` stays 0 under both lowerings because
+the engine shares identical `rand()` draws (`SELECT rand(), rand()`
+returns twins; 0 at old head too), so the `uuid()` pin carries the
+`nullif` proof.
+
+Depth-12 `nvl`+`nullif` pin plans in under 1 s; timed `EXPLAIN` at
+depths 4/8/12/16 answers in under 0.2 s each. Five-deep execution on
+100k rows, identical workload both trees (5 samples base, 3 head):
+base `CASE` median 0.6526 s, head `coalesce` median 0.1914 s — head runs
+at 0.29x base, inside the 1.2x envelope at 3.4x faster.
+
 ## Coverage attestation
 
 ```yaml
 COVERAGE_ATTESTATION:
   pr_unit: nvl-type-coercion-1
   complete: true
-  reattested: [AT-1, AT-2, AT-3, AT-6, AT-8, AT-10]
+  reattested: [AT-1, AT-2, AT-3, AT-6, AT-7, AT-8, AT-10]
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Clauses C-001..C-007 walked one by one against behavior — the oracle matrix measured on live PySpark 4.1.2 in two session zones, the widening verified per cell, the residuals ledgered with divergence pins, the guards re-run to zero breaks, the mutation run red-first on the base tree, and the gate run as written; every clause is PROVEN and cited from the maps.
+      evidence: Clauses C-001..C-007 plus re-verify C-012..C-015 walked one by one against behavior — the oracle matrix measured on live PySpark 4.1.2 in two session zones, the widening verified per cell, the residuals ledgered with divergence pins, the guards re-run to zero breaks, the mutation run red-first on the base tree, the CASE mutant red on the re-verify pins, and the gate run as written; every clause is PROVEN and cited from the maps.
       artifacts: [task/ledgers/staging/nvl-type-coercion-1-ledger.md, python/repark/tests/test_nvl_type_coercion_1.py]
     - id: AT-2
       status: ATTACKED
@@ -156,8 +179,9 @@ COVERAGE_ATTESTATION:
       evidence: Arrow value AND type pinned per oracle cell through collect and typeof; facade display keeps the nvl/ifnull/nvl2/nullif/zeroifnull/nullifzero spellings via one native _scalar call each; struct/map answers pinned through collected values, not the stringifying wrapper.
       artifacts: [python/repark/tests/test_nvl_type_coercion_1.py, python/repark/src/repark/spark/functions_expr.py]
     - id: AT-7
-      status: N/A
-      justification: No memory or performance envelope changes — the kernel takes only picked rows per side and the matrices run in seconds; no new cache, spill, or batch-atomic path.
+      status: ATTACKED
+      evidence: Five-deep nvl on 100k rows runs at 0.29x the CASE-lowering base (0.1914 s vs 0.6526 s medians), inside the 1.2x envelope; depth-12 nesting plans in under 1 s and depths 4/8/12/16 explain in under 0.2 s each.
+      artifacts: [task/ledgers/staging/nvl-type-coercion-1-ledger.md]
     - id: AT-8
       status: ATTACKED
       evidence: The nullif rule seats fifth before type_coercion on both doors with the contract test extended; file-size baselines move DOWN only (functions_expr.py 2171 -> 2170 with the CAP-1 mirror in lockstep); the fixture holds only asserted cells at 772 lines.
