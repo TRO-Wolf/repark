@@ -162,18 +162,23 @@ pub(super) async fn insert_stream_checked(
     write_schema: &ArrowSchema,
 ) -> Result<impl Stream<Item = Result<RecordBatch>> + Unpin + use<>> {
     super::note_logical_target_sql_pass();
+    let dataframe = ctx.sql(sql).await?;
     let raw = crate::write::store_overflow::analyzed_store_source(ctx, sql).await?;
     let targets: Vec<(&str, &DataType)> = write_schema
         .fields()
         .iter()
         .map(|field| (field.name().as_str(), field.data_type()))
         .collect();
-    refuse_void_writes(ctx, "``", &raw, targets.clone())?;
-    crate::write::negated_null_store::refuse_negated_null_writes(ctx, "``", &raw, targets.clone())?;
-    crate::write::ntz_store::refuse_ntz_writes(ctx, "``", &raw, targets)?;
-    let raw_schema = raw.schema();
-    validate_insert_store_assignment(raw_schema.fields(), write_schema)?;
-    let stream_sql = zone_wrapping_stream_sql(ctx, sql, &raw, write_schema);
+    refuse_void_writes(ctx, "``", dataframe.logical_plan(), targets.clone())?;
+    crate::write::negated_null_store::refuse_negated_null_writes(
+        ctx,
+        "``",
+        dataframe.logical_plan(),
+        targets.clone(),
+    )?;
+    crate::write::ntz_store::refuse_ntz_writes(ctx, "``", dataframe.logical_plan(), targets)?;
+    validate_insert_store_assignment(dataframe.schema().fields(), write_schema)?;
+    let stream_sql = zone_wrapping_stream_sql(ctx, sql, dataframe.logical_plan(), write_schema);
     let wrapped = crate::write::store_overflow::wrap_store_outputs(
         raw,
         &write_targets(write_schema),

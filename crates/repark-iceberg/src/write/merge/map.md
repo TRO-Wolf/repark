@@ -283,8 +283,10 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   update probe reads types from the unoptimized plan so a const division reaches the
   rewrite instead of folding to `DIVIDE_BY_ZERO` first.
   **Merge origin/main v1.5.1 (2026-09-29):** both sides kept — the void, negated-null
-  and NTZ gates run in that order on the analyzed source, then the overflow wrap, then
-  the zone-wrapping subquery (which re-analyzes and re-wraps in its own arm).
+  and NTZ gates plus the ANSI matrix judge the unanalyzed plan exactly as on main (an
+  analyzed plan would rename an `Int64` literal `Int32` in the refusal text), the
+  overflow wrap runs on the analyzed source, then the zone-wrapping subquery (which
+  re-analyzes and re-wraps in its own arm).
 - `insert.rs` — **WO NTZ-1 slice 2 (2026-09-27):** the MERGE INSERT and UPDATE SET gates
   also call `../ntz_store.rs::refuse_ntz_writes` before the ANSI matrix, so an illegal
   source into an NTZ column refuses with Spark's `CANNOT_SAFELY_CAST` text naming
