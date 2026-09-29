@@ -60,7 +60,7 @@ pub(crate) async fn refuse_unassignable_ltz_values(
     if !presented
         .fields()
         .iter()
-        .any(|field| is_microsecond_ltz(field.data_type()))
+        .any(|field| is_judged_target(field.data_type()))
     {
         return Ok(());
     }
@@ -123,7 +123,7 @@ async fn refuse_value(
     target: &DataType,
     value: &Expr,
 ) -> Result<()> {
-    if is_bare_null(value) || !is_microsecond_ltz(target) {
+    if is_bare_null(value) || !is_judged_target(target) {
         return Ok(());
     }
     let source = if let Some(data_type) = literal_source_type(value) {
@@ -135,7 +135,7 @@ async fn refuse_value(
         };
         probed
     };
-    if let Some(text) = repark_iceberg::write::update_cast::incompatible_update_message(
+    if let Some(text) = repark_iceberg::write::update_cast::incompatible_store_message(
         display,
         &format!("`{column}`"),
         &source,
@@ -143,7 +143,7 @@ async fn refuse_value(
     ) {
         return Err(DataFusionError::Plan(text));
     }
-    if source.is_numeric() {
+    if is_microsecond_ltz(target) && source.is_numeric() {
         return Err(DataFusionError::Plan(numeric_refusal(
             display, column, &source, target,
         )));
@@ -164,6 +164,12 @@ fn numeric_refusal(display: &str, column: &str, source: &DataType, target: &Data
             ("toType", to.as_str()),
         ],
     )
+}
+
+fn is_judged_target(data_type: &DataType) -> bool {
+    is_microsecond_ltz(data_type)
+        || data_type.is_numeric()
+        || matches!(data_type, DataType::Date32 | DataType::Boolean)
 }
 
 fn is_microsecond_ltz(data_type: &DataType) -> bool {
@@ -401,6 +407,31 @@ mod tests {
         let row =
             values_row("INSERT INTO t VALUES (CAST(1 AS TIMESTAMP), DATE '2024-01-04', abs(-1))");
         assert_eq!(typed(&row), vec![None, None, None], "{row:?}");
+    }
+
+    #[test]
+    fn numbers_dates_booleans_and_zoned_timestamps_are_judged() {
+        for data_type in [
+            DataType::Int8,
+            DataType::Int32,
+            DataType::Int64,
+            DataType::Float32,
+            DataType::Float64,
+            DataType::Decimal128(10, 2),
+            DataType::Date32,
+            DataType::Boolean,
+            DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into())),
+        ] {
+            assert!(is_judged_target(&data_type), "{data_type:?}");
+        }
+        for data_type in [
+            DataType::Utf8,
+            DataType::Binary,
+            DataType::Timestamp(TimeUnit::Microsecond, None),
+            DataType::Timestamp(TimeUnit::Nanosecond, Some("UTC".into())),
+        ] {
+            assert!(!is_judged_target(&data_type), "{data_type:?}");
+        }
     }
 
     #[test]

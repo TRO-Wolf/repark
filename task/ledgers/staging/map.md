@@ -33,6 +33,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   store (C-001); the VALUES residual stays open for every other target (R-1).
   `risk_tier: standard`. Branch `fix/ltz-store-int-1`.
   pins: ltz-store-int-1/C-001
+- [store-ts-to-numeric-1-ledger.md](store-ts-to-numeric-1-ledger.md) —
+  **WO STORE-TS-TO-NUMERIC-1 (2026-09-28), in flight:** TIMESTAMP, DATE, STRING,
+  BOOLEAN and `-NULL` sources refuse with Spark's `CANNOT_SAFELY_CAST` text where
+  Spark's ANSI store assignment refuses them — the VALUES door into numeric, DATE and
+  BOOLEAN columns (C-001), `-NULL` on every write door (C-002), STRING into
+  FLOAT/DOUBLE on the INSERT doors (C-003), STRING into DECIMAL on UPDATE (C-004) —
+  while every store Spark allows still stores (C-005). `risk_tier: standard`. Branch
+  `fix/store-ts-to-numeric-1`.
+  pins: store-ts-to-numeric-1/C-001, C-002, C-003, C-004, C-005
 - [uuid-cast-window-1-ledger.md](uuid-cast-window-1-ledger.md) —
   **WO UUID-CAST-WINDOW-1 (2026-09-27), in flight:** the UUID refusal's SQL window
   counts as Spark 4.1.2 counts — the position in Unicode scalar values, the window

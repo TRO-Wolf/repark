@@ -27,6 +27,11 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   planning; a `SELECT *, CAST(id AS STRING)` no longer leaks DataFusion's `Projections require
   unique expression names`. Its two children are in [insert_positional/](insert_positional/map.md).
   pins: u8-write-sql/C-011, C-023
+  **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** after that rewrite (`rewrite_positional_insert`)
+  it runs `void_type::refuse_insert_source_types` on the prepared statement, so every
+  positional INSERT door — append, owned append, OVERWRITE and VALUES — refuses a `-NULL`
+  into a DATE, BOOLEAN or timestamp column and a STRING into FLOAT/DOUBLE with Spark's text.
+  `router.rs` stays at its 1000-line ceiling. pins: store-ts-to-numeric-1/C-002, C-003
 
 - `tests.rs` — `#[cfg(test)] mod tests;` in `../router.rs`.
   **MW-6:** the CALL dispatch covers all supported procedures, including `register_table`.

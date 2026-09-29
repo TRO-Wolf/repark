@@ -18,7 +18,20 @@ use repark_iceberg::write::void_store::refuse_void_writes;
 use crate::catalog_ops::name_parts;
 use crate::write_to_branch::qualify_table_parts;
 
+mod insert_source_types;
 mod ltz_values_store;
+
+pub(crate) async fn refuse_insert_source_types(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    insert: &Insert,
+    by_name: bool,
+) -> Result<()> {
+    Box::pin(insert_source_types::refuse_insert_source_types(
+        ctx, catalogs, insert, by_name,
+    ))
+    .await
+}
 
 pub(crate) fn rewrite_cast_null_to_void(statement: &mut Statement) {
     let _ = statement.visit(&mut CastNullToVoid);

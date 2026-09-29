@@ -27,6 +27,26 @@ handling (`CAST(NULL AS VOID)` rewrite, the non-NULL VALUES refusal into
   function is judged by its probed type; leading-zero fractions count precision
   from significant digits (six classifier tests).
   pins: ltz-store-int-1/C-001
+  **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** the gate also judges numeric, DATE
+  and BOOLEAN targets (`is_judged_target`, one classifier test), through
+  `incompatible_store_message` so a DECIMAL target has Spark's name: TIMESTAMP
+  into BIGINT, STRING into INT, BOOLEAN or DATE, BOOLEAN into INT and INT into
+  BOOLEAN refuse with Spark's text. The DDL-name numeric fallback stays for LTZ
+  targets only, so a numeric into a numeric column still stores.
+  pins: store-ts-to-numeric-1/C-001
+- `insert_source_types.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):**
+  `refuse_insert_source_types` is the Spark door's INSERT gate for two source
+  types the analyzer gate cannot see: a negated NULL (Spark's DOUBLE, judged by
+  `repark_iceberg`'s `refuse_negated_null_writes`) and a STRING into FLOAT or
+  DOUBLE (the `spark_float_stringify` rule rewrites that conform cast before
+  `InsertStoreAssignment` runs). It loads the target schema, skips a table with
+  no DATE, BOOLEAN, timestamp, BINARY or floating-point column, plans the source
+  once, maps it positionally, by column list or by name, and refuses with
+  Spark's text naming the quoted table. `void_type.rs` re-exports it behind a
+  `Box::pin` wrapper. Callers: `router/insert_positional.rs`
+  `prepare_positional_insert` (append, owned append, OVERWRITE, VALUES) and
+  `insert_by_name.rs`. Unmapped columns and unplannable sources pass.
+  pins: store-ts-to-numeric-1/C-002, C-003
 
 ## Pointers
 

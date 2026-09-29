@@ -4561,6 +4561,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `VALUES (DATE '…')` is refused by the G6-3 CAST gate instead.
   **LTZ-STORE-INT-1 (2026-09-28)** closes the residual for `TIMESTAMP` (LTZ) targets at
   the existing void VALUES gate site, before planning; every other target stays residual.
+  **STORE-TS-TO-NUMERIC-1 (2026-09-28)** closes it for numeric, DATE and BOOLEAN targets:
+  `test_a_literal_values_row_refuses_like_spark` pins `VALUES (true)` and
+  `VALUES (DATE '…')` into `INT` refusing with Spark's `CANNOT_SAFELY_CAST` text and
+  writing nothing. pins: store-ts-to-numeric-1/C-001
   Arrow path.
 - `test_ltz_store_int_1.py` — **WO LTZ-STORE-INT-1 (2026-09-28):** `INSERT INTO sc.ns.l
   VALUES (0, 1)` refuses with the recorded Spark `ins_l_int` answer — error class,
@@ -4569,6 +4573,21 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   leave the table empty. **Fold 2026-09-28 (verifier VL-1..VL-6):** `nvl` and
   `ifnull` over DATE and TIMESTAMP store.
   pins: ltz-store-int-1/C-001
+- [test_store_ts_to_numeric_1.py](test_store_ts_to_numeric_1.py) +
+  `store_ts_to_numeric_1_spark_oracle.json` — **WO STORE-TS-TO-NUMERIC-1
+  (2026-09-28):** one session replays 58 cells recorded on Spark 4.1.2 + Iceberg
+  1.11.0 (UTC) in order and compares refusal (class, SQLSTATE, message body with the
+  RePark-only planning prefix allowed) and the target read-back after every
+  statement. Refusals: TIMESTAMP, STRING, BOOLEAN and INT sources on the VALUES door
+  into numeric, DATE and BOOLEAN columns (C-001); `-NULL` and `-(NULL)` into DATE,
+  BOOLEAN, TIMESTAMP and TIMESTAMP_NTZ on VALUES, OVERWRITE VALUES, UPDATE, INSERT …
+  SELECT, OVERWRITE, BY NAME, both MERGE arms and both DataFrame writers, bare,
+  through a derived table and through a temp view (C-002); STRING into FLOAT/DOUBLE on
+  INSERT … SELECT and the DataFrame writers (C-003); STRING into DECIMAL on UPDATE
+  (C-004). Stores in the same test: DATE ↔ TIMESTAMP, numeric widening, in-range
+  narrowing, explicit CAST, NULL, `-NULL` into numeric and STRING, the CTAS controls,
+  and LTZ-STORE-INT-1's INT → TIMESTAMP refusal (C-005).
+  pins: store-ts-to-numeric-1/C-001, C-002, C-003, C-004, C-005
 - `test_merge_semantics_audit.py` — **MERGE-audit corpus** (2026-08-14 audit gap-map rows
   c/d/g/n/o): null-safe `<=>` / `eqNullSafe` ON matches NULL keys (both doors); builder-door
   `=` NULL keys do not match; self-merge (target as source) updates once per row; join-key

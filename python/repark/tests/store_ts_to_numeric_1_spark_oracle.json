@@ -1,0 +1,977 @@
+{
+ "meta": {
+  "engine": "Spark 4.1.2 + Iceberg 1.11.0 (spark.sql.storeAssignmentPolicy=ANSI default)",
+  "session": {
+   "spark.sql.session.timeZone": "UTC"
+  }
+ },
+ "setup": [
+  "CREATE NAMESPACE IF NOT EXISTS sc.ns",
+  "CREATE TABLE sc.ns.src (id INT, tsc TIMESTAMP) USING iceberg",
+  "INSERT INTO sc.ns.src VALUES (1, TIMESTAMP'1970-01-01 00:00:01')",
+  "CREATE TABLE sc.ns.t_bigint (id INT, c BIGINT) USING iceberg",
+  "CREATE TABLE sc.ns.o_bigint (id INT, c BIGINT) USING iceberg",
+  "INSERT INTO sc.ns.t_bigint VALUES (0, 7L)",
+  "INSERT INTO sc.ns.o_bigint VALUES (0, 7L)",
+  "CREATE TABLE sc.ns.t_int (id INT, c INT) USING iceberg",
+  "CREATE TABLE sc.ns.o_int (id INT, c INT) USING iceberg",
+  "INSERT INTO sc.ns.t_int VALUES (0, 7)",
+  "INSERT INTO sc.ns.o_int VALUES (0, 7)",
+  "CREATE TABLE sc.ns.t_double (id INT, c DOUBLE) USING iceberg",
+  "CREATE TABLE sc.ns.o_double (id INT, c DOUBLE) USING iceberg",
+  "INSERT INTO sc.ns.t_double VALUES (0, 7.0D)",
+  "INSERT INTO sc.ns.o_double VALUES (0, 7.0D)",
+  "CREATE TABLE sc.ns.t_float (id INT, c FLOAT) USING iceberg",
+  "CREATE TABLE sc.ns.o_float (id INT, c FLOAT) USING iceberg",
+  "INSERT INTO sc.ns.t_float VALUES (0, CAST(7 AS FLOAT))",
+  "INSERT INTO sc.ns.o_float VALUES (0, CAST(7 AS FLOAT))",
+  "CREATE TABLE sc.ns.t_dec (id INT, c DECIMAL(10,2)) USING iceberg",
+  "CREATE TABLE sc.ns.o_dec (id INT, c DECIMAL(10,2)) USING iceberg",
+  "INSERT INTO sc.ns.t_dec VALUES (0, 7.00BD)",
+  "INSERT INTO sc.ns.o_dec VALUES (0, 7.00BD)",
+  "CREATE TABLE sc.ns.t_date (id INT, c DATE) USING iceberg",
+  "CREATE TABLE sc.ns.o_date (id INT, c DATE) USING iceberg",
+  "INSERT INTO sc.ns.t_date VALUES (0, DATE'2000-01-01')",
+  "INSERT INTO sc.ns.o_date VALUES (0, DATE'2000-01-01')",
+  "CREATE TABLE sc.ns.t_boolean (id INT, c BOOLEAN) USING iceberg",
+  "CREATE TABLE sc.ns.o_boolean (id INT, c BOOLEAN) USING iceberg",
+  "INSERT INTO sc.ns.t_boolean VALUES (0, true)",
+  "INSERT INTO sc.ns.o_boolean VALUES (0, true)",
+  "CREATE TABLE sc.ns.t_ts (id INT, c TIMESTAMP) USING iceberg",
+  "CREATE TABLE sc.ns.o_ts (id INT, c TIMESTAMP) USING iceberg",
+  "INSERT INTO sc.ns.t_ts VALUES (0, TIMESTAMP'2000-01-01 00:00:00')",
+  "INSERT INTO sc.ns.o_ts VALUES (0, TIMESTAMP'2000-01-01 00:00:00')",
+  "CREATE TABLE sc.ns.t_ntz (id INT, c TIMESTAMP_NTZ) USING iceberg",
+  "CREATE TABLE sc.ns.o_ntz (id INT, c TIMESTAMP_NTZ) USING iceberg",
+  "INSERT INTO sc.ns.t_ntz VALUES (0, TIMESTAMP_NTZ'2000-01-01 00:00:00')",
+  "INSERT INTO sc.ns.o_ntz VALUES (0, TIMESTAMP_NTZ'2000-01-01 00:00:00')",
+  "CREATE TABLE sc.ns.t_str (id INT, c STRING) USING iceberg",
+  "CREATE TABLE sc.ns.o_str (id INT, c STRING) USING iceberg",
+  "INSERT INTO sc.ns.t_str VALUES (0, 'seed')",
+  "INSERT INTO sc.ns.o_str VALUES (0, 'seed')",
+  "CREATE OR REPLACE TEMPORARY VIEW v_ts_lit AS SELECT TIMESTAMP'1970-01-01 00:00:01' AS c",
+  "CREATE OR REPLACE TEMPORARY VIEW v_cast_ts AS SELECT CAST(1 AS TIMESTAMP) AS c",
+  "CREATE OR REPLACE TEMPORARY VIEW v_ts_col AS SELECT tsc AS c FROM sc.ns.src",
+  "CREATE OR REPLACE TEMPORARY VIEW v_date_lit AS SELECT DATE'1970-01-02' AS c",
+  "CREATE OR REPLACE TEMPORARY VIEW v_str_num AS SELECT '1' AS c",
+  "CREATE OR REPLACE TEMPORARY VIEW v_str_date AS SELECT '2024-01-01' AS c",
+  "CREATE OR REPLACE TEMPORARY VIEW v_neg_null AS SELECT -NULL AS c",
+  "CREATE OR REPLACE TEMPORARY VIEW v_neg_null_nested AS SELECT -(NULL) AS c",
+  "CREATE OR REPLACE TEMPORARY VIEW v_null AS SELECT NULL AS c",
+  "CREATE OR REPLACE TEMPORARY VIEW v_int_lit AS SELECT 1 AS c",
+  "CREATE OR REPLACE TEMPORARY VIEW v_dec_lit AS SELECT 1.5 AS c",
+  "CREATE OR REPLACE TEMPORARY VIEW v_bool_lit AS SELECT true AS c",
+  "CREATE OR REPLACE TEMPORARY VIEW v_big_small AS SELECT CAST(7 AS BIGINT) AS c",
+  "CREATE OR REPLACE TEMPORARY VIEW v_cast_ts_bigint AS SELECT CAST(TIMESTAMP'1970-01-01 00:00:01' AS BIGINT) AS c"
+ ],
+ "cells": {
+  "values/ts_lit/bigint/bare": {
+   "sql": "INSERT INTO sc.ns.t_bigint VALUES (100, TIMESTAMP'1970-01-01 00:00:01')",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_bigint WHERE id IN (0, 100)",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`t_bigint`: Cannot safely cast `c` \"TIMESTAMP\" to \"BIGINT\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "7",
+     "bigint"
+    ]
+   ]
+  },
+  "values/ts_lit/double/bare": {
+   "sql": "INSERT INTO sc.ns.t_double VALUES (101, TIMESTAMP'1970-01-01 00:00:01')",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_double WHERE id IN (0, 101)",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`t_double`: Cannot safely cast `c` \"TIMESTAMP\" to \"DOUBLE\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "7.0",
+     "double"
+    ]
+   ]
+  },
+  "values/cast_ts/dec/bare": {
+   "sql": "INSERT INTO sc.ns.t_dec VALUES (102, CAST(1 AS TIMESTAMP))",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_dec WHERE id IN (0, 102)",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`t_dec`: Cannot safely cast `c` \"TIMESTAMP\" to \"DECIMAL(10,2)\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "7.00",
+     "decimal(10,2)"
+    ]
+   ]
+  },
+  "values/str_num/int/bare": {
+   "sql": "INSERT INTO sc.ns.t_int VALUES (103, '1')",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_int WHERE id IN (0, 103)",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`t_int`: Cannot safely cast `c` \"STRING\" to \"INT\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "7",
+     "int"
+    ]
+   ]
+  },
+  "values/str_num/boolean/bare": {
+   "sql": "INSERT INTO sc.ns.t_boolean VALUES (104, '1')",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_boolean WHERE id IN (0, 104)",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`t_boolean`: Cannot safely cast `c` \"STRING\" to \"BOOLEAN\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "true",
+     "boolean"
+    ]
+   ]
+  },
+  "values/str_date/date/bare": {
+   "sql": "INSERT INTO sc.ns.t_date VALUES (105, '2024-01-01')",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_date WHERE id IN (0, 105)",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`t_date`: Cannot safely cast `c` \"STRING\" to \"DATE\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "2000-01-01",
+     "date"
+    ]
+   ]
+  },
+  "values/bool_lit/int/bare": {
+   "sql": "INSERT INTO sc.ns.t_int VALUES (106, true)",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_int WHERE id IN (0, 106)",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`t_int`: Cannot safely cast `c` \"BOOLEAN\" to \"INT\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "7",
+     "int"
+    ]
+   ]
+  },
+  "values/int_lit/boolean/bare": {
+   "sql": "INSERT INTO sc.ns.t_boolean VALUES (107, 1)",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_boolean WHERE id IN (0, 107)",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`t_boolean`: Cannot safely cast `c` \"INT\" to \"BOOLEAN\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "true",
+     "boolean"
+    ]
+   ]
+  },
+  "values/neg_null/date/bare": {
+   "sql": "INSERT INTO sc.ns.t_date VALUES (108, -NULL)",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_date WHERE id IN (0, 108)",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`t_date`: Cannot safely cast `c` \"DOUBLE\" to \"DATE\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "2000-01-01",
+     "date"
+    ]
+   ]
+  },
+  "values/neg_null_nested/ntz/bare": {
+   "sql": "INSERT INTO sc.ns.t_ntz VALUES (109, -(NULL))",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ntz WHERE id IN (0, 109)",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`t_ntz`: Cannot safely cast `c` \"DOUBLE\" to \"TIMESTAMP_NTZ\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "2000-01-01 00:00:00",
+     "timestamp_ntz"
+    ]
+   ]
+  },
+  "overwrite_values/neg_null/boolean/bare": {
+   "sql": "INSERT OVERWRITE sc.ns.o_boolean VALUES (110, -NULL)",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.o_boolean",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`o_boolean`: Cannot safely cast `c` \"DOUBLE\" to \"BOOLEAN\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "true",
+     "boolean"
+    ]
+   ]
+  },
+  "update/str_num/dec/bare": {
+   "sql": "UPDATE sc.ns.t_dec SET c = '1' WHERE id = 0",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_dec WHERE id IN (0, 111)",
+   "reset": "UPDATE sc.ns.t_dec SET c = 7.00BD WHERE id = 0",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c` \"STRING\" to \"DECIMAL(10,2)\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "7.00",
+     "decimal(10,2)"
+    ]
+   ]
+  },
+  "update/neg_null/ts/bare": {
+   "sql": "UPDATE sc.ns.t_ts SET c = -NULL WHERE id = 0",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id IN (0, 112)",
+   "reset": "UPDATE sc.ns.t_ts SET c = TIMESTAMP'2000-01-01 00:00:00' WHERE id = 0",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c` \"DOUBLE\" to \"TIMESTAMP\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "2000-01-01 00:00:00",
+     "timestamp"
+    ]
+   ]
+  },
+  "update/neg_null/ntz/bare": {
+   "sql": "UPDATE sc.ns.t_ntz SET c = -NULL WHERE id = 0",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ntz WHERE id IN (0, 113)",
+   "reset": "UPDATE sc.ns.t_ntz SET c = TIMESTAMP_NTZ'2000-01-01 00:00:00' WHERE id = 0",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c` \"DOUBLE\" to \"TIMESTAMP_NTZ\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "2000-01-01 00:00:00",
+     "timestamp_ntz"
+    ]
+   ]
+  },
+  "select/str_num/double/bare": {
+   "sql": "INSERT INTO sc.ns.t_double SELECT 114 AS id, '1' AS c",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_double WHERE id IN (0, 114)",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`t_double`: Cannot safely cast `c` \"STRING\" to \"DOUBLE\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "7.0",
+     "double"
+    ]
+   ]
+  },
+  "select/str_num/float/derived": {
+   "sql": "INSERT INTO sc.ns.t_float SELECT id, c FROM (SELECT 115 AS id, '1' AS c) d",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_float WHERE id IN (0, 115)",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`t_float`: Cannot safely cast `c` \"STRING\" to \"FLOAT\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "7.0",
+     "float"
+    ]
+   ]
+  },
+  "select/neg_null/date/view": {
+   "sql": "INSERT INTO sc.ns.t_date SELECT 116 AS id, c FROM v_neg_null",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_date WHERE id IN (0, 116)",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`t_date`: Cannot safely cast `c` \"DOUBLE\" to \"DATE\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "2000-01-01",
+     "date"
+    ]
+   ]
+  },
+  "overwrite/neg_null/ts/derived": {
+   "sql": "INSERT OVERWRITE sc.ns.o_ts SELECT id, c FROM (SELECT 117 AS id, -NULL AS c) d",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.o_ts",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`o_ts`: Cannot safely cast `c` \"DOUBLE\" to \"TIMESTAMP\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "2000-01-01 00:00:00",
+     "timestamp"
+    ]
+   ]
+  },
+  "overwrite/neg_null/date/view": {
+   "sql": "INSERT OVERWRITE sc.ns.o_date SELECT 118 AS id, c FROM v_neg_null",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.o_date",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`o_date`: Cannot safely cast `c` \"DOUBLE\" to \"DATE\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "2000-01-01",
+     "date"
+    ]
+   ]
+  },
+  "byname/neg_null/boolean/bare": {
+   "sql": "INSERT INTO sc.ns.t_boolean BY NAME SELECT -NULL AS c, 119 AS id",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_boolean WHERE id IN (0, 119)",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`t_boolean`: Cannot safely cast `c` \"DOUBLE\" to \"BOOLEAN\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "true",
+     "boolean"
+    ]
+   ]
+  },
+  "byname/neg_null/ts/view": {
+   "sql": "INSERT INTO sc.ns.t_ts BY NAME SELECT c, 120 AS id FROM v_neg_null",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id IN (0, 120)",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`t_ts`: Cannot safely cast `c` \"DOUBLE\" to \"TIMESTAMP\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "2000-01-01 00:00:00",
+     "timestamp"
+    ]
+   ]
+  },
+  "merge_update/neg_null/date/bare": {
+   "sql": "MERGE INTO sc.ns.t_date AS tg USING (SELECT 0 AS id) AS s ON tg.id = s.id WHEN MATCHED THEN UPDATE SET c = -NULL",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_date WHERE id IN (0, 121)",
+   "reset": "UPDATE sc.ns.t_date SET c = DATE'2000-01-01' WHERE id = 0",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c` \"DOUBLE\" to \"DATE\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "2000-01-01",
+     "date"
+    ]
+   ]
+  },
+  "merge_update/neg_null/boolean/view": {
+   "sql": "MERGE INTO sc.ns.t_boolean AS tg USING (SELECT 0 AS id, c FROM v_neg_null) AS s ON tg.id = s.id WHEN MATCHED THEN UPDATE SET c = s.c",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_boolean WHERE id IN (0, 122)",
+   "reset": "UPDATE sc.ns.t_boolean SET c = true WHERE id = 0",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c` \"DOUBLE\" to \"BOOLEAN\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "true",
+     "boolean"
+    ]
+   ]
+  },
+  "merge_insert/neg_null/ts/derived": {
+   "sql": "MERGE INTO sc.ns.t_ts AS tg USING (SELECT id, c FROM (SELECT 123 AS id, -NULL AS c) d) AS s ON tg.id = s.id WHEN NOT MATCHED THEN INSERT (id, c) VALUES (s.id, s.c)",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id IN (0, 123)",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c` \"DOUBLE\" to \"TIMESTAMP\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "2000-01-01 00:00:00",
+     "timestamp"
+    ]
+   ]
+  },
+  "merge_insert/neg_null/ntz/bare": {
+   "sql": "MERGE INTO sc.ns.t_ntz AS tg USING (SELECT 124 AS id) AS s ON tg.id = s.id WHEN NOT MATCHED THEN INSERT (id, c) VALUES (s.id, -NULL)",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ntz WHERE id IN (0, 124)",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c` \"DOUBLE\" to \"TIMESTAMP_NTZ\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "2000-01-01 00:00:00",
+     "timestamp_ntz"
+    ]
+   ]
+  },
+  "merge_insert/neg_null/date/view": {
+   "sql": "MERGE INTO sc.ns.t_date AS tg USING (SELECT 125 AS id, c FROM v_neg_null) AS s ON tg.id = s.id WHEN NOT MATCHED THEN INSERT (id, c) VALUES (s.id, s.c)",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_date WHERE id IN (0, 125)",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table ``: Cannot safely cast `c` \"DOUBLE\" to \"DATE\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "2000-01-01",
+     "date"
+    ]
+   ]
+  },
+  "df_append/str_num/double/view": {
+   "source": "SELECT 126 AS id, c FROM v_str_num",
+   "table": "sc.ns.t_double",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_double WHERE id IN (0, 126)",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`t_double`: Cannot safely cast `c` \"STRING\" to \"DOUBLE\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "7.0",
+     "double"
+    ]
+   ]
+  },
+  "df_append/neg_null/date/bare": {
+   "source": "SELECT 127 AS id, -NULL AS c",
+   "table": "sc.ns.t_date",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_date WHERE id IN (0, 127)",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`t_date`: Cannot safely cast `c` \"DOUBLE\" to \"DATE\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "2000-01-01",
+     "date"
+    ]
+   ]
+  },
+  "df_insertinto/str_num/float/bare": {
+   "source": "SELECT 128 AS id, '1' AS c",
+   "table": "sc.ns.t_float",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_float WHERE id IN (0, 128)",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`t_float`: Cannot safely cast `c` \"STRING\" to \"FLOAT\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "7.0",
+     "float"
+    ]
+   ]
+  },
+  "df_insertinto/neg_null/boolean/derived": {
+   "source": "SELECT id, c FROM (SELECT 129 AS id, -NULL AS c) d",
+   "table": "sc.ns.t_boolean",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_boolean WHERE id IN (0, 129)",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`t_boolean`: Cannot safely cast `c` \"DOUBLE\" to \"BOOLEAN\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "true",
+     "boolean"
+    ]
+   ]
+  },
+  "values/int_lit/ts/bare": {
+   "sql": "INSERT INTO sc.ns.t_ts VALUES (130, 1)",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id IN (0, 130)",
+   "refused": true,
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "sql_state": "KD000",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`t_ts`: Cannot safely cast `c` \"INT\" to \"TIMESTAMP\". SQLSTATE: KD000",
+   "rows": [
+    [
+     0,
+     "2000-01-01 00:00:00",
+     "timestamp"
+    ]
+   ]
+  },
+  "values/date_lit/ts/bare": {
+   "sql": "INSERT INTO sc.ns.t_ts VALUES (131, DATE'1970-01-02')",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id IN (0, 131)",
+   "refused": false,
+   "rows": [
+    [
+     0,
+     "2000-01-01 00:00:00",
+     "timestamp"
+    ],
+    [
+     131,
+     "1970-01-02 00:00:00",
+     "timestamp"
+    ]
+   ]
+  },
+  "values/ts_lit/date/bare": {
+   "sql": "INSERT INTO sc.ns.t_date VALUES (132, TIMESTAMP'1970-01-01 00:00:01')",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_date WHERE id IN (0, 132)",
+   "refused": false,
+   "rows": [
+    [
+     0,
+     "2000-01-01",
+     "date"
+    ],
+    [
+     132,
+     "1970-01-01",
+     "date"
+    ]
+   ]
+  },
+  "select/date_lit/ts/derived": {
+   "sql": "INSERT INTO sc.ns.t_ts SELECT id, c FROM (SELECT 133 AS id, DATE'1970-01-02' AS c) d",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id IN (0, 133)",
+   "refused": false,
+   "rows": [
+    [
+     0,
+     "2000-01-01 00:00:00",
+     "timestamp"
+    ],
+    [
+     133,
+     "1970-01-02 00:00:00",
+     "timestamp"
+    ]
+   ]
+  },
+  "select/ts_lit/date/view": {
+   "sql": "INSERT INTO sc.ns.t_date SELECT 134 AS id, c FROM v_ts_lit",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_date WHERE id IN (0, 134)",
+   "refused": false,
+   "rows": [
+    [
+     0,
+     "2000-01-01",
+     "date"
+    ],
+    [
+     134,
+     "1970-01-01",
+     "date"
+    ]
+   ]
+  },
+  "update/date_lit/ts/bare": {
+   "sql": "UPDATE sc.ns.t_ts SET c = DATE'1970-01-02' WHERE id = 0",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id IN (0, 135)",
+   "reset": "UPDATE sc.ns.t_ts SET c = TIMESTAMP'2000-01-01 00:00:00' WHERE id = 0",
+   "refused": false,
+   "rows": [
+    [
+     0,
+     "1970-01-02 00:00:00",
+     "timestamp"
+    ]
+   ]
+  },
+  "merge_update/ts_lit/date/bare": {
+   "sql": "MERGE INTO sc.ns.t_date AS tg USING (SELECT 0 AS id) AS s ON tg.id = s.id WHEN MATCHED THEN UPDATE SET c = TIMESTAMP'1970-01-01 00:00:01'",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_date WHERE id IN (0, 136)",
+   "reset": "UPDATE sc.ns.t_date SET c = DATE'2000-01-01' WHERE id = 0",
+   "refused": false,
+   "rows": [
+    [
+     0,
+     "1970-01-01",
+     "date"
+    ]
+   ]
+  },
+  "values/int_lit/bigint/bare": {
+   "sql": "INSERT INTO sc.ns.t_bigint VALUES (137, 1)",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_bigint WHERE id IN (0, 137)",
+   "refused": false,
+   "rows": [
+    [
+     0,
+     "7",
+     "bigint"
+    ],
+    [
+     137,
+     "1",
+     "bigint"
+    ]
+   ]
+  },
+  "values/int_lit/double/bare": {
+   "sql": "INSERT INTO sc.ns.t_double VALUES (138, 1)",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_double WHERE id IN (0, 138)",
+   "refused": false,
+   "rows": [
+    [
+     0,
+     "7.0",
+     "double"
+    ],
+    [
+     138,
+     "1.0",
+     "double"
+    ]
+   ]
+  },
+  "values/dec_lit/double/bare": {
+   "sql": "INSERT INTO sc.ns.t_double VALUES (139, 1.5)",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_double WHERE id IN (0, 139)",
+   "refused": false,
+   "rows": [
+    [
+     0,
+     "7.0",
+     "double"
+    ],
+    [
+     139,
+     "1.5",
+     "double"
+    ]
+   ]
+  },
+  "values/big_small/int/bare": {
+   "sql": "INSERT INTO sc.ns.t_int VALUES (140, CAST(7 AS BIGINT))",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_int WHERE id IN (0, 140)",
+   "refused": false,
+   "rows": [
+    [
+     0,
+     "7",
+     "int"
+    ],
+    [
+     140,
+     "7",
+     "int"
+    ]
+   ]
+  },
+  "select/int_lit/bigint/derived": {
+   "sql": "INSERT INTO sc.ns.t_bigint SELECT id, c FROM (SELECT 141 AS id, 1 AS c) d",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_bigint WHERE id IN (0, 141)",
+   "refused": false,
+   "rows": [
+    [
+     0,
+     "7",
+     "bigint"
+    ],
+    [
+     141,
+     "1",
+     "bigint"
+    ]
+   ]
+  },
+  "select/dec_lit/double/view": {
+   "sql": "INSERT INTO sc.ns.t_double SELECT 142 AS id, c FROM v_dec_lit",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_double WHERE id IN (0, 142)",
+   "refused": false,
+   "rows": [
+    [
+     0,
+     "7.0",
+     "double"
+    ],
+    [
+     142,
+     "1.5",
+     "double"
+    ]
+   ]
+  },
+  "values/cast_ts_bigint/bigint/bare": {
+   "sql": "INSERT INTO sc.ns.t_bigint VALUES (143, CAST(TIMESTAMP'1970-01-01 00:00:01' AS BIGINT))",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_bigint WHERE id IN (0, 143)",
+   "refused": false,
+   "rows": [
+    [
+     0,
+     "7",
+     "bigint"
+    ],
+    [
+     143,
+     "1",
+     "bigint"
+    ]
+   ]
+  },
+  "values/neg_null/int/bare": {
+   "sql": "INSERT INTO sc.ns.t_int VALUES (144, -NULL)",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_int WHERE id IN (0, 144)",
+   "refused": false,
+   "rows": [
+    [
+     0,
+     "7",
+     "int"
+    ],
+    [
+     144,
+     null,
+     "int"
+    ]
+   ]
+  },
+  "values/neg_null/str/bare": {
+   "sql": "INSERT INTO sc.ns.t_str VALUES (145, -NULL)",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_str WHERE id IN (0, 145)",
+   "refused": false,
+   "rows": [
+    [
+     0,
+     "seed",
+     "string"
+    ],
+    [
+     145,
+     null,
+     "string"
+    ]
+   ]
+  },
+  "select/neg_null/dec/view": {
+   "sql": "INSERT INTO sc.ns.t_dec SELECT 146 AS id, c FROM v_neg_null",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_dec WHERE id IN (0, 146)",
+   "refused": false,
+   "rows": [
+    [
+     0,
+     "7.00",
+     "decimal(10,2)"
+    ],
+    [
+     146,
+     null,
+     "decimal(10,2)"
+    ]
+   ]
+  },
+  "merge_insert/neg_null/double/bare": {
+   "sql": "MERGE INTO sc.ns.t_double AS tg USING (SELECT 147 AS id) AS s ON tg.id = s.id WHEN NOT MATCHED THEN INSERT (id, c) VALUES (s.id, -NULL)",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_double WHERE id IN (0, 147)",
+   "refused": false,
+   "rows": [
+    [
+     0,
+     "7.0",
+     "double"
+    ],
+    [
+     147,
+     null,
+     "double"
+    ]
+   ]
+  },
+  "update/neg_null/bigint/bare": {
+   "sql": "UPDATE sc.ns.t_bigint SET c = -NULL WHERE id = 0",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_bigint WHERE id IN (0, 148)",
+   "reset": "UPDATE sc.ns.t_bigint SET c = 7L WHERE id = 0",
+   "refused": false,
+   "rows": [
+    [
+     0,
+     null,
+     "bigint"
+    ]
+   ]
+  },
+  "values/null/date/bare": {
+   "sql": "INSERT INTO sc.ns.t_date VALUES (149, NULL)",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_date WHERE id IN (0, 149)",
+   "refused": false,
+   "rows": [
+    [
+     0,
+     "2000-01-01",
+     "date"
+    ],
+    [
+     149,
+     null,
+     "date"
+    ]
+   ]
+  },
+  "select/null/boolean/derived": {
+   "sql": "INSERT INTO sc.ns.t_boolean SELECT id, c FROM (SELECT 150 AS id, NULL AS c) d",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_boolean WHERE id IN (0, 150)",
+   "refused": false,
+   "rows": [
+    [
+     0,
+     "true",
+     "boolean"
+    ],
+    [
+     150,
+     null,
+     "boolean"
+    ]
+   ]
+  },
+  "df_append/int_lit/double/bare": {
+   "source": "SELECT 151 AS id, 1 AS c",
+   "table": "sc.ns.t_double",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_double WHERE id IN (0, 151)",
+   "refused": false,
+   "rows": [
+    [
+     0,
+     "7.0",
+     "double"
+    ],
+    [
+     151,
+     "1.0",
+     "double"
+    ]
+   ]
+  },
+  "df_insertinto/ts_lit/date/view": {
+   "source": "SELECT 152 AS id, c FROM v_ts_lit",
+   "table": "sc.ns.t_date",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_date WHERE id IN (0, 152)",
+   "refused": false,
+   "rows": [
+    [
+     0,
+     "2000-01-01",
+     "date"
+    ],
+    [
+     152,
+     "1970-01-01",
+     "date"
+    ]
+   ]
+  },
+  "byname/date_lit/ts/bare": {
+   "sql": "INSERT INTO sc.ns.t_ts BY NAME SELECT DATE'1970-01-02' AS c, 153 AS id",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id IN (0, 153)",
+   "refused": false,
+   "rows": [
+    [
+     0,
+     "2000-01-01 00:00:00",
+     "timestamp"
+    ],
+    [
+     153,
+     "1970-01-02 00:00:00",
+     "timestamp"
+    ]
+   ]
+  },
+  "overwrite/ts_lit/date/bare": {
+   "sql": "INSERT OVERWRITE sc.ns.o_date SELECT 154 AS id, TIMESTAMP'1970-01-01 00:00:01' AS c",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.o_date",
+   "refused": false,
+   "rows": [
+    [
+     154,
+     "1970-01-01",
+     "date"
+    ]
+   ]
+  },
+  "select/ts_col/date/derived": {
+   "sql": "INSERT INTO sc.ns.t_date SELECT id, c FROM (SELECT 155 AS id, tsc AS c FROM sc.ns.src) d",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_date WHERE id IN (0, 155)",
+   "refused": false,
+   "rows": [
+    [
+     0,
+     "2000-01-01",
+     "date"
+    ],
+    [
+     155,
+     "1970-01-01",
+     "date"
+    ]
+   ]
+  },
+  "ctas/ts_lit/-/bare": {
+   "sql": "CREATE TABLE sc.ns.ctas_ts_lit_bare USING iceberg AS SELECT 156 AS id, TIMESTAMP'1970-01-01 00:00:01' AS c",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.ctas_ts_lit_bare",
+   "refused": false,
+   "rows": [
+    [
+     156,
+     "1970-01-01 00:00:01",
+     "timestamp"
+    ]
+   ]
+  },
+  "ctas/date_lit/-/view": {
+   "sql": "CREATE TABLE sc.ns.ctas_date_lit_view USING iceberg AS SELECT 157 AS id, c FROM v_date_lit",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.ctas_date_lit_view",
+   "refused": false,
+   "rows": [
+    [
+     157,
+     "1970-01-02",
+     "date"
+    ]
+   ]
+  }
+ }
+}

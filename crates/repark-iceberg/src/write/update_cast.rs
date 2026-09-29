@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::sync::Arc;
 
 use datafusion::arrow::datatypes::{DataType, Field, Fields, TimeUnit};
@@ -25,6 +26,26 @@ pub fn incompatible_update_message(
     source: &DataType,
     target: &DataType,
 ) -> Option<String> {
+    incompatible_message(table, column, source, target, false)
+}
+
+#[must_use]
+pub fn incompatible_store_message(
+    table: &str,
+    column: &str,
+    source: &DataType,
+    target: &DataType,
+) -> Option<String> {
+    incompatible_message(table, column, source, target, true)
+}
+
+fn incompatible_message(
+    table: &str,
+    column: &str,
+    source: &DataType,
+    target: &DataType,
+    name_decimals: bool,
+) -> Option<String> {
     let source = normalize_for_assignment(source);
     let target = normalize_for_assignment(target);
     if ansi_store_assignable(source, target) {
@@ -33,17 +54,31 @@ pub fn incompatible_update_message(
     if matches!(source, DataType::Map(_, _)) || matches!(target, DataType::Map(_, _)) {
         return incompatible_nested_message(column, source, target);
     }
-    let from = spark_update_type_name(source)?;
-    let to = spark_update_type_name(target)?;
+    let from = store_type_name(source, name_decimals)?;
+    let to = store_type_name(target, name_decimals)?;
     Some(spark_error::message(
         spark_error::INCOMPATIBLE_DATA_FOR_TABLE_CANNOT_SAFELY_CAST,
         &[
             ("tableName", table),
             ("columnName", column),
-            ("fromType", from),
-            ("toType", to),
+            ("fromType", &from),
+            ("toType", &to),
         ],
     ))
+}
+
+fn store_type_name(data_type: &DataType, name_decimals: bool) -> Option<Cow<'static, str>> {
+    match data_type {
+        DataType::Decimal32(precision, scale)
+        | DataType::Decimal64(precision, scale)
+        | DataType::Decimal128(precision, scale)
+        | DataType::Decimal256(precision, scale)
+            if name_decimals =>
+        {
+            Some(Cow::Owned(format!("DECIMAL({precision},{scale})")))
+        }
+        other => spark_update_type_name(other).map(Cow::Borrowed),
+    }
 }
 
 #[must_use]
