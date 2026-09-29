@@ -46,9 +46,6 @@ fn check_struct_access(
     key: &str,
     written: &WrittenRefs,
 ) -> Result<()> {
-    if key.bytes().any(|byte| byte.is_ascii_uppercase()) {
-        return Ok(());
-    }
     let Some(DataType::Struct(fields)) = struct_type_of(inputs, base) else {
         return Ok(());
     };
@@ -84,7 +81,6 @@ fn written_field_spelling(
     key: &str,
 ) -> Option<String> {
     let mut spellings: Vec<&String> = Vec::new();
-    let mut unquoted = false;
     for (qualifier, leaf) in written
         .qualified
         .iter()
@@ -99,14 +95,8 @@ fn written_field_spelling(
             continue;
         }
         spellings.push(leaf);
-        let quoted = written.quoted.iter().any(|(outer, inner)| {
-            outer.eq_ignore_ascii_case(qualifier) && inner.eq_ignore_ascii_case(leaf)
-        });
-        if !quoted {
-            unquoted = true;
-        }
     }
-    if spellings.is_empty() || !unquoted {
+    if spellings.is_empty() {
         return None;
     }
     if let Some(found) = spellings.iter().find(|leaf| leaf.as_str() == key) {

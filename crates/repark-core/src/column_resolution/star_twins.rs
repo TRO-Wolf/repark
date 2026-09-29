@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion::datasource::ViewTable;
 use datafusion::error::{DataFusionError, Result};
-use datafusion::logical_expr::{Expr, LogicalPlan, TableScan};
+use datafusion::logical_expr::{Expr, LogicalPlan, TableScan, TableType};
 
 use super::Twins;
 
@@ -60,6 +60,9 @@ fn collect_scan_twin_keys(plan: &LogicalPlan, keys: &mut HashSet<String>) {
 
 fn scan_keys(scan: &TableScan, keys: &mut HashSet<String>) {
     let provider: &dyn Any = scan.source.as_ref();
+    if scan.source.table_type() == TableType::Temporary {
+        return;
+    }
     if let Some(view) = provider.downcast_ref::<ViewTable>() {
         collect_scan_twin_keys(view.logical_plan(), keys);
         return;

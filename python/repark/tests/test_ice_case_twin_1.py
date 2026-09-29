@@ -9,6 +9,12 @@ belongs to the scan of a catalog table only: derived tables, CTEs, joins and
 DataFrame temp views answer, as do version/snapshot/timestamp time-travel
 reads; branch-name reads refuse. Under ``caseSensitive=true`` nested DROP,
 ADD, DROP IF EXISTS and ``rewrite_data_files(where)`` answer.
+
+DIFF-PROBE fold (2026-09-29): C-003 rewritten to live Spark 4.1.2 (unambiguous
+DDL applies under ``false``; ambiguous names refuse loud) plus new pins for
+the fold: tag selectors, struct-twin 42000, temp/catalog view reads, CTAS over
+twins. Oracle: live Spark 4.1.2 2026-09-29 plus ``target/diff-probe/out/spark``
+(np2 temp-view cells).
 """
 
 from __future__ import annotations
@@ -30,6 +36,8 @@ _REFUSAL = (
     "Choose another name or rename the existing column. SQLSTATE: 42711"
 )
 _COLLISION = "Cannot build lower case index: id and ID collide"
+_AMBIGUOUS_FIELD = "[AMBIGUOUS_REFERENCE_TO_FIELDS]"
+_SQLSTATE_42000 = "SQLSTATE: 42000"
 
 
 @pytest.fixture
@@ -79,7 +87,11 @@ def test_derived_cte_and_join_twin_stars_answer(
 def test_nested_drop_if_exists_drops_and_add_answers_under_true(
     twin_session: ReparkSession,
 ) -> None:
-    """VR-1/VR-4: nested DROP IF EXISTS drops, ADD answers (p9 t-cells)."""
+    """VR-1/VR-4: nested DROP IF EXISTS drops, ADD answers (p9 t-cells).
+
+    C-003 rewrite: the ``false``-door DROP IF EXISTS of the existing ``s.z``
+    applies like Spark instead of refusing on the table-level collision.
+    """
     _make_twin(twin_session, "tw9")
     twin_session.conf.set(_CASE_SENSITIVE_KEY, "true")
     try:
@@ -89,8 +101,8 @@ def test_nested_drop_if_exists_drops_and_add_answers_under_true(
         assert _describe_map(twin_session, f"{_CATALOG}.ns.tw9")["s"] == "struct<X:int,z:int,y:int>"
     finally:
         twin_session.conf.set(_CASE_SENSITIVE_KEY, "false")
-    with pytest.raises(PySparkException, match=_COLLISION):
-        twin_session.sql(f"ALTER TABLE {_CATALOG}.ns.tw9 DROP COLUMN IF EXISTS s.z").collect()
+    twin_session.sql(f"ALTER TABLE {_CATALOG}.ns.tw9 DROP COLUMN IF EXISTS s.z").collect()
+    assert _describe_map(twin_session, f"{_CATALOG}.ns.tw9")["s"] == "struct<X:int,y:int>"
 
 
 def test_branch_read_refuses_and_time_travel_answers(
@@ -177,3 +189,133 @@ def test_rewrite_where_refuses_under_false_and_answers_under_true(
         ]
     finally:
         twin_session.conf.set(_CASE_SENSITIVE_KEY, "false")
+
+
+def test_top_level_rename_answers_and_ambiguous_names_refuse(
+    twin_session: ReparkSession,
+) -> None:
+    """C-003 rewrite: unambiguous RENAME applies; ambiguous DROP/RENAME refuse loud."""
+    _make_twin(twin_session, "twr")
+    twin_session.sql(f"ALTER TABLE {_CATALOG}.ns.twr RENAME COLUMN b TO c").collect()
+    assert _describe_map(twin_session, f"{_CATALOG}.ns.twr") == {
+        "id": "int",
+        "ID": "int",
+        "s": "struct<x:int,X:int,z:int>",
+        "c": "int",
+    }
+    with pytest.raises(PySparkException, match=_COLLISION):
+        twin_session.sql(f"ALTER TABLE {_CATALOG}.ns.twr DROP COLUMN id").collect()
+    with pytest.raises(PySparkException, match=_COLLISION):
+        twin_session.sql(f"ALTER TABLE {_CATALOG}.ns.twr RENAME COLUMN c TO ID").collect()
+
+
+def test_nested_add_answers_and_ambiguous_nested_drop_refuses(
+    twin_session: ReparkSession,
+) -> None:
+    """C-003 rewrite: nested ADD applies; ambiguous nested DROP refuses loud."""
+    _make_twin(twin_session, "twn")
+    twin_session.sql(f"ALTER TABLE {_CATALOG}.ns.twn ADD COLUMN s.q INT").collect()
+    described = _describe_map(twin_session, f"{_CATALOG}.ns.twn")["s"]
+    assert described == "struct<x:int,X:int,z:int,q:int>"
+    with pytest.raises(PySparkException, match=_COLLISION):
+        twin_session.sql(f"ALTER TABLE {_CATALOG}.ns.twn DROP COLUMN s.x").collect()
+
+
+def test_tag_selector_refuses_like_branch(twin_session: ReparkSession) -> None:
+    """DIFF-PROBE: tag-selector reads refuse 42711 like branch selectors."""
+    _make_twin(twin_session, "twt")
+    twin_session.conf.set(_CASE_SENSITIVE_KEY, "true")
+    try:
+        twin_session.sql(f"ALTER TABLE {_CATALOG}.ns.twt CREATE TAG tg").collect()
+    finally:
+        twin_session.conf.set(_CASE_SENSITIVE_KEY, "false")
+    for sql in (
+        f"SELECT b FROM {_CATALOG}.ns.twt.tag_tg",
+        f"SELECT * FROM {_CATALOG}.ns.twt.tag_tg",
+    ):
+        with pytest.raises(AnalysisException) as caught:
+            twin_session.sql(sql).collect()
+        assert _REFUSAL in str(caught.value)
+
+
+def test_struct_twins_refuse_42000_quoting_changes_nothing(
+    twin_session: ReparkSession,
+) -> None:
+    """DIFF-PROBE: every twin struct-field spelling refuses 42000 under false."""
+    _make_twin(twin_session, "tws")
+    table = f"{_CATALOG}.ns.tws"
+    for sql, leaf in [
+        (f"SELECT s.x FROM {table}", "x"),
+        (f"SELECT s.X FROM {table}", "X"),
+        (f"SELECT s.`x` FROM {table}", "x"),
+        (f"SELECT s.`X` FROM {table}", "X"),
+        (f"SELECT `s`.`x` FROM {table}", "x"),
+        (f"SELECT s.x, s.X FROM {table}", "x"),
+    ]:
+        with pytest.raises(AnalysisException) as caught:
+            twin_session.sql(sql).collect()
+        message = str(caught.value)
+        assert _AMBIGUOUS_FIELD in message
+        assert f"Ambiguous reference to the field `{leaf}`" in message
+        assert _SQLSTATE_42000 in message
+    twin_session.conf.set(_CASE_SENSITIVE_KEY, "true")
+    try:
+        answered = twin_session.sql(f"SELECT s.x FROM {table}").to_arrow()
+        assert [list(row.values()) for row in answered.to_pylist()] == [[10]]
+        exact = twin_session.sql(f"SELECT s.X FROM {table}").to_arrow()
+        assert [list(row.values()) for row in exact.to_pylist()] == [[20]]
+    finally:
+        twin_session.conf.set(_CASE_SENSITIVE_KEY, "false")
+
+
+def test_temp_view_body_carries_the_verdict(twin_session: ReparkSession) -> None:
+    """DIFF-PROBE np2: scan-free twin view answers; table-backed view refuses."""
+    twin_session.conf.set(_CASE_SENSITIVE_KEY, "true")
+    twin_session.sql("CREATE OR REPLACE TEMPORARY VIEW sview AS SELECT 1 AS a, 2 AS A").collect()
+    _make_twin(twin_session, "twv")
+    twin_session.conf.set(_CASE_SENSITIVE_KEY, "true")
+    twin_session.sql(
+        f"CREATE OR REPLACE TEMPORARY VIEW vtw AS SELECT * FROM {_CATALOG}.ns.twv"
+    ).collect()
+    twin_session.conf.set(_CASE_SENSITIVE_KEY, "false")
+    answered = twin_session.sql("SELECT * FROM sview").to_arrow()
+    assert answered.column_names == ["a", "A"]
+    assert sorted(([row["a"], row["A"]] for row in answered.to_pylist()), key=repr) == [[1, 2]]
+    with pytest.raises(AnalysisException) as caught:
+        twin_session.sql("SELECT * FROM vtw").collect()
+    assert _REFUSAL in str(caught.value)
+
+
+def test_catalog_twin_view_reads_both_values(twin_session: ReparkSession) -> None:
+    """DIFF-PROBE p5/gap: catalog twin-view reads [[1, 2]] like its temp analog."""
+    twin_session.conf.set(_CASE_SENSITIVE_KEY, "true")
+    try:
+        twin_session.sql(f"CREATE VIEW {_CATALOG}.ns.tw3 AS SELECT 1 AS a, 2 AS A").collect()
+        answered = twin_session.sql(f"SELECT * FROM {_CATALOG}.ns.tw3").to_arrow()
+    finally:
+        twin_session.conf.set(_CASE_SENSITIVE_KEY, "false")
+    assert answered.column_names == ["a", "A"]
+    assert sorted(([row["a"], row["A"]] for row in answered.to_pylist()), key=repr) == [[1, 2]]
+
+
+def test_ctas_star_over_twins_answers_under_true(twin_session: ReparkSession) -> None:
+    """DIFF-PROBE: CTAS star over twins answers on the fast and options paths."""
+    _make_twin(twin_session, "twc")
+    twin_session.conf.set(_CASE_SENSITIVE_KEY, "true")
+    try:
+        twin_session.sql(
+            f"CREATE TABLE {_CATALOG}.ns.tw_ctas USING iceberg AS SELECT * FROM {_CATALOG}.ns.twc"
+        ).collect()
+        twin_session.sql(
+            f"CREATE TABLE {_CATALOG}.ns.tw_ctas_p USING iceberg TBLPROPERTIES ('x'='y') "
+            f"AS SELECT * FROM {_CATALOG}.ns.twc"
+        ).collect()
+        fast = twin_session.sql(f"SELECT * FROM {_CATALOG}.ns.tw_ctas").to_arrow()
+        slow = twin_session.sql(f"SELECT * FROM {_CATALOG}.ns.tw_ctas_p").to_arrow()
+    finally:
+        twin_session.conf.set(_CASE_SENSITIVE_KEY, "false")
+    want_rows = [[1, 2, {"x": 10, "X": 20, "z": 30}, 5]]
+    for answered in (fast, slow):
+        assert answered.column_names == ["id", "ID", "s", "b"]
+        got = sorted(([list(row.values()) for row in answered.to_pylist()]), key=repr)
+        assert got == want_rows

@@ -668,9 +668,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   statement once against the valid fields under `spark.sql.caseSensitive = false`,
   `rewrite_fragment_case` does the same for DML fragments; both emit backticked
   stored-case spellings, collisions refuse `[AMBIGUOUS_REFERENCE]` / `42704`).
-  **RP-56 DIFF-PROBE fold (2026-09-29):** the audit records the written references'
-  quoted spellings (`WrittenRefs.quoted`) for the `column_resolution/struct_fields.rs`
-  post-pass, which refuses an unquoted lowercase struct path into a two-fold twin.
+  **RP-56 DIFF-PROBE fold (2026-09-29):** the `column_resolution/struct_fields.rs`
+  post-pass refuses a struct path into a two-fold twin with `42000`
+  (quoting changes nothing per live Spark; the pass runs only under `false`).
   Round 21b integration: this module owns no config carrier — `spark.sql.caseSensitive`
   has one home, `repark_functions::case_sensitive::SparkCaseSensitiveConfig` (landed on
   main by ICE-RTAS-BYNAME-1), and the Spark door passes `case_insensitive` in as an

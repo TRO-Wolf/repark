@@ -327,7 +327,6 @@ fn missing_ambiguity(error: &DataFusionError) -> Option<&Column> {
 struct WrittenRefs {
     bare: HashSet<String>,
     qualified: HashSet<(String, String)>,
-    quoted: HashSet<(String, String)>,
     outer_bare: HashSet<String>,
     outer_qualified: HashSet<(String, String)>,
     projection: HashSet<String>,
@@ -382,7 +381,6 @@ impl datafusion::sql::sqlparser::ast::Visitor for StarScan {
 struct WrittenRefsCollector {
     bare: HashSet<String>,
     qualified: HashSet<(String, String)>,
-    quoted: HashSet<(String, String)>,
     outer_bare: HashSet<String>,
     outer_qualified: HashSet<(String, String)>,
     projection: HashSet<String>,
@@ -506,9 +504,6 @@ impl datafusion::sql::sqlparser::ast::Visitor for WrittenRefsCollector {
                 let name = parts[parts.len() - 1].value.clone();
                 let qualifier = parts[parts.len() - 2].value.clone();
                 self.qualified.insert((qualifier.clone(), name.clone()));
-                if parts[parts.len() - 1].quote_style.is_some() {
-                    self.quoted.insert((qualifier.clone(), name.clone()));
-                }
                 if outer {
                     self.outer_qualified.insert((qualifier, name));
                 }
@@ -527,7 +522,6 @@ fn written_references(statement: &Statement, defaults: [String; 2]) -> WrittenRe
     WrittenRefs {
         bare: collector.bare,
         qualified: collector.qualified,
-        quoted: collector.quoted,
         outer_bare: collector.outer_bare,
         outer_qualified: collector.outer_qualified,
         projection: collector.projection,

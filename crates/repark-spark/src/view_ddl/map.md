@@ -143,6 +143,9 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   with `read.rs`'s `VIEW_EXPANSION_STACK_RED_ZONE` (1 MiB) and
   `VIEW_EXPANSION_STACK_SEGMENT` (8 MiB), so a 100-level chain reads on the caller's stack.
   pins: ice-views-1/C-018
+  **RP-56 DIFF-PROBE fold (2026-09-29):** the provider reports `TableType::Temporary`
+  (it is one), so the twin-star guard skips its schema and the re-planned body carries the
+  verdict: a scan-free twin body answers, a twin-table body refuses, both like Spark.
 - `read.rs` — `ViewSchemaProvider` (`table` tries inner, then `load_view`,
   and returns a read-only provider planning the stored SQL under the stored
   defaults with aliases applied; `table_names` stays tables-only);

@@ -180,15 +180,17 @@ pins: ice-error-conditions-1/C-011
   twin relation with Spark's recorded 42711 sentence; `scan_twin_keys` scopes the
   refusal to a twin key inside one non-scratch table scan.
   **RP-56 DIFF-PROBE fold (2026-09-29):** the scan walker sees through `ViewTable`
-  nodes, so a temp view over a twin table keeps answering `SELECT *` while a
-  written star straight at the table still refuses.
+  nodes into the stored body (a stored twin-table scan still refuses), while
+  `Temporary` providers contribute no keys: a temp view re-plans its body through
+  the guarded door at every read, so a table-backed body refuses there and a
+  scan-free body answers (live Spark 4.1.2 answers the literal-twin view and
+  refuses the table-backed one, both 42711-shaped).
   pins: rp-56/C-002
 - `struct_fields.rs` — **RP-56 DIFF-PROBE fold (2026-09-29):** the struct-twin
-  post-pass. A query that writes an unquoted lowercase struct path (`s.x`) into a
-  two-fold case-insensitive twin whose wrong member answered gets the qualifier
-  requoted and refuses `42704` with the audit sentence; a quoted spelling and a
-  path written in an exact member case keep answering. Fed by the
-  `WrittenRefs.quoted` set the audit records.
+  post-pass. A query that reads a struct field with two case-insensitive matches
+  refuses `42000 AMBIGUOUS_REFERENCE_TO_FIELDS` naming the written leaf; quoting
+  changes nothing (live Spark 4.1.2 refuses `s.x`, `s.X`, ``s.`x` `` and
+  ``` `s`.`x` ``` alike). The pass runs only under `caseSensitive=false`.
   pins: rp-56/C-003
 
 ## Purpose
