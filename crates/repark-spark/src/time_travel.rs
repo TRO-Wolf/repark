@@ -66,7 +66,7 @@ struct TimeTravelSpan {
     clause_end: usize,
     table_parts: Vec<String>,
     pin: TimeTravelPin,
-    branch_selector: bool,
+    ref_selector: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -151,9 +151,9 @@ pub async fn prepare_time_travel_sql(
                 .map_err(iceberg_err)?
         }
         .with_uuid_as_string(true);
-        if span.branch_selector
+        if span.ref_selector
             && crate::spark_door_case_insensitive(ctx.state().config().options())
-            && let Some(refusal) = branch_twin_refusal(&provider)
+            && let Some(refusal) = ref_twin_refusal(&provider)
         {
             return Err(refusal);
         }
@@ -377,7 +377,7 @@ fn find_time_travel_spans(tokens: &[Token]) -> Result<Vec<TimeTravelSpan>> {
             clause_end,
             table_parts,
             pin,
-            branch_selector: false,
+            ref_selector: false,
         });
         // Continue after the value.
         sig_index = value_end_sig.max(sig_index + 1);
@@ -429,15 +429,16 @@ fn find_ref_selector_spans(tokens: &[Token]) -> Result<Vec<TimeTravelSpan>> {
             }
             Err(error) => return Err(error),
         };
-        let branch_selector = parts
-            .last()
-            .is_some_and(|last| last.to_ascii_lowercase().starts_with("branch_"));
+        let ref_selector = parts.last().is_some_and(|last| {
+            let folded = last.to_ascii_lowercase();
+            folded.starts_with("branch_") || folded.starts_with("tag_")
+        });
         spans.push(TimeTravelSpan {
             table_start: significant[name_start].0,
             clause_end: significant[name_end - 1].0 + 1,
             table_parts: parts[..parts.len() - 1].to_vec(),
             pin: TimeTravelPin::Version(spec),
-            branch_selector,
+            ref_selector,
         });
         sig_index = name_end;
     }
@@ -459,7 +460,7 @@ fn dotted_name_end(significant: &[(usize, &Token)], start: usize) -> Option<usiz
     Some(end)
 }
 
-fn branch_twin_refusal(provider: &IcebergStaticTableProvider) -> Option<DataFusionError> {
+fn ref_twin_refusal(provider: &IcebergStaticTableProvider) -> Option<DataFusionError> {
     let mut seen: HashMap<String, &str> = HashMap::new();
     for field in provider.schema().fields() {
         let folded = field.name().to_ascii_lowercase();

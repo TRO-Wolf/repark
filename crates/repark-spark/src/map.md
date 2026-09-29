@@ -823,6 +823,9 @@ pins: rp-4-fork-repin/C-005, C-006
   **RP-56 verifier fold (2026-09-28):** branch-selector spans refuse 42711 under `false` when
   the pinned provider schema has top-level twins (p9 `f_branch_table`); `VERSION`/`TIMESTAMP
   AS OF` keeps answering through the scratch skip.
+  **RP-56 DIFF-PROBE fold (2026-09-29):** tag selectors refuse like branch selectors
+  (`ref_selector` refuses 42711 under `false` on twin schemas; `VERSION`/`TIMESTAMP AS OF`
+  still answer).
 - `spark_ast.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):**
   `canonicalize_identity_selection` canonicalises the selection and each SET *value* through
   `rewrite_fragment_case` (a SQL fragment in, a SQL fragment out — the repair backticks a
@@ -1381,6 +1384,9 @@ pins: rp-4-fork-repin/C-005, C-006
   `rename_column`, `delete_column`); RePark keeps no schema model of its own. A required child
   without a default refuses with the fork's `Incompatible change: cannot add required column…`.
   Pins: [`tests/nested_column_ddl.rs`](tests/nested_column_ddl.rs).
+  **RP-56 DIFF-PROBE fold (2026-09-29):** the nested-DROP `IF EXISTS` filter uses
+  `column_move::nested_name_known_ci` so a stored-case path on a collided schema skips
+  instead of refusing.
   pins: ice-nested-evo-1/C-006, C-007, C-008, C-009, C-010, C-011, C-012
   **Round 2 (2026-09-18, run 22b):** a claimed statement that holds a double-quoted word
   (`RENAME COLUMN s.a TO "x.y"`, `ADD COLUMN s."x.y" INT`) refuses Spark's

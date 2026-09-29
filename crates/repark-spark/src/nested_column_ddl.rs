@@ -15,6 +15,7 @@ use repark_functions::timestamp_type::{SparkTimestampType, spark_timestamp_type_
 use repark_iceberg::write::alter::{
     ColumnPosition, SchemaChange, apply_schema_changes_on_table, starts_with_alter,
 };
+use repark_iceberg::write::column_move::nested_name_known_ci;
 use repark_iceberg::write::nested_column::{
     ColumnPathChange, NestedTypeRefusal, apply_column_path_changes, column_paths_commit_refusal,
     nested_add_refusal, nested_required_add_refusal, nested_spark_only_type_refusal,
@@ -787,10 +788,7 @@ async fn execute_nested_drop(
             let known = if case_sensitive {
                 schema.field_by_name(&name).is_some()
             } else {
-                schema
-                    .try_field_by_name_case_insensitive(&name)
-                    .map_err(iceberg_err)?
-                    .is_some()
+                nested_name_known_ci(schema, &name).map_err(iceberg_err)?
             };
             if !known {
                 continue;

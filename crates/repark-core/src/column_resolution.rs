@@ -147,9 +147,11 @@ async fn plan_with_repair(
     ];
     let mut error = match first {
         Ok(plan) => {
+            let written = written_references(&inner, defaults);
             if plan_has_upper_ascii_field(&plan) {
-                ambiguity::audit_plan_for_ambiguity(&plan, &written_references(&inner, defaults))?;
+                ambiguity::audit_plan_for_ambiguity(&plan, &written)?;
             }
+            struct_fields::refuse_ambiguous_struct_fields(&plan, &written)?;
             return boxed_finish(state, original, inner, plan).await;
         }
         Err(error) => error,
@@ -191,6 +193,7 @@ async fn plan_with_repair(
         {
             Ok(plan) => {
                 ambiguity::audit_plan_for_ambiguity(&plan, &written)?;
+                struct_fields::refuse_ambiguous_struct_fields(&plan, &written)?;
                 return boxed_finish(state, original, inner, plan).await;
             }
             Err(next) => error = next,
@@ -324,6 +327,7 @@ fn missing_ambiguity(error: &DataFusionError) -> Option<&Column> {
 struct WrittenRefs {
     bare: HashSet<String>,
     qualified: HashSet<(String, String)>,
+    quoted: HashSet<(String, String)>,
     outer_bare: HashSet<String>,
     outer_qualified: HashSet<(String, String)>,
     projection: HashSet<String>,
@@ -378,6 +382,7 @@ impl datafusion::sql::sqlparser::ast::Visitor for StarScan {
 struct WrittenRefsCollector {
     bare: HashSet<String>,
     qualified: HashSet<(String, String)>,
+    quoted: HashSet<(String, String)>,
     outer_bare: HashSet<String>,
     outer_qualified: HashSet<(String, String)>,
     projection: HashSet<String>,
@@ -501,6 +506,9 @@ impl datafusion::sql::sqlparser::ast::Visitor for WrittenRefsCollector {
                 let name = parts[parts.len() - 1].value.clone();
                 let qualifier = parts[parts.len() - 2].value.clone();
                 self.qualified.insert((qualifier.clone(), name.clone()));
+                if parts[parts.len() - 1].quote_style.is_some() {
+                    self.quoted.insert((qualifier.clone(), name.clone()));
+                }
                 if outer {
                     self.outer_qualified.insert((qualifier, name));
                 }
@@ -519,6 +527,7 @@ fn written_references(statement: &Statement, defaults: [String; 2]) -> WrittenRe
     WrittenRefs {
         bare: collector.bare,
         qualified: collector.qualified,
+        quoted: collector.quoted,
         outer_bare: collector.outer_bare,
         outer_qualified: collector.outer_qualified,
         projection: collector.projection,
@@ -901,6 +910,7 @@ mod inner_scopes;
 mod scope_fields;
 mod stack;
 mod star_twins;
+mod struct_fields;
 mod twins;
 
 pub use fold_text::fold_query_text;

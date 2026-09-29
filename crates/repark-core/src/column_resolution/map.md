@@ -179,7 +179,17 @@ pins: ice-error-conditions-1/C-011
   items. `refuse_star_twins` refuses a written projection star over a non-scratch
   twin relation with Spark's recorded 42711 sentence; `scan_twin_keys` scopes the
   refusal to a twin key inside one non-scratch table scan.
+  **RP-56 DIFF-PROBE fold (2026-09-29):** the scan walker sees through `ViewTable`
+  nodes, so a temp view over a twin table keeps answering `SELECT *` while a
+  written star straight at the table still refuses.
   pins: rp-56/C-002
+- `struct_fields.rs` — **RP-56 DIFF-PROBE fold (2026-09-29):** the struct-twin
+  post-pass. A query that writes an unquoted lowercase struct path (`s.x`) into a
+  two-fold case-insensitive twin whose wrong member answered gets the qualifier
+  requoted and refuses `42704` with the audit sentence; a quoted spelling and a
+  path written in an exact member case keep answering. Fed by the
+  `WrittenRefs.quoted` set the audit records.
+  pins: rp-56/C-003
 
 ## Purpose
 

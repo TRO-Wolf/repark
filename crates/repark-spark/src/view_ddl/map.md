@@ -154,6 +154,9 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   to their home first; `refuse_write_query_body` answers PARSE_SYNTAX_ERROR
   for a `WITH … INSERT/UPDATE/DELETE/MERGE` temp body; `nested_depth_refusal`
   is shared with `temp_view.rs`.
+  **RP-56 DIFF-PROBE fold (2026-09-29):** the `_repark_view` wrapper is skipped when the
+  view emits the stored names unchanged (`view_output_matches_stored`), so a catalog view
+  over a twin table answers `SELECT *` like Spark instead of refusing on the wrapper.
 - `describe.rs` — **PR2 (2026-09-22, V-DESCRIBE):** `describe_view_frame`
   is the view probe on the `TableNotFound` arm of `execute_describe_table`
   (`../describe_show.rs`): a loaded view answers, `ViewNotFound` and

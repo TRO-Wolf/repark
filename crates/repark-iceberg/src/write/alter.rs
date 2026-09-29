@@ -99,9 +99,9 @@ pub async fn apply_schema_changes_on_table(
         return Ok(());
     }
     let tx = Transaction::new(table);
-    // Spark `spark.sql.caseSensitive=false` default — match column names case-insensitively.
-    let mut action = tx.update_schema().case_sensitive(false);
-    for change in changes {
+    let (sensitive, changes) = super::column_move::route_schema_changes(table, changes);
+    let mut action = tx.update_schema().case_sensitive(sensitive);
+    for change in &changes {
         action = match change {
             SchemaChange::AddColumn {
                 name,

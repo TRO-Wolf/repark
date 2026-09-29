@@ -319,6 +319,9 @@ repark-core's error map.
   other column unchanged, so a non-promotion mismatch still fails in `RecordBatch::try_new`.
   Caller: `merge/mod.rs` `conform_scan_batch`.
   pins: ice-promote-read-1/C-011
+  **RP-56 DIFF-PROBE fold (2026-09-29):** `conform_batch_scoped` and
+  `retaining_unmapped_columns_scoped` take the session case flag so a CTAS over twins
+  resolves written names the way the door resolved them.
 - `append_fanout_serial.rs` — **ICE-WRITE-OPTIONS-1 round 3 (2026-09-17):** the serial
   conformed fanout (`fanout_conformed_stream_serial[_with_abort]`), split out of
   `append.rs` under the file-size gate; re-exported there so callers keep their paths.
@@ -871,6 +874,10 @@ repark-core's error map.
   doors load once. The partition-spec family moved to `partition_spec.rs` in the same change
   (the size ratchet), behaviour-identical.
   pins: ice-column-reorder-1/C-001, C-002, C-003, C-004, C-005, C-008, C-010, C-011
+  **RP-56 DIFF-PROBE fold (2026-09-29):** top-level schema changes route through
+  `column_move::route_schema_changes` first: on a collided (twin) schema with every name
+  resolving uniquely, the change applies case-sensitively under exact names; otherwise the
+  stock insensitive path runs and the fork's refusal stands.
 - `table_admin.rs` — (RP-56 DIFF-PROBE fold, 2026-09-28) the table-level
   (non-schema) `ALTER TABLE` family split out of `alter.rs`: SET/UNSET TBLPROPERTIES and
   `rename_table`, re-exported from `alter.rs` so every door keeps its path. Comment-free per
@@ -887,6 +894,10 @@ repark-core's error map.
   `.`, so a top-level `p.q` renders `` `p`.`q` `` as Spark does. `unresolved_column` splits a
   dotted name and delegates to it.
   pins: ice-nested-evo-1/C-048
+  **RP-56 DIFF-PROBE fold (2026-09-29):** `route_schema_changes` (top-level DDL routing),
+  `resolve_nested_path_ci` / `nested_name_known_ci` (nested-path resolution against stored
+  case) and `route_column_path_changes` (nested DDL routing) live here; `alter.rs` and
+  `nested_column.rs` only call in, so the collided-schema gating stays in one module.
 - `nested_column.rs` — **ICE-NESTED-EVO-1 (2026-09-17):** `ColumnPathChange` (`Add` under an
   optional dotted parent — a struct, or a list or map whose element or value struct the fork
   resolves — with `FIRST` / `AFTER` sibling positions; `Rename` and `Drop` by dotted path) and
@@ -898,6 +909,10 @@ repark-core's error map.
   exact file-size ceiling. 2 in-module tests (children evolve by field id; a required child
   without a default refuses and the schema id stays).
   pins: ice-nested-evo-1/C-007, C-010, C-011, C-012
+  **RP-56 DIFF-PROBE fold (2026-09-29):** `apply_column_path_changes` routes through
+  `column_move::route_column_path_changes` on collided schemas (unique exact names apply,
+  anything else keeps the insensitive path and its refusal), and the existence filters use
+  `nested_name_known_ci` so `IF EXISTS` drops keep their stored-case answers.
   **Round 2 (2026-09-18, run 22b):** `nested_add_refusal` is the Spark-shaped pre-check both
   doors run before the commit: an unknown parent answers Spark's
   `[UNRESOLVED_COLUMN.WITH_SUGGESTION] … SQLSTATE: 42703`, an existing child (case-insensitive)

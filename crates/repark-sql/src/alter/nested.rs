@@ -7,6 +7,7 @@ use datafusion::sql::sqlparser::parser::{Parser, ParserError};
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use repark_core::EngineContext;
 use repark_iceberg::write::alter::{ColumnPosition, starts_with_alter};
+use repark_iceberg::write::column_move::nested_name_known_ci;
 use repark_iceberg::write::nested_column::{
     ColumnPathChange, apply_column_path_changes, nested_add_refusal, nested_required_add_refusal,
 };
@@ -248,11 +249,7 @@ pub(crate) async fn execute_nested_column_ddl(
             for path in paths {
                 let name = path.join(".");
                 if *if_exists {
-                    let known = schema.field_by_name(&name).is_some()
-                        || schema
-                            .try_field_by_name_case_insensitive(&name)
-                            .map_err(iceberg_err)?
-                            .is_some();
+                    let known = nested_name_known_ci(schema, &name).map_err(iceberg_err)?;
                     if !known {
                         continue;
                     }

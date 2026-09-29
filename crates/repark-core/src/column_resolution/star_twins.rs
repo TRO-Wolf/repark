@@ -1,8 +1,10 @@
+use std::any::Any;
 use std::collections::{HashMap, HashSet};
 
 use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
+use datafusion::datasource::ViewTable;
 use datafusion::error::{DataFusionError, Result};
-use datafusion::logical_expr::{Expr, LogicalPlan};
+use datafusion::logical_expr::{Expr, LogicalPlan, TableScan};
 
 use super::Twins;
 
@@ -41,26 +43,39 @@ pub(super) fn refuse_star_twins(
 
 fn scan_twin_keys(plan: &LogicalPlan) -> HashSet<String> {
     let mut keys = HashSet::new();
+    collect_scan_twin_keys(plan, &mut keys);
+    keys
+}
+
+fn collect_scan_twin_keys(plan: &LogicalPlan, keys: &mut HashSet<String>) {
     let _ = plan.apply(|node| {
         if let LogicalPlan::TableScan(scan) = node
             && !crate::frame_names::is_scratch_relation(scan.table_name.table())
         {
-            let mut seen: HashMap<String, &str> = HashMap::new();
-            for (_, field) in scan.projected_schema.iter() {
-                let name = field.name().as_str();
-                let folded = name.to_ascii_lowercase();
-                match seen.get(&folded) {
-                    Some(first) if *first != name => {
-                        keys.insert(folded);
-                    }
-                    None => {
-                        seen.insert(folded, name);
-                    }
-                    _ => {}
-                }
-            }
+            scan_keys(scan, keys);
         }
         Ok(TreeNodeRecursion::Continue)
     });
-    keys
+}
+
+fn scan_keys(scan: &TableScan, keys: &mut HashSet<String>) {
+    let provider: &dyn Any = scan.source.as_ref();
+    if let Some(view) = provider.downcast_ref::<ViewTable>() {
+        collect_scan_twin_keys(view.logical_plan(), keys);
+        return;
+    }
+    let mut seen: HashMap<String, &str> = HashMap::new();
+    for (_, field) in scan.projected_schema.iter() {
+        let name = field.name().as_str();
+        let folded = name.to_ascii_lowercase();
+        match seen.get(&folded) {
+            Some(first) if *first != name => {
+                keys.insert(folded);
+            }
+            None => {
+                seen.insert(folded, name);
+            }
+            _ => {}
+        }
+    }
 }

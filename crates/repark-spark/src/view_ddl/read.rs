@@ -158,9 +158,30 @@ async fn expand_view_body(
         &spec.sql,
     )
     .await?;
+    let frame = plan_prepared_body(ctx, catalogs, &prepared, &pins).await?;
+    if view_output_matches_stored(&frame, &spec.column_names) {
+        return Ok(frame.logical_plan().clone());
+    }
+    let (prepared, pins) = prepare_view_body_sql(
+        ctx,
+        catalogs,
+        &stored_catalog,
+        &spec.default_namespace,
+        &spec.sql,
+    )
+    .await?;
     let aliased = apply_view_aliases(&prepared, &spec.column_names);
     let frame = plan_prepared_body(ctx, catalogs, &aliased, &pins).await?;
     Ok(frame.logical_plan().clone())
+}
+
+fn view_output_matches_stored(frame: &DataFrame, column_names: &[String]) -> bool {
+    let fields = frame.schema().fields();
+    fields.len() == column_names.len()
+        && fields
+            .iter()
+            .zip(column_names.iter())
+            .all(|(field, name)| field.name() == name)
 }
 
 pub(crate) fn nested_depth_refusal() -> DataFusionError {
