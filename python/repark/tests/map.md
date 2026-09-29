@@ -4652,6 +4652,21 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   STRING/DOUBLE UNION, `max` over a STRING/DOUBLE CASE, and a STRING/TIMESTAMP CASE
   into DATE through VALUES. 79 cells; the oracle is one cell per line and drops the
   temp views no cell reads. pins: store-ts-to-numeric-1/C-006
+- [test_store_ts_doors_2.py](test_store_ts_doors_2.py) +
+  `store_ts_doors_2_spark_oracle.json` — **WO STORE-TS-DOORS-2 (2026-09-29):**
+  one session replays 26 cells recorded on Spark 4.1.2 + Iceberg 1.11.0 (UTC) in
+  order and compares refusal (class, SQLSTATE, message body with the RePark-only
+  planning prefix allowed) and the target read-back after every statement.
+  Refusals: TIMESTAMP, `CAST(1 AS TIMESTAMP)`, TIMESTAMP_NTZ and DATE through a
+  VALUES node inside INSERT … SELECT into BIGINT, DOUBLE and INT — direct, star,
+  CTE, UNION, nested-alias, join, VALUES-join, WHERE and ORDER BY/LIMIT shapes
+  (C-001); `-NULL` into TIMESTAMP, DATE and BOOLEAN through static-partition
+  OVERWRITE VALUES and SELECT, plus the already-refusing listed and dynamic
+  forms (C-002). Stores in the same test: explicit `CAST(b AS BIGINT)`, INT,
+  NULL, TIMESTAMP into DATE, and `-NULL` into BIGINT (C-001, C-002). Two
+  in-test pins hold the boundary: a temp view over VALUES keeps the WI-1
+  refusal text and a STRING source still stores (C-003).
+  pins: store-ts-doors-2/C-001, C-002, C-003
 - `test_merge_semantics_audit.py` — **MERGE-audit corpus** (2026-08-14 audit gap-map rows
   c/d/g/n/o): null-safe `<=>` / `eqNullSafe` ON matches NULL keys (both doors); builder-door
   `=` NULL keys do not match; self-merge (target as source) updates once per row; join-key

@@ -77,6 +77,14 @@ handling (`CAST(NULL AS VOID)` rewrite, the non-NULL VALUES refusal into
   into TIMESTAMP refuses as on base. TIMESTAMP, TIMESTAMP_NTZ and DATE cells into
   numeric and BOOLEAN columns, BOOLEAN into numeric and numeric into BOOLEAN still
   refuse. pins: store-ts-to-numeric-1/C-001, C-006, C-007
+  **WO STORE-TS-DOORS-2 (2026-09-29):** a SELECT over a VALUES node is judged
+  too — `select_values_arms` maps each projected output position to the VALUES
+  cells that flow into it (derived tables, CTEs, UNION arms, joins; table and
+  view columns, literals, CASTs, functions and ambiguous refs stay unmapped)
+  and each arm's projected rows run through the unchanged `check_row`, so the
+  STRING silence and the leaf rule apply exactly as on the VALUES door. The
+  table load moved verbatim into `load_presented`.
+  pins: store-ts-doors-2/C-001
 - `insert_source_types.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):**
   `refuse_insert_source_types` is the Spark door's INSERT gate for two source
   types the analyzer gate cannot see: a negated NULL (Spark's DOUBLE, judged by
@@ -103,6 +111,23 @@ handling (`CAST(NULL AS VOID)` rewrite, the non-NULL VALUES refusal into
   and only for a table with a DATE, BOOLEAN, timestamp or BINARY column and a
   source with a `Null`-typed column. STRING sources store on every INSERT door as
   on base. pins: store-ts-to-numeric-1/C-002, C-006
+  **WO STORE-TS-DOORS-2 (2026-09-29):** `refuse_partition_overwrite_sources`
+  maps the filled partition-overwrite source onto the table columns minus the
+  static partition columns (or by column list, bailing when a static column is
+  listed) and runs the shared `refuse_negated_null_writes`, so `-NULL` into
+  TIMESTAMP, DATE and BOOLEAN refuses on the static-partition door exactly as on
+  the other INSERT doors. Called from `execute_partition_overwrite`.
+  pins: store-ts-doors-2/C-002
+- `select_values_arms.rs` — **WO STORE-TS-DOORS-2 (2026-09-29):**
+  `resolve_insert_arms` resolves an INSERT source into VALUES-cell arms: one arm
+  per UNION side, each output position mapped to the VALUES cells that flow into
+  it through transparent projections over derived tables, CTEs and joins.
+  Unmapped positions (table and view columns, literals, CASTs, functions,
+  ambiguous refs, unexpandable stars, mismatched aliases, recursive CTEs) judge
+  nothing, so the gate only ever refuses a VALUES cell Spark refuses.
+  `arm_row_groups` groups the arm's positions by VALUES node and `null_cell`
+  builds the silent placeholder. Eight classifier tests.
+  pins: store-ts-doors-2/C-001
 - `source_leaves.rs` — **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):**
   `source_type_is_reliable` decides whether a new refusal may trust RePark's
   planned source type. A plain cell (literal, typed string, CAST, a non-widening

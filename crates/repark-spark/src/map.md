@@ -230,6 +230,11 @@ pins: rp-4-fork-repin/C-005, C-006
   `repark_iceberg::write::zone_stores` with the listed columns (or the table columns
   minus the static partition columns), so both directions store through the session zone.
   pins: ntz-store-doors-1/C-001, C-002, C-005
+  **WO STORE-TS-DOORS-2 (2026-09-29):** `execute_partition_overwrite` refuses a
+  negated NULL into a TIMESTAMP, DATE or BOOLEAN column through
+  `void_type::refuse_partition_overwrite_sources` before staging; the call fits
+  the 1,000-line ceiling by importing the fill call's name (net −1 line, 998).
+  pins: store-ts-doors-2/C-002
 - `insert_overwrite.rs` — **R-FILEORDER-2 (2026-09-27, HALT, no code change):**
   Spark 4.1.2 answers `L-INSERT-OVERWRITE` `[[2,b,5,3],[3,c,6,3],[4,d,4,3]]` on a same-JVM
   triple but splits 2–4 across six fresh-JVM runs — one combined task whose file order is

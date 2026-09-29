@@ -3,7 +3,8 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
     DataType as SqlDataType, ExactNumberInfo, Expr, FunctionArg, FunctionArgExpr,
-    FunctionArguments, Insert, ObjectName, SetExpr, TableObject, TypedString, UnaryOperator, Value,
+    FunctionArguments, Insert, ObjectName, Query, SetExpr, TableObject, TypedString, UnaryOperator,
+    Value,
 };
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_common::spark_error;
@@ -37,36 +38,12 @@ pub(crate) async fn refuse_unassignable_ltz_values(
         _ => None,
     };
     let Some(values) = values else {
+        return refuse_select_arms(ctx, catalogs, insert, source).await;
+    };
+    let Some((presented, display)) = load_presented(ctx, catalogs, name).await else {
         return Ok(());
     };
-    let parts = qualify_table_parts(ctx, name_parts(name));
-    if parts.len() < 3 {
-        return Ok(());
-    }
-    let Some(catalog) = catalogs.get(&parts[0]) else {
-        return Ok(());
-    };
-    let Ok(namespace) = NamespaceIdent::from_vec(parts[1..parts.len() - 1].to_vec()) else {
-        return Ok(());
-    };
-    let ident = TableIdent::new(namespace, parts[parts.len() - 1].clone());
-    let Ok(table) = catalog.load_table(&ident).await else {
-        return Ok(());
-    };
-    let schema = table.metadata().current_schema();
-    let Ok(presented) = repark_iceberg::catalog::uuid_presentation::presented_arrow_schema(schema)
-    else {
-        return Ok(());
-    };
-    if !presented
-        .fields()
-        .iter()
-        .any(|field| is_judged_target(field.data_type()))
-    {
-        return Ok(());
-    }
     let case_insensitive = crate::spark_door_case_insensitive(ctx.state().config().options());
-    let display = quoted_table_display(&parts);
     for row in &values.rows {
         check_row(
             ctx,
@@ -77,6 +54,79 @@ pub(crate) async fn refuse_unassignable_ltz_values(
             case_insensitive,
         )
         .await?;
+    }
+    Ok(())
+}
+
+async fn load_presented(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    name: &ObjectName,
+) -> Option<(ArrowSchema, String)> {
+    let parts = qualify_table_parts(ctx, name_parts(name));
+    if parts.len() < 3 {
+        return None;
+    }
+    let catalog = catalogs.get(&parts[0])?;
+    let namespace = NamespaceIdent::from_vec(parts[1..parts.len() - 1].to_vec()).ok()?;
+    let ident = TableIdent::new(namespace, parts[parts.len() - 1].clone());
+    let table = catalog.load_table(&ident).await.ok()?;
+    let schema = table.metadata().current_schema();
+    let presented =
+        repark_iceberg::catalog::uuid_presentation::presented_arrow_schema(schema).ok()?;
+    if !presented
+        .fields()
+        .iter()
+        .any(|field| is_judged_target(field.data_type()))
+    {
+        return None;
+    }
+    Some((presented, quoted_table_display(&parts)))
+}
+
+async fn refuse_select_arms(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    insert: &Insert,
+    source: &Query,
+) -> Result<()> {
+    let TableObject::TableName(name) = &insert.table else {
+        return Ok(());
+    };
+    let case_insensitive = crate::spark_door_case_insensitive(ctx.state().config().options());
+    let mut arms = super::select_values_arms::resolve_insert_arms(source, case_insensitive);
+    arms.retain(|arm| arm.positions.iter().any(|position| !position.is_empty()));
+    if arms.is_empty() {
+        return Ok(());
+    }
+    let Some((presented, display)) = load_presented(ctx, catalogs, name).await else {
+        return Ok(());
+    };
+    for arm in &arms {
+        for rows in super::select_values_arms::arm_row_groups(arm) {
+            for row in rows {
+                let mut projected = Vec::with_capacity(arm.positions.len());
+                for position in &arm.positions {
+                    let cell = position
+                        .iter()
+                        .find(|cell| cell.rows.as_ptr() == rows.as_ptr())
+                        .and_then(|cell| row.content.get(cell.column));
+                    projected.push(
+                        cell.cloned()
+                            .unwrap_or_else(super::select_values_arms::null_cell),
+                    );
+                }
+                check_row(
+                    ctx,
+                    &presented,
+                    &display,
+                    &projected,
+                    &insert.columns,
+                    case_insensitive,
+                )
+                .await?;
+            }
+        }
     }
     Ok(())
 }

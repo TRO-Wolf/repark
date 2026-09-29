@@ -22,6 +22,7 @@ use crate::write_to_branch::qualify_table_parts;
 
 mod insert_source_types;
 mod ltz_values_store;
+mod select_values_arms;
 mod source_leaves;
 
 pub(crate) use source_leaves::{is_string_type, source_type_is_reliable};
@@ -34,6 +35,19 @@ pub(crate) async fn refuse_insert_source_types(
 ) -> Result<()> {
     Box::pin(insert_source_types::refuse_insert_source_types(
         ctx, catalogs, insert, by_name,
+    ))
+    .await
+}
+
+pub(crate) async fn refuse_partition_overwrite_sources(
+    ctx: &SessionContext,
+    table: &iceberg::table::Table,
+    table_name: &ObjectName,
+    filled: &repark_iceberg::write::insert_defaults::OverwriteSource,
+    reserved: &[String],
+) -> Result<()> {
+    Box::pin(insert_source_types::refuse_partition_overwrite_sources(
+        ctx, table, table_name, filled, reserved,
     ))
     .await
 }

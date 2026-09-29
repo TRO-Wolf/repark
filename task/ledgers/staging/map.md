@@ -46,6 +46,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (C-003, C-004 REJECTED) and return to base behaviour (C-006); a branching source
   refuses only when every leaf is a refused type (C-007). The STRING class moves to
   v1.5.2 card STORE-STRING-ASSIGN-1. pins: store-ts-to-numeric-1/C-006, C-007
+- [store-ts-doors-2-ledger.md](store-ts-doors-2-ledger.md) —
+  **WO STORE-TS-DOORS-2 (2026-09-29), in flight:** the two write doors #885
+  missed refuse like Spark — TIMESTAMP, TIMESTAMP_NTZ and DATE through a VALUES
+  node inside INSERT … SELECT into numeric columns (C-001) and `-NULL` into
+  TIMESTAMP, DATE and BOOLEAN through static-partition OVERWRITE (C-002) — while
+  every base match keeps its answer (C-003). `risk_tier: standard`. Branch
+  `fix/store-ts-doors-2`.
+  pins: store-ts-doors-2/C-001, C-002, C-003
 - [uuid-cast-window-1-ledger.md](uuid-cast-window-1-ledger.md) —
   **WO UUID-CAST-WINDOW-1 (2026-09-27), in flight:** the UUID refusal's SQL window
   counts as Spark 4.1.2 counts — the position in Unicode scalar values, the window

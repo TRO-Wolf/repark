@@ -22,6 +22,7 @@ use crate::catalog_ops::{
     name_parts, namespace_schema_name, refuse_read_only_dml_table_sql, reregister,
 };
 use crate::spark_ast;
+use crate::void_type::refuse_partition_overwrite_sources;
 
 // A non-empty source is staged before the table is replaced.
 
@@ -190,8 +191,9 @@ pub(crate) async fn execute_partition_overwrite(
     options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
     use repark_iceberg::write::{
-        OverwritePlan, partition_overwrite_request_from_exprs, plan_overwrite,
-        static_partition_source_columns, zone_stores,
+        OverwritePlan, insert_defaults::overwrite_source_with_defaults,
+        partition_overwrite_request_from_exprs, plan_overwrite, static_partition_source_columns,
+        zone_stores,
     };
 
     let Some((catalog_name, catalog, table, branch)) =
@@ -210,12 +212,9 @@ pub(crate) async fn execute_partition_overwrite(
     })?;
     let listed: Vec<String> = insert.columns.iter().map(object_name_last).collect();
     let reserved = static_partition_source_columns(&table, plan.equalities())?;
-    let filled = repark_iceberg::write::insert_defaults::overwrite_source_with_defaults(
-        table.metadata().current_schema(),
-        &listed,
-        &reserved,
-        source,
-    )?;
+    let schema = table.metadata().current_schema();
+    let filled = overwrite_source_with_defaults(schema, &listed, &reserved, source)?;
+    refuse_partition_overwrite_sources(ctx, &table, table_name, &filled, &reserved).await?;
     let column_names = filled.columns;
     let source_df = spark_ast::execute_passthrough(ctx, catalogs, &filled.sql).await?;
     let source_df = zone_stores(ctx, source_df, &table, &column_names, &reserved)?;
