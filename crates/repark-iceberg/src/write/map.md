@@ -795,6 +795,12 @@ repark-core's error map.
   refusal-expression constructors (`wrap_store_expr`, `store_guard_expr`). Verifier fold
   VO-2: `lookup_store_column` stops at a `Limit` whose fetch is a literal 0, so
   `LIMIT 0` over an overflowing constant writes nothing and never refuses, like Spark.
+  Re-verify fold VO2-1/VO2-2 (2026-09-29): the defining projection also yields when
+  its input writes nothing — `projection_input_writes_nothing` walks
+  Projection/SubqueryAlias/Limit to a literal fetch-0 — and `limit_empties_source`
+  treats a fetch-less literal OFFSET of 1 or more over a single-row constant source
+  (`limit_input_is_single_row` through Projection/SubqueryAlias/Sort to a one-row
+  EmptyRelation) like `LIMIT 0`. A Filter or JOIN between keeps the refusal.
 - `store_cast.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** rewritten as the Spark-boundary
   checked-cast kernel: `__repark_store_int{8,16,32,64}__` UDFs refuse NaN, infinities and
   out-of-range floats with the overflow message and store in-range values truncated like

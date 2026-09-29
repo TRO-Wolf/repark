@@ -82,6 +82,10 @@ def _frame_run(session: ReparkSession, cell: dict[str, Any]) -> dict[str, Any]:
     frame = session.sql(cell["query"])
     if "limit" in cell:
         frame = frame.limit(cell["limit"])
+    if "offset" in cell:
+        frame = frame.offset(cell["offset"])
+    if "select" in cell:
+        frame = frame.selectExpr(*cell["select"])
     if cell["mode"] == "writeto":
         return _attempt(lambda: frame.writeTo("sc.ns.cov").append())
     return _attempt(lambda: frame.write.insertInto("sc.ns.cov"))

@@ -217,6 +217,9 @@ fn lookup_store_column(
                         if expr_has_columns(defining)? {
                             return Ok(None);
                         }
+                        if projection_input_writes_nothing(&projection.input) {
+                            return Ok(None);
+                        }
                         return Ok(Some((*defining).clone()));
                     }
                 }
@@ -231,15 +234,62 @@ fn lookup_store_column(
                 plan = &sort.input;
             }
             LogicalPlan::Limit(limit) => {
-                if matches!(
-                    limit.get_fetch_type(),
-                    Ok(datafusion::logical_expr::FetchType::Literal(Some(0)))
-                ) {
+                if limit_empties_source(limit) {
                     return Ok(None);
                 }
                 plan = &limit.input;
             }
             _ => return Ok(None),
+        }
+    }
+}
+
+fn projection_input_writes_nothing(plan: &LogicalPlan) -> bool {
+    let mut plan = plan;
+    loop {
+        match plan {
+            LogicalPlan::Projection(projection) => plan = &projection.input,
+            LogicalPlan::SubqueryAlias(alias) => plan = &alias.input,
+            LogicalPlan::Limit(limit) => {
+                if limit_empties_source(limit) {
+                    return true;
+                }
+                plan = &limit.input;
+            }
+            _ => return false,
+        }
+    }
+}
+
+fn limit_empties_source(limit: &datafusion::logical_expr::Limit) -> bool {
+    if matches!(
+        limit.get_fetch_type(),
+        Ok(datafusion::logical_expr::FetchType::Literal(Some(0)))
+    ) {
+        return true;
+    }
+    if !matches!(
+        limit.get_fetch_type(),
+        Ok(datafusion::logical_expr::FetchType::Literal(None))
+    ) {
+        return false;
+    }
+    let skip = match limit.get_skip_type() {
+        Ok(datafusion::logical_expr::SkipType::Literal(skip)) => skip,
+        _ => return false,
+    };
+    skip >= 1 && limit_input_is_single_row(&limit.input)
+}
+
+fn limit_input_is_single_row(plan: &LogicalPlan) -> bool {
+    let mut plan = plan;
+    loop {
+        match plan {
+            LogicalPlan::Projection(projection) => plan = &projection.input,
+            LogicalPlan::SubqueryAlias(alias) => plan = &alias.input,
+            LogicalPlan::Sort(sort) => plan = &sort.input,
+            LogicalPlan::EmptyRelation(empty) => return empty.produce_one_row,
+            _ => return false,
         }
     }
 }
