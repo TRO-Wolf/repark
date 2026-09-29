@@ -544,10 +544,21 @@ mod tests {
     }
 
     #[test]
+    fn probe_string_tag_grows_past_a_closer_the_value_ends_into() {
+        let row = values_row("INSERT INTO t VALUES ('it''s$p', '$p$x''y$pp', '''$p')");
+        let rendered: Vec<String> = row.iter().map(crate::void_type::probe_text).collect();
+        assert_eq!(
+            rendered,
+            vec!["$pp$it's$p$pp$", "$ppp$$p$x'y$pp$ppp$", "$pp$'$p$pp$"],
+            "{row:?}"
+        );
+    }
+
+    #[test]
     fn probe_strings_parse_back_to_the_same_value_on_both_probe_dialects() {
         let row = values_row(
-            "INSERT INTO t VALUES ('it''s', 'a\\\\''b', 'plain', 'C:\\\\temp\\\\', '$p$x''y', '-- \
-             x\\\\''y')",
+            "INSERT INTO t VALUES ('it''s', 'a\\\\''b', 'plain', 'C:\\\\temp\\\\', '$p$x''y', 'it''s$p', \
+             '$p$x''y$pp', '''$p', '-- x\\\\''y')",
         );
         let generic = GenericDialect;
         let databricks = DatabricksDialect {};

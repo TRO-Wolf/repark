@@ -60,6 +60,10 @@ def test_ntz_door_backslash_quote_strings_store_exact_values(tmp_path: Path) -> 
         (104, r"'\u00e9'", "é"),
         (106, r"'-- x\\''y'", "-- x\\'y"),
         (109, r"'a\nb\\''c'", "a\nb\\'c"),
+        (110, "'it''s$p'", "it's$p"),
+        (111, r"'x\\''y$p'", "x\\'y$p"),
+        (112, "'$p$x''y$pp'", "$p$x'y$pp"),
+        (113, "'''$p'", "'$p"),
         (1051, r"'a\\''b'", "a\\'b"),
         (1054, r"'\\'''", "\\'"),
     ]

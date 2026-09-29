@@ -213,7 +213,7 @@ impl VisitorMut for DollarQuoteProbeStrings {
 
 fn probe_string_tag(value: &str) -> String {
     let mut tag = String::from("p");
-    while value.contains(format!("${tag}$").as_str()) {
+    while format!("{value}${tag}$").find(format!("${tag}$").as_str()) != Some(value.len()) {
         tag.push('p');
     }
     tag

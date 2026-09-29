@@ -48,6 +48,10 @@ handling (`CAST(NULL AS VOID)` rewrite, the non-NULL VALUES refusal into
   probe renders through the parent's shared `probe_text`, which dollar-quotes
   a string literal holding a quote with the same value, so a backslash before
   a quote no longer refuses the row on this door either (eighteen tests).
+  **Fold 2026-09-29 (re-verify 3, RN4-1):** the dollar-quote tag also grows
+  past a closer the value runs into (`'it''s$p'`), so a quoted value ending in
+  `$` plus the tag no longer closes the probe early and refuses (nineteen
+  tests).
   pins: ltz-store-int-1/C-001
 
 ## Pointers
