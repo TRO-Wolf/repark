@@ -34,6 +34,7 @@ pub(crate) async fn conform_types(
         &targets,
         false,
         true,
+        Some("INSERT OVERWRITE"),
     )?;
     ctx.execute_logical_plan(plan).await
 }

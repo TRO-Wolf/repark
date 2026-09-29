@@ -286,7 +286,8 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   and NTZ gates plus the ANSI matrix judge the unanalyzed plan exactly as on main (an
   analyzed plan would rename an `Int64` literal `Int32` in the refusal text), the
   overflow wrap runs on the analyzed source, then the zone-wrapping subquery (which
-  re-analyzes and re-wraps in its own arm).
+  re-analyzes and re-wraps in its own arm). Re-verify VO3-1 (2026-09-29): MERGE passes
+  `None` for the wrap's gate label — those gates already judge before the wrap.
 - `insert.rs` — **WO NTZ-1 slice 2 (2026-09-27):** the MERGE INSERT and UPDATE SET gates
   also call `../ntz_store.rs::refuse_ntz_writes` before the ANSI matrix, so an illegal
   source into an NTZ column refuses with Spark's `CANNOT_SAFELY_CAST` text naming

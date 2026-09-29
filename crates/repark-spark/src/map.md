@@ -237,6 +237,9 @@ pins: rp-4-fork-repin/C-005, C-006
   **Merge origin/main v1.5.1 (2026-09-29):** both sides kept — the BY NAME and the
   stage-then-swap OVERWRITE sources pass through `zone_stores(_by_name)` first, then
   the overflow wrap (`wrap_store_outputs` / `conform_types`).
+  Re-verify VO3-1 (2026-09-29): both doors pass their per-batch op label into the wrap
+  (`append` / `INSERT OVERWRITE`), so the store gate judges before the overflow check
+  with byte-identical text.
 - `insert_overwrite.rs` — **WO NTZ-STORE-DOORS-1 (2026-09-28):** the stage-then-swap path
   (static, dynamic, `BY NAME`, column list, so `writeTo().overwritePartitions()` too) and
   the `PARTITION (…)` path pass the planned source through

@@ -184,6 +184,7 @@ pub(super) async fn insert_stream_checked(
         &write_targets(write_schema),
         true,
         true,
+        None,
     )?;
     let dataframe = ctx.execute_logical_plan(wrapped).await?;
     let dataframe = if let Some(stream_sql) = stream_sql {
@@ -193,6 +194,7 @@ pub(super) async fn insert_stream_checked(
             &write_targets(write_schema),
             true,
             true,
+            None,
         )?;
         ctx.execute_logical_plan(wrapped).await?
     } else {
@@ -254,6 +256,7 @@ pub(super) async fn update_stream_checked(
         &write_targets(write_schema),
         true,
         false,
+        None,
     )?;
     ctx.execute_logical_plan(wrapped)
         .await?

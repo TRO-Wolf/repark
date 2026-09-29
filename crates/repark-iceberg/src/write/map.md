@@ -830,6 +830,12 @@ repark-core's error map.
   it between eager analysis and optimization so the optimizer folds the swapped guard.
   `analyzed_store_source` is the shared parse-plus-analyze entry for the raw-SQL internal
   plans. pins: cast-overflow-insert-1 (python/repark/tests/test_cast_overflow_insert_1.py).
+  Re-verify VO3-1 (2026-09-29): `wrap_store_outputs` takes a `gate_op` label and judges
+  every (source, target) pair with `refuse_unless_write_store_assignable` before building
+  the wrap, so a row with both a type refusal and an overflow reports the store refusal
+  like Spark; BY NAME passes `Some("append")` and OVERWRITE passes
+  `Some("INSERT OVERWRITE")`, byte-identical to the per-batch gates, while MERGE and
+  UPDATE pass `None` because their ANSI gates already judge before the wrap.
 - `store_fold.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** split from `store_overflow.rs`
   at the plan/expression seam (file-size gate): const-input resolution and physical
   evaluation (`check_folded_store_input`, `fold_scalar`, `resolve_store_input`) plus the
@@ -850,7 +856,8 @@ repark-core's error map.
   past an integer bound stores the truncated bound, as Spark's ANSI cast does.
 - `predicate_dml.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** the UPDATE scratch rewrite
   plans through `analyzed_store_source` and `wrap_store_outputs`, so per-row fractional
-  overflow refuses with the column named.
+  overflow refuses with the column named. Re-verify VO3-1 (2026-09-29): passes `None`
+  for the wrap's gate label — the UPDATE SET gates judge before the rewrite is built.
 - `insert_defaults.rs` — **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** the ONE home for
   filling omitted columns from `write_default` on every write path: `column_defaults`
   reads the table defaults, `fill_insert_plan` rewrites a short INSERT plan, an

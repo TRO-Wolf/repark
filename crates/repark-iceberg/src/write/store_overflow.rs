@@ -12,6 +12,7 @@ use datafusion::logical_expr::{
 use datafusion::optimizer::AnalyzerRule;
 use datafusion::scalar::ScalarValue;
 
+use super::store_assign::refuse_unless_write_store_assignable;
 use super::store_fold::{
     check_folded_store_input, expr_references_column, store_guard_expr, wrap_store_expr,
 };
@@ -604,10 +605,14 @@ pub fn wrap_store_outputs(
     targets: &[(String, DataType)],
     by_name: bool,
     fold: bool,
+    gate_op: Option<&str>,
 ) -> Result<LogicalPlan> {
     let LogicalPlan::Projection(projection) = plan else {
         return Ok(plan);
     };
+    if let Some(op) = gate_op {
+        judge_wrap_store_assignable(&projection, targets, by_name, op)?;
+    }
     let mut input = Arc::clone(&projection.input);
     let schema = input.schema().clone();
     let mut changed = false;
@@ -659,6 +664,39 @@ pub fn wrap_store_outputs(
         return Ok(LogicalPlan::Projection(projection));
     }
     Ok(LogicalPlan::Projection(Projection::try_new(out, input)?))
+}
+
+fn judge_wrap_store_assignable(
+    projection: &Projection,
+    targets: &[(String, DataType)],
+    by_name: bool,
+    op: &str,
+) -> Result<()> {
+    let schema = projection.input.schema();
+    for (position, expr) in projection.expr.iter().enumerate() {
+        let (inner, frames) = split_aliases(expr);
+        let name = store_output_name(inner, &frames);
+        let target = if by_name {
+            targets
+                .iter()
+                .find(|(candidate, _)| candidate == &name)
+                .or_else(|| {
+                    targets
+                        .iter()
+                        .find(|(candidate, _)| candidate.eq_ignore_ascii_case(&name))
+                })
+        } else {
+            targets.get(position)
+        };
+        let Some((column, target_type)) = target else {
+            continue;
+        };
+        let Ok(source) = inner.get_type(schema.as_ref()) else {
+            continue;
+        };
+        refuse_unless_write_store_assignable(op, column, &source, target_type)?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]

@@ -226,6 +226,7 @@ async fn append_by_name_projection(
         &targets,
         true,
         true,
+        Some("append"),
     )?;
     let source_df = ctx.execute_logical_plan(plan).await?;
     let stream = source_df.execute_stream().await?;
