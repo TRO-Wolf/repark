@@ -164,3 +164,60 @@ COVERAGE_ATTESTATION:
 | R-2 | Dated 2026-09-29 (no crash; pre-existing optimizer/execution scaling): the join count phase runs 129.2 s at 500 post-fix, so 1,000-deep joins exceed 250 s; the pin sits at 200. |
 | R-3 | Dated 2026-09-29 (pre-existing clean-refusal divergence, deliberately untouched): 200-deep nested selects answer 2 on Spark 4.1.2 and refuse at RePark's parser limit 50; relaxing the limit could open SQL-door crashes, so it stays out of this unit. |
 | R-4 | Dated 2026-09-29 (caveat on the Measurements reservation): a strict-overcommit (`vm.overcommit_memory=2`) or `ulimit -v` environment could fail the 256 MiB thread/stack reservations with loud errors instead of crashes; residency is unchanged and default overcommit is unaffected. |
+
+## Release per-call cost follow-up (2026-09-29)
+
+Release wheels for head and the `d415da76` base worktree
+(`CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16`, one build at a time), 5 fresh
+processes per side, medians of 1,000 `SELECT 1` collects, 1,000 filter
+counts, 200 Iceberg counts, plus import-plus-session milliseconds.
+
+| Round | Head shape | select1 | filter_count | iceberg | import_session |
+|---|---|---|---|---|---|
+| R1 | 256 MiB segment/pool | 1.3181 | 1.0594 | 1.1946 | 0.9945 |
+| R2 | 128 MiB segment, 64 MiB pool | 1.3111 | 1.0845 | 1.0185 | 0.9769 |
+| R3 | R2 plus `runtime.spawn` offload | 1.4008 | 1.5844 | 1.4283 | (unrecorded) |
+| R4 | conditional growth (shipped) | 1.0200 | 1.0026 | 1.0108 | 1.0043 |
+
+Root cause: `on_grown_stack_with` passes red zone = segment, so
+`stacker::maybe_grow` grows on every call; each grown region mmaps a
+fresh segment and re-faults its touched pages, ~100 microseconds per
+region (~2 regions per `SELECT 1` collect, 1 per `count`). Resizing the
+segment cannot help because the cost is touched pages, not reserved
+bytes. The `runtime.spawn` offload regressed: its two cross-thread hops
+cost scheduling latency on the loaded 64-CPU box (base shows a larger
+futex count and still answers faster).
+
+Fix: growth is conditional on logical-plan input depth.
+`frame_needs_grown_stack` grows past `DEEP_PLAN_INPUT_DEPTH` (16); 16
+levels times the 53 KiB worst case is ~0.85 MiB, safe on a 2 MiB
+thread. `count`/`show`/`__arrow_c_stream__` drive through
+`block_on_grown_if`, and the verdict rides into
+`StreamingBatchReader::new` as `grown_polls` so polls match the plan
+that opened them. `session.sql` stays on a direct `runtime.block_on`
+(parse plus lazy plan build, never the optimizer); admin and IO paths
+keep unconditional `block_on`. The spawn offload is fully reverted.
+
+Verification on the shipped shape: debug pins 4 passed (37 s); the pin
+worker on release answers every value exactly (filter 50, join 1,
+union 15050, withColumn 50, nested SQL RecursionError, flat union 601);
+a 100-deep `collect` plus `to_arrow` answers 50 on release (grown polls
+under release codegen); M1 and M2 re-run red (rc=-11 both) and restored
+green; `cargo test -p repark-python` 95 plus 25 with 4 new tests (depth
+split, grown/ungrown drive, 40-deep grown stream). strace on release
+shows no per-query segment growth; the 128 MiB `PROT_NONE` reservations
+appear on base too (allocator, startup only).
+
+Release memory after import plus session plus the 3-filter query:
+base `VmSize=4339264 kB VmRSS=190864 kB`; head `VmSize=5989636 kB
+VmRSS=197304 kB` (rerun `5989648 kB / 191104 kB`). Reservation delta
++1.65 GiB virtual (64 MiB pool stacks plus allocator arenas), down from
++6.8 GiB at 256 MiB; residency delta is run-to-run noise (+6 MB then
++0.2 MB). R-4 now reads 128 MiB segments (allocated only for deep
+plans) and 64 MiB pool stacks.
+
+Coverage note: AT-2's "same grown-stack helper" now reads "the same
+`block_on`/`block_on_grown_if` pair" — shallow terminal and poll
+traffic skips growth by plan-depth verdict; every deep shape still
+grows. AT-7's bound is superseded by the R4 row above (1.10x ceiling,
+all green). AT-10 re-verified on the shipped shape as recorded here.

@@ -20,7 +20,7 @@ use tokio::runtime::Runtime;
 
 use crate::arrow_export::StreamingBatchReader;
 use crate::column::PyColumn;
-use crate::deep_stack::block_on;
+use crate::deep_stack::{block_on_grown_if, frame_needs_grown_stack};
 use crate::fence::{fenced, fenced_span};
 use crate::{datafusion_to_py_err, to_py_err};
 
@@ -144,7 +144,8 @@ impl PyDataFrame {
     /// Returns `RuntimeError` if the engine fails to execute the count.
     pub fn count(&self, py: Python<'_>) -> PyResult<usize> {
         fenced_span!("py.action", "PyDataFrame.count", {
-            py.detach(|| block_on(&self.runtime, self.df.clone().count()))
+            let grown = frame_needs_grown_stack(&self.df);
+            py.detach(|| block_on_grown_if(&self.runtime, self.df.clone().count(), grown))
                 .map_err(datafusion_to_py_err)
         })
     }
@@ -242,8 +243,10 @@ impl PyDataFrame {
                 .clone()
                 .limit(0, Some(n))
                 .map_err(datafusion_to_py_err)?;
+            let grown = frame_needs_grown_stack(&limited);
             let batches = py.detach(|| {
-                block_on(&self.runtime, limited.collect()).map_err(datafusion_to_py_err)
+                block_on_grown_if(&self.runtime, limited.collect(), grown)
+                    .map_err(datafusion_to_py_err)
             })?;
             pretty_format_batches(&batches)
                 .map(|table| table.to_string())
@@ -268,11 +271,14 @@ impl PyDataFrame {
             let schema: SchemaRef = self.analyzed_arrow_schema_native()?;
             let schema = crate::arrow_export::coerced_export_schema(&schema);
             // Open a lazy batch stream — the physical plan build runs with the GIL released.
+            let grown = frame_needs_grown_stack(&self.df);
             let stream = py
-                .detach(|| block_on(&self.runtime, self.df.clone().execute_stream()))
+                .detach(|| {
+                    block_on_grown_if(&self.runtime, self.df.clone().execute_stream(), grown)
+                })
                 .map_err(datafusion_to_py_err)?;
             let reader: Box<dyn RecordBatchReader + Send> = Box::new(
-                StreamingBatchReader::new(Arc::clone(&self.runtime), stream, schema)
+                StreamingBatchReader::new(Arc::clone(&self.runtime), stream, schema, grown)
                     .with_refusals(crate::arrow_export::refusal_log(&self.df)),
             );
             let ffi_stream = FFI_ArrowArrayStream::new(reader);
@@ -751,7 +757,7 @@ mod tests {
                 ],
             );
             let mut reader =
-                StreamingBatchReader::new(reader_test_runtime(), stream, int64_schema());
+                StreamingBatchReader::new(reader_test_runtime(), stream, int64_schema(), true);
 
             let first = reader
                 .next()
@@ -786,7 +792,8 @@ mod tests {
                     Ok(int64_batch(&[4, 5, 6])),
                 ],
             );
-            let reader = StreamingBatchReader::new(reader_test_runtime(), stream, int64_schema());
+            let reader =
+                StreamingBatchReader::new(reader_test_runtime(), stream, int64_schema(), true);
 
             assert_eq!(
                 reader.schema(),
@@ -827,7 +834,7 @@ mod tests {
                 vec![Err(DataFusionError::Execution("kaboom".into()))],
             );
             let mut reader =
-                StreamingBatchReader::new(reader_test_runtime(), stream, int64_schema());
+                StreamingBatchReader::new(reader_test_runtime(), stream, int64_schema(), true);
 
             let error = reader
                 .next()

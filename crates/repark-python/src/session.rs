@@ -166,7 +166,7 @@ impl PyReparkSession {
         fenced_span!("py.sql", "PyReparkSession.sql", {
             let query = crate::session_runtime::prepare_session_sql(query)?;
             let df = py
-                .detach(|| block_on(&self.runtime, self.session.sql(&query)))
+                .detach(|| self.runtime.block_on(self.session.sql(&query)))
                 .map_err(to_py_err)?;
             Ok(PyDataFrame::new(df, Arc::clone(&self.runtime)))
         })

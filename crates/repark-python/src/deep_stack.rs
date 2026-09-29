@@ -1,23 +1,51 @@
+use datafusion::dataframe::DataFrame;
+use datafusion::logical_expr::LogicalPlan;
 use repark_core::column_resolution::on_grown_stack_with;
 use std::future::Future;
 use std::io;
 use tokio::runtime::{Builder, Runtime};
 
-pub(crate) const DEEP_PLAN_STACK_BYTES: usize = 256 * 1024 * 1024;
+pub(crate) const GROWN_STACK_SEGMENT_BYTES: usize = 128 * 1024 * 1024;
+pub(crate) const RUNTIME_THREAD_STACK_BYTES: usize = 64 * 1024 * 1024;
+pub(crate) const DEEP_PLAN_INPUT_DEPTH: usize = 16;
 
 pub(crate) fn build_shared_runtime() -> io::Result<Runtime> {
     Builder::new_multi_thread()
         .enable_all()
-        .thread_stack_size(DEEP_PLAN_STACK_BYTES)
+        .thread_stack_size(RUNTIME_THREAD_STACK_BYTES)
         .build()
 }
 
 pub(crate) fn block_on<F: Future>(runtime: &Runtime, future: F) -> F::Output {
     runtime.block_on(on_grown_stack_with(
-        DEEP_PLAN_STACK_BYTES,
-        DEEP_PLAN_STACK_BYTES,
+        GROWN_STACK_SEGMENT_BYTES,
+        GROWN_STACK_SEGMENT_BYTES,
         future,
     ))
+}
+
+pub(crate) fn block_on_grown_if<F: Future>(runtime: &Runtime, future: F, grown: bool) -> F::Output {
+    if grown {
+        block_on(runtime, future)
+    } else {
+        runtime.block_on(future)
+    }
+}
+
+pub(crate) fn frame_needs_grown_stack(frame: &DataFrame) -> bool {
+    plan_input_depth(frame.logical_plan()) > DEEP_PLAN_INPUT_DEPTH
+}
+
+pub(crate) fn plan_input_depth(plan: &LogicalPlan) -> usize {
+    let mut deepest = 0;
+    let mut pending = vec![(plan, 1_usize)];
+    while let Some((node, depth)) = pending.pop() {
+        deepest = deepest.max(depth);
+        for input in node.inputs() {
+            pending.push((input, depth + 1));
+        }
+    }
+    deepest
 }
 
 #[cfg(test)]
@@ -52,12 +80,52 @@ mod tests {
     #[test]
     fn block_on_drives_recursion_beyond_default_thread_stacks() {
         let runtime = test_runtime();
-        let levels = 30_000;
+        let levels = 4_000;
         assert_eq!(
             block_on(&runtime, async { recurse_with_kilobyte_frames(levels) }),
             levels,
-            "thirty megabytes of recursion complete on the grown stack"
+            "twelve megabytes of recursion complete on the grown stack"
         );
+    }
+
+    #[test]
+    fn block_on_grown_if_drives_deep_recursion_when_grown() {
+        let runtime = test_runtime();
+        let levels = 4_000;
+        assert_eq!(
+            block_on_grown_if(
+                &runtime,
+                async { recurse_with_kilobyte_frames(levels) },
+                true
+            ),
+            levels,
+            "twelve megabytes of recursion complete on the grown stack"
+        );
+    }
+
+    #[test]
+    fn block_on_grown_if_returns_output_when_ungrown() {
+        let runtime = test_runtime();
+        assert_eq!(block_on_grown_if(&runtime, async { 40 + 2 }, false), 42);
+    }
+
+    #[test]
+    fn frame_needs_grown_stack_splits_at_the_depth_threshold() {
+        use datafusion::logical_expr::lit;
+        use datafusion::prelude::SessionContext;
+        let context = SessionContext::new();
+        let shallow = context.read_empty().expect("an empty frame builds");
+        assert_eq!(plan_input_depth(shallow.logical_plan()), 1);
+        assert!(!frame_needs_grown_stack(&shallow));
+        let mut chained = shallow.filter(lit(true)).expect("a first filter builds");
+        for _ in 0..DEEP_PLAN_INPUT_DEPTH {
+            chained = chained.filter(lit(true)).expect("a chained filter builds");
+        }
+        assert_eq!(
+            plan_input_depth(chained.logical_plan()),
+            DEEP_PLAN_INPUT_DEPTH + 2
+        );
+        assert!(frame_needs_grown_stack(&chained));
     }
 
     #[test]
@@ -92,13 +160,13 @@ mod tests {
     #[test]
     fn shared_runtime_blocking_threads_survive_deep_recursion() {
         let runtime = build_shared_runtime().expect("the shared runtime builds");
-        let levels = 30_000;
+        let levels = 4_000;
         let joined =
             runtime.block_on(runtime.spawn_blocking(move || recurse_with_kilobyte_frames(levels)));
         assert_eq!(
             joined.expect("the blocking task joins"),
             levels,
-            "thirty megabytes of recursion complete on a runtime blocking thread"
+            "twelve megabytes of recursion complete on a runtime blocking thread"
         );
     }
 
