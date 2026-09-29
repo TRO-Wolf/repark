@@ -430,18 +430,23 @@ async fn invalid_format_mode_partition_and_option_refuse_loud() {
             .to_string()
             .contains("is not in the DataFrame columns")
     );
-    let error = session
+}
+
+#[tokio::test]
+async fn temporal_write_options_are_honored_on_csv_path_write() {
+    let (session, _) = write_session("write-bucket");
+    let frame = frame_of(&session, "SELECT 1 AS id, 'a' AS grp").await;
+    session
         .write_path(
             &frame,
-            url,
+            "s3://write-bucket/cell/p",
             "csv",
             "error",
             &options_map(&[("dateFormat", "yyyy")]),
             &[],
         )
         .await
-        .unwrap_err();
-    assert!(error.to_string().contains("not supported yet"));
+        .expect("temporal write options are honored, not refused");
 }
 
 #[tokio::test]

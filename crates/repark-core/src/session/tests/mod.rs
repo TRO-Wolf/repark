@@ -16,4 +16,5 @@ mod s3_prefix_read;
 mod session;
 mod session_catalog;
 mod subquery;
+mod text_write_format;
 mod window_rescan;

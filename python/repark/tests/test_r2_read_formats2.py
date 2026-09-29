@@ -81,29 +81,35 @@ def test_write_csv_null_value_and_header_round_trip(spark: ReparkSession, tmp_pa
     assert rows[1]["name"] == "b"
 
 
-def test_write_csv_date_format_refuse_loud(spark: ReparkSession, tmp_path: Path) -> None:
-    """dateFormat refuse-loud — SimpleDateFormat vs strftime mismatch (no silent mis-format)."""
+def test_write_csv_date_format_honored(spark: ReparkSession, tmp_path: Path) -> None:
+    """dateFormat honored on CSV writes (Spark w0 UTC|csv|userdate)."""
     path = tmp_path / "dfmt"
-    with pytest.raises(AnalysisException, match=r"dateFormat|not supported|strftime"):
-        spark.createDataFrame([(1, "a")], ["id", "name"]).write.mode("overwrite").option(
-            "dateFormat", "yyyy-MM-dd"
-        ).csv(str(path), header=True)
+    spark.sql("SELECT 1 AS id, DATE '2024-06-15' AS d").write.mode("overwrite").option(
+        "dateFormat", "dd/MM/yyyy"
+    ).csv(str(path), header=True)
+    text = next(path.rglob("*.csv")).read_text(encoding="utf-8")
+    assert text == "id,d\n1,15/06/2024\n"
 
 
-def test_write_csv_timestamp_format_refuse_loud(spark: ReparkSession, tmp_path: Path) -> None:
+def test_write_csv_timestamp_format_honored(spark: ReparkSession, tmp_path: Path) -> None:
+    """timestampFormat honored on CSV writes (Spark w0 America/New_York|csv|userfmt)."""
+    spark.conf.set("spark.sql.session.timeZone", "America/New_York")
     path = tmp_path / "tfmt"
-    with pytest.raises(AnalysisException, match=r"timestampFormat|not supported|strftime"):
-        spark.createDataFrame([(1, "a")], ["id", "name"]).write.mode("overwrite").csv(
-            str(path), header=True, timestampFormat="yyyy-MM-dd HH:mm:ss"
-        )
+    spark.sql("SELECT 1 AS id, TIMESTAMP '2024-06-15 12:34:56' AS t").write.mode("overwrite").csv(
+        str(path), header=True, timestampFormat="yyyy/MM/dd HH:mm"
+    )
+    text = next(path.rglob("*.csv")).read_text(encoding="utf-8")
+    assert text == "id,t\n1,2024/06/15 12:34\n"
 
 
-def test_write_json_date_format_refuse_loud(spark: ReparkSession, tmp_path: Path) -> None:
+def test_write_json_date_format_honored(spark: ReparkSession, tmp_path: Path) -> None:
+    """dateFormat honored on JSON writes (Spark w0 UTC|json|userdate)."""
     path = tmp_path / "jdf"
-    with pytest.raises(AnalysisException, match=r"dateFormat|not supported"):
-        spark.createDataFrame([(1, "a")], ["id", "name"]).write.mode("overwrite").option(
-            "dateFormat", "yyyy-MM-dd"
-        ).json(str(path))
+    spark.sql("SELECT 1 AS id, DATE '2024-06-15' AS d").write.mode("overwrite").option(
+        "dateFormat", "dd/MM/yyyy"
+    ).json(str(path))
+    text = next(path.rglob("*.json")).read_text(encoding="utf-8")
+    assert text == '{"id":1,"d":"15/06/2024"}\n'
 
 
 def test_write_parquet_compression_snappy(spark: ReparkSession, tmp_path: Path) -> None:

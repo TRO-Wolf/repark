@@ -18,6 +18,16 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   pins on an in-memory store (no AWS): mode matrix, marker-last commit order,
   exists-any-object, overwrite delete-then-write, bucket-root refusal.
   pins: s3-path-write-1/C-007, C-008, C-009, C-015
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** the csv `dateFormat` refusal
+  leg moved to `temporal_write_options_are_honored_on_csv_path_write`: the
+  option now succeeds instead of refusing.
+  pins: text-write-timestamp-zone-1/C-002
+- `text_write_format.rs` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):**
+  compiler/validator/renderer pins against the Spark oracle: every error
+  class per pattern kind, DST-gap and LMT-seconds default renders, the
+  offset-letter matrix, and the SELECT builder (star fast path, wrapping,
+  partition skip, eager rejection).
+  pins: text-write-timestamp-zone-1/C-004
 - `s3_prefix_read.rs` — **S3-PATH-WRITE-1 round 2 (2026-09-28):** slashless S3
   prefix reads on an in-memory store (no AWS): a written prefix reads back
   slashless for parquet, csv and json; exact part URLs keep single-file reads

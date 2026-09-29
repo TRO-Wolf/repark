@@ -1,0 +1,534 @@
+use std::collections::HashMap;
+use std::str::FromStr;
+use std::sync::Arc;
+
+use arrow::array::timezone::Tz;
+use arrow::datatypes::{DataType, Field, Schema};
+use chrono::{FixedOffset, NaiveDate, TimeZone};
+
+use crate::session::text_write_format::render::{
+    RenderValue, render_compiled, render_date_default, render_ntz_default, render_timestamp_default,
+};
+use crate::session::text_write_format::select::build_text_write_select;
+use crate::session::text_write_format::{
+    PatternKind, compile_write_pattern, micros_to_naive_wall, micros_to_wall_zone,
+};
+
+const GUIDE_URL: &str = "https://spark.apache.org/docs/latest/sql-ref-datetime-pattern.html";
+
+fn suggestion_message(pattern: &str) -> String {
+    format!(
+        "[INVALID_DATETIME_PATTERN.WITH_SUGGESTION] Unrecognized datetime pattern: '{pattern}'. \
+         You can form a valid datetime pattern with the guide from '{GUIDE_URL}'. SQLSTATE: 22007"
+    )
+}
+
+fn recognition_message(pattern: &str) -> String {
+    format!(
+        "[INCONSISTENT_BEHAVIOR_CROSS_VERSION.DATETIME_PATTERN_RECOGNITION] You may get a \
+         different result due to the upgrading to Spark >= 3.0:\nFail to recognize '{pattern}' \
+         pattern in the DateTimeFormatter.\n1) You can set \
+         \"spark.sql.legacy.timeParserPolicy\" to \"LEGACY\" to restore the behavior before Spark \
+         3.0.\n2) You can form a valid datetime pattern with the guide from '{GUIDE_URL}'. \
+         SQLSTATE: 42K0B"
+    )
+}
+
+fn failure_message(pattern: &str, kind: PatternKind) -> String {
+    compile_write_pattern(pattern, kind)
+        .expect_err("pattern must fail")
+        .message()
+        .to_string()
+}
+
+fn render_instant(pattern: &str, micros: i64, zone_name: &str) -> Result<String, String> {
+    let zone = Tz::from_str(zone_name).expect("zone parses");
+    let (wall, offset) = micros_to_wall_zone(micros, zone).expect("instant in range");
+    let nanos = u32::try_from(micros.rem_euclid(1_000_000)).expect("micros fit") * 1_000;
+    let compiled = compile_write_pattern(pattern, PatternKind::Timestamp).expect("pattern valid");
+    let value = RenderValue::Instant {
+        wall,
+        nanos,
+        offset,
+        zone_id: zone_name,
+    };
+    render_compiled(&compiled, &value)
+}
+
+fn render_wall(pattern: &str, micros: i64) -> Result<String, String> {
+    let wall = micros_to_naive_wall(micros).expect("instant in range");
+    let nanos = u32::try_from(micros.rem_euclid(1_000_000)).expect("micros fit") * 1_000;
+    let compiled =
+        compile_write_pattern(pattern, PatternKind::TimestampNtz).expect("pattern valid");
+    render_compiled(&compiled, &RenderValue::Wall { wall, nanos })
+}
+
+fn render_date(pattern: &str, year: i32, month: u32, day: u32) -> Result<String, String> {
+    let date = NaiveDate::from_ymd_opt(year, month, day).expect("date valid");
+    let compiled = compile_write_pattern(pattern, PatternKind::Date).expect("pattern valid");
+    render_compiled(&compiled, &RenderValue::Date { date })
+}
+
+fn utc_micros(year: i32, month: u32, day: u32, hour: u32, minute: u32, second: u32) -> i64 {
+    chrono::Utc
+        .with_ymd_and_hms(year, month, day, hour, minute, second)
+        .unwrap()
+        .timestamp_micros()
+}
+
+#[test]
+fn timestamp_brief_user_format_compiles() {
+    compile_write_pattern("yyyy/MM/dd HH:mm", PatternKind::Timestamp).expect("brief format valid");
+}
+
+#[test]
+fn timestamp_zone_name_refused_with_suggestion() {
+    for pattern in ["z", "zz", "zzzz", "v"] {
+        assert_eq!(
+            failure_message(pattern, PatternKind::Timestamp),
+            suggestion_message(pattern),
+            "unsupported zone-name pattern refuses loudly"
+        );
+    }
+}
+
+#[test]
+fn timestamp_double_v_refused_with_suggestion() {
+    assert_eq!(
+        failure_message("vv", PatternKind::Timestamp),
+        suggestion_message("vv")
+    );
+}
+
+#[test]
+fn timestamp_zone_id_count_validated() {
+    compile_write_pattern("VV", PatternKind::Timestamp).expect("VV valid");
+    assert_eq!(
+        failure_message("V", PatternKind::Timestamp),
+        suggestion_message("V")
+    );
+    assert_eq!(
+        failure_message("VVV", PatternKind::Timestamp),
+        suggestion_message("VVV")
+    );
+}
+
+#[test]
+fn timestamp_localized_offset_count_validated() {
+    compile_write_pattern("O", PatternKind::Timestamp).expect("O valid");
+    compile_write_pattern("OOOO", PatternKind::Timestamp).expect("OOOO valid");
+    assert_eq!(
+        failure_message("OOO", PatternKind::Timestamp),
+        suggestion_message("OOO")
+    );
+    assert_eq!(
+        failure_message("OOOOO", PatternKind::Timestamp),
+        suggestion_message("OOOOO")
+    );
+}
+
+#[test]
+fn timestamp_quarter_overflow_reports_level() {
+    let failure = compile_write_pattern("QQQQQ", PatternKind::Timestamp).expect_err("level fails");
+    assert!(failure.illegal_argument());
+    assert_eq!(
+        failure.message(),
+        "[INVALID_DATETIME_PATTERN.LENGTH] Unrecognized datetime pattern: QQQQQ. Too many letters \
+         in datetime pattern: QQQQQ. Please reduce pattern length. SQLSTATE: 22007"
+    );
+}
+
+#[test]
+fn timestamp_day_overflow_reports_recognition() {
+    assert_eq!(
+        failure_message("dddd", PatternKind::Timestamp),
+        recognition_message("dddd")
+    );
+}
+
+#[test]
+fn timestamp_bogus_reports_illegal_character() {
+    let failure = compile_write_pattern("BOGUS", PatternKind::Timestamp).expect_err("bogus fails");
+    assert!(failure.illegal_argument());
+    assert_eq!(
+        failure.message(),
+        "[INVALID_DATETIME_PATTERN.ILLEGAL_CHARACTER] Unrecognized datetime pattern: BOGUS. \
+         Illegal pattern character found in datetime pattern: B. Please provide legal character. \
+         SQLSTATE: 22007"
+    );
+}
+
+#[test]
+fn timestamp_bare_close_reports_recognition() {
+    assert_eq!(
+        failure_message("]", PatternKind::Timestamp),
+        recognition_message("]")
+    );
+}
+
+#[test]
+fn ntz_legacy_failures_downgrade_to_suggestion() {
+    for pattern in ["qqqqq", "BOGUS", "w", "SSSSSSSSSS"] {
+        assert_eq!(
+            failure_message(pattern, PatternKind::TimestampNtz),
+            suggestion_message(pattern),
+            "ntz downgrades legacy failure"
+        );
+    }
+}
+
+#[test]
+fn ntz_zone_id_count_refused_with_suggestion() {
+    assert_eq!(
+        failure_message("yyyy V", PatternKind::TimestampNtz),
+        suggestion_message("yyyy V")
+    );
+}
+
+#[test]
+fn date_quarter_overflow_reports_level() {
+    let failure = compile_write_pattern("qqqqq", PatternKind::Date).expect_err("level fails");
+    assert!(failure.illegal_argument());
+}
+
+#[test]
+fn date_month_overflow_reports_recognition() {
+    assert_eq!(
+        failure_message("MMMMM", PatternKind::Date),
+        recognition_message("MMMMM")
+    );
+}
+
+#[test]
+fn date_bogus_reports_illegal_character() {
+    let failure = compile_write_pattern("BOGUS", PatternKind::Date).expect_err("bogus fails");
+    assert!(failure.illegal_argument());
+    assert!(failure.message().contains("pattern character"));
+}
+
+#[test]
+fn date_unmatched_close_reports_lazy_message() {
+    let failure = compile_write_pattern("xxx]", PatternKind::Date).expect_err("close fails");
+    assert!(!failure.illegal_argument());
+    assert_eq!(
+        failure.message(),
+        "Pattern invalid as it contains ] without previous ["
+    );
+}
+
+#[test]
+fn date_unclosed_quote_reports_lazy_message() {
+    let failure = compile_write_pattern("yyyy-MM-dd'", PatternKind::Date).expect_err("quote fails");
+    assert_eq!(
+        failure.message(),
+        "Pattern ends with an incomplete string literal: uuuu-MM-dd'"
+    );
+}
+
+#[test]
+fn date_zone_id_count_reports_lazy_message() {
+    let failure = compile_write_pattern("yyyy V", PatternKind::Date).expect_err("V fails");
+    assert_eq!(failure.message(), "Pattern letter count must be 2: V");
+}
+
+#[test]
+fn default_render_spans_dst_gap_in_session_zone() {
+    let micros = utc_micros(2024, 3, 10, 7, 30, 0);
+    let zone = Tz::from_str("America/New_York").expect("zone parses");
+    let (wall, offset) = micros_to_wall_zone(micros, zone).expect("instant in range");
+    assert_eq!(
+        render_timestamp_default(&wall, 0, offset),
+        "2024-03-10T03:30:00.000-04:00"
+    );
+}
+
+#[test]
+fn default_render_keeps_lmt_offset_seconds() {
+    let micros = utc_micros(1899, 12, 31, 18, 38, 49);
+    let zone = Tz::from_str("Asia/Kolkata").expect("zone parses");
+    let (wall, offset) = micros_to_wall_zone(micros, zone).expect("instant in range");
+    assert_eq!(
+        render_timestamp_default(&wall, 0, offset),
+        "1899-12-31T23:59:59.000+05:21:10"
+    );
+}
+
+#[test]
+fn default_render_uses_z_for_zero_offset() {
+    let micros = utc_micros(2024, 6, 15, 12, 34, 56) + 789_456;
+    let zone = Tz::from_str("UTC").expect("zone parses");
+    let (wall, offset) = micros_to_wall_zone(micros, zone).expect("instant in range");
+    assert_eq!(
+        render_timestamp_default(&wall, 789_456_000, offset),
+        "2024-06-15T12:34:56.789Z"
+    );
+}
+
+#[test]
+fn default_render_truncates_fraction_to_millis() {
+    let micros = utc_micros(2024, 6, 15, 12, 34, 56) + 999_999;
+    let zone = Tz::from_str("UTC").expect("zone parses");
+    let (wall, offset) = micros_to_wall_zone(micros, zone).expect("instant in range");
+    assert_eq!(
+        render_timestamp_default(&wall, 999_999_000, offset),
+        "2024-06-15T12:34:56.999Z"
+    );
+}
+
+#[test]
+fn default_ntz_render_has_no_zone() {
+    let micros = utc_micros(2024, 6, 15, 12, 34, 56) + 789_456;
+    let wall = micros_to_naive_wall(micros).expect("instant in range");
+    assert_eq!(
+        render_ntz_default(&wall, 789_456_000),
+        "2024-06-15T12:34:56.789"
+    );
+}
+
+#[test]
+fn default_date_render() {
+    let date = NaiveDate::from_ymd_opt(2024, 6, 15).expect("date valid");
+    assert_eq!(render_date_default(date), "2024-06-15");
+}
+
+#[test]
+fn user_format_renders_brief_pattern() {
+    let micros = utc_micros(2024, 6, 15, 16, 34, 56);
+    assert_eq!(
+        render_instant("yyyy/MM/dd HH:mm", micros, "America/New_York").expect("renders"),
+        "2024/06/15 12:34"
+    );
+}
+
+#[test]
+fn offset_letters_match_spark_for_lmt_seconds() {
+    let micros = utc_micros(1899, 12, 31, 18, 38, 49);
+    let zone = "Asia/Kolkata";
+    assert_eq!(render_instant("x", micros, zone).expect("renders"), "+0521");
+    assert_eq!(
+        render_instant("xx", micros, zone).expect("renders"),
+        "+0521"
+    );
+    assert_eq!(
+        render_instant("xxx", micros, zone).expect("renders"),
+        "+05:21"
+    );
+    assert_eq!(
+        render_instant("xxxx", micros, zone).expect("renders"),
+        "+052110"
+    );
+    assert_eq!(
+        render_instant("xxxxx", micros, zone).expect("renders"),
+        "+05:21:10"
+    );
+    assert_eq!(
+        render_instant("OOOO", micros, zone).expect("renders"),
+        "GMT+05:21:10"
+    );
+}
+
+#[test]
+fn offset_letters_match_spark_for_whole_hour() {
+    let micros = utc_micros(2024, 6, 15, 16, 34, 56);
+    let zone = "America/New_York";
+    assert_eq!(
+        render_instant("XXXX", micros, zone).expect("renders"),
+        "-0400"
+    );
+    assert_eq!(
+        render_instant("ZZZZ", micros, zone).expect("renders"),
+        "GMT-04:00"
+    );
+    assert_eq!(render_instant("O", micros, zone).expect("renders"), "GMT-4");
+    assert_eq!(
+        render_instant("VV", micros, zone).expect("renders"),
+        "America/New_York"
+    );
+}
+
+#[test]
+fn localized_offset_zero_renders_gmt() {
+    let micros = utc_micros(2024, 6, 15, 12, 34, 56);
+    assert_eq!(
+        render_instant("OOOO", micros, "UTC").expect("renders"),
+        "GMT"
+    );
+}
+
+#[test]
+fn year_and_era_and_mjd_match_spark() {
+    let micros = utc_micros(2024, 6, 15, 16, 34, 56);
+    let zone = "America/New_York";
+    assert_eq!(
+        render_instant("yyyyy", micros, zone).expect("renders"),
+        "02024"
+    );
+    assert_eq!(
+        render_instant("gg", micros, zone).expect("renders"),
+        "60476"
+    );
+    assert_eq!(render_instant("G", micros, zone).expect("renders"), "AD");
+}
+
+#[test]
+fn padded_fields_match_spark_pad_cell() {
+    let micros = utc_micros(2024, 1, 5, 3, 4, 5) + 6_007;
+    assert_eq!(
+        render_instant("DDD dd m s H h K k a S SS", micros, "UTC").expect("renders"),
+        "005 05 4 5 3 3 3 3 AM 0 00"
+    );
+}
+
+#[test]
+fn date_fields_match_spark_weekday_cell() {
+    assert_eq!(
+        render_date("E Q G F D", 2024, 6, 15).expect("renders"),
+        "Sat 2 AD 1 167"
+    );
+}
+
+#[test]
+fn ntz_fields_match_spark_cell() {
+    let micros = utc_micros(2024, 6, 15, 12, 34, 56) + 789_456;
+    assert_eq!(
+        render_wall("E Q G h a F D", micros).expect("renders"),
+        "Sat 2 AD 12 PM 1 167"
+    );
+}
+
+#[test]
+fn quoted_literal_keeps_escaped_quote() {
+    let micros = utc_micros(2024, 6, 15, 16, 34, 56);
+    assert_eq!(
+        render_instant("'o''clock' yyyy", micros, "America/New_York").expect("renders"),
+        "o'clock 2024"
+    );
+}
+
+#[test]
+fn empty_section_renders_empty() {
+    let micros = utc_micros(2024, 6, 15, 12, 34, 56);
+    assert_eq!(
+        render_instant("[]", micros, "UTC").expect("renders"),
+        String::new()
+    );
+}
+
+#[test]
+fn unclosed_section_skips_failing_field() {
+    assert_eq!(
+        render_date("[xxx", 2024, 6, 15).expect("renders"),
+        String::new()
+    );
+}
+
+#[test]
+fn date_time_field_fails_lazy() {
+    assert_eq!(
+        render_date("HH", 2024, 6, 15).expect_err("hour fails"),
+        "Unsupported field: HourOfDay"
+    );
+}
+
+#[test]
+fn ntz_offset_field_fails_lazy() {
+    let micros = utc_micros(2024, 6, 15, 12, 34, 56);
+    assert_eq!(
+        render_wall("XXX", micros).expect_err("offset fails"),
+        "Unsupported field: OffsetSeconds"
+    );
+}
+
+#[test]
+fn ntz_zone_id_fails_lazy() {
+    let micros = utc_micros(2024, 6, 15, 12, 34, 56);
+    assert_eq!(
+        render_wall("VV", micros).expect_err("zone fails"),
+        "Unable to extract ZoneId from temporal 2024-06-15T12:34:56"
+    );
+}
+
+#[test]
+fn date_zone_name_fails_lazy() {
+    assert_eq!(
+        render_date("z", 2024, 6, 15).expect_err("zone fails"),
+        "Unable to extract ZoneId from temporal 2024-06-15"
+    );
+}
+
+fn schema_of(fields: Vec<Field>) -> Arc<Schema> {
+    Arc::new(Schema::new(fields))
+}
+
+fn timestamp_field(name: &str) -> Field {
+    Field::new(
+        name,
+        DataType::Timestamp(arrow::datatypes::TimeUnit::Microsecond, Some("UTC".into())),
+        true,
+    )
+}
+
+#[test]
+fn select_without_temporal_stays_star() {
+    let schema = schema_of(vec![Field::new("id", DataType::Int64, true)]);
+    let options = HashMap::new();
+    assert_eq!(
+        build_text_write_select(&schema, "v", "UTC", &options, &[]).expect("select builds"),
+        "SELECT * FROM v"
+    );
+}
+
+#[test]
+fn select_wraps_temporal_and_keeps_names() {
+    let schema = schema_of(vec![
+        Field::new("id", DataType::Int64, true),
+        timestamp_field("t"),
+    ]);
+    let options = HashMap::new();
+    let select =
+        build_text_write_select(&schema, "v", "America/New_York", &options, &[]).expect("builds");
+    assert!(select.contains("`id`"), "plain column stays: {select}");
+    assert!(
+        select.contains("repark_write_format_text(`t`, NULL, NULL, NULL, 'America/New_York')"),
+        "temporal column wrapped: {select}"
+    );
+    assert!(select.contains(" AS `t`"), "alias kept: {select}");
+}
+
+#[test]
+fn select_skips_partition_columns() {
+    let schema = schema_of(vec![timestamp_field("day")]);
+    let options = HashMap::new();
+    assert_eq!(
+        build_text_write_select(&schema, "v", "UTC", &options, &["day".to_string()])
+            .expect("select builds"),
+        "SELECT * FROM v"
+    );
+}
+
+#[test]
+fn select_rejects_bad_user_pattern() {
+    let schema = schema_of(vec![timestamp_field("t")]);
+    let mut options = HashMap::new();
+    options.insert("timestampFormat".to_string(), "vv".to_string());
+    let error = build_text_write_select(&schema, "v", "UTC", &options, &[]).expect_err("rejects");
+    assert!(
+        error
+            .to_string()
+            .contains("INVALID_DATETIME_PATTERN.WITH_SUGGESTION"),
+        "spark class surfaces: {error}"
+    );
+}
+
+#[test]
+fn fixed_offset_renders_default_shape() {
+    let wall = NaiveDate::from_ymd_opt(2024, 1, 5)
+        .expect("date valid")
+        .and_hms_opt(3, 4, 5)
+        .expect("time valid");
+    let offset = FixedOffset::east_opt(5 * 3600 + 30 * 60).expect("offset valid");
+    assert_eq!(
+        render_timestamp_default(&wall, 6_007_000, offset),
+        "2024-01-05T03:04:05.006+05:30"
+    );
+}

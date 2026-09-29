@@ -3761,8 +3761,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **IO-ORC-1 (2026-09-16):** `test_load_orc_declared_not_implemented` becomes
   `test_load_orc_reaches_the_scan` (missing path is `PATH_NOT_FOUND` now).
   pins: io-orc-1/C-004
+- `test_text_write_timestamp_zone_1.py` + `text_write_timestamp_zone_1_fixture.json` —
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** 179 Spark-recorded CSV/JSON
+  timestamp-write cells (4 zones, defaults, user formats, refusals, nested)
+  compared byte for byte or by error token, CSV/JSON read-back legs, and a
+  moto s3a leg.
+  pins: text-write-timestamp-zone-1/C-001, C-002, C-003, C-005, C-006
 - `test_r2_read_formats2.py` — R2 writer option matrix / path modes / partitionBy: quoteAll /
-  escapeQuotes wired; dateFormat/timestampFormat refuse-loud; parquet compression; path
+  escapeQuotes wired; dateFormat/timestampFormat honored (TEXT-WRITE-TIMESTAMP-ZONE-1
+  flipped the three refuse-loud legs to honored pins); parquet compression; path
   mode overwrite/append/error/ignore; partitionBy hive layout + multi-col + append merge +
   unknown-col loud; **octo fix half:** root `read.parquet(partitioned)` no null-fill /
   no empty root part (C3-001/C6-001), duplicate partitionBy loud (C3-002), append col-set +
