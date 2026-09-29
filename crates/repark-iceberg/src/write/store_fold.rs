@@ -274,9 +274,8 @@ fn limit_empties_source(limit: &datafusion::logical_expr::Limit) -> bool {
     ) {
         return false;
     }
-    let skip = match limit.get_skip_type() {
-        Ok(datafusion::logical_expr::SkipType::Literal(skip)) => skip,
-        _ => return false,
+    let Ok(datafusion::logical_expr::SkipType::Literal(skip)) = limit.get_skip_type() else {
+        return false;
     };
     skip >= 1 && limit_input_is_single_row(&limit.input)
 }
