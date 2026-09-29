@@ -224,6 +224,12 @@ pins: rp-4-fork-repin/C-005, C-006
   first, no hit is left alone); the derived-source probe plans with
   normalization off under `true` so scope fields keep their written case.
   pins: casesens-1/C-008
+- `insert_overwrite.rs` — **WO NTZ-STORE-DOORS-1 (2026-09-28):** the stage-then-swap path
+  (static, dynamic, `BY NAME`, column list, so `writeTo().overwritePartitions()` too) and
+  the `PARTITION (…)` path pass the planned source through
+  `repark_iceberg::write::zone_stores` with the listed columns (or the table columns
+  minus the static partition columns), so both directions store through the session zone.
+  pins: ntz-store-doors-1/C-001, C-002, C-005
 - `insert_overwrite.rs` — **R-FILEORDER-2 (2026-09-27, HALT, no code change):**
   Spark 4.1.2 answers `L-INSERT-OVERWRITE` `[[2,b,5,3],[3,c,6,3],[4,d,4,3]]` on a same-JVM
   triple but splits 2–4 across six fresh-JVM runs — one combined task whose file order is
@@ -347,6 +353,10 @@ pins: rp-4-fork-repin/C-005, C-006
   reregister) and the overwrite delegation to `insert_overwrite_from_staged_source`. Branch
   targets count as owned write heads (`write_to_branch.rs`), so no temp-view rewrite fires.
   In-module tests (file-backed in [insert_by_name/map.md](insert_by_name/map.md)).
+  **WO NTZ-STORE-DOORS-1 (2026-09-28):** the staged append passes the planned projection
+  through `repark_iceberg::write::zone_stores_by_name`, so an LTZ value stores its
+  session-zone wall in a `TIMESTAMP_NTZ` column and a naive or `DATE` value its
+  session-zone instant in a `TIMESTAMP` column. pins: ntz-store-doors-1/C-001, C-002
   **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):** `by_name_source_query` is the by-name
   resolution alone (`probe_source_names`, `refuse_underived`, `name_mapping` — the arity check,
   the ambiguity and `EXTRA_COLUMNS` refusals and `CANNOT_FIND_DATA` for a missing required

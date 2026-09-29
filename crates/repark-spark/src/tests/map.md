@@ -2000,6 +2000,15 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **WO NTZ-1 verifier fold (2026-09-28):** `update_refusal_names_a_timestamp_literal_source_as_timestamp`
   pins the UPDATE-door refusal naming a `TIMESTAMP'…'` source `"TIMESTAMP"`.
   pins: ntz-1/C-007
+  **WO NTZ-STORE-DOORS-1 (2026-09-28):** one pin per remaining write door and direction
+  (`BY NAME`, `INSERT OVERWRITE` static / `BY NAME` / `PARTITION (p = 1)` / dynamic /
+  column list, MERGE UPDATE SET, UPDATE SET *, INSERT (cols), INSERT *) over UTC, New
+  York and Kolkata with the DST gap and overlap rows: an LTZ source stores Spark's
+  session-zone wall in a `TIMESTAMP_NTZ` column and an NTZ source Spark's session-zone
+  instant in a `TIMESTAMP` column (walls and micros recorded from Spark 4.1.2);
+  `date_stores_the_session_midnight_through_every_door` pins the `DATE` rows. Every
+  must-change pin is red on `adc26586`; the MERGE LTZ→NTZ pins guard NTZ-1 and are
+  green there. pins: ntz-store-doors-1/C-001, C-002, C-003, C-004
 
 - `describe_table.rs` — **SQL-DESCRIBE-1 (2026-09-09):** `DESCRIBE|DESC [TABLE]
   [EXTENDED|FORMATTED] catalog.namespace.table` against a memory-catalog table built like the

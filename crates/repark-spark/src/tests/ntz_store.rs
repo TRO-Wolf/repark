@@ -451,3 +451,367 @@ async fn select_from_utc_into_ntz_keeps_the_bare_value_wrap() {
         vec![(1, Some("2024-01-01 21:00:00".to_string()))]
     );
 }
+
+const LTZ_SOURCES: &str = "SELECT 1 AS id, TIMESTAMP'2024-07-01 12:00:00' AS c UNION ALL SELECT 2, \
+                           TIMESTAMP'2024-01-01 12:00:00Z' UNION ALL SELECT 3, \
+                           TIMESTAMP'2024-03-10 02:30:00' UNION ALL SELECT 4, \
+                           TIMESTAMP'2024-11-03 01:30:00'";
+
+const NTZ_SOURCES: &str = "SELECT 1 AS id, TIMESTAMP_NTZ'2024-07-01 12:00:00' AS c UNION ALL SELECT \
+                           2, TIMESTAMP_NTZ'2024-03-10 02:30:00' UNION ALL SELECT 3, \
+                           TIMESTAMP_NTZ'2024-11-03 01:30:00'";
+
+const LTZ_INTO_NTZ_WALLS: [(&str, [&str; 4]); 3] = [
+    (
+        "UTC",
+        [
+            "2024-07-01 12:00:00",
+            "2024-01-01 12:00:00",
+            "2024-03-10 02:30:00",
+            "2024-11-03 01:30:00",
+        ],
+    ),
+    (
+        "America/New_York",
+        [
+            "2024-07-01 12:00:00",
+            "2024-01-01 07:00:00",
+            "2024-03-10 03:30:00",
+            "2024-11-03 01:30:00",
+        ],
+    ),
+    (
+        "Asia/Kolkata",
+        [
+            "2024-07-01 12:00:00",
+            "2024-01-01 17:30:00",
+            "2024-03-10 02:30:00",
+            "2024-11-03 01:30:00",
+        ],
+    ),
+];
+
+const NTZ_INTO_LTZ_MICROS: [(&str, [i64; 3]); 3] = [
+    (
+        "UTC",
+        [
+            1_719_835_200_000_000,
+            1_710_037_800_000_000,
+            1_730_597_400_000_000,
+        ],
+    ),
+    (
+        "America/New_York",
+        [
+            1_719_849_600_000_000,
+            1_710_055_800_000_000,
+            1_730_611_800_000_000,
+        ],
+    ),
+    (
+        "Asia/Kolkata",
+        [
+            1_719_815_400_000_000,
+            1_710_018_000_000_000,
+            1_730_577_600_000_000,
+        ],
+    ),
+];
+
+const DATE_INTO_LTZ_MICROS: [(&str, i64); 3] = [
+    ("UTC", 1_710_028_800_000_000),
+    ("America/New_York", 1_710_046_800_000_000),
+    ("Asia/Kolkata", 1_710_009_000_000_000),
+];
+
+fn door_sql(door: &str, source: &str) -> (bool, bool, String) {
+    let (seeded, dynamic, template) = match door {
+        "by_name" => (
+            false,
+            false,
+            "INSERT INTO {t} BY NAME SELECT c, id, 1 AS p FROM ({s}) s",
+        ),
+        "overwrite" => (
+            false,
+            false,
+            "INSERT OVERWRITE {t} SELECT id, c, 1 FROM ({s}) s",
+        ),
+        "overwrite_by_name" => (
+            false,
+            false,
+            "INSERT OVERWRITE {t} BY NAME SELECT c, id, 1 AS p FROM ({s}) s",
+        ),
+        "overwrite_partition" => (
+            false,
+            false,
+            "INSERT OVERWRITE {t} PARTITION (p = 1) SELECT id, c FROM ({s}) s",
+        ),
+        "overwrite_dynamic" => (
+            false,
+            true,
+            "INSERT OVERWRITE {t} SELECT id, c, id FROM ({s}) s",
+        ),
+        "overwrite_columns" => (
+            false,
+            true,
+            "INSERT OVERWRITE {t} (id, c, p) SELECT id, c, id FROM ({s}) s",
+        ),
+        "merge_update" => (
+            true,
+            false,
+            "MERGE INTO {t} t USING ({s}) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET c = s.c",
+        ),
+        "merge_update_star" => (
+            true,
+            false,
+            "MERGE INTO {t} t USING (SELECT id, c, 1 AS p FROM ({s}) u) s ON t.id = s.id WHEN \
+             MATCHED THEN UPDATE SET *",
+        ),
+        "merge_insert" => (
+            false,
+            false,
+            "MERGE INTO {t} t USING ({s}) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, c, \
+             p) VALUES (s.id, s.c, 1)",
+        ),
+        "merge_insert_star" => (
+            false,
+            false,
+            "MERGE INTO {t} t USING (SELECT id, c, 1 AS p FROM ({s}) u) s ON t.id = s.id WHEN \
+             NOT MATCHED THEN INSERT *",
+        ),
+        other => panic!("unknown door {other}"),
+    };
+    let sql = template
+        .replace("{t}", "ice.sales.door")
+        .replace("{s}", source);
+    (seeded, dynamic, sql)
+}
+
+fn set_dynamic_overwrite(ctx: &SessionContext) {
+    let state = ctx.state_ref();
+    let mut state = state.write();
+    state
+        .config_mut()
+        .options_mut()
+        .extensions
+        .insert(repark_core::PartitionOverwriteModeConfig {
+            mode: repark_core::PartitionOverwriteMode::Dynamic,
+        });
+}
+
+async fn store_through_door(
+    zone: &str,
+    door: &str,
+    column_type: &str,
+    source: &str,
+    rows: usize,
+) -> (SessionContext, CatalogRegistry, TempDir) {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_ntz_at(&warehouse, zone).await;
+    let (seeded, dynamic, sql) = door_sql(door, source);
+    if dynamic {
+        set_dynamic_overwrite(&ctx);
+    }
+    run(
+        &ctx,
+        &catalogs,
+        &format!(
+            "CREATE TABLE ice.sales.door (id INT, c {column_type}, p INT) USING iceberg \
+             PARTITIONED BY (p)"
+        ),
+    )
+    .await;
+    if seeded {
+        let seed = (1..=rows)
+            .map(|id| format!("({id}, NULL, 1)"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        run(
+            &ctx,
+            &catalogs,
+            &format!("INSERT INTO ice.sales.door VALUES {seed}"),
+        )
+        .await;
+    }
+    run(&ctx, &catalogs, &sql).await;
+    (ctx, catalogs, warehouse)
+}
+
+async fn door_instants(ctx: &SessionContext, catalogs: &CatalogRegistry) -> Vec<(i32, i64)> {
+    let out = execute(
+        ctx,
+        catalogs,
+        "SELECT id, c FROM ice.sales.door ORDER BY id",
+    )
+    .await
+    .unwrap()
+    .collect()
+    .await
+    .unwrap();
+    let mut rows = Vec::new();
+    for batch in &out {
+        let ids = batch
+            .column(0)
+            .as_primitive::<datafusion::arrow::datatypes::Int32Type>();
+        let ticks = batch
+            .column(1)
+            .as_primitive::<datafusion::arrow::datatypes::TimestampMicrosecondType>();
+        for row in 0..batch.num_rows() {
+            rows.push((ids.value(row), ticks.value(row)));
+        }
+    }
+    rows
+}
+
+async fn assert_ltz_into_ntz(door: &str) {
+    for (zone, expected) in LTZ_INTO_NTZ_WALLS {
+        let (ctx, catalogs, _warehouse) =
+            store_through_door(zone, door, "TIMESTAMP_NTZ", LTZ_SOURCES, 4).await;
+        let want: Vec<(i32, Option<String>)> = (1..=4)
+            .zip(expected)
+            .map(|(id, wall)| (id, Some(wall.to_string())))
+            .collect();
+        assert_eq!(
+            walls(&ctx, &catalogs, "ice.sales.door").await,
+            want,
+            "{door} {zone}"
+        );
+    }
+}
+
+async fn assert_ntz_into_ltz(door: &str) {
+    for (zone, expected) in NTZ_INTO_LTZ_MICROS {
+        let (ctx, catalogs, _warehouse) =
+            store_through_door(zone, door, "TIMESTAMP", NTZ_SOURCES, 3).await;
+        let want: Vec<(i32, i64)> = (1..=3).zip(expected).collect();
+        assert_eq!(door_instants(&ctx, &catalogs).await, want, "{door} {zone}");
+    }
+}
+
+#[tokio::test]
+async fn by_name_stores_the_ltz_session_wall() {
+    assert_ltz_into_ntz("by_name").await;
+}
+
+#[tokio::test]
+async fn by_name_stores_the_ntz_session_instant() {
+    assert_ntz_into_ltz("by_name").await;
+}
+
+#[tokio::test]
+async fn overwrite_stores_the_ltz_session_wall() {
+    assert_ltz_into_ntz("overwrite").await;
+}
+
+#[tokio::test]
+async fn overwrite_stores_the_ntz_session_instant() {
+    assert_ntz_into_ltz("overwrite").await;
+}
+
+#[tokio::test]
+async fn overwrite_by_name_stores_the_ltz_session_wall() {
+    assert_ltz_into_ntz("overwrite_by_name").await;
+}
+
+#[tokio::test]
+async fn overwrite_by_name_stores_the_ntz_session_instant() {
+    assert_ntz_into_ltz("overwrite_by_name").await;
+}
+
+#[tokio::test]
+async fn overwrite_partition_stores_the_ltz_session_wall() {
+    assert_ltz_into_ntz("overwrite_partition").await;
+}
+
+#[tokio::test]
+async fn overwrite_partition_stores_the_ntz_session_instant() {
+    assert_ntz_into_ltz("overwrite_partition").await;
+}
+
+#[tokio::test]
+async fn dynamic_overwrite_stores_the_ltz_session_wall() {
+    assert_ltz_into_ntz("overwrite_dynamic").await;
+}
+
+#[tokio::test]
+async fn dynamic_overwrite_stores_the_ntz_session_instant() {
+    assert_ntz_into_ltz("overwrite_dynamic").await;
+}
+
+#[tokio::test]
+async fn column_list_overwrite_stores_the_ltz_session_wall() {
+    assert_ltz_into_ntz("overwrite_columns").await;
+}
+
+#[tokio::test]
+async fn column_list_overwrite_stores_the_ntz_session_instant() {
+    assert_ntz_into_ltz("overwrite_columns").await;
+}
+
+#[tokio::test]
+async fn merge_update_stores_the_ltz_session_wall() {
+    assert_ltz_into_ntz("merge_update").await;
+}
+
+#[tokio::test]
+async fn merge_update_stores_the_ntz_session_instant() {
+    assert_ntz_into_ltz("merge_update").await;
+}
+
+#[tokio::test]
+async fn merge_update_star_stores_the_ltz_session_wall() {
+    assert_ltz_into_ntz("merge_update_star").await;
+}
+
+#[tokio::test]
+async fn merge_update_star_stores_the_ntz_session_instant() {
+    assert_ntz_into_ltz("merge_update_star").await;
+}
+
+#[tokio::test]
+async fn merge_insert_stores_the_ltz_session_wall() {
+    assert_ltz_into_ntz("merge_insert").await;
+}
+
+#[tokio::test]
+async fn merge_insert_stores_the_ntz_session_instant() {
+    assert_ntz_into_ltz("merge_insert").await;
+}
+
+#[tokio::test]
+async fn merge_insert_star_stores_the_ltz_session_wall() {
+    assert_ltz_into_ntz("merge_insert_star").await;
+}
+
+#[tokio::test]
+async fn merge_insert_star_stores_the_ntz_session_instant() {
+    assert_ntz_into_ltz("merge_insert_star").await;
+}
+
+#[tokio::test]
+async fn date_stores_the_session_midnight_through_every_door() {
+    for door in [
+        "by_name",
+        "overwrite",
+        "overwrite_partition",
+        "overwrite_dynamic",
+        "merge_update",
+        "merge_insert_star",
+    ] {
+        for (zone, micros) in DATE_INTO_LTZ_MICROS {
+            let (ctx, catalogs, _warehouse) = store_through_door(
+                zone,
+                door,
+                "TIMESTAMP",
+                "SELECT 1 AS id, DATE'2024-03-10' AS c",
+                1,
+            )
+            .await;
+            assert_eq!(
+                door_instants(&ctx, &catalogs).await,
+                vec![(1, micros)],
+                "{door} {zone}"
+            );
+        }
+    }
+}

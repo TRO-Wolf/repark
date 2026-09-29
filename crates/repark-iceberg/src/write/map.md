@@ -374,6 +374,11 @@ repark-core's error map.
   **WO NTZ-1 verifier fold (2026-09-28):** only microsecond-naive timestamps name
   `TIMESTAMP_NTZ`; the nanosecond zoneless form of an unlocalized `TIMESTAMP'…'`
   literal names `TIMESTAMP` again. pins: ntz-1/C-007
+  **WO NTZ-STORE-DOORS-1 (2026-09-28):** a `Timestamp(µs, zone)` target renders
+  `arrow_cast((CAST((expr) AS TIMESTAMP)), '<type>')`, so a naive or `DATE` value
+  stores the session-zone instant on MERGE UPDATE SET (and the nested-assignment
+  fold); the ANSI door and bare sessions read it as UTC as before.
+  pins: ntz-store-doors-1/C-002, C-003, C-004
 - `ntz_store.rs` — **WO NTZ-1 slice 2 (2026-09-27):** the NTZ store gate in the
   `void_store` shape: `refuse_ntz_writes` runs the session analyzer over the planned
   write and refuses, for a `Timestamp(µs, None)` target, any source the ANSI matrix
@@ -381,6 +386,17 @@ repark-core's error map.
   the wall-cast UDF name (`NTZ_WALL_CAST_UDF_NAME`, pinned equal to the registered UDF)
   and its `ntz_wall_cast_sql` renderer, used by the identity-UPDATE projection, the
   MERGE INSERT projection and `store_assignment_cast_sql`. pins: ntz-1/C-006, C-007
+  **WO NTZ-STORE-DOORS-1 (2026-09-28):** also the one home of the session-zone store
+  seam for the remaining write doors. `zone_stores` (and `zone_stores_by_name`) maps a
+  planned source frame onto its target columns (listed, positional minus static
+  partition columns, or by name), reads the analyzed source types, and wraps only a
+  cross-zone column: an instant into a `TIMESTAMP_NTZ` target through the wall-cast UDF,
+  a naive microsecond timestamp or a `DATE` into a `TIMESTAMP` target through a `CAST`
+  that the Spark door's `spark_ltz_timestamp_cast` rule localizes in the session zone.
+  Every other column, a failed analysis and an unregistered UDF leave the frame as is.
+  `ltz_instant_cast_sql` / `needs_ltz_instant_cast` / `analyzed_types` serve the MERGE
+  renderers. Callers: repark-spark `insert_by_name.rs` and `insert_overwrite.rs`.
+  pins: ntz-store-doors-1/C-001, C-002, C-003, C-004
 - `void_store.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** `refuse_void_writes` is the
   one VOID store gate: given a planned source and its target columns, it does nothing unless a
   target is Arrow `Null`; then it runs the session analyzer (so an integer literal types `INT`

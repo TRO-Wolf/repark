@@ -82,6 +82,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   FIXED.
   `risk_tier: standard`. Branch `feat/tblprops-1`.
   pins: tblprops-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+- [ntz-store-doors-1-ledger.md](ntz-store-doors-1-ledger.md) —
+  **WO NTZ-STORE-DOORS-1 (2026-09-28), in flight:** the remaining write doors
+  (`BY NAME`, the `INSERT OVERWRITE` family, `writeTo().overwritePartitions()`, MERGE
+  UPDATE SET / SET * / INSERT (cols) / INSERT *) store `TIMESTAMP` into
+  `TIMESTAMP_NTZ` as the session-zone wall (C-001) and `TIMESTAMP_NTZ` into
+  `TIMESTAMP` as the session-zone instant (C-002) through one seam, refusals and
+  same-type stores unchanged (C-003), `DATE` stores the session midnight (C-004),
+  partition transforms follow the stored value (C-005).
+  `risk_tier: standard`. Branch `fix/ntz-store-doors-1`.
+  pins: ntz-store-doors-1/C-001, C-002, C-003, C-004, C-005
 - [ntz-1-ledger.md](ntz-1-ledger.md) —
   **WO NTZ-1 (2026-09-26), in flight:** `TIMESTAMP_NTZ` literals, casts and
   store assignment answer as Spark. Slice 1 (this commit): the literal and the
