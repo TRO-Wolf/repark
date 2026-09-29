@@ -6,7 +6,9 @@ written); csv twin writes keep writing like Spark; orc keeps its declared
 refusal; under true nothing twin-related refuses. RD-2: an exact-mode
 ``F.col`` miss raises ``UNRESOLVED_COLUMN.WITH_SUGGESTION`` with Spark's text;
 false-path misses stay byte-identical. Spark's answers live in
-``casesens_release_diff_1_spark.json`` beside this file.
+``casesens_release_diff_1_spark.json`` beside this file. The pre-write twin
+check reads the plan schema only, so a parquet path write of a twin-free
+frame runs its UDF exactly once.
 
 Recorded residues: R-RD1-PART-TWIN (partitionBy naming a twin refuses
 ``COLUMN_ALREADY_EXISTS`` here, ``AMBIGUOUS_REFERENCE`` on Spark),
@@ -33,9 +35,11 @@ import os
 import socket
 import subprocess
 import time
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
+import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
@@ -620,5 +624,32 @@ def test_false_path_misses_stay_byte_identical(tmp_path: Path) -> None:
             )
         else:
             raise AssertionError("false bare miss answered")
+    finally:
+        session.stop()
+
+
+def _doubled(batches: Iterator[pa.RecordBatch]) -> Iterator[pa.RecordBatch]:
+    """Yield each input batch with its x values doubled."""
+    for batch in batches:
+        values = [value.as_py() * 2 for value in batch.column(0)]
+        yield pa.record_batch([pa.array(values, type=pa.int32())], names=["x"])
+
+
+def test_parquet_path_write_runs_twin_free_udf_once(tmp_path: Path) -> None:
+    """A parquet path write of a twin-free frame runs its UDF exactly once."""
+    session = _open(tmp_path)
+    try:
+        session.conf.set("spark.sql.caseSensitive", "false")
+        calls = {"runs": 0}
+
+        def counted(batches: Iterator[pa.RecordBatch]) -> Iterator[pa.RecordBatch]:
+            calls["runs"] += 1
+            yield from _doubled(batches)
+
+        frame = session.createDataFrame([(1,), (2,)], "x INT").mapInArrow(counted, "x INT")
+        path = tmp_path / "udf_once"
+        frame.write.mode("overwrite").parquet(str(path))
+        assert calls["runs"] == 1
+        assert sorted(row.x for row in session.read.parquet(str(path)).collect()) == [2, 4]
     finally:
         session.stop()

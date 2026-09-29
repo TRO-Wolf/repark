@@ -32,6 +32,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   site and the refusal precedes every save mode. csv keeps writing, orc keeps
   its declared refusal, nothing refuses under true.
   pins: casesens-release-diff-1/C-001, C-002, C-003
+  **CI fix (2026-09-29):** the check passes the frame's held native plan plus
+  `frame.columns` (both schema-only) instead of `frame._plan()`, which
+  materialized the mapInArrow bridge and ran every UDF a second time; the twin
+  refusals are unchanged.
 
 ## Modules
 

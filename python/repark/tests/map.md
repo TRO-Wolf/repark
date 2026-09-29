@@ -3792,6 +3792,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the moto s3a refusal cell, and the exact `F.col` misses with Spark's
   `UNRESOLVED_COLUMN` text beside byte-identical false-path misses.
   pins: casesens-release-diff-1/C-001, C-002, C-003, C-004, C-005
+  **CI fix (2026-09-29):** `test_parquet_path_write_runs_twin_free_udf_once`
+  pins that a parquet path write of a twin-free frame runs its UDF exactly
+  once (the check reads the plan schema, never executes the plan).
 - `test_e2_readwriter.py` — E2 R-CENSUS-READWRITER: bare-name resolution
   (`resolve_table_name` / saveAsTable / table / writeTo / insertInto / MERGE /
   DROP TABLE SQL expander), `spark.sql.defaultNamespace` seed, parquet save/load +
