@@ -165,6 +165,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   once per call through `object_store_s3` (parquet and csv resolve inside their
   reader bodies, so this file grows by one line and stays under its ceiling).
   pins: s3-path-write-1/C-013
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** declares
+  `session/text_write_format.rs` and registers its UDF at session build.
+  pins: text-write-timestamp-zone-1/C-001
 - `session_owner.rs` — the session-built DESCRIBE owner: `DescribeOwnerConfig`
   (`repark.describe` prefix, `owner`, default `unknown`), the build-time
   `session_owner_snapshot` (`USER`, then `USERNAME`, then `unknown`), and the

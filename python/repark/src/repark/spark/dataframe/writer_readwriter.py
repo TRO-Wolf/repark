@@ -399,7 +399,7 @@ class DataFrameWriter:
         try:
             self._run_through_temp_view(
                 lambda view: (
-                    f"COPY ({self._build_text_write_select(view)}) TO '{escaped_staging}' "
+                    f"COPY ({self._build_text_write_select(view, stored_as)}) TO '{escaped_staging}' "
                     f"STORED AS {stored_as}{partition_clause}{options_clause}"
                 )
             )
@@ -573,8 +573,10 @@ class DataFrameWriter:
                     return
             return
 
-    def _build_text_write_select(self, view: str) -> str:
+    def _build_text_write_select(self, view: str, stored_as: str) -> str:
         """Build the COPY inner SELECT with text timestamp formatting."""
+        if stored_as not in ("CSV", "JSON"):
+            return f"SELECT * FROM {view}"
         return writer_layout.text_write_select(self, view)
 
     def _copy_options_sql(self, stored_as: str) -> str:

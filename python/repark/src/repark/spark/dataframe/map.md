@@ -18,9 +18,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - `writer_readwriter.py` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** the
   temporal options leave the CSV/JSON unsupported sets for
   `_TEMPORAL_WRITE_OPTIONS` (skipped in COPY option SQL, honored through the
-  SELECT builder), and the local COPY inner `SELECT` comes from
-  `_build_text_write_select`.
-  pins: text-write-timestamp-zone-1/C-001, C-002
+  SELECT builder), and the local CSV/JSON COPY inner `SELECT` comes from
+  `_build_text_write_select` (other formats keep `SELECT *`, so parquet
+  stays binary).
+  pins: text-write-timestamp-zone-1/C-001, C-002, C-006
 - `writer_layout.py` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):**
   `text_write_select` carries writer state to the `session_text_write_select`
   binding, which returns the COPY inner `SELECT`.

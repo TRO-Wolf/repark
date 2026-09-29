@@ -118,6 +118,24 @@ def test_csv_read_back_returns_original_values(spark: ReparkSession, tmp_path: P
     assert rows[0]["t"] == datetime.datetime(2024, 3, 10, 7, 30, tzinfo=datetime.UTC)
 
 
+def test_parquet_temporal_round_trip_keeps_types(spark: ReparkSession, tmp_path: Path) -> None:
+    """Parquet writes stay binary: temporal columns keep their types."""
+    spark.conf.set("spark.sql.session.timeZone", "America/New_York")
+    dest = tmp_path / "out"
+    spark.sql(
+        "SELECT 1 AS id, TIMESTAMP '2024-03-10 02:30:00' AS t, DATE '2024-06-15' AS d"
+    ).write.mode("overwrite").parquet(str(dest))
+    loaded = spark.read.parquet(str(dest))
+    assert [field.dataType.simpleString() for field in loaded.schema.fields] == [
+        "int",
+        "timestamp",
+        "date",
+    ]
+    rows = loaded.orderBy("id").to_arrow().to_pylist()
+    assert rows[0]["t"] == datetime.datetime(2024, 3, 10, 7, 30, tzinfo=datetime.UTC)
+    assert rows[0]["d"] == datetime.date(2024, 6, 15)
+
+
 def test_json_read_back_keeps_written_string(spark: ReparkSession, tmp_path: Path) -> None:
     """A JSON read-back keeps the written bytes; CAST recovers the instant."""
     spark.conf.set("spark.sql.session.timeZone", "America/New_York")
