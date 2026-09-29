@@ -2018,6 +2018,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `default_cells_in_ntz_tables_store_null` stores `DEFAULT` into the NTZ column,
   into a non-timestamp column of an NTZ table, into an LTZ column beside NTZ, with
   and without a column list. Spark answers: re-verify `p2/spark.json`.
+  **Fold 2026-09-29 (LTZ-STACKED-SIGN-1 second re-verify fold, RN3-1):**
+  `backslash_quote_strings_store_their_exact_values` stores every re-verifier
+  string shape (plain, column-list, `map`, both `replace`-casts, both
+  in-matrix cells, trailing-backslash, `\n`/`\t`, `\u00e9`) with Spark's
+  exact values. Spark answers: re-verify2 `rn31-spark.json` plus the
+  `rn31b` live run (2026-09-29).
 
 - `describe_table.rs` — **SQL-DESCRIBE-1 (2026-09-09):** `DESCRIBE|DESC [TABLE]
   [EXTENDED|FORMATTED] catalog.namespace.table` against a memory-catalog table built like the
@@ -2210,6 +2216,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   column list in either order) as NULL; `stacked_minus_under_nvl_probes_and_stores`
   stores `nvl(NULL, CAST(date_add(DATE'2024-01-01', - -1) AS TIMESTAMP))` and the
   `ifnull` twin with Spark's walls.
+  **Fold 2026-09-29 (LTZ-STACKED-SIGN-1 second re-verify fold, RN3-1):**
+  `backslash_quote_replace_casts_store_their_wall` stores the re-verifier and
+  new-string `replace`-casts into `TIMESTAMP` with Spark's wall. Spark answers:
+  re-verify2 `rn31-spark.json` plus the `rn31b` live run (2026-09-29).
   pins: ltz-store-int-1/C-001
 - `use_ddl.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the `USE` behavior pins over
   one- and two-catalog memory setups: two-part set, v2 clear-to-empty, session-catalog

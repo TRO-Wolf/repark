@@ -129,8 +129,7 @@ async fn refuse_value(
     let source = if let Some(data_type) = literal_source_type(value) {
         data_type
     } else {
-        let select = nvl_coalesce_text(value)
-            .unwrap_or_else(|| super::parenthesize_stacked_minus(value).to_string());
+        let select = nvl_coalesce_text(value).unwrap_or_else(|| super::probe_text(value));
         let Some(probed) = probe_source_type(ctx, &select).await? else {
             return Ok(());
         };
@@ -264,8 +263,8 @@ fn nvl_coalesce_text(value: &Expr) -> Option<String> {
     };
     Some(format!(
         "coalesce({}, {})",
-        super::parenthesize_stacked_minus(first),
-        super::parenthesize_stacked_minus(second)
+        super::probe_text(first),
+        super::probe_text(second)
     ))
 }
 
@@ -329,8 +328,8 @@ async fn probe_source_type(ctx: &SessionContext, select: &str) -> Result<Option<
 
 #[cfg(test)]
 mod tests {
-    use datafusion::sql::sqlparser::ast::Statement;
-    use datafusion::sql::sqlparser::dialect::GenericDialect;
+    use datafusion::sql::sqlparser::ast::{SelectItem, Statement};
+    use datafusion::sql::sqlparser::dialect::{DatabricksDialect, Dialect, GenericDialect};
     use datafusion::sql::sqlparser::parser::Parser;
 
     use super::*;
@@ -516,6 +515,109 @@ mod tests {
                 Some(DataType::Decimal128(2, 1)),
             ],
             "{row:?}"
+        );
+    }
+
+    #[test]
+    fn probe_strings_holding_a_quote_render_dollar_quoted() {
+        let row = values_row("INSERT INTO t VALUES ('it''s', 'a\\\\''b', 'plain')");
+        let rendered: Vec<String> = row.iter().map(crate::void_type::probe_text).collect();
+        assert_eq!(
+            rendered,
+            vec!["$p$it's$p$", "$p$a\\\\'b$p$", "'plain'"],
+            "{row:?}"
+        );
+    }
+
+    #[test]
+    fn probe_strings_without_a_quote_render_unchanged() {
+        let row = values_row("INSERT INTO t VALUES ('C:\\\\temp\\\\', 'a\\nb')");
+        let rendered: Vec<String> = row.iter().map(crate::void_type::probe_text).collect();
+        assert_eq!(rendered, vec!["'C:\\\\temp\\\\'", "'a\\nb'"], "{row:?}");
+    }
+
+    #[test]
+    fn probe_string_tag_grows_past_a_tag_collision() {
+        let row = values_row("INSERT INTO t VALUES ('$p$x''y')");
+        let rendered: Vec<String> = row.iter().map(crate::void_type::probe_text).collect();
+        assert_eq!(rendered, vec!["$pp$$p$x'y$pp$"], "{row:?}");
+    }
+
+    #[test]
+    fn probe_strings_parse_back_to_the_same_value_on_both_probe_dialects() {
+        let row = values_row(
+            "INSERT INTO t VALUES ('it''s', 'a\\\\''b', 'plain', 'C:\\\\temp\\\\', '$p$x''y', '-- \
+             x\\\\''y')",
+        );
+        let generic = GenericDialect;
+        let databricks = DatabricksDialect {};
+        let dialects: [&dyn Dialect; 2] = [&generic, &databricks];
+        for cell in &row {
+            let Expr::Value(literal) = cell else {
+                panic!("want a literal cell, got {cell:?}");
+            };
+            let Value::SingleQuotedString(want) = &literal.value else {
+                panic!("want a single-quoted cell, got {cell:?}");
+            };
+            let rendered = crate::void_type::probe_text(cell);
+            for dialect in dialects {
+                let mut statements =
+                    Parser::parse_sql(dialect, &format!("SELECT {rendered}")).unwrap();
+                let Statement::Query(query) = statements.swap_remove(0) else {
+                    panic!("want a SELECT probe, got {rendered}");
+                };
+                let SetExpr::Select(select) = query.body.as_ref() else {
+                    panic!("want a SELECT body, got {rendered}");
+                };
+                let SelectItem::UnnamedExpr(Expr::Value(got)) = &select.projection[0] else {
+                    panic!("want one literal column, got {rendered}");
+                };
+                match &got.value {
+                    Value::SingleQuotedString(got) => assert_eq!(got, want, "{rendered}"),
+                    Value::DollarQuotedString(got) => assert_eq!(&got.value, want, "{rendered}"),
+                    other => panic!("want a string literal back, got {other:?}"),
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn nvl_probe_rewrite_dollar_quotes_quoted_operands() {
+        let row = values_row("INSERT INTO t VALUES (nvl(NULL, replace('a\\\\''b', '\\\\''', '')))");
+        assert_eq!(
+            nvl_coalesce_text(&row[0]).unwrap(),
+            "coalesce(NULL, replace($p$a\\\\'b$p$, $p$\\\\'$p$, ''))",
+            "{row:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn ltz_door_passes_a_timestamp_cast_over_a_backslash_quote_replace() {
+        let ctx = SessionContext::new();
+        let row = values_row(
+            "INSERT INTO t VALUES (CAST(replace('2024-01-02 03:04:05\\\\''', '\\\\''', '') AS \
+             TIMESTAMP))",
+        );
+        let target = DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into()));
+        refuse_value(&ctx, "`t`", "c", &target, &row[0])
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn ltz_door_names_a_backslash_quote_string_cell_as_string() {
+        let ctx = SessionContext::new();
+        let row = values_row("INSERT INTO t VALUES (replace('a\\\\''b', '\\\\''', ''))");
+        let target = DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into()));
+        let error = refuse_value(&ctx, "`t`", "c", &target, &row[0])
+            .await
+            .unwrap_err();
+        let text = error.to_string();
+        assert!(
+            text.contains("CANNOT_SAFELY_CAST")
+                && text.contains("\"STRING\"")
+                && text.contains("\"TIMESTAMP\""),
+            "{text}"
         );
     }
 }

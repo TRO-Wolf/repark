@@ -440,6 +440,12 @@ pins: rp-4-fork-repin/C-005, C-006
   renders both operands through the shared parenthesizer, so
   `nvl(NULL, CAST(date_add(DATE'2024-01-01', - -1) AS TIMESTAMP))` stores as
   Spark does instead of refusing on a `--` comment.
+  **Fold 2026-09-29 (LTZ-STACKED-SIGN-1 second re-verify fold, RN3-1):** the
+  probe renders through the shared `probe_text`, which dollar-quotes a string
+  literal holding a quote with the same value: sqlparser's `Display` leaves a
+  quote after a backslash unescaped, so the probe text failed to parse and
+  refused the row. Seven in-module pins (render, both probe dialects, `nvl`
+  operands, door pass/refusal).
   Directory map: [void_type/map.md](void_type/map.md).
   Pins: [tests/ltz_store.rs](tests/ltz_store.rs).
   pins: ltz-store-int-1/C-001
@@ -1176,6 +1182,13 @@ pins: rp-4-fork-repin/C-005, C-006
   check. The sign-led `starts_with('-')` disjunct is removed: every tree the
   parser produces with a sign-led operand is a unary-under-unary the match
   already wraps.
+  **Fold 2026-09-29 (LTZ-STACKED-SIGN-1 second re-verify fold, RN3-1):** the
+  shared `probe_text` (parenthesizer, then dollar-quote of string literals
+  holding a quote under a collision-free tag) renders every fail-closed VALUES
+  probe cell on both doors, so backslash-quote rows store Spark's exact values
+  and probes that still cannot parse still refuse. The fail-open probes (VOID
+  value and query, UPDATE SET, MERGE assignment) keep raw `Display`: a broken
+  rendering passes the row through there and can never refuse a valid one.
 - `cast_gate.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** the unit's one cast hook, a single
   call in `spark_ast.rs`'s passthrough: the `CAST(NULL AS VOID)` rewrite (`void_type.rs`)
   and the `CAST(x AS UUID)` refusal (`uuid_cast.rs`). pins: u9-types-1/C-009, C-010

@@ -459,3 +459,30 @@ async fn nvl_and_ifnull_over_temporal_values_store() {
         ]
     );
 }
+
+#[tokio::test]
+async fn backslash_quote_replace_casts_store_their_wall() {
+    let (_warehouse, ctx, catalogs) = door().await;
+    for (id, cell) in [
+        (
+            9,
+            r"CAST(replace('2024-01-02 03:04:05\\''', '\\''', '') AS TIMESTAMP)",
+        ),
+        (
+            301,
+            r"CAST(replace('2024-01-02 03:04:05a\\\\''b', 'a\\\\''b', '') AS TIMESTAMP)",
+        ),
+        (
+            302,
+            r"CAST(replace('-- x\\''y2024-01-02 03:04:05', '-- x\\''y', '') AS TIMESTAMP)",
+        ),
+    ] {
+        let sql = format!("INSERT INTO ice.sales.l VALUES ({id}, {cell})");
+        run(&ctx, &catalogs, &sql).await;
+    }
+    let wall = Some("2024-01-02 03:04:05".to_string());
+    assert_eq!(
+        id_and_c(&ctx, &catalogs).await,
+        vec![(9, wall.clone()), (301, wall.clone()), (302, wall)]
+    );
+}

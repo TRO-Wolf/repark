@@ -6,8 +6,8 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::LogicalPlan;
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
-    CastKind, DataType, Expr, Insert, ObjectName, SetExpr, Statement, TableObject, Value,
-    ValueWithSpan, VisitMut, VisitorMut,
+    CastKind, DataType, DollarQuotedString, Expr, Insert, ObjectName, SetExpr, Statement,
+    TableObject, Value, ValueWithSpan, VisitMut, VisitorMut,
 };
 use datafusion::sql::sqlparser::tokenizer::Span;
 use iceberg::spec::{NestedField, PrimitiveType, Type};
@@ -184,6 +184,41 @@ impl VisitorMut for StackedSignParens {
     }
 }
 
+pub(crate) fn probe_text(value: &Expr) -> String {
+    let mut rewritten = parenthesize_stacked_minus(value);
+    let _ = rewritten.visit(&mut DollarQuoteProbeStrings);
+    rewritten.to_string()
+}
+
+struct DollarQuoteProbeStrings;
+
+impl VisitorMut for DollarQuoteProbeStrings {
+    type Break = Infallible;
+
+    fn post_visit_expr(&mut self, expr: &mut Expr) -> ControlFlow<Self::Break> {
+        if let Expr::Value(literal) = expr
+            && let Value::SingleQuotedString(text) = &literal.value
+            && text.contains('\'')
+        {
+            let value = text.clone();
+            let tag = probe_string_tag(&value);
+            literal.value = Value::DollarQuotedString(DollarQuotedString {
+                value,
+                tag: Some(tag),
+            });
+        }
+        ControlFlow::Continue(())
+    }
+}
+
+fn probe_string_tag(value: &str) -> String {
+    let mut tag = String::from("p");
+    while value.contains(format!("${tag}$").as_str()) {
+        tag.push('p');
+    }
+    tag
+}
+
 fn numeric_ntz_refusal(
     display: &str,
     column: &str,
@@ -255,7 +290,7 @@ fn ntz_probe_cell(index: usize, value: &Expr) -> String {
     if is_default_marker(value) {
         format!("NULL AS p{index}")
     } else {
-        format!("{} AS p{index}", parenthesize_stacked_minus(value))
+        format!("{} AS p{index}", probe_text(value))
     }
 }
 

@@ -44,6 +44,10 @@ handling (`CAST(NULL AS VOID)` rewrite, the non-NULL VALUES refusal into
   parenthesizer. `ntz_probe_that_cannot_parse_refuses_instead_of_passing` is the
   NTZ door's twin of the fail-closed pin: it drives the parent's `check_ntz_row`
   with an unparsable cell and expects the `ParserError` back (eleven tests).
+  **Fold 2026-09-29 (LTZ-STACKED-SIGN-1 second re-verify fold, RN3-1):** the
+  probe renders through the parent's shared `probe_text`, which dollar-quotes
+  a string literal holding a quote with the same value, so a backslash before
+  a quote no longer refuses the row on this door either (eighteen tests).
   pins: ltz-store-int-1/C-001
 
 ## Pointers

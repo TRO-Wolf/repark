@@ -4571,6 +4571,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **LTZ-STORE-INT-1 (2026-09-28)** closes the residual for `TIMESTAMP` (LTZ) targets at
   the existing void VALUES gate site, before planning; every other target stays residual.
   Arrow path.
+- `test_ltz_stacked_sign_1.py` — **Fold 2026-09-29 (LTZ-STACKED-SIGN-1 second
+  re-verify fold, RN3-1):** backslash-quote strings store Spark 4.1.2's exact
+  values on both fail-closed VALUES doors — plain, column-list and map cells
+  plus `--`-holding and trailing-backslash, `\n`/`\t`, `\u00e9` controls
+  into `TIMESTAMP_NTZ`, and `replace`-casts into `TIMESTAMP` — read back on
+  the Arrow path. pins: ltz-stacked-sign-1/RN3-1
 - `test_ltz_store_int_1.py` — **WO LTZ-STORE-INT-1 (2026-09-28):** `INSERT INTO sc.ns.l
   VALUES (0, 1)` refuses with the recorded Spark `ins_l_int` answer — error class,
   condition, SQLSTATE and the message body, with the RePark-only planning prefix
