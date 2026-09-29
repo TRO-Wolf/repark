@@ -1,17 +1,10 @@
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use arrow::array::timezone::Tz;
-use chrono::TimeZone;
-use datafusion::arrow::array::{
-    Array, ArrayRef, BooleanArray, FixedSizeListArray, LargeListArray, ListArray, MapArray,
-    StructArray, TimestampMicrosecondArray, TimestampMillisecondArray, TimestampNanosecondArray,
-    TimestampSecondArray, UInt32Array,
-};
+use chrono::Utc;
+use datafusion::arrow::array::{Array, ArrayRef, BooleanArray, UInt32Array};
 use datafusion::arrow::compute::kernels::nullif::nullif as arrow_nullif;
 use datafusion::arrow::compute::take;
-use datafusion::arrow::compute::{CastOptions, cast_with_options};
-use datafusion::arrow::datatypes::TimeUnit;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
 use datafusion::common::{Result, ScalarValue, exec_err, internal_err};
 use datafusion::logical_expr::conditional_expressions::CaseBuilder;
@@ -21,10 +14,11 @@ use datafusion::logical_expr::{
     Volatility,
 };
 
+use crate::cast_map::spark_cast_ansi_zoned;
 use crate::session_time_zone::session_time_zone_from_options;
 use crate::spark_nvl::{
     CompareRefusal, binary_op_diff_types, coalesce_data_diff_types, compare_for_nullif,
-    if_data_diff_types, invalid_ordering_type, spark_nvl_type_name, widen_full, wrong_num_args,
+    if_data_diff_types, invalid_ordering_type, widen_full, wrong_num_args,
 };
 
 #[must_use]
@@ -60,6 +54,11 @@ pub fn nullifzero_udf() -> Arc<ScalarUDF> {
 #[must_use]
 pub fn nullif_pick_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(NullIfPick::new()))
+}
+
+#[must_use]
+pub fn nvl_cast_udf(target: &DataType) -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkNvlCast::new(target.clone())))
 }
 
 #[must_use]
@@ -103,6 +102,11 @@ pub fn zeroifnull_expr(arg: Expr) -> Expr {
 #[must_use]
 pub fn nullifzero_expr(arg: Expr) -> Expr {
     crate::expr_fn::call(nullifzero_udf(), vec![arg])
+}
+
+#[must_use]
+pub fn nvl_cast_expr(value: Expr, target: &DataType) -> Expr {
+    crate::expr_fn::call(nvl_cast_udf(target), vec![value])
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -202,177 +206,12 @@ fn first_present(first: &ArrayRef, second: &ArrayRef) -> Result<ArrayRef> {
     pick_rows(first, second, &mask)
 }
 
-fn total_nulls(array: &dyn Array) -> usize {
-    let mut nulls = array.logical_null_count();
-    if let Some(structs) = array.as_any().downcast_ref::<StructArray>() {
-        for column in structs.columns() {
-            nulls += total_nulls(column.as_ref());
-        }
-    } else if let Some(lists) = array.as_any().downcast_ref::<ListArray>() {
-        nulls += total_nulls(lists.values().as_ref());
-    } else if let Some(lists) = array.as_any().downcast_ref::<LargeListArray>() {
-        nulls += total_nulls(lists.values().as_ref());
-    } else if let Some(lists) = array.as_any().downcast_ref::<FixedSizeListArray>() {
-        nulls += total_nulls(lists.values().as_ref());
-    } else if let Some(maps) = array.as_any().downcast_ref::<MapArray>() {
-        nulls += total_nulls(maps.entries());
-    }
-    nulls
-}
-
-fn invalid_cast_input(
-    spelling: &str,
-    from: &DataType,
-    widen: &DataType,
-) -> datafusion::common::DataFusionError {
-    datafusion::common::DataFusionError::Execution(format!(
-        "[CAST_INVALID_INPUT] The value of type \"{}\" cannot be cast to \"{}\" in `{spelling}` because it is malformed. SQLSTATE: 22018",
-        spark_nvl_type_name(from),
-        spark_nvl_type_name(widen),
-    ))
-}
-
-fn cast_taken_strict(taken: &ArrayRef, widen: &DataType, spelling: &str) -> Result<ArrayRef> {
-    let options = CastOptions {
-        safe: false,
-        ..CastOptions::default()
-    };
-    let casted = cast_with_options(taken.as_ref(), widen, &options)?;
-    if total_nulls(casted.as_ref()) > total_nulls(taken.as_ref()) {
-        return Err(invalid_cast_input(spelling, taken.data_type(), widen));
-    }
-    Ok(casted)
-}
-
-fn needs_zone_shift(from: &DataType, widen: &DataType) -> bool {
-    let from_wall = matches!(
-        from,
-        DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, None)
-    );
-    from_wall && matches!(widen, DataType::Timestamp(_, Some(_)))
-}
-
-fn wall_to_instant_micros(wall: i64, zone: Tz) -> Option<i64> {
-    let naive = chrono::DateTime::from_timestamp_micros(wall)?.naive_utc();
-    let resolved = zone.from_local_datetime(&naive);
-    if let Some(single) = resolved.single().or_else(|| resolved.earliest()) {
-        return Some(single.timestamp_micros());
-    }
-    let shifted = naive.checked_add_signed(chrono::Duration::hours(1))?;
-    let retried = zone.from_local_datetime(&shifted);
-    retried
-        .single()
-        .or_else(|| retried.earliest())
-        .map(|single| single.timestamp_micros())
-}
-
-fn timestamp_rows_micros(casted: &dyn Array, unit: TimeUnit) -> Option<Vec<Option<i64>>> {
-    let mut rows = Vec::with_capacity(casted.len());
-    match unit {
-        TimeUnit::Second => {
-            let stamps = casted.as_any().downcast_ref::<TimestampSecondArray>()?;
-            for row in 0..casted.len() {
-                rows.push(if stamps.is_null(row) {
-                    None
-                } else {
-                    stamps.value(row).checked_mul(1_000_000)
-                });
-            }
-        }
-        TimeUnit::Millisecond => {
-            let stamps = casted
-                .as_any()
-                .downcast_ref::<TimestampMillisecondArray>()?;
-            for row in 0..casted.len() {
-                rows.push(if stamps.is_null(row) {
-                    None
-                } else {
-                    stamps.value(row).checked_mul(1_000)
-                });
-            }
-        }
-        TimeUnit::Microsecond => {
-            let stamps = casted
-                .as_any()
-                .downcast_ref::<TimestampMicrosecondArray>()?;
-            for row in 0..casted.len() {
-                rows.push(if stamps.is_null(row) {
-                    None
-                } else {
-                    Some(stamps.value(row))
-                });
-            }
-        }
-        TimeUnit::Nanosecond => {
-            let stamps = casted.as_any().downcast_ref::<TimestampNanosecondArray>()?;
-            for row in 0..casted.len() {
-                rows.push(if stamps.is_null(row) {
-                    None
-                } else {
-                    Some(stamps.value(row) / 1_000)
-                });
-            }
-        }
-    }
-    if rows.iter().any(Option::is_none) && casted.logical_null_count() == 0 {
-        return None;
-    }
-    Some(rows)
-}
-
-fn shift_ltz_to_session_walls(casted: &ArrayRef, widen: &DataType, zone: Tz) -> Option<ArrayRef> {
-    let DataType::Timestamp(unit, Some(zone_name)) = widen else {
-        return None;
-    };
-    let rows = timestamp_rows_micros(casted.as_ref(), *unit)?;
-    let mut instants = Vec::with_capacity(rows.len());
-    for row in rows {
-        match row {
-            None => instants.push(None),
-            Some(wall) => instants.push(wall_to_instant_micros(wall, zone)),
-        }
-    }
-    if instants.iter().any(Option::is_none) && casted.logical_null_count() == 0 {
-        return None;
-    }
-    let shifted = TimestampMicrosecondArray::from(instants).with_timezone(zone_name.as_ref());
-    if *unit == TimeUnit::Microsecond {
-        return Some(Arc::new(shifted));
-    }
-    cast_with_options(
-        &shifted,
-        widen,
-        &CastOptions {
-            safe: false,
-            ..CastOptions::default()
-        },
-    )
-    .ok()
-}
-
-fn cast_taken(
-    taken: &ArrayRef,
-    widen: &DataType,
-    spelling: &str,
-    zone: Option<&Tz>,
-) -> Result<ArrayRef> {
-    let casted = cast_taken_strict(taken, widen, spelling)?;
-    if let Some(resolved) = zone
-        && needs_zone_shift(taken.data_type(), widen)
-        && let Some(shifted) = shift_ltz_to_session_walls(&casted, widen, *resolved)
-    {
-        return Ok(shifted);
-    }
-    Ok(casted)
-}
-
 fn pick_cast(
     first: &ArrayRef,
     second: &ArrayRef,
     use_first: &[bool],
     widen: &DataType,
-    spelling: &str,
-    zone: Option<&Tz>,
+    zone: &str,
 ) -> Result<ArrayRef> {
     let mut first_rows = Vec::new();
     let mut second_rows = Vec::new();
@@ -388,8 +227,9 @@ fn pick_cast(
     }
     let taken_first = take(first.as_ref(), &UInt32Array::from(first_rows), None)?;
     let taken_second = take(second.as_ref(), &UInt32Array::from(second_rows), None)?;
-    let cast_first = cast_taken(&taken_first, widen, spelling, zone)?;
-    let cast_second = cast_taken(&taken_second, widen, spelling, zone)?;
+    let now = Utc::now();
+    let cast_first = spark_cast_ansi_zoned(&taken_first, widen, zone, now)?;
+    let cast_second = spark_cast_ansi_zoned(&taken_second, widen, zone, now)?;
     let first_len = u32::try_from(cast_first.len()).map_err(|_| {
         datafusion::common::DataFusionError::Execution("row index overflow".to_owned())
     })?;
@@ -410,7 +250,7 @@ fn pick_cast(
     Ok(take(&combined, &UInt32Array::from(indices), None)?)
 }
 
-fn zero_scalar(data_type: &DataType) -> Result<ScalarValue> {
+pub(crate) fn zero_scalar(data_type: &DataType) -> Result<ScalarValue> {
     match data_type {
         DataType::Int32 => Ok(ScalarValue::Int32(Some(0))),
         DataType::Int64 => Ok(ScalarValue::Int64(Some(0))),
@@ -507,17 +347,9 @@ impl ScalarUDFImpl for SparkNvl {
         let mask: Vec<bool> = (0..first.len())
             .map(|row| !row_is_null(first, row))
             .collect();
-        let zone_name = session_time_zone_from_options(args.config_options.as_ref());
-        let zone = (zone_name != "UTC")
-            .then(|| zone_name.parse::<Tz>().ok())
-            .flatten();
+        let zone = session_time_zone_from_options(args.config_options.as_ref());
         Ok(ColumnarValue::Array(pick_cast(
-            first,
-            second,
-            &mask,
-            &widen,
-            self.spelling,
-            zone.as_ref(),
+            first, second, &mask, &widen, zone,
         )?))
     }
 
@@ -607,17 +439,9 @@ impl ScalarUDFImpl for SparkNvl2 {
         let widen = widen_full(first.data_type(), second.data_type())
             .ok_or_else(|| if_data_diff_types(first.data_type(), second.data_type()))?;
         let mask: Vec<bool> = (0..test.len()).map(|row| !row_is_null(test, row)).collect();
-        let zone_name = session_time_zone_from_options(args.config_options.as_ref());
-        let zone = (zone_name != "UTC")
-            .then(|| zone_name.parse::<Tz>().ok())
-            .flatten();
+        let zone = session_time_zone_from_options(args.config_options.as_ref());
         Ok(ColumnarValue::Array(pick_cast(
-            first,
-            second,
-            &mask,
-            &widen,
-            "nvl2",
-            zone.as_ref(),
+            first, second, &mask, &widen, zone,
         )?))
     }
 
@@ -758,8 +582,8 @@ impl ScalarUDFImpl for SparkZeroIfNull {
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
-        let common = zeroifnull_common(arg_types)?;
-        Ok(vec![common])
+        zeroifnull_common(arg_types)?;
+        Ok(arg_types.to_vec())
     }
 
     fn simplify(&self, args: Vec<Expr>, info: &SimplifyContext) -> Result<ExprSimplifyResult> {
@@ -924,5 +748,89 @@ impl ScalarUDFImpl for NullIfPick {
                 )
             })?;
         Ok(ColumnarValue::Array(arrow_nullif(value.as_ref(), mask)?))
+    }
+}
+
+#[derive(Debug)]
+struct SparkNvlCast {
+    target: DataType,
+    signature: Signature,
+}
+
+impl SparkNvlCast {
+    fn new(target: DataType) -> Self {
+        Self {
+            target,
+            signature: Signature::user_defined(Volatility::Stable),
+        }
+    }
+}
+
+impl PartialEq for SparkNvlCast {
+    fn eq(&self, other: &Self) -> bool {
+        self.target == other.target
+    }
+}
+
+impl Eq for SparkNvlCast {}
+
+impl Hash for SparkNvlCast {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name().hash(state);
+        self.target.hash(state);
+    }
+}
+
+impl ScalarUDFImpl for SparkNvlCast {
+    #[allow(clippy::unnecessary_literal_bound)]
+    fn name(&self) -> &str {
+        "__repark_nvl_cast"
+    }
+
+    fn signature(&self) -> &Signature {
+        &self.signature
+    }
+
+    fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
+        if arg_types.len() != 1 {
+            return Err(wrong_num_args("__repark_nvl_cast", 1, arg_types.len()));
+        }
+        Ok(self.target.clone())
+    }
+
+    fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        let [value] = args.arg_fields else {
+            return Err(wrong_num_args(
+                "__repark_nvl_cast",
+                1,
+                args.arg_fields.len(),
+            ));
+        };
+        Ok(Arc::new(Field::new(
+            "__repark_nvl_cast",
+            self.target.clone(),
+            value.is_nullable(),
+        )))
+    }
+
+    fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
+        if arg_types.len() != 1 {
+            return Err(wrong_num_args("__repark_nvl_cast", 1, arg_types.len()));
+        }
+        Ok(arg_types.to_vec())
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        let arrays = materialize(&args.args)?;
+        let [value] = arrays.as_slice() else {
+            return Err(wrong_num_args("__repark_nvl_cast", 1, arrays.len()));
+        };
+        let zone = session_time_zone_from_options(args.config_options.as_ref());
+        Ok(ColumnarValue::Array(spark_cast_ansi_zoned(
+            value,
+            &self.target,
+            zone,
+            Utc::now(),
+        )?))
     }
 }

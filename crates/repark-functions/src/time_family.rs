@@ -7,6 +7,7 @@ use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
 use datafusion::common::{Result, ScalarValue, exec_err};
 use datafusion::error::DataFusionError;
+use datafusion::logical_expr::simplify::{ExprSimplifyResult, SimplifyContext};
 use datafusion::logical_expr::{
     ColumnarValue, Expr, LogicalPlan, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF,
     ScalarUDFImpl, Signature, Volatility,
@@ -353,6 +354,18 @@ impl ScalarUDFImpl for SparkTypeof {
             return Err(typeof_arity(arg_types.len()));
         }
         Ok(arg_types.to_vec())
+    }
+
+    fn simplify(&self, args: Vec<Expr>, info: &SimplifyContext) -> Result<ExprSimplifyResult> {
+        let [arg] = args.as_slice() else {
+            return Err(typeof_arity(args.len()));
+        };
+        let data_type = info.get_data_type(arg)?;
+        let name = spark_type_name(&data_type)?;
+        Ok(ExprSimplifyResult::Simplified(Expr::Literal(
+            ScalarValue::Utf8(Some(name)),
+            None,
+        )))
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {

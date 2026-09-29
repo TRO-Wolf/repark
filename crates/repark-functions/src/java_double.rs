@@ -1,7 +1,7 @@
 mod bigint;
 mod dtoa;
 mod format_float;
-mod parse_float;
+pub(crate) mod parse_float;
 #[cfg(test)]
 mod tables_doubles;
 #[cfg(test)]

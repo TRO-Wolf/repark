@@ -120,6 +120,52 @@ fn is_valid_date(date: (i64, i64, i64)) -> bool {
 }
 
 #[must_use]
+pub(crate) fn timestamp_wall_micros(
+    parsed: &ParsedTimestamp<'_>,
+    zone: SparkZone,
+    now: DateTime<Utc>,
+) -> Option<i64> {
+    if !is_valid_time(parsed) {
+        return None;
+    }
+    let date = if parsed.just_time {
+        today_in(zone, now)
+    } else {
+        (parsed.year, parsed.month, parsed.day)
+    };
+    if !is_valid_date(date) {
+        return None;
+    }
+    i64::try_from(wall_micros(date, parsed)).ok()
+}
+
+#[must_use]
+pub(crate) fn date_days(parsed: &ParsedTimestamp<'_>) -> Option<i32> {
+    if parsed.just_time {
+        return None;
+    }
+    let date = (parsed.year, parsed.month, parsed.day);
+    if !is_valid_date(date) {
+        return None;
+    }
+    i32::try_from(days_from_civil(date.0, date.1, date.2)).ok()
+}
+
+#[must_use]
+pub(crate) fn wall_micros_to_instant(wall: i64, zone: SparkZone) -> Option<i64> {
+    match zone {
+        SparkZone::Offset(offset) => {
+            let shift = i64::from(offset.local_minus_utc()).checked_mul(1_000_000)?;
+            wall.checked_sub(shift)
+        }
+        SparkZone::Named(named) => {
+            let naive = DateTime::from_timestamp_micros(wall)?.naive_utc();
+            crate::datetime::micros_from_local_datetime(naive, named, None)
+        }
+    }
+}
+
+#[must_use]
 pub(crate) fn instant_micros(
     parsed: &ParsedTimestamp<'_>,
     zone: SparkZone,

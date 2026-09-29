@@ -4,45 +4,40 @@ use datafusion::arrow::datatypes::DataType;
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
 use datafusion::common::{DFSchema, Result, ScalarValue};
-use datafusion::error::DataFusionError;
 use datafusion::functions::expr_fn::get_field;
+use datafusion::logical_expr::conditional_expressions::CaseBuilder;
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::{BinaryExpr, Cast, Expr, ExprSchemable, LogicalPlan, Operator};
 use datafusion::optimizer::AnalyzerRule;
 
 use crate::spark_nvl::{
-    CompareRefusal, binary_op_diff_types, compare_for_nullif, invalid_ordering_type,
+    CompareRefusal, binary_op_diff_types, coalesce_data_diff_types, compare_for_nullif,
+    if_data_diff_types, invalid_ordering_type, widen_full,
 };
-use crate::spark_nvl_udf::nullif_pick_udf;
+use crate::spark_nvl_udf::{
+    ifnull_expr, nullif_pick_udf, nvl_cast_expr, nvl_expr, nvl2_expr, zero_scalar, zeroifnull_expr,
+};
 
-#[expect(
-    clippy::missing_errors_doc,
-    reason = "The error contract is documented in map.md under the owner comment ban."
-)]
-pub fn insert_nullif_rule_before_coercion(
+#[must_use]
+pub fn append_nvl_family_rule(
     mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
-) -> Result<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
-    let Some(position) = rules.iter().position(|rule| rule.name() == "type_coercion") else {
-        return Err(DataFusionError::Plan(
-            "spark nullif rewrite requires the default type_coercion analyzer rule".to_owned(),
-        ));
-    };
-    rules.insert(position, Arc::new(SparkNullifRewrite));
-    Ok(rules)
+) -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
+    rules.push(Arc::new(SparkNvlFamilyRewrite));
+    rules
 }
 
 #[derive(Debug, Default)]
-pub struct SparkNullifRewrite;
+pub struct SparkNvlFamilyRewrite;
 
-impl AnalyzerRule for SparkNullifRewrite {
+impl AnalyzerRule for SparkNvlFamilyRewrite {
     fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
         plan.transform_up_with_subqueries(rewrite_plan).data()
     }
 
     #[allow(clippy::unnecessary_literal_bound)]
     fn name(&self) -> &str {
-        "spark_nullif_rewrite"
+        "spark_nvl_family_rewrite"
     }
 }
 
@@ -64,6 +59,30 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
     let Expr::ScalarFunction(function) = &expr else {
         return Ok(Transformed::no(expr));
     };
+    if (function.func.name() == "nvl" || function.func.name() == "ifnull")
+        && function.args.len() == 2
+    {
+        let rewritten = rewrite_nvl(
+            function.func.name(),
+            function.args[0].clone(),
+            function.args[1].clone(),
+            schema,
+        )?;
+        return Ok(Transformed::yes(rewritten));
+    }
+    if function.func.name() == "nvl2" && function.args.len() == 3 {
+        let rewritten = rewrite_nvl2(
+            function.args[0].clone(),
+            function.args[1].clone(),
+            function.args[2].clone(),
+            schema,
+        )?;
+        return Ok(Transformed::yes(rewritten));
+    }
+    if function.func.name() == "zeroifnull" && function.args.len() == 1 {
+        let rewritten = rewrite_zeroifnull(function.args[0].clone(), schema)?;
+        return Ok(Transformed::yes(rewritten));
+    }
     if function.func.name() == "nullif" && function.args.len() == 2 {
         let rewritten = rewrite_nullif(
             function.args[0].clone(),
@@ -87,6 +106,84 @@ fn is_null_literal(expr: &Expr) -> bool {
         Expr::Cast(cast) => is_null_literal(&cast.expr),
         _ => false,
     }
+}
+
+fn is_non_null_literal(expr: &Expr) -> bool {
+    match expr {
+        Expr::Literal(scalar, _) => !scalar.is_null(),
+        Expr::Cast(cast) => is_non_null_literal(&cast.expr),
+        _ => false,
+    }
+}
+
+fn case_when_present(test: Expr, first: Expr, second: Expr) -> Result<Expr> {
+    CaseBuilder::new(
+        None,
+        vec![test.is_not_null()],
+        vec![first],
+        Some(Box::new(second)),
+    )
+    .end()
+}
+
+fn rewrite_nvl(spelling: &str, first: Expr, second: Expr, schema: &DFSchema) -> Result<Expr> {
+    let (Ok(first_type), Ok(second_type)) = (first.get_type(schema), second.get_type(schema))
+    else {
+        return Ok(if spelling == "nvl" {
+            nvl_expr(first, second)
+        } else {
+            ifnull_expr(first, second)
+        });
+    };
+    let widen = widen_full(&first_type, &second_type)
+        .ok_or_else(|| coalesce_data_diff_types(&first_type, &second_type))?;
+    if is_null_literal(&first) {
+        return Ok(nvl_cast_expr(second, &widen));
+    }
+    if is_non_null_literal(&first) {
+        return Ok(nvl_cast_expr(first, &widen));
+    }
+    case_when_present(
+        first.clone(),
+        nvl_cast_expr(first, &widen),
+        nvl_cast_expr(second, &widen),
+    )
+}
+
+fn rewrite_nvl2(test: Expr, first: Expr, second: Expr, schema: &DFSchema) -> Result<Expr> {
+    let (Ok(first_type), Ok(second_type)) = (first.get_type(schema), second.get_type(schema))
+    else {
+        return Ok(nvl2_expr(test, first, second));
+    };
+    let widen = widen_full(&first_type, &second_type)
+        .ok_or_else(|| if_data_diff_types(&first_type, &second_type))?;
+    if is_null_literal(&test) {
+        return Ok(nvl_cast_expr(second, &widen));
+    }
+    if is_non_null_literal(&test) {
+        return Ok(nvl_cast_expr(first, &widen));
+    }
+    case_when_present(
+        test,
+        nvl_cast_expr(first, &widen),
+        nvl_cast_expr(second, &widen),
+    )
+}
+
+fn rewrite_zeroifnull(arg: Expr, schema: &DFSchema) -> Result<Expr> {
+    let Ok(arg_type) = arg.get_type(schema) else {
+        return Ok(zeroifnull_expr(arg));
+    };
+    let widen = widen_full(&arg_type, &DataType::Int32)
+        .ok_or_else(|| coalesce_data_diff_types(&arg_type, &DataType::Int32))?;
+    let zero = Expr::Literal(zero_scalar(&widen)?, None);
+    if is_null_literal(&arg) {
+        return Ok(zero);
+    }
+    if is_non_null_literal(&arg) {
+        return Ok(nvl_cast_expr(arg, &widen));
+    }
+    case_when_present(arg.clone(), nvl_cast_expr(arg, &widen), zero)
 }
 
 fn rewrite_nullif(
@@ -163,6 +260,13 @@ fn blind_pick(first: Expr, second: Expr) -> Expr {
     ))
 }
 
+fn needs_spark_shaped_cast(from_type: &DataType, common: &DataType) -> bool {
+    matches!(
+        from_type,
+        DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, None)
+    ) && matches!(common, DataType::Timestamp(_, _))
+}
+
 fn shape_operand(expr: &Expr, path: &[String], from_type: &DataType, common: &DataType) -> Expr {
     let mut shaped = expr.clone();
     for name in path {
@@ -170,6 +274,8 @@ fn shape_operand(expr: &Expr, path: &[String], from_type: &DataType, common: &Da
     }
     if from_type == common {
         shaped
+    } else if needs_spark_shaped_cast(from_type, common) {
+        nvl_cast_expr(shaped, common)
     } else {
         Expr::Cast(Cast::new(Box::new(shaped), common.clone()))
     }
@@ -185,7 +291,7 @@ mod tests {
     use super::*;
 
     fn ctx() -> SessionContext {
-        let rules = insert_nullif_rule_before_coercion(Analyzer::new().rules).unwrap();
+        let rules = append_nvl_family_rule(Analyzer::new().rules);
         let state = SessionStateBuilder::new()
             .with_default_features()
             .with_analyzer_rules(rules)
@@ -270,8 +376,9 @@ mod tests {
         };
         let config = crate::cardinality::with_repark_sql_config(SessionConfig::new(), settings);
         let mut rules: Vec<Arc<dyn datafusion::optimizer::AnalyzerRule + Send + Sync>> =
-            vec![Arc::new(SparkNullifRewrite), Arc::new(TypeCoercion::new())];
+            vec![Arc::new(TypeCoercion::new())];
         rules.extend(crate::cardinality::analyzer_rules());
+        rules = append_nvl_family_rule(rules);
         let state = SessionStateBuilder::new()
             .with_default_features()
             .with_config(config)
