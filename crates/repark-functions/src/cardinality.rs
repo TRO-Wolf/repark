@@ -430,6 +430,18 @@ fn const_i128(expr: &Expr, depth: u32) -> Option<i128> {
                     let right = const_i128(&args[1], depth - 1)?;
                     if left == right { None } else { Some(left) }
                 }
+                "__repark_nullif_pick" if args.len() == 2 => match &args[0] {
+                    Expr::BinaryExpr(binary) if matches!(binary.op, Operator::Eq) => {
+                        let left = const_i128(&binary.left, depth - 1)?;
+                        let right = const_i128(&binary.right, depth - 1)?;
+                        if left == right {
+                            None
+                        } else {
+                            const_i128(&args[1], depth - 1)
+                        }
+                    }
+                    _ => None,
+                },
                 _ => None,
             }
         }

@@ -578,6 +578,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   it names the conf and the v2 default only. pins: v3-9-mor-predicate-dml-dv/C-006
   **WO U5 PR2b (2026-09-24):** the resolver parses the value as an integer and accepts `1`
   (D-CREATE-V1); `0`, `4`, negatives and non-integers refuse, naming v1, v2 or v3.
+  **NVL-TYPE-COERCION-1 (2026-09-29):** the const folder matches the
+  `__repark_nullif_pick(Eq, value)` shape so `array_repeat` ceilings still
+  fire through the rewritten `nullif`. pins: nvl-type-coercion-1/C-002.
 
 
 - **R-FN-BATCH4** aggregate expansion.
@@ -697,6 +700,26 @@ scalars live under [`try_invert/`](try_invert/map.md).
   Timestamp only. The facade column-CAST pin still holds Spark-equal non-null
   struct CAST.
   pins: nullability-2/C-001, C-002, C-004
+- `spark_nvl.rs` — **NVL-TYPE-COERCION-1 (2026-09-29):** Spark's `nvl`-family
+  widening, measured cell by cell on live Spark 4.1.2 (UTC + America/New_York,
+  ANSI on). `nvl`/`ifnull` widen like `coalesce`, `nvl2` branches widen like
+  `if`, `nullif` compares after widening and returns its first argument's type,
+  `zeroifnull` is `coalesce(arg, 0)`, `nullifzero` is `nullif(arg, 0)`.
+  Refusals carry Spark's `DATATYPE_MISMATCH` / `WRONG_NUM_ARGS` classes.
+  pins: nvl-type-coercion-1/C-001, C-002
+- `spark_nvl_udf.rs` — **NVL-TYPE-COERCION-1 (2026-09-29):** the six Spark-door
+  UDFs plus the internal `__repark_nullif_pick`. `nvl`/`ifnull`/`nvl2` validate
+  in `coerce_types` and evaluate in a lazy per-row cast-and-pick kernel
+  (unpicked branches never cast, so `nvl(1, 's')` answers; temporal casts
+  shift through the session zone; invented nulls raise `CAST_INVALID_INPUT`).
+  `zeroifnull` simplifies to CASE; `nullif`/`nullifzero` validate here and
+  execute through the rule. pins: nvl-type-coercion-1/C-002
+- `spark_nvl_rule.rs` — **NVL-TYPE-COERCION-1 (2026-09-29):** the
+  `SparkNullifRewrite` analyzer rule, seated before `type_coercion` on the
+  Spark door and the `F.expr` context. `nullif(a, b)` becomes
+  `__repark_nullif_pick(a = b, a)` with explicit casts (structs flattened
+  field by field, positionally); a NULL-literal side short-circuits to the
+  first argument; `nullifzero(c)` expands inline. pins: nvl-type-coercion-1/C-002
 - `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer
   rule, installed on BOTH doors via `install_shared_analyzer_rules` (defined here since FNP-11B step 3 and re-exported from the crate root, so `repark_functions::install_shared_analyzer_rules` and run 16b's `session.rs` call are unchanged; the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts; the TIME guard left for `analyzer_rules()` in remediation round 1).
   installer calls it in place of the integer-only one — same line count, so the
@@ -1138,6 +1161,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `to_number`/`to_binary` cache one format; `ntz_single` strips through one
   builder. PERF-001 stays per-row: the batch forward is unsound against the
   inner batch-atomic error (see the ledger). pins: fnp-11b/C-006, C-007.
+  **NVL-TYPE-COERCION-1 (2026-09-29):** `SparkTypeof` spells intervals
+  (`interval year to month`, `interval day`, `interval month day nano`) for the
+  `nvl` interval cells. pins: nvl-type-coercion-1/C-002.
   **FNP-11B step 6 (2026-09-15):** `SparkTypeof` spells `array<…>` / `map<…>` /
   `struct<…>` recursively through the same table (no second table; the
   `repark-spark` renderer stays uncalled across the crate edge) and wrong arity

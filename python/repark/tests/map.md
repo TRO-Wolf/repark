@@ -4937,6 +4937,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   bool+long CANNOT_MERGE pin.
   **octo C3:** empty-list field then list-of-dict keeps array<struct>; string+struct
   CANNOT_MERGE pin.
+- `test_nvl_type_coercion_1.py` — **NVL-TYPE-COERCION-1 (2026-09-29):** 756 pins
+  over the recorded `test_nvl_type_coercion_1_spark.json` (live Spark 4.1.2, UTC +
+  America/New_York, ANSI on): SELECT typeof/value cells per session, struct/map
+  collect cells, the 17 facade `typeof` ops, temp-view cells, one INSERT flow
+  with both table reads, five known-divergence pins, and the `coalesce` guards.
+  pins: nvl-type-coercion-1/C-003, C-004, C-005
 - `test_select_naming.py` — **Group H** select/projection display naming vs live PySpark 4.1.2:
   mutation leak accepts `Int32(1)` as well as `Int64(1)` (F-Y10-1 Python lit width);
   full matrix (`(x + 1)`, cast-of-attr → child name, cast-of-compound → `CAST(...)`,

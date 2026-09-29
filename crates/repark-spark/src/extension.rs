@@ -80,7 +80,8 @@ impl SessionExtension for SparkExtension {
         rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
     ) -> datafusion::error::Result<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
         let rules = repark_functions::analyzer_rules_with_higher_order_preparation(rules)?;
-        crate::spark_literal_typing::insert_literal_rule_before_coercion(rules)
+        let rules = crate::spark_literal_typing::insert_literal_rule_before_coercion(rules)?;
+        repark_functions::spark_nvl_rule::insert_nullif_rule_before_coercion(rules)
     }
 
     /// Register Spark functions and analyzer rules, then compose the TA window extension.

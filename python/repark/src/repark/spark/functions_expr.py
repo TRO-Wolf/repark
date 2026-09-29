@@ -26,7 +26,6 @@ from repark.spark.functions import (
     _integer_argument,
     _partition_transform_of,
     _scalar,
-    coalesce,
     col,
     concat,
     date_add,
@@ -1686,12 +1685,12 @@ def sign(col: Column | str) -> Column:
 
 def ifnull(col: Column | str, alt: Column | str) -> Column:
     """Replace NULL with ``alt`` (PySpark ``functions.ifnull``; 2-arg ``coalesce``)."""
-    return coalesce(_as_column_arg(col, as_lit=False), _as_column_arg(alt, as_lit=False))
+    return _scalar("ifnull", col, alt)
 
 
 def nvl(col1: Column | str, col2: Column | str) -> Column:
     """Replace NULL with ``col2`` (PySpark ``functions.nvl``; 2-arg ``coalesce``)."""
-    return coalesce(_as_column_arg(col1, as_lit=False), _as_column_arg(col2, as_lit=False))
+    return _scalar("nvl", col1, col2)
 
 
 def asc(col: Column | str) -> Column:
@@ -1800,10 +1799,10 @@ def log1p(col: Column | str) -> Column:
 
 
 def nvl2(col1: Column | str, col2: Column | str, col3: Column | str) -> Column:
-    """If ``col1`` is not null return ``col2`` else ``col3`` (PySpark ``functions.nvl2``)."""
-    return when(~isnull(col1), _as_column_arg(col2, as_lit=False)).otherwise(
-        _as_column_arg(col3, as_lit=False)
-    )
+    """If ``col1`` is not null return ``col2`` else ``col3``.
+    PySpark ``functions.nvl2`` spelling; branches widen like Spark ``if``.
+    """
+    return _scalar("nvl2", col1, col2, col3)
 
 
 def nullif(col1: Column | str, col2: Column | str) -> Column:
@@ -1818,12 +1817,12 @@ def equal_null(col1: Column | str, col2: Column | str) -> Column:
 
 def zeroifnull(col: Column | str) -> Column:
     """Replace NULL with 0 (PySpark ``functions.zeroifnull``)."""
-    return coalesce(_as_column_arg(col, as_lit=False), lit(0))
+    return _scalar("zeroifnull", col)
 
 
 def nullifzero(col: Column | str) -> Column:
     """NULL when the value is 0 (PySpark ``functions.nullifzero``)."""
-    return nullif(col, lit(0))
+    return _scalar("nullifzero", col)
 
 
 def isnotnull(col: Column | str) -> Column:

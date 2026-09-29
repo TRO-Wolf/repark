@@ -340,6 +340,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   refusing `format=` and bind it as a literal (`lit_indices={1}`); a Column format raises
   `NOT_ITERABLE`; `unix_timestamp` takes Spark's default `'yyyy-MM-dd HH:mm:ss'`. The file
   holds exactly 2235 lines. pins: fnp-11b/C-001, C-002
+  **NVL-TYPE-COERCION-1 (2026-09-29):** `ifnull` / `nvl` / `nvl2` / `zeroifnull`
+  stop composing `coalesce` / `when` and call one native `_scalar` each, so the
+  facade resolves the same Spark-widening kernels as the SQL door (`nullif` /
+  `nullifzero` already did). The dead `coalesce` import leaves; the baseline
+  ratchets 2171 → 2170 in `check_lib_py.py` and the CAP-1 mirror.
+  pins: nvl-type-coercion-1/C-002
 - `functions_stack.py` — **PERF-UNPIVOT-1 (2026-09-12):** `F.stack` / `StackCall` /
   `select_with_stack_if_present`. Installed last onto `functions.py`; its
   one-generator gate also reads `_repark_generator` (FNP-GEN-1) so `stack` beside

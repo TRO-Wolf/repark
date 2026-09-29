@@ -58,6 +58,9 @@ pub mod spark_log;
 pub mod spark_log1p;
 pub mod spark_math;
 pub mod spark_nullability;
+pub mod spark_nvl;
+pub mod spark_nvl_rule;
+pub mod spark_nvl_udf;
 pub mod spark_regexp;
 pub mod spark_regexp_match;
 pub mod spark_result_types;
@@ -157,6 +160,7 @@ pub fn register_all(ctx: &SessionContext) {
         .chain(spark_chr::functions())
         .chain(spark_degrees::functions())
         .chain(spark_elt::functions())
+        .chain(spark_nvl_udf::functions())
         .chain(spark_startswith::functions())
         .chain(spark_hash::functions())
     {
