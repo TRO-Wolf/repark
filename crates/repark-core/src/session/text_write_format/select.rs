@@ -28,14 +28,14 @@ fn contains_temporal(data_type: &DataType) -> bool {
 }
 
 fn quote_ident(name: &str) -> String {
-    format!("\"{}\"", name.replace('"', "\"\""))
+    format!("`{}`", name.replace('`', "``"))
 }
 
 fn quote_literal(text: &str) -> String {
     format!("'{}'", text.replace('\'', "''"))
 }
 
-fn pattern_argument(pattern: &Option<String>) -> String {
+fn pattern_argument(pattern: Option<&String>) -> String {
     match pattern {
         Some(text) => quote_literal(text),
         None => "NULL".to_string(),
@@ -43,19 +43,19 @@ fn pattern_argument(pattern: &Option<String>) -> String {
 }
 
 fn validate_user_patterns(
-    timestamp: &Option<String>,
-    ntz: &Option<String>,
-    date: &Option<String>,
+    timestamp: Option<&String>,
+    ntz: Option<&String>,
+    date: Option<&String>,
 ) -> crate::Result<()> {
     for (pattern, kind) in [
         (timestamp, PatternKind::Timestamp),
         (ntz, PatternKind::TimestampNtz),
         (date, PatternKind::Date),
     ] {
-        if let Some(text) = pattern {
-            if let Err(failure) = compile_write_pattern(text, kind) {
-                return Err(pattern_failure_error(&failure));
-            }
+        if let Some(text) = pattern
+            && let Err(failure) = compile_write_pattern(text, kind)
+        {
+            return Err(pattern_failure_error(&failure));
         }
     }
     Ok(())
@@ -70,7 +70,7 @@ pub fn build_text_write_select(
     partition_by: &[String],
 ) -> crate::Result<String> {
     let (timestamp, ntz, date) = write_option_patterns(options);
-    validate_user_patterns(&timestamp, &ntz, &date)?;
+    validate_user_patterns(timestamp.as_ref(), ntz.as_ref(), date.as_ref())?;
     let zone = canonical_session_zone_id(zone_id);
     let partitions: HashSet<String> = partition_by
         .iter()
@@ -96,9 +96,9 @@ pub fn build_text_write_select(
             "{}({}, {}, {}, {}, {}) AS {}",
             super::udf::WRITE_FORMAT_FUNCTION,
             quote_ident(name),
-            pattern_argument(&timestamp),
-            pattern_argument(&ntz),
-            pattern_argument(&date),
+            pattern_argument(timestamp.as_ref()),
+            pattern_argument(ntz.as_ref()),
+            pattern_argument(date.as_ref()),
             quote_literal(&zone),
             quote_ident(name)
         ));

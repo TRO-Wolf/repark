@@ -167,6 +167,17 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   **S3-PATH-WRITE-1 re-verify (2026-09-28):** the append branch `HEAD`s the
   exact key and refuses loud when an object sits at the destination
   (`R-S3-APPEND-EXACT`), since the exact object would win the read.
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** the temporal options
+  (`timestampFormat`, `timestampNTZFormat`, `dateFormat`) are honored, not
+  refused: they skip COPY option SQL and the CSV/JSON `COPY` inner `SELECT`
+  comes from `text_write_format::select`, which formats temporal columns in
+  the session zone. pins: text-write-timestamp-zone-1/C-001, C-002
+- `text_write_format.rs` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** the
+  user-pattern compiler and validator (Spark `INVALID_DATETIME_PATTERN` /
+  `INCONSISTENT_BEHAVIOR_CROSS_VERSION` classes, NTZ downgrades, DATE lazy
+  messages), the micros-to-wall/zone conversions, and the option-key helpers.
+  Child: [`text_write_format/`](text_write_format/map.md).
+  pins: text-write-timestamp-zone-1/C-004
 - `late_catalogs.rs` — `register_late_configured_catalogs`, moved out of `session.rs` under the
   CAP-1 rule that a file at its ceiling grows by splitting; behavior is byte-identical and the
   `session.rs` baseline ratcheted 1039 → 1002.

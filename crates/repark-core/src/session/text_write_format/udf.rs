@@ -47,7 +47,7 @@ fn spec_from_value(text: Option<&str>, kind: PatternKind) -> Result<FormatSpec> 
         None => Ok(FormatSpec::Default),
         Some(pattern) => compile_write_pattern(pattern, kind)
             .map(FormatSpec::Compiled)
-            .map_err(pattern_failure_datafusion),
+            .map_err(|failure| pattern_failure_datafusion(&failure)),
     }
 }
 
@@ -57,7 +57,7 @@ fn fraction_nanos(micros: i64) -> u32 {
 
 fn format_instant_value(
     micros: i64,
-    zone: &Tz,
+    zone: Tz,
     zone_id: &str,
     spec: &FormatSpec,
 ) -> Result<Option<String>> {
@@ -105,7 +105,7 @@ fn format_date_value(days: i32, spec: &FormatSpec) -> Result<Option<String>> {
         return Ok(None);
     };
     match spec {
-        FormatSpec::Default => Ok(Some(render_date_default(&date))),
+        FormatSpec::Default => Ok(Some(render_date_default(date))),
         FormatSpec::Compiled(compiled) => {
             let value = RenderValue::Date { date };
             render_compiled(compiled, &value)
@@ -123,7 +123,9 @@ fn map_data_type(data_type: &DataType) -> DataType {
         DataType::LargeList(field) => DataType::LargeList(map_field(field)),
         DataType::FixedSizeList(field, size) => DataType::FixedSizeList(map_field(field), *size),
         DataType::Map(field, sorted) => {
-            let entries = field.data_type().as_struct();
+            let DataType::Struct(entries) = field.data_type() else {
+                return data_type.clone();
+            };
             let mapped: Vec<Arc<Field>> = entries
                 .iter()
                 .enumerate()
@@ -160,13 +162,13 @@ fn map_field(field: &Arc<Field>) -> Arc<Field> {
     )
 }
 
-fn arrow_failed(error: arrow::error::ArrowError) -> DataFusionError {
+fn arrow_failed(error: &arrow::error::ArrowError) -> DataFusionError {
     DataFusionError::Execution(format!("text timestamp write failed: {error}"))
 }
 
 struct FormatContext<'a> {
     specs: &'a FormatSpecs,
-    zone: &'a Tz,
+    zone: Tz,
     zone_id: &'a str,
 }
 
@@ -260,11 +262,11 @@ fn format_struct_column(array: &ArrayRef, context: &FormatContext) -> Result<Arr
             .column_names()
             .iter()
             .zip(columns.iter())
-            .map(|(name, column)| Arc::new(Field::new(name, column.data_type().clone(), true)))
+            .map(|(name, column)| Arc::new(Field::new(*name, column.data_type().clone(), true)))
             .collect(),
     };
     let rebuilt = StructArray::try_new(fields.into(), columns, structure.nulls().cloned())
-        .map_err(arrow_failed)?;
+        .map_err(|error| arrow_failed(&error))?;
     Ok(Arc::new(rebuilt))
 }
 
@@ -277,7 +279,7 @@ fn format_list_column(array: &ArrayRef, context: &FormatContext) -> Result<Array
         };
         let rebuilt =
             ListArray::try_new(field, list.offsets().clone(), values, list.nulls().cloned())
-                .map_err(arrow_failed)?;
+                .map_err(|error| arrow_failed(&error))?;
         return Ok(Arc::new(rebuilt));
     }
     if let Some(list) = array.as_any().downcast_ref::<LargeListArray>() {
@@ -288,7 +290,7 @@ fn format_list_column(array: &ArrayRef, context: &FormatContext) -> Result<Array
         };
         let rebuilt =
             LargeListArray::try_new(field, list.offsets().clone(), values, list.nulls().cloned())
-                .map_err(arrow_failed)?;
+                .map_err(|error| arrow_failed(&error))?;
         return Ok(Arc::new(rebuilt));
     }
     if let Some(list) = array.as_any().downcast_ref::<FixedSizeListArray>() {
@@ -299,7 +301,7 @@ fn format_list_column(array: &ArrayRef, context: &FormatContext) -> Result<Array
         };
         let rebuilt =
             FixedSizeListArray::try_new(field, list.value_length(), values, list.nulls().cloned())
-                .map_err(arrow_failed)?;
+                .map_err(|error| arrow_failed(&error))?;
         return Ok(Arc::new(rebuilt));
     }
     Ok(array.clone())
@@ -321,7 +323,7 @@ fn format_map_column(array: &ArrayRef, context: &FormatContext) -> Result<ArrayR
         vec![entries.column(0).clone(), values],
         entries.nulls().cloned(),
     )
-    .map_err(arrow_failed)?;
+    .map_err(|error| arrow_failed(&error))?;
     let field = match array.data_type() {
         DataType::Map(field, _) => Arc::new(
             field
@@ -346,7 +348,7 @@ fn format_map_column(array: &ArrayRef, context: &FormatContext) -> Result<ArrayR
         map.nulls().cloned(),
         sorted,
     )
-    .map_err(arrow_failed)?;
+    .map_err(|error| arrow_failed(&error))?;
     Ok(Arc::new(rebuilt))
 }
 
@@ -484,7 +486,7 @@ impl ScalarUDFImpl for WriteFormatText {
         })?;
         let context = FormatContext {
             specs: &specs,
-            zone: &zone,
+            zone,
             zone_id: zone_id.as_str(),
         };
         format_array(value.clone(), &context).map(ColumnarValue::Array)

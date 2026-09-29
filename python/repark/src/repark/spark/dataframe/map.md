@@ -15,6 +15,16 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   Spark 4.1.2 path-write behaviour on S3 recorded in 38 `W-PATH-S3-*` cells against a local
   moto emulator; the evidence and the design answers live in `task/ledgers/staging/u12-probes/`.
   pins: s3-path-write-1/C-001, C-002, C-003, C-004, C-005, C-006
+- `writer_readwriter.py` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** the
+  temporal options leave the CSV/JSON unsupported sets for
+  `_TEMPORAL_WRITE_OPTIONS` (skipped in COPY option SQL, honored through the
+  SELECT builder), and the local COPY inner `SELECT` comes from
+  `_build_text_write_select`.
+  pins: text-write-timestamp-zone-1/C-001, C-002
+- `writer_layout.py` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):**
+  `text_write_select` carries writer state to the `session_text_write_select`
+  binding, which returns the COPY inner `SELECT`.
+  pins: text-write-timestamp-zone-1/C-001
 - `writer_s3.py` — **S3-PATH-WRITE-1 round 1 (2026-09-28):** the S3 path-write
   forward. `is_s3_url` detects the scheme without filesystem calls;
   `write_s3_path` carries writer state to the `session_write_path` binding,

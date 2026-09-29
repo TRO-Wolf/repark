@@ -201,10 +201,7 @@ fn refused_csv_option(key: &str) -> bool {
 }
 
 fn refused_json_option(key: &str) -> bool {
-    matches!(
-        key,
-        "encoding" | "linesep" | "ignorenullfields"
-    )
+    matches!(key, "encoding" | "linesep" | "ignorenullfields")
 }
 
 fn copy_options_sql(format: &WriteFormat, options: &HashMap<String, String>) -> Result<String> {
@@ -758,6 +755,23 @@ impl ReparkSession {
     }
 
     #[allow(clippy::missing_errors_doc)]
+    fn copy_inner_select(
+        &self,
+        frame: &DataFrame,
+        format: &WriteFormat,
+        view: &str,
+        options: &HashMap<String, String>,
+        partitions: &[String],
+    ) -> Result<String> {
+        match format {
+            WriteFormat::Parquet => Ok(format!("SELECT * FROM {view}")),
+            WriteFormat::Csv | WriteFormat::Json => {
+                self.text_write_select_sql(frame, view, options, partitions)
+            }
+        }
+    }
+
+    #[allow(clippy::missing_errors_doc)]
     pub async fn write_path(
         &self,
         frame: &DataFrame,
@@ -841,12 +855,8 @@ impl ReparkSession {
         }
         let view = unique_view_name();
         let copy_target = object_store_s3::write_target_url(&scheme, &bucket, &prefix_text);
-        let select_sql = match &format {
-            WriteFormat::Parquet => format!("SELECT * FROM {view}"),
-            WriteFormat::Csv | WriteFormat::Json => {
-                self.text_write_select_sql(frame, &view, options, &resolved_partitions)?
-            }
-        };
+        let select_sql =
+            self.copy_inner_select(frame, &format, &view, options, &resolved_partitions)?;
         let copy_sql = format!(
             "COPY ({select_sql}) TO '{}' STORED AS {}{}{}",
             sql_escape(&copy_target),

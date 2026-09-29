@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use arrow::array::timezone::Tz;
-use chrono::{FixedOffset, NaiveDateTime};
+use chrono::{FixedOffset, NaiveDateTime, Offset as _};
 use datafusion::common::DataFusionError;
 use repark_common::Error;
 
@@ -64,7 +64,7 @@ impl PatternFailure {
     fn level(run: &str) -> Self {
         Self {
             message: format!(
-                "[INVALID_DATETIME_PATTERN.LEVEL] Unrecognized datetime pattern: {run}. Too \
+                "[INVALID_DATETIME_PATTERN.LENGTH] Unrecognized datetime pattern: {run}. Too \
                  many letters in datetime pattern: {run}. Please reduce pattern length. \
                  SQLSTATE: 22007"
             ),
@@ -134,7 +134,6 @@ struct PatternScan {
     letters: Vec<char>,
     unclosed_quote: bool,
     unmatched_close: bool,
-    bare_close: bool,
     section_char: bool,
 }
 
@@ -205,7 +204,6 @@ fn scan_pattern(pattern: &str) -> PatternScan {
         letters,
         unclosed_quote,
         unmatched_close,
-        bare_close: pattern == "]",
         section_char,
     }
 }
@@ -247,21 +245,17 @@ fn week_trigger_present(scan: &PatternScan) -> bool {
     })
 }
 
-fn legacy_recognition_triggered(scan: &PatternScan) -> bool {
-    if scan.section_char || scan.bare_close {
+fn legacy_recognition_triggered(scan: &PatternScan, bare_close: bool) -> bool {
+    if scan.section_char || bare_close {
         return true;
     }
     scan.runs.iter().any(|(letter, count)| match letter {
         'w' | 'W' | 'u' | 'Y' => true,
-        'F' => *count > 1,
-        'M' | 'L' | 'E' => *count > 4,
+        'F' | 'a' => *count > 1,
+        'M' | 'L' | 'E' | 'G' | 'z' => *count > 4,
         'S' => *count > 9,
-        'a' => *count > 1,
-        'G' => *count > 4,
-        'z' => *count > 4,
         'D' => *count > 3,
-        'd' => *count > 2,
-        'h' | 'H' | 'm' | 's' | 'K' | 'k' => *count > 2,
+        'd' | 'h' | 'H' | 'm' | 's' | 'K' | 'k' => *count > 2,
         'Z' => *count > 5,
         _ => false,
     })
@@ -325,7 +319,7 @@ fn shared_legacy_failure(pattern: &str, scan: &PatternScan) -> Option<PatternFai
             return Some(PatternFailure::level(&run));
         }
     }
-    if legacy_recognition_triggered(scan) {
+    if legacy_recognition_triggered(scan, pattern == "]") {
         return Some(PatternFailure::recognition(pattern));
     }
     None
@@ -456,11 +450,17 @@ fn compile_tokens(pattern: &str) -> CompiledPattern {
             }
             index += 1;
             let mut literal = String::new();
-            while index < characters.len() && characters[index] != '\'' {
+            while index < characters.len() {
+                if characters[index] == '\'' {
+                    if characters.get(index + 1) == Some(&'\'') {
+                        literal.push('\'');
+                        index += 2;
+                        continue;
+                    }
+                    index += 1;
+                    break;
+                }
                 literal.push(characters[index]);
-                index += 1;
-            }
-            if index < characters.len() {
                 index += 1;
             }
             tokens.push(PatternToken::Literal(literal));
@@ -530,9 +530,9 @@ pub fn compile_write_pattern(
     Ok(compile_tokens(pattern))
 }
 
-pub fn micros_to_wall_zone(micros: i64, zone: &Tz) -> Option<(NaiveDateTime, FixedOffset)> {
+pub fn micros_to_wall_zone(micros: i64, zone: Tz) -> Option<(NaiveDateTime, FixedOffset)> {
     let instant = chrono::DateTime::from_timestamp_micros(micros)?;
-    let zoned = instant.with_timezone(zone);
+    let zoned = instant.with_timezone(&zone);
     Some((zoned.naive_local(), zoned.offset().fix()))
 }
 

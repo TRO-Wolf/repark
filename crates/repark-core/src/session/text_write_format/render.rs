@@ -1,3 +1,5 @@
+use std::fmt::Write as _;
+
 use chrono::{Datelike, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, Timelike, Weekday};
 
 use super::{CompiledPattern, PatternToken};
@@ -66,15 +68,13 @@ fn format_iso_offset(sign: char, hours: u32, minutes: u32, seconds: u32, colon: 
     let mut text = format!("{sign}{hours:02}");
     if colon {
         text.push(':');
-        text.push_str(&format!("{minutes:02}"));
-    } else {
-        text.push_str(&format!("{minutes:02}"));
     }
+    let _ = write!(text, "{minutes:02}");
     if seconds != 0 {
         if colon {
             text.push(':');
         }
-        text.push_str(&format!("{seconds:02}"));
+        let _ = write!(text, "{seconds:02}");
     }
     text
 }
@@ -93,7 +93,7 @@ fn render_offset_field(letter: char, count: usize, offset: FixedOffset) -> Strin
             1 => {
                 let mut text = format!("{sign}{hours:02}");
                 if minutes != 0 {
-                    text.push_str(&format!("{minutes:02}"));
+                    let _ = write!(text, "{minutes:02}");
                 }
                 text
             }
@@ -102,7 +102,7 @@ fn render_offset_field(letter: char, count: usize, offset: FixedOffset) -> Strin
             4 => {
                 let mut text = format!("{sign}{hours:02}{minutes:02}");
                 if seconds != 0 {
-                    text.push_str(&format!("{seconds:02}"));
+                    let _ = write!(text, "{seconds:02}");
                 }
                 text
             }
@@ -135,9 +135,9 @@ fn render_localized_offset(count: usize, offset: FixedOffset) -> String {
     }
     let mut text = format!("GMT{sign}{hours}");
     if minutes != 0 || seconds != 0 {
-        text.push_str(&format!(":{minutes:02}"));
+        let _ = write!(text, ":{minutes:02}");
         if seconds != 0 {
-            text.push_str(&format!(":{seconds:02}"));
+            let _ = write!(text, ":{seconds:02}");
         }
     }
     text
@@ -233,13 +233,14 @@ fn render_year(year: i32, count: usize) -> String {
         return era_year.to_string();
     }
     let width = count.max(1);
-    format!("{:0width$}", era_year, width = width)
+    format!("{era_year:0width$}")
 }
 
 fn render_fraction(nanos: u32, count: usize) -> String {
     let width = count.clamp(1, 9);
-    let divisor = 10u32.pow(9 - width as u32);
-    format!("{:0width$}", nanos / divisor, width = width)
+    let narrow = u32::try_from(width).unwrap_or(9);
+    let divisor = 10u32.pow(9 - narrow);
+    format!("{:0width$}", nanos / divisor)
 }
 
 fn render_date_field(
@@ -297,12 +298,11 @@ fn render_time_field(
         )),
         'h' => Some(format!(
             "{:0width$}",
-            if time.hour() % 12 == 0 {
+            if time.hour().is_multiple_of(12) {
                 12
             } else {
                 time.hour() % 12
             },
-            width = width
         )),
         'm' => Some(format!("{:0width$}", time.minute(), width = width)),
         's' => Some(format!("{:0width$}", time.second(), width = width)),
@@ -331,8 +331,9 @@ fn render_field(
     value: &RenderValue,
 ) -> std::result::Result<String, String> {
     let (date, wall, nanos) = match value {
-        RenderValue::Instant { wall, nanos, .. } => (wall.date(), Some(*wall), *nanos),
-        RenderValue::Wall { wall, nanos } => (wall.date(), Some(*wall), *nanos),
+        RenderValue::Instant { wall, nanos, .. } | RenderValue::Wall { wall, nanos } => {
+            (wall.date(), Some(*wall), *nanos)
+        }
         RenderValue::Date { date } => (*date, None, 0),
     };
     let epoch_day = NaiveDateTime::new(date, NaiveTime::MIN)
@@ -358,7 +359,6 @@ fn render_field(
             _ => Err(unsupported_field("OffsetSeconds")),
         },
         RenderValue::Wall { .. } | RenderValue::Date { .. } => match letter {
-            'X' | 'x' | 'Z' | 'O' => Err(unsupported_field("OffsetSeconds")),
             'V' | 'v' | 'z' => Err(zone_id_missing(value)),
             _ => Err(unsupported_field("OffsetSeconds")),
         },
@@ -438,6 +438,6 @@ pub fn render_ntz_default(wall: &NaiveDateTime, nanos: u32) -> String {
     )
 }
 
-pub fn render_date_default(date: &NaiveDate) -> String {
+pub fn render_date_default(date: NaiveDate) -> String {
     date.format("%Y-%m-%d").to_string()
 }
