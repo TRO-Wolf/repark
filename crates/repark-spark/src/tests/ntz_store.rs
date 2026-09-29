@@ -25,7 +25,7 @@ async fn failure(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) ->
     }
 }
 
-async fn walls(
+pub(super) async fn walls(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     table: &str,

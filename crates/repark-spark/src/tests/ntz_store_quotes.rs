@@ -2,7 +2,7 @@ use datafusion::arrow::array::AsArray;
 
 use super::super::*;
 use super::common::*;
-use super::ntz_store::setup_ntz;
+use super::ntz_store::{setup_ntz, walls};
 
 async fn id_strings(
     ctx: &SessionContext,

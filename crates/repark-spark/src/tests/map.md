@@ -2079,8 +2079,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 
 - `ntz_store_quotes.rs` — **Split 2026-09-29 (NTZ-STORE-DOORS-1 merge of main):**
   `backslash_quote_strings_store_their_exact_values` and its `id_strings` reader,
-  moved verbatim from `ntz_store.rs`. It uses the parent's `setup_ntz`, which is now
-  `pub(super)`. The pins are LTZ-STACKED-SIGN-1's RN3-1 pins (see the `ntz_store.rs`
+  moved verbatim from `ntz_store.rs`. It uses the parent's `setup_ntz` and `walls`, which
+  are now `pub(super)`. The pins are LTZ-STACKED-SIGN-1's RN3-1 pins (see the `ntz_store.rs`
   entry).
 
 - `describe_table.rs` — **SQL-DESCRIBE-1 (2026-09-09):** `DESCRIBE|DESC [TABLE]
