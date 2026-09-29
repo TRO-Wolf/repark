@@ -38,7 +38,7 @@ impl AnalyzerRule for StoreOverflowCast {
             .data()
     }
 
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "repark_store_overflow_cast"
     }
 }
@@ -70,9 +70,7 @@ fn store_issue(column: &str, source: &DataType, target: &DataType) -> Option<Sto
     else {
         return None;
     };
-    if store_cast_udf_for_target(target).is_none() {
-        return None;
-    }
+    store_cast_udf_for_target(target)?;
     Some(StoreIssue {
         column: column.to_string(),
         source_name,
@@ -187,12 +185,9 @@ fn conform_values_rows(
                 out.push(expr.clone());
                 continue;
             };
-            let source = match cast.expr.get_type(&DFSchema::empty()) {
-                Ok(source) => source,
-                Err(_) => {
-                    out.push(expr.clone());
-                    continue;
-                }
+            let Ok(source) = cast.expr.get_type(&DFSchema::empty()) else {
+                out.push(expr.clone());
+                continue;
             };
             let Some(issue) = store_issue(target_field.name(), &source, cast.field.data_type())
             else {
@@ -200,9 +195,9 @@ fn conform_values_rows(
                 continue;
             };
             if fold {
-                check_folded_store_input(&issue, (*cast.expr).clone(), None, true)?;
+                check_folded_store_input(&issue, &cast.expr, None, true)?;
             }
-            let swapped = swap_guards_in_expr((*cast.expr).clone(), &issue)?;
+            let swapped = swap_guards_in_expr((*cast.expr).clone(), &issue);
             out.push(rewrap_aliases(wrap_store_expr(&issue, swapped), &frames));
             changed = true;
         }
@@ -228,7 +223,7 @@ fn target_field_by_name<'a>(
                 .iter()
                 .find(|field| field.name().eq_ignore_ascii_case(name))
         })
-        .map(|field| field.as_ref())
+        .map(AsRef::as_ref)
 }
 
 fn conform_store_exprs(
@@ -247,12 +242,17 @@ fn conform_store_exprs(
         let target_field = target_field_by_name(target, &name).or_else(|| {
             frames
                 .is_empty()
-                .then(|| target.fields().get(position).map(|field| field.as_ref()))
+                .then(|| target.fields().get(position).map(AsRef::as_ref))
                 .flatten()
         });
         let Some(target_field) = target_field else {
             out.push(expr.clone());
             continue;
+        };
+        let flags = ConformStoreFlags {
+            fold,
+            in_values: false,
+            unwrap_cast: true,
         };
         let Some(rewritten) = conform_one_store_expr(
             inner,
@@ -260,9 +260,7 @@ fn conform_store_exprs(
             &mut input,
             target_field.name(),
             target_field.data_type(),
-            fold,
-            false,
-            true,
+            flags,
         )?
         else {
             out.push(expr.clone());
@@ -277,26 +275,37 @@ fn conform_store_exprs(
     Ok(Some((out, input)))
 }
 
+#[derive(Debug, Clone, Copy)]
+struct ConformStoreFlags {
+    fold: bool,
+    in_values: bool,
+    unwrap_cast: bool,
+}
+
 fn conform_one_store_expr(
     inner: &Expr,
     schema: &DFSchema,
     input: &mut Arc<LogicalPlan>,
     column: &str,
     target_type: &DataType,
-    fold: bool,
-    in_values: bool,
-    unwrap_cast: bool,
+    flags: ConformStoreFlags,
 ) -> Result<Option<Expr>> {
     if let Expr::ScalarFunction(function) = inner
         && store_int_target(function.func.name()).is_some()
     {
         return Ok(None);
     }
-    let nested =
-        rewrite_nested_arrow_casts(inner.clone(), schema, input, column, target_type, fold)?;
+    let nested = rewrite_nested_arrow_casts(
+        inner.clone(),
+        schema,
+        input,
+        column,
+        target_type,
+        flags.fold,
+    )?;
     let nested_changed = nested != *inner;
     let inner = &nested;
-    let (value, source, cast_target) = store_cast_parts(inner, schema, unwrap_cast);
+    let (value, source, cast_target) = store_cast_parts(inner, schema, flags.unwrap_cast);
     if let Some(cast_target) = cast_target
         && &cast_target != target_type
     {
@@ -305,13 +314,13 @@ fn conform_one_store_expr(
     let Some(issue) = store_issue(column, &source, target_type) else {
         return Ok(nested_changed.then(|| nested.clone()));
     };
-    if fold {
-        check_folded_store_input(&issue, value.clone(), Some(input.as_ref()), in_values)?;
+    if flags.fold {
+        check_folded_store_input(&issue, &value, Some(input.as_ref()), flags.in_values)?;
     }
     swap_lineage_guards_for_expr(input, &value, &issue);
     Ok(Some(wrap_store_expr(
         &issue,
-        swap_guards_in_expr(value, &issue)?,
+        swap_guards_in_expr(value, &issue),
     )))
 }
 
@@ -412,17 +421,12 @@ fn nested_arrow_cast_rewrite(
         return Ok(None);
     };
     if fold {
-        check_folded_store_input(
-            &issue,
-            function.args[0].clone(),
-            Some(input.as_ref()),
-            false,
-        )?;
+        check_folded_store_input(&issue, &function.args[0], Some(input.as_ref()), false)?;
     }
     swap_lineage_guards_for_expr(input, &function.args[0], &issue);
     Ok(Some(wrap_store_expr(
         &issue,
-        swap_guards_in_expr(function.args[0].clone(), &issue)?,
+        swap_guards_in_expr(function.args[0].clone(), &issue),
     )))
 }
 
@@ -502,10 +506,10 @@ fn swap_defining_project_guards(plan: &mut LogicalPlan, column: &str, issue: &St
     }
 }
 
-fn swap_guards_in_expr(expr: Expr, issue: &StoreIssue) -> Result<Expr> {
+fn swap_guards_in_expr(expr: Expr, issue: &StoreIssue) -> Expr {
     let mut owned = expr;
     swap_guards_in_expr_owned(&mut owned, issue);
-    Ok(owned)
+    owned
 }
 
 fn swap_guards_in_expr_owned(expr: &mut Expr, issue: &StoreIssue) -> bool {
@@ -627,15 +631,18 @@ pub fn wrap_store_outputs(
             out.push(expr.clone());
             continue;
         };
+        let flags = ConformStoreFlags {
+            fold,
+            in_values: false,
+            unwrap_cast: false,
+        };
         let conformed = conform_one_store_expr(
             inner,
             schema.as_ref(),
             &mut input,
             column,
             target_type,
-            fold,
-            false,
-            false,
+            flags,
         )?;
         let Some(rewritten) = conformed else {
             out.push(expr.clone());
@@ -664,7 +671,6 @@ mod tests {
     use datafusion::prelude::SessionContext;
 
     use super::*;
-    use crate::write::store_cast::STORE_INT_GUARD_NAME;
 
     fn ctx() -> SessionContext {
         let ctx = SessionContext::new();
@@ -894,7 +900,7 @@ mod tests {
                 vec![Expr::Literal(ScalarValue::Float64(Some(0.0)), None)],
             ))),
         ));
-        let swapped = swap_guards_in_expr(expr, &issue).unwrap();
+        let swapped = swap_guards_in_expr(expr, &issue);
         let text = format!("{swapped:?}");
         assert!(text.contains("StoreIntGuard"), "{text}");
         assert!(!text.contains("DummyGuard"), "{text}");

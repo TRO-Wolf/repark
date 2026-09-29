@@ -42,20 +42,20 @@ pub(crate) fn store_guard_expr(divisor: Expr, issue: &StoreIssue) -> Expr {
 
 pub(crate) fn check_folded_store_input(
     issue: &StoreIssue,
-    value: Expr,
+    value: &Expr,
     input: Option<&LogicalPlan>,
     in_values: bool,
 ) -> Result<()> {
     let resolved = match input {
-        Some(plan) => resolve_store_input(plan, &value)?,
-        None => (!expr_has_columns(&value)?).then(|| value.clone()),
+        Some(plan) => resolve_store_input(plan, value)?,
+        None => (!expr_has_columns(value)?).then(|| value.clone()),
     };
     let Some(folded) = resolved else {
         return Ok(());
     };
-    let scalar = match fold_scalar(&folded)? {
+    let scalar = match fold_scalar(&folded) {
         Some(Ok(scalar)) => scalar,
-        Some(Err(error)) => return convert_fold_error(issue, error, in_values),
+        Some(Err(error)) => return convert_fold_error(issue, &error, in_values),
         None => return Ok(()),
     };
     if scalar.is_null() {
@@ -90,7 +90,7 @@ pub(crate) fn check_folded_store_input(
     }
 }
 
-fn convert_fold_error(issue: &StoreIssue, error: DataFusionError, in_values: bool) -> Result<()> {
+fn convert_fold_error(issue: &StoreIssue, error: &DataFusionError, in_values: bool) -> Result<()> {
     if !in_values
         && CONVERTIBLE_EVAL_HEADS
             .iter()
@@ -129,29 +129,28 @@ pub(crate) fn expr_references_column(expr: &Expr, column: &str) -> bool {
     found
 }
 
-fn fold_scalar(expr: &Expr) -> Result<Option<std::result::Result<ScalarValue, DataFusionError>>> {
-    let physical = match datafusion::physical_expr::create_physical_expr(
+fn fold_scalar(expr: &Expr) -> Option<std::result::Result<ScalarValue, DataFusionError>> {
+    let Ok(physical) = datafusion::physical_expr::create_physical_expr(
         expr,
         &DFSchema::empty(),
         &ExecutionProps::new(),
-    ) {
-        Ok(physical) => physical,
-        Err(_) => return Ok(None),
+    ) else {
+        return None;
     };
     let batch = RecordBatch::new_empty(Arc::new(ArrowSchema::empty()));
     let value = match physical.evaluate(&batch) {
         Ok(value) => value,
-        Err(error) => return Ok(Some(Err(error))),
+        Err(error) => return Some(Err(error)),
     };
     match value {
-        datafusion::logical_expr::ColumnarValue::Scalar(scalar) => Ok(Some(Ok(scalar))),
+        datafusion::logical_expr::ColumnarValue::Scalar(scalar) => Some(Ok(scalar)),
         datafusion::logical_expr::ColumnarValue::Array(array) if array.len() == 1 => {
             match ScalarValue::try_from_array(array.as_ref(), 0) {
-                Ok(scalar) => Ok(Some(Ok(scalar))),
-                Err(_) => Ok(None),
+                Ok(scalar) => Some(Ok(scalar)),
+                Err(_) => None,
             }
         }
-        _ => Ok(None),
+        datafusion::logical_expr::ColumnarValue::Array(_) => None,
     }
 }
 
@@ -173,12 +172,11 @@ fn resolve_store_substituted(input: &LogicalPlan, expr: &Expr) -> Result<Option<
             let Expr::Column(column) = &node else {
                 return Ok(Transformed::no(node));
             };
-            match lookup_store_column(input, column)? {
-                Some(defining) => Ok(Transformed::yes(defining)),
-                None => {
-                    failed = true;
-                    Ok(Transformed::no(node))
-                }
+            if let Some(defining) = lookup_store_column(input, column)? {
+                Ok(Transformed::yes(defining))
+            } else {
+                failed = true;
+                Ok(Transformed::no(node))
             }
         })?
         .data;

@@ -81,11 +81,12 @@ fn strict_options() -> CastOptions<'static> {
     }
 }
 
+#[expect(clippy::cast_precision_loss)]
 fn float_store_bounds(target: &DataType) -> Option<(f64, f64)> {
     match target {
-        DataType::Int8 => Some((i8::MIN as f64, i8::MAX as f64)),
-        DataType::Int16 => Some((i16::MIN as f64, i16::MAX as f64)),
-        DataType::Int32 => Some((i32::MIN as f64, i32::MAX as f64)),
+        DataType::Int8 => Some((f64::from(i8::MIN), f64::from(i8::MAX))),
+        DataType::Int16 => Some((f64::from(i16::MIN), f64::from(i16::MAX))),
+        DataType::Int32 => Some((f64::from(i32::MIN), f64::from(i32::MAX))),
         DataType::Int64 => Some((i64::MIN as f64, i64::MAX as f64)),
         _ => None,
     }
@@ -106,6 +107,7 @@ fn check_float_store_value(
 
 macro_rules! float_store_array {
     ($name:ident, $float:ident, $int:ident, $scalar:ident) => {
+        #[expect(clippy::cast_possible_truncation)]
         fn $name(
             column: &str,
             source: &str,
@@ -179,14 +181,13 @@ fn decode_store_input(value: &ColumnarValue) -> Result<(ColumnarValue, DataType)
     match value {
         ColumnarValue::Scalar(scalar) => {
             if matches!(scalar.data_type(), DataType::Dictionary(_, _)) {
-                let array = scalar.to_array_of_size(1).map_err(DataFusionError::from)?;
+                let array = scalar.to_array_of_size(1)?;
                 let decoded = cast_with_options(
                     array.as_ref(),
                     normalize_for_assignment(&scalar.data_type()),
                     &strict_options(),
                 )?;
-                let back =
-                    ScalarValue::try_from_array(&decoded, 0).map_err(DataFusionError::from)?;
+                let back = ScalarValue::try_from_array(&decoded, 0)?;
                 let data_type = back.data_type();
                 return Ok((ColumnarValue::Scalar(back), data_type));
             }
@@ -243,11 +244,11 @@ pub(crate) fn cast_store_value(
             if scalar.is_null() {
                 return Ok(ColumnarValue::Scalar(typed_null_scalar(target)));
             }
-            let array = scalar.to_array_of_size(1).map_err(DataFusionError::from)?;
+            let array = scalar.to_array_of_size(1)?;
             let casted = cast_store_array(column, &from, &to, &Arc::new(array), target)?;
-            Ok(ColumnarValue::Scalar(
-                ScalarValue::try_from_array(&casted, 0).map_err(DataFusionError::from)?,
-            ))
+            Ok(ColumnarValue::Scalar(ScalarValue::try_from_array(
+                &casted, 0,
+            )?))
         }
         ColumnarValue::Array(array) => Ok(ColumnarValue::Array(cast_store_array(
             column, &from, &to, &array, target,
@@ -685,9 +686,9 @@ mod tests {
     fn exact_powers_of_two_at_the_int64_edge_store_like_spark() {
         let udf = store_int64_udf();
         for (value, stored) in [
-            (9.223372036854776e18, i64::MAX),
-            (-9.223372036854776e18, i64::MIN),
-            (f64::from(9.223372036854776e18_f32), i64::MAX),
+            (9.223_372_036_854_776e18, i64::MAX),
+            (-9.223_372_036_854_776e18, i64::MIN),
+            (f64::from(2.0_f32.powi(63)), i64::MAX),
         ] {
             let ok = invoke_cast(
                 &udf,
@@ -703,7 +704,7 @@ mod tests {
         let udf32 = store_int32_udf();
         let error = invoke_cast(
             &udf32,
-            ColumnarValue::Scalar(ScalarValue::Float64(Some(9.223372036854776e18))),
+            ColumnarValue::Scalar(ScalarValue::Float64(Some(9.223_372_036_854_776e18))),
             "v",
         )
         .expect_err("2^63 refuses into INT");
@@ -720,7 +721,7 @@ mod tests {
         let udf = store_int64_udf();
         let ok = invoke_cast(
             &udf,
-            ColumnarValue::Scalar(ScalarValue::Float32(Some(9.223372e18))),
+            ColumnarValue::Scalar(ScalarValue::Float32(Some(9.223_372e18))),
             "v",
         )
         .expect("f32 2^63 stores");
@@ -731,7 +732,7 @@ mod tests {
         let udf32 = store_int32_udf();
         let error = invoke_cast(
             &udf32,
-            ColumnarValue::Scalar(ScalarValue::Float32(Some(3.4028235e38))),
+            ColumnarValue::Scalar(ScalarValue::Float32(Some(3.402_823_5e38))),
             "v",
         )
         .expect_err("f32 MAX refuses into INT");
