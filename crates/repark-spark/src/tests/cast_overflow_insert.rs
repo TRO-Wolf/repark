@@ -113,6 +113,26 @@ async fn insert_select_column_and_division_refuse() {
         let message = refusal(&ctx, &catalogs, sql).await;
         overflow_head(&message, "DOUBLE", "BIGINT", "v");
     }
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.srce (id BIGINT, d DOUBLE) USING iceberg",
+    )
+    .await;
+    let message = refusal(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.cov SELECT id, 1e19 FROM ice.sales.srce",
+    )
+    .await;
+    overflow_head(&message, "DOUBLE", "BIGINT", "v");
+    let message = refusal(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.cov SELECT id, v FROM (SELECT id, (id - id) / (id - id) AS v FROM ice.sales.cov) s",
+    )
+    .await;
+    overflow_head(&message, "DOUBLE", "BIGINT", "v");
     assert_eq!(values_of(&ctx, &catalogs).await, vec![0]);
 }
 
@@ -207,6 +227,20 @@ async fn overwrite_and_by_name_refuse() {
     )
     .await;
     overflow_head(&message, "DOUBLE", "BIGINT", "v");
+    for sql in [
+        "INSERT OVERWRITE ice.sales.cov SELECT 10, 0/0",
+        "INSERT INTO ice.sales.cov BY NAME SELECT 10 AS id, 0/0 AS v",
+    ] {
+        let message = refusal(&ctx, &catalogs, sql).await;
+        overflow_head(&message, "DOUBLE", "BIGINT", "v");
+    }
+    for sql in [
+        "INSERT OVERWRITE ice.sales.cov SELECT 10, 1/0.0",
+        "INSERT INTO ice.sales.cov BY NAME SELECT 10 AS id, 1/0.0 AS v",
+    ] {
+        let message = refusal(&ctx, &catalogs, sql).await;
+        overflow_head(&message, "DECIMAL(27,6)", "BIGINT", "v");
+    }
     assert_eq!(values_of(&ctx, &catalogs).await, vec![0]);
 }
 

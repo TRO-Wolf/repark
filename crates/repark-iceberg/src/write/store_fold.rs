@@ -3,7 +3,7 @@ use std::sync::Arc;
 use datafusion::arrow::datatypes::{DataType, Schema as ArrowSchema};
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::common::DFSchema;
-use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
+use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::execution::context::ExecutionProps;
 use datafusion::logical_expr::expr::ScalarFunction;
@@ -12,7 +12,7 @@ use datafusion::scalar::ScalarValue;
 
 use super::store_overflow::{CONVERTIBLE_EVAL_HEADS, StoreIssue, split_aliases};
 use crate::write::store_cast::{
-    cast_store_value, store_cast_udf_for_target, store_int_guard_udf, store_overflow_message,
+    cast_store_value, store_cast_udf_for_target, store_int_guard_udf, store_overflow_error,
 };
 
 pub(crate) fn wrap_store_expr(issue: &StoreIssue, value: Expr) -> Expr {
@@ -80,11 +80,11 @@ pub(crate) fn check_folded_store_input(
                 .to_string()
                 .contains("[CAST_OVERFLOW_IN_TABLE_INSERT]") =>
         {
-            Err(DataFusionError::Plan(store_overflow_message(
+            Err(store_overflow_error(
                 &issue.column,
                 &issue.source_name,
                 &issue.target_name,
-            )))
+            ))
         }
         Err(error) => Err(error),
     }
@@ -96,11 +96,11 @@ fn convert_fold_error(issue: &StoreIssue, error: DataFusionError, in_values: boo
             .iter()
             .any(|head| error.to_string().contains(head))
     {
-        return Err(DataFusionError::Plan(store_overflow_message(
+        return Err(store_overflow_error(
             &issue.column,
             &issue.source_name,
             &issue.target_name,
-        )));
+        ));
     }
     Ok(())
 }
@@ -160,8 +160,38 @@ fn resolve_store_input(input: &LogicalPlan, expr: &Expr) -> Result<Option<Expr>>
         return Ok(Some(expr.clone()));
     }
     let Expr::Column(column) = expr else {
-        return Ok(None);
+        return resolve_store_substituted(input, expr);
     };
+    lookup_store_column(input, column)
+}
+
+fn resolve_store_substituted(input: &LogicalPlan, expr: &Expr) -> Result<Option<Expr>> {
+    let mut failed = false;
+    let substituted = expr
+        .clone()
+        .transform_up(|node| {
+            let Expr::Column(column) = &node else {
+                return Ok(Transformed::no(node));
+            };
+            match lookup_store_column(input, column)? {
+                Some(defining) => Ok(Transformed::yes(defining)),
+                None => {
+                    failed = true;
+                    Ok(Transformed::no(node))
+                }
+            }
+        })?
+        .data;
+    if failed || expr_has_columns(&substituted)? {
+        return Ok(None);
+    }
+    Ok(Some(substituted))
+}
+
+fn lookup_store_column(
+    input: &LogicalPlan,
+    column: &datafusion::common::Column,
+) -> Result<Option<Expr>> {
     let mut column = column.clone();
     let mut plan = input;
     loop {
@@ -172,6 +202,7 @@ fn resolve_store_input(input: &LogicalPlan, expr: &Expr) -> Result<Option<Expr>>
                     .iter()
                     .filter(|candidate| match candidate {
                         Expr::Alias(alias) => alias.name == column.name,
+                        Expr::Column(candidate) => candidate.name == column.name,
                         other => other.schema_name().to_string() == column.name,
                     })
                     .collect();

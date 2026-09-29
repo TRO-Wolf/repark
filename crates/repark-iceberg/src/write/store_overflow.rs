@@ -245,7 +245,8 @@ fn conform_store_exprs(
         let (inner, frames) = split_aliases(expr);
         let name = store_output_name(inner, &frames);
         let target_field = target_field_by_name(target, &name).or_else(|| {
-            (inner.schema_name().to_string() == name)
+            frames
+                .is_empty()
                 .then(|| target.fields().get(position).map(|field| field.as_ref()))
                 .flatten()
         });
@@ -454,6 +455,7 @@ fn swap_defining_project_guards(plan: &mut LogicalPlan, column: &str, issue: &St
                 .iter()
                 .position(|candidate| match candidate {
                     Expr::Alias(alias) => alias.name == *column,
+                    Expr::Column(candidate) => candidate.name == *column,
                     other => other.schema_name().to_string() == *column,
                 });
             let Some(index) = position else {
@@ -639,7 +641,11 @@ pub fn wrap_store_outputs(
             out.push(expr.clone());
             continue;
         };
-        out.push(rewrap_aliases(rewritten, &frames));
+        if frames.is_empty() {
+            out.push(rewritten.alias(column));
+        } else {
+            out.push(rewrap_aliases(rewritten, &frames));
+        }
         changed = true;
     }
     if !changed {
@@ -720,6 +726,24 @@ mod tests {
                 .expect_err("const overflow must refuse");
             overflow_head(&message, "DOUBLE", "BIGINT", "v");
         }
+    }
+
+    #[tokio::test]
+    async fn insert_select_const_overflow_refuses_over_empty_source() {
+        let ctx = ctx();
+        let empty = Arc::new(Schema::new(vec![
+            Field::new("id", DataType::Int64, true),
+            Field::new("d", DataType::Float64, true),
+        ]));
+        ctx.register_table(
+            "e",
+            Arc::new(MemTable::try_new(empty, vec![vec![]]).unwrap()),
+        )
+        .unwrap();
+        let message = run(&ctx, "INSERT INTO t SELECT id, 1e19 FROM e")
+            .await
+            .expect_err("const overflow over empty source must refuse");
+        overflow_head(&message, "DOUBLE", "BIGINT", "v");
     }
 
     #[tokio::test]
