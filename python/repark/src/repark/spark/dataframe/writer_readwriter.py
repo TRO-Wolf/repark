@@ -399,7 +399,8 @@ class DataFrameWriter:
         try:
             self._run_through_temp_view(
                 lambda view: (
-                    f"COPY ({self._build_text_write_select(view, stored_as)}) TO '{escaped_staging}' "
+                    f"COPY ({self._build_text_write_select(view, stored_as)}) "
+                    f"TO '{escaped_staging}' "
                     f"STORED AS {stored_as}{partition_clause}{options_clause}"
                 )
             )
