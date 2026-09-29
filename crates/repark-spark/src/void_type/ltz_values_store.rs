@@ -9,9 +9,7 @@ use iceberg::{NamespaceIdent, TableIdent};
 use repark_common::spark_error;
 use repark_core::CatalogRegistry;
 
-use super::spark_widen::{
-    BranchShape, branch_shape, is_string_type, widen_operand_types, widened_stores,
-};
+use super::source_leaves::{is_string_type, source_type_is_reliable};
 use super::{column_name, is_bare_null};
 use crate::catalog_ops::{name_parts, quoted_table_display};
 use crate::write_to_branch::qualify_table_parts;
@@ -138,15 +136,17 @@ async fn refuse_value(
         };
         probed
     };
+    if !is_microsecond_ltz(target)
+        && (is_string_type(&source) || !source_type_is_reliable(value, target))
+    {
+        return Ok(());
+    }
     if let Some(text) = repark_iceberg::write::update_cast::incompatible_store_message(
         display,
         &format!("`{column}`"),
         &source,
         target,
     ) {
-        if spark_branch_stores(&source, target, value) {
-            return Ok(());
-        }
         return Err(DataFusionError::Plan(text));
     }
     if is_microsecond_ltz(target) && source.is_numeric() {
@@ -155,80 +155,6 @@ async fn refuse_value(
         )));
     }
     Ok(())
-}
-
-fn spark_branch_stores(source: &DataType, target: &DataType, value: &Expr) -> bool {
-    if !is_string_type(source) {
-        return false;
-    }
-    match spark_branch_type(value) {
-        Some(widened) => widened_stores(&widened, target),
-        None => false,
-    }
-}
-
-fn spark_branch_type(value: &Expr) -> Option<DataType> {
-    let mut peeled = value;
-    while let Expr::Nested(inner) = peeled {
-        peeled = inner;
-    }
-    match peeled {
-        Expr::Case {
-            conditions,
-            else_result,
-            ..
-        } => {
-            let mut branches = Vec::with_capacity(conditions.len() + 1);
-            for when in conditions {
-                branches.push(spark_branch_type(&when.result)?);
-            }
-            if let Some(else_result) = else_result {
-                branches.push(spark_branch_type(else_result)?);
-            }
-            widen_operand_types(&branches)
-        }
-        Expr::Function(function) => {
-            let FunctionArguments::List(list) = &function.args else {
-                return None;
-            };
-            let mut operands = Vec::with_capacity(list.args.len());
-            for argument in &list.args {
-                let FunctionArg::Unnamed(FunctionArgExpr::Expr(operand)) = argument else {
-                    return None;
-                };
-                operands.push(operand);
-            }
-            let picked = match branch_shape(&function.name.to_string(), operands.len())? {
-                BranchShape::All => &operands[..],
-                BranchShape::First => operands.get(..1)?,
-                BranchShape::AfterFirst => operands.get(1..)?,
-            };
-            let mut branches = Vec::with_capacity(picked.len());
-            for operand in picked {
-                branches.push(spark_branch_type(operand)?);
-            }
-            widen_operand_types(&branches)
-        }
-        Expr::UnaryOp {
-            op: UnaryOperator::Plus | UnaryOperator::Minus,
-            expr,
-        } => match spark_branch_type(expr) {
-            Some(DataType::Null) => Some(DataType::Float64),
-            other => other,
-        },
-        _ => literal_source_type(peeled).or_else(|| cast_target_type_of(peeled)),
-    }
-}
-
-fn cast_target_type_of(value: &Expr) -> Option<DataType> {
-    match value {
-        Expr::Cast {
-            data_type,
-            array: false,
-            ..
-        } => cast_target_type(data_type),
-        _ => None,
-    }
 }
 
 fn cast_target_type(data_type: &SqlDataType) -> Option<DataType> {
@@ -295,7 +221,7 @@ fn is_microsecond_ltz(data_type: &DataType) -> bool {
     )
 }
 
-fn literal_source_type(value: &Expr) -> Option<DataType> {
+pub(super) fn literal_source_type(value: &Expr) -> Option<DataType> {
     match value {
         Expr::Value(literal) => match &literal.value {
             Value::Number(text, long) => Some(number_text_type(text, *long)),
@@ -556,51 +482,6 @@ mod tests {
             ],
             "{row:?}"
         );
-    }
-
-    #[test]
-    fn mixed_branches_widen_to_the_numeric_side() {
-        let row = values_row(
-            "INSERT INTO t VALUES (CASE WHEN true THEN '1' ELSE 2 END, nvl('1', 2), \
-             nullif(NULL, NULL), coalesce(NULL, 'x'), abs(1))",
-        );
-        let widened: Vec<Option<DataType>> = row.iter().map(spark_branch_type).collect();
-        assert_eq!(
-            widened,
-            vec![
-                Some(DataType::Int32),
-                Some(DataType::Int32),
-                Some(DataType::Null),
-                Some(DataType::Utf8),
-                None,
-            ],
-            "{row:?}"
-        );
-    }
-
-    #[test]
-    fn widened_branches_store_into_numerics_but_not_into_booleans() {
-        let row = values_row("INSERT INTO t VALUES (CASE WHEN true THEN '1' ELSE 2 END)");
-        assert!(spark_branch_stores(
-            &DataType::Utf8,
-            &DataType::Int32,
-            &row[0]
-        ));
-        assert!(spark_branch_stores(
-            &DataType::Utf8,
-            &DataType::Float64,
-            &row[0]
-        ));
-        assert!(!spark_branch_stores(
-            &DataType::Utf8,
-            &DataType::Boolean,
-            &row[0]
-        ));
-        assert!(!spark_branch_stores(
-            &DataType::Int32,
-            &DataType::Int32,
-            &row[0]
-        ));
     }
 
     #[test]

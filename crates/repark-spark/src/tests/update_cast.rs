@@ -86,7 +86,7 @@ async fn update_missing_table_keeps_its_own_error() {
 }
 
 #[tokio::test]
-async fn insert_string_into_bigint_refuses_like_spark() {
+async fn insert_string_into_bigint_keeps_the_insert_path() {
     let (_warehouse, ctx, catalogs) = door().await;
     let text = match execute(
         &ctx,
@@ -96,17 +96,14 @@ async fn insert_string_into_bigint_refuses_like_spark() {
     .await
     {
         Ok(frame) => match frame.collect().await {
-            Ok(_) => panic!("INSERT string into BIGINT must refuse"),
+            Ok(_) => panic!("INSERT string into BIGINT must fail on the insert path"),
             Err(err) => err.to_string(),
         },
         Err(err) => err.to_string(),
     };
+    assert!(text.contains("Cannot cast string 'notanumber'"), "{text}");
     assert!(
-        text.contains(
-            "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for \
-             the table `ice`.`sales`.`t`: Cannot safely cast `id` \"STRING\" to \"BIGINT\". \
-             SQLSTATE: KD000"
-        ),
+        !text.contains("Cannot write incompatible data for the table"),
         "{text}"
     );
 }

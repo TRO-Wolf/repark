@@ -44,6 +44,8 @@ Rewrite or execute the INSERT forms the stock parser cannot model on the Spark d
   `void_type::refuse_insert_source_types` gate after the width check, so
   `writeTo().overwrite(condition)` refuses STRING into FLOAT/DOUBLE and `-NULL`
   into DATE/BOOLEAN with Spark's text like every other INSERT door.
+  **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** through the narrowed gate this door refuses only
+  the `-NULL` cells; a STRING source stores as on base. pins: store-ts-to-numeric-1/C-006
 - `partition_append.rs` — `INSERT INTO … PARTITION (…)` becomes a plain positional INSERT.
   Static values (Spark's string form, checked by an Arrow cast with `safe: false`,
   `CAST_INVALID_INPUT` on failure) go in at their table positions (or after a column list),

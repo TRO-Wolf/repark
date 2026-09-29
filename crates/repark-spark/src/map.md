@@ -347,6 +347,8 @@ pins: rp-4-fork-repin/C-005, C-006
   `router/insert_positional.rs`. So a `-NULL` into a DATE, BOOLEAN or timestamp column and
   a STRING into FLOAT/DOUBLE refuse with Spark's text on every INSERT door, the DataFrame
   writers included. pins: store-ts-to-numeric-1/C-002, C-003
+  **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** the gate now judges `-NULL` only; STRING
+  sources store as on base. pins: store-ts-to-numeric-1/C-006
 - `insert_by_name.rs` — `INSERT … BY NAME` (ICE-RTAS-BYNAME-1, 2026-09-17): the token-level
   strip (sqlparser has no `BY NAME`), the count-first Spark error rule, the positional
   projection build, the staged-append executor (stream → conform → `commit_append_to` →
@@ -441,6 +443,9 @@ pins: rp-4-fork-repin/C-005, C-006
   DATE and BOOLEAN targets, and the sibling `void_type/insert_source_types.rs`
   holds the INSERT gate for `-NULL` and STRING → FLOAT/DOUBLE.
   pins: store-ts-to-numeric-1/C-001
+  **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** STRING-planned cells and branching cells whose
+  leaves are not all refused types stay silent (`void_type/source_leaves.rs`); the INSERT
+  gate keeps only `-NULL`. pins: store-ts-to-numeric-1/C-006, C-007
   Directory map: [void_type/map.md](void_type/map.md).
   Pins: [tests/ltz_store.rs](tests/ltz_store.rs).
   pins: ltz-store-int-1/C-001
@@ -511,6 +516,10 @@ pins: rp-4-fork-repin/C-005, C-006
   `refuse_negated_null_writes` (a `-NULL` SET value is Spark's DOUBLE), and the final
   check uses `incompatible_store_message`, so a STRING into a DECIMAL column refuses
   naming `"DECIMAL(10,2)"`. pins: store-ts-to-numeric-1/C-002, C-004
+  **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** the DECIMAL-naming message applies only where
+  the base message (`incompatible_update_message`) already refuses, or where the source
+  is not STRING and `void_type::source_type_is_reliable` trusts the SET value; a STRING
+  into DECIMAL stores again as on base. pins: store-ts-to-numeric-1/C-006, C-007
   **U8 WRITE-SQL PR2 (2026-09-25):** `execute_update` now calls
   `refuse_cast_then_fold_nested`. It loads the target once (`load_update_target`), runs the
   same top-level cast refusal on it (skipped when a key repeats, so the fold's `Multiple

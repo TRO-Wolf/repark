@@ -2165,6 +2165,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `VALUES ('notanumber', 'z')` refuses `CANNOT_SAFELY_CAST` naming `"STRING"` to
   `"BIGINT"` at the VALUES gate, where it used to fail in the cast kernel.
   pins: store-ts-to-numeric-1/C-001
+  **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** STRING sources return to base behaviour, so
+  the INSERT cell is back to its base pin `insert_string_into_bigint_keeps_the_insert_path`
+  (the cast-kernel error, not the store text). pins: store-ts-to-numeric-1/C-006
 - [ltz_store.rs](ltz_store.rs) — **WO LTZ-STORE-INT-1 (2026-09-28):** INT into a
   `TIMESTAMP` (LTZ) column refuses on VALUES, SELECT, UPDATE and MERGE — the VALUES text
   equals Spark's recorded `ins_l_int` refusal on the test catalog, and the refused

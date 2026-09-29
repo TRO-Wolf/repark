@@ -4592,6 +4592,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   STRING/numeric CASE, `nvl` and `nullif` shapes Spark widens to a storable type
   (VALUES, SELECT, BY NAME, column list, OVERWRITE, `append`, `insertInto`,
   `saveAsTable`; the runner learns the `df_saveastable` door). 81 cells total.
+  **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** the eight STRING-source refusal cells
+  (VALUES `'1'` into INT and BOOLEAN, `'2024-01-01'` into DATE, UPDATE `'1'` into
+  DECIMAL, STRING into FLOAT/DOUBLE through SELECT, a derived table, `append` over a
+  view and `insertInto`) are deleted — those shapes return to base behaviour. Six store
+  cells measured on Spark 4.1.2 pin the re-verify families: a SQL temp view over a
+  STRING/INT CASE, `writeTo().append()` and `write.insertInto()` of the same CASE, a
+  STRING/DOUBLE UNION, `max` over a STRING/DOUBLE CASE, and a STRING/TIMESTAMP CASE
+  into DATE through VALUES. 79 cells; the oracle is one cell per line and drops the
+  temp views no cell reads. pins: store-ts-to-numeric-1/C-006
 - `test_merge_semantics_audit.py` — **MERGE-audit corpus** (2026-08-14 audit gap-map rows
   c/d/g/n/o): null-safe `<=>` / `eqNullSafe` ON matches NULL keys (both doors); builder-door
   `=` NULL keys do not match; self-merge (target as source) updates once per row; join-key

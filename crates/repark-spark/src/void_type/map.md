@@ -43,6 +43,14 @@ handling (`CAST(NULL AS VOID)` rewrite, the non-NULL VALUES refusal into
   the refusal keeps naming the planned STRING so still-refusing cells keep their
   text). DATE typed strings and plain CASTs now read by declared type, so DATE
   and `CAST(i AS DOUBLE)` VALUES rows skip the per-cell probe (verifier VT-4).
+  **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** the VT-1 widening
+  escape is gone. For a numeric, DATE or BOOLEAN target the gate stays silent
+  when the planned source is STRING (base behaviour: STRING into those columns
+  stores again) or when `source_leaves::source_type_is_reliable` rejects the
+  cell; LTZ targets keep LTZ-STORE-INT-1's judgment unchanged, so a STRING cell
+  into TIMESTAMP refuses as on base. TIMESTAMP, TIMESTAMP_NTZ and DATE cells into
+  numeric and BOOLEAN columns, BOOLEAN into numeric and numeric into BOOLEAN still
+  refuse. pins: store-ts-to-numeric-1/C-001, C-006, C-007
 - `insert_source_types.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):**
   `refuse_insert_source_types` is the Spark door's INSERT gate for two source
   types the analyzer gate cannot see: a negated NULL (Spark's DOUBLE, judged by
@@ -63,16 +71,25 @@ handling (`CAST(NULL AS VOID)` rewrite, the non-NULL VALUES refusal into
   widened branch type; `__repark_float_to_string__` is transparent (it only
   wraps FLOAT/DOUBLE, so the walk reads its argument). Called now also from
   `router/insert_positional/replace_where.rs` (verifier VT-2).
-- `spark_widen.rs` — **Fold 2026-09-29 (verifier VT-1):** the shared Spark
-  branch-widening lattice both gates judge through. `branch_shape` names the
-  widening functions and their operand slices (`nullif` keeps its first
-  argument, `if`/`nvl2` skip the condition); `widen_operand_types` drops NULLs,
-  widens STRING with one numeric side to the widest numeric and STRING with DATE
-  or TIMESTAMP to that side, and answers None for anything Spark would not widen
-  (BOOLEAN mixed with STRING, two disagreeing sides); `widened_stores` skips the
-  refusal only for a plain widened type the matrix stores, never a widened
-  numeric into an LTZ target. Six lattice tests plus one store test.
-  pins: store-ts-to-numeric-1/C-001, C-003
+  **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** the STRING → FLOAT/DOUBLE
+  refusal, its plan walk (`spark_source_type`) and the `__repark_float_to_string__`
+  transparency are removed; the gate now only runs `refuse_negated_null_writes`,
+  and only for a table with a DATE, BOOLEAN, timestamp or BINARY column and a
+  source with a `Null`-typed column. STRING sources store on every INSERT door as
+  on base. pins: store-ts-to-numeric-1/C-002, C-006
+- `source_leaves.rs` — **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):**
+  `source_type_is_reliable` decides whether a new refusal may trust RePark's
+  planned source type. A plain cell (literal, typed string, CAST, a non-widening
+  function, a scalar subquery projecting one column) is trusted. A branching cell
+  — CASE, `coalesce`/`greatest`/`least`/`nvl`/`ifnull`/`nullif`/`if`/`nvl2`, any
+  other scalar subquery, EXISTS, IN (subquery) — is trusted only when every leaf
+  it can return has a statically known type that is not STRING and that itself
+  refuses into the target (TIMESTAMP, TIMESTAMP_NTZ including
+  `__repark_timestamp_ntz__(…)`, and DATE leaves into numeric and BOOLEAN
+  columns; bare NULL leaves are neutral); anything else stays silent and the
+  store behaves as on base. `is_string_type` names the STRING family. Five
+  classifier tests. Replaces the VT-1 widening lattice `spark_widen.rs`, deleted
+  with its call sites. pins: store-ts-to-numeric-1/C-007
 
 ## Pointers
 

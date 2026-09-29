@@ -9,9 +9,11 @@ use repark_core::CatalogRegistry;
 use repark_iceberg::catalog::uuid_presentation::presented_arrow_schema;
 use repark_iceberg::write::negated_null_store::refuse_negated_null_writes;
 use repark_iceberg::write::ntz_store::refuse_ntz_writes;
+use repark_iceberg::write::update_cast::{incompatible_store_message, incompatible_update_message};
 use repark_iceberg::write::void_store::refuse_void_writes;
 
 use crate::merge::nested_assign::{self, AssignmentScope};
+use crate::void_type::{is_string_type, source_type_is_reliable};
 
 struct UpdateTarget {
     arrow_schema: ArrowSchema,
@@ -133,12 +135,15 @@ async fn refuse_incompatible_update_cast(
         let Some(source_field) = frame.schema().fields().first() else {
             return Ok(());
         };
-        if let Some(text) = repark_iceberg::write::update_cast::incompatible_store_message(
-            "``",
-            &format!("`{column}`"),
-            source_field.data_type(),
-            field.data_type(),
-        ) {
+        let source = source_field.data_type();
+        let column = format!("`{column}`");
+        let judged = incompatible_update_message("``", &column, source, field.data_type())
+            .is_some()
+            || (!is_string_type(source)
+                && source_type_is_reliable(&assignment.value, field.data_type()));
+        if judged
+            && let Some(text) = incompatible_store_message("``", &column, source, field.data_type())
+        {
             return Err(DataFusionError::Plan(text));
         }
     }

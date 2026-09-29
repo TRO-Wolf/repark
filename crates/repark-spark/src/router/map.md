@@ -32,6 +32,8 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   positional INSERT door — append, owned append, OVERWRITE and VALUES — refuses a `-NULL`
   into a DATE, BOOLEAN or timestamp column and a STRING into FLOAT/DOUBLE with Spark's text.
   `router.rs` stays at its 1000-line ceiling. pins: store-ts-to-numeric-1/C-002, C-003
+  **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** the gate judges `-NULL` only; STRING sources store
+  as on base. pins: store-ts-to-numeric-1/C-006
 
 - `tests.rs` — `#[cfg(test)] mod tests;` in `../router.rs`.
   **MW-6:** the CALL dispatch covers all supported procedures, including `register_table`.

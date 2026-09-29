@@ -42,6 +42,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   while every store Spark allows still stores (C-005). `risk_tier: standard`. Branch
   `fix/store-ts-to-numeric-1`.
   pins: store-ts-to-numeric-1/C-001, C-002, C-003, C-004, C-005
+  **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** STRING-source refusals are withdrawn
+  (C-003, C-004 REJECTED) and return to base behaviour (C-006); a branching source
+  refuses only when every leaf is a refused type (C-007). The STRING class moves to
+  v1.5.2 card STORE-STRING-ASSIGN-1. pins: store-ts-to-numeric-1/C-006, C-007
 - [uuid-cast-window-1-ledger.md](uuid-cast-window-1-ledger.md) —
   **WO UUID-CAST-WINDOW-1 (2026-09-27), in flight:** the UUID refusal's SQL window
   counts as Spark 4.1.2 counts — the position in Unicode scalar values, the window
