@@ -14,7 +14,7 @@ use datafusion::arrow::datatypes::{
     TimestampNanosecondType,
 };
 use datafusion::arrow::error::ArrowError;
-use datafusion::common::tree_node::Transformed;
+use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
 use datafusion::common::{DFSchema, DataFusionError, Result, ScalarValue};
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{
@@ -594,14 +594,22 @@ fn widen_values(
     rewrite: &dyn Fn(Expr) -> Result<Expr>,
 ) -> Result<(LogicalPlan, bool)> {
     let wall = DataType::Timestamp(TimeUnit::Microsecond, None);
+    let wall_ns = DataType::Timestamp(TimeUnit::Nanosecond, None);
     let instant = crate::instant_ts::ltz_timestamp_type();
-    let columns: Vec<usize> = values
+    let columns: Vec<(usize, bool)> = values
         .schema
         .fields()
         .iter()
         .enumerate()
-        .filter(|(_, field)| field.data_type() == &wall)
-        .map(|(column, _)| column)
+        .filter_map(|(column, field)| {
+            if field.data_type() == &wall {
+                Some((column, false))
+            } else if field.data_type() == &wall_ns {
+                Some((column, true))
+            } else {
+                None
+            }
+        })
         .collect();
     if columns.is_empty() {
         return Ok((LogicalPlan::Values(values), false));
@@ -614,36 +622,47 @@ fn widen_values(
         .map(|(qualifier, field)| (qualifier.cloned(), Arc::clone(field)))
         .collect();
     let mut changed = false;
-    for column in columns {
-        let Ok(cells) = rows
-            .iter()
-            .map(|row| rewrite(row[column].clone()))
-            .collect::<Result<Vec<Expr>>>()
-        else {
-            continue;
-        };
-        let Ok(types) = cells
-            .iter()
-            .map(|cell| cell.get_type(&empty))
-            .collect::<Result<Vec<DataType>>>()
-        else {
-            continue;
-        };
-        let instants = types.iter().filter(|found| **found == instant).count();
-        let walls = types.iter().filter(|found| **found == wall).count();
-        if instants == 0 || walls == 0 || instants + walls != types.len() {
+    for (column, declared_ns) in columns {
+        let pres: Vec<Expr> = rows.iter().map(|row| row[column].clone()).collect();
+        if !values_column_needs_rewrite(&pres) {
             continue;
         }
-        for (row, (cell, found)) in rows.iter_mut().zip(cells.into_iter().zip(types)) {
-            row[column] = if found == wall {
-                Expr::Cast(Cast::new(Box::new(cell), instant.clone()))
-            } else {
-                cell
+        let Some((counts, cells, types)) =
+            classify_values_column(&pres, rewrite, &empty, &instant, &wall)
+        else {
+            continue;
+        };
+        if counts.others > 0 {
+            continue;
+        }
+        if counts.instants > 0 && counts.walls > 0 && !declared_ns {
+            for (row, (cell, found)) in rows.iter_mut().zip(cells.into_iter().zip(types)) {
+                row[column] = if found == wall {
+                    Expr::Cast(Cast::new(Box::new(cell), instant.clone()))
+                } else {
+                    cell
+                };
+            }
+            let field = &mut fields[column].1;
+            *field = Arc::new(field.as_ref().clone().with_data_type(instant.clone()));
+            changed = true;
+        } else if counts.instants == 0 && counts.dates > 0 && counts.walls > 0 {
+            let Ok(fresh) = pres
+                .iter()
+                .map(|cell| values_cell_to_naive(cell.clone(), &empty, &wall))
+                .collect::<Result<Vec<Expr>>>()
+            else {
+                continue;
             };
+            for (row, cell) in rows.iter_mut().zip(fresh) {
+                row[column] = cell;
+            }
+            if declared_ns {
+                let field = &mut fields[column].1;
+                *field = Arc::new(field.as_ref().clone().with_data_type(wall.clone()));
+            }
+            changed = true;
         }
-        let field = &mut fields[column].1;
-        *field = Arc::new(field.as_ref().clone().with_data_type(instant.clone()));
-        changed = true;
     }
     let schema = if changed {
         Arc::new(DFSchema::new_with_metadata(
@@ -660,6 +679,229 @@ fn widen_values(
         }),
         changed,
     ))
+}
+
+enum ValuesCellClass {
+    Date,
+    Wall,
+    Instant,
+    Other,
+}
+
+struct ValuesColumnCounts {
+    dates: usize,
+    walls: usize,
+    instants: usize,
+    others: usize,
+}
+
+fn classify_values_column(
+    pres: &[Expr],
+    rewrite: &dyn Fn(Expr) -> Result<Expr>,
+    empty: &DFSchema,
+    instant: &DataType,
+    wall: &DataType,
+) -> Option<(ValuesColumnCounts, Vec<Expr>, Vec<DataType>)> {
+    let cells = pres
+        .iter()
+        .map(|cell| rewrite(cell.clone()))
+        .collect::<Result<Vec<Expr>>>()
+        .ok()?;
+    let types = cells
+        .iter()
+        .map(|cell| cell.get_type(empty))
+        .collect::<Result<Vec<DataType>>>()
+        .ok()?;
+    let mut counts = ValuesColumnCounts {
+        dates: 0,
+        walls: 0,
+        instants: 0,
+        others: 0,
+    };
+    for (pre, post) in pres.iter().zip(&types) {
+        match values_cell_class(pre, post, empty, instant, wall) {
+            ValuesCellClass::Date => counts.dates += 1,
+            ValuesCellClass::Wall => counts.walls += 1,
+            ValuesCellClass::Instant => counts.instants += 1,
+            ValuesCellClass::Other => counts.others += 1,
+        }
+    }
+    Some((counts, cells, types))
+}
+
+fn values_cell_class(
+    pre: &Expr,
+    post: &DataType,
+    empty: &DFSchema,
+    instant: &DataType,
+    wall: &DataType,
+) -> ValuesCellClass {
+    if is_values_date_cell(pre, empty) {
+        ValuesCellClass::Date
+    } else if is_values_naive_cell(pre, empty) {
+        ValuesCellClass::Wall
+    } else if post == instant {
+        ValuesCellClass::Instant
+    } else if post == wall {
+        ValuesCellClass::Wall
+    } else {
+        ValuesCellClass::Other
+    }
+}
+
+fn strip_values_wrappers(mut expr: &Expr) -> &Expr {
+    loop {
+        match expr {
+            Expr::Alias(alias) => expr = alias.expr.as_ref(),
+            Expr::ScalarFunction(function)
+                if function.func.name() == crate::decimal_cast::SPARK_NONNULL_NAME
+                    && function.args.len() == 1 =>
+            {
+                expr = &function.args[0];
+            }
+            _ => return expr,
+        }
+    }
+}
+
+fn is_values_date_cell(pre: &Expr, empty: &DFSchema) -> bool {
+    let core = strip_values_wrappers(pre);
+    if matches!(
+        core.get_type(empty),
+        Ok(DataType::Date32 | DataType::Date64)
+    ) {
+        return true;
+    }
+    if let Expr::Cast(cast) = core
+        && matches!(cast.field.data_type(), DataType::Timestamp(_, None))
+        && matches!(
+            cast.expr.get_type(empty),
+            Ok(DataType::Date32 | DataType::Date64)
+        )
+    {
+        return true;
+    }
+    false
+}
+
+fn is_values_naive_cell(pre: &Expr, empty: &DFSchema) -> bool {
+    let core = strip_values_wrappers(pre);
+    if let Expr::ScalarFunction(function) = core {
+        return matches!(
+            function.func.name(),
+            crate::timestamp_ntz_cast::TIMESTAMP_NTZ_LITERAL_NAME
+                | crate::timestamp_ntz_cast::TIMESTAMP_NTZ_CAST_NAME
+                | crate::timestamp_ntz_cast::TRY_TIMESTAMP_NTZ_CAST_NAME
+        );
+    }
+    if let Expr::Literal(scalar, _) = core {
+        return matches!(
+            scalar,
+            ScalarValue::Null
+                | ScalarValue::TimestampNanosecond(None, _)
+                | ScalarValue::TimestampMicrosecond(None, _)
+                | ScalarValue::TimestampMillisecond(None, _)
+                | ScalarValue::TimestampSecond(None, _)
+                | ScalarValue::TimestampMicrosecond(_, None)
+        );
+    }
+    if let Expr::Cast(cast) = core
+        && matches!(cast.field.data_type(), DataType::Timestamp(_, None))
+        && matches!(
+            cast.expr.get_type(empty),
+            Ok(DataType::Timestamp(TimeUnit::Microsecond, None) | DataType::Null)
+        )
+    {
+        return true;
+    }
+    false
+}
+
+fn values_cell_to_naive(cell: Expr, empty: &DFSchema, wall: &DataType) -> Result<Expr> {
+    if matches!(
+        strip_values_wrappers(&cell),
+        Expr::Literal(
+            ScalarValue::TimestampNanosecond(None, _)
+                | ScalarValue::TimestampMicrosecond(None, _)
+                | ScalarValue::TimestampMillisecond(None, _)
+                | ScalarValue::TimestampSecond(None, _),
+            _,
+        )
+    ) {
+        return Ok(Expr::Cast(Cast::new(
+            Box::new(Expr::Literal(ScalarValue::Null, None)),
+            wall.clone(),
+        )));
+    }
+    cell.transform_up(|node| {
+        let Expr::Cast(cast) = node else {
+            return Ok(Transformed::no(node));
+        };
+        let target = cast.field.data_type().clone();
+        let Ok(source) = cast.expr.get_type(empty) else {
+            return Ok(Transformed::no(Expr::Cast(cast)));
+        };
+        if matches!(source, DataType::Date32 | DataType::Date64)
+            && matches!(target, DataType::Timestamp(_, None))
+        {
+            return Ok(Transformed::yes(
+                crate::timestamp_ntz_cast::timestamp_ntz_cast_expr(*cast.expr, false),
+            ));
+        }
+        if matches!(source, DataType::Timestamp(TimeUnit::Microsecond, None))
+            && matches!(target, DataType::Timestamp(_, None))
+        {
+            return Ok(Transformed::yes(*cast.expr));
+        }
+        if matches!(source, DataType::Null)
+            && matches!(target, DataType::Timestamp(TimeUnit::Nanosecond, None))
+        {
+            return Ok(Transformed::yes(Expr::Cast(Cast::new(
+                cast.expr,
+                wall.clone(),
+            ))));
+        }
+        Ok(Transformed::no(Expr::Cast(cast)))
+    })
+    .map(|transformed| transformed.data)
+}
+
+fn values_column_needs_rewrite(cells: &[Expr]) -> bool {
+    cells.iter().any(values_cell_needs_rewrite)
+}
+
+fn values_cell_needs_rewrite(cell: &Expr) -> bool {
+    let mut interesting = false;
+    cell.apply(|node| {
+        let hit = match node {
+            Expr::Cast(_) | Expr::TryCast(_) | Expr::Column(_) => true,
+            Expr::Literal(scalar, _) => matches!(
+                scalar,
+                ScalarValue::TimestampNanosecond(_, _)
+                    | ScalarValue::TimestampMicrosecond(_, _)
+                    | ScalarValue::TimestampMillisecond(_, _)
+                    | ScalarValue::TimestampSecond(_, _)
+                    | ScalarValue::Date32(_)
+                    | ScalarValue::Date64(_)
+            ),
+            Expr::ScalarFunction(function) => !matches!(
+                function.func.name(),
+                crate::timestamp_ntz_cast::TIMESTAMP_NTZ_LITERAL_NAME
+                    | crate::timestamp_ntz_cast::TIMESTAMP_NTZ_CAST_NAME
+                    | crate::timestamp_ntz_cast::TRY_TIMESTAMP_NTZ_CAST_NAME
+                    | crate::decimal_cast::SPARK_NONNULL_NAME
+            ),
+            _ => false,
+        };
+        if hit {
+            interesting = true;
+            Ok(TreeNodeRecursion::Stop)
+        } else {
+            Ok(TreeNodeRecursion::Continue)
+        }
+    })
+    .is_ok()
+        && interesting
 }
 
 #[cfg(test)]

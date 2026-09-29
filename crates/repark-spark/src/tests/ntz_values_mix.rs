@@ -266,3 +266,188 @@ async fn merge_update_stores_sparks_walls() {
 async fn merge_update_star_stores_sparks_walls() {
     assert_door_stores_sparks_walls("merge_update_star").await;
 }
+
+const DATE_GAP_ZONES: [(&str, &str, &str); 3] = [
+    (
+        "America/New_York",
+        "2024-03-10 02:30:00",
+        "2024-03-10 03:30:00",
+    ),
+    (
+        "Australia/Lord_Howe",
+        "2024-10-06 02:15:00",
+        "2024-10-06 02:45:00",
+    ),
+    ("Asia/Kolkata", "2024-03-10 02:30:00", "2024-03-10 02:30:00"),
+];
+
+fn date_gap_sources(gap: &str) -> [String; 2] {
+    [
+        format!("VALUES (1, DATE '2024-03-10'), (2, TIMESTAMP_NTZ '{gap}')"),
+        format!("VALUES (1, TIMESTAMP_NTZ '{gap}'), (2, NULL), (3, DATE '2024-03-10')"),
+    ]
+}
+
+fn date_gap_want(
+    order: usize,
+    column_type: &str,
+    gap: &str,
+    resolved: &str,
+) -> Vec<Vec<Option<String>>> {
+    let wall = if column_type == "TIMESTAMP" {
+        resolved.to_string()
+    } else {
+        gap.to_string()
+    };
+    let text = |value: &str| Some(value.to_string());
+    if order == 0 {
+        vec![
+            vec![text("1"), text("2024-03-10 00:00:00")],
+            vec![text("2"), text(&wall)],
+        ]
+    } else {
+        vec![
+            vec![text("1"), text(&wall)],
+            vec![text("2"), None],
+            vec![text("3"), text("2024-03-10 00:00:00")],
+        ]
+    }
+}
+
+async fn assert_date_ntz_door_stores_sparks_walls(door: &str) {
+    for (zone, gap, resolved) in DATE_GAP_ZONES {
+        for column_type in ["TIMESTAMP", "TIMESTAMP_NTZ"] {
+            for (order, source) in date_gap_sources(gap).iter().enumerate() {
+                let warehouse = TempDir::new().unwrap();
+                let (ctx, catalogs) = session_at(&warehouse, zone).await;
+                run(
+                    &ctx,
+                    &catalogs,
+                    &format!("CREATE TABLE ice.sales.mix (id INT, c {column_type}) USING iceberg"),
+                )
+                .await;
+                let (_, sql) = door_sql(door, source);
+                run(&ctx, &catalogs, &sql).await;
+                let got = text_rows(
+                    &ctx,
+                    &catalogs,
+                    "SELECT id, CAST(c AS STRING) FROM ice.sales.mix",
+                )
+                .await;
+                let want = date_gap_want(order, column_type, gap, resolved);
+                assert_eq!(got, want, "{door} {zone} {column_type} order{order}");
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn date_ntz_values_type_the_column_timestamp_ntz() {
+    for (zone, gap, _) in DATE_GAP_ZONES {
+        let warehouse = TempDir::new().unwrap();
+        let (ctx, catalogs) = session_at(&warehouse, zone).await;
+        for (order, source) in date_gap_sources(gap).iter().enumerate() {
+            let got = text_rows(
+                &ctx,
+                &catalogs,
+                &format!(
+                    "SELECT CAST(id AS INT), typeof(c), CAST(c AS STRING) FROM {source} AS s(id, c)"
+                ),
+            )
+            .await;
+            let text = |value: &str| Some(value.to_string());
+            let ntz = text("timestamp_ntz");
+            let midnight = text("2024-03-10 00:00:00");
+            let want = if order == 0 {
+                vec![
+                    vec![text("1"), ntz.clone(), midnight],
+                    vec![text("2"), ntz, text(gap)],
+                ]
+            } else {
+                vec![
+                    vec![text("1"), ntz.clone(), text(gap)],
+                    vec![text("2"), ntz.clone(), None],
+                    vec![text("3"), ntz, midnight],
+                ]
+            };
+            assert_eq!(got, want, "{zone} {source}");
+        }
+    }
+}
+
+#[tokio::test]
+async fn date_ntz_insert_values_stores_sparks_walls() {
+    assert_date_ntz_door_stores_sparks_walls("insert_values").await;
+}
+
+#[tokio::test]
+async fn date_ntz_insert_select_stores_sparks_walls() {
+    assert_date_ntz_door_stores_sparks_walls("insert_select").await;
+}
+
+#[tokio::test]
+async fn date_ntz_by_name_stores_sparks_walls() {
+    assert_date_ntz_door_stores_sparks_walls("by_name").await;
+}
+
+#[tokio::test]
+async fn date_ntz_overwrite_values_stores_sparks_walls() {
+    assert_date_ntz_door_stores_sparks_walls("overwrite_values").await;
+}
+
+#[tokio::test]
+async fn date_ntz_merge_insert_star_stores_sparks_walls() {
+    assert_date_ntz_door_stores_sparks_walls("merge_insert_star").await;
+}
+
+#[tokio::test]
+async fn date_timestamp_mixes_keep_their_timestamp_type() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = session_at(&warehouse, "America/New_York").await;
+    let text = |value: &str| Some(value.to_string());
+    for (source, first, second) in [
+        (
+            "VALUES (1, DATE '2024-01-15'), (2, TIMESTAMP '2024-01-15 23:30:00')",
+            "2024-01-15 00:00:00",
+            "2024-01-15 23:30:00",
+        ),
+        (
+            "VALUES (1, TIMESTAMP '2024-01-15 23:30:00'), (2, DATE '2024-01-15')",
+            "2024-01-15 23:30:00",
+            "2024-01-15 00:00:00",
+        ),
+    ] {
+        let got = text_rows(
+            &ctx,
+            &catalogs,
+            &format!(
+                "SELECT CAST(id AS INT), typeof(c), CAST(c AS STRING) FROM {source} AS s(id, c)"
+            ),
+        )
+        .await;
+        assert_eq!(
+            got,
+            vec![
+                vec![text("1"), text("timestamp"), text(first)],
+                vec![text("2"), text("timestamp"), text(second)],
+            ],
+            "{source}"
+        );
+    }
+    let got = text_rows(
+        &ctx,
+        &catalogs,
+        "SELECT CAST(id AS INT), typeof(c), CAST(c AS STRING) FROM VALUES (1, DATE \
+         '2024-03-10'), (2, TIMESTAMP_NTZ '2024-03-10 02:30:00'), (3, TIMESTAMP \
+         '2024-01-15 23:30:00') AS s(id, c)",
+    )
+    .await;
+    assert_eq!(
+        got,
+        vec![
+            vec![text("1"), text("timestamp"), text("2024-03-10 00:00:00"),],
+            vec![text("2"), text("timestamp"), text("2024-03-10 03:30:00")],
+            vec![text("3"), text("timestamp"), text("2024-01-15 23:30:00"),],
+        ]
+    );
+}

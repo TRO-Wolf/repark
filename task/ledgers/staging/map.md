@@ -93,9 +93,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (2026-09-29) adds C-006: a `VALUES` column that mixes `TIMESTAMP` and
   `TIMESTAMP_NTZ` is typed `TIMESTAMP` through the session zone at the `VALUES`
   coercion site. It widens R-1 to the nested types, adds R-5 (MERGE `ON`) and
-  R-6, and closes R-4.
+  R-6, and closes R-4. The re-verify fold (2026-09-29) adds C-007: a `DATE` cell
+  never triggers the widening, so `DATE` + `TIMESTAMP_NTZ` stays `TIMESTAMP_NTZ`,
+  and corrects the fold's "0 moved away" claim and R-6.
   `risk_tier: standard`. Branch `fix/ntz-store-doors-1`.
-  pins: ntz-store-doors-1/C-001, C-002, C-003, C-004, C-005, C-006
+  pins: ntz-store-doors-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [ntz-1-ledger.md](ntz-1-ledger.md) —
   **WO NTZ-1 (2026-09-26), in flight:** `TIMESTAMP_NTZ` literals, casts and
   store assignment answer as Spark. Slice 1 (this commit): the literal and the

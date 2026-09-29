@@ -1086,6 +1086,19 @@ scalars live under [`try_invert/`](try_invert/map.md).
   any other type, and every other column keep their cells and type. Parents recompute their
   schema only after a widening.
   pins: ntz-store-doors-1/C-006
+  **WO NTZ-STORE-DOORS-1 re-verify fold (2026-09-29, RD2-1):** a `DATE` cell no longer
+  counts as an instant. Instant-ness is decided from the pre-rewrite cell: a bare `DATE`, or
+  a naive-target `CAST` of a `DATE`, is a date, never an instant, so a `DATE` +
+  `TIMESTAMP_NTZ` column is not widened. A column of dates and naive walls with no instant is
+  normalized to `TIMESTAMP_NTZ` instead: each date cell becomes the NTZ wall cast, naive
+  nanosecond wraps are stripped, and a nanosecond-declared column is retyped naive
+  microseconds. The widening still fires when a true instant is present, with date cells
+  neutral. `values_column_needs_rewrite` skips the per-cell rewrite only when no cell holds
+  a cast, a timestamp or date literal, a column, or a non-NTZ scalar call, which keeps the
+  skip equivalent to classifying every cell. A user `CAST` of a naive value to `TIMESTAMP`
+  beside a bare `DATE` plans identically to the coerced pair, so that exotic mix follows the
+  date side; see the unit ledger's RD2-1 paragraph.
+  pins: ntz-store-doors-1/C-007
 - `timestamp_ntz_cast.rs` — **WO NTZ-1 slice 1 (2026-09-26):** the embedded Spark-door
   casts `__repark_cast_timestamp_ntz__` / `__repark_try_cast_timestamp_ntz__` (→
   `Timestamp(µs, None)`) and the wall literal `__repark_timestamp_ntz__`, registered

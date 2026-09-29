@@ -2020,6 +2020,17 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   all 11 of these pins. `unmixed_values_keep_their_timestamp_type` keeps all-NTZ and
   all-LTZ columns as they were and stays green under that revert.
   pins: ntz-store-doors-1/C-006
+  **WO NTZ-STORE-DOORS-1 re-verify fold (2026-09-29, RD2-1):** a `DATE` cell never
+  triggers the widening. `date_ntz_values_type_the_column_timestamp_ntz` pins
+  `typeof` = `timestamp_ntz` with the gap wall kept for a `DATE` +
+  `TIMESTAMP_NTZ` column in both row orders in New York, Lord Howe and Kolkata.
+  One pin per door (positional INSERT VALUES and SELECT, `BY NAME` append,
+  INSERT OVERWRITE VALUES, MERGE INSERT *) stores Spark 4.1.2's walls in both
+  target types over the same zones and orders, with a NULL row. Counting a
+  `DATE` as an instant again reds the new pins. `date_timestamp_mixes_keep_their_timestamp_type`
+  keeps `DATE` + `TIMESTAMP` and `DATE` + `TIMESTAMP` + `TIMESTAMP_NTZ` at
+  `timestamp` with the gap resolved.
+  pins: ntz-store-doors-1/C-007
 
 - `describe_table.rs` — **SQL-DESCRIBE-1 (2026-09-09):** `DESCRIBE|DESC [TABLE]
   [EXTENDED|FORMATTED] catalog.namespace.table` against a memory-catalog table built like the
