@@ -122,7 +122,7 @@ fn struct_type_of(inputs: &[&LogicalPlan], expr: &Expr) -> Option<DataType> {
                 return Some(field.data_type().clone());
             }
             let mut found = None;
-            for field in fields.iter() {
+            for field in &fields {
                 if field.name().eq_ignore_ascii_case(key) {
                     if found.is_some() {
                         return None;

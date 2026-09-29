@@ -189,8 +189,8 @@ pins: ice-error-conditions-1/C-011
 - `struct_fields.rs` — **RP-56 DIFF-PROBE fold (2026-09-29):** the struct-twin
   post-pass. A query that reads a struct field with two case-insensitive matches
   refuses `42000 AMBIGUOUS_REFERENCE_TO_FIELDS` naming the written leaf; quoting
-  changes nothing (live Spark 4.1.2 refuses `s.x`, `s.X`, ``s.`x` `` and
-  ``` `s`.`x` ``` alike). The pass runs only under `caseSensitive=false`.
+  changes nothing (live Spark 4.1.2 refuses every spelling alike, 2026-09-29).
+  The pass runs only under `caseSensitive=false`.
   pins: rp-56/C-003
 
 ## Purpose
