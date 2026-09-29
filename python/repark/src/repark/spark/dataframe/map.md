@@ -206,6 +206,23 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   Spark's Sort refusal (42703). `core.py` routes string `filter` through
   `rebind_predicate_qualifiers` (RC2-1), stops quoting tokens after a dot,
   and ratchets 3957 → 3952. pins: casesens-2/C-009, C-010, C-011, C-012, C-013
+  **CASESENS-2 second re-verify fold (2026-09-29):** string `filter` calls
+  `_native.filter_bound_sql` (alias qualifiers bind on the parsed tree,
+  RC3-1/RC3-2); the quoter quotes a token after a dot again (the pre-stack
+  behaviour) except a folded-ambiguous one, which it leaves to the tree
+  binder. `_twin_engine` names a duplicate-name select output: a bare bind
+  with an origin keeps `__repark_sel_<pid>_<field>_<n>` and its origin, an
+  aliased or computed output is `__repark_sel_a_<i>_<n>` (a new attribute,
+  RC3-3), a bare bind without an origin stays `__repark_sel_h2_<i>_<n>`.
+  `_shared_origin_column` binds the first hit carrying the shared origin
+  (the last one tripped DataFusion's union sort check); `_hit_origins`
+  counts each `_a_` engine as its own attribute; `_distinct_attributes` on
+  a plain frame asks `same_source_fields` (RC3-4). `_sort_like_spark`
+  resolves an ambiguous key through the projection child
+  (`child_sort_target`): `bound` re-sorts by that output with the key's
+  direction, `unresolved` refuses Spark's 42703 with the parsed name parts
+  (RC3-7), `hidden` keeps the ambiguity (RC3-6). `core.py` ratchets
+  3952 → 3950. pins: casesens-2/C-016, C-017, C-018, C-019
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`

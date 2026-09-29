@@ -322,7 +322,7 @@ impl PyDataFrame {
     /// This path bypasses the statement router, so it applies the parse-altitude valves here.
     pub fn filter_sql(&self, predicate: &str) -> PyResult<Self> {
         fenced!("PyDataFrame.filter_sql", {
-            let df = crate::dataframe_names::filter_frame_with_sql(&self.df, predicate)?;
+            let df = crate::dataframe_names::filter_frame_with_sql(&self.df, predicate, None)?;
             Ok(Self::new(df, Arc::clone(&self.runtime)))
         })
     }

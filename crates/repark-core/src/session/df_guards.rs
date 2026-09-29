@@ -18,6 +18,7 @@ pub mod case_bind;
 mod cast_names;
 mod predicate_names;
 mod resolver_names;
+mod sort_names;
 pub(super) mod subquery;
 mod window_rescan;
 mod written_names;

@@ -91,6 +91,8 @@ def _quote_filter_ident_token(
     if matches is None:
         return token
     if len(matches) > 1:
+        if match.string[: match.start()].endswith("."):
+            return token
         candidates = ", ".join(f"`{name}`" for name in matches)
         raise AnalysisException(
             f"[AMBIGUOUS_REFERENCE] Reference `{token}` is ambiguous, could be: [{candidates}]."
@@ -1230,8 +1232,8 @@ class DataFrame:
         if isinstance(condition, str):
             exact = _native.frame_is_exact(self._plan())
             quoted = condition if exact else self._quote_filter_sql_identifiers(condition)
-            rebound = _native.rebind_predicate_qualifiers(self._plan(), self.columns, quoted)
-            return self._spawn_preserving_identity(self._plan().filter_sql(rebound))
+            bound = _native.filter_bound_sql(self._plan(), quoted, self.columns)
+            return self._spawn_preserving_identity(bound)
         raise PySparkTypeError(
             errorClass="NOT_COLUMN_OR_STR",
             messageParameters={
@@ -1344,13 +1346,9 @@ class DataFrame:
             for name, column in zip(projection_names, projected, strict=True):
                 name_counts[name] = name_counts.get(name, 0) + 1
                 if name in dup_set:
-                    if column._origin_plan_id is not None and column._origin_field is not None:
-                        engine = (
-                            f"__repark_sel_{column._origin_plan_id}_"
-                            f"{column._origin_field}_{name_counts[name]}"
-                        )
-                    else:
-                        engine = f"__repark_sel_h2_{len(h1_engine_names)}_{name_counts[name]}"
+                    engine, origin = written_names._twin_engine(
+                        column, len(h1_engine_names), name_counts[name]
+                    )
                     rewritten.append(
                         Column(
                             column._inner.alias(engine),
@@ -1371,8 +1369,8 @@ class DataFrame:
                     )
                     h1_display_names.append(name)
                     h1_engine_names.append(engine)
-                    if column._origin_plan_id is not None and column._origin_field is not None:
-                        h1_origin_map[(column._origin_plan_id, column._origin_field)] = engine
+                    if origin is not None:
+                        h1_origin_map[origin] = engine
                 else:
                     rewritten.append(_collapse_identity_projection_alias(column))
                     engine_name = (
@@ -2003,7 +2001,7 @@ class DataFrame:
         columns_by_fold: dict[str, list[str]] = {}
         for column in columns:
             columns_by_fold.setdefault(column.casefold(), []).append(column)
-        ident_pattern = re.compile(r"(?<!\.)\b([A-Za-z_][A-Za-z0-9_]*)\b(?!\s*\()")
+        ident_pattern = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\b(?!\s*\()")
 
         pieces = re.split(r"('(?:[^']|'')*')", sql)
         rebuilt: list[str] = []

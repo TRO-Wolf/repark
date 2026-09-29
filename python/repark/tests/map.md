@@ -296,6 +296,19 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`p11/j_sel_true`, R-CS2-12), and the exact-duplicate rename answers
   `[z, z]` (`p11/sj2_wcr`).
   pins: casesens-2/C-009, C-010, C-011, C-012, C-013, C-014
+  **CASESENS-2 second re-verify fold (2026-09-29):** six pins against the
+  second re-verify's live Spark 4.1.2 cells (banner 4.1.2, JDK 17, UTC)
+  and this round's pin probe: struct and subscript alias predicates bind
+  on the tree under both rules (`T.s.f`, `t.s.F`, `tb.arr[0]`, alias-join
+  `L.s.f`, wrong case under `true` refuses naming `` `t`.`s`.`f` ``, the
+  `\'` escape answers what the unaliased predicate answers); predicates
+  keep every token (`'a' 'b'` rows, `r'b'`, `ORDER BY` stays a
+  `ParseException`); an aliased copy is a new attribute (select, groupBy,
+  `fillna` refuse `AMBIGUOUS_REFERENCE`, the bare twin answers); one
+  attribute under two spellings fills; the sort key resolves through the
+  projection child (ascending, three descending spellings, the union
+  twin, the case twin still 42703); sort refusals print `` `x.y` `` and
+  `` `a``b` ``. pins: casesens-2/C-015, C-016, C-017, C-018, C-019
 - [test_ntz_1.py](test_ntz_1.py) + `ntz_1_spark_oracle.json` — **WO NTZ-1 slice 1
   (2026-09-26):** the `TIMESTAMP_NTZ` literal and explicit casts replay Spark's measured
   answers — 29 literal/cast/refusal queries in UTC and New York sessions, the v2/v3

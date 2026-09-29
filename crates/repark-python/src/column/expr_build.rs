@@ -40,9 +40,18 @@ pub(crate) fn written_column(name: &str) -> Expr {
 pub(crate) fn parse_canonical_predicate(
     frame: &datafusion::prelude::DataFrame,
     predicate: &str,
+    displays: Option<&[String]>,
 ) -> datafusion::error::Result<Expr> {
     let canonical = repark_spark::spark_literals::canonicalize(predicate)?;
-    frame.parse_sql_expr(canonical.as_ref()).map_err(|error| {
+    let (state, _) = frame.clone().into_parts();
+    bound_predicate(
+        &state,
+        frame.schema(),
+        canonical.as_ref(),
+        displays,
+        repark_core::frame_names::NameRule::IgnoreCase,
+    )
+    .map_err(|error| {
         repark_spark::spark_literals::translate_downstream_error(
             predicate,
             canonical.as_ref(),
@@ -54,6 +63,7 @@ pub(crate) fn parse_canonical_predicate(
 pub(crate) fn parse_canonical_predicate_exact(
     frame: &datafusion::prelude::DataFrame,
     predicate: &str,
+    displays: Option<&[String]>,
 ) -> datafusion::error::Result<Expr> {
     let canonical = repark_spark::spark_literals::canonicalize(predicate)?;
     let (mut state, _) = frame.clone().into_parts();
@@ -62,7 +72,13 @@ pub(crate) fn parse_canonical_predicate_exact(
         .options_mut()
         .sql_parser
         .enable_ident_normalization = false;
-    match state.create_logical_expr(canonical.as_ref(), frame.schema()) {
+    match bound_predicate(
+        &state,
+        frame.schema(),
+        canonical.as_ref(),
+        displays,
+        repark_core::frame_names::NameRule::Exact,
+    ) {
         Ok(expr) => Ok(expr),
         Err(error) => {
             if let Some((relation, name)) = missing_column(&error) {
@@ -89,6 +105,26 @@ pub(crate) fn parse_canonical_predicate_exact(
             ))
         }
     }
+}
+
+fn bound_predicate(
+    state: &datafusion::execution::SessionState,
+    schema: &DFSchema,
+    canonical: &str,
+    displays: Option<&[String]>,
+    rule: repark_core::frame_names::NameRule,
+) -> datafusion::error::Result<Expr> {
+    let dialect = state.config().options().sql_parser.dialect;
+    let mut parsed = state.sql_to_expr_with_alias(canonical, &dialect)?;
+    if let Some(displays) = displays {
+        repark_core::frame_names::bind_predicate_qualifiers(
+            &mut parsed.expr,
+            schema,
+            displays,
+            rule,
+        )?;
+    }
+    state.create_logical_expr_from_sql_expr(parsed, schema)
 }
 
 pub(crate) async fn plan_expr_column(

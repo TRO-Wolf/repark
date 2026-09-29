@@ -8,20 +8,21 @@ use crate::column::expr_build::{parse_canonical_predicate, parse_canonical_predi
 use crate::dataframe::PyDataFrame;
 use crate::datafusion_to_py_err;
 use crate::fence::fenced;
-use repark_core::frame_names::{Disposition, NameRule};
+use repark_core::frame_names::{ChildSort, Disposition, NameRule};
 use repark_functions::case_sensitive::spark_case_sensitive_from_options;
 
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(attribute_column, module)?)?;
     module.add_function(wrap_pyfunction!(attribute_copies, module)?)?;
     module.add_function(wrap_pyfunction!(attribute_copy_name, module)?)?;
+    module.add_function(wrap_pyfunction!(child_sort_target, module)?)?;
     module.add_function(wrap_pyfunction!(drop_frame_columns, module)?)?;
+    module.add_function(wrap_pyfunction!(filter_bound_sql, module)?)?;
     module.add_function(wrap_pyfunction!(frame_case_sensitive, module)?)?;
     module.add_function(wrap_pyfunction!(frame_is_exact, module)?)?;
     module.add_function(wrap_pyfunction!(match_display_names, module)?)?;
     module.add_function(wrap_pyfunction!(match_resolver_names, module)?)?;
     module.add_function(wrap_pyfunction!(match_subset_names, module)?)?;
-    module.add_function(wrap_pyfunction!(rebind_predicate_qualifiers, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_display_name, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_join_condition, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_folded_duplicate_keys, module)?)?;
@@ -31,6 +32,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(resolve_frame_names, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_qualified_display_names, module)?)?;
     module.add_function(wrap_pyfunction!(rewrite_join_condition_aliases, module)?)?;
+    module.add_function(wrap_pyfunction!(same_source_fields, module)?)?;
     Ok(())
 }
 
@@ -68,11 +70,15 @@ pub(crate) fn bound_projection(frame: &DataFrame, column: &PyColumn) -> PyResult
         .map_err(datafusion_to_py_err)
 }
 
-pub(crate) fn filter_frame_with_sql(frame: &DataFrame, predicate: &str) -> PyResult<DataFrame> {
+pub(crate) fn filter_frame_with_sql(
+    frame: &DataFrame,
+    predicate: &str,
+    displays: Option<&[String]>,
+) -> PyResult<DataFrame> {
     repark_spark::refuse_sql_fragment(predicate).map_err(datafusion_to_py_err)?;
     let parsed = match frame_rule(frame) {
-        NameRule::Exact => parse_canonical_predicate_exact(frame, predicate),
-        NameRule::IgnoreCase => parse_canonical_predicate(frame, predicate),
+        NameRule::Exact => parse_canonical_predicate_exact(frame, predicate, displays),
+        NameRule::IgnoreCase => parse_canonical_predicate(frame, predicate, displays),
     }
     .map_err(|error| crate::unknown_routine_to_py_err(predicate, error))?;
     frame.clone().filter(parsed).map_err(datafusion_to_py_err)
@@ -200,12 +206,32 @@ fn refuse_folded_duplicate_keys(frame: &PyDataFrame, keys: Vec<String>) -> PyRes
 
 #[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
 #[pyfunction]
-fn refuse_unresolved_name(written: &str, held: Vec<String>) -> PyResult<()> {
+fn refuse_unresolved_name(written: Vec<String>, held: Vec<String>) -> PyResult<()> {
     fenced!("dataframe_names.refuse_unresolved_name", {
         Err(datafusion_to_py_err(
-            repark_core::frame_names::unresolved_display_name(written, &held),
+            repark_core::frame_names::unresolved_display_name(&written, &held),
         ))
     })
+}
+
+#[allow(clippy::needless_pass_by_value)]
+#[pyfunction]
+fn child_sort_target(frame: &PyDataFrame, written: Vec<String>) -> (String, String) {
+    match repark_core::frame_names::sort_through_child(
+        frame.inner().logical_plan(),
+        &written,
+        frame_rule(frame.inner()),
+    ) {
+        ChildSort::Bound(engine) => ("bound".to_string(), engine),
+        ChildSort::Hidden => ("hidden".to_string(), String::new()),
+        ChildSort::Unresolved => ("unresolved".to_string(), String::new()),
+    }
+}
+
+#[allow(clippy::needless_pass_by_value)]
+#[pyfunction]
+fn same_source_fields(frame: &PyDataFrame, fields: Vec<String>) -> bool {
+    repark_core::frame_names::same_source_fields(frame.inner().logical_plan(), &fields)
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -353,19 +379,17 @@ fn resolve_qualified_display_names(
     })
 }
 
-#[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
 #[pyfunction]
-fn rebind_predicate_qualifiers(
+fn filter_bound_sql(
     frame: &PyDataFrame,
-    displays: Vec<String>,
     predicate: &str,
-) -> String {
-    repark_core::frame_names::rebind_predicate_qualifiers(
-        frame.inner().schema(),
-        &displays,
-        predicate,
-        frame_rule(frame.inner()),
-    )
+    displays: Vec<String>,
+) -> PyResult<PyDataFrame> {
+    fenced!("dataframe_names.filter_bound_sql", {
+        let df = filter_frame_with_sql(frame.inner(), predicate, Some(&displays))?;
+        Ok(PyDataFrame::new(df, frame.runtime_handle()))
+    })
 }
 
 #[pyfunction]

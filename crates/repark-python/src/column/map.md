@@ -215,6 +215,14 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `parse_canonical_predicate_exact` parses a filter fragment against a
   normalization-off clone of the frame state and routes a `FieldNotFound` miss
   through the rule binder for Spark's refusal. pins: casesens-1/C-009
+  **CASESENS-2 second re-verify fold (2026-09-29, RC3-1, RC3-2):** both
+  predicate parsers take `displays: Option<&[String]>` and share
+  `bound_predicate`, which splits DataFusion's own parse
+  (`sql_to_expr_with_alias`, the whole string, same dialect) from planning
+  (`create_logical_expr_from_sql_expr`) and binds alias qualifiers on the
+  parsed tree through `frame_names::bind_predicate_qualifiers` between the
+  two when `displays` is `Some`. `None` (the Column-path `filter_sql` and
+  the door-parity pins) plans exactly as before. pins: casesens-2/C-015, C-016
 - [`window.rs`](window.rs) owns Spark frame conversion and unordered-window policy.
   **WIN-SLIDE-1 (2026-09-04):** a `RANGE` offset is emitted as `ScalarValue::Utf8`, not `Int64`.
   DataFusion's window-frame coercion casts a `Utf8` bound to the ORDER BY key's type (that is the

@@ -6,9 +6,11 @@ use datafusion::common::{Column, DFSchema, DataFusionError, Result, TableReferen
 use datafusion::sql::sqlparser::ast::{Expr as SqlExpr, Ident, visit_expressions_mut};
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::parser::Parser;
+use datafusion::sql::sqlparser::tokenizer::Token;
 use repark_common::names::{NameRule, column_already_exists, folded_duplicate};
 
 use super::case_bind::{Hit, ambiguous_reference, unresolved_column};
+use super::sort_names::written_column;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Disposition {
@@ -74,12 +76,15 @@ pub fn rewrite_join_condition_aliases(
     right_view: &str,
     rule: NameRule,
 ) -> String {
-    let Ok(mut condition) = Parser::new(&DatabricksDialect {})
-        .try_with_sql(condition_sql)
-        .and_then(|mut parser| parser.parse_expr())
-    else {
+    let Ok(mut parser) = Parser::new(&DatabricksDialect {}).try_with_sql(condition_sql) else {
         return condition_sql.to_string();
     };
+    let Ok(mut condition) = parser.parse_expr() else {
+        return condition_sql.to_string();
+    };
+    if parser.peek_token().token != Token::EOF {
+        return condition_sql.to_string();
+    }
     let mut rewritten = false;
     let _ = visit_expressions_mut(&mut condition, |node| {
         if let SqlExpr::CompoundIdentifier(parts) = node
@@ -159,8 +164,16 @@ pub fn refuse_folded_duplicate_keys(keys: &[String], rule: NameRule) -> Result<(
 }
 
 #[must_use]
-pub fn unresolved_display_name(written: &str, held: &[String]) -> DataFusionError {
-    unresolved_display_miss(&Column::from_qualified_name_ignore_case(written), held)
+pub fn unresolved_display_name(written: &[String], held: &[String]) -> DataFusionError {
+    let column = match written {
+        [table, name] => Column::new(Some(TableReference::bare(table.as_str())), name),
+        [schema, table, name] => Column::new(
+            Some(TableReference::partial(schema.as_str(), table.as_str())),
+            name,
+        ),
+        _ => Column::new_unqualified(written.join(".")),
+    };
+    unresolved_display_miss(&column, held)
 }
 
 #[must_use]
@@ -193,22 +206,17 @@ fn resolve_one_name(
         let (qualifier, engine) = whole.swap_remove(0);
         return Ok((written.to_string(), qualifier, engine, Disposition::Bound));
     }
+    let shown = if written.contains('`') {
+        written_column(written)
+    } else {
+        Column::new_unqualified(written)
+    };
     if whole.len() > 1 {
-        return settle(
-            frame_schema,
-            &Column::new_unqualified(written),
-            rule,
-            Disposition::Ambiguous,
-        );
+        return settle(frame_schema, &shown, rule, Disposition::Ambiguous);
     }
     let probe = Column::from_qualified_name_ignore_case(written);
     if probe.relation.is_none() {
-        return settle(
-            frame_schema,
-            &Column::new_unqualified(written),
-            rule,
-            Disposition::Missing,
-        );
+        return settle(frame_schema, &shown, rule, Disposition::Missing);
     }
     let mut narrowed: Vec<(String, String)> = frame_schema
         .iter()
@@ -234,7 +242,11 @@ fn resolve_one_name(
         let (qualifier, engine) = narrowed.swap_remove(0);
         return Ok((written.to_string(), qualifier, engine, Disposition::Bound));
     }
-    let column = Column::new(probe.relation, probe.name);
+    let column = if written.contains('`') {
+        shown
+    } else {
+        Column::new(probe.relation, probe.name)
+    };
     if narrowed.is_empty() {
         settle(frame_schema, &column, rule, Disposition::Missing)
     } else {
@@ -305,6 +317,9 @@ fn resolve_one_display(
     rule: NameRule,
 ) -> Result<(String, String, Disposition)> {
     let paired = frame_schema.fields().len() == displays.len();
+    if written.contains('`') && written_column(written).relation.is_none() {
+        return Ok((written.to_string(), String::new(), Disposition::Missing));
+    }
     let Some((qualifier, last_segment)) = written.rsplit_once('.') else {
         return Ok((written.to_string(), String::new(), Disposition::Missing));
     };
@@ -395,10 +410,12 @@ fn match_one_display_by(
         _ => Disposition::Ambiguous,
     };
     if matches!(rule, NameRule::Exact) && !matches!(disposition, Disposition::Bound) {
-        return Err(unresolved_display_miss(
-            &Column::new_unqualified(name),
-            held,
-        ));
+        let column = if name.contains('`') {
+            written_column(name)
+        } else {
+            Column::new_unqualified(name)
+        };
+        return Err(unresolved_display_miss(&column, held));
     }
     Ok((name.to_string(), hits, disposition))
 }
@@ -762,7 +779,13 @@ mod tests {
         let left = schema(&[("l", "id"), ("l", "Data")]);
         let right = schema(&[("r", "id"), ("r", "Data")]);
         for rule in [Exact, IgnoreCase] {
-            for untouched in ["(`id` = `Data`)", "(JL.`id` = JR.`id`)", "(`l`.`id` ="] {
+            for untouched in [
+                "(`id` = `Data`)",
+                "(JL.`id` = JR.`id`)",
+                "(`l`.`id` =",
+                "l.id = r.id AND l.Data = 'a' 'b'",
+                "l.id = r.id ORDER BY 1",
+            ] {
                 assert_eq!(
                     rewrite_join_condition_aliases(&left, &right, untouched, "JL", "JR", rule),
                     untouched

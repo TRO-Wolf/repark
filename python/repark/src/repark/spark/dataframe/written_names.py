@@ -110,7 +110,7 @@ def _bind_written_column(frame: DataFrame, name: str) -> Column:
             and "." not in name
             and _native.match_resolver_names(plan, [name], columns)[0][1]
         ):
-            _native.refuse_unresolved_name(name, columns)
+            _native.refuse_unresolved_name([name], columns)
         if disposition == "missing":
             raise AnalysisException(
                 f"A column with name `{name}` cannot be resolved; available columns: {columns}"
@@ -163,10 +163,56 @@ def _sort_like_spark(
         found = _AMBIGUOUS_REFERENCE.search(str(error))
         if found is None:
             raise
-        parts = re.findall(r"`((?:[^`]|``)*)`", found.group(1))
-        written = ".".join(part.replace("``", "`") for part in parts)
-        _native.refuse_unresolved_name(written, frame.columns)
-        raise
+        parts = [
+            part.replace("``", "`") for part in re.findall(r"`((?:[^`]|``)*)`", found.group(1))
+        ]
+        disposition, engine = _native.child_sort_target(frame._plan(), parts)
+        if disposition == "unresolved":
+            _native.refuse_unresolved_name(parts, frame.columns)
+        if disposition != "bound":
+            raise
+        rebound = tuple(_child_sort_key(frame, item, found.group(1), engine) for item in cols)
+        if all(key is item for key, item in zip(rebound, cols, strict=True)):
+            raise
+    columns, directions, nulls_first = frame._sort_specs(rebound, ascending)
+    return frame._spawn_preserving_identity(frame._plan().sort(columns, directions, nulls_first))
+
+
+def _child_sort_key(
+    frame: DataFrame, item: Column | str, reference: str, engine: str
+) -> Column | str:
+    if isinstance(item, Column):
+        name = item._projection_name
+        if not item._stable_name or name in (None, "", "*") or item._spark_display != name:
+            return item
+    else:
+        name = item
+    try:
+        columns, directions, nulls_first = frame._sort_specs((item,), None)
+        frame._plan().sort(columns, directions, nulls_first)
+    except AnalysisException as error:
+        found = _AMBIGUOUS_REFERENCE.search(str(error))
+        if found is None or found.group(1) != reference:
+            return item
+    else:
+        return item
+    return Column(
+        _native.attribute_column(engine),
+        spark_display=str(name),
+        has_free_attribute=True,
+        sql_expr=_quote_ident(engine),
+        sort_ascending=item._sort_ascending if isinstance(item, Column) else None,
+        sort_nulls_first=item._sort_nulls_first if isinstance(item, Column) else None,
+    )
+
+
+def _twin_engine(column: Column, position: int, count: int) -> tuple[str, tuple[str, str] | None]:
+    plan_id, field = column._origin_plan_id, column._origin_field
+    if column._spark_display != column._projection_name:
+        return f"__repark_sel_a_{position}_{count}", None
+    if plan_id is None or field is None:
+        return f"__repark_sel_h2_{position}_{count}", None
+    return f"__repark_sel_{plan_id}_{field}_{count}", (plan_id, field)
 
 
 def _engine_origin(frame: DataFrame, engine: str) -> tuple[str, str] | None:
@@ -181,14 +227,18 @@ def _shared_origin_column(frame: DataFrame, name: str, hits: list[str]) -> Colum
     if frame._display_names is None or frame._engine_names is None or not frame._origin_map:
         return None
     wanted = set(hits)
-    pairs = zip(frame._display_names, frame._engine_names, strict=True)
-    origins = {_engine_origin(frame, engine) for display, engine in pairs if display in wanted}
+    pairs = [
+        (_engine_origin(frame, engine), engine)
+        for display, engine in zip(frame._display_names, frame._engine_names, strict=True)
+        if display in wanted
+    ]
+    origins = {origin for origin, _engine in pairs}
     if len(origins) != 1:
         return None
     key = origins.pop()
     if key is None:
         return None
-    engine = frame._origin_map[key]
+    engine = pairs[0][1]
     quoted = _quote_ident(engine)
     return Column(
         _native.attribute_column(engine).alias(name),
@@ -225,7 +275,8 @@ def _match_lenient_subset(frame: DataFrame, subset: list[str]) -> list[str]:
 
 def _distinct_attributes(frame: DataFrame, hits: list[str]) -> bool:
     if frame._display_names is None:
-        return len(set(hits)) > 1
+        spelled = sorted(set(hits))
+        return len(spelled) > 1 and not _native.same_source_fields(frame._plan(), spelled)
     return len(_hit_origins(frame, hits)) > 1
 
 
@@ -234,8 +285,16 @@ def _hit_origins(frame: DataFrame, hits: list[str]) -> set[tuple[str, str]]:
         return set()
     wanted = set(hits)
     pairs = zip(frame._display_names, frame._engine_names, strict=True)
-    origins = {_engine_origin(frame, engine) for display, engine in pairs if display in wanted}
+    origins = {
+        _engine_origin(frame, engine) or _new_attribute(engine)
+        for display, engine in pairs
+        if display in wanted
+    }
     return {origin for origin in origins if origin is not None}
+
+
+def _new_attribute(engine: str) -> tuple[str, str] | None:
+    return ("", engine) if re.fullmatch(r"__repark_sel_a_[0-9]+_[0-9]+", engine) else None
 
 
 def _overlay_drop_targets(frame: DataFrame, item: Column | str, name: str) -> list[str]:

@@ -1,104 +1,167 @@
 use std::ops::ControlFlow;
 
-use datafusion::common::{DFSchema, TableReference};
-use datafusion::sql::sqlparser::ast::{Expr as SqlExpr, Ident, visit_expressions_mut};
-use datafusion::sql::sqlparser::dialect::DatabricksDialect;
-use datafusion::sql::sqlparser::parser::Parser;
+use datafusion::common::{Column, DFSchema, DataFusionError, Result, TableReference};
+use datafusion::sql::sqlparser::ast::{
+    AccessExpr, Expr as SqlExpr, Ident, Query, VisitMut, VisitorMut, visit_expressions,
+};
 use repark_common::names::NameRule;
 
+use super::case_bind::{Hit, ambiguous_reference};
 use super::written_names::qualifier_matches;
 
-#[must_use]
-pub fn rebind_predicate_qualifiers(
+#[allow(clippy::missing_errors_doc)]
+pub fn bind_predicate_qualifiers(
+    predicate: &mut SqlExpr,
     frame_schema: &DFSchema,
     displays: &[String],
-    predicate: &str,
     rule: NameRule,
-) -> String {
-    let Ok(mut parsed) = Parser::new(&DatabricksDialect {})
-        .try_with_sql(predicate)
-        .and_then(|mut parser| parser.parse_expr())
-    else {
-        return predicate.to_string();
-    };
-    let mut rewritten = false;
-    let _ = visit_expressions_mut(&mut parsed, |node| {
-        if let SqlExpr::CompoundIdentifier(parts) = node
-            && let Some((name, qualifier)) = parts.split_last()
-            && let Some(respelled) = held_reference(frame_schema, displays, qualifier, name, rule)
-        {
-            *node = SqlExpr::CompoundIdentifier(
-                respelled
-                    .into_iter()
-                    .map(|part| Ident::with_quote('`', part))
-                    .collect(),
-            );
-            rewritten = true;
+) -> Result<()> {
+    let mut lambda_names = Vec::new();
+    let _ = visit_expressions(predicate, |node| {
+        if let SqlExpr::Lambda(lambda) = node {
+            lambda_names.extend(lambda.params.iter().map(|param| param.name.value.clone()));
         }
         ControlFlow::<()>::Continue(())
     });
-    if rewritten {
-        parsed.to_string()
-    } else {
-        predicate.to_string()
+    let mut binder = QualifierBinder {
+        frame_schema,
+        displays,
+        rule,
+        lambda_names,
+        query_depth: 0,
+    };
+    match predicate.visit(&mut binder) {
+        ControlFlow::Break(error) => Err(error),
+        ControlFlow::Continue(()) => Ok(()),
     }
 }
 
-fn held_reference(
-    frame_schema: &DFSchema,
-    displays: &[String],
-    qualifier: &[Ident],
-    name: &Ident,
+struct QualifierBinder<'a> {
+    frame_schema: &'a DFSchema,
+    displays: &'a [String],
     rule: NameRule,
-) -> Option<Vec<String>> {
-    let want = match qualifier {
-        [table] => TableReference::bare(table.value.as_str()),
-        [schema, table] => TableReference::partial(schema.value.as_str(), table.value.as_str()),
-        [catalog, schema, table] => TableReference::full(
-            catalog.value.as_str(),
-            schema.value.as_str(),
-            table.value.as_str(),
-        ),
-        _ => return None,
-    };
-    let paired = frame_schema.fields().len() == displays.len();
-    let mut found: Vec<(&TableReference, &str)> = Vec::new();
-    for (index, (held, field)) in frame_schema.iter().enumerate() {
-        let display = if paired {
-            displays[index].as_str()
-        } else {
-            field.name().as_str()
+    lambda_names: Vec<String>,
+    query_depth: usize,
+}
+
+impl VisitorMut for QualifierBinder<'_> {
+    type Break = DataFusionError;
+
+    fn pre_visit_query(&mut self, _query: &mut Query) -> ControlFlow<Self::Break> {
+        self.query_depth += 1;
+        ControlFlow::Continue(())
+    }
+
+    fn post_visit_query(&mut self, _query: &mut Query) -> ControlFlow<Self::Break> {
+        self.query_depth -= 1;
+        ControlFlow::Continue(())
+    }
+
+    fn pre_visit_expr(&mut self, expr: &mut SqlExpr) -> ControlFlow<Self::Break> {
+        if self.query_depth > 0 {
+            return ControlFlow::Continue(());
+        }
+        let mut parts: Vec<&mut Ident> = match expr {
+            SqlExpr::CompoundIdentifier(parts) => parts.iter_mut().collect(),
+            SqlExpr::CompoundFieldAccess { root, access_chain } => {
+                let SqlExpr::Identifier(root) = root.as_mut() else {
+                    return ControlFlow::Continue(());
+                };
+                std::iter::once(root)
+                    .chain(access_chain.iter_mut().map_while(|access| match access {
+                        AccessExpr::Dot(SqlExpr::Identifier(part)) => Some(part),
+                        _ => None,
+                    }))
+                    .collect()
+            }
+            _ => return ControlFlow::Continue(()),
         };
-        if let Some(held) = held
-            && qualifier_matches(&want, held, rule)
-            && rule.matches(name.value.as_str(), display)
-            && !found.contains(&(held, field.name().as_str()))
-        {
-            found.push((held, field.name().as_str()));
+        match self.bound_parts(&parts) {
+            Ok(Some(respelled)) => {
+                for (part, held) in parts.iter_mut().zip(respelled) {
+                    **part = Ident {
+                        value: held,
+                        quote_style: Some('`'),
+                        span: part.span,
+                    };
+                }
+                ControlFlow::Continue(())
+            }
+            Ok(None) => ControlFlow::Continue(()),
+            Err(error) => ControlFlow::Break(error),
         }
     }
-    let [(held, engine)] = found.as_slice() else {
-        return None;
-    };
+}
+
+impl QualifierBinder<'_> {
+    fn bound_parts(&self, parts: &[&mut Ident]) -> Result<Option<Vec<String>>> {
+        let Some(first) = parts.first() else {
+            return Ok(None);
+        };
+        if self
+            .lambda_names
+            .iter()
+            .any(|name| NameRule::IgnoreCase.matches(name, &first.value))
+        {
+            return Ok(None);
+        }
+        for width in (1..parts.len().min(4)).rev() {
+            let written: Vec<&str> = parts[..width]
+                .iter()
+                .map(|part| part.value.as_str())
+                .collect();
+            let want = match written.as_slice() {
+                [table] => TableReference::bare(*table),
+                [schema, table] => TableReference::partial(*schema, *table),
+                [catalog, schema, table] => TableReference::full(*catalog, *schema, *table),
+                _ => return Ok(None),
+            };
+            let name = parts[width].value.as_str();
+            let hits = self.hits(&want, name);
+            match hits.as_slice() {
+                [] => {}
+                [(held, engine)] => return Ok(respelled(*held, engine.name(), width)),
+                _ => {
+                    let column = Column::new(Some(want), name);
+                    return Err(ambiguous_reference(&column, &hits));
+                }
+            }
+        }
+        Ok(None)
+    }
+
+    fn hits(&self, want: &TableReference, name: &str) -> Vec<Hit<'_>> {
+        let paired = self.frame_schema.fields().len() == self.displays.len();
+        let mut found: Vec<Hit<'_>> = Vec::new();
+        for (index, (held, field)) in self.frame_schema.iter().enumerate() {
+            let display = if paired {
+                self.displays[index].as_str()
+            } else {
+                field.name().as_str()
+            };
+            if let Some(held) = held
+                && qualifier_matches(want, held, self.rule)
+                && self.rule.matches(name, display)
+                && !found
+                    .iter()
+                    .any(|(seen, engine)| *seen == Some(held) && engine.name() == field.name())
+            {
+                found.push((Some(held), field.as_ref()));
+            }
+        }
+        found
+    }
+}
+
+fn respelled(held: Option<&TableReference>, engine: &str, width: usize) -> Option<Vec<String>> {
+    let held = held?;
     let spelled: Vec<String> = [held.catalog(), held.schema(), Some(held.table())]
         .into_iter()
         .flatten()
         .map(str::to_string)
         .collect();
-    let mut respelled = spelled
-        .get(spelled.len().checked_sub(qualifier.len())?..)?
-        .to_vec();
-    respelled.push((*engine).to_string());
-    let read_as = qualifier.iter().chain(std::iter::once(name)).map(|part| {
-        if part.quote_style.is_some() || matches!(rule, NameRule::Exact) {
-            part.value.clone()
-        } else {
-            part.value.to_ascii_lowercase()
-        }
-    });
-    if read_as.eq(respelled.iter().cloned()) {
-        return None;
-    }
+    let mut respelled = spelled.get(spelled.len().checked_sub(width)?..)?.to_vec();
+    respelled.push(engine.to_string());
     Some(respelled)
 }
 
@@ -109,9 +172,12 @@ mod tests {
 
     use datafusion::arrow::datatypes::{DataType, Field};
     use datafusion::common::{DFSchema, TableReference};
+    use datafusion::sql::sqlparser::dialect::DatabricksDialect;
+    use datafusion::sql::sqlparser::parser::Parser;
+    use datafusion::sql::sqlparser::tokenizer::Token;
 
-    use super::rebind_predicate_qualifiers;
-    use repark_common::names::NameRule::{Exact, IgnoreCase};
+    use super::bind_predicate_qualifiers;
+    use repark_common::names::NameRule::{self, Exact, IgnoreCase};
 
     fn held_schema(names: &[(&str, &str)]) -> DFSchema {
         let fields = names
@@ -128,54 +194,92 @@ mod tests {
         DFSchema::new_with_metadata(fields, HashMap::new()).unwrap()
     }
 
+    fn bound(schema: &DFSchema, displays: &[&str], sql: &str, rule: NameRule) -> String {
+        let mut parser = Parser::new(&DatabricksDialect {})
+            .try_with_sql(sql)
+            .unwrap();
+        let mut parsed = parser.parse_expr().unwrap();
+        assert_eq!(parser.peek_token().token, Token::EOF, "{sql}");
+        let displays: Vec<String> = displays.iter().map(|name| (*name).to_string()).collect();
+        bind_predicate_qualifiers(&mut parsed, schema, &displays, rule).unwrap();
+        parsed.to_string()
+    }
+
     #[test]
-    fn predicate_qualifiers_rebind_to_the_held_spelling_by_rule() {
-        let frame = held_schema(&[("T", "id"), ("T", "Val")]);
-        let names = ["id".to_string(), "Val".to_string()];
+    fn alias_qualifiers_bind_on_the_parsed_tree_by_rule() {
+        let frame = held_schema(&[("T", "id"), ("T", "Val"), ("T", "s"), ("T", "arr")]);
+        let names = ["id", "Val", "s", "arr"];
         assert_eq!(
-            rebind_predicate_qualifiers(&frame, &names, "T.`id` > 1", IgnoreCase),
-            "`T`.`id` > 1"
-        );
-        assert_eq!(
-            rebind_predicate_qualifiers(&frame, &names, "t.val > 10 AND T.id < 5", IgnoreCase),
+            bound(&frame, &names, "t.val > 10 AND T.id < 5", IgnoreCase),
             "`T`.`Val` > 10 AND `T`.`id` < 5"
         );
-        for untouched in ["`T`.`id` > 1", "x.id > 1", "id > 1", "T.nope > 1"] {
-            assert_eq!(
-                rebind_predicate_qualifiers(&frame, &names, untouched, IgnoreCase),
-                untouched
-            );
+        assert_eq!(
+            bound(&frame, &names, "t.s.f > 1", IgnoreCase),
+            "`T`.`s`.f > 1"
+        );
+        assert_eq!(
+            bound(&frame, &names, "tb.s.f > 1", IgnoreCase),
+            "tb.s.f > 1"
+        );
+        assert_eq!(
+            bound(&frame, &names, "t.arr[0] = 1", IgnoreCase),
+            "`T`.`arr`[0] = 1"
+        );
+        assert_eq!(
+            bound(&frame, &names, "(T.Val = 1) OR t.id IN (3, 4)", IgnoreCase),
+            "(`T`.`Val` = 1) OR `T`.`id` IN (3, 4)"
+        );
+        for untouched in [
+            "id > 1",
+            "x.id > 1",
+            "s.f > 1",
+            "T.nope > 1",
+            "exists(arr, T -> T.f > 1)",
+        ] {
+            assert_eq!(bound(&frame, &names, untouched, IgnoreCase), untouched);
         }
-        for exact_untouched in ["t.id > 1", "T.id > 1", "T.ID > 1"] {
+        assert_eq!(
+            bound(&frame, &names, "t.id IN (SELECT t.id FROM o t)", IgnoreCase),
+            "`T`.`id` IN (SELECT t.id FROM o t)"
+        );
+        for exact_untouched in ["t.id > 1", "T.ID > 1", "t.s.f > 1"] {
             assert_eq!(
-                rebind_predicate_qualifiers(&frame, &names, exact_untouched, Exact),
+                bound(&frame, &names, exact_untouched, Exact),
                 exact_untouched
             );
         }
-        let lower = held_schema(&[("t", "id")]);
-        assert_eq!(
-            rebind_predicate_qualifiers(&lower, &["id".to_string()], "t.id  >  1", IgnoreCase),
-            "t.id  >  1"
-        );
-        let twins = held_schema(&[("l", "id"), ("L", "id")]);
-        let twin_names = ["id".to_string(), "id".to_string()];
-        assert_eq!(
-            rebind_predicate_qualifiers(&twins, &twin_names, "L.id > 1", IgnoreCase),
-            "L.id > 1"
-        );
+        assert_eq!(bound(&frame, &names, "T.s.f > 1", Exact), "`T`.`s`.f > 1");
         let joined = held_schema(&[("L", "e0"), ("L", "e1"), ("R", "e2"), ("R", "e3")]);
-        let displays = ["id", "Data", "ID", "Data"].map(str::to_string);
+        let displays = ["id", "Data", "ID", "Data"];
         assert_eq!(
-            rebind_predicate_qualifiers(&joined, &displays, "r.data = 'x'", IgnoreCase),
+            bound(&joined, &displays, "r.data = 'x'", IgnoreCase),
             "`R`.`e3` = 'x'"
         );
         assert_eq!(
-            rebind_predicate_qualifiers(&joined, &displays, "R.Data = 'x'", Exact),
+            bound(&joined, &displays, "R.Data = 'x'", Exact),
             "`R`.`e3` = 'x'"
         );
         assert_eq!(
-            rebind_predicate_qualifiers(&joined, &displays, "r.Data = 'x'", Exact),
+            bound(&joined, &displays, "r.Data = 'x'", Exact),
             "r.Data = 'x'"
         );
+    }
+
+    #[test]
+    fn two_attributes_under_one_qualifier_refuse_ambiguous() {
+        let twins = held_schema(&[("T", "id"), ("T", "ID")]);
+        let mut parsed = Parser::new(&DatabricksDialect {})
+            .try_with_sql("T.id > 1")
+            .unwrap()
+            .parse_expr()
+            .unwrap();
+        let error = bind_predicate_qualifiers(&mut parsed, &twins, &[], IgnoreCase).unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("[AMBIGUOUS_REFERENCE] Reference `T`.`id` is ambiguous"),
+            "{error}"
+        );
+        assert_eq!(bound(&twins, &[], "T.ID > 1", Exact), "`T`.`ID` > 1");
     }
 }
