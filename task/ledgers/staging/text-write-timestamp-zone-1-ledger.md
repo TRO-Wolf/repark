@@ -175,3 +175,57 @@ and `test_parquet_temporal_round_trip_keeps_types` pins it.
   rejections, 8 pre-existing partition refusals, 4 R-1, 9 R-2, 7 R-3 quoting,
   2 R-3 map keys), zero flips.
 - Neighbour base-vs-head harness (lane-local): `/tmp/neighbours.py`.
+
+## DIFF-PROBE fold (2026-09-29, Muse worker lane `/tmp/xcsvts`)
+
+**P1M-JSON (performance): closes with no product change.** Re-measured on
+release builds per the fold brief (`maturin develop --release` with
+`CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16` in `/tmp/xrel` at `adc26586` and at
+head `784f3667`; debug `.so` files backed up and restored after; 3 fresh
+processes per side, each running the probe's `do_perf` shape for CSV, JSON
+and parquet in order; 1M rows, `America/New_York`). Release bytes and first
+shas match the debug report exactly, so the harness replays the same writes.
+`write_ms` per sample:
+
+| Side | CSV | JSON | Parquet |
+|---|---|---|---|
+| Base release | 114.4 / 127.1 / 115.3 | 104.2 / 77.9 / 103.4 | 77.1 / 65.3 / 62.6 |
+| Head release | 81.3 / 93.6 / 92.8 | 101.4 / 99.4 / 108.0 | 60.5 / 74.9 / 56.0 |
+| Ratio head/base (means) | 0.75x | 1.08x | 0.93x |
+| Ratio head/base (medians) | 0.80x | 0.98x | 0.93x |
+
+JSON is 1.08x on means and 0.98x on medians, under the 1.2x line; the
+1.32x/1.34x debug ratio was a debug-build artifact. CSV head is faster than
+base (pre-formatted strings skip the writer's timestamp path), and the
+parquet control sits at 0.93x, bounding harness noise near +/-10%. No
+formatter change was made; the UDF keeps per-value rendering. Lane-local
+harness: `/tmp/perfrel.py`, outputs under `/tmp/perfrel/`.
+
+**W180 (empty `timestampFormat` writes unquoted empty): HALT, needs a ruling.**
+Spark (NP07, live 4.1.2) writes `id,t\n1,""\n`; head writes `id,t\n1,\n`;
+base refused the option. The audit found no targeted fix at the formatting
+layer:
+
+- The UDF renders every non-null value under the empty pattern as a non-null
+  empty string; the Arrow sink (`csv-core` `QuoteStyle::Necessary`) never
+  quotes an empty field (`needs_quotes` is false on zero bytes), and the only
+  other styles quote the wrong cells (`Always` would quote `1`; `NonNumeric`
+  would quote every plain string, flipping NP02). There is no per-value
+  quoting knob; the sink maps `{NULL -> "", "" -> ""}`.
+- Byte post-processing cannot recover the distinction: NULL and `""` leave
+  identical bytes (proven: `SELECT '' AS s` and `SELECT CAST(NULL AS
+  TIMESTAMP)` both write `,1`; MIX3 under the empty pattern writes three
+  identical `N,` rows where Spark wants `1,""`, `2,`, `3,""` per NP07+NQ01).
+  A correct rewrite would need row values aligned to part files across the
+  local and s3a routes, compression, partitions and CSV options.
+- Blast radius of any sink change: plain empty strings (NQ02: Spark `""`,
+  both sides unquoted) share the residue R-3; JSON already matches Spark
+  (`{"id":1,"t":""}`); RePark reads `1,""` and `1,` back identically
+  (`t=None`), so the divergence is write-bytes only.
+
+Recommended disposition: dispose as a divergence — pin the current bytes with
+the NP07 Spark key beside the R-3 residue (the test module docstring already
+records "empty strings stay unquoted in CSV") — or card a sink-level fix (a
+CSV writer that quotes empty-but-not-null). The fold lane committed no
+product change; the W180 pin and the full DIFF-PROBE replay ride with the
+ruling lane.
