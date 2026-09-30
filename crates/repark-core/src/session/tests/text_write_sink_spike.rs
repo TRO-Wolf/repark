@@ -25,6 +25,7 @@ use datafusion::physical_expr_common::sort_expr::LexRequirement;
 use datafusion::physical_plan::{
     DisplayAs, DisplayFormatType, ExecutionPlan, SendableRecordBatchStream,
 };
+use object_store::path::Path as ObjectPath;
 use object_store::{ObjectMeta, ObjectStore};
 
 use crate::ReparkSession;
@@ -399,7 +400,7 @@ async fn spike_custom_stored_as_csv_keeps_csv_extension() {
     let names = part_files(&target);
     assert_eq!(names.len(), 1, "one part file, got {names:?}");
     assert!(
-        names[0].ends_with(".csv"),
+        ObjectPath::from(names[0].as_str()).extension() == Some("csv"),
         "csv extension kept, got {names:?}"
     );
     let body = std::fs::read_to_string(target.join(&names[0])).unwrap();
@@ -421,7 +422,7 @@ async fn spike_custom_stored_as_json_keeps_json_extension() {
     let names = part_files(&target);
     assert_eq!(names.len(), 1, "one part file, got {names:?}");
     assert!(
-        names[0].ends_with(".json"),
+        ObjectPath::from(names[0].as_str()).extension() == Some("json"),
         "json extension kept, got {names:?}"
     );
     let body = std::fs::read_to_string(target.join(&names[0])).unwrap();

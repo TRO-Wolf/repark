@@ -57,6 +57,18 @@ async fn listed_names(memory: &InMemory, prefix: &str) -> Vec<String> {
     names
 }
 
+fn has_extension(name: &str, extension: &str) -> bool {
+    ObjectPath::from(name).extension() == Some(extension)
+}
+
+fn part_with<'a>(names: &'a [String], extension: &str) -> &'a str {
+    names
+        .iter()
+        .find(|name| has_extension(name, extension))
+        .map(String::as_str)
+        .unwrap()
+}
+
 async fn object_text(memory: &InMemory, key: &str) -> String {
     let bytes = memory
         .get(&ObjectPath::from(key))
@@ -128,7 +140,7 @@ async fn sink_csv_formats_temporal_in_session_zone() {
         .unwrap();
     let names = listed_names(&memory, "cell/p").await;
     assert_eq!(names.len(), 2, "part plus _SUCCESS, got {names:?}");
-    let part = names.iter().find(|name| name.ends_with(".csv")).unwrap();
+    let part = part_with(&names, "csv");
     assert_eq!(
         object_text(&memory, part).await,
         "id,t,n,d\n1,2024-06-15T08:34:56.789-04:00,2024-06-15T12:34:56.789,2024-06-15\n"
@@ -152,7 +164,7 @@ async fn sink_json_formats_temporal_in_session_zone() {
         .unwrap();
     let names = listed_names(&memory, "cell/p").await;
     assert_eq!(names.len(), 2, "part plus _SUCCESS, got {names:?}");
-    let part = names.iter().find(|name| name.ends_with(".json")).unwrap();
+    let part = part_with(&names, "json");
     assert_eq!(
         object_text(&memory, part).await,
         "{\"id\":1,\"t\":\"2024-06-15T08:34:56.789-04:00\",\"n\":\"2024-06-15T12:34:56.789\",\"d\":\"2024-06-15\"}\n"
@@ -175,7 +187,7 @@ async fn sink_user_pattern_renders_through_serializer() {
         .await
         .unwrap();
     let names = listed_names(&memory, "cell/p").await;
-    let part = names.iter().find(|name| name.ends_with(".csv")).unwrap();
+    let part = part_with(&names, "csv");
     assert_eq!(
         object_text(&memory, part).await,
         "id,t,n,d\n1,2024/06/15 08:34,2024-06-15T12:34:56.789,2024-06-15\n"
@@ -201,10 +213,10 @@ async fn sink_partition_columns_keep_raw_directory_names() {
     assert!(
         names
             .iter()
-            .any(|name| name.starts_with("cell/p/d=2024-06-15/") && name.ends_with(".csv")),
+            .any(|name| name.starts_with("cell/p/d=2024-06-15/") && has_extension(name, "csv")),
         "raw date directory name, got {names:?}"
     );
-    let part = names.iter().find(|name| name.ends_with(".csv")).unwrap();
+    let part = part_with(&names, "csv");
     assert_eq!(
         object_text(&memory, part).await,
         "id,t,n\n1,2024-06-15T08:34:56.789-04:00,2024-06-15T12:34:56.789\n"
@@ -278,7 +290,7 @@ async fn sink_empty_frame_writes_header_only_csv() {
         .await
         .unwrap();
     let names = listed_names(&memory, "cell/p").await;
-    let part = names.iter().find(|name| name.ends_with(".csv")).unwrap();
+    let part = part_with(&names, "csv");
     assert_eq!(object_text(&memory, part).await, "id,t,n,d\n");
 }
 
@@ -309,19 +321,11 @@ async fn sink_null_temporal_writes_empty_fields() {
         .await
         .unwrap();
     let names = listed_names(&memory, "cell/p").await;
-    let part = names.iter().find(|name| name.ends_with(".csv")).unwrap();
+    let part = part_with(&names, "csv");
     assert_eq!(object_text(&memory, part).await, "id,t,n,d\n1,,,\n");
 }
 
-#[tokio::test]
-async fn sink_keep_partition_columns_pass_temporal_native() {
-    let session = ReparkSession::builder()
-        .configs(HashMap::from([(
-            "spark.sql.session.timeZone".to_string(),
-            "America/New_York".to_string(),
-        )]))
-        .build()
-        .unwrap();
+fn keep_partition_batch() -> RecordBatch {
     let micros = instant_micros();
     let days = NaiveDate::from_ymd_opt(2024, 6, 15)
         .unwrap()
@@ -337,7 +341,7 @@ async fn sink_keep_partition_columns_pass_temporal_native() {
         Field::new("d", DataType::Date32, true),
         Field::new("p", DataType::Date32, true),
     ]));
-    let batch = RecordBatch::try_new(
+    RecordBatch::try_new(
         schema,
         vec![
             Arc::new(Int64Array::from(vec![1])),
@@ -346,7 +350,19 @@ async fn sink_keep_partition_columns_pass_temporal_native() {
             Arc::new(Date32Array::from(vec![days])),
         ],
     )
-    .unwrap();
+    .unwrap()
+}
+
+#[tokio::test]
+async fn sink_keep_partition_columns_pass_temporal_native() {
+    let session = ReparkSession::builder()
+        .configs(HashMap::from([(
+            "spark.sql.session.timeZone".to_string(),
+            "America/New_York".to_string(),
+        )]))
+        .build()
+        .unwrap();
+    let batch = keep_partition_batch();
     session.context().register_batch("v", batch).unwrap();
     session
         .sql("SET datafusion.execution.keep_partition_by_columns = true")
@@ -451,7 +467,7 @@ async fn sink_year_10000_renders_signed_proleptic() {
         .await
         .unwrap();
     let names = listed_names(&memory, "cell/p").await;
-    let part = names.iter().find(|name| name.ends_with(".csv")).unwrap();
+    let part = part_with(&names, "csv");
     assert_eq!(
         object_text(&memory, part).await,
         "t\n+10000-01-01T00:00:00.000Z\n"
