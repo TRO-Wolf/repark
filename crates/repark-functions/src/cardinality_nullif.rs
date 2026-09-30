@@ -2,9 +2,9 @@ use datafusion::arrow::datatypes::DataType;
 use datafusion::common::ScalarValue;
 use datafusion::common::tree_node::{Transformed, TreeNode};
 use datafusion::logical_expr::Expr;
-use datafusion::logical_expr::expr::{BinaryExpr, ScalarFunction};
+use datafusion::logical_expr::expr::BinaryExpr;
 
-use crate::cardinality::{CONST_FOLD_MAX_DEPTH, const_f64, const_i128, f64_trunc_to_i128};
+use crate::cardinality::{CONST_FOLD_MAX_DEPTH, const_f64, const_i128};
 
 pub(crate) fn nullif_const_int(first: &Expr, second: &Expr, depth: u32) -> Option<i128> {
     let bound = nullif_bound_value(first, depth).or_else(|| decimal_core_trunc(first))?;
@@ -116,10 +116,9 @@ fn nullif_proven_equal(first: &Expr, second: &Expr, depth: u32) -> bool {
     if let (Some(left), Some(right)) = (
         nullif_int_value(first, depth),
         nullif_int_value(second, depth),
-    ) {
-        if left == right {
-            return true;
-        }
+    ) && left == right
+    {
+        return true;
     }
     if nullif_decimal_core_equal(first, second, depth) {
         return true;

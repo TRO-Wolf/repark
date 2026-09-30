@@ -2,7 +2,6 @@
 
 use std::sync::Arc;
 
-use datafusion::arrow::datatypes::DataType;
 use datafusion::common::config::{ConfigExtension, ConfigOptions};
 use datafusion::common::extensions_options;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
@@ -266,7 +265,7 @@ fn parse_decimal_integer_text(text: &str) -> Option<i128> {
 
 /// Truncate a finite `f64` toward zero into `i128` for ceiling checks.
 #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
-pub(crate) fn f64_trunc_to_i128(value: f64) -> Option<i128> {
+fn f64_trunc_to_i128(value: f64) -> Option<i128> {
     if !value.is_finite() {
         return None;
     }
