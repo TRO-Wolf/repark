@@ -297,3 +297,62 @@ runs) and jshell probes against `DateTimeFormatter`, `SimpleDateFormat`, and
 AT-2, AT-5, AT-6 evidence updated for the fold; C-001 counts 207 facade pins
 and C-004 counts 52 Rust pins. The splice-restore mutation is recorded as M2
 above: the VC-6 pins red.
+
+## Re-verify fold VC2-1..VC2-7 (2026-09-29, Muse worker lane `/tmp/xcsvts`)
+
+Folded re-verify findings VC2-1..VC2-7 from
+`reverify-csvts-opus-handback.json` (live Spark 4.1.2 oracle,
+4700+ cells). Commit 4f6d8216.
+
+- VC2-1 (`VV` zero offsets): `java_display_zone_id` returns the bare
+  prefix when the normalized offset is `+00:00` or `-00:00`, matching
+  `ZoneId.of` with-prefix display. Pinned all five measured spellings
+  (`UTC+0`, `UTC+00:00`, `UTC-00:00`, `GMT+0`, `GMT-0`) as Rust table
+  rows plus `VV` and full-pattern facade cells.
+- VC2-2 (`g` padding): Modified Julian Day renders sign plus
+  zero-padded absolute value at minimum width = letter count
+  (`SignStyle.NORMAL`), with no truncation past the width. Pinned
+  `g` through `gggggg` on MJD 3, -7, 7715, 60374 in Rust and as
+  24 facade cells.
+- VC2-3 (formatter speed): measured release on varied data first
+  (5.5-11.7x), then applied R1: an offset-interval cache (6-day
+  probe steps under the measured 597600s minimum transition gap of
+  the bundled chrono-tz 0.10.4 tables; transitions span 1844-2099),
+  a reused buffer with no per-value `String`, and a table-driven
+  default renderer (`fast.rs`) with day cache, precomputed offset
+  suffix, and small-delta carry. Byte-identity pinned by a
+  scalar-vs-fast differential test (7 zones, transitions, era/year
+  boundaries, extremes, both directions) plus unchanged checksums.
+- VC2-4 (policy default): the facade default and the Rust default
+  both read `CORRECTED`, as Spark 4.1.2 reports. No refusal or write
+  changes: only `is_legacy` is ever read. The `_SQLCONF_DEFAULTS`
+  symbol hash is re-baselined. Pinned get/unset/write.
+- VC2-5 (EST/MST/HST tzdb rules): already at base; carried.
+- VC2-6 (pattern message): the RECOGNITION text keeps its error
+  class but drops the LEGACY clause; the Rust message helper and
+  pins follow.
+- VC2-7 (LEGACY scope): under LEGACY the write refuses only when
+  the frame carries temporal columns; inert options on a
+  non-temporal frame write. Pinned.
+
+Release perf on varied 1M timestamps (median of 15, both release,
+verifier harness; raw JSON under
+`/tmp/oc-worker/direct/wo/reverify-csvts-fold/`):
+
+| shape | head (s) | base (s) | ratio |
+|---|---|---|---|
+| ctl_parquet_many | 0.150 | 0.150 | 1.00x |
+| ctl_csv_plain | 0.053 | 0.053 | 0.99x |
+| ctl_json_plain | 0.066 | 0.065 | 1.01x |
+| csv_one_default | 0.154 | 0.119 | 1.28x |
+| csv_many_default | 0.402 | 0.218 | 1.85x |
+| json_one_default | 0.121 | 0.091 | 1.33x |
+| json_many_default | 0.404 | 0.263 | 1.53x |
+
+Every default shape stays over the 1.2x bar (pattern shapes have no
+base: base refuses the options). UDF-level profile: 21ns loop+append,
+19ns resolve-hit, scalar render 250ns, fast render 24-58ns per
+column shape. The read plus string-write floor leaves csv_many about
+14ns/value of UDF budget against a 25ns append+civil floor, so the
+bar needs a structural change (no string materialization), not more
+UDF tuning. Handed back HALT with the numbers.

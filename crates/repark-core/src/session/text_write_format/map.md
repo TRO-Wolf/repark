@@ -18,14 +18,26 @@ change; partition columns stay unwrapped.
   them eagerly for LTZ and the renderer fails them lazily for NTZ/DATE.
   `y` renders the signed proleptic year (a `+` past 9999) unless an unquoted
   `G` is present, which switches year-of-era; `VV` renders the Java display
-  id the UDF resolves, never the canonical zone.
+  id the UDF resolves, never the canonical zone. `g` pads the signed day
+  count with zeros to the letter count (re-verify 2026-09-29). Every
+  field writes into a caller buffer: no per-value `String` on the hot
+  path (re-verify 2026-09-29).
 - `udf.rs` — the volatile `ScalarUDF` and its Arrow recursion (timestamp, date,
   struct, list, map values; map keys untouched). Return-type mapping mirrors
   the recursion so plans see `Utf8` where strings come out. The zone argument
   arrives raw: the UDF canonicalizes it for `Tz` and resolves the Java display
   id for `VV`. Pattern arguments arrive backslash-doubled (see `select.rs`):
   the UDF halves each pair before compiling, so error echoes show the user's
-  pattern.
+  pattern. An offset-interval cache resolves the `Tz` once per transition
+  span instead of once per value; default specs dispatch to the `fast.rs
+  loops (re-verify 2026-09-29).
+- `fast.rs` — the default-format fast path (re-verify 2026-09-29):
+  table-driven digit emission, a day cache, a precomputed offset suffix,
+  and a small-delta carry between consecutive values. The 6-day bound
+  search stays under the 597600s minimum transition gap measured from
+  the bundled chrono-tz 0.10.4 tables (transitions span 1844-2099);
+  re-measure on any chrono-tz bump. Byte-identity with the scalar
+  renders is pinned by a differential test, not by review.
 - `select.rs` — `build_text_write_select`: per-kind user-pattern validation
   (Spark error classes) plus the projection builder, and the
   `ReparkSession::text_write_select_sql` entry over a `DataFrame` schema.
@@ -36,7 +48,9 @@ change; partition columns stay unwrapped.
   columns are all wrapped: quoted identifiers resolve case-sensitively.
   `text_write_select_sql` refuses temporal-bearing writes under
   `spark.sql.legacy.timeParserPolicy=LEGACY`: legacy rendering is carded as
-  TEXT-WRITE-LEGACY-POLICY-1, not implemented.
+  TEXT-WRITE-LEGACY-POLICY-1, not implemented. A LEGACY frame without
+  temporal columns writes even when it carries temporal options, as
+  Spark does (re-verify 2026-09-29).
 
 ## Debug
 

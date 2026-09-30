@@ -186,6 +186,8 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   scan, `y` runs past 6 refused, and the trailing-`]` class (RECOGNITION for
   LTZ/DATE when every letter is a legacy `SimpleDateFormat` letter, measured
   against the JDK; NTZ downgrades).
+  **Re-verify (2026-09-29):** the RECOGNITION text keeps its class but drops
+  the LEGACY clause; `g` padding and the `fast.rs` loops live in the child.
 - `late_catalogs.rs` — `register_late_configured_catalogs`, moved out of `session.rs` under the
   CAP-1 rule that a file at its ceiling grows by splitting; behavior is byte-identical and the
   `session.rs` baseline ratcheted 1039 → 1002.

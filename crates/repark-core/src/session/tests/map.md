@@ -31,6 +31,9 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   **TEXT-WRITE-TIMESTAMP-ZONE-1 verifier fold (2026-09-29):** quote-run,
   year-width, proleptic-year, trailing-`]`-class, backslash-escape, and
   case-twin pins (52 total).
+  **Re-verify (2026-09-29):** `g`-padding, no-LEGACY-clause, offset-cache,
+  and scalar-vs-fast differential pins (56 in-module; the two
+  temporary release probes left with the re-verify fold).
 - `s3_prefix_read.rs` — **S3-PATH-WRITE-1 round 2 (2026-09-28):** slashless S3
   prefix reads on an in-memory store (no AWS): a written prefix reads back
   slashless for parquet, csv and json; exact part URLs keep single-file reads

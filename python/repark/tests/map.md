@@ -3770,6 +3770,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **TEXT-WRITE-TIMESTAMP-ZONE-1 verifier fold (2026-09-29):** 20 more cells
   (quote runs, year width, `VV` display ids, backslash patterns, case twins,
   trailing-`]` classes) plus LEGACY-refusal and LMT-residue legs (207 pins).
+  **Re-verify (2026-09-29):** 34 more cells (zero-offset `VV` spellings,
+  `g` padding widths) plus policy-default, no-LEGACY-clause, and
+  optioned-non-temporal LEGACY legs (244 pins).
 - `test_r2_read_formats2.py` — R2 writer option matrix / path modes / partitionBy: quoteAll /
   escapeQuotes wired; dateFormat/timestampFormat honored (TEXT-WRITE-TIMESTAMP-ZONE-1
   flipped the three refuse-loud legs to honored pins); parquet compression; path
