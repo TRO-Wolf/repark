@@ -249,6 +249,13 @@ sits at its 190 ceiling). Native receivers call `inner.sql_built(...)`;
 facade receivers keep `_sql_built`. Same pins, same oracles, re-verified
 post-fix.
 
+Fix round (2026-09-30): the new pins caught two pre-existing gaps the brief's
+cells did not cover. (1) `groupingSets` returns a grand-total row beyond Spark
+(att3 base and head both show it); the pin asserts it with a Spark-equal value.
+(2) `refuse_non_deterministic` re-rendered the REPLACE WHERE predicate with
+`Display`, refusing `\'` values as unterminated in both modes; it now renders
+through `render_for_reparse` (same VE-3-class fix, 3 lines).
+
 ## Coverage attestation
 
 ```yaml
