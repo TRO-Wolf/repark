@@ -264,6 +264,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and re-insert. TZ-6 states Spark's contract and the TY-TIMESTAMP-NTZ rows go
   EQUAL beside it.
   pins: ntz-1/C-008, C-009
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-1/VG-2):**
+  `test_stacked_sign_shapes_into_ntz_refuse` refuses every VG shape with the
+  exact Spark body (`- -1 + 0` names the engine's `BIGINT`), plus the
+  `(NULL, +- -1)` multi-row; the seeded row survives alone.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 re-verify fold, RN2-1/RN2-2):**
+  `test_equal_and_default_cells_store_like_spark` stores equal-cell and `DEFAULT`
+  rows with the walls Spark 4.1.2 stored in the re-verify follow-up probe, and
+  refuses `(10, 1, 1, '2024-…')` / `(11, 1, 1, - -1)` with Spark's recorded
+  bodies (`STRING`, `INT`), where base stored both.
 - [test_ntz_7_verify.py](test_ntz_7_verify.py) + `ntz_7_verify_spark_oracle.json` —
   **WO NTZ-1 verifier fold (2026-09-28):** `from_utc_timestamp` / `to_utc_timestamp`
   over strings and a STRING column keep Spark's TIMESTAMP in a New York session —
@@ -281,6 +290,32 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   sequence replays (writes run, 11 reads assert rows and dtypes); 3 divergence
   steps pin the widening row and both refusal texts beside Spark's.
   pins: ntz-1/C-006
+  **WO NTZ-STORE-DOORS-1 verifier fold (2026-09-29):** the `r_wide` step (R-NTZ-S2-11)
+  now asserts Spark's recorded rows. The mixed `VALUES` column is typed `TIMESTAMP`, so
+  the New York gap wall stores `2024-03-10 03:30:00`. Its `divergence` and `spark_rows`
+  keys are gone, and two divergence steps remain: the UPDATE refusal texts.
+  pins: ntz-store-doors-1/C-006
+- [test_ntz_store_doors_1.py](test_ntz_store_doors_1.py) +
+  [ntz_store_doors_1_spark_oracle.json](ntz_store_doors_1_spark_oracle.json) —
+  **WO NTZ-STORE-DOORS-1 (2026-09-28):** 66 door cells (UTC, New York, Kolkata ×
+  `TIMESTAMP` / `TIMESTAMP_NTZ` × `BY NAME`, the `INSERT OVERWRITE` family,
+  `writeTo().overwritePartitions()`, `writeTo().overwrite(cond)` and the four MERGE
+  arms) replay Spark 4.1.2's recorded reads for eleven sources, and every Spark refusal
+  asserts RePark's recorded refusal text; 12 `days`/`hours` cells replay rows,
+  `.partitions` and the equality filter.
+  pins: ntz-store-doors-1/C-001, C-002, C-003, C-004, C-005
+  **Verifier fold (2026-09-29, VD-1):**
+  [ntz_store_doors_1_mixed_spark_oracle.json](ntz_store_doors_1_mixed_spark_oracle.json)
+  (generated from `target/ntz-mix/out/m-spark.json`) adds 52 door cells and 4 SELECT
+  cells for a `VALUES` column that mixes `TIMESTAMP` and `TIMESTAMP_NTZ`. The door cells
+  cover New York and Kolkata × both target types × 13 doors: the ten SQL doors plus
+  `overwritePartitions()`, `insertInto(overwrite=True)` and `writeTo().append()`. Each
+  cell runs three sources. The SELECT cells cover UTC, New York, Kolkata and Lord Howe:
+  `typeof` and values of the mixed sources, all-NTZ and all-LTZ controls, NULL, CTE,
+  subquery, two-column, CAST and `to_timestamp` mixes, and UNION, CASE and coalesce
+  literals. Reverting the coercion reds 43 door cells and all 4 SELECT cells. The 9 cells
+  that stay green are positional-door guards that were already equal to Spark.
+  pins: ntz-store-doors-1/C-006
 - [test_uuid_cast_window_1.py](test_uuid_cast_window_1.py) +
   [uuid_cast_window_1_spark_oracle.json](uuid_cast_window_1_spark_oracle.json) —
   **WO UUID-CAST-WINDOW-1 (2026-09-27):** the `CAST('a' AS UUID)` refusal replays
@@ -4562,14 +4597,61 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `VALUES (DATE '…')` is refused by the G6-3 CAST gate instead.
   **LTZ-STORE-INT-1 (2026-09-28)** closes the residual for `TIMESTAMP` (LTZ) targets at
   the existing void VALUES gate site, before planning; every other target stays residual.
+  **STORE-TS-TO-NUMERIC-1 (2026-09-28)** closes it for numeric, DATE and BOOLEAN targets:
+  `test_a_literal_values_row_refuses_like_spark` pins `VALUES (true)` and
+  `VALUES (DATE '…')` into `INT` refusing with Spark's `CANNOT_SAFELY_CAST` text and
+  writing nothing. pins: store-ts-to-numeric-1/C-001
   Arrow path.
+- `test_ltz_stacked_sign_1.py` — **Fold 2026-09-29 (LTZ-STACKED-SIGN-1 second
+  re-verify fold, RN3-1):** backslash-quote strings store Spark 4.1.2's exact
+  values on both fail-closed VALUES doors — plain, column-list and map cells
+  plus `--`-holding and trailing-backslash, `\n`/`\t`, `\u00e9` controls
+  into `TIMESTAMP_NTZ`, and `replace`-casts into `TIMESTAMP` — read back on
+  the Arrow path; re-verify 3 (RN4-1) adds values ending in `$p` that
+  collided with the probe's dollar-quote closer. pins: ltz-stacked-sign-1/RN3-1
 - `test_ltz_store_int_1.py` — **WO LTZ-STORE-INT-1 (2026-09-28):** `INSERT INTO sc.ns.l
   VALUES (0, 1)` refuses with the recorded Spark `ins_l_int` answer — error class,
   condition, SQLSTATE and the message body, with the RePark-only planning prefix
   pinned separately — and a DataFrame append of INT into TIMESTAMP refuses; both
   leave the table empty. **Fold 2026-09-28 (verifier VL-1..VL-6):** `nvl` and
   `ifnull` over DATE and TIMESTAMP store.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1):** `VALUES (0, - -1)` refuses with the
+  recorded class, condition and SQLSTATE, and writes nothing.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-1/VG-2):** every VG
+  shape plus the `(NULL, +- -1)` multi-row refuses with the recorded class,
+  condition and SQLSTATE, and writes nothing.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 re-verify fold, RN2-2):** `DEFAULT` (bare
+  and in both column-list orders) stores NULL, and a stacked sign under `nvl` /
+  `ifnull` stores the day Spark 4.1.2 stored (`2024-01-02`, `2023-12-31`).
   pins: ltz-store-int-1/C-001
+- [test_store_ts_to_numeric_1.py](test_store_ts_to_numeric_1.py) +
+  `store_ts_to_numeric_1_spark_oracle.json` — **WO STORE-TS-TO-NUMERIC-1
+  (2026-09-28):** one session replays 58 cells recorded on Spark 4.1.2 + Iceberg
+  1.11.0 (UTC) in order and compares refusal (class, SQLSTATE, message body with the
+  RePark-only planning prefix allowed) and the target read-back after every
+  statement. Refusals: TIMESTAMP, STRING, BOOLEAN and INT sources on the VALUES door
+  into numeric, DATE and BOOLEAN columns (C-001); `-NULL` and `-(NULL)` into DATE,
+  BOOLEAN, TIMESTAMP and TIMESTAMP_NTZ on VALUES, OVERWRITE VALUES, UPDATE, INSERT …
+  SELECT, OVERWRITE, BY NAME, both MERGE arms and both DataFrame writers, bare,
+  through a derived table and through a temp view (C-002); STRING into FLOAT/DOUBLE on
+  INSERT … SELECT and the DataFrame writers (C-003); STRING into DECIMAL on UPDATE
+  (C-004). Stores in the same test: DATE ↔ TIMESTAMP, numeric widening, in-range
+  narrowing, explicit CAST, NULL, `-NULL` into numeric and STRING, the CTAS controls,
+  and LTZ-STORE-INT-1's INT → TIMESTAMP refusal (C-005).
+  pins: store-ts-to-numeric-1/C-001, C-002, C-003, C-004, C-005
+  **Fold 2026-09-29 (verifier VT-1):** 23 more store cells pin the mixed
+  STRING/numeric CASE, `nvl` and `nullif` shapes Spark widens to a storable type
+  (VALUES, SELECT, BY NAME, column list, OVERWRITE, `append`, `insertInto`,
+  `saveAsTable`; the runner learns the `df_saveastable` door). 81 cells total.
+  **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** the eight STRING-source refusal cells
+  (VALUES `'1'` into INT and BOOLEAN, `'2024-01-01'` into DATE, UPDATE `'1'` into
+  DECIMAL, STRING into FLOAT/DOUBLE through SELECT, a derived table, `append` over a
+  view and `insertInto`) are deleted — those shapes return to base behaviour. Six store
+  cells measured on Spark 4.1.2 pin the re-verify families: a SQL temp view over a
+  STRING/INT CASE, `writeTo().append()` and `write.insertInto()` of the same CASE, a
+  STRING/DOUBLE UNION, `max` over a STRING/DOUBLE CASE, and a STRING/TIMESTAMP CASE
+  into DATE through VALUES. 79 cells; the oracle is one cell per line and drops the
+  temp views no cell reads. pins: store-ts-to-numeric-1/C-006
 - `test_merge_semantics_audit.py` — **MERGE-audit corpus** (2026-08-14 audit gap-map rows
   c/d/g/n/o): null-safe `<=>` / `eqNullSafe` ON matches NULL keys (both doors); builder-door
   `=` NULL keys do not match; self-merge (target as source) updates once per row; join-key
