@@ -4,6 +4,11 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [attr-id-1-ledger.md](attr-id-1-ledger.md) —
+  **WO ATTR-ID-1 (2026-09-30), in flight:** every output field of every DataFrame plan
+  carries one attribute id in field metadata (`repark.attr`), and the DataFrame door resolves a
+  written name by the set of ids over its hits. S1 lands the propagation pins on DataFusion
+  alone (C-001) and the Rust core (C-002). `risk_tier: standard`. Branch `feat/attr-id-1`.
 - [aws-accept-replace-1-ledger.md](aws-accept-replace-1-ledger.md) —
   **WO AWS-ACCEPT-REPLACE-1 (2026-09-27), in flight:** RP-55 repins the fork to
   `6e937f49` (F-STAGED-SINGLE-WRITE-1 `#362` — a staged replace writes its metadata file

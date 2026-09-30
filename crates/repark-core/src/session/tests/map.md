@@ -9,6 +9,18 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
 ## Contents
 
 - `mod.rs` — thin index (rustfmt module order).
+- `attr_id.rs` — **ATTR-ID-1 S1 (2026-09-30):** the propagation pins for the `repark.attr`
+  field-metadata key, measured on DataFusion 54.1.0 alone (a frame tagged by
+  `alias_with_metadata`, ids read by position after each node). A bare column and an alias of a
+  column inherit the id; a cast copies the source id (so the stamp must override it);
+  arithmetic, a literal, `abs`, `upper`, a one-argument `coalesce` and `CASE` carry none;
+  Filter, Limit, Sort, Distinct and SubqueryAlias keep every id; a self-join carries the same
+  ids on both sides; Union and `union_by_name` keep an id only where every input carries the
+  same one (a self-union keeps all, a union of distinct ids keeps none); an Aggregate key keeps
+  its id and the aggregate values carry none; a Window keeps its input ids and its value
+  carries none; a temp view registered through `create_or_replace_temp_view_from` and read back
+  by SQL keeps the ids, and the facade's join shape over two views of one frame repeats them.
+  pins: attr-id-1/C-001
 - `session.rs` — ported v1 session battery plus P2G R2 / A13 / metadata-enumeration pins. RP-5: the bare-session half of the metadata-table enumeration contract (fork F-8 listing); mutation — make `information_schema` expect a `$snapshots` twin and the pin reds. pins: rp-5-fork-repin/C-003
   Child: [session/catalog_registration.rs](session/map.md).
   RP-5: `information_schema` hide pin now cites fork F-8 listing (no engine shim).

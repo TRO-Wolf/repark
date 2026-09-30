@@ -1,4 +1,5 @@
 mod a13;
+mod attr_id;
 mod aws_gate;
 mod cache_budget;
 mod commit_unknown;
