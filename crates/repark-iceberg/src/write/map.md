@@ -835,7 +835,9 @@ repark-core's error map.
   the wrap, so a row with both a type refusal and an overflow reports the store refusal
   like Spark; BY NAME passes `Some("append")` and OVERWRITE passes
   `Some("INSERT OVERWRITE")`, byte-identical to the per-batch gates, while MERGE and
-  UPDATE pass `None` because their ANSI gates already judge before the wrap.
+  UPDATE pass `None` because their ANSI gates already judge before the wrap. OVERWRITE
+  targets come from the presented schema and BY NAME targets stay stored, matching each
+  door's per-batch write schema (UUID text stores through OVERWRITE, refuses on append).
 - `store_fold.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** split from `store_overflow.rs`
   at the plan/expression seam (file-size gate): const-input resolution and physical
   evaluation (`check_folded_store_input`, `fold_scalar`, `resolve_store_input`) plus the

@@ -1,5 +1,6 @@
 use datafusion::error::Result;
 use datafusion::prelude::{DataFrame, SessionContext};
+use repark_iceberg::catalog::uuid_presentation::presented_arrow_schema;
 
 pub(crate) async fn conform_types(
     ctx: &SessionContext,
@@ -7,8 +8,8 @@ pub(crate) async fn conform_types(
     column_names: &[String],
     source_df: DataFrame,
 ) -> Result<DataFrame> {
-    let arrow = iceberg::arrow::schema_to_arrow_schema(table.metadata().current_schema())
-        .map_err(crate::iceberg_err)?;
+    let arrow =
+        presented_arrow_schema(table.metadata().current_schema()).map_err(crate::iceberg_err)?;
     let mut targets = Vec::new();
     if column_names.is_empty() {
         for field in arrow.fields() {
