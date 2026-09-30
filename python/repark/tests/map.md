@@ -7385,6 +7385,22 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   catchable `RecursionError` (Spark refuses nested-deep SQL too, with
   `FAILED_TO_PARSE_TOO_COMPLEX`), and flat 600-union SQL counts 601.
   pins: deep-filter-chain-crash-1/C-001, C-002, C-003, C-004
+- [test_deep_subquery_expression_1.py](test_deep_subquery_expression_1.py) —
+  **DEEP-FILTER-CHAIN-CRASH-1 verifier fold (2026-09-29, VD-1..VD-3):**
+  subquery plans and deep expressions never kill the interpreter. One
+  module-scoped fixture drives the battery in a single isolated interpreter
+  (1200 s timeout: the 5,000-term OR answers in ~220 s and the 20,000-term
+  DF OR's Python-side tree build takes ~360 s on a debug build): a
+  1,000-deep chain counts 50 under a scalar subquery and under
+  `IN (SELECT ...)` (both segfaulted on f958d1a8), a 5,000-term OR through
+  `sql()` answers 50 (the SQL door grows past any expression depth, and
+  Spark answers these shapes through SQL too), a 20,000-term OR through
+  `filter()` raises `AnalysisException` naming the deep-expression limit
+  (Spark raises `StackOverflowError` at `.filter()` the same way), a
+  2,000-deep `+1` select raises the same refusal, SQL past the 1 MiB text
+  cap refuses the same way, and a 16-deep chain counts 50 on a 512 KiB
+  thread (the small-stack backstop grows under 2 MiB remaining).
+  pins: deep-filter-chain-crash-1/C-005, C-006, C-007, C-008
 
 ## I want to...
 

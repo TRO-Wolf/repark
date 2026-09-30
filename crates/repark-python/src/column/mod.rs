@@ -2,24 +2,19 @@
 //! Constructors resolve literals and standalone SQL expressions; `DataFrame` methods resolve
 //! expressions against their input schema.
 
-use crate::deep_stack::block_on;
-use crate::{AnalysisException, fence::fenced};
-use datafusion::arrow::datatypes::DataType;
-use datafusion::functions_aggregate::count::count_udaf;
-use datafusion::functions_window::cume_dist::cume_dist_udwf;
+use crate::{AnalysisException, deep_stack::block_on, fence::fenced};
 use datafusion::functions_window::lead_lag::{lag_udwf, lead_udwf};
-use datafusion::functions_window::nth_value::nth_value_udwf;
-use datafusion::functions_window::ntile::ntile_udwf;
 use datafusion::functions_window::rank::{dense_rank_udwf, percent_rank_udwf, rank_udwf};
-use datafusion::functions_window::row_number::row_number_udwf;
+use datafusion::functions_window::{cume_dist::cume_dist_udwf, ntile::ntile_udwf};
+use datafusion::functions_window::{nth_value::nth_value_udwf, row_number::row_number_udwf};
 use datafusion::logical_expr::expr::{HigherOrderFunction, Lambda, NullTreatment, WindowFunction};
 use datafusion::logical_expr::{
     Case, Cast, Expr, ExprFunctionExt, WindowFunctionDefinition, lambda_var, lit,
 };
 use datafusion::scalar::ScalarValue;
-use pyo3::exceptions::PyValueError;
-use pyo3::prelude::*;
+use datafusion::{arrow::datatypes::DataType, functions_aggregate::count::count_udaf};
 use pyo3::types::{PyBool, PyFloat, PyInt, PyString};
+use pyo3::{exceptions::PyValueError, prelude::*};
 
 pub(crate) mod display;
 #[cfg(test)]
@@ -54,6 +49,10 @@ impl PyColumn {
     /// The held expression, cloned for handoff to a [`crate::dataframe::PyDataFrame`] method.
     pub(crate) fn expr(&self) -> Expr {
         self.expr.clone()
+    }
+
+    pub(crate) fn expression_depth(&self) -> usize {
+        crate::deep_stack::expression_depth(&self.expr)
     }
 }
 
@@ -218,6 +217,7 @@ impl PyColumn {
     #[staticmethod]
     pub fn sql(sql: &str) -> PyResult<Self> {
         fenced!("Column.sql", {
+            crate::deep_stack::refuse_overlong_sql(sql)?;
             repark_spark::refuse_sql_fragment(sql).map_err(crate::datafusion_to_py_err)?;
             let context =
                 expr_build::sql_context(sql, true).map_err(crate::datafusion_to_py_err)?;

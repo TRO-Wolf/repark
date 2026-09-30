@@ -7,6 +7,8 @@ use std::task::{Context, Poll};
 use datafusion::sql::parser::Statement as DfStatement;
 use datafusion::sql::sqlparser::ast::{Expr, Query, SetExpr, TableFactor, Visit, Visitor};
 
+pub use stacker::remaining_stack;
+
 const BYTES_PER_LEVEL: usize = 32 * 1024;
 const BASE_BYTES: usize = 256 * 1024;
 

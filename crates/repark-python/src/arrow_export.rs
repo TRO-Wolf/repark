@@ -712,7 +712,7 @@ mod tests {
         use datafusion::logical_expr::lit;
         use datafusion::prelude::{SessionConfig, SessionContext, col};
 
-        use crate::deep_stack::frame_needs_grown_stack;
+        use crate::deep_stack::frame_drive_segment;
         Python::attach(|_python| {
             let context =
                 SessionContext::new_with_config(SessionConfig::new().with_target_partitions(1));
@@ -729,7 +729,9 @@ mod tests {
                     .filter(col("id").gt(lit(0)))
                     .expect("a chained filter builds");
             }
-            let grown = frame_needs_grown_stack(&chained);
+            let segment =
+                frame_drive_segment(&chained).expect("a 40-deep chain drives under the caps");
+            let grown = segment.is_some();
             assert!(grown, "a 40-deep chain must trip the grown-stack threshold");
             let runtime = Arc::new(Runtime::new().expect("a tokio runtime builds"));
             let stream = block_on_grown_if(&runtime, chained.execute_stream(), grown)

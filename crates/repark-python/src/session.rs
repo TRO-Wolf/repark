@@ -9,9 +9,8 @@ use tokio::runtime::Runtime;
 
 use crate::UnsupportedOperationException;
 use crate::arrow_export::drain_arrow_c_stream;
-use crate::dataframe::PyDataFrame;
-use crate::dataframe::with_stream_poll_no_detach;
-use crate::deep_stack::{block_on, build_shared_runtime};
+use crate::dataframe::{PyDataFrame, with_stream_poll_no_detach};
+use crate::deep_stack::{block_on, block_on_grown_if, build_shared_runtime};
 use crate::fence::{fenced, fenced_span};
 use crate::to_py_err;
 
@@ -165,8 +164,9 @@ impl PyReparkSession {
     pub fn sql(&self, py: Python<'_>, query: &str) -> PyResult<PyDataFrame> {
         fenced_span!("py.sql", "PyReparkSession.sql", {
             let query = crate::session_runtime::prepare_session_sql(query)?;
+            let grown = crate::deep_stack::sql_drive_grown(&query)?;
             let df = py
-                .detach(|| self.runtime.block_on(self.session.sql(&query)))
+                .detach(|| block_on_grown_if(&self.runtime, self.session.sql(&query), grown))
                 .map_err(to_py_err)?;
             Ok(PyDataFrame::new(df, Arc::clone(&self.runtime)))
         })

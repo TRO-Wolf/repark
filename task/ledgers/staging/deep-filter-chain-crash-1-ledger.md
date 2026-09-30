@@ -74,6 +74,10 @@ fork edit, no new crate edge.
 | C-002 | 200 chained joins count 1 and 300 chained unions count 15050, Spark's answers; the base tree SIGSEGVs at 110 joins. | One isolated-interpreter pin asserting both counts. | PROVEN | `test_deep_filter_chain_crash_1.py` `test_deep_join_and_union_chains_answer_on_dataframe_door`; `deep_stack.rs` `shared_runtime_blocking_threads_survive_deep_recursion`; join-200 and union-300 cells answer on head. |
 | C-003 | 120 chained `withColumn` count 50; plan-build time caps the depth, not the stack (44 s build at 200 on base). | One isolated-interpreter pin asserting the count at the recorded ceiling. | PROVEN | `test_deep_filter_chain_crash_1.py` `test_wide_with_column_chain_answers_within_ceiling`; withColumn-120 answers on head. |
 | C-004 | 1,000-deep nested SQL raises a catchable `RecursionError`, never a crash (Spark refuses nested-deep SQL with `FAILED_TO_PARSE_TOO_COMPLEX`); flat 600-branch `UNION ALL` SQL counts 601. | One isolated-interpreter pin asserting the refusal class and the flat count. | PROVEN | `test_deep_filter_chain_crash_1.py` `test_deep_sql_shapes_refuse_clean_or_answer`; nested-1000 records `RecursionError`, flat-600 records 601 on head. |
+| C-005 | A 1,000-deep filter chain answers 50 under a scalar subquery and under `IN (SELECT ...)` (VD-1); both shapes SIGSEGV on f958d1a8. | One isolated-interpreter pin asserting both counts. | PROVEN | `test_deep_subquery_expression_1.py` `test_thousand_filter_chain_answers_under_subqueries`; `deep_stack.rs` `plan_depths_see_through_scalar_subqueries`. |
+| C-006 | A 5,000-term OR through `sql()` answers 50 on the debug build and a 10,000-term OR answers 50 on release (VD-2; Spark answers both too); the same shape through `filter()` raises a catchable `AnalysisException` at build time (Spark raises `StackOverflowError` at `.filter()` the same way). | Debug pin asserting the 5k answer; release or_n_sql N=10000 answers 50 in 108 s; DF-door refusal pins at 2k/20k. | PROVEN | `test_deep_subquery_expression_1.py` `test_five_thousand_term_or_answers_through_sql`, `test_twenty_thousand_term_or_refuses_through_filter`; `deep_stack.rs` `frame_drive_segment_grows_past_the_expression_cap`. |
+| C-007 | A 2,000-deep `+1` select raises a catchable `AnalysisException` naming the deep-expression limit, never a crash (VD-3; Spark refuses deep arithmetic with a catchable error too). SQL past the 1 MiB text cap refuses the same way. | Isolated-interpreter pins asserting both refusal classes. | PROVEN | `test_deep_subquery_expression_1.py` `test_two_thousand_deep_select_refuses_clean`, `test_overlong_sql_refuses_clean`; `deep_stack.rs` `sql_gates_split_at_the_length_bounds`. |
+| C-008 | A 16-deep chain counts 50 on a 512 KiB thread (small-stack backstop: any entry point grows when under 2 MiB remain); debug SIGSEGVs on f958d1a8 and base alike. | One isolated-interpreter pin. | PROVEN | `test_deep_subquery_expression_1.py` `test_shallow_chain_answers_on_small_stack_thread`. |
 
 ## Mutation record (2026-09-29)
 
@@ -221,3 +225,126 @@ Coverage note: AT-2's "same grown-stack helper" now reads "the same
 traffic skips growth by plan-depth verdict; every deep shape still
 grows. AT-7's bound is superseded by the R4 row above (1.10x ceiling,
 all green). AT-10 re-verified on the shipped shape as recorded here.
+
+## Verifier fold plan (2026-09-29)
+
+Opus findings VD-1..VD-5 against f958d1a8. Fix: keep conditional
+growth, extend the depth walk to subquery plans and expression depth
+(iterative worklists, no recursion), grow `sql()` behind a 4 KiB length
+gate, refuse past caps with `AnalysisException` naming the limit
+(expression depth 1500, plan depth 8192, SQL text 1 MiB), scale the
+grown segment 128 KiB per plan level (128 MiB floor, 1 GiB ceiling).
+Thread-pool execution for every entry was rejected: the R3 `spawn`
+measurement (1.40-1.58x) already proves the hand-off cost breaks the
+ceiling, and `sql()` plus the streaming polls hold `!Send` futures.
+
+## Verifier fold evidence (2026-09-29, debug build unless noted)
+
+Cap placement follows Spark's own split: Spark answers 10k/20k-term
+ORs through SQL (10 s, 16 s) and raises `StackOverflowError` at
+`.filter()` on the DF door. The builders therefore refuse past
+expression depth 1500 while the terminal verdict grows past any
+expression depth (`frame_drive_segment_grows_past_the_expression_cap`;
+plan 8192 and SQL 1 MiB refuse everywhere).
+
+Pins: `test_deep_subquery_expression_1.py` 6 passed in 664 s
+(subquery-1000 scalar+IN answer 50; or_5000_sql answers 50 in ~220 s;
+or_20000 DF-door refuses `AnalysisException`; arith-2000 select
+refuses; 1 MiB SQL refuses; 16-deep counts 50 on a 512 KiB thread).
+Rust units 878 plus 101.
+
+Verifier-probe rerun (isolated interpreter per probe): all 7 VD-1
+subquery probes answer 50 (3 s); small-stack 14-deep and 16-deep
+answer 50; N=2000 subquery IN/scalar/direct answer 50 (4-10 s);
+`selectexpr_or_2000` answers 50 in 280 s (was crash);
+`and_5000_df` refuses in 14.5 s where Spark raises in 14.3 s (both
+sides pay the Python/JVM tree build); all filter_1000 terminals,
+threads_8, union_2000, values_20000 match the recorded head answers.
+Intended flips: `or_5000_df` and the mixed-thread 2000-OR shape now
+refuse at `filter()` (Spark refuses both; the old debug build
+answered after ~200 s). Still slow-or-hung, matching the verifier's
+out-of-scope perf list and release-side records: `upper_1000_df`
+(release answers in 227 s both sides), `udf_deep_arg` and
+`arith_rightdeep_1000_df` (release timeouts both sides),
+`concat_300_df`/`struct_200_df` (timeouts both sides). The
+`SELECT 1+1...` hang at n=1000 is pre-existing: the short-text path
+is byte-identical to the old `runtime.block_on`.
+
+VD-2 mutation on debug: `sql()` reverted to a plain `block_on`
+answers or_n_sql at N=2000 (31 s) and N=5000 (272 s) and times out
+past 900 s at N=10000 — no crash. The debug main thread (8 MiB)
+survives the parse recursion; the recorded debug or_5000 crash died
+at collect time (the old terminal verdict stayed plain for shallow
+plans), which the grown terminal verdict now covers. The `sql()`
+crash itself is release-side (the verifier's gdb record inside
+`PyReparkSession::sql` at N=10000), so the decisive mutation ran
+on the release build: plain-`sql()` release answers or_n_sql with
+50 at N=10000 (107 s) and N=20000 (554 s) — no crash. The A/B
+against the verifier's rhead record (CRASH at both N) isolates the
+fix exactly: for this shape the two builds differ only in the
+terminal verdict (old: plan-inputs 2, stays plain; new: expression
+depth 20001, drives grown), so the crash died at collect/optimize
+time on the plain stack, and the expression-aware terminal growth
+is what fixes VD-2. The `sql()` length gate stays as instructed
+defense-in-depth for parse-time recursion; it costs short queries
+nothing and cannot change these outcomes.
+
+## Verifier fold release evidence (2026-09-29)
+
+Wheels head vs `d415da76` (`CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16`,
+one build at a time), 5 fresh processes per side, medians:
+
+| Side | select1 (1000) | filter (1000) | iceberg (200) | import+session |
+|---|---|---|---|---|
+| Head | 748.9 ms | 1142.4 ms | 335.4 ms | 146.9 ms |
+| Base | 766.3 ms | 1188.9 ms | 348.8 ms | 150.1 ms |
+| Ratio | 0.9773 | 0.9609 | 0.9614 | 0.9787 |
+
+All four ratios sit under the 1.10x ceiling with margin (head
+nominally faster; run-to-run median noise is ~2%). The extended
+verdict walk (subquery plans plus expression depth) costs shallow
+queries nothing measurable on release.
+
+Release answers: or_n_sql N=10000 answers 50 in 108 s (VD-2 pin;
+the verifier's rhead crashes); filter_n_count N=8000 answers 50 in
+8 s (clean-probes regression check; the 1 GiB scaled segment spawns
+fine); subq_in_deepview_sql / subq_scalar_df answer in 0.5 s,
+N=2000 subquery IN/scalar in 1.4 s, repro_vd1.py 1000 rc=0;
+upper_1000_df answers 1 in 215 s (rhead: 227 s, no regression).
+
+Release memory after import plus session plus the 3-filter query:
+base `VmSize=4338376 kB VmRSS=185-191 MB`; head `VmSize=5989008 kB
+VmRSS=156-191 MB`. Residency delta is run-to-run noise. VD-5
+reservation correction: the +1.65 GiB virtual delta is 26
+anonymous 64 MiB stack mappings (measured in `/proc/self/maps`),
+one per runtime thread under this lane's 26-CPU cgroup quota
+(`cpu.max 2600000 100000`), i.e. `RUNTIME_THREAD_STACK_BYTES` x
+(workers plus blocking-pool threads). The reservation scales with
+the CPU count the runtime sizes its pools to — a 64-CPU lane
+reserves proportionally more — and it is reserve-only: no
+resident cost.
+
+VD-5 non-covered shapes: the verdict measures the logical plan at
+the entry point, so it does not see (a) deeply nested DATA TYPES
+(`struct<struct<...>>` conversion recursions, unmeasured), (b)
+subtrees the optimizer duplicates past the measured shape, (c)
+execution-side recursion past the 64 MiB worker stacks (no
+reaching shape is known; N=8000 plans answer), (d) recursion in
+user UDF code. The `Extension`/`Unnest` no-expression
+classification is compile-guarded: the exhaustive
+`node_expressions` match fails the build until a new DataFusion
+plan variant is classified.
+
+VD-4 DIFF-PROBE rerun at the final head (debug): 305 old
+statements re-run with zero real flips (only `sess_version`'s
+random appid), plus 9 new `deep-vd` statements, all `ok:true`:
+four subquery shapes answer 50 (0.5-3 s), `vd2_or_5000_sql`
+answers 50 (262 s), the three DF-door refusal shapes report
+`refused:AnalysisException`, `vd_smallstack_16` counts 50.
+Base side (`d415da76` debug, solo reruns): the three 1000-deep
+subquery shapes, `vd3_and_5000`, `vd3_arith_2000`, and
+`vd_smallstack_16` SIGSEGV (rc=-11 each); `vd1_in_300` answers 50
+(0.6 s, same as head); `vd2_or_5000_sql` answers 50 in 368 s (head:
+262 s, same answer); `vd3_or_2000` answers 50 in 14 s where head
+refuses `AnalysisException` (intended flip — Spark raises on this
+shape). Six crashes fixed, two same-answers, one intended flip.

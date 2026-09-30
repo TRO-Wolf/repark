@@ -720,6 +720,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   rendering. `tests.rs`
   `sensitive_session_refuses_folded_names_and_keeps_backticks` now answers
   unquoted exact `userId` (Spark's `cs_sel_Data` shape; ledger Tests rewritten).
+  **DEEP-FILTER-CHAIN-CRASH-1 verifier fold (2026-09-29):** re-exports
+  `stack::remaining_stack` so the binding's small-stack backstop reads the
+  calling thread's remaining bytes.
+  pins: deep-filter-chain-crash-1/C-008
   pins: ice-mixed-case-1/C-001, C-002, C-007, C-013, C-014, C-015, C-016, C-017, C-021, C-022
   pins: casesens-1/C-005, C-006, C-007, C-008
   pins: ice-error-conditions-1/C-011

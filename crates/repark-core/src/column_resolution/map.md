@@ -70,6 +70,9 @@ pins: ice-error-conditions-1/C-011
   are public through `column_resolution` (`on_grown_stack` passes one value for both) so
   repark-spark's re-planning temp-view scan grows the stack the same way; removing that wrapper
   overflows the 100-level temp-view chain pins. pins: ice-views-1/C-018
+  **DEEP-FILTER-CHAIN-CRASH-1 verifier fold (2026-09-29):** `remaining_stack` is
+  public through `column_resolution` too, so the binding's small-stack backstop
+  reads the calling thread's remaining stack without a new dependency edge.
 - `tests.rs` — the battery below. **WO CASESENS-1 slice 2 (2026-09-27):**
   `sensitive_session_refuses_folded_names_and_keeps_backticks` answers unquoted
   exact `userId` where it refused `userid` (normalization-off exactness, net-zero

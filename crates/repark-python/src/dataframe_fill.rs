@@ -7,6 +7,9 @@ use pyo3::wrap_pyfunction;
 use crate::column::PyColumn;
 use crate::column::display::wrap_cast;
 use crate::dataframe::PyDataFrame;
+use crate::deep_stack::{
+    DEEP_NESTING_DEPTH, refuse_expression_depth, run_grown_if, stack_is_small,
+};
 use crate::fence::fenced;
 
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -51,13 +54,22 @@ fn fill_expr_for_column(
                 )));
             }
         };
+        let depth = bound.expression_depth();
+        refuse_expression_depth(depth)?;
         let schema = frame.analyzed_arrow_schema_native()?;
-        let build = repark_core::na_fill_expr(
-            &schema,
-            bound.expr(),
-            field_name.as_str(),
-            fallback_name.as_str(),
-            scalar,
+        let runtime = frame.runtime_handle();
+        let build = run_grown_if(
+            &runtime,
+            depth > DEEP_NESTING_DEPTH || stack_is_small(),
+            || {
+                repark_core::na_fill_expr(
+                    &schema,
+                    bound.expr(),
+                    field_name.as_str(),
+                    fallback_name.as_str(),
+                    scalar,
+                )
+            },
         );
         let filled = PyColumn::from_expr(build.expr);
         let cast = match build.cast_to {
