@@ -172,6 +172,11 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   verifier fold replaced the pre-coercion `nullif` seat), so the `F.expr`
   door rewrites the family exactly like the session door.
   pins: nvl-type-coercion-1/C-002
+  **Re-verify 9 fold (2026-09-30, ANSI-off):** the family seat is gone
+  again: the shared context carries no session ANSI flag, so `F.expr`
+  leaves the family raw and the consumer session lowers it with the
+  live flag, exactly like the column-API door.
+  pins: nvl-type-coercion-1/C-040
   **FN-FIX-1:** `window_from_aggregate` copies `IGNORE NULLS`. pins: fn-fix-1-registry-rows/C-002
   **FNP-AGG-1 slice (d) (2026-09-21):** `cast_unsigned_count_to_signed` moved here
   from `function_dispatch.rs` (same body, re-exported there) so `grouping_id_call`

@@ -198,6 +198,16 @@ fn case_when_present(test: Expr, first: Expr, second: Expr) -> Result<Expr> {
 fn maybe_nvl_cast(expr: Expr, from_type: &DataType, widen: &DataType) -> Expr {
     if from_type == widen {
         expr
+    } else if matches!(from_type, DataType::Timestamp(_, _))
+        && matches!(
+            widen,
+            DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
+        )
+    {
+        crate::expr_fn::call(
+            crate::timestamp_cast::spark_timestamp_to_string_udf(),
+            vec![expr],
+        )
     } else {
         nvl_cast_expr(expr, widen)
     }
@@ -582,8 +592,7 @@ mod tests {
             .expect("bind nvl under legacy coercion")
             .collect()
             .await
-            .err()
-            .expect("legacy nvl over string and boolean refuses")
+            .expect_err("legacy nvl over string and boolean refuses")
             .to_string();
         assert!(
             message.contains("[DATATYPE_MISMATCH.DATA_DIFF_TYPES]"),

@@ -126,7 +126,7 @@ def test_vn8_r1_exact_equal_shapes_answer_null(
     assert [row.asDict() for row in ceiling100.sql(cell[1]).collect()] == [{"v": None}]
 
 
-VN8_R1_SQL_WRAPPED_REFUSALS: list[tuple[str, str]] = [
+VN8_R1_SQL_WRAPPED_NULLS: list[tuple[str, str]] = [
     (
         "repeat_greatest_str",
         "SELECT size(array_repeat(1, nullif(101, greatest(CAST('0' AS INT), 101)))) AS v",
@@ -137,15 +137,14 @@ VN8_R1_SQL_WRAPPED_REFUSALS: list[tuple[str, str]] = [
     ),
 ]
 
-VN8_R1_SQL_WRAPPED_REFUSAL_IDS = [cell[0] for cell in VN8_R1_SQL_WRAPPED_REFUSALS]
+VN8_R1_SQL_WRAPPED_NULL_IDS = [cell[0] for cell in VN8_R1_SQL_WRAPPED_NULLS]
 
 
-@pytest.mark.parametrize("cell", VN8_R1_SQL_WRAPPED_REFUSALS, ids=VN8_R1_SQL_WRAPPED_REFUSAL_IDS)
-def test_vn8_r1_wrapped_cast_second_refuses_residue(
+@pytest.mark.parametrize("cell", VN8_R1_SQL_WRAPPED_NULLS, ids=VN8_R1_SQL_WRAPPED_NULL_IDS)
+def test_vn8_r1_wrapped_cast_second_answers_null(
     ceiling100: ReparkSession, cell: tuple[str, str]
 ) -> None:
-    with pytest.raises(AnalysisException, match=_MAX_ARRAY_ELEMENTS_KEY):
-        ceiling100.sql(cell[1]).collect()
+    assert [row.asDict() for row in ceiling100.sql(cell[1]).collect()] == [{"v": None}]
 
 
 VN8_R1_FEXPR_REFUSALS: list[tuple[str, str, str]] = [

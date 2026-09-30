@@ -136,7 +136,7 @@ def test_vn7_r1_equal_pairs_answer_null(ceiling100: ReparkSession, cell: tuple[s
     assert [row.asDict() for row in ceiling100.sql(cell[1]).collect()] == [{"v": None}]
 
 
-VN7_R1_WRAPPED_DEC_REFUSALS: list[tuple[str, str]] = [
+VN7_R1_WRAPPED_DEC_NULLS: list[tuple[str, str]] = [
     (
         "repeat_second_dec",
         "SELECT size(array_repeat(1, nullif(101, CAST(101 AS DECIMAL(5,0))))) AS v",
@@ -147,15 +147,14 @@ VN7_R1_WRAPPED_DEC_REFUSALS: list[tuple[str, str]] = [
     ),
 ]
 
-VN7_R1_WRAPPED_DEC_REFUSAL_IDS = [cell[0] for cell in VN7_R1_WRAPPED_DEC_REFUSALS]
+VN7_R1_WRAPPED_DEC_NULL_IDS = [cell[0] for cell in VN7_R1_WRAPPED_DEC_NULLS]
 
 
-@pytest.mark.parametrize("cell", VN7_R1_WRAPPED_DEC_REFUSALS, ids=VN7_R1_WRAPPED_DEC_REFUSAL_IDS)
-def test_vn7_r1_wrapped_decimal_second_refuses_residue(
+@pytest.mark.parametrize("cell", VN7_R1_WRAPPED_DEC_NULLS, ids=VN7_R1_WRAPPED_DEC_NULL_IDS)
+def test_vn7_r1_wrapped_decimal_second_answers_null(
     ceiling100: ReparkSession, cell: tuple[str, str]
 ) -> None:
-    with pytest.raises(AnalysisException, match=_MAX_ARRAY_ELEMENTS_KEY):
-        ceiling100.sql(cell[1]).collect()
+    assert [row.asDict() for row in ceiling100.sql(cell[1]).collect()] == [{"v": None}]
 
 
 VN7_3_STRING_EQUAL_ANSWERS: list[tuple[str, str]] = [
@@ -242,10 +241,11 @@ VN7_R1_INT_CAST_DOUBLE_IDS = [cell[0] for cell in VN7_R1_INT_CAST_DOUBLE]
 
 
 @pytest.mark.parametrize("cell", VN7_R1_INT_CAST_DOUBLE, ids=VN7_R1_INT_CAST_DOUBLE_IDS)
-def test_vn7_r1_int_cast_double_first_answers(
+def test_vn7_r1_int_cast_double_first_refuses(
     ceiling100: ReparkSession, cell: tuple[str, str]
 ) -> None:
-    assert [row.asDict() for row in ceiling100.sql(cell[1]).collect()] == [{"v": 101}]
+    with pytest.raises(AnalysisException, match=_MAX_ARRAY_ELEMENTS_KEY):
+        ceiling100.sql(cell[1]).collect()
 
 
 def test_vn7_r1_unsigned_count_over_ceiling_refuses(

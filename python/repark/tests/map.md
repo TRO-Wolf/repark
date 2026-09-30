@@ -5022,6 +5022,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `'101'`, `' 101 '`) answer NULL again; the nullable-cast-wrapped
   `DECIMAL(5,0)` second stays refused as residue.
   pins: nvl-type-coercion-1/C-035
+  Re-verify 9 fold (2026-09-30): the int-cast `D` firsts refuse
+  (guard-correct at TRUE 101 over 100) and the `DECIMAL(5,0)` second
+  answers NULL (the nullable wrapper is value-identity).
+  pins: nvl-type-coercion-1/C-038
 - `test_nvl_type_coercion_1_vn8.py` — **NVL-TYPE-COERCION-1 re-verify 7
   (2026-09-30, VN8-1/VN8-2/VN8-3/VN8-4):** 71 pins. The VN8-1 bypass
   shapes (`try_cast` first, `coalesce` first, simple-`CASE` first,
@@ -5037,7 +5041,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   overflow, string start, `BIGINT` start, string step, `nullif` stop,
   garbage `typeof`, a string column with a NULL row, and the column API)
   and refuse without it; garbage raises `CAST_INVALID_INPUT` under ANSI;
-  `DATE`/`STRING` siblings stay refused. pins: nvl-type-coercion-1/C-033,
+  `DATE`/`STRING` siblings stay refused.
+  Re-verify 9 fold (2026-09-30): the `greatest`-wrapped cast second
+  answers NULL (the nullable wrapper is value-identity).
+  pins: nvl-type-coercion-1/C-033, C-038,
   C-034
   Re-verify 8 fold (2026-09-30): the exact-equal shapes (mixed-width,
   big/smallint/subquery-`'101'`) answer NULL again; the
@@ -5063,8 +5070,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `greatest` bypass refuses, `coalesce`/`nvl`/`nvl2` over
   `zeroifnull` answer 0/1/2); R3 (the legacy `STRING`×type matrix for
   `nvl`/`ifnull`/`nvl2` with `typeof`+value, the `BOOLEAN` refusal, the
-  `zeroifnull` string cells, the `nullif` legacy guard cells and the
-  five VN5-3 precision cells, ANSI-on guards kept).
+  `zeroifnull` string cells, the `nullif` legacy guard cells, four
+  VN5-3 precision cells plus the fullwidth-decimal divergence pin, and
+  ANSI-on guards kept).
   pins: nvl-type-coercion-1/C-038, C-039, C-040
 - `test_select_naming.py` — **Group H** select/projection display naming vs live PySpark 4.1.2:
   mutation leak accepts `Int32(1)` as well as `Int64(1)` (F-Y10-1 Python lit width);

@@ -410,16 +410,17 @@ pub(crate) fn compare_for_nullif_with_ansi(
     right: &DataType,
     ansi_on: bool,
 ) -> Result<Vec<CompareLeaf>, CompareRefusal> {
-    if !ansi_on && let Some(other) = legacy_text_other(left, right) {
-        if let Some(common) = legacy_string_common(other, true) {
-            return Ok(vec![CompareLeaf {
-                path_a: Vec::new(),
-                path_b: Vec::new(),
-                type_a: unwrap_transparent(left).clone(),
-                type_b: unwrap_transparent(right).clone(),
-                common,
-            }]);
-        }
+    if !ansi_on
+        && let Some(common) =
+            legacy_text_other(left, right).and_then(|other| legacy_string_common(other, true))
+    {
+        return Ok(vec![CompareLeaf {
+            path_a: Vec::new(),
+            path_b: Vec::new(),
+            type_a: unwrap_transparent(left).clone(),
+            type_b: unwrap_transparent(right).clone(),
+            common,
+        }]);
     }
     compare_for_nullif(left, right)
 }

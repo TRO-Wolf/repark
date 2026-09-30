@@ -357,7 +357,16 @@ fn const_f64_scalar_function(name: &str, args: &[Expr], depth: u32) -> Option<f6
             (value >= 0.0).then_some(value.sqrt())
         }
         "arrow_cast" | "cast" if !args.is_empty() => const_f64(&args[0], depth - 1),
+        "__repark_decimal_cast_nullable__" if args.len() == 1 => const_f64(&args[0], depth - 1),
         _ => None,
+    }
+}
+
+fn const_i128_zero_shaped(name: &str, arg: &Expr, depth: u32) -> Option<i128> {
+    if name.eq_ignore_ascii_case("zeroifnull") {
+        crate::cardinality_nullif::zeroifnull_fold(arg, depth)
+    } else {
+        crate::cardinality_nullif::nullifzero_nested(arg, depth)
     }
 }
 
@@ -402,27 +411,20 @@ pub(crate) fn const_i128(expr: &Expr, depth: u32) -> Option<i128> {
                     .or_else(|| f64_trunc_to_i128(const_f64(&args[0], depth - 1)?.abs())),
                 "arrow_cast" | "cast" if !args.is_empty() => const_i128(&args[0], depth - 1)
                     .or_else(|| f64_trunc_to_i128(const_f64(&args[0], depth - 1)?)),
+                "__repark_decimal_cast_nullable__" if args.len() == 1 => {
+                    const_i128(&args[0], depth - 1)
+                }
                 "floor" | "ceil" | "ceiling" | "trunc" | "truncate" | "round" | "power" | "pow"
                 | "log" | "log10" | "log2" | "ln" | "exp" | "sqrt" => {
                     f64_trunc_to_i128(const_f64_scalar_function(func.name(), args, depth)?)
                 }
-                "coalesce" => {
-                    for arg in args {
-                        if let Some(value) = const_i128(arg, depth - 1) {
-                            return Some(value);
-                        }
-                    }
-                    None
-                }
+                "coalesce" => crate::cardinality_nullif::nvl_fold(args, depth - 1),
                 "nvl" | "ifnull" if args.len() == 2 => {
                     crate::cardinality_nullif::nvl_fold(args, depth - 1)
                 }
                 "nvl2" if args.len() == 3 => crate::cardinality_nullif::nvl2_fold(args, depth - 1),
-                "zeroifnull" if args.len() == 1 => {
-                    crate::cardinality_nullif::zeroifnull_fold(&args[0], depth - 1)
-                }
-                "nullifzero" if args.len() == 1 => {
-                    crate::cardinality_nullif::nullifzero_nested(&args[0], depth - 1)
+                "zeroifnull" | "nullifzero" if args.len() == 1 => {
+                    const_i128_zero_shaped(func.name(), &args[0], depth - 1)
                 }
                 "greatest" | "least" if !args.is_empty() => {
                     let mut values = Vec::with_capacity(args.len());

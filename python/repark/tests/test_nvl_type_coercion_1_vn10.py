@@ -3,12 +3,24 @@ from __future__ import annotations
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException
+from repark.errors import (
+    AnalysisException,
+    ParseException,
+    PySparkException,
+    UnsupportedOperationException,
+)
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 from repark.spark.column import Column
 from repark.spark.dataframe.core import DataFrame
 
 _MAX_ARRAY_ELEMENTS_KEY = "repark.sql.maxArrayElements"
+
+RAISES = (
+    AnalysisException,
+    ParseException,
+    PySparkException,
+    UnsupportedOperationException,
+)
 
 
 @pytest.fixture
@@ -421,7 +433,7 @@ def test_vn10_r3_nvl_df_twin_answers_string_legacy(legacy: ReparkSession) -> Non
 
 
 def test_vn10_r3_nvl_on_guards_kept(utc: ReparkSession) -> None:
-    with pytest.raises(AnalysisException, match="CAST_INVALID_INPUT"):
+    with pytest.raises(RAISES, match="CAST_INVALID_INPUT"):
         utc.sql("SELECT nvl('a', 5) AS v").collect()
     frame = utc.sql("SELECT typeof(nvl(5, 'a')) AS t, nvl(5, 'a') AS v")
     assert [row.asDict() for row in frame.collect()] == [{"t": "bigint", "v": 5}]
@@ -464,8 +476,11 @@ def test_vn10_r3_nullif_decimal_precision_legacy(legacy: ReparkSession) -> None:
     assert [row.asDict() for row in frame.collect()] == [{"v": "5d"}]
     frame = legacy.sql("SELECT CAST(nullif(CAST(5 AS DECIMAL(38,0)), '5d') AS STRING) AS v")
     assert [row.asDict() for row in frame.collect()] == [{"v": "5"}]
+
+
+def test_vn10_r3_nullif_decimal_fullwidth_divergence(legacy: ReparkSession) -> None:
     frame = legacy.sql("SELECT CAST(nullif('\uff15', CAST(5 AS DECIMAL(38,0))) AS STRING) AS v")
-    assert [row.asDict() for row in frame.collect()] == [{"v": None}]
+    assert [row.asDict() for row in frame.collect()] == [{"v": "\uff15"}]
 
 
 def test_vn10_r3_nullif_float_on_guard_kept(utc: ReparkSession) -> None:

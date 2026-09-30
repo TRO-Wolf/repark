@@ -101,11 +101,11 @@ pub(crate) fn nullif_value(
 
 #[allow(clippy::cast_precision_loss, clippy::float_cmp)]
 fn exact_i128(expr: &Expr, depth: u32) -> Option<i128> {
+    if is_integral_cast(expr) {
+        return const_i128(&rewrite_decimal_trunc(expr), depth);
+    }
     let rewritten = rewrite_decimal_literals(expr);
     let value = const_i128(&rewritten, depth)?;
-    if is_integral_cast(&rewritten) {
-        return Some(value);
-    }
     if let Some(float) = const_f64(&rewritten, depth)
         && float != value as f64
     {
@@ -141,14 +141,19 @@ fn is_integral_target(data_type: &DataType) -> bool {
 }
 
 fn rewrite_decimal_literals(expr: &Expr) -> Expr {
+    rewrite_decimal_with(expr, decimal_replacement)
+}
+
+fn rewrite_decimal_trunc(expr: &Expr) -> Expr {
+    rewrite_decimal_with(expr, decimal_trunc_replacement)
+}
+
+fn rewrite_decimal_with(expr: &Expr, replace: fn(Option<i128>, u8, i8) -> ScalarValue) -> Expr {
     expr.clone()
         .transform(|node| match node {
-            Expr::Literal(ScalarValue::Decimal128(unscaled, precision, scale), meta) => {
-                Ok(Transformed::yes(Expr::Literal(
-                    decimal_replacement(unscaled, precision, scale),
-                    meta,
-                )))
-            }
+            Expr::Literal(ScalarValue::Decimal128(unscaled, precision, scale), meta) => Ok(
+                Transformed::yes(Expr::Literal(replace(unscaled, precision, scale), meta)),
+            ),
             other => Ok(Transformed::no(other)),
         })
         .map_or_else(|_| expr.clone(), |done| done.data)
@@ -171,6 +176,27 @@ fn integral_quotient(unscaled: i128, scale: i8) -> Option<i128> {
         if unscaled.checked_rem(divisor)? != 0 {
             return None;
         }
+        unscaled.checked_div(divisor)
+    } else {
+        let places = u32::try_from(scale.checked_neg()?).ok()?;
+        unscaled.checked_mul(10i128.checked_pow(places)?)
+    }
+}
+
+fn decimal_trunc_replacement(unscaled: Option<i128>, precision: u8, scale: i8) -> ScalarValue {
+    let Some(raw) = unscaled else {
+        return ScalarValue::Decimal128(None, precision, scale);
+    };
+    trunc_quotient(raw, scale)
+        .and_then(|quotient| i64::try_from(quotient).ok())
+        .map_or(ScalarValue::Int64(None), |fits| {
+            ScalarValue::Int64(Some(fits))
+        })
+}
+
+fn trunc_quotient(unscaled: i128, scale: i8) -> Option<i128> {
+    if scale >= 0 {
+        let divisor = 10i128.checked_pow(u32::try_from(scale).ok()?)?;
         unscaled.checked_div(divisor)
     } else {
         let places = u32::try_from(scale.checked_neg()?).ok()?;
@@ -288,6 +314,18 @@ mod tests {
         assert_eq!(
             nullif_value(&lit(101), &lit(101.4f64), DEPTH, NullifPosition::Count),
             Some(101)
+        );
+    }
+
+    #[test]
+    fn nullif_integral_cast_folds_through_decimal_literals() {
+        use datafusion::logical_expr::Cast;
+        let decimal = Expr::Literal(ScalarValue::Decimal128(Some(1015), 4, 1), None);
+        let double = Expr::Cast(Cast::new(Box::new(decimal), DataType::Float64));
+        let second = Expr::Cast(Cast::new(Box::new(double), DataType::Int32));
+        assert_eq!(
+            nullif_value(&lit(101), &second, DEPTH, NullifPosition::Count),
+            None
         );
     }
 

@@ -931,7 +931,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **Re-verify 9 fold (2026-09-30, ANSI-off):** the rule reads
   `spark.sql.ansi.enabled` from its `ConfigOptions` and widens through
   the `*_with_ansi` entries, so the same plan coerces legacy under
-  ANSI off and ANSI under ANSI on. pins: nvl-type-coercion-1/C-040
+  ANSI off and ANSI under ANSI on. `TIMESTAMP`→`STRING` branches route
+  through `__repark_timestamp_to_string__`, since the kernel cast
+  formats `T…Z` where Spark formats a blank-separated wall time; the
+  `F.expr` seat is removed (its context has no session ANSI flag) so
+  the session lowers with the live flag. pins: nvl-type-coercion-1/C-040
 - `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer
   rule, installed on BOTH doors via `install_shared_analyzer_rules` (defined here since FNP-11B step 3 and re-exported from the crate root, so `repark_functions::install_shared_analyzer_rules` and run 16b's `session.rs` call are unchanged; the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts; the TIME guard left for `analyzer_rules()` in remediation round 1).
   installer calls it in place of the integer-only one — same line count, so the
