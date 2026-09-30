@@ -644,3 +644,27 @@ commit takes the same collector after the COPY settles. Only s3a text
 COPYs carry the option, and only for the spec formats; a lookup miss gets
 a private collector nobody reads. The C-007/C-009 clauses and the M10
 mutation above describe the committed mechanism and still hold.
+
+Re-verify 4 fold, proof (2026-09-30, same lane; outputs in
+`/tmp/oc-worker/direct/wo/reverify4-csvts-fold/`). Moto (`rb.py main`,
+1 rep): 8/8 vc41 cells leave destination keys and whole-bucket ETags
+unchanged over json/csv by plain overwrite, partitioned overwrite, append
+and partitioned append; 4/4 prefix cells keep every pre-existing key
+including `_SUCCESS`; 2/2 success appends add one part and keep ETags; 3/3
+concurrent cells delete 0 foreign keys (31/30/34 in-window PUTs all
+survive, plus every pre-window PUT) with 0 own-part leaks at the normal
+prefix, the sibling prefix and the bucket root. Moto deny proxy: 3/3 keep
+the original error variant and text as the prefix with one clean appended
+note (`datafusion engine error:` occurs once), no pre-existing key
+touched, partials remain while deletes are denied. Success identity: s3p3
+19/19 and s3lazy 12/12 identical to the v4 recordings modulo the VC4-2
+quoted value and one partition row-order flip that also flips between two
+runs of this build; the 50-cell differential is `diff -r` RC=0 against
+the recorded head tree. Reverify3 replay (rv1+rv2 probes plus conf, doors,
+doors2, gprobe, zchg, all rc=0): 10162 cells, 10124 same under cmp3way
+against v3; the 38 deltas are 34 read-back legs over `*-spark`/`*-head`
+write dirs whose files were pruned from evidence (0 files; those cells
+write nothing), 2 inferred-column-order flips proven run-to-run random on
+this build with identical write bytes, and 2 read-back error texts that
+differ only by the embedded output root. Aux trees 7/7 byte-identical. 0
+cells moved.
