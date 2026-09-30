@@ -401,17 +401,17 @@ so refusal stays allowed by (b).
 | Plan cell (debug) | 3466b00c | base | Spark |
 |---|---|---|---|
 | filter 4000/8192/8193/12000/20000 | ans/ref/ref/ref/ref | crash x5 | refuse x5 |
-| union DF 4000/8192/8193/12000/20000 | ans/ref/ref/ref/ref | ans/ans/ans/tmo/tmo | ans/ans/ans/…/… |
-| union SQL 4000/8192/8193/12000/20000 | ans/ref/ref/ref/tmo | ans/ans/ans/tmo/tmo | …/…/…/…/… |
+| union DF 4000/8192/8193/12000/20000 | ans/ref/ref/ref/ref | ans/ans/ans/tmo/tmo | ans/ans/ans/ref/ref |
+| union SQL 4000/8192/8193/12000/20000 | ans/ref/ref/ref/tmo | ans/ans/ans/tmo/tmo | ref/ref/ref/ref/ref |
 | withColumn 4000/8192/8193/12000/20000 | tmo x5 | tmo x5 | refuse x5 |
 | select 4000/8192/8193/12000/20000 | ans/ref/ref/ref/tmo | ans/ans/ans/tmo/tmo | refuse x5 |
 
-`ans`/`ref`/`tmo` = answers / clean `AnalysisException` /
-timeout; `…` = still running when the fold committed, decision needs
-no deeper cell (head answers wherever either side answers). Union DF
-8193: base 409700 in 557 s, Spark 409700 in 1266 s. Union SQL 8193:
-base 8194 in 991 s. Post-fold head re-runs every R2 cell: unions
-answer, filter/select/withColumn keep their verdicts, no crash.
+`ans`/`ref`/`tmo` = answers / clean refusal / timeout. Spark
+refuses union DF at 12000+ (`StackOverflowError` at `count`) and
+union SQL from 4000 (`FAILED_TO_PARSE_TOO_COMPLEX`; answers 600 per
+Step 0). Union DF 8193: base 409700 in 557 s, Spark 409700 in
+1266 s. Union SQL 8193: base 8194 in 991 s. The close-out section
+below records the post-fold re-run of every R2 cell.
 
 R3: the 1500 builder expression cap stays. Spark first refuses
 `and`/`or`/`+` chains between 300 and 350 terms (depth 301-351,
@@ -440,6 +440,44 @@ Residues added: R-5 (dropping a deep plan needs ~250 B per level
 on the dropping thread: an 8201-deep test plan aborts a 2 MiB
 thread at drop, so the union-spine unit runs on a 64 MiB thread;
 main-thread drops hold past 20000, sub-megabyte threads must not
-hold deep plans — same as base) and R-6 (100k+ IN lists: Spark
-answers 1 on both forms, base answers 1000 range-form / 1
-view-form; pre-existing divergence, out of unit scope).
+hold deep plans — same as base) and R-6 (the 200k-item IN list
+answers 1000 over `collect()` and 1 over `count()` on every side;
+pre-existing terminal split, out of unit scope).
+
+## Limits fold close-out (2026-09-30)
+
+Post-fold head re-runs all 26 R2 cells plus the IN list (one
+isolated interpreter per cell): unions DF/SQL answer at 8192/8193
+(DF 8193: 409700 in 540 s; SQL 8193: 8194 in 953 s), union DF 12000
+answers 600050 in 1167 s where base times out, the remaining deep
+unions time out exactly where base times out, filters refuse past
+the cap, selects refuse past the cap, withColumn times out in plan
+build on both sides. Zero crashes; zero answered-on-3466b00c-now-
+refusing. Select 20000 refuses given the 1200 s budget (the 300 s
+pre-fix timeout was a budget artifact, not a verdict).
+
+Mutation M3: the SQL text cap restored (const + refusal + three
+call sites) turns the C-009 pin red (the worker dies at the IN
+cell; the statement refuses `query-text limit` in 1.0 s); reverted
+with `git status` clean, and the IN list answers 1000 in 60 s
+again.
+
+DIFF-PROBE replay at the fold head: 314 statements, zero real flips
+vs 3466b00c (random `sess_version` appid plus `COLLECT_SET` element
+order; both orders reproduce on identical code). Verifier-probe
+replay (27 probes on head and base): all 7 VD-1 subquery probes
+answer 50, `selectexpr_or_2000` answers 50, `and_5000_df` refuses
+clean where base crashes, all filter_1000 terminals answer, the
+small-stack and 8-thread shapes answer — VD-1..VD-3 still fixed.
+`test_deep_subquery_expression_1.py` 6 passed in 622 s (the
+converted 1.1 MB answer pin included).
+
+Release per-call medians vs d415da76 (wheels,
+`CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16`, 5 fresh processes per
+side): select1 0.9843, filter_count 1.0051, iceberg 0.8560,
+import+session 1.0096 — all under the 1.10x bar.
+
+Gate fallout fixed in this commit: the CAP-1 mirror row for
+`column/mod.rs` ratchets 1012 → 1011 with the script baseline,
+plus the scripts and parity-tests map rows the lockstep rule
+needs.
