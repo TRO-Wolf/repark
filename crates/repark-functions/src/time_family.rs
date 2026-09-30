@@ -2,7 +2,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use arrow::datatypes::{DataType, Field, FieldRef, IntervalUnit, TimeUnit};
+use arrow::datatypes::{DataType, Field, FieldRef, TimeUnit};
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
 use datafusion::common::{Result, ScalarValue, exec_err};
@@ -299,9 +299,6 @@ fn spark_type_name(data_type: &DataType) -> Result<String> {
         DataType::Time32(_) | DataType::Time64(_) => Ok("time(6)".to_string()),
         DataType::Timestamp(_, None) => Ok("timestamp_ntz".to_string()),
         DataType::Timestamp(_, Some(_)) => Ok("timestamp".to_string()),
-        DataType::Interval(IntervalUnit::YearMonth) => Ok("interval year to month".to_string()),
-        DataType::Interval(IntervalUnit::DayTime) => Ok("interval day".to_string()),
-        DataType::Interval(IntervalUnit::MonthDayNano) => Ok("interval month day nano".to_string()),
         DataType::List(field) | DataType::LargeList(field) => {
             Ok(format!("array<{}>", spark_type_name(field.data_type())?))
         }

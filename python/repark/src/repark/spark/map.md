@@ -694,3 +694,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `json_tuple` / `from_csv` / `schema_of_csv` from `FACADE_ONLY_ROUTINE_NAMES`
   for the same reason — the dispatch now resolves all three on the Rust kernels.
   The full facade suite caught it again. pins: fnp-gen-1/C-002, C-006
+- **NVL-TYPE-COERCION-1 CI fix (2026-09-30):** `functions_byname.py` drops
+  `nvl` / `nvl2` / `ifnull` / `nullifzero` / `zeroifnull` from
+  `FACADE_ONLY_ROUTINE_NAMES` — the engine now resolves all five through
+  `_scalar`, so `call_function` reaches them as builtins and the
+  byname-allowlist census derives them out of the facade-only set.
+  pins: nvl-type-coercion-1/C-002

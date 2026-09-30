@@ -617,6 +617,35 @@ above as deterministic is flaky (2 of 3 reruns pass).
 Mutants, replay, gate and pin-count outcomes are recorded in the lane
 hand-back alongside this commit.
 
+### CI fix: typeof interval refusal + byName allowlist (2026-09-30)
+
+CI's `build + import smoke` job ran the full facade suite on the
+merge head and found 4 failures this lane never runs locally. All
+four belong to this branch: both test files are byte-identical on
+`origin/main` (whose CI is green), and the product code under them
+changed only here.
+
+The three `test_typeof_interval_spelling_is_blocked_on_the_unit_seam`
+cells (TYPEOF-SQL-14..16) failed with DID NOT RAISE. A wip snapshot
+added `Interval` arms to `SparkTypeof` for `nvl` interval cells that
+never shipped; head answered `interval month day nano` for all three
+inputs. Live Spark 4.1.2 (banner `4.1.2`, America/New_York) spells
+`interval day` / `interval year` / `interval month`, and base
+(`/tmp/xrel`) refuses with `typeof(Interval(MonthDayNano)) is not
+implemented`. Head answered where Spark answers but with the wrong
+spelling on all three, so per the audit the pin stands and the
+product is fixed: the arms and the now-unused `IntervalUnit` import
+are removed, restoring the refusal. No pin weakened; no branch test
+uses `typeof` over an interval.
+
+`test_fnp_misc_1_byname_allowlist_covers_facade` failed because the
+engine now resolves `nvl` / `nvl2` / `ifnull` / `nullifzero` /
+`zeroifnull` through `_scalar`, so the census derives exactly those
+five out of the facade-only set. The tuple is hand-maintained (prior
+units drop names the same way), so the five rows are removed from
+`FACADE_ONLY_ROUTINE_NAMES`; `call_function` now reaches them as
+engine builtins.
+
 ## Coverage attestation
 
 ```yaml
