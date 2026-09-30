@@ -936,6 +936,14 @@ def test_vn4_nullifzero_negative_zero_float(utc: ReparkSession) -> None:
     assert [row.asDict() for row in rows] == [{"t": "float", "v": None}]
 
 
+def test_vn4_nullifzero_computed_negative_zero_float(utc: ReparkSession) -> None:
+    rows = utc.sql(
+        "SELECT typeof(nullifzero(-1.0F * 0.0F)) AS t, "
+        "CAST(nullifzero(-1.0F * 0.0F) AS STRING) AS v"
+    ).collect()
+    assert [row.asDict() for row in rows] == [{"t": "float", "v": None}]
+
+
 def test_vn4_nullifzero_computed_negative_zero(utc: ReparkSession) -> None:
     rows = utc.sql(
         "SELECT typeof(nullifzero(-1.0D * 0.0D)) AS t, "
