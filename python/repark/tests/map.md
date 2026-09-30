@@ -4666,6 +4666,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   NULL, TIMESTAMP into DATE, and `-NULL` into BIGINT (C-001, C-002). Two
   in-test pins hold the boundary: a temp view over VALUES keeps the WI-1
   refusal text and a STRING source still stores (C-003).
+  **Fold 2026-09-29 (verifier VT-1):** 21 more oracle cells (`p01`–`p21`) pin the
+  widened set-operation stores and the kept STRING refusals, and three in-test
+  pins hold the carried texts: STRING beside BIGINT/BOOLEAN still names STRING,
+  the EXCEPT/INTERSECT/UNION datetime clashes into BIGINT refuse, and STRING
+  beside table TIMESTAMP into BIGINT keeps the analyzer `type_coercion` refusal.
   pins: store-ts-doors-2/C-001, C-002, C-003
 - `test_merge_semantics_audit.py` — **MERGE-audit corpus** (2026-08-14 audit gap-map rows
   c/d/g/n/o): null-safe `<=>` / `eqNullSafe` ON matches NULL keys (both doors); builder-door

@@ -14,12 +14,30 @@ pub(crate) struct SourceCell<'a> {
 #[derive(Debug)]
 pub(crate) struct ArmMap<'a> {
     pub(crate) positions: Vec<Vec<SourceCell<'a>>>,
+    pub(crate) provenance: Vec<Vec<SiblingProvenance<'a>>>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) enum SiblingProvenance<'a> {
+    Table {
+        table: &'a ObjectName,
+        column: String,
+    },
+    Expr {
+        expr: &'a Expr,
+    },
 }
 
 struct FactorDef<'a> {
     name: Option<String>,
     names: Vec<String>,
     columns: Vec<Vec<SourceCell<'a>>>,
+    provenance: Vec<Vec<SiblingProvenance<'a>>>,
+}
+
+struct TableRef<'a> {
+    name: &'a ObjectName,
+    alias: Option<&'a str>,
 }
 
 const QUERY_DEPTH: usize = 16;
@@ -99,6 +117,7 @@ fn identity_map(values: &Values) -> ArmMap<'_> {
                 }]
             })
             .collect(),
+        provenance: vec![Vec::new(); width],
     }
 }
 
@@ -116,18 +135,35 @@ fn select_arm<'a>(
         })
         .map(|factor| factor_def(factor, scope, case_insensitive, depth))
         .collect();
+    let tables: Vec<Option<TableRef<'_>>> = select
+        .from
+        .iter()
+        .flat_map(|from| {
+            std::iter::once(&from.relation).chain(from.joins.iter().map(|join| &join.relation))
+        })
+        .map(|factor| table_ref(factor, scope, case_insensitive))
+        .collect();
     let mut positions = Vec::with_capacity(select.projection.len());
+    let mut provenance = Vec::with_capacity(select.projection.len());
     for item in &select.projection {
         match item {
             SelectItem::UnnamedExpr(expr) | SelectItem::ExprWithAlias { expr, .. } => {
                 positions.push(resolve_expr(expr, &factors, case_insensitive));
+                provenance.push(resolve_provenance(
+                    expr,
+                    &factors,
+                    &tables,
+                    case_insensitive,
+                ));
             }
             SelectItem::Wildcard(options) => {
                 if !plain_options(options) {
                     return None;
                 }
                 for factor in &factors {
-                    positions.extend(factor.as_ref()?.columns.iter().cloned());
+                    let factor = factor.as_ref()?;
+                    positions.extend(factor.columns.iter().cloned());
+                    provenance.extend(factor.provenance.iter().cloned());
                 }
             }
             SelectItem::QualifiedWildcard(kind, options) => {
@@ -139,11 +175,15 @@ fn select_arm<'a>(
                 };
                 let factor = qualified_factor(name, &factors, case_insensitive)?;
                 positions.extend(factor.columns.iter().cloned());
+                provenance.extend(factor.provenance.iter().cloned());
             }
             SelectItem::ExprWithAliases { .. } => return None,
         }
     }
-    Some(ArmMap { positions })
+    Some(ArmMap {
+        positions,
+        provenance,
+    })
 }
 
 fn resolve_expr<'a>(
@@ -197,6 +237,112 @@ fn column_cells<'a>(
         }
     }
     found.map_or(Vec::new(), |index| factor.columns[index].clone())
+}
+
+fn resolve_provenance<'a>(
+    expr: &'a Expr,
+    factors: &[Option<FactorDef<'a>>],
+    tables: &[Option<TableRef<'a>>],
+    case_insensitive: bool,
+) -> Vec<SiblingProvenance<'a>> {
+    if factors.is_empty() {
+        return vec![SiblingProvenance::Expr { expr }];
+    }
+    match peel(expr) {
+        Expr::Identifier(ident) => {
+            let ([factor], [table]) = (factors, tables) else {
+                return Vec::new();
+            };
+            match (factor, table) {
+                (Some(factor), None) => column_provenance(factor, &ident.value, case_insensitive),
+                (None, Some(table)) => vec![SiblingProvenance::Table {
+                    table: table.name,
+                    column: ident.value.clone(),
+                }],
+                _ => Vec::new(),
+            }
+        }
+        Expr::CompoundIdentifier(parts) => {
+            let [qualifier, column] = parts.as_slice() else {
+                return Vec::new();
+            };
+            let derived = factors.iter().flatten().find(|factor| {
+                factor
+                    .name
+                    .as_ref()
+                    .is_some_and(|name| name_matches(name, &qualifier.value, case_insensitive))
+            });
+            let table = tables
+                .iter()
+                .flatten()
+                .find(|table| qualifier_matches_table(table, &qualifier.value, case_insensitive));
+            match (derived, table) {
+                (Some(factor), None) => column_provenance(factor, &column.value, case_insensitive),
+                (None, Some(table)) => vec![SiblingProvenance::Table {
+                    table: table.name,
+                    column: column.value.clone(),
+                }],
+                _ => Vec::new(),
+            }
+        }
+        _ => Vec::new(),
+    }
+}
+
+fn column_provenance<'a>(
+    factor: &FactorDef<'a>,
+    wanted: &str,
+    case_insensitive: bool,
+) -> Vec<SiblingProvenance<'a>> {
+    let mut found = None;
+    for (index, name) in factor.names.iter().enumerate() {
+        if name_matches(name, wanted, case_insensitive) {
+            if found.is_some() {
+                return Vec::new();
+            }
+            found = Some(index);
+        }
+    }
+    found.map_or(Vec::new(), |index| factor.provenance[index].clone())
+}
+
+fn table_ref<'a>(
+    factor: &'a TableFactor,
+    scope: &[&'a Cte],
+    case_insensitive: bool,
+) -> Option<TableRef<'a>> {
+    let TableFactor::Table {
+        name,
+        alias,
+        args: None,
+        ..
+    } = factor
+    else {
+        return None;
+    };
+    if cte_named(name, scope, case_insensitive).is_some() {
+        return None;
+    }
+    Some(TableRef {
+        name,
+        alias: alias.as_ref().map(|alias| alias.name.value.as_str()),
+    })
+}
+
+fn qualifier_matches_table(table: &TableRef, qualifier: &str, case_insensitive: bool) -> bool {
+    if let Some(alias) = table.alias {
+        return name_matches(alias, qualifier, case_insensitive);
+    }
+    table_short_name(table.name)
+        .is_some_and(|short| name_matches(short, qualifier, case_insensitive))
+}
+
+fn table_short_name(name: &ObjectName) -> Option<&str> {
+    name.0
+        .iter()
+        .rev()
+        .find_map(|part| part.as_ident())
+        .map(|ident| ident.value.as_str())
 }
 
 fn qualified_factor<'a, 'b>(
@@ -309,6 +455,7 @@ fn values_factor(values: &Values) -> FactorDef<'_> {
                 }]
             })
             .collect(),
+        provenance: vec![Vec::new(); width],
     }
 }
 
@@ -326,17 +473,38 @@ fn select_factor<'a>(
         })
         .map(|factor| factor_def(factor, scope, case_insensitive, depth))
         .collect();
+    let tables: Vec<Option<TableRef<'_>>> = select
+        .from
+        .iter()
+        .flat_map(|from| {
+            std::iter::once(&from.relation).chain(from.joins.iter().map(|join| &join.relation))
+        })
+        .map(|factor| table_ref(factor, scope, case_insensitive))
+        .collect();
     let mut names = Vec::with_capacity(select.projection.len());
     let mut columns = Vec::with_capacity(select.projection.len());
+    let mut provenance = Vec::with_capacity(select.projection.len());
     for item in &select.projection {
         match item {
             SelectItem::UnnamedExpr(expr) => {
                 names.push(output_name(expr, None));
                 columns.push(resolve_expr(expr, &factors, case_insensitive));
+                provenance.push(resolve_provenance(
+                    expr,
+                    &factors,
+                    &tables,
+                    case_insensitive,
+                ));
             }
             SelectItem::ExprWithAlias { expr, alias } => {
                 names.push(output_name(expr, Some(alias)));
                 columns.push(resolve_expr(expr, &factors, case_insensitive));
+                provenance.push(resolve_provenance(
+                    expr,
+                    &factors,
+                    &tables,
+                    case_insensitive,
+                ));
             }
             SelectItem::Wildcard(options) => {
                 if !plain_options(options) {
@@ -346,6 +514,7 @@ fn select_factor<'a>(
                     let factor = factor.as_ref()?;
                     names.extend(factor.names.iter().cloned());
                     columns.extend(factor.columns.iter().cloned());
+                    provenance.extend(factor.provenance.iter().cloned());
                 }
             }
             SelectItem::QualifiedWildcard(kind, options) => {
@@ -358,6 +527,7 @@ fn select_factor<'a>(
                 let factor = qualified_factor(name, &factors, case_insensitive)?;
                 names.extend(factor.names.iter().cloned());
                 columns.extend(factor.columns.iter().cloned());
+                provenance.extend(factor.provenance.iter().cloned());
             }
             SelectItem::ExprWithAliases { .. } => return None,
         }
@@ -366,6 +536,7 @@ fn select_factor<'a>(
         name: None,
         names,
         columns,
+        provenance,
     })
 }
 
@@ -380,6 +551,15 @@ fn merge_factors<'a>(left: FactorDef<'a>, right: FactorDef<'a>) -> Option<Factor
             .columns
             .into_iter()
             .zip(right.columns)
+            .map(|(mut left, right)| {
+                left.extend(right);
+                left
+            })
+            .collect(),
+        provenance: left
+            .provenance
+            .into_iter()
+            .zip(right.provenance)
             .map(|(mut left, right)| {
                 left.extend(right);
                 left
@@ -494,6 +674,96 @@ mod tests {
                     .collect()
             })
             .collect()
+    }
+
+    fn proven(sql: &str) -> Vec<Vec<Vec<String>>> {
+        let mut statements = Parser::parse_sql(&GenericDialect, sql).unwrap();
+        let Statement::Insert(insert) = statements.swap_remove(0) else {
+            panic!("want an INSERT statement");
+        };
+        let source = insert.source.unwrap();
+        resolve_insert_arms(&source, true)
+            .iter()
+            .map(|arm| {
+                arm.provenance
+                    .iter()
+                    .map(|position| {
+                        position
+                            .iter()
+                            .map(|entry| match entry {
+                                SiblingProvenance::Table { table, column } => {
+                                    format!("{table}#{column}")
+                                }
+                                SiblingProvenance::Expr { expr } => expr.to_string(),
+                            })
+                            .collect()
+                    })
+                    .collect()
+            })
+            .collect()
+    }
+
+    #[test]
+    fn table_columns_and_select_literals_carry_provenance() {
+        let unioned = proven(
+            "INSERT INTO t SELECT * FROM (VALUES (1, 'x')) AS v(a, b) UNION ALL SELECT id, tsc FROM src",
+        );
+        assert_eq!(
+            unioned,
+            vec![
+                vec![Vec::<String>::new(), Vec::<String>::new()],
+                vec![vec![String::from("src#id")], vec![String::from("src#tsc")]],
+            ],
+            "{unioned:?}"
+        );
+        let literals = proven(
+            "INSERT INTO t SELECT * FROM (VALUES (1, 'x')) AS v(a, b) UNION ALL SELECT 2, 7L",
+        );
+        assert_eq!(
+            literals,
+            vec![
+                vec![Vec::<String>::new(), Vec::<String>::new()],
+                vec![vec![String::from("2")], vec![String::from("7L")]],
+            ],
+            "{literals:?}"
+        );
+        let qualified = proven(
+            "INSERT INTO t SELECT s.tsc FROM src AS s UNION ALL SELECT a FROM (VALUES (1)) AS v(a)",
+        );
+        assert_eq!(
+            qualified,
+            vec![
+                vec![vec![String::from("src#tsc")]],
+                vec![Vec::<String>::new()],
+            ],
+            "{qualified:?}"
+        );
+    }
+
+    #[test]
+    fn derived_unions_merge_cells_with_table_provenance() {
+        let merged = proven(
+            "INSERT INTO t WITH u AS (SELECT * FROM (VALUES (1, 'x')) AS v(a, b) UNION ALL SELECT id, tsc FROM src) SELECT * FROM u",
+        );
+        assert_eq!(
+            merged,
+            vec![vec![
+                vec![String::from("src#id")],
+                vec![String::from("src#tsc")]
+            ]],
+            "{merged:?}"
+        );
+        let cells = mapped(
+            "INSERT INTO t WITH u AS (SELECT * FROM (VALUES (1, 'x')) AS v(a, b) UNION ALL SELECT id, tsc FROM src) SELECT * FROM u",
+        );
+        assert_eq!(
+            cells,
+            vec![vec![
+                vec![String::from("1/0/1")],
+                vec![String::from("1/1/'x'")],
+            ]],
+            "{cells:?}"
+        );
     }
 
     #[test]

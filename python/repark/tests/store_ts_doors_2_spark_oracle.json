@@ -20,7 +20,15 @@
   "CREATE TABLE sc.ns.d2p_ts (a INT, b TIMESTAMP, p STRING) USING iceberg PARTITIONED BY (p)",
   "CREATE TABLE sc.ns.d2p_date (a INT, b DATE, p STRING) USING iceberg PARTITIONED BY (p)",
   "CREATE TABLE sc.ns.d2p_bool (a INT, b BOOLEAN, p STRING) USING iceberg PARTITIONED BY (p)",
-  "CREATE TABLE sc.ns.d2p_bigint (a INT, b BIGINT, p STRING) USING iceberg PARTITIONED BY (p)"
+  "CREATE TABLE sc.ns.d2p_bigint (a INT, b BIGINT, p STRING) USING iceberg PARTITIONED BY (p)",
+  "CREATE TABLE sc.ns.t_bigint (id INT, c BIGINT) USING iceberg",
+  "CREATE TABLE sc.ns.t_ts (id INT, c TIMESTAMP) USING iceberg",
+  "CREATE TABLE sc.ns.t_date (id INT, c DATE) USING iceberg",
+  "CREATE TABLE sc.ns.t_bool (id INT, c BOOLEAN) USING iceberg",
+  "CREATE TABLE sc.ns.src (id INT, tsc TIMESTAMP, dt DATE, s STRING, b BIGINT, d DOUBLE) USING iceberg",
+  "INSERT INTO sc.ns.src VALUES (1, TIMESTAMP'2020-01-01 10:00:00', DATE'2020-01-02', 'seven', 7L, 7.5D), (2, TIMESTAMP'2021-06-15 12:30:00', DATE'2021-06-16', 'x', 42L, 1.25D)",
+  "CREATE TABLE sc.ns.psrc (id INT, s STRING) USING iceberg",
+  "INSERT INTO sc.ns.psrc VALUES (1, '2020-01-01 10:00:00'), (2, '2021-06-15 12:30:00')"
  ],
  "cells": {
   "vselect/direct/ts/bigint": {
@@ -381,6 +389,330 @@
    "sql_state": "KD000",
    "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`d2p_ts`: Cannot safely cast `b` \"DOUBLE\" to \"TIMESTAMP\". SQLSTATE: KD000",
    "rows": []
+  },
+  "p01/union_all_tbl_ts": {
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8001 AND id < 8011",
+   "refused": false,
+   "rows": [
+    [
+     8001,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8002,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8003,
+     "2021-06-15 12:30:00",
+     "timestamp"
+    ]
+   ],
+   "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8001,'2020-01-01 10:00:00')) AS v(a,b) UNION ALL SELECT id + 8001, tsc FROM sc.ns.src"
+  },
+  "p02/union_distinct_tbl_ts": {
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8011 AND id < 8021",
+   "refused": false,
+   "rows": [
+    [
+     8011,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8012,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8013,
+     "2021-06-15 12:30:00",
+     "timestamp"
+    ]
+   ],
+   "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8011,'2020-01-01 10:00:00')) AS v(a,b) UNION SELECT id + 8011, tsc FROM sc.ns.src"
+  },
+  "p03/tbl_first_union": {
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8021 AND id < 8031",
+   "refused": false,
+   "rows": [
+    [
+     8021,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8022,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8023,
+     "2021-06-15 12:30:00",
+     "timestamp"
+    ]
+   ],
+   "sql": "INSERT INTO sc.ns.t_ts SELECT id + 8021, tsc FROM sc.ns.src UNION ALL SELECT * FROM (VALUES (8021,'2020-01-01 10:00:00')) AS v(a,b)"
+  },
+  "p04/values_union_values_ts": {
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8031 AND id < 8041",
+   "refused": false,
+   "rows": [
+    [
+     8031,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8032,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ]
+   ],
+   "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8031,'2020-01-01 10:00:00')) AS v(a,b) UNION ALL SELECT * FROM (VALUES (8032,TIMESTAMP'2020-01-01 10:00:00')) AS w(a,b)"
+  },
+  "p05/bare_values_union": {
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8041 AND id < 8051",
+   "refused": false,
+   "rows": [
+    [
+     8041,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8042,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ]
+   ],
+   "sql": "INSERT INTO sc.ns.t_ts VALUES (8041,'2020-01-01 10:00:00') UNION ALL VALUES (8042,TIMESTAMP'2020-01-01 10:00:00')"
+  },
+  "p06/except_right_str": {
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8051 AND id < 8061",
+   "refused": false,
+   "rows": [
+    [
+     8052,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8053,
+     "2021-06-15 12:30:00",
+     "timestamp"
+    ]
+   ],
+   "sql": "INSERT INTO sc.ns.t_ts SELECT id + 8051, tsc FROM sc.ns.src EXCEPT SELECT * FROM (VALUES (0,'2020-01-01 10:00:00')) AS v(a,b)"
+  },
+  "p07/intersect_str": {
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8071 AND id < 8081",
+   "refused": false,
+   "rows": [
+    [
+     8072,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ]
+   ],
+   "sql": "INSERT INTO sc.ns.t_ts SELECT id + 8071, tsc FROM sc.ns.src INTERSECT SELECT * FROM (VALUES (8072,'2020-01-01 10:00:00')) AS v(a,b)"
+  },
+  "p08/union_cast_ts": {
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8081 AND id < 8091",
+   "refused": false,
+   "rows": [
+    [
+     8081,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8082,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ]
+   ],
+   "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8081,'2020-01-01 10:00:00')) AS v(a,b) UNION ALL SELECT 8082, CAST('2020-01-01 10:00:00' AS TIMESTAMP)"
+  },
+  "p09/union_ntz": {
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8091 AND id < 8101",
+   "refused": false,
+   "rows": [
+    [
+     8091,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8092,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ]
+   ],
+   "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8091,'2020-01-01 10:00:00')) AS v(a,b) UNION ALL SELECT 8092, CAST(TIMESTAMP'2020-01-01 10:00:00' AS TIMESTAMP_NTZ)"
+  },
+  "p10/union_date_d": {
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8101 AND id < 8111",
+   "refused": false,
+   "rows": [
+    [
+     8101,
+     "2020-01-01 00:00:00",
+     "timestamp"
+    ],
+    [
+     8102,
+     "2020-01-01 00:00:00",
+     "timestamp"
+    ]
+   ],
+   "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8101,'2020-01-01')) AS v(a,b) UNION ALL SELECT 8102, DATE'2020-01-01'"
+  },
+  "p11/derived_union": {
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8111 AND id < 8121",
+   "refused": false,
+   "rows": [
+    [
+     8111,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8112,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ]
+   ],
+   "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM (SELECT * FROM (VALUES (8111,'2020-01-01 10:00:00')) AS v(a,b) UNION ALL SELECT * FROM (VALUES (8112,TIMESTAMP'2020-01-01 10:00:00')) AS w(a,b)) AS u"
+  },
+  "p12/cte_union": {
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8121 AND id < 8131",
+   "refused": false,
+   "rows": [
+    [
+     8121,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8122,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8123,
+     "2021-06-15 12:30:00",
+     "timestamp"
+    ]
+   ],
+   "sql": "INSERT INTO sc.ns.t_ts WITH u AS (SELECT * FROM (VALUES (8121,'2020-01-01 10:00:00')) AS v(a,b) UNION ALL SELECT id + 8121, tsc FROM sc.ns.src) SELECT * FROM u"
+  },
+  "p13/rows_date_ts_into_date": {
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_date WHERE id >= 8131 AND id < 8141",
+   "refused": false,
+   "rows": [
+    [
+     8131,
+     "2020-01-01",
+     "date"
+    ],
+    [
+     8132,
+     "2020-01-01",
+     "date"
+    ]
+   ],
+   "sql": "INSERT INTO sc.ns.t_date SELECT * FROM (VALUES (8131,DATE'2020-01-01'), (8132,TIMESTAMP'2020-01-01 10:00:00')) AS v(a,b)"
+  },
+  "p14/union_vals_ts_bool_target": {
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_bool WHERE id >= 8141 AND id < 8151",
+   "refused": false,
+   "rows": [
+    [
+     8141,
+     "true",
+     "boolean"
+    ],
+    [
+     8142,
+     "true",
+     "boolean"
+    ]
+   ],
+   "sql": "INSERT INTO sc.ns.t_bool SELECT * FROM (VALUES (8141,'true')) AS v(a,b) UNION ALL SELECT 8142, TRUE"
+  },
+  "p15/union_vals_int_bigint_target": {
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_bigint WHERE id >= 8151 AND id < 8161",
+   "refused": false,
+   "rows": [
+    [
+     8151,
+     "7",
+     "bigint"
+    ],
+    [
+     8152,
+     "8",
+     "bigint"
+    ]
+   ],
+   "sql": "INSERT INTO sc.ns.t_bigint SELECT * FROM (VALUES (8151,'7')) AS v(a,b) UNION ALL SELECT 8152, 8L"
+  },
+  "p16/str_null_into_ts": {
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`t_ts`: Cannot safely cast `c` \"STRING\" to \"TIMESTAMP\". SQLSTATE: KD000",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8161 AND id < 8171",
+   "refused": true,
+   "rows": [],
+   "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8161,'2020-01-01 10:00:00')) AS v(a,b) UNION ALL SELECT * FROM (VALUES (8161,NULL)) AS w(a,b)",
+   "sql_state": "KD000"
+  },
+  "p17/parseable_tblstr_into_ts": {
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`t_ts`: Cannot safely cast `c` \"STRING\" to \"TIMESTAMP\". SQLSTATE: KD000",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8171 AND id < 8181",
+   "refused": true,
+   "rows": [],
+   "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8171,'2020-01-01 10:00:00')) AS v(a,b) UNION ALL SELECT id + 8171, s FROM sc.ns.src",
+   "sql_state": "KD000"
+  },
+  "p18/parseable_psrc_into_ts": {
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`t_ts`: Cannot safely cast `c` \"STRING\" to \"TIMESTAMP\". SQLSTATE: KD000",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8181 AND id < 8191",
+   "refused": true,
+   "rows": [],
+   "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8181,'2020-01-01 10:00:00')) AS v(a,b) UNION ALL SELECT id + 8181, s FROM sc.ns.psrc",
+   "sql_state": "KD000"
+  },
+  "p19/ts_vals_str_into_bigint": {
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`t_bigint`: Cannot safely cast `c` \"TIMESTAMP\" to \"BIGINT\". SQLSTATE: KD000",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_bigint WHERE id >= 8191 AND id < 8201",
+   "refused": true,
+   "rows": [],
+   "sql": "INSERT INTO sc.ns.t_bigint SELECT * FROM (VALUES (8191,TIMESTAMP'2020-01-01 10:00:00')) AS v(a,b) UNION ALL SELECT * FROM (VALUES (8192,'x')) AS w(a,b)",
+   "sql_state": "KD000"
+  },
+  "p20/ts_except_str_into_bigint": {
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`t_bigint`: Cannot safely cast `c` \"TIMESTAMP\" to \"BIGINT\". SQLSTATE: KD000",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_bigint WHERE id >= 8201 AND id < 8211",
+   "refused": true,
+   "rows": [],
+   "sql": "INSERT INTO sc.ns.t_bigint SELECT a, b FROM (VALUES (8201,TIMESTAMP'2020-01-01 10:00:00')) AS v(a,b) EXCEPT SELECT * FROM (VALUES (8201,'x')) AS w(a,b)",
+   "sql_state": "KD000"
+  },
+  "p21/str_star_into_ts": {
+   "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+   "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`t_ts`: Cannot safely cast `c` \"STRING\" to \"TIMESTAMP\". SQLSTATE: KD000",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8211 AND id < 8221",
+   "refused": true,
+   "rows": [],
+   "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8211,'2020-01-01 10:00:00')) AS v(a,b)",
+   "sql_state": "KD000"
   }
  }
 }

@@ -129,7 +129,7 @@ fn branch_operands(value: &Expr) -> Option<Vec<&Expr>> {
     }
 }
 
-fn leaf_type(value: &Expr) -> Option<DataType> {
+pub(crate) fn leaf_type(value: &Expr) -> Option<DataType> {
     match value {
         Expr::TypedString(typed) => {
             timestamp_type(&typed.data_type).or_else(|| literal_source_type(value))

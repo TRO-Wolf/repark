@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use datafusion::arrow::datatypes::{DataType, Schema as ArrowSchema, TimeUnit};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
@@ -10,7 +12,8 @@ use iceberg::{NamespaceIdent, TableIdent};
 use repark_common::spark_error;
 use repark_core::CatalogRegistry;
 
-use super::source_leaves::{is_string_type, source_type_is_reliable};
+use super::select_values_arms::{ArmMap, SiblingProvenance, SourceCell};
+use super::source_leaves::{is_string_type, leaf_type, source_type_is_reliable};
 use super::{column_name, is_null_or_default_cell};
 use crate::catalog_ops::{name_parts, quoted_table_display};
 use crate::write_to_branch::qualify_table_parts;
@@ -67,13 +70,7 @@ async fn load_presented(
     if parts.len() < 3 {
         return None;
     }
-    let catalog = catalogs.get(&parts[0])?;
-    let namespace = NamespaceIdent::from_vec(parts[1..parts.len() - 1].to_vec()).ok()?;
-    let ident = TableIdent::new(namespace, parts[parts.len() - 1].clone());
-    let table = catalog.load_table(&ident).await.ok()?;
-    let schema = table.metadata().current_schema();
-    let presented =
-        repark_iceberg::catalog::uuid_presentation::presented_arrow_schema(schema).ok()?;
+    let presented = load_table_schema(catalogs, &parts).await?;
     if !presented
         .fields()
         .iter()
@@ -82,6 +79,15 @@ async fn load_presented(
         return None;
     }
     Some((presented, quoted_table_display(&parts)))
+}
+
+async fn load_table_schema(catalogs: &CatalogRegistry, parts: &[String]) -> Option<ArrowSchema> {
+    let catalog = catalogs.get(&parts[0])?;
+    let namespace = NamespaceIdent::from_vec(parts[1..parts.len() - 1].to_vec()).ok()?;
+    let ident = TableIdent::new(namespace, parts[parts.len() - 1].clone());
+    let table = catalog.load_table(&ident).await.ok()?;
+    let schema = table.metadata().current_schema();
+    repark_iceberg::catalog::uuid_presentation::presented_arrow_schema(schema).ok()
 }
 
 async fn refuse_select_arms(
@@ -94,27 +100,37 @@ async fn refuse_select_arms(
         return Ok(());
     };
     let case_insensitive = crate::spark_door_case_insensitive(ctx.state().config().options());
-    let mut arms = super::select_values_arms::resolve_insert_arms(source, case_insensitive);
-    arms.retain(|arm| arm.positions.iter().any(|position| !position.is_empty()));
-    if arms.is_empty() {
+    let arms = super::select_values_arms::resolve_insert_arms(source, case_insensitive);
+    if arms
+        .iter()
+        .all(|arm| arm.positions.iter().all(Vec::is_empty))
+    {
         return Ok(());
     }
     let Some((presented, display)) = load_presented(ctx, catalogs, name).await else {
         return Ok(());
     };
-    for arm in &arms {
+    let mut siblings = SiblingJudge::new(ctx, catalogs, &arms, case_insensitive);
+    for (arm_index, arm) in arms.iter().enumerate() {
         for rows in super::select_values_arms::arm_row_groups(arm) {
             for row in rows {
                 let mut projected = Vec::with_capacity(arm.positions.len());
-                for position in &arm.positions {
-                    let cell = position
+                for (position, cells) in arm.positions.iter().enumerate() {
+                    let cell = cells
                         .iter()
                         .find(|cell| cell.rows.as_ptr() == rows.as_ptr())
                         .and_then(|cell| row.content.get(cell.column));
-                    projected.push(
-                        cell.cloned()
-                            .unwrap_or_else(super::select_values_arms::null_cell),
-                    );
+                    let value = cell
+                        .cloned()
+                        .unwrap_or_else(super::select_values_arms::null_cell);
+                    if siblings
+                        .skip_string(arm_index, position, rows.as_ptr() as usize, &value)
+                        .await
+                    {
+                        projected.push(super::select_values_arms::null_cell());
+                    } else {
+                        projected.push(value);
+                    }
                 }
                 check_row(
                     ctx,
@@ -129,6 +145,145 @@ async fn refuse_select_arms(
         }
     }
     Ok(())
+}
+
+struct SiblingJudge<'ctx, 'arms, 'ast> {
+    ctx: &'ctx SessionContext,
+    catalogs: &'ctx CatalogRegistry,
+    arms: &'arms [ArmMap<'ast>],
+    case_insensitive: bool,
+    decisions: HashMap<(usize, usize), bool>,
+    tables: HashMap<String, Option<ArrowSchema>>,
+}
+
+impl<'ctx, 'arms, 'ast> SiblingJudge<'ctx, 'arms, 'ast> {
+    fn new(
+        ctx: &'ctx SessionContext,
+        catalogs: &'ctx CatalogRegistry,
+        arms: &'arms [ArmMap<'ast>],
+        case_insensitive: bool,
+    ) -> Self {
+        Self {
+            ctx,
+            catalogs,
+            arms,
+            case_insensitive,
+            decisions: HashMap::new(),
+            tables: HashMap::new(),
+        }
+    }
+
+    async fn skip_string(
+        &mut self,
+        arm: usize,
+        position: usize,
+        rows: usize,
+        value: &Expr,
+    ) -> bool {
+        if !leaf_type(value).is_some_and(|data_type| is_string_type(&data_type)) {
+            return false;
+        }
+        if let Some(decided) = self.decisions.get(&(arm, position)) {
+            return *decided;
+        }
+        let decided = self.sibling_is_datetime(arm, position, rows).await;
+        self.decisions.insert((arm, position), decided);
+        decided
+    }
+
+    async fn sibling_is_datetime(&mut self, arm: usize, position: usize, rows: usize) -> bool {
+        let arms = self.arms;
+        for (other, arm_map) in arms.iter().enumerate() {
+            if let Some(cells) = arm_map.positions.get(position) {
+                for cell in cells {
+                    if other == arm && cell.rows.as_ptr() as usize == rows {
+                        continue;
+                    }
+                    if values_column_is_datetime(cell) {
+                        return true;
+                    }
+                }
+            }
+            if let Some(entries) = arm_map.provenance.get(position) {
+                for entry in entries {
+                    if self.provenance_is_datetime(entry).await {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
+    }
+
+    async fn provenance_is_datetime(&mut self, entry: &SiblingProvenance<'_>) -> bool {
+        match entry {
+            SiblingProvenance::Table { table, column } => self
+                .table_column_type(table, column)
+                .await
+                .is_some_and(|data_type| is_datetime_type(&data_type)),
+            SiblingProvenance::Expr { expr } => {
+                if let Some(data_type) = leaf_type(expr) {
+                    return is_datetime_type(&data_type);
+                }
+                self.probe_expr_type(expr)
+                    .await
+                    .is_some_and(|data_type| is_datetime_type(&data_type))
+            }
+        }
+    }
+
+    async fn table_column_type(&mut self, table: &ObjectName, column: &str) -> Option<DataType> {
+        let parts = qualify_table_parts(self.ctx, name_parts(table));
+        if parts.len() < 3 {
+            return None;
+        }
+        let key = parts.join(".");
+        if !self.tables.contains_key(&key) {
+            let schema = load_table_schema(self.catalogs, &parts).await;
+            self.tables.insert(key.clone(), schema);
+        }
+        let insensitive = self.case_insensitive;
+        self.tables.get(&key)?.as_ref().and_then(|schema| {
+            schema
+                .fields()
+                .iter()
+                .find(|field| {
+                    if insensitive {
+                        field.name().eq_ignore_ascii_case(column)
+                    } else {
+                        field.name() == column
+                    }
+                })
+                .map(|field| field.data_type().clone())
+        })
+    }
+
+    async fn probe_expr_type(&self, expr: &Expr) -> Option<DataType> {
+        let select = nvl_coalesce_text(expr).unwrap_or_else(|| super::probe_text(expr));
+        probe_source_type(self.ctx, &select).await.ok().flatten()
+    }
+}
+
+fn values_column_is_datetime(cell: &SourceCell) -> bool {
+    let mut saw_datetime = false;
+    for row in cell.rows {
+        let Some(expr) = row.content.get(cell.column) else {
+            continue;
+        };
+        match leaf_type(expr) {
+            Some(data_type) if is_datetime_type(&data_type) => saw_datetime = true,
+            Some(DataType::Null) => {}
+            _ => return false,
+        }
+    }
+    saw_datetime
+}
+
+fn is_datetime_type(data_type: &DataType) -> bool {
+    matches!(
+        data_type,
+        DataType::Timestamp(_, _) | DataType::Date32 | DataType::Date64
+    )
 }
 
 async fn check_row(

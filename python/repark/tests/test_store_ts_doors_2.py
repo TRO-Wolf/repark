@@ -123,3 +123,108 @@ def test_string_source_still_stores(tmp_path: Path) -> None:
         assert rows == [[0, "7", "bigint"], [42, "1", "bigint"]]
     finally:
         session.stop()
+
+
+def _fold_rows(session: ReparkSession, table: str, low: int) -> list[list[Any]]:
+    return sorted(
+        [
+            _norm(list(row))
+            for row in session.sql(
+                "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t "
+                f"FROM {table} WHERE id >= {low} AND id < {low + 10}"
+            ).collect()
+        ],
+        key=repr,
+    )
+
+
+def test_fold_string_beside_bigint_or_bool_keeps_string_refusal(tmp_path: Path) -> None:
+    cases = [
+        (
+            "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8221, 'abc')) AS v(a, b) "
+            "UNION ALL SELECT * FROM (VALUES (8222, 8L)) AS w(a, b)",
+            8221,
+        ),
+        (
+            "INSERT INTO sc.ns.t_ts SELECT * FROM "
+            "(VALUES (8231, '2020-01-01 10:00:00')) AS v(a, b) "
+            "UNION ALL SELECT * FROM (VALUES (8232, 8L)) AS w(a, b)",
+            8231,
+        ),
+        (
+            "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8241, 'abc')) AS v(a, b) "
+            "UNION ALL SELECT * FROM (VALUES (8242, TRUE)) AS w(a, b)",
+            8241,
+        ),
+        (
+            "INSERT INTO sc.ns.t_ts SELECT * FROM "
+            "(VALUES (8251, '2020-01-01 10:00:00')) AS v(a, b) "
+            "UNION ALL SELECT * FROM (VALUES (8252, TRUE)) AS w(a, b)",
+            8251,
+        ),
+    ]
+    session = _open(tmp_path)
+    try:
+        for sql, low in cases:
+            got = _write(session, {"sql": sql})
+            assert got["refused"] is True, sql
+            assert got["condition"] == "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST", sql
+            assert got["sql_state"] == "KD000", sql
+            assert 'Cannot safely cast `c` "STRING" to "TIMESTAMP"' in got["message"], sql
+            assert _fold_rows(session, "sc.ns.t_ts", low) == [], sql
+    finally:
+        session.stop()
+
+
+def test_fold_setop_datetime_clash_into_bigint_refuses(tmp_path: Path) -> None:
+    cases = [
+        (
+            "INSERT INTO sc.ns.t_bigint SELECT * FROM (VALUES (8261, 7)) AS v(a, b) "
+            "EXCEPT SELECT * FROM (VALUES (8262, TIMESTAMP'2020-01-01 10:00:00')) AS w(a, b)",
+            8261,
+        ),
+        (
+            "INSERT INTO sc.ns.t_bigint SELECT * FROM (VALUES (8271, 7)) AS v(a, b) "
+            "INTERSECT SELECT * FROM (VALUES (8272, TIMESTAMP'2020-01-01 10:00:00')) AS w(a, b)",
+            8271,
+        ),
+        (
+            "INSERT INTO sc.ns.t_bigint SELECT * FROM "
+            "(VALUES (8291, TIMESTAMP'2020-01-01 10:00:00')) AS v(a, b) "
+            "UNION ALL SELECT 8292, 7L",
+            8291,
+        ),
+    ]
+    session = _open(tmp_path)
+    try:
+        for sql, low in cases:
+            got = _write(session, {"sql": sql})
+            assert got["refused"] is True, sql
+            assert got["condition"] == "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST", sql
+            assert got["sql_state"] == "KD000", sql
+            assert 'Cannot safely cast `c` "TIMESTAMP" to "BIGINT"' in got["message"], sql
+            assert _fold_rows(session, "sc.ns.t_bigint", low) == [], sql
+    finally:
+        session.stop()
+
+
+def test_fold_string_beside_timestamp_into_bigint_refuses(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        sql = (
+            "INSERT INTO sc.ns.t_bigint SELECT * FROM (VALUES (8281, '2020-01-01 10:00:00')) "
+            "AS v(a, b) UNION ALL SELECT id + 8281, tsc FROM sc.ns.src"
+        )
+        try:
+            session.sql(sql).collect()
+            stored = True
+        except Exception as error:
+            stored = False
+            condition = getattr(error, "getCondition", None)
+            assert (condition() if callable(condition) else None) is None
+            assert str(error).splitlines()[0] == "type_coercion"
+            assert "Incompatible inputs for Union" in str(error)
+        assert stored is False
+        assert _fold_rows(session, "sc.ns.t_bigint", 8281) == []
+    finally:
+        session.stop()

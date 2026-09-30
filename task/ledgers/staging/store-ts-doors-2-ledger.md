@@ -83,7 +83,7 @@ store; zero stored-value changes.
 |---|---|---|---|---|
 | C-001 | TIMESTAMP, `CAST(1 AS TIMESTAMP)`, TIMESTAMP_NTZ and DATE sources through a VALUES node inside INSERT … SELECT into numeric columns refuse with Spark's recorded class, SQLSTATE and message body, and write nothing; the direct, star, CTE, UNION, alias, join, VALUES-join, WHERE and ORDER BY/LIMIT shapes are each pinned, and explicit `CAST(b AS BIGINT)`, INT and NULL still store. | `test_store_ts_doors_2.py` replays the recorded `vselect/*` refusal and store cells; the resolver classifier tests. | PROVEN | 15 refusal cells and 4 store cells equal `store_ts_doors_2_spark_oracle.json`; on `57ebb57a` 10 stored, 4 refused with a different text, and the WHERE shape stored (measured on a base rebuild). 8 resolver classifier tests pass. |
 | C-002 | `-NULL` into TIMESTAMP, DATE and BOOLEAN columns through static-partition OVERWRITE VALUES and SELECT refuses with Spark's text naming `"DOUBLE"`, and writes nothing; `-NULL` into BIGINT still stores NULL; the listed, dynamic and BY NAME partition forms keep refusing with the identical text. | The replay test's `partovw/*` cells. | PROVEN | 6 refusal cells and 1 store cell equal the oracle; 4 refusals (VALUES into TIMESTAMP/DATE/BOOLEAN, SELECT into TIMESTAMP) stored NULL on `57ebb57a`. |
-| C-003 | Every Step 0 cell where base already matches Spark is unchanged: all STRING-source stores, `CAST(ts AS BIGINT)`, the temp-view shape (WI-1 text), the CTE-before shape, and the #885 and WI-1 suites. | The Step 0 matrix re-run on head (63 cells byte-identical); the in-test view and STRING pins; `test_store_ts_to_numeric_1.py` and `test_insert_store_assign.py` green. | PROVEN | Matrix diff confines every change to the 18 intended cells; view and STRING pins pass; 28 tests green across the three files. |
+| C-003 | STRING into TIMESTAMP through the VALUES-in-SELECT door refuses with Spark's class (24 cells: the 6 c1 STRING sources × star, direct, CTE and UNION-STRING shapes); every other cell where base already matches Spark is unchanged — all other STRING-source stores, `CAST(ts AS BIGINT)`, the temp-view shape (WI-1 text), the CTE-before shape, and the #885 and WI-1 suites. | The Step 0 matrix re-run on head; the in-test view and STRING pins; the #885, WI-1 and NTZ suites green; the fold replay of c1/c3/c4/c5/c7 plus 31 fold cells. | PROVEN | The 24 STRING-into-TIMESTAMP cells equal Spark (base stored 8 and raised CAST_INVALID_INPUT on 16); the 2113-cell fold replay shows zero moves away from Spark; view and STRING pins pass; 165 tests green across the four files. |
 
 ## Mutation record (2026-09-29)
 
@@ -94,6 +94,7 @@ and was reverted; the final tree rebuilds green.
 |---|---|---|---|
 | M-PE18 | The SELECT-arm call site is skipped (`refuse_select_arms` unreachable) | 15: every `vselect/*` refusal; all stores and `partovw/*` stay green | view and STRING pins green |
 | M-PE24 | The partition-overwrite call site is skipped (the helper call removed) | 4: `partovw/values/negnull/{ts,date,bool}`, `partovw/select/negnull/ts`; listed/dynamic stay green through the earlier gate | view and STRING pins green |
+| M-VT1 | The fold skip is forced off (`is_datetime_type` returns false) | 12: every `p01`–`p12` store pin refuses again; `p13`–`p21` and all in-test pins stay green | the 26 original oracle cells green |
 
 **Neighbours (2026-09-29).** The 78-statement Step 0 matrix plus 16 follow-up/gap
 statements answer byte-identically on `57ebb57a` and on this unit except the 18
@@ -106,6 +107,60 @@ R-STN-1, the CTE-before door, STORE-STRING-ASSIGN-1).
 **Existing pins changed (0).** No existing test file is touched; `git status`
 shows only the four product files, the new resolver module, the new replay test
 plus oracle, this ledger, and three `map.md` files.
+
+## Verifier fold (2026-09-29, PR #894)
+
+The verifier found one regression, VT-1 (S1): a STRING cell in a VALUES arm of
+a UNION, UNION ALL, EXCEPT or INTERSECT refused into TIMESTAMP when a sibling
+arm was TIMESTAMP, TIMESTAMP_NTZ or DATE. Spark widens the column and stores,
+and base stored. The resolver judged each arm's cells on their own literal
+types. The fold rulings (R1/R2) replace arm-local judgment for exactly that
+cell: a mapped STRING cell (static source type STRING) in a set-operation arm
+is skipped if and only if some sibling arm at the same position has static
+type TIMESTAMP, TIMESTAMP_NTZ or DATE. A NULL, BIGINT, BOOLEAN, STRING or any
+other sibling does not trigger the skip, and every non-STRING cell keeps being
+judged exactly as before, on UNION and on EXCEPT/INTERSECT alike (right-operand
+non-STRING cells keep refusing, so o5/o6 match Spark's refusal).
+
+**Fix.** `select_values_arms.rs` records provenance beside the cell map: table
+and column for a table-arm position, the literal expression for a
+SELECT-no-FROM position, carried through derived tables, CTEs and set-operation
+merges. `ltz_values_store.rs` types each sibling in `refuse_select_arms` —
+mapped VALUES columns by the existing `leaf_type` (a column qualifies only when
+every known leaf is datetime or NULL and at least one is datetime), table
+provenance through the existing catalogs handle, SELECT-no-FROM expressions
+through `leaf_type` then the existing probe — and substitutes the silent NULL
+cell for a skipped STRING cell. No new type rule, no new cast table, no second
+copy of #885's gate, no whole-source plan. A sibling that cannot be resolved
+with those tools does not skip: `SELECT *` over a real table, a star over
+mixed join factors, and non-column expressions over tables keep today's
+judgement; no target cell needs them.
+
+**Proof.** All 31 fold cells and the 13 `vt1/*` store cells equal Spark's
+outcome, and its class wherever `51688c1c` already equalled it. Replaying
+c1_string (432), c3_allow (633), c4_refuse (605), c5_extra (64) and c7_fn (348)
+shows 0 cells that equalled Spark on `51688c1c` moving away from it; the only
+changes are the 14 VT-1 stores (12 `vt1/*` plus the `widen/union_*` pair, rows
+byte-identical to Spark and base) and the 7 fold flips (m4–m7/m11 refuse with
+Spark's CAST_INVALID_INPUT, m8/n5 store). Pins: 21 oracle cells (`p01`–`p21`,
+recorded on live Spark 4.1.2 with clean 8000-range ids) plus 3 in-test pins
+covering `p22`–`p29`. Perf on the DEBUG build (`maturin develop`):
+mapped-plus-judged vs unmapped control 1.18s/1.10s = 1.07x, and the sibling
+scan itself 0.953s/0.946s = 1.007x against the no-scan refusal; the inline-
+VALUES vs temp-view planning gap (3.6s vs 1.1s) reproduces with the gate
+bypassed and is pre-existing.
+
+**Carried (R4).** VT-2 (S3): mixed-type rows inside one VALUES node refuse with
+CANNOT_SAFELY_CAST where Spark raises INVALID_INLINE_TABLE; the probe record
+that marked it Spark-confirmed is corrected here. `vt1/union_date_ts_into_bigint`
+still refuses CANNOT_SAFELY_CAST (Spark: INCOMPATIBLE_COLUMN_TYPE); o5/o6 keep
+their CANNOT_SAFELY_CAST-vs-INCOMPATIBLE_COLUMN_TYPE class gap; m1 refuses with
+the analyzer's `type_coercion` text exactly as on base. VT-4 (S2, pre-existing):
+`array<timestamp>` into `array<bigint>` and struct/map timestamp fields store
+where Spark refuses; out of scope. Noted: n5 stores `2020-01-01 10:00:00` where
+Spark stores midnight (Spark widens STRING+DATE to DATE and truncates the
+time); base agrees with head, so the value gap is pre-existing and the cell
+meets its outcome-only target.
 
 ## Coverage
 

@@ -85,6 +85,14 @@ handling (`CAST(NULL AS VOID)` rewrite, the non-NULL VALUES refusal into
   STRING silence and the leaf rule apply exactly as on the VALUES door. The
   table load moved verbatim into `load_presented`.
   pins: store-ts-doors-2/C-001
+  **Fold 2026-09-29 (verifier VT-1):** a mapped STRING cell is skipped when a
+  sibling set-operation arm at the same position has static type TIMESTAMP,
+  TIMESTAMP_NTZ or DATE — `SiblingJudge` types mapped sibling columns by
+  `leaf_type`, table provenance through the shared table loader and
+  SELECT-no-FROM expressions by `leaf_type` then the existing probe, and a
+  skipped cell is projected as the silent NULL cell. Any other sibling, any
+  non-STRING cell and any unresolvable shape keep the pre-fold judgment.
+  pins: store-ts-doors-2/C-001, C-003
 - `insert_source_types.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):**
   `refuse_insert_source_types` is the Spark door's INSERT gate for two source
   types the analyzer gate cannot see: a negated NULL (Spark's DOUBLE, judged by
@@ -128,6 +136,12 @@ handling (`CAST(NULL AS VOID)` rewrite, the non-NULL VALUES refusal into
   `arm_row_groups` groups the arm's positions by VALUES node and `null_cell`
   builds the silent placeholder. Eight classifier tests.
   pins: store-ts-doors-2/C-001
+  **Fold 2026-09-29 (verifier VT-1):** each arm position also carries sibling
+  provenance — table and column for a table-arm column ref, the expression for
+  a SELECT-no-FROM projection — resolved through derived tables, CTEs and
+  set-operation merges next to the cell map, so the store gate can type the
+  sibling arm Spark widens against. Two provenance tests.
+  pins: store-ts-doors-2/C-001, C-003
 - `source_leaves.rs` — **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):**
   `source_type_is_reliable` decides whether a new refusal may trust RePark's
   planned source type. A plain cell (literal, typed string, CAST, a non-widening
