@@ -4989,6 +4989,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   as `Utf8`); the `nvl(rand(), xd)` non-nullable schema; `IF()`-first
   collects over a nullable column; the lossy `sequence` cell in both
   spellings. pins: nvl-type-coercion-1/C-022, C-023, C-024, C-025
+- `test_nvl_type_coercion_1_vn6.py` — **NVL-TYPE-COERCION-1 re-verify 5
+  (2026-09-30, VN6-1/VN6-2):** 26 pins. `nvl`/`ifnull` over `try_cast`,
+  `try_add`, `try_divide`, `try_element_at` and `try_to_number` with a
+  volatile child and a nullable fallback collect NULL like base and Spark in
+  SQL and DataFrame; mixed-width and `CAST` integer `nullif` over the 100
+  ceiling refuse, equal mixed-width `nullif` yields NULL, and the lossy
+  `sequence` cell still answers NULL. pins: nvl-type-coercion-1/C-026, C-027
 - `test_select_naming.py` — **Group H** select/projection display naming vs live PySpark 4.1.2:
   mutation leak accepts `Int32(1)` as well as `Int64(1)` (F-Y10-1 Python lit width);
   full matrix (`(x + 1)`, cast-of-attr → child name, cast-of-compound → `CAST(...)`,

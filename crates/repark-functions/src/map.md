@@ -600,6 +600,13 @@ scalars live under [`try_invert/`](try_invert/map.md).
   Spark. This corrects the R3 "carried from main" line: base fails earlier
   with `DATATYPE_MISMATCH`, so the fold first became reachable in this unit.
   pins: nvl-type-coercion-1/C-025.
+  **Re-verify 5 (2026-09-30, VN6-2):** `nullif(a, b)` is bounded by its
+  first argument whenever `a` is an exact integer of any width or signedness
+  (integer `CAST` chains count), whatever `b` is; it folds to NULL only on
+  proven equality — `i128` for integer pairs, `f64` with NaN equality when a
+  float is involved — so mixed-width over-ceiling counts refuse again while
+  the lossy `sequence` cell still answers NULL. Truncated floats never fold.
+  pins: nvl-type-coercion-1/C-027.
 
 
 - **R-FN-BATCH4** aggregate expansion.
@@ -762,6 +769,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   unless the first holds `CASE`/`IF` (the engine's volatile-`CASE`
   misreport is physical-only and deterministic, and `IF()` reaches the
   rule as a function). pins: nvl-type-coercion-1/C-022, C-023, C-024
+  **Re-verify 5 (2026-09-30, VN6-1/VN6-3):** the pick carries its first
+  argument's logical nullability (computed by the rule against the input
+  schema, `TryCast`/`try_*` shapes forced nullable) instead of the physical
+  flag, which understates for `TRY_CAST`; the kernel still returns the
+  original first array while a scalar side is cast once through a one-row
+  array for the compare. pins: nvl-type-coercion-1/C-026, C-028
 - `spark_nvl_rule.rs` — **NVL-TYPE-COERCION-1 (2026-09-29):** the
   `SparkNvlFamilyRewrite` analyzer rule, appended last on the Spark door and
   the `F.expr` context. NULL-literal and non-null-literal sides fold without
@@ -795,6 +808,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   the first type, so both argument orders share the session-zoned Spark
   cast; same-type and non-string widened `nullif` keep DataFusion's form.
   pins: nvl-type-coercion-1/C-023
+  **Re-verify 5 (2026-09-30, VN6-1):** the rule computes the pick's first
+  nullability from the logical widened branch against the input schema
+  (`nullable()`, `TryCast`/`try_*` top shapes forced nullable) and carries
+  the flag into the pick; the `CASE`/`IF` trust rule is unchanged.
+  pins: nvl-type-coercion-1/C-026
 - `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer
   rule, installed on BOTH doors via `install_shared_analyzer_rules` (defined here since FNP-11B step 3 and re-exported from the crate root, so `repark_functions::install_shared_analyzer_rules` and run 16b's `session.rs` call are unchanged; the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts; the TIME guard left for `analyzer_rules()` in remediation round 1).
   installer calls it in place of the integer-only one — same line count, so the

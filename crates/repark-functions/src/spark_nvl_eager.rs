@@ -11,7 +11,7 @@ use datafusion::arrow::compute::kernels::nullif::nullif as arrow_nullif;
 use datafusion::arrow::compute::{CastOptions, cast_with_options, concat, take};
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Float32Type, Float64Type};
 use datafusion::common::tree_node::TreeNode;
-use datafusion::common::{Result, exec_err};
+use datafusion::common::{Result, ScalarValue, exec_err};
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{
     ColumnarValue, Expr, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
@@ -34,10 +34,13 @@ pub fn nullif_compare_udf(common: &DataType) -> Arc<ScalarUDF> {
 }
 
 #[must_use]
-pub fn nvl_pick_expr(first: Expr, second: Expr) -> Expr {
+pub fn nvl_pick_expr(first: Expr, second: Expr, first_nullable: bool) -> Expr {
     let trust_first = first_nullability_trusted(&first);
     Expr::ScalarFunction(ScalarFunction::new_udf(
-        Arc::new(ScalarUDF::from(NvlPick::with_trust(trust_first))),
+        Arc::new(ScalarUDF::from(NvlPick::with_trust(
+            trust_first,
+            first_nullable,
+        ))),
         vec![first, second],
     ))
 }
@@ -183,6 +186,28 @@ fn cast_to_common(
     Ok(cast_with_options(array.as_ref(), common, &options)?)
 }
 
+fn compare_array(
+    original: &ColumnarValue,
+    materialized: &ArrayRef,
+    common: &DataType,
+    zone: &str,
+    ansi: bool,
+    now: DateTime<Utc>,
+) -> Result<ArrayRef> {
+    let ColumnarValue::Scalar(scalar) = original else {
+        return cast_to_common(materialized, common, zone, ansi, now);
+    };
+    if scalar.data_type() == *common {
+        return Ok(Arc::clone(materialized));
+    }
+    let one = scalar.to_array_of_size(1)?;
+    let casted = cast_to_common(&one, common, zone, ansi, now)?;
+    match ScalarValue::try_from_array(&casted, 0) {
+        Ok(cast_scalar) => Ok(cast_scalar.to_array_of_size(materialized.len())?),
+        Err(_) => cast_to_common(materialized, common, zone, ansi, now),
+    }
+}
+
 #[allow(
     clippy::float_cmp,
     reason = "Spark nullif compares floats with == plus NaN equality"
@@ -237,17 +262,19 @@ fn zipped_float_match<T: Copy>(
 struct NvlPick {
     signature: Signature,
     trust_first: bool,
+    first_nullable: bool,
 }
 
 impl NvlPick {
     fn new() -> Self {
-        Self::with_trust(false)
+        Self::with_trust(false, true)
     }
 
-    fn with_trust(trust_first: bool) -> Self {
+    fn with_trust(trust_first: bool, first_nullable: bool) -> Self {
         Self {
             signature: Signature::user_defined(Volatility::Immutable),
             trust_first,
+            first_nullable,
         }
     }
 }
@@ -285,7 +312,7 @@ impl ScalarUDFImpl for NvlPick {
             ));
         };
         let nullable = if self.trust_first {
-            first.is_nullable() && second.is_nullable()
+            self.first_nullable && second.is_nullable()
         } else {
             second.is_nullable()
         };
@@ -383,6 +410,9 @@ impl ScalarUDFImpl for NullifCompare {
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        let zone = session_time_zone_from_options(args.config_options.as_ref());
+        let ansi = spark_ansi_enabled_from_options(args.config_options.as_ref());
+        let now = Utc::now();
         let arrays = materialize(&args.args)?;
         let [first, second] = arrays.as_slice() else {
             return Err(wrong_num_args("__repark_nullif_compare", 2, arrays.len()));
@@ -392,11 +422,15 @@ impl ScalarUDFImpl for NullifCompare {
         {
             return Ok(ColumnarValue::Array(Arc::clone(first)));
         }
-        let zone = session_time_zone_from_options(args.config_options.as_ref());
-        let ansi = spark_ansi_enabled_from_options(args.config_options.as_ref());
-        let now = Utc::now();
-        let left = cast_to_common(first, &self.common, zone, ansi, now)?;
-        let right = cast_to_common(second, &self.common, zone, ansi, now)?;
+        let [first_value, second_value] = args.args.as_slice() else {
+            return Err(wrong_num_args(
+                "__repark_nullif_compare",
+                2,
+                args.args.len(),
+            ));
+        };
+        let left = compare_array(first_value, first, &self.common, zone, ansi, now)?;
+        let right = compare_array(second_value, second, &self.common, zone, ansi, now)?;
         let compared: BooleanArray = if matches!(self.common, DataType::Float32 | DataType::Float64)
         {
             float_nullif_match(&left, &right, &self.common)?

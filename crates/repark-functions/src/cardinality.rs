@@ -451,30 +451,104 @@ fn const_i128(expr: &Expr, depth: u32) -> Option<i128> {
 }
 
 fn nullif_const_int(first: &Expr, second: &Expr) -> Option<i128> {
-    let (left, left_type) = nullif_exact_int(first)?;
-    let (right, right_type) = nullif_exact_int(second)?;
-    if left_type != right_type {
-        return None;
+    let first_value = nullif_exact_int_value(first)?;
+    if nullif_proven_equal(first, second) {
+        None
+    } else {
+        Some(first_value)
     }
-    if left == right { None } else { Some(left) }
 }
 
-fn nullif_exact_int(expr: &Expr) -> Option<(i128, DataType)> {
-    let Expr::Literal(scalar, _) = expr else {
-        return None;
+#[allow(
+    clippy::float_cmp,
+    reason = "Spark nullif compares DOUBLE images with == plus NaN equality"
+)]
+fn nullif_proven_equal(first: &Expr, second: &Expr) -> bool {
+    if let (Some(left), Some(right)) = (
+        nullif_exact_int_value(first),
+        nullif_exact_int_value(second),
+    ) {
+        return left == right;
+    }
+    if !nullif_float_involved(first) && !nullif_float_involved(second) {
+        return false;
+    }
+    let (Some(left), Some(right)) = (
+        const_f64(first, CONST_FOLD_MAX_DEPTH),
+        const_f64(second, CONST_FOLD_MAX_DEPTH),
+    ) else {
+        return false;
     };
-    let value = match scalar {
-        ScalarValue::Int8(Some(value)) => i128::from(*value),
-        ScalarValue::Int16(Some(value)) => i128::from(*value),
-        ScalarValue::Int32(Some(value)) => i128::from(*value),
-        ScalarValue::Int64(Some(value)) => i128::from(*value),
-        ScalarValue::UInt8(Some(value)) => i128::from(*value),
-        ScalarValue::UInt16(Some(value)) => i128::from(*value),
-        ScalarValue::UInt32(Some(value)) => i128::from(*value),
-        ScalarValue::UInt64(Some(value)) => i128::from(*value),
-        _ => return None,
-    };
-    Some((value, scalar.data_type()))
+    left == right || (left.is_nan() && right.is_nan())
+}
+
+fn nullif_exact_int_value(expr: &Expr) -> Option<i128> {
+    match expr {
+        Expr::Literal(scalar, _) => match scalar {
+            ScalarValue::Int8(Some(value)) => Some(i128::from(*value)),
+            ScalarValue::Int16(Some(value)) => Some(i128::from(*value)),
+            ScalarValue::Int32(Some(value)) => Some(i128::from(*value)),
+            ScalarValue::Int64(Some(value)) => Some(i128::from(*value)),
+            ScalarValue::UInt8(Some(value)) => Some(i128::from(*value)),
+            ScalarValue::UInt16(Some(value)) => Some(i128::from(*value)),
+            ScalarValue::UInt32(Some(value)) => Some(i128::from(*value)),
+            ScalarValue::UInt64(Some(value)) => Some(i128::from(*value)),
+            _ => None,
+        },
+        Expr::Cast(cast) => {
+            if !is_integer_type(cast.field.data_type()) {
+                return None;
+            }
+            nullif_exact_int_value(cast.expr.as_ref())
+        }
+        Expr::TryCast(try_cast) => {
+            if !is_integer_type(try_cast.field.data_type()) {
+                return None;
+            }
+            nullif_exact_int_value(try_cast.expr.as_ref())
+        }
+        Expr::Negative(inner) => nullif_exact_int_value(inner.as_ref())?.checked_neg(),
+        Expr::Alias(alias) => nullif_exact_int_value(alias.expr.as_ref()),
+        _ => None,
+    }
+}
+
+fn is_integer_type(data_type: &DataType) -> bool {
+    matches!(
+        data_type,
+        DataType::Int8
+            | DataType::Int16
+            | DataType::Int32
+            | DataType::Int64
+            | DataType::UInt8
+            | DataType::UInt16
+            | DataType::UInt32
+            | DataType::UInt64
+    )
+}
+
+fn nullif_float_involved(expr: &Expr) -> bool {
+    match expr {
+        Expr::Literal(ScalarValue::Float32(_) | ScalarValue::Float64(_), _) => true,
+        Expr::Cast(cast) => {
+            matches!(
+                cast.field.data_type(),
+                DataType::Float32 | DataType::Float64
+            ) || nullif_float_involved(cast.expr.as_ref())
+        }
+        Expr::TryCast(try_cast) => {
+            matches!(
+                try_cast.field.data_type(),
+                DataType::Float32 | DataType::Float64
+            ) || nullif_float_involved(try_cast.expr.as_ref())
+        }
+        Expr::Negative(inner) => nullif_float_involved(inner.as_ref()),
+        Expr::Alias(alias) => nullif_float_involved(alias.expr.as_ref()),
+        Expr::BinaryExpr(BinaryExpr { left, right, .. }) => {
+            nullif_float_involved(left.as_ref()) || nullif_float_involved(right.as_ref())
+        }
+        _ => false,
+    }
 }
 
 /// Trivial scalar subquery `SELECT <const>` (no outer refs) — C5-SEC-001.
@@ -842,6 +916,10 @@ mod tests {
             "SELECT array_repeat(1, greatest(101, 1)) AS a",
             "SELECT array_repeat(1, least(200, 101)) AS a",
             "SELECT array_repeat(1, nullif(101, 0)) AS a",
+            "SELECT array_repeat(1, nullif(CAST(101 AS BIGINT), 0)) AS a",
+            "SELECT array_repeat(1, nullif(101, CAST(0 AS BIGINT))) AS a",
+            "SELECT array_repeat(1, nullif(CAST(101 AS SMALLINT), CAST(0 AS BIGINT))) AS a",
+            "SELECT array_repeat(1, nullif(1000, CAST(1 AS BIGINT))) AS a",
             "SELECT array_repeat(1, CASE WHEN true THEN 101 ELSE 1 END) AS a",
             "SELECT array_repeat(1, CASE WHEN false THEN 1 WHEN true THEN 101 END) AS a",
             "SELECT array_repeat(1, CASE 1 WHEN 1 THEN 101 ELSE 1 END) AS a",

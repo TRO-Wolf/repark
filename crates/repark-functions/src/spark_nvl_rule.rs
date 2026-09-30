@@ -215,15 +215,40 @@ fn rewrite_nvl(spelling: &str, first: Expr, second: Expr, schema: &DFSchema) -> 
         return Ok(maybe_nvl_cast(first, &first_type, &widen));
     }
     if is_truly_volatile(&first) {
-        return Ok(nvl_pick_expr(
-            maybe_nvl_cast(first, &first_type, &widen),
-            maybe_nvl_cast(second, &second_type, &widen),
-        ));
+        let widened_first = maybe_nvl_cast(first, &first_type, &widen);
+        let widened_second = maybe_nvl_cast(second, &second_type, &widen);
+        let first_nullable = logical_first_nullable(&widened_first, schema);
+        return Ok(nvl_pick_expr(widened_first, widened_second, first_nullable));
     }
     Ok(coalesce(vec![
         maybe_nvl_cast(first, &first_type, &widen),
         maybe_nvl_cast(second, &second_type, &widen),
     ]))
+}
+
+fn logical_first_nullable(first: &Expr, schema: &DFSchema) -> bool {
+    if first_is_try_shape(first) {
+        return true;
+    }
+    first.nullable(schema).unwrap_or(true)
+}
+
+fn first_is_try_shape(first: &Expr) -> bool {
+    let mut current = first;
+    loop {
+        match current {
+            Expr::Alias(alias) => current = alias.expr.as_ref(),
+            Expr::Cast(cast) => current = cast.expr.as_ref(),
+            Expr::ScalarFunction(call)
+                if call.func.name() == "__repark_nvl_cast" && call.args.len() == 1 =>
+            {
+                current = &call.args[0];
+            }
+            _ => break,
+        }
+    }
+    matches!(current, Expr::TryCast(_))
+        || matches!(current, Expr::ScalarFunction(call) if call.func.name().to_ascii_lowercase().starts_with("try_"))
 }
 
 fn rewrite_nvl2(test: Expr, first: Expr, second: Expr, schema: &DFSchema) -> Result<Expr> {
@@ -265,7 +290,9 @@ fn rewrite_zeroifnull(arg: Expr, schema: &DFSchema) -> Result<Expr> {
         return Ok(maybe_nvl_cast(arg, &arg_type, &widen));
     }
     if is_truly_volatile(&arg) {
-        return Ok(nvl_pick_expr(maybe_nvl_cast(arg, &arg_type, &widen), zero));
+        let widened = maybe_nvl_cast(arg, &arg_type, &widen);
+        let first_nullable = logical_first_nullable(&widened, schema);
+        return Ok(nvl_pick_expr(widened, zero, first_nullable));
     }
     Ok(coalesce(vec![maybe_nvl_cast(arg, &arg_type, &widen), zero]))
 }

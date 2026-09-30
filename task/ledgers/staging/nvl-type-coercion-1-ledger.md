@@ -49,6 +49,9 @@ interval-literal parsing; plain `if`/`CASE`/`=`/CAST methodology probes;
 | C-023 | VN5-4: every mixed-type scalar `nullif` with a string side routes through the kernel's session-zoned Spark string cast in both argument orders (the single-`nullif` path included); dictionary-encoded strings unpack then cast the same way. `nullif(true, 'on')`, `nullif(5L, ' 5 ')` and `nullif(dict_col, 5)` equal Spark, and swapping argument order never changes the compare. | Both-order value pins ANSI on/off + the column forms + the dictionary pin, every expectation measured on live Spark 4.1.2; the VN5-4 mutant reds them. | PROVEN | 11/11 order+dictionary pins green, mutant reds exactly those 11; the string-first symmetry guards stay green on both; struct-pick string leaves keep `Expr::Cast` (no ANSI-aware plan-level cast exists — out of the ruled scope). |
 | C-024 | VN5-5: the pick reports `first && second` nullability when the first argument holds no `CASE`/`IF` (`rand()`/`uuid()` firsts report non-nullable like Spark); a first holding `CASE`/`IF` keeps the R2 fallback rule, so VN4-2 values stay exact. | The schema pin green; the `IF`-first collect pins green; the naive `first && second` mutant reds all 4 collect pins. | PROVEN | Schema all non-nullable like Spark; `IF` collects ~1/6 NULLs; naive mutant crashes the 2 new + 2 VN4 collect pins (physical `CASE` misreport is deterministic, logical flag reads nullable). |
 | C-025 | VN5-7: the plain-`nullif` `const_i128` arm folds only same-type exact-integer literals; the lossy `sequence` cell answers NULL like Spark; the C-021 "carried from main" line is corrected (base fails earlier with `DATATYPE_MISMATCH`). | The 2 sequence pins green; the fold mutant reds them; the same-type over-ceiling refusal still fires. | PROVEN | 2/2 sequence pins green, mutant reds 2/2; `array_repeat(1, nullif(101, 0))` still refuses (Rust test green); VN5-1 remainder, VN5-3, VN5-6 carried as ruled. |
+| C-026 | VN6-1: the pick carries its first argument's logical nullability (rule computes `nullable()` on the widened branch against the input schema; `TryCast`/`try_*` top shapes forced nullable) instead of the physical flag, so `nvl`/`ifnull` over `try_cast`, `try_add`, `try_divide`, `try_element_at` and `try_to_number` with a volatile child collect NULL like base and Spark; every VN5-5 schema pin stays green. | The 20 SQL+DataFrame pins green; the physical-flag mutant reds them; the VN5-5 pins green. | PROVEN | 20/20 green in SQL and DataFrame; mutant (physical `arg_fields` flag) reds the `try_cast` pins; `nvl(rand(), xd)` still non-nullable. |
+| C-027 | VN6-2: `nullif(a, b)` under the array ceiling is bounded by `a` whenever `a` is an exact integer of any width or signedness (integer `CAST` chains count), folding to NULL only on proven equality (`i128` for integers, `f64` with NaN equality for floats); truncated floats never fold, so the VN5-7 cell still answers NULL. | The 4 refusal pins + the equal-yields-NULL pin + the lossy pin green; the same-type-only mutant reds the refusals. | PROVEN | 6/6 green at ceiling 100; mutant reds 4/4 refusals; `sequence(0L, nullif(9007199254740993L, 9007199254740992D))` still NULL. |
+| C-028 | VN6-3: a scalar side of `__repark_nullif_compare` is cast once through a one-row array for the compare while the kernel returns the original first array; `nullif(int_col, '5')` runs at or under 1.10x base (DEBUG median-of-15). | The perf table vs `adc26586` DEBUG. | PROVEN | Table in the lane hand-back. The string→DOUBLE per-row shapes are reported there; VN6-4 (shared `string_to_date` date-prefix gap) is carried, not changed here. |
 
 ## Evidence
 
@@ -306,6 +309,36 @@ reds 2/2 sequence pins; each reverted with a clean tree. The
 tree: the engine's own cast pre-normalizes, and `nullif` returns
 its input faithfully. Replay, gate and perf-table outcomes are
 recorded in the lane hand-back alongside this commit.
+
+### Re-verify 5 VN6-1/VN6-2/VN6-3 (2026-09-30)
+
+Step 0 on the lane head (`da35cc85`) reproduces both S2s against base
+`/tmp/xrel` (`adc26586`): `nvl(try_cast(concat('x', CAST(rand() AS
+STRING)) AS INT), x)` dies with the Arrow non-nullable error where base
+and Spark answer `NULL` nullable, and the four mixed-width/`CAST`
+`nullif` counts answer 101/1000 where base refuses at the ceiling.
+
+VN6-1 moves the pick's first nullability from the physical `arg_fields`
+(which inherit the child's flag through `TRY_CAST`) to the logical
+widened branch (`nullable()` against the input schema, `TryCast` and
+`try_*` top shapes forced nullable); the `CASE`/`IF` trust rule is
+unchanged, so `nvl(rand(), xd)` stays non-nullable like Spark. A first
+draft pre-cast the scalar first argument in place and broke the kernel's
+return-type promise (`Int64` for promised `Int32` on `nullif(101, 0L)`);
+the shipped form keeps the original first array for the return and casts
+scalars once only for the compare.
+
+VN6-2 bounds `nullif(a, b)` by `a` for exact integers of any width or
+signedness (integer `CAST` chains count), folding to NULL only on proven
+equality (`i128`, or `f64` with NaN equality when a float is involved);
+strings, decimals and truncated floats never prove equality, so the
+VN5-7 lossy cell still answers NULL. VN6-4 (shared `string_to_date`
+rejecting `'2024-01-01 junk'` where Spark keeps the date) is carried:
+the cast leaf predates this unit.
+
+949 pins pass (923 + 26 new in
+`test_nvl_type_coercion_1_vn6.py`). Mutants, replay, gate and perf-table
+outcomes are recorded in the lane hand-back alongside this commit.
 
 ## Coverage attestation
 
