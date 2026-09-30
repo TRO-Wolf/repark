@@ -8,18 +8,21 @@ use crate::column::expr_build::{parse_canonical_predicate, parse_canonical_predi
 use crate::dataframe::PyDataFrame;
 use crate::datafusion_to_py_err;
 use crate::fence::fenced;
-use repark_core::frame_names::NameRule;
+use repark_core::frame_names::{NameRule, Resolution};
 use repark_functions::case_sensitive::spark_case_sensitive_from_options;
 
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(attribute_column, module)?)?;
+    module.add_function(wrap_pyfunction!(attribute_ids, module)?)?;
     module.add_function(wrap_pyfunction!(attribute_copies, module)?)?;
     module.add_function(wrap_pyfunction!(attribute_copy_name, module)?)?;
     module.add_function(wrap_pyfunction!(drop_frame_columns, module)?)?;
     module.add_function(wrap_pyfunction!(frame_case_sensitive, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_join_condition, module)?)?;
     module.add_function(wrap_pyfunction!(requalify_join_sides, module)?)?;
+    module.add_function(wrap_pyfunction!(resolve_display_name, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_frame_names, module)?)?;
+    module.add_function(wrap_pyfunction!(stamp_attribute_ids, module)?)?;
     Ok(())
 }
 
@@ -161,7 +164,7 @@ fn refuse_ambiguous_join_condition(
 
 #[allow(clippy::missing_errors_doc)]
 #[pyfunction]
-fn requalify_join_sides(
+pub(crate) fn requalify_join_sides(
     joined: &PyDataFrame,
     left: &PyDataFrame,
     right: Option<&PyDataFrame>,
@@ -171,6 +174,16 @@ fn requalify_join_sides(
         sides.extend(right.map(|frame| frame.inner().schema()));
         let df = repark_core::frame_names::requalify_join_sides(joined.inner().clone(), &sides)
             .map_err(datafusion_to_py_err)?;
+        let df = match right {
+            Some(_) => {
+                let left_width = left.inner().schema().fields().len();
+                let (state, plan) = df.into_parts();
+                let plan = repark_core::frame_names::remint_join_collisions(plan, left_width)
+                    .map_err(datafusion_to_py_err)?;
+                DataFrame::new(state, plan)
+            }
+            None => df,
+        };
         Ok(PyDataFrame::new(df, joined.runtime_handle()))
     })
 }
@@ -190,5 +203,53 @@ fn resolve_frame_names(frame: &PyDataFrame, names: Vec<String>) -> PyResult<Vec<
             frame_rule(frame.inner()),
         )
         .map_err(datafusion_to_py_err)
+    })
+}
+
+#[allow(clippy::missing_errors_doc)]
+#[pyfunction]
+pub(crate) fn stamp_attribute_ids(frame: &PyDataFrame) -> PyResult<PyDataFrame> {
+    fenced!("dataframe_names.stamp_attribute_ids", {
+        let (state, plan) = frame.inner().clone().into_parts();
+        let plan = repark_core::frame_names::stamp(plan).map_err(datafusion_to_py_err)?;
+        Ok(PyDataFrame::new(
+            DataFrame::new(state, plan),
+            frame.runtime_handle(),
+        ))
+    })
+}
+
+#[pyfunction]
+pub(crate) fn attribute_ids(frame: &PyDataFrame) -> Vec<Option<String>> {
+    repark_core::frame_names::attribute_ids(frame.inner().schema())
+        .into_iter()
+        .map(|id| id.map(|id| id.as_str().to_string()))
+        .collect()
+}
+
+#[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
+#[pyfunction]
+#[pyo3(signature = (frame, written, qualifier, displays, exact))]
+pub(crate) fn resolve_display_name(
+    frame: &PyDataFrame,
+    written: &str,
+    qualifier: Option<&str>,
+    displays: Vec<String>,
+    exact: bool,
+) -> PyResult<(String, Vec<usize>)> {
+    fenced!("dataframe_names.resolve_display_name", {
+        let resolution = repark_core::frame_names::resolve(
+            frame.inner().schema(),
+            written,
+            qualifier,
+            NameRule::from_case_sensitive(exact),
+            &displays,
+        )
+        .map_err(datafusion_to_py_err)?;
+        Ok(match resolution {
+            Resolution::Bound(hits) => ("bound".to_string(), hits),
+            Resolution::Ambiguous(hits) => ("ambiguous".to_string(), hits),
+            Resolution::Missing => ("missing".to_string(), Vec::new()),
+        })
     })
 }

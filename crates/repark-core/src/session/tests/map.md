@@ -21,6 +21,20 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   carries none; a temp view registered through `create_or_replace_temp_view_from` and read back
   by SQL keeps the ids, and the facade's join shape over two views of one frame repeats them.
   pins: attr-id-1/C-001
+  The same file pins the core over `frame_names`: `stamp` mints one fresh id per source field
+  and is idempotent on a stamped source and a stamped projection, and a temp view of a stamped
+  frame reads back the same ids; it keeps column ids and mints distinct fresh ids for a cast,
+  arithmetic and a literal; it leaves a stamped Filter/Limit/Sort/Distinct/SubqueryAlias chain
+  unchanged; it keeps an Aggregate key's id and mints the values and a Window output; a
+  Union, `union_by_name` and `union_by_folded_name` take the first input's ids. Over the
+  facade's join shape (two temp views, `requalify_join_sides`, then
+  `remint_join_collisions`) the left keeps its ids and each colliding right id is re-minted
+  once, so right-side twins stay twins and a written `id` over both sides is ambiguous; a join
+  of distinct attributes is returned unchanged. `resolve` over `(id, Data, s)` under both rules:
+  one hit, twins of one attribute (same and case-folded displays), two attributes under one
+  name (same and case-folded displays), a written qualifier's hit and miss, a cast twin that
+  reuses the name, and a missing id or a display-count mismatch as an error.
+  pins: attr-id-1/C-002, C-003, C-004
 - `session.rs` — ported v1 session battery plus P2G R2 / A13 / metadata-enumeration pins. RP-5: the bare-session half of the metadata-table enumeration contract (fork F-8 listing); mutation — make `information_schema` expect a `$snapshots` twin and the pin reds. pins: rp-5-fork-repin/C-003
   Child: [session/catalog_registration.rs](session/map.md).
   RP-5: `information_schema` hide pin now cites fork F-8 listing (no engine shim).

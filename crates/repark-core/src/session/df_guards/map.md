@@ -13,6 +13,29 @@ wrapped optimizer rule) and declares this directory.
   [../map.md](../map.md); its pins are `../tests/window_rescan.rs` and
   `python/repark/tests/test_win_slide_1.py`.
   pins: win-slide-1/C-001, C-005
+- `attr_id.rs` — **ATTR-ID-1 S1 (2026-09-30):** attribute identity as a function of the plan.
+  Every output field of a DataFrame plan carries one attribute id in its field metadata under
+  `repark.attr`; the work order is `/tmp/oc-worker/direct/wo/attr-id-1-design.md` §3.
+  `AttrId` is `a` plus 12 hex digits from a per-process counter (`NEXT_ATTR`, the
+  `TEMP_VIEW_SEQ` pattern of `metadata_columns.rs`), never derived from a name, a position or a
+  plan id. `stamp(plan)` looks only at the root and is idempotent: a Projection root keeps a
+  column (or an alias chain over a column) whose field already carries an id, keeps any alias
+  whose own metadata carries one, and gives every other expression a fresh id through
+  `Alias::with_metadata` (a bare expression gets an alias of its own qualified name) — so a cast,
+  which copies its source id in DataFusion, still gets a fresh one. Any other root keeps a fully
+  stamped schema as it is and otherwise adds one pass-through Projection that sets an id only
+  where one is missing: a Union root takes the first input's id at that position (looking
+  through the `union_by_name` wrapper Projection, which DataFusion builds with an id-less
+  schema), every other root mints. `attribute_ids(schema)` reads the ids by position.
+  `remint_join_collisions(plan, left_width)` gives every right-side id that also appears on the
+  left one fresh id (right-side twins of one attribute stay twins; a left width past the field
+  count is an internal error). `resolve(schema, written, qualifier, rule, displays)` collects
+  the positions whose display name matches `written` under `rule` (and whose relation matches
+  a written qualifier through `same_relation`, which moved here from `case_bind.rs` so both
+  files share it) and answers `Bound(hits)` for one distinct id, `Ambiguous(hits)` for more and
+  `Missing` for none; a hit without an id and a display count that differs from the field count
+  are internal errors, never a wildcard. The facade does not call any of it yet (S2 stamps
+  every spawned frame). Pins: `../tests/attr_id.rs`. pins: attr-id-1/C-002, C-003, C-004
 - `case_bind.rs` — **U11-EDGE-1 (2026-09-26):** `bind_case_insensitive`, run first by
   `subquery.rs`'s `resolve_bound_expr` (the DataFrame door's one binding hook). An
   unqualified column the frame schema does not hold exactly binds to the single field that
@@ -134,6 +157,10 @@ wrapped optimizer rule) and declares this directory.
   **Re-verify (2026-09-28, RC-3):** the child-name lookup recurses through
   nested casts (`test_nested_cast_of_a_column_keeps_the_written_child_name`).
   pins: casesens-1/C-009
+  **ATTR-ID-1 S1 (2026-09-30):** one `pub use` block re-exports `AttrId`, `Resolution`,
+  `attribute_ids`, `remint_join_collisions`, `resolve` and `stamp` from `attr_id.rs`, so they
+  leave through `frame_names`; `same_relation` moved to `attr_id.rs` and is imported back, so
+  the file shrinks 1000 → 990. pins: attr-id-1/C-002
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside

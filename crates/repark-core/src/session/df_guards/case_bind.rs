@@ -16,6 +16,11 @@ use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::parser::Parser;
 use repark_common::spark_error;
 
+use super::attr_id::same_relation;
+
+pub use super::attr_id::{
+    AttrId, Resolution, attribute_ids, remint_join_collisions, resolve, stamp,
+};
 pub use super::subquery::resolve_bound_expr_with;
 pub use repark_common::names::{NameHit, NameRule};
 
@@ -371,21 +376,6 @@ fn unique_case_match(column: &Column, frame_schema: &DFSchema) -> Option<Column>
     hits.iter()
         .all(|(qualifier, field)| Column::new(qualifier.cloned(), field.name()) == first)
         .then_some(first)
-}
-
-fn same_relation(written: &TableReference, held: &TableReference, rule: NameRule) -> bool {
-    let written_parts = [written.catalog(), written.schema(), Some(written.table())];
-    let held_parts = [held.catalog(), held.schema(), Some(held.table())];
-    written_parts
-        .iter()
-        .zip(held_parts.iter())
-        .all(
-            |(written_part, held_part)| match (written_part, held_part) {
-                (Some(written_part), Some(held_part)) => rule.matches(written_part, held_part),
-                (Some(_), None) => false,
-                (None, _) => true,
-            },
-        )
 }
 
 fn bind_name(schema: &DFSchema, name: &str, rule: NameRule) -> Column {

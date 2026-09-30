@@ -339,3 +339,67 @@ fn binding_refuses_both_intent_flags() {
         assert!(refusal.is_instance_of::<pyo3::exceptions::PyValueError>(py));
     });
 }
+
+#[test]
+fn binding_stamps_resolves_and_re_mints_a_self_join() {
+    Python::attach(|py| {
+        let session = PyReparkSession::new(py, None, None, None, None, None).expect("session");
+        let frame = session
+            .sql(py, "SELECT 1 AS id, 'a' AS data")
+            .expect("source frame");
+        let stamped = crate::dataframe_names::stamp_attribute_ids(&frame).expect("stamp");
+        let held = crate::dataframe_names::attribute_ids(&stamped);
+        assert!(held.iter().all(Option::is_some));
+        assert_ne!(held[0], held[1]);
+        let pair = vec!["id".to_string(), "data".to_string()];
+        let resolve = |frame: &PyDataFrame, written: &str, displays: &[String], exact: bool| {
+            crate::dataframe_names::resolve_display_name(
+                frame,
+                written,
+                None,
+                displays.to_vec(),
+                exact,
+            )
+            .expect("resolve")
+        };
+        assert_eq!(
+            resolve(&stamped, "ID", &pair, false),
+            ("bound".to_string(), vec![0])
+        );
+        assert_eq!(
+            resolve(&stamped, "ID", &pair, true),
+            ("missing".to_string(), Vec::new())
+        );
+        for view in ["attr_l", "attr_r"] {
+            session
+                .create_or_replace_temp_view(view, &stamped)
+                .expect("temp view");
+        }
+        let joined = session
+            .sql(
+                py,
+                "SELECT attr_l.id AS l_id, attr_l.data AS l_data, attr_r.id AS r_id, \
+                 attr_r.data AS r_data FROM attr_l CROSS JOIN attr_r",
+            )
+            .expect("self-join");
+        assert_eq!(
+            crate::dataframe_names::attribute_ids(&joined)[2..],
+            held[..]
+        );
+        let requalified =
+            crate::dataframe_names::requalify_join_sides(&joined, &stamped, Some(&stamped))
+                .expect("requalify");
+        let after = crate::dataframe_names::attribute_ids(&requalified);
+        assert_eq!(after[..2], held[..]);
+        assert!(
+            after[2..]
+                .iter()
+                .all(|id| id.is_some() && !held.contains(id))
+        );
+        let quad = ["id", "data", "id", "data"].map(str::to_string);
+        assert_eq!(
+            resolve(&requalified, "id", &quad, false),
+            ("ambiguous".to_string(), vec![0, 2])
+        );
+    });
+}
