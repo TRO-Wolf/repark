@@ -6,6 +6,16 @@ measurements behind it; it leaves when the owner charters it (a brief under `bri
 declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
+- **Cards from the #881 verifiers (2026-09-30, ATTR-ID-1 OD-3):**
+  [plan-depth-1-card-2026-09-30.md](plan-depth-1-card-2026-09-30.md) — `count()` on 200 chained `filter`
+  calls segfaults on main (RC5-5) ·
+  [sql-lambda-scope-1-card-2026-09-30.md](sql-lambda-scope-1-card-2026-09-30.md) — SQL-door lambda
+  parameters bind to same-named columns, silent wrong rows (RC5-6) ·
+  [sort-parent-column-1-card-2026-09-30.md](sort-parent-column-1-card-2026-09-30.md) — `orderBy(parent
+  Column)` on a case-twin frame sorts by the output twin (RC5-7; after ATTR-ID-1 S2) ·
+  [unicode-case-version-1-card-2026-09-30.md](unicode-case-version-1-card-2026-09-30.md) — case folding
+  uses Rust's Unicode 16 tables where Spark's JDK 17 has Unicode 13 (RC3-5 / R-CS2-17; owner decision on
+  the reference JDK).
 - [read-path-obligations-2026-09-27.md](read-path-obligations-2026-09-27.md) — **WO READ-PATH-1
   (2026-09-27):** the obligations inventory — all 211 binding sentences from AGENTS.md, CLAUDE.md
   and the three skills, each with its old home, new home and role trigger. Closes when the PR merges.
