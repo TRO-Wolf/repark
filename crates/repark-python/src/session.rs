@@ -10,44 +10,8 @@ use tokio::runtime::Runtime;
 use crate::arrow_export::drain_arrow_c_stream;
 use crate::dataframe::{PyDataFrame, with_stream_poll_no_detach};
 use crate::fence::{fenced, fenced_span};
+use crate::session_runtime::apply_session_knobs;
 use crate::{UnsupportedOperationException, to_py_err};
-
-/// Apply the shared builder knobs used by both the Spark-door constructor and the native door.
-fn apply_session_knobs(
-    memory_limit_gb: Option<usize>,
-    batch_size: Option<usize>,
-    target_partitions: Option<usize>,
-    config: Option<HashMap<String, String>>,
-) -> PyResult<ReparkSessionBuilder> {
-    let mut builder = ReparkSession::builder();
-    // Zero explicitly opts out of the bounded pool; other values select the requested limit.
-    match memory_limit_gb {
-        None => {}
-        Some(0) => builder = builder.memory_limit_bytes(0),
-        Some(gb) => builder = builder.memory_limit_gb(gb),
-    }
-    // Zero is invalid for batch and partition counts; do not silently apply defaults.
-    if let Some(0) = batch_size {
-        return Err(to_py_err(repark_core::Error::Config(
-            "batch_size must be >= 1 (got 0)".to_string(),
-        )));
-    }
-    if let Some(0) = target_partitions {
-        return Err(to_py_err(repark_core::Error::Config(
-            "target_partitions must be >= 1 (got 0)".to_string(),
-        )));
-    }
-    if let Some(rows) = batch_size {
-        builder = builder.batch_size(rows);
-    }
-    if let Some(parts) = target_partitions {
-        builder = builder.target_partitions(parts);
-    }
-    if let Some(config) = config {
-        builder = builder.configs(config);
-    }
-    Ok(builder)
-}
 
 /// Build the engine session, register catalogs, wrap in the Python handle.
 fn finish_session(py: Python<'_>, builder: ReparkSessionBuilder) -> PyResult<PyReparkSession> {
@@ -164,6 +128,17 @@ impl PyReparkSession {
             let query = crate::session_runtime::prepare_session_sql(query)?;
             let df = py
                 .detach(|| self.runtime.block_on(self.session.sql(&query)))
+                .map_err(to_py_err)?;
+            Ok(PyDataFrame::new(df, Arc::clone(&self.runtime)))
+        })
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub fn sql_built(&self, py: Python<'_>, query: &str) -> PyResult<PyDataFrame> {
+        fenced_span!("py.sql", "PyReparkSession.sql_built", {
+            let query = crate::session_runtime::prepare_session_sql(query)?;
+            let df = py
+                .detach(|| self.runtime.block_on(self.session.sql_built(&query)))
                 .map_err(to_py_err)?;
             Ok(PyDataFrame::new(df, Arc::clone(&self.runtime)))
         })

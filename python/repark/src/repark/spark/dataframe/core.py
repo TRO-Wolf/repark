@@ -403,7 +403,7 @@ class DataFrame:
             return
         old_cache_view = self._cache_view
         self._session.materialize_as_temp_view(view_name, self._inner)
-        self._inner = self._session._sql_built(f"SELECT * FROM {view_name}")
+        self._inner = self._session.sql_built(f"SELECT * FROM {view_name}")
         if old_cache_view is not None and old_cache_view != view_name:
             cache_handle.release_view_hold(self, old_cache_view)
         self._checkpoint_lazy = False
@@ -677,7 +677,7 @@ class DataFrame:
             self._session.register_arrow_stream_as_temp_view(view_name, stream_obj)
             self._track_mia_view(view_name, replace_ephemeral=replace_ephemeral)
             tracked = True
-            return self._session._sql_built(f"SELECT * FROM {view_name}")
+            return self._session.sql_built(f"SELECT * FROM {view_name}")
         except Exception:
             if not tracked:
                 with contextlib.suppress(Exception):
@@ -696,7 +696,7 @@ class DataFrame:
             self._session.register_ipc_stream_as_temp_view(view_name, ipc_bytes)
             self._track_mia_view(view_name, replace_ephemeral=replace_ephemeral)
             tracked = True
-            return self._session._sql_built(f"SELECT * FROM {view_name}")
+            return self._session.sql_built(f"SELECT * FROM {view_name}")
         except Exception:
             if not tracked:
                 with contextlib.suppress(Exception):
@@ -728,7 +728,7 @@ class DataFrame:
         placeholder = pa.Table.from_batches([], schema=arrow_schema)
         register_arrow_exporter_as_temp_view(self._session, view_name, placeholder)
         try:
-            placeholder_inner = self._session._sql_built(f"SELECT * FROM {view_name}")
+            placeholder_inner = self._session.sql_built(f"SELECT * FROM {view_name}")
         except Exception:
             with contextlib.suppress(Exception):
                 self._session.drop_temp_view(view_name)
@@ -1023,7 +1023,7 @@ class DataFrame:
             engine_keys.append(self._engine_field_for_display(canonical))
         view = self._source_view_name
         self._session.declare_temp_view_sorted(view, engine_keys, tightenNulls)
-        self._inner = self._session._sql_built(f"SELECT * FROM {view}")
+        self._inner = self._session.sql_built(f"SELECT * FROM {view}")
         self._tighten_derived = tightenNulls
         return self
 
@@ -1475,7 +1475,7 @@ class DataFrame:
                 expression_sql, output_name = _global_agg_sql_parts(column)
                 parts.append(f"{expression_sql} AS {_quote_ident(output_name)}")
             sql = f"SELECT {', '.join(parts)} FROM {view}"
-            return self._spawn(self._session._sql_built(sql))
+            return self._spawn(self._session.sql_built(sql))
         finally:
             self._session.drop_temp_view(view)
 
@@ -1568,7 +1568,7 @@ class DataFrame:
             sql = f"SELECT {', '.join(select_parts)} FROM {view}"
             if where is not None:
                 sql = f"{sql} WHERE {where}"
-            return self._spawn(mid._session._sql_built(sql))
+            return self._spawn(mid._session.sql_built(sql))
         finally:
             mid._session.drop_temp_view(view)
 
@@ -1807,7 +1807,7 @@ class DataFrame:
         view = scratch_view_name(self._session, "_repark_h1_sel_")
         self._session.create_or_replace_temp_view(view, _native.attribute_copies(self._plan()))
         try:
-            planned = self._session._sql_built(f"SELECT {', '.join(proj_parts)} FROM {view}")
+            planned = self._session.sql_built(f"SELECT {', '.join(proj_parts)} FROM {view}")
             child = self._spawn(planned)
             if h1_display_names is not None:
                 child._display_names = h1_display_names
@@ -2808,7 +2808,7 @@ class DataFrame:
                     f"{how_sql} JOIN {right_alias} ON {on_sql}"
                 )
             sides = (self._plan(), None if left_only else other._plan())
-            planned = _native.requalify_join_sides(self._session._sql_built(join_sql), *sides)
+            planned = _native.requalify_join_sides(self._session.sql_built(join_sql), *sides)
             child = self._spawn(planned, other)
             child._display_names = display_names
             child._engine_names = engine_names
@@ -2920,7 +2920,7 @@ class DataFrame:
                     f"{_quote_ident(value_col)} AS {val_out} FROM {view}"
                 )
             sql = " UNION ALL ".join(parts)
-            return self._spawn(self._session._sql_built(sql))
+            return self._spawn(self._session.sql_built(sql))
         finally:
             self._session.drop_temp_view(view)
 
@@ -2945,7 +2945,7 @@ class DataFrame:
         view = scratch_view_name(self._session, "__repark_explain_")
         surface_b.register_view_without_fill(self, view)
         try:
-            plan = self._spawn(self._session._sql_built(f"{sql} SELECT * FROM {view}"))
+            plan = self._spawn(self._session.sql_built(f"{sql} SELECT * FROM {view}"))
             rows = [(row["plan_type"], row["plan"]) for row in surface_b.rows_without_fill(plan)]
         finally:
             self._session.drop_temp_view(view)
@@ -3083,7 +3083,7 @@ class DataFrame:
             self._session.create_or_replace_temp_view(left, self._plan())
             other._session.create_or_replace_temp_view(right, other._plan())
             query = f"SELECT * FROM {left} {op_sql} SELECT * FROM {right}"
-            planned = self._session._sql_built(query)
+            planned = self._session.sql_built(query)
             child = self._spawn(planned, other)
             if self._display_names is not None and self._engine_names is not None:
                 child._display_names = list(self._display_names)
@@ -3145,7 +3145,7 @@ class DataFrame:
         try:
             self._session.create_or_replace_temp_view(left, self._plan())
             other._session.create_or_replace_temp_view(right, other._plan())
-            planned = self._session._sql_built(f"SELECT * FROM {left} CROSS JOIN {right}")
+            planned = self._session.sql_built(f"SELECT * FROM {left} CROSS JOIN {right}")
             return self._spawn(planned, other)
         finally:
             self._session.drop_temp_view(left)

@@ -107,14 +107,14 @@ def _sample(
     frame._session.create_or_replace_temp_view(view, frame._plan())
     try:
         if fraction_value >= 1.0:
-            planned = frame._session._sql_built(f"SELECT * FROM {view}")
+            planned = frame._session.sql_built(f"SELECT * FROM {view}")
         elif fraction_value <= 0.0:
-            planned = frame._session._sql_built(f"SELECT * FROM {view} WHERE 1 = 0")
+            planned = frame._session.sql_built(f"SELECT * FROM {view} WHERE 1 = 0")
         else:
             order_fields = frame._engine_names if frame._engine_names is not None else frame.columns
             order_sql = ", ".join(_quote_ident_sql(c) for c in order_fields)
             order_clause = f"ORDER BY {order_sql}" if order_sql else ""
-            planned = frame._session._sql_built(
+            planned = frame._session.sql_built(
                 f"SELECT * EXCLUDE (__repark_rn) FROM ("
                 f"  SELECT *, row_number() OVER ({order_clause}) AS __repark_rn FROM {view}"
                 f") WHERE (abs((CAST(__repark_rn AS BIGINT) + {plan_seed}) "
@@ -175,7 +175,7 @@ def _random_split(
                 f")"
             )
         scored_name = scratch_view_name(frame._session, "__repark_rsplit_s_")
-        scored = frame._session._sql_built(bucket_sql)
+        scored = frame._session.sql_built(bucket_sql)
         frame._session.create_or_replace_temp_view(scored_name, scored)
         try:
             frames: list[DataFrame] = []
@@ -185,7 +185,7 @@ def _random_split(
                     predicate = f"__repark_split_u >= {lower}"
                 else:
                     predicate = f"__repark_split_u >= {lower} AND __repark_split_u < {upper}"
-                part = frame._session._sql_built(
+                part = frame._session.sql_built(
                     f"SELECT * EXCLUDE (__repark_split_u) FROM {scored_name} WHERE {predicate}"
                 )
                 child = frame._spawn(part)

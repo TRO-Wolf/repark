@@ -238,6 +238,17 @@ e99fa1eb. Mutations red-first per fix (R1 override follow-flag-again, R1
 fragment identity, R2 `.to_string()`), tree clean after each revert. Lane gate
 `gate.sh` green.
 
+Follow-up (2026-09-30): the first cut routed native receivers
+(`DataFrame._session` is the native `PyReparkSession`) through a free
+`session_sql_built(session, query)`; the facade pins caught the missing method
+(11 failed, 26 passed). The follow-up adds the `sql_built` pymethod on
+`PyReparkSession` in `session.rs`, funded by moving `apply_session_knobs`
+verbatim into `session_runtime.rs` (1122 → 1097, shrink-only ratchet; the
+brief's new-file suggestion would have needed a `mod` line in `lib.rs`, which
+sits at its 190 ceiling). Native receivers call `inner.sql_built(...)`;
+facade receivers keep `_sql_built`. Same pins, same oracles, re-verified
+post-fix.
+
 ## Coverage attestation
 
 ```yaml

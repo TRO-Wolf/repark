@@ -35,7 +35,7 @@ remain in the Rust-backed modules.
 - RandomForest save, write, read, and load refuse because pickle loading permits arbitrary code execution.
 - Model envelopes require a positive feature count, a confined booster path, and a non-empty blob.
 - **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** prediction SQL runs
-  through `_sql_built`. pins: string-literal-escape-1/C-011
+  through the native `sql_built` method. pins: string-literal-escape-1/C-011
 
 ## Pointers
 

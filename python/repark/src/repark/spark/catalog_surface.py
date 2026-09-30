@@ -11,7 +11,6 @@ import weakref
 from types import MethodType
 from typing import TYPE_CHECKING, Any, NoReturn
 
-from repark import _native
 from repark.errors import (
     AnalysisException,
     IllegalArgumentException,
@@ -142,7 +141,7 @@ def _describe_extended_rows(
     from repark.spark.dataframe import DataFrame
 
     frame = DataFrame(
-        _native.session_sql_built(inner, f"DESCRIBE TABLE EXTENDED {_sql_table_ref(resolved)}"),
+        inner.sql_built(f"DESCRIBE TABLE EXTENDED {_sql_table_ref(resolved)}"),
         inner,
         token,
     )
@@ -346,7 +345,7 @@ def session_table(session: ReparkSession, table_name: str) -> DataFrame:
                 cached.pop(resolved, None)
                 frame.unpersist()
     _drop_stale_identity_frames(inner, token, resolved, kind)
-    frame = DataFrame(_native.session_sql_built(inner, f"SELECT * FROM {scan_ref}"), inner, token)
+    frame = DataFrame(inner.sql_built(f"SELECT * FROM {scan_ref}"), inner, token)
     _frame_identities(token)[frame] = (resolved, kind)
     return frame
 
@@ -526,7 +525,7 @@ def cache_table(
     if kind == "table" and not _known_table(session, resolved):
         _raise_table_or_view_not_found(table_name)
     frame = DataFrame(
-        _native.session_sql_built(inner, f"SELECT * FROM {_sql_table_ref(resolved)}"),
+        inner.sql_built(f"SELECT * FROM {_sql_table_ref(resolved)}"),
         inner,
         session._alive_token,
     )

@@ -97,7 +97,7 @@ def _register_temp(dataset: Any, prefix: str = "ml") -> tuple[Any, str]:
 
 def _sql_on(frame: Any, sql: str) -> Any:
     """Run SQL on the frame's native session; return a Python DataFrame."""
-    return frame._spawn(frame._session._sql_built(sql))
+    return frame._spawn(frame._session.sql_built(sql))
 
 
 def _collect_sql(frame: Any, sql: str) -> list[Any]:

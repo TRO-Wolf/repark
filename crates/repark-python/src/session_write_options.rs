@@ -74,25 +74,6 @@ pub fn session_write_path(
 
 #[allow(clippy::missing_errors_doc)]
 #[pyfunction]
-#[pyo3(signature = (session, query))]
-pub fn session_sql_built(
-    py: Python<'_>,
-    session: PyRef<'_, PyReparkSession>,
-    query: &str,
-) -> PyResult<PyDataFrame> {
-    fenced_span!("py.sql", "session_sql_built", {
-        let query = crate::session_runtime::prepare_session_sql(query)?;
-        let runtime = Arc::clone(&session.runtime);
-        let inner = session.session.clone();
-        let df = py
-            .detach(|| runtime.block_on(inner.sql_built(&query)))
-            .map_err(crate::to_py_err)?;
-        Ok(PyDataFrame::new(df, runtime))
-    })
-}
-
-#[allow(clippy::missing_errors_doc)]
-#[pyfunction]
 #[pyo3(signature = (sql, keep_verbatim))]
 pub fn built_sql_user_fragment(sql: &str, keep_verbatim: bool) -> PyResult<String> {
     fenced_span!("py.sql", "built_sql_user_fragment", {
@@ -108,7 +89,6 @@ pub fn built_sql_user_fragment(sql: &str, keep_verbatim: bool) -> PyResult<Strin
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(session_sql_with_write_options, module)?)?;
     module.add_function(wrap_pyfunction!(session_write_path, module)?)?;
-    module.add_function(wrap_pyfunction!(session_sql_built, module)?)?;
     module.add_function(wrap_pyfunction!(built_sql_user_fragment, module)?)?;
     Ok(())
 }

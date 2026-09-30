@@ -34,7 +34,7 @@ delegated estimators live in [feature/map.md](feature/map.md) and [ext/map.md](e
   move-aside replacement with best-effort restoration; existing files are unlinked before rename.
 - `LinearRegressionSummary` exposes no computed metrics and refuses unknown fields.
 - **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** estimator and
-  evaluator SQL runs through `_sql_built`, so fitted labels parse in default
+  evaluator SQL runs through the native `sql_built` method, so fitted labels parse in default
   mode whatever the session flag says. pins: string-literal-escape-1/C-011
 
 ## Pointers

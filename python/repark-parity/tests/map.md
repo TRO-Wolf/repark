@@ -2,6 +2,8 @@
 
 STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30): the CAP-1 mirror follows the shrink-only ratchets `dataframe/core.py` 3973 → 3971 and `session/session_core.py` 2293 → 2277. pins: string-literal-escape-1/C-011
 
+STRING-LITERAL-ESCAPE-1 re-verify follow-up (2026-09-30): the CAP-1 mirror follows the shrink-only ratchet `repark-python/src/session.rs` 1122 → 1097. pins: string-literal-escape-1/C-011
+
 WO CATALOG-1 (2026-09-26): the CAP-1 mirror drops the retired `catalog_config.rs` row, follows `session/tests/session.rs` 1407 → 1406, and the exception count 38 → 37. pins: catalog-1/C-006
 
 U1-MEM-LAYOUT-1 layout-r7 (2026-09-23): the CAP-1 mirror row for `crates/repark-spark/src/tests/ctas.rs` follows the Rust gate's 1357 baseline; it still named 1361 and reddened the Python job.

@@ -238,7 +238,7 @@ class PolarsFrame:
             )
             select_clause = f"{left_view}.*" + (f", {select_right}" if select_right else "")
             sql = f"SELECT {select_clause} FROM {left_view} {join_kw} {right_view} ON {on_sql}"
-            planned = session._sql_built(sql)
+            planned = session.sql_built(sql)
             child = self._frame._spawn(planned, right)
             return PolarsFrame(child)
         finally:

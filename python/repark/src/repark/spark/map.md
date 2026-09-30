@@ -543,7 +543,7 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `whenNotMatchedBySource` DELETE/UPDATE execute.
   pins: dml-a-merge-not-matched-by-source/C-002, C-003
   **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** the built `MERGE`
-  runs through `_sql_built` (default-mode literals); free-SQL `str` conditions
+  runs through the native `sql_built` method (default-mode literals); free-SQL `str` conditions
   stay refused, so only `F.expr` columns carry user text. pins: string-literal-escape-1/C-011
 - `merge_aliases.py` — **IPI-56 (2026-09-20):** which `(target, source)` aliases
   the rendered `MERGE INTO` declares. Spark's own condition form qualifies the
@@ -564,7 +564,7 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `PolarsFrame.eager()` wraps the Spark `eager()`; `collect()` is untouched
   (pins: df-eager-1/C-006).
   **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** the built join scan
-  runs through `_sql_built`. pins: string-literal-escape-1/C-011
+  runs through the native `sql_built` method. pins: string-literal-escape-1/C-011
 - `observation.py` — **DF-SURFACE-B-1 (2026-09-14):** PySpark `Observation`. A
   named (or generated-name) handle filled by the first action on a
   `DataFrame.observe` child; `get` before that action raises
