@@ -1,6 +1,7 @@
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
+use chrono::{DateTime, Utc};
 use datafusion::arrow::array::{
     Array, ArrayRef, Date32Array, Int8Array, Int16Array, Int32Array, Int64Array,
     IntervalMonthDayNanoArray, ListArray, TimestampMicrosecondArray,
@@ -12,11 +13,16 @@ use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{
     DataType, Field, FieldRef, IntervalMonthDayNano, IntervalUnit, TimeUnit,
 };
-use datafusion::common::{DataFusionError, Result, exec_err};
+use datafusion::common::config::ConfigOptions;
+use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
+use datafusion::common::{DFSchema, DataFusionError, Result, exec_err};
 use datafusion::logical_expr::{
-    ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
-    TypeSignature, Volatility,
+    ColumnarValue, Expr, ExprSchemable, LogicalPlan, ReturnFieldArgs, ScalarFunctionArgs,
+    ScalarUDF, ScalarUDFImpl, Signature, TypeSignature, Volatility,
 };
+use datafusion::optimizer::AnalyzerRule;
+
+use crate::session_time_zone::session_time_zone_from_options;
 
 mod rows;
 
@@ -78,6 +84,13 @@ fn int_rank(data_type: &DataType) -> Option<u8> {
     }
 }
 
+fn is_string_type(data_type: &DataType) -> bool {
+    matches!(
+        data_type,
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
+    )
+}
+
 fn wrong_input_types(arg_types: &[DataType]) -> DataFusionError {
     let rendered: Vec<String> = arg_types
         .iter()
@@ -101,6 +114,24 @@ fn plan_sequence(arg_types: &[DataType]) -> Result<Family> {
             "'sequence' expects (start, stop[, step]), got {} argument(s)",
             arg_types.len()
         )));
+    }
+    let present: Vec<&DataType> = arg_types
+        .iter()
+        .filter(|arg_type| **arg_type != DataType::Null)
+        .collect();
+    if present.iter().any(|arg_type| int_rank(arg_type).is_some())
+        && present
+            .iter()
+            .all(|arg_type| int_rank(arg_type).is_some() || is_string_type(arg_type))
+    {
+        return Ok(Family::Int);
+    }
+    if let Some(family) = temporal_string_family(&arg_types[..2]) {
+        let step_type = arg_types.get(2).unwrap_or(&DataType::Null);
+        if *step_type != DataType::Null && *step_type != month_day_nano() {
+            return Err(wrong_input_types(arg_types));
+        }
+        return Ok(family);
     }
     let start_family = if arg_types[0] == DataType::Null {
         None
@@ -139,9 +170,29 @@ fn plan_sequence(arg_types: &[DataType]) -> Result<Family> {
     }
 }
 
+fn temporal_string_family(bounds: &[DataType]) -> Option<Family> {
+    let [start, stop] = bounds else {
+        return None;
+    };
+    let sibling = if is_string_type(start) && !is_string_type(stop) {
+        family_of(stop)
+    } else if is_string_type(stop) && !is_string_type(start) {
+        family_of(start)
+    } else {
+        return None;
+    };
+    match sibling {
+        Some(Family::Date | Family::Timestamp) => sibling,
+        _ => None,
+    }
+}
+
 fn sequence_element(family: Family, arg_types: &[DataType]) -> DataType {
     match family {
         Family::Int => {
+            if arg_types.iter().any(is_string_type) {
+                return DataType::Int64;
+            }
             let mut widest = DataType::Int32;
             let mut rank: Option<u8> = None;
             for arg_type in arg_types {
@@ -156,13 +207,66 @@ fn sequence_element(family: Family, arg_types: &[DataType]) -> DataType {
         }
         Family::Date => DataType::Date32,
         Family::Timestamp => {
-            if arg_types[0] == DataType::Null {
+            if arg_types[0] == DataType::Null || is_string_type(&arg_types[0]) {
                 arg_types[1].clone()
             } else {
                 arg_types[0].clone()
             }
         }
     }
+}
+
+#[derive(Debug, Default)]
+pub struct SequenceStringBounds;
+
+impl AnalyzerRule for SequenceStringBounds {
+    fn analyze(&self, plan: LogicalPlan, config: &ConfigOptions) -> Result<LogicalPlan> {
+        if crate::ansi::spark_ansi_enabled_from_options(config) {
+            return Ok(plan);
+        }
+        plan.transform_up_with_subqueries(check_plan_node).data()
+    }
+
+    #[allow(clippy::unnecessary_literal_bound)]
+    fn name(&self) -> &str {
+        "sequence_string_bounds"
+    }
+}
+
+fn check_plan_node(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+    let mut schema = DFSchema::empty();
+    for input in plan.inputs() {
+        schema.merge(input.schema());
+    }
+    plan.map_expressions(|expr| {
+        expr.transform_up(|node| {
+            if let Expr::ScalarFunction(function) = &node
+                && function.func.name() == "sequence"
+            {
+                refuse_string_bounds(&function.args, &schema)?;
+            }
+            Ok(Transformed::no(node))
+        })
+    })
+}
+
+fn refuse_string_bounds(args: &[Expr], schema: &DFSchema) -> Result<()> {
+    let mut arg_types = Vec::with_capacity(args.len());
+    for arg in args {
+        let Ok(arg_type) = arg.get_type(schema) else {
+            return Ok(());
+        };
+        arg_types.push(arg_type);
+    }
+    if arg_types.iter().any(is_string_type) {
+        return Err(wrong_input_types(&arg_types));
+    }
+    Ok(())
+}
+
+#[must_use]
+pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
+    vec![Arc::new(SequenceStringBounds)]
 }
 
 impl ScalarUDFImpl for SparkSequence {
@@ -183,7 +287,8 @@ impl ScalarUDFImpl for SparkSequence {
             .iter()
             .map(|field| field.data_type().clone())
             .collect();
-        let nullable = args.arg_fields.iter().any(|field| field.is_nullable());
+        let nullable = args.arg_fields.iter().any(|field| field.is_nullable())
+            || declared.iter().any(is_string_type);
         Ok(Arc::new(Field::new(
             "sequence",
             self.return_type(&declared)?,
@@ -200,11 +305,14 @@ impl ScalarUDFImpl for SparkSequence {
         let ScalarFunctionArgs {
             args: arg_values,
             return_field,
+            config_options,
             ..
         } = args;
         let DataType::List(element) = return_field.data_type() else {
             return exec_err!("sequence needs a list return");
         };
+        let zone = session_time_zone_from_options(config_options.as_ref());
+        let now = Utc::now();
         if arg_values
             .iter()
             .all(|value| matches!(value, ColumnarValue::Scalar(_)))
@@ -213,8 +321,8 @@ impl ScalarUDFImpl for SparkSequence {
                 DataType::Int8 | DataType::Int16 | DataType::Int32 | DataType::Int64 => {
                     scalar_ints(element, &arg_values)
                 }
-                DataType::Date32 => scalar_dates(element, &arg_values),
-                DataType::Timestamp(_, _) => scalar_timestamps(element, &arg_values),
+                DataType::Date32 => scalar_dates(element, &arg_values, zone, now),
+                DataType::Timestamp(_, _) => scalar_timestamps(element, &arg_values, zone, now),
                 other => exec_err!("sequence cannot build {other} elements"),
             };
         }
@@ -224,8 +332,8 @@ impl ScalarUDFImpl for SparkSequence {
             DataType::Int8 | DataType::Int16 | DataType::Int32 | DataType::Int64 => {
                 invoke_ints(&arrays, row_count, element)
             }
-            DataType::Date32 => invoke_dates(&arrays, row_count, element),
-            DataType::Timestamp(_, _) => invoke_timestamps(&arrays, row_count, element),
+            DataType::Date32 => invoke_dates(&arrays, row_count, element, zone, now),
+            DataType::Timestamp(_, _) => invoke_timestamps(&arrays, row_count, element, zone, now),
             other => exec_err!("sequence cannot build {other} elements"),
         }
     }
@@ -251,11 +359,11 @@ fn scalar_int(value: &ColumnarValue) -> Result<Option<i64>> {
     }
 }
 
-fn scalar_days(value: &ColumnarValue) -> Result<Option<i32>> {
+fn scalar_days(value: &ColumnarValue, zone: &str, now: DateTime<Utc>) -> Result<Option<i32>> {
     match value {
         ColumnarValue::Scalar(ScalarValue::Null) => Ok(None),
         ColumnarValue::Scalar(scalar) => {
-            let single = as_date_days(&scalar.to_array_of_size(1)?)?;
+            let single = as_date_days(&scalar.to_array_of_size(1)?, zone, now)?;
             Ok(if single.is_null(0) {
                 None
             } else {
@@ -274,11 +382,16 @@ fn scalar_interval(value: &ColumnarValue) -> Result<Option<IntervalMonthDayNano>
     }
 }
 
-fn scalar_micros(value: &ColumnarValue) -> Result<Option<i64>> {
+fn scalar_micros(
+    value: &ColumnarValue,
+    target: &DataType,
+    zone: &str,
+    now: DateTime<Utc>,
+) -> Result<Option<i64>> {
     match value {
         ColumnarValue::Scalar(ScalarValue::Null) => Ok(None),
         ColumnarValue::Scalar(scalar) => {
-            let single = as_micros(&scalar.to_array_of_size(1)?)?;
+            let single = as_micros(&scalar.to_array_of_size(1)?, target, zone, now)?;
             Ok(if single.is_null(0) {
                 None
             } else {
@@ -313,9 +426,14 @@ fn scalar_ints(element: &FieldRef, args: &[ColumnarValue]) -> Result<ColumnarVal
     }
 }
 
-fn scalar_dates(element: &FieldRef, args: &[ColumnarValue]) -> Result<ColumnarValue> {
-    let start = scalar_days(&args[0])?;
-    let stop = scalar_days(&args[1])?;
+fn scalar_dates(
+    element: &FieldRef,
+    args: &[ColumnarValue],
+    zone: &str,
+    now: DateTime<Utc>,
+) -> Result<ColumnarValue> {
+    let start = scalar_days(&args[0], zone, now)?;
+    let stop = scalar_days(&args[1], zone, now)?;
     let stride = if args.len() > 2 {
         Some(scalar_interval(&args[2])?)
     } else {
@@ -346,9 +464,15 @@ fn scalar_dates(element: &FieldRef, args: &[ColumnarValue]) -> Result<ColumnarVa
     }
 }
 
-fn scalar_timestamps(element: &FieldRef, args: &[ColumnarValue]) -> Result<ColumnarValue> {
-    let start = scalar_micros(&args[0])?;
-    let stop = scalar_micros(&args[1])?;
+fn scalar_timestamps(
+    element: &FieldRef,
+    args: &[ColumnarValue],
+    zone: &str,
+    now: DateTime<Utc>,
+) -> Result<ColumnarValue> {
+    let target = element.data_type();
+    let start = scalar_micros(&args[0], target, zone, now)?;
+    let stop = scalar_micros(&args[1], target, zone, now)?;
     let stride = if args.len() > 2 {
         Some(scalar_interval(&args[2])?)
     } else {
@@ -358,23 +482,23 @@ fn scalar_timestamps(element: &FieldRef, args: &[ColumnarValue]) -> Result<Colum
         let explicit = match stride {
             None => None,
             Some(None) => {
-                let shaped = shape_timestamps(Vec::new());
+                let shaped = shape_timestamps(element, Vec::new());
                 return finish_one(element, shaped, false);
             }
             Some(Some(given)) => Some(given),
         };
         match rows::timestamp_row(start, stop, explicit)? {
             None => {
-                let shaped = shape_timestamps(Vec::new());
+                let shaped = shape_timestamps(element, Vec::new());
                 finish_one(element, shaped, false)
             }
             Some(pieces) => {
-                let shaped = shape_timestamps(pieces);
+                let shaped = shape_timestamps(element, pieces);
                 finish_one(element, shaped, true)
             }
         }
     } else {
-        let shaped = shape_timestamps(Vec::new());
+        let shaped = shape_timestamps(element, Vec::new());
         finish_one(element, shaped, false)
     }
 }
@@ -416,8 +540,11 @@ fn shape_dates(values: Vec<i32>) -> ArrayRef {
     Arc::new(Date32Array::from(values))
 }
 
-fn shape_timestamps(values: Vec<i64>) -> ArrayRef {
-    Arc::new(TimestampMicrosecondArray::from(values).with_timezone("UTC"))
+fn shape_timestamps(element: &FieldRef, values: Vec<i64>) -> ArrayRef {
+    match element.data_type() {
+        DataType::Timestamp(_, None) => Arc::new(TimestampMicrosecondArray::from(values)),
+        _ => Arc::new(TimestampMicrosecondArray::from(values).with_timezone("UTC")),
+    }
 }
 
 fn invoke_ints(arrays: &[ArrayRef], row_count: usize, element: &FieldRef) -> Result<ColumnarValue> {
@@ -461,13 +588,15 @@ fn invoke_dates(
     arrays: &[ArrayRef],
     row_count: usize,
     element: &FieldRef,
+    zone: &str,
+    now: DateTime<Utc>,
 ) -> Result<ColumnarValue> {
     let mut offsets: Vec<i32> = Vec::with_capacity(row_count + 1);
     offsets.push(0);
     let mut validity: Vec<bool> = Vec::with_capacity(row_count);
     let mut any_null = false;
-    let starts = as_date_days(&arrays[0])?;
-    let stops = as_date_days(&arrays[1])?;
+    let starts = as_date_days(&arrays[0], zone, now)?;
+    let stops = as_date_days(&arrays[1], zone, now)?;
     let strides = if arrays.len() > 2 {
         Some(as_interval(&arrays[2])?)
     } else {
@@ -503,13 +632,16 @@ fn invoke_timestamps(
     arrays: &[ArrayRef],
     row_count: usize,
     element: &FieldRef,
+    zone: &str,
+    now: DateTime<Utc>,
 ) -> Result<ColumnarValue> {
     let mut offsets: Vec<i32> = Vec::with_capacity(row_count + 1);
     offsets.push(0);
     let mut validity: Vec<bool> = Vec::with_capacity(row_count);
     let mut any_null = false;
-    let starts = as_micros(&arrays[0])?;
-    let stops = as_micros(&arrays[1])?;
+    let target = element.data_type();
+    let starts = as_micros(&arrays[0], target, zone, now)?;
+    let stops = as_micros(&arrays[1], target, zone, now)?;
     let strides = if arrays.len() > 2 {
         Some(as_interval(&arrays[2])?)
     } else {
@@ -537,7 +669,7 @@ fn invoke_timestamps(
         }
         offsets.push(fit_i32(values.len())?);
     }
-    let shaped = shape_timestamps(values);
+    let shaped = shape_timestamps(element, values);
     finish_list(element, offsets, validity, any_null, shaped)
 }
 
@@ -556,12 +688,21 @@ fn as_i64(array: &ArrayRef) -> Result<Int64Array> {
     if array.data_type() == &DataType::Int64 {
         return downcast_primitive(array, "int");
     }
+    if is_string_type(array.data_type()) {
+        let casted =
+            crate::cast_map::spark_cast_ansi_zoned(array, &DataType::Int64, "UTC", Utc::now())?;
+        return downcast_primitive(&casted, "int");
+    }
     downcast_primitive(&cast(array.as_ref(), &DataType::Int64)?, "int")
 }
 
-fn as_date_days(array: &ArrayRef) -> Result<Date32Array> {
+fn as_date_days(array: &ArrayRef, zone: &str, now: DateTime<Utc>) -> Result<Date32Array> {
     if array.data_type() == &DataType::Date32 {
         return downcast_primitive(array, "date");
+    }
+    if is_string_type(array.data_type()) {
+        let casted = crate::cast_map::spark_cast_ansi_zoned(array, &DataType::Date32, zone, now)?;
+        return downcast_primitive(&casted, "date");
     }
     downcast_primitive(&cast(array.as_ref(), &DataType::Date32)?, "date")
 }
@@ -570,9 +711,30 @@ fn microsecond_utc() -> DataType {
     DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into()))
 }
 
-fn as_micros(array: &ArrayRef) -> Result<TimestampMicrosecondArray> {
+fn timestamp_string_target(element: &DataType) -> DataType {
+    match element {
+        DataType::Timestamp(_, None) => DataType::Timestamp(TimeUnit::Microsecond, None),
+        _ => microsecond_utc(),
+    }
+}
+
+fn as_micros(
+    array: &ArrayRef,
+    target: &DataType,
+    zone: &str,
+    now: DateTime<Utc>,
+) -> Result<TimestampMicrosecondArray> {
     if array.data_type() == &microsecond_utc() {
         return downcast_primitive(array, "timestamp");
+    }
+    if is_string_type(array.data_type()) {
+        let casted = crate::cast_map::spark_cast_ansi_zoned(
+            array,
+            &timestamp_string_target(target),
+            zone,
+            now,
+        )?;
+        return downcast_primitive(&casted, "timestamp");
     }
     match array.data_type() {
         DataType::Timestamp(_, _) => {
@@ -614,194 +776,4 @@ fn finish_list(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    use datafusion::arrow::array::AsArray;
-    use datafusion::prelude::SessionContext;
-
-    fn ctx() -> SessionContext {
-        let ctx = SessionContext::new();
-        crate::register_all(&ctx);
-        for rule in crate::analyzer_rules() {
-            ctx.add_analyzer_rule(rule);
-        }
-        ctx
-    }
-
-    async fn values_of(ctx: &SessionContext, sql: &str) -> Vec<i64> {
-        let batches = ctx
-            .sql(sql)
-            .await
-            .unwrap_or_else(|error| panic!("plan {sql}: {error}"))
-            .collect()
-            .await
-            .unwrap_or_else(|error| panic!("execute {sql}: {error}"));
-        let lists = batches[0].column(0).as_list::<i32>();
-        assert_eq!(lists.len(), 1);
-        let inner = lists.value(0);
-        if let Some(numbers) = inner.as_any().downcast_ref::<Int64Array>() {
-            return numbers.values().to_vec();
-        }
-        inner
-            .as_any()
-            .downcast_ref::<datafusion::arrow::array::Int32Array>()
-            .expect("int values")
-            .values()
-            .iter()
-            .map(|value| i64::from(*value))
-            .collect()
-    }
-
-    #[tokio::test]
-    async fn sequence_int_widths_and_steps() {
-        let ctx = ctx();
-        assert_eq!(
-            values_of(&ctx, "SELECT sequence(1, 3)").await,
-            vec![1, 2, 3]
-        );
-        assert_eq!(
-            values_of(&ctx, "SELECT sequence(3, 1)").await,
-            vec![3, 2, 1]
-        );
-        assert_eq!(
-            values_of(&ctx, "SELECT sequence(1, 10, 3)").await,
-            vec![1, 4, 7, 10]
-        );
-        let batches = ctx
-            .sql("SELECT sequence(CAST(1 AS TINYINT), CAST(3 AS TINYINT))")
-            .await
-            .expect("plan tinyint")
-            .collect()
-            .await
-            .expect("execute tinyint");
-        assert_eq!(
-            batches[0].column(0).data_type(),
-            &DataType::List(Arc::new(Field::new("element", DataType::Int8, false)))
-        );
-    }
-
-    #[tokio::test]
-    async fn sequence_bigint_keeps_width() {
-        let ctx = ctx();
-        let batches = ctx
-            .sql("SELECT sequence(CAST(1 AS BIGINT), CAST(3 AS BIGINT))")
-            .await
-            .expect("plan bigint")
-            .collect()
-            .await
-            .expect("execute bigint");
-        assert_eq!(
-            batches[0].column(0).data_type(),
-            &DataType::List(Arc::new(Field::new("element", DataType::Int64, false)))
-        );
-    }
-
-    #[tokio::test]
-    async fn sequence_step_errors_carry_spark_text() {
-        let ctx = ctx();
-        for (sql, text) in [
-            (
-                "SELECT sequence(1, 3, 0)",
-                "requirement failed: Illegal sequence boundaries: 1 to 3 by 0",
-            ),
-            (
-                "SELECT sequence(1, 3, -1)",
-                "requirement failed: Illegal sequence boundaries: 1 to 3 by -1",
-            ),
-        ] {
-            let error = ctx
-                .sql(sql)
-                .await
-                .unwrap_or_else(|error| panic!("plan {sql}: {error}"))
-                .collect()
-                .await
-                .unwrap_err()
-                .to_string();
-            assert!(error.contains(text), "{sql}: {error}");
-        }
-    }
-
-    #[tokio::test]
-    async fn sequence_decimal_bound_refuses_wrong_input_types() {
-        let ctx = ctx();
-        let error = ctx
-            .sql("SELECT sequence(1.5, 3)")
-            .await
-            .err()
-            .unwrap_or_else(|| panic!("should refuse"))
-            .to_string();
-        assert!(
-            error.contains("DATATYPE_MISMATCH.SEQUENCE_WRONG_INPUT_TYPES"),
-            "{error}"
-        );
-    }
-
-    #[tokio::test]
-    async fn sequence_null_bound_answers_null_with_empty_contains() {
-        let ctx = ctx();
-        let batches = ctx
-            .sql("SELECT sequence(1, CAST(NULL AS INT))")
-            .await
-            .expect("plan null bound")
-            .collect()
-            .await
-            .expect("execute null bound");
-        assert_eq!(
-            batches[0].column(0).data_type(),
-            &DataType::List(Arc::new(Field::new("element", DataType::Int32, false)))
-        );
-        assert!(batches[0].column(0).is_null(0));
-    }
-
-    #[tokio::test]
-    async fn sequence_dates_and_month_step() {
-        let ctx = ctx();
-        let batches = ctx
-            .sql("SELECT sequence(DATE'2024-01-01', DATE'2024-01-03')")
-            .await
-            .expect("plan dates")
-            .collect()
-            .await
-            .expect("execute dates");
-        let lists = batches[0].column(0).as_list::<i32>();
-        let row = lists.value(0);
-        let days = row
-            .as_any()
-            .downcast_ref::<Date32Array>()
-            .expect("date values");
-        assert_eq!(days.values(), &[19723, 19724, 19725]);
-        let batches = ctx
-            .sql("SELECT sequence(DATE'2024-01-01', DATE'2024-03-01', INTERVAL 1 MONTH)")
-            .await
-            .expect("plan month step")
-            .collect()
-            .await
-            .expect("execute month step");
-        let lists = batches[0].column(0).as_list::<i32>();
-        let row = lists.value(0);
-        let days = row
-            .as_any()
-            .downcast_ref::<Date32Array>()
-            .expect("date values");
-        assert_eq!(days.values(), &[19723, 19754, 19783]);
-        let batches = ctx
-            .sql("SELECT sequence(DATE'2024-01-31', DATE'2024-03-31', INTERVAL 1 MONTH)")
-            .await
-            .expect("plan clamping month step")
-            .collect()
-            .await
-            .expect("execute clamping month step");
-        let lists = batches[0].column(0).as_list::<i32>();
-        let row = lists.value(0);
-        let days = row
-            .as_any()
-            .downcast_ref::<Date32Array>()
-            .expect("date values");
-        let rendered: Vec<String> = days
-            .iter()
-            .map(|day| rows::format_days(day.expect("date value")).expect("format date"))
-            .collect();
-        assert_eq!(rendered, vec!["2024-01-31", "2024-02-29", "2024-03-31"]);
-    }
-}
+mod tests;

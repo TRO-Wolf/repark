@@ -102,7 +102,11 @@ impl SessionExtension for SparkExtension {
         ctx.add_analyzer_rule(Arc::new(crate::spark_typed::FoldSparkNumericCasts));
         ctx.add_analyzer_rule(Arc::new(crate::spark_typed::SparkProjectionDisplay));
         ctx.add_analyzer_rule(Arc::new(repark_core::StackRewrite));
-        TaExtension.register(ctx)
+        TaExtension.register(ctx)?;
+        ctx.add_analyzer_rule(Arc::new(
+            repark_functions::spark_nvl_rule::SparkNvlFamilyRewrite,
+        ));
+        Ok(())
     }
 }
 

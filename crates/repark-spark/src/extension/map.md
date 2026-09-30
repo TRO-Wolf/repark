@@ -48,6 +48,12 @@ function-registry + analyzer-rule installation + the composed
   installs the post-coercion rules minus the subsumed late
   `spark_integer_literal`.
   pins: sql-literal-typing-1/L-001, L-002
+  **NVL-TYPE-COERCION-1 (2026-09-29):** the same contract test pinned a fifth
+  pre-coercion seat, `spark_nullif_rewrite` immediately before `type_coercion`;
+  the verifier fold removed that seat and the family rule
+  (`spark_nvl_family_rewrite`) now runs last. The nullif door pins prove the
+  seat is gone without losing the rewrite.
+  pins: nvl-type-coercion-1/C-002
   **WO INTDIV-1 (2026-09-28):** the same contract test pins a fifth pre-coercion seat,
   `spark_fractional_division` immediately before `higher_order_preparation` (the four
   existing offsets are unchanged), and the filter passes it through.

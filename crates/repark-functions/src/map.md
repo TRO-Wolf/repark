@@ -496,6 +496,17 @@ scalars live under [`try_invert/`](try_invert/map.md).
   reaches a registered UDF, so the mode cannot be fixed at registration. Colliding keys
   after a key cast are kept, as Spark stores them.
   pins: cast-map-spell-1/C-011, C-012, C-013
+  **NVL-TYPE-COERCION-1 re-verify 3 (2026-09-29, VN4-1):** `spark_cast_legacy_zoned`
+  joins `spark_cast_ansi_zoned` as the second `Mode`-fixed entry point over the same
+  `spark_cast`, so the `nullif` kernel can cast string sources under the live ANSI mode
+  without a new parser. pins: nvl-type-coercion-1/C-019
+  **NVL-TYPE-COERCION-1 re-verify 6 follow-up (2026-09-30, VN7-3):**
+  `strict_integer_text` re-exports the ANSI string-to-`Int64` leaf
+  (`spark_trim` plus `parse_strict_integer`, whose `Int64` range filter is
+  vacuous) for the `nullif` ceiling proof, so the proof parses `b` with the
+  same cast the compare kernel runs. A strict success also succeeds under
+  legacy with the same value, so the proof holds in both ANSI modes without
+  reading the flag the ceiling never sees. pins: nvl-type-coercion-1/C-032
 - `iceberg_system.rs` — **ICE-SYSTEM-FUNCTIONS-1 (2026-09-20), round 1 of 3:**
   the Iceberg `bucket(n, col)` / `truncate(w, col)` system functions as scalar
   UDFs under reserved internal names (`__iceberg_system_bucket`,
@@ -578,6 +589,121 @@ scalars live under [`try_invert/`](try_invert/map.md).
   it names the conf and the v2 default only. pins: v3-9-mor-predicate-dml-dv/C-006
   **WO U5 PR2b (2026-09-24):** the resolver parses the value as an integer and accepts `1`
   (D-CREATE-V1); `0`, `4`, negatives and non-integers refuse, naming v1, v2 or v3.
+  **NVL-TYPE-COERCION-1 (2026-09-29):** the const folder matches the
+  `__repark_nullif_pick(Eq, value)` shape so `array_repeat` ceilings still
+  fire through the rewritten `nullif`. pins: nvl-type-coercion-1/C-002.
+  **Re-verify 2 (2026-09-29, VN3-2):** the folder also matches
+  `__repark_nullif_compare(first, second)` like `nullif`, so widened const
+  `nullif` still folds. pins: nvl-type-coercion-1/C-017.
+  **Re-verify 3 (2026-09-29, VN4-6):** that match is removed again — the arm is
+  plain `nullif` as on main — because the kernel compares in its compare type,
+  not as `i128`. The lossy `sequence(0L, nullif(9007199254740993L,
+  9007199254740992D))` still refuses: the ceiling folds the pre-rewrite
+  `nullif` (this rule seats before the `nvl`-family rewrite), carried from
+  main. pins: nvl-type-coercion-1/C-021.
+  **Re-verify 4 (2026-09-30, VN5-7):** the plain-`nullif` arm folds only
+  same-type exact-integer literals now (floats, strings, casts and mixed
+  widths defer to runtime), so the lossy `sequence` cell answers NULL like
+  Spark. This corrects the R3 "carried from main" line: base fails earlier
+  with `DATATYPE_MISMATCH`, so the fold first became reachable in this unit.
+  pins: nvl-type-coercion-1/C-025.
+  **Re-verify 5 (2026-09-30, VN6-2):** `nullif(a, b)` is bounded by its
+  first argument whenever `a` is an exact integer of any width or signedness
+  (integer `CAST` chains count), whatever `b` is; it folds to NULL only on
+  proven equality — `i128` for integer pairs, `f64` with NaN equality when a
+  float is involved — so mixed-width over-ceiling counts refuse again while
+  the lossy `sequence` cell still answers NULL. Truncated floats never fold.
+  pins: nvl-type-coercion-1/C-027.
+  **Re-verify 6 (2026-09-30, VN7-1/VN7-2):** the bound is the general
+  `const_i128` of the first argument — `abs`, `greatest`, `CASE`, scalar
+  subqueries, nested `nullif` and integer casts all refuse over the ceiling
+  again — and the `__repark_nullif_compare` form the `F.expr` door produces
+  folds through the same arm, so every door refuses alike. Strings stay
+  unknown (base never folded a string-derived count: `spark_decimal_rewrite`
+  wraps those casts in an unfoldable UDF first), and the bound never
+  unwraps that UDF while the proof does, so `CAST(101 AS DECIMAL)`
+  proves but wrapped shapes like `CAST(101.9D AS INT)` keep answering.
+  Equality proves three ways — exact integers both sides, an
+  exactly-integral `Decimal128` second against an exact first, or the
+  kept `f64` compare — so `nullif(101, 101.0D)` and
+  `nullif(101, CAST(101 AS DECIMAL))` answer NULL while
+  `nullif(101, '101')` stays ceiling-refused. The fold lives in
+  `cardinality_nullif.rs` (file-size split, move-only).
+  pins: nvl-type-coercion-1/C-029.
+  **Re-verify 6 follow-up (2026-09-30, VN7-3):** the residue is fixed, not
+  carried — a `STRING` literal second proves equality through the same
+  strict integer cast the compare kernel runs, so `nullif(101, '101')`
+  and `nullif(101, ' 101 ')` yield NULL under the ceiling like base and
+  Spark while unparsable or unequal seconds keep the bound at `a`.
+  pins: nvl-type-coercion-1/C-032.
+  **Re-verify 7 (2026-09-30, VN8-1/VN8-2/VN8-4):** the proofs are gone —
+  the `nullif`/`__repark_nullif_compare` ceiling bound is `const_i128`
+  of the unmodified first argument, `b` is never evaluated, and nothing
+  ever folds to NULL; a foldable first over the ceiling refuses whatever
+  the second is (dated residue in the ledger, equal and unequal pairs).
+  pins: nvl-type-coercion-1/C-033.
+  **Re-verify 8 fold (2026-09-30, VN9-1/VN9-2):** the `nullif` arm folds
+  nested (base's value: exact equality or unknown) while the ceiling
+  call sites fold a direct `nullif` count/stop argument as COUNT (an
+  inexact second keeps the bound at the first); `const_i128` itself is
+  untouched. pins: nvl-type-coercion-1/C-035.
+  **Re-verify 8 follow-up (2026-09-30, VN9-1):** the fold also matches
+  the unlowered `nvl`-family spellings — `nvl`/`ifnull` as first-match,
+  `nvl2` by branch, `zeroifnull`/`nullifzero` as `nullif(x, 0)` — so
+  column-API-built counts refuse like the SQL door.
+  pins: nvl-type-coercion-1/C-037.
+  **Re-verify 9 fold (2026-09-30, VN10-3):** the `zeroifnull` arm folds
+  as `coalesce(x, 0)` (`zeroifnull_fold`); `nullifzero` stays
+  `nullif(x, 0)`. pins: nvl-type-coercion-1/C-039.
+- `cardinality_nullif.rs` — **NVL-TYPE-COERCION-1 re-verify 6
+  (2026-09-30, VN7-1/VN7-2/VN7-3):** the `nullif` ceiling fold, split out of
+  `cardinality.rs` (move-only): `nullif_const_int` bounds by the first
+  argument and folds proven-equal pairs to NULL; string literals prune to
+  NULL before the shared `const_i128`, so string-derived counts stay
+  unknown like base. The bound and the proof evaluate separately: the
+  bound never unwraps the nullable-decimal UDF (base cannot see through
+  it either, so wrapped shapes like `CAST(101.9D AS INT)` keep answering),
+  while the proof unwraps it (`CAST(101 AS DECIMAL)` proves) and reads
+  `Decimal128` cores through float/decimal casts only (truncated for the
+  bound, exact for equality); the kept `f64` path keeps the lossy
+  `sequence` pins NULL. pins: nvl-type-coercion-1/C-029.
+  **Re-verify 6 follow-up (2026-09-30, VN7-3):** the fourth proof leg
+  pairs an integral-literal first (through `Alias`/`Negative` only, never
+  casts, so float-32 and decimal-to-`f64` rounding cannot fake equality)
+  with a `STRING` literal second parsed by the shared
+  `strict_integer_text`; equal pairs fold to NULL and every other string
+  second keeps the bound at `a`. pins: nvl-type-coercion-1/C-032.
+  **Re-verify 7 (2026-09-30, VN8-1/VN8-2/VN8-4):** the whole fold is one
+  line now — `const_i128(first)` — after the string pruning, the decimal
+  unwrapping, the equality proof, the string arm and the float leg are
+  deleted with the `strict_integer_text` share they were built for; net
+  line count down. pins: nvl-type-coercion-1/C-033.
+  **Re-verify 8 fold (2026-09-30, VN9-1/VN9-2):** one `nullif_value`
+  function again: exact equality of the two `exact_i128` sides folds to
+  NULL, an inexact second keeps the bound at the first in a COUNT
+  position (`array_repeat`/`repeat` count, `sequence` stop, under
+  `Alias`/`Cast` only) and folds unknown in every nested position, so
+  `coalesce(nullif(1, 1), 1000)` refuses and `sequence(nullif(1, 1),
+  1000)` answers NULL like base. `exact_i128` is `const_i128` over
+  integral-decimal-normalized trees plus the `f64`-image check, so
+  `101.4` never proves equality while `101.0D`, `101L` and `'101'` do;
+  the nullable-cast UDF stays opaque (a wrapped second is residue, and
+  the `F.expr` door folds `CAST('0' AS INT)` first so it answers where
+  SQL refuses). pins: nvl-type-coercion-1/C-035.
+  **Re-verify 8 follow-up (2026-09-30, VN9-1):** `nvl_fold`,
+  `nvl2_fold` (exact-null tests via `is_exact_null`) and
+  `nullifzero_nested` fold the unlowered spellings with the same
+  `nullif_value` semantics; `zin`/`niz` need no COUNT path since their
+  zero side is never unknown. pins: nvl-type-coercion-1/C-037.
+  **Re-verify 9 fold (2026-09-30, VN10-1..VN10-3):** the bound is
+  unguarded `const_i128(first)` and exactness guards only the equality
+  proof, which needs both sides exact; a `Cast`/`TryCast` to an
+  integral type counts as exact at its cast result, so
+  `nullif(try_cast(150.5D AS INT), 0)` bounds at 150 while
+  `nullif(101, CAST(101.5D AS INT))` folds to NULL.
+  `zeroifnull_fold` is `nvl_fold([x, 0])`, `zeroifnull` leaves
+  `exact_null_call` (it never returns NULL), and the unit test pins
+  the corrected shape. pins: nvl-type-coercion-1/C-038, C-039.
 
 
 - **R-FN-BATCH4** aggregate expansion.
@@ -697,6 +823,119 @@ scalars live under [`try_invert/`](try_invert/map.md).
   Timestamp only. The facade column-CAST pin still holds Spark-equal non-null
   struct CAST.
   pins: nullability-2/C-001, C-002, C-004
+- `spark_nvl.rs` — **NVL-TYPE-COERCION-1 (2026-09-29):** Spark's `nvl`-family
+  widening, measured cell by cell on live Spark 4.1.2 (UTC + America/New_York,
+  ANSI on). `nvl`/`ifnull` widen like `coalesce`, `nvl2` branches widen like
+  `if`, `nullif` compares after widening and returns its first argument's type,
+  `zeroifnull` is `coalesce(arg, 0)`, `nullifzero` is `nullif(arg, 0)`.
+  Refusals carry Spark's `DATATYPE_MISMATCH` / `WRONG_NUM_ARGS` classes.
+  pins: nvl-type-coercion-1/C-001, C-002
+  **Re-verify 9 fold (2026-09-30, ANSI-off):** the `*_with_ansi` entries
+  apply Spark's legacy coercion to top-level `STRING` pairs when ANSI is
+  off, measured on live Spark 4.1.2 (UTC): value widening
+  (`nvl`/`ifnull`/`nvl2`/`zeroifnull`) goes to `STRING` except
+  `STRING`×`BOOLEAN`, which refuses `DATA_DIFF_TYPES`; `nullif`
+  compares at the other side's type (VN5-3: `FLOAT`/`DECIMAL`, not
+  `DOUBLE`). Nested complex types keep the ANSI table (unmeasured).
+  `ansi_string_widen` is the extracted ANSI string table and doubles
+  as the legacy peer test. pins: nvl-type-coercion-1/C-040
+- `spark_nvl_udf.rs` — **NVL-TYPE-COERCION-1 (2026-09-29):** the six Spark-door
+  UDFs plus the internal `__repark_nullif_pick` and the `nvl_cast` vehicle.
+  Validation lives in `coerce_types`/`return_type`; evaluation moved to the
+  rule in the verifier fold (below) and the kernels stay as the blind fallback.
+  `nullif`/`nullifzero` validate here and execute through the rule.
+  pins: nvl-type-coercion-1/C-002
+  **Verifier fold (2026-09-29):** `nvl_cast_expr(value, W)` routes every
+  widening cast through the session-zoned Spark cast (`spark_cast_ansi_zoned`),
+  so string→timestamp reads the session zone and string leaves parse like
+  Spark (trim, `d`/`f` suffix, partial dates, boolean vocabulary); failures
+  raise `CAST_INVALID_INPUT`. pins: nvl-type-coercion-1/C-009, C-010
+  **Re-verify 9 fold (2026-09-30, ANSI-off):** `zero_scalar` gains the
+  `STRING` zero (`'0'`), which the legacy `zeroifnull` widening needs.
+  pins: nvl-type-coercion-1/C-040
+- `spark_nvl_eager.rs` — **NVL-TYPE-COERCION-1 (2026-09-29, VN3-1..VN3-3):**
+  the two single-evaluation kernels the rule reaches for: `__repark_nvl_pick`
+  takes the two widened branches once each and picks per row (volatile-first
+  `nvl`/`ifnull`/`zeroifnull`; it evaluates the fallback on every row, a
+  recorded gap against Spark laziness that applies only there), and
+  `__repark_nullif_compare` takes `first`/`second` once each, casts both to
+  the compare type inside, compares with Arrow `eq`, and returns the original
+  `first` array or NULL (widened `nullif` and every `nullifzero`; struct,
+  multi-leaf and list compares stay on the pick form). pins:
+  nvl-type-coercion-1/C-016, C-017
+  **Re-verify 3 (2026-09-29, VN4-1..VN4-4):** string sources cast through the
+  session-zoned Spark cast under the live ANSI mode (ANSI failures raise
+  `CAST_INVALID_INPUT`; legacy failures cast to NULL), the pick declares
+  nullable from its fallback (the engine misreports some volatile `CASE`
+  branches as non-nullable), and `Float32`/`Float64` compares normalize
+  `-0.0` before `eq` (`NaN` already equals `NaN`). pins:
+  nvl-type-coercion-1/C-019, C-020
+  **Re-verify 4 (2026-09-30, VN5-2/VN5-4/VN5-5):** the float compare is one
+  null-propagating zip (`==` plus NaN-equals-NaN, no intermediate arrays),
+  so widened float `nullif` runs at base speed and kernel NaN payloads
+  compare equal like Spark; dictionary-encoded strings unpack before the
+  same Spark cast; the pick trusts its first argument's nullability flag
+  unless the first holds `CASE`/`IF` (the engine's volatile-`CASE`
+  misreport is physical-only and deterministic, and `IF()` reaches the
+  rule as a function). pins: nvl-type-coercion-1/C-022, C-023, C-024
+  **Re-verify 5 (2026-09-30, VN6-1/VN6-3):** the pick carries its first
+  argument's logical nullability (computed by the rule against the input
+  schema, `TryCast`/`try_*` shapes forced nullable) instead of the physical
+  flag, which understates for `TRY_CAST`; the kernel still returns the
+  original first array while a scalar side is cast once through a one-row
+  array for the compare. pins: nvl-type-coercion-1/C-026, C-028
+  **Re-verify 6 (2026-09-30, VN7-4):** an all-NULL first returns at once and
+  a partially-NULL first masks the array second side before the compare
+  cast, so Spark's skipped right side never raises `CAST_INVALID_INPUT` on
+  NULL rows; non-NULL invalid rows still raise, the first-side cast is
+  untouched, and a null-free first pays one `null_count` check.
+  pins: nvl-type-coercion-1/C-031
+- `spark_nvl_rule.rs` — **NVL-TYPE-COERCION-1 (2026-09-29):** the
+  `SparkNvlFamilyRewrite` analyzer rule, appended last on the Spark door and
+  the `F.expr` context. NULL-literal and non-null-literal sides fold without
+  a `CASE`. `nullifzero(c)` expands inline through the pick form, which
+  double-evaluates like Spark's own `nullifzero`.
+  The widened zero emits as `CAST(0 AS W)`, never a bare literal: both doors
+  analyze twice and the literal rules narrow a bare `Int64(0)` on the second
+  pass. pins: nvl-type-coercion-1/C-002, C-008, C-011
+  **Re-verify (2026-09-29, VN2-1..VN2-3):** the `CASE` lowering evaluated its
+  test twice, so `nvl`/`ifnull` lower to `coalesce` of the two `nvl_cast`
+  branches and `zeroifnull` to `coalesce` with the widened zero (`nvl2` keeps
+  its `CASE`: test, branches each appear once). Scalar `nullif` lowers to
+  DataFusion's own `nullif` over the shaped operands (cast back to the first
+  type; the NTZ/ns targets use their cast UDFs because the second pass peels
+  a bare naive-`CAST` of an LTZ child); deterministic mixed-type and struct
+  compares keep the pick form, which is exact there. The rule only rewrites
+  `UserDefined`-signature `nullif` calls, so its own emitted form and the
+  division zero-guard pass through. Grouping-set inner expressions keep
+  their names across the rewrite. pins: nvl-type-coercion-1/C-012, C-013,
+  C-014
+  **Re-verify 2 (2026-09-29, VN3-1..VN3-4):** `coalesce` simplifies to
+  `CASE WHEN a IS NOT NULL`, so a volatile first now lowers to
+  `__repark_nvl_pick` over the widened branches (single evaluation; the
+  non-volatile path keeps `coalesce` and its laziness); widened scalar
+  `nullif` and every `nullifzero` lower to `__repark_nullif_compare`, which
+  returns the original value, while same-type `nullif` keeps DataFusion's
+  own form with no cast-back; a no-op `nvl_cast` (arg type already the widen)
+  is skipped. pins: nvl-type-coercion-1/C-016, C-017, C-018
+  **Re-verify 4 (2026-09-30, VN5-4):** a scalar `nullif` whose string side
+  still needs a cast lowers to the kernel even when the compare type equals
+  the first type, so both argument orders share the session-zoned Spark
+  cast; same-type and non-string widened `nullif` keep DataFusion's form.
+  pins: nvl-type-coercion-1/C-023
+  **Re-verify 5 (2026-09-30, VN6-1):** the rule computes the pick's first
+  nullability from the logical widened branch against the input schema
+  (`nullable()`, `TryCast`/`try_*` top shapes forced nullable) and carries
+  the flag into the pick; the `CASE`/`IF` trust rule is unchanged.
+  pins: nvl-type-coercion-1/C-026
+  **Re-verify 9 fold (2026-09-30, ANSI-off):** the rule reads
+  `spark.sql.ansi.enabled` from its `ConfigOptions` and widens through
+  the `*_with_ansi` entries, so the same plan coerces legacy under
+  ANSI off and ANSI under ANSI on. `TIMESTAMP`→`STRING` branches route
+  through `__repark_timestamp_to_string__`, since the kernel cast
+  formats `T…Z` where Spark formats a blank-separated wall time; the
+  `F.expr` seat is removed (its context has no session ANSI flag) so
+  the session lowers with the live flag. pins: nvl-type-coercion-1/C-040
 - `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer
   rule, installed on BOTH doors via `install_shared_analyzer_rules` (defined here since FNP-11B step 3 and re-exported from the crate root, so `repark_functions::install_shared_analyzer_rules` and run 16b's `session.rs` call are unchanged; the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts; the TIME guard left for `analyzer_rules()` in remediation round 1).
   installer calls it in place of the integer-only one — same line count, so the
@@ -768,6 +1007,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `crate::shim_udf_boilerplate!`. File-backed rather than root-inline because
   `scripts/check_lib_rs.py` counts every `lib.rs` line and this root sits at its 175 ceiling —
   the ceiling did not rise.
+- `eager.rs` — **NVL-TYPE-COERCION-1 (2026-09-29):** `analyze_eagerly` moved
+  here unchanged from `lib.rs` (sanctioned out (1), net-negative: the root
+  lands at 180 of its 186 ceiling with the four `spark_nvl` module decls) and
+  re-exported at the root, so every caller keeps its path.
+  pins: nvl-type-coercion-1/C-002
 - `url.rs` — Spark `parse_url` / `try_parse_url` use `java.net.URI`-shaped splitting (sibling
   `java_uri.rs`).
   `datafusion-spark` 54.1 extracts with `url::Url`, a WHATWG-URL **normalizer**;
@@ -951,6 +1195,31 @@ scalars live under [`try_invert/`](try_invert/map.md).
   closed-form counts reserve up front at native width with a scalar fast path. The int/date/
   timestamp row kernels live in `spark_sequence/rows.rs` (file-size split, move-only).
   pins: door-converge-2/C-007, C-009
+  **NVL-TYPE-COERCION-1 re-verify 6 (2026-09-30, VN7-6):** the never-casts
+  rule above gains one exception — `STRING` bounds with an `INT` sibling
+  coerce to the widest sibling width, restoring base's `array<int>` for
+  `sequence(1, nullif('101', 0))`, because Spark implicitly casts them and
+  the integer narrow still runs first (only string args cast, and the
+  analyzer-rule coerce that inserts the cast seats after narrowing).
+  Date/timestamp families, all-string bounds and `array_repeat` keep
+  refusing. pins: nvl-type-coercion-1/C-030
+  **NVL-TYPE-COERCION-1 re-verify 7 (2026-09-30, VN8-3):** the coercion
+  follows Spark 4.1.2 exactly as measured — under ANSI a `STRING` bound
+  casts to `BIGINT` through the shared ANSI string cast (trims, raises
+  `CAST_INVALID_INPUT`) and the result is `array<bigint>`; `coerce_types`
+  passes bounds through untouched so no DataFusion cast is inserted, and
+  the new `SequenceStringBounds` analyzer rule (seated before the
+  ceiling) refuses every `STRING` bound without ANSI. Date/`STRING`
+  siblings stay refused (carried: Spark ANSI answers). pins:
+  nvl-type-coercion-1/C-034
+  **NVL-TYPE-COERCION-1 re-verify 8 fold (2026-09-30, VN9-3):** a
+  `DATE`/`TIMESTAMP` bound with a `STRING` sibling takes the temporal
+  family and casts the string side through the shared ANSI string cast
+  in the session zone (`array<date>`, `array<timestamp>`,
+  `array<timestamp_ntz>` like Spark); the timestamp element follows the
+  temporal sibling and naive elements shape naive arrays. The tests move
+  to `spark_sequence/tests.rs` (file-size split, move-only). pins:
+  nvl-type-coercion-1/C-036
 - `spark_hash.rs` — **FNP-MATH-1 step 4 (2026-09-16, run 18a):** Spark Murmur3
   `hash` kernel (seed 42; per-type `mix`/`fmix` shapes verified against the fixture;
   strings as LE words with per-byte tails; arrays/structs/maps fold; always `int`,
@@ -1191,6 +1460,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `analyzer_rules()` since remediation round 1 (both doors refuse the same
   CAST-to-TIME text at build). pins: fnp-11b/C-002, C-003, C-004, C-005;
   `time_family::tests::*`.
+  **NVL re-verify (2026-09-29, VN2-4):** `SparkTypeof::simplify` folds from
+  the planned type, but skips the fold when the argument holds
+  `greatest`/`least` over a string (the fold answered where Spark refuses).
+  pins: nvl-type-coercion-1/C-015
   **FNP-11B remediation round 1 (2026-09-16):** `interval_avg` keeps exact-width
   (`i128`) sums with the overflow flag recomputed per add/subtract/merge and
   merges every state row (L-001, L-003); `to_char` resolves its input arm once
@@ -1198,6 +1471,14 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `to_number`/`to_binary` cache one format; `ntz_single` strips through one
   builder. PERF-001 stays per-row: the batch forward is unsound against the
   inner batch-atomic error (see the ledger). pins: fnp-11b/C-006, C-007.
+  **NVL-TYPE-COERCION-1 CI fix (2026-09-30):** the `SparkTypeof` interval
+  arms are gone. Their only consumer was the `day_interval_type_name`
+  divergence pin, which recorded their wrong answer (`interval month day nano`
+  for every interval input) against live Spark 4.1.2's `interval day` /
+  `interval year` / `interval month`; units arrive unit-less, so the
+  day/year/month spellings stay blocked behind the `MonthDayNano` refusal the
+  TYPEOF-SQL-14..16 pins assert, and the divergence pin records `raises`.
+  pins: nvl-type-coercion-1/C-002.
   **FNP-11B step 6 (2026-09-15):** `SparkTypeof` spells `array<…>` / `map<…>` /
   `struct<…>` recursively through the same table (no second table; the
   `repark-spark` renderer stays uncalled across the crate edge) and wrong arity

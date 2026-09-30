@@ -113,7 +113,6 @@ FACADE_ONLY_ROUTINE_NAMES: tuple[str, ...] = (
     "hll_union",
     "hll_union_agg",
     "hours",
-    "ifnull",
     "input_file_block_length",
     "input_file_block_start",
     "input_file_name",
@@ -170,9 +169,6 @@ FACADE_ONLY_ROUTINE_NAMES: tuple[str, ...] = (
     "now",
     "nth_value",
     "ntile",
-    "nullifzero",
-    "nvl",
-    "nvl2",
     "parse_json",
     "percent_rank",
     "percentile_approx",
@@ -269,7 +265,6 @@ FACADE_ONLY_ROUTINE_NAMES: tuple[str, ...] = (
     "xpath_string",
     "year",
     "years",
-    "zeroifnull",
     "zip_with",
 )
 

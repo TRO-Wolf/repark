@@ -14,6 +14,11 @@ parent keeps the UDF plumbing, dispatch (scalar/column paths), shaping and the
   from the start (`start + months × i`); runtime expansion refuses with the
   literal ceiling's text. Extracted 2026-09-15 as a file-size split (move-only).
   pins: door-converge-2/C-007, C-009
+- [`tests.rs`](tests.rs) — the `sequence` UDF tests, moved out of
+  [`spark_sequence.rs`](../spark_sequence.rs) 2026-09-30 as a file-size
+  split (move-only) so the temporal/`STRING` sibling support keeps the
+  parent under the ceiling.
+  pins: nvl-type-coercion-1/C-036
 
 ## Contracts pinned
 

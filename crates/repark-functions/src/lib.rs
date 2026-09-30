@@ -13,6 +13,7 @@ pub mod bool_decimal;
 mod interval_avg;
 pub use bool_decimal::install_shared_analyzer_rules;
 pub mod cardinality;
+mod cardinality_nullif;
 pub mod case_sensitive;
 pub mod cast_map;
 pub mod collection;
@@ -23,6 +24,7 @@ pub mod decimal_cast;
 pub mod decimal_precision;
 pub mod decimal_spark;
 pub mod declared_refuse;
+mod eager;
 pub mod expr_fn;
 pub mod format_version;
 pub mod generator;
@@ -58,6 +60,10 @@ pub mod spark_log;
 pub mod spark_log1p;
 pub mod spark_math;
 pub mod spark_nullability;
+pub mod spark_nvl;
+pub mod spark_nvl_eager;
+pub mod spark_nvl_rule;
+pub mod spark_nvl_udf;
 pub mod spark_regexp;
 pub mod spark_regexp_match;
 pub mod spark_result_types;
@@ -86,12 +92,11 @@ pub mod validate;
 #[cfg(test)]
 mod tests;
 
+pub use eager::analyze_eagerly;
 pub use grouping::ResolveGroupingId;
 pub use lambda_rebind::analyzer_rules_with_higher_order_preparation;
 pub use registration::analyzer_rules;
 
-use datafusion::execution::SessionState;
-use datafusion::logical_expr::LogicalPlan;
 use datafusion::prelude::SessionContext;
 
 /// Register the full Spark-compatible scalar/aggregate/window function set into `ctx`.
@@ -157,6 +162,8 @@ pub fn register_all(ctx: &SessionContext) {
         .chain(spark_chr::functions())
         .chain(spark_degrees::functions())
         .chain(spark_elt::functions())
+        .chain(spark_nvl_eager::functions())
+        .chain(spark_nvl_udf::functions())
         .chain(spark_startswith::functions())
         .chain(spark_hash::functions())
     {
@@ -171,16 +178,4 @@ pub fn register_all(ctx: &SessionContext) {
     registration::register_udf_families(ctx);
     decimal_spark::register_spark_decimal_planner(ctx);
     integer_spark::register_spark_integer_planner(ctx);
-}
-
-/// Run Spark analyzer rules until schema changes reach the `TypeCoercion` fixpoint.
-/// # Errors
-/// Propagates analyzer-rule failures as [`datafusion::error::DataFusionError`].
-pub fn analyze_eagerly(
-    state: &SessionState,
-    plan: LogicalPlan,
-) -> datafusion::error::Result<LogicalPlan> {
-    state
-        .analyzer()
-        .execute_and_check(plan, state.config_options(), |_, _| {})
 }

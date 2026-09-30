@@ -110,6 +110,10 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   **FNP-11B step 2 (2026-09-15):** the `to_date` arm takes 1 or 2 args
   (`expr_fn::to_date` widens to `Vec<Expr>`); `unix_timestamp` takes 0 to 2.
   pins: fnp-11b/C-002, C-003
+  **NVL-TYPE-COERCION-1 (2026-09-29):** `call_scalar_expr` routes the whole
+  `nvl` family (`nvl`, `ifnull`, `nvl2`, `nullif`, `zeroifnull`, `nullifzero`)
+  through `spark_nvl_udf::nvl_family_expr` onto the Spark-widening UDFs.
+  pins: nvl-type-coercion-1/C-002
 - [`function_dispatch/dispatch_json.rs`](function_dispatch/dispatch_json.rs) —
   **FNP-9/10 (2026-09-05):** arms for
   `get_json_object`, `json_array_length`, `json_object_keys`, `schema_of_json`, `to_json`,
@@ -163,6 +167,16 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   minus the subsumed late integer rule, so the `F.expr` door types mixed-width
   SQL exactly like the session door.
   pins: sql-literal-typing-1/L-001
+  **NVL-TYPE-COERCION-1 (2026-09-29):** `build_expr_context` seats the
+  family rewrite through the shared `append_nvl_family_rule` (last; the
+  verifier fold replaced the pre-coercion `nullif` seat), so the `F.expr`
+  door rewrites the family exactly like the session door.
+  pins: nvl-type-coercion-1/C-002
+  **Re-verify 9 fold (2026-09-30, ANSI-off):** the family seat is gone
+  again: the shared context carries no session ANSI flag, so `F.expr`
+  leaves the family raw and the consumer session lowers it with the
+  live flag, exactly like the column-API door.
+  pins: nvl-type-coercion-1/C-040
   **FN-FIX-1:** `window_from_aggregate` copies `IGNORE NULLS`. pins: fn-fix-1-registry-rows/C-002
   **FNP-AGG-1 slice (d) (2026-09-21):** `cast_unsigned_count_to_signed` moved here
   from `function_dispatch.rs` (same body, re-exported there) so `grouping_id_call`
@@ -240,6 +254,9 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   overwriting the door would break `FROM generate_series` users.
   pins: door-converge-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
   C-009, C-010, C-011, C-012, C-013, C-014; pins: door-converge-2/C-006
+  **NVL-TYPE-COERCION-1 (2026-09-29):** the six `nvl`-family spellings join
+  `SCALAR_NAMES` with their arities; both doors resolve the same
+  Spark-widening kernels. pins: nvl-type-coercion-1/C-002
   **ABS-EXPR-1 (2026-09-13):** `EXPECTED_DIVERGENCES` gains `abs` — the facade's core
   `checked_abs` raises on integer-min (Spark ANSI-on answer); the door's `SparkAbs`
   wraps because repark never sets `execution.enable_ansi_mode` — measured on typed

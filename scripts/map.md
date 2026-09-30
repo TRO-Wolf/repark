@@ -1,5 +1,7 @@
 # map — scripts/
 
+NVL-TYPE-COERCION-1 (2026-09-29): `check_lib_py.py` ratchets `functions_expr.py` 2171 → 2170 (the dead `coalesce` import leaves with the `_scalar` reroute), shrink-only, with the CAP-1 mirror. pins: nvl-type-coercion-1/C-002
+
 WO CASESENS-1 S5 (2026-09-27): `check_rust_file_size.py` ratchets `repark-iceberg/src/write/alter.rs` 1607 → 1606 (the DROP/REPLACE name pin is rewritten to the exact refusal without its comments), shrink-only. pins: casesens-1/C-013
 
 WO CASESENS-1 S3 (2026-09-27): `check_rust_file_size.py` retires the `repark-python/src/dataframe.rs` row (1005 → 976, under the default; the case-bind helpers moved to `dataframe_names.rs`). pins: casesens-1/C-009

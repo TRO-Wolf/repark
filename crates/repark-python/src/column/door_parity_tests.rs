@@ -85,6 +85,12 @@ const EXPECTED_DIVERGENCES: &[(&str, FacadeShape, &str)] = &[
 /// Scalar spellings covered by the explicit guard.
 const SCALAR_NAMES: &[(&str, usize)] = &[
     ("abs", 1),
+    ("nvl", 2),
+    ("ifnull", 2),
+    ("nvl2", 3),
+    ("nullif", 2),
+    ("zeroifnull", 1),
+    ("nullifzero", 1),
     ("hypot", 2),
     ("bin", 1),
     ("rint", 1),

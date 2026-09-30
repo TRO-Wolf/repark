@@ -5020,6 +5020,146 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   bool+long CANNOT_MERGE pin.
   **octo C3:** empty-list field then list-of-dict keeps array<struct>; string+struct
   CANNOT_MERGE pin.
+- `test_nvl_type_coercion_1.py` — **NVL-TYPE-COERCION-1 (2026-09-29):** 756 pins
+  over the recorded `test_nvl_type_coercion_1_spark.json` (live Spark 4.1.2, UTC +
+  America/New_York, ANSI on): SELECT typeof/value cells per session, struct/map
+  collect cells, the 17 facade `typeof` ops, temp-view cells, one INSERT flow
+  with both table reads, five known-divergence pins, and the `coalesce` guards.
+  The same file is the mutation instrument (red on base) and the gate's pytest leg.
+  pins: nvl-type-coercion-1/C-003, C-004, C-005, C-006, C-007
+  Verifier-fold pins (2026-09-29, VN-1..VN-3, same file — 390 lines, under the
+  1000-line ceiling): VN-1 pins the six lazy shapes (`nvl(1, 1/0)`, `nvl2(1, 2,
+  1/0)`, the ANSI overflow, the failed `assert_true`, the `nvl(x, 10/y)` column
+  form and its `F.nvl` twin) answering the first argument; VN-2 pins the
+  session-zone micros in New York (`1704474000000000`) and Kolkata
+  (`1704436200000000`, measured on live Spark 4.1.2) plus an Iceberg store and
+  micros/string read-back in New York; VN-3 pins the seven Spark string
+  widenings, the `'on'` refusal with `CAST_INVALID_INPUT`, and
+  `typeof(nvl('abc', 2))` as `bigint`. Every other expected value is the
+  recorded Spark answer from the verify-nvl `hbs.txt` battery.
+  Re-verify pins (2026-09-29, VN2-1..VN2-3, same file): the `rand()` and
+  `uuid()` single-evaluation repros for `nvl`, `ifnull`, `zeroifnull` and
+  `nullif` (each asserting 0 rows), a depth-12 `nvl` and `nullif` nesting
+  that plans in under 1 s, and exact-row `ROLLUP`/`CUBE` over `nvl`,
+  `ifnull` and `nullif`.
+  Re-verify 2 pins (2026-09-29, VN3-1..VN3-4, same file): the six vacuous
+  `IS NULL` pins are replaced by distribution pins (`nvl`/`ifnull`/
+  `zeroifnull` over `range(20000)` with a nullable fallback: no NULLs, the
+  share of 1s in 0.45-0.55) in SELECT, WHERE, GROUP BY and `lag()` plus
+  `F.nvl`/`F.ifnull` twins and literal-fallback collects; the seven
+  volatile-first `nullif` cast-back cells assert Spark's original values;
+  depth-12 widened `nullif` (bigint, double, string) and `nullifzero` plan
+  and run under 2 s; the `nvl` chain EXPLAIN shows no `__repark_nvl_cast`.
+  pins: nvl-type-coercion-1/C-016, C-017, C-018
+  Re-verify 3 pins (2026-09-29, VN4-1..VN4-4, same file): the 12-cell
+  string-source `nullif` matrix (padded numerics, `d`/`f` suffixes,
+  short and padded timestamps/dates) in UTC, New York and Kolkata; 8
+  ANSI-off cells (invalid strings answer the first argument); 4 ANSI-on
+  refusal cells (`CAST_INVALID_INPUT`); 5 WHERE and 2 column cells; the
+  volatile-first `nvl`/`ifnull` over a nullable column in SQL and over a
+  parquet column through `F.nvl` (20000 rows, null share ~1/6); the
+  `-0.0`/`NaN` `nullifzero`/`nullif` cells. Every expectation measured
+  on live Spark 4.1.2. pins: nvl-type-coercion-1/C-019, C-020
+  CI fix (2026-09-30): the `day_interval_type_name` divergence pin records
+  `raises` — `typeof` over an interval is blocked on the fnp-11b seam again,
+  so the cell refuses where Spark answers `interval day`.
+  pins: nvl-type-coercion-1/C-002
+- `test_nvl_type_coercion_1_vn5.py` — **NVL-TYPE-COERCION-1 re-verify 4
+  (2026-09-30, VN5-2/VN5-4/VN5-5/VN5-7):** the sibling split out at the
+  1000-line ceiling. 29 pins, every expectation measured on live Spark
+  4.1.2 (UTC): the kernel NaN-payload cells; `nullif(5L, ' 5 ')`,
+  `nullif(true, 'on'/'off'/'tr')` and `nullif(5L, '5.0')` in both
+  argument orders, ANSI on (values and `CAST_INVALID_INPUT` refusals)
+  and off, plus column forms; a dictionary-encoded parquet column
+  built from a `pa.dictionary`-typed table (encoding alone reads back
+  as `Utf8`); the `nvl(rand(), xd)` non-nullable schema; `IF()`-first
+  collects over a nullable column; the lossy `sequence` cell in both
+  spellings. pins: nvl-type-coercion-1/C-022, C-023, C-024, C-025.
+  Re-verify 7 (2026-09-30): both lossy cells refuse over the ceiling
+  per the bound-only residue. pins: nvl-type-coercion-1/C-033
+- `test_nvl_type_coercion_1_vn6.py` — **NVL-TYPE-COERCION-1 re-verify 5
+  (2026-09-30, VN6-1/VN6-2):** 26 pins. `nvl`/`ifnull` over `try_cast`,
+  `try_add`, `try_divide`, `try_element_at` and `try_to_number` with a
+  volatile child and a nullable fallback collect NULL like base and Spark in
+  SQL and DataFrame; mixed-width and `CAST` integer `nullif` over the 100
+  ceiling refuse, equal mixed-width `nullif` yields NULL, and the lossy
+  `sequence` cell still answers NULL. pins: nvl-type-coercion-1/C-026, C-027.
+  Re-verify 7 (2026-09-30): the lossy cell refuses per the bound-only
+  residue. pins: nvl-type-coercion-1/C-033
+- `test_nvl_type_coercion_1_vn7.py` — **NVL-TYPE-COERCION-1 re-verify 6
+  (2026-09-30, VN7-1/VN7-2/VN7-3/VN7-4/VN7-6):** 53 pins. Foldable-first
+  `nullif` (`abs`, `greatest`, `CASE`, scalar subquery, nested, `D`-cast)
+  refuses over the 100 ceiling in SQL and `F.expr`; `101.0D` and
+  `DECIMAL(101)` seconds yield NULL; equal string seconds (`'101'`,
+  `' 101 '`) yield NULL while unequal (`'102'`) and garbage (`'abc'`)
+  seconds keep the bound at `a`; the unsigned over-ceiling refusal stays
+  pinned; int-cast `D` firsts keep answering like base; string-first
+  `sequence` answers `101` as `array<int>` (`array<bigint>` for `1L`) in
+  SQL, `F.expr` and the column API while `array_repeat` and garbage
+  strings still refuse; NULL-first rows skip the compare cast and
+  non-NULL invalid rows still raise; garbage seconds raise
+  `CAST_INVALID_INPUT` under ANSI and answer `101` without it.
+  pins: nvl-type-coercion-1/C-029, C-030, C-031, C-032.
+  Re-verify 7 (2026-09-30): the equal-pair cells refuse per the bound-only
+  residue, string-first `sequence` answers `array<bigint>`, and the
+  ceiling-100 string-first cell refuses. pins: nvl-type-coercion-1/C-033,
+  C-034
+  Re-verify 8 fold (2026-09-30): the exact-equal pairs (`101.0D`,
+  `'101'`, `' 101 '`) answer NULL again; the nullable-cast-wrapped
+  `DECIMAL(5,0)` second stays refused as residue.
+  pins: nvl-type-coercion-1/C-035
+  Re-verify 9 fold (2026-09-30): the int-cast `D` firsts refuse
+  (guard-correct at TRUE 101 over 100) and the `DECIMAL(5,0)` second
+  answers NULL (the nullable wrapper is value-identity).
+  pins: nvl-type-coercion-1/C-038
+- `test_nvl_type_coercion_1_vn8.py` — **NVL-TYPE-COERCION-1 re-verify 7
+  (2026-09-30, VN8-1/VN8-2/VN8-3/VN8-4):** 71 pins. The VN8-1 bypass
+  shapes (`try_cast` first, `coalesce` first, simple-`CASE` first,
+  `coalesce` second) refuse over the 100 ceiling in SQL and `F.expr`,
+  and the column-spellable three refuse on the column API too (simple
+  `CASE` and scalar subqueries have no column spelling); the VN8-2
+  truncated-float family refuses on `F.expr`;
+  the VN8-4 residue shapes refuse in SQL and `F.expr`; equal mixed-width
+  `nullif(101, 101L)` refuses over the ceiling while `nullif(5, 5)`
+  answers NULL at the default ceiling; the VN7-1 foldable firsts and
+  VN6-2 mixed widths refuse on the column API too. `sequence` `STRING`
+  bounds answer `array<bigint>` under ANSI (values, whitespace, int
+  overflow, string start, `BIGINT` start, string step, `nullif` stop,
+  garbage `typeof`, a string column with a NULL row, and the column API)
+  and refuse without it; garbage raises `CAST_INVALID_INPUT` under ANSI;
+  `DATE`/`STRING` siblings stay refused.
+  Re-verify 9 fold (2026-09-30): the `greatest`-wrapped cast second
+  answers NULL (the nullable wrapper is value-identity).
+  pins: nvl-type-coercion-1/C-033, C-038,
+  C-034
+  Re-verify 8 fold (2026-09-30): the exact-equal shapes (mixed-width,
+  big/smallint/subquery-`'101'`) answer NULL again; the
+  nullable-cast-wrapped `greatest` second stays refused on SQL as
+  residue while the `F.expr` door answers NULL; the `DATE`/`STRING`
+  guard moves to the vn9 temporal family. pins: nvl-type-coercion-1/C-035,
+  C-036
+- `test_nvl_type_coercion_1_vn9.py` — **NVL-TYPE-COERCION-1 re-verify 8
+  fold (2026-09-30, VN9-1/VN9-2/VN9-3):** 83 pins. The ruling table (14
+  nullif/coalesce/sequence rows) on SQL, `F.expr` and the column API;
+  the VN9-1 doors (`repeat`, `generate_series`, lambda, `5L`/`1.0D`/
+  `'1'`/subquery/column seconds) refuse; the 6 temporal/`STRING`
+  `sequence` cells answer `array<date>`/`array<timestamp>`/
+  `array<timestamp_ntz>` under ANSI (values, `F.expr`/column twins, a
+  New-York session-zone pin) and refuse without it; the two residue
+  shapes refuse; the follow-up pins the `nvl`/`ifnull`/`nvl2`/
+  `zeroifnull`/`nullifzero` alias spellings on SQL, `F.expr` and the
+  column API (16 pins). pins: nvl-type-coercion-1/C-035, C-036, C-037
+- `test_nvl_type_coercion_1_vn10.py` — **NVL-TYPE-COERCION-1 re-verify 9
+  fold (2026-09-30, VN10-1..VN10-3 + ANSI-off):** ~100 pins. R1 (the
+  integral-cast first/second cells refuse/fold on SQL, `F.expr` and the
+  column API under both ANSI modes, the `101.4` refusal kept); R2 (the
+  `greatest` bypass refuses, `coalesce`/`nvl`/`nvl2` over
+  `zeroifnull` answer 0/1/2); R3 (the legacy `STRING`×type matrix for
+  `nvl`/`ifnull`/`nvl2` with `typeof`+value, the `BOOLEAN` refusal, the
+  `zeroifnull` string cells, the `nullif` legacy guard cells, four
+  VN5-3 precision cells plus the fullwidth-decimal divergence pin, and
+  ANSI-on guards kept).
+  pins: nvl-type-coercion-1/C-038, C-039, C-040
 - `test_select_naming.py` — **Group H** select/projection display naming vs live PySpark 4.1.2:
   mutation leak accepts `Int32(1)` as well as `Int64(1)` (F-Y10-1 Python lit width);
   full matrix (`(x + 1)`, cast-of-attr → child name, cast-of-compound → `CAST(...)`,

@@ -1,6 +1,7 @@
 use std::str::FromStr;
 use std::sync::{Arc, LazyLock};
 
+use chrono::{DateTime, FixedOffset, Utc};
 use datafusion::arrow::array::{
     Array, ArrayRef, AsArray, ListArray, MapArray, StructArray, new_empty_array, new_null_array,
 };
@@ -16,6 +17,8 @@ use datafusion::logical_expr::{
 use datafusion::prelude::SessionContext;
 
 use crate::ansi::spark_ansi_enabled_from_options;
+use crate::session_time_zone::session_time_zone_from_options;
+use crate::spark_string_timestamp::zone::{SparkZone, spark_zone_id};
 use leaf::{Mode, atomic_castable, key_castable, leaf_cast};
 
 mod leaf;
@@ -242,7 +245,40 @@ fn map_entries_field(target: &FieldRef, key: &ArrayRef, value: &ArrayRef) -> Fie
     }
 }
 
-fn cast_map_array(source: &ArrayRef, target: &DataType, mode: Mode) -> Result<ArrayRef> {
+fn session_zone(name: &str) -> Result<SparkZone> {
+    if let Some(zone) = spark_zone_id(name) {
+        return Ok(zone);
+    }
+    let utc = FixedOffset::east_opt(0)
+        .ok_or_else(|| DataFusionError::Internal("a zero UTC offset always resolves".to_owned()))?;
+    Ok(SparkZone::Offset(utc))
+}
+
+pub(crate) fn spark_cast_ansi_zoned(
+    source: &ArrayRef,
+    target: &DataType,
+    zone: &str,
+    now: DateTime<Utc>,
+) -> Result<ArrayRef> {
+    spark_cast(source, target, Mode::Ansi, session_zone(zone)?, now)
+}
+
+pub(crate) fn spark_cast_legacy_zoned(
+    source: &ArrayRef,
+    target: &DataType,
+    zone: &str,
+    now: DateTime<Utc>,
+) -> Result<ArrayRef> {
+    spark_cast(source, target, Mode::Legacy, session_zone(zone)?, now)
+}
+
+fn cast_map_array(
+    source: &ArrayRef,
+    target: &DataType,
+    mode: Mode,
+    zone: SparkZone,
+    now: DateTime<Utc>,
+) -> Result<ArrayRef> {
     let DataType::Map(target_entries, sorted) = target else {
         return exec_err!("expected a map target, got {target}");
     };
@@ -250,8 +286,8 @@ fn cast_map_array(source: &ArrayRef, target: &DataType, mode: Mode) -> Result<Ar
         return exec_err!("malformed map target {target}");
     };
     let map = source.as_map();
-    let keys = spark_cast(map.keys(), key_type, mode)?;
-    let values = spark_cast(map.values(), value_type, mode)?;
+    let keys = spark_cast(map.keys(), key_type, mode, zone, now)?;
+    let values = spark_cast(map.values(), value_type, mode, zone, now)?;
     if keys.null_count() > 0 {
         return exec_err!("a map key cast produced NULL");
     }
@@ -270,13 +306,21 @@ fn cast_map_array(source: &ArrayRef, target: &DataType, mode: Mode) -> Result<Ar
     )?))
 }
 
-fn spark_cast(source: &ArrayRef, target: &DataType, mode: Mode) -> Result<ArrayRef> {
+fn spark_cast(
+    source: &ArrayRef,
+    target: &DataType,
+    mode: Mode,
+    zone: SparkZone,
+    now: DateTime<Utc>,
+) -> Result<ArrayRef> {
     match (source.data_type(), target) {
         (DataType::Null, _) => Ok(new_null_array(target, source.len())),
-        (DataType::Map(_, _), DataType::Map(_, _)) => cast_map_array(source, target, mode),
+        (DataType::Map(_, _), DataType::Map(_, _)) => {
+            cast_map_array(source, target, mode, zone, now)
+        }
         (DataType::List(_), DataType::List(field)) => {
             let list = source.as_list::<i32>();
-            let values = spark_cast(list.values(), field.data_type(), mode)?;
+            let values = spark_cast(list.values(), field.data_type(), mode, zone, now)?;
             Ok(Arc::new(ListArray::try_new(
                 Arc::clone(field),
                 list.offsets().clone(),
@@ -290,7 +334,7 @@ fn spark_cast(source: &ArrayRef, target: &DataType, mode: Mode) -> Result<ArrayR
                 .columns()
                 .iter()
                 .zip(fields.iter())
-                .map(|(column, field)| spark_cast(column, field.data_type(), mode))
+                .map(|(column, field)| spark_cast(column, field.data_type(), mode, zone, now))
                 .collect::<Result<Vec<_>>>()?;
             Ok(Arc::new(StructArray::try_new(
                 fields.clone(),
@@ -305,7 +349,7 @@ fn spark_cast(source: &ArrayRef, target: &DataType, mode: Mode) -> Result<ArrayR
             };
             Ok(cast_with_options(source.as_ref(), target, &options)?)
         }
-        _ => leaf_cast(source, target, mode),
+        _ => leaf_cast(source, target, mode, zone, now),
     }
 }
 
@@ -318,7 +362,7 @@ struct SparkCastMap {
 impl SparkCastMap {
     fn new(empty_source: bool) -> Self {
         Self {
-            signature: Signature::any(3, Volatility::Immutable),
+            signature: Signature::any(3, Volatility::Stable),
             empty_source,
         }
     }
@@ -430,13 +474,15 @@ impl ScalarUDFImpl for SparkCastMap {
         {
             return Err(cast_mismatch(source.name(), source.data_type(), &target));
         }
+        let zone = session_zone(session_time_zone_from_options(&args.config_options))?;
+        let now = Utc::now();
         match value {
-            ColumnarValue::Array(source) => {
-                Ok(ColumnarValue::Array(spark_cast(source, &target, mode)?))
-            }
+            ColumnarValue::Array(source) => Ok(ColumnarValue::Array(spark_cast(
+                source, &target, mode, zone, now,
+            )?)),
             ColumnarValue::Scalar(scalar) => {
                 let source = scalar.to_array_of_size(1)?;
-                let cast = spark_cast(&source, &target, mode)?;
+                let cast = spark_cast(&source, &target, mode, zone, now)?;
                 Ok(ColumnarValue::Scalar(ScalarValue::try_from_array(
                     &cast, 0,
                 )?))

@@ -1735,6 +1735,9 @@ pins: rp-4-fork-repin/C-005, C-006
   [extension/map.md](extension/map.md) and [../tests/session_timezone.rs](../tests/session_timezone.rs).
   **FNP-8 (2026-09-07):** its analyzer-configuration hook inserts the shared HOF preparation rule
   before core's first default type-coercion rule. pins: fnp-8/C-003, C-004
+  **NVL-TYPE-COERCION-1 (2026-09-29):** the hook also seats the shared
+  `nullif` rewrite immediately before `type_coercion`.
+  pins: nvl-type-coercion-1/C-002
   **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** `configure` registers
   `view_ddl::temp_view::definition_plan` as the session's `ViewDefinitionPlans` resolver
   (`repark_iceberg::write::negated_null_store`). pins: store-ts-to-numeric-1/C-002

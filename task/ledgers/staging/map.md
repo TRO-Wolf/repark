@@ -1946,3 +1946,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   awaits the owner run on real AWS).
   `risk_tier: standard`. Branch `feat/s3-path-write-1`.
   pins: s3-path-write-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
+- [nvl-type-coercion-1-ledger.md](nvl-type-coercion-1-ledger.md) —
+  **NVL-TYPE-COERCION-1 (2026-09-29):** the `nvl` family widens like Spark
+  (C-001 the oracle matrix, C-002 the UDFs + rule, C-003 the flip counts,
+  C-004 the out-of-scope residuals, C-005 the zero-break guards, C-006 the
+  mutation + neighbour proofs, C-007 the gate).
+  `risk_tier: standard`. Branch `fix/nvl-type-coercion-1`.
+  pins: nvl-type-coercion-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007

@@ -29,6 +29,11 @@ of the rule. Closes when the Spark grammar changes (a Spark bump re-records the 
   its offset from the latest year in 2072–2099 with the same leap flag and January-1 weekday.
   A wall before 1200 reads its offset from the same day in 1200–1599 (local mean time), so the
   i64 range edge outside chrono's calendar still resolves.
+  **NVL-TYPE-COERCION-1 (2026-09-29):** `timestamp_wall_micros` and
+  `date_days` validate a parsed string without shifting it (NTZ and date
+  targets), while `wall_micros_to_instant` shifts temporal walls to instants
+  for date / NTZ → timestamp casts. The `nvl` family reaches all three
+  through the leaf casts. pins: nvl-type-coercion-1/C-009
 
 Tests: [`../tests/spark_string_timestamp.rs`](../tests/map.md).
 pins: cast-ts-string-1/C-001, C-002, C-003, C-008
