@@ -181,6 +181,14 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   after the validated format clause) come from
   `text_write_format::select::text_write_copy_parts`; formatting runs in the
   sink serializer.
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 3 fold (2026-09-30):** the commit
+  snapshots the destination keys before the COPY and deletes every
+  non-snapshot key when the write fails
+  ([`path_write/rollback.rs`](path_write/rollback.rs)), so no partial output
+  survives on any mode; the append-validation cohort moved to
+  [`path_write/append.rs`](path_write/append.rs) under the file-size gate.
+  Child: [`path_write/`](path_write/map.md).
+  pins: text-write-timestamp-zone-1/C-007
 - `text_write_format.rs` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** the
   user-pattern compiler and validator (Spark `INVALID_DATETIME_PATTERN` /
   `INCONSISTENT_BEHAVIOR_CROSS_VERSION` classes, NTZ downgrades, DATE lazy

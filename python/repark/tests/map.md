@@ -3775,6 +3775,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   optioned-non-temporal LEGACY legs (244 pins).
   **Re-verify 2 (2026-09-30):** a `perf`-marked shuffled-data pin: 20k
   timestamps over 1900-2024 write to CSV inside a 1.0 s debug budget.
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 3 fold (2026-09-30):** the
+  failed-local-write trio: a 400k-row JSON write with zone letters on NTZ
+  leaves no destination on overwrite (plain and partitioned) and keeps every
+  destination byte on append.
+  pins: text-write-timestamp-zone-1/C-008
 - `test_r2_read_formats2.py` — R2 writer option matrix / path modes / partitionBy: quoteAll /
   escapeQuotes wired; dateFormat/timestampFormat honored (TEXT-WRITE-TIMESTAMP-ZONE-1
   flipped the three refuse-loud legs to honored pins); parquet compression; path

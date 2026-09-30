@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use arrow::array::RecordBatch;
+use arrow::array::{Int64Array, RecordBatch, StringArray, TimestampMicrosecondArray};
+use arrow::datatypes::{DataType, Field, Schema, TimeUnit};
+use chrono::NaiveDate;
+use datafusion::datasource::MemTable;
 use datafusion::prelude::DataFrame;
 use futures::StreamExt;
 use object_store::ObjectStore;
@@ -598,6 +601,205 @@ async fn overwrite_of_prefix_the_frame_reads_refuses() {
     assert_eq!(names.len(), 2);
     let again = session.read_parquet(url).await.unwrap();
     assert_frame_rows(again, 1, &["1", "a"]).await;
+}
+
+const ROLLBACK_ROWS: usize = 400_000;
+const ROLLBACK_PARTITIONS: usize = 8;
+const ROLLBACK_FAILING_ROW: i64 = 99_999;
+
+fn write_session_in(bucket: &str, zone: &str) -> (ReparkSession, Arc<InMemory>) {
+    let session = ReparkSession::builder()
+        .configs(HashMap::from([(
+            "spark.sql.session.timeZone".to_string(),
+            zone.to_string(),
+        )]))
+        .build()
+        .unwrap();
+    let memory = Arc::new(InMemory::new());
+    let store: Arc<dyn ObjectStore> = memory.clone();
+    session
+        .register_s3_bucket_store_for_test(bucket, &store)
+        .unwrap();
+    (session, memory)
+}
+
+fn rollback_noon_micros() -> i64 {
+    NaiveDate::from_ymd_opt(2024, 6, 15)
+        .unwrap()
+        .and_hms_opt(12, 0, 0)
+        .unwrap()
+        .and_utc()
+        .timestamp_micros()
+}
+
+fn rollback_frame_schema() -> arrow::datatypes::SchemaRef {
+    Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int64, false),
+        Field::new("n", DataType::Timestamp(TimeUnit::Microsecond, None), true),
+        Field::new(
+            "t",
+            DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into())),
+            false,
+        ),
+        Field::new("s", DataType::Utf8, false),
+    ]))
+}
+
+fn rollback_seed_batch() -> RecordBatch {
+    let micros = rollback_noon_micros();
+    RecordBatch::try_new(
+        rollback_frame_schema(),
+        vec![
+            Arc::new(Int64Array::from(vec![1, 2, 3])),
+            Arc::new(TimestampMicrosecondArray::from(vec![micros; 3])),
+            Arc::new(TimestampMicrosecondArray::from(vec![micros; 3]).with_timezone("UTC")),
+            Arc::new(StringArray::from(vec!["a", "b", "a"])),
+        ],
+    )
+    .unwrap()
+}
+
+fn rollback_big_partitions() -> (arrow::datatypes::SchemaRef, Vec<Vec<RecordBatch>>) {
+    let micros = rollback_noon_micros();
+    let schema = rollback_frame_schema();
+    let rows_per_partition = ROLLBACK_ROWS / ROLLBACK_PARTITIONS;
+    let mut partitions = Vec::with_capacity(ROLLBACK_PARTITIONS);
+    for partition in 0..ROLLBACK_PARTITIONS {
+        let base = i64::try_from(partition * rows_per_partition).unwrap();
+        let span = i64::try_from(rows_per_partition).unwrap();
+        let ids: Vec<i64> = (0..span).map(|offset| base + offset).collect();
+        let ntz: Vec<Option<i64>> = ids
+            .iter()
+            .map(|id| {
+                if *id == ROLLBACK_FAILING_ROW {
+                    Some(micros)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        let ltz = vec![micros; rows_per_partition];
+        let groups: Vec<&str> = ids
+            .iter()
+            .map(|id| if id % 2 == 0 { "a" } else { "b" })
+            .collect();
+        let batch = RecordBatch::try_new(
+            Arc::clone(&schema),
+            vec![
+                Arc::new(Int64Array::from(ids)),
+                Arc::new(TimestampMicrosecondArray::from(ntz)),
+                Arc::new(TimestampMicrosecondArray::from(ltz).with_timezone("UTC")),
+                Arc::new(StringArray::from(groups)),
+            ],
+        )
+        .unwrap();
+        partitions.push(vec![batch]);
+    }
+    (schema, partitions)
+}
+
+async fn frame_of_rollback_big(session: &ReparkSession, name: &str) -> DataFrame {
+    let (schema, partitions) = rollback_big_partitions();
+    let table = MemTable::try_new(schema, partitions).unwrap();
+    session
+        .context()
+        .register_table(name, Arc::new(table))
+        .unwrap();
+    session.sql(&format!("SELECT * FROM {name}")).await.unwrap()
+}
+
+fn rollback_pattern_options() -> HashMap<String, String> {
+    options_map(&[("timestampNTZFormat", "yyyy-MM-dd VV")])
+}
+
+#[tokio::test]
+async fn failed_render_overwrite_into_empty_leaves_no_objects() {
+    let (session, memory) = write_session_in("rollback-bucket", "America/New_York");
+    let frame = frame_of_rollback_big(&session, "big_over").await;
+    let url = "s3://rollback-bucket/cell/over";
+    assert!(listed_names(&memory, "cell/over").await.is_empty());
+    let error = session
+        .write_path(
+            &frame,
+            url,
+            "json",
+            "overwrite",
+            &rollback_pattern_options(),
+            &[],
+        )
+        .await
+        .unwrap_err();
+    assert!(
+        error.to_string().contains("Unable to extract ZoneId"),
+        "got: {error}"
+    );
+    assert!(listed_names(&memory, "cell/over").await.is_empty());
+}
+
+#[tokio::test]
+async fn failed_render_append_preserves_existing_objects() {
+    let (session, memory) = write_session_in("rollback-bucket", "America/New_York");
+    session
+        .context()
+        .register_batch("seed_append", rollback_seed_batch())
+        .unwrap();
+    let seed = session.sql("SELECT * FROM seed_append").await.unwrap();
+    let frame = frame_of_rollback_big(&session, "big_append").await;
+    let url = "s3://rollback-bucket/cell/append";
+    session
+        .write_path(&seed, url, "json", "error", &HashMap::new(), &[])
+        .await
+        .unwrap();
+    let before = listed_names(&memory, "cell/append").await;
+    assert!(!before.is_empty());
+    let mut before_bytes = Vec::with_capacity(before.len());
+    for name in &before {
+        before_bytes.push(object_bytes(&memory, name).await);
+    }
+    let error = session
+        .write_path(
+            &frame,
+            url,
+            "json",
+            "append",
+            &rollback_pattern_options(),
+            &[],
+        )
+        .await
+        .unwrap_err();
+    assert!(
+        error.to_string().contains("Unable to extract ZoneId"),
+        "got: {error}"
+    );
+    let after = listed_names(&memory, "cell/append").await;
+    assert_eq!(after, before);
+    for (name, bytes) in before.iter().zip(before_bytes.iter()) {
+        assert_eq!(&object_bytes(&memory, name).await, bytes);
+    }
+}
+
+#[tokio::test]
+async fn failed_render_partitioned_overwrite_leaves_no_objects() {
+    let (session, memory) = write_session_in("rollback-bucket", "America/New_York");
+    let frame = frame_of_rollback_big(&session, "big_part").await;
+    let url = "s3://rollback-bucket/cell/part";
+    assert!(listed_names(&memory, "cell/part").await.is_empty());
+    let error = session
+        .write_path(
+            &frame,
+            url,
+            "json",
+            "overwrite",
+            &rollback_pattern_options(),
+            &["s".to_string()],
+        )
+        .await
+        .unwrap_err();
+    assert!(
+        error.to_string().contains("Unable to extract ZoneId"),
+        "got: {error}"
+    );
+    assert!(listed_names(&memory, "cell/part").await.is_empty());
 }
 
 #[tokio::test]

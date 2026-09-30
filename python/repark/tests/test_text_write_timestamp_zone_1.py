@@ -12,6 +12,7 @@ tzdata and stay read-consistent; empty strings stay unquoted in CSV; map keys
 stay unformatted; hive-partitioned writes stay refused.
 
 pins: text-write-timestamp-zone-1/C-001 through P-006
+pins: text-write-timestamp-zone-1/C-008
 """
 
 from __future__ import annotations
@@ -49,6 +50,21 @@ _MOTOPY: Path = _REPO_ROOT / "target" / "u12" / "moto-venv" / "bin" / "python"
 _BUCKET: str = "text-write-timestamp-zone-1"
 _SHUFFLED_ROWS: int = 20_000
 _SHUFFLED_BUDGET_SECONDS: float = 1.0
+_LAZY_BIG_SQL: str = (
+    "SELECT id, CASE WHEN id = 99999 THEN TIMESTAMP_NTZ '2024-06-15 12:00:00' "
+    "ELSE NULL END AS n, TIMESTAMP '2024-06-15 12:00:00' AS t, "
+    "CASE WHEN id % 2 = 0 THEN 'a' ELSE 'b' END AS s FROM range(400000)"
+)
+_LAZY_SEED_SQL: str = (
+    "SELECT 1 AS id, TIMESTAMP_NTZ '2024-06-15 12:00:00' AS n, "
+    "TIMESTAMP '2024-06-15 12:00:00' AS t, 'a' AS s "
+    "UNION ALL SELECT 2, TIMESTAMP_NTZ '2024-06-15 12:00:00', "
+    "TIMESTAMP '2024-06-15 12:00:00', 'b' "
+    "UNION ALL SELECT 3, TIMESTAMP_NTZ '2024-06-15 12:00:00', "
+    "TIMESTAMP '2024-06-15 12:00:00', 'a'"
+)
+_LAZY_PATTERN_KEY: str = "timestampNTZFormat"
+_LAZY_PATTERN_VALUE: str = "yyyy-MM-dd VV"
 
 
 @pytest.fixture
@@ -379,3 +395,57 @@ def test_s3a_csv_write_matches_spark(moto_endpoint: str) -> None:
     ]
     assert len(bodies) == 1
     assert bodies[0] == "id,t\n1,2024-03-10T03:30:00.000-04:00\n"
+
+
+def _tree_snapshot(root: Path) -> dict[str, bytes]:
+    """Map every file below a write destination to its bytes."""
+    if not root.exists():
+        return {}
+    return {
+        path.relative_to(root).as_posix(): path.read_bytes()
+        for path in sorted(root.rglob("*"))
+        if path.is_file()
+    }
+
+
+def _run_lazy_big_write(
+    spark: ReparkSession, dest: Path, mode: str, partition_by: list[str]
+) -> None:
+    """Write the 400k-row frame with zone letters on NTZ, which fails while rendering."""
+    spark.conf.set("spark.sql.session.timeZone", "America/New_York")
+    writer = (
+        spark.sql(_LAZY_BIG_SQL).write.mode(mode).option(_LAZY_PATTERN_KEY, _LAZY_PATTERN_VALUE)
+    )
+    if partition_by:
+        writer = writer.partitionBy(*partition_by)
+    writer.json(str(dest))
+
+
+def test_failed_local_overwrite_leaves_no_destination(spark: ReparkSession, tmp_path: Path) -> None:
+    """A lazy render failure on a local overwrite leaves no destination behind."""
+    dest = tmp_path / "out"
+    with pytest.raises(PySparkException, match="Unable to extract ZoneId"):
+        _run_lazy_big_write(spark, dest, "overwrite", [])
+    assert _tree_snapshot(dest) == {}
+
+
+def test_failed_local_append_preserves_destination(spark: ReparkSession, tmp_path: Path) -> None:
+    """A lazy render failure on a local append keeps every destination byte."""
+    spark.conf.set("spark.sql.session.timeZone", "America/New_York")
+    dest = tmp_path / "out"
+    spark.sql(_LAZY_SEED_SQL).write.mode("overwrite").json(str(dest))
+    before = _tree_snapshot(dest)
+    assert before
+    with pytest.raises(PySparkException, match="Unable to extract ZoneId"):
+        _run_lazy_big_write(spark, dest, "append", [])
+    assert _tree_snapshot(dest) == before
+
+
+def test_failed_local_partitioned_overwrite_leaves_no_destination(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """A lazy render failure on a local partitioned overwrite leaves no destination behind."""
+    dest = tmp_path / "out"
+    with pytest.raises(PySparkException, match="Unable to extract ZoneId"):
+        _run_lazy_big_write(spark, dest, "overwrite", ["s"])
+    assert _tree_snapshot(dest) == {}

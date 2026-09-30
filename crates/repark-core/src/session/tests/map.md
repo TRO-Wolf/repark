@@ -22,6 +22,11 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   leg moved to `temporal_write_options_are_honored_on_csv_path_write`: the
   option now succeeds instead of refusing.
   pins: text-write-timestamp-zone-1/C-002
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 3 fold (2026-09-30):** the
+  failed-write rollback pins: a 400k-row JSON write with zone letters on NTZ
+  leaves the destination key set unchanged for overwrite-into-empty, append
+  (existing bytes also unchanged) and partitioned overwrite.
+  pins: text-write-timestamp-zone-1/C-007
 - `text_write_format.rs` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):**
   compiler/validator/renderer pins against the Spark oracle: every error
   class per pattern kind, DST-gap and LMT-seconds default renders, the

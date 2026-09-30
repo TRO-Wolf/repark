@@ -71,6 +71,8 @@ America/New_York unless noted:
 | C-004 | The Rust compiler, validator, renderer and SELECT builder match the oracle cell by cell, including the offset-letter matrix with LMT seconds, the `''` quote escape, section skip, and the star fast path / partition skip / eager rejection of the builder. | `session::tests::text_write_format` unit pins. | PROVEN | `cargo test -p repark-core --lib session::tests::text_write_format`: 52 passed (verifier fold adds quote runs, year width/sign, trailing-`]` class, backslash escape, case twins). |
 | C-005 | The s3a route formats identically (moto, fake creds only) and read-back round-trips the instant. | The moto s3a leg + the CSV/JSON read-back legs. | PROVEN | `test_s3a_csv_write_matches_spark` green; CSV read-back returns the instant, JSON keeps the bytes and `CAST` recovers it. |
 | C-006 | Nothing else changes: parquet/ORC/Iceberg writes, non-temporal CSV/JSON bytes, the CSV header default, and every read path are untouched; the 25-statement neighbour diff reports no unintended change; the only pin flips are the four mandated refusal-to-honored flips. | Neighbour base-vs-head diff + the flip census + the untouched-path suites. | PROVEN | 25-statement base-vs-head diff: 1 change, the intended `n22` zone wall; multi-part order and random names normalized. Flip census: 3 R2 + 1 Rust refusal pins flipped (all mandated); 0 UTC-wall asserts; 0 unexpected. Temporal + csv/json suites green (237, 459, 801 passed). |
+| C-007 | A failed s3a CSV/JSON write leaves the destination key set unchanged: the commit snapshots the destination keys before the COPY and deletes every key missing from the snapshot on failure, over empty, appended and partitioned prefixes; the original error is preserved and a cleanup failure is appended to it. | `session::tests::path_write` rollback pins (400k-row zone-letters-on-NTZ render failure) + the rollback-helper unit pins. | PROVEN | `failed_render_overwrite_into_empty_leaves_no_objects`, `failed_render_append_preserves_existing_objects`, `failed_render_partitioned_overwrite_leaves_no_objects` green; rollback snapshot/delete/note unit pins green; cleanup-removal mutation reds the three pins. |
+| C-008 | A failed local CSV/JSON write leaves the destination unchanged: the staged COPY is removed and overwrite leaves no destination while append keeps every destination byte, including partitioned layouts. | Facade destination-snapshot legs over the 400k-row zone-letters-on-NTZ render failure. | PROVEN | `test_failed_local_overwrite_leaves_no_destination`, `test_failed_local_append_preserves_destination`, `test_failed_local_partitioned_overwrite_leaves_no_destination` green. |
 
 ## Mutation record (2026-09-29)
 
@@ -84,6 +86,7 @@ America/New_York unless noted:
 | M6 | VC2-6: replace the RECOGNITION guide clause with a `LEGACY` stub | 7 Rust recognition pins red (49 pass, 7 fail). Reverted; `git status` clean. |
 | M7 | VC2-7: refuse LEGACY writes even with no temporal column (`temporal_columns \|\| true`) | Blind at the Rust level (56 pass: no Rust pin covers the non-temporal LEGACY leg); the 2 facade non-temporal LEGACY pins red after a venv rebuild. Reverted and rebuilt; pins green; `git status` clean. |
 | M8 | VC3-1/VC3-2: restore the exact 6-day step search (`probe`/`bound_above`/`bound_below`, 12288 budget) | The all-zones `cached_offsets_match_direct_lookups_in_every_zone` pin reds on the first zone (Africa/Abidjan): the offset asserts stay green, the 15-minute window pin fails. Reverted; `git status` clean; 3/3 cache pins green. |
+| M9 | VC4-1: replace the rollback call in `commit_s3_write` with a no-op | All three C-007 s3a pins red (partial objects survive the failed write). Reverted; 6/6 rollback pins green. |
 
 ## Coverage
 
@@ -548,3 +551,27 @@ the sink tasks.
 `scripts/verify-repark-tokenizer.py` and `scripts/repark-python-session.py`
 do not exist in this lane, so no script mapping names a stale helper.
 `gate.sh` reports GATE GREEN.
+
+Re-verify 3 fold (2026-09-30, lane /tmp/xcsvts, branch
+fix/text-write-timestamp-zone-1): re-verify 3 found no output-byte change on
+any successful write but filed VC4-1 (a failed s3a text write commits partial
+part objects, up to whole batches plus empty parts, beside the destination)
+and VC4-2 (a lazy render error quotes whichever failing batch finished
+first). R1 (VC4-1): `commit_s3_write` snapshots the destination keys before
+the COPY and, on any failure, deletes every key missing from the snapshot,
+over every mode, partitioned layouts and empty parts; existing append objects
+stay untouched. A snapshot-listing failure refuses before the COPY; a cleanup
+failure is appended to the original error text with the variant preserved.
+The code lives in the new `session/path_write/rollback.rs`; the
+append-validation cohort moved verbatim to `session/path_write/append.rs`
+under the file-size gate. VC4-2 is accepted and documented: the serialize
+tasks run in parallel, so the quoted failing value is whichever batch loses
+the race; 3d4f2030 was already nondeterministic here (29/30 first-row in the
+verifier's 30-run probe).
+
+Pins: three Rust s3a pins over the in-memory S3 route (400k-row JSON write,
+zone letters on NTZ, one non-null NTZ at row 99999): overwrite-into-empty and
+partitioned overwrite leave no objects, append preserves keys and bytes
+(C-007); three local-route pins snapshot the destination tree around the same
+failing write (C-008). Mutation M9 (the cleanup call replaced with a no-op):
+all three s3a pins red. Reverted; pins green.
