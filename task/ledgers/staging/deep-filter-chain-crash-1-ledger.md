@@ -512,16 +512,19 @@ Fix: `deep_stack::grown_clone` sizes a sync grown segment from the
 iterative expression depth (8 KiB per level, ~5x the measured debug
 cost, 1 GiB ceiling) via a new `repark_core` sync primitive
 `run_on_grown_stack`; every operator routes operand clones through
-the `PyColumn::expr` clone-out, `Drop` drops deep trees grown, and
+the `PyColumn::expr` clone-out, `Drop` drops deep trees grown, a manual
+`Clone` grows the by-value argument clones at the PyO3 boundary (the
+first after-repro built the 20,000-term tree, then crashed cloning it
+into `filter()`), and
 the three bodies that clone owned deep exprs (`over`,
 `call_scalar_expr`, `count_distinct_argument`) grow around renamed
 inner bodies. No refusal added, no threshold moved: the 20,000-term
 build still succeeds and still refuses at `filter()`. `column/mod.rs`
-ratchets 1011 → 1006 (rustfmt joins three shortened calls).
+ratchets 1011 → 1005 (rustfmt joins three shortened calls; the `Clone` derive leaves with the manual impl).
 
-Rust units M-R1/M-R2: `grown_clone` restored to a raw clone aborts
-the 20,000-deep combine test (SIGABRT), and an empty `Drop` aborts it
-too; both restored green.
+Rust units M-R1/M-R2/M-R3: `grown_clone` restored to a raw clone
+aborts the 20,000-deep combine test (SIGABRT), an empty `Drop` aborts
+it too, and a raw `Clone` aborts it as well; all restored green.
 
 Residues added: R-7 (recursive `Display`/`schema_name` formatting of
 a deep expression — `display_name`, `make_struct` field naming —

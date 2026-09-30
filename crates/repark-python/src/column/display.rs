@@ -285,6 +285,12 @@ impl Drop for PyColumn {
     }
 }
 
+impl Clone for PyColumn {
+    fn clone(&self) -> Self {
+        Self::from_expr(crate::deep_stack::grown_clone(&self.expr))
+    }
+}
+
 #[pyclass(name = "PyColumnParts", module = "repark._native")]
 pub struct PyColumnParts;
 

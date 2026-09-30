@@ -577,6 +577,8 @@ mod tests {
             .spawn(move || {
                 let left = PyColumn::from_expr(deep);
                 let right = PyColumn::from_expr(lit(true));
+                let copied = left.clone();
+                assert_eq!(copied.expression_depth(), depth);
                 let combined = left.or_(&right).expect("a deep or-combine builds");
                 assert_eq!(combined.expression_depth(), depth + 1);
             })

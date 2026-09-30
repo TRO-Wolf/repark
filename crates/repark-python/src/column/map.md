@@ -68,6 +68,8 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   **DEEP-FILTER-CHAIN-CRASH-1 CI segv (2026-09-30):** `impl Drop for PyColumn`
   lives here (`mod.rs` is at its exact baseline): a deep tree drops on a grown
   segment sized by expression depth, so teardown never overflows a caller stack.
+  `impl Clone` lives here too: by-value arguments clone at the PyO3 boundary
+  before any builder verdict runs, so the clone grows the same way.
   `unary_neg` clones the child once. pins: deep-filter-chain-crash-1/C-012
 - [`display/construct.rs`](display/construct.rs) — **FACADE-2 step 3 (2026-09-13):** the
   Group-1 typed constructors that replace `_native.PyColumn.sql` call sites:
@@ -101,7 +103,7 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   **CI segv (2026-09-30):** `PyColumn::expr` is the grown clone-out (every
   operator routes its operand clones through it); the `case_when` by-value moves
   become clones because the type now implements `Drop`. rustfmt joins three
-  calls (1011 → 1006). pins: deep-filter-chain-crash-1/C-012
+  calls plus the removed `Clone` derive (1011 → 1005). pins: deep-filter-chain-crash-1/C-012
 - [`function_dispatch.rs`](function_dispatch.rs) owns scalar and aggregate function dispatch.
   Its default arm hands the name to [`function_dispatch/`](function_dispatch/map.md) before
   refusing.
