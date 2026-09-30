@@ -7097,7 +7097,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** VE2-1 built-door pins
   (cube/rollup/groupingSets/unpivot, mergeInto incl. an `F.expr` condition,
   overwrite cond/partitions, createTable schema str) and VE2-2 nested
-  UPDATE/MERGE SET pins, each with a default-mode control.
+  UPDATE/MERGE SET pins, each with a default-mode control; the
+  `_forward_datafusion_conf` and `_materialize_values_as_memtable_frame`
+  symbol hashes move in `test_production_file_size.py` (built doors route
+  `_sql_built`).
   pins: string-literal-escape-1/C-011, C-012
 - `test_fnp_4b_hof_display.py` — **FNP-4B round 6 (2026-09-15):** Q3 red pin for run
   16a — selectExpr higher-order display must hide the `__repark_hof_array_field__`

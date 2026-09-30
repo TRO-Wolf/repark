@@ -39,8 +39,8 @@ pre-existing, previously scoped to session doors by FNP-4B);
 | C-008 | VE-1: `UNSET TBLPROPERTIES [IF EXISTS]`, `SHOW TBLPROPERTIES t (key)` and `COMMENT ON … IS …` always unescape in verbatim mode (UNSET removes the collapsed key, SHOW-key returns the collapsed value, COMMENT ON stores the fully unescaped text both modes); default mode unchanged. | Rust DDL-table rows + facade VE-1 pins + control pins green; verify-esc/DIFF-PROBE replay at 0 regressions. | PROVEN | 6/6 Rust DDL rows green; 4/4 facade VE-1 pins green; mutation red-first (3 verbatim pins red, default control green); replay moves only to Spark-equal. |
 | C-009 | VE-2: `filter`/`where` strings read the frame's session verbatim flag and `F.expr` reads the active session's build-time flag, so all three parse like the session door; default mode takes the identical path as before. | Rust frame-flag pin + facade VE-2 pins + control pins green; verify-esc/DIFF-PROBE replay at 0 regressions. | PROVEN | Rust frame-flag pin green; 3/3 facade VE-2 pins green; each half mutated red-first (frame, `F.expr`); the ten `dv*e` replay cells flip Spark-equal; replay at 0 regressions. |
 | C-010 | VE-3: every DML re-render (`UPDATE`/`DELETE` selections, `SET` values, MERGE `ON`/predicates/`VALUES`/assignments/sources, both doors, both fragment rewrites) preserves string values exactly; verbatim `''`/backslash and default quad conditions match and store Spark-equal values. | `sql_text` round-trip + planning pins + facade VE-3 pins + control pins green; verify-esc/DIFF-PROBE replay at 0 regressions. | PROVEN | 8/8 `sql_text` pins green; 5/5 facade VE-3 pins green; mutation red-first at both levels (6 Rust + 4 facade red); replay moves only to Spark-equal; heals the UPDATE/DELETE/MERGE-SET halves of carried VE-4 items 3 and 4. |
-| C-011 | VE2-1 re-verify fold: facade-built SQL parses with verbatim forced off for that one parse (scoped override, session conf untouched); user-written text (`spark.sql`, `selectExpr`, `expr`, `filter`/`where`) still follows the flag; user fragments spliced into built SQL (`F.expr` columns) are pre-rendered under the flag into default-stable text; DDL-defs fragments splice raw (C-005 default treatment). | Rust fragment + override-wiring pins + facade VE2-1 pins + default controls green; reverify-esc/verify-esc replay at 0 regressions. | PROVEN | 4/4 fragment + 1/1 wiring Rust pins green; 13/13 facade pins green; mutation red-first (override, fragment); every att3 built-door cell flips Spark-equal. |
-| C-012 | VE2-2 re-verify fold: nested struct-field `UPDATE`/`MERGE SET` values render through `render_for_reparse`, so verbatim doublings/backslashes store kept and default ones collapse, and `\'` parses instead of refusing; refusal texts quote values as valid SQL. | Rust nested leaf/fold/refusal pins + facade VE2-2 pins + default controls green. | PROVEN | 4/4 nested Rust pins green; 2/2 facade VE2-2 pins green; mutation red-first (`.to_string()`); nest.py cells flip Spark-equal. |
+| C-011 | VE2-1 re-verify fold: facade-built SQL parses with verbatim forced off for that one parse (scoped override, session conf untouched); user-written text (`spark.sql`, `selectExpr`, `expr`, `filter`/`where`) still follows the flag; user fragments spliced into built SQL (`F.expr` columns) are pre-rendered under the flag into default-stable text; DDL-defs fragments splice raw (C-005 default treatment). | Rust fragment + override-wiring pins + facade VE2-1 pins + default controls green; reverify-esc/verify-esc replay at 0 regressions. | PROVEN | 4/4 fragment + 8/8 wiring Rust pins green; 13/13 facade pins green; mutation red-first (override, fragment); 19 replay cells flip Spark-equal, 0 true regressions over 1475. |
+| C-012 | VE2-2 re-verify fold: nested struct-field `UPDATE`/`MERGE SET` values render through `render_for_reparse`, so verbatim doublings/backslashes store kept and default ones collapse, and `\'` parses instead of refusing; refusal texts quote values as valid SQL. | Rust nested leaf/fold/refusal pins + facade VE2-2 pins + default controls green. | PROVEN | 24/24 nested_assign Rust pins green (4 new re-render/refusal); 2/2 facade VE2-2 pins green; mutation red-first (`.to_string()`); nest.py 14/14 Spark-equal. |
 
 ## Evidence
 
@@ -208,8 +208,8 @@ takes default treatment both modes (C-005, re-confirmed on live Spark in the
 `ct` oracle cells), and `DEFAULT` is refused.
 
 Internal-caller inventory (every `session.sql` / `inner.sql` caller; user
-doors keep the flag, built doors route `_sql_built` /
-`session_sql_built`): user text — `spark.sql`, `selectExpr`
+doors keep the flag, built doors route `_sql_built` (facade) /
+`inner.sql_built` (native)): user text — `spark.sql`, `selectExpr`
 (`dataframe/core.py`), `expr` (`functions.py`), `filter`/`where` strings, the
 UDF-rewrite re-entries (`session_core.py`), the ANSI door. Built —
 `merge.py`, `writer_schema.py`, `writer_layout.py` (via
@@ -232,11 +232,17 @@ trap from the verify fold): built agg/unpivot/merge/overwrite answers are
 mode-identical; the expr-condition merge discriminates (default hits
 `it's`, verbatim hits `it''s`); DDL `COMMENT` unescapes both modes.
 
-Replay: reverify-esc (`att3`, `nest`, `att2`) plus verify-esc replayed into
-`reverify-esc-fold/` — 0 cells away from Spark that equalled Spark on
-e99fa1eb. Mutations red-first per fix (R1 override follow-flag-again, R1
-fragment identity, R2 `.to_string()`), tree clean after each revert. Lane gate
-`gate.sh` green.
+Replay: reverify-esc (`att2`, `att3`, `nest`) plus verify-esc (`attack`,
+`rt`, `nb`, `dmlv`, `ns`, diff-probe `dp`-`dp4`) replayed into
+`reverify-esc-fold/` against a true e99fa1eb base built in a throwaway
+worktree (removed after; Spark oracles reused) — 1475 cells, 1349 fold-equal
+to Spark, 19 moved to Spark, 0 true moved-away. The one flagged away cell
+(`v_sidx`) is a canon artifact: Spark errored only on missing numpy in the
+oracle env while the fold matches base-default exactly. The two
+changed-still-wrong cells are the pre-existing `groupingSets` grand-total row
+(fold values Spark-equal). Mutations red-first per fix (R1 override
+follow-flag-again, R1 fragment identity, R2 `.to_string()`), tree clean after
+each revert. Lane gate `gate.sh` green.
 
 Follow-up (2026-09-30): the first cut routed native receivers
 (`DataFrame._session` is the native `PyReparkSession`) through a free
@@ -255,6 +261,12 @@ cells did not cover. (1) `groupingSets` returns a grand-total row beyond Spark
 (2) `refuse_non_deterministic` re-rendered the REPLACE WHERE predicate with
 `Display`, refusing `\'` values as unterminated in both modes; it now renders
 through `render_for_reparse` (same VE-3-class fix, 3 lines).
+
+Gate round (2026-09-30): the lane gate caught the two intended body changes
+under the session-split AST-hash pin; the `_forward_datafusion_conf` and
+`_materialize_values_as_memtable_frame` hashes move to the `_sql_built`
+routing (same sanctioned pin update as the catalog-1 `resolve_table_name`
+move).
 
 ## Coverage attestation
 
