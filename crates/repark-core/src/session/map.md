@@ -193,10 +193,11 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   snapshot rollback is gone: a failed CSV/JSON write deletes exactly the
   output paths its own sink recorded plus a materialized empty part, so a
   concurrent writer's objects survive under the same prefix and at the
-  bucket root; the COPY runs through an explicitly built physical plan so
-  the commit can reach the sink's collector, and parquet keeps its
-  pre-rollback commit with no cleanup. A cleanup failure appends the bare
-  message once, without repeating the variant prefix.
+  bucket root; the commit reaches the sink's collector through a
+  per-session registry keyed by the write id the COPY OPTIONS carry (the
+  Spark door runs COPY eagerly, so no plan handle outlives the write), and
+  parquet keeps its pre-rollback commit with no cleanup. A cleanup failure
+  appends the bare message once, without repeating the variant prefix.
   pins: text-write-timestamp-zone-1/C-009
 - `text_write_format.rs` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** the
   user-pattern compiler and validator (Spark `INVALID_DATETIME_PATTERN` /

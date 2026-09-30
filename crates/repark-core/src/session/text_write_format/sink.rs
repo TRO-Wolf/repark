@@ -38,6 +38,7 @@ impl ReparkTextSink {
         config: FileSinkConfig,
         options: CsvWriterOptions,
         spec: Arc<TextWriteSpec>,
+        created: Arc<Mutex<Vec<ObjectPath>>>,
     ) -> Self {
         Self {
             config,
@@ -45,7 +46,7 @@ impl ReparkTextSink {
             csv_options: Some(options),
             json_options: None,
             spec,
-            created: Arc::new(Mutex::new(Vec::new())),
+            created,
         }
     }
 
@@ -53,6 +54,7 @@ impl ReparkTextSink {
         config: FileSinkConfig,
         options: JsonWriterOptions,
         spec: Arc<TextWriteSpec>,
+        created: Arc<Mutex<Vec<ObjectPath>>>,
     ) -> Self {
         Self {
             config,
@@ -60,12 +62,8 @@ impl ReparkTextSink {
             csv_options: None,
             json_options: Some(options),
             spec,
-            created: Arc::new(Mutex::new(Vec::new())),
+            created,
         }
-    }
-
-    pub(crate) fn created_paths(&self) -> Arc<Mutex<Vec<ObjectPath>>> {
-        Arc::clone(&self.created)
     }
 
     fn skip_columns(&self) -> Arc<HashSet<String>> {

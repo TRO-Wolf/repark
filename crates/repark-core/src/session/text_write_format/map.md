@@ -71,6 +71,12 @@ unformatted, as the UDF left them unwrapped.
   time) and hands the rest to the inner CSV/JSON factory; `options_sql` emits
   the pairs the builders merge into COPY OPTIONS. Only the zone rides as a
   plain literal: a validated zone id never holds a quote or a backslash.
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 4 fold (2026-09-30):**
+  `TextWritePathRegistry`, a `ConfigExtension` holding one recorded-path
+  collector per running s3a text write, keyed by the `repark.text.write_id`
+  OPTION the commit appends; the map inside is `Arc`-shared so every plan
+  clone of the session sees it, and the entry is removed when the write
+  settles. pins: text-write-timestamp-zone-1/C-009
 - `serializer.rs` — `ReparkTextSerializer`: maps every temporal-bearing column
   (the same `contains_temporal` predicate as `select.rs`) through
   `format_batch_for_sink`, skipping top-level partition columns by lowercased
@@ -82,19 +88,24 @@ unformatted, as the UDF left them unwrapped.
   DataFusion builds it, then wrapped). The demux strips partition columns
   before serialization and names directories from the raw values, as before.
   **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 4 fold (2026-09-30):** the sink
-  owns a per-write collector of the output paths the demux hands it: the
-  `spawn_writer_tasks_and_join` override records each path and forwards the
-  stream into DataFusion's orchestration unchanged, so success bytes and
-  keys are identical and the s3a commit can delete exactly what this write
-  created on failure. The collector lives on the sink instance of one COPY,
-  never in shared state. pins: text-write-timestamp-zone-1/C-009
+  records the output paths the demux hands it into a per-write collector:
+  the `spawn_writer_tasks_and_join` override records each path and forwards
+  the stream into DataFusion's orchestration unchanged, so success bytes and
+  keys are identical. The factory injects the collector the session
+  registry holds for this COPY's write id (a miss gets a private one
+  nobody reads), and the s3a commit takes the same collector to delete
+  exactly what this write created on failure. Sharing stays inside one
+  write: never a process-global list. pins: text-write-timestamp-zone-1/C-009
 - `file_format.rs` — `ReparkTextFormat`, which delegates every method to the
   inner `CsvFormat` / `JsonFormat` except `create_writer_physical_plan`
   (same header, newlines-in-values and compression handling, over
   `ReparkTextSink`), and `ReparkTextFormatFactory`, registered on the session
   under `repark_text_csv` / `repark_text_json`. The factory ext is the
   `STORED AS` name; the format ext stays `csv` / `json`, so part files keep
-  their extension.
+  their extension. **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 4 fold
+  (2026-09-30):** the writer plan resolves this COPY's recorded-path
+  collector from the session registry by the spec's write id and injects
+  it into the sink. pins: text-write-timestamp-zone-1/C-009
 
 ## Debug
 

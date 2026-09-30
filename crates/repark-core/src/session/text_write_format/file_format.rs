@@ -22,7 +22,7 @@ use datafusion::prelude::SessionContext;
 use object_store::{ObjectMeta, ObjectStore};
 
 use super::sink::ReparkTextSink;
-use super::spec::TextWriteSpec;
+use super::spec::{TextWriteSpec, collector_for_write};
 
 pub(crate) const TEXT_CSV_FORMAT_NAME: &str = "repark_text_csv";
 pub(crate) const TEXT_JSON_FORMAT_NAME: &str = "repark_text_json";
@@ -113,6 +113,7 @@ impl FileFormat for ReparkTextFormat {
                 TextKind::Json => not_impl_err!("Overwrites are not implemented yet for Json"),
             };
         }
+        let created = collector_for_write(state, self.spec.write_id.as_deref());
         let sink = match self.kind {
             TextKind::Csv => {
                 let Some(csv) = self.inner.downcast_ref::<CsvFormat>() else {
@@ -136,6 +137,7 @@ impl FileFormat for ReparkTextFormat {
                     conf,
                     writer_options,
                     Arc::clone(&self.spec),
+                    created,
                 ))
             }
             TextKind::Json => {
@@ -147,6 +149,7 @@ impl FileFormat for ReparkTextFormat {
                     conf,
                     writer_options,
                     Arc::clone(&self.spec),
+                    created,
                 ))
             }
         };

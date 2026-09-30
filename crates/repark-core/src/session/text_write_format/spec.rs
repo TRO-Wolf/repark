@@ -1,6 +1,11 @@
+use std::any::Any;
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
+use datafusion::catalog::Session;
+use datafusion::common::config::{ConfigEntry, ConfigExtension, ExtensionOptions};
 use datafusion::common::{DataFusionError, Result};
+use object_store::path::Path as ObjectPath;
 
 use super::PatternKind;
 use super::udf::{FormatSpecs, spec_from_value};
@@ -10,7 +15,98 @@ pub(crate) const SPEC_ZONE_KEY: &str = "repark.text.zone";
 pub(crate) const SPEC_TIMESTAMP_FORMAT_KEY: &str = "repark.text.timestamp_format_hex";
 pub(crate) const SPEC_NTZ_FORMAT_KEY: &str = "repark.text.timestamp_ntz_format_hex";
 pub(crate) const SPEC_DATE_FORMAT_KEY: &str = "repark.text.date_format_hex";
+pub(crate) const SPEC_WRITE_ID_KEY: &str = "repark.text.write_id";
 const SPEC_PREFIX: &str = "repark.text.";
+
+type TextWriteCollectors = Arc<Mutex<HashMap<String, Arc<Mutex<Vec<ObjectPath>>>>>>;
+
+#[derive(Debug, Default)]
+pub(crate) struct TextWritePathRegistry {
+    paths: TextWriteCollectors,
+}
+
+impl TextWritePathRegistry {
+    pub(crate) fn register(&self, write_id: &str) -> Arc<Mutex<Vec<ObjectPath>>> {
+        let collector = Arc::new(Mutex::new(Vec::new()));
+        if let Ok(mut guard) = self.paths.lock() {
+            guard.insert(write_id.to_string(), Arc::clone(&collector));
+        }
+        collector
+    }
+
+    pub(crate) fn handle(&self, write_id: &str) -> Option<Arc<Mutex<Vec<ObjectPath>>>> {
+        self.paths
+            .lock()
+            .ok()
+            .and_then(|guard| guard.get(write_id).cloned())
+    }
+
+    pub(crate) fn take(&self, write_id: &str) -> Vec<ObjectPath> {
+        let removed = self
+            .paths
+            .lock()
+            .ok()
+            .and_then(|mut guard| guard.remove(write_id));
+        match removed {
+            Some(collector) => {
+                let mut guard = collector
+                    .lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner);
+                std::mem::take(&mut *guard)
+            }
+            None => Vec::new(),
+        }
+    }
+}
+
+impl ConfigExtension for TextWritePathRegistry {
+    const PREFIX: &'static str = "repark.textwrite";
+}
+
+impl ExtensionOptions for TextWritePathRegistry {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn cloned(&self) -> Box<dyn ExtensionOptions> {
+        Box::new(Self {
+            paths: Arc::clone(&self.paths),
+        })
+    }
+
+    fn set(&mut self, key: &str, _value: &str) -> Result<()> {
+        Err(DataFusionError::Configuration(format!(
+            "`{}.{key}` is not a settable option: the text write registry is owned by the \
+             running s3a write and never set by configuration",
+            Self::PREFIX
+        )))
+    }
+
+    fn entries(&self) -> Vec<ConfigEntry> {
+        Vec::new()
+    }
+}
+
+pub(crate) fn collector_for_write(
+    state: &dyn Session,
+    write_id: Option<&str>,
+) -> Arc<Mutex<Vec<ObjectPath>>> {
+    if let Some(id) = write_id
+        && let Some(registry) = state
+            .config_options()
+            .extensions
+            .get::<TextWritePathRegistry>()
+        && let Some(collector) = registry.handle(id)
+    {
+        collector
+    } else {
+        Arc::new(Mutex::new(Vec::new()))
+    }
+}
 
 #[derive(Debug)]
 pub(crate) struct TextWriteSpec {
@@ -18,6 +114,7 @@ pub(crate) struct TextWriteSpec {
     pub canonical: String,
     pub display: String,
     pub specs: FormatSpecs,
+    pub write_id: Option<String>,
 }
 
 impl TextWriteSpec {
@@ -36,6 +133,7 @@ impl TextWriteSpec {
                 ntz: spec_from_value(ntz, PatternKind::TimestampNtz)?,
                 date: spec_from_value(date, PatternKind::Date)?,
             },
+            write_id: None,
         })
     }
 
@@ -50,12 +148,13 @@ impl TextWriteSpec {
         let timestamp = Self::decode_option(format_options, SPEC_TIMESTAMP_FORMAT_KEY)?;
         let ntz = Self::decode_option(format_options, SPEC_NTZ_FORMAT_KEY)?;
         let date = Self::decode_option(format_options, SPEC_DATE_FORMAT_KEY)?;
-        let spec = Self::from_parts(
+        let mut spec = Self::from_parts(
             zone_raw,
             timestamp.as_deref(),
             ntz.as_deref(),
             date.as_deref(),
         )?;
+        spec.write_id = format_options.get(SPEC_WRITE_ID_KEY).cloned();
         let rest = format_options
             .iter()
             .filter(|(key, _)| !key.starts_with(SPEC_PREFIX))
@@ -133,5 +232,46 @@ impl TextWriteSpec {
             }
         }
         pairs.join(", ")
+    }
+}
+
+#[cfg(test)]
+mod spec_tests {
+    use super::*;
+
+    #[test]
+    fn spec_write_id_parses_and_strips_from_rest() {
+        let mut format_options = HashMap::new();
+        format_options.insert("repark.text.zone".to_string(), "UTC".to_string());
+        format_options.insert("repark.text.write_id".to_string(), "write-1".to_string());
+        format_options.insert("format.has_header".to_string(), "false".to_string());
+        let (spec, rest) =
+            TextWriteSpec::from_format_options(&format_options).expect("spec builds");
+        assert_eq!(spec.write_id.as_deref(), Some("write-1"));
+        assert_eq!(
+            rest,
+            HashMap::from([("format.has_header".to_string(), "false".to_string())])
+        );
+        let plain = HashMap::from([("repark.text.zone".to_string(), "UTC".to_string())]);
+        let (spec, _) = TextWriteSpec::from_format_options(&plain).expect("spec builds");
+        assert_eq!(spec.write_id, None);
+    }
+
+    #[test]
+    fn write_path_registry_holds_one_collector_per_write() {
+        let registry = TextWritePathRegistry::default();
+        assert!(registry.handle("missing").is_none());
+        assert!(registry.take("missing").is_empty());
+        let first = registry.register("write-1");
+        let second = registry.register("write-2");
+        first
+            .lock()
+            .unwrap()
+            .push(ObjectPath::from("prefix/first.json"));
+        assert_eq!(registry.take("write-1").len(), 1);
+        assert!(registry.take("write-1").is_empty());
+        assert!(registry.handle("write-2").is_some());
+        assert!(second.lock().unwrap().is_empty());
+        assert!(registry.take("write-2").is_empty());
     }
 }

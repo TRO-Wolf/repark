@@ -1,12 +1,9 @@
-use std::any::Any;
 use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use arrow::datatypes::SchemaRef;
-use datafusion::datasource::sink::DataSinkExec;
 use datafusion::execution::object_store::ObjectStoreUrl;
 use datafusion::parquet::arrow::arrow_writer::ArrowWriter;
-use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::DataFrame;
 use futures::StreamExt;
 use object_store::ObjectStore;
@@ -21,7 +18,7 @@ use crate::object_store_s3;
 use crate::session::ReparkSession;
 use crate::session::text_write_format::is_text_write_format_option;
 use crate::session::text_write_format::select::{TextWriteCopyParts, merge_spec_options};
-use crate::session::text_write_format::sink::ReparkTextSink;
+use crate::session::text_write_format::spec::{SPEC_WRITE_ID_KEY, TextWritePathRegistry};
 
 mod append;
 mod rollback;
@@ -157,6 +154,17 @@ fn writer_bool(raw: &str) -> bool {
 
 fn sql_escape(value: &str) -> String {
     value.replace('\'', "''")
+}
+
+fn with_text_write_id(spec_options_sql: String, view: &str) -> String {
+    if spec_options_sql.is_empty() {
+        spec_options_sql
+    } else {
+        format!(
+            "{spec_options_sql}, '{SPEC_WRITE_ID_KEY}' '{}'",
+            sql_escape(view)
+        )
+    }
 }
 
 fn normalize_write_compression(raw: &str) -> Result<&'static str> {
@@ -528,23 +536,6 @@ struct S3Commit<'a> {
     copy_sql: &'a str,
 }
 
-fn text_sink_created_paths(plan: &Arc<dyn ExecutionPlan>) -> Option<Arc<Mutex<Vec<ObjectPath>>>> {
-    let mut stack = vec![Arc::clone(plan)];
-    while let Some(node) = stack.pop() {
-        let node_any = node.as_ref() as &dyn Any;
-        if let Some(exec) = node_any.downcast_ref::<DataSinkExec>() {
-            let sink = exec.sink() as &dyn Any;
-            if let Some(text) = sink.downcast_ref::<ReparkTextSink>() {
-                return Some(text.created_paths());
-            }
-        }
-        for child in node.children() {
-            stack.push(Arc::clone(child));
-        }
-    }
-    None
-}
-
 impl ReparkSession {
     #[allow(clippy::missing_errors_doc)]
     fn copy_inner_parts(
@@ -652,7 +643,8 @@ impl ReparkSession {
         let view = unique_view_name();
         let copy_target = object_store_s3::write_target_url(&scheme, &bucket, &prefix_text);
         let parts = self.copy_inner_parts(frame, &format, &view, options, &resolved_partitions)?;
-        let options_clause = merge_spec_options(options_clause, &parts.spec_options_sql);
+        let spec_options_sql = with_text_write_id(parts.spec_options_sql, &view);
+        let options_clause = merge_spec_options(options_clause, &spec_options_sql);
         let copy_sql = format!(
             "COPY ({}) TO '{}' STORED AS {}{}{}",
             parts.select_sql,
@@ -761,9 +753,9 @@ impl ReparkSession {
         } else {
             Some(commit.prefix)
         };
-        let mut created: Option<Arc<Mutex<Vec<ObjectPath>>>> = None;
         let mut materialized: Option<ObjectPath> = None;
         let outcome = async {
+            self.register_text_write(view);
             let copy_outcome = self
                 .sql_with_write_options(
                     commit.copy_sql,
@@ -772,15 +764,7 @@ impl ReparkSession {
                     false,
                 )
                 .await?;
-            let task_context = Arc::new(copy_outcome.task_ctx());
-            let plan = copy_outcome
-                .create_physical_plan()
-                .await
-                .map_err(engine_err)?;
-            created = text_sink_created_paths(&plan);
-            let _copy_batches = datafusion::physical_plan::collect(plan, task_context)
-                .await
-                .map_err(engine_err)?;
+            let _copy_batches = copy_outcome.collect().await.map_err(engine_err)?;
             let mut parts =
                 list_part_keys(commit.store, scope, commit.format.extension(), commit.url).await?;
             if parts.is_empty() && !commit.partitioned {
@@ -824,6 +808,8 @@ impl ReparkSession {
             Ok::<usize, Error>(parts.len())
         }
         .await;
+        let mut locations = self.take_text_write_paths(view);
+        locations.extend(materialized);
         match outcome {
             Ok(count) => {
                 self.drop_temp_view(view)?;
@@ -831,14 +817,6 @@ impl ReparkSession {
             }
             Err(error) => {
                 let _drop_result = self.drop_temp_view(view);
-                let mut locations = Vec::new();
-                if let Some(handle) = created.as_ref() {
-                    let mut guard = handle
-                        .lock()
-                        .unwrap_or_else(std::sync::PoisonError::into_inner);
-                    locations.append(&mut guard);
-                }
-                locations.extend(materialized);
                 let cleanup =
                     rollback::delete_recorded_keys(commit.store, &locations, commit.url).await;
                 match cleanup {
@@ -850,5 +828,27 @@ impl ReparkSession {
                 }
             }
         }
+    }
+
+    fn register_text_write(&self, view: &str) {
+        let state_lock = self.context().state_ref();
+        let mut state = state_lock.write();
+        let options = state.config_mut().options_mut();
+        if options.extensions.get::<TextWritePathRegistry>().is_none() {
+            options.extensions.insert(TextWritePathRegistry::default());
+        }
+        if let Some(registry) = options.extensions.get::<TextWritePathRegistry>() {
+            registry.register(view);
+        }
+    }
+
+    fn take_text_write_paths(&self, view: &str) -> Vec<ObjectPath> {
+        self.context()
+            .copied_config()
+            .options()
+            .extensions
+            .get::<TextWritePathRegistry>()
+            .map(|registry| registry.take(view))
+            .unwrap_or_default()
     }
 }

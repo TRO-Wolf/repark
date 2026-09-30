@@ -626,3 +626,21 @@ bucket root keeps a foreign prefix intact with no other new key. Mutation
 M10 (the rollback deletes by listing again): both pins red. Reverted; pins
 green. Proof outputs live in
 `/tmp/oc-worker/direct/wo/reverify4-csvts-fold/`.
+
+Re-verify 4 fold, correction (2026-09-30, same lane): the first cut reached
+the sink's collector by walking the COPY's physical plan for the
+`DataSinkExec` node. The moto proof showed that cut deletes nothing on the
+facade door: the Spark router runs `LogicalPlan::Copy` eagerly inside
+`sql_with_write_options` (`repark-spark/src/spark_ast.rs`
+`execute_passthrough_inner` collects DML/COPY and returns materialized
+batches), so the sink lives and dies inside that call and no plan handle
+outlives the write. The committed mechanism passes the collector into the
+COPY instead: the commit registers a per-write collector in a
+`TextWritePathRegistry` session extension (a `ConfigExtension` whose inner
+map is `Arc`-shared, so every plan clone of the session sees it) under the
+write id it appends as a `repark.text.write_id` COPY OPTION, the factory
+resolves that id to the collector and injects it into the sink, and the
+commit takes the same collector after the COPY settles. Only s3a text
+COPYs carry the option, and only for the spec formats; a lookup miss gets
+a private collector nobody reads. The C-007/C-009 clauses and the M10
+mutation above describe the committed mechanism and still hold.
