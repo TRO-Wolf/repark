@@ -3773,6 +3773,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **Re-verify (2026-09-29):** 34 more cells (zero-offset `VV` spellings,
   `g` padding widths) plus policy-default, no-LEGACY-clause, and
   optioned-non-temporal LEGACY legs (244 pins).
+  **Re-verify 2 (2026-09-30):** a `perf`-marked shuffled-data pin: 20k
+  timestamps over 1900-2024 write to CSV inside a 1.0 s debug budget.
 - `test_r2_read_formats2.py` — R2 writer option matrix / path modes / partitionBy: quoteAll /
   escapeQuotes wired; dateFormat/timestampFormat honored (TEXT-WRITE-TIMESTAMP-ZONE-1
   flipped the three refuse-loud legs to honored pins); parquet compression; path

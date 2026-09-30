@@ -34,6 +34,14 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   **Re-verify (2026-09-29):** `g`-padding, no-LEGACY-clause, offset-cache,
   and scalar-vs-fast differential pins (56 in-module; the two
   temporary release probes left with the re-verify fold).
+- `text_write_format_cache.rs` — **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 2
+  (2026-09-30):** the zone-offset cache proves itself against direct
+  chrono-tz lookups over all 597 bundled zones: every transition found by a
+  3-day scan of 1840-2100 (exact instants plus microsecond/second/hour/day
+  neighbours, each queried after warming the cache days away on both sides),
+  sampled years 1-9999, and a fixed-offset battery. Every resolve also holds
+  the cached window at or under 15 minutes, so a reintroduced step search
+  reds the suite structurally.
 - `s3_prefix_read.rs` — **S3-PATH-WRITE-1 round 2 (2026-09-28):** slashless S3
   prefix reads on an in-memory store (no AWS): a written prefix reads back
   slashless for parquet, csv and json; exact part URLs keep single-file reads

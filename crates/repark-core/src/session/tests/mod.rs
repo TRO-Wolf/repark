@@ -17,4 +17,5 @@ mod session;
 mod session_catalog;
 mod subquery;
 mod text_write_format;
+mod text_write_format_cache;
 mod window_rescan;

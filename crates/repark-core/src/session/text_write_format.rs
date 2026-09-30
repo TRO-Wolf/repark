@@ -31,6 +31,7 @@ pub enum PatternToken {
 pub struct CompiledPattern {
     tokens: Vec<PatternToken>,
     matching: Vec<Option<usize>>,
+    has_era: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -513,7 +514,14 @@ fn compile_tokens(pattern: &str) -> CompiledPattern {
             _ => {}
         }
     }
-    CompiledPattern { tokens, matching }
+    let has_era = tokens
+        .iter()
+        .any(|token| matches!(token, PatternToken::Field { letter: 'G', .. }));
+    CompiledPattern {
+        tokens,
+        matching,
+        has_era,
+    }
 }
 
 pub fn compile_write_pattern(

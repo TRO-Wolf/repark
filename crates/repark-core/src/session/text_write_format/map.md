@@ -21,23 +21,27 @@ change; partition columns stay unwrapped.
   id the UDF resolves, never the canonical zone. `g` pads the signed day
   count with zeros to the letter count (re-verify 2026-09-29). Every
   field writes into a caller buffer: no per-value `String` on the hot
-  path (re-verify 2026-09-29).
+  path (re-verify 2026-09-29). The compiled pattern carries `has_era`,
+  decided once per pattern; `epoch_day` is computed once per value
+  (re-verify 2 2026-09-30).
 - `udf.rs` — the volatile `ScalarUDF` and its Arrow recursion (timestamp, date,
   struct, list, map values; map keys untouched). Return-type mapping mirrors
   the recursion so plans see `Utf8` where strings come out. The zone argument
   arrives raw: the UDF canonicalizes it for `Tz` and resolves the Java display
   id for `VV`. Pattern arguments arrive backslash-doubled (see `select.rs`):
   the UDF halves each pair before compiling, so error echoes show the user's
-  pattern. An offset-interval cache resolves the `Tz` once per transition
-  span instead of once per value; default specs dispatch to the `fast.rs
-  loops (re-verify 2026-09-29).
+  pattern. UTC and fixed-offset zones resolve once per call with no zone
+  lookup; other zones share one offset cache per session zone, held on the
+  UDF struct and parked between calls (re-verify 2 2026-09-30). A miss costs
+  one direct lookup plus a two-endpoint proof that the 15-minute window
+  around the instant holds a single offset; an unproven window caches
+  nothing, and no search walks in steps. Default specs dispatch to the
+  `fast.rs` loops and build each output column in one offsets-plus-values
+  buffer validated once per batch (re-verify 2 2026-09-30).
 - `fast.rs` — the default-format fast path (re-verify 2026-09-29):
   table-driven digit emission, a day cache, a precomputed offset suffix,
-  and a small-delta carry between consecutive values. The 6-day bound
-  search stays under the 597600s minimum transition gap measured from
-  the bundled chrono-tz 0.10.4 tables (transitions span 1844-2099);
-  re-measure on any chrono-tz bump. Byte-identity with the scalar
-  renders is pinned by a differential test, not by review.
+  and a small-delta carry between consecutive values. Byte-identity with
+  the scalar renders is pinned by a differential test, not by review.
 - `select.rs` — `build_text_write_select`: per-kind user-pattern validation
   (Spark error classes) plus the projection builder, and the
   `ReparkSession::text_write_select_sql` entry over a `DataFrame` schema.

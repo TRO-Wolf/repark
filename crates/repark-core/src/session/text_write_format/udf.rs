@@ -1,12 +1,14 @@
+use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use arrow::array::timezone::Tz;
 use arrow::array::{
     Array, ArrayRef, AsArray, FixedSizeListArray, LargeListArray, ListArray, MapArray,
-    StringBuilder, StructArray,
+    NullBufferBuilder, StringArray, StringBuilder, StructArray,
 };
+use arrow::buffer::{Buffer, OffsetBuffer, ScalarBuffer};
 use arrow::compute::cast;
 use arrow::datatypes::{
     DataType, Date32Type, Date64Type, Field, FieldRef, TimeUnit, TimestampMicrosecondType,
@@ -27,7 +29,9 @@ use super::{
     CompiledPattern, PatternKind, compile_write_pattern, micros_to_naive_wall, micros_to_wall_zone,
     pattern_failure_datafusion,
 };
-use crate::session_time_zone::{canonical_session_zone_id, java_display_zone_id};
+use crate::session_time_zone::{
+    DEFAULT_SESSION_TIME_ZONE, canonical_session_zone_id, java_display_zone_id,
+};
 
 pub const WRITE_FORMAT_FUNCTION: &str = "repark_write_format_text";
 
@@ -71,10 +75,12 @@ fn fraction_nanos(micros: i64) -> u32 {
     u32::try_from(micros.rem_euclid(MICROS_PER_SECOND)).unwrap_or(0) * NANOS_PER_MICRO
 }
 
-const SEARCH_SECONDS_CLAMP: i64 = 9_000_000_000_000;
-const SEARCH_STEP_SECONDS: i64 = 518_400;
-const SEARCH_PROBE_BUDGET: u32 = 12_288;
+pub(crate) const CACHED_WINDOW_MICROS: i64 = 900_000_000;
 
+const WINDOW_HALF_MICROS: i64 = CACHED_WINDOW_MICROS / 2;
+const SHARED_ZONE_LIMIT: usize = 64;
+
+#[derive(Debug)]
 pub(crate) struct OffsetCache {
     zone: Tz,
     offset: Option<FixedOffset>,
@@ -97,66 +103,30 @@ impl OffsetCache {
         }
     }
 
-    fn probe(&self, seconds: i64, offset: FixedOffset) -> bool {
-        let clamped = seconds.clamp(-SEARCH_SECONDS_CLAMP, SEARCH_SECONDS_CLAMP);
-        micros_to_wall_zone(clamped * MICROS_PER_SECOND, self.zone)
+    #[cfg(test)]
+    pub(crate) fn cached_span_micros(&self) -> Option<i64> {
+        self.offset.map(|_| self.end - self.start)
+    }
+
+    fn prove_window(&mut self, micros: i64, offset: FixedOffset) {
+        let start = micros.saturating_sub(WINDOW_HALF_MICROS);
+        let end = micros.saturating_add(WINDOW_HALF_MICROS);
+        let ends_hold = micros_to_wall_zone(start, self.zone)
             .is_some_and(|(_, found)| found == offset)
-    }
-
-    fn bound_above(&self, center: i64, offset: FixedOffset) -> i64 {
-        let mut low = center;
-        for _ in 0..SEARCH_PROBE_BUDGET {
-            let high = low.saturating_add(SEARCH_STEP_SECONDS);
-            if !self.probe(high, offset) {
-                let mut keep = low;
-                let mut drop = high;
-                while drop - keep > 1 {
-                    let middle = keep + (drop - keep) / 2;
-                    if self.probe(middle, offset) {
-                        keep = middle;
-                    } else {
-                        drop = middle;
-                    }
-                }
-                return drop;
-            }
-            low = high;
+            && micros_to_wall_zone(end.saturating_sub(1), self.zone)
+                .is_some_and(|(_, found)| found == offset);
+        if ends_hold {
+            self.offset = Some(offset);
+            self.start = start;
+            self.end = end;
+        } else {
+            self.offset = None;
         }
-        low.saturating_add(1)
-    }
-
-    fn bound_below(&self, center: i64, offset: FixedOffset) -> i64 {
-        let mut high = center;
-        for _ in 0..SEARCH_PROBE_BUDGET {
-            let low = high.saturating_sub(SEARCH_STEP_SECONDS);
-            if !self.probe(low, offset) {
-                let mut drop = low;
-                let mut keep = high;
-                while keep - drop > 1 {
-                    let middle = drop + (keep - drop) / 2;
-                    if self.probe(middle, offset) {
-                        keep = middle;
-                    } else {
-                        drop = middle;
-                    }
-                }
-                return keep;
-            }
-            high = low;
-        }
-        high
     }
 
     fn refresh(&mut self, micros: i64) -> Option<(NaiveDateTime, FixedOffset)> {
         let (wall, offset) = micros_to_wall_zone(micros, self.zone)?;
-        let center = micros.div_euclid(MICROS_PER_SECOND);
-        self.offset = Some(offset);
-        self.start = self
-            .bound_below(center, offset)
-            .saturating_mul(MICROS_PER_SECOND);
-        self.end = self
-            .bound_above(center, offset)
-            .saturating_mul(MICROS_PER_SECOND);
+        self.prove_window(micros, offset);
         Some((wall, offset))
     }
 
@@ -180,14 +150,7 @@ impl OffsetCache {
         let (_, offset) = micros_to_wall_zone(micros, self.zone)?;
         let shift = i64::from(offset.local_minus_utc()) * MICROS_PER_SECOND;
         let shifted = micros.checked_add(shift)?;
-        let center = micros.div_euclid(MICROS_PER_SECOND);
-        self.offset = Some(offset);
-        self.start = self
-            .bound_below(center, offset)
-            .saturating_mul(MICROS_PER_SECOND);
-        self.end = self
-            .bound_above(center, offset)
-            .saturating_mul(MICROS_PER_SECOND);
+        self.prove_window(micros, offset);
         Some((shifted, offset))
     }
 
@@ -210,14 +173,98 @@ impl OffsetCache {
     }
 }
 
+#[derive(Debug)]
+pub(crate) enum ZoneResolver {
+    Fixed {
+        offset: FixedOffset,
+        wall_lowest: i64,
+        wall_highest: i64,
+    },
+    Cached(OffsetCache),
+}
+
+impl ZoneResolver {
+    pub(crate) fn fixed(offset: FixedOffset) -> Self {
+        let (wall_lowest, wall_highest) = wall_micros_bounds();
+        Self::Fixed {
+            offset,
+            wall_lowest,
+            wall_highest,
+        }
+    }
+
+    pub(crate) fn resolve(&mut self, micros: i64) -> Option<(NaiveDateTime, FixedOffset)> {
+        match self {
+            Self::Fixed { offset, .. } => {
+                let shift = i64::from(offset.local_minus_utc()) * MICROS_PER_SECOND;
+                let shifted = micros.checked_add(shift)?;
+                let wall = chrono::DateTime::from_timestamp_micros(shifted)?.naive_utc();
+                Some((wall, *offset))
+            }
+            Self::Cached(cache) => cache.resolve(micros),
+        }
+    }
+
+    pub(crate) fn resolve_micros(&mut self, micros: i64) -> Option<(i64, FixedOffset)> {
+        match self {
+            Self::Fixed {
+                offset,
+                wall_lowest,
+                wall_highest,
+            } => {
+                let shift = i64::from(offset.local_minus_utc()) * MICROS_PER_SECOND;
+                let shifted = micros.checked_add(shift)?;
+                if shifted < *wall_lowest
+                    || shifted > *wall_highest
+                    || micros < *wall_lowest
+                    || micros > *wall_highest
+                {
+                    return None;
+                }
+                Some((shifted, *offset))
+            }
+            Self::Cached(cache) => cache.resolve_micros(micros),
+        }
+    }
+}
+
+fn fixed_session_offset(canonical: &str) -> Option<FixedOffset> {
+    if canonical == DEFAULT_SESSION_TIME_ZONE {
+        return FixedOffset::east_opt(0);
+    }
+    let bytes = canonical.as_bytes();
+    if bytes.len() != 6 || bytes[3] != b':' {
+        return None;
+    }
+    if bytes[0] != b'+' && bytes[0] != b'-' {
+        return None;
+    }
+    if ![bytes[1], bytes[2], bytes[4], bytes[5]]
+        .iter()
+        .all(u8::is_ascii_digit)
+    {
+        return None;
+    }
+    let hours = u32::from(bytes[1] - b'0') * 10 + u32::from(bytes[2] - b'0');
+    let minutes = u32::from(bytes[4] - b'0') * 10 + u32::from(bytes[5] - b'0');
+    let Ok(seconds) = i32::try_from(hours * 3600 + minutes * 60) else {
+        return None;
+    };
+    if bytes[0] == b'+' {
+        FixedOffset::east_opt(seconds)
+    } else {
+        FixedOffset::west_opt(seconds)
+    }
+}
+
 fn format_instant_into(
     buffer: &mut String,
     micros: i64,
-    cache: &mut OffsetCache,
+    resolver: &mut ZoneResolver,
     zone_id: &str,
     spec: &FormatSpec,
 ) -> Result<bool> {
-    let Some((wall, offset)) = cache.resolve(micros) else {
+    let Some((wall, offset)) = resolver.resolve(micros) else {
         return Ok(false);
     };
     let nanos = fraction_nanos(micros);
@@ -333,42 +380,81 @@ fn arrow_failed(error: &arrow::error::ArrowError) -> DataFusionError {
 
 struct FormatContext<'a> {
     specs: &'a FormatSpecs,
-    cache: OffsetCache,
+    resolver: ZoneResolver,
     zone_id: &'a str,
 }
 
-fn staged_text(staged: &[u8], len: usize) -> &str {
-    debug_assert!(staged[..len].iter().all(u8::is_ascii));
-    std::str::from_utf8(&staged[..len]).unwrap_or("")
+struct TextColumnBuilder {
+    offsets: Vec<i32>,
+    values: Vec<u8>,
+    nulls: NullBufferBuilder,
+}
+
+impl TextColumnBuilder {
+    fn with_capacity(rows: usize, bytes: usize) -> Self {
+        let mut offsets = Vec::with_capacity(rows + 1);
+        offsets.push(0);
+        Self {
+            offsets,
+            values: Vec::with_capacity(bytes),
+            nulls: NullBufferBuilder::new(rows),
+        }
+    }
+
+    fn append_bytes(&mut self, bytes: &[u8]) -> Result<()> {
+        self.values.extend_from_slice(bytes);
+        let Ok(end) = i32::try_from(self.values.len()) else {
+            return Err(DataFusionError::Execution(
+                "text timestamp write failed: output exceeds 2 GiB".to_string(),
+            ));
+        };
+        self.offsets.push(end);
+        self.nulls.append_non_null();
+        Ok(())
+    }
+
+    fn append_null(&mut self) {
+        let last = self.offsets[self.offsets.len() - 1];
+        self.offsets.push(last);
+        self.nulls.append_null();
+    }
+
+    fn finish(mut self) -> Result<ArrayRef> {
+        let offsets = OffsetBuffer::new(ScalarBuffer::from(self.offsets));
+        let values = Buffer::from(self.values);
+        let array = StringArray::try_new(offsets, values, self.nulls.finish())
+            .map_err(|error| arrow_failed(&error))?;
+        Ok(Arc::new(array))
+    }
 }
 
 fn append_ltz_default(
-    builder: &mut StringBuilder,
+    builder: &mut TextColumnBuilder,
     state: &mut TimestampDefaultState,
     staged: &mut [u8; 48],
-    cache: &mut OffsetCache,
+    resolver: &mut ZoneResolver,
     ticks: i64,
-) {
-    match cache.resolve_micros(ticks) {
-        Some((wall, offset)) => {
-            let len = state.render(wall, Some(offset), staged);
-            builder.append_value(staged_text(staged, len));
-        }
-        None => builder.append_null(),
+) -> Result<()> {
+    if let Some((wall, offset)) = resolver.resolve_micros(ticks) {
+        let len = state.render(wall, Some(offset), staged);
+        builder.append_bytes(&staged[..len])
+    } else {
+        builder.append_null();
+        Ok(())
     }
 }
 
 fn format_ltz_default_column(
     micros: &arrow::array::PrimitiveArray<TimestampMicrosecondType>,
-    cache: &mut OffsetCache,
-) -> ArrayRef {
-    let mut builder = StringBuilder::with_capacity(micros.len(), micros.len() * 32);
+    resolver: &mut ZoneResolver,
+) -> Result<ArrayRef> {
+    let mut builder = TextColumnBuilder::with_capacity(micros.len(), micros.len() * 32);
     let mut state = TimestampDefaultState::new();
     let mut staged = [0u8; 48];
     let values = micros.values();
     if micros.null_count() == 0 {
         for ticks in values {
-            append_ltz_default(&mut builder, &mut state, &mut staged, cache, *ticks);
+            append_ltz_default(&mut builder, &mut state, &mut staged, resolver, *ticks)?;
         }
     } else {
         for (row, ticks) in values.iter().enumerate() {
@@ -376,16 +462,16 @@ fn format_ltz_default_column(
                 builder.append_null();
                 continue;
             }
-            append_ltz_default(&mut builder, &mut state, &mut staged, cache, *ticks);
+            append_ltz_default(&mut builder, &mut state, &mut staged, resolver, *ticks)?;
         }
     }
-    Arc::new(builder.finish())
+    builder.finish()
 }
 
 fn format_ntz_default_column(
     micros: &arrow::array::PrimitiveArray<TimestampMicrosecondType>,
-) -> ArrayRef {
-    let mut builder = StringBuilder::with_capacity(micros.len(), micros.len() * 32);
+) -> Result<ArrayRef> {
+    let mut builder = TextColumnBuilder::with_capacity(micros.len(), micros.len() * 32);
     let mut state = TimestampDefaultState::new();
     let mut staged = [0u8; 48];
     let (lowest, highest) = wall_micros_bounds();
@@ -397,7 +483,7 @@ fn format_ntz_default_column(
                 continue;
             }
             let len = state.render(*ticks, None, &mut staged);
-            builder.append_value(staged_text(&staged, len));
+            builder.append_bytes(&staged[..len])?;
         }
     } else {
         for (row, ticks) in values.iter().enumerate() {
@@ -406,21 +492,23 @@ fn format_ntz_default_column(
                 continue;
             }
             let len = state.render(*ticks, None, &mut staged);
-            builder.append_value(staged_text(&staged, len));
+            builder.append_bytes(&staged[..len])?;
         }
     }
-    Arc::new(builder.finish())
+    builder.finish()
 }
 
 fn append_date_default(
-    builder: &mut StringBuilder,
+    builder: &mut TextColumnBuilder,
     state: &mut DateDefaultState,
     staged: &mut [u8; 48],
     days: i64,
-) {
-    match state.render(days, staged) {
-        Some(len) => builder.append_value(staged_text(staged, len)),
-        None => builder.append_null(),
+) -> Result<()> {
+    if let Some(len) = state.render(days, staged) {
+        builder.append_bytes(&staged[..len])
+    } else {
+        builder.append_null();
+        Ok(())
     }
 }
 
@@ -440,11 +528,11 @@ fn format_timestamp_column(
         &context.specs.ntz
     };
     if matches!(spec, FormatSpec::Default) {
-        return Ok(if zoned {
-            format_ltz_default_column(micros, &mut context.cache)
+        return if zoned {
+            format_ltz_default_column(micros, &mut context.resolver)
         } else {
             format_ntz_default_column(micros)
-        });
+        };
     }
     let mut builder = StringBuilder::with_capacity(micros.len(), micros.len() * 32);
     let mut buffer = String::with_capacity(64);
@@ -458,7 +546,7 @@ fn format_timestamp_column(
             format_instant_into(
                 &mut buffer,
                 ticks,
-                &mut context.cache,
+                &mut context.resolver,
                 context.zone_id,
                 &context.specs.timestamp,
             )?
@@ -474,14 +562,14 @@ fn format_timestamp_column(
     Ok(Arc::new(builder.finish()))
 }
 
-fn format_date_default_column(days: &arrow::array::PrimitiveArray<Date32Type>) -> ArrayRef {
-    let mut builder = StringBuilder::with_capacity(days.len(), days.len() * 10);
+fn format_date_default_column(days: &arrow::array::PrimitiveArray<Date32Type>) -> Result<ArrayRef> {
+    let mut builder = TextColumnBuilder::with_capacity(days.len(), days.len() * 10);
     let mut state = DateDefaultState::new();
     let mut staged = [0u8; 48];
     let values = days.values();
     if days.null_count() == 0 {
         for day in values {
-            append_date_default(&mut builder, &mut state, &mut staged, i64::from(*day));
+            append_date_default(&mut builder, &mut state, &mut staged, i64::from(*day))?;
         }
     } else {
         for (row, day) in values.iter().enumerate() {
@@ -489,17 +577,17 @@ fn format_date_default_column(days: &arrow::array::PrimitiveArray<Date32Type>) -
                 builder.append_null();
                 continue;
             }
-            append_date_default(&mut builder, &mut state, &mut staged, i64::from(*day));
+            append_date_default(&mut builder, &mut state, &mut staged, i64::from(*day))?;
         }
     }
-    Arc::new(builder.finish())
+    builder.finish()
 }
 
 fn format_date_column(array: &ArrayRef, context: &FormatContext) -> Result<ArrayRef> {
     let days = cast(array.as_ref(), &DataType::Date32)?;
     let days = days.as_primitive::<Date32Type>();
     if matches!(context.specs.date, FormatSpec::Default) {
-        return Ok(format_date_default_column(days));
+        return format_date_default_column(days);
     }
     let mut builder = StringBuilder::with_capacity(days.len(), days.len() * 10);
     let mut buffer = String::with_capacity(16);
@@ -520,7 +608,7 @@ fn format_date_column(array: &ArrayRef, context: &FormatContext) -> Result<Array
 fn format_date64_column(array: &ArrayRef, context: &FormatContext) -> Result<ArrayRef> {
     let array = array.as_primitive::<Date64Type>();
     if matches!(context.specs.date, FormatSpec::Default) {
-        let mut builder = StringBuilder::with_capacity(array.len(), array.len() * 10);
+        let mut builder = TextColumnBuilder::with_capacity(array.len(), array.len() * 10);
         let mut state = DateDefaultState::new();
         let mut staged = [0u8; 48];
         let values = array.values();
@@ -531,7 +619,7 @@ fn format_date64_column(array: &ArrayRef, context: &FormatContext) -> Result<Arr
                     &mut state,
                     &mut staged,
                     millis.div_euclid(MILLIS_PER_DAY),
-                );
+                )?;
             }
         } else {
             for (row, millis) in values.iter().enumerate() {
@@ -544,10 +632,10 @@ fn format_date64_column(array: &ArrayRef, context: &FormatContext) -> Result<Arr
                     &mut state,
                     &mut staged,
                     millis.div_euclid(MILLIS_PER_DAY),
-                );
+                )?;
             }
         }
-        return Ok(Arc::new(builder.finish()));
+        return builder.finish();
     }
     let mut builder = StringBuilder::with_capacity(array.len(), array.len() * 10);
     let mut buffer = String::with_capacity(16);
@@ -694,13 +782,49 @@ fn format_array(array: ArrayRef, context: &mut FormatContext) -> Result<ArrayRef
 #[derive(Debug)]
 struct WriteFormatText {
     signature: Signature,
+    caches: Mutex<HashMap<String, OffsetCache>>,
 }
 
 impl WriteFormatText {
     fn new() -> Self {
         Self {
             signature: Signature::user_defined(Volatility::Volatile),
+            caches: Mutex::new(HashMap::new()),
         }
+    }
+
+    fn take_resolver(&self, canonical: &str, zone_raw: &str) -> Result<ZoneResolver> {
+        if let Some(offset) = fixed_session_offset(canonical) {
+            return Ok(ZoneResolver::fixed(offset));
+        }
+        let zone = Tz::from_str(canonical).map_err(|error| {
+            DataFusionError::Execution(format!(
+                "session timezone {zone_raw:?} could not be resolved at query time ({error})"
+            ))
+        })?;
+        let mut caches = self
+            .caches
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        Ok(ZoneResolver::Cached(
+            caches
+                .remove(canonical)
+                .unwrap_or_else(|| OffsetCache::new(zone)),
+        ))
+    }
+
+    fn park_resolver(&self, canonical: String, resolver: ZoneResolver) {
+        let ZoneResolver::Cached(cache) = resolver else {
+            return;
+        };
+        let mut caches = self
+            .caches
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        if caches.len() >= SHARED_ZONE_LIMIT {
+            caches.clear();
+        }
+        caches.insert(canonical, cache);
     }
 }
 
@@ -805,18 +929,15 @@ impl ScalarUDFImpl for WriteFormatText {
             date: spec_from_value(date.as_deref(), PatternKind::Date)?,
         };
         let canonical = canonical_session_zone_id(zone_raw.as_str());
-        let zone = Tz::from_str(canonical.as_str()).map_err(|error| {
-            DataFusionError::Execution(format!(
-                "session timezone {zone_raw:?} could not be resolved at query time ({error})"
-            ))
-        })?;
         let display = java_display_zone_id(zone_raw.as_str());
         let mut context = FormatContext {
             specs: &specs,
-            cache: OffsetCache::new(zone),
+            resolver: self.take_resolver(canonical.as_str(), zone_raw.as_str())?,
             zone_id: display.as_str(),
         };
-        format_array(value.clone(), &mut context).map(ColumnarValue::Array)
+        let formatted = format_array(value.clone(), &mut context)?;
+        self.park_resolver(canonical, context.resolver);
+        Ok(ColumnarValue::Array(formatted))
     }
 }
 

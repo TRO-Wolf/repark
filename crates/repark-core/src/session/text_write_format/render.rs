@@ -423,6 +423,7 @@ fn render_field_into(
     letter: char,
     count: usize,
     value: &RenderValue,
+    epoch_day: i64,
     has_era: bool,
 ) -> std::result::Result<(), String> {
     let (date, wall, nanos) = match value {
@@ -431,10 +432,6 @@ fn render_field_into(
         }
         RenderValue::Date { date } => (*date, None, 0),
     };
-    let epoch_day = NaiveDateTime::new(date, NaiveTime::MIN)
-        .and_utc()
-        .timestamp()
-        .div_euclid(86_400);
     if render_date_field_into(output, letter, count, date, epoch_day, has_era) {
         return Ok(());
     }
@@ -473,10 +470,15 @@ pub fn render_compiled_into(
 ) -> std::result::Result<(), String> {
     output.clear();
     let mut section_starts: Vec<(usize, usize)> = Vec::new();
-    let has_era = compiled
-        .tokens
-        .iter()
-        .any(|token| matches!(token, PatternToken::Field { letter: 'G', .. }));
+    let date = match value {
+        RenderValue::Instant { wall, .. } | RenderValue::Wall { wall, .. } => wall.date(),
+        RenderValue::Date { date } => *date,
+    };
+    let epoch_day = NaiveDateTime::new(date, NaiveTime::MIN)
+        .and_utc()
+        .timestamp()
+        .div_euclid(86_400);
+    let has_era = compiled.has_era;
     let mut index = 0usize;
     while index < compiled.tokens.len() {
         match &compiled.tokens[index] {
@@ -493,7 +495,7 @@ pub fn render_compiled_into(
                 index += 1;
             }
             PatternToken::Field { letter, count } => {
-                match render_field_into(output, *letter, *count, value, has_era) {
+                match render_field_into(output, *letter, *count, value, epoch_day, has_era) {
                     Ok(()) => {
                         index += 1;
                     }

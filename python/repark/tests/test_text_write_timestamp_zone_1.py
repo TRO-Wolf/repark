@@ -19,6 +19,7 @@ from __future__ import annotations
 import datetime
 import json
 import os
+import random
 import re
 import socket
 import subprocess
@@ -46,6 +47,8 @@ _DIVERGENCE_CELLS: list[dict[str, Any]] = [
 _REPO_ROOT: Path = Path(__file__).resolve().parents[3]
 _MOTOPY: Path = _REPO_ROOT / "target" / "u12" / "moto-venv" / "bin" / "python"
 _BUCKET: str = "text-write-timestamp-zone-1"
+_SHUFFLED_ROWS: int = 20_000
+_SHUFFLED_BUDGET_SECONDS: float = 1.0
 
 
 @pytest.fixture
@@ -220,6 +223,34 @@ def test_lmt_offset_seconds_csv_schema_read_refuses_loud(
     ).option("header", "true").csv(str(dest))
     with pytest.raises(Exception, match=r"Invalid timezone"):
         spark.read.option("header", "true").schema("id INT, t TIMESTAMP").csv(str(dest)).collect()
+
+
+@pytest.mark.perf
+def test_shuffled_timestamps_write_within_budget(spark: ReparkSession, tmp_path: Path) -> None:
+    """Shuffled timestamps write near base speed; a cache miss costs one lookup."""
+    spark.conf.set("spark.sql.session.timeZone", "America/New_York")
+    rng = random.Random(1)
+    rows = [
+        (
+            index,
+            datetime.datetime(
+                rng.randint(1900, 2024),
+                rng.randint(1, 12),
+                rng.randint(1, 28),
+                rng.randint(0, 23),
+            ),
+        )
+        for index in range(_SHUFFLED_ROWS)
+    ]
+    frame = spark.createDataFrame(rows, "id INT, t TIMESTAMP")
+    dest = tmp_path / "out"
+    started = time.perf_counter()
+    frame.write.mode("overwrite").csv(str(dest))
+    elapsed = time.perf_counter() - started
+    parts = sorted(dest.rglob("*.csv"))
+    assert parts, "expected part files"
+    assert sum(part.stat().st_size for part in parts) > _SHUFFLED_ROWS * 20
+    assert elapsed <= _SHUFFLED_BUDGET_SECONDS, f"shuffled 20k CSV took {elapsed:.2f}s"
 
 
 def test_json_read_back_keeps_written_string(spark: ReparkSession, tmp_path: Path) -> None:
