@@ -421,3 +421,207 @@ def test_vo3_1_insert_into_overwrite_ovf_first_reports_store_refusal(tmp_path: P
         )
     finally:
         session.stop()
+
+
+_VO4_DATE: str = "DATE'2024-01-02'"
+_VO4_OVF: str = "1e19D"
+_VO4_APPEND_ARITY: str = "Error during planning: Column count doesn't match insert query!"
+
+
+def _vo4_overwrite_arity(source: int, target: int) -> str:
+    """Render base's positional OVERWRITE arity refusal for the given counts."""
+    return (
+        "Error during planning: INSERT OVERWRITE column count mismatch: "
+        f"source has {source} columns, target table has {target} "
+        "(SQL INSERT is positional \u2014 OV1 D9)"
+    )
+
+
+def _vo4_mismatch(
+    session: ReparkSession,
+    key: str,
+    table: str,
+    run: Any,
+    want: str,
+    want_rows: list[Any],
+) -> str | None:
+    """Run one arity pin and report a mismatch, or None when it refuses byte-identical."""
+    got = _attempt(run)
+    if "answered" in got:
+        return f"{key}: answered instead of refusing"
+    if got.get("message", "") != want:
+        return f"{key}: message {got.get('message', '')!r} != {want!r}"
+    if got.get("err") != "AnalysisException":
+        return f"{key}: err {got}"
+    if got.get("sql_state") is not None:
+        return f"{key}: sql_state {got}"
+    seen = _rows(session.sql(f"SELECT * FROM {table}"))
+    return None if seen == want_rows else f"{key}: read-back {seen} != {want_rows}"
+
+
+def _vo4_seed(session: ReparkSession, table: str, fault: str, partitioned: bool) -> list[Any]:
+    """Seed one arity pin table for the fault and return its read-back rows."""
+    middle = "v BIGINT" if fault == "date" else "v INT"
+    if partitioned:
+        _seed_vo3(
+            session,
+            table,
+            f"(id BIGINT, {middle}, w BIGINT, p INT) PARTITIONED BY (p)",
+            "INSERT INTO @T SELECT 1, NULL, NULL, 1",
+        )
+        return [[1, None, None, 1]]
+    _seed_vo3(
+        session, table, f"(id BIGINT, {middle}, w BIGINT)", "INSERT INTO @T SELECT 1, NULL, NULL"
+    )
+    return [[1, None, None]]
+
+
+def _vo4_expr(fault: str) -> str:
+    """Return the fault literal for the fault key."""
+    return _VO4_DATE if fault == "date" else _VO4_OVF
+
+
+def test_vo4_1_overwrite_reports_arity_first(tmp_path: Path) -> None:
+    """VO4-1 pins ovw/fewer+more/date+ovf: a short or long source reports arity first."""
+    session = _open_vo3(tmp_path)
+    try:
+        misses: list[str] = []
+        for fault in ("date", "ovf"):
+            table = f"sc.ns.vo4ovw{fault}"
+            want_rows = _vo4_seed(session, table, fault, False)
+            expr = _vo4_expr(fault)
+            fewer = f"INSERT OVERWRITE {table} SELECT 1, {expr}"
+            more = f"INSERT OVERWRITE {table} SELECT 1, {expr}, 3, 4"
+            for key, sql, want in (
+                (f"ovw/fewer/{fault}", fewer, _vo4_overwrite_arity(2, 3)),
+                (f"ovw/more/{fault}", more, _vo4_overwrite_arity(4, 3)),
+            ):
+                miss = _vo4_mismatch(
+                    session, key, table, lambda sql=sql: session.sql(sql).collect(), want, want_rows
+                )
+                if miss is not None:
+                    misses.append(miss)
+    finally:
+        session.stop()
+    assert misses == []
+
+
+def test_vo4_1_overwrite_dynamic_reports_arity_first(tmp_path: Path) -> None:
+    """VO4-1 pins ovwdyn/fewer+more/date+ovf: dynamic OVERWRITE reports arity first."""
+    session = _open_vo3(tmp_path)
+    try:
+        misses: list[str] = []
+        session.conf.set(_VO3_DYNAMIC_KEY, "dynamic")
+        try:
+            for fault in ("date", "ovf"):
+                table = f"sc.ns.vo4dyn{fault}"
+                want_rows = _vo4_seed(session, table, fault, True)
+                expr = _vo4_expr(fault)
+                fewer = f"INSERT OVERWRITE {table} SELECT 1, {expr}, 1"
+                more = f"INSERT OVERWRITE {table} SELECT 1, {expr}, 3, 1, 9"
+                for key, sql, want in (
+                    (f"ovwdyn/fewer/{fault}", fewer, _vo4_overwrite_arity(3, 4)),
+                    (f"ovwdyn/more/{fault}", more, _vo4_overwrite_arity(5, 4)),
+                ):
+                    miss = _vo4_mismatch(
+                        session,
+                        key,
+                        table,
+                        lambda sql=sql: session.sql(sql).collect(),
+                        want,
+                        want_rows,
+                    )
+                    if miss is not None:
+                        misses.append(miss)
+        finally:
+            session.conf.set(_VO3_DYNAMIC_KEY, "static")
+    finally:
+        session.stop()
+    assert misses == []
+
+
+def test_vo4_1_insert_into_overwrite_reports_arity_first(tmp_path: Path) -> None:
+    """VO4-1 pins dfinsertovw: insertInto(overwrite=True) with arity fault reports arity."""
+    session = _open_vo3(tmp_path)
+    try:
+        misses: list[str] = []
+        for fault in ("date", "ovf"):
+            table = f"sc.ns.vo4dfovw{fault}"
+            want_rows = _vo4_seed(session, table, fault, False)
+            expr = _vo4_expr(fault)
+            few_frame = session.sql(f"SELECT CAST(1 AS BIGINT) AS id, {expr} AS v")
+            more_frame = session.sql(f"SELECT CAST(1 AS BIGINT) AS id, {expr} AS v, 3 AS w, 4 AS x")
+            for key, frame, want in (
+                (f"dfinsertovw/fewer/{fault}", few_frame, _vo4_overwrite_arity(2, 3)),
+                (f"dfinsertovw/more/{fault}", more_frame, _vo4_overwrite_arity(4, 3)),
+            ):
+                miss = _vo4_mismatch(
+                    session,
+                    key,
+                    table,
+                    lambda frame=frame, table=table: frame.write.insertInto(table, overwrite=True),
+                    want,
+                    want_rows,
+                )
+                if miss is not None:
+                    misses.append(miss)
+    finally:
+        session.stop()
+    assert misses == []
+
+
+def test_vo4_1_insert_into_reports_arity_first(tmp_path: Path) -> None:
+    """VO4-1 pins dfinsert: insertInto(append) with arity fault reports arity byte-identical."""
+    session = _open_vo3(tmp_path)
+    try:
+        misses: list[str] = []
+        for fault in ("date", "ovf"):
+            table = f"sc.ns.vo4df{fault}"
+            want_rows = _vo4_seed(session, table, fault, False)
+            expr = _vo4_expr(fault)
+            few_frame = session.sql(f"SELECT CAST(1 AS BIGINT) AS id, {expr} AS v")
+            more_frame = session.sql(f"SELECT CAST(1 AS BIGINT) AS id, {expr} AS v, 3 AS w, 4 AS x")
+            for key, frame in (
+                (f"dfinsert/fewer/{fault}", few_frame),
+                (f"dfinsert/more/{fault}", more_frame),
+            ):
+                miss = _vo4_mismatch(
+                    session,
+                    key,
+                    table,
+                    lambda frame=frame, table=table: frame.write.insertInto(table, overwrite=False),
+                    _VO4_APPEND_ARITY,
+                    want_rows,
+                )
+                if miss is not None:
+                    misses.append(miss)
+    finally:
+        session.stop()
+    assert misses == []
+
+
+def test_vo4_1_insert_select_reports_arity_first(tmp_path: Path) -> None:
+    """VO4-1 pins select: INSERT INTO SELECT with arity fault reports arity byte-identical."""
+    session = _open_vo3(tmp_path)
+    try:
+        misses: list[str] = []
+        for fault in ("date", "ovf"):
+            table = f"sc.ns.vo4sel{fault}"
+            want_rows = _vo4_seed(session, table, fault, False)
+            expr = _vo4_expr(fault)
+            fewer = f"INSERT INTO {table} SELECT 1, {expr}"
+            more = f"INSERT INTO {table} SELECT 1, {expr}, 3, 4"
+            for key, sql in ((f"select/fewer/{fault}", fewer), (f"select/more/{fault}", more)):
+                miss = _vo4_mismatch(
+                    session,
+                    key,
+                    table,
+                    lambda sql=sql: session.sql(sql).collect(),
+                    _VO4_APPEND_ARITY,
+                    want_rows,
+                )
+                if miss is not None:
+                    misses.append(miss)
+    finally:
+        session.stop()
+    assert misses == []

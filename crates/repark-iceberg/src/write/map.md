@@ -838,6 +838,10 @@ repark-core's error map.
   UPDATE pass `None` because their ANSI gates already judge before the wrap. OVERWRITE
   targets come from the presented schema and BY NAME targets stay stored, matching each
   door's per-batch write schema (UUID text stores through OVERWRITE, refuses on append).
+  Re-verify VO4-1 (2026-09-30): `wrap_store_outputs` returns a positional source whose
+  column count differs from the target count unwrapped and unjudged, so the per-batch
+  arity refusal fires exactly as on base; Spark likewise orders arity first
+  (`INSERT_COLUMN_ARITY_MISMATCH`).
 - `store_fold.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** split from `store_overflow.rs`
   at the plan/expression seam (file-size gate): const-input resolution and physical
   evaluation (`check_folded_store_input`, `fold_scalar`, `resolve_store_input`) plus the

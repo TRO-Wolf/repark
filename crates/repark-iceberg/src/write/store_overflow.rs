@@ -610,6 +610,9 @@ pub fn wrap_store_outputs(
     let LogicalPlan::Projection(projection) = plan else {
         return Ok(plan);
     };
+    if !by_name && projection.expr.len() != targets.len() {
+        return Ok(LogicalPlan::Projection(projection));
+    }
     if let Some(op) = gate_op {
         judge_wrap_store_assignable(&projection, targets, by_name, op)?;
     }
