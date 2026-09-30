@@ -36,9 +36,9 @@ pre-existing, previously scoped to session doors by FNP-4B);
 | C-005 | DIFF-PROBE fold: verbatim keep-exact covers query-expression literals and `OPTIONS` values only; DDL property lists (`TBLPROPERTIES` / `PROPERTIES` / `DBPROPERTIES`) and `COMMENT` runs in `CREATE` / `ALTER` take default treatment, so all 6 regression cells equal Spark 4.1.2. | The `verbatim_ddl_positions_take_default_treatment` Rust pins plus the 4 verbatim-DDL facade read-back pins green; the 6 cells equal their Spark oracles cell by cell. | PROVEN | `o10r`, `v_cmt`+`v_cmt_r`, `v_tb_dq_r`, `w_alter_r` (key and backslash value), `w_cmt1_r` all Spark-equal; `SELECT comment` alias guard and `OPTIONS`-value survivor pinned. |
 | C-006 | The whole-probe replay moves nothing else: 489 of 497 cells are byte-identical old-head to new-head; the 8 that move are the 5 fix read-backs plus 3 red-at-both-sides backslash cells, all 8 Spark-equal; 0 control diffs. | Old-head rerun into a separate out dir, byte-compared cell by cell; every moved cell compared against its Spark oracle. | PROVEN | New flips `v_tb_esc_r`, `v_tb_bsdoub_r`, `w_cmt2_r` Spark-equal; `v_cmt` CREATE succeeds on both heads; 43 INTENDED + 16 SPARK-CONFIRMED head values byte-identical. |
 | C-007 | Namespace `PROPERTIES` / `DBPROPERTIES` take the same DDL treatment (Spark fully unescapes there, measured both shapes); `COMMENT ON` is out of scope (Spark collapses doublings but preserves backslashes there — a different rule, verbatim doubling red recorded); default-mode `COMMENT` doubles refusal stays (pre-existing, both modes). | Facade namespace pins green; Spark oracle cells for namespace escapes, `COMMENT ON` × modes, and default `COMMENT` doubles recorded in the fold evidence. | PROVEN | Namespace doubling/backslash/`\u0041` Spark-oracled; `COMMENT ON` backslash green both modes (do-not-touch), doubling red verbatim-only; default `COMMENT "x""y"` ParseException on both heads. CORRECTED 2026-09-30 by C-008: clean Spark reruns show `COMMENT ON` fully unescapes both modes. |
-| C-008 | VE-1: `UNSET TBLPROPERTIES [IF EXISTS]`, `SHOW TBLPROPERTIES t (key)` and `COMMENT ON … IS …` always unescape in verbatim mode (UNSET removes the collapsed key, SHOW-key returns the collapsed value, COMMENT ON stores the fully unescaped text both modes); default mode unchanged. | Rust DDL-table rows + facade VE-1 pins + control pins green; verify-esc/DIFF-PROBE replay at 0 regressions. | OPEN | Spark oracles: `ns-spark.json` v_unset_r, `rt-spark.json` v/d_cm_key + v/d_cm_on_r, `cm-spark.json` both-modes characterization. Closing: the replay + gate. |
-| C-009 | VE-2: `filter`/`where` strings read the frame's session verbatim flag and `F.expr` reads the active session's build-time flag, so all three parse like the session door; default mode takes the identical path as before. | Rust frame-flag pin + facade VE-2 pins + control pins green; verify-esc/DIFF-PROBE replay at 0 regressions. | OPEN | Spark oracles: `ns-spark.json` v/d_filter + v/d_where, `pin-spark`/`cf-spark` F.expr both modes. The unit's "F.expr sessionless" scope note is superseded for the flag decision only (planning stays sessionless). Closing: the replay + gate. |
-| C-010 | VE-3: every DML re-render (`UPDATE`/`DELETE` selections, `SET` values, MERGE `ON`/predicates/`VALUES`/assignments/sources, both doors, both fragment rewrites) preserves string values exactly; verbatim `''`/backslash and default quad conditions match and store Spark-equal values. | `sql_text` round-trip + planning pins + facade VE-3 pins + control pins green; verify-esc/DIFF-PROBE replay at 0 regressions. | OPEN | Spark oracles: `pin-spark.json` v_upd/v_del/v_mrg/v_mrgo, `qd-spark.json` default quads, `cf-spark.json` default dq UPDATE/MERGE. Also heals the UPDATE/DELETE/MERGE-SET half of carried VE-4 item 3. Closing: the replay + gate. |
+| C-008 | VE-1: `UNSET TBLPROPERTIES [IF EXISTS]`, `SHOW TBLPROPERTIES t (key)` and `COMMENT ON … IS …` always unescape in verbatim mode (UNSET removes the collapsed key, SHOW-key returns the collapsed value, COMMENT ON stores the fully unescaped text both modes); default mode unchanged. | Rust DDL-table rows + facade VE-1 pins + control pins green; verify-esc/DIFF-PROBE replay at 0 regressions. | PROVEN | 6/6 Rust DDL rows green; 4/4 facade VE-1 pins green; mutation red-first (3 verbatim pins red, default control green); replay moves only to Spark-equal. |
+| C-009 | VE-2: `filter`/`where` strings read the frame's session verbatim flag and `F.expr` reads the active session's build-time flag, so all three parse like the session door; default mode takes the identical path as before. | Rust frame-flag pin + facade VE-2 pins + control pins green; verify-esc/DIFF-PROBE replay at 0 regressions. | PROVEN | Rust frame-flag pin green; 3/3 facade VE-2 pins green; each half mutated red-first (frame, `F.expr`); the ten `dv*e` replay cells flip Spark-equal; replay at 0 regressions. |
+| C-010 | VE-3: every DML re-render (`UPDATE`/`DELETE` selections, `SET` values, MERGE `ON`/predicates/`VALUES`/assignments/sources, both doors, both fragment rewrites) preserves string values exactly; verbatim `''`/backslash and default quad conditions match and store Spark-equal values. | `sql_text` round-trip + planning pins + facade VE-3 pins + control pins green; verify-esc/DIFF-PROBE replay at 0 regressions. | PROVEN | 8/8 `sql_text` pins green; 5/5 facade VE-3 pins green; mutation red-first at both levels (6 Rust + 4 facade red); replay moves only to Spark-equal; heals the UPDATE/DELETE/MERGE-SET halves of carried VE-4 items 3 and 4. |
 
 ## Evidence
 
@@ -122,7 +122,7 @@ pins red without (the `OPTIONS`-value survivor correctly stays green),
 `python/repark/tests/map.md`, `crates/repark-spark/src/map.md`,
 `src/tests/map.md`, `src/spark_rewrites/map.md` in the same commit.
 
-### C-008/C-009/C-010 verifier fold evidence (2026-09-30, OPEN → the replay + gate)
+### C-008/C-009/C-010 verifier fold evidence (2026-09-30, PROVEN)
 
 Mechanism VE-1: the DDL statement gate covers `SHOW` and `COMMENT`;
 `UNSET … [IF EXISTS]` skips the guard words before the key paren,
@@ -166,9 +166,18 @@ Spark leg may read verbatim — its cells are escape-free, so no finding, but
 future Spark legs must run default-first or in separate JVMs.
 
 VE-4 carried items observed (orchestrator files cards): the ten pre-existing
-divergences stand, except item 3's UPDATE/DELETE/MERGE-SET half heals as a
-side effect of C-010 (CTAS/INSERT OVERWRITE still collapse); the 2,000-deep
-`||` segfault belongs to DEEP-FILTER-CHAIN-CRASH-1 (#892).
+divergences stand, except items 3 and 4 heal on the UPDATE/DELETE/MERGE-SET
+paths as a side effect of C-010 (CTAS/INSERT OVERWRITE still collapse);
+the 2,000-deep `||` segfault belongs to DEEP-FILTER-CHAIN-CRASH-1 (#892).
+
+Close-out: verify-esc (`attack` 379 + `rt` 150 + `ns` 24 + `dmlv` 36) and
+DIFF-PROBE (`dp` 437 + `dp2` 26 + `dp3` 22 + `dp4` 12) replayed post-fix —
+1,086 cells, 40 move, 0 regressions, 34 flip to Spark-equal (6 `dmlv` cells
+have no Spark leg and read Spark-consistent); every other move is
+snapshot-id/path/run-tag noise. Mutations red-first per fix at both levels
+(VE-1: 1 Rust + 3 facade; VE-2: 1 Rust + 2 facade halves; VE-3: 6 Rust + 4
+facade), controls green throughout, tree clean after each revert. Lane gate
+`gate.sh` green.
 
 ## Coverage attestation
 
