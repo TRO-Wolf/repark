@@ -28,6 +28,10 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   offset-letter matrix, and the SELECT builder (star fast path, wrapping,
   partition skip, eager rejection).
   pins: text-write-timestamp-zone-1/C-004
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):** the SELECT
+  builder pins are now COPY-parts pins (plain format keep, sink format
+  resolution with zone, partition skip, eager rejection, quote-only escaping,
+  case twins); the wrapping-shape pins left with the UDF.
   **TEXT-WRITE-TIMESTAMP-ZONE-1 verifier fold (2026-09-29):** quote-run,
   year-width, proleptic-year, trailing-`]`-class, backslash-escape, and
   case-twin pins (52 total).
@@ -49,6 +53,11 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   OPTIONS keys reach `create` verbatim, part files keep the `.csv`/`.json`
   extension, and a serializer error surfaces with its message intact; a
   no-strip control shows unstripped custom keys fail the inner factory.
+- `text_write_sink.rs` — **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round
+  (2026-09-30):** end-to-end pins for the sink serializer: zone-correct
+  CSV/JSON bytes, user patterns, raw partition directory names, lazy and
+  eager error identity, empty and all-null frames, and the
+  keep-partition-columns native pass-through against plain CSV.
 - `s3_prefix_read.rs` — **S3-PATH-WRITE-1 round 2 (2026-09-28):** slashless S3
   prefix reads on an in-memory store (no AWS): a written prefix reads back
   slashless for parquet, csv and json; exact part URLs keep single-file reads

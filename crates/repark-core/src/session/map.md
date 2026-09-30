@@ -176,6 +176,11 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   refused: they skip COPY option SQL and the CSV/JSON `COPY` inner `SELECT`
   comes from `text_write_format::select`, which formats temporal columns in
   the session zone. pins: text-write-timestamp-zone-1/C-001, C-002
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):** the CSV/JSON
+  COPY parts (plain inner `SELECT`, resolved `STORED AS`, spec OPTIONS merged
+  after the validated format clause) come from
+  `text_write_format::select::text_write_copy_parts`; formatting runs in the
+  sink serializer.
 - `text_write_format.rs` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** the
   user-pattern compiler and validator (Spark `INVALID_DATETIME_PATTERN` /
   `INCONSISTENT_BEHAVIOR_CROSS_VERSION` classes, NTZ downgrades, DATE lazy

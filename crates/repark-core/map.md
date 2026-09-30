@@ -37,6 +37,10 @@ honestly"). SQL routing and session-build registration are seam-inverted
   **ICE-MIXED-CASE-1 run 22b (2026-09-18, Q-22b-MC-1):** also `stacker 0.1.25` (workspace) for
   the column repair's grown-stack poll (`src/column_resolution/stack.rs`); already locked via
   DataFusion's `recursive`, so the lock gains only the edge.
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):** also `bytes`
+  (workspace) for the sink serializer's `BatchSerializer` impl
+  (`src/session/text_write_format/serializer.rs`); already locked via DataFusion,
+  so the lock gains only the edge.
 - `src/silver.rs` + [src/silver/](src/silver/map.md) — typed `SilverPlan` (SILVER-S1):
   strict TOML parse, closed enums, canonical identity, deterministic explain. Public from
   this crate, not wired to Python. Unstable until SIL-1..SIL-10.

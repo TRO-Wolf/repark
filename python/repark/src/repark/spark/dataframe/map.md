@@ -22,10 +22,20 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `_build_text_write_select` (other formats keep `SELECT *`, so parquet
   stays binary).
   pins: text-write-timestamp-zone-1/C-001, C-002, C-006
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):** the local
+  COPY statement comes from `writer_layout.text_write_copy_sql` (plain
+  inner `SELECT`, resolved `STORED AS` name, merged spec OPTIONS); the
+  `_build_text_write_select` entry is gone.
 - `writer_layout.py` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):**
   `text_write_select` carries writer state to the `session_text_write_select`
   binding, which returns the COPY inner `SELECT`.
   pins: text-write-timestamp-zone-1/C-001
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):**
+  `text_write_copy_parts` carries writer state plus `STORED AS` to the
+  `session_text_write_copy_parts` binding and returns the inner `SELECT`,
+  the resolved format name and the spec OPTIONS; `text_write_copy_sql`
+  assembles the full COPY, and `_merge_spec_options` appends the spec
+  pairs to the format OPTIONS clause.
 - `writer_s3.py` — **S3-PATH-WRITE-1 round 1 (2026-09-28):** the S3 path-write
   forward. `is_s3_url` detects the scheme without filesystem calls;
   `write_s3_path` carries writer state to the `session_write_path` binding,

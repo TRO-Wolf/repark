@@ -1,74 +1,57 @@
-use std::collections::HashMap;
-use std::hash::{Hash, Hasher};
+use std::collections::HashSet;
 use std::str::FromStr;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use arrow::array::timezone::Tz;
 use arrow::array::{
     Array, ArrayRef, AsArray, FixedSizeListArray, LargeListArray, ListArray, MapArray,
-    NullBufferBuilder, StringArray, StringBuilder, StructArray,
+    NullBufferBuilder, RecordBatch, StringArray, StringBuilder, StructArray,
 };
 use arrow::buffer::{Buffer, OffsetBuffer, ScalarBuffer};
 use arrow::compute::cast;
 use arrow::datatypes::{
-    DataType, Date32Type, Date64Type, Field, FieldRef, TimeUnit, TimestampMicrosecondType,
+    DataType, Date32Type, Date64Type, Field, Schema, TimeUnit, TimestampMicrosecondType,
 };
 use chrono::{FixedOffset, NaiveDateTime};
 use datafusion::common::{DataFusionError, Result};
-use datafusion::logical_expr::{
-    ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
-    Volatility,
-};
 
 use super::fast::{DateDefaultState, TimestampDefaultState, wall_micros_bounds};
 use super::render::{
     RenderValue, render_compiled_into, render_date_default_into, render_ntz_default_into,
     render_timestamp_default_into,
 };
+use super::select::contains_temporal;
+use super::spec::TextWriteSpec;
 use super::{
     CompiledPattern, PatternKind, compile_write_pattern, micros_to_naive_wall, micros_to_wall_zone,
     pattern_failure_datafusion,
 };
-use crate::session_time_zone::{
-    DEFAULT_SESSION_TIME_ZONE, canonical_session_zone_id, java_display_zone_id,
-};
-
-pub const WRITE_FORMAT_FUNCTION: &str = "repark_write_format_text";
+use crate::session_time_zone::DEFAULT_SESSION_TIME_ZONE;
 
 const MICROS_PER_SECOND: i64 = 1_000_000;
 const MILLIS_PER_DAY: i64 = 86_400_000;
 const NANOS_PER_MICRO: u32 = 1_000;
 
-enum FormatSpec {
+#[derive(Debug)]
+pub(crate) enum FormatSpec {
     Default,
     Compiled(CompiledPattern),
 }
 
-struct FormatSpecs {
-    timestamp: FormatSpec,
-    ntz: FormatSpec,
-    date: FormatSpec,
+#[derive(Debug)]
+pub(crate) struct FormatSpecs {
+    pub timestamp: FormatSpec,
+    pub ntz: FormatSpec,
+    pub date: FormatSpec,
 }
 
-fn spec_from_value(text: Option<&str>, kind: PatternKind) -> Result<FormatSpec> {
+pub(crate) fn spec_from_value(text: Option<&str>, kind: PatternKind) -> Result<FormatSpec> {
     match text {
         None => Ok(FormatSpec::Default),
         Some(pattern) => compile_write_pattern(pattern, kind)
             .map(FormatSpec::Compiled)
             .map_err(|failure| pattern_failure_datafusion(&failure)),
     }
-}
-
-fn halve_backslashes(text: &str) -> String {
-    let mut output = String::with_capacity(text.len());
-    let mut characters = text.chars().peekable();
-    while let Some(current) = characters.next() {
-        if current == '\\' && characters.peek() == Some(&'\\') {
-            characters.next();
-        }
-        output.push(current);
-    }
-    output
 }
 
 fn fraction_nanos(micros: i64) -> u32 {
@@ -78,7 +61,6 @@ fn fraction_nanos(micros: i64) -> u32 {
 pub(crate) const CACHED_WINDOW_MICROS: i64 = 900_000_000;
 
 const WINDOW_HALF_MICROS: i64 = CACHED_WINDOW_MICROS / 2;
-const SHARED_ZONE_LIMIT: usize = 64;
 
 #[derive(Debug)]
 pub(crate) struct OffsetCache {
@@ -244,7 +226,7 @@ impl ZoneResolver {
     }
 }
 
-fn fixed_session_offset(canonical: &str) -> Option<FixedOffset> {
+pub(crate) fn fixed_session_offset(canonical: &str) -> Option<FixedOffset> {
     if canonical == DEFAULT_SESSION_TIME_ZONE {
         return FixedOffset::east_opt(0);
     }
@@ -343,7 +325,7 @@ fn format_date_into(buffer: &mut String, days: i32, spec: &FormatSpec) -> Result
     }
 }
 
-fn map_data_type(data_type: &DataType) -> DataType {
+pub(crate) fn map_data_type(data_type: &DataType) -> DataType {
     match data_type {
         DataType::Timestamp(_, _) | DataType::Date32 | DataType::Date64 => DataType::Utf8,
         DataType::Struct(fields) => DataType::Struct(map_fields(fields)),
@@ -390,14 +372,14 @@ fn map_field(field: &Arc<Field>) -> Arc<Field> {
     )
 }
 
-fn arrow_failed(error: &arrow::error::ArrowError) -> DataFusionError {
+pub(crate) fn arrow_failed(error: &arrow::error::ArrowError) -> DataFusionError {
     DataFusionError::Execution(format!("text timestamp write failed: {error}"))
 }
 
-struct FormatContext<'a> {
-    specs: &'a FormatSpecs,
-    resolver: ZoneResolver,
-    zone_id: &'a str,
+pub(crate) struct FormatContext<'a> {
+    pub specs: &'a FormatSpecs,
+    pub resolver: ZoneResolver,
+    pub zone_id: &'a str,
 }
 
 struct TextColumnBuilder {
@@ -781,7 +763,7 @@ fn format_map_column(array: &ArrayRef, context: &mut FormatContext) -> Result<Ar
     Ok(Arc::new(rebuilt))
 }
 
-fn format_array(array: ArrayRef, context: &mut FormatContext) -> Result<ArrayRef> {
+pub(crate) fn format_array(array: ArrayRef, context: &mut FormatContext) -> Result<ArrayRef> {
     match array.data_type() {
         DataType::Timestamp(_, zone) => format_timestamp_column(&array, zone.is_some(), context),
         DataType::Date32 => format_date_column(&array, context),
@@ -795,173 +777,44 @@ fn format_array(array: ArrayRef, context: &mut FormatContext) -> Result<ArrayRef
     }
 }
 
-#[derive(Debug)]
-struct WriteFormatText {
-    signature: Signature,
-    caches: Mutex<HashMap<String, OffsetCache>>,
-}
-
-impl WriteFormatText {
-    fn new() -> Self {
-        Self {
-            signature: Signature::user_defined(Volatility::Volatile),
-            caches: Mutex::new(HashMap::new()),
-        }
+pub(crate) fn zone_resolver_for_sink(canonical: &str, zone_raw: &str) -> Result<ZoneResolver> {
+    if let Some(offset) = fixed_session_offset(canonical) {
+        return Ok(ZoneResolver::fixed(offset));
     }
-
-    fn take_resolver(&self, canonical: &str, zone_raw: &str) -> Result<ZoneResolver> {
-        if let Some(offset) = fixed_session_offset(canonical) {
-            return Ok(ZoneResolver::fixed(offset));
-        }
-        let zone = Tz::from_str(canonical).map_err(|error| {
-            DataFusionError::Execution(format!(
-                "session timezone {zone_raw:?} could not be resolved at query time ({error})"
-            ))
-        })?;
-        let mut caches = self
-            .caches
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner);
-        Ok(ZoneResolver::Cached(
-            caches
-                .remove(canonical)
-                .unwrap_or_else(|| OffsetCache::new(zone)),
+    let zone = Tz::from_str(canonical).map_err(|error| {
+        DataFusionError::Execution(format!(
+            "session timezone {zone_raw:?} could not be resolved at query time ({error})"
         ))
-    }
+    })?;
+    Ok(ZoneResolver::Cached(OffsetCache::new(zone)))
+}
 
-    fn park_resolver(&self, canonical: String, resolver: ZoneResolver) {
-        let ZoneResolver::Cached(cache) = resolver else {
-            return;
-        };
-        let mut caches = self
-            .caches
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner);
-        if caches.len() >= SHARED_ZONE_LIMIT {
-            caches.clear();
+pub(crate) fn format_batch_for_sink(
+    batch: &RecordBatch,
+    spec: &TextWriteSpec,
+    skip: &HashSet<String>,
+) -> Result<RecordBatch> {
+    let mut context = FormatContext {
+        specs: &spec.specs,
+        resolver: zone_resolver_for_sink(spec.canonical.as_str(), spec.zone_raw.as_str())?,
+        zone_id: spec.display.as_str(),
+    };
+    let schema = batch.schema();
+    let mut fields = Vec::with_capacity(schema.fields().len());
+    let mut columns = Vec::with_capacity(batch.num_columns());
+    for (field, column) in schema.fields().iter().zip(batch.columns()) {
+        if skip.contains(&field.name().to_lowercase()) || !contains_temporal(field.data_type()) {
+            fields.push(Arc::clone(field));
+            columns.push(column.clone());
+            continue;
         }
-        caches.insert(canonical, cache);
+        fields.push(Arc::new(Field::new(
+            field.name(),
+            map_data_type(field.data_type()),
+            field.is_nullable(),
+        )));
+        columns.push(format_array(column.clone(), &mut context)?);
     }
-}
-
-impl PartialEq for WriteFormatText {
-    fn eq(&self, _other: &Self) -> bool {
-        true
-    }
-}
-
-impl Eq for WriteFormatText {}
-
-impl Hash for WriteFormatText {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.name().hash(state);
-    }
-}
-
-impl ScalarUDFImpl for WriteFormatText {
-    fn name(&self) -> &str {
-        WRITE_FORMAT_FUNCTION
-    }
-
-    fn signature(&self) -> &Signature {
-        &self.signature
-    }
-
-    fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
-        let Some(first) = arg_types.first() else {
-            return Err(DataFusionError::Plan(format!(
-                "'{WRITE_FORMAT_FUNCTION}' expects (value, timestamp, ntz, date, zone), got 0 \
-                 argument(s)"
-            )));
-        };
-        Ok(map_data_type(first))
-    }
-
-    fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
-        let Some(first) = args.arg_fields.first() else {
-            return Err(DataFusionError::Plan(format!(
-                "'{WRITE_FORMAT_FUNCTION}' expects (value, timestamp, ntz, date, zone), got 0 \
-                 argument(s)"
-            )));
-        };
-        Ok(Arc::new(Field::new(
-            first.name(),
-            map_data_type(first.data_type()),
-            true,
-        )))
-    }
-
-    fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
-        if arg_types.len() != 5 {
-            return Err(DataFusionError::Plan(format!(
-                "'{WRITE_FORMAT_FUNCTION}' expects (value, timestamp, ntz, date, zone), got {} \
-                 argument(s)",
-                arg_types.len()
-            )));
-        }
-        Ok(vec![
-            arg_types[0].clone(),
-            DataType::Utf8,
-            DataType::Utf8,
-            DataType::Utf8,
-            DataType::Utf8,
-        ])
-    }
-
-    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
-        let arrays = ColumnarValue::values_to_arrays(&args.args)?;
-        let Some(value) = arrays.first() else {
-            return Err(DataFusionError::Execution(format!(
-                "'{WRITE_FORMAT_FUNCTION}' expects (value, timestamp, ntz, date, zone), got 0 \
-                 argument(s)"
-            )));
-        };
-        let pattern_at = |position: usize| -> Result<Option<String>> {
-            let Some(source) = arrays.get(position) else {
-                return Err(DataFusionError::Execution(format!(
-                    "'{WRITE_FORMAT_FUNCTION}' expects (value, timestamp, ntz, date, zone), got \
-                     {} argument(s)",
-                    arrays.len()
-                )));
-            };
-            let casted = cast(source.as_ref(), &DataType::Utf8)?;
-            let strings = casted.as_string::<i32>();
-            if strings.is_empty() || strings.is_null(0) {
-                return Ok(None);
-            }
-            Ok(Some(strings.value(0).to_string()))
-        };
-        let timestamp = pattern_at(1)?.map(|text| halve_backslashes(&text));
-        let ntz = pattern_at(2)?.map(|text| halve_backslashes(&text));
-        let date = pattern_at(3)?.map(|text| halve_backslashes(&text));
-        let zone_raw = pattern_at(4)?.ok_or_else(|| {
-            DataFusionError::Execution(format!(
-                "'{WRITE_FORMAT_FUNCTION}' expects a session zone id, got NULL"
-            ))
-        })?;
-        let specs = FormatSpecs {
-            timestamp: spec_from_value(timestamp.as_deref(), PatternKind::Timestamp)?,
-            ntz: spec_from_value(ntz.as_deref(), PatternKind::TimestampNtz)?,
-            date: spec_from_value(date.as_deref(), PatternKind::Date)?,
-        };
-        let canonical = canonical_session_zone_id(zone_raw.as_str());
-        let display = java_display_zone_id(zone_raw.as_str());
-        let mut context = FormatContext {
-            specs: &specs,
-            resolver: self.take_resolver(canonical.as_str(), zone_raw.as_str())?,
-            zone_id: display.as_str(),
-        };
-        let formatted = format_array(value.clone(), &mut context)?;
-        self.park_resolver(canonical, context.resolver);
-        Ok(ColumnarValue::Array(formatted))
-    }
-}
-
-#[must_use]
-pub fn text_write_format_udf() -> Arc<ScalarUDF> {
-    Arc::new(ScalarUDF::from(WriteFormatText::new()))
-}
-
-pub fn register_text_write_format(ctx: &datafusion::prelude::SessionContext) {
-    ctx.register_udf(text_write_format_udf().as_ref().clone());
+    RecordBatch::try_new(Arc::new(Schema::new(fields)), columns)
+        .map_err(|error| arrow_failed(&error))
 }

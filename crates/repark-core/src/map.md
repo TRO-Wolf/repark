@@ -58,7 +58,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **REVIEW-FIX-7 step 1 (2026-09-10):** `parse()` sanitizes TOML failures to
   `message()` plus the locally computed line and column, never the echoed source line.
   pins: review-fix-7/C-002
-- `session.rs` — `ReparkSession` + `ReparkSessionBuilder` (file-backed tests). **G-6:** rustdoc
+- `session.rs` — `ReparkSession` + `ReparkSessionBuilder` (file-backed tests). **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):** session build registers the `repark_text_csv` / `repark_text_json` sink formats instead of the retired `repark_write_format_text` UDF. **G-6:** rustdoc
   intra-links fixed (private helpers named in backticks, not broken `[links]`;
   `Self::list_iceberg_table_names` for the live list path). **ICE-READ-PERF-0 (2026-09-19):**
   `register_catalog_spec` builds Glue and S3 Tables catalogs through

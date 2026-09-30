@@ -308,7 +308,8 @@ impl ReparkSessionBuilder {
         let temp_view_home = build_temp_view_home(&context);
         ext.register(&context).map_err(engine_err)?;
         crate::range_table::register_spark_range(&context);
-        text_write_format::udf::register_text_write_format(&context);
+        text_write_format::file_format::register_text_write_formats(&context)
+            .map_err(engine_err)?;
         let dialect = self
             .sql_dialect
             .unwrap_or_else(|| Arc::new(DataFusionDialect));

@@ -13,7 +13,8 @@ use crate::session::text_write_format::render::{
     RenderValue, render_compiled_into, render_date_default_into, render_ntz_default_into,
     render_timestamp_default_into,
 };
-use crate::session::text_write_format::select::build_text_write_select;
+use crate::session::text_write_format::select::build_text_write_copy_parts;
+use crate::session::text_write_format::spec::TextWriteSpec;
 use crate::session::text_write_format::udf::OffsetCache;
 use crate::session::text_write_format::{
     CompiledPattern, PatternKind, compile_write_pattern, micros_to_naive_wall, micros_to_wall_zone,
@@ -500,49 +501,59 @@ fn timestamp_field(name: &str) -> Field {
 }
 
 #[test]
-fn select_without_temporal_stays_star() {
+fn parts_without_temporal_keep_plain_format() {
     let schema = schema_of(vec![Field::new("id", DataType::Int64, true)]);
     let options = HashMap::new();
-    assert_eq!(
-        build_text_write_select(&schema, "v", "UTC", &options, &[]).expect("select builds"),
-        "SELECT * FROM v"
-    );
+    let parts = build_text_write_copy_parts(&schema, "v", "UTC", &options, &[], "CSV")
+        .expect("parts build");
+    assert_eq!(parts.select_sql, "SELECT * FROM v");
+    assert_eq!(parts.stored_as, "CSV");
+    assert!(parts.spec_options_sql.is_empty());
 }
 
 #[test]
-fn select_wraps_temporal_and_keeps_names() {
+fn parts_with_temporal_resolve_sink_format_and_zone() {
     let schema = schema_of(vec![
         Field::new("id", DataType::Int64, true),
         timestamp_field("t"),
     ]);
     let options = HashMap::new();
-    let select =
-        build_text_write_select(&schema, "v", "America/New_York", &options, &[]).expect("builds");
-    assert!(select.contains("`id`"), "plain column stays: {select}");
+    let parts = build_text_write_copy_parts(&schema, "v", "America/New_York", &options, &[], "CSV")
+        .expect("parts build");
+    assert_eq!(parts.select_sql, "SELECT * FROM v");
+    assert_eq!(parts.stored_as, "repark_text_csv");
     assert!(
-        select.contains("repark_write_format_text(`t`, NULL, NULL, NULL, 'America/New_York')"),
-        "temporal column wrapped: {select}"
+        parts
+            .spec_options_sql
+            .contains("'repark.text.zone' 'America/New_York'"),
+        "zone rides the spec options: {}",
+        parts.spec_options_sql
     );
-    assert!(select.contains(" AS `t`"), "alias kept: {select}");
+    let parts =
+        build_text_write_copy_parts(&schema, "v", "America/New_York", &options, &[], "JSON")
+            .expect("parts build");
+    assert_eq!(parts.stored_as, "repark_text_json");
 }
 
 #[test]
-fn select_skips_partition_columns() {
+fn parts_skip_partition_columns() {
     let schema = schema_of(vec![timestamp_field("day")]);
     let options = HashMap::new();
-    assert_eq!(
-        build_text_write_select(&schema, "v", "UTC", &options, &["day".to_string()])
-            .expect("select builds"),
-        "SELECT * FROM v"
-    );
+    let parts =
+        build_text_write_copy_parts(&schema, "v", "UTC", &options, &["day".to_string()], "CSV")
+            .expect("parts build");
+    assert_eq!(parts.select_sql, "SELECT * FROM v");
+    assert_eq!(parts.stored_as, "CSV");
+    assert!(parts.spec_options_sql.is_empty());
 }
 
 #[test]
-fn select_rejects_bad_user_pattern() {
+fn parts_reject_bad_user_pattern() {
     let schema = schema_of(vec![timestamp_field("t")]);
     let mut options = HashMap::new();
     options.insert("timestampFormat".to_string(), "vv".to_string());
-    let error = build_text_write_select(&schema, "v", "UTC", &options, &[]).expect_err("rejects");
+    let error = build_text_write_copy_parts(&schema, "v", "UTC", &options, &[], "CSV")
+        .expect_err("rejects");
     assert!(
         error
             .to_string()
@@ -670,32 +681,57 @@ fn date_trailing_close_recognized_for_legacy_letters() {
 }
 
 #[test]
-fn select_escapes_backslash_quote_in_pattern_literal() {
+fn parts_hex_encode_pattern_options() {
     let schema = schema_of(vec![timestamp_field("t")]);
     let mut options = HashMap::new();
     options.insert("timestampFormat".to_string(), "'\\'yyyy".to_string());
-    let select =
-        build_text_write_select(&schema, "v", "UTC", &options, &[]).expect("select builds");
+    let parts = build_text_write_copy_parts(&schema, "v", "UTC", &options, &[], "CSV")
+        .expect("parts build");
     assert!(
-        select.contains("'''\\\\''yyyy'"),
-        "backslash doubled before quote doubling: {select}"
+        parts
+            .spec_options_sql
+            .contains("'repark.text.timestamp_format_hex' '275c2779797979'"),
+        "pattern rides as hex: {}",
+        parts.spec_options_sql
     );
 }
 
 #[test]
-fn select_wraps_case_duplicate_temporal_columns() {
+fn spec_format_options_decode_hex_and_strip_keys() {
+    let mut format_options = HashMap::new();
+    format_options.insert("repark.text.zone".to_string(), "UTC".to_string());
+    format_options.insert(
+        "repark.text.timestamp_format_hex".to_string(),
+        "275c2779797979".to_string(),
+    );
+    format_options.insert("format.has_header".to_string(), "false".to_string());
+    let (spec, rest) = TextWriteSpec::from_format_options(&format_options).expect("spec builds");
+    assert_eq!(spec.zone_raw, "UTC");
+    assert_eq!(
+        rest,
+        HashMap::from([("format.has_header".to_string(), "false".to_string())])
+    );
+    let mut bad = HashMap::new();
+    bad.insert("repark.text.zone".to_string(), "UTC".to_string());
+    bad.insert(
+        "repark.text.timestamp_format_hex".to_string(),
+        "zz".to_string(),
+    );
+    let error = TextWriteSpec::from_format_options(&bad).expect_err("bad hex refuses");
+    assert!(
+        error.to_string().contains("not valid hex"),
+        "loud hex refusal: {error}"
+    );
+}
+
+#[test]
+fn parts_format_case_duplicate_temporal_columns() {
     let schema = schema_of(vec![timestamp_field("T"), timestamp_field("t")]);
     let options = HashMap::new();
-    let select =
-        build_text_write_select(&schema, "v", "America/New_York", &options, &[]).expect("builds");
-    assert!(
-        select.contains("repark_write_format_text(`T`"),
-        "upper twin wrapped: {select}"
-    );
-    assert!(
-        select.contains("repark_write_format_text(`t`"),
-        "lower twin wrapped: {select}"
-    );
+    let parts = build_text_write_copy_parts(&schema, "v", "America/New_York", &options, &[], "CSV")
+        .expect("parts build");
+    assert_eq!(parts.stored_as, "repark_text_csv");
+    assert_eq!(parts.select_sql, "SELECT * FROM v");
 }
 
 #[test]

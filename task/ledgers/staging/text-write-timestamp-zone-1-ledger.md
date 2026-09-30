@@ -468,3 +468,43 @@ all-zones suite reds on the first zone (behavioral asserts stay green —
 6-day steps are correct on the bundled tables; the 15-minute window pin
 is the structural killer). Reverted; `git status` clean. Lane gate
 green; lane `.venv` restored to a debug build; base worktree removed.
+
+Sink-format round (2026-09-30, lane /tmp/xcsvts, branch
+fix/text-write-timestamp-zone-1): temporal formatting moves from the serial
+UDF projection into the sink's parallel per-batch serializers, per the
+orchestrator sketch (Q1 option 1, Q2 no interim). Route (A): two factories
+(`repark_text_csv`, `repark_text_json`) registered on the session; the two
+COPY builders emit the custom `STORED AS` plus the spec as `repark.text.*`
+OPTIONS; the inner SELECT is plain `SELECT *`. Non-temporal frames keep
+plain `STORED AS CSV`/`JSON`, so their path is untouched by construction.
+
+Step-0 spike (committed first): five Rust pins prove in DataFusion 54.1.0
+that a custom `STORED AS` resolves, custom OPTIONS reach `create` verbatim,
+part files keep `.csv`/`.json` (the extension comes from the format's
+`get_ext`, not the factory's), a serializer error surfaces intact, and
+unstripped custom keys fail the inner factory (stripping is load-bearing).
+
+Two-door tokenizer finding: the Spark door processes backslash escapes in
+string literals while the core door passes them verbatim, so no single
+literal quoting carries backslash patterns through both doors. User
+patterns ride the OPTIONS as hex (`repark.text.*_format_hex`); only the
+validated zone id rides as a plain literal. The vc6-bsquote facade cells
+pin the round trip. Bad hex refuses loud at plan time.
+
+Product: `spec.rs` (TextWriteSpec, option keys, hex encode/decode),
+`serializer.rs` (wrapping BatchSerializer over the unchanged `udf.rs`
+engine, one fresh offset cache per call, partition columns skipped by
+lowercased name), `sink.rs` (mirrors CsvSink/JsonSink), `file_format.rs`
+(delegating format plus factory plus session registration), `select.rs`
+rebuilt around `text_write_copy_parts` (same eager validation and LEGACY
+refusal, same refusal order). The `repark_write_format_text` UDF shell,
+its registration and the SELECT wrapper are removed: grep found no other
+caller. One-line `bytes.workspace` addition to repark-core (workspace pin,
+already in the lock; the BatchSerializer signature needs the type).
+
+Correctness proof: 10 new Rust sink pins (zone bytes csv/json, user
+patterns, raw partition directory names, lazy/eager error identity, empty
+and all-null frames, keep-partition native pass-through against plain
+CSV), the rewritten COPY-parts pins, all 245 facade pins green, plus the
+head-vs-new byte differential, the reverify replays, the skip-a-column
+mutation and the release perf table below.

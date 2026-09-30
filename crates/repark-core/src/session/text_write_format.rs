@@ -6,8 +6,12 @@ use datafusion::common::DataFusionError;
 use repark_common::Error;
 
 pub mod fast;
+pub mod file_format;
 pub mod render;
 pub mod select;
+pub mod serializer;
+pub mod sink;
+pub mod spec;
 pub mod udf;
 
 const GUIDE_URL: &str = "https://spark.apache.org/docs/latest/sql-ref-datetime-pattern.html";

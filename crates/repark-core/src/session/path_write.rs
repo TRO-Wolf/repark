@@ -17,6 +17,7 @@ use crate::engine_err;
 use crate::object_store_s3;
 use crate::session::ReparkSession;
 use crate::session::text_write_format::is_text_write_format_option;
+use crate::session::text_write_format::select::{TextWriteCopyParts, merge_spec_options};
 
 impl ReparkSession {
     pub fn note_local_write_root(&self, path: &str) {
@@ -755,18 +756,22 @@ impl ReparkSession {
     }
 
     #[allow(clippy::missing_errors_doc)]
-    fn copy_inner_select(
+    fn copy_inner_parts(
         &self,
         frame: &DataFrame,
         format: &WriteFormat,
         view: &str,
         options: &HashMap<String, String>,
         partitions: &[String],
-    ) -> Result<String> {
+    ) -> Result<TextWriteCopyParts> {
         match format {
-            WriteFormat::Parquet => Ok(format!("SELECT * FROM {view}")),
+            WriteFormat::Parquet => Ok(TextWriteCopyParts {
+                select_sql: format!("SELECT * FROM {view}"),
+                stored_as: format.stored_as().to_string(),
+                spec_options_sql: String::new(),
+            }),
             WriteFormat::Csv | WriteFormat::Json => {
-                self.text_write_select_sql(frame, view, options, partitions)
+                self.text_write_copy_parts(frame, view, options, partitions, format.stored_as())
             }
         }
     }
@@ -855,12 +860,13 @@ impl ReparkSession {
         }
         let view = unique_view_name();
         let copy_target = object_store_s3::write_target_url(&scheme, &bucket, &prefix_text);
-        let select_sql =
-            self.copy_inner_select(frame, &format, &view, options, &resolved_partitions)?;
+        let parts = self.copy_inner_parts(frame, &format, &view, options, &resolved_partitions)?;
+        let options_clause = merge_spec_options(options_clause, &parts.spec_options_sql);
         let copy_sql = format!(
-            "COPY ({select_sql}) TO '{}' STORED AS {}{}{}",
+            "COPY ({}) TO '{}' STORED AS {}{}{}",
+            parts.select_sql,
             sql_escape(&copy_target),
-            format.stored_as(),
+            parts.stored_as,
             partition_clause(&resolved_partitions),
             options_clause
         );

@@ -4,13 +4,15 @@ use arrow::datatypes::{DataType, SchemaRef};
 use datafusion::prelude::DataFrame;
 use repark_common::Error;
 
+use super::file_format::{TEXT_CSV_FORMAT_NAME, TEXT_JSON_FORMAT_NAME};
+use super::spec::TextWriteSpec;
 use super::{PatternKind, compile_write_pattern, pattern_failure_error, write_option_patterns};
 use crate::session::ReparkSession;
 use crate::session_time_zone::{
     TimeParserPolicy, TimeParserPolicyConfig, conf_dump_selects_legacy_policy,
 };
 
-fn contains_temporal(data_type: &DataType) -> bool {
+pub(crate) fn contains_temporal(data_type: &DataType) -> bool {
     match data_type {
         DataType::Timestamp(_, _) | DataType::Date32 | DataType::Date64 => true,
         DataType::List(field) | DataType::LargeList(field) | DataType::FixedSizeList(field, _) => {
@@ -27,21 +29,6 @@ fn contains_temporal(data_type: &DataType) -> bool {
             _ => false,
         },
         _ => false,
-    }
-}
-
-fn quote_ident(name: &str) -> String {
-    format!("`{}`", name.replace('`', "``"))
-}
-
-fn quote_literal(text: &str) -> String {
-    format!("'{}'", text.replace('\\', "\\\\").replace('\'', "''"))
-}
-
-fn pattern_argument(pattern: Option<&String>) -> String {
-    match pattern {
-        Some(text) => quote_literal(text),
-        None => "NULL".to_string(),
     }
 }
 
@@ -64,56 +51,81 @@ fn validate_user_patterns(
     Ok(())
 }
 
+pub(crate) fn text_write_needs_format(schema: &SchemaRef, partition_by: &[String]) -> bool {
+    let partitions: HashSet<String> = partition_by
+        .iter()
+        .map(|name| name.to_lowercase())
+        .collect();
+    schema.fields().iter().any(|field| {
+        !partitions.contains(&field.name().to_lowercase()) && contains_temporal(field.data_type())
+    })
+}
+
+#[derive(Debug)]
+pub struct TextWriteCopyParts {
+    pub select_sql: String,
+    pub stored_as: String,
+    pub spec_options_sql: String,
+}
+
+pub(crate) fn merge_spec_options(base: String, spec_sql: &str) -> String {
+    if spec_sql.is_empty() {
+        return base;
+    }
+    if base.is_empty() {
+        return format!(" OPTIONS ({spec_sql})");
+    }
+    match base.strip_suffix(')') {
+        Some(head) => format!("{head}, {spec_sql})"),
+        None => base,
+    }
+}
+
 #[allow(clippy::missing_errors_doc)]
-pub fn build_text_write_select(
+pub fn build_text_write_copy_parts(
     schema: &SchemaRef,
     view_sql: &str,
     zone_id: &str,
     options: &HashMap<String, String>,
     partition_by: &[String],
-) -> crate::Result<String> {
+    stored_as: &str,
+) -> crate::Result<TextWriteCopyParts> {
     let (timestamp, ntz, date) = write_option_patterns(options);
     validate_user_patterns(timestamp.as_ref(), ntz.as_ref(), date.as_ref())?;
-    let partitions: HashSet<String> = partition_by
-        .iter()
-        .map(|name| name.to_lowercase())
-        .collect();
-    let mut items = Vec::with_capacity(schema.fields().len());
-    let mut wrapped = 0usize;
-    for field in schema.fields() {
-        let name = field.name();
-        let folded = name.to_lowercase();
-        if partitions.contains(&folded) || !contains_temporal(field.data_type()) {
-            items.push(quote_ident(name));
-            continue;
-        }
-        items.push(format!(
-            "{}({}, {}, {}, {}, {}) AS {}",
-            super::udf::WRITE_FORMAT_FUNCTION,
-            quote_ident(name),
-            pattern_argument(timestamp.as_ref()),
-            pattern_argument(ntz.as_ref()),
-            pattern_argument(date.as_ref()),
-            quote_literal(zone_id),
-            quote_ident(name)
-        ));
-        wrapped += 1;
+    if !text_write_needs_format(schema, partition_by) {
+        return Ok(TextWriteCopyParts {
+            select_sql: format!("SELECT * FROM {view_sql}"),
+            stored_as: stored_as.to_string(),
+            spec_options_sql: String::new(),
+        });
     }
-    if wrapped == 0 {
-        return Ok(format!("SELECT * FROM {view_sql}"));
-    }
-    Ok(format!("SELECT {} FROM {view_sql}", items.join(", ")))
+    let resolved = match stored_as.to_ascii_lowercase().as_str() {
+        "csv" => TEXT_CSV_FORMAT_NAME.to_string(),
+        "json" => TEXT_JSON_FORMAT_NAME.to_string(),
+        _ => stored_as.to_string(),
+    };
+    Ok(TextWriteCopyParts {
+        select_sql: format!("SELECT * FROM {view_sql}"),
+        stored_as: resolved,
+        spec_options_sql: TextWriteSpec::options_sql(
+            zone_id,
+            timestamp.as_deref(),
+            ntz.as_deref(),
+            date.as_deref(),
+        ),
+    })
 }
 
 impl ReparkSession {
     #[allow(clippy::missing_errors_doc)]
-    pub fn text_write_select_sql(
+    pub fn text_write_copy_parts(
         &self,
         frame: &DataFrame,
         view_sql: &str,
         options: &HashMap<String, String>,
         partition_by: &[String],
-    ) -> crate::Result<String> {
+        stored_as: &str,
+    ) -> crate::Result<TextWriteCopyParts> {
         let live = self
             .context()
             .copied_config()
@@ -141,12 +153,13 @@ impl ReparkSession {
                 ));
             }
         }
-        build_text_write_select(
+        build_text_write_copy_parts(
             frame.schema().inner(),
             view_sql,
             self.session_time_zone().id(),
             options,
             partition_by,
+            stored_as,
         )
     }
 }
