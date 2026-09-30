@@ -83,6 +83,7 @@ America/New_York unless noted:
 | M5 | VC2-4: flip the facade `_SQLCONF_DEFAULTS` policy back to `LEGACY` | The facade `test_time_parser_policy_default_is_corrected` pin reds. Reverted; pin green. |
 | M6 | VC2-6: replace the RECOGNITION guide clause with a `LEGACY` stub | 7 Rust recognition pins red (49 pass, 7 fail). Reverted; `git status` clean. |
 | M7 | VC2-7: refuse LEGACY writes even with no temporal column (`temporal_columns \|\| true`) | Blind at the Rust level (56 pass: no Rust pin covers the non-temporal LEGACY leg); the 2 facade non-temporal LEGACY pins red after a venv rebuild. Reverted and rebuilt; pins green; `git status` clean. |
+| M8 | VC3-1/VC3-2: restore the exact 6-day step search (`probe`/`bound_above`/`bound_below`, 12288 budget) | The all-zones `cached_offsets_match_direct_lookups_in_every_zone` pin reds on the first zone (Africa/Abidjan): the offset asserts stay green, the 15-minute window pin fails. Reverted; `git status` clean; 3/3 cache pins green. |
 
 ## Coverage
 
@@ -374,3 +375,96 @@ after the reruns. Mutations M3-M7 (table above) each red the pins of
 their fix and revert clean. The temporary release probes left the
 tree (commit e75232ab); lane gate green; lane `.venv` restored to a
 debug build; base worktree removed.
+
+## Re-verify 2 fold VC3-1..VC3-2 (2026-09-30, Muse worker lane `/tmp/xcsvts`)
+
+Folded re-verify-2 findings VC3-1 (S1) and VC3-2 (S3) from
+`reverify2-csvts-opus-handback.json`. Commits 301dd4e6 (product, tests,
+maps) and c058b900 (adjacency follow-up).
+
+- VC3-1 (shuffled cliff): the offset cache no longer walks in steps. A
+  miss resolves the instant directly through chrono-tz, once, and caches
+  a 15-minute window around it only after proving both ends hold the
+  same offset; an unproven window caches nothing. The proof itself runs
+  only when the value lands within one window of the previous value
+  (c058b900): scattered misses on shuffled data skip a proof they cannot
+  amortize, which moved the release 20k shape from 2.0x to 1.4x base.
+  UTC and fixed-offset session zones resolve once per call with no zone
+  lookup; other zones share one cache per session zone, held on the UDF
+  struct and parked between calls. Default columns build in one
+  offsets-plus-values buffer validated once per batch; the pattern path
+  computes `epoch_day` once per value and `has_era` once per pattern.
+- VC3-2 (step assumption): the 6-day search is deleted with its map.md
+  guard prose. The new `text_write_format_cache` suite runs all 597
+  bundled zones over every transition found by a 3-day scan of
+  1840-2100 (exact instants plus neighbours, each queried after warming
+  days away on both sides) plus sampled years 1-9999: cached offsets
+  equal direct lookups every time, and every cached window holds at or
+  under 15 minutes.
+- Carried: VC3-3 (S3, also on base — dictionary-typed timestamp columns
+  skip the formatter; the orchestrator files the card) and R-1 (years at
+  or past 2100 in DST zones).
+
+Shuffled data, debug (verifier harness; base-debug numbers recorded by
+the round-2 verifier on adc26586, one test-only commit before the
+5fb38051 branch point; base ignores the session zone, so the NY base leg
+stands in where the verifier recorded NY only):
+
+| shape | head | base | ratio | old head |
+|---|---|---|---|---|
+| vc31 20k NY | 0.11 s | 0.09 s | 1.2x | 2.44 s |
+| wide 2k UTC / NY | 0.029 / 0.040 s | 0.021 / 0.030 s | 1.4x / 1.3x | 11.2 / 16.3 s |
+| wide 20k UTC / NY | 0.098 / 0.117 s | 0.096 / 0.096 s | 1.0x / 1.2x | 112 / 164 s |
+| birth/wide/modern 200k NY | 0.41 / 0.37 / 0.33 s | 0.32 / 0.28 / 0.33 s | 1.3x / 1.3x / 1.0x | 8.2 s / timeout / 0.33 s |
+| birth/wide/modern 200k UTC | 0.28 / 0.27 / 0.31 s | 0.32 / 0.28 / 0.34 s | 0.9x / 1.0x / 0.9x | timeout / timeout / 0.31 s |
+
+Shuffled data, release (both release,
+`CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16`; base worktree
+`/tmp/xcsvts-base` at 5fb38051, removed after):
+
+| shape | head | base | ratio |
+|---|---|---|---|
+| vc31 20k NY / UTC | 0.011 / 0.009 s | 0.008 / 0.008 s | 1.4x / 1.1x |
+| wide 2k/20k UTC | 0.004 / 0.008 s | 0.004 / 0.010 s | 1.0x / 0.8x |
+| wide 2k/20k NY | 0.004 / 0.010 s | 0.004 / 0.009 s | 1.0x / 1.1x |
+| birth/wide/modern 200k NY | 0.052 / 0.046 / 0.040 s | 0.042 / 0.041 / 0.036 s | 1.2x / 1.1x / 1.1x |
+| birth/wide/modern 200k UTC | 0.038 / 0.036 / 0.035 s | 0.039 / 0.043 / 0.045 s | 1.0x / 0.9x / 0.8x |
+
+Every shuffled shape sits at or under 1.4x base in both profiles; the old
+head ran 26x to 1700x on the same shapes.
+
+Default shapes, release, median of 15 (verifier 1M harness):
+
+| shape | head (s) | base (s) | ratio | last fold |
+|---|---|---|---|---|
+| csv_one_default | 0.161 | 0.119 | 1.35x | 1.28x |
+| csv_many_default | 0.424 | 0.238 | 1.78x | 1.85x |
+| json_one_default | 0.127 | 0.101 | 1.26x | 1.33x |
+| json_many_default | 0.422 | 0.242 | 1.74x | 1.53x |
+
+Ratios match the last fold within run-to-run noise (base itself moves
+about 15% across days under shared-machine load; an interleaved re-run
+put head absolutes under the last fold's head absolutes on both many
+shapes). Time-ordered debug shapes match aa5f563b exactly (modern NY
+0.329 vs 0.33 s, modern UTC 0.311 vs 0.31 s).
+
+Replay of `reverify2-csvts/` (which replays every `reverify-csvts/`
+cell: probe and canon identical, cell defs purely additive) on the debug
+lane build: 5194 cells (4968 replay + 226 fast) plus conf (3 modes),
+doors, doors2, g and zchg probes — zero cells moved away from Spark,
+zero changed at all. Three harness artifacts, each confirmed not a
+behavior change: the `rt-spark-*` readbacks need the verifier's
+`*-spark` symlinks (mirrored; the verifier hit the same 4 false moves);
+`surf/json_basic` shows the documented nondeterministic JSON-infer
+column-order flake (abf7bb42 agrees with the new head; aa5f563b flipped
+without any read-path change); `surf/csv_basic` and `doors` embed the
+harness out-dir path in readback errors (identical modulo the path).
+`fastrand` (21.5 min on the old head) finishes in seconds.
+
+Pins: the all-zones Rust suite plus a `perf`-marked 20k shuffled pin
+with a 1.0 s debug budget (measured 0.11 s; the old head needed 2.44 s).
+Mutation M8 (table above) restores the exact 6-day step search: the
+all-zones suite reds on the first zone (behavioral asserts stay green —
+6-day steps are correct on the bundled tables; the 15-minute window pin
+is the structural killer). Reverted; `git status` clean. Lane gate
+green; lane `.venv` restored to a debug build; base worktree removed.
