@@ -23,6 +23,7 @@ use crate::write_to_branch::qualify_table_parts;
 mod insert_source_types;
 mod ltz_values_store;
 mod select_values_arms;
+mod sibling_types;
 mod source_leaves;
 
 pub(crate) use source_leaves::{is_string_type, source_type_is_reliable};

@@ -95,6 +95,9 @@ and was reverted; the final tree rebuilds green.
 | M-PE18 | The SELECT-arm call site is skipped (`refuse_select_arms` unreachable) | 15: every `vselect/*` refusal; all stores and `partovw/*` stay green | view and STRING pins green |
 | M-PE24 | The partition-overwrite call site is skipped (the helper call removed) | 4: `partovw/values/negnull/{ts,date,bool}`, `partovw/select/negnull/ts`; listed/dynamic stay green through the earlier gate | view and STRING pins green |
 | M-VT1 | The fold skip is forced off (`is_datetime_type` returns false) | 12: every `p01`–`p12` store pin refuses again; `p13`–`p21` and all in-test pins stay green | the 26 original oracle cells green |
+| M-VT1a | The R1 probe is forced off (`probed_type` returns None, arm plans on) | 6: every `q01`–`q06` function-cell pin refuses again; `q07`, `q08`–`q16` and all in-test pins stay green | all 47 pre-fold oracle cells green |
+| M-VT1b | The R1 probe and the R2 arm plans are both forced off | 17: every `q01`–`q16` pin refuses again, plus `p09` (its NTZ sibling needs the probe); every other pre-fold cell stays green | the `values_current_ts` in-test pin refuses again |
+| M-R2 | The R2 arm plans are forced off (`arm_plan` returns Failed, probes on) | 9: every `q08`–`q16` residue pin refuses again; `q01`–`q07` and all pre-fold cells stay green | the `current_ts_in_from`, `date_fn` and `join_unqual` in-test pins refuse again |
 
 **Neighbours (2026-09-29).** The 78-statement Step 0 matrix plus 16 follow-up/gap
 statements answer byte-identically on `57ebb57a` and on this unit except the 18
@@ -161,6 +164,54 @@ where Spark refuses; out of scope. Noted: n5 stores `2020-01-01 10:00:00` where
 Spark stores midnight (Spark widens STRING+DATE to DATE and truncates the
 time); base agrees with head, so the value gap is pre-existing and the cell
 meets its outcome-only target.
+
+## Re-verify fold 2 (2026-09-30, PR #894)
+
+The re-verifier found no false store but 19 refused stores plus two
+measurement gaps (VT2-1..VT2-5). The fold rulings replace the skip's typing
+only; the refusal path is untouched.
+
+**Fix.** `sibling_types.rs` (new) holds `SiblingJudge`, moved from
+`ltz_values_store.rs`. R1: a cell and every sibling cell are typed the way
+`refuse_value` types them — `literal_source_type`, then `leaf_type` for the
+TIMESTAMP/NTZ shapes the probe would only confirm, then the existing probe —
+so the skip and the refusal never type a cell differently (VT2-1:
+function-valued STRING cells and VALUES siblings of
+`current_timestamp()`/`make_timestamp()`). R2: a position no cell or
+provenance entry resolves falls back to planning that arm's SELECT alone
+through the session and reading the column type (stars over tables,
+expressions over table columns, constant expressions in a SELECT with FROM,
+temp-view siblings); the whole set operation is never planned, and a plan
+failure keeps the pre-fold judgment. Arms that reference CTE names, missing
+objects, or anything else the session cannot plan keep the pre-fold judgment
+too. VT2-2: a plan failure that is an ambiguity (typed
+`AmbiguousReference`, else the bare word in the message) passes the STRING
+cell through unjudged so the analyzer raises Spark's AMBIGUOUS_REFERENCE;
+non-STRING cells beside an ambiguous arm keep being judged first (residual,
+same as before). R3: the skip is one per-position map built once per
+statement — probes cached by probe text, table schemas by table, arm plans
+by arm — and reused for every cell; a cell whose static type is absent is
+only probed when the map already skips its position. `select_values_arms.rs`
+carries each arm's rendered SELECT and yields position-less arms for stars
+over unresolvable factors instead of dropping them.
+
+**Proof.** Pins `q01`–`q16` (recorded on live Spark 4.1.2, 8401–8551 id
+range) plus four in-test pins: the 8 VT2-1 cells, the 11 residue cells and
+the VT2-2 cell. The `cast_s_ts`, `to_timestamp_tbl` and `swapped_arms` pins
+read the parseable `psrc` strings (the unit `src.s` values are unparsable,
+unlike the attack setup). The `make_timestamp` and `values_current_ts`
+pins are covered twice — the R1 probe and the R2 arm plan each skip them
+alone (M-VT1a/M-R2). The `p09` NTZ sibling resolves through the probe (the
+gate sees the lowered `__repark_cast_timestamp_ntz__` call) and is rescued
+by the arm plan when probes are off. Replays of `verify-tsd/`,
+`verify-tsd-fold/` and `reverify-tsd/`, the R3 perf table, and the named
+suites run after the commit; the round hand-back records their numbers.
+
+**Observed, not fixed (VT2-3).** A time-bearing STRING beside a DATE
+sibling stores the time where Spark stores midnight (base agrees with
+head). The fold reopens the base path for one more shape
+(`test_fold_date_sibling_time_string_stores_with_midnight_divergence`
+pins the stored rows); the orchestrator files the widening card.
 
 ## Coverage
 

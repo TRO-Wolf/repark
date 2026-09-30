@@ -15,6 +15,7 @@ pub(crate) struct SourceCell<'a> {
 pub(crate) struct ArmMap<'a> {
     pub(crate) positions: Vec<Vec<SourceCell<'a>>>,
     pub(crate) provenance: Vec<Vec<SiblingProvenance<'a>>>,
+    pub(crate) arm_sql: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -118,6 +119,7 @@ fn identity_map(values: &Values) -> ArmMap<'_> {
             })
             .collect(),
         provenance: vec![Vec::new(); width],
+        arm_sql: None,
     }
 }
 
@@ -161,7 +163,9 @@ fn select_arm<'a>(
                     return None;
                 }
                 for factor in &factors {
-                    let factor = factor.as_ref()?;
+                    let Some(factor) = factor.as_ref() else {
+                        return Some(super::sibling_types::unmapped_arm(select));
+                    };
                     positions.extend(factor.columns.iter().cloned());
                     provenance.extend(factor.provenance.iter().cloned());
                 }
@@ -173,7 +177,9 @@ fn select_arm<'a>(
                 let SelectItemQualifiedWildcardKind::ObjectName(name) = kind else {
                     return None;
                 };
-                let factor = qualified_factor(name, &factors, case_insensitive)?;
+                let Some(factor) = qualified_factor(name, &factors, case_insensitive) else {
+                    return Some(super::sibling_types::unmapped_arm(select));
+                };
                 positions.extend(factor.columns.iter().cloned());
                 provenance.extend(factor.provenance.iter().cloned());
             }
@@ -183,6 +189,7 @@ fn select_arm<'a>(
     Some(ArmMap {
         positions,
         provenance,
+        arm_sql: Some(select.to_string()),
     })
 }
 
@@ -904,7 +911,7 @@ mod tests {
             mapped(
                 "INSERT INTO t SELECT * FROM (VALUES (1, 2)) AS v(a, b) JOIN src ON v.a = src.id",
             ),
-            Vec::<Vec<Vec<String>>>::new(),
+            vec![Vec::<Vec<String>>::new()],
         );
         assert_eq!(
             mapped("INSERT INTO t SELECT * EXCEPT (a) FROM (VALUES (1, 2)) AS v(a, b)"),
@@ -926,7 +933,7 @@ mod tests {
         );
         assert_eq!(
             mapped("INSERT INTO t WITH RECURSIVE v AS (SELECT * FROM v) SELECT * FROM v",),
-            Vec::<Vec<Vec<String>>>::new(),
+            vec![Vec::<Vec<String>>::new()],
         );
     }
 

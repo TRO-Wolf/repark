@@ -28,7 +28,9 @@
   "CREATE TABLE sc.ns.src (id INT, tsc TIMESTAMP, dt DATE, s STRING, b BIGINT, d DOUBLE) USING iceberg",
   "INSERT INTO sc.ns.src VALUES (1, TIMESTAMP'2020-01-01 10:00:00', DATE'2020-01-02', 'seven', 7L, 7.5D), (2, TIMESTAMP'2021-06-15 12:30:00', DATE'2021-06-16', 'x', 42L, 1.25D)",
   "CREATE TABLE sc.ns.psrc (id INT, s STRING) USING iceberg",
-  "INSERT INTO sc.ns.psrc VALUES (1, '2020-01-01 10:00:00'), (2, '2021-06-15 12:30:00')"
+  "INSERT INTO sc.ns.psrc VALUES (1, '2020-01-01 10:00:00'), (2, '2021-06-15 12:30:00')",
+  "CREATE TABLE sc.ns.t_ts2 (id INT, c TIMESTAMP, e TIMESTAMP) USING iceberg",
+  "CREATE TEMPORARY VIEW doors2_tv AS SELECT id, tsc FROM sc.ns.src"
  ],
  "cells": {
   "vselect/direct/ts/bigint": {
@@ -713,6 +715,336 @@
    "rows": [],
    "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8211,'2020-01-01 10:00:00')) AS v(a,b)",
    "sql_state": "KD000"
+  },
+  "q01/cellfn_concat": {
+   "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8401, concat('2020-01-01', ' 10:00:00'))) AS v(a, b) UNION ALL SELECT id + 8401, tsc FROM sc.ns.src",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8401 AND id < 8411",
+   "refused": false,
+   "rows": [
+    [
+     8401,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8402,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8403,
+     "2021-06-15 12:30:00",
+     "timestamp"
+    ]
+   ]
+  },
+  "q02/cellfn_pipes": {
+   "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8411, '2020-01-01' || ' 10:00:00')) AS v(a, b) UNION ALL SELECT id + 8411, tsc FROM sc.ns.src",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8411 AND id < 8421",
+   "refused": false,
+   "rows": [
+    [
+     8411,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8412,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8413,
+     "2021-06-15 12:30:00",
+     "timestamp"
+    ]
+   ]
+  },
+  "q03/cellfn_upper": {
+   "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8421, upper('2020-01-01 10:00:00'))) AS v(a, b) UNION ALL SELECT id + 8421, tsc FROM sc.ns.src",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8421 AND id < 8431",
+   "refused": false,
+   "rows": [
+    [
+     8421,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8422,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8423,
+     "2021-06-15 12:30:00",
+     "timestamp"
+    ]
+   ]
+  },
+  "q04/cellfn_date_format": {
+   "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8431, date_format(TIMESTAMP'2020-01-01 10:00:00', 'yyyy-MM-dd HH:mm:ss'))) AS v(a, b) UNION ALL SELECT id + 8431, tsc FROM sc.ns.src",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8431 AND id < 8441",
+   "refused": false,
+   "rows": [
+    [
+     8431,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8432,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8433,
+     "2021-06-15 12:30:00",
+     "timestamp"
+    ]
+   ]
+  },
+  "q05/cellfn_substr": {
+   "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8441, substr('x2020-01-01 10:00:00', 2))) AS v(a, b) UNION ALL SELECT id + 8441, tsc FROM sc.ns.src",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8441 AND id < 8451",
+   "refused": false,
+   "rows": [
+    [
+     8441,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8442,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8443,
+     "2021-06-15 12:30:00",
+     "timestamp"
+    ]
+   ]
+  },
+  "q06/wide_concat": {
+   "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8451, concat('2020-01-01', ' 10:00:00'))) AS v(a, b) UNION ALL SELECT id + 8451, tsc FROM sc.ns.src",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8451 AND id < 8461",
+   "refused": false,
+   "rows": [
+    [
+     8451,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8452,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8453,
+     "2021-06-15 12:30:00",
+     "timestamp"
+    ]
+   ]
+  },
+  "q07/values_make_ts": {
+   "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8461, '2020-01-01 10:00:00')) AS v(a, b) UNION ALL SELECT * FROM (VALUES (8462, make_timestamp(2020, 1, 1, 0, 0, 0))) AS w(a, b)",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8461 AND id < 8471",
+   "refused": false,
+   "rows": [
+    [
+     8461,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8462,
+     "2020-01-01 00:00:00",
+     "timestamp"
+    ]
+   ]
+  },
+  "q08/star_table": {
+   "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8471, '2020-01-01 10:00:00')) AS v(a, b) UNION ALL SELECT * FROM sc.ns.src2",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8471 AND id < 8481",
+   "refused": false,
+   "rows": [
+    [
+     8471,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ]
+   ]
+  },
+  "q09/qual_star_table": {
+   "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8481, '2020-01-01 10:00:00')) AS v(a, b) UNION ALL SELECT t.* FROM sc.ns.src2 t",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8481 AND id < 8491",
+   "refused": false,
+   "rows": [
+    [
+     8481,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ]
+   ]
+  },
+  "q10/ts_plus_interval": {
+   "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8491, '2020-01-01 10:00:00')) AS v(a, b) UNION ALL SELECT id + 8491, tsc + INTERVAL 1 DAY FROM sc.ns.src",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8491 AND id < 8501",
+   "refused": false,
+   "rows": [
+    [
+     8491,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8492,
+     "2020-01-02 10:00:00",
+     "timestamp"
+    ],
+    [
+     8493,
+     "2021-06-16 12:30:00",
+     "timestamp"
+    ]
+   ]
+  },
+  "q11/cast_s_ts": {
+   "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8501, '2020-01-01 10:00:00')) AS v(a, b) UNION ALL SELECT id + 8501, CAST(s AS TIMESTAMP) FROM sc.ns.psrc",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8501 AND id < 8511",
+   "refused": false,
+   "rows": [
+    [
+     8501,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8502,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8503,
+     "2021-06-15 12:30:00",
+     "timestamp"
+    ]
+   ]
+  },
+  "q12/coalesce": {
+   "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8511, '2020-01-01 10:00:00')) AS v(a, b) UNION ALL SELECT id + 8511, coalesce(tsc, NULL) FROM sc.ns.src",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8511 AND id < 8521",
+   "refused": false,
+   "rows": [
+    [
+     8511,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8512,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8513,
+     "2021-06-15 12:30:00",
+     "timestamp"
+    ]
+   ]
+  },
+  "q13/to_timestamp_tbl": {
+   "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8521, '2020-01-01 10:00:00')) AS v(a, b) UNION ALL SELECT id + 8521, to_timestamp(s) FROM sc.ns.psrc",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8521 AND id < 8531",
+   "refused": false,
+   "rows": [
+    [
+     8521,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8522,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8523,
+     "2021-06-15 12:30:00",
+     "timestamp"
+    ]
+   ]
+  },
+  "q14/lit_ts_in_from": {
+   "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8531, '2020-01-01 10:00:00')) AS v(a, b) UNION ALL SELECT id + 8531, TIMESTAMP'2021-02-02 02:02:02' FROM sc.ns.src",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8531 AND id < 8541",
+   "refused": false,
+   "rows": [
+    [
+     8531,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8532,
+     "2021-02-02 02:02:02",
+     "timestamp"
+    ],
+    [
+     8533,
+     "2021-02-02 02:02:02",
+     "timestamp"
+    ]
+   ]
+  },
+  "q15/swapped_arms": {
+   "sql": "INSERT INTO sc.ns.t_ts2 SELECT * FROM (VALUES (8541, '2020-01-01 10:00:00', TIMESTAMP'2021-02-02 02:02:02')) AS v(a, b, c) UNION ALL SELECT id + 8541, TIMESTAMP'2021-02-02 02:02:02', s FROM sc.ns.psrc",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t, CAST(e AS STRING) AS e FROM sc.ns.t_ts2 WHERE id >= 8541 AND id < 8551",
+   "refused": false,
+   "rows": [
+    [
+     8541,
+     "2020-01-01 10:00:00",
+     "timestamp",
+     "2021-02-02 02:02:02"
+    ],
+    [
+     8542,
+     "2021-02-02 02:02:02",
+     "timestamp",
+     "2020-01-01 10:00:00"
+    ],
+    [
+     8543,
+     "2021-02-02 02:02:02",
+     "timestamp",
+     "2021-06-15 12:30:00"
+    ]
+   ]
+  },
+  "q16/temp_view": {
+   "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM (VALUES (8551, '2020-01-01 10:00:00')) AS v(a, b) UNION ALL SELECT id + 8551, tsc FROM doors2_tv",
+   "readback": "SELECT id, CAST(c AS STRING) AS c, typeof(c) AS t FROM sc.ns.t_ts WHERE id >= 8551 AND id < 8561",
+   "refused": false,
+   "rows": [
+    [
+     8551,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8552,
+     "2020-01-01 10:00:00",
+     "timestamp"
+    ],
+    [
+     8553,
+     "2021-06-15 12:30:00",
+     "timestamp"
+    ]
+   ]
   }
  }
 }

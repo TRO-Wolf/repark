@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -204,6 +205,112 @@ def test_fold_setop_datetime_clash_into_bigint_refuses(tmp_path: Path) -> None:
             assert got["sql_state"] == "KD000", sql
             assert 'Cannot safely cast `c` "TIMESTAMP" to "BIGINT"' in got["message"], sql
             assert _fold_rows(session, "sc.ns.t_bigint", low) == [], sql
+    finally:
+        session.stop()
+
+
+def _fold_parses_as_timestamp(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        datetime.strptime(value[:19], "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return False
+    return True
+
+
+def test_fold_values_current_timestamp_sibling_stores(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        got = _write(
+            session,
+            {
+                "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM "
+                "(VALUES (8571, '2020-01-01 10:00:00')) AS v(a, b) UNION ALL "
+                "SELECT * FROM (VALUES (8572, current_timestamp())) AS w(a, b)"
+            },
+        )
+        assert got["refused"] is False, got
+        rows = _fold_rows(session, "sc.ns.t_ts", 8571)
+        assert rows[0] == [8571, "2020-01-01 10:00:00", "timestamp"], rows
+        assert len(rows) == 2, rows
+        assert rows[1][0] == 8572, rows
+        assert rows[1][2] == "timestamp", rows
+        assert _fold_parses_as_timestamp(rows[1][1]), rows
+    finally:
+        session.stop()
+
+
+def test_fold_current_timestamp_in_from_sibling_stores(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        got = _write(
+            session,
+            {
+                "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM "
+                "(VALUES (8581, '2020-01-01 10:00:00')) AS v(a, b) UNION ALL "
+                "SELECT id + 8581, current_timestamp() FROM sc.ns.src"
+            },
+        )
+        assert got["refused"] is False, got
+        rows = _fold_rows(session, "sc.ns.t_ts", 8581)
+        assert rows[0] == [8581, "2020-01-01 10:00:00", "timestamp"], rows
+        assert len(rows) == 3, rows
+        for row in rows[1:]:
+            assert row[2] == "timestamp", rows
+            assert _fold_parses_as_timestamp(row[1]), rows
+        assert sorted(row[0] for row in rows[1:]) == [8582, 8583], rows
+    finally:
+        session.stop()
+
+
+def test_fold_date_sibling_time_string_stores_with_midnight_divergence(
+    tmp_path: Path,
+) -> None:
+    session = _open(tmp_path)
+    try:
+        got = _write(
+            session,
+            {
+                "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM "
+                "(VALUES (8591, '2020-01-01 10:00:00')) AS v(a, b) UNION ALL "
+                "SELECT id + 8591, date(tsc) FROM sc.ns.src"
+            },
+        )
+        assert got["refused"] is False, got
+        assert _fold_rows(session, "sc.ns.t_ts", 8591) == [
+            [8591, "2020-01-01 10:00:00", "timestamp"],
+            [8592, "2020-01-01 00:00:00", "timestamp"],
+            [8593, "2021-06-15 00:00:00", "timestamp"],
+        ]
+    finally:
+        session.stop()
+
+
+def test_fold_ambiguous_sibling_raises_ambiguous_reference(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        session.sql("CREATE NAMESPACE IF NOT EXISTS sc.ns2").collect()
+        session.sql(
+            "CREATE TABLE sc.ns2.doors2_src2 (id INT, tsc TIMESTAMP) USING iceberg"
+        ).collect()
+        session.sql(
+            "INSERT INTO sc.ns2.doors2_src2 VALUES (1, TIMESTAMP'2020-08-08 08:08:08')"
+        ).collect()
+        got = _write(
+            session,
+            {
+                "sql": "INSERT INTO sc.ns.t_ts SELECT * FROM "
+                "(VALUES (8601, '2020-01-01 10:00:00')) AS v(a, b) UNION ALL "
+                "SELECT a.id + 8601, tsc FROM sc.ns.src a "
+                "JOIN sc.ns2.doors2_src2 b ON a.id = b.id"
+            },
+        )
+        assert got["refused"] is True, got
+        assert got["condition"] == "AMBIGUOUS_REFERENCE", got
+        assert got["sql_state"] == "42704", got
+        assert "Reference `tsc` is ambiguous" in got["message"], got
+        assert _fold_rows(session, "sc.ns.t_ts", 8601) == []
     finally:
         session.stop()
 

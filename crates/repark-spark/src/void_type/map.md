@@ -93,6 +93,12 @@ handling (`CAST(NULL AS VOID)` rewrite, the non-NULL VALUES refusal into
   skipped cell is projected as the silent NULL cell. Any other sibling, any
   non-STRING cell and any unresolvable shape keep the pre-fold judgment.
   pins: store-ts-doors-2/C-001, C-003
+  **Fold 2026-09-30 (re-verify VT2-1, VT2-2, VT2-4, VT2-5):** the judge moves
+  verbatim to `sibling_types.rs` and this file keeps the refusal path
+  (`refuse_value` still types by `literal_source_type` then the probe, and
+  still fail-closes when the probe cannot parse). The skip call site now
+  passes only the position and the cell.
+  pins: store-ts-doors-2/C-001, C-003
 - `insert_source_types.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):**
   `refuse_insert_source_types` is the Spark door's INSERT gate for two source
   types the analyzer gate cannot see: a negated NULL (Spark's DOUBLE, judged by
@@ -141,6 +147,35 @@ handling (`CAST(NULL AS VOID)` rewrite, the non-NULL VALUES refusal into
   a SELECT-no-FROM projection — resolved through derived tables, CTEs and
   set-operation merges next to the cell map, so the store gate can type the
   sibling arm Spark widens against. Two provenance tests.
+  pins: store-ts-doors-2/C-001, C-003
+  **Fold 2026-09-30 (re-verify VT2-1, VT2-2, VT2-4, VT2-5):** each arm also
+  carries its rendered SELECT (`arm_sql`; VALUES leaves carry none). A plain
+  or qualified star over an unresolvable factor now yields an arm with no
+  positions that still carries the SELECT, instead of dropping the arm, so
+  the judge can plan that arm alone as a fallback; every other drop stays a
+  drop. The mixed-star and recursive classifier pins now expect one empty
+  arm; their positions stay unmapped.
+  pins: store-ts-doors-2/C-001, C-003
+- `sibling_types.rs` — **Fold 2026-09-30 (re-verify VT2-1, VT2-2, VT2-4,
+  VT2-5):** `SiblingJudge`, moved here from `ltz_values_store.rs`, decides
+  the VT-1 skip from one per-position map built once per statement and
+  reused for every cell. A cell and every sibling cell are typed the way
+  the refusal types them — `literal_source_type`, then `leaf_type` for the
+  TIMESTAMP/NTZ shapes the probe would only confirm, then the existing
+  probe — so the skip and the refusal never type a cell differently
+  (VT2-1: function-valued STRING cells and VALUES siblings of
+  `current_timestamp()`/`make_timestamp()`). A position no cell or
+  provenance entry resolves falls back to planning that arm's SELECT
+  alone through the session and reading the column type (R2: stars over
+  tables, expressions over table columns, constant expressions in a
+  SELECT with FROM, temp-view siblings); a plan failure keeps the old
+  judgment, while an ambiguity failure passes the STRING cell through
+  so the analyzer raises Spark's AMBIGUOUS_REFERENCE (VT2-2). Probes
+  are cached by probe text, table schemas by table, arm plans by arm,
+  so a probe-heavy deep UNION plans each arm at most once (VT2-4).
+  Six tests: unmapped-star shapes, static typing, the ambiguity
+  matcher, probe sharing, skip beside TIMESTAMP but not BIGINT, and
+  the plan-failure fall-through.
   pins: store-ts-doors-2/C-001, C-003
 - `source_leaves.rs` — **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):**
   `source_type_is_reliable` decides whether a new refusal may trust RePark's
