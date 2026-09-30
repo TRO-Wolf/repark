@@ -587,3 +587,40 @@ exists); on the new build the same probe leaves zero objects too (seed gone,
 partials rolled back). The old-data loss on a failed overwrite is therefore
 the pre-existing delete-before-COPY order, unchanged by this fold. Replay
 outputs live in `/tmp/oc-worker/direct/wo/reverify3-csvts-fold/`.
+
+Re-verify 4 fold (2026-09-30, lane /tmp/xcsvts, branch
+fix/text-write-timestamp-zone-1): re-verify 4 found the VC4-1 rollback clean
+on the s3a route (24/24 failing writes leave keys and ETags unchanged, s3a
+success cells identical) but filed VC5-1 (S2, new since 68125572): the
+snapshot-diff rollback deletes every key missing from the snapshot, so
+objects a concurrent writer committed during the write window are deleted
+too (30/39 same-prefix PUTs, 29/41 bucket-wide at the bucket root). R1: a
+failed CSV/JSON write deletes exactly the output paths its own sink
+recorded, plus a materialized empty part, and nothing else. `ReparkTextSink`
+owns a per-write `Arc<Mutex<Vec<ObjectPath>>>` collector on the sink
+instance of one COPY; the `spawn_writer_tasks_and_join` override records
+each demux path and forwards the stream into DataFusion's orchestration
+unchanged, so success bytes and keys are identical. The s3a text commit
+builds the COPY's physical plan explicitly (`task_ctx` plus
+`create_physical_plan`, the same two steps `DataFrame::collect` runs) so it
+can reach the sink's collector through the `DataSinkExec` node, then
+executes that plan; on failure it deletes exactly the recorded paths plus
+the materialized empty part. No listing-based deletion remains.
+`_SUCCESS` is never deleted on failure: its PUT is the last commit step,
+so a failed PUT created nothing and a surviving one belongs to another
+writer. A cleanup failure appends the bare cleanup message to the original
+error once, without repeating the variant prefix. Parquet is restored to
+exactly 68125572's commit with no rollback, a known gap: a parquet-side
+rollback needs its own sink, and parquet has no render-time failures. A
+second known gap: text writes without temporal columns use DataFusion's
+plain sinks rather than `ReparkTextSink`, so an IO-mid-COPY failure there
+leaves partial output as at 68125572.
+
+Pins (C-009): two Rust pins over the in-memory S3 route reuse the 400k-row
+zone-letters-on-NTZ failing write: an append with keys PUT under the same
+prefix, a sibling prefix and an unrelated prefix while it fails keeps every
+foreign key and byte with no other new key, and a failing append at the
+bucket root keeps a foreign prefix intact with no other new key. Mutation
+M10 (the rollback deletes by listing again): both pins red. Reverted; pins
+green. Proof outputs live in
+`/tmp/oc-worker/direct/wo/reverify4-csvts-fold/`.

@@ -27,6 +27,12 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   leaves the destination key set unchanged for overwrite-into-empty, append
   (existing bytes also unchanged) and partitioned overwrite.
   pins: text-write-timestamp-zone-1/C-007
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 4 fold (2026-09-30):** the
+  concurrent-writer pins: keys PUT under the same prefix, a sibling prefix
+  and an unrelated prefix while a 400k-row append fails all survive with
+  their bytes, and a failing append at the bucket root keeps a foreign
+  prefix intact while its own parts are gone.
+  pins: text-write-timestamp-zone-1/C-009
 - `text_write_format.rs` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):**
   compiler/validator/renderer pins against the Spark oracle: every error
   class per pattern kind, DST-gap and LMT-seconds default renders, the

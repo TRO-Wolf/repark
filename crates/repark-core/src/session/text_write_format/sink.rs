@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use std::fmt::{Debug, Formatter};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use arrow::datatypes::SchemaRef;
 use async_trait::async_trait;
@@ -18,6 +18,7 @@ use datafusion::datasource::sink::DataSink;
 use datafusion::execution::TaskContext;
 use datafusion::physical_plan::{DisplayAs, DisplayFormatType, SendableRecordBatchStream};
 use object_store::ObjectStore;
+use object_store::path::Path as ObjectPath;
 
 use super::file_format::TextKind;
 use super::serializer::ReparkTextSerializer;
@@ -29,6 +30,7 @@ pub(crate) struct ReparkTextSink {
     csv_options: Option<CsvWriterOptions>,
     json_options: Option<JsonWriterOptions>,
     spec: Arc<TextWriteSpec>,
+    created: Arc<Mutex<Vec<ObjectPath>>>,
 }
 
 impl ReparkTextSink {
@@ -43,6 +45,7 @@ impl ReparkTextSink {
             csv_options: Some(options),
             json_options: None,
             spec,
+            created: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -57,7 +60,12 @@ impl ReparkTextSink {
             csv_options: None,
             json_options: Some(options),
             spec,
+            created: Arc::new(Mutex::new(Vec::new())),
         }
+    }
+
+    pub(crate) fn created_paths(&self) -> Arc<Mutex<Vec<ObjectPath>>> {
+        Arc::clone(&self.created)
     }
 
     fn skip_columns(&self) -> Arc<HashSet<String>> {
@@ -144,16 +152,30 @@ impl FileSink for ReparkTextSink {
                     )
                 }
             };
-        spawn_writer_tasks_and_join(
+        let (forward_send, forward_recv) = tokio::sync::mpsc::unbounded_channel();
+        let created = Arc::clone(&self.created);
+        let mut incoming = file_stream_rx;
+        let forward = async move {
+            while let Some((location, stream)) = incoming.recv().await {
+                if let Ok(mut guard) = created.lock() {
+                    guard.push(location.clone());
+                }
+                if forward_send.send((location, stream)).is_err() {
+                    break;
+                }
+            }
+        };
+        let write = spawn_writer_tasks_and_join(
             context,
             serializer,
             compression,
             compression_level,
             object_store,
             demux_task,
-            file_stream_rx,
-        )
-        .await
+            forward_recv,
+        );
+        let (outcome, ()) = futures::join!(write, forward);
+        outcome
     }
 }
 

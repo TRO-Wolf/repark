@@ -81,6 +81,13 @@ unformatted, as the UDF left them unwrapped.
   `write_all` via `FileSink::write_all`, inner serializer built exactly as
   DataFusion builds it, then wrapped). The demux strips partition columns
   before serialization and names directories from the raw values, as before.
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 4 fold (2026-09-30):** the sink
+  owns a per-write collector of the output paths the demux hands it: the
+  `spawn_writer_tasks_and_join` override records each path and forwards the
+  stream into DataFusion's orchestration unchanged, so success bytes and
+  keys are identical and the s3a commit can delete exactly what this write
+  created on failure. The collector lives on the sink instance of one COPY,
+  never in shared state. pins: text-write-timestamp-zone-1/C-009
 - `file_format.rs` — `ReparkTextFormat`, which delegates every method to the
   inner `CsvFormat` / `JsonFormat` except `create_writer_physical_plan`
   (same header, newlines-in-values and compression handling, over

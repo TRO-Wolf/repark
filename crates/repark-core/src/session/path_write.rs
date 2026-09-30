@@ -1,9 +1,12 @@
+use std::any::Any;
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use arrow::datatypes::SchemaRef;
+use datafusion::datasource::sink::DataSinkExec;
 use datafusion::execution::object_store::ObjectStoreUrl;
 use datafusion::parquet::arrow::arrow_writer::ArrowWriter;
+use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::DataFrame;
 use futures::StreamExt;
 use object_store::ObjectStore;
@@ -18,6 +21,7 @@ use crate::object_store_s3;
 use crate::session::ReparkSession;
 use crate::session::text_write_format::is_text_write_format_option;
 use crate::session::text_write_format::select::{TextWriteCopyParts, merge_spec_options};
+use crate::session::text_write_format::sink::ReparkTextSink;
 
 mod append;
 mod rollback;
@@ -524,6 +528,23 @@ struct S3Commit<'a> {
     copy_sql: &'a str,
 }
 
+fn text_sink_created_paths(plan: &Arc<dyn ExecutionPlan>) -> Option<Arc<Mutex<Vec<ObjectPath>>>> {
+    let mut stack = vec![Arc::clone(plan)];
+    while let Some(node) = stack.pop() {
+        let node_any = node.as_ref() as &dyn Any;
+        if let Some(exec) = node_any.downcast_ref::<DataSinkExec>() {
+            let sink = exec.sink() as &dyn Any;
+            if let Some(text) = sink.downcast_ref::<ReparkTextSink>() {
+                return Some(text.created_paths());
+            }
+        }
+        for child in node.children() {
+            stack.push(Arc::clone(child));
+        }
+    }
+    None
+}
+
 impl ReparkSession {
     #[allow(clippy::missing_errors_doc)]
     fn copy_inner_parts(
@@ -656,13 +677,19 @@ impl ReparkSession {
     }
 
     async fn commit_s3_write(&self, view: &str, commit: &S3Commit<'_>) -> Result<usize> {
+        match commit.format {
+            WriteFormat::Parquet => self.commit_s3_write_parquet(view, commit).await,
+            WriteFormat::Csv | WriteFormat::Json => self.commit_s3_write_text(view, commit).await,
+        }
+    }
+
+    async fn commit_s3_write_parquet(&self, view: &str, commit: &S3Commit<'_>) -> Result<usize> {
+        self.create_or_replace_temp_view_from(view, commit.frame)?;
         let scope = if commit.at_root {
             None
         } else {
             Some(commit.prefix)
         };
-        let snapshot = rollback::snapshot_destination_keys(commit.store, scope, commit.url).await?;
-        self.create_or_replace_temp_view_from(view, commit.frame)?;
         let outcome = async {
             let copy_outcome = self
                 .sql_with_write_options(
@@ -722,16 +749,104 @@ impl ReparkSession {
             }
             Err(error) => {
                 let _drop_result = self.drop_temp_view(view);
-                let cleanup = rollback::delete_keys_missing_from_snapshot(
+                Err(error)
+            }
+        }
+    }
+
+    async fn commit_s3_write_text(&self, view: &str, commit: &S3Commit<'_>) -> Result<usize> {
+        self.create_or_replace_temp_view_from(view, commit.frame)?;
+        let scope = if commit.at_root {
+            None
+        } else {
+            Some(commit.prefix)
+        };
+        let mut created: Option<Arc<Mutex<Vec<ObjectPath>>>> = None;
+        let mut materialized: Option<ObjectPath> = None;
+        let outcome = async {
+            let copy_outcome = self
+                .sql_with_write_options(
+                    commit.copy_sql,
+                    &HashMap::new(),
+                    OverwriteIntent::Session,
+                    false,
+                )
+                .await?;
+            let task_context = Arc::new(copy_outcome.task_ctx());
+            let plan = copy_outcome
+                .create_physical_plan()
+                .await
+                .map_err(engine_err)?;
+            created = text_sink_created_paths(&plan);
+            let _copy_batches = datafusion::physical_plan::collect(plan, task_context)
+                .await
+                .map_err(engine_err)?;
+            let mut parts =
+                list_part_keys(commit.store, scope, commit.format.extension(), commit.url).await?;
+            if parts.is_empty() && !commit.partitioned {
+                let location = if commit.at_root {
+                    ObjectPath::from(format!("part-00000.{}", commit.format.extension()))
+                } else {
+                    commit
+                        .prefix
+                        .clone()
+                        .join(format!("part-00000.{}", commit.format.extension()))
+                };
+                materialize_empty_part(
                     commit.store,
-                    scope,
-                    &snapshot,
+                    &location,
+                    commit.format,
+                    commit.frame.schema().inner(),
+                    commit.columns,
+                    commit.options,
                     commit.url,
                 )
-                .await;
+                .await?;
+                materialized = Some(location);
+                parts = list_part_keys(commit.store, scope, commit.format.extension(), commit.url)
+                    .await?;
+            }
+            let success = if commit.at_root {
+                ObjectPath::from("_SUCCESS")
+            } else {
+                commit.prefix.clone().join("_SUCCESS")
+            };
+            commit
+                .store
+                .put(&success, PutPayload::from(Vec::<u8>::new()))
+                .await
+                .map_err(|error| {
+                    Error::DataFusion(format!(
+                        "cannot write S3 _SUCCESS under {}: {error}",
+                        commit.url
+                    ))
+                })?;
+            Ok::<usize, Error>(parts.len())
+        }
+        .await;
+        match outcome {
+            Ok(count) => {
+                self.drop_temp_view(view)?;
+                Ok(count)
+            }
+            Err(error) => {
+                let _drop_result = self.drop_temp_view(view);
+                let mut locations = Vec::new();
+                if let Some(handle) = created.as_ref() {
+                    let mut guard = handle
+                        .lock()
+                        .unwrap_or_else(std::sync::PoisonError::into_inner);
+                    locations.append(&mut guard);
+                }
+                locations.extend(materialized);
+                let cleanup =
+                    rollback::delete_recorded_keys(commit.store, &locations, commit.url).await;
                 match cleanup {
                     Ok(()) => Err(error),
-                    Err(cleanup) => Err(rollback::with_cleanup_note(error, &cleanup.to_string())),
+                    Err(cleanup) => Err(rollback::with_cleanup_note(
+                        error,
+                        &rollback::cleanup_message(&cleanup),
+                    )),
                 }
             }
         }

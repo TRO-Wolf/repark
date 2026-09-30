@@ -802,6 +802,102 @@ async fn failed_render_partitioned_overwrite_leaves_no_objects() {
     assert!(listed_names(&memory, "cell/part").await.is_empty());
 }
 
+const CONCURRENT_FOREIGN_LINE: &str =
+    "{\"id\":1,\"n\":\"2024-01-01T00:00:00.000\",\"t\":\"2024-06-15T12:00:00.000\"}\n";
+
+async fn put_foreign_key(memory: &InMemory, key: &str) {
+    memory
+        .put(
+            &ObjectPath::from(key),
+            object_store::PutPayload::from(CONCURRENT_FOREIGN_LINE),
+        )
+        .await
+        .unwrap();
+}
+
+async fn put_foreign_keys(memory: &InMemory, keys: &[String]) {
+    for key in keys {
+        put_foreign_key(memory, key).await;
+        tokio::task::yield_now().await;
+    }
+}
+
+fn foreign_keys(prefix: &str, count: usize) -> Vec<String> {
+    (0..count)
+        .map(|index| format!("{prefix}zz-foreign-{index:02}.json"))
+        .collect()
+}
+
+#[tokio::test]
+async fn failed_render_append_leaves_concurrent_objects_alone() {
+    let (session, memory) = write_session_in("conc-bucket", "America/New_York");
+    session
+        .context()
+        .register_batch("seed_conc", rollback_seed_batch())
+        .unwrap();
+    let seed = session.sql("SELECT * FROM seed_conc").await.unwrap();
+    let frame = frame_of_rollback_big(&session, "big_conc").await;
+    let url = "s3://conc-bucket/cell/conc";
+    session
+        .write_path(&seed, url, "json", "error", &HashMap::new(), &[])
+        .await
+        .unwrap();
+    let before = listed_names(&memory, "cell/conc").await;
+    assert!(!before.is_empty());
+    let same = foreign_keys("cell/conc/", 16);
+    let sibling = foreign_keys("cell/conc-sibling/", 4);
+    let elsewhere = foreign_keys("elsewhere/", 4);
+    let poke = async {
+        put_foreign_keys(&memory, &same).await;
+        put_foreign_keys(&memory, &sibling).await;
+        put_foreign_keys(&memory, &elsewhere).await;
+    };
+    let options = rollback_pattern_options();
+    let write = session.write_path(&frame, url, "json", "append", &options, &[]);
+    let (result, ()) = futures::join!(write, poke);
+    let error = result.unwrap_err();
+    assert!(
+        error.to_string().contains("Unable to extract ZoneId"),
+        "got: {error}"
+    );
+    let mut expected = before.clone();
+    expected.extend(same.iter().cloned());
+    expected.extend(sibling.iter().cloned());
+    expected.extend(elsewhere.iter().cloned());
+    expected.sort();
+    let after = listed_names(&memory, "").await;
+    assert_eq!(after, expected);
+    for key in same.iter().chain(sibling.iter()).chain(elsewhere.iter()) {
+        assert_eq!(
+            object_bytes(&memory, key).await,
+            CONCURRENT_FOREIGN_LINE.as_bytes()
+        );
+    }
+}
+
+#[tokio::test]
+async fn failed_render_root_append_leaves_foreign_prefixes_alone() {
+    let (session, memory) = write_session_in("conc-root", "America/New_York");
+    let frame = frame_of_rollback_big(&session, "big_root").await;
+    let url = "s3://conc-root";
+    put_foreign_key(&memory, "unrelated/keep.txt").await;
+    let foreign = foreign_keys("unrelated/", 16);
+    let poke = put_foreign_keys(&memory, &foreign);
+    let options = rollback_pattern_options();
+    let write = session.write_path(&frame, url, "json", "append", &options, &[]);
+    let (result, ()) = futures::join!(write, poke);
+    let error = result.unwrap_err();
+    assert!(
+        error.to_string().contains("Unable to extract ZoneId"),
+        "got: {error}"
+    );
+    let after = listed_names(&memory, "").await;
+    let mut expected = vec!["unrelated/keep.txt".to_string()];
+    expected.extend(foreign.iter().cloned());
+    expected.sort();
+    assert_eq!(after, expected);
+}
+
 #[tokio::test]
 async fn hash_key_writes_beside_the_plain_prefix() {
     let (session, memory) = write_session("write-bucket");

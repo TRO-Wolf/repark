@@ -189,6 +189,15 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   [`path_write/append.rs`](path_write/append.rs) under the file-size gate.
   Child: [`path_write/`](path_write/map.md).
   pins: text-write-timestamp-zone-1/C-007
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 4 fold (2026-09-30):** the
+  snapshot rollback is gone: a failed CSV/JSON write deletes exactly the
+  output paths its own sink recorded plus a materialized empty part, so a
+  concurrent writer's objects survive under the same prefix and at the
+  bucket root; the COPY runs through an explicitly built physical plan so
+  the commit can reach the sink's collector, and parquet keeps its
+  pre-rollback commit with no cleanup. A cleanup failure appends the bare
+  message once, without repeating the variant prefix.
+  pins: text-write-timestamp-zone-1/C-009
 - `text_write_format.rs` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** the
   user-pattern compiler and validator (Spark `INVALID_DATETIME_PATTERN` /
   `INCONSISTENT_BEHAVIOR_CROSS_VERSION` classes, NTZ downgrades, DATE lazy

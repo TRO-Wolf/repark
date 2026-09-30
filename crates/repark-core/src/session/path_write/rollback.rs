@@ -1,6 +1,3 @@
-use std::collections::HashSet;
-
-use futures::StreamExt;
 use object_store::ObjectStore;
 use object_store::ObjectStoreExt;
 use object_store::path::Path as ObjectPath;
@@ -8,41 +5,13 @@ use object_store::path::Path as ObjectPath;
 use repark_common::{Error, Result};
 
 #[allow(clippy::missing_errors_doc)]
-pub(super) async fn snapshot_destination_keys(
+pub(super) async fn delete_recorded_keys(
     store: &dyn ObjectStore,
-    scope: Option<&ObjectPath>,
-    origin: &str,
-) -> Result<HashSet<String>> {
-    let mut listed = store.list(scope);
-    let mut keys = HashSet::new();
-    while let Some(meta) = listed.next().await {
-        let meta = meta.map_err(|error| {
-            Error::DataFusion(format!("cannot list S3 destination {origin}: {error}"))
-        })?;
-        keys.insert(meta.location.to_string());
-    }
-    Ok(keys)
-}
-
-#[allow(clippy::missing_errors_doc)]
-pub(super) async fn delete_keys_missing_from_snapshot(
-    store: &dyn ObjectStore,
-    scope: Option<&ObjectPath>,
-    snapshot: &HashSet<String>,
+    locations: &[ObjectPath],
     origin: &str,
 ) -> Result<()> {
-    let mut listed = store.list(scope);
-    let mut fresh = Vec::new();
-    while let Some(meta) = listed.next().await {
-        let meta = meta.map_err(|error| {
-            Error::DataFusion(format!("cannot list S3 destination {origin}: {error}"))
-        })?;
-        if !snapshot.contains(meta.location.as_ref()) {
-            fresh.push(meta.location);
-        }
-    }
     let mut failure = None;
-    for location in &fresh {
+    for location in locations {
         if let Err(error) = store.delete(location).await
             && failure.is_none()
         {
@@ -54,6 +23,13 @@ pub(super) async fn delete_keys_missing_from_snapshot(
     match failure {
         Some(message) => Err(Error::DataFusion(message)),
         None => Ok(()),
+    }
+}
+
+pub(super) fn cleanup_message(cleanup: &Error) -> String {
+    match cleanup {
+        Error::DataFusion(message) => message.clone(),
+        other => other.to_string(),
     }
 }
 
@@ -82,6 +58,9 @@ pub(super) fn with_cleanup_note(error: Error, cleanup: &str) -> Error {
 
 #[cfg(test)]
 mod rollback_tests {
+    use std::collections::HashSet;
+
+    use futures::StreamExt;
     use object_store::PutPayload;
     use object_store::memory::InMemory;
 
@@ -94,50 +73,46 @@ mod rollback_tests {
             .unwrap();
     }
 
-    #[tokio::test]
-    async fn rollback_removes_only_keys_missing_from_snapshot() {
-        let memory = InMemory::new();
-        put_key(&memory, "prefix/kept-part").await;
-        put_key(&memory, "prefix/kept-success").await;
-        let scope = ObjectPath::parse("prefix").unwrap();
-        let snapshot = snapshot_destination_keys(&memory, Some(&scope), "origin")
-            .await
-            .unwrap();
-        assert_eq!(snapshot.len(), 2);
-        put_key(&memory, "prefix/fresh-part").await;
-        put_key(&memory, "prefix/nested/fresh-part").await;
-        put_key(&memory, "elsewhere/fresh-part").await;
-        delete_keys_missing_from_snapshot(&memory, Some(&scope), &snapshot, "origin")
-            .await
-            .unwrap();
-        let after = snapshot_destination_keys(&memory, Some(&scope), "origin")
-            .await
-            .unwrap();
-        assert_eq!(after, snapshot);
-        let whole = snapshot_destination_keys(&memory, None, "origin")
-            .await
-            .unwrap();
-        assert!(whole.contains("elsewhere/fresh-part"));
-        delete_keys_missing_from_snapshot(&memory, None, &snapshot, "origin")
-            .await
-            .unwrap();
-        let cleaned = snapshot_destination_keys(&memory, None, "origin")
-            .await
-            .unwrap();
-        assert_eq!(cleaned, snapshot);
+    async fn listed(memory: &InMemory) -> HashSet<String> {
+        let mut listed = memory.list(None);
+        let mut keys = HashSet::new();
+        while let Some(meta) = listed.next().await {
+            keys.insert(meta.unwrap().location.to_string());
+        }
+        keys
     }
 
     #[tokio::test]
-    async fn rollback_over_an_empty_snapshot_and_store_is_a_noop() {
+    async fn rollback_deletes_only_the_recorded_keys() {
         let memory = InMemory::new();
-        let scope = ObjectPath::parse("prefix").unwrap();
-        let snapshot = snapshot_destination_keys(&memory, Some(&scope), "origin")
+        put_key(&memory, "prefix/kept-part").await;
+        put_key(&memory, "prefix/zz-foreign-same").await;
+        put_key(&memory, "elsewhere/zz-foreign-other").await;
+        put_key(&memory, "prefix/fresh-part").await;
+        put_key(&memory, "prefix/nested/fresh-part").await;
+        let recorded = vec![
+            ObjectPath::from("prefix/fresh-part"),
+            ObjectPath::from("prefix/nested/fresh-part"),
+        ];
+        delete_recorded_keys(&memory, &recorded, "origin")
             .await
             .unwrap();
-        assert!(snapshot.is_empty());
-        delete_keys_missing_from_snapshot(&memory, Some(&scope), &snapshot, "origin")
-            .await
-            .unwrap();
+        let after = listed(&memory).await;
+        assert!(!after.contains("prefix/fresh-part"));
+        assert!(!after.contains("prefix/nested/fresh-part"));
+        assert!(after.contains("prefix/kept-part"));
+        assert!(after.contains("prefix/zz-foreign-same"));
+        assert!(after.contains("elsewhere/zz-foreign-other"));
+    }
+
+    #[tokio::test]
+    async fn rollback_with_no_recorded_keys_is_a_noop() {
+        let memory = InMemory::new();
+        put_key(&memory, "prefix/kept-part").await;
+        delete_recorded_keys(&memory, &[], "origin").await.unwrap();
+        let after = listed(&memory).await;
+        assert_eq!(after.len(), 1);
+        assert!(after.contains("prefix/kept-part"));
     }
 
     #[test]
@@ -163,5 +138,26 @@ mod rollback_tests {
             }
         ));
         assert!(noted.to_string().contains("cleanup failed"));
+    }
+
+    #[test]
+    fn cleanup_note_carries_the_bare_cleanup_message_once() {
+        let cleanup = Error::DataFusion("cannot delete S3 object k under o: denied".to_string());
+        assert_eq!(
+            cleanup_message(&cleanup),
+            "cannot delete S3 object k under o: denied"
+        );
+        let noted = with_cleanup_note(
+            Error::DataFusion("boom".to_string()),
+            &cleanup_message(&cleanup),
+        );
+        assert_eq!(
+            noted
+                .to_string()
+                .matches("datafusion engine error:")
+                .count(),
+            1
+        );
+        assert!(noted.to_string().contains("cannot delete S3 object k"));
     }
 }
