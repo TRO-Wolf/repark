@@ -14,6 +14,8 @@ from repark.errors import (
     UnsupportedOperationException,
 )
 
+_MAX_ARRAY_ELEMENTS_KEY = "repark.sql.maxArrayElements"
+
 RAISES = (
     AnalysisException,
     ParseException,
@@ -205,19 +207,21 @@ def test_vn5_r2_nan_payload_string_kernel_answers_null(utc: ReparkSession) -> No
     assert [row.asDict() for row in rows] == [{"v": None}]
 
 
-def test_vn5_r7_lossy_nullif_in_sequence_answers_null(utc: ReparkSession) -> None:
-    rows = utc.sql(
-        "SELECT typeof(sequence(0L, nullif(9007199254740993L, 9007199254740992D))) AS t, "
-        "CAST(sequence(0L, nullif(9007199254740993L, 9007199254740992D)) AS STRING) AS v"
-    ).collect()
-    assert [row.asDict() for row in rows] == [{"t": "array<bigint>", "v": None}]
+def test_vn5_r7_lossy_nullif_in_sequence_refuses_residue(utc: ReparkSession) -> None:
+    with pytest.raises(AnalysisException, match=_MAX_ARRAY_ELEMENTS_KEY):
+        utc.sql(
+            "SELECT typeof(sequence(0L, nullif(9007199254740993L, 9007199254740992D))) AS t, "
+            "CAST(sequence(0L, nullif(9007199254740993L, 9007199254740992D)) AS STRING) AS v"
+        ).collect()
 
 
-def test_vn5_r7_lossy_nullif_cast_form_in_sequence_answers_null(utc: ReparkSession) -> None:
-    rows = utc.sql(
-        "SELECT typeof(sequence(0L, nullif(CAST(9007199254740993 AS BIGINT), "
-        "CAST(9007199254740992 AS DOUBLE)))) AS t, "
-        "CAST(sequence(0L, nullif(CAST(9007199254740993 AS BIGINT), "
-        "CAST(9007199254740992 AS DOUBLE))) AS STRING) AS v"
-    ).collect()
-    assert [row.asDict() for row in rows] == [{"t": "array<bigint>", "v": None}]
+def test_vn5_r7_lossy_nullif_cast_form_in_sequence_refuses_residue(
+    utc: ReparkSession,
+) -> None:
+    with pytest.raises(AnalysisException, match=_MAX_ARRAY_ELEMENTS_KEY):
+        utc.sql(
+            "SELECT typeof(sequence(0L, nullif(CAST(9007199254740993 AS BIGINT), "
+            "CAST(9007199254740992 AS DOUBLE)))) AS t, "
+            "CAST(sequence(0L, nullif(CAST(9007199254740993 AS BIGINT), "
+            "CAST(9007199254740992 AS DOUBLE))) AS STRING) AS v"
+        ).collect()

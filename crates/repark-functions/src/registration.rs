@@ -27,6 +27,7 @@ pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
         Arc::new(crate::int_to_binary::IntToBinaryCast),
         Arc::new(crate::java_double::SparkFloatStringify),
     ];
+    rules.extend(crate::spark_sequence::analyzer_rules());
     rules.extend(crate::cardinality::analyzer_rules());
     rules.push(crate::csv::fold::CsvFold::rule());
     rules.push(crate::time_family::time_cast_guard_rule());

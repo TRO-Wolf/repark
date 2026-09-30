@@ -636,6 +636,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   and `nullif(101, ' 101 ')` yield NULL under the ceiling like base and
   Spark while unparsable or unequal seconds keep the bound at `a`.
   pins: nvl-type-coercion-1/C-032.
+  **Re-verify 7 (2026-09-30, VN8-1/VN8-2/VN8-4):** the proofs are gone —
+  the `nullif`/`__repark_nullif_compare` ceiling bound is `const_i128`
+  of the unmodified first argument, `b` is never evaluated, and nothing
+  ever folds to NULL; a foldable first over the ceiling refuses whatever
+  the second is (dated residue in the ledger, equal and unequal pairs).
+  pins: nvl-type-coercion-1/C-033.
 - `cardinality_nullif.rs` — **NVL-TYPE-COERCION-1 re-verify 6
   (2026-09-30, VN7-1/VN7-2/VN7-3):** the `nullif` ceiling fold, split out of
   `cardinality.rs` (move-only): `nullif_const_int` bounds by the first
@@ -654,6 +660,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   with a `STRING` literal second parsed by the shared
   `strict_integer_text`; equal pairs fold to NULL and every other string
   second keeps the bound at `a`. pins: nvl-type-coercion-1/C-032.
+  **Re-verify 7 (2026-09-30, VN8-1/VN8-2/VN8-4):** the whole fold is one
+  line now — `const_i128(first)` — after the string pruning, the decimal
+  unwrapping, the equality proof, the string arm and the float leg are
+  deleted with the `strict_integer_text` share they were built for; net
+  line count down. pins: nvl-type-coercion-1/C-033.
 
 
 - **R-FN-BATCH4** aggregate expansion.
@@ -1133,6 +1144,15 @@ scalars live under [`try_invert/`](try_invert/map.md).
   analyzer-rule coerce that inserts the cast seats after narrowing).
   Date/timestamp families, all-string bounds and `array_repeat` keep
   refusing. pins: nvl-type-coercion-1/C-030
+  **NVL-TYPE-COERCION-1 re-verify 7 (2026-09-30, VN8-3):** the coercion
+  follows Spark 4.1.2 exactly as measured — under ANSI a `STRING` bound
+  casts to `BIGINT` through the shared ANSI string cast (trims, raises
+  `CAST_INVALID_INPUT`) and the result is `array<bigint>`; `coerce_types`
+  passes bounds through untouched so no DataFusion cast is inserted, and
+  the new `SequenceStringBounds` analyzer rule (seated before the
+  ceiling) refuses every `STRING` bound without ANSI. Date/`STRING`
+  siblings stay refused (carried: Spark ANSI answers). pins:
+  nvl-type-coercion-1/C-034
 - `spark_hash.rs` — **FNP-MATH-1 step 4 (2026-09-16, run 18a):** Spark Murmur3
   `hash` kernel (seed 42; per-type `mix`/`fmix` shapes verified against the fixture;
   strings as LE words with per-byte tails; arrays/structs/maps fold; always `int`,

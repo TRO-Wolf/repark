@@ -4988,14 +4988,18 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   built from a `pa.dictionary`-typed table (encoding alone reads back
   as `Utf8`); the `nvl(rand(), xd)` non-nullable schema; `IF()`-first
   collects over a nullable column; the lossy `sequence` cell in both
-  spellings. pins: nvl-type-coercion-1/C-022, C-023, C-024, C-025
+  spellings. pins: nvl-type-coercion-1/C-022, C-023, C-024, C-025.
+  Re-verify 7 (2026-09-30): both lossy cells refuse over the ceiling
+  per the bound-only residue. pins: nvl-type-coercion-1/C-033
 - `test_nvl_type_coercion_1_vn6.py` — **NVL-TYPE-COERCION-1 re-verify 5
   (2026-09-30, VN6-1/VN6-2):** 26 pins. `nvl`/`ifnull` over `try_cast`,
   `try_add`, `try_divide`, `try_element_at` and `try_to_number` with a
   volatile child and a nullable fallback collect NULL like base and Spark in
   SQL and DataFrame; mixed-width and `CAST` integer `nullif` over the 100
   ceiling refuse, equal mixed-width `nullif` yields NULL, and the lossy
-  `sequence` cell still answers NULL. pins: nvl-type-coercion-1/C-026, C-027
+  `sequence` cell still answers NULL. pins: nvl-type-coercion-1/C-026, C-027.
+  Re-verify 7 (2026-09-30): the lossy cell refuses per the bound-only
+  residue. pins: nvl-type-coercion-1/C-033
 - `test_nvl_type_coercion_1_vn7.py` — **NVL-TYPE-COERCION-1 re-verify 6
   (2026-09-30, VN7-1/VN7-2/VN7-3/VN7-4/VN7-6):** 53 pins. Foldable-first
   `nullif` (`abs`, `greatest`, `CASE`, scalar subquery, nested, `D`-cast)
@@ -5009,7 +5013,28 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   strings still refuse; NULL-first rows skip the compare cast and
   non-NULL invalid rows still raise; garbage seconds raise
   `CAST_INVALID_INPUT` under ANSI and answer `101` without it.
-  pins: nvl-type-coercion-1/C-029, C-030, C-031, C-032
+  pins: nvl-type-coercion-1/C-029, C-030, C-031, C-032.
+  Re-verify 7 (2026-09-30): the equal-pair cells refuse per the bound-only
+  residue, string-first `sequence` answers `array<bigint>`, and the
+  ceiling-100 string-first cell refuses. pins: nvl-type-coercion-1/C-033,
+  C-034
+- `test_nvl_type_coercion_1_vn8.py` — **NVL-TYPE-COERCION-1 re-verify 7
+  (2026-09-30, VN8-1/VN8-2/VN8-3/VN8-4):** 71 pins. The VN8-1 bypass
+  shapes (`try_cast` first, `coalesce` first, simple-`CASE` first,
+  `coalesce` second) refuse over the 100 ceiling in SQL and `F.expr`,
+  and the column-spellable three refuse on the column API too (simple
+  `CASE` and scalar subqueries have no column spelling); the VN8-2
+  truncated-float family refuses on `F.expr`;
+  the VN8-4 residue shapes refuse in SQL and `F.expr`; equal mixed-width
+  `nullif(101, 101L)` refuses over the ceiling while `nullif(5, 5)`
+  answers NULL at the default ceiling; the VN7-1 foldable firsts and
+  VN6-2 mixed widths refuse on the column API too. `sequence` `STRING`
+  bounds answer `array<bigint>` under ANSI (values, whitespace, int
+  overflow, string start, `BIGINT` start, string step, `nullif` stop,
+  garbage `typeof`, a string column with a NULL row, and the column API)
+  and refuse without it; garbage raises `CAST_INVALID_INPUT` under ANSI;
+  `DATE`/`STRING` siblings stay refused. pins: nvl-type-coercion-1/C-033,
+  C-034
 - `test_select_naming.py` — **Group H** select/projection display naming vs live PySpark 4.1.2:
   mutation leak accepts `Int32(1)` as well as `Int64(1)` (F-Y10-1 Python lit width);
   full matrix (`(x + 1)`, cast-of-attr → child name, cast-of-compound → `CAST(...)`,

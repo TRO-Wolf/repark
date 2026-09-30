@@ -1,6 +1,7 @@
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
+use chrono::Utc;
 use datafusion::arrow::array::{
     Array, ArrayRef, Date32Array, Int8Array, Int16Array, Int32Array, Int64Array,
     IntervalMonthDayNanoArray, ListArray, TimestampMicrosecondArray,
@@ -12,11 +13,14 @@ use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{
     DataType, Field, FieldRef, IntervalMonthDayNano, IntervalUnit, TimeUnit,
 };
-use datafusion::common::{DataFusionError, Result, exec_err};
+use datafusion::common::config::ConfigOptions;
+use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
+use datafusion::common::{DFSchema, DataFusionError, Result, exec_err};
 use datafusion::logical_expr::{
-    ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
-    TypeSignature, Volatility,
+    ColumnarValue, Expr, ExprSchemable, LogicalPlan, ReturnFieldArgs, ScalarFunctionArgs,
+    ScalarUDF, ScalarUDFImpl, Signature, TypeSignature, Volatility,
 };
+use datafusion::optimizer::AnalyzerRule;
 
 mod rows;
 
@@ -160,6 +164,9 @@ fn plan_sequence(arg_types: &[DataType]) -> Result<Family> {
 fn sequence_element(family: Family, arg_types: &[DataType]) -> DataType {
     match family {
         Family::Int => {
+            if arg_types.iter().any(is_string_type) {
+                return DataType::Int64;
+            }
             let mut widest = DataType::Int32;
             let mut rank: Option<u8> = None;
             for arg_type in arg_types {
@@ -183,6 +190,59 @@ fn sequence_element(family: Family, arg_types: &[DataType]) -> DataType {
     }
 }
 
+#[derive(Debug, Default)]
+pub struct SequenceStringBounds;
+
+impl AnalyzerRule for SequenceStringBounds {
+    fn analyze(&self, plan: LogicalPlan, config: &ConfigOptions) -> Result<LogicalPlan> {
+        if crate::ansi::spark_ansi_enabled_from_options(config) {
+            return Ok(plan);
+        }
+        plan.transform_up_with_subqueries(check_plan_node).data()
+    }
+
+    #[allow(clippy::unnecessary_literal_bound)]
+    fn name(&self) -> &str {
+        "sequence_string_bounds"
+    }
+}
+
+fn check_plan_node(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+    let mut schema = DFSchema::empty();
+    for input in plan.inputs() {
+        schema.merge(input.schema());
+    }
+    plan.map_expressions(|expr| {
+        expr.transform_up(|node| {
+            if let Expr::ScalarFunction(function) = &node
+                && function.func.name() == "sequence"
+            {
+                refuse_string_bounds(&function.args, &schema)?;
+            }
+            Ok(Transformed::no(node))
+        })
+    })
+}
+
+fn refuse_string_bounds(args: &[Expr], schema: &DFSchema) -> Result<()> {
+    let mut arg_types = Vec::with_capacity(args.len());
+    for arg in args {
+        let Ok(arg_type) = arg.get_type(schema) else {
+            return Ok(());
+        };
+        arg_types.push(arg_type);
+    }
+    if arg_types.iter().any(is_string_type) {
+        return Err(wrong_input_types(&arg_types));
+    }
+    Ok(())
+}
+
+#[must_use]
+pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
+    vec![Arc::new(SequenceStringBounds)]
+}
+
 impl ScalarUDFImpl for SparkSequence {
     crate::shim_udf_boilerplate!("sequence");
 
@@ -201,7 +261,8 @@ impl ScalarUDFImpl for SparkSequence {
             .iter()
             .map(|field| field.data_type().clone())
             .collect();
-        let nullable = args.arg_fields.iter().any(|field| field.is_nullable());
+        let nullable = args.arg_fields.iter().any(|field| field.is_nullable())
+            || declared.iter().any(is_string_type);
         Ok(Arc::new(Field::new(
             "sequence",
             self.return_type(&declared)?,
@@ -211,26 +272,7 @@ impl ScalarUDFImpl for SparkSequence {
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
         plan_sequence(arg_types)?;
-        let mut widest = DataType::Int32;
-        let mut rank: Option<u8> = None;
-        for arg_type in arg_types {
-            if let Some(next) = int_rank(arg_type)
-                && rank.is_none_or(|current| next > current)
-            {
-                rank = Some(next);
-                widest = arg_type.clone();
-            }
-        }
-        Ok(arg_types
-            .iter()
-            .map(|arg_type| {
-                if is_string_type(arg_type) {
-                    widest.clone()
-                } else {
-                    arg_type.clone()
-                }
-            })
-            .collect())
+        Ok(arg_types.to_vec())
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
@@ -593,6 +635,11 @@ fn as_i64(array: &ArrayRef) -> Result<Int64Array> {
     if array.data_type() == &DataType::Int64 {
         return downcast_primitive(array, "int");
     }
+    if is_string_type(array.data_type()) {
+        let casted =
+            crate::cast_map::spark_cast_ansi_zoned(array, &DataType::Int64, "UTC", Utc::now())?;
+        return downcast_primitive(&casted, "int");
+    }
     downcast_primitive(&cast(array.as_ref(), &DataType::Int64)?, "int")
 }
 
@@ -792,16 +839,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn sequence_string_stop_casts_to_widest_int() {
+    async fn sequence_string_bound_casts_to_bigint() {
         let ctx = ctx();
         let values = values_of(&ctx, "SELECT sequence(CAST(1 AS INT), '101')").await;
         assert_eq!(values.len(), 101);
         assert_eq!((values[0], values[100]), (1, 101));
-        for (start, element) in [
-            ("CAST(1 AS INT)", DataType::Int32),
-            ("CAST(1 AS BIGINT)", DataType::Int64),
-            ("CAST(1 AS SMALLINT)", DataType::Int16),
-        ] {
+        for start in ["CAST(1 AS INT)", "CAST(1 AS BIGINT)", "CAST(1 AS SMALLINT)"] {
             let batches = ctx
                 .sql(&format!("SELECT sequence({start}, '3')"))
                 .await
@@ -811,8 +854,62 @@ mod tests {
                 .unwrap_or_else(|error| panic!("execute {start}: {error}"));
             assert_eq!(
                 batches[0].column(0).data_type(),
-                &DataType::List(Arc::new(Field::new("element", element, false))),
+                &DataType::List(Arc::new(Field::new("element", DataType::Int64, false))),
                 "{start}"
+            );
+        }
+        assert_eq!(
+            values_of(&ctx, "SELECT sequence(1, ' 5 ')").await,
+            vec![1, 2, 3, 4, 5]
+        );
+        assert_eq!(
+            values_of(&ctx, "SELECT sequence(2147483647, '2147483648')").await,
+            vec![2_147_483_647, 2_147_483_648]
+        );
+        assert_eq!(
+            values_of(&ctx, "SELECT sequence('1', 5)").await,
+            vec![1, 2, 3, 4, 5]
+        );
+        let error = ctx
+            .sql("SELECT sequence(1, 'abc')")
+            .await
+            .expect("plan garbage string bound")
+            .collect()
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("CAST_INVALID_INPUT"), "{error}");
+    }
+
+    #[tokio::test]
+    async fn sequence_string_bound_refuses_without_ansi() {
+        use datafusion::prelude::SessionConfig;
+
+        use crate::ansi::with_spark_ansi_config;
+        let ctx =
+            SessionContext::new_with_config(with_spark_ansi_config(SessionConfig::new(), false));
+        crate::register_all(&ctx);
+        for rule in crate::analyzer_rules() {
+            ctx.add_analyzer_rule(rule);
+        }
+        for sql in [
+            "SELECT sequence(1, '5')",
+            "SELECT sequence('1', 5)",
+            "SELECT sequence(1, 5, '2')",
+        ] {
+            let error = crate::analyze_eagerly(
+                &ctx.state(),
+                ctx.sql(sql)
+                    .await
+                    .unwrap_or_else(|error| panic!("plan {sql}: {error}"))
+                    .logical_plan()
+                    .clone(),
+            )
+            .expect_err("string bound refuses without ansi")
+            .to_string();
+            assert!(
+                error.contains("DATATYPE_MISMATCH.SEQUENCE_WRONG_INPUT_TYPES"),
+                "{sql}: {error}"
             );
         }
     }

@@ -224,10 +224,6 @@ fn parse_strict_integer(text: &str) -> Option<i64> {
     text.parse::<i64>().ok()
 }
 
-pub(crate) fn strict_integer_text(text: &str) -> Option<i64> {
-    parse_strict_integer(spark_trim(text))
-}
-
 fn parse_legacy_integer(text: &str) -> Option<i64> {
     let (whole, fraction) = text.split_once('.').unwrap_or((text, ""));
     if !fraction.bytes().all(|byte| byte.is_ascii_digit()) {

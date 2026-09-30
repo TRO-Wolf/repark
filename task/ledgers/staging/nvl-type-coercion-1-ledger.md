@@ -56,6 +56,8 @@ interval-literal parsing; plain `if`/`CASE`/`=`/CAST methodology probes;
 | C-030 | VN7-6: `sequence` accepts `STRING` bounds with an `INT` sibling, coercing to the widest sibling width, so `sequence(1, nullif('101', 0))` answers 101 as `array<int>` like base and Spark; date/timestamp families, all-string bounds and `array_repeat` keep refusing. | The 5 answer pins (SQL, `F.expr`, column API) and the 2 still-refuses guards green. | PROVEN | 7/7 green; `typeof` is `array<int>` (`array<bigint>` for `1L`). |
 | C-031 | VN7-4: the `__repark_nullif_compare` kernel returns at once on an all-NULL first and masks the array second side on a partially-NULL first, so NULL rows never raise `CAST_INVALID_INPUT` while non-NULL invalid rows still do; null-free firsts pay one `null_count` check. | The 8 R3 pins green; the cast-every-row mutant reds the 5 answer pins and keeps the 2 raises pins green. | PROVEN | 8/8 green; the VN6-3 perf table vs `adc26586` DEBUG sits inside noise (lane hand-back). |
 | C-032 | VN7-3 follow-up: a `STRING` literal second proves `nullif` equality through the shared strict integer cast the compare kernel runs, so `nullif(101, '101')` and `nullif(101, ' 101 ')` yield NULL under the 100 ceiling like base and live Spark 4.1.2; unparsable (`'abc'`) and unequal (`'102'`) seconds keep the bound at `a`, and garbage seconds raise `CAST_INVALID_INPUT` under ANSI while answering `101` without it. | The 4 equal-NULL pins, the 2 unequal-refusal pins, the 2 direct garbage pins (ANSI on/off) and the under-ceiling garbage divergence pin green; the no-string-arm mutant reds the 4 NULL pins. | PROVEN | 9/9 green at ceiling 100; mutant reverted with the tree clean; the first is an integral literal through `Alias`/`Negative` only (no casts), so the proof holds in both ANSI modes without reading the flag. |
+| C-033 | VN8-1/VN8-2/VN8-4: the ceiling bound for `nullif(a, b)` and the `__repark_nullif_compare` form is `const_i128` of the unmodified first argument; `b` is never evaluated and nothing ever folds to NULL, so a foldable first over the ceiling refuses whatever the second is (dated residue below, equal and unequal pairs; below the ceiling nothing changes). | The 14 SQL + 20 `F.expr` + 13 column-API refusal pins, the 2 equal-mixed-width residue pins, the `nullif(5, 5)` NULL pin and the rewritten NULL→refusal pins green; the fold-to-NULL mutant reds a bypass pin. | PROVEN | All green at ceiling 100; mutant reverted with the tree clean; `cardinality_nullif.rs` shrinks to one line (net down). |
+| C-034 | VN8-3: `sequence` `STRING` bounds follow Spark 4.1.2 exactly as measured on the live oracle — under ANSI the bound casts to `BIGINT` through the shared ANSI string cast and the result is `array<bigint>`; without ANSI every `STRING` bound refuses with `SEQUENCE_WRONG_INPUT_TYPES`. | The 7 ANSI-on value+`typeof` pins, the 8 ANSI-off refusal pins, the garbage `CAST_INVALID_INPUT`/`typeof`/off pins, the string-column pin, the column-API pin and the `DATE`/`STRING` still-refuses guard green; the widest-sibling mutant reds the overflow and whitespace pins. | PROVEN | All green; `DATE`+`STRING` under ANSI stays refused (carried: Spark answers `array<date>`); mutant reverted with the tree clean. |
 
 ## Evidence
 
@@ -385,6 +387,58 @@ on NULL-first rows and returns at once on all-NULL firsts.
 `first_cast_dbl` replay cells keep answering like base and Spark.
 Mutants, replay, gate and perf-table outcomes are recorded in the lane
 hand-back alongside this commit.
+
+### Re-verify 7 VN8-1/VN8-2/VN8-3/VN8-4 (2026-09-30)
+
+The lane halted once before editing: bound-only R1 refuses 8 SQL-door
+verifier cells where Spark, base and head all answer `[[101]]` with
+unequal pairs, outside the brief's equal-pair residue list. The
+orchestrator ruled (a): the ceiling is RePark's own guard, so refusal
+is correct wherever the true cardinality exceeds it. The residue is
+therefore a principle — when `const_i128` of the first argument is
+above the ceiling, `nullif` refuses, whatever the second argument is —
+and the replay target excepts every cell it covers.
+
+Residue cells (all refuse; Spark answers, base answers except where
+noted): the equal pairs `nullif(101, 101L)` (new SQL pins, `plain`
+pin kept), `nullif(101, 101.0D)` and
+`nullif(101, CAST(101 AS DECIMAL(5,0)))` (rewritten vn7 pins),
+`nullif(101, '101')` and `nullif(101, ' 101 ')` (rewritten vn7 pins),
+the VN8-4 shapes `nullif(101L, '101')`, `nullif((SELECT 101), '101')`,
+`nullif(CAST(101 AS SMALLINT), '101')`,
+`nullif(101, greatest(CAST('0' AS INT), 101))` (new SQL/`F.expr`
+pins), the `'+101'`/`'0101'`/tab `X=X'` string variants, the three
+lossy `sequence` pins (rewritten; base errors `DATATYPE_MISMATCH`
+there, so the refusal is also the closer match), and the 8 unequal
+cells `vn7/first_str/{seq,seqL}`,
+`r1/q_coalesce_str/{repeat,seq,seqL}`,
+`r1/q_coalesce_cast/{repeat,seq,seqL}` with the rewritten
+`test_vn7_r2_string_first_sequence_ceiling100` pin. Below the ceiling
+nothing changes (`nullif(5, 5)` answers NULL).
+
+R1 deletes the string pruning, the decimal unwrapping, the equality
+proof, the string arm and the float leg plus the
+`strict_integer_text` share they were built for;
+`cardinality_nullif.rs` shrinks 228 lines to 7. R2 measures Spark
+4.1.2 live first (36 cells, banner `4.1.2 UTC`, recorded at
+`reverify7-nvl-fold/r2-spark.json`): ANSI on casts every `STRING`
+bound to `BIGINT` with the trimming cast and returns `array<bigint>`
+(garbage raises `CAST_INVALID_INPUT` to `BIGINT`); ANSI off refuses
+every one with `SEQUENCE_WRONG_INPUT_TYPES`; `DATE`+`STRING` answers
+`array<date>` under ANSI and is carried (head and base refuse).
+`sequence` implements exactly that: `BIGINT` element with a string
+present, no `DataFusion` cast inserted, the shared ANSI string cast at
+invoke, and the `SequenceStringBounds` analyzer rule seated before the
+ceiling for the ANSI-off refusal.
+
+Carried (ledger only): the attack3 coalesce/shuffle wrong-result
+flake, which predates this unit and base reproduces (the orchestrator
+files the card), and VN7-5 perf, awaiting the owner's decision.
+
+1073 pins pass (1002 + 71 new in
+`test_nvl_type_coercion_1_vn8.py`); the lossy and equal-pair rewrites
+keep their file counts. Mutants, replay, gate and perf-table outcomes
+are recorded in the lane hand-back alongside this commit.
 
 ## Coverage attestation
 

@@ -123,7 +123,7 @@ def test_vn7_r1_foldable_first_fexpr_refuses(
         frame.collect()
 
 
-VN7_R1_NULLS: list[tuple[str, str]] = [
+VN7_R1_EQUAL_REFUSALS: list[tuple[str, str]] = [
     ("repeat_eq_dbl", "SELECT size(array_repeat(1, nullif(101, 101.0D))) AS v"),
     ("seq_eq_dbl", "SELECT size(sequence(1, nullif(101, 101.0D))) AS v"),
     (
@@ -136,15 +136,18 @@ VN7_R1_NULLS: list[tuple[str, str]] = [
     ),
 ]
 
-VN7_R1_NULL_IDS = [cell[0] for cell in VN7_R1_NULLS]
+VN7_R1_EQUAL_REFUSAL_IDS = [cell[0] for cell in VN7_R1_EQUAL_REFUSALS]
 
 
-@pytest.mark.parametrize("cell", VN7_R1_NULLS, ids=VN7_R1_NULL_IDS)
-def test_vn7_r1_proven_equal_yields_null(ceiling100: ReparkSession, cell: tuple[str, str]) -> None:
-    assert [row.asDict() for row in ceiling100.sql(cell[1]).collect()] == [{"v": None}]
+@pytest.mark.parametrize("cell", VN7_R1_EQUAL_REFUSALS, ids=VN7_R1_EQUAL_REFUSAL_IDS)
+def test_vn7_r1_equal_pairs_refuse_residue(
+    ceiling100: ReparkSession, cell: tuple[str, str]
+) -> None:
+    with pytest.raises(AnalysisException, match=_MAX_ARRAY_ELEMENTS_KEY):
+        ceiling100.sql(cell[1]).collect()
 
 
-VN7_3_STRING_EQUAL_NULLS: list[tuple[str, str]] = [
+VN7_3_STRING_EQUAL_REFUSALS: list[tuple[str, str]] = [
     (
         "repeat_second_str",
         "SELECT size(array_repeat(1, nullif(101, '101'))) AS v",
@@ -157,14 +160,15 @@ VN7_3_STRING_EQUAL_NULLS: list[tuple[str, str]] = [
     ("seq_second_str_padded", "SELECT size(sequence(1, nullif(101, ' 101 '))) AS v"),
 ]
 
-VN7_3_STRING_EQUAL_NULL_IDS = [cell[0] for cell in VN7_3_STRING_EQUAL_NULLS]
+VN7_3_STRING_EQUAL_REFUSAL_IDS = [cell[0] for cell in VN7_3_STRING_EQUAL_REFUSALS]
 
 
-@pytest.mark.parametrize("cell", VN7_3_STRING_EQUAL_NULLS, ids=VN7_3_STRING_EQUAL_NULL_IDS)
-def test_vn7_3_equal_string_second_yields_null(
+@pytest.mark.parametrize("cell", VN7_3_STRING_EQUAL_REFUSALS, ids=VN7_3_STRING_EQUAL_REFUSAL_IDS)
+def test_vn7_3_equal_string_second_refuses_residue(
     ceiling100: ReparkSession, cell: tuple[str, str]
 ) -> None:
-    assert [row.asDict() for row in ceiling100.sql(cell[1]).collect()] == [{"v": None}]
+    with pytest.raises(AnalysisException, match=_MAX_ARRAY_ELEMENTS_KEY):
+        ceiling100.sql(cell[1]).collect()
 
 
 VN7_3_STRING_UNEQUAL_REFUSALS: list[tuple[str, str]] = [
@@ -248,7 +252,7 @@ def test_vn7_r2_string_first_sequence_answers(utc: ReparkSession) -> None:
         "SELECT typeof(sequence(1, nullif('101', 0))) AS t, "
         "size(sequence(1, nullif('101', 0))) AS v"
     ).collect()
-    assert [row.asDict() for row in rows] == [{"t": "array<int>", "v": 101}]
+    assert [row.asDict() for row in rows] == [{"t": "array<bigint>", "v": 101}]
 
 
 def test_vn7_r2_string_first_sequence_bigint_answers(utc: ReparkSession) -> None:
@@ -259,9 +263,11 @@ def test_vn7_r2_string_first_sequence_bigint_answers(utc: ReparkSession) -> None
     assert [row.asDict() for row in rows] == [{"t": "array<bigint>", "v": 101}]
 
 
-def test_vn7_r2_string_first_sequence_ceiling100(ceiling100: ReparkSession) -> None:
-    rows = ceiling100.sql("SELECT size(sequence(1, nullif('101', 0))) AS v").collect()
-    assert [row.asDict() for row in rows] == [{"v": 101}]
+def test_vn7_r2_string_first_sequence_ceiling100_residue(
+    ceiling100: ReparkSession,
+) -> None:
+    with pytest.raises(AnalysisException, match=_MAX_ARRAY_ELEMENTS_KEY):
+        ceiling100.sql("SELECT size(sequence(1, nullif('101', 0))) AS v").collect()
 
 
 def test_vn7_r2_string_first_sequence_fexpr(utc: ReparkSession) -> None:

@@ -139,11 +139,11 @@ def test_vn6_r2_equal_mixed_width_nullif_yields_null(ceiling100: ReparkSession) 
     assert [row.asDict() for row in rows] == [{"t": "int", "v": None}]
 
 
-def test_vn6_r2_lossy_nullif_in_sequence_still_answers_null(
+def test_vn6_r2_lossy_nullif_in_sequence_refuses_residue(
     ceiling100: ReparkSession,
 ) -> None:
-    rows = ceiling100.sql(
-        "SELECT typeof(sequence(0L, nullif(9007199254740993L, 9007199254740992D))) AS t, "
-        "CAST(sequence(0L, nullif(9007199254740993L, 9007199254740992D)) AS STRING) AS v"
-    ).collect()
-    assert [row.asDict() for row in rows] == [{"t": "array<bigint>", "v": None}]
+    with pytest.raises(AnalysisException, match=_MAX_ARRAY_ELEMENTS_KEY):
+        ceiling100.sql(
+            "SELECT typeof(sequence(0L, nullif(9007199254740993L, 9007199254740992D))) AS t, "
+            "CAST(sequence(0L, nullif(9007199254740993L, 9007199254740992D)) AS STRING) AS v"
+        ).collect()

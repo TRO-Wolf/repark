@@ -600,7 +600,7 @@ mod tests {
     }
 
     #[test]
-    fn nullif_decimal_double_seconds_fold_to_null() {
+    fn nullif_equal_seconds_refuse_over_ceiling() {
         use datafusion::arrow::datatypes::DataType as ArrowType;
         use datafusion::logical_expr::lit;
         let decimal = Expr::Literal(ScalarValue::Decimal128(Some(1010), 4, 1), None);
@@ -617,43 +617,40 @@ mod tests {
             lit(101i64),
         ] {
             let count = df_nullif(lit(101i32), second);
-            crate::cardinality::refuse_literal_expansion("array_repeat", &[lit(1i64), count], 100)
-                .expect("proven-equal nullif must skip the ceiling");
+            let err = crate::cardinality::refuse_literal_expansion(
+                "array_repeat",
+                &[lit(1i64), count],
+                100,
+            )
+            .expect_err("equal nullif refuses once the first argument is over the ceiling")
+            .to_string();
+            assert!(
+                err.contains(crate::cardinality::MAX_ARRAY_ELEMENTS_KEY),
+                "{err}"
+            );
         }
     }
 
     #[test]
-    fn nullif_string_sides_skip_or_refuse() {
+    fn nullif_string_sides_refuse_over_ceiling() {
         use datafusion::logical_expr::lit;
-        let string_first = df_nullif(lit("101"), lit(0i32));
-        crate::cardinality::refuse_literal_expansion(
-            "array_repeat",
-            &[lit(1i64), string_first],
-            100,
-        )
-        .expect("string-first nullif stays unknown to the ceiling");
-        for text in ["101", " 101 ", "+101"] {
-            let string_second = df_nullif(lit(101i32), lit(text));
-            crate::cardinality::refuse_literal_expansion(
+        for count in [
+            df_nullif(lit("101"), lit(0i32)),
+            df_nullif(lit(101i32), lit("101")),
+            df_nullif(lit(101i32), lit(" 101 ")),
+            df_nullif(lit(101i32), lit("+101")),
+            df_nullif(lit(101i32), lit("102")),
+            df_nullif(lit(101i32), lit("abc")),
+            df_nullif(lit(101i32), lit("101.0")),
+            df_nullif(lit(101i32), lit("")),
+        ] {
+            let err = crate::cardinality::refuse_literal_expansion(
                 "array_repeat",
-                &[lit(1i64), string_second],
+                &[lit(1i64), count],
                 100,
             )
-            .unwrap_or_else(|error| {
-                panic!("equal string-second nullif skips the ceiling for {text:?}: {error}")
-            });
-        }
-        for text in ["102", "abc", "101.0", ""] {
-            let string_second = df_nullif(lit(101i32), lit(text));
-            let outcome = crate::cardinality::refuse_literal_expansion(
-                "array_repeat",
-                &[lit(1i64), string_second],
-                100,
-            );
-            let err = match outcome {
-                Err(error) => error.to_string(),
-                Ok(()) => panic!("unequal string-second nullif refuses for {text:?}"),
-            };
+            .expect_err("a foldable first argument over the ceiling refuses")
+            .to_string();
             assert!(
                 err.contains(crate::cardinality::MAX_ARRAY_ELEMENTS_KEY),
                 "{err}"
