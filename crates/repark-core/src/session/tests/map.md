@@ -42,6 +42,13 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   sampled years 1-9999, and a fixed-offset battery. Every resolve also holds
   the cached window at or under 15 minutes, so a reintroduced step search
   reds the suite structurally.
+- `text_write_sink_spike.rs` — **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format
+  round (2026-09-30):** step-0 spike for wiring route (A). A test-only
+  wrapping format factory, format, sink and serializer over CSV/JSON prove
+  in DataFusion 54.1.0 that a custom `STORED AS` name resolves, custom
+  OPTIONS keys reach `create` verbatim, part files keep the `.csv`/`.json`
+  extension, and a serializer error surfaces with its message intact; a
+  no-strip control shows unstripped custom keys fail the inner factory.
 - `s3_prefix_read.rs` — **S3-PATH-WRITE-1 round 2 (2026-09-28):** slashless S3
   prefix reads on an in-memory store (no AWS): a written prefix reads back
   slashless for parquet, csv and json; exact part URLs keep single-file reads

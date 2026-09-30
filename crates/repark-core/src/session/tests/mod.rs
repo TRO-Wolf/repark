@@ -18,4 +18,5 @@ mod session_catalog;
 mod subquery;
 mod text_write_format;
 mod text_write_format_cache;
+mod text_write_sink_spike;
 mod window_rescan;
