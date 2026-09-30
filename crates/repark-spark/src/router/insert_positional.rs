@@ -21,6 +21,19 @@ pub(crate) async fn prepare_positional_insert(
     catalogs: &CatalogRegistry,
     insert: &Insert,
 ) -> Result<Option<PreparedInsert>> {
+    let prepared = rewrite_positional_insert(ctx, catalogs, insert).await?;
+    let judged = prepared
+        .as_ref()
+        .map_or(insert, |prepared| &prepared.insert);
+    crate::void_type::refuse_insert_source_types(ctx, catalogs, judged, false).await?;
+    Ok(prepared)
+}
+
+async fn rewrite_positional_insert(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    insert: &Insert,
+) -> Result<Option<PreparedInsert>> {
     let deduplicated = deduplicate_source_names(insert);
     let current = deduplicated.as_ref().unwrap_or(insert);
     if let Some(rewritten) =

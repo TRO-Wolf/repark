@@ -1268,6 +1268,14 @@ scalars live under [`try_invert/`](try_invert/map.md).
   path only. pins: cast-ts-string-1/C-001, C-004, C-005
   **WO NTZ-1 slice 2 (2026-09-27):** `rewrite_cast` retargets NTZ-target casts through
   `timestamp_ntz_cast` before the existing arms (+3 lines). pins: ntz-1/C-006
+  **WO NTZ-STORE-DOORS-1 verifier fold (2026-09-29, VD-1):** `analyze` first runs
+  `timestamp_ns_cast::widen_mixed_values_timestamps` with `rewrite_cast` as the cell
+  rewrite, before NTZ-1's `retarget_dml_store_casts`. The DML retarget therefore sees a
+  mixed `VALUES` column already typed `TIMESTAMP` (+5 lines).
+  pins: ntz-store-doors-1/C-006
+  **WO NTZ-STORE-DOORS-1 third re-verify fold (2026-09-29, RD4-1):** the call also passes
+  `timestamp_type.is_ntz()`, so the pass reads a `TIMESTAMP` literal by the session's
+  default timestamp type. pins: ntz-store-doors-1/C-009
 - `timestamp_cast.rs` — **TZ-5 (2026-08-12)** plus **B-TZ-4 (2026-08-13):** the embedded UDFs
   `analyzer.rs` puts under timestamp casts. `__repark_epoch_seconds_floor__` (→ `Int64`) serves
   integer targets with exact `div_euclid` **floor** — Spark uses `Math.floorDiv`, so `-0.5 s` is
@@ -1338,6 +1346,58 @@ scalars live under [`try_invert/`](try_invert/map.md).
   checked cast; both ns casts are one shared UDF instance each.
   Tests in [timestamp_ns_cast/](timestamp_ns_cast/map.md).
   pins: ice-tsns-sql-1/C-001, C-002, C-009
+  **WO NTZ-STORE-DOORS-1 verifier fold (2026-09-29, VD-1):**
+  `widen_mixed_values_timestamps` is the `VALUES` type-coercion seam for a column that mixes
+  `TIMESTAMP` and `TIMESTAMP_NTZ`. DataFusion's union resolution types such a column naive
+  microseconds, because a `TIMESTAMP '…'` literal is still a naive `Timestamp(ns)` cast when
+  `VALUES` is planned. The pass rewrites each naive-microsecond column's cells as
+  `spark_ltz_timestamp_cast` would; when the rewritten cells are only instants and naive walls
+  with at least one of each, the column becomes `TIMESTAMP` and each wall cell a `CAST` to
+  `TIMESTAMP`, which the same rule localizes in the session zone. That is Spark's wider type,
+  the one UNION, CASE and coalesce already choose. All-NTZ and all-LTZ columns, a column with
+  any other type, and every other column keep their cells and type. Parents recompute their
+  schema only after a widening.
+  pins: ntz-store-doors-1/C-006
+  **WO NTZ-STORE-DOORS-1 re-verify fold (2026-09-29, RD2-1):** a `DATE` cell no longer
+  counts as an instant. Instant-ness is decided from the pre-rewrite cell: a bare `DATE`, or
+  a naive-target `CAST` of a `DATE`, is a date, never an instant, so a `DATE` +
+  `TIMESTAMP_NTZ` column is not widened. A column of dates and naive walls with no instant is
+  normalized to `TIMESTAMP_NTZ` instead: each date cell becomes the NTZ wall cast, naive
+  nanosecond wraps are stripped, and a nanosecond-declared column is retyped naive
+  microseconds. The widening still fires when a true instant is present, with date cells
+  neutral. `values_column_needs_rewrite` skips the per-cell rewrite only when no cell holds
+  a cast, a timestamp or date literal, a column, or a non-NTZ scalar call, which keeps the
+  skip equivalent to classifying every cell. A user `CAST` of a naive value to `TIMESTAMP`
+  beside a bare `DATE` plans identically to the coerced pair, so that exotic mix follows the
+  date side; see the unit ledger's RD2-1 paragraph.
+  pins: ntz-store-doors-1/C-007
+  **WO NTZ-STORE-DOORS-1 second re-verify fold (2026-09-29, RD3-1/RD3-2):** the exotic mix
+  above is no longer ambiguous. The Spark door's keyword lowering wraps a written
+  `CAST(… AS TIMESTAMP)` `VALUES` cell in a second `CAST(… AS TIMESTAMP)` (see
+  `repark-spark` [keyword_lower/](../../repark-spark/src/keyword_lower/map.md)), so the
+  cell's outer source is a nanosecond timestamp: neither the date rule nor the naive-wall
+  rule matches it, and the rewritten cell classifies as an instant. A `DATE` or
+  `TIMESTAMP_NTZ` beside it therefore takes base's `TIMESTAMP` path. NULL cells (a NULL
+  literal or a cast of one) still count as walls for the `TIMESTAMP` widening, as before,
+  but the `TIMESTAMP_NTZ` normalization now fires only when at least one non-NULL cell is a
+  naive wall (`null_walls`).
+  pins: ntz-store-doors-1/C-008
+  **WO NTZ-STORE-DOORS-1 third re-verify fold (2026-09-29, RD4-1):** the pass deviates
+  from base only on positive, syntactic evidence; no cell is classified by its rewritten
+  type alone. The evidence reader is
+  [timestamp_ns_cast/values_evidence.rs](timestamp_ns_cast/map.md). A wall is a
+  `TIMESTAMP_NTZ` literal or a `CAST` / `::` / `TRY_CAST` to `TIMESTAMP_NTZ`, optionally
+  plus or minus `INTERVAL` literals, or a call to `to_timestamp_ntz`, `make_timestamp_ntz` or
+  `localtimestamp` whose own type is naive microseconds. An instant is a `TIMESTAMP` /
+  `TIMESTAMP_LTZ` literal, a marked `CAST(… AS TIMESTAMP)`, a top-level `TRY_CAST(… AS
+  TIMESTAMP)` or a `CAST(… AS TIMESTAMP)` / literal under `INTERVAL` arithmetic, or a call to
+  `from_utc_timestamp` / `to_utc_timestamp`, and its rewritten type must be the instant.
+  `DATE` and NULL cells stay neutral. Every other cell (`date_trunc`, `coalesce`, `if`,
+  `CASE`, `greatest`, a column, `current_timestamp()` and the rest) is `Other`, and one such
+  cell leaves the whole column on base's path. Under
+  `spark.sql.timestampType=TIMESTAMP_NTZ` (`ntz_default`, passed by `instant_ts`) the
+  `TIMESTAMP`-keyword forms are walls, since Spark types them `TIMESTAMP_NTZ` there.
+  pins: ntz-store-doors-1/C-009
 - `timestamp_ntz_cast.rs` — **WO NTZ-1 slice 1 (2026-09-26):** the embedded Spark-door
   casts `__repark_cast_timestamp_ntz__` / `__repark_try_cast_timestamp_ntz__` (→
   `Timestamp(µs, None)`) and the wall literal `__repark_timestamp_ntz__`, registered

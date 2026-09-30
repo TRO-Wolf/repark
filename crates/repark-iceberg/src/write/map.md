@@ -374,6 +374,11 @@ repark-core's error map.
   **WO NTZ-1 verifier fold (2026-09-28):** only microsecond-naive timestamps name
   `TIMESTAMP_NTZ`; the nanosecond zoneless form of an unlocalized `TIMESTAMP'…'`
   literal names `TIMESTAMP` again. pins: ntz-1/C-007
+  **WO NTZ-STORE-DOORS-1 (2026-09-28):** a `Timestamp(µs, zone)` target renders
+  `arrow_cast((CAST((expr) AS TIMESTAMP)), '<type>')`, so a naive or `DATE` value
+  stores the session-zone instant on MERGE UPDATE SET (and the nested-assignment
+  fold); the ANSI door and bare sessions read it as UTC as before.
+  pins: ntz-store-doors-1/C-002, C-003, C-004
 - `ntz_store.rs` — **WO NTZ-1 slice 2 (2026-09-27):** the NTZ store gate in the
   `void_store` shape: `refuse_ntz_writes` runs the session analyzer over the planned
   write and refuses, for a `Timestamp(µs, None)` target, any source the ANSI matrix
@@ -381,6 +386,38 @@ repark-core's error map.
   the wall-cast UDF name (`NTZ_WALL_CAST_UDF_NAME`, pinned equal to the registered UDF)
   and its `ntz_wall_cast_sql` renderer, used by the identity-UPDATE projection, the
   MERGE INSERT projection and `store_assignment_cast_sql`. pins: ntz-1/C-006, C-007
+  **WO NTZ-STORE-DOORS-1 (2026-09-28):** also the one home of the session-zone store
+  seam for the remaining write doors. `zone_stores` (and `zone_stores_by_name`) maps a
+  planned source frame onto its target columns (listed, positional minus static
+  partition columns, or by name), reads the analyzed source types, and wraps only a
+  cross-zone column: an instant into a `TIMESTAMP_NTZ` target through the wall-cast UDF,
+  a naive microsecond timestamp or a `DATE` into a `TIMESTAMP` target through a `CAST`
+  that the Spark door's `spark_ltz_timestamp_cast` rule localizes in the session zone.
+  Every other column, a failed analysis and an unregistered UDF leave the frame as is.
+  `ltz_instant_cast_sql` / `needs_ltz_instant_cast` / `analyzed_types` serve the MERGE
+  renderers. Callers: repark-spark `insert_by_name.rs` and `insert_overwrite.rs`.
+  pins: ntz-store-doors-1/C-001, C-002, C-003, C-004
+- `negated_null_store.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** Spark types `-NULL`
+  (and `- -NULL`, `-(NULL)`) as DOUBLE; DataFusion plans it as Arrow `Null`, which the ANSI
+  matrix stores anywhere. `refuse_negated_null_writes(ctx, table, plan, targets)` follows
+  each `Null`-typed output column of a planned source back through projections, aliases,
+  subquery aliases, filters, sorts, limits, `DISTINCT`, joins (split by side), `VALUES` rows
+  and `UNION` branches (every row or branch NULL, at least one negated) and view scans, and
+  refuses a negated NULL into a column DOUBLE cannot store (`refuses_double`: DATE,
+  BOOLEAN, TIMESTAMP, TIMESTAMP_NTZ, BINARY) with Spark's `CANNOT_SAFELY_CAST` text naming
+  `"DOUBLE"`. A view scan resolves through `get_logical_plan`, or through the session's
+  `ViewDefinitionPlans` resolver (`with_view_definition_plans`), which the Spark door
+  registers so a replanning temp view answers its creation-time plan without DataFusion
+  inlining it. Callers: `merge/insert.rs` (INSERT and UPDATE SET gates), repark-spark
+  `update_cast.rs` and `void_type/insert_source_types.rs`. Four unit tests.
+  pins: store-ts-to-numeric-1/C-002
+  **Fold 2026-09-29 (verifier VT-1):** `definition_plan` exposes the resolver to
+  the Spark door's widening walk, which resolves views the same way.
+- `update_cast.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** `incompatible_store_message`
+  is `incompatible_update_message` with DECIMAL names (`"DECIMAL(10,2)"`), used by the Spark
+  door's VALUES, INSERT and UPDATE gates and by `negated_null_store.rs`;
+  `incompatible_update_message` keeps its answers (no DECIMAL name), so the native door and
+  the VOID, NTZ and nested-MERGE callers are unchanged. pins: store-ts-to-numeric-1/C-004
 - `void_store.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** `refuse_void_writes` is the
   one VOID store gate: given a planned source and its target columns, it does nothing unless a
   target is Arrow `Null`; then it runs the session analyzer (so an integer literal types `INT`
@@ -776,6 +813,10 @@ repark-core's error map.
   `TIMESTAMP` (LTZ) targets one stage earlier, at the Spark door's existing
   `refuse_insert_void_values` gate site
   (`repark-spark/src/void_type/ltz_values_store.rs`); every other target stays residual.
+  STORE-TS-TO-NUMERIC-1 (2026-09-28) extends that gate to numeric, DATE and BOOLEAN
+  targets; the Spark door's `spark_float_stringify` rule rewrites a STRING → FLOAT/DOUBLE
+  conform cast before this rule runs, so that pair is judged by the Spark door's INSERT
+  gate (`repark-spark/src/void_type/insert_source_types.rs`). This rule is unchanged.
   Ledger:
   [`../../../../task/wi2-g6-cast-integrity-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-16-wi2-g6-cast-integrity-ledger.md).
 - `insert_defaults.rs` — **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** the ONE home for
@@ -805,6 +846,10 @@ repark-core's error map.
   `WITH` (its text carries `WITH_SUGGESTION` and the CTE's columns; RePark names none).
   `DEFAULT` inside a CTE body or derived table is never rewritten and refuses in
   planning (`No field named default`), as Spark refuses it.
+  **LTZ-STACKED-SIGN-1 re-verify fold (2026-09-28):** `is_default_marker` is `pub` so
+  the Spark door's VALUES probes (`repark-spark/src/void_type.rs`), which run before
+  marker substitution, read a `DEFAULT` cell as its column's default instead of an
+  unresolvable identifier.
   pins: ice-v3-write-default-1/C-021
   pins: ice-v3-write-default-1/C-004, C-005, C-006, C-007
   **Round 5 (2026-09-17):** `overwrite_source_with_defaults` is the one
