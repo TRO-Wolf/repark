@@ -642,6 +642,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   ever folds to NULL; a foldable first over the ceiling refuses whatever
   the second is (dated residue in the ledger, equal and unequal pairs).
   pins: nvl-type-coercion-1/C-033.
+  **Re-verify 8 fold (2026-09-30, VN9-1/VN9-2):** the `nullif` arm folds
+  nested (base's value: exact equality or unknown) while the ceiling
+  call sites fold a direct `nullif` count/stop argument as COUNT (an
+  inexact second keeps the bound at the first); `const_i128` itself is
+  untouched. pins: nvl-type-coercion-1/C-035.
 - `cardinality_nullif.rs` — **NVL-TYPE-COERCION-1 re-verify 6
   (2026-09-30, VN7-1/VN7-2/VN7-3):** the `nullif` ceiling fold, split out of
   `cardinality.rs` (move-only): `nullif_const_int` bounds by the first
@@ -665,6 +670,18 @@ scalars live under [`try_invert/`](try_invert/map.md).
   unwrapping, the equality proof, the string arm and the float leg are
   deleted with the `strict_integer_text` share they were built for; net
   line count down. pins: nvl-type-coercion-1/C-033.
+  **Re-verify 8 fold (2026-09-30, VN9-1/VN9-2):** one `nullif_value`
+  function again: exact equality of the two `exact_i128` sides folds to
+  NULL, an inexact second keeps the bound at the first in a COUNT
+  position (`array_repeat`/`repeat` count, `sequence` stop, under
+  `Alias`/`Cast` only) and folds unknown in every nested position, so
+  `coalesce(nullif(1, 1), 1000)` refuses and `sequence(nullif(1, 1),
+  1000)` answers NULL like base. `exact_i128` is `const_i128` over
+  integral-decimal-normalized trees plus the `f64`-image check, so
+  `101.4` never proves equality while `101.0D`, `101L` and `'101'` do;
+  the nullable-cast UDF stays opaque (a wrapped second is residue, and
+  the `F.expr` door folds `CAST('0' AS INT)` first so it answers where
+  SQL refuses). pins: nvl-type-coercion-1/C-035.
 
 
 - **R-FN-BATCH4** aggregate expansion.
@@ -1153,6 +1170,14 @@ scalars live under [`try_invert/`](try_invert/map.md).
   ceiling) refuses every `STRING` bound without ANSI. Date/`STRING`
   siblings stay refused (carried: Spark ANSI answers). pins:
   nvl-type-coercion-1/C-034
+  **NVL-TYPE-COERCION-1 re-verify 8 fold (2026-09-30, VN9-3):** a
+  `DATE`/`TIMESTAMP` bound with a `STRING` sibling takes the temporal
+  family and casts the string side through the shared ANSI string cast
+  in the session zone (`array<date>`, `array<timestamp>`,
+  `array<timestamp_ntz>` like Spark); the timestamp element follows the
+  temporal sibling and naive elements shape naive arrays. The tests move
+  to `spark_sequence/tests.rs` (file-size split, move-only). pins:
+  nvl-type-coercion-1/C-036
 - `spark_hash.rs` — **FNP-MATH-1 step 4 (2026-09-16, run 18a):** Spark Murmur3
   `hash` kernel (seed 42; per-type `mix`/`fmix` shapes verified against the fixture;
   strings as LE words with per-byte tails; arrays/structs/maps fold; always `int`,

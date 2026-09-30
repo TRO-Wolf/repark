@@ -58,6 +58,8 @@ interval-literal parsing; plain `if`/`CASE`/`=`/CAST methodology probes;
 | C-032 | VN7-3 follow-up: a `STRING` literal second proves `nullif` equality through the shared strict integer cast the compare kernel runs, so `nullif(101, '101')` and `nullif(101, ' 101 ')` yield NULL under the 100 ceiling like base and live Spark 4.1.2; unparsable (`'abc'`) and unequal (`'102'`) seconds keep the bound at `a`, and garbage seconds raise `CAST_INVALID_INPUT` under ANSI while answering `101` without it. | The 4 equal-NULL pins, the 2 unequal-refusal pins, the 2 direct garbage pins (ANSI on/off) and the under-ceiling garbage divergence pin green; the no-string-arm mutant reds the 4 NULL pins. | PROVEN | 9/9 green at ceiling 100; mutant reverted with the tree clean; the first is an integral literal through `Alias`/`Negative` only (no casts), so the proof holds in both ANSI modes without reading the flag. |
 | C-033 | VN8-1/VN8-2/VN8-4: the ceiling bound for `nullif(a, b)` and the `__repark_nullif_compare` form is `const_i128` of the unmodified first argument; `b` is never evaluated and nothing ever folds to NULL, so a foldable first over the ceiling refuses whatever the second is (dated residue below, equal and unequal pairs; below the ceiling nothing changes). | The 14 SQL + 20 `F.expr` + 13 column-API refusal pins, the 2 equal-mixed-width residue pins, the `nullif(5, 5)` NULL pin and the rewritten NULL→refusal pins green; the fold-to-NULL mutant reds a bypass pin. | PROVEN | All green at ceiling 100; mutant reverted with the tree clean; `cardinality_nullif.rs` shrinks to one line (net down). |
 | C-034 | VN8-3: `sequence` `STRING` bounds follow Spark 4.1.2 exactly as measured on the live oracle — under ANSI the bound casts to `BIGINT` through the shared ANSI string cast and the result is `array<bigint>`; without ANSI every `STRING` bound refuses with `SEQUENCE_WRONG_INPUT_TYPES`. | The 7 ANSI-on value+`typeof` pins, the 8 ANSI-off refusal pins, the garbage `CAST_INVALID_INPUT`/`typeof`/off pins, the string-column pin, the column-API pin and the `DATE`/`STRING` still-refuses guard green; the widest-sibling mutant reds the overflow and whitespace pins. | PROVEN | All green; `DATE`+`STRING` under ANSI stays refused (carried: Spark answers `array<date>`); mutant reverted with the tree clean. |
+| C-035 | VN9-1/VN9-2: one `nullif_value` fold serves `nullif` and `__repark_nullif_compare`: exact equality of the two `exact_i128` sides folds to NULL; an inexact second keeps the bound at the first in a COUNT position (`array_repeat`/`repeat` count, `sequence` stop, under `Alias`/`Cast` only) and folds unknown in every nested position. `exact_i128` is base's `const_i128` over integral-decimal-normalized trees plus the `f64`-image check, so truncation never proves equality. | The 14-row ruling table pinned on SQL, `F.expr` and the column API, the VN9-1 door refusal pins and the two residue pins green; the nested-as-COUNT mutant reds the coalesce pin and the no-exactness mutant reds the `101.4` pin. | PROVEN | 67 vn9 pins green at ceiling 100 plus the rewritten vn7/vn8 pins; both mutants reverted with the tree clean; residue is exactly the two dated bullets below. |
+| C-036 | VN9-3: `sequence` with a `DATE`/`TIMESTAMP` bound and a `STRING` sibling answers `array<date>`/`array<timestamp>`/`array<timestamp_ntz>` under ANSI by casting the string side through the existing shared Spark string→date/timestamp cast in the session zone, and refuses `SEQUENCE_WRONG_INPUT_TYPES` without ANSI — all 6 verifier cells, no shared-cast change. | The 6 ANSI-on value+`typeof` pins, the 6 ANSI-off refusal pins, the `F.expr`/column-API twins and the New-York session-zone pin green. | PROVEN | All green; the `sequence` tests move to `spark_sequence/tests.rs` (file-size split, move-only); naive elements shape naive arrays. |
 
 ## Evidence
 
@@ -439,6 +441,76 @@ files the card), and VN7-5 perf, awaiting the owner's decision.
 `test_nvl_type_coercion_1_vn8.py`); the lossy and equal-pair rewrites
 keep their file counts. Mutants, replay, gate and perf-table outcomes
 are recorded in the lane hand-back alongside this commit.
+
+### Re-verify 8 fold VN9-1/VN9-2/VN9-3 (2026-09-30)
+
+VN9-1 (`coalesce(nullif(1, 1), 1000)` counted as 1, skipping the
+ceiling) and VN9-2 (`sequence(nullif(1, 1), 1000)` and stepped
+`coalesce` refusing) share one cause: the bound-only fold applied
+COUNT semantics inside enclosing expressions. The fix is positional:
+`nullif_value` folds exact equality to NULL everywhere, keeps the
+first-argument bound only for a direct count/stop argument, and folds
+unknown in every nested position. `exact_i128` is base's `const_i128`
+over integral-decimal-normalized trees plus the `f64`-image check, so
+`101.4` (float or decimal), `1.014e2`, `sqrt(10201.5D)` and their kin
+never prove equality, while `101.0D`, `101L`, `'101'`, `'+101'` and
+`'0101'` do. `ROUND(101.49)` stays refused (`const_i128` has no
+`round` arm, so the second reads inexact — residue). The
+`__repark_nullif_pick` arm is untouched (no listed cell reaches it).
+`const_i128` itself is untouched, so every non-`nullif` count folds
+exactly as before.
+
+Residue (exactly these two bullets, verified against base
+`adc26586` at ceiling 100 — both answer NULL there):
+
+- A COUNT-position `nullif` whose second argument is not an exact
+  constant while its first is above the ceiling: columns
+  (`nullif(101, c)` with `c = 101`), scalar subqueries over columns,
+  computed strings, unparsable strings (`'abc'`, `'101.0'`, `''`),
+  non-integral floats/decimals, decimal-rounding casts
+  (`CAST(100.5D AS DECIMAL(5,0))`), and nullable-cast-wrapped shapes
+  (`CAST(101 AS DECIMAL(5,0))`, `greatest(CAST('0' AS INT), 101)` —
+  the wrap lands before the ceiling on the SQL door, so the fold
+  cannot see through it; the `F.expr` door folds `CAST('0' AS INT)`
+  first and answers NULL there). A bare `' 101 '` literal second is
+  exact (trims and parses) and answers NULL — the residue form is the
+  wrapped `CAST(' 101 ' AS INT)` or a column holding it.
+- A `sequence` stop with a negative step:
+  `sequence(101, nullif(1, c), -1)` with `c = 1` refuses while the
+  true stop is NULL.
+
+Carried pre-existing residue (predates this round, pins unchanged):
+the three lossy `sequence` pins (exact `i128` inequality where Spark
+compares equal in `DOUBLE`; base errors `DATATYPE_MISMATCH` there)
+and the `below/seq_step` cells (unknown step defaults to stride 1;
+base refuses identically).
+
+Gains (refused last round, answer like Spark now): every exact-equal
+pair above (`101.0D`, `101L`, `'101'`, `' 101 '`, `'+101'`,
+`'0101'`), the VN9-2 cells, the `below/*` arithmetic cells (base
+agrees on all of these), and the 6 VN9-3 temporal cells. Fixes
+(answered last round through the VN9-1 bypass, refuse like base now):
+`coal_nested`, `coal_cast`, `coal_sub`, `coal_str` and `coal_dbl`
+(all fold the `coalesce` to 1000 again). One flip answers like Spark
+but misses the guard exactly as base does:
+`nullif(101, coalesce(CAST('0' AS INT), 101))` (the wrapped first
+branch reads unknown, the fold falls through to 101 and proves a
+false equality) answers `[[101]]` on SQL like Spark and base, where
+R1 refused; recorded in the hand-back guards list.
+
+VN9-3 measures Spark from this round's verifier evidence
+(`reverify8-nvl/attack/out/spark-rv8.json`, pinned PySpark 4.1.2,
+UTC): all 6 cells answer with the temporal array type (dates
+2024-01-01..03/05, timestamps hourly 00:00Z..03:00Z, NTZ 00:00..02:00)
+under ANSI and refuse `SEQUENCE_WRONG_INPUT_TYPES` without it. No
+shared-cast change was needed. Carried (ledger only): VN9-4, views
+re-analyzed under the current ANSI setting (general gap, `CAST`
+behaves the same; the orchestrator files the card).
+
+1139 nvl-family pins pass (1072 + 67 new in
+`test_nvl_type_coercion_1_vn9.py`); the vn7/vn8 rewrites keep their
+file counts. Mutants, replay, gate and perf-table outcomes are
+recorded in the lane hand-back alongside this commit.
 
 ## Coverage attestation
 

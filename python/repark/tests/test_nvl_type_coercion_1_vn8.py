@@ -86,6 +86,18 @@ VN8_R1_SQL_REFUSALS: list[tuple[str, str]] = [
         "seq_q_coalesce",
         "SELECT size(sequence(1, nullif(101, coalesce(try_cast('0' AS INT), 101)))) AS v",
     ),
+]
+
+VN8_R1_SQL_REFUSAL_IDS = [cell[0] for cell in VN8_R1_SQL_REFUSALS]
+
+
+@pytest.mark.parametrize("cell", VN8_R1_SQL_REFUSALS, ids=VN8_R1_SQL_REFUSAL_IDS)
+def test_vn8_r1_bypass_shapes_refuse(ceiling100: ReparkSession, cell: tuple[str, str]) -> None:
+    with pytest.raises(AnalysisException, match=_MAX_ARRAY_ELEMENTS_KEY):
+        ceiling100.sql(cell[1]).collect()
+
+
+VN8_R1_SQL_EQUAL_ANSWERS: list[tuple[str, str]] = [
     (
         "seq_big_str",
         "SELECT size(sequence(1, nullif(101L, '101'))) AS v",
@@ -102,6 +114,19 @@ VN8_R1_SQL_REFUSALS: list[tuple[str, str]] = [
         "seq_subquery_str",
         "SELECT size(sequence(1, nullif((SELECT 101), '101'))) AS v",
     ),
+]
+
+VN8_R1_SQL_EQUAL_ANSWER_IDS = [cell[0] for cell in VN8_R1_SQL_EQUAL_ANSWERS]
+
+
+@pytest.mark.parametrize("cell", VN8_R1_SQL_EQUAL_ANSWERS, ids=VN8_R1_SQL_EQUAL_ANSWER_IDS)
+def test_vn8_r1_exact_equal_shapes_answer_null(
+    ceiling100: ReparkSession, cell: tuple[str, str]
+) -> None:
+    assert [row.asDict() for row in ceiling100.sql(cell[1]).collect()] == [{"v": None}]
+
+
+VN8_R1_SQL_WRAPPED_REFUSALS: list[tuple[str, str]] = [
     (
         "repeat_greatest_str",
         "SELECT size(array_repeat(1, nullif(101, greatest(CAST('0' AS INT), 101)))) AS v",
@@ -112,11 +137,13 @@ VN8_R1_SQL_REFUSALS: list[tuple[str, str]] = [
     ),
 ]
 
-VN8_R1_SQL_REFUSAL_IDS = [cell[0] for cell in VN8_R1_SQL_REFUSALS]
+VN8_R1_SQL_WRAPPED_REFUSAL_IDS = [cell[0] for cell in VN8_R1_SQL_WRAPPED_REFUSALS]
 
 
-@pytest.mark.parametrize("cell", VN8_R1_SQL_REFUSALS, ids=VN8_R1_SQL_REFUSAL_IDS)
-def test_vn8_r1_bypass_shapes_refuse(ceiling100: ReparkSession, cell: tuple[str, str]) -> None:
+@pytest.mark.parametrize("cell", VN8_R1_SQL_WRAPPED_REFUSALS, ids=VN8_R1_SQL_WRAPPED_REFUSAL_IDS)
+def test_vn8_r1_wrapped_cast_second_refuses_residue(
+    ceiling100: ReparkSession, cell: tuple[str, str]
+) -> None:
     with pytest.raises(AnalysisException, match=_MAX_ARRAY_ELEMENTS_KEY):
         ceiling100.sql(cell[1]).collect()
 
@@ -138,10 +165,6 @@ VN8_R1_FEXPR_REFUSALS: list[tuple[str, str, str]] = [
     ("trunc_exp_seq", "sequence", "nullif(101, 1.014e2)"),
     ("trunc_sqrt", "array_repeat", "nullif(101, sqrt(10201.5D))"),
     ("trunc_sqrt_seq", "sequence", "nullif(101, sqrt(10201.5D))"),
-    ("big_str", "sequence", "nullif(101L, '101')"),
-    ("cast_si_str", "sequence", "nullif(CAST(101 AS SMALLINT), '101')"),
-    ("subquery_str", "array_repeat", "nullif((SELECT 101), '101')"),
-    ("greatest_str", "array_repeat", "nullif(101, greatest(CAST('0' AS INT), 101))"),
 ]
 
 VN8_R1_FEXPR_REFUSAL_IDS = [cell[0] for cell in VN8_R1_FEXPR_REFUSALS]
@@ -154,6 +177,24 @@ def test_vn8_r1_bypass_shapes_fexpr_refuse(
     frame = ceiling100.range(1).select(F.size(F.expr(f"{cell[1]}(1, {cell[2]})")).alias("v"))
     with pytest.raises(AnalysisException, match=_MAX_ARRAY_ELEMENTS_KEY):
         frame.collect()
+
+
+VN8_R1_FEXPR_EQUAL_ANSWERS: list[tuple[str, str, str]] = [
+    ("big_str", "sequence", "nullif(101L, '101')"),
+    ("cast_si_str", "sequence", "nullif(CAST(101 AS SMALLINT), '101')"),
+    ("subquery_str", "array_repeat", "nullif((SELECT 101), '101')"),
+    ("greatest_str", "array_repeat", "nullif(101, greatest(CAST('0' AS INT), 101))"),
+]
+
+VN8_R1_FEXPR_EQUAL_ANSWER_IDS = [cell[0] for cell in VN8_R1_FEXPR_EQUAL_ANSWERS]
+
+
+@pytest.mark.parametrize("cell", VN8_R1_FEXPR_EQUAL_ANSWERS, ids=VN8_R1_FEXPR_EQUAL_ANSWER_IDS)
+def test_vn8_r1_exact_equal_shapes_fexpr_answer_null(
+    ceiling100: ReparkSession, cell: tuple[str, str, str]
+) -> None:
+    frame = ceiling100.range(1).select(F.size(F.expr(f"{cell[1]}(1, {cell[2]})")).alias("v"))
+    assert [row.asDict() for row in frame.collect()] == [{"v": None}]
 
 
 @pytest.mark.parametrize("func", ["array_repeat", "sequence"])
@@ -241,7 +282,7 @@ def test_vn8_r1_df_foldable_firsts_refuse(ceiling100: ReparkSession, cell: tuple
         frame.collect()
 
 
-VN8_R1_RESIDUE_EQUAL: list[tuple[str, str]] = [
+VN8_R1_MIXED_EQUAL_ANSWERS: list[tuple[str, str]] = [
     (
         "repeat_int_big_equal",
         "SELECT size(array_repeat(1, nullif(101, 101L))) AS v",
@@ -252,15 +293,14 @@ VN8_R1_RESIDUE_EQUAL: list[tuple[str, str]] = [
     ),
 ]
 
-VN8_R1_RESIDUE_EQUAL_IDS = [cell[0] for cell in VN8_R1_RESIDUE_EQUAL]
+VN8_R1_MIXED_EQUAL_ANSWER_IDS = [cell[0] for cell in VN8_R1_MIXED_EQUAL_ANSWERS]
 
 
-@pytest.mark.parametrize("cell", VN8_R1_RESIDUE_EQUAL, ids=VN8_R1_RESIDUE_EQUAL_IDS)
-def test_vn8_r1_equal_mixed_width_refuses_residue(
+@pytest.mark.parametrize("cell", VN8_R1_MIXED_EQUAL_ANSWERS, ids=VN8_R1_MIXED_EQUAL_ANSWER_IDS)
+def test_vn8_r1_equal_mixed_width_answers_null(
     ceiling100: ReparkSession, cell: tuple[str, str]
 ) -> None:
-    with pytest.raises(AnalysisException, match=_MAX_ARRAY_ELEMENTS_KEY):
-        ceiling100.sql(cell[1]).collect()
+    assert [row.asDict() for row in ceiling100.sql(cell[1]).collect()] == [{"v": None}]
 
 
 def test_vn8_r1_small_equal_pair_answers_null(utc: ReparkSession) -> None:
@@ -329,11 +369,6 @@ def test_vn8_r2_garbage_string_refuses_without_ansi(
 ) -> None:
     with pytest.raises(AnalysisException, match="SEQUENCE_WRONG_INPUT_TYPES"):
         ceiling100_legacy.sql("SELECT sequence(1, 'abc') AS v").collect()
-
-
-def test_vn8_r2_date_string_still_refuses(utc: ReparkSession) -> None:
-    with pytest.raises(_RAISES):
-        utc.sql("SELECT sequence(DATE'2024-01-01', '2024-01-03') AS v").collect()
 
 
 def test_vn8_r2_string_column_answers_bigint(utc: ReparkSession) -> None:

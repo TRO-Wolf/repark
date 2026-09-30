@@ -123,9 +123,20 @@ def test_vn7_r1_foldable_first_fexpr_refuses(
         frame.collect()
 
 
-VN7_R1_EQUAL_REFUSALS: list[tuple[str, str]] = [
+VN7_R1_EQUAL_ANSWERS: list[tuple[str, str]] = [
     ("repeat_eq_dbl", "SELECT size(array_repeat(1, nullif(101, 101.0D))) AS v"),
     ("seq_eq_dbl", "SELECT size(sequence(1, nullif(101, 101.0D))) AS v"),
+]
+
+VN7_R1_EQUAL_ANSWER_IDS = [cell[0] for cell in VN7_R1_EQUAL_ANSWERS]
+
+
+@pytest.mark.parametrize("cell", VN7_R1_EQUAL_ANSWERS, ids=VN7_R1_EQUAL_ANSWER_IDS)
+def test_vn7_r1_equal_pairs_answer_null(ceiling100: ReparkSession, cell: tuple[str, str]) -> None:
+    assert [row.asDict() for row in ceiling100.sql(cell[1]).collect()] == [{"v": None}]
+
+
+VN7_R1_WRAPPED_DEC_REFUSALS: list[tuple[str, str]] = [
     (
         "repeat_second_dec",
         "SELECT size(array_repeat(1, nullif(101, CAST(101 AS DECIMAL(5,0))))) AS v",
@@ -136,18 +147,18 @@ VN7_R1_EQUAL_REFUSALS: list[tuple[str, str]] = [
     ),
 ]
 
-VN7_R1_EQUAL_REFUSAL_IDS = [cell[0] for cell in VN7_R1_EQUAL_REFUSALS]
+VN7_R1_WRAPPED_DEC_REFUSAL_IDS = [cell[0] for cell in VN7_R1_WRAPPED_DEC_REFUSALS]
 
 
-@pytest.mark.parametrize("cell", VN7_R1_EQUAL_REFUSALS, ids=VN7_R1_EQUAL_REFUSAL_IDS)
-def test_vn7_r1_equal_pairs_refuse_residue(
+@pytest.mark.parametrize("cell", VN7_R1_WRAPPED_DEC_REFUSALS, ids=VN7_R1_WRAPPED_DEC_REFUSAL_IDS)
+def test_vn7_r1_wrapped_decimal_second_refuses_residue(
     ceiling100: ReparkSession, cell: tuple[str, str]
 ) -> None:
     with pytest.raises(AnalysisException, match=_MAX_ARRAY_ELEMENTS_KEY):
         ceiling100.sql(cell[1]).collect()
 
 
-VN7_3_STRING_EQUAL_REFUSALS: list[tuple[str, str]] = [
+VN7_3_STRING_EQUAL_ANSWERS: list[tuple[str, str]] = [
     (
         "repeat_second_str",
         "SELECT size(array_repeat(1, nullif(101, '101'))) AS v",
@@ -160,15 +171,14 @@ VN7_3_STRING_EQUAL_REFUSALS: list[tuple[str, str]] = [
     ("seq_second_str_padded", "SELECT size(sequence(1, nullif(101, ' 101 '))) AS v"),
 ]
 
-VN7_3_STRING_EQUAL_REFUSAL_IDS = [cell[0] for cell in VN7_3_STRING_EQUAL_REFUSALS]
+VN7_3_STRING_EQUAL_ANSWER_IDS = [cell[0] for cell in VN7_3_STRING_EQUAL_ANSWERS]
 
 
-@pytest.mark.parametrize("cell", VN7_3_STRING_EQUAL_REFUSALS, ids=VN7_3_STRING_EQUAL_REFUSAL_IDS)
-def test_vn7_3_equal_string_second_refuses_residue(
+@pytest.mark.parametrize("cell", VN7_3_STRING_EQUAL_ANSWERS, ids=VN7_3_STRING_EQUAL_ANSWER_IDS)
+def test_vn7_3_equal_string_second_answers_null(
     ceiling100: ReparkSession, cell: tuple[str, str]
 ) -> None:
-    with pytest.raises(AnalysisException, match=_MAX_ARRAY_ELEMENTS_KEY):
-        ceiling100.sql(cell[1]).collect()
+    assert [row.asDict() for row in ceiling100.sql(cell[1]).collect()] == [{"v": None}]
 
 
 VN7_3_STRING_UNEQUAL_REFUSALS: list[tuple[str, str]] = [

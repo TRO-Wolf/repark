@@ -5018,6 +5018,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   residue, string-first `sequence` answers `array<bigint>`, and the
   ceiling-100 string-first cell refuses. pins: nvl-type-coercion-1/C-033,
   C-034
+  Re-verify 8 fold (2026-09-30): the exact-equal pairs (`101.0D`,
+  `'101'`, `' 101 '`) answer NULL again; the nullable-cast-wrapped
+  `DECIMAL(5,0)` second stays refused as residue.
+  pins: nvl-type-coercion-1/C-035
 - `test_nvl_type_coercion_1_vn8.py` — **NVL-TYPE-COERCION-1 re-verify 7
   (2026-09-30, VN8-1/VN8-2/VN8-3/VN8-4):** 71 pins. The VN8-1 bypass
   shapes (`try_cast` first, `coalesce` first, simple-`CASE` first,
@@ -5035,6 +5039,21 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and refuse without it; garbage raises `CAST_INVALID_INPUT` under ANSI;
   `DATE`/`STRING` siblings stay refused. pins: nvl-type-coercion-1/C-033,
   C-034
+  Re-verify 8 fold (2026-09-30): the exact-equal shapes (mixed-width,
+  big/smallint/subquery-`'101'`) answer NULL again; the
+  nullable-cast-wrapped `greatest` second stays refused on SQL as
+  residue while the `F.expr` door answers NULL; the `DATE`/`STRING`
+  guard moves to the vn9 temporal family. pins: nvl-type-coercion-1/C-035,
+  C-036
+- `test_nvl_type_coercion_1_vn9.py` — **NVL-TYPE-COERCION-1 re-verify 8
+  fold (2026-09-30, VN9-1/VN9-2/VN9-3):** 67 pins. The ruling table (14
+  nullif/coalesce/sequence rows) on SQL, `F.expr` and the column API;
+  the VN9-1 doors (`repeat`, `generate_series`, lambda, `5L`/`1.0D`/
+  `'1'`/subquery/column seconds) refuse; the 6 temporal/`STRING`
+  `sequence` cells answer `array<date>`/`array<timestamp>`/
+  `array<timestamp_ntz>` under ANSI (values, `F.expr`/column twins, a
+  New-York session-zone pin) and refuse without it; the two residue
+  shapes refuse. pins: nvl-type-coercion-1/C-035, C-036
 - `test_select_naming.py` — **Group H** select/projection display naming vs live PySpark 4.1.2:
   mutation leak accepts `Int32(1)` as well as `Int64(1)` (F-Y10-1 Python lit width);
   full matrix (`(x + 1)`, cast-of-attr → child name, cast-of-compound → `CAST(...)`,

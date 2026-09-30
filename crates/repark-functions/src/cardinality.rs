@@ -426,7 +426,12 @@ pub(crate) fn const_i128(expr: &Expr, depth: u32) -> Option<i128> {
                     }
                 }
                 "nullif" | "__repark_nullif_compare" if args.len() == 2 => {
-                    crate::cardinality_nullif::nullif_const_int(&args[0], &args[1], depth - 1)
+                    crate::cardinality_nullif::nullif_value(
+                        &args[0],
+                        &args[1],
+                        depth - 1,
+                        crate::cardinality_nullif::NullifPosition::Nested,
+                    )
                 }
                 "__repark_nullif_pick" if args.len() == 2 => match &args[0] {
                     Expr::BinaryExpr(binary) if matches!(binary.op, Operator::Eq) => {
@@ -520,6 +525,53 @@ pub fn literal_i64(expr: &Expr) -> Option<i64> {
     i64::try_from(value).ok()
 }
 
+fn count_position_nullif(expr: &Expr) -> Option<(&Expr, &Expr)> {
+    let mut current = expr;
+    loop {
+        match current {
+            Expr::Alias(alias) => current = alias.expr.as_ref(),
+            Expr::Cast(cast) => current = cast.expr.as_ref(),
+            Expr::TryCast(try_cast) => current = try_cast.expr.as_ref(),
+            Expr::ScalarFunction(function)
+                if function.args.len() == 2
+                    && matches!(
+                        function.func.name().to_ascii_lowercase().as_str(),
+                        "nullif" | "__repark_nullif_compare"
+                    ) =>
+            {
+                return Some((&function.args[0], &function.args[1]));
+            }
+            _ => return None,
+        }
+    }
+}
+
+fn count_fold(expr: &Expr) -> Option<i128> {
+    if let Some((first, second)) = count_position_nullif(expr) {
+        crate::cardinality_nullif::nullif_value(
+            first,
+            second,
+            CONST_FOLD_MAX_DEPTH,
+            crate::cardinality_nullif::NullifPosition::Count,
+        )
+    } else {
+        const_i128(expr, CONST_FOLD_MAX_DEPTH)
+    }
+}
+
+fn count_fold_nonneg_u64(expr: &Expr) -> Option<u64> {
+    let value = count_fold(expr)?;
+    if value < 0 {
+        return None;
+    }
+    u64::try_from(value).ok()
+}
+
+fn count_position_i64(expr: &Expr) -> Option<i64> {
+    let value = count_fold(expr)?;
+    i64::try_from(value).ok()
+}
+
 /// Cardinality of an inclusive numeric sequence `start..=stop` by `stride` (Spark `sequence`).
 #[must_use]
 pub fn sequence_cardinality(start: i64, stop: i64, stride: i64) -> Option<u64> {
@@ -557,14 +609,14 @@ pub fn refuse_literal_expansion(function_name: &str, args: &[Expr], max: u64) ->
     match function_name {
         "array_repeat" | "repeat" => {
             if args.len() >= 2
-                && let Some(count) = literal_nonneg_u64(&args[1])
+                && let Some(count) = count_fold_nonneg_u64(&args[1])
             {
                 refuse_if_over_ceiling(function_name, count, max)?;
             }
         }
         "sequence" | "generate_series" | "gen_series" | "range" if args.len() >= 2 => {
             let start = literal_i64(&args[0]);
-            let stop = literal_i64(&args[1]);
+            let stop = count_position_i64(&args[1]);
             let stride = if args.len() >= 3 {
                 literal_i64(&args[2]).unwrap_or(1)
             } else {
@@ -844,6 +896,50 @@ mod tests {
                 err.contains(MAX_ARRAY_ELEMENTS_KEY),
                 "must name conf for {sql}: {err}"
             );
+        }
+    }
+
+    #[tokio::test]
+    async fn analyzer_nullif_nested_folds_value_and_count_bounds_first() {
+        let settings = ReparkSqlSettings {
+            max_array_elements: 100,
+            ..ReparkSqlSettings::default()
+        };
+        let config = with_repark_sql_config(SessionConfig::new(), settings);
+        let ctx = SessionContext::new_with_config(config);
+        for rule in analyzer_rules() {
+            ctx.add_analyzer_rule(rule);
+        }
+        for sql in [
+            "SELECT array_repeat(1, coalesce(nullif(1, 1), 1000)) AS a",
+            "SELECT repeat('x', coalesce(nullif(1, 1), 1000)) AS a",
+            "SELECT range(1, coalesce(nullif(1, 1), 1000)) AS a",
+            "SELECT generate_series(1, coalesce(nullif(1, 1), 1000)) AS a",
+        ] {
+            let df = ctx
+                .sql(sql)
+                .await
+                .unwrap_or_else(|error| panic!("plan {sql}: {error}"));
+            let err = crate::analyze_eagerly(&ctx.state(), df.logical_plan().clone())
+                .expect_err("nested NULL and inexact seconds must refuse over the ceiling")
+                .to_string();
+            assert!(
+                err.contains(MAX_ARRAY_ELEMENTS_KEY),
+                "must name conf for {sql}: {err}"
+            );
+        }
+        for sql in [
+            "SELECT array_repeat(1, coalesce(nullif(1, 0), 1000)) AS a",
+            "SELECT array_repeat(1, nullif(5, 5)) AS a",
+            "SELECT range(nullif(1, 1), 1000) AS a",
+            "SELECT range(1, 1000, coalesce(nullif(1, 1), 10)) AS a",
+        ] {
+            let df = ctx
+                .sql(sql)
+                .await
+                .unwrap_or_else(|error| panic!("plan {sql}: {error}"));
+            crate::analyze_eagerly(&ctx.state(), df.logical_plan().clone())
+                .unwrap_or_else(|error| panic!("nested value must answer for {sql}: {error}"));
         }
     }
 

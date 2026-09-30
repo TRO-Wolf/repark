@@ -600,7 +600,7 @@ mod tests {
     }
 
     #[test]
-    fn nullif_equal_seconds_refuse_over_ceiling() {
+    fn nullif_equal_seconds_answer_null() {
         use datafusion::arrow::datatypes::DataType as ArrowType;
         use datafusion::logical_expr::lit;
         let decimal = Expr::Literal(ScalarValue::Decimal128(Some(1010), 4, 1), None);
@@ -612,22 +612,13 @@ mod tests {
             double,
             Expr::Cast(datafusion::logical_expr::Cast::new(
                 Box::new(lit(101i32)),
-                ArrowType::Decimal128(5, 0),
+                ArrowType::Decimal128(10, 0),
             )),
             lit(101i64),
         ] {
             let count = df_nullif(lit(101i32), second);
-            let err = crate::cardinality::refuse_literal_expansion(
-                "array_repeat",
-                &[lit(1i64), count],
-                100,
-            )
-            .expect_err("equal nullif refuses once the first argument is over the ceiling")
-            .to_string();
-            assert!(
-                err.contains(crate::cardinality::MAX_ARRAY_ELEMENTS_KEY),
-                "{err}"
-            );
+            crate::cardinality::refuse_literal_expansion("array_repeat", &[lit(1i64), count], 100)
+                .expect("exact-equal nullif folds to NULL under the ceiling");
         }
     }
 
@@ -636,9 +627,6 @@ mod tests {
         use datafusion::logical_expr::lit;
         for count in [
             df_nullif(lit("101"), lit(0i32)),
-            df_nullif(lit(101i32), lit("101")),
-            df_nullif(lit(101i32), lit(" 101 ")),
-            df_nullif(lit(101i32), lit("+101")),
             df_nullif(lit(101i32), lit("102")),
             df_nullif(lit(101i32), lit("abc")),
             df_nullif(lit(101i32), lit("101.0")),
@@ -656,6 +644,57 @@ mod tests {
                 "{err}"
             );
         }
+    }
+
+    #[test]
+    fn nullif_equal_string_seconds_answer_null() {
+        use datafusion::logical_expr::lit;
+        for count in [
+            df_nullif(lit(101i32), lit("101")),
+            df_nullif(lit(101i32), lit(" 101 ")),
+            df_nullif(lit(101i32), lit("+101")),
+        ] {
+            crate::cardinality::refuse_literal_expansion("array_repeat", &[lit(1i64), count], 100)
+                .expect("exact-equal string seconds fold to NULL under the ceiling");
+        }
+    }
+
+    #[test]
+    fn nullif_inexact_seconds_bound_first_over_ceiling() {
+        use datafusion::logical_expr::{col, lit};
+        for second in [
+            lit(101.4f64),
+            Expr::Literal(ScalarValue::Decimal128(Some(1014), 4, 1), None),
+            col("c"),
+        ] {
+            let count = df_nullif(lit(101i32), second);
+            let err = crate::cardinality::refuse_literal_expansion(
+                "array_repeat",
+                &[lit(1i64), count],
+                100,
+            )
+            .expect_err("inexact seconds keep the bound at the first argument")
+            .to_string();
+            assert!(
+                err.contains(crate::cardinality::MAX_ARRAY_ELEMENTS_KEY),
+                "{err}"
+            );
+        }
+        let skipped = coalesce(vec![df_nullif(lit(1i32), lit(1i32)), lit(1000i32)]);
+        let err = crate::cardinality::refuse_literal_expansion(
+            "array_repeat",
+            &[lit(1i64), skipped],
+            100,
+        )
+        .expect_err("nested NULL falls through to the later coalesce branch")
+        .to_string();
+        assert!(
+            err.contains(crate::cardinality::MAX_ARRAY_ELEMENTS_KEY),
+            "{err}"
+        );
+        let kept = coalesce(vec![df_nullif(lit(1i32), lit(0i32)), lit(1000i32)]);
+        crate::cardinality::refuse_literal_expansion("array_repeat", &[lit(1i64), kept], 100)
+            .expect("nested unequal values fold through the enclosing call");
     }
 
     #[tokio::test]
