@@ -126,15 +126,13 @@ impl ReparkSession {
             TimeParserPolicy::is_legacy,
         );
         if legacy {
-            let (timestamp, ntz, date) = write_option_patterns(options);
-            let temporal_options = timestamp.is_some() || ntz.is_some() || date.is_some();
             let temporal_columns = frame
                 .schema()
                 .inner()
                 .fields()
                 .iter()
                 .any(|field| contains_temporal(field.data_type()));
-            if temporal_options || temporal_columns {
+            if temporal_columns {
                 return Err(Error::Analysis(
                     "CSV/JSON text writes with spark.sql.legacy.timeParserPolicy=LEGACY are not \
                      supported yet (legacy SimpleDateFormat rendering is not implemented; unset \

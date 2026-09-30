@@ -227,7 +227,11 @@ pub fn java_display_zone_id(raw: &str) -> String {
         }
         let rest = &trimmed[prefix.len()..];
         if matches!(rest.as_bytes().first(), Some(b'+' | b'-')) {
-            return format!("{prefix}{}", normalize_java_offset(rest));
+            let normalized = normalize_java_offset(rest);
+            if normalized == "+00:00" || normalized == "-00:00" {
+                return prefix.to_string();
+            }
+            return format!("{prefix}{normalized}");
         }
         return trimmed.to_string();
     }
@@ -301,8 +305,8 @@ pub const TIME_PARSER_POLICY_KEY: &str = "spark.sql.legacy.timeParserPolicy";
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TimeParserPolicy {
     Legacy,
-    Corrected,
     #[default]
+    Corrected,
     Exception,
 }
 

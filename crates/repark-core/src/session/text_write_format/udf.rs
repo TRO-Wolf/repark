@@ -11,14 +11,17 @@ use arrow::compute::cast;
 use arrow::datatypes::{
     DataType, Date32Type, Date64Type, Field, FieldRef, TimeUnit, TimestampMicrosecondType,
 };
+use chrono::{FixedOffset, NaiveDateTime};
 use datafusion::common::{DataFusionError, Result};
 use datafusion::logical_expr::{
     ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
     Volatility,
 };
 
+use super::fast::{DateDefaultState, TimestampDefaultState, wall_micros_bounds};
 use super::render::{
-    RenderValue, render_compiled, render_date_default, render_ntz_default, render_timestamp_default,
+    RenderValue, render_compiled_into, render_date_default_into, render_ntz_default_into,
+    render_timestamp_default_into,
 };
 use super::{
     CompiledPattern, PatternKind, compile_write_pattern, micros_to_naive_wall, micros_to_wall_zone,
@@ -68,18 +71,161 @@ fn fraction_nanos(micros: i64) -> u32 {
     u32::try_from(micros.rem_euclid(MICROS_PER_SECOND)).unwrap_or(0) * NANOS_PER_MICRO
 }
 
-fn format_instant_value(
-    micros: i64,
+const SEARCH_SECONDS_CLAMP: i64 = 9_000_000_000_000;
+const SEARCH_STEP_SECONDS: i64 = 518_400;
+const SEARCH_PROBE_BUDGET: u32 = 12_288;
+
+pub(crate) struct OffsetCache {
     zone: Tz,
+    offset: Option<FixedOffset>,
+    start: i64,
+    end: i64,
+    wall_lowest: i64,
+    wall_highest: i64,
+}
+
+impl OffsetCache {
+    pub(crate) fn new(zone: Tz) -> Self {
+        let (wall_lowest, wall_highest) = wall_micros_bounds();
+        Self {
+            zone,
+            offset: None,
+            start: 0,
+            end: 0,
+            wall_lowest,
+            wall_highest,
+        }
+    }
+
+    fn probe(&self, seconds: i64, offset: FixedOffset) -> bool {
+        let clamped = seconds.clamp(-SEARCH_SECONDS_CLAMP, SEARCH_SECONDS_CLAMP);
+        micros_to_wall_zone(clamped * MICROS_PER_SECOND, self.zone)
+            .is_some_and(|(_, found)| found == offset)
+    }
+
+    fn bound_above(&self, center: i64, offset: FixedOffset) -> i64 {
+        let mut low = center;
+        for _ in 0..SEARCH_PROBE_BUDGET {
+            let high = low.saturating_add(SEARCH_STEP_SECONDS);
+            if !self.probe(high, offset) {
+                let mut keep = low;
+                let mut drop = high;
+                while drop - keep > 1 {
+                    let middle = keep + (drop - keep) / 2;
+                    if self.probe(middle, offset) {
+                        keep = middle;
+                    } else {
+                        drop = middle;
+                    }
+                }
+                return drop;
+            }
+            low = high;
+        }
+        low.saturating_add(1)
+    }
+
+    fn bound_below(&self, center: i64, offset: FixedOffset) -> i64 {
+        let mut high = center;
+        for _ in 0..SEARCH_PROBE_BUDGET {
+            let low = high.saturating_sub(SEARCH_STEP_SECONDS);
+            if !self.probe(low, offset) {
+                let mut drop = low;
+                let mut keep = high;
+                while keep - drop > 1 {
+                    let middle = drop + (keep - drop) / 2;
+                    if self.probe(middle, offset) {
+                        keep = middle;
+                    } else {
+                        drop = middle;
+                    }
+                }
+                return keep;
+            }
+            high = low;
+        }
+        high
+    }
+
+    fn refresh(&mut self, micros: i64) -> Option<(NaiveDateTime, FixedOffset)> {
+        let (wall, offset) = micros_to_wall_zone(micros, self.zone)?;
+        let center = micros.div_euclid(MICROS_PER_SECOND);
+        self.offset = Some(offset);
+        self.start = self
+            .bound_below(center, offset)
+            .saturating_mul(MICROS_PER_SECOND);
+        self.end = self
+            .bound_above(center, offset)
+            .saturating_mul(MICROS_PER_SECOND);
+        Some((wall, offset))
+    }
+
+    pub(crate) fn resolve(&mut self, micros: i64) -> Option<(NaiveDateTime, FixedOffset)> {
+        if let Some(offset) = self.offset
+            && micros >= self.start
+            && micros < self.end
+        {
+            let shift = i64::from(offset.local_minus_utc()) * MICROS_PER_SECOND;
+            if let Some(shifted) = micros.checked_add(shift)
+                && let Some(wall) = chrono::DateTime::from_timestamp_micros(shifted)
+                    .map(|instant| instant.naive_utc())
+            {
+                return Some((wall, offset));
+            }
+        }
+        self.refresh(micros)
+    }
+
+    fn refresh_micros(&mut self, micros: i64) -> Option<(i64, FixedOffset)> {
+        let (_, offset) = micros_to_wall_zone(micros, self.zone)?;
+        let shift = i64::from(offset.local_minus_utc()) * MICROS_PER_SECOND;
+        let shifted = micros.checked_add(shift)?;
+        let center = micros.div_euclid(MICROS_PER_SECOND);
+        self.offset = Some(offset);
+        self.start = self
+            .bound_below(center, offset)
+            .saturating_mul(MICROS_PER_SECOND);
+        self.end = self
+            .bound_above(center, offset)
+            .saturating_mul(MICROS_PER_SECOND);
+        Some((shifted, offset))
+    }
+
+    pub(crate) fn resolve_micros(&mut self, micros: i64) -> Option<(i64, FixedOffset)> {
+        if let Some(offset) = self.offset
+            && micros >= self.start
+            && micros < self.end
+        {
+            let shift = i64::from(offset.local_minus_utc()) * MICROS_PER_SECOND;
+            if let Some(shifted) = micros.checked_add(shift)
+                && shifted >= self.wall_lowest
+                && shifted <= self.wall_highest
+                && micros >= self.wall_lowest
+                && micros <= self.wall_highest
+            {
+                return Some((shifted, offset));
+            }
+        }
+        self.refresh_micros(micros)
+    }
+}
+
+fn format_instant_into(
+    buffer: &mut String,
+    micros: i64,
+    cache: &mut OffsetCache,
     zone_id: &str,
     spec: &FormatSpec,
-) -> Result<Option<String>> {
-    let Some((wall, offset)) = micros_to_wall_zone(micros, zone) else {
-        return Ok(None);
+) -> Result<bool> {
+    let Some((wall, offset)) = cache.resolve(micros) else {
+        return Ok(false);
     };
     let nanos = fraction_nanos(micros);
     match spec {
-        FormatSpec::Default => Ok(Some(render_timestamp_default(&wall, nanos, offset))),
+        FormatSpec::Default => {
+            render_timestamp_default_into(buffer, &wall, nanos, offset);
+            Ok(true)
+        }
         FormatSpec::Compiled(compiled) => {
             let value = RenderValue::Instant {
                 wall,
@@ -87,42 +233,48 @@ fn format_instant_value(
                 offset,
                 zone_id,
             };
-            render_compiled(compiled, &value)
-                .map(Some)
+            render_compiled_into(compiled, &value, buffer)
+                .map(|()| true)
                 .map_err(DataFusionError::Execution)
         }
     }
 }
 
-fn format_wall_value(micros: i64, spec: &FormatSpec) -> Result<Option<String>> {
+fn format_wall_into(buffer: &mut String, micros: i64, spec: &FormatSpec) -> Result<bool> {
     let Some(wall) = micros_to_naive_wall(micros) else {
-        return Ok(None);
+        return Ok(false);
     };
     let nanos = fraction_nanos(micros);
     match spec {
-        FormatSpec::Default => Ok(Some(render_ntz_default(&wall, nanos))),
+        FormatSpec::Default => {
+            render_ntz_default_into(buffer, &wall, nanos);
+            Ok(true)
+        }
         FormatSpec::Compiled(compiled) => {
             let value = RenderValue::Wall { wall, nanos };
-            render_compiled(compiled, &value)
-                .map(Some)
+            render_compiled_into(compiled, &value, buffer)
+                .map(|()| true)
                 .map_err(DataFusionError::Execution)
         }
     }
 }
 
-fn format_date_value(days: i32, spec: &FormatSpec) -> Result<Option<String>> {
+fn format_date_into(buffer: &mut String, days: i32, spec: &FormatSpec) -> Result<bool> {
     let Some(absolute) = days.checked_add(719_163) else {
-        return Ok(None);
+        return Ok(false);
     };
     let Some(date) = chrono::NaiveDate::from_num_days_from_ce_opt(absolute) else {
-        return Ok(None);
+        return Ok(false);
     };
     match spec {
-        FormatSpec::Default => Ok(Some(render_date_default(date))),
+        FormatSpec::Default => {
+            render_date_default_into(buffer, date);
+            Ok(true)
+        }
         FormatSpec::Compiled(compiled) => {
             let value = RenderValue::Date { date };
-            render_compiled(compiled, &value)
-                .map(Some)
+            render_compiled_into(compiled, &value, buffer)
+                .map(|()| true)
                 .map_err(DataFusionError::Execution)
         }
     }
@@ -181,21 +333,121 @@ fn arrow_failed(error: &arrow::error::ArrowError) -> DataFusionError {
 
 struct FormatContext<'a> {
     specs: &'a FormatSpecs,
-    zone: Tz,
+    cache: OffsetCache,
     zone_id: &'a str,
+}
+
+fn staged_text(staged: &[u8], len: usize) -> &str {
+    debug_assert!(staged[..len].iter().all(u8::is_ascii));
+    std::str::from_utf8(&staged[..len]).unwrap_or("")
+}
+
+fn append_ltz_default(
+    builder: &mut StringBuilder,
+    state: &mut TimestampDefaultState,
+    staged: &mut [u8; 48],
+    cache: &mut OffsetCache,
+    ticks: i64,
+) {
+    match cache.resolve_micros(ticks) {
+        Some((wall, offset)) => {
+            let len = state.render(wall, Some(offset), staged);
+            builder.append_value(staged_text(staged, len));
+        }
+        None => builder.append_null(),
+    }
+}
+
+fn format_ltz_default_column(
+    micros: &arrow::array::PrimitiveArray<TimestampMicrosecondType>,
+    cache: &mut OffsetCache,
+) -> ArrayRef {
+    let mut builder = StringBuilder::with_capacity(micros.len(), micros.len() * 32);
+    let mut state = TimestampDefaultState::new();
+    let mut staged = [0u8; 48];
+    let values = micros.values();
+    if micros.null_count() == 0 {
+        for ticks in values {
+            append_ltz_default(&mut builder, &mut state, &mut staged, cache, *ticks);
+        }
+    } else {
+        for (row, ticks) in values.iter().enumerate() {
+            if micros.is_null(row) {
+                builder.append_null();
+                continue;
+            }
+            append_ltz_default(&mut builder, &mut state, &mut staged, cache, *ticks);
+        }
+    }
+    Arc::new(builder.finish())
+}
+
+fn format_ntz_default_column(
+    micros: &arrow::array::PrimitiveArray<TimestampMicrosecondType>,
+) -> ArrayRef {
+    let mut builder = StringBuilder::with_capacity(micros.len(), micros.len() * 32);
+    let mut state = TimestampDefaultState::new();
+    let mut staged = [0u8; 48];
+    let (lowest, highest) = wall_micros_bounds();
+    let values = micros.values();
+    if micros.null_count() == 0 {
+        for ticks in values {
+            if *ticks < lowest || *ticks > highest {
+                builder.append_null();
+                continue;
+            }
+            let len = state.render(*ticks, None, &mut staged);
+            builder.append_value(staged_text(&staged, len));
+        }
+    } else {
+        for (row, ticks) in values.iter().enumerate() {
+            if micros.is_null(row) || *ticks < lowest || *ticks > highest {
+                builder.append_null();
+                continue;
+            }
+            let len = state.render(*ticks, None, &mut staged);
+            builder.append_value(staged_text(&staged, len));
+        }
+    }
+    Arc::new(builder.finish())
+}
+
+fn append_date_default(
+    builder: &mut StringBuilder,
+    state: &mut DateDefaultState,
+    staged: &mut [u8; 48],
+    days: i64,
+) {
+    match state.render(days, staged) {
+        Some(len) => builder.append_value(staged_text(staged, len)),
+        None => builder.append_null(),
+    }
 }
 
 fn format_timestamp_column(
     array: &ArrayRef,
     zoned: bool,
-    context: &FormatContext,
+    context: &mut FormatContext,
 ) -> Result<ArrayRef> {
     let micros = cast(
         array.as_ref(),
         &DataType::Timestamp(TimeUnit::Microsecond, None),
     )?;
     let micros = micros.as_primitive::<TimestampMicrosecondType>();
+    let spec = if zoned {
+        &context.specs.timestamp
+    } else {
+        &context.specs.ntz
+    };
+    if matches!(spec, FormatSpec::Default) {
+        return Ok(if zoned {
+            format_ltz_default_column(micros, &mut context.cache)
+        } else {
+            format_ntz_default_column(micros)
+        });
+    }
     let mut builder = StringBuilder::with_capacity(micros.len(), micros.len() * 32);
+    let mut buffer = String::with_capacity(64);
     for row in 0..micros.len() {
         if micros.is_null(row) {
             builder.append_null();
@@ -203,35 +455,63 @@ fn format_timestamp_column(
         }
         let ticks = micros.value(row);
         let rendered = if zoned {
-            format_instant_value(
+            format_instant_into(
+                &mut buffer,
                 ticks,
-                context.zone,
+                &mut context.cache,
                 context.zone_id,
                 &context.specs.timestamp,
             )?
         } else {
-            format_wall_value(ticks, &context.specs.ntz)?
+            format_wall_into(&mut buffer, ticks, &context.specs.ntz)?
         };
-        match rendered {
-            Some(text) => builder.append_value(text),
-            None => builder.append_null(),
+        if rendered {
+            builder.append_value(&buffer);
+        } else {
+            builder.append_null();
         }
     }
     Ok(Arc::new(builder.finish()))
 }
 
+fn format_date_default_column(days: &arrow::array::PrimitiveArray<Date32Type>) -> ArrayRef {
+    let mut builder = StringBuilder::with_capacity(days.len(), days.len() * 10);
+    let mut state = DateDefaultState::new();
+    let mut staged = [0u8; 48];
+    let values = days.values();
+    if days.null_count() == 0 {
+        for day in values {
+            append_date_default(&mut builder, &mut state, &mut staged, i64::from(*day));
+        }
+    } else {
+        for (row, day) in values.iter().enumerate() {
+            if days.is_null(row) {
+                builder.append_null();
+                continue;
+            }
+            append_date_default(&mut builder, &mut state, &mut staged, i64::from(*day));
+        }
+    }
+    Arc::new(builder.finish())
+}
+
 fn format_date_column(array: &ArrayRef, context: &FormatContext) -> Result<ArrayRef> {
     let days = cast(array.as_ref(), &DataType::Date32)?;
     let days = days.as_primitive::<Date32Type>();
+    if matches!(context.specs.date, FormatSpec::Default) {
+        return Ok(format_date_default_column(days));
+    }
     let mut builder = StringBuilder::with_capacity(days.len(), days.len() * 10);
+    let mut buffer = String::with_capacity(16);
     for row in 0..days.len() {
         if days.is_null(row) {
             builder.append_null();
             continue;
         }
-        match format_date_value(days.value(row), &context.specs.date)? {
-            Some(text) => builder.append_value(text),
-            None => builder.append_null(),
+        if format_date_into(&mut buffer, days.value(row), &context.specs.date)? {
+            builder.append_value(&buffer);
+        } else {
+            builder.append_null();
         }
     }
     Ok(Arc::new(builder.finish()))
@@ -239,7 +519,38 @@ fn format_date_column(array: &ArrayRef, context: &FormatContext) -> Result<Array
 
 fn format_date64_column(array: &ArrayRef, context: &FormatContext) -> Result<ArrayRef> {
     let array = array.as_primitive::<Date64Type>();
+    if matches!(context.specs.date, FormatSpec::Default) {
+        let mut builder = StringBuilder::with_capacity(array.len(), array.len() * 10);
+        let mut state = DateDefaultState::new();
+        let mut staged = [0u8; 48];
+        let values = array.values();
+        if array.null_count() == 0 {
+            for millis in values {
+                append_date_default(
+                    &mut builder,
+                    &mut state,
+                    &mut staged,
+                    millis.div_euclid(MILLIS_PER_DAY),
+                );
+            }
+        } else {
+            for (row, millis) in values.iter().enumerate() {
+                if array.is_null(row) {
+                    builder.append_null();
+                    continue;
+                }
+                append_date_default(
+                    &mut builder,
+                    &mut state,
+                    &mut staged,
+                    millis.div_euclid(MILLIS_PER_DAY),
+                );
+            }
+        }
+        return Ok(Arc::new(builder.finish()));
+    }
     let mut builder = StringBuilder::with_capacity(array.len(), array.len() * 10);
+    let mut buffer = String::with_capacity(16);
     for row in 0..array.len() {
         if array.is_null(row) {
             builder.append_null();
@@ -250,15 +561,16 @@ fn format_date64_column(array: &ArrayRef, context: &FormatContext) -> Result<Arr
             builder.append_null();
             continue;
         };
-        match format_date_value(days, &context.specs.date)? {
-            Some(text) => builder.append_value(text),
-            None => builder.append_null(),
+        if format_date_into(&mut buffer, days, &context.specs.date)? {
+            builder.append_value(&buffer);
+        } else {
+            builder.append_null();
         }
     }
     Ok(Arc::new(builder.finish()))
 }
 
-fn format_struct_column(array: &ArrayRef, context: &FormatContext) -> Result<ArrayRef> {
+fn format_struct_column(array: &ArrayRef, context: &mut FormatContext) -> Result<ArrayRef> {
     let Some(structure) = array.as_struct_opt() else {
         return Ok(array.clone());
     };
@@ -283,7 +595,7 @@ fn format_struct_column(array: &ArrayRef, context: &FormatContext) -> Result<Arr
     Ok(Arc::new(rebuilt))
 }
 
-fn format_list_column(array: &ArrayRef, context: &FormatContext) -> Result<ArrayRef> {
+fn format_list_column(array: &ArrayRef, context: &mut FormatContext) -> Result<ArrayRef> {
     if let Some(list) = array.as_any().downcast_ref::<ListArray>() {
         let values = format_array(list.values().clone(), context)?;
         let field = match array.data_type() {
@@ -320,7 +632,7 @@ fn format_list_column(array: &ArrayRef, context: &FormatContext) -> Result<Array
     Ok(array.clone())
 }
 
-fn format_map_column(array: &ArrayRef, context: &FormatContext) -> Result<ArrayRef> {
+fn format_map_column(array: &ArrayRef, context: &mut FormatContext) -> Result<ArrayRef> {
     let Some(map) = array.as_map_opt() else {
         return Ok(array.clone());
     };
@@ -365,7 +677,7 @@ fn format_map_column(array: &ArrayRef, context: &FormatContext) -> Result<ArrayR
     Ok(Arc::new(rebuilt))
 }
 
-fn format_array(array: ArrayRef, context: &FormatContext) -> Result<ArrayRef> {
+fn format_array(array: ArrayRef, context: &mut FormatContext) -> Result<ArrayRef> {
     match array.data_type() {
         DataType::Timestamp(_, zone) => format_timestamp_column(&array, zone.is_some(), context),
         DataType::Date32 => format_date_column(&array, context),
@@ -499,12 +811,12 @@ impl ScalarUDFImpl for WriteFormatText {
             ))
         })?;
         let display = java_display_zone_id(zone_raw.as_str());
-        let context = FormatContext {
+        let mut context = FormatContext {
             specs: &specs,
-            zone,
+            cache: OffsetCache::new(zone),
             zone_id: display.as_str(),
         };
-        format_array(value.clone(), &context).map(ColumnarValue::Array)
+        format_array(value.clone(), &mut context).map(ColumnarValue::Array)
     }
 }
 
@@ -515,4 +827,138 @@ pub fn text_write_format_udf() -> Arc<ScalarUDF> {
 
 pub fn register_text_write_format(ctx: &datafusion::prelude::SessionContext) {
     ctx.register_udf(text_write_format_udf().as_ref().clone());
+}
+
+#[cfg(test)]
+mod perf_probe {
+    use super::*;
+    use arrow::array::{Date32Array, TimestampMicrosecondArray};
+
+    fn checksum(array: &ArrayRef) -> u64 {
+        let strings = array
+            .as_any()
+            .downcast_ref::<arrow::array::StringArray>()
+            .expect("utf8 output");
+        let mut hash = 0u64;
+        for row in 0..strings.len() {
+            if strings.is_null(row) {
+                hash = hash.wrapping_add(1);
+                continue;
+            }
+            for byte in strings.value(row).as_bytes() {
+                hash = hash.wrapping_mul(31).wrapping_add(u64::from(*byte));
+            }
+        }
+        hash
+    }
+
+    fn probe_column(name: &str, array: &ArrayRef, zoned: bool, specs: &FormatSpecs) {
+        let zone = Tz::from_str("America/New_York").expect("zone parses");
+        let display = java_display_zone_id("America/New_York");
+        let mut context = FormatContext {
+            specs,
+            cache: OffsetCache::new(zone),
+            zone_id: display.leak(),
+        };
+        let started = std::time::Instant::now();
+        let out = if zoned {
+            format_timestamp_column(array, true, &mut context).expect("formats")
+        } else if array.data_type() == &DataType::Date32 {
+            format_date_column(array, &context).expect("formats")
+        } else {
+            format_timestamp_column(array, false, &mut context).expect("formats")
+        };
+        let elapsed = started.elapsed();
+        let sum = checksum(&out);
+        assert_eq!(out.len(), array.len());
+        assert_ne!(sum, 0);
+        let per = elapsed.as_nanos() / u128::try_from(array.len()).unwrap_or(1);
+        println!("PROBE {name}: {elapsed:?} total, {per} ns/value, checksum {sum}");
+    }
+
+    fn default_specs() -> FormatSpecs {
+        FormatSpecs {
+            timestamp: FormatSpec::Default,
+            ntz: FormatSpec::Default,
+            date: FormatSpec::Default,
+        }
+    }
+
+    #[test]
+    fn probe_loop_stages_throughput() {
+        let rows = 1_000_000i64;
+        let base = 1_704_067_200_000_000i64;
+        let values: Vec<i64> = (0..rows).map(|i| base + i * 31_536_789).collect();
+        let array: ArrayRef =
+            Arc::new(TimestampMicrosecondArray::from(values).with_timezone("UTC"));
+        let micros = array.as_primitive::<TimestampMicrosecondType>();
+        let zone = Tz::from_str("America/New_York").expect("zone parses");
+        let started = std::time::Instant::now();
+        let mut builder = StringBuilder::with_capacity(micros.len(), micros.len() * 32);
+        for row in 0..micros.len() {
+            if micros.is_null(row) {
+                builder.append_null();
+            } else {
+                builder.append_value("2024-06-15T12:34:56.789-04:00");
+            }
+        }
+        let out: ArrayRef = Arc::new(builder.finish());
+        println!(
+            "PROBE loop_only: {:?} total, checksum {}",
+            started.elapsed(),
+            checksum(&out)
+        );
+        let mut cache = OffsetCache::new(zone);
+        let started = std::time::Instant::now();
+        let mut total = 0i64;
+        for row in 0..micros.len() {
+            if let Some((wall, offset)) = cache.resolve(micros.value(row)) {
+                total += i64::from(offset.local_minus_utc()) + wall.and_utc().timestamp();
+            }
+        }
+        println!(
+            "PROBE resolve_only: {:?} total, sink {total}",
+            started.elapsed()
+        );
+        let (wall, offset) = micros_to_wall_zone(base, zone).expect("in range");
+        let started = std::time::Instant::now();
+        let mut builder = StringBuilder::with_capacity(micros.len(), micros.len() * 32);
+        let mut buffer = String::with_capacity(64);
+        for row in 0..micros.len() {
+            if micros.is_null(row) {
+                builder.append_null();
+            } else {
+                render_timestamp_default_into(&mut buffer, &wall, 789_000_000, offset);
+                builder.append_value(&buffer);
+            }
+        }
+        let out: ArrayRef = Arc::new(builder.finish());
+        println!(
+            "PROBE render_only: {:?} total, checksum {}",
+            started.elapsed(),
+            checksum(&out)
+        );
+    }
+
+    #[test]
+    fn probe_default_paths_throughput() {
+        let rows = 1_000_000i64;
+        let base = 1_704_067_200_000_000i64;
+        let t1: Vec<i64> = (0..rows).map(|i| base + i * 31_536_789).collect();
+        let t2: Vec<i64> = (0..rows).map(|i| base - i * 7_777_777_777).collect();
+        let t3: Vec<i64> = (0..rows).map(|i| base + i * 1_000_003).collect();
+        let days: Vec<i32> = (0..rows)
+            .map(|i| i32::try_from(19_700 + (i % 20_000) - 10_000).expect("day fits"))
+            .collect();
+        let zoned = |values: Vec<i64>| -> ArrayRef {
+            Arc::new(TimestampMicrosecondArray::from(values).with_timezone("UTC"))
+        };
+        probe_column("ltz_t1", &zoned(t1.clone()), true, &default_specs());
+        probe_column("ltz_t2", &zoned(t2), true, &default_specs());
+        probe_column("ltz_t3", &zoned(t3), true, &default_specs());
+        let ntz: ArrayRef = Arc::new(TimestampMicrosecondArray::from(t1));
+        probe_column("ntz_t1", &ntz, false, &default_specs());
+        let dates: ArrayRef = Arc::new(Date32Array::from(days));
+        probe_column("date_d", &dates, false, &default_specs());
+    }
 }

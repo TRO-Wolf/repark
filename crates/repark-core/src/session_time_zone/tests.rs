@@ -283,6 +283,11 @@ fn java_display_zone_id_matches_zone_id_get_id() {
         ("MST7MDT", "MST7MDT"),
         ("PST8PDT", "PST8PDT"),
         ("UT", "UT"),
+        ("UTC+0", "UTC"),
+        ("UTC+00:00", "UTC"),
+        ("UTC-00:00", "UTC"),
+        ("GMT+0", "GMT"),
+        ("GMT-0", "GMT"),
     ];
     for (raw, display) in table {
         assert_eq!(java_display_zone_id(raw), display, "raw {raw:?}");
@@ -312,6 +317,7 @@ fn time_parser_policy_parses_legacy_corrected_exception() {
             .is_legacy()
     );
     assert!(!TimeParserPolicy::default().is_legacy());
+    assert_eq!(TimeParserPolicy::default(), TimeParserPolicy::Corrected);
     let error = parse_time_parser_policy("BOGUS").expect_err("refuses");
     let message = error.to_string();
     assert!(

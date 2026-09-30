@@ -6,12 +6,17 @@ use arrow::array::timezone::Tz;
 use arrow::datatypes::{DataType, Field, Schema};
 use chrono::{FixedOffset, NaiveDate, TimeZone};
 
+use crate::session::text_write_format::fast::{
+    DateDefaultState, TimestampDefaultState, wall_micros_bounds,
+};
 use crate::session::text_write_format::render::{
-    RenderValue, render_compiled, render_date_default, render_ntz_default, render_timestamp_default,
+    RenderValue, render_compiled_into, render_date_default_into, render_ntz_default_into,
+    render_timestamp_default_into,
 };
 use crate::session::text_write_format::select::build_text_write_select;
+use crate::session::text_write_format::udf::OffsetCache;
 use crate::session::text_write_format::{
-    PatternKind, compile_write_pattern, micros_to_naive_wall, micros_to_wall_zone,
+    CompiledPattern, PatternKind, compile_write_pattern, micros_to_naive_wall, micros_to_wall_zone,
 };
 
 const GUIDE_URL: &str = "https://spark.apache.org/docs/latest/sql-ref-datetime-pattern.html";
@@ -27,10 +32,8 @@ fn recognition_message(pattern: &str) -> String {
     format!(
         "[INCONSISTENT_BEHAVIOR_CROSS_VERSION.DATETIME_PATTERN_RECOGNITION] You may get a \
          different result due to the upgrading to Spark >= 3.0:\nFail to recognize '{pattern}' \
-         pattern in the DateTimeFormatter.\n1) You can set \
-         \"spark.sql.legacy.timeParserPolicy\" to \"LEGACY\" to restore the behavior before Spark \
-         3.0.\n2) You can form a valid datetime pattern with the guide from '{GUIDE_URL}'. \
-         SQLSTATE: 42K0B"
+         pattern in the DateTimeFormatter.\nYou can form a valid datetime pattern with the \
+         guide from '{GUIDE_URL}'. SQLSTATE: 42K0B"
     )
 }
 
@@ -39,6 +42,34 @@ fn failure_message(pattern: &str, kind: PatternKind) -> String {
         .expect_err("pattern must fail")
         .message()
         .to_string()
+}
+
+fn render_compiled(compiled: &CompiledPattern, value: &RenderValue) -> Result<String, String> {
+    let mut output = String::new();
+    render_compiled_into(compiled, value, &mut output)?;
+    Ok(output)
+}
+
+fn render_timestamp_default(
+    wall: &chrono::NaiveDateTime,
+    nanos: u32,
+    offset: FixedOffset,
+) -> String {
+    let mut output = String::new();
+    render_timestamp_default_into(&mut output, wall, nanos, offset);
+    output
+}
+
+fn render_ntz_default(wall: &chrono::NaiveDateTime, nanos: u32) -> String {
+    let mut output = String::new();
+    render_ntz_default_into(&mut output, wall, nanos);
+    output
+}
+
+fn render_date_default(date: NaiveDate) -> String {
+    let mut output = String::new();
+    render_date_default_into(&mut output, date);
+    output
 }
 
 fn render_instant(pattern: &str, micros: i64, zone_name: &str) -> Result<String, String> {
@@ -665,4 +696,258 @@ fn select_wraps_case_duplicate_temporal_columns() {
         select.contains("repark_write_format_text(`t`"),
         "lower twin wrapped: {select}"
     );
+}
+
+#[test]
+fn modified_julian_day_pads_to_letter_count() {
+    let table = [
+        (
+            (1858, 11, 20),
+            ["3", "03", "003", "0003", "00003", "000003"],
+        ),
+        (
+            (1858, 11, 10),
+            ["-7", "-07", "-007", "-0007", "-00007", "-000007"],
+        ),
+        (
+            (1880, 1, 1),
+            ["7715", "7715", "7715", "7715", "07715", "007715"],
+        ),
+        (
+            (2024, 3, 5),
+            ["60374", "60374", "60374", "60374", "60374", "060374"],
+        ),
+    ];
+    for ((year, month, day), expected) in table {
+        for (position, want) in expected.iter().enumerate() {
+            let pattern = "g".repeat(position + 1);
+            assert_eq!(
+                render_date(&pattern, year, month, day).expect("g renders"),
+                (*want).to_string(),
+                "pattern {pattern} on {year}-{month}-{day}"
+            );
+        }
+    }
+}
+
+#[test]
+fn recognition_failure_recommends_no_legacy_policy() {
+    for pattern in ["dddd", "yyyyyyy", "yyyy]"] {
+        let message = failure_message(pattern, PatternKind::Timestamp);
+        assert!(
+            !message.contains("LEGACY"),
+            "no LEGACY clause survives: {message}"
+        );
+    }
+}
+
+fn fast_timestamp_text(
+    state: &mut TimestampDefaultState,
+    staged: &mut [u8; 48],
+    wall: i64,
+    offset: Option<FixedOffset>,
+) -> String {
+    let len = state.render(wall, offset, staged);
+    std::str::from_utf8(&staged[..len])
+        .expect("ascii")
+        .to_string()
+}
+
+fn fast_differential_zones() -> [&'static str; 7] {
+    [
+        "America/New_York",
+        "Australia/Lord_Howe",
+        "Pacific/Apia",
+        "Asia/Kathmandu",
+        "UTC",
+        "+05:30",
+        "-08:00",
+    ]
+}
+
+fn fast_differential_instants() -> Vec<i64> {
+    let mut instants = Vec::new();
+    for hour in 0..1440 {
+        instants.push(utc_micros(2024, 2, 20, 0, 0, 0) + i64::from(hour) * 3_600_000_000);
+    }
+    for day in 0..5 {
+        instants.push(utc_micros(1883, 11, 16, 12, 0, 0) + i64::from(day) * 86_400_000_000);
+    }
+    for hour in 0..72 {
+        instants.push(utc_micros(1850, 6, 1, 0, 0, 0) + i64::from(hour) * 3_600_000_000);
+    }
+    for (year, month, day) in [
+        (2024, 2, 28),
+        (2023, 12, 31),
+        (1999, 12, 31),
+        (2000, 2, 28),
+        (9999, 12, 31),
+        (1, 1, 1),
+        (1, 12, 31),
+    ] {
+        let noon = utc_micros(year, month, day, 12, 0, 0);
+        for delta in [-86_400_000_001, -86_400_000_000, -1, 0, 1, 86_400_000_000] {
+            instants.push(noon + delta);
+        }
+        for second in 0..130 {
+            instants.push(noon + second * 1_000_000);
+        }
+    }
+    instants.push(utc_micros(2200, 6, 15, 12, 0, 0));
+    instants.push(utc_micros(1800, 1, 1, 0, 0, 0));
+    instants.push(utc_micros(200_000, 6, 15, 12, 0, 0));
+    instants.push(i64::MAX - 1);
+    instants.push(i64::MIN + 1);
+    instants
+}
+
+#[test]
+fn fast_default_renders_match_scalar_renders() {
+    let zones = fast_differential_zones();
+    let instants = fast_differential_instants();
+    for zone_name in zones {
+        let zone = Tz::from_str(zone_name).expect("zone parses");
+        let mut cache = OffsetCache::new(zone);
+        let mut state = TimestampDefaultState::new();
+        let mut staged = [0u8; 48];
+        for micros in &instants {
+            let old = micros_to_wall_zone(*micros, zone).map(|(wall, offset)| {
+                let nanos =
+                    u32::try_from(micros.rem_euclid(1_000_000)).expect("micros fit") * 1_000;
+                render_timestamp_default(&wall, nanos, offset)
+            });
+            let fast = cache.resolve_micros(*micros).map(|(wall, offset)| {
+                fast_timestamp_text(&mut state, &mut staged, wall, Some(offset))
+            });
+            assert_eq!(fast, old, "zone {zone_name} micros {micros}");
+        }
+        let mut state = TimestampDefaultState::new();
+        for micros in instants.iter().rev() {
+            let old = micros_to_wall_zone(*micros, zone).map(|(wall, offset)| {
+                let nanos =
+                    u32::try_from(micros.rem_euclid(1_000_000)).expect("micros fit") * 1_000;
+                render_timestamp_default(&wall, nanos, offset)
+            });
+            let fast = cache.resolve_micros(*micros).map(|(wall, offset)| {
+                fast_timestamp_text(&mut state, &mut staged, wall, Some(offset))
+            });
+            assert_eq!(fast, old, "zone {zone_name} reversed micros {micros}");
+        }
+    }
+    let mut state = TimestampDefaultState::new();
+    let mut staged = [0u8; 48];
+    let (lowest, highest) = wall_micros_bounds();
+    for micros in &instants {
+        let old = micros_to_naive_wall(*micros).map(|wall| {
+            let nanos = u32::try_from(micros.rem_euclid(1_000_000)).expect("micros fit") * 1_000;
+            render_ntz_default(&wall, nanos)
+        });
+        let fast = if *micros < lowest || *micros > highest {
+            None
+        } else {
+            Some(fast_timestamp_text(&mut state, &mut staged, *micros, None))
+        };
+        assert_eq!(fast, old, "ntz micros {micros}");
+    }
+    let mut boundaries = Vec::new();
+    for days in [
+        -2_500_000i64,
+        -1_000_000,
+        -100_000,
+        -10_000,
+        -1_000,
+        -100,
+        0,
+        100,
+    ] {
+        for extra in 0..400 {
+            boundaries.push(days + extra);
+        }
+    }
+    for days in [
+        i64::from(i32::MIN),
+        i64::from(i32::MAX),
+        2_958_465,
+        2_958_466,
+        -719_163,
+        719_162,
+    ] {
+        boundaries.push(days);
+    }
+    let mut date_state = DateDefaultState::new();
+    for days in &boundaries {
+        let old = i32::try_from(*days).ok().and_then(|narrow| {
+            narrow.checked_add(719_163).and_then(|absolute| {
+                NaiveDate::from_num_days_from_ce_opt(absolute).map(render_date_default)
+            })
+        });
+        let fast = date_state.render(*days, &mut staged).map(|len| {
+            std::str::from_utf8(&staged[..len])
+                .expect("ascii")
+                .to_string()
+        });
+        assert_eq!(fast, old, "date days {days}");
+    }
+    let mut date_state = DateDefaultState::new();
+    for days in boundaries.iter().rev() {
+        let old = i32::try_from(*days).ok().and_then(|narrow| {
+            narrow.checked_add(719_163).and_then(|absolute| {
+                NaiveDate::from_num_days_from_ce_opt(absolute).map(render_date_default)
+            })
+        });
+        let fast = date_state.render(*days, &mut staged).map(|len| {
+            std::str::from_utf8(&staged[..len])
+                .expect("ascii")
+                .to_string()
+        });
+        assert_eq!(fast, old, "date reversed days {days}");
+    }
+}
+
+#[test]
+fn offset_cache_matches_direct_zone_resolution() {
+    let zones = [
+        "America/New_York",
+        "Australia/Lord_Howe",
+        "Pacific/Apia",
+        "Asia/Kathmandu",
+        "UTC",
+        "+05:30",
+    ];
+    let mut instants = Vec::new();
+    for hour in 0..1440 {
+        instants.push(utc_micros(2024, 2, 20, 0, 0, 0) + i64::from(hour) * 3_600_000_000);
+    }
+    for day in 0..5 {
+        instants.push(utc_micros(1883, 11, 16, 12, 0, 0) + i64::from(day) * 86_400_000_000);
+    }
+    for hour in 0..72 {
+        instants.push(utc_micros(1850, 6, 1, 0, 0, 0) + i64::from(hour) * 3_600_000_000);
+    }
+    let edge = utc_micros(2024, 3, 10, 7, 0, 0);
+    for delta in -3..=3 {
+        instants.push(edge + delta);
+        instants.push(edge + delta * 1_000_000);
+    }
+    instants.push(utc_micros(2200, 6, 15, 12, 0, 0));
+    instants.push(utc_micros(1800, 1, 1, 0, 0, 0));
+    for zone_name in zones {
+        let zone = Tz::from_str(zone_name).expect("zone parses");
+        let mut cache = OffsetCache::new(zone);
+        for micros in &instants {
+            assert_eq!(
+                cache.resolve(*micros),
+                micros_to_wall_zone(*micros, zone),
+                "zone {zone_name} micros {micros}"
+            );
+        }
+        let mut cache = OffsetCache::new(zone);
+        for micros in instants.iter().rev() {
+            assert_eq!(
+                cache.resolve(*micros),
+                micros_to_wall_zone(*micros, zone),
+                "zone {zone_name} reversed micros {micros}"
+            );
+        }
+    }
 }

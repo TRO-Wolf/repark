@@ -5,6 +5,7 @@ use chrono::{FixedOffset, NaiveDateTime, Offset as _};
 use datafusion::common::DataFusionError;
 use repark_common::Error;
 
+pub mod fast;
 pub mod render;
 pub mod select;
 pub mod udf;
@@ -77,10 +78,8 @@ impl PatternFailure {
             message: format!(
                 "[INCONSISTENT_BEHAVIOR_CROSS_VERSION.DATETIME_PATTERN_RECOGNITION] You may \
                  get a different result due to the upgrading to Spark >= 3.0:\nFail to \
-                 recognize '{pattern}' pattern in the DateTimeFormatter.\n1) You can set \
-                 \"spark.sql.legacy.timeParserPolicy\" to \"LEGACY\" to restore the behavior \
-                 before Spark 3.0.\n2) You can form a valid datetime pattern with the guide \
-                 from '{GUIDE_URL}'. SQLSTATE: 42K0B"
+                 recognize '{pattern}' pattern in the DateTimeFormatter.\nYou can form a \
+                 valid datetime pattern with the guide from '{GUIDE_URL}'. SQLSTATE: 42K0B"
             ),
             illegal_argument: false,
         }
