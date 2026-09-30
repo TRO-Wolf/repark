@@ -173,7 +173,7 @@ def _forward_datafusion_conf(session: ReparkSession, key: str, value: str) -> No
     sql = _format_datafusion_set_sql(key, value)
 
     try:
-        session.sql(sql)
+        session._sql_built(sql)
 
     except Exception as engine_error:
         # Engine already classifies most SET failures as PySparkException; re-surface as

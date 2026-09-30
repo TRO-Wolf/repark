@@ -299,6 +299,74 @@ fn verbatim_ddl_positions_take_default_treatment() {
     );
 }
 
+async fn built_string_value(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    expr: &str,
+    verbatim_override: Option<bool>,
+) -> String {
+    let options = crate::write_options::StatementWriteOptions {
+        verbatim_override,
+        ..crate::write_options::StatementWriteOptions::empty()
+    };
+    let batches = execute_with_statement_options(
+        ctx,
+        catalogs,
+        &format!("SELECT {expr} AS s"),
+        &std::collections::HashSet::new(),
+        &options,
+    )
+    .await
+    .unwrap_or_else(|error| panic!("`SELECT {expr}` failed: {error}"))
+    .collect()
+    .await
+    .unwrap();
+    assert_eq!(
+        batches[0].schema().field(0).data_type(),
+        &DataType::Utf8,
+        "`{expr}` must yield a Spark STRING (Arrow Utf8)"
+    );
+    let column = batches[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<StringArray>()
+        .expect("Utf8 column");
+    column.value(0).to_string()
+}
+
+#[tokio::test]
+async fn built_statements_parse_default_on_a_verbatim_session() {
+    let (ctx, catalogs) = verbatim_expr_ctx();
+    for (literal, expected) in [
+        ("'it''s'", "it's"),
+        ("'a\\\\b'", "a\\b"),
+        ("'x''y'", "x'y"),
+        ("'plain'", "plain"),
+    ] {
+        assert_eq!(
+            built_string_value(&ctx, &catalogs, literal, Some(false)).await,
+            expected,
+            "{literal}"
+        );
+        assert_eq!(
+            built_string_value(&ctx, &catalogs, literal, None).await,
+            literal
+                .strip_prefix('\'')
+                .and_then(|body| body.strip_suffix('\''))
+                .expect("quoted literal"),
+            "{literal}"
+        );
+    }
+    let (ctx, catalogs) = expr_ctx();
+    for (literal, expected) in [("'it''s'", "it's"), ("'a\\\\b'", "a\\b")] {
+        assert_eq!(
+            built_string_value(&ctx, &catalogs, literal, Some(false)).await,
+            expected,
+            "{literal}"
+        );
+    }
+}
+
 #[test]
 fn unescape_collapses_only_the_literal_quote() {
     let unescape = crate::spark_literals::unescape_spark_literal;

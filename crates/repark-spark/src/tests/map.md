@@ -481,6 +481,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** the DDL table gains
   `UNSET` (both `IF EXISTS` shapes), `SHOW TBLPROPERTIES` key, and
   `COMMENT ON` rows. pins: string-literal-escape-1/C-008
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):**
+  `built_statements_parse_default_on_a_verbatim_session` pins the override
+  wiring: `Some(false)` answers default values, `None` keeps the flag.
+  pins: string-literal-escape-1/C-011
 - `cast_binary.rs` — **SQP-1 (C-009):** `CAST … AS BINARY` plans to Arrow `Binary` (B1/B8–B10/B13/
   B15), refuses illegal sources (`DATATYPE_MISMATCH`, B2–B7), keeps `VARBINARY` refusing (B12),
   leaves a `BINARY` DDL column untouched; `TRY_CAST(<int>)` refuses without the ANSI-off suggestion.

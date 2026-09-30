@@ -323,19 +323,19 @@ def expr(sql: str) -> Column:
     from repark.spark.functions_session import _active_verbatim_flag
 
     stripped = sql.strip()
+    infix_tokens = (" + ", " - ", " * ", " / ", " % ")
     # Spark pretty-names simple infix fragments with surrounding parens (live 4.1.2).
     if stripped and not (stripped.startswith("(") and stripped.endswith(")")):
-        if any(token in stripped for token in (" + ", " - ", " * ", " / ", " % ")):
-            display = f"({stripped})"
-        else:
-            display = stripped
+        display = f"({stripped})" if any(token in stripped for token in infix_tokens) else stripped
     else:
         display = stripped
+    verbatim = _active_verbatim_flag()
     return Column(
-        _native.PyColumn.sql(sql, _active_verbatim_flag()),
+        _native.PyColumn.sql(sql, verbatim),
         spark_display=display,
         projection_name=display,
         stable_name=False,
+        sql_expr=_native.built_sql_user_fragment(sql, verbatim),
     )
 
 

@@ -1,5 +1,7 @@
 # map — scripts/
 
+STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30): `check_lib_py.py` ratchets `dataframe/core.py` 3973 → 3971 and `session/session_core.py` 2293 → 2277, with the CAP-1 mirror, shrink-only. pins: string-literal-escape-1/C-011
+
 STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30): `check_lib_py.py` ratchets `spark/functions.py` 1984 → 1938 (the `lit` rendering helpers move unchanged to `functions_lit.py`; the shed `#` notes live in the spark map), with the CAP-1 mirror, shrink-only. pins: string-literal-escape-1/C-009
 
 WO CASESENS-1 S5 (2026-09-27): `check_rust_file_size.py` ratchets `repark-iceberg/src/write/alter.rs` 1607 → 1606 (the DROP/REPLACE name pin is rewritten to the exact refusal without its comments), shrink-only. pins: casesens-1/C-013

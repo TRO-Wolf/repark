@@ -809,7 +809,7 @@ def load_smart_csv(
     )
     report = prepared.report
     if not prepared.headers:
-        frame = session.sql("SELECT 1 AS _repark_smart_empty WHERE 1 = 0").drop(
+        frame = session._sql_built("SELECT 1 AS _repark_smart_empty WHERE 1 = 0").drop(
             "_repark_smart_empty"
         )
         report.columns = []

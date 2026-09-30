@@ -42,3 +42,8 @@ verbatim flag; `spark.sql.ansi.doubleQuotedIdentifiers` has no carrier.
   `literal_value` / `raw_value` / `split_raw_head` (mode and raw dispatch),
   and the escape applicators (`apply_escape`, octal, `\u`/`\U`, Java
   surrogate artifacts, `UNREPRESENTABLE`).
+- `built_fragment.rs` — **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):**
+  `canonicalize_fragment_for_default_parse` resolves a user-written fragment's
+  literals under the session flag, then requotes for the default door, so the
+  built statement's forced-default parse recovers the same values. Default input
+  returns borrowed. pins: string-literal-escape-1/C-011

@@ -34,6 +34,10 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the funnel also merges the session
   write conf (`session_write_conf_from_ctx`) into the statement options, so the
   session codec and snapshot properties ride `EngineContext` to every door.
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** the funnel takes
+  `verbatim_override: Option<bool>` and fills `EngineContext::verbatim_override`;
+  `sql_built` passes `Some(false)`, `sql_with` passes `None`.
+  pins: string-literal-escape-1/C-011
 - `writer_layout.rs` — **U7 PR1 (2026-09-24), round 2:** `ReparkSession::plan_table_write`,
   the one entry the Python binding calls, so `repark-python` keeps no `repark-iceberg` edge
   (the module is public and re-exports the kernel's `WriterAction`, `WriterLayout`,

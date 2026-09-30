@@ -505,6 +505,11 @@ pins: rp-4-fork-repin/C-005, C-006
   replace door (`ctas.rs`), so an append or a plain create ignores the option as Spark does.
   pins `isolation_level_passes_through_unparsed_like_spark`,
   `replace_doors_refuse_an_unknown_isolation_level_like_spark`. pins: u7-write-df-2/C-014
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** `verbatim_override:
+  Option<bool>` (set by `dialect.rs` from `EngineContext`, never from an option key)
+  forces the literal mode for one parse; `effective_verbatim` falls back to the session
+  flag. `router.rs` reads it for the canonicalize call and the error translation.
+  pins: string-literal-escape-1/C-011
 - `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** last-wins validation of
   the out-of-band option pairs (snapshot-property strip-and-lowercase, parquet
   honour, orc/avro/bogus refusals, option-over-table-property

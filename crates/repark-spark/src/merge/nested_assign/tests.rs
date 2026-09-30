@@ -2,13 +2,13 @@ use std::sync::Arc;
 
 use datafusion::arrow::datatypes::{DataType, Field, Fields, Schema as ArrowSchema};
 use datafusion::prelude::SessionContext;
-use datafusion::sql::sqlparser::ast::{Assignment, AssignmentTarget, Statement};
+use datafusion::sql::sqlparser::ast::{Assignment, AssignmentTarget, Expr, Statement, Value};
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::parser::Parser;
 
 use super::{
-    AssignmentScope, Step, fold_nested_assignments, render, resolve_key, resolve_target,
-    value_sql_for,
+    AssignmentScope, Keyed, Step, fold_nested_assignments, leaf_sql, render, repeated_insert_keys,
+    resolve_key, resolve_target, value_sql_for,
 };
 
 fn struct_type(fields: Vec<Field>) -> DataType {
@@ -450,5 +450,75 @@ async fn conflicting_and_repeated_assignments_refuse_with_every_error() {
          \"id = 3\" due to data type mismatch: \n- Multiple assignments for 'st.a': 1, 2\n- \
          Conflicting assignments for 'st.inner': t.st.`inner` = NULL, t.st.`inner`.`y` = 'q' \
          SQLSTATE: 42K09"
+    );
+}
+
+#[test]
+fn doubled_quotes_rerender_for_the_nested_rebuild() {
+    let schema = schema();
+    let assigns = assignments("UPDATE t SET st.inner.y = 'n''''f'");
+    let key = resolve_key(&schema, &parts("st.inner.y"), false)
+        .expect("key resolves")
+        .expect("nested key");
+    let keyed = Keyed {
+        key,
+        value: &assigns[0].value,
+        value_type: None,
+        sql: String::new(),
+    };
+    let leaf =
+        leaf_sql(&keyed, &DataType::Utf8, &parts("st.inner.y"), false).expect("leaf renders");
+    assert!(
+        leaf.contains("'n''''f'"),
+        "doubled quotes survive the nested rebuild: {leaf}"
+    );
+}
+
+#[tokio::test]
+async fn backslash_quote_values_parse_in_the_nested_rebuild() {
+    let ctx = SessionContext::new();
+    let folded = fold_nested_assignments(
+        &ctx,
+        &schema(),
+        &scope(),
+        &assignments("UPDATE t SET st.inner.y = 'k\\\\''m'"),
+    )
+    .await
+    .unwrap_or_else(|error| panic!("backslash-quote rebuild failed: {error}"))
+    .expect("nested assignment folds");
+    assert_eq!(folded.len(), 1);
+}
+
+#[tokio::test]
+async fn conflicting_quoted_values_render_doubled_in_the_refusal() {
+    let ctx = SessionContext::new();
+    let error = fold_nested_assignments(
+        &ctx,
+        &schema(),
+        &scope(),
+        &assignments("UPDATE t SET st.inner = NULL, st.inner.y = 'it''s'"),
+    )
+    .await
+    .unwrap_err()
+    .to_string();
+    assert!(
+        error.contains("t.st.`inner`.`y` = 'it''s'"),
+        "conflict refusal quotes the value: {error}"
+    );
+}
+
+#[test]
+fn repeated_quoted_values_render_doubled_in_the_refusal() {
+    let schema = schema();
+    let key = resolve_key(&schema, &parts("id"), false)
+        .expect("key resolves")
+        .expect("top-level key");
+    let row = [
+        Expr::Value(Value::SingleQuotedString("it's".to_string()).with_empty_span()),
+        Expr::Value(Value::SingleQuotedString("x".to_string()).with_empty_span()),
+    ];
+    assert_eq!(
+        repeated_insert_keys(&[Some(key.clone()), Some(key)], &row),
+        ["Multiple assignments for 'id': 'it''s', 'x'"]
     );
 }

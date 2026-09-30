@@ -298,7 +298,7 @@ def reenter_with_prediction(
     owned = False
     try:
         register_arrow_exporter_as_temp_view(session, view_name, new_table)
-        inner = session.sql(f"SELECT * FROM {view_name}")
+        inner = session._sql_built(f"SELECT * FROM {view_name}")
         result = frame._spawn(inner)
         _own_ext_temp_view(result, session, view_name)
         owned = True

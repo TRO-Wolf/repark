@@ -69,7 +69,7 @@ def _require_dense_feature_width(
             f"SELECT COUNT(*) AS n FROM {view} WHERE {quoted} IS NULL "
             f"OR array_length({quoted}) <> {int(num_features)}"
         )
-        rows = list(frame._spawn(frame._session.sql(sql)).collect())
+        rows = list(frame._spawn(frame._session._sql_built(sql)).collect())
         if not rows:
             return
         values = list(rows[0].asDict().values()) if hasattr(rows[0], "asDict") else list(rows[0])

@@ -8,7 +8,7 @@ five doors under both ``escapedStringLiterals`` settings). PE-10: a doubled
 raw literal ends the raw token (the tail lexes as a quoted literal).
 
 pins: string-literal-escape-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007,
-C-008, C-009, C-010
+C-008, C-009, C-010, C-011, C-012
 """
 
 from __future__ import annotations
@@ -423,3 +423,299 @@ def test_default_dml_predicates_match_spark(spark: ReparkSession, tmp_path: Path
     spark.sql("UPDATE sc.ns.q3 SET s = 'u''p' WHERE s = 'it''s'")
     table = spark.sql("SELECT id, s FROM sc.ns.q3 ORDER BY id").to_arrow()
     assert _text(table, "s") == ["u'p", "z"]
+
+
+BUILT_DATA: list[tuple[int, str]] = [
+    (1, "it's"),
+    (2, "a\\b"),
+    (3, "x''y"),
+    (4, "k\\'m"),
+    (5, "plain"),
+    (6, "it''s"),
+]
+
+
+def _sorted_rows(table: pa.Table) -> list[tuple[Any, ...]]:
+    """Rows sorted for order-free DataFrame aggs."""
+    return sorted((tuple(row.values()) for row in table.to_pylist()), key=lambda row: repr(row))
+
+
+def _assert_string_field(table: pa.Table, name: str) -> None:
+    """Assert a result column is a Spark STRING."""
+    assert pa.types.is_string(table.schema.field(name).type), name
+
+
+def _built_cube_expected() -> list[tuple[Any, ...]]:
+    """Spark verbatim/default rows for the backslash ``when`` inside cube."""
+    rows = [(value, 0) for _id, value in BUILT_DATA] + [(None, 1)]
+    return sorted(
+        [(value, 1 if value == "k\\'m" else count) for value, count in rows],
+        key=lambda row: repr(row),
+    )
+
+
+def test_verbatim_built_aggregations_keep_python_values(verbatim: ReparkSession) -> None:
+    """Verbatim cube/rollup/groupingSets answer Python values exactly (VE2-1)."""
+    frame = verbatim.createDataFrame(BUILT_DATA, ["id", "s"])
+    cube = frame.cube("s").agg(F.sum(F.when(F.col("s") == "k\\'m", 1).otherwise(0)).alias("k"))
+    cube_table = cube.to_arrow()
+    _assert_string_field(cube_table, "s")
+    assert _sorted_rows(cube_table) == _built_cube_expected()
+    rollup = frame.rollup("s").agg(F.first(F.lit("q\\'r")).alias("r"))
+    rollup_table = rollup.to_arrow()
+    _assert_string_field(rollup_table, "r")
+    rollup_rows = _sorted_rows(rollup_table)
+    assert len(rollup_rows) == len(BUILT_DATA) + 1
+    for _value, lit_value in rollup_rows:
+        assert lit_value == "q\\'r"
+    grouped = frame.groupingSets("s").agg(F.max(F.concat(F.col("s"), F.lit("\\"))).alias("g"))
+    grouped_table = grouped.to_arrow()
+    _assert_string_field(grouped_table, "g")
+    assert _sorted_rows(grouped_table) == sorted(
+        [(value, f"{value}\\") for _id, value in BUILT_DATA], key=lambda row: repr(row)
+    )
+
+
+def test_default_built_aggregations_match_spark(spark: ReparkSession) -> None:
+    """Default cube/rollup/groupingSets answers equal Spark (VE2-1 control)."""
+    frame = spark.createDataFrame(BUILT_DATA, ["id", "s"])
+    cube = frame.cube("s").agg(F.sum(F.when(F.col("s") == "k\\'m", 1).otherwise(0)).alias("k"))
+    cube_table = cube.to_arrow()
+    _assert_string_field(cube_table, "s")
+    assert _sorted_rows(cube_table) == _built_cube_expected()
+    rollup = frame.rollup("s").agg(F.first(F.lit("q\\'r")).alias("r"))
+    rollup_table = rollup.to_arrow()
+    _assert_string_field(rollup_table, "r")
+    rollup_rows = _sorted_rows(rollup_table)
+    assert len(rollup_rows) == len(BUILT_DATA) + 1
+    for _value, lit_value in rollup_rows:
+        assert lit_value == "q\\'r"
+
+
+def test_verbatim_unpivot_keeps_backslash_labels(verbatim: ReparkSession) -> None:
+    """Verbatim unpivot variable labels keep quotes and backslashes (VE2-1)."""
+    frame = verbatim.createDataFrame([(1, 5, 6, 7)], ["id", "a'b", "c\\d", "q\\'r"])
+    unpivoted = frame.unpivot("id", ["a'b", "c\\d", "q\\'r"], "var", "val")
+    unpivoted_table = unpivoted.to_arrow()
+    _assert_string_field(unpivoted_table, "var")
+    assert _sorted_rows(unpivoted_table) == sorted(
+        [(1, "a'b", 5), (1, "c\\d", 6), (1, "q\\'r", 7)], key=lambda row: repr(row)
+    )
+
+
+def test_default_unpivot_matches_spark(spark: ReparkSession) -> None:
+    """Default unpivot labels equal Spark (VE2-1 control)."""
+    frame = spark.createDataFrame([(1, 5, 6, 7)], ["id", "a'b", "c\\d", "q\\'r"])
+    unpivoted = frame.unpivot("id", ["a'b", "c\\d", "q\\'r"], "var", "val")
+    unpivoted_table = unpivoted.to_arrow()
+    _assert_string_field(unpivoted_table, "var")
+    assert _sorted_rows(unpivoted_table) == sorted(
+        [(1, "a'b", 5), (1, "c\\d", 6), (1, "q\\'r", 7)], key=lambda row: repr(row)
+    )
+
+
+def _merge_backslash_source(session: ReparkSession) -> Any:
+    """Two-row merge source with a backslash-quote key."""
+    return session.createDataFrame([(4, "k\\'m"), (7, "n'w")], ["id", "s"])
+
+
+def test_verbatim_merge_into_matches_backslash_rows(
+    verbatim: ReparkSession, tmp_path: Path
+) -> None:
+    """Verbatim mergeInto matches and stores backslash values (VE2-1)."""
+    verbatim.register_memory_catalog("sc", tmp_path)
+    verbatim.sql("CREATE NAMESPACE sc.ns")
+    verbatim.sql("CREATE TABLE sc.ns.t (id INT, s STRING) USING iceberg")
+    verbatim.createDataFrame(BUILT_DATA, ["id", "s"]).writeTo("sc.ns.t").append()
+    (
+        _merge_backslash_source(verbatim)
+        .alias("src")
+        .mergeInto("sc.ns.t", F.col("t.id") == F.col("src.id"))
+        .whenMatched(F.col("t.s") == "k\\'m")
+        .update({"s": F.concat(F.col("src.s"), F.lit("|\\'"))})
+        .whenNotMatched()
+        .insert({"id": F.col("src.id"), "s": F.lit("i\\'n")})
+        .merge()
+    )
+    table = verbatim.sql("SELECT id, s FROM sc.ns.t ORDER BY id").to_arrow()
+    assert table.column("id").to_pylist() == [1, 2, 3, 4, 5, 6, 7]
+    assert _text(table, "s") == ["it's", "a\\b", "x''y", "k\\'m|\\'", "plain", "it''s", "i\\'n"]
+
+
+def test_default_merge_into_matches_spark(spark: ReparkSession, tmp_path: Path) -> None:
+    """Default mergeInto answers equal Spark (VE2-1 control)."""
+    spark.register_memory_catalog("sc", tmp_path)
+    spark.sql("CREATE NAMESPACE sc.ns")
+    spark.sql("CREATE TABLE sc.ns.t (id INT, s STRING) USING iceberg")
+    spark.createDataFrame(BUILT_DATA, ["id", "s"]).writeTo("sc.ns.t").append()
+    (
+        _merge_backslash_source(spark)
+        .alias("src")
+        .mergeInto("sc.ns.t", F.col("t.id") == F.col("src.id"))
+        .whenMatched(F.col("t.s") == "k\\'m")
+        .update({"s": F.concat(F.col("src.s"), F.lit("|\\'"))})
+        .whenNotMatched()
+        .insert({"id": F.col("src.id"), "s": F.lit("i\\'n")})
+        .merge()
+    )
+    table = spark.sql("SELECT id, s FROM sc.ns.t ORDER BY id").to_arrow()
+    assert table.column("id").to_pylist() == [1, 2, 3, 4, 5, 6, 7]
+    assert _text(table, "s") == ["it's", "a\\b", "x''y", "k\\'m|\\'", "plain", "it''s", "i\\'n"]
+
+
+def test_verbatim_merge_into_expr_condition_follows_flag(
+    verbatim: ReparkSession, tmp_path: Path
+) -> None:
+    """A verbatim expr condition spliced into built MERGE matches the kept value (VE2-1)."""
+    verbatim.register_memory_catalog("sc", tmp_path)
+    verbatim.sql("CREATE NAMESPACE sc.ns")
+    verbatim.sql("CREATE TABLE sc.ns.e (id INT, s STRING) USING iceberg")
+    verbatim.createDataFrame(BUILT_DATA, ["id", "s"]).writeTo("sc.ns.e").append()
+    (
+        verbatim.createDataFrame([(1, "x"), (6, "y")], ["id", "s"])
+        .alias("src")
+        .mergeInto("sc.ns.e", F.col("e.id") == F.col("src.id"))
+        .whenMatched(F.expr("e.s = 'it''s'"))
+        .update({"s": F.lit("hit")})
+        .merge()
+    )
+    table = verbatim.sql("SELECT id, s FROM sc.ns.e ORDER BY id").to_arrow()
+    assert _text(table, "s") == ["it's", "a\\b", "x''y", "k\\'m", "plain", "hit"]
+
+
+def test_default_merge_into_expr_condition_matches_spark(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """A default expr condition spliced into built MERGE matches the collapsed value."""
+    spark.register_memory_catalog("sc", tmp_path)
+    spark.sql("CREATE NAMESPACE sc.ns")
+    spark.sql("CREATE TABLE sc.ns.e (id INT, s STRING) USING iceberg")
+    spark.createDataFrame(BUILT_DATA, ["id", "s"]).writeTo("sc.ns.e").append()
+    (
+        spark.createDataFrame([(1, "x"), (6, "y")], ["id", "s"])
+        .alias("src")
+        .mergeInto("sc.ns.e", F.col("e.id") == F.col("src.id"))
+        .whenMatched(F.expr("e.s = 'it''s'"))
+        .update({"s": F.lit("hit")})
+        .merge()
+    )
+    table = spark.sql("SELECT id, s FROM sc.ns.e ORDER BY id").to_arrow()
+    assert _text(table, "s") == ["hit", "a\\b", "x''y", "k\\'m", "plain", "it''s"]
+
+
+def test_verbatim_overwrite_condition_replaces_backslash_rows(
+    verbatim: ReparkSession, tmp_path: Path
+) -> None:
+    """Verbatim overwrite(cond) replaces the backslash row without duplicating (VE2-1)."""
+    verbatim.register_memory_catalog("sc", tmp_path)
+    verbatim.sql("CREATE NAMESPACE sc.ns")
+    verbatim.sql("CREATE TABLE sc.ns.p (id INT, s STRING) USING iceberg PARTITIONED BY (s)")
+    verbatim.createDataFrame([(1, "k\\'m"), (2, "z")], ["id", "s"]).writeTo("sc.ns.p").append()
+    verbatim.createDataFrame([(9, "k\\'m")], ["id", "s"]).writeTo("sc.ns.p").overwrite(
+        F.col("s") == "k\\'m"
+    )
+    table = verbatim.sql("SELECT id, s FROM sc.ns.p ORDER BY id").to_arrow()
+    assert table.column("id").to_pylist() == [2, 9]
+    assert _text(table, "s") == ["z", "k\\'m"]
+
+
+def test_default_overwrite_condition_matches_spark(spark: ReparkSession, tmp_path: Path) -> None:
+    """Default overwrite(cond) answers equal Spark (VE2-1 control)."""
+    spark.register_memory_catalog("sc", tmp_path)
+    spark.sql("CREATE NAMESPACE sc.ns")
+    spark.sql("CREATE TABLE sc.ns.p (id INT, s STRING) USING iceberg PARTITIONED BY (s)")
+    spark.createDataFrame([(1, "k\\'m"), (2, "z")], ["id", "s"]).writeTo("sc.ns.p").append()
+    spark.createDataFrame([(9, "k\\'m")], ["id", "s"]).writeTo("sc.ns.p").overwrite(
+        F.col("s") == "k\\'m"
+    )
+    table = spark.sql("SELECT id, s FROM sc.ns.p ORDER BY id").to_arrow()
+    assert table.column("id").to_pylist() == [2, 9]
+    assert _text(table, "s") == ["z", "k\\'m"]
+
+
+def test_verbatim_overwrite_partitions_keeps_quoted_values(
+    verbatim: ReparkSession, tmp_path: Path
+) -> None:
+    """Verbatim overwritePartitions replaces only the present quoted partition (VE2-1)."""
+    verbatim.register_memory_catalog("sc", tmp_path)
+    verbatim.sql("CREATE NAMESPACE sc.ns")
+    verbatim.sql("CREATE TABLE sc.ns.q (id INT, s STRING) USING iceberg PARTITIONED BY (s)")
+    verbatim.createDataFrame([(1, "it's"), (2, "x''y"), (3, "z")], ["id", "s"]).writeTo(
+        "sc.ns.q"
+    ).append()
+    verbatim.createDataFrame([(7, "it's")], ["id", "s"]).writeTo("sc.ns.q").overwritePartitions()
+    table = verbatim.sql("SELECT id, s FROM sc.ns.q ORDER BY id").to_arrow()
+    assert table.column("id").to_pylist() == [2, 3, 7]
+    assert _text(table, "s") == ["x''y", "z", "it's"]
+
+
+def test_verbatim_create_table_schema_str_unescapes_comment(
+    verbatim: ReparkSession, tmp_path: Path
+) -> None:
+    """A verbatim DDL schema fragment keeps the always-unescape COMMENT rule (VE2-1)."""
+    from repark.spark import catalog_surface
+
+    verbatim.register_memory_catalog("sc", tmp_path)
+    verbatim.sql("CREATE NAMESPACE sc.ns")
+    catalog_surface.create_table(
+        verbatim.catalog, "sc.ns.ct", schema="a STRING COMMENT 'it''s', b INT"
+    )
+    table = verbatim.sql("DESCRIBE TABLE sc.ns.ct").to_arrow()
+    assert table.column("col_name").to_pylist() == ["a", "b"]
+    assert _text(table, "comment") == ["it's", None]
+
+
+def test_default_create_table_schema_str_matches_spark(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """A default DDL schema fragment unescapes COMMENT text like Spark."""
+    from repark.spark import catalog_surface
+
+    spark.register_memory_catalog("sc", tmp_path)
+    spark.sql("CREATE NAMESPACE sc.ns")
+    catalog_surface.create_table(
+        spark.catalog, "sc.ns.ct", schema="a STRING COMMENT 'it''s', b INT"
+    )
+    table = spark.sql("DESCRIBE TABLE sc.ns.ct").to_arrow()
+    assert table.column("col_name").to_pylist() == ["a", "b"]
+    assert _text(table, "comment") == ["it's", None]
+
+
+def test_verbatim_nested_struct_set_keeps_values(verbatim: ReparkSession, tmp_path: Path) -> None:
+    """Verbatim nested UPDATE/MERGE SET store kept doublings and backslashes (VE2-2)."""
+    verbatim.register_memory_catalog("sc", tmp_path)
+    verbatim.sql("CREATE NAMESPACE sc.ns")
+    verbatim.sql("CREATE TABLE sc.ns.st (id INT, st STRUCT<f: STRING, g: INT>) USING iceberg")
+    verbatim.sql(
+        "INSERT INTO sc.ns.st VALUES (1, named_struct('f', 'a', 'g', 1)), "
+        "(2, named_struct('f', 'b', 'g', 2)), (3, named_struct('f', 'c', 'g', 3))"
+    )
+    verbatim.sql("UPDATE sc.ns.st SET st.f = 'n''''f' WHERE id = 1")
+    verbatim.sql("UPDATE sc.ns.st SET st.f = 'k\\\\''m' WHERE id = 2")
+    verbatim.sql(
+        "MERGE INTO sc.ns.st t USING (SELECT 3 AS id) s ON t.id = s.id "
+        "WHEN MATCHED THEN UPDATE SET t.st.f = 'm''''g'"
+    )
+    table = verbatim.sql("SELECT id, st.f AS f FROM sc.ns.st ORDER BY id").to_arrow()
+    assert table.column("id").to_pylist() == [1, 2, 3]
+    assert _text(table, "f") == ["n''''f", "k\\\\''m", "m''''g"]
+
+
+def test_default_nested_struct_set_matches_spark(spark: ReparkSession, tmp_path: Path) -> None:
+    """Default nested UPDATE/MERGE SET collapse doublings and backslashes like Spark."""
+    spark.register_memory_catalog("sc", tmp_path)
+    spark.sql("CREATE NAMESPACE sc.ns")
+    spark.sql("CREATE TABLE sc.ns.st (id INT, st STRUCT<f: STRING, g: INT>) USING iceberg")
+    spark.sql(
+        "INSERT INTO sc.ns.st VALUES (1, named_struct('f', 'a', 'g', 1)), "
+        "(2, named_struct('f', 'b', 'g', 2)), (3, named_struct('f', 'c', 'g', 3))"
+    )
+    spark.sql("UPDATE sc.ns.st SET st.f = 'n''''f' WHERE id = 1")
+    spark.sql("UPDATE sc.ns.st SET st.f = 'k\\\\''m' WHERE id = 2")
+    spark.sql(
+        "MERGE INTO sc.ns.st t USING (SELECT 3 AS id) s ON t.id = s.id "
+        "WHEN MATCHED THEN UPDATE SET t.st.f = 'm''''g'"
+    )
+    table = spark.sql("SELECT id, st.f AS f FROM sc.ns.st ORDER BY id").to_arrow()
+    assert table.column("id").to_pylist() == [1, 2, 3]
+    assert _text(table, "f") == ["n''f", "k\\'m", "m''g"]

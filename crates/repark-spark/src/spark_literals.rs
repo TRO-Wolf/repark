@@ -14,6 +14,8 @@ use datafusion::sql::sqlparser::tokenizer::{Location, Token, TokenWithSpan, Toke
 
 mod unescape;
 
+pub mod built_fragment;
+
 pub(crate) use unescape::unescape_spark_literal;
 
 #[derive(Debug)]

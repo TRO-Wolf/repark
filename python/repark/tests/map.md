@@ -7094,6 +7094,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   COMMENT ON pins, VE-2 filter/where/F.expr flag pins, and VE-3 UPDATE/DELETE/
   MERGE predicate pins, each with a default-mode control.
   pins: string-literal-escape-1/C-008, C-009, C-010
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** VE2-1 built-door pins
+  (cube/rollup/groupingSets/unpivot, mergeInto incl. an `F.expr` condition,
+  overwrite cond/partitions, createTable schema str) and VE2-2 nested
+  UPDATE/MERGE SET pins, each with a default-mode control.
+  pins: string-literal-escape-1/C-011, C-012
 - `test_fnp_4b_hof_display.py` — **FNP-4B round 6 (2026-09-15):** Q3 red pin for run
   16a — selectExpr higher-order display must hide the `__repark_hof_array_field__`
   packing marker. **Round 7 (2026-09-15):** strict xfail per R-16c-10; 16a flips

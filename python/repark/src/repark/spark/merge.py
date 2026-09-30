@@ -157,7 +157,7 @@ class MergeIntoWriter:
         try:
             sql = self._render_sql(view_name)
             # MERGE is eager at sql(); discard the returned handle (same as CTAS writers).
-            session.sql(sql)
+            session._sql_built(sql)
         finally:
             session.drop_temp_view(view_name)
 
