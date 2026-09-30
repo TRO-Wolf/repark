@@ -152,6 +152,31 @@ def test_vn7_r1_string_second_stays_ceiling_refused_divergence(
         ceiling100.sql(cell[1]).collect()
 
 
+VN7_R1_INT_CAST_DOUBLE: list[tuple[str, str]] = [
+    (
+        "repeat_cast_dbl",
+        "SELECT size(array_repeat(1, nullif(CAST(101.9D AS INT), 0))) AS v",
+    ),
+    (
+        "seq_cast_dbl",
+        "SELECT size(sequence(1, nullif(CAST(101.9D AS INT), 0))) AS v",
+    ),
+    (
+        "seq_cast_dbl_big",
+        "SELECT size(sequence(1, nullif(CAST(101.9D AS BIGINT), 0L))) AS v",
+    ),
+]
+
+VN7_R1_INT_CAST_DOUBLE_IDS = [cell[0] for cell in VN7_R1_INT_CAST_DOUBLE]
+
+
+@pytest.mark.parametrize("cell", VN7_R1_INT_CAST_DOUBLE, ids=VN7_R1_INT_CAST_DOUBLE_IDS)
+def test_vn7_r1_int_cast_double_first_answers(
+    ceiling100: ReparkSession, cell: tuple[str, str]
+) -> None:
+    assert [row.asDict() for row in ceiling100.sql(cell[1]).collect()] == [{"v": 101}]
+
+
 def test_vn7_r1_unsigned_count_over_ceiling_refuses(
     ceiling100: ReparkSession,
 ) -> None:

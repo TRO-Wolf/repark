@@ -613,23 +613,28 @@ scalars live under [`try_invert/`](try_invert/map.md).
   again — and the `__repark_nullif_compare` form the `F.expr` door produces
   folds through the same arm, so every door refuses alike. Strings stay
   unknown (base never folded a string-derived count: `spark_decimal_rewrite`
-  wraps those casts in an unfoldable UDF first), and the nullable-decimal
-  UDF unwraps before the fold so `CAST(101 AS DECIMAL)` counts. Equality
-  proves three ways — exact integers both sides, an exactly-integral
-  `Decimal128` second against an exact first, or the kept `f64` compare —
-  so `nullif(101, 101.0D)` and `nullif(101, CAST(101 AS DECIMAL))` answer
-  NULL while `nullif(101, '101')` stays ceiling-refused. The fold lives in
+  wraps those casts in an unfoldable UDF first), and the bound never
+  unwraps that UDF while the proof does, so `CAST(101 AS DECIMAL)`
+  proves but wrapped shapes like `CAST(101.9D AS INT)` keep answering.
+  Equality proves three ways — exact integers both sides, an
+  exactly-integral `Decimal128` second against an exact first, or the
+  kept `f64` compare — so `nullif(101, 101.0D)` and
+  `nullif(101, CAST(101 AS DECIMAL))` answer NULL while
+  `nullif(101, '101')` stays ceiling-refused. The fold lives in
   `cardinality_nullif.rs` (file-size split, move-only).
   pins: nvl-type-coercion-1/C-029.
 - `cardinality_nullif.rs` — **NVL-TYPE-COERCION-1 re-verify 6
   (2026-09-30, VN7-1/VN7-2/VN7-3):** the `nullif` ceiling fold, split out of
   `cardinality.rs` (move-only): `nullif_const_int` bounds by the first
   argument and folds proven-equal pairs to NULL; string literals prune to
-  NULL and the nullable-decimal UDF unwraps before the shared `const_i128`,
-  so string-derived counts stay unknown like base while decimal casts
-  count; `Decimal128` cores prove (truncated for the bound, exact for
-  equality) and the kept `f64` path keeps the lossy `sequence` pins NULL.
-  pins: nvl-type-coercion-1/C-029.
+  NULL before the shared `const_i128`, so string-derived counts stay
+  unknown like base. The bound and the proof evaluate separately: the
+  bound never unwraps the nullable-decimal UDF (base cannot see through
+  it either, so wrapped shapes like `CAST(101.9D AS INT)` keep answering),
+  while the proof unwraps it (`CAST(101 AS DECIMAL)` proves) and reads
+  `Decimal128` cores through float/decimal casts only (truncated for the
+  bound, exact for equality); the kept `f64` path keeps the lossy
+  `sequence` pins NULL. pins: nvl-type-coercion-1/C-029.
 
 
 - **R-FN-BATCH4** aggregate expansion.

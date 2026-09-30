@@ -4997,11 +4997,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   ceiling refuse, equal mixed-width `nullif` yields NULL, and the lossy
   `sequence` cell still answers NULL. pins: nvl-type-coercion-1/C-026, C-027
 - `test_nvl_type_coercion_1_vn7.py` — **NVL-TYPE-COERCION-1 re-verify 6
-  (2026-09-30, VN7-1/VN7-2/VN7-3/VN7-4/VN7-6):** 43 pins. Foldable-first
+  (2026-09-30, VN7-1/VN7-2/VN7-3/VN7-4/VN7-6):** 46 pins. Foldable-first
   `nullif` (`abs`, `greatest`, `CASE`, scalar subquery, nested, `D`-cast)
   refuses over the 100 ceiling in SQL and `F.expr`; `101.0D` and
   `DECIMAL(101)` seconds yield NULL; the string-second refusal and the
-  unsigned over-ceiling refusal stay pinned; string-first `sequence`
+  unsigned over-ceiling refusal stay pinned; int-cast `D` firsts keep
+  answering like base; string-first `sequence`
   answers `101` as `array<int>` (`array<bigint>` for `1L`) in SQL,
   `F.expr` and the column API while `array_repeat` and garbage strings
   still refuse; NULL-first rows skip the compare cast and non-NULL

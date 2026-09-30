@@ -7,8 +7,12 @@ use datafusion::logical_expr::expr::{BinaryExpr, ScalarFunction};
 use crate::cardinality::{CONST_FOLD_MAX_DEPTH, const_f64, const_i128, f64_trunc_to_i128};
 
 pub(crate) fn nullif_const_int(first: &Expr, second: &Expr, depth: u32) -> Option<i128> {
-    let bound = nullif_int_value(first, depth).or_else(|| decimal_core_trunc(first))?;
+    let bound = nullif_bound_value(first, depth).or_else(|| decimal_core_trunc(first))?;
     (!nullif_proven_equal(first, second, depth)).then_some(bound)
+}
+
+fn nullif_bound_value(expr: &Expr, depth: u32) -> Option<i128> {
+    const_i128(&prune_string_literals(expr), depth)
 }
 
 fn nullif_int_value(expr: &Expr, depth: u32) -> Option<i128> {
@@ -44,13 +48,29 @@ fn unwrap_decimal_nullable(expr: &Expr) -> Expr {
         .map_or_else(|_| expr.clone(), |done| done.data)
 }
 
+fn is_float_or_decimal(data_type: &DataType) -> bool {
+    matches!(
+        data_type,
+        DataType::Float32
+            | DataType::Float64
+            | DataType::Decimal32(_, _)
+            | DataType::Decimal64(_, _)
+            | DataType::Decimal128(_, _)
+            | DataType::Decimal256(_, _)
+    )
+}
+
 fn strip_numeric_core(expr: &Expr) -> Option<(ScalarValue, bool)> {
     let mut current = expr;
     let mut negate = false;
     loop {
         match current {
-            Expr::Cast(cast) => current = cast.expr.as_ref(),
-            Expr::TryCast(cast) => current = cast.expr.as_ref(),
+            Expr::Cast(cast) if is_float_or_decimal(cast.field.data_type()) => {
+                current = cast.expr.as_ref();
+            }
+            Expr::TryCast(cast) if is_float_or_decimal(cast.field.data_type()) => {
+                current = cast.expr.as_ref();
+            }
             Expr::Alias(alias) => current = alias.expr.as_ref(),
             Expr::Negative(inner) => {
                 negate = !negate;
