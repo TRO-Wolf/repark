@@ -19,9 +19,86 @@ in field metadata under `repark.attr`, and resolves names by that id.
 
 | Clause | Statement | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
-| C-001 | On DataFusion 54.1.0 alone, the `repark.attr` field-metadata key propagates as measured: a bare column and an alias of a column inherit; a cast copies the source id; arithmetic, literal, function, one-argument `coalesce` and `CASE` carry none; Filter, Limit, Sort, Distinct and SubqueryAlias keep every id; a self-join repeats the ids on both sides; Union and `union_by_name` keep an id only where every input carries the same one; Aggregate keys keep theirs and values carry none; Window passes its input ids and its value carries none; a temp view read back by SQL keeps them, and so does the facade's join shape over two views. | One pin per row of the work order's §3.5, ids asserted by position after the node. | PROVEN | `crates/repark-core/src/session/tests/attr_id.rs`, 10 passed at the first commit. |
-| C-002 | `stamp(plan)` (`df_guards/attr_id.rs`) gives every output field of the root an id and is idempotent: a Projection root keeps a column's inherited id and an alias's own id, and mints a fresh id for every other expression through `Alias::with_metadata`, overriding the id a cast copies; any other root keeps a fully stamped schema and otherwise adds one pass-through Projection that sets only the missing ids — a Union root from its first input (through DataFusion's `union_by_name` wrapper), every other root by minting. `attribute_ids` reads the ids by position. The ids are opaque (`a` plus 12 hex digits from a per-process counter), never derived from a name, a position or a plan id. | Pins per §3.5 row after `stamp`: source, column, cast, arithmetic, literal, pass-through chain, Aggregate, Window, Union (three doors), temp-view read-back, idempotence. | PROVEN | `crates/repark-core/src/session/tests/attr_id.rs` — `stamp_mints_a_fresh_id_per_source_field_and_is_idempotent`, `stamp_keeps_column_ids_and_mints_for_cast_arithmetic_and_literals`, `stamp_leaves_pass_through_nodes_unchanged`, `stamp_keeps_aggregate_keys_and_mints_values_and_window_outputs`, `stamp_gives_a_union_the_first_input_ids`. |
+| C-001 | On DataFusion 54.1.0 alone, the `repark.attr` field-metadata key propagates as measured: a bare column and an alias of a column inherit; a cast copies the source id; arithmetic, literal, function, one-argument `coalesce` and `CASE` carry none; Filter, Limit, Sort, Distinct and SubqueryAlias keep every id; a self-join repeats the ids on both sides; Union and `union_by_name` keep an id only where every input carrying the column has the same one (a column the first input lacks keeps a later input's id); Aggregate keys keep theirs and values carry none; Window passes its input ids and its value carries none; a temp view read back by SQL keeps them, and so does the facade's join shape over two views. | One pin per row of the work order's §3.5, ids asserted by position after the node. | PROVEN | `crates/repark-core/src/session/tests/attr_id.rs`, 10 passed at the first commit. |
+| C-002 | `stamp(plan)` (`df_guards/attr_id.rs`) gives every output field of the root an id and is idempotent: a Projection root keeps a column's inherited id and an alias's own id, and mints a fresh id for every other expression through `Alias::with_metadata`, overriding the id a cast copies; any other root keeps a fully stamped schema and otherwise adds one pass-through Projection that sets only the missing ids by minting, except a Union root, whose every position takes the first input's id (read from the first input's expressions, through DataFusion's `union_by_name` wrapper) and mints where the first input has none. `attribute_ids` reads the ids by position. The ids are opaque (`a` plus 12 hex digits from a per-process counter), never derived from a name, a position or a plan id. | Pins per §3.5 row after `stamp`: source, column, cast, arithmetic, literal, pass-through chain, Aggregate, Window, Union (three doors), temp-view read-back, idempotence. | PROVEN | `crates/repark-core/src/session/tests/attr_id.rs` — `stamp_mints_a_fresh_id_per_source_field_and_is_idempotent`, `stamp_keeps_column_ids_and_mints_for_cast_arithmetic_and_literals`, `stamp_leaves_pass_through_nodes_unchanged`, `stamp_keeps_aggregate_keys_and_mints_values_and_window_outputs`, `stamp_gives_a_union_the_first_input_ids`, `stamp_mints_where_the_first_union_input_has_no_id_to_give`. |
 | C-003 | `remint_join_collisions(plan, left_width)` keeps every left id and gives each right-side id that also appears on the left one fresh id (right-side twins of one attribute stay twins); a join of distinct attributes returns unchanged, and a left width past the field count is an internal error. Over the facade's join shape the ids survive `requalify_join_sides`. | A self-join over two temp views of one stamped frame, a right side with a twin, and a join of two distinct frames. | PROVEN | `the_join_re_mint_keeps_the_left_and_renames_each_colliding_right_id_once`, `the_join_re_mint_leaves_a_join_of_distinct_attributes_unchanged`. |
 | C-004 | `resolve(schema, written, qualifier, rule, displays)` collects the positions whose display matches under the rule (and whose relation matches a written qualifier through `same_relation`), then answers `Bound(hits)` for one distinct id, `Ambiguous(hits)` for more, `Missing` for none; a hit without an id and a display count unequal to the field count are internal errors, never a wildcard. | Pins over `(id, Data, s)` under `Exact` and `IgnoreCase`: one hit; two hits with one id (same and case-folded displays); two hits with two ids (same and case-folded displays, the folded-duplicate keys); a qualified hit and miss; a cast twin; the two error paths. | PROVEN | `resolve_binds_a_single_hit_under_each_rule`, `resolve_binds_every_twin_of_one_attribute`, `resolve_refuses_two_attributes_under_one_name`, `resolve_narrows_by_a_written_qualifier`, `resolve_refuses_a_cast_twin_that_reuses_the_name`, `resolve_treats_a_missing_id_as_a_bug_and_checks_the_display_count`. |
 | C-005 | `repark-python`'s `dataframe_names` binds the core without logic of its own: `stamp_attribute_ids(frame) -> PyDataFrame`, `attribute_ids(frame) -> list[str \| None]`, `resolve_display_name(frame, written, qualifier, displays, exact) -> (str, list[int])` with `"bound"`, `"ambiguous"` or `"missing"` first; `requalify_join_sides` re-mints the right side's colliding ids when a right side is given. No facade or Python file changes in S1. | A binding pin on a real session. | PROVEN | `crates/repark-python/src/tests.rs` `binding_stamps_resolves_and_re_mints_a_self_join`; `git diff --stat origin/main` lists no `python/` path. |
-| C-006 | Mutations M1–M4 (work order §4 S1) each turn their named pins red and are reverted with a clean tree. | Run each, record the red tests, revert, `git status` clean. | OPEN (run after this commit) | — |
+| C-006 | Mutations M1–M4 (work order §4 S1) each turn their named pins red and are reverted with a clean tree. | Run each, record the red tests, revert, `git status` clean. | PROVEN | The mutation record below, run on the round's third commit. |
+
+**§2 "to verify" rows, measured (2026-09-30), none contradicting §2:** Union and
+`union_by_name` intersect the ids of the inputs that carry a column (dropped where they
+differ; a later input's id where the first input lacks the column), which is the case §2
+foresaw, so RePark gives a Union root the first input's ids (C-002). A temp view's read-back
+keeps the ids. Aggregate keys keep theirs. A Window passes its input ids through. Filter,
+Limit, Sort, Distinct and SubqueryAlias pass every id through.
+
+## Mutation record (2026-09-30)
+
+Each mutation edited `crates/repark-core/src/session/df_guards/attr_id.rs`, ran
+`cargo test -p repark-core --lib session::tests::attr_id` (M2 also
+`cargo test -p repark-python --lib binding_stamps`), and was reverted with `git checkout`;
+`git status --short` was empty after each.
+
+| # | Mutation | Red |
+|---|---|---|
+| M1 | `AttrId::mint` returns one constant id, so `stamp` mints one id for every field | 9 of 24: the ambiguity pins `resolve_refuses_two_attributes_under_one_name` and `resolve_refuses_a_cast_twin_that_reuses_the_name`, the stamp pins (source, cast/arithmetic/literal, aggregate/window, both union pins) and both join re-mint pins |
+| M2 | `remint_join_collisions` returns the plan unchanged | `the_join_re_mint_keeps_the_left_and_renames_each_colliding_right_id_once`, `the_join_re_mint_leaves_a_join_of_distinct_attributes_unchanged` and the binding pin `binding_stamps_resolves_and_re_mints_a_self_join` |
+| M3 | `resolve` groups the hits by display name instead of by id | `resolve_binds_every_twin_of_one_attribute` (the case-folded twin), `resolve_refuses_two_attributes_under_one_name`, `resolve_refuses_a_cast_twin_that_reuses_the_name`, and the self-join's ambiguous `id` in `the_join_re_mint_keeps_the_left_and_renames_each_colliding_right_id_once` |
+| M4 | `stamp` keeps any field that already carries an id, so the id a cast copies survives | `stamp_keeps_column_ids_and_mints_for_cast_arithmetic_and_literals`, `resolve_refuses_a_cast_twin_that_reuses_the_name` |
+
+## Coverage
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: attr-id-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Each §3.5 row has a DataFusion-only pin and a pin after stamp; resolve is pinned over the six named cases under both rules.
+      artifacts: [crates/repark-core/src/session/tests/attr_id.rs]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Unstamped roots, fully stamped roots, a union whose first input lacks a column, right-side twins, a join of distinct frames, an out-of-range left width, a display-count mismatch and a hit without an id are each exercised.
+      artifacts: [crates/repark-core/src/session/tests/attr_id.rs]
+    - id: AT-3
+      status: ATTACKED
+      evidence: A missing id and a display-count mismatch are internal errors in resolve, and an out-of-range left width is one in the re-mint; stamp is idempotent, so a repeated spawn changes nothing.
+      artifacts: [crates/repark-core/src/session/df_guards/attr_id.rs]
+    - id: AT-4
+      status: ATTACKED
+      evidence: The one shared state is the per-process id counter, an AtomicU64 incremented with fetch_add; ids stay unique across threads and sessions in one process.
+      artifacts: [crates/repark-core/src/session/df_guards/attr_id.rs]
+    - id: AT-5
+      status: N/A
+      justification: No privileged action, credential, deserialization or path handling; plan metadata only.
+    - id: AT-6
+      status: ATTACKED
+      evidence: The ids ride in Arrow field metadata; S1 changes no frame the facade holds, and the metadata that may leave the process once S2 stamps every frame is residue R-2.
+      artifacts: [task/ledgers/staging/attr-id-1-ledger.md]
+    - id: AT-7
+      status: N/A
+      justification: One pass-through projection per unstamped non-projection root; the replay timing guard belongs to S2 (work order halt rule 4).
+    - id: AT-8
+      status: ATTACKED
+      evidence: The DataFusion 54.1.0 propagation the design leans on is pinned rather than presumed, including the cast and union behaviours the stamp overrides.
+      artifacts: [crates/repark-core/src/session/tests/attr_id.rs]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Every internal error names the field position and name or the two counts it compared.
+      artifacts: [crates/repark-core/src/session/df_guards/attr_id.rs]
+    - id: AT-10
+      status: ATTACKED
+      evidence: M1–M4 each red their named pins; every added branch has a pinned input (idempotent roots, union mint and inherit, the by-name wrapper, the re-mint no-op and error, both resolve errors).
+      artifacts: [crates/repark-core/src/session/tests/attr_id.rs, crates/repark-python/src/tests.rs]
+  complete: true
+```
+
+## Residues
+
+| # | Residue |
+|---|---|
+| R-1 | Dated 2026-09-30, open for S3: Spark's `Alias` creates a new attribute, so a user-written `Column.alias` over a column is a fresh `exprId` there, while §3.5 (and `stamp`) has an alias of a column inherit, which the facade's own renames need. `stamp` keeps an alias's own id, so the facade can give a user alias a fresh one; the S0 replay decides. |
+| R-2 | Dated 2026-09-30, open for S2: `repark.attr` rides in Arrow field metadata, so once S2 stamps every frame it can reach written files, cached views and exported Arrow schemas, and a file written by one process can bring ids that collide with another process's counter. |
+| R-3 | Dated 2026-09-30, open for S2/S3: only `requalify_join_sides` re-mints; a USING join (`join_on_keys`, keys then each side's other columns) of a frame with itself still repeats the right side's ids. |
+| R-4 | Dated 2026-09-30, open for S3e: `resolve` matches a written qualifier against the field's relation only; the frame's Python-held join qualifiers (§3.4) are not in the §4 S1 signature. |

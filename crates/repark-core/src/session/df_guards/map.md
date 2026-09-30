@@ -24,9 +24,13 @@ wrapped optimizer rule) and declares this directory.
   `Alias::with_metadata` (a bare expression gets an alias of its own qualified name) — so a cast,
   which copies its source id in DataFusion, still gets a fresh one. Any other root keeps a fully
   stamped schema as it is and otherwise adds one pass-through Projection that sets an id only
-  where one is missing: a Union root takes the first input's id at that position (looking
-  through the `union_by_name` wrapper Projection, which DataFusion builds with an id-less
-  schema), every other root mints. `attribute_ids(schema)` reads the ids by position.
+  where one is missing, and every other root mints. A Union root instead takes the first
+  input's id at every position, Spark's rule: DataFusion intersects the ids of the inputs that
+  carry a column, so it drops an id where the inputs differ and keeps a later input's id where
+  the first lacks the column (`union_by_name` with a missing column). The first input's ids
+  are read from its expressions when it is a Projection (an alias's own id, else the id of the
+  column under the aliases), because DataFusion's by-name wrapper Projection carries the
+  union's schema; a position with no such id (the wrapper's `NULL AS c`) mints. `attribute_ids(schema)` reads the ids by position.
   `remint_join_collisions(plan, left_width)` gives every right-side id that also appears on the
   left one fresh id (right-side twins of one attribute stay twins; a left width past the field
   count is an internal error). `resolve(schema, written, qualifier, rule, displays)` collects

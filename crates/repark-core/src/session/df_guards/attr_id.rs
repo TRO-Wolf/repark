@@ -7,7 +7,7 @@ use datafusion::common::metadata::FieldMetadata;
 use datafusion::common::{
     Column, DFSchema, Result, TableReference, internal_datafusion_err, internal_err,
 };
-use datafusion::logical_expr::{Expr, LogicalPlan, Projection};
+use datafusion::logical_expr::{Expr, LogicalPlan, Projection, Union};
 use repark_common::names::NameRule;
 
 const ATTR_KEY: &str = "repark.attr";
@@ -62,47 +62,52 @@ pub fn stamp(plan: LogicalPlan) -> Result<LogicalPlan> {
     if let LogicalPlan::Projection(projection) = &plan {
         return stamp_projection(projection).map(|stamped| stamped.unwrap_or(plan));
     }
-    let first = match &plan {
-        LogicalPlan::Union(union) => union
-            .inputs
-            .first()
-            .map(|input| first_input_ids(input))
-            .unwrap_or_default(),
-        _ => Vec::new(),
+    let minted = match &plan {
+        LogicalPlan::Union(union) => union_ids(union),
+        _ => plan
+            .schema()
+            .fields()
+            .iter()
+            .map(|field| AttrId::of(field).is_none().then(AttrId::mint))
+            .collect::<Vec<_>>(),
     };
-    let minted = plan
-        .schema()
-        .fields()
-        .iter()
-        .enumerate()
-        .map(|(position, field)| {
-            AttrId::of(field).is_none().then(|| {
-                first
-                    .get(position)
-                    .cloned()
-                    .flatten()
-                    .unwrap_or_else(AttrId::mint)
-            })
-        })
-        .collect::<Vec<_>>();
     if minted.iter().all(Option::is_none) {
         return Ok(plan);
     }
     project_ids(plan, &minted)
 }
 
+fn union_ids(union: &Union) -> Vec<Option<AttrId>> {
+    let first = union
+        .inputs
+        .first()
+        .map(|input| first_input_ids(input))
+        .unwrap_or_default();
+    union
+        .schema
+        .fields()
+        .iter()
+        .enumerate()
+        .map(
+            |(position, field)| match first.get(position).cloned().flatten() {
+                Some(id) if AttrId::of(field).as_ref() == Some(&id) => None,
+                Some(id) => Some(id),
+                None => Some(AttrId::mint()),
+            },
+        )
+        .collect()
+}
+
 fn first_input_ids(input: &LogicalPlan) -> Vec<Option<AttrId>> {
-    let ids = attribute_ids(input.schema());
     let LogicalPlan::Projection(projection) = input else {
-        return ids;
+        return attribute_ids(input.schema());
     };
     let below = projection.input.schema();
     projection
         .expr
         .iter()
-        .zip(ids)
-        .map(|(expr, id)| {
-            id.or_else(|| match expr {
+        .map(|expr| {
+            own_id(expr).or_else(|| match strip_aliases(expr) {
                 Expr::Column(column) => below
                     .maybe_index_of_column(column)
                     .and_then(|index| AttrId::of(below.field(index))),
@@ -119,7 +124,8 @@ fn stamp_projection(projection: &Projection) -> Result<Option<LogicalPlan>> {
         .iter()
         .zip(projection.schema.iter())
         .map(|(expr, (qualifier, field))| {
-            if carries_own_id(expr) || (is_column(expr) && AttrId::of(field).is_some()) {
+            let is_column = matches!(strip_aliases(expr), Expr::Column(_));
+            if own_id(expr).is_some() || (is_column && AttrId::of(field).is_some()) {
                 return expr.clone();
             }
             changed = true;
@@ -133,22 +139,23 @@ fn stamp_projection(projection: &Projection) -> Result<Option<LogicalPlan>> {
         .map(|stamped| Some(LogicalPlan::Projection(stamped)))
 }
 
-fn carries_own_id(expr: &Expr) -> bool {
+fn own_id(expr: &Expr) -> Option<AttrId> {
     let Expr::Alias(alias) = expr else {
-        return false;
+        return None;
     };
     alias
         .metadata
         .as_ref()
-        .is_some_and(|metadata| metadata.inner().contains_key(ATTR_KEY))
+        .and_then(|metadata| metadata.inner().get(ATTR_KEY).cloned())
+        .map(AttrId)
 }
 
-fn is_column(expr: &Expr) -> bool {
+fn strip_aliases(expr: &Expr) -> &Expr {
     let mut inner = expr;
     while let Expr::Alias(alias) = inner {
         inner = &alias.expr;
     }
-    matches!(inner, Expr::Column(_))
+    inner
 }
 
 fn with_id(expr: Expr, qualifier: Option<&TableReference>, name: &str, id: &AttrId) -> Expr {

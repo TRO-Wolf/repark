@@ -8,7 +8,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   **WO ATTR-ID-1 (2026-09-30), in flight:** every output field of every DataFrame plan
   carries one attribute id in field metadata (`repark.attr`), and the DataFrame door resolves a
   written name by the set of ids over its hits. S1 lands the propagation pins on DataFusion
-  alone (C-001) and the Rust core (C-002). `risk_tier: standard`. Branch `feat/attr-id-1`.
+  alone (C-001), `stamp` with Spark's first-input union rule (C-002), the join re-mint
+  (C-003), `resolve` (C-004), the `repark-python` binds (C-005) and mutations M1–M4 (C-006);
+  R-1..R-4 are dated residues for S2–S3. `risk_tier: standard`. Branch `feat/attr-id-1`.
 - [aws-accept-replace-1-ledger.md](aws-accept-replace-1-ledger.md) —
   **WO AWS-ACCEPT-REPLACE-1 (2026-09-27), in flight:** RP-55 repins the fork to
   `6e937f49` (F-STAGED-SINGLE-WRITE-1 `#362` — a staged replace writes its metadata file

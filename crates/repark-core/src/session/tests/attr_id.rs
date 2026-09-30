@@ -150,7 +150,7 @@ fn a_self_join_carries_the_same_ids_on_both_sides() {
 }
 
 #[test]
-fn union_keeps_an_id_only_where_every_input_agrees() {
+fn union_keeps_an_id_only_where_every_input_carrying_the_column_agrees() {
     let context = SessionContext::new();
     let first = tagged(&context);
     let second = tagged_as(&context, ["b1", "a2", "b3"]);
@@ -158,8 +158,13 @@ fn union_keeps_an_id_only_where_every_input_agrees() {
     assert_eq!(ids(&unioned), named(&["", "a2", ""]));
     let by_name = first.clone().union_by_name(second).unwrap();
     assert_eq!(ids(&by_name), named(&["", "a2", ""]));
-    let self_union = first.clone().union(first).unwrap();
+    let self_union = first.clone().union(first.clone()).unwrap();
     assert_eq!(ids(&self_union), named(&["a1", "a2", "a3"]));
+    let narrow = first.select(vec![col("id"), col("data")]).unwrap();
+    let padded = narrow
+        .union_by_name(tagged_as(&context, ["b1", "b2", "b3"]))
+        .unwrap();
+    assert_eq!(ids(&padded), named(&["", "", "b3"]));
 }
 
 #[test]
@@ -348,6 +353,24 @@ fn stamp_gives_a_union_the_first_input_ids() {
         .unwrap();
     let folded = stamped(union_by_folded_name(first, respelled, false, IgnoreCase).unwrap());
     assert_eq!(ids(&folded), held);
+}
+
+#[test]
+fn stamp_mints_where_the_first_union_input_has_no_id_to_give() {
+    let context = SessionContext::new();
+    let raw = stamped(source(&context).union(source(&context)).unwrap());
+    let minted = ids(&raw);
+    assert!(minted.iter().all(Option::is_some));
+    assert_eq!(distinct_count(&minted), 3);
+    let full = stamped(source(&context));
+    let narrow = stamped(source(&context))
+        .select(vec![col("id"), col("data")])
+        .unwrap();
+    let held = ids(&narrow);
+    let padded = stamped(narrow.union_by_name(full.clone()).unwrap());
+    let after = ids(&padded);
+    assert_eq!(after[..2], held[..]);
+    assert!(after[2].is_some() && !ids(&full).contains(&after[2]));
 }
 
 fn joined_over_views(session: &ReparkSession, left: &DataFrame, right: &DataFrame) -> String {
