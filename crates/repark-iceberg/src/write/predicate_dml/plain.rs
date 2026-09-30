@@ -173,7 +173,7 @@ fn allowed_from_target(
         spec: PredicateDmlSpec {
             target: TableIdent::new(namespace, table_name),
             target_alias,
-            selection_sql: scratch_selection.to_string(),
+            selection_sql: crate::write::sql_text::render_for_reparse(&mut scratch_selection),
             assignments: None,
             case_insensitive: true,
             branch,
@@ -250,7 +250,7 @@ fn allowed_update_with(
         spec: PredicateDmlSpec {
             target: TableIdent::new(namespace, table_name),
             target_alias,
-            selection_sql: scratch_selection.to_string(),
+            selection_sql: crate::write::sql_text::render_for_reparse(&mut scratch_selection),
             assignments: Some(assignments),
             case_insensitive: true,
             branch,

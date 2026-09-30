@@ -118,6 +118,9 @@ pins: ice-error-conditions-1/C-011
   returns the folded text, unchanged when the first plan succeeds; the MERGE
   door folds a parenthesized derived source with it before the fragment rewrite.
   pins: casesens-1/C-004
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** folded exits render
+  through `repark_iceberg::write::sql_text::render_for_reparse` so string
+  values re-parse exactly. pins: string-literal-escape-1/C-010
 - `twins.rs` — **WO CASESENS-1 slice 4 (2026-09-27):** the case-twin output
   pass (R9). `is_unique_name_error` matches DataFusion's `Projections require
   unique expression names` head through its wrappers; `respell_case_twins`

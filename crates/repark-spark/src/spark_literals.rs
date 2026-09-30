@@ -102,7 +102,8 @@ pub fn canonicalize(sql: &str) -> Result<Cow<'_, str>> {
     canonicalize_verbatim(sql, false)
 }
 
-pub(crate) fn canonicalize_verbatim(sql: &str, keep_verbatim: bool) -> Result<Cow<'_, str>> {
+#[allow(clippy::missing_errors_doc)]
+pub fn canonicalize_verbatim(sql: &str, keep_verbatim: bool) -> Result<Cow<'_, str>> {
     if !sql.as_bytes().contains(&b'\'')
         && !sql.as_bytes().contains(&b'"')
         && !sql.as_bytes().contains(&b'\\')
@@ -196,7 +197,8 @@ pub fn translate_downstream_error(
     translate_downstream_error_verbatim(original, canonical, error, false)
 }
 
-pub(crate) fn translate_downstream_error_verbatim(
+#[must_use]
+pub fn translate_downstream_error_verbatim(
     original: &str,
     canonical: &str,
     error: DataFusionError,
@@ -452,9 +454,12 @@ fn ddl_span_kind_at(spans: &[DdlSpan], location: Location) -> Option<DdlSpanKind
 }
 
 fn ddl_verbatim_spans(tokens: &[TokenWithSpan]) -> Vec<DdlSpan> {
-    if !is_create_or_alter_statement(tokens) {
+    if !is_property_statement(tokens) {
         return Vec::new();
     }
+    let show_head = leading_significant_words(tokens, 1)
+        .first()
+        .is_some_and(|word| word.eq_ignore_ascii_case("SHOW"));
     let mut spans = Vec::new();
     let mut index = 0;
     while index < tokens.len() {
@@ -464,13 +469,14 @@ fn ddl_verbatim_spans(tokens: &[TokenWithSpan]) -> Vec<DdlSpan> {
         };
         if word.quote_style.is_none() {
             if word.value.eq_ignore_ascii_case("COMMENT")
-                && let Some(span) = comment_run_span(tokens, index)
+                && let Some(span) =
+                    comment_on_span(tokens, index).or_else(|| comment_run_span(tokens, index))
             {
                 spans.push(span);
             } else if (word.value.eq_ignore_ascii_case("TBLPROPERTIES")
                 || word.value.eq_ignore_ascii_case("PROPERTIES")
                 || word.value.eq_ignore_ascii_case("DBPROPERTIES"))
-                && let Some(span) = properties_paren_span(tokens, index)
+                && let Some(span) = properties_paren_span(tokens, index, show_head)
             {
                 spans.push(span);
             }
@@ -480,32 +486,76 @@ fn ddl_verbatim_spans(tokens: &[TokenWithSpan]) -> Vec<DdlSpan> {
     spans
 }
 
-fn is_create_or_alter_statement(tokens: &[TokenWithSpan]) -> bool {
+fn is_property_statement(tokens: &[TokenWithSpan]) -> bool {
     let words = leading_significant_words(tokens, 2);
     let matches = |word: &&str, keyword: &str| word.eq_ignore_ascii_case(keyword);
+    let head = |word: &&str| {
+        matches(word, "CREATE")
+            || matches(word, "ALTER")
+            || matches(word, "SHOW")
+            || matches(word, "COMMENT")
+    };
     match words.as_slice() {
-        [first, ..] if matches(first, "CREATE") || matches(first, "ALTER") => true,
-        [explain, second] if matches(explain, "EXPLAIN") => {
-            matches(second, "CREATE") || matches(second, "ALTER")
-        }
+        [first, ..] if head(first) => true,
+        [explain, second] if matches(explain, "EXPLAIN") && head(second) => true,
         _ => false,
     }
 }
 
-fn properties_paren_span(tokens: &[TokenWithSpan], word_index: usize) -> Option<DdlSpan> {
-    let open = crate::spark_rewrites::skip_whitespace(tokens, word_index + 1);
-    if !matches!(
-        tokens.get(open).map(|with_span| &with_span.token),
+fn is_bare_word(tokens: &[TokenWithSpan], index: usize, keyword: &str) -> bool {
+    matches!(
+        tokens.get(index).map(|with_span| &with_span.token),
+        Some(Token::Word(word))
+            if word.quote_style.is_none() && word.value.eq_ignore_ascii_case(keyword)
+    )
+}
+
+fn is_lparen(tokens: &[TokenWithSpan], index: usize) -> bool {
+    matches!(
+        tokens.get(index).map(|with_span| &with_span.token),
         Some(Token::LParen)
-    ) {
-        return None;
+    )
+}
+
+fn properties_paren_span(
+    tokens: &[TokenWithSpan],
+    word_index: usize,
+    show_head: bool,
+) -> Option<DdlSpan> {
+    let mut open = crate::spark_rewrites::skip_whitespace(tokens, word_index + 1);
+    if is_bare_word(tokens, open, "IF") {
+        let exists = crate::spark_rewrites::skip_whitespace(tokens, open + 1);
+        if is_bare_word(tokens, exists, "EXISTS") {
+            open = crate::spark_rewrites::skip_whitespace(tokens, exists + 1);
+        }
     }
+    let open = if is_lparen(tokens, open) {
+        open
+    } else if show_head {
+        (word_index + 1..tokens.len()).find(|index| is_lparen(tokens, *index))?
+    } else {
+        return None;
+    };
     let close = crate::spark_rewrites::matching_paren(tokens, open)?;
     Some(DdlSpan {
         start: tokens[open].span.start,
         end: tokens[close].span.end,
         kind: DdlSpanKind::Properties,
     })
+}
+
+fn comment_on_span(tokens: &[TokenWithSpan], word_index: usize) -> Option<DdlSpan> {
+    let on = crate::spark_rewrites::skip_whitespace(tokens, word_index + 1);
+    if !is_bare_word(tokens, on, "ON") {
+        return None;
+    }
+    let mut found = None;
+    for index in on + 1..tokens.len() {
+        if is_bare_word(tokens, index, "IS") && comment_run_span(tokens, index).is_some() {
+            found = Some(index);
+        }
+    }
+    found.and_then(|is| comment_run_span(tokens, is))
 }
 
 fn comment_run_span(tokens: &[TokenWithSpan], word_index: usize) -> Option<DdlSpan> {
@@ -758,7 +808,7 @@ where
 }
 
 #[must_use]
-pub(crate) fn with_escaped_string_literals_config(
+pub fn with_escaped_string_literals_config(
     config: SessionConfig,
     keep_verbatim: bool,
 ) -> SessionConfig {
@@ -766,9 +816,7 @@ pub(crate) fn with_escaped_string_literals_config(
 }
 
 #[must_use]
-pub(crate) fn escaped_verbatim_from_options(
-    options: &datafusion::common::config::ConfigOptions,
-) -> bool {
+pub fn escaped_verbatim_from_options(options: &datafusion::common::config::ConfigOptions) -> bool {
     options
         .extensions
         .get::<SparkEscapedStringLiteralsConfig>()

@@ -203,6 +203,10 @@ pins: rp-4-fork-repin/C-005, C-006
   in-module tests (MG-2: M2 Oracle sub-predicates, M3
   assignment-target qualification, M8 INSERT column list, M10 non-last
   unconditional clause). pins: dml-a-merge-not-matched-by-source/C-005
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** every rendered
+  fragment (`ON`, clause predicates, `VALUES` rows, `SET` assignments, the
+  derived source) goes through `repark_iceberg::write::sql_text::render_for_reparse`
+  so string values re-parse exactly. pins: string-literal-escape-1/C-010
 - `merge_fragments.rs` — **ICE-MIXED-CASE-1 (2026-09-17):** MERGE fragment
   preprocessing for case-insensitive resolution (target/source scope read,
   `ON` / predicate / value fragment rewrite, `maybe_` dispatcher that stamps
@@ -507,6 +511,9 @@ pins: rp-4-fork-repin/C-005, C-006
   fold's scope carries `spark.sql.caseSensitive`, so a re-cased whole-struct value refuses
   `CANNOT_FIND_DATA` under `true`.
   pins: u8-write-sql/C-025, C-027, C-032, C-033
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** the folded
+  statement renders through `repark_iceberg::write::sql_text::render_for_reparse`
+  so string values re-parse exactly. pins: string-literal-escape-1/C-010
 - `write_to_branch.rs` — Spark-door write-to-branch routing: tag/missing-branch Spark-shaped
   refuse; two-part names qualify through session defaults; the MOR valve runs on the
   Iceberg ident before the temp rewrite; fork-executed INSERT/UPDATE/DELETE via
@@ -987,6 +994,16 @@ pins: rp-4-fork-repin/C-005, C-006
   its planner already unescapes keys from original text and splices values
   from verbatim inners. `COMMENT ON` stays out (Spark collapses doublings
   but preserves backslashes there — a different rule).
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** the DDL gate covers
+  `SHOW` and `COMMENT` statements too; `UNSET … [IF EXISTS]` skips the guard
+  words before the key paren, `SHOW TBLPROPERTIES t (…)` spans the trailing
+  key paren, and `COMMENT ON … IS …` spans the literal after the last `IS`
+  followed by one. A clean Spark rerun shows `COMMENT ON` fully unescapes
+  both modes, superseding the DIFF-PROBE note above. The verbatim entry
+  points (`canonicalize_verbatim`, `translate_downstream_error_verbatim`,
+  `with_escaped_string_literals_config`, `escaped_verbatim_from_options`)
+  turn `pub` for the binding's `filter`/`where`/`F.expr` doors.
+  pins: string-literal-escape-1/C-008, C-009
 - `spark_literal_typing.rs` — **SQL-LITERAL-TYPING-1 (2026-09-16):**
   `SparkIntegralLiteral` types unsuffixed integral literals as Spark does —
   Int64 fitting i32 narrows to Int32, UInt64 becomes Decimal128(digits, 0),

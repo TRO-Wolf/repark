@@ -229,6 +229,36 @@ fn verbatim_ddl_positions_take_default_treatment() {
             &["nk''''k"],
         ),
         (
+            "ALTER TABLE t UNSET TBLPROPERTIES ('c''d')",
+            &["'c''d'"],
+            &["c''''d"],
+        ),
+        (
+            "ALTER TABLE t UNSET TBLPROPERTIES IF EXISTS ('a''b', 'c')",
+            &["'a''b'"],
+            &["a''''b"],
+        ),
+        (
+            "SHOW TBLPROPERTIES sc.ns.t ('p''k')",
+            &["'p''k'"],
+            &["p''''k"],
+        ),
+        (
+            "SHOW TBLPROPERTIES sc.ns.t ('a\\nb')",
+            &["'a\nb'"],
+            &["a\\nb"],
+        ),
+        (
+            "COMMENT ON TABLE sc.ns.t IS 'o''n\\tc'",
+            &["'o''n\tc'"],
+            &["o''''n"],
+        ),
+        (
+            "COMMENT ON COLUMN sc.ns.t.c IS 'i''d'",
+            &["'i''d'"],
+            &["i''''d"],
+        ),
+        (
             "CREATE NAMESPACE n WITH PROPERTIES ('a''b'='c')",
             &["'a''b'"],
             &["a''''b"],

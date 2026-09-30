@@ -75,7 +75,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split transform families along their existing plan-node boundaries.",
     ),
     "python/repark/src/repark/spark/functions.py": (
-        1984,
+        1938,
         "Facade function exports and wrappers remain consolidated.",
         "Split by function family while preserving the public re-export surface.",
     ),

@@ -478,6 +478,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins verbatim DDL canonicals (property lists borrowed, backslashes unescaped,
   `COMMENT` doubles rewritten single-quoted, the `SELECT comment` alias guard,
   `EXPLAIN` passthrough).
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** the DDL table gains
+  `UNSET` (both `IF EXISTS` shapes), `SHOW TBLPROPERTIES` key, and
+  `COMMENT ON` rows. pins: string-literal-escape-1/C-008
 - `cast_binary.rs` — **SQP-1 (C-009):** `CAST … AS BINARY` plans to Arrow `Binary` (B1/B8–B10/B13/
   B15), refuses illegal sources (`DATATYPE_MISMATCH`, B2–B7), keeps `VARBINARY` refusing (B12),
   leaves a `BINARY` DDL column untouched; `TRY_CAST(<int>)` refuses without the ANSI-off suggestion.

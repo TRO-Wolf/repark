@@ -35,7 +35,10 @@ pre-existing, previously scoped to session doors by FNP-4B);
 | C-004 | Nothing else moves: every Step-0 match stays a match (zero match-to-diff transitions); the native door answers byte-identically; NTZ/LTZ and escape neighbours green; the full `repark-spark` suite green; byte-frozen files keep their hashes. | The before/after transition check, the native rerun, neighbour suites, and the freeze record green. | PROVEN | 2472 passed, 0 failed; `test_pr_245_revalidation_record.py` 11 passed; native before==after. |
 | C-005 | DIFF-PROBE fold: verbatim keep-exact covers query-expression literals and `OPTIONS` values only; DDL property lists (`TBLPROPERTIES` / `PROPERTIES` / `DBPROPERTIES`) and `COMMENT` runs in `CREATE` / `ALTER` take default treatment, so all 6 regression cells equal Spark 4.1.2. | The `verbatim_ddl_positions_take_default_treatment` Rust pins plus the 4 verbatim-DDL facade read-back pins green; the 6 cells equal their Spark oracles cell by cell. | PROVEN | `o10r`, `v_cmt`+`v_cmt_r`, `v_tb_dq_r`, `w_alter_r` (key and backslash value), `w_cmt1_r` all Spark-equal; `SELECT comment` alias guard and `OPTIONS`-value survivor pinned. |
 | C-006 | The whole-probe replay moves nothing else: 489 of 497 cells are byte-identical old-head to new-head; the 8 that move are the 5 fix read-backs plus 3 red-at-both-sides backslash cells, all 8 Spark-equal; 0 control diffs. | Old-head rerun into a separate out dir, byte-compared cell by cell; every moved cell compared against its Spark oracle. | PROVEN | New flips `v_tb_esc_r`, `v_tb_bsdoub_r`, `w_cmt2_r` Spark-equal; `v_cmt` CREATE succeeds on both heads; 43 INTENDED + 16 SPARK-CONFIRMED head values byte-identical. |
-| C-007 | Namespace `PROPERTIES` / `DBPROPERTIES` take the same DDL treatment (Spark fully unescapes there, measured both shapes); `COMMENT ON` is out of scope (Spark collapses doublings but preserves backslashes there — a different rule, verbatim doubling red recorded); default-mode `COMMENT` doubles refusal stays (pre-existing, both modes). | Facade namespace pins green; Spark oracle cells for namespace escapes, `COMMENT ON` × modes, and default `COMMENT` doubles recorded in the fold evidence. | PROVEN | Namespace doubling/backslash/`\u0041` Spark-oracled; `COMMENT ON` backslash green both modes (do-not-touch), doubling red verbatim-only; default `COMMENT "x""y"` ParseException on both heads. |
+| C-007 | Namespace `PROPERTIES` / `DBPROPERTIES` take the same DDL treatment (Spark fully unescapes there, measured both shapes); `COMMENT ON` is out of scope (Spark collapses doublings but preserves backslashes there — a different rule, verbatim doubling red recorded); default-mode `COMMENT` doubles refusal stays (pre-existing, both modes). | Facade namespace pins green; Spark oracle cells for namespace escapes, `COMMENT ON` × modes, and default `COMMENT` doubles recorded in the fold evidence. | PROVEN | Namespace doubling/backslash/`\u0041` Spark-oracled; `COMMENT ON` backslash green both modes (do-not-touch), doubling red verbatim-only; default `COMMENT "x""y"` ParseException on both heads. CORRECTED 2026-09-30 by C-008: clean Spark reruns show `COMMENT ON` fully unescapes both modes. |
+| C-008 | VE-1: `UNSET TBLPROPERTIES [IF EXISTS]`, `SHOW TBLPROPERTIES t (key)` and `COMMENT ON … IS …` always unescape in verbatim mode (UNSET removes the collapsed key, SHOW-key returns the collapsed value, COMMENT ON stores the fully unescaped text both modes); default mode unchanged. | Rust DDL-table rows + facade VE-1 pins + control pins green; verify-esc/DIFF-PROBE replay at 0 regressions. | OPEN | Spark oracles: `ns-spark.json` v_unset_r, `rt-spark.json` v/d_cm_key + v/d_cm_on_r, `cm-spark.json` both-modes characterization. Closing: the replay + gate. |
+| C-009 | VE-2: `filter`/`where` strings read the frame's session verbatim flag and `F.expr` reads the active session's build-time flag, so all three parse like the session door; default mode takes the identical path as before. | Rust frame-flag pin + facade VE-2 pins + control pins green; verify-esc/DIFF-PROBE replay at 0 regressions. | OPEN | Spark oracles: `ns-spark.json` v/d_filter + v/d_where, `pin-spark`/`cf-spark` F.expr both modes. The unit's "F.expr sessionless" scope note is superseded for the flag decision only (planning stays sessionless). Closing: the replay + gate. |
+| C-010 | VE-3: every DML re-render (`UPDATE`/`DELETE` selections, `SET` values, MERGE `ON`/predicates/`VALUES`/assignments/sources, both doors, both fragment rewrites) preserves string values exactly; verbatim `''`/backslash and default quad conditions match and store Spark-equal values. | `sql_text` round-trip + planning pins + facade VE-3 pins + control pins green; verify-esc/DIFF-PROBE replay at 0 regressions. | OPEN | Spark oracles: `pin-spark.json` v_upd/v_del/v_mrg/v_mrgo, `qd-spark.json` default quads, `cf-spark.json` default dq UPDATE/MERGE. Also heals the UPDATE/DELETE/MERGE-SET half of carried VE-4 item 3. Closing: the replay + gate. |
 
 ## Evidence
 
@@ -118,6 +121,54 @@ pins red without (the `OPTIONS`-value survivor correctly stays green),
 `python/repark/tests/test_string_literal_escape_1.py`;
 `python/repark/tests/map.md`, `crates/repark-spark/src/map.md`,
 `src/tests/map.md`, `src/spark_rewrites/map.md` in the same commit.
+
+### C-008/C-009/C-010 verifier fold evidence (2026-09-30, OPEN → the replay + gate)
+
+Mechanism VE-1: the DDL statement gate covers `SHOW` and `COMMENT`;
+`UNSET … [IF EXISTS]` skips the guard words before the key paren,
+`SHOW TBLPROPERTIES t (…)` spans the trailing key paren, `COMMENT ON … IS …`
+spans the literal after the last `IS` followed by one (`is_bare_word` /
+`is_lparen` / `comment_on_span` helpers; gate renamed
+`is_create_or_alter_statement` → `is_property_statement`). Default mode
+computes no spans, as before.
+
+Mechanism VE-2: `parse_canonical_predicate[_exact]` read the flag from the
+frame (`frame_verbatim` over `task_ctx` options) and run the verbatim
+canonicalize + error translation with it; `PyColumn::sql` takes
+`keep_verbatim` from `F.expr`, which reads the active session's build-time
+key (`functions_session._active_verbatim_flag`). The four Spark entry points
+turn `pub` for the binding. `functions.py` 1984 → 1938 via the pure
+`functions_lit` move (shed `#` notes recorded in the spark map).
+
+Mechanism VE-3: `write/sql_text.rs::render_for_reparse` swaps each
+quote-bearing string value for an indexed placeholder, renders, then splices
+the doubled literal back (collision falls back to the plain render). Applied
+at every DML render and re-render: predicate selections, `SET` values, the
+folded `UPDATE`, all MERGE fragments incl. the derived source on both doors,
+plus `rewrite_fragment_case`, `check_fragment_exact`/`check_identity_exact`
+and the `fold_query_text` folded exits. `N'…'` was tried and abandoned:
+DataFusion does not plan it (`national_literals_plan_as_strings` red).
+
+Spark oracles (all `jvm-lock.sh`, PySpark 4.1.2): reused `ns-spark.json`
+v/d_unset_r + v/d_filter + v/d_where and `rt-spark.json` v/d_cm_key +
+v/d_cm_on_r; new `cm-spark.json` (COMMENT ON doubling/backslash/both ×
+modes: full unescape everywhere — supersedes the C-007 preserve-backslash
+note), `pin-spark.json` verbatim UPDATE/DELETE/MERGE/others,
+`cf-spark.json` default `F.expr`/dq-UPDATE/MERGE, `qd-spark.json` default
+quad UPDATE/DELETE/MERGE.
+
+Method note: a Spark default session built after a verbatim session in one
+JVM inherits `escapedStringLiterals=true` (`ord-spark.json`: `SET` shows
+`true`). The first pin probe ran verbatim-first, so its default leg was
+discarded and re-measured default-first; every oracle above ran
+default-first or single-session. By the same token `attack.py`'s third (ansi)
+Spark leg may read verbatim — its cells are escape-free, so no finding, but
+future Spark legs must run default-first or in separate JVMs.
+
+VE-4 carried items observed (orchestrator files cards): the ten pre-existing
+divergences stand, except item 3's UPDATE/DELETE/MERGE-SET half heals as a
+side effect of C-010 (CTAS/INSERT OVERWRITE still collapse); the 2,000-deep
+`||` segfault belongs to DEEP-FILTER-CHAIN-CRASH-1 (#892).
 
 ## Coverage attestation
 

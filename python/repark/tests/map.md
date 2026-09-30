@@ -7008,6 +7008,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **DIFF-PROBE fold (2026-09-29):** verbatim DDL read-back pins — TBLPROPERTIES
   keys/values, column COMMENT text, ALTER SET, and namespace PROPERTIES/DBPROPERTIES
   collapse like Spark; verbatim OPTIONS values stay verbatim (survivor pin).
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** VE-1 UNSET/SHOW-key/
+  COMMENT ON pins, VE-2 filter/where/F.expr flag pins, and VE-3 UPDATE/DELETE/
+  MERGE predicate pins, each with a default-mode control.
+  pins: string-literal-escape-1/C-008, C-009, C-010
 - `test_fnp_4b_hof_display.py` — **FNP-4B round 6 (2026-09-15):** Q3 red pin for run
   16a — selectExpr higher-order display must hide the `__repark_hof_array_field__`
   packing marker. **Round 7 (2026-09-15):** strict xfail per R-16c-10; 16a flips

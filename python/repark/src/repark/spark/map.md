@@ -228,6 +228,13 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **FNP-11B step 6 (2026-09-15):** `lit` takes `decimal.Decimal` (Spark's
   inferred precision and scale) by casting the decimal text, so no new native
   literal constructor is needed. pins: fnp-11b/C-005
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** `expr` passes the
+  active session's verbatim flag into `_native.PyColumn.sql`, so `F.expr`
+  parses like the session door. `_lit_sql_expr` / `_lit_spark_display` move
+  unchanged to [functions_lit.py](functions_lit.py) (the `#` notes shed, per
+  the owner ruling: `lit(2.0)` keeps its double point in display names, and
+  string displays stay unquoted); the baseline ratchets 1984 → 1938.
+  pins: string-literal-escape-1/C-009
 - `functions_agg.py` — aggregate-function re-exports. **FNP-ALIAS-1 (2026-09-15):**
   `approxCountDistinct` is the deprecated alias of `approx_count_distinct` and warns Spark's
   exact `FutureWarning` on every call; it reaches `functions.py` through this module's
@@ -436,6 +443,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   pins: fnp-8/C-003
 - `functions_try.py` — FNP-7a/7b `try_*` wrappers installed onto `functions.py` `__all__`.
   pins: fnp-7-try-inversions/C-013, C-016
+- `functions_lit.py` — **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):**
+  the `lit` rendering helpers (`_lit_sql_expr`, `_lit_spark_display`), moved
+  unchanged from `functions.py` so that file holds its ratcheted baseline.
+  pins: string-literal-escape-1/C-009
 - `functions_math.py` — mathematical and trigonometric wrappers. **FNP-ALIAS-1 (2026-09-15):**
   `degrees`/`radians` move here from `functions_expr.py` (functions_expr sat exactly on its
   ceiling) and stop composing `(x * 180) / pi()`. The engine's `degrees` scalar has no
@@ -497,6 +508,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   coercion, the refusals and the ANSI switch for both doors. pins: fnp-alias-1/C-001,
   C-002, C-003, C-004; fnp-bitmap-facade-1/C-011, C-012, C-013, C-014
 - `functions_session.py` — session-bound function helpers.
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):**
+  `_active_verbatim_flag` reads the active session's build-time
+  `escapedStringLiterals` setting for `F.expr` (absent session or key reads
+  false, matching the engine default). pins: string-literal-escape-1/C-009
 - `functions_udf.py` — Python UDF and pandas UDF markers, validation, and return-type
   contracts. Execution uses the DataFrame Arrow bridge. DFCORE-2 (2026-09-07): the
   `pandas_udf` docstring cross-reference follows the scalar rewrite to its new home,

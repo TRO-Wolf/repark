@@ -182,11 +182,17 @@ repark-core's error map.
   file is vacuously true, which is where Spark's empty `delete` snapshot on a no-match comes
   from. Both doors call this one seat.
   pins: ice-meta-delete-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** `selection_sql`
+  renders through `sql_text::render_for_reparse` so string values re-parse
+  exactly. pins: string-literal-escape-1/C-010
 - `predicate_dml.rs` — **ICE-CATALOG-SESSION-1 S9 (2026-09-20):** the identity-collector
   scratch refs quote through the split-aware scratch quoter (982 → 983, under the default ceiling).
   **WO U5 PR2b round 2 (2026-09-25):** merge-on-read DELETE/UPDATE on a v1 table raise Spark's
   IllegalArgumentException `Deletes are supported in V2 and above` (MERGE: `merge/mod.rs`).
   pins: ice-nested-evo-1/C-057
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** selections and
+  `SET` values render through `sql_text::render_for_reparse` so string
+  values re-parse exactly. pins: string-literal-escape-1/C-010
 - `predicate_dml.rs` — **ICE-OCC-SCOPED-1 (2026-09-17):** the identity DELETE / UPDATE builds a
   `CommitScope` from its isolation property and `conflict_filter::for_identity_dml` over its own
   `WHERE`, and hands it to the COW overwrite or the MoR row delta, so a concurrent commit that
@@ -1009,6 +1015,17 @@ repark-core's error map.
   `NameRule` and each dotted segment binds through it; a miss refuses Java's
   `ValidationException: Cannot find field '<written>' in struct: …` under both rules
   (the old `Cannot find field {name} in table schema` text is gone; R-2 closed).
+- `sql_text.rs` — **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):**
+  `render_for_reparse` renders an AST node to SQL text that re-parses to the
+  same string values. sqlparser's `Display` prints an already-doubled `''`
+  pair and a quote after a backslash as-is, so a value with quote pairs
+  re-parses collapsed; pre-doubling the value cannot survive the Display
+  either (a quote after a backslash is unrepresentable), and `N'…'`
+  literals do not plan on DataFusion. The renderer instead swaps each
+  quote-bearing value for an indexed placeholder, renders, then splices the
+  doubled single-quoted literal back; a placeholder collision falls back to
+  the plain render. Quote-free values render byte-identically.
+  pins: string-literal-escape-1/C-010
 - `format_version.rs` — **V3-10:** `set_properties_and_format_version` folds the fork's
   `UpgradeFormatVersionAction` and `UpdatePropertiesAction` into ONE transaction, so an ALTER
   carrying `format-version` beside another key is one metadata commit as it is on Spark; nothing
