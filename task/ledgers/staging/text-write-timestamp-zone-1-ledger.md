@@ -508,3 +508,43 @@ and all-null frames, keep-partition native pass-through against plain
 CSV), the rewritten COPY-parts pins, all 245 facade pins green, plus the
 head-vs-new byte differential, the reverify replays, the skip-a-column
 mutation and the release perf table below.
+
+Byte differential: 50/50 head-vs-new cells byte-identical, `diff -r -x
+manifest.txt` RC=0. Reverify replays: rv1 1726 cells plus rv2 5199 cells,
+0 real moves (2 documented output-root path artifacts in parser column
+numbers). Skip-a-column mutation went red and was reverted. No
+sink-surfaced error text changed, so no per-cell error listing is owed.
+
+Release perf, CODEGEN_UNITS=16, interleaved, median of 15, seconds:
+
+| shape | base | new | ratio |
+|---|---|---|---|
+| csv_one_default | 0.118 | 0.112 | 0.95x |
+| csv_many_default | 0.204 | 0.193 | 0.95x |
+| json_one_default | 0.095 | 0.080 | 0.84x |
+| json_many_default | 0.235 | 0.207 | 0.88x |
+| ctl_csv_plain | 0.055 | 0.052 | 0.96x |
+| ctl_json_plain | 0.067 | 0.067 | 1.00x |
+| ctl_parquet_many | 0.147 | 0.143 | 0.98x |
+
+User-pattern shapes against head (median of 15, seconds):
+
+| shape | head | new | ratio |
+|---|---|---|---|
+| csv_one_pattern | 0.426 | 0.141 | 0.33x |
+| csv_many_pattern | 1.633 | 0.291 | 0.18x |
+| json_one_pattern | 0.402 | 0.108 | 0.27x |
+| json_many_pattern | 1.660 | 0.291 | 0.18x |
+
+Shuffled-zone shapes against base (median of 7, ratio only): UTC 0.89x to
+1.09x; non-UTC 1.04x to 1.32x, worst wide_20k_NY 1.32x and vc31_20k_NY
+1.31x, all at or under the 1.4x bar.
+
+Thread course: new build shows 16-thread CPU in the parallel serialize
+region (0.10 to 0.15s, DONE 0.197s). Head shows a serial UDF phase then
+the 16-thread sink (DONE 0.382s). The temporal format work moved into
+the sink tasks.
+
+`scripts/verify-repark-tokenizer.py` and `scripts/repark-python-session.py`
+do not exist in this lane, so no script mapping names a stale helper.
+`gate.sh` reports GATE GREEN.
