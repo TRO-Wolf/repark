@@ -178,9 +178,9 @@ def test_legacy_policy_allows_optioned_non_temporal_write(
     spark.conf.set("spark.sql.session.timeZone", "America/New_York")
     spark.conf.set("spark.sql.legacy.timeParserPolicy", "LEGACY")
     dest = tmp_path / "out"
-    spark.sql("SELECT 1 AS id, 'x' AS s").write.mode("overwrite").option(
-        "header", "true"
-    ).option("timestampFormat", "yyyy").csv(str(dest))
+    spark.sql("SELECT 1 AS id, 'x' AS s").write.mode("overwrite").option("header", "true").option(
+        "timestampFormat", "yyyy"
+    ).csv(str(dest))
     assert _part_text(dest, ".csv") == "id,s\n1,x\n"
 
 
@@ -192,15 +192,13 @@ def test_time_parser_policy_default_is_corrected(spark: ReparkSession, tmp_path:
     spark.conf.unset("spark.sql.legacy.timeParserPolicy")
     assert spark.conf.get("spark.sql.legacy.timeParserPolicy") == "CORRECTED"
     dest = tmp_path / "out"
-    spark.sql("SELECT 1 AS id, TIMESTAMP '2024-06-15 12:00:00' AS t").write.mode(
-        "overwrite"
-    ).json(str(dest))
+    spark.sql("SELECT 1 AS id, TIMESTAMP '2024-06-15 12:00:00' AS t").write.mode("overwrite").json(
+        str(dest)
+    )
     assert _part_text(dest, ".json") == '{"id":1,"t":"2024-06-15T12:00:00.000-04:00"}\n'
 
 
-def test_recognition_error_carries_no_legacy_clause(
-    spark: ReparkSession, tmp_path: Path
-) -> None:
+def test_recognition_error_carries_no_legacy_clause(spark: ReparkSession, tmp_path: Path) -> None:
     """The pattern error keeps its class but stops recommending LEGACY."""
     spark.conf.set("spark.sql.session.timeZone", "America/New_York")
     with pytest.raises(PySparkException) as excinfo:
