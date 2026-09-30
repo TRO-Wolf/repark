@@ -647,6 +647,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   call sites fold a direct `nullif` count/stop argument as COUNT (an
   inexact second keeps the bound at the first); `const_i128` itself is
   untouched. pins: nvl-type-coercion-1/C-035.
+  **Re-verify 8 follow-up (2026-09-30, VN9-1):** the fold also matches
+  the unlowered `nvl`-family spellings — `nvl`/`ifnull` as first-match,
+  `nvl2` by branch, `zeroifnull`/`nullifzero` as `nullif(x, 0)` — so
+  column-API-built counts refuse like the SQL door.
+  pins: nvl-type-coercion-1/C-037.
 - `cardinality_nullif.rs` — **NVL-TYPE-COERCION-1 re-verify 6
   (2026-09-30, VN7-1/VN7-2/VN7-3):** the `nullif` ceiling fold, split out of
   `cardinality.rs` (move-only): `nullif_const_int` bounds by the first
@@ -682,6 +687,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   the nullable-cast UDF stays opaque (a wrapped second is residue, and
   the `F.expr` door folds `CAST('0' AS INT)` first so it answers where
   SQL refuses). pins: nvl-type-coercion-1/C-035.
+  **Re-verify 8 follow-up (2026-09-30, VN9-1):** `nvl_fold`,
+  `nvl2_fold` (exact-null tests via `is_exact_null`) and
+  `nullifzero_nested` fold the unlowered spellings with the same
+  `nullif_value` semantics; `zin`/`niz` need no COUNT path since their
+  zero side is never unknown. pins: nvl-type-coercion-1/C-037.
 
 
 - **R-FN-BATCH4** aggregate expansion.

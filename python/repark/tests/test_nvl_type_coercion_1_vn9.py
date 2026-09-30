@@ -323,6 +323,26 @@ VN9_DOOR_REFUSALS: list[tuple[str, str]] = [
         "second_subquery",
         "SELECT size(array_repeat(1, coalesce(nullif(1, (SELECT 1)), 1000))) AS v",
     ),
+    (
+        "nvl_alias",
+        "SELECT size(array_repeat(1, nvl(nullif(1, 1), 1000))) AS v",
+    ),
+    (
+        "ifnull_alias",
+        "SELECT size(array_repeat(1, ifnull(nullif(1, 1), 1000))) AS v",
+    ),
+    (
+        "nvl_alias_seq",
+        "SELECT size(sequence(1, nvl(nullif(1, 1), 1000))) AS v",
+    ),
+    (
+        "ifnull_alias_seq",
+        "SELECT size(sequence(1, ifnull(nullif(1, 1), 1000))) AS v",
+    ),
+    (
+        "nvl2_true",
+        "SELECT size(array_repeat(1, nvl2(1, 1000, 0))) AS v",
+    ),
 ]
 
 VN9_DOOR_REFUSAL_IDS = [cell[0] for cell in VN9_DOOR_REFUSALS]
@@ -340,6 +360,66 @@ def test_vn9_door_column_second_refuses(ceiling100: ReparkSession) -> None:
         ceiling100.sql(
             "SELECT size(array_repeat(1, coalesce(nullif(1, c), 1000))) AS v FROM vn9_c"
         ).collect()
+
+
+VN9_DOOR_FEXPR_ALIAS_REFUSALS: list[tuple[str, str]] = [
+    ("nvl_alias", "array_repeat(1, nvl(nullif(1, 1), 1000))"),
+    ("ifnull_alias", "array_repeat(1, ifnull(nullif(1, 1), 1000))"),
+    ("nvl_alias_seq", "sequence(1, nvl(nullif(1, 1), 1000))"),
+    ("ifnull_alias_seq", "sequence(1, ifnull(nullif(1, 1), 1000))"),
+]
+
+VN9_DOOR_FEXPR_ALIAS_REFUSAL_IDS = [cell[0] for cell in VN9_DOOR_FEXPR_ALIAS_REFUSALS]
+
+
+@pytest.mark.parametrize(
+    "cell", VN9_DOOR_FEXPR_ALIAS_REFUSALS, ids=VN9_DOOR_FEXPR_ALIAS_REFUSAL_IDS
+)
+def test_vn9_door_fexpr_alias_refuses(ceiling100: ReparkSession, cell: tuple[str, str]) -> None:
+    frame = ceiling100.range(1).select(F.size(F.expr(cell[1])).alias("v"))
+    with pytest.raises(AnalysisException, match=_MAX_ARRAY_ELEMENTS_KEY):
+        frame.collect()
+
+
+def test_vn9_door_df_nvl_fn_refuses(ceiling100: ReparkSession) -> None:
+    count = F.nvl(F.nullif(F.lit(1), F.lit(1)), F.lit(1000))
+    with pytest.raises(AnalysisException, match=_MAX_ARRAY_ELEMENTS_KEY):
+        vn9_df_count(ceiling100, count).collect()
+
+
+def test_vn9_door_df_ifnull_fn_refuses(ceiling100: ReparkSession) -> None:
+    count = F.ifnull(F.nullif(F.lit(1), F.lit(1)), F.lit(1000))
+    with pytest.raises(AnalysisException, match=_MAX_ARRAY_ELEMENTS_KEY):
+        vn9_df_count(ceiling100, count).collect()
+
+
+def test_vn9_door_df_nvl2_fn_refuses(ceiling100: ReparkSession) -> None:
+    count = F.nvl2(F.lit(1), F.lit(1000), F.lit(0))
+    with pytest.raises(AnalysisException, match=_MAX_ARRAY_ELEMENTS_KEY):
+        vn9_df_count(ceiling100, count).collect()
+
+
+def test_vn9_door_df_nvl2_nullif_test_refuses(ceiling100: ReparkSession) -> None:
+    count = F.nvl2(F.nullif(F.lit(1), F.lit(1)), F.lit(5), F.lit(1000))
+    with pytest.raises(AnalysisException, match=_MAX_ARRAY_ELEMENTS_KEY):
+        vn9_df_count(ceiling100, count).collect()
+
+
+def test_vn9_door_df_nvl2_null_test_answers(ceiling100: ReparkSession) -> None:
+    count = F.nvl2(F.nullif(F.lit(1), F.lit(1)), F.lit(1000), F.lit(5))
+    assert [row.asDict() for row in vn9_df_count(ceiling100, count).collect()] == [{"v": 5}]
+
+
+def test_vn9_door_df_zeroifnull_fn_refuses(ceiling100: ReparkSession) -> None:
+    count = F.zeroifnull(F.lit(101))
+    with pytest.raises(AnalysisException, match=_MAX_ARRAY_ELEMENTS_KEY):
+        vn9_df_count(ceiling100, count).collect()
+
+
+def test_vn9_door_df_nullifzero_fn_refuses(ceiling100: ReparkSession) -> None:
+    count = F.nullifzero(F.lit(101))
+    with pytest.raises(AnalysisException, match=_MAX_ARRAY_ELEMENTS_KEY):
+        vn9_df_count(ceiling100, count).collect()
 
 
 VN9_TEMPORAL_ON: list[tuple[str, str, str, object]] = [

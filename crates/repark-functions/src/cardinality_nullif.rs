@@ -10,6 +10,69 @@ pub(crate) enum NullifPosition {
     Nested,
 }
 
+pub(crate) fn nvl_fold(args: &[Expr], depth: u32) -> Option<i128> {
+    for arg in args {
+        if let Some(value) = const_i128(arg, depth) {
+            return Some(value);
+        }
+    }
+    None
+}
+
+pub(crate) fn nvl2_fold(args: &[Expr], depth: u32) -> Option<i128> {
+    let [test, second, third] = args else {
+        return None;
+    };
+    if const_i128(test, depth).is_some() {
+        const_i128(second, depth)
+    } else if is_exact_null(test, depth) {
+        const_i128(third, depth)
+    } else {
+        None
+    }
+}
+
+pub(crate) fn nullifzero_nested(arg: &Expr, depth: u32) -> Option<i128> {
+    nullif_value(arg, &zero_literal(), depth, NullifPosition::Nested)
+}
+
+pub(crate) fn is_exact_null(expr: &Expr, depth: u32) -> bool {
+    if depth == 0 {
+        return false;
+    }
+    match expr {
+        Expr::Literal(scalar, _) => scalar.is_null(),
+        Expr::Alias(alias) => is_exact_null(alias.expr.as_ref(), depth - 1),
+        Expr::Cast(cast) => is_exact_null(cast.expr.as_ref(), depth - 1),
+        Expr::TryCast(try_cast) => is_exact_null(try_cast.expr.as_ref(), depth - 1),
+        Expr::ScalarFunction(function) => exact_null_call(
+            function.func.name().to_ascii_lowercase().as_str(),
+            &function.args,
+            depth - 1,
+        ),
+        _ => false,
+    }
+}
+
+fn exact_null_call(name: &str, args: &[Expr], depth: u32) -> bool {
+    match name {
+        "nullif" | "__repark_nullif_compare" if args.len() == 2 => {
+            matches!(
+                (exact_i128(&args[0], depth), exact_i128(&args[1], depth)),
+                (Some(left), Some(right)) if left == right
+            )
+        }
+        "zeroifnull" | "nullifzero" if args.len() == 1 => {
+            matches!(exact_i128(&args[0], depth), Some(0))
+        }
+        _ => false,
+    }
+}
+
+fn zero_literal() -> Expr {
+    Expr::Literal(ScalarValue::Int32(Some(0)), None)
+}
+
 pub(crate) fn nullif_value(
     first: &Expr,
     second: &Expr,
@@ -79,5 +142,76 @@ fn integral_quotient(unscaled: i128, scale: i8) -> Option<i128> {
     } else {
         let places = u32::try_from(scale.checked_neg()?).ok()?;
         unscaled.checked_mul(10i128.checked_pow(places)?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use datafusion::logical_expr::lit;
+
+    use super::*;
+    use crate::spark_nvl_udf::{
+        ifnull_expr, nullif_expr, nullifzero_expr, nvl_expr, zeroifnull_expr,
+    };
+
+    const DEPTH: u32 = 8;
+
+    fn null_literal() -> Expr {
+        Expr::Literal(ScalarValue::Null, None)
+    }
+
+    #[test]
+    fn nvl_fold_skips_exact_null_first() {
+        assert_eq!(
+            nvl_fold(&[nullif_expr(lit(1), lit(1)), lit(1000)], DEPTH),
+            Some(1000)
+        );
+        assert_eq!(
+            nvl_fold(&[nullif_expr(lit(1), lit(0)), lit(1000)], DEPTH),
+            Some(1)
+        );
+        assert_eq!(nvl_fold(&[null_literal(), lit(1000)], DEPTH), Some(1000));
+    }
+
+    #[test]
+    fn nvl2_fold_picks_branch_by_test() {
+        assert_eq!(nvl2_fold(&[lit(1), lit(1000), lit(0)], DEPTH), Some(1000));
+        assert_eq!(
+            nvl2_fold(&[null_literal(), lit(1000), lit(5)], DEPTH),
+            Some(5)
+        );
+        assert_eq!(
+            nvl2_fold(&[nullif_expr(lit(1), lit(1)), lit(1000), lit(5)], DEPTH),
+            Some(5)
+        );
+        assert_eq!(nvl2_fold(&[lit(1), lit(1000)], DEPTH), None);
+    }
+
+    #[test]
+    fn nullifzero_nested_folds_exact_value() {
+        assert_eq!(nullifzero_nested(&lit(101), DEPTH), Some(101));
+        assert_eq!(nullifzero_nested(&lit(0), DEPTH), None);
+        assert_eq!(nullifzero_nested(&null_literal(), DEPTH), None);
+    }
+
+    #[test]
+    fn exact_null_names_null_shapes_only() {
+        assert!(is_exact_null(&null_literal(), DEPTH));
+        assert!(is_exact_null(&nullif_expr(lit(1), lit(1)), DEPTH));
+        assert!(is_exact_null(&zeroifnull_expr(lit(0)), DEPTH));
+        assert!(is_exact_null(&nullifzero_expr(lit(0)), DEPTH));
+        assert!(!is_exact_null(&lit(1), DEPTH));
+        assert!(!is_exact_null(&nullif_expr(lit(1), lit(0)), DEPTH));
+        assert!(!is_exact_null(&zeroifnull_expr(lit(101)), DEPTH));
+        assert!(!is_exact_null(&nvl_expr(lit(1), lit(1000)), DEPTH));
+    }
+
+    #[test]
+    fn ifnull_and_nvl_share_nvl_fold() {
+        let ifnull = ifnull_expr(nullif_expr(lit(1), lit(1)), lit(1000));
+        let Expr::ScalarFunction(function) = ifnull else {
+            panic!("ifnull_expr must build a scalar call");
+        };
+        assert_eq!(nvl_fold(&function.args, DEPTH), Some(1000));
     }
 }

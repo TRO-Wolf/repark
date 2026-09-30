@@ -60,6 +60,7 @@ interval-literal parsing; plain `if`/`CASE`/`=`/CAST methodology probes;
 | C-034 | VN8-3: `sequence` `STRING` bounds follow Spark 4.1.2 exactly as measured on the live oracle — under ANSI the bound casts to `BIGINT` through the shared ANSI string cast and the result is `array<bigint>`; without ANSI every `STRING` bound refuses with `SEQUENCE_WRONG_INPUT_TYPES`. | The 7 ANSI-on value+`typeof` pins, the 8 ANSI-off refusal pins, the garbage `CAST_INVALID_INPUT`/`typeof`/off pins, the string-column pin, the column-API pin and the `DATE`/`STRING` still-refuses guard green; the widest-sibling mutant reds the overflow and whitespace pins. | PROVEN | All green; `DATE`+`STRING` under ANSI stays refused (carried: Spark answers `array<date>`); mutant reverted with the tree clean. |
 | C-035 | VN9-1/VN9-2: one `nullif_value` fold serves `nullif` and `__repark_nullif_compare`: exact equality of the two `exact_i128` sides folds to NULL; an inexact second keeps the bound at the first in a COUNT position (`array_repeat`/`repeat` count, `sequence` stop, under `Alias`/`Cast` only) and folds unknown in every nested position. `exact_i128` is base's `const_i128` over integral-decimal-normalized trees plus the `f64`-image check, so truncation never proves equality. | The 14-row ruling table pinned on SQL, `F.expr` and the column API, the VN9-1 door refusal pins and the two residue pins green; the nested-as-COUNT mutant reds the coalesce pin and the no-exactness mutant reds the `101.4` pin. | PROVEN | 67 vn9 pins green at ceiling 100 plus the rewritten vn7/vn8 pins; both mutants reverted with the tree clean; residue is exactly the two dated bullets below. |
 | C-036 | VN9-3: `sequence` with a `DATE`/`TIMESTAMP` bound and a `STRING` sibling answers `array<date>`/`array<timestamp>`/`array<timestamp_ntz>` under ANSI by casting the string side through the existing shared Spark string→date/timestamp cast in the session zone, and refuses `SEQUENCE_WRONG_INPUT_TYPES` without ANSI — all 6 verifier cells, no shared-cast change. | The 6 ANSI-on value+`typeof` pins, the 6 ANSI-off refusal pins, the `F.expr`/column-API twins and the New-York session-zone pin green. | PROVEN | All green; the `sequence` tests move to `spark_sequence/tests.rs` (file-size split, move-only); naive elements shape naive arrays. |
+| C-037 | VN9-1 follow-up: the const fold reads the unlowered `nvl`-family spellings (`nvl`/`ifnull` as first-match, `nvl2` by literal-or-exact-null test, `zeroifnull`/`nullifzero` as `nullif(x, 0)`), so column-API-built counts refuse TRUE-over-ceiling like the SQL door; `nvl`/`ifnull`/`zeroifnull`/`nullifzero` restore base's refusals, while `nvl2` newly refuses where base answers (guard-correct at TRUE 1000 over 100, SQL-door-consistent). | The 5 SQL + 4 `F.expr` + 7 column-API pins green; the 5 direct fold unit tests green; the post-fix replay moves 7 cells, all classified (4 `nvl2_eq` bypass closures, 3 `q_ifnull_cast` alignments to base/Spark). | PROVEN | 16 new pins green; fn-door/base parity restored except the documented `nvl2` guard closure. |
 
 ## Evidence
 
@@ -511,6 +512,58 @@ behaves the same; the orchestrator files the card).
 `test_nvl_type_coercion_1_vn9.py`); the vn7/vn8 rewrites keep their
 file counts. Mutants, replay, gate and perf-table outcomes are
 recorded in the lane hand-back alongside this commit.
+
+### Re-verify 8 follow-up: replay triage + fn-door closure (2026-09-30)
+
+Full replay (`reverify8-nvl-fold`, 17 batteries, ceiling 100):
+0 value changes and 0 refusals outside the stated residue plus the
+C-037 closure. rv8 (`par` is VN8 `e5f8bf2c`): every `byp/coal_*`,
+`genser`, `lambda_coal` and `df_coal` refusal is the mandated VN9-1
+fix (TRUE 1000 over 100; base refused, VN8 bypassed);
+`byp/ifnull_eq` and `byp/nvl_eq` refuse through the same fix under
+alias spellings (base and VN8 answer TRUE 1000 — no halt: the
+exact-everywhere ruling determines alias spellings, and answering
+would keep a live bypass); `step_seq` and `below/seq_start` heal to
+base/Spark (VN9-2); the five `seq/*` gains are VN9-3. rv7 (`par` is
+the NvlFold sibling): gains are exact-equality fixes and VN9-3; the
+off-mode `size(NULL)` vs Spark `-1`, the `lead0`/`L` type error and
+the `q_coalesce_str_off` optimizer failure are base-identical;
+`q_coalesce_str` answers 101 like its `CAST` twin (the
+`CAST('0' AS INT)` unified branch wraps, the fold skips to 101 and
+proves a false equality — guard miss shared with base and Spark,
+second guards-list entry); `t_round_e` on `F.expr` heals to Spark.
+`ts_str`/`ts_s` render UTC while the oracle shows New-York walls,
+but the instants match exactly — PySpark 4.1.2 `collect()` formats
+`TIMESTAMP_LTZ` in the system zone (`fromtimestamp`, no session-zone
+read) while repark renders the session zone; base renders
+identically, so the skew is a pre-existing collect-level artifact.
+rv6ceil/confirm7 diffs are exact-equality fixes; the `uuid`/`shuffle`
+batteries (rv6main, a3, extra2 and the dedicated nondeterminism
+battery) fluctuate run to run. `attack`
+`ice/update_zin` errors on base (`UNRESOLVED_ROUTINE`, no
+`zeroifnull`) and on head (dependency `schema/batches` planning
+error after this branch's VN2/VN3 `zeroifnull` resolves); the parent
+succeeds via its own write-path fix on a sibling branch — error to
+error, no value at base, out of scope. `onlyice` has a 1-key parent
+and is internally consistent with `attack`.
+
+Column-API probing then found the fold blind to unlowered
+`nvl`-family counts: `F.nvl`/`F.ifnull`/`F.nvl2`/`F.zeroifnull`/
+`F.nullifzero` built TRUE-over-ceiling arrays the SQL door refuses.
+Base refuses the `nvl`/`ifnull`/`zeroifnull`/`nullifzero` shapes, so
+those four are regressions; base builds `nvl2`, which stays a
+pre-existing hole unless closed. The fix teaches `const_i128` the
+alias spellings (`nvl_fold`, `nvl2_fold` with `is_exact_null` for
+exact-null tests, `nullifzero_nested` as `nullif(x, 0)` — `zin`/`niz`
+need no COUNT path since their zero side is never unknown) and pins
+all doors; `nvl2` now refuses where base answers, which is
+guard-correct (TRUE 1000 over 100) and matches the SQL door that
+already refuses it. 1155 nvl-family pins pass (1072 + 83 vn9). The
+post-fix replay reruns with 0 value changes and 7 classified moves:
+4 `byp/nvl2_eq` bypass closures (TRUE 1000, same no-halt rationale
+as the `nvl`/`ifnull` aliases) and 3 `r1/q_ifnull_cast` alignments
+to base/Spark 101 (the `ifnull` twin of the documented
+wrap-and-skip guard miss, third guards-list entry).
 
 ## Coverage attestation
 

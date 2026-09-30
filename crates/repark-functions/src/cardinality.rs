@@ -414,6 +414,13 @@ pub(crate) fn const_i128(expr: &Expr, depth: u32) -> Option<i128> {
                     }
                     None
                 }
+                "nvl" | "ifnull" if args.len() == 2 => {
+                    crate::cardinality_nullif::nvl_fold(args, depth - 1)
+                }
+                "nvl2" if args.len() == 3 => crate::cardinality_nullif::nvl2_fold(args, depth - 1),
+                "zeroifnull" | "nullifzero" if args.len() == 1 => {
+                    crate::cardinality_nullif::nullifzero_nested(&args[0], depth - 1)
+                }
                 "greatest" | "least" if !args.is_empty() => {
                     let mut values = Vec::with_capacity(args.len());
                     for arg in args {
