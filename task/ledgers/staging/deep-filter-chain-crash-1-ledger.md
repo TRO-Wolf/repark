@@ -172,7 +172,7 @@ COVERAGE_ATTESTATION:
 | R-3 | Dated 2026-09-29 (pre-existing clean-refusal divergence, deliberately untouched): 200-deep nested selects answer 2 on Spark 4.1.2 and refuse at RePark's parser limit 50; relaxing the limit could open SQL-door crashes, so it stays out of this unit. |
 | R-4 | Dated 2026-09-29 (caveat on the Measurements reservation): a strict-overcommit (`vm.overcommit_memory=2`) or `ulimit -v` environment could fail the 256 MiB thread/stack reservations with loud errors instead of crashes; residency is unchanged and default overcommit is unaffected. |
 | R-5 | Dated 2026-09-29 (limits fold; drop-side stack cost): dropping a deep plan needs ~250 B per level on the dropping thread (an 8201-deep test plan aborts a 2 MiB thread at drop); main-thread drops hold past 20000 and pool threads hold 64 MiB, so only a sub-megabyte thread holding a deep plan is exposed — same as base. |
-| R-6 | Dated 2026-09-29 (limits fold; pre-existing IN-list divergence, out of unit scope): at 100k+ IN items Spark 4.1.2 answers 1 on both the `range()` and temp-view forms while base answers 1000 range-form / 1 view-form; small IN lists answer exactly everywhere. Head matches base per form. |
+| R-6 | Dated 2026-09-29 (limits fold; pre-existing terminal split, out of unit scope): the 200k-item IN list answers 1000 through `collect()` and 1 through `count()` on base and head alike (10/10 virgin samples stable per terminal; form-independent); Spark's `count()` answers 1 too, its `collect()` is unmeasured. The C-009 pin uses `collect()`, matching the orchestrator's 1000-in-60 s measurement. |
 
 ## Release per-call cost follow-up (2026-09-29)
 
@@ -370,19 +370,23 @@ expression depth is N+1 for `and`/`or`, N+2 for `+`.
 R1: the SQL text cap is deleted (`MAX_SQL_TEXT_LEN`,
 `refuse_overlong_sql`, its call sites and pins). The 200,000-item IN
 list over `range(1000)` (1,288,936 bytes) answers 1000 on base in
-59.9 s and refuses on 3466b00c; Spark has no text-length limit. Long
-text now drives the grown stack past 4 KiB instead of refusing.
+59.9 s over `collect()` and refuses on 3466b00c; Spark has no
+text-length limit. Long text now drives the grown stack past 4 KiB
+instead of refusing.
 
-| IN shape (debug) | base | 3466b00c | Spark |
+| IN shape, 200k items (debug) | base | 3466b00c | Spark |
 |---|---|---|---|
-| range form, 100k items | 1000, 33 s | refuses (text cap) | 1, 4 s |
-| range form, 200k items | 1000, 60 s | refuses (text cap) | 1, 9 s |
-| temp-view form, 100k items | 1000, 33 s | refuses (text cap) | 1, 7 s |
-| temp-view form, 200k items | 1, 42 s | refuses (text cap) | 1, 10 s |
+| `range()` form over `collect()` | 1000, 60 s | refuses (text cap) | unmeasured |
+| `range()` form over `count()` | 1, 42 s | refuses (text cap) | 1, 9 s |
+| temp-view form over `collect()` | 1000, 66 s | refuses (text cap) | unmeasured |
+| temp-view form over `count()` | 1, 42 s | refuses (text cap) | 1, 10 s |
 
-Spark answers 1 on all four 100k+ cells (R-6); small IN lists answer
-exactly on every side (10k items: Spark 25, correct). The fold pin
-uses the range form and expects base's 1000.
+The split is the terminal, not the form: `collect()` answers 1000
+and `count()` answers 1 on base and head alike (10/10 virgin
+samples stable per terminal), and Spark's `count()` answers 1 too
+(R-6); small IN lists answer exactly on every side (10k items:
+Spark 25, correct). The fold pin uses the range form over
+`collect()` and expects base's 1000.
 
 R2: the 8192 plan cap stays for filter-led plans and stops counting
 `Union` nodes (`PlanDepths.limited`). Base crashes every filter cell

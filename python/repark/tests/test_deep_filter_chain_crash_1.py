@@ -64,7 +64,7 @@ results["union_600_sql"] = session.sql(flat).count()
 in_text = "SELECT count(*) FROM range(1000) WHERE id IN (" + ",".join(
     str(i) for i in range(200000)
 ) + ")"
-results["in_200k_range"] = session.sql(in_text).count()
+results["in_200k_range"] = session.sql(in_text).collect()[0][0]
 
 unioned8193 = base
 for _ in range(8193):
