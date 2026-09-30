@@ -526,6 +526,34 @@ Rust units M-R1/M-R2/M-R3: `grown_clone` restored to a raw clone
 aborts the 20,000-deep combine test (SIGABRT), an empty `Drop` aborts
 it too, and a raw `Clone` aborts it as well; all restored green.
 
+CI-shaped proof (fresh debug wheels, `ulimit -s 8192`, `-n 4`):
+parent 6 errors in 274 s (the CI failure verbatim); head 6 passed in
+966 s. The lane-32 MiB parent run passes in 637 s, which is why the
+lane stayed green. Wheel mutation M4: reinstalling the parent wheel
+crashes the 20,000-term probe again (rc=139); reinstalling head goes
+green; `git status` clean.
+
+Release A/B (head vs parent wheels, 5 fresh processes per side,
+medians): select1 1.0114, filter_count 1.0122, iceberg 0.9895,
+import_session 1.0014 — max 1.0122, under the 1.05 bar. Memory spot:
+VmSize +156 KiB (+0.003%), VmRSS within run noise; the reservation
+note holds (no new persistent mappings — grown segments are
+transient mmaps).
+
+Reruns, both venvs, all green: subquery file 6/6 (lane 940 s, wheel
+966 s), filter-chain file 9/9 (lane 779 s, wheel 668 s), sibling pin
+2/2 (lane 87 s, wheel 96 s). Neighbour shapes answer identically
+pre/post with unchanged times except the pathological 20,000-term
+build. `outer()` over a 6,000-deep column survives on 8 MiB
+(DataFusion's own recursion protection holds `transform`).
+
+Gate 15/16: the parity suite's two `test_ci_tier_cell` failures are
+one pre-existing sort-cell timeout (KILLED at the 600 s cell budget),
+reproduced at base (cb8c8b8d) with the identical signature — not this
+change. The golden dates to v1.3 (2026-09-11, 19 days of drift);
+tier-1 CI runs the same suite and renders its own verdict. Untouched
+as out of scope; the question goes to the orchestrator.
+
 Residues added: R-7 (recursive `Display`/`schema_name` formatting of
 a deep expression — `display_name`, `make_struct` field naming —
 still runs on the caller thread; no caller holds a deep expression

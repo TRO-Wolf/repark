@@ -7409,9 +7409,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   remaining). **Limits fold (2026-09-29):** the 1 MiB refusal pin became a
   1.1 MB answer pin (`SELECT 1` plus padding collects 1).
   pins: deep-filter-chain-crash-1/C-005, C-006, C-007, C-008
+  **CI segv (2026-09-30):** the grown per-op clone costs ~1.9x on the
+  pathological 20,000-term quadratic build (~360 s → ~680 s debug), so the full
+  worker takes ~940-966 s against the 1200 s budget; every other shape is
+  unchanged in answer and time. pins: deep-filter-chain-crash-1/C-012
 - [test_deep_expr_build_small_stack_1.py](test_deep_expr_build_small_stack_1.py) —
   **DEEP-FILTER-CHAIN-CRASH-1 CI segv (2026-09-30):** the 6,000-term OR builds on
-  the caller thread and on an 8 MiB thread in one isolated interpreter (~30 s),
+  the caller thread and on an 8 MiB thread in one isolated interpreter (~90 s),
   then refuses `AnalysisException` at `filter()` on both. The debug `Expr::clone`
   costs ~1.6 KiB per level, so the build (not the builder) overflowed CI's 8 MiB
   main stack while the lane's 32 MiB survived; 4000 builds and 6000 crashes
