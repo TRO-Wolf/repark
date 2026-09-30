@@ -4,7 +4,7 @@ import pytest
 
 from repark import ReparkSession
 from repark.errors import AnalysisException
-from repark.spark import functions as F
+from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 
 _MAX_ARRAY_ELEMENTS_KEY = "repark.sql.maxArrayElements"
 
