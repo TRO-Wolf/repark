@@ -213,6 +213,21 @@ head). The fold reopens the base path for one more shape
 (`test_fold_date_sibling_time_string_stores_with_midnight_divergence`
 pins the stored rows); the orchestrator files the widening card.
 
+**Numbers (2026-09-30, DEBUG build).** Replay on this head:
+`verify-tsd/` (2,182 cells) plus `verify-tsd-fold/` (60 cells) show zero
+strict differences against the `21a35daf` recordings, zero moves away
+from Spark against `51688c1c` and base, and the same fixed sets as fold
+1 (12 `vt1` stores, the widen pair, 7 fold flips). Attack replay (129
+cells): the 20 intended changes only — the 19 stores now store with
+Spark's rows (except the VT2-3 midnight gap on the DATE-sibling shape)
+and the ambiguous join now raises AMBIGUOUS_REFERENCE; zero false
+stores. Perf, medians of 3, mapped shape against the unmapped control in
+the same DEBUG build: u10k 69.7s/70.2s = 0.99x, deep200 2.76s/1.85s =
+1.49x, probe200 3.61s/2.71s = 1.33x, probe200first 3.44s/2.81s = 1.23x,
+probe400 9.79s/7.43s = 1.32x; against the recorded base-release shape
+ratios the gate-attributable cost is 1.01x, 1.13x, 1.09x, 1.15x and
+1.05x (was 1.04x, 1.15x, 2.83x, 1.21x, 3.48x).
+
 ## Coverage
 
 ```yaml
