@@ -42,6 +42,17 @@ def ceiling100() -> ReparkSession:
     )
 
 
+@pytest.fixture
+def ceiling100_legacy() -> ReparkSession:
+    return (
+        ReparkSession.builder.appName("nvl-type-coercion-1-vn7-3-legacy")
+        .config("spark.sql.session.timeZone", "UTC")
+        .config("spark.sql.ansi.enabled", "false")
+        .config(_MAX_ARRAY_ELEMENTS_KEY, "100")
+        .getOrCreate()
+    )
+
+
 VN7_R1_REFUSALS: list[tuple[str, str]] = [
     ("repeat_abs", "SELECT size(array_repeat(1, nullif(abs(-101), 0))) AS v"),
     ("repeat_greatest", "SELECT size(array_repeat(1, nullif(greatest(101, 1), 0))) AS v"),
@@ -133,23 +144,69 @@ def test_vn7_r1_proven_equal_yields_null(ceiling100: ReparkSession, cell: tuple[
     assert [row.asDict() for row in ceiling100.sql(cell[1]).collect()] == [{"v": None}]
 
 
-VN7_R1_RESIDUE: list[tuple[str, str]] = [
+VN7_3_STRING_EQUAL_NULLS: list[tuple[str, str]] = [
     (
         "repeat_second_str",
         "SELECT size(array_repeat(1, nullif(101, '101'))) AS v",
     ),
     ("seq_second_str", "SELECT size(sequence(1, nullif(101, '101'))) AS v"),
+    (
+        "repeat_second_str_padded",
+        "SELECT size(array_repeat(1, nullif(101, ' 101 '))) AS v",
+    ),
+    ("seq_second_str_padded", "SELECT size(sequence(1, nullif(101, ' 101 '))) AS v"),
 ]
 
-VN7_R1_RESIDUE_IDS = [cell[0] for cell in VN7_R1_RESIDUE]
+VN7_3_STRING_EQUAL_NULL_IDS = [cell[0] for cell in VN7_3_STRING_EQUAL_NULLS]
 
 
-@pytest.mark.parametrize("cell", VN7_R1_RESIDUE, ids=VN7_R1_RESIDUE_IDS)
-def test_vn7_r1_string_second_stays_ceiling_refused_divergence(
+@pytest.mark.parametrize("cell", VN7_3_STRING_EQUAL_NULLS, ids=VN7_3_STRING_EQUAL_NULL_IDS)
+def test_vn7_3_equal_string_second_yields_null(
+    ceiling100: ReparkSession, cell: tuple[str, str]
+) -> None:
+    assert [row.asDict() for row in ceiling100.sql(cell[1]).collect()] == [{"v": None}]
+
+
+VN7_3_STRING_UNEQUAL_REFUSALS: list[tuple[str, str]] = [
+    (
+        "repeat_second_str_unequal",
+        "SELECT size(array_repeat(1, nullif(101, '102'))) AS v",
+    ),
+    ("seq_second_str_unequal", "SELECT size(sequence(1, nullif(101, '102'))) AS v"),
+]
+
+VN7_3_STRING_UNEQUAL_REFUSAL_IDS = [cell[0] for cell in VN7_3_STRING_UNEQUAL_REFUSALS]
+
+
+@pytest.mark.parametrize(
+    "cell", VN7_3_STRING_UNEQUAL_REFUSALS, ids=VN7_3_STRING_UNEQUAL_REFUSAL_IDS
+)
+def test_vn7_3_unequal_string_second_refuses(
     ceiling100: ReparkSession, cell: tuple[str, str]
 ) -> None:
     with pytest.raises(AnalysisException, match=_MAX_ARRAY_ELEMENTS_KEY):
         ceiling100.sql(cell[1]).collect()
+
+
+def test_vn7_3_garbage_string_second_raises_cast_error_when_ansi(
+    ceiling100: ReparkSession,
+) -> None:
+    with pytest.raises(RAISES, match="CAST_INVALID_INPUT"):
+        ceiling100.sql("SELECT nullif(101, 'abc') AS v").collect()
+
+
+def test_vn7_3_garbage_string_second_answers_without_ansi(
+    ceiling100_legacy: ReparkSession,
+) -> None:
+    rows = ceiling100_legacy.sql("SELECT nullif(101, 'abc') AS v").collect()
+    assert [row.asDict() for row in rows] == [{"v": 101}]
+
+
+def test_vn7_3_garbage_string_second_under_ceiling_refuses_divergence(
+    ceiling100: ReparkSession,
+) -> None:
+    with pytest.raises(AnalysisException, match=_MAX_ARRAY_ELEMENTS_KEY):
+        ceiling100.sql("SELECT size(array_repeat(1, nullif(101, 'abc'))) AS v").collect()
 
 
 VN7_R1_INT_CAST_DOUBLE: list[tuple[str, str]] = [

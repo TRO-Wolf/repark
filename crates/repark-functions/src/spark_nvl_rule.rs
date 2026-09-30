@@ -632,18 +632,33 @@ mod tests {
             100,
         )
         .expect("string-first nullif stays unknown to the ceiling");
-        let string_second = df_nullif(lit(101i32), lit("101"));
-        let err = crate::cardinality::refuse_literal_expansion(
-            "array_repeat",
-            &[lit(1i64), string_second],
-            100,
-        )
-        .expect_err("unproven string-second nullif stays bounded by its first argument")
-        .to_string();
-        assert!(
-            err.contains(crate::cardinality::MAX_ARRAY_ELEMENTS_KEY),
-            "{err}"
-        );
+        for text in ["101", " 101 ", "+101"] {
+            let string_second = df_nullif(lit(101i32), lit(text));
+            crate::cardinality::refuse_literal_expansion(
+                "array_repeat",
+                &[lit(1i64), string_second],
+                100,
+            )
+            .unwrap_or_else(|error| {
+                panic!("equal string-second nullif skips the ceiling for {text:?}: {error}")
+            });
+        }
+        for text in ["102", "abc", "101.0", ""] {
+            let string_second = df_nullif(lit(101i32), lit(text));
+            let outcome = crate::cardinality::refuse_literal_expansion(
+                "array_repeat",
+                &[lit(1i64), string_second],
+                100,
+            );
+            let err = match outcome {
+                Err(error) => error.to_string(),
+                Ok(()) => panic!("unequal string-second nullif refuses for {text:?}"),
+            };
+            assert!(
+                err.contains(crate::cardinality::MAX_ARRAY_ELEMENTS_KEY),
+                "{err}"
+            );
+        }
     }
 
     #[tokio::test]

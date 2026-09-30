@@ -500,6 +500,13 @@ scalars live under [`try_invert/`](try_invert/map.md).
   joins `spark_cast_ansi_zoned` as the second `Mode`-fixed entry point over the same
   `spark_cast`, so the `nullif` kernel can cast string sources under the live ANSI mode
   without a new parser. pins: nvl-type-coercion-1/C-019
+  **NVL-TYPE-COERCION-1 re-verify 6 follow-up (2026-09-30, VN7-3):**
+  `strict_integer_text` re-exports the ANSI string-to-`Int64` leaf
+  (`spark_trim` plus `parse_strict_integer`, whose `Int64` range filter is
+  vacuous) for the `nullif` ceiling proof, so the proof parses `b` with the
+  same cast the compare kernel runs. A strict success also succeeds under
+  legacy with the same value, so the proof holds in both ANSI modes without
+  reading the flag the ceiling never sees. pins: nvl-type-coercion-1/C-032
 - `iceberg_system.rs` — **ICE-SYSTEM-FUNCTIONS-1 (2026-09-20), round 1 of 3:**
   the Iceberg `bucket(n, col)` / `truncate(w, col)` system functions as scalar
   UDFs under reserved internal names (`__iceberg_system_bucket`,
@@ -623,6 +630,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `nullif(101, '101')` stays ceiling-refused. The fold lives in
   `cardinality_nullif.rs` (file-size split, move-only).
   pins: nvl-type-coercion-1/C-029.
+  **Re-verify 6 follow-up (2026-09-30, VN7-3):** the residue is fixed, not
+  carried — a `STRING` literal second proves equality through the same
+  strict integer cast the compare kernel runs, so `nullif(101, '101')`
+  and `nullif(101, ' 101 ')` yield NULL under the ceiling like base and
+  Spark while unparsable or unequal seconds keep the bound at `a`.
+  pins: nvl-type-coercion-1/C-032.
 - `cardinality_nullif.rs` — **NVL-TYPE-COERCION-1 re-verify 6
   (2026-09-30, VN7-1/VN7-2/VN7-3):** the `nullif` ceiling fold, split out of
   `cardinality.rs` (move-only): `nullif_const_int` bounds by the first
@@ -635,6 +648,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `Decimal128` cores through float/decimal casts only (truncated for the
   bound, exact for equality); the kept `f64` path keeps the lossy
   `sequence` pins NULL. pins: nvl-type-coercion-1/C-029.
+  **Re-verify 6 follow-up (2026-09-30, VN7-3):** the fourth proof leg
+  pairs an integral-literal first (through `Alias`/`Negative` only, never
+  casts, so float-32 and decimal-to-`f64` rounding cannot fake equality)
+  with a `STRING` literal second parsed by the shared
+  `strict_integer_text`; equal pairs fold to NULL and every other string
+  second keeps the bound at `a`. pins: nvl-type-coercion-1/C-032.
 
 
 - **R-FN-BATCH4** aggregate expansion.

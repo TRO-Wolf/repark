@@ -123,6 +123,9 @@ fn nullif_proven_equal(first: &Expr, second: &Expr, depth: u32) -> bool {
     if nullif_decimal_core_equal(first, second, depth) {
         return true;
     }
+    if nullif_string_literal_equal(first, second) {
+        return true;
+    }
     if !nullif_float_involved(first) && !nullif_float_involved(second) {
         return false;
     }
@@ -149,6 +152,55 @@ fn nullif_decimal_core_equal(first: &Expr, second: &Expr, depth: u32) -> bool {
     };
     let got = if negate { got.checked_neg() } else { Some(got) };
     got == Some(want)
+}
+
+fn nullif_string_literal_equal(first: &Expr, second: &Expr) -> bool {
+    let Expr::Literal(
+        ScalarValue::Utf8(Some(text))
+        | ScalarValue::LargeUtf8(Some(text))
+        | ScalarValue::Utf8View(Some(text)),
+        _,
+    ) = second
+    else {
+        return false;
+    };
+    let Some(want) = integral_literal_value(first) else {
+        return false;
+    };
+    crate::cast_map::strict_integer_text(text).is_some_and(|parsed| i128::from(parsed) == want)
+}
+
+fn integral_literal_value(expr: &Expr) -> Option<i128> {
+    let mut current = expr;
+    let mut negate = false;
+    loop {
+        match current {
+            Expr::Alias(alias) => current = alias.expr.as_ref(),
+            Expr::Negative(inner) => {
+                negate = !negate;
+                current = inner.as_ref();
+            }
+            Expr::Literal(scalar, _) => {
+                let value = match scalar {
+                    ScalarValue::Int8(Some(value)) => i128::from(*value),
+                    ScalarValue::Int16(Some(value)) => i128::from(*value),
+                    ScalarValue::Int32(Some(value)) => i128::from(*value),
+                    ScalarValue::Int64(Some(value)) => i128::from(*value),
+                    ScalarValue::UInt8(Some(value)) => i128::from(*value),
+                    ScalarValue::UInt16(Some(value)) => i128::from(*value),
+                    ScalarValue::UInt32(Some(value)) => i128::from(*value),
+                    ScalarValue::UInt64(Some(value)) => i128::from(*value),
+                    _ => return None,
+                };
+                return if negate {
+                    value.checked_neg()
+                } else {
+                    Some(value)
+                };
+            }
+            _ => return None,
+        }
+    }
 }
 
 fn nullif_float_involved(expr: &Expr) -> bool {

@@ -24,6 +24,7 @@ use leaf::{Mode, atomic_castable, key_castable, leaf_cast};
 mod leaf;
 mod rewrite;
 
+pub(crate) use leaf::strict_integer_text;
 pub use rewrite::{map_cast_target, map_cast_token, rewrite_map_casts};
 
 pub const CAST_MAP_NAME: &str = "__repark_cast_map__";
