@@ -1,5 +1,11 @@
 # map — python/repark-parity/tests
 
+CASESENS-2 third re-verify fold (2026-09-29): the CAP-1 mirror row for `spark/dataframe/core.py` follows the script baseline 3950 → 3949. pins: casesens-2/C-023
+
+CASESENS-2 second re-verify fold (2026-09-29): the CAP-1 mirror row for `spark/dataframe/core.py` follows the script baseline 3952 → 3950 (the twin engine naming moves into `written_names.py`). pins: casesens-2/C-018
+
+CASESENS-2 re-verify fold (2026-09-28): the CAP-1 mirror row for `spark/dataframe/core.py` follows the script baseline 3957 → 3952 (the sort refusal moves into `written_names.py`). pins: casesens-2/C-012
+
 WO CATALOG-1 (2026-09-26): the CAP-1 mirror drops the retired `catalog_config.rs` row, follows `session/tests/session.rs` 1407 → 1406, and the exception count 38 → 37. pins: catalog-1/C-006
 
 U1-MEM-LAYOUT-1 layout-r7 (2026-09-23): the CAP-1 mirror row for `crates/repark-spark/src/tests/ctas.rs` follows the Rust gate's 1357 baseline; it still named 1361 and reddened the Python job.
@@ -180,6 +186,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `docs/examples/functions/{posexplode,inline}.py` cover the four names and
   the backlog baseline ratchets 112 → 110.
   pins: fnp-gen-1/C-001, C-006
+- `test_cap_1_source_file_line_cap.py` — **CASESENS-2 (2026-09-28, PR #881):** the
+  `spark/dataframe/core.py` mirror row ratchets 3973 → 3957 with the script baseline
+  (the S1–S3 name bindings move to Rust). No other row moves. pins: casesens-2/C-007
 - `test_cap_1_source_file_line_cap.py` — **WO CASESENS-1 slice 5 (2026-09-27):**
   mirror row ratchets `repark-iceberg/src/write/alter.rs` 1607 → 1606 with the script
   baseline and drops the retired `repark-python/src/dataframe.rs` 1005 row.

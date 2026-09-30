@@ -15,8 +15,13 @@ use repark_common::Error;
 use crate::extension::SessionExtension;
 
 pub mod case_bind;
+mod cast_names;
+mod predicate_names;
+mod resolver_names;
+mod sort_names;
 pub(super) mod subquery;
 mod window_rescan;
+mod written_names;
 
 /// DataFusion's own name for the pass-2 leaf-projection rule.
 const LEAF_PUSHDOWN_RULE_NAME: &str = "push_down_leaf_projections";

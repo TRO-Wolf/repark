@@ -141,7 +141,7 @@ fn facade_udf(name: &str, arity: usize) -> Option<Arc<ScalarUDF>> {
 async fn exact_predicate_refuses_a_case_only_match() {
     let ctx = SessionContext::new();
     let frame = ctx.sql("SELECT 1 AS id, 'a' AS \"Data\"").await.unwrap();
-    let error = super::expr_build::parse_canonical_predicate_exact(&frame, "ID > 1")
+    let error = super::expr_build::parse_canonical_predicate_exact(&frame, "ID > 1", None)
         .unwrap_err()
         .to_string();
     assert!(
@@ -149,7 +149,8 @@ async fn exact_predicate_refuses_a_case_only_match() {
         "{error}"
     );
     assert!(error.contains("`ID`"), "{error}");
-    let bound = super::expr_build::parse_canonical_predicate_exact(&frame, "Data = 'a'").unwrap();
+    let bound =
+        super::expr_build::parse_canonical_predicate_exact(&frame, "Data = 'a'", None).unwrap();
     assert!(format!("{bound}").contains("Data"), "{bound}");
 }
 

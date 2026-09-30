@@ -120,7 +120,6 @@ EXPECTED_PACKAGE_EXPORTS: list[str] = [
     "_reset_dropin_warnings_for_tests",
     "_resolve_cache_budgets",
     "_resolve_writer_table",
-    "_rewrite_join_qcol_sql",
     "_rewrite_qcol_tokens_local",
     "_run_pandas_udf_arrow_batches",
     "_run_python_udf_arrow_batches",
@@ -276,7 +275,6 @@ EXPECTED_CORE_EXPORTS: list[str] = [
     "_reset_dropin_warnings_for_tests",
     "_resolve_cache_budgets",
     "_resolve_writer_table",
-    "_rewrite_join_qcol_sql",
     "_rewrite_qcol_tokens_local",
     "_run_pandas_udf_arrow_batches",
     "_run_python_udf_arrow_batches",
@@ -319,6 +317,7 @@ EXPECTED_DATAFRAME_SLOTS: tuple[str, ...] = (
     "_eager_shape",
     "_engine_names",
     "_field_metadata",
+    "_fresh_outputs",
     "_handles",
     "_ingest_report",
     "_inner",
@@ -446,6 +445,7 @@ EXPECTED_DATAFRAME_DIR: list[str] = [
     "_execute_map_in_arrow_bridge_ipc",
     "_explain_text",
     "_field_metadata",
+    "_fresh_outputs",
     "_grouping_col_sql",
     "_grouping_sets_grouped",
     "_handles",
@@ -702,6 +702,7 @@ EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
     "writer_save",
     "writer_schema",
     "writer_text",
+    "written_names",
     "_native",
 }
 
@@ -719,5 +720,6 @@ EXPECTED_NEW_CORE_SUBMODULES: set[str] = {
     "surface_b",
     "udf_projection",
     "udf_window_projection",
+    "written_names",
     "_native",
 }

@@ -236,6 +236,109 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **Re-verify (2026-09-28):** `test_nested_cast_of_a_column_keeps_the_written_child_name`
   (RC-3) and `test_describe_resolves_display_names_under_case_sensitive` (RC-4).
   pins: casesens-1/C-009, C-010
+- [test_casesens_2.py](test_casesens_2.py) + `casesens_2_spark_oracle.json` —
+  **WO CASESENS-2 slice 1 (2026-09-28):** the R-CS1-10 true-door refusals plus
+  getitem (class, condition, SQLSTATE, head, candidate set per leg), the five
+  true-mode p6 misses, the qualified-string legs (R-11 answer, exact-qualified
+  answers under `true`, the self-join shape refuses naming `` `l`.`ID` ``),
+  and the false-door guards (r7 legs, S3 false legs, legacy miss text, R-19
+  lazy timing, quoter spot). `qs_sel_t_id_true` stays unpinned (re-homed
+  per the 2026-09-28 ruling); `r7_selfjoin` pins in slice 4. p1/p4 legs
+  read `casesens_1_spark_oracle.json`.
+  pins: casesens-2/C-001, C-002, C-003, C-006
+  **WO CASESENS-2 slice 2 (2026-09-28):** `withColumn(s)` and renames follow
+  the rule (folded keys append and folded renames no-op under `true`; replace
+  and twin fan-out under `false`), folded keys refuse 42711, and the overlay
+  replace set pins display-spelled (R7).
+  pins: casesens-2/C-002, C-004, C-006
+  **WO CASESENS-2 slice 3 (2026-09-28):** `fillna` / `dropna` subsets and
+  `dropDuplicates` follow the rule (folded or missing subset names refuse
+  under `true`; subsets fold under `false` over the null table and the
+  `dropDuplicates` miss raises the legacy text, type plus message per R8),
+  with the `na` overlay path pinned beside the plain path. The sweep and
+  replay evidence below covers the no-regressions clause.
+  pins: casesens-2/C-002, C-005, C-006, C-008
+  **WO CASESENS-2 slice 4 (2026-09-28):** DataFrame-alias qualified names
+  bind in join conditions and on the join child (`r7_selfjoin` and
+  `r18_alias_join` answer, `selfjoin_true` refuses, wrong-case alias
+  qualifier refuses 42703), and the nine p10 non-join overlay cells pin
+  the two `true` qualified misses, the R4 facade refusals, and the three
+  R-CS2-7 answer-gaps. The oracle gains the p10 keys (existing keys
+  byte-equal).
+  pins: casesens-2/C-003, C-008
+  **CASESENS-2 verifier fold (2026-09-28):** the eight S5 pins — the unicode
+  fold legs under both doors (the DataFrame door answers, `STRASSE` misses,
+  `true` refuses), the six ambiguous shapes plus bare getitem, the
+  true-door construction refusal, the asymmetric self-join, the plural
+  fan-out, and the R-CS2-8/R-CS2-9 residue pins — with the live-measured
+  p11 values embedded (Spark 4.1.2, 2026-09-28).
+  pins: casesens-2/C-003, C-004, C-005, C-006
+- [test_casesens_2_diffprobe.py](test_casesens_2_diffprobe.py) —
+  **CASESENS-2 DIFF-PROBE fold (2026-09-28):** the R2/R4 regression pins,
+  seven tests with the live Spark 4.1.2 texts embedded (the `np` cells
+  from the DIFF-PROBE run, the catalog-join candidates and the sigma
+  refusal from this round's micro-probe): the folded qualifier refuses
+  naming `t`.`id` on both tables, the exact spelling answers under true,
+  the twin select refuses byte-exact ambiguous on cdf and catalog frames,
+  the aliased self-join names `l`/`r` candidates, and the final-sigma
+  refusal stays pinned as R-CS2-13. Lives apart from
+  `test_casesens_2.py`, which is at its 1000-line ceiling.
+  pins: casesens-2/C-002, C-006
+  **CASESENS-2 re-verify fold (2026-09-28):** one pin per finding
+  RC2-1…RC2-6 with live Spark 4.1.2 texts (banner 4.1.2, UTC) — alias
+  qualifiers in filter strings (both rules, Polars door, alias join),
+  `true` condition joins over shared names plus the bare ambiguous
+  refusal, the lookup/resolver split (`ıd`, `σ`/`ς` twins, `withColumns`
+  keys, `ß`), one attribute projected twice, alias-join `drop` / rename /
+  `fillna` / `orderBy`, and the `true` USING self-join twins. The
+  final-sigma pin flips to Spark's 42703 (R-CS2-13 closed).
+  `test_casesens_2.py` flips two pins to Spark's recorded answers: the
+  `true` attribute join builds and its alias select refuses `` `j`.`s` ``
+  (`p11/j_sel_true`, R-CS2-12), and the exact-duplicate rename answers
+  `[z, z]` (`p11/sj2_wcr`).
+  pins: casesens-2/C-009, C-010, C-011, C-012, C-013, C-014
+  **CASESENS-2 second re-verify fold (2026-09-29):** six pins against the
+  second re-verify's live Spark 4.1.2 cells (banner 4.1.2, JDK 17, UTC)
+  and this round's pin probe: struct and subscript alias predicates bind
+  on the tree under both rules (`T.s.f`, `t.s.F`, `tb.arr[0]`, alias-join
+  `L.s.f`, wrong case under `true` refuses naming `` `t`.`s`.`f` ``, the
+  `\'` escape answers what the unaliased predicate answers); predicates
+  keep every token (`'a' 'b'` rows, `r'b'`, `ORDER BY` stays a
+  `ParseException`); an aliased copy is a new attribute (select, groupBy,
+  `fillna` refuse `AMBIGUOUS_REFERENCE`, the bare twin answers); one
+  attribute under two spellings fills; the sort key resolves through the
+  projection child (ascending, three descending spellings, the union
+  twin, the case twin still 42703); sort refusals print `` `x.y` `` and
+  `` `a``b` ``. pins: casesens-2/C-015, C-016, C-017, C-018, C-019
+  **CASESENS-2 third re-verify fold (2026-09-29):** seven `test_rc4_*` pins
+  against live Spark 4.1.2 cells measured this round (JDK 17): an
+  upper-case lambda parameter binds its own body under both rules
+  (`exists(arr, T -> T > 4)` with a `T` column answers `[1, 5]`, the
+  silent wrong-row case; `X -> x > 4` binds the `x` column under `true`,
+  `T -> t > 4` refuses 42703); a lambda parameter scopes to its own body
+  (`exists(array(L.k), L -> L > 4)` on an alias join, `A.id` outside the
+  body); a parent Column filters through aliased twins and `drop(d.v)`
+  keeps them; an aliased output refuses `fillna`/`dropna` on a plain
+  frame; sort keys resolve through filter, limit and distinct; sort keys
+  on hidden twins answer through the child (the distinct leg stays
+  `AMBIGUOUS_REFERENCE`, R-CS2-18); twin names under `true` dedupe on
+  every copy and filter as one attribute or refuse `AMBIGUOUS_REFERENCE`.
+  pins: casesens-2/C-021, C-022, C-023, C-024, C-025, C-026, C-027
+  The same fold adds `_fresh_outputs` to the frozen `DataFrame` slot and
+  `dir` lists in `_dfcore_1_expected.py` (the new private slot, C-024).
+  **CASESENS-2 fourth re-verify fold (2026-09-29):** three `test_rc5_*`
+  pins, checked against live Spark 4.1.2 cells (the re-verify's `p5` set
+  and this round's pin probe, JDK 17). Under `true`, twins with an
+  unproven identity refuse `AMBIGUOUS_REFERENCE` 42704 in `filter`,
+  `where`, backticked names and a lambda body, in both twin orders
+  (`F.col`/literal, `F.col`/computed, `F.expr`/`F.expr`), while
+  `d.v`/`F.col('v')`, `F.col`/`F.col` and `F.expr`/`F.col` answer. Under
+  `false`, `` exists(arr, `X` -> X > 4) `` and `` X -> `X` > 4 `` answer
+  `[1, 5]`. `fillna`/`dropna` subsets over unproven twins refuse under
+  both rules, including the `false` self-join. `test_casesens_2.py`'s
+  `test_s3_dropna_follows_the_rule` flips its alias-twin legs to Spark's
+  byte-exact `AMBIGUOUS_REFERENCE` (R-CS2-14).
+  pins: casesens-2/C-030, C-031, C-032
 - [test_ntz_1.py](test_ntz_1.py) + `ntz_1_spark_oracle.json` — **WO NTZ-1 slice 1
   (2026-09-26):** the `TIMESTAMP_NTZ` literal and explicit casts replay Spark's measured
   answers — 29 literal/cast/refusal queries in UTC and New York sessions, the v2/v3
@@ -2201,6 +2304,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_describe_non_describable_column_arms` for the measured boundary: bare
   `describe()`/`summary(...)` skip non-numeric non-string columns and naming one
   raises `PySparkValueError`.
+  **CASESENS-2 verifier fold (2026-09-28):** the EX-DF-18 divergence pin flips
+  to `test_with_columns_renamed_duplicate_names_answers` — the plural rename
+  answers Spark's duplicate-named frame.
+  pins: casesens-2/C-004
   pins: ex-19-dataframe-d-window/C-001
   pins: ex-29-class-remainder/C-002, C-003
   pins: df-describe-str-1/C-001, C-002, C-003
@@ -5934,7 +6041,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_dogfood_gaps.py` — Group F (2026-07-21 dogfood): F1 `current_timestamp` µs/UTC Arrow +
   Iceberg v2 CTAS regression; **TZ-4 PR-1:** SQL / `F.expr` `current_timestamp` ns residuals
   flipped to µs+UTC; SQL / expr CTAS reject pins flipped to v2 success. F2/F3 `sparkContext`/`version`; F4 `withColumns` atomic +
-  `withColumnsRenamed` (+ duplicate-name fail-loud); F5 `transform` signature/error class; F6
+  `withColumnsRenamed` (+ duplicate-name answers, flipped 2026-09-28 by the CASESENS-2
+  verifier fold); F5 `transform` signature/error class; F6
   DIVERGENCE-1 timestamp-LTZ collect passthrough disclosure (JVM-free). Oracles from live
   PySpark 4.1.2.
 - `test_column_access.py` — (+ 2026-07-21 review pins: getitem requested-spelling naming, copy no-recursion) **Group G1** column-access sugar (2026-07-21; octo R1 Half B + R2
@@ -5953,6 +6061,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   rows (C2-Q-003), `select` columns `negative(x)`, `str`/`repr` `Column<'negative(x)'>`,
   `F.sum(-df.x)` → `sum(negative(x))`, double `negative(negative(x))`, nested
   `sum(negative((x + 1)))` display **and** values). JVM-free pins from live PySpark 4.1.2.
+  **CASESENS-2 DIFF-PROBE fold (2026-09-28):**
+  `test_getitem_str_case_ambiguous_raises` asserts Spark's live-measured
+  ambiguity rendering (written spelling per hit, condition, SQLSTATE)
+  instead of the held spellings; its contract is unchanged.
+  pins: casesens-2/C-006
 - `test_column_parity_1.py` + `facade_column_oracle.json` — **COLUMN-PARITY-1 step 1**
   (2026-09-14): the `Column` surface pins driven by the recorded PySpark 4.1.2 oracle
   fixture (`col.*` cells) — `isin` (list/set flattening, tuple refusal

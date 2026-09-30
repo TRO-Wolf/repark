@@ -2343,9 +2343,33 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   lowercase-data, `orderBy`, `groupBy`, string `filter`) still answer
   (R-CS1-10, descoped to CASESENS-2 — the facade pre-binds them in
   `dataframe/core.py` before Rust sees the written name).
+  **CASESENS-2 S1 (2026-09-28):** R-CS1-10 closed — bare names resolve in Rust,
+  so the six legs plus `df["ID"]` refuse naming the written spelling and total
+  misses refuse the same way; qualified strings bind under `false`
+  (`q.select("t.id")` / `"t.ID"`, the aliased-table shape) naming the output
+  with the written last segment, the exact qualified shape answers under
+  `true`, and the self-join shape refuses naming `` `l`.`ID` ``. The `false`
+  door is otherwise byte-identical (r7 guards, S3 false legs, legacy
+  miss/ambiguity texts, R-19 lazy timing, the quoter battery). Re-homed per
+  the 2026-09-28 ruling, unit ledger: the `r7_selfjoin` condition refuses
+  first (R-CS2-1, join-origin follow-up) and a false-built frame reused under
+  `true` reads its captured rule (R-CS2-2).
+  **CASESENS-2 S2 (2026-09-28):** `withColumn(s)` and renames follow the rule —
+  under `true` a folded key appends and a folded rename no-ops, under `false`
+  `withColumn` replaces (every twin) and renames fan out to twins, and folded
+  `withColumns` keys refuse `[COLUMN_ALREADY_EXISTS]` 42711. The overlay
+  replace set is display-spelled, as before.
+  **CASESENS-2 S3 (2026-09-28):** `na` subsets and `dropDuplicates` follow the
+  rule — under `true` a folded or missing subset name refuses
+  (`[UNRESOLVED_COLUMN.WITH_SUGGESTION]` for `fillna` / `dropna`, Spark's
+  legacy `Cannot resolve column name …` text for `dropDuplicates`), under
+  `false` subsets match ignoring case over the null table and the
+  `dropDuplicates` miss raises the legacy text. The `na` overlay path folds
+  like the plain path.
 - **Apache Spark** — the refusals and answers above. *(oracle: recorded —
   PySpark 4.1.2 + Iceberg 1.11, 2026-09-27, `casesens_1_spark_oracle.json`
-  (210 steps) beside the facade pin.)*
+  (210 steps) beside the facade pin; 2026-09-28, `casesens_2_spark_oracle.json`
+  (34 steps) beside the S1 pin.)*
 - **Pin** — `python/repark/tests/test_casesens_1.py`
   (`test_s3_dataframe_door_is_exact_under_case_sensitive`,
   `test_s3_dataframe_union_refuses_the_missing_name`,
@@ -2357,6 +2381,26 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   `ignore_case_rule_is_unchanged`, `frame_functions_follow_the_rule`);
   `crates/repark-python/src/column/door_parity_tests.rs::column_keeps_the_written_spelling`.
   pins: casesens-1/C-009, C-010
+  **CASESENS-2 S1 (2026-09-28):** `python/repark/tests/test_casesens_2.py`
+  (`test_s1_true_door_refuses_bare_names`, `test_s1_true_misses_refuse`,
+  `test_s1_qualified_strings_bind`, `test_s1_false_door_byte_identical`);
+  `crates/repark-core/src/session/df_guards/written_names.rs::tests`
+  (`select_names_bind_and_refuse_by_rule`,
+  `qualified_names_split_on_the_last_dot`,
+  `display_names_fan_out_and_the_subset_text_is_legacy`).
+  pins: casesens-2/C-001, C-002, C-003, C-006
+  **CASESENS-2 S2 (2026-09-28):** `python/repark/tests/test_casesens_2.py`
+  (`test_s2_withcolumn_follows_the_rule`, `test_s2_renamed_follows_the_rule`,
+  `test_s2_folded_keys_refuse`, `test_s2_overlay_replace_unchanged`);
+  `crates/repark-core/src/session/df_guards/written_names.rs::tests`
+  (`display_match_fans_out_under_ignore_case_and_is_exact_under_exact`).
+  pins: casesens-2/C-002, C-004, C-006
+  **CASESENS-2 S3 (2026-09-28):** `python/repark/tests/test_casesens_2.py`
+  (`test_s3_fillna_follows_the_rule`, `test_s3_dropna_follows_the_rule`,
+  `test_s3_drop_duplicates_follows_the_rule`);
+  `crates/repark-core/src/session/df_guards/written_names.rs::tests`
+  (`subset_names_fan_out_and_miss_with_the_legacy_text`).
+  pins: casesens-2/C-002, C-005, C-006
 - **Rationale** — FIXED; every true-mode refusal is Spark's measured text, its
   head with the candidate set, or the recorded legacy text, and the default
   session is unchanged.
@@ -12970,22 +13014,22 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-18 measurement. The refusal is disclosed
   (R-DF-BATCH2) and pinned in `test_df_batch2.py`; this row records the measured Spark answers
   and keeps the name on the example backlog until the engine grows a row-JSON exporter.
-### EX-DF-18 — `withColumnsRenamed` refuses duplicate final names; Spark answers the duplicate-named frame
+### EX-DF-18 — `withColumnsRenamed` answers duplicate final names like Spark — **FIXED 2026-09-28 (CASESENS-2)**
 
-- **repark** — a rename map whose final names collide raises
-  `AnalysisException: withColumnsRenamed produced duplicate column names ['k', 'k', 'v']; repark
-  requires unique column names (Spark allows duplicates — Group F disclosure)`. Non-colliding
-  maps — including a chain applied sequentially in dict order (`{"g": "gg", "k": "g"}` on
-  `[g, k, v]` answers `[gg, g, v]`) — match Spark bit-for-bit on names and values.
+- **repark** — a rename map whose final names collide answers Spark's duplicate-named frame
+  (twin fan-out under `caseSensitive=false`): displays may repeat while engine names stay
+  unique. Non-colliding maps — including a chain applied sequentially in dict order
+  (`{"g": "gg", "k": "g"}` on `[g, k, v]` answers `[gg, g, v]`) — match Spark bit-for-bit on
+  names and values.
 - **Apache Spark** — `withColumnsRenamed({"g": "k", "k": "k"})` on `[g, k, v]` answers the frame
   with duplicate column names `['k', 'k', 'v']`; renames apply sequentially in dict insertion
   order. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-19 DataFrame-d batch; one-row
   `g`/`k`/`v` frame.)*
 - **Pin** —
-  `python/repark/tests/test_examples_dataframe_d.py::test_with_columns_renamed_duplicate_names_divergence`
-- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-19 measurement. The name stays covered by
-  the non-colliding arms, where the engines agree; this row records the colliding-map arm until
-  repark can materialize duplicate column names the way Spark does.
+  `python/repark/tests/test_examples_dataframe_d.py::test_with_columns_renamed_duplicate_names_answers`
+- **Rationale** — FIXED 2026-09-28 by the CASESENS-2 verifier fold (V2-3): the plural refusal is
+  removed and the colliding-map arm answers through the same overlay projection the singular
+  form uses.
 
 ### EX-DF-19 — `stat.freqItems` answers the frequent-item table — **FIXED 2026-09-15 (DF-RUST-3)**
 

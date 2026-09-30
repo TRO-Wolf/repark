@@ -134,6 +134,31 @@ wrapped optimizer rule) and declares this directory.
   **Re-verify (2026-09-28, RC-3):** the child-name lookup recurses through
   nested casts (`test_nested_cast_of_a_column_keeps_the_written_child_name`).
   pins: casesens-1/C-009
+  **CASESENS-2 S4 clerk (2026-09-28):** the merge pushed this file to 1002 lines, so
+  `bind_projection_expr` plus `cast_child_name` moved byte-identical to
+  `cast_names.rs` and re-export through this module; the public `frame_names` path
+  is unchanged and this file sits 25 lines under the ceiling.
+  **CASESENS-2 verifier fold (2026-09-28):** `ambiguous_reference` and the
+  `Hit` alias widen to `pub(super)` (line-neutral) so the qualified-display
+  path shares Spark's ambiguous text instead of formatting its own.
+  pins: casesens-2/C-003
+  **CASESENS-2 re-verify fold (2026-09-28) on `case_bind.rs`:** `bind_names`
+  refuses Spark's 42703 under either rule when the lookup misses but the
+  resolver fold would hit (the RC2-3 split's `ı`/`ς` legs); a total miss
+  still passes through. `refuse_ambiguous_condition` takes the frame rule
+  (RC2-2), `case_hits_by` / `unique_case_match` take the comparison, and
+  `drop_named_columns` matches string names by `resolver_matches` and
+  Column references by lookup (Spark's `drop(str)` vs `drop(Column)`).
+  pins: casesens-2/C-009, C-011
+- [cast_names.rs](cast_names.rs) — **CASESENS-2 S4 clerk (2026-09-28):** the select-path
+  written-spelling helper, split byte-identical out of `case_bind.rs` when the merge
+  pushed that file past the 1000-line ceiling. `bind_projection_expr` binds through
+  `subquery::resolve_bound_expr_with` and re-aliases to the written spelling (a bare
+  column keeps its spelling; a top-level `Cast`/`TryCast` over a column child keeps the
+  child name via the recursive `cast_child_name`); re-exported through `case_bind` so
+  `repark_core::frame_names::bind_projection_expr` is unchanged. Rust pin
+  `projection_keeps_the_written_spelling` stays in `case_bind.rs`'s test module.
+  pins: casesens-1/C-009
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside
@@ -164,6 +189,188 @@ wrapped optimizer rule) and declares this directory.
   `IgnoreCase`) and gains the sibling `resolve_bound_expr_with(expr, schema, rule)`,
   re-exported through `frame_names` (`session.rs` sits exactly at its ceiling, so the root
   re-export cannot grow). pins: casesens-1/C-009
+- `written_names.rs` — **CASESENS-2 S1 (2026-09-28):** the DataFrame door's
+  written-name matchers (R5). `resolve_df_names(schema, names, rule)` matches
+  whole-first, then splits qualified strings on the last dot (the qualifier
+  through the local `qualifier_matches`, the segment through `NameRule`),
+  returning `(written, qualifier, engine, Disposition)`; `match_display_names`
+  matches caller-passed candidates with full fan-out. Under `Exact` both raise
+  `unresolved_column` instead of returning `Ambiguous`/`Missing`;
+  `unresolved_subset_name` renders the legacy drop-subset text for S3. The
+  qualifier comparison is local (not `same_relation`) because widening that
+  signature costs 4 reformatted lines the 1000-line `case_bind.rs` ceiling
+  cannot spare. Re-exported through `frame_names` (2 `pub use` lines).
+  Rust pins in the file's test module: `select_names_bind_and_refuse_by_rule`,
+  `qualified_names_split_on_the_last_dot`,
+  `display_names_fan_out_and_the_subset_text_is_legacy`.
+  pins: casesens-2/C-001, C-003
+  **CASESENS-2 S2 (2026-09-28):** `refuse_folded_duplicate_keys(keys, rule)`
+  (ok under `Exact`, Spark's 42711 text under `IgnoreCase`), re-exported
+  inside the existing `pub use` line (`case_bind.rs` stays 1000); pin
+  `display_match_fans_out_under_ignore_case_and_is_exact_under_exact`.
+  pins: casesens-2/C-004
+  **CASESENS-2 S3 (2026-09-28):** `match_subset_names(written, held, rule)`
+  (fan-out under `IgnoreCase`, exact hits under `Exact`, Spark's legacy
+  subset text on a miss under both rules), re-exported inside the existing
+  `pub use` line (`case_bind.rs` stays 1000); pin
+  `subset_names_fan_out_and_miss_with_the_legacy_text`.
+  pins: casesens-2/C-002, C-005
+  **CASESENS-2 S4 (2026-09-28):** `rewrite_join_condition_aliases`
+  (Databricks parse; two-part compounds rebind through the single side
+  whose qualifier matches and the single field whose name matches,
+  emitting a bare view plus a backticked engine field; anything else
+  passes byte-identical) and `resolve_qualified_display_names`
+  (positional schema-qualifier plus display pairing, first hit binds,
+  `Exact` raises the qualified `unresolved_column`); the written
+  qualifier builds `TableReference::Bare` directly because
+  `TableReference::from` lowercases. Re-exported on a third `pub use`
+  line funded by an inlined test `let` (`case_bind.rs` stays 1000).
+  Pins `join_condition_aliases_rebind_through_the_side_schemas`,
+  `join_condition_aliases_leave_other_references_untouched`,
+  `qualified_display_names_pair_schema_positions_with_displays`.
+  pins: casesens-2/C-003
+  **CASESENS-2 verifier fold (2026-09-28):** `resolve_one_display` collects
+  every qualifier-plus-display hit and refuses `AMBIGUOUS_REFERENCE` with
+  Spark's text (the shared `ambiguous_reference`) when a dotted name hits
+  different engine fields under either rule; the same engine seen twice
+  still binds, and misses keep their rule behavior. Pin
+  `qualified_display_multi_hit_refuses_unless_same_engine` covers the
+  ambiguous legs (both rules) and the same-engine leg.
+  **CASESENS-2 re-verify fold (2026-09-28):** `match_resolver_names` serves
+  the resolver-direct sites through `NameRule::resolver_matches` (RC2-3),
+  `match_subset_names` matches the same way, `unresolved_display_name`
+  renders Spark's 42703 refusal over a display list, and
+  `qualifier_matches` is shared with `predicate_names.rs`. The predicate
+  rebind moved out to keep this file under 1000. Pin
+  `resolver_names_keep_equals_ignore_case_where_lookup_lowers`.
+  pins: casesens-2/C-009, C-012
+  **CASESENS-2 second re-verify fold (2026-09-29):**
+  `rewrite_join_condition_aliases` rewrites only when the parse consumed
+  the whole condition; a partial parse passes the text through unchanged,
+  so no trailing token is dropped (`'a' 'b'` and `r''` conditions refuse
+  loudly instead of truncating). `unresolved_display_name` takes the parsed
+  name parts, and the `Exact` misses in `resolve_one_name` and
+  `match_one_display_by` render a backticked name through
+  `written_column`. Pin
+  `join_condition_aliases_leave_other_references_untouched` (partial-parse
+  legs). pins: casesens-2/C-019, C-020
+  **CASESENS-2 third re-verify fold (2026-09-29, RC4-7):** `match_subset_names`
+  keeps every hit under both rules (Spark's `dropDuplicates` matches all
+  outputs by the resolver), so an exact twin name under `Exact` dedupes on
+  both copies; a miss still raises the legacy subset text. Pin
+  `subset_names_fan_out_and_miss_with_the_legacy_text` (exact-twin leg).
+  pins: casesens-2/C-027
+- `predicate_names.rs` — **CASESENS-2 second re-verify fold (2026-09-29, RC3-1, RC3-2):**
+  the text rewriter is gone. `bind_predicate_qualifiers(expr, schema,
+  displays, rule)` walks the sqlparser tree the engine's own parser built
+  from the whole string (`SessionState::sql_to_expr_with_alias`, so a
+  parse error stays the engine's parse error and nothing is re-rendered).
+  A `CompoundIdentifier`, or the identifier root plus leading dot parts of
+  a `CompoundFieldAccess` (`T.arr[0]`), tries qualifier widths 3..1 as
+  DataFusion's `search_dfschema` does; the first width with hits decides:
+  one hit rewrites those idents to the backticked held qualifier and
+  engine field (display-paired on overlays) and leaves the nested parts
+  (`T.s.f`) to DataFusion, two distinct hits refuse Spark's
+  `AMBIGUOUS_REFERENCE`, none leaves the idents alone. Subqueries and
+  compounds rooted at a lambda parameter are not touched. A predicate with
+  no alias qualifier parses to the same tree, so its plan is unchanged.
+  Pins `alias_qualifiers_bind_on_the_parsed_tree_by_rule`,
+  `two_attributes_under_one_qualifier_refuse_ambiguous`.
+  pins: casesens-2/C-010, C-015
+  **CASESENS-2 third re-verify fold (2026-09-29, RC4-1, RC4-6, RC4-7):**
+  `bind_predicate_qualifiers(expr, schema, displays: Option<_>,
+  attributes, rule)` keeps a stack of lambda scopes, pushed on entering an
+  `Expr::Lambda` and popped on leaving it, so a lambda parameter shadows
+  names only inside its own body and matches by the session rule; a
+  compound outside the body binds as if the lambda did not exist
+  (`exists(array(L.k), L -> L > 4)`, `exists(t.arr, t -> ...)`). Under
+  `Exact` each parameter and each body identifier it shadows is
+  backtick-quoted with the parameter's spelling, because DataFusion
+  lowercases unquoted parameters even with identifier normalization off
+  (`exists(arr, T -> T > 4)` compared the `T` column). A compound rooted at
+  an in-scope parameter becomes a named-field subscript on the lambda
+  variable (`T.id` inside `T -> …` extracts from `T`, as Spark does). With
+  a non-empty `attributes` list (one identity per display, the facade
+  sends it under `Exact` on duplicate-display frames) a bare identifier
+  hitting two or more displays binds the first engine field when the hits
+  share one identity (empty identities do not count) and refuses
+  `AMBIGUOUS_REFERENCE` otherwise. `displays = None` binds lambdas only.
+  Pins `a_lambda_parameter_shadows_names_inside_its_own_body_only`,
+  `exact_bare_names_over_twin_displays_bind_one_attribute_or_refuse`.
+  pins: casesens-2/C-021, C-022, C-027
+  **CASESENS-2 fourth re-verify fold (2026-09-29, RC5-1, RC5-2):** an
+  unknown identity is never a wildcard. A bare identifier over twin
+  displays binds only when every hit carries the same non-empty identity;
+  an empty identity, or two different ones, refuses
+  `AMBIGUOUS_REFERENCE` (Spark and main refuse
+  `select(F.col('v'), F.lit(100).alias('v')).filter('v > 15')`, which
+  bound the first twin at `ca4ac687`). The facade now sends the
+  plan-derived identities of `sort_names::twin_identities`, so the empty
+  string no longer reaches the binder at all. Lambda parameter quoting and
+  body respelling run under both rules: under `IgnoreCase` DataFusion
+  lowercased the unquoted body of `` exists(arr, `X` -> X > 4) `` and
+  bound the `x` column. Matching still follows the session rule.
+  Pins `a_lambda_parameter_shadows_names_inside_its_own_body_only`
+  (the `IgnoreCase` rows now quote), and
+  `exact_bare_names_over_twin_displays_bind_one_attribute_or_refuse`
+  (an empty identity refuses). pins: casesens-2/C-030, C-031
+- `sort_names.rs` — **CASESENS-2 second re-verify fold (2026-09-29, RC3-4,
+  RC3-6, RC3-7):** `sort_through_child(plan, written, rule)` resolves an
+  ambiguous sort key the way Spark's Sort does: on a `Projection` it
+  matches the written name against the projection input by the rule; one
+  hit that some output carries as a bare column is `Bound(output)`, one
+  hit no output carries is `Hidden`, zero or several hits (or no
+  projection) are `Unresolved` (Spark's 42703). `same_source_fields(plan,
+  fields)` reports whether named outputs of a projection are all the same
+  bare input column (one attribute under two spellings).
+  `written_column(written)` parses a Spark multipart name (backticks,
+  doubled backticks, dots) so refusals print `` `x.y` `` and `` `a``b` ``.
+  Pins `sort_keys_resolve_through_the_projection_child_like_spark`,
+  `one_source_column_is_one_attribute`,
+  `written_names_render_as_spark_prints_them`.
+  pins: casesens-2/C-017, C-018, C-019
+  **CASESENS-2 third re-verify fold (2026-09-29, RC4-4, RC4-5):**
+  `sort_through_child` walks down through `Filter`, `Limit`, `Sort` and
+  `Distinct::All` to the nearest `Projection` (Spark resolves missing sort
+  attributes through unary nodes); anything else below the sort is
+  `Unresolved` as before. A child hit no output carries is
+  `Child(name)` when no output field has that name, the name is unique in
+  the projection input and no `Distinct` sits in between: the facade sorts
+  by that input column and DataFusion's sort builder adds it through the
+  projection and projects it away. Otherwise it stays `Hidden`. Pin
+  `sort_keys_resolve_through_the_nearest_projection_below`.
+  pins: casesens-2/C-025, C-026
+  **CASESENS-2 fourth re-verify fold (2026-09-29, RC5-1, RC5-3):**
+  `twin_identities(plan, fresh)` gives one identity per output field. It
+  walks down through `Filter`, `Limit`, `Sort`, `SubqueryAlias` and
+  `Distinct::All` to the nearest `Projection`. A plain column reference
+  (aliases unwrapped) is `col:<input index>`, so two outputs that read
+  the same input column are one attribute. Anything else is `own:<field>`:
+  a computed output, an output the facade marks `fresh` (an aliased
+  twin, a new attribute in Spark), or every field when no projection is
+  found. Pin `twin_identities_prove_one_attribute_or_stay_distinct`.
+  pins: casesens-2/C-030, C-032
+- `resolver_names.rs` — **CASESENS-2 re-verify fold (2026-09-28):**
+  `join_on_named_keys`, `union_by_folded_name` and their helpers moved
+  byte-identical out of `case_bind.rs` (1000-line ceiling) with `bind_name`
+  matching through `NameRule::resolver_matches` (Spark's USING keys and
+  `unionByName` use the resolver). Re-exported through `frame_names`;
+  their tests stay in `case_bind.rs`.
+  pins: casesens-2/C-009
+  pins: casesens-2/C-003
+  **CASESENS-2 DIFF-PROBE fold (2026-09-28):**
+  `refuse_ambiguous_display_name(schema, displays, written, rule)` renders a
+  bare folded-ambiguous display select through the shared
+  `ambiguous_reference`: matching display positions pair with the schema
+  qualifier at the same index (scratch qualifiers render bare like Spark's
+  ``[`ID`, `ID`]``; catalog qualifiers render qualified like Spark's
+  ``[`sc`.`ns`.`t`.`ID`, `sc`.`ns`.`u`.`ID`]``), and the unpaired corner
+  pairs no qualifier. Fewer than two hits answers ok so the facade keeps
+  its text.
+  Re-exported on a fourth `pub use` line. Pins
+  `bare_twin_select_refuses_spark_ambiguous` and
+  `aliased_twin_select_names_qualified_candidates`.
+  pins: casesens-2/C-006
 
 ## Pointers
 

@@ -141,6 +141,128 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   **Critic round (2026-09-14, R-4):** the select/filter struct-edit resolve hooks are
   deleted — `withField` / `dropFields` are native `update_fields` expressions, so no
   boundary rewrite runs. pins: column-parity-1/C-002, C-004, C-005, C-008
+  CASESENS-2 S1 (2026-09-28): `_bind_schema_column` keeps the engine branch and
+  delegates the written path to `written_names._bind_written_column` (one-line
+  call site); `_rebind_stable_name_column` returns its input under `Exact`, and
+  string `filter` skips the quoter under `Exact`. `core` binds `written_names`,
+  so the package and core surfaces gain exactly that module name. `core.py`
+  stays 3973 (the extracted method funds the two gates and the module binding).
+  pins: casesens-2/C-001, C-003, C-006
+- `written_names.py` owns the CASESENS-2 S1 written-name body
+  `_bind_written_column(frame, name)` behind the `_bind_schema_column` call site:
+  exact-or-raise under `Exact`, the exact-membership fast path plus the native
+  R5 match and the legacy miss/ambiguity renderers under `IgnoreCase`, and
+  qualified strings riding the proven `F.col` path. Every string site shares
+  getitem's R-19 laziness (C-023 pins lazy `select` on twins).
+  pins: casesens-2/C-001, C-003, C-006
+  CASESENS-2 S2 (2026-09-28): the withColumn/rename body behind the three
+  `core.py` call sites — `_refuse_folded_with_columns_keys`,
+  `_match_with_columns_keys`, `_locate_rename_targets`,
+  `_rewrite_running_names`: native fan-out under `IgnoreCase`, exact `==`
+  behind the `frame_is_exact` gate under `Exact` (the raising R5 matcher
+  cannot serve append/no-op sites), exact-duplicate hits left alone (R-22).
+  `core.py` holds 3973. pins: casesens-2/C-002, C-004, C-006
+  CASESENS-2 S3 (2026-09-28): the subset body behind the na and
+  `drop_duplicates` call sites — `_match_lenient_subset` (misses match
+  nothing under `IgnoreCase`, refuse natively under `Exact`) and
+  `_match_subset_names` (fan-out under `IgnoreCase`, exact hits under
+  `Exact`, the legacy subset text on a miss under both rules). `core.py`
+  3973 → 3968 (ceilings ratcheted; the helper stays per the 2026-09-28
+  ruling, residue R-CS2-6). The unit diff adds zero matchers (grep).
+  pins: casesens-2/C-002, C-005, C-006, C-007
+  CASESENS-2 S4 (2026-09-28): the alias-qualified body behind the join
+  call site — `_rewrite_join_condition` (QCOL tokens then the native
+  alias rewrite) and `_bind_qualified_display_column` (dotted names on
+  overlay frames through the native pairing, written last segment kept,
+  `None` under `IgnoreCase` so the caller keeps today's refusal).
+  `core.py` 3968 → 3963 (ceilings ratcheted; the frozen surfaces lose
+  exactly `_rewrite_join_qcol_sql`, which keeps its `plan_collapse`
+  home). pins: casesens-2/C-003, C-008
+  CASESENS-2 verifier fold (2026-09-28): `_bind_qualified_display_column`
+  refuses natively when a dotted name hits different attributes (contract
+  only — the raise is native); `_rebind_stable_name_column` re-raises
+  `[AMBIGUOUS_REFERENCE]` instead of falling through to the engine; the
+  `withColumnsRenamed` duplicate-name refusal is removed so the plural
+  answers Spark's frame like the singular (EX-DF-18 FIXED). `core.py`
+  3963 → 3957 (ceilings ratcheted). pins: casesens-2/C-003, C-004
+  CASESENS-2 DIFF-PROBE fold (2026-09-28): the bare folded-ambiguous arm
+  of `_bind_written_column` calls the native shared refusal first, so the
+  class, condition, SQLSTATE and candidate list match Spark; the facade
+  text below it stays as the degenerate fallback (fewer than two native
+  hits, or an empty schema — unreachable through the public API, kept so
+  the arm never answers silently). pins: casesens-2/C-006
+  CASESENS-2 re-verify fold (2026-09-28): the `Exact` arm of
+  `_bind_written_column` attaches the origin metadata the `IgnoreCase` arm
+  does (RC2-2, condition joins requalify per side) and refuses exact
+  display twins through the native ambiguous refusal (RC2-6); a lookup miss
+  the resolver fold would hit raises Spark's 42703 (RC2-3); hits that share
+  one origin bind that attribute (`_shared_origin_column`, RC2-4). The
+  withColumn/rename matchers call `match_resolver_names`; na subsets refuse
+  hits on distinct attributes (`_distinct_attributes`); overlay `drop`
+  binds dotted Columns through the qualified display pairing, unqualified
+  Columns by lookup, strings by the resolver, and drops engine fields
+  exactly (`_overlay_drop_targets`); renames rewrite every hit
+  (RC2-5). `_sort_like_spark` owns `orderBy` and turns an ambiguity into
+  Spark's Sort refusal (42703). `core.py` routes string `filter` through
+  `rebind_predicate_qualifiers` (RC2-1), stops quoting tokens after a dot,
+  and ratchets 3957 → 3952. pins: casesens-2/C-009, C-010, C-011, C-012, C-013
+  **CASESENS-2 second re-verify fold (2026-09-29):** string `filter` calls
+  `_native.filter_bound_sql` (alias qualifiers bind on the parsed tree,
+  RC3-1/RC3-2); the quoter quotes a token after a dot again (the pre-stack
+  behaviour) except a folded-ambiguous one, which it leaves to the tree
+  binder. `_twin_engine` names a duplicate-name select output: a bare bind
+  with an origin keeps `__repark_sel_<pid>_<field>_<n>` and its origin, an
+  aliased or computed output is `__repark_sel_a_<i>_<n>` (a new attribute,
+  RC3-3), a bare bind without an origin stays `__repark_sel_h2_<i>_<n>`.
+  `_shared_origin_column` binds the first hit carrying the shared origin
+  (the last one tripped DataFusion's union sort check); `_hit_origins`
+  counts each `_a_` engine as its own attribute; `_distinct_attributes` on
+  a plain frame asks `same_source_fields` (RC3-4). `_sort_like_spark`
+  resolves an ambiguous key through the projection child
+  (`child_sort_target`): `bound` re-sorts by that output with the key's
+  direction, `unresolved` refuses Spark's 42703 with the parsed name parts
+  (RC3-7), `hidden` keeps the ambiguity (RC3-6). `core.py` ratchets
+  3952 → 3950. pins: casesens-2/C-016, C-017, C-018, C-019
+  **CASESENS-2 third re-verify fold (2026-09-29):** an aliased twin whose
+  source is a bare origin column is named
+  `__repark_sel_a_<i>_<n>_<pid>_<field>`: still a new attribute for name
+  lookups and ambiguity (`_new_attribute`), but `_filter_qcol_sql` maps a
+  parent Column's origin to the first such twin, so `twins.filter(d.v >
+  15)` answers through the alias like Spark's missing-attribute resolution
+  (RC4-2). `drop` of an origin Column on a duplicate-display frame drops
+  only outputs that are not new attributes (`_origin_drop_targets`), so
+  `select(d.v.alias('v'), d.v.alias('v')).drop(d.v)` keeps both. `select`
+  records the aliased output names in `_fresh_outputs` (carried by
+  `_inherit_plan_metadata`), and `_distinct_attributes` on a plain frame
+  counts an aliased output as its own attribute before asking
+  `same_source_fields` (RC4-3). `_sort_like_spark` resolves each
+  ambiguous key in turn (at most one pass per key) and accepts `child`
+  from `child_sort_target`, sorting by the projection input column
+  (RC4-4, RC4-5). Under `true` string `filter` passes
+  `_predicate_attributes` (origin, new-attribute or unknown identity per
+  display) so a bare twin name binds one attribute or refuses
+  `AMBIGUOUS_REFERENCE` (RC4-7). `core.py` stays under 3950 (a garbled
+  docstring fragment in `filter` is deleted). The four re-verify probe
+  sets re-run against the recorded main and Spark outputs hold the
+  `false` no-alias predicates byte-identical to main. pins:
+  casesens-2/C-023, C-024, C-025, C-026, C-027, C-029
+  **CASESENS-2 fourth re-verify fold (2026-09-29, RC5-1, RC5-3):**
+  identities come from the plan, not from origins. `_twin_identities`
+  marks each `_a_` engine as fresh and asks the native `twin_identities`.
+  A bare bind (`F.col('v')`, `F.expr('v')`, `d.v`, `d['v']`) is its input
+  column, and an aliased or computed output is its own attribute.
+  `_predicate_attributes` sends that list under `true`, so a twin
+  without an origin no longer binds as a wildcard
+  (`select(F.col('v'), F.lit(100).alias('v')).filter('v > 15')` refuses
+  `AMBIGUOUS_REFERENCE` as Spark and main do, and
+  `select(d.v, F.col('v'))` still answers). `_distinct_attributes` on an
+  overlay frame counts distinct identities among the hits, so `fillna`
+  and `dropna` refuse over unproven twins: the `F.col`/literal twins, the
+  self-join `select(F.col('s1.v'), F.col('s2.v'))` and the alias twins of
+  R-CS2-14. It also serves overlay `drop` of a Column without an origin.
+  `_hit_origins` is gone. The re-verify corpora re-run against the
+  recorded main, `ca4ac687` and Spark outputs hold 0 REGRESSION and move
+  no cell that matched Spark. pins: casesens-2/C-030, C-032, C-033
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`

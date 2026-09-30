@@ -18,7 +18,15 @@ impl NameRule {
     pub fn matches(self, written: &str, held: &str) -> bool {
         match self {
             Self::Exact => written == held,
-            Self::IgnoreCase => written.eq_ignore_ascii_case(held),
+            Self::IgnoreCase => lookup_equal(written, held),
+        }
+    }
+
+    #[must_use]
+    pub fn resolver_matches(self, written: &str, held: &str) -> bool {
+        match self {
+            Self::Exact => written == held,
+            Self::IgnoreCase => java_equals_ignore_case(written, held),
         }
     }
 
@@ -29,7 +37,7 @@ impl NameRule {
         for candidate in held {
             if candidate == written {
                 exact.push(candidate.as_str());
-            } else if candidate.eq_ignore_ascii_case(written) {
+            } else if lookup_equal(candidate, written) {
                 folded.push(candidate.as_str());
             }
         }
@@ -68,18 +76,64 @@ pub enum NameHit<'a> {
 
 #[must_use]
 pub fn folded_duplicate(names: &[impl AsRef<str>]) -> Option<String> {
-    let mut seen: Vec<&str> = Vec::with_capacity(names.len());
+    let mut seen: Vec<String> = Vec::with_capacity(names.len());
     for name in names {
-        let name = name.as_ref();
-        if seen
-            .iter()
-            .any(|earlier| earlier.eq_ignore_ascii_case(name))
-        {
-            return Some(name.to_ascii_lowercase());
+        let key = name.as_ref().to_lowercase();
+        if seen.contains(&key) {
+            return Some(key);
         }
-        seen.push(name);
+        seen.push(key);
     }
     None
+}
+
+fn lookup_equal(left: &str, right: &str) -> bool {
+    left == right
+        || (left.to_lowercase() == right.to_lowercase() && java_equals_ignore_case(left, right))
+}
+
+fn java_equals_ignore_case(left: &str, right: &str) -> bool {
+    if left == right {
+        return true;
+    }
+    if left.encode_utf16().count() != right.encode_utf16().count() {
+        return false;
+    }
+    let mut left_chars = left.chars();
+    let mut right_chars = right.chars();
+    loop {
+        match (left_chars.next(), right_chars.next()) {
+            (None, None) => return true,
+            (Some(one), Some(other)) => {
+                if !java_char_equal(one, other) {
+                    return false;
+                }
+            }
+            (None, Some(_)) | (Some(_), None) => return false,
+        }
+    }
+}
+
+fn java_char_equal(one: char, other: char) -> bool {
+    one == other
+        || single_upper(one) == single_upper(other)
+        || single_lower(one) == single_lower(other)
+}
+
+fn single_upper(value: char) -> char {
+    let mut mapped = value.to_uppercase();
+    match (mapped.next(), mapped.next()) {
+        (Some(one), None) => one,
+        _ => value,
+    }
+}
+
+fn single_lower(value: char) -> char {
+    let mut mapped = value.to_lowercase();
+    match (mapped.next(), mapped.next()) {
+        (Some(one), None) => one,
+        _ => value,
+    }
 }
 
 #[must_use]
@@ -133,6 +187,107 @@ mod tests {
             column_already_exists("a"),
             "[COLUMN_ALREADY_EXISTS] The column `a` already exists. Choose another name or \
              rename the existing column. SQLSTATE: 42711"
+        );
+    }
+
+    #[test]
+    fn ignore_case_folds_unicode_like_java_equals_ignore_case() {
+        let folded: &[(&str, &str)] = &[
+            ("ünï", "Ünï"),
+            ("ÜNÏ", "Ünï"),
+            ("éte", "Éte"),
+            ("ÉTE", "Éte"),
+            ("id", "ID"),
+            ("Data", "DATA"),
+        ];
+        for (written, held) in folded {
+            assert!(
+                NameRule::IgnoreCase.matches(written, held),
+                "{written} {held}"
+            );
+            assert!(
+                NameRule::IgnoreCase.matches(held, written),
+                "{held} {written}"
+            );
+        }
+        let split: &[(&str, &str)] = &[
+            ("STRASSE", "straße"),
+            ("ß", "SS"),
+            ("ß", "S"),
+            ("id", "idx"),
+            ("ünï", "ünïx"),
+        ];
+        for (written, held) in split {
+            assert!(
+                !NameRule::IgnoreCase.matches(written, held),
+                "{written} {held}"
+            );
+        }
+        let held = ["id".to_string(), "Ünï".to_string(), "Éte".to_string()];
+        assert_eq!(
+            NameRule::IgnoreCase.lookup("ünï", &held),
+            NameHit::One("Ünï")
+        );
+        assert_eq!(
+            NameRule::IgnoreCase.lookup("ÜNÏ", &held),
+            NameHit::One("Ünï")
+        );
+        assert_eq!(
+            NameRule::IgnoreCase.lookup("éte", &held),
+            NameHit::One("Éte")
+        );
+        assert_eq!(NameRule::IgnoreCase.lookup("nope", &held), NameHit::None);
+        assert_eq!(folded_duplicate(&["Ünï", "ünï"]), Some("ünï".to_string()));
+        assert_eq!(folded_duplicate(&["ÜNÏ", "Ünï"]), Some("ünï".to_string()));
+        assert_eq!(folded_duplicate(&["straße", "STRASSE"]), None);
+    }
+
+    #[test]
+    fn lookup_lowers_like_spark_and_the_resolver_keeps_equals_ignore_case() {
+        let lookup_refuses: &[(&str, &str)] = &[
+            ("ıd", "id"),
+            ("ID", "ıd"),
+            ("ς", "σ"),
+            ("Σ", "ς"),
+            ("ασ", "ΑΣ"),
+            ("i\u{307}d", "İd"),
+            ("ß", "SS"),
+        ];
+        for (written, held) in lookup_refuses {
+            assert!(
+                !NameRule::IgnoreCase.matches(written, held),
+                "{written} {held}"
+            );
+        }
+        let lookup_binds: &[(&str, &str)] = &[
+            ("ας", "ΑΣ"),
+            ("İD", "İd"),
+            ("\u{212a}", "k"),
+            ("\u{1c6}", "\u{1c5}"),
+            ("Σ", "σ"),
+            ("üNÏ", "Ünï"),
+        ];
+        for (written, held) in lookup_binds {
+            assert!(
+                NameRule::IgnoreCase.matches(written, held),
+                "{written} {held}"
+            );
+        }
+        for (written, held) in [("ıd", "id"), ("ς", "σ"), ("ασ", "ΑΣ")] {
+            assert!(NameRule::IgnoreCase.resolver_matches(written, held));
+            assert!(!NameRule::Exact.resolver_matches(written, held));
+        }
+        assert!(!NameRule::IgnoreCase.resolver_matches("ß", "SS"));
+        let held = ["σ".to_string(), "ς".to_string()];
+        assert_eq!(NameRule::IgnoreCase.lookup("σ", &held), NameHit::One("σ"));
+        assert_eq!(NameRule::IgnoreCase.lookup("Σ", &held), NameHit::One("σ"));
+        assert_eq!(folded_duplicate(&["ı", "I"]), None);
+        assert_eq!(folded_duplicate(&["σ", "ς"]), None);
+        assert_eq!(folded_duplicate(&["ΑΣ", "ασ"]), None);
+        assert_eq!(folded_duplicate(&["ΑΣ", "ας"]), Some("ας".to_string()));
+        assert_eq!(
+            folded_duplicate(&["İ", "i\u{307}"]),
+            Some("i\u{307}".to_string())
         );
     }
 }

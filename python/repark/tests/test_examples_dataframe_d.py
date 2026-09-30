@@ -26,13 +26,15 @@ def spark() -> Iterator[ReparkSession]:
     session.stop()
 
 
-def test_with_columns_renamed_duplicate_names_divergence(spark: ReparkSession) -> None:
-    """withColumnsRenamed refuses duplicate names; Spark answers ['k', 'k', 'v'] (EX-DF-18)."""
+def test_with_columns_renamed_duplicate_names_answers(spark: ReparkSession) -> None:
+    """withColumnsRenamed answers duplicate names like Spark (EX-DF-18, CASESENS-2)."""
     frame = spark.createDataFrame([("a", 1, 10.0)], ["g", "k", "v"])
-    with pytest.raises(AnalysisException, match="duplicate column names"):
-        frame.withColumnsRenamed({"g": "k", "k": "k"})
-    with pytest.raises(AnalysisException, match="duplicate column names"):
-        frame.with_columns_renamed({"g": "k", "k": "k"})
+    renamed = frame.withColumnsRenamed({"g": "k", "k": "k"})
+    assert renamed.columns == ["k", "k", "v"]
+    assert renamed.collect() == frame.collect()
+    renamed = frame.with_columns_renamed({"g": "k", "k": "k"})
+    assert renamed.columns == ["k", "k", "v"]
+    assert renamed.collect() == frame.collect()
 
 
 def test_stat_freq_items_answers(spark: ReparkSession) -> None:

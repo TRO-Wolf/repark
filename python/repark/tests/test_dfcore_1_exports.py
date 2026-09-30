@@ -126,6 +126,11 @@ member, slot, alias, or core-surface name changes.
 U11-EDGE-1 (2026-09-26) binds ``_native`` at module level on ``core`` for the DataFrame-door
 attribute binder (``attribute_column`` / ``attribute_copies``), so ``EXPECTED_NEW_CORE_SUBMODULES``
 and ``EXPECTED_NEW_PACKAGE_SUBMODULES`` each gain exactly ``_native``.
+CASESENS-2 S4 (2026-09-28): the join-condition rewrite moves behind
+``written_names._rewrite_join_condition``, so ``core`` drops the
+``plan_collapse`` import and both frozen surfaces lose exactly
+``_rewrite_join_qcol_sql``; the helper keeps its home and behavior.
+pins: casesens-2/C-003
 """
 
 from __future__ import annotations

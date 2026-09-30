@@ -37,49 +37,131 @@ pub(crate) fn written_column(name: &str) -> Expr {
     Expr::Column(Column::from_qualified_name_ignore_case(name))
 }
 
-pub(crate) fn parse_canonical_predicate(
+pub(crate) fn predicate_parts(
     frame: &datafusion::prelude::DataFrame,
     predicate: &str,
+    displays: Option<&[String]>,
+    attributes: &[String],
+) -> datafusion::error::Result<(datafusion::execution::SessionState, LogicalPlan, Expr)> {
+    let (mut state, plan) = frame.clone().into_parts();
+    let rule = repark_core::frame_names::NameRule::from_case_sensitive(
+        repark_functions::case_sensitive::spark_case_sensitive_from_options(
+            state.config().options(),
+        ),
+    );
+    let parsed = planned_predicate(
+        &mut state,
+        frame.schema(),
+        predicate,
+        displays,
+        attributes,
+        rule,
+    )?;
+    Ok((state, plan, parsed))
+}
+
+#[cfg(test)]
+pub(crate) fn parse_canonical_predicate_exact(
+    frame: &datafusion::prelude::DataFrame,
+    predicate: &str,
+    displays: Option<&[String]>,
+) -> datafusion::error::Result<Expr> {
+    let (mut state, _) = frame.clone().into_parts();
+    planned_predicate(
+        &mut state,
+        frame.schema(),
+        predicate,
+        displays,
+        &[],
+        repark_core::frame_names::NameRule::Exact,
+    )
+}
+
+fn planned_predicate(
+    state: &mut datafusion::execution::SessionState,
+    schema: &DFSchema,
+    predicate: &str,
+    displays: Option<&[String]>,
+    attributes: &[String],
+    rule: repark_core::frame_names::NameRule,
 ) -> datafusion::error::Result<Expr> {
     let canonical = repark_spark::spark_literals::canonicalize(predicate)?;
-    frame.parse_sql_expr(canonical.as_ref()).map_err(|error| {
+    let translated = |error| {
         repark_spark::spark_literals::translate_downstream_error(
             predicate,
             canonical.as_ref(),
             error,
         )
-    })
-}
-
-pub(crate) fn parse_canonical_predicate_exact(
-    frame: &datafusion::prelude::DataFrame,
-    predicate: &str,
-) -> datafusion::error::Result<Expr> {
-    let canonical = repark_spark::spark_literals::canonicalize(predicate)?;
-    let (mut state, _) = frame.clone().into_parts();
+    };
+    if matches!(rule, repark_core::frame_names::NameRule::IgnoreCase) {
+        return bound_predicate(
+            state,
+            schema,
+            canonical.as_ref(),
+            displays,
+            attributes,
+            rule,
+        )
+        .map_err(translated);
+    }
+    let normalized = state
+        .config()
+        .options()
+        .sql_parser
+        .enable_ident_normalization;
     state
         .config_mut()
         .options_mut()
         .sql_parser
         .enable_ident_normalization = false;
-    match state.create_logical_expr(canonical.as_ref(), frame.schema()) {
+    let planned = bound_predicate(
+        state,
+        schema,
+        canonical.as_ref(),
+        displays,
+        attributes,
+        rule,
+    );
+    state
+        .config_mut()
+        .options_mut()
+        .sql_parser
+        .enable_ident_normalization = normalized;
+    match planned {
         Ok(expr) => Ok(expr),
         Err(error) => {
             if let Some((relation, name)) = missing_column(&error) {
+                let written = match &relation {
+                    Some(table) => format!("{table}.{name}"),
+                    None => name.clone(),
+                };
                 let probe = Expr::Column(Column::new(relation, name));
-                repark_core::frame_names::resolve_bound_expr_with(
-                    probe,
-                    frame.schema(),
-                    repark_core::frame_names::NameRule::Exact,
-                )?;
+                repark_core::frame_names::resolve_bound_expr_with(probe, schema, rule)?;
+                repark_core::frame_names::resolve_df_names(schema, &[written], rule)?;
             }
-            Err(repark_spark::spark_literals::translate_downstream_error(
-                predicate,
-                canonical.as_ref(),
-                error,
-            ))
+            Err(translated(error))
         }
     }
+}
+
+fn bound_predicate(
+    state: &datafusion::execution::SessionState,
+    schema: &DFSchema,
+    canonical: &str,
+    displays: Option<&[String]>,
+    attributes: &[String],
+    rule: repark_core::frame_names::NameRule,
+) -> datafusion::error::Result<Expr> {
+    let dialect = state.config().options().sql_parser.dialect;
+    let mut parsed = state.sql_to_expr_with_alias(canonical, &dialect)?;
+    repark_core::frame_names::bind_predicate_qualifiers(
+        &mut parsed.expr,
+        schema,
+        displays,
+        attributes,
+        rule,
+    )?;
+    state.create_logical_expr_from_sql_expr(parsed, schema)
 }
 
 pub(crate) async fn plan_expr_column(

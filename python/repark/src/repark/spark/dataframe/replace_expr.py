@@ -243,6 +243,7 @@ def _inherit_plan_metadata(parent: DataFrame, child: DataFrame) -> DataFrame:
         child._origin_map = dict(parent._origin_map) if parent._origin_map is not None else None
     if parent._join_qualifiers is not None:
         child._join_qualifiers = list(parent._join_qualifiers)
+    child._fresh_outputs = parent._fresh_outputs
     return child
 
 

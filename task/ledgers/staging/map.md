@@ -67,6 +67,28 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   DDL exactness (C-013…C-016); one rule (C-017) and no regressions (C-018) flip
   last. `risk_tier: high`. Branch `feat/casesens-1-s1`.
   pins: casesens-1/C-001, C-002, C-004
+- [casesens-2-ledger.md](casesens-2-ledger.md) —
+  **WO CASESENS-2 (2026-09-28), in flight:** the DataFrame door resolves names
+  in Rust — `true` exact on every name API, qualified strings bind,
+  `withColumn(s)` / renames / `fillna` / `dropDuplicates` follow the rule.
+  Slices 1–3: C-001, C-002, C-004…C-008 PROVEN. Slice 4 (branch
+  `feat/casesens-2-s4`): the self-join halves bind (C-003 PROVEN, R-CS2-1
+  CLOSED per the owner ruling); the p10 non-join overlay shapes pin the
+  `true` misses, the R4 refusals, and the R-CS2-7 answer-gaps. Verifier
+  fold (same branch): the S5 unicode/ambiguity pins land and residues
+  R-CS2-8…R-CS2-12 open beside R-CS2-7. Re-verify fold (same branch,
+  base `ecfffe69`): RC2-1…RC2-6 fixed, C-009…C-014 PROVEN, R-CS2-12 and
+  R-CS2-13 closed with corrections, R-CS2-10 re-scoped, R-CS2-14…16 open.
+  Second re-verify fold (same branch, base `69ea4609`): RC3-1…RC3-4,
+  RC3-6, RC3-7 fixed, C-015…C-020 PROVEN, R-CS2-15 closed, R-CS2-17…19
+  open (RC3-5 recorded as R-CS2-17). Third re-verify fold (same branch,
+  base `4c2f03d4`): RC4-1…RC4-8 fixed, C-021…C-029 PROVEN, R-CS2-18
+  narrowed, R-CS2-20 open. Fourth re-verify fold (same branch, base
+  `ca4ac687`): RC5-1…RC5-3 fixed, C-030…C-033 PROVEN, R-CS2-14 narrowed,
+  R-CS2-18's RC4-5 extension and R-CS2-20 confirmed by the orchestrator,
+  R-CS2-21…23 open (RC5-6…RC5-8); RC5-5 goes to a separate card.
+  `risk_tier: high`.
+  pins: casesens-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032, C-033
 - [r-fileorder-2-ledger.md](r-fileorder-2-ledger.md) —
   **R-FILEORDER-2 (2026-09-27), HALT per R1:** Spark 4.1.2's own `L-INSERT-OVERWRITE`
   lineage differs between runs (the same-JVM triple agrees, C-001; six fresh-JVM runs

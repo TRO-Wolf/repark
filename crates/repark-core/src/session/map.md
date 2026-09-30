@@ -252,6 +252,16 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 - `tests/df_guard.rs` — the nine `df_guards.rs` pins, split out of `tests.rs` when the DEFECT-2
   **U11-EDGE-1 (2026-09-26):** `df_guards.rs` also declares `df_guards/case_bind.rs`
   (row in `df_guards/map.md`). pins: u11-edge-1/C-015
+  **CASESENS-2 S4 clerk (2026-09-28):** `df_guards.rs` also declares
+  `df_guards/cast_names.rs` (row in `df_guards/map.md`), the byte-identical split that
+  returns `case_bind.rs` under the 1000-line ceiling after the merge.
+  **CASESENS-2 re-verify fold (2026-09-28):** `df_guards.rs` also declares
+  `df_guards/predicate_names.rs` and `df_guards/resolver_names.rs` (rows in
+  `df_guards/map.md`), keeping `case_bind.rs` and `written_names.rs` under the
+  1000-line ceiling. pins: casesens-2/C-009, C-010
+  **CASESENS-2 second re-verify fold (2026-09-29):** `df_guards.rs` also
+  declares `df_guards/sort_names.rs` (row in `df_guards/map.md`).
+  pins: casesens-2/C-017
   Round 2 (2026-09-26): `case_bind` is `pub` and `session.rs` re-exports it as
   `frame_names`. pins: u11-edge-1/C-017, C-018, C-019, C-020
 - `tests/df_guard.rs` — the seven `df_guards.rs` pins, split out of `tests.rs` when the DEFECT-2

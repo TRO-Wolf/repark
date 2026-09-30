@@ -237,14 +237,12 @@ def test_with_columns_renamed_chain_without_collision(spark: ReparkSession) -> N
     assert out.to_arrow().column("y").to_pylist() == [1]
 
 
-def test_with_columns_renamed_duplicate_final_names_fail_loud(spark: ReparkSession) -> None:
-    """Spark probe ``{"a":"b","b":"c"}`` on ``[a,b]`` yields ``[c,c]`` (sequential).
-
-    repark cannot materialize duplicate column names — raises AnalysisException (disclosed).
-    """
+def test_with_columns_renamed_duplicate_final_names_answers(spark: ReparkSession) -> None:
+    """Spark probe ``{"a":"b","b":"c"}`` on ``[a,b]`` yields ``[c,c]`` (sequential)."""
     frame = spark.createDataFrame([(1, 2)], ["a", "b"])
-    with pytest.raises(AnalysisException, match="duplicate column names"):
-        frame.withColumnsRenamed({"a": "b", "b": "c"})
+    out = frame.withColumnsRenamed({"a": "b", "b": "c"})
+    assert out.columns == ["c", "c"]
+    assert [list(row) for row in out.collect()] == [[1, 2]]
 
 
 # F5 — DataFrame.transform
