@@ -45,6 +45,10 @@ interval-literal parsing; plain `if`/`CASE`/`=`/CAST methodology probes;
 | C-019 | VN4-1: every string source (`Utf8`, `LargeUtf8`, `Utf8View`) in `__repark_nullif_compare` casts through the session-zoned Spark cast — `spark_cast_ansi_zoned` under ANSI on (invalid strings raise `CAST_INVALID_INPUT`), `spark_cast_legacy_zoned` under ANSI off (invalid strings cast to NULL, so `nullif` returns `first`). Whitespace-padded numerics, `d`/`f`/`D` suffixes, single-digit date/time parts, whitespace-padded timestamps, and the NY/Kolkata zones match Spark in SELECT and WHERE. | The 12-cell zone matrix (UTC/NY/Kolkata) + 8 ANSI-off cells + 4 ANSI-on refusal cells + 5 WHERE cells + 2 column cells green; each expectation measured on live Spark 4.1.2. | PROVEN | 55/55 R1 pins green; oracle table under Evidence; `' 1 '` vs INT and `'on'` vs BOOLEAN flip from Arrow errors to Spark's answers as a consequence of the same ruling. |
 | C-020 | VN4-2 + VN4-4: `__repark_nvl_pick` declares nullable from its fallback (`second.is_nullable()`), so a volatile first over a nullable column collects instead of raising the Arrow non-nullable error; `__repark_nullif_compare` normalizes `-0.0` to `+0.0` on `Float32`/`Float64` compares (`NaN` already equals `NaN`), so `nullifzero(-0.0)` answers NULL like Spark. Same-type float `nullif` keeps DataFusion's form (carried, wrong on base too). | The SQL `nvl`/`ifnull` + parquet-backed `F.nvl` fallback pins green (20000 rows, null share distinguishes single from double evaluation); the six `-0.0`/`NaN` pins green with Spark-measured types. | PROVEN | 3/3 fallback pins green (nulls ~3300, single evaluation); 6/6 float pins green; `nullif(-0.0D, 0)` still answers `-0.0` (single-`nullif` path, PRE on base). |
 | C-021 | VN4-6 + carried: `const_i128` no longer folds `__repark_nullif_compare` (the arm is plain `nullif` as on main); `sequence(0L, nullif(9007199254740993L, 9007199254740992D))` still refuses at the ceiling because the ceiling folds the pre-rewrite `nullif` (analyzer order predates this unit) — carried from main, Spark answers NULL. VN4-3 (volatile-first fallback evaluated per row), VN4-5 (struct/widened-list nests exponential) and VN4-7 (widened `nvl` chains plan 1.6-1.9x base) are carried, unchanged. | The fold line reverted; the sequence cell measured on Spark (NULL) and head (ceiling refusal, identical to pre-fold head). | PROVEN | Line reverted; sequence refusal byte-identical before/after; VN4-3/VN4-5/VN4-7 untouched (no code on those paths). |
+| C-022 | VN5-2: `__repark_nullif_compare` compares `Float32`/`Float64` in one null-propagating pass (`==` plus NaN-equals-NaN, no intermediate arrays); widened float `nullif` runs at or under 1.10x base and string→DOUBLE improves toward it (DEBUG median-of-15); the kernel NaN-payload cells answer NULL like Spark. | The 2 NaN pins green; the VN4 float pins green; the copy-compare mutant reds only the 2 NaN pins; the 3-round perf table vs `adc26586` DEBUG. | PROVEN | 2/2 NaN pins green, mutant reds 2/2 with 921 others green; float rows 0.93-1.03x, string→DOUBLE 1.15-1.19x on / 1.09-1.18x off (residual is the R1 per-row Spark parse); table in the lane hand-back. |
+| C-023 | VN5-4: every mixed-type scalar `nullif` with a string side routes through the kernel's session-zoned Spark string cast in both argument orders (the single-`nullif` path included); dictionary-encoded strings unpack then cast the same way. `nullif(true, 'on')`, `nullif(5L, ' 5 ')` and `nullif(dict_col, 5)` equal Spark, and swapping argument order never changes the compare. | Both-order value pins ANSI on/off + the column forms + the dictionary pin, every expectation measured on live Spark 4.1.2; the VN5-4 mutant reds them. | PROVEN | 11/11 order+dictionary pins green, mutant reds exactly those 11; the string-first symmetry guards stay green on both; struct-pick string leaves keep `Expr::Cast` (no ANSI-aware plan-level cast exists — out of the ruled scope). |
+| C-024 | VN5-5: the pick reports `first && second` nullability when the first argument holds no `CASE`/`IF` (`rand()`/`uuid()` firsts report non-nullable like Spark); a first holding `CASE`/`IF` keeps the R2 fallback rule, so VN4-2 values stay exact. | The schema pin green; the `IF`-first collect pins green; the naive `first && second` mutant reds all 4 collect pins. | PROVEN | Schema all non-nullable like Spark; `IF` collects ~1/6 NULLs; naive mutant crashes the 2 new + 2 VN4 collect pins (physical `CASE` misreport is deterministic, logical flag reads nullable). |
+| C-025 | VN5-7: the plain-`nullif` `const_i128` arm folds only same-type exact-integer literals; the lossy `sequence` cell answers NULL like Spark; the C-021 "carried from main" line is corrected (base fails earlier with `DATATYPE_MISMATCH`). | The 2 sequence pins green; the fold mutant reds them; the same-type over-ceiling refusal still fires. | PROVEN | 2/2 sequence pins green, mutant reds 2/2; `array_repeat(1, nullif(101, 0))` still refuses (Rust test green); VN5-1 remainder, VN5-3, VN5-6 carried as ruled. |
 
 ## Evidence
 
@@ -233,6 +237,75 @@ expectation was measured on the live oracle above; the full
 cell-by-cell table is in the lane hand-back. Gate, replay, perf and
 mutation outcomes are recorded in the lane hand-back alongside this
 commit.
+
+### Re-verify 4 VN5-2/VN5-4/VN5-5/VN5-7 (2026-09-30)
+
+Step 0 reruns every VN5 repro on the lane head (`8cc68e73`) and
+measures the same statements on live Spark 4.1.2 (banner `4.1.2`,
+session zone `UTC`, via `jvm-lock.sh`): boolean-first `nullif`
+answers lenient values on head where Spark raises
+`CAST_INVALID_INPUT` (ANSI on) or answers `true` (ANSI off);
+`nullif(5L, ' 5 ')` raises an Arrow cast error on head, NULL on
+Spark both modes; `nullif(5L, '5.0')` raises Arrow on head,
+`CAST_INVALID_INPUT` on Spark ANSI-on and NULL ANSI-off; the five
+dictionary cells raise Arrow errors on head and answer on Spark;
+`nvl(rand(), xd)` reports nullable on head, non-nullable on Spark
+and base; the lossy `sequence` cell refuses at the ceiling on head,
+NULL on Spark.
+
+VN5-2 replaces the copy-and-`eq` float compare with one
+null-propagating zip over the value slices (`==` plus
+NaN-equals-NaN, no intermediate arrays). The widened-float rows run
+0.93-1.03x base (DEBUG vs DEBUG, median of 15, 1M rows); string→
+DOUBLE improves to 1.15-1.19x on / 1.09-1.18x off but keeps a
+residual from the R1 per-row Spark string parse, which the ruled
+mechanism does not touch. The mechanism also fixes the two kernel
+NaN-payload cells (`sqrt(-1)` versus `'NaN'`) to NULL like Spark;
+the single-path, array and struct NaN/`-0.0` cells stay wrong as
+carried (VN5-1 remainder).
+
+VN5-4 routes a scalar `nullif` to the kernel whenever a string side
+still needs a cast, even when the compare type equals the first
+type, and unpacks dictionary-encoded strings before the same
+session-zoned Spark cast. All three must-equal cells match Spark in
+both argument orders under both ANSI modes, and the date-dictionary
+cell comes along through the same routing. Struct-pick string
+leaves keep `Expr::Cast`: no ANSI-aware plan-level cast exists, so
+that shape is out of the ruled scope. The dictionary pin builds its
+parquet from a `pa.dictionary`-typed table — parquet dictionary
+*encoding* alone still reads back as `Utf8`; the embedded
+`ARROW:schema` decides the physical type.
+
+VN5-5 reports the pick nullable from both arguments when the first
+holds no `CASE`/`IF`, and keeps the R2 fallback rule otherwise.
+The misreport is deterministic and physical-only: the logical
+`CASE` flag reads nullable while execution declares non-nullable
+(6/6 bare-`CASE` collects fail on the unmodified tree). `IF()`
+reaches the rule as a scalar function (it lowers to `CASE` later),
+so the shape matches both spellings. VN4-2 stays exact with no
+conflict, so nothing is carried here.
+
+VN5-7 folds plain `nullif` only for same-type exact-integer
+literals; every other shape (floats, strings, casts, mixed widths)
+defers to runtime. The lossy `sequence` cell answers NULL like
+Spark in both spellings. Correction (2026-09-30): the C-021 line
+calling that refusal "carried from main" was wrong — base fails
+earlier with `DATATYPE_MISMATCH`, so the fold first became
+reachable in this unit. VN5-1 remainder, VN5-3 and VN5-6 are
+carried as ruled, untouched.
+
+The 72-cell head-vs-`8cc68e73` comparison moves 25 cells, every one
+toward Spark, none away; 923 pins pass (894 + 29 new in the sibling
+`test_nvl_type_coercion_1_vn5.py`, split out at the 1000-line
+ceiling). Mutants: VN5-2 reds 2/2 NaN pins (921 others green), VN5-4 reds
+11/11 order+dictionary pins, VN5-5 reds the schema pin (and the
+naive `first && second` variant crashes all 4 collect pins), VN5-7
+reds 2/2 sequence pins; each reverted with a clean tree. The
+`-0.0`-return scare (`nullif(CAST(-0.0 AS FLOAT), 1.0D)` answering
+`'0.0'`) reproduces byte-identically on the stashed `8cc68e73`
+tree: the engine's own cast pre-normalizes, and `nullif` returns
+its input faithfully. Replay, gate and perf-table outcomes are
+recorded in the lane hand-back alongside this commit.
 
 ## Coverage attestation
 

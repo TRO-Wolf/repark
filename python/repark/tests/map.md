@@ -4978,6 +4978,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   parquet column through `F.nvl` (20000 rows, null share ~1/6); the
   `-0.0`/`NaN` `nullifzero`/`nullif` cells. Every expectation measured
   on live Spark 4.1.2. pins: nvl-type-coercion-1/C-019, C-020
+- `test_nvl_type_coercion_1_vn5.py` — **NVL-TYPE-COERCION-1 re-verify 4
+  (2026-09-30, VN5-2/VN5-4/VN5-5/VN5-7):** the sibling split out at the
+  1000-line ceiling. 29 pins, every expectation measured on live Spark
+  4.1.2 (UTC): the kernel NaN-payload cells; `nullif(5L, ' 5 ')`,
+  `nullif(true, 'on'/'off'/'tr')` and `nullif(5L, '5.0')` in both
+  argument orders, ANSI on (values and `CAST_INVALID_INPUT` refusals)
+  and off, plus column forms; a dictionary-encoded parquet column
+  built from a `pa.dictionary`-typed table (encoding alone reads back
+  as `Utf8`); the `nvl(rand(), xd)` non-nullable schema; `IF()`-first
+  collects over a nullable column; the lossy `sequence` cell in both
+  spellings. pins: nvl-type-coercion-1/C-022, C-023, C-024, C-025
 - `test_select_naming.py` — **Group H** select/projection display naming vs live PySpark 4.1.2:
   mutation leak accepts `Int32(1)` as well as `Int64(1)` (F-Y10-1 Python lit width);
   full matrix (`(x + 1)`, cast-of-attr → child name, cast-of-compound → `CAST(...)`,

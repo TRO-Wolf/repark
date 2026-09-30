@@ -2,6 +2,7 @@
 
 use std::sync::Arc;
 
+use datafusion::arrow::datatypes::DataType;
 use datafusion::common::config::{ConfigExtension, ConfigOptions};
 use datafusion::common::extensions_options;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
@@ -425,11 +426,7 @@ fn const_i128(expr: &Expr, depth: u32) -> Option<i128> {
                         values.into_iter().min()
                     }
                 }
-                "nullif" if args.len() == 2 => {
-                    let left = const_i128(&args[0], depth - 1)?;
-                    let right = const_i128(&args[1], depth - 1)?;
-                    if left == right { None } else { Some(left) }
-                }
+                "nullif" if args.len() == 2 => nullif_const_int(&args[0], &args[1]),
                 "__repark_nullif_pick" if args.len() == 2 => match &args[0] {
                     Expr::BinaryExpr(binary) if matches!(binary.op, Operator::Eq) => {
                         let left = const_i128(&binary.left, depth - 1)?;
@@ -451,6 +448,33 @@ fn const_i128(expr: &Expr, depth: u32) -> Option<i128> {
         }
         _ => None,
     }
+}
+
+fn nullif_const_int(first: &Expr, second: &Expr) -> Option<i128> {
+    let (left, left_type) = nullif_exact_int(first)?;
+    let (right, right_type) = nullif_exact_int(second)?;
+    if left_type != right_type {
+        return None;
+    }
+    if left == right { None } else { Some(left) }
+}
+
+fn nullif_exact_int(expr: &Expr) -> Option<(i128, DataType)> {
+    let Expr::Literal(scalar, _) = expr else {
+        return None;
+    };
+    let value = match scalar {
+        ScalarValue::Int8(Some(value)) => i128::from(*value),
+        ScalarValue::Int16(Some(value)) => i128::from(*value),
+        ScalarValue::Int32(Some(value)) => i128::from(*value),
+        ScalarValue::Int64(Some(value)) => i128::from(*value),
+        ScalarValue::UInt8(Some(value)) => i128::from(*value),
+        ScalarValue::UInt16(Some(value)) => i128::from(*value),
+        ScalarValue::UInt32(Some(value)) => i128::from(*value),
+        ScalarValue::UInt64(Some(value)) => i128::from(*value),
+        _ => return None,
+    };
+    Some((value, scalar.data_type()))
 }
 
 /// Trivial scalar subquery `SELECT <const>` (no outer refs) — C5-SEC-001.

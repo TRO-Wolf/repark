@@ -306,21 +306,19 @@ fn rewrite_nullif(
     if is_null_literal(&first) || is_null_literal(&second) {
         return Ok(first);
     }
-    if !from_nullifzero
-        && let [leaf] = leaves.as_slice()
-        && leaf.path_a.is_empty()
-        && leaf.path_b.is_empty()
-        && leaf.common == first_type
-    {
-        return Ok(single_nullif(&first, &second, leaf));
-    }
     if let [leaf] = leaves.as_slice()
         && leaf.path_a.is_empty()
         && leaf.path_b.is_empty()
-        && crate::spark_nvl_eager::kernel_covers_scalar(&leaf.common)
-        && (from_nullifzero || leaf.common != first_type)
     {
-        return Ok(nullif_compare_expr(first, second, &leaf.common));
+        let string_cast = leaf_string_needs_cast(&leaf.type_a, &leaf.type_b, &leaf.common);
+        if !from_nullifzero && leaf.common == first_type && !string_cast {
+            return Ok(single_nullif(&first, &second, leaf));
+        }
+        if crate::spark_nvl_eager::kernel_covers_scalar(&leaf.common)
+            && (from_nullifzero || leaf.common != first_type || string_cast)
+        {
+            return Ok(nullif_compare_expr(first, second, &leaf.common));
+        }
     }
     let mut cond: Option<Expr> = None;
     for leaf in &leaves {
@@ -347,6 +345,18 @@ fn rewrite_nullif(
         nullif_pick_udf(),
         vec![cond, first],
     )))
+}
+
+fn leaf_string_needs_cast(type_a: &DataType, type_b: &DataType, common: &DataType) -> bool {
+    (is_string_leaf(type_a) && type_a != common) || (is_string_leaf(type_b) && type_b != common)
+}
+
+fn is_string_leaf(data_type: &DataType) -> bool {
+    match data_type {
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => true,
+        DataType::Dictionary(_, values) => is_string_leaf(values),
+        _ => false,
+    }
 }
 
 fn single_nullif(first: &Expr, second: &Expr, leaf: &CompareLeaf) -> Expr {

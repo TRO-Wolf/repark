@@ -3,12 +3,14 @@ use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use datafusion::arrow::array::{
-    Array, ArrayRef, AsArray, BooleanArray, Float32Array, Float64Array, UInt32Array,
+    Array, ArrayRef, AsArray, BooleanArray, BooleanBufferBuilder, UInt32Array,
 };
+use datafusion::arrow::buffer::NullBuffer;
 use datafusion::arrow::compute::kernels::cmp::eq;
 use datafusion::arrow::compute::kernels::nullif::nullif as arrow_nullif;
 use datafusion::arrow::compute::{CastOptions, cast_with_options, concat, take};
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Float32Type, Float64Type};
+use datafusion::common::tree_node::TreeNode;
 use datafusion::common::{Result, exec_err};
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{
@@ -33,7 +35,20 @@ pub fn nullif_compare_udf(common: &DataType) -> Arc<ScalarUDF> {
 
 #[must_use]
 pub fn nvl_pick_expr(first: Expr, second: Expr) -> Expr {
-    Expr::ScalarFunction(ScalarFunction::new_udf(nvl_pick_udf(), vec![first, second]))
+    let trust_first = first_nullability_trusted(&first);
+    Expr::ScalarFunction(ScalarFunction::new_udf(
+        Arc::new(ScalarUDF::from(NvlPick::with_trust(trust_first))),
+        vec![first, second],
+    ))
+}
+
+fn first_nullability_trusted(first: &Expr) -> bool {
+    !first
+        .exists(|node| {
+            Ok(matches!(node, Expr::Case(_))
+                || matches!(node, Expr::ScalarFunction(call) if call.func.name().eq_ignore_ascii_case("if")))
+        })
+        .unwrap_or(true)
 }
 
 #[must_use]
@@ -142,6 +157,16 @@ fn cast_to_common(
     if array.data_type() == common {
         return Ok(Arc::clone(array));
     }
+    if let DataType::Dictionary(_, values) = array.data_type()
+        && is_string_source(values)
+    {
+        let options = CastOptions {
+            safe: false,
+            ..CastOptions::default()
+        };
+        let unpacked = cast_with_options(array.as_ref(), values.as_ref(), &options)?;
+        return cast_to_common(&unpacked, common, zone, ansi, now);
+    }
     if is_string_source(array.data_type()) {
         if ansi {
             return spark_cast_ansi_zoned(array, common, zone, now);
@@ -158,35 +183,71 @@ fn cast_to_common(
     Ok(cast_with_options(array.as_ref(), common, &options)?)
 }
 
-fn without_negative_zero(array: &ArrayRef) -> ArrayRef {
-    if array.data_type() == &DataType::Float32 {
-        let values = array.as_primitive::<Float32Type>();
-        let normalized: Float32Array = values
-            .iter()
-            .map(|value| value.map(|inner| if inner == 0.0 { 0.0 } else { inner }))
-            .collect();
-        return Arc::new(normalized);
+#[allow(
+    clippy::float_cmp,
+    reason = "Spark nullif compares floats with == plus NaN equality"
+)]
+fn float_nullif_match(
+    left: &ArrayRef,
+    right: &ArrayRef,
+    common: &DataType,
+) -> Result<BooleanArray> {
+    if left.len() != right.len() {
+        return exec_err!(
+            "float nullif got mismatched argument widths {} and {}",
+            left.len(),
+            right.len()
+        );
     }
-    if array.data_type() == &DataType::Float64 {
-        let values = array.as_primitive::<Float64Type>();
-        let normalized: Float64Array = values
-            .iter()
-            .map(|value| value.map(|inner| if inner == 0.0 { 0.0 } else { inner }))
-            .collect();
-        return Arc::new(normalized);
+    let nulls = NullBuffer::union(left.nulls(), right.nulls());
+    if common == &DataType::Float32 {
+        let left = left.as_primitive::<Float32Type>();
+        let right = right.as_primitive::<Float32Type>();
+        return Ok(zipped_float_match(
+            left.values(),
+            right.values(),
+            nulls,
+            |first, second| first == second || (first.is_nan() && second.is_nan()),
+        ));
     }
-    Arc::clone(array)
+    let left = left.as_primitive::<Float64Type>();
+    let right = right.as_primitive::<Float64Type>();
+    Ok(zipped_float_match(
+        left.values(),
+        right.values(),
+        nulls,
+        |first, second| first == second || (first.is_nan() && second.is_nan()),
+    ))
+}
+
+fn zipped_float_match<T: Copy>(
+    left: &[T],
+    right: &[T],
+    nulls: Option<NullBuffer>,
+    equal: impl Fn(T, T) -> bool,
+) -> BooleanArray {
+    let mut values = BooleanBufferBuilder::new(left.len());
+    for (first, second) in left.iter().zip(right.iter()) {
+        values.append(equal(*first, *second));
+    }
+    BooleanArray::new(values.finish(), nulls)
 }
 
 #[derive(Debug)]
 struct NvlPick {
     signature: Signature,
+    trust_first: bool,
 }
 
 impl NvlPick {
     fn new() -> Self {
+        Self::with_trust(false)
+    }
+
+    fn with_trust(trust_first: bool) -> Self {
         Self {
             signature: Signature::user_defined(Volatility::Immutable),
+            trust_first,
         }
     }
 }
@@ -223,7 +284,11 @@ impl ScalarUDFImpl for NvlPick {
                 args.arg_fields.len(),
             ));
         };
-        let nullable = second.is_nullable();
+        let nullable = if self.trust_first {
+            first.is_nullable() && second.is_nullable()
+        } else {
+            second.is_nullable()
+        };
         Ok(Arc::new(Field::new(
             "__repark_nvl_pick",
             first.data_type().clone(),
@@ -334,10 +399,7 @@ impl ScalarUDFImpl for NullifCompare {
         let right = cast_to_common(second, &self.common, zone, ansi, now)?;
         let compared: BooleanArray = if matches!(self.common, DataType::Float32 | DataType::Float64)
         {
-            eq(
-                &without_negative_zero(&left),
-                &without_negative_zero(&right),
-            )?
+            float_nullif_match(&left, &right, &self.common)?
         } else {
             eq(&left, &right)?
         };

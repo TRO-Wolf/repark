@@ -594,6 +594,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   9007199254740992D))` still refuses: the ceiling folds the pre-rewrite
   `nullif` (this rule seats before the `nvl`-family rewrite), carried from
   main. pins: nvl-type-coercion-1/C-021.
+  **Re-verify 4 (2026-09-30, VN5-7):** the plain-`nullif` arm folds only
+  same-type exact-integer literals now (floats, strings, casts and mixed
+  widths defer to runtime), so the lossy `sequence` cell answers NULL like
+  Spark. This corrects the R3 "carried from main" line: base fails earlier
+  with `DATATYPE_MISMATCH`, so the fold first became reachable in this unit.
+  pins: nvl-type-coercion-1/C-025.
 
 
 - **R-FN-BATCH4** aggregate expansion.
@@ -748,6 +754,14 @@ scalars live under [`try_invert/`](try_invert/map.md).
   branches as non-nullable), and `Float32`/`Float64` compares normalize
   `-0.0` before `eq` (`NaN` already equals `NaN`). pins:
   nvl-type-coercion-1/C-019, C-020
+  **Re-verify 4 (2026-09-30, VN5-2/VN5-4/VN5-5):** the float compare is one
+  null-propagating zip (`==` plus NaN-equals-NaN, no intermediate arrays),
+  so widened float `nullif` runs at base speed and kernel NaN payloads
+  compare equal like Spark; dictionary-encoded strings unpack before the
+  same Spark cast; the pick trusts its first argument's nullability flag
+  unless the first holds `CASE`/`IF` (the engine's volatile-`CASE`
+  misreport is physical-only and deterministic, and `IF()` reaches the
+  rule as a function). pins: nvl-type-coercion-1/C-022, C-023, C-024
 - `spark_nvl_rule.rs` — **NVL-TYPE-COERCION-1 (2026-09-29):** the
   `SparkNvlFamilyRewrite` analyzer rule, appended last on the Spark door and
   the `F.expr` context. NULL-literal and non-null-literal sides fold without
@@ -776,6 +790,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   returns the original value, while same-type `nullif` keeps DataFusion's
   own form with no cast-back; a no-op `nvl_cast` (arg type already the widen)
   is skipped. pins: nvl-type-coercion-1/C-016, C-017, C-018
+  **Re-verify 4 (2026-09-30, VN5-4):** a scalar `nullif` whose string side
+  still needs a cast lowers to the kernel even when the compare type equals
+  the first type, so both argument orders share the session-zoned Spark
+  cast; same-type and non-string widened `nullif` keep DataFusion's form.
+  pins: nvl-type-coercion-1/C-023
 - `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer
   rule, installed on BOTH doors via `install_shared_analyzer_rules` (defined here since FNP-11B step 3 and re-exported from the crate root, so `repark_functions::install_shared_analyzer_rules` and run 16b's `session.rs` call are unchanged; the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts; the TIME guard left for `analyzer_rules()` in remediation round 1).
   installer calls it in place of the integer-only one — same line count, so the
