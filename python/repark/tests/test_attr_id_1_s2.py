@@ -43,6 +43,12 @@ def _assert_footer_clean(part: Path) -> None:
     assert not file_metadata or _ATTR_KEY not in file_metadata
 
 
+def _written_files(out: Path, suffix: str) -> list[Path]:
+    if out.is_file():
+        return [out]
+    return sorted(part for part in out.rglob(f"*{suffix}") if part.is_file())
+
+
 def test_every_spawned_frame_carries_an_id_on_every_output_field(
     spark: ReparkSession, tmp_path: Path
 ) -> None:
@@ -78,7 +84,7 @@ def test_written_parquet_footer_carries_no_attribute_key(
 ) -> None:
     out = tmp_path / "clean.parquet"
     _frame(spark).write.parquet(str(out))
-    parts = sorted(out.rglob("*.parquet"))
+    parts = _written_files(out, ".parquet")
     assert parts
     for part in parts:
         _assert_footer_clean(part)
@@ -93,13 +99,13 @@ def test_written_csv_and_json_bytes_carry_no_attribute_key(
 ) -> None:
     csv_out = tmp_path / "clean.csv"
     _frame(spark).write.csv(str(csv_out))
-    csv_parts = [part for part in sorted(csv_out.rglob("*")) if part.is_file()]
+    csv_parts = _written_files(csv_out, ".csv")
     assert csv_parts
     for part in csv_parts:
         assert _ATTR_KEY not in part.read_bytes()
     json_out = tmp_path / "clean.json"
     _frame(spark).write.json(str(json_out))
-    json_parts = [part for part in sorted(json_out.rglob("*")) if part.is_file()]
+    json_parts = _written_files(json_out, ".json")
     assert json_parts
     for part in json_parts:
         assert _ATTR_KEY not in part.read_bytes()
@@ -156,7 +162,8 @@ def test_arrow_exports_carry_no_attribute_key(
     spark: ReparkSession, capsys: pytest.CaptureFixture[str]
 ) -> None:
     frame = _frame(spark)
-    assert _ATTR_KEY not in str(frame.to_arrow().schema.metadata)
+    table_metadata = frame.to_arrow().schema.metadata or {}
+    assert _ATTR_KEY not in table_metadata
     for field in frame.to_arrow().schema:
         assert (field.metadata or {}).get(_ATTR_KEY) is None
     for field in frame.toArrow().schema:
@@ -202,14 +209,15 @@ def test_deep_and_joined_frames_write_clean_footers(spark: ReparkSession, tmp_pa
     deep = base.select("id", "data").filter("id > 0").select("id", "data")
     deep_out = tmp_path / "deep.parquet"
     deep.write.parquet(str(deep_out))
-    deep_parts = sorted(deep_out.rglob("*.parquet"))
+    deep_parts = _written_files(deep_out, ".parquet")
     assert deep_parts
     for part in deep_parts:
         _assert_footer_clean(part)
-    joined = base.join(base, on="id")
+    other = base.withColumnRenamed("data", "other_data")
+    joined = base.join(other, on="id")
     join_out = tmp_path / "joined.parquet"
     joined.write.parquet(str(join_out))
-    join_parts = sorted(join_out.rglob("*.parquet"))
+    join_parts = _written_files(join_out, ".parquet")
     assert join_parts
     for part in join_parts:
         _assert_footer_clean(part)
@@ -220,7 +228,7 @@ def test_cached_frames_write_clean_footers(spark: ReparkSession, tmp_path: Path)
     assert frame.count() == 2
     out = tmp_path / "cached.parquet"
     frame.write.parquet(str(out))
-    parts = sorted(out.rglob("*.parquet"))
+    parts = _written_files(out, ".parquet")
     assert parts
     for part in parts:
         _assert_footer_clean(part)
@@ -237,7 +245,7 @@ def test_scalar_subquery_sources_write_clean_footers(spark: ReparkSession, tmp_p
     for name, frame in (("in_subquery", filtered), ("scalar_subquery", scalar)):
         out = tmp_path / f"{name}.parquet"
         frame.write.parquet(str(out))
-        parts = sorted(out.rglob("*.parquet"))
+        parts = _written_files(out, ".parquet")
         assert parts
         for part in parts:
             _assert_footer_clean(part)
