@@ -584,6 +584,68 @@ mod tests {
         );
     }
 
+    #[test]
+    fn nullif_compare_form_bounded_by_first_argument() {
+        use datafusion::logical_expr::lit;
+        let compare =
+            crate::spark_nvl_eager::nullif_compare_expr(lit(101i32), lit(0i64), &DataType::Int64);
+        let args = vec![lit(1i64), compare];
+        let err = crate::cardinality::refuse_literal_expansion("array_repeat", &args, 100)
+            .expect_err("mixed-width compare form must refuse over the ceiling")
+            .to_string();
+        assert!(
+            err.contains(crate::cardinality::MAX_ARRAY_ELEMENTS_KEY),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn nullif_decimal_double_seconds_fold_to_null() {
+        use datafusion::arrow::datatypes::DataType as ArrowType;
+        use datafusion::logical_expr::lit;
+        let decimal = Expr::Literal(ScalarValue::Decimal128(Some(1010), 4, 1), None);
+        let double = Expr::Cast(datafusion::logical_expr::Cast::new(
+            Box::new(decimal),
+            ArrowType::Float64,
+        ));
+        for second in [
+            double,
+            Expr::Cast(datafusion::logical_expr::Cast::new(
+                Box::new(lit(101i32)),
+                ArrowType::Decimal128(5, 0),
+            )),
+            lit(101i64),
+        ] {
+            let count = df_nullif(lit(101i32), second);
+            crate::cardinality::refuse_literal_expansion("array_repeat", &[lit(1i64), count], 100)
+                .expect("proven-equal nullif must skip the ceiling");
+        }
+    }
+
+    #[test]
+    fn nullif_string_sides_skip_or_refuse() {
+        use datafusion::logical_expr::lit;
+        let string_first = df_nullif(lit("101"), lit(0i32));
+        crate::cardinality::refuse_literal_expansion(
+            "array_repeat",
+            &[lit(1i64), string_first],
+            100,
+        )
+        .expect("string-first nullif stays unknown to the ceiling");
+        let string_second = df_nullif(lit(101i32), lit("101"));
+        let err = crate::cardinality::refuse_literal_expansion(
+            "array_repeat",
+            &[lit(1i64), string_second],
+            100,
+        )
+        .expect_err("unproven string-second nullif stays bounded by its first argument")
+        .to_string();
+        assert!(
+            err.contains(crate::cardinality::MAX_ARRAY_ELEMENTS_KEY),
+            "{err}"
+        );
+    }
+
     #[tokio::test]
     async fn rule_compares_structs_by_position() {
         let ctx = ctx();

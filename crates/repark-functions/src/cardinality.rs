@@ -14,7 +14,7 @@ use datafusion::optimizer::AnalyzerRule;
 use datafusion::prelude::SessionConfig;
 
 /// Max recursion depth when folding planner-visible const integer trees (`Cast` / `BinaryExpr`).
-const CONST_FOLD_MAX_DEPTH: u32 = 32;
+pub(crate) const CONST_FOLD_MAX_DEPTH: u32 = 32;
 
 /// Canonical conf key (Spark-style camelCase).
 pub const MAX_ARRAY_ELEMENTS_KEY: &str = "repark.sql.maxArrayElements";
@@ -266,7 +266,7 @@ fn parse_decimal_integer_text(text: &str) -> Option<i128> {
 
 /// Truncate a finite `f64` toward zero into `i128` for ceiling checks.
 #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
-fn f64_trunc_to_i128(value: f64) -> Option<i128> {
+pub(crate) fn f64_trunc_to_i128(value: f64) -> Option<i128> {
     if !value.is_finite() {
         return None;
     }
@@ -275,7 +275,7 @@ fn f64_trunc_to_i128(value: f64) -> Option<i128> {
 }
 
 #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
-fn const_f64(expr: &Expr, depth: u32) -> Option<f64> {
+pub(crate) fn const_f64(expr: &Expr, depth: u32) -> Option<f64> {
     if depth == 0 {
         return None;
     }
@@ -363,7 +363,7 @@ fn const_f64_scalar_function(name: &str, args: &[Expr], depth: u32) -> Option<f6
 }
 
 /// Fold a planner-visible integer const tree to `i128` (depth-bounded).
-fn const_i128(expr: &Expr, depth: u32) -> Option<i128> {
+pub(crate) fn const_i128(expr: &Expr, depth: u32) -> Option<i128> {
     if depth == 0 {
         return None;
     }
@@ -426,7 +426,9 @@ fn const_i128(expr: &Expr, depth: u32) -> Option<i128> {
                         values.into_iter().min()
                     }
                 }
-                "nullif" if args.len() == 2 => nullif_const_int(&args[0], &args[1]),
+                "nullif" | "__repark_nullif_compare" if args.len() == 2 => {
+                    crate::cardinality_nullif::nullif_const_int(&args[0], &args[1], depth - 1)
+                }
                 "__repark_nullif_pick" if args.len() == 2 => match &args[0] {
                     Expr::BinaryExpr(binary) if matches!(binary.op, Operator::Eq) => {
                         let left = const_i128(&binary.left, depth - 1)?;
@@ -447,107 +449,6 @@ fn const_i128(expr: &Expr, depth: u32) -> Option<i128> {
             const_i128_from_scalar_subquery(subquery.subquery.as_ref(), depth - 1)
         }
         _ => None,
-    }
-}
-
-fn nullif_const_int(first: &Expr, second: &Expr) -> Option<i128> {
-    let first_value = nullif_exact_int_value(first)?;
-    if nullif_proven_equal(first, second) {
-        None
-    } else {
-        Some(first_value)
-    }
-}
-
-#[allow(
-    clippy::float_cmp,
-    reason = "Spark nullif compares DOUBLE images with == plus NaN equality"
-)]
-fn nullif_proven_equal(first: &Expr, second: &Expr) -> bool {
-    if let (Some(left), Some(right)) = (
-        nullif_exact_int_value(first),
-        nullif_exact_int_value(second),
-    ) {
-        return left == right;
-    }
-    if !nullif_float_involved(first) && !nullif_float_involved(second) {
-        return false;
-    }
-    let (Some(left), Some(right)) = (
-        const_f64(first, CONST_FOLD_MAX_DEPTH),
-        const_f64(second, CONST_FOLD_MAX_DEPTH),
-    ) else {
-        return false;
-    };
-    left == right || (left.is_nan() && right.is_nan())
-}
-
-fn nullif_exact_int_value(expr: &Expr) -> Option<i128> {
-    match expr {
-        Expr::Literal(scalar, _) => match scalar {
-            ScalarValue::Int8(Some(value)) => Some(i128::from(*value)),
-            ScalarValue::Int16(Some(value)) => Some(i128::from(*value)),
-            ScalarValue::Int32(Some(value)) => Some(i128::from(*value)),
-            ScalarValue::Int64(Some(value)) => Some(i128::from(*value)),
-            ScalarValue::UInt8(Some(value)) => Some(i128::from(*value)),
-            ScalarValue::UInt16(Some(value)) => Some(i128::from(*value)),
-            ScalarValue::UInt32(Some(value)) => Some(i128::from(*value)),
-            ScalarValue::UInt64(Some(value)) => Some(i128::from(*value)),
-            _ => None,
-        },
-        Expr::Cast(cast) => {
-            if !is_integer_type(cast.field.data_type()) {
-                return None;
-            }
-            nullif_exact_int_value(cast.expr.as_ref())
-        }
-        Expr::TryCast(try_cast) => {
-            if !is_integer_type(try_cast.field.data_type()) {
-                return None;
-            }
-            nullif_exact_int_value(try_cast.expr.as_ref())
-        }
-        Expr::Negative(inner) => nullif_exact_int_value(inner.as_ref())?.checked_neg(),
-        Expr::Alias(alias) => nullif_exact_int_value(alias.expr.as_ref()),
-        _ => None,
-    }
-}
-
-fn is_integer_type(data_type: &DataType) -> bool {
-    matches!(
-        data_type,
-        DataType::Int8
-            | DataType::Int16
-            | DataType::Int32
-            | DataType::Int64
-            | DataType::UInt8
-            | DataType::UInt16
-            | DataType::UInt32
-            | DataType::UInt64
-    )
-}
-
-fn nullif_float_involved(expr: &Expr) -> bool {
-    match expr {
-        Expr::Literal(ScalarValue::Float32(_) | ScalarValue::Float64(_), _) => true,
-        Expr::Cast(cast) => {
-            matches!(
-                cast.field.data_type(),
-                DataType::Float32 | DataType::Float64
-            ) || nullif_float_involved(cast.expr.as_ref())
-        }
-        Expr::TryCast(try_cast) => {
-            matches!(
-                try_cast.field.data_type(),
-                DataType::Float32 | DataType::Float64
-            ) || nullif_float_involved(try_cast.expr.as_ref())
-        }
-        Expr::Negative(inner) => nullif_float_involved(inner.as_ref()),
-        Expr::Alias(alias) => nullif_float_involved(alias.expr.as_ref()),
-        Expr::BinaryExpr(BinaryExpr { left, right, .. }) => {
-            nullif_float_involved(left.as_ref()) || nullif_float_involved(right.as_ref())
-        }
-        _ => false,
     }
 }
 
@@ -920,6 +821,12 @@ mod tests {
             "SELECT array_repeat(1, nullif(101, CAST(0 AS BIGINT))) AS a",
             "SELECT array_repeat(1, nullif(CAST(101 AS SMALLINT), CAST(0 AS BIGINT))) AS a",
             "SELECT array_repeat(1, nullif(1000, CAST(1 AS BIGINT))) AS a",
+            "SELECT array_repeat(1, nullif(abs(-101), 0)) AS a",
+            "SELECT array_repeat(1, nullif(greatest(101, 1), 0)) AS a",
+            "SELECT array_repeat(1, nullif(CASE WHEN true THEN 101 END, 0)) AS a",
+            "SELECT array_repeat(1, nullif((SELECT 101), 0)) AS a",
+            "SELECT array_repeat(1, nullif(nullif(101, 0), 0)) AS a",
+            "SELECT array_repeat(1, CAST(nullif(CAST(CAST(101 AS DECIMAL(4, 1)) AS DOUBLE), 0) AS INT)) AS a",
             "SELECT array_repeat(1, CASE WHEN true THEN 101 ELSE 1 END) AS a",
             "SELECT array_repeat(1, CASE WHEN false THEN 1 WHEN true THEN 101 END) AS a",
             "SELECT array_repeat(1, CASE 1 WHEN 1 THEN 101 ELSE 1 END) AS a",

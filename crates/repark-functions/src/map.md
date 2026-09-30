@@ -607,6 +607,29 @@ scalars live under [`try_invert/`](try_invert/map.md).
   float is involved — so mixed-width over-ceiling counts refuse again while
   the lossy `sequence` cell still answers NULL. Truncated floats never fold.
   pins: nvl-type-coercion-1/C-027.
+  **Re-verify 6 (2026-09-30, VN7-1/VN7-2):** the bound is the general
+  `const_i128` of the first argument — `abs`, `greatest`, `CASE`, scalar
+  subqueries, nested `nullif` and integer casts all refuse over the ceiling
+  again — and the `__repark_nullif_compare` form the `F.expr` door produces
+  folds through the same arm, so every door refuses alike. Strings stay
+  unknown (base never folded a string-derived count: `spark_decimal_rewrite`
+  wraps those casts in an unfoldable UDF first), and the nullable-decimal
+  UDF unwraps before the fold so `CAST(101 AS DECIMAL)` counts. Equality
+  proves three ways — exact integers both sides, an exactly-integral
+  `Decimal128` second against an exact first, or the kept `f64` compare —
+  so `nullif(101, 101.0D)` and `nullif(101, CAST(101 AS DECIMAL))` answer
+  NULL while `nullif(101, '101')` stays ceiling-refused. The fold lives in
+  `cardinality_nullif.rs` (file-size split, move-only).
+  pins: nvl-type-coercion-1/C-029.
+- `cardinality_nullif.rs` — **NVL-TYPE-COERCION-1 re-verify 6
+  (2026-09-30, VN7-1/VN7-2/VN7-3):** the `nullif` ceiling fold, split out of
+  `cardinality.rs` (move-only): `nullif_const_int` bounds by the first
+  argument and folds proven-equal pairs to NULL; string literals prune to
+  NULL and the nullable-decimal UDF unwraps before the shared `const_i128`,
+  so string-derived counts stay unknown like base while decimal casts
+  count; `Decimal128` cores prove (truncated for the bound, exact for
+  equality) and the kept `f64` path keeps the lossy `sequence` pins NULL.
+  pins: nvl-type-coercion-1/C-029.
 
 
 - **R-FN-BATCH4** aggregate expansion.
@@ -775,6 +798,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   flag, which understates for `TRY_CAST`; the kernel still returns the
   original first array while a scalar side is cast once through a one-row
   array for the compare. pins: nvl-type-coercion-1/C-026, C-028
+  **Re-verify 6 (2026-09-30, VN7-4):** an all-NULL first returns at once and
+  a partially-NULL first masks the array second side before the compare
+  cast, so Spark's skipped right side never raises `CAST_INVALID_INPUT` on
+  NULL rows; non-NULL invalid rows still raise, the first-side cast is
+  untouched, and a null-free first pays one `null_count` check.
+  pins: nvl-type-coercion-1/C-031
 - `spark_nvl_rule.rs` — **NVL-TYPE-COERCION-1 (2026-09-29):** the
   `SparkNvlFamilyRewrite` analyzer rule, appended last on the Spark door and
   the `F.expr` context. NULL-literal and non-null-literal sides fold without
@@ -1072,6 +1101,14 @@ scalars live under [`try_invert/`](try_invert/map.md).
   closed-form counts reserve up front at native width with a scalar fast path. The int/date/
   timestamp row kernels live in `spark_sequence/rows.rs` (file-size split, move-only).
   pins: door-converge-2/C-007, C-009
+  **NVL-TYPE-COERCION-1 re-verify 6 (2026-09-30, VN7-6):** the never-casts
+  rule above gains one exception — `STRING` bounds with an `INT` sibling
+  coerce to the widest sibling width, restoring base's `array<int>` for
+  `sequence(1, nullif('101', 0))`, because Spark implicitly casts them and
+  the integer narrow still runs first (only string args cast, and the
+  analyzer-rule coerce that inserts the cast seats after narrowing).
+  Date/timestamp families, all-string bounds and `array_repeat` keep
+  refusing. pins: nvl-type-coercion-1/C-030
 - `spark_hash.rs` — **FNP-MATH-1 step 4 (2026-09-16, run 18a):** Spark Murmur3
   `hash` kernel (seed 42; per-type `mix`/`fmix` shapes verified against the fixture;
   strings as LE words with per-byte tails; arrays/structs/maps fold; always `int`,

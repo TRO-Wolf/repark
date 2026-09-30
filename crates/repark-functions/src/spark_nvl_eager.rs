@@ -1,4 +1,5 @@
 use std::hash::{Hash, Hasher};
+use std::ops::Not;
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
@@ -245,6 +246,16 @@ fn float_nullif_match(
     ))
 }
 
+fn mask_null_first_rows(second: &ArrayRef, first: &ArrayRef) -> Result<ArrayRef> {
+    let Some(validity) = first.nulls() else {
+        return Ok(Arc::clone(second));
+    };
+    Ok(arrow_nullif(
+        second.as_ref(),
+        &BooleanArray::new(validity.inner().not(), None),
+    )?)
+}
+
 fn zipped_float_match<T: Copy>(
     left: &[T],
     right: &[T],
@@ -429,8 +440,18 @@ impl ScalarUDFImpl for NullifCompare {
                 args.args.len(),
             ));
         };
+        let first_nulls = first.null_count();
+        if first_nulls == first.len() {
+            return Ok(ColumnarValue::Array(Arc::clone(first)));
+        }
+        let masked = if first_nulls > 0 && matches!(second_value, ColumnarValue::Array(_)) {
+            Some(mask_null_first_rows(second, first)?)
+        } else {
+            None
+        };
+        let second_array = masked.as_ref().unwrap_or(second);
         let left = compare_array(first_value, first, &self.common, zone, ansi, now)?;
-        let right = compare_array(second_value, second, &self.common, zone, ansi, now)?;
+        let right = compare_array(second_value, second_array, &self.common, zone, ansi, now)?;
         let compared: BooleanArray = if matches!(self.common, DataType::Float32 | DataType::Float64)
         {
             float_nullif_match(&left, &right, &self.common)?

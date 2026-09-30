@@ -78,6 +78,13 @@ fn int_rank(data_type: &DataType) -> Option<u8> {
     }
 }
 
+fn is_string_type(data_type: &DataType) -> bool {
+    matches!(
+        data_type,
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
+    )
+}
+
 fn wrong_input_types(arg_types: &[DataType]) -> DataFusionError {
     let rendered: Vec<String> = arg_types
         .iter()
@@ -101,6 +108,17 @@ fn plan_sequence(arg_types: &[DataType]) -> Result<Family> {
             "'sequence' expects (start, stop[, step]), got {} argument(s)",
             arg_types.len()
         )));
+    }
+    let present: Vec<&DataType> = arg_types
+        .iter()
+        .filter(|arg_type| **arg_type != DataType::Null)
+        .collect();
+    if present.iter().any(|arg_type| int_rank(arg_type).is_some())
+        && present
+            .iter()
+            .all(|arg_type| int_rank(arg_type).is_some() || is_string_type(arg_type))
+    {
+        return Ok(Family::Int);
     }
     let start_family = if arg_types[0] == DataType::Null {
         None
@@ -193,7 +211,26 @@ impl ScalarUDFImpl for SparkSequence {
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
         plan_sequence(arg_types)?;
-        Ok(arg_types.to_vec())
+        let mut widest = DataType::Int32;
+        let mut rank: Option<u8> = None;
+        for arg_type in arg_types {
+            if let Some(next) = int_rank(arg_type)
+                && rank.is_none_or(|current| next > current)
+            {
+                rank = Some(next);
+                widest = arg_type.clone();
+            }
+        }
+        Ok(arg_types
+            .iter()
+            .map(|arg_type| {
+                if is_string_type(arg_type) {
+                    widest.clone()
+                } else {
+                    arg_type.clone()
+                }
+            })
+            .collect())
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
@@ -752,6 +789,47 @@ mod tests {
             &DataType::List(Arc::new(Field::new("element", DataType::Int32, false)))
         );
         assert!(batches[0].column(0).is_null(0));
+    }
+
+    #[tokio::test]
+    async fn sequence_string_stop_casts_to_widest_int() {
+        let ctx = ctx();
+        let values = values_of(&ctx, "SELECT sequence(CAST(1 AS INT), '101')").await;
+        assert_eq!(values.len(), 101);
+        assert_eq!((values[0], values[100]), (1, 101));
+        for (start, element) in [
+            ("CAST(1 AS INT)", DataType::Int32),
+            ("CAST(1 AS BIGINT)", DataType::Int64),
+            ("CAST(1 AS SMALLINT)", DataType::Int16),
+        ] {
+            let batches = ctx
+                .sql(&format!("SELECT sequence({start}, '3')"))
+                .await
+                .unwrap_or_else(|error| panic!("plan {start}: {error}"))
+                .collect()
+                .await
+                .unwrap_or_else(|error| panic!("execute {start}: {error}"));
+            assert_eq!(
+                batches[0].column(0).data_type(),
+                &DataType::List(Arc::new(Field::new("element", element, false))),
+                "{start}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn sequence_string_date_bound_still_refuses() {
+        let ctx = ctx();
+        let error = ctx
+            .sql("SELECT sequence(DATE'2024-01-01', '2024-01-03')")
+            .await
+            .err()
+            .unwrap_or_else(|| panic!("should refuse"))
+            .to_string();
+        assert!(
+            error.contains("DATATYPE_MISMATCH.SEQUENCE_WRONG_INPUT_TYPES"),
+            "{error}"
+        );
     }
 
     #[tokio::test]

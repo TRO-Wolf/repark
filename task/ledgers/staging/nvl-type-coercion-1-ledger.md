@@ -52,6 +52,9 @@ interval-literal parsing; plain `if`/`CASE`/`=`/CAST methodology probes;
 | C-026 | VN6-1: the pick carries its first argument's logical nullability (rule computes `nullable()` on the widened branch against the input schema; `TryCast`/`try_*` top shapes forced nullable) instead of the physical flag, so `nvl`/`ifnull` over `try_cast`, `try_add`, `try_divide`, `try_element_at` and `try_to_number` with a volatile child collect NULL like base and Spark; every VN5-5 schema pin stays green. | The 20 SQL+DataFrame pins green; the physical-flag mutant reds them; the VN5-5 pins green. | PROVEN | 20/20 green in SQL and DataFrame; mutant (physical `arg_fields` flag) reds the `try_cast` pins; `nvl(rand(), xd)` still non-nullable. |
 | C-027 | VN6-2: `nullif(a, b)` under the array ceiling is bounded by `a` whenever `a` is an exact integer of any width or signedness (integer `CAST` chains count), folding to NULL only on proven equality (`i128` for integers, `f64` with NaN equality for floats); truncated floats never fold, so the VN5-7 cell still answers NULL. | The 4 refusal pins + the equal-yields-NULL pin + the lossy pin green; the same-type-only mutant reds the refusals. | PROVEN | 6/6 green at ceiling 100; mutant reds 4/4 refusals; `sequence(0L, nullif(9007199254740993L, 9007199254740992D))` still NULL. |
 | C-028 | VN6-3: a scalar side of `__repark_nullif_compare` is cast once through a one-row array for the compare while the kernel returns the original first array; `nullif(int_col, '5')` runs at or under 1.10x base (DEBUG median-of-15). | The perf table vs `adc26586` DEBUG. | PROVEN | Table in the lane hand-back. The string→DOUBLE per-row shapes are reported there; VN6-4 (shared `string_to_date` date-prefix gap) is carried, not changed here. |
+| C-029 | VN7-1/VN7-2/VN7-3: `nullif(a, b)` and the `__repark_nullif_compare` form are bounded by the general `const_i128` of `a` (strings stay unknown like base); equality proves only for exact integers, exactly-integral `Decimal128` seconds, or the kept `f64` compare. | The 13 SQL + 9 `F.expr` refusal pins, the 4 NULL pins and the 2 residue pins green; the literals-only mutant reds 21 pins and the no-compare-arm mutant reds 4. | PROVEN | 28/28 green at ceiling 100; both mutants reverted with the tree clean; the fold lives in `cardinality_nullif.rs` (file-size split, move-only). |
+| C-030 | VN7-6: `sequence` accepts `STRING` bounds with an `INT` sibling, coercing to the widest sibling width, so `sequence(1, nullif('101', 0))` answers 101 as `array<int>` like base and Spark; date/timestamp families, all-string bounds and `array_repeat` keep refusing. | The 5 answer pins (SQL, `F.expr`, column API) and the 2 still-refuses guards green. | PROVEN | 7/7 green; `typeof` is `array<int>` (`array<bigint>` for `1L`). |
+| C-031 | VN7-4: the `__repark_nullif_compare` kernel returns at once on an all-NULL first and masks the array second side on a partially-NULL first, so NULL rows never raise `CAST_INVALID_INPUT` while non-NULL invalid rows still do; null-free firsts pay one `null_count` check. | The 8 R3 pins green; the cast-every-row mutant reds the 5 answer pins and keeps the 2 raises pins green. | PROVEN | 8/8 green; the VN6-3 perf table vs `adc26586` DEBUG sits inside noise (lane hand-back). |
 
 ## Evidence
 
@@ -339,6 +342,45 @@ the cast leaf predates this unit.
 949 pins pass (923 + 26 new in
 `test_nvl_type_coercion_1_vn6.py`). Mutants, replay, gate and perf-table
 outcomes are recorded in the lane hand-back alongside this commit.
+
+### Re-verify 6 VN7-1/VN7-2/VN7-3/VN7-4/VN7-6 (2026-09-30)
+
+Step 0 on the lane head (`a6de0ae1`) reproduces every finding against
+base `/tmp/xrel` (`adc26586`): the six foldable-first counts answer 101
+where base refuses, `F.expr("array_repeat(1, nullif(101, 0L))")`
+answers where base refuses, and `sequence(1, nullif('101', 0))` dies
+in `sequence` coercion where base and Spark answer 101. A rule-by-rule
+trace of the production analyzer list shows why base never folds a
+string-derived count: `spark_decimal_rewrite` wraps those casts in the
+nullable-decimal UDF before the ceiling seats, so the raw-`nullif`
+fold on head must prune string literals itself to match base.
+
+VN7-1/VN7-2 bound `nullif(a, b)` by the general `const_i128` of `a`
+with the `__repark_nullif_compare` form folding through the same arm;
+VN7-3 proves equality for exact integers, exactly-integral `Decimal128`
+seconds (the `D` suffix arrives as `CAST(Decimal128 AS DOUBLE)`, and
+`CAST(int AS DECIMAL)` arrives UDF-wrapped, so both unwrap before the
+fold) and the kept `f64` path, which the lossy pins still need. The
+first draft returned P1 inequality early and red the three lossy pins;
+the shipped proof tries all three legs. `nullif(101, '101')` stays
+ceiling-refused against Spark-NULL (recorded divergence, pinned); the
+brief's "base refused it with a coercion error" is wrong — base
+answers NULL there (measured). VN7-5 (shared fast string→DOUBLE
+parse) is the owner's own unit, untouched. The unsigned `arrow_cast`
+over-ceiling count now refuses at the ceiling instead of erroring
+internal (the bound covers it); the under-ceiling internal error
+remains and is carried.
+
+VN7-6 teaches `sequence` (only) the implicit string→int bound cast
+Spark applies, to the widest `INT` sibling; `array_repeat` keeps
+refusing string counts like Spark. VN7-4 masks the array second side
+on NULL-first rows and returns at once on all-NULL firsts.
+
+992 pins pass (949 + 43 new in
+`test_nvl_type_coercion_1_vn7.py`) plus 7 `cardinality.rs` SQL rows, 3
+`cardinality_nullif` direct tests in `spark_nvl_rule.rs` and 2
+`sequence` width tests. Mutants, replay, gate and perf-table outcomes
+are recorded in the lane hand-back alongside this commit.
 
 ## Coverage attestation
 

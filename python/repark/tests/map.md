@@ -4996,6 +4996,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   SQL and DataFrame; mixed-width and `CAST` integer `nullif` over the 100
   ceiling refuse, equal mixed-width `nullif` yields NULL, and the lossy
   `sequence` cell still answers NULL. pins: nvl-type-coercion-1/C-026, C-027
+- `test_nvl_type_coercion_1_vn7.py` — **NVL-TYPE-COERCION-1 re-verify 6
+  (2026-09-30, VN7-1/VN7-2/VN7-3/VN7-4/VN7-6):** 43 pins. Foldable-first
+  `nullif` (`abs`, `greatest`, `CASE`, scalar subquery, nested, `D`-cast)
+  refuses over the 100 ceiling in SQL and `F.expr`; `101.0D` and
+  `DECIMAL(101)` seconds yield NULL; the string-second refusal and the
+  unsigned over-ceiling refusal stay pinned; string-first `sequence`
+  answers `101` as `array<int>` (`array<bigint>` for `1L`) in SQL,
+  `F.expr` and the column API while `array_repeat` and garbage strings
+  still refuse; NULL-first rows skip the compare cast and non-NULL
+  invalid rows still raise. pins: nvl-type-coercion-1/C-029, C-030, C-031
 - `test_select_naming.py` — **Group H** select/projection display naming vs live PySpark 4.1.2:
   mutation leak accepts `Int32(1)` as well as `Int64(1)` (F-Y10-1 Python lit width);
   full matrix (`(x + 1)`, cast-of-attr → child name, cast-of-compound → `CAST(...)`,
