@@ -221,6 +221,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   id or a desynced engine name). No docstring: the lane's no-comments ruling covers new
   private helpers; the contract lives here.
   pins: attr-id-1/C-008
+  **ATTR-ID-1 S2 fix (2026-09-30):** on a statement frame (`frame_is_relation` false)
+  `_bound_attr_id` returns `None` — no identity exists there — while a missing id on a
+  relation frame still fails loud.
+  pins: attr-id-1/C-008, C-014
   **ATTR-ID-1 S2 exports (2026-09-30):** `_strip_attribute_id_metadata(table)` drops
   the `repark.attr` key from every top-level Arrow field (Tables and RecordBatches;
   zero-copy when absent), called from `DataFrame._apply_export_display_names`.

@@ -57,8 +57,35 @@ pub fn attribute_ids(schema: &DFSchema) -> Vec<Option<AttrId>> {
         .collect()
 }
 
+#[must_use]
+pub fn plan_is_relation(plan: &LogicalPlan) -> bool {
+    match plan {
+        LogicalPlan::EmptyRelation(empty) => !empty.schema.fields().is_empty(),
+        LogicalPlan::Projection(_)
+        | LogicalPlan::Filter(_)
+        | LogicalPlan::Window(_)
+        | LogicalPlan::Aggregate(_)
+        | LogicalPlan::Sort(_)
+        | LogicalPlan::Join(_)
+        | LogicalPlan::Repartition(_)
+        | LogicalPlan::Union(_)
+        | LogicalPlan::TableScan(_)
+        | LogicalPlan::Subquery(_)
+        | LogicalPlan::SubqueryAlias(_)
+        | LogicalPlan::Limit(_)
+        | LogicalPlan::Values(_)
+        | LogicalPlan::Distinct(_)
+        | LogicalPlan::Unnest(_)
+        | LogicalPlan::RecursiveQuery(_) => true,
+        _ => false,
+    }
+}
+
 #[allow(clippy::missing_errors_doc)]
 pub fn stamp(plan: LogicalPlan) -> Result<LogicalPlan> {
+    if !plan_is_relation(&plan) {
+        return Ok(plan);
+    }
     if let LogicalPlan::Projection(projection) = &plan {
         return stamp_projection(projection).map(|stamped| stamped.unwrap_or(plan));
     }

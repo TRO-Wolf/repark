@@ -46,6 +46,12 @@ wrapped optimizer rule) and declares this directory.
   `try_new_with_schema`; any other root gains one pass-through Projection with a
   cleaned schema). Names, types, nullability, qualifiers, and schema-level metadata are
   preserved. Pins: `../tests/attr_id.rs`. pins: attr-id-1/C-009
+  **ATTR-ID-1 S2 fix (2026-09-30):** `stamp` only touches relation roots
+  (`plan_is_relation`: the 16 relation variants, plus an `EmptyRelation` with fields —
+  a field-less one is a planned `DROP TABLE`). Statement roots (`Explain`, `Analyze`,
+  `Ddl`, `Dml`, `Copy`, `DescribeTable`, `Statement`, `Extension`) pass through
+  unchanged, since wrapping one breaks it (`Explain` must stay root, DML must stay a
+  write). Pins: `../tests/attr_id.rs`. pins: attr-id-1/C-007, C-014
 - `case_bind.rs` — **U11-EDGE-1 (2026-09-26):** `bind_case_insensitive`, run first by
   `subquery.rs`'s `resolve_bound_expr` (the DataFrame door's one binding hook). An
   unqualified column the frame schema does not hold exactly binds to the single field that

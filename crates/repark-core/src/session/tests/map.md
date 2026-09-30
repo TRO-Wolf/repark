@@ -43,6 +43,10 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   keeping names, types, nullability, and qualifiers, returns an unstamped plan unchanged,
   and clears a non-Projection (Aggregate) root.
   pins: attr-id-1/C-011, C-009
+  **ATTR-ID-1 S2 fix (2026-09-30):** `EXPLAIN`, `EXPLAIN ANALYZE`, `DESCRIBE`, `INSERT`,
+  `COPY`, and `DROP TABLE` plan to statement roots that `stamp` returns unchanged while a
+  `SELECT` root stays a relation; a field-less `EmptyRelation` is a statement, one with
+  fields a relation. pins: attr-id-1/C-014
 - `session.rs` — ported v1 session battery plus P2G R2 / A13 / metadata-enumeration pins. RP-5: the bare-session half of the metadata-table enumeration contract (fork F-8 listing); mutation — make `information_schema` expect a `$snapshots` twin and the pin reds. pins: rp-5-fork-repin/C-003
   Child: [session/catalog_registration.rs](session/map.md).
   RP-5: `information_schema` hide pin now cites fork F-8 listing (no engine shim).

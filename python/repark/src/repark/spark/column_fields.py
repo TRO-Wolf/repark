@@ -352,7 +352,7 @@ def _update_fields_result(column: Any, value: Any, parts: Any) -> Any:
     )
 
 
-def _bound_attr_id(frame: Any, engine_field: str) -> str:
+def _bound_attr_id(frame: Any, engine_field: str) -> str | None:
     native: Any = _native.stamp_attribute_ids(frame._plan())
     frame._inner = native
     native_names: list[str] = [
@@ -362,7 +362,7 @@ def _bound_attr_id(frame: Any, engine_field: str) -> str:
         raise RuntimeError(f"internal error: engine field {engine_field!r} left the native schema")
     held: list[str | None] = _native.attribute_ids(native)
     attr_id: str | None = held[native_names.index(engine_field)]
-    if attr_id is None:
+    if attr_id is None and _native.frame_is_relation(native):
         raise RuntimeError(f"internal error: stamped field {engine_field!r} has no attribute id")
     return attr_id
 

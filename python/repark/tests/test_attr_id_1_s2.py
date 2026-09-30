@@ -189,3 +189,9 @@ def test_cache_keeps_frames_bindable(spark: ReparkSession) -> None:
     assert frame.count() == 2
     assert frame["id"]._attr_id is not None
     assert all(id is not None for id in _ids(frame))
+
+
+def test_statement_frames_bind_without_an_attribute_id(spark: ReparkSession) -> None:
+    explained = spark.sql("EXPLAIN SELECT 1 AS id")
+    assert explained["plan"]._attr_id is None
+    assert explained.collect()

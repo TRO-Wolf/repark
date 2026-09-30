@@ -5,19 +5,20 @@ use datafusion::arrow::array::{ArrayRef, Int64Array, RecordBatch, StringArray};
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::common::JoinType;
 use datafusion::common::metadata::FieldMetadata;
+use datafusion::common::{DFSchema, DFSchemaRef};
 use datafusion::dataframe::DataFrame;
 use datafusion::functions::expr_fn::{abs, coalesce, upper};
 use datafusion::functions_aggregate::expr_fn::{count, max};
 use datafusion::functions_window::expr_fn::row_number;
-use datafusion::logical_expr::{cast, col, lit, when};
+use datafusion::logical_expr::{EmptyRelation, LogicalPlan, cast, col, lit, when};
 use datafusion::prelude::SessionContext;
 
 use crate::ReparkSession;
 use crate::frame_names::{
     NameRule,
     NameRule::{Exact, IgnoreCase},
-    Resolution, attribute_ids, join_on_named_keys, remint_join_collisions, requalify_join_sides,
-    resolve, stamp, strip, union_by_folded_name,
+    Resolution, attribute_ids, join_on_named_keys, plan_is_relation, remint_join_collisions,
+    requalify_join_sides, resolve, stamp, strip, union_by_folded_name,
 };
 
 const KEY: &str = "repark.attr";
@@ -685,6 +686,59 @@ fn strip_removes_every_id_and_keeps_names_types_and_qualifiers() {
     let bare = source(&context);
     let (_, plan) = bare.clone().into_parts();
     assert_eq!(&strip(plan).unwrap(), bare.logical_plan());
+}
+
+#[tokio::test]
+async fn stamp_leaves_statement_roots_unchanged() {
+    let context = SessionContext::new();
+    let probe = Arc::new(Schema::new(vec![Field::new("id", DataType::Int64, false)]));
+    context
+        .register_table(
+            "probe_stmt",
+            Arc::new(
+                datafusion::datasource::memory::MemTable::try_new(
+                    Arc::clone(&probe),
+                    vec![Vec::new()],
+                )
+                .unwrap(),
+            ),
+        )
+        .unwrap();
+    let query = context.sql("SELECT id FROM probe_stmt").await.unwrap();
+    assert!(plan_is_relation(query.logical_plan()));
+    for query in [
+        "EXPLAIN SELECT id FROM probe_stmt",
+        "EXPLAIN ANALYZE SELECT id FROM probe_stmt",
+        "DESCRIBE probe_stmt",
+        "INSERT INTO probe_stmt VALUES (1)",
+        "COPY (SELECT id FROM probe_stmt) TO '/tmp/attr_probe_out' STORED AS PARQUET",
+        "DROP TABLE probe_stmt",
+    ] {
+        let planned = context.sql(query).await.expect(query);
+        let (_, plan) = planned.clone().into_parts();
+        assert!(!plan_is_relation(&plan), "{query} is a statement root");
+        assert_eq!(&stamp(plan.clone()).unwrap(), &plan);
+    }
+}
+
+#[test]
+fn plan_is_relation_splits_empty_relations_by_their_fields() {
+    let bare: DFSchemaRef = Arc::new(DFSchema::empty());
+    assert!(!plan_is_relation(&LogicalPlan::EmptyRelation(
+        EmptyRelation {
+            produce_one_row: false,
+            schema: bare,
+        }
+    )));
+    let with_field: DFSchemaRef = Arc::new(
+        DFSchema::try_from(Schema::new(vec![Field::new("id", DataType::Int64, false)])).unwrap(),
+    );
+    assert!(plan_is_relation(&LogicalPlan::EmptyRelation(
+        EmptyRelation {
+            produce_one_row: false,
+            schema: with_field,
+        }
+    )));
 }
 
 #[test]

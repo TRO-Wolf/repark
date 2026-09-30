@@ -18,6 +18,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(attribute_copy_name, module)?)?;
     module.add_function(wrap_pyfunction!(drop_frame_columns, module)?)?;
     module.add_function(wrap_pyfunction!(frame_case_sensitive, module)?)?;
+    module.add_function(wrap_pyfunction!(frame_is_relation, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_join_condition, module)?)?;
     module.add_function(wrap_pyfunction!(requalify_join_sides, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_display_name, module)?)?;
@@ -192,6 +193,11 @@ pub(crate) fn requalify_join_sides(
 #[pyfunction]
 fn frame_case_sensitive(frame: &PyDataFrame) -> bool {
     matches!(frame_rule(frame.inner()), NameRule::Exact)
+}
+
+#[pyfunction]
+fn frame_is_relation(frame: &PyDataFrame) -> bool {
+    repark_core::frame_names::plan_is_relation(frame.inner().logical_plan())
 }
 
 #[allow(clippy::missing_errors_doc)]
