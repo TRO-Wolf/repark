@@ -635,8 +635,13 @@ inputs. Live Spark 4.1.2 (banner `4.1.2`, America/New_York) spells
 implemented`. Head answered where Spark answers but with the wrong
 spelling on all three, so per the audit the pin stands and the
 product is fixed: the arms and the now-unused `IntervalUnit` import
-are removed, restoring the refusal. No pin weakened; no branch test
-uses `typeof` over an interval.
+are removed, restoring the refusal. No pin weakened. One branch pin
+moves with it: the `day_interval_type_name` divergence pin recorded
+the arms' wrong answer and now records `raises`. Neighbour note: base
+answers `t='string'` on that statement (base mistypes the `nvl` of
+intervals, itself wrong against Spark's `interval day`); head now
+refuses, which is the composition of this unit's correct interval
+`nvl` typing with the seam's `typeof` refusal.
 
 `test_fnp_misc_1_byname_allowlist_covers_facade` failed because the
 engine now resolves `nvl` / `nvl2` / `ifnull` / `nullifzero` /

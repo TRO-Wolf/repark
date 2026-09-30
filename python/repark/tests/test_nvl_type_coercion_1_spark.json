@@ -694,7 +694,7 @@
 {"key": "struct_to_string_raises", "repark": "raises", "spark": "{1}", "sql": "SELECT CAST(STRUCT(1 AS a) AS STRING) AS v"},
 {"key": "map_to_string_raises", "repark": "raises", "spark": "{a -> 1}", "sql": "SELECT CAST(MAP('a', 1) AS STRING) AS v"},
 {"col": "v", "key": "array_timestamp_element_format", "repark": "[2024-01-01T00:00:00Z]", "spark": "[2024-01-01 00:00:00]", "sql": "SELECT typeof(nvl(ARRAY(DATE '2024-01-01'), ARRAY(TIMESTAMP '2024-01-01 00:00:00'))) AS t, CAST(nvl(ARRAY(DATE '2024-01-01'), ARRAY(TIMESTAMP '2024-01-01 00:00:00')) AS STRING) AS v"},
-{"col": "t", "key": "day_interval_type_name", "repark": "interval month day nano", "spark": "interval day", "sql": "SELECT typeof(nvl(INTERVAL '1' DAY, INTERVAL '2' DAY)) AS t"},
+{"key": "day_interval_type_name", "repark": "raises", "spark": "interval day", "sql": "SELECT typeof(nvl(INTERVAL '1' DAY, INTERVAL '2' DAY)) AS t"},
 {"col": "v", "key": "day_interval_string_format", "repark": "1 days", "spark": "INTERVAL '1' DAY", "sql": "SELECT CAST(nvl(INTERVAL '1' DAY, INTERVAL '2' DAY) AS STRING) AS v"}
 ],
 "coalesce_guards": [

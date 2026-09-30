@@ -5060,6 +5060,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   parquet column through `F.nvl` (20000 rows, null share ~1/6); the
   `-0.0`/`NaN` `nullifzero`/`nullif` cells. Every expectation measured
   on live Spark 4.1.2. pins: nvl-type-coercion-1/C-019, C-020
+  CI fix (2026-09-30): the `day_interval_type_name` divergence pin records
+  `raises` — `typeof` over an interval is blocked on the fnp-11b seam again,
+  so the cell refuses where Spark answers `interval day`.
+  pins: nvl-type-coercion-1/C-002
 - `test_nvl_type_coercion_1_vn5.py` — **NVL-TYPE-COERCION-1 re-verify 4
   (2026-09-30, VN5-2/VN5-4/VN5-5/VN5-7):** the sibling split out at the
   1000-line ceiling. 29 pins, every expectation measured on live Spark

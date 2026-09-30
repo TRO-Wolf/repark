@@ -1472,11 +1472,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   builder. PERF-001 stays per-row: the batch forward is unsound against the
   inner batch-atomic error (see the ledger). pins: fnp-11b/C-006, C-007.
   **NVL-TYPE-COERCION-1 CI fix (2026-09-30):** the `SparkTypeof` interval
-  arms are gone. A wip snapshot added them for `nvl` interval cells that never
-  shipped, and they answered `interval month day nano` for every interval input
-  while live Spark 4.1.2 spells `interval day` / `interval year` /
-  `interval month`; units arrive unit-less, so the day/year/month spellings stay
-  blocked behind the `MonthDayNano` refusal the TYPEOF-SQL-14..16 pins assert.
+  arms are gone. Their only consumer was the `day_interval_type_name`
+  divergence pin, which recorded their wrong answer (`interval month day nano`
+  for every interval input) against live Spark 4.1.2's `interval day` /
+  `interval year` / `interval month`; units arrive unit-less, so the
+  day/year/month spellings stay blocked behind the `MonthDayNano` refusal the
+  TYPEOF-SQL-14..16 pins assert, and the divergence pin records `raises`.
   pins: nvl-type-coercion-1/C-002.
   **FNP-11B step 6 (2026-09-15):** `SparkTypeof` spells `array<…>` / `map<…>` /
   `struct<…>` recursively through the same table (no second table; the
