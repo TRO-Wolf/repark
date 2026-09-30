@@ -172,7 +172,7 @@ impl FileSink for ReparkTextSink {
             demux_task,
             forward_recv,
         );
-        let (outcome, ()) = futures::join!(write, forward);
+        let (outcome, ()) = futures::future::join(write, forward).await;
         outcome
     }
 }
