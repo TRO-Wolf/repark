@@ -496,13 +496,13 @@ async fn conflicting_quoted_values_render_doubled_in_the_refusal() {
         &ctx,
         &schema(),
         &scope(),
-        &assignments("UPDATE t SET st.inner = NULL, st.inner.y = 'it''s'"),
+        &assignments("UPDATE t SET st.inner = NULL, st.inner.y = 'it''''s'"),
     )
     .await
     .unwrap_err()
     .to_string();
     assert!(
-        error.contains("t.st.`inner`.`y` = 'it''s'"),
+        error.contains("t.st.`inner`.`y` = 'it''''s'"),
         "conflict refusal quotes the value: {error}"
     );
 }
@@ -514,11 +514,11 @@ fn repeated_quoted_values_render_doubled_in_the_refusal() {
         .expect("key resolves")
         .expect("top-level key");
     let row = [
-        Expr::Value(Value::SingleQuotedString("it's".to_string()).with_empty_span()),
+        Expr::Value(Value::SingleQuotedString("it''s".to_string()).with_empty_span()),
         Expr::Value(Value::SingleQuotedString("x".to_string()).with_empty_span()),
     ];
     assert_eq!(
         repeated_insert_keys(&[Some(key.clone()), Some(key)], &row),
-        ["Multiple assignments for 'id': 'it''s', 'x'"]
+        ["Multiple assignments for 'id': 'it''''s', 'x'"]
     );
 }
