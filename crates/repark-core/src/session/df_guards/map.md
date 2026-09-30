@@ -40,12 +40,14 @@ wrapped optimizer rule) and declares this directory.
   `Missing` for none; a hit without an id and a display count that differs from the field count
   are internal errors, never a wildcard. The facade does not call any of it yet (S2 stamps
   every spawned frame). Pins: `../tests/attr_id.rs`. pins: attr-id-1/C-002, C-003, C-004
-  **ATTR-ID-1 S2 (2026-09-30):** `strip(plan)` returns the plan unchanged when no root
-  output field carries the key, else rebuilds the root with the key removed from every
-  field (a Projection root keeps its expressions under an explicit cleaned schema via
-  `try_new_with_schema`; any other root gains one pass-through Projection with a
-  cleaned schema). Names, types, nullability, qualifiers, and schema-level metadata are
-  preserved. Pins: `../tests/attr_id.rs`. pins: attr-id-1/C-009
+  **ATTR-ID-1 S2 (2026-09-30):** `strip(plan)` rebuilds the plan bottom-up with the key
+  removed from every stored schema and every embedded `Alias` (nodes rebuild through
+  their own `try_new`, so the optimizer cannot resurrect the key by recomputing; unions
+  retry strict, by-name, then loose because the node does not record its constructor).
+  `Values`/`EmptyRelation`/`TableScan` leaves are clean by construction and fail loud
+  when keyed; statements and `Extension` pass through. `strip_record_batches` gives
+  every `MemTable` temp view a clean schema and clean batches at creation. Pins:
+  `../tests/attr_id.rs`. pins: attr-id-1/C-009
   **ATTR-ID-1 S2 fix (2026-09-30):** `stamp` only touches relation roots
   (`plan_is_relation`: the 16 relation variants, plus an `EmptyRelation` with fields —
   a field-less one is a planned `DROP TABLE`). Statement roots (`Explain`, `Analyze`,

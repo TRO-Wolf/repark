@@ -195,3 +195,49 @@ def test_statement_frames_bind_without_an_attribute_id(spark: ReparkSession) -> 
     explained = spark.sql("EXPLAIN SELECT 1 AS id")
     assert explained["plan"]._attr_id is None
     assert explained.collect()
+
+
+def test_deep_and_joined_frames_write_clean_footers(spark: ReparkSession, tmp_path: Path) -> None:
+    base = _frame(spark)
+    deep = base.select("id", "data").filter("id > 0").select("id", "data")
+    deep_out = tmp_path / "deep.parquet"
+    deep.write.parquet(str(deep_out))
+    deep_parts = sorted(deep_out.rglob("*.parquet"))
+    assert deep_parts
+    for part in deep_parts:
+        _assert_footer_clean(part)
+    joined = base.join(base, on="id")
+    join_out = tmp_path / "joined.parquet"
+    joined.write.parquet(str(join_out))
+    join_parts = sorted(join_out.rglob("*.parquet"))
+    assert join_parts
+    for part in join_parts:
+        _assert_footer_clean(part)
+
+
+def test_cached_frames_write_clean_footers(spark: ReparkSession, tmp_path: Path) -> None:
+    frame = _frame(spark).cache()
+    assert frame.count() == 2
+    out = tmp_path / "cached.parquet"
+    frame.write.parquet(str(out))
+    parts = sorted(out.rglob("*.parquet"))
+    assert parts
+    for part in parts:
+        _assert_footer_clean(part)
+    assert [list(row) for row in spark.read.parquet(str(out)).collect()] == [
+        [1, "a"],
+        [2, "b"],
+    ]
+
+
+def test_scalar_subquery_sources_write_clean_footers(spark: ReparkSession, tmp_path: Path) -> None:
+    _frame(spark).create_or_replace_temp_view("sq_t")
+    filtered = spark.sql("SELECT * FROM sq_t WHERE id IN (SELECT id FROM sq_t WHERE data = 'a')")
+    scalar = spark.sql("SELECT *, (SELECT COUNT(*) FROM sq_t) AS n FROM sq_t")
+    for name, frame in (("in_subquery", filtered), ("scalar_subquery", scalar)):
+        out = tmp_path / f"{name}.parquet"
+        frame.write.parquet(str(out))
+        parts = sorted(out.rglob("*.parquet"))
+        assert parts
+        for part in parts:
+            _assert_footer_clean(part)

@@ -15,7 +15,7 @@ use datafusion::prelude::SessionContext;
 
 use crate::ReparkSession;
 use crate::frame_names::{
-    NameRule,
+    AttrId, NameRule,
     NameRule::{Exact, IgnoreCase},
     Resolution, attribute_ids, join_on_named_keys, plan_is_relation, remint_join_collisions,
     requalify_join_sides, resolve, stamp, strip, union_by_folded_name,
@@ -719,6 +719,143 @@ async fn stamp_leaves_statement_roots_unchanged() {
         assert!(!plan_is_relation(&plan), "{query} is a statement root");
         assert_eq!(&stamp(plan.clone()).unwrap(), &plan);
     }
+}
+
+#[tokio::test]
+async fn strip_survives_optimization_and_execution() {
+    let session = ReparkSession::new().unwrap();
+    let deep = stamped(
+        stamped(source(session.context()))
+            .select(vec![col("id"), col("data"), col("s")])
+            .unwrap(),
+    );
+    let deep = stamped(
+        deep.select(vec![col("id"), col("data")])
+            .unwrap()
+            .filter(col("id").gt(lit(0)))
+            .unwrap(),
+    );
+    let (state, plan) = deep.clone().into_parts();
+    let stripped = DataFrame::new(state, strip(plan).unwrap());
+    for batch in stripped.collect().await.unwrap() {
+        for field in batch.schema().fields() {
+            assert!(AttrId::of(field).is_none());
+        }
+    }
+    session
+        .create_or_replace_temp_view_from("strip_u_l", &deep)
+        .unwrap();
+    session
+        .create_or_replace_temp_view_from("strip_u_r", &deep)
+        .unwrap();
+    let left = session.sql("SELECT * FROM strip_u_l").await.unwrap();
+    let right = session.sql("SELECT * FROM strip_u_r").await.unwrap();
+    let joined = join_on_named_keys(
+        left,
+        right,
+        &["id".to_string()],
+        JoinType::Inner,
+        IgnoreCase,
+    )
+    .unwrap();
+    let (state, plan) = joined.into_parts();
+    let stripped = DataFrame::new(state, strip(plan).unwrap());
+    assert_eq!(stripped.clone().count().await.unwrap(), 2);
+    for batch in stripped.collect().await.unwrap() {
+        for field in batch.schema().fields() {
+            assert!(AttrId::of(field).is_none());
+        }
+    }
+}
+
+#[tokio::test]
+async fn strip_rebuilds_strict_and_by_name_unions() {
+    let context = SessionContext::new();
+    let left = stamped(source(&context));
+    let right = stamped(source(&context));
+    for unioned in [
+        left.clone().union(right.clone()).unwrap(),
+        left.clone().union_by_name(right.clone()).unwrap(),
+    ] {
+        let (state, plan) = unioned.into_parts();
+        let stripped = DataFrame::new(state, strip(plan).unwrap());
+        assert_eq!(stripped.clone().count().await.unwrap(), 4);
+        let names = ["id", "data", "s"].map(str::to_string);
+        assert_eq!(
+            stripped
+                .schema()
+                .fields()
+                .iter()
+                .map(|field| field.name().clone())
+                .collect::<Vec<_>>(),
+            names
+        );
+        for batch in stripped.collect().await.unwrap() {
+            for field in batch.schema().fields() {
+                assert!(AttrId::of(field).is_none());
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn strip_refuses_a_keyed_table_scan() {
+    let context = SessionContext::new();
+    let field =
+        Field::new("id", DataType::Int64, false).with_metadata(std::collections::HashMap::from([
+            ("repark.attr".to_string(), "a1".to_string()),
+        ]));
+    let schema = Arc::new(Schema::new(vec![field]));
+    let table =
+        datafusion::datasource::memory::MemTable::try_new(Arc::clone(&schema), vec![Vec::new()])
+            .unwrap();
+    context
+        .register_table("keyed_probe", Arc::new(table))
+        .unwrap();
+    let scan = context.table("keyed_probe").await.unwrap();
+    let (_, plan) = scan.into_parts();
+    assert!(strip(plan).is_err());
+}
+
+#[test]
+fn strip_record_batches_cleans_schema_and_batches() {
+    use datafusion::arrow::array::{Int64Array, RecordBatch};
+    use datafusion::arrow::datatypes::SchemaRef;
+
+    let field =
+        Field::new("id", DataType::Int64, false).with_metadata(std::collections::HashMap::from([
+            ("repark.attr".to_string(), "a1".to_string()),
+        ]));
+    let schema: SchemaRef = Arc::new(Schema::new(vec![field]));
+    let batch = RecordBatch::try_new(
+        Arc::clone(&schema),
+        vec![Arc::new(Int64Array::from(vec![1, 2]))],
+    )
+    .unwrap();
+    let (cleaned, batches) =
+        crate::session::df_guards::attr_id::strip_record_batches(schema, vec![batch]).unwrap();
+    assert!(AttrId::of(&cleaned.fields()[0]).is_none());
+    assert_eq!(batches.len(), 1);
+    assert!(AttrId::of(&batches[0].schema().fields()[0]).is_none());
+    assert_eq!(
+        batches[0]
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .unwrap()
+            .values(),
+        &[1, 2]
+    );
+    let plain: SchemaRef = Arc::new(Schema::new(vec![Field::new("id", DataType::Int64, false)]));
+    let batch = RecordBatch::try_new(
+        Arc::clone(&plain),
+        vec![Arc::new(Int64Array::from(vec![1]))],
+    )
+    .unwrap();
+    let (same, _) =
+        crate::session::df_guards::attr_id::strip_record_batches(Arc::clone(&plain), vec![batch])
+            .unwrap();
+    assert!(Arc::ptr_eq(&same, &plain));
 }
 
 #[test]

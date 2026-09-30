@@ -47,6 +47,12 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `ReparkSession` by delegating to the inherent `create_or_replace_temp_view_from`,
   `resolve_temp_view_home_ref`, `temp_view_home`, `list_temp_view_names` and `drop_temp_view`.
   pins: ice-views-1/C-018
+  **ATTR-ID-1 S2 (2026-09-30):** all four `MemTable` constructors
+  (`create_or_replace_temp_view`, `register_record_batches_as_temp_view`,
+  `register_collected_memtable`, `declare_temp_view_sorted`) run their schema and batches
+  through `df_guards::attr_id::strip_record_batches`, so materialized views are born
+  without the key (cache reads mint fresh ids — S3 resolve must cope, ledger R-5).
+  pins: attr-id-1/C-009
   **SQM round 6 (R6-1):** the temp-view family, split out of `session.rs` when
   the choke-point fix pushed that file past its ceiling. The old exception then retired under the
   prior default; CAP-1 records the file again at its exact source-size baseline. Holds

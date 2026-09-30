@@ -8878,6 +8878,8 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   footers carry no `repark.attr`; `toArrow`/`to_arrow`/`to_arrow_batches` schemas are clean,
   `schema` fields carry no attr metadata, and `printSchema`/`repr`/`collect` show no key; a
   USING self-join keeps the key and left ids with a fresh right id; a cached frame stays
-  bindable; an `EXPLAIN` frame binds with `_attr_id` `None` and still collects. No module
+  bindable; an `EXPLAIN` frame binds with `_attr_id` `None` and still collects; deep
+  select chains, join outputs, cached frames, and `IN`/scalar-subquery sources all write
+  clean parquet footers. No module
   docstring: the lane's no-comments ruling covers the new file; the
   contract lives here. pins: attr-id-1/C-007, C-008, C-009, C-010, C-011, C-014

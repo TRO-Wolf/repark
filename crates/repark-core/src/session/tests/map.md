@@ -43,6 +43,12 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   keeping names, types, nullability, and qualifiers, returns an unstamped plan unchanged,
   and clears a non-Projection (Aggregate) root.
   pins: attr-id-1/C-011, C-009
+  **ATTR-ID-1 S2 recursive (2026-09-30):** a stripped deep plan and a stripped USING
+  self-join collect clean batches (the optimizer cannot resurrect the key); strict and
+  by-name unions rebuild with names preserved and clean output; a keyed `TableScan`
+  fails loud; `strip_record_batches` cleans a keyed schema and its batches keeping
+  values, and returns clean input untouched.
+  pins: attr-id-1/C-009
   **ATTR-ID-1 S2 fix (2026-09-30):** `EXPLAIN`, `EXPLAIN ANALYZE`, `DESCRIBE`, `INSERT`,
   `COPY`, and `DROP TABLE` plan to statement roots that `stamp` returns unchanged while a
   `SELECT` root stays a relation; a field-less `EmptyRelation` is a statement, one with

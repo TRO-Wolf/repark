@@ -2,12 +2,19 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use datafusion::arrow::datatypes::Field;
+use datafusion::arrow::array::RecordBatch;
+use datafusion::arrow::datatypes::{Field, Schema, SchemaRef};
 use datafusion::common::metadata::FieldMetadata;
+use datafusion::common::tree_node::{Transformed, TreeNode};
 use datafusion::common::{
-    Column, DFSchema, Result, TableReference, internal_datafusion_err, internal_err,
+    Column, DFSchema, DFSchemaRef, Result, ScalarValue, TableReference, internal_datafusion_err,
+    internal_err,
 };
-use datafusion::logical_expr::{Expr, LogicalPlan, Projection, Union};
+use datafusion::logical_expr::expr::{Alias, Exists, InSubquery};
+use datafusion::logical_expr::{
+    Aggregate, Distinct, DistinctOn, Expr, Filter, Join, LogicalPlan, LogicalPlanBuilder,
+    Projection, RecursiveQuery, SortExpr, Subquery, SubqueryAlias, Union, Unnest, Window,
+};
 use repark_common::names::NameRule;
 
 const ATTR_KEY: &str = "repark.attr";
@@ -244,36 +251,214 @@ pub fn remint_join_collisions(plan: LogicalPlan, left_width: usize) -> Result<Lo
 
 #[allow(clippy::missing_errors_doc)]
 pub fn strip(plan: LogicalPlan) -> Result<LogicalPlan> {
-    if let LogicalPlan::Projection(projection) = &plan {
-        let Some(schema) = cleaned_schema(projection.schema.as_ref())? else {
-            return Ok(plan);
-        };
-        return Projection::try_new_with_schema(
-            projection.expr.clone(),
-            Arc::clone(&projection.input),
-            schema,
-        )
-        .map(LogicalPlan::Projection);
+    match plan {
+        LogicalPlan::Projection(_)
+        | LogicalPlan::Window(_)
+        | LogicalPlan::Aggregate(_)
+        | LogicalPlan::Join(_)
+        | LogicalPlan::Union(_)
+        | LogicalPlan::SubqueryAlias(_)
+        | LogicalPlan::Unnest(_)
+        | LogicalPlan::RecursiveQuery(_)
+        | LogicalPlan::Distinct(_) => strip_stored(plan),
+        LogicalPlan::Filter(filter) => {
+            let predicate = strip_expr(filter.predicate)?;
+            let input = strip_child(filter.input)?;
+            Filter::try_new(predicate, input).map(LogicalPlan::Filter)
+        }
+        LogicalPlan::Sort(sort) => {
+            let expr = sort
+                .expr
+                .into_iter()
+                .map(|item| {
+                    strip_expr(item.expr).map(|expr| SortExpr {
+                        expr,
+                        asc: item.asc,
+                        nulls_first: item.nulls_first,
+                    })
+                })
+                .collect::<Result<Vec<_>>>()?;
+            let input = strip_child(sort.input)?;
+            LogicalPlanBuilder::from(input).sort(expr)?.build()
+        }
+        LogicalPlan::Repartition(repartition) => {
+            let input = strip_child(repartition.input)?;
+            LogicalPlanBuilder::from(input)
+                .repartition(repartition.partitioning_scheme)?
+                .build()
+        }
+        LogicalPlan::Subquery(subquery) => {
+            let input = strip_child(Arc::clone(&subquery.subquery))?;
+            Ok(LogicalPlan::Subquery(subquery.with_plan(input)))
+        }
+        LogicalPlan::Limit(limit) => {
+            let skip = limit_usize(limit.skip.as_deref(), "skip")?.unwrap_or(0);
+            let fetch = limit_usize(limit.fetch.as_deref(), "fetch")?;
+            let input = strip_child(limit.input)?;
+            LogicalPlanBuilder::from(input).limit(skip, fetch)?.build()
+        }
+        LogicalPlan::Values(values) => {
+            loud_if_keyed(values.schema.as_ref(), "Values")?;
+            Ok(LogicalPlan::Values(values))
+        }
+        LogicalPlan::EmptyRelation(empty) => {
+            loud_if_keyed(empty.schema.as_ref(), "EmptyRelation")?;
+            Ok(LogicalPlan::EmptyRelation(empty))
+        }
+        LogicalPlan::TableScan(scan) => {
+            loud_if_keyed(scan.projected_schema.as_ref(), "TableScan")?;
+            Ok(LogicalPlan::TableScan(scan))
+        }
+        LogicalPlan::Extension(_)
+        | LogicalPlan::Statement(_)
+        | LogicalPlan::Explain(_)
+        | LogicalPlan::Analyze(_)
+        | LogicalPlan::Dml(_)
+        | LogicalPlan::Ddl(_)
+        | LogicalPlan::Copy(_)
+        | LogicalPlan::DescribeTable(_) => Ok(plan),
     }
-    let Some(schema) = cleaned_schema(plan.schema())? else {
-        return Ok(plan);
-    };
-    let expr = plan
-        .schema()
-        .iter()
-        .map(|(qualifier, field)| Expr::Column(Column::new(qualifier.cloned(), field.name())))
-        .collect::<Vec<_>>();
-    Projection::try_new_with_schema(expr, Arc::new(plan), schema).map(LogicalPlan::Projection)
 }
 
-fn cleaned_schema(schema: &DFSchema) -> Result<Option<Arc<DFSchema>>> {
+fn loud_if_keyed(schema: &DFSchema, what: &str) -> Result<()> {
     if schema
         .fields()
         .iter()
-        .all(|field| AttrId::of(field).is_none())
+        .any(|field| AttrId::of(field).is_some())
     {
-        return Ok(None);
+        return Err(internal_datafusion_err!(
+            "strip reached a keyed {what}; providers are born clean"
+        ));
     }
+    Ok(())
+}
+
+fn limit_usize(expr: Option<&Expr>, what: &str) -> Result<Option<usize>> {
+    expr.map(|expr| match expr {
+        Expr::Literal(ScalarValue::Int64(Some(n)), _) => usize::try_from(*n)
+            .map_err(|_| internal_datafusion_err!("strip cannot rebuild a negative {what} limit")),
+        _ => Err(internal_datafusion_err!(
+            "strip cannot rebuild a non-literal {what} limit"
+        )),
+    })
+    .transpose()
+}
+
+fn strip_child(input: Arc<LogicalPlan>) -> Result<Arc<LogicalPlan>> {
+    strip(Arc::unwrap_or_clone(input)).map(Arc::new)
+}
+
+fn strip_exprs(exprs: Vec<Expr>) -> Result<Vec<Expr>> {
+    exprs.into_iter().map(strip_expr).collect()
+}
+
+#[allow(clippy::missing_errors_doc)]
+#[allow(clippy::too_many_lines)]
+fn strip_stored(plan: LogicalPlan) -> Result<LogicalPlan> {
+    match plan {
+        LogicalPlan::Projection(projection) => {
+            let expr = strip_exprs(projection.expr)?;
+            let input = strip_child(projection.input)?;
+            Projection::try_new(expr, input).map(LogicalPlan::Projection)
+        }
+        LogicalPlan::Window(window) => {
+            let expr = strip_exprs(window.window_expr)?;
+            let input = strip_child(window.input)?;
+            let schema = cleaned_df_schema(window.schema.as_ref())?;
+            Window::try_new_with_schema(expr, input, schema).map(LogicalPlan::Window)
+        }
+        LogicalPlan::Aggregate(aggregate) => {
+            let group_expr = strip_exprs(aggregate.group_expr)?;
+            let aggr_expr = strip_exprs(aggregate.aggr_expr)?;
+            let input = strip_child(aggregate.input)?;
+            let schema = cleaned_df_schema(aggregate.schema.as_ref())?;
+            Aggregate::try_new_with_schema(input, group_expr, aggr_expr, schema)
+                .map(LogicalPlan::Aggregate)
+        }
+        LogicalPlan::Join(join) => {
+            let on = join
+                .on
+                .into_iter()
+                .map(|(left, right)| Ok((strip_expr(left)?, strip_expr(right)?)))
+                .collect::<Result<Vec<_>>>()?;
+            let filter = join.filter.map(strip_expr).transpose()?;
+            let left = strip_child(join.left)?;
+            let right = strip_child(join.right)?;
+            Join::try_new(
+                left,
+                right,
+                on,
+                filter,
+                join.join_type,
+                join.join_constraint,
+                join.null_equality,
+                join.null_aware,
+            )
+            .map(LogicalPlan::Join)
+        }
+        LogicalPlan::Union(union) => strip_union(union.inputs),
+        LogicalPlan::SubqueryAlias(alias) => {
+            let input = strip_child(alias.input)?;
+            SubqueryAlias::try_new(input, alias.alias).map(LogicalPlan::SubqueryAlias)
+        }
+        LogicalPlan::Unnest(unnest) => {
+            let input = strip_child(unnest.input)?;
+            Unnest::try_new(input, unnest.exec_columns, unnest.options).map(LogicalPlan::Unnest)
+        }
+        LogicalPlan::RecursiveQuery(query) => {
+            let static_term = strip_child(query.static_term)?;
+            let recursive_term = strip_child(query.recursive_term)?;
+            RecursiveQuery::try_new(query.name, static_term, recursive_term, query.is_distinct)
+                .map(LogicalPlan::RecursiveQuery)
+        }
+        LogicalPlan::Distinct(Distinct::All(input)) => {
+            Ok(LogicalPlan::Distinct(Distinct::All(strip_child(input)?)))
+        }
+        LogicalPlan::Distinct(Distinct::On(distinct)) => {
+            let on_expr = strip_exprs(distinct.on_expr)?;
+            let select_expr = strip_exprs(distinct.select_expr)?;
+            let sort_expr = distinct
+                .sort_expr
+                .map(|exprs| {
+                    exprs
+                        .into_iter()
+                        .map(|item| {
+                            strip_expr(item.expr).map(|expr| SortExpr {
+                                expr,
+                                asc: item.asc,
+                                nulls_first: item.nulls_first,
+                            })
+                        })
+                        .collect::<Result<Vec<_>>>()
+                })
+                .transpose()?;
+            let input = strip_child(distinct.input)?;
+            DistinctOn::try_new(on_expr, select_expr, sort_expr, input)
+                .map(Distinct::On)
+                .map(LogicalPlan::Distinct)
+        }
+        other => Ok(other),
+    }
+}
+
+fn strip_union(inputs: Vec<Arc<LogicalPlan>>) -> Result<LogicalPlan> {
+    let inputs = inputs
+        .into_iter()
+        .map(strip_child)
+        .collect::<Result<Vec<_>>>()?;
+    match Union::try_new(inputs.clone()) {
+        Ok(union) => Ok(LogicalPlan::Union(union)),
+        Err(strict) => match Union::try_new_by_name(inputs.clone()) {
+            Ok(union) => Ok(LogicalPlan::Union(union)),
+            Err(_) => match Union::try_new_with_loose_types(inputs) {
+                Ok(union) => Ok(LogicalPlan::Union(union)),
+                Err(_) => Err(strict),
+            },
+        },
+    }
+}
+
+fn cleaned_df_schema(schema: &DFSchema) -> Result<DFSchemaRef> {
     let qualified = schema
         .iter()
         .map(|(qualifier, field)| {
@@ -282,8 +467,84 @@ fn cleaned_schema(schema: &DFSchema) -> Result<Option<Arc<DFSchema>>> {
             (qualifier.cloned(), Arc::new(stripped))
         })
         .collect::<Vec<_>>();
-    DFSchema::new_with_metadata(qualified, schema.metadata().clone())
-        .map(|schema| Some(Arc::new(schema)))
+    DFSchema::new_with_metadata(qualified, schema.metadata().clone()).map(Arc::new)
+}
+
+fn strip_expr(expr: Expr) -> Result<Expr> {
+    expr.transform_up(|node| match node {
+        Expr::Alias(alias) => match alias.metadata {
+            Some(meta) if meta.inner().contains_key(ATTR_KEY) => {
+                let mut inner = meta.inner().clone();
+                inner.remove(ATTR_KEY);
+                Ok(Transformed::yes(Expr::Alias(Alias {
+                    metadata: Some(FieldMetadata::new(inner)),
+                    ..alias
+                })))
+            }
+            _ => Ok(Transformed::no(Expr::Alias(alias))),
+        },
+        Expr::ScalarSubquery(subquery) => {
+            let plan = strip(Arc::unwrap_or_clone(subquery.subquery.clone()))?;
+            Ok(Transformed::yes(Expr::ScalarSubquery(Subquery {
+                subquery: Arc::new(plan),
+                ..subquery
+            })))
+        }
+        Expr::Exists(exists) => {
+            let plan = strip(Arc::unwrap_or_clone(exists.subquery.subquery.clone()))?;
+            Ok(Transformed::yes(Expr::Exists(Exists {
+                subquery: Subquery {
+                    subquery: Arc::new(plan),
+                    ..exists.subquery
+                },
+                ..exists
+            })))
+        }
+        Expr::InSubquery(query) => {
+            let plan = strip(Arc::unwrap_or_clone(query.subquery.subquery.clone()))?;
+            Ok(Transformed::yes(Expr::InSubquery(InSubquery {
+                subquery: Subquery {
+                    subquery: Arc::new(plan),
+                    ..query.subquery
+                },
+                ..query
+            })))
+        }
+        _ => Ok(Transformed::no(node)),
+    })
+    .map(|transformed| transformed.data)
+}
+
+pub(crate) fn strip_record_batches(
+    schema: SchemaRef,
+    batches: Vec<RecordBatch>,
+) -> Result<(SchemaRef, Vec<RecordBatch>)> {
+    if schema
+        .fields()
+        .iter()
+        .all(|field| AttrId::of(field).is_none())
+    {
+        return Ok((schema, batches));
+    }
+    let fields = schema
+        .fields()
+        .iter()
+        .map(|field| {
+            let mut stripped = field.as_ref().clone();
+            stripped.metadata_mut().remove(ATTR_KEY);
+            Arc::new(stripped)
+        })
+        .collect::<Vec<_>>();
+    let schema = Arc::new(Schema::new_with_metadata(fields, schema.metadata().clone()));
+    let batches = batches
+        .into_iter()
+        .map(|batch| {
+            RecordBatch::try_new(Arc::clone(&schema), batch.columns().to_vec()).map_err(|error| {
+                internal_datafusion_err!("stripped batch keeps its columns: {error}")
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+    Ok((schema, batches))
 }
 
 #[allow(clippy::missing_errors_doc)]
