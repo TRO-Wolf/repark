@@ -298,7 +298,7 @@ class DataFrame:
 
         The shared ``alive_token`` makes held frames fail after ``ReparkSession.stop``.
         """
-        self._inner = inner
+        self._inner = _native.stamp_attribute_ids(inner)
         self._session = session
         self._alive_token: dict[str, bool] = (
             alive_token if alive_token is not None else {"alive": True}
@@ -1969,7 +1969,6 @@ class DataFrame:
         Preserve the requested display spelling and attach origin metadata for joins.
         """
         from repark.spark._idents import quote_ident as _quote_ident
-
         written = canonical is None
         canonical = self._resolve_getitem_column_name(name) if written else canonical
         engine_field = self._engine_field_for_display(canonical)
@@ -1986,6 +1985,7 @@ class DataFrame:
             sql_expr=quoted,
             origin_plan_id=self._plan_id,
             origin_field=canonical,
+            attr_id=_column_fields._bound_attr_id(self, engine_field),
         )
 
     def _quote_filter_sql_identifiers(self, sql: str) -> str:

@@ -192,6 +192,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   token for a map-bearing type (`MapType`, `"map<string,bigint>"`) and raises
   `ParseException` otherwise; the file shrank to 1529 and its ceiling ratcheted down.
   pins: cast-map-spell-1/C-004
+  **ATTR-ID-1 S2 (2026-09-30):** `Column` gains the `_attr_id` slot (default `None`,
+  set through the new `attr_id` parameter at the frame-field bind sites). Line-neutral
+  at 1529: the slot, parameter, and assignment lines are funded by documenting the
+  bind triple in two docstring lines and merging the origin pair assignment. `alias`,
+  `for_select`, and compound constructors do not propagate it yet (S3).
+  pins: attr-id-1/C-008
 - `column_fields.py` — **COLUMN-PARITY-1 (2026-09-14):** method bodies bound on
   `Column` (kept out of `column.py`, which is at its exact line baseline):
   `between` / `eqNullSafe` (extracted for headroom), `isin`, `isNaN`, `astype`,
@@ -210,6 +216,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   unaliased `F.col("*")` (SQL text `` `*` ``, projection name `*`; `lit("*")` and
   `col("*").alias(…)` are not), so `DataFrame.select` expands it like the string `"*"`.
   pins: u11-edge-1/C-029
+  **ATTR-ID-1 S2 (2026-09-30):** `_bound_attr_id(frame, engine_field)` reads the stamped
+  id at the engine field's native position (stamping on read, failing loud on a missing
+  id or a desynced engine name). No docstring: the lane's no-comments ruling covers new
+  private helpers; the contract lives here.
+  pins: attr-id-1/C-008
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
   unsupported operations fail explicitly.

@@ -352,6 +352,21 @@ def _update_fields_result(column: Any, value: Any, parts: Any) -> Any:
     )
 
 
+def _bound_attr_id(frame: Any, engine_field: str) -> str:
+    native: Any = _native.stamp_attribute_ids(frame._plan())
+    frame._inner = native
+    native_names: list[str] = [
+        name for name, _type_key, _nullable in native.logical_schema_fields()
+    ]
+    if engine_field not in native_names:
+        raise RuntimeError(f"internal error: engine field {engine_field!r} left the native schema")
+    held: list[str | None] = _native.attribute_ids(native)
+    attr_id: str | None = held[native_names.index(engine_field)]
+    if attr_id is None:
+        raise RuntimeError(f"internal error: stamped field {engine_field!r} has no attribute id")
+    return attr_id
+
+
 def column_or_str_error(item: Any) -> PySparkTypeError:
     """The ``select``/``_column_of`` rejection — ``TableArg`` gets Spark's conditioned error."""
     if type(item).__name__ == "TableArg" or "table_arg" in (type(item).__module__ or "").lower():

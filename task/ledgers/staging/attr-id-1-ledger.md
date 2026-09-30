@@ -102,3 +102,16 @@ COVERAGE_ATTESTATION:
 | R-2 | Dated 2026-09-30, open for S2: `repark.attr` rides in Arrow field metadata, so once S2 stamps every frame it can reach written files, cached views and exported Arrow schemas, and a file written by one process can bring ids that collide with another process's counter. |
 | R-3 | Dated 2026-09-30, open for S2/S3: only `requalify_join_sides` re-mints; a USING join (`join_on_keys`, keys then each side's other columns) of a frame with itself still repeats the right side's ids. |
 | R-4 | Dated 2026-09-30, open for S3e: `resolve` matches a written qualifier against the field's relation only; the frame's Python-held join qualifiers (§3.4) are not in the §4 S1 signature. |
+
+## Round S2 (2026-09-30)
+
+**Model:** muse-spark-1.3-contributor (S2 executor, guided).
+**Work order:** `/tmp/oc-worker/direct/wo/attr-id-1-design.md` §4 S2 with the orchestrator's
+corrections (baseline `main.json`, stamp in `DataFrame.__init__`, `Column._attr_id` at the
+bind sites that exist on main) plus §9 rulings Q2 (strip `repark.attr` at every write sink
+and export) and Q3 (the USING-join re-mint).
+
+| Clause | Statement | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-007 | Every facade `DataFrame` is stamped at construction: `DataFrame.__init__` wraps the native frame in `stamp_attribute_ids`, and every construction site calls the constructor. | Grep over `python/repark/src/repark` showing every facade `DataFrame(` call runs `__init__` (no `__new__`/copy/pickle bypass, no subclass), plus runtime pins that frames from `createDataFrame`, `sql`, and a reader carry an id on every output field. | OPEN | Construction grep: 17 facade `DataFrame(` calls, all direct constructor calls (`core.py` `_spawn` and the streaming parent, `session_core.py` readers and `sql`, `reader_incremental.py`, `reader_orc.py`, `reader_text.py`, `reader_iceberg_path.py`, `catalog_surface.py`, the ANSI door); the `joins_columns.py`/`udf_bridge.py` hits are `pd.DataFrame`. Runtime pins land with the Block 2 pin file. |
+| C-008 | `Column` carries `_attr_id` (default `None`), set at the frame-field bind sites behind `_column_of`, `__getitem__`, and `__getattr__` (`_bind_schema_column` via `column_fields._bound_attr_id`, which stamps on read and fails loud on a missing id); nothing reads it yet. | Pins that `df["x"]`, `df.x`, and `_column_of` set the id at the field's position and that `F.col` stays `None`. `_bind_engine_display_column` exists on main but is intentionally unset (the ruling's S3 covers it); `alias`, `for_select`, and compound constructors do not propagate yet (S3). | OPEN | Runtime pins land with the Block 2 pin file. |

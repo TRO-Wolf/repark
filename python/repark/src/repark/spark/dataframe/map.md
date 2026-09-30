@@ -141,6 +141,18 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   **Critic round (2026-09-14, R-4):** the select/filter struct-edit resolve hooks are
   deleted — `withField` / `dropFields` are native `update_fields` expressions, so no
   boundary rewrite runs. pins: column-parity-1/C-002, C-004, C-005, C-008
+  ATTR-ID-1 S2 (2026-09-30): `DataFrame.__init__` stamps the wrapped native frame
+  (`_native.stamp_attribute_ids`, idempotent, in place on the assignment line), so every
+  facade construction site (`_spawn`, the session readers and `sql`, the catalog surface,
+  the ANSI door) yields a frame whose root output fields all carry `repark.attr`; no
+  construction path builds a facade frame without `__init__` (grep proof in the ledger).
+  `_bind_schema_column` (the funnel behind `__getitem__`, `__getattr__`, `_column_of`,
+  `_rebind_stable_name_column`) sets the bound `Column._attr_id` through
+  `column_fields._bound_attr_id`, which stamps on read (covers the post-construction
+  `_inner` replacements: cache, checkpoint, bridge, declared sort) and fails loud when
+  a stamped position still lacks an id. Both edits are line-neutral at 3973 (one blank
+  line funds the `attr_id` kwarg). Nothing reads `_attr_id` yet (S3).
+  pins: attr-id-1/C-007, C-008
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`

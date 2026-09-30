@@ -49,6 +49,7 @@ class Column:
     __slots__ = (
         "_agg_name",
         "_alias_metadata",
+        "_attr_id",
         "_g2_range_order_names",
         "_generator",
         "_generator_cast",
@@ -96,6 +97,7 @@ class Column:
         sql_expr: str | None = None,
         origin_plan_id: str | None = None,
         origin_field: str | None = None,
+        attr_id: str | None = None,
         join_sql_expr: str | None = None,
         g2_range_order_names: list[str] | None = None,
         window_spec: WindowSpec | None = None,
@@ -159,10 +161,8 @@ class Column:
         Sticky across derived Columns so the transform still fails loud outside
         ``partitionedBy`` (Spark ``PARTITION_TRANSFORM_EXPRESSION_NOT_IN_PARTITIONED_BY``).
 
-        ``origin_plan_id`` / ``origin_field``: set when this Column is a pure
-        schema bind from a DataFrame (``df["x"]`` / ``df.x``). Join conditions and
-        post-join ``select``/``drop`` resolve the correct side via these tokens. Cleared
-        on compound ops (binary/arithmetic); preserved across ``.alias`` / ``for_select``.
+        ``origin_plan_id`` / ``origin_field`` / ``attr_id``: set when this Column binds a
+        frame field (``df["x"]`` / ``df.x``); joins resolve the side through these tokens.
 
         ``join_sql_expr`` (H1): composed join-ON SQL with ``__REPARK_QCOL_*`` tokens so
         ``df1.b == df2.b`` stays side-qualified through binary ops without polluting
@@ -203,8 +203,8 @@ class Column:
         # assignments). Distinct from ``spark_display``: string literals are unquoted in
         # display names but must be quoted in SQL. Unset → fall back to spark_display_part().
         self._sql_expr = sql_expr
-        self._origin_plan_id = origin_plan_id
-        self._origin_field = origin_field
+        self._origin_plan_id, self._origin_field = origin_plan_id, origin_field
+        self._attr_id = attr_id
         self._join_sql_expr = join_sql_expr
         # Simple ORDER BY column names for value-offset RANGE numeric-type check at select.
         self._g2_range_order_names = list(g2_range_order_names) if g2_range_order_names else None
