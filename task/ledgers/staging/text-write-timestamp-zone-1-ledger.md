@@ -78,6 +78,11 @@ America/New_York unless noted:
 |---|---|---|
 | M1 | Force the SELECT builder zone to UTC (`zone = "UTC"`) | 71 facade pins red: every non-UTC LTZ bytes cell plus the CSV/JSON read-back and s3a legs; pure NTZ (`ntz0/3/6`) and DATE (`date`) cells stay green; `userdate`/`userntz` red only via their `t` column. Reverted; `git status` clean; 182 green. |
 | M2 | Restore the undoubled splice (`quote_literal` doubles quotes only) | The 3 facade VC-6 pins (`vc6-bsquote` ×2, `vc6-bspair`) plus the Rust `select_escapes_backslash_quote_in_pattern_literal` pin red (quote-adjacent backslash breaks the `COPY` literal again). Reverted; `git status` clean; 207 green. |
+| M3 | VC2-1: return the prefixed offset (`UTC+00:00`) instead of the bare prefix on normalized zero offsets | The Rust `java_display_zone_id_matches_zone_id_get_id` table pin reds (18 pass, 1 fails). Reverted; `git status` clean. |
+| M4 | VC2-2: render `g` as a bare day count with no sign/zero padding | The Rust `modified_julian_day_pads_to_letter_count` pin reds (55 pass, 1 fails). Reverted; `git status` clean. |
+| M5 | VC2-4: flip the facade `_SQLCONF_DEFAULTS` policy back to `LEGACY` | The facade `test_time_parser_policy_default_is_corrected` pin reds. Reverted; pin green. |
+| M6 | VC2-6: replace the RECOGNITION guide clause with a `LEGACY` stub | 7 Rust recognition pins red (49 pass, 7 fail). Reverted; `git status` clean. |
+| M7 | VC2-7: refuse LEGACY writes even with no temporal column (`temporal_columns \|\| true`) | Blind at the Rust level (56 pass: no Rust pin covers the non-temporal LEGACY leg); the 2 facade non-temporal LEGACY pins red after a venv rebuild. Reverted and rebuilt; pins green; `git status` clean. |
 
 ## Coverage
 
@@ -356,3 +361,16 @@ column shape. The read plus string-write floor leaves csv_many about
 14ns/value of UDF budget against a 25ns append+civil floor, so the
 bar needs a structural change (no string materialization), not more
 UDF tuning. Handed back HALT with the numbers.
+
+Replay against the reverify-csvts Spark oracle (new-head outputs under
+`/tmp/rerun/out/`, conf legs re-captured under `/tmp/conf-rerun/` and
+byte-identical to the first rerun): 5054 cells (4968 cellset, 29
+doors, 8 doors2, 49 conf) — zero cells moved away from Spark. Fixed
+toward Spark: 10 zones2 `VV` zero-offset cells, 3 letters `g` cells,
+and 8 conf cells (6 runtime get-cells plus `builder_then_unset_get`
+on both builder legs). The verifier `out/` tree is untouched: conf
+and doors data dirs were re-verified byte-identical to their backups
+after the reruns. Mutations M3-M7 (table above) each red the pins of
+their fix and revert clean. The temporary release probes left the
+tree (commit e75232ab); lane gate green; lane `.venv` restored to a
+debug build; base worktree removed.
