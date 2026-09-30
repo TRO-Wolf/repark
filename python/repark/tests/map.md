@@ -8869,3 +8869,14 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
     `…_an_accept_any_table`) also wipes a plain table with an empty `BY NAME`
     overwrite, with or without a NULL column (C-018).
   pins: u6-write-refusals/C-013, C-015, C-016, C-017, C-018
+- [test_attr_id_1_s2.py](test_attr_id_1_s2.py) — **ATTR-ID-1 S2 (2026-09-30):** the seam pins.
+  Every spawned frame carries an id on every output field (`createDataFrame`, `sql`,
+  `select`/`filter`/`withColumn` children, a join child, a parquet re-read); the bind sites
+  (`df["x"]`, `df.x`, `_column_of`) set `Column._attr_id` at the field's position while
+  `F.col` stays `None`; a written parquet footer's field and file metadata, written CSV/JSON
+  bytes, an Iceberg CTAS's stored metadata JSON plus data-file footers, and MERGE data-file
+  footers carry no `repark.attr`; `toArrow`/`to_arrow`/`to_arrow_batches` schemas are clean,
+  `schema` fields carry no attr metadata, and `printSchema`/`repr`/`collect` show no key; a
+  USING self-join keeps the key and left ids with a fresh right id; a cached frame stays
+  bindable. No module docstring: the lane's no-comments ruling covers the new file; the
+  contract lives here. pins: attr-id-1/C-007, C-008, C-009, C-010, C-011

@@ -16,10 +16,10 @@ use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::parser::Parser;
 use repark_common::spark_error;
 
-use super::attr_id::same_relation;
+use super::attr_id::{remint_join_collisions, same_relation};
 
 pub use super::attr_id::{
-    AttrId, Resolution, attribute_ids, remint_join_collisions, resolve, stamp,
+    AttrId, Resolution, attribute_ids, remint_join_collisions, resolve, stamp, strip,
 };
 pub use super::subquery::resolve_bound_expr_with;
 pub use repark_common::names::{NameHit, NameRule};
@@ -451,6 +451,7 @@ pub fn join_on_named_keys(
         .iter()
         .map(|key| bind_name(right.schema(), key, rule))
         .collect();
+    let left_schema = left.schema().clone();
     let (state, left_plan) = left.into_parts();
     let plan = LogicalPlanBuilder::from(left_plan)
         .join(
@@ -465,16 +466,22 @@ pub fn join_on_named_keys(
         return Ok(joined);
     }
     let mut seen: HashSet<String> = HashSet::new();
+    let mut right_kept = 0usize;
     let projection: Vec<Expr> = joined
         .schema()
         .iter()
-        .filter(|(_, field)| {
+        .enumerate()
+        .filter(|(index, (_, field))| {
             let matched = keys.iter().find(|key| rule.matches(key, field.name()));
-            matched.is_none_or(|key| seen.insert(key.clone()))
+            let keep = matched.is_none_or(|key| seen.insert(key.clone()));
+            right_kept += usize::from(keep && *index >= left_schema.fields().len());
+            keep
         })
-        .map(|(qualifier, field)| Expr::Column(Column::new(qualifier.cloned(), field.name())))
+        .map(|(_, (qualifier, field))| Expr::Column(Column::new(qualifier.cloned(), field.name())))
         .collect();
-    joined.select(projection)
+    let right_start = projection.len() - right_kept;
+    let (state, plan) = joined.select(projection)?.into_parts();
+    remint_join_collisions(plan, right_start).map(|plan| DataFrame::new(state, plan))
 }
 
 #[allow(clippy::missing_errors_doc)]

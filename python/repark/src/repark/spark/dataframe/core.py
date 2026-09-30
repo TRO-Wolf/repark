@@ -1964,11 +1964,11 @@ class DataFrame:
         )
 
     def _bind_schema_column(self, name: str, canonical: str | None = None) -> Column:
-        """Bind a name case-insensitively and quote its canonical engine identifier.
-
-        Preserve the requested display spelling and attach origin metadata for joins.
+        """Bind a name case-insensitively and quote its canonical engine identifier,
+        preserving the requested display spelling and attaching origin and attribute ids.
         """
         from repark.spark._idents import quote_ident as _quote_ident
+
         written = canonical is None
         canonical = self._resolve_getitem_column_name(name) if written else canonical
         engine_field = self._engine_field_for_display(canonical)
@@ -3597,7 +3597,7 @@ class DataFrame:
 
     def _apply_export_display_names(self, table: Any) -> Any:
         """Apply display names at the Arrow boundary while preserving duplicate positions."""
-        table = _strip_internal_tighten_metadata(table)
+        table = _column_fields._strip_attribute_id_metadata(_strip_internal_tighten_metadata(table))
         if self._display_names is None or self._engine_names is None:
             return table
         display = list(self._display_names)

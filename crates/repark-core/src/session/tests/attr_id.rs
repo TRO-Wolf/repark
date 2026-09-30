@@ -16,8 +16,8 @@ use crate::ReparkSession;
 use crate::frame_names::{
     NameRule,
     NameRule::{Exact, IgnoreCase},
-    Resolution, attribute_ids, remint_join_collisions, requalify_join_sides, resolve, stamp,
-    union_by_folded_name,
+    Resolution, attribute_ids, join_on_named_keys, remint_join_collisions, requalify_join_sides,
+    resolve, stamp, strip, union_by_folded_name,
 };
 
 const KEY: &str = "repark.attr";
@@ -632,4 +632,73 @@ fn resolve_treats_a_missing_id_as_a_bug_and_checks_the_display_count() {
     );
     let frame = stamped(source(&context));
     assert!(resolve(frame.schema(), "id", None, IgnoreCase, &strings(&["id"])).is_err());
+}
+
+#[test]
+fn using_join_re_mints_colliding_right_ids_of_a_self_join() {
+    let context = SessionContext::new();
+    let frame = stamped(source(&context));
+    let held = ids(&frame);
+    let joined = join_on_named_keys(
+        frame.clone(),
+        frame.clone(),
+        &["id".to_string()],
+        JoinType::Inner,
+        IgnoreCase,
+    )
+    .unwrap();
+    let after = ids(&joined);
+    assert_eq!(after.len(), 5);
+    assert_eq!(after[0], held[0]);
+    assert_eq!(&after[1..3], &held[1..]);
+    assert!(
+        after[3..]
+            .iter()
+            .all(|id| id.is_some() && !held.contains(id))
+    );
+    assert_ne!(after[3], after[4]);
+}
+
+#[test]
+fn strip_removes_every_id_and_keeps_names_types_and_qualifiers() {
+    let context = SessionContext::new();
+    let frame = stamped(source(&context));
+    let (state, plan) = frame.clone().into_parts();
+    let stripped = DataFrame::new(state, strip(plan).unwrap());
+    assert_eq!(ids(&stripped), named(&["", "", ""]));
+    for ((before_qualifier, before), (after_qualifier, after)) in
+        frame.schema().iter().zip(stripped.schema().iter())
+    {
+        assert_eq!(before_qualifier, after_qualifier);
+        assert_eq!(before.name(), after.name());
+        assert_eq!(before.data_type(), after.data_type());
+        assert_eq!(before.is_nullable(), after.is_nullable());
+    }
+    let bare = source(&context);
+    let (_, plan) = bare.clone().into_parts();
+    assert_eq!(&strip(plan).unwrap(), bare.logical_plan());
+}
+
+#[test]
+fn strip_clears_a_non_projection_root() {
+    let context = SessionContext::new();
+    let frame = stamped(source(&context));
+    let aggregated = stamped(
+        frame
+            .aggregate(vec![col("s")], vec![max(col("id")).alias("top")])
+            .unwrap(),
+    );
+    assert!(ids(&aggregated).iter().all(Option::is_some));
+    let (state, plan) = aggregated.into_parts();
+    let stripped = DataFrame::new(state, strip(plan).unwrap());
+    assert_eq!(ids(&stripped), named(&["", ""]));
+    assert_eq!(
+        stripped
+            .schema()
+            .fields()
+            .iter()
+            .map(|field| field.name().clone())
+            .collect::<Vec<_>>(),
+        vec!["s".to_string(), "top".to_string()]
+    );
 }

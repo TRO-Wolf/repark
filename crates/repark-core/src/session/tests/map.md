@@ -38,6 +38,11 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   name (same and case-folded displays), a written qualifier's hit and miss, a cast twin that
   reuses the name, and a missing id or a display-count mismatch as an error. Mutations M1–M4
   (the ledger's record) red these pins. pins: attr-id-1/C-002, C-003, C-004, C-006
+  **ATTR-ID-1 S2 (2026-09-30):** a USING self-join keeps the key and left ids and re-mints
+  the two colliding right ids distinctly; `strip` removes every id from a Projection root
+  keeping names, types, nullability, and qualifiers, returns an unstamped plan unchanged,
+  and clears a non-Projection (Aggregate) root.
+  pins: attr-id-1/C-011, C-009
 - `session.rs` — ported v1 session battery plus P2G R2 / A13 / metadata-enumeration pins. RP-5: the bare-session half of the metadata-table enumeration contract (fork F-8 listing); mutation — make `information_schema` expect a `$snapshots` twin and the pin reds. pins: rp-5-fork-repin/C-003
   Child: [session/catalog_registration.rs](session/map.md).
   RP-5: `information_schema` hide pin now cites fork F-8 listing (no engine shim).

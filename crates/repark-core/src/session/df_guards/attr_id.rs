@@ -216,6 +216,50 @@ pub fn remint_join_collisions(plan: LogicalPlan, left_width: usize) -> Result<Lo
 }
 
 #[allow(clippy::missing_errors_doc)]
+pub fn strip(plan: LogicalPlan) -> Result<LogicalPlan> {
+    if let LogicalPlan::Projection(projection) = &plan {
+        let Some(schema) = cleaned_schema(projection.schema.as_ref())? else {
+            return Ok(plan);
+        };
+        return Projection::try_new_with_schema(
+            projection.expr.clone(),
+            Arc::clone(&projection.input),
+            schema,
+        )
+        .map(LogicalPlan::Projection);
+    }
+    let Some(schema) = cleaned_schema(plan.schema())? else {
+        return Ok(plan);
+    };
+    let expr = plan
+        .schema()
+        .iter()
+        .map(|(qualifier, field)| Expr::Column(Column::new(qualifier.cloned(), field.name())))
+        .collect::<Vec<_>>();
+    Projection::try_new_with_schema(expr, Arc::new(plan), schema).map(LogicalPlan::Projection)
+}
+
+fn cleaned_schema(schema: &DFSchema) -> Result<Option<Arc<DFSchema>>> {
+    if schema
+        .fields()
+        .iter()
+        .all(|field| AttrId::of(field).is_none())
+    {
+        return Ok(None);
+    }
+    let qualified = schema
+        .iter()
+        .map(|(qualifier, field)| {
+            let mut stripped = field.as_ref().clone();
+            stripped.metadata_mut().remove(ATTR_KEY);
+            (qualifier.cloned(), Arc::new(stripped))
+        })
+        .collect::<Vec<_>>();
+    DFSchema::new_with_metadata(qualified, schema.metadata().clone())
+        .map(|schema| Some(Arc::new(schema)))
+}
+
+#[allow(clippy::missing_errors_doc)]
 pub fn resolve(
     schema: &DFSchema,
     written: &str,

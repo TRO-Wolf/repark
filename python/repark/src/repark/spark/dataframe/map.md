@@ -24,6 +24,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `writer_layout.partitioned_by_sql_clause`, retiring
   `writer_readwriter.py`'s size exception (996 lines).
   pins: s3-path-write-1/C-007, C-008, C-009, C-012, C-013, C-014, C-015
+  **ATTR-ID-1 S2 (2026-09-30):** the frame handed to `session_write_path` is
+  stripped of `repark.attr` first, in place on the argument line.
+  pins: attr-id-1/C-009
 
 ## Modules
 
@@ -150,9 +153,16 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `_rebind_stable_name_column`) sets the bound `Column._attr_id` through
   `column_fields._bound_attr_id`, which stamps on read (covers the post-construction
   `_inner` replacements: cache, checkpoint, bridge, declared sort) and fails loud when
-  a stamped position still lacks an id. Both edits are line-neutral at 3973 (one blank
-  line funds the `attr_id` kwarg). Nothing reads `_attr_id` yet (S3).
+  a stamped position still lacks an id. Both edits are line-neutral at 3973 (the
+  condensed docstring funds the `attr_id` kwarg). Nothing reads `_attr_id` yet (S3).
   pins: attr-id-1/C-007, C-008
+  ATTR-ID-1 S2 exports (2026-09-30): `_apply_export_display_names` (the funnel behind
+  `to_arrow`/`toArrow`, `to_arrow_batches`, hence `toPandas` and `collect`) also drops
+  `repark.attr` from every exported Arrow field through
+  `column_fields._strip_attribute_id_metadata`, nested in place on the tighten-strip
+  line (line-neutral at 3973). `schema`/`printSchema`/`show`/`_repr` build from
+  name/type/nullable triples and carry no field metadata.
+  pins: attr-id-1/C-010
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`
@@ -796,6 +806,13 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `refuse_bucketed_or_clustered_table_write` merges the table-write checks so
   `writer_readwriter.py` holds its exact 1105 baseline.
   pins: io-bucket-cluster-1/C-005
+  **ATTR-ID-1 S2 (2026-09-30):** `run_through_temp_view` (the funnel behind every
+  SQL-composed write: local COPY for parquet/CSV/JSON, CTAS/RTAS, by-name append,
+  static overwrite, `saveAsTable`, `insertInto`, V2 `writeTo`) registers the source
+  stripped of `repark.attr` (`_native.strip_attribute_ids`), so no written file's
+  footer or stored schema carries the key. Text writes carry values only (no schema
+  channel) and are unchanged.
+  pins: attr-id-1/C-009
   **Re-check (2026-09-15):** `_unpack_column_args` checks `cols` before `col` and raises `NOT_LIST_OF_STR` with Spark's sentence through `_refuse_not_list_of_str`.
   ICE-WRITE-OPTIONS-1 (2026-09-17): `store_writer_option` (case-insensitive
   last-wins dedup shared by both writers) and `run_through_temp_view` (the one

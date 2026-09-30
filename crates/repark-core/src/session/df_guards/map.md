@@ -40,6 +40,12 @@ wrapped optimizer rule) and declares this directory.
   `Missing` for none; a hit without an id and a display count that differs from the field count
   are internal errors, never a wildcard. The facade does not call any of it yet (S2 stamps
   every spawned frame). Pins: `../tests/attr_id.rs`. pins: attr-id-1/C-002, C-003, C-004
+  **ATTR-ID-1 S2 (2026-09-30):** `strip(plan)` returns the plan unchanged when no root
+  output field carries the key, else rebuilds the root with the key removed from every
+  field (a Projection root keeps its expressions under an explicit cleaned schema via
+  `try_new_with_schema`; any other root gains one pass-through Projection with a
+  cleaned schema). Names, types, nullability, qualifiers, and schema-level metadata are
+  preserved. Pins: `../tests/attr_id.rs`. pins: attr-id-1/C-009
 - `case_bind.rs` — **U11-EDGE-1 (2026-09-26):** `bind_case_insensitive`, run first by
   `subquery.rs`'s `resolve_bound_expr` (the DataFrame door's one binding hook). An
   unqualified column the frame schema does not hold exactly binds to the single field that
@@ -165,6 +171,12 @@ wrapped optimizer rule) and declares this directory.
   `attribute_ids`, `remint_join_collisions`, `resolve` and `stamp` from `attr_id.rs`, so they
   leave through `frame_names`; `same_relation` moved to `attr_id.rs` and is imported back, so
   the file shrinks 1000 → 990. pins: attr-id-1/C-002
+  **ATTR-ID-1 S2 (2026-09-30):** `join_on_named_keys` (USING) counts the kept right-side
+  output positions while building the key-dedup projection and runs the S1
+  `remint_join_collisions` over the projected join split at that count, so a self-join
+  keeps the left ids and re-mints every colliding right id (semi/anti return before the
+  projection and need none). `strip` joins the `frame_names` re-export. 990 → 997.
+  pins: attr-id-1/C-011, C-009
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside

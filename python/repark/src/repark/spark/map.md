@@ -221,6 +221,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   id or a desynced engine name). No docstring: the lane's no-comments ruling covers new
   private helpers; the contract lives here.
   pins: attr-id-1/C-008
+  **ATTR-ID-1 S2 exports (2026-09-30):** `_strip_attribute_id_metadata(table)` drops
+  the `repark.attr` key from every top-level Arrow field (Tables and RecordBatches;
+  zero-copy when absent), called from `DataFrame._apply_export_display_names`.
+  pins: attr-id-1/C-010
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
   unsupported operations fail explicitly.
@@ -525,6 +529,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - `merge.py` — `mergeInto` builder and SQL MERGE source registration. DML-A:
   `whenNotMatchedBySource` DELETE/UPDATE execute.
   pins: dml-a-merge-not-matched-by-source/C-002, C-003
+  **ATTR-ID-1 S2 (2026-09-30):** the MERGE source view is registered stripped of
+  `repark.attr`, like every other write source.
+  pins: attr-id-1/C-009
 - `merge_aliases.py` — **IPI-56 (2026-09-20):** which `(target, source)` aliases
   the rendered `MERGE INTO` declares. Spark's own condition form qualifies the
   target by its **short table name** and the source by the frame's alias, so a

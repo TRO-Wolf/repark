@@ -61,7 +61,8 @@ def run_through_temp_view(
     dataframe._ensure_alive()
     session = dataframe._session
     view_name = scratch_view_name(session, prefix)
-    session.create_or_replace_temp_view(view_name, dataframe._native_for_registration())
+    registered = _native.strip_attribute_ids(dataframe._native_for_registration())
+    session.create_or_replace_temp_view(view_name, registered)
     try:
         _native.session_sql_with_write_options(
             session,

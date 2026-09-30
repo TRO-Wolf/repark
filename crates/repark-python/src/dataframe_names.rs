@@ -23,6 +23,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(resolve_display_name, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_frame_names, module)?)?;
     module.add_function(wrap_pyfunction!(stamp_attribute_ids, module)?)?;
+    module.add_function(wrap_pyfunction!(strip_attribute_ids, module)?)?;
     Ok(())
 }
 
@@ -212,6 +213,19 @@ pub(crate) fn stamp_attribute_ids(frame: &PyDataFrame) -> PyResult<PyDataFrame> 
     fenced!("dataframe_names.stamp_attribute_ids", {
         let (state, plan) = frame.inner().clone().into_parts();
         let plan = repark_core::frame_names::stamp(plan).map_err(datafusion_to_py_err)?;
+        Ok(PyDataFrame::new(
+            DataFrame::new(state, plan),
+            frame.runtime_handle(),
+        ))
+    })
+}
+
+#[allow(clippy::missing_errors_doc)]
+#[pyfunction]
+pub(crate) fn strip_attribute_ids(frame: &PyDataFrame) -> PyResult<PyDataFrame> {
+    fenced!("dataframe_names.strip_attribute_ids", {
+        let (state, plan) = frame.inner().clone().into_parts();
+        let plan = repark_core::frame_names::strip(plan).map_err(datafusion_to_py_err)?;
         Ok(PyDataFrame::new(
             DataFrame::new(state, plan),
             frame.runtime_handle(),

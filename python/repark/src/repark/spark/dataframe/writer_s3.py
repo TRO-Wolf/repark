@@ -22,7 +22,7 @@ def write_s3_path(writer: Any, path: str, *, stored_as: str) -> None:
     dataframe._ensure_alive()
     _native.session_write_path(
         dataframe._session,
-        dataframe._native_for_registration(),
+        _native.strip_attribute_ids(dataframe._native_for_registration()),
         path,
         stored_as.lower(),
         writer._mode,

@@ -403,3 +403,28 @@ fn binding_stamps_resolves_and_re_mints_a_self_join() {
         );
     });
 }
+
+#[test]
+fn binding_re_mints_using_join_collisions_of_a_self_join() {
+    Python::attach(|py| {
+        let session = PyReparkSession::new(py, None, None, None, None, None).expect("session");
+        let frame = session
+            .sql(py, "SELECT 1 AS id, 'a' AS data")
+            .expect("source frame");
+        let stamped = crate::dataframe_names::stamp_attribute_ids(&frame).expect("stamp");
+        let held = crate::dataframe_names::attribute_ids(&stamped);
+        let joined = crate::dataframe_names::join_on_keys(
+            stamped.inner(),
+            stamped.inner(),
+            &["id".to_string()],
+            datafusion::logical_expr::JoinType::Inner,
+        )
+        .expect("using self-join");
+        let joined = PyDataFrame::new(joined, stamped.runtime_handle());
+        let after = crate::dataframe_names::attribute_ids(&joined);
+        assert_eq!(after.len(), 3);
+        assert_eq!(after[0], held[0]);
+        assert_eq!(after[1], held[1]);
+        assert!(after[2].is_some() && !held.contains(&after[2]));
+    });
+}
