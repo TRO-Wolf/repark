@@ -23,10 +23,14 @@ fn options_map(pairs: &[(&str, &str)]) -> HashMap<String, String> {
 }
 
 fn write_session(bucket: &str) -> (ReparkSession, Arc<InMemory>) {
+    write_session_in(bucket, "America/New_York")
+}
+
+fn write_session_in(bucket: &str, zone: &str) -> (ReparkSession, Arc<InMemory>) {
     let session = ReparkSession::builder()
         .configs(HashMap::from([(
             "spark.sql.session.timeZone".to_string(),
-            "America/New_York".to_string(),
+            zone.to_string(),
         )]))
         .build()
         .unwrap();
@@ -416,6 +420,41 @@ async fn sink_keep_partition_columns_pass_temporal_native() {
     assert!(
         custom_fields[1].contains("-04:00"),
         "zone offset rendered: {custom_body:?}"
+    );
+}
+
+#[tokio::test]
+async fn sink_year_10000_renders_signed_proleptic() {
+    let (session, memory) = write_session_in("sink-bucket", "UTC");
+    let schema = Arc::new(Schema::new(vec![Field::new(
+        "t",
+        DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into())),
+        true,
+    )]));
+    let batch = RecordBatch::try_new(
+        schema,
+        vec![Arc::new(
+            TimestampMicrosecondArray::from(vec![253_402_300_800_000_000]).with_timezone("UTC"),
+        )],
+    )
+    .unwrap();
+    let frame = frame_of_batch(&session, "v", batch).await;
+    session
+        .write_path(
+            &frame,
+            "s3://sink-bucket/cell/p",
+            "csv",
+            "error",
+            &HashMap::new(),
+            &[],
+        )
+        .await
+        .unwrap();
+    let names = listed_names(&memory, "cell/p").await;
+    let part = names.iter().find(|name| name.ends_with(".csv")).unwrap();
+    assert_eq!(
+        object_text(&memory, part).await,
+        "t\n+10000-01-01T00:00:00.000Z\n"
     );
 }
 

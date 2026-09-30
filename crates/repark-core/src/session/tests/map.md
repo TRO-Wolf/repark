@@ -56,8 +56,9 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
 - `text_write_sink.rs` — **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round
   (2026-09-30):** end-to-end pins for the sink serializer: zone-correct
   CSV/JSON bytes, user patterns, raw partition directory names, lazy and
-  eager error identity, empty and all-null frames, and the
-  keep-partition-columns native pass-through against plain CSV.
+  eager error identity, empty and all-null frames, the
+  keep-partition-columns native pass-through against plain CSV, and the
+  signed year-10000 render.
 - `s3_prefix_read.rs` — **S3-PATH-WRITE-1 round 2 (2026-09-28):** slashless S3
   prefix reads on an in-memory store (no AWS): a written prefix reads back
   slashless for parquet, csv and json; exact part URLs keep single-file reads
