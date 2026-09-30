@@ -394,6 +394,14 @@ def test_verbatim_dml_predicates_keep_backslashes(verbatim: ReparkSession, tmp_p
     verbatim.sql("UPDATE sc.ns.b SET s = 'q' WHERE s = 'a\\nb'")
     table = verbatim.sql("SELECT id, s FROM sc.ns.b ORDER BY id").to_arrow()
     assert _text(table, "s") == ["q", "z"]
+    verbatim.sql("CREATE TABLE sc.ns.bq (id INT, s STRING) USING iceberg")
+    verbatim.sql("INSERT INTO sc.ns.bq VALUES (1, 'k\\\\''m'), (2, 'z')")
+    verbatim.sql("UPDATE sc.ns.bq SET s = 'q' WHERE s = 'k\\\\''m'")
+    table = verbatim.sql("SELECT id, s FROM sc.ns.bq ORDER BY id").to_arrow()
+    assert _text(table, "s") == ["q", "z"]
+    verbatim.sql("UPDATE sc.ns.bq SET s = 'k\\\\''m' WHERE id = 2")
+    table = verbatim.sql("SELECT id, s FROM sc.ns.bq ORDER BY id").to_arrow()
+    assert _text(table, "s") == ["q", "k\\\\''m"]
 
 
 def test_default_dml_predicates_match_spark(spark: ReparkSession, tmp_path: Path) -> None:
