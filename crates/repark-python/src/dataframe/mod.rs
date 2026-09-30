@@ -309,7 +309,7 @@ impl PyDataFrame {
     #[allow(clippy::missing_errors_doc)]
     pub fn filter_sql(&self, predicate: &str) -> PyResult<Self> {
         fenced!("PyDataFrame.filter_sql", {
-            let grown = sql_drive_grown(predicate)?;
+            let grown = sql_drive_grown(predicate);
             let df = run_grown_if(&self.runtime, grown, || {
                 crate::dataframe_names::filter_frame_with_sql(&self.df, predicate)
             })?;

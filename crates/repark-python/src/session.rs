@@ -164,7 +164,7 @@ impl PyReparkSession {
     pub fn sql(&self, py: Python<'_>, query: &str) -> PyResult<PyDataFrame> {
         fenced_span!("py.sql", "PyReparkSession.sql", {
             let query = crate::session_runtime::prepare_session_sql(query)?;
-            let grown = crate::deep_stack::sql_drive_grown(&query)?;
+            let grown = crate::deep_stack::sql_drive_grown(&query);
             let df = py
                 .detach(|| block_on_grown_if(&self.runtime, self.session.sql(&query), grown))
                 .map_err(to_py_err)?;

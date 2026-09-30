@@ -19,7 +19,10 @@ transforms, terminal actions, schema introspection, and Arrow C Stream export.
   every doc comment per the comment ban, so the `PyResult`-returning fns carry
   per-item `#[allow(clippy::missing_errors_doc)]` (repo precedent:
   `repark-distributed`).
-  pins: deep-filter-chain-crash-1/C-001
+  **Limits fold (2026-09-29):** `filter_sql` keeps only the 4 KiB growth gate
+  (the text refusal is gone); terminals count non-`Union` nodes toward the
+  8192 plan cap, so union spines answer past it and filter-led plans refuse.
+  pins: deep-filter-chain-crash-1/C-001, C-010
 - [`tests.rs`](tests.rs) — **DEEP-FILTER-CHAIN-CRASH-1 verifier fold
   (2026-09-29):** the `dataframe` unit tests, moved verbatim from the inline
   module (Arrow export values, types, laziness, errors, schema caching).

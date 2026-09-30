@@ -19,7 +19,6 @@ pub(crate) const MAX_PLAN_DEPTH: usize = 8192;
 pub(crate) const GROWN_SEGMENT_BYTES_PER_PLAN_LEVEL: usize = 128 * 1024;
 pub(crate) const MAX_GROWN_SEGMENT_BYTES: usize = 1024 * 1024 * 1024;
 pub(crate) const GROWN_SQL_TEXT_LEN: usize = 4096;
-pub(crate) const MAX_SQL_TEXT_LEN: usize = 1024 * 1024;
 pub(crate) const SMALL_STACK_REMAINING_BYTES: usize = 2 * 1024 * 1024;
 
 pub(crate) fn build_shared_runtime() -> io::Result<Runtime> {
@@ -63,28 +62,44 @@ pub(crate) fn run_grown_if<T>(runtime: &Runtime, grown: bool, work: impl FnOnce(
 #[derive(Debug)]
 pub(crate) struct PlanDepths {
     pub(crate) plan: usize,
+    pub(crate) limited: usize,
     pub(crate) expression: usize,
+}
+
+fn union_free_depth(node: &LogicalPlan) -> usize {
+    usize::from(!matches!(node, LogicalPlan::Union(_)))
 }
 
 pub(crate) fn plan_depths(plan: &LogicalPlan) -> PlanDepths {
     let mut deepest_plan = 0;
+    let mut deepest_limited = 0;
     let mut deepest_expression = 0;
-    let mut pending_plans = vec![(plan, 1_usize)];
-    while let Some((node, plan_depth)) = pending_plans.pop() {
+    let mut pending_plans = vec![(plan, 1_usize, union_free_depth(plan))];
+    while let Some((node, plan_depth, limited_depth)) = pending_plans.pop() {
         deepest_plan = deepest_plan.max(plan_depth);
+        deepest_limited = deepest_limited.max(limited_depth);
         for input in node.inputs() {
-            pending_plans.push((input, plan_depth + 1));
+            pending_plans.push((
+                input,
+                plan_depth + 1,
+                limited_depth + union_free_depth(input),
+            ));
         }
         for expr in node_expressions(node) {
             let (depth, subqueries) = expression_depth_and_subqueries(expr);
             deepest_expression = deepest_expression.max(depth);
             for subquery in subqueries {
-                pending_plans.push((subquery, plan_depth + 1));
+                pending_plans.push((
+                    subquery,
+                    plan_depth + 1,
+                    limited_depth + union_free_depth(subquery),
+                ));
             }
         }
     }
     PlanDepths {
         plan: deepest_plan,
+        limited: deepest_limited,
         expression: deepest_expression,
     }
 }
@@ -179,10 +194,10 @@ pub(crate) fn refuse_overdeep_plan(plan: &LogicalPlan) -> PyResult<PlanDepths> {
 
 pub(crate) fn refuse_overdeep_plan_inputs(plan: &LogicalPlan) -> PyResult<PlanDepths> {
     let depths = plan_depths(plan);
-    if depths.plan > MAX_PLAN_DEPTH {
+    if depths.limited > MAX_PLAN_DEPTH {
         return Err(AnalysisException::new_err(format!(
             "plan depth {} exceeds the supported maximum of {MAX_PLAN_DEPTH} (deep-plan limit)",
-            depths.plan
+            depths.limited
         )));
     }
     Ok(depths)
@@ -210,23 +225,12 @@ pub(crate) fn drive_segment_bytes(depths: &PlanDepths) -> Option<usize> {
     }
 }
 
-pub(crate) fn refuse_overlong_sql(query: &str) -> PyResult<()> {
-    if query.len() > MAX_SQL_TEXT_LEN {
-        return Err(AnalysisException::new_err(format!(
-            "query text length {} exceeds the supported maximum of {MAX_SQL_TEXT_LEN} bytes (query-text limit)",
-            query.len()
-        )));
-    }
-    Ok(())
-}
-
 pub(crate) fn sql_needs_grown_stack(query: &str) -> bool {
     query.len() > GROWN_SQL_TEXT_LEN
 }
 
-pub(crate) fn sql_drive_grown(query: &str) -> PyResult<bool> {
-    refuse_overlong_sql(query)?;
-    Ok(sql_needs_grown_stack(query) || stack_is_small())
+pub(crate) fn sql_drive_grown(query: &str) -> bool {
+    sql_needs_grown_stack(query) || stack_is_small()
 }
 
 pub(crate) fn stack_is_small() -> bool {
@@ -413,14 +417,48 @@ mod tests {
     }
 
     #[test]
+    fn plan_depths_ignore_union_spines_for_the_plan_cap() {
+        use datafusion::logical_expr::LogicalPlanBuilder;
+        use datafusion::logical_expr::Union;
+        use std::sync::Arc;
+        std::thread::Builder::new()
+            .stack_size(64 * 1024 * 1024)
+            .spawn(|| {
+                let leaf = LogicalPlanBuilder::empty(false)
+                    .build()
+                    .expect("an empty plan builds");
+                let mut plan = leaf.clone();
+                for _ in 0..MAX_PLAN_DEPTH + 8 {
+                    plan = LogicalPlan::Union(
+                        Union::try_new(vec![Arc::new(plan), Arc::new(leaf.clone())])
+                            .expect("a union wraps"),
+                    );
+                }
+                let depths = plan_depths(&plan);
+                assert!(
+                    depths.plan > MAX_PLAN_DEPTH,
+                    "the union spine runs past the cap: {}",
+                    depths.plan
+                );
+                assert_eq!(depths.limited, 1);
+                assert!(refuse_overdeep_plan_inputs(&plan).is_ok());
+            })
+            .expect("a big-stack test thread spawns")
+            .join()
+            .expect("the big-stack test thread joins");
+    }
+
+    #[test]
     fn drive_segment_bytes_scales_with_plan_depth() {
         let deep = PlanDepths {
             plan: MAX_PLAN_DEPTH,
+            limited: MAX_PLAN_DEPTH,
             expression: 1,
         };
         assert_eq!(drive_segment_bytes(&deep), Some(MAX_GROWN_SEGMENT_BYTES));
         let expression_only = PlanDepths {
             plan: 2,
+            limited: 2,
             expression: DEEP_NESTING_DEPTH + 1,
         };
         assert_eq!(
@@ -430,16 +468,11 @@ mod tests {
     }
 
     #[test]
-    fn sql_gates_split_at_the_length_bounds() {
+    fn sql_growth_gate_splits_at_the_length_bound() {
         assert!(!sql_needs_grown_stack("SELECT 1"));
         assert!(sql_needs_grown_stack(&" ".repeat(GROWN_SQL_TEXT_LEN + 1)));
-        assert!(refuse_overlong_sql("SELECT 1").is_ok());
-        let error = refuse_overlong_sql(&" ".repeat(MAX_SQL_TEXT_LEN + 1))
-            .expect_err("overlong SQL refuses");
-        assert!(
-            error.to_string().contains("query-text limit"),
-            "the refusal names the limit: {error}"
-        );
+        assert!(sql_drive_grown(&" ".repeat(GROWN_SQL_TEXT_LEN + 1)));
+        assert!(sql_drive_grown(&" ".repeat(2 * 1024 * 1024)));
     }
 
     #[test]

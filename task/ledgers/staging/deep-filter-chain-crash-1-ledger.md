@@ -76,7 +76,10 @@ fork edit, no new crate edge.
 | C-004 | 1,000-deep nested SQL raises a catchable `RecursionError`, never a crash (Spark refuses nested-deep SQL with `FAILED_TO_PARSE_TOO_COMPLEX`); flat 600-branch `UNION ALL` SQL counts 601. | One isolated-interpreter pin asserting the refusal class and the flat count. | PROVEN | `test_deep_filter_chain_crash_1.py` `test_deep_sql_shapes_refuse_clean_or_answer`; nested-1000 records `RecursionError`, flat-600 records 601 on head. |
 | C-005 | A 1,000-deep filter chain answers 50 under a scalar subquery and under `IN (SELECT ...)` (VD-1); both shapes SIGSEGV on f958d1a8. | One isolated-interpreter pin asserting both counts. | PROVEN | `test_deep_subquery_expression_1.py` `test_thousand_filter_chain_answers_under_subqueries`; `deep_stack.rs` `plan_depths_see_through_scalar_subqueries`. |
 | C-006 | A 5,000-term OR through `sql()` answers 50 on the debug build and a 10,000-term OR answers 50 on release (VD-2; Spark answers both too); the same shape through `filter()` raises a catchable `AnalysisException` at build time (Spark raises `StackOverflowError` at `.filter()` the same way). | Debug pin asserting the 5k answer; release or_n_sql N=10000 answers 50 in 108 s; DF-door refusal pins at 2k/20k. | PROVEN | `test_deep_subquery_expression_1.py` `test_five_thousand_term_or_answers_through_sql`, `test_twenty_thousand_term_or_refuses_through_filter`; `deep_stack.rs` `frame_drive_segment_grows_past_the_expression_cap`. |
-| C-007 | A 2,000-deep `+1` select raises a catchable `AnalysisException` naming the deep-expression limit, never a crash (VD-3; Spark refuses deep arithmetic with a catchable error too). SQL past the 1 MiB text cap refuses the same way. | Isolated-interpreter pins asserting both refusal classes. | PROVEN | `test_deep_subquery_expression_1.py` `test_two_thousand_deep_select_refuses_clean`, `test_overlong_sql_refuses_clean`; `deep_stack.rs` `sql_gates_split_at_the_length_bounds`. |
+| C-007 | A 2,000-deep `+1` select raises a catchable `AnalysisException` naming the deep-expression limit, never a crash (VD-3; Spark refuses deep arithmetic with a catchable error too). | One isolated-interpreter pin asserting the refusal class. | PROVEN | `test_deep_subquery_expression_1.py` `test_two_thousand_deep_select_refuses_clean`; `deep_stack.rs` `refuse_expression_depth_splits_at_the_cap`. |
+| C-009 | The 200,000-item IN list over `range(1000)` (1,288,936 bytes) counts 1000; no query-text length cap remains (limits R1; base answers 1000 in 60 s, Spark answers with no length limit). | One isolated-interpreter pin asserting the count. | PROVEN | `test_deep_filter_chain_crash_1.py` `test_two_hundred_thousand_item_in_list_answers`. |
+| C-010 | 8,193 `DataFrame.union` calls count 409700 (union spines skip the plan cap: base and Spark answer unions at 8193); 8,192 chained filters refuse `AnalysisException` naming the deep-plan limit (base SIGSEGVs and Spark raises `StackOverflowError` there). | Two isolated-interpreter pins asserting the count and the refusal class. | PROVEN | `test_deep_filter_chain_crash_1.py` `test_union_past_plan_cap_answers`, `test_filter_past_plan_cap_refuses_clean`; `deep_stack.rs` `plan_depths_ignore_union_spines_for_the_plan_cap`. |
+| C-011 | A 300-term AND answers 50 and a 1,500-term AND refuses `AnalysisException` at `filter()` (limits R3; Spark first refuses `and`/`or`/`+` chains past 300 terms, so the 1500 builder cap refuses above Spark). | Two isolated-interpreter pins asserting the count and the refusal class. | PROVEN | `test_deep_filter_chain_crash_1.py` `test_and_chain_at_must_answer_depth_answers`, `test_and_chain_past_expression_cap_refuses_clean`. |
 | C-008 | A 16-deep chain counts 50 on a 512 KiB thread (small-stack backstop: any entry point grows when under 2 MiB remain); debug SIGSEGVs on f958d1a8 and base alike. | One isolated-interpreter pin. | PROVEN | `test_deep_subquery_expression_1.py` `test_shallow_chain_answers_on_small_stack_thread`. |
 
 ## Mutation record (2026-09-29)
@@ -168,6 +171,8 @@ COVERAGE_ATTESTATION:
 | R-2 | Dated 2026-09-29 (no crash; pre-existing optimizer/execution scaling): the join count phase runs 129.2 s at 500 post-fix, so 1,000-deep joins exceed 250 s; the pin sits at 200. |
 | R-3 | Dated 2026-09-29 (pre-existing clean-refusal divergence, deliberately untouched): 200-deep nested selects answer 2 on Spark 4.1.2 and refuse at RePark's parser limit 50; relaxing the limit could open SQL-door crashes, so it stays out of this unit. |
 | R-4 | Dated 2026-09-29 (caveat on the Measurements reservation): a strict-overcommit (`vm.overcommit_memory=2`) or `ulimit -v` environment could fail the 256 MiB thread/stack reservations with loud errors instead of crashes; residency is unchanged and default overcommit is unaffected. |
+| R-5 | Dated 2026-09-29 (limits fold; drop-side stack cost): dropping a deep plan needs ~250 B per level on the dropping thread (an 8201-deep test plan aborts a 2 MiB thread at drop); main-thread drops hold past 20000 and pool threads hold 64 MiB, so only a sub-megabyte thread holding a deep plan is exposed — same as base. |
+| R-6 | Dated 2026-09-29 (limits fold; pre-existing IN-list divergence, out of unit scope): at 100k+ IN items Spark 4.1.2 answers 1 on both the `range()` and temp-view forms while base answers 1000 range-form / 1 view-form; small IN lists answer exactly everywhere. Head matches base per form. |
 
 ## Release per-call cost follow-up (2026-09-29)
 
@@ -237,6 +242,9 @@ grown segment 128 KiB per plan level (128 MiB floor, 1 GiB ceiling).
 Thread-pool execution for every entry was rejected: the R3 `spawn`
 measurement (1.40-1.58x) already proves the hand-off cost breaks the
 ceiling, and `sql()` plus the streaming polls hold `!Send` futures.
+(Limits fold: the SQL text cap is removed and the plan cap counts
+non-union nodes; the paragraph above describes 3466b00c, the section
+below describes the fold.)
 
 ## Verifier fold evidence (2026-09-29, debug build unless noted)
 
@@ -348,3 +356,86 @@ subquery shapes, `vd3_and_5000`, `vd3_arith_2000`, and
 262 s, same answer); `vd3_or_2000` answers 50 in 14 s where head
 refuses `AnalysisException` (intended flip — Spark raises on this
 shape). Six crashes fixed, two same-answers, one intended flip.
+
+## Limits fold (2026-09-29)
+
+Rule: this unit stops crashes, so a refusal survives only where base
+crashes on the same statement (a) or Spark 4.1.2 refuses it at the
+same threshold, measured (b). Fold base is adc26586 (`/tmp/xrel`);
+Spark is 4.1.2 `America/New_York` local[2] on zulu-17 (banner in
+`spark_bisect.jsonl`); RePark sides are debug builds, one isolated
+interpreter per cell. Depths below are the brief's N (chain length);
+expression depth is N+1 for `and`/`or`, N+2 for `+`.
+
+R1: the SQL text cap is deleted (`MAX_SQL_TEXT_LEN`,
+`refuse_overlong_sql`, its call sites and pins). The 200,000-item IN
+list over `range(1000)` (1,288,936 bytes) answers 1000 on base in
+59.9 s and refuses on 3466b00c; Spark has no text-length limit. Long
+text now drives the grown stack past 4 KiB instead of refusing.
+
+| IN shape (debug) | base | 3466b00c | Spark |
+|---|---|---|---|
+| range form, 100k items | 1000, 33 s | refuses (text cap) | 1, 4 s |
+| range form, 200k items | 1000, 60 s | refuses (text cap) | 1, 9 s |
+| temp-view form, 100k items | 1000, 33 s | refuses (text cap) | 1, 7 s |
+| temp-view form, 200k items | 1, 42 s | refuses (text cap) | 1, 10 s |
+
+Spark answers 1 on all four 100k+ cells (R-6); small IN lists answer
+exactly on every side (10k items: Spark 25, correct). The fold pin
+uses the range form and expects base's 1000.
+
+R2: the 8192 plan cap stays for filter-led plans and stops counting
+`Union` nodes (`PlanDepths.limited`). Base crashes every filter cell
+at 4000+ and Spark refuses them (`StackOverflowError`, at build from
+4000, at `count` from 1000); the filter-count threshold sits in
+(900, 1000]. Base and Spark both answer unions at 8192/8193, so the
+blanket cap was a regression there. `withColumn` times out on both
+RePark sides at 4000+ (superlinear plan build, R-1 extended); select
+answers on base at 8192/8193 but Spark refuses selects from 4000,
+so refusal stays allowed by (b).
+
+| Plan cell (debug) | 3466b00c | base | Spark |
+|---|---|---|---|
+| filter 4000/8192/8193/12000/20000 | ans/ref/ref/ref/ref | crash x5 | refuse x5 |
+| union DF 4000/8192/8193/12000/20000 | ans/ref/ref/ref/ref | ans/ans/ans/tmo/tmo | ans/ans/ans/…/… |
+| union SQL 4000/8192/8193/12000/20000 | ans/ref/ref/ref/tmo | ans/ans/ans/tmo/tmo | …/…/…/…/… |
+| withColumn 4000/8192/8193/12000/20000 | tmo x5 | tmo x5 | refuse x5 |
+| select 4000/8192/8193/12000/20000 | ans/ref/ref/ref/tmo | ans/ans/ans/tmo/tmo | refuse x5 |
+
+`ans`/`ref`/`tmo` = answers / clean `AnalysisException` /
+timeout; `…` = still running when the fold committed, decision needs
+no deeper cell (head answers wherever either side answers). Union DF
+8193: base 409700 in 557 s, Spark 409700 in 1266 s. Union SQL 8193:
+base 8194 in 991 s. Post-fold head re-runs every R2 cell: unions
+answer, filter/select/withColumn keep their verdicts, no crash.
+
+R3: the 1500 builder expression cap stays. Spark first refuses
+`and`/`or`/`+` chains between 300 and 350 terms (depth 301-351,
+all three ops, `StackOverflowError` at build), so the head refusal
+at depth 1501 sits above Spark's threshold on every op, and every
+depth Spark answers (300 and below) answers on head. Base answers
+`and` to 3000 (crash by 4000), `or` to 5000 (timeout at 8000), and
+`+` to 300 in 159 s (hang at 1000-1100, crash from 1200); every
+depth head refuses past 1500 is refused by Spark too, so (b) holds
+on each. No cap moves.
+
+| Expression cell (debug) | 3466b00c | base | Spark |
+|---|---|---|---|
+| and 1000/1499/1500/1501/2000/3000/5000 | ans/ans/ref/ref/ref/ref/ref | ans x6/crash | refuse x7 |
+| or 1000/1499/1500/1501/2000/3000/5000 | ans/ans/ref/ref/ref/ref/ref | ans x7 | refuse x7 |
+| plus 200/300/1000/1499/1500/1501/2000+ | ans/ans/tmo/ref/ref/ref/ref | ans/ans/tmo/crash x4 | ans/ans/ref x5 |
+
+Pins: C-009 (IN list 1000), C-010 (union 8193 answers 409700,
+filter 8192 refuses), C-011 (AND 300 answers 50, AND 1500 refuses),
+all in `test_deep_filter_chain_crash_1.py` (gate-covered; worker
+timeout 300 s → 1500 s). C-007 keeps the arith-2000 refusal; its
+SQL-cap half is deleted with the cap. Rust: `deep_stack.rs` gains
+the union-spine unit; the SQL-gate unit pins growth without refusal.
+
+Residues added: R-5 (dropping a deep plan needs ~250 B per level
+on the dropping thread: an 8201-deep test plan aborts a 2 MiB
+thread at drop, so the union-spine unit runs on a 64 MiB thread;
+main-thread drops hold past 20000, sub-megabyte threads must not
+hold deep plans — same as base) and R-6 (100k+ IN lists: Spark
+answers 1 on both forms, base answers 1000 range-form / 1
+view-form; pre-existing divergence, out of unit scope).

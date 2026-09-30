@@ -91,7 +91,9 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   **DEEP-FILTER-CHAIN-CRASH-1 (2026-09-29):** `Column.sql` drives its planned
   expression through `deep_stack::block_on` (grown-stack entry point; net-zero: two
   `use` lines join to pay for the import, stays 1012).
-  pins: deep-filter-chain-crash-1/C-001
+  **Limits fold (2026-09-29):** the 1 MiB text refusal is removed (1012 → 1011);
+  long fragments plan as on base.
+  pins: deep-filter-chain-crash-1/C-001, C-009
 - [`function_dispatch.rs`](function_dispatch.rs) owns scalar and aggregate function dispatch.
   Its default arm hands the name to [`function_dispatch/`](function_dispatch/map.md) before
   refusing.

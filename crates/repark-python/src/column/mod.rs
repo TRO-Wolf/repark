@@ -217,7 +217,6 @@ impl PyColumn {
     #[staticmethod]
     pub fn sql(sql: &str) -> PyResult<Self> {
         fenced!("Column.sql", {
-            crate::deep_stack::refuse_overlong_sql(sql)?;
             repark_spark::refuse_sql_fragment(sql).map_err(crate::datafusion_to_py_err)?;
             let context =
                 expr_build::sql_context(sql, true).map_err(crate::datafusion_to_py_err)?;

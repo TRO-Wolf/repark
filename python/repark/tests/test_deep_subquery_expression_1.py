@@ -60,11 +60,7 @@ except Exception as raised:
     results["arith_2000_select"] = type(raised).__name__
 
 long_query = "SELECT 1" + " " * 1100000
-try:
-    session.sql(long_query).collect()[0][0]
-    results["sql_overlong"] = "answered"
-except Exception as raised:
-    results["sql_overlong"] = type(raised).__name__
+results["sql_long"] = session.sql(long_query).collect()[0][0]
 
 threading.stack_size(512 * 1024)
 shallow = base
@@ -132,11 +128,11 @@ def test_two_thousand_deep_select_refuses_clean(
     assert worker_results["arith_2000_select"] == "AnalysisException"
 
 
-def test_overlong_sql_refuses_clean(
+def test_long_sql_text_answers_without_a_cap(
     worker_results: dict[str, object],
 ) -> None:
-    """SQL past the 1 MiB text cap raises AnalysisException, never a crash."""
-    assert worker_results["sql_overlong"] == "AnalysisException"
+    """1.1 MB of SQL text answers 1; the query-text length cap is gone."""
+    assert worker_results["sql_long"] == 1
 
 
 def test_shallow_chain_answers_on_small_stack_thread(

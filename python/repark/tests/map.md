@@ -7384,7 +7384,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   200 on base, caps the depth — not the stack), 1,000-deep nested SQL raises a
   catchable `RecursionError` (Spark refuses nested-deep SQL too, with
   `FAILED_TO_PARSE_TOO_COMPLEX`), and flat 600-union SQL counts 601.
-  pins: deep-filter-chain-crash-1/C-001, C-002, C-003, C-004
+  **Limits fold (2026-09-29):** the battery gains the 200,000-item IN list
+  over `range(1000)` (counts 1000, ~60 s on debug — the text cap is gone),
+  8,193 unions counting 409700 (union spines skip the plan cap, ~560 s),
+  8,192 filters refusing `AnalysisException` (base crashes and Spark refuses
+  there), a 300-term AND answering 50 (Spark answers 300, refuses 350), and
+  a 1,500-term AND refusing `AnalysisException` at `filter()` (worker
+  timeout 1500 s).
+  pins: deep-filter-chain-crash-1/C-001, C-002, C-003, C-004, C-009, C-010, C-011
 - [test_deep_subquery_expression_1.py](test_deep_subquery_expression_1.py) —
   **DEEP-FILTER-CHAIN-CRASH-1 verifier fold (2026-09-29, VD-1..VD-3):**
   subquery plans and deep expressions never kill the interpreter. One
@@ -7397,9 +7404,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Spark answers these shapes through SQL too), a 20,000-term OR through
   `filter()` raises `AnalysisException` naming the deep-expression limit
   (Spark raises `StackOverflowError` at `.filter()` the same way), a
-  2,000-deep `+1` select raises the same refusal, SQL past the 1 MiB text
-  cap refuses the same way, and a 16-deep chain counts 50 on a 512 KiB
-  thread (the small-stack backstop grows under 2 MiB remaining).
+  2,000-deep `+1` select raises the same refusal, and a 16-deep chain
+  counts 50 on a 512 KiB thread (the small-stack backstop grows under 2 MiB
+  remaining). **Limits fold (2026-09-29):** the 1 MiB refusal pin became a
+  1.1 MB answer pin (`SELECT 1` plus padding collects 1).
   pins: deep-filter-chain-crash-1/C-005, C-006, C-007, C-008
 
 ## I want to...
