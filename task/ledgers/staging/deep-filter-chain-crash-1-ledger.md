@@ -81,6 +81,7 @@ fork edit, no new crate edge.
 | C-010 | 8,193 `DataFrame.union` calls count 409700 (union spines skip the plan cap: base and Spark answer unions at 8193); 8,192 chained filters refuse `AnalysisException` naming the deep-plan limit (base SIGSEGVs and Spark raises `StackOverflowError` there). | Two isolated-interpreter pins asserting the count and the refusal class. | PROVEN | `test_deep_filter_chain_crash_1.py` `test_union_past_plan_cap_answers`, `test_filter_past_plan_cap_refuses_clean`; `deep_stack.rs` `plan_depths_ignore_union_spines_for_the_plan_cap`. |
 | C-011 | A 300-term AND answers 50 and a 1,500-term AND refuses `AnalysisException` at `filter()` (limits R3; Spark first refuses `and`/`or`/`+` chains past 300 terms, so the 1500 builder cap refuses above Spark). | Two isolated-interpreter pins asserting the count and the refusal class. | PROVEN | `test_deep_filter_chain_crash_1.py` `test_and_chain_at_must_answer_depth_answers`, `test_and_chain_past_expression_cap_refuses_clean`. |
 | C-008 | A 16-deep chain counts 50 on a 512 KiB thread (small-stack backstop: any entry point grows when under 2 MiB remain); debug SIGSEGVs on f958d1a8 and base alike. | One isolated-interpreter pin. | PROVEN | `test_deep_subquery_expression_1.py` `test_shallow_chain_answers_on_small_stack_thread`. |
+| C-012 | A 6,000-term OR builds on the caller thread and on an 8 MiB thread, then refuses `AnalysisException` at `filter()` on both (CI segv: the 20,000-term build SIGSEGVs on an 8 MiB main stack before any builder runs). | One isolated-interpreter pin asserting both refusals; the grown-clone/drop Rust units. | PROVEN | `test_deep_expr_build_small_stack_1.py` both tests; `deep_stack.rs` `grown_column_combine_and_drop_survive_deep_trees`, `grown_expression_clone_and_drop_serve_sub_megabyte_threads`. |
 
 ## Mutation record (2026-09-29)
 
@@ -173,6 +174,8 @@ COVERAGE_ATTESTATION:
 | R-4 | Dated 2026-09-29 (caveat on the Measurements reservation): a strict-overcommit (`vm.overcommit_memory=2`) or `ulimit -v` environment could fail the 256 MiB thread/stack reservations with loud errors instead of crashes; residency is unchanged and default overcommit is unaffected. |
 | R-5 | Dated 2026-09-29 (limits fold; drop-side stack cost): dropping a deep plan needs ~250 B per level on the dropping thread (an 8201-deep test plan aborts a 2 MiB thread at drop); main-thread drops hold past 20000 and pool threads hold 64 MiB, so only a sub-megabyte thread holding a deep plan is exposed — same as base. |
 | R-6 | Dated 2026-09-29 (limits fold; pre-existing terminal split, out of unit scope): the 200k-item IN list answers 1000 through `collect()` and 1 through `count()` on base and head alike (10/10 virgin samples stable per terminal; form-independent); Spark's `count()` answers 1 too, its `collect()` is unmeasured. The C-009 pin uses `collect()`, matching the orchestrator's 1000-in-60 s measurement. |
+| R-7 | Dated 2026-09-30 (CI segv; pre-existing, same as base): recursive `Display`/`schema_name` formatting of a deep expression (`display_name`, `make_struct` field naming) still runs on the caller thread; no caller holds a deep expression there. |
+| R-8 | Dated 2026-09-30 (CI segv; pre-existing, same as base): `DataFrame::clone` of a plan whose top node holds a deep expression evaluates eagerly on the caller outside the terminal verdict; the unit's shapes top out far below it. |
 
 ## Release per-call cost follow-up (2026-09-29)
 
@@ -481,3 +484,49 @@ Gate fallout fixed in this commit: the CAP-1 mirror row for
 `column/mod.rs` ratchets 1012 → 1011 with the script baseline,
 plus the scripts and parity-tests map rows the lockstep rule
 needs.
+
+## CI segv (2026-09-30)
+
+CI job `build + import smoke (debug, host)` on cb8c8b8d: all six
+`test_deep_subquery_expression_1.py` tests ERROR — the fixture worker
+dies rc=-11 with empty stdout/stderr; the other 14,083 pass. The lane
+is green on the same commit.
+
+Environment difference: the lane main thread is 32 MiB
+(`ulimit -s 32768`) while CI's ubuntu default is 8 MiB. Split-shape
+probes on the lane develop build: subquery, or_5000_sql, arith_2000,
+longsql and smallstack_16 all pass under `ulimit -s 8192`; the
+20,000-term `|` reduce crashes mid-build under 8 MiB (rc=139) and
+passes under 32 MiB. gdb on the 8 MiB crash: thread 1 SIGSEGV inside
+recursive `Expr::clone` (`BinaryExpr::clone` → `Box<Expr>::clone`)
+with the stack pointer off the main stack.
+
+Root cause: `PyColumn` operators clone (and then drop) DataFusion
+`Expr` trees with compiler-generated recursive Clone/Drop on the
+caller thread, with no grown-stack hop. The 1500 builder refusal
+cannot cover this: the crash lands while *building* the expression,
+before `filter()` runs. Threshold bisect on 8 MiB debug: N=4000
+builds, N=6000 crashes, so ~1.6 KiB per level.
+
+Fix: `deep_stack::grown_clone` sizes a sync grown segment from the
+iterative expression depth (8 KiB per level, ~5x the measured debug
+cost, 1 GiB ceiling) via a new `repark_core` sync primitive
+`run_on_grown_stack`; every operator routes operand clones through
+the `PyColumn::expr` clone-out, `Drop` drops deep trees grown, and
+the three bodies that clone owned deep exprs (`over`,
+`call_scalar_expr`, `count_distinct_argument`) grow around renamed
+inner bodies. No refusal added, no threshold moved: the 20,000-term
+build still succeeds and still refuses at `filter()`. `column/mod.rs`
+ratchets 1011 → 1006 (rustfmt joins three shortened calls).
+
+Rust units M-R1/M-R2: `grown_clone` restored to a raw clone aborts
+the 20,000-deep combine test (SIGABRT), and an empty `Drop` aborts it
+too; both restored green.
+
+Residues added: R-7 (recursive `Display`/`schema_name` formatting of
+a deep expression — `display_name`, `make_struct` field naming —
+still runs on the caller thread; no caller holds a deep expression
+there, same as base) and R-8 (`DataFrame::clone` of a plan whose top
+node holds a deep expression evaluates eagerly on the caller outside
+the terminal verdict; the unit's shapes top out far below it, same as
+base).

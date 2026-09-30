@@ -48,7 +48,7 @@ impl PyColumn {
 
     /// The held expression, cloned for handoff to a [`crate::dataframe::PyDataFrame`] method.
     pub(crate) fn expr(&self) -> Expr {
-        self.expr.clone()
+        crate::deep_stack::grown_clone(&self.expr)
     }
 
     pub(crate) fn expression_depth(&self) -> usize {
@@ -232,14 +232,14 @@ impl PyColumn {
     /// `IS NULL` predicate (PySpark `Column.isNull`).
     pub fn is_null(&self) -> PyResult<Self> {
         fenced!("Column.is_null", {
-            Ok(Self::from_expr(self.expr.clone().is_null()))
+            Ok(Self::from_expr(self.expr().is_null()))
         })
     }
 
     /// `IS NOT NULL` predicate (PySpark `Column.isNotNull`).
     pub fn is_not_null(&self) -> PyResult<Self> {
         fenced!("Column.is_not_null", {
-            Ok(Self::from_expr(self.expr.clone().is_not_null()))
+            Ok(Self::from_expr(self.expr().is_not_null()))
         })
     }
 
@@ -255,9 +255,9 @@ impl PyColumn {
         fenced!("Column.case_when", {
             let when_then_expr = when_thens
                 .into_iter()
-                .map(|(condition, value)| (Box::new(condition.expr), Box::new(value.expr)))
+                .map(|(condition, value)| (Box::new(condition.expr()), Box::new(value.expr())))
                 .collect();
-            let else_expr = otherwise.map(|column| Box::new(column.expr));
+            let else_expr = otherwise.map(|column| Box::new(column.expr()));
             Ok(Self::from_expr(Expr::Case(Case {
                 expr: None,
                 when_then_expr,
@@ -324,7 +324,7 @@ impl PyColumn {
     pub fn year(&self) -> PyResult<Self> {
         fenced!("Column.year", {
             Ok(Self::from_expr(repark_functions::expr_fn::year(
-                self.expr.clone(),
+                self.expr(),
             )))
         })
     }
@@ -333,7 +333,7 @@ impl PyColumn {
     pub fn month(&self) -> PyResult<Self> {
         fenced!("Column.month", {
             Ok(Self::from_expr(repark_functions::expr_fn::month(
-                self.expr.clone(),
+                self.expr(),
             )))
         })
     }
@@ -342,7 +342,7 @@ impl PyColumn {
     pub fn quarter(&self) -> PyResult<Self> {
         fenced!("Column.quarter", {
             Ok(Self::from_expr(repark_functions::expr_fn::quarter(
-                self.expr.clone(),
+                self.expr(),
             )))
         })
     }
@@ -351,7 +351,7 @@ impl PyColumn {
     pub fn weekofyear(&self) -> PyResult<Self> {
         fenced!("Column.weekofyear", {
             Ok(Self::from_expr(repark_functions::expr_fn::weekofyear(
-                self.expr.clone(),
+                self.expr(),
             )))
         })
     }
@@ -360,7 +360,7 @@ impl PyColumn {
     pub fn dayofweek(&self) -> PyResult<Self> {
         fenced!("Column.dayofweek", {
             Ok(Self::from_expr(repark_functions::expr_fn::dayofweek(
-                self.expr.clone(),
+                self.expr(),
             )))
         })
     }
@@ -369,7 +369,7 @@ impl PyColumn {
     pub fn weekday(&self) -> PyResult<Self> {
         fenced!("Column.weekday", {
             Ok(Self::from_expr(repark_functions::expr_fn::weekday(
-                self.expr.clone(),
+                self.expr(),
             )))
         })
     }
@@ -378,7 +378,7 @@ impl PyColumn {
     pub fn dayofmonth(&self) -> PyResult<Self> {
         fenced!("Column.dayofmonth", {
             Ok(Self::from_expr(repark_functions::expr_fn::dayofmonth(
-                self.expr.clone(),
+                self.expr(),
             )))
         })
     }
@@ -387,7 +387,7 @@ impl PyColumn {
     pub fn dayofyear(&self) -> PyResult<Self> {
         fenced!("Column.dayofyear", {
             Ok(Self::from_expr(repark_functions::expr_fn::dayofyear(
-                self.expr.clone(),
+                self.expr(),
             )))
         })
     }
@@ -396,7 +396,7 @@ impl PyColumn {
     pub fn last_day(&self) -> PyResult<Self> {
         fenced!("Column.last_day", {
             Ok(Self::from_expr(repark_functions::expr_fn::last_day(
-                self.expr.clone(),
+                self.expr(),
             )))
         })
     }
@@ -405,7 +405,7 @@ impl PyColumn {
     pub fn add_months(&self, num_months: &PyColumn) -> PyResult<Self> {
         fenced!("Column.add_months", {
             Ok(Self::from_expr(repark_functions::expr_fn::add_months(
-                self.expr.clone(),
+                self.expr(),
                 num_months.expr.clone(),
             )))
         })
@@ -415,7 +415,7 @@ impl PyColumn {
     pub fn date_add(&self, num_days: &PyColumn) -> PyResult<Self> {
         fenced!("Column.date_add", {
             Ok(Self::from_expr(repark_functions::expr_fn::date_add(
-                self.expr.clone(),
+                self.expr(),
                 num_days.expr.clone(),
             )))
         })
@@ -425,7 +425,7 @@ impl PyColumn {
     pub fn date_format(&self, format: &str) -> PyResult<Self> {
         fenced!("Column.date_format", {
             Ok(Self::from_expr(repark_functions::expr_fn::date_format(
-                self.expr.clone(),
+                self.expr(),
                 lit(format),
             )))
         })
@@ -435,7 +435,7 @@ impl PyColumn {
     pub fn trunc(&self, format: &str) -> PyResult<Self> {
         fenced!("Column.trunc", {
             Ok(Self::from_expr(repark_functions::expr_fn::trunc(
-                self.expr.clone(),
+                self.expr(),
                 lit(format),
             )))
         })
@@ -447,7 +447,7 @@ impl PyColumn {
         fenced!("Column.date_trunc", {
             Ok(Self::from_expr(repark_functions::expr_fn::date_trunc(
                 lit(format),
-                self.expr.clone(),
+                self.expr(),
             )))
         })
     }
@@ -604,21 +604,21 @@ impl PyColumn {
     /// `self + other` (PySpark `Column.__add__`).
     pub fn add(&self, other: &PyColumn) -> PyResult<Self> {
         fenced!("Column.add", {
-            Ok(Self::from_expr(self.expr.clone() + other.expr.clone()))
+            Ok(Self::from_expr(self.expr() + other.expr()))
         })
     }
 
     /// `self - other` (PySpark `Column.__sub__`).
     pub fn sub(&self, other: &PyColumn) -> PyResult<Self> {
         fenced!("Column.sub", {
-            Ok(Self::from_expr(self.expr.clone() - other.expr.clone()))
+            Ok(Self::from_expr(self.expr() - other.expr()))
         })
     }
 
     /// `self * other` (PySpark `Column.__mul__`).
     pub fn mul(&self, other: &PyColumn) -> PyResult<Self> {
         fenced!("Column.mul", {
-            Ok(Self::from_expr(self.expr.clone() * other.expr.clone()))
+            Ok(Self::from_expr(self.expr() * other.expr()))
         })
     }
 
@@ -631,9 +631,8 @@ impl PyColumn {
     /// on operands that are already floating point is a no-op, and NULL casts stay NULL.
     pub fn div(&self, other: &PyColumn) -> PyResult<Self> {
         fenced!("Column.div", {
-            let numerator = Expr::Cast(Cast::new(Box::new(self.expr.clone()), DataType::Float64));
-            let denominator =
-                Expr::Cast(Cast::new(Box::new(other.expr.clone()), DataType::Float64));
+            let numerator = Expr::Cast(Cast::new(Box::new(self.expr()), DataType::Float64));
+            let denominator = Expr::Cast(Cast::new(Box::new(other.expr()), DataType::Float64));
             Ok(Self::from_expr(numerator / denominator))
         })
     }
@@ -642,51 +641,49 @@ impl PyColumn {
     /// which maps to DataFusion's `%`.
     pub fn modulo(&self, other: &PyColumn) -> PyResult<Self> {
         fenced!("Column.modulo", {
-            Ok(Self::from_expr(self.expr.clone() % other.expr.clone()))
+            Ok(Self::from_expr(self.expr() % other.expr()))
         })
     }
 
     /// `self == other` (PySpark `Column.__eq__`).
     pub fn eq(&self, other: &PyColumn) -> PyResult<Self> {
         fenced!("Column.eq", {
-            Ok(Self::from_expr(self.expr.clone().eq(other.expr.clone())))
+            Ok(Self::from_expr(self.expr().eq(other.expr())))
         })
     }
 
     /// `self != other` (PySpark `Column.__ne__`).
     pub fn ne(&self, other: &PyColumn) -> PyResult<Self> {
         fenced!("Column.ne", {
-            Ok(Self::from_expr(
-                self.expr.clone().not_eq(other.expr.clone()),
-            ))
+            Ok(Self::from_expr(self.expr().not_eq(other.expr())))
         })
     }
 
     /// `self < other` (PySpark `Column.__lt__`).
     pub fn lt(&self, other: &PyColumn) -> PyResult<Self> {
         fenced!("Column.lt", {
-            Ok(Self::from_expr(self.expr.clone().lt(other.expr.clone())))
+            Ok(Self::from_expr(self.expr().lt(other.expr())))
         })
     }
 
     /// `self > other` (PySpark `Column.__gt__`).
     pub fn gt(&self, other: &PyColumn) -> PyResult<Self> {
         fenced!("Column.gt", {
-            Ok(Self::from_expr(self.expr.clone().gt(other.expr.clone())))
+            Ok(Self::from_expr(self.expr().gt(other.expr())))
         })
     }
 
     /// `self <= other` (PySpark `Column.__le__`).
     pub fn le(&self, other: &PyColumn) -> PyResult<Self> {
         fenced!("Column.le", {
-            Ok(Self::from_expr(self.expr.clone().lt_eq(other.expr.clone())))
+            Ok(Self::from_expr(self.expr().lt_eq(other.expr())))
         })
     }
 
     /// `self >= other` (PySpark `Column.__ge__`).
     pub fn ge(&self, other: &PyColumn) -> PyResult<Self> {
         fenced!("Column.ge", {
-            Ok(Self::from_expr(self.expr.clone().gt_eq(other.expr.clone())))
+            Ok(Self::from_expr(self.expr().gt_eq(other.expr())))
         })
     }
 
@@ -694,26 +691,26 @@ impl PyColumn {
     /// bitwise operator, so this maps to the logical `AND`.
     pub fn and_(&self, other: &PyColumn) -> PyResult<Self> {
         fenced!("Column.and_", {
-            Ok(Self::from_expr(self.expr.clone().and(other.expr.clone())))
+            Ok(Self::from_expr(self.expr().and(other.expr())))
         })
     }
 
     /// Logical OR (PySpark `Column.__or__`, spelled `|`).
     pub fn or_(&self, other: &PyColumn) -> PyResult<Self> {
         fenced!("Column.or_", {
-            Ok(Self::from_expr(self.expr.clone().or(other.expr.clone())))
+            Ok(Self::from_expr(self.expr().or(other.expr())))
         })
     }
 
     /// Logical NOT (PySpark `Column.__invert__`, spelled `~`).
     pub fn not_(&self) -> PyResult<Self> {
-        fenced!("Column.not_", { Ok(Self::from_expr(!self.expr.clone())) })
+        fenced!("Column.not_", { Ok(Self::from_expr(!self.expr())) })
     }
 
     /// Rename the column (PySpark `Column.alias`).
     pub fn alias(&self, name: &str) -> PyResult<Self> {
         fenced!("Column.alias", {
-            Ok(Self::from_expr(self.expr.clone().alias(name)))
+            Ok(Self::from_expr(self.expr().alias(name)))
         })
     }
 
@@ -729,7 +726,7 @@ impl PyColumn {
         fenced!("Column.cast", {
             let data_type = parse_data_type(type_spec).map_err(AnalysisException::new_err)?;
             Ok(Self::from_expr(datafusion::logical_expr::Expr::Cast(
-                datafusion::logical_expr::Cast::new(Box::new(self.expr.clone()), data_type),
+                datafusion::logical_expr::Cast::new(Box::new(self.expr()), data_type),
             )))
         })
     }
@@ -745,7 +742,7 @@ impl PyColumn {
         fenced!("Column.try_cast", {
             let data_type = parse_data_type(type_spec).map_err(AnalysisException::new_err)?;
             Ok(Self::from_expr(datafusion::logical_expr::Expr::TryCast(
-                datafusion::logical_expr::TryCast::new(Box::new(self.expr.clone()), data_type),
+                datafusion::logical_expr::TryCast::new(Box::new(self.expr()), data_type),
             )))
         })
     }
@@ -766,9 +763,7 @@ impl PyColumn {
     /// ``… AS a AS b``. Non-alias expressions are unchanged. Idempotent.
     pub fn collapse_identity_aliases(&self) -> PyResult<Self> {
         fenced!("Column.collapse_identity_aliases", {
-            Ok(Self::from_expr(collapse_identity_alias_chain(
-                self.expr.clone(),
-            )))
+            Ok(Self::from_expr(collapse_identity_alias_chain(self.expr())))
         })
     }
 
@@ -781,10 +776,10 @@ impl PyColumn {
     pub fn aggregate(&self, kind: &str, ignore_nulls: bool) -> PyResult<Self> {
         fenced!("Column.aggregate", {
             if kind == "collect_list" || kind == "collect_set" {
-                return Self::collect_aggregate(self.expr.clone(), kind == "collect_set");
+                return Self::collect_aggregate(self.expr(), kind == "collect_set");
             }
             let udaf = unary_aggregate_udaf(kind)?;
-            let base = udaf.call(vec![self.expr.clone()]);
+            let base = udaf.call(vec![self.expr()]);
             // A plain `call` is already a usable aggregate `Expr`; only IGNORE NULLS needs the
             // builder chain (`ExprFunctionExt` on `Expr` → `ExprFuncBuilder` → `build`). The
             // unsigned cast wraps the finished aggregate, since the builder chain only accepts
@@ -809,7 +804,7 @@ impl PyColumn {
     pub fn aggregate_binary(&self, kind: &str, others: Vec<PyColumn>) -> PyResult<Self> {
         fenced!("Column.aggregate_binary", {
             let udaf = nary_aggregate_udaf(kind)?;
-            let mut args = vec![self.expr.clone()];
+            let mut args = vec![self.expr()];
             args.extend(others.iter().map(PyColumn::expr));
             let expr = cast_unsigned_count_to_signed(&udaf, others.len() + 1, udaf.call(args));
             Ok(Self::from_expr(expr))
@@ -823,7 +818,7 @@ impl PyColumn {
                     "approx_percentile_cont percentile must be in [0, 1], got {percentile}"
                 )));
             }
-            let expr = percentile_approx_scalar_expr(self.expr.clone(), percentile, accuracy);
+            let expr = percentile_approx_scalar_expr(self.expr(), percentile, accuracy);
             Ok(Self::from_expr(expr))
         })
     }
@@ -839,7 +834,7 @@ impl PyColumn {
                     "approx_percentile percentages must be in [0, 1]",
                 ));
             }
-            let expr = percentile_approx_list_expr(self.expr.clone(), percentages, accuracy);
+            let expr = percentile_approx_list_expr(self.expr(), percentages, accuracy);
             Ok(Self::from_expr(expr))
         })
     }

@@ -362,6 +362,16 @@ impl PyColumn {
 
     /// Build a single count-distinct argument, nulling multi-column tuples when any field is NULL.
     pub(super) fn count_distinct_argument(args: Vec<Expr>) -> PyResult<Expr> {
+        let mut deepest = 0;
+        for arg in &args {
+            deepest = deepest.max(crate::deep_stack::expression_depth(arg));
+        }
+        crate::deep_stack::grow_expr_if_needed(deepest, || {
+            Self::count_distinct_argument_inner(args)
+        })
+    }
+
+    fn count_distinct_argument_inner(args: Vec<Expr>) -> PyResult<Expr> {
         if args.len() == 1 {
             return args.into_iter().next().ok_or_else(|| {
                 PyValueError::new_err("count(DISTINCT …) requires at least one argument column")

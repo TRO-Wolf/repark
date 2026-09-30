@@ -1,6 +1,7 @@
 use datafusion::arrow::datatypes::DataType;
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{Case, Cast, Expr, lit};
+use datafusion::scalar::ScalarValue;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::pybacked::PyBackedStr;
@@ -273,6 +274,17 @@ fn engine_cast(inner: &PyColumn, engine_type: &str, keyword: &str) -> PyResult<P
 
 type RenderedParts = (PyColumn, String, String, Option<String>);
 
+impl Drop for PyColumn {
+    fn drop(&mut self) {
+        crate::deep_stack::grow_expr_if_needed(
+            crate::deep_stack::expression_depth(&self.expr),
+            || {
+                let _ = std::mem::replace(&mut self.expr, lit(ScalarValue::Null));
+            },
+        );
+    }
+}
+
 #[pyclass(name = "PyColumnParts", module = "repark._native")]
 pub struct PyColumnParts;
 
@@ -329,7 +341,7 @@ impl PyColumnParts {
     ) -> PyResult<RenderedParts> {
         fenced!("ColumnParts.unary_neg", {
             let display = wrap_negative_display(child_display);
-            let negated = Expr::Negative(Box::new(inner.expr().clone()));
+            let negated = Expr::Negative(Box::new(inner.expr()));
             let aliased = PyColumn::from_expr(negated.alias(&display));
             Ok((aliased, display, wrap_negative_sql(child_sql), None))
         })
@@ -622,9 +634,9 @@ impl PyColumnParts {
             }
             let when_then_expr = when_thens
                 .into_iter()
-                .map(|(condition, value)| (Box::new(condition.expr), Box::new(value.expr)))
+                .map(|(condition, value)| (Box::new(condition.expr()), Box::new(value.expr())))
                 .collect();
-            let else_expr = otherwise.map(|column| Box::new(column.expr));
+            let else_expr = otherwise.map(|column| Box::new(column.expr()));
             let inner = PyColumn::from_expr(Expr::Case(Case {
                 expr: None,
                 when_then_expr,
@@ -725,7 +737,7 @@ impl PyColumnParts {
                     "call_scalar part lists must match the argument count",
                 ));
             }
-            let exprs = inners.into_iter().map(|column| column.expr).collect();
+            let exprs = inners.into_iter().map(|column| column.expr()).collect();
             let inner = PyColumn::from_expr(call_scalar_expr(name, exprs)?);
             let shown = display.map_or_else(|| wrap_call(name, &display_parts), str::to_string);
             Ok((

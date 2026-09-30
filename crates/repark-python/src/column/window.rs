@@ -27,6 +27,12 @@ pub(super) struct OverSpec {
 }
 
 pub(super) fn build_over_expression(expr: &Expr, spec: OverSpec) -> PyResult<Expr> {
+    crate::deep_stack::grow_expr_if_needed(crate::deep_stack::expression_depth(expr), || {
+        build_over_expression_inner(expr, spec)
+    })
+}
+
+fn build_over_expression_inner(expr: &Expr, spec: OverSpec) -> PyResult<Expr> {
     let OverSpec {
         partition_by,
         order_by,

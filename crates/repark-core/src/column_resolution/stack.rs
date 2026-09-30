@@ -113,6 +113,10 @@ pub fn on_grown_stack_with<F: Future>(red_zone: usize, segment: usize, future: F
     }
 }
 
+pub fn run_on_grown_stack<T>(red_zone: usize, segment: usize, work: impl FnOnce() -> T) -> T {
+    stacker::maybe_grow(red_zone, segment, work)
+}
+
 impl<F: Future> Future for GrownStack<F> {
     type Output = F::Output;
 

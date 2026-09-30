@@ -73,6 +73,9 @@ pins: ice-error-conditions-1/C-011
   **DEEP-FILTER-CHAIN-CRASH-1 verifier fold (2026-09-29):** `remaining_stack` is
   public through `column_resolution` too, so the binding's small-stack backstop
   reads the calling thread's remaining stack without a new dependency edge.
+  **CI segv (2026-09-30):** `run_on_grown_stack(red_zone, segment, work)` is the
+  sync form of the same primitive, so column clone/combine/drop runs grown
+  without a future or a runtime handle. pins: deep-filter-chain-crash-1/C-012
 - `tests.rs` — the battery below. **WO CASESENS-1 slice 2 (2026-09-27):**
   `sensitive_session_refuses_folded_names_and_keeps_backticks` answers unquoted
   exact `userId` where it refused `userid` (normalization-off exactness, net-zero

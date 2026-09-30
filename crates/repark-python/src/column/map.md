@@ -65,6 +65,10 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   the `session_window` wrapper the same way (marker call aliased
   `session_window`).
   pins: fnp-win-1/C-001, C-002, C-004, C-008
+  **DEEP-FILTER-CHAIN-CRASH-1 CI segv (2026-09-30):** `impl Drop for PyColumn`
+  lives here (`mod.rs` is at its exact baseline): a deep tree drops on a grown
+  segment sized by expression depth, so teardown never overflows a caller stack.
+  `unary_neg` clones the child once. pins: deep-filter-chain-crash-1/C-012
 - [`display/construct.rs`](display/construct.rs) — **FACADE-2 step 3 (2026-09-13):** the
   Group-1 typed constructors that replace `_native.PyColumn.sql` call sites:
   `lit_timestamp`, `lit_date`, `lit_time`, `lit_array_cast`, `pi`, `uuid` — a `display`
@@ -94,6 +98,10 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   **Limits fold (2026-09-29):** the 1 MiB text refusal is removed (1012 → 1011);
   long fragments plan as on base.
   pins: deep-filter-chain-crash-1/C-001, C-009
+  **CI segv (2026-09-30):** `PyColumn::expr` is the grown clone-out (every
+  operator routes its operand clones through it); the `case_when` by-value moves
+  become clones because the type now implements `Drop`. rustfmt joins three
+  calls (1011 → 1006). pins: deep-filter-chain-crash-1/C-012
 - [`function_dispatch.rs`](function_dispatch.rs) owns scalar and aggregate function dispatch.
   Its default arm hands the name to [`function_dispatch/`](function_dispatch/map.md) before
   refusing.
@@ -116,6 +124,10 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   **FNP-11B step 2 (2026-09-15):** the `to_date` arm takes 1 or 2 args
   (`expr_fn::to_date` widens to `Vec<Expr>`); `unix_timestamp` takes 0 to 2.
   pins: fnp-11b/C-002, C-003
+  **DEEP-FILTER-CHAIN-CRASH-1 CI segv (2026-09-30):** `call_scalar_expr` keeps
+  its name and grows by max argument depth around a renamed inner match, so the
+  arm clones of a deep argument run on a sized segment.
+  pins: deep-filter-chain-crash-1/C-012
 - [`function_dispatch/dispatch_json.rs`](function_dispatch/dispatch_json.rs) —
   **FNP-9/10 (2026-09-05):** arms for
   `get_json_object`, `json_array_length`, `json_object_keys`, `schema_of_json`, `to_json`,
@@ -216,6 +228,10 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `parse_canonical_predicate_exact` parses a filter fragment against a
   normalization-off clone of the frame state and routes a `FieldNotFound` miss
   through the rule binder for Spark's refusal. pins: casesens-1/C-009
+  **DEEP-FILTER-CHAIN-CRASH-1 CI segv (2026-09-30):**
+  `count_distinct_argument` keeps its name and grows by max argument depth
+  around a renamed inner body, so the packed-struct clone of deep arguments runs
+  on a sized segment. pins: deep-filter-chain-crash-1/C-012
 - [`window.rs`](window.rs) owns Spark frame conversion and unordered-window policy.
   **WIN-SLIDE-1 (2026-09-04):** a `RANGE` offset is emitted as `ScalarValue::Utf8`, not `Int64`.
   DataFusion's window-frame coercion casts a `Utf8` bound to the ORDER BY key's type (that is the
@@ -224,6 +240,10 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `rangeBetween(-2, 0)` over an `IntegerType` or `DoubleType` key answered the cumulative column.
   `ROWS` / `GROUPS` bounds stay `UInt64`, which is already the coercion target.
   Registry: `WIN-RANGE-DF-1`. pins: win-slide-1/C-003
+  **DEEP-FILTER-CHAIN-CRASH-1 CI segv (2026-09-30):**
+  `build_over_expression` keeps its name and grows by subject depth around a
+  renamed inner body, so the aggregate sub-clones of a deep subject run on a
+  sized segment. pins: deep-filter-chain-crash-1/C-012
 - [`door_parity_tests.rs`](door_parity_tests.rs) pins standalone facade UDF behavior against SQL.
   **DOOR-CONVERGE-1 (2026-09-15):** `EXPECTED_DIVERGENCES` ratchets 22 → 14 — `abs`,
   `hypot`, `bin`, `rint`, `base64`, `unbase64`, `size`, `cardinality`,

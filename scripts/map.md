@@ -1,5 +1,7 @@
 # map — scripts/
 
+DEEP-FILTER-CHAIN-CRASH-1 CI segv (2026-09-30): `check_rust_file_size.py` ratchets `repark-python/src/column/mod.rs` 1011 → 1006 (rustfmt joins three calls shortened by the grown clone-out), shrink-only, with the CAP-1 mirror. pins: deep-filter-chain-crash-1/C-012
+
 DEEP-FILTER-CHAIN-CRASH-1 limits fold (2026-09-29): `check_rust_file_size.py` ratchets `repark-python/src/column/mod.rs` 1012 → 1011 (the SQL text-cap call leaves `Column.sql`), shrink-only, with the CAP-1 mirror. pins: deep-filter-chain-crash-1/C-009
 
 WO CASESENS-1 S5 (2026-09-27): `check_rust_file_size.py` ratchets `repark-iceberg/src/write/alter.rs` 1607 → 1606 (the DROP/REPLACE name pin is rewritten to the exact refusal without its comments), shrink-only. pins: casesens-1/C-013

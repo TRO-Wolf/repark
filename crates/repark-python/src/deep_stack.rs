@@ -4,7 +4,7 @@ use datafusion::logical_expr::{
     Distinct, DistinctOn, Execute, Expr, LogicalPlan, Partitioning, Statement,
 };
 use pyo3::prelude::PyResult;
-use repark_core::column_resolution::{on_grown_stack_with, remaining_stack};
+use repark_core::column_resolution::{on_grown_stack_with, remaining_stack, run_on_grown_stack};
 use std::future::Future;
 use std::io;
 use tokio::runtime::{Builder, Runtime};
@@ -20,6 +20,7 @@ pub(crate) const GROWN_SEGMENT_BYTES_PER_PLAN_LEVEL: usize = 128 * 1024;
 pub(crate) const MAX_GROWN_SEGMENT_BYTES: usize = 1024 * 1024 * 1024;
 pub(crate) const GROWN_SQL_TEXT_LEN: usize = 4096;
 pub(crate) const SMALL_STACK_REMAINING_BYTES: usize = 2 * 1024 * 1024;
+pub(crate) const EXPR_GROWN_BYTES_PER_LEVEL: usize = 8 * 1024;
 
 pub(crate) fn build_shared_runtime() -> io::Result<Runtime> {
     Builder::new_multi_thread()
@@ -57,6 +58,17 @@ pub(crate) fn block_on_grown_sized<F: Future>(
 
 pub(crate) fn run_grown_if<T>(runtime: &Runtime, grown: bool, work: impl FnOnce() -> T) -> T {
     block_on_grown_if(runtime, async { work() }, grown)
+}
+
+pub(crate) fn grow_expr_if_needed<T>(depth: usize, work: impl FnOnce() -> T) -> T {
+    let need = depth
+        .saturating_mul(EXPR_GROWN_BYTES_PER_LEVEL)
+        .min(MAX_GROWN_SEGMENT_BYTES);
+    run_on_grown_stack(need, need, work)
+}
+
+pub(crate) fn grown_clone(expr: &Expr) -> Expr {
+    grow_expr_if_needed(expression_depth(expr), || expr.clone())
 }
 
 #[derive(Debug)]
@@ -521,6 +533,56 @@ mod tests {
     fn shared_runtime_drives_futures() {
         let runtime = build_shared_runtime().expect("the shared runtime builds");
         assert_eq!(runtime.block_on(async { 7 * 6 }), 42);
+    }
+
+    #[test]
+    fn grown_expression_clone_and_drop_serve_sub_megabyte_threads() {
+        use crate::column::PyColumn;
+        use datafusion::logical_expr::{Operator, binary_expr, lit};
+        use datafusion::prelude::col;
+        let mut deep = col("a");
+        for _ in 0..2000 {
+            deep = binary_expr(deep, Operator::Plus, lit(1));
+        }
+        let held = PyColumn::from_expr(deep);
+        std::thread::Builder::new()
+            .stack_size(512 * 1024)
+            .spawn(move || {
+                let copied = held.expr();
+                assert_eq!(expression_depth(&copied), held.expression_depth());
+            })
+            .expect("a small-stack test thread spawns")
+            .join()
+            .expect("the small-stack test thread joins");
+    }
+
+    #[test]
+    fn grown_column_combine_and_drop_survive_deep_trees() {
+        use crate::column::PyColumn;
+        use datafusion::logical_expr::{Operator, binary_expr, lit};
+        use datafusion::prelude::col;
+        const _: () = assert!(20000 * EXPR_GROWN_BYTES_PER_LEVEL <= MAX_GROWN_SEGMENT_BYTES);
+        let mut deep = binary_expr(col("a"), Operator::Eq, lit(0_i64));
+        for index in 1_i64..20000 {
+            deep = binary_expr(
+                deep,
+                Operator::Or,
+                binary_expr(col("a"), Operator::Eq, lit(index)),
+            );
+        }
+        let depth = expression_depth(&deep);
+        assert!(depth > MAX_EXPRESSION_DEPTH);
+        std::thread::Builder::new()
+            .stack_size(2 * 1024 * 1024)
+            .spawn(move || {
+                let left = PyColumn::from_expr(deep);
+                let right = PyColumn::from_expr(lit(true));
+                let combined = left.or_(&right).expect("a deep or-combine builds");
+                assert_eq!(combined.expression_depth(), depth + 1);
+            })
+            .expect("a small-stack test thread spawns")
+            .join()
+            .expect("the small-stack test thread joins");
     }
 
     #[test]
