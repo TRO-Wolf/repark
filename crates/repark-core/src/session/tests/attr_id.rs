@@ -9,7 +9,7 @@ use datafusion::common::{DFSchema, DFSchemaRef};
 use datafusion::dataframe::DataFrame;
 use datafusion::functions::expr_fn::{abs, coalesce, upper};
 use datafusion::functions_aggregate::expr_fn::{count, max};
-use datafusion::functions_window::expr_fn::row_number;
+use datafusion::functions_window::expr_fn::{lag, row_number};
 use datafusion::logical_expr::{EmptyRelation, LogicalPlan, cast, col, lit, when};
 use datafusion::prelude::SessionContext;
 
@@ -17,8 +17,8 @@ use crate::ReparkSession;
 use crate::frame_names::{
     AttrId, NameRule,
     NameRule::{Exact, IgnoreCase},
-    Resolution, attribute_ids, join_on_named_keys, plan_is_relation, remint_join_collisions,
-    requalify_join_sides, resolve, stamp, strip, union_by_folded_name,
+    Resolution, attribute_ids, join_on_named_keys, plan_is_relation, plan_is_stamped,
+    remint_join_collisions, requalify_join_sides, resolve, stamp, strip, union_by_folded_name,
 };
 
 const KEY: &str = "repark.attr";
@@ -902,4 +902,77 @@ fn strip_clears_a_non_projection_root() {
             .collect::<Vec<_>>(),
         vec!["s".to_string(), "top".to_string()]
     );
+}
+
+fn assert_mirror(frame: &DataFrame, stamped_already: bool) {
+    assert_eq!(plan_is_stamped(frame.logical_plan()), stamped_already);
+    let restamped = stamp(frame.logical_plan().clone()).unwrap();
+    assert_eq!(&restamped == frame.logical_plan(), stamped_already);
+}
+
+#[test]
+fn plan_is_stamped_matches_what_stamp_would_change() {
+    let context = SessionContext::new();
+    let frame = stamped(source(&context));
+    assert_mirror(&frame, true);
+    assert_mirror(&source(&context), false);
+    let pure = frame.clone().select(vec![col("s"), col("id")]).unwrap();
+    assert_mirror(&pure, true);
+    let computed = frame
+        .clone()
+        .select(vec![
+            col("id"),
+            cast(col("data"), DataType::Int64),
+            lit(1i64),
+        ])
+        .unwrap();
+    assert_mirror(&computed, false);
+    assert_mirror(&stamped(computed), true);
+    let chained = frame
+        .clone()
+        .filter(lit(true))
+        .unwrap()
+        .limit(0, Some(1))
+        .unwrap()
+        .sort(vec![col("data").sort(true, false)])
+        .unwrap()
+        .distinct()
+        .unwrap()
+        .alias("q")
+        .unwrap();
+    assert_mirror(&chained, true);
+    let grouped = frame
+        .clone()
+        .aggregate(vec![col("data")], vec![max(col("id"))])
+        .unwrap();
+    assert_mirror(&grouped, false);
+    assert_mirror(&stamped(grouped), true);
+    let windowed = frame
+        .clone()
+        .window(vec![lag(col("id"), Some(1), None).alias("prev")])
+        .unwrap();
+    assert!(ids(&windowed).iter().all(Option::is_some));
+    assert_mirror(&windowed, false);
+    assert_mirror(&stamped(windowed), true);
+    let having = frame
+        .clone()
+        .aggregate(vec![col("data")], vec![max(col("id"))])
+        .unwrap()
+        .filter(lit(true))
+        .unwrap();
+    assert_mirror(&having, false);
+    assert_mirror(&stamped(having), true);
+    let self_union = frame.clone().union(frame.clone()).unwrap();
+    assert_mirror(&self_union, true);
+    let other = stamped(source(&context));
+    let mixed = frame.clone().union(other).unwrap();
+    assert_mirror(&mixed, false);
+    assert_mirror(&stamped(mixed), true);
+    let bare: DFSchemaRef = Arc::new(DFSchema::empty());
+    assert!(plan_is_stamped(&LogicalPlan::EmptyRelation(
+        EmptyRelation {
+            produce_one_row: false,
+            schema: bare,
+        }
+    )));
 }

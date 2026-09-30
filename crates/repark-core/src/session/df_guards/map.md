@@ -94,6 +94,18 @@ wrapped optimizer rule) and declares this directory.
   keeps a foreign id: a source that carries one is re-minted once. Pins:
   `../tests/attr_id_fresh.rs`, `../tests/attr_id_verify.rs`.
   pins: attr-id-1/C-017, C-018, C-019, C-020
+  **ATTR-ID-1 S3a timing cut (2026-09-30):** `plan_is_stamped(plan)` answers by reference
+  whether `stamp` would return the plan unchanged, so the binding can keep an already-stamped
+  `PyDataFrame` handle (and its cached analyzed schema) instead of cloning the plan on every
+  spawn. It mirrors the mint conditions exactly: a Projection root whose every expression
+  carries its own native id or inherits one over a non-computed input position, a Union root
+  whose every position already carries the first input's id, any other relation root with no
+  computed position and no missing or foreign id; a statement root reads stamped, and a
+  classification error reads unstamped so `stamp` surfaces it. A bare presence check would
+  misread a fresh computed node whose copied ids are all native (a `lag` output keeps its
+  argument's native id until `stamp` mints it), so the predicate reuses `computed_outputs`,
+  `own_id` and `first_input_ids` rather than re-deciding. Pins: `../tests/attr_id.rs`.
+  pins: attr-id-1/C-023
 - `case_bind.rs` — **U11-EDGE-1 (2026-09-26):** `bind_case_insensitive`, run first by
   `subquery.rs`'s `resolve_bound_expr` (the DataFrame door's one binding hook). An
   unqualified column the frame schema does not hold exactly binds to the single field that

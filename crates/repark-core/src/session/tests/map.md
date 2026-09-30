@@ -40,6 +40,14 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   (the ledger's record) red these pins. pins: attr-id-1/C-002, C-003, C-004, C-006
   **ATTR-ID-1 S1b (2026-09-30, VA1-4):** the join no-op pin first asserts the six joined ids
   are present and distinct, so it cannot pass with every id missing. pins: attr-id-1/C-020
+  **ATTR-ID-1 S3a timing cut (2026-09-30):** `plan_is_stamped_matches_what_stamp_would_change`
+  asserts both directions of the mirror on every root shape the facade spawns: a stamped
+  source, a bare source, a pure-column projection, a cast/literal projection, a
+  Filter/Limit/Sort/Distinct/SubqueryAlias chain, a fresh Aggregate, a fresh `lag` Window
+  whose copied ids are all native, a Filter over a bare Aggregate, a self-union, a union of
+  two distinctly stamped frames, and a field-less `EmptyRelation`. Each shape asserts the
+  predicate's answer and that `stamp` returns the plan unchanged exactly when the predicate
+  reads stamped. pins: attr-id-1/C-023
 - `attr_id_seam.rs` — **ATTR-ID-1 S2b (2026-09-30):** the logical/physical seam. A core
   session's optimizer starts with `repark_strip_attribute_ids` and its analyzer does not carry
   it, so an analyzed plan (the Spark SQL door's eager analysis) keeps its ids. An Aggregate

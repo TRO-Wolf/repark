@@ -104,6 +104,54 @@ pub fn plan_is_relation(plan: &LogicalPlan) -> bool {
     }
 }
 
+#[must_use]
+pub fn plan_is_stamped(plan: &LogicalPlan) -> bool {
+    stamped_state(plan).unwrap_or(false)
+}
+
+fn stamped_state(plan: &LogicalPlan) -> Result<bool> {
+    if !plan_is_relation(plan) {
+        return Ok(true);
+    }
+    if let LogicalPlan::Projection(projection) = plan {
+        let computed = computed_outputs(&projection.input)?;
+        let below = projection.input.schema();
+        return Ok(projection.expr.iter().zip(projection.schema.iter()).all(
+            |(expr, (_qualifier, field))| {
+                let inherits = match strip_aliases(expr) {
+                    Expr::Column(column) => below
+                        .maybe_index_of_column(column)
+                        .is_some_and(|index| !computed.get(index).copied().unwrap_or(true)),
+                    _ => false,
+                };
+                own_id(expr).is_some() || (inherits && AttrId::native(field).is_some())
+            },
+        ));
+    }
+    if let LogicalPlan::Union(union) = plan {
+        let first = union
+            .inputs
+            .first()
+            .map(|input| first_input_ids(input))
+            .unwrap_or_default();
+        return Ok(union
+            .schema
+            .fields()
+            .iter()
+            .enumerate()
+            .all(|(position, field)| {
+                matches!(first.get(position).cloned().flatten(), Some(id) if AttrId::of(field).as_ref() == Some(&id))
+            }));
+    }
+    let computed = computed_outputs(plan)?;
+    Ok(plan
+        .schema()
+        .fields()
+        .iter()
+        .zip(computed)
+        .all(|(field, computed)| !computed && AttrId::native(field).is_some()))
+}
+
 #[allow(clippy::missing_errors_doc)]
 pub fn stamp(plan: LogicalPlan) -> Result<LogicalPlan> {
     if !plan_is_relation(&plan) {

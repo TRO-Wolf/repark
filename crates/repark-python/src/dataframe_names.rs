@@ -215,14 +215,19 @@ fn resolve_frame_names(frame: &PyDataFrame, names: Vec<String>) -> PyResult<Vec<
 
 #[allow(clippy::missing_errors_doc)]
 #[pyfunction]
-pub(crate) fn stamp_attribute_ids(frame: &PyDataFrame) -> PyResult<PyDataFrame> {
+pub(crate) fn stamp_attribute_ids(frame: Py<PyDataFrame>) -> PyResult<Py<PyDataFrame>> {
     fenced!("dataframe_names.stamp_attribute_ids", {
-        let (state, plan) = frame.inner().clone().into_parts();
-        let plan = repark_core::frame_names::stamp(plan).map_err(datafusion_to_py_err)?;
-        Ok(PyDataFrame::new(
-            DataFrame::new(state, plan),
-            frame.runtime_handle(),
-        ))
+        Python::attach(|py| {
+            let bound = frame.bind(py);
+            let borrowed = bound.borrow();
+            if repark_core::frame_names::plan_is_stamped(borrowed.inner().logical_plan()) {
+                return Ok(frame.clone_ref(py));
+            }
+            let (state, plan) = borrowed.inner().clone().into_parts();
+            let plan = repark_core::frame_names::stamp(plan).map_err(datafusion_to_py_err)?;
+            let runtime = borrowed.runtime_handle();
+            Py::new(py, PyDataFrame::new(DataFrame::new(state, plan), runtime))
+        })
     })
 }
 

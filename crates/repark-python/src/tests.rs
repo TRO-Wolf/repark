@@ -347,7 +347,11 @@ fn binding_stamps_resolves_and_re_mints_a_self_join() {
         let frame = session
             .sql(py, "SELECT 1 AS id, 'a' AS data")
             .expect("source frame");
-        let stamped = crate::dataframe_names::stamp_attribute_ids(&frame).expect("stamp");
+        let stamped =
+            crate::dataframe_names::stamp_attribute_ids(Py::new(py, frame).expect("handle"))
+                .expect("stamp");
+        let bound = stamped.bind(py);
+        let stamped = bound.borrow();
         let held = crate::dataframe_names::attribute_ids(&stamped);
         assert!(held.iter().all(Option::is_some));
         assert_ne!(held[0], held[1]);
@@ -411,7 +415,11 @@ fn binding_re_mints_using_join_collisions_of_a_self_join() {
         let frame = session
             .sql(py, "SELECT 1 AS id, 'a' AS data")
             .expect("source frame");
-        let stamped = crate::dataframe_names::stamp_attribute_ids(&frame).expect("stamp");
+        let stamped =
+            crate::dataframe_names::stamp_attribute_ids(Py::new(py, frame).expect("handle"))
+                .expect("stamp");
+        let bound = stamped.bind(py);
+        let stamped = bound.borrow();
         let held = crate::dataframe_names::attribute_ids(&stamped);
         for view in ["using_l", "using_r"] {
             session
@@ -443,7 +451,11 @@ fn binding_re_mints_lateral_join_collisions_of_a_self_join() {
         let frame = session
             .sql(py, "SELECT 1 AS id, 'a' AS data")
             .expect("source frame");
-        let stamped = crate::dataframe_names::stamp_attribute_ids(&frame).expect("stamp");
+        let stamped =
+            crate::dataframe_names::stamp_attribute_ids(Py::new(py, frame).expect("handle"))
+                .expect("stamp");
+        let bound = stamped.bind(py);
+        let stamped = bound.borrow();
         let held = crate::dataframe_names::attribute_ids(&stamped);
         let left = crate::subquery::subquery_alias(&stamped, "l").expect("left alias");
         let right = crate::subquery::subquery_alias(&stamped, "r").expect("right alias");

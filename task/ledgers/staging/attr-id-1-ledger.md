@@ -188,3 +188,17 @@ round's own edits.
 
 **VA1-6.** The `attr_id.rs` row of `df_guards/map.md` no longer cites a `/tmp` path (it cites
 this ledger) and its duplicated "every other root mints" clause is gone.
+
+## Round S3a (2026-09-30)
+
+**Model:** muse-spark-1.3-contributor (S3a executor, guided).
+**Work order:** `/tmp/oc-worker/direct/wo/attr-id-1-design.md` §4 S3a with §9c rulings Q1–Q3:
+the `select` family (`select`, `__getitem__`, `__getattr__`, `_column_of`,
+`_rebind_stable_name_column`) binds through `resolve` under the session's live
+`spark.sql.caseSensitive`, parent Columns bind by `_attr_id`, a user `alias()` mints a
+fresh id through the alias's own metadata, and the helpers only this family used are
+deleted in the same commit.
+
+| Clause | Statement | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-023 | The §9c Q2 timing cut: `plan_is_stamped` answers by reference whether `stamp` would change the plan (the Projection, Union and other-root mint conditions mirrored; statement roots read stamped; a classification error reads unstamped), and `stamp_attribute_ids` returns the same `PyDataFrame` handle when stamped, keeping the cached analyzed schema. The S0 replay median returns to at or under 597 s with no cell moved away from Spark. | The mirror pin over every spawned root shape; three replays on the cut compared with `compare.py`. | OPEN (replay pending at the cut commit) | `crates/repark-core/src/session/tests/attr_id.rs` `plan_is_stamped_matches_what_stamp_would_change`; replays land in the hand-back. |
