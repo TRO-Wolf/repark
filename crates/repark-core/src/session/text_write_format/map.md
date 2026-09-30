@@ -33,9 +33,11 @@ change; partition columns stay unwrapped.
   pattern. UTC and fixed-offset zones resolve once per call with no zone
   lookup; other zones share one offset cache per session zone, held on the
   UDF struct and parked between calls (re-verify 2 2026-09-30). A miss costs
-  one direct lookup plus a two-endpoint proof that the 15-minute window
-  around the instant holds a single offset; an unproven window caches
-  nothing, and no search walks in steps. Default specs dispatch to the
+  one direct lookup; the two-endpoint proof that the 15-minute window
+  around the instant holds a single offset runs only when the value lands
+  within one window of the previous value, so scattered misses skip a
+  proof they cannot amortize. An unproven window caches nothing, and no
+  search walks in steps. Default specs dispatch to the
   `fast.rs` loops and build each output column in one offsets-plus-values
   buffer validated once per batch (re-verify 2 2026-09-30).
 - `fast.rs` — the default-format fast path (re-verify 2026-09-29):

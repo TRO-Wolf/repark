@@ -86,6 +86,7 @@ pub(crate) struct OffsetCache {
     offset: Option<FixedOffset>,
     start: i64,
     end: i64,
+    last: i64,
     wall_lowest: i64,
     wall_highest: i64,
 }
@@ -98,6 +99,7 @@ impl OffsetCache {
             offset: None,
             start: 0,
             end: 0,
+            last: 0,
             wall_lowest,
             wall_highest,
         }
@@ -124,9 +126,13 @@ impl OffsetCache {
         }
     }
 
-    fn refresh(&mut self, micros: i64) -> Option<(NaiveDateTime, FixedOffset)> {
+    fn refresh(&mut self, micros: i64, adjacent: bool) -> Option<(NaiveDateTime, FixedOffset)> {
         let (wall, offset) = micros_to_wall_zone(micros, self.zone)?;
-        self.prove_window(micros, offset);
+        if adjacent {
+            self.prove_window(micros, offset);
+        } else {
+            self.offset = None;
+        }
         Some((wall, offset))
     }
 
@@ -140,17 +146,24 @@ impl OffsetCache {
                 && let Some(wall) = chrono::DateTime::from_timestamp_micros(shifted)
                     .map(|instant| instant.naive_utc())
             {
+                self.last = micros;
                 return Some((wall, offset));
             }
         }
-        self.refresh(micros)
+        let adjacent = micros.abs_diff(self.last) <= CACHED_WINDOW_MICROS as u64;
+        self.last = micros;
+        self.refresh(micros, adjacent)
     }
 
-    fn refresh_micros(&mut self, micros: i64) -> Option<(i64, FixedOffset)> {
+    fn refresh_micros(&mut self, micros: i64, adjacent: bool) -> Option<(i64, FixedOffset)> {
         let (_, offset) = micros_to_wall_zone(micros, self.zone)?;
         let shift = i64::from(offset.local_minus_utc()) * MICROS_PER_SECOND;
         let shifted = micros.checked_add(shift)?;
-        self.prove_window(micros, offset);
+        if adjacent {
+            self.prove_window(micros, offset);
+        } else {
+            self.offset = None;
+        }
         Some((shifted, offset))
     }
 
@@ -166,10 +179,13 @@ impl OffsetCache {
                 && micros >= self.wall_lowest
                 && micros <= self.wall_highest
             {
+                self.last = micros;
                 return Some((shifted, offset));
             }
         }
-        self.refresh_micros(micros)
+        let adjacent = micros.abs_diff(self.last) <= CACHED_WINDOW_MICROS as u64;
+        self.last = micros;
+        self.refresh_micros(micros, adjacent)
     }
 }
 
