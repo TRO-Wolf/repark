@@ -122,3 +122,35 @@ and export) and Q3 (the USING-join re-mint).
 | C-012 | The S0 replay on this head is byte-identical to `main.json` on every judged cell (the 7 nondet cells excluded), and its median-of-3 wall clock is at most 597 s (1.2x of main's 498 s). | `replay.py main` into the S2 out-dir, `compare.py` against `main.json`: 0 changed judged cells. | OPEN | Runs after the Block 2 build; counts and timings land in the hand-back. |
 | C-013 | The strip is load-bearing: with the parquet-sink strip disabled the footer pin goes red; reverted, the tree is clean. | The mutation record below. | OPEN | Runs after the Block 2 build. |
 | C-014 | `stamp` only touches relation roots: `plan_is_relation` answers the 16 relation variants plus a field-bearing `EmptyRelation`, and `frame_is_relation` exposes it so statement-frame binds yield `None`. | The six statement roots plan unchanged with a `SELECT` positive, and the `EmptyRelation` split pin. | OPEN | Core pins green in the fix commit; the facade `EXPLAIN` pin runs after the rebuild. |
+
+## Round S2b (2026-09-30)
+
+**Model:** claude-opus-5-5 (S2b executor, high).
+**Work order:** `/tmp/oc-worker/direct/wo/attr-id-1-s2b-s1b.md` Part A: S2 ended blocked on 23
+neighbour failures ("Physical input schema should be the same as the one converted from
+logical input schema", `repark.attr` on the logical side). The choice and its evidence are in
+the design's §9a.
+
+| Clause | Statement | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-015 | Ids live on unoptimized and analyzed logical plans only. `StripAttributeIds` is the first optimizer rule of every core session (never an analyzer rule: the Spark SQL door keeps its eagerly analyzed plan as the frame, and the facade's join shape reads ids from it): bottom-up, subqueries included, it drops `repark.attr` from every `Alias`'s metadata and every outer-reference field of a node whose schema or expressions carry it, and recomputes that node's schema with DataFusion's `recompute_schema` (a Union takes `intersect_metadata_for_union` of its inputs); an alias left with no metadata over a column of its own name and relation becomes the bare column again, so the stamp's pass-through Projections fall to `OptimizeProjections` and a stamped frame optimizes to its unstamped twin's plan. DataFusion's physical planner drops alias metadata on every non-literal expression, so without the rule a stamped pass-through Projection over a clean source makes the logical and physical Aggregate inputs differ in field metadata; with it they agree without weakening DataFusion's check, and a foreign-keyed source keeps its key on both sides. Name resolution reads `DataFrame::schema()`, which the optimizer never rewrites. | A Rust repro of the failure; the rule is first in the optimizer and absent from the analyzer, and an analyzed plan keeps its ids; Aggregates over stamped source, Window, Union, `union_by_name`, semi-join, self-join, scalar-subquery and `EXISTS` frames plan and run with no id in any optimized node while the frame keeps its ids; a foreign-keyed source still runs; a stamped struct-field select and a stamped aggregate optimize to their unstamped twins' plans. | PROVEN | `crates/repark-core/src/session/tests/attr_id_seam.rs`, 6 pins; `tests/df_guard.rs`'s rule-order pin; M-A1 below. |
+| C-016 | S2's neighbour regressions are gone and nothing else moved: the 23 failing tests pass, the neighbour sweep is green, S2's pins stay green, and the S0 replay is byte-identical to `main.json` on every judged cell within the 597 s median bar. | The sweep (`test_casesens_1*`, every `test_*join*`, `test_*csv*`, `test_*json*`, `test_*write*`, `test_*iceberg*`, `test_*cache*`, `test_attr_id*`, `test_e2_readwriter.py`; `-n 8`) and three replays compared with `compare.py`. | OPEN (4 judged cells change; median 597.27 s, 0.27 s over the bar) | Sweep: 2159 passed, 19 skipped, 2 xfailed, 0 failed. Replay (`replay.py main`, three runs, 602.82 / 595.09 / 597.27 s, median 597.27 s against main's 497.68 s): 43992 cells, identical across the three runs; 4 judged cells differ from `main.json`, 0 EQUAL cells move away from Spark, all four are errors on both builds and wrong against Spark on both. `r2.{F,T}_oj_twinjoin_filt`: the "No field named v" message lists the last four fields qualified (`l.__H`) where main lists them bare. `r3.{F,T}_ob_agg_max`: main fails in `type_coercion`; this build fails earlier, "Projections require unique expression names", because DataFusion's missing-sort-column step adds `__ID.v` next to the stamp's `__ID.v AS v`. Both come from the stamp's `Alias(Column)` wrappers in the unoptimized plan, which no optimizer step can reach. Evidence: `/tmp/oc-worker/direct/wo/attr-id-1/s2b/cmp-a*`. |
+
+**Mutation M-A1 (2026-09-30).** `unnest_safe_optimizer_rules` starts from an empty list
+instead of `StripAttributeIds`: four `attr_id_seam.rs` pins go red, three with DataFusion's
+"Physical input schema should be the same as the one converted from logical input schema"
+error at `collect` and one on the missing rule; the analyzed-plan pin stays green. Reverted
+from a copy; `git diff` showed only the round's own edits.
+
+**Mutation M-A2 (2026-09-30).** The strip keeps an emptied alias over a same-named column:
+`a_stamped_frame_optimizes_to_the_plan_of_its_unstamped_twin` goes red with DataFusion's
+"Optimizer rule 'push_down_leaf_projections' failed … duplicate qualified field name s" (the
+same failure the replay's `cs2.T.select(T.s.a)` cell showed, and stock DataFusion shows on a
+stamped frame with no strip at all). Reverted from a copy.
+
+**Rejected first cut (2026-09-30).** The strip first ran as an analyzer rule. The core pins
+were green, but `binding_stamps_resolves_and_re_mints_a_self_join` and
+`binding_re_mints_using_join_collisions_of_a_self_join` went red: the Spark SQL door
+(`repark_functions::analyze_eagerly`) returns the analyzed plan as the frame, so every
+`spark.sql()` frame and every SQL-over-views join lost its ids. The optimizer runs only at
+execution, so the rule moved there.

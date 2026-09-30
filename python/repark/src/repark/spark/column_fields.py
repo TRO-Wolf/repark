@@ -353,11 +353,11 @@ def _update_fields_result(column: Any, value: Any, parts: Any) -> Any:
 
 
 def _bound_attr_id(frame: Any, engine_field: str) -> str | None:
-    native: Any = _native.stamp_attribute_ids(frame._plan())
-    frame._inner = native
-    native_names: list[str] = [
-        name for name, _type_key, _nullable in native.logical_schema_fields()
-    ]
+    native: Any = frame._plan()
+    if None in _native.attribute_ids(native):
+        native = _native.stamp_attribute_ids(native)
+        frame._inner = native
+    native_names: list[str] = _native.logical_column_names(native)
     if engine_field not in native_names:
         raise RuntimeError(f"internal error: engine field {engine_field!r} left the native schema")
     held: list[str | None] = _native.attribute_ids(native)

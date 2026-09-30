@@ -73,7 +73,8 @@ pub(super) fn analyzer_rules_with_df_54_1_rule_guards() -> Vec<Arc<dyn AnalyzerR
 
 /// DataFusion's recommended rule list with `push_down_leaf_projections` wrapped.
 fn unnest_safe_optimizer_rules() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
-    let mut rules: Vec<Arc<dyn OptimizerRule + Send + Sync>> = Vec::new();
+    let mut rules: Vec<Arc<dyn OptimizerRule + Send + Sync>> =
+        vec![Arc::new(attr_id::StripAttributeIds)];
     for rule in Optimizer::new().rules {
         match rule.name() {
             "scalar_subquery_to_join" => {

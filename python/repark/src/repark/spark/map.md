@@ -225,6 +225,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `_bound_attr_id` returns `None` — no identity exists there — while a missing id on a
   relation frame still fails loud.
   pins: attr-id-1/C-008, C-014
+  **ATTR-ID-1 S2b (2026-09-30):** `_bound_attr_id` re-stamps (and replaces `_inner`) only
+  when the frame's root lacks an id, and finds the engine field among the unanalyzed
+  `logical_column_names`, the same schema `attribute_ids` reads. S2 called
+  `logical_schema_fields` on a fresh handle per bind, which re-ran the analyzer every time:
+  22 of 82 s in a cProfile of the replay's `r3` corpus.
+  pins: attr-id-1/C-016
   **ATTR-ID-1 S2 exports (2026-09-30):** `_strip_attribute_id_metadata(table)` drops
   the `repark.attr` key from every top-level Arrow field (Tables and RecordBatches;
   zero-copy when absent), called from `DataFrame._apply_export_display_names`.

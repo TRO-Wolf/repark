@@ -54,6 +54,25 @@ wrapped optimizer rule) and declares this directory.
   `Ddl`, `Dml`, `Copy`, `DescribeTable`, `Statement`, `Extension`) pass through
   unchanged, since wrapping one breaks it (`Explain` must stay root, DML must stay a
   write). Pins: `../tests/attr_id.rs`. pins: attr-id-1/C-007, C-014
+  **ATTR-ID-1 S2b (2026-09-30):** ids live on unoptimized and analyzed plans only.
+  `StripAttributeIds` (`repark_strip_attribute_ids`) is an optimizer rule that owns its
+  recursion: bottom-up, subqueries included, on every node whose schema or expressions carry
+  the key it drops the key from each `Alias`'s metadata and each outer-reference field (an
+  alias left with no metadata over a column of its own name and relation becomes that bare
+  column again, so the stamp's pass-through Projections fall to `OptimizeProjections` and the
+  optimized plan is the unstamped twin's), then
+  recomputes the node's schema through DataFusion's own `recompute_schema` (a `Union` takes
+  the intersection of its inputs' field metadata, DataFusion's union rule, because
+  `recompute_schema` keeps a same-width union's schema). Why: DataFusion 54.1's physical
+  planner drops an `Alias`'s metadata unless the aliased expression is a literal, so a stamped
+  pass-through Projection over a clean source gives a keyed logical field a clean physical
+  twin, and the Aggregate planner's schema check (it compares field metadata) fails. After the
+  rule, logical metadata again derives only from the sources, as the physical plan's does, so
+  the check holds unweakened; a source that carries a foreign `repark.attr` keeps it on both
+  sides. It is not an analyzer rule because the Spark SQL door analyzes eagerly
+  (`repark_functions::analyze_eagerly`) and keeps the analyzed plan as the frame, whose ids the
+  facade's join shape needs. Name resolution reads `DataFrame::schema()`, which the optimizer
+  never touches. Pins: `../tests/attr_id_seam.rs`. pins: attr-id-1/C-015, C-016
 - `case_bind.rs` — **U11-EDGE-1 (2026-09-26):** `bind_case_insensitive`, run first by
   `subquery.rs`'s `resolve_bound_expr` (the DataFrame door's one binding hook). An
   unqualified column the frame schema does not hold exactly binds to the single field that

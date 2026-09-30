@@ -38,6 +38,20 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   name (same and case-folded displays), a written qualifier's hit and miss, a cast twin that
   reuses the name, and a missing id or a display-count mismatch as an error. Mutations M1–M4
   (the ledger's record) red these pins. pins: attr-id-1/C-002, C-003, C-004, C-006
+- `attr_id_seam.rs` — **ATTR-ID-1 S2b (2026-09-30):** the logical/physical seam. A core
+  session's optimizer starts with `repark_strip_attribute_ids` and its analyzer does not carry
+  it, so an analyzed plan (the Spark SQL door's eager analysis) keeps its ids. An Aggregate
+  over a stamped clean source (the facade's `inferSchema` shape: `sum(CASE … TRY_CAST …)`)
+  plans and runs, and over stamped Window, Union, `union_by_name`, semi-join, self-join,
+  scalar-subquery and `EXISTS` frames too; each optimized plan carries no id at any node while
+  the frame's own schema keeps every id. A source keyed outside the session under a
+  re-labelling alias still runs, since the schema is recomputed rather than blanked. With the
+  rule removed four pins fail, three with DataFusion's "Physical input schema should be the
+  same" error (the ledger's M-A1). A stamped frame (a struct field access, an aggregate)
+  optimizes to exactly its unstamped twin's plan; without the unalias step DataFusion's
+  `push_down_leaf_projections` fails on the stamp's `s AS s` alias (M-A2). `df_guard.rs`'s
+  rule-order pin now expects the strip first.
+  pins: attr-id-1/C-015, C-016
   **ATTR-ID-1 S2 (2026-09-30):** a USING self-join keeps the key and left ids and re-mints
   the two colliding right ids distinctly; `strip` removes every id from a Projection root
   keeping names, types, nullability, and qualifiers, returns an unstamped plan unchanged,

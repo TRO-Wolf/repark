@@ -1,5 +1,6 @@
 mod a13;
 mod attr_id;
+mod attr_id_seam;
 mod aws_gate;
 mod cache_budget;
 mod commit_unknown;

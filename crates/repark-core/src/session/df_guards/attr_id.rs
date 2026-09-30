@@ -5,16 +5,17 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use datafusion::arrow::array::RecordBatch;
 use datafusion::arrow::datatypes::{Field, Schema, SchemaRef};
 use datafusion::common::metadata::FieldMetadata;
-use datafusion::common::tree_node::{Transformed, TreeNode};
+use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
 use datafusion::common::{
     Column, DFSchema, DFSchemaRef, Result, ScalarValue, TableReference, internal_datafusion_err,
     internal_err,
 };
-use datafusion::logical_expr::expr::{Alias, Exists, InSubquery};
+use datafusion::logical_expr::expr::{Alias, Exists, InSubquery, intersect_metadata_for_union};
 use datafusion::logical_expr::{
     Aggregate, Distinct, DistinctOn, Expr, Filter, Join, LogicalPlan, LogicalPlanBuilder,
     Projection, RecursiveQuery, SortExpr, Subquery, SubqueryAlias, Union, Unnest, Window,
 };
+use datafusion::optimizer::{ApplyOrder, OptimizerConfig, OptimizerRule};
 use repark_common::names::NameRule;
 
 const ATTR_KEY: &str = "repark.attr";
@@ -217,6 +218,136 @@ fn project_ids(plan: LogicalPlan, ids: &[Option<AttrId>]) -> Result<LogicalPlan>
         })
         .collect::<Vec<_>>();
     Projection::try_new(expr, Arc::new(plan)).map(LogicalPlan::Projection)
+}
+
+#[derive(Debug, Default)]
+pub struct StripAttributeIds;
+
+impl OptimizerRule for StripAttributeIds {
+    #[allow(clippy::unnecessary_literal_bound)]
+    fn name(&self) -> &str {
+        "repark_strip_attribute_ids"
+    }
+
+    fn apply_order(&self) -> Option<ApplyOrder> {
+        None
+    }
+
+    fn rewrite(
+        &self,
+        plan: LogicalPlan,
+        _config: &dyn OptimizerConfig,
+    ) -> Result<Transformed<LogicalPlan>> {
+        plan.transform_up_with_subqueries(drop_node_ids)
+    }
+}
+
+fn drop_node_ids(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+    let mut keyed = schema_carries_id(plan.schema());
+    if !keyed {
+        plan.apply_expressions(|expr| {
+            keyed = expr.exists(|node| Ok(expr_node_carries_id(node)))?;
+            Ok(if keyed {
+                TreeNodeRecursion::Stop
+            } else {
+                TreeNodeRecursion::Continue
+            })
+        })?;
+    }
+    if !keyed {
+        return Ok(Transformed::no(plan));
+    }
+    let plan = plan
+        .map_expressions(|expr| expr.transform_up(|node| Ok(drop_expr_id(node))))?
+        .data;
+    let plan = match plan {
+        LogicalPlan::Union(union) => {
+            let schema = union_schema_from_inputs(&union)?;
+            LogicalPlan::Union(Union {
+                inputs: union.inputs,
+                schema,
+            })
+        }
+        other => other.recompute_schema()?,
+    };
+    Ok(Transformed::yes(plan))
+}
+
+fn schema_carries_id(schema: &DFSchema) -> bool {
+    schema
+        .fields()
+        .iter()
+        .any(|field| field.metadata().contains_key(ATTR_KEY))
+}
+
+fn expr_node_carries_id(expr: &Expr) -> bool {
+    match expr {
+        Expr::Alias(alias) => alias
+            .metadata
+            .as_ref()
+            .is_some_and(|metadata| metadata.inner().contains_key(ATTR_KEY)),
+        Expr::OuterReferenceColumn(field, _) => field.metadata().contains_key(ATTR_KEY),
+        _ => false,
+    }
+}
+
+fn drop_expr_id(expr: Expr) -> Transformed<Expr> {
+    if !expr_node_carries_id(&expr) {
+        return Transformed::no(expr);
+    }
+    Transformed::yes(match expr {
+        Expr::Alias(alias) => {
+            let mut inner = alias
+                .metadata
+                .as_ref()
+                .map(|metadata| metadata.inner().clone())
+                .unwrap_or_default();
+            inner.remove(ATTR_KEY);
+            let metadata = (!inner.is_empty()).then(|| FieldMetadata::new(inner));
+            match *alias.expr {
+                Expr::Column(column)
+                    if metadata.is_none()
+                        && column.name == alias.name
+                        && column.relation == alias.relation =>
+                {
+                    Expr::Column(column)
+                }
+                expr => Expr::Alias(Alias {
+                    expr: Box::new(expr),
+                    metadata,
+                    ..alias
+                }),
+            }
+        }
+        Expr::OuterReferenceColumn(field, column) => {
+            let mut clean = field.as_ref().clone();
+            clean.metadata_mut().remove(ATTR_KEY);
+            Expr::OuterReferenceColumn(Arc::new(clean), column)
+        }
+        other => other,
+    })
+}
+
+fn union_schema_from_inputs(union: &Union) -> Result<DFSchemaRef> {
+    let fields = union
+        .schema
+        .iter()
+        .enumerate()
+        .map(|(position, (qualifier, field))| {
+            let metadata = intersect_metadata_for_union(
+                union
+                    .inputs
+                    .iter()
+                    .filter_map(|input| input.schema().fields().get(position))
+                    .map(|input_field| input_field.metadata()),
+            );
+            let field = field.as_ref().clone().with_metadata(metadata);
+            (qualifier.cloned(), Arc::new(field))
+        })
+        .collect::<Vec<_>>();
+    DFSchema::new_with_metadata(fields, union.schema.metadata().clone())?
+        .with_functional_dependencies(union.schema.functional_dependencies().clone())
+        .map(Arc::new)
 }
 
 #[allow(clippy::missing_errors_doc)]
