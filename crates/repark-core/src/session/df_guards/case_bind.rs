@@ -16,7 +16,7 @@ use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::parser::Parser;
 use repark_common::spark_error;
 
-use super::attr_id::{remint_join_collisions, same_relation};
+use super::attr_id::same_relation;
 
 pub use super::attr_id::{
     AttrId, Resolution, attribute_ids, remint_join_collisions, resolve, stamp, strip,

@@ -413,9 +413,16 @@ fn binding_re_mints_using_join_collisions_of_a_self_join() {
             .expect("source frame");
         let stamped = crate::dataframe_names::stamp_attribute_ids(&frame).expect("stamp");
         let held = crate::dataframe_names::attribute_ids(&stamped);
+        for view in ["using_l", "using_r"] {
+            session
+                .create_or_replace_temp_view(view, &stamped)
+                .expect("temp view");
+        }
+        let left = session.sql(py, "SELECT * FROM using_l").expect("left");
+        let right = session.sql(py, "SELECT * FROM using_r").expect("right");
         let joined = crate::dataframe_names::join_on_keys(
-            stamped.inner(),
-            stamped.inner(),
+            left.inner(),
+            right.inner(),
             &["id".to_string()],
             datafusion::logical_expr::JoinType::Inner,
         )

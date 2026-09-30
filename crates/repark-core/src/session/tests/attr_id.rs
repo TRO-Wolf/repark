@@ -634,14 +634,22 @@ fn resolve_treats_a_missing_id_as_a_bug_and_checks_the_display_count() {
     assert!(resolve(frame.schema(), "id", None, IgnoreCase, &strings(&["id"])).is_err());
 }
 
-#[test]
-fn using_join_re_mints_colliding_right_ids_of_a_self_join() {
-    let context = SessionContext::new();
-    let frame = stamped(source(&context));
+#[tokio::test]
+async fn using_join_re_mints_colliding_right_ids_of_a_self_join() {
+    let session = ReparkSession::new().unwrap();
+    let frame = stamped(source(session.context()));
     let held = ids(&frame);
+    session
+        .create_or_replace_temp_view_from("attr_l", &frame)
+        .unwrap();
+    session
+        .create_or_replace_temp_view_from("attr_r", &frame)
+        .unwrap();
+    let left = session.sql("SELECT * FROM attr_l").await.unwrap();
+    let right = session.sql("SELECT * FROM attr_r").await.unwrap();
     let joined = join_on_named_keys(
-        frame.clone(),
-        frame.clone(),
+        left,
+        right,
         &["id".to_string()],
         JoinType::Inner,
         IgnoreCase,
