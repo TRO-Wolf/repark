@@ -575,3 +575,15 @@ partitioned overwrite leave no objects, append preserves keys and bytes
 (C-007); three local-route pins snapshot the destination tree around the same
 failing write (C-008). Mutation M9 (the cleanup call replaced with a no-op):
 all three s3a pins red. Reverted; pins green.
+
+Proof continued: the last round's byte differential (50 cells: defaults,
+patterns, nested, partitioned, empty, all-null, year-1, options, error cells,
+six 1M-row shapes, one moto s3a cell) re-ran against `/tmp/xcsvts-head`
+(3d4f2030): `diff -r -x manifest.txt` RC=0; the unexcluded diff shows only the
+harness `build=` label. Overwrite order, measured over moto: on 3d4f2030 a
+failing 400k-row overwrite over a seeded prefix leaves zero objects (both
+seed keys gone, no partials — the projection error fires before any writer
+exists); on the new build the same probe leaves zero objects too (seed gone,
+partials rolled back). The old-data loss on a failed overwrite is therefore
+the pre-existing delete-before-COPY order, unchanged by this fold. Replay
+outputs live in `/tmp/oc-worker/direct/wo/reverify3-csvts-fold/`.
