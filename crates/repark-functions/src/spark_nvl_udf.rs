@@ -258,6 +258,9 @@ pub(crate) fn zero_scalar(data_type: &DataType) -> Result<ScalarValue> {
         DataType::Decimal128(precision, scale) => {
             Ok(ScalarValue::Decimal128(Some(0), *precision, *scale))
         }
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => {
+            Ok(ScalarValue::Utf8(Some("0".to_owned())))
+        }
         other => internal_err!("zeroifnull reached an unwidenable common type {other}"),
     }
 }

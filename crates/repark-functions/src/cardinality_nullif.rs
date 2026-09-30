@@ -1,3 +1,4 @@
+use datafusion::arrow::datatypes::DataType;
 use datafusion::common::ScalarValue;
 use datafusion::common::tree_node::{Transformed, TreeNode};
 use datafusion::logical_expr::Expr;
@@ -36,6 +37,10 @@ pub(crate) fn nullifzero_nested(arg: &Expr, depth: u32) -> Option<i128> {
     nullif_value(arg, &zero_literal(), depth, NullifPosition::Nested)
 }
 
+pub(crate) fn zeroifnull_fold(arg: &Expr, depth: u32) -> Option<i128> {
+    nvl_fold(&[arg.clone(), zero_literal()], depth)
+}
+
 pub(crate) fn is_exact_null(expr: &Expr, depth: u32) -> bool {
     if depth == 0 {
         return false;
@@ -62,7 +67,7 @@ fn exact_null_call(name: &str, args: &[Expr], depth: u32) -> bool {
                 (Some(left), Some(right)) if left == right
             )
         }
-        "zeroifnull" | "nullifzero" if args.len() == 1 => {
+        "nullifzero" if args.len() == 1 => {
             matches!(exact_i128(&args[0], depth), Some(0))
         }
         _ => false,
@@ -79,15 +84,14 @@ pub(crate) fn nullif_value(
     depth: u32,
     position: NullifPosition,
 ) -> Option<i128> {
-    let left = exact_i128(first, depth)?;
-    match exact_i128(second, depth) {
-        Some(right) => {
-            if left == right {
-                None
-            } else {
-                Some(left)
-            }
-        }
+    let left = const_i128(first, depth)?;
+    let proven = match (exact_i128(first, depth), exact_i128(second, depth)) {
+        (Some(owned), Some(other)) => Some(owned == other),
+        _ => None,
+    };
+    match proven {
+        Some(true) => None,
+        Some(false) => Some(left),
         None => match position {
             NullifPosition::Count => Some(left),
             NullifPosition::Nested => None,
@@ -99,12 +103,41 @@ pub(crate) fn nullif_value(
 fn exact_i128(expr: &Expr, depth: u32) -> Option<i128> {
     let rewritten = rewrite_decimal_literals(expr);
     let value = const_i128(&rewritten, depth)?;
+    if is_integral_cast(&rewritten) {
+        return Some(value);
+    }
     if let Some(float) = const_f64(&rewritten, depth)
         && float != value as f64
     {
         return None;
     }
     Some(value)
+}
+
+fn is_integral_cast(expr: &Expr) -> bool {
+    let mut current = expr;
+    loop {
+        match current {
+            Expr::Alias(alias) => current = alias.expr.as_ref(),
+            Expr::Cast(cast) => return is_integral_target(cast.field.data_type()),
+            Expr::TryCast(try_cast) => return is_integral_target(try_cast.field.data_type()),
+            _ => return false,
+        }
+    }
+}
+
+fn is_integral_target(data_type: &DataType) -> bool {
+    matches!(
+        data_type,
+        DataType::Int8
+            | DataType::Int16
+            | DataType::Int32
+            | DataType::Int64
+            | DataType::UInt8
+            | DataType::UInt16
+            | DataType::UInt32
+            | DataType::UInt64
+    )
 }
 
 fn rewrite_decimal_literals(expr: &Expr) -> Expr {
@@ -198,12 +231,64 @@ mod tests {
     fn exact_null_names_null_shapes_only() {
         assert!(is_exact_null(&null_literal(), DEPTH));
         assert!(is_exact_null(&nullif_expr(lit(1), lit(1)), DEPTH));
-        assert!(is_exact_null(&zeroifnull_expr(lit(0)), DEPTH));
+        assert!(!is_exact_null(&zeroifnull_expr(lit(0)), DEPTH));
+        assert!(!is_exact_null(&zeroifnull_expr(null_literal()), DEPTH));
         assert!(is_exact_null(&nullifzero_expr(lit(0)), DEPTH));
         assert!(!is_exact_null(&lit(1), DEPTH));
         assert!(!is_exact_null(&nullif_expr(lit(1), lit(0)), DEPTH));
         assert!(!is_exact_null(&zeroifnull_expr(lit(101)), DEPTH));
         assert!(!is_exact_null(&nvl_expr(lit(1), lit(1000)), DEPTH));
+    }
+
+    #[test]
+    fn zeroifnull_fold_matches_nvl_with_zero() {
+        use datafusion::logical_expr::{col, lit};
+        assert_eq!(zeroifnull_fold(&lit(0), DEPTH), Some(0));
+        assert_eq!(zeroifnull_fold(&null_literal(), DEPTH), Some(0));
+        assert_eq!(zeroifnull_fold(&lit(101), DEPTH), Some(101));
+        assert_eq!(zeroifnull_fold(&col("c"), DEPTH), Some(0));
+    }
+
+    #[test]
+    fn nullif_first_argument_folds_without_exactness() {
+        use datafusion::logical_expr::{Cast, TryCast, lit};
+        let cast = Expr::Cast(Cast::new(Box::new(lit(150.5f64)), DataType::Int32));
+        let attempt = Expr::TryCast(TryCast::new(Box::new(lit(150.5f64)), DataType::Int32));
+        for first in [cast, attempt] {
+            assert_eq!(
+                nullif_value(&first, &lit(0), DEPTH, NullifPosition::Count),
+                Some(150)
+            );
+            assert_eq!(
+                nullif_value(&first, &lit(0), DEPTH, NullifPosition::Nested),
+                Some(150)
+            );
+        }
+        assert_eq!(
+            nullif_value(&lit(101.4f64), &lit(0), DEPTH, NullifPosition::Count),
+            Some(101)
+        );
+        assert_eq!(
+            nullif_value(&lit(101.4f64), &lit(0), DEPTH, NullifPosition::Nested),
+            None
+        );
+    }
+
+    #[test]
+    fn nullif_integral_cast_seconds_prove_equality() {
+        use datafusion::logical_expr::{Cast, TryCast, lit};
+        let cast = Expr::Cast(Cast::new(Box::new(lit(101.5f64)), DataType::Int32));
+        let attempt = Expr::TryCast(TryCast::new(Box::new(lit(101.5f64)), DataType::Int32));
+        for second in [cast, attempt] {
+            assert_eq!(
+                nullif_value(&lit(101), &second, DEPTH, NullifPosition::Count),
+                None
+            );
+        }
+        assert_eq!(
+            nullif_value(&lit(101), &lit(101.4f64), DEPTH, NullifPosition::Count),
+            Some(101)
+        );
     }
 
     #[test]

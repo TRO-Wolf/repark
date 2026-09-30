@@ -5056,6 +5056,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   shapes refuse; the follow-up pins the `nvl`/`ifnull`/`nvl2`/
   `zeroifnull`/`nullifzero` alias spellings on SQL, `F.expr` and the
   column API (16 pins). pins: nvl-type-coercion-1/C-035, C-036, C-037
+- `test_nvl_type_coercion_1_vn10.py` — **NVL-TYPE-COERCION-1 re-verify 9
+  fold (2026-09-30, VN10-1..VN10-3 + ANSI-off):** ~100 pins. R1 (the
+  integral-cast first/second cells refuse/fold on SQL, `F.expr` and the
+  column API under both ANSI modes, the `101.4` refusal kept); R2 (the
+  `greatest` bypass refuses, `coalesce`/`nvl`/`nvl2` over
+  `zeroifnull` answer 0/1/2); R3 (the legacy `STRING`×type matrix for
+  `nvl`/`ifnull`/`nvl2` with `typeof`+value, the `BOOLEAN` refusal, the
+  `zeroifnull` string cells, the `nullif` legacy guard cells and the
+  five VN5-3 precision cells, ANSI-on guards kept).
+  pins: nvl-type-coercion-1/C-038, C-039, C-040
 - `test_select_naming.py` — **Group H** select/projection display naming vs live PySpark 4.1.2:
   mutation leak accepts `Int32(1)` as well as `Int64(1)` (F-Y10-1 Python lit width);
   full matrix (`(x + 1)`, cast-of-attr → child name, cast-of-compound → `CAST(...)`,

@@ -61,6 +61,9 @@ interval-literal parsing; plain `if`/`CASE`/`=`/CAST methodology probes;
 | C-035 | VN9-1/VN9-2: one `nullif_value` fold serves `nullif` and `__repark_nullif_compare`: exact equality of the two `exact_i128` sides folds to NULL; an inexact second keeps the bound at the first in a COUNT position (`array_repeat`/`repeat` count, `sequence` stop, under `Alias`/`Cast` only) and folds unknown in every nested position. `exact_i128` is base's `const_i128` over integral-decimal-normalized trees plus the `f64`-image check, so truncation never proves equality. | The 14-row ruling table pinned on SQL, `F.expr` and the column API, the VN9-1 door refusal pins and the two residue pins green; the nested-as-COUNT mutant reds the coalesce pin and the no-exactness mutant reds the `101.4` pin. | PROVEN | 67 vn9 pins green at ceiling 100 plus the rewritten vn7/vn8 pins; both mutants reverted with the tree clean; residue is exactly the two dated bullets below. |
 | C-036 | VN9-3: `sequence` with a `DATE`/`TIMESTAMP` bound and a `STRING` sibling answers `array<date>`/`array<timestamp>`/`array<timestamp_ntz>` under ANSI by casting the string side through the existing shared Spark string→date/timestamp cast in the session zone, and refuses `SEQUENCE_WRONG_INPUT_TYPES` without ANSI — all 6 verifier cells, no shared-cast change. | The 6 ANSI-on value+`typeof` pins, the 6 ANSI-off refusal pins, the `F.expr`/column-API twins and the New-York session-zone pin green. | PROVEN | All green; the `sequence` tests move to `spark_sequence/tests.rs` (file-size split, move-only); naive elements shape naive arrays. |
 | C-037 | VN9-1 follow-up: the const fold reads the unlowered `nvl`-family spellings (`nvl`/`ifnull` as first-match, `nvl2` by literal-or-exact-null test, `zeroifnull`/`nullifzero` as `nullif(x, 0)`), so column-API-built counts refuse TRUE-over-ceiling like the SQL door; `nvl`/`ifnull`/`zeroifnull`/`nullifzero` restore base's refusals, while `nvl2` newly refuses where base answers (guard-correct at TRUE 1000 over 100, SQL-door-consistent). | The 5 SQL + 4 `F.expr` + 7 column-API pins green; the 5 direct fold unit tests green; the post-fix replay moves 7 cells, all classified (4 `nvl2_eq` bypass closures, 3 `q_ifnull_cast` alignments to base/Spark). | PROVEN | 16 new pins green; fn-door/base parity restored except the documented `nvl2` guard closure. |
+| C-038 | VN10-1/VN10-2: `nullif_value` folds its first argument with unguarded `const_i128`; exactness guards only the equality proof, which needs both sides exact; a `Cast`/`TryCast` to an integral type counts as exact at its cast result. | The R1 pins green (SQL, `F.expr`, column API, ANSI on+off); the first-arg-guard mutant reds them. | PROVEN | The `try_cast(150.5D AS INT)` first refuses at 100, the `CAST(101.5D AS INT)` seconds fold to NULL, `nullif(101, 101.4)` still refuses. |
+| C-039 | VN10-3: the const fold treats `zeroifnull(x)` as `nvl_fold([x, 0])`; `zeroifnull` leaves `exact_null_call` and the unit test pins the corrected shape. | The R2 pins green (both ANSI modes); the `nullifzero`-fold mutant reds them. | PROVEN | The `greatest` bypass refuses; `coalesce`/`nvl`/`nvl2` over `zeroifnull` answer 0/1/2 like base. |
+| C-040 | ANSI-off `nvl`-family coercion follows Spark's legacy rules as measured on the live oracle: value widening (`nvl`/`ifnull`/`nvl2`/`zeroifnull`) over `STRING`×{integral, float, double, decimal, date, timestamp} goes to `STRING`, `STRING`×`BOOLEAN` refuses `DATA_DIFF_TYPES`, and `nullif` compares at the other side's type (VN5-3); ANSI-on behaviour is unchanged. | The R3 pins green over the measured matrix; the ANSI-rules-under-off mutant reds them. | PROVEN | 280+22 live-Spark cells; the 99-cell head-vs-Spark gap closes to the carried `nullif` `BOOLEAN`×integral asymmetry, which stays refused like base. |
 
 ## Evidence
 
@@ -564,6 +567,42 @@ post-fix replay reruns with 0 value changes and 7 classified moves:
 as the `nvl`/`ifnull` aliases) and 3 `r1/q_ifnull_cast` alignments
 to base/Spark 101 (the `ifnull` twin of the documented
 wrap-and-skip guard miss, third guards-list entry).
+
+### Re-verify 9 fold VN10-1..VN10-3 + ANSI-off (2026-09-30)
+
+R1 moves the exactness guard off the bound: the folded value is base's
+`const_i128(first)` while only the equality proof needs both sides
+exact, and an integral `Cast`/`TryCast` is exact at the cast result
+(truncation is the cast's own value). R2 folds `zeroifnull(x)` as
+`nvl_fold([x, 0])`, which matches base's lowered `coalesce(x, 0)` fold
+exactly, including its false-equality shape for unknown firsts.
+
+R3 measures live Spark 4.1.2 first (banner `4.1.2`, UTC, one batched
+run of 280 cells plus a 22-cell follow-up): under ANSI off,
+`nvl`/`ifnull`/`nvl2` over `STRING`×{`INT`, `BIGINT`, `FLOAT`,
+`DOUBLE`, `DECIMAL`, `DATE`, `TIMESTAMP`} widen to `STRING` in both
+orders, `STRING`×`BOOLEAN` refuses `DATA_DIFF_TYPES`, `zeroifnull`
+follows the same table (`'0'` for a NULL string), and `nullif`
+compares at the other side's type with legacy casts
+(`nullif('05', 5)` is NULL in both modes, which rules out a
+`STRING` compare). The rule reads the live ANSI flag and applies the
+legacy table to top-level `STRING` pairs only; nested complex types
+and `STRING`×`BINARY` keep the ANSI table (unmeasured), and the UDF
+fallback keeps ANSI validation (unreached: every legacy pair that
+refuses also validates under ANSI, and no legacy pair newly allows).
+`spark_nvl.rs` lands at 997 of its 1000 ceiling; the next change there
+splits first.
+
+Carried (ledger only, each on base too): timestamp sequences default
+to a 1-second step where Spark uses 1 day, day steps are added in UTC,
+and timestamp sequences have no ceiling (VN10-N1); `nullif` over
+`BOOLEAN`×integral answers under ANSI off on Spark but refuses here
+and on base (measured, out of the ruled matrix). Correction
+(2026-09-30): the `ice/update_zin` schema/batches error recorded
+above as deterministic is flaky (2 of 3 reruns pass).
+
+Mutants, replay, gate and pin-count outcomes are recorded in the lane
+hand-back alongside this commit.
 
 ## Coverage attestation
 

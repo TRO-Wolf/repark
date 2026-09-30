@@ -418,7 +418,10 @@ pub(crate) fn const_i128(expr: &Expr, depth: u32) -> Option<i128> {
                     crate::cardinality_nullif::nvl_fold(args, depth - 1)
                 }
                 "nvl2" if args.len() == 3 => crate::cardinality_nullif::nvl2_fold(args, depth - 1),
-                "zeroifnull" | "nullifzero" if args.len() == 1 => {
+                "zeroifnull" if args.len() == 1 => {
+                    crate::cardinality_nullif::zeroifnull_fold(&args[0], depth - 1)
+                }
+                "nullifzero" if args.len() == 1 => {
                     crate::cardinality_nullif::nullifzero_nested(&args[0], depth - 1)
                 }
                 "greatest" | "least" if !args.is_empty() => {

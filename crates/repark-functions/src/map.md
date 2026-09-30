@@ -652,6 +652,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `nvl2` by branch, `zeroifnull`/`nullifzero` as `nullif(x, 0)` — so
   column-API-built counts refuse like the SQL door.
   pins: nvl-type-coercion-1/C-037.
+  **Re-verify 9 fold (2026-09-30, VN10-3):** the `zeroifnull` arm folds
+  as `coalesce(x, 0)` (`zeroifnull_fold`); `nullifzero` stays
+  `nullif(x, 0)`. pins: nvl-type-coercion-1/C-039.
 - `cardinality_nullif.rs` — **NVL-TYPE-COERCION-1 re-verify 6
   (2026-09-30, VN7-1/VN7-2/VN7-3):** the `nullif` ceiling fold, split out of
   `cardinality.rs` (move-only): `nullif_const_int` bounds by the first
@@ -692,6 +695,15 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `nullifzero_nested` fold the unlowered spellings with the same
   `nullif_value` semantics; `zin`/`niz` need no COUNT path since their
   zero side is never unknown. pins: nvl-type-coercion-1/C-037.
+  **Re-verify 9 fold (2026-09-30, VN10-1..VN10-3):** the bound is
+  unguarded `const_i128(first)` and exactness guards only the equality
+  proof, which needs both sides exact; a `Cast`/`TryCast` to an
+  integral type counts as exact at its cast result, so
+  `nullif(try_cast(150.5D AS INT), 0)` bounds at 150 while
+  `nullif(101, CAST(101.5D AS INT))` folds to NULL.
+  `zeroifnull_fold` is `nvl_fold([x, 0])`, `zeroifnull` leaves
+  `exact_null_call` (it never returns NULL), and the unit test pins
+  the corrected shape. pins: nvl-type-coercion-1/C-038, C-039.
 
 
 - **R-FN-BATCH4** aggregate expansion.
@@ -818,6 +830,15 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `zeroifnull` is `coalesce(arg, 0)`, `nullifzero` is `nullif(arg, 0)`.
   Refusals carry Spark's `DATATYPE_MISMATCH` / `WRONG_NUM_ARGS` classes.
   pins: nvl-type-coercion-1/C-001, C-002
+  **Re-verify 9 fold (2026-09-30, ANSI-off):** the `*_with_ansi` entries
+  apply Spark's legacy coercion to top-level `STRING` pairs when ANSI is
+  off, measured on live Spark 4.1.2 (UTC): value widening
+  (`nvl`/`ifnull`/`nvl2`/`zeroifnull`) goes to `STRING` except
+  `STRING`×`BOOLEAN`, which refuses `DATA_DIFF_TYPES`; `nullif`
+  compares at the other side's type (VN5-3: `FLOAT`/`DECIMAL`, not
+  `DOUBLE`). Nested complex types keep the ANSI table (unmeasured).
+  `ansi_string_widen` is the extracted ANSI string table and doubles
+  as the legacy peer test. pins: nvl-type-coercion-1/C-040
 - `spark_nvl_udf.rs` — **NVL-TYPE-COERCION-1 (2026-09-29):** the six Spark-door
   UDFs plus the internal `__repark_nullif_pick` and the `nvl_cast` vehicle.
   Validation lives in `coerce_types`/`return_type`; evaluation moved to the
@@ -829,6 +850,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   so string→timestamp reads the session zone and string leaves parse like
   Spark (trim, `d`/`f` suffix, partial dates, boolean vocabulary); failures
   raise `CAST_INVALID_INPUT`. pins: nvl-type-coercion-1/C-009, C-010
+  **Re-verify 9 fold (2026-09-30, ANSI-off):** `zero_scalar` gains the
+  `STRING` zero (`'0'`), which the legacy `zeroifnull` widening needs.
+  pins: nvl-type-coercion-1/C-040
 - `spark_nvl_eager.rs` — **NVL-TYPE-COERCION-1 (2026-09-29, VN3-1..VN3-3):**
   the two single-evaluation kernels the rule reaches for: `__repark_nvl_pick`
   takes the two widened branches once each and picks per row (volatile-first
@@ -904,6 +928,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (`nullable()`, `TryCast`/`try_*` top shapes forced nullable) and carries
   the flag into the pick; the `CASE`/`IF` trust rule is unchanged.
   pins: nvl-type-coercion-1/C-026
+  **Re-verify 9 fold (2026-09-30, ANSI-off):** the rule reads
+  `spark.sql.ansi.enabled` from its `ConfigOptions` and widens through
+  the `*_with_ansi` entries, so the same plan coerces legacy under
+  ANSI off and ANSI under ANSI on. pins: nvl-type-coercion-1/C-040
 - `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer
   rule, installed on BOTH doors via `install_shared_analyzer_rules` (defined here since FNP-11B step 3 and re-exported from the crate root, so `repark_functions::install_shared_analyzer_rules` and run 16b's `session.rs` call are unchanged; the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts; the TIME guard left for `analyzer_rules()` in remediation round 1).
   installer calls it in place of the integer-only one — same line count, so the

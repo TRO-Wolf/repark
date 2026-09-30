@@ -8,6 +8,17 @@ pub(crate) fn widen_full(left: &DataType, right: &DataType) -> Option<DataType> 
     widen_inner(left, right, true)
 }
 
+pub(crate) fn widen_full_with_ansi(
+    left: &DataType,
+    right: &DataType,
+    ansi_on: bool,
+) -> Option<DataType> {
+    if !ansi_on && let Some(other) = legacy_text_other(left, right) {
+        return legacy_string_common(other, false);
+    }
+    widen_full(left, right)
+}
+
 fn unwrap_transparent(data_type: &DataType) -> &DataType {
     match data_type {
         DataType::Dictionary(_, values) => unwrap_transparent(values),
@@ -167,25 +178,7 @@ fn scalar_widen(left: &DataType, right: &DataType, strings: bool) -> Option<Data
             return None;
         }
         let other = if is_text(left) { right } else { left };
-        if integral_rank(other).is_some() {
-            return Some(DataType::Int64);
-        }
-        if is_float(other) || matches!(other, DataType::Float64) || as_decimal(other).is_some() {
-            return Some(DataType::Float64);
-        }
-        if is_date(other) {
-            return Some(DataType::Date32);
-        }
-        if let Some((_, zone)) = timestamp_parts(other) {
-            return Some(DataType::Timestamp(TimeUnit::Microsecond, zone));
-        }
-        if matches!(other, DataType::Boolean) {
-            return Some(DataType::Boolean);
-        }
-        if is_binary(other) {
-            return Some(DataType::Binary);
-        }
-        return None;
+        return ansi_string_widen(other);
     }
     if is_binary(left) && is_binary(right) {
         return Some(DataType::Binary);
@@ -194,6 +187,52 @@ fn scalar_widen(left: &DataType, right: &DataType, strings: bool) -> Option<Data
         return Some(left.clone());
     }
     None
+}
+
+fn ansi_string_widen(other: &DataType) -> Option<DataType> {
+    if integral_rank(other).is_some() {
+        return Some(DataType::Int64);
+    }
+    if is_float(other) || matches!(other, DataType::Float64) || as_decimal(other).is_some() {
+        return Some(DataType::Float64);
+    }
+    if is_date(other) {
+        return Some(DataType::Date32);
+    }
+    if let Some((_, zone)) = timestamp_parts(other) {
+        return Some(DataType::Timestamp(TimeUnit::Microsecond, zone));
+    }
+    if matches!(other, DataType::Boolean) {
+        return Some(DataType::Boolean);
+    }
+    if is_binary(other) {
+        return Some(DataType::Binary);
+    }
+    None
+}
+
+fn legacy_text_other<'a>(left: &'a DataType, right: &'a DataType) -> Option<&'a DataType> {
+    let pair = (unwrap_transparent(left), unwrap_transparent(right));
+    match (is_text(pair.0), is_text(pair.1)) {
+        (true, false) => Some(pair.1),
+        (false, true) => Some(pair.0),
+        _ => None,
+    }
+}
+
+fn legacy_string_common(other: &DataType, compare: bool) -> Option<DataType> {
+    if is_binary(other) {
+        return Some(DataType::Binary);
+    }
+    ansi_string_widen(other)?;
+    if !compare && matches!(other, DataType::Boolean) {
+        return None;
+    }
+    Some(if compare {
+        other.clone()
+    } else {
+        DataType::Utf8
+    })
 }
 
 pub(crate) fn decimal_wider(p1: u8, s1: i8, p2: u8, s2: i8) -> Option<(u8, i8)> {
@@ -364,6 +403,25 @@ pub(crate) fn compare_for_nullif(
     right: &DataType,
 ) -> Result<Vec<CompareLeaf>, CompareRefusal> {
     compare_inner(left, right, true, Vec::new(), Vec::new())
+}
+
+pub(crate) fn compare_for_nullif_with_ansi(
+    left: &DataType,
+    right: &DataType,
+    ansi_on: bool,
+) -> Result<Vec<CompareLeaf>, CompareRefusal> {
+    if !ansi_on && let Some(other) = legacy_text_other(left, right) {
+        if let Some(common) = legacy_string_common(other, true) {
+            return Ok(vec![CompareLeaf {
+                path_a: Vec::new(),
+                path_b: Vec::new(),
+                type_a: unwrap_transparent(left).clone(),
+                type_b: unwrap_transparent(right).clone(),
+                common,
+            }]);
+        }
+    }
+    compare_for_nullif(left, right)
 }
 
 fn compare_inner(
