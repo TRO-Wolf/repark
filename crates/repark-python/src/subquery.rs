@@ -73,7 +73,7 @@ fn exists_subquery(frame: &PyDataFrame) -> PyResult<PyColumn> {
 
 #[allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
 #[pyfunction]
-fn subquery_alias(frame: &PyDataFrame, alias: &str) -> PyResult<PyDataFrame> {
+pub(crate) fn subquery_alias(frame: &PyDataFrame, alias: &str) -> PyResult<PyDataFrame> {
     fenced!("subquery.subquery_alias", {
         let (state, plan) = frame.df.clone().into_parts();
         let aliased = LogicalPlan::SubqueryAlias(
@@ -88,7 +88,7 @@ fn subquery_alias(frame: &PyDataFrame, alias: &str) -> PyResult<PyDataFrame> {
 
 #[allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
 #[pyfunction]
-fn lateral_join(
+pub(crate) fn lateral_join(
     left: &PyDataFrame,
     right: &PyDataFrame,
     join_type: &str,
@@ -109,6 +109,7 @@ fn lateral_join(
         };
         let (state, left_plan) = left.df.clone().into_parts();
         let left_schema = Arc::clone(left_plan.schema());
+        let left_width = left_schema.fields().len();
         let resolved_right =
             repark_core::resolve_subquery_plan(right.df.logical_plan().clone(), &left_schema)
                 .map_err(datafusion_to_py_err)?;
@@ -174,6 +175,8 @@ fn lateral_join(
             }
             None => join_plan,
         };
+        let output = repark_core::frame_names::remint_join_collisions(output, left_width)
+            .map_err(datafusion_to_py_err)?;
         Ok(PyDataFrame::new(
             DataFrame::new(state, output),
             left.runtime_handle(),

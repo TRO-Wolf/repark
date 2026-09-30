@@ -15,7 +15,8 @@ wrapped optimizer rule) and declares this directory.
   pins: win-slide-1/C-001, C-005
 - `attr_id.rs` — **ATTR-ID-1 S1 (2026-09-30):** attribute identity as a function of the plan.
   Every output field of a DataFrame plan carries one attribute id in its field metadata under
-  `repark.attr`; the work order is `/tmp/oc-worker/direct/wo/attr-id-1-design.md` §3.
+  `repark.attr`; the design and its rulings are recorded in the unit ledger,
+  `task/ledgers/staging/attr-id-1-ledger.md`.
   `AttrId` is `a` plus 12 hex digits from a per-process counter (`NEXT_ATTR`, the
   `TEMP_VIEW_SEQ` pattern of `metadata_columns.rs`), never derived from a name, a position or a
   plan id. `stamp(plan)` looks only at the root and is idempotent: a Projection root keeps a
@@ -24,7 +25,7 @@ wrapped optimizer rule) and declares this directory.
   `Alias::with_metadata` (a bare expression gets an alias of its own qualified name) — so a cast,
   which copies its source id in DataFusion, still gets a fresh one. Any other root keeps a fully
   stamped schema as it is and otherwise adds one pass-through Projection that sets an id only
-  where one is missing, and every other root mints. A Union root instead takes the first
+  where one is missing (S1b below narrows "missing" for Aggregate and Window roots). A Union root instead takes the first
   input's id at every position, Spark's rule: DataFusion intersects the ids of the inputs that
   carry a column, so it drops an id where the inputs differ and keeps a later input's id where
   the first lacks the column (`union_by_name` with a missing column). The first input's ids
@@ -73,6 +74,26 @@ wrapped optimizer rule) and declares this directory.
   (`repark_functions::analyze_eagerly`) and keeps the analyzed plan as the frame, whose ids the
   facade's join shape needs. Name resolution reads `DataFrame::schema()`, which the optimizer
   never touches. Pins: `../tests/attr_id_seam.rs`. pins: attr-id-1/C-015, C-016
+  **ATTR-ID-1 S1b (2026-09-30):** identity is decided by structure, never by copied metadata
+  (DataFusion copies the argument's metadata onto `first_value`, `last_value`, `lag`, `lead`,
+  `nth_value`, a cast and a negation). `computed_outputs(node)` answers, by position, which
+  outputs a same-op node computed: it skips a Filter/Sort/Limit chain (HAVING, ORDER BY), then
+  a Window's outputs past its input width are computed and its input positions take the
+  input's answer, and an Aggregate's group keys are computed unless the key (aliases stripped)
+  is a `Column` over a non-computed input position, while the grouping id and every aggregate
+  value are computed; any other node computes nothing. An Aggregate or Window root (or a
+  Filter/Sort/Limit root over one) mints every computed position; a Projection root keeps a
+  column only when it references a non-computed input position. The classification reads a
+  same-op node below the root but never rewrites it: the ids are set on the root Projection or
+  the pass-through Projection `stamp` adds. It needs no metadata: a Window or Aggregate that
+  was itself a stamped frame's root sits under that stamp's pass-through Projection, except an
+  Aggregate with no computed output, where both readings agree. A second `stamp` keeps every
+  alias whose own metadata carries a native id, so the stamp stays idempotent. Ids are
+  `a` + a 16-hex per-process prefix (a `RandomState` hash of the process id) + a 12-hex
+  counter; `AttrId::is_native` tells them from ids another process wrote, and `stamp` never
+  keeps a foreign id: a source that carries one is re-minted once. Pins:
+  `../tests/attr_id_fresh.rs`, `../tests/attr_id_verify.rs`.
+  pins: attr-id-1/C-017, C-018, C-019, C-020
 - `case_bind.rs` — **U11-EDGE-1 (2026-09-26):** `bind_case_insensitive`, run first by
   `subquery.rs`'s `resolve_bound_expr` (the DataFrame door's one binding hook). An
   unqualified column the frame schema does not hold exactly binds to the single field that

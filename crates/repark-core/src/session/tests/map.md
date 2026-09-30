@@ -38,6 +38,8 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   name (same and case-folded displays), a written qualifier's hit and miss, a cast twin that
   reuses the name, and a missing id or a display-count mismatch as an error. Mutations M1–M4
   (the ledger's record) red these pins. pins: attr-id-1/C-002, C-003, C-004, C-006
+  **ATTR-ID-1 S1b (2026-09-30, VA1-4):** the join no-op pin first asserts the six joined ids
+  are present and distinct, so it cannot pass with every id missing. pins: attr-id-1/C-020
 - `attr_id_seam.rs` — **ATTR-ID-1 S2b (2026-09-30):** the logical/physical seam. A core
   session's optimizer starts with `repark_strip_attribute_ids` and its analyzer does not carry
   it, so an analyzed plan (the Spark SQL door's eager analysis) keeps its ids. An Aggregate
@@ -52,6 +54,26 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   `push_down_leaf_projections` fails on the stamp's `s AS s` alias (M-A2). `df_guard.rs`'s
   rule-order pin now expects the strip first.
   pins: attr-id-1/C-015, C-016
+- `attr_id_fresh.rs` — **ATTR-ID-1 S1b (2026-09-30):** fresh ids for computed outputs.
+  Measured on DataFusion alone: a negated group key, `first_value`, `last_value`, `lag`, `lead`
+  and `nth_value` copy their argument's id. After `stamp`, every aggregate value the facade
+  emits (`first`, `last`, `first` ignoring nulls, `min`, `max`, `sum`, `avg`, `count`,
+  `collect_list`, `collect_set`, `nth_value`) and every cast, negated or arithmetic group key
+  gets its own fresh id while a bare-column key keeps its id; every window output (`lag`,
+  `lead`, `nth_value`, and `first_value`/`last_value`/`max` over a window) is fresh while the
+  input passes through; a `select` over a same-op Window or Aggregate mints what it computes
+  and keeps what it passes; SQL `GROUP BY` and `HAVING` over a view do the same. Each shape
+  re-stamps unchanged. A parquet file whose footer carries `repark.attr` (read with
+  `skip_metadata(false)`; the default read drops field metadata) gets fresh native ids once,
+  two reads share none, and the frame aggregates and runs. Mutations M5, M6, M7 and M8 (the
+  ledger's record) red these pins. pins: attr-id-1/C-017, C-018, C-019, C-021
+- `attr_id_verify.rs` — **ATTR-ID-1 S1b (2026-09-30):** the S1 verifier's regression
+  pins, ported with only `rustfmt` and one split (the self-join pin's semi-join and
+  qualified-resolve tail is its own test, for clippy's length limit): `first_value`/`last_value`
+  values, cast and negated keys, `lag`/`lead` roots, `lag` through `select` resolving
+  ambiguous, `first_value` through SQL over a view, a union of unions, three-way and nested
+  self-joins, a semi join and qualified names over a re-minted join, and an alias over an
+  aliased cast that carries an id. pins: attr-id-1/C-017, C-018
   **ATTR-ID-1 S2 (2026-09-30):** a USING self-join keeps the key and left ids and re-mints
   the two colliding right ids distinctly; `strip` removes every id from a Projection root
   keeping names, types, nullability, and qualifiers, returns an unstamped plan unchanged,

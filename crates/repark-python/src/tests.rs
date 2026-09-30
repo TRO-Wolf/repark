@@ -435,3 +435,30 @@ fn binding_re_mints_using_join_collisions_of_a_self_join() {
         assert!(after[2].is_some() && !held.contains(&after[2]));
     });
 }
+
+#[test]
+fn binding_re_mints_lateral_join_collisions_of_a_self_join() {
+    Python::attach(|py| {
+        let session = PyReparkSession::new(py, None, None, None, None, None).expect("session");
+        let frame = session
+            .sql(py, "SELECT 1 AS id, 'a' AS data")
+            .expect("source frame");
+        let stamped = crate::dataframe_names::stamp_attribute_ids(&frame).expect("stamp");
+        let held = crate::dataframe_names::attribute_ids(&stamped);
+        let left = crate::subquery::subquery_alias(&stamped, "l").expect("left alias");
+        let right = crate::subquery::subquery_alias(&stamped, "r").expect("right alias");
+        for join_type in ["inner", "left"] {
+            let joined = crate::subquery::lateral_join(&left, &right, join_type, None, None)
+                .expect("lateral self-join");
+            let after = crate::dataframe_names::attribute_ids(&joined);
+            assert_eq!(after.len(), 4);
+            assert_eq!(after[..2], held[..]);
+            assert!(
+                after[2..]
+                    .iter()
+                    .all(|id| id.is_some() && !held.contains(id))
+            );
+            assert_ne!(after[2], after[3]);
+        }
+    });
+}

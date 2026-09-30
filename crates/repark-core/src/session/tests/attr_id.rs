@@ -444,6 +444,8 @@ async fn the_join_re_mint_leaves_a_join_of_distinct_attributes_unchanged() {
     let right = stamped(source(session.context()));
     let sql = joined_over_views(&session, &left, &right);
     let joined = session.sql(&sql).await.unwrap();
+    assert!(ids(&joined).iter().all(Option::is_some));
+    assert_eq!(distinct_count(&ids(&joined)), 6);
     let plan = joined.logical_plan().clone();
     assert_eq!(remint_join_collisions(plan.clone(), 3).unwrap(), plan);
     assert!(remint_join_collisions(plan, 7).is_err());

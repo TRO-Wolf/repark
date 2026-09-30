@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
-use std::sync::Arc;
+use std::hash::{BuildHasher, RandomState};
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, LazyLock};
 
 use datafusion::arrow::array::RecordBatch;
 use datafusion::arrow::datatypes::{Field, Schema, SchemaRef};
@@ -11,9 +12,10 @@ use datafusion::common::{
     internal_err,
 };
 use datafusion::logical_expr::expr::{Alias, Exists, InSubquery, intersect_metadata_for_union};
+use datafusion::logical_expr::utils::grouping_set_to_exprlist;
 use datafusion::logical_expr::{
-    Aggregate, Distinct, DistinctOn, Expr, Filter, Join, LogicalPlan, LogicalPlanBuilder,
-    Projection, RecursiveQuery, SortExpr, Subquery, SubqueryAlias, Union, Unnest, Window,
+    Aggregate, Distinct, DistinctOn, Expr, Filter, Join, Limit, LogicalPlan, LogicalPlanBuilder,
+    Projection, RecursiveQuery, Sort, SortExpr, Subquery, SubqueryAlias, Union, Unnest, Window,
 };
 use datafusion::optimizer::{ApplyOrder, OptimizerConfig, OptimizerRule};
 use repark_common::names::NameRule;
@@ -22,6 +24,9 @@ const ATTR_KEY: &str = "repark.attr";
 
 static NEXT_ATTR: AtomicU64 = AtomicU64::new(1);
 
+static PROCESS_PREFIX: LazyLock<String> =
+    LazyLock::new(|| format!("a{:016x}", RandomState::new().hash_one(std::process::id())));
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct AttrId(String);
 
@@ -29,9 +34,19 @@ impl AttrId {
     #[must_use]
     pub fn mint() -> Self {
         Self(format!(
-            "a{:012x}",
+            "{}{:012x}",
+            PROCESS_PREFIX.as_str(),
             NEXT_ATTR.fetch_add(1, Ordering::Relaxed)
         ))
+    }
+
+    #[must_use]
+    pub fn is_native(&self) -> bool {
+        self.0.len() == PROCESS_PREFIX.len() + 12 && self.0.starts_with(PROCESS_PREFIX.as_str())
+    }
+
+    fn native(field: &Field) -> Option<Self> {
+        Self::of(field).filter(Self::is_native)
     }
 
     #[must_use]
@@ -103,7 +118,10 @@ pub fn stamp(plan: LogicalPlan) -> Result<LogicalPlan> {
             .schema()
             .fields()
             .iter()
-            .map(|field| AttrId::of(field).is_none().then(AttrId::mint))
+            .zip(computed_outputs(&plan)?)
+            .map(|(field, computed)| {
+                (computed || AttrId::native(field).is_none()).then(AttrId::mint)
+            })
             .collect::<Vec<_>>(),
     };
     if minted.iter().all(Option::is_none) {
@@ -145,7 +163,7 @@ fn first_input_ids(input: &LogicalPlan) -> Vec<Option<AttrId>> {
             own_id(expr).or_else(|| match strip_aliases(expr) {
                 Expr::Column(column) => below
                     .maybe_index_of_column(column)
-                    .and_then(|index| AttrId::of(below.field(index))),
+                    .and_then(|index| AttrId::native(below.field(index))),
                 _ => None,
             })
         })
@@ -153,14 +171,21 @@ fn first_input_ids(input: &LogicalPlan) -> Vec<Option<AttrId>> {
 }
 
 fn stamp_projection(projection: &Projection) -> Result<Option<LogicalPlan>> {
+    let computed = computed_outputs(&projection.input)?;
+    let below = projection.input.schema();
     let mut changed = false;
     let expr = projection
         .expr
         .iter()
         .zip(projection.schema.iter())
         .map(|(expr, (qualifier, field))| {
-            let is_column = matches!(strip_aliases(expr), Expr::Column(_));
-            if own_id(expr).is_some() || (is_column && AttrId::of(field).is_some()) {
+            let inherits = match strip_aliases(expr) {
+                Expr::Column(column) => below
+                    .maybe_index_of_column(column)
+                    .is_some_and(|index| !computed.get(index).copied().unwrap_or(true)),
+                _ => false,
+            };
+            if own_id(expr).is_some() || (inherits && AttrId::native(field).is_some()) {
                 return expr.clone();
             }
             changed = true;
@@ -183,6 +208,38 @@ fn own_id(expr: &Expr) -> Option<AttrId> {
         .as_ref()
         .and_then(|metadata| metadata.inner().get(ATTR_KEY).cloned())
         .map(AttrId)
+        .filter(AttrId::is_native)
+}
+
+fn computed_outputs(plan: &LogicalPlan) -> Result<Vec<bool>> {
+    let mut node = plan;
+    while let LogicalPlan::Filter(Filter { input, .. })
+    | LogicalPlan::Sort(Sort { input, .. })
+    | LogicalPlan::Limit(Limit { input, .. }) = node
+    {
+        node = input.as_ref();
+    }
+    let mut computed = match node {
+        LogicalPlan::Window(window) => computed_outputs(&window.input)?,
+        LogicalPlan::Aggregate(aggregate) => computed_group_keys(aggregate)?,
+        other => return Ok(vec![false; other.schema().fields().len()]),
+    };
+    computed.resize(node.schema().fields().len(), true);
+    Ok(computed)
+}
+
+fn computed_group_keys(aggregate: &Aggregate) -> Result<Vec<bool>> {
+    let below = computed_outputs(&aggregate.input)?;
+    let input = aggregate.input.schema();
+    Ok(grouping_set_to_exprlist(&aggregate.group_expr)?
+        .into_iter()
+        .map(|expr| match strip_aliases(expr) {
+            Expr::Column(column) => input
+                .maybe_index_of_column(column)
+                .is_none_or(|index| below.get(index).copied().unwrap_or(true)),
+            _ => true,
+        })
+        .collect())
 }
 
 fn strip_aliases(expr: &Expr) -> &Expr {
