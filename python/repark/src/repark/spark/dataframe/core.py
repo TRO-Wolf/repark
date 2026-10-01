@@ -1083,16 +1083,18 @@ class DataFrame:
         if merged is not None:
             return merged
         projected: list[Any] = []
-        seen_display: set[str] = set()
-        folded = {name.casefold(): name for name in colsMap}
-        for bound in self._iter_bound_columns():
-            written = bound._projection_name or bound.spark_display_part()
-            seen_display.add(written.casefold())
-            if (display := folded.get(written.casefold())) is not None:
-                replacement = colsMap[display]
+        bounds = self._iter_bound_columns()
+        writtens = [bound._projection_name or bound.spark_display_part() for bound in bounds]
+        winners: list[str | None] = [None] * len(bounds)
+        for key in colsMap:
+            for position in _column_fields._live_rule_hits(self, key, writtens):
+                winners[position] = key
+        for bound, winning_key in zip(bounds, winners, strict=True):
+            if winning_key is not None:
+                replacement = colsMap[winning_key]
                 if isinstance(replacement, Column):
                     replacement = self._rebind_origin_column(replacement)
-                aliased = replacement.alias(display)
+                aliased = replacement.alias(winning_key)
                 if (
                     isinstance(replacement, Column)
                     and replacement._origin_plan_id is not None
@@ -1101,8 +1103,8 @@ class DataFrame:
                     projected.append(
                         Column(
                             aliased._inner,
-                            spark_display=display,
-                            projection_name=display,
+                            spark_display=winning_key,
+                            projection_name=winning_key,
                             stable_name=True,
                             has_free_attribute=True,
                             origin_plan_id=bound._origin_plan_id,
@@ -1117,7 +1119,7 @@ class DataFrame:
             else:
                 projected.append(bound)
         for name, column in colsMap.items():
-            if name.casefold() not in seen_display:
+            if not _column_fields._live_rule_hits(self, name, writtens):
                 if isinstance(column, Column):
                     projected.append(self._rebind_origin_column(column).alias(name))
                 else:
@@ -3101,8 +3103,8 @@ class DataFrame:
         """Rename a column (PySpark ``DataFrame.withColumnRenamed``).
 
         Renaming a column that does not exist is a silent no-op (Spark semantics).
-        Empty-string *target* names are rejected. Name resolution is
-        case-insensitive (Spark ``caseSensitive=false``); the rename is applied via quoted
+        Empty-string *target* names are rejected. Name resolution follows
+        the live session rule; the rename is applied via quoted
         schema bind +:meth:`select` so mixed-case fields after a requested-spelling projection
         actually rename (native DataFusion ``with_column_renamed`` silently no-ops on
         case-preserved fields).
@@ -3116,17 +3118,13 @@ class DataFrame:
                 "withColumnRenamed target names must be non-empty "
                 "(empty/whitespace names are rejected — Group F / octo r3)"
             )
-        try:
-            canonical = self._resolve_getitem_column_name(existing)
-        except AnalysisException:
+        bounds = self._iter_bound_columns()
+        writtens = [bound._projection_name or bound.spark_display_part() for bound in bounds]
+        if not (hits := _column_fields._live_rule_hits(self, existing, writtens)):
             return self
-        projected: list[Column] = []
-        for bound in self._iter_bound_columns():
-            display = bound._projection_name or bound.spark_display_part()
-            if display == canonical:
-                projected.append(bound.alias(new))
-            else:
-                projected.append(bound)
+        projected = [
+            bound.alias(new) if position in hits else bound for position, bound in enumerate(bounds)
+        ]
         return self.select(*projected)
 
     withColumnRenamed = with_column_renamed  # noqa: N815 — deliberate PySpark-compatible camelCase alias
@@ -3166,7 +3164,8 @@ class DataFrame:
                     "withColumnsRenamed target names must be non-empty "
                     "(empty/whitespace names are rejected — Group F / octo r3)"
                 )
-            names = [new_name if name == old_name else name for name in names]
+            for position in _column_fields._live_rule_hits(self, old_name, names):
+                names[position] = new_name
         multi_name = self._display_names is not None and self._engine_names is not None
         if not multi_name and len(names) != len(set(names)):
             raise AnalysisException(
@@ -3182,7 +3181,7 @@ class DataFrame:
                 continue
             projected.append(
                 Column(
-                    bound._inner.alias(final),
+                    _native.PyColumnParts.alias(bound._inner, display, final)[0],
                     spark_display=final,
                     projection_name=final,
                     stable_name=True,

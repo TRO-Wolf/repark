@@ -8927,3 +8927,20 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   **Gate j_cross (2026-10-01):** the alias-dup pins (C-029): a one-id join
   dup refuses past `alias` plus `withColumn` and on the qualified door,
   under both rules (S0 spark.json). pins: attr-id-1/C-029
+- [test_attr_id_1_s3c.py](test_attr_id_1_s3c.py) — **ATTR-ID-1 S3c (2026-10-01):** the
+  `withColumn(s)`/`withColumn(s)Renamed` cutover pins, each under both case rules
+  unless noted. `withColumn` replaces a twin pair of one attribute and two
+  attributes sharing a display, then refuses `filter`/`select(str)`/`select(col)`
+  as ambiguous; a bare-value replacement mints per position too; a case-variant
+  name replaces insensitive and appends sensitive; folded rivals replace both
+  insensitive and the exact one sensitive. `withColumnRenamed` renames a twin
+  pair and a two-attribute display, no-ops a miss, and renamed twins refuse
+  `filter`/`select(str)`/`select(col)` (singular and plural — the §9f fresh-id
+  ruling). `withColumns` replaces hits and appends misses in order, keeps
+  last-wins folded keys insensitive, and replaces plus appends sensitive;
+  `withColumnsRenamed` matches folded keys sequentially, refuses duplicate
+  finals (the unchanged Group F refusal, exact chain and folded match), and
+  the live rule decides after the frame was built. Every row expectation is
+  live-Spark 4.1.2 verbatim (s3c probes, banner in `spark_banner.out`).
+  No module docstring: the lane's no-comments ruling covers the new file; the
+  contract lives here. pins: attr-id-1/C-031

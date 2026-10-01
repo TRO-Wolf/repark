@@ -411,6 +411,14 @@ def column_or_str_error(item: Any) -> PySparkTypeError:
     return PySparkTypeError(f"expected a column name (str) or Column, got {type(item).__name__}")
 
 
+def _live_rule_hits(frame: Any, written: str, displays: list[str]) -> list[int]:
+    """Hit positions of a literal name under the session's live case rule."""
+    exact_hits, folded_hits = _unqualified_candidates(written, displays)
+    if _native.session_case_sensitive(frame._session):
+        return exact_hits
+    return exact_hits + folded_hits
+
+
 def _split_written_name(written: str) -> tuple[list[str] | None, str] | None:
     parts: list[str] = []
     current: list[str] = []
@@ -634,7 +642,11 @@ def _rebind_stable_name_column(frame: Any, column: Any) -> Any:
         return column
     try:
         bound = _bind_resolved_name(frame, name)
-    except AnalysisException:
+    except AnalysisException as error:
+        if error.getCondition() == "AMBIGUOUS_REFERENCE":
+            split = _split_written_name(name)
+            if split is not None and split[0] is None:
+                raise
         return column
     return _rewrap_with_markers(column, bound)
 

@@ -501,3 +501,60 @@ Sweep (`-n 8`, 45 files): 2236 passed, 19 skipped, 2 xfailed.
 `gate.sh`: 15/15 GREEN, including the parity suite (green after the
 orchestrator removed the torn `/tmp/muse-worker` snapshot) and both
 Rust lib suites. Pin file: 52 green.
+
+## Round S3c (2026-10-01)
+
+**Model:** muse-spark-1.3-contributor (S3c executor, guided).
+**Work order:** `/tmp/oc-worker/direct/wo/attr-id-1-design.md` §4 S3c with
+`/tmp/oc-worker/direct/wo/attr-id-1-s3c-withcolumn.md` and the §9f ruling
+(a rename mints one fresh id per renamed position): `withColumn(s)` and
+`withColumn(s)Renamed` bind through the shared live-rule hit computation;
+each replaced, appended or renamed position gets its own fresh id.
+
+| Clause | Statement | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-030 | The S3c cutover: `_live_rule_hits` (`column_fields.py`) computes a literal name's hit positions under the session's live `spark.sql.caseSensitive` (exact hits under the exact rule, exact plus folded under the insensitive rule, Python `casefold` as in S3a H-1; no qualifier split, as before). `with_columns` replaces every hit of each key (last key wins a position two keys hit, as before) and appends hit-less keys in dict order; `with_column_renamed` renames every hit and no-ops a miss by returning the same frame; `with_columns_renamed` rewrites sequentially under the live rule instead of exact-only. Each replaced or appended position keeps its `.alias` fresh id; the singular rename keeps its `Column.alias` route and the plural rename moves its native plain alias to the fresh-id alias (`PyColumnParts.alias`, same `Column` construction otherwise). `_rebind_stable_name_column` re-raises an unqualified `AMBIGUOUS_REFERENCE` instead of falling through to a bare engine error; misses and qualified names still fall through (S3e owns qualified). No helper is deleted: `_iter_bound_columns`, `_resolve_getitem_column_name`, `_rebind_origin_column`, `_bind_engine_display_column` and `_engine_field_for_display` each keep a caller outside the family (commit grep). | The 24 pins (36 instances) under both case rules; the live-Spark probe series (banner 4.1.2 America/New_York); mutations M1–M3 each red on their pins and reverted; the S0 replay with 0 cells moved away from Spark, the 7672 S3a/S3b gains kept, and the neighbour sweep green. | PROVEN (pins + mutations; replay lands in the hand-back) | `python/repark/tests/test_attr_id_1_s3c.py`; `python/repark/src/repark/spark/column_fields.py` `_live_rule_hits`; `python/repark/src/repark/spark/dataframe/core.py` `with_columns`, `with_column_renamed`, `with_columns_renamed`; probes `s3c/spark_probes_s3c*.py` with `.out` files; replays land in the hand-back. |
+| C-031 | The pins bite: 16 of 36 fail on the base tree (every live-rule, fan-out, renamed-twins and Column-door pin); M1 (live-rule bypass, unconditional fold) reds the 6 sensitive-rule pins; M2 (one alias shared across a key's hit positions) reds the 2 bare-value per-position pins — a literal keep-old-id variant reds 16 through broken values and is recorded as too coarse; M3 (both rename paths keep the id through the plain alias) reds the 4 renamed-twins pins. Each mutation is reverted from a copy with the intended diff intact. | The fail-before run and the three mutation runs below. | PROVEN | This ledger's mutation record; `git diff` after each revert. |
+
+**S3c halt Q1 (2026-10-01, brief rule 5: Spark contradicts a bullet).**
+The brief said "a renamed column keeps its id". Live Spark 4.1.2, measured
+twice (executor probes `s3c3`/`s3c4`, orchestrator `rename_probe.py`), binds
+`filter` on `select("v", "v")` twins and raises `AMBIGUOUS_REFERENCE` on
+`filter`/`select(str)`/`select(F.col)` after either rename, under both case
+rules: each renamed position is a distinct fresh attribute. The round halted
+with no commit and resumed under the §9f ruling (rename mints fresh per
+position, as an alias does). All other brief bullets were confirmed by the
+same probes: replace and rename fan out to every hit with no ambiguity
+refusal (twins of one attribute and two attributes sharing a display alike),
+a rename miss is a no-op, a variant name replaces insensitive (taking the
+written spelling) and appends sensitive, and folded `withColumns` keys raise
+Spark's `COLUMN_ALREADY_EXISTS` insensitive — which stays a gap, since the
+brief keeps today's last-wins/no-refusal key behaviour unchanged.
+
+**S3c Column-door fix (2026-10-01).** The renamed-twins `select(F.col)` pin
+caught a pre-existing S3a gap: `_rebind_stable_name_column` swallowed every
+`AnalysisException` from `_bind_resolved_name`, so the Column door died bare
+where Spark refuses shaped (established shape: 2-id twins `select(F.col)`
+is bare on the base tree). The swallow is now precise: an unqualified
+`AMBIGUOUS_REFERENCE` is re-raised (Spark refuses every unqualified 2-id
+reference, so no EQUAL cell can depend on the fall-through); misses and
+qualified names keep today's path. The replay guards the shared path.
+
+**Observed, out of scope (2026-10-01).** Free `F.col` references in select
+compounds and `withColumns` values against duplicate-display (overlay)
+frames die with a bare engine error even where Spark binds (1-id twins
+included); the `withColumns` pre-aliasing (`v AS v` display) skips the
+stable-name rebind and the value path is untouched by S3c. Base behaves
+identically. A corpus cell that moves only through this gap is named there.
+
+**Mutation record S3c (2026-10-01).** Each mutation edited the named file,
+ran `pytest python/repark/tests/test_attr_id_1_s3c.py`, and was reverted
+from a copy; `diff` against the copies was empty afterwards and the file
+is 36 green.
+
+| # | Mutation | Red |
+|---|---|---|
+| M1 | `_live_rule_hits` always folds (`and False` on the exact arm) | The 6 sensitive-rule pins: variant append, folded-rival replace, folded-keys replace-and-append, rename-variant miss, plural exact-keep, insensitive-then-sensitive build |
+| M2 | One `replacement.alias` per key shared across its hit positions | The 2 bare-value per-position pins (computed-value pins stay green: `stamp` mints per position whatever the alias shares) |
+| M2-coarse | Literal keep-old-id: plain-alias `Column` construction for the replacement | 16 red through broken values (the thin construction drops facade state); rejected as too coarse, recorded here |
+| M3 | Both rename paths keep the id (singular manual plain-alias construction, plural back to `bound._inner.alias`) | The 4 renamed-twins pins (singular and plural, both rules) |

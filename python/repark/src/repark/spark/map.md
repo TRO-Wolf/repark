@@ -298,6 +298,14 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `filter_quote.py` (this module keeps the `_quote_filter_sql_identifiers`
   entry): 1209 → 871 lines. Pins: `python/repark/tests/test_attr_id_1_s3b.py`.
   pins: attr-id-1/C-026
+  **ATTR-ID-1 S3c (2026-10-01):** `_live_rule_hits` is the shared hit
+  computation the `withColumn(s)`/`withColumn(s)Renamed` family binds through
+  (exact hits under the exact rule, exact plus folded under the insensitive
+  rule; literal names, no qualifier split). `_rebind_stable_name_column` now
+  re-raises an unqualified `AMBIGUOUS_REFERENCE` instead of falling through to
+  a bare engine error; misses and qualified names still fall through (S3e owns
+  qualified). Pins: `python/repark/tests/test_attr_id_1_s3c.py`.
+  pins: attr-id-1/C-030
 - `filter_quote.py` — **ATTR-ID-1 S3b H-1 (2026-10-01):** the filter-SQL
   identifier quoter, split out of `column_fields.py` at the size ceiling (pure
   move; the entry stays there). `_FILTER_TOKEN_PATTERN`,

@@ -1099,6 +1099,12 @@ that held the comment (pins: comment-core-1/C-003).
   no new column reads a name that layer defined; `filter` / `drop` / `select` never copy
   sticky meta. Multi-name frames iterate engine/display bindings and preserve origin on
   replacement. The new layer writes sticky meta for a later merge.
+  **ATTR-ID-1 S3c (2026-10-01):** each key's hit set is the shared live-rule
+  computation (`column_fields._live_rule_hits`); every hit position is replaced
+  (Spark fans out across one id and across two — no ambiguity refusal), a miss
+  appends, and among folded-duplicate keys the last wins, as before. Each
+  replaced or appended position gets its own fresh id through `.alias`.
+  pins: attr-id-1/C-030
 - `_try_merge_adjacent_window_layer`: Do not merge past a cache mark (that would orphan
   the intermediate MemTable pin). Replay both maps on the pre-layer frame so DataFusion
   fuses one `WindowAggr`.
@@ -1228,11 +1234,19 @@ that held the comment (pins: comment-core-1/C-003).
   engine field (Spark keeps one row per distinct key multiset). Empty subset is
   full-row distinct (avoids DataFusion empty ORDER BY). Use `row_number` keep-first
   rather than `groupBy`+`first` so non-key columns survive.
-- `with_column_renamed`: Multi-name frames bind by engine/display pairs (bare name
-  rebind raises `AMBIGUOUS_REFERENCE` on duplicate displays).
+- `with_column_renamed`: Multi-name frames bind by engine/display pairs.
+  **ATTR-ID-1 S3c (2026-10-01):** the existing name's hit set is the shared
+  live-rule computation; every hit is renamed (Spark fans out, no ambiguity
+  refusal), a miss is a no-op returning the same frame, and each renamed
+  position mints one fresh id through `Column.alias` (live-Spark §9f ruling).
+  pins: attr-id-1/C-030
 - `with_columns_renamed`: Multi-name frames already carry Spark-legal duplicate
   displays; allow them and rename via engine bindings. Ordinary frames still refuse
   duplicate names. Keep origin so multi-name select identity survives the rename.
+  **ATTR-ID-1 S3c (2026-10-01):** the sequential rewrite matches under the live
+  rule instead of exact-only, and each renamed position mints one fresh id
+  through the native fresh-id alias (§9f ruling). The duplicate-finals refusal
+  is unchanged. pins: attr-id-1/C-030
 - `_column_of`: Stable-name rebind (`F.col` / requested spelling) then origin rebind
   so `orderBy` / `groupBy` / `select` parent Columns hit the correct post-join engine
   field.
