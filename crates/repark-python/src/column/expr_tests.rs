@@ -3,7 +3,6 @@ use super::*;
 #[test]
 fn expr_sql_substr_zero_matches_spark() {
     let column = PyColumn::sql("substr('hello', 0, 3)").expect("parse");
-    // Consumer context is a *different* SessionContext (mirrors F.expr → spark DF handoff).
     let context = datafusion::prelude::SessionContext::new();
     repark_functions::register_all(&context);
     for rule in repark_functions::analyzer_rules() {
@@ -28,10 +27,6 @@ fn expr_sql_substr_zero_matches_spark() {
     );
 }
 
-/// Two- and three-argument `substr` calls use the Spark-compatible UDF.
-///
-/// The analyzer must rewrite the three-argument form as that UDF, so zero-based slicing
-/// matches SQL (`'hello'` pos0 len3 → `'he'`).
 #[test]
 fn call_scalar_substr_zero_matches_spark() {
     use datafusion::arrow::array::StringArray;
@@ -66,7 +61,6 @@ fn call_scalar_substr_zero_matches_spark() {
         "call_scalar substr pos0 len3 must be Spark 'hel' (not DF 'he'); expr={:?}",
         column.expr()
     );
-    // Negative start from end: substr('hello', -3, 2) → 'll'
     let neg = PyColumn::call_scalar(
         "substr",
         vec![
@@ -89,14 +83,11 @@ fn call_scalar_substr_zero_matches_spark() {
     assert_eq!(array_neg.value(0), "ll");
 }
 
-/// The handoff expression must carry its post-analysis type so the logical schema matches
-/// executed buffers. Integer division `5/2` must remain `Float64` through the handoff.
 #[test]
 fn expr_sql_integer_division_hands_off_float64() {
     use datafusion::arrow::array::Float64Array;
 
     let column = PyColumn::sql("5/2").expect("parse");
-    // Consumer context is a *different* SessionContext (mirrors F.expr → spark DF handoff).
     let context = datafusion::prelude::SessionContext::new();
     repark_functions::register_all(&context);
     for rule in repark_functions::analyzer_rules() {

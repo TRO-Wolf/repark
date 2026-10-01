@@ -3,18 +3,15 @@ use pyo3::prelude::*;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-/// The Spark session must install both the Spark extension and dialect.
 #[test]
 fn spark_doored_session_resolves_spark_function_and_routes_spark_statement() {
     Python::attach(|py| {
         let session =
             PyReparkSession::new(py, None, None, None, None, None).expect("session builds");
 
-        // (1) Spark function registry is installed: a Spark-only name resolves and evaluates.
         let frame = session
             .sql(py, "SELECT weekofyear(DATE '2021-01-01') AS w")
             .expect("a Spark-only function resolves — SparkExtension installed the registry");
-        // Arrow path, not `show`: value AND type are the claim (docs/testing.md).
         let batches = frame
             .runtime_handle()
             .block_on(frame.inner().clone().collect())
@@ -30,7 +27,6 @@ fn spark_doored_session_resolves_spark_function_and_routes_spark_statement() {
             "weekofyear must carry SPARK's ISO week-year semantics, not a DataFusion default"
         );
 
-        // (2) Spark statement router is installed: a Spark-only statement reaches its refusal.
         let sql = "MERGE INTO t USING s ON t.id = s.id WHEN MATCHED THEN DELETE OUTPUT d.*";
         let Err(routed) = session.sql(py, sql) else {
             panic!("MERGE OUTPUT is a loud router refusal, not a plan")
@@ -47,7 +43,6 @@ fn spark_doored_session_resolves_spark_function_and_routes_spark_statement() {
     });
 }
 
-/// Native door: `PyReparkSession::native` must NOT install the Spark extension or dialect.
 #[test]
 fn native_session_is_not_spark_doored() {
     Python::attach(|py| {
@@ -84,13 +79,11 @@ fn native_session_is_not_spark_doored() {
     });
 }
 
-/// `read_excel` keeps its port-pin name, arity, and defaults and refuses loudly.
 #[test]
 fn read_excel_refuses_with_named_unsupported_operation() {
     Python::attach(|py| {
         let session =
             PyReparkSession::new(py, None, None, None, None, None).expect("session builds");
-        // `PyDataFrame` is not `Debug`; pattern-match the error arm instead of `expect_err`.
         let Err(error) = session.read_excel(py, "/tmp/never-opened.xlsx", None) else {
             panic!("the excel reader is deferred post-milestone-one — it must not return a frame")
         };
@@ -118,7 +111,6 @@ fn read_excel_refuses_with_named_unsupported_operation() {
     });
 }
 
-/// `excel_sheet_names` refuses with its own named surface.
 #[test]
 fn excel_sheet_names_refuses_with_named_unsupported_operation() {
     Python::attach(|py| {
@@ -140,7 +132,6 @@ fn excel_sheet_names_refuses_with_named_unsupported_operation() {
     });
 }
 
-/// The nine-argument JDBC refusal must not echo the connection URL or the properties map.
 #[test]
 fn read_postgres_refuses_with_named_unsupported_operation() {
     Python::attach(|py| {
@@ -186,7 +177,6 @@ fn read_postgres_refuses_with_named_unsupported_operation() {
     });
 }
 
-/// A Rust panic through a fenced Python method surfaces as base `PySparkException`.
 #[test]
 fn fenced_panic_surfaces_as_pyspark_exception_and_leaves_session_usable() {
     Python::attach(|py| {
@@ -196,7 +186,6 @@ fn fenced_panic_surfaces_as_pyspark_exception_and_leaves_session_usable() {
         )
         .expect("pyclass instantiates");
 
-        // Drive the panic through real Python dispatch so PyO3's trampoline is in the loop.
         let error = session
             .call_method0(py, "panic_probe")
             .expect_err("the probe deterministically panics through the fence");
@@ -218,7 +207,6 @@ fn fenced_panic_surfaces_as_pyspark_exception_and_leaves_session_usable() {
             "the panic text is preserved under the internal-error framing: {message}"
         );
 
-        // Interpreter alive + the SAME session still usable after the fenced panic.
         let frame = session
             .borrow(py)
             .sql(py, "SELECT 1 AS n")
@@ -233,7 +221,6 @@ fn fenced_panic_surfaces_as_pyspark_exception_and_leaves_session_usable() {
 
 #[test]
 fn sequential_sessions_share_one_tokio_runtime() {
-    // Two sequential constructors must share one process-wide Tokio runtime.
     Python::attach(|py| {
         let first = PyReparkSession::new(py, None, None, None, None, None).expect("first session");
         let second =
@@ -245,7 +232,6 @@ fn sequential_sessions_share_one_tokio_runtime() {
     });
 }
 
-/// Collects the `family` field from a `py.entry` span.
 struct FamilyFieldVisitor<'a> {
     family: &'a mut String,
 }
@@ -304,7 +290,6 @@ where
     }
 }
 
-/// Entry-point families emit `py.entry` spans with the family and operation fields.
 #[test]
 fn entry_point_families_emit_py_entry_spans() {
     use std::fs;
@@ -336,9 +321,7 @@ fn entry_point_families_emit_py_entry_spans() {
             PyReparkSession::new(py, None, None, None, None, None).expect("session builds");
         let frame = session.sql(py, "SELECT 1 AS n").expect("sql plans");
         assert_eq!(frame.count(py).expect("count"), 1);
-        // py.read: span opens before the body fails (missing path) — family still recorded.
         let _ = session.read_parquet(py, "/nonexistent/obs1-family-pin.parquet");
-        // py.catalog: memory catalog registration (AWS-free).
         session
             .register_memory_catalog(py, "obs1_mem", &warehouse_str)
             .expect("memory catalog registers");

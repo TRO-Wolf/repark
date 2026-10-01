@@ -1,7 +1,6 @@
 use datafusion::logical_expr::Expr;
 use pyo3::prelude::*;
 
-/// A Python-facing immutable DataFusion expression.
 #[pyclass(name = "PyColumn", module = "repark._native", from_py_object)]
 pub struct PyColumn {
     pub(super) expr: Expr,
