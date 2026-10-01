@@ -667,7 +667,10 @@ PROVEN. The full facade suite on the same wheel runs 13,966 passed,
 Release A/B (head vs `a53118a6` wheels,
 `CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16`, 5 fresh processes per
 side, medians): import_session 0.9805, select1 1.0198, filter_count
-0.9718 — max 1.0198, under the 1.05 bar.
+0.9718 — max 1.0198, under the 1.05 bar. Re-measured on the final
+32 MiB code (`692169b5` wheel vs the same `d415da76` base wheel,
+2026-10-01): import_session 1.0355, select1 1.0224, filter_count
+1.0156 — max 1.0355, under the 1.05 bar.
 
 DIFF-PROBE replay (305 recorded statements on the new head): 0
 regressions — one appid noise cell and one `collect_set` order flip
@@ -694,4 +697,10 @@ then frozen, threads parked in futex). The 64 MiB dates to f958d1a8
 recursion needs the headroom), so the shared runtime moves to 32 MiB:
 the pin holds, the spill cells pass in 33 s, and the deep battery
 re-runs green: 24/24 in 1858 s on the final 32 MiB code (2026-10-01).
-Release A/B re-measures on the final code.
+Release A/B re-measured on the final code (max 1.0355, under the 1.05
+bar; see above). Full `gate.sh` on the final code: all 16 steps exit
+0 — comment ban 0, repark-core lib, clippy, panic ban, fmt, lib-rs,
+rust-file-size, lib-py, develop, `test_deep_filter_chain_crash_1`
+(62 passed, 818 s),
+ruff check, ruff format, parity harness (785 passed, 795 s),
+ledger-grammar, docs-links, map-sync — GATE GREEN (2026-10-01).
