@@ -322,27 +322,45 @@ uppercase columns, exact and missing case-sensitive refs, and an ambiguous
 arm unjudging a VALUES position elsewhere; the quoted-case test now pins the
 repair instead of the retry.
 
-**Open (halted for a ruling).** R2's `string(tsc)` bullet prescribes giving
-the arm planner the session's full registry, but the session registry itself
-lacks `string`: `SELECT string(1)` raises UNRESOLVED_ROUTINE on this head,
-datafusion-spark 54.1.0 ships no `string` UDF, and no RePark shim registers
-one. R1 already routes the arm through the identical session state, so the
-prescribed mechanism cannot resolve it. The cell keeps its fold-3
-UNRESOLVED_ROUTINE (Spark: CANNOT_SAFELY_CAST); the recommended disposition
-is the verifier's: ledger as an S3 class gap owned by function coverage.
-Its siblings (`timestamp()`, `current_user()`, and the other
-UNRESOLVED_ROUTINE attack5 fn cells) share the cause.
+**Ruled gap (orchestrator ruling 2026-09-30 on the fold-4 halt).** R2's
+`string(tsc)` bullet prescribed giving the arm planner the session's full
+registry, but the session registry itself lacks `string`: `SELECT string(1)`
+raises UNRESOLVED_ROUTINE on this head, datafusion-spark 54.1.0 ships no
+`string` UDF, and no RePark shim registers one. R1 already routes the arm
+through the identical session state, so the prescribed mechanism cannot
+resolve it. Recorded here as an S3 class gap owned by function coverage; the
+orchestrator files the card. No shim and no gate carve-out were added. The
+cell keeps its fold-3 UNRESOLVED_ROUTINE (Spark: CANNOT_SAFELY_CAST). Its
+siblings (`timestamp()`, `current_user()`, and the other UNRESOLVED_ROUTINE
+attack5 fn cells) share the cause.
 
 **Carried (orchestrator cards, same on base).** VT4-2: a quoted CTE name
 whose case differs from an unquoted reference resolves to the temp view in a
 case-insensitive session. VT4-3: the `PARTITION (p)` and `PARTITION (p='v')`
 INSERT INTO doors carry the facade CTE rewrite. `fail/unresolved_star`
 raises an unclassified "table not found" rather than
-TABLE_OR_VIEW_NOT_FOUND.
+TABLE_OR_VIEW_NOT_FOUND. `into/r1/lower_def_q_upper_ref` (a quoted
+uppercase CTE reference to a lowercase CTE definition) now reports the
+statement's own unclassified `table datafusion.public.XV not found`,
+byte-identical to base, instead of the previous head's gate-masked
+CANNOT_SAFELY_CAST: the R1 unjudge unmasks a statement-level
+quoted-CTE-name resolution gap in the VT4-2 family. Lax-equal, strict move
+toward base, probe-neutral.
 
-**Proof.** The round hand-back records the mutation runs (M-R1 raw plan plus
-retry, M-R2 ambiguity without the stand-down, each reverting clean), the
-replay into `reverify3-tsd-fold/`, and the perf table.
+**Proof (2026-09-30, head `aa1b0bb3`).** Mutations, each reverting clean:
+M-R1 (raw plan plus retry) reds the 3 VT4-1 fold4 tests and the 3 R1 unit
+pins; M-R2 (ambiguity without the stand-down) reds the ambiguity unit pin
+and the ambiguity fold4 test. Replay into `reverify3-tsd-fold/` (probe and
+probe5 harnesses, every child under `ulimit -v 67108864`): attack5/attack6/
+attack7 plus the 16-set replay, 2,810 cells — 0 lax moves against
+`dc72ab08`, 0 new false stores against `b9f2eac6` and base, the 20
+re-verify-1 targets unmoved; the 36 VT4-1 cells move toward Spark, 6 cells
+move strict-toward Spark (4 UNRESOLVED_COLUMN, 2 AMBIGUOUS_REFERENCE), 1
+cell moves strict-toward base (the unmasked CTE cell above). Perf, medians
+of 3: probe200 3.558s/2.622s = 1.357x against a base 3.269s/2.490s =
+1.313x, gate-attributable 1.034x; probe400 9.909s/7.581s = 1.307x against
+a base 9.115s/6.865s = 1.328x, gate-attributable 0.984x. `bash gate.sh` is
+GREEN on the docs head.
 
 ## Coverage
 
