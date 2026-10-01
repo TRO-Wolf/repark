@@ -8,7 +8,7 @@ use crate::column::expr_build::{parse_canonical_predicate, parse_canonical_predi
 use crate::dataframe::PyDataFrame;
 use crate::datafusion_to_py_err;
 use crate::fence::fenced;
-use repark_core::frame_names::{NameRule, Resolution};
+use repark_core::frame_names::{NameRule, Resolution, SortShape};
 use repark_functions::case_sensitive::spark_case_sensitive_from_options;
 
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -16,13 +16,16 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(attribute_ids, module)?)?;
     module.add_function(wrap_pyfunction!(attribute_copies, module)?)?;
     module.add_function(wrap_pyfunction!(attribute_copy_name, module)?)?;
+    module.add_function(wrap_pyfunction!(bind_free_names, module)?)?;
     module.add_function(wrap_pyfunction!(drop_frame_columns, module)?)?;
     module.add_function(wrap_pyfunction!(frame_case_sensitive, module)?)?;
     module.add_function(wrap_pyfunction!(frame_is_relation, module)?)?;
+    module.add_function(wrap_pyfunction!(grandchild_key_status, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_join_condition, module)?)?;
     module.add_function(wrap_pyfunction!(requalify_join_sides, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_display_name, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_frame_names, module)?)?;
+    module.add_function(wrap_pyfunction!(sort_child_shape, module)?)?;
     module.add_function(wrap_pyfunction!(stamp_attribute_ids, module)?)?;
     module.add_function(wrap_pyfunction!(strip_attribute_ids, module)?)?;
     Ok(())
@@ -211,6 +214,69 @@ fn resolve_frame_names(frame: &PyDataFrame, names: Vec<String>) -> PyResult<Vec<
         )
         .map_err(datafusion_to_py_err)
     })
+}
+
+#[allow(clippy::missing_errors_doc)]
+#[pyfunction]
+#[pyo3(signature = (frame, column, displays, exact, for_sort))]
+pub(crate) fn bind_free_names(
+    frame: &PyDataFrame,
+    column: &PyColumn,
+    displays: Vec<String>,
+    exact: bool,
+    for_sort: bool,
+) -> PyResult<PyColumn> {
+    fenced!("dataframe_names.bind_free_names", {
+        let prepared = column
+            .expr()
+            .resolve_lambda_variables(frame.inner().schema())
+            .map_err(datafusion_to_py_err)?
+            .data;
+        let bound = repark_core::frame_names::bind_free_names(
+            prepared,
+            frame.inner().logical_plan(),
+            NameRule::from_case_sensitive(exact),
+            &displays,
+            for_sort,
+        )
+        .map_err(datafusion_to_py_err)?;
+        Ok(PyColumn::from_expr(bound))
+    })
+}
+
+#[allow(clippy::missing_errors_doc)]
+#[pyfunction]
+#[pyo3(signature = (frame, written, exact))]
+pub(crate) fn grandchild_key_status(
+    frame: &PyDataFrame,
+    written: &str,
+    exact: bool,
+) -> PyResult<String> {
+    fenced!("dataframe_names.grandchild_key_status", {
+        let status = repark_core::frame_names::grandchild_key(
+            frame.inner().logical_plan(),
+            written,
+            NameRule::from_case_sensitive(exact),
+        )
+        .map_err(datafusion_to_py_err)?;
+        Ok(match status {
+            None => "not-applicable",
+            Some(Resolution::Bound(_)) => "bound",
+            Some(Resolution::Ambiguous(_)) => "ambiguous",
+            Some(Resolution::Missing) => "missing",
+        }
+        .to_string())
+    })
+}
+
+#[pyfunction]
+pub(crate) fn sort_child_shape(frame: &PyDataFrame) -> String {
+    match repark_core::frame_names::sort_shape(frame.inner().logical_plan()) {
+        SortShape::Project => "project",
+        SortShape::Aggregate => "aggregate",
+        SortShape::Other => "other",
+    }
+    .to_string()
 }
 
 #[allow(clippy::missing_errors_doc)]

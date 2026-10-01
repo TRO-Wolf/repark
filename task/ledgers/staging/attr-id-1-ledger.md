@@ -294,3 +294,30 @@ whole landed unit and needs a full separate build). All three head runs repeat
 5252 diffs / 0 moved away / 3925 FIXED; the quoted-guard amend restored the
 s3a-3 answers cell-for-cell (only nondet row-order/candidate-case noise differs
 run to run).
+
+## Round S3b (2026-10-01)
+
+**Model:** muse-spark-1.3-contributor (S3b executor, guided).
+**Work order:** `/tmp/oc-worker/direct/wo/attr-id-1-design.md` S3 with
+`/tmp/oc-worker/direct/wo/attr-id-1-s3b-filter-sort.md`: `filter(str)` /
+`where(str)`, `filter(Column)` and `orderBy` / `sort` (string names and parent
+Columns) bind through the S1 `resolve` under the live session rule; the
+family's helpers are deleted in the same commit.
+
+| Clause | Statement | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-025 | The S3b cutover: `filter` (both arms) and `_sort_specs` bind through `column_fields` (`_rebind_free_names`, `_quote_filter_sql_identifiers`, `_bind_sort_key`) over the new `frame_names::sort_names` (`sort_shape`, `grandchild_key`, `bind_free_names`, bound via `dataframe_names.rs`). One id binds; several refuse (`AMBIGUOUS_REFERENCE` on filter, oldest id on a Project sort, `UNRESOLVED_COLUMN` elsewhere); a miss passes through, a sort miss tries the join grandchild first. No exact-preference on either door: an exact spelling among folded rivals refuses, as live Spark does. Deleted in the same commit: `_quote_filter_ident_token`, `_quote_filter_idents_in_fragment`, `DataFrame._quote_filter_sql_identifiers`, `_SQL_LITERAL_KEYWORDS` (the set re-homed in `column_fields`). | The 22 facade pins under both case rules; the 15 Rust pins; the resolve-skip mutation killing the 4 filter pins; the pre-existing `test_filter_predicate_rewrite.py` suite green (it caught the first cut's exact-preference and the dropped literal skip); three S0 replays with 0 cells moved away from Spark, `r2` twinjoin_filt and `r3` ob_agg_max closed, and the 44-file neighbour sweep green. | PROVEN (pins + mutation; replay lands in the hand-back) | `python/repark/tests/test_attr_id_1_s3b.py`; `crates/repark-core/src/session/tests/attr_id_s3b.rs`; `crates/repark-core/src/session/df_guards/sort_names.rs`; `python/repark/src/repark/spark/column_fields.py` `_rebind_free_names`, `_resolve_sort_name`, `_bind_sort_key`, `_bind_filter_token`; replays land in the hand-back. |
+| C-026 | Grep proof that each deleted helper had no caller outside the family: `_quote_filter_ident_token`, `_quote_filter_idents_in_fragment` and `_SQL_LITERAL_KEYWORDS` appear only in `core.py` (deleted), the frozen surface `_dfcore_1_expected.py` (mirror updated in the same commit), and `test_filter_predicate_rewrite.py` docstrings (homes repointed); `DataFrame._quote_filter_sql_identifiers` appears only in `core.py` (deleted method, one docstring repointed) and the same test docstrings. | The grep output recorded at commit time; `test_dfcore_1_exports.py` green. | PROVEN | Commit grep; `python/repark/tests/test_dfcore_1_exports.py` 10 passed. |
+
+**S3b first-cut halt (2026-10-01, self-caught before commit).** The first cut
+carried an exact-preference on both filter doors (`exact_hits or folded_hits`
+in `_bind_filter_token`, `exact_hit` in the Rust walker) and dropped the
+`_SQL_LITERAL_KEYWORDS` skip and the actual-spelling ambiguity echo. The
+pre-existing `test_filter_predicate_rewrite.py` suite went 13 red: exact
+spellings among case twins bound instead of refusing (str and Column doors),
+`true` / `false` / `null` bound to same-named columns, and the message shape
+pin failed. The cited `wcV` / `caseF` cells never needed the preference: `caseF`
+is `select("id", "v", F.col("V"))` (one attribute under two displays, so the
+pure rule binds) and `wcV` carries a single `V`. Fix in the same round: the
+pure resolve rule on both doors, the keyword skip and the actual-spelling echo
+restored, the two pins that encoded the preference rewritten to the live rule.

@@ -16,6 +16,7 @@ use crate::extension::SessionExtension;
 
 pub(crate) mod attr_id;
 pub mod case_bind;
+pub(crate) mod sort_names;
 pub(super) mod subquery;
 mod window_rescan;
 

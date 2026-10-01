@@ -48,6 +48,19 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   two distinctly stamped frames, and a field-less `EmptyRelation`. Each shape asserts the
   predicate's answer and that `stamp` returns the plan unchanged exactly when the predicate
   reads stamped. pins: attr-id-1/C-023
+- `attr_id_s3b.rs` — **ATTR-ID-1 S3b (2026-10-01):** the filter/sort binder
+  pins, 15 tests on tagged `MemTable` frames (`alias_with_metadata` ids, no
+  facade). `sort_shape` over a union, a join, an aggregate, a select through a
+  filter, a stamp passthrough, and a scratch-relation join-select (which skips
+  to the join); `grandchild_key` binding a shared using-key id, refusing
+  folded rivals, missing an absent name, and declining a non-Projection root;
+  `bind_free_names` rewriting a display to its engine field, refusing an
+  ambiguity with an exact spelling present on the filter path, binding the
+  oldest id on a Project sort, refusing unresolved on a join sort, leaving a
+  miss and a qualified token untouched, and binding the outer query of
+  `Exists`/`InSubquery` without entering the subplan. Mutation: skipping
+  `resolve` on the filter path reds the 4 filter pins and leaves the 11
+  sort/shape pins green. pins: attr-id-1/C-025
 - `attr_id_seam.rs` — **ATTR-ID-1 S2b (2026-09-30):** the logical/physical seam. A core
   session's optimizer starts with `repark_strip_attribute_ids` and its analyzer does not carry
   it, so an analyzed plan (the Spark SQL door's eager analysis) keeps its ids. An Aggregate

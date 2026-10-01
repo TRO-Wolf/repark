@@ -249,6 +249,24 @@ wrapped optimizer rule) and declares this directory.
   pins: attr-id-1/C-011, C-009
   **ATTR-ID-1 S3a (2026-09-30):** `alias_with_fresh_id` joins the `frame_names`
   re-export beside `strip`. pins: attr-id-1/C-024
+  **ATTR-ID-1 S3b (2026-10-01):** re-exports `SortShape`, `sort_shape`,
+  `grandchild_key` and `bind_free_names` from `sort_names.rs`; `Hit`,
+  `ambiguous_reference` and `unresolved_column` widen to `pub(crate)` for the
+  walker. 999 lines. pins: attr-id-1/C-025
+- `sort_names.rs` — **ATTR-ID-1 S3b (2026-10-01):** the filter/sort free-name
+  binder over the S1 `resolve`. `sort_shape` descends Filter/Sort/Limit/
+  Repartition/Distinct/SubqueryAlias and transparent Projections (a passthrough,
+  or a join-select whose every column carries a scratch relation) and answers
+  `Project`, `Aggregate` or `Other`. `grandchild_key` resolves one written name
+  against the join schema below a Projection root (`None` on any other root or
+  with no join below). `bind_free_names` rewrites each unqualified `Column`
+  (qualified tokens and subquery plans pass through): one id binds the engine
+  field as an attribute reference, several refuse — `AMBIGUOUS_REFERENCE` on the
+  filter path, the oldest id on a Project sort, `UNRESOLVED_COLUMN` on any other
+  sort — and a miss passes through for the engine. No exact-preference anywhere:
+  Spark refuses an exact spelling among folded rivals on both filter doors
+  (`test_filter_predicate_rewrite.py`), and the S3a inline exact bind stays a
+  select-only rule. Pins: `../tests/attr_id_s3b.rs`. pins: attr-id-1/C-025
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside

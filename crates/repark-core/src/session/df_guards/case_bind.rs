@@ -22,10 +22,11 @@ pub use super::attr_id::{
     AttrId, Resolution, alias_with_fresh_id, attribute_ids, plan_is_relation, plan_is_stamped,
     remint_join_collisions, resolve, stamp, strip,
 };
+pub use super::sort_names::{SortShape, bind_free_names, grandchild_key, sort_shape};
 pub use super::subquery::resolve_bound_expr_with;
 pub use repark_common::names::{NameHit, NameRule};
 
-type Hit<'a> = (Option<&'a TableReference>, &'a Field);
+pub(crate) type Hit<'a> = (Option<&'a TableReference>, &'a Field);
 
 const ATTRIBUTE_MARK: Location = Location {
     line: u64::MAX,
@@ -168,7 +169,7 @@ fn sql_id(relation: Option<&TableReference>, name: &str) -> String {
         .join(".")
 }
 
-fn ambiguous_reference(column: &Column, hits: &[Hit<'_>]) -> DataFusionError {
+pub(crate) fn ambiguous_reference(column: &Column, hits: &[Hit<'_>]) -> DataFusionError {
     let mut options = hits
         .iter()
         .map(|(qualifier, _)| sql_id(*qualifier, &column.name))
@@ -184,7 +185,7 @@ fn ambiguous_reference(column: &Column, hits: &[Hit<'_>]) -> DataFusionError {
     )
 }
 
-fn unresolved_column(column: &Column, frame_schema: &DFSchema) -> DataFusionError {
+pub(crate) fn unresolved_column(column: &Column, frame_schema: &DFSchema) -> DataFusionError {
     let reference = sql_id(column.relation.as_ref(), &column.name);
     let suggestions = frame_schema
         .iter()

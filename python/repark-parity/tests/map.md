@@ -1,5 +1,7 @@
 # map — python/repark-parity/tests
 
+ATTR-ID-1 S3b (2026-10-01): CAP-1 mirror row ratcheted down with the code — `dataframe/core.py` 3921 → 3846 (the filter quoter moves to `column_fields.py`). The `check_lib_py.py` exception row moved in the same commit; no row raised. pins: attr-id-1/C-025
+
 WO CATALOG-1 (2026-09-26): the CAP-1 mirror drops the retired `catalog_config.rs` row, follows `session/tests/session.rs` 1407 → 1406, and the exception count 38 → 37. pins: catalog-1/C-006
 
 U1-MEM-LAYOUT-1 layout-r7 (2026-09-23): the CAP-1 mirror row for `crates/repark-spark/src/tests/ctas.rs` follows the Rust gate's 1357 baseline; it still named 1361 and reddened the Python job.

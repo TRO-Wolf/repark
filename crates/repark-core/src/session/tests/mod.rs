@@ -1,6 +1,7 @@
 mod a13;
 mod attr_id;
 mod attr_id_fresh;
+mod attr_id_s3b;
 mod attr_id_seam;
 mod attr_id_verify;
 mod aws_gate;

@@ -268,6 +268,26 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   No docstrings: the lane's no-comments ruling covers new private helpers; the
   contract lives here. Pins: `python/repark/tests/test_attr_id_1_s3a.py`.
   pins: attr-id-1/C-024
+  **ATTR-ID-1 S3b (2026-10-01):** the filter/sort family's one resolve rule lives
+  here too. `_rebind_free_names` funnels a filter/sort `Column` through native
+  `bind_free_names` (stamping on read, under the live session rule; a frame with
+  unicode-folded rivals keeps the legacy path, since the native rule folds
+  ASCII-only). `_bind_sort_key` binds strings through `_resolve_sort_name` and
+  parent Columns by id first (`_bind_stable_id_column`), then by stable name
+  over the same rule, then an aggregate display rebind, else the free-name
+  funnel: one id binds the engine field, several bind the oldest on a Project
+  child (`sort_child_shape`) and refuse `UNRESOLVED_COLUMN` elsewhere, and a
+  miss skips to the join grandchild (`grandchild_key_status`) before refusing.
+  `_quote_filter_sql_identifiers` keeps the old parsing (quoted-span
+  protection, the function-call lookahead) and binds each bare token through
+  `_bind_filter_token`: a literal keyword (`_SQL_LITERAL_KEYWORDS`, re-homed
+  from `dataframe/core.py`) never binds, one id quotes the engine field, several
+  raise the old `AMBIGUOUS_REFERENCE` text listing the actual display spellings,
+  and a miss or a non-unique qualified engine name stays for the engine. No
+  exact-preference on either door: an exact spelling among folded rivals
+  refuses, as live Spark does. No docstrings on the new private helpers; the
+  contract lives here. Pins: `python/repark/tests/test_attr_id_1_s3b.py`.
+  pins: attr-id-1/C-025
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
   unsupported operations fail explicitly.

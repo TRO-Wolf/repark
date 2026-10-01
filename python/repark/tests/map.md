@@ -5879,7 +5879,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_filter_predicate_rewrite.py` — **audit G2**: the SQL-string filter-predicate identifier
   rewriter. FNP-4B critic: double-quoted span is a STRING literal (renamed pin
   `test_explicitly_double_quoted_span_is_a_string_literal`). pins: fnp-4b/C-018
-  rewriter (`DataFrame._quote_filter_sql_identifiers`), pinned through BOTH entry points
+  rewriter (`column_fields._quote_filter_sql_identifiers` since ATTR-ID-1 S3b), pinned
+  through BOTH entry points
   (`.filter` and `.where`, parametrized) on the `to_arrow` path, value AND Arrow type. Four
   behaviours + their discriminators: (1) a casefold collision (`id`/`ID`) refuses **at the
   reference** — `filter("other > 0")` on that frame still runs (the over-refusal regression),
@@ -5889,7 +5890,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `year` column, and the **case-differing** shape (column `YEAR`, call `year(ts)`) is the true
   discriminator since DataFusion resolves function names case-sensitively (`"YEAR"(ts)` →
   `Invalid function`), while bare `year`/`YEAR` on the same frame still rewrites (P5C5-Q-001);
-  (3) **all three** members of `_SQL_LITERAL_KEYWORDS` keep their grammar meaning against a frame
+  (3) **all three** members of `column_fields._SQL_LITERAL_KEYWORDS` keep their grammar meaning against a frame
   that actually carries a column of that name — `["true","b"]`, `["false","b"]`, `["null","b"]` —
   each with the suppressed rewrite asserted to fail (`"true"` / `"false"` → non-boolean predicate;
   `b IS NOT "null"` → `ParseException`);
@@ -8894,3 +8895,15 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   qualified select binds one join side and a qualified miss refuses unresolved; the
   live case rule decides after creation. No module docstring: the lane's no-comments
   ruling covers the new file; the contract lives here. pins: attr-id-1/C-024
+- [test_attr_id_1_s3b.py](test_attr_id_1_s3b.py) — **ATTR-ID-1 S3b (2026-10-01):** the
+  filter/sort cutover pins, each under both case rules unless noted. `filter(str)`
+  of a one-attribute twin pair binds; of two attributes sharing a name refuses;
+  a qualified predicate binds one join side; `filter(Column)` binds the one
+  attribute and refuses the twin join; an exact spelling with a folded rival
+  follows the live rule (binds sensitive, refuses insensitive); `orderBy` by a
+  string and by a parent Column sorts a twin frame (SORT-PARENT-COLUMN-1); the
+  oldest id wins a Project dup; a join dup is unresolved; an aggregate display
+  rebinds; a missing key skips to the join grandchild when bound there; the
+  live case rule decides after creation. No module docstring: the lane's
+  no-comments ruling covers the new file; the contract lives here.
+  pins: attr-id-1/C-025

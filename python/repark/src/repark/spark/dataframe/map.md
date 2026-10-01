@@ -171,6 +171,15 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `alias` restores the parent display/engine overlay when the `SubqueryAlias` dedupes
   a display name, so resolve sees the presented names. 3973 → 3921, with the CAP-1
   mirror. pins: attr-id-1/C-024
+  ATTR-ID-1 S3b (2026-10-01): `filter` (both the `Column` and the `str` arm) and
+  `_sort_specs` route name binding through `column_fields` (`_rebind_free_names`,
+  `_quote_filter_sql_identifiers`, `_bind_sort_key`; bodies in the
+  `column_fields.py` row of the parent map). The family's helpers are deleted in
+  the same commit: `_quote_filter_ident_token`,
+  `_quote_filter_idents_in_fragment`, the `DataFrame._quote_filter_sql_identifiers`
+  method and `_SQL_LITERAL_KEYWORDS` (the set is re-homed in `column_fields`;
+  grep proof of no outside caller in the ledger). 3921 → 3846, with the CAP-1
+  mirror. pins: attr-id-1/C-025
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`

@@ -5,6 +5,8 @@ pins: column-parity-1/C-001, C-002, C-003, C-004, C-005, C-008
 
 from __future__ import annotations
 
+import functools
+import re
 from typing import Any, NoReturn
 
 from repark import _native
@@ -658,3 +660,269 @@ def _column_of(frame: Any, item: Any) -> Any:
     if isinstance(item, str):
         return _bind_resolved_name(frame, item)
     raise column_or_str_error(item)
+
+
+def _ascii_folded(text: str) -> str:
+    return "".join(chr(ord(char) + 32) if "A" <= char <= "Z" else char for char in text)
+
+
+def _frame_has_unicode_folded_rivals(displays: list[str], held: list[str | None]) -> bool:
+    groups: dict[str, list[int]] = {}
+    for position, display in enumerate(displays):
+        groups.setdefault(display.casefold(), []).append(position)
+    for positions in groups.values():
+        ids = {held[position] for position in positions if held[position] is not None}
+        rivals = {_ascii_folded(displays[position]) for position in positions}
+        if len(ids) > 1 and len(rivals) > 1:
+            return True
+    return False
+
+
+def _rebind_free_names(frame: Any, column: Any, for_sort: bool) -> Any:
+    from repark.spark.column import Column
+
+    native = frame._plan()
+    held = list(_native.attribute_ids(native))
+    if None in held:
+        frame._inner = _native.stamp_attribute_ids(frame._inner)
+        native = frame._plan()
+        held = list(_native.attribute_ids(native))
+    exact = bool(_native.session_case_sensitive(frame._session))
+    displays = list(frame.columns)
+    if not exact and _frame_has_unicode_folded_rivals(displays, held):
+        return column
+    rebound = _native.bind_free_names(native, column._inner, displays, exact, for_sort)
+    return Column(
+        rebound,
+        sort_ascending=column._sort_ascending,
+        sort_nulls_first=column._sort_nulls_first,
+        when_pairs=column._when_pairs,
+        agg_name=column._agg_name,
+        is_aggregate=column._is_aggregate,
+        is_foldable=column._is_foldable,
+        has_free_attribute=column._has_free_attribute,
+        has_ungroupable=column._has_ungroupable,
+        is_aggregate_function=column._is_aggregate_function,
+        generator=column._generator,
+        generator_cast=column._generator_cast,
+        spark_display=column._spark_display,
+        projection_name=column._projection_name,
+        stable_name=column._stable_name,
+        partition_transform=column._partition_transform,
+        sql_expr=column._sql_expr,
+        origin_plan_id=column._origin_plan_id,
+        origin_field=column._origin_field,
+        attr_id=column._attr_id,
+        join_sql_expr=column._join_sql_expr,
+        g2_range_order_names=column._g2_range_order_names,
+        window_spec=column._window_spec,
+        alias_metadata=column._alias_metadata,
+        outer=column._outer,
+    )
+
+
+def _build_sort_bound_column(
+    frame: Any, engine: str, display: str, shown: str, attr: str | None
+) -> Any:
+    from repark.spark._idents import quote_ident as _quote_ident
+    from repark.spark.column import Column
+
+    quoted = _quote_ident(engine)
+    bound = Column(
+        _native.PyColumn.column(quoted).alias(shown),
+        spark_display=shown,
+        projection_name=shown,
+        stable_name=True,
+        has_free_attribute=True,
+        origin_plan_id=frame._plan_id,
+        origin_field=display,
+        attr_id=attr,
+    )
+    bound._sql_expr = quoted
+    return bound
+
+
+def _checked_sort_position(
+    frame: Any, native: Any, engine_names: list[str], held: list[str | None], position: int
+) -> str:
+    engine_field = engine_names[position]
+    if held[position] is None and _native.frame_is_relation(native):
+        detail = f"internal error: stamped field {engine_field!r} has no attribute id"
+        raise RuntimeError(detail)
+    return engine_field
+
+
+def _resolve_sort_name(frame: Any, written: str) -> Any:
+    from repark.spark.column import Column
+
+    split = _split_written_name(written)
+    if split is None:
+        return frame._bind_schema_column(written)
+    qualifier_parts, name = split
+    if name == "*":
+        return frame._bind_schema_column(written)
+    if qualifier_parts is not None:
+        return _bind_resolved_name(frame, written)
+    native = frame._plan()
+    displays = list(frame.columns)
+    engine_names = list(_native.logical_column_names(native))
+    if len(displays) != len(engine_names):
+        return frame._bind_schema_column(written)
+    held: list[str | None] = list(_native.attribute_ids(native))
+    if None in held:
+        frame._inner = _native.stamp_attribute_ids(frame._inner)
+        native = frame._plan()
+        engine_names = list(_native.logical_column_names(native))
+        held = list(_native.attribute_ids(native))
+    exact_hits, folded_hits = _unqualified_candidates(name, displays)
+    if len(exact_hits) == 1 and not folded_hits:
+        position = exact_hits[0]
+        engine = _checked_sort_position(frame, native, engine_names, held, position)
+        return _build_sort_bound_column(frame, engine, displays[position], name, held[position])
+    exact = bool(_native.session_case_sensitive(frame._session))
+    candidates = exact_hits if exact else exact_hits + folded_hits
+    status, hits = _group_candidates(candidates, held)
+    if status == "bound":
+        position = hits[0]
+        engine = _checked_sort_position(frame, native, engine_names, held, position)
+        return _build_sort_bound_column(frame, engine, displays[position], name, held[position])
+    if status == "missing":
+        if _native.grandchild_key_status(native, name, exact) == "bound":
+            return Column(
+                _native.PyColumn.column(name),
+                spark_display=name,
+                projection_name=name,
+                stable_name=True,
+            )
+        _raise_unresolved_name(None, name, displays)
+    if written != name:
+        return frame._bind_schema_column(written)
+    if _native.sort_child_shape(native) == "project":
+        ranked = [position for position in hits if held[position] is not None]
+        position = min(ranked, key=held.__getitem__) if ranked else hits[0]
+        engine = _checked_sort_position(frame, native, engine_names, held, position)
+        return _build_sort_bound_column(frame, engine, displays[position], name, held[position])
+    _raise_unresolved_name(None, name, displays)
+
+
+def _bind_sort_key(frame: Any, item: Any) -> Any:
+    from repark.spark.column import Column
+
+    if isinstance(item, str):
+        return _resolve_sort_name(frame, item)
+    if isinstance(item, Column):
+        rebound = _bind_stable_id_column(frame, item)
+        if rebound is not None:
+            return rebound
+        if item._stable_name and (item._origin_plan_id is None or item._origin_field is None):
+            name = item._projection_name
+            if name is not None and name != "" and name != "*" and item._spark_display == name:
+                return _rewrap_with_markers(item, _resolve_sort_name(frame, name))
+        if item._is_aggregate and _native.sort_child_shape(frame._plan()) == "aggregate":
+            display = item._projection_name
+            if display is None:
+                display = item._spark_display
+            if display is not None and display != "":
+                try:
+                    bound = _resolve_sort_name(frame, display)
+                except AnalysisException:
+                    pass
+                else:
+                    return _rewrap_with_markers(item, bound)
+        return _rebind_free_names(frame, item, True)
+    raise column_or_str_error(item)
+
+
+_FILTER_TOKEN_PATTERN = re.compile(
+    r"\b([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\b(?!\s*\()"
+)
+
+_SQL_LITERAL_KEYWORDS = frozenset({"true", "false", "null"})
+
+
+def _engine_name_is_unique(engine_names: list[str], engine_field: str, exact: bool) -> bool:
+    if sum(1 for engine in engine_names if engine == engine_field) != 1:
+        return False
+    if exact:
+        return True
+    folded = engine_field.casefold()
+    return sum(1 for engine in engine_names if engine.casefold() == folded) == 1
+
+
+def _bind_filter_token(
+    match: re.Match[str],
+    *,
+    native: Any,
+    displays: list[str],
+    engine_names: list[str],
+    held: list[str | None],
+    exact: bool,
+) -> str:
+    from repark.spark._idents import quote_ident as _quote_ident
+
+    token = match.group(1)
+    parts = token.split(".")
+    name = parts[-1]
+    if len(parts) == 1:
+        if name.casefold() in _SQL_LITERAL_KEYWORDS:
+            return token
+        exact_hits, folded_hits = _unqualified_candidates(name, displays)
+        candidates = exact_hits if exact else exact_hits + folded_hits
+        if not candidates:
+            return token
+        status, hits = _group_candidates(candidates, held)
+        if status == "bound":
+            return _quote_ident(engine_names[hits[0]])
+        if status == "missing":
+            return token
+        candidates_echo = ", ".join(f"`{displays[position]}`" for position in hits)
+        detail = f"[AMBIGUOUS_REFERENCE] Reference `{token}` is ambiguous, "
+        raise AnalysisException(f"{detail}could be: [{candidates_echo}].")
+    qualifier = ".".join(parts[:-1])
+    status, hits = _native.resolve_display_name(native, name, qualifier, displays, exact)
+    if status == "bound":
+        engine_field = engine_names[hits[0]]
+        if _engine_name_is_unique(engine_names, engine_field, exact):
+            return _quote_ident(engine_field)
+        return token
+    if status == "ambiguous":
+        candidates_echo = ", ".join(f"`{token}`" for _ in hits)
+        detail = f"[AMBIGUOUS_REFERENCE] Reference `{token}` is ambiguous, "
+        raise AnalysisException(f"{detail}could be: [{candidates_echo}].")
+    return token
+
+
+def _quote_filter_sql_identifiers(frame: Any, sql: str) -> str:
+    native = frame._plan()
+    displays = list(frame.columns)
+    engine_names = list(_native.logical_column_names(native))
+    if not displays or len(displays) != len(engine_names):
+        return sql
+    held: list[str | None] = list(_native.attribute_ids(native))
+    if None in held:
+        frame._inner = _native.stamp_attribute_ids(frame._inner)
+        native = frame._plan()
+        engine_names = list(_native.logical_column_names(native))
+        held = list(_native.attribute_ids(native))
+    exact = bool(_native.session_case_sensitive(frame._session))
+    binder = functools.partial(
+        _bind_filter_token,
+        native=native,
+        displays=displays,
+        engine_names=engine_names,
+        held=held,
+        exact=exact,
+    )
+    pieces = re.split(r"('(?:[^']|'')*')", sql)
+    rebuilt: list[str] = []
+    for piece in pieces:
+        if piece.startswith("'"):
+            rebuilt.append(piece)
+            continue
+        subpieces = re.split(r'("(?:[^"]|"")*"|`(?:[^`]|``)*`)', piece)
+        for subpiece in subpieces:
+            if subpiece.startswith(('"', "`")):
+                rebuilt.append(subpiece)
+            else:
+                rebuilt.append(_FILTER_TOKEN_PATTERN.sub(binder, subpiece))
+    return "".join(rebuilt)

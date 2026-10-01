@@ -64,8 +64,6 @@ logger = logging.getLogger(__name__)
 _vertical_show_warned = False
 _STOPPED_MESSAGE = "Cannot call methods on a stopped ReparkSession"
 
-_SQL_LITERAL_KEYWORDS = frozenset({"true", "false", "null"})
-
 _SEMI_JOIN_HOWS = frozenset({"leftsemi", "leftanti"})
 
 
@@ -75,39 +73,6 @@ def _drop_mia_temp_views(session: Any, names: list[str]) -> None:
         with contextlib.suppress(Exception):
             session.drop_temp_view(view_name)
     names.clear()
-
-
-def _quote_filter_ident_token(
-    match: re.Match[str],
-    *,
-    columns_by_fold: dict[str, list[str]],
-) -> str:
-    """Quote one matched filter token, or return it unchanged when it names no column."""
-    token = match.group(1)
-    if token.casefold() in _SQL_LITERAL_KEYWORDS:
-        return token
-    matches = columns_by_fold.get(token.casefold())
-    if matches is None:
-        return token
-    if len(matches) > 1:
-        candidates = ", ".join(f"`{name}`" for name in matches)
-        raise AnalysisException(
-            f"[AMBIGUOUS_REFERENCE] Reference `{token}` is ambiguous, could be: [{candidates}]."
-        )
-    return _quote_ident_sql(matches[0])
-
-
-def _quote_filter_idents_in_fragment(
-    fragment: str,
-    *,
-    ident_pattern: re.Pattern[str],
-    columns_by_fold: dict[str, list[str]],
-) -> str:
-    """Quote every bare identifier in ``fragment`` that names a column of this frame."""
-    return ident_pattern.sub(
-        functools.partial(_quote_filter_ident_token, columns_by_fold=columns_by_fold),
-        fragment,
-    )
 
 
 def _emit_join_side_columns(
@@ -154,7 +119,7 @@ def _by_name_casefold_map(columns: list[str], *, surface: str) -> dict[str, str]
     Write surfaces only — the whole column list is conformed against a target schema there, so
     every name in it *is* a reference. The filter-predicate rewriter must NOT use this helper: a
     predicate references a subset of the frame, so it resolves per token
-    (:meth:`DataFrame._quote_filter_sql_identifiers`).
+    (:func:`repark.spark.column_fields._quote_filter_sql_identifiers`).
     """
     mapping: dict[str, str] = {}
     for column in columns:
@@ -1227,9 +1192,10 @@ class DataFrame:
                 if "__REPARK_QCOL_" not in local_sql:
                     return self._spawn_preserving_identity(self._plan().filter_sql(local_sql))
             predicate = self._rebind_origin_column(condition)
+            predicate = _column_fields._rebind_free_names(self, predicate, False)
             return self._spawn_preserving_identity(self._plan().filter(predicate._inner))
         if isinstance(condition, str):
-            quoted = self._quote_filter_sql_identifiers(condition)
+            quoted = _column_fields._quote_filter_sql_identifiers(self, condition)
             return self._spawn_preserving_identity(self._plan().filter_sql(quoted))
         raise PySparkTypeError(
             errorClass="NOT_COLUMN_OR_STR",
@@ -1987,47 +1953,6 @@ class DataFrame:
             origin_field=canonical,
             attr_id=_column_fields._bound_attr_id(self, engine_field),
         )
-
-    def _quote_filter_sql_identifiers(self, sql: str) -> str:
-        """Quote schema-bound identifiers in a SQL filter predicate.
-
-        DataFusion lowercases unquoted identifiers. This rewrite quotes case-insensitive
-        schema matches so case-preserved fields remain resolvable. It ignores single-quoted
-        literals and double-quoted spans.
-
-        Backtick-quoted spans pass through untouched, like double-quoted spans. The
-        rewrite never quotes their contents, so a valid Spark predicate still parses.
-
-        A case-fold collision fails only when the predicate names the ambiguous field. The
-        error lists the conflicting field names and omits Spark's SQLSTATE suffix.
-        """
-        columns = self.columns
-        if not columns:
-            return sql
-        columns_by_fold: dict[str, list[str]] = {}
-        for column in columns:
-            columns_by_fold.setdefault(column.casefold(), []).append(column)
-        ident_pattern = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\b(?!\s*\()")
-
-        pieces = re.split(r"('(?:[^']|'')*')", sql)
-        rebuilt: list[str] = []
-        for piece in pieces:
-            if piece.startswith("'"):
-                rebuilt.append(piece)
-                continue
-            subpieces = re.split(r'("(?:[^"]|"")*"|`(?:[^`]|``)*`)', piece)
-            for subpiece in subpieces:
-                if subpiece.startswith(('"', "`")):
-                    rebuilt.append(subpiece)
-                else:
-                    rebuilt.append(
-                        _quote_filter_idents_in_fragment(
-                            subpiece,
-                            ident_pattern=ident_pattern,
-                            columns_by_fold=columns_by_fold,
-                        )
-                    )
-        return "".join(rebuilt)
 
     def _rebind_stable_name_column(self, column: Column) -> Column:
         """Rebind a stable-name Column against this frame (body in column_fields)."""
@@ -3471,7 +3396,7 @@ class DataFrame:
         ascending_flags: list[bool] = []
         order_columns: list[Any] = []
         for item in cols:
-            column = self._column_of(item)
+            column = _column_fields._bind_sort_key(self, item)
             _reject_partition_transform(column)
             column._reject_nested_generator("orderBy")
             is_ascending = True if column._sort_ascending is None else column._sort_ascending
