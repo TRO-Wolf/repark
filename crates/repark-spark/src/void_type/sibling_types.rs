@@ -809,7 +809,7 @@ mod tests {
         let catalogs = CatalogRegistry::new();
         let mut statements = Parser::parse_sql(
             &GenericDialect,
-            "INSERT INTO g SELECT * FROM (VALUES (1, 'x')) AS v(a, b) UNION ALL SELECT id, UPPER(C) FROM t",
+            "INSERT INTO g SELECT * FROM (VALUES (1, 'x')) AS v(a, b) UNION ALL SELECT id, UPPER(S) FROM t",
         )
         .unwrap();
         let Statement::Insert(insert) = statements.swap_remove(0) else {
