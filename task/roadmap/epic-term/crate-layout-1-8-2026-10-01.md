@@ -1,6 +1,6 @@
 # The crate layout through 1.8 — fourteen crates, one split, four arrivals (ruled 2026-10-01)
 
-**Date:** 2026-10-01 · **Ruled by:** the owner ("I love that layout"), in discussion with a Claude session (claude-fable-5-1) · **Measured on:** `origin/main` at `db3a1f37` (v1.5.1) · **Builds on:** `task/roadmap/mid-term/crate-layout-review-2026-09-30.md` (the test-placement review, PR #896, linked once it is on main), [roadmap-design-plan-2026-08-29.md](roadmap-design-plan-2026-08-29.md) (cards 1.3, 1.6, 1.7), [unified-database-query-cdc-silver-plan-2026-09-13.md](unified-database-query-cdc-silver-plan-2026-09-13.md) (the three independent lifecycles), [deterministic-silver-layer-compiler-2026-09-12.md](deterministic-silver-layer-compiler-2026-09-12.md).
+**Date:** 2026-10-01 · **Ruled by:** the owner ("I love that layout"), in discussion with a Claude session (claude-fable-5-1) · **Measured on:** `origin/main` at `db3a1f37` (v1.5.1) · **Builds on:** [../mid-term/crate-layout-review-2026-09-30.md](../mid-term/crate-layout-review-2026-09-30.md) (the test-placement review), [roadmap-design-plan-2026-08-29.md](roadmap-design-plan-2026-08-29.md) (cards 1.3, 1.6, 1.7), [unified-database-query-cdc-silver-plan-2026-09-13.md](unified-database-query-cdc-silver-plan-2026-09-13.md) (the three independent lifecycles), [deterministic-silver-layer-compiler-2026-09-12.md](deterministic-silver-layer-compiler-2026-09-12.md).
 
 ## 1. The ruling in one table
 
