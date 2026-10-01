@@ -700,7 +700,7 @@ re-runs green: 24/24 in 1858 s on the final 32 MiB code (2026-10-01).
 Release A/B re-measured on the final code (max 1.0355, under the 1.05
 bar; see above). Full `gate.sh` on the final code: all 16 steps exit
 0 — comment ban 0, repark-core lib, clippy, panic ban, fmt, lib-rs,
-rust-file-size, lib-py, develop, `test_deep_filter_chain_crash_1`
+rust-file-size, lib-py, develop, the 5-file deep pytest step
 (62 passed, 818 s),
 ruff check, ruff format, parity harness (785 passed, 795 s),
 ledger-grammar, docs-links, map-sync — GATE GREEN (2026-10-01).
