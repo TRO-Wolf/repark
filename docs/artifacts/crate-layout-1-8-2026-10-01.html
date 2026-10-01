@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Crate Layout 1.8</title>
+<meta name="description" content="The RePark crate layout through release 1.8: fourteen crates, the repark-spark-dialect split, the 1.7 crawler and cdc crates, and the tidy window.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#f3f7f7; --surface:#ffffff; --ink:#15262a; --muted:#4d6468; --line:#cfdfe0;
+  --accent:#0f7c80; --accent-soft:#dcefef; --warn:#a65b00; --warn-soft:#fbeedd;
+  --bad:#a4262c; --bad-soft:#f8e2e3; --good:#2f6f3e; --good-soft:#e2f1e5;
+  --code-bg:#e8f0f0;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d1719; --surface:#132226; --ink:#dcebec; --muted:#93acaf; --line:#27403f;
+    --accent:#55c2c5; --accent-soft:#16383a; --warn:#e8a456; --warn-soft:#3a2a14;
+    --bad:#f0858a; --bad-soft:#3d1b1e; --good:#84c996; --good-soft:#18331f; --code-bg:#1a2d30;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d1719; --surface:#132226; --ink:#dcebec; --muted:#93acaf; --line:#27403f;
+  --accent:#55c2c5; --accent-soft:#16383a; --warn:#e8a456; --warn-soft:#3a2a14;
+  --bad:#f0858a; --bad-soft:#3d1b1e; --good:#84c996; --good-soft:#18331f; --code-bg:#1a2d30;
+  color-scheme: dark;
+}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;padding-inline:16px;padding-block:32px 64px}
+main{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:40px}
+header{display:flex;flex-direction:column;gap:10px;border-bottom:2px solid var(--accent);padding-bottom:20px}
+.eyebrow{font:500 12px/1.2 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+h1{font:600 clamp(28px,5vw,40px)/1.15 "IBM Plex Serif",Georgia,serif;margin:0;text-wrap:balance}
+h2{font:600 24px/1.25 "IBM Plex Serif",Georgia,serif;margin:0 0 12px;text-wrap:balance}
+h3{font:600 17px/1.35 "IBM Plex Sans",system-ui,sans-serif;margin:22px 0 6px;text-wrap:balance}
+p,li{max-width:68ch}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 12px;padding-left:22px}
+li{margin-bottom:6px}
+.lede{font-size:18px;color:var(--muted);margin:0}
+.meta{font:13px/1.5 "IBM Plex Mono",ui-monospace,monospace;color:var(--muted)}
+code{font:0.88em "IBM Plex Mono",ui-monospace,monospace;background:var(--code-bg);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+section{display:flex;flex-direction:column}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:8px 0 12px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.stat b{display:block;font:600 26px/1.1 "IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;color:var(--ink)}
+.stat span{font-size:13px;color:var(--muted)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:4px 0 12px}
+table{border-collapse:collapse;width:100%;min-width:620px;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:9px 12px;border-bottom:1px solid var(--line)}
+th{font:600 12px/1.3 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);background:var(--accent-soft)}
+tr:last-child td{border-bottom:none}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag{display:inline-block;font:600 11px/1 "IBM Plex Mono",ui-monospace,monospace;padding:3px 6px;border-radius:4px;white-space:nowrap;background:var(--accent-soft);color:var(--accent);margin-left:6px;vertical-align:middle}
+.tag.measured{background:var(--good-soft);color:var(--good)}
+.tag.judgement{background:var(--warn-soft);color:var(--warn)}
+.tag.rule{background:var(--bad-soft);color:var(--bad)}
+.callout{border-left:4px solid var(--accent);background:var(--surface);padding:12px 16px;border-radius:0 8px 8px 0;margin:4px 0 12px}
+.callout p:last-child{margin-bottom:0}
+.pair{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0 0 12px}
+.pair dt{font:600 12px/1.9 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.pair dd{margin:0;max-width:68ch}
+footer{border-top:1px solid var(--line);padding-top:16px}
+@media (max-width:520px){.pair{grid-template-columns:1fr}.pair dt{line-height:1.4;margin-top:6px}}
+pre{background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font:13px/1.5 "IBM Plex Mono",ui-monospace,monospace}
+pre code{background:none;padding:0}
+</style>
+
+</head>
+<body>
+<main>
+<header>
+  <div class="eyebrow">RePark · roadmap adjustment · 2026-10-01</div>
+  <h1>The crate layout through 1.8</h1>
+  <p class="lede">Fourteen crates, one split, four arrivals. The owner's ruling of 2026-10-01 after the test-placement review and the Sail-approach discussion, with the measurements behind each name.</p>
+  <p class="meta">Prepared by a Claude session (claude-fable-5-1). Measured on <code>origin/main</code> at <code>db3a1f37</code> (v1.5.1). Record of ruling: <code>task/roadmap/epic-term/crate-layout-1-8-2026-10-01.md</code>.</p>
+</header>
+<section>
+<p><strong>Date:</strong> 2026-10-01 · <strong>Ruled by:</strong> the owner ("I love that layout"), in discussion with a Claude session (claude-fable-5-1) · <strong>Measured on:</strong> <code>origin/main</code> at <code>db3a1f37</code> (v1.5.1) · <strong>Builds on:</strong> <code>task/roadmap/mid-term/crate-layout-review-2026-09-30.md</code> (the test-placement review, PR #896, linked once it is on main), <a href="roadmap-design-plan-2026-08-29.md">roadmap-design-plan-2026-08-29.md</a> (cards 1.3, 1.6, 1.7), <a href="unified-database-query-cdc-silver-plan-2026-09-13.md">unified-database-query-cdc-silver-plan-2026-09-13.md</a> (the three independent lifecycles), <a href="deterministic-silver-layer-compiler-2026-09-12.md">deterministic-silver-layer-compiler-2026-09-12.md</a>.</p>
+
+</section>
+<section>
+<h2>1. The ruling in one table</h2>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>crate</th>
+<th>tier · role</th>
+<th>owns</th>
+<th>edges down</th>
+<th>arrives</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>repark-common</code></td>
+<td>0 · foundation</td>
+<td>names, errors, shared types</td>
+<td>—</td>
+<td>shipped</td>
+</tr>
+<tr>
+<td><code>repark-iceberg</code></td>
+<td>1 · table service</td>
+<td>catalogs (Glue, S3 Tables, Postgres, memory/Hadoop; <strong>REST joins here</strong>, no separate crate), DML, maintenance over the fork</td>
+<td>common</td>
+<td>shipped</td>
+</tr>
+<tr>
+<td><code>repark-connect</code></td>
+<td>1 · table service</td>
+<td>Postgres and SQL Server providers, pushdown, pools, type maps (card 1.6)</td>
+<td>common, core</td>
+<td><strong>1.6</strong></td>
+</tr>
+<tr>
+<td><code>repark-cdc</code></td>
+<td>1 · table service</td>
+<td>logical-replication capture → Arrow → Bronze append, capture checkpoints</td>
+<td>common, iceberg, core</td>
+<td><strong>1.7</strong></td>
+</tr>
+<tr>
+<td><code>repark-io</code></td>
+<td>1 · table service</td>
+<td>smart CSV, Excel, JSON, IPC, Avro, Hive-partitioned directory discovery (card 1.3)</td>
+<td>common, core</td>
+<td><strong>1.8</strong></td>
+</tr>
+<tr>
+<td><code>repark-core</code></td>
+<td>2 · engine</td>
+<td>Session, planning, <code>df_guards</code> (ATTR-ID-1), path writes, and the <strong><code>silver/</code> module</strong>: the <code>SilverPlan</code> compiler and publication</td>
+<td>common, iceberg</td>
+<td>shipped; <code>silver/</code> at 1.7</td>
+</tr>
+<tr>
+<td><code>repark-spark-dialect</code></td>
+<td>3 · door</td>
+<td>the Spark SQL grammar: AST, normalize, keyword case, literals and literal typing, rewrites, collation, windows, <code>void</code>, the type table</td>
+<td>common, core, functions</td>
+<td>the tidy window</td>
+</tr>
+<tr>
+<td><code>repark-spark</code></td>
+<td>3 · door</td>
+<td>the router and the four command families <code>ddl/</code>, <code>dml/</code>, <code>inspect/</code>, <code>procedures/</code></td>
+<td>spark-dialect, common, core, iceberg, functions, ta</td>
+<td>shipped, reshaped in the tidy window</td>
+</tr>
+<tr>
+<td><code>repark-sql</code></td>
+<td>3 · door</td>
+<td>the ANSI door</td>
+<td>common, core, iceberg, functions, ta; <strong><code>repark-spark</code> as a dev-dependency only</strong></td>
+<td>shipped, edge corrected in the tidy window</td>
+</tr>
+<tr>
+<td><code>repark-functions</code></td>
+<td>3 · tool</td>
+<td>Spark function semantics and the cast tables</td>
+<td>—</td>
+<td>shipped</td>
+</tr>
+<tr>
+<td><code>repark-ta</code></td>
+<td>3 · tool</td>
+<td>unchanged</td>
+<td>core</td>
+<td>shipped</td>
+</tr>
+<tr>
+<td><code>repark-ml</code></td>
+<td>3 · tool</td>
+<td>unchanged</td>
+<td>—</td>
+<td>shipped</td>
+</tr>
+<tr>
+<td><code>repark-crawler</code></td>
+<td>3 · tool</td>
+<td>bounded discovery runs, profiling under a budget, the evidence store, proposed Bronze and Silver specifications and diffs</td>
+<td>common, core, connect</td>
+<td><strong>1.7</strong></td>
+</tr>
+<tr>
+<td><code>repark-distributed</code></td>
+<td>3 · runtime</td>
+<td><code>DistributedExecutor</code>, Ballista M1, feature-gated</td>
+<td>core</td>
+<td>shipped</td>
+</tr>
+<tr>
+<td><code>repark-python</code></td>
+<td>4 · bindings</td>
+<td>the thin PyO3 adapter, the only <code>unsafe</code></td>
+<td>common, core, spark, sql, functions, ta, ml</td>
+<td>shipped</td>
+</tr>
+</tbody>
+</table></div>
+<p>Every crate carries one integration binary, <code>tests/it/main.rs</code>, with one module per former test file (option 1 of the 2026-09-30 review), so <code>src/</code> holds product code only.</p>
+<pre><code>tier 4  bindings     repark-python
+
+tier 3  doors        repark-spark ──► repark-spark-dialect       repark-sql
+        tools        repark-functions   repark-ta   repark-ml   repark-crawler
+        runtime      repark-distributed
+
+tier 2  engine       repark-core  (… silver/)
+
+tier 1  services     repark-iceberg   repark-connect   repark-cdc   repark-io
+
+tier 0  foundation   repark-common
+</code></pre>
+
+</section>
+<section>
+<h2>2. Why these names</h2>
+<p><strong><code>repark-crawler</code>, <code>repark-cdc</code>, and no <code>repark-silver</code>.</strong> The unified plan rules three independent lifecycles (its §3–4, 2026-09-13): the crawler/planner is a bounded run that inspects source catalogs, optionally profiles, proposes mappings and exits, never publishing data; capture is the snapshot/CDC producer with its own checkpoint state; Silver execution compiles an accepted plan over a pinned Bronze snapshot and publishes. The crawler and the producer each get a crate because each has its own lifecycle, credentials and state. Silver execution is "a typed plan → a DataFusion plan → one publication commit", which is what <code>repark-core</code>'s Session already does for the two doors, and its S-0/S-1 foundation is chartered inside 1.5; it starts as <code>repark-core/src/silver/</code> and earns a crate only if it grows a grammar of its own. The owner's first instinct, <code>repark-silver → repark-crawler</code>, would have put the component that commits under the name of the component the plan says must not; the three-way reading keeps the plan's words.</p>
+<p><strong>Not <code>repark-streaming</code>.</strong> Capture is one producer with one checkpoint. "Streaming" names Structured Streaming, which the v1.5 parity gate carves out (ruling C-1, IPI-47) and the roadmap places at 2.2 as micro-batch change-data reads; a crate by that name at 1.7 would collect every such finding. The plan's own word is capture; <code>repark-cdc</code> is the one people search for.</p>
+<p><strong><code>repark-spark-dialect</code>, not <code>repark-spark-ddl</code>.</strong> Measured on <code>main</code>, <code>repark-spark</code> is 143k lines of Rust, of which 87k (61 %) is <code>src/tests/</code>. The product 56k falls into six families:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>family</th>
+<th>modules</th>
+<th>~lines</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>dialect</td>
+<td><code>spark_ast</code>, <code>dialect/</code>, <code>normalize</code>, <code>keyword_lower</code>, <code>spark_literals</code>, <code>spark_literal_typing</code>, <code>spark_typed</code>, <code>spark_rewrites</code>, <code>collation</code>, <code>void_type</code>, <code>type_table</code>, <code>window_range</code>, <code>time_window</code>, <code>bare_*</code>, <code>uuid_cast</code>, <code>update_cast</code>, <code>spark_tree_string</code>, <code>matrix</code>, <code>extension</code></td>
+<td>16k</td>
+</tr>
+<tr>
+<td>ddl</td>
+<td><code>create_table</code>, <code>ctas</code>, <code>alter*</code>, <code>nested_column_ddl</code>, <code>replace_columns</code>, <code>column_move</code>, <code>ref_ddl</code>, <code>namespace_ddl</code>, <code>use_ddl</code>, <code>view_ddl</code>, <code>table_props_*</code>, <code>format_version</code>, <code>sort_order_parse</code>, <code>local_fs_ddl</code>, <code>truncate</code>, <code>wap</code>, <code>write_to_branch</code>, <code>time_travel</code></td>
+<td>15k</td>
+</tr>
+<tr>
+<td>inspect</td>
+<td><code>describe_*</code>, <code>show_*</code>, <code>metadata_tables</code>, <code>catalog_ops</code></td>
+<td>5k</td>
+</tr>
+<tr>
+<td>dml</td>
+<td><code>insert_*</code>, <code>merge*</code>, <code>append_with_options</code>, <code>write_options</code></td>
+<td>8k</td>
+</tr>
+<tr>
+<td>procedures</td>
+<td><code>call/</code>, <code>call_args</code></td>
+<td>9k</td>
+</tr>
+<tr>
+<td>router</td>
+<td><code>router/</code></td>
+<td>3k</td>
+</tr>
+</tbody>
+</table></div>
+<p>DDL is one of four side-effecting families, and the router that dispatches to all four would have to sit in the crate that depends on the pulled-out one. So the extraction goes the other way: the dialect (parse, normalize, type; no catalog, no side effects, no <code>repark-iceberg</code> edge) moves <em>below</em> into <code>repark-spark-dialect</code>, and <code>repark-spark</code> keeps its name, its <code>_native</code> binding and every <code>cargo test -p repark-spark</code> filter, reorganised as <code>router/ ddl/ dml/ inspect/ procedures/</code>. The dialect is also the part a Spark Connect analyzer would need at 1.12. "Dialect" is the word ARCHITECTURE.md already uses ("each door keeps its own grammar") and the <code>dialect/</code> module already exists. Had the commands been the extracted half, Spark's own word is <code>commands</code> (<code>RunnableCommand</code>, <code>execution/command/</code>), never <code>ddl</code>.</p>
+<p><strong>No <code>repark-functions</code> split.</strong> 74k lines, but the families are already directory-grouped and share the cast tables; grouping the flat root (option 3 of the review) is enough.</p>
+
+</section>
+<section>
+<h2>3. What the measurement surfaced, and what the layout fixes</h2>
+<ol>
+<li><strong><code>repark-sql</code> → <code>repark-spark</code> is a product edge today</strong> (<code>crates/repark-sql/Cargo.toml:59</code>) whose every use is in <code>tests/</code> (<code>SparkDialect</code>, <code>SparkExtension</code> for the cross-door two-session protocol) plus two fixture paths that join <code>../repark-spark/src/tests/fixtures</code>. ARCHITECTURE.md says the doors share nothing above tier 1. The edge becomes <code>[dev-dependencies]</code>, and the fixture paths move with the <code>tests/it/</code> unit, which must carry them: a hard-coded join into another crate's <code>src/tests</code> breaks silently when that directory moves.</li>
+<li><strong><code>scripts/check_crate_dag.py</code> declares six edges; the <code>Cargo.toml</code> files carry fourteen.</strong> <code>repark-spark → iceberg / functions / ta / common</code>, <code>repark-sql → every lower crate</code>, and <code>repark-python → *</code> are undeclared. The table is trued up in the tidy window before any new crate adds a row, so the gate enforces the rule it states.</li>
+<li><strong><code>repark-functions</code> depends on nothing.</strong> <code>repark-spark-dialect</code> will depend on it for typing. That is the right direction; nothing in functions ever imports the dialect.</li>
+<li><strong><code>repark-exec</code></strong> in PROJECT.md's crate list never materialised; its concerns live in <code>repark-core</code>. It is struck from the list, not built (PROJECT.md edit for the owner).</li>
+</ol>
+
+</section>
+<section>
+<h2>4. What stays out until after 1.8</h2>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>not a crate before 1.8</th>
+<th>why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>repark-silver</code></td>
+<td>a <code>repark-core</code> module until it earns a grammar (§2)</td>
+</tr>
+<tr>
+<td><code>repark-api</code></td>
+<td>an internal-API crate with one caller is a boundary nobody tests; it is cut when the second caller exists (the 1.12 server, or earlier if the migration scorecard re-opens the order — Q&amp;A row 2026-10-01)</td>
+</tr>
+<tr>
+<td><code>repark-server</code>, <code>repark-server-spark-connect</code>, <code>repark-cli</code></td>
+<td>1.12 (card 1.8 of the design plan)</td>
+</tr>
+<tr>
+<td><code>repark-streaming</code></td>
+<td>§2</td>
+</tr>
+<tr>
+<td>a REST catalog crate</td>
+<td>the fork's <code>iceberg-catalog-rest</code> does the protocol; <code>repark-iceberg</code> gets a <code>CatalogKind::Rest</code> arm beside Glue and S3 Tables</td>
+</tr>
+<tr>
+<td><code>repark-exec</code></td>
+<td>struck (§3.4)</td>
+</tr>
+</tbody>
+</table></div>
+
+</section>
+<section>
+<h2>5. The tidy window and its units</h2>
+<p>The window is <strong>after the v1.5.2 merge queue drains and before the first 1.6 connector unit opens</strong>: every unit is a pure move, and the cost of a move is merge conflicts with in-flight branches, so it runs when few are open. Each unit is a clerk-tier Muse round (moves, no logic), gated by an identical <code>cargo test -p &lt;crate&gt;</code> count before and after, <code>scripts/check_rust_file_size.py</code> with its <code>EXCEPTIONS</code> table re-keyed, map.md lockstep, and the DAG gate. Relocated code sheds its comments (the 2026-09-18 comment-gate ruling). No DIFF-PROBE or Opus verifier on a pure-move unit: the test-count match and the gates are the whole proof, and an Opus pass on a move has no catch rate behind it.</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>unit</th>
+<th>what moves</th>
+<th>carries</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T-1</td>
+<td><code>tests/it/</code> for <code>repark-spark</code></td>
+<td>87k lines of <code>src/tests/</code> into one binary, one module per former file; fixtures to <code>tests/fixtures/</code></td>
+<td>the two <code>repark-sql</code> fixture joins; every <code>--test &lt;name&gt;</code> filter in briefs, gates and CI becomes a module filter</td>
+</tr>
+<tr>
+<td>T-2</td>
+<td><code>tests/it/</code> for <code>repark-iceberg</code>, <code>repark-core</code>, then the rest</td>
+<td>same shape</td>
+<td>the <code>EXCEPTIONS</code> rows for <code>dynamic_flatten/tests.rs</code> and <code>catalog/tests/catalog.rs</code></td>
+</tr>
+<tr>
+<td>T-3</td>
+<td>the <code>repark-sql</code> Spark edge to <code>[dev-dependencies]</code>; the DAG table trued up to the fourteen real edges</td>
+<td>one <code>Cargo.toml</code> line, one gate table</td>
+<td>ARCHITECTURE.md's tier map names the dev-only edge</td>
+</tr>
+<tr>
+<td>T-4</td>
+<td><code>repark-spark</code> directories <code>router/ ddl/ dml/ inspect/ procedures/</code></td>
+<td>the modules of §2's table, <code>use</code> paths, five <code>map.md</code> files</td>
+<td>nothing else</td>
+</tr>
+<tr>
+<td>T-5</td>
+<td>extract <code>repark-spark-dialect</code></td>
+<td>the dialect directory becomes a crate; <code>repark-spark</code> imports it; a DAG row; a workspace member</td>
+<td>the version bump mechanics name a new member</td>
+</tr>
+</tbody>
+</table></div>
+<p>The <code>#[path]</code> rule question from the 2026-09-30 review (allow <code>#[path]</code> for a <code>#[cfg(test)]</code> child module and nothing else, or keep the directories) needs its one-line answer before T-1, since T-1 decides whether the single-file test directories survive the move.</p>
+<p>Then 1.6 opens with <code>repark-connect</code> on a clean DAG; 1.7 adds <code>repark-crawler</code>, <code>repark-cdc</code> and <code>repark-core/src/silver/</code>; 1.8 adds <code>repark-io</code>.</p>
+
+</section>
+<section>
+<h2>6. Decisions recorded</h2>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>id</th>
+<th>decision</th>
+<th>status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CL-1</td>
+<td><code>repark-crawler</code> (tier 3 tool) and <code>repark-cdc</code> (tier 1 service) are the 1.7 crates; Silver execution is <code>repark-core/src/silver/</code></td>
+<td><strong>ruled 2026-10-01</strong></td>
+</tr>
+<tr>
+<td>CL-2</td>
+<td>no <code>repark-streaming</code>; the producer crate is <code>repark-cdc</code></td>
+<td><strong>ruled 2026-10-01</strong></td>
+</tr>
+<tr>
+<td>CL-3</td>
+<td>the <code>repark-spark</code> split extracts the dialect below as <code>repark-spark-dialect</code>; <code>repark-spark</code> keeps its name and gains <code>router/ ddl/ dml/ inspect/ procedures/</code></td>
+<td><strong>ruled 2026-10-01</strong></td>
+</tr>
+<tr>
+<td>CL-4</td>
+<td>the tidy window is post-v1.5.2 queue drain, pre-1.6; units T-1…T-5, clerk tier, no verifier on pure moves</td>
+<td><strong>ruled 2026-10-01</strong></td>
+</tr>
+<tr>
+<td>CL-5</td>
+<td><code>repark-sql → repark-spark</code> becomes dev-only; the DAG table is trued up</td>
+<td><strong>ruled 2026-10-01</strong></td>
+</tr>
+<tr>
+<td>CL-6</td>
+<td>the <code>#[path]</code> rule for <code>#[cfg(test)]</code> children</td>
+<td><strong>open</strong> — one line from the owner before T-1</td>
+</tr>
+<tr>
+<td>CL-7</td>
+<td>strike <code>repark-exec</code> from PROJECT.md's crate list</td>
+<td><strong>open</strong> — PROJECT.md is the owner's file</td>
+</tr>
+</tbody>
+</table></div>
+
+</section>
+<section>
+<h2>Leaves this directory when</h2>
+<p>T-1…T-5 have merged and ARCHITECTURE.md's tier map shows the fourteen crates with their declared edges; then this file is the dated record and the design plan's cards 1.3, 1.6 and 1.7 name the homes above.</p>
+</section>
+<footer><p class="meta">Pure moves, clerk tier, test-count gate. Open: CL-6 the <code>#[path]</code> rule, CL-7 the PROJECT.md crate list.</p></footer>
+</main>
+</body></html>

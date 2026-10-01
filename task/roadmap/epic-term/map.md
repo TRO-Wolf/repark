@@ -83,7 +83,13 @@ is now the epic list from v0.6 through 3.0 (v0.7–v0.10 shifted to 1.1–1.4 wh
   torture suite, Never-OOM, and `repark.toml`; 1.5–1.13 (was 1.1–1.9) are parity, connectors,
   dbt and the Spark Connect server;
   2.x is Flight SQL + the API freeze, then maintenance policy, change-data reads, CDC ingestion,
-  MVs, observability, Substrait; 3.0 is the trust promise. Q&A log of every ruling at the end. Ladder re-cut 2026-09-14 (evening): PySpark functions and transformations parity ships in **1.5** (census-chartered, run 15); the medallion is 1.7, Polars I/O 1.8, Polars functions 1.9, Trino 1.10, dbt 1.11, Spark Connect 1.12, multi-writer + REST 1.13. Q&A row 2026-09-16 (morning): every run-17 recommendation as ruled, Muse contributor as the actor tier for day run 18. Q&A row 2026-10-01: the external Sail-approach review — the 09-13 order stands provisionally, the migration scorecard is chartered as a measurement before any Spark Connect decision, REST's slot goes to the owner (1.8 proposed), ATTR-ID-1 precedes any Connect spike.
+  MVs, observability, Substrait; 3.0 is the trust promise. Q&A log of every ruling at the end. Ladder re-cut 2026-09-14 (evening): PySpark functions and transformations parity ships in **1.5** (census-chartered, run 15); the medallion is 1.7, Polars I/O 1.8, Polars functions 1.9, Trino 1.10, dbt 1.11, Spark Connect 1.12, multi-writer + REST 1.13. Q&A row 2026-09-16 (morning): every run-17 recommendation as ruled, Muse contributor as the actor tier for day run 18. Q&A row 2026-10-01: the external Sail-approach review — the 09-13 order stands provisionally, the migration scorecard is chartered as a measurement before any Spark Connect decision, REST's slot goes to the owner (1.8 proposed), ATTR-ID-1 precedes any Connect spike. Q&A row 2026-10-01 (crates): the fourteen-crate layout through 1.8 and its tidy window.
+- [crate-layout-1-8-2026-10-01.md](crate-layout-1-8-2026-10-01.md) — **the crate layout through 1.8
+  (ruled 2026-10-01):** fourteen crates by tier with roles, edges and arrival release — `repark-connect` 1.6,
+  `repark-crawler` + `repark-cdc` 1.7 (Silver execution a `repark-core` module), `repark-io` 1.8,
+  `repark-spark-dialect` extracted below `repark-spark` (which keeps its name and gains `router/ ddl/ dml/
+  inspect/ procedures/`); the `repark-sql → repark-spark` edge to dev-only and the DAG table trued up;
+  the tidy window (post-v1.5.2, pre-1.6) as units T-1…T-5 at clerk tier; decisions CL-1…CL-7.
 - [roadmap-design-plan-2026-08-29.md](roadmap-design-plan-2026-08-29.md) — **the design plan
   by crate (ruled 2026-08-29):** the release roadmap's *where* and *how* — one work card per
   roadmap item naming the crate (NEW or UPDATE, tier, `ALLOWED_EDGES` rows), the reference
