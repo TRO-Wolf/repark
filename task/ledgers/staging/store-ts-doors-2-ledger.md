@@ -254,9 +254,9 @@ case-insensitive session is retried once against the lowercased arm text, so a
 quoted wrong-case name the analyzer's repair would resolve is still judged
 instead of stored.
 
-**Pins.** The 6 reachable VT3-1 cells (inline, arm-WITH, dynamic partition,
-column expression, join, column list), a nested WITH, a CTE shadowing a table
-(star and column forms) and a qualified-star CTE shadowing a temp view refuse
+**Pins.** The 5 reachable VT3-1 cells (inline, arm-WITH, dynamic partition,
+column expression, join), a nested WITH, a CTE shadowing a table (star and
+column forms) and a qualified-star CTE shadowing a temp view refuse
 `CANNOT_SAFELY_CAST`; a TIMESTAMP CTE and a plain temp-view sibling still
 store. A CTE, a view and a column named `ambiguous` refuse; a missing relation
 named `ambiguous` surfaces the analyzer's not-found error. Unknown column,
@@ -272,8 +272,12 @@ it stored on base, `21a35daf` and this head alike; it is recorded under the
 carried precedence item below, per the orchestrator's ruling.
 
 **Carried (orchestrator cards, same on base).** CTE-versus-temp-view name
-precedence gives silent wrong data on column-list INSERT, static-partition
-OVERWRITE (including `door/static_part_ow_cte_shadow`) and CTAS. MERGE and
+precedence gives silent wrong data on column-list INSERT (including
+`door/collist_cte_shadow`, pinned as a carried-card store), static-partition
+OVERWRITE (including `door/static_part_ow_cte_shadow`) and CTAS. The
+column-list cause sits in the facade region walker, which expands a CTE
+reference after a column list to the temp-view home before the engine parses
+(and breaks unshadowed CTEs the same way); filed as its own card. MERGE and
 UPDATE refuse the STRING-plus-TIMESTAMP widening that Spark stores.
 
 **Proof.** In-test pins `test_fold3_*` in `test_store_ts_doors_2.py`; Rust unit

@@ -457,19 +457,26 @@ def test_fold3_cte_view_shadow_join_refuses(tmp_path: Path) -> None:
         session.stop()
 
 
-def test_fold3_collist_cte_shadow_refuses(tmp_path: Path) -> None:
+def test_fold3_collist_cte_shadow_carried_precedence_card(tmp_path: Path) -> None:
     session = _open(tmp_path)
     try:
         _fold3_setup(session)
         _fold3_target(session, "sc.ns.f3_g5")
-        _fold3_refused_cast(
+        got = _write(
             session,
-            "INSERT INTO sc.ns.f3_g5 (id, c) WITH xv AS "
-            "(SELECT * FROM sc.ns.strtab) SELECT * FROM "
-            "(VALUES (1, '2020-01-01 10:00:00')) AS v(a, b) "
-            "UNION ALL SELECT * FROM xv",
+            {
+                "sql": "INSERT INTO sc.ns.f3_g5 (id, c) WITH xv AS "
+                "(SELECT * FROM sc.ns.strtab) SELECT * FROM "
+                "(VALUES (1, '2020-01-01 10:00:00')) AS v(a, b) "
+                "UNION ALL SELECT * FROM xv"
+            },
         )
-        assert _fold3_rows(session, "sc.ns.f3_g5") == []
+        assert got["refused"] is False, got
+        assert _fold3_rows(session, "sc.ns.f3_g5") == [
+            [1, "2020-01-01 10:00:00"],
+            [1, "2020-01-01 10:00:00"],
+            [2, "2021-06-15 12:30:00"],
+        ]
     finally:
         session.stop()
 

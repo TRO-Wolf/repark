@@ -4673,15 +4673,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   beside table TIMESTAMP into BIGINT keeps the analyzer `type_coercion` refusal.
   pins: store-ts-doors-2/C-001, C-002, C-003
   **Fold 2026-09-30 (re-verify VT3-1..VT3-3):** eighteen `test_fold3_*` pins:
-  the 6 reachable CTE-shadow refusals (inline, arm-WITH, dynamic partition,
-  column expression, join, column list), a nested WITH, a CTE shadowing a
-  table (star and column forms) and a qualified-star CTE shadowing a temp
-  view; TIMESTAMP-CTE and plain-view store guards; a CTE, a view and a
-  column named `ambiguous` refusing plus the missing-`ambiguous` not-found
-  surfacing; unknown column, routine and table surfacing the analyzer's
-  class with nothing stored; and quoted-case refusal guards. The 7 new
-  shapes carry Spark 4.1.2 answers measured once for this fold.
-  pins: store-ts-doors-2/C-001, C-003
+  the 5 reachable CTE-shadow refusals (inline, arm-WITH, dynamic partition,
+  column expression, join), a nested WITH, a CTE shadowing a table (star and
+  column forms) and a qualified-star CTE shadowing a temp view; TIMESTAMP-CTE
+  and plain-view store guards; a CTE, a view and a column named `ambiguous`
+  refusing plus the missing-`ambiguous` not-found surfacing; unknown column,
+  routine and table surfacing the analyzer's class with nothing stored; and
+  quoted-case refusal guards. The column-list CTE shadow is a carried-card
+  pin instead: it asserts today's facade-rewritten store, not Spark's
+  refusal. The 7 new shapes carry Spark 4.1.2 answers measured once for this
+  fold. pins: store-ts-doors-2/C-001, C-003
 - `test_merge_semantics_audit.py` — **MERGE-audit corpus** (2026-08-14 audit gap-map rows
   c/d/g/n/o): null-safe `<=>` / `eqNullSafe` ON matches NULL keys (both doors); builder-door
   `=` NULL keys do not match; self-merge (target as source) updates once per row; join-key
