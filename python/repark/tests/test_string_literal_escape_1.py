@@ -13,6 +13,7 @@ C-008, C-009, C-010, C-011, C-012
 
 from __future__ import annotations
 
+import datetime
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,7 @@ import pytest
 from repark import ReparkSession
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 from repark.spark.ml.feature import SQLTransformer
+from repark.spark.session import _reset_active_session_for_tests
 
 
 @pytest.fixture
@@ -753,3 +755,38 @@ def test_default_sql_transformer_matches_spark(spark: ReparkSession) -> None:
     assert _text(out.to_arrow(), "v") == ["it's", "it's"]
     out = SQLTransformer(statement="SELECT id FROM __THIS__ WHERE s = 'it''s'").transform(frame)
     assert sorted(out.to_arrow().column("id").to_pylist()) == [1]
+
+
+_MERGE_PIN_PATTERN: str = "yyyy-MM-dd''HH:mm:ss"
+_MERGE_PIN_SPARK_BYTES: bytes = b"it's,2024-06-15'12:00:00\nit''s,2024-06-15'12:00:00\n"
+
+
+def _write_merge_pin_csv(verbatim_mode: bool, dest: Path) -> bytes:
+    """Write the merge-pin frame as CSV in one session mode, return part bytes."""
+    _reset_active_session_for_tests()
+    builder = ReparkSession.builder.appName("pytest-string-literal-escape-1-merge-pin")
+    if verbatim_mode:
+        builder = builder.config("spark.sql.parser.escapedStringLiterals", "true")
+    session = builder.getOrCreate()
+    try:
+        session.conf.set("spark.sql.session.timeZone", "America/New_York")
+        rows = [
+            ("it's", datetime.datetime(2024, 6, 15, 12, 0, 0)),
+            ("it''s", datetime.datetime(2024, 6, 15, 12, 0, 0)),
+        ]
+        frame = session.createDataFrame(rows, ["s", "t"])
+        frame.write.mode("overwrite").option("header", "false").option(
+            "timestampFormat", _MERGE_PIN_PATTERN
+        ).csv(str(dest))
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()
+    parts = sorted(dest.rglob("*.csv"))
+    assert len(parts) == 1
+    return parts[0].read_bytes()
+
+
+def test_merge_text_write_verbatim_matches_spark_and_default(tmp_path: Path) -> None:
+    """Verbatim CSV write with a quoted timestampFormat matches Spark and default."""
+    assert _write_merge_pin_csv(False, tmp_path / "default") == _MERGE_PIN_SPARK_BYTES
+    assert _write_merge_pin_csv(True, tmp_path / "verbatim") == _MERGE_PIN_SPARK_BYTES

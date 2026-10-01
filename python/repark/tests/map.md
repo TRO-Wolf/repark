@@ -7135,6 +7135,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   assertions; the two capped files rename the seam method (line-neutral),
   the other three observe both doors.
   pins: string-literal-escape-1/C-013
+  **STRING-LITERAL-ESCAPE-1 merge (2026-10-01):** the text-write merge pin —
+  a verbatim CSV write with timestampFormat `yyyy-MM-dd''HH:mm:ss` and
+  `it's` / `it''s` values writes the Spark bytes, equal to the default-mode
+  bytes for the same frame.
+  pins: string-literal-escape-1/C-015
 - `test_fnp_4b_hof_display.py` — **FNP-4B round 6 (2026-09-15):** Q3 red pin for run
   16a — selectExpr higher-order display must hide the `__repark_hof_array_field__`
   packing marker. **Round 7 (2026-09-15):** strict xfail per R-16c-10; 16a flips

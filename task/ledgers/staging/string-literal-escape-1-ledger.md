@@ -43,6 +43,7 @@ pre-existing, previously scoped to session doors by FNP-4B);
 | C-012 | VE2-2 re-verify fold: nested struct-field `UPDATE`/`MERGE SET` values render through `render_for_reparse`, so verbatim doublings/backslashes store kept and default ones collapse, and `\'` parses instead of refusing; refusal texts quote values as valid SQL. | Rust nested leaf/fold/refusal pins + facade VE2-2 pins + default controls green. | PROVEN | 24/24 nested_assign Rust pins green (4 new re-render/refusal); 2/2 facade VE2-2 pins green; mutation red-first (`.to_string()`); nest.py 14/14 Spark-equal. |
 | C-013 | CI round: the five failure-injection/SQL-spy seams (`test_catalog_surface_1`, `test_create_dataframe_materialize` x3, `test_eager_own_1`, `test_mapinarrow`, `test_ml_boost_oracle`) observe the `sql_built` door the product now uses for facade-built SQL, with identical assertions — injection still lands on the SQL call after register, the catalog spy still sees cache-view reads, CV still requires the mat-view read; cleanup behavior unchanged. | The 7 seam tests green with assertions untouched; no product change on those paths. | PROVEN | All 8 CI failures reproduced locally then green; the two capped test files rename the seam method line-neutrally, the other three observe both doors. |
 | C-014 | CI round: `F.expr`'s `sql_expr` keeps the display-shaped text through the default-door pre-render, so bare infix fragments keep base's parens and composed embeddings keep their grouping; the pre-render only re-renders string-literal regions. Corrects the re-verify note that the display fallback's parens never mattered. | Facade-2 display goldens byte-identical (no golden change); cube/rollup composed-key values Spark-equal. | PROVEN | `cube(F.expr("1 + 1") * 2)` key 4 (head said 3), `rollup((10 - 2) * x)` 80/160 (head said -10/-30); Spark 4.1.2 and base measured 2026-09-30. |
+| C-015 | Merge origin/main (#889, #891, #898): the one conflict keeps both bindings; #889's local text-write COPY already executes through the built door and both S3 commit legs move to `sql_built_with_write_options`, so engine-built COPY parses in default mode in verbatim sessions; default-mode behaviour is unchanged (override `None`+flag-off is `Some(false)`, one pure move); the verbatim CSV merge pin writes Spark bytes. | `gate.sh` 16/17 with the 1 red proven environmental (see evidence); `test_text_write*`, `test_cast_overflow_insert_1`, and the unit suites green; the merge pin green; both-sides content check clean. | PROVEN | Default == verbatim == Spark bytes on the pin (Spark 4.1.2 `local[1]` via `jvm-lock.sh`); `session.rs` ceiling held by pure-moving `list_temp_view_names` to `temp_views.rs`; map rows de-duplicated; the red `test_index_live_muse_worker_includes_inventory_stamps` reads the live `/tmp/muse-worker` tree and trips on another lane's torn `handback.json` (xattr run `20261001T042318Z`, stale since 05:15), with test+script byte-identical on base, HEAD, and main. |
 
 ## Evidence
 
@@ -353,3 +354,31 @@ COVERAGE_ATTESTATION:
       evidence: Red-first held — old behavior fails 5/6 new Rust pins and 6/6 facade tests, and passes again on the byte-exact restore; every new branch names a flipping input (quote arms, raw head/tail/verbatim splits, verbatim rewrite rule); no dead branch ships.
       artifacts: [crates/repark-spark/src/tests/string_literal_escape_1.rs, python/repark/tests/test_string_literal_escape_1.py]
 ```
+
+### C-015 merge inventory (2026-10-01)
+
+New internal-SQL rows from #889, classified as the C-011 inventory does
+(built SQL parses default, user SQL follows the flag). Built —
+`writer_layout.text_write_copy_sql` / `text_write_copy_parts` (Python; the
+statement executes through the `session_sql_with_write_options` binding,
+already on `sql_built_with_write_options`, so no change) and the S3
+`copy_sql` from `copy_inner_parts` (Rust; `commit_s3_write_parquet` and
+`commit_s3_write_text` move from `sql_with_write_options` to
+`sql_built_with_write_options` — one statement, one door, both legs).
+Not doors — `store_overflow.rs ctx.sql` (DataFusion `SessionContext` in
+#891 tests, no verbatim machinery), `test_cast_overflow_insert_1.py`
+`session.sql` (user-written DML in tests, user door correct),
+`session_configuration.py` / `builder_conf.py` (config keys only),
+`core.py` offset (plan change). Untouched pre-existing —
+`session.rs metadata_at::read_sql` (time-travel read, predates both sides);
+the verbatim behaviour there is #890's as merged, not this merge's scope.
+
+Merge pin: `test_merge_text_write_verbatim_matches_spark_and_default`
+(`test_string_literal_escape_1.py`) writes the two-row frame
+(`it's`, `it''s`, one timestamp) as CSV with
+`timestampFormat` `yyyy-MM-dd''HH:mm:ss` under `America/New_York` in both
+session modes; both byte-compare against the Spark 4.1.2 oracle bytes
+recorded verbatim (`jvm-lock.sh`, `local[1]`, Java 17). The default-mode
+leg doubles as the #889-head leg: in default sessions the re-route is a
+no-op and the move is pure, and the full `test_text_write*` suite green on
+the merged head proves default behaviour kept.
