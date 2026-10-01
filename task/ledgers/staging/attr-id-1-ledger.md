@@ -700,3 +700,11 @@ and the origin map recovers the left side. M3 (every fan-out stops at the
 first hit, five sites) reds 16: the drop/fill/dropna twin, join-dup, union
 `drop(str)` and sensitive-closure fan-out pins; the `dropDuplicates` twins
 stay green by construction and the union first-only pins by design.
+
+**Mutation re-run record S3d follow-up 3 (2026-10-01, after C-037).** Same
+three mutations; diffs at `s3d/mutation_m1_c037.diff`,
+`s3d/mutation_m2_c037.diff`, `s3d/mutation_m3_c037.diff`; each reverted with
+`git status` clean and the suite back to 122 green. M1 reds 17 (the 16 plus
+the multi-id same-display union refusal). M2 reds 6, unchanged. M3 reds 19
+(the 16 plus the project-twins fill fan-out, the project-twins free-Column
+fan-out, and the divergent-twins `dropDuplicates` fan-out).
