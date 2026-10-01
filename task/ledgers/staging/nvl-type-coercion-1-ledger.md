@@ -703,28 +703,35 @@ COVERAGE_ATTESTATION:
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-041 | With ANSI off the family takes base's path exactly through the pre-coercion base-route rule (R1); `F.expr` nullif/nvl compare in one zone (R2, UTC fold both modes); an integral cast truncates the whole result once (R3); bind-time typing declares the core bind type except string-first `nvl` pairs, which widen (Q1 selective rule). | The vn11 pins (7 Q1 + 4 fold cells) green; the Rust unit tests green; p10 shows only carried cells differing. | PROVEN | 19/19 vn11 pins green; 941 lib tests green; p10 newhead6: ANSI-off 114 VAL + 154 TXT all carried per the owner rule below, ANSI-on 50 VAL all intended/fixed; gate run as written, exit in the hand-back. |
+| C-041 | With ANSI off the family takes base's path exactly through the pre-coercion base-route rule (R1); `F.expr` nullif/nvl compare in one zone (R2, UTC fold both modes); an integral cast truncates the whole result once (R3); bind-time typing declares the core bind type except string-first `nvl` pairs, which widen (Q1 selective rule); `F.expr` nvl2 (Int32, Utf8, Binary) literal triples refuse with base's cast class (Q3 micro-fold). | The vn11 pins (7 Q1 + 4 fold cells) and vn12 pins (4 Q3 cells) green; the Rust unit tests green; p10 shows only carried cells differing. | PROVEN | 19/19 vn11 + 4/4 vn12 pins green; 942 lib tests green; p10 newhead10: ANSI-off 110 VAL + 158 TXT all carried per the owner rule below, ANSI-on same 50 VAL as part 3; gate run as written, exit in the hand-back. |
 
 **Owner cap (2026-09-30, #888's last fold).** Fold only cells where head
 answers what base and Spark refuse, or where head's value or class differs
 from Spark on a cell base got right. Carry everything else. Folded here: the
 7 Q1 regressions (plus_nvl x4, len_nvl_ltz x3: be5193c3==Spark, head refused);
 the 4 Q2(a) ts/fexpr cells where base==Spark (nullif_s_ltz, nullif_ltz_s in
-Asia/Kolkata + America/New_York, ANSI off). Carried (all dated 2026-09-30):
+Asia/Kolkata + America/New_York, ANSI off); the 4 Q3 nvl2/binary cells where
+base==Spark (m/off/nvl2/binary/{bad,good}/1_S_T/fexpr/{t,v}, ANSI off,
+2026-10-01: head answered binary, base and live Spark 4.1.2 refuse).
+Carried (all dated 2026-09-30 except the Q3 TXT note, 2026-10-01):
 
 - Q2(b), 4 cells, base errors / Spark strings / head ints:
   df/off/nullif_s_i/t, df/off/nvl_ni_s/t, df/off/nvl_s_i/t, df/off/zin_s/t
-  (plus 5 pre-existing be5193c3-equal answer cells: df/off/coal_s_i/t and
-  m/off/nvl2/binary/{bad,good}/1_S_T/fexpr/{v,t}). Base was not right; the
-  head ints come from the base-route core swap.
+  (plus 1 pre-existing be5193c3-equal answer cell: df/off/coal_s_i/t).
+  Base was not right; the head ints come from the base-route core swap.
+  The 4 m/off/nvl2/binary/{bad,good}/1_S_T/fexpr/{v,t} cells formerly
+  listed here are folded under the Q3 ruling (2026-10-01): base and
+  Spark both refuse them, so the owner cap folds them, never carries.
 - Q2(c), ceiling-class under card CONST-EVAL-CEILING-1: byp/off/sub_bd/repeat
   + byp/off/sub_bd/seq (true NULL count, head CEILs; the bare R3 forms answer
   NULL/1/150 like base and Spark in both modes).
 - Q2(d), same error class: 56 error-type cells
   (base AnalysisException/None, head PySparkException/None; the fold fixed
-  be5193c3 bypass answers into refusals, e.g. df/off/ifnull_ns_dt/v) and 154
+  be5193c3 bypass answers into refusals, e.g. df/off/ifnull_ns_dt/v) and 158
   text-only cells (116 base-route-wrap prefixes incl. 76 UNRESOLVED_ROUTINE,
-  36 Int32/Int64 + wrap tails, 2 lost candidate tails). Fix noted: map the
+  36 Int32/Int64 + wrap tails, 2 lost candidate tails, plus the 4 Q3
+  rule-name prefixes: the refusal quotes base's message body verbatim and
+  only its first line names the raising rule). Fix noted: map the
   base-route wrap in error_map (~15 lines), cut per cap.
 - Q2(a) NTZ carry, 4 cells, base wrong: ts/off/{Kolkata,New_York}/nullif_ntz_s
   + nullif_s_ntz fexpr/v (base answers the stamp, Spark and head answer NULL).
@@ -755,3 +762,41 @@ every other `nvl` pair and every `nullif` pair declares the core bind type
 (base's path by construction). Measured: the 7 Q1 cells return to
 be5193c3==Spark, nested_coal_nvl x12 and ctl_vn10_2f x2 hold base-equal, no
 other cell moves except the carried plus_nvl x4 above.
+
+**Mechanism note (Q3 micro-fold, part 4, 2026-10-01).** The cont3 halt found
+4 cells (m/off/nvl2/binary/{bad,good}/1_S_T/fexpr/{t,v}) where base and Spark
+both refuse but head answered binary; the Q3 ruling folds them. Cause: the
+`F.expr` door shares the `nvl2` UDF instance with SQL, so the base route sent
+the (string, binary) pair to core `nvl2`, whose order-dependent union answers
+binary — while base's `F.expr` path refuses (its SQL door answers binary too,
+so the fix must scope to `F.expr`). Fix (~45 product lines, no new modules):
+`SparkNvl2` gains the `fexpr_built` marker (`new_fexpr`, constructors collapsed
+through `with_built` plus test compaction to hold the 1,000-line ceiling; the
+`nvl2_fexpr_udf` constructor lives in `spark_nvl_fexpr` for the same ceiling),
+the throwaway context registers it, and `route_nvl2` refuses a marked
+all-literal (Int32, Utf8, Binary) triple with base's
+`CAST_WITH_CONF_SUGGESTION` class and cast text (the message body quotes base
+verbatim; only the rule-name prefix line differs, a text-only residue — a real
+CAST cannot reproduce it because int-to-binary answers under ANSI off).
+Scope notes: NULL tests still route to core (base answers them), the SQL door
+is unmarked (answers binary like base), and the T_S order still refuses via
+core with its carried error-type text. Measured: live Spark 4.1.2 refuses all
+4 (DATA_DIFF_TYPES); p10 newhead10 moves exactly those 4 VAL cells against
+newhead9 (VAL+cls base-equal, TXT prefix only), zero other moves, ANSI-on the
+same 50 VAL set; 4/4 vn12 pins green, 19/19 vn11 green (Q1 intact). Mutations
+(all red then reverted, tree clean): R1 base-route stand-down removal (4 base
+tests red), R2 New_York text parse (4 fold tests red), R3 operand truncation
+(the R3 pin red), Q3 fold-undo LargeBinary swap (the Rust pin + all 4 vn12
+pins red). Replay (fold4- prefix): probe/rv7/rv8/rv9/rv9b/r3/r3-extra/extra/
+extra1/extra8/extra8b/only-ice/confirm7/tsn (7034 cells) zero diffs vs part 3
+(tsn first hit the 240 s cap at 4250/7034 statements with no output file, then
+completed unbounded as a large suite rather than a pathological shape);
+`fold4-a3` shows 52 diffs and the null-distribution, vol, attack-a2 and
+extra2 suites show 2/1/2/1, all shuffle/uuid/order/timing noise proven by
+fold2-vs-fold3 flapping; attack ice/update_zin flipped ERR-to-OK (runtime
+schema/batches flake, no binary/fexpr in the statement) with the after_update
+cascade; extra3 5 timing-only; main/ceil have no nvl2-bearing diffs vs rv10
+refs (46/36 standing residue, zero binary literals in rv6.py). Note: the
+group-1 run overwrote part-3 fold-main/fold-ceil.json (RV6_TAG builds the name
+inside rv6.py); the files were renamed to fold4- (no tag field inside, rename
+is clean) and part-3 main/ceil evidence is superseded by this paragraph.
