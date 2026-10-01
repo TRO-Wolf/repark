@@ -21,6 +21,7 @@ pub struct EngineContext<'a> {
     pub source_by_name: bool,
     pub session_time_zone: SessionTimeZone,
     pub temp_views: Option<&'a dyn TempViewSession>,
+    pub verbatim_override: Option<bool>,
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -66,6 +67,7 @@ impl<'a> EngineContext<'a> {
             source_by_name: false,
             session_time_zone,
             temp_views: None,
+            verbatim_override: None,
         }
     }
 }

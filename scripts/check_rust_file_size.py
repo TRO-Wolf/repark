@@ -122,7 +122,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract the remaining date or window method family.",
     ),
     "crates/repark-python/src/session.rs": (
-        1122,
+        1097,
         "PyO3 session construction and query entry points share one module.",
         "Split configuration bindings from query and catalog bindings.",
     ),

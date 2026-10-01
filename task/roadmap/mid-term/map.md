@@ -139,6 +139,24 @@ declines it (a dated ruling in the intake, then the archive).
 - [tz-offset-seconds-1-card-2026-09-16.md](tz-offset-seconds-1-card-2026-09-16.md) — **card TZ-OFFSET-SECONDS-1
   (2026-09-16, 1.6, ruling Q-17c-1):** sub-minute fixed session offsets (`+05:30:30`) carried as seconds east of UTC
   in a typed zone instead of an Arrow `Tz` string; closes the dated declaration SET-ANSI-RUNTIME-4. No 1.5 code.
+- [plan-depth-1-card-2026-09-30.md](plan-depth-1-card-2026-09-30.md) — **card PLAN-DEPTH-1
+  (2026-09-30, mid-term, ruling OD-3):** `count()` over 200 or more chained `DataFrame.filter`
+  calls segfaults (stack overflow); verifier finding RC5-5, S3, pre-existing. Covered by PR #892
+  (DEEP-FILTER-CHAIN-CRASH-1); closes when #892 merges, after re-running the repro with string
+  and Column filters under both `caseSensitive` settings on main.
+- [sql-lambda-scope-1-card-2026-09-30.md](sql-lambda-scope-1-card-2026-09-30.md) — **card SQL-LAMBDA-SCOPE-1
+  (2026-09-30, mid-term, ruling OD-3):** the `spark.sql` door scopes higher-order-function
+  lambdas to the wrong rows (`exists` predicates answer `[2]`/`[1]`/`[1,5]`/`[5]` where Spark
+  answers `[1,2]`/`[1,5]`/`[1,2,5]`/`[1,5]`); verifier finding RC5-6, S3, pre-existing, base and
+  head identical. The `DataFrame.filter` forms already answer Spark.
+- [sort-parent-column-1-card-2026-09-30.md](sort-parent-column-1-card-2026-09-30.md) — **card SORT-PARENT-COLUMN-1
+  (2026-09-30, mid-term, ruling OD-3):** `orderBy(parent Column)` on a case-twin frame sorts by
+  the output twin instead of the hidden parent attribute under `caseSensitive=true`;
+  verifier finding RC5-7, S3, pre-existing, base and head identical. Home is the R-CS2-18 family.
+- [unicode-case-version-1-card-2026-09-30.md](unicode-case-version-1-card-2026-09-30.md) — **card UNICODE-CASE-VERSION-1
+  (2026-09-30, mid-term, ruling OD-3):** case folding uses Rust's Unicode 16 tables while JDK 17
+  Spark uses Unicode 13, so Unicode 14–16 case pairs fold in RePark but stay distinct in Spark;
+  verifier finding RC3-5 / residue R-CS2-17, S3, 34 cells. The boundary moves with the deployment JDK.
 - [bl11-encoder-perf-1-card-2026-09-16.md](bl11-encoder-perf-1-card-2026-09-16.md) — **card BL11-ENCODER-PERF-1
   (2026-09-16, P3 perf, ruling Q-17c-5):** the numeric → BINARY encoder builds fixed-width output in bulk (arithmetic
   offsets, cloned validity) instead of a per-row builder; starts from 17c's measured 26.81 ms vs 18.35 ms (~1.5×).
@@ -413,3 +431,79 @@ declines it (a dated ruling in the intake, then the archive).
 - [release-diff-1-5-1-pre-existing.md](release-diff-1-5-1-pre-existing.md) — **RELEASE-DIFF-1-5-1-PE (2026-09-29):** the wrong answers found on main by the v1.5.1 release differential and the per-PR verifiers that were already there before this release. PE-3 to PE-26 each carry a severity, Spark's answer and a card name, with the silent rows (S1) first.
 - [cast-overflow-in-table-insert-1.md](cast-overflow-in-table-insert-1.md) — **CAST-OVERFLOW-IN-TABLE-INSERT-1 card (2026-09-28):** an out-of-range fractional store into an integer column refuses `CAST_OVERFLOW_IN_TABLE_INSERT`, as Spark does. It is in flight as PR #891 (v1.5.2).
 - [polars-is-duplicated-1.md](polars-is-duplicated-1.md) — **POLARS-IS-DUPLICATED-1 card (2026-09-28, owner ruling):** `.filter(col('x').is_duplicated())` on both `rp.col` and `F.col`, with Polars 1.43.2 semantics (every occurrence, null==null, NaN==NaN, 0.0==-0.0). It is in flight as PR #883 (v1.5.2).
+- [fexpr-operator-paren-1-card-2026-10-01.md](fexpr-operator-paren-1-card-2026-10-01.md) — **card FEXPR-OPERATOR-PAREN-1
+  (2026-10-01, HIGH, from the overnight owner-items backlog, #890 re-verify 3 VE4-1):** an `F.expr`
+  fragment without spaces around a binary operator is composed without parentheses, so
+  `cube(F.expr('a-b')*2)` and `F.expr('(a) - (b)')` give wrong cube/rollup grouping keys
+  (RePark -1/-16/3, Spark -14/0/10/4); cause `python/repark/src/repark/spark/functions.py:326-329,338`.
+- [concat-nested-memory-1-card-2026-10-01.md](concat-nested-memory-1-card-2026-10-01.md) — **card
+  CONCAT-NESTED-MEMORY-1 (2026-10-01, HIGH, from the overnight owner-items backlog, #892 lane):**
+  300 nested `F.concat(e, F.lit('x'))` over a 50-row frame grew a debug process to 90+ GB over
+  4.5 h (119 GB in another run); the `/tmp/concat.py` probe is gone (evidence not retained), so the
+  repro is rebuilt inline and runs must be memory-capped (`ulimit -v 67108864`, about 240 s).
+- [string-to-date-truncate-1-card-2026-10-01.md](string-to-date-truncate-1-card-2026-10-01.md) — **card
+  STRING-TO-DATE-TRUNCATE-1 (2026-10-01, from the overnight owner-items backlog, VN6-4 S3):**
+  `string_to_date` (`crates/repark-functions/src/cast_map/leaf.rs:562-576`) rejects
+  `'2024-01-01 junk'` and `'2024-01-01Tjunk'` where Spark truncates to the date; ANSI-off
+  `nullif(DATE '2024-01-01', '2024-01-01 junk')` returns the date where Spark returns NULL.
+- [s3a-overwrite-commit-1-card-2026-10-01.md](s3a-overwrite-commit-1-card-2026-10-01.md) — **card
+  S3A-OVERWRITE-COMMIT-1 (2026-10-01, from the overnight owner-items backlog, #889 rollback fold
+  on moto):** an s3a `mode("overwrite")` text write deletes the destination's existing objects
+  BEFORE the COPY, so a failed overwrite leaves the destination empty; Spark's commit protocol
+  keeps the old data until commit; same on `3d4f2030` and on base.
+- [coalesce-shuffle-flake-1-card-2026-10-01.md](coalesce-shuffle-flake-1-card-2026-10-01.md) — **card
+  COALESCE-SHUFFLE-FLAKE-1 (2026-10-01, from the overnight owner-items backlog, #888 re-verify 7):**
+  an attack3 coalesce/shuffle wrong-result flake, reproduced on base; evidence
+  `/tmp/oc-worker/direct/wo/reverify7-nvl/` (evidence location, retained).
+- [json-ntz-null-inference-1-card-2026-10-01.md](json-ntz-null-inference-1-card-2026-10-01.md) — **card
+  JSON-NTZ-NULL-INFERENCE-1 (2026-10-01, from the overnight owner-items backlog, #889 fold):** a
+  mostly-null NTZ column drops out of JSON read-back key inference, so appending such a frame to
+  its own seed fails append validation.
+- [view-ansi-capture-1-card-2026-10-01.md](view-ansi-capture-1-card-2026-10-01.md) — **card
+  VIEW-ANSI-CAPTURE-1 (2026-10-01, from the overnight owner-items backlog, #888 re-verify 8
+  VN9-4):** views are re-analyzed under the current session's ANSI setting, not the setting they
+  were created under, so a view created under ANSI on with `sequence(1, '3')` or a CAST changes
+  behaviour when read under ANSI off; Spark keeps the creation-time setting.
+- [const-eval-ceiling-1-card-2026-10-01.md](const-eval-ceiling-1-card-2026-10-01.md) — **card
+  CONST-EVAL-CEILING-1 (2026-10-01, the owner's card, from the overnight owner-items backlog):**
+  replace the mirror constant evaluator (`cardinality.rs` const_i128/const_f64/exact_i128, and
+  `cardinality_nullif.rs`) with a ceiling check on DataFusion's ExprSimplifier/ConstEvaluator
+  output; includes the line-67 unknown-versus-NULL defect (`nullif(101,
+  coalesce(CAST('0' AS INT), 101))` proves a false equality) as a known instance.
+- [verbatim-ctas-escape-1-card-2026-10-01.md](verbatim-ctas-escape-1-card-2026-10-01.md) — **card
+  VERBATIM-CTAS-ESCAPE-1 (2026-10-01, from the overnight owner-items backlog, #890 re-verify
+  VE2-3):** in verbatim mode (`spark.sql.parser.escapedStringLiterals=true`), CTAS and INSERT
+  OVERWRITE with a `\'` literal fail with a parse error, while Spark accepts them.
+- [cte-temp-view-precedence-1-card-2026-10-01.md](cte-temp-view-precedence-1-card-2026-10-01.md) — **card
+  CTE-TEMP-VIEW-PRECEDENCE-1 (2026-10-01, from the overnight owner-items backlog, one card covering
+  lines 69, 77 and 81):** CTE-versus-temp-view precedence gives silent wrong data on column-list
+  INSERT, static-partition OVERWRITE and CTAS (a CTE should shadow a same-named temp view); the
+  facade region walker expands CTE references on the column-list door; VT4-2 (quoted-case CTE name)
+  and VT4-3 (`PARTITION (p)` / `PARTITION (p='v')` doors).
+- [merge-update-ts-widening-1-card-2026-10-01.md](merge-update-ts-widening-1-card-2026-10-01.md) — **card
+  MERGE-UPDATE-TS-WIDENING-1 (2026-10-01, from the overnight owner-items backlog, #894 re-verify
+  2, pre-existing on base):** MERGE and UPDATE refuse the STRING-plus-TIMESTAMP widening that
+  Spark stores.
+- [fexpr-timestamp-zone-1-card-2026-10-01.md](fexpr-timestamp-zone-1-card-2026-10-01.md) — **card
+  FEXPR-TIMESTAMP-ZONE-1 (2026-10-01, from the overnight owner-items backlog, #888 re-verify
+  10):** `F.expr` TIMESTAMP literals resolve in UTC instead of the session zone (a DataFrame
+  `F.expr` door gap; SQL resolves them in the session zone).
+- [ml-cv-fold-test-strength-1-card-2026-10-01.md](ml-cv-fold-test-strength-1-card-2026-10-01.md) — **card
+  ML-CV-FOLD-TEST-STRENGTH-1 (2026-10-01, from the overnight owner-items backlog, VE4-2):**
+  `test_ml_boost_oracle.py::test_cross_validator_materializes_fold_labels` cannot tell folds that
+  ignore the materialized view from folds that use it, because the fold-count query reads the view anyway.
+- [unpivot-perf-flake-1-card-2026-10-01.md](unpivot-perf-flake-1-card-2026-10-01.md) — **card
+  UNPIVOT-PERF-FLAKE-1 (2026-10-01, from the overnight owner-items backlog, CI flake):**
+  `python/repark/tests/test_perf_unpivot_1.py::test_stack_is_linear_in_columns` is timing-based
+  and fails on shared CI runners with no product cause (hit #891 at exponent 1.224 and #892 at
+  1.120); needs a noise-robust bound.
+- [spark-string-ts-functions-1-card-2026-10-01.md](spark-string-ts-functions-1-card-2026-10-01.md) — **card
+  SPARK-STRING-TS-FUNCTIONS-1 (2026-10-01, from the overnight owner-items backlog, #894 fold 4):**
+  RePark registers no Spark `string()`, `timestamp()` or `current_user()` function
+  (datafusion-spark 54.1 ships none); `SELECT string(1)` raises `UNRESOLVED_ROUTINE` where Spark answers.
+- [string-numeric-parse-perf-1-card-2026-10-01.md](string-numeric-parse-perf-1-card-2026-10-01.md) — **unit
+  STRING-NUMERIC-PARSE-PERF-1 (2026-10-01, the owner's new unit, from the overnight owner-items
+  backlog):** a fast Spark-compatible string→number parse in the shared `cast_map`
+  (`crates/repark-functions/src/cast_map/leaf.rs`, `string_to_fractional`, then
+  `java_double/parse_float.rs`); target string→DOUBLE/INT/BIGINT/DECIMAL within 1.05x of
+  DataFusion's native cast with byte-identical Spark semantics; carried by #888 as VN7-5, not a #888 blocker.

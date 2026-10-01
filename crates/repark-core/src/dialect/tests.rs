@@ -29,6 +29,7 @@ async fn datafusion_dialect_passthrough_executes_trivial_query() {
                 source_by_name: false,
                 session_time_zone: SessionTimeZone::default(),
                 temp_views: None,
+                verbatim_override: None,
             },
             "SELECT 1 + 1 AS two",
         )
@@ -65,6 +66,7 @@ async fn engine_context_constructs_with_explicit_fields() {
         source_by_name: false,
         session_time_zone: SessionTimeZone::default(),
         temp_views: None,
+        verbatim_override: None,
     };
     assert!(cx.read_only.is_empty());
     let dialect: Arc<dyn SqlDialect> = Arc::new(DataFusionDialect);

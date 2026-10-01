@@ -58,7 +58,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **REVIEW-FIX-7 step 1 (2026-09-10):** `parse()` sanitizes TOML failures to
   `message()` plus the locally computed line and column, never the echoed source line.
   pins: review-fix-7/C-002
-- `session.rs` — `ReparkSession` + `ReparkSessionBuilder` (file-backed tests). **G-6:** rustdoc
+- `session.rs` — `ReparkSession` + `ReparkSessionBuilder` (file-backed tests). **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):** session build registers the `repark_text_csv` / `repark_text_json` sink formats instead of the retired `repark_write_format_text` UDF. **G-6:** rustdoc
   intra-links fixed (private helpers named in backticks, not broken `[links]`;
   `Self::list_iceberg_table_names` for the live list path). **ICE-READ-PERF-0 (2026-09-19):**
   `register_catalog_spec` builds Glue and S3 Tables catalogs through
@@ -71,7 +71,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `execute_with_write_options` (see `dialect.rs`). **Run 22b rebase (2026-09-18,
   Q-22b-WO-1):** ICE-DYN-OVERWRITE-1's `static_overwrite.rs` (`sql_with_overwrite_flag`,
   `sql_static_overwrite`) is retired; `session/write_options.rs` is the one statement
-  funnel. **ICE-OVERWRITE-MODE-1 (2026-09-19):** `sql_with_write_options(query, options,
+  funnel. **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** `sql_built` /
+  `sql_built_with_write_options` carry facade-built SQL with `verbatim_override: Some(false)`;
+  `sql_with` passes `None` (user text follows the session flag).
+  pins: string-literal-escape-1/C-011 **ICE-OVERWRITE-MODE-1 (2026-09-19):** `sql_with_write_options(query, options,
   overwrite_intent)` fills `EngineContext::overwrite_intent` (`Session` / `Static` for
   `saveAsTable` / `Dynamic` for `writeTo.overwritePartitions`), and `sql_with` calls it with an
   empty map and `Session`. pins: ice-dyn-overwrite-1/L-001; ice-write-options-1/C-014;
@@ -165,6 +168,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   once per call through `object_store_s3` (parquet and csv resolve inside their
   reader bodies, so this file grows by one line and stays under its ceiling).
   pins: s3-path-write-1/C-013
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** declares
+  `session/text_write_format.rs` and registers its UDF at session build.
+  pins: text-write-timestamp-zone-1/C-001
 - `session_owner.rs` — the session-built DESCRIBE owner: `DescribeOwnerConfig`
   (`repark.describe` prefix, `owner`, default `unknown`), the build-time
   `session_owner_snapshot` (`USER`, then `USERNAME`, then `unknown`), and the
@@ -365,6 +371,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   refusal payload when one is present, else keeps the full display. pins: fnp-math-1/C-004
   **WO-A4 (2026-09-23):** a bracketed `ParserError::ParserError` payload stays a `Parse` error
   and renders verbatim; unbracketed payloads and other parser variants keep the DataFusion display.
+  **CAST-OVERFLOW-INSERT-1 (2026-09-29):** an `Execution` message headed
+  `[CAST_OVERFLOW_IN_TABLE_INSERT]` classifies `Arithmetic` and renders verbatim, beside
+  `ARITHMETIC_OVERFLOW`.
 - [unknown_routine.rs](unknown_routine.rs) — **UNRESOLVED-ROUTINE-1 (2026-09-16):** the blanket reshape
   (see [../map.md](../map.md)).
   **Remediation round 1 (2026-09-16):** token-based call-site matching (see
@@ -713,6 +722,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   folded statement's inner scopes (`column_resolution/inner_scopes.rs`) and
   re-plans once on change, falling back to the pre-respell plan when the
   respelled statement fails (ledger D1); the repair loop itself is untouched.
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):**
+  `rewrite_fragment_case` re-renders through
+  `repark_iceberg::write::sql_text::render_for_reparse` so string values
+  re-parse exactly. pins: string-literal-escape-1/C-010
   **WO CASESENS-1 slice 2 (2026-09-27):** `plan_case_sensitive` plans on a
   cloned state with identifier normalization off (the guard stays first), and
   `stamp_unresolved_column` renders a missing column DataFusion reports with a
@@ -1225,6 +1238,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   clones; `session_time_zone` now returns the snapshot `Arc`). Pedantic-clean (nested
   or-patterns, method-ref digit checks).
   pins: set-ansi-runtime-1/C-002
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 verifier fold (2026-09-29):** `java_display_zone_id`
+  (`ZoneId.of(raw, SHORT_IDS).getId()` semantics for `VV`, jshell-verified) and the
+  `spark.sql.legacy.timeParserPolicy` carrier (`TimeParserPolicyConfig`, lazily
+  installed by the `ReparkSession` setter; only the key rides the crate root so
+  `lib.rs` holds its ceiling; builder-seeded values are read back from the conf
+  dump).
 - `temp_view.rs` (+ `temp_view/tests.rs`) — **the temp-view NAME choke point (round 6, R6-1):**
   `TempViewHome` (the build-time `catalog.schema` a session's temp views live in, snapshotted
   once), `build_temp_view_home` (the one `build()`-time capture, moved here from `session.rs`

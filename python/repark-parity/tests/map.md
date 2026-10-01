@@ -1,5 +1,9 @@
 # map — python/repark-parity/tests
 
+STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30): the CAP-1 mirror follows the shrink-only ratchets `dataframe/core.py` 3973 → 3971 and `session/session_core.py` 2293 → 2277. pins: string-literal-escape-1/C-011
+
+STRING-LITERAL-ESCAPE-1 re-verify follow-up (2026-09-30): the CAP-1 mirror follows the shrink-only ratchet `repark-python/src/session.rs` 1122 → 1097. pins: string-literal-escape-1/C-011
+
 WO CATALOG-1 (2026-09-26): the CAP-1 mirror drops the retired `catalog_config.rs` row, follows `session/tests/session.rs` 1407 → 1406, and the exception count 38 → 37. pins: catalog-1/C-006
 
 U1-MEM-LAYOUT-1 layout-r7 (2026-09-23): the CAP-1 mirror row for `crates/repark-spark/src/tests/ctas.rs` follows the Rust gate's 1357 baseline; it still named 1361 and reddened the Python job.
@@ -180,6 +184,10 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `docs/examples/functions/{posexplode,inline}.py` cover the four names and
   the backlog baseline ratchets 112 → 110.
   pins: fnp-gen-1/C-001, C-006
+- `test_cap_1_source_file_line_cap.py` — **STRING-LITERAL-ESCAPE-1 verifier fold
+  (2026-09-30):** mirror row ratchets `spark/functions.py` 1984 → 1938 with the
+  script baseline (the `lit` rendering helpers move to `functions_lit.py`).
+  pins: string-literal-escape-1/C-009
 - `test_cap_1_source_file_line_cap.py` — **WO CASESENS-1 slice 5 (2026-09-27):**
   mirror row ratchets `repark-iceberg/src/write/alter.rs` 1607 → 1606 with the script
   baseline and drops the retired `repark-python/src/dataframe.rs` 1005 row.

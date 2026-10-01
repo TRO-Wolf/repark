@@ -219,12 +219,12 @@ impl PyDataFrame {
     /// Engine-side skip + fetch (DataFusion `Limit` with non-zero skip).
     /// # Errors
     /// Returns `RuntimeError` if the limit cannot be planned.
-    pub fn limit_with_skip(&self, skip: usize, fetch: usize) -> PyResult<Self> {
+    pub fn limit_with_skip(&self, skip: usize, fetch: Option<usize>) -> PyResult<Self> {
         fenced!("PyDataFrame.limit_with_skip", {
             let df = self
                 .df
                 .clone()
-                .limit(skip, Some(fetch))
+                .limit(skip, fetch)
                 .map_err(datafusion_to_py_err)?;
             Ok(Self::new(df, Arc::clone(&self.runtime)))
         })

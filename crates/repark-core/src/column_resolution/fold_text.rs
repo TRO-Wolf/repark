@@ -28,14 +28,18 @@ pub async fn fold_query_text(state: &SessionState, query_sql: &str) -> Result<St
     let mut seen: HashSet<(Option<String>, String)> = HashSet::new();
     loop {
         let Some((field, valid)) = super::missing_field(&error) else {
-            return Ok(inner.to_string());
+            return Ok(repark_iceberg::write::sql_text::render_for_reparse(
+                &mut inner,
+            ));
         };
         let miss = (
             field.relation.as_ref().map(ToString::to_string),
             field.name.clone(),
         );
         if !seen.insert(miss) {
-            return Ok(inner.to_string());
+            return Ok(repark_iceberg::write::sql_text::render_for_reparse(
+                &mut inner,
+            ));
         }
         let catalog = match known.take() {
             Some(catalog) => catalog,
@@ -44,13 +48,19 @@ pub async fn fold_query_text(state: &SessionState, query_sql: &str) -> Result<St
         let catalog = known.insert(catalog);
         catalog.absorb(valid);
         if !fold::fold_statement(&mut inner, catalog, &written)? {
-            return Ok(inner.to_string());
+            return Ok(repark_iceberg::write::sql_text::render_for_reparse(
+                &mut inner,
+            ));
         }
         match state
             .statement_to_plan(datafusion::sql::parser::Statement::Statement(inner.clone()))
             .await
         {
-            Ok(_) => return Ok(inner.to_string()),
+            Ok(_) => {
+                return Ok(repark_iceberg::write::sql_text::render_for_reparse(
+                    &mut inner,
+                ));
+            }
             Err(next) => error = next,
         }
     }

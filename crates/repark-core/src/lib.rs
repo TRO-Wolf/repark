@@ -60,8 +60,8 @@ pub use session::{
 
 // === Session timezone ===
 pub use session_time_zone::{
-    DEFAULT_SESSION_TIME_ZONE, SESSION_TIME_ZONE_KEY, SessionTimeZone, canonical_session_zone_id,
-    parse_runtime_session_zone_value, resolve_session_time_zone,
+    DEFAULT_SESSION_TIME_ZONE, SESSION_TIME_ZONE_KEY, SessionTimeZone, TIME_PARSER_POLICY_KEY,
+    canonical_session_zone_id, parse_runtime_session_zone_value, resolve_session_time_zone,
 };
 
 // --- Seams.

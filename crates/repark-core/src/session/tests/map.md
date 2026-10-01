@@ -18,6 +18,58 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   pins on an in-memory store (no AWS): mode matrix, marker-last commit order,
   exists-any-object, overwrite delete-then-write, bucket-root refusal.
   pins: s3-path-write-1/C-007, C-008, C-009, C-015
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** the csv `dateFormat` refusal
+  leg moved to `temporal_write_options_are_honored_on_csv_path_write`: the
+  option now succeeds instead of refusing.
+  pins: text-write-timestamp-zone-1/C-002
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 3 fold (2026-09-30):** the
+  failed-write rollback pins: a 400k-row JSON write with zone letters on NTZ
+  leaves the destination key set unchanged for overwrite-into-empty, append
+  (existing bytes also unchanged) and partitioned overwrite.
+  pins: text-write-timestamp-zone-1/C-007
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 4 fold (2026-09-30):** the
+  concurrent-writer pins: keys PUT under the same prefix, a sibling prefix
+  and an unrelated prefix while a 400k-row append fails all survive with
+  their bytes, and a failing append at the bucket root keeps a foreign
+  prefix intact while its own parts are gone.
+  pins: text-write-timestamp-zone-1/C-009
+- `text_write_format.rs` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):**
+  compiler/validator/renderer pins against the Spark oracle: every error
+  class per pattern kind, DST-gap and LMT-seconds default renders, the
+  offset-letter matrix, and the SELECT builder (star fast path, wrapping,
+  partition skip, eager rejection).
+  pins: text-write-timestamp-zone-1/C-004
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):** the SELECT
+  builder pins are now COPY-parts pins (plain format keep, sink format
+  resolution with zone, partition skip, eager rejection, quote-only escaping,
+  case twins); the wrapping-shape pins left with the UDF.
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 verifier fold (2026-09-29):** quote-run,
+  year-width, proleptic-year, trailing-`]`-class, backslash-escape, and
+  case-twin pins (52 total).
+  **Re-verify (2026-09-29):** `g`-padding, no-LEGACY-clause, offset-cache,
+  and scalar-vs-fast differential pins (56 in-module; the two
+  temporary release probes left with the re-verify fold).
+- `text_write_format_cache.rs` — **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 2
+  (2026-09-30):** the zone-offset cache proves itself against direct
+  chrono-tz lookups over all 597 bundled zones: every transition found by a
+  3-day scan of 1840-2100 (exact instants plus microsecond/second/hour/day
+  neighbours, each queried after warming the cache days away on both sides),
+  sampled years 1-9999, and a fixed-offset battery. Every resolve also holds
+  the cached window at or under 15 minutes, so a reintroduced step search
+  reds the suite structurally.
+- `text_write_sink_spike.rs` — **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format
+  round (2026-09-30):** step-0 spike for wiring route (A). A test-only
+  wrapping format factory, format, sink and serializer over CSV/JSON prove
+  in DataFusion 54.1.0 that a custom `STORED AS` name resolves, custom
+  OPTIONS keys reach `create` verbatim, part files keep the `.csv`/`.json`
+  extension, and a serializer error surfaces with its message intact; a
+  no-strip control shows unstripped custom keys fail the inner factory.
+- `text_write_sink.rs` — **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round
+  (2026-09-30):** end-to-end pins for the sink serializer: zone-correct
+  CSV/JSON bytes, user patterns, raw partition directory names, lazy and
+  eager error identity, empty and all-null frames, the
+  keep-partition-columns native pass-through against plain CSV, and the
+  signed year-10000 render.
 - `s3_prefix_read.rs` — **S3-PATH-WRITE-1 round 2 (2026-09-28):** slashless S3
   prefix reads on an in-memory store (no AWS): a written prefix reads back
   slashless for parquet, csv and json; exact part URLs keep single-file reads

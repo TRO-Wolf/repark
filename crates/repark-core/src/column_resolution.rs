@@ -613,7 +613,9 @@ pub fn rewrite_fragment_case(
     if let Some(error) = repair.error {
         return Err(error);
     }
-    Ok(expr.to_string())
+    Ok(repark_iceberg::write::sql_text::render_for_reparse(
+        &mut expr,
+    ))
 }
 
 struct FragmentRepair<'a> {

@@ -71,6 +71,9 @@ works, so the attribute is gone rather than documented.
   map children, so an UPDATE assigning a `STRUCT<u: uuid>` column (whole or one field) takes
   the fork path too, where it was planned as a UNION of stored bytes and presented text.
   pins: u9-types-1/C-016
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** selections render
+  through `sql_text::render_for_reparse` so string values re-parse exactly.
+  pins: string-literal-escape-1/C-010
 - `plain.rs` (branch) — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** `split_branch_parts`
   reads a four-part `<catalog>.<ns>.<table>.branch_<name>` DML target into the table plus the
   ref, which lands on `PredicateDmlSpec.branch`; the executor scans that ref's snapshot and
