@@ -1953,3 +1953,5 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   C-004 the zero-break guards).
   `risk_tier: standard`. Branch `fix/string-literal-escape-1`.
   pins: string-literal-escape-1/C-000, C-001, C-002, C-003, C-004
+  Re-verify VE3-1 (2026-09-30): the inventory now excepts `SQLTransformer`
+  (user-written SQL through the user door).

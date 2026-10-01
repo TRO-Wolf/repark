@@ -1896,7 +1896,7 @@ class SQLTransformer(Transformer):
         host, view = _register_temp(frame, "sqltr")
         try:
             sql = stripped.replace("__THIS__", view)
-            return _sql_on(host, sql)
+            return host._spawn(host._session.sql(sql))
         finally:
             with contextlib.suppress(Exception):
                 host._session.drop_temp_view(view)

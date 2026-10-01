@@ -21,6 +21,7 @@ import pytest
 
 from repark import ReparkSession
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
+from repark.spark.ml.feature import SQLTransformer
 
 
 @pytest.fixture
@@ -726,3 +727,29 @@ def test_default_nested_struct_set_matches_spark(spark: ReparkSession, tmp_path:
     table = spark.sql("SELECT id, st.f AS f FROM sc.ns.st ORDER BY id").to_arrow()
     assert table.column("id").to_pylist() == [1, 2, 3]
     assert _text(table, "f") == ["n''f", "k\\'m", "m''g"]
+
+
+def test_verbatim_sql_transformer_follows_the_flag(verbatim: ReparkSession) -> None:
+    """Verbatim SQLTransformer answers equal spark.sql, not the built door (VE3-1)."""
+    frame = verbatim.createDataFrame([(1, "it's"), (2, "it''s")], ["id", "s"])
+    out = SQLTransformer(statement="SELECT id, 'a\\\\b' AS v FROM __THIS__").transform(frame)
+    assert _text(out.to_arrow(), "v") == ["a\\\\b", "a\\\\b"]
+    out = SQLTransformer(statement="SELECT id, 'k\\'m' AS v FROM __THIS__").transform(frame)
+    assert _text(out.to_arrow(), "v") == ["k\\'m", "k\\'m"]
+    out = SQLTransformer(statement="SELECT id, 'it''s' AS v FROM __THIS__").transform(frame)
+    assert _text(out.to_arrow(), "v") == ["it''s", "it''s"]
+    out = SQLTransformer(statement="SELECT id FROM __THIS__ WHERE s = 'it''s'").transform(frame)
+    assert sorted(out.to_arrow().column("id").to_pylist()) == [2]
+
+
+def test_default_sql_transformer_matches_spark(spark: ReparkSession) -> None:
+    """Default SQLTransformer collapses literals like Spark (VE3-1 control)."""
+    frame = spark.createDataFrame([(1, "it's"), (2, "it''s")], ["id", "s"])
+    out = SQLTransformer(statement="SELECT id, 'a\\\\b' AS v FROM __THIS__").transform(frame)
+    assert _text(out.to_arrow(), "v") == ["a\\b", "a\\b"]
+    out = SQLTransformer(statement="SELECT id, 'k\\'m' AS v FROM __THIS__").transform(frame)
+    assert _text(out.to_arrow(), "v") == ["k'm", "k'm"]
+    out = SQLTransformer(statement="SELECT id, 'it''s' AS v FROM __THIS__").transform(frame)
+    assert _text(out.to_arrow(), "v") == ["it's", "it's"]
+    out = SQLTransformer(statement="SELECT id FROM __THIS__ WHERE s = 'it''s'").transform(frame)
+    assert sorted(out.to_arrow().column("id").to_pylist()) == [1]

@@ -7102,6 +7102,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   symbol hashes move in `test_production_file_size.py` (built doors route
   `_sql_built`).
   pins: string-literal-escape-1/C-011, C-012
+  **STRING-LITERAL-ESCAPE-1 re-verify VE3-1 (2026-09-30):** `SQLTransformer`
+  is user-written SQL through the user door, so verbatim/default literal and
+  `WHERE s = 'it''s'` pins equal `spark.sql` (and Spark).
 - `test_fnp_4b_hof_display.py` — **FNP-4B round 6 (2026-09-15):** Q3 red pin for run
   16a — selectExpr higher-order display must hide the `__repark_hof_array_field__`
   packing marker. **Round 7 (2026-09-15):** strict xfail per R-16c-10; 16a flips

@@ -220,7 +220,9 @@ UDF-rewrite re-entries (`session_core.py`), the ANSI door. Built —
 `session_core.py` (`range`, SET constant), `session_surface.py` (fixed TVF
 names), `session_maintenance.py`, `session_configuration.py` (SET, intercepted
 pre-engine), `create_dataframe_rows.py`, `ml/*` (incl. the `_transformers`
-`_sql_on` funnel). Built SQL cannot carry registered-UDF calls (UDF markers
+`_sql_on` funnel; the one exception is `SQLTransformer`, whose user-written
+statement runs through the user `sql` door per the VE3-1 fix, 2026-09-30).
+Built SQL cannot carry registered-UDF calls (UDF markers
 refuse composition), so the UDF rewrite keeps its user-door re-entry.
 
 R2: `nested_assign.rs` `leaf_sql`, `Keyed.sql`, `repeated_insert_keys` render
