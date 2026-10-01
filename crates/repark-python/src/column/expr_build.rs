@@ -202,6 +202,7 @@ fn build_expr_context() -> datafusion::error::Result<SessionContext> {
     rules.push(std::sync::Arc::new(repark_spark::FoldSparkNumericCasts));
     rules.push(std::sync::Arc::new(repark_spark::SparkProjectionDisplay));
     rules.extend(repark_spark::spark_literal_typing::spark_door_post_coercion_rules());
+    let rules = repark_functions::spark_nvl_rule::append_nvl_family_rule(rules);
     let state = SessionStateBuilder::new()
         .with_config(config)
         .with_default_features()

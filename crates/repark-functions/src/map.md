@@ -655,6 +655,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **Re-verify 9 fold (2026-09-30, VN10-3):** the `zeroifnull` arm folds
   as `coalesce(x, 0)` (`zeroifnull_fold`); `nullifzero` stays
   `nullif(x, 0)`. pins: nvl-type-coercion-1/C-039.
+  **Re-verify 10 fold (2026-09-30, VN11-4, R3):** `f64_trunc_to_i128`
+  is `pub(crate)` for the nullif fold's whole-value truncation.
+  pins: nvl-type-coercion-1/C-041
 - `cardinality_nullif.rs` — **NVL-TYPE-COERCION-1 re-verify 6
   (2026-09-30, VN7-1/VN7-2/VN7-3):** the `nullif` ceiling fold, split out of
   `cardinality.rs` (move-only): `nullif_const_int` bounds by the first
@@ -704,6 +707,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `zeroifnull_fold` is `nvl_fold([x, 0])`, `zeroifnull` leaves
   `exact_null_call` (it never returns NULL), and the unit test pins
   the corrected shape. pins: nvl-type-coercion-1/C-038, C-039.
+  **Re-verify 10 fold (2026-09-30, VN11-4, R3):** `CAST(<arithmetic>
+  AS <integral>)` evaluates the arithmetic whole in its own type and
+  truncates the result once (`exact_decimal_value` / `exact_f64_trunc`
+  plus the `fits_integral_target` range check), so
+  `nullif(150, CAST(300.4BD - 149.6BD AS INT))` answers like base and
+  Spark below the ceiling. pins: nvl-type-coercion-1/C-041
 
 
 - **R-FN-BATCH4** aggregate expansion.
@@ -839,6 +848,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `DOUBLE`). Nested complex types keep the ANSI table (unmeasured).
   `ansi_string_widen` is the extracted ANSI string table and doubles
   as the legacy peer test. pins: nvl-type-coercion-1/C-040
+  **Re-verify 10 fold (2026-09-30, VN11-1/VN11-2/VN11-5, R1):** the
+  `*_with_ansi` entries and the legacy ANSI-off helpers are deleted:
+  with ANSI off the family takes base's path exactly through the
+  pre-coercion base-route rule, so partial ANSI-off typing is dead.
+  The widening table is ANSI-on-only now.
+  pins: nvl-type-coercion-1/C-041
 - `spark_nvl_udf.rs` — **NVL-TYPE-COERCION-1 (2026-09-29):** the six Spark-door
   UDFs plus the internal `__repark_nullif_pick` and the `nvl_cast` vehicle.
   Validation lives in `coerce_types`/`return_type`; evaluation moved to the
@@ -853,6 +868,13 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **Re-verify 9 fold (2026-09-30, ANSI-off):** `zero_scalar` gains the
   `STRING` zero (`'0'`), which the legacy `zeroifnull` widening needs.
   pins: nvl-type-coercion-1/C-040
+  **Re-verify 10 fold (2026-09-30, VN11-1/VN11-2/VN11-5, R1):** the four
+  DataFrame-built UDFs carry a `facade_built` marker and the
+  `*_facade_udf` constructors plus `nvl_family_facade_expr` build them;
+  `return_type` never refuses (first-arg / widened-or-first fallback)
+  and `coerce_types` checks arity only, so bind never pre-empts the
+  base-route rule; the post-rule still refuses at execution time.
+  pins: nvl-type-coercion-1/C-041
 - `spark_nvl_eager.rs` — **NVL-TYPE-COERCION-1 (2026-09-29, VN3-1..VN3-3):**
   the two single-evaluation kernels the rule reaches for: `__repark_nvl_pick`
   takes the two widened branches once each and picks per row (volatile-first
@@ -936,6 +958,17 @@ scalars live under [`try_invert/`](try_invert/map.md).
   formats `T…Z` where Spark formats a blank-separated wall time; the
   `F.expr` seat is removed (its context has no session ANSI flag) so
   the session lowers with the live flag. pins: nvl-type-coercion-1/C-040
+  **Re-verify 10 fold (2026-09-30, VN11-1/VN11-2/VN11-5, R1):** the rule
+  stands down when ANSI is off and leaves every family call for the
+  base-route rule; ANSI-on behavior is unchanged.
+  pins: nvl-type-coercion-1/C-041
+- `spark_nvl_base.rs` — **NVL-TYPE-COERCION-1 re-verify 10 fold
+  (2026-09-30, VN11-1/VN11-2/VN11-5, R1):** `SparkNvlBaseRoute`, seated
+  immediately before `type_coercion`: with ANSI off it routes SQL
+  `nvl`/`ifnull`/`nvl2`/`nullif` to the core spellings, facade-marked
+  calls to the base `coalesce`/`CASE`/`nullif` shapes, and
+  registry-only `zeroifnull`/`nullifzero` to Spark's `Invalid
+  function` refusal. pins: nvl-type-coercion-1/C-041
 - `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer
   rule, installed on BOTH doors via `install_shared_analyzer_rules` (defined here since FNP-11B step 3 and re-exported from the crate root, so `repark_functions::install_shared_analyzer_rules` and run 16b's `session.rs` call are unchanged; the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts; the TIME guard left for `analyzer_rules()` in remediation round 1).
   installer calls it in place of the integer-only one — same line count, so the
@@ -1009,7 +1042,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   the ceiling did not rise.
 - `eager.rs` — **NVL-TYPE-COERCION-1 (2026-09-29):** `analyze_eagerly` moved
   here unchanged from `lib.rs` (sanctioned out (1), net-negative: the root
-  lands at 180 of its 186 ceiling with the four `spark_nvl` module decls) and
+  lands at 182 of its 186 ceiling with the five `spark_nvl` module decls (re-verify 10 fold adds `spark_nvl_base`)) and
   re-exported at the root, so every caller keeps its path.
   pins: nvl-type-coercion-1/C-002
 - `url.rs` — Spark `parse_url` / `try_parse_url` use `java.net.URI`-shaped splitting (sibling

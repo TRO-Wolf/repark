@@ -8,17 +8,6 @@ pub(crate) fn widen_full(left: &DataType, right: &DataType) -> Option<DataType> 
     widen_inner(left, right, true)
 }
 
-pub(crate) fn widen_full_with_ansi(
-    left: &DataType,
-    right: &DataType,
-    ansi_on: bool,
-) -> Option<DataType> {
-    if !ansi_on && let Some(other) = legacy_text_other(left, right) {
-        return legacy_string_common(other, false);
-    }
-    widen_full(left, right)
-}
-
 fn unwrap_transparent(data_type: &DataType) -> &DataType {
     match data_type {
         DataType::Dictionary(_, values) => unwrap_transparent(values),
@@ -211,30 +200,6 @@ fn ansi_string_widen(other: &DataType) -> Option<DataType> {
     None
 }
 
-fn legacy_text_other<'a>(left: &'a DataType, right: &'a DataType) -> Option<&'a DataType> {
-    let pair = (unwrap_transparent(left), unwrap_transparent(right));
-    match (is_text(pair.0), is_text(pair.1)) {
-        (true, false) => Some(pair.1),
-        (false, true) => Some(pair.0),
-        _ => None,
-    }
-}
-
-fn legacy_string_common(other: &DataType, compare: bool) -> Option<DataType> {
-    if is_binary(other) {
-        return Some(DataType::Binary);
-    }
-    ansi_string_widen(other)?;
-    if !compare && matches!(other, DataType::Boolean) {
-        return None;
-    }
-    Some(if compare {
-        other.clone()
-    } else {
-        DataType::Utf8
-    })
-}
-
 pub(crate) fn decimal_wider(p1: u8, s1: i8, p2: u8, s2: i8) -> Option<(u8, i8)> {
     let scale = i32::from(s1).max(i32::from(s2));
     let range = (i32::from(p1) - i32::from(s1)).max(i32::from(p2) - i32::from(s2));
@@ -403,26 +368,6 @@ pub(crate) fn compare_for_nullif(
     right: &DataType,
 ) -> Result<Vec<CompareLeaf>, CompareRefusal> {
     compare_inner(left, right, true, Vec::new(), Vec::new())
-}
-
-pub(crate) fn compare_for_nullif_with_ansi(
-    left: &DataType,
-    right: &DataType,
-    ansi_on: bool,
-) -> Result<Vec<CompareLeaf>, CompareRefusal> {
-    if !ansi_on
-        && let Some(common) =
-            legacy_text_other(left, right).and_then(|other| legacy_string_common(other, true))
-    {
-        return Ok(vec![CompareLeaf {
-            path_a: Vec::new(),
-            path_b: Vec::new(),
-            type_a: unwrap_transparent(left).clone(),
-            type_b: unwrap_transparent(right).clone(),
-            common,
-        }]);
-    }
-    compare_for_nullif(left, right)
 }
 
 fn compare_inner(

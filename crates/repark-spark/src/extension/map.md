@@ -58,6 +58,10 @@ function-registry + analyzer-rule installation + the composed
   `spark_fractional_division` immediately before `higher_order_preparation` (the four
   existing offsets are unchanged), and the filter passes it through.
   pins: intdiv-1/C-002
+  **NVL-TYPE-COERCION-1 re-verify 10 fold (2026-09-30, VN11-1/VN11-2/VN11-5,
+  R1):** the same contract test pins the `spark_nvl_base_route`
+  pre-coercion seat, inserted ahead of the integral-literal seat.
+  pins: nvl-type-coercion-1/C-041
 - `session_catalog.rs` — **CATALOG-1 (2026-09-26):** `apply_default_catalog(session, name)`
   (registry and carrier, a no-op once `USE` pinned the current catalog),
   `with_configured_defaults` (the build carrier from `spark.sql.defaultCatalog`),

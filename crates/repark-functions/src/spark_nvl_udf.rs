@@ -16,10 +16,7 @@ use datafusion::logical_expr::{
 
 use crate::cast_map::spark_cast_ansi_zoned;
 use crate::session_time_zone::session_time_zone_from_options;
-use crate::spark_nvl::{
-    CompareRefusal, binary_op_diff_types, coalesce_data_diff_types, compare_for_nullif,
-    if_data_diff_types, invalid_ordering_type, widen_full, wrong_num_args,
-};
+use crate::spark_nvl::{coalesce_data_diff_types, if_data_diff_types, widen_full, wrong_num_args};
 
 #[must_use]
 pub fn nvl_udf() -> Arc<ScalarUDF> {
@@ -109,6 +106,66 @@ pub fn nvl_cast_expr(value: Expr, target: &DataType) -> Expr {
     crate::expr_fn::call(nvl_cast_udf(target), vec![value])
 }
 
+#[must_use]
+pub fn nvl_facade_udf(spelling: &'static str) -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkNvl::new_facade(spelling)))
+}
+
+#[must_use]
+pub fn nvl2_facade_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkNvl2::new_facade()))
+}
+
+#[must_use]
+pub fn zeroifnull_facade_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkZeroIfNull::new_facade()))
+}
+
+#[must_use]
+pub fn nullifzero_facade_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkNullIfZero::new_facade()))
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn nvl_family_facade_expr(name: &str, args: &[Expr]) -> Result<Expr, String> {
+    let got = args.len();
+    match name {
+        "nvl" | "ifnull" => match args {
+            [first, second] => Ok(crate::expr_fn::call(
+                nvl_facade_udf(if name == "nvl" { "nvl" } else { "ifnull" }),
+                vec![first.clone(), second.clone()],
+            )),
+            _ => Err(format!("expects 2 args, got {got}")),
+        },
+        "nvl2" => match args {
+            [test, first, second] => Ok(crate::expr_fn::call(
+                nvl2_facade_udf(),
+                vec![test.clone(), first.clone(), second.clone()],
+            )),
+            _ => Err(format!("expects 3 args, got {got}")),
+        },
+        "nullif" => match args {
+            [first, second] => Ok(nullif_expr(first.clone(), second.clone())),
+            _ => Err(format!("expects 2 args, got {got}")),
+        },
+        "zeroifnull" => match args {
+            [arg] => Ok(crate::expr_fn::call(
+                zeroifnull_facade_udf(),
+                vec![arg.clone()],
+            )),
+            _ => Err(format!("expects 1 args, got {got}")),
+        },
+        "nullifzero" => match args {
+            [arg] => Ok(crate::expr_fn::call(
+                nullifzero_facade_udf(),
+                vec![arg.clone()],
+            )),
+            _ => Err(format!("expects 1 args, got {got}")),
+        },
+        _ => Err(format!("unknown nvl family name {name}")),
+    }
+}
+
 #[allow(clippy::missing_errors_doc)]
 pub fn nvl_family_expr(name: &str, args: &[Expr]) -> Result<Expr, String> {
     let got = args.len();
@@ -141,13 +198,6 @@ pub fn nvl_family_expr(name: &str, args: &[Expr]) -> Result<Expr, String> {
         },
         _ => Err(format!("unknown nvl family name {name}")),
     }
-}
-
-fn nvl_common(arg_types: &[DataType], spelling: &str) -> Result<DataType> {
-    let [first, second] = arg_types else {
-        return Err(wrong_num_args(spelling, 2, arg_types.len()));
-    };
-    widen_full(first, second).ok_or_else(|| coalesce_data_diff_types(first, second))
 }
 
 fn materialize(values: &[ColumnarValue]) -> Result<Vec<ArrayRef>> {
@@ -277,9 +327,10 @@ fn case_when_present(test: Expr, first: Expr, second: Expr) -> Result<ExprSimpli
 }
 
 #[derive(Debug)]
-struct SparkNvl {
+pub(crate) struct SparkNvl {
     spelling: &'static str,
     signature: Signature,
+    facade_built: bool,
 }
 
 impl SparkNvl {
@@ -287,7 +338,20 @@ impl SparkNvl {
         Self {
             spelling,
             signature: Signature::user_defined(Volatility::Immutable),
+            facade_built: false,
         }
+    }
+
+    fn new_facade(spelling: &'static str) -> Self {
+        Self {
+            spelling,
+            signature: Signature::user_defined(Volatility::Immutable),
+            facade_built: true,
+        }
+    }
+
+    pub(crate) fn is_facade_built(&self) -> bool {
+        self.facade_built
     }
 }
 
@@ -315,7 +379,10 @@ impl ScalarUDFImpl for SparkNvl {
     }
 
     fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
-        nvl_common(arg_types, self.spelling)
+        let [first, second] = arg_types else {
+            return Err(wrong_num_args(self.spelling, 2, arg_types.len()));
+        };
+        Ok(widen_full(first, second).unwrap_or_else(|| first.clone()))
     }
 
     fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
@@ -323,13 +390,15 @@ impl ScalarUDFImpl for SparkNvl {
             return Err(wrong_num_args(self.spelling, 2, args.arg_fields.len()));
         };
         let common = widen_full(first.data_type(), second.data_type())
-            .ok_or_else(|| coalesce_data_diff_types(first.data_type(), second.data_type()))?;
+            .unwrap_or_else(|| first.data_type().clone());
         let nullable = first.is_nullable() && second.is_nullable();
         Ok(Arc::new(Field::new(self.spelling, common, nullable)))
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
-        nvl_common(arg_types, self.spelling)?;
+        if arg_types.len() != 2 {
+            return Err(wrong_num_args(self.spelling, 2, arg_types.len()));
+        }
         Ok(arg_types.to_vec())
     }
 
@@ -372,15 +441,28 @@ impl ScalarUDFImpl for SparkNvl {
 }
 
 #[derive(Debug)]
-struct SparkNvl2 {
+pub(crate) struct SparkNvl2 {
     signature: Signature,
+    facade_built: bool,
 }
 
 impl SparkNvl2 {
     fn new() -> Self {
         Self {
             signature: Signature::user_defined(Volatility::Immutable),
+            facade_built: false,
         }
+    }
+
+    fn new_facade() -> Self {
+        Self {
+            signature: Signature::user_defined(Volatility::Immutable),
+            facade_built: true,
+        }
+    }
+
+    pub(crate) fn is_facade_built(&self) -> bool {
+        self.facade_built
     }
 }
 
@@ -398,18 +480,14 @@ impl Hash for SparkNvl2 {
     }
 }
 
-fn nvl2_common(arg_types: &[DataType]) -> Result<DataType> {
-    let [_, first, second] = arg_types else {
-        return Err(wrong_num_args("nvl2", 3, arg_types.len()));
-    };
-    widen_full(first, second).ok_or_else(|| if_data_diff_types(first, second))
-}
-
 impl ScalarUDFImpl for SparkNvl2 {
     crate::shim_udf_boilerplate!("nvl2");
 
     fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
-        nvl2_common(arg_types)
+        let [_, first, second] = arg_types else {
+            return Err(wrong_num_args("nvl2", 3, arg_types.len()));
+        };
+        Ok(widen_full(first, second).unwrap_or_else(|| first.clone()))
     }
 
     fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
@@ -417,13 +495,15 @@ impl ScalarUDFImpl for SparkNvl2 {
             return Err(wrong_num_args("nvl2", 3, args.arg_fields.len()));
         };
         let common = widen_full(first.data_type(), second.data_type())
-            .ok_or_else(|| if_data_diff_types(first.data_type(), second.data_type()))?;
+            .unwrap_or_else(|| first.data_type().clone());
         let nullable = first.is_nullable() || second.is_nullable();
         Ok(Arc::new(Field::new("nvl2", common, nullable)))
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
-        nvl2_common(arg_types)?;
+        if arg_types.len() != 3 {
+            return Err(wrong_num_args("nvl2", 3, arg_types.len()));
+        }
         Ok(arg_types.to_vec())
     }
 
@@ -490,33 +570,20 @@ impl Hash for SparkNullif {
     }
 }
 
-fn nullif_validated(arg_types: &[DataType], spelling: &str) -> Result<()> {
-    let [first, second] = arg_types else {
-        return Err(wrong_num_args(spelling, 2, arg_types.len()));
-    };
-    match compare_for_nullif(first, second) {
-        Ok(_) => Ok(()),
-        Err(CompareRefusal::BinaryOp) => Err(binary_op_diff_types("...", "...", first, second)),
-        Err(CompareRefusal::Ordering(common)) => Err(invalid_ordering_type("...", "...", &common)),
-    }
-}
-
 impl ScalarUDFImpl for SparkNullif {
     crate::shim_udf_boilerplate!("nullif");
 
     fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
-        nullif_validated(arg_types, "nullif")?;
-        Ok(arg_types[0].clone())
+        let [first, _] = arg_types else {
+            return Err(wrong_num_args("nullif", 2, arg_types.len()));
+        };
+        Ok(first.clone())
     }
 
     fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
-        let [first, second] = args.arg_fields else {
+        let [first, _] = args.arg_fields else {
             return Err(wrong_num_args("nullif", 2, args.arg_fields.len()));
         };
-        nullif_validated(
-            &[first.data_type().clone(), second.data_type().clone()],
-            "nullif",
-        )?;
         Ok(Arc::new(Field::new(
             "nullif",
             first.data_type().clone(),
@@ -525,7 +592,9 @@ impl ScalarUDFImpl for SparkNullif {
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
-        nullif_validated(arg_types, "nullif")?;
+        if arg_types.len() != 2 {
+            return Err(wrong_num_args("nullif", 2, arg_types.len()));
+        }
         Ok(arg_types.to_vec())
     }
 
@@ -535,15 +604,28 @@ impl ScalarUDFImpl for SparkNullif {
 }
 
 #[derive(Debug)]
-struct SparkZeroIfNull {
+pub(crate) struct SparkZeroIfNull {
     signature: Signature,
+    facade_built: bool,
 }
 
 impl SparkZeroIfNull {
     fn new() -> Self {
         Self {
             signature: Signature::user_defined(Volatility::Immutable),
+            facade_built: false,
         }
+    }
+
+    fn new_facade() -> Self {
+        Self {
+            signature: Signature::user_defined(Volatility::Immutable),
+            facade_built: true,
+        }
+    }
+
+    pub(crate) fn is_facade_built(&self) -> bool {
+        self.facade_built
     }
 }
 
@@ -561,18 +643,14 @@ impl Hash for SparkZeroIfNull {
     }
 }
 
-fn zeroifnull_common(arg_types: &[DataType]) -> Result<DataType> {
-    let [arg] = arg_types else {
-        return Err(wrong_num_args("zeroifnull", 1, arg_types.len()));
-    };
-    widen_full(arg, &DataType::Int32).ok_or_else(|| coalesce_data_diff_types(arg, &DataType::Int32))
-}
-
 impl ScalarUDFImpl for SparkZeroIfNull {
     crate::shim_udf_boilerplate!("zeroifnull");
 
     fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
-        zeroifnull_common(arg_types)
+        let [arg] = arg_types else {
+            return Err(wrong_num_args("zeroifnull", 1, arg_types.len()));
+        };
+        Ok(widen_full(arg, &DataType::Int32).unwrap_or_else(|| arg.clone()))
     }
 
     fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
@@ -580,12 +658,14 @@ impl ScalarUDFImpl for SparkZeroIfNull {
             return Err(wrong_num_args("zeroifnull", 1, args.arg_fields.len()));
         };
         let common = widen_full(arg.data_type(), &DataType::Int32)
-            .ok_or_else(|| coalesce_data_diff_types(arg.data_type(), &DataType::Int32))?;
+            .unwrap_or_else(|| arg.data_type().clone());
         Ok(Arc::new(Field::new("zeroifnull", common, false)))
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
-        zeroifnull_common(arg_types)?;
+        if arg_types.len() != 1 {
+            return Err(wrong_num_args("zeroifnull", 1, arg_types.len()));
+        }
         Ok(arg_types.to_vec())
     }
 
@@ -609,15 +689,28 @@ impl ScalarUDFImpl for SparkZeroIfNull {
 }
 
 #[derive(Debug)]
-struct SparkNullIfZero {
+pub(crate) struct SparkNullIfZero {
     signature: Signature,
+    facade_built: bool,
 }
 
 impl SparkNullIfZero {
     fn new() -> Self {
         Self {
             signature: Signature::user_defined(Volatility::Immutable),
+            facade_built: false,
         }
+    }
+
+    fn new_facade() -> Self {
+        Self {
+            signature: Signature::user_defined(Volatility::Immutable),
+            facade_built: true,
+        }
+    }
+
+    pub(crate) fn is_facade_built(&self) -> bool {
+        self.facade_built
     }
 }
 
@@ -635,32 +728,20 @@ impl Hash for SparkNullIfZero {
     }
 }
 
-fn nullifzero_validated(arg_types: &[DataType]) -> Result<()> {
-    let [arg] = arg_types else {
-        return Err(wrong_num_args("nullifzero", 1, arg_types.len()));
-    };
-    match compare_for_nullif(arg, &DataType::Int32) {
-        Ok(_) => Ok(()),
-        Err(CompareRefusal::BinaryOp) => {
-            Err(binary_op_diff_types("...", "0", arg, &DataType::Int32))
-        }
-        Err(CompareRefusal::Ordering(common)) => Err(invalid_ordering_type("...", "0", &common)),
-    }
-}
-
 impl ScalarUDFImpl for SparkNullIfZero {
     crate::shim_udf_boilerplate!("nullifzero");
 
     fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
-        nullifzero_validated(arg_types)?;
-        Ok(arg_types[0].clone())
+        let [arg] = arg_types else {
+            return Err(wrong_num_args("nullifzero", 1, arg_types.len()));
+        };
+        Ok(arg.clone())
     }
 
     fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
         let [arg] = args.arg_fields else {
             return Err(wrong_num_args("nullifzero", 1, args.arg_fields.len()));
         };
-        nullifzero_validated(std::slice::from_ref(arg.data_type()))?;
         Ok(Arc::new(Field::new(
             "nullifzero",
             arg.data_type().clone(),
@@ -669,7 +750,9 @@ impl ScalarUDFImpl for SparkNullIfZero {
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
-        nullifzero_validated(arg_types)?;
+        if arg_types.len() != 1 {
+            return Err(wrong_num_args("nullifzero", 1, arg_types.len()));
+        }
         Ok(arg_types.to_vec())
     }
 

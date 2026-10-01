@@ -16,7 +16,7 @@ use datafusion::optimizer::AnalyzerRule;
 
 use crate::spark_nvl::{
     CompareLeaf, CompareRefusal, binary_op_diff_types, coalesce_data_diff_types,
-    compare_for_nullif_with_ansi, if_data_diff_types, invalid_ordering_type, widen_full_with_ansi,
+    compare_for_nullif, if_data_diff_types, invalid_ordering_type, widen_full,
 };
 use crate::spark_nvl_eager::{nullif_compare_expr, nvl_pick_expr};
 use crate::spark_nvl_udf::{
@@ -36,9 +36,10 @@ pub struct SparkNvlFamilyRewrite;
 
 impl AnalyzerRule for SparkNvlFamilyRewrite {
     fn analyze(&self, plan: LogicalPlan, config: &ConfigOptions) -> Result<LogicalPlan> {
-        let ansi_on = crate::ansi::spark_ansi_enabled_from_options(config);
-        plan.transform_up_with_subqueries(|plan| rewrite_plan(plan, ansi_on))
-            .data()
+        if !crate::ansi::spark_ansi_enabled_from_options(config) {
+            return Ok(plan);
+        }
+        plan.transform_up_with_subqueries(rewrite_plan).data()
     }
 
     #[allow(clippy::unnecessary_literal_bound)]
@@ -47,7 +48,7 @@ impl AnalyzerRule for SparkNvlFamilyRewrite {
     }
 }
 
-fn rewrite_plan(plan: LogicalPlan, ansi_on: bool) -> Result<Transformed<LogicalPlan>> {
+fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     let mut schema = DFSchema::empty();
     for input in plan.inputs() {
         schema.merge(input.schema());
@@ -55,10 +56,10 @@ fn rewrite_plan(plan: LogicalPlan, ansi_on: bool) -> Result<Transformed<LogicalP
     let name_preserver = NamePreserver::new(&plan);
     let transformed = plan.map_expressions(|expr| {
         if let Expr::GroupingSet(set) = &expr {
-            return rewrite_grouping_set(set, &name_preserver, &schema, ansi_on);
+            return rewrite_grouping_set(set, &name_preserver, &schema);
         }
         let saved_name = name_preserver.save(&expr);
-        let rewritten = expr.transform_up(|node| rewrite_expr(node, &schema, ansi_on))?;
+        let rewritten = expr.transform_up(|node| rewrite_expr(node, &schema))?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
     transformed.map_data(LogicalPlan::recompute_schema)
@@ -68,14 +69,13 @@ fn rewrite_grouping_set(
     set: &GroupingSet,
     name_preserver: &NamePreserver,
     schema: &DFSchema,
-    ansi_on: bool,
 ) -> Result<Transformed<Expr>> {
     let mut changed = false;
     let mut rewrite_inner = |inner: &Expr| -> Result<Expr> {
         let saved_name = name_preserver.save(inner);
         let rewritten = inner
             .clone()
-            .transform_up(|node| rewrite_expr(node, schema, ansi_on))?;
+            .transform_up(|node| rewrite_expr(node, schema))?;
         changed |= rewritten.transformed;
         Ok(rewritten.update_data(|node| saved_name.restore(node)).data)
     };
@@ -113,7 +113,7 @@ fn rewrite_grouping_set(
     ))
 }
 
-fn rewrite_expr(expr: Expr, schema: &DFSchema, ansi_on: bool) -> Result<Transformed<Expr>> {
+fn rewrite_expr(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
     let Expr::ScalarFunction(function) = &expr else {
         return Ok(Transformed::no(expr));
     };
@@ -125,7 +125,6 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema, ansi_on: bool) -> Result<Transfor
             function.args[0].clone(),
             function.args[1].clone(),
             schema,
-            ansi_on,
         )?;
         return Ok(Transformed::yes(rewritten));
     }
@@ -135,12 +134,11 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema, ansi_on: bool) -> Result<Transfor
             function.args[1].clone(),
             function.args[2].clone(),
             schema,
-            ansi_on,
         )?;
         return Ok(Transformed::yes(rewritten));
     }
     if function.func.name() == "zeroifnull" && function.args.len() == 1 {
-        let rewritten = rewrite_zeroifnull(function.args[0].clone(), schema, ansi_on)?;
+        let rewritten = rewrite_zeroifnull(function.args[0].clone(), schema)?;
         return Ok(Transformed::yes(rewritten));
     }
     if is_spark_nullif_call(function) && function.args.len() == 2 {
@@ -149,13 +147,12 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema, ansi_on: bool) -> Result<Transfor
             function.args[1].clone(),
             None,
             schema,
-            ansi_on,
         )?;
         return Ok(Transformed::yes(rewritten));
     }
     if function.func.name() == "nullifzero" && function.args.len() == 1 {
         let zero = Expr::Literal(ScalarValue::Int32(Some(0)), None);
-        let rewritten = rewrite_nullif(function.args[0].clone(), zero, Some("0"), schema, ansi_on)?;
+        let rewritten = rewrite_nullif(function.args[0].clone(), zero, Some("0"), schema)?;
         return Ok(Transformed::yes(rewritten));
     }
     Ok(Transformed::no(expr))
@@ -213,13 +210,7 @@ fn maybe_nvl_cast(expr: Expr, from_type: &DataType, widen: &DataType) -> Expr {
     }
 }
 
-fn rewrite_nvl(
-    spelling: &str,
-    first: Expr,
-    second: Expr,
-    schema: &DFSchema,
-    ansi_on: bool,
-) -> Result<Expr> {
+fn rewrite_nvl(spelling: &str, first: Expr, second: Expr, schema: &DFSchema) -> Result<Expr> {
     let (Ok(first_type), Ok(second_type)) = (first.get_type(schema), second.get_type(schema))
     else {
         return Ok(if spelling == "nvl" {
@@ -228,7 +219,7 @@ fn rewrite_nvl(
             ifnull_expr(first, second)
         });
     };
-    let widen = widen_full_with_ansi(&first_type, &second_type, ansi_on)
+    let widen = widen_full(&first_type, &second_type)
         .ok_or_else(|| coalesce_data_diff_types(&first_type, &second_type))?;
     if is_null_literal(&first) {
         return Ok(maybe_nvl_cast(second, &second_type, &widen));
@@ -273,18 +264,12 @@ fn first_is_try_shape(first: &Expr) -> bool {
         || matches!(current, Expr::ScalarFunction(call) if call.func.name().to_ascii_lowercase().starts_with("try_"))
 }
 
-fn rewrite_nvl2(
-    test: Expr,
-    first: Expr,
-    second: Expr,
-    schema: &DFSchema,
-    ansi_on: bool,
-) -> Result<Expr> {
+fn rewrite_nvl2(test: Expr, first: Expr, second: Expr, schema: &DFSchema) -> Result<Expr> {
     let (Ok(first_type), Ok(second_type)) = (first.get_type(schema), second.get_type(schema))
     else {
         return Ok(nvl2_expr(test, first, second));
     };
-    let widen = widen_full_with_ansi(&first_type, &second_type, ansi_on)
+    let widen = widen_full(&first_type, &second_type)
         .ok_or_else(|| if_data_diff_types(&first_type, &second_type))?;
     if is_null_literal(&test) {
         return Ok(maybe_nvl_cast(second, &second_type, &widen));
@@ -304,11 +289,11 @@ fn widened_zero(widen: &DataType) -> Result<Expr> {
     Ok(Expr::Cast(Cast::new(Box::new(zero), widen.clone())))
 }
 
-fn rewrite_zeroifnull(arg: Expr, schema: &DFSchema, ansi_on: bool) -> Result<Expr> {
+fn rewrite_zeroifnull(arg: Expr, schema: &DFSchema) -> Result<Expr> {
     let Ok(arg_type) = arg.get_type(schema) else {
         return Ok(zeroifnull_expr(arg));
     };
-    let widen = widen_full_with_ansi(&arg_type, &DataType::Int32, ansi_on)
+    let widen = widen_full(&arg_type, &DataType::Int32)
         .ok_or_else(|| coalesce_data_diff_types(&arg_type, &DataType::Int32))?;
     let zero = widened_zero(&widen)?;
     if is_null_literal(&arg) {
@@ -330,7 +315,6 @@ fn rewrite_nullif(
     second: Expr,
     second_sql: Option<&str>,
     schema: &DFSchema,
-    ansi_on: bool,
 ) -> Result<Expr> {
     let (Ok(first_type), Ok(second_type)) = (first.get_type(schema), second.get_type(schema))
     else {
@@ -342,7 +326,7 @@ fn rewrite_nullif(
     let first_sql = "...";
     let from_nullifzero = second_sql.is_some();
     let second_sql = second_sql.unwrap_or("...");
-    let leaves = match compare_for_nullif_with_ansi(&first_type, &second_type, ansi_on) {
+    let leaves = match compare_for_nullif(&first_type, &second_type) {
         Ok(leaves) => leaves,
         Err(CompareRefusal::BinaryOp) => {
             return Err(binary_op_diff_types(
@@ -541,13 +525,18 @@ mod tests {
     async fn plan_err(ctx: &SessionContext, sql: &str) -> String {
         ctx.sql(sql)
             .await
+            .unwrap_or_else(|error| panic!("bind {sql}: {error}"))
+            .collect()
+            .await
             .err()
             .unwrap_or_else(|| panic!("{sql} planned, want refusal"))
             .to_string()
     }
 
     fn ctx_with_ansi(ansi_on: bool) -> SessionContext {
-        let rules = append_nvl_family_rule(Analyzer::new().rules);
+        let rules = crate::spark_nvl_base::insert_base_route_before_coercion(Analyzer::new().rules)
+            .expect("default analyzer contains type_coercion");
+        let rules = append_nvl_family_rule(rules);
         let config =
             crate::ansi::with_spark_ansi_config(datafusion::prelude::SessionConfig::new(), ansi_on);
         let state = SessionStateBuilder::new()
@@ -566,38 +555,31 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn rule_widens_string_to_string_without_ansi() {
+    async fn rule_stands_down_without_ansi() {
         let ctx = ctx_with_ansi(false);
         let rows = one_row(&ctx, "SELECT nvl('a', 5) AS v").await;
         assert!(rows.iter().any(|row| row.contains('a')), "{rows:?}");
         let batches = ctx
             .sql("SELECT nvl('a', 5) AS v")
             .await
-            .expect("plan nvl under legacy coercion")
+            .expect("plan nvl on the base route")
             .collect()
             .await
-            .expect("collect nvl under legacy coercion");
+            .expect("collect nvl on the base route");
         assert_eq!(
             batches[0].schema().field(0).data_type(),
             &DataType::Utf8,
-            "legacy nvl widens to string"
+            "base-route nvl widens to string"
         );
         let rows = one_row(&ctx, "SELECT nvl2(1, 'a', 5) AS v").await;
         assert!(rows.iter().any(|row| row.contains('a')), "{rows:?}");
-        let rows = one_row(&ctx, "SELECT zeroifnull('a') AS v").await;
-        assert!(rows.iter().any(|row| row.contains('a')), "{rows:?}");
-        let message = ctx
-            .sql("SELECT nvl('a', true) AS v")
-            .await
-            .expect("bind nvl under legacy coercion")
-            .collect()
-            .await
-            .expect_err("legacy nvl over string and boolean refuses")
-            .to_string();
+        let message = plan_err(&ctx, "SELECT zeroifnull('a') AS v").await;
         assert!(
-            message.contains("[DATATYPE_MISMATCH.DATA_DIFF_TYPES]"),
+            message.contains("Invalid function 'zeroifnull'"),
             "{message}"
         );
+        let rows = one_row(&ctx, "SELECT nvl('a', true) AS v").await;
+        assert!(rows.iter().any(|row| row.contains('a')), "{rows:?}");
     }
 
     #[tokio::test]
@@ -605,7 +587,7 @@ mod tests {
         let ctx = ctx_with_ansi(false);
         assert!(
             cell_is_null(&ctx, "SELECT nullif('0.1', CAST(0.1 AS FLOAT)) AS v").await,
-            "legacy float compare answers null"
+            "base-route float compare answers null"
         );
         assert!(
             cell_is_null(
@@ -613,10 +595,13 @@ mod tests {
                 "SELECT nullif('16777217', CAST(16777216 AS FLOAT)) AS v"
             )
             .await,
-            "legacy float compare rounds like Spark"
+            "base-route float compare rounds like Spark"
         );
-        let rows = one_row(&ctx, "SELECT nullif('5d', CAST(5 AS DECIMAL(38,0))) AS v").await;
-        assert!(rows.iter().any(|row| row.contains("5d")), "{rows:?}");
+        let message = plan_err(&ctx, "SELECT nullif('5d', CAST(5 AS DECIMAL(38,0))) AS v").await;
+        assert!(
+            message.contains("Cannot cast string '5d'"),
+            "base-route decimal compare fails its cast like base: {message}"
+        );
     }
 
     #[tokio::test]

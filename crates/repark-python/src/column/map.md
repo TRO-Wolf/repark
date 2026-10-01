@@ -114,6 +114,11 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `nvl` family (`nvl`, `ifnull`, `nvl2`, `nullif`, `zeroifnull`, `nullifzero`)
   through `spark_nvl_udf::nvl_family_expr` onto the Spark-widening UDFs.
   pins: nvl-type-coercion-1/C-002
+  **Re-verify 10 fold (2026-09-30, VN11-1/VN11-2/VN11-5, R1):**
+  `call_scalar_expr` routes the DataFrame door through
+  `nvl_family_facade_expr` onto the facade-marked UDFs, so the
+  base-route rule lowers them to base's shapes under ANSI off.
+  pins: nvl-type-coercion-1/C-041
 - [`function_dispatch/dispatch_json.rs`](function_dispatch/dispatch_json.rs) —
   **FNP-9/10 (2026-09-05):** arms for
   `get_json_object`, `json_array_length`, `json_object_keys`, `schema_of_json`, `to_json`,
@@ -177,6 +182,11 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   leaves the family raw and the consumer session lowers it with the
   live flag, exactly like the column-API door.
   pins: nvl-type-coercion-1/C-040
+  **Re-verify 10 fold (2026-09-30, VN11-3, R2):** the family seat is
+  restored through `append_nvl_family_rule`: the re-verify 9
+  session-time lowering is reverted, so `F.expr` nullif/nvl compare
+  in one zone exactly as before it.
+  pins: nvl-type-coercion-1/C-041
   **FN-FIX-1:** `window_from_aggregate` copies `IGNORE NULLS`. pins: fn-fix-1-registry-rows/C-002
   **FNP-AGG-1 slice (d) (2026-09-21):** `cast_unsigned_count_to_signed` moved here
   from `function_dispatch.rs` (same body, re-exported there) so `grouping_id_call`

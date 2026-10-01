@@ -61,6 +61,7 @@ pub mod spark_log1p;
 pub mod spark_math;
 pub mod spark_nullability;
 pub mod spark_nvl;
+pub mod spark_nvl_base;
 pub mod spark_nvl_eager;
 pub mod spark_nvl_rule;
 pub mod spark_nvl_udf;
