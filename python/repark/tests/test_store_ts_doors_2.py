@@ -888,3 +888,104 @@ def test_fold4_ambiguity_at_other_position_surfaces_ambiguous(
             assert _fold3_rows(session, table) == [], sql
     finally:
         session.stop()
+
+
+def _fold5_setup(session: ReparkSession) -> None:
+    session.sql("CREATE TABLE sc.ns.tsrc (id INT, c STRING, t TIMESTAMP) USING iceberg").collect()
+    session.sql(
+        "INSERT INTO sc.ns.tsrc VALUES (2, '2020-07-07 07:07:07', TIMESTAMP'2020-08-08 08:08:08')"
+    ).collect()
+    session.sql("CREATE TABLE sc.ns.usrc (ID INT, C STRING, T TIMESTAMP) USING iceberg").collect()
+    session.sql(
+        "INSERT INTO sc.ns.usrc VALUES (2, '2020-07-07 07:07:07', TIMESTAMP'2020-08-08 08:08:08')"
+    ).collect()
+
+
+_FOLD5_ARMS = [
+    "SELECT id, coalesce(c, c) FROM (SELECT id, c, count(*) OVER (ORDER BY t "
+    "RANGE BETWEEN INTERVAL 1 DAY PRECEDING AND CURRENT ROW) AS n FROM sc.ns.tsrc) q",
+    "SELECT id, coalesce(c, c || CAST(count(*) OVER (ORDER BY t RANGE BETWEEN INTERVAL 1 DAY "
+    "PRECEDING AND CURRENT ROW) AS STRING)) FROM sc.ns.tsrc",
+    "SELECT id, coalesce(c, c || CAST(count(*) OVER w AS STRING)) FROM sc.ns.tsrc WINDOW w AS "
+    "(ORDER BY t RANGE BETWEEN INTERVAL 1 DAY PRECEDING AND CURRENT ROW)",
+    "SELECT ID, coalesce(C, C) FROM (SELECT ID, C, count(*) OVER (ORDER BY T "
+    "RANGE BETWEEN INTERVAL 1 DAY PRECEDING AND CURRENT ROW) AS n FROM sc.ns.usrc) q",
+]
+
+_FOLD5_EXTRA_ARMS = [
+    "SELECT id, coalesce(c, c) FROM (SELECT id, c, count(*) OVER (ORDER BY t "
+    "RANGE BETWEEN CURRENT ROW AND INTERVAL 1 DAY FOLLOWING) AS n FROM sc.ns.tsrc) q",
+    "SELECT id, coalesce(c, c) FROM (SELECT id, c, count(*) OVER (ORDER BY t RANGE BETWEEN "
+    "INTERVAL 1 DAY PRECEDING AND INTERVAL 2 DAY FOLLOWING) AS n FROM sc.ns.tsrc) q",
+]
+
+
+def test_fold5_unquoted_interval_window_arms_refuse(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        _fold5_setup(session)
+        index = 0
+        for mode in ("ci", "cs"):
+            if mode == "cs":
+                session.sql("SET spark.sql.caseSensitive=true").collect()
+            for door in ("into", "dynpart", "collist"):
+                for arm in _FOLD5_ARMS:
+                    table = f"sc.ns.f5_g{index}"
+                    index += 1
+                    _fold4_target(session, table, partitioned=door == "dynpart")
+                    sql = _fold4_door_sql(table, door, arm)
+                    _fold3_refused_cast(session, sql)
+                    assert _fold3_rows(session, table) == [], sql
+    finally:
+        session.stop()
+
+
+def test_fold5_interval_window_controls(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        _fold5_setup(session)
+        quoted = (
+            "SELECT id, coalesce(c, c) FROM (SELECT id, c, count(*) OVER (ORDER BY t RANGE BETWEEN "
+            "INTERVAL '1' DAY PRECEDING AND CURRENT ROW) AS n FROM sc.ns.tsrc) q"
+        )
+        ranged = (
+            "SELECT id, coalesce(c, c) FROM (SELECT id, c, count(*) OVER "
+            "(ORDER BY id RANGE BETWEEN 1 PRECEDING AND CURRENT ROW) AS n FROM sc.ns.tsrc) q"
+        )
+        for index, arm in enumerate((quoted, ranged)):
+            table = f"sc.ns.f5_c{index}"
+            _fold4_target(session, table)
+            sql = f"INSERT INTO {table} {_FOLD4_VALUES} UNION ALL {arm}"
+            _fold3_refused_cast(session, sql)
+            assert _fold3_rows(session, table) == [], sql
+        table = "sc.ns.f5_s0"
+        _fold4_target(session, table)
+        sql = (
+            f"INSERT INTO {table} {_FOLD4_VALUES} UNION ALL SELECT id, coalesce(t, t) "
+            "FROM (SELECT id, t, count(*) OVER (ORDER BY t RANGE BETWEEN INTERVAL 1 DAY "
+            "PRECEDING AND CURRENT ROW) AS n FROM sc.ns.tsrc) q"
+        )
+        got = _write(session, {"sql": sql})
+        assert got["refused"] is False, (sql, got)
+        assert _fold3_rows(session, table) == [
+            [1, "2020-01-01 10:00:00"],
+            [2, "2020-08-08 08:08:08"],
+        ], sql
+    finally:
+        session.stop()
+
+
+def test_fold5_other_unquoted_frame_bounds_refuse(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        _fold5_setup(session)
+        for index, (door, arm) in enumerate(
+            [("into", _FOLD5_EXTRA_ARMS[0]), ("collist", _FOLD5_EXTRA_ARMS[1])]
+        ):
+            table = f"sc.ns.f5_x{index}"
+            _fold4_target(session, table)
+            sql = _fold4_door_sql(table, door, arm)
+            _fold3_refused_cast(session, sql)
+            assert _fold3_rows(session, table) == [], sql
+    finally:
+        session.stop()

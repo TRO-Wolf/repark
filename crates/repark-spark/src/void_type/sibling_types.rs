@@ -1,14 +1,11 @@
 use std::collections::HashMap;
-use std::ops::ControlFlow;
 
 use datafusion::arrow::datatypes::{DataType, Schema as ArrowSchema};
 use datafusion::common::SchemaError;
 use datafusion::error::DataFusionError;
 use datafusion::logical_expr::LogicalPlan;
 use datafusion::prelude::SessionContext;
-use datafusion::sql::sqlparser::ast::{
-    Cte, Expr, ObjectName, ObjectNamePart, Select, Visit, Visitor,
-};
+use datafusion::sql::sqlparser::ast::{Expr, ObjectName};
 use repark_core::CatalogRegistry;
 
 use super::ltz_values_store::{
@@ -313,106 +310,9 @@ impl<'ctx, 'arms, 'ast> SiblingJudge<'ctx, 'arms, 'ast> {
             Ok(plan) => typed_plan(&plan),
             Err(error) if is_ambiguity(&error) => ArmPlan::Ambiguous,
             Err(error) if is_parse_error(&error) => ArmPlan::Failed,
-            Err(_) => ArmPlan::Unresolved,
+            Err(error) if is_resolution_error(&error) => ArmPlan::Unresolved,
+            Err(_) => ArmPlan::Failed,
         }
-    }
-}
-
-pub(crate) fn unmapped_arm<'arm>(
-    select: &Select,
-    scope: &[&Cte],
-    case_insensitive: bool,
-) -> ArmMap<'arm> {
-    ArmMap {
-        positions: Vec::new(),
-        provenance: Vec::new(),
-        arm_sql: scoped_arm_sql(select, scope, case_insensitive),
-    }
-}
-
-pub(crate) fn scoped_arm_sql(
-    select: &Select,
-    scope: &[&Cte],
-    case_insensitive: bool,
-) -> Option<String> {
-    if scope.is_empty() {
-        return Some(select.to_string());
-    }
-    let mut kept: Vec<&Cte> = Vec::with_capacity(scope.len());
-    for cte in scope {
-        let name = cte.alias.name.value.as_str();
-        if let Some(position) = kept
-            .iter()
-            .position(|kept| names_equal(&kept.alias.name.value, name, case_insensitive))
-        {
-            kept.remove(position);
-        }
-        kept.push(*cte);
-    }
-    if has_case_twins(&kept) {
-        return None;
-    }
-    let mut sql = String::from(if scope_needs_recursive(&kept, case_insensitive) {
-        "WITH RECURSIVE "
-    } else {
-        "WITH "
-    });
-    for (position, cte) in kept.iter().enumerate() {
-        if position > 0 {
-            sql.push_str(", ");
-        }
-        sql.push_str(&cte.to_string());
-    }
-    sql.push(' ');
-    sql.push_str(&select.to_string());
-    Some(sql)
-}
-
-fn has_case_twins(kept: &[&Cte]) -> bool {
-    kept.iter().enumerate().any(|(index, first)| {
-        kept.iter().skip(index + 1).any(|second| {
-            first.alias.name.value != second.alias.name.value
-                && first
-                    .alias
-                    .name
-                    .value
-                    .eq_ignore_ascii_case(&second.alias.name.value)
-        })
-    })
-}
-
-fn scope_needs_recursive(kept: &[&Cte], case_insensitive: bool) -> bool {
-    kept.iter().enumerate().any(|(index, cte)| {
-        let mut seen = RelationNames { names: Vec::new() };
-        let _ = cte.query.visit(&mut seen);
-        seen.names.iter().any(|name| {
-            kept.iter()
-                .skip(index)
-                .any(|kept| names_equal(&kept.alias.name.value, name, case_insensitive))
-        })
-    })
-}
-
-fn names_equal(first: &str, second: &str, case_insensitive: bool) -> bool {
-    if case_insensitive {
-        first.eq_ignore_ascii_case(second)
-    } else {
-        first == second
-    }
-}
-
-struct RelationNames {
-    names: Vec<String>,
-}
-
-impl Visitor for RelationNames {
-    type Break = std::convert::Infallible;
-
-    fn pre_visit_relation(&mut self, relation: &ObjectName) -> ControlFlow<Self::Break> {
-        if let [ObjectNamePart::Identifier(ident)] = relation.0.as_slice() {
-            self.names.push(ident.value.clone());
-        }
-        ControlFlow::Continue(())
     }
 }
 
@@ -455,6 +355,41 @@ fn is_parse_error(error: &DataFusionError) -> bool {
         DataFusionError::Collection(errors) => errors.iter().any(is_parse_error),
         _ => false,
     }
+}
+
+fn is_resolution_error(error: &DataFusionError) -> bool {
+    match error {
+        DataFusionError::SchemaError(inner, _) => {
+            matches!(inner.as_ref(), SchemaError::FieldNotFound { .. })
+        }
+        DataFusionError::Plan(payload) => is_resolution_payload(payload),
+        DataFusionError::Diagnostic(detail, inner) => {
+            is_unknown_table_text(&detail.message) || is_resolution_error(inner)
+        }
+        DataFusionError::Context(_, inner) => is_resolution_error(inner),
+        DataFusionError::Shared(inner) => is_resolution_error(inner),
+        DataFusionError::Collection(errors) => errors.iter().any(is_resolution_error),
+        _ => false,
+    }
+}
+
+fn is_resolution_payload(payload: &str) -> bool {
+    is_unresolved_tag(payload)
+        || payload.starts_with("Invalid function '")
+        || is_unknown_table_text(payload)
+        || payload.starts_with("failed to resolve schema: ")
+        || payload.starts_with("failed to resolve catalog: ")
+}
+
+fn is_unresolved_tag(payload: &str) -> bool {
+    payload.contains("[UNRESOLVED_COLUMN")
+        || payload.contains("[UNRESOLVED_ROUTINE")
+        || payload.contains("[TABLE_OR_VIEW_NOT_FOUND")
+}
+
+fn is_unknown_table_text(text: &str) -> bool {
+    text.starts_with("Table not found: ")
+        || (text.starts_with("table '") && text.ends_with("' not found"))
 }
 
 #[cfg(test)]
@@ -566,6 +501,63 @@ mod tests {
         )));
     }
 
+    #[test]
+    fn resolution_matches_only_typed_and_tagged_failures() {
+        let missing = DataFusionError::SchemaError(
+            Box::new(SchemaError::FieldNotFound {
+                field: Box::new(Column::from_name("nosuch")),
+                valid_fields: Vec::new(),
+            }),
+            Box::new(None),
+        );
+        assert!(is_resolution_error(&missing));
+        assert!(is_resolution_error(&DataFusionError::Collection(vec![
+            missing
+        ])));
+        for payload in [
+            "[UNRESOLVED_COLUMN.WITH_SUGGESTION] cannot resolve `nosuch`",
+            "[UNRESOLVED_ROUTINE] cannot resolve `nosuchfn`",
+            "[TABLE_OR_VIEW_NOT_FOUND] cannot find `nosuch`",
+            "Invalid function 'nosuchfn'.\nDid you mean 'cosh'?",
+            "table 'datafusion.public.missing_table' not found",
+            "Table not found: t",
+            "failed to resolve schema: ns",
+            "failed to resolve catalog: cat",
+        ] {
+            let error = DataFusionError::Plan(payload.to_string());
+            assert!(is_resolution_error(&error), "{payload}");
+        }
+        let wrapped = DataFusionError::Diagnostic(
+            Box::new(datafusion::common::Diagnostic::new_error(
+                "table 'missing_table' not found",
+                None,
+            )),
+            Box::new(DataFusionError::Plan(
+                "failed to resolve schema: ns".to_string(),
+            )),
+        );
+        assert!(is_resolution_error(&wrapped));
+        for payload in [
+            "Cannot coerce arithmetic expression Utf8 + Int64 to valid types",
+            "table function 'nosuchtvf' not found",
+            "Table function 'nosuchtvf' not found",
+            "table ambiguous_tsc not found",
+        ] {
+            let error = DataFusionError::Plan(payload.to_string());
+            assert!(!is_resolution_error(&error), "{payload}");
+        }
+        assert!(!is_resolution_error(&DataFusionError::Execution(
+            "INTERVAL expression cannot be Value(Number(\"1\"))".to_string(),
+        )));
+        let ambiguous = DataFusionError::SchemaError(
+            Box::new(SchemaError::AmbiguousReference {
+                field: Box::new(Column::from_name("tsc")),
+            }),
+            Box::new(None),
+        );
+        assert!(!is_resolution_error(&ambiguous));
+    }
+
     #[tokio::test]
     async fn function_cells_type_through_the_shared_probe() {
         let ctx = SessionContext::new();
@@ -675,6 +667,14 @@ mod tests {
         let schema = Schema::new(vec![
             Field::new("id", DataType::Int32, false),
             Field::new("s", DataType::Utf8, false),
+            Field::new(
+                "t",
+                DataType::Timestamp(
+                    datafusion::arrow::datatypes::TimeUnit::Microsecond,
+                    Some("UTC".into()),
+                ),
+                true,
+            ),
         ]);
         let table =
             MemTable::try_new(Arc::new(schema), vec![Vec::new()]).expect("memory table builds");
@@ -822,6 +822,48 @@ mod tests {
         let value = cell.rows[0].content[cell.column].clone();
         assert!(judge.skip_string(1, &value).await);
         assert!(matches!(judge.plans.get(&1), Some(ArmPlan::Unresolved)));
+    }
+
+    #[tokio::test]
+    async fn unquoted_interval_window_arms_keep_their_judgement() {
+        let ctx = mem_ctx();
+        let catalogs = CatalogRegistry::new();
+        let mut statements = Parser::parse_sql(
+            &GenericDialect,
+            "INSERT INTO g SELECT * FROM (VALUES (1, 'x')) AS v(a, b) UNION ALL SELECT id, s FROM (SELECT id, s, count(*) OVER (ORDER BY t RANGE BETWEEN INTERVAL 1 DAY PRECEDING AND CURRENT ROW) AS n FROM t) q",
+        )
+        .unwrap();
+        let Statement::Insert(insert) = statements.swap_remove(0) else {
+            panic!("want an INSERT statement");
+        };
+        let source = insert.source.unwrap();
+        let arms = resolve_insert_arms(&source, true);
+        let mut judge = SiblingJudge::new(&ctx, &catalogs, &arms, true);
+        let cell = &arms[0].positions[1][0];
+        let value = cell.rows[0].content[cell.column].clone();
+        assert!(!judge.skip_string(1, &value).await);
+        assert!(matches!(judge.plans.get(&1), Some(ArmPlan::Failed)));
+    }
+
+    #[tokio::test]
+    async fn coercion_failure_arms_keep_their_judgement() {
+        let ctx = mem_ctx();
+        let catalogs = CatalogRegistry::new();
+        let mut statements = Parser::parse_sql(
+            &GenericDialect,
+            "INSERT INTO g SELECT * FROM (VALUES (1, 'x')) AS v(a, b) UNION ALL SELECT id, s + 1 FROM t",
+        )
+        .unwrap();
+        let Statement::Insert(insert) = statements.swap_remove(0) else {
+            panic!("want an INSERT statement");
+        };
+        let source = insert.source.unwrap();
+        let arms = resolve_insert_arms(&source, true);
+        let mut judge = SiblingJudge::new(&ctx, &catalogs, &arms, true);
+        let cell = &arms[0].positions[1][0];
+        let value = cell.rows[0].content[cell.column].clone();
+        assert!(!judge.skip_string(1, &value).await);
+        assert!(matches!(judge.plans.get(&1), Some(ArmPlan::Failed)));
     }
 
     #[tokio::test]

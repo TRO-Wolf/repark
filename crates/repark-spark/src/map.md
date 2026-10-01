@@ -934,6 +934,13 @@ pins: rp-4-fork-repin/C-005, C-006
   columns from `write_default` on the planned DML (`insert_defaults`). The marker
   pass's loaded table threads into the fill call, so one INSERT loads once.
   pins: ice-v3-write-default-1/C-004, C-007
+- `spark_ast.rs` — **WO STORE-TS-DOORS-2 re-verify fold 5 (2026-10-01):**
+  the unquoted-`INTERVAL` frame-bound quoting runs before the
+  store-assignment gate, so a sibling arm is planned from exactly the text
+  the statement will plan; quoting after the gate left the arm unplannable
+  and the cell unjudged, which stored (VT5-1). DataFusion plans only
+  `SingleQuotedString` interval bounds, hence the rewrite.
+  pins: store-ts-doors-2/C-001, C-003
 - `bare_nullary.rs` — **SPARK-SQL-GRAMMAR-1 C-010 (2026-09-16):** bare nullary
   keywords in both Spark directions. `demote_refusing_nullary_calls` lowers a
   no-paren `localtimestamp` call (the Databricks dialect parses it as a function)

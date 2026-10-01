@@ -157,10 +157,16 @@ handling (`CAST(NULL AS VOID)` rewrite, the non-NULL VALUES refusal into
   arm; their positions stay unmapped.
   pins: store-ts-doors-2/C-001, C-003
   **Fold 2026-09-30 (re-verify VT3-1):** the carried SELECT is scoped —
-  `sibling_types::scoped_arm_sql` prefixes every in-scope CTE definition
+  `sibling_scope::scoped_arm_sql` prefixes every in-scope CTE definition
   (innermost wins on shadowing) and declines to scope case twins, so an arm
   is never planned outside its statement's CTE scope. Call sites only; the
   resolver and its classifier pins are unchanged.
+  pins: store-ts-doors-2/C-001, C-003
+- `sibling_scope.rs` — **Fold 2026-10-01 (re-verify VT5-1):** the CTE-scope
+  prefix moved verbatim from `sibling_types.rs` (`scoped_arm_sql`,
+  `unmapped_arm` and their helpers), so the judge file stays under its
+  ceiling. Call sites only; the resolver and its classifier pins are
+  unchanged.
   pins: store-ts-doors-2/C-001, C-003
 - `sibling_types.rs` — **Fold 2026-09-30 (re-verify VT2-1, VT2-2, VT2-4,
   VT2-5):** `SiblingJudge`, moved here from `ltz_values_store.rs`, decides
@@ -208,6 +214,16 @@ handling (`CAST(NULL AS VOID)` rewrite, the non-NULL VALUES refusal into
   possible. Four tests: lowercase refs over uppercase columns, exact
   case-sensitive refs, missing case-sensitive refs, and an ambiguous arm
   unjudging a VALUES position elsewhere.
+  pins: store-ts-doors-2/C-001, C-003
+  **Fold 2026-10-01 (re-verify VT5-1):** `Unresolved` narrows to genuine
+  resolution failures — the typed `SchemaError::FieldNotFound`, the
+  `[UNRESOLVED_COLUMN]` / `[UNRESOLVED_ROUTINE]` /
+  `[TABLE_OR_VIEW_NOT_FOUND]` tags, and DataFusion's raw unknown-function and
+  unknown-table plans matched by constructor shape, never by loose text — so a
+  later rewrite can no longer turn a planning failure into a store (VT5-1).
+  Every other failure is `Failed` and keeps the earlier refusal. Three tests:
+  the resolution matcher, and an unquoted-interval window arm plus a
+  coercion-failure arm keeping their judgment.
   pins: store-ts-doors-2/C-001, C-003
 - `source_leaves.rs` — **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):**
   `source_type_is_reliable` decides whether a new refusal may trust RePark's

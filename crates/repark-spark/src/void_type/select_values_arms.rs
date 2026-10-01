@@ -5,7 +5,7 @@ use datafusion::sql::sqlparser::ast::{
 };
 use datafusion::sql::sqlparser::tokenizer::Span;
 
-use super::sibling_types::{scoped_arm_sql, unmapped_arm};
+use super::sibling_scope::{scoped_arm_sql, unmapped_arm};
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct SourceCell<'a> {

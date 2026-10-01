@@ -362,6 +362,43 @@ of 3: probe200 3.558s/2.622s = 1.357x against a base 3.269s/2.490s =
 a base 9.115s/6.865s = 1.328x, gate-attributable 0.984x. `bash gate.sh` is
 GREEN on the docs head.
 
+## Re-verify fold 5 (2026-10-01, PR #894)
+
+The re-verifier confirmed VT4-1 and the VT4-4 class fixes with 0 new false
+stores, but found 24 false stores through an unquoted-`INTERVAL` window-frame
+bound (VT5-1, S1): the statement quotes the bound after the gate runs, so the
+arm fails to plan while the statement succeeds, and the catch-all Unresolved
+leaves the cell unjudged. Base stores as well; `b9f2eac6` refused.
+
+**Fix.** R1: the interval-bound quoting moves above the store-assignment gate
+in `spark_ast.rs`, so each arm is planned from exactly the text the statement
+will plan. R2: the R3 catch-all narrows — only a genuine resolution failure
+leaves a cell unjudged, matched by error type and constructor shape, never by
+loose text: the typed `SchemaError::FieldNotFound`, the
+`[UNRESOLVED_COLUMN]` / `[UNRESOLVED_ROUTINE]` /
+`[TABLE_OR_VIEW_NOT_FOUND]` tags, DataFusion's `Invalid function` plan, its
+`table … not found` / `Table not found` plans (including the `Diagnostic`
+message that carries the shape when the inner error is a schema or catalog
+resolution failure), and the `failed to resolve schema/catalog` plans. Every
+other planning failure is `Failed` and keeps the earlier refusal, as
+`b9f2eac6` did. The CTE-scope prefix moves verbatim to `sibling_scope.rs` so
+the judge file stays under its ceiling; call sites only.
+
+**Pins.** In-test `test_fold5_*`: the verifier's 24 VT5-1 cells (4 arm shapes
+× INTO, dynamic partition, column-list × both case modes) refusing
+CANNOT_SAFELY_CAST with nothing stored; the quoted-bound, integer-range and
+TIMESTAMP-arm controls; and two further unquoted frame shapes (an unquoted
+`FOLLOWING` end bound, both bounds unquoted) refusing as Spark 4.1.2 does,
+measured live in UTC. Rust unit pins: the resolution matcher, and an
+unquoted-interval window arm plus a coercion-failure arm keeping their
+judgment.
+
+**Carried (ledger only).** `amb_groupby` and `amb_subquery_exists` report
+CANNOT_SAFELY_CAST where Spark reports AMBIGUOUS_REFERENCE (class only, the
+VT4-4(a) family). The struct-field case gaps, identical on base.
+
+**Proof.** Pending — recorded after the replay.
+
 ## Coverage
 
 ```yaml
