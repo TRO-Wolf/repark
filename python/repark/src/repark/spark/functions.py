@@ -335,7 +335,7 @@ def expr(sql: str) -> Column:
         spark_display=display,
         projection_name=display,
         stable_name=False,
-        sql_expr=_native.built_sql_user_fragment(sql, verbatim),
+        sql_expr=_native.built_sql_user_fragment(display, verbatim),
     )
 
 

@@ -248,6 +248,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   an `F.expr` column spliced into facade-built SQL keeps the session flag's
   values; default input passes through unchanged. The display-naming fold keeps
   the 1938 baseline. pins: string-literal-escape-1/C-011
+  **STRING-LITERAL-ESCAPE-1 CI round (2026-09-30):** `expr` pre-renders the
+  display-shaped text (a bare infix fragment keeps its parens) instead of the
+  raw fragment, so the stored `sql_expr` keeps base's grouping when composed
+  and the pre-render only re-renders string-literal regions; the raw fragment
+  dropped the parens and mis-valued cube/rollup keys built from composed
+  `F.expr` columns. pins: string-literal-escape-1/C-014
 - `functions_agg.py` — aggregate-function re-exports. **FNP-ALIAS-1 (2026-09-15):**
   `approxCountDistinct` is the deprecated alias of `approx_count_distinct` and warns Spark's
   exact `FutureWarning` on every call; it reaches `functions.py` through this module's

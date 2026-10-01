@@ -1957,3 +1957,5 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (user-written SQL through the user door).
   CI round seams (2026-09-30): the five test seams follow the `sql_built`
   door with the same assertions (C-013).
+  CI round expr (2026-09-30): `F.expr` pre-renders display-shaped text so
+  composed embeddings keep base's grouping (C-014).

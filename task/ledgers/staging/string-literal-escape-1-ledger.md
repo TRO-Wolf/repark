@@ -42,6 +42,7 @@ pre-existing, previously scoped to session doors by FNP-4B);
 | C-011 | VE2-1 re-verify fold: facade-built SQL parses with verbatim forced off for that one parse (scoped override, session conf untouched); user-written text (`spark.sql`, `selectExpr`, `expr`, `filter`/`where`) still follows the flag; user fragments spliced into built SQL (`F.expr` columns) are pre-rendered under the flag into default-stable text; DDL-defs fragments splice raw (C-005 default treatment). | Rust fragment + override-wiring pins + facade VE2-1 pins + default controls green; reverify-esc/verify-esc replay at 0 regressions. | PROVEN | 4/4 fragment + 8/8 wiring Rust pins green; 13/13 facade pins green; mutation red-first (override, fragment); 19 replay cells flip Spark-equal, 0 true regressions over 1475. |
 | C-012 | VE2-2 re-verify fold: nested struct-field `UPDATE`/`MERGE SET` values render through `render_for_reparse`, so verbatim doublings/backslashes store kept and default ones collapse, and `\'` parses instead of refusing; refusal texts quote values as valid SQL. | Rust nested leaf/fold/refusal pins + facade VE2-2 pins + default controls green. | PROVEN | 24/24 nested_assign Rust pins green (4 new re-render/refusal); 2/2 facade VE2-2 pins green; mutation red-first (`.to_string()`); nest.py 14/14 Spark-equal. |
 | C-013 | CI round: the five failure-injection/SQL-spy seams (`test_catalog_surface_1`, `test_create_dataframe_materialize` x3, `test_eager_own_1`, `test_mapinarrow`, `test_ml_boost_oracle`) observe the `sql_built` door the product now uses for facade-built SQL, with identical assertions — injection still lands on the SQL call after register, the catalog spy still sees cache-view reads, CV still requires the mat-view read; cleanup behavior unchanged. | The 7 seam tests green with assertions untouched; no product change on those paths. | PROVEN | All 8 CI failures reproduced locally then green; the two capped test files rename the seam method line-neutrally, the other three observe both doors. |
+| C-014 | CI round: `F.expr`'s `sql_expr` keeps the display-shaped text through the default-door pre-render, so bare infix fragments keep base's parens and composed embeddings keep their grouping; the pre-render only re-renders string-literal regions. Corrects the re-verify note that the display fallback's parens never mattered. | Facade-2 display goldens byte-identical (no golden change); cube/rollup composed-key values Spark-equal. | PROVEN | `cube(F.expr("1 + 1") * 2)` key 4 (head said 3), `rollup((10 - 2) * x)` 80/160 (head said -10/-30); Spark 4.1.2 and base measured 2026-09-30. |
 
 ## Evidence
 
@@ -291,6 +292,21 @@ other three observe both doors. No product change: every guarded cleanup
 `_materialize_values_as_memtable_frame`, `bind_registered_view`, the
 mapInArrow register/track/scan paths) still runs around the `sql_built`
 call, and each test's own drop/track assertions confirm it.
+
+Display fragment (C-014): the facade-2 golden failure was a real behavior
+change, decided by measurement. `F.expr("1 + 1")` stored the raw fragment
+as its `sql_expr`, so composition rendered `(1 + 1 * 2)`; the golden (and
+base) render `((1 + 1) * 2)`. `select`/`groupBy` were unaffected (native
+inner), but cube/rollup execute the embedded fragment: `cube(F.expr("1 +
+1") * 2)` keyed 3 instead of 4, `rollup((10 - 2) * x)` keyed -10/-30
+instead of 80/160. Spark 4.1.2 (`jvm-lock.sh`, 2026-09-30) keys 4 and
+80/160; base `/tmp/xrel` (adc26586) keys 4 and 80/160 with the golden's
+bytes. The fix pre-renders the display-shaped text instead of the raw
+fragment (one word in `functions.py`), so the pre-render only re-renders
+string-literal regions and base's grouping returns; no golden change.
+This corrects the re-verify note above that the old display fallback's
+parens never mattered — they were load-bearing on executed-embedding
+paths (cube/rollup/grouping-sets, MERGE, REPLACE WHERE).
 
 ## Coverage attestation
 
