@@ -12,7 +12,7 @@ use tokio::runtime::{Builder, Runtime};
 use crate::exceptions::AnalysisException;
 
 pub(crate) const GROWN_STACK_SEGMENT_BYTES: usize = 128 * 1024 * 1024;
-pub(crate) const RUNTIME_THREAD_STACK_BYTES: usize = 64 * 1024 * 1024;
+pub(crate) const RUNTIME_THREAD_STACK_BYTES: usize = 32 * 1024 * 1024;
 pub(crate) const DEEP_NESTING_DEPTH: usize = 16;
 pub(crate) const MAX_EXPRESSION_DEPTH: usize = 1500;
 pub(crate) const MAX_PLAN_DEPTH: usize = 8192;

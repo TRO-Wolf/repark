@@ -87,7 +87,7 @@ fork edit, no new crate edge.
 | C-015 | A 2,000-term SQL-text OR answers 50 through `F.expr`, `selectExpr`, and string `filter` (VD2-3; the 1,500 cap no longer applies to SQL text); a 1,500-term DF-built OR refuses `AnalysisException` at `filter()` (Spark raises `StackOverflowError` at `.filter()` on the same shape); a 5,001-term mixed DF/text OR answers 50 (Spark answers 50). | Three isolated-interpreter pins plus the 2026-09-30 Spark verbatim. | PROVEN | `test_deep_reverify_1.py` `test_sql_text_or_chains_answer_on_every_door`, `test_dataframe_built_or_past_cap_refuses_clean`, `test_mixed_dataframe_and_text_or_answers`; Spark `or_df_1500` StackOverflowError, `or_fexpr_5000` 50, `mixed5001` 50. |
 | C-016 | Teardown of deep columns and frames on GC/finalizer threads never overflows (VD2-4); owning types drop on a grown segment sized from cached levels. | One isolated-interpreter pin collecting deep cycles on main and on a 256 KiB thread. | PROVEN | `test_deep_reverify_1.py` `test_gc_collects_deep_cycles_on_main_and_small_threads`. |
 | C-017 | 256 KiB and 512 KiB caller threads count a 16-deep chain, refuse a 2,000-term DF-built OR, read `.columns` off a 500-deep frame, and collect a deep cycle (VD2-5). | Two isolated-interpreter pins, one per stack size. | PROVEN | `test_deep_reverify_1.py` `test_small_stack_thread_answers_and_collects`, `test_half_meg_stack_thread_answers_and_collects`. |
-| C-018 | The debug suite answers within 1.15x of 1,108 s and unpivot stays linear in columns (VD2-6; the per-op tree walks inflated the suite past 2,088 s with exponent 1.120). | CI-shaped wheel repro under `repark.slice` plus the 64 GiB cap, `-n 4`: suite time and the unpivot exponent. | OPEN | Closes when the wheel repro records both numbers in the appendix below. |
+| C-018 | The debug suite answers within 1.15x of 1,108 s and unpivot stays linear in columns (VD2-6; the per-op tree walks inflated the suite past 2,088 s with exponent 1.120). | CI-shaped wheel repro under `repark.slice` plus the 64 GiB cap, `-n 4`: suite time and the unpivot exponent. | PROVEN | Slice (subquery + unpivot + 4 unit files) 68 passed in 848 s < 1,274 s bar; unpivot exponent 0.950 on the debug wheel. |
 
 ## Mutation record (2026-09-29)
 
@@ -642,6 +642,56 @@ verbatim to `column/levels.rs` with `pub(super)` fields) and
 Rust: 113 lib tests green, clippy clean, rustfmt clean. Dev-wheel
 pins: `test_deep_reverify_1.py` 7/7 (main 129 s, small/GC 93 s),
 `test_deep_subquery_expression_1.py` 6/6 (826 s),
-`test_deep_expr_build_small_stack_1.py` 2/2 (75 s); the filter-chain
-file reruns below. C-018, the mutation record, the release A/B, and
-the neighbour replays land in the closing entry.
+`test_deep_expr_build_small_stack_1.py` 2/2 (75 s),
+`test_deep_filter_chain_crash_1.py` 9/9 (692 s).
+
+## Re-verify fold closing entry (2026-09-30)
+
+Mutations (each rebuilt, reddened, reverted, rebuilt green,
+`git status` clean): M1 raw `PyDataFrame` Drop SIGSEGVs (rc=139)
+dropping a 3,000-deep frame on a 256 KiB thread, restored rc=0; M2
+`maybe_grow` neutralized in `repark-core` SIGSEGVs (rc=-11) the 256
+KiB pin worker, restored green; M3 SQL-text cap restored fails the
+SQL-text pin (worker rc=1, `AnalysisException`), restored 7/7.
+
+CI-shaped repro: debug wheel to `/tmp/xdeep-dist`, fresh venv
+`/tmp/xdeep-wheeltest` with the facade extras, `repark.slice` plus
+`ulimit -v 67108864`, `-n 4`. The brief's slice (subquery + unpivot
++ `test_df_easy` + `test_dfcore_1_exports` +
+`test_production_file_size` + CAP-1) runs 68 passed in 848 s, under
+the 1.15x bar of 1,274 s; the unpivot exponent measures 0.950 on the
+debug wheel (medians 0.038/0.162/0.348 s at width 50/250/500). C-018
+PROVEN. The full facade suite on the same wheel runs 13,966 passed,
+485 skipped, 147 xfailed, 0 failed in 2,053 s.
+
+Release A/B (head vs `a53118a6` wheels,
+`CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16`, 5 fresh processes per
+side, medians): import_session 0.9805, select1 1.0198, filter_count
+0.9718 — max 1.0198, under the 1.05 bar.
+
+DIFF-PROBE replay (305 recorded statements on the new head): 0
+regressions — one appid noise cell and one `collect_set` order flip
+proven nondeterministic (both orders across 6 identical-head runs);
+9 newer vd* statements all answer as expected. VD replay (89
+recorded probes): 3 moves, 0 regressions. `concat_300_df` and
+`concat_1000_df` move timeout/CRASH to `MemoryError` (a pre-existing
+deep-nested-function eval blowup: the base build raises the identical
+`MemoryError`, and Spark answers 15350 at 300 but `StackOverflowError`
+at 1000) — improved failure mode, out of scope. `upper_1000_df`
+moves timeout to the correct answer 1 (Spark `StackOverflowError`s):
+RePark answers where Spark overflows. Spark oracle for all three
+recorded 2026-09-30. The concat-300 divergence (Spark 15350 vs our
+`MemoryError`) is reported for a registry row; no pin (a 116 s
+blowup is not pin material).
+
+Closing fix (2026-10-01): the gate's spill cells hung (`KILLED`,
+sort wedged past 600 s) because late tokio blocking-thread spawns
+map 64 MiB stacks each and fail under the cells' address-space cap
+(strace: 4 threads, `mmap(64 MiB, MAP_STACK) = ENOMEM`, spill writes
+then frozen, threads parked in futex). The 64 MiB dates to f958d1a8
+(pre-fold). 8 MiB aborts
+`shared_runtime_blocking_threads_survive_deep_recursion` (12 MiB of
+recursion needs the headroom), so the shared runtime moves to 32 MiB:
+the pin holds, the spill cells pass in 33 s, and the deep battery
+re-runs green: 24/24 in 1858 s on the final 32 MiB code (2026-10-01).
+Release A/B re-measures on the final code.
