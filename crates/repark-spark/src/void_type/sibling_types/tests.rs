@@ -644,6 +644,11 @@ fn mem_ctx_nullary() -> SessionContext {
 
     let config = crate::extension::apply_spark_parser_dialect(SessionConfig::new());
     let ctx = SessionContext::new_with_config(config);
+    ctx.register_udf(
+        repark_functions::temporal_ctor::arith::localtimestamp_udf()
+            .as_ref()
+            .clone(),
+    );
     let schema = Schema::new(vec![
         Field::new("id", DataType::Int32, false),
         Field::new("localtimestamp", DataType::Utf8, false),
