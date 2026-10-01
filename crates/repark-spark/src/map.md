@@ -224,6 +224,22 @@ pins: rp-4-fork-repin/C-005, C-006
   first, no hit is left alone); the derived-source probe plans with
   normalization off under `true` so scope fields keep their written case.
   pins: casesens-1/C-008
+- `insert_overwrite/store.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** split from
+  `insert_overwrite.rs` (file-size gate; a child module so `lib.rs` keeps its exact
+  baseline): `conform_types` resolves the positional targets and runs
+  `wrap_store_outputs` over the analyzed source plan; the stage-then-swap source passes
+  through it. See [insert_overwrite/map.md](insert_overwrite/map.md).
+- `extension.rs`, `insert_by_name.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** the
+  extension registers `repark_iceberg::StoreOverflowCast` AFTER the post-coercion rules
+  (it consumes `SparkExprSemantics`' guarded division shape, so it must run after it —
+  unlike `InsertStoreAssignment`, which needs the pre-cast types) plus the `store_cast`
+  UDF family; the BY NAME projection runs `wrap_store_outputs`.
+  **Merge origin/main v1.5.1 (2026-09-29):** both sides kept — the BY NAME and the
+  stage-then-swap OVERWRITE sources pass through `zone_stores(_by_name)` first, then
+  the overflow wrap (`wrap_store_outputs` / `conform_types`).
+  Re-verify VO3-1 (2026-09-29): both doors pass their per-batch op label into the wrap
+  (`append` / `INSERT OVERWRITE`), so the store gate judges before the overflow check
+  with byte-identical text.
 - `insert_overwrite.rs` — **WO NTZ-STORE-DOORS-1 (2026-09-28):** the stage-then-swap path
   (static, dynamic, `BY NAME`, column list, so `writeTo().overwritePartitions()` too) and
   the `PARTITION (…)` path pass the planned source through

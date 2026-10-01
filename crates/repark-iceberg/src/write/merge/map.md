@@ -277,6 +277,17 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
 - `insert.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** the MERGE INSERT and UPDATE SET
   gates call `../void_store.rs::refuse_void_writes` with table `` before the ANSI matrix, so a
   value into a `VOID` column refuses with Spark's text. pins: u9-types-1/C-014
+- `insert.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** the MERGE INSERT and UPDATE SET
+  stream builders plan through `analyzed_store_source` and `wrap_store_outputs`, so a
+  fractional store refuses `CAST_OVERFLOW_IN_TABLE_INSERT` with the column named; the
+  update probe reads types from the unoptimized plan so a const division reaches the
+  rewrite instead of folding to `DIVIDE_BY_ZERO` first.
+  **Merge origin/main v1.5.1 (2026-09-29):** both sides kept — the void, negated-null
+  and NTZ gates plus the ANSI matrix judge the unanalyzed plan exactly as on main (an
+  analyzed plan would rename an `Int64` literal `Int32` in the refusal text), the
+  overflow wrap runs on the analyzed source, then the zone-wrapping subquery (which
+  re-analyzes and re-wraps in its own arm). Re-verify VO3-1 (2026-09-29): MERGE passes
+  `None` for the wrap's gate label — those gates already judge before the wrap.
 - `insert.rs` — **WO NTZ-1 slice 2 (2026-09-27):** the MERGE INSERT and UPDATE SET gates
   also call `../ntz_store.rs::refuse_ntz_writes` before the ANSI matrix, so an illegal
   source into an NTZ column refuses with Spark's `CANNOT_SAFELY_CAST` text naming

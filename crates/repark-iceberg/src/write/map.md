@@ -819,6 +819,51 @@ repark-core's error map.
   gate (`repark-spark/src/void_type/insert_source_types.rs`). This rule is unchanged.
   Ledger:
   [`../../../../task/wi2-g6-cast-integrity-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-16-wi2-g6-cast-integrity-ledger.md).
+- `store_overflow.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** `StoreOverflowCast`, an
+  `AnalyzerRule` over `LogicalPlan::Dml` that maps out-of-range fractional/decimal stores
+  into integer columns to Spark's `CAST_OVERFLOW_IN_TABLE_INSERT` (SQLSTATE 22003), naming
+  source type, target type and column. Constants refuse at plan through `store_fold.rs`
+  evaluation; column expressions are wrapped in the checked-cast UDF from `store_cast.rs`,
+  and zero-divisor guards are swapped for the store guard so `0/0` and `1/0.0` name the
+  division type, not `DIVIDE_BY_ZERO`. `wrap_store_outputs` is the same conformance for
+  non-Dml plans (MERGE arms, the UPDATE rewrite, OVERWRITE/BY NAME sources); callers apply
+  it between eager analysis and optimization so the optimizer folds the swapped guard.
+  `analyzed_store_source` is the shared parse-plus-analyze entry for the raw-SQL internal
+  plans. pins: cast-overflow-insert-1 (python/repark/tests/test_cast_overflow_insert_1.py).
+  Re-verify VO3-1 (2026-09-29): `wrap_store_outputs` takes a `gate_op` label and judges
+  every (source, target) pair with `refuse_unless_write_store_assignable` before building
+  the wrap, so a row with both a type refusal and an overflow reports the store refusal
+  like Spark; BY NAME passes `Some("append")` and OVERWRITE passes
+  `Some("INSERT OVERWRITE")`, byte-identical to the per-batch gates, while MERGE and
+  UPDATE pass `None` because their ANSI gates already judge before the wrap. OVERWRITE
+  targets come from the presented schema and BY NAME targets stay stored, matching each
+  door's per-batch write schema (UUID text stores through OVERWRITE, refuses on append).
+  Re-verify VO4-1 (2026-09-30): `wrap_store_outputs` returns a positional source whose
+  column count differs from the target count unwrapped and unjudged, so the per-batch
+  arity refusal fires exactly as on base; Spark likewise orders arity first
+  (`INSERT_COLUMN_ARITY_MISMATCH`).
+- `store_fold.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** split from `store_overflow.rs`
+  at the plan/expression seam (file-size gate): const-input resolution and physical
+  evaluation (`check_folded_store_input`, `fold_scalar`, `resolve_store_input`) plus the
+  refusal-expression constructors (`wrap_store_expr`, `store_guard_expr`). Verifier fold
+  VO-2: `lookup_store_column` stops at a `Limit` whose fetch is a literal 0, so
+  `LIMIT 0` over an overflowing constant writes nothing and never refuses, like Spark.
+  Re-verify fold VO2-1/VO2-2 (2026-09-29): the defining projection also yields when
+  its input writes nothing — `projection_input_writes_nothing` walks
+  Projection/SubqueryAlias/Limit to a literal fetch-0 — and `limit_empties_source`
+  treats a fetch-less literal OFFSET of 1 or more over a single-row constant source
+  (`limit_input_is_single_row` through Projection/SubqueryAlias/Sort to a one-row
+  EmptyRelation) like `LIMIT 0`. A Filter or JOIN between keeps the refusal.
+- `store_cast.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** rewritten as the Spark-boundary
+  checked-cast kernel: `__repark_store_int{8,16,32,64}__` UDFs refuse NaN, infinities and
+  out-of-range floats with the overflow message and store in-range values truncated like
+  Spark; `__repark_store_int_guard__` converts a zero divisor into the same refusal.
+  Verifier fold VO-1: the bound check judges `value.trunc()`, so a DOUBLE a fraction
+  past an integer bound stores the truncated bound, as Spark's ANSI cast does.
+- `predicate_dml.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** the UPDATE scratch rewrite
+  plans through `analyzed_store_source` and `wrap_store_outputs`, so per-row fractional
+  overflow refuses with the column named. Re-verify VO3-1 (2026-09-29): passes `None`
+  for the wrap's gate label — the UPDATE SET gates judge before the rewrite is built.
 - `insert_defaults.rs` — **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** the ONE home for
   filling omitted columns from `write_default` on every write path: `column_defaults`
   reads the table defaults, `fill_insert_plan` rewrites a short INSERT plan, an

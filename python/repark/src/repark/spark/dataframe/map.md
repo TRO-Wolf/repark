@@ -1169,8 +1169,10 @@ that held the comment (pins: comment-core-1/C-003).
 - `repartitionById`: Type-check simple name refs so non-int partition columns fail
   loud (Spark analysis). Bare attribute only — casts and expressions stay deferred
   to the engine seed.
-- `offset`: Fetch a very large tail after skip (practical unbounded offset on one
-  node).
+- `offset`: Plans a fetch-less engine `Limit` via `limit_with_skip(n, None)`
+  (CAST-OVERFLOW-INSERT-1 re-verify VO2-2, 2026-09-29), so a skipping offset over
+  a one-row constant source writes nothing, like Spark; the old large-fetch
+  encoding shadowed that shape.
 - `drop`: Live Spark 4.1.2: `drop(right["k"])` after leftsemi/leftanti is a no-op.
   Name-based drop removes every engine field whose display matches.
 - `order_by`: Sort does not change column identity; keep display and engine maps.

@@ -55,6 +55,9 @@ pub mod sort_order;
 mod static_value;
 /// The ANSI store-assignment matrix — ONE home for MERGE and the non-MERGE insert/append lowerings.
 pub(crate) mod store_assign;
+pub mod store_cast;
+pub(crate) mod store_fold;
+pub mod store_overflow;
 pub mod summary_collision;
 /// Test-support-only snapshot-ref helpers (`_testing_create_ref`).
 pub mod testing_support;
@@ -142,6 +145,7 @@ pub use session_write_conf::{
     session_write_conf_from_options, session_write_conf_is_set, unset_session_write_key,
     with_session_write_conf,
 };
+pub use store_overflow::StoreOverflowCast;
 pub use summary_collision::EngineSummary;
 pub use truncate::{commit_truncate, commit_truncate_to};
 pub use write_options::{
