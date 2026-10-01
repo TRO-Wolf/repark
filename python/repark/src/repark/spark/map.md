@@ -306,6 +306,14 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   columns bind), `_main_path_dotted_token` (main's bare-ident tokenization
   with the byte-identical collision raise), and `_bind_filter_token`.
   pins: attr-id-1/C-026
+  **S3b H-1 follow-up (2026-10-01):** a lambda reference that matches its
+  parameter only by folding (`X` under param `x`, insensitive rule) raises
+  `_FoldedLambdaFallbackError`; the entry catches it and runs the whole
+  predicate through `_main_path_filter_sql` (a verbatim port of main's
+  fold-everything quoter, string-identical on probes). Spark folds nested
+  case-colliding lambda variables to one variable; the engine binds them
+  case-sensitively, so only main's path reproduces Spark there. Exact-rule
+  references never fold and never trigger. pins: attr-id-1/C-027
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
   unsupported operations fail explicitly.

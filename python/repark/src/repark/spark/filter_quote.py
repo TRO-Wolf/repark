@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import functools
 import re
 from typing import Any
 
 from repark import _native
 from repark.errors import AnalysisException
+
+
+class _FoldedLambdaFallbackError(Exception):
+    pass
 
 
 def _unqualified_candidates(name: str, displays: list[str]) -> tuple[list[int], list[int]]:
@@ -310,6 +315,8 @@ def _bind_filter_token(
             return token
         param = _scope_param_for(scopes, start, end, name, exact)
         if param is not None:
+            if param != name:
+                raise _FoldedLambdaFallbackError
             return _quote_ident(param)
         exact_hits, folded_hits = _unqualified_candidates(name, displays)
         candidates = exact_hits if exact else exact_hits + folded_hits
@@ -333,7 +340,11 @@ def _bind_filter_token(
     head = parts[0]
     param = _scope_param_for(scopes, start, start + len(head), head, exact)
     if param is not None:
-        subscript = "".join(f"['{rest.replace(chr(39), chr(39) * 2)}']" for rest in parts[1:])
+        if param != head:
+            raise _FoldedLambdaFallbackError
+        from repark.spark._idents import escape_sql_single_quotes as _escape_quotes
+
+        subscript = "".join(f"['{_escape_quotes(rest)}']" for rest in parts[1:])
         return _quote_ident(param) + subscript
     if not _name_matches_head(head, qualifiers, exact):
         return _main_path_dotted_token(parts, displays, engine_names, fold_map)
@@ -351,3 +362,47 @@ def _bind_filter_token(
     if _name_matches_head(head, displays, exact):
         return _main_path_dotted_token(parts, displays, engine_names, fold_map)
     return token
+
+
+_MAIN_IDENT_PATTERN = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\b(?!\s*\()")
+
+
+def _main_path_filter_token(match: re.Match[str], *, columns_by_fold: dict[str, list[str]]) -> str:
+    from repark.spark._idents import quote_ident as _quote_ident
+
+    token = match.group(1)
+    if token.casefold() in _SQL_LITERAL_KEYWORDS:
+        return token
+    matches = columns_by_fold.get(token.casefold())
+    if matches is None:
+        return token
+    if len(matches) > 1:
+        candidates = ", ".join(f"`{name}`" for name in matches)
+        raise AnalysisException(
+            f"[AMBIGUOUS_REFERENCE] Reference `{token}` is ambiguous, could be: [{candidates}]."
+        )
+    return _quote_ident(matches[0])
+
+
+def _main_path_filter_sql(sql: str, displays: list[str]) -> str:
+    columns_by_fold: dict[str, list[str]] = {}
+    for column in displays:
+        columns_by_fold.setdefault(column.casefold(), []).append(column)
+    pieces = re.split(r"('(?:[^']|'')*')", sql)
+    rebuilt: list[str] = []
+    for piece in pieces:
+        if piece.startswith("'"):
+            rebuilt.append(piece)
+            continue
+        subpieces = re.split(r'("(?:[^"]|"")*"|`(?:[^`]|``)*`)', piece)
+        for subpiece in subpieces:
+            if subpiece.startswith(('"', "`")):
+                rebuilt.append(subpiece)
+            else:
+                rebuilt.append(
+                    _MAIN_IDENT_PATTERN.sub(
+                        functools.partial(_main_path_filter_token, columns_by_fold=columns_by_fold),
+                        subpiece,
+                    )
+                )
+    return "".join(rebuilt)

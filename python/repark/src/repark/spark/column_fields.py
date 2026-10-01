@@ -19,9 +19,11 @@ from repark.errors import (
 from repark.spark.filter_quote import (
     _FILTER_TOKEN_PATTERN,
     _bind_filter_token,
+    _FoldedLambdaFallbackError,
     _group_candidates,
     _lambda_quoted_span,
     _lambda_scopes,
+    _main_path_filter_sql,
     _unqualified_candidates,
 )
 
@@ -853,19 +855,22 @@ def _quote_filter_sql_identifiers(frame: Any, sql: str) -> str:
     pieces = re.split(r"('(?:[^']|'')*')", sql)
     rebuilt: list[str] = []
     offset = 0
-    for piece in pieces:
-        if piece.startswith("'"):
-            rebuilt.append(piece)
-            offset += len(piece)
-            continue
-        subpieces = re.split(r'("(?:[^"]|"")*"|`(?:[^`]|``)*`)', piece)
-        for subpiece in subpieces:
-            if subpiece.startswith('"'):
-                rebuilt.append(subpiece)
-            elif subpiece.startswith("`"):
-                rebuilt.append(_lambda_quoted_span(subpiece, scopes, decls, offset, exact))
-            else:
-                scoped = functools.partial(binder, base=offset)
-                rebuilt.append(_FILTER_TOKEN_PATTERN.sub(scoped, subpiece))
-            offset += len(subpiece)
+    try:
+        for piece in pieces:
+            if piece.startswith("'"):
+                rebuilt.append(piece)
+                offset += len(piece)
+                continue
+            subpieces = re.split(r'("(?:[^"]|"")*"|`(?:[^`]|``)*`)', piece)
+            for subpiece in subpieces:
+                if subpiece.startswith('"'):
+                    rebuilt.append(subpiece)
+                elif subpiece.startswith("`"):
+                    rebuilt.append(_lambda_quoted_span(subpiece, scopes, decls, offset, exact))
+                else:
+                    scoped = functools.partial(binder, base=offset)
+                    rebuilt.append(_FILTER_TOKEN_PATTERN.sub(scoped, subpiece))
+                offset += len(subpiece)
+    except _FoldedLambdaFallbackError:
+        return _main_path_filter_sql(sql, displays)
     return "".join(rebuilt)

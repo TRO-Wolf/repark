@@ -8914,3 +8914,8 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   raise), the qualifier-first tie and the tie coincidence. Every row
   expectation is live-Spark verbatim (h1/h1d/h1e probes).
   pins: attr-id-1/C-026
+  **S3b H-1 follow-up (2026-10-01):** the nested-lambda case-collision pins
+  (C-027): four nested `X`/`x` and `T`/`t` shapes fold to no rows under the
+  insensitive rule (S0 spark.json) and stay distinct (`[1, 5]`) under the
+  exact rule (live-Spark probe); the reverse nesting and one single-level
+  folded reference fold insensitive. pins: attr-id-1/C-027

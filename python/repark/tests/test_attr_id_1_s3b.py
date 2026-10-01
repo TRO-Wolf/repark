@@ -248,3 +248,46 @@ def test_filter_struct_qualifier_tie_prefers_qualifier(spark: ReparkSession) -> 
 def test_filter_struct_qualifier_coincidence(ruled_spark: ReparkSession) -> None:
     filtered = _struct_frame(ruled_spark).alias("T").filter("T.id > 3").select("id")
     assert _rows(filtered) == [(6,)]
+
+
+def _nested_lambda_frame(spark: ReparkSession) -> Any:
+    return spark.createDataFrame(
+        [(1, [1, 5], 9, 0), (2, [2], 0, 2), (5, [5, 6, 7], 1, 7), (6, [], 4, 3)],
+        "id INT, arr ARRAY<INT>, T INT, x INT",
+    )
+
+
+_NESTED_COLLISION_PREDS = [
+    "exists(arr, X -> exists(arr, x -> X > x))",
+    "exists(arr, x -> exists(arr, X -> X > x))",
+    "exists(arr, T -> exists(arr, t -> T > t))",
+    "exists(arr, t -> exists(arr, T -> T > t))",
+]
+
+
+def test_filter_nested_lambda_collision_folds_insensitive(spark: ReparkSession) -> None:
+    spark.conf.set("spark.sql.caseSensitive", "false")
+    frame = _nested_lambda_frame(spark).select("id", "arr", "T", "x")
+    for pred in _NESTED_COLLISION_PREDS:
+        assert _rows(frame.filter(pred).select("id")) == []
+
+
+def test_filter_nested_lambda_reverse_collision_folds_insensitive(spark: ReparkSession) -> None:
+    spark.conf.set("spark.sql.caseSensitive", "false")
+    frame = _nested_lambda_frame(spark).select("id", "arr", "T", "x")
+    filtered = frame.filter("exists(arr, x -> exists(arr, X -> x > X))").select("id")
+    assert _rows(filtered) == []
+
+
+def test_filter_nested_lambda_vars_stay_distinct_sensitive(spark: ReparkSession) -> None:
+    spark.conf.set("spark.sql.caseSensitive", "true")
+    frame = _nested_lambda_frame(spark).select("id", "arr", "T", "x")
+    for pred in _NESTED_COLLISION_PREDS:
+        assert _rows(frame.filter(pred).select("id")) == [(1,), (5,)]
+
+
+def test_filter_single_level_folded_lambda_ref_folds_insensitive(spark: ReparkSession) -> None:
+    spark.conf.set("spark.sql.caseSensitive", "false")
+    frame = _nested_lambda_frame(spark).select("id", "arr", "T", "x")
+    filtered = frame.filter("exists(arr, V -> v > 4)").select("id")
+    assert _rows(filtered) == [(1,), (5,)]
