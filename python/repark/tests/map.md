@@ -7421,6 +7421,19 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   main stack while the lane's 32 MiB survived; 4000 builds and 6000 crashes
   pre-fix on 8 MiB.
   pins: deep-filter-chain-crash-1/C-012
+- [test_deep_reverify_1.py](test_deep_reverify_1.py) —
+  **DEEP-FILTER-CHAIN-CRASH-1 re-verify fold (2026-09-30):** the VD2 pins, one
+  isolated interpreter per path. Main: 2,000-term SQL-text OR answers 50
+  through `F.expr`, `selectExpr`, and string `filter` (the 1,500 cap no longer
+  applies to SQL text); 1,500-term DF-built OR refuses `AnalysisException`
+  (Spark refuses DF-built chains past 300 terms); a 5,001-term mixed DF/text
+  OR answers 50 (Spark answers it); `sql()` over a 1,000-deep view counts 50
+  and `explain` names Filter. 256 KiB and 512 KiB threads: a 16-deep count
+  answers 50, a 2,000-term DF-built OR refuses, `.columns` reads a 500-deep
+  frame, and `gc.collect()` frees a deep cycle. GC: `gc.collect()` frees a
+  6,000-term column plus a 1,000-deep frame cycle on main and a 6,000-term
+  column plus a 200-deep frame cycle on a 256 KiB thread.
+  pins: deep-filter-chain-crash-1/C-013, C-014, C-015, C-016, C-017, C-018
 
 ## I want to...
 

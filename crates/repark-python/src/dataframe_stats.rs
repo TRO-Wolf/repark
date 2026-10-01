@@ -23,8 +23,16 @@ fn freq_items(
     capacity: usize,
 ) -> PyResult<PyDataFrame> {
     fenced!("freq_items", {
-        let df = repark_core::freq_items(frame.df.clone(), &column_names, capacity)
-            .map_err(to_py_err)?;
+        let depths = frame.depths();
+        let need = crate::deep_stack::clone_need_bytes(depths.plan, depths.expression);
+        let df = crate::deep_stack::grown_sync(need, || {
+            repark_core::freq_items(
+                crate::deep_stack::grown_clone_frame(frame.inner(), &frame.depths()),
+                &column_names,
+                capacity,
+            )
+        })
+        .map_err(to_py_err)?;
         Ok(PyDataFrame::new(df, Arc::clone(&frame.runtime)))
     })
 }
@@ -38,7 +46,7 @@ fn transpose(
     max_values: usize,
 ) -> PyResult<(PyDataFrame, Vec<String>)> {
     fenced!("transpose", {
-        let source = frame.df.clone();
+        let source = crate::deep_stack::grown_clone_frame(&frame.df, &frame.depths());
         let outcome = py
             .detach(|| {
                 block_on(

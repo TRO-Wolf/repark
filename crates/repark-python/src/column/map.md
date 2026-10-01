@@ -71,6 +71,11 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `impl Clone` lives here too: by-value arguments clone at the PyO3 boundary
   before any builder verdict runs, so the clone grows the same way.
   `unary_neg` clones the child once. pins: deep-filter-chain-crash-1/C-012
+  **Re-verify fold (2026-09-30):** `Drop`/`Clone` size from the cached levels
+  (no walk); every `Parts` constructor composes through `combine` (fixed shape)
+  or `combine_surveyed` (scalar dispatch); the inline tests moved verbatim to
+  `display/tests.rs` with the Parts exactness battery.
+  pins: deep-filter-chain-crash-1/C-013
 - [`display/construct.rs`](display/construct.rs) — **FACADE-2 step 3 (2026-09-13):** the
   Group-1 typed constructors that replace `_native.PyColumn.sql` call sites:
   `lit_timestamp`, `lit_date`, `lit_time`, `lit_array_cast`, `pi`, `uuid` — a `display`
@@ -85,6 +90,8 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   List<item: <element>, nullable>)` — `VARCHAR` maps to `Utf8View` internally and the
   Arrow exporter coerces views to `string` at the door.
   pins: facade-2/C-014, C-015, C-016
+  **Re-verify fold (2026-09-30):** the typed constructors compose through
+  `combine` (fixed shape). pins: deep-filter-chain-crash-1/C-013
 - [`mod.rs`](mod.rs) owns `PyColumn`, constructors, operators, aggregates, and window attachment.
   **PERF-APPROXPCT-1 (2026-09-05):** `approx_percentile_cont` / `approx_percentile_list`
   take `accuracy: Option<i64>` (None omits the third literal, so default-accuracy display
@@ -104,6 +111,31 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   operator routes its operand clones through it); the `case_when` by-value moves
   become clones because the type now implements `Drop`. rustfmt joins three
   calls plus the removed `Clone` derive (1011 → 1005). pins: deep-filter-chain-crash-1/C-012
+  **Re-verify fold (2026-09-30, C-013..C-018, CI perf):** `PyColumn` carries
+  cached `(expression, df-built, subquery-plan)` levels: `combine` composes
+  them in O(1) for fixed-shape operators, `combine_surveyed` surveys once for
+  variable-shape ones, and `expr`/`Clone`/`Drop` size their grown segments from
+  the cache with no per-op tree walk (the walk was the debug-suite 2x). The
+  builder cap counts df-built levels, so SQL-text columns (`from_sql_text`,
+  df 0) stay exempt while DataFrame-API trees still refuse past 1500; mixed
+  trees count only their DF-built levels (Spark answers the mixed-5001 cell).
+  `display_name`/`contains_higher_order` and `make_struct` field naming read
+  through `grown_read`. `Column.sql` plans under `block_on_grown_if` on the
+  text gate. The `expr_tests` module moved verbatim to `expr_tests.rs` and the
+  `PyColumn` struct plus its level constructors moved verbatim to `levels.rs`
+  (the file would otherwise pass its ceiling; 1049 → 969, the exception row
+  retires); `expr_tests.rs` carries the column exactness battery.
+  pins: deep-filter-chain-crash-1/C-013, C-015, C-017, C-018
+- [`expr_tests.rs`](expr_tests.rs) — **Re-verify fold (2026-09-30):** the
+  `column` unit tests, moved verbatim from the inline module, plus the cached-
+  level exactness battery (every operator asserts cached levels equal a fresh
+  survey, with df-level pins for SQL-text and mixed shapes).
+  pins: deep-filter-chain-crash-1/C-013
+- [`levels.rs`](levels.rs) — **Re-verify fold (2026-09-30):** the `PyColumn`
+  struct and its cached-level constructors (`from_expr`, `from_sql_text`,
+  `combine`, `combine_surveyed`, `grown_read`), moved verbatim from `mod.rs`;
+  fields are `pub(super)`, which is exactly the visibility they had.
+  pins: deep-filter-chain-crash-1/C-013
 - [`function_dispatch.rs`](function_dispatch.rs) owns scalar and aggregate function dispatch.
   Its default arm hands the name to [`function_dispatch/`](function_dispatch/map.md) before
   refusing.
@@ -234,6 +266,10 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `count_distinct_argument` keeps its name and grows by max argument depth
   around a renamed inner body, so the packed-struct clone of deep arguments runs
   on a sized segment. pins: deep-filter-chain-crash-1/C-012
+  **Re-verify fold (2026-09-30):** the exact-match predicate helpers take
+  `&PyDataFrame` (not the raw frame) and clone grown from its cached levels;
+  `collect_aggregate` / `grouping_id_column` take `&PyColumn` and compose
+  through `combine_surveyed`. pins: deep-filter-chain-crash-1/C-013
 - [`window.rs`](window.rs) owns Spark frame conversion and unordered-window policy.
   **WIN-SLIDE-1 (2026-09-04):** a `RANGE` offset is emitted as `ScalarValue::Utf8`, not `Int64`.
   DataFusion's window-frame coercion casts a `Utf8` bound to the ORDER BY key's type (that is the
@@ -246,6 +282,8 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `build_over_expression` keeps its name and grows by subject depth around a
   renamed inner body, so the aggregate sub-clones of a deep subject run on a
   sized segment. pins: deep-filter-chain-crash-1/C-012
+  **Re-verify fold (2026-09-30):** the `over` constructor composes through
+  `combine` (fixed shape); the grown wrapper stays. pins: deep-filter-chain-crash-1/C-013
 - [`door_parity_tests.rs`](door_parity_tests.rs) pins standalone facade UDF behavior against SQL.
   **DOOR-CONVERGE-1 (2026-09-15):** `EXPECTED_DIVERGENCES` ratchets 22 → 14 — `abs`,
   `hypot`, `bin`, `rint`, `base64`, `unbase64`, `size`, `cardinality`,
@@ -286,6 +324,9 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `describe_with_missing_column_refuses_unresolved` pins the `None` branch of
   `resolve_written_names` under both rules.
   pins: casesens-1/C-009, C-010
+  **Re-verify fold (2026-09-30):** the case-only pin drives through
+  `PyDataFrame::new` on a local runtime (the helper takes the handle now) as a
+  sync test. pins: deep-filter-chain-crash-1/C-013
 
 ## Contracts
 

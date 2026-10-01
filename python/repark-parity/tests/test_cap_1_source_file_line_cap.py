@@ -38,8 +38,6 @@ _RUST_BASELINES: tuple[tuple[str, int], ...] = (
     ("crates/repark-iceberg/src/write/merge/tests/streaming_scan.rs", 3018),
     ("crates/repark-iceberg/src/write/overwrite.rs", 1053),
     ("crates/repark-iceberg/src/write/predicate_dml/tests/predicate_dml.rs", 1435),
-    ("crates/repark-python/src/column/mod.rs", 1005),
-    ("crates/repark-python/src/session.rs", 1122),
     ("crates/repark-spark/src/alter.rs", 1272),
     ("crates/repark-spark/src/metadata_tables.rs", 1059),
     ("crates/repark-spark/src/tests/alter.rs", 1181),
@@ -177,7 +175,7 @@ def test_cap_1_exception_tables_equal_the_measured_debt() -> None:
     assert _baselines(python_gate) == python_approved
     assert rust_debt == rust_approved
     assert python_debt == python_approved
-    assert len(rust_approved) == 36
+    assert len(rust_approved) == 34
     assert len(python_approved) == 31
 
 

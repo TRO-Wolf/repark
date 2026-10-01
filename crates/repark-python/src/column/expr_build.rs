@@ -38,38 +38,42 @@ pub(crate) fn written_column(name: &str) -> Expr {
 }
 
 pub(crate) fn parse_canonical_predicate(
-    frame: &datafusion::prelude::DataFrame,
+    frame: &crate::dataframe::PyDataFrame,
     predicate: &str,
 ) -> datafusion::error::Result<Expr> {
     let canonical = repark_spark::spark_literals::canonicalize(predicate)?;
-    frame.parse_sql_expr(canonical.as_ref()).map_err(|error| {
-        repark_spark::spark_literals::translate_downstream_error(
-            predicate,
-            canonical.as_ref(),
-            error,
-        )
-    })
+    frame
+        .inner()
+        .parse_sql_expr(canonical.as_ref())
+        .map_err(|error| {
+            repark_spark::spark_literals::translate_downstream_error(
+                predicate,
+                canonical.as_ref(),
+                error,
+            )
+        })
 }
 
 pub(crate) fn parse_canonical_predicate_exact(
-    frame: &datafusion::prelude::DataFrame,
+    frame: &crate::dataframe::PyDataFrame,
     predicate: &str,
 ) -> datafusion::error::Result<Expr> {
     let canonical = repark_spark::spark_literals::canonicalize(predicate)?;
-    let (mut state, _) = frame.clone().into_parts();
+    let (mut state, _) =
+        crate::deep_stack::grown_clone_frame(frame.inner(), &frame.depths()).into_parts();
     state
         .config_mut()
         .options_mut()
         .sql_parser
         .enable_ident_normalization = false;
-    match state.create_logical_expr(canonical.as_ref(), frame.schema()) {
+    match state.create_logical_expr(canonical.as_ref(), frame.inner().schema()) {
         Ok(expr) => Ok(expr),
         Err(error) => {
             if let Some((relation, name)) = missing_column(&error) {
                 let probe = Expr::Column(Column::new(relation, name));
                 repark_core::frame_names::resolve_bound_expr_with(
                     probe,
-                    frame.schema(),
+                    frame.inner().schema(),
                     repark_core::frame_names::NameRule::Exact,
                 )?;
             }
@@ -92,8 +96,13 @@ pub(crate) async fn plan_expr_column(
     let select_sql = format!("SELECT ({canonical}) AS _repark_expr");
     let plan = match context.sql(&select_sql).await {
         Ok(frame) => {
-            match repark_functions::analyze_eagerly(&context.state(), frame.logical_plan().clone())
-            {
+            let planned = crate::deep_stack::plan_depths(frame.logical_plan());
+            let owned = crate::deep_stack::grown_clone_plan(
+                frame.logical_plan(),
+                planned.plan,
+                planned.expression,
+            );
+            match repark_functions::analyze_eagerly(&context.state(), owned) {
                 Ok(analyzed) => analyzed,
                 Err(error) => {
                     if missing_column(&error).is_some() {
@@ -334,8 +343,8 @@ pub(super) fn window_from_aggregate(
 
 impl PyColumn {
     /// Build Spark `collect_list` / `collect_set` semantics for NULL and empty groups.
-    pub(super) fn collect_aggregate(argument: Expr, distinct: bool) -> PyResult<Self> {
-        let base = array_agg_udaf().call(vec![argument]);
+    pub(super) fn collect_aggregate(column: &PyColumn, distinct: bool) -> PyResult<Self> {
+        let base = array_agg_udaf().call(vec![column.expr()]);
         let aggregated = if distinct {
             base.distinct()
                 .null_treatment(NullTreatment::IgnoreNulls)
@@ -351,7 +360,7 @@ impl PyColumn {
         // DataFusion returns NULL for an empty array_agg; Spark returns an empty array.
         let empty = datafusion::functions_nested::expr_fn::make_array(vec![]);
         let expr = datafusion::functions::expr_fn::coalesce(vec![aggregated, empty]);
-        Ok(Self::from_expr(expr))
+        Ok(Self::combine_surveyed(expr, [column]))
     }
 
     pub(super) fn grouping_id_call(args: Vec<Expr>) -> PyResult<Expr> {
@@ -397,7 +406,10 @@ impl PyColumn {
 pub(crate) fn grouping_id_column(args: Vec<PyColumn>) -> PyResult<PyColumn> {
     fenced!("grouping_id_column", {
         let exprs = args.iter().map(PyColumn::expr).collect::<Vec<_>>();
-        Ok(PyColumn::from_expr(PyColumn::grouping_id_call(exprs)?))
+        Ok(PyColumn::combine_surveyed(
+            PyColumn::grouping_id_call(exprs)?,
+            &args,
+        ))
     })
 }
 

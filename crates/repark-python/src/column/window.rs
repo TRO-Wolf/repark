@@ -125,10 +125,14 @@ impl PyColumn {
         udwf: std::sync::Arc<datafusion::logical_expr::WindowUDF>,
         args: &[PyColumn],
     ) -> Self {
-        Self::from_expr(Expr::from(WindowFunction::new(
-            WindowFunctionDefinition::WindowUDF(udwf),
-            args.iter().map(PyColumn::expr).collect(),
-        )))
+        Self::combine(
+            Expr::from(WindowFunction::new(
+                WindowFunctionDefinition::WindowUDF(udwf),
+                args.iter().map(PyColumn::expr).collect(),
+            )),
+            args,
+            1,
+        )
     }
 }
 

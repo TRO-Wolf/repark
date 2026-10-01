@@ -31,8 +31,15 @@ pub fn session_sql_with_write_options(
         }
     };
     fenced_span!("py.sql", "session_sql_with_write_options", {
-        repark_spark::refuse_declared_function_in_sql(query)
+        if crate::deep_stack::sql_drive_grown(query) {
+            crate::deep_stack::grown_sync(crate::deep_stack::GROWN_STACK_SEGMENT_BYTES, || {
+                repark_spark::refuse_declared_function_in_sql(query)
+            })
             .map_err(crate::datafusion_to_py_err)?;
+        } else {
+            repark_spark::refuse_declared_function_in_sql(query)
+                .map_err(crate::datafusion_to_py_err)?;
+        }
         let runtime = Arc::clone(&session.runtime);
         let inner = session.session.clone();
         let df = py
@@ -63,7 +70,7 @@ pub fn session_write_path(
     fenced_span!("py.write", "session_write_path", {
         let runtime = Arc::clone(&session.runtime);
         let inner = session.session.clone();
-        let frame = frame.inner().clone();
+        let frame = crate::deep_stack::grown_clone_frame(frame.inner(), &frame.depths());
         py.detach(|| {
             block_on(
                 &runtime,

@@ -137,10 +137,15 @@ fn facade_udf(name: &str, arity: usize) -> Option<Arc<ScalarUDF>> {
     }
 }
 
-#[tokio::test]
-async fn exact_predicate_refuses_a_case_only_match() {
+#[test]
+fn exact_predicate_refuses_a_case_only_match() {
+    let runtime: std::sync::Arc<tokio::runtime::Runtime> =
+        std::sync::Arc::new(tokio::runtime::Runtime::new().unwrap());
     let ctx = SessionContext::new();
-    let frame = ctx.sql("SELECT 1 AS id, 'a' AS \"Data\"").await.unwrap();
+    let df = runtime
+        .block_on(ctx.sql("SELECT 1 AS id, 'a' AS \"Data\""))
+        .unwrap();
+    let frame = crate::dataframe::PyDataFrame::new(df, runtime);
     let error = super::expr_build::parse_canonical_predicate_exact(&frame, "ID > 1")
         .unwrap_err()
         .to_string();

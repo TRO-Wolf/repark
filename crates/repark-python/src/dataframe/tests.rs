@@ -404,3 +404,132 @@ fn arrow_type_key_deep_list_nesting_is_depth_bounded() {
         key.len()
     );
 }
+
+fn battery_frame_on(table: &str) -> PyDataFrame {
+    let runtime: Arc<Runtime> = Arc::new(Runtime::new().expect("a runtime builds"));
+    let schema = Arc::new(Schema::new(vec![Field::new("id", DataType::Int64, false)]));
+    let batch = RecordBatch::try_new(schema, vec![Arc::new(Int64Array::from(vec![1, 2, 3])) as _])
+        .expect("a probe batch builds");
+    let context = SessionContext::new();
+    context.register_batch(table, batch).expect("register");
+    let df = runtime
+        .block_on(context.table(table))
+        .expect("a table scans");
+    PyDataFrame::new(df, runtime)
+}
+
+fn battery_frame() -> PyDataFrame {
+    battery_frame_on("t")
+}
+
+fn assert_frame_depths(frame: &PyDataFrame, label: &str) {
+    let walked = crate::deep_stack::plan_depths(frame.inner().logical_plan());
+    let cached = frame.depths();
+    assert_eq!(
+        (cached.plan, cached.limited, cached.expression),
+        (walked.plan, walked.limited, walked.expression),
+        "{label}"
+    );
+}
+
+#[test]
+fn cached_frame_levels_match_a_fresh_survey() {
+    let id = || PyColumn::column("id").expect("a column builds");
+    let base = battery_frame();
+    assert_frame_depths(&base, "leaf");
+    let mut chained = base
+        .filter(id().is_not_null().expect("a predicate builds"))
+        .expect("a filter builds");
+    assert_frame_depths(&chained, "filter");
+    for index in 0..20 {
+        chained = chained
+            .filter(id().is_not_null().expect("a predicate builds"))
+            .expect("a chained filter builds");
+        assert_frame_depths(&chained, &format!("filter chain {index}"));
+    }
+    let selected = base.select(vec![id()]).expect("a select builds");
+    assert_frame_depths(&selected, "select");
+    let extended = base.with_column("x", id()).expect("a with_column builds");
+    assert_frame_depths(&extended, "with_column");
+    let aliased_value = base
+        .with_column("x", id().alias("y").expect("an alias builds"))
+        .expect("a with_column over an alias builds");
+    assert_frame_depths(&aliased_value, "with_column aliased");
+    let replaced = base
+        .with_column("id", id())
+        .expect("a replacing with_column builds");
+    assert_frame_depths(&replaced, "with_column replace");
+    let sorted = base
+        .sort(vec![id()], vec![true], vec![true])
+        .expect("a sort builds");
+    assert_frame_depths(&sorted, "sort");
+    let aggregated = base
+        .aggregate(
+            vec![id()],
+            vec![id().aggregate("sum", false).expect("a sum builds")],
+        )
+        .expect("an aggregate builds");
+    assert_frame_depths(&aggregated, "aggregate");
+    let limited = base.limit(2).expect("a limit builds");
+    assert_frame_depths(&limited, "limit");
+    let skipped = base.limit_with_skip(1, 2).expect("a skip builds");
+    assert_frame_depths(&skipped, "limit_with_skip");
+    let distinct = base.distinct().expect("a distinct builds");
+    assert_frame_depths(&distinct, "distinct");
+    let distinct_on = base
+        .distinct_on(vec!["id".to_string()])
+        .expect("a distinct_on builds");
+    assert_frame_depths(&distinct_on, "distinct_on");
+    let renamed = base
+        .with_column_renamed("id", "x")
+        .expect("a rename builds");
+    assert_frame_depths(&renamed, "renamed");
+    let string_filtered = base.filter_sql("id > 1").expect("a sql filter builds");
+    assert_frame_depths(&string_filtered, "filter_sql");
+    Python::attach(|py| {
+        let left = Py::new(py, battery_frame()).expect("a frame object builds");
+        let right = Py::new(py, battery_frame_on("u")).expect("a frame object builds");
+        let unioned = left
+            .borrow(py)
+            .union(right.borrow(py), false)
+            .expect("a union builds");
+        assert_frame_depths(&unioned, "union");
+        let mut spine = left
+            .borrow(py)
+            .union(right.borrow(py), false)
+            .expect("a union builds");
+        for index in 0..10 {
+            let next = Py::new(py, battery_frame()).expect("a frame object builds");
+            spine = spine
+                .union(next.borrow(py), false)
+                .expect("a chained union builds");
+            assert_frame_depths(&spine, &format!("union spine {index}"));
+        }
+        drop(spine);
+        let named = left
+            .borrow(py)
+            .union_by_name(right.borrow(py), false)
+            .expect("a union_by_name builds");
+        assert_frame_depths(&named, "union_by_name");
+        let joined = left
+            .borrow(py)
+            .join_on_names(right.borrow(py), vec!["id".to_string()], "inner")
+            .expect("a key join builds");
+        assert_frame_depths(&joined, "join_on_names");
+        let renamed = left
+            .borrow(py)
+            .with_column_renamed("id", "lid")
+            .expect("a rename builds");
+        let renamed = Py::new(py, renamed).expect("a frame object builds");
+        let lid = PyColumn::column("lid").expect("a column builds");
+        let conditional = renamed
+            .borrow(py)
+            .join_on_condition(
+                right.borrow(py),
+                lid.is_not_null().expect("a predicate builds"),
+                "inner",
+            )
+            .expect("a conditional join builds");
+        assert_frame_depths(&conditional, "join_on_condition");
+    });
+}

@@ -42,7 +42,9 @@ fn ml_to_py_err(err: MlError) -> PyErr {
 
 /// Open `execute_stream` on a clone of the held plan without collecting it.
 fn open_stream(plan: &DataFrame, runtime: &Runtime) -> Result<SendableRecordBatchStream, MlError> {
-    block_on(runtime, plan.clone().execute_stream())
+    let depths = crate::deep_stack::plan_depths(plan.logical_plan());
+    let owned = crate::deep_stack::grown_clone_frame(plan, &depths);
+    block_on(runtime, owned.execute_stream())
         .map_err(|err| MlError::IllegalArgument(format!("execute_stream: {err}")))
 }
 
@@ -343,7 +345,7 @@ pub fn fit_linear_regression(
         validate_linear_regression_params(elastic_net_param, standardization)
             .map_err(ml_to_py_err)?;
         // Clone Rust-owned state before releasing the GIL; PyRef is not Send.
-        let plan = frame.inner().clone();
+        let plan = crate::deep_stack::grown_clone_frame(frame.inner(), &frame.depths());
         let runtime: Arc<Runtime> = frame.runtime_handle();
         let solution = py.detach(|| {
             let num_features = discover_feature_width(&plan, runtime.as_ref(), &features_col)
@@ -396,7 +398,7 @@ pub fn fit_logistic_regression(
     tol: f64,
 ) -> PyResult<Py<PyDict>> {
     fenced!("ml.fit_logistic_regression", {
-        let plan = frame.inner().clone();
+        let plan = crate::deep_stack::grown_clone_frame(frame.inner(), &frame.depths());
         let runtime: Arc<Runtime> = frame.runtime_handle();
         let solution = py.detach(|| {
             let (num_features, num_valid) =
@@ -572,7 +574,7 @@ pub fn fit_kmeans(
 ) -> PyResult<Py<PyDict>> {
     fenced!("ml.fit_kmeans", {
         validate_init_mode(init_mode).map_err(ml_to_py_err)?;
-        let plan = frame.inner().clone();
+        let plan = crate::deep_stack::grown_clone_frame(frame.inner(), &frame.depths());
         let runtime: Arc<Runtime> = frame.runtime_handle();
         let solution = py.detach(|| {
             let (num_features, num_valid) =

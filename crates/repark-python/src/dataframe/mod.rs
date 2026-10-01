@@ -19,8 +19,9 @@ use tokio::runtime::Runtime;
 use crate::arrow_export::StreamingBatchReader;
 use crate::column::PyColumn;
 use crate::deep_stack::{
-    DEEP_NESTING_DEPTH, block_on_grown_sized, frame_drive_segment, refuse_expression_depth,
-    run_grown_if, sql_drive_grown, stack_is_small,
+    DEEP_NESTING_DEPTH, PlanDepths, block_on_grown_sized, clone_need_bytes,
+    frame_drive_segment_cached, grown_clone_frame, grown_sync, max_depths, plan_depths,
+    refuse_expression_depth, run_grown_if, sql_drive_grown, stack_is_small,
 };
 use crate::fence::{fenced, fenced_span};
 use crate::{datafusion_to_py_err, to_py_err};
@@ -65,26 +66,50 @@ fn join_type_from_str(how: &str) -> PyResult<JoinType> {
 
 #[pyclass(name = "PyDataFrame", module = "repark._native")]
 pub struct PyDataFrame {
-    pub(crate) df: DataFrame,
+    pub(crate) df: std::mem::ManuallyDrop<DataFrame>,
     pub(crate) runtime: Arc<Runtime>,
     analyzed_schema: OnceLock<SchemaRef>,
+    depths: PlanDepths,
+}
+
+impl Drop for PyDataFrame {
+    fn drop(&mut self) {
+        let need = clone_need_bytes(self.depths.plan, self.depths.expression);
+        grown_sync(need, || unsafe {
+            std::mem::ManuallyDrop::drop(&mut self.df);
+        });
+    }
 }
 
 impl PyDataFrame {
-    fn bound(&self, column: &PyColumn) -> PyResult<Expr> {
+    fn bound(&self, column: &PyColumn) -> PyResult<(Expr, usize)> {
         crate::dataframe_names::bound_column(&self.df, column)
     }
 
     pub(crate) fn new(df: DataFrame, runtime: Arc<Runtime>) -> Self {
+        let depths = crate::deep_stack::plan_depths(df.logical_plan());
+        Self::new_with_depths(df, runtime, depths)
+    }
+
+    pub(crate) fn new_with_depths(
+        df: DataFrame,
+        runtime: Arc<Runtime>,
+        depths: PlanDepths,
+    ) -> Self {
         Self {
-            df,
+            df: std::mem::ManuallyDrop::new(df),
             runtime,
             analyzed_schema: OnceLock::new(),
+            depths,
         }
     }
 
     pub(crate) fn inner(&self) -> &DataFrame {
         &self.df
+    }
+
+    pub(crate) fn depths(&self) -> PlanDepths {
+        self.depths
     }
 
     pub(crate) fn runtime_handle(&self) -> Arc<Runtime> {
@@ -95,17 +120,22 @@ impl PyDataFrame {
         if let Some(schema) = self.analyzed_schema.get() {
             return Ok(Arc::clone(schema));
         }
-        let segment = frame_drive_segment(&self.df)?;
-        let (state, plan) = self.df.clone().into_parts();
-        let analyzed = block_on_grown_sized(
+        let segment = frame_drive_segment_cached(&self.depths)?;
+        let df = grown_clone_frame(&self.df, &self.depths);
+        let schema = block_on_grown_sized(
             &self.runtime,
-            async { repark_functions::analyze_eagerly(&state, plan) },
+            async {
+                let (state, plan) = df.into_parts();
+                let analyzed = repark_functions::analyze_eagerly(&state, plan);
+                analyzed.map(|analyzed| {
+                    repark_core::strip_tighten_export_metadata(Arc::new(
+                        analyzed.schema().as_arrow().clone(),
+                    ))
+                })
+            },
             segment,
         )
         .map_err(datafusion_to_py_err)?;
-        let schema: SchemaRef = repark_core::strip_tighten_export_metadata(Arc::new(
-            analyzed.schema().as_arrow().clone(),
-        ));
         let _ = self.analyzed_schema.set(Arc::clone(&schema));
         Ok(self.analyzed_schema.get().map(Arc::clone).unwrap_or(schema))
     }
@@ -123,19 +153,81 @@ fn arrow_type_key(data_type: &ArrowDataType) -> String {
 
 fn drive_columns<'a, T>(
     runtime: &Runtime,
+    frame: &PlanDepths,
     columns: impl IntoIterator<Item = &'a PyColumn>,
-    build: impl FnOnce() -> PyResult<T>,
-) -> PyResult<T> {
-    let mut deepest = 0;
+    build: impl FnOnce() -> PyResult<(T, usize)>,
+) -> PyResult<(T, usize)> {
+    let mut deepest_df = 0;
+    let mut deepest_expr = 0;
+    let mut deepest_plan = 0;
     for column in columns {
-        deepest = deepest.max(column.expression_depth());
+        deepest_df = deepest_df.max(column.df_depth());
+        deepest_expr = deepest_expr.max(column.expression_depth());
+        deepest_plan = deepest_plan.max(column.plan_depth());
     }
-    refuse_expression_depth(deepest)?;
+    refuse_expression_depth(deepest_df)?;
     run_grown_if(
         runtime,
-        deepest > DEEP_NESTING_DEPTH || stack_is_small(),
+        deepest_expr > DEEP_NESTING_DEPTH
+            || deepest_plan > DEEP_NESTING_DEPTH
+            || frame.plan > DEEP_NESTING_DEPTH
+            || frame.expression > DEEP_NESTING_DEPTH
+            || stack_is_small(),
         build,
     )
+}
+
+fn carries_subquery_plan<'a>(columns: impl IntoIterator<Item = &'a PyColumn>) -> bool {
+    columns.into_iter().any(|column| column.plan_depth() > 0)
+}
+
+fn child_depths(
+    frame: &PlanDepths,
+    bound: usize,
+    built: &DataFrame,
+    carries_plan: bool,
+) -> PlanDepths {
+    if carries_plan {
+        plan_depths(built.logical_plan())
+    } else {
+        grown_child(frame, bound)
+    }
+}
+
+fn join_child_depths(
+    left: &PlanDepths,
+    right: &PlanDepths,
+    bound: usize,
+    built: &DataFrame,
+    carries_plan: bool,
+) -> PlanDepths {
+    if carries_plan {
+        plan_depths(built.logical_plan())
+    } else {
+        grown_join(left, right, bound)
+    }
+}
+
+fn grown_child(frame: &PlanDepths, bound: usize) -> PlanDepths {
+    PlanDepths {
+        plan: frame.plan + 1,
+        limited: frame.limited + 1,
+        expression: frame.expression.max(bound),
+    }
+}
+
+fn grown_join(left: &PlanDepths, right: &PlanDepths, bound: usize) -> PlanDepths {
+    let frames = max_depths(left, right);
+    PlanDepths {
+        plan: frames.plan + 1,
+        limited: frames.limited + 1,
+        expression: frames.expression.max(bound),
+    }
+}
+
+fn frame_clone_need(left: &PlanDepths, right: &PlanDepths) -> usize {
+    let frames = max_depths(left, right);
+    clone_need_bytes(frames.plan, frames.expression)
 }
 
 #[allow(
@@ -148,8 +240,9 @@ impl PyDataFrame {
     #[allow(clippy::missing_errors_doc)]
     pub fn count(&self, py: Python<'_>) -> PyResult<usize> {
         fenced_span!("py.action", "PyDataFrame.count", {
-            let segment = frame_drive_segment(&self.df)?;
-            py.detach(|| block_on_grown_sized(&self.runtime, self.df.clone().count(), segment))
+            let segment = frame_drive_segment_cached(&self.depths)?;
+            let df = grown_clone_frame(&self.df, &self.depths);
+            py.detach(|| block_on_grown_sized(&self.runtime, df.count(), segment))
                 .map_err(datafusion_to_py_err)
         })
     }
@@ -205,24 +298,32 @@ impl PyDataFrame {
     #[allow(clippy::missing_errors_doc)]
     pub fn limit(&self, n: usize) -> PyResult<Self> {
         fenced!("PyDataFrame.limit", {
-            let df = self
-                .df
-                .clone()
-                .limit(0, Some(n))
-                .map_err(datafusion_to_py_err)?;
-            Ok(Self::new(df, Arc::clone(&self.runtime)))
+            let need = clone_need_bytes(self.depths.plan, self.depths.expression);
+            let df = grown_sync(need, || {
+                grown_clone_frame(self.inner(), &self.depths).limit(0, Some(n))
+            })
+            .map_err(datafusion_to_py_err)?;
+            Ok(Self::new_with_depths(
+                df,
+                Arc::clone(&self.runtime),
+                grown_child(&self.depths, 1),
+            ))
         })
     }
 
     #[allow(clippy::missing_errors_doc)]
     pub fn limit_with_skip(&self, skip: usize, fetch: usize) -> PyResult<Self> {
         fenced!("PyDataFrame.limit_with_skip", {
-            let df = self
-                .df
-                .clone()
-                .limit(skip, Some(fetch))
-                .map_err(datafusion_to_py_err)?;
-            Ok(Self::new(df, Arc::clone(&self.runtime)))
+            let need = clone_need_bytes(self.depths.plan, self.depths.expression);
+            let df = grown_sync(need, || {
+                grown_clone_frame(self.inner(), &self.depths).limit(skip, Some(fetch))
+            })
+            .map_err(datafusion_to_py_err)?;
+            Ok(Self::new_with_depths(
+                df,
+                Arc::clone(&self.runtime),
+                grown_child(&self.depths, 1),
+            ))
         })
     }
 
@@ -230,12 +331,13 @@ impl PyDataFrame {
     #[allow(clippy::missing_errors_doc)]
     pub fn show(&self, py: Python<'_>, n: usize) -> PyResult<String> {
         fenced_span!("py.action", "PyDataFrame.show", {
-            let limited = self
-                .df
-                .clone()
-                .limit(0, Some(n))
-                .map_err(datafusion_to_py_err)?;
-            let segment = frame_drive_segment(&limited)?;
+            let need = clone_need_bytes(self.depths.plan, self.depths.expression);
+            let limited = grown_sync(need, || {
+                grown_clone_frame(self.inner(), &self.depths).limit(0, Some(n))
+            })
+            .map_err(datafusion_to_py_err)?;
+            let depths = grown_child(&self.depths, 1);
+            let segment = frame_drive_segment_cached(&depths)?;
             let batches = py.detach(|| {
                 block_on_grown_sized(&self.runtime, limited.collect(), segment)
                     .map_err(datafusion_to_py_err)
@@ -258,12 +360,11 @@ impl PyDataFrame {
             let _ = requested_schema;
             let schema: SchemaRef = self.analyzed_arrow_schema_native()?;
             let schema = crate::arrow_export::coerced_export_schema(&schema);
-            let segment = frame_drive_segment(&self.df)?;
+            let segment = frame_drive_segment_cached(&self.depths)?;
             let grown = segment.is_some();
+            let df = grown_clone_frame(&self.df, &self.depths);
             let stream = py
-                .detach(|| {
-                    block_on_grown_sized(&self.runtime, self.df.clone().execute_stream(), segment)
-                })
+                .detach(|| block_on_grown_sized(&self.runtime, df.execute_stream(), segment))
                 .map_err(datafusion_to_py_err)?;
             let reader: Box<dyn RecordBatchReader + Send> = Box::new(
                 StreamingBatchReader::new(Arc::clone(&self.runtime), stream, schema, grown)
@@ -283,54 +384,79 @@ impl PyDataFrame {
     #[allow(clippy::missing_errors_doc)]
     pub fn with_column(&self, name: &str, column: PyColumn) -> PyResult<Self> {
         fenced!("PyDataFrame.with_column", {
-            let df = drive_columns(&self.runtime, std::slice::from_ref(&column), || {
-                self.df
-                    .clone()
-                    .with_column(name, self.bound(&column)?)
-                    .map_err(datafusion_to_py_err)
-            })?;
-            Ok(Self::new(df, Arc::clone(&self.runtime)))
+            let carries_plan = carries_subquery_plan(std::slice::from_ref(&column));
+            let (df, bound) = drive_columns(
+                &self.runtime,
+                &self.depths,
+                std::slice::from_ref(&column),
+                || {
+                    let (bound, depth) = self.bound(&column)?;
+                    let df = grown_clone_frame(self.inner(), &self.depths)
+                        .with_column(name, bound)
+                        .map_err(datafusion_to_py_err)?;
+                    Ok((df, depth))
+                },
+            )?;
+            let depths = child_depths(&self.depths, bound + 1, &df, carries_plan);
+            Ok(Self::new_with_depths(df, Arc::clone(&self.runtime), depths))
         })
     }
 
     #[allow(clippy::missing_errors_doc)]
     pub fn filter(&self, predicate: PyColumn) -> PyResult<Self> {
         fenced!("PyDataFrame.filter", {
-            let df = drive_columns(&self.runtime, std::slice::from_ref(&predicate), || {
-                self.df
-                    .clone()
-                    .filter(self.bound(&predicate)?)
-                    .map_err(datafusion_to_py_err)
-            })?;
-            Ok(Self::new(df, Arc::clone(&self.runtime)))
+            let carries_plan = carries_subquery_plan(std::slice::from_ref(&predicate));
+            let (df, bound) = drive_columns(
+                &self.runtime,
+                &self.depths,
+                std::slice::from_ref(&predicate),
+                || {
+                    let (bound, depth) = self.bound(&predicate)?;
+                    let df = grown_clone_frame(self.inner(), &self.depths)
+                        .filter(bound)
+                        .map_err(datafusion_to_py_err)?;
+                    Ok((df, depth))
+                },
+            )?;
+            let depths = child_depths(&self.depths, bound, &df, carries_plan);
+            Ok(Self::new_with_depths(df, Arc::clone(&self.runtime), depths))
         })
     }
 
     #[allow(clippy::missing_errors_doc)]
     pub fn filter_sql(&self, predicate: &str) -> PyResult<Self> {
         fenced!("PyDataFrame.filter_sql", {
-            let grown = sql_drive_grown(predicate);
-            let df = run_grown_if(&self.runtime, grown, || {
-                crate::dataframe_names::filter_frame_with_sql(&self.df, predicate)
+            let grown = sql_drive_grown(predicate)
+                || self.depths.plan > DEEP_NESTING_DEPTH
+                || self.depths.expression > DEEP_NESTING_DEPTH;
+            let (df, bound, carries_plan) = run_grown_if(&self.runtime, grown, || {
+                crate::dataframe_names::filter_frame_with_sql(self, predicate)
             })?;
-            Ok(Self::new(df, Arc::clone(&self.runtime)))
+            let depths = child_depths(&self.depths, bound, &df, carries_plan);
+            Ok(Self::new_with_depths(df, Arc::clone(&self.runtime), depths))
         })
     }
 
     #[allow(clippy::missing_errors_doc)]
     pub fn select(&self, columns: Vec<PyColumn>) -> PyResult<Self> {
         fenced!("PyDataFrame.select", {
-            let df = drive_columns(&self.runtime, &columns, || {
-                let expressions: Vec<Expr> = columns
-                    .iter()
-                    .map(|column| crate::dataframe_names::bound_projection(&self.df, column))
-                    .collect::<PyResult<_>>()?;
-                self.df
-                    .clone()
+            let carries_plan = carries_subquery_plan(&columns);
+            let (df, bound) = drive_columns(&self.runtime, &self.depths, &columns, || {
+                let mut deepest = 0;
+                let mut expressions = Vec::with_capacity(columns.len());
+                for column in &columns {
+                    let (bound, depth) =
+                        crate::dataframe_names::bound_projection(&self.df, column)?;
+                    deepest = deepest.max(depth);
+                    expressions.push(bound);
+                }
+                let df = grown_clone_frame(self.inner(), &self.depths)
                     .select(expressions)
-                    .map_err(datafusion_to_py_err)
+                    .map_err(datafusion_to_py_err)?;
+                Ok((df, deepest))
             })?;
-            Ok(Self::new(df, Arc::clone(&self.runtime)))
+            let depths = child_depths(&self.depths, bound, &df, carries_plan);
+            Ok(Self::new_with_depths(df, Arc::clone(&self.runtime), depths))
         })
     }
 
@@ -347,21 +473,28 @@ impl PyDataFrame {
                     "sort expects columns, ascending, and nulls_first vectors of equal length",
                 ));
             }
-            let df = drive_columns(&self.runtime, &columns, || {
-                let sort_expressions = columns
+            let carries_plan = carries_subquery_plan(&columns);
+            let (df, bound) = drive_columns(&self.runtime, &self.depths, &columns, || {
+                let bounds = columns
                     .iter()
+                    .map(|column| self.bound(column))
+                    .collect::<PyResult<Vec<_>>>()?;
+                let deepest = bounds.iter().map(|(_, depth)| *depth).max().unwrap_or(0);
+                let sort_expressions = bounds
+                    .into_iter()
                     .zip(ascending)
                     .zip(nulls_first)
-                    .map(|((column, is_ascending), nulls_first)| {
-                        Ok(self.bound(column)?.sort(is_ascending, nulls_first))
+                    .map(|((bound, is_ascending), nulls_first)| {
+                        bound.0.sort(is_ascending, nulls_first)
                     })
-                    .collect::<PyResult<Vec<_>>>()?;
-                self.df
-                    .clone()
+                    .collect::<Vec<_>>();
+                let df = grown_clone_frame(self.inner(), &self.depths)
                     .sort(sort_expressions)
-                    .map_err(datafusion_to_py_err)
+                    .map_err(datafusion_to_py_err)?;
+                Ok((df, deepest))
             })?;
-            Ok(Self::new(df, Arc::clone(&self.runtime)))
+            let depths = child_depths(&self.depths, bound, &df, carries_plan);
+            Ok(Self::new_with_depths(df, Arc::clone(&self.runtime), depths))
         })
     }
 
@@ -374,7 +507,10 @@ impl PyDataFrame {
     ) -> PyResult<Self> {
         fenced!("PyDataFrame.join_on_names", {
             let join_type = join_type_from_str(how)?;
-            let df = crate::dataframe_names::join_on_keys(&self.df, &right.df, &on, join_type)?;
+            let need = frame_clone_need(&self.depths, &right.depths());
+            let df = grown_sync(need, || {
+                crate::dataframe_names::join_on_keys(self, &right, &on, join_type)
+            })?;
             Ok(Self::new(df, Arc::clone(&self.runtime)))
         })
     }
@@ -388,35 +524,60 @@ impl PyDataFrame {
     ) -> PyResult<Self> {
         fenced!("PyDataFrame.join_on_condition", {
             let join_type = join_type_from_str(how)?;
-            let joined = drive_columns(&self.runtime, std::slice::from_ref(&condition), || {
-                self.df
-                    .clone()
-                    .join_on(right.df.clone(), join_type, [self.bound(&condition)?])
-                    .map_err(datafusion_to_py_err)
-            })?;
-            Ok(Self::new(joined, Arc::clone(&self.runtime)))
+            let frames = max_depths(&self.depths, &right.depths());
+            let carries_plan = carries_subquery_plan(std::slice::from_ref(&condition));
+            let (joined, bound) = drive_columns(
+                &self.runtime,
+                &frames,
+                std::slice::from_ref(&condition),
+                || {
+                    let (bound, depth) = self.bound(&condition)?;
+                    let joined = grown_clone_frame(self.inner(), &self.depths)
+                        .join_on(
+                            grown_clone_frame(right.inner(), &right.depths()),
+                            join_type,
+                            [bound],
+                        )
+                        .map_err(datafusion_to_py_err)?;
+                    Ok((joined, depth))
+                },
+            )?;
+            let depths =
+                join_child_depths(&self.depths, &right.depths(), bound, &joined, carries_plan);
+            Ok(Self::new_with_depths(
+                joined,
+                Arc::clone(&self.runtime),
+                depths,
+            ))
         })
     }
 
     #[allow(clippy::missing_errors_doc)]
     pub fn aggregate(&self, group_by: Vec<PyColumn>, aggregates: Vec<PyColumn>) -> PyResult<Self> {
         fenced!("PyDataFrame.aggregate", {
+            let carries_plan = carries_subquery_plan(group_by.iter().chain(aggregates.iter()));
             let columns = group_by.iter().chain(aggregates.iter());
-            let df = drive_columns(&self.runtime, columns, || {
-                let group_exprs: Vec<Expr> = group_by
-                    .iter()
-                    .map(|column| self.bound(column))
-                    .collect::<PyResult<_>>()?;
-                let aggregate_exprs: Vec<Expr> = aggregates
-                    .iter()
-                    .map(|column| self.bound(column))
-                    .collect::<PyResult<_>>()?;
-                self.df
-                    .clone()
+            let (df, bound) = drive_columns(&self.runtime, &self.depths, columns, || {
+                let mut deepest = 0;
+                let mut group_exprs = Vec::with_capacity(group_by.len());
+                for column in &group_by {
+                    let (bound, depth) = self.bound(column)?;
+                    deepest = deepest.max(depth);
+                    group_exprs.push(bound);
+                }
+                let mut aggregate_exprs = Vec::with_capacity(aggregates.len());
+                for column in &aggregates {
+                    let (bound, depth) = self.bound(column)?;
+                    deepest = deepest.max(depth);
+                    aggregate_exprs.push(bound);
+                }
+                let df = grown_clone_frame(self.inner(), &self.depths)
                     .aggregate(group_exprs, aggregate_exprs)
-                    .map_err(datafusion_to_py_err)
+                    .map_err(datafusion_to_py_err)?;
+                Ok((df, deepest))
             })?;
-            Ok(Self::new(df, Arc::clone(&self.runtime)))
+            let depths = child_depths(&self.depths, bound, &df, carries_plan);
+            Ok(Self::new_with_depths(df, Arc::clone(&self.runtime), depths))
         })
     }
 
@@ -426,12 +587,22 @@ impl PyDataFrame {
             return self.union_by_name(other, true);
         }
         fenced!("PyDataFrame.union", {
-            let unioned = self
-                .df
-                .clone()
-                .union(other.df.clone())
-                .map_err(datafusion_to_py_err)?;
-            Ok(Self::new(unioned, Arc::clone(&self.runtime)))
+            let frames = max_depths(&self.depths, &other.depths());
+            let need = clone_need_bytes(frames.plan, frames.expression);
+            let unioned = grown_sync(need, || {
+                grown_clone_frame(self.inner(), &self.depths)
+                    .union(grown_clone_frame(other.inner(), &other.depths()))
+            })
+            .map_err(datafusion_to_py_err)?;
+            Ok(Self::new_with_depths(
+                unioned,
+                Arc::clone(&self.runtime),
+                PlanDepths {
+                    plan: frames.plan + 1,
+                    limited: frames.limited,
+                    expression: frames.expression,
+                },
+            ))
         })
     }
 
@@ -442,7 +613,10 @@ impl PyDataFrame {
         allow_missing: bool,
     ) -> PyResult<Self> {
         fenced!("PyDataFrame.union_by_name", {
-            let unioned = crate::dataframe_names::union_frames(&self.df, &other.df, allow_missing)?;
+            let need = frame_clone_need(&self.depths, &other.depths());
+            let unioned = grown_sync(need, || {
+                crate::dataframe_names::union_frames(self, &other, allow_missing)
+            })?;
             Ok(Self::new(unioned, Arc::clone(&self.runtime)))
         })
     }
@@ -450,39 +624,60 @@ impl PyDataFrame {
     #[allow(clippy::missing_errors_doc)]
     pub fn distinct(&self) -> PyResult<Self> {
         fenced!("PyDataFrame.distinct", {
-            let df = self.df.clone().distinct().map_err(datafusion_to_py_err)?;
-            Ok(Self::new(df, Arc::clone(&self.runtime)))
+            let need = clone_need_bytes(self.depths.plan, self.depths.expression);
+            let df = grown_sync(need, || {
+                grown_clone_frame(self.inner(), &self.depths).distinct()
+            })
+            .map_err(datafusion_to_py_err)?;
+            Ok(Self::new_with_depths(
+                df,
+                Arc::clone(&self.runtime),
+                grown_child(&self.depths, 0),
+            ))
         })
     }
 
     #[allow(clippy::missing_errors_doc)]
     pub fn distinct_on(&self, subset: Vec<String>) -> PyResult<Self> {
         fenced!("PyDataFrame.distinct_on", {
-            let on_exprs: Vec<Expr> = subset.iter().map(col).collect();
-            let select_exprs: Vec<Expr> = self
-                .df
-                .schema()
-                .iter()
-                .map(|(_qualifier, field)| col(field.name()))
-                .collect();
-            let df = self
-                .df
-                .clone()
-                .distinct_on(on_exprs, select_exprs, None)
-                .map_err(datafusion_to_py_err)?;
-            Ok(Self::new(df, Arc::clone(&self.runtime)))
+            let need = clone_need_bytes(self.depths.plan, self.depths.expression);
+            let df = grown_sync(need, || {
+                let on_exprs: Vec<Expr> = subset.iter().map(col).collect();
+                let select_exprs: Vec<Expr> = self
+                    .df
+                    .schema()
+                    .iter()
+                    .map(|(_qualifier, field)| col(field.name()))
+                    .collect();
+                grown_clone_frame(self.inner(), &self.depths).distinct_on(
+                    on_exprs,
+                    select_exprs,
+                    None,
+                )
+            })
+            .map_err(datafusion_to_py_err)?;
+            Ok(Self::new_with_depths(
+                df,
+                Arc::clone(&self.runtime),
+                grown_child(&self.depths, 1),
+            ))
         })
     }
 
     #[allow(clippy::missing_errors_doc)]
     pub fn with_column_renamed(&self, old_name: &str, new_name: &str) -> PyResult<Self> {
         fenced!("PyDataFrame.with_column_renamed", {
-            let df = self
-                .df
-                .clone()
-                .with_column_renamed(old_name, new_name)
-                .map_err(datafusion_to_py_err)?;
-            Ok(Self::new(df, Arc::clone(&self.runtime)))
+            let need = clone_need_bytes(self.depths.plan, self.depths.expression);
+            let df = grown_sync(need, || {
+                grown_clone_frame(self.inner(), &self.depths)
+                    .with_column_renamed(old_name, new_name)
+            })
+            .map_err(datafusion_to_py_err)?;
+            Ok(Self::new_with_depths(
+                df,
+                Arc::clone(&self.runtime),
+                grown_child(&self.depths, 2),
+            ))
         })
     }
 
@@ -503,7 +698,11 @@ impl PyDataFrame {
                 empty_as_null,
                 max_depth,
             };
-            let df = repark_core::dynamic_flatten(self.df.clone(), options).map_err(to_py_err)?;
+            let need = clone_need_bytes(self.depths.plan, self.depths.expression);
+            let df = grown_sync(need, || {
+                repark_core::dynamic_flatten(grown_clone_frame(self.inner(), &self.depths), options)
+            })
+            .map_err(to_py_err)?;
             Ok(Self::new(df, Arc::clone(&self.runtime)))
         })
     }

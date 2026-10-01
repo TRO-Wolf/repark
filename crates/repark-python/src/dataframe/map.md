@@ -23,6 +23,31 @@ transforms, terminal actions, schema introspection, and Arrow C Stream export.
   (the text refusal is gone); terminals count non-`Union` nodes toward the
   8192 plan cap, so union spines answer past it and filter-led plans refuse.
   pins: deep-filter-chain-crash-1/C-001, C-010
+  **Re-verify fold (2026-09-30, C-013..C-018, CI perf):** `PyDataFrame` caches
+  its `PlanDepths`: `new` surveys once, single-node builders compose O(1)
+  through `new_with_depths`, conditional-shape builders re-survey. Terminals
+  and `analyzed_arrow_schema_native` size from the cache; the analyzed plan
+  drops inside the grown future. Every builder clone runs through
+  `grown_sync`/`grown_clone_frame`/`drive_columns`, and `drive_columns` grows
+  on frame depth too. Builders that attach a column carrying a subquery plan
+  (`select`, `filter`, `with_column`, `sort`, `aggregate`, `join_on_condition`,
+  SQL-text `filter` with a subquery predicate) re-survey the built plan instead
+  of composing O(1): the O(1) rule dropped the carried plan levels and the
+  terminal undersized its segment (scalar over a 1000-deep chain SIGSEGVs
+  without it). `drive_columns` also grows on carried plan depth, and the
+  builder-internal schema walks (`distinct_on`, the names helpers,
+  `logical_column_names`) run inside the grown region. `Drop` tears the plan
+  down on a grown segment sized from the cache. The `df` field is `ManuallyDrop<DataFrame>` so `Drop` can run the
+  teardown on a grown stack: a replace-with-placeholder needs an owned spare
+  `SessionState`, whose clone is HashMap-plus-String churn (~100us, paid per
+  frame), while `ManuallyDrop::drop` costs nothing. The one `unsafe` call runs
+  at most once per handle because `Drop::drop` runs at most once and
+  `ManuallyDrop`'s own drop is a no-op, so no double-drop exists; the binding
+  crate already allows `unsafe` for PyO3 macros. pins: deep-filter-chain-crash-1/C-013, C-016
 - [`tests.rs`](tests.rs) — **DEEP-FILTER-CHAIN-CRASH-1 verifier fold
   (2026-09-29):** the `dataframe` unit tests, moved verbatim from the inline
   module (Arrow export values, types, laziness, errors, schema caching).
+  **Re-verify fold (2026-09-30):** plus the frame exactness battery (every O(1)
+  builder rule asserts cached levels equal a fresh `plan_depths`; the
+  subquery-carrying shapes pin in `subquery.rs`, next to the constructors).
+  pins: deep-filter-chain-crash-1/C-013

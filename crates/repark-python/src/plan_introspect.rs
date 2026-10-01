@@ -20,10 +20,14 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
 #[pyfunction]
 fn input_files(py: Python<'_>, frame: &PyDataFrame) -> PyResult<Vec<String>> {
     fenced_span!("py.action", "plan_introspect.input_files", {
-        let plan = py
-            .detach(|| block_on(&frame.runtime, frame.df.clone().create_physical_plan()))
-            .map_err(datafusion_to_py_err)?;
-        Ok(repark_core::input_files(&plan))
+        let df = crate::deep_stack::grown_clone_frame(&frame.df, &frame.depths());
+        py.detach(|| {
+            block_on(&frame.runtime, async {
+                let plan = df.create_physical_plan().await?;
+                Ok::<_, datafusion::error::DataFusionError>(repark_core::input_files(&plan))
+            })
+        })
+        .map_err(datafusion_to_py_err)
     })
 }
 
@@ -35,13 +39,25 @@ fn semantic_hash(
     lineages: HashMap<String, Bound<'_, PyDataFrame>>,
 ) -> PyResult<i64> {
     fenced!("plan_introspect.semantic_hash", {
-        let (state, plan) = frame.df.clone().into_parts();
-        let mut definitions = HashMap::with_capacity(lineages.len());
-        for (name, lineage) in &lineages {
-            let definition: LogicalPlan = lineage.borrow().df.clone().into_parts().1;
-            definitions.insert(name.clone(), definition);
+        let mut depths = frame.depths();
+        for lineage in lineages.values() {
+            depths = crate::deep_stack::max_depths(&depths, &lineage.borrow().depths());
         }
-        py.detach(|| repark_core::semantic_hash(&state, &plan, &definitions).map_err(to_py_err))
+        let need = crate::deep_stack::clone_need_bytes(depths.plan, depths.expression);
+        crate::deep_stack::grown_sync(need, || {
+            let (state, plan) =
+                crate::deep_stack::grown_clone_frame(frame.inner(), &frame.depths()).into_parts();
+            let mut definitions = HashMap::with_capacity(lineages.len());
+            for (name, lineage) in &lineages {
+                let lineage_depths = lineage.borrow().depths();
+                let definition: LogicalPlan =
+                    crate::deep_stack::grown_clone_frame(lineage.borrow().inner(), &lineage_depths)
+                        .into_parts()
+                        .1;
+                definitions.insert(name.clone(), definition);
+            }
+            py.detach(|| repark_core::semantic_hash(&state, &plan, &definitions).map_err(to_py_err))
+        })
     })
 }
 
@@ -54,22 +70,35 @@ fn same_semantics(
     lineages: HashMap<String, Bound<'_, PyDataFrame>>,
 ) -> PyResult<bool> {
     fenced!("plan_introspect.same_semantics", {
-        let (state_left, plan_left) = left.df.clone().into_parts();
-        let (state_right, plan_right) = right.df.clone().into_parts();
-        let mut definitions = HashMap::with_capacity(lineages.len());
-        for (name, lineage) in &lineages {
-            let definition: LogicalPlan = lineage.borrow().df.clone().into_parts().1;
-            definitions.insert(name.clone(), definition);
+        let mut depths = crate::deep_stack::max_depths(&left.depths(), &right.depths());
+        for lineage in lineages.values() {
+            depths = crate::deep_stack::max_depths(&depths, &lineage.borrow().depths());
         }
-        py.detach(|| {
-            repark_core::same_semantics(
-                &state_left,
-                &plan_left,
-                &state_right,
-                &plan_right,
-                &definitions,
-            )
-            .map_err(to_py_err)
+        let need = crate::deep_stack::clone_need_bytes(depths.plan, depths.expression);
+        crate::deep_stack::grown_sync(need, || {
+            let (state_left, plan_left) =
+                crate::deep_stack::grown_clone_frame(left.inner(), &left.depths()).into_parts();
+            let (state_right, plan_right) =
+                crate::deep_stack::grown_clone_frame(right.inner(), &right.depths()).into_parts();
+            let mut definitions = HashMap::with_capacity(lineages.len());
+            for (name, lineage) in &lineages {
+                let lineage_depths = lineage.borrow().depths();
+                let definition: LogicalPlan =
+                    crate::deep_stack::grown_clone_frame(lineage.borrow().inner(), &lineage_depths)
+                        .into_parts()
+                        .1;
+                definitions.insert(name.clone(), definition);
+            }
+            py.detach(|| {
+                repark_core::same_semantics(
+                    &state_left,
+                    &plan_left,
+                    &state_right,
+                    &plan_right,
+                    &definitions,
+                )
+                .map_err(to_py_err)
+            })
         })
     })
 }

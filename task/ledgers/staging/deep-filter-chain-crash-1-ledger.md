@@ -82,6 +82,12 @@ fork edit, no new crate edge.
 | C-011 | A 300-term AND answers 50 and a 1,500-term AND refuses `AnalysisException` at `filter()` (limits R3; Spark first refuses `and`/`or`/`+` chains past 300 terms, so the 1500 builder cap refuses above Spark). | Two isolated-interpreter pins asserting the count and the refusal class. | PROVEN | `test_deep_filter_chain_crash_1.py` `test_and_chain_at_must_answer_depth_answers`, `test_and_chain_past_expression_cap_refuses_clean`. |
 | C-008 | A 16-deep chain counts 50 on a 512 KiB thread (small-stack backstop: any entry point grows when under 2 MiB remain); debug SIGSEGVs on f958d1a8 and base alike. | One isolated-interpreter pin. | PROVEN | `test_deep_subquery_expression_1.py` `test_shallow_chain_answers_on_small_stack_thread`. |
 | C-012 | A 6,000-term OR builds on the caller thread and on an 8 MiB thread, then refuses `AnalysisException` at `filter()` on both (CI segv: the 20,000-term build SIGSEGVs on an 8 MiB main stack before any builder runs). | One isolated-interpreter pin asserting both refusals; the grown-clone/drop Rust units. | PROVEN | `test_deep_expr_build_small_stack_1.py` both tests; `deep_stack.rs` `grown_column_combine_and_drop_survive_deep_trees`, `grown_expression_clone_and_drop_serve_sub_megabyte_threads`. |
+| C-013 | Every clone, plan, optimize, execute, format, and drop of a plan or expression runs through the single grown-stack helper sized from cached levels (VD2-1); no public operation overflows any caller thread. | The guard test greens and a planted bypass reds it; the column/frame exactness batteries assert cached levels equal a fresh survey on every rule. | PROVEN | `tests.rs` `grown_stack_guard_rejects_bypass_sites`; `expr_tests.rs` / `display/tests.rs` / `dataframe/tests.rs` / `subquery.rs` batteries; `test_deep_reverify_1.py` all workers survive. |
+| C-014 | `sql()` over a temp view holding a 1,000-deep plan counts 50 (VD2-2); the session carries a deep-view high-water mark and the query grows past it. | One isolated-interpreter pin asserting the count. | PROVEN | `test_deep_reverify_1.py` `test_deep_view_sql_and_explain_answer` (`deep_view_count` 50). |
+| C-015 | A 2,000-term SQL-text OR answers 50 through `F.expr`, `selectExpr`, and string `filter` (VD2-3; the 1,500 cap no longer applies to SQL text); a 1,500-term DF-built OR refuses `AnalysisException` at `filter()` (Spark raises `StackOverflowError` at `.filter()` on the same shape); a 5,001-term mixed DF/text OR answers 50 (Spark answers 50). | Three isolated-interpreter pins plus the 2026-09-30 Spark verbatim. | PROVEN | `test_deep_reverify_1.py` `test_sql_text_or_chains_answer_on_every_door`, `test_dataframe_built_or_past_cap_refuses_clean`, `test_mixed_dataframe_and_text_or_answers`; Spark `or_df_1500` StackOverflowError, `or_fexpr_5000` 50, `mixed5001` 50. |
+| C-016 | Teardown of deep columns and frames on GC/finalizer threads never overflows (VD2-4); owning types drop on a grown segment sized from cached levels. | One isolated-interpreter pin collecting deep cycles on main and on a 256 KiB thread. | PROVEN | `test_deep_reverify_1.py` `test_gc_collects_deep_cycles_on_main_and_small_threads`. |
+| C-017 | 256 KiB and 512 KiB caller threads count a 16-deep chain, refuse a 2,000-term DF-built OR, read `.columns` off a 500-deep frame, and collect a deep cycle (VD2-5). | Two isolated-interpreter pins, one per stack size. | PROVEN | `test_deep_reverify_1.py` `test_small_stack_thread_answers_and_collects`, `test_half_meg_stack_thread_answers_and_collects`. |
+| C-018 | The debug suite answers within 1.15x of 1,108 s and unpivot stays linear in columns (VD2-6; the per-op tree walks inflated the suite past 2,088 s with exponent 1.120). | CI-shaped wheel repro under `repark.slice` plus the 64 GiB cap, `-n 4`: suite time and the unpivot exponent. | OPEN | Closes when the wheel repro records both numbers in the appendix below. |
 
 ## Mutation record (2026-09-29)
 
@@ -561,3 +567,81 @@ there, same as base) and R-8 (`DataFrame::clone` of a plan whose top
 node holds a deep expression evaluates eagerly on the caller outside
 the terminal verdict; the unit's shapes top out far below it, same as
 base).
+
+## Re-verify fold (2026-09-30, VD2-1..VD2-6 + CI perf)
+
+The verifier's second round holds every public operation to one bar:
+no segfault on any caller thread (main, 256 KiB Python threads,
+GC/finalizer) for any plan/expression shape Spark answers, through one
+`stacker::maybe_grow` helper per recursion level, with the 1,500
+builder cap lifted off SQL text and the debug-suite time back within
+1.15x of 1,108 s. Clauses C-013..C-018 close the six items; C-018 stays
+OPEN until the CI-shaped wheel repro below records its two numbers.
+
+Mechanism: cached levels, composed O(1). `PyColumn` carries
+`(expression, df-built, subquery-plan)` levels and `PyDataFrame`
+carries its `PlanDepths`; fixed-shape builders compose them without
+walking, variable-shape builders survey once, and every clone, plan,
+optimize, execute, format, schema walk, and drop sizes its grown
+segment from the cache. The per-op tree walks are gone, which is what
+restores the debug-suite time: a walk per operator over thousand-deep
+trees was the 2x. R-7 and R-8 close here: `display_name`,
+`contains_higher_order`, and `make_struct` field naming read through
+`grown_read`, and every builder clone runs through
+`grown_clone_frame` / `grown_clone_plan` / `grown_clone_expr`.
+
+The builder cap counts df-built levels only. SQL-text columns
+(`F.expr`, `selectExpr`, string `filter`/`where`) enter with df 0, so
+SQL-text OR chains answer past 1,500 while DF-built chains still
+refuse; mixed trees count only their DF-built levels. Spark oracle
+(2026-09-30, same JVM session, verbatim): `or_df_1500` raises
+`Py4JJavaError` caused by `java.lang.StackOverflowError` at `.filter()`
+(5.0 s), `or_df_20000` raises `Py4JJavaError` at `.filter()` (45.8 s),
+`or_fexpr_5000` answers 50 (6.9 s), `mixed5001` answers 50 (3.4 s).
+RePark answers 50 / 50 / 50 and refuses `AnalysisException` at
+`filter()` on the DF-built shapes — refusal where Spark refuses,
+answers where Spark answers.
+
+Inventory: every group below routes through the helper; the guard
+test (`tests.rs` `grown_stack_guard_rejects_bypass_sites`) reds any
+raw plan/expression clone outside `deep_stack.rs` (a planted
+`self.inner().clone()` reds it; reverted clean).
+
+| Group | Mechanism |
+|---|---|
+| PyColumn builders (~100 operators) | `combine` O(1) fixed shape, `combine_surveyed` once variable shape; operands clone through grown `expr()` |
+| PyColumn reads (`display_name`, `contains_higher_order`, `make_struct` naming, `Column.sql`) | `grown_read` / `block_on_grown_if` on the text gate |
+| PyColumn `Drop`/`Clone` | grown segments sized from cached levels |
+| Frame builders attaching columns (`filter`, `select`, `with_column`, `sort`, `aggregate`, `join_on_condition`, SQL-text `filter`) | `drive_columns` (refuse + grow on df/expr/carried-plan depth); re-survey when a column carries a subquery plan, else O(1) |
+| Frame builders without columns (`limit`, `distinct`, `union`, `distinct_on`, renames) | `grown_sync` + O(1), or full survey for conditional shapes |
+| Terminals (`count`, `collect`/Arrow export, `show`, analyzed schema) | cached verdict sizes the drive; the analyzed plan drops inside the grown future |
+| Frame `Drop` (`ManuallyDrop`) | teardown on a grown segment sized from the cache |
+| Session (`sql`, temp views, readers, drops, catalogs) | grown plan/execute; deep-view high-water mark floors result levels (never `limited`) |
+| `#[pyfunction]` doors (subquery, names, stack, stats, introspect, write options, ml, `logical_column_names`) | grown clones and grown schema walks throughout |
+| Facade `explain` | composition only: temp view + `sql(EXPLAIN …)` + collect, each grown |
+
+Carried-plan crash found and fixed in-fold: `select` over a scalar
+subquery of a 1,000-deep chain SIGSEGVd (rc=-11) because the O(1)
+frame rule dropped the column's carried plan levels and the terminal
+grew for ~5 levels while the optimizer recursed 1,000+ deep
+(`PushDownFilter::rewrite` under 296 `LogicalPlan::schema` frames).
+Fix: builders re-survey when an input column carries plan levels (the
+surveys are iterative, safe on any thread); `drive_columns` and
+lateral grow on carried plan depth; builder-internal schema walks
+moved inside the grown regions. Regression: `subquery.rs`
+`builders_carrying_subquery_columns_match_a_fresh_survey` (red on the
+reverted rule, green on the fix) plus the `subquery_1000_scalar` pin
+back to 50.
+
+Size-gate retirements (shrink-only, with the CAP-1 mirror, rust count
+36 → 34): `column/mod.rs` 1005 → 969 (unit tests verbatim to
+`column/expr_tests.rs`, the `PyColumn` struct plus level constructors
+verbatim to `column/levels.rs` with `pub(super)` fields) and
+`session.rs` 1122 → 802 (unit tests verbatim to `session_tests.rs`).
+
+Rust: 113 lib tests green, clippy clean, rustfmt clean. Dev-wheel
+pins: `test_deep_reverify_1.py` 7/7 (main 129 s, small/GC 93 s),
+`test_deep_subquery_expression_1.py` 6/6 (826 s),
+`test_deep_expr_build_small_stack_1.py` 2/2 (75 s); the filter-chain
+file reruns below. C-018, the mutation record, the release A/B, and
+the neighbour replays land in the closing entry.

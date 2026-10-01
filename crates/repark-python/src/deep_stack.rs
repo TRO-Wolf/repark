@@ -21,6 +21,7 @@ pub(crate) const MAX_GROWN_SEGMENT_BYTES: usize = 1024 * 1024 * 1024;
 pub(crate) const GROWN_SQL_TEXT_LEN: usize = 4096;
 pub(crate) const SMALL_STACK_REMAINING_BYTES: usize = 2 * 1024 * 1024;
 pub(crate) const EXPR_GROWN_BYTES_PER_LEVEL: usize = 8 * 1024;
+pub(crate) const FRAME_CLONE_BYTES_PER_PLAN_LEVEL: usize = 4 * 1024;
 
 pub(crate) fn build_shared_runtime() -> io::Result<Runtime> {
     Builder::new_multi_thread()
@@ -67,11 +68,46 @@ pub(crate) fn grow_expr_if_needed<T>(depth: usize, work: impl FnOnce() -> T) -> 
     run_on_grown_stack(need, need, work)
 }
 
-pub(crate) fn grown_clone(expr: &Expr) -> Expr {
-    grow_expr_if_needed(expression_depth(expr), || expr.clone())
+pub(crate) fn clone_need_bytes(plan_depth: usize, expression_depth: usize) -> usize {
+    plan_depth
+        .saturating_mul(FRAME_CLONE_BYTES_PER_PLAN_LEVEL)
+        .max(expression_depth.saturating_mul(EXPR_GROWN_BYTES_PER_LEVEL))
+        .min(MAX_GROWN_SEGMENT_BYTES)
 }
 
-#[derive(Debug)]
+pub(crate) fn grown_clone_expr(expr: &Expr, expression_depth: usize, plan_depth: usize) -> Expr {
+    let need = clone_need_bytes(plan_depth, expression_depth);
+    run_on_grown_stack(need, need, || expr.clone())
+}
+
+pub(crate) fn grown_clone_frame(frame: &DataFrame, depths: &PlanDepths) -> DataFrame {
+    let need = clone_need_bytes(depths.plan, depths.expression);
+    run_on_grown_stack(need, need, || frame.clone())
+}
+
+pub(crate) fn grown_clone_plan(
+    plan: &LogicalPlan,
+    plan_depth: usize,
+    expression_depth: usize,
+) -> LogicalPlan {
+    let need = clone_need_bytes(plan_depth, expression_depth);
+    run_on_grown_stack(need, need, || plan.clone())
+}
+
+pub(crate) fn grown_sync<T>(need: usize, work: impl FnOnce() -> T) -> T {
+    run_on_grown_stack(need, need, work)
+}
+
+pub(crate) fn survey_expression(expr: &Expr) -> (usize, usize) {
+    let (depth, subqueries) = expression_depth_and_subqueries(expr);
+    let mut deepest_plan = 0;
+    for subquery in subqueries {
+        deepest_plan = deepest_plan.max(plan_depths(subquery).plan);
+    }
+    (depth, deepest_plan)
+}
+
+#[derive(Debug, Clone, Copy)]
 pub(crate) struct PlanDepths {
     pub(crate) plan: usize,
     pub(crate) limited: usize,
@@ -198,23 +234,6 @@ fn expression_depth_and_subqueries(expr: &Expr) -> (usize, Vec<&LogicalPlan>) {
     (deepest, subqueries)
 }
 
-pub(crate) fn refuse_overdeep_plan(plan: &LogicalPlan) -> PyResult<PlanDepths> {
-    let depths = refuse_overdeep_plan_inputs(plan)?;
-    refuse_expression_depth(depths.expression)?;
-    Ok(depths)
-}
-
-pub(crate) fn refuse_overdeep_plan_inputs(plan: &LogicalPlan) -> PyResult<PlanDepths> {
-    let depths = plan_depths(plan);
-    if depths.limited > MAX_PLAN_DEPTH {
-        return Err(AnalysisException::new_err(format!(
-            "plan depth {} exceeds the supported maximum of {MAX_PLAN_DEPTH} (deep-plan limit)",
-            depths.limited
-        )));
-    }
-    Ok(depths)
-}
-
 pub(crate) fn refuse_expression_depth(depth: usize) -> PyResult<()> {
     if depth > MAX_EXPRESSION_DEPTH {
         return Err(AnalysisException::new_err(format!(
@@ -249,12 +268,25 @@ pub(crate) fn stack_is_small() -> bool {
     remaining_stack().is_none_or(|remaining| remaining < SMALL_STACK_REMAINING_BYTES)
 }
 
-pub(crate) fn frame_drive_segment(frame: &DataFrame) -> PyResult<Option<usize>> {
-    let depths = refuse_overdeep_plan_inputs(frame.logical_plan())?;
-    if drive_segment_bytes(&depths).is_none() && stack_is_small() {
+pub(crate) fn frame_drive_segment_cached(depths: &PlanDepths) -> PyResult<Option<usize>> {
+    if depths.limited > MAX_PLAN_DEPTH {
+        return Err(AnalysisException::new_err(format!(
+            "plan depth {} exceeds the supported maximum of {MAX_PLAN_DEPTH} (deep-plan limit)",
+            depths.limited
+        )));
+    }
+    if drive_segment_bytes(depths).is_none() && stack_is_small() {
         return Ok(Some(GROWN_STACK_SEGMENT_BYTES));
     }
-    Ok(drive_segment_bytes(&depths))
+    Ok(drive_segment_bytes(depths))
+}
+
+pub(crate) fn max_depths(first: &PlanDepths, second: &PlanDepths) -> PlanDepths {
+    PlanDepths {
+        plan: first.plan.max(second.plan),
+        limited: first.limited.max(second.limited),
+        expression: first.expression.max(second.expression),
+    }
 }
 
 #[cfg(test)]
@@ -421,7 +453,8 @@ mod tests {
                 Filter::try_new(lit(true), Arc::new(plan)).expect("a filter wraps"),
             );
         }
-        let error = refuse_overdeep_plan(&plan).expect_err("a plan past the cap refuses");
+        let depths = plan_depths(&plan);
+        let error = frame_drive_segment_cached(&depths).expect_err("a plan past the cap refuses");
         assert!(
             error.to_string().contains("deep-plan limit"),
             "the refusal names the limit: {error}"
@@ -453,7 +486,7 @@ mod tests {
                     depths.plan
                 );
                 assert_eq!(depths.limited, 1);
-                assert!(refuse_overdeep_plan_inputs(&plan).is_ok());
+                assert!(frame_drive_segment_cached(&depths).is_ok());
             })
             .expect("a big-stack test thread spawns")
             .join()
@@ -601,8 +634,9 @@ mod tests {
             .expect("an empty frame builds")
             .filter(over)
             .expect("a deep predicate builds");
+        let depths = plan_depths(frame.logical_plan());
         assert!(
-            frame_drive_segment(&frame)
+            frame_drive_segment_cached(&depths)
                 .expect("terminals grow past the expression cap")
                 .is_some()
         );
