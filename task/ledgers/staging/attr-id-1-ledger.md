@@ -484,3 +484,20 @@ Spark's qualifier-qualified echo. Pins written first (4 red), green
 after. Also fixed in this commit: the H-1 `redundant_closure` clippy
 lint in `logical_names.rs` (clippy's suggestion, same bytes), which
 blocked `make rust-clippy`.
+
+## S3b gate record (2026-10-01, head 1faedb48)
+
+Replays `t-head-2/3/4` (foreground, `ulimit -v 67108864`): 43946
+cells each, 0 EQUAL-moved on all three, 7672 FIXED each
+(deterministic across runs; +20 over the pre-fix head: 14
+nested-lambda, 4 S3a `j_cross`, 2 `j_cross` Column-door bonus),
+0 of the 203 S3a gains lost, the four §9c cells FIXED. The
+`setup J3/SJ2/TT failed AnalysisException` lines are the cs2 fixture
+setup try/except outcomes, byte-identical on base and head.
+Timing (`like_for_like_h1.py`, bases `t-base-1/2/3`): pair ratios
+1.0139/1.0656/1.0366, median-of-3 1.0285x against the 1.2x bar;
+7672 FIXED cells cost 37.5s reported separately; coverage 0.9999.
+Sweep (`-n 8`, 45 files): 2236 passed, 19 skipped, 2 xfailed.
+`gate.sh`: 15/15 GREEN, including the parity suite (green after the
+orchestrator removed the torn `/tmp/muse-worker` snapshot) and both
+Rust lib suites. Pin file: 52 green.
