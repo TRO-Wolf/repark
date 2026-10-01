@@ -8975,11 +8975,15 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   `dropna`, free-Column `drop`), union `drop(str)` fan-out, distinct-id
   union and reversed-order refusals (probes s3d8..11).
   pins: attr-id-1/C-034
-  **ATTR-ID-1 S3d follow-up 3 (2026-10-01):** 12 more pins: same-display
-  union twins refuse an exact subset but bind a folded one first-only, a
-  multi-id same-display union refuses, project twins fan out without a union,
-  `dropDuplicates` fans out to divergent twins, U+0130 variants miss under
-  `fillna`/`dropna`/free-Column `drop` but hit under `drop(str)`/
-  `dropDuplicates`, and final-sigma folds hit while the U+0130 expansion
-  misses (probes s3d16..17).
+  **ATTR-ID-1 S3d follow-up 3 (2026-10-01):** 9 more pins: project twins
+  fan out without a union, `dropDuplicates` fans out to divergent twins,
+  U+0130 variants miss under `fillna`/`dropna`/free-Column `drop` but hit
+  under `drop(str)`/`dropDuplicates`, and final-sigma folds hit while the
+  U+0130 expansion misses (probes s3d16..17).
   pins: attr-id-1/C-037
+  **ATTR-ID-1 S3d follow-up 4 (2026-10-01):** 2 union-twins pins bind
+  first-only for both spellings on a single-id (select-dup) union and refuse
+  both spellings on a multi-id (alias-dup) union; a creation-dup union is
+  unbuildable in RePark (`createDataFrame` refuses dup names, probe s3d18
+  measures the Spark side).
+  pins: attr-id-1/C-038

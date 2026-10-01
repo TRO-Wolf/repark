@@ -115,12 +115,7 @@ def _bound_subset_positions(
     status, grouped = _grouped(hits, held)
     if status == "ambiguous":
         _raise_ambiguous_reference(frame, key, grouped)
-    closed = _close_positions(grouped, held)
-    if len(closed) > 1 and _native.union_dup_below_wrappers(frame._plan(), closed):
-        exact = [position for position in hits if displays[position] == key]
-        if len(exact) > 1:
-            _raise_ambiguous_reference(frame, key, hits)
-        return sorted(grouped)[:1]
+    closed = _trim_union_first(frame, grouped, _close_positions(grouped, held))
     _refuse_guarded(frame, closed, engine_names, key)
     return closed
 

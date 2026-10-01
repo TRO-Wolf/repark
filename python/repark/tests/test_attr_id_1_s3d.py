@@ -567,20 +567,14 @@ def test_union_drop_str_fans_out_to_every_hit(spark: ReparkSession) -> None:
     assert _resolved_union(spark).drop("V").columns == ["id"]
 
 
-def test_union_same_display_twins_refuse_exact_subset(spark: ReparkSession) -> None:
-    with pytest.raises(AnalysisException) as failed:
-        _same_display_union(spark).fillna(0, subset=["v"])
-    assert failed.value.getCondition() == "AMBIGUOUS_REFERENCE"
-    with pytest.raises(AnalysisException) as failed:
-        _same_display_union(spark).dropna(subset=["v"])
-    assert failed.value.getCondition() == "AMBIGUOUS_REFERENCE"
-
-
-def test_union_same_display_twins_folded_subset_binds_first_position_only(
-    spark: ReparkSession,
-) -> None:
+def test_union_same_display_twins_bind_first_position_only(spark: ReparkSession) -> None:
     wanted = [(1, 10, 10), (1, 10, 10), (2, 0, None), (2, 0, None)]
+    assert _rows(_same_display_union(spark).fillna(0, subset=["v"])) == wanted
     assert _rows(_same_display_union(spark).fillna(0, subset=["V"])) == wanted
+    assert _rows(_same_display_union(spark).dropna(subset=["v"])) == [
+        (1, 10, 10),
+        (1, 10, 10),
+    ]
     assert _rows(_same_display_union(spark).dropna(subset=["V"])) == [
         (1, 10, 10),
         (1, 10, 10),
@@ -589,12 +583,29 @@ def test_union_same_display_twins_folded_subset_binds_first_position_only(
     assert _same_display_union(spark).drop(functions.col("V")).columns == ["id", "v"]
 
 
-def test_union_multi_id_same_display_twins_refuse_subset(spark: ReparkSession) -> None:
+def _alias_dup_union(spark: ReparkSession) -> Any:
     source = _union_source(spark)
     twins = source.select("id", functions.col("v").alias("v"), functions.col("v").alias("v"))
-    doubled = twins.union(twins)
+    return twins.union(twins)
+
+
+def test_union_multi_id_same_display_twins_refuse_subset_and_col(
+    spark: ReparkSession,
+) -> None:
     with pytest.raises(AnalysisException) as failed:
-        doubled.fillna(0, subset=["v"])
+        _alias_dup_union(spark).fillna(0, subset=["v"])
+    assert failed.value.getCondition() == "AMBIGUOUS_REFERENCE"
+    with pytest.raises(AnalysisException) as failed:
+        _alias_dup_union(spark).fillna(0, subset=["V"])
+    assert failed.value.getCondition() == "AMBIGUOUS_REFERENCE"
+    with pytest.raises(AnalysisException) as failed:
+        _alias_dup_union(spark).dropna(subset=["v"])
+    assert failed.value.getCondition() == "AMBIGUOUS_REFERENCE"
+    with pytest.raises(AnalysisException) as failed:
+        _alias_dup_union(spark).drop(functions.col("v"))
+    assert failed.value.getCondition() == "AMBIGUOUS_REFERENCE"
+    with pytest.raises(AnalysisException) as failed:
+        _alias_dup_union(spark).drop(functions.col("V"))
     assert failed.value.getCondition() == "AMBIGUOUS_REFERENCE"
 
 
