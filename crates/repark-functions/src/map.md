@@ -698,6 +698,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `nullifzero_nested` fold the unlowered spellings with the same
   `nullif_value` semantics; `zin`/`niz` need no COUNT path since their
   zero side is never unknown. pins: nvl-type-coercion-1/C-037.
+  **Re-verify 10 fold part 2 (2026-09-30, VN11-4, R3):** a second
+  under the nullable-decimal-cast UDF stays opaque (no bound), so an
+  integral cast over decimal arithmetic truncates the whole result
+  once downstream instead of proving against truncated operands.
+  pins: nvl-type-coercion-1/C-041.
   **Re-verify 9 fold (2026-09-30, VN10-1..VN10-3):** the bound is
   unguarded `const_i128(first)` and exactness guards only the equality
   proof, which needs both sides exact; a `Cast`/`TryCast` to an
@@ -875,6 +880,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   and `coerce_types` checks arity only, so bind never pre-empts the
   base-route rule; the post-rule still refuses at execution time.
   pins: nvl-type-coercion-1/C-041
+  **Re-verify 10 fold part 2 (2026-09-30, VN11-1/VN11-3, R1/R2):**
+  `nvl`/`nvl2`/`nullif` declare through `spark_nvl_core` (the core
+  UDF's own bind type, widened-or-first fallback) and `nullif` gains
+  the `fexpr_built` marker with the `nullif_fexpr_udf` constructor,
+  so the `F.expr` door parses to a distinguishable call.
+  pins: nvl-type-coercion-1/C-041
 - `spark_nvl_eager.rs` — **NVL-TYPE-COERCION-1 (2026-09-29, VN3-1..VN3-3):**
   the two single-evaluation kernels the rule reaches for: `__repark_nvl_pick`
   takes the two widened branches once each and picks per row (volatile-first
@@ -962,6 +973,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   stands down when ANSI is off and leaves every family call for the
   base-route rule; ANSI-on behavior is unchanged.
   pins: nvl-type-coercion-1/C-041
+  **Re-verify 10 fold part 2 (2026-09-30, VN11-3, R2):** under ANSI
+  on, a `fexpr_built` `nullif` string/stamp literal pair folds in UTC
+  before the rewrite, so both sides compare in one zone; the stand-down
+  is unchanged. pins: nvl-type-coercion-1/C-041
 - `spark_nvl_base.rs` — **NVL-TYPE-COERCION-1 re-verify 10 fold
   (2026-09-30, VN11-1/VN11-2/VN11-5, R1):** `SparkNvlBaseRoute`, seated
   immediately before `type_coercion`: with ANSI off it routes SQL
@@ -969,6 +984,29 @@ scalars live under [`try_invert/`](try_invert/map.md).
   calls to the base `coalesce`/`CASE`/`nullif` shapes, and
   registry-only `zeroifnull`/`nullifzero` to Spark's `Invalid
   function` refusal. pins: nvl-type-coercion-1/C-041
+  **Re-verify 10 fold part 2 (2026-09-30, VN11-1/VN11-2/VN11-5,
+  R1):** the routes return `Result`: all-literal calls validate
+  through `spark_nvl_core` (the core bind error, so unbindable
+  literals refuse before the swap), a failed schema recompute keeps
+  the swapped plan instead of erroring, and registry-only
+  `zeroifnull`/`nullifzero` refuse with base's `UNRESOLVED_ROUTINE`
+  text; `F.expr`-marked calls route exactly like SQL calls (no fold
+  under ANSI off). pins: nvl-type-coercion-1/C-041
+- `spark_nvl_core.rs` — **NVL-TYPE-COERCION-1 re-verify 10 fold part 2
+  (2026-09-30, VN11-1/VN11-2/VN11-5, R1):** core-bind delegation for
+  the ANSI-off stand-down: `core_declared`/`core_field` run the core
+  UDF's `fields_with_udf` plus `return_field_from_args` so the
+  family UDFs declare base's bind type (core `nvl` has no temporal
+  UNIFORM member, so timestamp pairs declare `Utf8` like base), and
+  `validate_core_call` refuses literal calls the core bind cannot
+  take. pins: nvl-type-coercion-1/C-041
+- `spark_nvl_fexpr.rs` — **NVL-TYPE-COERCION-1 re-verify 10 fold part 2
+  (2026-09-30, VN11-3, R2):** the single-zone UTC fold for
+  `F.expr`-marked `nullif` string/stamp literal pairs: the text side
+  parses in UTC and equal pairs fold to NULL, so the ANSI-on family
+  rule compares both sides in one zone; unequal, unparsable and
+  non-UTC pairs pass through untouched.
+  pins: nvl-type-coercion-1/C-041
 - `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer
   rule, installed on BOTH doors via `install_shared_analyzer_rules` (defined here since FNP-11B step 3 and re-exported from the crate root, so `repark_functions::install_shared_analyzer_rules` and run 16b's `session.rs` call are unchanged; the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts; the TIME guard left for `analyzer_rules()` in remediation round 1).
   installer calls it in place of the integer-only one — same line count, so the
@@ -1042,7 +1080,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   the ceiling did not rise.
 - `eager.rs` — **NVL-TYPE-COERCION-1 (2026-09-29):** `analyze_eagerly` moved
   here unchanged from `lib.rs` (sanctioned out (1), net-negative: the root
-  lands at 182 of its 186 ceiling with the five `spark_nvl` module decls (re-verify 10 fold adds `spark_nvl_base`)) and
+  lands at 184 of its 186 ceiling with the seven `spark_nvl` module decls (re-verify 10 fold adds `spark_nvl_base`, part 2 adds `spark_nvl_core` and `spark_nvl_fexpr`)) and
   re-exported at the root, so every caller keeps its path.
   pins: nvl-type-coercion-1/C-002
 - `url.rs` — Spark `parse_url` / `try_parse_url` use `java.net.URI`-shaped splitting (sibling

@@ -202,7 +202,7 @@ fn build_expr_context() -> datafusion::error::Result<SessionContext> {
     rules.push(std::sync::Arc::new(repark_spark::FoldSparkNumericCasts));
     rules.push(std::sync::Arc::new(repark_spark::SparkProjectionDisplay));
     rules.extend(repark_spark::spark_literal_typing::spark_door_post_coercion_rules());
-    let rules = repark_functions::spark_nvl_rule::append_nvl_family_rule(rules);
+    rules.retain(|rule| rule.name() != "type_coercion");
     let state = SessionStateBuilder::new()
         .with_config(config)
         .with_default_features()
@@ -212,6 +212,11 @@ fn build_expr_context() -> datafusion::error::Result<SessionContext> {
     context.register_udf(repark_spark::spark_as_udf().as_ref().clone());
     context.register_udf(repark_spark::suffix_literal_udf().as_ref().clone());
     repark_functions::register_all(&context);
+    context.register_udf(
+        repark_functions::spark_nvl_udf::nullif_fexpr_udf()
+            .as_ref()
+            .clone(),
+    );
     Ok(context)
 }
 

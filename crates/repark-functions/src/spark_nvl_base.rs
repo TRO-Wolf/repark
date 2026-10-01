@@ -52,7 +52,18 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
         }
         expr.transform_up(rewrite_expr)
     })?;
-    transformed.map_data(LogicalPlan::recompute_schema)
+    if !transformed.transformed {
+        return Ok(transformed);
+    }
+    let fallback = transformed.data.clone();
+    match transformed.map_data(LogicalPlan::recompute_schema) {
+        Ok(recomputed) => Ok(recomputed),
+        Err(_) => Ok(Transformed::new(
+            fallback,
+            true,
+            TreeNodeRecursion::Continue,
+        )),
+    }
 }
 
 fn rewrite_grouping_set(set: &GroupingSet) -> Result<Transformed<Expr>> {
@@ -104,9 +115,9 @@ fn rewrite_expr(expr: Expr) -> Result<Transformed<Expr>> {
         return Ok(Transformed::no(expr));
     }
     let routed = match function.func.name() {
-        "nvl" | "ifnull" => Ok(route_nvl(function)),
-        "nvl2" => Ok(route_nvl2(function)),
-        "nullif" => Ok(route_nullif(function)),
+        "nvl" | "ifnull" => route_nvl(function),
+        "nvl2" => route_nvl2(function),
+        "nullif" => route_nullif(function),
         "zeroifnull" => route_zeroifnull(function),
         "nullifzero" => route_nullifzero(function),
         _ => return Ok(Transformed::no(expr)),
@@ -149,19 +160,21 @@ fn zero_literal() -> Expr {
     Expr::Literal(ScalarValue::Int32(Some(0)), None)
 }
 
-fn route_nvl(function: &ScalarFunction) -> Expr {
+fn route_nvl(function: &ScalarFunction) -> Result<Expr> {
     if function
         .func
         .inner()
         .downcast_ref::<SparkNvl>()
         .is_some_and(SparkNvl::is_facade_built)
     {
-        return coalesce(function.args.clone());
+        validate_literals(&datafusion::functions::core::coalesce(), function)?;
+        return Ok(coalesce(function.args.clone()));
     }
-    core_nvl(function.args.clone())
+    validate_literals(&datafusion::functions::core::nvl(), function)?;
+    Ok(core_nvl(function.args.clone()))
 }
 
-fn route_nvl2(function: &ScalarFunction) -> Expr {
+fn route_nvl2(function: &ScalarFunction) -> Result<Expr> {
     if let [test, first, second] = function.args.as_slice()
         && function
             .func
@@ -169,20 +182,38 @@ fn route_nvl2(function: &ScalarFunction) -> Expr {
             .downcast_ref::<SparkNvl2>()
             .is_some_and(SparkNvl2::is_facade_built)
     {
-        return Expr::Case(Case {
+        return Ok(Expr::Case(Case {
             expr: None,
             when_then_expr: vec![(
                 Box::new(test.clone().is_null().not()),
                 Box::new(first.clone()),
             )],
             else_expr: Some(Box::new(second.clone())),
-        });
+        }));
     }
-    core_nvl2(function.args.clone())
+    validate_literals(&datafusion::functions::core::nvl2(), function)?;
+    Ok(core_nvl2(function.args.clone()))
 }
 
-fn route_nullif(function: &ScalarFunction) -> Expr {
-    core_nullif(function.args.clone())
+fn route_nullif(function: &ScalarFunction) -> Result<Expr> {
+    validate_literals(&datafusion::functions::core::nullif(), function)?;
+    Ok(core_nullif(function.args.clone()))
+}
+
+fn validate_literals(
+    core: &datafusion::logical_expr::ScalarUDF,
+    function: &ScalarFunction,
+) -> Result<()> {
+    let Some(types) = crate::spark_nvl_core::literal_types(&function.args) else {
+        return Ok(());
+    };
+    crate::spark_nvl_core::validate_core_call(core, &types)
+}
+
+fn unresolved_routine(name: &str) -> DataFusionError {
+    DataFusionError::Plan(format!(
+        "[UNRESOLVED_ROUTINE] Cannot resolve routine `{name}` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 0"
+    ))
 }
 
 fn route_zeroifnull(function: &ScalarFunction) -> Result<Expr> {
@@ -195,10 +226,7 @@ fn route_zeroifnull(function: &ScalarFunction) -> Result<Expr> {
     {
         return Ok(coalesce(vec![arg.clone(), zero_literal()]));
     }
-    Err(DataFusionError::Plan(format!(
-        "Invalid function '{}'",
-        function.func.name()
-    )))
+    Err(unresolved_routine(function.func.name()))
 }
 
 fn route_nullifzero(function: &ScalarFunction) -> Result<Expr> {
@@ -211,10 +239,7 @@ fn route_nullifzero(function: &ScalarFunction) -> Result<Expr> {
     {
         return Ok(core_nullif(vec![arg.clone(), zero_literal()]));
     }
-    Err(DataFusionError::Plan(format!(
-        "Invalid function '{}'",
-        function.func.name()
-    )))
+    Err(unresolved_routine(function.func.name()))
 }
 
 #[cfg(test)]
@@ -310,7 +335,12 @@ mod tests {
             .await
             .expect_err("ansi-off zeroifnull must refuse")
             .to_string();
-        assert!(error.contains("Invalid function 'zeroifnull'"), "{error}");
+        assert!(
+            error.contains(
+                "[UNRESOLVED_ROUTINE] Cannot resolve routine `zeroifnull` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 0"
+            ),
+            "{error}"
+        );
     }
 
     #[tokio::test]
@@ -324,7 +354,7 @@ mod tests {
             .await
             .expect_err("ansi casts still fail")
             .to_string();
-        assert!(!error.contains("Invalid function"), "{error}");
+        assert!(!error.contains("UNRESOLVED_ROUTINE"), "{error}");
     }
 
     #[test]
@@ -340,7 +370,37 @@ mod tests {
             .transform_up(rewrite_expr)
             .expect_err("registry zeroifnull must refuse")
             .to_string();
-        assert!(error.contains("Invalid function 'zeroifnull'"), "{error}");
+        assert!(
+            error.contains("[UNRESOLVED_ROUTINE] Cannot resolve routine `zeroifnull`"),
+            "{error}"
+        );
+    }
+
+    #[test]
+    fn validate_reports_base_bind_failure() {
+        let call = nvl_family_expr("nullif", &[lit("a"), lit(true)]).expect("registry call");
+        let error = call
+            .transform_up(rewrite_expr)
+            .expect_err("mismatch must refuse")
+            .to_string();
+        assert_eq!(
+            error,
+            "Error during planning: For function 'nullif' Utf8 and Boolean is not comparable"
+        );
+    }
+
+    #[tokio::test]
+    async fn unresolvable_routed_plan_keeps_base_bind_text() {
+        let ctx = ctx_with_ansi(false);
+        let error = ctx
+            .sql("SELECT nullif('a', true) AS v")
+            .await
+            .expect("ansi-off nullif binds")
+            .collect()
+            .await
+            .expect_err("mismatched nullif must refuse")
+            .to_string();
+        assert!(error.contains("not comparable"), "{error}");
     }
 
     #[test]

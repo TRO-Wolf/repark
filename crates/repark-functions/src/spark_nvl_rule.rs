@@ -20,7 +20,8 @@ use crate::spark_nvl::{
 };
 use crate::spark_nvl_eager::{nullif_compare_expr, nvl_pick_expr};
 use crate::spark_nvl_udf::{
-    ifnull_expr, nullif_pick_udf, nvl_cast_expr, nvl_expr, nvl2_expr, zero_scalar, zeroifnull_expr,
+    SparkNullif, ifnull_expr, nullif_pick_udf, nvl_cast_expr, nvl_expr, nvl2_expr, zero_scalar,
+    zeroifnull_expr,
 };
 
 #[must_use]
@@ -142,6 +143,18 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
         return Ok(Transformed::yes(rewritten));
     }
     if is_spark_nullif_call(function) && function.args.len() == 2 {
+        if function
+            .func
+            .inner()
+            .downcast_ref::<SparkNullif>()
+            .is_some_and(SparkNullif::is_fexpr_built)
+            && let Some((_, on)) = crate::spark_nvl_fexpr::utc_fold_nullif_literals(
+                &function.args[0],
+                &function.args[1],
+            )
+        {
+            return Ok(Transformed::yes(on));
+        }
         let rewritten = rewrite_nullif(
             function.args[0].clone(),
             function.args[1].clone(),
@@ -575,11 +588,37 @@ mod tests {
         assert!(rows.iter().any(|row| row.contains('a')), "{rows:?}");
         let message = plan_err(&ctx, "SELECT zeroifnull('a') AS v").await;
         assert!(
-            message.contains("Invalid function 'zeroifnull'"),
+            message.contains("[UNRESOLVED_ROUTINE] Cannot resolve routine `zeroifnull`"),
             "{message}"
         );
         let rows = one_row(&ctx, "SELECT nvl('a', true) AS v").await;
         assert!(rows.iter().any(|row| row.contains('a')), "{rows:?}");
+    }
+
+    #[test]
+    fn fexpr_nullif_utc_pair_folds_before_rewrite() {
+        use datafusion::arrow::array::timezone::Tz;
+
+        use crate::csv::default_timestamp_micros;
+        let zone: Tz = "UTC".parse().expect("utc zone");
+        let micros = default_timestamp_micros("2024-01-02 03:04:05", Some(zone)).expect("parse");
+        let stamp = Expr::Literal(
+            ScalarValue::TimestampMicrosecond(Some(micros), Some(Arc::from("UTC"))),
+            None,
+        );
+        let text = Expr::Literal(
+            ScalarValue::Utf8(Some("2024-01-02 03:04:05".to_owned())),
+            None,
+        );
+        let call =
+            crate::expr_fn::call(crate::spark_nvl_udf::nullif_fexpr_udf(), vec![stamp, text]);
+        let folded = rewrite_expr(call, &DFSchema::empty())
+            .expect("rewrite")
+            .data;
+        let Expr::Literal(value, _) = folded else {
+            panic!("utc-equal fexpr nullif must fold");
+        };
+        assert!(value.is_null(), "folded nullif is null");
     }
 
     #[tokio::test]

@@ -187,6 +187,14 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   session-time lowering is reverted, so `F.expr` nullif/nvl compare
   in one zone exactly as before it.
   pins: nvl-type-coercion-1/C-041
+  **Re-verify 10 fold part 2 (2026-09-30, VN11-3, R1/R2):** the seat
+  is gone again — the shared context carries no session ANSI flag,
+  so it cannot lower for both modes. The context strips
+  `type_coercion` and registers the `fexpr_built` `nullif` UDF
+  instead: `F.expr` extracts raw marked calls and the consumer
+  session lowers with the live flag (base route under ANSI off, the
+  UTC single-zone fold under ANSI on).
+  pins: nvl-type-coercion-1/C-041
   **FN-FIX-1:** `window_from_aggregate` copies `IGNORE NULLS`. pins: fn-fix-1-registry-rows/C-002
   **FNP-AGG-1 slice (d) (2026-09-21):** `cast_unsigned_count_to_signed` moved here
   from `function_dispatch.rs` (same body, re-exported there) so `grouping_id_call`

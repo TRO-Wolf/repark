@@ -85,6 +85,9 @@ pub(crate) fn nullif_value(
     position: NullifPosition,
 ) -> Option<i128> {
     let left = const_i128(first, depth)?;
+    if is_opaque_decimal_cast(second) {
+        return None;
+    }
     let proven = match (exact_i128(first, depth), exact_i128(second, depth)) {
         (Some(owned), Some(other)) => Some(owned == other),
         _ => None,
@@ -96,6 +99,21 @@ pub(crate) fn nullif_value(
             NullifPosition::Count => Some(left),
             NullifPosition::Nested => None,
         },
+    }
+}
+
+fn is_opaque_decimal_cast(expr: &Expr) -> bool {
+    let mut current = expr;
+    loop {
+        match current {
+            Expr::Alias(alias) => current = alias.expr.as_ref(),
+            Expr::ScalarFunction(function)
+                if function.func.name() == crate::decimal_cast::DECIMAL_CAST_NULLABLE_NAME =>
+            {
+                return true;
+            }
+            _ => return false,
+        }
     }
 }
 
@@ -499,6 +517,30 @@ mod tests {
         let second = Expr::Cast(Cast::new(Box::new(double), DataType::Int32));
         assert_eq!(
             nullif_value(&lit(101), &second, DEPTH, NullifPosition::Count),
+            None
+        );
+    }
+
+    #[test]
+    fn nullif_opaque_decimal_second_has_no_bound() {
+        use datafusion::logical_expr::{BinaryExpr, Operator, lit};
+        let decimal =
+            |unscaled: i128| Expr::Literal(ScalarValue::Decimal128(Some(unscaled), 4, 1), None);
+        let inner = Expr::BinaryExpr(BinaryExpr::new(
+            Box::new(decimal(3004)),
+            Operator::Minus,
+            Box::new(decimal(1496)),
+        ));
+        let wrapped = crate::expr_fn::call(
+            crate::decimal_cast::spark_decimal_cast_nullable_udf(),
+            vec![inner],
+        );
+        assert_eq!(
+            nullif_value(&lit(150), &wrapped, DEPTH, NullifPosition::Count),
+            None
+        );
+        assert_eq!(
+            nullif_value(&lit(150), &wrapped, DEPTH, NullifPosition::Nested),
             None
         );
     }

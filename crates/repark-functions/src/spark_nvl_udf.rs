@@ -39,6 +39,11 @@ pub fn nullif_udf() -> Arc<ScalarUDF> {
 }
 
 #[must_use]
+pub fn nullif_fexpr_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkNullif::new_fexpr()))
+}
+
+#[must_use]
 pub fn zeroifnull_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkZeroIfNull::new()))
 }
@@ -382,6 +387,11 @@ impl ScalarUDFImpl for SparkNvl {
         let [first, second] = arg_types else {
             return Err(wrong_num_args(self.spelling, 2, arg_types.len()));
         };
+        if let Some(declared) =
+            crate::spark_nvl_core::core_declared(&datafusion::functions::core::nvl(), arg_types)
+        {
+            return Ok(declared);
+        }
         Ok(widen_full(first, second).unwrap_or_else(|| first.clone()))
     }
 
@@ -389,6 +399,13 @@ impl ScalarUDFImpl for SparkNvl {
         let [first, second] = args.arg_fields else {
             return Err(wrong_num_args(self.spelling, 2, args.arg_fields.len()));
         };
+        if let Some(field) = crate::spark_nvl_core::core_field(
+            &datafusion::functions::core::nvl(),
+            self.spelling,
+            &args,
+        ) {
+            return Ok(field);
+        }
         let common = widen_full(first.data_type(), second.data_type())
             .unwrap_or_else(|| first.data_type().clone());
         let nullable = first.is_nullable() && second.is_nullable();
@@ -487,6 +504,11 @@ impl ScalarUDFImpl for SparkNvl2 {
         let [_, first, second] = arg_types else {
             return Err(wrong_num_args("nvl2", 3, arg_types.len()));
         };
+        if let Some(declared) =
+            crate::spark_nvl_core::core_declared(&datafusion::functions::core::nvl2(), arg_types)
+        {
+            return Ok(declared);
+        }
         Ok(widen_full(first, second).unwrap_or_else(|| first.clone()))
     }
 
@@ -494,6 +516,11 @@ impl ScalarUDFImpl for SparkNvl2 {
         let [_, first, second] = args.arg_fields else {
             return Err(wrong_num_args("nvl2", 3, args.arg_fields.len()));
         };
+        if let Some(field) =
+            crate::spark_nvl_core::core_field(&datafusion::functions::core::nvl2(), "nvl2", &args)
+        {
+            return Ok(field);
+        }
         let common = widen_full(first.data_type(), second.data_type())
             .unwrap_or_else(|| first.data_type().clone());
         let nullable = first.is_nullable() || second.is_nullable();
@@ -544,15 +571,28 @@ impl ScalarUDFImpl for SparkNvl2 {
 }
 
 #[derive(Debug)]
-struct SparkNullif {
+pub(crate) struct SparkNullif {
     signature: Signature,
+    fexpr_built: bool,
 }
 
 impl SparkNullif {
     fn new() -> Self {
         Self {
             signature: Signature::user_defined(Volatility::Immutable),
+            fexpr_built: false,
         }
+    }
+
+    fn new_fexpr() -> Self {
+        Self {
+            signature: Signature::user_defined(Volatility::Immutable),
+            fexpr_built: true,
+        }
+    }
+
+    pub(crate) fn is_fexpr_built(&self) -> bool {
+        self.fexpr_built
     }
 }
 
@@ -577,6 +617,11 @@ impl ScalarUDFImpl for SparkNullif {
         let [first, _] = arg_types else {
             return Err(wrong_num_args("nullif", 2, arg_types.len()));
         };
+        if let Some(declared) =
+            crate::spark_nvl_core::core_declared(&datafusion::functions::core::nullif(), arg_types)
+        {
+            return Ok(declared);
+        }
         Ok(first.clone())
     }
 
@@ -584,6 +629,13 @@ impl ScalarUDFImpl for SparkNullif {
         let [first, _] = args.arg_fields else {
             return Err(wrong_num_args("nullif", 2, args.arg_fields.len()));
         };
+        if let Some(field) = crate::spark_nvl_core::core_field(
+            &datafusion::functions::core::nullif(),
+            "nullif",
+            &args,
+        ) {
+            return Ok(field);
+        }
         Ok(Arc::new(Field::new(
             "nullif",
             first.data_type().clone(),
