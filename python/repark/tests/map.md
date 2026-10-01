@@ -5890,7 +5890,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `year` column, and the **case-differing** shape (column `YEAR`, call `year(ts)`) is the true
   discriminator since DataFusion resolves function names case-sensitively (`"YEAR"(ts)` →
   `Invalid function`), while bare `year`/`YEAR` on the same frame still rewrites (P5C5-Q-001);
-  (3) **all three** members of `column_fields._SQL_LITERAL_KEYWORDS` keep their grammar meaning against a frame
+  (3) **all three** members of `filter_quote._SQL_LITERAL_KEYWORDS` keep their grammar meaning against a frame
   that actually carries a column of that name — `["true","b"]`, `["false","b"]`, `["null","b"]` —
   each with the suppressed rewrite asserted to fail (`"true"` / `"false"` → non-boolean predicate;
   `b IS NOT "null"` → `ParseException`);
@@ -8907,3 +8907,10 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   live case rule decides after creation. No module docstring: the lane's
   no-comments ruling covers the new file; the contract lives here.
   pins: attr-id-1/C-025
+  **ATTR-ID-1 S3b H-1 (2026-10-01):** the §9e pins (C-026): aliased-join and
+  corpus-cross-join dups refuse on both doors under both rules; the missing
+  sort key falls through in output order; the three lambda shapes bind under
+  `caseSensitive=true`; struct access, the facade-held qualifier (main's
+  raise), the qualifier-first tie and the tie coincidence. Every row
+  expectation is live-Spark verbatim (h1/h1d/h1e probes).
+  pins: attr-id-1/C-026

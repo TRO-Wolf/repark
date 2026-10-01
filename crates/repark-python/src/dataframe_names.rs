@@ -1,10 +1,13 @@
+use datafusion::common::Column;
 use datafusion::dataframe::DataFrame;
 use datafusion::logical_expr::{Expr, JoinType};
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
 use crate::column::PyColumn;
-use crate::column::expr_build::{parse_canonical_predicate, parse_canonical_predicate_exact};
+use crate::column::expr_build::{
+    ambiguous_column, parse_canonical_predicate, parse_canonical_predicate_exact,
+};
 use crate::dataframe::PyDataFrame;
 use crate::datafusion_to_py_err;
 use crate::fence::fenced;
@@ -18,6 +21,8 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(attribute_copy_name, module)?)?;
     module.add_function(wrap_pyfunction!(bind_free_names, module)?)?;
     module.add_function(wrap_pyfunction!(drop_frame_columns, module)?)?;
+    module.add_function(wrap_pyfunction!(engine_field_is_unique, module)?)?;
+    module.add_function(wrap_pyfunction!(join_dup_below_wrappers, module)?)?;
     module.add_function(wrap_pyfunction!(frame_case_sensitive, module)?)?;
     module.add_function(wrap_pyfunction!(frame_is_relation, module)?)?;
     module.add_function(wrap_pyfunction!(grandchild_key_status, module)?)?;
@@ -72,7 +77,19 @@ pub(crate) fn filter_frame_with_sql(frame: &DataFrame, predicate: &str) -> PyRes
         NameRule::IgnoreCase => parse_canonical_predicate(frame, predicate),
     }
     .map_err(|error| crate::unknown_routine_to_py_err(predicate, error))?;
-    frame.clone().filter(parsed).map_err(datafusion_to_py_err)
+    frame.clone().filter(parsed).map_err(|error| {
+        if let Some((relation, name)) = ambiguous_column(&error) {
+            let probe = Expr::Column(Column::new(relation, name));
+            if let Err(shaped) = repark_core::frame_names::resolve_bound_expr_with(
+                probe,
+                frame.schema(),
+                frame_rule(frame),
+            ) {
+                return datafusion_to_py_err(shaped);
+            }
+        }
+        datafusion_to_py_err(error)
+    })
 }
 
 pub(crate) fn join_on_keys(
@@ -308,6 +325,16 @@ pub(crate) fn strip_attribute_ids(frame: &PyDataFrame) -> PyResult<PyDataFrame> 
             frame.runtime_handle(),
         ))
     })
+}
+
+#[pyfunction]
+pub(crate) fn engine_field_is_unique(frame: &PyDataFrame, name: &str) -> bool {
+    repark_core::frame_names::engine_field_is_unique(frame.inner().schema(), name)
+}
+
+#[pyfunction]
+pub(crate) fn join_dup_below_wrappers(frame: &PyDataFrame) -> bool {
+    repark_core::frame_names::join_dup_below_wrappers(frame.inner().logical_plan())
 }
 
 #[pyfunction]

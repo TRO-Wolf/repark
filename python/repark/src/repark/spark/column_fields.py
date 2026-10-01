@@ -16,6 +16,14 @@ from repark.errors import (
     PySparkTypeError,
     UnsupportedOperationException,
 )
+from repark.spark.filter_quote import (
+    _FILTER_TOKEN_PATTERN,
+    _bind_filter_token,
+    _group_candidates,
+    _lambda_quoted_span,
+    _lambda_scopes,
+    _unqualified_candidates,
+)
 
 
 def carried_select_attrs(column: Any) -> dict[str, Any]:
@@ -474,30 +482,6 @@ def _raise_folded_ambiguous(
     )
 
 
-def _unqualified_candidates(name: str, displays: list[str]) -> tuple[list[int], list[int]]:
-    exact_hits = [index for index, display in enumerate(displays) if display == name]
-    folded = name.casefold()
-    folded_hits = [
-        index
-        for index, display in enumerate(displays)
-        if display != name and display.casefold() == folded
-    ]
-    return exact_hits, folded_hits
-
-
-def _group_candidates(candidates: list[int], held: list[str | None]) -> tuple[str, list[int]]:
-    groups: list[str | None] = []
-    for index in candidates:
-        held_id = held[index]
-        if held_id is None or held_id not in groups:
-            groups.append(held_id)
-    if not candidates:
-        return ("missing", [])
-    if len(groups) == 1:
-        return ("bound", [candidates[0]])
-    return ("ambiguous", candidates)
-
-
 def _bind_resolved_name(frame: Any, written: str) -> Any:
     from repark.spark._idents import quote_ident as _quote_ident
     from repark.spark.column import Column
@@ -613,7 +597,7 @@ def _bind_stable_id_column(frame: Any, column: Any) -> Any | None:
         return column
     native_names = _native.logical_column_names(native)
     engine_field = native_names[held.index(attr_id)]
-    if native_names.count(engine_field) != 1:
+    if not _native.engine_field_is_unique(native, engine_field):
         return column
     quoted = _quote_ident(engine_field)
     shown = column._projection_name if column._projection_name is not None else engine_field
@@ -787,14 +771,14 @@ def _resolve_sort_name(frame: Any, written: str) -> Any:
         engine = _checked_sort_position(frame, native, engine_names, held, position)
         return _build_sort_bound_column(frame, engine, displays[position], name, held[position])
     if status == "missing":
-        if _native.grandchild_key_status(native, name, exact) == "bound":
-            return Column(
-                _native.PyColumn.column(name),
-                spark_display=name,
-                projection_name=name,
-                stable_name=True,
-            )
-        _raise_unresolved_name(None, name, displays)
+        if _native.grandchild_key_status(native, name, exact) == "ambiguous":
+            _raise_unresolved_name(None, name, displays)
+        return Column(
+            _native.PyColumn.column(name),
+            spark_display=name,
+            projection_name=name,
+            stable_name=True,
+        )
     if written != name:
         return frame._bind_schema_column(written)
     if _native.sort_child_shape(native) == "project":
@@ -833,65 +817,6 @@ def _bind_sort_key(frame: Any, item: Any) -> Any:
     raise column_or_str_error(item)
 
 
-_FILTER_TOKEN_PATTERN = re.compile(
-    r"\b([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\b(?!\s*\()"
-)
-
-_SQL_LITERAL_KEYWORDS = frozenset({"true", "false", "null"})
-
-
-def _engine_name_is_unique(engine_names: list[str], engine_field: str, exact: bool) -> bool:
-    if sum(1 for engine in engine_names if engine == engine_field) != 1:
-        return False
-    if exact:
-        return True
-    folded = engine_field.casefold()
-    return sum(1 for engine in engine_names if engine.casefold() == folded) == 1
-
-
-def _bind_filter_token(
-    match: re.Match[str],
-    *,
-    native: Any,
-    displays: list[str],
-    engine_names: list[str],
-    held: list[str | None],
-    exact: bool,
-) -> str:
-    from repark.spark._idents import quote_ident as _quote_ident
-
-    token = match.group(1)
-    parts = token.split(".")
-    name = parts[-1]
-    if len(parts) == 1:
-        if name.casefold() in _SQL_LITERAL_KEYWORDS:
-            return token
-        exact_hits, folded_hits = _unqualified_candidates(name, displays)
-        candidates = exact_hits if exact else exact_hits + folded_hits
-        if not candidates:
-            return token
-        status, hits = _group_candidates(candidates, held)
-        if status == "bound":
-            return _quote_ident(engine_names[hits[0]])
-        if status == "missing":
-            return token
-        candidates_echo = ", ".join(f"`{displays[position]}`" for position in hits)
-        detail = f"[AMBIGUOUS_REFERENCE] Reference `{token}` is ambiguous, "
-        raise AnalysisException(f"{detail}could be: [{candidates_echo}].")
-    qualifier = ".".join(parts[:-1])
-    status, hits = _native.resolve_display_name(native, name, qualifier, displays, exact)
-    if status == "bound":
-        engine_field = engine_names[hits[0]]
-        if _engine_name_is_unique(engine_names, engine_field, exact):
-            return _quote_ident(engine_field)
-        return token
-    if status == "ambiguous":
-        candidates_echo = ", ".join(f"`{token}`" for _ in hits)
-        detail = f"[AMBIGUOUS_REFERENCE] Reference `{token}` is ambiguous, "
-        raise AnalysisException(f"{detail}could be: [{candidates_echo}].")
-    return token
-
-
 def _quote_filter_sql_identifiers(frame: Any, sql: str) -> str:
     native = frame._plan()
     displays = list(frame.columns)
@@ -905,6 +830,14 @@ def _quote_filter_sql_identifiers(frame: Any, sql: str) -> str:
         engine_names = list(_native.logical_column_names(native))
         held = list(_native.attribute_ids(native))
     exact = bool(_native.session_case_sensitive(frame._session))
+    qualifiers = [held_name for held_name in _native.logical_column_qualifiers(native) if held_name]
+    fold_map: dict[str, list[int]] = {}
+    for position, display in enumerate(displays):
+        fold_map.setdefault(display.casefold(), []).append(position)
+    scopes: list[tuple[int, int, list[str]]] = []
+    decls: dict[tuple[int, int], str] = {}
+    if "->" in sql:
+        scopes, decls = _lambda_scopes(sql)
     binder = functools.partial(
         _bind_filter_token,
         native=native,
@@ -912,17 +845,27 @@ def _quote_filter_sql_identifiers(frame: Any, sql: str) -> str:
         engine_names=engine_names,
         held=held,
         exact=exact,
+        qualifiers=qualifiers,
+        fold_map=fold_map,
+        scopes=scopes,
+        decls=decls,
     )
     pieces = re.split(r"('(?:[^']|'')*')", sql)
     rebuilt: list[str] = []
+    offset = 0
     for piece in pieces:
         if piece.startswith("'"):
             rebuilt.append(piece)
+            offset += len(piece)
             continue
         subpieces = re.split(r'("(?:[^"]|"")*"|`(?:[^`]|``)*`)', piece)
         for subpiece in subpieces:
-            if subpiece.startswith(('"', "`")):
+            if subpiece.startswith('"'):
                 rebuilt.append(subpiece)
+            elif subpiece.startswith("`"):
+                rebuilt.append(_lambda_quoted_span(subpiece, scopes, decls, offset, exact))
             else:
-                rebuilt.append(_FILTER_TOKEN_PATTERN.sub(binder, subpiece))
+                scoped = functools.partial(binder, base=offset)
+                rebuilt.append(_FILTER_TOKEN_PATTERN.sub(scoped, subpiece))
+            offset += len(subpiece)
     return "".join(rebuilt)

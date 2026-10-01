@@ -23,6 +23,7 @@ pub use super::attr_id::{
     remint_join_collisions, resolve, stamp, strip,
 };
 pub use super::sort_names::{SortShape, bind_free_names, grandchild_key, sort_shape};
+pub use super::sort_names::{engine_field_is_unique, join_dup_below_wrappers};
 pub use super::subquery::resolve_bound_expr_with;
 pub use repark_common::names::{NameHit, NameRule};
 

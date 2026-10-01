@@ -288,6 +288,24 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   refuses, as live Spark does. No docstrings on the new private helpers; the
   contract lives here. Pins: `python/repark/tests/test_attr_id_1_s3b.py`.
   pins: attr-id-1/C-025
+  **ATTR-ID-1 S3b H-1 (2026-10-01):** the §9e rulings. A one-id multi-hit
+  token refuses when `join_dup_below_wrappers` sees a join below (the
+  `SubqueryAlias` dedup hides the join but preserves ids) and the echo lists
+  every candidate; a sort key with no output hit falls through to the engine;
+  dotted tokens route on plan qualifiers only, qualifier-first on a struct tie
+  (Spark-measured) with a main's-path fallback on a qualifier miss, anything
+  else takes main's bare-ident path. The quoter machinery moves to
+  `filter_quote.py` (this module keeps the `_quote_filter_sql_identifiers`
+  entry): 1209 → 871 lines. Pins: `python/repark/tests/test_attr_id_1_s3b.py`.
+  pins: attr-id-1/C-026
+- `filter_quote.py` — **ATTR-ID-1 S3b H-1 (2026-10-01):** the filter-SQL
+  identifier quoter, split out of `column_fields.py` at the size ceiling (pure
+  move; the entry stays there). `_FILTER_TOKEN_PATTERN`,
+  `_SQL_LITERAL_KEYWORDS`, the candidate pair, the lambda scope tokenizer
+  (RC4-1/RC4-6/RC5-2 port: decl sites quoted, bodies resolve params, outer
+  columns bind), `_main_path_dotted_token` (main's bare-ident tokenization
+  with the byte-identical collision raise), and `_bind_filter_token`.
+  pins: attr-id-1/C-026
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
   unsupported operations fail explicitly.

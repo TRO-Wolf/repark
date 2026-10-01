@@ -9,6 +9,17 @@ use super::case_bind::{
     ambiguous_reference, attribute_reference, is_scratch_relation, unresolved_column,
 };
 
+#[must_use]
+pub fn engine_field_is_unique(schema: &DFSchema, name: &str) -> bool {
+    schema
+        .fields()
+        .iter()
+        .filter(|field| field.name() == name)
+        .take(2)
+        .count()
+        == 1
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SortShape {
     Project,
@@ -44,6 +55,45 @@ fn below_transparent(plan: &LogicalPlan) -> &LogicalPlan {
         LogicalPlan::SubqueryAlias(alias) => alias.input.as_ref(),
         LogicalPlan::Projection(projection) if is_transparent(projection) => &projection.input,
         _ => plan,
+    }
+}
+
+fn projection_preserves_ids(projection: &Projection) -> bool {
+    let above = projection
+        .schema
+        .fields()
+        .iter()
+        .map(|field| AttrId::of(field))
+        .collect::<Vec<_>>();
+    let below = projection
+        .input
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| AttrId::of(field))
+        .collect::<Vec<_>>();
+    above == below
+}
+
+#[must_use]
+pub fn join_dup_below_wrappers(plan: &LogicalPlan) -> bool {
+    let mut node = plan;
+    loop {
+        if matches!(node, LogicalPlan::Join(_)) {
+            return true;
+        }
+        if let LogicalPlan::Projection(projection) = node {
+            if !projection_preserves_ids(projection) {
+                return false;
+            }
+            node = projection.input.as_ref();
+            continue;
+        }
+        let below = below_transparent(node);
+        if std::ptr::eq(below, node) {
+            return false;
+        }
+        node = below;
     }
 }
 
@@ -144,10 +194,11 @@ pub fn bind_free_names(
     } else {
         SortShape::Other
     };
+    let join_dup = !for_sort && join_dup_below_wrappers(plan);
     expr.transform(|node| {
         Ok(match node {
             Expr::Column(column) if column.relation.is_none() => Transformed::yes(
-                bind_free_column(column, schema, rule, displays, for_sort, shape)?,
+                bind_free_column(column, schema, rule, displays, for_sort, shape, join_dup)?,
             ),
             _ => Transformed::no(node),
         })
@@ -162,6 +213,7 @@ fn bind_free_column(
     displays: &[String],
     for_sort: bool,
     shape: SortShape,
+    join_dup: bool,
 ) -> Result<Expr> {
     match resolve(schema, &column.name, None, rule, displays)? {
         Resolution::Bound(hits) => {
@@ -171,6 +223,12 @@ fn bind_free_column(
             let field = schema.fields().get(*position).ok_or_else(|| {
                 internal_datafusion_err!("resolve bound out of range for {}", column.name)
             })?;
+            if !for_sort && !engine_field_is_unique(schema, field.name()) {
+                return Ok(Expr::Column(column));
+            }
+            if !for_sort && hits.len() > 1 && join_dup {
+                return ambiguous_for_hits(&column, schema, &hits);
+            }
             Ok(attribute_reference(field.name()))
         }
         Resolution::Ambiguous(hits) => {
@@ -180,15 +238,19 @@ fn bind_free_column(
                 }
                 return Err(unresolved_column(&column, schema));
             }
-            let options = hits
-                .iter()
-                .filter_map(|position| schema.iter().nth(*position))
-                .map(|(qualifier, field)| (qualifier, field.as_ref()))
-                .collect::<Vec<_>>();
-            Err(ambiguous_reference(&column, &options))
+            ambiguous_for_hits(&column, schema, &hits)
         }
         Resolution::Missing => Ok(Expr::Column(column)),
     }
+}
+
+fn ambiguous_for_hits(column: &Column, schema: &DFSchema, hits: &[usize]) -> Result<Expr> {
+    let options = hits
+        .iter()
+        .filter_map(|position| schema.iter().nth(*position))
+        .map(|(qualifier, field)| (qualifier, field.as_ref()))
+        .collect::<Vec<_>>();
+    Err(ambiguous_reference(column, &options))
 }
 
 fn oldest_field(schema: &DFSchema, hits: &[usize]) -> Result<Expr> {

@@ -16,7 +16,20 @@ pub fn logical_column_names(frame: PyRef<'_, PyDataFrame>) -> PyResult<Vec<Strin
     })
 }
 
+#[pyfunction]
+pub fn logical_column_qualifiers(frame: PyRef<'_, PyDataFrame>) -> PyResult<Vec<Option<String>>> {
+    fenced!("logical_names.logical_column_qualifiers", {
+        Ok(frame
+            .inner()
+            .schema()
+            .iter()
+            .map(|(qualifier, _)| qualifier.map(|held| held.to_string()))
+            .collect())
+    })
+}
+
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(logical_column_names, module)?)?;
+    module.add_function(wrap_pyfunction!(logical_column_qualifiers, module)?)?;
     Ok(())
 }

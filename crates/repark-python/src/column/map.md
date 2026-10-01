@@ -215,6 +215,9 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `parse_canonical_predicate_exact` parses a filter fragment against a
   normalization-off clone of the frame state and routes a `FieldNotFound` miss
   through the rule binder for Spark's refusal. pins: casesens-1/C-009
+  **ATTR-ID-1 S3b H-1 (2026-10-01):** `ambiguous_column` reads the relation
+  and name out of a filter-stage `AmbiguousReference` (through `Diagnostic`
+  wrappers) for the `filter_frame_with_sql` reshape. pins: attr-id-1/C-026
 - [`window.rs`](window.rs) owns Spark frame conversion and unordered-window policy.
   **WIN-SLIDE-1 (2026-09-04):** a `RANGE` offset is emitted as `ScalarValue::Utf8`, not `Int64`.
   DataFusion's window-frame coercion casts a `Utf8` bound to the ORDER BY key's type (that is the

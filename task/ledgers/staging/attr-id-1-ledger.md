@@ -371,3 +371,58 @@ fallback ruling (old qualifier-blind raise vs a shaped miss); B4 — restore
 bare-ident tokenization and resolve dots as struct access first. B2-sort, B3
 and B4 each need a decision the brief did not make, so the round halts rather
 than reworking the rule unruled.
+
+**S3b H-1 fix (2026-10-01, §9e rulings, pins attr-id-1/C-026).** All four
+rulings implemented; the 179 buckets re-measured cell by cell below (replay
+`t-head-2` pending at commit time).
+
+B1: the walker takes the shared `engine_field_is_unique` guard plus a
+`join_dup_below_wrappers` walk for the shape the guard cannot see — an
+aliased join whose `SubqueryAlias::try_new` dedup projection renames the
+engines unique (`v`, `v:1`) while preserving the degenerate one-id ids.
+The walk descends single-input nodes and id-preserving projections (the
+dedup preserves ids without being transparent); a one-id multi-hit token
+over such a join refuses `AMBIGUOUS_REFERENCE` on both doors. Same-frame
+dups (cc-twins, whose facade-renamed engines are already unique) still
+bind. The str-door echo lists every candidate, as main does.
+
+B2-sort: a 0-hit key falls through to the engine (plain column, main's
+path); the grandchild-ambiguous refusal stays. Spark-measured: a 2-id
+project key binds oldest (ROWS, committed pin stands) and a join dup
+refuses `UNRESOLVED_COLUMN` — sort never yields `AMBIGUOUS_REFERENCE`,
+so the fix brief's "2-id AMBIGUOUS" pin wording is loose; the committed
+`test_orderby_of_join_dup_is_unresolved` is the pin, with Spark's tag.
+
+B2-lambda: the tokenizer owns lambda scope (RC4-1/RC4-6/RC5-2 port from
+`pull/881/head`): decl sites quoted, bodies resolve params, outer columns
+bind under both rules. All three pins measured verbatim against live
+Spark, including the shadowed-outside shape (`v < 100 AND exists(arr, v
+-> v > 4)` → `[[1], [5]]`).
+
+B3/B4: a dotted token routes on plan qualifiers only. A plan-qualifier
+tie with a struct column goes qualifier-first — Spark-measured
+(`T.id > 5` on the disambiguating frame → `[[9]]`) — with a main's-path
+fallback on a qualifier miss (struct access, alias3 shape); anything else
+takes main's bare-ident path with the byte-identical collision raise.
+Under Exact a tie still reads struct-first because DataFusion lowercases
+the `SubqueryAlias` qualifier (`T` → `t`, so the live rule misses):
+kept main-divergence, S3e Q4 owns facade case. Exact qualified-join
+filters (`L.v`) likewise take main's path (plan carries folded `l`/`r`).
+
+Mutations (each red, then reverted; tree verified identical after):
+M1 drops the B1 bound-arm gate — alias pins (both doors, both rules) and
+`jcross-col` go red; `jcross-str` stays green via the engine/probe
+backstop and cc stays green by correct bind. M2 refuses on 0 sort hits —
+the fallthrough and grandchild pins go red. M3 blinds the tokenizer —
+`exists` goes red; `transform`/shadow lock outcomes (quoting coincidence).
+M4 routes every dotted token through resolve with miss raising — struct,
+facade-held and Exact-coincidence pins go red; qualifier hits stay green.
+
+Known residues kept: `qalias_str` (`q.v` on the alias frame — one
+degenerate id, unique engine — binds ROWS where Spark refuses; the
+rulings' letter, main-equal); `alias_sort` (sort binds one id, main's
+path); Exact ties and Exact qualified joins (above, S3e). The
+`column_fields.py` split (`filter_quote.py`, pure move, entry stays) was
+forced by the size gate: S3b left the file at 1209 with no exception row
+and `gate.sh` never ran on that round. `case_bind.rs` sits at exactly
+1000 (at ceiling, untouched).

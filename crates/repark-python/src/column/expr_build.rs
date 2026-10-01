@@ -141,6 +141,21 @@ fn missing_column(
     }
 }
 
+pub(crate) fn ambiguous_column(
+    error: &datafusion::error::DataFusionError,
+) -> Option<(Option<TableReference>, String)> {
+    match error {
+        datafusion::error::DataFusionError::SchemaError(inner, _) => match inner.as_ref() {
+            SchemaError::AmbiguousReference { field } => {
+                Some((field.relation.clone(), field.name.clone()))
+            }
+            _ => None,
+        },
+        datafusion::error::DataFusionError::Diagnostic(_, inner) => ambiguous_column(inner),
+        _ => None,
+    }
+}
+
 fn parse_unresolved_expr(
     context: &SessionContext,
     canonical: &str,

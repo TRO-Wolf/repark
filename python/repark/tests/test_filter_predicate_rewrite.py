@@ -15,7 +15,7 @@ Arrow export path (``to_arrow`` — value AND type), never ``show``:
   rewritten.
 * **SQL literal keywords are never bound to a same-named column**: ``true`` / ``false`` / ``null``
   keep their grammar meaning even on a frame with a column literally named ``true`` / ``false`` /
-  ``null``. **All three** members of ``column_fields._SQL_LITERAL_KEYWORDS`` are pinned
+  ``null``. **All three** members of ``filter_quote._SQL_LITERAL_KEYWORDS`` are pinned
   against a frame that actually carries a column of that name — dropping any one member reds
   this module.
 * **backtick-quoted spans pass through untouched** (BL-2, FIXED FNP-4B): ``filter("`my col` > 2")``
@@ -103,7 +103,7 @@ def test_ambiguous_reference_error_uses_the_spark_message_shape(spark: ReparkSes
 
         [AMBIGUOUS_REFERENCE] Reference `id` is ambiguous, could be: [`id`, `id`]. SQLSTATE: 42704
 
-    Two recorded, deliberate differences (see ``column_fields._bind_filter_token``): repark
+    Two recorded, deliberate differences (see ``filter_quote._bind_filter_token``): repark
     lists the ACTUAL colliding columns where Spark echoes the reference spelling once per
     candidate, and repark omits the ``SQLSTATE`` suffix (no repark error carries one).
     """
@@ -296,7 +296,7 @@ def test_bound_true_column_predicate_is_the_discriminator(spark: ReparkSession) 
 def test_false_keyword_is_not_bound_to_a_column_named_false(
     spark: ReparkSession, entry_point: str
 ) -> None:
-    """The third member of ``column_fields._SQL_LITERAL_KEYWORDS`` needs its own frame: on a
+    """The third member of ``filter_quote._SQL_LITERAL_KEYWORDS`` needs its own frame: on a
     ``["true", "b"]`` frame the token ``false`` matches no column, so the skip is never consulted
     for it and the
     member was unpinned until this frame (audit G2-C-001 — mutation-proved: dropping ``"false"``
@@ -324,7 +324,7 @@ def test_false_keyword_is_not_bound_to_a_column_named_false(
 def test_bound_false_column_predicate_is_the_discriminator(spark: ReparkSession) -> None:
     """The rewrite the ``false`` skip suppresses: binding the token to the ``false`` column yields
     an Int64 predicate, which does not plan. Removing ``"false"`` from
-    ``column_fields._SQL_LITERAL_KEYWORDS`` turns the pin above into exactly this error.
+    ``filter_quote._SQL_LITERAL_KEYWORDS`` turns the pin above into exactly this error.
     """
     df = spark.createDataFrame([(1, 2), (3, 4)], ["false", "b"])
     with pytest.raises(AnalysisException, match="non-boolean predicate"):

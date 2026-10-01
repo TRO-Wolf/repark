@@ -253,6 +253,10 @@ wrapped optimizer rule) and declares this directory.
   `grandchild_key` and `bind_free_names` from `sort_names.rs`; `Hit`,
   `ambiguous_reference` and `unresolved_column` widen to `pub(crate)` for the
   walker. 999 lines. pins: attr-id-1/C-025
+  **ATTR-ID-1 S3b H-1 (2026-10-01):** also re-exports
+  `engine_field_is_unique` and `join_dup_below_wrappers` from `sort_names.rs`
+  (one brace line). 1000 lines, at ceiling.
+  pins: attr-id-1/C-026
 - `sort_names.rs` — **ATTR-ID-1 S3b (2026-10-01):** the filter/sort free-name
   binder over the S1 `resolve`. `sort_shape` descends Filter/Sort/Limit/
   Repartition/Distinct/SubqueryAlias and transparent Projections (a passthrough,
@@ -267,6 +271,15 @@ wrapped optimizer rule) and declares this directory.
   Spark refuses an exact spelling among folded rivals on both filter doors
   (`test_filter_predicate_rewrite.py`), and the S3a inline exact bind stays a
   select-only rule. Pins: `../tests/attr_id_s3b.rs`. pins: attr-id-1/C-025
+  **ATTR-ID-1 S3b H-1 (2026-10-01):** `engine_field_is_unique` (one shared
+  guard for select and filter) and `join_dup_below_wrappers`, which descends
+  single-input nodes and id-preserving Projections (DataFusion's
+  `SubqueryAlias::try_new` dedup projection preserves ids without being
+  transparent) and answers whether a join sits below. `bind_free_names`
+  refuses a multi-hit bound free column over such a join with the shared
+  `ambiguous_for_hits` error; the non-unique-engine arm still leaves the token
+  unbound for the engine.
+  pins: attr-id-1/C-026
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside
