@@ -579,3 +579,6 @@ upper/lower/equal, U+0130 read as `I`, measured against live Spark on the
 is untouched, and its convergence on Java belongs to the unicode-case card
 (RC3-5), which owns version drift as well. The first commit fails the 6 new
 gate-fix pins; the gate commit carries the fixes with 5 new unicode pins.
+`gate.sh` then red on the CAP-1 mirror (`test_cap_1_source_file_line_cap`:
+the `core.py` row still read 3846); a third commit ratchets the mirror row
+to 3836 with its map row.
