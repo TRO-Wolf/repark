@@ -413,7 +413,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   probes s3e1–6: `drop("a.v")` is a no-op). pins: attr-id-1/C-039
 - `qualified_names.py` — **ATTR-ID-1 S3e (2026-10-01):** the qualified-name
   home, split out of `column_fields.py` at the ceiling. `_frame_qualifiers`
-  threading (`_join_frame_qualifiers` unions each side's names onto the
+  threading (`_alias_frame_qualifiers` names every stamped id,
+  `_join_frame_qualifiers` unions each side's names onto the
   output ids, pairing using keys), the compound rewriter
   (`_rebind_qualified_refs`), the qualified star expansion
   (`_expand_qualified_star`, unknown qualifiers fall through to the engine),

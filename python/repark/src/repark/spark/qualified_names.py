@@ -6,6 +6,12 @@ from repark import _native
 from repark.spark.filter_quote import _frame_qualifiers_for_bind
 
 
+def _alias_frame_qualifiers(child: Any, name: str) -> dict[str, frozenset[str]]:
+    return {
+        held: frozenset({name}) for held in _native.attribute_ids(child._plan()) if held is not None
+    }
+
+
 def _join_frame_qualifiers(child: Any, left: Any, right: Any) -> dict[str, frozenset[str]] | None:
     for frame in (child, left, right):
         if None in list(_native.attribute_ids(frame._plan())):

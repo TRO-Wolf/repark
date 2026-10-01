@@ -182,8 +182,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   mirror. pins: attr-id-1/C-025
   ATTR-ID-1 S3e (2026-10-01): the `DataFrame._frame_qualifiers` slot (id to
   qualifier names, copied by `_spawn`, set by `alias`, unioned onto join
-  output by `_join_frame_qualifiers` at all four join sites, with cross-join
-  duplicate ids re-minted first) feeds `resolve` at every qualified door;
+  output by `_join_frame_qualifiers` at all four join sites, re-minting
+  cross-join duplicate ids only when a side carries qualifiers, so unaliased
+  crosses keep the S3d id assignment bit for bit) feeds `resolve` at every
+  qualified door;
   `select` expands a qualified star through `qualified_names`; `selectExpr`
   delegates to `filter_quote._select_expr_frame`. No helper is deleted: the
   qualified-path candidates each keep an outside-family caller (proof in the

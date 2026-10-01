@@ -2187,8 +2187,7 @@ class DataFrame:
             if parent_columns != child_native:
                 child._display_names = parent_columns
                 child._engine_names = child_native
-        current = [held for held in _native.attribute_ids(child._plan()) if held is not None]
-        child._frame_qualifiers = {held: frozenset({name}) for held in current}
+        child._frame_qualifiers = _qualified_names._alias_frame_qualifiers(child, name)
         return child
 
     def toArrow(  # noqa: N802 — PySpark method name
@@ -3005,7 +3004,8 @@ class DataFrame:
             other._session.create_or_replace_temp_view(right, other._plan())
             planned = self._session.sql(f"SELECT * FROM {left} CROSS JOIN {right}")
             child = self._spawn(planned, other)
-            child._inner = _native.remint_cross_collisions(child._plan(), len(self.columns))
+            if self._frame_qualifiers or other._frame_qualifiers:
+                child._inner = _native.remint_cross_collisions(child._plan(), len(self.columns))
             child._frame_qualifiers = _qualified_names._join_frame_qualifiers(child, self, other)
             return child
         finally:
