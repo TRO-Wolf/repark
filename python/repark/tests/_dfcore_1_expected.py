@@ -667,6 +667,7 @@ EXPECTED_OVERLOADED_METHODS: dict[str, int] = {"head": 2}
 
 EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
     "_column_fields",
+    "_subset_resolve",
     "cache_handle",
     "cogroup",
     "colregex",
@@ -700,6 +701,7 @@ EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
 
 EXPECTED_NEW_CORE_SUBMODULES: set[str] = {
     "_column_fields",
+    "_subset_resolve",
     "cache_handle",
     "display",
     "plan_introspect",

@@ -182,6 +182,10 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `docs/examples/functions/{posexplode,inline}.py` cover the four names and
   the backlog baseline ratchets 112 → 110.
   pins: fnp-gen-1/C-001, C-006
+- `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 S3d (2026-10-01):**
+  mirror row ratchets `dataframe/core.py` 3836 → 3803 with the script baseline
+  (the `drop`/`dropDuplicates` binding moves to `spark/subset_resolve.py`).
+  pins: attr-id-1/C-032
 - `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 S3c (2026-10-01):**
   mirror row ratchets `dataframe/core.py` 3846 → 3836 with the script baseline
   (the lifted duplicate-finals refusal and its docstring). pins: attr-id-1/C-030

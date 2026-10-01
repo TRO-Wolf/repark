@@ -184,6 +184,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`
   (multi-name frames keep their display/engine binds). pins: u11-edge-1/C-024
+  **ATTR-ID-1 S3d (2026-10-01):** `fill` (scalar subset and dict keys) and
+  `drop` (subset) bind each key through `spark/subset_resolve` under the live
+  rule: one id fills or filters every hit position, two ids refuse
+  `AMBIGUOUS_REFERENCE` past the shared guard, and a miss refuses
+  `UNRESOLVED_COLUMN.WITH_SUGGESTION`. Scalar fill targets positions, so a
+  twin pair fills per position. pins: attr-id-1/C-032
   IO-DECLARED-1 (2026-09-14): `replace` joins the missing-data surface as the exact
   `DataFrame.replace` delegation with the same no-value sentinel
   (`replace_expr._NO_VALUE`) — PySpark's `<no value>` default — so `na.replace(x)`
@@ -1204,6 +1210,13 @@ that held the comment (pins: comment-core-1/C-003).
   node).
 - `drop`: Live Spark 4.1.2: `drop(right["k"])` after leftsemi/leftanti is a no-op.
   Name-based drop removes every engine field whose display matches.
+  **ATTR-ID-1 S3d (2026-10-01):** binding moves to
+  `spark/subset_resolve._drop_targets` under the live rule. A parent Column
+  drops every position carrying its id (one side of a self-join); a
+  resolved-but-absent Column (alias, other frame, compound) is a no-op, as is
+  a miss; a str fans out to every hit; a free Column refuses a two-attribute
+  display. Dotted or backticked free Columns keep the native qualified path.
+  pins: attr-id-1/C-032
 - `order_by`: Sort does not change column identity; keep display and engine maps.
 - `join`: Normalize Spark aliases to engine tokens. The semi family folds
   `left_semi` / `left_anti` after stripping underscores. A conditionless semi/anti
@@ -1234,6 +1247,10 @@ that held the comment (pins: comment-core-1/C-003).
   engine field (Spark keeps one row per distinct key multiset). Empty subset is
   full-row distinct (avoids DataFusion empty ORDER BY). Use `row_number` keep-first
   rather than `groupBy`+`first` so non-key columns survive.
+  **ATTR-ID-1 S3d (2026-10-01):** each key's hit set is the shared live-rule
+  computation (`spark/subset_resolve._fanout_subset`); every hit position keys
+  the dedup with no ambiguity refusal, and a miss raises Spark's
+  `_LEGACY_ERROR_TEMP_1201`. pins: attr-id-1/C-032
 - `with_column_renamed`: Multi-name frames bind by engine/display pairs.
   **ATTR-ID-1 S3c (2026-10-01):** the existing name's hit set is the shared
   live-rule computation; every hit is renamed (Spark fans out, no ambiguity

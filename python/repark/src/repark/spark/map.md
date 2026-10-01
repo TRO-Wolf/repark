@@ -336,6 +336,26 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **Gate j_cross (2026-10-01):** the qualifier-bound arm carries the same
   one-id multi-hit join-dup refusal as the unqualified arm, echoing
   qualifier-qualified candidates as Spark does. pins: attr-id-1/C-029
+- `subset_resolve.py` — **ATTR-ID-1 S3d (2026-10-01):** the
+  `drop`/`dropDuplicates`/`fillna`/`dropna` name-binding home. `_bindings`
+  reads the stamped ids, native engines, and facade displays (or `None` for a
+  bridge frame or a desynced overlay, where each caller keeps its legacy path);
+  `_grouped` answers bound/ambiguous/missing over the live-rule hits;
+  `_guard_passes` is the shared S3a/S3b guard (a multi-hit bind needs unique
+  engine fields and no join dup below the wrappers). `_drop_targets` binds each
+  drop item: a parent Column by its `_attr_id` (every id position, one side of
+  a self-join; an engine-shared id position takes the base-identical native
+  path because a bare duplicate-engine frame cannot drop one position by
+  name), an origin-mapped Column by its engine, a resolved-but-absent Column
+  to a no-op, a free Column by name with ambiguity refusal, a str by fanning
+  out to every hit, and a miss to a no-op; dotted or backticked free Columns
+  keep the native qualified path (S3e owns qualified). `_fanout_subset` binds
+  each `dropDuplicates` key to every hit and misses with Spark's
+  `_LEGACY_ERROR_TEMP_1201`; `_bound_subset_positions` binds each
+  `fillna`/`dropna` key with ambiguity refusal and guarded fan-out, missing
+  with `UNRESOLVED_COLUMN.WITH_SUGGESTION`. No module docstring: the lane's
+  no-comments ruling covers the new file; the contract lives here.
+  pins: attr-id-1/C-032
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
   unsupported operations fail explicitly.

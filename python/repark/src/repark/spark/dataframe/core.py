@@ -26,6 +26,7 @@ from repark.errors import (
     UnsupportedOperationException,
 )
 from repark.spark import column_fields as _column_fields
+from repark.spark import subset_resolve as _subset_resolve
 from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._temp_views import home_view_ref, scratch_view_name
 from repark.spark.column import Column, _bound_generator_array, sort_nulls_first_for
@@ -2441,29 +2442,7 @@ class DataFrame:
         relation; an origin Column on a post-join frame drops that side's field only, and an
         unemitted semi/anti right origin is a Spark 4.1.2 no-op.
         """
-        engine_drop: list[str] = []
-        references: list[str] = []
-        attributes: list[str] = []
-        for item in cols:
-            if (
-                isinstance(item, Column)
-                and item._origin_plan_id is not None
-                and item._origin_field is not None
-            ):
-                if item._origin_plan_id in self._origin_not_emitted:
-                    continue
-                if self._origin_map is not None:
-                    key = (item._origin_plan_id, item._origin_field)
-                    if key in self._origin_map:
-                        attributes.append(self._origin_map[key])
-                        continue
-            name = self._name_of(item)
-            if self._display_names is not None and self._engine_names is not None:
-                for display, engine in zip(self._display_names, self._engine_names, strict=True):
-                    if display == name:
-                        engine_drop.append(engine)
-            else:
-                (references if isinstance(item, Column) else engine_drop).append(name)
+        engine_drop, references, attributes = _subset_resolve._drop_targets(self, cols)
         plan = _native.drop_frame_columns(self._plan(), engine_drop, references, attributes)
         child = self._spawn(plan)
         if self._display_names is not None and self._engine_names is not None:
@@ -3061,19 +3040,7 @@ class DataFrame:
         names = _normalize_subset(subset, accept_str=False, allowed_phrase="a list or tuple")
         if names is None:
             return self._spawn_preserving_identity(self._plan().distinct())
-        resolved: list[str] = []
-        if self._display_names is not None and self._engine_names is not None:
-            want = {self._name_of(item) for item in names}
-            for display, engine in zip(self._display_names, self._engine_names, strict=True):
-                if display in want:
-                    resolved.append(engine)
-            if not resolved:
-                for item in names:
-                    resolved.append(self._resolve_getitem_column_name(self._name_of(item)))
-        else:
-            for item in names:
-                held = self._resolve_getitem_column_name(self._name_of(item)).casefold()
-                resolved.extend(name for name in self.columns if name.casefold() == held)
+        resolved = _subset_resolve._fanout_subset(self, names)
         all_engine = (
             list(self._engine_names) if self._engine_names is not None else list(self.columns)
         )

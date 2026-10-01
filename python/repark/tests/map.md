@@ -3339,6 +3339,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   IO-BUCKET-CLUSTER-1 (2026-09-14): `EXPECTED_NEW_PACKAGE_SUBMODULES` gains
   `writer_layout`. pins: io-bucket-cluster-1/C-005
   pins: dfcore-1/C-001, C-002, C-003, C-008
+  ATTR-ID-1 S3d (2026-10-01): core and the package each gain exactly
+  `_subset_resolve` (the new S3d binding home, bound by `core`'s module import).
+  pins: attr-id-1/C-032
   DFCORE-2 (2026-09-07): the class dir loses exactly the four moved helpers; core and the
   package each gain exactly the two new module names; `MOVED_SELECT_HELPERS` pins each
   helper as its new home's own frame-first function. `test_pandas_udf.py`'s plan-time
@@ -8946,3 +8949,19 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   (s3c probes, banner in `spark_banner.out`).
   No module docstring: the lane's no-comments ruling covers the new file; the
   contract lives here. pins: attr-id-1/C-031
+- [test_attr_id_1_s3d.py](test_attr_id_1_s3d.py) — **ATTR-ID-1 S3d (2026-10-01):** the
+  `drop`/`dropDuplicates`/`fillna`/`dropna` cutover pins, each under both case rules
+  unless noted. `drop(str)` drops a twin pair of one attribute and a two-attribute
+  display, no-ops a miss, and drops a variant insensitive while missing sensitive;
+  `drop(F.col)` drops one-attribute twins but refuses two attributes, and no-ops a
+  miss; a parent Column drops only its id positions (one side of a self-join, both
+  of one-attribute twins); compounds, literals, aliases, and other-frame Columns
+  are no-ops; the live rule decides after the frame was built. `dropDuplicates`
+  runs on twins and two-attribute displays, misses with `_LEGACY_ERROR_TEMP_1201`,
+  and follows the live rule on variants. `fillna` (subset and dict) and `dropna`
+  fan out over one-attribute twins, refuse two attributes and join dups, miss with
+  `UNRESOLVED_COLUMN.WITH_SUGGESTION`, follow the live rule on variants, take the
+  last of folded dict keys, and count each twin position under `thresh`. Every row
+  expectation is live-Spark 4.1.2 verbatim (s3d probes).
+  No module docstring: the lane's no-comments ruling covers the new file; the
+  contract lives here. pins: attr-id-1/C-032, C-033

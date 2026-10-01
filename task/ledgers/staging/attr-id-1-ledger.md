@@ -582,3 +582,59 @@ gate-fix pins; the gate commit carries the fixes with 5 new unicode pins.
 `gate.sh` then red on the CAP-1 mirror (`test_cap_1_source_file_line_cap`:
 the `core.py` row still read 3846); a third commit ratchets the mirror row
 to 3836 with its map row.
+
+## Round S3d (2026-10-01)
+
+**Model:** muse-spark-1.3-contributor (S3d executor, guided).
+**Work order:** `/tmp/oc-worker/direct/wo/attr-id-1-design.md` §4 S3d with
+`/tmp/oc-worker/direct/wo/attr-id-1-s3d-drop-na.md`: `drop`,
+`dropDuplicates`, `fillna`/`na.fill` and `dropna`/`na.drop` bind through the
+single resolve rule, fanning out to every hit position where Spark fans out
+and refusing with Spark's error class where Spark refuses.
+
+| Clause | Statement | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-032 | The S3d cutover: `spark/subset_resolve.py` binds the family under the session's live rule over the shared `_live_rule_hits` plus id grouping (`_grouped`: one id binds every hit, two refuse) and the shared guard (multi-hit binds need unique engine fields and no join dup below the wrappers). `drop(str)` fans out to every hit and no-ops a miss; `drop(Column)` binds a parent Column by `_attr_id` to every id position (one side of a self-join), no-ops a resolved-but-absent Column (alias, other frame, compound, literal) and a miss, and refuses a two-attribute display; dotted or backticked free Columns keep the native qualified path. `dropDuplicates` fans out every key with no refusal and misses with `_LEGACY_ERROR_TEMP_1201`. `fillna` (subset and dict, last folded key wins) and `dropna` fan out one id positionally, refuse two ids past the guard, and miss with `UNRESOLVED_COLUMN.WITH_SUGGESTION`. A parent id position whose engine is shared with a kept position (a bare duplicate-engine frame, which cannot drop one position by name) takes the base-identical native path; bridge frames and desynced overlays keep their legacy paths. No helper is deleted: `_name_of`, `_resolve_getitem_column_name`, `_normalize_subset`, `_engine_field_for_display`, `_bind_engine_display_column` and `_iter_bound_columns` each keep a caller outside the family (commit grep); the family's own matching was inline and moved into the new module. | The 50 pins (84 instances) under both case rules, each expectation live-Spark 4.1.2 verbatim; mutations M1–M3 each red on their pins and reverted; the S0 replay with 0 cells moved away from Spark, the 8558 S3a/S3b/S3c gains kept, and the neighbour sweep green. | PROVEN (pins + mutations; replay lands in the hand-back) | `python/repark/tests/test_attr_id_1_s3d.py`; `python/repark/src/repark/spark/subset_resolve.py`; probes `s3d/spark_probes_s3d*.py` with `.out` files; replays land in the hand-back. |
+| C-033 | The pins bite: 40 of 84 fail on the base tree (every ambiguity, miss-shape, live-rule, parent-id, compound, legacy-cond and join-dup pin); M1 (grouping binds every id count) reds the 14 two-attribute and join-dup refusal pins; M2 (parent Columns bind by display) reds the 10 id, sided, alias and other-frame pins; M3 (every fan-out stops at the first hit) reds the 14 fan-out pins except the `dropDuplicates` twins, which dedup identically by construction. Each mutation is reverted from a copy with the intended diff intact. | The fail-before run and the three mutation runs below. | PROVEN | This ledger's mutation record; `git diff` after each revert. |
+
+**S3d Spark measurements (2026-10-01, four batched probes, live Spark 4.1.2).**
+`drop(str)` fans out over one id and over two with no refusal, and a miss is a
+no-op; `drop(F.col)` fans out over one id, refuses two with
+`AMBIGUOUS_REFERENCE`, and no-ops a miss; a parent Column drops every position
+carrying its id (one side of a self-join, both of one-attribute twins);
+compounds, literals, aliases, and other-frame Columns are no-ops, as is a
+qualified `drop("l.v")` str (literal). `dropDuplicates` runs over twins and
+two-attribute displays and misses with `_LEGACY_ERROR_TEMP_1201`.
+`fillna`/`dropna` fan out one id, refuse two past the guard, and miss with
+`UNRESOLVED_COLUMN.WITH_SUGGESTION`; folded dict keys are last-wins and
+duplicate subset keys count each time under `thresh`. The live rule decides
+after the frame was built. No halt: every shape agrees with fan-out per Bound
+plus the per-API miss and refusal rules above.
+
+**S3d residue R-6 (2026-10-01).** A parent-Column drop that splits a bare
+duplicate-engine frame (a USING self-join: no display overlay, both engines
+`v`) keeps the base `AMBIGUOUS_REFERENCE`: the drop mechanism addresses
+fields by name and cannot name one of two same-named positions. Spark drops
+the parent side. The fix is to give USING joins with duplicate outputs the
+H1-style display/engine overlay at join time (then the id drop is exact, as
+the condition-self-join pin proves); that is a join-path change, so a
+follow-up card owns it, not S3e or S4. No replay cell covers the shape.
+
+**Mutation record S3d (2026-10-01).** Each mutation edited
+`python/repark/src/repark/spark/subset_resolve.py`, ran
+`pytest python/repark/tests/test_attr_id_1_s3d.py`, and was reverted from a
+copy; `diff` against the copy was empty afterwards and the file is 84 green.
+
+| # | Mutation | Red |
+|---|---|---|
+| M1 | `_grouped` binds every id count (`== 1` to `>= 1`) | The 14 two-attribute and join-dup refusal pins (drop Column, fillna subset, fillna dict, dropna, each under both rules) |
+| M2 | Parent Columns skip the id and origin-map branches and bind by display | The 10 id pins (parent-child, alias, other-frame, self-join side, sided values, each under both rules) |
+| M3 | Every S3d fan-out stops at the first hit (five sites) | The 14 fan-out pins (drop str twins, drop Column twins, drop str join-dup, fillna subset twins, fillna dict twins, dropna thresh twins, each under both rules); the `dropDuplicates` twins stay green because dedup by one of identical twins yields the same rows |
+
+**S3d echo rule (2026-10-01).** Live Spark echoes each ambiguity candidate as
+the qualifier-qualified written name (measured: `[`Id`, `Id`]` for a folded
+rival, `[`l`.`v`, `r`.`v`]` on a join), and the pre-existing u11 pin asserts
+the same shape (`[`id`, `id`]` unqualified, `[`a`.`id`, `b`.`id`]` qualified).
+The S3d refusal renders that shape from the plan qualifiers with the native
+scratch-relation filter, so the u11 contract holds byte-for-byte with no test
+change. The S3a/S3b display-echo sites are untouched.
