@@ -1241,12 +1241,13 @@ that held the comment (pins: comment-core-1/C-003).
   position mints one fresh id through `Column.alias` (live-Spark §9f ruling).
   pins: attr-id-1/C-030
 - `with_columns_renamed`: Multi-name frames already carry Spark-legal duplicate
-  displays; allow them and rename via engine bindings. Ordinary frames still refuse
-  duplicate names. Keep origin so multi-name select identity survives the rename.
+  displays; allow them and rename via engine bindings. Keep origin so multi-name
+  select identity survives the rename.
   **ATTR-ID-1 S3c (2026-10-01):** the sequential rewrite matches under the live
   rule instead of exact-only, and each renamed position mints one fresh id
-  through the native fresh-id alias (§9f ruling). The duplicate-finals refusal
-  is unchanged. pins: attr-id-1/C-030
+  through the native fresh-id alias (§9f ruling). Colliding final names
+  materialize through the display overlay; the Group F refusal is gone
+  (EX-DF-18 FIXED). pins: attr-id-1/C-030
 - `_column_of`: Stable-name rebind (`F.col` / requested spelling) then origin rebind
   so `orderBy` / `groupBy` / `select` parent Columns hit the correct post-join engine
   field.

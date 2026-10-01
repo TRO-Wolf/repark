@@ -3137,11 +3137,9 @@ class DataFrame:
         to ``[c, c]`` (``a→b`` → ``[b, b]``, then every ``b→c``). A missing old name is a
         silent no-op per the singular rule.
 
-        repark cannot materialize **duplicate column names** (DataFusion projections require
-        unique names). When a rename map would leave two columns with the same final name,
-        repark raises :class:`~repark.errors.AnalysisException` rather than producing Spark's
-        duplicate-named frame. Non-colliding maps match
-        Spark bit-for-bit on names and values.
+        Colliding final names materialize Spark's duplicate-named frame through the
+        display overlay (unique engine fields beneath shared displays), so every map
+        matches Spark bit-for-bit on names and values.
         """
         if not isinstance(colsMap, dict):
             raise PySparkTypeError(
@@ -3166,13 +3164,6 @@ class DataFrame:
                 )
             for position in _column_fields._live_rule_hits(self, old_name, names):
                 names[position] = new_name
-        multi_name = self._display_names is not None and self._engine_names is not None
-        if not multi_name and len(names) != len(set(names)):
-            raise AnalysisException(
-                "withColumnsRenamed produced duplicate column names "
-                f"{names}; repark requires unique column names (Spark allows duplicates — "
-                "Group F disclosure)"
-            )
         projected: list[Column] = []
         for bound, final in zip(self._iter_bound_columns(), names, strict=True):
             display = bound._projection_name or bound.spark_display_part()

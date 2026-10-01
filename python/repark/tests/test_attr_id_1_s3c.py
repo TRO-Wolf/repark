@@ -209,21 +209,23 @@ def test_with_columns_renamed_folded_keys_match_sequentially(ruled_spark: Repark
     assert _rows(renamed) == [(1, 30), (2, 10)]
 
 
-def test_with_columns_renamed_sequential_chain_refuses_duplicate_finals(
+def test_with_columns_renamed_sequential_chain_materializes_duplicate_finals(
     ruled_spark: ReparkSession,
 ) -> None:
     frame = ruled_spark.createDataFrame([(1, 10)], "a BIGINT, b BIGINT")
-    with pytest.raises(AnalysisException, match="duplicate column names"):
-        frame.withColumnsRenamed({"a": "b", "b": "c"})
+    renamed = frame.withColumnsRenamed({"a": "b", "b": "c"})
+    assert renamed.columns == ["c", "c"]
+    assert _rows(renamed) == [(1, 10)]
 
 
-def test_with_columns_renamed_folded_match_refuses_duplicate_finals_insensitive(
+def test_with_columns_renamed_folded_match_materializes_duplicate_finals_insensitive(
     spark: ReparkSession,
 ) -> None:
     spark.conf.set("spark.sql.caseSensitive", "false")
     frame = spark.createDataFrame([(1, 10)], "a BIGINT, A BIGINT")
-    with pytest.raises(AnalysisException, match="duplicate column names"):
-        frame.withColumnsRenamed({"a": "x"})
+    renamed = frame.withColumnsRenamed({"a": "x"})
+    assert renamed.columns == ["x", "x"]
+    assert _rows(renamed) == [(1, 10)]
 
 
 def test_with_columns_renamed_exact_match_keeps_rival_sensitive(spark: ReparkSession) -> None:
@@ -232,6 +234,49 @@ def test_with_columns_renamed_exact_match_keeps_rival_sensitive(spark: ReparkSes
     renamed = frame.withColumnsRenamed({"a": "x"})
     assert renamed.columns == ["x", "A"]
     assert _rows(renamed) == [(1, 10)]
+
+
+def test_casefold_pair_without_java_match_appends_insensitive(spark: ReparkSession) -> None:
+    spark.conf.set("spark.sql.caseSensitive", "false")
+    frame = spark.createDataFrame([(1, 2)], ["stra\u00dfe", "v"])
+    appended = frame.withColumn("STRASSE", functions.lit(0))
+    assert appended.columns == ["stra\u00dfe", "v", "STRASSE"]
+    assert _rows(appended) == [(1, 2, 0)]
+
+
+def test_casefold_pair_without_java_match_noops_rename_insensitive(
+    spark: ReparkSession,
+) -> None:
+    spark.conf.set("spark.sql.caseSensitive", "false")
+    frame = spark.createDataFrame([(1, 2)], ["stra\u00dfe", "v"])
+    assert frame.withColumnRenamed("STRASSE", "z").columns == ["stra\u00dfe", "v"]
+    assert frame.withColumnsRenamed({"STRASSE": "z"}).columns == ["stra\u00dfe", "v"]
+
+
+def test_capital_sharp_s_replaces_small_sharp_s_insensitive(spark: ReparkSession) -> None:
+    spark.conf.set("spark.sql.caseSensitive", "false")
+    frame = spark.createDataFrame([(1, 2)], ["\u00df", "v"])
+    replaced = frame.withColumn("\u1e9e", functions.lit(0))
+    assert replaced.columns == ["\u1e9e", "v"]
+    assert _rows(replaced) == [(0, 2)]
+
+
+def test_java_match_without_casefold_match_renames_insensitive(
+    spark: ReparkSession,
+) -> None:
+    spark.conf.set("spark.sql.caseSensitive", "false")
+    frame = spark.createDataFrame([(1, 2)], ["\u0130d", "v"])
+    renamed = frame.withColumnsRenamed({"id": "z"})
+    assert renamed.columns == ["z", "v"]
+    assert _rows(renamed) == [(1, 2)]
+
+
+def test_java_match_without_casefold_match_misses_sensitive(spark: ReparkSession) -> None:
+    spark.conf.set("spark.sql.caseSensitive", "true")
+    frame = spark.createDataFrame([(1, 2)], ["\u0130d", "v"])
+    renamed = frame.withColumnsRenamed({"id": "z"})
+    assert renamed.columns == ["\u0130d", "v"]
+    assert _rows(renamed) == [(1, 2)]
 
 
 def test_live_rule_decides_after_build_insensitive_then_sensitive(spark: ReparkSession) -> None:

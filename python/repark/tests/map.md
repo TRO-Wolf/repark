@@ -8938,9 +8938,11 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   `filter`/`select(str)`/`select(col)` (singular and plural — the §9f fresh-id
   ruling). `withColumns` replaces hits and appends misses in order, keeps
   last-wins folded keys insensitive, and replaces plus appends sensitive;
-  `withColumnsRenamed` matches folded keys sequentially, refuses duplicate
-  finals (the unchanged Group F refusal, exact chain and folded match), and
-  the live rule decides after the frame was built. Every row expectation is
-  live-Spark 4.1.2 verbatim (s3c probes, banner in `spark_banner.out`).
+  `withColumnsRenamed` matches folded keys sequentially and materializes
+  duplicate finals (exact chain and folded match — EX-DF-18 FIXED); the live
+  rule decides after the frame was built. The insensitive fold is Java's, not
+  `casefold`'s: `STRASSE` misses `straße`, `ẞ` hits `ß`, `id` hits `İd`
+  (live-Spark s3c5 probes). Every row expectation is live-Spark 4.1.2 verbatim
+  (s3c probes, banner in `spark_banner.out`).
   No module docstring: the lane's no-comments ruling covers the new file; the
   contract lives here. pins: attr-id-1/C-031
