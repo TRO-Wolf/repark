@@ -8987,3 +8987,19 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   unbuildable in RePark (`createDataFrame` refuses dup names, probe s3d18
   measures the Spark side).
   pins: attr-id-1/C-038
+- [test_attr_id_1_s3e.py](test_attr_id_1_s3e.py) — **ATTR-ID-1 S3e (2026-10-01):** the
+  qualified-name cutover pins, each under both case rules unless noted.
+  Self-join `a.v`/`b.v` in select, getitem, free Column, filter, orderBy,
+  Column drop (str drop is a no-op), withColumn, star (`select` and
+  `F.col`), and single-token selectExpr; qualifier-case folds insensitive
+  and refuses sensitive; misses raise `UNRESOLVED_COLUMN.WITH_SUGGESTION`;
+  twins refuse `AMBIGUOUS_REFERENCE` in select and drop but raise
+  unresolved in sort; struct heads keep main's path (filter binds,
+  select/sort raise, pinned as divergences); a struct named like a
+  qualifier prefers the qualifier; re-alias drops old qualifiers; the live
+  rule decides after the frame was built; cross sides bind; qualifiers
+  survive select/filter but not recompute. Every row expectation is
+  live-Spark 4.1.2 verbatim (s3e probes 1–6). Mutations M1–M3 (the
+  ledger's record) red the family pins. No module docstring: the lane's
+  no-comments ruling covers the new file; the contract lives here.
+  pins: attr-id-1/C-039
