@@ -321,3 +321,53 @@ is `select("id", "v", F.col("V"))` (one attribute under two displays, so the
 pure rule binds) and `wcV` carries a single `V`. Fix in the same round: the
 pure resolve rule on both doors, the keyword skip and the actual-spelling echo
 restored, the two pins that encoded the preference rewritten to the live rule.
+
+**S3b gate halt H-1 (2026-10-01, brief rule 1: a cell EQUAL on main moves
+away).** Head replay 1 (`s3b/t-head-1`, oracle `spark.json`/`main.json` copied
+from `t-base-1` per the S3a procedure): 9805 diffs, **179 REGRESSION** (main ==
+Spark, head != Spark), 7426 FIXED. All four §9c cells are FIXED
+(`r2.{F,T}_oj_twinjoin_filt` cond AMBIGUOUS_REFERENCE, `r3.{F,T}_ob_agg_max`
+byte-equal rows), so the named goal lands but the neighbours fail the round.
+S3a no-regress also fails: 203 cells where S3a-head == Spark no longer match
+(the 179 plus 24 S3a-only gains). No further gate runs (replays 2-3, timing,
+sweep, `gate.sh`) — the signal is structural, not noise. Buckets, each with
+the Spark-measured behaviour that falsifies the brief's stated rule:
+
+- B1, 103 cells (r2/r5p6/r5p6t filter, str and Column doors): Spark+main
+  AMBIGUOUS_REFERENCE, head bare `Schema error: Ambiguous reference to
+  unqualified field v`. A cross/self join carries one id on both sides (probed:
+  `crossJoin` ids repeat per side) under duplicate engine names, so the walker
+  binds and the marked ref dies bare in DataFusion analysis past the shaped
+  hook refusal. The S3a select path already learned this (bind onto unique
+  engine fields only); the walker lacks the guard. 24 further `j_cross` filter
+  cells (S3a-only gains) return rows from one side instead of refusing.
+- B2-sort, 60 cells (`r4p4.*_so proj*`): Spark+main ROWS, head shaped
+  UNRESOLVED_COLUMN. `select("id").orderBy(v...)`: Spark resolves the sort key
+  against the input scope, not the output displays. The brief's "0 hits →
+  UNRESOLVED_COLUMN" premise is false for sort keys outside the output.
+- B2-lambda, 5 cells (r3lam4/r4p4/r5p7, all caseSensitive=true):
+  `filter("exists(arr, X -> X > 4)")` — Spark+main ROWS, head native
+  UNRESOLVED of the lambda variable. Under Exact the new quoter leaves the
+  var token bare and the downstream native binder refuses it; the old
+  always-fold quoter had quoted it (masking the tokenizer's lambda-blindness).
+- B3, 8 cells (`q_filt`): Spark+main AMBIGUOUS_REFERENCE, head bare `Schema
+  error: No field named q.v`. `filter("q.v > 15")` on an aliased twin frame:
+  the qualifier is facade-held (lost from the plan by `withColumn`), so the
+  qualifier-aware miss passes the token through to a bare DF error where the
+  old qualifier-blind quoter raised shaped AMBIGUOUS on the bare name. S3e Q4
+  owns facade-held qualifiers.
+- B4, 3 cells (`r3.*bd_struct_named_*`): Spark+main ROWS, head bare `Schema
+  error: No field named t.id`. `filter("T.id > 3")` on a `(T struct, id)`
+  frame is struct field access, not qualifier+name; the new dotted
+  tokenization broke it (the old pattern matched bare idents only — the brief
+  said to keep the parsing as-is).
+
+Recommended repairs, for the ruling: B1 — the S3a uniqueness guard in the
+walker (leave the token for the hook when the engine name is not unique);
+B2-sort — miss falls through to the engine instead of refusing; B2-lambda —
+tokenizer skips lambda-bound variables, or the native binder does (needs an
+owner decision on which layer owns lambda scope); B3 — qualified-miss
+fallback ruling (old qualifier-blind raise vs a shaped miss); B4 — restore
+bare-ident tokenization and resolve dots as struct access first. B2-sort, B3
+and B4 each need a decision the brief did not make, so the round halts rather
+than reworking the rule unruled.
