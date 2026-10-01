@@ -4674,6 +4674,62 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   STRING/DOUBLE UNION, `max` over a STRING/DOUBLE CASE, and a STRING/TIMESTAMP CASE
   into DATE through VALUES. 79 cells; the oracle is one cell per line and drops the
   temp views no cell reads. pins: store-ts-to-numeric-1/C-006
+- [test_store_ts_doors_2.py](test_store_ts_doors_2.py) +
+  `store_ts_doors_2_spark_oracle.json` — **WO STORE-TS-DOORS-2 (2026-09-29):**
+  one session replays 26 cells recorded on Spark 4.1.2 + Iceberg 1.11.0 (UTC) in
+  order and compares refusal (class, SQLSTATE, message body with the RePark-only
+  planning prefix allowed) and the target read-back after every statement.
+  Refusals: TIMESTAMP, `CAST(1 AS TIMESTAMP)`, TIMESTAMP_NTZ and DATE through a
+  VALUES node inside INSERT … SELECT into BIGINT, DOUBLE and INT — direct, star,
+  CTE, UNION, nested-alias, join, VALUES-join, WHERE and ORDER BY/LIMIT shapes
+  (C-001); `-NULL` into TIMESTAMP, DATE and BOOLEAN through static-partition
+  OVERWRITE VALUES and SELECT, plus the already-refusing listed and dynamic
+  forms (C-002). Stores in the same test: explicit `CAST(b AS BIGINT)`, INT,
+  NULL, TIMESTAMP into DATE, and `-NULL` into BIGINT (C-001, C-002). Two
+  in-test pins hold the boundary: a temp view over VALUES keeps the WI-1
+  refusal text and a STRING source still stores (C-003).
+  **Fold 2026-09-29 (verifier VT-1):** 21 more oracle cells (`p01`–`p21`) pin the
+  widened set-operation stores and the kept STRING refusals, and three in-test
+  pins hold the carried texts: STRING beside BIGINT/BOOLEAN still names STRING,
+  the EXCEPT/INTERSECT/UNION datetime clashes into BIGINT refuse, and STRING
+  beside table TIMESTAMP into BIGINT keeps the analyzer `type_coercion` refusal.
+  pins: store-ts-doors-2/C-001, C-002, C-003
+  **Fold 2026-09-30 (re-verify VT3-1..VT3-3):** eighteen `test_fold3_*` pins:
+  the 5 reachable CTE-shadow refusals (inline, arm-WITH, dynamic partition,
+  column expression, join), a nested WITH, a CTE shadowing a table (star and
+  column forms) and a qualified-star CTE shadowing a temp view; TIMESTAMP-CTE
+  and plain-view store guards; a CTE, a view and a column named `ambiguous`
+  refusing plus the missing-`ambiguous` not-found surfacing; unknown column,
+  routine and table surfacing the analyzer's class with nothing stored; and
+  quoted-case refusal guards. The column-list CTE shadow is a carried-card
+  pin instead: it asserts today's facade-rewritten store, not Spark's
+  refusal. The 7 new shapes carry Spark 4.1.2 answers measured once for this
+  fold. pins: store-ts-doors-2/C-001, C-003
+  **Fold 2026-09-30 (re-verify VT4-1, VT4-4):** five `test_fold4_*` pins: the
+  36 mixed-case storing cells (8 case-insensitive and 4 case-sensitive arm
+  shapes over uppercase columns, a mixed-case column, an uppercase view and a
+  derived table, each on INTO, dynamic partition and column-list) refusing
+  CANNOT_SAFELY_CAST with nothing stored; TIMESTAMP-twin store guards; a
+  case-sensitive missing column surfacing UNRESOLVED_COLUMN on all three
+  doors; and a real ambiguity at a non-datetime position surfacing
+  AMBIGUOUS_REFERENCE on INTO and column-list. Spark answers are the
+  re-verify-3 attack5/6/7 recordings. pins: store-ts-doors-2/C-001, C-003
+  **Fold 2026-10-01 (re-verify VT5-1):** three `test_fold5_*` pins: the 24
+  unquoted-`INTERVAL` window-frame cells (4 arm shapes on INTO, dynamic
+  partition and column-list in both case modes) refusing
+  CANNOT_SAFELY_CAST with nothing stored; the quoted-bound, integer-range
+  and TIMESTAMP-arm controls; and two further unquoted frame shapes
+  refusing as Spark 4.1.2 does. pins: store-ts-doors-2/C-001, C-003
+- [test_store_ts_doors_2_fold6.py](test_store_ts_doors_2_fold6.py) —
+  **Fold 2026-10-01 (re-verify VT6-1):** four `test_fold6_*` pins, split out
+  at the 1000-line ceiling: the 6 nullary-column arm shapes
+  (`coalesce`/`WHERE`, `CASE`, derived `coalesce`, scalar subquery,
+  uppercase) on INTO, dynamic partition and column-list
+  case-insensitive plus INTO case-sensitive, each refusing as Spark 4.1.2
+  does with nothing stored (CANNOT_SAFELY_CAST; UNRESOLVED_COLUMN for the
+  uppercase case-sensitive shape); the direct, backticked and qualified
+  controls refusing; and the TIMESTAMP-`coalesce` store guards.
+  pins: store-ts-doors-2/C-001, C-003
 - `test_merge_semantics_audit.py` — **MERGE-audit corpus** (2026-08-14 audit gap-map rows
   c/d/g/n/o): null-safe `<=>` / `eqNullSafe` ON matches NULL keys (both doors); builder-door
   `=` NULL keys do not match; self-merge (target as source) updates once per row; join-key
