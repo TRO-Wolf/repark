@@ -4683,6 +4683,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pin instead: it asserts today's facade-rewritten store, not Spark's
   refusal. The 7 new shapes carry Spark 4.1.2 answers measured once for this
   fold. pins: store-ts-doors-2/C-001, C-003
+  **Fold 2026-09-30 (re-verify VT4-1, VT4-4):** five `test_fold4_*` pins: the
+  36 mixed-case storing cells (8 case-insensitive and 4 case-sensitive arm
+  shapes over uppercase columns, a mixed-case column, an uppercase view and a
+  derived table, each on INTO, dynamic partition and column-list) refusing
+  CANNOT_SAFELY_CAST with nothing stored; TIMESTAMP-twin store guards; a
+  case-sensitive missing column surfacing UNRESOLVED_COLUMN on all three
+  doors; and a real ambiguity at a non-datetime position surfacing
+  AMBIGUOUS_REFERENCE on INTO and column-list. Spark answers are the
+  re-verify-3 attack5/6/7 recordings. pins: store-ts-doors-2/C-001, C-003
 - `test_merge_semantics_audit.py` — **MERGE-audit corpus** (2026-08-14 audit gap-map rows
   c/d/g/n/o): null-safe `<=>` / `eqNullSafe` ON matches NULL keys (both doors); builder-door
   `=` NULL keys do not match; self-merge (target as source) updates once per row; join-key

@@ -196,6 +196,19 @@ handling (`CAST(NULL AS VOID)` rewrite, the non-NULL VALUES refusal into
   the unjudged failure, the kept judgment without SQL, the prefix, the
   shadowing and recursion prefix, the case-twin decline, and the retry pair.
   pins: store-ts-doors-2/C-001, C-003
+  **Fold 2026-09-30 (re-verify VT4-1, VT4-4):** the arm plan runs through
+  `plan_statement_with_column_repair` with the executing dialect, the same
+  planner the statement itself uses, so the gate judges the arm the statement
+  actually plans; a raw plan skews on any name the repair would fix, and the
+  skew unjudges the arm and stores (VT4-1). The lowercase retry is gone:
+  repair subsumes it. A consulted arm that plans `Ambiguous` now unjudges
+  every position, superseding the fold-3 per-position rule, so the analyzer's
+  AMBIGUOUS_REFERENCE surfaces instead of a sibling-gate CANNOT_SAFELY_CAST
+  (VT4-4); an ambiguous arm means the statement fails, so no store is
+  possible. Four tests: lowercase refs over uppercase columns, exact
+  case-sensitive refs, missing case-sensitive refs, and an ambiguous arm
+  unjudging a VALUES position elsewhere.
+  pins: store-ts-doors-2/C-001, C-003
 - `source_leaves.rs` — **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):**
   `source_type_is_reliable` decides whether a new refusal may trust RePark's
   planned source type. A plain cell (literal, typed string, CAST, a non-widening

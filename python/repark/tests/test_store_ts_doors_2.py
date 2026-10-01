@@ -733,3 +733,158 @@ def test_fold3_quoted_case_siblings_keep_refusal(tmp_path: Path) -> None:
         assert _fold3_rows(session, "sc.ns.f3_q2") == []
     finally:
         session.stop()
+
+
+def _fold4_setup(session: ReparkSession) -> None:
+    _fold3_setup(session)
+    session.sql("CREATE TABLE sc.ns.upc (ID INT, C STRING) USING iceberg").collect()
+    session.sql("INSERT INTO sc.ns.upc VALUES (2, '2020-07-07 07:07:07')").collect()
+    session.sql("CREATE TABLE sc.ns.mixc (id INT, Cx STRING) USING iceberg").collect()
+    session.sql("INSERT INTO sc.ns.mixc VALUES (2, '2020-07-07 07:07:07')").collect()
+    session.sql("CREATE TABLE sc.ns.uptsc (ID INT, C TIMESTAMP) USING iceberg").collect()
+    session.sql("INSERT INTO sc.ns.uptsc VALUES (2, TIMESTAMP'2020-08-08 08:08:08')").collect()
+    session.sql("CREATE TEMPORARY VIEW UPV2 AS SELECT ID, C FROM sc.ns.upc").collect()
+    session.sql("CREATE TABLE sc.ns.tstab (id INT, c TIMESTAMP) USING iceberg").collect()
+    session.sql("INSERT INTO sc.ns.tstab VALUES (2, TIMESTAMP'2020-08-08 08:08:08')").collect()
+
+
+def _fold4_target(session: ReparkSession, table: str, partitioned: bool = False) -> None:
+    if partitioned:
+        session.sql(
+            f"CREATE TABLE {table} (id INT, c TIMESTAMP, p STRING) USING iceberg PARTITIONED BY (p)"
+        ).collect()
+    else:
+        _fold3_target(session, table)
+
+
+_FOLD4_VALUES = "SELECT * FROM (VALUES (1, '2020-01-01 10:00:00')) AS v(a, b)"
+_FOLD4_VALUES_PART = "SELECT * FROM (VALUES (1, '2020-01-01 10:00:00', 'p1')) AS v(a, b, p)"
+
+_FOLD4_CI_ARMS = [
+    "SELECT id, coalesce(c, c) FROM sc.ns.upc",
+    "SELECT ID, coalesce(C, C) FROM sc.ns.upc",
+    "SELECT u.ID, upper(u.C) FROM sc.ns.upc u",
+    "SELECT id, coalesce(cx, cx) FROM sc.ns.mixc",
+    "SELECT id, coalesce(Cx, Cx) FROM sc.ns.mixc",
+    "SELECT ID, coalesce(C, C) FROM UPV2",
+    "SELECT id, coalesce(c, c) FROM upv2",
+    "SELECT ID, coalesce(C, C) FROM (SELECT * FROM sc.ns.upc) q",
+]
+
+_FOLD4_CS_ARMS = [
+    "SELECT ID, coalesce(C, C) FROM sc.ns.upc",
+    "SELECT u.ID, upper(u.C) FROM sc.ns.upc u",
+    "SELECT id, coalesce(Cx, Cx) FROM sc.ns.mixc",
+    "SELECT ID, coalesce(C, C) FROM (SELECT * FROM sc.ns.upc) q",
+]
+
+
+def _fold4_door_sql(table: str, door: str, arm: str) -> str:
+    if door == "dynpart":
+        widened = arm.replace(" FROM ", ", 'p1' AS p FROM ", 1)
+        return f"INSERT INTO {table} {_FOLD4_VALUES_PART} UNION ALL {widened}"
+    if door == "collist":
+        return f"INSERT INTO {table} (id, c) {_FOLD4_VALUES} UNION ALL {arm}"
+    return f"INSERT INTO {table} {_FOLD4_VALUES} UNION ALL {arm}"
+
+
+def test_fold4_mixed_case_columns_refuse_on_all_doors(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        _fold4_setup(session)
+        index = 0
+        for door in ("into", "dynpart", "collist"):
+            for arm in _FOLD4_CI_ARMS:
+                table = f"sc.ns.f4_g{index}"
+                index += 1
+                _fold4_target(session, table, partitioned=door == "dynpart")
+                sql = _fold4_door_sql(table, door, arm)
+                _fold3_refused_cast(session, sql)
+                assert _fold3_rows(session, table) == [], sql
+    finally:
+        session.stop()
+
+
+def test_fold4_mixed_case_columns_refuse_case_sensitive(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        _fold4_setup(session)
+        session.sql("SET spark.sql.caseSensitive=true").collect()
+        index = 0
+        for door in ("into", "dynpart", "collist"):
+            for arm in _FOLD4_CS_ARMS:
+                table = f"sc.ns.f4_c{index}"
+                index += 1
+                _fold4_target(session, table, partitioned=door == "dynpart")
+                sql = _fold4_door_sql(table, door, arm)
+                _fold3_refused_cast(session, sql)
+                assert _fold3_rows(session, table) == [], sql
+    finally:
+        session.stop()
+
+
+def test_fold4_timestamp_twins_still_store(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        _fold4_setup(session)
+        for index, arm in enumerate(
+            [
+                "SELECT ID, coalesce(C, C) FROM sc.ns.uptsc",
+                "SELECT id, coalesce(c, c) FROM sc.ns.uptsc",
+            ]
+        ):
+            table = f"sc.ns.f4_s{index}"
+            _fold4_target(session, table)
+            sql = f"INSERT INTO {table} {_FOLD4_VALUES} UNION ALL {arm}"
+            got = _write(session, {"sql": sql})
+            assert got["refused"] is False, (sql, got)
+            assert _fold3_rows(session, table) == [
+                [1, "2020-01-01 10:00:00"],
+                [2, "2020-08-08 08:08:08"],
+            ], sql
+    finally:
+        session.stop()
+
+
+def test_fold4_case_sensitive_missing_column_surfaces_unresolved(
+    tmp_path: Path,
+) -> None:
+    session = _open(tmp_path)
+    try:
+        _fold4_setup(session)
+        session.sql("SET spark.sql.caseSensitive=true").collect()
+        for index, door in enumerate(("into", "dynpart", "collist")):
+            table = f"sc.ns.f4_u{index}"
+            _fold4_target(session, table, partitioned=door == "dynpart")
+            sql = _fold4_door_sql(table, door, "SELECT id, coalesce(C, C) FROM sc.ns.strtab")
+            got = _write(session, {"sql": sql})
+            assert got["refused"] is True, sql
+            assert got["condition"] == "UNRESOLVED_COLUMN.WITH_SUGGESTION", got
+            assert got["sql_state"] == "42703", got
+            assert _fold3_rows(session, table) == [], sql
+    finally:
+        session.stop()
+
+
+def test_fold4_ambiguity_at_other_position_surfaces_ambiguous(
+    tmp_path: Path,
+) -> None:
+    session = _open(tmp_path)
+    try:
+        _fold4_setup(session)
+        for index, door in enumerate(("into", "collist")):
+            table = f"sc.ns.f4_a{index}"
+            _fold3_target(session, table)
+            sql = _fold4_door_sql(
+                table,
+                door,
+                "SELECT id, a.c FROM sc.ns.strtab a JOIN sc.ns.tstab b ON a.id = b.id",
+            )
+            got = _write(session, {"sql": sql})
+            assert got["refused"] is True, sql
+            assert got["condition"] == "AMBIGUOUS_REFERENCE", got
+            assert got["sql_state"] == "42704", got
+            assert "Reference `id` is ambiguous" in got["message"], got
+            assert _fold3_rows(session, table) == [], sql
+    finally:
+        session.stop()

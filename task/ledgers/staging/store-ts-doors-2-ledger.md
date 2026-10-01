@@ -287,6 +287,63 @@ and the quoted-case retry. The round hand-back records the mutation runs
 (M-R1 bare arm text, M-R2 word match, M-R3 refuse on planning failure, each
 reverting clean), the replay into `reverify2-tsd-fold/`, and the perf table.
 
+## Re-verify fold 4 (2026-09-30, PR #894)
+
+The re-verifier confirmed the fold-3 fixes and 0 replay moves, but found 36
+false stores through the raw arm plan (VT4-1, S1) and three error-class gaps
+(VT4-4, S3). The fold rulings change the arm plan only; the refusal path is
+untouched.
+
+**Fix.** R1: every arm is planned through
+`plan_statement_with_column_repair` with the executing dialect — the same
+planner, with the same column-case repair, that the real statement uses — so
+the gate judges the arm the statement actually plans. A mixed-case reference
+the repair fixes (`c` over `C`, `Cx`, an uppercase view or a derived table)
+now types instead of going Unresolved and storing. The lowercase retry is
+removed: repair subsumes it (it also folds quoted idents). An arm that still
+fails after repair stays Unresolved and unjudged, so the analyzer raises.
+R2: a consulted arm that plans `Ambiguous` now unjudges every position,
+superseding the fold-3 per-position rule, so a real ambiguity at a
+non-datetime position surfaces AMBIGUOUS_REFERENCE instead of a sibling-gate
+CANNOT_SAFELY_CAST; an ambiguous arm means the statement fails, so no store
+is possible. A missing uppercase column in a case-sensitive session surfaces
+UNRESOLVED_COLUMN.WITH_SUGGESTION through the strict repair path. Only
+consulted arms are counted, so the plan set — and the perf profile — is
+unchanged: an ambiguity the judge never consults (e.g. buried in a WHERE
+clause over fully resolving positions) keeps the pre-fold masking.
+
+**Pins.** In-test `test_fold4_*`: the 36 VT4-1 cells (8 case-insensitive and
+4 case-sensitive arm shapes × INTO, dynamic partition, column-list) refusing
+CANNOT_SAFELY_CAST with nothing stored; TIMESTAMP-twin store guards; the
+case-sensitive missing column on all three doors; real ambiguity at a
+non-datetime position on INTO and column-list. Spark answers are the
+re-verify-3 attack5/6/7 recordings. Rust unit pins: lowercase refs over
+uppercase columns, exact and missing case-sensitive refs, and an ambiguous
+arm unjudging a VALUES position elsewhere; the quoted-case test now pins the
+repair instead of the retry.
+
+**Open (halted for a ruling).** R2's `string(tsc)` bullet prescribes giving
+the arm planner the session's full registry, but the session registry itself
+lacks `string`: `SELECT string(1)` raises UNRESOLVED_ROUTINE on this head,
+datafusion-spark 54.1.0 ships no `string` UDF, and no RePark shim registers
+one. R1 already routes the arm through the identical session state, so the
+prescribed mechanism cannot resolve it. The cell keeps its fold-3
+UNRESOLVED_ROUTINE (Spark: CANNOT_SAFELY_CAST); the recommended disposition
+is the verifier's: ledger as an S3 class gap owned by function coverage.
+Its siblings (`timestamp()`, `current_user()`, and the other
+UNRESOLVED_ROUTINE attack5 fn cells) share the cause.
+
+**Carried (orchestrator cards, same on base).** VT4-2: a quoted CTE name
+whose case differs from an unquoted reference resolves to the temp view in a
+case-insensitive session. VT4-3: the `PARTITION (p)` and `PARTITION (p='v')`
+INSERT INTO doors carry the facade CTE rewrite. `fail/unresolved_star`
+raises an unclassified "table not found" rather than
+TABLE_OR_VIEW_NOT_FOUND.
+
+**Proof.** The round hand-back records the mutation runs (M-R1 raw plan plus
+retry, M-R2 ambiguity without the stand-down, each reverting clean), the
+replay into `reverify3-tsd-fold/`, and the perf table.
+
 ## Coverage
 
 ```yaml

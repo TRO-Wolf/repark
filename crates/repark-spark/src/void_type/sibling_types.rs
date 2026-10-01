@@ -4,7 +4,8 @@ use std::ops::ControlFlow;
 use datafusion::arrow::datatypes::{DataType, Schema as ArrowSchema};
 use datafusion::common::SchemaError;
 use datafusion::error::DataFusionError;
-use datafusion::prelude::{DataFrame, SessionContext};
+use datafusion::logical_expr::LogicalPlan;
+use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
     Cte, Expr, ObjectName, ObjectNamePart, Select, Visit, Visitor,
 };
@@ -138,7 +139,7 @@ impl<'ctx, 'arms, 'ast> SiblingJudge<'ctx, 'arms, 'ast> {
                     }
                 }
             }
-            if unresolved_pass {
+            if unresolved_pass || self.planned_ambiguous_arm() {
                 skip.fill(true);
             }
             self.skip = Some(skip);
@@ -276,6 +277,12 @@ impl<'ctx, 'arms, 'ast> SiblingJudge<'ctx, 'arms, 'ast> {
         typed
     }
 
+    fn planned_ambiguous_arm(&self) -> bool {
+        self.plans
+            .values()
+            .any(|plan| matches!(plan, ArmPlan::Ambiguous))
+    }
+
     async fn arm_plan(&mut self, index: usize) -> ArmPlan {
         if let Some(plan) = self.plans.get(&index) {
             return plan.clone();
@@ -290,17 +297,23 @@ impl<'ctx, 'arms, 'ast> SiblingJudge<'ctx, 'arms, 'ast> {
     }
 
     async fn plan_arm_sql(&self, sql: &str) -> ArmPlan {
-        match self.ctx.sql(sql).await {
-            Ok(frame) => typed_plan(&frame),
+        let state = self.ctx.state();
+        let session_dialect = state.config().options().sql_parser.dialect;
+        let dialect = crate::dialect_for_executing_parse(sql, session_dialect);
+        let Ok(statement) = state.sql_to_statement(sql, &dialect) else {
+            return ArmPlan::Failed;
+        };
+        match repark_core::column_resolution::plan_statement_with_column_repair(
+            &state,
+            statement,
+            self.case_insensitive,
+        )
+        .await
+        {
+            Ok(plan) => typed_plan(&plan),
             Err(error) if is_ambiguity(&error) => ArmPlan::Ambiguous,
             Err(error) if is_parse_error(&error) => ArmPlan::Failed,
-            Err(_) if !self.case_insensitive => ArmPlan::Unresolved,
-            Err(_) => match self.ctx.sql(&sql.to_lowercase()).await {
-                Ok(frame) => typed_plan(&frame),
-                Err(error) if is_ambiguity(&error) => ArmPlan::Ambiguous,
-                Err(error) if is_parse_error(&error) => ArmPlan::Failed,
-                Err(_) => ArmPlan::Unresolved,
-            },
+            Err(_) => ArmPlan::Unresolved,
         }
     }
 }
@@ -403,10 +416,9 @@ impl Visitor for RelationNames {
     }
 }
 
-fn typed_plan(frame: &DataFrame) -> ArmPlan {
+fn typed_plan(plan: &LogicalPlan) -> ArmPlan {
     ArmPlan::Typed(
-        frame
-            .schema()
+        plan.schema()
             .fields()
             .iter()
             .map(|field| field.data_type().clone())
@@ -671,8 +683,44 @@ mod tests {
         ctx
     }
 
+    fn mem_ctx_upper() -> SessionContext {
+        use datafusion::arrow::datatypes::{Field, Schema};
+        use datafusion::datasource::memory::MemTable;
+        use std::sync::Arc;
+
+        let ctx = SessionContext::new();
+        let schema = Schema::new(vec![
+            Field::new("ID", DataType::Int32, false),
+            Field::new("C", DataType::Utf8, false),
+        ]);
+        let table =
+            MemTable::try_new(Arc::new(schema), vec![Vec::new()]).expect("memory table builds");
+        ctx.register_table("t", Arc::new(table))
+            .expect("memory table registers");
+        ctx
+    }
+
+    fn mem_ctx_join() -> SessionContext {
+        use datafusion::arrow::datatypes::{Field, Schema};
+        use datafusion::datasource::memory::MemTable;
+        use std::sync::Arc;
+
+        let ctx = SessionContext::new();
+        for name in ["t", "u"] {
+            let schema = Schema::new(vec![
+                Field::new("id", DataType::Int32, false),
+                Field::new("c", DataType::Utf8, false),
+            ]);
+            let table =
+                MemTable::try_new(Arc::new(schema), vec![Vec::new()]).expect("memory table builds");
+            ctx.register_table(name, Arc::new(table))
+                .expect("memory table registers");
+        }
+        ctx
+    }
+
     #[tokio::test]
-    async fn quoted_case_in_expressions_resolves_through_the_retry() {
+    async fn quoted_case_in_expressions_resolves_through_column_repair() {
         let ctx = mem_ctx();
         let catalogs = CatalogRegistry::new();
         let mut statements = Parser::parse_sql(
@@ -711,6 +759,91 @@ mod tests {
         let value = cell.rows[0].content[cell.column].clone();
         assert!(judge.skip_string(1, &value).await);
         assert!(matches!(judge.plans.get(&1), Some(ArmPlan::Unresolved)));
+    }
+
+    #[tokio::test]
+    async fn lowercase_refs_over_uppercase_columns_stay_judged() {
+        let ctx = mem_ctx_upper();
+        let catalogs = CatalogRegistry::new();
+        let mut statements = Parser::parse_sql(
+            &GenericDialect,
+            "INSERT INTO g SELECT * FROM (VALUES (1, 'x')) AS v(a, b) UNION ALL SELECT id, UPPER(c) FROM t",
+        )
+        .unwrap();
+        let Statement::Insert(insert) = statements.swap_remove(0) else {
+            panic!("want an INSERT statement");
+        };
+        let source = insert.source.unwrap();
+        let arms = resolve_insert_arms(&source, true);
+        let mut judge = SiblingJudge::new(&ctx, &catalogs, &arms, true);
+        let cell = &arms[0].positions[1][0];
+        let value = cell.rows[0].content[cell.column].clone();
+        assert!(!judge.skip_string(1, &value).await);
+        assert!(matches!(judge.plans.get(&1), Some(ArmPlan::Typed(_))));
+    }
+
+    #[tokio::test]
+    async fn case_sensitive_exact_uppercase_refs_stay_judged() {
+        let ctx = mem_ctx_upper();
+        let catalogs = CatalogRegistry::new();
+        let mut statements = Parser::parse_sql(
+            &GenericDialect,
+            "INSERT INTO g SELECT * FROM (VALUES (1, 'x')) AS v(a, b) UNION ALL SELECT ID, UPPER(C) FROM t",
+        )
+        .unwrap();
+        let Statement::Insert(insert) = statements.swap_remove(0) else {
+            panic!("want an INSERT statement");
+        };
+        let source = insert.source.unwrap();
+        let arms = resolve_insert_arms(&source, false);
+        let mut judge = SiblingJudge::new(&ctx, &catalogs, &arms, false);
+        let cell = &arms[0].positions[1][0];
+        let value = cell.rows[0].content[cell.column].clone();
+        assert!(!judge.skip_string(1, &value).await);
+        assert!(matches!(judge.plans.get(&1), Some(ArmPlan::Typed(_))));
+    }
+
+    #[tokio::test]
+    async fn case_sensitive_missing_uppercase_refs_stay_unresolved() {
+        let ctx = mem_ctx();
+        let catalogs = CatalogRegistry::new();
+        let mut statements = Parser::parse_sql(
+            &GenericDialect,
+            "INSERT INTO g SELECT * FROM (VALUES (1, 'x')) AS v(a, b) UNION ALL SELECT id, UPPER(C) FROM t",
+        )
+        .unwrap();
+        let Statement::Insert(insert) = statements.swap_remove(0) else {
+            panic!("want an INSERT statement");
+        };
+        let source = insert.source.unwrap();
+        let arms = resolve_insert_arms(&source, false);
+        let mut judge = SiblingJudge::new(&ctx, &catalogs, &arms, false);
+        let cell = &arms[0].positions[1][0];
+        let value = cell.rows[0].content[cell.column].clone();
+        assert!(judge.skip_string(1, &value).await);
+        assert!(matches!(judge.plans.get(&1), Some(ArmPlan::Unresolved)));
+    }
+
+    #[tokio::test]
+    async fn ambiguous_arms_unjudge_values_positions_at_other_positions() {
+        let ctx = mem_ctx_join();
+        let catalogs = CatalogRegistry::new();
+        let mut statements = Parser::parse_sql(
+            &GenericDialect,
+            "INSERT INTO g SELECT v.a, t.c FROM (VALUES ('x', 2)) AS v(a, b) JOIN t ON v.b = t.id JOIN u ON t.id = u.id WHERE c = c",
+        )
+        .unwrap();
+        let Statement::Insert(insert) = statements.swap_remove(0) else {
+            panic!("want an INSERT statement");
+        };
+        let source = insert.source.unwrap();
+        let arms = resolve_insert_arms(&source, true);
+        assert_eq!(arms.len(), 1);
+        let mut judge = SiblingJudge::new(&ctx, &catalogs, &arms, true);
+        let cell = &arms[0].positions[0][0];
+        let value = cell.rows[0].content[cell.column].clone();
+        assert!(judge.skip_string(0, &value).await);
+        assert!(matches!(judge.plans.get(&0), Some(ArmPlan::Ambiguous)));
     }
 
     #[test]
