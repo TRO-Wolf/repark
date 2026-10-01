@@ -397,7 +397,23 @@ judgment.
 CANNOT_SAFELY_CAST where Spark reports AMBIGUOUS_REFERENCE (class only, the
 VT4-4(a) family). The struct-field case gaps, identical on base.
 
-**Proof.** Pending — recorded after the replay.
+**Proof (2026-10-01, head `6a2e2b42`).** Mutations, each reverting clean:
+M-R1 (quote after the gate) reds the TIMESTAMP store control while R2's
+guard keeps the refusal pins green; M-R1+M-R2 (pre-fix behavior) reds the
+24-cell and extras tests with stores, reproducing VT5-1; M-R2 (catch-all
+Unresolved) reds exactly the 2 R2 unit guard tests. Replay into
+`reverify4-tsd-fold/` (probe and probe5 harnesses, every child under `ulimit
+-v 67108864`): the 16-set replay plus attack5/attack6/attack7/attack8/attack9,
+3,122 cells — 0 lax and 0 strict moves away from Spark against `15cf5dee`, 0
+new false stores against `15cf5dee`, `b9f2eac6` and base; the 24 VT5-1 cells
+move store-to-refuse and 25 more move strict-toward Spark (struct arms, table
+functions and unclassified planner failures now judged to the gate refusal
+Spark reports). The 81 remaining head false stores are all pre-existing or
+carried. Perf, medians of 3: probe200 3.521s/2.618s = 1.345x against a base
+3.262s/2.499s = 1.305x, gate-attributable 1.030x; probe400 9.808s/7.259s =
+1.351x against a base 9.024s/6.918s = 1.305x, gate-attributable 1.036x.
+`bash gate.sh` is GREEN on this head except the `repark-parity` suite step,
+which fails identically on the untouched base (see the hand-back).
 
 ## Coverage
 
