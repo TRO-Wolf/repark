@@ -464,7 +464,24 @@ double-wrap no-op.
 **Carried (ledger only).** The interval, frame, typed-literal and backtick
 cells the verifier classed as class-only, or as matching Spark.
 
-**Proof.** Pending — recorded after the replay.
+**Proof.** Mutations, each reverted clean: skipping the shared judge
+rewrite reddens the two fold-6 refusal tests plus the demoted-nullary Rust
+pin; un-anchoring a tag reddens the resolution matcher; breaking the
+`Invalid function` prefix reddens the real-planner pin and the matcher.
+Replay of the 16 sets plus attacks 5–11 into
+`/tmp/oc-worker/direct/wo/reverify5-tsd-fold/` (3,356 cells): 0 away from
+Spark lax and strict against c963885c; the toward-lax set is exactly the
+31 VT6-1 cells, all now CANNOT_SAFELY_CAST as Spark; 6 further toward-strict
+cells where `tw_select` moves UNRESOLVED_COLUMN to Spark's
+CANNOT_SAFELY_CAST because the arm now plans through the time-window wrap;
+0 head false stores in attacks 10 and 11; 0 new false stores against
+c963885c, the b9 head and base; the 81 remaining false stores are the
+carried c1/c3/a5/a6/a3 sets. Perf medians of 3, gate-attributable:
+probe200 3.484/2.616 = 1.332x against base 3.546/2.688 = 1.319x (1.010x);
+probe400 9.812/7.405 = 1.325x against base 9.824/7.452 = 1.318x (1.005x).
+`bash gate.sh` is GREEN on this head (16/16 steps; the first run caught
+two valve source pins still matching the pre-chain call spelling plus a
+missing lane-venv `pytest-xdist`, both repaired).
 
 ## Coverage
 
