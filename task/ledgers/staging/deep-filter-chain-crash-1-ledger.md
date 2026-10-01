@@ -82,12 +82,12 @@ fork edit, no new crate edge.
 | C-011 | A 300-term AND answers 50 and a 1,500-term AND refuses `AnalysisException` at `filter()` (limits R3; Spark first refuses `and`/`or`/`+` chains past 300 terms, so the 1500 builder cap refuses above Spark). | Two isolated-interpreter pins asserting the count and the refusal class. | PROVEN | `test_deep_filter_chain_crash_1.py` `test_and_chain_at_must_answer_depth_answers`, `test_and_chain_past_expression_cap_refuses_clean`. |
 | C-008 | A 16-deep chain counts 50 on a 512 KiB thread (small-stack backstop: any entry point grows when under 2 MiB remain); debug SIGSEGVs on f958d1a8 and base alike. | One isolated-interpreter pin. | PROVEN | `test_deep_subquery_expression_1.py` `test_shallow_chain_answers_on_small_stack_thread`. |
 | C-012 | A 6,000-term OR builds on the caller thread and on an 8 MiB thread, then refuses `AnalysisException` at `filter()` on both (CI segv: the 20,000-term build SIGSEGVs on an 8 MiB main stack before any builder runs). | One isolated-interpreter pin asserting both refusals; the grown-clone/drop Rust units. | PROVEN | `test_deep_expr_build_small_stack_1.py` both tests; `deep_stack.rs` `grown_column_combine_and_drop_survive_deep_trees`, `grown_expression_clone_and_drop_serve_sub_megabyte_threads`. |
-| C-013 | Every clone, plan, optimize, execute, format, and drop of a plan or expression runs through the single grown-stack helper sized from cached levels (VD2-1); no public operation overflows any caller thread. | The guard test greens and a planted bypass reds it; the column/frame exactness batteries assert cached levels equal a fresh survey on every rule. | PROVEN | `tests.rs` `grown_stack_guard_rejects_bypass_sites`; `expr_tests.rs` / `display/tests.rs` / `dataframe/tests.rs` / `subquery.rs` batteries; `test_deep_reverify_1.py` all workers survive. |
+| C-013 | Every clone, plan, optimize, execute, format, and drop of a plan or expression runs through the single grown-stack helper sized from cached levels (VD2-1); no public operation overflows any caller thread. The guard test checks this as a text search over seven clone spellings only: it skips files whose names contain "test" and it does not cover drops or formatting (carried residue R-9). | The guard test greens and a planted bypass in one of the seven spellings reds it; the column/frame exactness batteries assert cached levels equal a fresh survey on every rule. | PROVEN | `tests.rs` `grown_stack_guard_rejects_bypass_sites`; `expr_tests.rs` / `display/tests.rs` / `dataframe/tests.rs` / `subquery.rs` batteries; `test_deep_reverify_1.py` all workers survive. |
 | C-014 | `sql()` over a temp view holding a 1,000-deep plan counts 50 (VD2-2); the session carries a deep-view high-water mark and the query grows past it. | One isolated-interpreter pin asserting the count. | PROVEN | `test_deep_reverify_1.py` `test_deep_view_sql_and_explain_answer` (`deep_view_count` 50). |
 | C-015 | A 2,000-term SQL-text OR answers 50 through `F.expr`, `selectExpr`, and string `filter` (VD2-3; the 1,500 cap no longer applies to SQL text); a 1,500-term DF-built OR refuses `AnalysisException` at `filter()` (Spark raises `StackOverflowError` at `.filter()` on the same shape); a 5,001-term mixed DF/text OR answers 50 (Spark answers 50). | Three isolated-interpreter pins plus the 2026-09-30 Spark verbatim. | PROVEN | `test_deep_reverify_1.py` `test_sql_text_or_chains_answer_on_every_door`, `test_dataframe_built_or_past_cap_refuses_clean`, `test_mixed_dataframe_and_text_or_answers`; Spark `or_df_1500` StackOverflowError, `or_fexpr_5000` 50, `mixed5001` 50. |
 | C-016 | Teardown of deep columns and frames on GC/finalizer threads never overflows (VD2-4); owning types drop on a grown segment sized from cached levels. | One isolated-interpreter pin collecting deep cycles on main and on a 256 KiB thread. | PROVEN | `test_deep_reverify_1.py` `test_gc_collects_deep_cycles_on_main_and_small_threads`. |
-| C-017 | 256 KiB and 512 KiB caller threads count a 16-deep chain, refuse a 2,000-term DF-built OR, read `.columns` off a 500-deep frame, and collect a deep cycle (VD2-5). | Two isolated-interpreter pins, one per stack size. | PROVEN | `test_deep_reverify_1.py` `test_small_stack_thread_answers_and_collects`, `test_half_meg_stack_thread_answers_and_collects`. |
-| C-018 | The debug suite answers within 1.15x of 1,108 s and unpivot stays linear in columns (VD2-6; the per-op tree walks inflated the suite past 2,088 s with exponent 1.120). | CI-shaped wheel repro under `repark.slice` plus the 64 GiB cap, `-n 4`: suite time and the unpivot exponent. | PROVEN | Slice (subquery + unpivot + 4 unit files) 68 passed in 848 s < 1,274 s bar; unpivot exponent 0.950 on the debug wheel. |
+| C-017 | 256 KiB and 512 KiB caller threads count a 16-deep chain, refuse a 2,000-term DF-built OR, read `.columns` off a 500-deep frame, and collect a deep cycle (small-stack coverage, not VD2-5; VD2-5 was `add_months`/`date_add` over a deep operand, which has no facade pin — R-10). | Two isolated-interpreter pins, one per stack size. | PROVEN | `test_deep_reverify_1.py` `test_small_stack_thread_answers_and_collects`, `test_half_meg_stack_thread_answers_and_collects`. |
+| C-018 | The per-op tree walks are gone: a six-file slice answers in 848 s against the 1,274 s full-suite-derived bar (like-for-unlike, stated plainly), the re-verifier's same-box like-for-like A/B on a 47-file sample runs head 104 s and 154 s against base 157 s and 158 s (ratio ≤ 0.98), and unpivot stays linear in columns (exponent 0.950; the walks had inflated the suite past 2,088 s with exponent 1.120). CI has not run on this head; the post-merge CI run is the full-suite number. | CI-shaped wheel repro under `repark.slice` plus the 64 GiB cap, `-n 4`: slice time, the re-verifier A/B, and the unpivot exponent. | PROVEN | Six-file slice 68 passed in 848 s < 1,274 s bar; 47-file sample head 104/154 s vs base 157/158 s; unpivot exponent 0.950 on the debug wheel. |
 
 ## Mutation record (2026-09-29)
 
@@ -182,6 +182,9 @@ COVERAGE_ATTESTATION:
 | R-6 | Dated 2026-09-29 (limits fold; pre-existing terminal split, out of unit scope): the 200k-item IN list answers 1000 through `collect()` and 1 through `count()` on base and head alike (10/10 virgin samples stable per terminal; form-independent); Spark's `count()` answers 1 too, its `collect()` is unmeasured. The C-009 pin uses `collect()`, matching the orchestrator's 1000-in-60 s measurement. |
 | R-7 | Dated 2026-09-30 (CI segv; pre-existing, same as base): recursive `Display`/`schema_name` formatting of a deep expression (`display_name`, `make_struct` field naming) still runs on the caller thread; no caller holds a deep expression there. |
 | R-8 | Dated 2026-09-30 (CI segv; pre-existing, same as base): `DataFrame::clone` of a plan whose top node holds a deep expression evaluates eagerly on the caller outside the terminal verdict; the unit's shapes top out far below it. |
+| R-9 | Dated 2026-10-01 (re-verifier VD3-1; guard coverage gap, carried): the bypass guard is a text search over seven clone spellings, it skips files whose names contain "test", and it covers neither drops nor formatting; a new bypass in another spelling passes silently. Coverage of those rests on the exactness batteries and review until the guard goes type-based. |
+| R-10 | Dated 2026-10-01 (re-verifier VD3-3; pin/repro scale gap, carried): the VD2 pins are smaller than the repros (2,000-term SQL text where the repros ran 5,000–20,000 terms, a 1,000-deep filter-chain view where the repro ran 5,000), and no facade pin covers `add_months`/`date_add` over a deep operand on a small thread (only the Rust door test exercises the combine). The larger repros all pass on head; the gap is future-regression coverage, not a live bug. |
+| R-11 | Dated 2026-10-01 (re-verifier VD3-3; unresolved inside the budget, carried): the 20,000-term string-filter `.count()` on the main thread times out at 240 s twice (no crash, no answer; base SIGSEGVs there and Spark answers 50). It is not proven to answer. |
 
 ## Release per-call cost follow-up (2026-09-29)
 
@@ -603,9 +606,10 @@ RePark answers 50 / 50 / 50 and refuses `AnalysisException` at
 answers where Spark answers.
 
 Inventory: every group below routes through the helper; the guard
-test (`tests.rs` `grown_stack_guard_rejects_bypass_sites`) reds any
-raw plan/expression clone outside `deep_stack.rs` (a planted
-`self.inner().clone()` reds it; reverted clean).
+test (`tests.rs` `grown_stack_guard_rejects_bypass_sites`) reds the
+seven spelled clone forms outside `deep_stack.rs` (a planted
+`self.inner().clone()` reds it; reverted clean). Other spellings,
+drops, and formatting are outside what the text search sees (R-9).
 
 | Group | Mechanism |
 |---|---|
@@ -659,10 +663,16 @@ CI-shaped repro: debug wheel to `/tmp/xdeep-dist`, fresh venv
 `ulimit -v 67108864`, `-n 4`. The brief's slice (subquery + unpivot
 + `test_df_easy` + `test_dfcore_1_exports` +
 `test_production_file_size` + CAP-1) runs 68 passed in 848 s, under
-the 1.15x bar of 1,274 s; the unpivot exponent measures 0.950 on the
+the 1.15x bar of 1,274 s — a six-file slice held against a
+full-suite-derived bar, like-for-unlike, stated plainly; the
+like-for-like number is the re-verifier's same-box A/B on a 47-file
+sample (`-n 4`, interleaved): head 104 s and 154 s against base 157 s
+and 158 s (ratio ≤ 0.98). The unpivot exponent measures 0.950 on the
 debug wheel (medians 0.038/0.162/0.348 s at width 50/250/500). C-018
 PROVEN. The full facade suite on the same wheel runs 13,966 passed,
-485 skipped, 147 xfailed, 0 failed in 2,053 s.
+485 skipped, 147 xfailed, 0 failed in 2,053 s (context only; no base
+comparator). CI has not run on this head; the post-merge CI run is
+the full-suite number.
 
 Release A/B (head vs `a53118a6` wheels,
 `CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16`, 5 fresh processes per
