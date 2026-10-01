@@ -78,8 +78,7 @@ pre code{background:none;padding:0}
   <p class="meta">Prepared by a Claude session (claude-fable-5-1). Measured on <code>origin/main</code> at <code>db3a1f37</code> (v1.5.1). Record of ruling: <code>task/roadmap/epic-term/crate-layout-1-8-2026-10-01.md</code>.</p>
 </header>
 <section>
-<p><strong>Date:</strong> 2026-10-01 · <strong>Ruled by:</strong> the owner ("I love that layout"), in discussion with a Claude session (claude-fable-5-1) · <strong>Measured on:</strong> <code>origin/main</code> at <code>db3a1f37</code> (v1.5.1) · <strong>Builds on:</strong> <code>task/roadmap/mid-term/crate-layout-review-2026-09-30.md</code> (the test-placement review, in the same change), <a href="roadmap-design-plan-2026-08-29.md">roadmap-design-plan-2026-08-29.md</a> (cards 1.3, 1.6, 1.7), <a href="unified-database-query-cdc-silver-plan-2026-09-13.md">unified-database-query-cdc-silver-plan-2026-09-13.md</a> (the three independent lifecycles), <a href="deterministic-silver-layer-compiler-2026-09-12.md">deterministic-silver-layer-compiler-2026-09-12.md</a>.</p>
-
+<p><strong>Date:</strong> 2026-10-01 · <strong>Ruled by:</strong> the owner ("I love that layout"), in discussion with a Claude session (claude-fable-5-1) · <strong>Measured on:</strong> <code>origin/main</code> at <code>db3a1f37</code> (v1.5.1) · <strong>Builds on:</strong> <a href="../mid-term/crate-layout-review-2026-09-30.md">../mid-term/crate-layout-review-2026-09-30.md</a> (the test-placement review), <a href="roadmap-design-plan-2026-08-29.md">roadmap-design-plan-2026-08-29.md</a> (cards 1.3, 1.6, 1.7), <a href="unified-database-query-cdc-silver-plan-2026-09-13.md">unified-database-query-cdc-silver-plan-2026-09-13.md</a> (the three independent lifecycles), <a href="deterministic-silver-layer-compiler-2026-09-12.md">deterministic-silver-layer-compiler-2026-09-12.md</a>.</p>
 </section>
 <section>
 <h2>1. The ruling in one table</h2>
@@ -112,33 +111,33 @@ pre code{background:none;padding:0}
 <td><code>repark-connect</code></td>
 <td>1 · table service</td>
 <td>Postgres and SQL Server providers, pushdown, pools, type maps (card 1.6)</td>
-<td>common, core</td>
+<td>common</td>
 <td><strong>1.6</strong></td>
 </tr>
 <tr>
 <td><code>repark-cdc</code></td>
 <td>1 · table service</td>
 <td>logical-replication capture → Arrow → Bronze append, capture checkpoints</td>
-<td>common, iceberg, core</td>
+<td>common, iceberg</td>
 <td><strong>1.7</strong></td>
 </tr>
 <tr>
 <td><code>repark-io</code></td>
 <td>1 · table service</td>
 <td>smart CSV, Excel, JSON, IPC, Avro, Hive-partitioned directory discovery (card 1.3)</td>
-<td>common, core</td>
+<td>common</td>
 <td><strong>1.8</strong></td>
 </tr>
 <tr>
 <td><code>repark-core</code></td>
 <td>2 · engine</td>
 <td>Session, planning, <code>df_guards</code> (ATTR-ID-1), path writes, and the <strong><code>silver/</code> module</strong>: the <code>SilverPlan</code> compiler and publication</td>
-<td>common, iceberg</td>
+<td>common, iceberg; connect, cdc, io as each arrives</td>
 <td>shipped; <code>silver/</code> at 1.7</td>
 </tr>
 <tr>
 <td><code>repark-spark-dialect</code></td>
-<td>3 · door</td>
+<td>3 · capability</td>
 <td>the Spark SQL grammar: AST, normalize, keyword case, literals and literal typing, rewrites, collation, windows, <code>void</code>, the type table</td>
 <td>common, core, functions</td>
 <td>the tidy window</td>
@@ -155,7 +154,7 @@ pre code{background:none;padding:0}
 <td>3 · door</td>
 <td>the ANSI door</td>
 <td>common, core, iceberg, functions, ta; <strong><code>repark-spark</code> as a dev-dependency only</strong></td>
-<td>shipped, edge corrected in the tidy window</td>
+<td>shipped</td>
 </tr>
 <tr>
 <td><code>repark-functions</code></td>
@@ -180,7 +179,7 @@ pre code{background:none;padding:0}
 </tr>
 <tr>
 <td><code>repark-crawler</code></td>
-<td>3 · tool</td>
+<td>3 · capability</td>
 <td>bounded discovery runs, profiling under a budget, the evidence store, proposed Bronze and Silver specifications and diffs</td>
 <td>common, core, connect</td>
 <td><strong>1.7</strong></td>
@@ -196,12 +195,13 @@ pre code{background:none;padding:0}
 <td><code>repark-python</code></td>
 <td>4 · bindings</td>
 <td>the thin PyO3 adapter, the only <code>unsafe</code></td>
-<td>common, core, spark, sql, functions, ta, ml</td>
+<td>common, core, spark, sql, functions, ta, ml; crawler at 1.7</td>
 <td>shipped</td>
 </tr>
 </tbody>
 </table></div>
 <p>Every crate carries one integration binary, <code>tests/it/main.rs</code>, with one module per former test file (option 1 of the 2026-09-30 review), so <code>src/</code> holds product code only.</p>
+<p><strong>Corrected the same day, against the gate.</strong> The first draft gave <code>repark-connect</code>, <code>repark-cdc</code> and <code>repark-io</code> an edge to <code>repark-core</code>. <code>scripts/check_crate_dag.py</code> rejects that at declaration: a product edge may not point at a strictly higher tier, and the tier-1 precedent is <code>repark-iceberg</code>, which speaks DataFusion natively and is reached <em>down to</em> by <code>repark-core</code>. The three services follow that precedent. <code>repark-spark-dialect</code> and <code>repark-crawler</code> carry the gate's role <code>capability</code>, not <code>door</code>: the gate forbids a door → door product edge, and the dialect is the grammar one door consumes, not a surface a user types at. The five arriving crates are <strong>pre-declared</strong> in the gate's tier, role and edge tables and as <code>planned</code> components in <code>repo-manifest.toml</code> (both allow rows for crates not yet in the workspace; the manifest reds if a directory appears while still planned), so each arrives onto an enforced layout rather than onto a table that is trued up afterwards.</p>
 <pre><code>tier 4  bindings     repark-python
 
 tier 3  doors        repark-spark ──► repark-spark-dialect       repark-sql
@@ -214,7 +214,6 @@ tier 1  services     repark-iceberg   repark-connect   repark-cdc   repark-io
 
 tier 0  foundation   repark-common
 </code></pre>
-
 </section>
 <section>
 <h2>2. Why these names</h2>
@@ -264,17 +263,15 @@ tier 0  foundation   repark-common
 </table></div>
 <p>DDL is one of four side-effecting families, and the router that dispatches to all four would have to sit in the crate that depends on the pulled-out one. So the extraction goes the other way: the dialect (parse, normalize, type; no catalog, no side effects, no <code>repark-iceberg</code> edge) moves <em>below</em> into <code>repark-spark-dialect</code>, and <code>repark-spark</code> keeps its name, its <code>_native</code> binding and every <code>cargo test -p repark-spark</code> filter, reorganised as <code>router/ ddl/ dml/ inspect/ procedures/</code>. The dialect is also the part a Spark Connect analyzer would need at 1.12. "Dialect" is the word ARCHITECTURE.md already uses ("each door keeps its own grammar") and the <code>dialect/</code> module already exists. Had the commands been the extracted half, Spark's own word is <code>commands</code> (<code>RunnableCommand</code>, <code>execution/command/</code>), never <code>ddl</code>.</p>
 <p><strong>No <code>repark-functions</code> split.</strong> 74k lines, but the families are already directory-grouped and share the cast tables; grouping the flat root (option 3 of the review) is enough.</p>
-
 </section>
 <section>
 <h2>3. What the measurement surfaced, and what the layout fixes</h2>
 <ol>
-<li><strong><code>repark-sql</code> → <code>repark-spark</code> is a product edge today</strong> (<code>crates/repark-sql/Cargo.toml:59</code>) whose every use is in <code>tests/</code> (<code>SparkDialect</code>, <code>SparkExtension</code> for the cross-door two-session protocol) plus two fixture paths that join <code>../repark-spark/src/tests/fixtures</code>. ARCHITECTURE.md says the doors share nothing above tier 1. The edge becomes <code>[dev-dependencies]</code>, and the fixture paths move with the <code>tests/it/</code> unit, which must carry them: a hard-coded join into another crate's <code>src/tests</code> breaks silently when that directory moves.</li>
-<li><strong><code>scripts/check_crate_dag.py</code> declares six edges; the <code>Cargo.toml</code> files carry fourteen.</strong> <code>repark-spark → iceberg / functions / ta / common</code>, <code>repark-sql → every lower crate</code>, and <code>repark-python → *</code> are undeclared. The table is trued up in the tidy window before any new crate adds a row, so the gate enforces the rule it states.</li>
+<li><strong><code>repark-sql</code> → <code>repark-spark</code> is already dev-only.</strong> The first draft of this file called it a product edge; re-measured the same day, <code>crates/repark-sql/Cargo.toml:59</code> sits under <code>[dev-dependencies]</code> (section opens at line 44) and the DAG gate permits exactly that kind. What remains true: two fixture paths in <code>repark-sql</code>'s tests join <code>../repark-spark/src/tests/fixtures</code>, and that hard-coded join breaks silently when T-1 moves the directory, so T-1 carries them.</li>
+<li><strong>The DAG gate already declares every real edge.</strong> The first draft claimed six declared against fourteen real; <code>scripts/check_crate_dag.sh</code> on this branch reports <em>22 internal edges clean (3 dev, 18 normal, 1 optional) across 10 of 10 mapped crates</em>. There was nothing to true up. The gate's table is instead extended <em>ahead</em> of the arrivals (§1, the correction note), which is the opposite direction from the one first proposed.</li>
 <li><strong><code>repark-functions</code> depends on nothing.</strong> <code>repark-spark-dialect</code> will depend on it for typing. That is the right direction; nothing in functions ever imports the dialect.</li>
-<li><strong><code>repark-exec</code></strong> in PROJECT.md's crate list never materialised; its concerns live in <code>repark-core</code>. It is struck from the list, not built (PROJECT.md edit for the owner).</li>
+<li><strong><code>repark-exec</code></strong> in PROJECT.md's crate list never materialised; its concerns live in <code>repark-core</code>. Struck on 2026-10-01 from PROJECT.md, AGENTS.md's change-location guide and <code>repo-manifest.toml</code>'s planned components in the same change as this file.</li>
 </ol>
-
 </section>
 <section>
 <h2>4. What stays out until after 1.8</h2>
@@ -312,7 +309,6 @@ tier 0  foundation   repark-common
 </tr>
 </tbody>
 </table></div>
-
 </section>
 <section>
 <h2>5. The tidy window and its units</h2>
@@ -341,9 +337,9 @@ tier 0  foundation   repark-common
 </tr>
 <tr>
 <td>T-3</td>
-<td>the <code>repark-sql</code> Spark edge to <code>[dev-dependencies]</code>; the DAG table trued up to the fourteen real edges</td>
-<td>one <code>Cargo.toml</code> line, one gate table</td>
-<td>ARCHITECTURE.md's tier map names the dev-only edge</td>
+<td>~~the <code>repark-sql</code> Spark edge; the DAG table trued up~~ — both measured already true (§3.1, §3.2); the arrivals are pre-declared in the gate and the manifest in the change that carries this file</td>
+<td>nothing left to move</td>
+<td>ARCHITECTURE.md's tier map names the dev-only edge and the pre-declared crates, with T-5</td>
 </tr>
 <tr>
 <td>T-4</td>
@@ -361,7 +357,6 @@ tier 0  foundation   repark-common
 </table></div>
 <p>The <code>#[path]</code> rule question from the 2026-09-30 review (allow <code>#[path]</code> for a <code>#[cfg(test)]</code> child module and nothing else, or keep the directories) needs its one-line answer before T-1, since T-1 decides whether the single-file test directories survive the move.</p>
 <p>Then 1.6 opens with <code>repark-connect</code> on a clean DAG; 1.7 adds <code>repark-crawler</code>, <code>repark-cdc</code> and <code>repark-core/src/silver/</code>; 1.8 adds <code>repark-io</code>.</p>
-
 </section>
 <section>
 <h2>6. Decisions recorded</h2>
@@ -396,8 +391,8 @@ tier 0  foundation   repark-common
 </tr>
 <tr>
 <td>CL-5</td>
-<td><code>repark-sql → repark-spark</code> becomes dev-only; the DAG table is trued up</td>
-<td><strong>ruled 2026-10-01</strong></td>
+<td><code>repark-sql → repark-spark</code> dev-only; the DAG table complete</td>
+<td><strong>already true on <code>main</code></strong> — measured 2026-10-01 (§3.1, §3.2), ruling moot</td>
 </tr>
 <tr>
 <td>CL-6</td>
@@ -407,16 +402,19 @@ tier 0  foundation   repark-common
 <tr>
 <td>CL-7</td>
 <td>strike <code>repark-exec</code> from PROJECT.md's crate list</td>
-<td><strong>open</strong> — PROJECT.md is the owner's file</td>
+<td><strong>done 2026-10-01</strong> in this change (PROJECT.md, AGENTS.md, <code>repo-manifest.toml</code>); the owner reviews it in the PR</td>
+</tr>
+<tr>
+<td>CL-8</td>
+<td>arriving crates are pre-declared, never pre-created: tier, role and edges in <code>scripts/check_crate_dag.py</code>, a <code>planned</code> row in <code>repo-manifest.toml</code>, a row in AGENTS.md's guide; no directory until the first unit lands</td>
+<td><strong>ruled 2026-10-01</strong> (owner: "pre define the crates in the repo for organizing purposes")</td>
 </tr>
 </tbody>
 </table></div>
-
 </section>
 <section>
 <h2>Leaves this directory when</h2>
 <p>T-1…T-5 have merged and ARCHITECTURE.md's tier map shows the fourteen crates with their declared edges; then this file is the dated record and the design plan's cards 1.3, 1.6 and 1.7 name the homes above.</p>
 </section>
-<footer><p class="meta">Pure moves, clerk tier, test-count gate. Open: CL-6 the <code>#[path]</code> rule, CL-7 the PROJECT.md crate list.</p></footer>
 </main>
 </body></html>

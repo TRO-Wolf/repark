@@ -1163,7 +1163,12 @@ repark-parity slice.
   is the forbidden door→door product edge. Third-party crates are out of scope (internal = any
   Cargo workspace member — membership, not the `repark-` name, is the test); a new workspace
   member missing from `TIERS`/`ROLES` fails the guard; mapped crates that have not landed yet are
-  simply not inspected. NOTE the binding's deliberate **non-edges** (no `repark-sql`, no
+  simply not inspected — and since 2026-10-01 the table carries the layout of record ahead of
+  the code: `repark-connect`, `repark-cdc`, `repark-io` (tier 1), `repark-spark-dialect` and
+  `repark-crawler` (tier 3) are pre-declared with their edges from
+  `task/roadmap/epic-term/crate-layout-1-8-2026-10-01.md` (CL-8), so each arrives onto an
+  enforced layout. A pre-declared row is still audited: the declaration audit rejected the
+  first draft's tier-1 → `repark-core` edges as layering inversions. NOTE the binding's deliberate **non-edges** (no `repark-sql`, no
   `repark-iceberg`) are still enforced by review, not here — this guard bans edges, it never
   requires one. Wired into `make check-crate-dag` (in the `make ci` chain),
   `.pre-commit-config.yaml`, and the hook installed by `make install-hooks`.

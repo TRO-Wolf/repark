@@ -8,21 +8,23 @@
 |---|---|---|---|---|
 | `repark-common` | 0 · foundation | names, errors, shared types | — | shipped |
 | `repark-iceberg` | 1 · table service | catalogs (Glue, S3 Tables, Postgres, memory/Hadoop; **REST joins here**, no separate crate), DML, maintenance over the fork | common | shipped |
-| `repark-connect` | 1 · table service | Postgres and SQL Server providers, pushdown, pools, type maps (card 1.6) | common, core | **1.6** |
-| `repark-cdc` | 1 · table service | logical-replication capture → Arrow → Bronze append, capture checkpoints | common, iceberg, core | **1.7** |
-| `repark-io` | 1 · table service | smart CSV, Excel, JSON, IPC, Avro, Hive-partitioned directory discovery (card 1.3) | common, core | **1.8** |
-| `repark-core` | 2 · engine | Session, planning, `df_guards` (ATTR-ID-1), path writes, and the **`silver/` module**: the `SilverPlan` compiler and publication | common, iceberg | shipped; `silver/` at 1.7 |
-| `repark-spark-dialect` | 3 · door | the Spark SQL grammar: AST, normalize, keyword case, literals and literal typing, rewrites, collation, windows, `void`, the type table | common, core, functions | the tidy window |
+| `repark-connect` | 1 · table service | Postgres and SQL Server providers, pushdown, pools, type maps (card 1.6) | common | **1.6** |
+| `repark-cdc` | 1 · table service | logical-replication capture → Arrow → Bronze append, capture checkpoints | common, iceberg | **1.7** |
+| `repark-io` | 1 · table service | smart CSV, Excel, JSON, IPC, Avro, Hive-partitioned directory discovery (card 1.3) | common | **1.8** |
+| `repark-core` | 2 · engine | Session, planning, `df_guards` (ATTR-ID-1), path writes, and the **`silver/` module**: the `SilverPlan` compiler and publication | common, iceberg; connect, cdc, io as each arrives | shipped; `silver/` at 1.7 |
+| `repark-spark-dialect` | 3 · capability | the Spark SQL grammar: AST, normalize, keyword case, literals and literal typing, rewrites, collation, windows, `void`, the type table | common, core, functions | the tidy window |
 | `repark-spark` | 3 · door | the router and the four command families `ddl/`, `dml/`, `inspect/`, `procedures/` | spark-dialect, common, core, iceberg, functions, ta | shipped, reshaped in the tidy window |
-| `repark-sql` | 3 · door | the ANSI door | common, core, iceberg, functions, ta; **`repark-spark` as a dev-dependency only** | shipped, edge corrected in the tidy window |
+| `repark-sql` | 3 · door | the ANSI door | common, core, iceberg, functions, ta; **`repark-spark` as a dev-dependency only** | shipped |
 | `repark-functions` | 3 · tool | Spark function semantics and the cast tables | — | shipped |
 | `repark-ta` | 3 · tool | unchanged | core | shipped |
 | `repark-ml` | 3 · tool | unchanged | — | shipped |
-| `repark-crawler` | 3 · tool | bounded discovery runs, profiling under a budget, the evidence store, proposed Bronze and Silver specifications and diffs | common, core, connect | **1.7** |
+| `repark-crawler` | 3 · capability | bounded discovery runs, profiling under a budget, the evidence store, proposed Bronze and Silver specifications and diffs | common, core, connect | **1.7** |
 | `repark-distributed` | 3 · runtime | `DistributedExecutor`, Ballista M1, feature-gated | core | shipped |
-| `repark-python` | 4 · bindings | the thin PyO3 adapter, the only `unsafe` | common, core, spark, sql, functions, ta, ml | shipped |
+| `repark-python` | 4 · bindings | the thin PyO3 adapter, the only `unsafe` | common, core, spark, sql, functions, ta, ml; crawler at 1.7 | shipped |
 
 Every crate carries one integration binary, `tests/it/main.rs`, with one module per former test file (option 1 of the 2026-09-30 review), so `src/` holds product code only.
+
+**Corrected the same day, against the gate.** The first draft gave `repark-connect`, `repark-cdc` and `repark-io` an edge to `repark-core`. `scripts/check_crate_dag.py` rejects that at declaration: a product edge may not point at a strictly higher tier, and the tier-1 precedent is `repark-iceberg`, which speaks DataFusion natively and is reached *down to* by `repark-core`. The three services follow that precedent. `repark-spark-dialect` and `repark-crawler` carry the gate's role `capability`, not `door`: the gate forbids a door → door product edge, and the dialect is the grammar one door consumes, not a surface a user types at. The five arriving crates are **pre-declared** in the gate's tier, role and edge tables and as `planned` components in `repo-manifest.toml` (both allow rows for crates not yet in the workspace; the manifest reds if a directory appears while still planned), so each arrives onto an enforced layout rather than onto a table that is trued up afterwards.
 
 ```
 tier 4  bindings     repark-python
@@ -61,10 +63,10 @@ DDL is one of four side-effecting families, and the router that dispatches to al
 
 ## 3. What the measurement surfaced, and what the layout fixes
 
-1. **`repark-sql` → `repark-spark` is a product edge today** (`crates/repark-sql/Cargo.toml:59`) whose every use is in `tests/` (`SparkDialect`, `SparkExtension` for the cross-door two-session protocol) plus two fixture paths that join `../repark-spark/src/tests/fixtures`. ARCHITECTURE.md says the doors share nothing above tier 1. The edge becomes `[dev-dependencies]`, and the fixture paths move with the `tests/it/` unit, which must carry them: a hard-coded join into another crate's `src/tests` breaks silently when that directory moves.
-2. **`scripts/check_crate_dag.py` declares six edges; the `Cargo.toml` files carry fourteen.** `repark-spark → iceberg / functions / ta / common`, `repark-sql → every lower crate`, and `repark-python → *` are undeclared. The table is trued up in the tidy window before any new crate adds a row, so the gate enforces the rule it states.
+1. **`repark-sql` → `repark-spark` is already dev-only.** The first draft of this file called it a product edge; re-measured the same day, `crates/repark-sql/Cargo.toml:59` sits under `[dev-dependencies]` (section opens at line 44) and the DAG gate permits exactly that kind. What remains true: two fixture paths in `repark-sql`'s tests join `../repark-spark/src/tests/fixtures`, and that hard-coded join breaks silently when T-1 moves the directory, so T-1 carries them.
+2. **The DAG gate already declares every real edge.** The first draft claimed six declared against fourteen real; `scripts/check_crate_dag.sh` on this branch reports *22 internal edges clean (3 dev, 18 normal, 1 optional) across 10 of 10 mapped crates*. There was nothing to true up. The gate's table is instead extended *ahead* of the arrivals (§1, the correction note), which is the opposite direction from the one first proposed.
 3. **`repark-functions` depends on nothing.** `repark-spark-dialect` will depend on it for typing. That is the right direction; nothing in functions ever imports the dialect.
-4. **`repark-exec`** in PROJECT.md's crate list never materialised; its concerns live in `repark-core`. It is struck from the list, not built (PROJECT.md edit for the owner).
+4. **`repark-exec`** in PROJECT.md's crate list never materialised; its concerns live in `repark-core`. Struck on 2026-10-01 from PROJECT.md, AGENTS.md's change-location guide and `repo-manifest.toml`'s planned components in the same change as this file.
 
 ## 4. What stays out until after 1.8
 
@@ -85,7 +87,7 @@ The window is **after the v1.5.2 merge queue drains and before the first 1.6 con
 |---|---|---|---|
 | T-1 | `tests/it/` for `repark-spark` | 87k lines of `src/tests/` into one binary, one module per former file; fixtures to `tests/fixtures/` | the two `repark-sql` fixture joins; every `--test <name>` filter in briefs, gates and CI becomes a module filter |
 | T-2 | `tests/it/` for `repark-iceberg`, `repark-core`, then the rest | same shape | the `EXCEPTIONS` rows for `dynamic_flatten/tests.rs` and `catalog/tests/catalog.rs` |
-| T-3 | the `repark-sql` Spark edge to `[dev-dependencies]`; the DAG table trued up to the fourteen real edges | one `Cargo.toml` line, one gate table | ARCHITECTURE.md's tier map names the dev-only edge |
+| T-3 | ~~the `repark-sql` Spark edge; the DAG table trued up~~ — both measured already true (§3.1, §3.2); the arrivals are pre-declared in the gate and the manifest in the change that carries this file | nothing left to move | ARCHITECTURE.md's tier map names the dev-only edge and the pre-declared crates, with T-5 |
 | T-4 | `repark-spark` directories `router/ ddl/ dml/ inspect/ procedures/` | the modules of §2's table, `use` paths, five `map.md` files | nothing else |
 | T-5 | extract `repark-spark-dialect` | the dialect directory becomes a crate; `repark-spark` imports it; a DAG row; a workspace member | the version bump mechanics name a new member |
 
@@ -101,9 +103,10 @@ Then 1.6 opens with `repark-connect` on a clean DAG; 1.7 adds `repark-crawler`, 
 | CL-2 | no `repark-streaming`; the producer crate is `repark-cdc` | **ruled 2026-10-01** |
 | CL-3 | the `repark-spark` split extracts the dialect below as `repark-spark-dialect`; `repark-spark` keeps its name and gains `router/ ddl/ dml/ inspect/ procedures/` | **ruled 2026-10-01** |
 | CL-4 | the tidy window is post-v1.5.2 queue drain, pre-1.6; units T-1…T-5, clerk tier, no verifier on pure moves | **ruled 2026-10-01** |
-| CL-5 | `repark-sql → repark-spark` becomes dev-only; the DAG table is trued up | **ruled 2026-10-01** |
+| CL-5 | `repark-sql → repark-spark` dev-only; the DAG table complete | **already true on `main`** — measured 2026-10-01 (§3.1, §3.2), ruling moot |
 | CL-6 | the `#[path]` rule for `#[cfg(test)]` children | **open** — one line from the owner before T-1 |
-| CL-7 | strike `repark-exec` from PROJECT.md's crate list | **open** — PROJECT.md is the owner's file |
+| CL-7 | strike `repark-exec` from PROJECT.md's crate list | **done 2026-10-01** in this change (PROJECT.md, AGENTS.md, `repo-manifest.toml`); the owner reviews it in the PR |
+| CL-8 | arriving crates are pre-declared, never pre-created: tier, role and edges in `scripts/check_crate_dag.py`, a `planned` row in `repo-manifest.toml`, a row in AGENTS.md's guide; no directory until the first unit lands | **ruled 2026-10-01** (owner: "pre define the crates in the repo for organizing purposes") |
 
 ## Leaves this directory when
 

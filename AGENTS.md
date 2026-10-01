@@ -69,20 +69,21 @@ Current state: [STATUS.md](STATUS.md) — do not restate it here.
 
 ## Crate map — where a change will go
 
-Which home owns which kind of change. `Status: deferred` homes do **not** exist yet — do not
-create one ahead of its driver. The delivered crates (the live workspace `Cargo.toml` is the
-authoritative list) are mirrored — path, layer, delivery status — in [repo-manifest.toml](repo-manifest.toml)
-via `make check-manifest`; see [STATUS.md](STATUS.md) for delivery state, [crates/map.md](crates/map.md)
-for navigation. The `deferred` rows are the manifest's `planned` components: the gate reds if
-anything appears at their path while still declared planned.
+Which home owns which kind of change. `deferred` homes do **not** exist yet: they are the
+`planned` rows of [repo-manifest.toml](repo-manifest.toml) (`make check-manifest` reds if anything
+appears at their path) with tiers and edges pre-declared in `scripts/check_crate_dag.py`; never
+create one ahead of its first unit. Delivery state:
+[STATUS.md](STATUS.md); navigation: [crates/map.md](crates/map.md).
 
 | You will want to change… | Home | Status |
 |---|---|---|
 | Lazy-frame IR, planning, optimizer hooks, `Session` | `crates/repark-core` | delivered |
-| Execution config, spill, out-of-core | `crates/repark-exec` | deferred — extracted when its code arrives |
 | Inference readers (CSV, Excel, JSON) | `crates/repark-io` | deferred — extracted when its code arrives |
 | Catalogs (Glue, S3 Tables) + Iceberg DML + maintenance; adapter over the owned fork | `crates/repark-iceberg` | delivered |
-| Postgres / MSSQL connectivity | `crates/repark-connect` | deferred |
+| Postgres / MSSQL connectivity | `crates/repark-connect` | deferred — 1.6 |
+| Native snapshot + CDC capture into Bronze | `crates/repark-cdc` | deferred — 1.7 |
+| Discovery runs, proposed specs | `crates/repark-crawler` | deferred — 1.7 |
+| The Spark SQL grammar | `crates/repark-spark-dialect` | deferred — tidy window |
 | ANSI SQL front end (native dialect) | `crates/repark-sql` | delivered |
 | Spark semantics: function shims, Spark SQL dialect, the parity surface | `crates/repark-spark` | delivered |
 | ML: native estimator kernels (Cholesky/OLS/IRLS/Lloyd) | `crates/repark-ml` | delivered |
@@ -91,8 +92,8 @@ anything appears at their path while still declared planned.
 | The PySpark facade | `python/repark/spark` | delivered |
 | The dbt adapter | `python/dbt-repark` | delivered (DBT-1) |
 
-DataFusion remains the engine under everything. `repark-exec` / `repark-io` are extracted when
-their code arrives ([docs/design/session-api.md](docs/design/session-api.md) §1).
+DataFusion remains the engine under everything. Layout of record:
+[task/roadmap/epic-term/crate-layout-1-8-2026-10-01.md](task/roadmap/epic-term/crate-layout-1-8-2026-10-01.md).
 
 ## Verify before "done"
 
