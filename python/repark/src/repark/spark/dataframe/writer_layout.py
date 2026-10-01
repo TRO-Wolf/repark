@@ -408,3 +408,54 @@ def table_of_ref_target(qualified: str) -> str:
         if last.startswith(prefix) and len(last) > len(prefix):
             return ".".join(parts[:-1])
     return qualified
+
+
+def _merge_spec_options(base: str, spec_sql: str) -> str:
+    """Append emitted spec OPTIONS pairs to a COPY OPTIONS clause."""
+    if not spec_sql:
+        return base
+    if not base:
+        return " OPTIONS (" + spec_sql + ")"
+    if base.endswith(")"):
+        return base[:-1] + ", " + spec_sql + ")"
+    return base
+
+
+def text_write_copy_parts(writer: Any, view: str, stored_as: str) -> tuple[str, str, str]:
+    """Build the COPY inner SELECT, STORED AS name and spec OPTIONS for text writes."""
+    dataframe = writer._dataframe
+    dataframe._ensure_alive()
+    return _native.session_text_write_copy_parts(
+        dataframe._session,
+        dataframe._native_for_registration(),
+        view,
+        dict(writer._options),
+        [str(column) for column in writer._partition_columns],
+        stored_as,
+    )
+
+
+def text_write_copy_sql(
+    writer: Any,
+    view: str,
+    stored_as: str,
+    partition_clause: str,
+    options_clause: str,
+    escaped_staging: str,
+) -> str:
+    """Build the full COPY statement for a staged text path write."""
+    if stored_as not in ("CSV", "JSON"):
+        return (
+            f"COPY (SELECT * FROM {view}) "
+            f"TO '{escaped_staging}' "
+            f"STORED AS {stored_as}{partition_clause}{options_clause}"
+        )
+    select_sql, resolved_stored_as, spec_options_sql = text_write_copy_parts(
+        writer, view, stored_as
+    )
+    options_clause = _merge_spec_options(options_clause, spec_options_sql)
+    return (
+        f"COPY ({select_sql}) "
+        f"TO '{escaped_staging}' "
+        f"STORED AS {resolved_stored_as}{partition_clause}{options_clause}"
+    )

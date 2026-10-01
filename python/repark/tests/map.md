@@ -3796,8 +3796,28 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **IO-ORC-1 (2026-09-16):** `test_load_orc_declared_not_implemented` becomes
   `test_load_orc_reaches_the_scan` (missing path is `PATH_NOT_FOUND` now).
   pins: io-orc-1/C-004
+- `test_text_write_timestamp_zone_1.py` + `text_write_timestamp_zone_1_fixture.json` —
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** 179 Spark-recorded CSV/JSON
+  timestamp-write cells (4 zones, defaults, user formats, refusals, nested)
+  compared byte for byte or by error token, CSV/JSON read-back legs, and a
+  moto s3a leg.
+  pins: text-write-timestamp-zone-1/C-001, C-002, C-003, C-005, C-006
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 verifier fold (2026-09-29):** 20 more cells
+  (quote runs, year width, `VV` display ids, backslash patterns, case twins,
+  trailing-`]` classes) plus LEGACY-refusal and LMT-residue legs (207 pins).
+  **Re-verify (2026-09-29):** 34 more cells (zero-offset `VV` spellings,
+  `g` padding widths) plus policy-default, no-LEGACY-clause, and
+  optioned-non-temporal LEGACY legs (244 pins).
+  **Re-verify 2 (2026-09-30):** a `perf`-marked shuffled-data pin: 20k
+  timestamps over 1900-2024 write to CSV inside a 1.0 s debug budget.
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 3 fold (2026-09-30):** the
+  failed-local-write trio: a 400k-row JSON write with zone letters on NTZ
+  leaves no destination on overwrite (plain and partitioned) and keeps every
+  destination byte on append.
+  pins: text-write-timestamp-zone-1/C-008
 - `test_r2_read_formats2.py` — R2 writer option matrix / path modes / partitionBy: quoteAll /
-  escapeQuotes wired; dateFormat/timestampFormat refuse-loud; parquet compression; path
+  escapeQuotes wired; dateFormat/timestampFormat honored (TEXT-WRITE-TIMESTAMP-ZONE-1
+  flipped the three refuse-loud legs to honored pins); parquet compression; path
   mode overwrite/append/error/ignore; partitionBy hive layout + multi-col + append merge +
   unknown-col loud; **octo fix half:** root `read.parquet(partitioned)` no null-fill /
   no empty root part (C3-001/C6-001), duplicate partitionBy loud (C3-002), append col-set +

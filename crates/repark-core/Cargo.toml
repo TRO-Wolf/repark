@@ -58,6 +58,7 @@ lz4_flex.workspace = true
 lzokay-native.workspace = true
 snap.workspace = true
 zstd.workspace = true
+bytes.workspace = true
 
 [dev-dependencies]
 # `#[tokio::test]` drives the async session API; `parquet` writes a fixture for the read_parquet
