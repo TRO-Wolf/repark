@@ -16,6 +16,19 @@ lowering it calls first.
   untouched for the R4 refusal. Reached from `lower_expression`,
   `TimestampNsCastLower::post_visit_expr` and `TimestampNsCastProbe`.
   pins: ntz-1/C-002, C-004, C-005
+- `ltz_values_cast.rs` — **WO NTZ-STORE-DOORS-1 second re-verify fold (2026-09-29,
+  RD3-1):** `mark_values_timestamp_casts` wraps each `VALUES` cell that is a written
+  `CAST` / `::` to `TIMESTAMP` (or `TIMESTAMP_LTZ`), through parentheses, in one more
+  `CAST(… AS TIMESTAMP)`. The planner's `VALUES` coercion emits the same naive
+  `Timestamp(ns)` cast for a `DATE` or `TIMESTAMP_NTZ` cell, so without the mark
+  `repark-functions` `timestamp_ns_cast` could not tell a written `CAST(ntz AS TIMESTAMP)`
+  from a coerced `TIMESTAMP_NTZ` literal. The extra cast is same-typed, so every later
+  rule treats the cell as before. A cell already wrapped is left alone, so the mark is
+  idempotent. Casts outside `VALUES`, `TRY_CAST`, and casts inside a larger cell
+  expression are untouched. `KeywordLower` and `TimestampNsCastLower` call it from
+  `post_visit_query`; `has_values_timestamp_cast` lets the MERGE probe lower a source
+  that needs it. 3 in-module tests.
+  pins: ntz-store-doors-1/C-008
 
 ## Pointers
 

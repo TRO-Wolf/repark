@@ -191,7 +191,7 @@ pub(crate) async fn execute_partition_overwrite(
 ) -> Result<DataFrame> {
     use repark_iceberg::write::{
         OverwritePlan, partition_overwrite_request_from_exprs, plan_overwrite,
-        static_partition_source_columns,
+        static_partition_source_columns, zone_stores,
     };
 
     let Some((catalog_name, catalog, table, branch)) =
@@ -218,6 +218,7 @@ pub(crate) async fn execute_partition_overwrite(
     )?;
     let column_names = filled.columns;
     let source_df = spark_ast::execute_passthrough(ctx, catalogs, &filled.sql).await?;
+    let source_df = zone_stores(ctx, source_df, &table, &column_names, &reserved)?;
     let (snapshot_extra, _) = options.resolve_with_session(ctx)?;
     let staged_files =
         stage_partition_overwrite_files(ctx, &table, &plan, source_df, column_names, options)
@@ -424,6 +425,7 @@ pub(crate) async fn insert_overwrite_iceberg_stage_then_swap(
     let (column_names, materialize_sql) =
         overwrite_source_with_default_fills(table, &column_names, source)?;
     let source_df = spark_ast::execute_passthrough(ctx, catalogs, &materialize_sql).await?;
+    let source_df = repark_iceberg::write::zone_stores(ctx, source_df, table, &column_names, &[])?;
     let stream = source_df.execute_stream().await?;
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
     let session = repark_iceberg::write::session_write_conf_from_ctx(ctx);

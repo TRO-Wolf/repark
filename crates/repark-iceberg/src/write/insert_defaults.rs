@@ -451,7 +451,8 @@ fn fill_fill(fill: Option<&ColumnDefault>) -> Result<MarkerFill> {
     }
 }
 
-fn is_default_marker(expr: &SqlExpr) -> bool {
+#[must_use]
+pub fn is_default_marker(expr: &SqlExpr) -> bool {
     match expr {
         SqlExpr::Identifier(ident) => {
             ident.quote_style.is_none() && ident.value.eq_ignore_ascii_case("default")
