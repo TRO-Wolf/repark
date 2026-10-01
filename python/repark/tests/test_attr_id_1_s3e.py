@@ -159,6 +159,14 @@ def test_sort_twins_raise_unresolved(ruled_spark: ReparkSession) -> None:
     assert refused.value.getCondition() == "UNRESOLVED_COLUMN.WITH_SUGGESTION"
 
 
+def test_sort_multi_hit_under_join_raises_unresolved(ruled_spark: ReparkSession) -> None:
+    frame = _frame(ruled_spark)
+    joined = frame.crossJoin(frame.select("v")).alias("q")
+    with pytest.raises(AnalysisException) as refused:
+        joined.orderBy("q.v").collect()
+    assert refused.value.getCondition() == "UNRESOLVED_COLUMN.WITH_SUGGESTION"
+
+
 def test_drop_twins_refuse_ambiguous(ruled_spark: ReparkSession) -> None:
     with pytest.raises(AnalysisException) as refused:
         _twins(ruled_spark).alias("q").drop(functions.col("q.v"))

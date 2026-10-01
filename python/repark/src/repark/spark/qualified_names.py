@@ -168,6 +168,8 @@ def _resolve_sort_qualified_name(
         native, name, qualifier, displays, exact, _frame_qualifiers_for_bind(frame)
     )
     if status == "bound":
+        if len(hits) > 1 and _native.join_dup_below_wrappers(native):
+            _raise_unresolved_name(qualifier_parts, name, displays)
         position = hits[0]
         engine_field = engine_names[position]
         quoted = _quote_ident(engine_field)

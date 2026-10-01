@@ -419,7 +419,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   (`_rebind_qualified_refs`), the qualified star expansion
   (`_expand_qualified_star`, unknown qualifiers fall through to the engine),
   and the qualified sort bind (`_resolve_sort_qualified_name`, ambiguous
-  twins raise unresolved as Spark does in sort). No module docstring: the
+  twins and multi-hit binds under a join raise unresolved as Spark does in
+  sort). No module docstring: the
   lane's no-comments ruling covers the new file; the contract lives here.
   pins: attr-id-1/C-039
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
