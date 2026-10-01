@@ -61,7 +61,7 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   Rust-newer identity sets, the Greek single-upper map, U+0130 lowering to
   `i`). A full-codepoint unit test pins every mapping against
   `java_case_dump.txt`. Reach the folds through `repark-core`'s re-export.
-  pins: attr-id-1/C-032
+  pins: attr-id-1/C-032, C-035
 - `java_case_dump.txt` — the compacted Zulu-17 `Character` dump behind that
   test: one `cp upper lower` hex line per mapped codepoint, sorted,
   generated from the S3d probe dump with a round-trip check (the generator

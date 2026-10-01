@@ -283,6 +283,13 @@ wrapped optimizer rule) and declares this directory.
   **Gate j_cross (2026-10-01):** the walk also descends id-extending
   Projections (above starts with below: `withColumn` appends a column).
   pins: attr-id-1/C-029
+  **ATTR-ID-1 S3d follow-up (2026-10-01):** `union_below_wrappers` answers
+  whether a Union sits below through transparent nodes and id-subset
+  Projections (every above id appears below, so reorder, rename, and subset
+  pass while new expressions and any unstamped side stop); joins and
+  aggregates stop the walk. Four unit pins (filter, no-union, reorder,
+  new-expression).
+  pins: attr-id-1/C-034
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside

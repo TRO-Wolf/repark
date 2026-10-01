@@ -596,6 +596,8 @@ and refusing with Spark's error class where Spark refuses.
 |---|---|---|---|---|
 | C-032 | The S3d cutover: `spark/subset_resolve.py` binds the family under the session's live rule over the shared `_live_rule_hits` plus id grouping (`_grouped`: one id binds every hit, two refuse) and the shared guard (multi-hit binds need unique engine fields and no join dup below the wrappers). `drop(str)` fans out to every hit and no-ops a miss; `drop(Column)` binds a parent Column by `_attr_id` to every id position (one side of a self-join), no-ops a resolved-but-absent Column (alias, other frame, compound, literal) and a miss, and refuses a two-attribute display; dotted or backticked free Columns keep the native qualified path. `dropDuplicates` fans out every key with no refusal and misses with `_LEGACY_ERROR_TEMP_1201`. `fillna` (subset and dict, last folded key wins) and `dropna` fan out one id positionally, refuse two ids past the guard, and miss with `UNRESOLVED_COLUMN.WITH_SUGGESTION`. A parent id position whose engine is shared with a kept position (a bare duplicate-engine frame, which cannot drop one position by name) takes the base-identical native path; bridge frames and desynced overlays keep their legacy paths. No helper is deleted: `_name_of`, `_resolve_getitem_column_name`, `_normalize_subset`, `_engine_field_for_display`, `_bind_engine_display_column` and `_iter_bound_columns` each keep a caller outside the family (commit grep); the family's own matching was inline and moved into the new module. | The 50 pins (84 instances) under both case rules, each expectation live-Spark 4.1.2 verbatim; mutations M1–M3 each red on their pins and reverted; the S0 replay with 0 cells moved away from Spark, the 8558 S3a/S3b/S3c gains kept, and the neighbour sweep green. | PROVEN (pins + mutations; replay lands in the hand-back) | `python/repark/tests/test_attr_id_1_s3d.py`; `python/repark/src/repark/spark/subset_resolve.py`; probes `s3d/spark_probes_s3d*.py` with `.out` files; replays land in the hand-back. |
 | C-033 | The pins bite: 40 of 84 fail on the base tree (every ambiguity, miss-shape, live-rule, parent-id, compound, legacy-cond and join-dup pin); M1 (grouping binds every id count) reds the 14 two-attribute and join-dup refusal pins; M2 (parent Columns bind by display) reds the 10 id, sided, alias and other-frame pins; M3 (every fan-out stops at the first hit) reds the 14 fan-out pins except the `dropDuplicates` twins, which dedup identically by construction. Each mutation is reverted from a copy with the intended diff intact. | The fail-before run and the three mutation runs below. | PROVEN | This ledger's mutation record; `git diff` after each revert. |
+| C-034 | The 7bc788dd corrections: the insensitive folds are codepoint Java (fold A is `Character.toLowerCase` per codepoint, fold B is codepoint `equalsIgnoreCase`: equal length plus per-codepoint equal/upper/lower) over int-version Java tables verified against a full-codepoint Zulu-17 dump — expansion pairs (`ß`/`SS`, U+0130/`i`+U+0307, U+FB00/`FF`) and newer-than-Java scripts (Vithkuqi, U+A7Cx, Georgian U+1C89/8A) miss, Deseret hits; one id closes over every same-id position in both case rules (a sensitive exact hit fans out too); a one-id multi-position bind under a union binds the positionally-first hit only for `fillna`/`dropna`/free-Column `drop` (native `union_below_wrappers` through transparent nodes and id-subset Projections, stopping at joins); `drop(str)` and `dropDuplicates` keep every-hit fan-out. | The 19 added pins plus the 9 fold pins (probes s3d8..11, every expectation live-Spark verbatim); the 4 `union_below_wrappers` Rust pins; the post-R-S3d-1 mutation re-run; the S0 replay with 0 cells moved away from Spark and the 8558 gains kept. | PROVEN (pins + mutations; replay lands in the hand-back) | `python/repark/tests/test_attr_id_1_s3d.py`; `python/repark/src/repark/spark/subset_resolve.py` `_close_positions`, `_trim_union_first`; `crates/repark-core/src/session/df_guards/sort_names.rs` `union_below_wrappers`; probes `s3d/spark_probes_s3d8*.py` with `.out` files; replays land in the hand-back. |
+| C-035 | Ruling R-S3d-1: the folds move to `repark_common::java_case` (`fold_a_equal`, `fold_b_equal`, correction tables for the Java-17 divergence) with a full-codepoint unit test against the compacted dump; `repark-core` re-exports them and `crates/repark-python/src/dataframe_names.rs` exposes `java_fold_hits(written, displays, mode)`; `subset_resolve._hits_folded` takes a mode and calls it, `column_fields._live_rule_hits` calls mode `b`, and `_java_case_equal` plus the Python tables and helpers are deleted. The 41 S3c pins are byte-identical before and after (no halt); a 7249-pair native-vs-old sweep differs only on the intended drift corrections. | The 7 `java_case` Rust pins; the S3c (41) and S3d (111) suites green; the sweep record. | PROVEN | `crates/repark-common/src/java_case.rs` + `java_case_dump.txt`; `crates/repark-python/src/dataframe_names.rs` `java_fold_hits`; replays land in the hand-back. |
 
 **S3d Spark measurements (2026-10-01, four batched probes, live Spark 4.1.2).**
 `drop(str)` fans out over one id and over two with no refusal, and a miss is a
@@ -638,3 +640,55 @@ the same shape (`[`id`, `id`]` unqualified, `[`a`.`id`, `b`.`id`]` qualified).
 The S3d refusal renders that shape from the plan qualifiers with the native
 scratch-relation filter, so the u11 contract holds byte-for-byte with no test
 change. The S3a/S3b display-echo sites are untouched.
+
+**S3d follow-up measurements (2026-10-01, probes s3d8..11, live Spark 4.1.2).**
+No probe before s3d8 ever tested an expansion pair under `drop`/`dropDuplicates`
+against Spark: the upper-then-lower fold-B theory was Java-side inference from
+same-length pairs plus a misread of probe7's (`ß`, U+1E9E), and Escape-exact
+s3d8 refutes it — (`ß`,`SS`), (U+0130,`i`+U+0307) and (U+FB00,`FF`) miss under
+both `drop(str)` and `fillna`, while (`ß`,U+1E9E) hits. What Spark does is
+codepoint Java: fold A is `Character.toLowerCase` per codepoint (Deseret and
+supplementary pairs included, so per-UTF-16-unit comparison is wrong too) and
+fold B is codepoint `equalsIgnoreCase` (equal codepoint length plus per-point
+equal/upper/lower with the int-version mappings, which never expand). Python
+3.12 maps scripts Zulu-17 does not (Vithkuqi, U+A7C0/C1 and kin), so Python
+ops alone over-hit; Rust 1.96 maps more still (Hanifi Rohingya, Medefaidrin,
+Latin Extended-D additions, Georgian U+1C89/8A). Union output renumbers
+colliding exprIds, so a same-id multi-position single-bind (`fillna`,
+`dropna`, free-Column `drop`) under a union binds the positionally-first hit
+only — including `fill("V")` filling the `v` position — while `drop(str)` and
+`dropDuplicates` fan out to every hit with no refusal; a dict's keys each bind
+first-only with last-key-wins per position. Sensitive hits close over every
+same-id position (`flipFT` fill fills both), while sensitive `drop(str)` stays
+hits-only. Multi-id refuses regardless of display order or exact-first.
+
+**S3d residue R-7 (2026-10-01).** Single-bind ambiguity above a join that sits
+above a union is unprobed (no replay cell covers join-above-union): the
+`union_below_wrappers` walk stops at joins, so a multi-id bind there refuses
+`AMBIGUOUS_REFERENCE` while Spark's dedup-lineage answer is unknown. Owned by
+the follow-up union-id card (the slice that implements union output id
+separation), not S3e.
+
+**S3d residue R-8 (2026-10-01).** `flipTF`/`T`-caseF cells: Spark errors
+building `F.col("V")` where no `V` exists under the sensitive rule, while
+RePark builds it (insensitive build binding). That is build-time
+select/Column binding, owned by S3a/S3b, not S3d; S3d's call-time binding
+cannot reach the Spark error.
+
+**S3d residue R-9 (2026-10-01).** `NameRule::matches`/`lookup` stay ASCII-only
+per ruling R-S3d-1: converging them on the Java folds belongs to the
+unicode-case card (RC3-5), not to this round.
+
+**Mutation re-run record S3d (2026-10-01, after R-S3d-1).** Same file and
+command as above; diffs at `s3d/mutation_m1_rerun.diff`,
+`s3d/mutation_m2_rerun.diff`, `s3d/mutation_m3_rerun.diff`; each reverted with
+`git status` clean and the suite back to 111 green. M1 (grouping binds every
+id count) reds 16: the 14 two-attribute and join-dup refusal pins plus the
+distinct-id-union and reversed-order refusals. M2 (parent-Column drop binds by
+display) reds 6: the self-join sided pins, the select-twins sided pins, and
+the other-frame no-op pins, each under both rules; the two-frame join sided
+pin stays green because the shared guard refuses the display-bound multi-hit
+and the origin map recovers the left side. M3 (every fan-out stops at the
+first hit, five sites) reds 16: the drop/fill/dropna twin, join-dup, union
+`drop(str)` and sensitive-closure fan-out pins; the `dropDuplicates` twins
+stay green by construction and the union first-only pins by design.

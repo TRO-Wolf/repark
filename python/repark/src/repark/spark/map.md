@@ -359,6 +359,16 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `fillna`/`dropna` key with ambiguity refusal and guarded fan-out, missing
   with `UNRESOLVED_COLUMN.WITH_SUGGESTION`. No module docstring: the lane's
   no-comments ruling covers the new file; the contract lives here.
+  **ATTR-ID-1 S3d follow-up (2026-10-01):** the insensitive folds are
+  codepoint Java (A: `toLowerCase`; B: `==`/upper/lower per codepoint) over
+  int-version Java tables, so expansion pairs (`ß`/`SS`, U+0130/`i`+U+0307,
+  U+FB00/`FF`) and newer-than-Java scripts (Vithkuqi, U+A7Cx) miss; one id
+  closes over every same-id position in both rules (a sensitive exact hit
+  fans out too); a one-id multi-position bind under a union binds the
+  positionally-first hit only for `fillna`/`dropna`/free-Column `drop`,
+  while `drop(str)` and `dropDuplicates` keep every-hit fan-out
+  (probes s3d8..11).
+  pins: attr-id-1/C-034
   **ATTR-ID-1 S3d R-S3d-1 (2026-10-01):** the Python fold tables and helpers
   are deleted; `_hits_folded` takes a mode and calls the native
   `java_fold_hits` (`a` for `fillna`/`dropna`/free-Column `drop`, `b` for

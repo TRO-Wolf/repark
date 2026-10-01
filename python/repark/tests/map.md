@@ -8965,3 +8965,9 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   expectation is live-Spark 4.1.2 verbatim (s3d probes).
   No module docstring: the lane's no-comments ruling covers the new file; the
   contract lives here. pins: attr-id-1/C-032, C-033
+  **ATTR-ID-1 S3d follow-up (2026-10-01):** 19 more pins over the same file:
+  fold-decisive expansion/newer-script/Deseret pairs, sensitive id-closure
+  and exact-only distinct ids, union first-only (subset, dict order,
+  `dropna`, free-Column `drop`), union `drop(str)` fan-out, distinct-id
+  union and reversed-order refusals (probes s3d8..11).
+  pins: attr-id-1/C-034
