@@ -1955,3 +1955,5 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   pins: string-literal-escape-1/C-000, C-001, C-002, C-003, C-004
   Re-verify VE3-1 (2026-09-30): the inventory now excepts `SQLTransformer`
   (user-written SQL through the user door).
+  CI round seams (2026-09-30): the five test seams follow the `sql_built`
+  door with the same assertions (C-013).

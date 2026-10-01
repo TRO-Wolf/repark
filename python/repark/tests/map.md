@@ -7105,6 +7105,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **STRING-LITERAL-ESCAPE-1 re-verify VE3-1 (2026-09-30):** `SQLTransformer`
   is user-written SQL through the user door, so verbatim/default literal and
   `WHERE s = 'it''s'` pins equal `spark.sql` (and Spark).
+  **STRING-LITERAL-ESCAPE-1 CI round (2026-09-30):** the failure-injection
+  and SQL-spy seams in `test_catalog_surface_1.py`,
+  `test_create_dataframe_materialize.py`, `test_eager_own_1.py`,
+  `test_mapinarrow.py`, and `test_ml_boost_oracle.py` follow the
+  `sql_built` door the product now uses for facade-built SQL, with the same
+  assertions; the two capped files rename the seam method (line-neutral),
+  the other three observe both doors.
+  pins: string-literal-escape-1/C-013
 - `test_fnp_4b_hof_display.py` — **FNP-4B round 6 (2026-09-15):** Q3 red pin for run
   16a — selectExpr higher-order display must hide the `__repark_hof_array_field__`
   packing marker. **Round 7 (2026-09-15):** strict xfail per R-16c-10; 16a flips

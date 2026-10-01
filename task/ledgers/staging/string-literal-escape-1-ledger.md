@@ -41,6 +41,7 @@ pre-existing, previously scoped to session doors by FNP-4B);
 | C-010 | VE-3: every DML re-render (`UPDATE`/`DELETE` selections, `SET` values, MERGE `ON`/predicates/`VALUES`/assignments/sources, both doors, both fragment rewrites) preserves string values exactly; verbatim `''`/backslash and default quad conditions match and store Spark-equal values. | `sql_text` round-trip + planning pins + facade VE-3 pins + control pins green; verify-esc/DIFF-PROBE replay at 0 regressions. | PROVEN | 8/8 `sql_text` pins green; 5/5 facade VE-3 pins green; mutation red-first at both levels (6 Rust + 4 facade red); replay moves only to Spark-equal; heals the UPDATE/DELETE/MERGE-SET halves of carried VE-4 items 3 and 4. |
 | C-011 | VE2-1 re-verify fold: facade-built SQL parses with verbatim forced off for that one parse (scoped override, session conf untouched); user-written text (`spark.sql`, `selectExpr`, `expr`, `filter`/`where`) still follows the flag; user fragments spliced into built SQL (`F.expr` columns) are pre-rendered under the flag into default-stable text; DDL-defs fragments splice raw (C-005 default treatment). | Rust fragment + override-wiring pins + facade VE2-1 pins + default controls green; reverify-esc/verify-esc replay at 0 regressions. | PROVEN | 4/4 fragment + 8/8 wiring Rust pins green; 13/13 facade pins green; mutation red-first (override, fragment); 19 replay cells flip Spark-equal, 0 true regressions over 1475. |
 | C-012 | VE2-2 re-verify fold: nested struct-field `UPDATE`/`MERGE SET` values render through `render_for_reparse`, so verbatim doublings/backslashes store kept and default ones collapse, and `\'` parses instead of refusing; refusal texts quote values as valid SQL. | Rust nested leaf/fold/refusal pins + facade VE2-2 pins + default controls green. | PROVEN | 24/24 nested_assign Rust pins green (4 new re-render/refusal); 2/2 facade VE2-2 pins green; mutation red-first (`.to_string()`); nest.py 14/14 Spark-equal. |
+| C-013 | CI round: the five failure-injection/SQL-spy seams (`test_catalog_surface_1`, `test_create_dataframe_materialize` x3, `test_eager_own_1`, `test_mapinarrow`, `test_ml_boost_oracle`) observe the `sql_built` door the product now uses for facade-built SQL, with identical assertions — injection still lands on the SQL call after register, the catalog spy still sees cache-view reads, CV still requires the mat-view read; cleanup behavior unchanged. | The 7 seam tests green with assertions untouched; no product change on those paths. | PROVEN | All 8 CI failures reproduced locally then green; the two capped test files rename the seam method line-neutrally, the other three observe both doors. |
 
 ## Evidence
 
@@ -269,6 +270,27 @@ under the session-split AST-hash pin; the `_forward_datafusion_conf` and
 `_materialize_values_as_memtable_frame` hashes move to the `_sql_built`
 routing (same sanctioned pin update as the catalog-1 `resolve_table_name`
 move).
+
+### C-013/C-014 CI round (2026-09-30)
+
+CI's full facade suite on 9d101b8c failed 8 tests the lane gate does not
+run. All 8 reproduced in the lane venv as one pytest command over the 6
+files, then fixed.
+
+Seams (C-013): `test_catalog_surface_1::_SpyInner`,
+`test_create_dataframe_materialize::_NativeRegisterProxy`,
+`test_eager_own_1::_FailScanOnCacheView`, `test_mapinarrow::_SessionProxy`,
+and `test_ml_boost_oracle::_SessionProxy` intercepted only the native
+`sql` door, which the `_sql_built` routing no longer uses for
+facade-built scans — so injections never fired and spies never recorded.
+Each seam now observes the `sql_built` door with the same assertions.
+The two capped files rename the seam method (line-neutral; the old door
+still delegates correctly through `__getattr__`, only unobserved); the
+other three observe both doors. No product change: every guarded cleanup
+(`_materialize_exporter_as_memtable_frame`,
+`_materialize_values_as_memtable_frame`, `bind_registered_view`, the
+mapInArrow register/track/scan paths) still runs around the `sql_built`
+call, and each test's own drop/track assertions confirm it.
 
 ## Coverage attestation
 
