@@ -114,15 +114,47 @@ fn projection_preserves_id_subset(projection: &Projection) -> bool {
     !above.contains(&None) && !below.contains(&None) && above.iter().all(|id| below.contains(id))
 }
 
+fn projection_input_ordinal(projection: &Projection, position: usize) -> Option<usize> {
+    let column = match projection.expr.get(position)? {
+        Expr::Column(column) => column,
+        Expr::Alias(Alias { expr, .. }) => match expr.as_ref() {
+            Expr::Column(column) => column,
+            _ => return None,
+        },
+        _ => return None,
+    };
+    projection
+        .input
+        .schema()
+        .iter()
+        .position(|(qualifier, field)| {
+            field.name() == &column.name && qualifier == column.relation.as_ref()
+        })
+}
+
 #[must_use]
-pub fn union_below_wrappers(plan: &LogicalPlan) -> bool {
+pub fn union_dup_below_wrappers(plan: &LogicalPlan, positions: &[usize]) -> bool {
     let mut node = plan;
+    let mapped = positions.to_vec();
     loop {
         if matches!(node, LogicalPlan::Union(_)) {
-            return true;
+            let mut ordered = mapped.clone();
+            ordered.sort_unstable();
+            ordered.dedup();
+            return ordered.len() >= 2 && ordered.len() == mapped.len();
         }
         if let LogicalPlan::Projection(projection) = node {
             if !projection_preserves_id_subset(projection) {
+                return false;
+            }
+            let mut below = Vec::with_capacity(mapped.len());
+            for position in &mapped {
+                match projection_input_ordinal(projection, *position) {
+                    Some(ordinal) => below.push(ordinal),
+                    None => return false,
+                }
+            }
+            if below != mapped {
                 return false;
             }
             node = projection.input.as_ref();
@@ -316,7 +348,7 @@ mod tests {
     use datafusion::common::DFSchema;
     use datafusion::logical_expr::{EmptyRelation, Filter, LogicalPlan, LogicalPlanBuilder, Union};
 
-    use super::union_below_wrappers;
+    use super::union_dup_below_wrappers;
 
     fn keyed(names: &[&str], ids: &[&str]) -> Arc<DFSchema> {
         let fields = names
@@ -350,27 +382,27 @@ mod tests {
     }
 
     #[test]
-    fn union_below_wrappers_sees_through_filters() {
+    fn union_dup_below_wrappers_sees_through_filters() {
         let schema = keyed(&["id", "v"], &["a1", "a2"]);
         let union = union_of(schema);
-        assert!(union_below_wrappers(&union));
+        assert!(union_dup_below_wrappers(&union, &[0, 1]));
         let filtered = Filter::try_new(
             datafusion::logical_expr::col("v").gt(datafusion::logical_expr::lit(1i64)),
             Arc::new(union),
         )
         .map(LogicalPlan::Filter)
         .unwrap();
-        assert!(union_below_wrappers(&filtered));
+        assert!(union_dup_below_wrappers(&filtered, &[0, 1]));
     }
 
     #[test]
-    fn union_below_wrappers_misses_without_union() {
+    fn union_dup_below_wrappers_misses_without_union() {
         let schema = keyed(&["id", "v"], &["a1", "a2"]);
-        assert!(!union_below_wrappers(&empty(schema)));
+        assert!(!union_dup_below_wrappers(&empty(schema), &[0, 1]));
     }
 
     #[test]
-    fn union_below_wrappers_sees_through_id_preserving_projection() {
+    fn union_dup_below_wrappers_stops_at_reorder() {
         let schema = keyed(&["id", "v", "w"], &["a1", "a2", "a2"]);
         let union = union_of(schema);
         let reordered = LogicalPlanBuilder::from(union)
@@ -381,11 +413,11 @@ mod tests {
             .unwrap()
             .build()
             .unwrap();
-        assert!(union_below_wrappers(&reordered));
+        assert!(!union_dup_below_wrappers(&reordered, &[0, 1]));
     }
 
     #[test]
-    fn union_below_wrappers_stops_at_new_expression() {
+    fn union_dup_below_wrappers_stops_at_new_expression() {
         let schema = keyed(&["id", "v"], &["a1", "a2"]);
         let union = union_of(schema);
         let computed = LogicalPlanBuilder::from(union)
@@ -395,6 +427,82 @@ mod tests {
             .unwrap()
             .build()
             .unwrap();
-        assert!(!union_below_wrappers(&computed));
+        assert!(!union_dup_below_wrappers(&computed, &[0]));
+    }
+
+    #[test]
+    fn union_dup_below_wrappers_ignores_dup_created_above_union() {
+        let schema = keyed(&["id", "v"], &["a1", "a2"]);
+        let union = union_of(schema);
+        let doubled = LogicalPlanBuilder::from(union)
+            .project(vec![
+                datafusion::logical_expr::col("v").alias("w1"),
+                datafusion::logical_expr::col("v").alias("w2"),
+            ])
+            .unwrap()
+            .build()
+            .unwrap();
+        assert!(!union_dup_below_wrappers(&doubled, &[0, 1]));
+    }
+
+    #[test]
+    fn union_dup_below_wrappers_stops_at_aliased_reorder() {
+        let schema = keyed(&["id", "v", "w"], &["a1", "a2", "a2"]);
+        let union = union_of(schema);
+        let reordered = LogicalPlanBuilder::from(union)
+            .project(vec![
+                datafusion::logical_expr::col("w").alias("w1"),
+                datafusion::logical_expr::col("v"),
+            ])
+            .unwrap()
+            .build()
+            .unwrap();
+        assert!(!union_dup_below_wrappers(&reordered, &[0, 1]));
+    }
+
+    #[test]
+    fn union_dup_below_wrappers_keeps_dup_present_at_union() {
+        let schema = keyed(&["id", "v", "v"], &["a1", "a2", "a2"]);
+        let union = union_of(schema);
+        assert!(union_dup_below_wrappers(&union, &[1, 2]));
+    }
+
+    #[test]
+    fn union_dup_below_wrappers_sees_through_identity_projection() {
+        let schema = keyed(&["id", "v", "w"], &["a1", "a2", "a2"]);
+        let union = union_of(schema);
+        let starred = LogicalPlanBuilder::from(union)
+            .project(vec![
+                datafusion::logical_expr::col("id"),
+                datafusion::logical_expr::col("v"),
+                datafusion::logical_expr::col("w"),
+            ])
+            .unwrap()
+            .build()
+            .unwrap();
+        assert!(union_dup_below_wrappers(&starred, &[1, 2]));
+    }
+
+    #[test]
+    fn union_dup_below_wrappers_sees_through_rename() {
+        let schema = keyed(&["id", "v", "w"], &["a1", "a2", "a2"]);
+        let union = union_of(schema);
+        let renamed = LogicalPlanBuilder::from(union)
+            .project(vec![
+                datafusion::logical_expr::col("id").alias("ID2"),
+                datafusion::logical_expr::col("v"),
+                datafusion::logical_expr::col("w"),
+            ])
+            .unwrap()
+            .build()
+            .unwrap();
+        assert!(union_dup_below_wrappers(&renamed, &[1, 2]));
+    }
+
+    #[test]
+    fn union_dup_below_wrappers_misses_single_position() {
+        let schema = keyed(&["id", "v"], &["a1", "a2"]);
+        let union = union_of(schema);
+        assert!(!union_dup_below_wrappers(&union, &[1]));
     }
 }

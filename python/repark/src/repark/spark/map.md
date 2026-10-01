@@ -374,6 +374,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `java_fold_hits` (`a` for `fillna`/`dropna`/free-Column `drop`, `b` for
   `drop(str)`/`dropDuplicates`).
   pins: attr-id-1/C-032
+  **ATTR-ID-1 S3d follow-up 2 (2026-10-01):** `_trim_union_first` passes the
+  closed positions to the native `union_dup_below_wrappers`: the trim fires
+  only when two or more positions reach the Union through identity
+  projections, so a dup created above the union (`unionbn`) and a
+  reorder/select above a dup union fan out (probes s3d12..14).
+  pins: attr-id-1/C-036
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
   unsupported operations fail explicitly.

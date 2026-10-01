@@ -22,7 +22,7 @@ pub use super::attr_id::{
     AttrId, Resolution, alias_with_fresh_id, attribute_ids, plan_is_relation, plan_is_stamped,
     remint_join_collisions, resolve, stamp, strip,
 };
-pub use super::sort_names::{SortShape, bind_free_names, grandchild_key, union_below_wrappers};
+pub use super::sort_names::{SortShape, bind_free_names, grandchild_key, union_dup_below_wrappers};
 pub use super::sort_names::{engine_field_is_unique, join_dup_below_wrappers, sort_shape};
 pub use super::subquery::resolve_bound_expr_with;
 pub use repark_common::names::{NameHit, NameRule};

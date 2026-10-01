@@ -290,6 +290,14 @@ wrapped optimizer rule) and declares this directory.
   aggregates stop the walk. Four unit pins (filter, no-union, reorder,
   new-expression).
   pins: attr-id-1/C-034
+  **ATTR-ID-1 S3d follow-up 2 (2026-10-01):** `union_dup_below_wrappers`
+  replaces it with positional tracking: a Projection continues the walk only
+  when it maps every bound position to itself (Spark re-resolves through any
+  name/Column projection, so reorder and dup-creating selects fan out, while
+  star, rename, and append keep union lineage), and the Union arm answers
+  true only when two or more distinct positions reach it (a dup created above
+  the union never trims). Ten unit pins.
+  pins: attr-id-1/C-036
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside

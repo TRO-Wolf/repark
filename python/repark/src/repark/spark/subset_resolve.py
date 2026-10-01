@@ -100,7 +100,7 @@ def _close_positions(grouped: list[int], held: list[str | None]) -> list[int]:
 
 
 def _trim_union_first(frame: Any, grouped: list[int], closed: list[int]) -> list[int]:
-    if len(closed) > 1 and _native.union_below_wrappers(frame._plan()):
+    if len(closed) > 1 and _native.union_dup_below_wrappers(frame._plan(), closed):
         return sorted(grouped)[:1]
     return closed
 
