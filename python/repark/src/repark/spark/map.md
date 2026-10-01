@@ -198,6 +198,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   bind triple in two docstring lines and merging the origin pair assignment. `alias`,
   `for_select`, and compound constructors do not propagate it yet (S3).
   pins: attr-id-1/C-008
+  **ATTR-ID-1 S3a (2026-09-30):** `alias` now mints: the native `PyColumnParts.alias`
+  carries a fresh id in the alias's own metadata, and the facade `Column` it returns
+  holds `_attr_id` `None` until bound. `for_select` and compound constructors still do
+  not propagate. pins: attr-id-1/C-024
 - `column_fields.py` — **COLUMN-PARITY-1 (2026-09-14):** method bodies bound on
   `Column` (kept out of `column.py`, which is at its exact line baseline):
   `between` / `eqNullSafe` (extracted for headroom), `isin`, `isNaN`, `astype`,
@@ -235,6 +239,35 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   the `repark.attr` key from every top-level Arrow field (Tables and RecordBatches;
   zero-copy when absent), called from `DataFrame._apply_export_display_names`.
   pins: attr-id-1/C-010
+  **ATTR-ID-1 S3a (2026-09-30):** the `select` family's one resolve rule lives here.
+  `_bind_resolved_name(frame, written)` parses the written name (backtick-aware split;
+  unparsable text and `*` fall back to `_bind_schema_column`), stamps on read, and
+  resolves under the live `session_case_sensitive`: one hit binds the engine field at
+  that position with the written spelling; a folded ambiguous name with one exact
+  spelling present binds that position inline (the `Column` `_bind_schema_column`
+  would build, without the re-entry); several exact spellings raise the old whole-name
+  `AMBIGUOUS_REFERENCE` inline; a quoted spelling delegates to `_bind_schema_column`
+  (the old path matches the raw written text, quotes intact); a pure folded ambiguous
+  name raises Spark's `AMBIGUOUS_REFERENCE` echoing the written-case candidates; a
+  miss raises `UNRESOLVED_COLUMN.WITH_SUGGESTION` with the folded candidates.
+  Non-relation frames and display/engine overlays delegate unchanged. Unqualified hits
+  come from `_unqualified_candidates` (Python `casefold`, exact-first) grouped by held
+  id in `_group_candidates` — the native rule folds ASCII-only, which the first S0
+  replay caught on 109 unicode cells. One exact hit with no folded rival binds without
+  reading the session rule; the rule, the relation check and the id-loudness check run
+  only off that path, so the common bind costs what the old one did.
+  Qualified names still call native `resolve_display_name` for the relation narrowing.
+  `_bind_stable_id_column` rebinds a parent Column by `_attr_id` to the first held
+  position through `attribute_column`, but only across plans (a same-frame bind stays
+  the written ref, so the engine shapes the refusal) and only onto a unique engine
+  field (a marked unqualified ref over duplicate engine names dies bare in DataFusion
+  analysis instead of the shaped hook refusal — 330 first-replay cells). An id miss
+  returns the column unchanged. `_rebind_stable_name_column` tries the id bind first,
+  then the old stable-name path over the new resolve rule (a refusal falls through to
+  the engine). `_column_of` is the same funnel over Columns and strings.
+  No docstrings: the lane's no-comments ruling covers new private helpers; the
+  contract lives here. Pins: `python/repark/tests/test_attr_id_1_s3a.py`.
+  pins: attr-id-1/C-024
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
   unsupported operations fail explicitly.

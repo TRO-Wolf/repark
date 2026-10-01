@@ -8883,3 +8883,14 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   clean parquet footers. No module
   docstring: the lane's no-comments ruling covers the new file; the
   contract lives here. pins: attr-id-1/C-007, C-008, C-009, C-010, C-011, C-014
+- [test_attr_id_1_s3a.py](test_attr_id_1_s3a.py) — **ATTR-ID-1 S3a (2026-09-30):** the
+  cutover pins, each under both case rules unless noted. `select`/`__getitem__`/
+  `__getattr__` of one twin display binds the one attribute; two attributes under one
+  display refuse; a folded spelling binds exact only when sensitive (an
+  insensitive-born twin stays ambiguous, a sensitive-born twin binds); a quoted dup
+  display misses as before (the old path matches the raw written text); a unicode
+  spelling binds by casefold when insensitive and refuses unresolved when sensitive;
+  parent Columns bind after filter and after drop; `alias()` mints a fresh id; a
+  qualified select binds one join side and a qualified miss refuses unresolved; the
+  live case rule decides after creation. No module docstring: the lane's no-comments
+  ruling covers the new file; the contract lives here. pins: attr-id-1/C-024

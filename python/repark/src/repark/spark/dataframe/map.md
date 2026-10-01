@@ -163,6 +163,14 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   line (line-neutral at 3973). `schema`/`printSchema`/`show`/`_repr` build from
   name/type/nullable triples and carry no field metadata.
   pins: attr-id-1/C-010
+  ATTR-ID-1 S3a (2026-09-30): `__getitem__` and `__getattr__` route strings through
+  `column_fields._bind_resolved_name`, and `_column_of` / `_rebind_stable_name_column`
+  become one-line delegates to `column_fields` (bodies in the `column_fields.py` row
+  of the parent map). `_bind_schema_column` stays for the old callers (star/int
+  getitem, `_iter_bound_columns`, ordering) and the ambiguous-with-exact delegation.
+  `alias` restores the parent display/engine overlay when the `SubqueryAlias` dedupes
+  a display name, so resolve sees the presented names. 3973 → 3921, with the CAP-1
+  mirror. pins: attr-id-1/C-024
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`

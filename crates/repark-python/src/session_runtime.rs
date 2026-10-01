@@ -9,6 +9,7 @@ use repark_functions::ansi::{
 };
 use repark_functions::case_sensitive::{
     SPARK_SQL_CASE_SENSITIVE_KEY, SparkCaseSensitiveConfig, parse_runtime_spark_sql_case_sensitive,
+    spark_case_sensitive_from_options,
 };
 use repark_functions::merge_schema::{
     MergeSchemaConfig, SPARK_SQL_ICEBERG_MERGE_SCHEMA_KEY, is_merge_schema_session_key,
@@ -45,6 +46,15 @@ pub fn restore_runtime_config(
 }
 
 #[pyfunction]
+pub fn session_case_sensitive(session: PyRef<'_, PyReparkSession>) -> PyResult<bool> {
+    fenced_span!("py.session", "session_case_sensitive", {
+        let state_lock = session.session.context().state_ref();
+        let state = state_lock.read();
+        Ok(spark_case_sensitive_from_options(state.config().options()))
+    })
+}
+
+#[pyfunction]
 pub fn unset_runtime_config(session: PyRef<'_, PyReparkSession>, key: &str) -> PyResult<()> {
     fenced_span!("py.session", "unset_runtime_config", {
         if key == DEFAULT_CATALOG_KEY {
@@ -64,6 +74,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(set_runtime_config, module)?)?;
     module.add_function(wrap_pyfunction!(restore_runtime_config, module)?)?;
     module.add_function(wrap_pyfunction!(unset_runtime_config, module)?)?;
+    module.add_function(wrap_pyfunction!(session_case_sensitive, module)?)?;
     module.add_function(wrap_pyfunction!(session_zone_canonical, module)?)?;
     module.add_function(wrap_pyfunction!(session_defaults, module)?)?;
     module.add_function(wrap_pyfunction!(current_catalog_checked, module)?)?;

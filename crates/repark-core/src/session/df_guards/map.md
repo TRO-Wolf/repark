@@ -106,6 +106,16 @@ wrapped optimizer rule) and declares this directory.
   argument's native id until `stamp` mints it), so the predicate reuses `computed_outputs`,
   `own_id` and `first_input_ids` rather than re-deciding. Pins: `../tests/attr_id.rs`.
   pins: attr-id-1/C-023
+  **ATTR-ID-1 S3a (2026-09-30):** `alias_with_fresh_id(expr, name)` builds the `Alias`
+  with a freshly minted id in its own metadata, the constructor a user `alias()` uses;
+  a second stamp keeps it (the S1b idempotence rule). It joins the `frame_names`
+  re-export. `first_input_ids` reads a Projection input's ids through `chain_id`
+  (outermost-with-metadata down the alias chain): a user alias under a plain machinery
+  alias keeps its own id instead of the source column's, so a union of aliased twins
+  keeps distinct ids. The output schema is not the source: DataFusion's `union_by_name`
+  pad projection grafts the other side's field (with its id) into the padded side's
+  schema. Pins: `../tests/attr_id.rs` `union_reads_inner_alias_ids_through_plain_machinery_aliases`.
+  pins: attr-id-1/C-024
 - `case_bind.rs` — **U11-EDGE-1 (2026-09-26):** `bind_case_insensitive`, run first by
   `subquery.rs`'s `resolve_bound_expr` (the DataFrame door's one binding hook). An
   unqualified column the frame schema does not hold exactly binds to the single field that
@@ -237,6 +247,8 @@ wrapped optimizer rule) and declares this directory.
   keeps the left ids and re-mints every colliding right id (semi/anti return before the
   projection and need none). `strip` joins the `frame_names` re-export. 990 → 997.
   pins: attr-id-1/C-011, C-009
+  **ATTR-ID-1 S3a (2026-09-30):** `alias_with_fresh_id` joins the `frame_names`
+  re-export beside `strip`. pins: attr-id-1/C-024
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside

@@ -17,8 +17,9 @@ use crate::ReparkSession;
 use crate::frame_names::{
     AttrId, NameRule,
     NameRule::{Exact, IgnoreCase},
-    Resolution, attribute_ids, join_on_named_keys, plan_is_relation, plan_is_stamped,
-    remint_join_collisions, requalify_join_sides, resolve, stamp, strip, union_by_folded_name,
+    Resolution, alias_with_fresh_id, attribute_ids, join_on_named_keys, plan_is_relation,
+    plan_is_stamped, remint_join_collisions, requalify_join_sides, resolve, stamp, strip,
+    union_by_folded_name,
 };
 
 const KEY: &str = "repark.attr";
@@ -372,6 +373,22 @@ fn stamp_mints_where_the_first_union_input_has_no_id_to_give() {
     let after = ids(&padded);
     assert_eq!(after[..2], held[..]);
     assert!(after[2].is_some() && !ids(&full).contains(&after[2]));
+}
+
+#[test]
+fn union_reads_inner_alias_ids_through_plain_machinery_aliases() {
+    let context = SessionContext::new();
+    let twins = stamped(source(&context))
+        .select(vec![
+            col("id"),
+            alias_with_fresh_id(col("data"), "data").alias("__sel_1"),
+            alias_with_fresh_id(col("data"), "data").alias("__sel_2"),
+        ])
+        .unwrap();
+    let held = ids(&twins);
+    assert_eq!(distinct_count(&held), 3);
+    let unioned = stamped(twins.clone().union(twins).unwrap());
+    assert_eq!(ids(&unioned), held);
 }
 
 fn joined_over_views(session: &ReparkSession, left: &DataFrame, right: &DataFrame) -> String {

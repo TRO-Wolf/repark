@@ -109,6 +109,16 @@ pub fn plan_is_stamped(plan: &LogicalPlan) -> bool {
     stamped_state(plan).unwrap_or(false)
 }
 
+#[must_use]
+pub fn alias_with_fresh_id(expr: Expr, name: &str) -> Expr {
+    Expr::Alias(Alias {
+        expr: Box::new(expr),
+        relation: None,
+        name: name.to_string(),
+        metadata: Some(AttrId::mint().metadata()),
+    })
+}
+
 fn stamped_state(plan: &LogicalPlan) -> Result<bool> {
     if !plan_is_relation(plan) {
         return Ok(true);
@@ -208,7 +218,7 @@ fn first_input_ids(input: &LogicalPlan) -> Vec<Option<AttrId>> {
         .expr
         .iter()
         .map(|expr| {
-            own_id(expr).or_else(|| match strip_aliases(expr) {
+            chain_id(expr).or_else(|| match strip_aliases(expr) {
                 Expr::Column(column) => below
                     .maybe_index_of_column(column)
                     .and_then(|index| AttrId::native(below.field(index))),
@@ -216,6 +226,23 @@ fn first_input_ids(input: &LogicalPlan) -> Vec<Option<AttrId>> {
             })
         })
         .collect()
+}
+
+fn chain_id(expr: &Expr) -> Option<AttrId> {
+    let mut node = expr;
+    while let Expr::Alias(alias) = node {
+        if let Some(id) = alias
+            .metadata
+            .as_ref()
+            .and_then(|metadata| metadata.inner().get(ATTR_KEY).cloned())
+            .map(AttrId)
+            .filter(AttrId::is_native)
+        {
+            return Some(id);
+        }
+        node = &alias.expr;
+    }
+    None
 }
 
 fn stamp_projection(projection: &Projection) -> Result<Option<LogicalPlan>> {

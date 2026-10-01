@@ -19,8 +19,8 @@ use repark_common::spark_error;
 use super::attr_id::same_relation;
 
 pub use super::attr_id::{
-    AttrId, Resolution, attribute_ids, plan_is_relation, plan_is_stamped, remint_join_collisions,
-    resolve, stamp, strip,
+    AttrId, Resolution, alias_with_fresh_id, attribute_ids, plan_is_relation, plan_is_stamped,
+    remint_join_collisions, resolve, stamp, strip,
 };
 pub use super::subquery::resolve_bound_expr_with;
 pub use repark_common::names::{NameHit, NameRule};

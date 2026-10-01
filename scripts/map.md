@@ -1,5 +1,7 @@
 # map — scripts/
 
+ATTR-ID-1 S3a (2026-09-30): `check_lib_py.py` ratchets `dataframe/core.py` 3973 → 3921 (`_column_of` and `_rebind_stable_name_column` become one-line delegates to `column_fields`, `__getitem__`/`__getattr__` route through the resolve rule, the alias overlay restores deduplicated display names), shrink-only, with the CAP-1 mirror. pins: attr-id-1/C-024
+
 WO CASESENS-1 S5 (2026-09-27): `check_rust_file_size.py` ratchets `repark-iceberg/src/write/alter.rs` 1607 → 1606 (the DROP/REPLACE name pin is rewritten to the exact refusal without its comments), shrink-only. pins: casesens-1/C-013
 
 WO CASESENS-1 S3 (2026-09-27): `check_rust_file_size.py` retires the `repark-python/src/dataframe.rs` row (1005 → 976, under the default; the case-bind helpers moved to `dataframe_names.rs`). pins: casesens-1/C-009

@@ -647,7 +647,10 @@ impl PyColumnParts {
     fn alias(inner: &PyColumn, child_display: &str, name: &str) -> PyResult<(PyColumn, String)> {
         fenced!("ColumnParts.alias", {
             Ok((
-                PyColumn::from_expr(inner.expr().alias(name)),
+                PyColumn::from_expr(repark_core::frame_names::alias_with_fresh_id(
+                    inner.expr(),
+                    name,
+                )),
                 wrap_alias(child_display, name),
             ))
         })

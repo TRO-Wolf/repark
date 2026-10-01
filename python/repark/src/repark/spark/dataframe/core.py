@@ -1679,7 +1679,7 @@ class DataFrame:
             raise PySparkAttributeError(
                 f"[ATTRIBUTE_NOT_SUPPORTED] Attribute `{name}` is not supported."
             )
-        return self._bind_schema_column(name)
+        return _column_fields._bind_resolved_name(self, name)
 
     def _resolve_getitem_column_name(self, item: str) -> str:
         """Resolve a getitem str key to a canonical schema column name.
@@ -2030,55 +2030,8 @@ class DataFrame:
         return "".join(rebuilt)
 
     def _rebind_stable_name_column(self, column: Column) -> Column:
-        """Rebind a bare NamedExpression against this frame (covers ``F.col`` at select).
-
-        Only pure name refs (``spark_display == projection_name`` and ``stable_name``) are
-        rebound — casts (``CAST(...)`` display), true user aliases (``x AS z``), and
-        compounds keep their existing plan. Missing names fall through to the engine.
-        Sort markers (``asc``/``desc``) from the original column are preserved so
-        ``orderBy(df.x.desc())`` still sorts after schema binding.
-
-        Origin-qualified Columns (parent ``df1["x"]`` / ``select("*")`` engine binds)
-        must not re-resolve by bare display name — multi-name frames raise
-        ``AMBIGUOUS_REFERENCE`` on that path.
-        """
-        if not column._stable_name:
-            return column
-        if column._origin_plan_id is not None and column._origin_field is not None:
-            return column
-        name = column._projection_name
-        if name is None or name == "" or name == "*":
-            return column
-        if column._spark_display != name:
-            return column
-        try:
-            bound = self._bind_schema_column(name)
-        except AnalysisException:
-            return column
-        if column._sort_ascending is None and column._sort_nulls_first is None:
-            return bound
-        return Column(
-            bound._inner,
-            sort_ascending=column._sort_ascending,
-            sort_nulls_first=column._sort_nulls_first,
-            spark_display=bound._spark_display,
-            projection_name=bound._projection_name,
-            stable_name=bound._stable_name,
-            agg_name=column._agg_name,
-            is_aggregate=column._is_aggregate,
-            is_foldable=column._is_foldable,
-            has_free_attribute=bound._has_free_attribute or column._has_free_attribute,
-            has_ungroupable=bound._has_ungroupable or column._has_ungroupable,
-            is_aggregate_function=column._is_aggregate_function,
-            partition_transform=column._partition_transform,
-            sql_expr=bound._sql_expr if bound._sql_expr is not None else column._sql_expr,
-            generator=column._generator,
-            generator_cast=column._generator_cast,
-            when_pairs=column._when_pairs,
-            origin_plan_id=bound._origin_plan_id or column._origin_plan_id,
-            origin_field=bound._origin_field or column._origin_field,
-            join_sql_expr=bound._join_sql_expr or column._join_sql_expr,
-        )
+        """Rebind a stable-name Column against this frame (body in column_fields)."""
+        return _column_fields._rebind_stable_name_column(self, column)
 
     def __getitem__(
         self,
@@ -2109,7 +2062,7 @@ class DataFrame:
                 from repark.spark.functions import col as col_fn
 
                 return col_fn("*")
-            return self._bind_schema_column(item)
+            return _column_fields._bind_resolved_name(self, item)
         if isinstance(item, Column):
             return self.filter(item)
         if isinstance(item, (list, tuple)):
@@ -2306,11 +2259,17 @@ class DataFrame:
         self._session.create_or_replace_temp_view(name, self._plan())
         from repark import _native
 
+        parent_columns = self.columns
         child = self._spawn(_native.subquery_alias(self._plan(), name))
         if self._display_names is not None and self._engine_names is not None:
             child._display_names = list(self._display_names)
             child._engine_names = list(self._engine_names)
             child._origin_map = dict(self._origin_map) if self._origin_map is not None else None
+        if child._display_names is None:
+            child_native = _native.logical_column_names(child._inner)
+            if parent_columns != child_native:
+                child._display_names = parent_columns
+                child._engine_names = child_native
         return child
 
     def toArrow(  # noqa: N802 — PySpark method name
@@ -3460,19 +3419,8 @@ class DataFrame:
     merge_into = mergeInto
 
     def _column_of(self, item: Column | str) -> Column:
-        """Coerce a column-name-or-Column into a :class:`Column` bound to this frame.
-
-        String names resolve against the frame schema (case-insensitive) with a quoted
-        native identifier. Bare ``F.col(...)`` NamedExpressions
-        are rebound the same way at the select/group/sort boundary so a later hop after
-        ``select("X")`` still finds field ``"X"``. Casts, true aliases, and compounds pass
-        through unchanged.
-        """
-        if isinstance(item, Column):
-            return self._rebind_origin_column(self._rebind_stable_name_column(item))
-        if isinstance(item, str):
-            return self._bind_schema_column(item)
-        raise _column_fields.column_or_str_error(item)
+        """Coerce a name-or-Column into a Column bound to this frame (body in column_fields)."""
+        return _column_fields._column_of(self, item)
 
     def _cross_join_enabled(self) -> bool:
         """Return the effective cross-join setting from runtime or builder configuration."""

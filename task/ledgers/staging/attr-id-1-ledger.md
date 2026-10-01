@@ -201,4 +201,96 @@ deleted in the same commit.
 
 | Clause | Statement | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
-| C-023 | The §9c Q2 timing cut: `plan_is_stamped` answers by reference whether `stamp` would change the plan (the Projection, Union and other-root mint conditions mirrored; statement roots read stamped; a classification error reads unstamped), and `stamp_attribute_ids` returns the same `PyDataFrame` handle when stamped, keeping the cached analyzed schema. The S0 replay median returns to at or under 597 s with no cell moved away from Spark. | The mirror pin over every spawned root shape; three replays on the cut compared with `compare.py`. | OPEN (replay pending at the cut commit) | `crates/repark-core/src/session/tests/attr_id.rs` `plan_is_stamped_matches_what_stamp_would_change`; replays land in the hand-back. |
+| C-023 | The §9c Q2 timing cut: `plan_is_stamped` answers by reference whether `stamp` would change the plan (the Projection, Union and other-root mint conditions mirrored; statement roots read stamped; a classification error reads unstamped), and `stamp_attribute_ids` returns the same `PyDataFrame` handle when stamped, keeping the cached analyzed schema. The S0 replay median returns to at or under 597 s with no cell moved away from Spark. | The mirror pin over every spawned root shape; three replays on the cut compared with `compare.py`. | PROVEN | `crates/repark-core/src/session/tests/attr_id.rs` `plan_is_stamped_matches_what_stamp_would_change`; three cut replays (`/tmp/oc-worker/direct/wo/attr-id-1/s3a/cut-1..3`): corpus-sum 590.4 / 594.7 / 586.7 s, every run 0 cells moved away from Spark, the same 4 judged diffs as C-016/C-022. |
+| C-024 | The S3a cutover: `select`, `__getitem__`, `__getattr__`, `_column_of` and `_rebind_stable_name_column` bind through the one resolve rule in `column_fields.py` (`_bind_resolved_name`) under the session's live `spark.sql.caseSensitive` (native `session_case_sensitive`, read from the session the frame holds); parent Columns bind by `_attr_id` to the first held position through `attribute_column`, across plans and onto unique engine fields only; a user `alias()` mints a fresh id in the alias's own metadata (`alias_with_fresh_id`, kept by the S1b idempotence rule, read through nested aliases by `chain_id`); `DataFrame.alias` restores the parent display/engine overlay when the `SubqueryAlias` dedupes a display name. `_bind_schema_column` stays for the star/int, `_iter_bound_columns`, ordering and ambiguous-with-exact callers — no top-level helper is deleted because every family-only candidate still has a caller outside the family (origin helpers, `column_or_str_error`). | The 23 cutover pins under both case rules; the u11 C-024 twin re-projection pin (which caught the bare-ref rebuild stripping the mark); the resolve mutation (shifted position) killing 15 of 23 pins; the first replay's halt (464 moved away in 3 shapes, all fixed and re-pinned); three S0 replays with 0 cells moved away from Spark and the 44-file neighbour sweep green. | PROVEN | `python/repark/tests/test_attr_id_1_s3a.py`; `crates/repark-python/src/column/display.rs` `alias`; `crates/repark-python/src/session_runtime.rs` `session_case_sensitive`; `crates/repark-core/src/session/df_guards/attr_id.rs` `alias_with_fresh_id`, `chain_id`; `crates/repark-core/src/session/tests/attr_id.rs` `union_reads_inner_alias_ids_through_plain_machinery_aliases`; replays land in the hand-back. |
+
+**S3a halt H-1 (2026-09-30, §5 rule 2).** The first S0 replay on the cutover
+(`/tmp/oc-worker/direct/wo/attr-id-1/s3a/s3a-1`, corpus-sum 615.4 s) moved 464
+EQUAL cells away (5973 diffs, 4048 FIXED, 1392 GAP-MOVED). All 464 regressions
+fall in 3 shapes: 109 UNRESOLVED (the native rule folds ASCII-only while the old
+facade used Python `casefold`: `ünï`/`Ünï`, `σ`/`Σ`, Kelvin/Angstrom), 330 bare
+`Schema error` (a marked unqualified ref over duplicate engine names skips the
+case-bind hook and dies in DataFusion analysis instead of the shaped refusal),
+25 ROWS-INSTEAD (same-frame written binds converted to id binds; a union of two
+user aliases sharing one id). Fixes in the same round: `_unqualified_hits`
+computes unqualified hits in Python with `casefold`, grouped by held id
+(qualified names keep the native relation narrowing); `_bind_stable_id_column`
+fires only across plans and onto a unique engine field; `first_input_ids` reads
+nested alias metadata through `chain_id` (a schema-first read was tried and
+reverted: DataFusion's `union_by_name` pad projection grafts the other side's
+field into the padded schema, which the `stamp_mints_where_the_first_union_input_has_no_id_to_give`
+pin caught). The union pin `union_reads_inner_alias_ids_through_plain_machinery_aliases`
+and the facade unicode pin `test_unicode_spelling_binds_by_casefold` pin the
+fixes; both bite (the union pin fails under `own_id`, the resolve mutation kills
+15 of 23). s3a-1 is kept as the halt evidence; the three gate replays run on the
+fixed code.
+
+**S3a bind fast path (2026-09-30).** s3a-1 was already 615.4 s on a quiet box
+against the 597 s bar, so the resolve rule was restructured before the gate
+replays: one exact hit with no folded rival binds without reading the session
+rule, and the relation check plus the id-loudness check run only off that path
+(`_unqualified_candidates` / `_group_candidates`; `held[position]` answers the
+id inline instead of `_bound_attr_id`'s re-read). Micro-bench: 3000
+`select("id", "Data", "v")` in 2.14 s vs 2.17 s on base. No behaviour change:
+the neighbour batch and the mutation re-run green after it.
+
+**S3a gap-moved taxonomy (2026-09-30, from s3a-2: 0 moved away, 3925 FIXED).**
+All 1208 GAP-MOVED cells named: R1 (315) alias `:1`→dup rename with identical
+rows, the S3b op still gaps; R2 (63) sensitive `F.col` unicode miss falls
+through to a bare engine error (needs the unicode-case card's hook);
+R3 (134) sensitive `withColumn` twin upstream replaces, so S3a correctly refuses
+the absent name (S3c); R4 (42) S3b orderBy/filter on the restored dup refuses
+AMBIGUOUS where Spark says UNRESOLVED (S3b owns the cond); R5 (11) sensitive
+qualifier-case inversion on alias frames — DataFusion normalizes the held
+qualifier at plan build, so `t` binds and `T` misses (S3e Q4 facade-held
+qualifiers); R6 (12) SQL-door cross joins share one id across sides, so
+qualified twins bind (S1 §8 SQL-door residue); R7 (1) `orderBy('x.id')` values
+now match Spark, struct repr differs; R8 (1) oracle-`skip` harness noise;
+R9 (534) qualified join-side misses now shaped UNRESOLVED (S3e Q4);
+R10 (46) AMBIGUOUS text-only (bare→engine prefix/SQLSTATE); R11 (29) cond-less
+miss now shaped AMBIGUOUS (orderBy cond S3b); R12 (20) the 4 S2b Q1 residues
+plus 16 qualified-`F.col` engine fall-throughs (S3e). s3a-2's timing (758.8 s)
+is contaminated (a reverify-deep campaign drove load to 67 mid-run); the gate
+replays re-run on a quiet box.
+
+**S3a halt H-2 (2026-09-30, §5 rule 4 / 597 s bar).** Three clean runs on the
+fixed code (s3a-3/4/5, corpus-sum 636.7 / 635.6 / 616.6 s, median 635.6 s):
+5252 diffs, **0 moved away**, 3925 FIXED, 1208 GAP-MOVED per the taxonomy above
+(identical classification all three runs). Timing is 38.4 s over the bar
+(1.277× main's 497.68 s). Root cause, measured: the gains execute. A
+twin-select that raised in 0.005 ms now collects in ~9.5 ms; r5p6 (the whole
+delta, +41.4 s over cut-1's 264.9 s) has 1699 newly-executing cells; a cProfile
+slice shows 5.2 of 8.7 s inside native collect vs 0.9 s in select. The bind path
+is at parity with base (3000×3-col select 2.14 s vs 2.17 s; twin binds 0.4 ms).
+No bind-path cut can recover execution cost, so the round halts with the code
+complete and all other gates green. A delegation shortcut (exact-1 ambiguous
+binds inline, exact-dup raises the old text inline, no `_bind_schema_column`
+re-entry) landed after the three runs; the first timed head runs caught it
+changing 4 backticked-name cells (the old path matches the raw written text,
+quotes intact, so it misses where the inline raise refuses), and the shortcut
+now delegates quoted spellings to `_bind_schema_column` — the re-runs below
+measure that final shape. Neighbour sweep on the final code:
+2182 passed, 19 skipped, 2 xfailed, 0 failed (44 files, `-n 8`; +23 over S2b
+are the new S3a pins).
+
+**S3a ruling Q2 (2026-09-30).** R5 (sensitive qualifier-case inversion on alias
+frames), R9 (qualified join-side misses) and the qualified half of R12 are
+S3e-owned residues per §9 Q4 (facade-held qualifiers into `resolve`); S3a keeps
+the shaped miss. R6 stays an S1 §8 SQL-door residue, R2 with the unicode-case
+card, R3 with S3c, R4/R11-orderBy with S3b.
+
+**S3a like-for-like verdict (2026-09-30, ruling Q1).** The timed driver
+(`s3a/replay_timed.py`, a mechanical copy of `replay.py` that records per-cell
+wall time; byte-identical answers on the oracle corpus) ran 3× on the cutover
+(612.3 / 614.2 / 621.3 s corpus-sum) and 3× on the parent `9f372d94`
+(589.1 / 586.5 / 587.8 s). (a) Over the 39,095 cells whose outcome class is
+unchanged (EQUAL→EQUAL plus same error cond), head/base = 234.4/235.4 s
+median-of-3, **ratio 0.9959** (pairs 0.9845 / 0.9919 / 1.0059) — under the 1.2×
+bar on every shape (EQUAL 0.9948, GAP-ROWS 0.9913, nocond 0.9991,
+UNRESOLVED 1.0026, AMBIGUOUS 0.9811). Timing coverage 99.99% both sides.
+(b) The 3,925 FIXED cells cost 18.4 s total, no bar. Base choice: the parent
+commit, which isolates this round's overhead (origin/main would conflate the
+whole landed unit and needs a full separate build). All three head runs repeat
+5252 diffs / 0 moved away / 3925 FIXED; the quoted-guard amend restored the
+s3a-3 answers cell-for-cell (only nondet row-order/candidate-case noise differs
+run to run).

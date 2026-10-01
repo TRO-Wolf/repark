@@ -5,10 +5,11 @@ pins: column-parity-1/C-001, C-002, C-003, C-004, C-005, C-008
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, NoReturn
 
 from repark import _native
 from repark.errors import (
+    AnalysisException,
     PySparkRuntimeError,
     PySparkTypeError,
     UnsupportedOperationException,
@@ -395,3 +396,265 @@ def column_or_str_error(item: Any) -> PySparkTypeError:
             messageParameters={"arg_name": "col", "arg_type": "TableArg"},
         )
     return PySparkTypeError(f"expected a column name (str) or Column, got {type(item).__name__}")
+
+
+def _split_written_name(written: str) -> tuple[list[str] | None, str] | None:
+    parts: list[str] = []
+    current: list[str] = []
+    quoted = False
+    index = 0
+    while index < len(written):
+        char = written[index]
+        if char == "`":
+            if quoted and index + 1 < len(written) and written[index + 1] == "`":
+                current.append("`")
+                index += 2
+                continue
+            quoted = not quoted
+            index += 1
+            continue
+        if char == "." and not quoted:
+            parts.append("".join(current))
+            current = []
+            index += 1
+            continue
+        current.append(char)
+        index += 1
+    if quoted:
+        return None
+    parts.append("".join(current))
+    if any(not part for part in parts):
+        return None
+    if len(parts) == 1:
+        return (None, parts[0])
+    if any("." in part or "`" in part for part in parts):
+        return None
+    return (parts[:-1], parts[-1])
+
+
+def _suggestion_candidates(name: str, displays: list[str]) -> list[str]:
+    lowered = name.lower()
+    seen: set[str] = set()
+    candidates: list[str] = []
+    for display in displays:
+        if display.lower() == lowered and display not in seen:
+            seen.add(display)
+            candidates.append(display)
+    return candidates
+
+
+def _qualified_target(qualifier: list[str] | None, name: str) -> str:
+    if qualifier is None:
+        return f"`{name}`"
+    return ".".join([*(f"`{part}`" for part in qualifier), f"`{name}`"])
+
+
+def _raise_unresolved_name(qualifier: list[str] | None, name: str, displays: list[str]) -> NoReturn:
+    message = (
+        "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter "
+        f"with name {_qualified_target(qualifier, name)} cannot be resolved."
+    )
+    candidates = _suggestion_candidates(name, displays)
+    if candidates:
+        quoted = ", ".join(f"`{candidate}`" for candidate in candidates)
+        message = f"{message} Did you mean one of the following? [{quoted}]."
+    raise AnalysisException(f"{message} SQLSTATE: 42703")
+
+
+def _raise_folded_ambiguous(
+    qualifier: list[str] | None, name: str, hits: list[int], displays: list[str]
+) -> NoReturn:
+    reference = _qualified_target(qualifier, name)
+    echoed = ", ".join(f"`{displays[position]}`" for position in hits)
+    raise AnalysisException(
+        f"[AMBIGUOUS_REFERENCE] Reference {reference} is ambiguous, "
+        f"could be: [{echoed}]. SQLSTATE: 42704"
+    )
+
+
+def _unqualified_candidates(name: str, displays: list[str]) -> tuple[list[int], list[int]]:
+    exact_hits = [index for index, display in enumerate(displays) if display == name]
+    folded = name.casefold()
+    folded_hits = [
+        index
+        for index, display in enumerate(displays)
+        if display != name and display.casefold() == folded
+    ]
+    return exact_hits, folded_hits
+
+
+def _group_candidates(candidates: list[int], held: list[str | None]) -> tuple[str, list[int]]:
+    groups: list[str | None] = []
+    for index in candidates:
+        held_id = held[index]
+        if held_id is None or held_id not in groups:
+            groups.append(held_id)
+    if not candidates:
+        return ("missing", [])
+    if len(groups) == 1:
+        return ("bound", [candidates[0]])
+    return ("ambiguous", candidates)
+
+
+def _bind_resolved_name(frame: Any, written: str) -> Any:
+    from repark.spark._idents import quote_ident as _quote_ident
+    from repark.spark.column import Column
+
+    split = _split_written_name(written)
+    if split is None:
+        return frame._bind_schema_column(written)
+    qualifier_parts, name = split
+    if name == "*":
+        return frame._bind_schema_column(written)
+    native = frame._plan()
+    held: list[str | None] = _native.attribute_ids(native)
+    if None in held:
+        native = _native.stamp_attribute_ids(native)
+        frame._inner = native
+        held = _native.attribute_ids(native)
+    displays = frame.columns
+    engine_names = _native.logical_column_names(native)
+    if len(displays) != len(engine_names):
+        return frame._bind_schema_column(written)
+    if qualifier_parts is None:
+        exact_hits, folded_hits = _unqualified_candidates(name, displays)
+        if len(exact_hits) == 1 and not folded_hits:
+            status, hits = "bound", exact_hits
+        else:
+            exact = _native.session_case_sensitive(frame._session)
+            candidates = exact_hits if exact else exact_hits + folded_hits
+            status, hits = _group_candidates(candidates, held)
+            if status == "ambiguous" and name in displays:
+                if written != name:
+                    return frame._bind_schema_column(written)
+                if len(exact_hits) == 1:
+                    status, hits = "bound", exact_hits
+                else:
+                    could_be = ", ".join(f"`{displays[index]}`" for index in exact_hits)
+                    raise AnalysisException(
+                        f"[AMBIGUOUS_REFERENCE] Reference `{name}` is ambiguous, "
+                        f"could be: [{could_be}]."
+                    )
+    else:
+        if not _native.frame_is_relation(native):
+            return frame._bind_schema_column(written)
+        exact = _native.session_case_sensitive(frame._session)
+        qualifier = ".".join(qualifier_parts)
+        status, hits = _native.resolve_display_name(native, name, qualifier, displays, exact)
+    if status == "missing":
+        _raise_unresolved_name(qualifier_parts, name, displays)
+    if status == "ambiguous":
+        _raise_folded_ambiguous(qualifier_parts, name, hits, displays)
+    position = hits[0]
+    engine_field = engine_names[position]
+    quoted = _quote_ident(engine_field)
+    if qualifier_parts is not None:
+        quoted = ".".join([*(_quote_ident(part) for part in qualifier_parts), quoted])
+    attr_id = held[position]
+    if attr_id is None and _native.frame_is_relation(native):
+        raise RuntimeError(f"internal error: stamped field {engine_field!r} has no attribute id")
+    bound = Column(
+        _native.PyColumn.column(quoted).alias(name),
+        spark_display=name,
+        projection_name=name,
+        stable_name=True,
+        has_free_attribute=True,
+        origin_plan_id=frame._plan_id,
+        origin_field=displays[position],
+        attr_id=attr_id,
+    )
+    bound._sql_expr = quoted
+    return bound
+
+
+def _rewrap_with_markers(column: Any, bound: Any) -> Any:
+    from repark.spark.column import Column
+
+    if column._sort_ascending is None and column._sort_nulls_first is None:
+        return bound
+    return Column(
+        bound._inner,
+        sort_ascending=column._sort_ascending,
+        sort_nulls_first=column._sort_nulls_first,
+        spark_display=bound._spark_display,
+        projection_name=bound._projection_name,
+        stable_name=bound._stable_name,
+        agg_name=column._agg_name,
+        is_aggregate=column._is_aggregate,
+        is_foldable=column._is_foldable,
+        has_free_attribute=bound._has_free_attribute or column._has_free_attribute,
+        has_ungroupable=bound._has_ungroupable or column._has_ungroupable,
+        is_aggregate_function=column._is_aggregate_function,
+        partition_transform=column._partition_transform,
+        sql_expr=bound._sql_expr if bound._sql_expr is not None else column._sql_expr,
+        generator=column._generator,
+        generator_cast=column._generator_cast,
+        when_pairs=column._when_pairs,
+        origin_plan_id=bound._origin_plan_id or column._origin_plan_id,
+        origin_field=bound._origin_field or column._origin_field,
+        join_sql_expr=bound._join_sql_expr or column._join_sql_expr,
+    )
+
+
+def _bind_stable_id_column(frame: Any, column: Any) -> Any | None:
+    from repark.spark._idents import quote_ident as _quote_ident
+    from repark.spark.column import Column
+
+    attr_id = column._attr_id
+    if attr_id is None:
+        return None
+    if column._origin_plan_id == frame._plan_id:
+        return None
+    native = frame._plan()
+    held: list[str | None] = _native.attribute_ids(native)
+    if attr_id not in held:
+        return column
+    native_names = _native.logical_column_names(native)
+    engine_field = native_names[held.index(attr_id)]
+    if native_names.count(engine_field) != 1:
+        return column
+    quoted = _quote_ident(engine_field)
+    shown = column._projection_name if column._projection_name is not None else engine_field
+    rebound = Column(
+        _native.attribute_column(engine_field).alias(shown),
+        spark_display=column._spark_display,
+        projection_name=column._projection_name,
+        stable_name=True,
+        has_free_attribute=True,
+        origin_plan_id=column._origin_plan_id,
+        origin_field=column._origin_field,
+        attr_id=attr_id,
+        **carried_select_attrs(column),
+    )
+    rebound._sql_expr = quoted
+    return _rewrap_with_markers(column, rebound)
+
+
+def _rebind_stable_name_column(frame: Any, column: Any) -> Any:
+    rebound = _bind_stable_id_column(frame, column)
+    if rebound is not None:
+        return rebound
+    if not column._stable_name:
+        return column
+    if column._origin_plan_id is not None and column._origin_field is not None:
+        return column
+    name = column._projection_name
+    if name is None or name == "" or name == "*":
+        return column
+    if column._spark_display != name:
+        return column
+    try:
+        bound = _bind_resolved_name(frame, name)
+    except AnalysisException:
+        return column
+    return _rewrap_with_markers(column, bound)
+
+
+def _column_of(frame: Any, item: Any) -> Any:
+    from repark.spark.column import Column
+
+    if isinstance(item, Column):
+        return frame._rebind_origin_column(_rebind_stable_name_column(frame, item))
+    if isinstance(item, str):
+        return _bind_resolved_name(frame, item)
+    raise column_or_str_error(item)
