@@ -34,6 +34,13 @@ pub(crate) fn core_field(
     )))
 }
 
+pub(crate) fn nvl_delegates(first: &DataType) -> bool {
+    !matches!(
+        first,
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
+    )
+}
+
 pub(crate) fn literal_types(args: &[Expr]) -> Option<Vec<DataType>> {
     args.iter()
         .map(|arg| {

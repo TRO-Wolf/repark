@@ -387,8 +387,9 @@ impl ScalarUDFImpl for SparkNvl {
         let [first, second] = arg_types else {
             return Err(wrong_num_args(self.spelling, 2, arg_types.len()));
         };
-        if let Some(declared) =
-            crate::spark_nvl_core::core_declared(&datafusion::functions::core::nvl(), arg_types)
+        if crate::spark_nvl_core::nvl_delegates(first)
+            && let Some(declared) =
+                crate::spark_nvl_core::core_declared(&datafusion::functions::core::nvl(), arg_types)
         {
             return Ok(declared);
         }
@@ -399,11 +400,13 @@ impl ScalarUDFImpl for SparkNvl {
         let [first, second] = args.arg_fields else {
             return Err(wrong_num_args(self.spelling, 2, args.arg_fields.len()));
         };
-        if let Some(field) = crate::spark_nvl_core::core_field(
-            &datafusion::functions::core::nvl(),
-            self.spelling,
-            &args,
-        ) {
+        if crate::spark_nvl_core::nvl_delegates(first.data_type())
+            && let Some(field) = crate::spark_nvl_core::core_field(
+                &datafusion::functions::core::nvl(),
+                self.spelling,
+                &args,
+            )
+        {
             return Ok(field);
         }
         let common = widen_full(first.data_type(), second.data_type())
@@ -504,11 +507,6 @@ impl ScalarUDFImpl for SparkNvl2 {
         let [_, first, second] = arg_types else {
             return Err(wrong_num_args("nvl2", 3, arg_types.len()));
         };
-        if let Some(declared) =
-            crate::spark_nvl_core::core_declared(&datafusion::functions::core::nvl2(), arg_types)
-        {
-            return Ok(declared);
-        }
         Ok(widen_full(first, second).unwrap_or_else(|| first.clone()))
     }
 
@@ -516,11 +514,6 @@ impl ScalarUDFImpl for SparkNvl2 {
         let [_, first, second] = args.arg_fields else {
             return Err(wrong_num_args("nvl2", 3, args.arg_fields.len()));
         };
-        if let Some(field) =
-            crate::spark_nvl_core::core_field(&datafusion::functions::core::nvl2(), "nvl2", &args)
-        {
-            return Ok(field);
-        }
         let common = widen_full(first.data_type(), second.data_type())
             .unwrap_or_else(|| first.data_type().clone());
         let nullable = first.is_nullable() || second.is_nullable();
@@ -970,5 +963,38 @@ impl ScalarUDFImpl for SparkNvlCast {
             zone,
             Utc::now(),
         )?))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use datafusion::arrow::datatypes::TimeUnit;
+
+    use super::*;
+
+    fn stamp() -> DataType {
+        DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into()))
+    }
+
+    #[test]
+    fn declare_follows_selective_rule() {
+        assert_eq!(
+            SparkNvl::new("nvl")
+                .return_type(&[DataType::Utf8, DataType::Int32])
+                .expect("plus shape widens"),
+            DataType::Int64
+        );
+        assert_eq!(
+            SparkNvl::new("nvl")
+                .return_type(&[stamp(), stamp()])
+                .expect("stamp pair delegates"),
+            DataType::Utf8
+        );
+        assert_eq!(
+            SparkNullif::new()
+                .return_type(&[DataType::Utf8, stamp()])
+                .expect("nullif declares"),
+            DataType::Timestamp(TimeUnit::Nanosecond, Some("UTC".into()))
+        );
     }
 }

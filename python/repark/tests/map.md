@@ -5160,6 +5160,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   VN5-3 precision cells plus the fullwidth-decimal divergence pin, and
   ANSI-on guards kept).
   pins: nvl-type-coercion-1/C-038, C-039, C-040
+- `test_nvl_type_coercion_1_vn11.py` — **NVL-TYPE-COERCION-1 re-verify 10
+  fold part 3 (2026-09-30, VN11 Q1 + Q2(a)):** 19 pins. Q1 (the 7 ANSI-on
+  regressions return to be5193c3==Spark: `plus_nvl` value+typeof on SQL and
+  `F.expr`, `len_nvl_ltz` on `F.expr` in UTC/New_York/Kolkata); Q2(a) (the 4
+  folded ts/fexpr cells answer NULL under ANSI off in New_York/Kolkata).
+  pins: nvl-type-coercion-1/C-041
 - `test_select_naming.py` — **Group H** select/projection display naming vs live PySpark 4.1.2:
   mutation leak accepts `Int32(1)` as well as `Int64(1)` (F-Y10-1 Python lit width);
   full matrix (`(x + 1)`, cast-of-attr → child name, cast-of-compound → `CAST(...)`,

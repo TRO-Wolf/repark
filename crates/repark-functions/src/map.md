@@ -886,6 +886,13 @@ scalars live under [`try_invert/`](try_invert/map.md).
   the `fexpr_built` marker with the `nullif_fexpr_udf` constructor,
   so the `F.expr` door parses to a distinguishable call.
   pins: nvl-type-coercion-1/C-041
+  **Re-verify 10 fold part 3 (2026-09-30, VN11 Q1 ruling):** the
+  delegation is selective: `nvl` widens string-first pairs (the
+  planner coerces arithmetic at bind time, before any rule runs, so
+  `nvl('5',5)+1` needs Int64 there) and declares the core bind type
+  otherwise (nested `coalesce(nvl(TS,'x'),'y')` needs Utf8);
+  `nullif` keeps unconditional core comparison; `nvl2` widens.
+  pins: nvl-type-coercion-1/C-041
 - `spark_nvl_eager.rs` — **NVL-TYPE-COERCION-1 (2026-09-29, VN3-1..VN3-3):**
   the two single-evaluation kernels the rule reaches for: `__repark_nvl_pick`
   takes the two widened branches once each and picks per row (volatile-first
@@ -992,6 +999,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `zeroifnull`/`nullifzero` refuse with base's `UNRESOLVED_ROUTINE`
   text; `F.expr`-marked calls route exactly like SQL calls (no fold
   under ANSI off). pins: nvl-type-coercion-1/C-041
+  **Re-verify 10 fold part 3 (2026-09-30, VN11 Q2(a)):** the
+  `fexpr_built` UTC fold is restored in the base route: a UTC-equal
+  pair folds to NULL exactly when base's UTC-coercing throwaway
+  would, so the 4 non-UTC-zone cells where base equals Spark match;
+  every other pair routes as before.
+  pins: nvl-type-coercion-1/C-041
 - `spark_nvl_core.rs` — **NVL-TYPE-COERCION-1 re-verify 10 fold part 2
   (2026-09-30, VN11-1/VN11-2/VN11-5, R1):** core-bind delegation for
   the ANSI-off stand-down: `core_declared`/`core_field` run the core
@@ -1007,6 +1020,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   rule compares both sides in one zone; unequal, unparsable and
   non-UTC pairs pass through untouched.
   pins: nvl-type-coercion-1/C-041
+  **Re-verify 10 fold part 3 (2026-09-30, VN11 Q2(a)):** the ANSI-off
+  base route folds through the same helper (stamp-typed NULL), so one
+  fold serves both modes. pins: nvl-type-coercion-1/C-041
 - `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer
   rule, installed on BOTH doors via `install_shared_analyzer_rules` (defined here since FNP-11B step 3 and re-exported from the crate root, so `repark_functions::install_shared_analyzer_rules` and run 16b's `session.rs` call are unchanged; the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts; the TIME guard left for `analyzer_rules()` in remediation round 1).
   installer calls it in place of the integer-only one — same line count, so the

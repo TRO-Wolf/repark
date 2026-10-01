@@ -698,3 +698,60 @@ COVERAGE_ATTESTATION:
       evidence: Red-first held — the headline pins failed on the base tree (typeof answered string) and pass at head; the neighbour file answers 23/25 identically with the 2 zeroifnull-SQL flips intended; no dead branch ships (every fallback returns the unshifted or uncast value by construction).
       artifacts: [python/repark/tests/test_nvl_type_coercion_1.py, task/ledgers/staging/nvl-type-coercion-1-ledger.md]
 ```
+
+## Re-verify 10 fold (2026-09-30, VN11-1..VN11-5, R1/R2/R3 + Q1/Q2 rulings)
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-041 | With ANSI off the family takes base's path exactly through the pre-coercion base-route rule (R1); `F.expr` nullif/nvl compare in one zone (R2, UTC fold both modes); an integral cast truncates the whole result once (R3); bind-time typing declares the core bind type except string-first `nvl` pairs, which widen (Q1 selective rule). | The vn11 pins (7 Q1 + 4 fold cells) green; the Rust unit tests green; p10 shows only carried cells differing. | PROVEN | 19/19 vn11 pins green; 941 lib tests green; p10 newhead6: ANSI-off 114 VAL + 154 TXT all carried per the owner rule below, ANSI-on 50 VAL all intended/fixed; gate run as written, exit in the hand-back. |
+
+**Owner cap (2026-09-30, #888's last fold).** Fold only cells where head
+answers what base and Spark refuse, or where head's value or class differs
+from Spark on a cell base got right. Carry everything else. Folded here: the
+7 Q1 regressions (plus_nvl x4, len_nvl_ltz x3: be5193c3==Spark, head refused);
+the 4 Q2(a) ts/fexpr cells where base==Spark (nullif_s_ltz, nullif_ltz_s in
+Asia/Kolkata + America/New_York, ANSI off). Carried (all dated 2026-09-30):
+
+- Q2(b), 4 cells, base errors / Spark strings / head ints:
+  df/off/nullif_s_i/t, df/off/nvl_ni_s/t, df/off/nvl_s_i/t, df/off/zin_s/t
+  (plus 5 pre-existing be5193c3-equal answer cells: df/off/coal_s_i/t and
+  m/off/nvl2/binary/{bad,good}/1_S_T/fexpr/{v,t}). Base was not right; the
+  head ints come from the base-route core swap.
+- Q2(c), ceiling-class under card CONST-EVAL-CEILING-1: byp/off/sub_bd/repeat
+  + byp/off/sub_bd/seq (true NULL count, head CEILs; the bare R3 forms answer
+  NULL/1/150 like base and Spark in both modes).
+- Q2(d), same error class: 56 error-type cells
+  (base AnalysisException/None, head PySparkException/None; the fold fixed
+  be5193c3 bypass answers into refusals, e.g. df/off/ifnull_ns_dt/v) and 154
+  text-only cells (116 base-route-wrap prefixes incl. 76 UNRESOLVED_ROUTINE,
+  36 Int32/Int64 + wrap tails, 2 lost candidate tails). Fix noted: map the
+  base-route wrap in error_map (~15 lines), cut per cap.
+- Q2(a) NTZ carry, 4 cells, base wrong: ts/off/{Kolkata,New_York}/nullif_ntz_s
+  + nullif_s_ntz fexpr/v (base answers the stamp, Spark and head answer NULL).
+- m/off/nested/plus_nvl x4 (sql+fexpr, v+t): base refuses, Spark-legacy
+  answers 6.0/double, head answers 6/bigint (be5193c3 behavior). Neither fold
+  clause applies (Spark answers too).
+- 33+6 bdf/byp ANSI-off CEILs + 39 ANSI-on CEILs where base answers past the
+  100 ceiling: intended R3-proof enforcement (counts genuinely over 100;
+  Spark has no ceiling, a deliberate RePark deviation). m/on arr_nvl x2 equal
+  be5193c3 exactly (base was wrong there: array<string> vs Spark array<bigint>).
+
+**Card CONST-EVAL-CEILING-1 (filed 2026-09-30).** The ceiling check runs on a
+mirror evaluator (`cardinality.rs`/`cardinality_nullif.rs`: `const_i128`,
+`exact_i128`, `nullif_value`) that re-implements constant folding instead of
+reading DataFusion's own simplified expression, so it proves NULL through
+shapes the engine evaluates differently (Q2(c) above) and answers Spark's
+value past the array ceiling where base refuses. Replacement: run the ceiling
+check on DataFusion's own simplified expression (ExprSimplifier/ConstEvaluator
+output) and delete the mirror. Carried, never folded, under the owner cap.
+
+**Mechanism note (Q1 refinement).** The approved throwaway-only delegate flag
+cannot work: the planner coerces eagerly at bind time, before any rule runs,
+so `nvl('5',5)+1` needs Int64 at bind (else the `+` dies in the throwaway)
+while nested `coalesce(nvl(TS,'x'),'y')` needs Utf8 at bind (else the outer
+union dies). The instances cannot see the ANSI flag, so part 3 declares per
+arg types instead: string-first `nvl` widens (the `+`/Spark-arithmetic path),
+every other `nvl` pair and every `nullif` pair declares the core bind type
+(base's path by construction). Measured: the 7 Q1 cells return to
+be5193c3==Spark, nested_coal_nvl x12 and ctl_vn10_2f x2 hold base-equal, no
+other cell moves except the carried plus_nvl x4 above.

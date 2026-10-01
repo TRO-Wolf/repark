@@ -10,7 +10,7 @@ use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{Case, Expr, GroupingSet, LogicalPlan, TypeSignature};
 use datafusion::optimizer::AnalyzerRule;
 
-use crate::spark_nvl_udf::{SparkNullIfZero, SparkNvl, SparkNvl2, SparkZeroIfNull};
+use crate::spark_nvl_udf::{SparkNullIfZero, SparkNullif, SparkNvl, SparkNvl2, SparkZeroIfNull};
 
 #[expect(
     clippy::missing_errors_doc,
@@ -196,6 +196,16 @@ fn route_nvl2(function: &ScalarFunction) -> Result<Expr> {
 }
 
 fn route_nullif(function: &ScalarFunction) -> Result<Expr> {
+    if let [first, second] = function.args.as_slice()
+        && function
+            .func
+            .inner()
+            .downcast_ref::<SparkNullif>()
+            .is_some_and(SparkNullif::is_fexpr_built)
+        && let Some((off, _)) = crate::spark_nvl_fexpr::utc_fold_nullif_literals(first, second)
+    {
+        return Ok(off);
+    }
     validate_literals(&datafusion::functions::core::nullif(), function)?;
     Ok(core_nullif(function.args.clone()))
 }
@@ -374,6 +384,48 @@ mod tests {
             error.contains("[UNRESOLVED_ROUTINE] Cannot resolve routine `zeroifnull`"),
             "{error}"
         );
+    }
+
+    #[tokio::test]
+    async fn ansi_off_nested_coal_nvl_answers_like_base() {
+        use datafusion::arrow::array::Array;
+        let ctx = ctx_with_ansi(false);
+        let batch = collect_one(
+            &ctx,
+            "SELECT coalesce(nvl(TIMESTAMP'2024-01-02 03:04:05', 'x'), 'y') AS v",
+        )
+        .await;
+        assert!(
+            batch
+                .column(0)
+                .as_any()
+                .downcast_ref::<datafusion::arrow::array::StringArray>()
+                .is_some_and(|column| column.value(0) == "2024-01-02T03:04:05"),
+            "nested coalesce answers the stamp text"
+        );
+    }
+
+    #[test]
+    fn fexpr_nullif_utc_pair_folds_to_null() {
+        use datafusion::arrow::array::timezone::Tz;
+
+        use crate::csv::default_timestamp_micros;
+        let zone: Tz = "UTC".parse().expect("utc zone");
+        let micros = default_timestamp_micros("2024-01-02 03:04:05", Some(zone)).expect("parse");
+        let stamp = Expr::Literal(
+            ScalarValue::TimestampMicrosecond(Some(micros), Some(Arc::from("UTC"))),
+            None,
+        );
+        let text = Expr::Literal(
+            ScalarValue::Utf8(Some("2024-01-02 03:04:05".to_owned())),
+            None,
+        );
+        let call =
+            crate::expr_fn::call(crate::spark_nvl_udf::nullif_fexpr_udf(), vec![stamp, text]);
+        let routed = call.transform_up(rewrite_expr).expect("route").data;
+        let Expr::Literal(ScalarValue::TimestampMicrosecond(None, _), _) = routed else {
+            panic!("utc-equal fexpr nullif must fold to null, got {routed:?}");
+        };
     }
 
     #[test]
