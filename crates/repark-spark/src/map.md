@@ -941,6 +941,24 @@ pins: rp-4-fork-repin/C-005, C-006
   and the cell unjudged, which stored (VT5-1). DataFusion plans only
   `SingleQuotedString` interval bounds, hence the rewrite.
   pins: store-ts-doors-2/C-001, C-003
+- `spark_ast.rs` — **WO STORE-TS-DOORS-2 re-verify fold 6 (2026-10-01):**
+  the pre-gate AST rewrite chain is one shared pair of functions
+  (`apply_pregate_rewrites_before_identity_dml` /
+  `apply_pregate_rewrites_after_identity_dml`), called strict by the
+  statement path and best-effort by the sibling judge through
+  `apply_pregate_judge_rewrites`, so an arm or probe plans exactly what the
+  statement plans (VT6-1). The split sits around identity-DML execution,
+  which is not a rewrite and stays mid-chain; order inside each half is the
+  old order (collation and declared-function at executing-parse altitude,
+  the DML-subquery valve, ordering defaults, the time-window wrap, the sort
+  rewrite, `BINARY`→`BYTEA`, bare units, the nullary demotion, keyword
+  lowering, interval-bound quoting). Best-effort keeps each rewrite's side
+  effects and continues past refusal errors, which on judge text are
+  double-application artifacts — notably the bare-unit rewrite refusing its
+  own quoted output — so the nullary demotion still runs after them.
+  `prepare_ordering` folds into the after half. The range-frame restatement
+  below keeps its own partial chain; it re-plans, it does not judge.
+  pins: store-ts-doors-2/C-001, C-003
 - `bare_nullary.rs` — **SPARK-SQL-GRAMMAR-1 C-010 (2026-09-16):** bare nullary
   keywords in both Spark directions. `demote_refusing_nullary_calls` lowers a
   no-paren `localtimestamp` call (the Databricks dialect parses it as a function)
@@ -1945,6 +1963,12 @@ pins: rp-4-fork-repin/C-005, C-006
   the second session spec refuses with Spark's `1039` text (shared constant
   from `repark_functions::spark_session_window`).
   pins: fnp-win-1/C-002, C-004, C-005, C-008
+  **WO STORE-TS-DOORS-2 re-verify fold 6 (2026-10-01):**
+  `wrapped_twice_matches_wrapped_once` pins that a second wrap over
+  Display text is a no-op returning false, which the sibling judge relies on
+  when it re-applies the pre-gate chain to arm text the statement already
+  wrapped.
+  pins: store-ts-doors-2/C-001, C-003
 - `window_range.rs` — Spark temporal `RANGE` rules. Unit-less bounds over `TIMESTAMP` refuse;
   bounds over `DATE` restate as day intervals because DataFusion reads bare values as months.
   Negative and value-inverted frames retain Spark refusal/empty behavior; numeric-key interval

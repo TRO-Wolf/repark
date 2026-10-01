@@ -67,18 +67,71 @@ pub(crate) async fn execute_insert_source(
     }
 }
 
-fn prepare_ordering(
-    allow_sort_rewrite: bool,
-    state: &SessionState,
-    inner: &mut Statement,
-    sort_rewrite_fired: &mut bool,
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum PregateStrictness {
+    Strict,
+    Lenient,
+}
+
+pub(crate) fn apply_pregate_rewrites_before_identity_dml(
+    sql: &str,
+    statement: &mut Statement,
+    strictness: PregateStrictness,
 ) -> Result<()> {
-    apply_spark_order_by_defaults(inner);
-    crate::time_window::wrap_time_window_grouping(inner)?;
-    if allow_sort_rewrite && crate::spark_door_case_insensitive(state.config().options()) {
-        *sort_rewrite_fired = crate::normalize::sort_key_projection::rewrite_statement(inner);
-    }
+    let run = |result: Result<()>| {
+        if strictness == PregateStrictness::Strict {
+            result
+        } else {
+            Ok(())
+        }
+    };
+    run(crate::refuse_collation_in_statement(statement))?;
+    run(crate::refuse_declared_function_in_statement(statement))?;
+    crate::keyword_lower::lower_empty_map_calls(statement);
+    run(crate::cast_gate::rewrite_and_refuse_casts(sql, statement))?;
     Ok(())
+}
+
+pub(crate) fn apply_pregate_rewrites_after_identity_dml(
+    statement: &mut Statement,
+    case_insensitive: bool,
+    allow_sort_rewrite: bool,
+    strictness: PregateStrictness,
+) -> Result<bool> {
+    let run = |result: Result<()>| {
+        if strictness == PregateStrictness::Strict {
+            result
+        } else {
+            Ok(())
+        }
+    };
+    run(crate::refuse_dml_subquery_predicate_in_statement(statement))?;
+    apply_spark_order_by_defaults(statement);
+    run(crate::time_window::wrap_time_window_grouping(statement).map(|_| ()))?;
+    let mut sort_rewrite_fired = false;
+    if allow_sort_rewrite && case_insensitive {
+        sort_rewrite_fired = crate::normalize::sort_key_projection::rewrite_statement(statement);
+    }
+    rewrite_binary_casts(statement);
+    run(crate::bare_unit::rewrite_bare_datetime_units(statement))?;
+    crate::bare_nullary::demote_refusing_nullary_calls(statement);
+    crate::keyword_lower::lower_spark_keywords(statement);
+    window_range::quote_unquoted_interval_range_bounds(statement);
+    Ok(sort_rewrite_fired)
+}
+
+pub(crate) fn apply_pregate_judge_rewrites(
+    sql: &str,
+    statement: &mut Statement,
+    case_insensitive: bool,
+) {
+    let _ = apply_pregate_rewrites_before_identity_dml(sql, statement, PregateStrictness::Lenient);
+    let _ = apply_pregate_rewrites_after_identity_dml(
+        statement,
+        case_insensitive,
+        true,
+        PregateStrictness::Lenient,
+    );
 }
 
 async fn execute_passthrough_inner(
@@ -101,23 +154,16 @@ async fn execute_passthrough_inner(
     let mut timestamp_cells = Vec::new();
     match statement.as_mut() {
         DfStatement::Statement(inner) => {
-            // G15 — collation at the EXECUTING parse (G3-E8 altitude).
-            crate::refuse_collation_in_statement(inner)?;
-            crate::refuse_declared_function_in_statement(inner)?;
-            crate::keyword_lower::lower_empty_map_calls(inner);
-            crate::cast_gate::rewrite_and_refuse_casts(sql, inner)?;
+            apply_pregate_rewrites_before_identity_dml(sql, inner, PregateStrictness::Strict)?;
             if let Some(done) = try_execute_identity_dml(ctx, catalogs, inner).await? {
                 return Ok(done);
             }
-            // G3-E8 — on the EXECUTING parse, before anything else touches the statement.
-            crate::refuse_dml_subquery_predicate_in_statement(inner)?;
-            prepare_ordering(allow_sort_rewrite, &state, inner, sort_rewrite_fired)?;
-            // SQP-1: rewrite `CAST` to `BYTEA`.
-            rewrite_binary_casts(inner);
-            crate::bare_unit::rewrite_bare_datetime_units(inner)?;
-            crate::bare_nullary::demote_refusing_nullary_calls(inner);
-            crate::keyword_lower::lower_spark_keywords(inner);
-            window_range::quote_unquoted_interval_range_bounds(inner);
+            *sort_rewrite_fired = apply_pregate_rewrites_after_identity_dml(
+                inner,
+                crate::spark_door_case_insensitive(state.config().options()),
+                allow_sort_rewrite,
+                PregateStrictness::Strict,
+            )?;
             Box::pin(refuse_insert_void_values(ctx, catalogs, inner)).await?;
             may_have_bare_range_bound = window_range::statement_has_bare_range_bound(inner);
             timestamp_cells = crate::insert_timestamp_ns::timestamp_typed_values_cells(inner);

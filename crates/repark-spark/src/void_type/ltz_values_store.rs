@@ -158,7 +158,15 @@ async fn check_row(
             return Ok(());
         }
         for (value, field) in row.iter().zip(presented.fields()) {
-            refuse_value(ctx, display, field.name(), field.data_type(), value).await?;
+            refuse_value(
+                ctx,
+                display,
+                field.name(),
+                field.data_type(),
+                value,
+                case_insensitive,
+            )
+            .await?;
         }
         return Ok(());
     }
@@ -176,7 +184,15 @@ async fn check_row(
         }) else {
             continue;
         };
-        refuse_value(ctx, display, field.name(), field.data_type(), value).await?;
+        refuse_value(
+            ctx,
+            display,
+            field.name(),
+            field.data_type(),
+            value,
+            case_insensitive,
+        )
+        .await?;
     }
     Ok(())
 }
@@ -187,6 +203,7 @@ async fn refuse_value(
     column: &str,
     target: &DataType,
     value: &Expr,
+    case_insensitive: bool,
 ) -> Result<()> {
     if is_null_or_default_cell(value) || !is_judged_target(target) {
         return Ok(());
@@ -195,7 +212,7 @@ async fn refuse_value(
         data_type
     } else {
         let select = nvl_coalesce_text(value).unwrap_or_else(|| super::probe_text(value));
-        let Some(probed) = probe_source_type(ctx, &select).await? else {
+        let Some(probed) = probe_source_type(ctx, &select, case_insensitive).await? else {
             return Ok(());
         };
         probed
@@ -444,8 +461,25 @@ fn decimal_text_type(text: &str) -> Option<DataType> {
 pub(super) async fn probe_source_type(
     ctx: &SessionContext,
     select: &str,
+    case_insensitive: bool,
 ) -> Result<Option<DataType>> {
-    let frame = ctx.sql(&format!("SELECT {select} AS probe")).await?;
+    let probe_sql = format!("SELECT {select} AS probe");
+    let state = ctx.state();
+    let session_dialect = state.config().options().sql_parser.dialect;
+    let dialect = crate::dialect_for_executing_parse(&probe_sql, session_dialect);
+    let rewritten = state
+        .sql_to_statement(&probe_sql, &dialect)
+        .ok()
+        .and_then(|mut statement| {
+            if let datafusion::sql::parser::Statement::Statement(inner) = &mut statement {
+                crate::spark_ast::apply_pregate_judge_rewrites(&probe_sql, inner, case_insensitive);
+                Some(inner.to_string())
+            } else {
+                None
+            }
+        })
+        .unwrap_or(probe_sql);
+    let frame = ctx.sql(&rewritten).await?;
     Ok(frame
         .schema()
         .fields()
@@ -598,7 +632,7 @@ mod tests {
     #[tokio::test]
     async fn probe_that_cannot_parse_refuses_instead_of_passing() {
         let ctx = SessionContext::new();
-        let error = probe_source_type(&ctx, "-- nothing but a comment")
+        let error = probe_source_type(&ctx, "-- nothing but a comment", true)
             .await
             .expect_err("an unparsable probe must refuse");
         assert!(error.to_string().contains("ParserError"), "{error}");
@@ -783,7 +817,7 @@ mod tests {
              TIMESTAMP))",
         );
         let target = DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into()));
-        refuse_value(&ctx, "`t`", "c", &target, &row[0])
+        refuse_value(&ctx, "`t`", "c", &target, &row[0], true)
             .await
             .unwrap();
     }
@@ -793,7 +827,7 @@ mod tests {
         let ctx = SessionContext::new();
         let row = values_row("INSERT INTO t VALUES (replace('a\\\\''b', '\\\\''', ''))");
         let target = DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into()));
-        let error = refuse_value(&ctx, "`t`", "c", &target, &row[0])
+        let error = refuse_value(&ctx, "`t`", "c", &target, &row[0], true)
             .await
             .unwrap_err();
         let text = error.to_string();

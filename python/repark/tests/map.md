@@ -4692,6 +4692,22 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   doors; and a real ambiguity at a non-datetime position surfacing
   AMBIGUOUS_REFERENCE on INTO and column-list. Spark answers are the
   re-verify-3 attack5/6/7 recordings. pins: store-ts-doors-2/C-001, C-003
+  **Fold 2026-10-01 (re-verify VT5-1):** three `test_fold5_*` pins: the 24
+  unquoted-`INTERVAL` window-frame cells (4 arm shapes on INTO, dynamic
+  partition and column-list in both case modes) refusing
+  CANNOT_SAFELY_CAST with nothing stored; the quoted-bound, integer-range
+  and TIMESTAMP-arm controls; and two further unquoted frame shapes
+  refusing as Spark 4.1.2 does. pins: store-ts-doors-2/C-001, C-003
+- [test_store_ts_doors_2_fold6.py](test_store_ts_doors_2_fold6.py) —
+  **Fold 2026-10-01 (re-verify VT6-1):** four `test_fold6_*` pins, split out
+  at the 1000-line ceiling: the 6 nullary-column arm shapes
+  (`coalesce`/`WHERE`, `CASE`, derived `coalesce`, scalar subquery,
+  uppercase) on INTO, dynamic partition and column-list
+  case-insensitive plus INTO case-sensitive, each refusing as Spark 4.1.2
+  does with nothing stored (CANNOT_SAFELY_CAST; UNRESOLVED_COLUMN for the
+  uppercase case-sensitive shape); the direct, backticked and qualified
+  controls refusing; and the TIMESTAMP-`coalesce` store guards.
+  pins: store-ts-doors-2/C-001, C-003
 - `test_merge_semantics_audit.py` — **MERGE-audit corpus** (2026-08-14 audit gap-map rows
   c/d/g/n/o): null-safe `<=>` / `eqNullSafe` ON matches NULL keys (both doors); builder-door
   `=` NULL keys do not match; self-merge (target as source) updates once per row; join-key

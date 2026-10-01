@@ -415,6 +415,57 @@ carried. Perf, medians of 3: probe200 3.521s/2.618s = 1.345x against a base
 `bash gate.sh` is GREEN on this head except the `repark-parity` suite step,
 which fails identically on the untouched base (see the hand-back).
 
+## Re-verify fold 6 (2026-10-01, PR #894)
+
+The re-verifier confirmed VT5-1 fixed (24/24 cells) with 0 cells away from
+Spark and 0 new false stores in its 3,122-cell replay, but found two
+findings. VT6-1 (S1): a STRING column named `localtimestamp` (or `now` in
+the arm's filter) is stored into TIMESTAMP where Spark refuses — 31 cells
+across both attacks, all doors and both case modes; base stores as well.
+The statement demotes the bare word to a column identifier, but the judge
+re-plans Display text, where the word re-parses as the nullary function, so
+the probe and the arm plan TIMESTAMP and the position is skipped. VT6-2
+(S2): the R2 classifier matches on message text, and the fold-5 ledger and
+`void_type/map.md` misdescribe that as "never by loose text".
+
+**Fix.** R3: the pre-gate AST rewrite chain is one shared pair of functions
+in `spark_ast.rs`, called strict by the statement path and best-effort by
+the sibling judge (`apply_pregate_judge_rewrites`) for every re-parsed arm
+and probe, so the judge plans exactly what the statement plans. The split
+sits around identity-DML execution, which is not a rewrite; order is
+unchanged. Best-effort continues past refusal errors — on judge text these
+are double-application artifacts, notably the bare-unit rewrite refusing
+its own quoted output — so the nullary demotion still runs. R4: the
+classifier anchors its tags at the payload start (RePark emits no error
+prefix of its own) and drops the `Table not found` and `failed to resolve
+schema/catalog` prefixes, which no producer emits on this path — the
+capital-T shape exists only in DataFusion's own test provider — and the
+"never by loose text" wording is corrected here and in the map: the
+classifier matches RePark's error-class tags and a fixed list of DataFusion
+message prefixes because DataFusion 54 carries `Plan` and `Diagnostic`
+errors as strings. Out of scope by design: the NTZ and
+`insert_source_types` probes are separate gates with their own briefs, and
+the range-frame restatement keeps its partial chain (it re-plans, it does
+not judge). The judge moves to `sibling_types/` at the file ceiling.
+
+**Pins.** In-test `test_fold6_*` (split out at the ceiling): the 6 VT6-1
+shapes on INTO, dynamic partition and column-list case-insensitive plus
+INTO case-sensitive, each refusing as Spark 4.1.2 does with nothing stored
+(CANNOT_SAFELY_CAST; UNRESOLVED_COLUMN for the uppercase case-sensitive
+shape); the direct, backticked and qualified controls refusing; and the
+TIMESTAMP-`coalesce` store guards. Spark answers are the re-verify-5
+attack10/11 recordings. Rust unit pins: one real-planner pin per DataFusion
+prefix plus the ambiguity-fallback pin (each plans failing SQL through the
+repair planner, so a rewording turns the pin red), the `table function …
+not found` Failed / `table … not found` Unresolved boundary, mid-string tag
+negatives, the demoted nullary arm typing as its column, and the
+double-wrap no-op.
+
+**Carried (ledger only).** The interval, frame, typed-literal and backtick
+cells the verifier classed as class-only, or as matching Spark.
+
+**Proof.** Pending — recorded after the replay.
+
 ## Coverage
 
 ```yaml

@@ -99,6 +99,13 @@ handling (`CAST(NULL AS VOID)` rewrite, the non-NULL VALUES refusal into
   still fail-closes when the probe cannot parse). The skip call site now
   passes only the position and the cell.
   pins: store-ts-doors-2/C-001, C-003
+  **Fold 2026-10-01 (re-verify VT6-1):** `probe_source_type` parses the probe
+  SELECT and runs it through the statement's pre-gate rewrite chain
+  (`spark_ast::apply_pregate_judge_rewrites`) before `ctx.sql`, so a bare
+  `localtimestamp` demotes to the column the statement plans instead of
+  probing as the TIMESTAMP function; a probe that cannot parse still falls
+  back to the original text and fail-closes as before.
+  pins: store-ts-doors-2/C-001, C-003
 - `insert_source_types.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):**
   `refuse_insert_source_types` is the Spark door's INSERT gate for two source
   types the analyzer gate cannot see: a negated NULL (Spark's DOUBLE, judged by
@@ -168,7 +175,7 @@ handling (`CAST(NULL AS VOID)` rewrite, the non-NULL VALUES refusal into
   ceiling. Call sites only; the resolver and its classifier pins are
   unchanged.
   pins: store-ts-doors-2/C-001, C-003
-- `sibling_types.rs` — **Fold 2026-09-30 (re-verify VT2-1, VT2-2, VT2-4,
+- `sibling_types/` — **Fold 2026-09-30 (re-verify VT2-1, VT2-2, VT2-4,
   VT2-5):** `SiblingJudge`, moved here from `ltz_values_store.rs`, decides
   the VT-1 skip from one per-position map built once per statement and
   reused for every cell. A cell and every sibling cell are typed the way
@@ -216,14 +223,26 @@ handling (`CAST(NULL AS VOID)` rewrite, the non-NULL VALUES refusal into
   unjudging a VALUES position elsewhere.
   pins: store-ts-doors-2/C-001, C-003
   **Fold 2026-10-01 (re-verify VT5-1):** `Unresolved` narrows to genuine
-  resolution failures — the typed `SchemaError::FieldNotFound`, the
-  `[UNRESOLVED_COLUMN]` / `[UNRESOLVED_ROUTINE]` /
-  `[TABLE_OR_VIEW_NOT_FOUND]` tags, and DataFusion's raw unknown-function and
-  unknown-table plans matched by constructor shape, never by loose text — so a
-  later rewrite can no longer turn a planning failure into a store (VT5-1).
-  Every other failure is `Failed` and keeps the earlier refusal. Three tests:
-  the resolution matcher, and an unquoted-interval window arm plus a
-  coercion-failure arm keeping their judgment.
+  resolution failures — the typed `SchemaError::FieldNotFound`, RePark's
+  error-class tags (`[UNRESOLVED_COLUMN]` / `[UNRESOLVED_ROUTINE]` /
+  `[TABLE_OR_VIEW_NOT_FOUND]`) and a fixed list of DataFusion message
+  prefixes, because DataFusion 54 carries `Plan` and `Diagnostic` errors as
+  strings with no typed variant for them — so a later rewrite can no longer
+  turn a planning failure into a store (VT5-1). Every other failure is
+  `Failed` and keeps the earlier refusal. Three tests: the resolution
+  matcher, and an unquoted-interval window arm plus a coercion-failure arm
+  keeping their judgment.
+  pins: store-ts-doors-2/C-001, C-003
+  **Fold 2026-10-01 (re-verify VT6-1, VT6-2):** the arm plan runs the
+  re-parsed arm through the statement's pre-gate rewrite chain
+  (`spark_ast::apply_pregate_judge_rewrites`), so the judge plans exactly
+  what the statement plans: a bare `localtimestamp` demotes to the STRING
+  column instead of re-parsing as the TIMESTAMP function and skipping the
+  position (VT6-1). The classifier anchors its tags at the payload start
+  (RePark emits no error prefix of its own) and drops the `Table not found`
+  and `failed to resolve schema/catalog` prefixes no producer emits on this
+  path (VT6-2). The judge plus its pins moves to `sibling_types/` at the
+  file ceiling. Directory map: [sibling_types/map.md](sibling_types/map.md).
   pins: store-ts-doors-2/C-001, C-003
 - `source_leaves.rs` — **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):**
   `source_type_is_reliable` decides whether a new refusal may trust RePark's
