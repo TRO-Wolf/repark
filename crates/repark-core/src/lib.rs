@@ -54,8 +54,8 @@ mod update_fields;
 // --- The Session surface (v1 names, courtesy `Session` alias).
 pub use session::ReparkSession as Session;
 pub use session::{
-    DATAFUSION_CONFIG_PREFIX, ReparkSession, ReparkSessionBuilder, frame_names, resolve_bound_expr,
-    resolve_scoped_expr, resolve_subquery_plan, writer_layout,
+    DATAFUSION_CONFIG_PREFIX, ReparkSession, ReparkSessionBuilder, fold_a_equal, fold_b_equal,
+    frame_names, resolve_bound_expr, resolve_scoped_expr, resolve_subquery_plan, writer_layout,
 };
 
 // === Session timezone ===

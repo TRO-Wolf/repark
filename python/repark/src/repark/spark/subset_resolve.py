@@ -1,126 +1,17 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import Any, NoReturn
 
 from repark import _native
 from repark.errors import AnalysisException
 from repark.spark import column_fields
 
-_U13_UPPER_IDENTITY = frozenset(
-    [
-        0x2C5F,
-        0xA7C1,
-        0xA7D1,
-        0xA7D7,
-        0xA7D9,
-        *range(0x10597, 0x105A2),
-        *range(0x105A3, 0x105B2),
-        *range(0x105B3, 0x105BA),
-        *range(0x105BB, 0x105BD),
-    ]
-)
 
-_U13_LOWER_IDENTITY = frozenset(
-    [
-        0x2C2F,
-        0xA7C0,
-        0xA7D0,
-        0xA7D6,
-        0xA7D8,
-        *range(0x10570, 0x1057B),
-        *range(0x1057C, 0x1058B),
-        *range(0x1058C, 0x10593),
-        *range(0x10594, 0x10596),
-    ]
-)
-
-_JAVA_UPPER_SINGLE = {
-    0x1F80: 0x1F88,
-    0x1F81: 0x1F89,
-    0x1F82: 0x1F8A,
-    0x1F83: 0x1F8B,
-    0x1F84: 0x1F8C,
-    0x1F85: 0x1F8D,
-    0x1F86: 0x1F8E,
-    0x1F87: 0x1F8F,
-    0x1F90: 0x1F98,
-    0x1F91: 0x1F99,
-    0x1F92: 0x1F9A,
-    0x1F93: 0x1F9B,
-    0x1F94: 0x1F9C,
-    0x1F95: 0x1F9D,
-    0x1F96: 0x1F9E,
-    0x1F97: 0x1F9F,
-    0x1FA0: 0x1FA8,
-    0x1FA1: 0x1FA9,
-    0x1FA2: 0x1FAA,
-    0x1FA3: 0x1FAB,
-    0x1FA4: 0x1FAC,
-    0x1FA5: 0x1FAD,
-    0x1FA6: 0x1FAE,
-    0x1FA7: 0x1FAF,
-    0x1FB3: 0x1FBC,
-    0x1FC3: 0x1FCC,
-    0x1FF3: 0x1FFC,
-}
-
-
-def _java_upper_char(value: str) -> str:
-    point = ord(value)
-    if point in _U13_UPPER_IDENTITY:
-        return value
-    single = _JAVA_UPPER_SINGLE.get(point)
-    if single is not None:
-        return chr(single)
-    uppered = value.upper()
-    if len(uppered) == 1:
-        return uppered
-    return value
-
-
-def _java_lower_char(value: str) -> str:
-    point = ord(value)
-    if point == 0x130:
-        return "i"
-    if point in _U13_LOWER_IDENTITY:
-        return value
-    return value.lower()
-
-
-def _fold_a_equal(first: str, second: str) -> bool:
-    if len(first) != len(second):
-        return False
-    for left, right in zip(first, second, strict=True):
-        if _java_lower_char(left) != _java_lower_char(right):
-            return False
-    return True
-
-
-def _fold_b_equal(first: str, second: str) -> bool:
-    if len(first) != len(second):
-        return False
-    for left, right in zip(first, second, strict=True):
-        if left == right:
-            continue
-        uppered = _java_upper_char(left) == _java_upper_char(right)
-        lowered = _java_lower_char(left) == _java_lower_char(right)
-        if not uppered and not lowered:
-            return False
-    return True
-
-
-def _hits_folded(
-    frame: Any, written: str, displays: list[str], fold: Callable[[str, str], bool]
-) -> list[int]:
+def _hits_folded(frame: Any, written: str, displays: list[str], mode: str) -> list[int]:
     exact = [position for position, display in enumerate(displays) if display == written]
     if frame._session is not None and _native.session_case_sensitive(frame._session):
         return exact
-    return exact + [
-        position
-        for position, display in enumerate(displays)
-        if display != written and fold(display, written)
-    ]
+    return exact + _native.java_fold_hits(written, displays, mode)
 
 
 def _bindings(frame: Any) -> tuple[list[str], list[str], list[str | None]] | None:
@@ -218,7 +109,7 @@ def _bound_subset_positions(
     frame: Any, key: str, bindings: tuple[list[str], list[str], list[str | None]]
 ) -> list[int]:
     displays, engine_names, held = bindings
-    hits = _hits_folded(frame, key, displays, _fold_a_equal)
+    hits = _hits_folded(frame, key, displays, "a")
     if not hits:
         column_fields._raise_unresolved_name(None, key, displays)
     status, grouped = _grouped(hits, held)
@@ -283,7 +174,7 @@ def _drop_targets(frame: Any, cols: tuple[Any, ...]) -> tuple[list[str], list[st
             continue
         displays, engine_names, held = bindings
         if isinstance(item, str):
-            hits = _hits_folded(frame, name, displays, _fold_b_equal)
+            hits = _hits_folded(frame, name, displays, "b")
             if not hits:
                 continue
             attributes.extend(engine_names[position] for position in hits)
@@ -294,7 +185,7 @@ def _drop_targets(frame: Any, cols: tuple[Any, ...]) -> tuple[list[str], list[st
         if (split is None or split[0] is not None or "`" in name) and not overlay:
             references.append(name)
             continue
-        hits = _hits_folded(frame, name, displays, _fold_a_equal)
+        hits = _hits_folded(frame, name, displays, "a")
         if not hits:
             continue
         status, grouped = _grouped(hits, held)
@@ -327,14 +218,14 @@ def _fanout_subset(frame: Any, names: list[str]) -> list[str]:
     if frame._display_names is not None and frame._engine_names is not None:
         hit_positions: set[int] = set()
         for key in names:
-            key_hits = _hits_folded(frame, key, displays, _fold_b_equal)
+            key_hits = _hits_folded(frame, key, displays, "b")
             if not key_hits:
                 _raise_cannot_resolve(key, displays)
             hit_positions.update(key_hits)
         return [engine_names[position] for position in sorted(hit_positions)]
     keyed: list[str] = []
     for key in names:
-        key_hits = _hits_folded(frame, key, displays, _fold_b_equal)
+        key_hits = _hits_folded(frame, key, displays, "b")
         if not key_hits:
             _raise_cannot_resolve(key, displays)
         keyed.extend(engine_names[position] for position in key_hits)

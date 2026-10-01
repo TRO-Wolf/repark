@@ -411,29 +411,11 @@ def column_or_str_error(item: Any) -> PySparkTypeError:
     return PySparkTypeError(f"expected a column name (str) or Column, got {type(item).__name__}")
 
 
-def _java_case_equal(left: str, right: str) -> bool:
-    if len(left) != len(right):
-        return False
-    left = left.replace("\u0130", "I")
-    right = right.replace("\u0130", "I")
-    return all(
-        left_char == right_char
-        or left_char.upper() == right_char.upper()
-        or left_char.lower() == right_char.lower()
-        for left_char, right_char in zip(left, right, strict=True)
-    )
-
-
 def _live_rule_hits(frame: Any, written: str, displays: list[str]) -> list[int]:
     exact_hits = [index for index, display in enumerate(displays) if display == written]
     if _native.session_case_sensitive(frame._session):
         return exact_hits
-    folded_hits = [
-        index
-        for index, display in enumerate(displays)
-        if display != written and _java_case_equal(display, written)
-    ]
-    return exact_hits + folded_hits
+    return exact_hits + _native.java_fold_hits(written, displays, "b")
 
 
 def _split_written_name(written: str) -> tuple[list[str] | None, str] | None:

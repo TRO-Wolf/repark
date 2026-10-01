@@ -311,6 +311,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   misses and qualified names still fall through (S3e owns qualified). Pins:
   `python/repark/tests/test_attr_id_1_s3c.py`.
   pins: attr-id-1/C-030
+  **ATTR-ID-1 S3d R-S3d-1 (2026-10-01):** `_java_case_equal` is deleted;
+  insensitive hits come from the native `java_fold_hits` mode `b` (same
+  contract, exact Java tables). The 41 S3c pins are unchanged.
+  pins: attr-id-1/C-032
 - `filter_quote.py` — **ATTR-ID-1 S3b H-1 (2026-10-01):** the filter-SQL
   identifier quoter, split out of `column_fields.py` at the size ceiling (pure
   move; the entry stays there). `_FILTER_TOKEN_PATTERN`,
@@ -355,6 +359,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `fillna`/`dropna` key with ambiguity refusal and guarded fan-out, missing
   with `UNRESOLVED_COLUMN.WITH_SUGGESTION`. No module docstring: the lane's
   no-comments ruling covers the new file; the contract lives here.
+  **ATTR-ID-1 S3d R-S3d-1 (2026-10-01):** the Python fold tables and helpers
+  are deleted; `_hits_folded` takes a mode and calls the native
+  `java_fold_hits` (`a` for `fillna`/`dropna`/free-Column `drop`, `b` for
+  `drop(str)`/`dropDuplicates`).
   pins: attr-id-1/C-032
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and

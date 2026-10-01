@@ -1,6 +1,7 @@
 use datafusion::common::Column;
 use datafusion::dataframe::DataFrame;
 use datafusion::logical_expr::{Expr, JoinType};
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
@@ -27,6 +28,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(frame_case_sensitive, module)?)?;
     module.add_function(wrap_pyfunction!(frame_is_relation, module)?)?;
     module.add_function(wrap_pyfunction!(grandchild_key_status, module)?)?;
+    module.add_function(wrap_pyfunction!(java_fold_hits, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_join_condition, module)?)?;
     module.add_function(wrap_pyfunction!(requalify_join_sides, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_display_name, module)?)?;
@@ -341,6 +343,31 @@ pub(crate) fn join_dup_below_wrappers(frame: &PyDataFrame) -> bool {
 #[pyfunction]
 pub(crate) fn union_below_wrappers(frame: &PyDataFrame) -> bool {
     repark_core::frame_names::union_below_wrappers(frame.inner().logical_plan())
+}
+
+#[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
+#[pyfunction]
+#[pyo3(signature = (written, displays, mode))]
+pub(crate) fn java_fold_hits(
+    written: &str,
+    displays: Vec<String>,
+    mode: &str,
+) -> PyResult<Vec<usize>> {
+    let fold = match mode {
+        "a" => repark_core::fold_a_equal,
+        "b" => repark_core::fold_b_equal,
+        _ => {
+            return Err(PyValueError::new_err(format!(
+                "java_fold_hits mode must be \"a\" or \"b\", got {mode:?}"
+            )));
+        }
+    };
+    Ok(displays
+        .iter()
+        .enumerate()
+        .filter(|(_, display)| display.as_str() != written && fold(display, written))
+        .map(|(index, _)| index)
+        .collect())
 }
 
 #[pyfunction]

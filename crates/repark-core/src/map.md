@@ -165,6 +165,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   once per call through `object_store_s3` (parquet and csv resolve inside their
   reader bodies, so this file grows by one line and stays under its ceiling).
   pins: s3-path-write-1/C-013
+  **ATTR-ID-1 S3d R-S3d-1 (2026-10-01):** re-exports
+  `repark_common::java_case::{fold_a_equal, fold_b_equal}` for the binding
+  (the Python crate reaches the tier-0 folds only through here).
+  pins: attr-id-1/C-032
 - `session_owner.rs` — the session-built DESCRIBE owner: `DescribeOwnerConfig`
   (`repark.describe` prefix, `owner`, default `unknown`), the build-time
   `session_owner_snapshot` (`USER`, then `USERNAME`, then `unknown`), and the
@@ -264,6 +268,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **U10 / R-DF-LOAD-PATH (2026-09-23):** `mod iceberg_path;` joined the module list at
   the exact 155-line baseline; the stale half-comment above the `error_map` re-export
   (its note is already carried by `session.rs`'s own line) was the line shed for it.
+  **ATTR-ID-1 S3d R-S3d-1 (2026-10-01):** `fold_a_equal` / `fold_b_equal`
+  join the `session` re-export list (reflowed in place: still 155 lines).
 - `iceberg_path.rs` (+ [iceberg_path/](iceberg_path/map.md)) — **U10 / R-DF-LOAD-PATH +
   R-DF-LOAD-METADATA-JSON (2026-09-23):** `ReparkSession::read_iceberg_path`, the
   `format("iceberg").load(<path>)` arm — Spark's `IcebergSource` rule applied at the
