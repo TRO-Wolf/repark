@@ -1,6 +1,6 @@
 # The crate layout through 1.8 — fourteen crates, one split, four arrivals (ruled 2026-10-01)
 
-**Date:** 2026-10-01 · **Ruled by:** the owner ("I love that layout"), in discussion with a Claude session (claude-fable-5-1) · **Measured on:** `origin/main` at `db3a1f37` (v1.5.1) · **Builds on:** [../mid-term/crate-layout-review-2026-09-30.md](../mid-term/crate-layout-review-2026-09-30.md) (the test-placement review), [roadmap-design-plan-2026-08-29.md](roadmap-design-plan-2026-08-29.md) (cards 1.3, 1.6, 1.7), [unified-database-query-cdc-silver-plan-2026-09-13.md](unified-database-query-cdc-silver-plan-2026-09-13.md) (the three independent lifecycles), [deterministic-silver-layer-compiler-2026-09-12.md](deterministic-silver-layer-compiler-2026-09-12.md).
+**Date:** 2026-10-01 · **Ruled by:** the owner ("I love that layout"), in discussion with a Claude session (claude-fable-5-1) · **Measured on:** `origin/main` at `db3a1f37` (v1.5.1) · **Builds on:** [../mid-term/crate-layout-review-2026-09-30.md](../mid-term/crate-layout-review-2026-09-30.md) (the test-placement review), [roadmap-design-plan-2026-08-29.md](roadmap-design-plan-2026-08-29.md) (cards 1.3 and 1.6; card 1.7 is dbt, and the 1.7 crates are chartered by the unified plan and the release roadmap's 1.7 row), [unified-database-query-cdc-silver-plan-2026-09-13.md](unified-database-query-cdc-silver-plan-2026-09-13.md) (the three independent lifecycles), [deterministic-silver-layer-compiler-2026-09-12.md](deterministic-silver-layer-compiler-2026-09-12.md).
 
 ## 1. The ruling in one table
 
@@ -11,13 +11,13 @@
 | `repark-connect` | 1 · table service | Postgres and SQL Server providers, pushdown, pools, type maps (card 1.6) | common | **1.6** |
 | `repark-cdc` | 1 · table service | logical-replication capture → Arrow → Bronze append, capture checkpoints | common, iceberg | **1.7** |
 | `repark-io` | 1 · table service | smart CSV, Excel, JSON, IPC, Avro, Hive-partitioned directory discovery (card 1.3) | common | **1.8** |
-| `repark-core` | 2 · engine | Session, planning, `df_guards` (ATTR-ID-1), path writes, and the **`silver/` module**: the `SilverPlan` compiler and publication | common, iceberg; connect, cdc, io as each arrives | shipped; `silver/` at 1.7 |
+| `repark-core` | 2 · engine | Session, planning, `df_guards` (ATTR-ID-1), path writes, and the **`silver/` module**: the `SilverPlan` compiler and publication | common, iceberg; connect, cdc, io as each arrives | shipped; `silver/` S-0 and S-1 on `main` (five modules), S-2 onward at 1.7 |
 | `repark-spark-dialect` | 3 · capability | the Spark SQL grammar: AST, normalize, keyword case, literals and literal typing, rewrites, collation, windows, `void`, the type table | common, core, functions | the tidy window |
 | `repark-spark` | 3 · door | the router and the four command families `ddl/`, `dml/`, `inspect/`, `procedures/` | spark-dialect, common, core, iceberg, functions, ta | shipped, reshaped in the tidy window |
 | `repark-sql` | 3 · door | the ANSI door | common, core, iceberg, functions, ta; **`repark-spark` as a dev-dependency only** | shipped |
-| `repark-functions` | 3 · tool | Spark function semantics and the cast tables | — | shipped |
-| `repark-ta` | 3 · tool | unchanged | core | shipped |
-| `repark-ml` | 3 · tool | unchanged | — | shipped |
+| `repark-functions` | 3 · capability | Spark function semantics and the cast tables | — | shipped |
+| `repark-ta` | 3 · capability | unchanged | core | shipped |
+| `repark-ml` | 3 · capability | unchanged | — | shipped |
 | `repark-crawler` | 3 · capability | bounded discovery runs, profiling under a budget, the evidence store, proposed Bronze and Silver specifications and diffs | common, core, connect | **1.7** |
 | `repark-distributed` | 3 · runtime | `DistributedExecutor`, Ballista M1, feature-gated | core | shipped |
 | `repark-python` | 4 · bindings | the thin PyO3 adapter, the only `unsafe` | common, core, spark, sql, functions, ta, ml; crawler at 1.7 | shipped |
@@ -30,7 +30,7 @@ Every crate carries one integration binary, `tests/it/main.rs`, with one module 
 tier 4  bindings     repark-python
 
 tier 3  doors        repark-spark ──► repark-spark-dialect       repark-sql
-        tools        repark-functions   repark-ta   repark-ml   repark-crawler
+        capability   repark-functions   repark-ta   repark-ml   repark-crawler
         runtime      repark-distributed
 
 tier 2  engine       repark-core  (… silver/)
@@ -78,6 +78,7 @@ DDL is one of four side-effecting families, and the router that dispatches to al
 | `repark-streaming` | §2 |
 | a REST catalog crate | the fork's `iceberg-catalog-rest` does the protocol; `repark-iceberg` gets a `CatalogKind::Rest` arm beside Glue and S3 Tables |
 | `repark-exec` | struck (§3.4) |
+| `repark-delta` | a **reserved name**, tier 1 table service, not before 2.x and demand-triggered; not pre-declared since it has no release; read-only interop only, Bronze and Silver stay Iceberg-only ([contracts-ahead-of-code-2026-10-01.md](contracts-ahead-of-code-2026-10-01.md) CC-10) |
 
 ## 5. The tidy window and its units
 
@@ -99,7 +100,7 @@ Then 1.6 opens with `repark-connect` on a clean DAG; 1.7 adds `repark-crawler`, 
 
 | id | decision | status |
 |---|---|---|
-| CL-1 | `repark-crawler` (tier 3 tool) and `repark-cdc` (tier 1 service) are the 1.7 crates; Silver execution is `repark-core/src/silver/` | **ruled 2026-10-01** |
+| CL-1 | `repark-crawler` (tier 3 capability) and `repark-cdc` (tier 1 service) are the 1.7 crates; Silver execution is `repark-core/src/silver/` | **ruled 2026-10-01** |
 | CL-2 | no `repark-streaming`; the producer crate is `repark-cdc` | **ruled 2026-10-01** |
 | CL-3 | the `repark-spark` split extracts the dialect below as `repark-spark-dialect`; `repark-spark` keeps its name and gains `router/ ddl/ dml/ inspect/ procedures/` | **ruled 2026-10-01** |
 | CL-4 | the tidy window is post-v1.5.2 queue drain, pre-1.6; units T-1…T-5, clerk tier, no verifier on pure moves | **ruled 2026-10-01** |
@@ -107,7 +108,8 @@ Then 1.6 opens with `repark-connect` on a clean DAG; 1.7 adds `repark-crawler`, 
 | CL-6 | the `#[path]` rule for `#[cfg(test)]` children | **open** — one line from the owner before T-1 |
 | CL-7 | strike `repark-exec` from PROJECT.md's crate list | **done 2026-10-01** in this change (PROJECT.md, AGENTS.md, `repo-manifest.toml`); the owner reviews it in the PR |
 | CL-8 | arriving crates are pre-declared, never pre-created: tier, role and edges in `scripts/check_crate_dag.py`, a `planned` row in `repo-manifest.toml`, a row in AGENTS.md's guide; no directory until the first unit lands | **ruled 2026-10-01** (owner: "pre define the crates in the repo for organizing purposes") |
+| CL-9 | the contracts between the arriving crates (seams, identity, configuration, errors, features, tests, metrics, denied edges, capture shutdown), the Delta Lake seam and the enterprise seams are ruled ahead of code in [contracts-ahead-of-code-2026-10-01.md](contracts-ahead-of-code-2026-10-01.md) (CC-1…CC-10, ES-1…ES-10) | **ruled 2026-10-01** |
 
 ## Leaves this directory when
 
-T-1…T-5 have merged and ARCHITECTURE.md's tier map shows the fourteen crates with their declared edges; then this file is the dated record and the design plan's cards 1.3, 1.6 and 1.7 name the homes above.
+T-1…T-5 have merged and ARCHITECTURE.md's tier map shows the fourteen crates with their declared edges; then this file is the dated record and the design plan's cards 1.3 and 1.6, with the unified plan for 1.7, name the homes above.

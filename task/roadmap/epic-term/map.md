@@ -88,8 +88,20 @@ is now the epic list from v0.6 through 3.0 (v0.7–v0.10 shifted to 1.1–1.4 wh
   (ruled 2026-10-01):** fourteen crates by tier with roles, edges and arrival release — `repark-connect` 1.6,
   `repark-crawler` + `repark-cdc` 1.7 (Silver execution a `repark-core` module), `repark-io` 1.8,
   `repark-spark-dialect` extracted below `repark-spark` (which keeps its name and gains `router/ ddl/ dml/
-  inspect/ procedures/`); the `repark-sql → repark-spark` edge to dev-only and the DAG table trued up;
-  the tidy window (post-v1.5.2, pre-1.6) as units T-1…T-5 at clerk tier; decisions CL-1…CL-7.
+  inspect/ procedures/`); the `repark-sql → repark-spark` edge measured already dev-only and the DAG
+  table already complete, so the five arriving crates are pre-declared instead (CL-8); the tidy window
+  (post-v1.5.2, pre-1.6) as units T-1…T-5 at clerk tier; decisions CL-1…CL-9.
+- [contracts-ahead-of-code-2026-10-01.md](contracts-ahead-of-code-2026-10-01.md) — **contracts ahead of code (ruled
+  2026-10-01):** the crate contracts between the pre-declared crates — CC-1 core consumes the services and
+  Session owns embedded capture under four shutdown rules, CC-2 the narrow T-6 identity move with a
+  generation field, CC-3 four reserved config prefixes and no keys, CC-4 structured errors with dated
+  registry rows, CC-5 Cargo features versus wheel inclusion, CC-6 the disposable Postgres container and
+  the five-scenario failure harness, CC-7 the `metrics` facade with entry-point initialization, CC-8 four
+  denied edges with kinds, CC-9 capture shutdown and checkpoint advancement as the 1.7 charter's first
+  decision, CC-10 Delta Lake as a reserved name with a read-only 2.x card; and the enterprise seams
+  ES-1…ES-10 (connector auth methods, Azure / GCS, table encryption, lineage, erasure and legal hold,
+  more connectors, an Airflow provider, Unity through Iceberg REST, SBOM and signed wheels, HA /
+  replication / FIPS declared out); card 1.6 re-chartered without Trino.
 - [roadmap-design-plan-2026-08-29.md](roadmap-design-plan-2026-08-29.md) — **the design plan
   by crate (ruled 2026-08-29):** the release roadmap's *where* and *how* — one work card per
   roadmap item naming the crate (NEW or UPDATE, tier, `ALLOWED_EDGES` rows), the reference
