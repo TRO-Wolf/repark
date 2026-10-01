@@ -5040,6 +5040,7 @@ dependencies = [
  "async-trait",
  "aws-config",
  "aws-credential-types",
+ "bytes",
  "chrono",
  "datafusion",
  "flate2",

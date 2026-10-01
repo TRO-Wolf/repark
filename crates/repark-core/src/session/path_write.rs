@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use arrow::datatypes::{DataType, SchemaRef};
+use arrow::datatypes::SchemaRef;
 use datafusion::execution::object_store::ObjectStoreUrl;
 use datafusion::parquet::arrow::arrow_writer::ArrowWriter;
 use datafusion::prelude::DataFrame;
@@ -16,6 +16,12 @@ use crate::OverwriteIntent;
 use crate::engine_err;
 use crate::object_store_s3;
 use crate::session::ReparkSession;
+use crate::session::text_write_format::is_text_write_format_option;
+use crate::session::text_write_format::select::{TextWriteCopyParts, merge_spec_options};
+use crate::session::text_write_format::spec::{SPEC_WRITE_ID_KEY, TextWritePathRegistry};
+
+mod append;
+mod rollback;
 
 impl ReparkSession {
     pub fn note_local_write_root(&self, path: &str) {
@@ -150,6 +156,17 @@ fn sql_escape(value: &str) -> String {
     value.replace('\'', "''")
 }
 
+fn with_text_write_id(spec_options_sql: String, view: &str) -> String {
+    if spec_options_sql.is_empty() {
+        spec_options_sql
+    } else {
+        format!(
+            "{spec_options_sql}, '{SPEC_WRITE_ID_KEY}' '{}'",
+            sql_escape(view)
+        )
+    }
+}
+
 fn normalize_write_compression(raw: &str) -> Result<&'static str> {
     match raw.trim().to_ascii_lowercase().as_str() {
         "" | "none" | "uncompressed" => Ok("uncompressed"),
@@ -189,10 +206,7 @@ fn normalize_parquet_write_compression(raw: &str) -> Result<String> {
 fn refused_csv_option(key: &str) -> bool {
     matches!(
         key,
-        "dateformat"
-            | "timestampformat"
-            | "timestampntzformat"
-            | "encoding"
+        "encoding"
             | "linesep"
             | "chartoescapequoteescaping"
             | "ignoreleadingwhitespace"
@@ -203,15 +217,7 @@ fn refused_csv_option(key: &str) -> bool {
 }
 
 fn refused_json_option(key: &str) -> bool {
-    matches!(
-        key,
-        "dateformat"
-            | "timestampformat"
-            | "timestampntzformat"
-            | "encoding"
-            | "linesep"
-            | "ignorenullfields"
-    )
+    matches!(key, "encoding" | "linesep" | "ignorenullfields")
 }
 
 fn copy_options_sql(format: &WriteFormat, options: &HashMap<String, String>) -> Result<String> {
@@ -228,6 +234,9 @@ fn copy_options_sql(format: &WriteFormat, options: &HashMap<String, String>) -> 
         }
         match format {
             WriteFormat::Csv => {
+                if is_text_write_format_option(&lowered) {
+                    continue;
+                }
                 if refused_csv_option(&lowered) {
                     return Err(Error::Analysis(format!(
                         "DataFrameWriter.csv option '{key}' is not supported yet (Spark \
@@ -267,6 +276,9 @@ fn copy_options_sql(format: &WriteFormat, options: &HashMap<String, String>) -> 
                 }
             }
             WriteFormat::Json => {
+                if is_text_write_format_option(&lowered) {
+                    continue;
+                }
                 if refused_json_option(&lowered) {
                     return Err(Error::Analysis(format!(
                         "DataFrameWriter.json option '{key}' is not supported yet (would \
@@ -458,67 +470,6 @@ async fn list_part_keys(
     Ok(parts)
 }
 
-fn quoted_list(names: &[String]) -> String {
-    format!(
-        "[{}]",
-        names
-            .iter()
-            .map(|name| format!("'{name}'"))
-            .collect::<Vec<_>>()
-            .join(", ")
-    )
-}
-
-fn append_types_compatible(left: &DataType, right: &DataType) -> bool {
-    if left == right {
-        return true;
-    }
-    match (left, right) {
-        (
-            DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View,
-            DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View,
-        )
-        | (
-            DataType::Binary | DataType::LargeBinary | DataType::BinaryView,
-            DataType::Binary | DataType::LargeBinary | DataType::BinaryView,
-        ) => true,
-        (DataType::List(left_field), DataType::List(right_field))
-        | (DataType::LargeList(left_field), DataType::LargeList(right_field)) => {
-            append_types_compatible(left_field.data_type(), right_field.data_type())
-        }
-        (
-            DataType::FixedSizeList(left_field, left_size),
-            DataType::FixedSizeList(right_field, right_size),
-        ) => {
-            left_size == right_size
-                && append_types_compatible(left_field.data_type(), right_field.data_type())
-        }
-        (DataType::Struct(left_fields), DataType::Struct(right_fields)) => {
-            left_fields.len() == right_fields.len()
-                && left_fields
-                    .iter()
-                    .zip(right_fields.iter())
-                    .all(|(left, right)| {
-                        left.name() == right.name()
-                            && append_types_compatible(left.data_type(), right.data_type())
-                    })
-        }
-        _ => false,
-    }
-}
-
-fn strip_partition_names<'a>(names: &[&'a String], partition_by: &[String]) -> Vec<&'a String> {
-    let folded: HashSet<String> = partition_by
-        .iter()
-        .map(|name| name.to_lowercase())
-        .collect();
-    names
-        .iter()
-        .filter(|name| !folded.contains(&name.to_lowercase()))
-        .copied()
-        .collect()
-}
-
 fn empty_parquet_bytes(schema: &SchemaRef) -> Result<Vec<u8>> {
     let mut buffer = std::io::Cursor::new(Vec::new());
     let writer = ArrowWriter::try_new(&mut buffer, Arc::clone(schema), None)
@@ -545,157 +496,6 @@ fn empty_csv_bytes(frame_columns: &[String], options: &HashMap<String, String>) 
     } else {
         Vec::new()
     }
-}
-
-async fn validate_append_parquet(
-    session: &ReparkSession,
-    source_schema: &SchemaRef,
-    partition_by: &[String],
-    part_urls: &[String],
-) -> Result<()> {
-    let source_names: Vec<String> = source_schema
-        .fields()
-        .iter()
-        .map(|field| field.name().clone())
-        .collect();
-    let source_refs: Vec<&String> = source_names.iter().collect();
-    let expected = strip_partition_names(&source_refs, partition_by);
-    let expected_by_case: HashMap<String, &String> = expected
-        .iter()
-        .map(|name| (name.to_lowercase(), *name))
-        .collect();
-    let source_type_by_case: HashMap<String, DataType> = source_schema
-        .fields()
-        .iter()
-        .filter(|field| expected_by_case.contains_key(&field.name().to_lowercase()))
-        .map(|field| (field.name().to_lowercase(), field.data_type().clone()))
-        .collect();
-    let mut dest_type_by_case: HashMap<String, DataType> = HashMap::new();
-    let mut dest_name_by_case: HashMap<String, String> = HashMap::new();
-    for part_url in part_urls {
-        let destination = session.read_parquet(part_url).await?;
-        let dest_names: Vec<String> = destination
-            .schema()
-            .fields()
-            .iter()
-            .map(|field| field.name().clone())
-            .collect();
-        let dest_refs: Vec<&String> = dest_names.iter().collect();
-        let stripped = strip_partition_names(&dest_refs, partition_by);
-        let stripped_keys: HashSet<String> =
-            stripped.iter().map(|name| name.to_lowercase()).collect();
-        for field in destination.schema().fields() {
-            let key = field.name().to_lowercase();
-            if stripped_keys.contains(&key) && !dest_type_by_case.contains_key(&key) {
-                dest_type_by_case.insert(key.clone(), field.data_type().clone());
-                dest_name_by_case.insert(key, field.name().clone());
-            }
-        }
-    }
-    let dest_keys: HashSet<String> = dest_type_by_case.keys().cloned().collect();
-    let expected_keys: HashSet<String> = expected_by_case.keys().cloned().collect();
-    if dest_keys != expected_keys {
-        let mut missing: Vec<String> = dest_keys
-            .difference(&expected_keys)
-            .map(|key| dest_name_by_case[key].clone())
-            .collect();
-        missing.sort();
-        let mut extra: Vec<&String> = expected_keys
-            .difference(&dest_keys)
-            .map(|key| expected_by_case[key])
-            .collect();
-        extra.sort();
-        let mut schema_names: Vec<String> = dest_name_by_case.values().cloned().collect();
-        schema_names.sort();
-        let missing_text = if missing.is_empty() {
-            String::new()
-        } else {
-            format!("; missing from the DataFrame: {}", quoted_list(&missing))
-        };
-        let extra_text = if extra.is_empty() {
-            String::new()
-        } else {
-            format!(
-                "; extra in the DataFrame: {}",
-                quoted_list(&extra.into_iter().cloned().collect::<Vec<_>>())
-            )
-        };
-        return Err(Error::Analysis(format!(
-            "cannot append DataFrame columns {} to path parquet schema {}: column sets \
-             differ{missing_text}{extra_text} (path mode('append') refuses silent null-fill / \
-             schema drift)",
-            quoted_list(&source_names),
-            quoted_list(&schema_names)
-        )));
-    }
-    for (key, source_type) in &source_type_by_case {
-        let dest_type = &dest_type_by_case[key];
-        if !append_types_compatible(source_type, dest_type) {
-            return Err(Error::Analysis(format!(
-                "cannot append column '{}': type mismatch source={source_type} vs path={dest_type} \
-                 (path mode('append') refuses type-incompatible merge)",
-                expected_by_case[key]
-            )));
-        }
-    }
-    Ok(())
-}
-
-async fn validate_append_csv(
-    session: &ReparkSession,
-    source_schema: &SchemaRef,
-    partition_by: &[String],
-    options: &HashMap<String, String>,
-    part_urls: &[String],
-) -> Result<()> {
-    let mut header_on = true;
-    let mut read_options = HashMap::new();
-    for (key, value) in options {
-        let lowered = key.to_lowercase();
-        if lowered == "header" {
-            header_on = writer_bool(value);
-        } else if lowered == "sep" || lowered == "delimiter" {
-            read_options.insert("sep".to_string(), value.clone());
-        } else if lowered == "quote" {
-            read_options.insert("quote".to_string(), value.clone());
-        } else if lowered == "escape" {
-            read_options.insert("escape".to_string(), value.clone());
-        }
-    }
-    if !header_on {
-        return Ok(());
-    }
-    read_options.insert("header".to_string(), "true".to_string());
-    let source_names: Vec<String> = source_schema
-        .fields()
-        .iter()
-        .map(|field| field.name().clone())
-        .collect();
-    let source_refs: Vec<&String> = source_names.iter().collect();
-    let expected = strip_partition_names(&source_refs, partition_by);
-    let expected_keys: HashSet<String> = expected.iter().map(|name| name.to_lowercase()).collect();
-    let Some(first) = part_urls.first() else {
-        return Ok(());
-    };
-    let destination = session.read_csv(first, &read_options).await?;
-    let dest_names: Vec<String> = destination
-        .schema()
-        .fields()
-        .iter()
-        .map(|field| field.name().clone())
-        .collect();
-    let dest_refs: Vec<&String> = dest_names.iter().collect();
-    let stripped = strip_partition_names(&dest_refs, partition_by);
-    let dest_keys: HashSet<String> = stripped.iter().map(|name| name.to_lowercase()).collect();
-    if dest_keys != expected_keys {
-        return Err(Error::Analysis(format!(
-            "cannot append DataFrame columns {} to path csv header {}: column sets differ \
-             (path mode('append') refuses silent null-fill / schema drift)",
-            quoted_list(&source_names),
-            quoted_list(&stripped.into_iter().cloned().collect::<Vec<_>>())
-        )));
-    }
-    Ok(())
 }
 
 async fn materialize_empty_part(
@@ -737,23 +537,23 @@ struct S3Commit<'a> {
 }
 
 impl ReparkSession {
-    async fn validate_append(
+    #[allow(clippy::missing_errors_doc)]
+    fn copy_inner_parts(
         &self,
+        frame: &DataFrame,
         format: &WriteFormat,
-        source_schema: &SchemaRef,
-        partition_by: &[String],
+        view: &str,
         options: &HashMap<String, String>,
-        part_urls: &[String],
-    ) -> Result<()> {
+        partitions: &[String],
+    ) -> Result<TextWriteCopyParts> {
         match format {
-            WriteFormat::Parquet => {
-                validate_append_parquet(self, source_schema, partition_by, part_urls).await
-            }
-            WriteFormat::Csv => {
-                validate_append_csv(self, source_schema, partition_by, options, part_urls).await
-            }
-            WriteFormat::Json => {
-                validate_append_json(self, source_schema, partition_by, part_urls).await
+            WriteFormat::Parquet => Ok(TextWriteCopyParts {
+                select_sql: format!("SELECT * FROM {view}"),
+                stored_as: format.stored_as().to_string(),
+                spec_options_sql: String::new(),
+            }),
+            WriteFormat::Csv | WriteFormat::Json => {
+                self.text_write_copy_parts(frame, view, options, partitions, format.stored_as())
             }
         }
     }
@@ -842,10 +642,14 @@ impl ReparkSession {
         }
         let view = unique_view_name();
         let copy_target = object_store_s3::write_target_url(&scheme, &bucket, &prefix_text);
+        let parts = self.copy_inner_parts(frame, &format, &view, options, &resolved_partitions)?;
+        let spec_options_sql = with_text_write_id(parts.spec_options_sql, &view);
+        let options_clause = merge_spec_options(options_clause, &spec_options_sql);
         let copy_sql = format!(
-            "COPY (SELECT * FROM {view}) TO '{}' STORED AS {}{}{}",
+            "COPY ({}) TO '{}' STORED AS {}{}{}",
+            parts.select_sql,
             sql_escape(&copy_target),
-            format.stored_as(),
+            parts.stored_as,
             partition_clause(&resolved_partitions),
             options_clause
         );
@@ -865,6 +669,13 @@ impl ReparkSession {
     }
 
     async fn commit_s3_write(&self, view: &str, commit: &S3Commit<'_>) -> Result<usize> {
+        match commit.format {
+            WriteFormat::Parquet => self.commit_s3_write_parquet(view, commit).await,
+            WriteFormat::Csv | WriteFormat::Json => self.commit_s3_write_text(view, commit).await,
+        }
+    }
+
+    async fn commit_s3_write_parquet(&self, view: &str, commit: &S3Commit<'_>) -> Result<usize> {
         self.create_or_replace_temp_view_from(view, commit.frame)?;
         let scope = if commit.at_root {
             None
@@ -934,44 +745,110 @@ impl ReparkSession {
             }
         }
     }
-}
 
-async fn validate_append_json(
-    session: &ReparkSession,
-    source_schema: &SchemaRef,
-    partition_by: &[String],
-    part_urls: &[String],
-) -> Result<()> {
-    let source_names: Vec<String> = source_schema
-        .fields()
-        .iter()
-        .map(|field| field.name().clone())
-        .collect();
-    let source_refs: Vec<&String> = source_names.iter().collect();
-    let expected = strip_partition_names(&source_refs, partition_by);
-    let expected_keys: HashSet<String> = expected.iter().map(|name| name.to_lowercase()).collect();
-    let Some(first) = part_urls.first() else {
-        return Ok(());
-    };
-    let destination = session.read_json(first, &HashMap::new()).await?;
-    let dest_names: Vec<String> = destination
-        .schema()
-        .fields()
-        .iter()
-        .map(|field| field.name().clone())
-        .collect();
-    let dest_refs: Vec<&String> = dest_names.iter().collect();
-    let stripped = strip_partition_names(&dest_refs, partition_by);
-    let dest_keys: HashSet<String> = stripped.iter().map(|name| name.to_lowercase()).collect();
-    if dest_keys != expected_keys {
-        let mut keys: Vec<String> = stripped.into_iter().cloned().collect();
-        keys.sort();
-        return Err(Error::Analysis(format!(
-            "cannot append DataFrame columns {} to path json keys {}: column sets differ \
-             (path mode('append') refuses silent null-fill / schema drift)",
-            quoted_list(&source_names),
-            quoted_list(&keys)
-        )));
+    async fn commit_s3_write_text(&self, view: &str, commit: &S3Commit<'_>) -> Result<usize> {
+        self.create_or_replace_temp_view_from(view, commit.frame)?;
+        let scope = if commit.at_root {
+            None
+        } else {
+            Some(commit.prefix)
+        };
+        let mut materialized: Option<ObjectPath> = None;
+        let outcome = async {
+            self.register_text_write(view);
+            let copy_outcome = self
+                .sql_with_write_options(
+                    commit.copy_sql,
+                    &HashMap::new(),
+                    OverwriteIntent::Session,
+                    false,
+                )
+                .await?;
+            let _copy_batches = copy_outcome.collect().await.map_err(engine_err)?;
+            let mut parts =
+                list_part_keys(commit.store, scope, commit.format.extension(), commit.url).await?;
+            if parts.is_empty() && !commit.partitioned {
+                let location = if commit.at_root {
+                    ObjectPath::from(format!("part-00000.{}", commit.format.extension()))
+                } else {
+                    commit
+                        .prefix
+                        .clone()
+                        .join(format!("part-00000.{}", commit.format.extension()))
+                };
+                materialize_empty_part(
+                    commit.store,
+                    &location,
+                    commit.format,
+                    commit.frame.schema().inner(),
+                    commit.columns,
+                    commit.options,
+                    commit.url,
+                )
+                .await?;
+                materialized = Some(location);
+                parts = list_part_keys(commit.store, scope, commit.format.extension(), commit.url)
+                    .await?;
+            }
+            let success = if commit.at_root {
+                ObjectPath::from("_SUCCESS")
+            } else {
+                commit.prefix.clone().join("_SUCCESS")
+            };
+            commit
+                .store
+                .put(&success, PutPayload::from(Vec::<u8>::new()))
+                .await
+                .map_err(|error| {
+                    Error::DataFusion(format!(
+                        "cannot write S3 _SUCCESS under {}: {error}",
+                        commit.url
+                    ))
+                })?;
+            Ok::<usize, Error>(parts.len())
+        }
+        .await;
+        let mut locations = self.take_text_write_paths(view);
+        locations.extend(materialized);
+        match outcome {
+            Ok(count) => {
+                self.drop_temp_view(view)?;
+                Ok(count)
+            }
+            Err(error) => {
+                let _drop_result = self.drop_temp_view(view);
+                let cleanup =
+                    rollback::delete_recorded_keys(commit.store, &locations, commit.url).await;
+                match cleanup {
+                    Ok(()) => Err(error),
+                    Err(cleanup) => Err(rollback::with_cleanup_note(
+                        error,
+                        &rollback::cleanup_message(&cleanup),
+                    )),
+                }
+            }
+        }
     }
-    Ok(())
+
+    fn register_text_write(&self, view: &str) {
+        let state_lock = self.context().state_ref();
+        let mut state = state_lock.write();
+        let options = state.config_mut().options_mut();
+        if options.extensions.get::<TextWritePathRegistry>().is_none() {
+            options.extensions.insert(TextWritePathRegistry::default());
+        }
+        if let Some(registry) = options.extensions.get::<TextWritePathRegistry>() {
+            registry.register(view);
+        }
+    }
+
+    fn take_text_write_paths(&self, view: &str) -> Vec<ObjectPath> {
+        self.context()
+            .copied_config()
+            .options()
+            .extensions
+            .get::<TextWritePathRegistry>()
+            .map(|registry| registry.take(view))
+            .unwrap_or_default()
+    }
 }
