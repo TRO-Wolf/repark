@@ -97,6 +97,45 @@ pub fn join_dup_below_wrappers(plan: &LogicalPlan) -> bool {
     }
 }
 
+fn projection_preserves_id_subset(projection: &Projection) -> bool {
+    let below = projection
+        .input
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| AttrId::of(field))
+        .collect::<Vec<_>>();
+    let above = projection
+        .schema
+        .fields()
+        .iter()
+        .map(|field| AttrId::of(field))
+        .collect::<Vec<_>>();
+    !above.contains(&None) && !below.contains(&None) && above.iter().all(|id| below.contains(id))
+}
+
+#[must_use]
+pub fn union_below_wrappers(plan: &LogicalPlan) -> bool {
+    let mut node = plan;
+    loop {
+        if matches!(node, LogicalPlan::Union(_)) {
+            return true;
+        }
+        if let LogicalPlan::Projection(projection) = node {
+            if !projection_preserves_id_subset(projection) {
+                return false;
+            }
+            node = projection.input.as_ref();
+            continue;
+        }
+        let below = below_transparent(node);
+        if std::ptr::eq(below, node) {
+            return false;
+        }
+        node = below;
+    }
+}
+
 fn below_join_through(plan: &LogicalPlan) -> Option<&DFSchema> {
     let mut node = plan;
     loop {
@@ -266,4 +305,96 @@ fn oldest_field(schema: &DFSchema, hits: &[usize]) -> Result<Expr> {
         || Err(internal_datafusion_err!("resolve bound an id-free hit")),
         |name| Ok(attribute_reference(&name)),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+    use std::sync::Arc;
+
+    use datafusion::arrow::datatypes::{DataType, Field, Schema};
+    use datafusion::common::DFSchema;
+    use datafusion::logical_expr::{EmptyRelation, Filter, LogicalPlan, LogicalPlanBuilder, Union};
+
+    use super::union_below_wrappers;
+
+    fn keyed(names: &[&str], ids: &[&str]) -> Arc<DFSchema> {
+        let fields = names
+            .iter()
+            .zip(ids.iter())
+            .map(|(name, id)| {
+                Field::new(*name, DataType::Int64, true).with_metadata(HashMap::from([(
+                    "repark.attr".to_string(),
+                    (*id).to_string(),
+                )]))
+            })
+            .collect::<Vec<_>>();
+        Arc::new(DFSchema::try_from(Schema::new(fields)).unwrap())
+    }
+
+    fn empty(schema: Arc<DFSchema>) -> LogicalPlan {
+        LogicalPlan::EmptyRelation(EmptyRelation {
+            produce_one_row: false,
+            schema,
+        })
+    }
+
+    fn union_of(schema: Arc<DFSchema>) -> LogicalPlan {
+        LogicalPlan::Union(Union {
+            inputs: vec![
+                Arc::new(empty(Arc::clone(&schema))),
+                Arc::new(empty(Arc::clone(&schema))),
+            ],
+            schema,
+        })
+    }
+
+    #[test]
+    fn union_below_wrappers_sees_through_filters() {
+        let schema = keyed(&["id", "v"], &["a1", "a2"]);
+        let union = union_of(schema);
+        assert!(union_below_wrappers(&union));
+        let filtered = Filter::try_new(
+            datafusion::logical_expr::col("v").gt(datafusion::logical_expr::lit(1i64)),
+            Arc::new(union),
+        )
+        .map(LogicalPlan::Filter)
+        .unwrap();
+        assert!(union_below_wrappers(&filtered));
+    }
+
+    #[test]
+    fn union_below_wrappers_misses_without_union() {
+        let schema = keyed(&["id", "v"], &["a1", "a2"]);
+        assert!(!union_below_wrappers(&empty(schema)));
+    }
+
+    #[test]
+    fn union_below_wrappers_sees_through_id_preserving_projection() {
+        let schema = keyed(&["id", "v", "w"], &["a1", "a2", "a2"]);
+        let union = union_of(schema);
+        let reordered = LogicalPlanBuilder::from(union)
+            .project(vec![
+                datafusion::logical_expr::col("w"),
+                datafusion::logical_expr::col("v"),
+            ])
+            .unwrap()
+            .build()
+            .unwrap();
+        assert!(union_below_wrappers(&reordered));
+    }
+
+    #[test]
+    fn union_below_wrappers_stops_at_new_expression() {
+        let schema = keyed(&["id", "v"], &["a1", "a2"]);
+        let union = union_of(schema);
+        let computed = LogicalPlanBuilder::from(union)
+            .project(vec![
+                datafusion::logical_expr::col("v").gt(datafusion::logical_expr::lit(1i64)),
+            ])
+            .unwrap()
+            .build()
+            .unwrap();
+        assert!(!union_below_wrappers(&computed));
+    }
 }

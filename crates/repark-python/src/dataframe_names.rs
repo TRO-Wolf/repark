@@ -23,6 +23,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(drop_frame_columns, module)?)?;
     module.add_function(wrap_pyfunction!(engine_field_is_unique, module)?)?;
     module.add_function(wrap_pyfunction!(join_dup_below_wrappers, module)?)?;
+    module.add_function(wrap_pyfunction!(union_below_wrappers, module)?)?;
     module.add_function(wrap_pyfunction!(frame_case_sensitive, module)?)?;
     module.add_function(wrap_pyfunction!(frame_is_relation, module)?)?;
     module.add_function(wrap_pyfunction!(grandchild_key_status, module)?)?;
@@ -335,6 +336,11 @@ pub(crate) fn engine_field_is_unique(frame: &PyDataFrame, name: &str) -> bool {
 #[pyfunction]
 pub(crate) fn join_dup_below_wrappers(frame: &PyDataFrame) -> bool {
     repark_core::frame_names::join_dup_below_wrappers(frame.inner().logical_plan())
+}
+
+#[pyfunction]
+pub(crate) fn union_below_wrappers(frame: &PyDataFrame) -> bool {
+    repark_core::frame_names::union_below_wrappers(frame.inner().logical_plan())
 }
 
 #[pyfunction]
