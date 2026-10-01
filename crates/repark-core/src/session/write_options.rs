@@ -1,14 +1,33 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use datafusion::error::DataFusionError;
 use datafusion::prelude::DataFrame;
-use repark_common::Result;
+use repark_common::{Error, Result};
 
 use crate::dialect::{EngineContext, SqlDialect};
 use crate::error_map::engine_err_for_sql;
 use crate::session::ReparkSession;
+use crate::session_time_zone::{TimeParserPolicyConfig, parse_time_parser_policy};
 
 impl ReparkSession {
+    #[allow(clippy::missing_errors_doc)]
+    pub fn set_time_parser_policy(&self, raw: &str) -> Result<()> {
+        let policy = parse_time_parser_policy(raw).map_err(|error| match error {
+            DataFusionError::Configuration(message) => Error::IllegalArgument(message),
+            other => Error::IllegalArgument(other.to_string()),
+        })?;
+        let state_lock = self.context().state_ref();
+        let mut state = state_lock.write();
+        let options = state.config_mut().options_mut();
+        if options.extensions.get::<TimeParserPolicyConfig>().is_none() {
+            options.extensions.insert(TimeParserPolicyConfig { policy });
+        } else if let Some(carrier) = options.extensions.get_mut::<TimeParserPolicyConfig>() {
+            carrier.policy = policy;
+        }
+        Ok(())
+    }
+
     #[must_use]
     pub fn set_iceberg_session_write_conf(&self, key: &str, value: &str) -> bool {
         let state_lock = self.context().state_ref();

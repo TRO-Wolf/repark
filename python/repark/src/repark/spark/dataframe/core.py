@@ -2536,8 +2536,8 @@ class DataFrame:
     def offset(self, n: int) -> DataFrame:
         """Skip the first ``n`` rows (PySpark ``DataFrame.offset``).
 
-        Implemented as ``limit_with_skip(n, large_fetch)`` then unrestricted remainder via a
-        large fetch cap (engine has no pure OFFSET without LIMIT).
+        Plans a fetch-less engine ``Limit``, so a skipping offset over a
+        one-row constant source writes nothing, like Spark.
         """
         self._ensure_alive()
         if isinstance(n, bool) or not isinstance(n, int):
@@ -2546,7 +2546,7 @@ class DataFrame:
             raise PySparkValueError(f"offset must be >= 0, got {n}")
         if n == 0:
             return self._identity_child()
-        return self._spawn_preserving_identity(self._plan().limit_with_skip(n, 2**31 - 1))
+        return self._spawn_preserving_identity(self._plan().limit_with_skip(n, None))
 
     def drop(self, *cols: Column | str) -> DataFrame:
         """Drop columns by name or :class:`Column` (PySpark ``DataFrame.drop``).

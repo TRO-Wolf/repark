@@ -1,5 +1,7 @@
 # map — python/repark/tests
 
+CAST-OVERFLOW-INSERT-1 (2026-09-29): `test_cast_overflow_insert_1.py` is the overflow-store battery — 9 tests over the 76-cell recorded Spark 4.1.2 oracle in `cast_overflow_insert_1_spark_oracle.json`, one door-group test per door (VALUES, INSERT SELECT, OVERWRITE, BY NAME, UPDATE, MERGE, DataFrame) plus range, untouched-refusal and must-not-change groups. Every refusal cell asserts the Spark class, message head, SQLSTATE and the post-statement read-back; every store cell asserts exact rows and column types. Divergences with their causes: `dec-div0` names RePark's `DECIMAL(17,6)` against Spark's `DECIMAL(8,6)`; `upd/div0-col` keeps the pre-existing UPDATE `__common_expr_1` failure; `ovw/empty-const` keeps the wipe-guard text; `insel/cte` keeps the CTE gap; the int-overflow keep-pin keeps its text per the brief. Verifier fold (2026-09-29): `vo1/` pins the truncated-bound stores per width for DOUBLE and FLOAT plus the exact-boundary refusals (all 17 statements measured on live Spark 4.1.2, banner `4.1.2 UTC`); `vo2/` pins `LIMIT 0` (plain, ORDER BY, subquery, BY NAME) and DataFrame `.limit(0)` succeeding with the table unchanged; `_frame_run` honours a `limit` cell key. Fixture trim (2026-09-29): the oracle keeps the asserted cells only — dropped `meta`, `ordered`, `divergence` and `keep_pin`, none read by the test module — compacted to one cell per line (1601 down to 104 lines); the full corpus lives at `/tmp/oc-worker/direct/wo/cast-overflow-evidence/cast_overflow_insert_1_spark_oracle.full.json`; the DIFF-PROBE 13 near-miss cells are recorded in the ledger as VALUES-CONSTANT-FOLD-PARITY. Re-verify fold (2026-09-29): `vo2b/` pins `LIMIT 0` below the defining projection (plain, table-backed, two-level, INT-target, DataFrame `.limit(0).selectExpr`) succeeding with the table unchanged, with the Filter-between and JOIN keep-refusals; `vo2c/` pins a skipping `OFFSET` over a one-row constant (plain, ORDER BY, subquery, below the defining projection, DataFrame `.offset(5)`) succeeding, with the `OFFSET 0`, `LIMIT 5 OFFSET 1` and table-backed keep-refusals; `_frame_run` honours `offset` and `select` cell keys. pins: cast-overflow-insert-1/C-001, C-002, C-003, C-004. Re-verify VO3-1 (2026-09-29): eight `test_vo3_1_*` pins assert a row with both a store-type refusal and an overflow reports the store refusal (never `CAST_OVERFLOW`) with the seed row intact on BY NAME, INSERT OVERWRITE, dynamic-partition OVERWRITE and `insertInto(overwrite=True)`, in both column orders. Re-verify VO4-1 (2026-09-30): five `test_vo4_1_*` pins assert a short or long source reports base's arity error byte-identical with the seed row intact on INSERT OVERWRITE, dynamic-partition OVERWRITE, `insertInto(overwrite=True)`, `insertInto(overwrite=False)` and INSERT INTO SELECT, each with a DATE column and a `1e19D` column, reusing the VO3 session and seed helpers.
+
 IPI-40 views PR3 (2026-09-23): `test_ice_views_3_alter.py` pins bare and two-part ALTER VIEW SET/UNSET/RENAME through USE, the three-part near miss, exact missing-view and no-USE refusals, and the unchanged ALTER TABLE missing-target answer on a view. `test_ice_views_1.py` pins SHOW VIEWS IN after USE, bare CREATE/DROP, the bare and two-part view write refusals, and successful bare and two-part table INSERT with exact rows. The direct router pins for CREATE/DROP/write-guard are in `crates/repark-spark/src/tests/alter_view_routing.rs` because the facade qualifies those bare names before dispatch.
 
 IPI-40 PR3 r2b (2026-09-23): every `pytest.raises` added by PR3 in `test_ice_views_1.py` and `test_ice_views_3_alter.py` also asserts the exact class (`type(caught.value) is …`); the three parser near-misses (`ALTER VIEW v` with no verb, `ALTER VIEWS`, `ALTER VIEWX`) are measured as `ParseException`. `test_ice_views_1.py` adds bare and two-part SELECT from a view after USE (`[[0],[1],[2]]`); SELECT names are qualified by the facade, so these pins are the only ones that measure that path.
@@ -3796,8 +3798,28 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **IO-ORC-1 (2026-09-16):** `test_load_orc_declared_not_implemented` becomes
   `test_load_orc_reaches_the_scan` (missing path is `PATH_NOT_FOUND` now).
   pins: io-orc-1/C-004
+- `test_text_write_timestamp_zone_1.py` + `text_write_timestamp_zone_1_fixture.json` —
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** 179 Spark-recorded CSV/JSON
+  timestamp-write cells (4 zones, defaults, user formats, refusals, nested)
+  compared byte for byte or by error token, CSV/JSON read-back legs, and a
+  moto s3a leg.
+  pins: text-write-timestamp-zone-1/C-001, C-002, C-003, C-005, C-006
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 verifier fold (2026-09-29):** 20 more cells
+  (quote runs, year width, `VV` display ids, backslash patterns, case twins,
+  trailing-`]` classes) plus LEGACY-refusal and LMT-residue legs (207 pins).
+  **Re-verify (2026-09-29):** 34 more cells (zero-offset `VV` spellings,
+  `g` padding widths) plus policy-default, no-LEGACY-clause, and
+  optioned-non-temporal LEGACY legs (244 pins).
+  **Re-verify 2 (2026-09-30):** a `perf`-marked shuffled-data pin: 20k
+  timestamps over 1900-2024 write to CSV inside a 1.0 s debug budget.
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 3 fold (2026-09-30):** the
+  failed-local-write trio: a 400k-row JSON write with zone letters on NTZ
+  leaves no destination on overwrite (plain and partitioned) and keeps every
+  destination byte on append.
+  pins: text-write-timestamp-zone-1/C-008
 - `test_r2_read_formats2.py` — R2 writer option matrix / path modes / partitionBy: quoteAll /
-  escapeQuotes wired; dateFormat/timestampFormat refuse-loud; parquet compression; path
+  escapeQuotes wired; dateFormat/timestampFormat honored (TEXT-WRITE-TIMESTAMP-ZONE-1
+  flipped the three refuse-loud legs to honored pins); parquet compression; path
   mode overwrite/append/error/ignore; partitionBy hive layout + multi-col + append merge +
   unknown-col loud; **octo fix half:** root `read.parquet(partitioned)` no null-fill /
   no empty root part (C3-001/C6-001), duplicate partitionBy loud (C3-002), append col-set +

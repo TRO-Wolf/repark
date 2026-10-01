@@ -86,9 +86,30 @@ pub fn built_sql_user_fragment(sql: &str, keep_verbatim: bool) -> PyResult<Strin
     })
 }
 
+#[allow(clippy::missing_errors_doc)]
+#[pyfunction]
+#[pyo3(signature = (session, frame, view, options, partition_by, stored_as))]
+pub fn session_text_write_copy_parts(
+    session: PyRef<'_, PyReparkSession>,
+    frame: &PyDataFrame,
+    view: &str,
+    options: HashMap<String, String>,
+    partition_by: Vec<String>,
+    stored_as: &str,
+) -> PyResult<(String, String, String)> {
+    fenced_span!("py.write", "session_text_write_copy_parts", {
+        session
+            .session
+            .text_write_copy_parts(frame.inner(), view, &options, &partition_by, stored_as)
+            .map(|parts| (parts.select_sql, parts.stored_as, parts.spec_options_sql))
+            .map_err(crate::to_py_err)
+    })
+}
+
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(session_sql_with_write_options, module)?)?;
     module.add_function(wrap_pyfunction!(session_write_path, module)?)?;
     module.add_function(wrap_pyfunction!(built_sql_user_fragment, module)?)?;
+    module.add_function(wrap_pyfunction!(session_text_write_copy_parts, module)?)?;
     Ok(())
 }

@@ -4,6 +4,16 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [text-write-timestamp-zone-1-ledger.md](text-write-timestamp-zone-1-ledger.md) —
+  **WO TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29), in flight:** CSV and JSON
+  writes format LTZ in the session zone under Spark's default `timestampFormat`,
+  NTZ and DATE under their zone-free defaults, through one shared Rust
+  SELECT-level formatter (local + s3a); user patterns honored per kind, bad
+  patterns refused with Spark's class (C-001..C-005); parquet/reads untouched,
+  one intended neighbour change, four mandated flips (C-006); post-2100 tzdata,
+  zone-name, sink and inference residues R-1..R-5.
+  `risk_tier: standard`. Branch `fix/text-write-timestamp-zone-1`.
+  pins: text-write-timestamp-zone-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [aws-accept-replace-1-ledger.md](aws-accept-replace-1-ledger.md) —
   **WO AWS-ACCEPT-REPLACE-1 (2026-09-27), in flight:** RP-55 repins the fork to
   `6e937f49` (F-STAGED-SINGLE-WRITE-1 `#362` — a staged replace writes its metadata file
@@ -682,6 +692,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `fix/cast-ts-string-1`.
   pins: cast-ts-string-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010, C-011, C-012
+- [cast-overflow-insert-1-ledger.md](cast-overflow-insert-1-ledger.md) —
+  **CAST-OVERFLOW-INSERT-1 (2026-09-29), in flight:** out-of-range DOUBLE, FLOAT and
+  DECIMAL stores into integer columns refuse Spark 4.1.2's `CAST_OVERFLOW_IN_TABLE_INSERT`
+  on all nine write doors — the `StoreOverflowCast` Dml analyzer rule plus the same
+  conformance applied between eager analysis and optimization on the non-Dml internal
+  plans, with checked-cast boundary UDFs and a Spark-error catalog entry; R-INTDIV-9
+  closed. Verifier fold (2026-09-29): VO-1 judges the truncated value, VO-2 stops at
+  `LIMIT 0`, and the seven S3 observations stand as residues R-VO-S3-1..7.
+  `risk_tier: standard`. Branch `fix/cast-overflow-insert-1`.
+  pins: cast-overflow-insert-1/C-001, C-002, C-003, C-004
 - [cast-map-spell-1-ledger.md](cast-map-spell-1-ledger.md) —
   **CAST-MAP-SPELL-1 (2026-09-19), in flight:** `CAST(… AS MAP<…>)` and
   `.cast(MapType)` answer Spark 4.1.2 on every door — a cast-UDF plus token-rewrite

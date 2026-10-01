@@ -45,8 +45,12 @@ WAP_SESSION_KEYS: frozenset[str] = frozenset({WAP_BRANCH_KEY, WAP_ID_KEY})
 MERGE_SCHEMA_KEY = "spark.sql.iceberg.merge-schema"
 
 
+TIME_PARSER_POLICY_KEY = "spark.sql.legacy.timeParserPolicy"
+
+
 _SQLCONF_DEFAULTS: dict[str, str] = {
     PARTITION_OVERWRITE_MODE_KEY: "STATIC",
+    TIME_PARSER_POLICY_KEY: "CORRECTED",
     # Default app name where we control the default (Spark has no default appName).
     "spark.app.name": "repark",
     # Conf true infers StructType for dict-valued *cells* (any nesting depth); false keeps

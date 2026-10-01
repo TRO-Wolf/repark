@@ -185,6 +185,10 @@ fn apply_runtime_config(
         apply_default_catalog(session, Some(value));
         return Ok(());
     }
+    if key == repark_core::TIME_PARSER_POLICY_KEY {
+        session.set_time_parser_policy(value)?;
+        return Ok(());
+    }
     if session.set_iceberg_session_write_conf(key, value) {
         return Ok(());
     }

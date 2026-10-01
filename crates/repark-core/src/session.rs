@@ -42,6 +42,7 @@ mod path_write;
 mod session_catalog;
 pub(crate) mod spill;
 mod temp_views;
+mod text_write_format;
 mod write_options;
 pub mod writer_layout;
 
@@ -307,6 +308,8 @@ impl ReparkSessionBuilder {
         let temp_view_home = build_temp_view_home(&context);
         ext.register(&context).map_err(engine_err)?;
         crate::range_table::register_spark_range(&context);
+        text_write_format::file_format::register_text_write_formats(&context)
+            .map_err(engine_err)?;
         let dialect = self
             .sql_dialect
             .unwrap_or_else(|| Arc::new(DataFusionDialect));
@@ -692,17 +695,6 @@ impl ReparkSession {
     }
 
     /// Return session temp-view names from the pinned home without loading table metadata.
-    /// # Errors
-    /// [`Error::Analysis`] when the build-time home provider was replaced; otherwise infallible.
-    pub fn list_temp_view_names(&self) -> Result<Vec<String>> {
-        // List the build-time home and refuse if its provider identity changed.
-        crate::temp_view::assert_home_intact(self.context(), &self.temp_view_home)?;
-        let Some(schema) = self.temp_view_home.provider.as_ref() else {
-            return Ok(Vec::new());
-        };
-        Ok(schema.table_names())
-    }
-
     /// Return DataFusion provider names for a catalog schema without loading tables.
     /// # Errors
     /// Currently infallible (unknown catalog/schema → empty list).

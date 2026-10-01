@@ -18,6 +18,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 ## Contents
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
+- `cast_overflow_insert.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** end-to-end refusal
+  pins over a real Iceberg table: every door refuses `CAST_OVERFLOW_IN_TABLE_INSERT` with
+  source/target/column named and nothing written; in-range, int-to-int and string stores
+  keep their behavior.
 - `describe_view_routing.rs` — DESCRIBE routing pins table and view probe failures,
   the viewless catalog refusal, unchanged tables, and stored view columns after
   the source table disappears, including EXTENDED. Failure pins check the

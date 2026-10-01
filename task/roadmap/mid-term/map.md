@@ -139,6 +139,24 @@ declines it (a dated ruling in the intake, then the archive).
 - [tz-offset-seconds-1-card-2026-09-16.md](tz-offset-seconds-1-card-2026-09-16.md) — **card TZ-OFFSET-SECONDS-1
   (2026-09-16, 1.6, ruling Q-17c-1):** sub-minute fixed session offsets (`+05:30:30`) carried as seconds east of UTC
   in a typed zone instead of an Arrow `Tz` string; closes the dated declaration SET-ANSI-RUNTIME-4. No 1.5 code.
+- [plan-depth-1-card-2026-09-30.md](plan-depth-1-card-2026-09-30.md) — **card PLAN-DEPTH-1
+  (2026-09-30, mid-term, ruling OD-3):** `count()` over 200 or more chained `DataFrame.filter`
+  calls segfaults (stack overflow); verifier finding RC5-5, S3, pre-existing. Covered by PR #892
+  (DEEP-FILTER-CHAIN-CRASH-1); closes when #892 merges, after re-running the repro with string
+  and Column filters under both `caseSensitive` settings on main.
+- [sql-lambda-scope-1-card-2026-09-30.md](sql-lambda-scope-1-card-2026-09-30.md) — **card SQL-LAMBDA-SCOPE-1
+  (2026-09-30, mid-term, ruling OD-3):** the `spark.sql` door scopes higher-order-function
+  lambdas to the wrong rows (`exists` predicates answer `[2]`/`[1]`/`[1,5]`/`[5]` where Spark
+  answers `[1,2]`/`[1,5]`/`[1,2,5]`/`[1,5]`); verifier finding RC5-6, S3, pre-existing, base and
+  head identical. The `DataFrame.filter` forms already answer Spark.
+- [sort-parent-column-1-card-2026-09-30.md](sort-parent-column-1-card-2026-09-30.md) — **card SORT-PARENT-COLUMN-1
+  (2026-09-30, mid-term, ruling OD-3):** `orderBy(parent Column)` on a case-twin frame sorts by
+  the output twin instead of the hidden parent attribute under `caseSensitive=true`;
+  verifier finding RC5-7, S3, pre-existing, base and head identical. Home is the R-CS2-18 family.
+- [unicode-case-version-1-card-2026-09-30.md](unicode-case-version-1-card-2026-09-30.md) — **card UNICODE-CASE-VERSION-1
+  (2026-09-30, mid-term, ruling OD-3):** case folding uses Rust's Unicode 16 tables while JDK 17
+  Spark uses Unicode 13, so Unicode 14–16 case pairs fold in RePark but stay distinct in Spark;
+  verifier finding RC3-5 / residue R-CS2-17, S3, 34 cells. The boundary moves with the deployment JDK.
 - [bl11-encoder-perf-1-card-2026-09-16.md](bl11-encoder-perf-1-card-2026-09-16.md) — **card BL11-ENCODER-PERF-1
   (2026-09-16, P3 perf, ruling Q-17c-5):** the numeric → BINARY encoder builds fixed-width output in bulk (arithmetic
   offsets, cloned validity) instead of a per-row builder; starts from 17c's measured 26.81 ms vs 18.35 ms (~1.5×).
