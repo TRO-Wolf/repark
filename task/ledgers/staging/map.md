@@ -4,6 +4,16 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [text-write-timestamp-zone-1-ledger.md](text-write-timestamp-zone-1-ledger.md) —
+  **WO TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29), in flight:** CSV and JSON
+  writes format LTZ in the session zone under Spark's default `timestampFormat`,
+  NTZ and DATE under their zone-free defaults, through one shared Rust
+  SELECT-level formatter (local + s3a); user patterns honored per kind, bad
+  patterns refused with Spark's class (C-001..C-005); parquet/reads untouched,
+  one intended neighbour change, four mandated flips (C-006); post-2100 tzdata,
+  zone-name, sink and inference residues R-1..R-5.
+  `risk_tier: standard`. Branch `fix/text-write-timestamp-zone-1`.
+  pins: text-write-timestamp-zone-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [aws-accept-replace-1-ledger.md](aws-accept-replace-1-ledger.md) —
   **WO AWS-ACCEPT-REPLACE-1 (2026-09-27), in flight:** RP-55 repins the fork to
   `6e937f49` (F-STAGED-SINGLE-WRITE-1 `#362` — a staged replace writes its metadata file
@@ -33,6 +43,27 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   store (C-001); the VALUES residual stays open for every other target (R-1).
   `risk_tier: standard`. Branch `fix/ltz-store-int-1`.
   pins: ltz-store-int-1/C-001
+- [store-ts-to-numeric-1-ledger.md](store-ts-to-numeric-1-ledger.md) —
+  **WO STORE-TS-TO-NUMERIC-1 (2026-09-28), in flight:** TIMESTAMP, DATE, STRING,
+  BOOLEAN and `-NULL` sources refuse with Spark's `CANNOT_SAFELY_CAST` text where
+  Spark's ANSI store assignment refuses them — the VALUES door into numeric, DATE and
+  BOOLEAN columns (C-001), `-NULL` on every write door (C-002), STRING into
+  FLOAT/DOUBLE on the INSERT doors (C-003), STRING into DECIMAL on UPDATE (C-004) —
+  while every store Spark allows still stores (C-005). `risk_tier: standard`. Branch
+  `fix/store-ts-to-numeric-1`.
+  pins: store-ts-to-numeric-1/C-001, C-002, C-003, C-004, C-005
+  **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** STRING-source refusals are withdrawn
+  (C-003, C-004 REJECTED) and return to base behaviour (C-006); a branching source
+  refuses only when every leaf is a refused type (C-007). The STRING class moves to
+  v1.5.2 card STORE-STRING-ASSIGN-1. pins: store-ts-to-numeric-1/C-006, C-007
+- [store-ts-doors-2-ledger.md](store-ts-doors-2-ledger.md) —
+  **WO STORE-TS-DOORS-2 (2026-09-29), in flight:** the two write doors #885
+  missed refuse like Spark — TIMESTAMP, TIMESTAMP_NTZ and DATE through a VALUES
+  node inside INSERT … SELECT into numeric columns (C-001) and `-NULL` into
+  TIMESTAMP, DATE and BOOLEAN through static-partition OVERWRITE (C-002) — while
+  every base match keeps its answer (C-003). `risk_tier: standard`. Branch
+  `fix/store-ts-doors-2`.
+  pins: store-ts-doors-2/C-001, C-002, C-003
 - [uuid-cast-window-1-ledger.md](uuid-cast-window-1-ledger.md) —
   **WO UUID-CAST-WINDOW-1 (2026-09-27), in flight:** the UUID refusal's SQL window
   counts as Spark 4.1.2 counts — the position in Unicode scalar values, the window
@@ -82,6 +113,28 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   FIXED.
   `risk_tier: standard`. Branch `feat/tblprops-1`.
   pins: tblprops-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+- [ntz-store-doors-1-ledger.md](ntz-store-doors-1-ledger.md) —
+  **WO NTZ-STORE-DOORS-1 (2026-09-28), in flight:** the remaining write doors
+  (`BY NAME`, the `INSERT OVERWRITE` family, `writeTo().overwritePartitions()`, MERGE
+  UPDATE SET / SET * / INSERT (cols) / INSERT *) store `TIMESTAMP` into
+  `TIMESTAMP_NTZ` as the session-zone wall (C-001) and `TIMESTAMP_NTZ` into
+  `TIMESTAMP` as the session-zone instant (C-002) through one seam, refusals and
+  same-type stores unchanged (C-003), `DATE` stores the session midnight (C-004),
+  partition transforms follow the stored value (C-005). The verifier fold
+  (2026-09-29) adds C-006: a `VALUES` column that mixes `TIMESTAMP` and
+  `TIMESTAMP_NTZ` is typed `TIMESTAMP` through the session zone at the `VALUES`
+  coercion site. It widens R-1 to the nested types, adds R-5 (MERGE `ON`) and
+  R-6, and closes R-4. The re-verify fold (2026-09-29) adds C-007: a `DATE` cell
+  never triggers the widening, so `DATE` + `TIMESTAMP_NTZ` stays `TIMESTAMP_NTZ`,
+  and corrects the fold's "0 moved away" claim and R-6. The second re-verify fold
+  (2026-09-29) adds C-008: a written `CAST(… AS TIMESTAMP)` `VALUES` cell is
+  `TIMESTAMP` beside a `DATE` or `TIMESTAMP_NTZ` cell, and NULL rows never make a
+  column `TIMESTAMP_NTZ`; it records R-7 (card NTZ-DST-GAP-CAST-1) to R-10. The third
+  re-verify fold (2026-09-29) adds C-009: the `VALUES` pass deviates from base only on
+  positive, syntactic evidence, so an expression cell such as `date_trunc` of an NTZ
+  beside a `DATE` keeps base's `TIMESTAMP`; it records R-11 and R-12.
+  `risk_tier: standard`. Branch `fix/ntz-store-doors-1`.
+  pins: ntz-store-doors-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [ntz-1-ledger.md](ntz-1-ledger.md) —
   **WO NTZ-1 (2026-09-26), in flight:** `TIMESTAMP_NTZ` literals, casts and
   store assignment answer as Spark. Slice 1 (this commit): the literal and the
@@ -647,6 +700,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `fix/cast-ts-string-1`.
   pins: cast-ts-string-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010, C-011, C-012
+- [cast-overflow-insert-1-ledger.md](cast-overflow-insert-1-ledger.md) —
+  **CAST-OVERFLOW-INSERT-1 (2026-09-29), in flight:** out-of-range DOUBLE, FLOAT and
+  DECIMAL stores into integer columns refuse Spark 4.1.2's `CAST_OVERFLOW_IN_TABLE_INSERT`
+  on all nine write doors — the `StoreOverflowCast` Dml analyzer rule plus the same
+  conformance applied between eager analysis and optimization on the non-Dml internal
+  plans, with checked-cast boundary UDFs and a Spark-error catalog entry; R-INTDIV-9
+  closed. Verifier fold (2026-09-29): VO-1 judges the truncated value, VO-2 stops at
+  `LIMIT 0`, and the seven S3 observations stand as residues R-VO-S3-1..7.
+  `risk_tier: standard`. Branch `fix/cast-overflow-insert-1`.
+  pins: cast-overflow-insert-1/C-001, C-002, C-003, C-004
 - [cast-map-spell-1-ledger.md](cast-map-spell-1-ledger.md) —
   **CAST-MAP-SPELL-1 (2026-09-19), in flight:** `CAST(… AS MAP<…>)` and
   `.cast(MapType)` answer Spark 4.1.2 on every door — a cast-UDF plus token-rewrite
@@ -1923,3 +1986,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   VmSize/VmRSS base-vs-head record live in the ledger; residues R-1..R-4.
   `risk_tier: standard`. Branch `fix/deep-filter-chain-crash-1`.
   pins: deep-filter-chain-crash-1/C-001, C-002, C-003, C-004
+- [string-literal-escape-1-ledger.md](string-literal-escape-1-ledger.md) —
+  **STRING-LITERAL-ESCAPE-1 (2026-09-29):** SQL string literals unescape as
+  Spark does (C-000 the 229-literal Step-0 matrix, C-001 quote-aware doubles
+  plus double-raw, C-002 raw head/tail splits, C-003 verbatim-exact values,
+  C-004 the zero-break guards).
+  `risk_tier: standard`. Branch `fix/string-literal-escape-1`.
+  pins: string-literal-escape-1/C-000, C-001, C-002, C-003, C-004
+  Re-verify VE3-1 (2026-09-30): the inventory now excepts `SQLTransformer`
+  (user-written SQL through the user door).
+  CI round seams (2026-09-30): the five test seams follow the `sql_built`
+  door with the same assertions (C-013).
+  CI round expr (2026-09-30): `F.expr` pre-renders display-shaped text so
+  composed embeddings keep base's grouping (C-014).

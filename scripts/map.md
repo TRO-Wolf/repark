@@ -3,6 +3,11 @@
 DEEP-FILTER-CHAIN-CRASH-1 CI segv (2026-09-30): `check_rust_file_size.py` ratchets `repark-python/src/column/mod.rs` 1011 → 1005 (rustfmt joins three calls shortened by the grown clone-out; the `Clone` derive leaves with the manual impl), shrink-only, with the CAP-1 mirror. pins: deep-filter-chain-crash-1/C-012
 
 DEEP-FILTER-CHAIN-CRASH-1 limits fold (2026-09-29): `check_rust_file_size.py` ratchets `repark-python/src/column/mod.rs` 1012 → 1011 (the SQL text-cap call leaves `Column.sql`), shrink-only, with the CAP-1 mirror. pins: deep-filter-chain-crash-1/C-009
+STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30): `check_lib_py.py` ratchets `dataframe/core.py` 3973 → 3971 and `session/session_core.py` 2293 → 2277, with the CAP-1 mirror, shrink-only. pins: string-literal-escape-1/C-011
+
+STRING-LITERAL-ESCAPE-1 re-verify follow-up (2026-09-30): `check_rust_file_size.py` ratchets `repark-python/src/session.rs` 1122 → 1097 (`apply_session_knobs` moves to `session_runtime.rs` to fund the `sql_built` method), with the CAP-1 mirror, shrink-only. pins: string-literal-escape-1/C-011
+
+STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30): `check_lib_py.py` ratchets `spark/functions.py` 1984 → 1938 (the `lit` rendering helpers move unchanged to `functions_lit.py`; the shed `#` notes live in the spark map), with the CAP-1 mirror, shrink-only. pins: string-literal-escape-1/C-009
 
 WO CASESENS-1 S5 (2026-09-27): `check_rust_file_size.py` ratchets `repark-iceberg/src/write/alter.rs` 1607 → 1606 (the DROP/REPLACE name pin is rewritten to the exact refusal without its comments), shrink-only. pins: casesens-1/C-013
 

@@ -1,5 +1,7 @@
 # map — python/repark/tests
 
+CAST-OVERFLOW-INSERT-1 (2026-09-29): `test_cast_overflow_insert_1.py` is the overflow-store battery — 9 tests over the 76-cell recorded Spark 4.1.2 oracle in `cast_overflow_insert_1_spark_oracle.json`, one door-group test per door (VALUES, INSERT SELECT, OVERWRITE, BY NAME, UPDATE, MERGE, DataFrame) plus range, untouched-refusal and must-not-change groups. Every refusal cell asserts the Spark class, message head, SQLSTATE and the post-statement read-back; every store cell asserts exact rows and column types. Divergences with their causes: `dec-div0` names RePark's `DECIMAL(17,6)` against Spark's `DECIMAL(8,6)`; `upd/div0-col` keeps the pre-existing UPDATE `__common_expr_1` failure; `ovw/empty-const` keeps the wipe-guard text; `insel/cte` keeps the CTE gap; the int-overflow keep-pin keeps its text per the brief. Verifier fold (2026-09-29): `vo1/` pins the truncated-bound stores per width for DOUBLE and FLOAT plus the exact-boundary refusals (all 17 statements measured on live Spark 4.1.2, banner `4.1.2 UTC`); `vo2/` pins `LIMIT 0` (plain, ORDER BY, subquery, BY NAME) and DataFrame `.limit(0)` succeeding with the table unchanged; `_frame_run` honours a `limit` cell key. Fixture trim (2026-09-29): the oracle keeps the asserted cells only — dropped `meta`, `ordered`, `divergence` and `keep_pin`, none read by the test module — compacted to one cell per line (1601 down to 104 lines); the full corpus lives at `/tmp/oc-worker/direct/wo/cast-overflow-evidence/cast_overflow_insert_1_spark_oracle.full.json`; the DIFF-PROBE 13 near-miss cells are recorded in the ledger as VALUES-CONSTANT-FOLD-PARITY. Re-verify fold (2026-09-29): `vo2b/` pins `LIMIT 0` below the defining projection (plain, table-backed, two-level, INT-target, DataFrame `.limit(0).selectExpr`) succeeding with the table unchanged, with the Filter-between and JOIN keep-refusals; `vo2c/` pins a skipping `OFFSET` over a one-row constant (plain, ORDER BY, subquery, below the defining projection, DataFrame `.offset(5)`) succeeding, with the `OFFSET 0`, `LIMIT 5 OFFSET 1` and table-backed keep-refusals; `_frame_run` honours `offset` and `select` cell keys. pins: cast-overflow-insert-1/C-001, C-002, C-003, C-004. Re-verify VO3-1 (2026-09-29): eight `test_vo3_1_*` pins assert a row with both a store-type refusal and an overflow reports the store refusal (never `CAST_OVERFLOW`) with the seed row intact on BY NAME, INSERT OVERWRITE, dynamic-partition OVERWRITE and `insertInto(overwrite=True)`, in both column orders. Re-verify VO4-1 (2026-09-30): five `test_vo4_1_*` pins assert a short or long source reports base's arity error byte-identical with the seed row intact on INSERT OVERWRITE, dynamic-partition OVERWRITE, `insertInto(overwrite=True)`, `insertInto(overwrite=False)` and INSERT INTO SELECT, each with a DATE column and a `1e19D` column, reusing the VO3 session and seed helpers.
+
 IPI-40 views PR3 (2026-09-23): `test_ice_views_3_alter.py` pins bare and two-part ALTER VIEW SET/UNSET/RENAME through USE, the three-part near miss, exact missing-view and no-USE refusals, and the unchanged ALTER TABLE missing-target answer on a view. `test_ice_views_1.py` pins SHOW VIEWS IN after USE, bare CREATE/DROP, the bare and two-part view write refusals, and successful bare and two-part table INSERT with exact rows. The direct router pins for CREATE/DROP/write-guard are in `crates/repark-spark/src/tests/alter_view_routing.rs` because the facade qualifies those bare names before dispatch.
 
 IPI-40 PR3 r2b (2026-09-23): every `pytest.raises` added by PR3 in `test_ice_views_1.py` and `test_ice_views_3_alter.py` also asserts the exact class (`type(caught.value) is …`); the three parser near-misses (`ALTER VIEW v` with no verb, `ALTER VIEWS`, `ALTER VIEWX`) are measured as `ParseException`. `test_ice_views_1.py` adds bare and two-part SELECT from a view after USE (`[[0],[1],[2]]`); SELECT names are qualified by the facade, so these pins are the only ones that measure that path.
@@ -290,6 +292,32 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   sequence replays (writes run, 11 reads assert rows and dtypes); 3 divergence
   steps pin the widening row and both refusal texts beside Spark's.
   pins: ntz-1/C-006
+  **WO NTZ-STORE-DOORS-1 verifier fold (2026-09-29):** the `r_wide` step (R-NTZ-S2-11)
+  now asserts Spark's recorded rows. The mixed `VALUES` column is typed `TIMESTAMP`, so
+  the New York gap wall stores `2024-03-10 03:30:00`. Its `divergence` and `spark_rows`
+  keys are gone, and two divergence steps remain: the UPDATE refusal texts.
+  pins: ntz-store-doors-1/C-006
+- [test_ntz_store_doors_1.py](test_ntz_store_doors_1.py) +
+  [ntz_store_doors_1_spark_oracle.json](ntz_store_doors_1_spark_oracle.json) —
+  **WO NTZ-STORE-DOORS-1 (2026-09-28):** 66 door cells (UTC, New York, Kolkata ×
+  `TIMESTAMP` / `TIMESTAMP_NTZ` × `BY NAME`, the `INSERT OVERWRITE` family,
+  `writeTo().overwritePartitions()`, `writeTo().overwrite(cond)` and the four MERGE
+  arms) replay Spark 4.1.2's recorded reads for eleven sources, and every Spark refusal
+  asserts RePark's recorded refusal text; 12 `days`/`hours` cells replay rows,
+  `.partitions` and the equality filter.
+  pins: ntz-store-doors-1/C-001, C-002, C-003, C-004, C-005
+  **Verifier fold (2026-09-29, VD-1):**
+  [ntz_store_doors_1_mixed_spark_oracle.json](ntz_store_doors_1_mixed_spark_oracle.json)
+  (generated from `target/ntz-mix/out/m-spark.json`) adds 52 door cells and 4 SELECT
+  cells for a `VALUES` column that mixes `TIMESTAMP` and `TIMESTAMP_NTZ`. The door cells
+  cover New York and Kolkata × both target types × 13 doors: the ten SQL doors plus
+  `overwritePartitions()`, `insertInto(overwrite=True)` and `writeTo().append()`. Each
+  cell runs three sources. The SELECT cells cover UTC, New York, Kolkata and Lord Howe:
+  `typeof` and values of the mixed sources, all-NTZ and all-LTZ controls, NULL, CTE,
+  subquery, two-column, CAST and `to_timestamp` mixes, and UNION, CASE and coalesce
+  literals. Reverting the coercion reds 43 door cells and all 4 SELECT cells. The 9 cells
+  that stay green are positional-door guards that were already equal to Spark.
+  pins: ntz-store-doors-1/C-006
 - [test_uuid_cast_window_1.py](test_uuid_cast_window_1.py) +
   [uuid_cast_window_1_spark_oracle.json](uuid_cast_window_1_spark_oracle.json) —
   **WO UUID-CAST-WINDOW-1 (2026-09-27):** the `CAST('a' AS UUID)` refusal replays
@@ -3770,8 +3798,28 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **IO-ORC-1 (2026-09-16):** `test_load_orc_declared_not_implemented` becomes
   `test_load_orc_reaches_the_scan` (missing path is `PATH_NOT_FOUND` now).
   pins: io-orc-1/C-004
+- `test_text_write_timestamp_zone_1.py` + `text_write_timestamp_zone_1_fixture.json` —
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** 179 Spark-recorded CSV/JSON
+  timestamp-write cells (4 zones, defaults, user formats, refusals, nested)
+  compared byte for byte or by error token, CSV/JSON read-back legs, and a
+  moto s3a leg.
+  pins: text-write-timestamp-zone-1/C-001, C-002, C-003, C-005, C-006
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 verifier fold (2026-09-29):** 20 more cells
+  (quote runs, year width, `VV` display ids, backslash patterns, case twins,
+  trailing-`]` classes) plus LEGACY-refusal and LMT-residue legs (207 pins).
+  **Re-verify (2026-09-29):** 34 more cells (zero-offset `VV` spellings,
+  `g` padding widths) plus policy-default, no-LEGACY-clause, and
+  optioned-non-temporal LEGACY legs (244 pins).
+  **Re-verify 2 (2026-09-30):** a `perf`-marked shuffled-data pin: 20k
+  timestamps over 1900-2024 write to CSV inside a 1.0 s debug budget.
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 3 fold (2026-09-30):** the
+  failed-local-write trio: a 400k-row JSON write with zone letters on NTZ
+  leaves no destination on overwrite (plain and partitioned) and keeps every
+  destination byte on append.
+  pins: text-write-timestamp-zone-1/C-008
 - `test_r2_read_formats2.py` — R2 writer option matrix / path modes / partitionBy: quoteAll /
-  escapeQuotes wired; dateFormat/timestampFormat refuse-loud; parquet compression; path
+  escapeQuotes wired; dateFormat/timestampFormat honored (TEXT-WRITE-TIMESTAMP-ZONE-1
+  flipped the three refuse-loud legs to honored pins); parquet compression; path
   mode overwrite/append/error/ignore; partitionBy hive layout + multi-col + append merge +
   unknown-col loud; **octo fix half:** root `read.parquet(partitioned)` no null-fill /
   no empty root part (C3-001/C6-001), duplicate partitionBy loud (C3-002), append col-set +
@@ -4571,6 +4619,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `VALUES (DATE '…')` is refused by the G6-3 CAST gate instead.
   **LTZ-STORE-INT-1 (2026-09-28)** closes the residual for `TIMESTAMP` (LTZ) targets at
   the existing void VALUES gate site, before planning; every other target stays residual.
+  **STORE-TS-TO-NUMERIC-1 (2026-09-28)** closes it for numeric, DATE and BOOLEAN targets:
+  `test_a_literal_values_row_refuses_like_spark` pins `VALUES (true)` and
+  `VALUES (DATE '…')` into `INT` refusing with Spark's `CANNOT_SAFELY_CAST` text and
+  writing nothing. pins: store-ts-to-numeric-1/C-001
   Arrow path.
 - `test_ltz_stacked_sign_1.py` — **Fold 2026-09-29 (LTZ-STACKED-SIGN-1 second
   re-verify fold, RN3-1):** backslash-quote strings store Spark 4.1.2's exact
@@ -4594,6 +4646,90 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and in both column-list orders) stores NULL, and a stacked sign under `nvl` /
   `ifnull` stores the day Spark 4.1.2 stored (`2024-01-02`, `2023-12-31`).
   pins: ltz-store-int-1/C-001
+- [test_store_ts_to_numeric_1.py](test_store_ts_to_numeric_1.py) +
+  `store_ts_to_numeric_1_spark_oracle.json` — **WO STORE-TS-TO-NUMERIC-1
+  (2026-09-28):** one session replays 58 cells recorded on Spark 4.1.2 + Iceberg
+  1.11.0 (UTC) in order and compares refusal (class, SQLSTATE, message body with the
+  RePark-only planning prefix allowed) and the target read-back after every
+  statement. Refusals: TIMESTAMP, STRING, BOOLEAN and INT sources on the VALUES door
+  into numeric, DATE and BOOLEAN columns (C-001); `-NULL` and `-(NULL)` into DATE,
+  BOOLEAN, TIMESTAMP and TIMESTAMP_NTZ on VALUES, OVERWRITE VALUES, UPDATE, INSERT …
+  SELECT, OVERWRITE, BY NAME, both MERGE arms and both DataFrame writers, bare,
+  through a derived table and through a temp view (C-002); STRING into FLOAT/DOUBLE on
+  INSERT … SELECT and the DataFrame writers (C-003); STRING into DECIMAL on UPDATE
+  (C-004). Stores in the same test: DATE ↔ TIMESTAMP, numeric widening, in-range
+  narrowing, explicit CAST, NULL, `-NULL` into numeric and STRING, the CTAS controls,
+  and LTZ-STORE-INT-1's INT → TIMESTAMP refusal (C-005).
+  pins: store-ts-to-numeric-1/C-001, C-002, C-003, C-004, C-005
+  **Fold 2026-09-29 (verifier VT-1):** 23 more store cells pin the mixed
+  STRING/numeric CASE, `nvl` and `nullif` shapes Spark widens to a storable type
+  (VALUES, SELECT, BY NAME, column list, OVERWRITE, `append`, `insertInto`,
+  `saveAsTable`; the runner learns the `df_saveastable` door). 81 cells total.
+  **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** the eight STRING-source refusal cells
+  (VALUES `'1'` into INT and BOOLEAN, `'2024-01-01'` into DATE, UPDATE `'1'` into
+  DECIMAL, STRING into FLOAT/DOUBLE through SELECT, a derived table, `append` over a
+  view and `insertInto`) are deleted — those shapes return to base behaviour. Six store
+  cells measured on Spark 4.1.2 pin the re-verify families: a SQL temp view over a
+  STRING/INT CASE, `writeTo().append()` and `write.insertInto()` of the same CASE, a
+  STRING/DOUBLE UNION, `max` over a STRING/DOUBLE CASE, and a STRING/TIMESTAMP CASE
+  into DATE through VALUES. 79 cells; the oracle is one cell per line and drops the
+  temp views no cell reads. pins: store-ts-to-numeric-1/C-006
+- [test_store_ts_doors_2.py](test_store_ts_doors_2.py) +
+  `store_ts_doors_2_spark_oracle.json` — **WO STORE-TS-DOORS-2 (2026-09-29):**
+  one session replays 26 cells recorded on Spark 4.1.2 + Iceberg 1.11.0 (UTC) in
+  order and compares refusal (class, SQLSTATE, message body with the RePark-only
+  planning prefix allowed) and the target read-back after every statement.
+  Refusals: TIMESTAMP, `CAST(1 AS TIMESTAMP)`, TIMESTAMP_NTZ and DATE through a
+  VALUES node inside INSERT … SELECT into BIGINT, DOUBLE and INT — direct, star,
+  CTE, UNION, nested-alias, join, VALUES-join, WHERE and ORDER BY/LIMIT shapes
+  (C-001); `-NULL` into TIMESTAMP, DATE and BOOLEAN through static-partition
+  OVERWRITE VALUES and SELECT, plus the already-refusing listed and dynamic
+  forms (C-002). Stores in the same test: explicit `CAST(b AS BIGINT)`, INT,
+  NULL, TIMESTAMP into DATE, and `-NULL` into BIGINT (C-001, C-002). Two
+  in-test pins hold the boundary: a temp view over VALUES keeps the WI-1
+  refusal text and a STRING source still stores (C-003).
+  **Fold 2026-09-29 (verifier VT-1):** 21 more oracle cells (`p01`–`p21`) pin the
+  widened set-operation stores and the kept STRING refusals, and three in-test
+  pins hold the carried texts: STRING beside BIGINT/BOOLEAN still names STRING,
+  the EXCEPT/INTERSECT/UNION datetime clashes into BIGINT refuse, and STRING
+  beside table TIMESTAMP into BIGINT keeps the analyzer `type_coercion` refusal.
+  pins: store-ts-doors-2/C-001, C-002, C-003
+  **Fold 2026-09-30 (re-verify VT3-1..VT3-3):** eighteen `test_fold3_*` pins:
+  the 5 reachable CTE-shadow refusals (inline, arm-WITH, dynamic partition,
+  column expression, join), a nested WITH, a CTE shadowing a table (star and
+  column forms) and a qualified-star CTE shadowing a temp view; TIMESTAMP-CTE
+  and plain-view store guards; a CTE, a view and a column named `ambiguous`
+  refusing plus the missing-`ambiguous` not-found surfacing; unknown column,
+  routine and table surfacing the analyzer's class with nothing stored; and
+  quoted-case refusal guards. The column-list CTE shadow is a carried-card
+  pin instead: it asserts today's facade-rewritten store, not Spark's
+  refusal. The 7 new shapes carry Spark 4.1.2 answers measured once for this
+  fold. pins: store-ts-doors-2/C-001, C-003
+  **Fold 2026-09-30 (re-verify VT4-1, VT4-4):** five `test_fold4_*` pins: the
+  36 mixed-case storing cells (8 case-insensitive and 4 case-sensitive arm
+  shapes over uppercase columns, a mixed-case column, an uppercase view and a
+  derived table, each on INTO, dynamic partition and column-list) refusing
+  CANNOT_SAFELY_CAST with nothing stored; TIMESTAMP-twin store guards; a
+  case-sensitive missing column surfacing UNRESOLVED_COLUMN on all three
+  doors; and a real ambiguity at a non-datetime position surfacing
+  AMBIGUOUS_REFERENCE on INTO and column-list. Spark answers are the
+  re-verify-3 attack5/6/7 recordings. pins: store-ts-doors-2/C-001, C-003
+  **Fold 2026-10-01 (re-verify VT5-1):** three `test_fold5_*` pins: the 24
+  unquoted-`INTERVAL` window-frame cells (4 arm shapes on INTO, dynamic
+  partition and column-list in both case modes) refusing
+  CANNOT_SAFELY_CAST with nothing stored; the quoted-bound, integer-range
+  and TIMESTAMP-arm controls; and two further unquoted frame shapes
+  refusing as Spark 4.1.2 does. pins: store-ts-doors-2/C-001, C-003
+- [test_store_ts_doors_2_fold6.py](test_store_ts_doors_2_fold6.py) —
+  **Fold 2026-10-01 (re-verify VT6-1):** four `test_fold6_*` pins, split out
+  at the 1000-line ceiling: the 6 nullary-column arm shapes
+  (`coalesce`/`WHERE`, `CASE`, derived `coalesce`, scalar subquery,
+  uppercase) on INTO, dynamic partition and column-list
+  case-insensitive plus INTO case-sensitive, each refusing as Spark 4.1.2
+  does with nothing stored (CANNOT_SAFELY_CAST; UNRESOLVED_COLUMN for the
+  uppercase case-sensitive shape); the direct, backticked and qualified
+  controls refusing; and the TIMESTAMP-`coalesce` store guards.
+  pins: store-ts-doors-2/C-001, C-003
 - `test_merge_semantics_audit.py` — **MERGE-audit corpus** (2026-08-14 audit gap-map rows
   c/d/g/n/o): null-safe `<=>` / `eqNullSafe` ON matches NULL keys (both doors); builder-door
   `=` NULL keys do not match; self-merge (target as source) updates once per row; join-key
@@ -7021,6 +7157,45 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   render from value text on `spark.sql` / `selectExpr` / `F.expr`, explicit
   aliases stay.
   pins: fnp-4b/C-001, C-003, C-014, C-015, C-029
+- `test_string_literal_escape_1.py` — **STRING-LITERAL-ESCAPE-1 (2026-09-29):**
+  PE-10 facade pins over the live PySpark 4.1.2 oracle — doubled `""` collapse
+  inside double-quoted literals, `r"…"` literals answering, raw `''`/`""`
+  splitting into head plus quoted tail, verbatim mode keeping doublings and
+  marking raw values with the opening quote — each on `spark.sql` (value,
+  length, Arrow type), `F.expr` / `selectExpr` / `filter`, and an
+  `INSERT INTO … VALUES` round-trip.
+  pins: string-literal-escape-1/C-001, C-002, C-003, C-004
+  **DIFF-PROBE fold (2026-09-29):** verbatim DDL read-back pins — TBLPROPERTIES
+  keys/values, column COMMENT text, ALTER SET, and namespace PROPERTIES/DBPROPERTIES
+  collapse like Spark; verbatim OPTIONS values stay verbatim (survivor pin).
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** VE-1 UNSET/SHOW-key/
+  COMMENT ON pins, VE-2 filter/where/F.expr flag pins, and VE-3 UPDATE/DELETE/
+  MERGE predicate pins, each with a default-mode control.
+  pins: string-literal-escape-1/C-008, C-009, C-010
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** VE2-1 built-door pins
+  (cube/rollup/groupingSets/unpivot, mergeInto incl. an `F.expr` condition,
+  overwrite cond/partitions, createTable schema str) and VE2-2 nested
+  UPDATE/MERGE SET pins, each with a default-mode control; the
+  `_forward_datafusion_conf` and `_materialize_values_as_memtable_frame`
+  symbol hashes move in `test_production_file_size.py` (built doors route
+  `_sql_built`).
+  pins: string-literal-escape-1/C-011, C-012
+  **STRING-LITERAL-ESCAPE-1 re-verify VE3-1 (2026-09-30):** `SQLTransformer`
+  is user-written SQL through the user door, so verbatim/default literal and
+  `WHERE s = 'it''s'` pins equal `spark.sql` (and Spark).
+  **STRING-LITERAL-ESCAPE-1 CI round (2026-09-30):** the failure-injection
+  and SQL-spy seams in `test_catalog_surface_1.py`,
+  `test_create_dataframe_materialize.py`, `test_eager_own_1.py`,
+  `test_mapinarrow.py`, and `test_ml_boost_oracle.py` follow the
+  `sql_built` door the product now uses for facade-built SQL, with the same
+  assertions; the two capped files rename the seam method (line-neutral),
+  the other three observe both doors.
+  pins: string-literal-escape-1/C-013
+  **STRING-LITERAL-ESCAPE-1 merge (2026-10-01):** the text-write merge pin —
+  a verbatim CSV write with timestampFormat `yyyy-MM-dd''HH:mm:ss` and
+  `it's` / `it''s` values writes the Spark bytes, equal to the default-mode
+  bytes for the same frame.
+  pins: string-literal-escape-1/C-015
 - `test_fnp_4b_hof_display.py` — **FNP-4B round 6 (2026-09-15):** Q3 red pin for run
   16a — selectExpr higher-order display must hide the `__repark_hof_array_field__`
   packing marker. **Round 7 (2026-09-15):** strict xfail per R-16c-10; 16a flips

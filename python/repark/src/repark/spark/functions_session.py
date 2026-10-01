@@ -30,6 +30,15 @@ def _active_session() -> Any:
     return ReparkSession.getActiveSession()
 
 
+def _active_verbatim_flag() -> bool:
+    """True when the active session built with ``escapedStringLiterals`` on."""
+    session = _active_session()
+    if session is None:
+        return False
+    raw = session._builder_config.get("spark.sql.parser.escapedStringLiterals")
+    return str(raw or "").strip().lower() in ("true", "1", "yes")
+
+
 def _current_catalog_name() -> str:
     """Session current catalog, or the facade default when none is active."""
     session = _active_session()

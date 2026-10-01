@@ -18,6 +18,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 ## Contents
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
+- `cast_overflow_insert.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** end-to-end refusal
+  pins over a real Iceberg table: every door refuses `CAST_OVERFLOW_IN_TABLE_INSERT` with
+  source/target/column named and nothing written; in-range, int-to-int and string stores
+  keep their behavior.
 - `describe_view_routing.rs` — DESCRIBE routing pins table and view probe failures,
   the viewless catalog refusal, unchanged tables, and stored view columns after
   the source table disappears, including EXTENDED. Failure pins check the
@@ -464,10 +468,30 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `declared_refuse.rs` — **FNP-15/16:** Spark-door parse-altitude refusals for the six
   unreachable names and the sketch family; passthrough attach pin.
   pins: fnp-15-16/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  **WO STORE-TS-DOORS-2 re-verify fold 6 (2026-10-01):** the source pin
+  matches the valve call inside the shared pre-gate chain.
+  pins: store-ts-doors-2/C-001, C-003
 - `spark_string_literals.rs` — **SQP-1:** the string-literal escape pins (C-001..C-008, C-010,
   C-012): the escape domain, `\'`/unpaired-backslash lexing, adjacency + the DataFusion-native
   `OPTIONS` carve-out, quote-runs-are-not-triple-quotes, raw strings, LIKE/RLIKE/backtick controls,
   exactly-once-on-every-path, the one-caller grep pin, the Generic-dialect honesty pin.
+- `string_literal_escape_1.rs` — **STRING-LITERAL-ESCAPE-1 (2026-09-29):** the
+  PE-10 pins in their own leaf (the SQP-1 leaf is byte-frozen, so nothing lands
+  there): doubled-`""` collapse in double-quoted literals, `r"…"` answering,
+  raw `''`/`""` head/tail splitting, verbatim doublings kept and raw values
+  marked, the escape-free-doubles borrow pin, and direct quote-awareness units.
+  pins: string-literal-escape-1/C-001, C-002, C-003, C-004
+  **DIFF-PROBE fold (2026-09-29):** `verbatim_ddl_positions_take_default_treatment`
+  pins verbatim DDL canonicals (property lists borrowed, backslashes unescaped,
+  `COMMENT` doubles rewritten single-quoted, the `SELECT comment` alias guard,
+  `EXPLAIN` passthrough).
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** the DDL table gains
+  `UNSET` (both `IF EXISTS` shapes), `SHOW TBLPROPERTIES` key, and
+  `COMMENT ON` rows. pins: string-literal-escape-1/C-008
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):**
+  `built_statements_parse_default_on_a_verbatim_session` pins the override
+  wiring: `Some(false)` answers default values, `None` keeps the flag.
+  pins: string-literal-escape-1/C-011
 - `cast_binary.rs` — **SQP-1 (C-009):** `CAST … AS BINARY` plans to Arrow `Binary` (B1/B8–B10/B13/
   B15), refuses illegal sources (`DATATYPE_MISMATCH`, B2–B7), keeps `VARBINARY` refusing (B12),
   leaves a `BINARY` DDL column untouched; `TRY_CAST(<int>)` refuses without the ANSI-off suggestion.
@@ -1547,6 +1571,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   spark_ast source attach (Q-001), a string-literal negative (incl. CAST-in-literal),
   and a default (non-COLLATE) `ORDER BY` untouched pin. Ledger:
   [`../../../../task/y7-collation-refuse-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-13-y7-collation-refuse-ledger.md).
+  **WO STORE-TS-DOORS-2 re-verify fold 6 (2026-10-01):** the source attach
+  matches the valve call inside the shared pre-gate chain.
+  pins: store-ts-doors-2/C-001, C-003
 - `window_temporal_range.rs` pins the Spark door's `RANGE` frames on datetime order keys and the
   paths that must remain unchanged:
   `temporal_range_bare_offset_over_timestamp_key_refuses_like_spark` (Spark's error class),
@@ -2000,6 +2027,57 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **WO NTZ-1 verifier fold (2026-09-28):** `update_refusal_names_a_timestamp_literal_source_as_timestamp`
   pins the UPDATE-door refusal naming a `TIMESTAMP'…'` source `"TIMESTAMP"`.
   pins: ntz-1/C-007
+  **WO NTZ-STORE-DOORS-1 (2026-09-28):** one pin per remaining write door and direction
+  (`BY NAME`, `INSERT OVERWRITE` static / `BY NAME` / `PARTITION (p = 1)` / dynamic /
+  column list, MERGE UPDATE SET, UPDATE SET *, INSERT (cols), INSERT *) over UTC, New
+  York and Kolkata with the DST gap and overlap rows: an LTZ source stores Spark's
+  session-zone wall in a `TIMESTAMP_NTZ` column and an NTZ source Spark's session-zone
+  instant in a `TIMESTAMP` column (walls and micros recorded from Spark 4.1.2);
+  `date_stores_the_session_midnight_through_every_door` pins the `DATE` rows. Every
+  must-change pin is red on `adc26586`; the MERGE LTZ→NTZ pins guard NTZ-1 and are
+  green there. pins: ntz-store-doors-1/C-001, C-002, C-003, C-004
+- `ntz_values_mix.rs` — **WO NTZ-STORE-DOORS-1 verifier fold (2026-09-29, VD-1):** a
+  `VALUES` list or inline table that mixes `TIMESTAMP` and `TIMESTAMP_NTZ` in one column,
+  in both row orders and with a New York DST-gap row and a NULL. One pin per SQL door
+  (positional INSERT VALUES and SELECT, INSERT OVERWRITE VALUES and SELECT, `BY NAME`
+  append and overwrite, MERGE INSERT *, INSERT (cols), UPDATE SET and UPDATE SET *) stores
+  Spark 4.1.2's walls in both `TIMESTAMP` and `TIMESTAMP_NTZ` columns in New York and
+  Kolkata. `mixed_values_type_the_column_timestamp_through_the_session_zone` pins
+  `typeof` = `timestamp` and the values of the plain SELECT. Reverting the coercion reds
+  all 11 of these pins. `unmixed_values_keep_their_timestamp_type` keeps all-NTZ and
+  all-LTZ columns as they were and stays green under that revert.
+  pins: ntz-store-doors-1/C-006
+  **WO NTZ-STORE-DOORS-1 re-verify fold (2026-09-29, RD2-1):** a `DATE` cell never
+  triggers the widening. `date_ntz_values_type_the_column_timestamp_ntz` pins
+  `typeof` = `timestamp_ntz` with the gap wall kept for a `DATE` +
+  `TIMESTAMP_NTZ` column in both row orders in New York, Lord Howe and Kolkata.
+  One pin per door (positional INSERT VALUES and SELECT, `BY NAME` append,
+  INSERT OVERWRITE VALUES, MERGE INSERT *) stores Spark 4.1.2's walls in both
+  target types over the same zones and orders, with a NULL row. Counting a
+  `DATE` as an instant again reds the new pins. `date_timestamp_mixes_keep_their_timestamp_type`
+  keeps `DATE` + `TIMESTAMP` and `DATE` + `TIMESTAMP` + `TIMESTAMP_NTZ` at
+  `timestamp` with the gap resolved.
+  pins: ntz-store-doors-1/C-007
+  **WO NTZ-STORE-DOORS-1 second re-verify fold (2026-09-29, RD3-1/RD3-2):**
+  `a_written_cast_as_timestamp_types_the_column_timestamp` pins `typeof` = `timestamp`
+  and Spark's values for `DATE` + `CAST(ntz AS TIMESTAMP)` in both row orders and for
+  `CAST(date AS TIMESTAMP)` + `CAST(ntz AS TIMESTAMP)`, in a plain SELECT and through
+  CTAS, in New York (gap resolved to 03:30) and Kolkata.
+  `a_written_cast_as_timestamp_stores_sparks_walls` stores the same sources through MERGE
+  INSERT * and positional INSERT SELECT into `TIMESTAMP` and `TIMESTAMP_NTZ` columns.
+  `a_written_cast_as_timestamp_beside_null_stays_timestamp` pins
+  `CAST(date AS TIMESTAMP)` + NULL in both orders: `typeof`, the value and `unix_micros`
+  in New York and Havana, in a SELECT and through CTAS. Turning the mark off reds the
+  first two pins; turning it off and counting NULL as a wall again also reds the third.
+  pins: ntz-store-doors-1/C-008
+  **WO NTZ-STORE-DOORS-1 third re-verify fold (2026-09-29, RD4-1):**
+  `an_expression_cell_beside_a_date_keeps_the_timestamp_type` pins `typeof` = `timestamp`
+  and Spark's values in New York for a `DATE` beside `date_trunc('HOUR', ntz)` (03:00),
+  `coalesce(CAST(ntz AS TIMESTAMP), ntz)` (03:30) and `from_utc_timestamp(ntz, 'UTC')`
+  (03:30), each in both row orders. `an_expression_cell_beside_a_date_stores_sparks_walls`
+  stores the same six sources through MERGE INSERT * into a `TIMESTAMP_NTZ` column.
+  Classifying an unknown cell as a naive wall again reds both pins.
+  pins: ntz-store-doors-1/C-009
   **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 round 2):** the stacked-sign pin refuses
   `- -1`, `- - -1`, `- -(1)`, `- -1.5`, `+-1`, `-+1`, `- -1BD` and the
   single-signed `-1.5`/`-1BD` with the exact Spark body each carries, and the
@@ -2023,7 +2101,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   string shape (plain, column-list, `map`, both `replace`-casts, both
   in-matrix cells, trailing-backslash, `\n`/`\t`, `\u00e9`) with Spark's
   exact values. Spark answers: re-verify2 `rn31-spark.json` plus the
-  `rn31b` live run (2026-09-29).
+  `rn31b` live run (2026-09-29). Moved to `ntz_store_quotes.rs` when NTZ-STORE-DOORS-1
+  merged main, to keep this file under the 1,000-line ceiling.
+
+- `ntz_store_quotes.rs` — **Split 2026-09-29 (NTZ-STORE-DOORS-1 merge of main):**
+  `backslash_quote_strings_store_their_exact_values` and its `id_strings` reader,
+  moved verbatim from `ntz_store.rs`. It uses the parent's `setup_ntz` and `walls`, which
+  are now `pub(super)`. The pins are LTZ-STACKED-SIGN-1's RN3-1 pins (see the `ntz_store.rs`
+  entry).
 
 - `describe_table.rs` — **SQL-DESCRIBE-1 (2026-09-09):** `DESCRIBE|DESC [TABLE]
   [EXTENDED|FORMATTED] catalog.namespace.table` against a memory-catalog table built like the
@@ -2185,6 +2270,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   statements succeed; a missing table keeps its own error and INSERT keeps the other
   cell's prose.
   pins: ipi-51/W-UPDATE-TYPE-ERR
+  **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** the INSERT cell now pins Spark's answer —
+  `VALUES ('notanumber', 'z')` refuses `CANNOT_SAFELY_CAST` naming `"STRING"` to
+  `"BIGINT"` at the VALUES gate, where it used to fail in the cast kernel.
+  pins: store-ts-to-numeric-1/C-001
+  **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** STRING sources return to base behaviour, so
+  the INSERT cell is back to its base pin `insert_string_into_bigint_keeps_the_insert_path`
+  (the cast-kernel error, not the store text). pins: store-ts-to-numeric-1/C-006
   **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 round 2):** `UPDATE … SET c = - -1`
   refuses `CANNOT_SAFELY_CAST` naming `"INT"` to `"TIMESTAMP"`, and the seeded
   row keeps its wall.

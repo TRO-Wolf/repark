@@ -230,6 +230,7 @@ pub(crate) async fn execute_replace_where(
         source,
     )
     .await?;
+    crate::void_type::refuse_insert_source_types(ctx, catalogs, &insert, false).await?;
     let source_df = spark_ast::execute_insert_source(ctx, catalogs, &planning_sql).await?;
     let namespace = namespace_schema_name(table.identifier().namespace());
     let base_table = format!(
@@ -379,10 +380,12 @@ async fn refuse_non_deterministic(
     base_table: &str,
     predicate: &Expr,
 ) -> Result<()> {
+    let mut rendered = Expr::clone(predicate);
+    let predicate_sql = repark_iceberg::write::sql_text::render_for_reparse(&mut rendered);
     let check = spark_ast::execute_passthrough(
         ctx,
         catalogs,
-        &format!("SELECT * FROM {base_table} WHERE {predicate}"),
+        &format!("SELECT * FROM {base_table} WHERE {predicate_sql}"),
     )
     .await?;
     let mut volatile = false;

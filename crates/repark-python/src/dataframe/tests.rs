@@ -472,7 +472,7 @@ fn cached_frame_levels_match_a_fresh_survey() {
     assert_frame_depths(&aggregated, "aggregate");
     let limited = base.limit(2).expect("a limit builds");
     assert_frame_depths(&limited, "limit");
-    let skipped = base.limit_with_skip(1, 2).expect("a skip builds");
+    let skipped = base.limit_with_skip(1, Some(2)).expect("a skip builds");
     assert_frame_depths(&skipped, "limit_with_skip");
     let distinct = base.distinct().expect("a distinct builds");
     assert_frame_depths(&distinct, "distinct");

@@ -15,44 +15,8 @@ use crate::arrow_export::drain_arrow_c_stream;
 use crate::dataframe::{PyDataFrame, with_stream_poll_no_detach};
 use crate::deep_stack::{block_on, block_on_grown_if, build_shared_runtime};
 use crate::fence::{fenced, fenced_span};
+use crate::session_runtime::apply_session_knobs;
 use crate::to_py_err;
-
-/// Apply the shared builder knobs used by both the Spark-door constructor and the native door.
-fn apply_session_knobs(
-    memory_limit_gb: Option<usize>,
-    batch_size: Option<usize>,
-    target_partitions: Option<usize>,
-    config: Option<HashMap<String, String>>,
-) -> PyResult<ReparkSessionBuilder> {
-    let mut builder = ReparkSession::builder();
-    // Zero explicitly opts out of the bounded pool; other values select the requested limit.
-    match memory_limit_gb {
-        None => {}
-        Some(0) => builder = builder.memory_limit_bytes(0),
-        Some(gb) => builder = builder.memory_limit_gb(gb),
-    }
-    // Zero is invalid for batch and partition counts; do not silently apply defaults.
-    if let Some(0) = batch_size {
-        return Err(to_py_err(repark_core::Error::Config(
-            "batch_size must be >= 1 (got 0)".to_string(),
-        )));
-    }
-    if let Some(0) = target_partitions {
-        return Err(to_py_err(repark_core::Error::Config(
-            "target_partitions must be >= 1 (got 0)".to_string(),
-        )));
-    }
-    if let Some(rows) = batch_size {
-        builder = builder.batch_size(rows);
-    }
-    if let Some(parts) = target_partitions {
-        builder = builder.target_partitions(parts);
-    }
-    if let Some(config) = config {
-        builder = builder.configs(config);
-    }
-    Ok(builder)
-}
 
 /// Build the engine session, register catalogs, wrap in the Python handle.
 fn finish_session(py: Python<'_>, builder: ReparkSessionBuilder) -> PyResult<PyReparkSession> {
@@ -121,8 +85,20 @@ impl PyReparkSession {
         session: &ReparkSession,
         query: &str,
     ) -> PyResult<datafusion::prelude::DataFrame> {
+        Self::plan_session_sql_inner(session, query, false).await
+    }
+
+    async fn plan_session_sql_inner(
+        session: &ReparkSession,
+        query: &str,
+        built: bool,
+    ) -> PyResult<datafusion::prelude::DataFrame> {
         let prepared = crate::session_runtime::prepare_session_sql(query)?;
-        session.sql(&prepared).await.map_err(to_py_err)
+        if built {
+            session.sql_built(&prepared).await.map_err(to_py_err)
+        } else {
+            session.sql(&prepared).await.map_err(to_py_err)
+        }
     }
 }
 
@@ -194,6 +170,26 @@ impl PyReparkSession {
                 || self.deep_view_levels() > crate::deep_stack::DEEP_NESTING_DEPTH;
             let df = py.detach(|| {
                 let planned = Self::plan_session_sql(&self.session, query);
+                block_on_grown_if(&self.runtime, planned, grown)
+            })?;
+            let mut depths = crate::deep_stack::plan_depths(df.logical_plan());
+            depths.plan = depths.plan.max(self.deep_view_levels());
+            depths.expression = depths.expression.max(self.deep_view_levels());
+            Ok(PyDataFrame::new_with_depths(
+                df,
+                Arc::clone(&self.runtime),
+                depths,
+            ))
+        })
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub fn sql_built(&self, py: Python<'_>, query: &str) -> PyResult<PyDataFrame> {
+        fenced_span!("py.sql", "PyReparkSession.sql_built", {
+            let grown = crate::deep_stack::sql_drive_grown(query)
+                || self.deep_view_levels() > crate::deep_stack::DEEP_NESTING_DEPTH;
+            let df = py.detach(|| {
+                let planned = Self::plan_session_sql_inner(&self.session, query, true);
                 block_on_grown_if(&self.runtime, planned, grown)
             })?;
             let mut depths = crate::deep_stack::plan_depths(df.logical_plan());

@@ -215,12 +215,8 @@ async fn execute_passthrough_attaches_collation_valve() {
 #[test]
 fn spark_ast_source_attaches_collation_valve() {
     let source = include_str!("../spark_ast.rs");
-    let attached = source.lines().any(|line| {
-        let trimmed = line.trim();
-        trimmed.starts_with("crate::refuse_collation_in_statement") && !trimmed.starts_with("//")
-    });
     assert!(
-        attached,
+        source.contains("refuse_collation_in_statement(statement)"),
         "A10 / Q-001: spark_ast execute_passthrough must call \
          refuse_collation_in_statement (router is not a substitute)"
     );

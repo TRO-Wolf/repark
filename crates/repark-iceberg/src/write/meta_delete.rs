@@ -74,7 +74,7 @@ pub fn try_meta_delete_target(statement: &Statement) -> Result<Option<MetaDelete
     let selection_sql = delete.selection.as_ref().map(|selection| {
         let mut scoped = selection.clone();
         rewrite_target_refs_in_expr(&mut scoped, &parts, &target_alias);
-        scoped.to_string()
+        crate::write::sql_text::render_for_reparse(&mut scoped)
     });
     Ok(Some(MetaDeleteTarget {
         catalog_name,

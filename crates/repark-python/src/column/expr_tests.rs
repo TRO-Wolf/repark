@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn expr_sql_substr_zero_matches_spark() {
-    let column = PyColumn::sql("substr('hello', 0, 3)").expect("parse");
+    let column = PyColumn::sql("substr('hello', 0, 3)", false).expect("parse");
     let context = datafusion::prelude::SessionContext::new();
     repark_functions::register_all(&context);
     for rule in repark_functions::analyzer_rules() {
@@ -87,7 +87,7 @@ fn call_scalar_substr_zero_matches_spark() {
 fn expr_sql_integer_division_hands_off_float64() {
     use datafusion::arrow::array::Float64Array;
 
-    let column = PyColumn::sql("5/2").expect("parse");
+    let column = PyColumn::sql("5/2", false).expect("parse");
     let context = datafusion::prelude::SessionContext::new();
     repark_functions::register_all(&context);
     for rule in repark_functions::analyzer_rules() {
@@ -265,7 +265,7 @@ fn cached_column_op_levels_match_a_fresh_survey() {
 fn sql_text_levels_count_no_df_depth() {
     let left = PyColumn::column("a").expect("a column builds");
     let right = PyColumn::column("b").expect("a column builds");
-    let text = PyColumn::sql("a = 1 OR a = 2").expect("sql text parses");
+    let text = PyColumn::sql("a = 1 OR a = 2", false).expect("sql text parses");
     let (text_expr, text_plan) = text.grown_read(crate::deep_stack::survey_expression);
     assert_eq!(text.expression_depth(), text_expr);
     assert_eq!(text.df_depth(), 0, "sql text counts no df levels");

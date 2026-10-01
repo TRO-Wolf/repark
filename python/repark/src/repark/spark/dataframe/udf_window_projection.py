@@ -177,8 +177,8 @@ def _select_with_window_pandas_udfs(frame: DataFrame, items: list[Any]) -> DataF
         agg_frame._prepare_for_plan()
         session.materialize_as_temp_view(left_view, left._inner)
         session.materialize_as_temp_view(agg_view, agg_frame._inner)
-        left_clean = frame._spawn(session.sql(f"SELECT * FROM {left_view}"))
-        agg_clean = frame._spawn(session.sql(f"SELECT * FROM {agg_view}"))
+        left_clean = frame._spawn(session.sql_built(f"SELECT * FROM {left_view}"))
+        agg_clean = frame._spawn(session.sql_built(f"SELECT * FROM {agg_view}"))
 
         if plain_items:
             final_names: list[str] = []
@@ -213,10 +213,10 @@ def _select_with_window_pandas_udfs(frame: DataFrame, items: list[Any]) -> DataF
             right_column_names=list(agg_clean.columns),
             prefer_right_names=set(window_out_names),
         )
-        joined = frame._spawn(session.sql(join_sql))
+        joined = frame._spawn(session.sql_built(join_sql))
         joined._prepare_for_plan()
         session.materialize_as_temp_view(out_view, joined._inner)
-        return frame._spawn(session.sql(f"SELECT * FROM {out_view}"))
+        return frame._spawn(session.sql_built(f"SELECT * FROM {out_view}"))
     finally:
         with contextlib.suppress(Exception):
             session.drop_temp_view(left_view)

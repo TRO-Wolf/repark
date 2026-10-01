@@ -245,3 +245,140 @@ async fn stored_runtime_zone_is_live_on_the_session_and_its_clones() {
     assert_eq!(session.session_time_zone().id(), "Asia/Tokyo");
     assert_eq!(session.clone().session_time_zone().id(), "Asia/Tokyo");
 }
+
+#[test]
+fn java_display_zone_id_matches_zone_id_get_id() {
+    let table = [
+        ("UTC", "UTC"),
+        ("Asia/Kathmandu", "Asia/Kathmandu"),
+        ("Africa/Monrovia", "Africa/Monrovia"),
+        ("Europe/Amsterdam", "Europe/Amsterdam"),
+        ("America/New_York", "America/New_York"),
+        ("Europe/London", "Europe/London"),
+        ("America/St_Johns", "America/St_Johns"),
+        ("Asia/Kolkata", "Asia/Kolkata"),
+        ("+05:30", "+05:30"),
+        ("-08:00", "-08:00"),
+        ("Asia/Calcutta", "Asia/Calcutta"),
+        ("US/Eastern", "US/Eastern"),
+        ("Etc/UTC", "Etc/UTC"),
+        ("GMT", "GMT"),
+        ("Z", "Z"),
+        ("EST", "-05:00"),
+        ("PST", "America/Los_Angeles"),
+        ("GMT+05:30", "GMT+05:30"),
+        ("UTC-3", "UTC-03:00"),
+        ("Etc/GMT+5", "Etc/GMT+5"),
+        ("+00:00", "Z"),
+        ("+14:00", "+14:00"),
+        ("Pacific/Apia", "Pacific/Apia"),
+        ("MST", "-07:00"),
+        ("HST", "-10:00"),
+        ("CST", "America/Chicago"),
+        ("IST", "Asia/Kolkata"),
+        ("JST", "Asia/Tokyo"),
+        ("CET", "CET"),
+        ("EST5EDT", "EST5EDT"),
+        ("CST6CDT", "CST6CDT"),
+        ("MST7MDT", "MST7MDT"),
+        ("PST8PDT", "PST8PDT"),
+        ("UT", "UT"),
+        ("UTC+0", "UTC"),
+        ("UTC+00:00", "UTC"),
+        ("UTC-00:00", "UTC"),
+        ("GMT+0", "GMT"),
+        ("GMT-0", "GMT"),
+    ];
+    for (raw, display) in table {
+        assert_eq!(java_display_zone_id(raw), display, "raw {raw:?}");
+    }
+}
+
+#[test]
+fn time_parser_policy_parses_legacy_corrected_exception() {
+    assert!(
+        parse_time_parser_policy("LEGACY")
+            .expect("parses")
+            .is_legacy()
+    );
+    assert!(
+        parse_time_parser_policy("legacy")
+            .expect("parses")
+            .is_legacy()
+    );
+    assert!(
+        !parse_time_parser_policy("CORRECTED")
+            .expect("parses")
+            .is_legacy()
+    );
+    assert!(
+        !parse_time_parser_policy("EXCEPTION")
+            .expect("parses")
+            .is_legacy()
+    );
+    assert!(!TimeParserPolicy::default().is_legacy());
+    assert_eq!(TimeParserPolicy::default(), TimeParserPolicy::Corrected);
+    let error = parse_time_parser_policy("BOGUS").expect_err("refuses");
+    let message = error.to_string();
+    assert!(
+        message.contains("[INVALID_CONF_VALUE.OUT_OF_RANGE_OF_OPTIONS]")
+            && message.contains(TIME_PARSER_POLICY_KEY),
+        "spark class and key surface: {message}"
+    );
+}
+
+#[test]
+fn time_parser_policy_setter_lazy_installs_the_carrier() {
+    let session = ReparkSession::builder().build().unwrap();
+    assert!(
+        session
+            .context()
+            .copied_config()
+            .options()
+            .extensions
+            .get::<TimeParserPolicyConfig>()
+            .is_none()
+    );
+    session.set_time_parser_policy("LEGACY").expect("sets");
+    let policy = session
+        .context()
+        .copied_config()
+        .options()
+        .extensions
+        .get::<TimeParserPolicyConfig>()
+        .expect("carrier installed")
+        .policy;
+    assert!(policy.is_legacy());
+    session.set_time_parser_policy("CORRECTED").expect("sets");
+    let policy = session
+        .context()
+        .copied_config()
+        .options()
+        .extensions
+        .get::<TimeParserPolicyConfig>()
+        .expect("carrier kept")
+        .policy;
+    assert!(!policy.is_legacy());
+}
+
+#[test]
+fn conf_dump_legacy_detection_matches_builder_spelling() {
+    let legacy = vec![(
+        TIME_PARSER_POLICY_KEY.to_string(),
+        "LEGACY".to_string(),
+        "builder".to_string(),
+    )];
+    assert!(conf_dump_selects_legacy_policy(&legacy));
+    let corrected = vec![(
+        TIME_PARSER_POLICY_KEY.to_string(),
+        "CORRECTED".to_string(),
+        "builder".to_string(),
+    )];
+    assert!(!conf_dump_selects_legacy_policy(&corrected));
+    assert!(!conf_dump_selects_legacy_policy(&[]));
+    let session = ReparkSession::builder()
+        .config(TIME_PARSER_POLICY_KEY, "LEGACY")
+        .build()
+        .unwrap();
+    assert!(conf_dump_selects_legacy_policy(&session.conf_dump()));
+}

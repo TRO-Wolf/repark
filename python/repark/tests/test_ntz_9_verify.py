@@ -8,9 +8,7 @@ as well, including VALUES nested under pass-through subqueries. This test
 replays the recorded New York write sequence against
 ``ntz_9_verify_spark_oracle.json`` (Spark 4.1.2 + Iceberg 1.11.0, measured
 2026-09-28): every write must run and every read replays Spark's rows and
-dtypes. Three divergence steps pin RePark's current answer beside Spark's:
-the mixed TIMESTAMP/TIMESTAMP_NTZ widening row (R-NTZ-S2-11) and the two
-UPDATE refusal texts (R-NTZ-S2-9, R-NTZ-S2-10).
+dtypes.
 
 pins: ntz-1/C-006
 """

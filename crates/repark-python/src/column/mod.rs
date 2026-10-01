@@ -37,11 +37,11 @@ pub use levels::PyColumn;
 use window::{OverSpec, build_over_expression};
 
 impl PyColumn {
-    async fn plan_sql_text(sql: &str) -> PyResult<Expr> {
+    async fn plan_sql_text(sql: &str, keep_verbatim: bool) -> PyResult<Expr> {
         repark_spark::refuse_sql_fragment(sql).map_err(crate::datafusion_to_py_err)?;
         let context = expr_build::sql_context(sql, true).map_err(crate::datafusion_to_py_err)?;
-        let canonical =
-            repark_spark::spark_literals::canonicalize(sql).map_err(crate::datafusion_to_py_err)?;
+        let canonical = repark_spark::spark_literals::canonicalize_verbatim(sql, keep_verbatim)
+            .map_err(crate::datafusion_to_py_err)?;
         expr_build::plan_expr_column(&context, canonical.as_ref(), sql).await
     }
 
@@ -226,12 +226,15 @@ impl PyColumn {
     /// Returns `ParseException` for invalid SQL and `AnalysisException` for unresolved columns.
     /// This path bypasses the Spark SQL router, so it applies the parse-altitude valves here.
     #[staticmethod]
-    pub fn sql(sql: &str) -> PyResult<Self> {
+    pub fn sql(sql: &str, keep_verbatim: bool) -> PyResult<Self> {
         fenced!("Column.sql", {
             let grown = crate::deep_stack::sql_drive_grown(sql);
             let runtime = crate::session::shared_runtime()?;
-            let expr =
-                crate::deep_stack::block_on_grown_if(&runtime, Self::plan_sql_text(sql), grown)?;
+            let expr = crate::deep_stack::block_on_grown_if(
+                &runtime,
+                Self::plan_sql_text(sql, keep_verbatim),
+                grown,
+            )?;
             Ok(Self::from_sql_text(expr))
         })
     }

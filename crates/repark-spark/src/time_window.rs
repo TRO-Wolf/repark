@@ -415,6 +415,18 @@ mod tests {
     }
 
     #[test]
+    fn wrapped_twice_matches_wrapped_once() {
+        let once = wrapped(
+            "SELECT CAST(window.start AS STRING) s, count(*) c FROM t GROUP BY window(ts, '10 minutes') ORDER BY s",
+        );
+        let dialect = GenericDialect {};
+        let mut restated = Parser::parse_sql(&dialect, &once).unwrap();
+        assert_eq!(restated.len(), 1);
+        assert!(!wrap_time_window_grouping(&mut restated[0]).unwrap());
+        assert_eq!(restated[0].to_string(), once);
+    }
+
+    #[test]
     fn group_by_window_wraps_from_and_names_window() {
         let rewritten = wrapped(
             "SELECT CAST(window.start AS STRING) s, count(*) c FROM t GROUP BY window(ts, '10 minutes') ORDER BY s",

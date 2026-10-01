@@ -312,11 +312,11 @@ impl PyDataFrame {
     }
 
     #[allow(clippy::missing_errors_doc)]
-    pub fn limit_with_skip(&self, skip: usize, fetch: usize) -> PyResult<Self> {
+    pub fn limit_with_skip(&self, skip: usize, fetch: Option<usize>) -> PyResult<Self> {
         fenced!("PyDataFrame.limit_with_skip", {
             let need = clone_need_bytes(self.depths.plan, self.depths.expression);
             let df = grown_sync(need, || {
-                grown_clone_frame(self.inner(), &self.depths).limit(skip, Some(fetch))
+                grown_clone_frame(self.inner(), &self.depths).limit(skip, fetch)
             })
             .map_err(datafusion_to_py_err)?;
             Ok(Self::new_with_depths(

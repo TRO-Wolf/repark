@@ -44,6 +44,10 @@ transforms, terminal actions, schema introspection, and Arrow C Stream export.
   at most once per handle because `Drop::drop` runs at most once and
   `ManuallyDrop`'s own drop is a no-op, so no double-drop exists; the binding
   crate already allows `unsafe` for PyO3 macros. pins: deep-filter-chain-crash-1/C-013, C-016
+  **CAST-OVERFLOW-INSERT-1 re-verify VO2-2 (2026-09-29):** `limit_with_skip`
+  takes an optional fetch, so DataFrame `.offset` plans a fetch-less `Limit`
+  matching Spark's pure Offset; the facade's large-fetch encoding is retired.
+  pins: cast-overflow-insert-1/C-001
 - [`tests.rs`](tests.rs) — **DEEP-FILTER-CHAIN-CRASH-1 verifier fold
   (2026-09-29):** the `dataframe` unit tests, moved verbatim from the inline
   module (Arrow export values, types, laziness, errors, schema caching).

@@ -182,11 +182,17 @@ repark-core's error map.
   file is vacuously true, which is where Spark's empty `delete` snapshot on a no-match comes
   from. Both doors call this one seat.
   pins: ice-meta-delete-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** `selection_sql`
+  renders through `sql_text::render_for_reparse` so string values re-parse
+  exactly. pins: string-literal-escape-1/C-010
 - `predicate_dml.rs` — **ICE-CATALOG-SESSION-1 S9 (2026-09-20):** the identity-collector
   scratch refs quote through the split-aware scratch quoter (982 → 983, under the default ceiling).
   **WO U5 PR2b round 2 (2026-09-25):** merge-on-read DELETE/UPDATE on a v1 table raise Spark's
   IllegalArgumentException `Deletes are supported in V2 and above` (MERGE: `merge/mod.rs`).
   pins: ice-nested-evo-1/C-057
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** selections and
+  `SET` values render through `sql_text::render_for_reparse` so string
+  values re-parse exactly. pins: string-literal-escape-1/C-010
 - `predicate_dml.rs` — **ICE-OCC-SCOPED-1 (2026-09-17):** the identity DELETE / UPDATE builds a
   `CommitScope` from its isolation property and `conflict_filter::for_identity_dml` over its own
   `WHERE`, and hands it to the COW overwrite or the MoR row delta, so a concurrent commit that
@@ -374,6 +380,11 @@ repark-core's error map.
   **WO NTZ-1 verifier fold (2026-09-28):** only microsecond-naive timestamps name
   `TIMESTAMP_NTZ`; the nanosecond zoneless form of an unlocalized `TIMESTAMP'…'`
   literal names `TIMESTAMP` again. pins: ntz-1/C-007
+  **WO NTZ-STORE-DOORS-1 (2026-09-28):** a `Timestamp(µs, zone)` target renders
+  `arrow_cast((CAST((expr) AS TIMESTAMP)), '<type>')`, so a naive or `DATE` value
+  stores the session-zone instant on MERGE UPDATE SET (and the nested-assignment
+  fold); the ANSI door and bare sessions read it as UTC as before.
+  pins: ntz-store-doors-1/C-002, C-003, C-004
 - `ntz_store.rs` — **WO NTZ-1 slice 2 (2026-09-27):** the NTZ store gate in the
   `void_store` shape: `refuse_ntz_writes` runs the session analyzer over the planned
   write and refuses, for a `Timestamp(µs, None)` target, any source the ANSI matrix
@@ -381,6 +392,38 @@ repark-core's error map.
   the wall-cast UDF name (`NTZ_WALL_CAST_UDF_NAME`, pinned equal to the registered UDF)
   and its `ntz_wall_cast_sql` renderer, used by the identity-UPDATE projection, the
   MERGE INSERT projection and `store_assignment_cast_sql`. pins: ntz-1/C-006, C-007
+  **WO NTZ-STORE-DOORS-1 (2026-09-28):** also the one home of the session-zone store
+  seam for the remaining write doors. `zone_stores` (and `zone_stores_by_name`) maps a
+  planned source frame onto its target columns (listed, positional minus static
+  partition columns, or by name), reads the analyzed source types, and wraps only a
+  cross-zone column: an instant into a `TIMESTAMP_NTZ` target through the wall-cast UDF,
+  a naive microsecond timestamp or a `DATE` into a `TIMESTAMP` target through a `CAST`
+  that the Spark door's `spark_ltz_timestamp_cast` rule localizes in the session zone.
+  Every other column, a failed analysis and an unregistered UDF leave the frame as is.
+  `ltz_instant_cast_sql` / `needs_ltz_instant_cast` / `analyzed_types` serve the MERGE
+  renderers. Callers: repark-spark `insert_by_name.rs` and `insert_overwrite.rs`.
+  pins: ntz-store-doors-1/C-001, C-002, C-003, C-004
+- `negated_null_store.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** Spark types `-NULL`
+  (and `- -NULL`, `-(NULL)`) as DOUBLE; DataFusion plans it as Arrow `Null`, which the ANSI
+  matrix stores anywhere. `refuse_negated_null_writes(ctx, table, plan, targets)` follows
+  each `Null`-typed output column of a planned source back through projections, aliases,
+  subquery aliases, filters, sorts, limits, `DISTINCT`, joins (split by side), `VALUES` rows
+  and `UNION` branches (every row or branch NULL, at least one negated) and view scans, and
+  refuses a negated NULL into a column DOUBLE cannot store (`refuses_double`: DATE,
+  BOOLEAN, TIMESTAMP, TIMESTAMP_NTZ, BINARY) with Spark's `CANNOT_SAFELY_CAST` text naming
+  `"DOUBLE"`. A view scan resolves through `get_logical_plan`, or through the session's
+  `ViewDefinitionPlans` resolver (`with_view_definition_plans`), which the Spark door
+  registers so a replanning temp view answers its creation-time plan without DataFusion
+  inlining it. Callers: `merge/insert.rs` (INSERT and UPDATE SET gates), repark-spark
+  `update_cast.rs` and `void_type/insert_source_types.rs`. Four unit tests.
+  pins: store-ts-to-numeric-1/C-002
+  **Fold 2026-09-29 (verifier VT-1):** `definition_plan` exposes the resolver to
+  the Spark door's widening walk, which resolves views the same way.
+- `update_cast.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** `incompatible_store_message`
+  is `incompatible_update_message` with DECIMAL names (`"DECIMAL(10,2)"`), used by the Spark
+  door's VALUES, INSERT and UPDATE gates and by `negated_null_store.rs`;
+  `incompatible_update_message` keeps its answers (no DECIMAL name), so the native door and
+  the VOID, NTZ and nested-MERGE callers are unchanged. pins: store-ts-to-numeric-1/C-004
 - `void_store.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** `refuse_void_writes` is the
   one VOID store gate: given a planned source and its target columns, it does nothing unless a
   target is Arrow `Null`; then it runs the session analyzer (so an integer literal types `INT`
@@ -776,8 +819,57 @@ repark-core's error map.
   `TIMESTAMP` (LTZ) targets one stage earlier, at the Spark door's existing
   `refuse_insert_void_values` gate site
   (`repark-spark/src/void_type/ltz_values_store.rs`); every other target stays residual.
+  STORE-TS-TO-NUMERIC-1 (2026-09-28) extends that gate to numeric, DATE and BOOLEAN
+  targets; the Spark door's `spark_float_stringify` rule rewrites a STRING → FLOAT/DOUBLE
+  conform cast before this rule runs, so that pair is judged by the Spark door's INSERT
+  gate (`repark-spark/src/void_type/insert_source_types.rs`). This rule is unchanged.
   Ledger:
   [`../../../../task/wi2-g6-cast-integrity-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-16-wi2-g6-cast-integrity-ledger.md).
+- `store_overflow.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** `StoreOverflowCast`, an
+  `AnalyzerRule` over `LogicalPlan::Dml` that maps out-of-range fractional/decimal stores
+  into integer columns to Spark's `CAST_OVERFLOW_IN_TABLE_INSERT` (SQLSTATE 22003), naming
+  source type, target type and column. Constants refuse at plan through `store_fold.rs`
+  evaluation; column expressions are wrapped in the checked-cast UDF from `store_cast.rs`,
+  and zero-divisor guards are swapped for the store guard so `0/0` and `1/0.0` name the
+  division type, not `DIVIDE_BY_ZERO`. `wrap_store_outputs` is the same conformance for
+  non-Dml plans (MERGE arms, the UPDATE rewrite, OVERWRITE/BY NAME sources); callers apply
+  it between eager analysis and optimization so the optimizer folds the swapped guard.
+  `analyzed_store_source` is the shared parse-plus-analyze entry for the raw-SQL internal
+  plans. pins: cast-overflow-insert-1 (python/repark/tests/test_cast_overflow_insert_1.py).
+  Re-verify VO3-1 (2026-09-29): `wrap_store_outputs` takes a `gate_op` label and judges
+  every (source, target) pair with `refuse_unless_write_store_assignable` before building
+  the wrap, so a row with both a type refusal and an overflow reports the store refusal
+  like Spark; BY NAME passes `Some("append")` and OVERWRITE passes
+  `Some("INSERT OVERWRITE")`, byte-identical to the per-batch gates, while MERGE and
+  UPDATE pass `None` because their ANSI gates already judge before the wrap. OVERWRITE
+  targets come from the presented schema and BY NAME targets stay stored, matching each
+  door's per-batch write schema (UUID text stores through OVERWRITE, refuses on append).
+  Re-verify VO4-1 (2026-09-30): `wrap_store_outputs` returns a positional source whose
+  column count differs from the target count unwrapped and unjudged, so the per-batch
+  arity refusal fires exactly as on base; Spark likewise orders arity first
+  (`INSERT_COLUMN_ARITY_MISMATCH`).
+- `store_fold.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** split from `store_overflow.rs`
+  at the plan/expression seam (file-size gate): const-input resolution and physical
+  evaluation (`check_folded_store_input`, `fold_scalar`, `resolve_store_input`) plus the
+  refusal-expression constructors (`wrap_store_expr`, `store_guard_expr`). Verifier fold
+  VO-2: `lookup_store_column` stops at a `Limit` whose fetch is a literal 0, so
+  `LIMIT 0` over an overflowing constant writes nothing and never refuses, like Spark.
+  Re-verify fold VO2-1/VO2-2 (2026-09-29): the defining projection also yields when
+  its input writes nothing — `projection_input_writes_nothing` walks
+  Projection/SubqueryAlias/Limit to a literal fetch-0 — and `limit_empties_source`
+  treats a fetch-less literal OFFSET of 1 or more over a single-row constant source
+  (`limit_input_is_single_row` through Projection/SubqueryAlias/Sort to a one-row
+  EmptyRelation) like `LIMIT 0`. A Filter or JOIN between keeps the refusal.
+- `store_cast.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** rewritten as the Spark-boundary
+  checked-cast kernel: `__repark_store_int{8,16,32,64}__` UDFs refuse NaN, infinities and
+  out-of-range floats with the overflow message and store in-range values truncated like
+  Spark; `__repark_store_int_guard__` converts a zero divisor into the same refusal.
+  Verifier fold VO-1: the bound check judges `value.trunc()`, so a DOUBLE a fraction
+  past an integer bound stores the truncated bound, as Spark's ANSI cast does.
+- `predicate_dml.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** the UPDATE scratch rewrite
+  plans through `analyzed_store_source` and `wrap_store_outputs`, so per-row fractional
+  overflow refuses with the column named. Re-verify VO3-1 (2026-09-29): passes `None`
+  for the wrap's gate label — the UPDATE SET gates judge before the rewrite is built.
 - `insert_defaults.rs` — **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** the ONE home for
   filling omitted columns from `write_default` on every write path: `column_defaults`
   reads the table defaults, `fill_insert_plan` rewrites a short INSERT plan, an
@@ -1013,6 +1105,17 @@ repark-core's error map.
   `NameRule` and each dotted segment binds through it; a miss refuses Java's
   `ValidationException: Cannot find field '<written>' in struct: …` under both rules
   (the old `Cannot find field {name} in table schema` text is gone; R-2 closed).
+- `sql_text.rs` — **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):**
+  `render_for_reparse` renders an AST node to SQL text that re-parses to the
+  same string values. sqlparser's `Display` prints an already-doubled `''`
+  pair and a quote after a backslash as-is, so a value with quote pairs
+  re-parses collapsed; pre-doubling the value cannot survive the Display
+  either (a quote after a backslash is unrepresentable), and `N'…'`
+  literals do not plan on DataFusion. The renderer instead swaps each
+  quote-bearing value for an indexed placeholder, renders, then splices the
+  doubled single-quoted literal back; a placeholder collision falls back to
+  the plain render. Quote-free values render byte-identically.
+  pins: string-literal-escape-1/C-010
 - `format_version.rs` — **V3-10:** `set_properties_and_format_version` folds the fork's
   `UpgradeFormatVersionAction` and `UpdatePropertiesAction` into ONE transaction, so an ALTER
   carrying `format-version` beside another key is one metadata commit as it is on Spark; nothing

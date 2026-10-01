@@ -37,19 +37,27 @@ pub(crate) fn written_column(name: &str) -> Expr {
     Expr::Column(Column::from_qualified_name_ignore_case(name))
 }
 
+pub(crate) fn frame_verbatim(frame: &datafusion::prelude::DataFrame) -> bool {
+    repark_spark::spark_literals::escaped_verbatim_from_options(
+        frame.task_ctx().session_config().options(),
+    )
+}
+
 pub(crate) fn parse_canonical_predicate(
     frame: &crate::dataframe::PyDataFrame,
     predicate: &str,
 ) -> datafusion::error::Result<Expr> {
-    let canonical = repark_spark::spark_literals::canonicalize(predicate)?;
+    let verbatim = frame_verbatim(frame.inner());
+    let canonical = repark_spark::spark_literals::canonicalize_verbatim(predicate, verbatim)?;
     frame
         .inner()
         .parse_sql_expr(canonical.as_ref())
         .map_err(|error| {
-            repark_spark::spark_literals::translate_downstream_error(
+            repark_spark::spark_literals::translate_downstream_error_verbatim(
                 predicate,
                 canonical.as_ref(),
                 error,
+                verbatim,
             )
         })
 }
@@ -58,7 +66,8 @@ pub(crate) fn parse_canonical_predicate_exact(
     frame: &crate::dataframe::PyDataFrame,
     predicate: &str,
 ) -> datafusion::error::Result<Expr> {
-    let canonical = repark_spark::spark_literals::canonicalize(predicate)?;
+    let verbatim = frame_verbatim(frame.inner());
+    let canonical = repark_spark::spark_literals::canonicalize_verbatim(predicate, verbatim)?;
     let (mut state, _) =
         crate::deep_stack::grown_clone_frame(frame.inner(), &frame.depths()).into_parts();
     state
@@ -77,11 +86,14 @@ pub(crate) fn parse_canonical_predicate_exact(
                     repark_core::frame_names::NameRule::Exact,
                 )?;
             }
-            Err(repark_spark::spark_literals::translate_downstream_error(
-                predicate,
-                canonical.as_ref(),
-                error,
-            ))
+            Err(
+                repark_spark::spark_literals::translate_downstream_error_verbatim(
+                    predicate,
+                    canonical.as_ref(),
+                    error,
+                    verbatim,
+                ),
+            )
         }
     }
 }
@@ -643,5 +655,57 @@ mod tests {
             }
             other => panic!("expected qualified Alias, got {other:?}"),
         }
+    }
+
+    async fn frame_with_string_column(verbatim: bool) -> crate::dataframe::PyDataFrame {
+        let config = if verbatim {
+            repark_spark::spark_literals::with_escaped_string_literals_config(
+                SessionConfig::new(),
+                true,
+            )
+        } else {
+            SessionConfig::new()
+        };
+        let context = SessionContext::new_with_config(config);
+        let frame = context
+            .sql("SELECT 'placeholder' AS v")
+            .await
+            .expect("string-column frame");
+        let runtime = Arc::new(tokio::runtime::Runtime::new().expect("a runtime builds"));
+        crate::dataframe::PyDataFrame::new(frame, runtime)
+    }
+
+    fn comparison_literal(expr: &Expr) -> String {
+        match expr {
+            Expr::BinaryExpr(datafusion::logical_expr::BinaryExpr { right, .. }) => {
+                match right.as_ref() {
+                    Expr::Literal(ScalarValue::Utf8(Some(value)), _) => value.clone(),
+                    other => panic!("expected Utf8 literal, got {other:?}"),
+                }
+            }
+            other => panic!("expected comparison, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn filter_predicates_follow_the_frame_verbatim_flag() {
+        let verbatim = frame_with_string_column(true).await;
+        assert_eq!(
+            comparison_literal(&parse_canonical_predicate(&verbatim, "v = 'it''s'").unwrap()),
+            "it''s"
+        );
+        assert_eq!(
+            comparison_literal(&parse_canonical_predicate_exact(&verbatim, "v = 'it''s'").unwrap()),
+            "it''s"
+        );
+        let default = frame_with_string_column(false).await;
+        assert_eq!(
+            comparison_literal(&parse_canonical_predicate(&default, "v = 'it''s'").unwrap()),
+            "it's"
+        );
+        assert_eq!(
+            comparison_literal(&parse_canonical_predicate_exact(&default, "v = 'it''s'").unwrap()),
+            "it's"
+        );
     }
 }
