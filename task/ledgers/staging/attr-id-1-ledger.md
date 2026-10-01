@@ -709,4 +709,18 @@ three mutations; diffs at `s3d/mutation_m1_c037.diff`,
 `git status` clean and the suite back to 122 green. M1 reds 17 (the 16 plus
 the multi-id same-display union refusal). M2 reds 6, unchanged. M3 reds 19
 (the 16 plus the project-twins fill fan-out, the project-twins free-Column
-fan-out, and the divergent-twins `dropDuplicates` fan-out).
+fan-out, and the divergent-twins `dropDuplicates` fan-out). Follow-up 4
+merges two union-twins pins into one (121 green); M1/M3 re-run post-C-038
+still red 17/19 with `git status` clean (M2's area untouched).
+
+**S3d gate record (2026-10-01, head 70001a27).** Three identical replays
+(`s3d/t-head-2/3/4`, foreground, `timeout 3000`, `ulimit -v 67108864`): 0
+cells moved away from Spark against both `main.json` and the S3c parent,
+0 lost, all 8558 FIXED kept, 2676 gains. Like-for-like timing
+(`s3d/like_for_like_s3d.py`, heads t-head-2/3/4, bases `s3c/t-base-c1/2/3`
+since `main.json` predates S3a–S3c): median-of-3 ratio 0.9902 (bar 1.2x),
+53.4s over the 11234 FIXED, coverage 0.9999. Neighbour sweep `-n 8` over
+the S3c 46 files plus `test_attr_id_1_s3d.py`: 2400 passed, 19 skipped, 2
+xfailed, 0 failed. `bash /tmp/xattr/gate.sh` prints GATE GREEN (second run;
+the first run red on two `.typos.toml` comment lines only, deleted in
+70001a27).
