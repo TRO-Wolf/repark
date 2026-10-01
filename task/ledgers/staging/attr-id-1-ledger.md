@@ -310,6 +310,7 @@ family's helpers are deleted in the same commit.
 | C-026 | Grep proof that each deleted helper had no caller outside the family: `_quote_filter_ident_token`, `_quote_filter_idents_in_fragment` and `_SQL_LITERAL_KEYWORDS` appear only in `core.py` (deleted), the frozen surface `_dfcore_1_expected.py` (mirror updated in the same commit), and `test_filter_predicate_rewrite.py` docstrings (homes repointed); `DataFrame._quote_filter_sql_identifiers` appears only in `core.py` (deleted method, one docstring repointed) and the same test docstrings. | The grep output recorded at commit time; `test_dfcore_1_exports.py` green. | PROVEN | Commit grep; `python/repark/tests/test_dfcore_1_exports.py` 10 passed. |
 | C-027 | The folded-lambda fallback: a filter-string lambda reference matching its parameter only by folding (insensitive rule) raises `_FoldedLambdaFallbackError`, and `_quote_filter_sql_identifiers` reruns the whole predicate through `_main_path_filter_sql`, a verbatim port of main's fold-everything quoter. Exact-rule references never fold and never trigger. | The 4 nested-collision pins (insensitive fold, sensitive distinct, reverse nesting, single-level folded); the M5 mutation (re-raise kills the 3 insensitive pins, sensitive stays green); the t-head-2 re-replay with 0 moved. | PROVEN (pins + mutation; replay lands in the hand-back) | `python/repark/tests/test_attr_id_1_s3b.py`; `python/repark/src/repark/spark/filter_quote.py` `_main_path_filter_sql`; replays land in the hand-back. |
 | C-028 | The fallback fires only on a nested parameter collision: `_scopes_have_folded_collision` reports an inner lambda parameter that folds to an enclosing parameter with different spelling, and `_bind_filter_token` raises `_FoldedLambdaFallbackError` on a folded reference only then. Single-level and collision-free nested shapes stay on the binder. | The 3 stays-on-binder pins plus the 4 C-027 pins; M6 (force fallback) and M7 (force binder) each red on its side; the t-head-2 re-replay with 0 moved and the 23 cells back to FIXED. | PROVEN (pins + mutations; replay lands in the hand-back) | `python/repark/tests/test_attr_id_1_s3b.py`; `python/repark/src/repark/spark/filter_quote.py` `_scopes_have_folded_collision`; replays land in the hand-back. |
+| C-029 | The B1 join-dup guard covers the two alias shapes: `join_dup_below_wrappers` descends id-extending Projections (above starts with below), and the qualifier-bound filter arm refuses a one-id multi-hit over a join dup exactly like the unqualified arm. | The 2 alias-dup pins under both rules (4 red before the fix); the t-head-2 re-replay with 0 S3a gains lost. | PROVEN (pins; replay lands in the hand-back) | `python/repark/tests/test_attr_id_1_s3b.py`; `crates/repark-core/src/session/df_guards/sort_names.rs` `join_dup_below_wrappers`; replays land in the hand-back. |
 
 **S3b first-cut halt (2026-10-01, self-caught before commit).** The first cut
 carried an exact-preference on both filter doors (`exact_hits or folded_hits`
@@ -467,3 +468,19 @@ LambdaVariable error); both reverted. M6 caught a weak pin first: the
 nested pin passed under both paths until the frame gained a true twin
 column (`select` plus aliased literal; `withColumn` replaces
 case-insensitively and made no twin).
+
+## Gate j_cross: alias-dup refusals (2026-10-01)
+
+`verify_gains.py` on the post-fix `t-head-2` lost 4 of the 203 S3a
+gains (`r5p7` `j_cross` `alias_wc|filt` and `alias|q_filt`, both
+rules; lost identically pre-fix, so an H-1 B1 gap, not a fallback
+regression). Both join `v` fields share one provenance id (both
+derive from the same source column), so the S3b rule binds; the B1
+refusal then depends on `join_dup_below_wrappers`, which stopped at
+the `withColumn` projection (above ids extend below) and never ran on
+the qualifier-bound arm. Fixes: the walk descends id-extending
+projections, and the qualified arm carries the symmetric guard with
+Spark's qualifier-qualified echo. Pins written first (4 red), green
+after. Also fixed in this commit: the H-1 `redundant_closure` clippy
+lint in `logical_names.rs` (clippy's suggestion, same bytes), which
+blocked `make rust-clippy`.

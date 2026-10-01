@@ -8924,3 +8924,6 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   a nested scope pair without a parameter collision all keep binder rows
   under the insensitive rule, each expectation measured on live Spark 4.1.2.
   pins: attr-id-1/C-028
+  **Gate j_cross (2026-10-01):** the alias-dup pins (C-029): a one-id join
+  dup refuses past `alias` plus `withColumn` and on the qualified door,
+  under both rules (S0 spark.json). pins: attr-id-1/C-029

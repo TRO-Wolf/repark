@@ -320,6 +320,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   references and nested scopes without that collision stay on the binder,
   which folds them to the parameter spelling exactly as Spark does.
   pins: attr-id-1/C-028
+  **Gate j_cross (2026-10-01):** the qualifier-bound arm carries the same
+  one-id multi-hit join-dup refusal as the unqualified arm, echoing
+  qualifier-qualified candidates as Spark does. pins: attr-id-1/C-029
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
   unsupported operations fail explicitly.

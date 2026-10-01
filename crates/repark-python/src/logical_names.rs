@@ -23,7 +23,7 @@ pub fn logical_column_qualifiers(frame: PyRef<'_, PyDataFrame>) -> PyResult<Vec<
             .inner()
             .schema()
             .iter()
-            .map(|(qualifier, _)| qualifier.map(|held| held.to_string()))
+            .map(|(qualifier, _)| qualifier.map(std::string::ToString::to_string))
             .collect())
     })
 }

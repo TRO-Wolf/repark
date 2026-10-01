@@ -280,6 +280,9 @@ wrapped optimizer rule) and declares this directory.
   `ambiguous_for_hits` error; the non-unique-engine arm still leaves the token
   unbound for the engine.
   pins: attr-id-1/C-026
+  **Gate j_cross (2026-10-01):** the walk also descends id-extending
+  Projections (above starts with below: `withColumn` appends a column).
+  pins: attr-id-1/C-029
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside

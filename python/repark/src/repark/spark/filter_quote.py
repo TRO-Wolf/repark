@@ -371,6 +371,12 @@ def _bind_filter_token(
     status, hits = _native.resolve_display_name(native, name, qualifier, displays, exact)
     if status == "bound":
         engine_field = engine_names[hits[0]]
+        if len(hits) > 1 and _native.join_dup_below_wrappers(native):
+            candidates_echo = ", ".join(
+                f"`{qualifier}`.`{displays[position]}`" for position in hits
+            )
+            detail = f"[AMBIGUOUS_REFERENCE] Reference `{token}` is ambiguous, "
+            raise AnalysisException(f"{detail}could be: [{candidates_echo}].")
         if _native.engine_field_is_unique(native, engine_field):
             return _quote_ident(engine_field)
         return token

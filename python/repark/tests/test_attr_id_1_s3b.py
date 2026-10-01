@@ -323,3 +323,26 @@ def test_filter_nested_no_collision_stays_on_binder(spark: ReparkSession) -> Non
     frame = _lambda_corpus_frame(spark).select("*", functions.lit(9).alias("X"))
     filtered = frame.filter("exists(arr, x -> exists(arr, y -> x > Y))").select("id")
     assert _rows(filtered) == [(1,), (5,)]
+
+
+def _alias_dup_frame(spark: ReparkSession) -> Any:
+    dd = spark.createDataFrame(
+        [(1, 10, "a"), (2, 20, "b"), (3, 30, "c"), (4, None, None)],
+        "id INT, v INT, Data STRING",
+    )
+    right = dd.select(functions.col("v")).filter(functions.col("v") > 15)
+    return dd.select("id", "v").crossJoin(right)
+
+
+def test_filter_str_of_alias_dup_past_with_column_is_ambiguous(ruled_spark: ReparkSession) -> None:
+    framed = _alias_dup_frame(ruled_spark).alias("q").withColumn("w", functions.lit(1))
+    with pytest.raises(AnalysisException) as caught:
+        framed.filter("v > 15")
+    assert caught.value.getCondition() == "AMBIGUOUS_REFERENCE"
+
+
+def test_filter_str_of_qualified_alias_dup_is_ambiguous(ruled_spark: ReparkSession) -> None:
+    framed = _alias_dup_frame(ruled_spark).alias("q")
+    with pytest.raises(AnalysisException) as caught:
+        framed.filter("q.v > 15")
+    assert caught.value.getCondition() == "AMBIGUOUS_REFERENCE"

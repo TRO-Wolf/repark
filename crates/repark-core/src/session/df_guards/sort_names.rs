@@ -72,7 +72,7 @@ fn projection_preserves_ids(projection: &Projection) -> bool {
         .iter()
         .map(|field| AttrId::of(field))
         .collect::<Vec<_>>();
-    above == below
+    above == below || (above.len() > below.len() && above[..below.len()] == below)
 }
 
 #[must_use]
