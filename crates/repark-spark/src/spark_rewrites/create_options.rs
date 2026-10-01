@@ -207,9 +207,8 @@ fn match_options_clause(
         }
         let key = match &tokens.get(cursor)?.token {
             Token::Word(word) => word.value.clone(),
-            Token::SingleQuotedString(raw) | Token::DoubleQuotedString(raw) => {
-                unescape_spark_literal(raw)
-            }
+            Token::SingleQuotedString(raw) => unescape_spark_literal(raw, '\''),
+            Token::DoubleQuotedString(raw) => unescape_spark_literal(raw, '"'),
             _ => return None,
         };
         cursor = skip_whitespace(tokens, cursor + 1);

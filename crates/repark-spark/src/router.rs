@@ -101,8 +101,7 @@ pub(crate) async fn execute_in_session<S: std::hash::BuildHasher>(
     }
     // Canonicalize once at the Spark SQL front door so later tokenizers cannot process escapes again.
     // Translate downstream parser locations back to the caller's SQL before returning an error.
-    let verbatim =
-        crate::spark_literals::escaped_verbatim_from_options(ctx.state().config().options());
+    let verbatim = write_options.effective_verbatim(ctx);
     let canonical = crate::alter_write_order::verbatim_write_order_sql(sql)
         .map_or_else(
             || crate::spark_literals::canonicalize_verbatim(sql, verbatim),
@@ -250,8 +249,7 @@ async fn execute_time_travelled(
     if let Some(original) = original_for_locations
         .and_then(|original| original_sql_for_locations(original, sql, sql_storage.as_ref()))
     {
-        let verbatim =
-            crate::spark_literals::escaped_verbatim_from_options(ctx.state().config().options());
+        let verbatim = write_options.effective_verbatim(ctx);
         result.map_err(|error| {
             crate::spark_literals::translate_downstream_error_verbatim(
                 original,

@@ -684,7 +684,7 @@ impl ReparkSession {
         };
         let outcome = async {
             let copy_outcome = self
-                .sql_with_write_options(
+                .sql_built_with_write_options(
                     commit.copy_sql,
                     &HashMap::new(),
                     OverwriteIntent::Session,
@@ -757,7 +757,7 @@ impl ReparkSession {
         let outcome = async {
             self.register_text_write(view);
             let copy_outcome = self
-                .sql_with_write_options(
+                .sql_built_with_write_options(
                     commit.copy_sql,
                     &HashMap::new(),
                     OverwriteIntent::Session,

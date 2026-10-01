@@ -216,12 +216,12 @@ impl PyColumn {
     /// Returns `ParseException` for invalid SQL and `AnalysisException` for unresolved columns.
     /// This path bypasses the Spark SQL router, so it applies the parse-altitude valves here.
     #[staticmethod]
-    pub fn sql(sql: &str) -> PyResult<Self> {
+    pub fn sql(sql: &str, keep_verbatim: bool) -> PyResult<Self> {
         fenced!("Column.sql", {
             repark_spark::refuse_sql_fragment(sql).map_err(crate::datafusion_to_py_err)?;
             let context =
                 expr_build::sql_context(sql, true).map_err(crate::datafusion_to_py_err)?;
-            let canonical = repark_spark::spark_literals::canonicalize(sql)
+            let canonical = repark_spark::spark_literals::canonicalize_verbatim(sql, keep_verbatim)
                 .map_err(crate::datafusion_to_py_err)?;
             let runtime = crate::session::shared_runtime()?;
             let planned = expr_build::plan_expr_column(&context, canonical.as_ref(), sql);
@@ -881,7 +881,7 @@ mod expr_tests {
 
     #[test]
     fn expr_sql_substr_zero_matches_spark() {
-        let column = PyColumn::sql("substr('hello', 0, 3)").expect("parse");
+        let column = PyColumn::sql("substr('hello', 0, 3)", false).expect("parse");
         // Consumer context is a *different* SessionContext (mirrors F.expr → spark DF handoff).
         let context = datafusion::prelude::SessionContext::new();
         repark_functions::register_all(&context);
@@ -974,7 +974,7 @@ mod expr_tests {
     fn expr_sql_integer_division_hands_off_float64() {
         use datafusion::arrow::array::Float64Array;
 
-        let column = PyColumn::sql("5/2").expect("parse");
+        let column = PyColumn::sql("5/2", false).expect("parse");
         // Consumer context is a *different* SessionContext (mirrors F.expr → spark DF handoff).
         let context = datafusion::prelude::SessionContext::new();
         repark_functions::register_all(&context);

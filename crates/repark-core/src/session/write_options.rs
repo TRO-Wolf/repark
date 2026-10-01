@@ -57,6 +57,41 @@ impl ReparkSession {
             options,
             overwrite_intent,
             source_by_name,
+            None,
+        )
+        .await
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub async fn sql_built(&self, query: &str) -> Result<DataFrame> {
+        let dialect = Arc::clone(&self.dialect);
+        self.sql_with_write_options_inner(
+            &dialect,
+            query,
+            &HashMap::new(),
+            crate::OverwriteIntent::Session,
+            false,
+            Some(false),
+        )
+        .await
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub async fn sql_built_with_write_options(
+        &self,
+        query: &str,
+        options: &HashMap<String, String>,
+        overwrite_intent: crate::OverwriteIntent,
+        source_by_name: bool,
+    ) -> Result<DataFrame> {
+        let dialect = Arc::clone(&self.dialect);
+        self.sql_with_write_options_inner(
+            &dialect,
+            query,
+            options,
+            overwrite_intent,
+            source_by_name,
+            Some(false),
         )
         .await
     }
@@ -68,6 +103,7 @@ impl ReparkSession {
         options: &HashMap<String, String>,
         overwrite_intent: crate::OverwriteIntent,
         source_by_name: bool,
+        verbatim_override: Option<bool>,
     ) -> Result<DataFrame> {
         if let Some(frame) = super::spill::maybe_apply_runtime_set(self.context(), query)? {
             return Ok(frame);
@@ -83,6 +119,7 @@ impl ReparkSession {
         );
         cx.overwrite_intent = overwrite_intent;
         cx.source_by_name = source_by_name;
+        cx.verbatim_override = verbatim_override;
         cx.temp_views = Some(self);
         dialect
             .execute_with_write_options(cx, query, options)

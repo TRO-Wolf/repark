@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import datetime
 import enum
-import math
 import warnings
 from decimal import Decimal
 from typing import Any
@@ -18,7 +17,8 @@ from repark import _native
 from repark.errors import PySparkTypeError, PySparkValueError
 from repark.spark._idents import quote_column_sql_expr as _quote_column_sql_expr
 from repark.spark._idents import sql_string_literal
-from repark.spark.column import Column, Scalar
+from repark.spark.column import Column
+from repark.spark.functions_lit import _lit_spark_display, _lit_sql_expr
 from repark.spark.udtf import UserDefinedTableFunction, udtf
 
 
@@ -309,54 +309,6 @@ def _lit_numpy_ndarray(value: Any) -> Column | None:
     )
 
 
-def _lit_sql_expr(value: Scalar) -> str:
-    """SQL literal fragment for embedding a ``lit`` into generated SQL (MERGE, etc.).
-
-    Non-finite floats must not use bare ``nan`` / ``inf`` tokens — those bind as
-    identifiers in free-SQL (select-global-agg, cube/rollup, MERGE) rather than float
-    constants. Use CAST string forms DataFusion accepts.
-    """
-    if value is None:
-        return "NULL"
-    if isinstance(value, bool):
-        return "TRUE" if value else "FALSE"
-    if isinstance(value, int):
-        return str(value)
-    if isinstance(value, float):
-        if math.isnan(value):
-            return "CAST('NaN' AS DOUBLE)"
-        if value == math.inf:
-            return "CAST('Infinity' AS DOUBLE)"
-        if value == -math.inf:
-            return "CAST('-Infinity' AS DOUBLE)"
-        return repr(value)
-    if isinstance(value, str):
-        return sql_string_literal(value)
-    return str(value)
-
-
-def _lit_spark_display(value: Scalar) -> str:
-    """PySpark-style literal fragment for display/agg names (not DataFusion's ``Int64(1)``).
-
-    Live PySpark 4.1.2 renders string literals **without** surrounding quotes in both projection
-    names (``df.select(F.lit("s")).columns == ['s']``) and aggregate embeds
-    (``first(z)``, ``concat(s, z)``). Integer/float/bool/NULL follow Spark coercion.
-    """
-    if value is None:
-        return "NULL"
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    if isinstance(value, int):
-        return str(value)
-    if isinstance(value, float):
-        # Spark keeps the double point: lit(2.0) names as "2.0", not "2" (live 4.1.2).
-        return repr(value)
-    if isinstance(value, str):
-        # Unquoted, matching Spark's pretty name (quotes only appear inside the string).
-        return value
-    return str(value)
-
-
 def expr(sql: str) -> Column:
     """A column from a SQL expression string (PySpark ``functions.expr``).
 
@@ -368,20 +320,22 @@ def expr(sql: str) -> Column:
     Projection display matches live PySpark 4.1.2 for bare arithmetic fragments: ``1 + 1`` is
     shown as ``(1 + 1)`` (analyzer paren). Already-parenthesized or non-infix SQL is left as given.
     """
+    from repark.spark.functions_session import _active_verbatim_flag
+
     stripped = sql.strip()
+    infix_tokens = (" + ", " - ", " * ", " / ", " % ")
     # Spark pretty-names simple infix fragments with surrounding parens (live 4.1.2).
     if stripped and not (stripped.startswith("(") and stripped.endswith(")")):
-        if any(token in stripped for token in (" + ", " - ", " * ", " / ", " % ")):
-            display = f"({stripped})"
-        else:
-            display = stripped
+        display = f"({stripped})" if any(token in stripped for token in infix_tokens) else stripped
     else:
         display = stripped
+    verbatim = _active_verbatim_flag()
     return Column(
-        _native.PyColumn.sql(sql),
+        _native.PyColumn.sql(sql, verbatim),
         spark_display=display,
         projection_name=display,
         stable_name=False,
+        sql_expr=_native.built_sql_user_fragment(display, verbatim),
     )
 
 

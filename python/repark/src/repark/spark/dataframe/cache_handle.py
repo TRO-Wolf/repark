@@ -97,7 +97,7 @@ def find_live_handle(frame: Any, view_name: str) -> CacheViewHandle | None:
 def bind_registered_view(frame: Any, view_name: str, lineage: Any) -> None:
     """Point ``frame`` at a freshly registered cache view and adopt its handle."""
     try:
-        frame._inner = frame._session.sql(f"SELECT * FROM {view_name}")
+        frame._inner = frame._session.sql_built(f"SELECT * FROM {view_name}")
     except Exception:
         frame._session.drop_temp_view(view_name)
         raise

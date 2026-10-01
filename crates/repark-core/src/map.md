@@ -71,7 +71,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `execute_with_write_options` (see `dialect.rs`). **Run 22b rebase (2026-09-18,
   Q-22b-WO-1):** ICE-DYN-OVERWRITE-1's `static_overwrite.rs` (`sql_with_overwrite_flag`,
   `sql_static_overwrite`) is retired; `session/write_options.rs` is the one statement
-  funnel. **ICE-OVERWRITE-MODE-1 (2026-09-19):** `sql_with_write_options(query, options,
+  funnel. **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** `sql_built` /
+  `sql_built_with_write_options` carry facade-built SQL with `verbatim_override: Some(false)`;
+  `sql_with` passes `None` (user text follows the session flag).
+  pins: string-literal-escape-1/C-011 **ICE-OVERWRITE-MODE-1 (2026-09-19):** `sql_with_write_options(query, options,
   overwrite_intent)` fills `EngineContext::overwrite_intent` (`Session` / `Static` for
   `saveAsTable` / `Dynamic` for `writeTo.overwritePartitions`), and `sql_with` calls it with an
   empty map and `Session`. pins: ice-dyn-overwrite-1/L-001; ice-write-options-1/C-014;
@@ -719,6 +722,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   folded statement's inner scopes (`column_resolution/inner_scopes.rs`) and
   re-plans once on change, falling back to the pre-respell plan when the
   respelled statement fails (ledger D1); the repair loop itself is untouched.
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):**
+  `rewrite_fragment_case` re-renders through
+  `repark_iceberg::write::sql_text::render_for_reparse` so string values
+  re-parse exactly. pins: string-literal-escape-1/C-010
   **WO CASESENS-1 slice 2 (2026-09-27):** `plan_case_sensitive` plans on a
   cloned state with identifier normalization off (the guard stays first), and
   `stamp_unresolved_column` renders a missing column DataFusion reports with a

@@ -261,7 +261,7 @@ class LinearRegressionModel(HasFeaturesCol, HasPredictionCol, Model):
         frame.createOrReplaceTempView(view)
         sql = f"SELECT {view}.*, ({expr}) AS {prediction} FROM {view}"
         try:
-            return frame._spawn(frame._session.sql(sql))
+            return frame._spawn(frame._session.sql_built(sql))
         finally:
             with contextlib.suppress(Exception):
                 frame._session.drop_temp_view(view)

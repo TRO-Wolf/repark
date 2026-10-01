@@ -203,6 +203,10 @@ pins: rp-4-fork-repin/C-005, C-006
   in-module tests (MG-2: M2 Oracle sub-predicates, M3
   assignment-target qualification, M8 INSERT column list, M10 non-last
   unconditional clause). pins: dml-a-merge-not-matched-by-source/C-005
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** every rendered
+  fragment (`ON`, clause predicates, `VALUES` rows, `SET` assignments, the
+  derived source) goes through `repark_iceberg::write::sql_text::render_for_reparse`
+  so string values re-parse exactly. pins: string-literal-escape-1/C-010
 - `merge_fragments.rs` — **ICE-MIXED-CASE-1 (2026-09-17):** MERGE fragment
   preprocessing for case-insensitive resolution (target/source scope read,
   `ON` / predicate / value fragment rewrite, `maybe_` dispatcher that stamps
@@ -517,6 +521,11 @@ pins: rp-4-fork-repin/C-005, C-006
   replace door (`ctas.rs`), so an append or a plain create ignores the option as Spark does.
   pins `isolation_level_passes_through_unparsed_like_spark`,
   `replace_doors_refuse_an_unknown_isolation_level_like_spark`. pins: u7-write-df-2/C-014
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** `verbatim_override:
+  Option<bool>` (set by `dialect.rs` from `EngineContext`, never from an option key)
+  forces the literal mode for one parse; `effective_verbatim` falls back to the session
+  flag. `router.rs` reads it for the canonicalize call and the error translation.
+  pins: string-literal-escape-1/C-011
 - `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** last-wins validation of
   the out-of-band option pairs (snapshot-property strip-and-lowercase, parquet
   honour, orc/avro/bogus refusals, option-over-table-property
@@ -571,6 +580,9 @@ pins: rp-4-fork-repin/C-005, C-006
   fold's scope carries `spark.sql.caseSensitive`, so a re-cased whole-struct value refuses
   `CANNOT_FIND_DATA` under `true`.
   pins: u8-write-sql/C-025, C-027, C-032, C-033
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** the folded
+  statement renders through `repark_iceberg::write::sql_text::render_for_reparse`
+  so string values re-parse exactly. pins: string-literal-escape-1/C-010
   **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 round 2):** the SET-value probe renders
   through `void_type.rs`'s stacked-minus parenthesizer, and integer literals
   are judged by Spark's type (`INT` unless `L`-suffixed or out of `INT` range)
@@ -1045,6 +1057,39 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: fnp-4b/C-001, C-004, C-005, C-006, C-020
   `sql_may_have_insert_partition` keeps quote-free `INSERT … PARTITION` text off the
   fast path so the column-list swap runs.
+  **STRING-LITERAL-ESCAPE-1 (2026-09-29):** the file reached 999 of its 1,000
+  lines, so the literal-value engine moves verbatim to the child module
+  [spark_literals/unescape.rs](spark_literals/unescape.rs) (comments shed per
+  the owner ruling; behavior identical, callers untouched via re-export).
+  The follow-up fix makes the value engine quote-aware: `""` collapses in
+  double-quoted literals (PE-10), `r"…"` answers, raw `''`/`""` splits head
+  from quoted tail, and verbatim keeps doublings. `create_options.rs` option
+  keys unescape with their own quote type. Rust pins in
+  [tests/string_literal_escape_1.rs](tests/string_literal_escape_1.rs) (own
+  leaf; the SQP-1 leaf is byte-frozen), facade pins in
+  `python/repark/tests/test_string_literal_escape_1.py`.
+  pins: string-literal-escape-1/C-000, C-001, C-002, C-003, C-004
+  **DIFF-PROBE fold (2026-09-29):** verbatim keep-exact now applies only to
+  query-expression literals and `OPTIONS` values; DDL property lists
+  (`TBLPROPERTIES` / `PROPERTIES` / `DBPROPERTIES` parens) and `COMMENT`
+  literal runs in `CREATE` / `ALTER` statements take default treatment, so
+  their canonical text matches default mode exactly. Doubled `""` inside a
+  `COMMENT` double-quoted literal forces a rewrite (the borrower path refuses
+  doubles there) into single-quoted form. The statement gate keeps
+  `SELECT comment '…'` aliases on the query rule. `OPTIONS` needs no span:
+  its planner already unescapes keys from original text and splices values
+  from verbatim inners. `COMMENT ON` stays out (Spark collapses doublings
+  but preserves backslashes there — a different rule).
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** the DDL gate covers
+  `SHOW` and `COMMENT` statements too; `UNSET … [IF EXISTS]` skips the guard
+  words before the key paren, `SHOW TBLPROPERTIES t (…)` spans the trailing
+  key paren, and `COMMENT ON … IS …` spans the literal after the last `IS`
+  followed by one. A clean Spark rerun shows `COMMENT ON` fully unescapes
+  both modes, superseding the DIFF-PROBE note above. The verbatim entry
+  points (`canonicalize_verbatim`, `translate_downstream_error_verbatim`,
+  `with_escaped_string_literals_config`, `escaped_verbatim_from_options`)
+  turn `pub` for the binding's `filter`/`where`/`F.expr` doors.
+  pins: string-literal-escape-1/C-008, C-009
 - `spark_literal_typing.rs` — **SQL-LITERAL-TYPING-1 (2026-09-16):**
   `SparkIntegralLiteral` types unsuffixed integral literals as Spark does —
   Int64 fitting i32 narrows to Int32, UInt64 becomes Decimal128(digits, 0),

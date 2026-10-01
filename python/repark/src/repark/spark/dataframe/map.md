@@ -162,6 +162,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   **Critic round (2026-09-14, R-4):** the select/filter struct-edit resolve hooks are
   deleted — `withField` / `dropFields` are native `update_fields` expressions, so no
   boundary rewrite runs. pins: column-parity-1/C-002, C-004, C-005, C-008
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** built scans, joins,
+  unpivot, and explain run through the native `sql_built` method; `selectExpr` stays on `sql`
+  (user text follows the flag). The set-op wrap plus its dict join ratchet the
+  baseline 3973 → 3971. pins: string-literal-escape-1/C-011
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`
@@ -347,6 +351,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   window result. The ordered path carries partition, order, and UDF inputs plus every
   source column on the group frame, overwrites same-name sources, and projects caller
   order last-wins. pins: dfcore-2/C-005
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** built projection SQL
+  runs through the native `sql_built` method. pins: string-literal-escape-1/C-011
 - `statistics.py` owns the statistics bodies behind the public wrappers (DFCORE-3,
   moved from `core.py` and `DataFrameStatFunctions.freqItems`; DF-RUST-3, 2026-09-15:
   `freqItems` runs the `FreqItemCounter` UDAF through `frame._plan().freq_items` —
@@ -424,6 +430,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   each stratum against one shared `rand(seed)` column so the sequence advances once
   per row. All three carry display names, engine names, and the origin map to each
   child, which keeps the `_repr_html_` hook. pins: dfcore-4a/C-004
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** built sample scans
+  run through the native `sql_built` method. pins: string-literal-escape-1/C-011
 - `display.py` owns the ten display bodies behind the public wrappers (DFCORE-4b,
   moved from `core.py`). DISPLAY-POLARS-1 departure (2026-09-09): `_resolve_display_style`'s
   one-line docstring said "default spark"; the default has been `polars` since step 1, so the
@@ -580,6 +588,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   pending-checkpoint materialize first and then reuse the shape, so
   `localCheckpoint(eager=False)` discharges on the next action with no count
   query. pins: review-fix-4/C-001, C-002, C-003
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** the built cache
+  shape scan runs through the native `sql_built` method. pins: string-literal-escape-1/C-011
 - `explain.py` owns the explain rendering support (DF-EXPLAIN-1, D-5 ruling 2026-09-08): the
   section headers `_LOGICAL_PLAN_HEADER` / `_PHYSICAL_PLAN_HEADER`, the `_EXPLAIN_CODEGEN_NOTE`
   line, the `_EXPLAIN_SECTION_PLAN` mode map (mode → SQL prefix + section keys), and the
@@ -621,6 +631,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   keep-set (`core._is_numeric_type_key`) covers the narrow widths
   (byte/short/float), matching Spark's NumericType.
   pins: dfcore-1/C-006, C-007, grouped-surface-1/C-007; pins: logical-width-1/C-013
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** built agg SQL runs
+  through the native `sql_built` method. pins: string-literal-escape-1/C-011
 - `plan_collapse.py` owns plan simplification, window structural keys, show formatting, Arrow
   display/type conversion, SQL literal quoting, identifier rewrites, and writer safety helpers.
   DISPLAY-POLARS-1 step 4 (2026-09-09, follow-up): the module keeps the show
@@ -1441,3 +1453,5 @@ twin-join frame `select(b["id"] + 1, F.col("*"))` answers the presented fields `
 `functools.partial(_native.attribute_copy_name, self._plan())`, the collision-free name the
 native copy projection gave each field. `core.py` stays 3973 (the docstring gave the line).
 pins: u11-edge-1/C-029, C-030
+**STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** the REPLACE WHERE scan
+runs through the native `sql_built` method. pins: string-literal-escape-1/C-011

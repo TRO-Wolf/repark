@@ -88,6 +88,10 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   **CASESENS-1 S3 (2026-09-27):** `PyColumn::column` builds through
   `expr_build::written_column` (the written spelling reaches the binder; net-zero, stays
   1012). pins: casesens-1/C-009
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** `PyColumn::sql`
+  takes the session's `keep_verbatim` flag and canonicalizes with it, so
+  `F.expr` parses like the session door (net-zero, stays 1012).
+  pins: string-literal-escape-1/C-009
 - [`function_dispatch.rs`](function_dispatch.rs) owns scalar and aggregate function dispatch.
   Its default arm hands the name to [`function_dispatch/`](function_dispatch/map.md) before
   refusing.
@@ -210,6 +214,11 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `parse_canonical_predicate_exact` parses a filter fragment against a
   normalization-off clone of the frame state and routes a `FieldNotFound` miss
   through the rule binder for Spark's refusal. pins: casesens-1/C-009
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):**
+  `parse_canonical_predicate[_exact]` read the session's verbatim flag from
+  the frame (`frame_verbatim`) and canonicalize with it, so `filter`/`where`
+  parse like the session door; default mode takes the identical path as
+  before. pins: string-literal-escape-1/C-009
 - [`window.rs`](window.rs) owns Spark frame conversion and unordered-window policy.
   **WIN-SLIDE-1 (2026-09-04):** a `RANGE` offset is emitted as `ScalarValue::Utf8`, not `Int64`.
   DataFusion's window-frame coercion casts a `Utf8` bound to the ORDER BY key's type (that is the

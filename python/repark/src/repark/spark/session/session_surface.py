@@ -630,6 +630,6 @@ class TableValuedFunction:
 
     def _sql_table_function(self, name: str) -> DataFrame:
         try:
-            return self._session.sql(f"SELECT * FROM {name}()")
+            return self._session._sql_built(f"SELECT * FROM {name}()")
         except (AnalysisException, ParseException):
             _not_implemented(f"tvf.{name}")

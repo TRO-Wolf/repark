@@ -23,6 +23,7 @@ pub struct StatementWriteOptions {
     pub merge_schema: Option<bool>,
     pub output_spec_id: Option<i32>,
     pub source_by_name: bool,
+    pub verbatim_override: Option<bool>,
 }
 
 impl StatementWriteOptions {
@@ -34,6 +35,13 @@ impl StatementWriteOptions {
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.raw.is_empty()
+    }
+
+    #[must_use]
+    pub fn effective_verbatim(&self, ctx: &datafusion::prelude::SessionContext) -> bool {
+        self.verbatim_override.unwrap_or_else(|| {
+            crate::spark_literals::escaped_verbatim_from_options(ctx.state().config().options())
+        })
     }
 
     #[must_use]

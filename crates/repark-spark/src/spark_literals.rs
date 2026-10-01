@@ -12,8 +12,11 @@ use datafusion::sql::sqlparser::dialect::{Dialect, GenericDialect};
 use datafusion::sql::sqlparser::parser::ParserError;
 use datafusion::sql::sqlparser::tokenizer::{Location, Token, TokenWithSpan, Tokenizer};
 
-/// Spark's measured replacement for an unrepresentable code point.
-const UNREPRESENTABLE: char = '\u{003F}';
+mod unescape;
+
+pub mod built_fragment;
+
+pub(crate) use unescape::unescape_spark_literal;
 
 #[derive(Debug)]
 struct SparkLexDialect(GenericDialect);
@@ -101,7 +104,8 @@ pub fn canonicalize(sql: &str) -> Result<Cow<'_, str>> {
     canonicalize_verbatim(sql, false)
 }
 
-pub(crate) fn canonicalize_verbatim(sql: &str, keep_verbatim: bool) -> Result<Cow<'_, str>> {
+#[allow(clippy::missing_errors_doc)]
+pub fn canonicalize_verbatim(sql: &str, keep_verbatim: bool) -> Result<Cow<'_, str>> {
     if !sql.as_bytes().contains(&b'\'')
         && !sql.as_bytes().contains(&b'"')
         && !sql.as_bytes().contains(&b'\\')
@@ -195,7 +199,8 @@ pub fn translate_downstream_error(
     translate_downstream_error_verbatim(original, canonical, error, false)
 }
 
-pub(crate) fn translate_downstream_error_verbatim(
+#[must_use]
+pub fn translate_downstream_error_verbatim(
     original: &str,
     canonical: &str,
     error: DataFusionError,
@@ -371,12 +376,31 @@ impl CanonicalRewrite {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum DdlSpanKind {
+    Properties,
+    Comment,
+}
+
+struct DdlSpan {
+    start: Location,
+    end: Location,
+    kind: DdlSpanKind,
+}
+
 /// Collect the literal spans that must change.
 fn plan_literal_regions(tokens: &[TokenWithSpan], keep_verbatim: bool) -> Vec<LiteralRegion> {
+    let ddl_spans = if keep_verbatim {
+        ddl_verbatim_spans(tokens)
+    } else {
+        Vec::new()
+    };
     let mut regions = Vec::new();
     let mut index = 0;
     while index < tokens.len() {
-        let Some(first_value) = literal_token_value(&tokens[index].token, keep_verbatim) else {
+        let ddl_kind = ddl_span_kind_at(&ddl_spans, tokens[index].span.start);
+        let verbatim_here = keep_verbatim && ddl_kind.is_none();
+        let Some(first_value) = literal_token_value(&tokens[index].token, verbatim_here) else {
             index += 1;
             continue;
         };
@@ -385,8 +409,9 @@ fn plan_literal_regions(tokens: &[TokenWithSpan], keep_verbatim: bool) -> Vec<Li
         let mut merged = first_value;
         let mut literal_count = 1usize;
         let single_is_double = matches!(tokens[index].token, Token::DoubleQuotedString(_));
-        let single_needs_rewrite = literal_needs_rewrite(&tokens[index].token, keep_verbatim);
-        // Absorb following literals separated only by whitespace.
+        let single_needs_rewrite = literal_needs_rewrite(&tokens[index].token, verbatim_here)
+            || ddl_kind == Some(DdlSpanKind::Comment)
+                && comment_forces_rewrite(&tokens[index].token);
         let mut cursor = index + 1;
         loop {
             let mut lookahead = cursor;
@@ -397,7 +422,7 @@ fn plan_literal_regions(tokens: &[TokenWithSpan], keep_verbatim: bool) -> Vec<Li
             }
             let Some(next_value) = tokens
                 .get(lookahead)
-                .and_then(|t| literal_token_value(&t.token, keep_verbatim))
+                .and_then(|t| literal_token_value(&t.token, verbatim_here))
             else {
                 break;
             };
@@ -423,40 +448,182 @@ fn plan_literal_regions(tokens: &[TokenWithSpan], keep_verbatim: bool) -> Vec<Li
     regions
 }
 
-fn literal_token_value(token: &Token, keep_verbatim: bool) -> Option<String> {
-    let unescape = |raw: &String| {
-        if keep_verbatim {
-            unescape_verbatim_literal(raw)
-        } else {
-            unescape_spark_literal(raw)
+fn ddl_span_kind_at(spans: &[DdlSpan], location: Location) -> Option<DdlSpanKind> {
+    spans
+        .iter()
+        .find(|span| span.start <= location && location <= span.end)
+        .map(|span| span.kind)
+}
+
+fn ddl_verbatim_spans(tokens: &[TokenWithSpan]) -> Vec<DdlSpan> {
+    if !is_property_statement(tokens) {
+        return Vec::new();
+    }
+    let show_head = leading_significant_words(tokens, 1)
+        .first()
+        .is_some_and(|word| word.eq_ignore_ascii_case("SHOW"));
+    let mut spans = Vec::new();
+    let mut index = 0;
+    while index < tokens.len() {
+        let Token::Word(word) = &tokens[index].token else {
+            index += 1;
+            continue;
+        };
+        if word.quote_style.is_none() {
+            if word.value.eq_ignore_ascii_case("COMMENT")
+                && let Some(span) =
+                    comment_on_span(tokens, index).or_else(|| comment_run_span(tokens, index))
+            {
+                spans.push(span);
+            } else if (word.value.eq_ignore_ascii_case("TBLPROPERTIES")
+                || word.value.eq_ignore_ascii_case("PROPERTIES")
+                || word.value.eq_ignore_ascii_case("DBPROPERTIES"))
+                && let Some(span) = properties_paren_span(tokens, index, show_head)
+            {
+                spans.push(span);
+            }
         }
+        index += 1;
+    }
+    spans
+}
+
+fn is_property_statement(tokens: &[TokenWithSpan]) -> bool {
+    let words = leading_significant_words(tokens, 2);
+    let matches = |word: &&str, keyword: &str| word.eq_ignore_ascii_case(keyword);
+    let head = |word: &&str| {
+        matches(word, "CREATE")
+            || matches(word, "ALTER")
+            || matches(word, "SHOW")
+            || matches(word, "COMMENT")
     };
+    match words.as_slice() {
+        [first, ..] if head(first) => true,
+        [explain, second] if matches(explain, "EXPLAIN") && head(second) => true,
+        _ => false,
+    }
+}
+
+fn is_bare_word(tokens: &[TokenWithSpan], index: usize, keyword: &str) -> bool {
+    matches!(
+        tokens.get(index).map(|with_span| &with_span.token),
+        Some(Token::Word(word))
+            if word.quote_style.is_none() && word.value.eq_ignore_ascii_case(keyword)
+    )
+}
+
+fn is_lparen(tokens: &[TokenWithSpan], index: usize) -> bool {
+    matches!(
+        tokens.get(index).map(|with_span| &with_span.token),
+        Some(Token::LParen)
+    )
+}
+
+fn properties_paren_span(
+    tokens: &[TokenWithSpan],
+    word_index: usize,
+    show_head: bool,
+) -> Option<DdlSpan> {
+    let mut open = crate::spark_rewrites::skip_whitespace(tokens, word_index + 1);
+    if is_bare_word(tokens, open, "IF") {
+        let exists = crate::spark_rewrites::skip_whitespace(tokens, open + 1);
+        if is_bare_word(tokens, exists, "EXISTS") {
+            open = crate::spark_rewrites::skip_whitespace(tokens, exists + 1);
+        }
+    }
+    let open = if is_lparen(tokens, open) {
+        open
+    } else if show_head {
+        (word_index + 1..tokens.len()).find(|index| is_lparen(tokens, *index))?
+    } else {
+        return None;
+    };
+    let close = crate::spark_rewrites::matching_paren(tokens, open)?;
+    Some(DdlSpan {
+        start: tokens[open].span.start,
+        end: tokens[close].span.end,
+        kind: DdlSpanKind::Properties,
+    })
+}
+
+fn comment_on_span(tokens: &[TokenWithSpan], word_index: usize) -> Option<DdlSpan> {
+    let on = crate::spark_rewrites::skip_whitespace(tokens, word_index + 1);
+    if !is_bare_word(tokens, on, "ON") {
+        return None;
+    }
+    let mut found = None;
+    for index in on + 1..tokens.len() {
+        if is_bare_word(tokens, index, "IS") && comment_run_span(tokens, index).is_some() {
+            found = Some(index);
+        }
+    }
+    found.and_then(|is| comment_run_span(tokens, is))
+}
+
+fn comment_run_span(tokens: &[TokenWithSpan], word_index: usize) -> Option<DdlSpan> {
+    let mut cursor = word_index + 1;
+    let mut run_start = None;
+    let mut run_end = None;
+    loop {
+        cursor = crate::spark_rewrites::skip_whitespace(tokens, cursor);
+        let Some(with_span) = tokens.get(cursor) else {
+            break;
+        };
+        if !is_span_string_literal(&with_span.token) {
+            break;
+        }
+        if run_start.is_none() {
+            run_start = Some(with_span.span.start);
+        }
+        run_end = Some(with_span.span.end);
+        cursor += 1;
+    }
+    run_start.zip(run_end).map(|(start, end)| DdlSpan {
+        start,
+        end,
+        kind: DdlSpanKind::Comment,
+    })
+}
+
+fn is_span_string_literal(token: &Token) -> bool {
+    matches!(
+        token,
+        Token::SingleQuotedString(_)
+            | Token::DoubleQuotedString(_)
+            | Token::SingleQuotedRawStringLiteral(_)
+            | Token::DoubleQuotedRawStringLiteral(_)
+    )
+}
+
+fn comment_forces_rewrite(token: &Token) -> bool {
+    matches!(token, Token::DoubleQuotedString(raw) if raw.contains("\"\""))
+}
+
+fn literal_token_value(token: &Token, keep_verbatim: bool) -> Option<String> {
     match token {
-        Token::SingleQuotedString(raw) | Token::DoubleQuotedString(raw) => Some(unescape(raw)),
-        Token::SingleQuotedRawStringLiteral(raw) => Some(raw.clone()),
+        Token::SingleQuotedString(raw) => Some(unescape::literal_value(raw, '\'', keep_verbatim)),
+        Token::DoubleQuotedString(raw) => Some(unescape::literal_value(raw, '"', keep_verbatim)),
+        Token::SingleQuotedRawStringLiteral(raw) => {
+            Some(unescape::raw_value(raw, '\'', keep_verbatim))
+        }
+        Token::DoubleQuotedRawStringLiteral(raw) => {
+            Some(unescape::raw_value(raw, '"', keep_verbatim))
+        }
         _ => None,
     }
 }
 
 fn literal_needs_rewrite(token: &Token, keep_verbatim: bool) -> bool {
     match token {
-        Token::SingleQuotedString(raw) => raw.contains('\\'),
-        Token::DoubleQuotedString(raw) => !keep_verbatim && raw.contains('\\'),
-        Token::SingleQuotedRawStringLiteral(_) => true,
+        Token::SingleQuotedString(raw) => {
+            raw.contains('\\') || (keep_verbatim && raw.contains("''"))
+        }
+        Token::DoubleQuotedString(raw) => {
+            raw.contains('\\') || (keep_verbatim && raw.contains("\"\""))
+        }
+        Token::SingleQuotedRawStringLiteral(_) | Token::DoubleQuotedRawStringLiteral(_) => true,
         _ => false,
     }
-}
-
-fn unescape_verbatim_literal(raw: &str) -> String {
-    let mut out = String::with_capacity(raw.len());
-    let mut characters = raw.chars().peekable();
-    while let Some(current) = characters.next() {
-        if current == '\'' && characters.peek() == Some(&'\'') {
-            characters.next();
-        }
-        out.push(current);
-    }
-    out
 }
 
 fn requote_double(value: &str) -> String {
@@ -580,176 +747,6 @@ fn ascii_digit_end(text: &str, start: usize) -> usize {
         .map_or(text.len(), |offset| start + offset)
 }
 
-/// Apply Spark 4.1.2's escape rules to the raw between-quote text `raw`.
-pub(crate) fn unescape_spark_literal(raw: &str) -> String {
-    let characters: Vec<char> = raw.chars().collect();
-    let mut out = String::with_capacity(raw.len());
-    let mut index = 0;
-    while index < characters.len() {
-        let current = characters[index];
-        if current == '\'' {
-            // A `'` here is only ever the first of a doubled `''`; a lone `'` ends the literal.
-            out.push('\'');
-            index += if characters.get(index + 1) == Some(&'\'') {
-                2
-            } else {
-                1
-            };
-            continue;
-        }
-        if current != '\\' {
-            out.push(current);
-            index += 1;
-            continue;
-        }
-        // The lexer refuses `'a\'` as unterminated before this runs.
-        let Some(&escaped) = characters.get(index + 1) else {
-            out.push('\\');
-            index += 1;
-            continue;
-        };
-        index = apply_escape(escaped, &characters, index, &mut out);
-    }
-    out
-}
-
-/// Handle one `\<escaped>` sequence starting at `index`; returns the next unconsumed index.
-fn apply_escape(escaped: char, characters: &[char], index: usize, out: &mut String) -> usize {
-    match escaped {
-        'n' => push_and_advance('\n', index, out),
-        't' => push_and_advance('\t', index, out),
-        'r' => push_and_advance('\r', index, out),
-        'b' => push_and_advance('\u{0008}', index, out),
-        'Z' => push_and_advance('\u{001A}', index, out),
-        // `\%` and `\_` keep the backslash: Spark's LIKE reads the escaped wildcard (E12).
-        '%' => push_kept_backslash('%', index, out),
-        '_' => push_kept_backslash('_', index, out),
-        'u' => apply_unicode_16(characters, index, out),
-        'U' => apply_unicode_32(characters, index, out),
-        '0'..='7' => apply_octal(escaped, characters, index, out),
-        // Any other escape drops the backslash and keeps the character.
-        other => push_and_advance(other, index, out),
-    }
-}
-
-/// Emit `character` for a two-character escape (`\` plus one) and step past both.
-fn push_and_advance(character: char, index: usize, out: &mut String) -> usize {
-    out.push(character);
-    index + 2
-}
-
-/// Emit `\<wildcard>` verbatim — the E12 rule where the backslash is kept for LIKE.
-fn push_kept_backslash(wildcard: char, index: usize, out: &mut String) -> usize {
-    out.push('\\');
-    out.push(wildcard);
-    index + 2
-}
-
-/// `\NNN` octal (E11, E27, U13).
-fn apply_octal(first: char, characters: &[char], index: usize, out: &mut String) -> usize {
-    let second = characters.get(index + 2).copied();
-    let third = characters.get(index + 3).copied();
-    if matches!(first, '0'..='1')
-        && let Some(second) = second.filter(|c| c.is_digit(8))
-        && let Some(third) = third.filter(|c| c.is_digit(8))
-    {
-        // Each digit is 0..=7 and the value is ≤ 0o177, so it is a valid ASCII byte.
-        let value = ((octal_value(first)) << 6) | (octal_value(second) << 3) | octal_value(third);
-        out.push(char::from(value));
-        return index + 4;
-    }
-    if first == '0' {
-        out.push('\0');
-        return index + 2;
-    }
-    // A single octal digit 1..=7 (or a short run) is an unknown escape: drop the backslash.
-    out.push(first);
-    index + 2
-}
-
-/// The numeric value of one ASCII octal digit (`'0'..='7'`); the caller has checked the range.
-fn octal_value(digit: char) -> u8 {
-    (digit as u8).saturating_sub(b'0')
-}
-
-/// `\uXXXX` (exactly 4 hex → a code point).
-fn apply_unicode_16(characters: &[char], index: usize, out: &mut String) -> usize {
-    let Some(high) = read_hex(characters, index + 2, 4) else {
-        out.push('u');
-        return index + 2;
-    };
-    if (0xD800..=0xDBFF).contains(&high)
-        && characters.get(index + 6) == Some(&'\\')
-        && characters.get(index + 7) == Some(&'u')
-        && let Some(low) =
-            read_hex(characters, index + 8, 4).filter(|v| (0xDC00..=0xDFFF).contains(v))
-    {
-        let combined = 0x1_0000 + ((high - 0xD800) << 10) + (low - 0xDC00);
-        push_code_point(combined, out);
-        return index + 12;
-    }
-    push_code_point(high, out);
-    index + 6
-}
-
-/// `\UXXXXXXXX` (exactly 8 hex → a code point; U5).
-fn apply_unicode_32(characters: &[char], index: usize, out: &mut String) -> usize {
-    let Some(value) = read_hex(characters, index + 2, 8) else {
-        out.push('U');
-        return index + 2;
-    };
-    push_code_point(value, out);
-    index + 10
-}
-
-/// Read exactly `count` hex digits from `start`, or `None` if fewer are present.
-fn read_hex(characters: &[char], start: usize, count: usize) -> Option<u32> {
-    let end = start.checked_add(count)?;
-    let slice = characters.get(start..end)?;
-    let mut value = 0u32;
-    for digit in slice {
-        value = value * 16 + digit.to_digit(16)?;
-    }
-    Some(value)
-}
-
-fn push_code_point(code_point: u32, out: &mut String) {
-    if let Some(character) = char::from_u32(code_point) {
-        out.push(character);
-        return;
-    }
-    if code_point <= 0xFFFF {
-        out.push(UNREPRESENTABLE);
-        return;
-    }
-    push_java_surrogate_artifact(code_point, out);
-}
-
-fn push_java_surrogate_artifact(code_point: u32, out: &mut String) {
-    let shifted = code_point.wrapping_sub(0x1_0000);
-    let high = 0xD800u32.wrapping_add((shifted.cast_signed() >> 10).cast_unsigned()) & 0xFFFF;
-    let low = 0xDC00 + (shifted & 0x3FF);
-    if (0xD800..=0xDBFF).contains(&high) && (0xDC00..=0xDFFF).contains(&low) {
-        let combined = 0x1_0000 + ((high - 0xD800) << 10) + (low - 0xDC00);
-        if let Some(character) = char::from_u32(combined) {
-            out.push(character);
-            return;
-        }
-    }
-    push_java_unit(high, out);
-    push_java_unit(low, out);
-}
-
-fn push_java_unit(unit: u32, out: &mut String) {
-    if (0xD800..=0xDFFF).contains(&unit) {
-        out.push(UNREPRESENTABLE);
-    } else if let Some(character) = char::from_u32(unit) {
-        out.push(character);
-    } else {
-        out.push(UNREPRESENTABLE);
-    }
-}
-
 pub(crate) const SPARK_SQL_PARSER_ESCAPED_STRING_LITERALS_KEY: &str =
     "spark.sql.parser.escapedStringLiterals";
 
@@ -813,7 +810,7 @@ where
 }
 
 #[must_use]
-pub(crate) fn with_escaped_string_literals_config(
+pub fn with_escaped_string_literals_config(
     config: SessionConfig,
     keep_verbatim: bool,
 ) -> SessionConfig {
@@ -821,9 +818,7 @@ pub(crate) fn with_escaped_string_literals_config(
 }
 
 #[must_use]
-pub(crate) fn escaped_verbatim_from_options(
-    options: &datafusion::common::config::ConfigOptions,
-) -> bool {
+pub fn escaped_verbatim_from_options(options: &datafusion::common::config::ConfigOptions) -> bool {
     options
         .extensions
         .get::<SparkEscapedStringLiteralsConfig>()

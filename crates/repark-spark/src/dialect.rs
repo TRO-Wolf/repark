@@ -15,34 +15,25 @@ impl SqlDialect for SparkDialect {
         cx: EngineContext<'_>,
         query: &str,
     ) -> datafusion::error::Result<DataFrame> {
-        match cx.overwrite_intent {
+        let mut write_options = match cx.overwrite_intent {
             repark_iceberg::write::OverwriteIntent::Session => {
-                crate::router::execute_in_session(
-                    cx.ctx,
-                    cx.catalogs,
-                    query,
-                    cx.read_only,
-                    &crate::write_options::StatementWriteOptions::empty(),
-                    cx.temp_views,
-                )
-                .await
+                crate::write_options::StatementWriteOptions::empty()
             }
-            intent => {
-                let write_options = crate::write_options::StatementWriteOptions {
-                    overwrite_intent: intent,
-                    ..crate::write_options::StatementWriteOptions::empty()
-                };
-                crate::router::execute_in_session(
-                    cx.ctx,
-                    cx.catalogs,
-                    query,
-                    cx.read_only,
-                    &write_options,
-                    cx.temp_views,
-                )
-                .await
-            }
-        }
+            intent => crate::write_options::StatementWriteOptions {
+                overwrite_intent: intent,
+                ..crate::write_options::StatementWriteOptions::empty()
+            },
+        };
+        write_options.verbatim_override = cx.verbatim_override;
+        crate::router::execute_in_session(
+            cx.ctx,
+            cx.catalogs,
+            query,
+            cx.read_only,
+            &write_options,
+            cx.temp_views,
+        )
+        .await
     }
 
     async fn execute_with_write_options(
@@ -59,6 +50,7 @@ impl SqlDialect for SparkDialect {
         let mut write_options = crate::write_options::StatementWriteOptions::validate(pairs)?;
         write_options.overwrite_intent = cx.overwrite_intent;
         write_options.source_by_name = cx.source_by_name;
+        write_options.verbatim_override = cx.verbatim_override;
         crate::router::execute_in_session(
             cx.ctx,
             cx.catalogs,

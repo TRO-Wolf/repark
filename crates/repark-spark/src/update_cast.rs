@@ -86,7 +86,10 @@ pub(crate) async fn refuse_cast_then_fold_nested(
     };
     let mut folded = update.clone();
     folded.assignments = assignments;
-    Ok(Some(Statement::Update(folded).to_string()))
+    let mut rendered = Statement::Update(folded);
+    Ok(Some(repark_iceberg::write::sql_text::render_for_reparse(
+        &mut rendered,
+    )))
 }
 
 fn integer_literal_source_type(value: &Expr) -> Option<ArrowDataType> {

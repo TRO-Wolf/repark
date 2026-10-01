@@ -7101,6 +7101,45 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   render from value text on `spark.sql` / `selectExpr` / `F.expr`, explicit
   aliases stay.
   pins: fnp-4b/C-001, C-003, C-014, C-015, C-029
+- `test_string_literal_escape_1.py` — **STRING-LITERAL-ESCAPE-1 (2026-09-29):**
+  PE-10 facade pins over the live PySpark 4.1.2 oracle — doubled `""` collapse
+  inside double-quoted literals, `r"…"` literals answering, raw `''`/`""`
+  splitting into head plus quoted tail, verbatim mode keeping doublings and
+  marking raw values with the opening quote — each on `spark.sql` (value,
+  length, Arrow type), `F.expr` / `selectExpr` / `filter`, and an
+  `INSERT INTO … VALUES` round-trip.
+  pins: string-literal-escape-1/C-001, C-002, C-003, C-004
+  **DIFF-PROBE fold (2026-09-29):** verbatim DDL read-back pins — TBLPROPERTIES
+  keys/values, column COMMENT text, ALTER SET, and namespace PROPERTIES/DBPROPERTIES
+  collapse like Spark; verbatim OPTIONS values stay verbatim (survivor pin).
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** VE-1 UNSET/SHOW-key/
+  COMMENT ON pins, VE-2 filter/where/F.expr flag pins, and VE-3 UPDATE/DELETE/
+  MERGE predicate pins, each with a default-mode control.
+  pins: string-literal-escape-1/C-008, C-009, C-010
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** VE2-1 built-door pins
+  (cube/rollup/groupingSets/unpivot, mergeInto incl. an `F.expr` condition,
+  overwrite cond/partitions, createTable schema str) and VE2-2 nested
+  UPDATE/MERGE SET pins, each with a default-mode control; the
+  `_forward_datafusion_conf` and `_materialize_values_as_memtable_frame`
+  symbol hashes move in `test_production_file_size.py` (built doors route
+  `_sql_built`).
+  pins: string-literal-escape-1/C-011, C-012
+  **STRING-LITERAL-ESCAPE-1 re-verify VE3-1 (2026-09-30):** `SQLTransformer`
+  is user-written SQL through the user door, so verbatim/default literal and
+  `WHERE s = 'it''s'` pins equal `spark.sql` (and Spark).
+  **STRING-LITERAL-ESCAPE-1 CI round (2026-09-30):** the failure-injection
+  and SQL-spy seams in `test_catalog_surface_1.py`,
+  `test_create_dataframe_materialize.py`, `test_eager_own_1.py`,
+  `test_mapinarrow.py`, and `test_ml_boost_oracle.py` follow the
+  `sql_built` door the product now uses for facade-built SQL, with the same
+  assertions; the two capped files rename the seam method (line-neutral),
+  the other three observe both doors.
+  pins: string-literal-escape-1/C-013
+  **STRING-LITERAL-ESCAPE-1 merge (2026-10-01):** the text-write merge pin —
+  a verbatim CSV write with timestampFormat `yyyy-MM-dd''HH:mm:ss` and
+  `it's` / `it''s` values writes the Spark bytes, equal to the default-mode
+  bytes for the same frame.
+  pins: string-literal-escape-1/C-015
 - `test_fnp_4b_hof_display.py` — **FNP-4B round 6 (2026-09-15):** Q3 red pin for run
   16a — selectExpr higher-order display must hide the `__repark_hof_array_field__`
   packing marker. **Round 7 (2026-09-15):** strict xfail per R-16c-10; 16a flips
