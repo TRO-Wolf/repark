@@ -314,6 +314,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   case-colliding lambda variables to one variable; the engine binds them
   case-sensitively, so only main's path reproduces Spark there. Exact-rule
   references never fold and never trigger. pins: attr-id-1/C-027
+  **Gate narrowing (2026-10-01):** the raise fires only when
+  `_scopes_have_folded_collision` finds an inner parameter that folds to an
+  enclosing parameter with different spelling. Single-level folded
+  references and nested scopes without that collision stay on the binder,
+  which folds them to the parameter spelling exactly as Spark does.
+  pins: attr-id-1/C-028
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
   unsupported operations fail explicitly.

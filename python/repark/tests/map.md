@@ -8919,3 +8919,8 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   insensitive rule (S0 spark.json) and stay distinct (`[1, 5]`) under the
   exact rule (live-Spark probe); the reverse nesting and one single-level
   folded reference fold insensitive. pins: attr-id-1/C-027
+  **Gate narrowing (2026-10-01):** the stays-on-binder pins (C-028): a
+  backticked declaration with a folded reference, a dotted folded head, and
+  a nested scope pair without a parameter collision all keep binder rows
+  under the insensitive rule, each expectation measured on live Spark 4.1.2.
+  pins: attr-id-1/C-028

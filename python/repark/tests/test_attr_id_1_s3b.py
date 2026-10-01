@@ -291,3 +291,35 @@ def test_filter_single_level_folded_lambda_ref_folds_insensitive(spark: ReparkSe
     frame = _nested_lambda_frame(spark).select("id", "arr", "T", "x")
     filtered = frame.filter("exists(arr, V -> v > 4)").select("id")
     assert _rows(filtered) == [(1,), (5,)]
+
+
+def _lambda_corpus_frame(spark: ReparkSession) -> Any:
+    return spark.createDataFrame(
+        [
+            (1, [1, 5], 9, 0, 10, (1, 2), [(1, 2), (3, 4)], {"k": 1, "a": 5}, 3, [[1, 2], [5]]),
+            (2, [2], 0, 2, 20, (5, 6), [(7, 1)], {"k": 2}, 1, [[2]]),
+            (5, [5, 6, 7], 1, 7, 30, (0, 0), [], {"z": 9}, 8, [[5, 6], [7]]),
+            (6, [], 4, 3, None, None, None, None, None, []),
+        ],
+        "id INT, arr ARRAY<INT>, T INT, x INT, v INT, s STRUCT<a:INT,B:INT>, "
+        "sa ARRAY<STRUCT<a:INT,B:INT>>, m MAP<STRING,INT>, k INT, nest ARRAY<ARRAY<INT>>",
+    ).select("id", "arr", "T", "x", "v", "sa", "m")
+
+
+def test_filter_backticked_decl_folded_ref_stays_on_binder(spark: ReparkSession) -> None:
+    spark.conf.set("spark.sql.caseSensitive", "false")
+    filtered = _lambda_corpus_frame(spark).filter("exists(arr, `X` -> x > 4)").select("id")
+    assert _rows(filtered) == [(1,), (5,)]
+
+
+def test_filter_dotted_folded_head_stays_on_binder(spark: ReparkSession) -> None:
+    spark.conf.set("spark.sql.caseSensitive", "false")
+    filtered = _lambda_corpus_frame(spark).filter("exists(sa, S -> s.a > 2)").select("id")
+    assert _rows(filtered) == [(1,), (2,)]
+
+
+def test_filter_nested_no_collision_stays_on_binder(spark: ReparkSession) -> None:
+    spark.conf.set("spark.sql.caseSensitive", "false")
+    frame = _lambda_corpus_frame(spark).select("*", functions.lit(9).alias("X"))
+    filtered = frame.filter("exists(arr, x -> exists(arr, y -> x > Y))").select("id")
+    assert _rows(filtered) == [(1,), (5,)]

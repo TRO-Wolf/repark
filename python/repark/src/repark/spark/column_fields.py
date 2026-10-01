@@ -24,6 +24,7 @@ from repark.spark.filter_quote import (
     _lambda_quoted_span,
     _lambda_scopes,
     _main_path_filter_sql,
+    _scopes_have_folded_collision,
     _unqualified_candidates,
 )
 
@@ -851,6 +852,7 @@ def _quote_filter_sql_identifiers(frame: Any, sql: str) -> str:
         fold_map=fold_map,
         scopes=scopes,
         decls=decls,
+        collision=_scopes_have_folded_collision(scopes, exact),
     )
     pieces = re.split(r"('(?:[^']|'')*')", sql)
     rebuilt: list[str] = []

@@ -309,6 +309,7 @@ family's helpers are deleted in the same commit.
 | C-025 | The S3b cutover: `filter` (both arms) and `_sort_specs` bind through `column_fields` (`_rebind_free_names`, `_quote_filter_sql_identifiers`, `_bind_sort_key`) over the new `frame_names::sort_names` (`sort_shape`, `grandchild_key`, `bind_free_names`, bound via `dataframe_names.rs`). One id binds; several refuse (`AMBIGUOUS_REFERENCE` on filter, oldest id on a Project sort, `UNRESOLVED_COLUMN` elsewhere); a miss passes through, a sort miss tries the join grandchild first. No exact-preference on either door: an exact spelling among folded rivals refuses, as live Spark does. Deleted in the same commit: `_quote_filter_ident_token`, `_quote_filter_idents_in_fragment`, `DataFrame._quote_filter_sql_identifiers`, `_SQL_LITERAL_KEYWORDS` (the set re-homed in `column_fields`). | The 22 facade pins under both case rules; the 15 Rust pins; the resolve-skip mutation killing the 4 filter pins; the pre-existing `test_filter_predicate_rewrite.py` suite green (it caught the first cut's exact-preference and the dropped literal skip); three S0 replays with 0 cells moved away from Spark, `r2` twinjoin_filt and `r3` ob_agg_max closed, and the 44-file neighbour sweep green. | PROVEN (pins + mutation; replay lands in the hand-back) | `python/repark/tests/test_attr_id_1_s3b.py`; `crates/repark-core/src/session/tests/attr_id_s3b.rs`; `crates/repark-core/src/session/df_guards/sort_names.rs`; `python/repark/src/repark/spark/column_fields.py` `_rebind_free_names`, `_resolve_sort_name`, `_bind_sort_key`, `_bind_filter_token`; replays land in the hand-back. |
 | C-026 | Grep proof that each deleted helper had no caller outside the family: `_quote_filter_ident_token`, `_quote_filter_idents_in_fragment` and `_SQL_LITERAL_KEYWORDS` appear only in `core.py` (deleted), the frozen surface `_dfcore_1_expected.py` (mirror updated in the same commit), and `test_filter_predicate_rewrite.py` docstrings (homes repointed); `DataFrame._quote_filter_sql_identifiers` appears only in `core.py` (deleted method, one docstring repointed) and the same test docstrings. | The grep output recorded at commit time; `test_dfcore_1_exports.py` green. | PROVEN | Commit grep; `python/repark/tests/test_dfcore_1_exports.py` 10 passed. |
 | C-027 | The folded-lambda fallback: a filter-string lambda reference matching its parameter only by folding (insensitive rule) raises `_FoldedLambdaFallbackError`, and `_quote_filter_sql_identifiers` reruns the whole predicate through `_main_path_filter_sql`, a verbatim port of main's fold-everything quoter. Exact-rule references never fold and never trigger. | The 4 nested-collision pins (insensitive fold, sensitive distinct, reverse nesting, single-level folded); the M5 mutation (re-raise kills the 3 insensitive pins, sensitive stays green); the t-head-2 re-replay with 0 moved. | PROVEN (pins + mutation; replay lands in the hand-back) | `python/repark/tests/test_attr_id_1_s3b.py`; `python/repark/src/repark/spark/filter_quote.py` `_main_path_filter_sql`; replays land in the hand-back. |
+| C-028 | The fallback fires only on a nested parameter collision: `_scopes_have_folded_collision` reports an inner lambda parameter that folds to an enclosing parameter with different spelling, and `_bind_filter_token` raises `_FoldedLambdaFallbackError` on a folded reference only then. Single-level and collision-free nested shapes stay on the binder. | The 3 stays-on-binder pins plus the 4 C-027 pins; M6 (force fallback) and M7 (force binder) each red on its side; the t-head-2 re-replay with 0 moved and the 23 cells back to FIXED. | PROVEN (pins + mutations; replay lands in the hand-back) | `python/repark/tests/test_attr_id_1_s3b.py`; `python/repark/src/repark/spark/filter_quote.py` `_scopes_have_folded_collision`; replays land in the hand-back. |
 
 **S3b first-cut halt (2026-10-01, self-caught before commit).** The first cut
 carried an exact-preference on both filter doors (`exact_hits or folded_hits`
@@ -447,3 +448,22 @@ insensitive pins go red, the sensitive pin stays green; reverted.
 Also fixed: the H-1 dotted-lambda subscript used a direct
 quote-doubling that `check_python_conventions.py` refuses; it now uses
 `escape_sql_single_quotes` (same bytes).
+
+## Gate narrowing: collision-gated fallback (2026-10-01)
+
+The post-fix `t-head-2` compare showed 0 moved but FIXED down 23
+(7666 to 7643): the fallback fired on every folded lambda match and
+rerouted 23 cells where the binder was Spark-right (single-level
+folded references, sibling scopes, nested scopes without a parameter
+collision) to main's quoter, which raises or misbinds on twin frames.
+Fix: `_scopes_have_folded_collision` detects an inner parameter that
+folds to an enclosing parameter with different spelling, and the raise
+fires only then. The trigger is exact on 14 probe shapes. New pins:
+backticked declaration plus folded reference, dotted folded head, and
+nested no-collision on a twin frame, each expectation measured on live
+Spark 4.1.2. Mutations M6 (force fallback: the 3 binder pins red) and
+M7 (force binder: the 2 collision pins red with the physical
+LambdaVariable error); both reverted. M6 caught a weak pin first: the
+nested pin passed under both paths until the frame gained a true twin
+column (`select` plus aliased literal; `withColumn` replaces
+case-insensitively and made no twin).

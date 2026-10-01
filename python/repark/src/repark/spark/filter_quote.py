@@ -224,6 +224,24 @@ def _lambda_scopes(sql: str) -> tuple[list[tuple[int, int, list[str]]], dict[tup
     return (scopes, decls)
 
 
+def _scopes_have_folded_collision(scopes: list[tuple[int, int, list[str]]], exact: bool) -> bool:
+    if exact:
+        return False
+    for outer_start, outer_end, outer_params in scopes:
+        for inner_start, inner_end, inner_params in scopes:
+            if (outer_start, outer_end) == (inner_start, inner_end):
+                continue
+            if not (outer_start <= inner_start and inner_end <= outer_end):
+                continue
+            for inner_param in inner_params:
+                for outer_param in outer_params:
+                    if inner_param == outer_param:
+                        continue
+                    if inner_param.casefold() == outer_param.casefold():
+                        return True
+    return False
+
+
 def _scope_param_for(
     scopes: list[tuple[int, int, list[str]]],
     start: int,
@@ -300,6 +318,7 @@ def _bind_filter_token(
     scopes: list[tuple[int, int, list[str]]],
     decls: dict[tuple[int, int], str],
     base: int,
+    collision: bool,
 ) -> str:
     from repark.spark._idents import quote_ident as _quote_ident
 
@@ -315,7 +334,7 @@ def _bind_filter_token(
             return token
         param = _scope_param_for(scopes, start, end, name, exact)
         if param is not None:
-            if param != name:
+            if collision and param != name:
                 raise _FoldedLambdaFallbackError
             return _quote_ident(param)
         exact_hits, folded_hits = _unqualified_candidates(name, displays)
@@ -340,7 +359,7 @@ def _bind_filter_token(
     head = parts[0]
     param = _scope_param_for(scopes, start, start + len(head), head, exact)
     if param is not None:
-        if param != head:
+        if collision and param != head:
             raise _FoldedLambdaFallbackError
         from repark.spark._idents import escape_sql_single_quotes as _escape_quotes
 
