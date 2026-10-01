@@ -4,6 +4,7 @@ use std::sync::Arc;
 use pyo3::prelude::*;
 
 use crate::dataframe::PyDataFrame;
+use crate::deep_stack::block_on;
 use crate::fence::fenced_span;
 use crate::session::PyReparkSession;
 
@@ -30,18 +31,28 @@ pub fn session_sql_with_write_options(
         }
     };
     fenced_span!("py.sql", "session_sql_with_write_options", {
-        repark_spark::refuse_declared_function_in_sql(query)
+        if crate::deep_stack::sql_drive_grown(query) {
+            crate::deep_stack::grown_sync(crate::deep_stack::GROWN_STACK_SEGMENT_BYTES, || {
+                repark_spark::refuse_declared_function_in_sql(query)
+            })
             .map_err(crate::datafusion_to_py_err)?;
+        } else {
+            repark_spark::refuse_declared_function_in_sql(query)
+                .map_err(crate::datafusion_to_py_err)?;
+        }
         let runtime = Arc::clone(&session.runtime);
         let inner = session.session.clone();
         let df = py
             .detach(|| {
-                runtime.block_on(inner.sql_built_with_write_options(
-                    query,
-                    &options,
-                    overwrite_intent,
-                    source_by_name,
-                ))
+                block_on(
+                    &runtime,
+                    inner.sql_built_with_write_options(
+                        query,
+                        &options,
+                        overwrite_intent,
+                        source_by_name,
+                    ),
+                )
             })
             .map_err(crate::to_py_err)?;
         Ok(PyDataFrame::new(df, runtime))
@@ -64,9 +75,12 @@ pub fn session_write_path(
     fenced_span!("py.write", "session_write_path", {
         let runtime = Arc::clone(&session.runtime);
         let inner = session.session.clone();
-        let frame = frame.inner().clone();
+        let frame = crate::deep_stack::grown_clone_frame(frame.inner(), &frame.depths());
         py.detach(|| {
-            runtime.block_on(inner.write_path(&frame, url, format, mode, &options, &partition_by))
+            block_on(
+                &runtime,
+                inner.write_path(&frame, url, format, mode, &options, &partition_by),
+            )
         })
         .map_err(crate::to_py_err)
     })

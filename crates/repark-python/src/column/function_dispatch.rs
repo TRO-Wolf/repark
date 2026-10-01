@@ -28,12 +28,19 @@ mod dispatch_spark;
 
 use super::expr_build::reciprocal_trig_or_inf;
 
-/// Lower a facade `call_scalar` name + already-built argument [`Expr`]s.
+pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
+    let mut deepest = 0;
+    for expr in &exprs {
+        deepest = deepest.max(crate::deep_stack::expression_depth(expr));
+    }
+    crate::deep_stack::grow_expr_if_needed(deepest, || call_scalar_expr_inner(name, exprs))
+}
+
 #[expect(
     clippy::too_many_lines,
     reason = "large match table of expr_fn bindings"
 )]
-pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
+fn call_scalar_expr_inner(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
     use datafusion::functions::expr_fn;
     use datafusion::functions_nested::expr_fn as nested_fn;
     let need = |n: usize| -> PyResult<()> {

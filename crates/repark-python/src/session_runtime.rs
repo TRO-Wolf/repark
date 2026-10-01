@@ -16,6 +16,7 @@ use repark_functions::merge_schema::{
 };
 use repark_functions::session_time_zone::SessionTimeZoneConfig;
 
+use crate::deep_stack::block_on;
 use crate::fence::fenced_span;
 
 const DEFAULT_CATALOG_KEY: &str = repark_core::CatalogRegistry::DEFAULT_CATALOG_KEY;
@@ -120,9 +121,10 @@ pub fn register_late_catalog_block(
 ) -> PyResult<bool> {
     fenced_span!("py.catalog", "register_late_catalog_block", {
         py.detach(|| {
-            session
-                .runtime
-                .block_on(session.session.register_late_catalog_block(&config))
+            block_on(
+                &session.runtime,
+                session.session.register_late_catalog_block(&config),
+            )
         })
         .map_err(to_py_err)
     })

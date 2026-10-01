@@ -184,6 +184,12 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `docs/examples/functions/{posexplode,inline}.py` cover the four names and
   the backlog baseline ratchets 112 → 110.
   pins: fnp-gen-1/C-001, C-006
+- `test_cap_1_source_file_line_cap.py` — **DEEP-FILTER-CHAIN-CRASH-1 CI segv (2026-09-30):**
+  mirror row ratchets `repark-python/src/column/mod.rs` 1011 → 1005 with the script
+  baseline. pins: deep-filter-chain-crash-1/C-012
+- `test_cap_1_source_file_line_cap.py` — **DEEP-FILTER-CHAIN-CRASH-1 limits fold (2026-09-29):**
+  mirror row ratchets `repark-python/src/column/mod.rs` 1012 → 1011 with the script
+  baseline. pins: deep-filter-chain-crash-1/C-009
 - `test_cap_1_source_file_line_cap.py` — **STRING-LITERAL-ESCAPE-1 verifier fold
   (2026-09-30):** mirror row ratchets `spark/functions.py` 1984 → 1938 with the
   script baseline (the `lit` rendering helpers move to `functions_lit.py`).
@@ -1133,3 +1139,4 @@ RP-42 fork pin bump (2026-09-20, run 27): `test_v3_cov_docs.py` holds its own co
   `repark-spark/src/tests/ctas.rs` 1357 → 1356. pins: ice-nested-evo-1/C-057
 - `test_cap_1_source_file_line_cap.py` — **U7 PR1 writer surface (2026-09-24):** the `python/repark/src/repark/spark/dataframe/writer_readwriter.py` mirror row ratchets 1077 → 1073 to the measured file and `scripts/check_lib_py.py`. No other row moves. Round 2 (2026-09-24): the same row ratchets 1073 → 1039 in lockstep with the gate. U7 PR2 (2026-09-24): 1039 → 1033 in lockstep with the gate (the `DataFrameWriterV2.option` branch/tag refusal leaves), then 1033 → 1031 (`overwrite(condition)` delegates its SQL to `writer_schema.py`).
 - `test_cap_1_source_file_line_cap.py` — **U7 PR1 writer surface (2026-09-24):** the `python/repark/src/repark/spark/dataframe/writer_readwriter.py` mirror row ratchets 1077 → 1073 to the measured file and `scripts/check_lib_py.py`. No other row moves. Round 2 (2026-09-24): the same row ratchets 1073 → 1039 in lockstep with the gate. U7 PR2 (2026-09-24): 1039 → 1033 in lockstep with the gate (the `DataFrameWriterV2.option` branch/tag refusal leaves), then 1033 → 1031 (`overwrite(condition)` delegates its SQL to `writer_schema.py`), then 1031 → 1029 (slice-2 round 2, 2026-09-25: the by-name binding moves to Rust). pins: u7-write-df-2/C-013
+- `test_cap_1_source_file_line_cap.py` — **DEEP-FILTER-CHAIN-CRASH-1 re-verify fold (2026-09-30):** the `repark-python/src/column/mod.rs` row (1005) and the `repark-python/src/session.rs` row (1122) retire with the script rows (`mod.rs` 1005 → 969: tests to `expr_tests.rs`, level constructors to `levels.rs`; `session.rs` 1122 → 802: tests to `session_tests.rs`); the rust count 36 → 34. pins: deep-filter-chain-crash-1/C-013

@@ -1,5 +1,6 @@
 use pyo3::prelude::*;
 
+use crate::deep_stack::block_on;
 use crate::fence::fenced;
 use crate::session::PyReparkSession;
 
@@ -12,7 +13,7 @@ pub fn iceberg_metadata_cache_census(
         let runtime = &session.runtime;
         session
             .py()
-            .detach(|| runtime.block_on(inner.settle_iceberg_metadata_cache()));
+            .detach(|| block_on(runtime, inner.settle_iceberg_metadata_cache()));
         let entries = inner.iceberg_metadata_cache_entries();
         Ok(match inner.iceberg_metadata_cache_stats() {
             Some((hits, misses, body_fetches)) => (true, hits, misses, body_fetches, entries),

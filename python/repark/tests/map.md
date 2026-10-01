@@ -7549,6 +7549,66 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   lands with C-014; the `C_MEM.t` arm leaves the refusal loop.
   pins: catalog-1/C-001, C-002, C-003, C-004,
   C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
+- [test_deep_filter_chain_crash_1.py](test_deep_filter_chain_crash_1.py) —
+  **DEEP-FILTER-CHAIN-CRASH-1 (2026-09-29):** deep operator chains answer instead
+  of killing the interpreter. One module-scoped fixture drives the whole battery
+  in a single isolated interpreter (a crash fails the fixture, never pytest):
+  1,000 chained filters count 50 on the DataFrame door (Spark 4.1.2 oracle 50;
+  base segfaulted at 610), 200 joins count 1 and 300 unions count 15050 (base
+  segfaulted at 110 joins), 120 `withColumn` count 50 (plan-build time, 44 s at
+  200 on base, caps the depth — not the stack), 1,000-deep nested SQL raises a
+  catchable `RecursionError` (Spark refuses nested-deep SQL too, with
+  `FAILED_TO_PARSE_TOO_COMPLEX`), and flat 600-union SQL counts 601.
+  **Limits fold (2026-09-29):** the battery gains the 200,000-item IN list
+  over `range(1000)` (counts 1000, ~60 s on debug — the text cap is gone),
+  8,193 unions counting 409700 (union spines skip the plan cap, ~560 s),
+  8,192 filters refusing `AnalysisException` (base crashes and Spark refuses
+  there), a 300-term AND answering 50 (Spark answers 300, refuses 350), and
+  a 1,500-term AND refusing `AnalysisException` at `filter()` (worker
+  timeout 1500 s).
+  pins: deep-filter-chain-crash-1/C-001, C-002, C-003, C-004, C-009, C-010, C-011
+- [test_deep_subquery_expression_1.py](test_deep_subquery_expression_1.py) —
+  **DEEP-FILTER-CHAIN-CRASH-1 verifier fold (2026-09-29, VD-1..VD-3):**
+  subquery plans and deep expressions never kill the interpreter. One
+  module-scoped fixture drives the battery in a single isolated interpreter
+  (1200 s timeout: the 5,000-term OR answers in ~220 s and the 20,000-term
+  DF OR's Python-side tree build takes ~360 s on a debug build): a
+  1,000-deep chain counts 50 under a scalar subquery and under
+  `IN (SELECT ...)` (both segfaulted on f958d1a8), a 5,000-term OR through
+  `sql()` answers 50 (the SQL door grows past any expression depth, and
+  Spark answers these shapes through SQL too), a 20,000-term OR through
+  `filter()` raises `AnalysisException` naming the deep-expression limit
+  (Spark raises `StackOverflowError` at `.filter()` the same way), a
+  2,000-deep `+1` select raises the same refusal, and a 16-deep chain
+  counts 50 on a 512 KiB thread (the small-stack backstop grows under 2 MiB
+  remaining). **Limits fold (2026-09-29):** the 1 MiB refusal pin became a
+  1.1 MB answer pin (`SELECT 1` plus padding collects 1).
+  pins: deep-filter-chain-crash-1/C-005, C-006, C-007, C-008
+  **CI segv (2026-09-30):** the grown per-op clone costs ~1.9x on the
+  pathological 20,000-term quadratic build (~360 s → ~680 s debug), so the full
+  worker takes ~940-966 s against the 1200 s budget; every other shape is
+  unchanged in answer and time. pins: deep-filter-chain-crash-1/C-012
+- [test_deep_expr_build_small_stack_1.py](test_deep_expr_build_small_stack_1.py) —
+  **DEEP-FILTER-CHAIN-CRASH-1 CI segv (2026-09-30):** the 6,000-term OR builds on
+  the caller thread and on an 8 MiB thread in one isolated interpreter (~90 s),
+  then refuses `AnalysisException` at `filter()` on both. The debug `Expr::clone`
+  costs ~1.6 KiB per level, so the build (not the builder) overflowed CI's 8 MiB
+  main stack while the lane's 32 MiB survived; 4000 builds and 6000 crashes
+  pre-fix on 8 MiB.
+  pins: deep-filter-chain-crash-1/C-012
+- [test_deep_reverify_1.py](test_deep_reverify_1.py) —
+  **DEEP-FILTER-CHAIN-CRASH-1 re-verify fold (2026-09-30):** the VD2 pins, one
+  isolated interpreter per path. Main: 2,000-term SQL-text OR answers 50
+  through `F.expr`, `selectExpr`, and string `filter` (the 1,500 cap no longer
+  applies to SQL text); 1,500-term DF-built OR refuses `AnalysisException`
+  (Spark refuses DF-built chains past 300 terms); a 5,001-term mixed DF/text
+  OR answers 50 (Spark answers it); `sql()` over a 1,000-deep view counts 50
+  and `explain` names Filter. 256 KiB and 512 KiB threads: a 16-deep count
+  answers 50, a 2,000-term DF-built OR refuses, `.columns` reads a 500-deep
+  frame, and `gc.collect()` frees a deep cycle. GC: `gc.collect()` frees a
+  6,000-term column plus a 1,000-deep frame cycle on main and a 6,000-term
+  column plus a 200-deep frame cycle on a 256 KiB thread.
+  pins: deep-filter-chain-crash-1/C-013, C-014, C-015, C-016, C-017, C-018
 
 ## I want to...
 

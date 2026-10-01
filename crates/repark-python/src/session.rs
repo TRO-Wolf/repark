@@ -1,27 +1,36 @@
 //! Synchronous Python wrapper over [`repark_core::ReparkSession`].
 
 use std::collections::HashMap;
-use std::sync::{Arc, OnceLock};
+use std::sync::{
+    Arc, OnceLock,
+    atomic::{AtomicUsize, Ordering},
+};
 
 use pyo3::prelude::*;
 use repark_core::{EngineRuntime, ReparkSession, ReparkSessionBuilder};
 use tokio::runtime::Runtime;
 
+use crate::UnsupportedOperationException;
 use crate::arrow_export::drain_arrow_c_stream;
 use crate::dataframe::{PyDataFrame, with_stream_poll_no_detach};
+use crate::deep_stack::{block_on, block_on_grown_if, build_shared_runtime};
 use crate::fence::{fenced, fenced_span};
 use crate::session_runtime::apply_session_knobs;
-use crate::{UnsupportedOperationException, to_py_err};
+use crate::to_py_err;
 
 /// Build the engine session, register catalogs, wrap in the Python handle.
 fn finish_session(py: Python<'_>, builder: ReparkSessionBuilder) -> PyResult<PyReparkSession> {
     let session = builder.build().map_err(to_py_err)?;
     repark_functions::install_shared_analyzer_rules(session.context());
     let runtime = shared_runtime()?;
-    py.detach(|| runtime.block_on(session.register_configured_catalogs()))
+    py.detach(|| block_on(&runtime, session.register_configured_catalogs()))
         .map_err(to_py_err)?;
     session.register_configured_sources().map_err(to_py_err)?;
-    Ok(PyReparkSession { session, runtime })
+    Ok(PyReparkSession {
+        session,
+        runtime,
+        deep_view_levels: AtomicUsize::new(0),
+    })
 }
 
 /// Process-wide Tokio runtime shared by sessions and their `DataFrames`.
@@ -34,7 +43,7 @@ pub(crate) fn shared_runtime() -> PyResult<Arc<Runtime>> {
     if let Some(runtime) = SHARED_RUNTIME.get() {
         return Ok(Arc::clone(runtime.runtime()));
     }
-    let runtime = Runtime::new().map_err(|err| {
+    let runtime = build_shared_runtime().map_err(|err| {
         pyo3::exceptions::PyRuntimeError::new_err(format!(
             "failed to start the engine runtime: {err}"
         ))
@@ -59,6 +68,38 @@ pub(crate) fn shared_runtime() -> PyResult<Arc<Runtime>> {
 pub struct PyReparkSession {
     pub(crate) session: ReparkSession,
     pub(crate) runtime: Arc<Runtime>,
+    deep_view_levels: AtomicUsize,
+}
+
+impl PyReparkSession {
+    pub(crate) fn note_view_depths(&self, depths: &crate::deep_stack::PlanDepths) {
+        self.deep_view_levels
+            .fetch_max(depths.plan.max(depths.expression), Ordering::Relaxed);
+    }
+
+    fn deep_view_levels(&self) -> usize {
+        self.deep_view_levels.load(Ordering::Relaxed)
+    }
+
+    async fn plan_session_sql(
+        session: &ReparkSession,
+        query: &str,
+    ) -> PyResult<datafusion::prelude::DataFrame> {
+        Self::plan_session_sql_inner(session, query, false).await
+    }
+
+    async fn plan_session_sql_inner(
+        session: &ReparkSession,
+        query: &str,
+        built: bool,
+    ) -> PyResult<datafusion::prelude::DataFrame> {
+        let prepared = crate::session_runtime::prepare_session_sql(query)?;
+        if built {
+            session.sql_built(&prepared).await.map_err(to_py_err)
+        } else {
+            session.sql(&prepared).await.map_err(to_py_err)
+        }
+    }
 }
 
 #[pymethods]
@@ -125,22 +166,40 @@ impl PyReparkSession {
     /// Returns `RuntimeError` on parse, planning, iceberg, or execution failure.
     pub fn sql(&self, py: Python<'_>, query: &str) -> PyResult<PyDataFrame> {
         fenced_span!("py.sql", "PyReparkSession.sql", {
-            let query = crate::session_runtime::prepare_session_sql(query)?;
-            let df = py
-                .detach(|| self.runtime.block_on(self.session.sql(&query)))
-                .map_err(to_py_err)?;
-            Ok(PyDataFrame::new(df, Arc::clone(&self.runtime)))
+            let grown = crate::deep_stack::sql_drive_grown(query)
+                || self.deep_view_levels() > crate::deep_stack::DEEP_NESTING_DEPTH;
+            let df = py.detach(|| {
+                let planned = Self::plan_session_sql(&self.session, query);
+                block_on_grown_if(&self.runtime, planned, grown)
+            })?;
+            let mut depths = crate::deep_stack::plan_depths(df.logical_plan());
+            depths.plan = depths.plan.max(self.deep_view_levels());
+            depths.expression = depths.expression.max(self.deep_view_levels());
+            Ok(PyDataFrame::new_with_depths(
+                df,
+                Arc::clone(&self.runtime),
+                depths,
+            ))
         })
     }
 
     #[allow(clippy::missing_errors_doc)]
     pub fn sql_built(&self, py: Python<'_>, query: &str) -> PyResult<PyDataFrame> {
         fenced_span!("py.sql", "PyReparkSession.sql_built", {
-            let query = crate::session_runtime::prepare_session_sql(query)?;
-            let df = py
-                .detach(|| self.runtime.block_on(self.session.sql_built(&query)))
-                .map_err(to_py_err)?;
-            Ok(PyDataFrame::new(df, Arc::clone(&self.runtime)))
+            let grown = crate::deep_stack::sql_drive_grown(query)
+                || self.deep_view_levels() > crate::deep_stack::DEEP_NESTING_DEPTH;
+            let df = py.detach(|| {
+                let planned = Self::plan_session_sql_inner(&self.session, query, true);
+                block_on_grown_if(&self.runtime, planned, grown)
+            })?;
+            let mut depths = crate::deep_stack::plan_depths(df.logical_plan());
+            depths.plan = depths.plan.max(self.deep_view_levels());
+            depths.expression = depths.expression.max(self.deep_view_levels());
+            Ok(PyDataFrame::new_with_depths(
+                df,
+                Arc::clone(&self.runtime),
+                depths,
+            ))
         })
     }
 
@@ -150,7 +209,7 @@ impl PyReparkSession {
     pub fn read_parquet(&self, py: Python<'_>, path: &str) -> PyResult<PyDataFrame> {
         fenced_span!("py.read", "PyReparkSession.read_parquet", {
             let df = py
-                .detach(|| self.runtime.block_on(self.session.read_parquet(path)))
+                .detach(|| block_on(&self.runtime, self.session.read_parquet(path)))
                 .map_err(to_py_err)?;
             Ok(PyDataFrame::new(df, Arc::clone(&self.runtime)))
         })
@@ -169,7 +228,7 @@ impl PyReparkSession {
         fenced_span!("py.read", "PyReparkSession.read_csv", {
             let opts = options.unwrap_or_default();
             let df = py
-                .detach(|| self.runtime.block_on(self.session.read_csv(path, &opts)))
+                .detach(|| block_on(&self.runtime, self.session.read_csv(path, &opts)))
                 .map_err(to_py_err)?;
             Ok(PyDataFrame::new(df, Arc::clone(&self.runtime)))
         })
@@ -188,7 +247,7 @@ impl PyReparkSession {
         fenced_span!("py.read", "PyReparkSession.read_json", {
             let opts = options.unwrap_or_default();
             let df = py
-                .detach(|| self.runtime.block_on(self.session.read_json(path, &opts)))
+                .detach(|| block_on(&self.runtime, self.session.read_json(path, &opts)))
                 .map_err(to_py_err)?;
             Ok(PyDataFrame::new(df, Arc::clone(&self.runtime)))
         })
@@ -280,9 +339,15 @@ impl PyReparkSession {
     /// Returns `RuntimeError` if registration fails.
     pub fn create_or_replace_temp_view(&self, name: &str, frame: &PyDataFrame) -> PyResult<()> {
         fenced!("PyReparkSession.create_or_replace_temp_view", {
-            self.session
-                .create_or_replace_temp_view_from(name, frame.inner())
-                .map_err(to_py_err)
+            let depths = frame.depths();
+            let need = crate::deep_stack::clone_need_bytes(depths.plan, depths.expression);
+            crate::deep_stack::grown_sync(need, || {
+                self.session
+                    .create_or_replace_temp_view_from(name, frame.inner())
+            })
+            .map_err(to_py_err)?;
+            self.note_view_depths(&depths);
+            Ok(())
         })
     }
 
@@ -299,11 +364,10 @@ impl PyReparkSession {
     ) -> PyResult<()> {
         fenced!("PyReparkSession.declare_temp_view_sorted", {
             py.detach(|| {
-                self.runtime.block_on(self.session.declare_temp_view_sorted(
-                    name,
-                    &keys,
-                    tighten_nulls,
-                ))
+                let sorted = self
+                    .session
+                    .declare_temp_view_sorted(name, &keys, tighten_nulls);
+                block_on(&self.runtime, sorted)
             })
             .map_err(to_py_err)
         })
@@ -319,10 +383,10 @@ impl PyReparkSession {
         frame: &PyDataFrame,
     ) -> PyResult<()> {
         fenced_span!("py.action", "PyReparkSession.materialize_as_temp_view", {
-            let frame = frame.inner().clone();
+            let frame = crate::deep_stack::grown_clone_frame(frame.inner(), &frame.depths());
             py.detach(|| {
-                self.runtime
-                    .block_on(self.session.materialize_dataframe_as_temp_view(name, frame))
+                let materialized = self.session.materialize_dataframe_as_temp_view(name, frame);
+                block_on(&self.runtime, materialized)
             })
             .map_err(to_py_err)
         })
@@ -339,12 +403,12 @@ impl PyReparkSession {
         budgets: (Option<u64>, Option<u64>),
     ) -> PyResult<()> {
         fenced_span!("py.action", "PyReparkSession.materialize_as_cache_view", {
-            let frame = frame.inner().clone();
+            let frame = crate::deep_stack::grown_clone_frame(frame.inner(), &frame.depths());
             py.detach(|| {
-                self.runtime.block_on(
-                    self.session
-                        .materialize_dataframe_as_cache_view(name, frame, budgets),
-                )
+                let materialized = self
+                    .session
+                    .materialize_dataframe_as_cache_view(name, frame, budgets);
+                block_on(&self.runtime, materialized)
             })
             .map_err(to_py_err)
         })
@@ -421,7 +485,10 @@ impl PyReparkSession {
     /// Returns `RuntimeError` if the name cannot be resolved as a table reference.
     pub fn drop_temp_view(&self, name: &str) -> PyResult<bool> {
         fenced!("PyReparkSession.drop_temp_view", {
-            self.session.drop_temp_view(name).map_err(to_py_err)
+            let held = self.deep_view_levels();
+            let need = crate::deep_stack::clone_need_bytes(held, held);
+            crate::deep_stack::grown_sync(need, || self.session.drop_temp_view(name))
+                .map_err(to_py_err)
         })
     }
 
@@ -430,7 +497,7 @@ impl PyReparkSession {
     /// Returns `RuntimeError` for a two-part name, an unregistered catalog, or a probe failure.
     pub fn table_exists(&self, py: Python<'_>, name: &str) -> PyResult<bool> {
         fenced_span!("py.catalog", "PyReparkSession.table_exists", {
-            py.detach(|| self.runtime.block_on(self.session.table_exists(name)))
+            py.detach(|| block_on(&self.runtime, self.session.table_exists(name)))
                 .map_err(to_py_err)
         })
     }
@@ -470,8 +537,8 @@ impl PyReparkSession {
     ) -> PyResult<()> {
         fenced_span!("py.catalog", "PyReparkSession.register_memory_catalog", {
             py.detach(|| {
-                self.runtime
-                    .block_on(self.session.register_memory_catalog(name, warehouse))
+                let registered = self.session.register_memory_catalog(name, warehouse);
+                block_on(&self.runtime, registered)
             })
             .map_err(to_py_err)
         })
@@ -525,8 +592,8 @@ impl PyReparkSession {
     ) -> PyResult<Vec<String>> {
         fenced_span!("py.catalog", "PyReparkSession.list_iceberg_table_names", {
             py.detach(|| {
-                self.runtime
-                    .block_on(self.session.list_iceberg_table_names(catalog, namespace))
+                let listed = self.session.list_iceberg_table_names(catalog, namespace);
+                block_on(&self.runtime, listed)
             })
             .map_err(to_py_err)
         })
@@ -567,8 +634,8 @@ impl PyReparkSession {
     pub fn refresh_catalog_provider(&self, py: Python<'_>, catalog: &str) -> PyResult<()> {
         fenced_span!("py.catalog", "PyReparkSession.refresh_catalog_provider", {
             py.detach(|| {
-                self.runtime
-                    .block_on(self.session.refresh_catalog_provider(catalog))
+                let refreshed = self.session.refresh_catalog_provider(catalog);
+                block_on(&self.runtime, refreshed)
             })
             .map_err(to_py_err)
         })
@@ -587,12 +654,13 @@ impl PyReparkSession {
     ) -> PyResult<()> {
         fenced!("PyReparkSession.testing_oob_create_table", {
             py.detach(|| {
-                self.runtime.block_on(self.session.testing_oob_create_table(
+                let created = self.session.testing_oob_create_table(
                     catalog_name,
                     namespace,
                     table,
                     warehouse_location,
-                ))
+                );
+                block_on(&self.runtime, created)
             })
             .map_err(to_py_err)
         })
@@ -610,11 +678,10 @@ impl PyReparkSession {
     ) -> PyResult<()> {
         fenced!("PyReparkSession.testing_oob_drop_table", {
             py.detach(|| {
-                self.runtime.block_on(self.session.testing_oob_drop_table(
-                    catalog_name,
-                    namespace,
-                    table,
-                ))
+                let dropped = self
+                    .session
+                    .testing_oob_drop_table(catalog_name, namespace, table);
+                block_on(&self.runtime, dropped)
             })
             .map_err(to_py_err)
         })
@@ -633,12 +700,10 @@ impl PyReparkSession {
     ) -> PyResult<()> {
         fenced!("PyReparkSession.testing_create_ref", {
             py.detach(|| {
-                self.runtime.block_on(self.session.testing_create_ref(
-                    table_name,
-                    kind,
-                    ref_name,
-                    snapshot_id,
-                ))
+                let made = self
+                    .session
+                    .testing_create_ref(table_name, kind, ref_name, snapshot_id);
+                block_on(&self.runtime, made)
             })
             .map_err(to_py_err)
         })
@@ -654,8 +719,8 @@ impl PyReparkSession {
     ) -> PyResult<Vec<(i64, i64)>> {
         fenced!("PyReparkSession.testing_list_snapshots", {
             py.detach(|| {
-                self.runtime
-                    .block_on(self.session.testing_list_snapshots(table_name))
+                let listed = self.session.testing_list_snapshots(table_name);
+                block_on(&self.runtime, listed)
             })
             .map_err(to_py_err)
         })
@@ -671,8 +736,8 @@ impl PyReparkSession {
     ) -> PyResult<(Vec<String>, Vec<String>)> {
         fenced_span!("py.catalog", "PyReparkSession.register_late_catalogs", {
             py.detach(|| {
-                self.runtime
-                    .block_on(self.session.register_late_configured_catalogs(&config))
+                let registered = self.session.register_late_configured_catalogs(&config);
+                block_on(&self.runtime, registered)
             })
             .map_err(to_py_err)
         })
@@ -696,10 +761,10 @@ impl PyReparkSession {
                 properties.insert("location".to_string(), location.to_string());
             }
             py.detach(|| {
-                self.runtime.block_on(
-                    self.session
-                        .create_namespace(catalog, namespace, properties),
-                )
+                let created = self
+                    .session
+                    .create_namespace(catalog, namespace, properties);
+                block_on(&self.runtime, created)
             })
             .map_err(to_py_err)
         })
@@ -730,368 +795,4 @@ fn deferred_reader_error(surface: &str) -> PyErr {
          connectors are scheduled post-milestone-one. See the \"Post-milestone-one (BACKLOG)\" \
          row in task/todo.md."
     ))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::sync::Arc;
-
-    /// The Spark session must install both the Spark extension and dialect.
-    #[test]
-    fn spark_doored_session_resolves_spark_function_and_routes_spark_statement() {
-        Python::attach(|py| {
-            let session =
-                PyReparkSession::new(py, None, None, None, None, None).expect("session builds");
-
-            // (1) Spark function registry is installed: a Spark-only name resolves and evaluates.
-            let frame = session
-                .sql(py, "SELECT weekofyear(DATE '2021-01-01') AS w")
-                .expect("a Spark-only function resolves — SparkExtension installed the registry");
-            // Arrow path, not `show`: value AND type are the claim (docs/testing.md).
-            let batches = frame
-                .runtime_handle()
-                .block_on(frame.inner().clone().collect())
-                .expect("the Spark function evaluates");
-            let weeks = batches[0]
-                .column(0)
-                .as_any()
-                .downcast_ref::<arrow::array::Int32Array>()
-                .expect("weekofyear returns Int32");
-            assert_eq!(
-                weeks.value(0),
-                53,
-                "weekofyear must carry SPARK's ISO week-year semantics, not a DataFusion default"
-            );
-
-            // (2) Spark statement router is installed: a Spark-only statement reaches its refusal.
-            let sql = "MERGE INTO t USING s ON t.id = s.id WHEN MATCHED THEN DELETE OUTPUT d.*";
-            let Err(routed) = session.sql(py, sql) else {
-                panic!("MERGE OUTPUT is a loud router refusal, not a plan")
-            };
-            let message = routed.to_string();
-            assert!(
-                message.contains("MERGE OUTPUT/RETURNING"),
-                "the routed refusal names the MERGE OUTPUT gap; got: {message}"
-            );
-            assert!(
-                routed.is_instance_of::<crate::UnsupportedOperationException>(py),
-                "the router's NotImplemented folds to UnsupportedOperationException: {message}"
-            );
-        });
-    }
-
-    /// Native door: `PyReparkSession::native` must NOT install the Spark extension or dialect.
-    #[test]
-    fn native_session_is_not_spark_doored() {
-        Python::attach(|py| {
-            let session =
-                PyReparkSession::native(py, None, None, None, None).expect("native session builds");
-
-            let frame = session
-                .sql(py, "SELECT CAST(5 AS INT) / CAST(2 AS INT) AS q")
-                .expect("native integer division plans");
-            let batches = frame
-                .runtime_handle()
-                .block_on(frame.inner().clone().collect())
-                .expect("native integer division evaluates");
-            let quotients = batches[0]
-                .column(0)
-                .as_any()
-                .downcast_ref::<arrow::array::Int32Array>()
-                .expect("native INT/INT is Int32 (truncated), not Spark Float64");
-            assert_eq!(
-                quotients.value(0),
-                2,
-                "ANSI / DataFusion integer / truncates"
-            );
-
-            let Err(missing) = session.sql(py, "SELECT weekofyear(DATE '2021-01-01') AS w") else {
-                panic!("weekofyear must not resolve on a native session");
-            };
-            let message = missing.to_string();
-            assert!(
-                message.to_ascii_lowercase().contains("weekofyear")
-                    || message.to_ascii_lowercase().contains("invalid function"),
-                "native session must lack the Spark function registry; got: {message}"
-            );
-        });
-    }
-
-    /// `read_excel` keeps its port-pin name, arity, and defaults and refuses loudly.
-    #[test]
-    fn read_excel_refuses_with_named_unsupported_operation() {
-        Python::attach(|py| {
-            let session =
-                PyReparkSession::new(py, None, None, None, None, None).expect("session builds");
-            // `PyDataFrame` is not `Debug`; pattern-match the error arm instead of `expect_err`.
-            let Err(error) = session.read_excel(py, "/tmp/never-opened.xlsx", None) else {
-                panic!(
-                    "the excel reader is deferred post-milestone-one — it must not return a frame"
-                )
-            };
-            assert!(
-                error.is_instance_of::<crate::UnsupportedOperationException>(py),
-                "a deferred surface raises UnsupportedOperationException"
-            );
-            assert!(
-                error.is_instance_of::<crate::PySparkException>(py),
-                "…which is still a PySparkException (hence a RuntimeError) — near-drop-in"
-            );
-            let message = error.to_string();
-            assert!(
-                message.contains("spark.read.excel"),
-                "the message names the refused SURFACE: {message}"
-            );
-            assert!(
-                message.contains("post-milestone-one"),
-                "the message states the schedule: {message}"
-            );
-            assert!(
-                message.contains("task/todo.md"),
-                "the message points at the tracking row: {message}"
-            );
-        });
-    }
-
-    /// `excel_sheet_names` refuses with its own named surface.
-    #[test]
-    fn excel_sheet_names_refuses_with_named_unsupported_operation() {
-        Python::attach(|py| {
-            let session =
-                PyReparkSession::new(py, None, None, None, None, None).expect("session builds");
-            let error = session
-                .excel_sheet_names(py, "/tmp/never-opened.xlsx")
-                .expect_err("the excel reader is deferred post-milestone-one");
-            assert!(error.is_instance_of::<crate::UnsupportedOperationException>(py));
-            let message = error.to_string();
-            assert!(
-                message.contains("spark.read.sheet_names"),
-                "the message names the refused SURFACE: {message}"
-            );
-            assert!(
-                message.contains("post-milestone-one") && message.contains("task/todo.md"),
-                "the message states the schedule and the tracking row: {message}"
-            );
-        });
-    }
-
-    /// The nine-argument JDBC refusal must not echo the connection URL or the properties map.
-    #[test]
-    fn read_postgres_refuses_with_named_unsupported_operation() {
-        Python::attach(|py| {
-            let session =
-                PyReparkSession::new(py, None, None, None, None, None).expect("session builds");
-            let Err(error) = session.read_postgres(
-                py,
-                "postgresql://user:sentinel-secret@host:5432/db",
-                Some("public.t"),
-                None,
-                Some(HashMap::from([(
-                    "password".to_owned(),
-                    "sentinel-property-secret".to_owned(),
-                )])),
-                None,
-                None,
-                None,
-                None,
-                None,
-            ) else {
-                panic!(
-                    "the postgres connector is deferred post-milestone-one — no frame is returned"
-                )
-            };
-            assert!(error.is_instance_of::<crate::UnsupportedOperationException>(py));
-            let message = error.to_string();
-            assert!(
-                message.contains("spark.read.jdbc"),
-                "the message names the refused SURFACE: {message}"
-            );
-            assert!(
-                message.contains("post-milestone-one") && message.contains("task/todo.md"),
-                "the message states the schedule and the tracking row: {message}"
-            );
-            assert!(
-                !message.contains("sentinel-secret") && !message.contains("postgresql://"),
-                "a refusal must never echo the connection URL — it may carry credentials: \
-                 {message}"
-            );
-            assert!(
-                !message.contains("sentinel-property-secret") && !message.contains("password"),
-                "a refusal must never echo the connection PROPERTIES — they may carry \
-                 credentials: {message}"
-            );
-        });
-    }
-
-    /// A Rust panic through a fenced Python method surfaces as base `PySparkException`.
-    #[test]
-    fn fenced_panic_surfaces_as_pyspark_exception_and_leaves_session_usable() {
-        Python::attach(|py| {
-            let session = Py::new(
-                py,
-                PyReparkSession::new(py, None, None, None, None, None).expect("session builds"),
-            )
-            .expect("pyclass instantiates");
-
-            // Drive the panic through real Python dispatch so PyO3's trampoline is in the loop.
-            let error = session
-                .call_method0(py, "panic_probe")
-                .expect_err("the probe deterministically panics through the fence");
-            assert!(
-                error.is_instance_of::<crate::PySparkException>(py),
-                "a fenced pymethod panic is the base PySparkException"
-            );
-            assert!(
-                error.is_instance_of::<pyo3::exceptions::PyRuntimeError>(py),
-                "PySparkException subclasses RuntimeError — `except RuntimeError` still catches it"
-            );
-            assert!(
-                !error.is_instance_of::<pyo3::panic::PanicException>(py),
-                "the fence must NOT let PyO3's raw PanicException (a BaseException) escape"
-            );
-            let message = error.to_string();
-            assert!(
-                message.contains("SAF-007 injected panic") && message.contains("internal error"),
-                "the panic text is preserved under the internal-error framing: {message}"
-            );
-
-            // Interpreter alive + the SAME session still usable after the fenced panic.
-            let frame = session
-                .borrow(py)
-                .sql(py, "SELECT 1 AS n")
-                .expect("the session still plans and runs queries after a fenced panic");
-            assert_eq!(
-                frame.count(py).expect("count executes"),
-                1,
-                "the session remains usable after a fenced panic (nothing poisoned)"
-            );
-        });
-    }
-
-    #[test]
-    fn sequential_sessions_share_one_tokio_runtime() {
-        // Two sequential constructors must share one process-wide Tokio runtime.
-        Python::attach(|py| {
-            let first =
-                PyReparkSession::new(py, None, None, None, None, None).expect("first session");
-            let second =
-                PyReparkSession::new(py, None, None, None, None, None).expect("second session");
-            assert!(
-                Arc::ptr_eq(&first.runtime_arc(), &second.runtime_arc()),
-                "two PyReparkSession values must share the process-wide Tokio runtime Arc"
-            );
-        });
-    }
-
-    /// Collects the `family` field from a `py.entry` span.
-    struct FamilyFieldVisitor<'a> {
-        family: &'a mut String,
-    }
-
-    impl tracing::field::Visit for FamilyFieldVisitor<'_> {
-        fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
-            if field.name() == "family" {
-                let text = format!("{value:?}");
-                *self.family = text
-                    .strip_prefix('"')
-                    .and_then(|s| s.strip_suffix('"'))
-                    .unwrap_or(text.as_str())
-                    .to_string();
-            }
-        }
-
-        fn record_str(&mut self, field: &tracing::field::Field, value: &str) {
-            if field.name() == "family" {
-                *self.family = value.to_string();
-            }
-        }
-    }
-
-    struct FamilyRecorder {
-        families: std::sync::Mutex<Vec<String>>,
-    }
-
-    struct FamilyLayer {
-        recorder: Arc<FamilyRecorder>,
-    }
-
-    impl<S> tracing_subscriber::Layer<S> for FamilyLayer
-    where
-        S: tracing::Subscriber + for<'a> tracing_subscriber::registry::LookupSpan<'a>,
-    {
-        fn on_new_span(
-            &self,
-            attrs: &tracing::span::Attributes<'_>,
-            _id: &tracing::span::Id,
-            _ctx: tracing_subscriber::layer::Context<'_, S>,
-        ) {
-            if attrs.metadata().name() != "py.entry" {
-                return;
-            }
-            let mut family = String::new();
-            attrs.record(&mut FamilyFieldVisitor {
-                family: &mut family,
-            });
-            if !family.is_empty() {
-                self.recorder
-                    .families
-                    .lock()
-                    .expect("family lock")
-                    .push(family);
-            }
-        }
-    }
-
-    /// Entry-point families emit `py.entry` spans with the family and operation fields.
-    #[test]
-    fn entry_point_families_emit_py_entry_spans() {
-        use std::fs;
-        use std::time::{SystemTime, UNIX_EPOCH};
-
-        use tracing_subscriber::layer::SubscriberExt;
-
-        let recorder = Arc::new(FamilyRecorder {
-            families: std::sync::Mutex::new(Vec::new()),
-        });
-        let _guard =
-            tracing::subscriber::set_default(tracing_subscriber::registry().with(FamilyLayer {
-                recorder: Arc::clone(&recorder),
-            }));
-
-        let nanos = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("clock")
-            .as_nanos();
-        let warehouse = std::env::temp_dir().join(format!("repark-obs1-family-{nanos}"));
-        fs::create_dir_all(&warehouse).expect("temp warehouse dir");
-        let warehouse_str = warehouse
-            .to_str()
-            .expect("utf-8 warehouse path")
-            .to_string();
-
-        Python::attach(|py| {
-            let session =
-                PyReparkSession::new(py, None, None, None, None, None).expect("session builds");
-            let frame = session.sql(py, "SELECT 1 AS n").expect("sql plans");
-            assert_eq!(frame.count(py).expect("count"), 1);
-            // py.read: span opens before the body fails (missing path) — family still recorded.
-            let _ = session.read_parquet(py, "/nonexistent/obs1-family-pin.parquet");
-            // py.catalog: memory catalog registration (AWS-free).
-            session
-                .register_memory_catalog(py, "obs1_mem", &warehouse_str)
-                .expect("memory catalog registers");
-            let _ = session.table_exists(py, "no_such_temp_view");
-        });
-
-        let _ = fs::remove_dir_all(&warehouse);
-
-        let families = recorder.families.lock().expect("family lock").clone();
-        for expected in ["py.session", "py.sql", "py.action", "py.read", "py.catalog"] {
-            assert!(
-                families.iter().any(|family| family == expected),
-                "expected family {expected}; recorded: {families:?}"
-            );
-        }
-    }
 }

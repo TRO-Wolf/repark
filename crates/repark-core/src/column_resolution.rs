@@ -879,7 +879,7 @@ mod stack;
 mod twins;
 
 pub use fold_text::fold_query_text;
-pub use stack::{GrownStack, on_grown_stack_with};
+pub use stack::{GrownStack, on_grown_stack_with, remaining_stack, run_on_grown_stack};
 
 #[cfg(test)]
 mod tests;
