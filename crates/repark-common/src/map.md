@@ -55,13 +55,24 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   pins: casesens-1/C-005, C-006, C-007, C-008, C-012, C-017
 - `java_case.rs` — **ATTR-ID-1 S3d R-S3d-1 (2026-10-01):** the single Java
   case-fold home (the binding's fold tables moved out of the Python facade so
-  the three copies cannot drift). `fold_a_equal` is codepoint `toLowerCase`
-  and `fold_b_equal` is codepoint `equalsIgnoreCase`, both over Rust `char`
-  mappings plus correction tables for the Java-17 divergence (the
+  the three copies cannot drift). `fold_b_equal` is OpenJDK
+  `String.equalsIgnoreCase` (equal length plus per-codepoint equal, upper, and
+  lower-of-upper — the lower step runs on the uppers, which is what equates
+  U+0130 with `i`/`ı`), and `string_lower_equal` is equal length plus
+  `String.toLowerCase` (U+0130 expands to `i`+U+0307, U+03A3 takes U+03C2
+  word-finally else U+03C3, every other codepoint lowers 1:1), both over Rust
+  `char` mappings plus correction tables for the Java-17 divergence (the
   Rust-newer identity sets, the Greek single-upper map, U+0130 lowering to
   `i`). A full-codepoint unit test pins every mapping against
   `java_case_dump.txt`. Reach the folds through `repark-core`'s re-export.
   pins: attr-id-1/C-032, C-035
+  **ATTR-ID-1 S3d follow-up 3 (2026-10-01):** the two-fold split is measured,
+  not assumed: `drop(str)`/`dropDuplicates`/`withColumn` use `equalsIgnoreCase`
+  (the `Analyzer.resolver` bytecode path; the earlier lower-of-originals form
+  missed U+0130/`ı`), while `fillna`/`dropna`/free-Column `drop` use
+  length-plus-`String.toLowerCase` (probes s3d16..17; `select` shares this rule
+  per the r1 `sel` cells, which is S3a/S3b territory).
+  pins: attr-id-1/C-037
 - `java_case_dump.txt` — the compacted Zulu-17 `Character` dump behind that
   test: one `cp upper lower` hex line per mapped codepoint, sorted,
   generated from the S3d probe dump with a round-trip check (the generator

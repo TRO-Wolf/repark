@@ -567,10 +567,110 @@ def test_union_drop_str_fans_out_to_every_hit(spark: ReparkSession) -> None:
     assert _resolved_union(spark).drop("V").columns == ["id"]
 
 
-def test_union_same_display_twins_fill_first_position_only(spark: ReparkSession) -> None:
+def test_union_same_display_twins_refuse_exact_subset(spark: ReparkSession) -> None:
+    with pytest.raises(AnalysisException) as failed:
+        _same_display_union(spark).fillna(0, subset=["v"])
+    assert failed.value.getCondition() == "AMBIGUOUS_REFERENCE"
+    with pytest.raises(AnalysisException) as failed:
+        _same_display_union(spark).dropna(subset=["v"])
+    assert failed.value.getCondition() == "AMBIGUOUS_REFERENCE"
+
+
+def test_union_same_display_twins_folded_subset_binds_first_position_only(
+    spark: ReparkSession,
+) -> None:
     wanted = [(1, 10, 10), (1, 10, 10), (2, 0, None), (2, 0, None)]
-    assert _rows(_same_display_union(spark).fillna(0, subset=["v"])) == wanted
+    assert _rows(_same_display_union(spark).fillna(0, subset=["V"])) == wanted
+    assert _rows(_same_display_union(spark).dropna(subset=["V"])) == [
+        (1, 10, 10),
+        (1, 10, 10),
+    ]
     assert _same_display_union(spark).drop(functions.col("v")).columns == ["id", "v"]
+    assert _same_display_union(spark).drop(functions.col("V")).columns == ["id", "v"]
+
+
+def test_union_multi_id_same_display_twins_refuse_subset(spark: ReparkSession) -> None:
+    source = _union_source(spark)
+    twins = source.select("id", functions.col("v").alias("v"), functions.col("v").alias("v"))
+    doubled = twins.union(twins)
+    with pytest.raises(AnalysisException) as failed:
+        doubled.fillna(0, subset=["v"])
+    assert failed.value.getCondition() == "AMBIGUOUS_REFERENCE"
+
+
+def _casef_frame(spark: ReparkSession) -> Any:
+    source = _union_source(spark)
+    return source.select("id", "v", functions.col("V"))
+
+
+def test_project_dup_twins_fill_fans_out_without_union(spark: ReparkSession) -> None:
+    wanted = [(1, 10, 10), (2, 0, 0)]
+    assert _rows(_casef_frame(spark).fillna(0, subset=["v"])) == wanted
+    assert _rows(_casef_frame(spark).fillna(0, subset=["V"])) == wanted
+    assert _rows(_casef_frame(spark).dropna(subset=["V"])) == [(1, 10, 10)]
+
+
+def test_project_dup_twins_drop_col_fans_out_without_union(spark: ReparkSession) -> None:
+    assert _casef_frame(spark).drop(functions.col("V")).columns == ["id"]
+
+
+def test_union_drop_duplicates_fans_out_to_divergent_twins(spark: ReparkSession) -> None:
+    source = _union_source(spark)
+    sided = source.select("id", "v", functions.lit(20).alias("V"))
+    doubled = sided.union(sided)
+    assert _rows(doubled.dropDuplicates(["V"])) == [(1, 10, 20), (2, None, 20)]
+    assert _rows(doubled.dropDuplicates(["v"])) == [(1, 10, 20), (2, None, 20)]
+    assert doubled.drop("V").columns == ["id"]
+
+
+def test_fillna_subset_misses_dotted_capital_i_variants(spark: ReparkSession) -> None:
+    spark.conf.set("spark.sql.caseSensitive", "false")
+    frame = spark.createDataFrame([(1, 2)], ["\u0130d", "v"])
+    for key in ["id", "\u0131d"]:
+        with pytest.raises(AnalysisException) as failed:
+            frame.fillna(0, subset=[key])
+        assert failed.value.getCondition() == "UNRESOLVED_COLUMN.WITH_SUGGESTION"
+        with pytest.raises(AnalysisException) as failed:
+            frame.dropna(subset=[key])
+        assert failed.value.getCondition() == "UNRESOLVED_COLUMN.WITH_SUGGESTION"
+
+
+def test_fillna_subset_hits_dotted_capital_i_exact_fold(spark: ReparkSession) -> None:
+    spark.conf.set("spark.sql.caseSensitive", "false")
+    frame = spark.createDataFrame([(1, 2)], ["\u0130d", "v"])
+    assert _rows(frame.fillna(0, subset=["\u0130D"])) == [(1, 2)]
+    assert _rows(frame.dropna(subset=["\u0130D"])) == [(1, 2)]
+
+
+def test_drop_str_and_duplicates_hit_dotted_capital_i_variants(
+    spark: ReparkSession,
+) -> None:
+    spark.conf.set("spark.sql.caseSensitive", "false")
+    frame = spark.createDataFrame([(1, 2)], ["\u0130d", "v"])
+    assert frame.drop("id").columns == ["v"]
+    assert frame.drop("\u0131d").columns == ["v"]
+    assert _rows(frame.dropDuplicates(["\u0131d"])) == [(1, 2)]
+
+
+def test_drop_col_misses_dotted_capital_i_variants(spark: ReparkSession) -> None:
+    spark.conf.set("spark.sql.caseSensitive", "false")
+    frame = spark.createDataFrame([(1, 2)], ["\u0130d", "v"])
+    assert frame.drop(functions.col("id")).columns == ["\u0130d", "v"]
+    assert frame.drop(functions.col("\u0131d")).columns == ["\u0130d", "v"]
+
+
+def test_fillna_subset_hits_final_sigma_fold(spark: ReparkSession) -> None:
+    spark.conf.set("spark.sql.caseSensitive", "false")
+    frame = spark.createDataFrame([(1,), (None,)], ["a\u03a3"])
+    assert _rows(frame.fillna(7, subset=["A\u03c2"])) == [(1,), (7,)]
+
+
+def test_fillna_subset_misses_dotted_capital_i_expansion(spark: ReparkSession) -> None:
+    spark.conf.set("spark.sql.caseSensitive", "false")
+    frame = spark.createDataFrame([(1,), (None,)], ["\u0130"])
+    with pytest.raises(AnalysisException) as failed:
+        frame.fillna(7, subset=["i\u0307"])
+    assert failed.value.getCondition() == "UNRESOLVED_COLUMN.WITH_SUGGESTION"
 
 
 def test_union_distinct_ids_refuse_subset_and_col(spark: ReparkSession) -> None:

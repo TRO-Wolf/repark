@@ -356,7 +356,7 @@ pub(crate) fn java_fold_hits(
     mode: &str,
 ) -> PyResult<Vec<usize>> {
     let fold = match mode {
-        "a" => repark_core::fold_a_equal,
+        "a" => repark_core::string_lower_equal,
         "b" => repark_core::fold_b_equal,
         _ => {
             return Err(PyValueError::new_err(format!(

@@ -380,6 +380,15 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   projections, so a dup created above the union (`unionbn`) and a
   reorder/select above a dup union fan out (probes s3d12..14).
   pins: attr-id-1/C-036
+  **ATTR-ID-1 S3d follow-up 3 (2026-10-01):** mode `a` is length plus
+  `String.toLowerCase` (fillna/dropna miss U+0130/`i`, probe s3d16); mode `b`
+  is OpenJDK `equalsIgnoreCase` down to the lower-of-uppers step. Under a
+  union, `fillna`/`dropna` refuse two or more exact spellings
+  (`AMBIGUOUS_REFERENCE`, probe s3d16 `dupin`) and otherwise bind the
+  positional-first hit even when a later hit spells the key exactly, while
+  free-Column `drop` trims silently (probe s3d17); `drop(str)` and
+  `dropDuplicates` fan out to every hit with no trim and no refusal.
+  pins: attr-id-1/C-037
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
   unsupported operations fail explicitly.

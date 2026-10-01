@@ -279,6 +279,22 @@ def test_java_match_without_casefold_match_misses_sensitive(spark: ReparkSession
     assert _rows(renamed) == [(1, 2)]
 
 
+def test_dotless_i_replaces_dotted_capital_i_insensitive(spark: ReparkSession) -> None:
+    spark.conf.set("spark.sql.caseSensitive", "false")
+    frame = spark.createDataFrame([(1, 2)], ["\u0130d", "v"])
+    replaced = frame.withColumn("\u0131d", functions.lit(0))
+    assert replaced.columns == ["\u0131d", "v"]
+    assert _rows(replaced) == [(0, 2)]
+
+
+def test_dotless_i_renames_dotted_capital_i_insensitive(spark: ReparkSession) -> None:
+    spark.conf.set("spark.sql.caseSensitive", "false")
+    frame = spark.createDataFrame([(1, 2)], ["\u0130d", "v"])
+    renamed = frame.withColumnRenamed("\u0131d", "z")
+    assert renamed.columns == ["z", "v"]
+    assert _rows(renamed) == [(1, 2)]
+
+
 def test_live_rule_decides_after_build_insensitive_then_sensitive(spark: ReparkSession) -> None:
     spark.conf.set("spark.sql.caseSensitive", "false")
     frame = _frame(spark)

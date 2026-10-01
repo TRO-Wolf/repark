@@ -8949,6 +8949,10 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   (s3c probes, banner in `spark_banner.out`).
   No module docstring: the lane's no-comments ruling covers the new file; the
   contract lives here. pins: attr-id-1/C-031
+  **ATTR-ID-1 S3d follow-up 3 (2026-10-01):** 2 more pins: `ıd` replaces and
+  renames `İd` insensitive (the native lower-of-uppers fix restores the S3c
+  `U+0130 read as I` behavior exactly; probe s3d16).
+  pins: attr-id-1/C-037
 - [test_attr_id_1_s3d.py](test_attr_id_1_s3d.py) — **ATTR-ID-1 S3d (2026-10-01):** the
   `drop`/`dropDuplicates`/`fillna`/`dropna` cutover pins, each under both case rules
   unless noted. `drop(str)` drops a twin pair of one attribute and a two-attribute
@@ -8971,3 +8975,11 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   `dropna`, free-Column `drop`), union `drop(str)` fan-out, distinct-id
   union and reversed-order refusals (probes s3d8..11).
   pins: attr-id-1/C-034
+  **ATTR-ID-1 S3d follow-up 3 (2026-10-01):** 12 more pins: same-display
+  union twins refuse an exact subset but bind a folded one first-only, a
+  multi-id same-display union refuses, project twins fan out without a union,
+  `dropDuplicates` fans out to divergent twins, U+0130 variants miss under
+  `fillna`/`dropna`/free-Column `drop` but hit under `drop(str)`/
+  `dropDuplicates`, and final-sigma folds hit while the U+0130 expansion
+  misses (probes s3d16..17).
+  pins: attr-id-1/C-037

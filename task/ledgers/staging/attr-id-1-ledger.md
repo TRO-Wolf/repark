@@ -601,6 +601,8 @@ and refusing with Spark's error class where Spark refuses.
 
 | C-036 | The union-trim correction: `union_dup_below_wrappers` tracks bound positions through the wrappers and a Projection continues only when it maps every position to itself (Spark re-resolves through any name/Column projection: reorder and dup-creating selects fan out, star/rename/append keep union lineage, probes s3d12..14); the Union arm fires only when two or more distinct positions reach it, so a dup created above the union (`unionbn`) never trims. | The 10 `sort_names` Rust pins; the S3c (41) and S3d (111) suites green; the S0 replay with 0 cells moved away from Spark. | PROVEN (pins; replay lands in the hand-back) | `crates/repark-core/src/session/df_guards/sort_names.rs` `union_dup_below_wrappers`; `crates/repark-python/src/dataframe_names.rs`; `python/repark/src/repark/spark/subset_resolve.py` `_trim_union_first`; probes `s3d/spark_probes_s3d12*.py`, `s3d13*.py`, `s3d14*.py` with `.out` files; replays land in the hand-back. |
 
+| C-037 | The fold-truth correction: mode `b` is OpenJDK `String.equalsIgnoreCase` down to the lower-of-uppers step (the step that equates U+0130 with `i`/`ı`; verified against the `Analyzer.resolver` bytecode path and a JVM `equalsIgnoreCase` probe), restoring the four S3c `nti2` gains; mode `a` is equal length plus `String.toLowerCase` (U+0130 expands, U+03A3 takes final-sigma context) for `fillna`/`dropna`/free-Column `drop` (probes s3d16..17). Under a union, `fillna`/`dropna` refuse two or more exact spellings with `AMBIGUOUS_REFERENCE` and otherwise bind the positional-first hit even past an exact later hit, while free-Column `drop` trims silently; `drop(str)` and `dropDuplicates` fan out with no trim and no refusal. | The 7 `java_case` Rust pins (extended pairs); the S3c (43) and S3d (122) suites green; the S0 replay with 0 cells moved away from Spark. | PROVEN (pins; replay lands in the hand-back) | `crates/repark-common/src/java_case.rs` `fold_b_equal`, `string_lower_equal`; `crates/repark-python/src/dataframe_names.rs` `java_fold_hits`; `python/repark/src/repark/spark/subset_resolve.py` `_bound_subset_positions`; probes `s3d/spark_probes_s3d16*.py`, `s3d17*.py` with `.out` files; replays land in the hand-back. |
+
 **S3d Spark measurements (2026-10-01, four batched probes, live Spark 4.1.2).**
 `drop(str)` fans out over one id and over two with no refusal, and a miss is a
 no-op; `drop(F.col)` fans out over one id, refuses two with
@@ -666,7 +668,7 @@ hits-only. Multi-id refuses regardless of display order or exact-first.
 
 **S3d residue R-7 (2026-10-01).** Single-bind ambiguity above a join that sits
 above a union is unprobed (no replay cell covers join-above-union): the
-`union_below_wrappers` walk stops at joins, so a multi-id bind there refuses
+`union_dup_below_wrappers` walk stops at joins, so a multi-id bind there refuses
 `AMBIGUOUS_REFERENCE` while Spark's dedup-lineage answer is unknown. Owned by
 the follow-up union-id card (the slice that implements union output id
 separation), not S3e.
@@ -679,7 +681,11 @@ cannot reach the Spark error.
 
 **S3d residue R-9 (2026-10-01).** `NameRule::matches`/`lookup` stay ASCII-only
 per ruling R-S3d-1: converging them on the Java folds belongs to the
-unicode-case card (RC3-5), not to this round.
+unicode-case card (RC3-5), not to this round. Follow-up 3 measured the gap
+exactly: `select` shares the fillna rule (equal length plus
+`String.toLowerCase`, 12/12 r1 `sel` cells plus probe s3d16 `sel_sig_up`),
+so ASCII-only misses non-ASCII folds (`σ`/`Σ`); the unicode-case card owns
+the fix with those cells.
 
 **Mutation re-run record S3d (2026-10-01, after R-S3d-1).** Same file and
 command as above; diffs at `s3d/mutation_m1_rerun.diff`,

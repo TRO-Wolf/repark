@@ -252,21 +252,36 @@ fn java_lower_char(value: char) -> char {
     }
 }
 
-#[must_use]
-pub fn fold_a_equal(first: &str, second: &str) -> bool {
-    let mut left = first.chars();
-    let mut right = second.chars();
-    loop {
-        match (left.next(), right.next()) {
-            (None, None) => return true,
-            (Some(one), Some(other)) => {
-                if java_lower_char(one) != java_lower_char(other) {
-                    return false;
-                }
-            }
-            (None, Some(_)) | (Some(_), None) => return false,
+fn is_final_sigma(values: &[char], index: usize) -> bool {
+    values[..index].iter().any(|value| value.is_alphabetic())
+        && !values[index + 1..]
+            .iter()
+            .any(|value| value.is_alphabetic())
+}
+
+fn string_lowered(value: &str) -> String {
+    let values: Vec<char> = value.chars().collect();
+    let mut lowered = String::with_capacity(value.len());
+    for (index, current) in values.iter().enumerate() {
+        if *current == '\u{130}' {
+            lowered.push_str("i\u{307}");
+        } else if *current == '\u{3a3}' {
+            lowered.push(if is_final_sigma(&values, index) {
+                '\u{3c2}'
+            } else {
+                '\u{3c3}'
+            });
+        } else {
+            lowered.push(java_lower_char(*current));
         }
     }
+    lowered
+}
+
+#[must_use]
+pub fn string_lower_equal(first: &str, second: &str) -> bool {
+    first.chars().count() == second.chars().count()
+        && string_lowered(first) == string_lowered(second)
 }
 
 #[must_use]
@@ -279,7 +294,8 @@ pub fn fold_b_equal(first: &str, second: &str) -> bool {
             (Some(one), Some(other)) => {
                 if one != other
                     && java_upper_char(one) != java_upper_char(other)
-                    && java_lower_char(one) != java_lower_char(other)
+                    && java_lower_char(java_upper_char(one))
+                        != java_lower_char(java_upper_char(other))
                 {
                     return false;
                 }
@@ -291,7 +307,7 @@ pub fn fold_b_equal(first: &str, second: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{fold_a_equal, fold_b_equal, java_lower_char, java_upper_char};
+    use super::{fold_b_equal, java_lower_char, java_upper_char, string_lower_equal};
 
     const DUMP: &str = include_str!("java_case_dump.txt");
 
@@ -387,6 +403,9 @@ mod tests {
             ("\u{df}", "\u{1e9e}"),
             ("\u{3a3}", "\u{3c3}"),
             ("\u{3a3}", "\u{3c2}"),
+            ("\u{130}", "\u{131}"),
+            ("\u{130}d", "id"),
+            ("\u{130}d", "\u{131}d"),
         ] {
             assert!(fold_b_equal(held, written), "{held} folds to {written}");
             assert!(fold_b_equal(written, held), "{written} folds to {held}");
@@ -423,19 +442,29 @@ mod tests {
     }
 
     #[test]
-    fn fold_a_accepts_lower_variants() {
+    fn string_lower_accepts_lower_variants() {
         for (held, written) in [
             ("k", "\u{212a}"),
             ("\u{df}", "\u{1e9e}"),
             ("\u{3a3}", "\u{3c3}"),
+            ("\u{130}d", "\u{130}D"),
+            ("a\u{3a3}", "A\u{3c2}"),
+            ("\u{3a3}\u{3a3}", "\u{3c3}\u{3c2}"),
+            ("a\u{3a3}b", "a\u{3c3}b"),
         ] {
-            assert!(fold_a_equal(held, written), "{held} folds to {written}");
-            assert!(fold_a_equal(written, held), "{written} folds to {held}");
+            assert!(
+                string_lower_equal(held, written),
+                "{held} folds to {written}"
+            );
+            assert!(
+                string_lower_equal(written, held),
+                "{written} folds to {held}"
+            );
         }
     }
 
     #[test]
-    fn fold_a_rejects_upper_only_pairs_expansions_and_mismatches() {
+    fn string_lower_rejects_upper_only_pairs_expansions_and_mismatches() {
         for (held, written) in [
             ("I", "\u{131}"),
             ("\u{b5}", "\u{3bc}"),
@@ -443,15 +472,18 @@ mod tests {
             ("\u{3a3}", "\u{3c2}"),
             ("\u{df}", "SS"),
             ("\u{130}", "i\u{307}"),
+            ("\u{130}d", "id"),
+            ("\u{130}d", "\u{131}d"),
+            ("id", "\u{131}d"),
             ("v", "x"),
             ("", "v"),
         ] {
             assert!(
-                !fold_a_equal(held, written),
+                !string_lower_equal(held, written),
                 "{held} must not fold to {written}"
             );
             assert!(
-                !fold_a_equal(written, held),
+                !string_lower_equal(written, held),
                 "{written} must not fold to {held}"
             );
         }
