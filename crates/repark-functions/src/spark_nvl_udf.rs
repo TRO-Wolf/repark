@@ -464,25 +464,36 @@ impl ScalarUDFImpl for SparkNvl {
 pub(crate) struct SparkNvl2 {
     signature: Signature,
     facade_built: bool,
+    fexpr_built: bool,
 }
 
 impl SparkNvl2 {
     fn new() -> Self {
-        Self {
-            signature: Signature::user_defined(Volatility::Immutable),
-            facade_built: false,
-        }
+        Self::with_built(false, false)
     }
 
     fn new_facade() -> Self {
+        Self::with_built(true, false)
+    }
+
+    pub(crate) fn new_fexpr() -> Self {
+        Self::with_built(false, true)
+    }
+
+    fn with_built(facade_built: bool, fexpr_built: bool) -> Self {
         Self {
             signature: Signature::user_defined(Volatility::Immutable),
-            facade_built: true,
+            facade_built,
+            fexpr_built,
         }
     }
 
     pub(crate) fn is_facade_built(&self) -> bool {
         self.facade_built
+    }
+
+    pub(crate) fn is_fexpr_built(&self) -> bool {
+        self.fexpr_built
     }
 }
 
@@ -972,29 +983,18 @@ mod tests {
 
     use super::*;
 
-    fn stamp() -> DataType {
-        DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into()))
-    }
-
     #[test]
     fn declare_follows_selective_rule() {
-        assert_eq!(
-            SparkNvl::new("nvl")
-                .return_type(&[DataType::Utf8, DataType::Int32])
-                .expect("plus shape widens"),
-            DataType::Int64
-        );
-        assert_eq!(
-            SparkNvl::new("nvl")
-                .return_type(&[stamp(), stamp()])
-                .expect("stamp pair delegates"),
-            DataType::Utf8
-        );
-        assert_eq!(
-            SparkNullif::new()
-                .return_type(&[DataType::Utf8, stamp()])
-                .expect("nullif declares"),
-            DataType::Timestamp(TimeUnit::Nanosecond, Some("UTC".into()))
-        );
+        let nvl = SparkNvl::new("nvl");
+        let plus = nvl.return_type(&[DataType::Utf8, DataType::Int32]);
+        assert_eq!(plus.expect("plus shape widens"), DataType::Int64);
+        let stamp = DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into()));
+        let stamps = nvl.return_type(&[stamp.clone(), stamp.clone()]);
+        assert_eq!(stamps.expect("stamp pair delegates"), DataType::Utf8);
+        let nullif = SparkNullif::new().return_type(&[DataType::Utf8, stamp]);
+        let nano = DataType::Timestamp(TimeUnit::Nanosecond, Some("UTC".into()));
+        assert_eq!(nullif.expect("nullif declares"), nano);
+        assert!(SparkNvl2::new_fexpr().is_fexpr_built());
+        assert!(!SparkNvl2::new().is_fexpr_built());
     }
 }

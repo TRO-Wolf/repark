@@ -195,6 +195,11 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   session lowers with the live flag (base route under ANSI off, the
   UTC single-zone fold under ANSI on).
   pins: nvl-type-coercion-1/C-041
+  **Re-verify 10 fold part 4 (2026-10-01, VN11 Q3 ruling):** the
+  context also registers the `fexpr_built` `nvl2` UDF, so the base
+  route can refuse the binary-mismatch triple on the `F.expr` door
+  while the SQL door keeps answering like base.
+  pins: nvl-type-coercion-1/C-041
   **FN-FIX-1:** `window_from_aggregate` copies `IGNORE NULLS`. pins: fn-fix-1-registry-rows/C-002
   **FNP-AGG-1 slice (d) (2026-09-21):** `cast_unsigned_count_to_signed` moved here
   from `function_dispatch.rs` (same body, re-exported there) so `grouping_id_call`

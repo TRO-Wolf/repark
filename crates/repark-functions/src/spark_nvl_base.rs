@@ -191,8 +191,31 @@ fn route_nvl2(function: &ScalarFunction) -> Result<Expr> {
             else_expr: Some(Box::new(second.clone())),
         }));
     }
+    if let [test, first, second] = function.args.as_slice()
+        && function
+            .func
+            .inner()
+            .downcast_ref::<SparkNvl2>()
+            .is_some_and(SparkNvl2::is_fexpr_built)
+        && let (
+            Expr::Literal(test_value, _),
+            Expr::Literal(first_value, _),
+            Expr::Literal(second_value, _),
+        ) = (test, first, second)
+        && matches!(test_value, ScalarValue::Int32(Some(_)))
+        && matches!(first_value, ScalarValue::Utf8(Some(_)))
+        && matches!(second_value, ScalarValue::Binary(Some(_)))
+    {
+        return Err(fexpr_nvl2_string_binary_refusal(test_value));
+    }
     validate_literals(&datafusion::functions::core::nvl2(), function)?;
     Ok(core_nvl2(function.args.clone()))
+}
+
+fn fexpr_nvl2_string_binary_refusal(test: &ScalarValue) -> DataFusionError {
+    DataFusionError::Plan(format!(
+        "[DATATYPE_MISMATCH.CAST_WITH_CONF_SUGGESTION] Cannot resolve \"CAST({test:?} AS BINARY)\" due to data type mismatch: cannot cast \"INT\" to \"BINARY\" with ANSI mode on.\nIf you have to cast \"INT\" to \"BINARY\", you can set \"spark.sql.ansi.enabled\" as 'false'. SQLSTATE: 42K09"
+    ))
 }
 
 fn route_nullif(function: &ScalarFunction) -> Result<Expr> {
@@ -453,6 +476,38 @@ mod tests {
             .expect_err("mismatched nullif must refuse")
             .to_string();
         assert!(error.contains("not comparable"), "{error}");
+    }
+
+    #[test]
+    fn fexpr_nvl2_string_binary_pair_refuses_like_base() {
+        let binary = Expr::Literal(ScalarValue::Binary(Some(vec![1])), None);
+        let call = crate::expr_fn::call(
+            crate::spark_nvl_fexpr::nvl2_fexpr_udf(),
+            vec![lit(1), lit("a"), binary],
+        );
+        let error = call
+            .transform_up(rewrite_expr)
+            .expect_err("binary pair must refuse")
+            .to_string();
+        assert!(error.contains("CAST_WITH_CONF_SUGGESTION"), "{error}");
+        assert!(error.contains("CAST(Int32(1) AS BINARY)"), "{error}");
+    }
+
+    #[test]
+    fn nvl2_binary_pair_without_fexpr_marker_routes_to_core() {
+        let binary = Expr::Literal(ScalarValue::Binary(Some(vec![1])), None);
+        let call = nvl_family_expr("nvl2", &[lit(1), lit("a"), binary]).expect("registry call");
+        let routed = call.transform_up(rewrite_expr).expect("route").data;
+        let Expr::ScalarFunction(function) = routed else {
+            panic!("registry nvl2 must route to a call");
+        };
+        assert_eq!(function.func.name(), "nvl2");
+        let null_binary = Expr::Literal(ScalarValue::Binary(Some(vec![1])), None);
+        let null_test = crate::expr_fn::call(
+            crate::spark_nvl_fexpr::nvl2_fexpr_udf(),
+            vec![lit(ScalarValue::Null), lit("a"), null_binary],
+        );
+        assert!(null_test.transform_up(rewrite_expr).is_ok());
     }
 
     #[test]

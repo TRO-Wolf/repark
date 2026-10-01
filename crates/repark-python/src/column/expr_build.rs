@@ -217,6 +217,11 @@ fn build_expr_context() -> datafusion::error::Result<SessionContext> {
             .as_ref()
             .clone(),
     );
+    context.register_udf(
+        repark_functions::spark_nvl_fexpr::nvl2_fexpr_udf()
+            .as_ref()
+            .clone(),
+    );
     Ok(context)
 }
 

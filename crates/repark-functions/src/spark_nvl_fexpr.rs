@@ -3,9 +3,15 @@ use std::sync::Arc;
 use datafusion::arrow::array::timezone::Tz;
 use datafusion::arrow::datatypes::TimeUnit;
 use datafusion::common::ScalarValue;
-use datafusion::logical_expr::Expr;
+use datafusion::logical_expr::{Expr, ScalarUDF};
 
 use crate::csv::default_timestamp_micros;
+use crate::spark_nvl_udf::SparkNvl2;
+
+#[must_use]
+pub fn nvl2_fexpr_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkNvl2::new_fexpr()))
+}
 
 pub(crate) fn utc_fold_nullif_literals(first: &Expr, second: &Expr) -> Option<(Expr, Expr)> {
     let (text, stamp) = string_stamp_pair(first, second)?;
