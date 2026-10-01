@@ -657,7 +657,7 @@ mod tests {
         }
     }
 
-    async fn frame_with_string_column(verbatim: bool) -> crate::dataframe::PyDataFrame {
+    async fn frame_with_string_column(verbatim: bool) -> datafusion::prelude::DataFrame {
         let config = if verbatim {
             repark_spark::spark_literals::with_escaped_string_literals_config(
                 SessionConfig::new(),
@@ -667,12 +667,17 @@ mod tests {
             SessionConfig::new()
         };
         let context = SessionContext::new_with_config(config);
-        let frame = context
+        context
             .sql("SELECT 'placeholder' AS v")
             .await
-            .expect("string-column frame");
-        let runtime = Arc::new(tokio::runtime::Runtime::new().expect("a runtime builds"));
-        crate::dataframe::PyDataFrame::new(frame, runtime)
+            .expect("string-column frame")
+    }
+
+    fn wrapped_frame(
+        runtime: &Arc<tokio::runtime::Runtime>,
+        frame: datafusion::prelude::DataFrame,
+    ) -> crate::dataframe::PyDataFrame {
+        crate::dataframe::PyDataFrame::new(frame, Arc::clone(runtime))
     }
 
     fn comparison_literal(expr: &Expr) -> String {
@@ -687,9 +692,10 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn filter_predicates_follow_the_frame_verbatim_flag() {
-        let verbatim = frame_with_string_column(true).await;
+    #[test]
+    fn filter_predicates_follow_the_frame_verbatim_flag() {
+        let runtime = Arc::new(tokio::runtime::Runtime::new().expect("a runtime builds"));
+        let verbatim = wrapped_frame(&runtime, runtime.block_on(frame_with_string_column(true)));
         assert_eq!(
             comparison_literal(&parse_canonical_predicate(&verbatim, "v = 'it''s'").unwrap()),
             "it''s"
@@ -698,7 +704,7 @@ mod tests {
             comparison_literal(&parse_canonical_predicate_exact(&verbatim, "v = 'it''s'").unwrap()),
             "it''s"
         );
-        let default = frame_with_string_column(false).await;
+        let default = wrapped_frame(&runtime, runtime.block_on(frame_with_string_column(false)));
         assert_eq!(
             comparison_literal(&parse_canonical_predicate(&default, "v = 'it''s'").unwrap()),
             "it's"
