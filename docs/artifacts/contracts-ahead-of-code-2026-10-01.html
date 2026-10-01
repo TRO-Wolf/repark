@@ -126,7 +126,7 @@ pre code{background:none;padding:0}
 <h3>CC-4 · Errors: operational meaning first, Spark wording where measured</h3>
 <p>Connector and capture errors carry structured operational meaning: authentication failure, retryable disconnect, lost replication history, invalid specification, ambiguous destination commit. A Spark condition is rendered only where the semantics match and the facade contract has been measured; otherwise the condition is RePark-owned, on the precedent of <code>CommitStateUnknown</code> (already in <code>repark-common/src/lib.rs</code>, the PyO3 exceptions and the Python taxonomy). Checkpoint loss is never forced into an approximately similar Spark class. There is no blanket carve-out: <strong>each RePark-owned condition gets a dated registry row</strong>, as a declared refusal does, so the extension boundary stays enumerable and cannot excuse an unrelated parity failure.</p>
 <h3>CC-5 · Features: Cargo modularity is not wheel availability</h3>
-<p>"In the standard wheel" does not require "no Cargo feature". Postgres query and capture ship in the standard wheel when delivered, behind features that stay available to Rust consumers (the <code>repark-distributed</code> precedent: <code>default = ["local"]</code>, <code>cluster</code> opt-in). SQL Server's wheel inclusion is decided by measurement, build time, wheel size, linking and platforms, before 1.6 closes. A compiled capability omitted from the wheel cannot be enabled by a runtime setting, which is the reason the default leans inclusive.</p>
+<p>"In the standard wheel" does not require "no Cargo feature". Postgres query and capture ship in the standard wheel when delivered, behind features that stay available to Rust consumers (the <code>repark-distributed</code> precedent: <code>default = ["local"]</code>, <code>cluster</code> opt-in). <strong>SQL Server ships through pip as an opt-in</strong> (owner, 2026-10-01: "ship it as an option in pip"). A pip extra cannot switch compiled code inside one wheel, so the C-0 measurement (build time, wheel size, linking, platforms) decides the mechanism: compiled into the standard wheel with the extra carrying only Python dependencies, or a sibling <code>repark-mssql</code> wheel. A compiled capability omitted from the wheel cannot be enabled by a runtime setting, which is the reason the default leans inclusive.</p>
 <h3>CC-6 · Postgres tests: a disposable container, and the five failure scenarios</h3>
 <p>Live cells run against a disposable local Postgres container, never an Airflow-managed database without established ownership and isolation. Private schemas are not enough for capture tests: <strong>publications and replication slots get unique names and explicit cleanup</strong>. The failure harness covers destination writes, checkpoint persistence and reconnects, plus five scenarios that are the pin list of <code>repark-cdc</code>'s S0 and exist before any capture code:</p>
 <ol>
@@ -177,7 +177,7 @@ pre code{background:none;padding:0}
 <li><strong>A dated refusal row for <code>format("delta")</code></strong> on both doors, with Spark's error class, so the registry says what RePark does today.</li>
 <li><strong>A 2.x card, demand-triggered, read-only</strong>: <code>delta-rs</code> exposes a DataFusion <code>TableProvider</code>, so a scan is cheap in code; the real cost is version lockstep, since <code>delta-rs</code> pins its own DataFusion and the workspace pins 54.1, the problem the Ballista audit measured. Writes stay out of the card.</li>
 <li><strong>Bronze and Silver stay Iceberg-only publication targets.</strong> The <code>SilverPlan</code> compiles over a pinned Iceberg snapshot; a Delta source enters only through a read scan or capture into Bronze.</li>
-<li><strong>The Databricks route needs no Delta code</strong>: Unity Catalog serves UniForm-enabled Delta tables over the Iceberg REST protocol, and the fork's <code>iceberg-catalog-rest</code> is complete. This is one more argument for ruling the REST slot (open since the 1.6 cut). Delta-to-Iceberg metadata migration in the manner of Apache XTable, Iceberg metadata written over the same Parquet files, is the enterprise lever that pulls customers toward the format RePark owns.</li>
+<li><strong>The Databricks route needs no Delta code</strong>: Unity Catalog serves UniForm-enabled Delta tables over the Iceberg REST protocol, and the fork's <code>iceberg-catalog-rest</code> is complete. The REST slot was ruled the same day: <strong>1.7</strong>, inside the medallion release (owner: "let's get the REST catalog moved to 1.7"). Delta-to-Iceberg metadata migration in the manner of Apache XTable, Iceberg metadata written over the same Parquet files, is the enterprise lever that pulls customers toward the format RePark owns.</li>
 </ul>
 <p>The release roadmap's "any second table format" in its explicitly-not-planned list now reads "as a publication target"; read-only interop is this card.</p>
 </section>
@@ -213,8 +213,8 @@ pre code{background:none;padding:0}
 <td>ES-3</td>
 <td><strong>Iceberg table encryption</strong></td>
 <td>keys applied, not stored</td>
-<td>ENC-1 in the parity registry records that <code>encryption.key-id</code> is stored and never applied; the feature is a fork item filed with 3.0 authentication; <strong>open product question</strong>: whether storing a key RePark will not honour should refuse instead of succeed</td>
-<td>3.0</td>
+<td>ENC-1 in the parity registry records that <code>encryption.key-id</code> is stored and never applied; the feature is a fork item filed with 3.0 authentication; <strong>ruled 2026-10-01: refuse</strong> — the first write to a table carrying <code>encryption.key-id</code> refuses, as Spark does without a KMS, and <code>CREATE</code> keeps succeeding as in Spark; a product card, release the owner's, flipping the ENC-1 pin on purpose</td>
+<td>the refusal next; encryption 3.0</td>
 </tr>
 <tr>
 <td>ES-4</td>
@@ -249,7 +249,7 @@ pre code{background:none;padding:0}
 <td><strong>Unity Catalog, Hive metastore</strong></td>
 <td>read the catalog they have</td>
 <td>Unity through its Iceberg REST endpoint (CC-10, the REST campaign); Hive metastore stays out (ruled 2026-08-29)</td>
-<td>REST slot</td>
+<td>1.7 (the REST campaign, ruled 2026-10-01)</td>
 </tr>
 <tr>
 <td>ES-9</td>
@@ -301,8 +301,8 @@ pre code{background:none;padding:0}
 </tr>
 <tr>
 <td>CC-5</td>
-<td>Postgres query and capture in the standard wheel behind retained features; SQL Server measured before inclusion</td>
-<td><strong>ruled 2026-10-01</strong>; the SQL Server measurement is open</td>
+<td>Postgres query and capture in the standard wheel behind retained features; SQL Server a pip opt-in, the mechanism decided by the C-0 measurement</td>
+<td><strong>ruled 2026-10-01</strong> (owner: "ship it as an option in pip")</td>
 </tr>
 <tr>
 <td>CC-6</td>
@@ -332,7 +332,7 @@ pre code{background:none;padding:0}
 <tr>
 <td>ES-1…ES-9</td>
 <td>the enterprise seams as tabled</td>
-<td><strong>ruled 2026-10-01</strong> ("get it added to the plan"); ES-3's refuse-or-store question is open</td>
+<td><strong>ruled 2026-10-01</strong> ("get it added to the plan"); ES-3 ruled <strong>refuse</strong>, ES-8's REST slot ruled <strong>1.7</strong> the same day</td>
 </tr>
 <tr>
 <td>ES-10</td>

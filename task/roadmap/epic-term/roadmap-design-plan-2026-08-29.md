@@ -393,7 +393,8 @@ sources it consumes are CFG-2's (delivered in 1.5), not CFG-1's; the crate is pr
   - C-4 — writes: `COPY … FROM STDIN (FORMAT BINARY)` default, row `INSERT` fallback per the
     `bulk | row` flag; `INSERT INTO <source>…` routing in both doors.
   - C-5 — SQL Server: TDS via `tiberius`; read = paged / partitioned SELECT; write = bulk insert,
-    row fallback; wheel inclusion decided by the C-0 measurement (CC-5).
+    row fallback; a pip opt-in (owner, 2026-10-01), the mechanism — compiled in with a
+    nominal extra, or a sibling wheel — decided by the C-0 measurement (CC-5).
   - C-6 — the Python conveniences and the CC-4 registry rows for the RePark-owned conditions.
   - C-1 and C-2 are design-heavy (an Opus executor with a design sketch); C-3…C-6 run on the
     standard tier with one verifier per stack and DIFF-PROBE on each.

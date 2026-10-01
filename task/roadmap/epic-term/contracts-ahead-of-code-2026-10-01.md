@@ -40,7 +40,7 @@ Connector and capture errors carry structured operational meaning: authenticatio
 
 ### CC-5 · Features: Cargo modularity is not wheel availability
 
-"In the standard wheel" does not require "no Cargo feature". Postgres query and capture ship in the standard wheel when delivered, behind features that stay available to Rust consumers (the `repark-distributed` precedent: `default = ["local"]`, `cluster` opt-in). SQL Server's wheel inclusion is decided by measurement, build time, wheel size, linking and platforms, before 1.6 closes. A compiled capability omitted from the wheel cannot be enabled by a runtime setting, which is the reason the default leans inclusive.
+"In the standard wheel" does not require "no Cargo feature". Postgres query and capture ship in the standard wheel when delivered, behind features that stay available to Rust consumers (the `repark-distributed` precedent: `default = ["local"]`, `cluster` opt-in). **SQL Server ships through pip as an opt-in** (owner, 2026-10-01: "ship it as an option in pip"). A pip extra cannot switch compiled code inside one wheel, so the C-0 measurement (build time, wheel size, linking, platforms) decides the mechanism: compiled into the standard wheel with the extra carrying only Python dependencies, or a sibling `repark-mssql` wheel. A compiled capability omitted from the wheel cannot be enabled by a runtime setting, which is the reason the default leans inclusive.
 
 ### CC-6 · Postgres tests: a disposable container, and the five failure scenarios
 
@@ -83,7 +83,7 @@ An enterprise buyer is often a Databricks shop whose data is in Delta. The ask i
 - **A dated refusal row for `format("delta")`** on both doors, with Spark's error class, so the registry says what RePark does today.
 - **A 2.x card, demand-triggered, read-only**: `delta-rs` exposes a DataFusion `TableProvider`, so a scan is cheap in code; the real cost is version lockstep, since `delta-rs` pins its own DataFusion and the workspace pins 54.1, the problem the Ballista audit measured. Writes stay out of the card.
 - **Bronze and Silver stay Iceberg-only publication targets.** The `SilverPlan` compiles over a pinned Iceberg snapshot; a Delta source enters only through a read scan or capture into Bronze.
-- **The Databricks route needs no Delta code**: Unity Catalog serves UniForm-enabled Delta tables over the Iceberg REST protocol, and the fork's `iceberg-catalog-rest` is complete. This is one more argument for ruling the REST slot (open since the 1.6 cut). Delta-to-Iceberg metadata migration in the manner of Apache XTable, Iceberg metadata written over the same Parquet files, is the enterprise lever that pulls customers toward the format RePark owns.
+- **The Databricks route needs no Delta code**: Unity Catalog serves UniForm-enabled Delta tables over the Iceberg REST protocol, and the fork's `iceberg-catalog-rest` is complete. The REST slot was ruled the same day: **1.7**, inside the medallion release (owner: "let's get the REST catalog moved to 1.7"). Delta-to-Iceberg metadata migration in the manner of Apache XTable, Iceberg metadata written over the same Parquet files, is the enterprise lever that pulls customers toward the format RePark owns.
 
 The release roadmap's "any second table format" in its explicitly-not-planned list now reads "as a publication target"; read-only interop is this card.
 
@@ -95,12 +95,12 @@ Same method: where a buyer will ask and the seam is cheap now, reserve it; where
 |---|---|---|---|---|
 | ES-1 | **Connector auth methods** | password auth to SQL Server or RDS is rarely allowed | an auth-method field on `repark-connect`'s connection settings, reserved in C-1; password at 1.6; IAM token (RDS) and Kerberos / Active Directory as **declared refusals** with a dated row | 1.6 (field), demand-triggered (methods) |
 | ES-2 | **Azure and GCS object stores** | multi-cloud warehouses | the workspace builds `object_store` 0.13 with only the `aws` feature; ADLS Gen2 and GCS are features of the same crate behind the same `CredentialProvider` bridge; `repark.azure.*` and `repark.gcs.*` reserved beside `repark.aws.*`, no keys | demand-triggered; the cost is a live-cell tier per cloud like `docs/tier2-aws.md`, not code |
-| ES-3 | **Iceberg table encryption** | keys applied, not stored | ENC-1 in the parity registry records that `encryption.key-id` is stored and never applied; the feature is a fork item filed with 3.0 authentication; **open product question**: whether storing a key RePark will not honour should refuse instead of succeed | 3.0 |
+| ES-3 | **Iceberg table encryption** | keys applied, not stored | ENC-1 in the parity registry records that `encryption.key-id` is stored and never applied; the feature is a fork item filed with 3.0 authentication; **ruled 2026-10-01: refuse** — the first write to a table carrying `encryption.key-id` refuses, as Spark does without a KMS, and `CREATE` keeps succeeding as in Spark; a product card, release the owner's, flipping the ENC-1 pin on purpose | the refusal next; encryption 3.0 |
 | ES-4 | **Lineage emission** | OpenLineage into Collibra, Atlan, DataHub | the 3.0 audit row already records principal, sources and snapshot ids, which is the OpenLineage event shape; an emitter is one exporter over the CC-7 facade | 2.7 sub-item |
 | ES-5 | **Compliance erasure and legal hold** | right-to-erasure with proof; records that may not expire | erasure = delete, rewrite, expire, orphan sweep and an audit record as one procedure; legal hold = an Iceberg tag the maintenance policy refuses to expire; both over procedures that exist | 2.1 sub-items |
 | ES-6 | **More connectors** | Oracle, MySQL, Snowflake, BigQuery | behind `repark-connect`'s provider trait; the `format("jdbc")` URL dispatch row (2026-09-15) refuses by scheme; cloud warehouses through ADBC | demand-triggered rows, no card |
 | ES-7 | **Airflow provider** | schedule RePark from the orchestrator they run | a sibling repository on the `dbt-repark` model, engine side unchanged | demand-triggered |
-| ES-8 | **Unity Catalog, Hive metastore** | read the catalog they have | Unity through its Iceberg REST endpoint (CC-10, the REST campaign); Hive metastore stays out (ruled 2026-08-29) | REST slot |
+| ES-8 | **Unity Catalog, Hive metastore** | read the catalog they have | Unity through its Iceberg REST endpoint (CC-10, the REST campaign); Hive metastore stays out (ruled 2026-08-29) | 1.7 (the REST campaign, ruled 2026-10-01) |
 | ES-9 | **Supply chain** | an SBOM and signed artifacts on every security questionnaire | CycloneDX output beside the `cargo-deny` job already in CI; signed wheels join the signed image | 3.0 deployment row |
 | ES-10 | **Declared out, in writing** | high availability, cross-region replication, FIPS-validated crypto | HA and replication: single node is the thesis and table replication is a catalog concern; FIPS: RustCrypto is not a validated module | the explicitly-not-planned list |
 
@@ -112,13 +112,13 @@ Same method: where a buyer will ask and the seam is cheap now, reserve it; where
 | CC-2 | the narrow T-6: identity with a generation field to common, connection settings and conversions to connect, loading and handles stay in core, lineage and offsets in cdc; scheduled with C-1 | **ruled 2026-10-01** |
 | CC-3 | four reserved prefixes, no keys; owner crate validates, core loads and merges; the source entry beats the session default | **ruled 2026-10-01** |
 | CC-4 | structured operational meaning first; Spark wording where measured; RePark-owned otherwise with a dated registry row each | **ruled 2026-10-01** |
-| CC-5 | Postgres query and capture in the standard wheel behind retained features; SQL Server measured before inclusion | **ruled 2026-10-01**; the SQL Server measurement is open |
+| CC-5 | Postgres query and capture in the standard wheel behind retained features; SQL Server a pip opt-in, the mechanism decided by the C-0 measurement | **ruled 2026-10-01** (owner: "ship it as an option in pip") |
 | CC-6 | disposable container, unique publication and slot names with cleanup, the five scenarios as cdc S0 pins | **ruled 2026-10-01** |
 | CC-7 | `metrics` facade, crate-owned emission, entry-point initialization with an explicit Python entry, plan-scoped per-query report, no telemetry crate through 1.8 | **ruled 2026-10-01** |
 | CC-8 | four denied edges with kinds in the gate script; `cdc → core` dropped as a duplicate; lands as a tidy-window chore | **ruled 2026-10-01**; the chore is open |
 | CC-9 | capture shutdown and checkpoint advancement filed as the 1.7 charter's first D-decision, with the generation clause | **ruled 2026-10-01** |
 | CC-10 | `repark-delta` reserved, not pre-declared; `format("delta")` refusal row; a read-only 2.x card on demand; Bronze and Silver Iceberg-only; the Databricks route is UniForm over Iceberg REST | **ruled 2026-10-01** |
-| ES-1…ES-9 | the enterprise seams as tabled | **ruled 2026-10-01** ("get it added to the plan"); ES-3's refuse-or-store question is open |
+| ES-1…ES-9 | the enterprise seams as tabled | **ruled 2026-10-01** ("get it added to the plan"); ES-3 ruled **refuse**, ES-8's REST slot ruled **1.7** the same day |
 | ES-10 | HA, replication and FIPS declared out | **ruled 2026-10-01** |
 
 ## Part D — what this change touches elsewhere

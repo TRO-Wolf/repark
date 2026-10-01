@@ -165,9 +165,8 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
   - v1 helper scripts not yet re-homed: [scripts/map.md](scripts/map.md) "Not re-homed". Each
     returns only with a concrete driver named there.
 - **Rust module layout is the default one** — `mod foo;` resolved by `foo.rs`, `foo/mod.rs`, or
-  `foo/*.rs`. `#[path = "…"]` is not module inclusion: move the file into the canonical tree.
-  A case that genuinely cannot sit in the tree keeps the attribute local to that one item and
-  states why in a comment.
+  `foo/*.rs`. `#[path = "…"]` is allowed on a `#[cfg(test)]` child module and nowhere else (owner,
+  2026-10-01); a product module moves into the canonical tree.
 - **`unsafe_code = "forbid"` everywhere except `crates/repark-python`**, which sets a local
   `unsafe_code = "allow"` because PyO3 macros expand to `unsafe`. Do not add `unsafe` elsewhere.
 - **Python:** hints on every parameter, return, and public attribute; Pydantic v2 `BaseModel`

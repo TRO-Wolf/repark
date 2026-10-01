@@ -92,7 +92,7 @@ The window is **after the v1.5.2 merge queue drains and before the first 1.6 con
 | T-4 | `repark-spark` directories `router/ ddl/ dml/ inspect/ procedures/` | the modules of §2's table, `use` paths, five `map.md` files | nothing else |
 | T-5 | extract `repark-spark-dialect` | the dialect directory becomes a crate; `repark-spark` imports it; a DAG row; a workspace member | the version bump mechanics name a new member |
 
-The `#[path]` rule question from the 2026-09-30 review (allow `#[path]` for a `#[cfg(test)]` child module and nothing else, or keep the directories) needs its one-line answer before T-1, since T-1 decides whether the single-file test directories survive the move.
+The `#[path]` rule question from the 2026-09-30 review is **ruled (CL-6, owner 2026-10-01: "allow for test")**: `#[path]` is allowed on a `#[cfg(test)]` child module and nowhere else, so T-1 may keep a single-file test module beside its product file where that reads better than a directory. AGENTS.md carries the rule; T-1 may open.
 
 Then 1.6 opens with `repark-connect` on a clean DAG; 1.7 adds `repark-crawler`, `repark-cdc` and `repark-core/src/silver/`; 1.8 adds `repark-io`.
 
@@ -105,7 +105,7 @@ Then 1.6 opens with `repark-connect` on a clean DAG; 1.7 adds `repark-crawler`, 
 | CL-3 | the `repark-spark` split extracts the dialect below as `repark-spark-dialect`; `repark-spark` keeps its name and gains `router/ ddl/ dml/ inspect/ procedures/` | **ruled 2026-10-01** |
 | CL-4 | the tidy window is post-v1.5.2 queue drain, pre-1.6; units T-1…T-5, clerk tier, no verifier on pure moves | **ruled 2026-10-01** |
 | CL-5 | `repark-sql → repark-spark` dev-only; the DAG table complete | **already true on `main`** — measured 2026-10-01 (§3.1, §3.2), ruling moot |
-| CL-6 | the `#[path]` rule for `#[cfg(test)]` children | **open** — one line from the owner before T-1 |
+| CL-6 | `#[path]` is allowed on a `#[cfg(test)]` child module and nowhere else; AGENTS.md amended | **ruled 2026-10-01** (owner: "allow for test") |
 | CL-7 | strike `repark-exec` from PROJECT.md's crate list | **done 2026-10-01** in this change (PROJECT.md, AGENTS.md, `repo-manifest.toml`); the owner reviews it in the PR |
 | CL-8 | arriving crates are pre-declared, never pre-created: tier, role and edges in `scripts/check_crate_dag.py`, a `planned` row in `repo-manifest.toml`, a row in AGENTS.md's guide; no directory until the first unit lands | **ruled 2026-10-01** (owner: "pre define the crates in the repo for organizing purposes") |
 | CL-9 | the contracts between the arriving crates (seams, identity, configuration, errors, features, tests, metrics, denied edges, capture shutdown), the Delta Lake seam and the enterprise seams are ruled ahead of code in [contracts-ahead-of-code-2026-10-01.md](contracts-ahead-of-code-2026-10-01.md) (CC-1…CC-10, ES-1…ES-10) | **ruled 2026-10-01** |
