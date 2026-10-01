@@ -156,6 +156,12 @@ handling (`CAST(NULL AS VOID)` rewrite, the non-NULL VALUES refusal into
   drop. The mixed-star and recursive classifier pins now expect one empty
   arm; their positions stay unmapped.
   pins: store-ts-doors-2/C-001, C-003
+  **Fold 2026-09-30 (re-verify VT3-1):** the carried SELECT is scoped —
+  `sibling_types::scoped_arm_sql` prefixes every in-scope CTE definition
+  (innermost wins on shadowing) and declines to scope case twins, so an arm
+  is never planned outside its statement's CTE scope. Call sites only; the
+  resolver and its classifier pins are unchanged.
+  pins: store-ts-doors-2/C-001, C-003
 - `sibling_types.rs` — **Fold 2026-09-30 (re-verify VT2-1, VT2-2, VT2-4,
   VT2-5):** `SiblingJudge`, moved here from `ltz_values_store.rs`, decides
   the VT-1 skip from one per-position map built once per statement and
@@ -176,6 +182,19 @@ handling (`CAST(NULL AS VOID)` rewrite, the non-NULL VALUES refusal into
   Six tests: unmapped-star shapes, static typing, the ambiguity
   matcher, probe sharing, skip beside TIMESTAMP but not BIGINT, and
   the plan-failure fall-through.
+  pins: store-ts-doors-2/C-001, C-003
+  **Fold 2026-09-30 (re-verify VT3-1..VT3-3):** the arm plan keeps four
+  outcomes. `Typed` judges by column type as before. `Ambiguous` matches
+  only the typed `SchemaError::AmbiguousReference` and the
+  `[AMBIGUOUS_REFERENCE]` tag, never the bare word, and a position-less
+  ambiguous arm judges instead of unjudging every position (VT3-2).
+  `Unresolved` (unknown column, function or table) leaves the cell unjudged
+  so the analyzer raises Spark's own class (VT3-3). `Failed` (no arm SQL, or
+  the constructed SQL cannot parse) keeps the old judgment, as does a
+  resolution failure retried once lowercased in a case-insensitive session
+  when the retry resolves. Eight tests cover the fold: the inverted matcher,
+  the unjudged failure, the kept judgment without SQL, the prefix, the
+  shadowing and recursion prefix, the case-twin decline, and the retry pair.
   pins: store-ts-doors-2/C-001, C-003
 - `source_leaves.rs` — **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):**
   `source_type_is_reliable` decides whether a new refusal may trust RePark's

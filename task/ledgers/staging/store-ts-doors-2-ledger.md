@@ -182,9 +182,13 @@ provenance entry resolves falls back to planning that arm's SELECT alone
 through the session and reading the column type (stars over tables,
 expressions over table columns, constant expressions in a SELECT with FROM,
 temp-view siblings); the whole set operation is never planned, and a plan
-failure keeps the pre-fold judgment. Arms that reference CTE names, missing
-objects, or anything else the session cannot plan keep the pre-fold judgment
-too. VT2-2: a plan failure that is an ambiguity (typed
+failure keeps the pre-fold judgment. Arms that reference CTE names are
+planned with their CTE definitions prefixed (fold 3 corrects the earlier
+claim, recorded here at the time, that they keep the pre-fold judgment: a
+same-named temp view or table resolved in their place). Arms that cannot be
+scoped, and arms whose constructed SQL cannot parse, keep the pre-fold
+judgment; missing objects leave the cell unjudged so the analyzer raises
+(R3). VT2-2: a plan failure that is an ambiguity (typed
 `AmbiguousReference`, else the bare word in the message) passes the STRING
 cell through unjudged so the analyzer raises Spark's AMBIGUOUS_REFERENCE;
 non-STRING cells beside an ambiguous arm keep being judged first (residual,
@@ -227,6 +231,57 @@ the same DEBUG build: u10k 69.7s/70.2s = 0.99x, deep200 2.76s/1.85s =
 probe400 9.79s/7.43s = 1.32x; against the recorded base-release shape
 ratios the gate-attributable cost is 1.01x, 1.13x, 1.09x, 1.15x and
 1.05x (was 1.04x, 1.15x, 2.83x, 1.21x, 3.48x).
+
+## Re-verify fold 3 (2026-09-30, PR #894)
+
+The re-verifier confirmed the 20 fold-2 target cells and 0 replay moves, but
+found 8 false stores through arm-alone planning (VT3-1..VT3-3). The fold
+rulings narrow the arm plan only; the refusal path is untouched.
+
+**Fix.** R1: every arm is planned inside its statement's CTE scope —
+`scoped_arm_sql` prefixes the arm's SELECT with each in-scope CTE definition
+(innermost wins on shadowing; `RECURSIVE` is re-emitted when a definition
+references its own or a later name), and an arm that cannot be scoped (case
+twins) carries no SQL and keeps the pre-fold judgment, which refuses. R2:
+`is_ambiguity` matches only the typed `SchemaError::AmbiguousReference` and
+RePark's `[AMBIGUOUS_REFERENCE]` tag, never the bare word; an ambiguous
+position-less arm no longer unjudges every position (mapped arms keep skipping
+only the positions whose cells and provenance are both empty). R3: any other
+arm planning failure (unknown column, function or table) leaves the cell
+unjudged so the analyzer raises Spark's own class; a failure to parse the
+constructed arm SQL keeps the old judgment. A resolution failure in a
+case-insensitive session is retried once against the lowercased arm text, so a
+quoted wrong-case name the analyzer's repair would resolve is still judged
+instead of stored.
+
+**Pins.** The 6 reachable VT3-1 cells (inline, arm-WITH, dynamic partition,
+column expression, join, column list), a nested WITH, a CTE shadowing a table
+(star and column forms) and a qualified-star CTE shadowing a temp view refuse
+`CANNOT_SAFELY_CAST`; a TIMESTAMP CTE and a plain temp-view sibling still
+store. A CTE, a view and a column named `ambiguous` refuse; a missing relation
+named `ambiguous` surfaces the analyzer's not-found error. Unknown column,
+function and table surface `UNRESOLVED_COLUMN`, `UNRESOLVED_ROUTINE` and
+`TABLE_OR_VIEW_NOT_FOUND` with nothing stored. Quoted-case siblings keep their
+refusal. Spark answers for the 7 new shapes were measured once on live Spark
+4.1.2 (evidence `reverify2-tsd-fold/spark/`); the rest reuse the recorded
+attack3/attack4 Spark answers.
+
+**Corrections.** `door/static_part_ow_cte_shadow` is not new since `21a35daf`:
+the LTZ gate returns early for every partitioned insert there as on base, so
+it stored on base, `21a35daf` and this head alike; it is recorded under the
+carried precedence item below, per the orchestrator's ruling.
+
+**Carried (orchestrator cards, same on base).** CTE-versus-temp-view name
+precedence gives silent wrong data on column-list INSERT, static-partition
+OVERWRITE (including `door/static_part_ow_cte_shadow`) and CTAS. MERGE and
+UPDATE refuse the STRING-plus-TIMESTAMP widening that Spark stores.
+
+**Proof.** In-test pins `test_fold3_*` in `test_store_ts_doors_2.py`; Rust unit
+pins for the typed ambiguity matcher, the unjudged resolution failure, the
+kept judgment without arm SQL, the CTE prefix with shadowing and recursion,
+and the quoted-case retry. The round hand-back records the mutation runs
+(M-R1 bare arm text, M-R2 word match, M-R3 refuse on planning failure, each
+reverting clean), the replay into `reverify2-tsd-fold/`, and the perf table.
 
 ## Coverage
 

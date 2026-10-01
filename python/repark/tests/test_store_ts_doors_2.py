@@ -335,3 +335,394 @@ def test_fold_string_beside_timestamp_into_bigint_refuses(tmp_path: Path) -> Non
         assert _fold_rows(session, "sc.ns.t_bigint", 8281) == []
     finally:
         session.stop()
+
+
+def _fold3_setup(session: ReparkSession) -> None:
+    session.sql("CREATE TABLE sc.ns.strtab (id INT, c STRING) USING iceberg").collect()
+    session.sql("INSERT INTO sc.ns.strtab VALUES (2, '2020-07-07 07:07:07')").collect()
+    session.sql("CREATE TABLE sc.ns.bigtab (id INT, c BIGINT) USING iceberg").collect()
+    session.sql("INSERT INTO sc.ns.bigtab VALUES (2, 7L)").collect()
+    session.sql("CREATE TABLE sc.ns.ambtab (id INT, ambiguous BIGINT) USING iceberg").collect()
+    session.sql("INSERT INTO sc.ns.ambtab VALUES (2, 7L)").collect()
+    session.sql("CREATE TABLE sc.ns.f3_xt (id INT, c TIMESTAMP) USING iceberg").collect()
+    session.sql("INSERT INTO sc.ns.f3_xt VALUES (2, TIMESTAMP'2020-08-08 08:08:08')").collect()
+    session.sql("CREATE TEMPORARY VIEW xv AS SELECT id, tsc AS c FROM sc.ns.src").collect()
+
+
+def _fold3_target(session: ReparkSession, table: str) -> None:
+    session.sql(f"CREATE TABLE {table} (id INT, c TIMESTAMP) USING iceberg").collect()
+
+
+def _fold3_rows(session: ReparkSession, table: str) -> list[list[Any]]:
+    return sorted(
+        [
+            _norm(list(row))
+            for row in session.sql(f"SELECT id, CAST(c AS STRING) AS c FROM {table}").collect()
+        ],
+        key=repr,
+    )
+
+
+def _fold3_refused_cast(session: ReparkSession, sql: str) -> dict[str, Any]:
+    got = _write(session, {"sql": sql})
+    assert got["refused"] is True, sql
+    assert got["condition"] == "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST", sql
+    assert got["sql_state"] == "KD000", sql
+    assert 'Cannot safely cast `c` "STRING" to "TIMESTAMP"' in got["message"], sql
+    return got
+
+
+def test_fold3_cte_view_shadow_inline_refuses(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        _fold3_setup(session)
+        _fold3_target(session, "sc.ns.f3_g1")
+        _fold3_refused_cast(
+            session,
+            "INSERT INTO sc.ns.f3_g1 WITH xv AS (SELECT * FROM sc.ns.strtab) "
+            "SELECT * FROM (VALUES (1, '2020-01-01 10:00:00')) AS v(a, b) "
+            "UNION ALL SELECT * FROM xv",
+        )
+        assert _fold3_rows(session, "sc.ns.f3_g1") == []
+    finally:
+        session.stop()
+
+
+def test_fold3_cte_view_shadow_arm_with_refuses(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        _fold3_setup(session)
+        _fold3_target(session, "sc.ns.f3_g2")
+        _fold3_refused_cast(
+            session,
+            "INSERT INTO sc.ns.f3_g2 SELECT * FROM "
+            "(VALUES (1, '2020-01-01 10:00:00')) AS v(a, b) UNION ALL "
+            "(WITH xv AS (SELECT * FROM sc.ns.strtab) SELECT * FROM xv)",
+        )
+        assert _fold3_rows(session, "sc.ns.f3_g2") == []
+    finally:
+        session.stop()
+
+
+def test_fold3_cte_view_shadow_dynpart_refuses(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        _fold3_setup(session)
+        session.sql(
+            "CREATE TABLE sc.ns.f3_pt (id INT, c TIMESTAMP, p STRING) "
+            "USING iceberg PARTITIONED BY (p)"
+        ).collect()
+        _fold3_refused_cast(
+            session,
+            "INSERT INTO sc.ns.f3_pt WITH xv AS "
+            "(SELECT id, c, 'p1' AS p FROM (SELECT * FROM sc.ns.strtab)) "
+            "SELECT * FROM (VALUES (1, '2020-01-01 10:00:00', 'p1')) AS v(a, b, p) "
+            "UNION ALL SELECT * FROM xv",
+        )
+        assert _fold3_rows(session, "sc.ns.f3_pt") == []
+    finally:
+        session.stop()
+
+
+def test_fold3_cte_view_shadow_cols_expr_refuses(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        _fold3_setup(session)
+        _fold3_target(session, "sc.ns.f3_g3")
+        _fold3_refused_cast(
+            session,
+            "INSERT INTO sc.ns.f3_g3 WITH xv AS (SELECT * FROM sc.ns.strtab) "
+            "SELECT * FROM (VALUES (1, '2020-01-01 10:00:00')) AS v(a, b) "
+            "UNION ALL SELECT id, coalesce(c, c) FROM xv",
+        )
+        assert _fold3_rows(session, "sc.ns.f3_g3") == []
+    finally:
+        session.stop()
+
+
+def test_fold3_cte_view_shadow_join_refuses(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        _fold3_setup(session)
+        _fold3_target(session, "sc.ns.f3_g4")
+        _fold3_refused_cast(
+            session,
+            "INSERT INTO sc.ns.f3_g4 WITH xv AS (SELECT * FROM sc.ns.strtab) "
+            "SELECT * FROM (VALUES (1, '2020-01-01 10:00:00')) AS v(a, b) "
+            "UNION ALL SELECT x.id, x.c FROM xv x "
+            "JOIN sc.ns.bigtab y ON x.id = y.id",
+        )
+        assert _fold3_rows(session, "sc.ns.f3_g4") == []
+    finally:
+        session.stop()
+
+
+def test_fold3_collist_cte_shadow_refuses(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        _fold3_setup(session)
+        _fold3_target(session, "sc.ns.f3_g5")
+        _fold3_refused_cast(
+            session,
+            "INSERT INTO sc.ns.f3_g5 (id, c) WITH xv AS "
+            "(SELECT * FROM sc.ns.strtab) SELECT * FROM "
+            "(VALUES (1, '2020-01-01 10:00:00')) AS v(a, b) "
+            "UNION ALL SELECT * FROM xv",
+        )
+        assert _fold3_rows(session, "sc.ns.f3_g5") == []
+    finally:
+        session.stop()
+
+
+def test_fold3_nested_with_shadow_refuses(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        _fold3_setup(session)
+        _fold3_target(session, "sc.ns.f3_g6")
+        _fold3_refused_cast(
+            session,
+            "INSERT INTO sc.ns.f3_g6 WITH o AS (SELECT * FROM sc.ns.strtab) "
+            "SELECT * FROM (VALUES (1, '2020-01-01 10:00:00')) AS v(a, b) "
+            "UNION ALL (WITH xv AS (SELECT * FROM o) SELECT * FROM xv)",
+        )
+        assert _fold3_rows(session, "sc.ns.f3_g6") == []
+    finally:
+        session.stop()
+
+
+def test_fold3_table_shadow_star_and_cols_refuse(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        _fold3_setup(session)
+        session.sql(
+            "CREATE TABLE spark_catalog.default.pv (id INT, c TIMESTAMP) USING parquet"
+        ).collect()
+        session.sql(
+            "INSERT INTO spark_catalog.default.pv VALUES (3, TIMESTAMP'2020-08-08 08:08:08')"
+        ).collect()
+        _fold3_target(session, "sc.ns.f3_g7")
+        _fold3_refused_cast(
+            session,
+            "INSERT INTO sc.ns.f3_g7 WITH pv AS (SELECT * FROM sc.ns.strtab) "
+            "SELECT * FROM (VALUES (1, '2020-01-01 10:00:00')) AS v(a, b) "
+            "UNION ALL SELECT * FROM pv",
+        )
+        assert _fold3_rows(session, "sc.ns.f3_g7") == []
+        _fold3_target(session, "sc.ns.f3_g8")
+        _fold3_refused_cast(
+            session,
+            "INSERT INTO sc.ns.f3_g8 WITH pv AS (SELECT * FROM sc.ns.strtab) "
+            "SELECT * FROM (VALUES (1, '2020-01-01 10:00:00')) AS v(a, b) "
+            "UNION ALL SELECT id, c FROM pv",
+        )
+        assert _fold3_rows(session, "sc.ns.f3_g8") == []
+    finally:
+        session.stop()
+
+
+def test_fold3_qualified_star_view_shadow_refuses(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        _fold3_setup(session)
+        _fold3_target(session, "sc.ns.f3_g9")
+        _fold3_refused_cast(
+            session,
+            "INSERT INTO sc.ns.f3_g9 WITH xv AS (SELECT * FROM sc.ns.strtab) "
+            "SELECT * FROM (VALUES (1, '2020-01-01 10:00:00')) AS v(a, b) "
+            "UNION ALL SELECT x.* FROM xv x",
+        )
+        assert _fold3_rows(session, "sc.ns.f3_g9") == []
+    finally:
+        session.stop()
+
+
+def test_fold3_timestamp_cte_and_view_siblings_still_store(
+    tmp_path: Path,
+) -> None:
+    session = _open(tmp_path)
+    try:
+        _fold3_setup(session)
+        _fold3_target(session, "sc.ns.f3_s1")
+        got = _write(
+            session,
+            {
+                "sql": "INSERT INTO sc.ns.f3_s1 WITH xv AS "
+                "(SELECT * FROM sc.ns.f3_xt) SELECT * FROM "
+                "(VALUES (1, '2020-01-01 10:00:00')) AS v(a, b) "
+                "UNION ALL SELECT * FROM xv"
+            },
+        )
+        assert got["refused"] is False, got
+        assert _fold3_rows(session, "sc.ns.f3_s1") == [
+            [1, "2020-01-01 10:00:00"],
+            [2, "2020-08-08 08:08:08"],
+        ]
+        _fold3_target(session, "sc.ns.f3_s2")
+        got = _write(
+            session,
+            {
+                "sql": "INSERT INTO sc.ns.f3_s2 SELECT * FROM "
+                "(VALUES (1, '2020-01-01 10:00:00')) AS v(a, b) "
+                "UNION ALL SELECT * FROM xv"
+            },
+        )
+        assert got["refused"] is False, got
+        assert _fold3_rows(session, "sc.ns.f3_s2") == [
+            [1, "2020-01-01 10:00:00"],
+            [1, "2020-01-01 10:00:00"],
+            [2, "2021-06-15 12:30:00"],
+        ]
+    finally:
+        session.stop()
+
+
+def test_fold3_cte_named_ambiguous_refuses(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        _fold3_setup(session)
+        _fold3_target(session, "sc.ns.f3_a1")
+        _fold3_refused_cast(
+            session,
+            "INSERT INTO sc.ns.f3_a1 WITH ambiguous AS "
+            "(SELECT * FROM sc.ns.strtab) SELECT * FROM "
+            "(VALUES (1, '2020-01-01 10:00:00')) AS v(a, b) "
+            "UNION ALL SELECT * FROM ambiguous",
+        )
+        assert _fold3_rows(session, "sc.ns.f3_a1") == []
+    finally:
+        session.stop()
+
+
+def test_fold3_view_named_ambiguous_refuses(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        _fold3_setup(session)
+        session.sql("CREATE TEMPORARY VIEW ambiguous AS SELECT * FROM sc.ns.strtab").collect()
+        _fold3_target(session, "sc.ns.f3_a2")
+        _fold3_refused_cast(
+            session,
+            "INSERT INTO sc.ns.f3_a2 SELECT * FROM "
+            "(VALUES (1, '2020-01-01 10:00:00')) AS v(a, b) "
+            "UNION ALL SELECT * FROM ambiguous",
+        )
+        assert _fold3_rows(session, "sc.ns.f3_a2") == []
+    finally:
+        session.stop()
+
+
+def test_fold3_column_named_ambiguous_refuses(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        _fold3_setup(session)
+        _fold3_target(session, "sc.ns.f3_a3")
+        _fold3_refused_cast(
+            session,
+            "INSERT INTO sc.ns.f3_a3 SELECT * FROM "
+            "(VALUES (1, '2020-01-01 10:00:00')) AS v(a, b) "
+            "UNION ALL SELECT id, ambiguous FROM sc.ns.ambtab",
+        )
+        assert _fold3_rows(session, "sc.ns.f3_a3") == []
+    finally:
+        session.stop()
+
+
+def test_fold3_missing_ambiguous_surfaces_not_found(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        _fold3_setup(session)
+        _fold3_target(session, "sc.ns.f3_a4")
+        got = _write(
+            session,
+            {
+                "sql": "INSERT INTO sc.ns.f3_a4 SELECT * FROM "
+                "(VALUES (1, '2020-01-01 10:00:00')) AS v(a, b) "
+                "UNION ALL SELECT * FROM ambiguous"
+            },
+        )
+        assert got["refused"] is True, got
+        assert "not found" in got["message"].lower(), got
+        assert _fold3_rows(session, "sc.ns.f3_a4") == []
+    finally:
+        session.stop()
+
+
+def test_fold3_unresolved_column_surfaces(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        _fold3_setup(session)
+        _fold3_target(session, "sc.ns.f3_u1")
+        got = _write(
+            session,
+            {
+                "sql": "INSERT INTO sc.ns.f3_u1 SELECT * FROM "
+                "(VALUES (1, '2020-01-01 10:00:00')) AS v(a, b) "
+                "UNION ALL SELECT id, tsc + nosuch FROM sc.ns.src"
+            },
+        )
+        assert got["refused"] is True, got
+        assert "UNRESOLVED_COLUMN" in got["message"] or "nosuch" in got["message"], got
+        assert _fold3_rows(session, "sc.ns.f3_u1") == []
+    finally:
+        session.stop()
+
+
+def test_fold3_unresolved_routine_surfaces(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        _fold3_setup(session)
+        _fold3_target(session, "sc.ns.f3_u2")
+        got = _write(
+            session,
+            {
+                "sql": "INSERT INTO sc.ns.f3_u2 SELECT * FROM "
+                "(VALUES (1, '2020-01-01 10:00:00')) AS v(a, b) "
+                "UNION ALL SELECT id, nosuchfn(tsc) FROM sc.ns.src"
+            },
+        )
+        assert got["refused"] is True, got
+        assert "UNRESOLVED_ROUTINE" in got["message"] or "nosuchfn" in got["message"], got
+        assert _fold3_rows(session, "sc.ns.f3_u2") == []
+    finally:
+        session.stop()
+
+
+def test_fold3_missing_table_surfaces(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        _fold3_setup(session)
+        _fold3_target(session, "sc.ns.f3_u3")
+        got = _write(
+            session,
+            {
+                "sql": "INSERT INTO sc.ns.f3_u3 SELECT * FROM "
+                "(VALUES (1, '2020-01-01 10:00:00')) AS v(a, b) "
+                "UNION ALL SELECT * FROM sc.ns.nosuchtable"
+            },
+        )
+        assert got["refused"] is True, got
+        assert "TABLE_OR_VIEW_NOT_FOUND" in got["message"] or "nosuchtable" in got["message"], got
+        assert _fold3_rows(session, "sc.ns.f3_u3") == []
+    finally:
+        session.stop()
+
+
+def test_fold3_quoted_case_siblings_keep_refusal(tmp_path: Path) -> None:
+    session = _open(tmp_path)
+    try:
+        _fold3_setup(session)
+        _fold3_target(session, "sc.ns.f3_q1")
+        _fold3_refused_cast(
+            session,
+            "INSERT INTO sc.ns.f3_q1 SELECT * FROM (VALUES (1, '2020-01-01 10:00:00')) "
+            'AS v(a, b) UNION ALL SELECT id, "S" FROM sc.ns.src',
+        )
+        assert _fold3_rows(session, "sc.ns.f3_q1") == []
+        _fold3_target(session, "sc.ns.f3_q2")
+        _fold3_refused_cast(
+            session,
+            "INSERT INTO sc.ns.f3_q2 SELECT * FROM (VALUES (1, '2020-01-01 10:00:00')) "
+            'AS v(a, b) UNION ALL SELECT id, "TSC" FROM sc.ns.src',
+        )
+        assert _fold3_rows(session, "sc.ns.f3_q2") == []
+    finally:
+        session.stop()

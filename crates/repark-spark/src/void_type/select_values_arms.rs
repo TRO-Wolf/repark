@@ -5,6 +5,8 @@ use datafusion::sql::sqlparser::ast::{
 };
 use datafusion::sql::sqlparser::tokenizer::Span;
 
+use super::sibling_types::{scoped_arm_sql, unmapped_arm};
+
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct SourceCell<'a> {
     pub(crate) rows: &'a [Parens<Vec<Expr>>],
@@ -164,7 +166,7 @@ fn select_arm<'a>(
                 }
                 for factor in &factors {
                     let Some(factor) = factor.as_ref() else {
-                        return Some(super::sibling_types::unmapped_arm(select));
+                        return Some(unmapped_arm(select, scope, case_insensitive));
                     };
                     positions.extend(factor.columns.iter().cloned());
                     provenance.extend(factor.provenance.iter().cloned());
@@ -178,7 +180,7 @@ fn select_arm<'a>(
                     return None;
                 };
                 let Some(factor) = qualified_factor(name, &factors, case_insensitive) else {
-                    return Some(super::sibling_types::unmapped_arm(select));
+                    return Some(unmapped_arm(select, scope, case_insensitive));
                 };
                 positions.extend(factor.columns.iter().cloned());
                 provenance.extend(factor.provenance.iter().cloned());
@@ -189,7 +191,7 @@ fn select_arm<'a>(
     Some(ArmMap {
         positions,
         provenance,
-        arm_sql: Some(select.to_string()),
+        arm_sql: scoped_arm_sql(select, scope, case_insensitive),
     })
 }
 
