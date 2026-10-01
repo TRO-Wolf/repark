@@ -8930,6 +8930,12 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   **Gate j_cross (2026-10-01):** the alias-dup pins (C-029): a one-id join
   dup refuses past `alias` plus `withColumn` and on the qualified door,
   under both rules (S0 spark.json). pins: attr-id-1/C-029
+  **ATTR-ID-1 S3e (2026-10-01):** the facade-held-qualifier filter pin
+  changes contract (R-4 closure): with the facade qualifiers in `resolve`,
+  the single-id twin pair binds instead of falling through to the engine's
+  raise, matching the select door on main; renamed to
+  `test_filter_facade_held_qualifier_binds_single_id`. The one-id join dup
+  still refuses (C-029, kept). pins: attr-id-1/C-039
 - [test_attr_id_1_s3c.py](test_attr_id_1_s3c.py) — **ATTR-ID-1 S3c (2026-10-01):** the
   `withColumn(s)`/`withColumn(s)Renamed` cutover pins, each under both case rules
   unless noted. `withColumn` replaces a twin pair of one attribute and two

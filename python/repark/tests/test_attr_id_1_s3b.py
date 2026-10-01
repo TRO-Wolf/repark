@@ -229,13 +229,11 @@ def test_filter_struct_access_with_shared_name(ruled_spark: ReparkSession) -> No
     assert _rows(filtered) == [({"id": 4, "x": 5}, 6)]
 
 
-def test_filter_facade_held_qualifier_raises_as_main(ruled_spark: ReparkSession) -> None:
+def test_filter_facade_held_qualifier_binds_single_id(ruled_spark: ReparkSession) -> None:
     frame = _frame(ruled_spark)
     twins = frame.select("id", functions.col("v"), functions.col("v"))
     aliased = twins.alias("q").withColumn("w", functions.lit(1))
-    with pytest.raises(AnalysisException) as caught:
-        aliased.filter("q.v > 15")
-    assert caught.value.getCondition() == "AMBIGUOUS_REFERENCE"
+    assert _rows(aliased.filter("q.v > 15")) == [(1, 30, 30, 1), (3, 20, 20, 1)]
 
 
 def test_filter_struct_qualifier_tie_prefers_qualifier(spark: ReparkSession) -> None:
