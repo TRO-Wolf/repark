@@ -58,7 +58,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **REVIEW-FIX-7 step 1 (2026-09-10):** `parse()` sanitizes TOML failures to
   `message()` plus the locally computed line and column, never the echoed source line.
   pins: review-fix-7/C-002
-- `session.rs` — `ReparkSession` + `ReparkSessionBuilder` (file-backed tests). **G-6:** rustdoc
+- `session.rs` — `ReparkSession` + `ReparkSessionBuilder` (file-backed tests). **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):** session build registers the `repark_text_csv` / `repark_text_json` sink formats instead of the retired `repark_write_format_text` UDF. **G-6:** rustdoc
   intra-links fixed (private helpers named in backticks, not broken `[links]`;
   `Self::list_iceberg_table_names` for the live list path). **ICE-READ-PERF-0 (2026-09-19):**
   `register_catalog_spec` builds Glue and S3 Tables catalogs through
@@ -165,6 +165,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   once per call through `object_store_s3` (parquet and csv resolve inside their
   reader bodies, so this file grows by one line and stays under its ceiling).
   pins: s3-path-write-1/C-013
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** declares
+  `session/text_write_format.rs` and registers its UDF at session build.
+  pins: text-write-timestamp-zone-1/C-001
 - `session_owner.rs` — the session-built DESCRIBE owner: `DescribeOwnerConfig`
   (`repark.describe` prefix, `owner`, default `unknown`), the build-time
   `session_owner_snapshot` (`USER`, then `USERNAME`, then `unknown`), and the
@@ -1228,6 +1231,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   clones; `session_time_zone` now returns the snapshot `Arc`). Pedantic-clean (nested
   or-patterns, method-ref digit checks).
   pins: set-ansi-runtime-1/C-002
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 verifier fold (2026-09-29):** `java_display_zone_id`
+  (`ZoneId.of(raw, SHORT_IDS).getId()` semantics for `VV`, jshell-verified) and the
+  `spark.sql.legacy.timeParserPolicy` carrier (`TimeParserPolicyConfig`, lazily
+  installed by the `ReparkSession` setter; only the key rides the crate root so
+  `lib.rs` holds its ceiling; builder-seeded values are read back from the conf
+  dump).
 - `temp_view.rs` (+ `temp_view/tests.rs`) — **the temp-view NAME choke point (round 6, R6-1):**
   `TempViewHome` (the build-time `catalog.schema` a session's temp views live in, snapshotted
   once), `build_temp_view_home` (the one `build()`-time capture, moved here from `session.rs`

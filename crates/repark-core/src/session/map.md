@@ -34,6 +34,10 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the funnel also merges the session
   write conf (`session_write_conf_from_ctx`) into the statement options, so the
   session codec and snapshot properties ride `EngineContext` to every door.
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 verifier fold (2026-09-29):**
+  `ReparkSession::set_time_parser_policy` (runtime `LEGACY`/`CORRECTED`/`EXCEPTION`
+  setter; lazily installs the policy carrier, so no builder install exists;
+  invalid values refuse with `INVALID_CONF_VALUE.OUT_OF_RANGE_OF_OPTIONS`).
 - `writer_layout.rs` — **U7 PR1 (2026-09-24), round 2:** `ReparkSession::plan_table_write`,
   the one entry the Python binding calls, so `repark-python` keeps no `repark-iceberg` edge
   (the module is public and re-exports the kernel's `WriterAction`, `WriterLayout`,
@@ -167,6 +171,48 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   **S3-PATH-WRITE-1 re-verify (2026-09-28):** the append branch `HEAD`s the
   exact key and refuses loud when an object sits at the destination
   (`R-S3-APPEND-EXACT`), since the exact object would win the read.
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** the temporal options
+  (`timestampFormat`, `timestampNTZFormat`, `dateFormat`) are honored, not
+  refused: they skip COPY option SQL and the CSV/JSON `COPY` inner `SELECT`
+  comes from `text_write_format::select`, which formats temporal columns in
+  the session zone. pins: text-write-timestamp-zone-1/C-001, C-002
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):** the CSV/JSON
+  COPY parts (plain inner `SELECT`, resolved `STORED AS`, spec OPTIONS merged
+  after the validated format clause) come from
+  `text_write_format::select::text_write_copy_parts`; formatting runs in the
+  sink serializer.
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 3 fold (2026-09-30):** the commit
+  snapshots the destination keys before the COPY and deletes every
+  non-snapshot key when the write fails
+  ([`path_write/rollback.rs`](path_write/rollback.rs)), so no partial output
+  survives on any mode; the append-validation cohort moved to
+  [`path_write/append.rs`](path_write/append.rs) under the file-size gate.
+  Child: [`path_write/`](path_write/map.md).
+  pins: text-write-timestamp-zone-1/C-007
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 4 fold (2026-09-30):** the
+  snapshot rollback is gone: a failed CSV/JSON write deletes exactly the
+  output paths its own sink recorded plus a materialized empty part, so a
+  concurrent writer's objects survive under the same prefix and at the
+  bucket root; the commit reaches the sink's collector through a
+  per-session registry keyed by the write id the COPY OPTIONS carry (the
+  Spark door runs COPY eagerly, so no plan handle outlives the write), and
+  parquet keeps its pre-rollback commit with no cleanup. A cleanup failure
+  appends the bare message once, without repeating the variant prefix.
+  pins: text-write-timestamp-zone-1/C-009
+- `text_write_format.rs` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** the
+  user-pattern compiler and validator (Spark `INVALID_DATETIME_PATTERN` /
+  `INCONSISTENT_BEHAVIOR_CROSS_VERSION` classes, NTZ downgrades, DATE lazy
+  messages), the micros-to-wall/zone conversions, and the option-key helpers.
+  Child: [`text_write_format/`](text_write_format/map.md).
+  pins: text-write-timestamp-zone-1/C-004
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 verifier fold (2026-09-29):** Java quote-run
+  scan, `y` runs past 6 refused, and the trailing-`]` class (RECOGNITION for
+  LTZ/DATE when every letter is a legacy `SimpleDateFormat` letter, measured
+  against the JDK; NTZ downgrades).
+  **Re-verify (2026-09-29):** the RECOGNITION text keeps its class but drops
+  the LEGACY clause; `g` padding and the `fast.rs` loops live in the child.
+  **Re-verify 2 (2026-09-30):** the compiled pattern carries `has_era`,
+  decided once per pattern instead of once per value.
 - `late_catalogs.rs` — `register_late_configured_catalogs`, moved out of `session.rs` under the
   CAP-1 rule that a file at its ceiling grows by splitting; behavior is byte-identical and the
   `session.rs` baseline ratcheted 1039 → 1002.

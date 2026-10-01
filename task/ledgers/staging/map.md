@@ -4,6 +4,16 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [text-write-timestamp-zone-1-ledger.md](text-write-timestamp-zone-1-ledger.md) —
+  **WO TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29), in flight:** CSV and JSON
+  writes format LTZ in the session zone under Spark's default `timestampFormat`,
+  NTZ and DATE under their zone-free defaults, through one shared Rust
+  SELECT-level formatter (local + s3a); user patterns honored per kind, bad
+  patterns refused with Spark's class (C-001..C-005); parquet/reads untouched,
+  one intended neighbour change, four mandated flips (C-006); post-2100 tzdata,
+  zone-name, sink and inference residues R-1..R-5.
+  `risk_tier: standard`. Branch `fix/text-write-timestamp-zone-1`.
+  pins: text-write-timestamp-zone-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [aws-accept-replace-1-ledger.md](aws-accept-replace-1-ledger.md) —
   **WO AWS-ACCEPT-REPLACE-1 (2026-09-27), in flight:** RP-55 repins the fork to
   `6e937f49` (F-STAGED-SINGLE-WRITE-1 `#362` — a staged replace writes its metadata file
