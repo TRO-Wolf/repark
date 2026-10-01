@@ -116,6 +116,11 @@ wrapped optimizer rule) and declares this directory.
   pad projection grafts the other side's field (with its id) into the padded side's
   schema. Pins: `../tests/attr_id.rs` `union_reads_inner_alias_ids_through_plain_machinery_aliases`.
   pins: attr-id-1/C-024
+  **ATTR-ID-1 S3e (2026-10-01):** `resolve` takes the facade-held qualifiers
+  (attribute id to qualifier names) and matches a written qualifier against the
+  plan relation or a facade entry under the live rule, so join sides and
+  `alias()` frames bind through the one id rule; a using-key union binds
+  either side. Pins: `../tests/attr_id_s3e.rs`. pins: attr-id-1/C-039
 - `case_bind.rs` — **U11-EDGE-1 (2026-09-26):** `bind_case_insensitive`, run first by
   `subquery.rs`'s `resolve_bound_expr` (the DataFrame door's one binding hook). An
   unqualified column the frame schema does not hold exactly binds to the single field that
@@ -257,6 +262,12 @@ wrapped optimizer rule) and declares this directory.
   `engine_field_is_unique` and `join_dup_below_wrappers` from `sort_names.rs`
   (one brace line). 1000 lines, at ceiling.
   pins: attr-id-1/C-026
+  **ATTR-ID-1 S3e (2026-10-01):** re-exports `bind_qualified_free_refs`,
+  `grandchild_qualified_key`, `join_output_sources` and
+  `qualifier_star_positions` from `sort_names.rs`; `bind_names` widens to
+  `pub(crate)` for the moved tests. The inline test module moves unchanged to
+  `../tests/case_bind.rs`, so the file drops 1000 → 552.
+  pins: attr-id-1/C-039
 - `sort_names.rs` — **ATTR-ID-1 S3b (2026-10-01):** the filter/sort free-name
   binder over the S1 `resolve`. `sort_shape` descends Filter/Sort/Limit/
   Repartition/Distinct/SubqueryAlias and transparent Projections (a passthrough,
@@ -298,6 +309,15 @@ wrapped optimizer rule) and declares this directory.
   true only when two or more distinct positions reach it (a dup created above
   the union never trims). Ten unit pins.
   pins: attr-id-1/C-036
+  **ATTR-ID-1 S3e (2026-10-01):** the qualified-name family over the S1
+  `resolve`. `bind_qualified_free_refs` rewrites each qualified free column
+  whose head names a plan relation or facade qualifier (struct heads pass
+  through for the engine); `grandchild_qualified_key` resolves one qualified
+  name against the join schema below a Projection root;
+  `join_output_sources` maps each join output position to its side feeds,
+  pairing using keys; `qualifier_star_positions` lists the positions under
+  one qualifier with their held parts. Pins: `../tests/attr_id_s3e.rs`.
+  pins: attr-id-1/C-039
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside

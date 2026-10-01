@@ -5,7 +5,7 @@ import re
 from typing import Any
 
 from repark import _native
-from repark.errors import AnalysisException
+from repark.errors import AnalysisException, PySparkTypeError, PySparkValueError
 
 
 class _FoldedLambdaFallbackError(Exception):
@@ -287,6 +287,28 @@ def _name_matches_head(head: str, names: list[str], exact: bool) -> bool:
     return any(name.casefold() == folded for name in names)
 
 
+def _frame_qualifiers_for_bind(frame: Any) -> dict[str, list[str]] | None:
+    held = frame._frame_qualifiers
+    if held is None:
+        return None
+    return {attr: sorted(names) for attr, names in held.items()}
+
+
+def _known_qualifiers(
+    frame: Any, native: Any, exact: bool
+) -> tuple[list[str], dict[str, list[str]] | None]:
+    qualifiers = [held for held in _native.logical_column_qualifiers(native) if held]
+    payload = _frame_qualifiers_for_bind(frame)
+    if payload:
+        seen = set(qualifiers) if exact else {name.casefold() for name in qualifiers}
+        for extra in sorted({part for quals in payload.values() for part in quals}):
+            key = extra if exact else extra.casefold()
+            if key not in seen:
+                qualifiers.append(extra)
+                seen.add(key)
+    return (qualifiers, payload)
+
+
 def _lambda_quoted_span(
     span: str,
     scopes: list[tuple[int, int, list[str]]],
@@ -319,6 +341,7 @@ def _bind_filter_token(
     decls: dict[tuple[int, int], str],
     base: int,
     collision: bool,
+    frame_qualifiers: dict[str, list[str]] | None = None,
 ) -> str:
     from repark.spark._idents import quote_ident as _quote_ident
 
@@ -368,7 +391,54 @@ def _bind_filter_token(
     if not _name_matches_head(head, qualifiers, exact):
         return _main_path_dotted_token(parts, displays, engine_names, fold_map)
     qualifier = ".".join(parts[:-1])
-    status, hits = _native.resolve_display_name(native, name, qualifier, displays, exact)
+    status, hits, plan_quals = _native.resolve_display_name(
+        native, name, qualifier, displays, exact, frame_qualifiers
+    )
+    if status == "bound":
+        engine_field = engine_names[hits[0]]
+        if len(hits) > 1 and _native.join_dup_below_wrappers(native):
+            candidates_echo = ", ".join(
+                f"`{qualifier}`.`{displays[position]}`" for position in hits
+            )
+            detail = f"[AMBIGUOUS_REFERENCE] Reference `{token}` is ambiguous, "
+            raise AnalysisException(f"{detail}could be: [{candidates_echo}].")
+        if _native.engine_field_is_unique(native, engine_field):
+            return _quote_ident(engine_field)
+        held_parts = plan_quals[0] if plan_quals else None
+        if held_parts:
+            return ".".join(
+                [*(_quote_ident(part) for part in held_parts), _quote_ident(engine_field)]
+            )
+        return token
+    if status == "ambiguous":
+        candidates_echo = ", ".join(f"`{token}`" for _ in hits)
+        detail = f"[AMBIGUOUS_REFERENCE] Reference `{token}` is ambiguous, "
+        raise AnalysisException(f"{detail}could be: [{candidates_echo}].")
+    if _name_matches_head(head, displays, exact):
+        return _main_path_dotted_token(parts, displays, engine_names, fold_map)
+    return token
+
+
+def _bind_select_expr_dotted_token(
+    match: re.Match[str],
+    *,
+    native: Any,
+    displays: list[str],
+    engine_names: list[str],
+    exact: bool,
+    qualifiers: list[str],
+    payload: dict[str, list[str]] | None,
+) -> str:
+    from repark.spark._idents import quote_ident as _quote_ident
+
+    token = match.group(1)
+    parts = token.split(".")
+    if not _name_matches_head(parts[0], qualifiers, exact):
+        return token
+    qualifier = ".".join(parts[:-1])
+    status, hits, _plan_quals = _native.resolve_display_name(
+        native, parts[-1], qualifier, displays, exact, payload
+    )
     if status == "bound":
         engine_field = engine_names[hits[0]]
         if len(hits) > 1 and _native.join_dup_below_wrappers(native):
@@ -384,9 +454,102 @@ def _bind_filter_token(
         candidates_echo = ", ".join(f"`{token}`" for _ in hits)
         detail = f"[AMBIGUOUS_REFERENCE] Reference `{token}` is ambiguous, "
         raise AnalysisException(f"{detail}could be: [{candidates_echo}].")
-    if _name_matches_head(head, displays, exact):
-        return _main_path_dotted_token(parts, displays, engine_names, fold_map)
     return token
+
+
+_DOTTED_TOKEN_PATTERN = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)+)\b")
+
+
+def _single_token_select_alias(
+    native: Any,
+    displays: list[str],
+    engine_names: list[str],
+    exact: bool,
+    qualifiers: list[str],
+    payload: dict[str, list[str]] | None,
+    token: str,
+) -> str | None:
+    from repark.spark._idents import quote_ident as _quote_ident
+
+    parts = token.split(".")
+    if not _name_matches_head(parts[0], qualifiers, exact):
+        return None
+    qualifier = ".".join(parts[:-1])
+    status, hits, _plan_quals = _native.resolve_display_name(
+        native, parts[-1], qualifier, displays, exact, payload
+    )
+    if status != "bound":
+        return None
+    engine_field = engine_names[hits[0]]
+    if len(hits) > 1 and _native.join_dup_below_wrappers(native):
+        return None
+    if not _native.engine_field_is_unique(native, engine_field):
+        return None
+    return f"{_quote_ident(engine_field)} AS {_quote_ident(parts[-1])}"
+
+
+def _quote_select_expr_dotted(frame: Any, expr: str) -> str:
+    native = frame._plan()
+    displays = list(frame.columns)
+    engine_names = list(_native.logical_column_names(native))
+    if not displays or len(displays) != len(engine_names):
+        return expr
+    if None in list(_native.attribute_ids(native)):
+        frame._inner = _native.stamp_attribute_ids(frame._inner)
+        native = frame._plan()
+        engine_names = list(_native.logical_column_names(native))
+    exact = bool(_native.session_case_sensitive(frame._session))
+    qualifiers, payload = _known_qualifiers(frame, native, exact)
+    single = _DOTTED_TOKEN_PATTERN.fullmatch(expr.strip())
+    if single is not None:
+        aliased = _single_token_select_alias(
+            native, displays, engine_names, exact, qualifiers, payload, single.group(1)
+        )
+        if aliased is not None:
+            return aliased
+    binder = functools.partial(
+        _bind_select_expr_dotted_token,
+        native=native,
+        displays=displays,
+        engine_names=engine_names,
+        exact=exact,
+        qualifiers=qualifiers,
+        payload=payload,
+    )
+    pieces = re.split(r"('(?:[^']|'')*')", expr)
+    rebuilt: list[str] = []
+    for piece in pieces:
+        if piece.startswith("'"):
+            rebuilt.append(piece)
+            continue
+        subpieces = re.split(r'("(?:[^"]|"")*"|`(?:[^`]|``)*`)', piece)
+        for subpiece in subpieces:
+            if subpiece.startswith(('"', "`")):
+                rebuilt.append(subpiece)
+            else:
+                rebuilt.append(_DOTTED_TOKEN_PATTERN.sub(binder, subpiece))
+    return "".join(rebuilt)
+
+
+def _select_expr_frame(frame: Any, expr: tuple[str, ...]) -> Any:
+    from repark.spark._temp_views import scratch_view_name
+
+    frame._ensure_alive()
+    if not expr:
+        raise PySparkValueError("selectExpr requires at least one expression")
+    for item in expr:
+        if not isinstance(item, str):
+            raise PySparkTypeError(f"selectExpr expressions must be str, got {type(item).__name__}")
+    if len(expr) == 1 and expr[0].strip() == "*":
+        return frame.select("*")
+    view = scratch_view_name(frame._session, "__repark_selx_")
+    frame._session.create_or_replace_temp_view(view, frame._plan())
+    try:
+        projection = ", ".join(_quote_select_expr_dotted(frame, item) for item in expr)
+        planned = frame._session.sql(f"SELECT {projection} FROM {view}")
+        return frame._spawn(planned)
+    finally:
+        frame._session.drop_temp_view(view)
 
 
 _MAIN_IDENT_PATTERN = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\b(?!\s*\()")

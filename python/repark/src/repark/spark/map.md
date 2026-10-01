@@ -315,6 +315,14 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   insensitive hits come from the native `java_fold_hits` mode `b` (same
   contract, exact Java tables). The 41 S3c pins are unchanged.
   pins: attr-id-1/C-032
+  **ATTR-ID-1 S3e (2026-10-01):** the qualified-name family moves to
+  `qualified_names.py` (pure move at the ceiling); `_bind_resolved_name`
+  passes the frame qualifiers into `resolve` and prefixes the bound engine
+  field with the held (not written) qualifier parts; `_column_of` runs a
+  stable-no-op Column through the qualified rewriter, so aliased compounds
+  bind; the filter quoter gains the facade qualifiers and substitutes the
+  held-qualified engine field under duplicate engines. Pins:
+  `python/repark/tests/test_attr_id_1_s3e.py`. pins: attr-id-1/C-039
 - `filter_quote.py` — **ATTR-ID-1 S3b H-1 (2026-10-01):** the filter-SQL
   identifier quoter, split out of `column_fields.py` at the size ceiling (pure
   move; the entry stays there). `_FILTER_TOKEN_PATTERN`,
@@ -340,6 +348,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **Gate j_cross (2026-10-01):** the qualifier-bound arm carries the same
   one-id multi-hit join-dup refusal as the unqualified arm, echoing
   qualifier-qualified candidates as Spark does. pins: attr-id-1/C-029
+  **ATTR-ID-1 S3e (2026-10-01):** `_frame_qualifiers_for_bind` (moved here
+  from `column_fields`) and `_known_qualifiers` (plan plus facade names)
+  serve every door; `_select_expr_frame` (the `selectExpr` body, moved from
+  `core.py` at its ceiling) rewrites qualifier-headed dotted tokens to the
+  engine field, aliasing a lone token to its written name; the filter
+  binder takes the facade payload. pins: attr-id-1/C-039
 - `subset_resolve.py` — **ATTR-ID-1 S3d (2026-10-01):** the
   `drop`/`dropDuplicates`/`fillna`/`dropna` name-binding home. `_bindings`
   reads the stamped ids, native engines, and facade displays (or `None` for a
@@ -392,6 +406,21 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   withdrawn multi-exact refusal); `drop(str)` and `dropDuplicates` fan out
   to every hit with no trim and no refusal (probe s3d17).
   pins: attr-id-1/C-038
+  **ATTR-ID-1 S3e (2026-10-01):** a dotted free Column whose head names a
+  qualifier resolves through `resolve` (unique engines drop by attribute,
+  shared engines drop by plan-held qualified reference, a miss is a no-op,
+  twins refuse `AMBIGUOUS_REFERENCE`); drop strings stay literal (Spark
+  probes s3e1–6: `drop("a.v")` is a no-op). pins: attr-id-1/C-039
+- `qualified_names.py` — **ATTR-ID-1 S3e (2026-10-01):** the qualified-name
+  home, split out of `column_fields.py` at the ceiling. `_frame_qualifiers`
+  threading (`_join_frame_qualifiers` unions each side's names onto the
+  output ids, pairing using keys), the compound rewriter
+  (`_rebind_qualified_refs`), the qualified star expansion
+  (`_expand_qualified_star`, unknown qualifiers fall through to the engine),
+  and the qualified sort bind (`_resolve_sort_qualified_name`, ambiguous
+  twins raise unresolved as Spark does in sort). No module docstring: the
+  lane's no-comments ruling covers the new file; the contract lives here.
+  pins: attr-id-1/C-039
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
   unsupported operations fail explicitly.

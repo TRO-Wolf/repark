@@ -48,6 +48,24 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   two distinctly stamped frames, and a field-less `EmptyRelation`. Each shape asserts the
   predicate's answer and that `stamp` returns the plan unchanged exactly when the predicate
   reads stamped. pins: attr-id-1/C-023
+  **ATTR-ID-1 S3e (2026-10-01):** the six `resolve_*` tests move unchanged to
+  `attr_id_resolve.rs` (the file sat at the ceiling after the facade-qualifier
+  argument joined every `resolve` call), and every remaining `resolve` call
+  passes `None` for it. pins: attr-id-1/C-039
+- `attr_id_resolve.rs` — **ATTR-ID-1 S3e (2026-10-01):** the moved `resolve_*`
+  pins (one hit, twins of one attribute, two attributes under one name, a
+  written qualifier's hit and miss, the cast twin, the missing-id and
+  display-count errors), with local copies of the `source`/`stamped`/`strings`
+  helpers, as `attr_id_s3e.rs` already does. pins: attr-id-1/C-039
+- `attr_id_s3e.rs` — **ATTR-ID-1 S3e (2026-10-01):** 14 pins for the
+  qualified-name family: facade-over-plan matching, the using-key union, the
+  free-ref rewriter (bind, pass-through, ambiguity), the grandchild key, the
+  join source map (using, condition, semi, non-join), and the star positions
+  over plan and facade qualifiers. pins: attr-id-1/C-039
+- `case_bind.rs` — **ATTR-ID-1 S3e (2026-10-01):** the 17 binder pins moved
+  unchanged out of the inline `case_bind.rs` test module (the file sat at its
+  ceiling); imports switch from `super::` to `crate::frame_names`, with
+  `bind_names` through its widened `pub(crate)` path. pins: attr-id-1/C-039
 - `attr_id_s3b.rs` — **ATTR-ID-1 S3b (2026-10-01):** the filter/sort binder
   pins, 15 tests on tagged `MemTable` frames (`alias_with_metadata` ids, no
   facade). `sort_shape` over a union, a join, an aggregate, a select through a

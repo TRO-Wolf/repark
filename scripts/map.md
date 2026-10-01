@@ -1,5 +1,7 @@
 # map — scripts/
 
+ATTR-ID-1 S3e (2026-10-01): `check_lib_py.py` ratchets `dataframe/core.py` 3803 → 3800 (the `selectExpr` body moves to `filter_quote._select_expr_frame` and the select star arms fold into one `qualified_names` delegate), shrink-only, with the CAP-1 mirror. pins: attr-id-1/C-039
+
 ATTR-ID-1 S3b (2026-10-01): `check_lib_py.py` ratchets `dataframe/core.py` 3921 → 3846 (the filter quoter and its token helpers move to `column_fields.py`, `filter`/`_sort_specs` delegate to it), shrink-only, with the CAP-1 mirror. pins: attr-id-1/C-025
 
 ATTR-ID-1 S3a (2026-09-30): `check_lib_py.py` ratchets `dataframe/core.py` 3973 → 3921 (`_column_of` and `_rebind_stable_name_column` become one-line delegates to `column_fields`, `__getitem__`/`__getattr__` route through the resolve rule, the alias overlay restores deduplicated display names), shrink-only, with the CAP-1 mirror. pins: attr-id-1/C-024

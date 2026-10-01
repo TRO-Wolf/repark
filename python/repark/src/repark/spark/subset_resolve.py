@@ -120,6 +120,44 @@ def _bound_subset_positions(
     return closed
 
 
+def _drop_qualified_column_targets(
+    frame: Any,
+    name: str,
+    split: tuple[list[str] | None, str],
+    bindings: tuple[list[str], list[str], list[str | None]],
+) -> tuple[list[str], list[str]] | None:
+    from repark.spark import filter_quote as _filter_quote
+
+    if split[0] is None:
+        return None
+    native = frame._plan()
+    exact = bool(_native.session_case_sensitive(frame._session))
+    qualifiers, payload = _filter_quote._known_qualifiers(frame, native, exact)
+    if not _filter_quote._name_matches_head(split[0][0], qualifiers, exact):
+        return None
+    qualifier = ".".join(split[0])
+    status, hits, _plan_quals = _native.resolve_display_name(
+        native, split[1], qualifier, bindings[0], exact, payload
+    )
+    if status == "bound":
+        engines = [bindings[1][position] for position in hits]
+        target = set(engines)
+        kept = {engine for index, engine in enumerate(bindings[1]) if index not in set(hits)}
+        if _guard_passes(frame, list(hits), bindings[1]) and target.isdisjoint(kept):
+            return (engines, [])
+        plan_quals = list(_native.logical_column_qualifiers(native))
+        refs = []
+        for position in hits:
+            held = plan_quals[position] if position < len(plan_quals) else None
+            if held is None:
+                return None
+            refs.append(f"{held}.{bindings[1][position]}")
+        return ([], refs)
+    if status == "ambiguous":
+        _raise_ambiguous_reference(frame, name, list(hits))
+    return ([], [])
+
+
 def _drop_targets(frame: Any, cols: tuple[Any, ...]) -> tuple[list[str], list[str], list[str]]:
     from repark.spark.column import Column
 
@@ -182,6 +220,12 @@ def _drop_targets(frame: Any, cols: tuple[Any, ...]) -> tuple[list[str], list[st
         if item._spark_display != name:
             continue
         split = column_fields._split_written_name(name)
+        if split is not None and split[0] is not None:
+            targets = _drop_qualified_column_targets(frame, name, split, bindings)
+            if targets is not None:
+                attributes.extend(targets[0])
+                references.extend(targets[1])
+                continue
         if (split is None or split[0] is not None or "`" in name) and not overlay:
             references.append(name)
             continue

@@ -180,6 +180,14 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   method and `_SQL_LITERAL_KEYWORDS` (the set is re-homed in `column_fields`;
   grep proof of no outside caller in the ledger). 3921 → 3846, with the CAP-1
   mirror. pins: attr-id-1/C-025
+  ATTR-ID-1 S3e (2026-10-01): the `DataFrame._frame_qualifiers` slot (id to
+  qualifier names, copied by `_spawn`, set by `alias`, unioned onto join
+  output by `_join_frame_qualifiers` at all four join sites, with cross-join
+  duplicate ids re-minted first) feeds `resolve` at every qualified door;
+  `select` expands a qualified star through `qualified_names`; `selectExpr`
+  delegates to `filter_quote._select_expr_frame`. No helper is deleted: the
+  qualified-path candidates each keep an outside-family caller (proof in the
+  ledger). 3803 → 3800, with the CAP-1 mirror. pins: attr-id-1/C-039
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`
@@ -230,6 +238,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   display/engine overlay + origin map + qualifier propagation shared by
   `core.py`'s identity spawns) — so `core.py` keeps only the slot and the call
   sites. `DataFrame.replace` is a one-line wrapper.
+  **ATTR-ID-1 S3e (2026-10-01):** `_aliased_join_sides` restores each side's
+  user qualifiers over the generated re-alias, so the join output carries
+  `a`/`b` while the plan keeps its generated relations. pins: attr-id-1/C-039
   IO-DECLARED-1 (2026-09-14): the module owns the shared no-value sentinel
   `_NO_VALUE` — PySpark's `<no value>` — now the default of both
   `DataFrame.replace` and `DataFrameNaFunctions.replace`; a non-dict

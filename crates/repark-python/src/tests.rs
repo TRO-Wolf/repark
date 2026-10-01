@@ -363,16 +363,17 @@ fn binding_stamps_resolves_and_re_mints_a_self_join() {
                 None,
                 displays.to_vec(),
                 exact,
+                None,
             )
             .expect("resolve")
         };
         assert_eq!(
             resolve(&stamped, "ID", &pair, false),
-            ("bound".to_string(), vec![0])
+            ("bound".to_string(), vec![0], vec![None::<Vec<String>>])
         );
         assert_eq!(
             resolve(&stamped, "ID", &pair, true),
-            ("missing".to_string(), Vec::new())
+            ("missing".to_string(), Vec::new(), Vec::new())
         );
         for view in ["attr_l", "attr_r"] {
             session
@@ -403,7 +404,11 @@ fn binding_stamps_resolves_and_re_mints_a_self_join() {
         let quad = ["id", "data", "id", "data"].map(str::to_string);
         assert_eq!(
             resolve(&requalified, "id", &quad, false),
-            ("ambiguous".to_string(), vec![0, 2])
+            (
+                "ambiguous".to_string(),
+                vec![0, 2],
+                vec![None::<Vec<String>>, None::<Vec<String>>]
+            )
         );
     });
 }

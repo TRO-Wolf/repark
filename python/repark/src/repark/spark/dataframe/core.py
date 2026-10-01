@@ -26,6 +26,8 @@ from repark.errors import (
     UnsupportedOperationException,
 )
 from repark.spark import column_fields as _column_fields
+from repark.spark import filter_quote as _filter_quote
+from repark.spark import qualified_names as _qualified_names
 from repark.spark import subset_resolve as _subset_resolve
 from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._temp_views import home_view_ref, scratch_view_name
@@ -230,6 +232,7 @@ class DataFrame:
         "_eager_shape",
         "_engine_names",
         "_field_metadata",
+        "_frame_qualifiers",
         "_handles",
         "_ingest_report",
         "_inner",
@@ -288,6 +291,7 @@ class DataFrame:
         self._display_names: list[str] | None = None
         self._engine_names: list[str] | None = None
         self._field_metadata: dict[str, dict[str, Any]] | None = None
+        self._frame_qualifiers: dict[str, frozenset[str]] | None = None
         self._join_qualifiers: list[str] | None = None
         self._origin_map: dict[tuple[str, str], str] | None = None
         self._origin_not_emitted: frozenset[str] = frozenset()
@@ -311,6 +315,8 @@ class DataFrame:
         """
         self._ensure_alive()
         child = DataFrame(inner, self._session, self._alive_token)
+        if self._frame_qualifiers is not None:
+            child._frame_qualifiers = dict(self._frame_qualifiers)
         child._origin_not_emitted = self._origin_not_emitted
         child._tighten_derived = self._tighten_derived or any(
             other._tighten_derived for other in others
@@ -1251,7 +1257,7 @@ class DataFrame:
             elif item == "*" if isinstance(item, str) else _column_fields.is_bare_star(item):
                 expanded.extend(self._iter_bound_columns())
             else:
-                expanded.append(item)
+                expanded.extend(_qualified_names._expand_select_star_item(self, item))
         stacked = select_with_stack_if_present(self, expanded)
         if stacked is not None:
             return stacked
@@ -2149,24 +2155,7 @@ class DataFrame:
         Pending ``mapInArrow`` bridges are prepared once, so non-idempotent UDFs do not rerun
         during SQL projection planning.
         """
-        self._ensure_alive()
-        if not expr:
-            raise PySparkValueError("selectExpr requires at least one expression")
-        for item in expr:
-            if not isinstance(item, str):
-                raise PySparkTypeError(
-                    f"selectExpr expressions must be str, got {type(item).__name__}"
-                )
-        if len(expr) == 1 and expr[0].strip() == "*":
-            return self.select("*")
-        view = scratch_view_name(self._session, "__repark_selx_")
-        self._session.create_or_replace_temp_view(view, self._plan())
-        try:
-            projection = ", ".join(expr)
-            planned = self._session.sql(f"SELECT {projection} FROM {view}")
-            return self._spawn(planned)
-        finally:
-            self._session.drop_temp_view(view)
+        return _filter_quote._select_expr_frame(self, expr)
 
     select_expr = selectExpr
 
@@ -2198,6 +2187,8 @@ class DataFrame:
             if parent_columns != child_native:
                 child._display_names = parent_columns
                 child._engine_names = child_native
+        current = [held for held in _native.attribute_ids(child._plan()) if held is not None]
+        child._frame_qualifiers = {held: frozenset({name}) for held in current}
         return child
 
     def toArrow(  # noqa: N802 — PySpark method name
@@ -2572,6 +2563,7 @@ class DataFrame:
         if isinstance(on, str):
             child = left._spawn(left._plan().join_on_names(right._plan(), [on], engine_how), other)
             replace_expr._assign_join_qualifiers(child, len(left.columns), side_names)
+            child._frame_qualifiers = _qualified_names._join_frame_qualifiers(child, left, right)
             child._remember_unemitted_right_origins(
                 self, other, left_only=engine_how in _SEMI_JOIN_HOWS
             )
@@ -2587,6 +2579,7 @@ class DataFrame:
                 return left.crossJoin(right)
             child = left._spawn(left._plan().join_on_names(right._plan(), keys, engine_how), other)
             replace_expr._assign_join_qualifiers(child, len(left.columns), side_names)
+            child._frame_qualifiers = _qualified_names._join_frame_qualifiers(child, left, right)
             child._remember_unemitted_right_origins(
                 self, other, left_only=engine_how in _SEMI_JOIN_HOWS
             )
@@ -2678,6 +2671,7 @@ class DataFrame:
             child._display_names = display_names
             child._engine_names = engine_names
             child._origin_map = origin_map
+            child._frame_qualifiers = _qualified_names._join_frame_qualifiers(child, self, other)
             child._remember_unemitted_right_origins(self, other, left_only=left_only)
             return child
         finally:
@@ -3010,7 +3004,10 @@ class DataFrame:
             self._session.create_or_replace_temp_view(left, self._plan())
             other._session.create_or_replace_temp_view(right, other._plan())
             planned = self._session.sql(f"SELECT * FROM {left} CROSS JOIN {right}")
-            return self._spawn(planned, other)
+            child = self._spawn(planned, other)
+            child._inner = _native.remint_cross_collisions(child._plan(), len(self.columns))
+            child._frame_qualifiers = _qualified_names._join_frame_qualifiers(child, self, other)
+            return child
         finally:
             self._session.drop_temp_view(left)
             other._session.drop_temp_view(right)

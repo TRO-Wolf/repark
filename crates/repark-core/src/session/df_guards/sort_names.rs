@@ -1,10 +1,14 @@
+use std::collections::BTreeMap;
+
 use datafusion::common::tree_node::{Transformed, TreeNode};
-use datafusion::common::{Column, DFSchema, Result, internal_datafusion_err};
+use datafusion::common::{
+    Column, DFSchema, DFSchemaRef, DataFusionError, Result, TableReference, internal_datafusion_err,
+};
 use datafusion::logical_expr::expr::Alias;
-use datafusion::logical_expr::{Distinct, Expr, LogicalPlan, Projection};
+use datafusion::logical_expr::{Distinct, Expr, Join, JoinType, LogicalPlan, Projection};
 use repark_common::names::NameRule;
 
-use super::attr_id::{AttrId, Resolution, resolve};
+use super::attr_id::{AttrId, Resolution, qualifier_matches_position, resolve};
 use super::case_bind::{
     ambiguous_reference, attribute_reference, is_scratch_relation, unresolved_column,
 };
@@ -245,7 +249,7 @@ pub fn grandchild_key(
         .iter()
         .map(|field| field.name().clone())
         .collect::<Vec<_>>();
-    resolve(schema, written, None, rule, &displays).map(Some)
+    resolve(schema, written, None, rule, &displays, None).map(Some)
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -286,7 +290,7 @@ fn bind_free_column(
     shape: SortShape,
     join_dup: bool,
 ) -> Result<Expr> {
-    match resolve(schema, &column.name, None, rule, displays)? {
+    match resolve(schema, &column.name, None, rule, displays, None)? {
         Resolution::Bound(hits) => {
             let position = hits.first().ok_or_else(|| {
                 internal_datafusion_err!("resolve bound no position for {}", column.name)
@@ -337,6 +341,258 @@ fn oldest_field(schema: &DFSchema, hits: &[usize]) -> Result<Expr> {
         || Err(internal_datafusion_err!("resolve bound an id-free hit")),
         |name| Ok(attribute_reference(&name)),
     )
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn bind_qualified_free_refs(
+    expr: Expr,
+    plan: &LogicalPlan,
+    rule: NameRule,
+    displays: &[String],
+    frame_qualifiers: Option<&BTreeMap<String, Vec<String>>>,
+    for_sort: bool,
+) -> Result<Expr> {
+    let schema = plan.schema();
+    if displays.len() != schema.fields().len() {
+        return Ok(expr);
+    }
+    let join_dup = !for_sort && join_dup_below_wrappers(plan);
+    expr.transform(|node| {
+        Ok(match node {
+            Expr::Column(column) if column.relation.is_some() => {
+                Transformed::yes(bind_qualified_free_column(
+                    column,
+                    schema,
+                    rule,
+                    displays,
+                    frame_qualifiers,
+                    for_sort,
+                    join_dup,
+                )?)
+            }
+            _ => Transformed::no(node),
+        })
+    })
+    .map(|transformed| transformed.data)
+}
+
+#[allow(clippy::missing_errors_doc)]
+fn bind_qualified_free_column(
+    column: Column,
+    schema: &DFSchema,
+    rule: NameRule,
+    displays: &[String],
+    frame_qualifiers: Option<&BTreeMap<String, Vec<String>>>,
+    for_sort: bool,
+    join_dup: bool,
+) -> Result<Expr> {
+    let qualifier = column.relation.as_ref().map(ToString::to_string);
+    match resolve(
+        schema,
+        &column.name,
+        qualifier.as_deref(),
+        rule,
+        displays,
+        frame_qualifiers,
+    )? {
+        Resolution::Bound(hits) => {
+            if hits.len() > 1 && join_dup {
+                return Err(qualified_refusal(&column, schema, &hits, for_sort));
+            }
+            let position = hits.first().ok_or_else(|| {
+                internal_datafusion_err!("resolve bound no position for {}", column.name)
+            })?;
+            let field = schema.fields().get(*position).ok_or_else(|| {
+                internal_datafusion_err!("resolve bound out of range for {}", column.name)
+            })?;
+            let held = schema.iter().nth(*position).and_then(|(held, _)| held);
+            Ok(Expr::Column(Column {
+                relation: held.cloned(),
+                name: field.name().clone(),
+                ..column
+            }))
+        }
+        Resolution::Ambiguous(hits) => Err(qualified_refusal(&column, schema, &hits, for_sort)),
+        Resolution::Missing => Ok(Expr::Column(column)),
+    }
+}
+
+fn qualified_refusal(
+    column: &Column,
+    schema: &DFSchema,
+    hits: &[usize],
+    for_sort: bool,
+) -> DataFusionError {
+    if for_sort {
+        return unresolved_column(column, schema);
+    }
+    let options = hits
+        .iter()
+        .filter_map(|position| schema.iter().nth(*position))
+        .map(|(_, field)| (column.relation.as_ref(), field.as_ref()))
+        .collect::<Vec<_>>();
+    ambiguous_reference(column, &options)
+}
+
+#[allow(clippy::missing_errors_doc, clippy::type_complexity)]
+pub fn grandchild_qualified_key(
+    plan: &LogicalPlan,
+    written: &str,
+    qualifier: &str,
+    rule: NameRule,
+    frame_qualifiers: Option<&BTreeMap<String, Vec<String>>>,
+) -> Result<Option<(Resolution, Option<(Vec<String>, String)>)>> {
+    let LogicalPlan::Projection(projection) = plan else {
+        return Ok(None);
+    };
+    let Some(schema) = below_join_through(projection.input.as_ref()) else {
+        return Ok(None);
+    };
+    let displays = schema
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect::<Vec<_>>();
+    let resolution = resolve(
+        schema,
+        written,
+        Some(qualifier),
+        rule,
+        &displays,
+        frame_qualifiers,
+    )?;
+    let Resolution::Bound(hits) = &resolution else {
+        return Ok(Some((resolution, None)));
+    };
+    let render = hits.first().and_then(|position| {
+        let (held, field) = schema.iter().nth(*position)?;
+        let parts = held
+            .map(|held| {
+                [held.catalog(), held.schema(), Some(held.table())]
+                    .into_iter()
+                    .flatten()
+                    .map(str::to_string)
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        Some((parts, field.name().clone()))
+    });
+    Ok(Some((resolution, render)))
+}
+
+#[must_use]
+pub fn join_output_sources(plan: &LogicalPlan) -> Vec<Vec<(bool, usize)>> {
+    let width = plan.schema().fields().len();
+    let mut mapped: Vec<Option<usize>> = (0..width).map(Some).collect();
+    let mut node = plan;
+    let joined = loop {
+        if let LogicalPlan::Projection(projection) = node {
+            mapped = mapped
+                .into_iter()
+                .map(|position| {
+                    position.and_then(|index| projection_input_ordinal(projection, index))
+                })
+                .collect();
+            node = projection.input.as_ref();
+            continue;
+        }
+        if let LogicalPlan::Join(joined) = node {
+            break joined;
+        }
+        let below = below_transparent(node);
+        if std::ptr::eq(below, node) {
+            return vec![Vec::new(); width];
+        }
+        node = below;
+    };
+    let left_len = joined.left.schema().fields().len();
+    let pairs = if join_pairs_key_sides(joined, width) {
+        join_key_pairs(joined)
+    } else {
+        Vec::new()
+    };
+    mapped
+        .into_iter()
+        .map(|position| match position {
+            None => Vec::new(),
+            Some(ordinal) if ordinal < left_len => {
+                let mut sources = vec![(false, ordinal)];
+                for (left_key, right_key) in &pairs {
+                    if *left_key == ordinal {
+                        sources.push((true, *right_key));
+                    }
+                }
+                sources
+            }
+            Some(ordinal) => vec![(true, ordinal - left_len)],
+        })
+        .collect()
+}
+
+fn join_pairs_key_sides(joined: &Join, width: usize) -> bool {
+    if matches!(joined.join_type, JoinType::LeftSemi | JoinType::LeftAnti) {
+        return false;
+    }
+    let joined_width = joined.left.schema().fields().len() + joined.right.schema().fields().len();
+    width < joined_width
+}
+
+fn join_key_pairs(joined: &Join) -> Vec<(usize, usize)> {
+    let left_schema = joined.left.schema();
+    let right_schema = joined.right.schema();
+    joined
+        .on
+        .iter()
+        .filter_map(|(left_key, right_key)| {
+            let (Expr::Column(left_key), Expr::Column(right_key)) = (left_key, right_key) else {
+                return None;
+            };
+            let left = key_ordinal(left_schema, left_key)?;
+            let right = key_ordinal(right_schema, right_key)?;
+            Some((left, right))
+        })
+        .collect()
+}
+
+fn key_ordinal(schema: &DFSchemaRef, key: &Column) -> Option<usize> {
+    schema.iter().position(|(qualifier, field)| {
+        field.name() == &key.name && qualifier == key.relation.as_ref()
+    })
+}
+
+#[must_use]
+pub fn qualifier_star_positions(
+    plan: &LogicalPlan,
+    head: &str,
+    rule: NameRule,
+    displays: &[String],
+    frame_qualifiers: Option<&BTreeMap<String, Vec<String>>>,
+) -> Option<Vec<(usize, Vec<String>)>> {
+    let schema = plan.schema();
+    if displays.len() != schema.fields().len() {
+        return None;
+    }
+    let written = TableReference::parse_str_normalized(head, true);
+    let mut positions = Vec::new();
+    for (position, ((held, field), _)) in schema.iter().zip(displays).enumerate() {
+        if qualifier_matches_position(&written, field, held, rule, frame_qualifiers) {
+            let parts = held
+                .map(|held| {
+                    [held.catalog(), held.schema(), Some(held.table())]
+                        .into_iter()
+                        .flatten()
+                        .map(str::to_string)
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default();
+            positions.push((position, parts));
+        }
+    }
+    if positions.is_empty() {
+        None
+    } else {
+        Some(positions)
+    }
 }
 
 #[cfg(test)]

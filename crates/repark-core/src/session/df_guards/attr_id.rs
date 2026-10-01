@@ -817,6 +817,7 @@ pub fn resolve(
     qualifier: Option<&str>,
     rule: NameRule,
     displays: &[String],
+    frame_qualifiers: Option<&BTreeMap<String, Vec<String>>>,
 ) -> Result<Resolution> {
     if displays.len() != schema.fields().len() {
         return internal_err!(
@@ -829,10 +830,11 @@ pub fn resolve(
     let mut hits = Vec::new();
     let mut ids = BTreeSet::new();
     for (position, ((held, field), display)) in schema.iter().zip(displays).enumerate() {
-        let relation_matches = match (&relation, held) {
-            (None, _) => true,
-            (Some(relation), Some(held)) => same_relation(relation, held, rule),
-            (Some(_), None) => false,
+        let relation_matches = match &relation {
+            None => true,
+            Some(written) => {
+                qualifier_matches_position(written, field, held, rule, frame_qualifiers)
+            }
         };
         if !relation_matches || !rule.matches(written, display) {
             continue;
@@ -851,6 +853,28 @@ pub fn resolve(
         1 => Resolution::Bound(hits),
         _ => Resolution::Ambiguous(hits),
     })
+}
+
+pub(super) fn qualifier_matches_position(
+    written: &TableReference,
+    field: &Field,
+    held: Option<&TableReference>,
+    rule: NameRule,
+    frame_qualifiers: Option<&BTreeMap<String, Vec<String>>>,
+) -> bool {
+    let facade =
+        frame_qualifiers.and_then(|map| AttrId::of(field).and_then(|id| map.get(id.as_str())));
+    match facade {
+        Some(names) => names.iter().any(|name| {
+            written.catalog().is_none()
+                && written.schema().is_none()
+                && rule.matches(written.table(), name)
+        }),
+        None => match held {
+            Some(held) => same_relation(written, held, rule),
+            None => false,
+        },
+    }
 }
 
 pub(super) fn same_relation(

@@ -220,7 +220,13 @@ def _aliased_join_sides(
     """Alias both join inputs under generated `_repark_jl_*`/`_repark_jr_*` names."""
     left_name = f"_repark_jl_{uuid.uuid4().hex[:12]}"
     right_name = f"_repark_jr_{uuid.uuid4().hex[:12]}"
-    return left.alias(left_name), right.alias(right_name), (left_name, right_name)
+    left_held = left._frame_qualifiers
+    right_held = right._frame_qualifiers
+    rebound_left = left.alias(left_name)
+    rebound_right = right.alias(right_name)
+    rebound_left._frame_qualifiers = dict(left_held) if left_held else None
+    rebound_right._frame_qualifiers = dict(right_held) if right_held else None
+    return rebound_left, rebound_right, (left_name, right_name)
 
 
 def _assign_join_qualifiers(

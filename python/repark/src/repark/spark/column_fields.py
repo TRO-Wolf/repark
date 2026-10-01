@@ -20,12 +20,19 @@ from repark.spark.filter_quote import (
     _FILTER_TOKEN_PATTERN,
     _bind_filter_token,
     _FoldedLambdaFallbackError,
+    _frame_qualifiers_for_bind,
     _group_candidates,
+    _known_qualifiers,
     _lambda_quoted_span,
     _lambda_scopes,
     _main_path_filter_sql,
     _scopes_have_folded_collision,
     _unqualified_candidates,
+)
+from repark.spark.qualified_names import (
+    _rebind_qualified_refs,
+    _resolve_sort_qualified_name,
+    _rewrap_rebound_column,
 )
 
 
@@ -485,7 +492,10 @@ def _raise_folded_ambiguous(
     qualifier: list[str] | None, name: str, hits: list[int], displays: list[str]
 ) -> NoReturn:
     reference = _qualified_target(qualifier, name)
-    echoed = ", ".join(f"`{displays[position]}`" for position in hits)
+    if qualifier is None:
+        echoed = ", ".join(f"`{displays[position]}`" for position in hits)
+    else:
+        echoed = ", ".join(_qualified_target(qualifier, displays[position]) for position in hits)
     raise AnalysisException(
         f"[AMBIGUOUS_REFERENCE] Reference {reference} is ambiguous, "
         f"could be: [{echoed}]. SQLSTATE: 42704"
@@ -536,7 +546,14 @@ def _bind_resolved_name(frame: Any, written: str) -> Any:
             return frame._bind_schema_column(written)
         exact = _native.session_case_sensitive(frame._session)
         qualifier = ".".join(qualifier_parts)
-        status, hits = _native.resolve_display_name(native, name, qualifier, displays, exact)
+        status, hits, plan_quals = _native.resolve_display_name(
+            native,
+            name,
+            qualifier,
+            displays,
+            exact,
+            _frame_qualifiers_for_bind(frame),
+        )
     if status == "missing":
         _raise_unresolved_name(qualifier_parts, name, displays)
     if status == "ambiguous":
@@ -545,7 +562,9 @@ def _bind_resolved_name(frame: Any, written: str) -> Any:
     engine_field = engine_names[position]
     quoted = _quote_ident(engine_field)
     if qualifier_parts is not None:
-        quoted = ".".join([*(_quote_ident(part) for part in qualifier_parts), quoted])
+        held_parts = plan_quals[0] if plan_quals else None
+        if held_parts:
+            quoted = ".".join([*(_quote_ident(part) for part in held_parts), quoted])
     attr_id = held[position]
     if attr_id is None and _native.frame_is_relation(native):
         raise RuntimeError(f"internal error: stamped field {engine_field!r} has no attribute id")
@@ -654,7 +673,10 @@ def _column_of(frame: Any, item: Any) -> Any:
     from repark.spark.column import Column
 
     if isinstance(item, Column):
-        return frame._rebind_origin_column(_rebind_stable_name_column(frame, item))
+        rebound = _rebind_stable_name_column(frame, item)
+        if rebound is item:
+            return _rebind_qualified_refs(frame, frame._rebind_origin_column(rebound), False)
+        return frame._rebind_origin_column(rebound)
     if isinstance(item, str):
         return _bind_resolved_name(frame, item)
     raise column_or_str_error(item)
@@ -677,8 +699,6 @@ def _frame_has_unicode_folded_rivals(displays: list[str], held: list[str | None]
 
 
 def _rebind_free_names(frame: Any, column: Any, for_sort: bool) -> Any:
-    from repark.spark.column import Column
-
     native = frame._plan()
     held = list(_native.attribute_ids(native))
     if None in held:
@@ -690,33 +710,7 @@ def _rebind_free_names(frame: Any, column: Any, for_sort: bool) -> Any:
     if not exact and _frame_has_unicode_folded_rivals(displays, held):
         return column
     rebound = _native.bind_free_names(native, column._inner, displays, exact, for_sort)
-    return Column(
-        rebound,
-        sort_ascending=column._sort_ascending,
-        sort_nulls_first=column._sort_nulls_first,
-        when_pairs=column._when_pairs,
-        agg_name=column._agg_name,
-        is_aggregate=column._is_aggregate,
-        is_foldable=column._is_foldable,
-        has_free_attribute=column._has_free_attribute,
-        has_ungroupable=column._has_ungroupable,
-        is_aggregate_function=column._is_aggregate_function,
-        generator=column._generator,
-        generator_cast=column._generator_cast,
-        spark_display=column._spark_display,
-        projection_name=column._projection_name,
-        stable_name=column._stable_name,
-        partition_transform=column._partition_transform,
-        sql_expr=column._sql_expr,
-        origin_plan_id=column._origin_plan_id,
-        origin_field=column._origin_field,
-        attr_id=column._attr_id,
-        join_sql_expr=column._join_sql_expr,
-        g2_range_order_names=column._g2_range_order_names,
-        window_spec=column._window_spec,
-        alias_metadata=column._alias_metadata,
-        outer=column._outer,
-    )
+    return _rewrap_rebound_column(column, rebound)
 
 
 def _build_sort_bound_column(
@@ -760,7 +754,7 @@ def _resolve_sort_name(frame: Any, written: str) -> Any:
     if name == "*":
         return frame._bind_schema_column(written)
     if qualifier_parts is not None:
-        return _bind_resolved_name(frame, written)
+        return _resolve_sort_qualified_name(frame, written, qualifier_parts, name)
     native = frame._plan()
     displays = list(frame.columns)
     engine_names = list(_native.logical_column_names(native))
@@ -827,7 +821,7 @@ def _bind_sort_key(frame: Any, item: Any) -> Any:
                     pass
                 else:
                     return _rewrap_with_markers(item, bound)
-        return _rebind_free_names(frame, item, True)
+        return _rebind_qualified_refs(frame, _rebind_free_names(frame, item, True), True)
     raise column_or_str_error(item)
 
 
@@ -844,7 +838,7 @@ def _quote_filter_sql_identifiers(frame: Any, sql: str) -> str:
         engine_names = list(_native.logical_column_names(native))
         held = list(_native.attribute_ids(native))
     exact = bool(_native.session_case_sensitive(frame._session))
-    qualifiers = [held_name for held_name in _native.logical_column_qualifiers(native) if held_name]
+    qualifiers, frame_bind_quals = _known_qualifiers(frame, native, exact)
     fold_map: dict[str, list[int]] = {}
     for position, display in enumerate(displays):
         fold_map.setdefault(display.casefold(), []).append(position)
@@ -864,6 +858,7 @@ def _quote_filter_sql_identifiers(frame: Any, sql: str) -> str:
         scopes=scopes,
         decls=decls,
         collision=_scopes_have_folded_collision(scopes, exact),
+        frame_qualifiers=frame_bind_quals,
     )
     pieces = re.split(r"('(?:[^']|'')*')", sql)
     rebuilt: list[str] = []

@@ -142,7 +142,8 @@ fn va_lag_through_select_is_ambiguous_with_its_source() {
             "id",
             None,
             IgnoreCase,
-            &strings(&["id", "id"])
+            &strings(&["id", "id"]),
+            None,
         )
         .unwrap(),
         Resolution::Ambiguous(vec![0, 1])
@@ -322,15 +323,23 @@ fn va_a_semi_join_is_a_no_op_and_a_qualified_name_binds_one_side() {
         3,
     );
     assert_eq!(
-        resolve(joined.schema(), "ID", Some("R"), IgnoreCase, &displays).unwrap(),
+        resolve(
+            joined.schema(),
+            "ID",
+            Some("R"),
+            IgnoreCase,
+            &displays,
+            None
+        )
+        .unwrap(),
         Resolution::Bound(vec![3])
     );
     assert_eq!(
-        resolve(joined.schema(), "id", Some("l"), Exact, &displays).unwrap(),
+        resolve(joined.schema(), "id", Some("l"), Exact, &displays, None).unwrap(),
         Resolution::Bound(vec![0])
     );
     assert_eq!(
-        resolve(joined.schema(), "id", None, Exact, &displays).unwrap(),
+        resolve(joined.schema(), "id", None, Exact, &displays, None).unwrap(),
         Resolution::Ambiguous(vec![0, 3])
     );
 }

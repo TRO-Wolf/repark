@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use datafusion::common::Column;
 use datafusion::dataframe::DataFrame;
 use datafusion::logical_expr::{Expr, JoinType};
@@ -21,15 +23,20 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(attribute_copies, module)?)?;
     module.add_function(wrap_pyfunction!(attribute_copy_name, module)?)?;
     module.add_function(wrap_pyfunction!(bind_free_names, module)?)?;
+    module.add_function(wrap_pyfunction!(bind_qualified_free_refs, module)?)?;
     module.add_function(wrap_pyfunction!(drop_frame_columns, module)?)?;
     module.add_function(wrap_pyfunction!(engine_field_is_unique, module)?)?;
+    module.add_function(wrap_pyfunction!(grandchild_qualified_key, module)?)?;
+    module.add_function(wrap_pyfunction!(qualifier_star_positions, module)?)?;
     module.add_function(wrap_pyfunction!(join_dup_below_wrappers, module)?)?;
+    module.add_function(wrap_pyfunction!(join_output_sources, module)?)?;
     module.add_function(wrap_pyfunction!(union_dup_below_wrappers, module)?)?;
     module.add_function(wrap_pyfunction!(frame_case_sensitive, module)?)?;
     module.add_function(wrap_pyfunction!(frame_is_relation, module)?)?;
     module.add_function(wrap_pyfunction!(grandchild_key_status, module)?)?;
     module.add_function(wrap_pyfunction!(java_fold_hits, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_join_condition, module)?)?;
+    module.add_function(wrap_pyfunction!(remint_cross_collisions, module)?)?;
     module.add_function(wrap_pyfunction!(requalify_join_sides, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_display_name, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_frame_names, module)?)?;
@@ -380,16 +387,21 @@ pub(crate) fn attribute_ids(frame: &PyDataFrame) -> Vec<Option<String>> {
         .collect()
 }
 
-#[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
+#[allow(
+    clippy::missing_errors_doc,
+    clippy::needless_pass_by_value,
+    clippy::type_complexity
+)]
 #[pyfunction]
-#[pyo3(signature = (frame, written, qualifier, displays, exact))]
+#[pyo3(signature = (frame, written, qualifier, displays, exact, frame_qualifiers))]
 pub(crate) fn resolve_display_name(
     frame: &PyDataFrame,
     written: &str,
     qualifier: Option<&str>,
     displays: Vec<String>,
     exact: bool,
-) -> PyResult<(String, Vec<usize>)> {
+    frame_qualifiers: Option<BTreeMap<String, Vec<String>>>,
+) -> PyResult<(String, Vec<usize>, Vec<Option<Vec<String>>>)> {
     fenced!("dataframe_names.resolve_display_name", {
         let resolution = repark_core::frame_names::resolve(
             frame.inner().schema(),
@@ -397,12 +409,140 @@ pub(crate) fn resolve_display_name(
             qualifier,
             NameRule::from_case_sensitive(exact),
             &displays,
+            frame_qualifiers.as_ref(),
         )
         .map_err(datafusion_to_py_err)?;
+        let held = frame
+            .inner()
+            .schema()
+            .iter()
+            .map(|(qualifier, _)| {
+                qualifier.map(|held| {
+                    [held.catalog(), held.schema(), Some(held.table())]
+                        .into_iter()
+                        .flatten()
+                        .map(str::to_string)
+                        .collect::<Vec<_>>()
+                })
+            })
+            .collect::<Vec<_>>();
+        let plan_qualifiers = |hits: &Vec<usize>| {
+            hits.iter()
+                .map(|position| held.get(*position).and_then(Clone::clone))
+                .collect::<Vec<_>>()
+        };
         Ok(match resolution {
-            Resolution::Bound(hits) => ("bound".to_string(), hits),
-            Resolution::Ambiguous(hits) => ("ambiguous".to_string(), hits),
-            Resolution::Missing => ("missing".to_string(), Vec::new()),
+            Resolution::Bound(hits) => {
+                let quals = plan_qualifiers(&hits);
+                ("bound".to_string(), hits, quals)
+            }
+            Resolution::Ambiguous(hits) => {
+                let quals = plan_qualifiers(&hits);
+                ("ambiguous".to_string(), hits, quals)
+            }
+            Resolution::Missing => ("missing".to_string(), Vec::new(), Vec::new()),
         })
+    })
+}
+
+#[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
+#[pyfunction]
+#[pyo3(signature = (frame, column, displays, exact, for_sort, frame_qualifiers))]
+pub(crate) fn bind_qualified_free_refs(
+    frame: &PyDataFrame,
+    column: &PyColumn,
+    displays: Vec<String>,
+    exact: bool,
+    for_sort: bool,
+    frame_qualifiers: Option<BTreeMap<String, Vec<String>>>,
+) -> PyResult<PyColumn> {
+    fenced!("dataframe_names.bind_qualified_free_refs", {
+        let prepared = column
+            .expr()
+            .resolve_lambda_variables(frame.inner().schema())
+            .map_err(datafusion_to_py_err)?
+            .data;
+        let bound = repark_core::frame_names::bind_qualified_free_refs(
+            prepared,
+            frame.inner().logical_plan(),
+            NameRule::from_case_sensitive(exact),
+            &displays,
+            frame_qualifiers.as_ref(),
+            for_sort,
+        )
+        .map_err(datafusion_to_py_err)?;
+        Ok(PyColumn::from_expr(bound))
+    })
+}
+
+#[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
+#[pyfunction]
+#[pyo3(signature = (frame, written, qualifier, exact, frame_qualifiers))]
+pub(crate) fn grandchild_qualified_key(
+    frame: &PyDataFrame,
+    written: &str,
+    qualifier: &str,
+    exact: bool,
+    frame_qualifiers: Option<BTreeMap<String, Vec<String>>>,
+) -> PyResult<(String, Vec<String>, Option<String>)> {
+    fenced!("dataframe_names.grandchild_qualified_key", {
+        let found = repark_core::frame_names::grandchild_qualified_key(
+            frame.inner().logical_plan(),
+            written,
+            qualifier,
+            NameRule::from_case_sensitive(exact),
+            frame_qualifiers.as_ref(),
+        )
+        .map_err(datafusion_to_py_err)?;
+        Ok(match found {
+            None => ("not-applicable".to_string(), Vec::new(), None),
+            Some((Resolution::Bound(_), render)) => {
+                let (parts, engine) = render.unwrap_or((Vec::new(), String::new()));
+                ("bound".to_string(), parts, Some(engine))
+            }
+            Some((Resolution::Ambiguous(_), _)) => ("ambiguous".to_string(), Vec::new(), None),
+            Some((Resolution::Missing, _)) => ("missing".to_string(), Vec::new(), None),
+        })
+    })
+}
+
+#[pyfunction]
+pub(crate) fn join_output_sources(frame: &PyDataFrame) -> Vec<Vec<(bool, usize)>> {
+    repark_core::frame_names::join_output_sources(frame.inner().logical_plan())
+}
+
+#[allow(clippy::needless_pass_by_value)]
+#[pyfunction]
+#[pyo3(signature = (frame, head, displays, exact, frame_qualifiers))]
+pub(crate) fn qualifier_star_positions(
+    frame: &PyDataFrame,
+    head: &str,
+    displays: Vec<String>,
+    exact: bool,
+    frame_qualifiers: Option<BTreeMap<String, Vec<String>>>,
+) -> Option<Vec<(usize, Vec<String>)>> {
+    repark_core::frame_names::qualifier_star_positions(
+        frame.inner().logical_plan(),
+        head,
+        NameRule::from_case_sensitive(exact),
+        &displays,
+        frame_qualifiers.as_ref(),
+    )
+}
+
+#[allow(clippy::missing_errors_doc)]
+#[pyfunction]
+pub(crate) fn remint_cross_collisions(
+    frame: &PyDataFrame,
+    left_width: usize,
+) -> PyResult<PyDataFrame> {
+    fenced!("dataframe_names.remint_cross_collisions", {
+        let (state, plan) = frame.inner().clone().into_parts();
+        let plan = repark_core::frame_names::remint_join_collisions(plan, left_width)
+            .map_err(datafusion_to_py_err)?;
+        Ok(PyDataFrame::new(
+            DataFrame::new(state, plan),
+            frame.runtime_handle(),
+        ))
     })
 }
