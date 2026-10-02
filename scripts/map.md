@@ -2,6 +2,8 @@
 
 ATTR-ID-1 S4 follow-up (2026-10-02): `check_lib_py.py` ratchets `spark/column.py` 1527 → 1485 (the sort-marker family moves to `column_sort.py` behind `Column` bindings) and `dataframe/core.py` 3711 → 3653 (`_select_via_attr_sql` moves to `join_attr_tokens.py` behind a one-line delegate), shrink-only. pins: attr-id-1/C-041
 
+ATTR-ID-1 S4 alias fix (2026-10-02): `check_lib_py.py` ratchets `spark/column.py` 1485 → 1378 (the string-predicate family moves to `column_string.py` behind `Column` bindings), shrink-only. pins: attr-id-1/C-042
+
 ATTR-ID-1 S3e (2026-10-01): `check_lib_py.py` ratchets `dataframe/core.py` 3803 → 3800 (the `selectExpr` body moves to `filter_quote._select_expr_frame` and the select star arms fold into one `qualified_names` delegate), shrink-only, with the CAP-1 mirror. pins: attr-id-1/C-039
 
 ATTR-ID-1 S3b (2026-10-01): `check_lib_py.py` ratchets `dataframe/core.py` 3921 → 3846 (the filter quoter and its token helpers move to `column_fields.py`, `filter`/`_sort_specs` delegate to it), shrink-only, with the CAP-1 mirror. pins: attr-id-1/C-025

@@ -278,3 +278,14 @@ def test_s4_dup_engine_parent_ref_keeps_shaped_ambiguity(spark: ReparkSession) -
     with pytest.raises(AnalysisException) as refused:
         joined.select(left.v, right.v).collect()
     assert refused.value.getCondition() == "AMBIGUOUS_REFERENCE"
+
+
+def test_s4_aliased_side_ref_binds_own_side(spark: ReparkSession) -> None:
+    """An aliased side ref on a condition join binds its own side (insensitive)."""
+    left = spark.createDataFrame([(1, "a"), (None, "n")], ["k", "a"])
+    right = spark.createDataFrame([(1, "x"), (None, "y")], ["k", "b"])
+    joined = left.join(right, left["k"].eqNullSafe(right["k"]), "inner")
+    frame = joined.select(left["k"].alias("lk"), left["a"], right["k"].alias("rk"), right["b"])
+    assert frame.columns == ["lk", "a", "rk", "b"]
+    assert sorted(tuple(row) for row in frame.collect() if row[0] is not None) == [(1, "a", 1, "x")]
+    assert sum(1 for row in frame.collect() if row[0] is None) == 1

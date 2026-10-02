@@ -171,7 +171,11 @@ def _drop_targets(frame: Any, cols: tuple[Any, ...]) -> tuple[list[str], list[st
             item._sort_ascending is not None or item._sort_nulls_first is not None
         ):
             continue
-        if isinstance(item, Column) and item._attr_id is not None:
+        if (
+            isinstance(item, Column)
+            and item._attr_id is not None
+            and item._spark_display == frame._name_of(item)
+        ):
             if item._attr_id in frame._unemitted_attr_ids:
                 continue
             ambiguous_drop = False

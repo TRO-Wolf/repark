@@ -211,6 +211,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   frame's held attribute by position. The sort-marker family moves to
   `column_sort.py` behind `Column` bindings (1536 → 1485, with the CAP-1
   mirror). Pins: `python/repark/tests/test_attr_id_1_s4.py`. pins: attr-id-1/C-041
+  **ATTR-ID-1 S4 alias fix (2026-10-02):** `alias` preserves the base column's
+  `_attr_id` and `_birth_frame`, so an aliased side ref binds its own side on
+  a condition join instead of reaching the engine with a bare duplicate name.
+  The string-predicate family moves to `column_string.py` behind `Column`
+  bindings (1485 → 1378, with the CAP-1 mirror). Pins:
+  `python/repark/tests/test_attr_id_1_s4.py`. pins: attr-id-1/C-042
 - `column_fields.py` — **COLUMN-PARITY-1 (2026-09-14):** method bodies bound on
   `Column` (kept out of `column.py`, which is at its exact line baseline):
   `between` / `eqNullSafe` (extracted for headroom), `isin`, `isNaN`, `astype`,
@@ -368,6 +374,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   (`sql_expr`, `generator`, the attribute id). No module docstring: the
   lane's no-comments ruling covers the new file; the contract lives here.
   pins: attr-id-1/C-041
+- `column_string.py` — **ATTR-ID-1 S4 alias fix (2026-10-02):** the
+  string-predicate family (`contains`/`substr`/`startswith`/`endswith`/`like`/
+  `ilike`/`rlike` plus `_string_predicate`), split out of `column.py` at the
+  size ceiling (pure move; `Column` binds the seven spellings). No module
+  docstring: the lane's no-comments ruling covers the new file; the contract
+  lives here. pins: attr-id-1/C-042
 - `filter_quote.py` — **ATTR-ID-1 S3b H-1 (2026-10-01):** the filter-SQL
   identifier quoter, split out of `column_fields.py` at the size ceiling (pure
   move; the entry stays there). `_FILTER_TOKEN_PATTERN`,
@@ -456,6 +468,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   shared engines drop by plan-held qualified reference, a miss is a no-op,
   twins refuse `AMBIGUOUS_REFERENCE`); drop strings stay literal (Spark
   probes s3e1–6: `drop("a.v")` is a no-op). pins: attr-id-1/C-039
+  **ATTR-ID-1 S4 alias fix (2026-10-02):** the `_attr_id` drop path takes
+  only simple refs (display equals the drop name), so an alias — which now
+  carries its base id — falls through to the name path and stays a no-op as
+  at base. pins: attr-id-1/C-042
 - `qualified_names.py` — **ATTR-ID-1 S3e (2026-10-01):** the qualified-name
   home, split out of `column_fields.py` at the ceiling. `_frame_qualifiers`
   threading (`_alias_frame_qualifiers` names every stamped id,

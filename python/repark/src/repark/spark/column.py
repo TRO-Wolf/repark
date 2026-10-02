@@ -23,6 +23,7 @@ from repark.errors import (
 )
 from repark.spark import column_fields as _column_fields
 from repark.spark import column_sort as _column_sort
+from repark.spark import column_string as _column_string
 from repark.spark._idents import escape_attr_token_quals as _escape_attr_token_quals
 from repark.spark._idents import quote_ident as _quote_sql_field_ident
 from repark.spark._idents import sql_string_literal as _sql_string_literal
@@ -522,123 +523,6 @@ class Column:
         left._reject_nested_generator("power")
         return spark_pow(left, self)
 
-    def contains(self, other: Column | Scalar) -> Column:
-        """Substring containment (PySpark ``Column.contains``)."""
-        return self._string_predicate("contains", other)
-
-    def substr(self, startPos: Column | int, length: Column | int) -> Column:  # noqa: N803
-        """Substring slice (PySpark ``Column.substr``).
-
-        Spark 1-based positions; ``startPos=0`` is treated as 1 (owned substring UDF).
-        ``startPos`` and ``length`` must share a type (both int or both Column) — same
-        checks as classic ``Column.__getitem__`` slice path.
-        """
-        self._reject_nested_generator("substr")
-        from repark.spark.functions import lit
-
-        start = startPos
-        stop = length
-        if type(start) is not type(stop):
-            raise PySparkTypeError(
-                errorClass="NOT_SAME_TYPE",
-                messageParameters={
-                    "arg_name1": "startPos",
-                    "arg_name2": "length",
-                    "arg_type1": type(start).__name__,
-                    "arg_type2": type(stop).__name__,
-                },
-            )
-        if isinstance(start, int):
-            start_col = lit(int(start))
-            length_col = lit(int(stop))
-            start_display: Any = start
-            length_display: Any = stop
-        elif isinstance(start, Column):
-            start_col = start
-            length_col = stop  # type: ignore[assignment]
-            start_display = start.spark_wrap_display_part()
-            length_display = length_col.spark_wrap_display_part()
-        else:
-            raise PySparkTypeError(
-                errorClass="NOT_COLUMN_OR_INT",
-                messageParameters={
-                    "arg_name": "startPos",
-                    "arg_type": type(start).__name__,
-                },
-            )
-        parts = _native.PyColumnParts.substr(
-            self._inner,
-            start_col._inner,
-            length_col._inner,
-            (self.spark_wrap_display_part(), str(start_display), str(length_display)),
-            (self.sql_expr_part(), start_col.sql_expr_part(), length_col.sql_expr_part()),
-        )
-        return Column(
-            parts[0],
-            spark_display=parts[1],
-            sql_expr=parts[2],
-            has_free_attribute=self._has_free_attribute,
-            is_foldable=self._is_foldable and not self._is_aggregate,
-            is_aggregate=self._is_aggregate,
-            has_ungroupable=self._has_ungroupable,
-        )
-
-    def startswith(self, other: Column | Scalar) -> Column:
-        """Prefix test (PySpark ``Column.startswith``)."""
-        return self._string_predicate("starts_with", other, display_name="startswith")
-
-    def endswith(self, other: Column | Scalar) -> Column:
-        """Suffix test (PySpark ``Column.endswith``)."""
-        return self._string_predicate("ends_with", other, display_name="endswith")
-
-    def like(self, other: Column | Scalar) -> Column:
-        """SQL ``LIKE`` (PySpark ``Column.like``)."""
-        return self._string_predicate("like", other)
-
-    def ilike(self, other: Column | Scalar) -> Column:
-        """Case-insensitive ``LIKE`` (PySpark ``Column.ilike``)."""
-        return self._string_predicate("ilike", other)
-
-    def rlike(self, other: Column | Scalar) -> Column:
-        """Regex match (PySpark ``Column.rlike``)."""
-        return self._string_predicate("rlike", other)
-
-    def _string_predicate(
-        self,
-        call_name: str,
-        other: Column | Scalar,
-        *,
-        display_name: str | None = None,
-    ) -> Column:
-        """Unary string predicate against a pattern/substring Column-or-scalar."""
-        shown = display_name or call_name
-        self._reject_nested_generator(shown)
-        right = self._to_column(other)
-        right._reject_nested_generator(shown)
-        parts = _native.PyColumnParts.string_predicate(
-            self._inner,
-            right._inner,
-            call_name,
-            shown,
-            (self.spark_wrap_display_part(), right.spark_wrap_display_part()),
-            (self.sql_expr_part(), right.sql_expr_part()),
-        )
-        is_aggregate = self._is_aggregate or right._is_aggregate
-        is_foldable = self._is_foldable and right._is_foldable and not is_aggregate
-        has_free_attribute = self._has_free_attribute or right._has_free_attribute
-        has_ungroupable = self._has_ungroupable or right._has_ungroupable
-        return Column(
-            parts[0],
-            spark_display=parts[1],
-            sql_expr=parts[2],
-            stable_name=False,
-            is_aggregate=is_aggregate,
-            is_foldable=is_foldable,
-            has_free_attribute=has_free_attribute,
-            has_ungroupable=has_ungroupable,
-            partition_transform=self._partition_transform or right._partition_transform,
-        )
-
     def bitwiseAND(self, other: Column | Scalar) -> Column:  # noqa: N802 — PySpark camelCase
         """Bitwise AND (PySpark ``Column.bitwiseAND``)."""
         return self._bitwise("bitwise_and", other, "&")
@@ -937,6 +821,8 @@ class Column:
             sql_expr=self.sql_expr_part(),
             projection_name=name,
             stable_name=True,
+            attr_id=self._attr_id,
+            birth_frame=self._birth_frame,
             partition_transform=self._partition_transform,
             is_aggregate=self._is_aggregate,
             is_foldable=self._is_foldable and not self._is_aggregate,
@@ -1340,6 +1226,13 @@ class Column:
     desc = _column_sort.desc
     desc_nulls_first = _column_sort.desc_nulls_first
     desc_nulls_last = _column_sort.desc_nulls_last
+    contains = _column_string.contains
+    substr = _column_string.substr
+    startswith = _column_string.startswith
+    endswith = _column_string.endswith
+    like = _column_string.like
+    ilike = _column_string.ilike
+    rlike = _column_string.rlike
 
 
 def _engine_type_from_cast_arg(data_type: Any) -> str:

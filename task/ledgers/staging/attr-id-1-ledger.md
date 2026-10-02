@@ -877,3 +877,7 @@ shaped. `b808460a` restores the uniqueness gate with exact (not folded)
 counting — J2 case twins still mark and bind, true duplicates stay written.
 Replay t-head-1 at `b808460a`: 43992 cells, 0 EQUAL moved, FIXED 11872,
 gains 10, lost 0, moved_vs_main 0.
+
+| Clause | Statement | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-042 | S4 alias fix keeps the deletion neutral for aliased refs: `alias` preserves the base column's `_attr_id` and `_birth_frame`, so an aliased side ref on a condition join binds its own side (the S4 deletion had dropped the alias-to-base link the origin pair carried) while a same-frame twin alias stays verbatim and refuses; `drop` takes only simple refs down the `_attr_id` path so an alias stays a no-op as at base. The string-predicate family moves to `column_string.py`; the `column.py` CAP-1 row ratchets down. | The alias pin green; the neighbour sweep green; three S0 replays 0 moved against `main.json`. | PROVEN (pin plus sweep; the neutrality replay lands in the gate record) | `python/repark/tests/test_attr_id_1_s4.py::test_s4_aliased_side_ref_binds_own_side`; `python/repark/src/repark/spark/column_string.py`; the S4 gate record below. |
