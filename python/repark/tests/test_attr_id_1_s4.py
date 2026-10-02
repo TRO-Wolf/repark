@@ -177,3 +177,24 @@ def test_s4_expression_output_parent_ref_stays_unbound_on_dup_names(
     assert projected.columns == ["b", "aa", "a", "b"]
     with pytest.raises(AnalysisException):
         projected.select(left["b"]).collect()
+
+
+def test_s4_same_frame_twin_getitem_stays_written_ref(spark: ReparkSession) -> None:
+    """A getitem column whose SQL already spells its engine is left for the engine (insensitive)."""
+    frame = spark.createDataFrame([(1, 2)], ["id", "ID"])
+    with pytest.raises(AnalysisException, match="AMBIGUOUS_REFERENCE"):
+        frame.select(frame["id"]).collect()
+
+
+def test_s4_unheld_sort_marker_funnels_to_oldest(spark: ReparkSession) -> None:
+    """A marked parent ref no output holds sorts by the oldest project hit (insensitive)."""
+    frame = spark.createDataFrame([(1, 30), (2, None), (3, 10), (4, 20)], ["id", "v"])
+    twins = frame.select((frame.v + 1).alias("V"), (frame.v * -1).alias("v"), frame.id)
+    assert [tuple(row) for row in twins.orderBy(frame.v.desc()).collect()] == [
+        (31, -30, 1),
+        (21, -20, 4),
+        (11, -10, 3),
+        (None, None, 2),
+    ]
+    with pytest.raises(AnalysisException, match="AMBIGUOUS_REFERENCE"):
+        twins.orderBy(frame.v).collect()

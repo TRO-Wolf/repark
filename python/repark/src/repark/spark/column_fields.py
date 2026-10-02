@@ -677,6 +677,8 @@ def _qualified_narrow_position(
 
 
 def _bind_stable_id_column(frame: Any, column: Any) -> Any | None:
+    from repark.spark._idents import quote_ident as _quote_ident
+
     attr_id = column._attr_id
     if attr_id is None:
         return None
@@ -684,6 +686,10 @@ def _bind_stable_id_column(frame: Any, column: Any) -> Any | None:
     held: list[str | None] = list(_native.attribute_ids(native))
     native_names = list(_native.logical_column_names(native))
     if attr_id in held:
+        if column._sql_expr is not None:
+            for position, engine in enumerate(native_names):
+                if held[position] == attr_id and _quote_ident(engine) == column._sql_expr:
+                    return column
         narrowed = _qualified_narrow_position(frame, column, held, list(frame.columns))
         if narrowed is not None:
             return _exact_rebind_position(frame, column, native, native_names, held, narrowed)
@@ -862,7 +868,9 @@ def _bind_sort_key(frame: Any, item: Any) -> Any:
         return _resolve_sort_name(frame, item)
     if isinstance(item, Column):
         rebound = _bind_stable_id_column(frame, item)
-        if rebound is not None:
+        if rebound is not None and rebound is not item:
+            return rebound
+        if rebound is item and item._sort_ascending is None and item._sort_nulls_first is None:
             return rebound
         if item._stable_name and item._attr_id is None:
             name = item._projection_name

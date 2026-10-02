@@ -330,9 +330,13 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   id the frame does not hold consults the native `projection_source_ids` lineage
   (alias, single-column `coalesce`, single-column searched `CASE`) before the
   miss, and a miss still returns the column unchanged so the id reaches the
-  refusal and the engine fallback. `_column_of` routes an
-  `_is_ambiguous_qualified_ref` (qualifiers plus an id held twice) through the
-  qualified rewriter first. Pins: `python/repark/tests/test_attr_id_1_s4.py`.
+  refusal and the engine fallback. A held id whose SQL already spells its engine
+  field stays the written ref (no rebind, so the engine shapes twin refusals).
+  `_column_of` routes an `_is_ambiguous_qualified_ref` (qualifiers plus an id
+  held twice) through the qualified rewriter first. `_bind_sort_key` takes only
+  true rebinds from the id bind; a miss stays verbatim for a plain column but a
+  marked (asc/desc) column falls through to the free-name funnel, which binds
+  the oldest project hit. Pins: `python/repark/tests/test_attr_id_1_s4.py`.
   pins: attr-id-1/C-040
 - `filter_quote.py` — **ATTR-ID-1 S3b H-1 (2026-10-01):** the filter-SQL
   identifier quoter, split out of `column_fields.py` at the size ceiling (pure
