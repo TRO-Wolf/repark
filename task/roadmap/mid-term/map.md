@@ -513,3 +513,70 @@ declines it (a dated ruling in the intake, then the archive).
   (`crates/repark-functions/src/cast_map/leaf.rs`, `string_to_fractional`, then
   `java_double/parse_float.rs`); target string→DOUBLE/INT/BIGINT/DECIMAL within 1.05x of
   DataFusion's native cast with byte-identical Spark semantics; carried by #888 as VN7-5, not a #888 blocker.
+- [nvl-type-coercion-2-card-2026-10-02.md](nvl-type-coercion-2-card-2026-10-02.md) — **card
+  NVL-TYPE-COERCION-2 (2026-10-02, design-heavy, from the #888 park):** one pre-coercion
+  mode-aware rewrite for the nvl family (Spark types `nvl('a', 5)` BIGINT on, STRING off;
+  the rewrite runs after `type_coercion`), deleting the base route, `core_declared`, the
+  fexpr markers, the F.expr `type_coercion` strip and the ceiling mirror evaluator; the
+  review experiment fixed 16 of 31 nested cap-b cells with zero ANSI-off movement. An Opus
+  design sketch comes first; no more folds on `54bc9ac2`.
+- [coalesce-ansi-widen-1-card-2026-10-02.md](coalesce-ansi-widen-1-card-2026-10-02.md) — **card
+  COALESCE-ANSI-WIDEN-1 (2026-10-02, from the #888 review):** bare `coalesce`/`array`
+  widening over STRING with DATE, BINARY and DECIMAL, pre-existing on base (four measured
+  cells: `coalesce('2024-01-02', DATE'2024-01-02')`, `array(sdt, dt)`, `upper(TIMESTAMP)`,
+  `coalesce(1.50BD, '1.5')`); BINARY shapes not yet measured.
+- [bare-literal-function-column-1-card-2026-10-02.md](bare-literal-function-column-1-card-2026-10-02.md) — **card
+  BARE-LITERAL-FUNCTION-COLUMN-1 (2026-10-02, S1, from the overnight owner-items backlog,
+  #894 round-6 VT7-1):** a STRING column named `current_timestamp`/`current_date` resolves
+  as the function (`bare_nullary.rs:9` lacks column-first); SELECT returns and stores the
+  current time where Spark uses the column; 24 cells, pre-existing on base.
+- [session-conf-live-1-card-2026-10-02.md](session-conf-live-1-card-2026-10-02.md) — **card
+  SESSION-CONF-LIVE-1 (2026-10-02, from ATTR-ID-1 S3c):** frames keep the case rule from
+  creation in `task_ctx`, so `conf.set` flips leave facade-live and native planning
+  disagreeing (121 gap-moved cells); a session-infrastructure card, outside S3a–S3e.
+- [createdataframe-dup-names-1-card-2026-10-02.md](createdataframe-dup-names-1-card-2026-10-02.md) — **card
+  CREATEDATAFRAME-DUP-NAMES-1 (2026-10-02, from ATTR-ID-1 S3d residue 2):** RePark's
+  `createDataFrame` refuses duplicate column names where Spark mints distinct ids (probe
+  `s3d18` unbuildable; the multi-id-union refusal is pinned via alias-dup instead).
+- [selectexpr-dup-field-join-1-card-2026-10-02.md](selectexpr-dup-field-join-1-card-2026-10-02.md) — **card
+  SELECTEXPR-DUP-FIELD-JOIN-1 (2026-10-02, from ATTR-ID-1 S3e):** `selectExpr` over
+  duplicate-field join frames fails at the scratch-view scan, on main-identical untouched
+  paths; a view/engine follow-up.
+- [qualified-display-name-1-card-2026-10-02.md](qualified-display-name-1-card-2026-10-02.md) — **card
+  QUALIFIED-DISPLAY-NAME-1 (2026-10-02, from ATTR-ID-1 S3e):** Spark strips qualifiers in
+  compound display names (`(v + v)`) and `selectExpr` (`(v + 1)`); RePark keeps the written
+  qualifier; a display-naming follow-up.
+- [star-error-shape-1-card-2026-10-02.md](star-error-shape-1-card-2026-10-02.md) — **card
+  STAR-ERROR-SHAPE-1 (2026-10-02, from ATTR-ID-1 S3e):** `INVALID_USAGE_OF_STAR_OR_REGEX`
+  for `F.col("q.*")` in filter/withColumn/orderBy, `CANNOT_RESOLVE_STAR_EXPAND` for unknown
+  stars, and shaped `getitem` `q.*`, where RePark gives engine errors; an error-shaping
+  follow-up.
+- [unresolved-suggest-qualified-1-card-2026-10-02.md](unresolved-suggest-qualified-1-card-2026-10-02.md) — **card
+  UNRESOLVED-SUGGEST-QUALIFIED-1 (2026-10-02, from ATTR-ID-1 S3e):** Spark's UNRESOLVED
+  suggestion lists are qualifier-qualified; RePark echoes bare names, unchanged from main;
+  a suggestion-list follow-up.
+- [withcolumn-dup-display-1-card-2026-10-02.md](withcolumn-dup-display-1-card-2026-10-02.md) — **card
+  WITHCOLUMN-DUP-DISPLAY-1 (2026-10-02, from ATTR-ID-1 S3e):** `withColumn` over
+  duplicate-display frames raises a bare AMBIGUOUS_REFERENCE via `_iter_bound_columns`,
+  main-identical; an engine/bounds follow-up.
+- [qualified-twin-bind-1-card-2026-10-02.md](qualified-twin-bind-1-card-2026-10-02.md) — **card
+  QUALIFIED-TWIN-BIND-1 (2026-10-02, record only, from ATTR-ID-1 S3e):** single-id
+  multi-hit qualified binds against Spark's two-attribute refusal under the settled
+  S1/C-038 select-dup model; target "revisit if a cell disagrees".
+- [df-metadata-col-1-card-2026-10-02.md](df-metadata-col-1-card-2026-10-02.md) — **card
+  DF-METADATA-COL-1 (2026-10-02, re-cut from closed draft PR #662):**
+  `DataFrame.metadataColumn` and the hidden `_metadata` struct on file scans, two weeks
+  stale with review findings open (P1 L-501 + 3 P2 + 1 P3, R-18b-16..19, Spark cells
+  recorded); kept branch `feat/df-metadata-col-1` at `e07acb9c`, round-4 tree saved as a
+  patch.
+- [java-regex-features-1-card-2026-10-02.md](java-regex-features-1-card-2026-10-02.md) — **card
+  JAVA-REGEX-FEATURES-1 (2026-10-02, re-cut from closed draft PR #658):** `split` /
+  `regexp_*` / `rlike` answer Java lookaround, backreferences and possessive quantifiers
+  via `fancy-regex 0.11`, verification-clean but never queued; kept branch
+  `feat/java-regex-features-1` at `4c36c6f6`; three declared residue cells with recorded
+  Spark answers.
+- [fnp-agg-1-card-2026-10-02.md](fnp-agg-1-card-2026-10-02.md) — **card FNP-AGG-1
+  (2026-10-02, re-cut from closed draft PR #625, step 1 of 5):** the aggregate names
+  still only on the branch — slice (d) (`grouping_id` + foundation) landed as `41534851`,
+  slices (a)–(c) unbuilt with 10 names remaining per the 09-21 rescue report; kept branch
+  `feat/fnp-agg-1` at `4a3379fe`; oracle recorded.
