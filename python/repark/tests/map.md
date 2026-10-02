@@ -9017,6 +9017,9 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   keep the diagonal; lineage-sharing compound arms refuse (Spark reports ambiguity
   too); mixed compound arms keep base rows as a divergence (Spark raises); a token
   whose id sits on neither join side reaches the engine unsided and refuses;
-  duplicate select outputs take positional `__repark_sel_{n}` engine names. No module
-  docstring: the lane's no-comments ruling covers the new file; the contract
-  lives here. pins: attr-id-1/C-040
+  duplicate select outputs take positional `__repark_sel_{n}` engine names; a parent
+  ref through `fillna`/`replace` binds its own side's output on duplicate names;
+  `eqNullSafe` sides a shared-lineage self-join; a parent ref past an arithmetic
+  output resolves by engine name on single names and raises on duplicate names.
+  No module docstring: the lane's no-comments ruling covers the new file; the
+  contract lives here. pins: attr-id-1/C-040

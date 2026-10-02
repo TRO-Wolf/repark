@@ -123,3 +123,57 @@ def test_s4_select_engine_names_shrunk(ruled_spark: ReparkSession) -> None:
         "__repark_sel_0",
         "__repark_sel_1",
     ]
+
+
+def _dup_join(spark: ReparkSession) -> Any:
+    """Join with duplicate ``b`` and asymmetric sides (left fills 0/2, right 0/20)."""
+    left_base = spark.createDataFrame([(1, 2), (3, None)], ["a", "b"])
+    right_base = spark.createDataFrame([(1, 20), (3, None)], ["a", "b"])
+    left = left_base.select(left_base.a.alias("aa"), left_base.b)
+    return left, right_base, left.join(right_base, left.aa == right_base.a)
+
+
+def test_s4_fillna_dup_name_binds_parent_source(ruled_spark: ReparkSession) -> None:
+    """A parent ref through ``fillna`` binds its own side's filled output."""
+    left, _right, joined = _dup_join(ruled_spark)
+    filled = joined.fillna(0)
+    assert filled.columns == ["aa", "b", "a", "b"]
+    assert sorted(row[0] for row in filled.select(left["b"]).collect()) == [0, 2]
+
+
+def test_s4_replace_dup_name_binds_parent_source(ruled_spark: ReparkSession) -> None:
+    """A parent ref through ``replace`` binds its own side's replaced output."""
+    left, _right, joined = _dup_join(ruled_spark)
+    replaced = joined.replace(2, 200)
+    assert replaced.columns == ["aa", "b", "a", "b"]
+    assert {row[0] for row in replaced.select(left["b"]).collect()} == {200, None}
+
+
+def test_s4_eq_null_safe_shared_lineage_sides(ruled_spark: ReparkSession) -> None:
+    """``IS NOT DISTINCT FROM`` separates comparison arms like ``=`` in a self-join."""
+    frame = ruled_spark.createDataFrame([(1, 2), (3, None)], ["a", "b"])
+    left = frame.select(frame.a.alias("aa"), frame.b)
+    joined = left.join(frame, left.b.eqNullSafe(frame.b))
+    assert joined.columns == ["aa", "b", "a", "b"]
+    assert sorted(tuple(row) for row in joined.collect()) == [
+        (1, 2, 1, 2),
+        (3, None, 3, None),
+    ]
+
+
+def test_s4_expression_output_parent_ref_uses_engine_name(ruled_spark: ReparkSession) -> None:
+    """A parent ref past an arithmetic output still resolves by engine name."""
+    frame = ruled_spark.createDataFrame([(1, 2), (3, 4)], ["a", "b"])
+    projected = frame.select((frame.b + 1).alias("b"), frame.a)
+    assert [row[0] for row in projected.select(frame.b).orderBy(frame.a).collect()] == [3, 5]
+
+
+def test_s4_expression_output_parent_ref_stays_unbound_on_dup_names(
+    ruled_spark: ReparkSession,
+) -> None:
+    """A parent ref past an arithmetic output on duplicate names raises, never binds."""
+    left, right, joined = _dup_join(ruled_spark)
+    projected = joined.select((left["b"] + 1).alias("b"), joined["aa"], joined["a"], right["b"])
+    assert projected.columns == ["b", "aa", "a", "b"]
+    with pytest.raises(AnalysisException):
+        projected.select(left["b"]).collect()

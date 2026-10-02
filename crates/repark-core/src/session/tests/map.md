@@ -52,6 +52,10 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   `attr_id_resolve.rs` (the file sat at the ceiling after the facade-qualifier
   argument joined every `resolve` call), and every remaining `resolve` call
   passes `None` for it. pins: attr-id-1/C-039
+  **ATTR-ID-1 S4 (2026-10-02):** two `projection_source_ids` pins: alias,
+  single-column `coalesce`, the `IS NOT NULL` fill `CASE` and the equality
+  replace `CASE` read their input id; multi-column `coalesce`, arithmetic and
+  `upper` read none. pins: attr-id-1/C-040
 - `attr_id_resolve.rs` — **ATTR-ID-1 S3e (2026-10-01):** the moved `resolve_*`
   pins (one hit, twins of one attribute, two attributes under one name, a
   written qualifier's hit and miss, the cast twin, the missing-id and

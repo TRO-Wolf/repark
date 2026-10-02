@@ -16,8 +16,8 @@ use datafusion::prelude::SessionContext;
 use crate::ReparkSession;
 use crate::frame_names::{
     AttrId, NameRule::IgnoreCase, Resolution, alias_with_fresh_id, attribute_ids,
-    join_on_named_keys, plan_is_relation, plan_is_stamped, remint_join_collisions,
-    requalify_join_sides, resolve, stamp, strip, union_by_folded_name,
+    join_on_named_keys, plan_is_relation, plan_is_stamped, projection_source_ids,
+    remint_join_collisions, requalify_join_sides, resolve, stamp, strip, union_by_folded_name,
 };
 
 const KEY: &str = "repark.attr";
@@ -808,4 +808,93 @@ fn plan_is_stamped_matches_what_stamp_would_change() {
             schema: bare,
         }
     )));
+}
+
+fn source_strs(sources: Vec<Option<AttrId>>) -> Vec<Option<String>> {
+    sources
+        .iter()
+        .map(|id| id.as_ref().map(|id| id.as_str().to_string()))
+        .collect()
+}
+
+#[test]
+fn projection_source_ids_reads_alias_coalesce_and_single_column_case() {
+    let context = SessionContext::new();
+    let minted = [AttrId::mint(), AttrId::mint(), AttrId::mint()];
+    let tags = [minted[0].as_str(), minted[1].as_str(), minted[2].as_str()];
+    let frame = tagged_as(&context, tags);
+    let aliased = frame
+        .clone()
+        .select(vec![col("id").alias("renamed"), col("data"), col("s")])
+        .unwrap();
+    assert_eq!(
+        source_strs(projection_source_ids(aliased.logical_plan())),
+        vec![
+            Some(tags[0].to_string()),
+            Some(tags[1].to_string()),
+            Some(tags[2].to_string())
+        ]
+    );
+    let filled = frame
+        .clone()
+        .select(vec![
+            coalesce(vec![col("id"), lit(0)]).alias("id"),
+            col("data"),
+            col("s"),
+        ])
+        .unwrap();
+    assert_eq!(
+        source_strs(projection_source_ids(filled.logical_plan()))[0],
+        Some(tags[0].to_string())
+    );
+    let fill_case = frame
+        .clone()
+        .select(vec![
+            when(col("data").is_not_null(), col("data"))
+                .otherwise(lit("z"))
+                .unwrap()
+                .alias("data"),
+            col("id"),
+            col("s"),
+        ])
+        .unwrap();
+    assert_eq!(
+        source_strs(projection_source_ids(fill_case.logical_plan()))[0],
+        Some(tags[1].to_string())
+    );
+    let replaced = frame
+        .clone()
+        .select(vec![
+            when(col("id").eq(lit(2)), lit(200))
+                .otherwise(col("id"))
+                .unwrap()
+                .alias("id"),
+            col("data"),
+            col("s"),
+        ])
+        .unwrap();
+    assert_eq!(
+        source_strs(projection_source_ids(replaced.logical_plan()))[0],
+        Some(tags[0].to_string())
+    );
+}
+
+#[test]
+fn projection_source_ids_refuses_multi_column_and_computed_outputs() {
+    let context = SessionContext::new();
+    let minted = [AttrId::mint(), AttrId::mint(), AttrId::mint()];
+    let tags = [minted[0].as_str(), minted[1].as_str(), minted[2].as_str()];
+    let frame = tagged_as(&context, tags);
+    let mixed = frame
+        .clone()
+        .select(vec![
+            coalesce(vec![col("id"), col("data")]).alias("id"),
+            (col("id") + lit(1)).alias("data"),
+            upper(col("s")).alias("s"),
+        ])
+        .unwrap();
+    assert_eq!(
+        source_strs(projection_source_ids(mixed.logical_plan())),
+        vec![None, None, None]
+    );
 }
