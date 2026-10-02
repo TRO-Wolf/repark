@@ -16,15 +16,30 @@ if TYPE_CHECKING:
     from repark.spark.dataframe.core import DataFrame
 
 
-_ATTR_TOKEN_RE = re.compile(r"__REPARK_ATTR_([A-Za-z0-9]+)__F(\d+)__([\w\\|]*)__")
+_ATTR_TOKEN_RE = re.compile(
+    r"__REPARK_ATTR_([A-Za-z0-9]+)__F(\d+)__([\w\\|]*?)(?:__D([0-9A-Fa-f]*))?__"
+)
+
+
+def _token_leaf_display(match: re.Match[str]) -> str | None:
+    """Decode a token's ``__D`` leaf display, or ``None`` when absent or broken."""
+    coded = match.group(4)
+    if coded is None:
+        return None
+    try:
+        return bytes.fromhex(coded).decode("utf-8")
+    except (ValueError, UnicodeDecodeError):
+        return None
 
 
 def _join_condition_attr_names(frame: DataFrame, cond_sql: str) -> dict[str, str]:
     """Map condition token ids to the display name on their birth frame.
 
     The birth frame is the live frame behind the token's frame field. A token
-    whose frame is gone, or whose id the frame no longer emits, stays out of
-    the map; the native preparer then refuses loud instead of guessing.
+    whose frame is gone, or whose id the frame no longer emits, falls back to
+    the leaf display the token itself carries; only a token with neither stays
+    out of the map, and the native preparer then refuses loud instead of
+    guessing.
     """
     names: dict[str, str] = {}
     if "__REPARK_ATTR_" not in cond_sql:
@@ -43,6 +58,10 @@ def _join_condition_attr_names(frame: DataFrame, cond_sql: str) -> dict[str, str
             by_frame[frame_id] = held
         if attr_id in held:
             names[attr_id] = held[attr_id]
+            continue
+        leaf = _token_leaf_display(match)
+        if leaf:
+            names[attr_id] = leaf
     return names
 
 

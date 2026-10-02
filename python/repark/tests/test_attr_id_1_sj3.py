@@ -458,3 +458,72 @@ def test_sj3_p_v_anti_idiom(ruled_spark: ReparkSession) -> None:
     d = _d(ruled_spark)
     f = d.filter("id > 1")
     _refuses_1182(lambda: d.join(f, d.id == f.id, "left").where(f.id.isNull()).select(d.id), ["id"])
+
+
+_MISSING_OP = "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+
+
+def _copies_d(spark: ReparkSession) -> Any:
+    return spark.createDataFrame([(1, 10, "a"), (2, 20, "b"), (3, 30, "c")], ["id", "v", "Data"])
+
+
+def _copies_o(spark: ReparkSession) -> Any:
+    return spark.createDataFrame([(10, "x"), (30, "y")], ["v", "tag"])
+
+
+def _copies_x(d: Any) -> Any:
+    return d.select(d.v.alias("v"))
+
+
+def _refuses_missing_naming(thunk: Callable[[], Any], name: str) -> None:
+    refused = _refuses(thunk, _MISSING_OP)
+    assert f'"{name}"' in str(refused)
+
+
+def test_sj3_r3_cp_al1_join_parent(ruled_spark: ReparkSession) -> None:
+    """Aliased-child join names the missing parent ref (``r3.cp_al1_join_parent``)."""
+    spark = ruled_spark
+    d = _copies_d(spark)
+    o = _copies_o(spark)
+    _refuses_missing_naming(lambda: d.select(d.v.alias("v")).join(o, d.v == o.v), "v")
+
+
+def test_sj3_r3_cp_al1id_join_parent(ruled_spark: ReparkSession) -> None:
+    """Aliased-child join with id names the missing parent ref (``r3.cp_al1id_join_parent``)."""
+    spark = ruled_spark
+    d = _copies_d(spark)
+    o = _copies_o(spark)
+    _refuses_missing_naming(lambda: d.select("id", d.v.alias("v")).join(o, d.v == o.v), "v")
+
+
+def test_sj3_r3_cp_al_al_join_parent(ruled_spark: ReparkSession) -> None:
+    """Twin-alias child join names the missing parent ref (``r3.cp_al_al_join_parent``)."""
+    spark = ruled_spark
+    d = _copies_d(spark)
+    o = _copies_o(spark)
+    child = d.select(d.v.alias("v"), d.v.alias("v"))
+    _refuses_missing_naming(lambda: child.join(o, d.v == o.v), "v")
+
+
+def test_sj3_r3_cp_wcr_join_parent(ruled_spark: ReparkSession) -> None:
+    """Renamed-child join names the missing parent ref (``r3.cp_wcr_join_parent``)."""
+    spark = ruled_spark
+    d = _copies_d(spark)
+    o = _copies_o(spark)
+    _refuses_missing_naming(lambda: d.withColumnRenamed("v", "v").join(o, d.v == o.v), "v")
+
+
+def test_sj3_r3_cp_x_join_self(ruled_spark: ReparkSession) -> None:
+    """Dead-birth join names the missing attr; no internal error (``r3.cp_x_join_self``)."""
+    spark = ruled_spark
+    d = _copies_d(spark)
+    _refuses_missing_naming(lambda: _copies_x(d).join(d, d.v == _copies_x(d).v), "v")
+
+
+def test_sj3_token_carries_leaf_display_hex(spark: ReparkSession) -> None:
+    """Tokens carry the bind-time leaf display as upper hex UTF-8."""
+    spark.conf.set("spark.sql.caseSensitive", "false")
+    d = _copies_d(spark)
+    assert d.v.join_sql_part().endswith("__D76__")
+    wide = spark.createDataFrame([(1,)], ["ü"])
+    assert wide["ü"].join_sql_part().endswith("__DC3BC__")

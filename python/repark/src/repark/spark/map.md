@@ -402,6 +402,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   the size ceiling (pure move; `Column` binds the five spellings).
   `join_sql_part` renders the frame field from `_column_frame_id`, `F0` without
   a birth frame. Pins: `python/repark/tests/test_attr_id_1_sj2.py`.
+  **ATTR-ID-1 SJ-3 R-SJ3-2 (2026-10-02):** the token carries the bind-time leaf
+  display as `__D<UPPERHEX-OF-UTF8>__` after the qualifiers, so a token whose
+  birth frame is an unbound dead temp still names its attribute for the native
+  preparer's `names` map. Pins: `python/repark/tests/test_attr_id_1_sj3.py`.
 - `filter_quote.py` — **ATTR-ID-1 S3b H-1 (2026-10-01):** the filter-SQL
   identifier quoter, split out of `column_fields.py` at the size ceiling (pure
   move; the entry stays there). `_FILTER_TOKEN_PATTERN`,

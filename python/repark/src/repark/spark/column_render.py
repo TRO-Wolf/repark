@@ -25,7 +25,9 @@ def join_sql_part(column: Column) -> str:
     if column._attr_id is not None:
         quals = _escape_attr_token_quals(column._qualifiers)
         frame = _column_fields._column_frame_id(column) or 0
-        return f"__REPARK_ATTR_{column._attr_id}__F{frame}__{quals}__"
+        shown = column._projection_name or spark_display_part(column)
+        leaf = shown.encode("utf-8").hex().upper()
+        return f"__REPARK_ATTR_{column._attr_id}__F{frame}__{quals}__D{leaf}__"
     return sql_expr_part(column)
 
 

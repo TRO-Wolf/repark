@@ -9064,7 +9064,8 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   describe/summary answer through inert empty roots (never renewing, no
   outputs); a relation child of describe gets a non-empty node. No module
   docstring: the lane's no-comments ruling covers the new file; the contract
-  lives here.
+  lives here. **ATTR-ID-1 SJ-3 R-SJ3-2 (2026-10-02):** the frameless exact-form
+  pin renders the leaf field (`__D78__`).
 - [test_attr_id_1_sj3.py](test_attr_id_1_sj3.py) — **ATTR-ID-1 SJ-3 (2026-10-02):**
   the condition-path pins, each named after its probe cell and EQUAL to live
   Spark 4.1.2 under both case rules: the `B_*`/`D_*`/`E_parent_alias_*`/`G_eq3_*`
@@ -9075,6 +9076,11 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   (`D_self_eq_sel_d`, `P_v_left_join_right_parent`, `P_v_anti_idiom`) carry
   strict xfail until SJ-4 wires the refusal funnel. No module docstring: the
   lane's no-comments ruling covers the new file; the contract lives here.
+  **ATTR-ID-1 SJ-3 R-SJ3-1/R-SJ3-2 (2026-10-02):** the accepted corpus pins
+  `r3.cp_{al1,al1id,al_al,wcr}_join_parent` (× both case rules, each Spark's
+  `MISSING_ATTRIBUTES` naming `v`), `r3.cp_x_join_self` (dead birth still names
+  `v`; the bare-`PySparkException` internal error cannot fire), and the token
+  leaf-hex render pin (ASCII plus non-ASCII).
 - [test_attr_id_1_v456.py](test_attr_id_1_v456.py) — **ATTR-ID-1 V-5 (2026-10-02):**
   the verifier-fold twin pins, measured against live Spark 4.1.2 `p5_twins`.
   The ported `test_v5` pin plus the 13 remaining F_ cells refuse

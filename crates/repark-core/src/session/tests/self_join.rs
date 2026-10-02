@@ -804,6 +804,15 @@ fn qualified_tokens_parse() {
 }
 
 #[test]
+fn tokens_with_a_leaf_display_field_parse_and_span_to_its_close() {
+    let Env { d, .. } = env();
+    let token = tok(&d, "id").replace("____", "__l\\|r__D6964__");
+    let parsed = parse_attr_refs(&format!("({token} > 1)")).unwrap();
+    assert_eq!(parsed.text, "(__rp_ref_0 > 1)");
+    assert_eq!(parsed.refs[0].frame, d.node.id());
+}
+
+#[test]
 fn a_token_without_a_frame_field_is_loud() {
     let refused = parse_attr_refs("(__REPARK_ATTR_a1____ = 1)").unwrap_err();
     assert!(refused.to_string().contains("carries no frame field"));

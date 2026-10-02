@@ -727,6 +727,11 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   chained-join duplicate displays do not hit `AMBIGUOUS_REFERENCE`, engine
   ordinals stay unique across chained duplicates, and bare `joined["b"]` stays
   `AMBIGUOUS`. Pins: `python/repark/tests/test_attr_id_1_sj3.py`.
+  **ATTR-ID-1 SJ-3 R-SJ3-2 (2026-10-02):** `_ATTR_TOKEN_RE` takes the optional
+  `__D<hex>__` leaf group (group 4; old-form tokens still match with group 4
+  unset); `_join_condition_attr_names` falls back to the decoded leaf when the
+  birth frame is dead or no longer emits the id. Only a token with neither
+  stays out of the map. Pins: `python/repark/tests/test_attr_id_1_sj3.py`.
 - `unemitted_ids.py` — **ATTR-ID-1 SJ-2 (2026-10-02):** the semi/anti
   unemitted-id family (`remember_unemitted_right_ids`/`raise_if_id_not_emitted`/
   `raise_unemitted_attr_tokens`/`refuse_unemitted_ids`), split out of `core.py`

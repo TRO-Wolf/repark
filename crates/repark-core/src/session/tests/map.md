@@ -172,6 +172,10 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   `x_empty_root_never_renews_and_skips_refusal_checks` pins the inert empty
   `Root`: it never renews, and `check_refs` returns early on it even when the
   display count cannot match the empty outputs.
+  **ATTR-ID-1 SJ-3 R-SJ3-2 (2026-10-02):**
+  `tokens_with_a_leaf_display_field_parse_and_span_to_its_close` pins that the
+  parser skips the token's `__D<hex>__` leaf field (the `rfind("__")` close
+  already covers it; no production change).
 - `session.rs` — ported v1 session battery plus P2G R2 / A13 / metadata-enumeration pins. RP-5: the bare-session half of the metadata-table enumeration contract (fork F-8 listing); mutation — make `information_schema` expect a `$snapshots` twin and the pin reds. pins: rp-5-fork-repin/C-003
   Child: [session/catalog_registration.rs](session/map.md).
   RP-5: `information_schema` hide pin now cites fork F-8 listing (no engine shim).

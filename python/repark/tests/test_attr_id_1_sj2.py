@@ -70,7 +70,7 @@ def test_sj2_frameless_columns_render_f0(spark: ReparkSession) -> None:
     assert qualified._attr_id is not None
     assert _token_frame(qualified.join_sql_part()) == 0
     bare = Column(_native.PyColumn.column("x"), attr_id="abc123")
-    assert bare.join_sql_part() == "__REPARK_ATTR_abc123__F0____"
+    assert bare.join_sql_part() == "__REPARK_ATTR_abc123__F0____D78__"
 
 
 def test_sj2_frame_node_ids_derive_and_checkpoint_reroots(spark: ReparkSession) -> None:
