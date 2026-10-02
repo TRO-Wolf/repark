@@ -18,6 +18,7 @@ use datafusion::scalar::ScalarValue;
 use pyo3::prelude::*;
 
 use crate::datafusion_to_py_err;
+use crate::deep_stack::{PlanDepths, grown_clone_expr, grown_clone_frame};
 use crate::fence::fenced;
 
 pub(crate) const MASK_NAME: &str = "__repark_is_duplicated__";
@@ -243,10 +244,10 @@ fn fresh_name(schema: &DFSchema, base: &str) -> String {
     }
 }
 
-fn order_key_columns_usable(keys: &[SortExpr], schema: &DFSchema) -> bool {
+fn order_key_columns_usable(keys: &[SortExpr], schema: &DFSchema, depths: &PlanDepths) -> bool {
     let mut usable = true;
     for key in keys {
-        let _ = key.expr.clone().transform(|step| {
+        let _ = grown_clone_expr(&key.expr, depths.expression, depths.plan).transform(|step| {
             match &step {
                 Expr::Column(column) => {
                     if schema.index_of_column(column).is_err() {
@@ -268,13 +269,20 @@ fn order_key_columns_usable(keys: &[SortExpr], schema: &DFSchema) -> bool {
     usable
 }
 
-fn input_order_keys(plan: &LogicalPlan, schema: &DFSchema) -> Vec<SortExpr> {
+fn input_order_keys(plan: &LogicalPlan, schema: &DFSchema, depths: &PlanDepths) -> Vec<SortExpr> {
     let mut current = plan;
     loop {
         match current {
             LogicalPlan::Sort(sort) => {
-                if order_key_columns_usable(&sort.expr, schema) {
-                    return sort.expr.clone();
+                if order_key_columns_usable(&sort.expr, schema, depths) {
+                    return sort
+                        .expr
+                        .iter()
+                        .map(|key| {
+                            grown_clone_expr(&key.expr, depths.expression, depths.plan)
+                                .sort(key.asc, key.nulls_first)
+                        })
+                        .collect();
                 }
                 return Vec::new();
             }
@@ -340,19 +348,21 @@ fn expand_root(
 }
 
 #[allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
-pub(crate) fn filter_frame(frame: &DataFrame, predicate: Expr) -> PyResult<(DataFrame, bool)> {
+pub(crate) fn filter_frame(
+    frame: &DataFrame,
+    depths: &PlanDepths,
+    predicate: Expr,
+) -> PyResult<(DataFrame, bool)> {
     fenced!("is_duplicated.filter_frame", {
         if !contains_mask(&predicate) {
-            let df = frame
-                .clone()
+            let df = grown_clone_frame(frame, depths)
                 .filter(predicate)
                 .map_err(datafusion_to_py_err)?;
             return Ok((df, false));
         }
         let index = fresh_name(frame.schema(), INDEX_BASE);
-        let order_keys = input_order_keys(frame.logical_plan(), frame.schema());
-        let indexed = frame
-            .clone()
+        let order_keys = input_order_keys(frame.logical_plan(), frame.schema(), depths);
+        let indexed = grown_clone_frame(frame, depths)
             .with_column(
                 &index,
                 row_index_expr(order_keys).map_err(datafusion_to_py_err)?,
@@ -379,16 +389,21 @@ pub(crate) fn filter_frame(frame: &DataFrame, predicate: Expr) -> PyResult<(Data
 }
 
 #[allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
-pub(crate) fn select_frame(frame: &DataFrame, exprs: Vec<Expr>) -> PyResult<(DataFrame, bool)> {
+pub(crate) fn select_frame(
+    frame: &DataFrame,
+    depths: &PlanDepths,
+    exprs: Vec<Expr>,
+) -> PyResult<(DataFrame, bool)> {
     fenced!("is_duplicated.select_frame", {
         if !exprs.iter().any(contains_mask) {
-            let df = frame.clone().select(exprs).map_err(datafusion_to_py_err)?;
+            let df = grown_clone_frame(frame, depths)
+                .select(exprs)
+                .map_err(datafusion_to_py_err)?;
             return Ok((df, false));
         }
         let index = fresh_name(frame.schema(), INDEX_BASE);
-        let order_keys = input_order_keys(frame.logical_plan(), frame.schema());
-        let mut staged = frame
-            .clone()
+        let order_keys = input_order_keys(frame.logical_plan(), frame.schema(), depths);
+        let mut staged = grown_clone_frame(frame, depths)
             .with_column(
                 &index,
                 row_index_expr(order_keys).map_err(datafusion_to_py_err)?,

@@ -412,7 +412,8 @@ impl PyDataFrame {
                 std::slice::from_ref(&predicate),
                 || {
                     let (bound, depth) = self.bound(&predicate)?;
-                    let (df, expanded) = crate::is_duplicated::filter_frame(self.inner(), bound)?;
+                    let (df, expanded) =
+                        crate::is_duplicated::filter_frame(self.inner(), &self.depths, bound)?;
                     Ok(((df, expanded), depth))
                 },
             )?;
@@ -449,8 +450,11 @@ impl PyDataFrame {
                         deepest = deepest.max(depth);
                         expressions.push(bound);
                     }
-                    let (df, expanded) =
-                        crate::is_duplicated::select_frame(self.inner(), expressions)?;
+                    let (df, expanded) = crate::is_duplicated::select_frame(
+                        self.inner(),
+                        &self.depths,
+                        expressions,
+                    )?;
                     Ok(((df, expanded), deepest))
                 })?;
             let depths = child_depths(&self.depths, bound, &df, carries_plan || expanded);
