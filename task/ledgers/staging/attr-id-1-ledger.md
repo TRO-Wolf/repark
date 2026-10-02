@@ -903,3 +903,38 @@ in `test_attr_id_1_s4.py` and one removal docstring in
 `test_dfcore_1_exports.py`); archived ledgers keep history lines, frozen
 and foreign-unit records untouched. `bash /tmp/xattr/gate.sh` prints
 GATE GREEN. C-041 and C-042 close to PROVEN unconditionally.
+
+**Verifier-fold V-4/V-5/V-6 record (2026-10-02, append-only).** The Opus
+end-of-stack verifier BLOCKed `b377de7e` with V-1 through V-8 (evidence
+under `/tmp/oc-worker/direct/wo/attr-id-1/verify/`). This round folds V-4
+and V-5; V-1, V-2 and V-3 are out of scope pending the owner join ruling,
+and V-6 halts (C-043 OPEN) because its ruling premise is false as
+measured. Product commits `4982931f` (V-5) and `b6b6aeb3` (V-4).
+
+| Clause | Statement | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-043 | V-6 HALTS: `crossJoin` re-minting the right side's colliding ids unconditionally (the ruling's mechanism) does not fix the `withColumnRenamed` pin — the rename dies in the name-based `_iter_bound_columns` duplicate path before ids matter — and the sufficient fix (a condition-join-style explicit projection with unique engines plus the display overlay) extends V-1's wrong-side binds to 14 base-refusing cross cells (`xj_sel_parent`, `xjf_sel_parent_f`, `xj_filter_parent` and kindred, both case rules). The ruling needs the owner V-1 decision first: refuse-like-Spark or carry frame lineage. | The owner ruling; then the three `p1_joins` pins (`xj_wcr`, `xj_wc`, `xj_dd`) green with the 14 cells explained. | OPEN (ruling question: V-6 rides on V-1) | `/tmp/oc-worker/direct/wo/attr-id-1/v456/p1_v6.json` (38 cells move against pre-V-6 head; the V-6 attempt is reverted, no commit). |
+
+| Clause | Statement | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-044 | V-5 keeps the case-twin refusal: under `caseSensitive=false` a folded-ambiguous name with one exact spelling births an id-less written-ref column (exact-engine spelling, birth frame kept) instead of binding the twin's id, so the engine refuses exactly as base and Spark on the birth frame and every pass-through child; `_born_ambiguous` returns those columns verbatim from `_bind_sort_key` because live Spark refuses Column sort keys as `AMBIGUOUS_REFERENCE` but string keys as `UNRESOLVED_COLUMN`. Under `caseSensitive=true` nothing changes. The S4 pass-through bind pin and the sort-marker `UNRESOLVED` pin flip to the Spark refusal. | The ported `test_v5` pin, the 13 remaining F_ cells refusing, all 16 T_ cells binding with Spark rows; the p5 grid 31 cells exact-base with 1 exact-Spark. | PROVEN | Commit `4982931f`; `python/repark/tests/test_attr_id_1_v456.py`; live-Spark `/tmp/oc-worker/direct/wo/attr-id-1/v456/v5_spark_order.json`; `/tmp/oc-worker/direct/wo/attr-id-1/v456/p5_v5.json`. |
+
+| Clause | Statement | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-045 | V-4 keeps a live frame's ids across materialization: native `copy_attribute_ids` carries the source schema's ids onto the fresh scan by position (a width mismatch is an internal error; an already-carried plan returns unchanged); `bind_registered_view` applies it to cache scans and `bind_checkpoint_scan` (moved out of `core`'s checkpoint arm, CAP-1 3653 → 3652) to checkpoint scans, while `unpersist` already restores the lineage plan untouched. `test_cache_keeps_frames_bindable` now asserts byte continuity. Known interaction: continuity exposes V-1 on `p7 child_before_materialize_join_parent` (base rows become a left-bind; Spark refuses), owned by the pending V-1 ruling. | The ported `test_v4` pins, the unpersist/checkpoint variants, the continuity pin, the Rust carry test; the p7 grid 7 cells exact-base-and-Spark. | PROVEN | Commit `b6b6aeb3`; `python/repark/tests/test_attr_id_1_v456.py`; `crates/repark-core/src/session/tests/attr_id.rs::the_id_carry_copies_source_ids_by_position_and_keeps_a_carried_plan`; `/tmp/oc-worker/direct/wo/attr-id-1/v456/p7_v4.json`. |
+
+**Verifier-fold halt-rule-3 correction (2026-10-02).** The S4 ruling
+sentence "No branch treats a missing id as anything but a loud error" is
+false as measured: `_bind_stable_id_column`'s final `return column`
+(`column_fields.py:722`) passes a column whose id no output holds, and it
+then binds by display name (finding V-3, pre-existing and base-identical).
+The sentence stands corrected to: every unknown id reaches a loud error,
+except the pass-through `return column`, which stays open as V-3 pending
+the owner ruling.
+
+**Verifier-fold R-5 correction (2026-10-02).** The S4 residue disposition
+closed R-5's cache half on bindability (`test_cache_keeps_frames_bindable`
+asserted non-`None` ids only). That test now asserts byte continuity
+across cache, unpersist and checkpoint, and C-045 proves the carry; the
+cache half closes on continuity. The SQL-`UNPIVOT` half stays open as
+recorded.
