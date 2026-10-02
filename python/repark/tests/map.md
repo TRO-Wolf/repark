@@ -4674,6 +4674,62 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   STRING/DOUBLE UNION, `max` over a STRING/DOUBLE CASE, and a STRING/TIMESTAMP CASE
   into DATE through VALUES. 79 cells; the oracle is one cell per line and drops the
   temp views no cell reads. pins: store-ts-to-numeric-1/C-006
+- [test_store_ts_doors_2.py](test_store_ts_doors_2.py) +
+  `store_ts_doors_2_spark_oracle.json` — **WO STORE-TS-DOORS-2 (2026-09-29):**
+  one session replays 26 cells recorded on Spark 4.1.2 + Iceberg 1.11.0 (UTC) in
+  order and compares refusal (class, SQLSTATE, message body with the RePark-only
+  planning prefix allowed) and the target read-back after every statement.
+  Refusals: TIMESTAMP, `CAST(1 AS TIMESTAMP)`, TIMESTAMP_NTZ and DATE through a
+  VALUES node inside INSERT … SELECT into BIGINT, DOUBLE and INT — direct, star,
+  CTE, UNION, nested-alias, join, VALUES-join, WHERE and ORDER BY/LIMIT shapes
+  (C-001); `-NULL` into TIMESTAMP, DATE and BOOLEAN through static-partition
+  OVERWRITE VALUES and SELECT, plus the already-refusing listed and dynamic
+  forms (C-002). Stores in the same test: explicit `CAST(b AS BIGINT)`, INT,
+  NULL, TIMESTAMP into DATE, and `-NULL` into BIGINT (C-001, C-002). Two
+  in-test pins hold the boundary: a temp view over VALUES keeps the WI-1
+  refusal text and a STRING source still stores (C-003).
+  **Fold 2026-09-29 (verifier VT-1):** 21 more oracle cells (`p01`–`p21`) pin the
+  widened set-operation stores and the kept STRING refusals, and three in-test
+  pins hold the carried texts: STRING beside BIGINT/BOOLEAN still names STRING,
+  the EXCEPT/INTERSECT/UNION datetime clashes into BIGINT refuse, and STRING
+  beside table TIMESTAMP into BIGINT keeps the analyzer `type_coercion` refusal.
+  pins: store-ts-doors-2/C-001, C-002, C-003
+  **Fold 2026-09-30 (re-verify VT3-1..VT3-3):** eighteen `test_fold3_*` pins:
+  the 5 reachable CTE-shadow refusals (inline, arm-WITH, dynamic partition,
+  column expression, join), a nested WITH, a CTE shadowing a table (star and
+  column forms) and a qualified-star CTE shadowing a temp view; TIMESTAMP-CTE
+  and plain-view store guards; a CTE, a view and a column named `ambiguous`
+  refusing plus the missing-`ambiguous` not-found surfacing; unknown column,
+  routine and table surfacing the analyzer's class with nothing stored; and
+  quoted-case refusal guards. The column-list CTE shadow is a carried-card
+  pin instead: it asserts today's facade-rewritten store, not Spark's
+  refusal. The 7 new shapes carry Spark 4.1.2 answers measured once for this
+  fold. pins: store-ts-doors-2/C-001, C-003
+  **Fold 2026-09-30 (re-verify VT4-1, VT4-4):** five `test_fold4_*` pins: the
+  36 mixed-case storing cells (8 case-insensitive and 4 case-sensitive arm
+  shapes over uppercase columns, a mixed-case column, an uppercase view and a
+  derived table, each on INTO, dynamic partition and column-list) refusing
+  CANNOT_SAFELY_CAST with nothing stored; TIMESTAMP-twin store guards; a
+  case-sensitive missing column surfacing UNRESOLVED_COLUMN on all three
+  doors; and a real ambiguity at a non-datetime position surfacing
+  AMBIGUOUS_REFERENCE on INTO and column-list. Spark answers are the
+  re-verify-3 attack5/6/7 recordings. pins: store-ts-doors-2/C-001, C-003
+  **Fold 2026-10-01 (re-verify VT5-1):** three `test_fold5_*` pins: the 24
+  unquoted-`INTERVAL` window-frame cells (4 arm shapes on INTO, dynamic
+  partition and column-list in both case modes) refusing
+  CANNOT_SAFELY_CAST with nothing stored; the quoted-bound, integer-range
+  and TIMESTAMP-arm controls; and two further unquoted frame shapes
+  refusing as Spark 4.1.2 does. pins: store-ts-doors-2/C-001, C-003
+- [test_store_ts_doors_2_fold6.py](test_store_ts_doors_2_fold6.py) —
+  **Fold 2026-10-01 (re-verify VT6-1):** four `test_fold6_*` pins, split out
+  at the 1000-line ceiling: the 6 nullary-column arm shapes
+  (`coalesce`/`WHERE`, `CASE`, derived `coalesce`, scalar subquery,
+  uppercase) on INTO, dynamic partition and column-list
+  case-insensitive plus INTO case-sensitive, each refusing as Spark 4.1.2
+  does with nothing stored (CANNOT_SAFELY_CAST; UNRESOLVED_COLUMN for the
+  uppercase case-sensitive shape); the direct, backticked and qualified
+  controls refusing; and the TIMESTAMP-`coalesce` store guards.
+  pins: store-ts-doors-2/C-001, C-003
 - `test_merge_semantics_audit.py` — **MERGE-audit corpus** (2026-08-14 audit gap-map rows
   c/d/g/n/o): null-safe `<=>` / `eqNullSafe` ON matches NULL keys (both doors); builder-door
   `=` NULL keys do not match; self-merge (target as source) updates once per row; join-key
@@ -7101,6 +7157,45 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   render from value text on `spark.sql` / `selectExpr` / `F.expr`, explicit
   aliases stay.
   pins: fnp-4b/C-001, C-003, C-014, C-015, C-029
+- `test_string_literal_escape_1.py` — **STRING-LITERAL-ESCAPE-1 (2026-09-29):**
+  PE-10 facade pins over the live PySpark 4.1.2 oracle — doubled `""` collapse
+  inside double-quoted literals, `r"…"` literals answering, raw `''`/`""`
+  splitting into head plus quoted tail, verbatim mode keeping doublings and
+  marking raw values with the opening quote — each on `spark.sql` (value,
+  length, Arrow type), `F.expr` / `selectExpr` / `filter`, and an
+  `INSERT INTO … VALUES` round-trip.
+  pins: string-literal-escape-1/C-001, C-002, C-003, C-004
+  **DIFF-PROBE fold (2026-09-29):** verbatim DDL read-back pins — TBLPROPERTIES
+  keys/values, column COMMENT text, ALTER SET, and namespace PROPERTIES/DBPROPERTIES
+  collapse like Spark; verbatim OPTIONS values stay verbatim (survivor pin).
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** VE-1 UNSET/SHOW-key/
+  COMMENT ON pins, VE-2 filter/where/F.expr flag pins, and VE-3 UPDATE/DELETE/
+  MERGE predicate pins, each with a default-mode control.
+  pins: string-literal-escape-1/C-008, C-009, C-010
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** VE2-1 built-door pins
+  (cube/rollup/groupingSets/unpivot, mergeInto incl. an `F.expr` condition,
+  overwrite cond/partitions, createTable schema str) and VE2-2 nested
+  UPDATE/MERGE SET pins, each with a default-mode control; the
+  `_forward_datafusion_conf` and `_materialize_values_as_memtable_frame`
+  symbol hashes move in `test_production_file_size.py` (built doors route
+  `_sql_built`).
+  pins: string-literal-escape-1/C-011, C-012
+  **STRING-LITERAL-ESCAPE-1 re-verify VE3-1 (2026-09-30):** `SQLTransformer`
+  is user-written SQL through the user door, so verbatim/default literal and
+  `WHERE s = 'it''s'` pins equal `spark.sql` (and Spark).
+  **STRING-LITERAL-ESCAPE-1 CI round (2026-09-30):** the failure-injection
+  and SQL-spy seams in `test_catalog_surface_1.py`,
+  `test_create_dataframe_materialize.py`, `test_eager_own_1.py`,
+  `test_mapinarrow.py`, and `test_ml_boost_oracle.py` follow the
+  `sql_built` door the product now uses for facade-built SQL, with the same
+  assertions; the two capped files rename the seam method (line-neutral),
+  the other three observe both doors.
+  pins: string-literal-escape-1/C-013
+  **STRING-LITERAL-ESCAPE-1 merge (2026-10-01):** the text-write merge pin —
+  a verbatim CSV write with timestampFormat `yyyy-MM-dd''HH:mm:ss` and
+  `it's` / `it''s` values writes the Spark bytes, equal to the default-mode
+  bytes for the same frame.
+  pins: string-literal-escape-1/C-015
 - `test_fnp_4b_hof_display.py` — **FNP-4B round 6 (2026-09-15):** Q3 red pin for run
   16a — selectExpr higher-order display must hide the `__repark_hof_array_field__`
   packing marker. **Round 7 (2026-09-15):** strict xfail per R-16c-10; 16a flips
@@ -7454,6 +7549,66 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   lands with C-014; the `C_MEM.t` arm leaves the refusal loop.
   pins: catalog-1/C-001, C-002, C-003, C-004,
   C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
+- [test_deep_filter_chain_crash_1.py](test_deep_filter_chain_crash_1.py) —
+  **DEEP-FILTER-CHAIN-CRASH-1 (2026-09-29):** deep operator chains answer instead
+  of killing the interpreter. One module-scoped fixture drives the whole battery
+  in a single isolated interpreter (a crash fails the fixture, never pytest):
+  1,000 chained filters count 50 on the DataFrame door (Spark 4.1.2 oracle 50;
+  base segfaulted at 610), 200 joins count 1 and 300 unions count 15050 (base
+  segfaulted at 110 joins), 120 `withColumn` count 50 (plan-build time, 44 s at
+  200 on base, caps the depth — not the stack), 1,000-deep nested SQL raises a
+  catchable `RecursionError` (Spark refuses nested-deep SQL too, with
+  `FAILED_TO_PARSE_TOO_COMPLEX`), and flat 600-union SQL counts 601.
+  **Limits fold (2026-09-29):** the battery gains the 200,000-item IN list
+  over `range(1000)` (counts 1000, ~60 s on debug — the text cap is gone),
+  8,193 unions counting 409700 (union spines skip the plan cap, ~560 s),
+  8,192 filters refusing `AnalysisException` (base crashes and Spark refuses
+  there), a 300-term AND answering 50 (Spark answers 300, refuses 350), and
+  a 1,500-term AND refusing `AnalysisException` at `filter()` (worker
+  timeout 1500 s).
+  pins: deep-filter-chain-crash-1/C-001, C-002, C-003, C-004, C-009, C-010, C-011
+- [test_deep_subquery_expression_1.py](test_deep_subquery_expression_1.py) —
+  **DEEP-FILTER-CHAIN-CRASH-1 verifier fold (2026-09-29, VD-1..VD-3):**
+  subquery plans and deep expressions never kill the interpreter. One
+  module-scoped fixture drives the battery in a single isolated interpreter
+  (1200 s timeout: the 5,000-term OR answers in ~220 s and the 20,000-term
+  DF OR's Python-side tree build takes ~360 s on a debug build): a
+  1,000-deep chain counts 50 under a scalar subquery and under
+  `IN (SELECT ...)` (both segfaulted on f958d1a8), a 5,000-term OR through
+  `sql()` answers 50 (the SQL door grows past any expression depth, and
+  Spark answers these shapes through SQL too), a 20,000-term OR through
+  `filter()` raises `AnalysisException` naming the deep-expression limit
+  (Spark raises `StackOverflowError` at `.filter()` the same way), a
+  2,000-deep `+1` select raises the same refusal, and a 16-deep chain
+  counts 50 on a 512 KiB thread (the small-stack backstop grows under 2 MiB
+  remaining). **Limits fold (2026-09-29):** the 1 MiB refusal pin became a
+  1.1 MB answer pin (`SELECT 1` plus padding collects 1).
+  pins: deep-filter-chain-crash-1/C-005, C-006, C-007, C-008
+  **CI segv (2026-09-30):** the grown per-op clone costs ~1.9x on the
+  pathological 20,000-term quadratic build (~360 s → ~680 s debug), so the full
+  worker takes ~940-966 s against the 1200 s budget; every other shape is
+  unchanged in answer and time. pins: deep-filter-chain-crash-1/C-012
+- [test_deep_expr_build_small_stack_1.py](test_deep_expr_build_small_stack_1.py) —
+  **DEEP-FILTER-CHAIN-CRASH-1 CI segv (2026-09-30):** the 6,000-term OR builds on
+  the caller thread and on an 8 MiB thread in one isolated interpreter (~90 s),
+  then refuses `AnalysisException` at `filter()` on both. The debug `Expr::clone`
+  costs ~1.6 KiB per level, so the build (not the builder) overflowed CI's 8 MiB
+  main stack while the lane's 32 MiB survived; 4000 builds and 6000 crashes
+  pre-fix on 8 MiB.
+  pins: deep-filter-chain-crash-1/C-012
+- [test_deep_reverify_1.py](test_deep_reverify_1.py) —
+  **DEEP-FILTER-CHAIN-CRASH-1 re-verify fold (2026-09-30):** the VD2 pins, one
+  isolated interpreter per path. Main: 2,000-term SQL-text OR answers 50
+  through `F.expr`, `selectExpr`, and string `filter` (the 1,500 cap no longer
+  applies to SQL text); 1,500-term DF-built OR refuses `AnalysisException`
+  (Spark refuses DF-built chains past 300 terms); a 5,001-term mixed DF/text
+  OR answers 50 (Spark answers it); `sql()` over a 1,000-deep view counts 50
+  and `explain` names Filter. 256 KiB and 512 KiB threads: a 16-deep count
+  answers 50, a 2,000-term DF-built OR refuses, `.columns` reads a 500-deep
+  frame, and `gc.collect()` frees a deep cycle. GC: `gc.collect()` frees a
+  6,000-term column plus a 1,000-deep frame cycle on main and a 6,000-term
+  column plus a 200-deep frame cycle on a 256 KiB thread.
+  pins: deep-filter-chain-crash-1/C-013, C-014, C-015, C-016, C-017, C-018
 
 ## I want to...
 

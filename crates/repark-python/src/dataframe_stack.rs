@@ -23,24 +23,30 @@ fn stack_dataframe(
     cell_indices: Option<Vec<usize>>,
 ) -> PyResult<PyDataFrame> {
     fenced!("stack_dataframe", {
+        let depths = frame.depths();
+        let need = crate::deep_stack::clone_need_bytes(depths.plan, depths.expression);
         let df = match (row_labels, cell_indices) {
-            (None, None) => repark_core::apply_stack(
-                frame.df.clone(),
-                n,
-                passthrough_count,
-                output_names.as_deref(),
-            ),
+            (None, None) => crate::deep_stack::grown_sync(need, || {
+                repark_core::apply_stack(
+                    crate::deep_stack::grown_clone_frame(frame.inner(), &depths),
+                    n,
+                    passthrough_count,
+                    output_names.as_deref(),
+                )
+            }),
             (Some(names), Some(cells)) => {
                 if i64::try_from(names.len()).unwrap_or(-1) != n {
                     return Err(to_py_err(repark_core::Error::Analysis(
                         "stack_dataframe row_labels count must equal n".to_string(),
                     )));
                 }
-                repark_core::apply_labeled_stack(
-                    frame.df.clone(),
-                    repark_core::StackLabels { names, cells },
-                    output_names.as_deref(),
-                )
+                crate::deep_stack::grown_sync(need, || {
+                    repark_core::apply_labeled_stack(
+                        crate::deep_stack::grown_clone_frame(frame.inner(), &depths),
+                        repark_core::StackLabels { names, cells },
+                        output_names.as_deref(),
+                    )
+                })
             }
             _ => {
                 return Err(to_py_err(repark_core::Error::Analysis(

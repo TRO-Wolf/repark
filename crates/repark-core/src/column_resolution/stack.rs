@@ -7,6 +7,8 @@ use std::task::{Context, Poll};
 use datafusion::sql::parser::Statement as DfStatement;
 use datafusion::sql::sqlparser::ast::{Expr, Query, SetExpr, TableFactor, Visit, Visitor};
 
+pub use stacker::remaining_stack;
+
 const BYTES_PER_LEVEL: usize = 32 * 1024;
 const BASE_BYTES: usize = 256 * 1024;
 
@@ -109,6 +111,10 @@ pub fn on_grown_stack_with<F: Future>(red_zone: usize, segment: usize, future: F
         segment,
         future: Box::pin(future),
     }
+}
+
+pub fn run_on_grown_stack<T>(red_zone: usize, segment: usize, work: impl FnOnce() -> T) -> T {
+    stacker::maybe_grow(red_zone, segment, work)
 }
 
 impl<F: Future> Future for GrownStack<F> {

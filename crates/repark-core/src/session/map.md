@@ -34,6 +34,10 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the funnel also merges the session
   write conf (`session_write_conf_from_ctx`) into the statement options, so the
   session codec and snapshot properties ride `EngineContext` to every door.
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** the funnel takes
+  `verbatim_override: Option<bool>` and fills `EngineContext::verbatim_override`;
+  `sql_built` passes `Some(false)`, `sql_with` passes `None`.
+  pins: string-literal-escape-1/C-011
   **TEXT-WRITE-TIMESTAMP-ZONE-1 verifier fold (2026-09-29):**
   `ReparkSession::set_time_parser_policy` (runtime `LEGACY`/`CORRECTED`/`EXCEPTION`
   setter; lazily installs the policy carrier, so no builder install exists;
@@ -102,6 +106,11 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   pins: decimal-cache-1/C-003, C-004, C-008, C-009, C-010, C-011
   (The analyze-then-conform pipeline is shared with the plain-`temp_view` path, which
   funnels through the same `register_collected_memtable`.)
+  **STRING-LITERAL-ESCAPE-1 merge (2026-10-01):** `list_temp_view_names` moves here
+  from `session.rs` (pure move; the merge pushed that file one line past its
+  ceiling). The moved code sheds two comments; their reason lives here: the
+  listing reads the build-time home and refuses when a catalog replaced its
+  provider, otherwise an empty home lists empty.
 - `cache_budget.rs` — **EAGER-BUDGET-1 step 1 (2026-09-13):** D-2 retained-byte accounting.
   `ReparkSession::retained_cache_bytes` enumerates the temp-view home's `__repark_cache_*`
   tables, downcasts each provider to `MemTable`, clones each partition's batch list under a
@@ -199,6 +208,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   parquet keeps its pre-rollback commit with no cleanup. A cleanup failure
   appends the bare message once, without repeating the variant prefix.
   pins: text-write-timestamp-zone-1/C-009
+  **STRING-LITERAL-ESCAPE-1 merge (2026-10-01):** both S3 commit legs run the
+  engine-built COPY through `sql_built_with_write_options`, so the statement
+  parses in default mode in every session mode.
 - `text_write_format.rs` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** the
   user-pattern compiler and validator (Spark `INVALID_DATETIME_PATTERN` /
   `INCONSISTENT_BEHAVIOR_CROSS_VERSION` classes, NTZ downgrades, DATE lazy

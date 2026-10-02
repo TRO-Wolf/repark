@@ -468,10 +468,30 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `declared_refuse.rs` — **FNP-15/16:** Spark-door parse-altitude refusals for the six
   unreachable names and the sketch family; passthrough attach pin.
   pins: fnp-15-16/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  **WO STORE-TS-DOORS-2 re-verify fold 6 (2026-10-01):** the source pin
+  matches the valve call inside the shared pre-gate chain.
+  pins: store-ts-doors-2/C-001, C-003
 - `spark_string_literals.rs` — **SQP-1:** the string-literal escape pins (C-001..C-008, C-010,
   C-012): the escape domain, `\'`/unpaired-backslash lexing, adjacency + the DataFusion-native
   `OPTIONS` carve-out, quote-runs-are-not-triple-quotes, raw strings, LIKE/RLIKE/backtick controls,
   exactly-once-on-every-path, the one-caller grep pin, the Generic-dialect honesty pin.
+- `string_literal_escape_1.rs` — **STRING-LITERAL-ESCAPE-1 (2026-09-29):** the
+  PE-10 pins in their own leaf (the SQP-1 leaf is byte-frozen, so nothing lands
+  there): doubled-`""` collapse in double-quoted literals, `r"…"` answering,
+  raw `''`/`""` head/tail splitting, verbatim doublings kept and raw values
+  marked, the escape-free-doubles borrow pin, and direct quote-awareness units.
+  pins: string-literal-escape-1/C-001, C-002, C-003, C-004
+  **DIFF-PROBE fold (2026-09-29):** `verbatim_ddl_positions_take_default_treatment`
+  pins verbatim DDL canonicals (property lists borrowed, backslashes unescaped,
+  `COMMENT` doubles rewritten single-quoted, the `SELECT comment` alias guard,
+  `EXPLAIN` passthrough).
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** the DDL table gains
+  `UNSET` (both `IF EXISTS` shapes), `SHOW TBLPROPERTIES` key, and
+  `COMMENT ON` rows. pins: string-literal-escape-1/C-008
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):**
+  `built_statements_parse_default_on_a_verbatim_session` pins the override
+  wiring: `Some(false)` answers default values, `None` keeps the flag.
+  pins: string-literal-escape-1/C-011
 - `cast_binary.rs` — **SQP-1 (C-009):** `CAST … AS BINARY` plans to Arrow `Binary` (B1/B8–B10/B13/
   B15), refuses illegal sources (`DATATYPE_MISMATCH`, B2–B7), keeps `VARBINARY` refusing (B12),
   leaves a `BINARY` DDL column untouched; `TRY_CAST(<int>)` refuses without the ANSI-off suggestion.
@@ -1551,6 +1571,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   spark_ast source attach (Q-001), a string-literal negative (incl. CAST-in-literal),
   and a default (non-COLLATE) `ORDER BY` untouched pin. Ledger:
   [`../../../../task/y7-collation-refuse-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-13-y7-collation-refuse-ledger.md).
+  **WO STORE-TS-DOORS-2 re-verify fold 6 (2026-10-01):** the source attach
+  matches the valve call inside the shared pre-gate chain.
+  pins: store-ts-doors-2/C-001, C-003
 - `window_temporal_range.rs` pins the Spark door's `RANGE` frames on datetime order keys and the
   paths that must remain unchanged:
   `temporal_range_bare_offset_over_timestamp_key_refuses_like_spark` (Spark's error class),

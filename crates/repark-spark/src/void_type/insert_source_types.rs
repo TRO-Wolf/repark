@@ -1,9 +1,10 @@
 use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema};
 use datafusion::error::Result;
 use datafusion::prelude::SessionContext;
-use datafusion::sql::sqlparser::ast::{Insert, TableObject};
+use datafusion::sql::sqlparser::ast::{Insert, ObjectName, TableObject};
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
+use repark_iceberg::write::insert_defaults::OverwriteSource;
 use repark_iceberg::write::negated_null_store::{refuse_negated_null_writes, refuses_double};
 
 use super::column_name;
@@ -86,6 +87,72 @@ pub(crate) async fn refuse_insert_source_types(
             .iter()
             .map(|field| (field.name().as_str(), field.data_type())),
     )
+}
+
+pub(crate) async fn refuse_partition_overwrite_sources(
+    ctx: &SessionContext,
+    table: &iceberg::table::Table,
+    table_name: &ObjectName,
+    filled: &OverwriteSource,
+    reserved: &[String],
+) -> Result<()> {
+    let Ok(presented) = repark_iceberg::catalog::uuid_presentation::presented_arrow_schema(
+        table.metadata().current_schema(),
+    ) else {
+        return Ok(());
+    };
+    let targets: Option<Vec<(&str, &DataType)>> = if filled.columns.is_empty() {
+        Some(
+            presented
+                .fields()
+                .iter()
+                .filter(|field| !is_reserved(field.name(), reserved))
+                .map(|field| (field.name().as_str(), field.data_type()))
+                .collect(),
+        )
+    } else {
+        filled
+            .columns
+            .iter()
+            .map(|name| {
+                if is_reserved(name, reserved) {
+                    return None;
+                }
+                presented
+                    .fields()
+                    .iter()
+                    .find(|field| field.name().eq_ignore_ascii_case(name))
+                    .map(|field| (field.name().as_str(), field.data_type()))
+            })
+            .collect()
+    };
+    let Some(targets) = targets else {
+        return Ok(());
+    };
+    if !targets
+        .iter()
+        .any(|(_, data_type)| refuses_double(data_type))
+    {
+        return Ok(());
+    }
+    let Ok(frame) = ctx.sql(&filled.sql).await else {
+        return Ok(());
+    };
+    let plan = frame.logical_plan();
+    if !plan
+        .schema()
+        .fields()
+        .iter()
+        .any(|field| matches!(field.data_type(), DataType::Null))
+    {
+        return Ok(());
+    }
+    let parts = qualify_table_parts(ctx, name_parts(table_name));
+    refuse_negated_null_writes(ctx, &quoted_table_display(&parts), plan, targets)
+}
+
+fn is_reserved(name: &str, reserved: &[String]) -> bool {
+    reserved.iter().any(|item| item.eq_ignore_ascii_case(name))
 }
 
 fn find_target<'a>(

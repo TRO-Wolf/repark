@@ -270,7 +270,7 @@ behavior. Preserve that distinction when designing the next experiment.
 
 ### Already-good paths and rejected leads
 
-The inspected [Python Arrow export](../../../crates/repark-python/src/dataframe.rs) already
+The inspected [Python Arrow export](../../../crates/repark-python/src/dataframe/mod.rs) already
 opens a lazy batch stream and releases the GIL during physical-plan construction. TA already
 borrows suitable null-free input buffers and shares multi-output computation.
 

@@ -35,6 +35,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   straight from `csv_rung_type` — no `DataType` construction; all three binds
   go through the cached `_type_table._native_function`.
   pins: facade-4/C-013, C-027
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** the built shape probe
+  runs through `_sql_built`. pins: string-literal-escape-1/C-011
 - `_type_table.py` — Python-side descriptor bridge for the shared Rust type table:
   the class→row answer table (descriptor head, `simpleString`, `_engine_type`),
   descriptor encode/decode, tree walks, and the container-token fallbacks for
@@ -127,6 +129,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **CFG-2 step 2 (2026-09-13):** `SourceMetadata` (the `name` / `kind` / `key_path` /
   `auto_register` / `properties` namedtuple) lives beside `CatalogMetadata` — the
   `listCatalogs` idiom — for `ReparkSession.sources()` rows. pins: cfg-2/C-013
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** the built USE / SHOW
+  / LIKE scans run through `_sql_built`. pins: string-literal-escape-1/C-011
 - `catalog_surface.py` — **CATALOG-SURFACE-1 (2026-09-14):** the thirteen-name second
   half of the `Catalog` surface — `getTable` / `listColumns` / `listFunctions` /
   `getFunction` metadata (DESCRIBE + SHOW PARTITIONS + the `repark.spark.functions`
@@ -166,6 +170,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **CATALOG-1 fold (2026-09-26):** `_known_table` re-raises a refused catalog's refusal
   from each probe instead of re-mapping it to not-found, so `getTable` surfaces it
   like Spark. pins: catalog-1/C-013
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** the native scans and
+  the `createTable` DDL run through the built door; the DDL-defs fragment splices
+  raw because DDL positions always take default treatment (C-005), which the
+  forced-default parse applies. pins: string-literal-escape-1/C-011
 - `column.py` — lazy expression objects, type gates, aliases, field access, generators,
   aggregates, windows, casts, and Spark-compatible operator behavior. Column identity
   metadata preserves join and duplicate-name semantics.
@@ -228,6 +236,24 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **FNP-11B step 6 (2026-09-15):** `lit` takes `decimal.Decimal` (Spark's
   inferred precision and scale) by casting the decimal text, so no new native
   literal constructor is needed. pins: fnp-11b/C-005
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** `expr` passes the
+  active session's verbatim flag into `_native.PyColumn.sql`, so `F.expr`
+  parses like the session door. `_lit_sql_expr` / `_lit_spark_display` move
+  unchanged to [functions_lit.py](functions_lit.py) (the `#` notes shed, per
+  the owner ruling: `lit(2.0)` keeps its double point in display names, and
+  string displays stay unquoted); the baseline ratchets 1984 → 1938.
+  pins: string-literal-escape-1/C-009
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** `expr` also stores
+  the fragment pre-rendered for the default door as the column's `sql_expr`, so
+  an `F.expr` column spliced into facade-built SQL keeps the session flag's
+  values; default input passes through unchanged. The display-naming fold keeps
+  the 1938 baseline. pins: string-literal-escape-1/C-011
+  **STRING-LITERAL-ESCAPE-1 CI round (2026-09-30):** `expr` pre-renders the
+  display-shaped text (a bare infix fragment keeps its parens) instead of the
+  raw fragment, so the stored `sql_expr` keeps base's grouping when composed
+  and the pre-render only re-renders string-literal regions; the raw fragment
+  dropped the parens and mis-valued cube/rollup keys built from composed
+  `F.expr` columns. pins: string-literal-escape-1/C-014
 - `functions_agg.py` — aggregate-function re-exports. **FNP-ALIAS-1 (2026-09-15):**
   `approxCountDistinct` is the deprecated alias of `approx_count_distinct` and warns Spark's
   exact `FutureWarning` on every call; it reaches `functions.py` through this module's
@@ -436,6 +462,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   pins: fnp-8/C-003
 - `functions_try.py` — FNP-7a/7b `try_*` wrappers installed onto `functions.py` `__all__`.
   pins: fnp-7-try-inversions/C-013, C-016
+- `functions_lit.py` — **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):**
+  the `lit` rendering helpers (`_lit_sql_expr`, `_lit_spark_display`), moved
+  unchanged from `functions.py` so that file holds its ratcheted baseline.
+  pins: string-literal-escape-1/C-009
 - `functions_math.py` — mathematical and trigonometric wrappers. **FNP-ALIAS-1 (2026-09-15):**
   `degrees`/`radians` move here from `functions_expr.py` (functions_expr sat exactly on its
   ceiling) and stop composing `(x * 180) / pi()`. The engine's `degrees` scalar has no
@@ -497,6 +527,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   coercion, the refusals and the ANSI switch for both doors. pins: fnp-alias-1/C-001,
   C-002, C-003, C-004; fnp-bitmap-facade-1/C-011, C-012, C-013, C-014
 - `functions_session.py` — session-bound function helpers.
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):**
+  `_active_verbatim_flag` reads the active session's build-time
+  `escapedStringLiterals` setting for `F.expr` (absent session or key reads
+  false, matching the engine default). pins: string-literal-escape-1/C-009
 - `functions_udf.py` — Python UDF and pandas UDF markers, validation, and return-type
   contracts. Execution uses the DataFrame Arrow bridge. DFCORE-2 (2026-09-07): the
   `pandas_udf` docstring cross-reference follows the scalar rewrite to its new home,
@@ -514,6 +548,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - `merge.py` — `mergeInto` builder and SQL MERGE source registration. DML-A:
   `whenNotMatchedBySource` DELETE/UPDATE execute.
   pins: dml-a-merge-not-matched-by-source/C-002, C-003
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** the built `MERGE`
+  runs through the native `sql_built` method (default-mode literals); free-SQL `str` conditions
+  stay refused, so only `F.expr` columns carry user text. pins: string-literal-escape-1/C-011
 - `merge_aliases.py` — **IPI-56 (2026-09-20):** which `(target, source)` aliases
   the rendered `MERGE INTO` declares. Spark's own condition form qualifies the
   target by its **short table name** and the source by the frame's alias, so a
@@ -532,6 +569,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `row_number` to BIGINT (pins: types-1/C-005). DF-EAGER-1 step 2 (2026-09-09):
   `PolarsFrame.eager()` wraps the Spark `eager()`; `collect()` is untouched
   (pins: df-eager-1/C-006).
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** the built join scan
+  runs through the native `sql_built` method. pins: string-literal-escape-1/C-011
 - `observation.py` — **DF-SURFACE-B-1 (2026-09-14):** PySpark `Observation`. A
   named (or generated-name) handle filled by the first action on a
   `DataFrame.observe` child; `get` before that action raises

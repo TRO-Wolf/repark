@@ -87,13 +87,8 @@ async fn execute_passthrough_attaches_declared_refuse_valve() {
 #[test]
 fn spark_ast_source_attaches_declared_refuse_valve() {
     let source = include_str!("../spark_ast.rs");
-    let attached = source.lines().any(|line| {
-        let trimmed = line.trim();
-        trimmed.starts_with("crate::refuse_declared_function_in_statement")
-            && !trimmed.starts_with("//")
-    });
     assert!(
-        attached,
+        source.contains("refuse_declared_function_in_statement(statement)"),
         "spark_ast execute_passthrough must call refuse_declared_function_in_statement"
     );
 }

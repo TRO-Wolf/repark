@@ -184,7 +184,7 @@ pub fn try_allowed_delete_in(statement: &Statement) -> Result<Option<AllowedDele
         spec: PredicateDmlSpec {
             target: TableIdent::new(namespace, table_name),
             target_alias,
-            selection_sql: scratch_selection.to_string(),
+            selection_sql: crate::write::sql_text::render_for_reparse(&mut scratch_selection),
             assignments: None,
             case_insensitive: true,
             branch: None,
@@ -670,7 +670,10 @@ fn scalar_set_assignments(
         }
         let mut value = assignment.value.clone();
         rewrite_target_refs_in_expr(&mut value, target_parts, target_alias);
-        assignments.push((column, value.to_string()));
+        assignments.push((
+            column,
+            crate::write::sql_text::render_for_reparse(&mut value),
+        ));
     }
     Some(assignments)
 }

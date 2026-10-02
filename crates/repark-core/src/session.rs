@@ -419,6 +419,7 @@ impl ReparkSession {
             &HashMap::new(),
             OverwriteIntent::Session,
             false,
+            None,
         )
         .await
     }
@@ -694,17 +695,6 @@ impl ReparkSession {
     }
 
     /// Return session temp-view names from the pinned home without loading table metadata.
-    /// # Errors
-    /// [`Error::Analysis`] when the build-time home provider was replaced; otherwise infallible.
-    pub fn list_temp_view_names(&self) -> Result<Vec<String>> {
-        // List the build-time home and refuse if its provider identity changed.
-        crate::temp_view::assert_home_intact(self.context(), &self.temp_view_home)?;
-        let Some(schema) = self.temp_view_home.provider.as_ref() else {
-            return Ok(Vec::new());
-        };
-        Ok(schema.table_names())
-    }
-
     /// Return DataFusion provider names for a catalog schema without loading tables.
     /// # Errors
     /// Currently infallible (unknown catalog/schema → empty list).

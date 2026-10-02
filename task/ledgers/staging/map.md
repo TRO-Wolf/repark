@@ -56,6 +56,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (C-003, C-004 REJECTED) and return to base behaviour (C-006); a branching source
   refuses only when every leaf is a refused type (C-007). The STRING class moves to
   v1.5.2 card STORE-STRING-ASSIGN-1. pins: store-ts-to-numeric-1/C-006, C-007
+- [store-ts-doors-2-ledger.md](store-ts-doors-2-ledger.md) —
+  **WO STORE-TS-DOORS-2 (2026-09-29), in flight:** the two write doors #885
+  missed refuse like Spark — TIMESTAMP, TIMESTAMP_NTZ and DATE through a VALUES
+  node inside INSERT … SELECT into numeric columns (C-001) and `-NULL` into
+  TIMESTAMP, DATE and BOOLEAN through static-partition OVERWRITE (C-002) — while
+  every base match keeps its answer (C-003). `risk_tier: standard`. Branch
+  `fix/store-ts-doors-2`.
+  pins: store-ts-doors-2/C-001, C-002, C-003
 - [uuid-cast-window-1-ledger.md](uuid-cast-window-1-ledger.md) —
   **WO UUID-CAST-WINDOW-1 (2026-09-27), in flight:** the UUID refusal's SQL window
   counts as Spark 4.1.2 counts — the position in Unicode scalar values, the window
@@ -1966,3 +1974,28 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   awaits the owner run on real AWS).
   `risk_tier: standard`. Branch `feat/s3-path-write-1`.
   pins: s3-path-write-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
+- [deep-filter-chain-crash-1-ledger.md](deep-filter-chain-crash-1-ledger.md) —
+  **DEEP-FILTER-CHAIN-CRASH-1 (2026-09-29), in flight:** deep operator chains
+  answer instead of killing the interpreter — every native entry point polls on
+  a 256 MiB stacker segment and the shared runtime builds 256 MiB pool threads
+  (C-001: one thousand filters count 50, base SIGSEGV at 610; C-002: 200 joins count 1
+  and 300 unions count 15050, base SIGSEGV at 110 joins; C-003: 120 withColumn
+  count 50 at the build-time ceiling; C-004: one-thousand-deep nested SQL raises
+  `RecursionError`, flat 600-union SQL counts 601). Step 0 backtraces, mutation
+  record (both pins SIGSEGV under restored old stacks), perf (+1.4%) and the
+  VmSize/VmRSS base-vs-head record live in the ledger; residues R-1..R-4.
+  `risk_tier: standard`. Branch `fix/deep-filter-chain-crash-1`.
+  pins: deep-filter-chain-crash-1/C-001, C-002, C-003, C-004
+- [string-literal-escape-1-ledger.md](string-literal-escape-1-ledger.md) —
+  **STRING-LITERAL-ESCAPE-1 (2026-09-29):** SQL string literals unescape as
+  Spark does (C-000 the 229-literal Step-0 matrix, C-001 quote-aware doubles
+  plus double-raw, C-002 raw head/tail splits, C-003 verbatim-exact values,
+  C-004 the zero-break guards).
+  `risk_tier: standard`. Branch `fix/string-literal-escape-1`.
+  pins: string-literal-escape-1/C-000, C-001, C-002, C-003, C-004
+  Re-verify VE3-1 (2026-09-30): the inventory now excepts `SQLTransformer`
+  (user-written SQL through the user door).
+  CI round seams (2026-09-30): the five test seams follow the `sql_built`
+  door with the same assertions (C-013).
+  CI round expr (2026-09-30): `F.expr` pre-renders display-shaped text so
+  composed embeddings keep base's grouping (C-014).

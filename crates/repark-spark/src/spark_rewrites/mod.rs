@@ -791,7 +791,7 @@ fn spark_struct_display(call_sql: &str, fields: &[String]) -> String {
     }
 }
 
-fn skip_whitespace(tokens: &[TokenWithSpan], mut index: usize) -> usize {
+pub(crate) fn skip_whitespace(tokens: &[TokenWithSpan], mut index: usize) -> usize {
     while matches!(
         tokens.get(index).map(|with_span| &with_span.token),
         Some(Token::Whitespace(_))
@@ -885,7 +885,7 @@ fn partition_column_list_swap(
     ])
 }
 
-fn matching_paren(tokens: &[TokenWithSpan], open: usize) -> Option<usize> {
+pub(crate) fn matching_paren(tokens: &[TokenWithSpan], open: usize) -> Option<usize> {
     if !matches!(
         tokens.get(open).map(|with_span| &with_span.token),
         Some(Token::LParen)

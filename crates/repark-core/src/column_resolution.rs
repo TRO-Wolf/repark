@@ -613,7 +613,9 @@ pub fn rewrite_fragment_case(
     if let Some(error) = repair.error {
         return Err(error);
     }
-    Ok(expr.to_string())
+    Ok(repark_iceberg::write::sql_text::render_for_reparse(
+        &mut expr,
+    ))
 }
 
 struct FragmentRepair<'a> {
@@ -877,7 +879,7 @@ mod stack;
 mod twins;
 
 pub use fold_text::fold_query_text;
-pub use stack::{GrownStack, on_grown_stack_with};
+pub use stack::{GrownStack, on_grown_stack_with, remaining_stack, run_on_grown_stack};
 
 #[cfg(test)]
 mod tests;

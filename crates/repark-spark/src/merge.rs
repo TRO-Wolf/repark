@@ -161,12 +161,13 @@ fn lower(
     }
     refuse_non_last_unconditional_clause(&matched, &not_matched, &not_matched_by_source)?;
 
+    let mut on_render = on.clone();
     let spec = MergeSpec {
         target: TableIdent::new(NamespaceIdent::new(namespace.clone()), table_name.clone()),
         target_alias,
         source_from_sql,
         source_alias,
-        on_sql: on.to_string(),
+        on_sql: repark_iceberg::write::sql_text::render_for_reparse(&mut on_render),
         matched,
         not_matched,
         not_matched_by_source,
@@ -185,7 +186,10 @@ fn lower_clause(
     not_matched: &mut Vec<InsertClause>,
     not_matched_by_source: &mut Vec<NotMatchedBySourceClause>,
 ) -> Result<()> {
-    let predicate_sql = clause.predicate.as_ref().map(ToString::to_string);
+    let predicate_sql = clause.predicate.as_ref().map(|predicate| {
+        let mut rendered = predicate.clone();
+        repark_iceberg::write::sql_text::render_for_reparse(&mut rendered)
+    });
     match (&clause.clause_kind, &clause.action) {
         (MergeClauseKind::Matched, MergeAction::Update(update_expr)) => {
             let MergeUpdateExpr {
@@ -260,7 +264,13 @@ fn lower_clause(
                 predicate_sql,
                 action: InsertAction::Explicit {
                     columns,
-                    values_sql: row.iter().map(ToString::to_string).collect(),
+                    values_sql: row
+                        .iter()
+                        .map(|value| {
+                            let mut rendered = value.clone();
+                            repark_iceberg::write::sql_text::render_for_reparse(&mut rendered)
+                        })
+                        .collect(),
                 },
             });
         }
@@ -377,7 +387,11 @@ fn lower_assignments(
                 ));
             };
             let column = resolve_merge_column(name, target_alias, "SET target")?;
-            Ok((column, assignment.value.to_string()))
+            let mut rendered = assignment.value.clone();
+            Ok((
+                column,
+                repark_iceberg::write::sql_text::render_for_reparse(&mut rendered),
+            ))
         })
         .collect()
 }
@@ -530,7 +544,9 @@ fn source_table(factor: &TableFactor) -> Result<(String, String)> {
                     "a MERGE subquery source requires an alias (USING (SELECT …) AS s)".to_string(),
                 )
             })?;
-            Ok((format!("({subquery})"), alias))
+            let mut rendered = subquery.clone();
+            let from_sql = repark_iceberg::write::sql_text::render_for_reparse(&mut rendered);
+            Ok((format!("({from_sql})"), alias))
         }
         other => Err(DataFusionError::Plan(format!(
             "unsupported MERGE source: `{other}`"

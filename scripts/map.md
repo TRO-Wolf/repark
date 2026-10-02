@@ -1,5 +1,14 @@
 # map — scripts/
 
+DEEP-FILTER-CHAIN-CRASH-1 CI segv (2026-09-30): `check_rust_file_size.py` ratchets `repark-python/src/column/mod.rs` 1011 → 1005 (rustfmt joins three calls shortened by the grown clone-out; the `Clone` derive leaves with the manual impl), shrink-only, with the CAP-1 mirror. pins: deep-filter-chain-crash-1/C-012
+
+DEEP-FILTER-CHAIN-CRASH-1 limits fold (2026-09-29): `check_rust_file_size.py` ratchets `repark-python/src/column/mod.rs` 1012 → 1011 (the SQL text-cap call leaves `Column.sql`), shrink-only, with the CAP-1 mirror. pins: deep-filter-chain-crash-1/C-009
+STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30): `check_lib_py.py` ratchets `dataframe/core.py` 3973 → 3971 and `session/session_core.py` 2293 → 2277, with the CAP-1 mirror, shrink-only. pins: string-literal-escape-1/C-011
+
+STRING-LITERAL-ESCAPE-1 re-verify follow-up (2026-09-30): `check_rust_file_size.py` ratchets `repark-python/src/session.rs` 1122 → 1097 (`apply_session_knobs` moves to `session_runtime.rs` to fund the `sql_built` method), with the CAP-1 mirror, shrink-only. pins: string-literal-escape-1/C-011
+
+STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30): `check_lib_py.py` ratchets `spark/functions.py` 1984 → 1938 (the `lit` rendering helpers move unchanged to `functions_lit.py`; the shed `#` notes live in the spark map), with the CAP-1 mirror, shrink-only. pins: string-literal-escape-1/C-009
+
 WO CASESENS-1 S5 (2026-09-27): `check_rust_file_size.py` ratchets `repark-iceberg/src/write/alter.rs` 1607 → 1606 (the DROP/REPLACE name pin is rewritten to the exact refusal without its comments), shrink-only. pins: casesens-1/C-013
 
 WO CASESENS-1 S3 (2026-09-27): `check_rust_file_size.py` retires the `repark-python/src/dataframe.rs` row (1005 → 976, under the default; the case-bind helpers moved to `dataframe_names.rs`). pins: casesens-1/C-009
@@ -45,6 +54,8 @@ IPI-40 views PR1 WO-R2 (2026-09-21): `check_lib_py.py` ratchets `session/session
 U7 PR1 (2026-09-24): `check_lib_py.py` ratchets `spark/dataframe/writer_readwriter.py` 1077 → 1073 (the iceberg `save` branch and the CTAS body move to `writer_save.py`; the `_format_explicit` slot adds three lines back), shrink-only. Round 2 (2026-09-24): 1073 → 1039 (`saveAsTable`'s mode and bucket branches move into the Rust `writer_plan` kernel; `_ctas_sql` leaves), with the CAP-1 mirror. U7 PR2 (2026-09-24): 1039 → 1033 (the `DataFrameWriterV2.option` branch/tag refusal leaves), with the CAP-1 mirror, then 1033 → 1031 (`overwrite(condition)` hands its SQL to `writer_schema.replace_where_statement`), then 1031 → 1029 (slice-2 round 2, 2026-09-25: the by-name binding moves to the Rust door), each with the CAP-1 mirror. `docs_links_allowlist.txt` loses the `iceberg-guide.md` REF-1 anchor row: the guide now links the row's full heading slug. pins: u7-write-df-2/C-005, C-006
 
 ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19): `check_rust_file_size.py` DROPS the `write/predicate_dml.rs` exception (1034 → 960, under the default ceiling: the MoR arms split to `predicate_dml/mor_commit.rs` and the UPDATE allow-list moved to `predicate_dml/plain.rs`) `write/merge/tests/streaming_scan.rs` 3020 → 3018 and `write/predicate_dml/tests/predicate_dml.rs` 1440 → 1435, all shrink-only, with the CAP-1 mirror.
+
+DEEP-FILTER-CHAIN-CRASH-1 re-verify fold (2026-09-30): `check_rust_file_size.py` DROPS the `repark-python/src/column/mod.rs` exception (1005 → 969, under the default ceiling: the unit tests moved verbatim to `column/expr_tests.rs` and the `PyColumn` level constructors to `column/levels.rs`) and the `repark-python/src/session.rs` exception (1122 → 802, under the default ceiling: the unit tests moved verbatim to `session_tests.rs`), both shrink-only, with the CAP-1 mirror (rust count 36 → 34). pins: deep-filter-chain-crash-1/C-013
 
 ICE-SESSION-WRITE-CONF-1 (2026-09-19): `check_rust_file_size.py` ratchets `write/merge/mod.rs` 1761 → 1701 (MERGE staging splits to `session_staging.rs`) and `write/predicate_dml.rs` 1139 → 1034 (identity COW commits split to `cow_commit.rs`), both shrink-only, with the CAP-1 mirror.
 ICE-RDF-SORT-PARSE-1 (2026-09-20): `check_rust_file_size.py` ratchets `repark-spark/src/tests/call.rs` 1303 → 1289 (`call_rewrite_sort_strategy_refuses_loud` becomes `call_rewrite_positional_strategy_routes_to_the_rewriter` — the R135 wording it pinned no longer exists, and the replacement asserts the fork's unsorted-table refusal through both the named and the positional door), shrink-only. pins: ice-rdf-sort-parse-1/C-004

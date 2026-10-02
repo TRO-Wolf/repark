@@ -1261,9 +1261,9 @@ def test_cross_validator_materializes_fold_labels() -> None:
                 materialize_calls.append(str(view_name))
                 return real_session.materialize_as_temp_view(view_name, plan)
 
-            def sql(self, query: str) -> object:
+            def sql_built(self, query: str) -> object:
                 sql_queries.append(str(query))
-                return real_session.sql(query)
+                return real_session.sql_built(query)
 
             def __getattr__(self, name: str) -> object:
                 return getattr(real_session, name)

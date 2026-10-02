@@ -376,7 +376,8 @@ fn leaf_sql(
     path: &[String],
     case_sensitive: bool,
 ) -> Result<String> {
-    let value_sql = keyed.value.to_string();
+    let mut value = Expr::clone(keyed.value);
+    let value_sql = repark_iceberg::write::sql_text::render_for_reparse(&mut value);
     match &keyed.value_type {
         Some(source) => value_sql_for(&value_sql, source, target, path, case_sensitive),
         None => Ok(store_assignment_cast_sql(&value_sql, target)),
@@ -498,11 +499,13 @@ pub(crate) async fn fold_nested_assignments(
         let Some(key) = key.as_ref().filter(|key| affected.contains(&key.column)) else {
             continue;
         };
+        let mut pretty_value = assignment.value.clone();
+        let pretty = repark_iceberg::write::sql_text::render_for_reparse(&mut pretty_value);
         keyed.push(Keyed {
             key: key.clone(),
             value: &assignment.value,
             value_type: probe_type(ctx, scope, &assignment.value).await,
-            sql: format!("{} = {}", key.sql(scope), assignment.value),
+            sql: format!("{} = {pretty}", key.sql(scope)),
         });
     }
     let mut aligner = Aligner {
@@ -621,9 +624,11 @@ fn repeated_insert_keys(keys: &[Option<ResolvedKey>], row: &[Expr]) -> Vec<Strin
         let Some(key) = key.as_ref().filter(|key| key.steps.is_empty()) else {
             continue;
         };
+        let mut pretty_value = Expr::clone(value);
+        let pretty = repark_iceberg::write::sql_text::render_for_reparse(&mut pretty_value);
         match columns.iter_mut().find(|(column, _)| *column == key.column) {
-            Some((_, values)) => values.push(value.to_string()),
-            None => columns.push((&key.column, vec![value.to_string()])),
+            Some((_, values)) => values.push(pretty),
+            None => columns.push((&key.column, vec![pretty])),
         }
     }
     columns
