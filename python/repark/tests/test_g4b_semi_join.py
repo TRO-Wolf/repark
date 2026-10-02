@@ -237,7 +237,6 @@ def test_semi_then_inner_join_emits_the_same_right(spark: ReparkSession, on_mode
     assert table.column_names == ["k"]
     assert table.to_pydict()["k"] == [1]
     assert joined.filter(right["k"] == 1).count() == 1
-    # Subtract that right, not clear the whole set: another unemitted id must still raise.
     third = spark.createDataFrame([(1,)], ["k"])
     other_inner = semi.join(third, on="k", how="inner")
     with pytest.raises(AnalysisException, match=_MISSING_APPEAR):
@@ -295,7 +294,6 @@ def test_distinct_name_right_ref_raises_missing_from_input(spark: ReparkSession,
         joined.filter(right["v"] == "x")
     with pytest.raises(AnalysisException, match=_MISSING_ABSENT):
         joined.withColumn("x", right["rk"])
-    # drop of a distinct-name right attribute is still a Spark no-op.
     assert joined.drop(right["rk"]).columns == ["k", "a"]
     assert joined.select(left["k"]).columns == ["k"]
 
@@ -403,8 +401,6 @@ def test_inner_join_abs_keeps_the_abs_on_a_negative_key(spark: ReparkSession, on
     assert table.to_pydict()["ak"] == [3]
     assert joined.filter(F.abs(right["k"]) > 0).count() == 1
 
-
-# Aggregate builders carry the attribute token in join_sql_expr (same hole as F.abs).
 
 _AGG_BUILDERS = (
     ("sum", F.sum),

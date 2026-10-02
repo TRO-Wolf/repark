@@ -6414,7 +6414,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   ride-along (`F.lower`). **W-4 / A6 Q-002:** `F.sum` / `F.count` / `F.avg` /
   `F.min` / `F.max` / `F.count_distinct` / `F.first` / `F.last` after semi raise
   the same classes (`test_right_ref_agg_*`, left / inner / distinct-name /
-  `count_distinct` left-then-right). Ledger: `task/y5-origin-map-ledger.md`,
+  `count_distinct` left-then-right); aggregate builders carry the attribute token
+  in `join_sql_expr` like `F.abs`, so the same refusal fires. Ledger: `task/y5-origin-map-ledger.md`,
   `task/z4-residuals-ledger.md`, `task/w4-z-residuals-ledger.md`. Live-Spark
   behaviour for the conditionless divergence is recorded in
   `task/g4b-join-widening-ledger.md`.
@@ -7502,7 +7503,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 | Add a decimal128 / overflow differential row | `test_decimal128_parity.py` (`G2_ROWS` / `G13_ROWS` / `CTAS_ROWS`; record the Spark half with `_record_decimal128_goldens.py`, never by hand) |
 | Re-derive the decimal128 Spark halves (record mode) | `JAVA_HOME=… PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_decimal128_goldens.py` |
 | Add a joins differential row (gap G4) | `test_join_parity.py` (`ROWS`; record Spark half with `_record_join_goldens.py`, never by hand) |
-| Change / extend the DataFrame `leftsemi` / `leftanti` surface | `test_g4b_semi_join.py` for spellings + refusals + G4b-R2 origin-map pins; `test_join_parity.py` for a recorded Spark equality; `crates/repark-python/tests/bindings.rs` for the engine-level pin |
+| Change / extend the DataFrame `leftsemi` / `leftanti` surface | `test_g4b_semi_join.py` for spellings + refusals + G4b-R2 unemitted-id pins; `test_join_parity.py` for a recorded Spark equality; `crates/repark-python/tests/bindings.rs` for the engine-level pin |
 | Pin semi/anti right-origin refuse / drop no-op | `test_g4b_semi_join.py` (`test_right_ref_*`, `test_left_refs_*`, `test_inner_join_right_ref_*`, `test_semi_then_inner_join_emits_the_same_right`, `test_spawn_descendant_still_refuses_unemitted_right`, `test_self_semi_exclusive_set_resolves_df_column`, `test_distinct_name_*`, `test_right_ref_abs_*`, `test_left_abs_*`, `test_inner_join_abs_*`, `test_distinct_name_abs_*`, `test_right_ref_lower_*`, `test_coalesce_left_then_right_*`, `test_abs_string_name_*`, `test_right_ref_agg_*`, `test_left_agg_*`, `test_inner_join_sum_*`, `test_distinct_name_sum_*`, `test_count_distinct_left_then_right_*`, `test_sum_string_name_*`,
   `test_inner_join_abs_keeps_the_abs_on_a_negative_key`) |
 | Re-derive the joins Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_join_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
