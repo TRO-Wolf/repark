@@ -101,7 +101,7 @@ COVERAGE_ATTESTATION:
 | R-1 | Dated 2026-09-30, open for S3: Spark's `Alias` creates a new attribute, so a user-written `Column.alias` over a column is a fresh `exprId` there, while §3.5 (and `stamp`) has an alias of a column inherit, which the facade's own renames need. `stamp` keeps an alias's own id, so the facade can give a user alias a fresh one; the S0 replay decides. |
 | R-2 | Dated 2026-09-30, open for S2: `repark.attr` rides in Arrow field metadata, so once S2 stamps every frame it can reach written files, cached views and exported Arrow schemas, and a file written by one process can bring ids that collide with another process's counter. |
 | R-3 | Dated 2026-09-30, open for S2/S3: only `requalify_join_sides` re-mints; a USING join (`join_on_keys`, keys then each side's other columns) of a frame with itself still repeats the right side's ids. |
-| R-4 | Dated 2026-09-30, open for S3e: `resolve` matches a written qualifier against the field's relation only; the frame's Python-held join qualifiers (§3.4) are not in the §4 S1 signature. |
+| R-4 | Dated 2026-09-30, open for S3e: `resolve` matches a written qualifier against the field's relation only; the frame's Python-held join qualifiers (§3.4) are not in the §4 S1 signature. Closed 2026-10-01 by S3e (C-039): `resolve` takes `frame_qualifiers` and matches plan or facade names under the live rule at every qualified door. |
 | R-5 | Dated 2026-09-30, open for S3: Q2 forces materialized providers born clean, so a cache/checkpoint read mints fresh ids instead of inheriting the cached frame's; S3 `resolve` must cope with the cache identity break (origin-token fallback or equivalent). `Extension` plan nodes (only `UnpivotNode`) pass the strip opaque; a SQL-`UNPIVOT` write source is unpinned until the facade probe lands. |
 
 ## Round S2 (2026-09-30)
@@ -604,7 +604,7 @@ and refusing with Spark's error class where Spark refuses.
 | C-037 | The fold-truth correction: mode `b` is OpenJDK `String.equalsIgnoreCase` down to the lower-of-uppers step (the step that equates U+0130 with `i`/`ı`; verified against the `Analyzer.resolver` bytecode path and a JVM `equalsIgnoreCase` probe), restoring the four S3c `nti2` gains; mode `a` is equal length plus `String.toLowerCase` (U+0130 expands, U+03A3 takes final-sigma context) for `fillna`/`dropna`/free-Column `drop` (probes s3d16..17). Under a union, `fillna`/`dropna` refuse two or more exact spellings with `AMBIGUOUS_REFERENCE` and otherwise bind the positional-first hit even past an exact later hit, while free-Column `drop` trims silently; `drop(str)` and `dropDuplicates` fan out with no trim and no refusal. | The 7 `java_case` Rust pins (extended pairs); the S3c (43) and S3d (122) suites green; the S0 replay with 0 cells moved away from Spark. | PROVEN (pins; replay lands in the hand-back) | `crates/repark-common/src/java_case.rs` `fold_b_equal`, `string_lower_equal`; `crates/repark-python/src/dataframe_names.rs` `java_fold_hits`; `python/repark/src/repark/spark/subset_resolve.py` `_bound_subset_positions`; probes `s3d/spark_probes_s3d16*.py`, `s3d17*.py` with `.out` files; replays land in the hand-back. |
 
 | C-038 | The multi-exact refusal is withdrawn: probe s3d18 untangles the two same-display union fixtures (a creation-dup union carries distinct attribute ids and refuses every subset spelling, a select-dup union shares one id and binds positional-first for either spelling), so the replay's 75 twin-union `dropna`/`fillna` cells are silent single-id trims, not refusals. The rule is id-only again: multi-id refuses, single-id under a union binds positional-first, single-id without a union fans out. C-037's fold clauses (OpenJDK `equalsIgnoreCase`, length-plus-`String.toLowerCase`) stand. | The S3c (43) and S3d (121) suites green; the S0 replay with 0 cells moved away from Spark. | PROVEN (pins; replay lands in the hand-back) | `python/repark/src/repark/spark/subset_resolve.py` `_bound_subset_positions`; probes `s3d/spark_probes_s3d18*.py` with `.out` files; replays land in the hand-back. |
-| C-039 | Qualified names bind through `resolve` with the frame's facade-held qualifiers (id to names, set by `alias`, unioned onto join output, pairing using keys): one id binds under that qualifier only, several refuse `AMBIGUOUS_REFERENCE`, none misses to Spark's `UNRESOLVED_COLUMN`; a head matching no qualifier keeps its door's main path (struct tokens in filter, literal drop strings, engine fall-through for stars). | The 14 `attr_id_s3e` Rust pins green; the facade pins land with `test_attr_id_1_s3e.py`. | OPEN (pins land next) | `crates/repark-core/src/session/df_guards/attr_id.rs` `resolve`; `sort_names.rs` `bind_qualified_free_refs`, `grandchild_qualified_key`, `join_output_sources`, `qualifier_star_positions`; `crates/repark-python/src/dataframe_names.rs`; `python/repark/src/repark/spark/qualified_names.py`; probes `s3e/spark_probes_s3e1*.py` through `s3e6*.py` with `.out` files; replays land in the hand-back. |
+| C-039 | Qualified names bind through `resolve` with the frame's facade-held qualifiers (id to names, set by `alias`, unioned onto join output, pairing using keys): one id binds under that qualifier only, several refuse `AMBIGUOUS_REFERENCE`, none misses to Spark's `UNRESOLVED_COLUMN`; a head matching no qualifier keeps its door's main path (struct tokens in filter, literal drop strings, engine fall-through for stars). | The 14 `attr_id_s3e` Rust pins and the 28 facade pins (56 instances, both rules) green; mutations M1–M3 red 19/3/18 and reverted; three replays 0 moved with 628 gains. | PROVEN | `crates/repark-core/src/session/df_guards/attr_id.rs` `resolve`; `sort_names.rs` `bind_qualified_free_refs`, `grandchild_qualified_key`, `join_output_sources`, `qualifier_star_positions`; `crates/repark-python/src/dataframe_names.rs`; `python/repark/src/repark/spark/qualified_names.py`; probes `s3e/spark_probes_s3e1*.py` through `s3e6*.py` with `.out` files; replays land in the hand-back. |
 
 **S3d Spark measurements (2026-10-01, four batched probes, live Spark 4.1.2).**
 `drop(str)` fans out over one id and over two with no refusal, and a miss is a
@@ -725,3 +725,69 @@ the S3c 46 files plus `test_attr_id_1_s3d.py`: 2400 passed, 19 skipped, 2
 xfailed, 0 failed. `bash /tmp/xattr/gate.sh` prints GATE GREEN (second run;
 the first run red on two `.typos.toml` comment lines only, deleted in
 70001a27).
+
+## Round S3e (2026-10-01)
+
+R-4 closes: `resolve` takes the facade-held qualifiers and every qualified
+door (`t.v`, `F.col`, `df[]`, filter/orderBy/selectExpr text, qualified refs
+after `alias()`, join children) binds through it, closing the S3a Q2 residues
+R5 (qualifier case on alias frames), R9 (qualified join-side misses) and the
+qualified half of R12 (`F.col` fall-throughs). One id binds under its
+qualifier only; several refuse `AMBIGUOUS_REFERENCE` (select, filter, drop),
+`UNRESOLVED_COLUMN` in sort (Spark's sort-twin shape, probe swp_amb); a miss
+raises Spark's `UNRESOLVED_COLUMN` echo. A head matching no qualifier keeps
+its door's main path: struct tokens in filter, literal drop strings (Spark:
+`drop("a.v")` is a no-op), engine fall-through for stars. Drop strings stay
+literal while drop Columns resolve — the one behaviour the brief left open,
+measured, not chosen. `DataFrame._frame_qualifiers` (id to names) is set by
+`alias`, copied by `_spawn`, unioned onto join output at all four join sites
+(using keys pair); cross-join duplicate ids re-mint only when a side carries
+qualifiers, so unaliased crosses keep the S3d id assignment bit for bit (the
+first replay's 2 twincross_fill losses, fixed). No helper is deleted: every
+family-only candidate keeps an outside-family caller — `_bind_qualified_column`
+(only caller `replace_expr.py:211`, the `replace()` positional path),
+`_qualified_target` (the error raisers), `_assign_join_qualifiers` plus the
+`_join_qualifiers` slot (join sites and `replace()`), `logical_column_qualifiers`
+(the `_known_qualifiers` plan half), `requalify_join_sides` (condition joins).
+For S4: `__REPARK_QCOL_` still has readers (`plan_collapse.py`, `core.py`,
+`column.py`) and `_origin_plan_id`/`_origin_field` still have readers
+(`functions.py`, `actions_export.py`, `plan_collapse.py`, `core.py`,
+`replace_expr.py`, `subset_resolve.py`, `column_fields.py`,
+`qualified_names.py`) — S3e is not their last reader.
+
+**S3e Spark measurements (2026-10-01, six batched probes, live Spark 4.1.2
+America/New_York).** Qualifier wins over a same-named struct in select,
+filter, orderBy and star; re-alias drops old qualifiers on frames and joins;
+the live rule decides after build; twin echo is `` [`q`.`v`, `q`.`v`] ``;
+sort twins raise unresolved; drop Column refuses twins and no-ops a miss;
+`selectExpr("a.v")` names `v`, compounds name bare (`(v + 1)`); `F.col("q.*")`
+expands in select; `df["q.*"]`, unknown stars and star-Columns outside select
+keep main's path (shaping is a follow-up). Divergences pinned honestly:
+struct select/orderBy (main's resolve-miss raise), unknown-star engine error,
+`selectExpr` over duplicate-field joins (the scratch-view scan fails on main
+identically — view-layer card), `withColumn` over duplicate-display frames
+(main-identical ambiguous bare bind), qualifier-keeping display names,
+bare suggestion lists, single-id multi-hit binds (the settled S1/C-038
+select-dup model; the S3b facade-held filter pin changes contract to bind and
+is renamed, matching the select door on main). Owners: follow-up cards only.
+
+Rust-first per R-S3d-1: all matching lives in `attr_id.rs`/`sort_names.rs`
+behind five thin natives; `NameRule` untouched. Ceiling splits (pure moves):
+`case_bind.rs` tests to `session/tests/case_bind.rs` (1000 → 552),
+`resolve_*` tests to `session/tests/attr_id_resolve.rs`; the qualified family
+to `spark/qualified_names.py`; the `selectExpr` body to
+`filter_quote._select_expr_frame`; `core.py` 3803 → 3800 with the CAP-1
+mirror. The 28 facade pins (56 instances) and the 14 Rust pins green;
+mutations M1 (facade payload forced `None`) reds 19, M2 (rule forced exact in
+`qualifier_matches_position`) reds the 3 fold pins, M3 (side names unioned
+onto every id) reds 18, each reverted with `git status` clean.
+
+**S3e gate record (2026-10-01, head ca53e0cc).** Three identical replays
+(`s3e/t-head-1/2/3`, foreground, `timeout 1500`, `ulimit -v 67108864`):
+43,946 cells, 0 moved away from Spark against both `main.json` and the S3d
+parent, 0 lost, all 8558 S3a/S3b/S3c FIXED and all 2676 S3d gains kept, 628
+S3e gains. Like-for-like timing (`s3e/like_for_like_s3e.py`, heads
+t-head-1/2/3, bases `s3d/t-head-2/3/4`): median-of-3 ratio 1.0176 (bar 1.2x),
+57.4s over the 11862 FIXED, coverage 0.9999. Neighbour sweep `-n 8` over the
+C-016 globs (48 files: the S3d 47 plus `test_attr_id_1_s3e.py`): 2456 passed,
+19 skipped, 2 xfailed, 0 failed. `bash /tmp/xattr/gate.sh` prints GATE GREEN.
