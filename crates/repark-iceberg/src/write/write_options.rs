@@ -41,6 +41,7 @@ pub struct WriterStagingOverrides {
     pub write_format: Option<String>,
     pub delete_format: Option<String>,
     pub output_spec_id: Option<i32>,
+    pub case_sensitive: bool,
 }
 
 impl WriterStagingOverrides {
@@ -122,8 +123,14 @@ where
         let current_schema = target.metadata().current_schema();
         let write_schema = Arc::new(schema_to_arrow_schema(current_schema).map_err(iceberg_err)?);
         let write_default_columns = write_default_column_names(current_schema);
+        let case_insensitive = !staging.case_sensitive;
         let conformed = stream.map(move |item| {
-            crate::write::conform::conform_batch(&write_schema, &write_default_columns, &item?)
+            crate::write::conform::conform_batch_scoped(
+                &write_schema,
+                &write_default_columns,
+                &item?,
+                case_insensitive,
+            )
         });
         stage_partitioned_stream_with_overrides(&target, conformed, staging, concurrency).await?
     };
@@ -167,8 +174,14 @@ where
     let current_schema = target.metadata().current_schema();
     let write_schema = Arc::new(schema_to_arrow_schema(current_schema).map_err(iceberg_err)?);
     let write_default_columns = write_default_column_names(current_schema);
+    let case_insensitive = !staging.case_sensitive;
     let conformed = stream.map(move |item| {
-        crate::write::conform::conform_batch(&write_schema, &write_default_columns, &item?)
+        crate::write::conform::conform_batch_scoped(
+            &write_schema,
+            &write_default_columns,
+            &item?,
+            case_insensitive,
+        )
     });
     crate::write::append::fanout_conformed_stream_with_concurrency(
         &target,
@@ -197,11 +210,13 @@ where
     let current_schema = table.metadata().current_schema();
     let write_schema = Arc::new(schema_to_arrow_schema(current_schema).map_err(iceberg_err)?);
     let write_default_columns = write_default_column_names(current_schema);
+    let case_insensitive = !staging.case_sensitive;
     let conformed = stream.map(move |item| {
-        crate::write::conform::conform_batch_retaining_unmapped_columns(
+        crate::write::conform::conform_batch_retaining_unmapped_columns_scoped(
             &write_schema,
             &write_default_columns,
             &item?,
+            case_insensitive,
         )
     });
     let build_writer = || async { build_unpartitioned_writer_with(table, staging).await };
@@ -382,8 +397,14 @@ where
         let current_schema = target.metadata().current_schema();
         let write_schema = Arc::new(schema_to_arrow_schema(current_schema).map_err(iceberg_err)?);
         let write_default_columns = write_default_column_names(current_schema);
+        let case_insensitive = !staging.case_sensitive;
         let conformed = stream.map(move |item| {
-            crate::write::conform::conform_batch(&write_schema, &write_default_columns, &item?)
+            crate::write::conform::conform_batch_scoped(
+                &write_schema,
+                &write_default_columns,
+                &item?,
+                case_insensitive,
+            )
         });
         stage_partitioned_stream_with_overrides(&target, conformed, staging, concurrency).await?
     };

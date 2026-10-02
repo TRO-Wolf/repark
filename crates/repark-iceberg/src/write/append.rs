@@ -11,7 +11,7 @@ use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::{Catalog, TableIdent};
 
 use crate::write::commit_error::{commit_result, operation_id_and_summary};
-use crate::write::conform::{conform_batch, conform_batches, write_default_column_names};
+use crate::write::conform::{conform_batches, write_default_column_names};
 use crate::write::distribution::{route_partitioned_stream, send_routed};
 use crate::write::merge::write_data_files_with_concurrency;
 use crate::write::{
@@ -21,6 +21,11 @@ use crate::write::{
 
 pub(crate) use super::append_fanout_serial::{
     fanout_conformed_stream_serial, fanout_conformed_stream_serial_with_abort,
+};
+pub use super::partitioned_files::{
+    write_partitioned_data_files, write_partitioned_data_files_from_stream,
+    write_partitioned_data_files_from_stream_with_concurrency,
+    write_partitioned_data_files_with_concurrency,
 };
 
 /// Append record batches to an Iceberg table — the sanctioned add-only commit path.
@@ -49,80 +54,8 @@ pub async fn append(
     commit_append(catalog, &table, new_files).await
 }
 
-/// # Errors
-/// A batch with a missing, extra, or duplicate column (unless the missing column carries an
-/// Iceberg `write-default`), an uncastable/overflowing value, or a NULL
-pub async fn write_partitioned_data_files(
-    table: &Table,
-    batches: Vec<RecordBatch>,
-) -> Result<Vec<DataFile>> {
-    write_partitioned_data_files_with_concurrency(table, batches, WriteConcurrency::default()).await
-}
-
-/// [`write_partitioned_data_files`] with explicit [`WriteConcurrency`].
-/// # Errors
-/// Same as [`write_partitioned_data_files`].
-pub async fn write_partitioned_data_files_with_concurrency(
-    table: &Table,
-    batches: Vec<RecordBatch>,
-    concurrency: WriteConcurrency,
-) -> Result<Vec<DataFile>> {
-    let current_schema = table.metadata().current_schema();
-    let write_schema = Arc::new(schema_to_arrow_schema(current_schema).map_err(iceberg_err)?);
-    let write_default_columns = write_default_column_names(current_schema);
-    let conformed = conform_batches(&write_schema, &write_default_columns, &batches)?;
-    if conformed.is_empty() {
-        return Ok(Vec::new());
-    }
-    fanout_data_files_with_concurrency(table, conformed, concurrency).await
-}
-
-/// Streaming sibling of `write_partitioned_data_files`: fan out each batch as it arrives.
-/// # Errors
-/// A batch with a missing, extra, or duplicate column (unless the missing column carries an
-/// Iceberg `write-default`), an uncastable/overflowing value, or a NULL
-pub async fn write_partitioned_data_files_from_stream<S>(
-    table: &Table,
-    stream: S,
-) -> Result<Vec<DataFile>>
-where
-    S: Stream<Item = Result<RecordBatch>> + Unpin,
-{
-    write_partitioned_data_files_from_stream_with_concurrency(
-        table,
-        stream,
-        WriteConcurrency::default(),
-    )
-    .await
-}
-
-/// [`write_partitioned_data_files_from_stream`] with explicit [`WriteConcurrency`].
-/// # Errors
-/// Same as [`write_partitioned_data_files_from_stream`].
-pub async fn write_partitioned_data_files_from_stream_with_concurrency<S>(
-    table: &Table,
-    stream: S,
-    concurrency: WriteConcurrency,
-) -> Result<Vec<DataFile>>
-where
-    S: Stream<Item = Result<RecordBatch>> + Unpin,
-{
-    let current_schema = table.metadata().current_schema();
-    let write_schema = Arc::new(schema_to_arrow_schema(current_schema).map_err(iceberg_err)?);
-    let write_default_columns = write_default_column_names(current_schema);
-    let conformed =
-        stream.map(move |item| conform_batch(&write_schema, &write_default_columns, &item?));
-    fanout_conformed_stream_with_concurrency(
-        table,
-        conformed,
-        concurrency,
-        &WriterStagingOverrides::none(),
-    )
-    .await
-}
-
 /// The identity-partition fanout core over ALREADY-CONFORMED batches (callers: [`append`] after
-async fn fanout_data_files_with_concurrency(
+pub(crate) async fn fanout_data_files_with_concurrency(
     table: &Table,
     batches: Vec<RecordBatch>,
     concurrency: WriteConcurrency,

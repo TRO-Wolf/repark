@@ -1,5 +1,6 @@
 //! Rewrite Spark Iceberg time-travel clauses to snapshot-pinned temporary providers.
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use datafusion::datasource::TableProvider;
@@ -65,6 +66,7 @@ struct TimeTravelSpan {
     clause_end: usize,
     table_parts: Vec<String>,
     pin: TimeTravelPin,
+    ref_selector: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -149,6 +151,12 @@ pub async fn prepare_time_travel_sql(
                 .map_err(iceberg_err)?
         }
         .with_uuid_as_string(true);
+        if span.ref_selector
+            && crate::spark_door_case_insensitive(ctx.state().config().options())
+            && let Some(refusal) = ref_twin_refusal(&provider)
+        {
+            return Err(refusal);
+        }
         let replacement = register_time_travel_provider(ctx, pinned, Arc::new(provider))?;
         tokens.splice(span.table_start..span.clause_end, replacement);
     }
@@ -369,6 +377,7 @@ fn find_time_travel_spans(tokens: &[Token]) -> Result<Vec<TimeTravelSpan>> {
             clause_end,
             table_parts,
             pin,
+            ref_selector: false,
         });
         // Continue after the value.
         sig_index = value_end_sig.max(sig_index + 1);
@@ -420,11 +429,16 @@ fn find_ref_selector_spans(tokens: &[Token]) -> Result<Vec<TimeTravelSpan>> {
             }
             Err(error) => return Err(error),
         };
+        let ref_selector = parts.last().is_some_and(|last| {
+            let folded = last.to_ascii_lowercase();
+            folded.starts_with("branch_") || folded.starts_with("tag_")
+        });
         spans.push(TimeTravelSpan {
             table_start: significant[name_start].0,
             clause_end: significant[name_end - 1].0 + 1,
             table_parts: parts[..parts.len() - 1].to_vec(),
             pin: TimeTravelPin::Version(spec),
+            ref_selector,
         });
         sig_index = name_end;
     }
@@ -444,6 +458,25 @@ fn dotted_name_end(significant: &[(usize, &Token)], start: usize) -> Option<usiz
         end += 2;
     }
     Some(end)
+}
+
+fn ref_twin_refusal(provider: &IcebergStaticTableProvider) -> Option<DataFusionError> {
+    let mut seen: HashMap<String, &str> = HashMap::new();
+    for field in provider.schema().fields() {
+        let folded = field.name().to_ascii_lowercase();
+        match seen.get(&folded) {
+            Some(first) if *first != field.name() => {
+                return Some(DataFusionError::Plan(format!(
+                    "[COLUMN_ALREADY_EXISTS] The column `{first}` already exists. Choose another name or rename the existing column. SQLSTATE: 42711"
+                )));
+            }
+            None => {
+                seen.insert(folded, field.name());
+            }
+            _ => {}
+        }
+    }
+    None
 }
 
 fn ref_selector_name(parts: &[String]) -> Result<Option<TimeTravelSpec>> {

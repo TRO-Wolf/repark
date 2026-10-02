@@ -676,7 +676,7 @@ pub(crate) async fn assert_empty_overwrite_types_assignment_compatible(
     let target_df = spark_ast::execute_passthrough(
         ctx,
         catalogs,
-        &format!("SELECT * FROM {table_sql} LIMIT 0"),
+        &format!("SELECT * FROM {table_sql} AS _repark_ow_tgt LIMIT 0"),
     )
     .await?;
     let source_schema = source_df.schema();

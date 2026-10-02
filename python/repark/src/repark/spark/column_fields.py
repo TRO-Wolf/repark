@@ -352,6 +352,31 @@ def _update_fields_result(column: Any, value: Any, parts: Any) -> Any:
     )
 
 
+def is_duplicated(column: Any) -> Any:
+    """True where this value occurs more than once in the frame (polars ``is_duplicated``).
+
+    Groups null with null, NaN with NaN, and -0.0 with 0.0. This is a RePark
+    extension; PySpark has no such method.
+    """
+    from repark.spark.column import Column
+
+    column._reject_nested_generator("is_duplicated")
+    parts = _native.PyColumnParts.is_duplicated(
+        column._inner,
+        column.spark_wrap_display_part(),
+        column.sql_expr_part(),
+        column.join_sql_part(),
+    )
+    return Column(
+        parts[0],
+        spark_display=parts[1],
+        sql_expr=parts[2],
+        join_sql_expr=parts[3],
+        stable_name=False,
+        has_ungroupable=True,
+    )
+
+
 def column_or_str_error(item: Any) -> PySparkTypeError:
     """The ``select``/``_column_of`` rejection — ``TableArg`` gets Spark's conditioned error."""
     if type(item).__name__ == "TableArg" or "table_arg" in (type(item).__module__ or "").lower():

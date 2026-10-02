@@ -406,19 +406,18 @@ impl PyDataFrame {
     pub fn filter(&self, predicate: PyColumn) -> PyResult<Self> {
         fenced!("PyDataFrame.filter", {
             let carries_plan = carries_subquery_plan(std::slice::from_ref(&predicate));
-            let (df, bound) = drive_columns(
+            let ((df, expanded), bound) = drive_columns(
                 &self.runtime,
                 &self.depths,
                 std::slice::from_ref(&predicate),
                 || {
                     let (bound, depth) = self.bound(&predicate)?;
-                    let df = grown_clone_frame(self.inner(), &self.depths)
-                        .filter(bound)
-                        .map_err(datafusion_to_py_err)?;
-                    Ok((df, depth))
+                    let (df, expanded) =
+                        crate::is_duplicated::filter_frame(self.inner(), &self.depths, bound)?;
+                    Ok(((df, expanded), depth))
                 },
             )?;
-            let depths = child_depths(&self.depths, bound, &df, carries_plan);
+            let depths = child_depths(&self.depths, bound, &df, carries_plan || expanded);
             Ok(Self::new_with_depths(df, Arc::clone(&self.runtime), depths))
         })
     }
@@ -441,21 +440,24 @@ impl PyDataFrame {
     pub fn select(&self, columns: Vec<PyColumn>) -> PyResult<Self> {
         fenced!("PyDataFrame.select", {
             let carries_plan = carries_subquery_plan(&columns);
-            let (df, bound) = drive_columns(&self.runtime, &self.depths, &columns, || {
-                let mut deepest = 0;
-                let mut expressions = Vec::with_capacity(columns.len());
-                for column in &columns {
-                    let (bound, depth) =
-                        crate::dataframe_names::bound_projection(&self.df, column)?;
-                    deepest = deepest.max(depth);
-                    expressions.push(bound);
-                }
-                let df = grown_clone_frame(self.inner(), &self.depths)
-                    .select(expressions)
-                    .map_err(datafusion_to_py_err)?;
-                Ok((df, deepest))
-            })?;
-            let depths = child_depths(&self.depths, bound, &df, carries_plan);
+            let ((df, expanded), bound) =
+                drive_columns(&self.runtime, &self.depths, &columns, || {
+                    let mut deepest = 0;
+                    let mut expressions = Vec::with_capacity(columns.len());
+                    for column in &columns {
+                        let (bound, depth) =
+                            crate::dataframe_names::bound_projection(&self.df, column)?;
+                        deepest = deepest.max(depth);
+                        expressions.push(bound);
+                    }
+                    let (df, expanded) = crate::is_duplicated::select_frame(
+                        self.inner(),
+                        &self.depths,
+                        expressions,
+                    )?;
+                    Ok(((df, expanded), deepest))
+                })?;
+            let depths = child_depths(&self.depths, bound, &df, carries_plan || expanded);
             Ok(Self::new_with_depths(df, Arc::clone(&self.runtime), depths))
         })
     }

@@ -1,5 +1,6 @@
 # map — scripts/
 
+RP-56 DIFF-PROBE fold (2026-09-29): `check_rust_file_size.py` ratchets `repark-iceberg/src/write/append.rs` 1804 → 1737 (the `write_partitioned_data_files*` family moved to `partitioned_files.rs`) and `repark-iceberg/src/write/merge/mod.rs` 1622 → 1569 (the `write_data_files*` family moved to `merge/file_sink.rs`), shrink-only.
 DEEP-FILTER-CHAIN-CRASH-1 CI segv (2026-09-30): `check_rust_file_size.py` ratchets `repark-python/src/column/mod.rs` 1011 → 1005 (rustfmt joins three calls shortened by the grown clone-out; the `Clone` derive leaves with the manual impl), shrink-only, with the CAP-1 mirror. pins: deep-filter-chain-crash-1/C-012
 
 DEEP-FILTER-CHAIN-CRASH-1 limits fold (2026-09-29): `check_rust_file_size.py` ratchets `repark-python/src/column/mod.rs` 1012 → 1011 (the SQL text-cap call leaves `Column.sql`), shrink-only, with the CAP-1 mirror. pins: deep-filter-chain-crash-1/C-009
@@ -918,6 +919,8 @@ repark-parity slice.
 
 ## Contents
 
+- [dev/](dev/map.md) — **C-0 (2026-10-02):** disposable Postgres Compose file and
+  `pg_disposable.sh` (`up` / `down` / `url` / `reap`) for the live-database cells.
 - `coordinator/` — the tick-driven lane coordinator (2026-09-22, moved in from the campaign's
   scratch tooling and renamed from `xorch`): a bash driver that waits for free and wakes a model
   for one bounded tick at a time, one lane per systemd unit; engines for Grok, Muse, GLM and Codex;

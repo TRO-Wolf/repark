@@ -5,7 +5,10 @@ use iceberg::{Catalog, Result};
 use repark_common::spark_error;
 
 use super::alter::ColumnPosition;
-use super::column_move::{top_level_names, unresolved_column, unresolved_column_parts};
+use super::column_move::{
+    NestedPathResolution, nested_name_known_ci, resolve_nested_path_ci, split_dotted,
+    top_level_names, unresolved_column, unresolved_column_parts,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ColumnPathChange {
@@ -110,36 +113,46 @@ pub fn nested_required_add_refusal(changes: &[ColumnPathChange]) -> Option<Strin
     })
 }
 
-#[must_use]
-pub fn nested_add_refusal(schema: &Schema, changes: &[ColumnPathChange]) -> Option<String> {
-    changes.iter().find_map(|change| {
+#[allow(clippy::missing_errors_doc)]
+pub fn nested_add_refusal(
+    schema: &Schema,
+    changes: &[ColumnPathChange],
+    case_sensitive: bool,
+) -> Result<Option<String>> {
+    let known = |name: &str| {
+        if case_sensitive {
+            Ok(schema.field_by_name(name).is_some())
+        } else {
+            nested_name_known_ci(schema, name)
+        }
+    };
+    for change in changes {
         let ColumnPathChange::Add {
             parent: Some(parent),
             name,
             ..
         } = change
         else {
-            return None;
+            continue;
         };
-        if schema.field_by_name_case_insensitive(parent).is_none() {
-            return Some(unresolved_column(parent, &top_level_names(schema)));
+        if !known(parent)? {
+            return Ok(Some(unresolved_column(parent, &top_level_names(schema))));
         }
-        schema
-            .field_by_name_case_insensitive(&full_name(Some(parent), name))
-            .map(|_| {
-                let rendered = parent
-                    .split('.')
-                    .chain(std::iter::once(name.as_str()))
-                    .map(|part| format!("`{part}`"))
-                    .collect::<Vec<_>>()
-                    .join(".");
-                format!(
-                    "[FIELD_ALREADY_EXISTS] Cannot add column, because {rendered} already exists \
-                     in \"{}\". SQLSTATE: 42710",
-                    spark_sql_struct(schema.as_struct().fields())
-                )
-            })
-    })
+        if known(&full_name(Some(parent), name))? {
+            let rendered = parent
+                .split('.')
+                .chain(std::iter::once(name.as_str()))
+                .map(|part| format!("`{part}`"))
+                .collect::<Vec<_>>()
+                .join(".");
+            return Ok(Some(format!(
+                "[FIELD_ALREADY_EXISTS] Cannot add column, because {rendered} already exists \
+                 in \"{}\". SQLSTATE: 42710",
+                spark_sql_struct(schema.as_struct().fields())
+            )));
+        }
+    }
+    Ok(None)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -544,6 +557,116 @@ pub fn resolve_nested_type_change(
     }
 }
 
+fn route_column_path_changes(
+    table: &Table,
+    changes: &[ColumnPathChange],
+    case_sensitive: bool,
+) -> (bool, Vec<ColumnPathChange>) {
+    if case_sensitive {
+        return (true, changes.to_vec());
+    }
+    let schema = table.metadata().current_schema();
+    if schema.try_field_by_name_case_insensitive("").is_ok() {
+        return (false, changes.to_vec());
+    }
+    let mut rewritten = Vec::with_capacity(changes.len());
+    for change in changes {
+        let Some(next) = route_column_path_change(schema, change) else {
+            return (false, changes.to_vec());
+        };
+        rewritten.push(next);
+    }
+    (true, rewritten)
+}
+
+fn route_column_path_change(
+    schema: &Schema,
+    change: &ColumnPathChange,
+) -> Option<ColumnPathChange> {
+    match change {
+        ColumnPathChange::Add {
+            parent,
+            name,
+            field_type,
+            doc,
+            required,
+            position,
+        } => {
+            let mut scope = match parent {
+                None => Vec::new(),
+                Some(dotted) => match resolve_nested_path_ci(schema, &split_dotted(dotted)) {
+                    NestedPathResolution::Unique(exact) => exact,
+                    _ => return None,
+                },
+            };
+            scope.push(name.clone());
+            if !matches!(
+                resolve_nested_path_ci(schema, &scope),
+                NestedPathResolution::Missing
+            ) {
+                return None;
+            }
+            scope.pop();
+            let position = match position {
+                None => None,
+                Some(ColumnPosition::First) => Some(ColumnPosition::First),
+                Some(ColumnPosition::After(reference)) => {
+                    let mut target = scope.clone();
+                    target.push(reference.clone());
+                    let NestedPathResolution::Unique(exact) =
+                        resolve_nested_path_ci(schema, &target)
+                    else {
+                        return None;
+                    };
+                    Some(ColumnPosition::After(exact.last()?.clone()))
+                }
+            };
+            Some(ColumnPathChange::Add {
+                parent: if scope.is_empty() {
+                    None
+                } else {
+                    Some(scope.join("."))
+                },
+                name: name.clone(),
+                field_type: field_type.clone(),
+                doc: doc.clone(),
+                required: *required,
+                position,
+            })
+        }
+        ColumnPathChange::Rename { path, to } => {
+            let NestedPathResolution::Unique(exact) =
+                resolve_nested_path_ci(schema, &split_dotted(path))
+            else {
+                return None;
+            };
+            let mut scope = exact.clone();
+            scope.pop();
+            scope.push(to.clone());
+            if !matches!(
+                resolve_nested_path_ci(schema, &scope),
+                NestedPathResolution::Missing
+            ) {
+                return None;
+            }
+            Some(ColumnPathChange::Rename {
+                path: exact.join("."),
+                to: to.clone(),
+            })
+        }
+        ColumnPathChange::Drop { path } => {
+            let NestedPathResolution::Unique(exact) =
+                resolve_nested_path_ci(schema, &split_dotted(path))
+            else {
+                return None;
+            };
+            Some(ColumnPathChange::Drop {
+                path: exact.join("."),
+            })
+        }
+    }
+}
+
 #[expect(
     clippy::missing_errors_doc,
     reason = "round comment ban: action-apply and commit errors propagate from the fork, recorded in the unit ledger"
@@ -552,13 +675,15 @@ pub async fn apply_column_path_changes(
     catalog: &dyn Catalog,
     table: &Table,
     changes: &[ColumnPathChange],
+    case_sensitive: bool,
 ) -> Result<()> {
     if changes.is_empty() {
         return Ok(());
     }
     let tx = Transaction::new(table);
-    let mut action = tx.update_schema().case_sensitive(false);
-    for change in changes {
+    let (sensitive, changes) = route_column_path_changes(table, changes, case_sensitive);
+    let mut action = tx.update_schema().case_sensitive(sensitive);
+    for change in &changes {
         action = match change {
             ColumnPathChange::Add {
                 parent,
@@ -682,18 +807,23 @@ mod tests {
         let (catalog, ident) = nested_table(&warehouse).await;
         let table = catalog.load_table(&ident).await.unwrap();
         let schema = table.metadata().current_schema();
-        assert_eq!(nested_add_refusal(schema, &[add("s", "c", false)]), None);
+        assert_eq!(
+            nested_add_refusal(schema, &[add("s", "c", false)], false).unwrap(),
+            None
+        );
         assert_eq!(nested_required_add_refusal(&[add("s", "c", false)]), None);
         assert_eq!(
             nested_required_add_refusal(&[add("s", "c", false), add("s", "r", true)]).as_deref(),
             Some("Unsupported table change: Incompatible change: cannot add required column: r")
         );
         assert_eq!(
-            nested_add_refusal(schema, &[add("arrs.element", "y", false)]),
+            nested_add_refusal(schema, &[add("arrs.element", "y", false)], false).unwrap(),
             None
         );
         assert_eq!(
-            nested_add_refusal(schema, &[add("s", "c", false), add("S", "A", false)]).as_deref(),
+            nested_add_refusal(schema, &[add("s", "c", false), add("S", "A", false)], false)
+                .unwrap()
+                .as_deref(),
             Some(
                 "[FIELD_ALREADY_EXISTS] Cannot add column, because `S`.`A` already exists in \
                  \"STRUCT<id: INT, s: STRUCT<a: INT, b: STRING>, arrs: ARRAY<STRUCT<x: INT>>>\". \
@@ -701,7 +831,9 @@ mod tests {
             )
         );
         assert_eq!(
-            nested_add_refusal(schema, &[add("nope", "z", false)]).as_deref(),
+            nested_add_refusal(schema, &[add("nope", "z", false)], false)
+                .unwrap()
+                .as_deref(),
             Some(
                 "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter \
                  with name `nope` cannot be resolved. Did you mean one of the following? \
@@ -746,7 +878,7 @@ mod tests {
                 path: "s.b".to_string(),
             },
         ];
-        apply_column_path_changes(catalog.as_ref(), &table, &changes)
+        apply_column_path_changes(catalog.as_ref(), &table, &changes, false)
             .await
             .unwrap();
         let schema = catalog
@@ -767,9 +899,10 @@ mod tests {
         let warehouse = TempDir::new().unwrap();
         let (catalog, ident) = nested_table(&warehouse).await;
         let table = catalog.load_table(&ident).await.unwrap();
-        let refused = apply_column_path_changes(catalog.as_ref(), &table, &[add("s", "r", true)])
-            .await
-            .expect_err("a required add without a default is incompatible");
+        let refused =
+            apply_column_path_changes(catalog.as_ref(), &table, &[add("s", "r", true)], false)
+                .await
+                .expect_err("a required add without a default is incompatible");
         assert!(
             refused
                 .to_string()
