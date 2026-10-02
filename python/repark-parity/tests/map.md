@@ -182,6 +182,12 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `docs/examples/functions/{posexplode,inline}.py` cover the four names and
   the backlog baseline ratchets 112 → 110.
   pins: fnp-gen-1/C-001, C-006
+- `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 S4 (2026-10-02):**
+  mirror rows ratchet `spark/column.py` 1527 → 1378 (the sort-marker family
+  moves to `column_sort.py`, the string-predicate family to `column_string.py`)
+  and `dataframe/core.py` 3711 → 3653 (`_select_via_attr_sql` moves to
+  `join_attr_tokens.py` behind a one-line delegate) with the script baseline.
+  pins: attr-id-1/C-042
 - `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 S3e (2026-10-01):**
   mirror row ratchets `dataframe/core.py` 3803 → 3800 with the script baseline
   (the `selectExpr` body moves out and the select star arms fold into one

@@ -12301,8 +12301,9 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   new column reads an earlier new column, which is exponential in the depth
   (`c[n] = f(c[n-1])`). The safe variant re-parents onto the previous projection's input only
   when the new expression reads no computed column — it never duplicates, but it rewrites plan
-  lineage, and `_origin_plan_id`, the `MISSING_ATTRIBUTES` contract and the
-  adjacent-window-layer merge are all defined in terms of that lineage. Wants its own scope
+  lineage, and `Column._attr_id`, the `MISSING_ATTRIBUTES` contract and the
+  adjacent-window-layer merge are all defined in terms of that lineage (S4,
+  2026-10-02: the `_origin_*` encodings are deleted). Wants its own scope
   audit before it is built. Evidence: `docs/perf/facade-boundary-baseline.md` §2.
 - **COLLECT-STRUCT-ROW-1** — surfaced 2026-09-04, PERF-FACADE-1 round-2 review. BACKLOG.
   A `StructType` cell comes back from `collect()` as a `dict`; live PySpark returns a nested

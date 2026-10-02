@@ -810,7 +810,7 @@ fn plan_is_stamped_matches_what_stamp_would_change() {
     )));
 }
 
-fn source_strs(sources: Vec<Option<AttrId>>) -> Vec<Option<String>> {
+fn source_strs(sources: &[Option<AttrId>]) -> Vec<Option<String>> {
     sources
         .iter()
         .map(|id| id.as_ref().map(|id| id.as_str().to_string()))
@@ -828,7 +828,7 @@ fn projection_source_ids_reads_alias_coalesce_and_single_column_case() {
         .select(vec![col("id").alias("renamed"), col("data"), col("s")])
         .unwrap();
     assert_eq!(
-        source_strs(projection_source_ids(aliased.logical_plan())),
+        source_strs(&projection_source_ids(aliased.logical_plan())),
         vec![
             Some(tags[0].to_string()),
             Some(tags[1].to_string()),
@@ -844,7 +844,7 @@ fn projection_source_ids_reads_alias_coalesce_and_single_column_case() {
         ])
         .unwrap();
     assert_eq!(
-        source_strs(projection_source_ids(filled.logical_plan()))[0],
+        source_strs(&projection_source_ids(filled.logical_plan()))[0],
         Some(tags[0].to_string())
     );
     let fill_case = frame
@@ -859,7 +859,7 @@ fn projection_source_ids_reads_alias_coalesce_and_single_column_case() {
         ])
         .unwrap();
     assert_eq!(
-        source_strs(projection_source_ids(fill_case.logical_plan()))[0],
+        source_strs(&projection_source_ids(fill_case.logical_plan()))[0],
         Some(tags[1].to_string())
     );
     let replaced = frame
@@ -874,7 +874,7 @@ fn projection_source_ids_reads_alias_coalesce_and_single_column_case() {
         ])
         .unwrap();
     assert_eq!(
-        source_strs(projection_source_ids(replaced.logical_plan()))[0],
+        source_strs(&projection_source_ids(replaced.logical_plan()))[0],
         Some(tags[0].to_string())
     );
 }
@@ -894,7 +894,7 @@ fn projection_source_ids_refuses_multi_column_and_computed_outputs() {
         ])
         .unwrap();
     assert_eq!(
-        source_strs(projection_source_ids(mixed.logical_plan())),
+        source_strs(&projection_source_ids(mixed.logical_plan())),
         vec![None, None, None]
     );
 }
