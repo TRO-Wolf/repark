@@ -398,6 +398,10 @@ impl PyColumn {
     }
 }
 
+pub(crate) fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
+    module.add_function(wrap_pyfunction!(grouping_id_column, module)?)
+}
+
 #[pyfunction]
 pub(crate) fn grouping_id_column(args: Vec<PyColumn>) -> PyResult<PyColumn> {
     fenced!("grouping_id_column", {

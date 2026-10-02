@@ -479,3 +479,267 @@ fn binding_re_mints_lateral_join_collisions_of_a_self_join() {
         }
     });
 }
+
+const SPARK_1182_ONE: &str = "Column v#1L are ambiguous. It's probably because you joined \
+several Datasets together, and some of these Datasets are the same. This column points to one of \
+the Datasets but Spark is unable to figure out which one. Please alias the Datasets with \
+different names via `Dataset.as` before joining them, and specify the column using qualified \
+name, e.g. `df.as(\"a\").join(df.as(\"b\"), $\"a.id\" > $\"b.id\")`. You can also set \
+spark.sql.analyzer.failAmbiguousSelfJoin to false to disable this check.";
+
+fn without_expr_ids(text: &str) -> String {
+    let mut kept = String::new();
+    let mut rest = text;
+    while let Some(at) = rest.find('#') {
+        kept.push_str(&rest[..at]);
+        let after = &rest[at + 1..];
+        let digits = after.bytes().take_while(u8::is_ascii_digit).count();
+        if digits > 0 && after[digits..].starts_with('L') {
+            rest = &after[digits + 1..];
+        } else {
+            kept.push('#');
+            rest = after;
+        }
+    }
+    kept.push_str(rest);
+    kept
+}
+
+fn spark_error_parts(py: Python<'_>, raised: &PyErr) -> (String, HashMap<String, String>, String) {
+    let value = raised.value(py);
+    let condition = value
+        .getattr("_spark_error_class")
+        .and_then(|held| held.extract::<String>())
+        .expect("condition");
+    let params = value
+        .getattr("_spark_message_parameters")
+        .and_then(|held| held.extract::<HashMap<String, String>>())
+        .expect("params");
+    (condition, params, value.to_string())
+}
+
+fn self_join_frame(
+    py: Python<'_>,
+    session: &PyReparkSession,
+) -> (Py<PyDataFrame>, crate::frame_lineage::PyFrameNode) {
+    let frame = session
+        .sql(py, "SELECT 1 AS id, 'a' AS data")
+        .expect("source frame");
+    let stamped = crate::dataframe_names::stamp_attribute_ids(Py::new(py, frame).expect("handle"))
+        .expect("stamp");
+    let node = crate::frame_lineage::frame_root(&stamped.bind(py).borrow()).expect("root node");
+    (stamped, node)
+}
+
+fn token(node: &crate::frame_lineage::PyFrameNode, position: usize) -> String {
+    format!(
+        "__REPARK_ATTR_{}__F{}____",
+        node.node.outputs()[position].as_str(),
+        node.node.id().get()
+    )
+}
+
+#[test]
+fn self_join_refusal_is_spark_1182_on_class_config_template_and_names() {
+    Python::attach(|py| {
+        let raised = crate::frame_lineage::self_join_error(py, &["v".to_string()]);
+        assert!(raised.is_instance_of::<AnalysisException>(py));
+        let (condition, params, message) = spark_error_parts(py, &raised);
+        assert_eq!(condition, "_LEGACY_ERROR_TEMP_1182");
+        assert_eq!(
+            params,
+            HashMap::from([
+                ("ambiguousAttrs".to_string(), "v".to_string()),
+                (
+                    "config".to_string(),
+                    "spark.sql.analyzer.failAmbiguousSelfJoin".to_string()
+                ),
+            ])
+        );
+        assert_eq!(message, without_expr_ids(SPARK_1182_ONE));
+        let pair = crate::frame_lineage::self_join_error(py, &["id".to_string(), "id".to_string()]);
+        let (_, params, message) = spark_error_parts(py, &pair);
+        assert_eq!(params["ambiguousAttrs"], "id, id");
+        assert_eq!(
+            message,
+            without_expr_ids(&SPARK_1182_ONE.replace("v#1L", "id#0L, id#0L"))
+        );
+    });
+}
+
+#[test]
+fn missing_attribute_refusals_follow_spark_subclasses() {
+    Python::attach(|py| {
+        let appear = crate::frame_lineage::missing_attributes_error(
+            py,
+            &["k".to_string()],
+            &["k".to_string(), "k".to_string()],
+            &["k".to_string()],
+        );
+        let (condition, params, message) = spark_error_parts(py, &appear);
+        assert_eq!(
+            condition,
+            "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+        );
+        assert_eq!(params["missingAttributes"], "\"k\"");
+        assert_eq!(params["input"], "\"k\", \"k\"");
+        assert_eq!(params["operation"], "\"k\"");
+        assert!(message.starts_with(
+            "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \
+             \"k\" missing from \"k\", \"k\" in operator !Join"
+        ));
+        let missing = crate::frame_lineage::missing_attributes_error(
+            py,
+            &["k".to_string()],
+            &["id".to_string(), "v".to_string()],
+            &[],
+        );
+        let (condition, params, _) = spark_error_parts(py, &missing);
+        assert_eq!(
+            condition,
+            "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT"
+        );
+        assert!(!params.contains_key("operation"));
+    });
+}
+
+#[test]
+fn self_join_confs_route_through_the_runtime_conf_and_read_live() {
+    Python::attach(|py| {
+        let session = Py::new(
+            py,
+            PyReparkSession::new(py, None, None, None, None, None).expect("session"),
+        )
+        .expect("session object");
+        let live = |session: &Py<PyReparkSession>| {
+            let config = crate::session_runtime::session_self_join(&session.borrow(py).session);
+            (config.fail_ambiguous, config.auto_resolve)
+        };
+        assert_eq!(live(&session), (true, true));
+        let fail = "spark.sql.analyzer.failAmbiguousSelfJoin";
+        let auto = "spark.sql.selfJoinAutoResolveAmbiguity";
+        crate::session_runtime::set_runtime_config(session.borrow(py), fail, "false")
+            .expect("set fail");
+        assert_eq!(live(&session), (false, true));
+        crate::session_runtime::set_runtime_config(session.borrow(py), auto, "FALSE")
+            .expect("set auto");
+        assert_eq!(live(&session), (false, false));
+        crate::session_runtime::unset_runtime_config(session.borrow(py), fail).expect("unset");
+        assert_eq!(live(&session), (true, false));
+        let refused = crate::session_runtime::set_runtime_config(session.borrow(py), auto, "maybe")
+            .expect_err("a non-boolean refuses");
+        assert!(refused.is_instance_of::<IllegalArgumentException>(py));
+        assert!(refused.value(py).to_string().starts_with(
+            "[INVALID_CONF_VALUE.TYPE_MISMATCH] The value 'maybe' in the config \
+             \"spark.sql.selfJoinAutoResolveAmbiguity\" is invalid."
+        ));
+        assert_eq!(live(&session), (true, false));
+    });
+}
+
+#[test]
+fn binding_prepares_self_join_conditions_by_the_session_rules() {
+    Python::attach(|py| {
+        let session = Py::new(
+            py,
+            PyReparkSession::new(py, None, None, None, None, None).expect("session"),
+        )
+        .expect("session object");
+        let (frame, d) = self_join_frame(py, &session.borrow(py));
+        let frame = frame.bind(py).borrow();
+        let f = crate::frame_lineage::frame_derived(&frame, &d, Vec::new()).expect("derived");
+        assert!(!d.node.renews() && !f.node.renews());
+        let shown = vec!["id".to_string(), "data".to_string()];
+        let prepare = |condition: &str| {
+            crate::frame_lineage::prepare_join_condition(
+                py,
+                &session.borrow(py),
+                condition,
+                &d,
+                &f,
+                &frame,
+                &frame,
+                "_l",
+                "_r",
+                shown.clone(),
+                shown.clone(),
+                HashMap::new(),
+            )
+        };
+        let (sql, remint) = prepare(&format!("({} = {})", token(&d, 0), token(&f, 0)))
+            .expect("the equi self-join is rewritten");
+        assert_eq!(sql, "(_l.`id` = _r.`id`)");
+        assert_eq!(remint.len(), 2);
+        let refused = prepare(&format!("({} > {})", token(&d, 0), token(&f, 0)))
+            .expect_err("the shared lineage refuses");
+        let (condition, params, _) = spark_error_parts(py, &refused);
+        assert_eq!(condition, "_LEGACY_ERROR_TEMP_1182");
+        assert_eq!(params["ambiguousAttrs"], "id, id");
+        crate::session_runtime::set_runtime_config(
+            session.borrow(py),
+            "spark.sql.analyzer.failAmbiguousSelfJoin",
+            "false",
+        )
+        .expect("conf off");
+        let (sql, _) = prepare(&format!("({} < {})", token(&f, 0), token(&d, 0)))
+            .expect("the conf off binds left");
+        assert_eq!(sql, "(_l.`id` < _l.`id`)");
+    });
+}
+
+#[test]
+fn binding_refuses_post_join_references_through_the_join_lineage() {
+    Python::attach(|py| {
+        let session = PyReparkSession::new(py, None, None, None, None, None).expect("session");
+        let (_frame, d) = self_join_frame(py, &session);
+        let held = d.node.outputs().to_vec();
+        let renewed = held
+            .iter()
+            .map(|_| repark_core::frame_names::AttrId::mint())
+            .collect::<Vec<_>>();
+        let fields = held
+            .iter()
+            .chain(&renewed)
+            .enumerate()
+            .map(|(position, id)| {
+                datafusion::arrow::datatypes::Field::new(
+                    format!("c{position}"),
+                    datafusion::arrow::datatypes::DataType::Int64,
+                    true,
+                )
+                .with_metadata(HashMap::from([(
+                    "repark.attr".to_string(),
+                    id.as_str().to_string(),
+                )]))
+            })
+            .collect::<Vec<_>>();
+        let schema = datafusion::common::DFSchema::try_from(
+            datafusion::arrow::datatypes::Schema::new(fields),
+        )
+        .expect("joined schema");
+        let joined = crate::frame_lineage::PyFrameNode {
+            node: repark_core::frame_names::FrameNode::join(
+                &schema,
+                std::sync::Arc::clone(&d.node),
+                std::sync::Arc::clone(&d.node),
+                held.iter().cloned().zip(renewed).collect(),
+                true,
+            )
+            .expect("join node"),
+        };
+        let shown = ["id", "data", "id", "data"].map(str::to_string).to_vec();
+        let refused = crate::frame_lineage::refuse_self_join_refs(
+            py,
+            &session,
+            &joined,
+            vec![token(&d, 0)],
+            shown.clone(),
+        )
+        .expect_err("the parent's id is on both sides");
+        let (condition, params, _) = spark_error_parts(py, &refused);
+        assert_eq!(condition, "_LEGACY_ERROR_TEMP_1182");
+        assert_eq!(params["ambiguousAttrs"], "id");
+        crate::frame_lineage::refuse_self_join_refs(py, &session, &d, vec![token(&d, 0)], shown)
+            .expect("a frame with no self-join pays one branch");
+    });
+}

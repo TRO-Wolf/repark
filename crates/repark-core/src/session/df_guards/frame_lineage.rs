@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::BuildHasher;
 use std::ptr;
 use std::sync::Arc;
@@ -22,6 +22,10 @@ impl FrameId {
     #[must_use]
     pub fn get(self) -> u64 {
         self.0
+    }
+
+    pub(crate) fn from_raw(raw: u64) -> Self {
+        Self(raw)
     }
 }
 
@@ -208,6 +212,18 @@ pub fn ambiguous<S: BuildHasher>(
     visible: &HashSet<AttrId, S>,
     refs: &[AttrRef],
 ) -> Vec<usize> {
+    ambiguous_images(target, visible, refs)
+        .into_iter()
+        .map(|(index, _)| index)
+        .collect()
+}
+
+#[must_use]
+pub fn ambiguous_images<S: BuildHasher>(
+    target: &FrameNode,
+    visible: &HashSet<AttrId, S>,
+    refs: &[AttrRef],
+) -> Vec<(usize, AttrId)> {
     if !target.renews {
         return Vec::new();
     }
@@ -216,7 +232,7 @@ pub fn ambiguous<S: BuildHasher>(
     };
     let mut links: Vec<Link<'_>> = Vec::new();
     let mut seen = HashSet::new();
-    let mut hits = BTreeSet::new();
+    let mut hits = BTreeMap::new();
     let mut stack: Vec<(&FrameNode, Option<usize>)> = vec![(target, None)];
     while let Some((node, chain)) = stack.pop() {
         if node.id < oldest
@@ -229,7 +245,7 @@ pub fn ambiguous<S: BuildHasher>(
             if reference.frame == node.id {
                 let renewed = image(&reference.attr, chain, &links);
                 if renewed != &reference.attr && visible.contains(renewed) {
-                    hits.insert(index);
+                    hits.entry(index).or_insert_with(|| renewed.clone());
                 }
             }
         }

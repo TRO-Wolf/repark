@@ -148,6 +148,23 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   `k_on_union_named_second_input_answers`; `emits_right` ignored (M-A7) reds none (see
   `../df_guards/map.md`). `attr_id.rs` and `attr_id_verify.rs` now call
   `remint_shared` with `join_collisions`, the old behaviour.
+- `self_join.rs` — **ATTR-ID-1 SJ-1b (2026-10-02):** 62 pins for `df_guards/self_join.rs`
+  over hand-built DAGs (the probes' fixtures: `f`, `g`, `a`, `b` share `d`'s ids, `w`
+  re-mints `id`, `r` re-mints `v` as `z`, `s` keeps `id`, `e` is unrelated). Each test is
+  named after its measured Spark cell (`selfjoin/sj1.spark.json`, `sj2`, `sj4`, `sj5`, and
+  the lane's `sj-1b/probe/sj1b.spark.json` and `sj1b2.spark.json` for the `X_*` cells):
+  every `B_*`, `D_*`, `G_eq3_*` (`G_eq3_str` and `G_eq3_right_nested` through the
+  token-free and inner conditions), `I_rewrite_name_missing` and `F_left_anti_gt`
+  verdict, plus `E_parent_alias_gt`, the `P_h2_*`/`P_s4_*` condition cells,
+  `K_off_cond_missing`, the `H_off_*` condition cells, the measured `X_*` shapes (nested
+  and half casts, `!=`, reversed and foldable literals, `rand()`, `IN`, the
+  `DeduplicateRelations` condition rewrite), and the post-join `check_refs` cells
+  `D_self_eq_sel_d`, `A_inner_sel_f_v`, `P_v_left_join_right_parent` and `I_window_f`.
+  Refusals assert the names Spark prints with its `#<n>L` suffixes stripped; rewrite
+  errors assert Spark's message byte for byte. Token pins: quoted spans are text,
+  qualifiers parse, and a token without a frame field is loud. Mutations, each reverted
+  (records in the SJ-1b hand-back): the equality exemption removed (M-A3), the rewrite
+  resolving by id (M-A4), right-first binding (M-A5).
 - `session.rs` — ported v1 session battery plus P2G R2 / A13 / metadata-enumeration pins. RP-5: the bare-session half of the metadata-table enumeration contract (fork F-8 listing); mutation — make `information_schema` expect a `$snapshots` twin and the pin reds. pins: rp-5-fork-repin/C-003
   Child: [session/catalog_registration.rs](session/map.md).
   RP-5: `information_schema` hide pin now cites fork F-8 listing (no engine shim).

@@ -55,6 +55,11 @@ impl AttrId {
     }
 
     #[must_use]
+    pub fn from_token(raw: &str) -> Self {
+        Self(raw.to_string())
+    }
+
+    #[must_use]
     pub fn of(field: &Field) -> Option<Self> {
         field.metadata().get(ATTR_KEY).cloned().map(Self)
     }

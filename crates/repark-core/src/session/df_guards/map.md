@@ -140,6 +140,9 @@ wrapped optimizer rule) and declares this directory.
   so nothing user-visible moves. A left width past the field count stays an internal
   error in both. Pins: `../tests/attr_id.rs`, `../tests/attr_id_verify.rs`,
   `../tests/frame_lineage.rs`.
+  **ATTR-ID-1 SJ-1b (2026-10-02):** `AttrId::from_token(raw)` wraps the id text a
+  reference token carries; it validates nothing, and an id no schema holds stays unbound
+  (`self_join.rs` refuses it loudly).
 - `attr_lineage.rs` — **ATTR-ID-1 S4 (2026-10-02):** projection-output lineage,
   a pure move out of `attr_id.rs` when that file passed the 1000-line ceiling.
   `projection_source_ids` maps each `Projection` output to its input attribute id
@@ -212,6 +215,79 @@ wrapped optimizer rule) and declares this directory.
 
   Nothing calls this module yet: SJ-1b adds the condition preparer and the bindings,
   and SJ-2 to SJ-4 wire the facade. Pins: `../tests/frame_lineage.rs`.
+  **ATTR-ID-1 SJ-1b (2026-10-02):** `ambiguous_images(target, visible, refs)` is the same
+  walk returning each hit with the first visible image it reached, so a refusal can name
+  the column by the display at that image's position (Spark's `ambiguousAttrs`);
+  `ambiguous` now maps it to indices, its verdicts unchanged. `FrameId::from_raw` reads a
+  frame id back from a reference token (crate-private).
+- `self_join.rs` — **ATTR-ID-1 SJ-1b (2026-10-02):** the self-join condition preparer, the
+  post-join reference check and the refusal texts, all Rust (owner ruling 2026-10-02,
+  option A: Spark Classic is the oracle, no "left wins" tie-break; sketch
+  `attr-id-1-selfjoin-design.md` §1.1–§1.4, §2.2). No facade calls it yet: SJ-2 wires the
+  token and the seam, SJ-3 the condition join, SJ-4 the post-join surfaces.
+  - `parse_attr_refs(sql)` reads the reference tokens SJ-2 will render,
+    `__REPARK_ATTR_<id>__F<frame>__<qualifiers>__` (the frame field sits before the
+    greedy qualifier group, and the qualifier group ends at its last `__`, as the
+    facade's regex does). Each token becomes the placeholder `__rp_ref_<n>` so the text
+    parses, and its byte span on the original text is kept. Quoted spans (`'…'`, `"…"`,
+    `` `…` ``, doubled-quote and backslash escapes) are text. A token without the frame
+    field, a malformed token, or text already holding `__rp_ref_` is an internal error,
+    never a guess (halt rule 5).
+  - The condition is parsed with `sqlparser`'s `DatabricksDialect`, the parser
+    `case_bind.rs` uses, and walked with `visit_expressions`. The walk records the
+    placeholders inside a window function (`Function { over: Some(_) }`, never checked),
+    and Spark's two exemptions from `DetectAmbiguousSelfJoin`'s root-`Join` branch: an
+    equality (`=`, `<=>`, `IS NOT DISTINCT FROM`) of two references to the same id, each
+    wrapped in any number of casts (Spark's recursive `AttrWithCast`; measured
+    `X_self_eq_castcast` = 9, so the sketch's "one cast" is widened to Spark's), and, when
+    the two inputs are the same frame, an equality of a reference and a foldable operand
+    (no reference, no column name, no subquery, no nondeterministic function: `rand()`
+    refuses, `1 + 1` and `upper('a')` do not; measured `X_self_eq_rand`,
+    `X_self_eq_litexpr`, `X_self_lit_rev`).
+  - `prepare_join_condition(cond_sql, left, right, names, rule, rules)` runs Spark's
+    order over two `JoinSide`s (node, stamped schema, display names, view alias):
+    1. `shared_ids` and one fresh id per shared id: the `remint` map returned with the
+       condition, which SJ-3 must apply to the joined plan unchanged.
+    2. `DeduplicateRelations`' own condition rewrite, read from the 4.1.2 bytecode (the
+       `attrMap` filtered by `DONT_DEDUPLICATE_EXPRESSION_IF_EXPR_ID_IN_OUTPUT`, then
+       `rewriteAttrs` on the join): a reference whose id the left does not output but
+       the right outputs and renews takes the renewed id, so it binds right and is never
+       ambiguous. Measured: `s.join(d, d.v > 15)` answers 6 with the check on and off
+       (`X_on_cond_shared_v`, `X_off_cond_shared_v`, `X_on_cond_shared_fv`,
+       `X_on_cond_shared_dv_f`, `X_on_cond_shared_eq`). The sketch's §1.3 omits this step.
+    3. Detect, when `fail_ambiguous`: every reference outside an exemption and a window is
+       walked by `ambiguous_images` from a provisional `Join` node whose right side is
+       always walked (SJ-1a ruling 1: `F_left_anti_gt` refuses), with `visible` the left
+       outputs plus the renewed right outputs. Hits refuse with
+       `Refusal::SelfJoin { names }`, one name per occurrence in text order (Spark's
+       multiplicity: `D_derived_eq_plus0` names `id, id`).
+    4. Bind by id: the left outputs first, else the renewed right outputs, else
+       `Refusal::Missing` with Spark's subclass (`operation` lists the missing names that
+       match an input display under the session rule: `APPEAR_IN_OPERATION`, else
+       `MISSING_FROM_INPUT`). A condition id missing from both sides belongs to a third
+       frame, whose name the token does not carry, so it comes from the caller's `names`
+       map; no name is an internal error.
+    5. Rewrite, when `auto_resolve` and the two inputs' output ids intersect: each
+       exempt equality of two bare references becomes `left.<name> = right.<name>`, the
+       first operand to the left whatever its frame (`D_derived_eq_rev`), each side
+       resolved by name with `resolve` under the session rule. No hit is
+       `UNRESOLVED_COLUMN.WITH_SUGGESTION` with the side's displays as suggestions
+       (`I_rewrite_name_missing`); two ids is `AMBIGUOUS_REFERENCE` `` `id` `` /
+       `` [`id`, `id`] `` (`G_eq3_*`), both through `spark_error` and byte-equal to Spark.
+    The text is spliced by span on the original condition, never re-rendered from the
+    syntax tree: each placeholder becomes `<alias>.` + the backtick-quoted engine field,
+    the quoting today's facade rewriter uses.
+  - `check_refs(target, displays, sql_parts, rules)` is the post-join check (SJ-4): the
+    references of every part, deduplicated by (frame, id) as Spark's `ColumnReference`
+    set is, minus window ones, walked with the target's outputs visible. It runs nothing
+    when `fail_ambiguous` is off or the target does not renew. `renewed_absent` is not
+    called (SJ-1a ruling 3: SJ-4 measures before wiring it).
+  - `self_join_message(names, config)` is the verbatim `_LEGACY_ERROR_TEMP_1182` template;
+    `missing_message`, `missing_condition` and `quoted_names` render `MISSING_ATTRIBUTES`
+    in the facade's one-line shape plus Spark's `SQLSTATE: XX000`. The operator renders
+    as `!Join` (Spark prints the plan node with exprIds).
+  The join type is not an input: `emits_right` is never a verdict input (SJ-1a ruling 2).
+  Pins: `../tests/self_join.rs`; the bindings in `crates/repark-python/src/frame_lineage.rs`.
 - `case_bind.rs` — **U11-EDGE-1 (2026-09-26):** `bind_case_insensitive`, run first by
   `subquery.rs`'s `resolve_bound_expr` (the DataFrame door's one binding hook). An
   unqualified column the frame schema does not hold exactly binds to the single field that
@@ -366,6 +442,11 @@ wrapped optimizer rule) and declares this directory.
   `FrameId`, `FrameKind`, `FrameNode`, `all_ids`, `ambiguous`, `renewed_absent` and
   `shared_ids`. `join_on_named_keys` (USING) passes `join_collisions` as the shared set,
   so its ids are unchanged.
+  **ATTR-ID-1 SJ-1b (2026-10-02):** the re-export adds `ambiguous_images` and
+  `self_join.rs`'s `AttrRefText`, `JoinSide`, `Prepared`, `PreparedCondition`, `Refusal`,
+  `SELF_JOIN_CONDITION`, `SelfJoinRules`, `check_refs`, `missing_condition`,
+  `missing_message`, `parse_attr_refs`, `prepare_join_condition`, `quoted_names` and
+  `self_join_message`.
 - `sort_names.rs` — **ATTR-ID-1 S3b (2026-10-01):** the filter/sort free-name
   binder over the S1 `resolve`. `sort_shape` descends Filter/Sort/Limit/
   Repartition/Distinct/SubqueryAlias and transparent Projections (a passthrough,

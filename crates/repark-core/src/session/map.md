@@ -274,6 +274,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `df_guards/frame_lineage.rs`, the self-join lineage core (`FrameNode` and the
   ambiguity walk), whose public items leave through `frame_names` (row in
   `df_guards/map.md`). No facade calls it yet.
+  **ATTR-ID-1 SJ-1b (2026-10-02):** it also declares the private `df_guards/self_join.rs`,
+  the self-join condition preparer and post-join reference check (row in
+  `df_guards/map.md`); its items leave through `frame_names`. No facade calls it yet.
 - `tests/df_guard.rs` — the seven `df_guards.rs` pins, split out of `tests.rs` when the DEFECT-2
   cohort pushed that file past the 1500-line ceiling (the sanctioned "split the module" out, not
   an EXCEPTIONS row). Guard 1: a bare no-extension session carries the scalar-subquery config

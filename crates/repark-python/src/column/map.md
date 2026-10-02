@@ -154,7 +154,7 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   DoubleType, computed in f64); the multiply coerces f32/int/decimal to f64 while
   bool/string still refuse (no numeric coercion).
   pins: abs-expr-1/C-001, C-002
-- [`expr_build.rs`](expr_build.rs) owns type parsing, alias handling, and expression inspection.
+- [`expr_build.rs`](expr_build.rs) owns type parsing, alias handling, and expression inspection. **ATTR-ID-1 SJ-1b (2026-10-02):** `register(module)` adds the `grouping_id_column` pyfunction, which `lib.rs` used to register inline; the move pays for `lib.rs`'s two `frame_lineage` lines.
   **CAST-MAP-SPELL-1 (2026-09-19):** `cast_to` sends a map-bearing type string to
   `repark_functions::cast_map::cast_map_expr` and every other one to `parse_data_type`;
   `plan_expr_column` runs the shared map-cast rewrite, so `F.expr` spells it too.

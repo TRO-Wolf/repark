@@ -474,6 +474,16 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (`INVALID_CONF_VALUE.TYPE_MISMATCH`, SQLSTATE 22022).
   pins: ice-rtas-byname-1/C-010
   The module carries no doc comments (comment ban); the three `Result` parsers take `#[allow(clippy::missing_errors_doc)]`.
+  **ATTR-ID-1 SJ-1b (2026-10-02):** `SparkSelfJoinConfig` (`PREFIX = repark.self-join`)
+  carries `fail_ambiguous` (`spark.sql.analyzer.failAmbiguousSelfJoin`) and
+  `auto_resolve` (`spark.sql.selfJoinAutoResolveAmbiguity`), both default **TRUE**, Spark's
+  defaults. `is_self_join_key`, the strict runtime parser `parse_runtime_self_join_flag`
+  (case-insensitive `true`/`false`; anything else is Spark's measured
+  `INVALID_CONF_VALUE.TYPE_MISMATCH`, SQLSTATE 22022), `with_self_join_flag` (`None`
+  restores the key's default) and `spark_self_join_from_options` (the defaults when the
+  session has no carrier). Served by the binding's `set_runtime_config` /
+  `unset_runtime_config`; read live by the self-join bindings. One inline test module pins
+  the defaults, the parser and the unset path.
 - `cast_map.rs` (+ [`cast_map/`](cast_map/map.md)) — **CAST-MAP-SPELL-1 (2026-09-19):**
   the Spark `CAST` / `TRY_CAST` to any type naming `MAP<…>`, shared by both SQL doors and the
   DataFrame `.cast`. Stock DataFusion plans no SQL map type, so `cast_map/rewrite.rs` turns

@@ -22,6 +22,7 @@ mod nlj_tight_pool;
 mod path_write;
 mod pool_refusals;
 mod s3_prefix_read;
+mod self_join;
 mod session;
 mod session_catalog;
 mod subquery;

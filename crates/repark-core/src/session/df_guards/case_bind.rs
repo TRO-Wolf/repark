@@ -26,7 +26,11 @@ pub use super::attr_id::{
 };
 pub use super::attr_lineage::projection_source_ids;
 pub use super::frame_lineage::{AttrRef, FrameId, FrameKind, FrameNode};
-pub use super::frame_lineage::{all_ids, ambiguous, renewed_absent, shared_ids};
+pub use super::frame_lineage::{all_ids, ambiguous, ambiguous_images, renewed_absent, shared_ids};
+pub use super::self_join::{AttrRefText, JoinSide, Prepared, PreparedCondition, Refusal};
+pub use super::self_join::{SELF_JOIN_CONDITION, SelfJoinRules, check_refs, missing_condition};
+pub use super::self_join::{missing_message, parse_attr_refs, prepare_join_condition};
+pub use super::self_join::{quoted_names, self_join_message};
 pub use super::sort_names::{SortShape, bind_free_names, bind_qualified_free_refs};
 pub use super::sort_names::{engine_field_is_unique, grandchild_key, grandchild_qualified_key};
 pub use super::sort_names::{join_dup_below_wrappers, join_output_sources};

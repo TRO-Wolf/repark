@@ -11,6 +11,11 @@ use repark_functions::case_sensitive::{
     SPARK_SQL_CASE_SENSITIVE_KEY, SparkCaseSensitiveConfig, parse_runtime_spark_sql_case_sensitive,
     spark_case_sensitive_from_options,
 };
+use repark_functions::case_sensitive::{
+    SPARK_SQL_FAIL_AMBIGUOUS_SELF_JOIN_KEY, SPARK_SQL_SELF_JOIN_AUTO_RESOLVE_KEY,
+    SparkSelfJoinConfig, is_self_join_key, parse_runtime_self_join_flag,
+    spark_self_join_from_options, with_self_join_flag,
+};
 use repark_functions::merge_schema::{
     MergeSchemaConfig, SPARK_SQL_ICEBERG_MERGE_SCHEMA_KEY, is_merge_schema_session_key,
     parse_merge_schema_value,
@@ -59,6 +64,9 @@ pub fn unset_runtime_config(session: PyRef<'_, PyReparkSession>, key: &str) -> P
     fenced_span!("py.session", "unset_runtime_config", {
         if key == DEFAULT_CATALOG_KEY {
             apply_default_catalog(&session.session, None);
+            Ok(())
+        } else if is_self_join_key(key) {
+            write_self_join_flag(&session.session, key, None);
             Ok(())
         } else if session.session.unset_iceberg_session_write_conf(key) {
             Ok(())
@@ -175,6 +183,12 @@ fn apply_runtime_config(
         write_case_sensitive_flag(session, enabled)?;
         return Ok(());
     }
+    if is_self_join_key(key) {
+        let enabled = parse_runtime_self_join_flag(key, value)
+            .map_err(|error| Error::IllegalArgument(configuration_message(error)))?;
+        write_self_join_flag(session, key, Some(enabled));
+        return Ok(());
+    }
     if is_merge_schema_session_key(key) {
         let enabled = parse_merge_schema_value(value)
             .map_err(|error| Error::IllegalArgument(configuration_message(error)))?;
@@ -202,7 +216,8 @@ fn apply_runtime_config(
     Err(Error::IllegalArgument(format!(
         "set_runtime_config refuses unknown key {key:?} (served: \
          {SPARK_SQL_ANSI_ENABLED_KEY:?}, {SESSION_TIME_ZONE_KEY:?}, \
-         {SPARK_SQL_CASE_SENSITIVE_KEY:?}, {SPARK_SQL_ICEBERG_MERGE_SCHEMA_KEY:?}, \
+         {SPARK_SQL_CASE_SENSITIVE_KEY:?}, {SPARK_SQL_FAIL_AMBIGUOUS_SELF_JOIN_KEY:?}, \
+         {SPARK_SQL_SELF_JOIN_AUTO_RESOLVE_KEY:?}, {SPARK_SQL_ICEBERG_MERGE_SCHEMA_KEY:?}, \
          {:?}, {:?}, {:?})",
         repark_core::PARTITION_OVERWRITE_MODE_KEY,
         repark_spark::wap::WAP_BRANCH_KEY,
@@ -255,6 +270,23 @@ fn write_case_sensitive_flag(session: &ReparkSession, enabled: bool) -> Result<(
              the live session has no case-sensitivity carrier"
         ))),
     }
+}
+
+fn write_self_join_flag(session: &ReparkSession, key: &str, value: Option<bool>) {
+    let state_lock = session.context().state_ref();
+    let mut state = state_lock.write();
+    let extensions = &mut state.config_mut().options_mut().extensions;
+    let held = extensions
+        .get::<SparkSelfJoinConfig>()
+        .cloned()
+        .unwrap_or_default();
+    extensions.insert(with_self_join_flag(held, key, value));
+}
+
+pub(crate) fn session_self_join(session: &ReparkSession) -> SparkSelfJoinConfig {
+    let state_lock = session.context().state_ref();
+    let state = state_lock.read();
+    spark_self_join_from_options(state.config().options())
 }
 
 fn write_merge_schema_flag(session: &ReparkSession, enabled: bool) -> Result<()> {
