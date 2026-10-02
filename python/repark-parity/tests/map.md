@@ -80,6 +80,10 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   wrote `docs/perf/eager-own-1-2026-09-13/{base,after}.json`.
   Needs the native module.
   pins: eager-own-1/C-001, C-012
+- [live_db/](live_db/map.md) — **C-0 (2026-10-02):** the `pg_live` fixture (unique
+  schema, publication and slot names, explicit cleanup) and the five cdc S0 pins
+  (`xfail(strict=True)` until the 1.7 producer). Cells skip when `REPARK_PG_URL`
+  is unset. No native module.
 - [spill/](spill/map.md) — **NEVEROOM-1 steps 1–3 (2026-09-10/11):** the spill-coverage
   matrix harness, the full-tier run, and the CI golden: the subprocess-per-cell runner
   with an address-space cap, the in-engine `range()` generators sized to the limit
