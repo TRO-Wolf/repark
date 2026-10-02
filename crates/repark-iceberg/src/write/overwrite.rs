@@ -13,7 +13,7 @@ use iceberg::table::Table;
 use crate::catalog::uuid_presentation::{
     presented_arrow_schema, store_presented_batch, stored_arrow_schema,
 };
-use crate::write::append::write_partitioned_data_files_from_stream_with_concurrency;
+use crate::write::append::write_partitioned_data_files_from_stream_with_concurrency as write_partitioned;
 use crate::write::concurrency::WriteConcurrency;
 use crate::write::merge::write_data_files_from_stream_with_concurrency;
 use crate::write::store_assign::refuse_unless_write_store_assignable;
@@ -73,9 +73,9 @@ where
         })
         .try_filter(|batch| ready(batch.num_rows() > 0));
     if table.metadata().default_partition_spec().is_unpartitioned() {
-        write_data_files_from_stream_with_concurrency(table, mapped, concurrency).await
+        write_data_files_from_stream_with_concurrency(table, mapped, concurrency, true).await
     } else {
-        write_partitioned_data_files_from_stream_with_concurrency(table, mapped, concurrency).await
+        write_partitioned(table, mapped, concurrency, true).await
     }
 }
 

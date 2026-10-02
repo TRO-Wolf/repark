@@ -182,6 +182,10 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   (`DataFrameWriter.bucketBy`/`bucket_by`/`sortBy`/`sort_by`/`clusterBy`/`cluster_by`,
   `DataFrameWriterV2.clusterBy`/`cluster_by`); backlog and exceptions baselines hold.
   pins: io-bucket-cluster-1/C-003
+- `test_ex_0_example_coverage.py` — **POLARS-IS-DUPLICATED-1 (2026-09-28):**
+  the enumerated public surface moves 1086 → 1087 as `Column.is_duplicated`
+  joins the `Column` inventory; `docs/examples/column/is_duplicated_ext.py`
+  covers it and the snapshot gains the row. pins: polars-is-duplicated-1/C-009
 - `test_ex_0_example_coverage.py` — **FNP-GEN-1 step 2 (2026-09-16):** the
   enumerated public surface moves 1062 → 1064 as `F.inline` and
   `F.inline_outer` join `__all__` through the generator installer;
@@ -202,6 +206,11 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   mirror row ratchets `repark-iceberg/src/write/alter.rs` 1607 → 1606 with the script
   baseline and drops the retired `repark-python/src/dataframe.rs` 1005 row.
   pins: casesens-1/C-013
+- `test_cap_1_source_file_line_cap.py` — **RP-56 DIFF-PROBE fold (2026-09-29):**
+  mirror rows ratchet `repark-iceberg/src/write/alter.rs` 1606 → 1556,
+  `repark-iceberg/src/write/append.rs` 1804 → 1737 and
+  `repark-iceberg/src/write/merge/mod.rs` 1622 → 1569 with the script baselines
+  (three pure-move splits). pins: rp-56/C-003
 - `test_cap_1_source_file_line_cap.py` — **WO CASESENS-1 CI fix round (2026-09-28,
   PR #876):** the `crates/repark-spark/src/tests/alter.rs` mirror row ratchets
   1182 → 1181 with the script baseline (the final fold's shrink). No other row moves.

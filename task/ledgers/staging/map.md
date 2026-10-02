@@ -22,6 +22,17 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   AWS acceptance rerun is an owner residue (R-1).
   `risk_tier: standard`. Branch `chore/rp-55-staged-single-write`.
   pins: aws-accept-replace-1/C-001
+- [rp-56-ledger.md](rp-56-ledger.md) —
+  **WO RP-56 (2026-09-28), in flight:** RP-56 repins the fork to
+  `e1d74bef` (F-SCHEMA-LCI-LAZY-1 `#364` — case-twin columns build; the
+  lower-case index refuses only on a case-insensitive lookup, as Java does) and
+  carries the Spark-door twin pins under `caseSensitive=true` (CREATE and CTAS,
+  red at `6e937f49`, green at `e1d74bef`, C-001) plus the bare-name refusal under
+  `false`; the false-door CREATE acceptance is a dated residue (R-1). The Opus-verifier
+  fold (2026-09-28, VR-1..VR-5) scopes the star refusal to catalog-table scans, routes
+  nested DDL by the session flag (C-002/C-003), and records R-6…R-9.
+  `risk_tier: standard`. Branch `chore/rp-56-case-twin-schema`.
+  pins: rp-56/C-001
 - [intdiv-1-ledger.md](intdiv-1-ledger.md) —
   **WO INTDIV-1 (2026-09-28), in flight:** arithmetic over an integer `/` answers
   Spark's DOUBLE type and values in every scope — same scope, derived table, CTE, temp
@@ -1231,6 +1242,17 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   pinned (1.5× standalone 2500 median) plus a strict-xfail linear flip pin.
   No product change. `risk_tier: standard`. Branch `perf/cast-1`.
   pins: perf-cast-1/C-001, C-002, C-003, C-004
+- [polars-is-duplicated-1-ledger.md](polars-is-duplicated-1-ledger.md) —
+  **WO POLARS-IS-DUPLICATED-1 (2026-09-28):** `Column.is_duplicated()` on both
+  doors answers real polars through filter, select and withColumn(s) (C-001..C-005),
+  general window predicates keep today's refusal and every keep-cell answers
+  unchanged (C-006), float normalisation lives only inside the lowering (C-007),
+  both mutations go red and revert clean (C-008), and the example inventory
+  carries the new name (C-009); `F.lit(1)` frame shape, join-ON refusal text and
+  nesting are dated residues (R-001..R-003); §3b folds the DIFF-PROBE order bugs
+  (a sort before/after the mask survives untouched).
+  `risk_tier: standard`. Branch `feat/polars-is-duplicated-1`.
+  pins: polars-is-duplicated-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [platform-1-ledger.md](platform-1-ledger.md) —
   **PLATFORM-1 step 1 (2026-09-12), in flight:** the abi3 wheel matrix —
   `wheels.yml` `platform-matrix` runs the four legs PRs never see (manylinux

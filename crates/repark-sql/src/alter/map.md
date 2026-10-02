@@ -21,6 +21,11 @@ which are pure functions, plus the `ALTER COLUMN … FIRST|AFTER` move recognize
   `nested_add_refusal` answers Spark's `FIELD_ALREADY_EXISTS` / `UNRESOLVED_COLUMN` before the
   commit. Every recorded cell is replayed in `../../tests/ansi_nested_ddl_oracle.rs`.
   pins: ice-nested-evo-1/C-017, C-019
+  **RP-56 verifier fold (2026-09-28):** the DROP existence filter resolves exact-or-`try_`
+  (loud on collided schemas) while the nested apply stays case-insensitive on this door.
+  **RP-56 DIFF-PROBE fold (2026-09-29):** the `IF EXISTS` filter uses
+  `column_move::nested_name_known_ci`, the same stored-case existence check as the
+  Spark door.
 - `hadoop_rename_tests.rs` — **PR-B hadoop naming (2026-09-24):** native-door twin of the Spark
   door's `tests/hadoop_rename.rs`. It uses a config-map `type=hadoop` catalog, then `CREATE
   TABLE` and two `INSERT`s. `RENAME TO` fails with `Error::NotImplemented` whose text is exactly

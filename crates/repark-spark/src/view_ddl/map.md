@@ -149,6 +149,9 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   with `read.rs`'s `VIEW_EXPANSION_STACK_RED_ZONE` (1 MiB) and
   `VIEW_EXPANSION_STACK_SEGMENT` (8 MiB), so a 100-level chain reads on the caller's stack.
   pins: ice-views-1/C-018
+  **RP-56 DIFF-PROBE fold (2026-09-29):** the provider reports `TableType::Temporary`
+  (it is one), so the twin-star guard skips its schema and the re-planned body carries the
+  verdict: a scan-free twin body answers, a twin-table body refuses, both like Spark.
 - `read.rs` — `ViewSchemaProvider` (`table` tries inner, then `load_view`,
   and returns a read-only provider planning the stored SQL under the stored
   defaults with aliases applied; `table_names` stays tables-only);
@@ -160,6 +163,15 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   to their home first; `refuse_write_query_body` answers PARSE_SYNTAX_ERROR
   for a `WITH … INSERT/UPDATE/DELETE/MERGE` temp body; `nested_depth_refusal`
   is shared with `temp_view.rs`.
+  **RP-56 DIFF-PROBE fold (2026-09-29):** the `_repark_view` wrapper is skipped when the
+  view emits the stored names unchanged (`view_output_matches_stored`), so a catalog view
+  over a twin table answers `SELECT *` like Spark instead of refusing on the wrapper.
+  **RP-56 (2026-10-02):** `table` resolves through
+  `repark_core::column_resolution::on_grown_stack_with` with the same 1 MiB red
+  zone and 8 MiB segment temp-view scans use, so a nested catalog-view chain
+  re-grows instead of overrunning the per-plan grown segment on an 8 MiB caller
+  stack; the 100-deep `VIEW_NESTED_DEPTH_LIMIT` refusal is unchanged.
+  pins: test_ice_views_1/test_nested_view_depth_guard
 - `describe.rs` — **PR2 (2026-09-22, V-DESCRIBE):** `describe_view_frame`
   is the view probe on the `TableNotFound` arm of `execute_describe_table`
   (`../describe_show.rs`): a loaded view answers, `ViewNotFound` and

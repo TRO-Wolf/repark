@@ -1,0 +1,1407 @@
+{
+ "big_summary": {
+  "duplicated_values": [
+   0,
+   1,
+   2
+  ],
+  "filter_count": 6,
+  "mask_sha256": "75d7db4955f28ec272523329ce874cac8255628a0bcba751ddcaa7acde9e9e16",
+  "true_count": 6
+ },
+ "combo": {
+  "and.filter": [
+   {
+    "c": 2,
+    "k": 5
+   }
+  ],
+  "and.select": [
+   {
+    "d": false
+   },
+   {
+    "d": true
+   },
+   {
+    "d": false
+   },
+   {
+    "d": false
+   }
+  ],
+  "expr.filter": [
+   {
+    "a": 1
+   },
+   {
+    "a": 2
+   },
+   {
+    "a": 3
+   },
+   {
+    "a": 4
+   },
+   {
+    "a": 5
+   }
+  ],
+  "expr.select": [
+   {
+    "d": true
+   },
+   {
+    "d": true
+   },
+   {
+    "d": true
+   },
+   {
+    "d": true
+   },
+   {
+    "d": true
+   }
+  ],
+  "not.filter": [
+   {
+    "c": 1,
+    "k": 0
+   },
+   {
+    "c": 3,
+    "k": 5
+   }
+  ],
+  "not.select": [
+   {
+    "d": true
+   },
+   {
+    "d": false
+   },
+   {
+    "d": false
+   },
+   {
+    "d": true
+   }
+  ],
+  "prefilter.filter": [
+   {
+    "c": 2
+   },
+   {
+    "c": 2
+   }
+  ],
+  "prefilter.select": [
+   {
+    "c": 2,
+    "d": true
+   },
+   {
+    "c": 2,
+    "d": true
+   },
+   {
+    "c": 3,
+    "d": false
+   }
+  ]
+ },
+ "frames": {
+  "bigint": {
+   "filter": [
+    {
+     "c": 10
+    },
+    {
+     "c": 10
+    },
+    {
+     "c": 10
+    }
+   ],
+   "mask": [
+    {
+     "d": true
+    },
+    {
+     "d": true
+    },
+    {
+     "d": true
+    },
+    {
+     "d": false
+    },
+    {
+     "d": false
+    }
+   ],
+   "select": [
+    {
+     "c": 10,
+     "d": true
+    },
+    {
+     "c": 10,
+     "d": true
+    },
+    {
+     "c": 10,
+     "d": true
+    },
+    {
+     "c": 20,
+     "d": false
+    },
+    {
+     "c": 30,
+     "d": false
+    }
+   ],
+   "with_columns": [
+    {
+     "c": 10,
+     "d": true
+    },
+    {
+     "c": 10,
+     "d": true
+    },
+    {
+     "c": 10,
+     "d": true
+    },
+    {
+     "c": 20,
+     "d": false
+    },
+    {
+     "c": 30,
+     "d": false
+    }
+   ]
+  },
+  "boolean": {
+   "filter": [
+    {
+     "c": true
+    },
+    {
+     "c": false
+    },
+    {
+     "c": true
+    },
+    {
+     "c": null
+    },
+    {
+     "c": null
+    },
+    {
+     "c": false
+    }
+   ],
+   "mask": [
+    {
+     "d": true
+    },
+    {
+     "d": true
+    },
+    {
+     "d": true
+    },
+    {
+     "d": true
+    },
+    {
+     "d": true
+    },
+    {
+     "d": true
+    }
+   ],
+   "select": [
+    {
+     "c": true,
+     "d": true
+    },
+    {
+     "c": false,
+     "d": true
+    },
+    {
+     "c": true,
+     "d": true
+    },
+    {
+     "c": null,
+     "d": true
+    },
+    {
+     "c": null,
+     "d": true
+    },
+    {
+     "c": false,
+     "d": true
+    }
+   ],
+   "with_columns": [
+    {
+     "c": true,
+     "d": true
+    },
+    {
+     "c": false,
+     "d": true
+    },
+    {
+     "c": true,
+     "d": true
+    },
+    {
+     "c": null,
+     "d": true
+    },
+    {
+     "c": null,
+     "d": true
+    },
+    {
+     "c": false,
+     "d": true
+    }
+   ]
+  },
+  "date": {
+   "filter": [
+    {
+     "c": {
+      "$date": "2024-01-01"
+     }
+    },
+    {
+     "c": {
+      "$date": "2024-01-01"
+     }
+    },
+    {
+     "c": null
+    },
+    {
+     "c": null
+    }
+   ],
+   "mask": [
+    {
+     "d": true
+    },
+    {
+     "d": false
+    },
+    {
+     "d": true
+    },
+    {
+     "d": true
+    },
+    {
+     "d": true
+    }
+   ],
+   "select": [
+    {
+     "c": {
+      "$date": "2024-01-01"
+     },
+     "d": true
+    },
+    {
+     "c": {
+      "$date": "2024-01-02"
+     },
+     "d": false
+    },
+    {
+     "c": {
+      "$date": "2024-01-01"
+     },
+     "d": true
+    },
+    {
+     "c": null,
+     "d": true
+    },
+    {
+     "c": null,
+     "d": true
+    }
+   ],
+   "with_columns": [
+    {
+     "c": {
+      "$date": "2024-01-01"
+     },
+     "d": true
+    },
+    {
+     "c": {
+      "$date": "2024-01-02"
+     },
+     "d": false
+    },
+    {
+     "c": {
+      "$date": "2024-01-01"
+     },
+     "d": true
+    },
+    {
+     "c": null,
+     "d": true
+    },
+    {
+     "c": null,
+     "d": true
+    }
+   ]
+  },
+  "decimal": {
+   "filter": [
+    {
+     "c": {
+      "$decimal": "1.10"
+     }
+    },
+    {
+     "c": {
+      "$decimal": "1.10"
+     }
+    },
+    {
+     "c": null
+    },
+    {
+     "c": null
+    }
+   ],
+   "mask": [
+    {
+     "d": true
+    },
+    {
+     "d": true
+    },
+    {
+     "d": false
+    },
+    {
+     "d": true
+    },
+    {
+     "d": true
+    }
+   ],
+   "select": [
+    {
+     "c": {
+      "$decimal": "1.10"
+     },
+     "d": true
+    },
+    {
+     "c": {
+      "$decimal": "1.10"
+     },
+     "d": true
+    },
+    {
+     "c": {
+      "$decimal": "2.50"
+     },
+     "d": false
+    },
+    {
+     "c": null,
+     "d": true
+    },
+    {
+     "c": null,
+     "d": true
+    }
+   ],
+   "with_columns": [
+    {
+     "c": {
+      "$decimal": "1.10"
+     },
+     "d": true
+    },
+    {
+     "c": {
+      "$decimal": "1.10"
+     },
+     "d": true
+    },
+    {
+     "c": {
+      "$decimal": "2.50"
+     },
+     "d": false
+    },
+    {
+     "c": null,
+     "d": true
+    },
+    {
+     "c": null,
+     "d": true
+    }
+   ]
+  },
+  "double": {
+   "filter": [
+    {
+     "c": {
+      "$float": "nan"
+     }
+    },
+    {
+     "c": {
+      "$float": "nan"
+     }
+    },
+    {
+     "c": {
+      "$float": "0.0"
+     }
+    },
+    {
+     "c": {
+      "$float": "-0.0"
+     }
+    }
+   ],
+   "mask": [
+    {
+     "d": false
+    },
+    {
+     "d": true
+    },
+    {
+     "d": true
+    },
+    {
+     "d": true
+    },
+    {
+     "d": true
+    },
+    {
+     "d": false
+    },
+    {
+     "d": false
+    }
+   ],
+   "select": [
+    {
+     "c": {
+      "$float": "1.0"
+     },
+     "d": false
+    },
+    {
+     "c": {
+      "$float": "nan"
+     },
+     "d": true
+    },
+    {
+     "c": {
+      "$float": "nan"
+     },
+     "d": true
+    },
+    {
+     "c": {
+      "$float": "0.0"
+     },
+     "d": true
+    },
+    {
+     "c": {
+      "$float": "-0.0"
+     },
+     "d": true
+    },
+    {
+     "c": null,
+     "d": false
+    },
+    {
+     "c": {
+      "$float": "2.0"
+     },
+     "d": false
+    }
+   ],
+   "with_columns": [
+    {
+     "c": {
+      "$float": "1.0"
+     },
+     "d": false
+    },
+    {
+     "c": {
+      "$float": "nan"
+     },
+     "d": true
+    },
+    {
+     "c": {
+      "$float": "nan"
+     },
+     "d": true
+    },
+    {
+     "c": {
+      "$float": "0.0"
+     },
+     "d": true
+    },
+    {
+     "c": {
+      "$float": "-0.0"
+     },
+     "d": true
+    },
+    {
+     "c": null,
+     "d": false
+    },
+    {
+     "c": {
+      "$float": "2.0"
+     },
+     "d": false
+    }
+   ]
+  },
+  "double_single": {
+   "filter": [],
+   "mask": [
+    {
+     "d": false
+    },
+    {
+     "d": false
+    },
+    {
+     "d": false
+    },
+    {
+     "d": false
+    }
+   ],
+   "select": [
+    {
+     "c": {
+      "$float": "1.0"
+     },
+     "d": false
+    },
+    {
+     "c": {
+      "$float": "nan"
+     },
+     "d": false
+    },
+    {
+     "c": null,
+     "d": false
+    },
+    {
+     "c": {
+      "$float": "2.0"
+     },
+     "d": false
+    }
+   ],
+   "with_columns": [
+    {
+     "c": {
+      "$float": "1.0"
+     },
+     "d": false
+    },
+    {
+     "c": {
+      "$float": "nan"
+     },
+     "d": false
+    },
+    {
+     "c": null,
+     "d": false
+    },
+    {
+     "c": {
+      "$float": "2.0"
+     },
+     "d": false
+    }
+   ]
+  },
+  "empty": {
+   "filter": [],
+   "mask": [],
+   "select": [],
+   "with_columns": []
+  },
+  "int": {
+   "filter": [
+    {
+     "c": 1
+    },
+    {
+     "c": 2
+    },
+    {
+     "c": 2
+    },
+    {
+     "c": null
+    },
+    {
+     "c": null
+    },
+    {
+     "c": 1
+    }
+   ],
+   "mask": [
+    {
+     "d": true
+    },
+    {
+     "d": true
+    },
+    {
+     "d": true
+    },
+    {
+     "d": true
+    },
+    {
+     "d": true
+    },
+    {
+     "d": false
+    },
+    {
+     "d": true
+    }
+   ],
+   "select": [
+    {
+     "c": 1,
+     "d": true
+    },
+    {
+     "c": 2,
+     "d": true
+    },
+    {
+     "c": 2,
+     "d": true
+    },
+    {
+     "c": null,
+     "d": true
+    },
+    {
+     "c": null,
+     "d": true
+    },
+    {
+     "c": 3,
+     "d": false
+    },
+    {
+     "c": 1,
+     "d": true
+    }
+   ],
+   "with_columns": [
+    {
+     "c": 1,
+     "d": true
+    },
+    {
+     "c": 2,
+     "d": true
+    },
+    {
+     "c": 2,
+     "d": true
+    },
+    {
+     "c": null,
+     "d": true
+    },
+    {
+     "c": null,
+     "d": true
+    },
+    {
+     "c": 3,
+     "d": false
+    },
+    {
+     "c": 1,
+     "d": true
+    }
+   ]
+  },
+  "one_row": {
+   "filter": [],
+   "mask": [
+    {
+     "d": false
+    }
+   ],
+   "select": [
+    {
+     "c": 42,
+     "d": false
+    }
+   ],
+   "with_columns": [
+    {
+     "c": 42,
+     "d": false
+    }
+   ]
+  },
+  "string": {
+   "filter": [
+    {
+     "c": "b"
+    },
+    {
+     "c": "b"
+    }
+   ],
+   "mask": [
+    {
+     "d": false
+    },
+    {
+     "d": false
+    },
+    {
+     "d": true
+    },
+    {
+     "d": true
+    },
+    {
+     "d": false
+    }
+   ],
+   "select": [
+    {
+     "c": "A",
+     "d": false
+    },
+    {
+     "c": "a",
+     "d": false
+    },
+    {
+     "c": "b",
+     "d": true
+    },
+    {
+     "c": "b",
+     "d": true
+    },
+    {
+     "c": null,
+     "d": false
+    }
+   ],
+   "with_columns": [
+    {
+     "c": "A",
+     "d": false
+    },
+    {
+     "c": "a",
+     "d": false
+    },
+    {
+     "c": "b",
+     "d": true
+    },
+    {
+     "c": "b",
+     "d": true
+    },
+    {
+     "c": null,
+     "d": false
+    }
+   ]
+  }
+ },
+ "keep": {
+  "keep.dir_names": [
+   "__add__",
+   "__and__",
+   "__bool__",
+   "__class__",
+   "__contains__",
+   "__delattr__",
+   "__dir__",
+   "__doc__",
+   "__eq__",
+   "__format__",
+   "__ge__",
+   "__getattr__",
+   "__getattribute__",
+   "__getitem__",
+   "__getstate__",
+   "__gt__",
+   "__hash__",
+   "__init__",
+   "__init_subclass__",
+   "__invert__",
+   "__iter__",
+   "__le__",
+   "__lt__",
+   "__mod__",
+   "__module__",
+   "__mul__",
+   "__ne__",
+   "__neg__",
+   "__new__",
+   "__nonzero__",
+   "__or__",
+   "__pow__",
+   "__radd__",
+   "__rand__",
+   "__reduce__",
+   "__reduce_ex__",
+   "__repr__",
+   "__rmod__",
+   "__rmul__",
+   "__ror__",
+   "__rpow__",
+   "__rsub__",
+   "__rtruediv__",
+   "__setattr__",
+   "__sizeof__",
+   "__slots__",
+   "__str__",
+   "__sub__",
+   "__subclasshook__",
+   "__truediv__",
+   "_agg_name",
+   "_alias_metadata",
+   "_binary",
+   "_bitwise",
+   "_from_when_pairs",
+   "_g2_range_order_names",
+   "_generator",
+   "_generator_cast",
+   "_has_free_attribute",
+   "_has_ungroupable",
+   "_inner",
+   "_is_aggregate",
+   "_is_aggregate_function",
+   "_is_foldable",
+   "_join_sql_expr",
+   "_origin_field",
+   "_origin_plan_id",
+   "_outer",
+   "_partition_transform",
+   "_projection_name",
+   "_reject_higher_order",
+   "_reject_nested_generator",
+   "_sort_ascending",
+   "_sort_nulls_first",
+   "_spark_display",
+   "_sql_expr",
+   "_stable_name",
+   "_string_predicate",
+   "_to_column",
+   "_when_pairs",
+   "_window_spec",
+   "_with_sort_order",
+   "alias",
+   "asc",
+   "asc_nulls_first",
+   "asc_nulls_last",
+   "astype",
+   "between",
+   "bitwiseAND",
+   "bitwiseOR",
+   "bitwiseXOR",
+   "cast",
+   "contains",
+   "desc",
+   "desc_nulls_first",
+   "desc_nulls_last",
+   "dropFields",
+   "dt",
+   "endswith",
+   "eqNullSafe",
+   "for_select",
+   "getField",
+   "getItem",
+   "ilike",
+   "isNaN",
+   "isNotNull",
+   "isNull",
+   "is_not_null",
+   "is_null",
+   "isin",
+   "join_sql_part",
+   "like",
+   "name",
+   "otherwise",
+   "outer",
+   "over",
+   "rlike",
+   "round",
+   "spark_display_part",
+   "spark_wrap_display_part",
+   "sql_expr_part",
+   "sql_expr_without_alias",
+   "startswith",
+   "str",
+   "substr",
+   "transform",
+   "try_cast",
+   "when",
+   "withField"
+  ],
+  "keep.dropdup_double": {
+   "columns": [
+    "c"
+   ],
+   "rows": [
+    [
+     {
+      "$float": "1.0"
+     }
+    ],
+    [
+     {
+      "$float": "0.0"
+     }
+    ],
+    [
+     {
+      "$float": "2.0"
+     }
+    ],
+    [
+     null
+    ],
+    [
+     {
+      "$float": "nan"
+     }
+    ],
+    [
+     {
+      "$float": "-0.0"
+     }
+    ]
+   ]
+  },
+  "keep.dropdup_int": {
+   "columns": [
+    "c"
+   ],
+   "rows": [
+    [
+     2
+    ],
+    [
+     1
+    ],
+    [
+     3
+    ],
+    [
+     null
+    ]
+   ]
+  },
+  "keep.isin_filter": {
+   "columns": [
+    "c"
+   ],
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     2
+    ],
+    [
+     1
+    ]
+   ]
+  },
+  "keep.isin_select": {
+   "columns": [
+    "d"
+   ],
+   "rows": [
+    [
+     false
+    ],
+    [
+     true
+    ],
+    [
+     true
+    ],
+    [
+     null
+    ],
+    [
+     null
+    ],
+    [
+     true
+    ],
+    [
+     false
+    ]
+   ]
+  },
+  "keep.isnull_filter": {
+   "columns": [
+    "c"
+   ],
+   "rows": [
+    [
+     null
+    ],
+    [
+     null
+    ]
+   ]
+  },
+  "keep.isnull_select": {
+   "columns": [
+    "d"
+   ],
+   "rows": [
+    [
+     false
+    ],
+    [
+     false
+    ],
+    [
+     false
+    ],
+    [
+     true
+    ],
+    [
+     true
+    ],
+    [
+     false
+    ],
+    [
+     false
+    ]
+   ]
+  },
+  "keep.notnull_filter": {
+   "columns": [
+    "c"
+   ],
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     1
+    ]
+   ]
+  },
+  "keep.row_number_filter": {
+   "$error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression WindowFunction(WindowFunction { fun: WindowUDF(WindowUDF { inner: RowNumber { signature: Signature { type_signature: Nullary, volatility: Immutable, parameter_names: None } } }), params: WindowFunctionParams { args: [], partition_by: [Column(Column { relation: Some(Full { catalog: \"datafusion\", schema: \"public\", table: \"__repark_cdf_3dd2879226b34912bd1c7f0dc0f9ff3f\" }), name: \"c\" })], order_by: [Sort { expr: Column(Column { relation: Some(Full { catalog: \"datafusion\", schema: \"public\", table: \"__repark_cdf_3dd2879226b34912bd1c7f0dc0f9ff3f\" }), name: \"c\" }), asc: true, nulls_first: true }], window_frame: WindowFrame { units: Rows, start_bound: Preceding(UInt64(NULL)), end_bound: CurrentRow, is_causal: true }, filter: None, null_treatment: None, distinct: false } })"
+  },
+  "keep.row_number_select": {
+   "columns": [
+    "c",
+    "d"
+   ],
+   "rows": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     2
+    ],
+    [
+     2,
+     1
+    ],
+    [
+     2,
+     2
+    ],
+    [
+     3,
+     1
+    ],
+    [
+     null,
+     1
+    ],
+    [
+     null,
+     2
+    ]
+   ]
+  },
+  "keep.rp_filter": {
+   "columns": [
+    "c"
+   ],
+   "rows": [
+    [
+     2
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ]
+   ]
+  },
+  "keep.rp_filter_null": {
+   "columns": [
+    "c"
+   ],
+   "rows": [
+    [
+     null
+    ],
+    [
+     null
+    ]
+   ]
+  },
+  "keep.rp_select": {
+   "columns": [
+    "c"
+   ],
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     2
+    ],
+    [
+     null
+    ],
+    [
+     null
+    ],
+    [
+     3
+    ],
+    [
+     1
+    ]
+   ]
+  },
+  "keep.rp_select_expr": {
+   "columns": [
+    "d"
+   ],
+   "rows": [
+    [
+     2
+    ],
+    [
+     4
+    ],
+    [
+     4
+    ],
+    [
+     null
+    ],
+    [
+     null
+    ],
+    [
+     6
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  "keep.rp_with_columns": {
+   "columns": [
+    "c",
+    "d"
+   ],
+   "rows": [
+    [
+     1,
+     2
+    ],
+    [
+     2,
+     3
+    ],
+    [
+     2,
+     3
+    ],
+    [
+     null,
+     null
+    ],
+    [
+     null,
+     null
+    ],
+    [
+     3,
+     4
+    ],
+    [
+     1,
+     2
+    ]
+   ]
+  },
+  "keep.window_filter": {
+   "$error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression WindowFunction(WindowFunction { fun: AggregateUDF(AggregateUDF { inner: Count { signature: Signature { type_signature: OneOf([VariadicAny, Nullary]), volatility: Immutable, parameter_names: None } } }), params: WindowFunctionParams { args: [Literal(Int32(1), None)], partition_by: [Column(Column { relation: Some(Full { catalog: \"datafusion\", schema: \"public\", table: \"__repark_cdf_3dd2879226b34912bd1c7f0dc0f9ff3f\" }), name: \"c\" })], order_by: [], window_frame: WindowFrame { units: Rows, start_bound: Preceding(UInt64(NULL)), end_bound: Following(UInt64(NULL)), is_causal: false }, filter: None, null_treatment: None, distinct: false } })"
+  },
+  "keep.window_select": {
+   "columns": [
+    "c",
+    "d"
+   ],
+   "rows": [
+    [
+     1,
+     true
+    ],
+    [
+     1,
+     true
+    ],
+    [
+     2,
+     true
+    ],
+    [
+     2,
+     true
+    ],
+    [
+     3,
+     false
+    ],
+    [
+     null,
+     true
+    ],
+    [
+     null,
+     true
+    ]
+   ]
+  },
+  "keep.withcol_isnull": {
+   "columns": [
+    "c",
+    "d"
+   ],
+   "rows": [
+    [
+     1,
+     false
+    ],
+    [
+     2,
+     false
+    ],
+    [
+     2,
+     false
+    ],
+    [
+     null,
+     true
+    ],
+    [
+     null,
+     true
+    ],
+    [
+     3,
+     false
+    ],
+    [
+     1,
+     false
+    ]
+   ]
+  }
+ },
+ "meta": {
+  "note": "polars oracle cells; repark base keep-cells; big frame summarized (10k rows)",
+  "polars": {
+   "engine": "polars 1.43.2"
+  },
+  "recorded": "2026-09-28"
+ }
+}
