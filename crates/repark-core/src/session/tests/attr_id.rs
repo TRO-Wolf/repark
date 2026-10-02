@@ -16,8 +16,8 @@ use datafusion::prelude::SessionContext;
 use crate::ReparkSession;
 use crate::frame_names::{
     AttrId, NameRule::IgnoreCase, Resolution, alias_with_fresh_id, attribute_ids,
-    copy_attribute_ids, join_on_named_keys, plan_is_relation, plan_is_stamped,
-    projection_source_ids, remint_join_collisions, requalify_join_sides, resolve, stamp, strip,
+    copy_attribute_ids, join_collisions, join_on_named_keys, plan_is_relation, plan_is_stamped,
+    projection_source_ids, remint_shared, requalify_join_sides, resolve, stamp, strip,
     union_by_folded_name,
 };
 
@@ -432,7 +432,8 @@ async fn the_join_re_mint_keeps_the_left_and_renames_each_colliding_right_id_onc
     );
     let requalified = requalify_join_sides(joined, &[frame.schema(), twins.schema()]).unwrap();
     let (state, plan) = requalified.into_parts();
-    let reminted = DataFrame::new(state, remint_join_collisions(plan, 3).unwrap());
+    let shared = join_collisions(&plan, 3).unwrap();
+    let reminted = DataFrame::new(state, remint_shared(plan, 3, &shared).unwrap().0);
     let after = ids(&reminted);
     assert_eq!(after[..3], held[..]);
     assert!(
@@ -463,8 +464,12 @@ async fn the_join_re_mint_leaves_a_join_of_distinct_attributes_unchanged() {
     assert!(ids(&joined).iter().all(Option::is_some));
     assert_eq!(distinct_count(&ids(&joined)), 6);
     let plan = joined.logical_plan().clone();
-    assert_eq!(remint_join_collisions(plan.clone(), 3).unwrap(), plan);
-    assert!(remint_join_collisions(plan, 7).is_err());
+    let shared = join_collisions(&plan, 3).unwrap();
+    assert!(shared.is_empty());
+    let unchanged = remint_shared(plan.clone(), 3, &shared).unwrap();
+    assert_eq!(unchanged, (plan.clone(), HashMap::new()));
+    assert!(remint_shared(plan.clone(), 7, &shared).is_err());
+    assert!(join_collisions(&plan, 7).is_err());
 }
 
 #[test]

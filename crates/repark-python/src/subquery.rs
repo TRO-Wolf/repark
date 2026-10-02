@@ -175,7 +175,9 @@ pub(crate) fn lateral_join(
             }
             None => join_plan,
         };
-        let output = repark_core::frame_names::remint_join_collisions(output, left_width)
+        let shared = repark_core::frame_names::join_collisions(&output, left_width)
+            .map_err(datafusion_to_py_err)?;
+        let (output, _) = repark_core::frame_names::remint_shared(output, left_width, &shared)
             .map_err(datafusion_to_py_err)?;
         Ok(PyDataFrame::new(
             DataFrame::new(state, output),

@@ -270,6 +270,10 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   **ATTR-ID-1 S4 (2026-10-02):** `df_guards.rs` also declares the private
   `df_guards/attr_lineage.rs`, a pure move of the projection lineage out of
   `attr_id.rs` (row in `df_guards/map.md`). pins: attr-id-1/C-040
+  **ATTR-ID-1 SJ-1a (2026-10-02):** `df_guards.rs` also declares the private
+  `df_guards/frame_lineage.rs`, the self-join lineage core (`FrameNode` and the
+  ambiguity walk), whose public items leave through `frame_names` (row in
+  `df_guards/map.md`). No facade calls it yet.
 - `tests/df_guard.rs` — the seven `df_guards.rs` pins, split out of `tests.rs` when the DEFECT-2
   cohort pushed that file past the 1500-line ceiling (the sanctioned "split the module" out, not
   an EXCEPTIONS row). Guard 1: a bare no-extension session carries the scalar-subquery config

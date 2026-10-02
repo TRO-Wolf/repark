@@ -14,7 +14,7 @@ use datafusion::prelude::SessionContext;
 use crate::ReparkSession;
 use crate::frame_names::{
     NameRule::{Exact, IgnoreCase},
-    Resolution, remint_join_collisions, resolve, stamp,
+    Resolution, join_collisions, remint_shared, resolve, stamp,
 };
 
 const KEY: &str = "repark.attr";
@@ -42,7 +42,8 @@ fn stamped(frame: DataFrame) -> DataFrame {
 
 fn reminted(frame: DataFrame, left_width: usize) -> DataFrame {
     let (state, plan) = frame.into_parts();
-    DataFrame::new(state, remint_join_collisions(plan, left_width).unwrap())
+    let shared = join_collisions(&plan, left_width).unwrap();
+    DataFrame::new(state, remint_shared(plan, left_width, &shared).unwrap().0)
 }
 
 fn ids(frame: &DataFrame) -> Vec<Option<String>> {
@@ -306,7 +307,8 @@ fn va_a_semi_join_is_a_no_op_and_a_qualified_name_binds_one_side() {
         )
         .unwrap();
     let plan = semi.logical_plan().clone();
-    assert_eq!(remint_join_collisions(plan.clone(), 3).unwrap(), plan);
+    let shared = join_collisions(&plan, 3).unwrap();
+    assert_eq!(remint_shared(plan.clone(), 3, &shared).unwrap().0, plan);
     let displays = strings(&["id", "data", "s", "id", "data", "s"]);
     let joined = reminted(
         a.clone()

@@ -17,6 +17,7 @@ use crate::extension::SessionExtension;
 pub(crate) mod attr_id;
 pub(crate) mod attr_lineage;
 pub mod case_bind;
+pub(crate) mod frame_lineage;
 pub(crate) mod sort_names;
 pub(super) mod subquery;
 mod window_rescan;

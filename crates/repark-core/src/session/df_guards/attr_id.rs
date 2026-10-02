@@ -482,8 +482,9 @@ fn union_schema_from_inputs(union: &Union) -> Result<DFSchemaRef> {
         .map(Arc::new)
 }
 
-#[allow(clippy::missing_errors_doc)]
-pub fn remint_join_collisions(plan: LogicalPlan, left_width: usize) -> Result<LogicalPlan> {
+type JoinSides<'a> = (&'a [Arc<Field>], &'a [Arc<Field>]);
+
+fn join_sides(plan: &LogicalPlan, left_width: usize) -> Result<JoinSides<'_>> {
     let fields = plan.schema().fields();
     if left_width > fields.len() {
         return internal_err!(
@@ -491,25 +492,44 @@ pub fn remint_join_collisions(plan: LogicalPlan, left_width: usize) -> Result<Lo
             fields.len()
         );
     }
-    let (left, right) = fields.split_at(left_width);
+    Ok(fields.split_at(left_width))
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn join_collisions(plan: &LogicalPlan, left_width: usize) -> Result<HashSet<AttrId>> {
+    let (left, right) = join_sides(plan, left_width)?;
     let held = left
         .iter()
         .filter_map(|field| AttrId::of(field))
         .collect::<HashSet<_>>();
+    Ok(right
+        .iter()
+        .filter_map(|field| AttrId::of(field))
+        .filter(|id| held.contains(id))
+        .collect())
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn remint_shared<S: BuildHasher>(
+    plan: LogicalPlan,
+    left_width: usize,
+    shared: &HashSet<AttrId, S>,
+) -> Result<(LogicalPlan, HashMap<AttrId, AttrId>)> {
+    let (left, right) = join_sides(&plan, left_width)?;
     let mut fresh = HashMap::new();
     let reminted = left
         .iter()
         .map(|_| None)
         .chain(right.iter().map(|field| {
             AttrId::of(field)
-                .filter(|id| held.contains(id))
+                .filter(|id| shared.contains(id))
                 .map(|id| fresh.entry(id).or_insert_with(AttrId::mint).clone())
         }))
         .collect::<Vec<_>>();
     if reminted.iter().all(Option::is_none) {
-        return Ok(plan);
+        return Ok((plan, fresh));
     }
-    project_ids(plan, &reminted)
+    project_ids(plan, &reminted).map(|plan| (plan, fresh))
 }
 
 #[allow(clippy::missing_errors_doc)]

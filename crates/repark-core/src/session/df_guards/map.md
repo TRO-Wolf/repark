@@ -126,6 +126,20 @@ wrapped optimizer rule) and declares this directory.
   internal error; an already-carried plan returns unchanged), so cache and
   checkpoint scans keep the live frame's identity. Pins: `../tests/attr_id.rs`.
   pins: attr-id-1/C-045
+  **ATTR-ID-1 SJ-1a (2026-10-02):** `remint_join_collisions` becomes
+  `remint_shared(plan, left_width, shared)`, which re-mints every right-side id in
+  `shared` (one fresh id per shared id, so right-side twins stay twins) and returns the
+  plan with the old-to-new map; an empty map leaves the plan unchanged. The shared set
+  is the caller's: self-join option A passes the lineage set (`frame_lineage::shared_ids`)
+  from SJ-3, which also renews an id that is on the right but only in the left's
+  lineage, not its output (Spark's `DeduplicateRelations`: `s = d.select('id');
+  s.join(d, s.id == d.id).select(d.v)` refuses, `A_sel_only_id_left_sel_d_v`).
+  `join_collisions(plan, left_width)` returns the right-side ids that also appear on the
+  left, the old collision set, and every caller passes it today (the USING path here,
+  `requalify_join_sides`, `remint_cross_collisions` and `lateral_join` in repark-python),
+  so nothing user-visible moves. A left width past the field count stays an internal
+  error in both. Pins: `../tests/attr_id.rs`, `../tests/attr_id_verify.rs`,
+  `../tests/frame_lineage.rs`.
 - `attr_lineage.rs` — **ATTR-ID-1 S4 (2026-10-02):** projection-output lineage,
   a pure move out of `attr_id.rs` when that file passed the 1000-line ceiling.
   `projection_source_ids` maps each `Projection` output to its input attribute id
@@ -137,6 +151,67 @@ wrapped optimizer rule) and declares this directory.
   behavior. Re-exported through `frame_names`. Pins:
   `python/repark/tests/test_attr_id_1_s4.py` (fillna/replace/eqNullSafe/expression
   pins). pins: attr-id-1/C-040
+- `frame_lineage.rs` — **ATTR-ID-1 SJ-1a (2026-10-02):** the lineage core for refusing
+  ambiguous self-join references the way Spark Classic does (owner ruling 2026-10-02,
+  option A; design sketch `attr-id-1-selfjoin-design.md` §2.1–§2.2). Spark tags every
+  Dataset's plan with a dataset id and, after `DeduplicateRelations` renews the right
+  side of a join, refuses a Column reference whose dataset occurs where its attribute
+  was renewed into another id that the new operator can see
+  (`DetectAmbiguousSelfJoin`, `_LEGACY_ERROR_TEMP_1182`). RePark has no exprIds, so it
+  keeps the lineage itself:
+  - `FrameId::mint()` is a per-process counter, Spark's `__dataset_id`. A node mints
+    its id when it is built, after its inputs, so an ancestor's id is always smaller.
+  - `FrameNode` is an immutable node in an `Arc` DAG: its id, its output attribute ids
+    read from the frame's stamped schema (`FrameNode::{root, derived, set_op, join}`;
+    an output without an id is an internal error, never a wildcard), its `FrameKind`
+    (`Root`, `Derived(parent)`, `SetOp { first, others }`,
+    `Join { left, right, remint, emits_right }`), and `renews`, true when this node or
+    any node below it (set-operation inputs and join right sides included) is a join
+    with a non-empty `remint`. It is computed once at construction, so a frame with no
+    self-join below it skips every check on one branch.
+  - `all_ids(node)` is the union of the outputs of every reachable node.
+    `shared_ids(left, right_outputs)` is the right outputs found in `all_ids(left)`:
+    the set `remint_shared` renews.
+  - `AttrRef { attr, frame }` is one Column reference: the attribute id it holds and
+    the frame it was bound on. SJ-1b's token parser will produce them.
+  - `ambiguous(target, visible, refs)` is the detector, an explicit-stack depth-first
+    walk of the target's lineage. It carries the chain of `remint` maps crossed on
+    join right-side descents (an arena of links, so the walk allocates per join, not
+    per node). At each node whose id is a reference's frame it applies the chain
+    innermost first and records the reference when the image is a different id that
+    `visible` holds. `SetOp.others` and the right side of a join that does not emit it
+    (`emits_right` false: semi and anti) are not walked; a set operation outputs its
+    first input's ids, so a frame met only in a later input is not ambiguous. The walk
+    skips every node older than the oldest referenced frame and every node with no
+    renewing join below it while the chain is empty, and memoises on (node, chain).
+    It returns the reference indices in order, one per reference.
+  - `renewed_absent(target, refs, outputs)` returns the references whose id is a key of
+    some `remint` in the target's lineage and is not in `outputs`: the ids the re-mint
+    removed, which §1.4 of the sketch refuses with `MISSING_ATTRIBUTES` under
+    `failAmbiguousSelfJoin=false` (`K_off_shared_*`).
+
+  Measured Spark verdicts the unit tests reproduce on hand-built DAGs
+  (`/tmp/oc-worker/direct/wo/attr-id-1/selfjoin/sj1.spark.json` and `sj4.spark.json`):
+  refusals `A_inner_sel_f_v`, `A_sel_only_id_left_sel_d_v`, `A_wc_sel_w_v`,
+  `K_on_union_first_input`, `G_eq3_cross_tok` (the condition's `f.id`, not `e.id`);
+  answers `A_rev_left_sel_f`, `A_sibling_absent`, `A_wc_sel_w_id`, `F_left_semi_sel_f`,
+  `K_on_union_second_input`. `K_on_union_second_input` unions an anonymous
+  `d.filter(...)`, so it answers by sibling absence; the lane measured the named form on
+  live Spark 4.1.2 (`/tmp/oc-worker/direct/wo/attr-id-1/sj-1a/probe/sj1a.spark.json`):
+  `d.join(d.union(f), …).select(f.v)` answers `[[10],[20],[20],[30],[30]]`
+  (`K_on_union_named_second_input`), while `.select(un.v)`, `.select(d.v)` and
+  `d.join(f.union(d), …).select(f.v)` refuse with 1182. That cell is the one that pins
+  the opaque `SetOp.others`.
+
+  `emits_right` changes no verdict on its own: a semi or anti join's renewed right ids
+  never reach any frame's outputs, so `visible` (the target's outputs) cannot hold an
+  image reached only through that side. It prunes the walk. Its mutation (M-A7) turns
+  no test red, which the SJ-1a hand-back records. SJ-1b's condition check must build
+  its provisional join node with the right side walked, since Spark checks a semi or
+  anti join's own condition against the renewed right side (`F_left_anti_gt`).
+
+  Nothing calls this module yet: SJ-1b adds the condition preparer and the bindings,
+  and SJ-2 to SJ-4 wire the facade. Pins: `../tests/frame_lineage.rs`.
 - `case_bind.rs` — **U11-EDGE-1 (2026-09-26):** `bind_case_insensitive`, run first by
   `subquery.rs`'s `resolve_bound_expr` (the DataFrame door's one binding hook). An
   unqualified column the frame schema does not hold exactly binds to the single field that
@@ -286,6 +361,11 @@ wrapped optimizer rule) and declares this directory.
   pins: attr-id-1/C-039
   **ATTR-ID-1 V-4 (2026-10-02):** `copy_attribute_ids` joins the `frame_names`
   re-export. pins: attr-id-1/C-045
+  **ATTR-ID-1 SJ-1a (2026-10-02):** the re-export swaps `remint_join_collisions` for
+  `remint_shared` and `join_collisions`, and adds `frame_lineage.rs`'s `AttrRef`,
+  `FrameId`, `FrameKind`, `FrameNode`, `all_ids`, `ambiguous`, `renewed_absent` and
+  `shared_ids`. `join_on_named_keys` (USING) passes `join_collisions` as the shared set,
+  so its ids are unchanged.
 - `sort_names.rs` — **ATTR-ID-1 S3b (2026-10-01):** the filter/sort free-name
   binder over the S1 `resolve`. `sort_shape` descends Filter/Sort/Limit/
   Repartition/Distinct/SubqueryAlias and transparent Projections (a passthrough,

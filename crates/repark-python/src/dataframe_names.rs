@@ -212,7 +212,9 @@ pub(crate) fn requalify_join_sides(
             Some(_) => {
                 let left_width = left.inner().schema().fields().len();
                 let (state, plan) = df.into_parts();
-                let plan = repark_core::frame_names::remint_join_collisions(plan, left_width)
+                let shared = repark_core::frame_names::join_collisions(&plan, left_width)
+                    .map_err(datafusion_to_py_err)?;
+                let (plan, _) = repark_core::frame_names::remint_shared(plan, left_width, &shared)
                     .map_err(datafusion_to_py_err)?;
                 DataFrame::new(state, plan)
             }
@@ -566,7 +568,9 @@ pub(crate) fn remint_cross_collisions(
 ) -> PyResult<PyDataFrame> {
     fenced!("dataframe_names.remint_cross_collisions", {
         let (state, plan) = frame.inner().clone().into_parts();
-        let plan = repark_core::frame_names::remint_join_collisions(plan, left_width)
+        let shared = repark_core::frame_names::join_collisions(&plan, left_width)
+            .map_err(datafusion_to_py_err)?;
+        let (plan, _) = repark_core::frame_names::remint_shared(plan, left_width, &shared)
             .map_err(datafusion_to_py_err)?;
         Ok(PyDataFrame::new(
             DataFrame::new(state, plan),

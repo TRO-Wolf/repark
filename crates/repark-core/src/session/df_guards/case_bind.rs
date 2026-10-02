@@ -21,8 +21,12 @@ use super::attr_id::same_relation;
 pub use super::attr_id::{
     AttrId, Resolution, alias_with_fresh_id, attribute_ids, copy_attribute_ids, stamp, strip,
 };
-pub use super::attr_id::{plan_is_relation, plan_is_stamped, remint_join_collisions, resolve};
+pub use super::attr_id::{
+    join_collisions, plan_is_relation, plan_is_stamped, remint_shared, resolve,
+};
 pub use super::attr_lineage::projection_source_ids;
+pub use super::frame_lineage::{AttrRef, FrameId, FrameKind, FrameNode};
+pub use super::frame_lineage::{all_ids, ambiguous, renewed_absent, shared_ids};
 pub use super::sort_names::{SortShape, bind_free_names, bind_qualified_free_refs};
 pub use super::sort_names::{engine_field_is_unique, grandchild_key, grandchild_qualified_key};
 pub use super::sort_names::{join_dup_below_wrappers, join_output_sources};
@@ -487,7 +491,8 @@ pub fn join_on_named_keys(
         .collect();
     let right_start = projection.len() - right_kept;
     let (state, plan) = joined.select(projection)?.into_parts();
-    remint_join_collisions(plan, right_start).map(|plan| DataFrame::new(state, plan))
+    let shared = join_collisions(&plan, right_start)?;
+    remint_shared(plan, right_start, &shared).map(|(plan, _)| DataFrame::new(state, plan))
 }
 
 #[allow(clippy::missing_errors_doc)]

@@ -132,6 +132,22 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   `COPY`, and `DROP TABLE` plan to statement roots that `stamp` returns unchanged while a
   `SELECT` root stays a relation; a field-less `EmptyRelation` is a statement, one with
   fields a relation. pins: attr-id-1/C-014
+- `frame_lineage.rs` — **ATTR-ID-1 SJ-1a (2026-10-02):** 16 pins for the self-join
+  lineage core over hand-built DAGs (`FrameNode::{root, derived, set_op, join}`, with each
+  join's `remint` minted from `shared_ids`, the way SJ-3 will build them). Each Spark cell
+  is named in its test: refusals `A_inner_sel_f_v`, `A_sel_only_id_left_sel_d_v`,
+  `A_wc_sel_w_v`, `K_on_union_first_input`, `K_on_union_named_first_input`,
+  `G_eq3_cross_tok`; answers `A_rev_left_sel_f`, `A_sibling_absent`, `A_wc_sel_w_id`,
+  `F_left_semi_sel_f`, `K_on_union_second_input`, `K_on_union_named_second_input`; and
+  `K_off_shared_sel` through `renewed_absent`. Three more pins: lineage reach, frame-id
+  order and `renews`; an unstamped output is an internal error; and `remint_shared`
+  renews a shared id that is not an output collision, returning its map. Mutations,
+  each reverted: the walk skips right sides (M-A1) reds 7 tests; `shared_ids` limited
+  to the left's outputs (M-A2) reds `a_sel_only_id_left_sel_d_v_refuses` and
+  `k_off_shared_sel_ref_is_renewed_absent`; `SetOp.others` walked (M-A6) reds
+  `k_on_union_named_second_input_answers`; `emits_right` ignored (M-A7) reds none (see
+  `../df_guards/map.md`). `attr_id.rs` and `attr_id_verify.rs` now call
+  `remint_shared` with `join_collisions`, the old behaviour.
 - `session.rs` — ported v1 session battery plus P2G R2 / A13 / metadata-enumeration pins. RP-5: the bare-session half of the metadata-table enumeration contract (fork F-8 listing); mutation — make `information_schema` expect a `$snapshots` twin and the pin reds. pins: rp-5-fork-repin/C-003
   Child: [session/catalog_registration.rs](session/map.md).
   RP-5: `information_schema` hide pin now cites fork F-8 listing (no engine shim).
