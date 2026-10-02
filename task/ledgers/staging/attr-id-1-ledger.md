@@ -865,3 +865,15 @@ select-lineage joins answer the diagonal, base-identical. One head cell
 moves against 09d0971d: the filter-compound shape now refuses with the
 multi-token-arm guard where base bound it — toward Spark, which raises.
 Evidence: `/tmp/s4_spark_lineage.log`, `/tmp/s4_spark_selfequi.log`.
+
+| Clause | Statement | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-041 | S4 follow-up keeps the deletion outcome-neutral at the bind: a column bound against the target frame (`Column._birth_frame`, set at every `_attr_id` bind site and carried by every attr-preserving rewrap) stays verbatim, any other frame's held id rebinds by position, and the rebind gates on exact engine-name uniqueness so duplicate-engine parent refs keep the shaped `AMBIGUOUS_REFERENCE`; a lineage hit binds only when the output display still shows the written name (a rename that drops the name refuses, a case-only rename binds). The sort-marker family moves to `column_sort.py` and `_select_via_attr_sql` moves to `join_attr_tokens.py` behind a one-line delegate; the `column.py` and `core.py` CAP-1 rows ratchet down. | The 10 follow-up pins green; the 12-file pin set plus `casesens_1` green (616 passed); three S0 replays 0 moved against `main.json` and 09d0971d. | PROVEN (pins plus t-head-1; t-head-2/3 land in the gate record) | Commits `23458d49` and `b808460a`; `python/repark/tests/test_attr_id_1_s4.py`; `python/repark/src/repark/spark/column_sort.py`; the S4 gate record below. |
+
+**S4 follow-up record (2026-10-02, append-only).** Replay t-head-1 at
+`23458d49` moved 248 cells against `main.json`, all error-shape: marked
+duplicate-engine refs failed with a bare engine error where base fails
+shaped. `b808460a` restores the uniqueness gate with exact (not folded)
+counting — J2 case twins still mark and bind, true duplicates stay written.
+Replay t-head-1 at `b808460a`: 43992 cells, 0 EQUAL moved, FIXED 11872,
+gains 10, lost 0, moved_vs_main 0.
