@@ -881,3 +881,25 @@ gains 10, lost 0, moved_vs_main 0.
 | Clause | Statement | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
 | C-042 | S4 alias fix keeps the deletion neutral for aliased refs: `alias` preserves the base column's `_attr_id` and `_birth_frame`, so an aliased side ref on a condition join binds its own side (the S4 deletion had dropped the alias-to-base link the origin pair carried) while a same-frame twin alias stays verbatim and refuses; `drop` takes only simple refs down the `_attr_id` path so an alias stays a no-op as at base. The string-predicate family moves to `column_string.py`; the `column.py` CAP-1 row ratchets down. | The alias pin green; the neighbour sweep green; three S0 replays 0 moved against `main.json`. | PROVEN (pin plus sweep; the neutrality replay lands in the gate record) | `python/repark/tests/test_attr_id_1_s4.py::test_s4_aliased_side_ref_binds_own_side`; `python/repark/src/repark/spark/column_string.py`; the S4 gate record below. |
+
+**S4 gate record (2026-10-02, append-only).** Final head `e130016f`.
+Product commits `23458d49` (birth-frame rule), `b808460a` (exact-unique
+gate), `7f88914b` (alias binding pair, drop simple-refs, string split),
+plus doc/ledger commits `1ac4d098` and `e130016f` (clippy borrow, CAP-1
+mirror rows 1527 → 1378 and 3711 → 3653 in lockstep, two live `_origin_*`
+prose mentions trued up). S0 replay ×3 at `7f88914b`, foreground with
+`timeout` and `ulimit -v 67108864` into
+`/tmp/oc-worker/direct/wo/attr-id-1/s4/t-head-N`: 43992 cells each, 0
+EQUAL moved, FIXED 11872, gains 10, lost 0, moved_vs_main 0 on all three.
+Like-for-like timing median-of-3 ratio 1.0289 (≤ 1.2x). Neighbour sweep
+`-n 8` over the C-016 globs (49 files): 2496 passed, 19 skipped, 2
+xfailed, 0 failed — including the eqNullSafe sweep case that base rows
+and S4 had broken. `casesens_1` 70 passed with no EQUAL pin change;
+`casesens_2`/`diffprobe` have no such facade files (`test -e` fails).
+`cargo test -p repark-core --lib` 976 passed; `-p repark-python --lib`
+88 passed. Deletion proof: every design name greps 0 live uses in
+`python/` and `crates/` (6 remaining mentions are the absence assertions
+in `test_attr_id_1_s4.py` and one removal docstring in
+`test_dfcore_1_exports.py`); archived ledgers keep history lines, frozen
+and foreign-unit records untouched. `bash /tmp/xattr/gate.sh` prints
+GATE GREEN. C-041 and C-042 close to PROVEN unconditionally.
