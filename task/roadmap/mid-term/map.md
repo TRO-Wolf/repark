@@ -6,6 +6,12 @@ measurements behind it; it leaves when the owner charters it (a brief under `bri
 declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
+- [crate-layout-review-2026-09-30.md](crate-layout-review-2026-09-30.md) — **crate layout review
+  (2026-09-30):** RePark's test placement (53 % of Rust lines are tests; 36 single-file `tests.rs`
+  directories; 45 integration binaries) measured against Sail, Polars and DataFusion, the four
+  options with their costs (one integration binary per crate, the `#[path]` rule question, family
+  grouping, statement-and-answer tests as data), and the recommended order after v1.5.1. Leaves when
+  the owner charters an option or declines the review.
 - [read-path-obligations-2026-09-27.md](read-path-obligations-2026-09-27.md) — **WO READ-PATH-1
   (2026-09-27):** the obligations inventory — all 211 binding sentences from AGENTS.md, CLAUDE.md
   and the three skills, each with its old home, new home and role trigger. Closes when the PR merges.

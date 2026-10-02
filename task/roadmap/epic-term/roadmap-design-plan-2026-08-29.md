@@ -346,47 +346,64 @@ units are chartered there (RP-3 next, then V3-3+). No card here — do not fork 
 - **Home:** UPDATE `repark-functions`, `python/repark/src/repark/spark/functions_*.py`; the FNP
   campaign over the 2,509-pin cohort. Existing ledgers govern.
 
-### Card 1.6 — Postgres / SQL Server / Trino → `repark-connect` NEW
+### Card 1.6 — Postgres / SQL Server → `repark-connect` NEW
 
-- **Home:** NEW `crates/repark-connect` — **tier 1, role "table service"** (peer of
-  `repark-iceberg`). Modules: `source.rs` (`SourceSpec` from CFG-1), `provider/{catalog,schema,
-  table}.rs` (DF `CatalogProvider` / `SchemaProvider` / `TableProvider` per source),
-  `pushdown.rs` (projection / filter / limit → remote SQL; Trino: whole-subtree),
-  `read/{postgres,mssql,trino}.rs` (partitioned parallel reads → Arrow),
-  `write/{postgres_copy,mssql_bulk,trino_insert,row}.rs`, `pool.rs` (per-session, lazy),
-  `types.rs` (remote ↔ Arrow type map, one table per backend).
-  UPDATE `repark-core/src/catalog_state.rs` (register providers under the source name),
-  `repark-sql` + `repark-spark` (`INSERT INTO <source>.<schema>.<table> SELECT …` routing to
-  the sink; `EXPLAIN` shows the pushdown boundary per source).
-  Python: `read_database` / `write_database` conveniences only (`python/repark/src/repark/io/`);
-  retire the deferred `read_postgres` refusal in `repark-python/src/session.rs`.
-- **Edges:** `repark-core → repark-connect` (normal; "registers the providers");
-  `repark-connect → repark-common` (normal). Deps: `tokio-postgres` (+`sqlx` only if needed),
-  `tiberius`, `reqwest` for Trino's HTTP protocol. No JVM, no ODBC.
+**Re-chartered 2026-10-01** against [contracts-ahead-of-code-2026-10-01.md](contracts-ahead-of-code-2026-10-01.md) (CC-1…CC-6,
+ES-1) and the release roadmap's 1.6 row: Trino left this card for 1.10 on 2026-09-13; the named
+sources it consumes are CFG-2's (delivered in 1.5), not CFG-1's; the crate is pre-declared
+(CL-8) and created by its first unit.
+
+- **Home:** `crates/repark-connect` — **tier 1, role "table service"** (peer of
+  `repark-iceberg`), pre-declared in `scripts/check_crate_dag.py` and `repo-manifest.toml`.
+  Modules: `settings.rs` (connection settings, including the reserved **auth-method** field —
+  password at 1.6; IAM token and Kerberos / Active Directory as declared refusals, ES-1),
+  `types/{postgres,mssql}.rs` (remote ↔ Arrow conversion, one table per backend),
+  `provider/{catalog,schema,table}.rs` (DF `CatalogProvider` / `SchemaProvider` / `TableProvider`
+  per source), `pushdown.rs` (projection / filter / limit → remote SQL, residuals reported),
+  `read/{postgres,mssql}.rs` (partitioned parallel reads → Arrow),
+  `write/{postgres_copy,mssql_bulk,row}.rs`, `pool.rs` (query pools; replication connections
+  never share them). The minimal source identity with its **generation** field lands in
+  `repark-common` with C-1 (CC-2). Stays in `repark-core`: profile loading, precedence,
+  registration (`catalog_state.rs` mounts the providers through `SessionExtension::register`)
+  and the user-facing handles in `named_sources.rs`; `refuse_source_ddl` retires on use.
+  `repark-sql` + `repark-spark`: `INSERT INTO <source>.<schema>.<table> SELECT …` routing to the
+  sink; `EXPLAIN` prints **what the statement pushed** per source, residual filters included
+  (CC-1). Python: `read_database` / `write_database` conveniences only
+  (`python/repark/src/repark/io/`); retire the deferred `read_postgres` refusal in
+  `repark-python/src/session.rs`.
+- **Edges:** `repark-core → repark-connect` (normal; "mounts the providers");
+  `repark-connect → repark-common` (normal); both pre-declared. Deps: `tokio-postgres` (+`sqlx`
+  only if needed), `tiberius`. No JVM, no ODBC.
 - **Reference:** DuckDB's ATTACH model — `LE/duckdb/src/include/duckdb/storage/storage_extension.hpp`
   (`attach_function_t` → a `Catalog`), `…/main/attached_database.hpp`, `…/catalog/catalog.hpp`
   (the shape: one attached catalog per source, transaction manager per source); Sail's catalog
   crates for a DataFusion-side registry shape: `LE/sail/crates/sail-catalog*/`; ConnectorX
   (partitioned reads on a partition column, Arrow destination) and ADBC as the external bars.
-- **Steps:**
-  1. Crate checklist (§0); `SourceSpec` consumed from CFG-1; CFG-2's refuse-loud stub retired.
-  2. `TableProvider::scan` with `supports_filters_pushdown` → `Exact` for the predicate subset
-     each backend can take; `TableProvider::insert_into` for writes; `EXPLAIN` prints the remote
-     SQL per source (the pushdown boundary).
-  3. Postgres read: `COPY (SELECT …) TO STDOUT (FORMAT BINARY)` decode → Arrow; parallel by
-     partition column when given. Write: `COPY … FROM STDIN (FORMAT BINARY)` default, row
-     `INSERT` fallback per the `bulk | row` flag.
-  4. SQL Server: TDS via `tiberius`; read = paged/partitioned SELECT; write = bulk insert
-     (`tiberius` bulk API), row fallback.
-  5. Trino: HTTP statement protocol; read paged; whole-subtree pushdown (aggregates + joins
-     that stay inside one Trino source) via a `SourceSubtreeRewrite` optimizer rule in
-     `repark-core/src/pre_execute/`; write = batched `INSERT`.
-  6. Benchmark: same query vs ConnectorX and pandas+SQLAlchemy; record the factor.
-- **Pins:** per backend: type-map round-trip table; pushdown pin per predicate class; bulk vs
-  row parity; the **federated statement** (Iceberg × Postgres × Trino join) with an `EXPLAIN`
-  boundary pin; the benchmark within the stated factor.
-- **Done when:** the roadmap's v1.6 acceptance line. Live DBs: the Docker Postgres/MSSQL on
-  this box; Trino via its docker image.
+- **Units:**
+  - C-0 — the disposable Postgres container fixture and the live-cell rules (CC-6); a SQL Server
+    container stood up only to measure (CC-5).
+  - C-1 — the skeleton: crate, `map.md`, workspace member, the manifest row flipped to
+    `delivered`, the CC-2 identity move, `settings.rs` and the Postgres type map; no provider.
+    Proves the pre-declaration path end to end.
+  - C-2 — the Postgres read path: `COPY (SELECT …) TO STDOUT (FORMAT BINARY)` decode → Arrow,
+    `TableProvider::scan` with `supports_filters_pushdown` → `Exact` for the predicate subset
+    Postgres takes, the `EXPLAIN` boundary with residuals, providers mounted, both stubs retired.
+  - C-3 — partitioned parallel reads on a partition column; the benchmark vs ConnectorX and
+    pandas+SQLAlchemy, the factor recorded.
+  - C-4 — writes: `COPY … FROM STDIN (FORMAT BINARY)` default, row `INSERT` fallback per the
+    `bulk | row` flag; `INSERT INTO <source>…` routing in both doors.
+  - C-5 — SQL Server: TDS via `tiberius`; read = paged / partitioned SELECT; write = bulk insert,
+    row fallback; a pip opt-in (owner, 2026-10-01), the mechanism — compiled in with a
+    nominal extra, or a sibling wheel — decided by the C-0 measurement (CC-5).
+  - C-6 — the Python conveniences and the CC-4 registry rows for the RePark-owned conditions.
+  - C-1 and C-2 are design-heavy (an Opus executor with a design sketch); C-3…C-6 run on the
+    standard tier with one verifier per stack and DIFF-PROBE on each.
+- **Pins:** per backend: type-map round-trip table; pushdown pin per predicate class, including a
+  residual-filter pin; bulk vs row parity; the **federated statement** (Iceberg × Postgres join,
+  × SQL Server from C-5) with an `EXPLAIN` boundary pin; the benchmark within the stated factor;
+  the ES-1 auth-method refusals.
+- **Done when:** the roadmap's v1.6 acceptance line. Live DBs: the C-0 container; SQL Server via
+  its docker image.
 - **Hand back when:** a type has no Arrow mapping (declare), or pushdown would change
   semantics (collation, NULL ordering) — declare, never approximate.
 
