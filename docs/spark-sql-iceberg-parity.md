@@ -13004,6 +13004,26 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **Rationale** — FIXED 2026-09-15 (DF-RUST-3). History: the name raised the disclosed
   `UnsupportedOperationException` (R-DF-BATCH2) until the Rust `FreqItemCounter` UDAF landed.
 
+### EX-DF-20 — shared-lineage joins side every token and run; Spark reports ambiguity on the cross-field and compound shapes
+
+- **repark** — `df.join(df, df.a == df.b)` answers the left-a/right-b equi rows;
+  `l.join(r, (l.x + l.y) == (r.x + r.y))` and `(l.x + r.y) == (l.y + r.x)` answer
+  per-side rows. Self-equi `df.join(df, df.x == df.x)` answers the diagonal on both
+  engines and is not part of this row.
+- **Apache Spark** — the cross-field equi and both compound shapes raise
+  `AnalysisException` (`Column … are ambiguous. It's probably because you joined
+  several Datasets together …`). *(oracle: recorded, live PySpark 4.1.2, 2026-10-02,
+  ATTR-ID-1 S4 probes s4-spark-lineage cells a/m/h2 and s4-spark-selfequi.)*
+- **Pin** —
+  `python/repark/tests/test_h2_group_h2.py::test_h2_same_object_self_join_cross_fields`,
+  `python/repark/tests/test_h2_group_h2.py::test_h2_same_object_compound_self_join_refuses_loud`
+  (aliased half),
+  `python/repark/tests/test_attr_id_1_s4.py::test_s4_mixed_compound_arms_divergence`
+- **Rationale** — BACKLOG, filed 2026-10-02 from the S4 measurement. Siding
+  shared-lineage tokens exactly would need Spark's per-plan attribute identity, which
+  the id model unifies across alias/filter/select; closing the row means resolving
+  ON-clause references against each join side's plan the way Catalyst does.
+
 ### PERF-APPROXQUANTILE-1 — `approxQuantile` collects once per frame, not once per column × probability — **FIXED 2026-09-07 (DFCORE-5)**
 
 - **repark** — **FIXED 2026-09-07 (DFCORE-5).** `DataFrame.approxQuantile` /

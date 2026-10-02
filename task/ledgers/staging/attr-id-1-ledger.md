@@ -791,3 +791,77 @@ t-head-1/2/3, bases `s3d/t-head-2/3/4`): median-of-3 ratio 1.0176 (bar 1.2x),
 57.4s over the 11862 FIXED, coverage 0.9999. Neighbour sweep `-n 8` over the
 C-016 globs (48 files: the S3d 47 plus `test_attr_id_1_s3e.py`): 2456 passed,
 19 skipped, 2 xfailed, 0 failed. `bash /tmp/xattr/gate.sh` prints GATE GREEN.
+
+## Round S4 (2026-10-02)
+
+**Model:** muse-spark-1.3-contributor (S4 executor, guided).
+**Work order:** `/tmp/oc-worker/direct/wo/attr-id-1-design.md` §4 S4 (delete the
+encodings) plus §5 halt rules and §9–§9f rulings.
+
+| Clause | Statement | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-040 | S4 deletes the origin encodings after every reader moves to attribute ids: `_origin_map` (and its propagation sites), `_engine_origin`, `_NEW_ATTRIBUTE`, `_new_attribute`, `_fresh_outputs`, `_origin_not_emitted`, `twin_identities`, `same_source_fields`, `_shared_origin_column`, `_distinct_attributes`, `_twin_identities`, `__REPARK_QCOL_`, `_origin_plan_id` / `_origin_field`, `_thread_origin`, `_rebind_origin_column`, `_remember_unemitted_right_origins` and `_select_via_qcol_sql` have no reader. Join tokens carry (attribute id, qualifier names) and side exactly per token in `join_attr_tokens.py` (a pure-move CAP-1 split out of `plan_collapse.py`); unknown ids reach the engine unsided; positional alternation fires only for ids present on both sides under the multi-token-arm guard. Semi and anti refusals key on `_unemitted_attr_ids`. Select engine names shrink to `__repark_sel_{n}`. The `column.py`, `core.py` and `functions.py` CAP-1 rows ratchet down and the `plan_collapse.py` row leaves. | A deletion grep with 0 code hits per name; the 9 S4 pins (17 instances, both rules); the frozen surface green; the CAP-1 mirror green; three S0 replays outcome-neutral against 09d0971d. | PROVEN (deletion grep plus pins; the neutrality replay lands in the gate record) | Commits `ead8a3ca` and `16973386`; `python/repark/tests/test_attr_id_1_s4.py`; `python/repark/src/repark/spark/dataframe/join_attr_tokens.py`; registry row EX-DF-20; the S4 gate record below. |
+
+**S4 verdicts on earlier OPEN clauses (2026-10-02, append-only update; the rows
+above keep their original verdict cells).** C-007: PROVEN — the construction
+grep re-run on this head finds the same 17 direct `DataFrame(` constructor
+calls and no `__new__`, subclass, copy or pickle bypass, and
+`test_attr_id_1_s2.py::test_every_spawned_frame_carries_an_id_on_every_output_field`
+is green. C-008: PROVEN — the S2 bind pin is green and S4 sets `_attr_id` at
+every remaining bind site (the S4 slot pin). C-009: PROVEN — the five S2
+write-cleanliness pins plus `cargo test -p repark-core --lib` (974 passed)
+and `-p repark-python --lib` (88 passed) are green. C-010: PROVEN — the S2
+export pin is green. C-011: PROVEN — the S2 USING pin plus the core and
+binding re-mint pins are green. C-013: REJECTED — the stated mutation (facade
+write-path strip disabled) leaves all 13 S2 pins green, so the facade strip
+is not load-bearing for any pinned cleanliness claim; the S2b optimizer rule
+`StripAttributeIds` guarantees footer and byte cleanliness at execution.
+C-014: PROVEN — the core statement-root pins and the S2 `EXPLAIN` pin are
+green. C-012, C-016, C-022 stay OPEN by construction: their statements
+(byte-identical to `main.json`) were overtaken on purpose by the S3 cutover
+gains (S3b also closed the four §9c cells C-016 named); the S4 gate record
+below is the live neutrality statement.
+
+**S4 residue dispositions (2026-10-02).** R-1 closes: S3a gives a user alias
+a fresh id (C-024) and the S0 replays decide the cells. R-2 closes: S1b
+per-process id prefixes (C-019) plus the S2 strip and the S2 write pins.
+R-3 closes: C-011 is PROVEN above. R-5 closes on the cache half (the S2
+cache pin is green through every S3 sweep); the SQL-`UNPIVOT` write-source
+half stays open under a follow-up card (no facade probe has landed).
+R-6 stays with its follow-up card, R-7 with the follow-up union-id card,
+R-8 moves to a follow-up card (build-time binding; S3a/S3b are closed),
+R-9 stays with the unicode-case card. New: R-10 (2026-10-02) — the facade
+write-path strip (`writer_layout.run_through_temp_view`,
+`writer_s3`, `merge.py`) is redundant on every pinned path per the C-013
+measurement; a follow-up card owns deleting it or pinning born-clean views.
+R-11 (2026-10-02) — shared-lineage join siding runs where Spark reports
+ambiguity; registry row EX-DF-20 (BACKLOG) with its pins. R-12
+(2026-10-02) — brief-named, not S4-measured: 121 replay cells read a stale
+session config; owned by the session-config card.
+
+**S4 registry paragraph (2026-10-02).** Row EX-DF-20 in
+`docs/spark-sql-iceberg-parity.md` §7 records the one divergence class S4
+keeps: shared-lineage joins (`df.join(df, df.a == df.b)`, aliased and mixed
+compound arms) side every token and answer rows where live Spark 4.1.2
+raises ambiguity. Self-equi (`df.join(df, df.x == df.x)`) answers the
+diagonal on both engines and is outside the row. The row lands with its
+three pins in the same change.
+
+**S4 positional-fallback ruling (2026-10-02, halt rule 3).** The fallback in
+`_resolve_join_token_sides` fires only when a token's id is present on both
+join sides (twins of one attribute: same-object frames, or distinct frames
+whose lineage shares the id with no qualified sibling to complement); the
+multi-token-arm guard refuses rather than mis-bind. A token whose id sits
+on neither side is never sided — it reaches the engine unchanged, which
+raises `UNRESOLVED_COLUMN`, base-identical. No branch treats a missing id
+as anything but a loud error. Pinned by
+`test_attr_id_1_s4.py::test_s4_third_frame_unknown_id_raises_engine_error`.
+
+**S4 Spark measurements (2026-10-02, live Spark 4.1.2).** Same-object simple
+cross-field (`frame.x == frame.y`), filter-compound, mixed-3token and
+aliased-compound joins raise `AnalysisException` ambiguity; same-object
+self-equi, unaliased-aliased, filter-simple, reversed-qualified and
+select-lineage joins answer the diagonal, base-identical. One head cell
+moves against 09d0971d: the filter-compound shape now refuses with the
+multi-token-arm guard where base bound it — toward Spark, which raises.
+Evidence: `/tmp/s4_spark_lineage.log`, `/tmp/s4_spark_selfequi.log`.
