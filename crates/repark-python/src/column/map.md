@@ -65,6 +65,10 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   the `session_window` wrapper the same way (marker call aliased
   `session_window`).
   pins: fnp-win-1/C-001, C-002, C-004, C-008
+  **POLARS-IS-DUPLICATED-1 (2026-09-28):** `is_duplicated` is one native call
+  in the same 4-tuple shape (`is_duplicated(child)` display, SQL and join
+  fragments) over the `expr_build::is_duplicated_expr` constructor.
+  pins: polars-is-duplicated-1/C-001
   **DEEP-FILTER-CHAIN-CRASH-1 CI segv (2026-09-30):** `impl Drop for PyColumn`
   lives here (`mod.rs` is at its exact baseline): a deep tree drops on a grown
   segment sized by expression depth, so teardown never overflows a caller stack.
@@ -206,6 +210,12 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   bool/string still refuse (no numeric coercion).
   pins: abs-expr-1/C-001, C-002
 - [`expr_build.rs`](expr_build.rs) owns type parsing, alias handling, and expression inspection.
+  **POLARS-IS-DUPLICATED-1 (2026-09-28):** `is_duplicated_expr` builds
+  `count(1) OVER (PARTITION BY dup_key(receiver)) > 1` through the same
+  `count_aggregate` + `build_over_expression` path a user-written window takes
+  (so the unordered full-partition frame matches), wrapped in the
+  `dup_mask_udf` marker the `filter_frame` / `select_frame` rewrite keys on.
+  pins: polars-is-duplicated-1/C-001, C-006
   **CAST-MAP-SPELL-1 (2026-09-19):** `cast_to` sends a map-bearing type string to
   `repark_functions::cast_map::cast_map_expr` and every other one to `parse_data_type`;
   `plan_expr_column` runs the shared map-cast rewrite, so `F.expr` spells it too.

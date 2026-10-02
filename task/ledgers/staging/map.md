@@ -1242,6 +1242,17 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   pinned (1.5× standalone 2500 median) plus a strict-xfail linear flip pin.
   No product change. `risk_tier: standard`. Branch `perf/cast-1`.
   pins: perf-cast-1/C-001, C-002, C-003, C-004
+- [polars-is-duplicated-1-ledger.md](polars-is-duplicated-1-ledger.md) —
+  **WO POLARS-IS-DUPLICATED-1 (2026-09-28):** `Column.is_duplicated()` on both
+  doors answers real polars through filter, select and withColumn(s) (C-001..C-005),
+  general window predicates keep today's refusal and every keep-cell answers
+  unchanged (C-006), float normalisation lives only inside the lowering (C-007),
+  both mutations go red and revert clean (C-008), and the example inventory
+  carries the new name (C-009); `F.lit(1)` frame shape, join-ON refusal text and
+  nesting are dated residues (R-001..R-003); §3b folds the DIFF-PROBE order bugs
+  (a sort before/after the mask survives untouched).
+  `risk_tier: standard`. Branch `feat/polars-is-duplicated-1`.
+  pins: polars-is-duplicated-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [platform-1-ledger.md](platform-1-ledger.md) —
   **PLATFORM-1 step 1 (2026-09-12), in flight:** the abi3 wheel matrix —
   `wheels.yml` `platform-matrix` runs the four legs PRs never see (manylinux
