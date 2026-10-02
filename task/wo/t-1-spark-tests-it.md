@@ -55,7 +55,7 @@ file, `use crate::…` becomes `use repark_spark::…` and `super::` paths that 
 7. `cargo test -p repark-spark --no-run 2>&1 | grep -E 'error\[E0603\]|error\[E0433\]|error\[E0432\]'` — any `E0603` line is halt H-2.
 8. `cargo test -p repark-spark 2>&1 | grep -E '^test result' | awk '{s+=$4} END {print "AFTER", s}'` — must equal BEFORE.
 9. The four map.md edits.
-10. `scripts/check_map_md.sh --base origin/main && scripts/check_rust_file_size.sh && scripts/check_lib_rs.sh && make check-comment-density`.
+10. `scripts/check_map_md.sh --base origin/main && scripts/check_rust_file_size.sh && scripts/check_lib_rs.sh`. No comment gate exists: the comment ban is held by review and step 5's grep, because the `check-comment-density` ratchet was dropped before #247 merged.
 11. Commit: `git -c user.name="TRO-Wolf" -c user.email="64240326+TRO-Wolf@users.noreply.github.com" commit -F msg.txt`, msg.txt = `chore(t-1): repark-spark tests into tests/it — pure move, N tests before and after (CL-4)` plus the `Authored-By:` trailer. Push, open the PR against `main`.
 
 ## 5. Gates and the line that means green
@@ -66,7 +66,7 @@ file, `use crate::…` becomes `use repark_spark::…` and `super::` paths that 
 | `scripts/check_map_md.sh --base origin/main` | `map-md: … clean` |
 | `scripts/check_rust_file_size.sh` | `rust-file-size: … clean` |
 | `scripts/check_lib_rs.sh` | `lib-rs: 10 crate roots clean` |
-| `make check-comment-density` | exits 0 |
+| step 5's `grep -nE '^\s*//' crates/repark-spark/tests/it/*.rs \| wc -l` | `0` |
 | `cargo test -p repark-sql` | unchanged count; the two fixture tests pass |
 
 ## 6. Halt rules

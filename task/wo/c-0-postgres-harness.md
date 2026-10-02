@@ -194,7 +194,7 @@ survives its teardown (`pg_replication_slots` and `pg_publication` empty of its 
 6. `make pg-down && docker ps -a --filter label=repark.disposable=1 --format '{{.Names}}' && docker volume ls -q --filter label=repark.disposable=1` — expect empty output from both.
 7. `docker compose -f scripts/dev/pg/compose.yaml config -q` — expect no output, exit 0.
 8. The `docs/testing.md` subsection; the five map.md edits.
-9. `ruff check python/repark-parity/tests/live_db && ruff format --check python/repark-parity/tests/live_db && scripts/check_map_md.sh --base origin/main && scripts/check_docstring_presence.sh && scripts/check_lib_py.sh && python3 scripts/check_docs_links.py && python3 scripts/check_docs_compaction.py && make check-comment-density`.
+9. `ruff check python/repark-parity/tests/live_db && ruff format --check python/repark-parity/tests/live_db && scripts/check_map_md.sh --base origin/main && scripts/check_docstring_presence.sh && scripts/check_lib_py.sh && python3 scripts/check_docs_links.py && python3 scripts/check_docs_compaction.py`. No comment gate exists: the comment ban is held by review, because the `check-comment-density` ratchet was dropped before #247 merged.
 10. Commit: `chore(c-0): the disposable Postgres via compose, the pg_live fixture and the five cdc S0 pins (CC-6)` with the `Authored-By:` trailer. Push, open the PR against `main`.
 
 ## 5. Gates and the line that means green
