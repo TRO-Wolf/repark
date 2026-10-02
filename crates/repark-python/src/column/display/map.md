@@ -18,6 +18,9 @@ in this child module and `display.rs` keeps the thin static-method wrappers that
   `to_timestamp(__repark_decimal_cast_nullable__(Utf8))` call the SQL path stored
   (measured: Arrow's nanosecond cast yields a null element, never an error).
   pins: facade-2/C-014, C-015, C-016
+- `tests.rs` — **Re-verify fold (2026-09-30):** the `display` unit tests, moved
+  verbatim from the inline module, plus the `Parts` exactness battery.
+  pins: deep-filter-chain-crash-1/C-013
 
 ## Pointers
 

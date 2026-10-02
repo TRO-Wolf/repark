@@ -2,30 +2,28 @@
 //! Constructors resolve literals and standalone SQL expressions; `DataFrame` methods resolve
 //! expressions against their input schema.
 
-use crate::AnalysisException;
-use crate::fence::fenced;
-use datafusion::arrow::datatypes::DataType;
-use datafusion::functions_aggregate::count::count_udaf;
-use datafusion::functions_window::cume_dist::cume_dist_udwf;
+use crate::{AnalysisException, fence::fenced};
 use datafusion::functions_window::lead_lag::{lag_udwf, lead_udwf};
-use datafusion::functions_window::nth_value::nth_value_udwf;
-use datafusion::functions_window::ntile::ntile_udwf;
 use datafusion::functions_window::rank::{dense_rank_udwf, percent_rank_udwf, rank_udwf};
-use datafusion::functions_window::row_number::row_number_udwf;
+use datafusion::functions_window::{cume_dist::cume_dist_udwf, ntile::ntile_udwf};
+use datafusion::functions_window::{nth_value::nth_value_udwf, row_number::row_number_udwf};
 use datafusion::logical_expr::expr::{HigherOrderFunction, Lambda, NullTreatment, WindowFunction};
 use datafusion::logical_expr::{
-    Case, Cast, Expr, ExprFunctionExt, WindowFunctionDefinition, lambda_var, lit,
+    Case, Cast, Expr, ExprFunctionExt, TryCast, WindowFunctionDefinition, lambda_var, lit,
 };
 use datafusion::scalar::ScalarValue;
-use pyo3::exceptions::PyValueError;
-use pyo3::prelude::*;
+use datafusion::{arrow::datatypes::DataType, functions_aggregate::count::count_udaf};
 use pyo3::types::{PyBool, PyFloat, PyInt, PyString};
+use pyo3::{exceptions::PyValueError, prelude::*};
 
 pub(crate) mod display;
 #[cfg(test)]
 mod door_parity_tests;
 pub(crate) mod expr_build;
+#[cfg(test)]
+mod expr_tests;
 mod function_dispatch;
+mod levels;
 mod window;
 
 use expr_build::{
@@ -35,25 +33,33 @@ use expr_build::{
 use function_dispatch::{
     call_scalar_expr, cast_unsigned_count_to_signed, nary_aggregate_udaf, unary_aggregate_udaf,
 };
+pub use levels::PyColumn;
 use window::{OverSpec, build_over_expression};
 
-/// A Python-facing immutable DataFusion expression.
-#[pyclass(name = "PyColumn", module = "repark._native", from_py_object)]
-#[derive(Clone)]
-pub struct PyColumn {
-    expr: Expr,
-}
-
 impl PyColumn {
-    /// Wrap a logical [`Expr`] (crate-internal — the facade only ever calls the pyclass
-    /// constructors and operators).
-    pub(crate) fn from_expr(expr: Expr) -> Self {
-        Self { expr }
+    async fn plan_sql_text(sql: &str, keep_verbatim: bool) -> PyResult<Expr> {
+        repark_spark::refuse_sql_fragment(sql).map_err(crate::datafusion_to_py_err)?;
+        let context = expr_build::sql_context(sql, true).map_err(crate::datafusion_to_py_err)?;
+        let canonical = repark_spark::spark_literals::canonicalize_verbatim(sql, keep_verbatim)
+            .map_err(crate::datafusion_to_py_err)?;
+        expr_build::plan_expr_column(&context, canonical.as_ref(), sql).await
     }
 
     /// The held expression, cloned for handoff to a [`crate::dataframe::PyDataFrame`] method.
     pub(crate) fn expr(&self) -> Expr {
-        self.expr.clone()
+        crate::deep_stack::grown_clone_expr(&self.expr, self.expr_levels, self.plan_levels)
+    }
+
+    pub(crate) fn expression_depth(&self) -> usize {
+        self.expr_levels
+    }
+
+    pub(crate) fn df_depth(&self) -> usize {
+        self.df_levels
+    }
+
+    pub(crate) fn plan_depth(&self) -> usize {
+        self.plan_levels
     }
 }
 
@@ -117,7 +123,7 @@ impl PyColumn {
     /// Propagates tree-walk failures through the engine exception classifier.
     pub fn contains_higher_order(&self) -> PyResult<bool> {
         fenced!("Column.contains_higher_order", {
-            expr_build::contains_higher_order(&self.expr)
+            self.grown_read(expr_build::contains_higher_order)
         })
     }
 
@@ -150,14 +156,17 @@ impl PyColumn {
                 refuse_nested_higher_order(&value, name, "value argument")?;
                 args.push(value);
             }
-            for (params, body) in lambdas {
+            for (params, body) in &lambdas {
                 let body = body.expr();
                 refuse_nested_higher_order(&body, name, "lambda")?;
-                args.push(Expr::Lambda(Lambda::new(params, body)));
+                args.push(Expr::Lambda(Lambda::new(params.clone(), body)));
             }
-            Ok(Self::from_expr(Expr::HigherOrderFunction(
-                HigherOrderFunction::new(function, args),
-            )))
+            Ok(Self::combine_surveyed(
+                Expr::HigherOrderFunction(HigherOrderFunction::new(function, args)),
+                value_args
+                    .iter()
+                    .chain(lambdas.iter().map(|(_, body)| body)),
+            ))
         })
     }
 
@@ -177,12 +186,12 @@ impl PyColumn {
             }
             // Preserve aliases because DataFusion's struct return type otherwise uses c0, c1, ….
             let mut args: Vec<Expr> = Vec::with_capacity(fields.len() * 2);
-            for (index, column) in fields.into_iter().enumerate() {
+            for (index, column) in fields.iter().enumerate() {
                 let expr = column.expr();
                 let (field_name, value) = match expr {
                     Expr::Alias(alias) => (alias.name.clone(), *alias.expr),
                     other => {
-                        let name = other.schema_name().to_string();
+                        let name = column.grown_read(|expr| expr.schema_name().to_string());
                         let field_name = if name.is_empty() {
                             format!("col{index}")
                         } else {
@@ -194,8 +203,9 @@ impl PyColumn {
                 args.push(lit(field_name));
                 args.push(value);
             }
-            Ok(Self::from_expr(
+            Ok(Self::combine_surveyed(
                 datafusion::functions::expr_fn::named_struct(args),
+                &fields,
             ))
         })
     }
@@ -216,31 +226,30 @@ impl PyColumn {
     /// Returns `ParseException` for invalid SQL and `AnalysisException` for unresolved columns.
     /// This path bypasses the Spark SQL router, so it applies the parse-altitude valves here.
     #[staticmethod]
-    pub fn sql(sql: &str) -> PyResult<Self> {
+    pub fn sql(sql: &str, keep_verbatim: bool) -> PyResult<Self> {
         fenced!("Column.sql", {
-            repark_spark::refuse_sql_fragment(sql).map_err(crate::datafusion_to_py_err)?;
-            let context =
-                expr_build::sql_context(sql, true).map_err(crate::datafusion_to_py_err)?;
-            let canonical = repark_spark::spark_literals::canonicalize(sql)
-                .map_err(crate::datafusion_to_py_err)?;
+            let grown = crate::deep_stack::sql_drive_grown(sql);
             let runtime = crate::session::shared_runtime()?;
-            let planned = expr_build::plan_expr_column(&context, canonical.as_ref(), sql);
-            let expr = runtime.block_on(planned)?;
-            Ok(Self::from_expr(expr))
+            let expr = crate::deep_stack::block_on_grown_if(
+                &runtime,
+                Self::plan_sql_text(sql, keep_verbatim),
+                grown,
+            )?;
+            Ok(Self::from_sql_text(expr))
         })
     }
 
     /// `IS NULL` predicate (PySpark `Column.isNull`).
     pub fn is_null(&self) -> PyResult<Self> {
         fenced!("Column.is_null", {
-            Ok(Self::from_expr(self.expr.clone().is_null()))
+            Ok(Self::combine(self.expr().is_null(), [self], 1))
         })
     }
 
     /// `IS NOT NULL` predicate (PySpark `Column.isNotNull`).
     pub fn is_not_null(&self) -> PyResult<Self> {
         fenced!("Column.is_not_null", {
-            Ok(Self::from_expr(self.expr.clone().is_not_null()))
+            Ok(Self::combine(self.expr().is_not_null(), [self], 1))
         })
     }
 
@@ -255,15 +264,22 @@ impl PyColumn {
     ) -> PyResult<Self> {
         fenced!("Column.case_when", {
             let when_then_expr = when_thens
-                .into_iter()
-                .map(|(condition, value)| (Box::new(condition.expr), Box::new(value.expr)))
+                .iter()
+                .map(|(condition, value)| (Box::new(condition.expr()), Box::new(value.expr())))
                 .collect();
-            let else_expr = otherwise.map(|column| Box::new(column.expr));
-            Ok(Self::from_expr(Expr::Case(Case {
-                expr: None,
-                when_then_expr,
-                else_expr,
-            })))
+            let else_expr = otherwise.as_ref().map(|column| Box::new(column.expr()));
+            Ok(Self::combine(
+                Expr::Case(Case {
+                    expr: None,
+                    when_then_expr,
+                    else_expr,
+                }),
+                when_thens
+                    .iter()
+                    .flat_map(|(condition, value)| [condition, value])
+                    .chain(otherwise.iter()),
+                1,
+            ))
         })
     }
 
@@ -272,9 +288,10 @@ impl PyColumn {
     pub fn coalesce(columns: Vec<PyColumn>) -> PyResult<Self> {
         fenced!("Column.coalesce", {
             let exprs = columns.iter().map(PyColumn::expr).collect();
-            Ok(Self::from_expr(datafusion::functions::expr_fn::coalesce(
-                exprs,
-            )))
+            Ok(Self::combine_surveyed(
+                datafusion::functions::expr_fn::coalesce(exprs),
+                &columns,
+            ))
         })
     }
 
@@ -284,9 +301,13 @@ impl PyColumn {
         fenced!("Column.concat", {
             use datafusion::logical_expr::expr::ScalarFunction;
             let exprs: Vec<Expr> = columns.iter().map(PyColumn::expr).collect();
-            Ok(Self::from_expr(Expr::ScalarFunction(
-                ScalarFunction::new_udf(repark_functions::string::concat_udf(), exprs),
-            )))
+            Ok(Self::combine_surveyed(
+                Expr::ScalarFunction(ScalarFunction::new_udf(
+                    repark_functions::string::concat_udf(),
+                    exprs,
+                )),
+                &columns,
+            ))
         })
     }
 
@@ -315,7 +336,10 @@ impl PyColumn {
     pub fn call_scalar(name: &str, args: Vec<PyColumn>) -> PyResult<Self> {
         fenced!("Column.call_scalar", {
             let exprs: Vec<Expr> = args.iter().map(PyColumn::expr).collect();
-            Ok(Self::from_expr(call_scalar_expr(name, exprs)?))
+            Ok(Self::combine_surveyed(
+                call_scalar_expr(name, exprs)?,
+                &args,
+            ))
         })
     }
 
@@ -324,121 +348,141 @@ impl PyColumn {
     /// Spark `year(date)` — the calendar year.
     pub fn year(&self) -> PyResult<Self> {
         fenced!("Column.year", {
-            Ok(Self::from_expr(repark_functions::expr_fn::year(
-                self.expr.clone(),
-            )))
+            Ok(Self::combine(
+                repark_functions::expr_fn::year(self.expr()),
+                [self],
+                1,
+            ))
         })
     }
 
     /// Spark `month(date)` — the month of year, 1..=12.
     pub fn month(&self) -> PyResult<Self> {
         fenced!("Column.month", {
-            Ok(Self::from_expr(repark_functions::expr_fn::month(
-                self.expr.clone(),
-            )))
+            Ok(Self::combine(
+                repark_functions::expr_fn::month(self.expr()),
+                [self],
+                1,
+            ))
         })
     }
 
     /// Spark `quarter(date)` — the quarter of year, 1..=4.
     pub fn quarter(&self) -> PyResult<Self> {
         fenced!("Column.quarter", {
-            Ok(Self::from_expr(repark_functions::expr_fn::quarter(
-                self.expr.clone(),
-            )))
+            Ok(Self::combine(
+                repark_functions::expr_fn::quarter(self.expr()),
+                [self],
+                1,
+            ))
         })
     }
 
     /// Spark `weekofyear(date)` — the ISO-8601 week number.
     pub fn weekofyear(&self) -> PyResult<Self> {
         fenced!("Column.weekofyear", {
-            Ok(Self::from_expr(repark_functions::expr_fn::weekofyear(
-                self.expr.clone(),
-            )))
+            Ok(Self::combine(
+                repark_functions::expr_fn::weekofyear(self.expr()),
+                [self],
+                1,
+            ))
         })
     }
 
     /// Spark `dayofweek(date)` — 1=Sunday .. 7=Saturday.
     pub fn dayofweek(&self) -> PyResult<Self> {
         fenced!("Column.dayofweek", {
-            Ok(Self::from_expr(repark_functions::expr_fn::dayofweek(
-                self.expr.clone(),
-            )))
+            Ok(Self::combine(
+                repark_functions::expr_fn::dayofweek(self.expr()),
+                [self],
+                1,
+            ))
         })
     }
 
     /// Spark `weekday(date)` — 0=Monday .. 6=Sunday.
     pub fn weekday(&self) -> PyResult<Self> {
         fenced!("Column.weekday", {
-            Ok(Self::from_expr(repark_functions::expr_fn::weekday(
-                self.expr.clone(),
-            )))
+            Ok(Self::combine(
+                repark_functions::expr_fn::weekday(self.expr()),
+                [self],
+                1,
+            ))
         })
     }
 
     /// Spark `dayofmonth(date)` — the day of month, 1..=31.
     pub fn dayofmonth(&self) -> PyResult<Self> {
         fenced!("Column.dayofmonth", {
-            Ok(Self::from_expr(repark_functions::expr_fn::dayofmonth(
-                self.expr.clone(),
-            )))
+            Ok(Self::combine(
+                repark_functions::expr_fn::dayofmonth(self.expr()),
+                [self],
+                1,
+            ))
         })
     }
 
     /// Spark `dayofyear(date)` — the day of year, 1..=366.
     pub fn dayofyear(&self) -> PyResult<Self> {
         fenced!("Column.dayofyear", {
-            Ok(Self::from_expr(repark_functions::expr_fn::dayofyear(
-                self.expr.clone(),
-            )))
+            Ok(Self::combine(
+                repark_functions::expr_fn::dayofyear(self.expr()),
+                [self],
+                1,
+            ))
         })
     }
 
     /// Spark `last_day(date)` — the last day of the month containing this date.
     pub fn last_day(&self) -> PyResult<Self> {
         fenced!("Column.last_day", {
-            Ok(Self::from_expr(repark_functions::expr_fn::last_day(
-                self.expr.clone(),
-            )))
+            Ok(Self::combine(
+                repark_functions::expr_fn::last_day(self.expr()),
+                [self],
+                1,
+            ))
         })
     }
 
     /// Spark `add_months(start, num_months)` — end-of-month-preserving month arithmetic.
     pub fn add_months(&self, num_months: &PyColumn) -> PyResult<Self> {
         fenced!("Column.add_months", {
-            Ok(Self::from_expr(repark_functions::expr_fn::add_months(
-                self.expr.clone(),
-                num_months.expr.clone(),
-            )))
+            Ok(Self::combine_surveyed(
+                repark_functions::expr_fn::add_months(self.expr(), num_months.expr()),
+                [self, num_months],
+            ))
         })
     }
 
     /// Spark `date_add(start, num_days)` — the date `num_days` after this date.
     pub fn date_add(&self, num_days: &PyColumn) -> PyResult<Self> {
         fenced!("Column.date_add", {
-            Ok(Self::from_expr(repark_functions::expr_fn::date_add(
-                self.expr.clone(),
-                num_days.expr.clone(),
-            )))
+            Ok(Self::combine_surveyed(
+                repark_functions::expr_fn::date_add(self.expr(), num_days.expr()),
+                [self, num_days],
+            ))
         })
     }
 
     /// Spark `date_format(timestamp, format)` — format with a Java pattern string (a literal).
     pub fn date_format(&self, format: &str) -> PyResult<Self> {
         fenced!("Column.date_format", {
-            Ok(Self::from_expr(repark_functions::expr_fn::date_format(
-                self.expr.clone(),
-                lit(format),
-            )))
+            Ok(Self::combine(
+                repark_functions::expr_fn::date_format(self.expr(), lit(format)),
+                [self],
+                1,
+            ))
         })
     }
 
     /// Spark `trunc(date, format)` — truncate a DATE to `format` (year/month/week/quarter).
     pub fn trunc(&self, format: &str) -> PyResult<Self> {
         fenced!("Column.trunc", {
-            Ok(Self::from_expr(repark_functions::expr_fn::trunc(
-                self.expr.clone(),
-                lit(format),
-            )))
+            Ok(Self::combine(
+                repark_functions::expr_fn::trunc(self.expr(), lit(format)),
+                [self],
+                1,
+            ))
         })
     }
 
@@ -446,10 +490,11 @@ impl PyColumn {
     /// argument order (format first) is applied here; the facade passes the format as a literal.
     pub fn date_trunc(&self, format: &str) -> PyResult<Self> {
         fenced!("Column.date_trunc", {
-            Ok(Self::from_expr(repark_functions::expr_fn::date_trunc(
-                lit(format),
-                self.expr.clone(),
-            )))
+            Ok(Self::combine(
+                repark_functions::expr_fn::date_trunc(lit(format), self.expr()),
+                [self],
+                1,
+            ))
         })
     }
 
@@ -550,10 +595,13 @@ impl PyColumn {
                 PyValueError::new_err(format!("unknown TA window function {name:?}"))
             })?;
             let arg_exprs: Vec<Expr> = args.iter().map(PyColumn::expr).collect();
-            Ok(Self::from_expr(Expr::from(WindowFunction::new(
-                WindowFunctionDefinition::WindowUDF(udf),
-                arg_exprs,
-            ))))
+            Ok(Self::combine_surveyed(
+                Expr::from(WindowFunction::new(
+                    WindowFunctionDefinition::WindowUDF(udf),
+                    arg_exprs,
+                )),
+                &args,
+            ))
         })
     }
 
@@ -589,6 +637,11 @@ impl PyColumn {
         frame_end: Option<i64>,
     ) -> PyResult<Self> {
         fenced!("Column.over", {
+            let levels = Self::input_levels(
+                std::iter::once(self)
+                    .chain(partition_by.iter())
+                    .chain(order_by.iter()),
+            );
             let spec = OverSpec {
                 partition_by,
                 order_by,
@@ -598,28 +651,31 @@ impl PyColumn {
                 frame_start,
                 frame_end,
             };
-            Ok(Self::from_expr(build_over_expression(&self.expr, spec)?))
+            Ok(Self::surveyed_levels(
+                build_over_expression(&self.expr, spec)?,
+                levels,
+            ))
         })
     }
 
     /// `self + other` (PySpark `Column.__add__`).
     pub fn add(&self, other: &PyColumn) -> PyResult<Self> {
         fenced!("Column.add", {
-            Ok(Self::from_expr(self.expr.clone() + other.expr.clone()))
+            Ok(Self::combine(self.expr() + other.expr(), [self, other], 1))
         })
     }
 
     /// `self - other` (PySpark `Column.__sub__`).
     pub fn sub(&self, other: &PyColumn) -> PyResult<Self> {
         fenced!("Column.sub", {
-            Ok(Self::from_expr(self.expr.clone() - other.expr.clone()))
+            Ok(Self::combine(self.expr() - other.expr(), [self, other], 1))
         })
     }
 
     /// `self * other` (PySpark `Column.__mul__`).
     pub fn mul(&self, other: &PyColumn) -> PyResult<Self> {
         fenced!("Column.mul", {
-            Ok(Self::from_expr(self.expr.clone() * other.expr.clone()))
+            Ok(Self::combine(self.expr() * other.expr(), [self, other], 1))
         })
     }
 
@@ -632,10 +688,9 @@ impl PyColumn {
     /// on operands that are already floating point is a no-op, and NULL casts stay NULL.
     pub fn div(&self, other: &PyColumn) -> PyResult<Self> {
         fenced!("Column.div", {
-            let numerator = Expr::Cast(Cast::new(Box::new(self.expr.clone()), DataType::Float64));
-            let denominator =
-                Expr::Cast(Cast::new(Box::new(other.expr.clone()), DataType::Float64));
-            Ok(Self::from_expr(numerator / denominator))
+            let numerator = Expr::Cast(Cast::new(Box::new(self.expr()), DataType::Float64));
+            let denominator = Expr::Cast(Cast::new(Box::new(other.expr()), DataType::Float64));
+            Ok(Self::combine(numerator / denominator, [self, other], 2))
         })
     }
 
@@ -643,22 +698,28 @@ impl PyColumn {
     /// which maps to DataFusion's `%`.
     pub fn modulo(&self, other: &PyColumn) -> PyResult<Self> {
         fenced!("Column.modulo", {
-            Ok(Self::from_expr(self.expr.clone() % other.expr.clone()))
+            Ok(Self::combine(self.expr() % other.expr(), [self, other], 1))
         })
     }
 
     /// `self == other` (PySpark `Column.__eq__`).
     pub fn eq(&self, other: &PyColumn) -> PyResult<Self> {
         fenced!("Column.eq", {
-            Ok(Self::from_expr(self.expr.clone().eq(other.expr.clone())))
+            Ok(Self::combine(
+                self.expr().eq(other.expr()),
+                [self, other],
+                1,
+            ))
         })
     }
 
     /// `self != other` (PySpark `Column.__ne__`).
     pub fn ne(&self, other: &PyColumn) -> PyResult<Self> {
         fenced!("Column.ne", {
-            Ok(Self::from_expr(
-                self.expr.clone().not_eq(other.expr.clone()),
+            Ok(Self::combine(
+                self.expr().not_eq(other.expr()),
+                [self, other],
+                1,
             ))
         })
     }
@@ -666,28 +727,44 @@ impl PyColumn {
     /// `self < other` (PySpark `Column.__lt__`).
     pub fn lt(&self, other: &PyColumn) -> PyResult<Self> {
         fenced!("Column.lt", {
-            Ok(Self::from_expr(self.expr.clone().lt(other.expr.clone())))
+            Ok(Self::combine(
+                self.expr().lt(other.expr()),
+                [self, other],
+                1,
+            ))
         })
     }
 
     /// `self > other` (PySpark `Column.__gt__`).
     pub fn gt(&self, other: &PyColumn) -> PyResult<Self> {
         fenced!("Column.gt", {
-            Ok(Self::from_expr(self.expr.clone().gt(other.expr.clone())))
+            Ok(Self::combine(
+                self.expr().gt(other.expr()),
+                [self, other],
+                1,
+            ))
         })
     }
 
     /// `self <= other` (PySpark `Column.__le__`).
     pub fn le(&self, other: &PyColumn) -> PyResult<Self> {
         fenced!("Column.le", {
-            Ok(Self::from_expr(self.expr.clone().lt_eq(other.expr.clone())))
+            Ok(Self::combine(
+                self.expr().lt_eq(other.expr()),
+                [self, other],
+                1,
+            ))
         })
     }
 
     /// `self >= other` (PySpark `Column.__ge__`).
     pub fn ge(&self, other: &PyColumn) -> PyResult<Self> {
         fenced!("Column.ge", {
-            Ok(Self::from_expr(self.expr.clone().gt_eq(other.expr.clone())))
+            Ok(Self::combine(
+                self.expr().gt_eq(other.expr()),
+                [self, other],
+                1,
+            ))
         })
     }
 
@@ -695,26 +772,36 @@ impl PyColumn {
     /// bitwise operator, so this maps to the logical `AND`.
     pub fn and_(&self, other: &PyColumn) -> PyResult<Self> {
         fenced!("Column.and_", {
-            Ok(Self::from_expr(self.expr.clone().and(other.expr.clone())))
+            Ok(Self::combine(
+                self.expr().and(other.expr()),
+                [self, other],
+                1,
+            ))
         })
     }
 
     /// Logical OR (PySpark `Column.__or__`, spelled `|`).
     pub fn or_(&self, other: &PyColumn) -> PyResult<Self> {
         fenced!("Column.or_", {
-            Ok(Self::from_expr(self.expr.clone().or(other.expr.clone())))
+            Ok(Self::combine(
+                self.expr().or(other.expr()),
+                [self, other],
+                1,
+            ))
         })
     }
 
     /// Logical NOT (PySpark `Column.__invert__`, spelled `~`).
     pub fn not_(&self) -> PyResult<Self> {
-        fenced!("Column.not_", { Ok(Self::from_expr(!self.expr.clone())) })
+        fenced!("Column.not_", {
+            Ok(Self::combine(!self.expr(), [self], 1))
+        })
     }
 
     /// Rename the column (PySpark `Column.alias`).
     pub fn alias(&self, name: &str) -> PyResult<Self> {
         fenced!("Column.alias", {
-            Ok(Self::from_expr(self.expr.clone().alias(name)))
+            Ok(Self::combine(self.expr().alias(name), [self], 1))
         })
     }
 
@@ -729,9 +816,11 @@ impl PyColumn {
     pub fn cast(&self, type_spec: &str) -> PyResult<Self> {
         fenced!("Column.cast", {
             let data_type = parse_data_type(type_spec).map_err(AnalysisException::new_err)?;
-            Ok(Self::from_expr(datafusion::logical_expr::Expr::Cast(
-                datafusion::logical_expr::Cast::new(Box::new(self.expr.clone()), data_type),
-            )))
+            Ok(Self::combine(
+                Expr::Cast(Cast::new(Box::new(self.expr()), data_type)),
+                [self],
+                1,
+            ))
         })
     }
 
@@ -745,9 +834,11 @@ impl PyColumn {
     pub fn try_cast(&self, type_spec: &str) -> PyResult<Self> {
         fenced!("Column.try_cast", {
             let data_type = parse_data_type(type_spec).map_err(AnalysisException::new_err)?;
-            Ok(Self::from_expr(datafusion::logical_expr::Expr::TryCast(
-                datafusion::logical_expr::TryCast::new(Box::new(self.expr.clone()), data_type),
-            )))
+            Ok(Self::combine(
+                Expr::TryCast(TryCast::new(Box::new(self.expr()), data_type)),
+                [self],
+                1,
+            ))
         })
     }
 
@@ -756,7 +847,7 @@ impl PyColumn {
     /// The column schema name supplies facade aggregate aliases such as `sum(x)`.
     pub fn display_name(&self) -> PyResult<String> {
         fenced!("Column.display_name", {
-            Ok(self.expr.schema_name().to_string())
+            Ok(self.grown_read(|expr| expr.schema_name().to_string()))
         })
     }
 
@@ -767,9 +858,10 @@ impl PyColumn {
     /// ``… AS a AS b``. Non-alias expressions are unchanged. Idempotent.
     pub fn collapse_identity_aliases(&self) -> PyResult<Self> {
         fenced!("Column.collapse_identity_aliases", {
-            Ok(Self::from_expr(collapse_identity_alias_chain(
-                self.expr.clone(),
-            )))
+            Ok(Self::combine_surveyed(
+                collapse_identity_alias_chain(self.expr()),
+                [self],
+            ))
         })
     }
 
@@ -782,10 +874,10 @@ impl PyColumn {
     pub fn aggregate(&self, kind: &str, ignore_nulls: bool) -> PyResult<Self> {
         fenced!("Column.aggregate", {
             if kind == "collect_list" || kind == "collect_set" {
-                return Self::collect_aggregate(self.expr.clone(), kind == "collect_set");
+                return Self::collect_aggregate(self, kind == "collect_set");
             }
             let udaf = unary_aggregate_udaf(kind)?;
-            let base = udaf.call(vec![self.expr.clone()]);
+            let base = udaf.call(vec![self.expr()]);
             // A plain `call` is already a usable aggregate `Expr`; only IGNORE NULLS needs the
             // builder chain (`ExprFunctionExt` on `Expr` → `ExprFuncBuilder` → `build`). The
             // unsigned cast wraps the finished aggregate, since the builder chain only accepts
@@ -801,19 +893,23 @@ impl PyColumn {
             } else {
                 base
             };
-            Ok(Self::from_expr(cast_unsigned_count_to_signed(
-                &udaf, 1, expr,
-            )))
+            Ok(Self::combine_surveyed(
+                cast_unsigned_count_to_signed(&udaf, 1, expr),
+                [self],
+            ))
         })
     }
 
     pub fn aggregate_binary(&self, kind: &str, others: Vec<PyColumn>) -> PyResult<Self> {
         fenced!("Column.aggregate_binary", {
             let udaf = nary_aggregate_udaf(kind)?;
-            let mut args = vec![self.expr.clone()];
+            let mut args = vec![self.expr()];
             args.extend(others.iter().map(PyColumn::expr));
             let expr = cast_unsigned_count_to_signed(&udaf, others.len() + 1, udaf.call(args));
-            Ok(Self::from_expr(expr))
+            Ok(Self::combine_surveyed(
+                expr,
+                std::iter::once(self).chain(others.iter()),
+            ))
         })
     }
 
@@ -824,8 +920,8 @@ impl PyColumn {
                     "approx_percentile_cont percentile must be in [0, 1], got {percentile}"
                 )));
             }
-            let expr = percentile_approx_scalar_expr(self.expr.clone(), percentile, accuracy);
-            Ok(Self::from_expr(expr))
+            let expr = percentile_approx_scalar_expr(self.expr(), percentile, accuracy);
+            Ok(Self::combine_surveyed(expr, [self]))
         })
     }
     pub fn approx_percentile_list(
@@ -840,8 +936,8 @@ impl PyColumn {
                     "approx_percentile percentages must be in [0, 1]",
                 ));
             }
-            let expr = percentile_approx_list_expr(self.expr.clone(), percentages, accuracy);
-            Ok(Self::from_expr(expr))
+            let expr = percentile_approx_list_expr(self.expr(), percentages, accuracy);
+            Ok(Self::combine_surveyed(expr, [self]))
         })
     }
 
@@ -870,143 +966,7 @@ impl PyColumn {
             } else {
                 count_udaf().call(args)
             };
-            Ok(Self::from_expr(expr))
+            Ok(Self::combine_surveyed(expr, &columns))
         })
-    }
-}
-
-#[cfg(test)]
-mod expr_tests {
-    use super::*;
-
-    #[test]
-    fn expr_sql_substr_zero_matches_spark() {
-        let column = PyColumn::sql("substr('hello', 0, 3)").expect("parse");
-        // Consumer context is a *different* SessionContext (mirrors F.expr → spark DF handoff).
-        let context = datafusion::prelude::SessionContext::new();
-        repark_functions::register_all(&context);
-        for rule in repark_functions::analyzer_rules() {
-            context.add_analyzer_rule(rule);
-        }
-        let runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap();
-        let batches = runtime.block_on(async {
-            let df = context.sql("SELECT 1 AS dummy").await.unwrap();
-            let df = df.select(vec![column.expr().alias("s")]).unwrap();
-            df.collect().await.unwrap()
-        });
-        let pretty = arrow::util::pretty::pretty_format_batches(&batches)
-            .unwrap()
-            .to_string();
-        assert!(
-            pretty.contains("hel"),
-            "expected Spark substr pos0 → hel, got:\n{pretty}\nexpr={:?}",
-            column.expr()
-        );
-    }
-
-    /// Two- and three-argument `substr` calls use the Spark-compatible UDF.
-    ///
-    /// The analyzer must rewrite the three-argument form as that UDF, so zero-based slicing
-    /// matches SQL (`'hello'` pos0 len3 → `'he'`).
-    #[test]
-    fn call_scalar_substr_zero_matches_spark() {
-        use datafusion::arrow::array::StringArray;
-
-        let string_col = PyColumn::from_expr(lit("hello"));
-        let start = PyColumn::from_expr(lit(0_i64));
-        let length = PyColumn::from_expr(lit(3_i64));
-        let column = PyColumn::call_scalar("substr", vec![string_col, start, length])
-            .expect("call_scalar substr");
-        let context = datafusion::prelude::SessionContext::new();
-        repark_functions::register_all(&context);
-        for rule in repark_functions::analyzer_rules() {
-            context.add_analyzer_rule(rule);
-        }
-        let runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap();
-        let batches = runtime.block_on(async {
-            let df = context.sql("SELECT 1 AS dummy").await.unwrap();
-            let df = df.select(vec![column.expr().alias("s")]).unwrap();
-            df.collect().await.unwrap()
-        });
-        let array = batches[0]
-            .column(0)
-            .as_any()
-            .downcast_ref::<StringArray>()
-            .expect("utf8 column");
-        assert_eq!(
-            array.value(0),
-            "hel",
-            "call_scalar substr pos0 len3 must be Spark 'hel' (not DF 'he'); expr={:?}",
-            column.expr()
-        );
-        // Negative start from end: substr('hello', -3, 2) → 'll'
-        let neg = PyColumn::call_scalar(
-            "substr",
-            vec![
-                PyColumn::from_expr(lit("hello")),
-                PyColumn::from_expr(lit(-3_i64)),
-                PyColumn::from_expr(lit(2_i64)),
-            ],
-        )
-        .expect("call_scalar substr neg");
-        let batches_neg = runtime.block_on(async {
-            let df = context.sql("SELECT 1 AS dummy").await.unwrap();
-            let df = df.select(vec![neg.expr().alias("s")]).unwrap();
-            df.collect().await.unwrap()
-        });
-        let array_neg = batches_neg[0]
-            .column(0)
-            .as_any()
-            .downcast_ref::<StringArray>()
-            .expect("utf8 column");
-        assert_eq!(array_neg.value(0), "ll");
-    }
-
-    /// The handoff expression must carry its post-analysis type so the logical schema matches
-    /// executed buffers. Integer division `5/2` must remain `Float64` through the handoff.
-    #[test]
-    fn expr_sql_integer_division_hands_off_float64() {
-        use datafusion::arrow::array::Float64Array;
-
-        let column = PyColumn::sql("5/2").expect("parse");
-        // Consumer context is a *different* SessionContext (mirrors F.expr → spark DF handoff).
-        let context = datafusion::prelude::SessionContext::new();
-        repark_functions::register_all(&context);
-        for rule in repark_functions::analyzer_rules() {
-            context.add_analyzer_rule(rule);
-        }
-        let runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap();
-        let (logical_type, batches) = runtime.block_on(async {
-            let df = context.sql("SELECT 1 AS dummy").await.unwrap();
-            let df = df.select(vec![column.expr().alias("x")]).unwrap();
-            let logical_type = df.schema().field(0).data_type().clone();
-            (logical_type, df.collect().await.unwrap())
-        });
-        assert_eq!(
-            logical_type,
-            DataType::Float64,
-            "F.expr('5/2') must hand off Float64 — an Int64 label over Float64 buffers \
-             bit-reinterprets at the Arrow boundary"
-        );
-        let executed_type = batches[0].schema().field(0).data_type().clone();
-        assert_eq!(
-            executed_type, logical_type,
-            "logical (exported) schema and executed batch schema must agree"
-        );
-        let values = batches[0]
-            .column(0)
-            .as_any()
-            .downcast_ref::<Float64Array>()
-            .expect("executed column must be Float64");
-        assert!((values.value(0) - 2.5).abs() < f64::EPSILON);
     }
 }

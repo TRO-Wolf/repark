@@ -315,6 +315,10 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   pins in [merge/cardinality_tests.rs](merge/cardinality_tests.rs) and
   [merge/nmbs_tests.rs](merge/nmbs_tests.rs).
   Tests: [merge/map.md](merge/map.md).
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** every rendered
+  fragment goes through `repark_iceberg::write::sql_text::render_for_reparse`
+  so string values re-parse exactly, mirroring the Spark door.
+  pins: string-literal-escape-1/C-010
 - `time_travel.rs` — the `FOR VERSION|TIMESTAMP AS OF` token-scan rewrite (Q5/G7): recognize,
   resolve through the hoisted `repark_core` half (`TimeTravelSpec` / `read_table_at`), register
   an ephemeral pinned view, splice its name in, THEN parse. `FOR` is mandatory; `"` quotes

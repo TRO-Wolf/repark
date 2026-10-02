@@ -97,7 +97,7 @@ def _register_temp(dataset: Any, prefix: str = "ml") -> tuple[Any, str]:
 
 def _sql_on(frame: Any, sql: str) -> Any:
     """Run SQL on the frame's native session; return a Python DataFrame."""
-    return frame._spawn(frame._session.sql(sql))
+    return frame._spawn(frame._session.sql_built(sql))
 
 
 def _collect_sql(frame: Any, sql: str) -> list[Any]:
@@ -1896,7 +1896,7 @@ class SQLTransformer(Transformer):
         host, view = _register_temp(frame, "sqltr")
         try:
             sql = stripped.replace("__THIS__", view)
-            return _sql_on(host, sql)
+            return host._spawn(host._session.sql(sql))
         finally:
             with contextlib.suppress(Exception):
                 host._session.drop_temp_view(view)

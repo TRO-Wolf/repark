@@ -284,6 +284,17 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
 - `insert.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** the MERGE INSERT and UPDATE SET
   gates call `../void_store.rs::refuse_void_writes` with table `` before the ANSI matrix, so a
   value into a `VOID` column refuses with Spark's text. pins: u9-types-1/C-014
+- `insert.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** the MERGE INSERT and UPDATE SET
+  stream builders plan through `analyzed_store_source` and `wrap_store_outputs`, so a
+  fractional store refuses `CAST_OVERFLOW_IN_TABLE_INSERT` with the column named; the
+  update probe reads types from the unoptimized plan so a const division reaches the
+  rewrite instead of folding to `DIVIDE_BY_ZERO` first.
+  **Merge origin/main v1.5.1 (2026-09-29):** both sides kept — the void, negated-null
+  and NTZ gates plus the ANSI matrix judge the unanalyzed plan exactly as on main (an
+  analyzed plan would rename an `Int64` literal `Int32` in the refusal text), the
+  overflow wrap runs on the analyzed source, then the zone-wrapping subquery (which
+  re-analyzes and re-wraps in its own arm). Re-verify VO3-1 (2026-09-29): MERGE passes
+  `None` for the wrap's gate label — those gates already judge before the wrap.
 - `insert.rs` — **WO NTZ-1 slice 2 (2026-09-27):** the MERGE INSERT and UPDATE SET gates
   also call `../ntz_store.rs::refuse_ntz_writes` before the ANSI matrix, so an illegal
   source into an NTZ column refuses with Spark's `CANNOT_SAFELY_CAST` text naming
@@ -292,6 +303,17 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   the gate always judges pre-wrap types and a table without NTZ columns streams its
   SQL untouched. MERGE UPDATE arms convert through `store_assignment_cast_sql`'s
   wall-cast UDF. pins: ntz-1/C-006, C-007
+  **WO NTZ-STORE-DOORS-1 (2026-09-28):** the converting subquery
+  (`zone_wrapping_stream_sql`) also wraps a `TIMESTAMP` column whose analyzed source
+  is naive or `DATE` through `store_assignment_cast_sql`, so `INSERT (cols)` and
+  `INSERT *` store the session-zone instant; the gates still run first on the raw
+  plan, and a table whose instant columns take instants streams its SQL untouched.
+  UPDATE SET and UPDATE SET * convert through `store_assignment_cast_sql`.
+  pins: ntz-store-doors-1/C-002, C-003, C-004
+- `insert.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** the MERGE INSERT and UPDATE SET
+  gates also call `../negated_null_store.rs::refuse_negated_null_writes` with table ``, so a
+  `-NULL` value (Spark's DOUBLE) into a DATE, BOOLEAN or timestamp column refuses with
+  Spark's text, through a derived source or a temp view as well. pins: store-ts-to-numeric-1/C-002
 - `insert.rs` — **U8 WRITE-SQL PR2 (2026-09-25):** `store_assignment_then_sql` delegates to
   `../update_cast.rs`'s `store_assignment_cast_sql`, so a struct target casts to its type
   without Iceberg field ids. With the struct-aware gate in `../store_assign.rs`, whole-struct

@@ -34,6 +34,9 @@ fold moves elsewhere.
   rebuild, the combined refusal text, and a top-level struct value folded through the
   by-name check (missing, extra, deep missing, reordered), and fix round 4's exact-case refusal
   and the `NOT NULL` rebuild. pins: u8-write-sql/C-027, C-028, C-029, C-030, C-032, C-033
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** doubled-quote and
+  backslash-quote rerender pins plus the doubled refusal-text pins.
+  pins: string-literal-escape-1/C-012
 
 ## Pointers
 

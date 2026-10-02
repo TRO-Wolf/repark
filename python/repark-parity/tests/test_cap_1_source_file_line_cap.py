@@ -38,8 +38,6 @@ _RUST_BASELINES: tuple[tuple[str, int], ...] = (
     ("crates/repark-iceberg/src/write/merge/tests/streaming_scan.rs", 3018),
     ("crates/repark-iceberg/src/write/overwrite.rs", 1053),
     ("crates/repark-iceberg/src/write/predicate_dml/tests/predicate_dml.rs", 1435),
-    ("crates/repark-python/src/column/mod.rs", 1012),
-    ("crates/repark-python/src/session.rs", 1122),
     ("crates/repark-spark/src/alter.rs", 1272),
     ("crates/repark-spark/src/metadata_tables.rs", 1059),
     ("crates/repark-spark/src/tests/alter.rs", 1181),
@@ -64,14 +62,14 @@ _PYTHON_BASELINES: tuple[tuple[str, int], ...] = (
     ("python/repark-parity/compat/runner.py", 1279),
     ("python/repark-parity/tests/test_compat_harness.py", 1021),
     ("python/repark/src/repark/spark/column.py", 1529),
-    ("python/repark/src/repark/spark/dataframe/core.py", 3973),
+    ("python/repark/src/repark/spark/dataframe/core.py", 3971),
     ("python/repark/src/repark/spark/dataframe/joins_columns.py", 1169),
     ("python/repark/src/repark/spark/dataframe/plan_collapse.py", 1054),
-    ("python/repark/src/repark/spark/functions.py", 1984),
+    ("python/repark/src/repark/spark/functions.py", 1938),
     ("python/repark/src/repark/spark/functions_expr.py", 2171),
     ("python/repark/src/repark/spark/functions_udf.py", 1300),
     ("python/repark/src/repark/spark/ml/feature/_transformers.py", 2717),
-    ("python/repark/src/repark/spark/session/session_core.py", 2293),
+    ("python/repark/src/repark/spark/session/session_core.py", 2277),
     ("python/repark/src/repark/spark/ta.py", 1818),
     ("python/repark/src/repark/spark/types.py", 1772),
     ("python/repark/tests/_live_parity.py", 1753),
@@ -177,7 +175,7 @@ def test_cap_1_exception_tables_equal_the_measured_debt() -> None:
     assert _baselines(python_gate) == python_approved
     assert rust_debt == rust_approved
     assert python_debt == python_approved
-    assert len(rust_approved) == 36
+    assert len(rust_approved) == 34
     assert len(python_approved) == 31
 
 

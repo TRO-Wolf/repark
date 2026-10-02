@@ -20,6 +20,9 @@ and the `EngineContext` construction contract.
   `temp_views: None` for the new `EngineContext` field. pins: ice-views-1/C-018
   **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):** the literals set `source_by_name: false` for the
   V2 writer's by-name source flag. pins: u7-write-df-2/C-013
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** the literals set
+  `verbatim_override: None`; `EngineContext::new` defaults it the same way.
+  pins: string-literal-escape-1/C-011
 
 ## Pointers
 

@@ -6,6 +6,7 @@ use pyo3::wrap_pyfunction;
 use repark_core::OrcReadOptions;
 
 use crate::dataframe::PyDataFrame;
+use crate::deep_stack::block_on;
 use crate::fence::fenced_span;
 use crate::session::PyReparkSession;
 use crate::to_py_err;
@@ -42,17 +43,13 @@ pub fn read_orc(
             user_schema,
         };
         let dataframe = Python::attach(|py| {
-            py.detach(|| {
-                session
-                    .runtime
-                    .block_on(session.session.read_orc(&paths, options))
-            })
-            .map_err(|error| {
-                let message = error.to_string();
-                let raised = to_py_err(error);
-                attach_orc_condition(py, &raised, &message);
-                raised
-            })
+            py.detach(|| block_on(&session.runtime, session.session.read_orc(&paths, options)))
+                .map_err(|error| {
+                    let message = error.to_string();
+                    let raised = to_py_err(error);
+                    attach_orc_condition(py, &raised, &message);
+                    raised
+                })
         })?;
         Ok(PyDataFrame::new(dataframe, Arc::clone(&session.runtime)))
     })

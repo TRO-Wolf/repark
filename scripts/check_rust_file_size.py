@@ -119,16 +119,6 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Predicate DML scenarios share one consolidated test module.",
         "Split DELETE and UPDATE scenario families with shared setup retained.",
     ),
-    "crates/repark-python/src/column/mod.rs": (
-        1012,
-        "PyO3 Column methods remain grouped in one binding module.",
-        "Extract the remaining date or window method family.",
-    ),
-    "crates/repark-python/src/session.rs": (
-        1122,
-        "PyO3 session construction and query entry points share one module.",
-        "Split configuration bindings from query and catalog bindings.",
-    ),
     "crates/repark-spark/src/alter.rs": (
         1272,
         "Spark ALTER token rewrites and dispatch share one planner module.",

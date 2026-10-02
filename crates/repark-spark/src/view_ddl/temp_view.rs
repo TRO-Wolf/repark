@@ -42,12 +42,19 @@ pub(crate) struct ReplanningTempView {
     references: Vec<Vec<String>>,
     dependencies: Vec<Vec<String>>,
     schema: SchemaRef,
+    definition_plan: LogicalPlan,
 }
 
 impl ReplanningTempView {
     pub(crate) fn display(&self) -> &str {
         &self.definition.display
     }
+}
+
+pub(crate) fn definition_plan(provider: &dyn TableProvider) -> Option<LogicalPlan> {
+    let any: &dyn Any = provider;
+    any.downcast_ref::<ReplanningTempView>()
+        .map(|view| view.definition_plan.clone())
 }
 
 impl std::fmt::Debug for ReplanningTempView {
@@ -158,6 +165,7 @@ pub(crate) async fn replanning_temp_view(
         ctx: ctx.clone(),
         catalogs: catalogs.clone(),
         schema: Arc::new(frame.schema().as_arrow().clone()),
+        definition_plan: frame.logical_plan().clone(),
         definition,
         temp_homes,
         references,
@@ -539,6 +547,10 @@ mod tests {
             references,
             dependencies: Vec::new(),
             schema: Arc::new(Schema::empty()),
+            definition_plan: LogicalPlan::EmptyRelation(datafusion::logical_expr::EmptyRelation {
+                produce_one_row: false,
+                schema: Arc::new(datafusion::common::DFSchema::empty()),
+            }),
         }
     }
 

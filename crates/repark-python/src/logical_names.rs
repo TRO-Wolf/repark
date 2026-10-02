@@ -6,13 +6,17 @@ use crate::fence::fenced;
 #[pyfunction]
 pub fn logical_column_names(frame: PyRef<'_, PyDataFrame>) -> PyResult<Vec<String>> {
     fenced!("logical_names.logical_column_names", {
-        Ok(frame
-            .inner()
-            .schema()
-            .fields()
-            .iter()
-            .map(|field| field.name().clone())
-            .collect())
+        let depths = frame.depths();
+        let need = crate::deep_stack::clone_need_bytes(depths.plan, depths.expression);
+        Ok(crate::deep_stack::grown_sync(need, || {
+            frame
+                .inner()
+                .schema()
+                .fields()
+                .iter()
+                .map(|field| field.name().clone())
+                .collect()
+        }))
     })
 }
 

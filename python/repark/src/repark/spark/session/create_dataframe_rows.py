@@ -807,7 +807,7 @@ def _materialize_values_as_memtable_frame(session: ReparkSession, values_sql: st
 
     """
 
-    ephemeral = session.sql(values_sql)
+    ephemeral = session._sql_built(values_sql)
 
     view_name = scratch_view_name(session._ensure_alive(), "__repark_cdf_")
 
@@ -820,7 +820,7 @@ def _materialize_values_as_memtable_frame(session: ReparkSession, values_sql: st
 
         registered = True
 
-        frame = session.sql(f"SELECT * FROM {view_name}")
+        frame = session._sql_built(f"SELECT * FROM {view_name}")
 
     except BaseException:
         # Drop orphan MemTable if sql() fails after register (mapInArrow parity).
@@ -890,7 +890,7 @@ def _materialize_exporter_as_memtable_frame(session: ReparkSession, exporter: An
     try:
         register_arrow_exporter_as_temp_view(native, view_name, exporter)
         registered = True
-        frame = session.sql(f"SELECT * FROM {view_name}")
+        frame = session._sql_built(f"SELECT * FROM {view_name}")
     except BaseException:
         if registered:
             with contextlib.suppress(Exception):

@@ -16,6 +16,7 @@ use repark_core::{PoolRefusalLog, REFUSAL_CONTAINMENT_NOTE};
 use tokio::runtime::Runtime;
 
 use crate::dataframe::STREAM_POLL_NO_DETACH;
+use crate::deep_stack::block_on_grown_if;
 use crate::fence::{fence_stream_poll, fenced_panic_detail};
 use crate::to_py_err;
 
@@ -48,6 +49,7 @@ pub(crate) struct StreamingBatchReader {
     runtime: Arc<Runtime>,
     stream: SendableRecordBatchStream,
     schema: SchemaRef,
+    grown_polls: bool,
     refusals: Option<Arc<PoolRefusalLog>>,
     refusals_before: u64,
 }
@@ -57,11 +59,13 @@ impl StreamingBatchReader {
         runtime: Arc<Runtime>,
         stream: SendableRecordBatchStream,
         schema: SchemaRef,
+        grown_polls: bool,
     ) -> Self {
         Self {
             runtime,
             stream,
             schema,
+            grown_polls,
             refusals: None,
             refusals_before: 0,
         }
@@ -110,15 +114,21 @@ impl Iterator for StreamingBatchReader {
     fn next(&mut self) -> Option<Self::Item> {
         // The Arrow callback cannot unwind across extern "C"; fence the poll and report an error.
         let Self {
-            runtime, stream, ..
+            runtime,
+            stream,
+            grown_polls,
+            ..
         } = self;
         let schema = Arc::clone(&self.schema);
+        let grown = *grown_polls;
         let item = fence_stream_poll("PyDataFrame.__arrow_c_stream__.next", || {
             let no_detach = STREAM_POLL_NO_DETACH.with(Cell::get);
             let polled = if no_detach {
-                runtime.block_on(stream.next())
+                block_on_grown_if(runtime, stream.next(), grown)
             } else {
-                Python::attach(|python| python.detach(|| runtime.block_on(stream.next())))
+                Python::attach(|python| {
+                    python.detach(|| block_on_grown_if(runtime, stream.next(), grown))
+                })
             };
             polled.map(|batch| {
                 batch
@@ -528,7 +538,7 @@ mod tests {
         refusals: Option<Arc<PoolRefusalLog>>,
     ) -> StreamingBatchReader {
         let runtime = Arc::new(tokio::runtime::Runtime::new().expect("a tokio runtime builds"));
-        StreamingBatchReader::new(runtime, stream, probe_schema()).with_refusals(refusals)
+        StreamingBatchReader::new(runtime, stream, probe_schema(), true).with_refusals(refusals)
     }
 
     fn empty_reader(refusals: Option<Arc<PoolRefusalLog>>) -> StreamingBatchReader {
@@ -693,6 +703,58 @@ mod tests {
                 !message.contains("a Rust panic was caught"),
                 "the reader itself contains the panic: {message}"
             );
+        });
+    }
+
+    #[test]
+    fn deep_filter_chain_streams_on_the_grown_stack() {
+        use arrow::array::Int64Array;
+        use datafusion::logical_expr::lit;
+        use datafusion::prelude::{SessionConfig, SessionContext, col};
+
+        use crate::deep_stack::{frame_drive_segment_cached, plan_depths};
+        Python::attach(|_python| {
+            let context =
+                SessionContext::new_with_config(SessionConfig::new().with_target_partitions(1));
+            let batch = RecordBatch::try_new(
+                probe_schema(),
+                vec![Arc::new(Int64Array::from(vec![1, 2, 3]))],
+            )
+            .expect("probe batch builds");
+            let mut chained = context
+                .read_batch(batch)
+                .expect("read_batch yields a DataFrame");
+            for _ in 0..40 {
+                chained = chained
+                    .filter(col("id").gt(lit(0)))
+                    .expect("a chained filter builds");
+            }
+            let depths = plan_depths(chained.logical_plan());
+            let segment =
+                frame_drive_segment_cached(&depths).expect("a 40-deep chain drives under the caps");
+            let grown = segment.is_some();
+            assert!(grown, "a 40-deep chain must trip the grown-stack threshold");
+            let runtime = Arc::new(Runtime::new().expect("a tokio runtime builds"));
+            let stream = block_on_grown_if(&runtime, chained.execute_stream(), grown)
+                .expect("a grown execute_stream opens");
+            let reader =
+                StreamingBatchReader::new(Arc::clone(&runtime), stream, probe_schema(), grown);
+            let drained: Vec<RecordBatch> = reader
+                .map(|batch| batch.expect("each batch decodes"))
+                .collect();
+            let values: Vec<i64> = drained
+                .iter()
+                .flat_map(|batch| {
+                    batch
+                        .column(0)
+                        .as_any()
+                        .downcast_ref::<Int64Array>()
+                        .expect("id stays Int64")
+                        .values()
+                        .to_vec()
+                })
+                .collect();
+            assert_eq!(values, vec![1, 2, 3]);
         });
     }
 }

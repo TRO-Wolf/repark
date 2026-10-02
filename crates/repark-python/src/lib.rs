@@ -13,6 +13,7 @@ mod dataframe_fill;
 mod dataframe_names;
 mod dataframe_stack;
 mod dataframe_stats;
+mod deep_stack;
 mod fence;
 mod logical_names;
 mod ml;
@@ -21,6 +22,8 @@ mod plan_introspect;
 mod session;
 mod session_runtime;
 mod session_sources;
+#[cfg(test)]
+mod session_tests;
 mod session_write_options;
 mod subquery;
 mod temp_view_names;
@@ -33,9 +36,9 @@ use datafusion::error::DataFusionError;
 use pyo3::prelude::*;
 use repark_core::ErrorClass;
 
-pub use column::PyColumn;
-pub use dataframe::PyDataFrame;
 pub use session::PyReparkSession;
+pub(crate) use unresolved_routine::unknown_routine_to_py_err;
+pub use {column::PyColumn, dataframe::PyDataFrame};
 
 /// The exception taxonomy lives in [`exceptions`]; see that module for the lint expectation.
 mod exceptions;
@@ -82,14 +85,6 @@ pub(crate) fn to_py_err(err: repark_core::Error) -> PyErr {
 #[allow(clippy::needless_pass_by_value)]
 pub(crate) fn datafusion_to_py_err(err: DataFusionError) -> PyErr {
     to_py_err(repark_core::engine_err(err))
-}
-
-#[allow(clippy::needless_pass_by_value)]
-pub(crate) fn unknown_routine_to_py_err(sql: &str, err: DataFusionError) -> PyErr {
-    match repark_core::map_unknown_routine_message(sql, &err.to_string()) {
-        Some(message) => to_py_err(repark_core::Error::Analysis(message)),
-        None => datafusion_to_py_err(err),
-    }
 }
 
 /// Install the optional environment-gated tracing subscriber once at module import.

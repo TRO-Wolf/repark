@@ -3,7 +3,7 @@ use datafusion::arrow::array::AsArray;
 use super::super::*;
 use super::common::*;
 
-async fn setup_ntz(wh: &TempDir) -> (SessionContext, CatalogRegistry) {
+pub(super) async fn setup_ntz(wh: &TempDir) -> (SessionContext, CatalogRegistry) {
     let (ctx, catalogs) = setup(wh).await;
     repark_functions::register_all(&ctx);
     (ctx, catalogs)
@@ -25,7 +25,7 @@ async fn failure(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) ->
     }
 }
 
-async fn walls(
+pub(super) async fn walls(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     table: &str,
@@ -320,6 +320,172 @@ async fn ntz_refusals_name_timestamp_ntz() {
 }
 
 #[tokio::test]
+async fn stacked_sign_numeric_values_into_ntz_refuse_like_single_signed() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_ntz(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.ntz (id INT, c TIMESTAMP_NTZ) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.ntz VALUES (0, TIMESTAMP_NTZ'2024-01-01 00:00:00')",
+    )
+    .await;
+    for (cell, from) in [
+        ("- -1", "INT"),
+        ("- - -1", "INT"),
+        ("- -(1)", "INT"),
+        ("- -1.5", "DECIMAL(2,1)"),
+        ("+-1", "INT"),
+        ("-+1", "INT"),
+        ("- -1BD", "DECIMAL(1,0)"),
+        ("-1.5", "DECIMAL(2,1)"),
+        ("-1BD", "DECIMAL(1,0)"),
+        ("(- -1)", "INT"),
+        ("+- -1", "INT"),
+        ("+(- -1)", "INT"),
+        ("-(- -1)", "INT"),
+        ("- -1 + 0", "BIGINT"),
+        ("abs(- -1)", "INT"),
+        ("CAST(- -1 AS INT)", "INT"),
+    ] {
+        let sql = format!("INSERT INTO ice.sales.ntz VALUES (1, {cell})");
+        let text = failure(&ctx, &catalogs, &sql).await;
+        let expected = format!(
+            "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for \
+             the table `ice`.`sales`.`ntz`: Cannot safely cast `c` \"{from}\" to \"TIMESTAMP_NTZ\". \
+             SQLSTATE: KD000"
+        );
+        assert!(text.ends_with(&expected), "{sql}: {text}");
+    }
+    assert_eq!(
+        walls(&ctx, &catalogs, "ice.sales.ntz").await,
+        vec![(0, Some("2024-01-01 00:00:00".to_string()))]
+    );
+}
+
+#[tokio::test]
+async fn stacked_sign_multi_row_with_null_and_bad_row_refuses() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_ntz(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.ntz (id INT, c TIMESTAMP_NTZ) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.ntz VALUES (0, TIMESTAMP_NTZ'2024-01-01 00:00:00')",
+    )
+    .await;
+    let sql = "INSERT INTO ice.sales.ntz VALUES (900, NULL), (901, +- -1)";
+    let text = failure(&ctx, &catalogs, sql).await;
+    let expected = "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data \
+         for the table `ice`.`sales`.`ntz`: Cannot safely cast `c` \"INT\" to \"TIMESTAMP_NTZ\". \
+         SQLSTATE: KD000";
+    assert!(text.ends_with(expected), "{sql}: {text}");
+    assert_eq!(
+        walls(&ctx, &catalogs, "ice.sales.ntz").await,
+        vec![(0, Some("2024-01-01 00:00:00".to_string()))]
+    );
+}
+
+#[tokio::test]
+async fn equal_cells_in_one_row_store_and_bad_rows_still_refuse() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_ntz(&warehouse).await;
+    for sql in [
+        "CREATE TABLE ice.sales.eq (id INT, a INT, b INT, c TIMESTAMP_NTZ) USING iceberg",
+        "CREATE TABLE ice.sales.two (id INT, c TIMESTAMP_NTZ, d TIMESTAMP_NTZ) USING iceberg",
+        "CREATE TABLE ice.sales.idn (id INT, c TIMESTAMP_NTZ, qty INT) USING iceberg",
+        "INSERT INTO ice.sales.eq VALUES (1, 1, 1, TIMESTAMP_NTZ'2024-01-02 03:04:05')",
+        "INSERT INTO ice.sales.eq VALUES (3, NULL, NULL, TIMESTAMP_NTZ'2024-01-02 03:04:05')",
+        "INSERT INTO ice.sales.eq VALUES (6, 7, CAST(7 AS INT), TIMESTAMP_NTZ'2024-01-02 03:04:05')",
+        "INSERT INTO ice.sales.eq VALUES (7, 1, 2, TIMESTAMP_NTZ'2024-01-02 03:04:05'), (8, 3, 3, \
+         TIMESTAMP_NTZ'2024-01-02 03:04:05')",
+        "INSERT INTO ice.sales.eq (c, a, b, id) VALUES (TIMESTAMP_NTZ'2024-01-02 03:04:05', 21, \
+         21, 21)",
+        "INSERT INTO ice.sales.two VALUES (1, TIMESTAMP_NTZ'2024-01-02 03:04:05', \
+         TIMESTAMP_NTZ'2024-01-02 03:04:05')",
+        "INSERT INTO ice.sales.two VALUES (3, NULL, NULL)",
+        "INSERT INTO ice.sales.idn VALUES (1, TIMESTAMP_NTZ'2024-01-02 03:04:05', 1)",
+    ] {
+        run(&ctx, &catalogs, sql).await;
+    }
+    for (sql, table, from) in [
+        (
+            "INSERT INTO ice.sales.eq VALUES (10, 1, 1, '2024-01-02 03:04:05')",
+            "eq",
+            "STRING",
+        ),
+        (
+            "INSERT INTO ice.sales.eq VALUES (11, 1, 1, - -1)",
+            "eq",
+            "INT",
+        ),
+        (
+            "INSERT INTO ice.sales.two VALUES (5, '2024-01-02 03:04:05', '2024-01-02 03:04:05')",
+            "two",
+            "STRING",
+        ),
+    ] {
+        let text = failure(&ctx, &catalogs, sql).await;
+        let expected = format!(
+            "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for \
+             the table `ice`.`sales`.`{table}`: Cannot safely cast `c` \"{from}\" to \
+             \"TIMESTAMP_NTZ\". SQLSTATE: KD000"
+        );
+        assert!(text.ends_with(&expected), "{sql}: {text}");
+    }
+    let wall = Some("2024-01-02 03:04:05".to_string());
+    assert_eq!(
+        walls(&ctx, &catalogs, "ice.sales.eq").await,
+        [1, 3, 6, 7, 8, 21].map(|id| (id, wall.clone())).to_vec()
+    );
+    assert_eq!(
+        walls(&ctx, &catalogs, "ice.sales.two").await,
+        vec![(1, wall.clone()), (3, None)]
+    );
+    assert_eq!(
+        walls(&ctx, &catalogs, "ice.sales.idn").await,
+        vec![(1, wall)]
+    );
+}
+
+#[tokio::test]
+async fn default_cells_in_ntz_tables_store_null() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_ntz(&warehouse).await;
+    for sql in [
+        "CREATE TABLE ice.sales.idn (id INT, c TIMESTAMP_NTZ, qty INT) USING iceberg",
+        "CREATE TABLE ice.sales.mix (id INT, l TIMESTAMP, c TIMESTAMP_NTZ) USING iceberg",
+        "INSERT INTO ice.sales.idn VALUES (6, DEFAULT, 1)",
+        "INSERT INTO ice.sales.idn VALUES (7, TIMESTAMP_NTZ'2024-01-02 03:04:05', DEFAULT)",
+        "INSERT INTO ice.sales.idn (id, c) VALUES (20, DEFAULT)",
+        "INSERT INTO ice.sales.mix VALUES (4, DEFAULT, TIMESTAMP_NTZ'2024-01-02 03:04:05')",
+        "INSERT INTO ice.sales.mix (id, l, c) VALUES (20, DEFAULT, TIMESTAMP_NTZ'2024-01-02 \
+         03:04:05')",
+    ] {
+        run(&ctx, &catalogs, sql).await;
+    }
+    let wall = Some("2024-01-02 03:04:05".to_string());
+    assert_eq!(
+        walls(&ctx, &catalogs, "ice.sales.idn").await,
+        vec![(6, None), (7, wall.clone()), (20, None)]
+    );
+    assert_eq!(
+        walls(&ctx, &catalogs, "ice.sales.mix").await,
+        vec![(4, wall.clone()), (20, wall)]
+    );
+}
+
+#[tokio::test]
 async fn values_from_utc_stores_the_session_wall() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_ntz_at(&warehouse, "America/New_York").await;
@@ -450,4 +616,368 @@ async fn select_from_utc_into_ntz_keeps_the_bare_value_wrap() {
         walls(&ctx, &catalogs, "ice.sales.vsel").await,
         vec![(1, Some("2024-01-01 21:00:00".to_string()))]
     );
+}
+
+const LTZ_SOURCES: &str = "SELECT 1 AS id, TIMESTAMP'2024-07-01 12:00:00' AS c UNION ALL SELECT 2, \
+                           TIMESTAMP'2024-01-01 12:00:00Z' UNION ALL SELECT 3, \
+                           TIMESTAMP'2024-03-10 02:30:00' UNION ALL SELECT 4, \
+                           TIMESTAMP'2024-11-03 01:30:00'";
+
+const NTZ_SOURCES: &str = "SELECT 1 AS id, TIMESTAMP_NTZ'2024-07-01 12:00:00' AS c UNION ALL SELECT \
+                           2, TIMESTAMP_NTZ'2024-03-10 02:30:00' UNION ALL SELECT 3, \
+                           TIMESTAMP_NTZ'2024-11-03 01:30:00'";
+
+const LTZ_INTO_NTZ_WALLS: [(&str, [&str; 4]); 3] = [
+    (
+        "UTC",
+        [
+            "2024-07-01 12:00:00",
+            "2024-01-01 12:00:00",
+            "2024-03-10 02:30:00",
+            "2024-11-03 01:30:00",
+        ],
+    ),
+    (
+        "America/New_York",
+        [
+            "2024-07-01 12:00:00",
+            "2024-01-01 07:00:00",
+            "2024-03-10 03:30:00",
+            "2024-11-03 01:30:00",
+        ],
+    ),
+    (
+        "Asia/Kolkata",
+        [
+            "2024-07-01 12:00:00",
+            "2024-01-01 17:30:00",
+            "2024-03-10 02:30:00",
+            "2024-11-03 01:30:00",
+        ],
+    ),
+];
+
+const NTZ_INTO_LTZ_MICROS: [(&str, [i64; 3]); 3] = [
+    (
+        "UTC",
+        [
+            1_719_835_200_000_000,
+            1_710_037_800_000_000,
+            1_730_597_400_000_000,
+        ],
+    ),
+    (
+        "America/New_York",
+        [
+            1_719_849_600_000_000,
+            1_710_055_800_000_000,
+            1_730_611_800_000_000,
+        ],
+    ),
+    (
+        "Asia/Kolkata",
+        [
+            1_719_815_400_000_000,
+            1_710_018_000_000_000,
+            1_730_577_600_000_000,
+        ],
+    ),
+];
+
+const DATE_INTO_LTZ_MICROS: [(&str, i64); 3] = [
+    ("UTC", 1_710_028_800_000_000),
+    ("America/New_York", 1_710_046_800_000_000),
+    ("Asia/Kolkata", 1_710_009_000_000_000),
+];
+
+fn door_sql(door: &str, source: &str) -> (bool, bool, String) {
+    let (seeded, dynamic, template) = match door {
+        "by_name" => (
+            false,
+            false,
+            "INSERT INTO {t} BY NAME SELECT c, id, 1 AS p FROM ({s}) s",
+        ),
+        "overwrite" => (
+            false,
+            false,
+            "INSERT OVERWRITE {t} SELECT id, c, 1 FROM ({s}) s",
+        ),
+        "overwrite_by_name" => (
+            false,
+            false,
+            "INSERT OVERWRITE {t} BY NAME SELECT c, id, 1 AS p FROM ({s}) s",
+        ),
+        "overwrite_partition" => (
+            false,
+            false,
+            "INSERT OVERWRITE {t} PARTITION (p = 1) SELECT id, c FROM ({s}) s",
+        ),
+        "overwrite_dynamic" => (
+            false,
+            true,
+            "INSERT OVERWRITE {t} SELECT id, c, id FROM ({s}) s",
+        ),
+        "overwrite_columns" => (
+            false,
+            true,
+            "INSERT OVERWRITE {t} (id, c, p) SELECT id, c, id FROM ({s}) s",
+        ),
+        "merge_update" => (
+            true,
+            false,
+            "MERGE INTO {t} t USING ({s}) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET c = s.c",
+        ),
+        "merge_update_star" => (
+            true,
+            false,
+            "MERGE INTO {t} t USING (SELECT id, c, 1 AS p FROM ({s}) u) s ON t.id = s.id WHEN \
+             MATCHED THEN UPDATE SET *",
+        ),
+        "merge_insert" => (
+            false,
+            false,
+            "MERGE INTO {t} t USING ({s}) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, c, \
+             p) VALUES (s.id, s.c, 1)",
+        ),
+        "merge_insert_star" => (
+            false,
+            false,
+            "MERGE INTO {t} t USING (SELECT id, c, 1 AS p FROM ({s}) u) s ON t.id = s.id WHEN \
+             NOT MATCHED THEN INSERT *",
+        ),
+        other => panic!("unknown door {other}"),
+    };
+    let sql = template
+        .replace("{t}", "ice.sales.door")
+        .replace("{s}", source);
+    (seeded, dynamic, sql)
+}
+
+fn set_dynamic_overwrite(ctx: &SessionContext) {
+    let state = ctx.state_ref();
+    let mut state = state.write();
+    state
+        .config_mut()
+        .options_mut()
+        .extensions
+        .insert(repark_core::PartitionOverwriteModeConfig {
+            mode: repark_core::PartitionOverwriteMode::Dynamic,
+        });
+}
+
+async fn store_through_door(
+    zone: &str,
+    door: &str,
+    column_type: &str,
+    source: &str,
+    rows: usize,
+) -> (SessionContext, CatalogRegistry, TempDir) {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_ntz_at(&warehouse, zone).await;
+    let (seeded, dynamic, sql) = door_sql(door, source);
+    if dynamic {
+        set_dynamic_overwrite(&ctx);
+    }
+    run(
+        &ctx,
+        &catalogs,
+        &format!(
+            "CREATE TABLE ice.sales.door (id INT, c {column_type}, p INT) USING iceberg \
+             PARTITIONED BY (p)"
+        ),
+    )
+    .await;
+    if seeded {
+        let seed = (1..=rows)
+            .map(|id| format!("({id}, NULL, 1)"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        run(
+            &ctx,
+            &catalogs,
+            &format!("INSERT INTO ice.sales.door VALUES {seed}"),
+        )
+        .await;
+    }
+    run(&ctx, &catalogs, &sql).await;
+    (ctx, catalogs, warehouse)
+}
+
+async fn door_instants(ctx: &SessionContext, catalogs: &CatalogRegistry) -> Vec<(i32, i64)> {
+    let out = execute(
+        ctx,
+        catalogs,
+        "SELECT id, c FROM ice.sales.door ORDER BY id",
+    )
+    .await
+    .unwrap()
+    .collect()
+    .await
+    .unwrap();
+    let mut rows = Vec::new();
+    for batch in &out {
+        let ids = batch
+            .column(0)
+            .as_primitive::<datafusion::arrow::datatypes::Int32Type>();
+        let ticks = batch
+            .column(1)
+            .as_primitive::<datafusion::arrow::datatypes::TimestampMicrosecondType>();
+        for row in 0..batch.num_rows() {
+            rows.push((ids.value(row), ticks.value(row)));
+        }
+    }
+    rows
+}
+
+async fn assert_ltz_into_ntz(door: &str) {
+    for (zone, expected) in LTZ_INTO_NTZ_WALLS {
+        let (ctx, catalogs, _warehouse) =
+            store_through_door(zone, door, "TIMESTAMP_NTZ", LTZ_SOURCES, 4).await;
+        let want: Vec<(i32, Option<String>)> = (1..=4)
+            .zip(expected)
+            .map(|(id, wall)| (id, Some(wall.to_string())))
+            .collect();
+        assert_eq!(
+            walls(&ctx, &catalogs, "ice.sales.door").await,
+            want,
+            "{door} {zone}"
+        );
+    }
+}
+
+async fn assert_ntz_into_ltz(door: &str) {
+    for (zone, expected) in NTZ_INTO_LTZ_MICROS {
+        let (ctx, catalogs, _warehouse) =
+            store_through_door(zone, door, "TIMESTAMP", NTZ_SOURCES, 3).await;
+        let want: Vec<(i32, i64)> = (1..=3).zip(expected).collect();
+        assert_eq!(door_instants(&ctx, &catalogs).await, want, "{door} {zone}");
+    }
+}
+
+#[tokio::test]
+async fn by_name_stores_the_ltz_session_wall() {
+    assert_ltz_into_ntz("by_name").await;
+}
+
+#[tokio::test]
+async fn by_name_stores_the_ntz_session_instant() {
+    assert_ntz_into_ltz("by_name").await;
+}
+
+#[tokio::test]
+async fn overwrite_stores_the_ltz_session_wall() {
+    assert_ltz_into_ntz("overwrite").await;
+}
+
+#[tokio::test]
+async fn overwrite_stores_the_ntz_session_instant() {
+    assert_ntz_into_ltz("overwrite").await;
+}
+
+#[tokio::test]
+async fn overwrite_by_name_stores_the_ltz_session_wall() {
+    assert_ltz_into_ntz("overwrite_by_name").await;
+}
+
+#[tokio::test]
+async fn overwrite_by_name_stores_the_ntz_session_instant() {
+    assert_ntz_into_ltz("overwrite_by_name").await;
+}
+
+#[tokio::test]
+async fn overwrite_partition_stores_the_ltz_session_wall() {
+    assert_ltz_into_ntz("overwrite_partition").await;
+}
+
+#[tokio::test]
+async fn overwrite_partition_stores_the_ntz_session_instant() {
+    assert_ntz_into_ltz("overwrite_partition").await;
+}
+
+#[tokio::test]
+async fn dynamic_overwrite_stores_the_ltz_session_wall() {
+    assert_ltz_into_ntz("overwrite_dynamic").await;
+}
+
+#[tokio::test]
+async fn dynamic_overwrite_stores_the_ntz_session_instant() {
+    assert_ntz_into_ltz("overwrite_dynamic").await;
+}
+
+#[tokio::test]
+async fn column_list_overwrite_stores_the_ltz_session_wall() {
+    assert_ltz_into_ntz("overwrite_columns").await;
+}
+
+#[tokio::test]
+async fn column_list_overwrite_stores_the_ntz_session_instant() {
+    assert_ntz_into_ltz("overwrite_columns").await;
+}
+
+#[tokio::test]
+async fn merge_update_stores_the_ltz_session_wall() {
+    assert_ltz_into_ntz("merge_update").await;
+}
+
+#[tokio::test]
+async fn merge_update_stores_the_ntz_session_instant() {
+    assert_ntz_into_ltz("merge_update").await;
+}
+
+#[tokio::test]
+async fn merge_update_star_stores_the_ltz_session_wall() {
+    assert_ltz_into_ntz("merge_update_star").await;
+}
+
+#[tokio::test]
+async fn merge_update_star_stores_the_ntz_session_instant() {
+    assert_ntz_into_ltz("merge_update_star").await;
+}
+
+#[tokio::test]
+async fn merge_insert_stores_the_ltz_session_wall() {
+    assert_ltz_into_ntz("merge_insert").await;
+}
+
+#[tokio::test]
+async fn merge_insert_stores_the_ntz_session_instant() {
+    assert_ntz_into_ltz("merge_insert").await;
+}
+
+#[tokio::test]
+async fn merge_insert_star_stores_the_ltz_session_wall() {
+    assert_ltz_into_ntz("merge_insert_star").await;
+}
+
+#[tokio::test]
+async fn merge_insert_star_stores_the_ntz_session_instant() {
+    assert_ntz_into_ltz("merge_insert_star").await;
+}
+
+#[tokio::test]
+async fn date_stores_the_session_midnight_through_every_door() {
+    for door in [
+        "by_name",
+        "overwrite",
+        "overwrite_partition",
+        "overwrite_dynamic",
+        "merge_update",
+        "merge_insert_star",
+    ] {
+        for (zone, micros) in DATE_INTO_LTZ_MICROS {
+            let (ctx, catalogs, _warehouse) = store_through_door(
+                zone,
+                door,
+                "TIMESTAMP",
+                "SELECT 1 AS id, DATE'2024-03-10' AS c",
+                1,
+            )
+            .await;
+            assert_eq!(
+                door_instants(&ctx, &catalogs).await,
+                vec![(1, micros)],
+                "{door} {zone}"
+            );
+        }
+    }
 }

@@ -292,26 +292,10 @@ def test_plain_insert_positive_controls_still_write(spark: ReparkSession) -> Non
     assert _rows(spark, "k, v") == [{"k": 1, "v": 9}]
 
 
-def test_the_named_residual_is_a_literal_values_row(spark: ReparkSession) -> None:
-    """WI-2's honest residual, pinned so it cannot rot into a surprise.
-
-    ``INSERT INTO … VALUES`` conforms its literals inside the ``Values`` node
-    (``LogicalPlanBuilder::infer_inner`` rewrites each row element as
-    ``row[j].cast_to(field_type, schema)``), where a synthesized cast and a user-written
-    ``CAST(x AS INT)`` are byte-identical — the outer conform is a no-op once the inner cast
-    already yielded the target type. Gating it would refuse a legal explicit cast, which is worse
-    than the gap, so the rule judges only ``Cast(Column, …)``.
-
-    The half of the residual that carried a silently-wrong VALUE is closed anyway: ``DATE → INT``
-    is refused wherever the cast appears, ``Values`` node included, by the G6-3 cast-legality gate
-    — with the CAST class rather than the write class, which this test records rather than hides.
-    What is genuinely open is a cast-legal-but-not-store-assignable literal, and ``true`` into an
-    ``INT`` column is exactly that.
-    """
+def test_a_literal_values_row_refuses_like_spark(spark: ReparkSession) -> None:
     _tables(spark, "k INT, v INT", "k INT, b BOOLEAN")
-    # Open: writes 1, where Spark refuses INCOMPATIBLE_DATA_FOR_TABLE.
-    spark.sql(f"INSERT INTO {FQ} VALUES (1, true)")
-    assert _rows(spark, "k, v") == [{"k": 1, "v": 1}]
-    # Closed, by the other gate and with the other class.
-    with pytest.raises(AnalysisException, match=r"DATATYPE_MISMATCH\.CAST_WITH_FUNC_SUGGESTION"):
-        spark.sql(f"INSERT INTO {FQ} VALUES (2, DATE '2020-01-01')")
+    for row, source in (("(1, true)", "BOOLEAN"), ("(2, DATE '2020-01-01')", "DATE")):
+        with pytest.raises(AnalysisException, match=SPARK_CLASS) as caught:
+            spark.sql(f"INSERT INTO {FQ} VALUES {row}")
+        assert f'Cannot safely cast `v` "{source}" to "INT". SQLSTATE: KD000' in str(caught.value)
+    assert _rows(spark, "k, v") == []

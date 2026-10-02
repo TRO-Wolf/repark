@@ -27,6 +27,7 @@ pub mod insert_gate;
 pub mod merge;
 pub mod meta_delete;
 mod name_resolution;
+pub mod negated_null_store;
 pub mod nested_column;
 pub mod nested_type_sql;
 pub mod ntz_store;
@@ -52,9 +53,13 @@ pub mod set_location;
 /// Product snapshot-ref helpers (CREATE/DROP BRANCH|TAG) + test-support seam.
 pub mod snapshot_refs;
 pub mod sort_order;
+pub mod sql_text;
 mod static_value;
 /// The ANSI store-assignment matrix — ONE home for MERGE and the non-MERGE insert/append lowerings.
 pub(crate) mod store_assign;
+pub mod store_cast;
+pub(crate) mod store_fold;
+pub mod store_overflow;
 pub mod summary_collision;
 pub mod table_admin;
 /// Test-support-only snapshot-ref helpers (`_testing_create_ref`).
@@ -110,6 +115,7 @@ pub use merge::{
     write_data_files, write_data_files_from_stream, write_data_files_from_stream_with_concurrency,
     write_data_files_with_concurrency,
 };
+pub use ntz_store::{zone_stores, zone_stores_by_name};
 pub use output_spec::{
     parse_output_spec_id, staged_spec_is_partitioned, staging_table, validate_output_spec_id,
 };
@@ -142,6 +148,7 @@ pub use session_write_conf::{
     session_write_conf_from_options, session_write_conf_is_set, unset_session_write_key,
     with_session_write_conf,
 };
+pub use store_overflow::StoreOverflowCast;
 pub use summary_collision::EngineSummary;
 pub use truncate::{commit_truncate, commit_truncate_to};
 pub use write_options::{
