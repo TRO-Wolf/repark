@@ -9,6 +9,12 @@ COLUMN_PATH = Path(__file__).resolve().parents[1] / "src" / "repark" / "spark" /
 COLUMN_FIELDS_PATH = (
     Path(__file__).resolve().parents[1] / "src" / "repark" / "spark" / "column_fields.py"
 )
+BINDING_MODULES: dict[str, Path] = {
+    "_column_fields": COLUMN_FIELDS_PATH,
+    "_column_sort": COLUMN_PATH.with_name("column_sort.py"),
+    "_column_string": COLUMN_PATH.with_name("column_string.py"),
+}
+SPLIT_MODULES: frozenset[str] = frozenset({"_column_sort", "_column_string"})
 SRC_ROOT = Path(__file__).resolve().parents[1] / "src" / "repark"
 GENERIC_HELPERS: dict[str, frozenset[str]] = {
     "functions.py": frozenset({"lit", "_lit_numpy_ndarray", "_scalar"}),
@@ -61,9 +67,9 @@ def _column_class(tree: ast.Module) -> ast.ClassDef:
 
 
 def _group2_functions(column_class: ast.ClassDef) -> dict[str, ast.FunctionDef]:
-    """Map Group-2 names to AST nodes, resolving `_column_fields` bindings. pins: facade-2/C-009"""
+    """Map Group-2 names to AST nodes, resolving sibling-module bindings. pins: facade-2/C-009"""
     found: dict[str, ast.FunctionDef] = {}
-    bound: dict[str, str] = {}
+    bound: dict[str, tuple[str, str]] = {}
     for item in column_class.body:
         if isinstance(item, ast.FunctionDef) and item.name in GROUP2_METHODS:
             found[item.name] = item
@@ -74,19 +80,20 @@ def _group2_functions(column_class: ast.ClassDef) -> dict[str, ast.FunctionDef]:
             and item.targets[0].id in GROUP2_METHODS
             and isinstance(item.value, ast.Attribute)
             and isinstance(item.value.value, ast.Name)
-            and item.value.value.id == "_column_fields"
+            and item.value.value.id in BINDING_MODULES
         ):
-            bound[item.targets[0].id] = item.value.attr
-    if bound:
-        fields_tree = ast.parse(
-            COLUMN_FIELDS_PATH.read_text(encoding="utf-8"),
-            filename=str(COLUMN_FIELDS_PATH),
-        )
-        for node in fields_tree.body:
-            if isinstance(node, ast.FunctionDef):
-                for bound_name, func_name in bound.items():
-                    if node.name == func_name:
-                        found[bound_name] = node
+            bound[item.targets[0].id] = (item.value.value.id, item.value.attr)
+    for alias in sorted({module for module, _ in bound.values()} | SPLIT_MODULES):
+        path = BINDING_MODULES[alias]
+        module_tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in module_tree.body:
+            if not isinstance(node, ast.FunctionDef):
+                continue
+            for bound_name, (module, func_name) in bound.items():
+                if module == alias and node.name == func_name:
+                    found[bound_name] = node
+            if alias in SPLIT_MODULES and node.name in GROUP2_METHODS:
+                found.setdefault(node.name, node)
     return found
 
 
