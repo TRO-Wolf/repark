@@ -89,11 +89,14 @@ def test_h2_same_object_self_join_equi_count(spark: ReparkSession) -> None:
 
 
 def test_h2_same_object_self_join_cross_fields(spark: ReparkSession) -> None:
-    """``df.join(df, df.a == df.b)`` same-object: left.a equi right.b."""
+    """``df.join(df, df.a == df.b)`` refuses 1182 (``P_h2_cross_fields``)."""
     frame = spark.createDataFrame([(1, 2), (2, 1), (3, 3)], ["a", "b"])
-    joined = frame.join(frame, frame.a == frame.b)
-    assert joined.columns == ["a", "b", "a", "b"]
-    assert joined.count() == 3
+    with pytest.raises(AnalysisException) as refused:
+        frame.join(frame, frame.a == frame.b).count()
+    assert refused.value.getCondition() == "_LEGACY_ERROR_TEMP_1182"
+    params = refused.value.getMessageParameters()
+    assert params["config"] == "spark.sql.analyzer.failAmbiguousSelfJoin"
+    assert params["ambiguousAttrs"] == "a, b"
 
 
 def test_h2_alias_self_join_still_works(spark: ReparkSession) -> None:
@@ -114,18 +117,37 @@ def test_h2_name_equi_same_object_unchanged(spark: ReparkSession) -> None:
 
 
 def test_h2_same_object_compound_self_join_refuses_loud(spark: ReparkSession) -> None:
-    """Multi-token arms refuse — alternation would silent-wrong.
+    """Compound self-join arms refuse 1182 (``P_h2_compound_same``).
 
-    ``(df.x + df.y) == (df.x + df.y)`` must not rewrite to ``L.x + R.y = L.x + R.y``
-    (cartesian). Alias both sides for full compound self-join support.
+    The aliased half refuses in Spark too (``P_h2_compound_alias``); free-name
+    strings answer 3 on both engines.
     """
     frame = spark.createDataFrame([(1, 10), (2, 20), (3, 30)], ["x", "y"])
-    with pytest.raises(AnalysisException, match=r"multi-token comparison arms|alias"):
+    with pytest.raises(AnalysisException) as refused:
         _ = frame.join(frame, (frame.x + frame.y) == (frame.x + frame.y)).count()
+    assert refused.value.getCondition() == "_LEGACY_ERROR_TEMP_1182"
+    params = refused.value.getMessageParameters()
+    assert params["config"] == "spark.sql.analyzer.failAmbiguousSelfJoin"
+    assert params["ambiguousAttrs"] == "x, y, x, y"
     left = frame.alias("l")
     right = frame.alias("r")
-    joined = left.join(right, (left.x + left.y) == (right.x + right.y))
-    assert joined.count() == 3
+    with pytest.raises(AnalysisException) as refused_alias:
+        _ = left.join(right, (left.x + left.y) == (right.x + right.y)).count()
+    assert refused_alias.value.getCondition() == "_LEGACY_ERROR_TEMP_1182"
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="R-18: qualified free names do not resolve in join conditions; "
+    "Spark 4.1.2 answers 3 under both case rules",
+)
+def test_h2_compound_alias_free_names_answer(spark: ReparkSession) -> None:
+    """Free-name compound alias join answers 3 (Spark-measured, R-18 gap)."""
+    frame = spark.createDataFrame([(1, 10), (2, 20), (3, 30)], ["x", "y"])
+    left = frame.alias("l")
+    right = frame.alias("r")
+    free = left.join(right, (F.col("l.x") + F.col("l.y")) == (F.col("r.x") + F.col("r.y")))
+    assert free.count() == 3
 
 
 def test_h2_same_object_and_or_simple_leaves_still_equi(spark: ReparkSession) -> None:

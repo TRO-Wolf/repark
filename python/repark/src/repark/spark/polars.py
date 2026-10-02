@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from repark import _native
 from repark.errors import PySparkTypeError, PySparkValueError
 from repark.spark._idents import is_plain_ident
 from repark.spark._idents import quote_ident as _quote_ident_ssot
@@ -239,7 +240,14 @@ class PolarsFrame:
             select_clause = f"{left_view}.*" + (f", {select_right}" if select_right else "")
             sql = f"SELECT {select_clause} FROM {left_view} {join_kw} {right_view} ON {on_sql}"
             planned = session.sql(sql)
-            child = self._frame._spawn(planned, right)
+            reminted, node = _native.join_plan_lineage(
+                planned,
+                self._frame._frame_node,
+                right._frame_node,
+                len(self._frame.columns),
+                True,
+            )
+            child = self._frame._spawn(reminted, right, node=node)
             return PolarsFrame(child)
         finally:
             session.drop_temp_view(left_view)

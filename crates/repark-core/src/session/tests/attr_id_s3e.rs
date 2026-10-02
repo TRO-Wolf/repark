@@ -13,7 +13,7 @@ use datafusion::prelude::SessionContext;
 
 use crate::frame_names::NameRule::{Exact, IgnoreCase};
 use crate::frame_names::{
-    Resolution, bind_qualified_free_refs, grandchild_qualified_key, join_on_named_keys,
+    FrameNode, Resolution, bind_qualified_free_refs, grandchild_qualified_key, join_on_named_keys,
     join_output_sources, qualifier_star_positions, resolve,
 };
 
@@ -270,12 +270,16 @@ fn join_output_sources_pairs_using_keys() {
     let context = SessionContext::new();
     let left = tagged_as(&context, ["k1", "l2", "l3"]).alias("l").unwrap();
     let right = tagged_as(&context, ["k1", "r2", "r3"]).alias("r").unwrap();
-    let joined = join_on_named_keys(
+    let left_node = FrameNode::root(left.schema()).unwrap();
+    let right_node = FrameNode::root(right.schema()).unwrap();
+    let (joined, _) = join_on_named_keys(
         left,
         right,
         &["id".to_string()],
         JoinType::Inner,
         IgnoreCase,
+        left_node,
+        right_node,
     )
     .unwrap();
     assert_eq!(
@@ -316,12 +320,16 @@ fn join_output_sources_emits_left_positions_only_for_semi() {
     let context = SessionContext::new();
     let left = tagged_as(&context, ["k1", "l2", "l3"]).alias("l").unwrap();
     let right = tagged_as(&context, ["k1", "r2", "r3"]).alias("r").unwrap();
-    let joined = join_on_named_keys(
+    let left_node = FrameNode::root(left.schema()).unwrap();
+    let right_node = FrameNode::root(right.schema()).unwrap();
+    let (joined, _) = join_on_named_keys(
         left,
         right,
         &["id".to_string()],
         JoinType::LeftSemi,
         IgnoreCase,
+        left_node,
+        right_node,
     )
     .unwrap();
     assert_eq!(

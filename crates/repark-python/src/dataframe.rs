@@ -21,6 +21,7 @@ use tokio::runtime::Runtime;
 use crate::arrow_export::StreamingBatchReader;
 use crate::column::PyColumn;
 use crate::fence::{fenced, fenced_span};
+use crate::frame_lineage::PyFrameNode;
 use crate::{datafusion_to_py_err, to_py_err};
 
 /// The Arrow C stream interface mandates this exact capsule name (a NUL-terminated C string).
@@ -385,11 +386,15 @@ impl PyDataFrame {
         right: PyRef<'_, PyDataFrame>,
         on: Vec<String>,
         how: &str,
-    ) -> PyResult<Self> {
+        left_node: &PyFrameNode,
+        right_node: &PyFrameNode,
+    ) -> PyResult<(Self, PyFrameNode)> {
         fenced!("PyDataFrame.join_on_names", {
             let join_type = join_type_from_str(how)?;
-            let df = crate::dataframe_names::join_on_keys(&self.df, &right.df, &on, join_type)?;
-            Ok(Self::new(df, Arc::clone(&self.runtime)))
+            let (df, node) = crate::dataframe_names::join_on_keys(
+                &self.df, &right.df, &on, join_type, left_node, right_node,
+            )?;
+            Ok((Self::new(df, Arc::clone(&self.runtime)), node))
         })
     }
 

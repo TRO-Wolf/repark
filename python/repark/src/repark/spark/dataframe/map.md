@@ -200,6 +200,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   caller node, joins keep today's spawn); the unemitted-id family moves to
   `unemitted_ids.py` behind `DataFrame` bindings (3652 → 3595, with the CAP-1
   mirror). Pins: `python/repark/tests/test_attr_id_1_sj2.py`.
+  **ATTR-ID-1 SJ-3 (2026-10-02):** `_join_on_condition_h1` prepares the
+  condition in Rust (`prepare_join_condition`) and spawns with the returned
+  `Join` node; the USING paths unpack `(frame, node)` from `join_on_names`;
+  `__init__` indexes each frame by node id in the shared `alive_token` box
+  (`frame_registry`, weak) so the names map resolves birth frames without a
+  global. Pins: `python/repark/tests/test_attr_id_1_sj3.py`.
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`
@@ -691,12 +697,16 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `join_attr_tokens.py` (CAP-1 split, pure move); this module re-exports the nine
   names so `core` and the frozen surface keep working. 1111 → 910 drops below the
   default ceiling, so the exception row leaves the CAP-1 test and `check_lib_py.py`.
+  ATTR-ID-1 SJ-3 (2026-10-02): the siding names are deleted with the block;
+  `_emit_join_side_columns` moves here from `core.py` (pure move, CAP-1 split);
+  five re-exports remain (`_ATTR_TOKEN_RE`, `_emit_join_side_columns`,
+  `_join_condition_attr_names`, `_replace_local_attr_token`,
+  `_rewrite_attr_tokens_local`).
   ATTR-ID-1 S4 follow-up (2026-10-02): the identity-alias peel carries
   `Column._birth_frame` with `_attr_id`. pins: attr-id-1/C-041
-- `join_attr_tokens.py` owns join `__REPARK_ATTR_` token siding: `_attr_token_exact_side`
-  binds one-side ids and qualifier-disambiguated shared ids; `_resolve_join_token_sides`
-  precomputes every token's side (exact, less-claimed complement, or positional
-  alternation under the multi-token-arm guard); `_JoinAttrRewriter` applies the sides.
+- `join_attr_tokens.py` owns `__REPARK_ATTR_` token scanning: the single-frame local
+  rewrite, the `_select_via_attr_sql` fast path, and `_join_condition_attr_names`
+  (birth-frame display names for the native join-condition preparer).
   **ATTR-ID-1 S4 (2026-10-02):** the arm guard treats `IS [NOT] DISTINCT FROM`
   as a comparison boundary like `=` (the `eqNullSafe` spelling), and the local
   single-frame rewrite consults the native `projection_source_ids` lineage for a
@@ -708,6 +718,15 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   **ATTR-ID-1 SJ-2 (2026-10-02):** `_ATTR_TOKEN_RE` takes the `F<frame>` field
   (`__REPARK_ATTR_<id>__F<frame>__<quals>__`); the qualifier group moves from 2
   to 3. Pins: `python/repark/tests/test_attr_id_1_sj2.py`.
+  **ATTR-ID-1 SJ-3 (2026-10-02):** the siding block is deleted outright
+  (`_attr_token_exact_side`, `_ATTR_SIDE_BOUNDARY_RE`,
+  `_same_object_attr_alternation_safe`, `_resolve_join_token_sides`,
+  `_rewrite_join_attr_sql`, `_JoinAttrRewriter`); the native
+  `prepare_join_condition` sides every token. `_emit_join_side_columns` moves
+  here from `core.py` (pure move, CAP-1 split): it walks by position so
+  chained-join duplicate displays do not hit `AMBIGUOUS_REFERENCE`, engine
+  ordinals stay unique across chained duplicates, and bare `joined["b"]` stays
+  `AMBIGUOUS`. Pins: `python/repark/tests/test_attr_id_1_sj3.py`.
 - `unemitted_ids.py` — **ATTR-ID-1 SJ-2 (2026-10-02):** the semi/anti
   unemitted-id family (`remember_unemitted_right_ids`/`raise_if_id_not_emitted`/
   `raise_unemitted_attr_tokens`/`refuse_unemitted_ids`), split out of `core.py`
@@ -1096,10 +1115,6 @@ that held the comment (pins: comment-core-1/C-003).
   Semi/anti engine tokens emit the left schema only. Cache MemTable names are
   object-identity and exclude checkpoints, CDF, and mapInArrow. Re-exports keep
   `plan_collapse` first so sibling modules import its helpers.
-- `_emit_join_side_columns`: Walk by position so chained-join duplicate displays do not
-  hit `AMBIGUOUS_REFERENCE`. Engine ordinals stay unique across chained duplicates.
-  Last-write on display duplicates applies to the internal origin map only; bare
-  `joined["b"]` stays `AMBIGUOUS`. Nested origin maps propagate.
 - `_by_name_casefold_map`: Exact duplicate names must not silently overwrite the prior
   entry.
 - `_normalize_subset`: PySpark's error class is per-surface, not derivable from

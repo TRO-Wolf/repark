@@ -2,12 +2,14 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use datafusion::common::DFSchema;
+use datafusion::dataframe::DataFrame;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3::wrap_pyfunction;
 use repark_core::frame_names::{
     AttrId, FrameNode, JoinSide, Prepared, Refusal, SELF_JOIN_CONDITION, SelfJoinRules, check_refs,
     missing_condition, missing_message, plan_is_relation, quoted_names, self_join_message,
+    shared_ids,
 };
 use repark_functions::case_sensitive::SPARK_SQL_FAIL_AMBIGUOUS_SELF_JOIN_KEY;
 
@@ -42,12 +44,14 @@ impl PyFrameNode {
     }
 }
 
+#[allow(clippy::missing_errors_doc)]
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PyFrameNode>()?;
     module.add_function(wrap_pyfunction!(frame_root, module)?)?;
     module.add_function(wrap_pyfunction!(frame_derived, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_self_join_refs, module)?)?;
     module.add_function(wrap_pyfunction!(prepare_join_condition, module)?)?;
+    module.add_function(wrap_pyfunction!(join_plan_lineage, module)?)?;
     Ok(())
 }
 
@@ -193,6 +197,7 @@ pub fn refuse_self_join_refs(
     clippy::needless_pass_by_value,
     clippy::too_many_arguments
 )]
+#[allow(clippy::implicit_hasher)]
 #[pyfunction]
 #[pyo3(signature = (
     session, cond_sql, left_node, right_node, left_frame, right_frame, left_alias, right_alias,
@@ -249,5 +254,36 @@ pub fn prepare_join_condition(
             )),
             Prepared::Refused(refusal) => Err(refusal_error(py, &refusal)),
         }
+    })
+}
+
+#[allow(clippy::missing_errors_doc)]
+#[pyfunction]
+#[pyo3(signature = (joined_frame, left_node, right_node, left_width, emits_right))]
+pub fn join_plan_lineage(
+    joined_frame: &PyDataFrame,
+    left_node: &PyFrameNode,
+    right_node: &PyFrameNode,
+    left_width: usize,
+    emits_right: bool,
+) -> PyResult<(PyDataFrame, PyFrameNode)> {
+    fenced!("frame_lineage.join_plan_lineage", {
+        let shared = shared_ids(&left_node.node, right_node.node.outputs());
+        let (state, plan) = joined_frame.inner().clone().into_parts();
+        let (plan, remint) = repark_core::frame_names::remint_shared(plan, left_width, &shared)
+            .map_err(datafusion_to_py_err)?;
+        let schema = plan.schema().clone();
+        let node = FrameNode::join(
+            &schema,
+            Arc::clone(&left_node.node),
+            Arc::clone(&right_node.node),
+            remint,
+            emits_right,
+        )
+        .map_err(datafusion_to_py_err)?;
+        Ok((
+            PyDataFrame::new(DataFrame::new(state, plan), joined_frame.runtime_handle()),
+            PyFrameNode { node },
+        ))
     })
 }

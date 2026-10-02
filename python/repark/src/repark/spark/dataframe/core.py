@@ -11,6 +11,7 @@ import functools
 import logging
 import re
 import uuid
+import weakref
 from collections.abc import Callable, Iterator
 from typing import TYPE_CHECKING, Any, overload
 
@@ -77,35 +78,6 @@ def _drop_mia_temp_views(session: Any, names: list[str]) -> None:
         with contextlib.suppress(Exception):
             session.drop_temp_view(view_name)
     names.clear()
-
-
-def _emit_join_side_columns(
-    side_frame: DataFrame,
-    side_alias: str,
-    side_tag: str,
-    *,
-    display_counts: dict[str, int],
-    proj_parts: list[str],
-    display_names: list[str],
-    engine_names: list[str],
-) -> None:
-    """Project one join side into ``proj_parts`` (walk by position)."""
-    if side_frame._display_names is not None and side_frame._engine_names is not None:
-        pairs = list(zip(side_frame._display_names, side_frame._engine_names, strict=True))
-    else:
-        pairs = [(name, name) for name in side_frame.columns]
-    for display_name, source_engine in pairs:
-        if display_counts.get(display_name, 0) > 1:
-            engine_out = (
-                f"__repark_{side_tag}_{side_frame._plan_id}_{len(engine_names)}_{display_name}"
-            )
-        else:
-            engine_out = display_name
-        proj_parts.append(
-            f"{side_alias}.{_quote_ident_sql(source_engine)} AS {_quote_ident_sql(engine_out)}"
-        )
-        display_names.append(display_name)
-        engine_names.append(engine_out)
 
 
 def _by_name_casefold_map(columns: list[str], *, surface: str) -> dict[str, str]:
@@ -268,6 +240,8 @@ class DataFrame:
         self._alive_token: dict[str, bool] = (
             alive_token if alive_token is not None else {"alive": True}
         )
+        registry = self._alive_token.setdefault("frame_registry", weakref.WeakValueDictionary())
+        registry[self._frame_node.id] = self
         self._persist_requested = False
         self._cache_view: str | None = None
         self._cache_view_owned_handle: Any | None = None
@@ -2308,11 +2282,6 @@ class DataFrame:
         and duplicate non-key names resolve. Output
         may carry Spark-legal duplicate *display* names with unique engine fields + attribute ids
         for post-join ``select(df1["x"])`` / ``drop(df1["x"])`` / ``AMBIGUOUS_REFERENCE``.
-
-        Same-object joins alternate token sides for simple
-        leaf comparisons (``df.x == df.x``, AND/OR of those) so equi self-joins keep
-        correct cardinality. Multi-token arms (``(df.x + df.y) == …``) refuse loud —
-        alternation would silently mis-bind.
         """
         join_how = "inner" if how is None else str(how).lower().replace("_", "")
         how_aliases = {
@@ -2362,7 +2331,10 @@ class DataFrame:
         else:
             left, right, side_names = self, other, None
         if isinstance(on, str):
-            child = left._spawn(left._plan().join_on_names(right._plan(), [on], engine_how), other)
+            planned, node = left._plan().join_on_names(
+                right._plan(), [on], engine_how, left._frame_node, right._frame_node
+            )
+            child = left._spawn(planned, other, node=node)
             replace_expr._assign_join_qualifiers(child, len(left.columns), side_names)
             child._frame_qualifiers = _qualified_names._join_frame_qualifiers(child, left, right)
             child._remember_unemitted_right_ids(
@@ -2378,7 +2350,10 @@ class DataFrame:
                         "If this is intended, set spark.sql.crossJoin.enabled=true to allow them."
                     )
                 return left.crossJoin(right)
-            child = left._spawn(left._plan().join_on_names(right._plan(), keys, engine_how), other)
+            planned, node = left._plan().join_on_names(
+                right._plan(), keys, engine_how, left._frame_node, right._frame_node
+            )
+            child = left._spawn(planned, other, node=node)
             replace_expr._assign_join_qualifiers(child, len(left.columns), side_names)
             child._frame_qualifiers = _qualified_names._join_frame_qualifiers(child, left, right)
             child._remember_unemitted_right_ids(
@@ -2415,12 +2390,19 @@ class DataFrame:
         self._session.create_or_replace_temp_view(left_alias, self._plan())
         self._session.create_or_replace_temp_view(right_alias, other._plan())
         try:
-            on_sql = _rewrite_join_attr_sql(
-                condition.join_sql_part(),
-                left=self,
-                right=other,
-                left_alias=left_alias,
-                right_alias=right_alias,
+            cond_sql = condition.join_sql_part()
+            on_sql, remint = _native.prepare_join_condition(
+                self._session,
+                cond_sql,
+                self._frame_node,
+                other._frame_node,
+                self._plan(),
+                other._plan(),
+                left_alias,
+                right_alias,
+                list(self.columns),
+                list(other.columns),
+                _join_condition_attr_names(self, cond_sql),
             )
             _native.refuse_ambiguous_join_condition(self._plan(), other._plan(), on_sql)
             left_cols = list(self.columns)
@@ -2464,8 +2446,15 @@ class DataFrame:
                     f"{how_sql} JOIN {right_alias} ON {on_sql}"
                 )
             sides = (self._plan(), None if left_only else other._plan())
-            planned = _native.requalify_join_sides(self._session.sql(join_sql), *sides)
-            child = self._spawn(planned, other)
+            planned, node = _native.requalify_join_sides(
+                self._session.sql(join_sql),
+                *sides,
+                self._frame_node,
+                other._frame_node,
+                remint,
+                not left_only,
+            )
+            child = self._spawn(planned, other, node=node)
             child._display_names = display_names
             child._engine_names = engine_names
             child._frame_qualifiers = _qualified_names._join_frame_qualifiers(child, self, other)
@@ -3494,7 +3483,6 @@ from repark.spark.dataframe.plan_collapse import (  # noqa: E402, I001
     _parse_count_distinct_simple_names,
     _reject_aggregate_in_with_column,
     _reject_partition_transform,
-    _ATTR_SIDE_BOUNDARY_RE,
     _arrow_debug_type_to_sql,
     _arrow_pa_type_label,
     _cell_text,
@@ -3515,9 +3503,9 @@ from repark.spark.dataframe.plan_collapse import (  # noqa: E402, I001
     _output_field_would_persist_required,
     _parse_list_element_sql_type,
     _reject_non_numeric_range_order,
-    _rewrite_join_attr_sql,
     _rewrite_attr_tokens_local,
-    _same_object_attr_alternation_safe,
+    _emit_join_side_columns,
+    _join_condition_attr_names,
     _spark_array_element_to_sql,
     _UNTYPED_NULL_ELEMENT,
     _sql_embed_expr_fragment,

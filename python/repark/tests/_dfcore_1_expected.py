@@ -27,8 +27,6 @@ EXPECTED_PACKAGE_EXPORTS: list[str] = [
     "TYPE_CHECKING",
     "UnsupportedOperationException",
     "_APPLY_IN_PANDAS_KEY_MISSING",
-    "_ATTR_SIDE_BOUNDARY_RE",
-    "_ATTR_TOKEN_RE",
     "_CACHE_VIEW_PREFIX",
     "_EXPLAIN_SECTION_PLAN",
     "_EXPORT_MEMORY_ERROR_MARKERS",
@@ -83,6 +81,7 @@ EXPECTED_PACKAGE_EXPORTS: list[str] = [
     "_is_native_pure_global_aggregate",
     "_is_numeric_type_key",
     "_iter_apply_in_pandas_group_tables",
+    "_join_condition_attr_names",
     "_list_field_element_debug",
     "_map_in_pandas_arrow_batches",
     "_merge_path_write_tree",
@@ -117,10 +116,8 @@ EXPECTED_PACKAGE_EXPORTS: list[str] = [
     "_resolve_cache_budgets",
     "_resolve_writer_table",
     "_rewrite_attr_tokens_local",
-    "_rewrite_join_attr_sql",
     "_run_pandas_udf_arrow_batches",
     "_run_python_udf_arrow_batches",
-    "_same_object_attr_alternation_safe",
     "_spark_array_element_to_sql",
     "_sql_embed_expr_fragment",
     "_sql_ident_bare_name",
@@ -151,6 +148,7 @@ EXPECTED_PACKAGE_EXPORTS: list[str] = [
     "sort_nulls_first_for",
     "udf_bridge",
     "uuid",
+    "weakref",
     "writer_readwriter",
 ]
 
@@ -179,8 +177,6 @@ EXPECTED_CORE_EXPORTS: list[str] = [
     "TYPE_CHECKING",
     "UnsupportedOperationException",
     "_APPLY_IN_PANDAS_KEY_MISSING",
-    "_ATTR_SIDE_BOUNDARY_RE",
-    "_ATTR_TOKEN_RE",
     "_CACHE_VIEW_PREFIX",
     "_EXPLAIN_SECTION_PLAN",
     "_EXPORT_MEMORY_ERROR_MARKERS",
@@ -235,6 +231,7 @@ EXPECTED_CORE_EXPORTS: list[str] = [
     "_is_native_pure_global_aggregate",
     "_is_numeric_type_key",
     "_iter_apply_in_pandas_group_tables",
+    "_join_condition_attr_names",
     "_list_field_element_debug",
     "_map_in_pandas_arrow_batches",
     "_merge_path_write_tree",
@@ -269,10 +266,8 @@ EXPECTED_CORE_EXPORTS: list[str] = [
     "_resolve_cache_budgets",
     "_resolve_writer_table",
     "_rewrite_attr_tokens_local",
-    "_rewrite_join_attr_sql",
     "_run_pandas_udf_arrow_batches",
     "_run_python_udf_arrow_batches",
-    "_same_object_attr_alternation_safe",
     "_spark_array_element_to_sql",
     "_sql_embed_expr_fragment",
     "_sql_ident_bare_name",
@@ -298,6 +293,7 @@ EXPECTED_CORE_EXPORTS: list[str] = [
     "scratch_view_name",
     "sort_nulls_first_for",
     "uuid",
+    "weakref",
 ]
 
 EXPECTED_DATAFRAME_SLOTS: tuple[str, ...] = (
@@ -311,6 +307,7 @@ EXPECTED_DATAFRAME_SLOTS: tuple[str, ...] = (
     "_eager_shape",
     "_engine_names",
     "_field_metadata",
+    "_frame_node",
     "_frame_qualifiers",
     "_handles",
     "_ingest_report",
@@ -438,6 +435,7 @@ EXPECTED_DATAFRAME_DIR: list[str] = [
     "_execute_map_in_arrow_bridge_ipc",
     "_explain_text",
     "_field_metadata",
+    "_frame_node",
     "_frame_qualifiers",
     "_grouping_col_sql",
     "_grouping_sets_grouped",
@@ -697,6 +695,7 @@ EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
     "writer_schema",
     "writer_text",
     "_native",
+    "unemitted_ids",
 }
 
 EXPECTED_NEW_CORE_SUBMODULES: set[str] = {
@@ -717,4 +716,5 @@ EXPECTED_NEW_CORE_SUBMODULES: set[str] = {
     "udf_projection",
     "udf_window_projection",
     "_native",
+    "unemitted_ids",
 }

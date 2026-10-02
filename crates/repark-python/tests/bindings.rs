@@ -558,9 +558,28 @@ fn join_on_names_merges_the_key_column() {
             .borrow(py)
             .sql(py, "SELECT * FROM (VALUES (1, 11), (2, 22)) AS r(k, rv)")
             .expect("right plans");
-        let right_cell = Py::new(py, right).expect("right pyclass");
-        let joined = left
-            .join_on_names(right_cell.borrow(py), vec!["k".to_string()], "inner")
+        let left =
+            _native::dataframe_names::stamp_attribute_ids(Py::new(py, left).expect("left pyclass"))
+                .expect("left stamps");
+        let right = _native::dataframe_names::stamp_attribute_ids(
+            Py::new(py, right).expect("right pyclass"),
+        )
+        .expect("right stamps");
+        let left_bound = left.bind(py);
+        let right_bound = right.bind(py);
+        let left_node =
+            _native::frame_lineage::frame_root(&left_bound.borrow()).expect("left node");
+        let right_node =
+            _native::frame_lineage::frame_root(&right_bound.borrow()).expect("right node");
+        let (joined, _) = left_bound
+            .borrow()
+            .join_on_names(
+                right_bound.borrow(),
+                vec!["k".to_string()],
+                "inner",
+                &left_node,
+                &right_node,
+            )
             .expect("join");
         let joined = Py::new(py, joined).expect("joined pyclass");
         let batch = collect_one_batch(py, &joined);
@@ -586,9 +605,25 @@ fn semi_family_batch(py: Python<'_>, how: &str) -> RecordBatch {
         .borrow(py)
         .sql(py, "SELECT * FROM (VALUES (1, 11), (NULL, 99)) AS r(k, rv)")
         .expect("right plans");
-    let right_cell = Py::new(py, right).expect("right pyclass");
-    let joined = left
-        .join_on_names(right_cell.borrow(py), vec!["k".to_string()], how)
+    let left =
+        _native::dataframe_names::stamp_attribute_ids(Py::new(py, left).expect("left pyclass"))
+            .expect("left stamps");
+    let right =
+        _native::dataframe_names::stamp_attribute_ids(Py::new(py, right).expect("right pyclass"))
+            .expect("right stamps");
+    let left_bound = left.bind(py);
+    let right_bound = right.bind(py);
+    let left_node = _native::frame_lineage::frame_root(&left_bound.borrow()).expect("left node");
+    let right_node = _native::frame_lineage::frame_root(&right_bound.borrow()).expect("right node");
+    let (joined, _) = left_bound
+        .borrow()
+        .join_on_names(
+            right_bound.borrow(),
+            vec!["k".to_string()],
+            how,
+            &left_node,
+            &right_node,
+        )
         .expect("semi-family join plans");
     let joined = Py::new(py, joined).expect("joined pyclass");
     collect_one_batch(py, &joined)

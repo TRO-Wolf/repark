@@ -520,21 +520,36 @@ pub fn remint_shared<S: BuildHasher>(
     left_width: usize,
     shared: &HashSet<AttrId, S>,
 ) -> Result<(LogicalPlan, HashMap<AttrId, AttrId>)> {
-    let (left, right) = join_sides(&plan, left_width)?;
+    let (_, right) = join_sides(&plan, left_width)?;
     let mut fresh = HashMap::new();
+    for field in right {
+        if let Some(id) = AttrId::of(field).filter(|id| shared.contains(id)) {
+            fresh.entry(id).or_insert_with(AttrId::mint);
+        }
+    }
+    remint_with_map(plan, left_width, &fresh).map(|plan| (plan, fresh))
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn remint_with_map<S: BuildHasher>(
+    plan: LogicalPlan,
+    left_width: usize,
+    remint: &HashMap<AttrId, AttrId, S>,
+) -> Result<LogicalPlan> {
+    let (left, right) = join_sides(&plan, left_width)?;
     let reminted = left
         .iter()
         .map(|_| None)
-        .chain(right.iter().map(|field| {
-            AttrId::of(field)
-                .filter(|id| shared.contains(id))
-                .map(|id| fresh.entry(id).or_insert_with(AttrId::mint).clone())
-        }))
+        .chain(
+            right
+                .iter()
+                .map(|field| AttrId::of(field).and_then(|id| remint.get(&id).cloned())),
+        )
         .collect::<Vec<_>>();
     if reminted.iter().all(Option::is_none) {
-        return Ok((plan, fresh));
+        return Ok(plan);
     }
-    project_ids(plan, &reminted).map(|plan| (plan, fresh))
+    project_ids(plan, &reminted)
 }
 
 #[allow(clippy::missing_errors_doc)]

@@ -8,8 +8,8 @@ use datafusion::prelude::SessionContext;
 
 use crate::frame_names::NameRule::{Exact, IgnoreCase};
 use crate::frame_names::{
-    attribute_reference, bind_projection_expr, drop_named_columns, join_on_named_keys,
-    refuse_ambiguous_condition, requalify_join_sides, union_by_folded_name,
+    FrameNode, attribute_reference, bind_projection_expr, drop_named_columns, join_on_named_keys,
+    refuse_ambiguous_condition, requalify_join_sides, stamp, union_by_folded_name,
 };
 use crate::session::df_guards::case_bind::bind_names;
 
@@ -259,6 +259,11 @@ async fn spelled(sql: &str) -> DataFrame {
     SessionContext::new().sql(sql).await.unwrap()
 }
 
+fn stamped(frame: DataFrame) -> DataFrame {
+    let (state, plan) = frame.into_parts();
+    DataFrame::new(state, stamp(plan).unwrap())
+}
+
 fn names(frame: &DataFrame) -> Vec<String> {
     frame
         .schema()
@@ -330,15 +335,19 @@ async fn attribute_drop_is_exact_and_a_two_hit_reference_refuses() {
 
 #[tokio::test]
 async fn join_binds_each_side_and_keeps_one_key() {
-    let left = spelled(r#"SELECT 1 AS "ID", 'a' AS data"#).await;
-    let right = spelled("SELECT 1 AS id, 'q' AS w").await;
+    let left = stamped(spelled(r#"SELECT 1 AS "ID", 'a' AS data"#).await);
+    let right = stamped(spelled("SELECT 1 AS id, 'q' AS w").await);
     let keys = ["Id".to_string()];
-    let joined = join_on_named_keys(
+    let left_node = FrameNode::root(left.schema()).unwrap();
+    let right_node = FrameNode::root(right.schema()).unwrap();
+    let (joined, _) = join_on_named_keys(
         left.clone(),
         right.clone(),
         &keys,
         JoinType::Inner,
         IgnoreCase,
+        Arc::clone(&left_node),
+        Arc::clone(&right_node),
     )
     .unwrap();
     assert_eq!(
@@ -346,7 +355,16 @@ async fn join_binds_each_side_and_keeps_one_key() {
         vec!["ID".to_string(), "data".to_string(), "w".to_string()]
     );
     assert_eq!(row_count(joined).await, 1);
-    let semi = join_on_named_keys(left, right, &keys, JoinType::LeftSemi, IgnoreCase).unwrap();
+    let (semi, _) = join_on_named_keys(
+        left,
+        right,
+        &keys,
+        JoinType::LeftSemi,
+        IgnoreCase,
+        left_node,
+        right_node,
+    )
+    .unwrap();
     assert_eq!(names(&semi), vec!["ID".to_string(), "data".to_string()]);
 }
 
@@ -414,12 +432,16 @@ async fn frame_functions_follow_the_rule() {
     assert_eq!(names(&dropped), vec!["data".to_string()]);
     let left = spelled(r#"SELECT 1 AS id, 'a' AS "Data""#).await;
     let right = spelled(r#"SELECT 1 AS "ID", 'q' AS w"#).await;
+    let left_node = FrameNode::root(&DFSchema::empty()).unwrap();
+    let right_node = FrameNode::root(&DFSchema::empty()).unwrap();
     let error = join_on_named_keys(
         left.clone(),
         right.clone(),
         &["ID".to_string()],
         JoinType::Inner,
         Exact,
+        left_node,
+        right_node,
     )
     .unwrap_err()
     .to_string();

@@ -3389,6 +3389,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and `semanticHash` (one-line bindings over `plan_introspect.py`); package and
   core each gain exactly `plan_introspect` behind the new module import.
   pins: df-plan-introspect-1/C-004
+  ATTR-ID-1 SJ-3 (2026-10-02): both surface lists lose the three deleted siding
+  names and gain `_join_condition_attr_names` plus `weakref`;
+  `_emit_join_side_columns` moves behind the same re-export (no surface change).
+  The same edit repairs the SJ-2 mirror misses (red since 5fb1b68a):
+  `_ATTR_TOKEN_RE` leaves both lists, `_frame_node` joins slots and dir, and
+  `unemitted_ids` joins both new-submodule sets; the alias scan counts only
+  rebinds with a same-class sibling.
 - `test_dfcore_4b_exports.py` — DFCORE-4b ownership pin: `MOVED_DISPLAY_HELPERS`
   pins the ten bodies as `display.py`'s own frame-first functions, the six
   leavers as gone from the class, and the four wrappers as kept.
@@ -3726,6 +3733,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   map (cast/year/`sum,sum` display overlay); same-object self-join equi sugar + multi-token
   arm loud refuse + alias workaround; `Column.round` / wrap-display collapse;
   `spark.app.name==repark` bare getOrCreate verify pin (critic-octo C1 pins).
+  **ATTR-ID-1 SJ-3 (2026-10-02):** the cross-field and compound self-join pins
+  refuse `_LEGACY_ERROR_TEMP_1182` with Spark's names (`P_h2_cross_fields`,
+  `P_h2_compound_same`, `P_h2_compound_alias`); the free-name compound answer
+  (`F.col("l.x")` strings, Spark answers 3 both rules) carries strict xfail —
+  qualified free names do not resolve in join conditions (R-18, pre-existing).
 - `test_f1_errorclass.py` — F1 true-EC residual: array.array unsupported →
   CANNOT_INFER_TYPE_FOR_FIELD; make_interval collect → PySparkNotImplementedError;
   `_merge_type` / `_make_type_verifier` class+param keys.
@@ -9019,8 +9031,9 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   `Column`/`DataFrame`; join tokens carry attribute ids, never QCOL; reversed-order
   and mixed aliased/unaliased joins side exactly; lineage-sharing simple equi-joins
   keep the diagonal; lineage-sharing compound arms refuse (Spark reports ambiguity
-  too); mixed compound arms keep base rows as a divergence (Spark raises); a token
-  whose id sits on neither join side reaches the engine unsided and refuses;
+  too); mixed compound arms refused as a divergence until SJ-3 closed it (Spark
+  raises); a token whose id sits on neither join side reaches the engine unsided
+  and refuses (SJ-3: `MISSING_ATTRIBUTES` from the preparer);
   duplicate select outputs take positional `__repark_sel_{n}` engine names; a parent
   ref through `fillna`/`replace` binds its own side's output on duplicate names;
   `eqNullSafe` sides a shared-lineage self-join; a parent ref past an arithmetic
@@ -9037,6 +9050,10 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   aliased side ref on a condition join binds its own side.
   No module docstring: the lane's no-comments ruling covers the new file; the
   contract lives here. pins: attr-id-1/C-040
+  **ATTR-ID-1 SJ-3 (2026-10-02):** the compound pins refuse
+  `_LEGACY_ERROR_TEMP_1182` with Spark's names; `test_s4_mixed_compound_arms_divergence`
+  is renamed `..._refuses` (divergence closed, EX-DF-20 fixed); the third-frame pin
+  expects `MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION`.
 - [test_attr_id_1_sj2.py](test_attr_id_1_sj2.py) — **ATTR-ID-1 SJ-2 (2026-10-02):**
   the seam pins. Every token-bearing bind site renders `F<id>` of its birth
   node; frameless tokens render `F0` and free names carry no id; children mint
@@ -9048,6 +9065,16 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   outputs); a relation child of describe gets a non-empty node. No module
   docstring: the lane's no-comments ruling covers the new file; the contract
   lives here.
+- [test_attr_id_1_sj3.py](test_attr_id_1_sj3.py) — **ATTR-ID-1 SJ-3 (2026-10-02):**
+  the condition-path pins, each named after its probe cell and EQUAL to live
+  Spark 4.1.2 under both case rules: the `B_*`/`D_*`/`E_parent_alias_*`/`G_eq3_*`
+  rows, `I_rewrite_name_missing`, `P_s4_third_frame`, `K_off_cond_missing`,
+  `F_left_anti_gt`, `I_rewrite_case` (getattr refuses at access on both engines,
+  so no preparer change), the conf-off `H_off_*` condition guards, and the
+  verifier `P_v_single_shared_token` siding pin. Three post-join pins
+  (`D_self_eq_sel_d`, `P_v_left_join_right_parent`, `P_v_anti_idiom`) carry
+  strict xfail until SJ-4 wires the refusal funnel. No module docstring: the
+  lane's no-comments ruling covers the new file; the contract lives here.
 - [test_attr_id_1_v456.py](test_attr_id_1_v456.py) — **ATTR-ID-1 V-5 (2026-10-02):**
   the verifier-fold twin pins, measured against live Spark 4.1.2 `p5_twins`.
   The ported `test_v5` pin plus the 13 remaining F_ cells refuse

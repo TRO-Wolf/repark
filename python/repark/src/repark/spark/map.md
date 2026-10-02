@@ -836,7 +836,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   sort, and null-placement semantics explicit. TYPES-1 round 4: `with_row_index` casts
   `row_number` to BIGINT (pins: types-1/C-005). DF-EAGER-1 step 2 (2026-09-09):
   `PolarsFrame.eager()` wraps the Spark `eager()`; `collect()` is untouched
-  (pins: df-eager-1/C-006).
+  (pins: df-eager-1/C-006). **ATTR-ID-1 SJ-3 (2026-10-02):** `PolarsFrame.join`
+  re-mints over the lineage shared set and spawns with the `Join` node via
+  `join_plan_lineage`, so later self-join checks see its lineage.
 - `observation.py` — **DF-SURFACE-B-1 (2026-09-14):** PySpark `Observation`. A
   named (or generated-name) handle filled by the first action on a
   `DataFrame.observe` child; `get` before that action raises

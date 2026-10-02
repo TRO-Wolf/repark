@@ -15,7 +15,7 @@ use datafusion::prelude::SessionContext;
 
 use crate::ReparkSession;
 use crate::frame_names::{
-    AttrId, NameRule::IgnoreCase, Resolution, alias_with_fresh_id, attribute_ids,
+    AttrId, FrameNode, NameRule::IgnoreCase, Resolution, alias_with_fresh_id, attribute_ids,
     copy_attribute_ids, join_collisions, join_on_named_keys, plan_is_relation, plan_is_stamped,
     projection_source_ids, remint_shared, requalify_join_sides, resolve, stamp, strip,
     union_by_folded_name,
@@ -508,12 +508,16 @@ async fn using_join_re_mints_colliding_right_ids_of_a_self_join() {
         .unwrap();
     let left = session.sql("SELECT * FROM attr_l").await.unwrap();
     let right = session.sql("SELECT * FROM attr_r").await.unwrap();
-    let joined = join_on_named_keys(
+    let left_node = FrameNode::root(left.schema()).unwrap();
+    let right_node = FrameNode::root(right.schema()).unwrap();
+    let (joined, _) = join_on_named_keys(
         left,
         right,
         &["id".to_string()],
         JoinType::Inner,
         IgnoreCase,
+        left_node,
+        right_node,
     )
     .unwrap();
     let after = ids(&joined);
@@ -610,12 +614,16 @@ async fn strip_survives_optimization_and_execution() {
         .unwrap();
     let left = session.sql("SELECT * FROM strip_u_l").await.unwrap();
     let right = session.sql("SELECT * FROM strip_u_r").await.unwrap();
-    let joined = join_on_named_keys(
+    let left_node = FrameNode::root(left.schema()).unwrap();
+    let right_node = FrameNode::root(right.schema()).unwrap();
+    let (joined, _) = join_on_named_keys(
         left,
         right,
         &["id".to_string()],
         JoinType::Inner,
         IgnoreCase,
+        left_node,
+        right_node,
     )
     .unwrap();
     let (state, plan) = joined.into_parts();

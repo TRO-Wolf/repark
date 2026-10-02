@@ -4,12 +4,15 @@ use std::sync::Arc;
 use datafusion::arrow::array::{ArrayRef, Int64Array, RecordBatch};
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::common::DFSchema;
+use datafusion::common::JoinType;
+use datafusion::dataframe::DataFrame;
 use datafusion::logical_expr::col;
 use datafusion::prelude::SessionContext;
 
+use crate::frame_names::NameRule::IgnoreCase;
 use crate::frame_names::{
-    AttrId, AttrRef, FrameNode, all_ids, ambiguous, attribute_ids, join_collisions, remint_shared,
-    renewed_absent, shared_ids,
+    AttrId, AttrRef, FrameNode, all_ids, ambiguous, attribute_ids, join_collisions,
+    join_on_named_keys, remint_shared, remint_with_map, renewed_absent, shared_ids,
 };
 
 const KEY: &str = "repark.attr";
@@ -279,4 +282,79 @@ fn remint_shared_renews_the_shared_set_not_only_output_collisions() {
     assert_eq!(after[..2], [Some(held[0].clone()), Some(held[1].clone())]);
     assert_eq!(after[2].as_ref(), remint.get(&held[2]));
     assert_ne!(after[2], Some(held[2].clone()));
+}
+
+fn tagged_frame(context: &SessionContext, names: &[&str], held: &[AttrId]) -> DataFrame {
+    let schema = Arc::new(Schema::new(
+        names
+            .iter()
+            .map(|name| Field::new(*name, DataType::Int64, false))
+            .collect::<Vec<_>>(),
+    ));
+    let columns: Vec<ArrayRef> = names
+        .iter()
+        .map(|_| Arc::new(Int64Array::from(vec![1, 2])) as ArrayRef)
+        .collect();
+    let tagged = names
+        .iter()
+        .zip(held)
+        .map(|(name, id)| {
+            col(*name).alias_with_metadata(
+                *name,
+                Some(HashMap::from([(KEY.to_string(), id.as_str().to_string())]).into()),
+            )
+        })
+        .collect::<Vec<_>>();
+    context
+        .read_batch(RecordBatch::try_new(schema, columns).unwrap())
+        .unwrap()
+        .select(tagged)
+        .unwrap()
+}
+
+#[test]
+fn remint_with_map_applies_exactly_the_given_map() {
+    let context = SessionContext::new();
+    let held = (0..3).map(|_| AttrId::mint()).collect::<Vec<_>>();
+    let frame = tagged_frame(&context, &["a", "b", "c"], &held);
+    let fixed = AttrId::mint();
+    let map = HashMap::from([
+        (held[2].clone(), fixed.clone()),
+        (AttrId::mint(), AttrId::mint()),
+    ]);
+    let reminted = remint_with_map(frame.logical_plan().clone(), 1, &map).unwrap();
+    let after = attribute_ids(reminted.schema());
+    assert_eq!(after[..2], [Some(held[0].clone()), Some(held[1].clone())]);
+    assert_eq!(after[2], Some(fixed));
+}
+
+#[test]
+fn named_key_join_renews_a_lineage_shared_id_below_the_left_output() {
+    let context = SessionContext::new();
+    let held = (0..2).map(|_| AttrId::mint()).collect::<Vec<_>>();
+    let parent = tagged_frame(&context, &["id", "v"], &held);
+    let parent_node = FrameNode::root(parent.schema()).unwrap();
+    let narrow = parent
+        .clone()
+        .select(vec![col("id")])
+        .unwrap()
+        .alias("n")
+        .unwrap();
+    let narrow_node = FrameNode::derived(narrow.schema(), Arc::clone(&parent_node)).unwrap();
+    let parent = parent.alias("p").unwrap();
+    let (joined, node) = join_on_named_keys(
+        narrow,
+        parent,
+        &["id".to_string()],
+        JoinType::Inner,
+        IgnoreCase,
+        narrow_node,
+        Arc::clone(&parent_node),
+    )
+    .unwrap();
+    let after = attribute_ids(joined.schema());
+    assert_eq!(after.len(), 2);
+    assert_eq!(after[0], Some(held[0].clone()));
+    assert_ne!(after[1], Some(held[1].clone()));
+    assert!(node.renews());
 }

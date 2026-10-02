@@ -1,4 +1,4 @@
-"""Join attribute-token siding: exact sides, complement, positional fallback."""
+"""Attribute-token scanning: single-frame rewrite, select fast path, birth names."""
 
 from __future__ import annotations
 
@@ -7,10 +7,8 @@ import re
 from typing import TYPE_CHECKING, Any
 
 from repark import _native
-from repark.errors import AnalysisException
 from repark.spark import column_fields as _column_fields
 from repark.spark._idents import quote_ident as _quote_ident_sql
-from repark.spark._idents import unescape_attr_token_quals as _unescape_attr_token_quals
 from repark.spark._temp_views import scratch_view_name
 
 if TYPE_CHECKING:
@@ -21,122 +19,42 @@ if TYPE_CHECKING:
 _ATTR_TOKEN_RE = re.compile(r"__REPARK_ATTR_([A-Za-z0-9]+)__F(\d+)__([\w\\|]*)__")
 
 
-def _attr_token_exact_side(
-    attr_id: str,
-    token_quals: frozenset[str],
-    *,
-    left_ids: list[str | None],
-    right_ids: list[str | None],
-    left_quals: dict[str, set[str]],
-    right_quals: dict[str, set[str]],
-) -> str | None:
-    """Return the join side a token names exactly, else ``None`` for later siding.
+def _join_condition_attr_names(frame: DataFrame, cond_sql: str) -> dict[str, str]:
+    """Map condition token ids to the display name on their birth frame.
 
-    A token whose id sits on one side binds there. A token whose id sits on both sides
-    binds through its qualifier names when they hit one side only. Any other token
-    (unknown id, empty or tied qualifiers) resolves in the rewrite pre-scan.
+    The birth frame is the live frame behind the token's frame field. A token
+    whose frame is gone, or whose id the frame no longer emits, stays out of
+    the map; the native preparer then refuses loud instead of guessing.
     """
-    in_left = attr_id in left_ids
-    in_right = attr_id in right_ids
-    if in_left and not in_right:
-        return "left"
-    if in_right and not in_left:
-        return "right"
-    if not in_left or not in_right:
-        return None
-    if token_quals:
-        left_hit = bool(token_quals & (left_quals.get(attr_id) or set()))
-        right_hit = bool(token_quals & (right_quals.get(attr_id) or set()))
-        if left_hit and not right_hit:
-            return "left"
-        if right_hit and not left_hit:
-            return "right"
-    return None
-
-
-_ATTR_SIDE_BOUNDARY_RE = re.compile(
-    r"(?i)(<=>|<=|>=|<>|!=|=|<|>|\bIS\s+NOT\s+DISTINCT\s+FROM\b"
-    r"|\bIS\s+DISTINCT\s+FROM\b|\bAND\b|\bOR\b)"
-)
-
-
-def _same_object_attr_alternation_safe(join_sql: str) -> bool:
-    """Return whether token alternation can preserve sides in a self-join.
-
-    Reject compound arms because alternation could bind a field to the wrong side.
-    """
-    matches = list(_ATTR_TOKEN_RE.finditer(join_sql))
-    if len(matches) < 2:
-        return True
-    for index in range(len(matches) - 1):
-        between = join_sql[matches[index].end() : matches[index + 1].start()]
-        if _ATTR_SIDE_BOUNDARY_RE.search(between) is None:
-            return False
-    return True
-
-
-def _resolve_join_token_sides(
-    join_sql: str,
-    *,
-    left: DataFrame,
-    right: DataFrame,
-    left_ids: list[str | None],
-    right_ids: list[str | None],
-) -> list[str | None]:
-    """Precompute the rewrite side per token match (``None`` leaves it unchanged).
-
-    Exact tokens bind their side; each remaining token of an id with exact siblings
-    takes the less-claimed side; any other remaining token alternates left/right by
-    occurrence, which refuses multi-token arms rather than mis-binding them.
-    """
-    matches = list(_ATTR_TOKEN_RE.finditer(join_sql))
-    left_quals = dict(left._frame_qualifiers or {})
-    right_quals = dict(right._frame_qualifiers or {})
-    exact: list[str | None] = [
-        _attr_token_exact_side(
-            match.group(1),
-            _unescape_attr_token_quals(match.group(3)),
-            left_ids=left_ids,
-            right_ids=right_ids,
-            left_quals=left_quals,
-            right_quals=right_quals,
-        )
-        for match in matches
-    ]
-    claimed: dict[str, dict[str, int]] = {}
-    for match, side in zip(matches, exact, strict=True):
-        if side is not None:
-            counts = claimed.setdefault(match.group(1), {"left": 0, "right": 0})
-            counts[side] += 1
-    same_object = left is right
-    sides: list[str | None] = list(exact)
-    positional = False
-    for index, (match, side) in enumerate(zip(matches, exact, strict=True)):
-        if side is not None:
+    names: dict[str, str] = {}
+    if "__REPARK_ATTR_" not in cond_sql:
+        return names
+    registry = frame._alive_token.get("frame_registry", {})
+    by_frame: dict[int, dict[str, str]] = {}
+    for match in _ATTR_TOKEN_RE.finditer(cond_sql):
+        attr_id = match.group(1)
+        if attr_id in names:
             continue
-        counts = claimed.get(match.group(1))
-        if not same_object and counts is not None:
-            if counts["left"] < counts["right"]:
-                sides[index] = "left"
-            elif counts["right"] < counts["left"]:
-                sides[index] = "right"
-            continue
-        if match.group(1) in left_ids:
-            sides[index] = "positional"
-            positional = True
-    if positional and not _same_object_attr_alternation_safe(join_sql):
-        raise AnalysisException(
-            "self-join condition has multi-token comparison arms that cannot "
-            "be disambiguated by alternating left/right attribute sides (would silently "
-            "mis-bind columns). Rewrite the condition so each comparison arm holds "
-            "a single attribute reference."
-        )
-    take_left = True
-    for index, side in enumerate(sides):
-        if side == "positional":
-            sides[index] = "left" if take_left else "right"
-            take_left = not take_left
-    return sides
+        frame_id = int(match.group(2))
+        held = by_frame.get(frame_id)
+        if held is None:
+            birth = registry.get(frame_id)
+            held = _birth_frame_attr_names(birth)
+            by_frame[frame_id] = held
+        if attr_id in held:
+            names[attr_id] = held[attr_id]
+    return names
+
+
+def _birth_frame_attr_names(birth: DataFrame | None) -> dict[str, str]:
+    """Map a birth frame's attribute ids to its display names, else empty."""
+    if birth is None or not birth._alive_token.get("alive", False):
+        return {}
+    displays = list(birth.columns)
+    held, _engines = _column_fields._stamped_ids_and_engines(birth)
+    if len(displays) != len(held):
+        return {}
+    return {attr_id: display for attr_id, display in zip(held, displays, strict=True) if attr_id}
 
 
 def _replace_local_attr_token(
@@ -168,71 +86,6 @@ def _rewrite_attr_tokens_local(join_sql: str, frame: DataFrame, spell: Any = str
         ),
         join_sql,
     )
-
-
-def _rewrite_join_attr_sql(
-    join_sql: str,
-    *,
-    left: DataFrame,
-    right: DataFrame,
-    left_alias: str,
-    right_alias: str,
-) -> str:
-    """Rewrite join attribute tokens to quoted fields on the matching side.
-
-    Unknown tokens remain unchanged so the engine reports an analysis error.
-    """
-    left_ids, left_engines = _column_fields._stamped_ids_and_engines(left)
-    right_ids, right_engines = _column_fields._stamped_ids_and_engines(right)
-    sides = _resolve_join_token_sides(
-        join_sql, left=left, right=right, left_ids=left_ids, right_ids=right_ids
-    )
-    rewriter = _JoinAttrRewriter(
-        left_ids=left_ids,
-        left_engines=left_engines,
-        right_ids=right_ids,
-        right_engines=right_engines,
-        left_alias=left_alias,
-        right_alias=right_alias,
-        sides=sides,
-    )
-    return _ATTR_TOKEN_RE.sub(rewriter, join_sql)
-
-
-class _JoinAttrRewriter:
-    """Rewrite join attribute tokens to their precomputed sides in match order."""
-
-    def __init__(
-        self,
-        *,
-        left_ids: list[str | None],
-        left_engines: list[str],
-        right_ids: list[str | None],
-        right_engines: list[str],
-        left_alias: str,
-        right_alias: str,
-        sides: list[str | None],
-    ) -> None:
-        self.left_ids = left_ids
-        self.left_engines = left_engines
-        self.right_ids = right_ids
-        self.right_engines = right_engines
-        self.left_alias = left_alias
-        self.right_alias = right_alias
-        self.sides = sides
-        self.position = 0
-
-    def __call__(self, match: re.Match[str]) -> str:
-        attr_id = match.group(1)
-        side = self.sides[self.position] if self.position < len(self.sides) else None
-        self.position += 1
-        if side == "left":
-            engine = self.left_engines[self.left_ids.index(attr_id)]
-            return f"{self.left_alias}.{_quote_ident_sql(engine)}"
-        if side == "right":
-            engine = self.right_engines[self.right_ids.index(attr_id)]
-            return f"{self.right_alias}.{_quote_ident_sql(engine)}"
-        return match.group(0)
 
 
 def _select_via_attr_sql(
@@ -307,3 +160,32 @@ def _select_via_attr_sql(
         return child
     finally:
         frame._session.drop_temp_view(view)
+
+
+def _emit_join_side_columns(
+    side_frame: DataFrame,
+    side_alias: str,
+    side_tag: str,
+    *,
+    display_counts: dict[str, int],
+    proj_parts: list[str],
+    display_names: list[str],
+    engine_names: list[str],
+) -> None:
+    """Project one join side into ``proj_parts`` (walk by position)."""
+    if side_frame._display_names is not None and side_frame._engine_names is not None:
+        pairs = list(zip(side_frame._display_names, side_frame._engine_names, strict=True))
+    else:
+        pairs = [(name, name) for name in side_frame.columns]
+    for display_name, source_engine in pairs:
+        if display_counts.get(display_name, 0) > 1:
+            engine_out = (
+                f"__repark_{side_tag}_{side_frame._plan_id}_{len(engine_names)}_{display_name}"
+            )
+        else:
+            engine_out = display_name
+        proj_parts.append(
+            f"{side_alias}.{_quote_ident_sql(source_engine)} AS {_quote_ident_sql(engine_out)}"
+        )
+        display_names.append(display_name)
+        engine_names.append(engine_out)

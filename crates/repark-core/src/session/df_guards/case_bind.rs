@@ -1,6 +1,7 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt::Write;
 use std::ops::ControlFlow;
+use std::sync::Arc;
 
 use datafusion::arrow::datatypes::Field;
 use datafusion::common::tree_node::{Transformed, TreeNode};
@@ -22,7 +23,7 @@ pub use super::attr_id::{
     AttrId, Resolution, alias_with_fresh_id, attribute_ids, copy_attribute_ids, stamp, strip,
 };
 pub use super::attr_id::{
-    join_collisions, plan_is_relation, plan_is_stamped, remint_shared, resolve,
+    join_collisions, plan_is_relation, plan_is_stamped, remint_shared, remint_with_map, resolve,
 };
 pub use super::attr_lineage::projection_source_ids;
 pub use super::frame_lineage::{AttrRef, FrameId, FrameKind, FrameNode};
@@ -446,7 +447,9 @@ pub fn join_on_named_keys(
     keys: &[String],
     join_type: JoinType,
     rule: NameRule,
-) -> Result<DataFrame> {
+    left_node: Arc<FrameNode>,
+    right_node: Arc<FrameNode>,
+) -> Result<(DataFrame, Arc<FrameNode>)> {
     if matches!(rule, NameRule::Exact) {
         for key in keys {
             if !left.schema().has_column_with_unqualified_name(key) {
@@ -466,6 +469,11 @@ pub fn join_on_named_keys(
         .map(|key| bind_name(right.schema(), key, rule))
         .collect();
     let left_schema = left.schema().clone();
+    let right_outputs = attribute_ids(right.schema())
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
+    let shared = shared_ids(&left_node, &right_outputs);
     let (state, left_plan) = left.into_parts();
     let plan = LogicalPlanBuilder::from(left_plan)
         .join(
@@ -477,7 +485,12 @@ pub fn join_on_named_keys(
         .build()?;
     let joined = DataFrame::new(state, plan);
     if matches!(join_type, JoinType::LeftSemi | JoinType::LeftAnti) {
-        return Ok(joined);
+        let remint = shared
+            .iter()
+            .map(|id| (id.clone(), AttrId::mint()))
+            .collect();
+        let node = FrameNode::join(joined.schema(), left_node, right_node, remint, false)?;
+        return Ok((joined, node));
     }
     let mut seen: HashSet<String> = HashSet::new();
     let mut right_kept = 0usize;
@@ -495,8 +508,10 @@ pub fn join_on_named_keys(
         .collect();
     let right_start = projection.len() - right_kept;
     let (state, plan) = joined.select(projection)?.into_parts();
-    let shared = join_collisions(&plan, right_start)?;
-    remint_shared(plan, right_start, &shared).map(|(plan, _)| DataFrame::new(state, plan))
+    let (plan, remint) = remint_shared(plan, right_start, &shared)?;
+    let schema = plan.schema().clone();
+    let node = FrameNode::join(&schema, left_node, right_node, remint, true)?;
+    Ok((DataFrame::new(state, plan), node))
 }
 
 #[allow(clippy::missing_errors_doc)]

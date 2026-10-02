@@ -143,6 +143,13 @@ wrapped optimizer rule) and declares this directory.
   **ATTR-ID-1 SJ-1b (2026-10-02):** `AttrId::from_token(raw)` wraps the id text a
   reference token carries; it validates nothing, and an id no schema holds stays unbound
   (`self_join.rs` refuses it loudly).
+  **ATTR-ID-1 SJ-3 (2026-10-02):** `remint_with_map(plan, left_width, remint)`
+  applies exactly a caller-given map (`remint_shared` mints its map, then
+  delegates); `join_on_named_keys` takes the two lineage nodes, re-mints over
+  `shared_ids(left_node, right_outputs)`, and returns the plan with its `Join`
+  node (semi/anti record the map with `emits_right=false` and skip the plan
+  re-mint). Only `remint_cross_collisions` and `lateral_join` still pass the
+  collision set. Pins: `../tests/frame_lineage.rs`.
 - `attr_lineage.rs` — **ATTR-ID-1 S4 (2026-10-02):** projection-output lineage,
   a pure move out of `attr_id.rs` when that file passed the 1000-line ceiling.
   `projection_source_ids` maps each `Projection` output to its input attribute id

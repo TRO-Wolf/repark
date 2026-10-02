@@ -1,4 +1,5 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::Arc;
 
 use datafusion::common::Column;
 use datafusion::dataframe::DataFrame;
@@ -14,9 +15,11 @@ use crate::column::expr_build::{
 use crate::dataframe::PyDataFrame;
 use crate::datafusion_to_py_err;
 use crate::fence::fenced;
-use repark_core::frame_names::{NameRule, Resolution, SortShape};
+use crate::frame_lineage::PyFrameNode;
+use repark_core::frame_names::{AttrId, FrameNode, NameRule, Resolution, SortShape};
 use repark_functions::case_sensitive::spark_case_sensitive_from_options;
 
+#[allow(clippy::missing_errors_doc)]
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(attribute_column, module)?)?;
     module.add_function(wrap_pyfunction!(attribute_ids, module)?)?;
@@ -109,15 +112,20 @@ pub(crate) fn join_on_keys(
     right: &DataFrame,
     on: &[String],
     join_type: JoinType,
-) -> PyResult<DataFrame> {
-    repark_core::frame_names::join_on_named_keys(
+    left_node: &PyFrameNode,
+    right_node: &PyFrameNode,
+) -> PyResult<(DataFrame, PyFrameNode)> {
+    let (joined, node) = repark_core::frame_names::join_on_named_keys(
         left.clone(),
         right.clone(),
         on,
         join_type,
         frame_rule(left),
+        Arc::clone(&left_node.node),
+        Arc::clone(&right_node.node),
     )
-    .map_err(datafusion_to_py_err)
+    .map_err(datafusion_to_py_err)?;
+    Ok((joined, PyFrameNode { node }))
 }
 
 pub(crate) fn union_frames(
@@ -198,29 +206,48 @@ fn refuse_ambiguous_join_condition(
 
 #[allow(clippy::missing_errors_doc)]
 #[pyfunction]
+#[pyo3(signature = (joined, left, right, left_node, right_node, remint, emits_right))]
 pub(crate) fn requalify_join_sides(
     joined: &PyDataFrame,
     left: &PyDataFrame,
     right: Option<&PyDataFrame>,
-) -> PyResult<PyDataFrame> {
+    left_node: &PyFrameNode,
+    right_node: &PyFrameNode,
+    remint: HashMap<String, String>,
+    emits_right: bool,
+) -> PyResult<(PyDataFrame, PyFrameNode)> {
     fenced!("dataframe_names.requalify_join_sides", {
         let mut sides = vec![left.inner().schema()];
         sides.extend(right.map(|frame| frame.inner().schema()));
         let df = repark_core::frame_names::requalify_join_sides(joined.inner().clone(), &sides)
             .map_err(datafusion_to_py_err)?;
-        let df = match right {
+        let remint = remint
+            .iter()
+            .map(|(old, new)| (AttrId::from_token(old), AttrId::from_token(new)))
+            .collect::<HashMap<_, _>>();
+        let plan = match right {
             Some(_) => {
                 let left_width = left.inner().schema().fields().len();
                 let (state, plan) = df.into_parts();
-                let shared = repark_core::frame_names::join_collisions(&plan, left_width)
-                    .map_err(datafusion_to_py_err)?;
-                let (plan, _) = repark_core::frame_names::remint_shared(plan, left_width, &shared)
+                let plan = repark_core::frame_names::remint_with_map(plan, left_width, &remint)
                     .map_err(datafusion_to_py_err)?;
                 DataFrame::new(state, plan)
             }
             None => df,
         };
-        Ok(PyDataFrame::new(df, joined.runtime_handle()))
+        let schema = plan.schema().clone();
+        let node = FrameNode::join(
+            &schema,
+            Arc::clone(&left_node.node),
+            Arc::clone(&right_node.node),
+            remint,
+            emits_right,
+        )
+        .map_err(datafusion_to_py_err)?;
+        Ok((
+            PyDataFrame::new(plan, joined.runtime_handle()),
+            PyFrameNode { node },
+        ))
     })
 }
 
@@ -312,7 +339,7 @@ pub(crate) fn sort_child_shape(frame: &PyDataFrame) -> String {
 
 #[allow(clippy::missing_errors_doc)]
 #[pyfunction]
-pub(crate) fn stamp_attribute_ids(frame: Py<PyDataFrame>) -> PyResult<Py<PyDataFrame>> {
+pub fn stamp_attribute_ids(frame: Py<PyDataFrame>) -> PyResult<Py<PyDataFrame>> {
     fenced!("dataframe_names.stamp_attribute_ids", {
         Python::attach(|py| {
             let bound = frame.bind(py);

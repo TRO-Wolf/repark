@@ -81,37 +81,40 @@ def test_s4_filter_lineage_simple_join(ruled_spark: ReparkSession) -> None:
 
 
 def test_s4_filter_lineage_compound_join_refuses(ruled_spark: ReparkSession) -> None:
-    """Lineage-sharing compound arms refuse; Spark reports ambiguity too."""
+    """Lineage-sharing compound arms refuse 1182 (``P_s4_filter_lineage_compound``)."""
     frame = _frame(ruled_spark)
     child = frame.filter(frame.y > 1)
-    with pytest.raises(AnalysisException, match=r"multi-token comparison arms"):
+    with pytest.raises(AnalysisException) as refused:
         _ = frame.join(child, (frame.x + 1) == (frame.x + child.x)).count()
+    assert refused.value.getCondition() == "_LEGACY_ERROR_TEMP_1182"
+    params = refused.value.getMessageParameters()
+    assert params["config"] == "spark.sql.analyzer.failAmbiguousSelfJoin"
+    assert params["ambiguousAttrs"] == "x, x, x"
 
 
-def test_s4_mixed_compound_arms_divergence(ruled_spark: ReparkSession) -> None:
-    """DIVERGENCE: mixed compound arms run where Spark reports ambiguity.
-
-    ``(l.x + r.y) == (l.y + r.x)`` resolves each token to its named side and keeps
-    the base diagonal; Spark raises ``ambiguous`` on the shared lineage.
-    """
+def test_s4_mixed_compound_arms_refuses(ruled_spark: ReparkSession) -> None:
+    """Mixed compound arms refuse 1182 (``P_s4_mixed_compound_arms``)."""
     frame = _frame(ruled_spark)
     left = frame.alias("l")
     right = frame.alias("r")
-    joined = left.join(right, (left.x + right.y) == (left.y + right.x))
-    assert sorted(tuple(row) for row in joined.collect()) == [
-        (1, 2, 1, 2),
-        (2, 1, 2, 1),
-        (3, 3, 3, 3),
-    ]
+    with pytest.raises(AnalysisException) as refused:
+        _ = left.join(right, (left.x + right.y) == (left.y + right.x)).count()
+    assert refused.value.getCondition() == "_LEGACY_ERROR_TEMP_1182"
+    params = refused.value.getMessageParameters()
+    assert params["config"] == "spark.sql.analyzer.failAmbiguousSelfJoin"
+    assert params["ambiguousAttrs"] == "y, x"
 
 
 def test_s4_third_frame_unknown_id_raises_engine_error(ruled_spark: ReparkSession) -> None:
-    """A token whose id sits on neither join side is never sided; the engine refuses."""
+    """A third frame's id is missing but appears (``P_s4_third_frame``)."""
     left = ruled_spark.createDataFrame([(1,)], ["k"])
     right = ruled_spark.createDataFrame([(1,)], ["k"])
     third = ruled_spark.createDataFrame([(1,)], ["k"])
-    with pytest.raises(AnalysisException, match=r"UNRESOLVED_COLUMN"):
+    with pytest.raises(AnalysisException) as refused:
         _ = left.join(right, third.k == 1).count()
+    assert (
+        refused.value.getCondition() == "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+    )
 
 
 def test_s4_select_engine_names_shrunk(ruled_spark: ReparkSession) -> None:

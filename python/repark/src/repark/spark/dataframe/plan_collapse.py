@@ -15,15 +15,11 @@ from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._idents import sql_string_literal as _sql_string_literal
 from repark.spark.column import Column
 from repark.spark.dataframe.join_attr_tokens import (
-    _ATTR_SIDE_BOUNDARY_RE,
     _ATTR_TOKEN_RE,
-    _attr_token_exact_side,
-    _JoinAttrRewriter,
+    _emit_join_side_columns,
+    _join_condition_attr_names,
     _replace_local_attr_token,
-    _resolve_join_token_sides,
     _rewrite_attr_tokens_local,
-    _rewrite_join_attr_sql,
-    _same_object_attr_alternation_safe,
 )
 from repark.spark.dataframe.polars_cells import (
     _arrow_pa_type_label,

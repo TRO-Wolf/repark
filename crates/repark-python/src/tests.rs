@@ -391,9 +391,32 @@ fn binding_stamps_resolves_and_re_mints_a_self_join() {
             crate::dataframe_names::attribute_ids(&joined)[2..],
             held[..]
         );
-        let requalified =
-            crate::dataframe_names::requalify_join_sides(&joined, &stamped, Some(&stamped))
-                .expect("requalify");
+        let left_node = crate::frame_lineage::frame_root(&stamped).expect("left node");
+        let right_node = crate::frame_lineage::frame_root(&stamped).expect("right node");
+        let shared =
+            repark_core::frame_names::shared_ids(&left_node.node, right_node.node.outputs());
+        let remint = shared
+            .iter()
+            .map(|id| {
+                (
+                    id.as_str().to_string(),
+                    repark_core::frame_names::AttrId::mint()
+                        .as_str()
+                        .to_string(),
+                )
+            })
+            .collect::<HashMap<_, _>>();
+        let (requalified, node) = crate::dataframe_names::requalify_join_sides(
+            &joined,
+            &stamped,
+            Some(&stamped),
+            &left_node,
+            &right_node,
+            remint,
+            true,
+        )
+        .expect("requalify");
+        assert!(node.node.renews());
         let after = crate::dataframe_names::attribute_ids(&requalified);
         assert_eq!(after[..2], held[..]);
         assert!(
@@ -433,11 +456,15 @@ fn binding_re_mints_using_join_collisions_of_a_self_join() {
         }
         let left = session.sql(py, "SELECT * FROM using_l").expect("left");
         let right = session.sql(py, "SELECT * FROM using_r").expect("right");
-        let joined = crate::dataframe_names::join_on_keys(
+        let left_node = crate::frame_lineage::frame_root(&left).expect("left node");
+        let right_node = crate::frame_lineage::frame_root(&right).expect("right node");
+        let (joined, node) = crate::dataframe_names::join_on_keys(
             left.inner(),
             right.inner(),
             &["id".to_string()],
             datafusion::logical_expr::JoinType::Inner,
+            &left_node,
+            &right_node,
         )
         .expect("using self-join");
         let joined = PyDataFrame::new(joined, stamped.runtime_handle());
@@ -446,6 +473,7 @@ fn binding_re_mints_using_join_collisions_of_a_self_join() {
         assert_eq!(after[0], held[0]);
         assert_eq!(after[1], held[1]);
         assert!(after[2].is_some() && !held.contains(&after[2]));
+        assert!(node.node.renews());
     });
 }
 
