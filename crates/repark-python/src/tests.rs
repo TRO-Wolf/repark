@@ -638,6 +638,26 @@ fn self_join_confs_route_through_the_runtime_conf_and_read_live() {
 }
 
 #[test]
+fn binding_builds_inert_empty_root_for_never_stamped_plans() {
+    Python::attach(|py| {
+        let session = PyReparkSession::new(py, None, None, None, None, None).expect("session");
+        let plan = session
+            .sql(py, "EXPLAIN SELECT 1 AS id")
+            .expect("explain frame");
+        let held = Py::new(py, plan).expect("handle");
+        let bound = held.bind(py);
+        let borrowed = bound.borrow();
+        let root = crate::frame_lineage::frame_root(&borrowed).expect("inert root");
+        assert!(!root.node.renews());
+        assert!(root.node.outputs().is_empty());
+        let (_frame, parent) = self_join_frame(py, &session);
+        let cut = crate::frame_lineage::frame_derived(&borrowed, &parent, Vec::new()).expect("cut");
+        assert!(!cut.node.renews());
+        assert!(cut.node.outputs().is_empty());
+    });
+}
+
+#[test]
 fn binding_prepares_self_join_conditions_by_the_session_rules() {
     Python::attach(|py| {
         let session = Py::new(

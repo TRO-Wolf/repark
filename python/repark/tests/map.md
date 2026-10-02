@@ -9043,8 +9043,11 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   fresh node ids and checkpoint re-roots; the two self-join confs forward
   through the native setter, default `true` (live Spark 4.1.2), refuse invalid
   values before storing; twin sorts on pass-through children and the
-  overlay-born sibling sort keep their base answers. No module docstring: the
-  lane's no-comments ruling covers the new file; the contract lives here.
+  overlay-born sibling sort keep their base answers. **R-SJ2-3 (2026-10-02):**
+  describe/summary answer through inert empty roots (never renewing, no
+  outputs); a relation child of describe gets a non-empty node. No module
+  docstring: the lane's no-comments ruling covers the new file; the contract
+  lives here.
 - [test_attr_id_1_v456.py](test_attr_id_1_v456.py) — **ATTR-ID-1 V-5 (2026-10-02):**
   the verifier-fold twin pins, measured against live Spark 4.1.2 `p5_twins`.
   The ported `test_v5` pin plus the 13 remaining F_ cells refuse

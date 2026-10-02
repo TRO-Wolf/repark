@@ -116,6 +116,35 @@ def test_sj2_self_join_confs_default_true_and_refuse_loud(spark: ReparkSession) 
     assert spark.conf.get(_FAIL_KEY) == "true"
 
 
+def test_sj2_describe_and_summary_answer(spark: ReparkSession) -> None:
+    """Describe/summary collect their base rows through inert nodes."""
+    frame = spark.createDataFrame([(1, 10), (2, 20)], ["id", "v"])
+    described = frame.describe()
+    assert described.columns == ["summary", "id", "v"]
+    assert [row[0] for row in described.collect()] == [
+        "count",
+        "mean",
+        "stddev",
+        "min",
+        "max",
+    ]
+    summered = frame.summary("count")
+    assert summered.columns == ["summary", "id", "v"]
+    assert [tuple(row) for row in summered.collect()] == [("count", "2", "2")]
+
+
+def test_sj2_never_stamped_frames_get_inert_empty_roots(spark: ReparkSession) -> None:
+    """Describe outputs carry a root node with no outputs that never renews."""
+    frame = spark.createDataFrame([(1, 10), (2, 20)], ["id", "v"])
+    described = frame.describe()
+    assert described._frame_node.renews is False
+    assert described._frame_node.output_count == 0
+    child = described.filter("summary = 'count'")
+    assert child._frame_node.output_count == 3
+    assert child._frame_node.renews is False
+    assert [tuple(row) for row in child.collect()] == [("count", "2", "2")]
+
+
 def test_sj2_twin_sort_on_pass_through_child_still_refuses(spark: ReparkSession) -> None:
     """A twin Column sorted on a derived frame refuses ``AMBIGUOUS_REFERENCE``."""
     spark.conf.set("spark.sql.caseSensitive", "false")

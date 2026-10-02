@@ -844,3 +844,13 @@ fn x_f0_frameless_token_binds_by_id_and_never_flags() {
         Prepared::Refused(Refusal::Missing { .. })
     ));
 }
+
+#[test]
+fn x_empty_root_never_renews_and_skips_refusal_checks() {
+    let target = FrameNode::root(&DFSchema::empty()).unwrap();
+    assert!(!target.renews());
+    assert!(target.outputs().is_empty());
+    let shown = vec!["v".to_string()];
+    let refusal = check_refs(&target, &shown, &[], ON).unwrap();
+    assert!(refusal.is_none());
+}

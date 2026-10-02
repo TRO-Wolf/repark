@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use datafusion::common::DFSchema;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3::wrap_pyfunction;
 use repark_core::frame_names::{
     AttrId, FrameNode, JoinSide, Prepared, Refusal, SELF_JOIN_CONDITION, SelfJoinRules, check_refs,
-    missing_condition, missing_message, quoted_names, self_join_message,
+    missing_condition, missing_message, plan_is_relation, quoted_names, self_join_message,
 };
 use repark_functions::case_sensitive::SPARK_SQL_FAIL_AMBIGUOUS_SELF_JOIN_KEY;
 
@@ -33,6 +34,11 @@ impl PyFrameNode {
     #[getter]
     fn renews(&self) -> bool {
         self.node.renews()
+    }
+
+    #[getter]
+    fn output_count(&self) -> usize {
+        self.node.outputs().len()
     }
 }
 
@@ -120,7 +126,14 @@ pub(crate) fn refusal_error(py: Python<'_>, refusal: &Refusal) -> PyErr {
 #[pyfunction]
 pub fn frame_root(frame: &PyDataFrame) -> PyResult<PyFrameNode> {
     fenced!("frame_lineage.frame_root", {
-        FrameNode::root(frame.inner().schema())
+        let inner = frame.inner();
+        let empty = DFSchema::empty();
+        let schema = if plan_is_relation(inner.logical_plan()) {
+            inner.schema()
+        } else {
+            &empty
+        };
+        FrameNode::root(schema)
             .map(|node| PyFrameNode { node })
             .map_err(datafusion_to_py_err)
     })
@@ -134,9 +147,14 @@ pub fn frame_derived(
     others: Vec<PyRef<'_, PyFrameNode>>,
 ) -> PyResult<PyFrameNode> {
     fenced!("frame_lineage.frame_derived", {
-        let schema = frame.inner().schema();
+        let inner = frame.inner();
+        let relation = plan_is_relation(inner.logical_plan());
+        let empty = DFSchema::empty();
+        let schema = if relation { inner.schema() } else { &empty };
         let parent = Arc::clone(&parent.node);
-        let built = if others.is_empty() {
+        let built = if !relation {
+            FrameNode::root(schema)
+        } else if others.is_empty() {
             FrameNode::derived(schema, parent)
         } else {
             let others = others.iter().map(|other| Arc::clone(&other.node)).collect();

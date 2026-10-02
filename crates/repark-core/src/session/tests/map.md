@@ -168,6 +168,10 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   **ATTR-ID-1 SJ-2 (2026-10-02):** `x_f0_frameless_token_binds_by_id_and_never_flags`
   pins the `F0` contract — a frameless token parses, never flags ambiguity, binds
   by id, and still refuses loud when its id is missing.
+  **ATTR-ID-1 SJ-2 R-SJ2-3 (2026-10-02):**
+  `x_empty_root_never_renews_and_skips_refusal_checks` pins the inert empty
+  `Root`: it never renews, and `check_refs` returns early on it even when the
+  display count cannot match the empty outputs.
 - `session.rs` — ported v1 session battery plus P2G R2 / A13 / metadata-enumeration pins. RP-5: the bare-session half of the metadata-table enumeration contract (fork F-8 listing); mutation — make `information_schema` expect a `$snapshots` twin and the pin reds. pins: rp-5-fork-repin/C-003
   Child: [session/catalog_registration.rs](session/map.md).
   RP-5: `information_schema` hide pin now cites fork F-8 listing (no engine shim).
