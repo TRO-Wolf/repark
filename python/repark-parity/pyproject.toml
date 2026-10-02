@@ -19,6 +19,5 @@ dependencies = ["pyarrow>=25.0.0", "pydantic>=2.10,<3"]
 record = ["pyspark==4.1.2"]
 live-db = ["psycopg[binary]>=3.2"]
 
-
 [tool.hatch.build.targets.wheel]
 packages = ["src/repark_parity"]
