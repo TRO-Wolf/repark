@@ -938,3 +938,21 @@ asserted non-`None` ids only). That test now asserts byte continuity
 across cache, unpersist and checkpoint, and C-045 proves the carry; the
 cache half closes on continuity. The SQL-`UNPIVOT` half stays open as
 recorded.
+
+**Verifier-fold gate record (2026-10-02, append-only).** Product heads
+`4982931f` (V-5) and `b6b6aeb3` (V-4) plus ledger `ec703941`. Cargo:
+`repark-core --lib` 977 passed (978 with the carry test counted once more
+under its filter), `repark-python --lib` 88 passed; clippy, fmt,
+`rust-panic-ban`, `check_lib_rs`, `check_rust_file_size` clean.
+`probes/test_verify_pins.py`: the 2 V-4 and 1 V-5 pins pass; the 5 V-1,
+V-2 and V-3 pins fail byte-identical to `b377de7e`. S0 replay once into
+`v456/t-head-1` (foreground, `timeout 1500`, `ulimit -v 67108864`):
+43992 judged cells, 0 EQUAL moved, FIXED 11872 against `main.json`;
+against `b377de7e`'s t-head-1, 9 raw diffs — 5 process-prefix noise, 3
+engine-echo-case noise (all three flip run-to-run on one build), 1
+`freqItems` order gain — 1 gain, 0 lost. Neighbour sweep `-n 8` over the
+C-016 globs (50 files with the new pin file): 2532 passed, 19 skipped, 2
+xfailed, 0 failed. `casesens_1` inside the sweep, no EQUAL pin change.
+Known V-4/V-1 interaction: `p7 child_before_materialize_join_parent`
+moves base-rows → left-bind (Spark refuses), owned by the pending V-1
+ruling. `bash /tmp/xattr/gate.sh` prints GATE GREEN.
