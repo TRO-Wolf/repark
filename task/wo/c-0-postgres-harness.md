@@ -16,12 +16,13 @@ Out: the SQL Server container (a separate measurement under CC-5), any Rust.
 - Rust-first does not apply to a test fixture; the Spark live cells are Python and this tier matches them.
 - No code comments; docstrings are required by the docstring-presence gate and are not comments.
 - The image is `postgres:16-alpine`; logical replication is on from the first run (`wal_level=logical`, 8 slots, 8 senders) so the 1.7 harness changes nothing here.
+- Docker (owner, 2026-10-02): the daemon is rootless Docker under `repark.slice`, reached through `DOCKER_HOST=unix:///run/user/<uid>/docker.sock` in the lane environment; never the system daemon, never the docker group. The image is pre-pulled by the owner, so the script runs with `--pull=never`. Every container is bounded (`--cpus 2 --memory 2g --pids-limit 256`), labelled `repark.disposable=1`, and at most four run at once; a `reap` subcommand removes any older than two hours.
 
 ## 2. Files
 
 | action | path |
 |---|---|
-| new | `scripts/dev/pg_disposable.sh` — `up` / `down` / `url`; one container per invocation, named `repark-pg-<user>-<pid>` |
+| new | `scripts/dev/pg_disposable.sh` — `up` / `down` / `url` / `reap`; one bounded, labelled container per invocation, named `repark-pg-<user>-<pid>` |
 | new | `python/repark-parity/tests/live_db/__init__.py` (empty) |
 | new | `python/repark-parity/tests/live_db/conftest.py` — the `pg_live` fixture |
 | new | `python/repark-parity/tests/live_db/test_c0_cdc_scenarios.py` — the five scenario pins |
@@ -40,15 +41,25 @@ IMAGE="postgres:16-alpine"
 STATE="${XDG_RUNTIME_DIR:-/tmp}/repark-pg.env"
 case "${1:-}" in
   up)
+    [ "$(docker ps -q --filter label=repark.disposable=1 | wc -l)" -lt 4 ] || { echo "four disposable containers already running" >&2; exit 3; }
     PORT=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1])')
-    docker run -d --rm --name "$NAME" -e POSTGRES_PASSWORD=repark -p "127.0.0.1:${PORT}:5432" "$IMAGE" \
-      -c wal_level=logical -c max_replication_slots=8 -c max_wal_senders=8 >/dev/null
+    docker run -d --rm --pull=never --name "$NAME" --label repark.disposable=1 \
+      --cpus 2 --memory 2g --pids-limit 256 --shm-size 256m \
+      -e POSTGRES_PASSWORD=repark -p "127.0.0.1:${PORT}:5432" "$IMAGE" \
+      -c wal_level=logical -c max_replication_slots=8 -c max_wal_senders=8 \
+      -c shared_buffers=256MB -c max_connections=50 >/dev/null
     until docker exec "$NAME" pg_isready -U postgres >/dev/null 2>&1; do sleep 0.5; done
     printf 'REPARK_PG_NAME=%s\nREPARK_PG_URL=postgresql://postgres:repark@127.0.0.1:%s/postgres\n' "$NAME" "$PORT" > "$STATE"
     cat "$STATE" ;;
   down) . "$STATE"; docker rm -f "$REPARK_PG_NAME" >/dev/null; rm -f "$STATE" ;;
   url) . "$STATE"; echo "$REPARK_PG_URL" ;;
-  *) echo "usage: $0 up|down|url" >&2; exit 2 ;;
+  reap)
+    cutoff=$(date -u -d '-2 hours' +%s)
+    for id in $(docker ps -q --filter label=repark.disposable=1); do
+      started=$(date -u -d "$(docker inspect --format '{{.State.StartedAt}}' "$id")" +%s)
+      [ "$started" -lt "$cutoff" ] && docker rm -f "$id" >/dev/null
+    done ;;
+  *) echo "usage: $0 up|down|url|reap" >&2; exit 2 ;;
 esac
 ```
 
@@ -104,8 +115,9 @@ survives its teardown (`pg_replication_slots` and `pg_publication` empty of its 
 > ### The live database tier
 >
 > A live database cell runs only against the disposable container `scripts/dev/pg_disposable.sh up`
-> starts (one per invocation, logical replication on), never against a database another system
-> owns. The `pg_live` fixture (`python/repark-parity/tests/live_db/conftest.py`) gives each test a
+> starts (one per invocation, logical replication on, bounded to two cores and two gigabytes, at
+> most four at once under the rootless daemon in `repark.slice`), never against a database another
+> system owns. The `pg_live` fixture (`python/repark-parity/tests/live_db/conftest.py`) gives each test a
 > schema, a publication name and a slot name that carry one random tag, and drops all three on
 > exit; a test that creates anything else drops it itself. Cells skip, not fail, when
 > `REPARK_PG_URL` is unset. The Spark live-cell rules (guard the shared session, single-file seed,
@@ -118,7 +130,7 @@ survives its teardown (`pg_replication_slots` and `pg_publication` empty of its 
 3. `scripts/dev/pg_disposable.sh up && export $(scripts/dev/pg_disposable.sh url | sed 's/^/REPARK_PG_URL=/')`.
 4. `.venv/bin/python -m pytest python/repark-parity/tests/live_db -q` — expect `1 passed, 5 xfailed`.
 5. `unset REPARK_PG_URL && .venv/bin/python -m pytest python/repark-parity/tests/live_db -q` — expect `6 skipped`.
-6. `scripts/dev/pg_disposable.sh down && docker ps -a --filter name=repark-pg --format '{{.Names}}'` — expect empty output.
+6. `scripts/dev/pg_disposable.sh down && docker ps -a --filter label=repark.disposable=1 --format '{{.Names}}'` — expect empty output.
 7. The `docs/testing.md` subsection; the four map.md edits.
 8. `ruff check python/repark-parity/tests/live_db && ruff format --check python/repark-parity/tests/live_db && scripts/check_map_md.sh --base origin/main && scripts/check_docstring_presence.sh && scripts/check_lib_py.sh && python3 scripts/check_docs_links.py && make check-comment-density`.
 9. Commit: `chore(c-0): the disposable Postgres container, the pg_live fixture and the five cdc S0 pins (CC-6)` with the `Authored-By:` trailer. Push, open the PR against `main`.
@@ -129,7 +141,7 @@ survives its teardown (`pg_replication_slots` and `pg_publication` empty of its 
 |---|---|
 | step 4 | `1 passed, 5 xfailed` |
 | step 5 | `6 skipped` |
-| step 6 | no container named `repark-pg-*` remains |
+| step 6 | no container labelled `repark.disposable=1` remains |
 | `ruff check` / `ruff format --check` | no output, exit 0 |
 | `scripts/check_map_md.sh --base origin/main` | `map-md: … clean` |
 | `scripts/check_docstring_presence.sh` | `docstring-presence: … clean` |
@@ -141,6 +153,7 @@ survives its teardown (`pg_replication_slots` and `pg_publication` empty of its 
 - **H-2** step 4 shows any `failed` or an `xpassed`: hand back the test name and output; do not loosen an assertion.
 - **H-3** a gate in step 8 needs a change outside §2's file list: hand back the gate's output; do not edit the gate.
 - **H-4** sixty minutes without green step 4: commit as `wip(c-0): …`, hand back.
+- **H-5** `up` exits 3 (four disposable containers already running): hand back; do not remove another lane's container and do not run `reap` to make room.
 
 ## 7. Hand-back
 
