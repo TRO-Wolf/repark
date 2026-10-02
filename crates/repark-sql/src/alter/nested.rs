@@ -7,6 +7,7 @@ use datafusion::sql::sqlparser::parser::{Parser, ParserError};
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use repark_core::EngineContext;
 use repark_iceberg::write::alter::{ColumnPosition, starts_with_alter};
+use repark_iceberg::write::column_move::nested_name_known_ci;
 use repark_iceberg::write::nested_column::{
     ColumnPathChange, apply_column_path_changes, nested_add_refusal, nested_required_add_refusal,
 };
@@ -244,24 +245,32 @@ pub(crate) async fn execute_nested_column_ddl(
         }],
         NestedColumnOperation::Drop { paths, if_exists } => {
             let schema = table.metadata().current_schema();
-            paths
-                .iter()
-                .map(|path| path.join("."))
-                .filter(|name| !*if_exists || schema.field_by_name_case_insensitive(name).is_some())
-                .map(|path| ColumnPathChange::Drop { path })
-                .collect()
+            let mut kept = Vec::with_capacity(paths.len());
+            for path in paths {
+                let name = path.join(".");
+                if *if_exists {
+                    let known = nested_name_known_ci(schema, &name).map_err(iceberg_err)?;
+                    if !known {
+                        continue;
+                    }
+                }
+                kept.push(ColumnPathChange::Drop { path: name });
+            }
+            kept
         }
     };
     if changes.is_empty() {
         return cx.ctx.read_empty();
     }
-    if let Some(message) = nested_add_refusal(table.metadata().current_schema(), &changes) {
+    if let Some(message) = nested_add_refusal(table.metadata().current_schema(), &changes, false)
+        .map_err(iceberg_err)?
+    {
         return Err(DataFusionError::Plan(message));
     }
     if let Some(message) = nested_required_add_refusal(&changes) {
         return Err(DataFusionError::Execution(message));
     }
-    apply_column_path_changes(target.catalog.as_ref(), &table, &changes)
+    apply_column_path_changes(target.catalog.as_ref(), &table, &changes, false)
         .await
         .map_err(iceberg_err)?;
     invalidate(cx, &target).await?;

@@ -215,6 +215,11 @@ pins: rp-4-fork-repin/C-005, C-006
   `current_schema()`), and a named source reads its `TableProvider` schema; only
   a subquery source (`USING (SELECT …) AS s`) still plans one `SELECT * … LIMIT
   0`, because no metadata exists for it. `merge.rs` resolves the catalog handle
+  before the fragment rewrite. pins: ice-mixed-case-1/C-004, C-018
+- `insert_overwrite.rs` — **RP-56 (2026-09-28):** the empty-overwrite target probe reads
+  through a scratch alias (engine machinery, like its sibling probes), and the
+  ambiguous-overwrite read-back counts (`SELECT 1 … HAVING COUNT(*)=1`) instead of starring.
+  pins: rp-56/C-001
   before the fragment rewrite. **WO CASESENS-1 slice 1 (2026-09-27):** a
   parenthesized derived source is folded as text
   (`column_resolution::fold_query_text`) before the fragment rewrite, so its
@@ -444,6 +449,8 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: ice-write-options-1/C-001, C-003
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the by-name append commit resolves
   the merged session write.
+  **RP-56 DIFF-PROBE fold (2026-09-29):** the direct file-writer calls pass `true`
+  (insensitive, the old behavior); BY NAME keeps its resolution.
 - `insert_arity.rs` — **IPI-51 PR9 (2026-09-21):** the short-VALUES arity router
   intercept. `refuse_if_short_values` refuses a positional `INSERT INTO t VALUES (…)` whose
   VALUES width is strictly below the Iceberg target's field count with
@@ -892,6 +899,9 @@ pins: rp-4-fork-repin/C-005, C-006
   `fast_append`; the service-managed arm calls `commit_replace_write_with_summary`.
   Plain CTAS with options keeps the append summary.
   pins: ice-write-options-1/C-016
+  **RP-56 DIFF-PROBE fold (2026-09-29):** both write sites pass the session case flag
+  down — `write_ctas_query` into the plan writer, `staging.case_sensitive` into the
+  options path — so a CTAS `SELECT *` over twins answers under `caseSensitive=true`.
 - `write_to_branch.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** when the session
   write conf is set, a plain `INSERT` / `DELETE` / `UPDATE` on `<table>.branch_<name>` counts
   as an owned write head, so the statement keeps its ref-qualified name and reaches RePark's
@@ -908,6 +918,12 @@ pins: rp-4-fork-repin/C-005, C-006
   the branch and not a read pinned to it (the pin turned the target into a read-only temp
   view; every other `FROM`, including a subquery's, still pins).
   pins: ice-session-write-conf-1/C-038
+  **RP-56 verifier fold (2026-09-28):** branch-selector spans refuse 42711 under `false` when
+  the pinned provider schema has top-level twins (p9 `f_branch_table`); `VERSION`/`TIMESTAMP
+  AS OF` keeps answering through the scratch skip.
+  **RP-56 DIFF-PROBE fold (2026-09-29):** tag selectors refuse like branch selectors
+  (`ref_selector` refuses 42711 under `false` on twin schemas; `VERSION`/`TIMESTAMP AS OF`
+  still answer).
 - `spark_ast.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):**
   `canonicalize_identity_selection` canonicalises the selection and each SET *value* through
   `rewrite_fragment_case` (a SQL fragment in, a SQL fragment out — the repair backticks a
@@ -1563,6 +1579,9 @@ pins: rp-4-fork-repin/C-005, C-006
   `rename_column`, `delete_column`); RePark keeps no schema model of its own. A required child
   without a default refuses with the fork's `Incompatible change: cannot add required column…`.
   Pins: [`tests/nested_column_ddl.rs`](tests/nested_column_ddl.rs).
+  **RP-56 DIFF-PROBE fold (2026-09-29):** the nested-DROP `IF EXISTS` filter uses
+  `column_move::nested_name_known_ci` so a stored-case path on a collided schema skips
+  instead of refusing.
   pins: ice-nested-evo-1/C-006, C-007, C-008, C-009, C-010, C-011, C-012
   **Round 2 (2026-09-18, run 22b):** a claimed statement that holds a double-quoted word
   (`RENAME COLUMN s.a TO "x.y"`, `ADD COLUMN s."x.y" INT`) refuses Spark's
@@ -1655,6 +1674,10 @@ pins: rp-4-fork-repin/C-005, C-006
   `residual_column_comment_refusal`, which `router.rs` calls where the deleted I6 refusal ran,
   names every other unclaimed `ALTER COLUMN … COMMENT '<literal>'` statement.
   pins: ice-nested-evo-1/C-049, C-050, C-051
+  **RP-56 verifier fold (2026-09-28):** the DROP existence check resolves exact under `true`
+  and `try_` under `false`, and the nested apply commits with the session's case-sensitivity,
+  so nested DROP/ADD/DROP-IF-EXISTS answer on twin tables under `true` and refuse loud under
+  `false` (p9 t-cells).
 - `alter_write_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** the `ALTER TABLE …
   WRITE …` pre-parse intercept (sqlparser carries none of these forms): `WRITE ORDERED BY`
   (sort order + `write.distribution-mode = range`), `WRITE LOCALLY ORDERED BY` (sort order,

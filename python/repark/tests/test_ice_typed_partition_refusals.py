@@ -109,23 +109,24 @@ def test_ctas_mixing_untyped_and_typed_partition_elements_answers_the_mix_text(
 
 
 @pytest.mark.parametrize(
-    ("columns", "partitioning", "pair"),
+    ("columns", "partitioning", "expected"),
     [
-        pytest.param("(id BIGINT, data STRING)", "(DATA STRING)", "data and DATA", id="declared"),
-        pytest.param("(id BIGINT)", "(p STRING, P INT)", "p and P", id="typed"),
+        pytest.param(
+            "(id BIGINT, data STRING)", "(DATA STRING)", ["id", "data", "DATA"], id="declared"
+        ),
+        pytest.param("(id BIGINT)", "(p STRING, P INT)", ["id", "p", "P"], id="typed"),
     ],
 )
-def test_typed_partition_columns_differing_by_case_reach_the_fork_under_case_sensitive(
-    spark: ReparkSession, columns: str, partitioning: str, pair: str
+def test_typed_partition_columns_differing_by_case_serve_under_case_sensitive(
+    spark: ReparkSession, columns: str, partitioning: str, expected: list[str]
 ) -> None:
     spark.conf.set("spark.sql.caseSensitive", "true")
     try:
-        caught = _refusal(
-            spark,
-            f"CREATE TABLE sc.ns.pcs {columns} USING iceberg PARTITIONED BY {partitioning}",
-        )
+        spark.sql(
+            f"CREATE TABLE sc.ns.pcs {columns} USING iceberg PARTITIONED BY {partitioning}"
+        ).collect()
+        assert spark.catalog.tableExists("sc.ns.pcs")
+        assert spark.table("sc.ns.pcs").columns == expected
+        assert spark.table("sc.ns.pcs").count() == 0
     finally:
         spark.conf.set("spark.sql.caseSensitive", "false")
-    assert type(caught) is PySparkException
-    assert str(caught) == f"DataInvalid => Cannot build lower case index: {pair} collide"
-    assert not spark.catalog.tableExists("sc.ns.pcs")

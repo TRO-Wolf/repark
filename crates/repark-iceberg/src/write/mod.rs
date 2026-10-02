@@ -41,6 +41,7 @@ pub mod overwrite_scope;
 pub mod partition_overwrite;
 pub mod partition_spec;
 pub mod partition_write;
+pub mod partitioned_files;
 pub(crate) mod position_delete;
 /// Identity DELETE/UPDATE (G3-E8 A1): SELECT over pinned `(_file, _pos)`, MERGE write arms.
 pub mod predicate_dml;
@@ -60,6 +61,7 @@ pub mod store_cast;
 pub(crate) mod store_fold;
 pub mod store_overflow;
 pub mod summary_collision;
+pub mod table_admin;
 /// Test-support-only snapshot-ref helpers (`_testing_create_ref`).
 pub mod testing_support;
 /// Whole-table `TRUNCATE TABLE` (delete-only empty overwrite).

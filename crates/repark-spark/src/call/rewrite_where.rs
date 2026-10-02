@@ -15,7 +15,11 @@ const MAX_WHERE_DEPTH: usize = 64;
 ///
 /// # Errors
 /// Spark's wrapper `Cannot parse predicates in where option: {expr}` on any conversion failure.
-pub(in crate::call) fn parse_rewrite_where(where_sql: &str, schema: &Schema) -> Result<Predicate> {
+pub(in crate::call) fn parse_rewrite_where(
+    where_sql: &str,
+    schema: &Schema,
+    case_sensitive: bool,
+) -> Result<Predicate> {
     if where_sql.trim().is_empty() || where_sql.contains(';') {
         return Err(where_parse_error(where_sql));
     }
@@ -28,6 +32,9 @@ pub(in crate::call) fn parse_rewrite_where(where_sql: &str, schema: &Schema) -> 
         .map_err(|_| where_parse_error(where_sql))?;
     if !matches!(parser.peek_token().token, Token::EOF) {
         return Err(where_parse_error(where_sql));
+    }
+    if !case_sensitive && let Err(collision) = schema.try_field_by_name_case_insensitive("") {
+        return Err(DataFusionError::Plan(collision.message().to_string()));
     }
     expr_to_predicate(&expr, schema, 0).map_err(|_| where_parse_error(where_sql))
 }
@@ -212,7 +219,8 @@ fn column_name(expr: &Expr, schema: &Schema) -> Result<String> {
         }
     };
     let field = schema
-        .field_by_name_case_insensitive(raw)
+        .field_by_name(raw)
+        .or_else(|| schema.field_by_name_case_insensitive(raw))
         .ok_or_else(|| DataFusionError::Plan(format!("unknown where column `{raw}`")))?;
     Ok(field.name.clone())
 }
@@ -317,7 +325,7 @@ mod tests {
     }
 
     fn parse_ok(sql: &str) -> Predicate {
-        parse_rewrite_where(sql, &test_schema()).unwrap_or_else(|error| {
+        parse_rewrite_where(sql, &test_schema(), true).unwrap_or_else(|error| {
             panic!("parse {sql:?} should succeed, got {error}");
         })
     }

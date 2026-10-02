@@ -40,6 +40,8 @@ holds the pieces split out of it.
   **WO CASESENS-1 slice 5 (2026-09-27):** `declare_order` passes
   `NameRule::IgnoreCase` to `apply_write_order` (the helper bypasses the door, so it
   keeps the old always-fold behavior for its exact-name orders). pins: casesens-1/C-015
+  **RP-56 DIFF-PROBE fold (2026-09-29):** the file-writer calls pass `true`
+  (insensitive, the old behavior) to the now-scoped writers; layouts unchanged.
 - `sort_order_tests.rs` — round-2 sort-order pins split out of `tests.rs` at the 1000-line
   ceiling: the dotted nested sort field sorts on the nested value (null structs sort as
   null), and a transform sort order refuses the write loud (the WRITE-ORDER-TRANSFORM-1

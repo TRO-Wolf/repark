@@ -2071,22 +2071,25 @@ Spark cells.
   fields and refuses the same way. A qualified reference that names one field
   (`i.USERID` beside `j.userId`) is not refused just because a bare spelling of the name is
   written somewhere else in the statement.
-- **repark, `SELECT *` over a twin frame (DECLARED, 2026-09-18, Q-21b-12)** — `SELECT * FROM twv`
-  on a temp view of ``SELECT 1 AS id, 0 AS `ID` `` answers columns `['id', 'ID']`, row `[1, 0]`.
-  Spark refuses both the star over its twin table and the twin view's creation with
-  `[COLUMN_ALREADY_EXISTS]` / `42711`. A star refusal in the Spark door's resolution module was
-  built and measured. It also refused the DataFrame door's `filter` and `table` lowerings on
-  case-colliding frames, which Spark answers (`test_filter_predicate_rewrite.py`, five cells), so
-  it did not land. RePark refuses the unquoted view DDL (`… 1 AS id, 2 AS ID`) with the engine's
-  `Projections require unique expression names`, so the refusal matches Spark there but the
-  sentence does not.
-- **repark, Iceberg table carrying twins (DECLARED)** — a twin Iceberg schema cannot be
-  created, and cannot be adopted either. `CREATE TABLE … (`id` INT, `ID` INT)` and
-  `register_table` on Spark's own twin metadata both refuse loud with `DataInvalid => Cannot
-  build lower case index: id and ID collide` (the fork's schema index), before any reference is
-  resolved. Every L-08 statement on such a table therefore refuses at adoption rather than with
-  Spark's sentence, and `SELECT *` refuses at adoption rather than with
-  `[COLUMN_ALREADY_EXISTS]`. The refusal is loud, never a silent answer.
+- **repark, `SELECT *` over a twin frame (FIXED 2026-09-28, RP-56 fold, closes C-020)** —
+  `SELECT * FROM twv` on a temp view of ``SELECT 1 AS id, 0 AS `ID` `` refuses with the recorded
+  `[COLUMN_ALREADY_EXISTS]` / `42711` sentence, as does the star over a twin Iceberg table. The
+  resolution audit refuses a written star over any non-scratch twin relation; scratch relations
+  keep answering, so the DataFrame door's `filter` and `table` lowerings on case-colliding
+  frames still serve the calls Spark answers (`test_filter_predicate_rewrite.py`). Before the
+  fold the star answered `['id', 'ID']`, row `[1, 0]` (DECLARED, Q-21b-12), because the first
+  refusal built here also refused those DataFrame lowerings. RePark refuses the unquoted view
+  DDL (`… 1 AS id, 2 AS ID`) with the engine's `Projections require unique expression names`,
+  so the refusal matches Spark there but the sentence does not.
+- **repark, Iceberg table carrying twins (restated 2026-09-28, RP-56)** — under
+  `caseSensitive=true` a twin Iceberg schema creates and reads back (columns `a`/`A`), and
+  `register_table` on Spark's own twin metadata adopts. References then refuse with Spark's
+  sentence (`[AMBIGUOUS_REFERENCE]` / `42704`, FIXED); `SELECT *` refuses with Spark's
+  `[COLUMN_ALREADY_EXISTS]` / `42711` sentence (FIXED by the RP-56 fold, which closes C-020).
+  Under `caseSensitive=false` a twin CREATE succeeds where Spark refuses
+  `[COLUMN_ALREADY_EXISTS]` (OPEN, RP-56 R-1). Before RP-56 the fork's eager index refused the
+  schema at build and at adoption with `DataInvalid => Cannot build lower case index: id and ID
+  collide`, so every L-08 statement refused at adoption.
 - **Apache Spark** — Iceberg's Java API `updateSchema().addColumn("ID", …)` on a table with
   `id` is allowed (schema `['id', 'ID']`). `SELECT t.ID FROM tw AS t` →
   `` [AMBIGUOUS_REFERENCE] Reference `t`.`ID` is ambiguous, could be: [`t`.`ID`, `t`.`ID`]. SQLSTATE: 42704 ``.
@@ -2102,14 +2105,17 @@ Spark cells.
 - **Pin** — `python/repark/tests/test_ice_mixed_case_1.py::test_case_twin_reference_is_ambiguous_exact_or_not`
   (the four reference forms on a twin frame, full sentence), `…::test_sql_door_ambiguous_reference_matches_spark_shape`
   (the recorded cross-relation sentence up to `SQLSTATE: 42704`),
-  `…::test_measured_case_twin_table_refuses_at_adoption[L08_*]` (the declared adoption
-  refusal for all four measured cells); Rust `crates/repark-core/src/column_resolution/tests.rs`
+  `…::test_measured_case_twin_table_adopts_then_refuses_references[L08_*]` (adoption, then
+  the recorded refusal for the three reference cells) and
+  `…::test_case_twin_table_star_answers_under_true_and_refuses_under_false` (the real-data
+  twin table answers under `true` and refuses the recorded 42711 under `false`); Rust
+  `crates/repark-core/src/column_resolution/tests.rs`
   `l08_correlated_reference_to_a_case_twin_is_ambiguous`,
   `l08_qualified_reference_is_not_ambiguous_because_a_bare_spelling_appears_elsewhere`,
-  `l08_bare_twin_options_carry_the_full_relation_name`, `n03_star_over_a_case_twin_answers_both_columns_declared`,
+  `l08_bare_twin_options_carry_the_full_relation_name`, `n03_star_over_a_case_twin_refuses_column_already_exists`,
   `case_only_collision_raises_the_spark_sentence`, `join_collision_on_bare_reference_raises`;
   `crates/repark-iceberg/src/write/name_resolution.rs::write_side_case_twins_are_ambiguous`;
-  the declared star answer `…::test_star_over_a_case_twin_frame_answers_both_columns_declared`.
+  the frame star refusal `…::test_star_over_a_case_twin_frame_refuses_column_already_exists`.
   pins: ice-mixed-case-1/C-016, C-020
 - **Rationale** — FIXED for references on the Spark door. DECLARED for twin Iceberg tables:
   loading a twin schema is table-format behavior that lives in the fork (fork rule), not a

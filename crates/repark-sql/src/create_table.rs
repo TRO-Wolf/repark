@@ -605,6 +605,7 @@ async fn stage_query(
             plan,
             task_ctx,
             concurrency,
+            true,
         )
         .await;
     }

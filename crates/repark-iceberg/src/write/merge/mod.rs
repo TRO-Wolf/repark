@@ -22,7 +22,6 @@ use datafusion::physical_plan::streaming::PartitionStream;
 use datafusion::prelude::SessionContext;
 use futures::channel::mpsc;
 use futures::{SinkExt, Stream, StreamExt, TryStreamExt};
-use iceberg::arrow::schema_to_arrow_schema;
 use iceberg::expr::Predicate;
 use iceberg::spec::{DataFile, FormatVersion, ManifestContentType};
 use iceberg::table::Table;
@@ -39,6 +38,7 @@ use uuid::Uuid;
 mod abort;
 pub(crate) mod cow_scratch;
 mod dv_close;
+mod file_sink;
 mod insert;
 mod not_matched_by_source;
 pub(crate) mod row_lineage;
@@ -47,6 +47,10 @@ mod snapshot_commit;
 pub(crate) mod spec;
 pub(crate) mod target_scan;
 
+pub use file_sink::{
+    write_data_files, write_data_files_from_stream, write_data_files_from_stream_with_concurrency,
+    write_data_files_with_concurrency,
+};
 use insert::{
     insert_stream_checked, store_assignment_then_sql, table_projection, update_stream_checked,
 };
@@ -58,9 +62,10 @@ pub(crate) use target_scan::{
 };
 
 use crate::catalog::uuid_presentation::{convert_uuid_column, presented_arrow_schema};
-use crate::write::concurrency::{WriteConcurrency, concurrency_from_ctx};
+#[cfg(test)]
+use crate::write::concurrency::WriteConcurrency;
+use crate::write::concurrency::concurrency_from_ctx;
 use crate::write::conflict_filter::from_merge_on;
-use crate::write::conform::{conform_batch_retaining_unmapped_columns, write_default_column_names};
 pub(crate) use crate::write::name_resolution::{
     CaseInsensitiveColumnIndex, SourceMatch, dedup_key, resolve_write_column,
 };
@@ -1373,64 +1378,6 @@ pub(super) fn cast_one_batch_to_write_schema(
         .map(|field| convert_uuid_column(named_column(batch, field.name())?, field.data_type()))
         .collect::<Result<Vec<_>>>()?;
     Ok(RecordBatch::try_new(write_schema.clone(), columns)?)
-}
-
-#[allow(clippy::missing_errors_doc)]
-pub async fn write_data_files(table: &Table, batches: Vec<RecordBatch>) -> Result<Vec<DataFile>> {
-    write_data_files_with_concurrency(table, batches, WriteConcurrency::default()).await
-}
-
-/// [`write_data_files`] with explicit [`WriteConcurrency`] (`repark.write.max-concurrent-files`).
-/// # Errors
-/// Same as [`write_data_files`].
-pub async fn write_data_files_with_concurrency(
-    table: &Table,
-    batches: Vec<RecordBatch>,
-    concurrency: WriteConcurrency,
-) -> Result<Vec<DataFile>> {
-    write_data_files_from_stream_with_concurrency(
-        table,
-        futures::stream::iter(batches.into_iter().map(Ok::<_, DataFusionError>)),
-        concurrency,
-    )
-    .await
-}
-
-#[allow(clippy::missing_errors_doc)]
-pub async fn write_data_files_from_stream<S>(table: &Table, stream: S) -> Result<Vec<DataFile>>
-where
-    S: Stream<Item = Result<RecordBatch>> + Unpin,
-{
-    write_data_files_from_stream_with_concurrency(table, stream, WriteConcurrency::default()).await
-}
-
-/// [`write_data_files_from_stream`] with explicit [`WriteConcurrency`].
-/// # Errors
-/// Same as [`write_data_files_from_stream`], plus a plan error when `max_concurrent_files < 1`.
-pub async fn write_data_files_from_stream_with_concurrency<S>(
-    table: &Table,
-    stream: S,
-    concurrency: WriteConcurrency,
-) -> Result<Vec<DataFile>>
-where
-    S: Stream<Item = Result<RecordBatch>> + Unpin,
-{
-    let max_concurrent = concurrency.max_concurrent_files;
-    if max_concurrent < 1 {
-        return Err(DataFusionError::Plan(format!(
-            "repark.write.max-concurrent-files must be >= 1 (got {max_concurrent})"
-        )));
-    }
-    let current_schema = table.metadata().current_schema();
-    let write_schema = Arc::new(schema_to_arrow_schema(current_schema).map_err(iceberg_err)?);
-    let write_default_columns = write_default_column_names(current_schema);
-    let conformed = stream.map(move |item| {
-        conform_batch_retaining_unmapped_columns(&write_schema, &write_default_columns, &item?)
-    });
-    let build_writer =
-        || async { session_staging::build_unpartitioned_data_file_writer(table).await };
-    crate::write::distribution::drive_unpartitioned(table, conformed, max_concurrent, build_writer)
-        .await
 }
 
 /// A minimal batch sink: write batches, then close into the produced data files.

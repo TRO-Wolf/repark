@@ -93,6 +93,13 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   too; the batch-sink helpers it shares (`BatchWriter`, `ForkBatchWriter`,
   `write_stream_into`, `write_stream_into_parallel`) are `pub(crate)` for that caller.
   pins: write-order-dist-1/C-008
+  **RP-56 DIFF-PROBE fold (2026-09-29):** the `write_data_files*` family moved to
+  `file_sink.rs` (re-exported here; baseline 1622 → 1569); the stream writer takes the
+  door's `case_insensitive` bit.
+- `file_sink.rs` — (RP-56 DIFF-PROBE fold, 2026-09-29) the unpartitioned
+  batch/stream file writers split out of `mod.rs`, re-exported there. Comment-free per the
+  owner ban. The error contract is unchanged: `max_concurrent_files < 1` refuses, conform
+  failures propagate.
 - `dv_close.rs` — v3 `RowDelta` DV-container close. `prepare_row_delta_deletes` writes
   V2 parquet position deletes or calls `close_touched_dv_containers_with_partitions` on V3, then
   `apply` stamps sibling sequences. C-003 pin

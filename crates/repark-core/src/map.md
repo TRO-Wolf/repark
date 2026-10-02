@@ -677,6 +677,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   statement once against the valid fields under `spark.sql.caseSensitive = false`,
   `rewrite_fragment_case` does the same for DML fragments; both emit backticked
   stored-case spellings, collisions refuse `[AMBIGUOUS_REFERENCE]` / `42704`).
+  **RP-56 DIFF-PROBE fold (2026-09-29):** the `column_resolution/struct_fields.rs`
+  post-pass refuses a struct path into a two-fold twin with `42000`
+  (quoting changes nothing per live Spark; the pass runs only under `false`).
   Round 21b integration: this module owns no config carrier — `spark.sql.caseSensitive`
   has one home, `repark_functions::case_sensitive::SparkCaseSensitiveConfig` (landed on
   main by ICE-RTAS-BYNAME-1), and the Spark door passes `case_insensitive` in as an
@@ -718,6 +721,17 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   the final drop run on a stack sized to the statement's nesting depth. Both case modes go
   through it. IPI-51 PR6 slice 1 (2026-09-21): a `FieldNotFound` that survives the fold is
   stamped `UNRESOLVED_COLUMN.WITH_SUGGESTION` / `42703`.
+  **RP-56 (2026-09-28):** `audit_plan_for_ambiguity` also refuses a written `*` over a
+  non-scratch twin relation under `false` (Spark's `COLUMN_ALREADY_EXISTS` / `42711`,
+  first twin named); scratch relations and the `true` door keep answering. Verifier fold
+  (2026-09-28): the refusal is scan-scoped — the twin key must occur inside one non-scratch
+  table scan — so derived/CTE/join/temp-view stars answer. Merge (2026-09-28): the
+  guard (`refuse_star_twins` / `scan_twin_keys`) moves to
+  `column_resolution/star_twins.rs` under the file-size gate, a pure move. See
+  [column_resolution/map.md](column_resolution/map.md).
+  pins: ice-mixed-case-1/C-001, C-002, C-007, C-013, C-014, C-015, C-016, C-017, C-021, C-022
+  pins: ice-error-conditions-1/C-011
+  pins: rp-56/C-001
   **WO CASESENS-1 slice 1 (2026-09-27):** `finish_with_display` respells the
   folded statement's inner scopes (`column_resolution/inner_scopes.rs`) and
   re-plans once on change, falling back to the pre-respell plan when the

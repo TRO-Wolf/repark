@@ -25,7 +25,12 @@ pub(crate) fn conform_batches(
 ) -> Result<Vec<RecordBatch>> {
     let mut conformed = Vec::with_capacity(batches.len());
     for batch in batches {
-        conformed.push(conform_batch(write_schema, write_default_columns, batch)?);
+        conformed.push(conform_batch_scoped(
+            write_schema,
+            write_default_columns,
+            batch,
+            true,
+        )?);
     }
     conformed.retain(|batch| batch.num_rows() > 0);
     Ok(conformed)
@@ -42,10 +47,11 @@ pub(crate) fn write_default_column_names(schema: &iceberg::spec::Schema) -> Hash
         .collect()
 }
 
-pub(crate) fn conform_batch_retaining_unmapped_columns(
+pub(crate) fn conform_batch_retaining_unmapped_columns_scoped(
     write_schema: &SchemaRef,
     write_default_columns: &HashSet<String>,
     batch: &RecordBatch,
+    case_insensitive: bool,
 ) -> Result<RecordBatch> {
     let write_names: HashSet<String> = write_schema
         .fields()
@@ -64,7 +70,7 @@ pub(crate) fn conform_batch_retaining_unmapped_columns(
         if write_schema_types_already_match(write_schema, batch) {
             return attach_write_field_ids(write_schema, batch);
         }
-        return conform_batch(write_schema, write_default_columns, batch);
+        return conform_batch_scoped(write_schema, write_default_columns, batch, case_insensitive);
     }
     let keep: Vec<usize> = (0..batch.num_columns())
         .filter(|index| !extra.contains(index))
@@ -75,7 +81,12 @@ pub(crate) fn conform_batch_retaining_unmapped_columns(
     let conformed = if write_schema_types_already_match(write_schema, &projected) {
         attach_write_field_ids(write_schema, &projected)?
     } else {
-        conform_batch(write_schema, write_default_columns, &projected)?
+        conform_batch_scoped(
+            write_schema,
+            write_default_columns,
+            &projected,
+            case_insensitive,
+        )?
     };
     let mut fields: Vec<Arc<Field>> = conformed.schema().fields().iter().cloned().collect();
     let mut columns = conformed.columns().to_vec();
@@ -125,6 +136,15 @@ pub(crate) fn conform_batch(
     write_default_columns: &HashSet<String>,
     batch: &RecordBatch,
 ) -> Result<RecordBatch> {
+    conform_batch_scoped(write_schema, write_default_columns, batch, true)
+}
+
+pub(crate) fn conform_batch_scoped(
+    write_schema: &SchemaRef,
+    write_default_columns: &HashSet<String>,
+    batch: &RecordBatch,
+    case_insensitive: bool,
+) -> Result<RecordBatch> {
     let source_names: Vec<&str> = batch
         .schema_ref()
         .fields()
@@ -137,46 +157,47 @@ pub(crate) fn conform_batch(
     let conformed = write_schema
         .fields()
         .iter()
-        .map(|field| match source_index.resolve(field.name()) {
-            SourceMatch::Unique(index) => {
-                consumed[index] = true;
-                let column = batch.column(index);
-                if column.data_type() == field.data_type() {
-                    return Ok(Some(Arc::clone(column)));
+        .map(
+            |field| match source_index.resolve_scoped(field.name(), case_insensitive) {
+                SourceMatch::Unique(index) => {
+                    consumed[index] = true;
+                    let column = batch.column(index);
+                    if column.data_type() == field.data_type() {
+                        return Ok(Some(Arc::clone(column)));
+                    }
+                    refuse_unless_write_store_assignable(
+                        "append",
+                        field.name(),
+                        column.data_type(),
+                        field.data_type(),
+                    )?;
+                    Ok(Some(cast_with_options(
+                        column,
+                        field.data_type(),
+                        &strict_cast(),
+                    )?))
                 }
-                // WI-1: ANSI store assignment BEFORE the kernel.
-                refuse_unless_write_store_assignable(
-                    "append",
-                    field.name(),
-                    column.data_type(),
-                    field.data_type(),
-                )?;
-                Ok(Some(cast_with_options(
-                    column,
-                    field.data_type(),
-                    &strict_cast(),
-                )?))
-            }
-            SourceMatch::Missing => {
-                if write_default_columns.contains(&field.name().to_ascii_lowercase()) {
-                    fill_omitted.push(field.name().clone());
-                    Ok(None)
-                } else {
-                    Err(DataFusionError::Plan(format!(
-                        "append batch is missing column `{}` required by the target table \
+                SourceMatch::Missing => {
+                    if write_default_columns.contains(&field.name().to_ascii_lowercase()) {
+                        fill_omitted.push(field.name().clone());
+                        Ok(None)
+                    } else {
+                        Err(DataFusionError::Plan(format!(
+                            "append batch is missing column `{}` required by the target table \
                          (columns resolve by name, case-insensitively — Spark default)",
-                        field.name()
-                    )))
+                            field.name()
+                        )))
+                    }
                 }
-            }
-            SourceMatch::Ambiguous(colliding) => Err(DataFusionError::Plan(format!(
-                "append batch column `{}` is ambiguous — source columns `{}` all resolve to it \
+                SourceMatch::Ambiguous(colliding) => Err(DataFusionError::Plan(format!(
+                    "append batch column `{}` is ambiguous — source columns `{}` all resolve to it \
                  (Spark case-insensitive resolution rejects the collision; a first-match rebuild \
                  would silently drop every copy after the first)",
-                field.name(),
-                colliding.join("`, `")
-            ))),
-        })
+                    field.name(),
+                    colliding.join("`, `")
+                ))),
+            },
+        )
         .collect::<Result<Vec<Option<ArrayRef>>>>()?;
     if let Some(extra) = consumed.iter().position(|matched| !matched) {
         return Err(DataFusionError::Plan(format!(
@@ -252,8 +273,9 @@ mod tests {
             vec![Arc::new(StringArray::from(vec!["s1"])) as ArrayRef],
         )
         .expect("batch");
-        let out = conform_batch_retaining_unmapped_columns(&write, &HashSet::new(), &batch)
-            .expect("conform");
+        let out =
+            conform_batch_retaining_unmapped_columns_scoped(&write, &HashSet::new(), &batch, true)
+                .expect("conform");
         assert_eq!(
             out.schema()
                 .field(0)
