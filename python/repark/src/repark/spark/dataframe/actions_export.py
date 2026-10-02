@@ -107,18 +107,16 @@ class DataFrameNaFunctions:
             )
         filled = F.coalesce(bound, literal)
         display = bound._projection_name or bound.spark_display_part()
-        if bound._origin_plan_id is None or bound._origin_field is None:
+        if bound._attr_id is None:
             return filled.alias(display) if display else filled
         return Column(
             filled_inner.alias(display),
             spark_display=display,
             projection_name=display,
-            stable_name=True,
+            stable_name=False,
             has_free_attribute=True,
             sql_expr=filled._sql_expr,
             join_sql_expr=(f"coalesce({bound.join_sql_part()}, {literal.join_sql_part()})"),
-            origin_plan_id=bound._origin_plan_id,
-            origin_field=bound._origin_field,
         )
 
     def _fill_dict(self, replacements: dict[str, Any]) -> DataFrame:

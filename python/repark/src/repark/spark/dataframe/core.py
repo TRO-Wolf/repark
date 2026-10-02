@@ -87,9 +87,8 @@ def _emit_join_side_columns(
     proj_parts: list[str],
     display_names: list[str],
     engine_names: list[str],
-    origin_map: dict[tuple[str, str], str],
 ) -> None:
-    """Project one join side into ``proj_parts`` / origin map (walk by position)."""
+    """Project one join side into ``proj_parts`` (walk by position)."""
     if side_frame._display_names is not None and side_frame._engine_names is not None:
         pairs = list(zip(side_frame._display_names, side_frame._engine_names, strict=True))
     else:
@@ -106,11 +105,6 @@ def _emit_join_side_columns(
         )
         display_names.append(display_name)
         engine_names.append(engine_out)
-        origin_map[(side_frame._plan_id, display_name)] = engine_out
-        if side_frame._origin_map is not None:
-            for (plan_id, field), nested_engine in side_frame._origin_map.items():
-                if nested_engine == source_engine:
-                    origin_map[(plan_id, field)] = engine_out
 
 
 def _by_name_casefold_map(columns: list[str], *, surface: str) -> dict[str, str]:
@@ -247,14 +241,13 @@ class DataFrame:
         "_mia_plan_ready",
         "_mia_temp_views",
         "_observations",
-        "_origin_map",
-        "_origin_not_emitted",
         "_persist_requested",
         "_plan_id",
         "_session",
         "_source_view_name",
         "_storage_level",
         "_tighten_derived",
+        "_unemitted_attr_ids",
     )
 
     def __init__(
@@ -293,8 +286,7 @@ class DataFrame:
         self._field_metadata: dict[str, dict[str, Any]] | None = None
         self._frame_qualifiers: dict[str, frozenset[str]] | None = None
         self._join_qualifiers: list[str] | None = None
-        self._origin_map: dict[tuple[str, str], str] | None = None
-        self._origin_not_emitted: frozenset[str] = frozenset()
+        self._unemitted_attr_ids: dict[str, str] = {}
         self._collapse_base: DataFrame | None = None
         self._layer_window_key: tuple[Any, ...] | None = None
         self._layer_map: dict[str, Any] | None = None
@@ -310,14 +302,15 @@ class DataFrame:
     def _spawn(self, inner: Any, *others: DataFrame) -> DataFrame:
         """Return a child sharing this frame's session and liveness token.
 
-        Cache marks stay on the current object. Semi/anti origin exclusions and tighten-null
-        metadata propagate to descendants; identity maps use ``_spawn_preserving_identity``.
+        Cache marks stay on the current object. Semi/anti unemitted-attribute exclusions and
+        tighten-null metadata propagate to descendants; identity maps use
+        ``_spawn_preserving_identity``.
         """
         self._ensure_alive()
         child = DataFrame(inner, self._session, self._alive_token)
         if self._frame_qualifiers is not None:
             child._frame_qualifiers = dict(self._frame_qualifiers)
-        child._origin_not_emitted = self._origin_not_emitted
+        child._unemitted_attr_ids = dict(self._unemitted_attr_ids)
         child._tighten_derived = self._tighten_derived or any(
             other._tighten_derived for other in others
         )
@@ -331,11 +324,11 @@ class DataFrame:
         return child
 
     def _spawn_preserving_identity(self, inner: Any) -> DataFrame:
-        """Spawn a child that keeps display, engine, and origin maps (filter / limit / cache).
+        """Spawn a child that keeps display and engine maps (filter / limit / cache).
 
         Column sets and engine field names are unchanged; only the plan is refined. A fresh
-        ``_plan_id`` is still assigned (this is a new plan node) while origin keys from
-        parents remain resolvable via the copied map.
+        ``_plan_id`` is still assigned (this is a new plan node) while parent attribute ids
+        stay resolvable in the refined plan.
         """
         child = self._spawn(inner)
         return replace_expr._inherit_plan_metadata(self, child)
@@ -1096,39 +1089,26 @@ class DataFrame:
         for key in colsMap:
             for position in _column_fields._live_rule_hits(self, key, writtens):
                 winners[position] = key
-        for bound, winning_key in zip(bounds, winners, strict=True):
+        for position, winning_key in enumerate(winners):
             if winning_key is not None:
                 replacement = colsMap[winning_key]
                 if isinstance(replacement, Column):
-                    replacement = self._rebind_origin_column(replacement)
-                aliased = replacement.alias(winning_key)
-                if (
-                    isinstance(replacement, Column)
-                    and replacement._origin_plan_id is not None
-                    and bound._origin_plan_id is not None
-                ):
-                    projected.append(
-                        Column(
-                            aliased._inner,
-                            spark_display=winning_key,
-                            projection_name=winning_key,
-                            stable_name=True,
-                            has_free_attribute=True,
-                            origin_plan_id=bound._origin_plan_id,
-                            origin_field=bound._origin_field,
-                            join_sql_expr=replacement._join_sql_expr,
-                            sql_expr=aliased._sql_expr,
-                            window_spec=getattr(replacement, "_window_spec", None),
-                        )
+                    rebound = _column_fields._bind_stable_id_column(self, replacement)
+                    replacement = self._refuse_unemitted_ids(
+                        replacement if rebound is None else rebound
                     )
-                else:
-                    projected.append(aliased)
+                projected.append(replacement.alias(winning_key))
             else:
-                projected.append(bound)
+                projected.append(bounds[position])
         for name, column in colsMap.items():
             if not _column_fields._live_rule_hits(self, name, writtens):
                 if isinstance(column, Column):
-                    projected.append(self._rebind_origin_column(column).alias(name))
+                    rebound = _column_fields._bind_stable_id_column(self, column)
+                    projected.append(
+                        self._refuse_unemitted_ids(column if rebound is None else rebound).alias(
+                            name
+                        )
+                    )
                 else:
                     projected.append(column.alias(name))
         child = self.select(*projected)
@@ -1196,11 +1176,11 @@ class DataFrame:
             _reject_partition_transform(condition)
             condition._reject_nested_generator("filter")
             join_sql = condition.join_sql_part()
-            if "__REPARK_QCOL_" in join_sql and self._origin_map is not None:
-                local_sql = _rewrite_qcol_tokens_local(join_sql, self)
-                if "__REPARK_QCOL_" not in local_sql:
+            if "__REPARK_ATTR_" in join_sql and self._display_names is not None:
+                local_sql = _rewrite_attr_tokens_local(join_sql, self)
+                if "__REPARK_ATTR_" not in local_sql:
                     return self._spawn_preserving_identity(self._plan().filter_sql(local_sql))
-            predicate = self._rebind_origin_column(condition)
+            predicate = self._refuse_unemitted_ids(condition)
             predicate = _column_fields._rebind_free_names(self, predicate, False)
             return self._spawn_preserving_identity(self._plan().filter(predicate._inner))
         if isinstance(condition, str):
@@ -1282,7 +1262,7 @@ class DataFrame:
             if isinstance(item, Column):
                 _reject_partition_transform(item)
                 _reject_non_numeric_range_order(self, item)
-        projected = [self._rebind_origin_column(self._column_of(item)) for item in expanded]
+        projected = [self._column_of(item) for item in expanded]
         generators = [column for column in projected if getattr(column, "_generator", None)]
         if len(generators) > 1:
             raise AnalysisException(
@@ -1306,25 +1286,22 @@ class DataFrame:
         h1_multi_name = False
         h1_display_names: list[str] | None = None
         h1_engine_names: list[str] | None = None
-        h1_origin_map: dict[tuple[str, str], str] | None = None
         if duplicates:
             dup_set = set(duplicates)
             h1_multi_name = True
             h1_display_names = []
             h1_engine_names = []
-            h1_origin_map = {}
-            name_counts: dict[str, int] = {}
+            bare_engines = {name for name in projection_names if name not in dup_set}
+            used_engines: set[str] = set()
             rewritten: list[Column] = []
-            for name, column in zip(projection_names, projected, strict=True):
-                name_counts[name] = name_counts.get(name, 0) + 1
+            for position, (name, column) in enumerate(
+                zip(projection_names, projected, strict=True)
+            ):
                 if name in dup_set:
-                    if column._origin_plan_id is not None and column._origin_field is not None:
-                        engine = (
-                            f"__repark_sel_{column._origin_plan_id}_"
-                            f"{column._origin_field}_{name_counts[name]}"
-                        )
-                    else:
-                        engine = f"__repark_sel_h2_{len(h1_engine_names)}_{name_counts[name]}"
+                    engine = f"__repark_sel_{position}"
+                    while engine in bare_engines or engine in used_engines:
+                        engine = f"{engine}_"
+                    used_engines.add(engine)
                     rewritten.append(
                         Column(
                             column._inner.alias(engine),
@@ -1336,8 +1313,7 @@ class DataFrame:
                             is_foldable=column._is_foldable,
                             has_ungroupable=column._has_ungroupable,
                             is_aggregate_function=column._is_aggregate_function,
-                            origin_plan_id=column._origin_plan_id,
-                            origin_field=column._origin_field,
+                            attr_id=column._attr_id,
                             join_sql_expr=column._join_sql_expr,
                             sql_expr=column._sql_expr,
                             **_column_fields.carried_select_attrs(column),
@@ -1345,8 +1321,6 @@ class DataFrame:
                     )
                     h1_display_names.append(name)
                     h1_engine_names.append(engine)
-                    if column._origin_plan_id is not None and column._origin_field is not None:
-                        h1_origin_map[(column._origin_plan_id, column._origin_field)] = engine
                 else:
                     rewritten.append(_collapse_identity_projection_alias(column))
                     engine_name = (
@@ -1356,11 +1330,7 @@ class DataFrame:
                     )
                     h1_display_names.append(name)
                     h1_engine_names.append(engine_name)
-                    if column._origin_plan_id is not None and column._origin_field is not None:
-                        h1_origin_map[(column._origin_plan_id, column._origin_field)] = engine_name
             projected = rewritten
-            if not h1_origin_map:
-                h1_origin_map = None
         else:
             projected = [_collapse_identity_projection_alias(column) for column in projected]
         aggregate_flags = [bool(column._is_aggregate) for column in projected]
@@ -1386,7 +1356,6 @@ class DataFrame:
                 if h1_multi_name and h1_display_names is not None and h1_engine_names is not None:
                     child._display_names = list(h1_display_names)
                     child._engine_names = list(h1_engine_names)
-                    child._origin_map = dict(h1_origin_map) if h1_origin_map is not None else None
                 return child
             raise AnalysisException(
                 "[MISSING_GROUP_BY] The query does not include a GROUP BY clause. "
@@ -1400,12 +1369,14 @@ class DataFrame:
                     "generator rewrite path. Use .alias(...) to make names unique."
                 )
             return self._select_with_generator(projected, generators[0])
-        if any("__REPARK_QCOL_" in column.join_sql_part() for column in projected):
-            sql_child = self._select_via_qcol_sql(
+        if any(
+            column._join_sql_expr is not None and "__REPARK_ATTR_" in column._join_sql_expr
+            for column in projected
+        ):
+            sql_child = self._select_via_attr_sql(
                 projected,
                 h1_display_names=h1_display_names if h1_multi_name else None,
                 h1_engine_names=h1_engine_names if h1_multi_name else None,
-                h1_origin_map=h1_origin_map if h1_multi_name else None,
             )
             if sql_child is not None:
                 return sql_child
@@ -1415,7 +1386,6 @@ class DataFrame:
         if h1_multi_name and h1_display_names is not None:
             child._display_names = h1_display_names
             child._engine_names = h1_engine_names
-            child._origin_map = h1_origin_map
         return child
 
     def _select_global_aggregate_sql(self, projected: list[Column]) -> DataFrame:
@@ -1718,38 +1688,34 @@ class DataFrame:
             )
         return display
 
-    def _select_via_qcol_sql(
+    def _select_via_attr_sql(
         self,
         projected: list[Column],
         *,
         h1_display_names: list[str] | None,
         h1_engine_names: list[str] | None,
-        h1_origin_map: dict[tuple[str, str], str] | None,
     ) -> DataFrame | None:
-        """Project Columns whose ``join_sql_part`` still has QCOL tokens.
+        """Project Columns whose ``join_sql_part`` still has attribute tokens.
 
         Registers this frame as a temp view, rewrites tokens to quoted engine fields, runs
         ``SELECT … FROM view``, drops the view; ``None`` if any token cannot be resolved.
         """
         from repark.spark._idents import quote_ident as _quote_ident
 
-        if self._origin_map is None:
+        if self._display_names is None or self._engine_names is None:
             return None
         copy_name = functools.partial(_native.attribute_copy_name, self._plan())
 
         proj_parts: list[str] = []
         display_names: list[str] = []
         engine_names: list[str] = []
-        origin_map: dict[tuple[str, str], str] = {}
+        used_engines: set[str] = set()
         name_counts: dict[str, int] = {}
-        for column in projected:
+        for position, column in enumerate(projected):
             expr_sql = column.join_sql_part()
-            held = self._origin_map.get((column._origin_plan_id, column._origin_field))
-            if held is not None and expr_sql == _quote_ident(held):
-                expr_sql = _quote_ident(copy_name(held))
-            if "__REPARK_QCOL_" in expr_sql:
-                expr_sql = _rewrite_qcol_tokens_local(expr_sql, self, copy_name)
-                if "__REPARK_QCOL_" in expr_sql:
+            if "__REPARK_ATTR_" in expr_sql:
+                expr_sql = _rewrite_attr_tokens_local(expr_sql, self, copy_name)
+                if "__REPARK_ATTR_" in expr_sql:
                     return None
             display = (
                 column._projection_name
@@ -1765,19 +1731,20 @@ class DataFrame:
             elif name_counts[display] > 1 or display in {
                 name for name, count in name_counts.items() if count > 1
             }:
-                engine = f"__repark_sel_q_{len(engine_names)}_{display}"
+                engine = f"__repark_sel_{position}"
             else:
                 if display.startswith("CAST(") or any(
                     ch in display for ch in (" ", "(", ")", "+", "-", "*", "/")
                 ):
-                    engine = f"__repark_sel_q_{len(engine_names)}"
+                    engine = f"__repark_sel_{position}"
                 else:
                     engine = display
+            while engine in used_engines:
+                engine = f"{engine}_"
+            used_engines.add(engine)
             proj_parts.append(f"({expr_sql}) AS {_quote_ident(engine)}")
             display_names.append(display)
             engine_names.append(engine)
-            if column._origin_plan_id is not None and column._origin_field is not None:
-                origin_map[(column._origin_plan_id, column._origin_field)] = engine
 
         view = scratch_view_name(self._session, "_repark_h1_sel_")
         self._session.create_or_replace_temp_view(view, _native.attribute_copies(self._plan()))
@@ -1787,7 +1754,6 @@ class DataFrame:
             if h1_display_names is not None:
                 child._display_names = h1_display_names
                 child._engine_names = h1_engine_names
-                child._origin_map = h1_origin_map
             else:
                 pairs = zip(display_names, engine_names, strict=True)
                 needs_identity = len(display_names) != len(set(display_names)) or any(
@@ -1796,7 +1762,6 @@ class DataFrame:
                 if needs_identity:
                     child._display_names = display_names
                     child._engine_names = engine_names
-                    child._origin_map = origin_map or None
             return child
         finally:
             self._session.drop_temp_view(view)
@@ -1807,14 +1772,7 @@ class DataFrame:
 
         quoted = _quote_ident(engine)
         native = _native.attribute_column(engine)
-        origin_plan_id = self._plan_id
-        origin_field = display
-        if self._origin_map is not None:
-            for (plan_id, field), mapped in self._origin_map.items():
-                if mapped == engine:
-                    origin_plan_id = plan_id
-                    origin_field = field
-                    break
+        attr_id = _column_fields._bound_attr_id(self, engine)
         return Column(
             native.alias(display),
             spark_display=display,
@@ -1822,8 +1780,8 @@ class DataFrame:
             stable_name=True,
             has_free_attribute=True,
             sql_expr=quoted,
-            origin_plan_id=origin_plan_id,
-            origin_field=origin_field,
+            attr_id=attr_id,
+            qualifiers=frozenset((self._frame_qualifiers or {}).get(attr_id) or ()),
         )
 
     def _iter_bound_columns(self) -> list[Column]:
@@ -1838,34 +1796,39 @@ class DataFrame:
             return [self._bind_schema_column(name) for name in names]
         return [self._bind_schema_column(name, name) for name in names]
 
-    def _origin_plan_ids(self) -> frozenset[str]:
-        """Plan ids this frame can still attribute (own id + nested origin-map keys)."""
-        ids = {self._plan_id}
-        if self._origin_map is not None:
-            ids.update(plan_id for plan_id, _field in self._origin_map)
-        return frozenset(ids)
-
-    def _remember_unemitted_right_origins(
+    def _remember_unemitted_right_ids(
         self, left: DataFrame, right: DataFrame, *, left_only: bool = True
     ) -> None:
-        """Record (semi/anti) or forget (emitting join) exclusive right plan ids.
+        """Record (semi/anti) or forget (emitting join) exclusive right attribute ids.
 
-        ``left_only=True`` unions exclusive right ids into :attr:`_origin_not_emitted`.
+        ``left_only=True`` unions exclusive right ids into :attr:`_unemitted_attr_ids`.
         ``left_only=False`` removes them after an emitting join.
         """
-        exclusive = right._origin_plan_ids() - left._origin_plan_ids()
+        held, engines = _column_fields._stamped_ids_and_engines(right)
+        displays = right.columns
+        if len(displays) != len(held):
+            displays = list(engines)
+        left_ids = set(_column_fields._stamped_ids_and_engines(left)[0])
+        exclusive = {
+            held_id: displays[position]
+            for position, held_id in enumerate(held)
+            if held_id is not None and held_id not in left_ids
+        }
         if exclusive:
-            self._origin_not_emitted = (
-                self._origin_not_emitted | exclusive
-                if left_only
-                else self._origin_not_emitted - exclusive
-            )
+            if left_only:
+                self._unemitted_attr_ids = {**self._unemitted_attr_ids, **exclusive}
+            else:
+                self._unemitted_attr_ids = {
+                    held_id: display
+                    for held_id, display in self._unemitted_attr_ids.items()
+                    if held_id not in exclusive
+                }
 
-    def _raise_if_origin_not_emitted(self, plan_id: str | None, field: str | None) -> None:
-        """Raise Spark 4.1.2 ``MISSING_ATTRIBUTES`` when ``plan_id`` was not emitted."""
-        if plan_id is None or plan_id not in self._origin_not_emitted:
+    def _raise_if_id_not_emitted(self, attr_id: str | None) -> None:
+        """Raise Spark 4.1.2 ``MISSING_ATTRIBUTES`` when ``attr_id`` was not emitted."""
+        if attr_id is None or attr_id not in self._unemitted_attr_ids:
             return
-        name = field if field is not None else "<unknown>"
+        name = self._unemitted_attr_ids[attr_id]
         available = ", ".join(f'"{column}"' for column in self.columns)
         quoted = f'"{name}"'
         if name in self.columns:
@@ -1880,67 +1843,28 @@ class DataFrame:
             f"Resolved attribute(s) {quoted} missing from {available} in operator !Project."
         )
 
-    def _raise_unemitted_qcol_tokens(self, join_sql: str) -> None:
-        """Refuse QCOL tokens whose plan id is in :attr:`_origin_not_emitted`."""
-        if not self._origin_not_emitted or "__REPARK_QCOL_" not in join_sql:
+    def _raise_unemitted_attr_tokens(self, join_sql: str) -> None:
+        """Refuse attribute tokens whose id is in :attr:`_unemitted_attr_ids`."""
+        if not self._unemitted_attr_ids or "__REPARK_ATTR_" not in join_sql:
             return
-        for match in _QCOL_TOKEN_RE.finditer(join_sql):
-            self._raise_if_origin_not_emitted(match.group(1), _decode_qcol_field(match.group(2)))
+        for match in _ATTR_TOKEN_RE.finditer(join_sql):
+            self._raise_if_id_not_emitted(match.group(1))
 
-    def _rebind_origin_column(self, column: Column) -> Column:
-        """Rebind a parent-origin Column to this frame's engine field.
+    def _refuse_unemitted_ids(self, column: Column) -> Column:
+        """Refuse a Column whose attribute was excluded by semi or anti join.
 
-        Preserve compound expressions. A right-side origin excluded by semi or anti raises
-        ``MISSING_ATTRIBUTES`` instead of falling back to the left side.
+        A right-side attribute excluded by semi or anti raises ``MISSING_ATTRIBUTES``
+        instead of falling back to the left side.
         """
-        self._raise_if_origin_not_emitted(column._origin_plan_id, column._origin_field)
+        self._raise_if_id_not_emitted(column._attr_id)
         join_sql = column._join_sql_expr
         if join_sql is not None:
-            self._raise_unemitted_qcol_tokens(join_sql)
-        if (
-            column._origin_plan_id is None
-            or column._origin_field is None
-            or self._origin_map is None
-        ):
-            return column
-        if join_sql is not None:
-            stripped = join_sql.strip()
-            pure_qcol = stripped.startswith("__REPARK_QCOL_") and stripped.endswith("__")
-            pure_quoted = (
-                stripped.startswith('"')
-                and stripped.endswith('"')
-                and "(" not in stripped
-                and " " not in stripped
-            )
-            if not pure_qcol and not pure_quoted:
-                return column
-        key = (column._origin_plan_id, column._origin_field)
-        engine = self._origin_map.get(key)
-        if engine is None:
-            return column
-        from repark.spark._idents import quote_ident as _quote_ident
-
-        quoted = _quote_ident(engine)
-        native = _native.attribute_column(engine)
-        display = column._projection_name or column._origin_field
-        return Column(
-            native.alias(display),
-            spark_display=display,
-            projection_name=display,
-            stable_name=True,
-            has_free_attribute=True,
-            sql_expr=quoted,
-            origin_plan_id=column._origin_plan_id,
-            origin_field=column._origin_field,
-            join_sql_expr=quoted,
-            sort_ascending=column._sort_ascending,
-            sort_nulls_first=column._sort_nulls_first,
-            **_column_fields.carried_select_attrs(column),
-        )
+            self._raise_unemitted_attr_tokens(join_sql)
+        return column
 
     def _bind_schema_column(self, name: str, canonical: str | None = None) -> Column:
         """Bind a name case-insensitively and quote its canonical engine identifier,
-        preserving the requested display spelling and attaching origin and attribute ids.
+        preserving the requested display spelling and attaching the attribute id.
         """
         from repark.spark._idents import quote_ident as _quote_ident
 
@@ -1951,6 +1875,7 @@ class DataFrame:
         native = (
             _native.PyColumn.column(quoted) if written else _native.attribute_column(engine_field)
         )
+        attr_id = _column_fields._bound_attr_id(self, engine_field)
         return Column(
             native.alias(name),
             spark_display=name,
@@ -1958,9 +1883,8 @@ class DataFrame:
             stable_name=True,
             has_free_attribute=True,
             sql_expr=quoted,
-            origin_plan_id=self._plan_id,
-            origin_field=canonical,
-            attr_id=_column_fields._bound_attr_id(self, engine_field),
+            attr_id=attr_id,
+            qualifiers=frozenset((self._frame_qualifiers or {}).get(attr_id) or ()),
         )
 
     def _rebind_stable_name_column(self, column: Column) -> Column:
@@ -2181,7 +2105,6 @@ class DataFrame:
         if self._display_names is not None and self._engine_names is not None:
             child._display_names = list(self._display_names)
             child._engine_names = list(self._engine_names)
-            child._origin_map = dict(self._origin_map) if self._origin_map is not None else None
         if child._display_names is None:
             child_native = _native.logical_column_names(child._inner)
             if parent_columns != child_native:
@@ -2429,8 +2352,8 @@ class DataFrame:
         """Drop columns by name or :class:`Column` (PySpark ``DataFrame.drop``).
 
         A name matching no field is a no-op; a qualified :class:`Column` binds through its
-        relation; an origin Column on a post-join frame drops that side's field only, and an
-        unemitted semi/anti right origin is a Spark 4.1.2 no-op.
+        relation; a bound Column on a post-join frame drops that side's field only, and an
+        unemitted semi/anti right attribute is a Spark 4.1.2 no-op.
         """
         engine_drop, references, attributes = _subset_resolve._drop_targets(self, cols)
         plan = _native.drop_frame_columns(self._plan(), engine_drop, references, attributes)
@@ -2441,10 +2364,6 @@ class DataFrame:
             kept = [(display, engine) for display, engine in pairs if engine not in dropped]
             child._display_names = [display for display, _ in kept]
             child._engine_names = [engine for _, engine in kept]
-            if self._origin_map is not None:
-                child._origin_map = {
-                    key: engine for key, engine in self._origin_map.items() if engine not in dropped
-                }
         return child
 
     def order_by(
@@ -2501,16 +2420,15 @@ class DataFrame:
         match. A semi or anti join with ``on=None`` is refused instead of becoming Cartesian.
         Right-parent Columns then raise ``MISSING_ATTRIBUTES``; ``drop`` is a no-op.
 
-        Condition joins rewrite origin-qualified references to relation-qualified SQL, so self-joins
+        Condition joins rewrite id-qualified references to relation-qualified SQL, so self-joins
         and duplicate non-key names resolve. Output
-        may carry Spark-legal duplicate *display* names with unique engine fields + origin map
+        may carry Spark-legal duplicate *display* names with unique engine fields + attribute ids
         for post-join ``select(df1["x"])`` / ``drop(df1["x"])`` / ``AMBIGUOUS_REFERENCE``.
 
         Same-object joins alternate token sides for simple
         leaf comparisons (``df.x == df.x``, AND/OR of those) so equi self-joins keep
-        correct cardinality. Multi-token arms (``(df.x + df.y) == …``) refuse loud with
-        the ``df.alias("l").join(df.alias("r"), …)`` workaround — alternation would
-        silently mis-bind.
+        correct cardinality. Multi-token arms (``(df.x + df.y) == …``) refuse loud —
+        alternation would silently mis-bind.
         """
         join_how = "inner" if how is None else str(how).lower().replace("_", "")
         how_aliases = {
@@ -2563,7 +2481,7 @@ class DataFrame:
             child = left._spawn(left._plan().join_on_names(right._plan(), [on], engine_how), other)
             replace_expr._assign_join_qualifiers(child, len(left.columns), side_names)
             child._frame_qualifiers = _qualified_names._join_frame_qualifiers(child, left, right)
-            child._remember_unemitted_right_origins(
+            child._remember_unemitted_right_ids(
                 self, other, left_only=engine_how in _SEMI_JOIN_HOWS
             )
             return child
@@ -2579,7 +2497,7 @@ class DataFrame:
             child = left._spawn(left._plan().join_on_names(right._plan(), keys, engine_how), other)
             replace_expr._assign_join_qualifiers(child, len(left.columns), side_names)
             child._frame_qualifiers = _qualified_names._join_frame_qualifiers(child, left, right)
-            child._remember_unemitted_right_origins(
+            child._remember_unemitted_right_ids(
                 self, other, left_only=engine_how in _SEMI_JOIN_HOWS
             )
             return child
@@ -2594,7 +2512,7 @@ class DataFrame:
         condition: Column,
         engine_how: str,
     ) -> DataFrame:
-        """Rewrite a condition join with origin-qualified references.
+        """Rewrite a condition join with id-qualified references.
 
         Semi and anti joins project only the left side because they emit no right-hand columns.
         """
@@ -2613,7 +2531,7 @@ class DataFrame:
         self._session.create_or_replace_temp_view(left_alias, self._plan())
         self._session.create_or_replace_temp_view(right_alias, other._plan())
         try:
-            on_sql = _rewrite_join_qcol_sql(
+            on_sql = _rewrite_join_attr_sql(
                 condition.join_sql_part(),
                 left=self,
                 right=other,
@@ -2631,7 +2549,6 @@ class DataFrame:
             proj_parts: list[str] = []
             display_names: list[str] = []
             engine_names: list[str] = []
-            origin_map: dict[tuple[str, str], str] = {}
 
             _emit_join_side_columns(
                 self,
@@ -2641,7 +2558,6 @@ class DataFrame:
                 proj_parts=proj_parts,
                 display_names=display_names,
                 engine_names=engine_names,
-                origin_map=origin_map,
             )
             if not left_only:
                 _emit_join_side_columns(
@@ -2652,7 +2568,6 @@ class DataFrame:
                     proj_parts=proj_parts,
                     display_names=display_names,
                     engine_names=engine_names,
-                    origin_map=origin_map,
                 )
 
             if engine_how == "cross":
@@ -2669,9 +2584,8 @@ class DataFrame:
             child = self._spawn(planned, other)
             child._display_names = display_names
             child._engine_names = engine_names
-            child._origin_map = origin_map
             child._frame_qualifiers = _qualified_names._join_frame_qualifiers(child, self, other)
-            child._remember_unemitted_right_origins(self, other, left_only=left_only)
+            child._remember_unemitted_right_ids(self, other, left_only=left_only)
             return child
         finally:
             self._session.drop_temp_view(left_alias)
@@ -2914,7 +2828,6 @@ class DataFrame:
         if self._display_names is not None and self._engine_names is not None:
             child._display_names = list(self._display_names)
             child._engine_names = list(self._engine_names)
-            child._origin_map = dict(self._origin_map) if self._origin_map is not None else None
         return child
 
     unionAll = union  # noqa: N815 — deliberate PySpark-compatible camelCase alias
@@ -2945,7 +2858,6 @@ class DataFrame:
             if self._display_names is not None and self._engine_names is not None:
                 child._display_names = list(self._display_names)
                 child._engine_names = list(self._engine_names)
-                child._origin_map = dict(self._origin_map) if self._origin_map is not None else None
             return child
         finally:
             self._session.drop_temp_view(left)
@@ -3142,8 +3054,8 @@ class DataFrame:
                     stable_name=True,
                     has_free_attribute=True,
                     sql_expr=bound._sql_expr,
-                    origin_plan_id=bound._origin_plan_id,
-                    origin_field=bound._origin_field,
+                    attr_id=bound._attr_id,
+                    qualifiers=bound._qualifiers,
                     join_sql_expr=bound._join_sql_expr,
                 )
             )
@@ -3190,7 +3102,7 @@ class DataFrame:
         empty lists when true. ``max_depth`` bounds rewrite passes and raises if nesting remains.
 
         The rewrite is schema-only and lazy. Collisions raise ``AnalysisException``. An unchanged
-        schema preserves display and origin identity; an expanding rewrite creates a new child.
+        schema preserves display and attribute identity; an expanding rewrite creates a new child.
         """
         self._ensure_alive()
         if not isinstance(separator, str):
@@ -3697,8 +3609,8 @@ from repark.spark.dataframe.plan_collapse import (  # noqa: E402, I001
     _parse_count_distinct_simple_names,
     _reject_aggregate_in_with_column,
     _reject_partition_transform,
-    _QCOL_SIDE_BOUNDARY_RE,
-    _QCOL_TOKEN_RE,
+    _ATTR_SIDE_BOUNDARY_RE,
+    _ATTR_TOKEN_RE,
     _arrow_debug_type_to_sql,
     _arrow_pa_type_label,
     _cell_text,
@@ -3706,7 +3618,6 @@ from repark.spark.dataframe.plan_collapse import (  # noqa: E402, I001
     _column_may_reference_names,
     _column_widths,
     _data_type_has_required_child,
-    _decode_qcol_field,
     _display_type_labels_from_arrow,
     _format_duckdb_show,
     _format_eager_eval_table,
@@ -3720,9 +3631,9 @@ from repark.spark.dataframe.plan_collapse import (  # noqa: E402, I001
     _output_field_would_persist_required,
     _parse_list_element_sql_type,
     _reject_non_numeric_range_order,
-    _rewrite_join_qcol_sql,
-    _rewrite_qcol_tokens_local,
-    _same_object_qcol_alternation_safe,
+    _rewrite_join_attr_sql,
+    _rewrite_attr_tokens_local,
+    _same_object_attr_alternation_safe,
     _spark_array_element_to_sql,
     _UNTYPED_NULL_ELEMENT,
     _sql_embed_expr_fragment,

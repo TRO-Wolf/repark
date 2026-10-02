@@ -7598,11 +7598,11 @@ Window.partitionBy/orderBy refuse; cube/rollup/groupingSets + SQL agg bare explo
 | joins budget pin reds | G4 must stay 20–30 rows, min 14 equalities, max 8 disclosures/splits, ≥4 `*null_keys_*` (every join type), ≥2 `*duplicate_keys_*`, ≥2 `*type_mismatch_*`, ≥2 `*nullable*`, ≥6 DF content rows, and (G4b) the DF semi family on both the name/list-key and Column-condition paths plus both NULL-key edges; restore the name-gated families rather than greening them with controls. |
 | a `df_left_semi_*` / `df_left_anti_*` row reds | the G4b DataFrame semi binding regressed. Localize in Rust first (`crates/repark-python/tests/bindings.rs` `join_on_names_left_semi_*` / `_left_anti_*` / `_semi_family_never_merges_a_key_column`), then the facade alias map + `_join_on_condition_h1` left-only projection in `python/repark/src/repark/dataframe/core.py`. Re-splitting the row to green it is a laundered regression, and `test_join_row_set_covers_g4_budget` reds on it. |
 | `test_g4b_semi_join.py` conditionless test reds | the semi/anti `on=None` / `on=[]` guard stopped firing, so a conditionless semi join now falls through to the Cartesian path and answers an m×n cross join instead of Spark's rows. Restore the `_SEMI_JOIN_HOWS` guard in `DataFrame.join`; do not relax the test. |
-| `test_right_ref_select_*` reds with left `k` values | the G4b-R2 origin map lost join-type awareness — `select(right["k"])` name-fell-back to the left column. Restore `_remember_unemitted_right_origins` on both the name-key and H1 condition paths; do not special-case `select` alone. |
-| `test_semi_then_inner_join_emits_the_same_right` reds | `_spawn` copied `_origin_not_emitted` onto the inner-join child and the emitting path did not subtract. Restore `left_only=False` on non-semi `_remember_unemitted_right_origins`. |
-| `test_spawn_descendant_still_refuses_unemitted_right` reds with left `k` | the `_spawn` copy line was deleted; filter/select children name-fall-back. Restore `child._origin_not_emitted = self._origin_not_emitted`. |
-| `test_self_semi_exclusive_set_resolves_df_column` reds | exclusive-set remember started recording the shared self plan id. Keep `right.ids - left.ids`. |
-| `test_right_ref_drop_is_spark_noop` reds by dropping `k` | `drop(right["k"])` fell through to name-drop of the left column. The unemitted-origin branch must `continue` (Spark 4.1.2 no-op), not raise and not name-drop. |
+| `test_right_ref_select_*` reds with left `k` values | the G4b-R2 unemitted-id set lost join-type awareness — `select(right["k"])` name-fell-back to the left column. Restore `_remember_unemitted_right_ids` on both the name-key and H1 condition paths; do not special-case `select` alone. |
+| `test_semi_then_inner_join_emits_the_same_right` reds | `_spawn` copied `_unemitted_attr_ids` onto the inner-join child and the emitting path did not subtract. Restore `left_only=False` on non-semi `_remember_unemitted_right_ids`. |
+| `test_spawn_descendant_still_refuses_unemitted_right` reds with left `k` | the `_spawn` copy line was deleted; filter/select children name-fall-back. Restore `child._unemitted_attr_ids = dict(self._unemitted_attr_ids)`. |
+| `test_self_semi_exclusive_set_resolves_df_column` reds | exclusive-set remember started recording the shared self attribute id. Keep `held_id not in left_ids`. |
+| `test_right_ref_drop_is_spark_noop` reds by dropping `k` | `drop(right["k"])` fell through to name-drop of the left column. The unemitted-id branch must `continue` (Spark 4.1.2 no-op), not raise and not name-drop. |
 | a `test_cast_failure_parity.py` row reds saying CONVERGED | repark now matches Spark (shared raise, or success golden): do NOT delete — flip to content/error equality and record the convergence. |
 | a cast-failure row reds saying regression | re-derive both halves with `_record_cast_failure_goldens.py` before touching the pin. |
 | cast-failure budget pin reds | G6 must stay 8–10 rows, min 3 equality-class, min 3 shared-raise errors, ≥2 `try_cast_*`, ≥1 DF `Column.cast` row, name-gated malformed-numeric / malformed-temporal / overflow families; do not invent divergences under ANSI ON. |
@@ -9009,3 +9009,12 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   ledger's record) red the family pins. No module docstring: the lane's
   no-comments ruling covers the new file; the contract lives here.
   pins: attr-id-1/C-039
+- [test_attr_id_1_s4.py](test_attr_id_1_s4.py) — **ATTR-ID-1 S4 (2026-10-02):** the
+  deletion pins, each under both case rules unless noted. Origin slots gone from
+  `Column`/`DataFrame`; join tokens carry attribute ids, never QCOL; reversed-order
+  and mixed aliased/unaliased joins side exactly; lineage-sharing simple equi-joins
+  keep the diagonal; lineage-sharing compound arms refuse (Spark reports ambiguity
+  too); mixed compound arms keep base rows as a divergence (Spark raises); duplicate
+  select outputs take positional `__repark_sel_{n}` engine names. No module
+  docstring: the lane's no-comments ruling covers the new file; the contract
+  lives here. pins: attr-id-1/C-040

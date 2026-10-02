@@ -665,10 +665,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **FNP-MATH-1 step 3 (2026-09-16, run 18a):** `conv(col, fromBase, toBase)` joins
   `INSTALL_NAMES` beside it. pins: fnp-math-1/C-001, C-002, C-003, C-004
   **crit-logic-1 L-001 (2026-09-15):** `_rescaled`
-  threads join origin like every house wrapper — `join_sql_expr` from the multiply result and
-  `**_thread_origin(column)` — so a right-parent column after semi/anti raises
+  threaded join origin like every house wrapper of that date — `join_sql_expr` from the
+  multiply result and the origin threader — so a right-parent column after semi/anti raises
   `MISSING_ATTRIBUTES` instead of silently binding the left, and a two-sided `degrees` ON
   clause binds each side. pins: fnp-alias-1/C-001, C-002, C-003, C-004
+  **ATTR-ID-1 S4 (2026-10-02):** the origin threader is deleted with the origin encodings;
+  the composed `join_sql_expr` attribute tokens alone carry the semi/anti refusal.
 - `functions_temporal.py` — FNP-11A temporal wrappers installed onto `functions.py`
   `__all__`; `make_timestamp` and `months_between` delegate through `functions_expr.py`.
   Interval builders print only the parts the call gave (`try_make_interval()`

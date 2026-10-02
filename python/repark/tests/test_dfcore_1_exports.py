@@ -126,6 +126,19 @@ member, slot, alias, or core-surface name changes.
 U11-EDGE-1 (2026-09-26) binds ``_native`` at module level on ``core`` for the DataFrame-door
 attribute binder (``attribute_column`` / ``attribute_copies``), so ``EXPECTED_NEW_CORE_SUBMODULES``
 and ``EXPECTED_NEW_PACKAGE_SUBMODULES`` each gain exactly ``_native``.
+ATTR-ID-1 S4 (2026-10-01): the origin encodings are deleted after every reader moves to
+attribute ids. ``EXPECTED_DATAFRAME_SLOTS`` loses ``_origin_map`` / ``_origin_not_emitted``
+and gains ``_unemitted_attr_ids``; ``EXPECTED_DATAFRAME_DIR`` loses those two plus
+``_origin_plan_ids`` / ``_raise_if_origin_not_emitted`` / ``_raise_unemitted_qcol_tokens`` /
+``_rebind_origin_column`` / ``_remember_unemitted_right_origins`` / ``_select_via_qcol_sql``
+and gains ``_raise_if_id_not_emitted`` / ``_raise_unemitted_attr_tokens`` /
+``_refuse_unemitted_ids`` / ``_remember_unemitted_right_ids`` / ``_select_via_attr_sql`` /
+``_unemitted_attr_ids``; ``core`` and the package each lose ``_decode_qcol_field`` and
+rename the five remaining QCOL helpers to their ``_attr_`` spellings. The same edit
+repairs the S3e mirror misses (red since ce53287a): the ``_frame_qualifiers`` slot in
+``EXPECTED_DATAFRAME_SLOTS`` / ``EXPECTED_DATAFRAME_DIR``, and ``_filter_quote`` /
+``_qualified_names`` in both new-submodule sets. The join-token siding block moves to
+``join_attr_tokens.py`` (CAP-1 split), so the package set gains exactly that name.
 """
 
 from __future__ import annotations

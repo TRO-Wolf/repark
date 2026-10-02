@@ -22,6 +22,7 @@ from repark.errors import (
     UnsupportedOperationException,
 )
 from repark.spark import column_fields as _column_fields
+from repark.spark._idents import escape_attr_token_quals as _escape_attr_token_quals
 from repark.spark._idents import quote_ident as _quote_sql_field_ident
 from repark.spark._idents import sql_string_literal as _sql_string_literal
 
@@ -60,11 +61,10 @@ class Column:
         "_is_aggregate_function",
         "_is_foldable",
         "_join_sql_expr",
-        "_origin_field",
-        "_origin_plan_id",
         "_outer",
         "_partition_transform",
         "_projection_name",
+        "_qualifiers",
         "_sort_ascending",
         "_sort_nulls_first",
         "_spark_display",
@@ -95,9 +95,8 @@ class Column:
         stable_name: bool = False,
         partition_transform: str | None = None,
         sql_expr: str | None = None,
-        origin_plan_id: str | None = None,
-        origin_field: str | None = None,
         attr_id: str | None = None,
+        qualifiers: frozenset[str] | None = None,
         join_sql_expr: str | None = None,
         g2_range_order_names: list[str] | None = None,
         window_spec: WindowSpec | None = None,
@@ -161,10 +160,13 @@ class Column:
         Sticky across derived Columns so the transform still fails loud outside
         ``partitionedBy`` (Spark ``PARTITION_TRANSFORM_EXPRESSION_NOT_IN_PARTITIONED_BY``).
 
-        ``origin_plan_id`` / ``origin_field`` / ``attr_id``: set when this Column binds a
-        frame field (``df["x"]`` / ``df.x``); joins resolve the side through these tokens.
+        ``attr_id``: set when this Column binds a frame field (``df["x"]`` / ``df.x``);
+        joins resolve the side through this id.
 
-        ``join_sql_expr`` (H1): composed join-ON SQL with ``__REPARK_QCOL_*`` tokens so
+        ``qualifiers``: the bound frame's qualifier names for this attribute, empty when the
+        frame carries none; joins side id-sharing tokens through these names.
+
+        ``join_sql_expr`` (H1): composed join-ON SQL with ``__REPARK_ATTR_*`` tokens so
         ``df1.b == df2.b`` stays side-qualified through binary ops without polluting
         free-SQL ``sql_expr`` (groupBy / MERGE / global-agg).
         """
@@ -203,8 +205,8 @@ class Column:
         # assignments). Distinct from ``spark_display``: string literals are unquoted in
         # display names but must be quoted in SQL. Unset → fall back to spark_display_part().
         self._sql_expr = sql_expr
-        self._origin_plan_id, self._origin_field = origin_plan_id, origin_field
         self._attr_id = attr_id
+        self._qualifiers = qualifiers if qualifiers is not None else frozenset()
         self._join_sql_expr = join_sql_expr
         # Simple ORDER BY column names for value-offset RANGE numeric-type check at select.
         self._g2_range_order_names = list(g2_range_order_names) if g2_range_order_names else None
@@ -219,14 +221,12 @@ class Column:
         return self.spark_display_part()
 
     def join_sql_part(self) -> str:
-        """SQL fragment for join ON rewrite (H1) — origin-qualified tokens when present."""
+        """SQL fragment for join ON rewrite (H1) — id-qualified tokens when present."""
         if self._join_sql_expr is not None:
             return self._join_sql_expr
-        if self._origin_plan_id is not None and self._origin_field is not None:
-            # Local import-free token: plan_id is hex; field encoded length-safe.
-            field_enc = self._origin_field.replace("\\", "\\\\").replace("\n", "\\n")
-            field_enc = field_enc.replace("__", "\\_\\_")
-            return f"__REPARK_QCOL_{self._origin_plan_id}__{field_enc}__"
+        if self._attr_id is not None:
+            quals = _escape_attr_token_quals(self._qualifiers)
+            return f"__REPARK_ATTR_{self._attr_id}__{quals}__"
         return self.sql_expr_part()
 
     def sql_expr_without_alias(self) -> str:
@@ -937,8 +937,6 @@ class Column:
             is_aggregate_function=self._is_aggregate_function,
             generator=self._generator,
             generator_cast=self._generator_cast,
-            origin_plan_id=self._origin_plan_id,
-            origin_field=self._origin_field,
             join_sql_expr=self._join_sql_expr,
             g2_range_order_names=self._g2_range_order_names,
             window_spec=self._window_spec,
@@ -1277,7 +1275,7 @@ class Column:
         The marker is the ONLY thing that changes. Dropping any of the carried attributes here
         silently breaks a different subsystem: `sql_expr` keeps free-SQL global-agg from falling
         back to unquoted display, ``generator`` keeps explode rewrite alive
-        through an ``orderBy`` marker, and the origin fields keep join
+        through an ``orderBy`` marker, and the attribute id keeps join
         identity through `orderBy(parent.col.desc())` (H1).
         """
         return Column(
@@ -1298,8 +1296,8 @@ class Column:
             generator=self._generator,
             generator_cast=self._generator_cast,
             when_pairs=self._when_pairs,
-            origin_plan_id=self._origin_plan_id,
-            origin_field=self._origin_field,
+            attr_id=self._attr_id,
+            qualifiers=self._qualifiers,
             join_sql_expr=self._join_sql_expr,
             **_column_fields.carried_select_attrs(self),
         )
@@ -1366,8 +1364,8 @@ class Column:
             stable_name=self._stable_name,
             partition_transform=self._partition_transform,
             sql_expr=self._sql_expr,
-            origin_plan_id=self._origin_plan_id,
-            origin_field=self._origin_field,
+            attr_id=self._attr_id,
+            qualifiers=self._qualifiers,
             join_sql_expr=self._join_sql_expr,
             g2_range_order_names=self._g2_range_order_names,
             window_spec=self._window_spec,

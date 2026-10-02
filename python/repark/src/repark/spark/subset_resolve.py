@@ -167,15 +167,15 @@ def _drop_targets(frame: Any, cols: tuple[Any, ...]) -> tuple[list[str], list[st
     bindings = _bindings(frame) if cols else None
     overlay = frame._display_names is not None and frame._engine_names is not None
     for item in cols:
-        if (
-            isinstance(item, Column)
-            and item._origin_plan_id is not None
-            and item._origin_field is not None
+        if isinstance(item, Column) and (
+            item._sort_ascending is not None or item._sort_nulls_first is not None
         ):
-            if item._origin_plan_id in frame._origin_not_emitted:
+            continue
+        if isinstance(item, Column) and item._attr_id is not None:
+            if item._attr_id in frame._unemitted_attr_ids:
                 continue
             ambiguous_drop = False
-            if bindings is not None and item._attr_id is not None:
+            if bindings is not None:
                 positions = [
                     position
                     for position, held_id in enumerate(bindings[2])
@@ -192,11 +192,6 @@ def _drop_targets(frame: Any, cols: tuple[Any, ...]) -> tuple[list[str], list[st
                         attributes.extend(bindings[1][position] for position in positions)
                         continue
                     ambiguous_drop = True
-            if frame._origin_map is not None:
-                key = (item._origin_plan_id, item._origin_field)
-                if key in frame._origin_map:
-                    attributes.append(frame._origin_map[key])
-                    continue
             if ambiguous_drop:
                 references.append(frame._name_of(item))
             continue

@@ -394,22 +394,6 @@ def _partition_transform_of(*columns: Column) -> str | None:
     return None
 
 
-def _thread_origin(*columns: Column) -> dict[str, str | None]:
-    """Copy H1 origin tokens from the first origin-bearing argument.
-
-    Wrappers that build a fresh :class:`Column` must pass these through;
-    otherwise ``F.abs(right["k"])`` after a semi join silently binds the left
-    column.
-    """
-    for column in columns:
-        if column._origin_plan_id is not None:
-            return {
-                "origin_plan_id": column._origin_plan_id,
-                "origin_field": column._origin_field,
-            }
-    return {}
-
-
 def coalesce(*columns: Column) -> Column:
     """First non-null across the argument columns (PySpark ``functions.coalesce``)."""
     if not columns:
@@ -437,7 +421,6 @@ def coalesce(*columns: Column) -> Column:
         has_free_attribute=has_free_attribute,
         has_ungroupable=has_ungroupable,
         partition_transform=_partition_transform_of(*columns),
-        **_thread_origin(*columns),
     )
 
 
@@ -471,7 +454,6 @@ def concat(*columns: Column) -> Column:
         has_free_attribute=has_free_attribute,
         has_ungroupable=has_ungroupable,
         partition_transform=_partition_transform_of(*columns),
-        **_thread_origin(*columns),
     )
 
 
@@ -593,7 +575,6 @@ def sum(col: Column | str) -> Column:
         spark_display=agg_name,
         projection_name=agg_name,
         partition_transform=column._partition_transform,
-        **_thread_origin(column),
     )
 
 
@@ -625,7 +606,6 @@ def count(col: Column | str) -> Column:
         join_sql_expr=f"count({column.join_sql_part()})",
         spark_display=agg_name,
         projection_name=agg_name,
-        **_thread_origin(column),
     )
 
 
@@ -660,7 +640,6 @@ def count_distinct(col: Column | str, *cols: Column | str) -> Column:
         spark_display=agg_name,
         projection_name=agg_name,
         partition_transform=_partition_transform_of(*(column for column, _ in columns)),
-        **_thread_origin(*(column for column, _ in columns)),
     )
 
 
@@ -680,7 +659,6 @@ def avg(col: Column | str) -> Column:
         spark_display=agg_name,
         projection_name=agg_name,
         partition_transform=column._partition_transform,
-        **_thread_origin(column),
     )
 
 
@@ -700,7 +678,6 @@ def min(col: Column | str) -> Column:
         spark_display=agg_name,
         projection_name=agg_name,
         partition_transform=column._partition_transform,
-        **_thread_origin(column),
     )
 
 
@@ -716,7 +693,6 @@ def max(col: Column | str) -> Column:
         spark_display=agg_name,
         projection_name=agg_name,
         partition_transform=column._partition_transform,
-        **_thread_origin(column),
     )
 
 
@@ -740,7 +716,6 @@ def first(col: Column | str, ignorenulls: bool = False) -> Column:
         spark_display=agg_name,
         projection_name=agg_name,
         partition_transform=column._partition_transform,
-        **_thread_origin(column),
     )
 
 
@@ -762,7 +737,6 @@ def last(col: Column | str, ignorenulls: bool = False) -> Column:
         spark_display=agg_name,
         projection_name=agg_name,
         partition_transform=column._partition_transform,
-        **_thread_origin(column),
     )
 
 
@@ -898,7 +872,6 @@ def _date_fn(column: Column | str, method_name: str, display_name: str) -> Colum
         has_free_attribute=argument._has_free_attribute,
         has_ungroupable=argument._has_ungroupable,
         partition_transform=argument._partition_transform,
-        **_thread_origin(argument),
     )
 
 
@@ -983,7 +956,6 @@ def add_months(start: Column | str, months: Column | int | str) -> Column:
         has_free_attribute=has_free_attribute,
         has_ungroupable=has_ungroupable,
         partition_transform=_partition_transform_of(start_column, months_column),
-        **_thread_origin(start_column, months_column),
     )
 
 
@@ -1017,7 +989,6 @@ def date_add(start: Column | str, days: Column | int | str) -> Column:
         has_free_attribute=has_free_attribute,
         has_ungroupable=has_ungroupable,
         partition_transform=_partition_transform_of(start_column, days_column),
-        **_thread_origin(start_column, days_column),
     )
 
 
@@ -1258,7 +1229,6 @@ def _scalar(
         has_ungroupable=ungroupable_flag,
         partition_transform=_partition_transform_of(*columns),
         window_spec=window_spec,
-        **_thread_origin(*columns),
     )
 
 

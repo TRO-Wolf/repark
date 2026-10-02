@@ -642,7 +642,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `_display_names`/`_engine_names` is set or names repeat, the positional
   `_iter_bound_columns` path is kept — that branch is the correctness guard that
   keeps duplicate display names positional (per-attribute expansion, no
-  `AMBIGUOUS_REFERENCE`) and resolves origins through `_origin_map`. Measured
+  `AMBIGUOUS_REFERENCE`) and binds each position through its attribute id
+  (ATTR-ID-1 S4 deleted the origin map this branch once read). Measured
   500-col/10-match 5.40 → 0.32 ms (ledger C-006).
   pins: df-colregex-1/C-001, C-003, C-005, C-006
 - `joins_columns.py` owns `GroupedData`, grouping sets, pivot, and pandas UDF grouping bridges.
@@ -668,6 +669,14 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   the carried struct-edit/metadata attrs through `column_fields.carried_select_attrs`
   and skips pending columns unchanged; the pending-check folds into the existing
   early-return guard to hold the exact baseline. pins: column-parity-1/C-004
+  ATTR-ID-1 S4 (2026-10-02): the join attribute-token siding block moves to
+  `join_attr_tokens.py` (CAP-1 split, pure move); this module re-exports the nine
+  names so `core` and the frozen surface keep working. 1111 → 910 drops below the
+  default ceiling, so the exception row leaves the CAP-1 test and `check_lib_py.py`.
+- `join_attr_tokens.py` owns join `__REPARK_ATTR_` token siding: `_attr_token_exact_side`
+  binds one-side ids and qualifier-disambiguated shared ids; `_resolve_join_token_sides`
+  precomputes every token's side (exact, less-claimed complement, or positional
+  alternation under the multi-token-arm guard); `_JoinAttrRewriter` applies the sides.
 - `polars_cells.py` owns every polars/duckdb cell and dtype spelling used by
   the show doors: `null` / lowercase bools / mixed-mode floats
   (shortest-expansion rules measured probe by probe against polars 1.43.2 —
@@ -1060,9 +1069,9 @@ that held the comment (pins: comment-core-1/C-003).
 - `_normalize_subset`: PySpark's error class is per-surface, not derivable from
   `accept_str` (dropDuplicates + fillna → `NOT_LIST_OR_TUPLE`, dropna →
   `NOT_LIST_OR_STR_OR_TUPLE`). Keep `enumerate` for position-aware diagnostics.
-- `DataFrame`: Sticky window-merge metadata, display/origin maps, smartCsv diagnostics,
+- `DataFrame`: Sticky window-merge metadata, display maps, smartCsv diagnostics,
   declared-sort source, and the tighten-nulls flag live on the instance.
-  `_semi_anti_right_plan_ids` holds right-side plan ids a semi/anti join did not emit.
+  `_unemitted_attr_ids` holds right-side attribute ids a semi/anti join did not emit.
   `declareSorted` is the disclosed repark camelCase spelling of `declare_sorted` (no
   PySpark equivalent). `is_empty` and `to_local_iterator` are disclosed snake_case
   aliases, not PySpark names. `repartition` validates arguments; execution is
@@ -1127,22 +1136,22 @@ that held the comment (pins: comment-core-1/C-003).
 - `_try_merge_adjacent_window_layer`: Do not merge past a cache mark (that would orphan
   the intermediate MemTable pin). Replay both maps on the pre-layer frame so DataFusion
   fuses one `WindowAggr`.
-- `filter`: A generator predicate would target the array placeholder. Compounds clear
-  origin but keep join_sql QCOL tokens — rewrite to local engine fields and use
-  `filter_sql`. Pure origin Columns rebind to engine fields before native filter.
+- `filter`: A generator predicate would target the array placeholder. Compounds keep
+  join_sql attribute tokens — rewrite to local engine fields and use
+  `filter_sql`. Pure id Columns rebind to engine fields before native filter.
 - `select`: Multi-name frames cannot re-resolve bare display strings (`AMBIGUOUS_REFERENCE`);
   expand via engine fields plus display identity. DataFusion requires unique engine
-  projection names; Spark allows duplicate displays. Origin-qualified duplicates keep
-  bare display names; non-origin duplicates use synthetic engine aliases. Keep composed
-  `join_sql` so a QCOL select does not fall back to a bare leaf. Classify projections
+  projection names; Spark allows duplicate displays. Duplicate displays take positional
+  `__repark_sel_{n}` engine names. Keep composed
+  `join_sql` so an attribute-token select does not fall back to a bare leaf. Classify projections
   from Column metadata, not expression text. A generator and an aggregate cannot share
   one grouping stage. Pure global requires every projection aggregate and/or foldable,
   with no free attributes and no sticky ungroupable (`row_number().over` is neither).
   Bare aggregates use the native aggregate path; composed post-agg ops need SQL because
   DataFusion `aggregate` rejects non-AggregateFunction exprs. Attach the display overlay
-  before the early return so `sum,sum` does not leak `__repark_sel_h2_*`. Mixed
+  before the early return so `sum,sum` does not leak `__repark_sel_*`. Mixed
   aggregate and free companion without GROUP BY is Spark `[MISSING_GROUP_BY]`. Duplicate
-  displays cannot pass the generator SQL rewrite. Compounds that still carry QCOL
+  displays cannot pass the generator SQL rewrite. Compounds that still carry attribute
   tokens cannot use unrebound native exprs on multi-name frames.
 - `_select_global_aggregate_sql`: One plan-stable snapshot for uncached mapInArrow.
   Register the prepared plan — never the empty MIA placeholder and never a second
@@ -1173,23 +1182,21 @@ that held the comment (pins: comment-core-1/C-003).
 - `_resolve_getitem_column_name`: De-dupe preserving order for case-insensitive
   multi-hit reporting. Same-display join duplicates are handled above the casefold
   multi path.
-- `_select_via_qcol_sql`: Token resolution requires a post-join origin map. Prefer
+- `_select_via_attr_sql`: Token resolution requires stamped attribute ids. Prefer
   multi-name engine aliases when the outer select already assigned them. A unique
   display is safe as an engine name; a CAST display needs an alias.
-- `_rebind_origin_column`: Only pure leaf refs rebind (no `join_sql`, or a bare QCOL
-  token, or a quoted ident). `coalesce` / `CAST` / binary ops keep native + origin.
-  Keep join rewrite tokens so further composition is not required. Preserve sort
-  markers through origin rebind.
+- `_refuse_unemitted_ids`: A Column whose attribute id sits in `_unemitted_attr_ids`
+  raises `MISSING_ATTRIBUTES`; any other Column passes through for the id rebind.
 - `_bind_schema_column`: Quote the engine schema field for free-SQL embeds. Join ON
-  rewrite uses `origin_plan_id` and `origin_field`, not this fragment.
+  rewrite uses attribute-id tokens, not this fragment.
 - `_quote_filter_sql_identifiers`: Do not rewrite function names or SQL boolean and
   null literals. Protect single-quoted SQL string literals, then double-quoted idents
   inside the rest. **FNP-4B (2026-09-15):** backtick-quoted spans are protected exactly
   like double-quoted spans (BL-2 FIXED); schema-bound idents quote with backticks.
-- `_rebind_stable_name_column`: Origin pins a specific side/engine field — skip
+- `_rebind_stable_name_column`: The attribute id pins a specific side/engine field — skip
   bare-name rebind. Sort markers force a new Column and keep sticky bits; prefer the
   bound's schema-quoted `sql_expr` so cube/rollup free-SQL SELECT quotes reserved
-  names such as `order`. Keep origin and `join_sql` through sort-marker rebind.
+  names such as `order`. Keep the id and `join_sql` through sort-marker rebind.
 - `__getitem__`: `df["*"]` is the star projection token for `count` and `select`.
   Live PySpark 4.1.2: CI getitem is a NamedExpression with the requested spelling
   (same display identity as `F.col("X")`), not `Alias(canonical AS item)`. Quoted
@@ -1350,9 +1357,9 @@ that held the comment (pins: comment-core-1/C-003).
 - Import failures: inspect the re-export block in `core.py` and package `__init__.py`.
 - Circular imports: region modules may import helpers from `core.py`; `core.py` binds them before
   importing region classes.
-- Origin or display regressions: inspect `_origin_map`, engine-name overlays, and `_spawn` paths.
+- Identity or display regressions: inspect stamped attribute ids, engine-name overlays, and `_spawn` paths.
 - File-size records: PYC-1 (2026-08-22) moved the UDF callbacks from `core.py` to
-  `udf_bridge.py`. Under CAP-1, `core.py` and `plan_collapse.py` carry exact exception rows;
+  `udf_bridge.py`. Under CAP-1, `core.py` carries an exact exception row;
   `udf_bridge.py` stays below the source-size default. TYPES-1 round 4 (2026-09-05): `core.py`
   6305→6303 — one import joined absorbs the round's increase (pins: types-1/C-008).
   DFCORE-1 (2026-09-07): `core.py` 6302→5954, `joins_columns.py` 1239→1238; the three new leaf

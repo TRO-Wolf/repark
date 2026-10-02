@@ -122,7 +122,6 @@ def test_h2_same_object_compound_self_join_refuses_loud(spark: ReparkSession) ->
     frame = spark.createDataFrame([(1, 10), (2, 20), (3, 30)], ["x", "y"])
     with pytest.raises(AnalysisException, match=r"multi-token comparison arms|alias"):
         _ = frame.join(frame, (frame.x + frame.y) == (frame.x + frame.y)).count()
-    # Workaround named in the error path: distinct plan ids via alias.
     left = frame.alias("l")
     right = frame.alias("r")
     joined = left.join(right, (left.x + left.y) == (right.x + right.y))

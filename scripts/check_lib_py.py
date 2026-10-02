@@ -55,12 +55,12 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split worker isolation from classification and report cases.",
     ),
     "python/repark/src/repark/spark/column.py": (
-        1529,
+        1527,
         "Column expression methods remain on one facade class.",
         "Extract a cohesive method family behind re-export bindings.",
     ),
     "python/repark/src/repark/spark/dataframe/core.py": (
-        3800,
+        3711,
         "The DataFrame facade still combines many plan-building method families.",
         "Extract one existing method region when a charter changes that responsibility.",
     ),
@@ -69,13 +69,8 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Join and column-selection helpers share one facade region.",
         "Split join planning from column projection helpers.",
     ),
-    "python/repark/src/repark/spark/dataframe/plan_collapse.py": (
-        1054,
-        "Plan-collapse transforms share one planner support module.",
-        "Split transform families along their existing plan-node boundaries.",
-    ),
     "python/repark/src/repark/spark/functions.py": (
-        1984,
+        1954,
         "Facade function exports and wrappers remain consolidated.",
         "Split by function family while preserving the public re-export surface.",
     ),

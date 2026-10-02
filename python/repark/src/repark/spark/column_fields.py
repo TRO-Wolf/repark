@@ -278,8 +278,8 @@ def outer(column: Any) -> Any:
         stable_name=column._stable_name,
         partition_transform=column._partition_transform,
         sql_expr=column._sql_expr,
-        origin_plan_id=column._origin_plan_id,
-        origin_field=column._origin_field,
+        attr_id=column._attr_id,
+        qualifiers=column._qualifiers,
         join_sql_expr=column._join_sql_expr,
         g2_range_order_names=column._g2_range_order_names,
         window_spec=column._window_spec,
@@ -371,6 +371,16 @@ def _update_fields_result(column: Any, value: Any, parts: Any) -> Any:
         partition_transform=column._partition_transform or value._partition_transform,
         outer=column._outer,
     )
+
+
+def _stamped_ids_and_engines(frame: Any) -> tuple[list[str | None], list[str]]:
+    native = frame._plan()
+    held: list[str | None] = list(_native.attribute_ids(native))
+    if None in held:
+        frame._inner = _native.stamp_attribute_ids(frame._inner)
+        native = frame._plan()
+        held = list(_native.attribute_ids(native))
+    return (held, list(_native.logical_column_names(native)))
 
 
 def _bound_attr_id(frame: Any, engine_field: str) -> str | None:
@@ -574,9 +584,8 @@ def _bind_resolved_name(frame: Any, written: str) -> Any:
         projection_name=name,
         stable_name=True,
         has_free_attribute=True,
-        origin_plan_id=frame._plan_id,
-        origin_field=displays[position],
         attr_id=attr_id,
+        qualifiers=frozenset((frame._frame_qualifiers or {}).get(attr_id) or ()),
     )
     bound._sql_expr = quoted
     return bound
@@ -605,8 +614,8 @@ def _rewrap_with_markers(column: Any, bound: Any) -> Any:
         generator=column._generator,
         generator_cast=column._generator_cast,
         when_pairs=column._when_pairs,
-        origin_plan_id=bound._origin_plan_id or column._origin_plan_id,
-        origin_field=bound._origin_field or column._origin_field,
+        attr_id=bound._attr_id or column._attr_id,
+        qualifiers=bound._qualifiers or column._qualifiers,
         join_sql_expr=bound._join_sql_expr or column._join_sql_expr,
     )
 
@@ -618,13 +627,15 @@ def _bind_stable_id_column(frame: Any, column: Any) -> Any | None:
     attr_id = column._attr_id
     if attr_id is None:
         return None
-    if column._origin_plan_id == frame._plan_id:
-        return None
     native = frame._plan()
     held: list[str | None] = _native.attribute_ids(native)
     if attr_id not in held:
         return column
     native_names = _native.logical_column_names(native)
+    if column._sql_expr is not None:
+        for position, engine in enumerate(native_names):
+            if held[position] == attr_id and _quote_ident(engine) == column._sql_expr:
+                return column
     engine_field = native_names[held.index(attr_id)]
     if not _native.engine_field_is_unique(native, engine_field):
         return column
@@ -636,8 +647,6 @@ def _bind_stable_id_column(frame: Any, column: Any) -> Any | None:
         projection_name=column._projection_name,
         stable_name=True,
         has_free_attribute=True,
-        origin_plan_id=column._origin_plan_id,
-        origin_field=column._origin_field,
         attr_id=attr_id,
         **carried_select_attrs(column),
     )
@@ -650,8 +659,6 @@ def _rebind_stable_name_column(frame: Any, column: Any) -> Any:
     if rebound is not None:
         return rebound
     if not column._stable_name:
-        return column
-    if column._origin_plan_id is not None and column._origin_field is not None:
         return column
     name = column._projection_name
     if name is None or name == "" or name == "*":
@@ -675,8 +682,8 @@ def _column_of(frame: Any, item: Any) -> Any:
     if isinstance(item, Column):
         rebound = _rebind_stable_name_column(frame, item)
         if rebound is item:
-            return _rebind_qualified_refs(frame, frame._rebind_origin_column(rebound), False)
-        return frame._rebind_origin_column(rebound)
+            return _rebind_qualified_refs(frame, frame._refuse_unemitted_ids(rebound), False)
+        return frame._refuse_unemitted_ids(rebound)
     if isinstance(item, str):
         return _bind_resolved_name(frame, item)
     raise column_or_str_error(item)
@@ -726,9 +733,8 @@ def _build_sort_bound_column(
         projection_name=shown,
         stable_name=True,
         has_free_attribute=True,
-        origin_plan_id=frame._plan_id,
-        origin_field=display,
         attr_id=attr,
+        qualifiers=frozenset((frame._frame_qualifiers or {}).get(attr) or ()),
     )
     bound._sql_expr = quoted
     return bound
@@ -806,7 +812,7 @@ def _bind_sort_key(frame: Any, item: Any) -> Any:
         rebound = _bind_stable_id_column(frame, item)
         if rebound is not None:
             return rebound
-        if item._stable_name and (item._origin_plan_id is None or item._origin_field is None):
+        if item._stable_name and item._attr_id is None:
             name = item._projection_name
             if name is not None and name != "" and name != "*" and item._spark_display == name:
                 return _rewrap_with_markers(item, _resolve_sort_name(frame, name))
