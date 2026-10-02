@@ -198,3 +198,73 @@ def test_s4_unheld_sort_marker_funnels_to_oldest(spark: ReparkSession) -> None:
     ]
     with pytest.raises(AnalysisException, match="AMBIGUOUS_REFERENCE"):
         twins.orderBy(frame.v).collect()
+
+
+def test_s4_pass_through_child_twin_parent_ref_binds(spark: ReparkSession) -> None:
+    """A twin parent ref binds by position on any pass-through child frame (insensitive)."""
+    frame = spark.createDataFrame([(1, 2)], ["id", "ID"])
+    assert frame.filter("1 > 0").select(frame["id"]).collect()[0][0] == 1
+    assert frame.alias("t").select(frame["id"]).collect()[0][0] == 1
+    assert frame.select("*").select(frame["id"]).collect()[0][0] == 1
+
+
+def test_s4_join_side_parent_ref_binds_by_position(spark: ReparkSession) -> None:
+    """A join-side parent ref binds its own side's output (insensitive)."""
+    left = spark.createDataFrame([(1, 10)], ["id", "v"]).alias("l")
+    right = spark.createDataFrame([(1, "x")], ["ID", "name"]).alias("r")
+    joined = left.join(right, left["id"] == right["ID"], "inner")
+    assert joined.select(left.id).collect() == [(1,)]
+    assert joined.select(left["id"]).collect() == [(1,)]
+
+
+def test_s4_select_output_parent_ref_binds_held_source(spark: ReparkSession) -> None:
+    """A parent ref past a duplicate select output binds the held source (insensitive)."""
+    frame = spark.createDataFrame([(1, 10), (2, 20)], ["id", "v"])
+    projected = frame.select(frame.v, frame.v.alias("V"))
+    assert [row[0] for row in projected.select(frame.v).collect()] == [10, 20]
+
+
+def test_s4_renamed_output_parent_ref_refuses(spark: ReparkSession) -> None:
+    """A parent ref past a rename that drops its name raises, never binds (insensitive)."""
+    frame = spark.createDataFrame([(1, 10)], ["id", "v"])
+    renamed = frame.withColumnRenamed("v", "V2")
+    with pytest.raises(AnalysisException, match="No field named"):
+        renamed.select(frame.v).collect()
+
+
+def test_s4_case_only_rename_parent_ref_binds(spark: ReparkSession) -> None:
+    """A parent ref past a case-only rename binds under insensitive resolution."""
+    frame = spark.createDataFrame([(1, 10)], ["id", "v"])
+    renamed = frame.withColumnRenamed("v", "V")
+    assert [row[0] for row in renamed.select(frame.v).collect()] == [10]
+
+
+def test_s4_replaced_output_parent_ref_reads_new_value(spark: ReparkSession) -> None:
+    """A parent ref past a same-name replacement reads the new value (insensitive)."""
+    frame = spark.createDataFrame([(1, 10)], ["id", "v"])
+    replaced = frame.withColumn("v", frame.v + 1)
+    assert [row[0] for row in replaced.select(frame.v).collect()] == [11]
+
+
+def test_s4_sort_marker_same_frame_twins_refuses(spark: ReparkSession) -> None:
+    """A marked sort key on its own twin frame stays written and unresolved (insensitive)."""
+    frame = spark.createDataFrame([(2, 20), (1, 10)], ["id", "ID"])
+    with pytest.raises(AnalysisException, match="UNRESOLVED_COLUMN"):
+        frame.orderBy(frame["id"].desc()).collect()
+    with pytest.raises(AnalysisException, match="UNRESOLVED_COLUMN"):
+        frame.orderBy(frame["id"].asc()).collect()
+
+
+def test_s4_sql_twins_same_frame_refuses(spark: ReparkSession) -> None:
+    """A same-frame ref on SQL twins stays written and ambiguous (insensitive)."""
+    frame = spark.sql("SELECT 1 AS id, 2 AS ID")
+    with pytest.raises(AnalysisException, match="AMBIGUOUS_REFERENCE"):
+        frame.select(frame["id"]).collect()
+
+
+def test_s4_compound_past_dup_output_refuses(spark: ReparkSession) -> None:
+    """A compound over a duplicate output stays written and ambiguous (insensitive)."""
+    frame = spark.createDataFrame([(1, 10)], ["id", "v"])
+    projected = frame.select(frame.v, frame.v.alias("V"))
+    with pytest.raises(AnalysisException, match="AMBIGUOUS_REFERENCE"):
+        projected.select(projected.v + 1).collect()

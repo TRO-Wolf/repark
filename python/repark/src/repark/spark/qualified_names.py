@@ -65,6 +65,7 @@ def _rewrap_rebound_column(column: Any, rebound: Any) -> Any:
         partition_transform=column._partition_transform,
         sql_expr=column._sql_expr,
         attr_id=column._attr_id,
+        birth_frame=column._birth_frame,
         qualifiers=column._qualifiers,
         join_sql_expr=column._join_sql_expr,
         g2_range_order_names=column._g2_range_order_names,
@@ -137,6 +138,7 @@ def _expand_qualified_star(frame: Any, written: str) -> list[Any] | None:
             stable_name=True,
             has_free_attribute=True,
             attr_id=held[position],
+            birth_frame=frame,
             qualifiers=frozenset(
                 (_frame_qualifiers_for_bind(frame) or {}).get(held[position]) or ()
             ),
@@ -202,6 +204,7 @@ def _sort_qualified_bound_column(
         stable_name=True,
         has_free_attribute=True,
         attr_id=attr,
+        birth_frame=frame,
         qualifiers=frozenset((frame._frame_qualifiers or {}).get(attr) or ()),
     )
     bound._sql_expr = quoted

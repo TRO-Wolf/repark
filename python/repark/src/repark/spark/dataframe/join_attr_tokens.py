@@ -11,8 +11,10 @@ from repark.errors import AnalysisException
 from repark.spark import column_fields as _column_fields
 from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._idents import unescape_attr_token_quals as _unescape_attr_token_quals
+from repark.spark._temp_views import scratch_view_name
 
 if TYPE_CHECKING:
+    from repark.spark.column import Column
     from repark.spark.dataframe.core import DataFrame
 
 
@@ -231,3 +233,77 @@ class _JoinAttrRewriter:
             engine = self.right_engines[self.right_ids.index(attr_id)]
             return f"{self.right_alias}.{_quote_ident_sql(engine)}"
         return match.group(0)
+
+
+def _select_via_attr_sql(
+    frame: DataFrame,
+    projected: list[Column],
+    *,
+    h1_display_names: list[str] | None,
+    h1_engine_names: list[str] | None,
+) -> DataFrame | None:
+    from repark.spark._idents import quote_ident as _quote_ident
+
+    if frame._display_names is None or frame._engine_names is None:
+        return None
+    copy_name = functools.partial(_native.attribute_copy_name, frame._plan())
+
+    proj_parts: list[str] = []
+    display_names: list[str] = []
+    engine_names: list[str] = []
+    used_engines: set[str] = set()
+    name_counts: dict[str, int] = {}
+    for position, column in enumerate(projected):
+        expr_sql = column.join_sql_part()
+        if "__REPARK_ATTR_" in expr_sql:
+            expr_sql = _rewrite_attr_tokens_local(expr_sql, frame, copy_name)
+            if "__REPARK_ATTR_" in expr_sql:
+                return None
+        display = (
+            column._projection_name
+            if column._projection_name is not None
+            else column.spark_display_part()
+        )
+        name_counts[display] = name_counts.get(display, 0) + 1
+        if h1_engine_names is not None and len(engine_names) < len(h1_engine_names):
+            engine = h1_engine_names[len(engine_names)]
+            display = (
+                h1_display_names[len(engine_names)] if h1_display_names is not None else display
+            )
+        elif name_counts[display] > 1 or display in {
+            name for name, count in name_counts.items() if count > 1
+        }:
+            engine = f"__repark_sel_{position}"
+        else:
+            if display.startswith("CAST(") or any(
+                ch in display for ch in (" ", "(", ")", "+", "-", "*", "/")
+            ):
+                engine = f"__repark_sel_{position}"
+            else:
+                engine = display
+        while engine in used_engines:
+            engine = f"{engine}_"
+        used_engines.add(engine)
+        proj_parts.append(f"({expr_sql}) AS {_quote_ident(engine)}")
+        display_names.append(display)
+        engine_names.append(engine)
+
+    view = scratch_view_name(frame._session, "_repark_h1_sel_")
+    frame._session.create_or_replace_temp_view(view, _native.attribute_copies(frame._plan()))
+    try:
+        planned = frame._session.sql(f"SELECT {', '.join(proj_parts)} FROM {view}")
+        child = frame._spawn(planned)
+        if h1_display_names is not None:
+            child._display_names = h1_display_names
+            child._engine_names = h1_engine_names
+        else:
+            pairs = zip(display_names, engine_names, strict=True)
+            needs_identity = len(display_names) != len(set(display_names)) or any(
+                display != engine for display, engine in pairs
+            )
+            if needs_identity:
+                child._display_names = display_names
+                child._engine_names = engine_names
+        return child
+    finally:
+        frame._session.drop_temp_view(view)

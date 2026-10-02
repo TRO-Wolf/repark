@@ -22,6 +22,7 @@ from repark.errors import (
     UnsupportedOperationException,
 )
 from repark.spark import column_fields as _column_fields
+from repark.spark import column_sort as _column_sort
 from repark.spark._idents import escape_attr_token_quals as _escape_attr_token_quals
 from repark.spark._idents import quote_ident as _quote_sql_field_ident
 from repark.spark._idents import sql_string_literal as _sql_string_literal
@@ -51,6 +52,7 @@ class Column:
         "_agg_name",
         "_alias_metadata",
         "_attr_id",
+        "_birth_frame",
         "_g2_range_order_names",
         "_generator",
         "_generator_cast",
@@ -96,6 +98,7 @@ class Column:
         partition_transform: str | None = None,
         sql_expr: str | None = None,
         attr_id: str | None = None,
+        birth_frame: Any = None,
         qualifiers: frozenset[str] | None = None,
         join_sql_expr: str | None = None,
         g2_range_order_names: list[str] | None = None,
@@ -163,6 +166,10 @@ class Column:
         ``attr_id``: set when this Column binds a frame field (``df["x"]`` / ``df.x``);
         joins resolve the side through this id.
 
+        ``birth_frame``: the frame this Column was bound against. A select/sort bind
+        keeps the written reference verbatim when the target frame is the birth frame,
+        and rebinds the held attribute by position on any other frame.
+
         ``qualifiers``: the bound frame's qualifier names for this attribute, empty when the
         frame carries none; joins side id-sharing tokens through these names.
 
@@ -206,6 +213,7 @@ class Column:
         # display names but must be quoted in SQL. Unset → fall back to spark_display_part().
         self._sql_expr = sql_expr
         self._attr_id = attr_id
+        self._birth_frame = birth_frame
         self._qualifiers = qualifiers if qualifiers is not None else frozenset()
         self._join_sql_expr = join_sql_expr
         # Simple ORDER BY column names for value-offset RANGE numeric-type check at select.
@@ -1269,63 +1277,6 @@ class Column:
             window_spec=window,
         )
 
-    def _with_sort_order(self, *, ascending: bool, nulls_first: bool) -> Column:
-        """This column carrying a sort marker, with every other tracked attribute preserved.
-
-        The marker is the ONLY thing that changes. Dropping any of the carried attributes here
-        silently breaks a different subsystem: `sql_expr` keeps free-SQL global-agg from falling
-        back to unquoted display, ``generator`` keeps explode rewrite alive
-        through an ``orderBy`` marker, and the attribute id keeps join
-        identity through `orderBy(parent.col.desc())` (H1).
-        """
-        return Column(
-            self._inner,
-            sort_ascending=ascending,
-            sort_nulls_first=nulls_first,
-            spark_display=self._spark_display,
-            projection_name=self._projection_name,
-            stable_name=self._stable_name,
-            agg_name=self._agg_name,
-            is_aggregate=self._is_aggregate,
-            is_foldable=self._is_foldable,
-            has_free_attribute=self._has_free_attribute,
-            has_ungroupable=self._has_ungroupable,
-            is_aggregate_function=self._is_aggregate_function,
-            partition_transform=self._partition_transform,
-            sql_expr=self._sql_expr,
-            generator=self._generator,
-            generator_cast=self._generator_cast,
-            when_pairs=self._when_pairs,
-            attr_id=self._attr_id,
-            qualifiers=self._qualifiers,
-            join_sql_expr=self._join_sql_expr,
-            **_column_fields.carried_select_attrs(self),
-        )
-
-    def asc(self) -> Column:
-        """Mark this column for ascending order (PySpark ``Column.asc``; nulls first)."""
-        return self._with_sort_order(ascending=True, nulls_first=True)
-
-    def asc_nulls_first(self) -> Column:
-        """Ascending order, nulls first (PySpark ``Column.asc_nulls_first``; same as ``asc``)."""
-        return self._with_sort_order(ascending=True, nulls_first=True)
-
-    def asc_nulls_last(self) -> Column:
-        """Ascending order, nulls LAST (PySpark ``Column.asc_nulls_last``)."""
-        return self._with_sort_order(ascending=True, nulls_first=False)
-
-    def desc(self) -> Column:
-        """Mark this column for descending order (PySpark ``Column.desc``; nulls last)."""
-        return self._with_sort_order(ascending=False, nulls_first=False)
-
-    def desc_nulls_first(self) -> Column:
-        """Descending order, nulls FIRST (PySpark ``Column.desc_nulls_first``)."""
-        return self._with_sort_order(ascending=False, nulls_first=True)
-
-    def desc_nulls_last(self) -> Column:
-        """Descending order, nulls last (PySpark ``Column.desc_nulls_last``; same as ``desc``)."""
-        return self._with_sort_order(ascending=False, nulls_first=False)
-
     def for_select(self) -> Column:
         """Return this column with the native expression aliased to the Spark projection name.
 
@@ -1365,6 +1316,7 @@ class Column:
             partition_transform=self._partition_transform,
             sql_expr=self._sql_expr,
             attr_id=self._attr_id,
+            birth_frame=self._birth_frame,
             qualifiers=self._qualifiers,
             join_sql_expr=self._join_sql_expr,
             g2_range_order_names=self._g2_range_order_names,
@@ -1382,6 +1334,12 @@ class Column:
     outer = _column_fields.outer
     withField = _column_fields.with_field  # noqa: N815 — PySpark camelCase alias
     dropFields = _column_fields.drop_fields  # noqa: N815 — PySpark camelCase alias
+    asc = _column_sort.asc
+    asc_nulls_first = _column_sort.asc_nulls_first
+    asc_nulls_last = _column_sort.asc_nulls_last
+    desc = _column_sort.desc
+    desc_nulls_first = _column_sort.desc_nulls_first
+    desc_nulls_last = _column_sort.desc_nulls_last
 
 
 def _engine_type_from_cast_arg(data_type: Any) -> str:

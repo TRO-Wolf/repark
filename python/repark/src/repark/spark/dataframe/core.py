@@ -1314,6 +1314,7 @@ class DataFrame:
                             has_ungroupable=column._has_ungroupable,
                             is_aggregate_function=column._is_aggregate_function,
                             attr_id=column._attr_id,
+                            birth_frame=column._birth_frame,
                             join_sql_expr=column._join_sql_expr,
                             sql_expr=column._sql_expr,
                             **_column_fields.carried_select_attrs(column),
@@ -1695,76 +1696,14 @@ class DataFrame:
         h1_display_names: list[str] | None,
         h1_engine_names: list[str] | None,
     ) -> DataFrame | None:
-        """Project Columns whose ``join_sql_part`` still has attribute tokens.
+        from repark.spark.dataframe.join_attr_tokens import _select_via_attr_sql as _impl
 
-        Registers this frame as a temp view, rewrites tokens to quoted engine fields, runs
-        ``SELECT … FROM view``, drops the view; ``None`` if any token cannot be resolved.
-        """
-        from repark.spark._idents import quote_ident as _quote_ident
-
-        if self._display_names is None or self._engine_names is None:
-            return None
-        copy_name = functools.partial(_native.attribute_copy_name, self._plan())
-
-        proj_parts: list[str] = []
-        display_names: list[str] = []
-        engine_names: list[str] = []
-        used_engines: set[str] = set()
-        name_counts: dict[str, int] = {}
-        for position, column in enumerate(projected):
-            expr_sql = column.join_sql_part()
-            if "__REPARK_ATTR_" in expr_sql:
-                expr_sql = _rewrite_attr_tokens_local(expr_sql, self, copy_name)
-                if "__REPARK_ATTR_" in expr_sql:
-                    return None
-            display = (
-                column._projection_name
-                if column._projection_name is not None
-                else column.spark_display_part()
-            )
-            name_counts[display] = name_counts.get(display, 0) + 1
-            if h1_engine_names is not None and len(engine_names) < len(h1_engine_names):
-                engine = h1_engine_names[len(engine_names)]
-                display = (
-                    h1_display_names[len(engine_names)] if h1_display_names is not None else display
-                )
-            elif name_counts[display] > 1 or display in {
-                name for name, count in name_counts.items() if count > 1
-            }:
-                engine = f"__repark_sel_{position}"
-            else:
-                if display.startswith("CAST(") or any(
-                    ch in display for ch in (" ", "(", ")", "+", "-", "*", "/")
-                ):
-                    engine = f"__repark_sel_{position}"
-                else:
-                    engine = display
-            while engine in used_engines:
-                engine = f"{engine}_"
-            used_engines.add(engine)
-            proj_parts.append(f"({expr_sql}) AS {_quote_ident(engine)}")
-            display_names.append(display)
-            engine_names.append(engine)
-
-        view = scratch_view_name(self._session, "_repark_h1_sel_")
-        self._session.create_or_replace_temp_view(view, _native.attribute_copies(self._plan()))
-        try:
-            planned = self._session.sql(f"SELECT {', '.join(proj_parts)} FROM {view}")
-            child = self._spawn(planned)
-            if h1_display_names is not None:
-                child._display_names = h1_display_names
-                child._engine_names = h1_engine_names
-            else:
-                pairs = zip(display_names, engine_names, strict=True)
-                needs_identity = len(display_names) != len(set(display_names)) or any(
-                    display != engine for display, engine in pairs
-                )
-                if needs_identity:
-                    child._display_names = display_names
-                    child._engine_names = engine_names
-            return child
-        finally:
-            self._session.drop_temp_view(view)
+        return _impl(
+            self,
+            projected,
+            h1_display_names=h1_display_names,
+            h1_engine_names=h1_engine_names,
+        )
 
     def _bind_engine_display_column(self, display: str, engine: str) -> Column:
         """Bind a display and engine pair by attribute for positional re-projections."""
@@ -1781,6 +1720,7 @@ class DataFrame:
             has_free_attribute=True,
             sql_expr=quoted,
             attr_id=attr_id,
+            birth_frame=self,
             qualifiers=frozenset((self._frame_qualifiers or {}).get(attr_id) or ()),
         )
 
@@ -1884,6 +1824,7 @@ class DataFrame:
             has_free_attribute=True,
             sql_expr=quoted,
             attr_id=attr_id,
+            birth_frame=self,
             qualifiers=frozenset((self._frame_qualifiers or {}).get(attr_id) or ()),
         )
 
@@ -3055,6 +2996,7 @@ class DataFrame:
                     has_free_attribute=True,
                     sql_expr=bound._sql_expr,
                     attr_id=bound._attr_id,
+                    birth_frame=bound._birth_frame,
                     qualifiers=bound._qualifiers,
                     join_sql_expr=bound._join_sql_expr,
                 )

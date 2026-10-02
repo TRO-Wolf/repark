@@ -190,6 +190,11 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   delegates to `filter_quote._select_expr_frame`. No helper is deleted: the
   qualified-path candidates each keep an outside-family caller (proof in the
   ledger). 3803 → 3800, with the CAP-1 mirror. pins: attr-id-1/C-039
+  ATTR-ID-1 S4 follow-up (2026-10-02): `_bind_schema_column`,
+  `_bind_engine_display_column`, the `withColumnsRenamed` rewrap, and the
+  duplicate-output select rewrite carry `Column._birth_frame` with `_attr_id`;
+  `_select_via_attr_sql` moves to `join_attr_tokens.py` behind a one-line
+  delegate (3715 → 3653, with the CAP-1 mirror). pins: attr-id-1/C-041
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`
@@ -673,6 +678,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `join_attr_tokens.py` (CAP-1 split, pure move); this module re-exports the nine
   names so `core` and the frozen surface keep working. 1111 → 910 drops below the
   default ceiling, so the exception row leaves the CAP-1 test and `check_lib_py.py`.
+  ATTR-ID-1 S4 follow-up (2026-10-02): the identity-alias peel carries
+  `Column._birth_frame` with `_attr_id`. pins: attr-id-1/C-041
 - `join_attr_tokens.py` owns join `__REPARK_ATTR_` token siding: `_attr_token_exact_side`
   binds one-side ids and qualifier-disambiguated shared ids; `_resolve_join_token_sides`
   precomputes every token's side (exact, less-claimed complement, or positional
@@ -681,6 +688,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   as a comparison boundary like `=` (the `eqNullSafe` spelling), and the local
   single-frame rewrite consults the native `projection_source_ids` lineage for a
   token the frame does not hold. pins: attr-id-1/C-040
+  **ATTR-ID-1 S4 follow-up (2026-10-02):** `_select_via_attr_sql` (the
+  temp-view select route for projections whose join SQL still carries attribute
+  tokens) moves here from `core.py` (pure move); a one-line delegate on
+  `DataFrame` keeps the frozen surface. pins: attr-id-1/C-041
 - `polars_cells.py` owns every polars/duckdb cell and dtype spelling used by
   the show doors: `null` / lowercase bools / mixed-mode floats
   (shortest-expansion rules measured probe by probe against polars 1.43.2 —

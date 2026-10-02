@@ -202,6 +202,15 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   carries a fresh id in the alias's own metadata, and the facade `Column` it returns
   holds `_attr_id` `None` until bound. `for_select` and compound constructors still do
   not propagate. pins: attr-id-1/C-024
+  **ATTR-ID-1 S4 follow-up (2026-10-02):** `Column` gains the `_birth_frame` slot
+  (default `None`, set through the new `birth_frame` parameter): the frame the
+  column was bound against. Every construction that carries `_attr_id` also carries
+  `_birth_frame` — fresh binds set the frame, rewraps (`_with_sort_order`,
+  `for_select`) propagate it, a rebind sets the new frame. The select/sort bind
+  keeps a birth-frame column's written reference verbatim and rebinds any other
+  frame's held attribute by position. The sort-marker family moves to
+  `column_sort.py` behind `Column` bindings (1536 → 1485, with the CAP-1
+  mirror). Pins: `python/repark/tests/test_attr_id_1_s4.py`. pins: attr-id-1/C-041
 - `column_fields.py` — **COLUMN-PARITY-1 (2026-09-14):** method bodies bound on
   `Column` (kept out of `column.py`, which is at its exact line baseline):
   `between` / `eqNullSafe` (extracted for headroom), `isin`, `isNaN`, `astype`,
@@ -338,6 +347,24 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   marked (asc/desc) column falls through to the free-name funnel, which binds
   the oldest project hit. Pins: `python/repark/tests/test_attr_id_1_s4.py`.
   pins: attr-id-1/C-040
+  **ATTR-ID-1 S4 follow-up (2026-10-02):** the SQL-spells-engine written-ref check
+  is deleted and the sameness test moves to `Column._birth_frame`: a column bound
+  against the target frame stays verbatim (the engine shapes same-frame twin
+  refusals), any other frame's held id rebinds by position through
+  `_exact_rebind_position`, which no longer gates on engine uniqueness. A lineage
+  hit (`projection_source_ids`) binds only when the output display still shows the
+  column's written name under the live session rule, so a rename that drops the
+  name refuses while a case-only rename still binds. `outer`, the sort bound
+  column, and `_rewrap_with_markers` carry `_birth_frame` with `_attr_id`. Pins:
+  `python/repark/tests/test_attr_id_1_s4.py`. pins: attr-id-1/C-041
+- `column_sort.py` — **ATTR-ID-1 S4 follow-up (2026-10-02):** the sort-marker
+  family, split out of `column.py` at the size ceiling (pure move; `Column`
+  binds the six `asc`/`desc` spellings). `_with_sort_order` re-marks the column
+  and preserves every other tracked attribute: the marker is the only change,
+  so dropping a carried attribute silently breaks another subsystem
+  (`sql_expr`, `generator`, the attribute id). No module docstring: the
+  lane's no-comments ruling covers the new file; the contract lives here.
+  pins: attr-id-1/C-041
 - `filter_quote.py` — **ATTR-ID-1 S3b H-1 (2026-10-01):** the filter-SQL
   identifier quoter, split out of `column_fields.py` at the size ceiling (pure
   move; the entry stays there). `_FILTER_TOKEN_PATTERN`,
@@ -438,6 +465,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   sort). No module docstring: the
   lane's no-comments ruling covers the new file; the contract lives here.
   pins: attr-id-1/C-039
+  **ATTR-ID-1 S4 follow-up (2026-10-02):** the qualified star expansion, the
+  qualified sort bound column, and the rebound rewrap carry `_birth_frame` with
+  `_attr_id`, so expanded columns count as birth-frame columns at the bind.
+  pins: attr-id-1/C-041
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
   unsupported operations fail explicitly.

@@ -9022,6 +9022,10 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   `eqNullSafe` sides a shared-lineage self-join; a parent ref past an arithmetic
   output resolves by engine name on single names and raises on duplicate names;
   a same-frame twin getitem stays the written ref and refuses; an unheld marked
-  sort key funnels to the oldest project hit while the plain parent ref refuses.
+  sort key funnels to the oldest project hit while the plain parent ref refuses;
+  twin parent refs bind on pass-through children, join sides, and duplicate
+  select outputs; a rename that drops the name refuses while a case-only rename
+  binds and a same-name replacement reads the new value; marked sort keys and
+  SQL-twin and compound refs refuse on their own frame.
   No module docstring: the lane's no-comments ruling covers the new file; the
   contract lives here. pins: attr-id-1/C-040

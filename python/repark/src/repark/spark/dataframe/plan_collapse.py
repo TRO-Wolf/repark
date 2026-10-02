@@ -164,6 +164,7 @@ def _collapse_identity_projection_alias(column: Column) -> Column:
             partition_transform=column._partition_transform,
             sql_expr=column._sql_expr,
             attr_id=column._attr_id,
+            birth_frame=column._birth_frame,
             qualifiers=column._qualifiers,
             join_sql_expr=column._join_sql_expr,
             g2_range_order_names=column._g2_range_order_names,

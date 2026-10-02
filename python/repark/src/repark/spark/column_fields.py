@@ -279,6 +279,7 @@ def outer(column: Any) -> Any:
         partition_transform=column._partition_transform,
         sql_expr=column._sql_expr,
         attr_id=column._attr_id,
+        birth_frame=column._birth_frame,
         qualifiers=column._qualifiers,
         join_sql_expr=column._join_sql_expr,
         g2_range_order_names=column._g2_range_order_names,
@@ -585,6 +586,7 @@ def _bind_resolved_name(frame: Any, written: str) -> Any:
         stable_name=True,
         has_free_attribute=True,
         attr_id=attr_id,
+        birth_frame=frame,
         qualifiers=frozenset((frame._frame_qualifiers or {}).get(attr_id) or ()),
     )
     bound._sql_expr = quoted
@@ -615,6 +617,7 @@ def _rewrap_with_markers(column: Any, bound: Any) -> Any:
         generator_cast=column._generator_cast,
         when_pairs=column._when_pairs,
         attr_id=bound._attr_id or column._attr_id,
+        birth_frame=(bound._birth_frame if bound._birth_frame is not None else column._birth_frame),
         qualifiers=bound._qualifiers or column._qualifiers,
         join_sql_expr=bound._join_sql_expr or column._join_sql_expr,
     )
@@ -623,7 +626,6 @@ def _rewrap_with_markers(column: Any, bound: Any) -> Any:
 def _exact_rebind_position(
     frame: Any,
     column: Any,
-    native: Any,
     native_names: list[str],
     held: list[str | None],
     position: int,
@@ -632,8 +634,6 @@ def _exact_rebind_position(
     from repark.spark.column import Column
 
     engine_field = native_names[position]
-    if not _native.engine_field_is_unique(native, engine_field):
-        return column
     quoted = _quote_ident(engine_field)
     shown = column._projection_name if column._projection_name is not None else engine_field
     rebound = Column(
@@ -643,6 +643,7 @@ def _exact_rebind_position(
         stable_name=True,
         has_free_attribute=True,
         attr_id=column._attr_id,
+        birth_frame=frame,
         qualifiers=frozenset((frame._frame_qualifiers or {}).get(held[position]) or ()),
         join_sql_expr=column._join_sql_expr,
         **carried_select_attrs(column),
@@ -677,8 +678,9 @@ def _qualified_narrow_position(
 
 
 def _bind_stable_id_column(frame: Any, column: Any) -> Any | None:
-    from repark.spark._idents import quote_ident as _quote_ident
-
+    birth = column._birth_frame
+    if birth is not None and birth is frame:
+        return column
     attr_id = column._attr_id
     if attr_id is None:
         return None
@@ -686,19 +688,25 @@ def _bind_stable_id_column(frame: Any, column: Any) -> Any | None:
     held: list[str | None] = list(_native.attribute_ids(native))
     native_names = list(_native.logical_column_names(native))
     if attr_id in held:
-        if column._sql_expr is not None:
-            for position, engine in enumerate(native_names):
-                if held[position] == attr_id and _quote_ident(engine) == column._sql_expr:
-                    return column
         narrowed = _qualified_narrow_position(frame, column, held, list(frame.columns))
         if narrowed is not None:
-            return _exact_rebind_position(frame, column, native, native_names, held, narrowed)
+            return _exact_rebind_position(frame, column, native_names, held, narrowed)
         hits = [position for position, held_id in enumerate(held) if held_id == attr_id]
-        return _exact_rebind_position(frame, column, native, native_names, held, hits[0])
+        return _exact_rebind_position(frame, column, native_names, held, hits[0])
+    name = column._projection_name or column._spark_display
+    if name is None:
+        return column
+    displays = list(frame.columns)
+    if len(displays) != len(native_names):
+        return column
+    exact = bool(_native.session_case_sensitive(frame._session))
     sources = _native.projection_source_ids(native)
     for position, source in enumerate(sources):
-        if source == attr_id and position < len(native_names):
-            return _exact_rebind_position(frame, column, native, native_names, held, position)
+        if source != attr_id or position >= len(native_names):
+            continue
+        output = displays[position]
+        if (output == name) if exact else (output.casefold() == name.casefold()):
+            return _exact_rebind_position(frame, column, native_names, held, position)
     return column
 
 
@@ -792,6 +800,7 @@ def _build_sort_bound_column(
         stable_name=True,
         has_free_attribute=True,
         attr_id=attr,
+        birth_frame=frame,
         qualifiers=frozenset((frame._frame_qualifiers or {}).get(attr) or ()),
     )
     bound._sql_expr = quoted
