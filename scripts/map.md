@@ -919,6 +919,8 @@ repark-parity slice.
 
 ## Contents
 
+- [dev/](dev/map.md) — **C-0 (2026-10-02):** disposable Postgres Compose file and
+  `pg_disposable.sh` (`up` / `down` / `url` / `reap`) for the live-database cells.
 - `coordinator/` — the tick-driven lane coordinator (2026-09-22, moved in from the campaign's
   scratch tooling and renamed from `xorch`): a bash driver that waits for free and wakes a model
   for one bounded tick at a time, one lane per systemd unit; engines for Grok, Muse, GLM and Codex;

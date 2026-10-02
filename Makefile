@@ -72,6 +72,18 @@ verify: ci test ## ci + rust-test — JVM-free, native-build-free (inner-loop)
 .PHONY: preflight
 preflight: verify py-test-facade py-test-parity-cap py-test-dbt audit workflows-lint ## The pre-PR gate: verify + facade suite + CAP-1 parity mirror + dbt-adapter suite + security + workflow lint
 
+.PHONY: pg-up
+pg-up: ## Start one disposable Postgres (logical replication on); prints REPARK_PG_URL
+	scripts/dev/pg_disposable.sh up
+
+.PHONY: pg-down
+pg-down: ## Stop the disposable Postgres this shell started
+	scripts/dev/pg_disposable.sh down
+
+.PHONY: pg-url
+pg-url: ## Print the running disposable Postgres URL
+	scripts/dev/pg_disposable.sh url
+
 .PHONY: audit
 audit: rust-audit rust-deny py-audit ## Security gates (cargo-audit + cargo-deny + pip-audit)
 
