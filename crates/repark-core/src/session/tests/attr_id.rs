@@ -16,8 +16,9 @@ use datafusion::prelude::SessionContext;
 use crate::ReparkSession;
 use crate::frame_names::{
     AttrId, NameRule::IgnoreCase, Resolution, alias_with_fresh_id, attribute_ids,
-    join_on_named_keys, plan_is_relation, plan_is_stamped, projection_source_ids,
-    remint_join_collisions, requalify_join_sides, resolve, stamp, strip, union_by_folded_name,
+    copy_attribute_ids, join_on_named_keys, plan_is_relation, plan_is_stamped,
+    projection_source_ids, remint_join_collisions, requalify_join_sides, resolve, stamp, strip,
+    union_by_folded_name,
 };
 
 const KEY: &str = "repark.attr";
@@ -464,6 +465,25 @@ async fn the_join_re_mint_leaves_a_join_of_distinct_attributes_unchanged() {
     let plan = joined.logical_plan().clone();
     assert_eq!(remint_join_collisions(plan.clone(), 3).unwrap(), plan);
     assert!(remint_join_collisions(plan, 7).is_err());
+}
+
+#[test]
+fn the_id_carry_copies_source_ids_by_position_and_keeps_a_carried_plan() {
+    let context = SessionContext::new();
+    let source = tagged(&context);
+    let fresh = tagged_as(&context, ["b1", "b2", "b3"]);
+    let carried = copy_attribute_ids(fresh.logical_plan().clone(), source.logical_plan()).unwrap();
+    let got = attribute_ids(carried.schema())
+        .iter()
+        .map(|id| id.as_ref().map(|held| held.as_str().to_string()))
+        .collect::<Vec<_>>();
+    assert_eq!(got, named(&["a1", "a2", "a3"]));
+    assert_eq!(
+        copy_attribute_ids(carried.clone(), &carried).unwrap(),
+        carried
+    );
+    let narrow = source.select(vec![col("id")]).unwrap();
+    assert!(copy_attribute_ids(carried, narrow.logical_plan()).is_err());
 }
 
 fn strings(values: &[&str]) -> Vec<String> {

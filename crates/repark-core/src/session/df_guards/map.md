@@ -121,6 +121,11 @@ wrapped optimizer rule) and declares this directory.
   plan relation or a facade entry under the live rule, so join sides and
   `alias()` frames bind through the one id rule; a using-key union binds
   either side. Pins: `../tests/attr_id_s3e.rs`. pins: attr-id-1/C-039
+  **ATTR-ID-1 V-4 (2026-10-02):** `copy_attribute_ids(plan, source)` carries the
+  source schema's ids onto the plan by position (a width mismatch is an
+  internal error; an already-carried plan returns unchanged), so cache and
+  checkpoint scans keep the live frame's identity. Pins: `../tests/attr_id.rs`.
+  pins: attr-id-1/C-045
 - `attr_lineage.rs` — **ATTR-ID-1 S4 (2026-10-02):** projection-output lineage,
   a pure move out of `attr_id.rs` when that file passed the 1000-line ceiling.
   `projection_source_ids` maps each `Projection` output to its input attribute id
@@ -279,6 +284,8 @@ wrapped optimizer rule) and declares this directory.
   `pub(crate)` for the moved tests. The inline test module moves unchanged to
   `../tests/case_bind.rs`, so the file drops 1000 → 552.
   pins: attr-id-1/C-039
+  **ATTR-ID-1 V-4 (2026-10-02):** `copy_attribute_ids` joins the `frame_names`
+  re-export. pins: attr-id-1/C-045
 - `sort_names.rs` — **ATTR-ID-1 S3b (2026-10-01):** the filter/sort free-name
   binder over the S1 `resolve`. `sort_shape` descends Filter/Sort/Limit/
   Repartition/Distinct/SubqueryAlias and transparent Projections (a passthrough,

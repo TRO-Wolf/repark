@@ -8883,7 +8883,8 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   footers carry no `repark.attr`; `toArrow`/`to_arrow`/`to_arrow_batches` schemas are clean,
   `schema` fields carry no attr metadata, and `printSchema`/`repr`/`collect` show no key; a
   USING self-join keeps the key and left ids with a fresh right id; a cached frame stays
-  bindable; an `EXPLAIN` frame binds with `_attr_id` `None` and still collects; deep
+  bindable with byte-identical ids across cache/unpersist/checkpoint (V-4 continuity,
+  2026-10-02); an `EXPLAIN` frame binds with `_attr_id` `None` and still collects; deep
   select chains, join outputs, cached frames, and `IN`/scalar-subquery sources all write
   clean parquet footers. No module
   docstring: the lane's no-comments ruling covers the new file; the
@@ -9037,6 +9038,8 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   the verifier-fold twin pins, measured against live Spark 4.1.2 `p5_twins`.
   The ported `test_v5` pin plus the 13 remaining F_ cells refuse
   `AMBIGUOUS_REFERENCE` under `caseSensitive=false`; all 16 T_ cells bind with
-  Spark's rows under `caseSensitive=true`. No module docstring: the lane's
-  no-comments ruling covers the new file; the contract lives here.
-  pins: attr-id-1/C-044
+  Spark's rows under `caseSensitive=true`. **V-4 (2026-10-02):** the ported
+  `test_v4` cache pins plus unpersist and `localCheckpoint` variants measured
+  from `p7_cache`, and a byte-continuity pin over cache/unpersist/checkpoint.
+  No module docstring: the lane's no-comments ruling covers the new file; the
+  contract lives here. pins: attr-id-1/C-044, C-045

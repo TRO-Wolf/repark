@@ -192,10 +192,13 @@ def test_using_self_join_re_mints_colliding_non_key_ids(spark: ReparkSession) ->
 
 
 def test_cache_keeps_frames_bindable(spark: ReparkSession) -> None:
-    frame = _frame(spark).cache()
+    frame = _frame(spark)
+    before = _ids(frame)
+    frame.cache()
     assert frame.count() == 2
     assert frame["id"]._attr_id is not None
     assert all(id is not None for id in _ids(frame))
+    assert _ids(frame) == before
 
 
 def test_statement_frames_bind_without_an_attribute_id(spark: ReparkSession) -> None:

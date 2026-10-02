@@ -513,6 +513,28 @@ pub fn remint_join_collisions(plan: LogicalPlan, left_width: usize) -> Result<Lo
 }
 
 #[allow(clippy::missing_errors_doc)]
+pub fn copy_attribute_ids(plan: LogicalPlan, source: &LogicalPlan) -> Result<LogicalPlan> {
+    let held = attribute_ids(plan.schema());
+    let wanted = attribute_ids(source.schema());
+    if held.len() != wanted.len() {
+        return internal_err!(
+            "attribute id carry: source width {} differs from the {} carried fields",
+            wanted.len(),
+            held.len()
+        );
+    }
+    let carried = wanted
+        .iter()
+        .zip(held.iter())
+        .map(|(source_id, held_id)| source_id.clone().or(held_id.clone()))
+        .collect::<Vec<_>>();
+    if carried == held {
+        return Ok(plan);
+    }
+    project_ids(plan, &carried)
+}
+
+#[allow(clippy::missing_errors_doc)]
 pub fn strip(plan: LogicalPlan) -> Result<LogicalPlan> {
     match plan {
         LogicalPlan::Projection(_)

@@ -7,6 +7,8 @@ import warnings
 import weakref
 from typing import Any
 
+from repark import _native
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -98,6 +100,7 @@ def bind_registered_view(frame: Any, view_name: str, lineage: Any) -> None:
     """Point ``frame`` at a freshly registered cache view and adopt its handle."""
     try:
         frame._inner = frame._session.sql(f"SELECT * FROM {view_name}")
+        frame._inner = _native.copy_attribute_ids(frame._inner, lineage)
     except Exception:
         frame._session.drop_temp_view(view_name)
         raise
@@ -109,6 +112,13 @@ def bind_registered_view(frame: Any, view_name: str, lineage: Any) -> None:
     from repark.spark.catalog_surface import _note_frame_cached
 
     _note_frame_cached(frame)
+
+
+def bind_checkpoint_scan(frame: Any, view_name: str, lineage: Any) -> None:
+    """Point ``frame`` at a freshly materialized checkpoint view, keeping its ids."""
+    frame._session.materialize_as_temp_view(view_name, lineage)
+    fresh = frame._session.sql(f"SELECT * FROM {view_name}")
+    frame._inner = _native.copy_attribute_ids(fresh, lineage)
 
 
 def release_view_hold(frame: Any, view_name: str) -> None:

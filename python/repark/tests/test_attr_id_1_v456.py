@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from repark import ReparkSession
+from repark import ReparkSession, _native
 from repark.errors import AnalysisException
 
 
@@ -52,6 +52,82 @@ _T_BINDS: list[tuple[str, Callable[[Any], Any], list[list[int]]]] = [
     ("pin_alias_getitem", lambda tw: tw.alias("t").select(tw["id"]), [[1], [4]]),
     ("pin_star_getitem", lambda tw: tw.select("*").select(tw["id"]), [[1], [4]]),
 ]
+
+
+def _frames(spark: ReparkSession) -> tuple[Any, Any]:
+    left = spark.createDataFrame([(1, 10), (2, 20), (3, 30)], ["id", "v"])
+    right = spark.createDataFrame([(1, 100), (2, 200)], ["id", "w"])
+    return left, right
+
+
+def test_v4_condition_built_before_cache(spark: ReparkSession) -> None:
+    """A join condition built before cache materialization still binds. C-045."""
+    spark.conf.set("spark.sql.caseSensitive", "false")
+    left, right = _frames(spark)
+    cond = left.id == right.id
+    left.cache()
+    left.count()
+    got = sorted(tuple(row) for row in left.join(right, cond).select(left.v, right.w).collect())
+    assert got == [(10, 100), (20, 200)]
+
+
+def test_v4_drop_col_taken_before_cache(spark: ReparkSession) -> None:
+    """`drop` of a Column taken before cache materialization still drops it. C-045."""
+    spark.conf.set("spark.sql.caseSensitive", "false")
+    left, right = _frames(spark)
+    column = left.v
+    left.cache()
+    left.count()
+    assert left.join(right, left.id == right.id).drop(column).columns == ["id", "id", "w"]
+
+
+def test_v4_col_taken_during_cache_binds_after_unpersist(spark: ReparkSession) -> None:
+    """A Column taken during cache binds after unpersist (Spark `p7_cache`). C-045."""
+    spark.conf.set("spark.sql.caseSensitive", "false")
+    left, right = _frames(spark)
+    left.cache()
+    left.count()
+    column = left.id
+    left.unpersist()
+    got = sorted(tuple(row) for row in right.join(left, right.id == column).collect())
+    assert got == [(1, 100, 1, 10), (2, 200, 2, 20)]
+
+
+def test_v4_col_taken_during_cache_selects_after_unpersist(spark: ReparkSession) -> None:
+    """A Column taken during cache selects on a child after unpersist (Spark `p7`). C-045."""
+    spark.conf.set("spark.sql.caseSensitive", "false")
+    left, _right = _frames(spark)
+    left.cache()
+    left.count()
+    column = left.v
+    left.unpersist()
+    got = sorted(tuple(row) for row in left.filter("id > 1").select(column).collect())
+    assert got == [(20,), (30,)]
+
+
+def test_v4_col_taken_before_checkpoint_binds(spark: ReparkSession) -> None:
+    """A Column taken before `localCheckpoint` binds on the checkpoint (Spark `p7`). C-045."""
+    spark.conf.set("spark.sql.caseSensitive", "false")
+    left, right = _frames(spark)
+    column = left.id
+    checked = left.localCheckpoint()
+    got = sorted(tuple(row) for row in checked.join(right, column == right.id).collect())
+    assert got == [(1, 10, 1, 100), (2, 20, 2, 200)]
+
+
+def test_v4_cache_materialization_keeps_ids_continuous(spark: ReparkSession) -> None:
+    """Cache, unpersist and checkpoint keep the frame's ids byte for byte. C-045."""
+    spark.conf.set("spark.sql.caseSensitive", "false")
+    left, _right = _frames(spark)
+    before = list(_native.attribute_ids(left._plan()))
+    assert all(id is not None for id in before)
+    left.cache()
+    left.count()
+    assert list(_native.attribute_ids(left._plan())) == before
+    left.unpersist()
+    assert list(_native.attribute_ids(left._plan())) == before
+    left.localCheckpoint()
+    assert list(_native.attribute_ids(left._plan())) == before
 
 
 def test_v5_twin_parent_on_child_refuses_insensitive(spark: ReparkSession) -> None:

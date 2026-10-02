@@ -18,7 +18,9 @@ use repark_common::spark_error;
 
 use super::attr_id::same_relation;
 
-pub use super::attr_id::{AttrId, Resolution, alias_with_fresh_id, attribute_ids, stamp, strip};
+pub use super::attr_id::{
+    AttrId, Resolution, alias_with_fresh_id, attribute_ids, copy_attribute_ids, stamp, strip,
+};
 pub use super::attr_id::{plan_is_relation, plan_is_stamped, remint_join_collisions, resolve};
 pub use super::attr_lineage::projection_source_ids;
 pub use super::sort_names::{SortShape, bind_free_names, bind_qualified_free_refs};

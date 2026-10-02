@@ -24,6 +24,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(attribute_copy_name, module)?)?;
     module.add_function(wrap_pyfunction!(bind_free_names, module)?)?;
     module.add_function(wrap_pyfunction!(bind_qualified_free_refs, module)?)?;
+    module.add_function(wrap_pyfunction!(copy_attribute_ids, module)?)?;
     module.add_function(wrap_pyfunction!(drop_frame_columns, module)?)?;
     module.add_function(wrap_pyfunction!(engine_field_is_unique, module)?)?;
     module.add_function(wrap_pyfunction!(grandchild_qualified_key, module)?)?;
@@ -537,6 +538,24 @@ pub(crate) fn qualifier_star_positions(
         &displays,
         frame_qualifiers.as_ref(),
     )
+}
+
+#[allow(clippy::missing_errors_doc)]
+#[pyfunction]
+pub(crate) fn copy_attribute_ids(
+    frame: &PyDataFrame,
+    source: &PyDataFrame,
+) -> PyResult<PyDataFrame> {
+    fenced!("dataframe_names.copy_attribute_ids", {
+        let (state, plan) = frame.inner().clone().into_parts();
+        let plan =
+            repark_core::frame_names::copy_attribute_ids(plan, source.inner().logical_plan())
+                .map_err(datafusion_to_py_err)?;
+        Ok(PyDataFrame::new(
+            DataFrame::new(state, plan),
+            frame.runtime_handle(),
+        ))
+    })
 }
 
 #[allow(clippy::missing_errors_doc)]

@@ -367,8 +367,7 @@ class DataFrame:
             _register_cache_frame(self._alive_token, self)
             return
         old_cache_view = self._cache_view
-        self._session.materialize_as_temp_view(view_name, self._inner)
-        self._inner = self._session.sql(f"SELECT * FROM {view_name}")
+        cache_handle.bind_checkpoint_scan(self, view_name, self._inner)
         if old_cache_view is not None and old_cache_view != view_name:
             cache_handle.release_view_hold(self, old_cache_view)
         self._checkpoint_lazy = False

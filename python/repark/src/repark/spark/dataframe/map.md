@@ -614,6 +614,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   materialize-time identity token (`catalog_surface._note_frame_cached`) for
   `spark.table(name)` frames, so the catalog overlay can tell a still-current
   `.cache()` from a stale one. pins: catalog-surface-1/C-009
+  **ATTR-ID-1 V-4 (2026-10-02):** `bind_registered_view` stamps the fresh cache
+  scan with the lineage plan's ids by position (native `copy_attribute_ids`),
+  and `bind_checkpoint_scan` (moved out of `core`'s checkpoint arm) does the
+  same for checkpoint scans, so a live frame keeps its identity across
+  materialization; `unpersist` already restores the lineage plan untouched.
+  pins: attr-id-1/C-045
   REVIEW-FIX-4 (2026-09-10, closes Q-12, Q-13, Q-50): `lazy()` on an eager
   frame is `_spawn_preserving_identity(frame._inner)` with no `_cache_view`
   interpolation — a set `_eager_shape` with no `_cache_view` (the checkpoint
