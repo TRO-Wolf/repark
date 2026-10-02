@@ -421,11 +421,11 @@ def test_mapinarrow_register_tracks_before_sql_fail(
             events.append(f"register:{view_name}")
             real.register_arrow_stream_as_temp_view(view_name, stream_obj)
 
-        def sql(self, query: str) -> object:
+        def sql_built(self, query: str) -> object:
             events.append(f"sql:{query}")
             if "__repark_mia_" in query:
                 raise RuntimeError("injected register-path failure")
-            return real.sql(query)
+            return real.sql_built(query)
 
         def drop_temp_view(self, view_name: str) -> object:
             events.append(f"drop:{view_name}")

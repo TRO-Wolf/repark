@@ -29,8 +29,8 @@ pub(crate) fn frame_rule(frame: &DataFrame) -> NameRule {
     ))
 }
 
-pub(crate) fn bound_column(frame: &DataFrame, column: &PyColumn) -> PyResult<Expr> {
-    column
+pub(crate) fn bound_column(frame: &DataFrame, column: &PyColumn) -> PyResult<(Expr, usize)> {
+    let bound = column
         .expr()
         .resolve_lambda_variables(frame.schema())
         .and_then(|expr| {
@@ -40,11 +40,13 @@ pub(crate) fn bound_column(frame: &DataFrame, column: &PyColumn) -> PyResult<Exp
                 frame_rule(frame),
             )
         })
-        .map_err(datafusion_to_py_err)
+        .map_err(datafusion_to_py_err)?;
+    let depth = crate::deep_stack::expression_depth(&bound);
+    Ok((bound, depth))
 }
 
-pub(crate) fn bound_projection(frame: &DataFrame, column: &PyColumn) -> PyResult<Expr> {
-    column
+pub(crate) fn bound_projection(frame: &DataFrame, column: &PyColumn) -> PyResult<(Expr, usize)> {
+    let bound = column
         .expr()
         .resolve_lambda_variables(frame.schema())
         .and_then(|expr| {
@@ -54,45 +56,56 @@ pub(crate) fn bound_projection(frame: &DataFrame, column: &PyColumn) -> PyResult
                 frame_rule(frame),
             )
         })
-        .map_err(datafusion_to_py_err)
+        .map_err(datafusion_to_py_err)?;
+    let depth = crate::deep_stack::expression_depth(&bound);
+    Ok((bound, depth))
 }
 
-pub(crate) fn filter_frame_with_sql(frame: &DataFrame, predicate: &str) -> PyResult<DataFrame> {
+pub(crate) fn filter_frame_with_sql(
+    frame: &PyDataFrame,
+    predicate: &str,
+) -> PyResult<(DataFrame, usize, bool)> {
     repark_spark::refuse_sql_fragment(predicate).map_err(datafusion_to_py_err)?;
-    let parsed = match frame_rule(frame) {
+    let parsed = match frame_rule(frame.inner()) {
         NameRule::Exact => parse_canonical_predicate_exact(frame, predicate),
         NameRule::IgnoreCase => parse_canonical_predicate(frame, predicate),
     }
     .map_err(|error| crate::unknown_routine_to_py_err(predicate, error))?;
-    frame.clone().filter(parsed).map_err(datafusion_to_py_err)
+    let (depth, subquery_plan) = crate::deep_stack::survey_expression(&parsed);
+    let filtered = crate::deep_stack::grown_clone_frame(frame.inner(), &frame.depths())
+        .filter(parsed)
+        .map_err(datafusion_to_py_err)?;
+    Ok((filtered, depth, subquery_plan > 0))
 }
 
 pub(crate) fn join_on_keys(
-    left: &DataFrame,
-    right: &DataFrame,
+    left: &PyDataFrame,
+    right: &PyDataFrame,
     on: &[String],
     join_type: JoinType,
 ) -> PyResult<DataFrame> {
+    let rule = frame_rule(left.inner());
     repark_core::frame_names::join_on_named_keys(
-        left.clone(),
-        right.clone(),
+        crate::deep_stack::grown_clone_frame(left.inner(), &left.depths()),
+        crate::deep_stack::grown_clone_frame(right.inner(), &right.depths()),
         on,
         join_type,
-        frame_rule(left),
+        rule,
     )
     .map_err(datafusion_to_py_err)
 }
 
 pub(crate) fn union_frames(
-    left: &DataFrame,
-    right: &DataFrame,
+    left: &PyDataFrame,
+    right: &PyDataFrame,
     allow_missing: bool,
 ) -> PyResult<DataFrame> {
+    let rule = frame_rule(left.inner());
     repark_core::frame_names::union_by_folded_name(
-        left.clone(),
-        right.clone(),
+        crate::deep_stack::grown_clone_frame(left.inner(), &left.depths()),
+        crate::deep_stack::grown_clone_frame(right.inner(), &right.depths()),
         allow_missing,
-        frame_rule(left),
+        rule,
     )
     .map_err(datafusion_to_py_err)
 }
@@ -111,15 +124,34 @@ fn attribute_column(name: &str) -> PyResult<PyColumn> {
 #[pyfunction]
 fn attribute_copies(frame: &PyDataFrame) -> PyResult<PyDataFrame> {
     fenced!("dataframe_names.attribute_copies", {
-        let df = repark_core::frame_names::with_attribute_copies(frame.inner().clone())
-            .map_err(datafusion_to_py_err)?;
-        Ok(PyDataFrame::new(df, frame.runtime_handle()))
+        let depths = frame.depths();
+        let need = crate::deep_stack::clone_need_bytes(depths.plan, depths.expression);
+        let df = crate::deep_stack::grown_sync(need, || {
+            repark_core::frame_names::with_attribute_copies(crate::deep_stack::grown_clone_frame(
+                frame.inner(),
+                &frame.depths(),
+            ))
+        })
+        .map_err(datafusion_to_py_err)?;
+        Ok(PyDataFrame::new_with_depths(
+            df,
+            frame.runtime_handle(),
+            crate::deep_stack::PlanDepths {
+                plan: depths.plan + 1,
+                limited: depths.limited + 1,
+                expression: depths.expression.max(2),
+            },
+        ))
     })
 }
 
 #[pyfunction]
 fn attribute_copy_name(frame: &PyDataFrame, name: &str) -> String {
-    repark_core::frame_names::attribute_copy_name_in(frame.inner().schema(), name)
+    let depths = frame.depths();
+    let need = crate::deep_stack::clone_need_bytes(depths.plan, depths.expression);
+    crate::deep_stack::grown_sync(need, || {
+        repark_core::frame_names::attribute_copy_name_in(frame.inner().schema(), name)
+    })
 }
 
 #[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
@@ -131,13 +163,17 @@ fn drop_frame_columns(
     attributes: Vec<String>,
 ) -> PyResult<PyDataFrame> {
     fenced!("dataframe_names.drop_frame_columns", {
-        let df = repark_core::frame_names::drop_named_columns(
-            frame.inner().clone(),
-            &names,
-            &references,
-            &attributes,
-            frame_rule(frame.inner()),
-        )
+        let depths = frame.depths();
+        let need = crate::deep_stack::clone_need_bytes(depths.plan, depths.expression);
+        let df = crate::deep_stack::grown_sync(need, || {
+            repark_core::frame_names::drop_named_columns(
+                crate::deep_stack::grown_clone_frame(frame.inner(), &frame.depths()),
+                &names,
+                &references,
+                &attributes,
+                frame_rule(frame.inner()),
+            )
+        })
         .map_err(datafusion_to_py_err)?;
         Ok(PyDataFrame::new(df, frame.runtime_handle()))
     })
@@ -151,10 +187,14 @@ fn refuse_ambiguous_join_condition(
     condition_sql: &str,
 ) -> PyResult<()> {
     fenced!("dataframe_names.refuse_ambiguous_join_condition", {
-        repark_core::frame_names::refuse_ambiguous_condition(
-            condition_sql,
-            &[left.inner().schema(), right.inner().schema()],
-        )
+        let frames = crate::deep_stack::max_depths(&left.depths(), &right.depths());
+        let need = crate::deep_stack::clone_need_bytes(frames.plan, frames.expression);
+        crate::deep_stack::grown_sync(need, || {
+            repark_core::frame_names::refuse_ambiguous_condition(
+                condition_sql,
+                &[left.inner().schema(), right.inner().schema()],
+            )
+        })
         .map_err(datafusion_to_py_err)
     })
 }
@@ -167,10 +207,20 @@ fn requalify_join_sides(
     right: Option<&PyDataFrame>,
 ) -> PyResult<PyDataFrame> {
     fenced!("dataframe_names.requalify_join_sides", {
-        let mut sides = vec![left.inner().schema()];
-        sides.extend(right.map(|frame| frame.inner().schema()));
-        let df = repark_core::frame_names::requalify_join_sides(joined.inner().clone(), &sides)
-            .map_err(datafusion_to_py_err)?;
+        let mut depths = crate::deep_stack::max_depths(&joined.depths(), &left.depths());
+        if let Some(frame) = right {
+            depths = crate::deep_stack::max_depths(&depths, &frame.depths());
+        }
+        let need = crate::deep_stack::clone_need_bytes(depths.plan, depths.expression);
+        let df = crate::deep_stack::grown_sync(need, || {
+            let mut sides = vec![left.inner().schema()];
+            sides.extend(right.map(|frame| frame.inner().schema()));
+            repark_core::frame_names::requalify_join_sides(
+                crate::deep_stack::grown_clone_frame(joined.inner(), &joined.depths()),
+                &sides,
+            )
+        })
+        .map_err(datafusion_to_py_err)?;
         Ok(PyDataFrame::new(df, joined.runtime_handle()))
     })
 }
@@ -184,11 +234,47 @@ fn frame_case_sensitive(frame: &PyDataFrame) -> bool {
 #[pyfunction]
 fn resolve_frame_names(frame: &PyDataFrame, names: Vec<String>) -> PyResult<Vec<(String, String)>> {
     fenced!("dataframe_names.resolve_frame_names", {
-        repark_core::frame_names::resolve_written_names(
-            frame.inner().schema(),
-            &names,
-            frame_rule(frame.inner()),
-        )
+        let depths = frame.depths();
+        let need = crate::deep_stack::clone_need_bytes(depths.plan, depths.expression);
+        crate::deep_stack::grown_sync(need, || {
+            repark_core::frame_names::resolve_written_names(
+                frame.inner().schema(),
+                &names,
+                frame_rule(frame.inner()),
+            )
+        })
         .map_err(datafusion_to_py_err)
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use datafusion::arrow::array::Int64Array;
+    use datafusion::arrow::datatypes::{DataType, Field, Schema};
+    use datafusion::prelude::SessionContext;
+    use std::sync::Arc;
+
+    #[test]
+    fn attribute_copies_levels_match_a_fresh_survey() {
+        let runtime: std::sync::Arc<tokio::runtime::Runtime> =
+            std::sync::Arc::new(tokio::runtime::Runtime::new().expect("a runtime builds"));
+        let schema = Arc::new(Schema::new(vec![Field::new("id", DataType::Int64, false)]));
+        let batch = datafusion::arrow::array::RecordBatch::try_new(
+            schema,
+            vec![Arc::new(Int64Array::from(vec![1, 2, 3])) as _],
+        )
+        .expect("a probe batch builds");
+        let context = SessionContext::new();
+        context.register_batch("t", batch).expect("register");
+        let df = runtime.block_on(context.table("t")).expect("a table scans");
+        let frame = PyDataFrame::new(df, runtime);
+        let copied = attribute_copies(&frame).expect("copies build");
+        let walked = crate::deep_stack::plan_depths(copied.inner().logical_plan());
+        let cached = copied.depths();
+        assert_eq!(
+            (cached.plan, cached.limited, cached.expression),
+            (walked.plan, walked.limited, walked.expression),
+        );
+    }
 }

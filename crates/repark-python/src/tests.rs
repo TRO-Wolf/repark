@@ -339,3 +339,95 @@ fn binding_refuses_both_intent_flags() {
         assert!(refusal.is_instance_of::<pyo3::exceptions::PyValueError>(py));
     });
 }
+
+#[test]
+fn grown_stack_guard_rejects_bypass_sites() {
+    let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src");
+    let patterns = [
+        ".df.clone()",
+        ".expr.clone()",
+        "inner().clone()",
+        "frame.clone()",
+        "logical_plan().clone()",
+        "plan.clone()",
+        "to_owned()",
+    ];
+    let markers = [
+        "grown_sync",
+        "grown_clone",
+        "run_grown_if",
+        "block_on_grown",
+        "run_on_grown_stack",
+        "grown_read",
+    ];
+    let allowed: &[(&str, &str)] = &[
+        ("cdf_infer/infer.rs", "name.to_owned()"),
+        ("type_bridge.rs", "collation.into_owned()"),
+    ];
+    let prod_markers = ["pub fn", "pub(crate) fn", "#[pyfunction]", "#[pymethods]"];
+    let mut offenders = Vec::new();
+    let mut stack = vec![root];
+    while let Some(path) = stack.pop() {
+        if path.is_dir() {
+            let entries = std::fs::read_dir(&path).expect("src entries read");
+            for entry in entries {
+                stack.push(entry.expect("a dir entry reads").path());
+            }
+            continue;
+        }
+        if path.extension().is_none_or(|ext| ext != "rs") {
+            continue;
+        }
+        let name = path.file_name().expect("a file name").to_string_lossy();
+        if name.contains("test") {
+            continue;
+        }
+        let text = std::fs::read_to_string(&path).expect("a source file reads");
+        let mut in_tests = false;
+        for (index, line) in text.lines().enumerate() {
+            let code = line.split("//").next().unwrap_or("").trim();
+            if code.contains("mod tests {") {
+                in_tests = true;
+                continue;
+            }
+            if in_tests {
+                if prod_markers.iter().any(|marker| code.contains(marker)) {
+                    offenders.push(format!(
+                        "{}:{}: production code after `mod tests` hides from the guard",
+                        path.display(),
+                        index + 1
+                    ));
+                }
+                continue;
+            }
+            if !patterns.iter().any(|pattern| code.contains(pattern)) {
+                continue;
+            }
+            let listed = allowed.iter().any(|(file, needle)| {
+                path.to_string_lossy().ends_with(file) && code.contains(needle)
+            });
+            if listed {
+                continue;
+            }
+            let home = path.file_name().is_some_and(|name| name == "deep_stack.rs");
+            let nested = markers.iter().any(|marker| code.contains(marker));
+            if home && nested {
+                continue;
+            }
+            if nested {
+                offenders.push(format!(
+                    "{}:{}: a raw clone inside a grown region must use grown_clone_* ({code})",
+                    path.display(),
+                    index + 1
+                ));
+            } else {
+                offenders.push(format!("{}:{}: {code}", path.display(), index + 1));
+            }
+        }
+    }
+    assert!(
+        offenders.is_empty(),
+        "owning-type clones outside the grown helpers:\n{}",
+        offenders.join("\n")
+    );
+}

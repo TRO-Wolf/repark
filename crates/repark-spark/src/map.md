@@ -203,6 +203,10 @@ pins: rp-4-fork-repin/C-005, C-006
   in-module tests (MG-2: M2 Oracle sub-predicates, M3
   assignment-target qualification, M8 INSERT column list, M10 non-last
   unconditional clause). pins: dml-a-merge-not-matched-by-source/C-005
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** every rendered
+  fragment (`ON`, clause predicates, `VALUES` rows, `SET` assignments, the
+  derived source) goes through `repark_iceberg::write::sql_text::render_for_reparse`
+  so string values re-parse exactly. pins: string-literal-escape-1/C-010
 - `merge_fragments.rs` — **ICE-MIXED-CASE-1 (2026-09-17):** MERGE fragment
   preprocessing for case-insensitive resolution (target/source scope read,
   `ON` / predicate / value fragment rewrite, `maybe_` dispatcher that stamps
@@ -224,6 +228,33 @@ pins: rp-4-fork-repin/C-005, C-006
   first, no hit is left alone); the derived-source probe plans with
   normalization off under `true` so scope fields keep their written case.
   pins: casesens-1/C-008
+- `insert_overwrite/store.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** split from
+  `insert_overwrite.rs` (file-size gate; a child module so `lib.rs` keeps its exact
+  baseline): `conform_types` resolves the positional targets and runs
+  `wrap_store_outputs` over the analyzed source plan; the stage-then-swap source passes
+  through it. See [insert_overwrite/map.md](insert_overwrite/map.md).
+- `extension.rs`, `insert_by_name.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** the
+  extension registers `repark_iceberg::StoreOverflowCast` AFTER the post-coercion rules
+  (it consumes `SparkExprSemantics`' guarded division shape, so it must run after it —
+  unlike `InsertStoreAssignment`, which needs the pre-cast types) plus the `store_cast`
+  UDF family; the BY NAME projection runs `wrap_store_outputs`.
+  **Merge origin/main v1.5.1 (2026-09-29):** both sides kept — the BY NAME and the
+  stage-then-swap OVERWRITE sources pass through `zone_stores(_by_name)` first, then
+  the overflow wrap (`wrap_store_outputs` / `conform_types`).
+  Re-verify VO3-1 (2026-09-29): both doors pass their per-batch op label into the wrap
+  (`append` / `INSERT OVERWRITE`), so the store gate judges before the overflow check
+  with byte-identical text.
+- `insert_overwrite.rs` — **WO NTZ-STORE-DOORS-1 (2026-09-28):** the stage-then-swap path
+  (static, dynamic, `BY NAME`, column list, so `writeTo().overwritePartitions()` too) and
+  the `PARTITION (…)` path pass the planned source through
+  `repark_iceberg::write::zone_stores` with the listed columns (or the table columns
+  minus the static partition columns), so both directions store through the session zone.
+  pins: ntz-store-doors-1/C-001, C-002, C-005
+  **WO STORE-TS-DOORS-2 (2026-09-29):** `execute_partition_overwrite` refuses a
+  negated NULL into a TIMESTAMP, DATE or BOOLEAN column through
+  `void_type::refuse_partition_overwrite_sources` before staging; the call fits
+  the 1,000-line ceiling by importing the fill call's name (net −1 line, 998).
+  pins: store-ts-doors-2/C-002
 - `insert_overwrite.rs` — **R-FILEORDER-2 (2026-09-27, HALT, no code change):**
   Spark 4.1.2 answers `L-INSERT-OVERWRITE` `[[2,b,5,3],[3,c,6,3],[4,d,4,3]]` on a same-JVM
   triple but splits 2–4 across six fresh-JVM runs — one combined task whose file order is
@@ -341,12 +372,24 @@ pins: rp-4-fork-repin/C-005, C-006
   **IPI-41 WO1 (2026-09-22):** the `write-format` / `delete-format` options are
   copied into staging here, so the option door reaches `resolve_data_format`.
   pins: ice-orc-avro-1/C-005, C-006
+- `insert_by_name.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):**
+  `execute_insert_by_name` (after the target resolves) calls
+  `void_type::refuse_insert_source_types` with by-name mapping; the positional twin runs in
+  `router/insert_positional.rs`. So a `-NULL` into a DATE, BOOLEAN or timestamp column and
+  a STRING into FLOAT/DOUBLE refuse with Spark's text on every INSERT door, the DataFrame
+  writers included. pins: store-ts-to-numeric-1/C-002, C-003
+  **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** the gate now judges `-NULL` only; STRING
+  sources store as on base. pins: store-ts-to-numeric-1/C-006
 - `insert_by_name.rs` — `INSERT … BY NAME` (ICE-RTAS-BYNAME-1, 2026-09-17): the token-level
   strip (sqlparser has no `BY NAME`), the count-first Spark error rule, the positional
   projection build, the staged-append executor (stream → conform → `commit_append_to` →
   reregister) and the overwrite delegation to `insert_overwrite_from_staged_source`. Branch
   targets count as owned write heads (`write_to_branch.rs`), so no temp-view rewrite fires.
   In-module tests (file-backed in [insert_by_name/map.md](insert_by_name/map.md)).
+  **WO NTZ-STORE-DOORS-1 (2026-09-28):** the staged append passes the planned projection
+  through `repark_iceberg::write::zone_stores_by_name`, so an LTZ value stores its
+  session-zone wall in a `TIMESTAMP_NTZ` column and a naive or `DATE` value its
+  session-zone instant in a `TIMESTAMP` column. pins: ntz-store-doors-1/C-001, C-002
   **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):** `by_name_source_query` is the by-name
   resolution alone (`probe_source_names`, `refuse_underived`, `name_mapping` — the arity check,
   the ambiguity and `EXTRA_COLUMNS` refusals and `CANNOT_FIND_DATA` for a missing required
@@ -431,6 +474,28 @@ pins: rp-4-fork-repin/C-005, C-006
   to two-argument `nvl`/`ifnull`, probed as `coalesce(a, b)`; every other
   function is judged by its probed type; leading-zero fractions count precision
   from significant digits.
+  **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** the VALUES gate also judges numeric,
+  DATE and BOOLEAN targets, and the sibling `void_type/insert_source_types.rs`
+  holds the INSERT gate for `-NULL` and STRING → FLOAT/DOUBLE.
+  pins: store-ts-to-numeric-1/C-001
+  **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** STRING-planned cells and branching cells whose
+  leaves are not all refused types stay silent (`void_type/source_leaves.rs`); the INSERT
+  gate keeps only `-NULL`. pins: store-ts-to-numeric-1/C-006, C-007
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-1/VG-2/VG-8):** the
+  probe renders through the shared recursive parenthesizer, an unparsable probe
+  refuses instead of passing the row, and `number_text_type` is shared with
+  `update_cast.rs`.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 re-verify fold, RN2-2):** a `DEFAULT`
+  cell is skipped like a bare NULL, and the `nvl`/`ifnull` → `coalesce` probe
+  renders both operands through the shared parenthesizer, so
+  `nvl(NULL, CAST(date_add(DATE'2024-01-01', - -1) AS TIMESTAMP))` stores as
+  Spark does instead of refusing on a `--` comment.
+  **Fold 2026-09-29 (LTZ-STACKED-SIGN-1 second re-verify fold, RN3-1):** the
+  probe renders through the shared `probe_text`, which dollar-quotes a string
+  literal holding a quote with the same value: sqlparser's `Display` leaves a
+  quote after a backslash unescaped, so the probe text failed to parse and
+  refused the row. Seven in-module pins (render, both probe dialects, `nvl`
+  operands, door pass/refusal).
   Directory map: [void_type/map.md](void_type/map.md).
   Pins: [tests/ltz_store.rs](tests/ltz_store.rs).
   pins: ltz-store-int-1/C-001
@@ -461,6 +526,11 @@ pins: rp-4-fork-repin/C-005, C-006
   replace door (`ctas.rs`), so an append or a plain create ignores the option as Spark does.
   pins `isolation_level_passes_through_unparsed_like_spark`,
   `replace_doors_refuse_an_unknown_isolation_level_like_spark`. pins: u7-write-df-2/C-014
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** `verbatim_override:
+  Option<bool>` (set by `dialect.rs` from `EngineContext`, never from an option key)
+  forces the literal mode for one parse; `effective_verbatim` falls back to the session
+  flag. `router.rs` reads it for the canonicalize call and the error translation.
+  pins: string-literal-escape-1/C-011
 - `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** last-wins validation of
   the out-of-band option pairs (snapshot-property strip-and-lowercase, parquet
   honour, orc/avro/bogus refusals, option-over-table-property
@@ -497,6 +567,14 @@ pins: rp-4-fork-repin/C-005, C-006
   `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]`/`KD000` as `Plan`. Missing
   catalog/table, unresolvable names, and failed probes fall through. Pins:
   [tests/update_cast.rs](tests/update_cast.rs). pins: ipi-51/W-UPDATE-TYPE-ERR
+  **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** the probe also runs
+  `refuse_negated_null_writes` (a `-NULL` SET value is Spark's DOUBLE), and the final
+  check uses `incompatible_store_message`, so a STRING into a DECIMAL column refuses
+  naming `"DECIMAL(10,2)"`. pins: store-ts-to-numeric-1/C-002, C-004
+  **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** the DECIMAL-naming message applies only where
+  the base message (`incompatible_update_message`) already refuses, or where the source
+  is not STRING and `void_type::source_type_is_reliable` trusts the SET value; a STRING
+  into DECIMAL stores again as on base. pins: store-ts-to-numeric-1/C-006, C-007
   **U8 WRITE-SQL PR2 (2026-09-25):** `execute_update` now calls
   `refuse_cast_then_fold_nested`. It loads the target once (`load_update_target`), runs the
   same top-level cast refusal on it (skipped when a key repeats, so the fold's `Multiple
@@ -507,6 +585,21 @@ pins: rp-4-fork-repin/C-005, C-006
   fold's scope carries `spark.sql.caseSensitive`, so a re-cased whole-struct value refuses
   `CANNOT_FIND_DATA` under `true`.
   pins: u8-write-sql/C-025, C-027, C-032, C-033
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** the folded
+  statement renders through `repark_iceberg::write::sql_text::render_for_reparse`
+  so string values re-parse exactly. pins: string-literal-escape-1/C-010
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 round 2):** the SET-value probe renders
+  through `void_type.rs`'s stacked-minus parenthesizer, and integer literals
+  are judged by Spark's type (`INT` unless `L`-suffixed or out of `INT` range)
+  because DataFusion plans every negated int literal as `BIGINT`. `UPDATE …
+  SET c = - -1` refuses `CANNOT_SAFELY_CAST` naming `"INT"`, as the
+  single-signed one now does; into an NTZ column both name `"INT"` through the
+  analyzed probe. Valid stacked-sign SET values still die in the downstream
+  re-parse (`ParserError`), unchanged.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-8):** the integer
+  classifier delegates digit typing to `void_type.rs`'s shared
+  `number_text_type` (integer results only, behavior unchanged) instead of
+  re-implementing it.
 - `write_to_branch.rs` — Spark-door write-to-branch routing: tag/missing-branch Spark-shaped
   refuse; two-part names qualify through session defaults; the MOR valve runs on the
   Iceberg ident before the temp rewrite; fork-executed INSERT/UPDATE/DELETE via
@@ -869,6 +962,31 @@ pins: rp-4-fork-repin/C-005, C-006
   columns from `write_default` on the planned DML (`insert_defaults`). The marker
   pass's loaded table threads into the fill call, so one INSERT loads once.
   pins: ice-v3-write-default-1/C-004, C-007
+- `spark_ast.rs` — **WO STORE-TS-DOORS-2 re-verify fold 5 (2026-10-01):**
+  the unquoted-`INTERVAL` frame-bound quoting runs before the
+  store-assignment gate, so a sibling arm is planned from exactly the text
+  the statement will plan; quoting after the gate left the arm unplannable
+  and the cell unjudged, which stored (VT5-1). DataFusion plans only
+  `SingleQuotedString` interval bounds, hence the rewrite.
+  pins: store-ts-doors-2/C-001, C-003
+- `spark_ast.rs` — **WO STORE-TS-DOORS-2 re-verify fold 6 (2026-10-01):**
+  the pre-gate AST rewrite chain is one shared pair of functions
+  (`apply_pregate_rewrites_before_identity_dml` /
+  `apply_pregate_rewrites_after_identity_dml`), called strict by the
+  statement path and best-effort by the sibling judge through
+  `apply_pregate_judge_rewrites`, so an arm or probe plans exactly what the
+  statement plans (VT6-1). The split sits around identity-DML execution,
+  which is not a rewrite and stays mid-chain; order inside each half is the
+  old order (collation and declared-function at executing-parse altitude,
+  the DML-subquery valve, ordering defaults, the time-window wrap, the sort
+  rewrite, `BINARY`→`BYTEA`, bare units, the nullary demotion, keyword
+  lowering, interval-bound quoting). Best-effort keeps each rewrite's side
+  effects and continues past refusal errors, which on judge text are
+  double-application artifacts — notably the bare-unit rewrite refusing its
+  own quoted output — so the nullary demotion still runs after them.
+  `prepare_ordering` folds into the after half. The range-frame restatement
+  below keeps its own partial chain; it re-plans, it does not judge.
+  pins: store-ts-doors-2/C-001, C-003
 - `bare_nullary.rs` — **SPARK-SQL-GRAMMAR-1 C-010 (2026-09-16):** bare nullary
   keywords in both Spark directions. `demote_refusing_nullary_calls` lowers a
   no-paren `localtimestamp` call (the Databricks dialect parses it as a function)
@@ -929,6 +1047,11 @@ pins: rp-4-fork-repin/C-005, C-006
   applied by `router.rs` to a MERGE's source, `ON` and clauses (MERGE plans its rendered pieces
   outside the passthrough) only when `has_empty_map_or_timestamp_ns_cast` finds one, and by `spark_ast.rs` to
   the statement an `EXPLAIN` wraps. pins: ice-tsns-sql-1/C-001, C-011
+  **WO NTZ-STORE-DOORS-1 second re-verify fold (2026-09-29, RD3-1):** both lowering
+  visitors also mark a written `CAST(… AS TIMESTAMP)` `VALUES` cell
+  ([keyword_lower/](keyword_lower/map.md) `ltz_values_cast.rs`), and
+  `has_empty_map_or_timestamp_ns_cast` also finds such a cell, so a MERGE source gets
+  the mark. pins: ntz-store-doors-1/C-008
   **UNRESOLVED-ROUTINE-1 (2026-09-16):** `unrelated_errors_pass_through` now
   fixtures a genuinely unrelated `Plan` error — unknown names reshape in
   `repark-core::unknown_routine`, not here.
@@ -964,6 +1087,39 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: fnp-4b/C-001, C-004, C-005, C-006, C-020
   `sql_may_have_insert_partition` keeps quote-free `INSERT … PARTITION` text off the
   fast path so the column-list swap runs.
+  **STRING-LITERAL-ESCAPE-1 (2026-09-29):** the file reached 999 of its 1,000
+  lines, so the literal-value engine moves verbatim to the child module
+  [spark_literals/unescape.rs](spark_literals/unescape.rs) (comments shed per
+  the owner ruling; behavior identical, callers untouched via re-export).
+  The follow-up fix makes the value engine quote-aware: `""` collapses in
+  double-quoted literals (PE-10), `r"…"` answers, raw `''`/`""` splits head
+  from quoted tail, and verbatim keeps doublings. `create_options.rs` option
+  keys unescape with their own quote type. Rust pins in
+  [tests/string_literal_escape_1.rs](tests/string_literal_escape_1.rs) (own
+  leaf; the SQP-1 leaf is byte-frozen), facade pins in
+  `python/repark/tests/test_string_literal_escape_1.py`.
+  pins: string-literal-escape-1/C-000, C-001, C-002, C-003, C-004
+  **DIFF-PROBE fold (2026-09-29):** verbatim keep-exact now applies only to
+  query-expression literals and `OPTIONS` values; DDL property lists
+  (`TBLPROPERTIES` / `PROPERTIES` / `DBPROPERTIES` parens) and `COMMENT`
+  literal runs in `CREATE` / `ALTER` statements take default treatment, so
+  their canonical text matches default mode exactly. Doubled `""` inside a
+  `COMMENT` double-quoted literal forces a rewrite (the borrower path refuses
+  doubles there) into single-quoted form. The statement gate keeps
+  `SELECT comment '…'` aliases on the query rule. `OPTIONS` needs no span:
+  its planner already unescapes keys from original text and splices values
+  from verbatim inners. `COMMENT ON` stays out (Spark collapses doublings
+  but preserves backslashes there — a different rule).
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** the DDL gate covers
+  `SHOW` and `COMMENT` statements too; `UNSET … [IF EXISTS]` skips the guard
+  words before the key paren, `SHOW TBLPROPERTIES t (…)` spans the trailing
+  key paren, and `COMMENT ON … IS …` spans the literal after the last `IS`
+  followed by one. A clean Spark rerun shows `COMMENT ON` fully unescapes
+  both modes, superseding the DIFF-PROBE note above. The verbatim entry
+  points (`canonicalize_verbatim`, `translate_downstream_error_verbatim`,
+  `with_escaped_string_literals_config`, `escaped_verbatim_from_options`)
+  turn `pub` for the binding's `filter`/`where`/`F.expr` doors.
+  pins: string-literal-escape-1/C-008, C-009
 - `spark_literal_typing.rs` — **SQL-LITERAL-TYPING-1 (2026-09-16):**
   `SparkIntegralLiteral` types unsuffixed integral literals as Spark does —
   Int64 fitting i32 narrows to Int32, UInt64 becomes Decimal128(digits, 0),
@@ -1128,6 +1284,40 @@ pins: rp-4-fork-repin/C-005, C-006
   `Timestamp(µs, None)` for the SELECT source; `update_cast.rs` calls the gate beside
   the VOID one. Illegal sources refuse with Spark's `CANNOT_SAFELY_CAST` naming
   `"TIMESTAMP_NTZ"`. pins: ntz-1/C-007
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 round 2):** `check_ntz_row` parenthesizes
+  a leading stacked-minus chain before rendering probe SQL, so `- -1` probes as
+  `-(-1)` instead of a `--` comment; each NTZ-targeted position is then judged
+  through the shared gate with a numeric fallback that names unnamable DECIMAL
+  sources `DECIMAL(p,s)`, first refusal in row order winning as before. The
+  helper lives in `void_type.rs` and `update_cast.rs` reuses it; the LTZ child
+  module keeps its own copy under the round-1 file-scope ruling.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-1/VG-2/VG-8):** the
+  helper is one recursive post-visit over the whole expression — the operand of
+  every unary operator is wrapped when itself unary or sign-led — used at all
+  three probe sites, so `(- -1)`, `+- -1`, `+(- -1)`, `-(- -1)`, `- -1 + 0`,
+  `abs(- -1)` and `CAST(- -1 AS INT)` probe their numeric type instead of a
+  `--` comment; a probe that still cannot parse now refuses with the analyzer's
+  own error instead of passing the row. `update_cast.rs` judges integer
+  literals through the shared `number_text_type`.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 re-verify fold, RN2-1..RN2-3):** every
+  NTZ probe position is aliased `p{n}`, so a row with two equal cells (`(1, 1, 1,
+  ts)`, `(3, NULL, NULL, ts)`, two equal NTZ literals, `7` beside `CAST(7 AS INT)`)
+  no longer trips DataFusion's unique-projection check; a `DEFAULT` cell probes as
+  `NULL` through `insert_defaults::is_default_marker`, because the probe runs
+  before marker substitution and a declared write-default fits its column by
+  construction. The fail-closed probe stays: with its own failure causes gone,
+  `(10, 1, 1, '2024-…')` and `(11, 1, 1, - -1)` refuse `CANNOT_SAFELY_CAST` as
+  Spark does, where base stored them because the duplicate-name error skipped the
+  check. The sign-led `starts_with('-')` disjunct is removed: every tree the
+  parser produces with a sign-led operand is a unary-under-unary the match
+  already wraps.
+  **Fold 2026-09-29 (LTZ-STACKED-SIGN-1 second re-verify fold, RN3-1):** the
+  shared `probe_text` (parenthesizer, then dollar-quote of string literals
+  holding a quote under a collision-free tag) renders every fail-closed VALUES
+  probe cell on both doors, so backslash-quote rows store Spark's exact values
+  and probes that still cannot parse still refuse. The fail-open probes (VOID
+  value and query, UPDATE SET, MERGE assignment) keep raw `Display`: a broken
+  rendering passes the row through there and can never refuse a valid one.
 - `cast_gate.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** the unit's one cast hook, a single
   call in `spark_ast.rs`'s passthrough: the `CAST(NULL AS VOID)` rewrite (`void_type.rs`)
   and the `CAST(x AS UUID)` refusal (`uuid_cast.rs`). pins: u9-types-1/C-009, C-010
@@ -1636,6 +1826,9 @@ pins: rp-4-fork-repin/C-005, C-006
   [extension/map.md](extension/map.md) and [../tests/session_timezone.rs](../tests/session_timezone.rs).
   **FNP-8 (2026-09-07):** its analyzer-configuration hook inserts the shared HOF preparation rule
   before core's first default type-coercion rule. pins: fnp-8/C-003, C-004
+  **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** `configure` registers
+  `view_ddl::temp_view::definition_plan` as the session's `ViewDefinitionPlans` resolver
+  (`repark_iceberg::write::negated_null_store`). pins: store-ts-to-numeric-1/C-002
 - **FNP-8 (2026-09-07):** the executing parser selects lambda syntax only inside
   recognized higher-order calls. JSON arrows retain the session parser and its AST.
   pins: fnp-8/C-004
@@ -1831,6 +2024,12 @@ pins: rp-4-fork-repin/C-005, C-006
   the second session spec refuses with Spark's `1039` text (shared constant
   from `repark_functions::spark_session_window`).
   pins: fnp-win-1/C-002, C-004, C-005, C-008
+  **WO STORE-TS-DOORS-2 re-verify fold 6 (2026-10-01):**
+  `wrapped_twice_matches_wrapped_once` pins that a second wrap over
+  Display text is a no-op returning false, which the sibling judge relies on
+  when it re-applies the pre-gate chain to arm text the statement already
+  wrapped.
+  pins: store-ts-doors-2/C-001, C-003
 - `window_range.rs` — Spark temporal `RANGE` rules. Unit-less bounds over `TIMESTAMP` refuse;
   bounds over `DATE` restate as day intervals because DataFusion reads bare values as months.
   Negative and value-inverted frames retain Spark refusal/empty behavior; numeric-key interval

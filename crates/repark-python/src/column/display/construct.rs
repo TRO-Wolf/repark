@@ -107,7 +107,11 @@ pub(super) fn lit_array_cast(
 ) -> PyResult<(PyColumn, String, String)> {
     let element = numpy_element_type(cast_type)?;
     let list = DataType::List(Arc::new(Field::new("item", element, true)));
-    let native = PyColumn::from_expr(Expr::Cast(Cast::new(Box::new(inner.expr()), list)));
+    let native = PyColumn::combine(
+        Expr::Cast(Cast::new(Box::new(inner.expr()), list)),
+        [inner],
+        1,
+    );
     Ok((
         native,
         wrap_angle_call("array", element_type),

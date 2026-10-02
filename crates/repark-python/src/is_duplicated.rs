@@ -340,13 +340,14 @@ fn expand_root(
 }
 
 #[allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
-pub(crate) fn filter_frame(frame: &DataFrame, predicate: Expr) -> PyResult<DataFrame> {
+pub(crate) fn filter_frame(frame: &DataFrame, predicate: Expr) -> PyResult<(DataFrame, bool)> {
     fenced!("is_duplicated.filter_frame", {
         if !contains_mask(&predicate) {
-            return frame
+            let df = frame
                 .clone()
                 .filter(predicate)
-                .map_err(datafusion_to_py_err);
+                .map_err(datafusion_to_py_err)?;
+            return Ok((df, false));
         }
         let index = fresh_name(frame.schema(), INDEX_BASE);
         let order_keys = input_order_keys(frame.logical_plan(), frame.schema());
@@ -364,7 +365,7 @@ pub(crate) fn filter_frame(frame: &DataFrame, predicate: Expr) -> PyResult<DataF
             .map(DFColumn::new_unqualified)
             .collect::<Vec<_>>();
         drops.push(DFColumn::new_unqualified(&index));
-        staged
+        let df = staged
             .filter(rewritten)
             .map_err(datafusion_to_py_err)?
             .sort(vec![
@@ -372,15 +373,17 @@ pub(crate) fn filter_frame(frame: &DataFrame, predicate: Expr) -> PyResult<DataF
             ])
             .map_err(datafusion_to_py_err)?
             .drop_columns(&drops)
-            .map_err(datafusion_to_py_err)
+            .map_err(datafusion_to_py_err)?;
+        Ok((df, true))
     })
 }
 
 #[allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
-pub(crate) fn select_frame(frame: &DataFrame, exprs: Vec<Expr>) -> PyResult<DataFrame> {
+pub(crate) fn select_frame(frame: &DataFrame, exprs: Vec<Expr>) -> PyResult<(DataFrame, bool)> {
     fenced!("is_duplicated.select_frame", {
         if !exprs.iter().any(contains_mask) {
-            return frame.clone().select(exprs).map_err(datafusion_to_py_err);
+            let df = frame.clone().select(exprs).map_err(datafusion_to_py_err)?;
+            return Ok((df, false));
         }
         let index = fresh_name(frame.schema(), INDEX_BASE);
         let order_keys = input_order_keys(frame.logical_plan(), frame.schema());
@@ -400,7 +403,7 @@ pub(crate) fn select_frame(frame: &DataFrame, exprs: Vec<Expr>) -> PyResult<Data
             rewritten.push(one);
         }
         rewritten.push(Expr::Column(DFColumn::new_unqualified(&index)));
-        staged
+        let df = staged
             .select(rewritten)
             .map_err(datafusion_to_py_err)?
             .sort(vec![
@@ -408,7 +411,8 @@ pub(crate) fn select_frame(frame: &DataFrame, exprs: Vec<Expr>) -> PyResult<Data
             ])
             .map_err(datafusion_to_py_err)?
             .drop_columns(&[DFColumn::new_unqualified(&index)])
-            .map_err(datafusion_to_py_err)
+            .map_err(datafusion_to_py_err)?;
+        Ok((df, true))
     })
 }
 

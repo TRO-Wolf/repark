@@ -1,6 +1,7 @@
 use datafusion::arrow::datatypes::DataType;
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{Case, Cast, Expr, lit};
+use datafusion::scalar::ScalarValue;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::pybacked::PyBackedStr;
@@ -13,6 +14,8 @@ use crate::AnalysisException;
 use crate::fence::fenced;
 
 mod construct;
+#[cfg(test)]
+mod tests;
 
 fn wrap_binary(left: &str, spark_op: &str, right: &str) -> String {
     let mut out = String::with_capacity(left.len() + spark_op.len() + right.len() + 4);
@@ -234,35 +237,35 @@ fn format_case_body(arms: Vec<(String, String)>, else_part: Option<&str>) -> Str
     out
 }
 
-fn apply_binary_op(left: &PyColumn, right: &PyColumn, op_method: &str) -> PyResult<Expr> {
+fn apply_binary_op(left: &PyColumn, right: &PyColumn, op_method: &str) -> PyResult<(Expr, usize)> {
     let left_expr = left.expr();
     let right_expr = right.expr();
     match op_method {
-        "add" => Ok(left_expr + right_expr),
-        "sub" => Ok(left_expr - right_expr),
-        "mul" => Ok(left_expr * right_expr),
+        "add" => Ok((left_expr + right_expr, 1)),
+        "sub" => Ok((left_expr - right_expr, 1)),
+        "mul" => Ok((left_expr * right_expr, 1)),
         "div" => {
             let numerator = Expr::Cast(Cast::new(Box::new(left_expr), DataType::Float64));
             let denominator = Expr::Cast(Cast::new(Box::new(right_expr), DataType::Float64));
-            Ok(numerator / denominator)
+            Ok((numerator / denominator, 2))
         }
-        "modulo" => Ok(left_expr % right_expr),
-        "eq" => Ok(left_expr.eq(right_expr)),
-        "lt" => Ok(left_expr.lt(right_expr)),
-        "gt" => Ok(left_expr.gt(right_expr)),
-        "le" => Ok(left_expr.lt_eq(right_expr)),
-        "ge" => Ok(left_expr.gt_eq(right_expr)),
-        "and_" => Ok(left_expr.and(right_expr)),
-        "or_" => Ok(left_expr.or(right_expr)),
+        "modulo" => Ok((left_expr % right_expr, 1)),
+        "eq" => Ok((left_expr.eq(right_expr), 1)),
+        "lt" => Ok((left_expr.lt(right_expr), 1)),
+        "gt" => Ok((left_expr.gt(right_expr), 1)),
+        "le" => Ok((left_expr.lt_eq(right_expr), 1)),
+        "ge" => Ok((left_expr.gt_eq(right_expr), 1)),
+        "and_" => Ok((left_expr.and(right_expr), 1)),
+        "or_" => Ok((left_expr.or(right_expr), 1)),
         other => Err(PyValueError::new_err(format!("unknown binary op {other}"))),
     }
 }
 
 fn call_two(name: &str, left: &PyColumn, right: &PyColumn) -> PyResult<PyColumn> {
-    Ok(PyColumn::from_expr(call_scalar_expr(
-        name,
-        vec![left.expr(), right.expr()],
-    )?))
+    Ok(PyColumn::combine_surveyed(
+        call_scalar_expr(name, vec![left.expr(), right.expr()])?,
+        [left, right],
+    ))
 }
 
 fn engine_cast(inner: &PyColumn, engine_type: &str, keyword: &str) -> PyResult<PyColumn> {
@@ -276,10 +279,30 @@ fn engine_cast(inner: &PyColumn, engine_type: &str, keyword: &str) -> PyResult<P
         }
     };
     let expr = cast_to(inner.expr(), engine_type, try_cast).map_err(AnalysisException::new_err)?;
-    Ok(PyColumn::from_expr(expr))
+    Ok(PyColumn::combine_surveyed(expr, [inner]))
 }
 
 type RenderedParts = (PyColumn, String, String, Option<String>);
+
+impl Drop for PyColumn {
+    fn drop(&mut self) {
+        let need = crate::deep_stack::clone_need_bytes(self.plan_levels, self.expr_levels);
+        crate::deep_stack::grown_sync(need, || {
+            let _ = std::mem::replace(&mut self.expr, lit(ScalarValue::Null));
+        });
+    }
+}
+
+impl Clone for PyColumn {
+    fn clone(&self) -> Self {
+        Self {
+            expr: self.expr(),
+            expr_levels: self.expr_levels,
+            df_levels: self.df_levels,
+            plan_levels: self.plan_levels,
+        }
+    }
+}
 
 #[pyclass(name = "PyColumnParts", module = "repark._native")]
 pub struct PyColumnParts;
@@ -297,7 +320,8 @@ impl PyColumnParts {
         right_parts: (&str, &str, &str),
     ) -> PyResult<RenderedParts> {
         fenced!("ColumnParts.binary", {
-            let inner = PyColumn::from_expr(apply_binary_op(left, right, op_method)?);
+            let (combined, added) = apply_binary_op(left, right, op_method)?;
+            let inner = PyColumn::combine(combined, [left, right], added);
             let (left_display, left_sql, left_join) = left_parts;
             let (right_display, right_sql, right_join) = right_parts;
             Ok((
@@ -317,7 +341,7 @@ impl PyColumnParts {
         right_parts: (&str, &str, &str),
     ) -> PyResult<RenderedParts> {
         fenced!("ColumnParts.not_equal", {
-            let inner = PyColumn::from_expr(left.expr().not_eq(right.expr()));
+            let inner = PyColumn::combine(left.expr().not_eq(right.expr()), [left, right], 1);
             let (left_display, left_sql, left_join) = left_parts;
             let (right_display, right_sql, right_join) = right_parts;
             Ok((
@@ -337,8 +361,8 @@ impl PyColumnParts {
     ) -> PyResult<RenderedParts> {
         fenced!("ColumnParts.unary_neg", {
             let display = wrap_negative_display(child_display);
-            let negated = Expr::Negative(Box::new(inner.expr().clone()));
-            let aliased = PyColumn::from_expr(negated.alias(&display));
+            let negated = Expr::Negative(Box::new(inner.expr()));
+            let aliased = PyColumn::combine(negated.alias(&display), [inner], 2);
             Ok((aliased, display, wrap_negative_sql(child_sql), None))
         })
     }
@@ -380,7 +404,7 @@ impl PyColumnParts {
             }
             let mut args = Vec::with_capacity(1 + ops.len() * 2 + values.len());
             args.push(inner.expr());
-            let mut values = values.into_iter();
+            let mut pending = values.iter();
             let mut value_parts = value_parts.iter();
             let (struct_display, struct_sql, struct_join) = struct_parts;
             let mut display = format!("update_fields({struct_display}");
@@ -392,7 +416,7 @@ impl PyColumnParts {
                 let quoted = path.replace('\'', "''");
                 match op.as_str() {
                     "with" => {
-                        let value = values.next().ok_or_else(|| {
+                        let value = pending.next().ok_or_else(|| {
                             PyValueError::new_err("update_fields 'with' op needs a value")
                         })?;
                         let (value_display, value_sql, value_join) =
@@ -434,12 +458,15 @@ impl PyColumnParts {
             display.push(')');
             sql.push(')');
             join.push(')');
-            if values.next().is_some() || value_parts.next().is_some() {
+            if pending.next().is_some() || value_parts.next().is_some() {
                 return Err(PyValueError::new_err(
                     "update_fields value lists must match the 'with' op count",
                 ));
             }
-            let native = PyColumn::from_expr(repark_core::update_fields_call(args));
+            let native = PyColumn::combine_surveyed(
+                repark_core::update_fields_call(args),
+                std::iter::once(inner).chain(values.iter()),
+            );
             Ok((native, display, sql, Some(join)))
         })
     }
@@ -449,7 +476,7 @@ impl PyColumnParts {
         fenced!("ColumnParts.repark_isnan", {
             let (child_display, child_sql, child_join) = child_parts;
             Ok((
-                PyColumn::from_expr(repark_core::repark_isnan_call(inner.expr())),
+                PyColumn::combine_surveyed(repark_core::repark_isnan_call(inner.expr()), [inner]),
                 format!("isnan({child_display})"),
                 format!("repark_isnan({child_sql})"),
                 Some(format!("repark_isnan({child_join})")),
@@ -469,7 +496,11 @@ impl PyColumnParts {
                 return Err(PyValueError::new_err("in_list values and parts must match"));
             }
             let exprs = values.iter().map(PyColumn::expr).collect();
-            let native = PyColumn::from_expr(inner.expr().in_list(exprs, false));
+            let native = PyColumn::combine(
+                inner.expr().in_list(exprs, false),
+                std::iter::once(inner).chain(values.iter()),
+                1,
+            );
             let wrap = |left: &str, rights: &[&str]| -> String {
                 format!("({left} IN ({}))", rights.join(", "))
             };
@@ -495,10 +526,10 @@ impl PyColumnParts {
         sql_parts: (&str, &str, &str),
     ) -> PyResult<RenderedParts> {
         fenced!("ColumnParts.substr", {
-            let native = PyColumn::from_expr(call_scalar_expr(
-                "substr",
-                vec![inner.expr(), start.expr(), length.expr()],
-            )?);
+            let native = PyColumn::combine_surveyed(
+                call_scalar_expr("substr", vec![inner.expr(), start.expr(), length.expr()])?,
+                [inner, start, length],
+            );
             let (child_display, start_display, length_display) = display_parts;
             let (child_sql, start_sql, length_sql) = sql_parts;
             Ok((
@@ -563,7 +594,7 @@ impl PyColumnParts {
     ) -> PyResult<RenderedParts> {
         fenced!("ColumnParts.invert", {
             Ok((
-                PyColumn::from_expr(!inner.expr()),
+                PyColumn::combine(!inner.expr(), [inner], 1),
                 wrap_invert(child_display),
                 wrap_invert(child_sql),
                 Some(wrap_invert(child_join)),
@@ -580,7 +611,7 @@ impl PyColumnParts {
     ) -> PyResult<RenderedParts> {
         fenced!("ColumnParts.is_null", {
             Ok((
-                PyColumn::from_expr(inner.expr().is_null()),
+                PyColumn::combine(inner.expr().is_null(), [inner], 1),
                 wrap_is_null(child_display),
                 wrap_is_null(child_sql),
                 Some(wrap_is_null(child_join)),
@@ -597,7 +628,7 @@ impl PyColumnParts {
     ) -> PyResult<RenderedParts> {
         fenced!("ColumnParts.is_not_null", {
             Ok((
-                PyColumn::from_expr(inner.expr().is_not_null()),
+                PyColumn::combine(inner.expr().is_not_null(), [inner], 1),
                 wrap_is_not_null(child_display),
                 wrap_is_not_null(child_sql),
                 Some(wrap_is_not_null(child_join)),
@@ -646,15 +677,22 @@ impl PyColumnParts {
                 ));
             }
             let when_then_expr = when_thens
-                .into_iter()
-                .map(|(condition, value)| (Box::new(condition.expr), Box::new(value.expr)))
+                .iter()
+                .map(|(condition, value)| (Box::new(condition.expr()), Box::new(value.expr())))
                 .collect();
-            let else_expr = otherwise.map(|column| Box::new(column.expr));
-            let inner = PyColumn::from_expr(Expr::Case(Case {
-                expr: None,
-                when_then_expr,
-                else_expr,
-            }));
+            let else_expr = otherwise.as_ref().map(|column| Box::new(column.expr()));
+            let inner = PyColumn::combine(
+                Expr::Case(Case {
+                    expr: None,
+                    when_then_expr,
+                    else_expr,
+                }),
+                when_thens
+                    .iter()
+                    .flat_map(|(condition, value)| [condition, value])
+                    .chain(otherwise.iter()),
+                1,
+            );
             let (else_display, else_sql, else_join) = match else_parts {
                 Some((display, sql, join)) => (Some(display), Some(sql), Some(join)),
                 None => (None, None, None),
@@ -672,7 +710,7 @@ impl PyColumnParts {
     fn alias(inner: &PyColumn, child_display: &str, name: &str) -> PyResult<(PyColumn, String)> {
         fenced!("ColumnParts.alias", {
             Ok((
-                PyColumn::from_expr(inner.expr().alias(name)),
+                PyColumn::combine(inner.expr().alias(name), [inner], 1),
                 wrap_alias(child_display, name),
             ))
         })
@@ -750,8 +788,8 @@ impl PyColumnParts {
                     "call_scalar part lists must match the argument count",
                 ));
             }
-            let exprs = inners.into_iter().map(|column| column.expr).collect();
-            let inner = PyColumn::from_expr(call_scalar_expr(name, exprs)?);
+            let exprs = inners.iter().map(PyColumn::expr).collect();
+            let inner = PyColumn::combine_surveyed(call_scalar_expr(name, exprs)?, &inners);
             let shown = display.map_or_else(|| wrap_call(name, &display_parts), str::to_string);
             Ok((
                 inner,
@@ -786,9 +824,11 @@ impl PyColumnParts {
                 repark_functions::spark_time_window::window_udf(),
                 args,
             ));
-            Ok(PyColumn::from_expr(call.alias(
-                repark_functions::spark_time_window::WINDOW_OUTPUT_NAME,
-            )))
+            Ok(PyColumn::combine(
+                call.alias(repark_functions::spark_time_window::WINDOW_OUTPUT_NAME),
+                [time],
+                2,
+            ))
         })
     }
 
@@ -800,9 +840,11 @@ impl PyColumnParts {
                 repark_functions::spark_session_window::session_window_udf(),
                 vec![time.expr(), gap.expr()],
             ));
-            Ok(PyColumn::from_expr(call.alias(
-                repark_functions::spark_session_window::SESSION_OUTPUT_NAME,
-            )))
+            Ok(PyColumn::combine(
+                call.alias(repark_functions::spark_session_window::SESSION_OUTPUT_NAME),
+                [time, gap],
+                2,
+            ))
         })
     }
 
@@ -884,85 +926,5 @@ impl PyColumnParts {
                 ))
             }
         })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn binary_paren_spaces_match_python() {
-        assert_eq!(wrap_binary("x", "+", "1"), "(x + 1)");
-        assert_eq!(wrap_binary("x", "AND", "flag"), "(x AND flag)");
-    }
-
-    #[test]
-    fn not_equal_uses_not_equals_form() {
-        assert_eq!(wrap_not_equal("x", "1"), "(NOT (x = 1))");
-    }
-
-    #[test]
-    fn unary_neg_display_and_sql_diverge() {
-        assert_eq!(wrap_negative_display("x"), "negative(x)");
-        assert_eq!(wrap_negative_sql("x"), "(-(x))");
-    }
-
-    #[test]
-    fn null_safe_sql_is_distinct_from() {
-        assert_eq!(wrap_null_safe_display("x", "NULL"), "(x <=> NULL)");
-        assert_eq!(
-            wrap_null_safe_sql("x", "NULL"),
-            "(x IS NOT DISTINCT FROM NULL)"
-        );
-    }
-
-    #[test]
-    fn case_open_and_closed_match_python() {
-        let arms = vec![
-            ("(x > 0)".to_string(), "1".to_string()),
-            ("(x < 0)".to_string(), "-1".to_string()),
-        ];
-        assert_eq!(
-            format_case_body(arms.clone(), None),
-            "CASE WHEN (x > 0) THEN 1 WHEN (x < 0) THEN -1 END"
-        );
-        assert_eq!(
-            format_case_body(arms[..1].to_vec(), Some("0")),
-            "CASE WHEN (x > 0) THEN 1 ELSE 0 END"
-        );
-    }
-
-    #[test]
-    fn cast_and_try_cast_keywords() {
-        assert_eq!(wrap_cast("CAST", "x", "DOUBLE"), "CAST(x AS DOUBLE)");
-        assert_eq!(wrap_cast("TRY_CAST", "x", "INT"), "TRY_CAST(x AS INT)");
-    }
-
-    #[test]
-    fn call_renders_name_comma_parts() {
-        assert_eq!(wrap_call("sqrt", &["x"]), "sqrt(x)");
-        assert_eq!(wrap_call("lpad", &["s", "10", "'x'"]), "lpad(s, 10, 'x')");
-        assert_eq!(wrap_call("rand", &[] as &[&str]), "rand()");
-    }
-
-    #[test]
-    fn getitem_index_field_and_key_shapes() {
-        assert_eq!(wrap_index_display("arr", "0"), "arr[0]");
-        assert_eq!(wrap_index_sql("arr", "0"), "(arr)[0]");
-        assert_eq!(wrap_field_sql("st", "\"a\""), "(st).\"a\"");
-        assert_eq!(wrap_index_display("m", "'k'"), "m['k']");
-        assert_eq!(wrap_alias("x", "z"), "x AS z");
-        assert_eq!(wrap_invert("flag"), "(NOT flag)");
-        assert_eq!(wrap_is_null("x"), "(x IS NULL)");
-        assert_eq!(
-            wrap_string_predicate_display("s", "startswith", "a"),
-            "s.startswith(a)"
-        );
-        assert_eq!(
-            wrap_string_predicate_sql("starts_with", "s", "'a'"),
-            "starts_with(s, 'a')"
-        );
-        assert_eq!(wrap_substr("s", "1", "2"), "substr(s, 1, 2)");
     }
 }

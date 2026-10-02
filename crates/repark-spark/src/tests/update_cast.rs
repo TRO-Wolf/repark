@@ -86,6 +86,54 @@ async fn update_missing_table_keeps_its_own_error() {
 }
 
 #[tokio::test]
+async fn update_stacked_sign_int_into_timestamp_stamps_cannot_safely_cast() {
+    let (_warehouse, ctx, catalogs) = door().await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.l (id INT, c TIMESTAMP) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.l VALUES (140, TIMESTAMP '2024-01-01 00:00:00')",
+    )
+    .await;
+    let err = plan_err(
+        &ctx,
+        &catalogs,
+        "UPDATE ice.sales.l SET c = - -1 WHERE id = 140",
+    )
+    .await;
+    assert!(
+        err.contains("[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]"),
+        "{err}"
+    );
+    assert!(
+        err.contains("Cannot safely cast `c` \"INT\" to \"TIMESTAMP\""),
+        "{err}"
+    );
+    assert!(err.contains("SQLSTATE: KD000"), "{err}");
+    let walls = execute(
+        &ctx,
+        &catalogs,
+        "SELECT CAST(c AS STRING) AS c FROM ice.sales.l WHERE id = 140",
+    )
+    .await
+    .unwrap()
+    .collect()
+    .await
+    .unwrap();
+    let rendered = walls[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<datafusion::arrow::array::StringArray>()
+        .unwrap();
+    assert_eq!(rendered.value(0), "2024-01-01 00:00:00");
+}
+
+#[tokio::test]
 async fn insert_string_into_bigint_keeps_the_insert_path() {
     let (_warehouse, ctx, catalogs) = door().await;
     let text = match execute(

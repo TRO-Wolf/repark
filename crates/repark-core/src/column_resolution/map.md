@@ -70,6 +70,12 @@ pins: ice-error-conditions-1/C-011
   are public through `column_resolution` (`on_grown_stack` passes one value for both) so
   repark-spark's re-planning temp-view scan grows the stack the same way; removing that wrapper
   overflows the 100-level temp-view chain pins. pins: ice-views-1/C-018
+  **DEEP-FILTER-CHAIN-CRASH-1 verifier fold (2026-09-29):** `remaining_stack` is
+  public through `column_resolution` too, so the binding's small-stack backstop
+  reads the calling thread's remaining stack without a new dependency edge.
+  **CI segv (2026-09-30):** `run_on_grown_stack(red_zone, segment, work)` is the
+  sync form of the same primitive, so column clone/combine/drop runs grown
+  without a future or a runtime handle. pins: deep-filter-chain-crash-1/C-012
 - `tests.rs` — the battery below. **WO CASESENS-1 slice 2 (2026-09-27):**
   `sensitive_session_refuses_folded_names_and_keeps_backticks` answers unquoted
   exact `userId` where it refused `userid` (normalization-off exactness, net-zero
@@ -118,6 +124,9 @@ pins: ice-error-conditions-1/C-011
   returns the folded text, unchanged when the first plan succeeds; the MERGE
   door folds a parenthesized derived source with it before the fragment rewrite.
   pins: casesens-1/C-004
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** folded exits render
+  through `repark_iceberg::write::sql_text::render_for_reparse` so string
+  values re-parse exactly. pins: string-literal-escape-1/C-010
 - `twins.rs` — **WO CASESENS-1 slice 4 (2026-09-27):** the case-twin output
   pass (R9). `is_unique_name_error` matches DataFusion's `Projections require
   unique expression names` head through its wrappers; `respell_case_twins`

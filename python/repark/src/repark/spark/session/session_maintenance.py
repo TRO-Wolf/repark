@@ -59,4 +59,4 @@ def run_maintenance(
         if _OVERRIDE_KEY.fullmatch(key) is None:
             raise PySparkValueError(f"run_maintenance override key {key!r} is not a plain name")
         parts.append(f"{key} => {_override_literal(key, value)}")
-    return self.sql(f"CALL {catalog}.system.run_maintenance({', '.join(parts)})")
+    return self._sql_built(f"CALL {catalog}.system.run_maintenance({', '.join(parts)})")

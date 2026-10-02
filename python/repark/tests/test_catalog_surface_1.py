@@ -80,6 +80,10 @@ class _SpyInner:
         self._recorded.append(text)
         return self._inner.sql(text)
 
+    def sql_built(self, text: str) -> Any:
+        self._recorded.append(text)
+        return self._inner.sql_built(text)
+
     def __getattr__(self, name: str) -> Any:
         return getattr(self._inner, name)
 

@@ -287,7 +287,7 @@ class Catalog:
                 f"[CATALOG_NOT_FOUND] The catalog `{name}` not found. Consider to set the SQL "
                 f'config "spark.sql.catalog.{name}" to a catalog plugin.'
             )
-        self._session.sql(f"USE {_quote_ident(name)}")
+        self._session._sql_built(f"USE {_quote_ident(name)}")
 
     setCurrentCatalog = set_current_catalog  # noqa: N815
 
@@ -311,7 +311,7 @@ class Catalog:
                 f"[SCHEMA_NOT_FOUND] The schema `{catalog}`.`{name}` cannot be found. Verify "
                 f"the spelling and correctness of the schema and catalog."
             )
-        self._session.sql(f"USE DATABASE {_quote_ident(name)}")
+        self._session._sql_built(f"USE DATABASE {_quote_ident(name)}")
 
     setCurrentDatabase = set_current_database  # noqa: N815
 
@@ -347,7 +347,7 @@ class Catalog:
             pattern = _require_str(pattern, "pattern")
             sql = f"{sql} LIKE {sql_string_literal(pattern)}"
         try:
-            table = self._session.sql(sql).to_arrow()
+            table = self._session._sql_built(sql).to_arrow()
         except Exception as exc:
             raise AnalysisException(f"listDatabases failed for catalog `{catalog}`: {exc}") from exc
         out: list[Any] = []
@@ -422,7 +422,7 @@ class Catalog:
         # namespace_exists + get_namespace + location resolver). Do not SHOW-list
         # listDatabases stays on SHOW (FA-2).
         sql = f"DESCRIBE NAMESPACE {_multipart([catalog, name])}"
-        table = self._session.sql(sql).to_arrow()
+        table = self._session._sql_built(sql).to_arrow()
         description: str | None = None
         location_uri: str | None = None
         rows = zip(
@@ -796,7 +796,7 @@ class Catalog:
         if name in known:
             return True
         try:
-            self._session.sql(f"SHOW NAMESPACES IN {_quote_ident(name)}").to_arrow()
+            self._session._sql_built(f"SHOW NAMESPACES IN {_quote_ident(name)}").to_arrow()
         except (UnsupportedOperationException, IllegalArgumentException):
             raise
         except Exception:
@@ -806,7 +806,9 @@ class Catalog:
 
     def _namespace_exists(self, catalog: str, namespace: str) -> bool:
         try:
-            table = self._session.sql(f"SHOW NAMESPACES IN {_quote_ident(catalog)}").to_arrow()
+            table = self._session._sql_built(
+                f"SHOW NAMESPACES IN {_quote_ident(catalog)}"
+            ).to_arrow()
         except (UnsupportedOperationException, IllegalArgumentException):
             raise
         except Exception:

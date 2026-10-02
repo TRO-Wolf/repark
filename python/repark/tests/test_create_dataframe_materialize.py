@@ -132,6 +132,12 @@ class _NativeRegisterProxy:
             raise RuntimeError("injected sql failure after MemTable register (P1a SAF-001)")
         return self._real.sql(query)
 
+    def sql_built(self, query: str) -> object:
+        registered = self.stream_views or self.ipc_byte_lens or self.materialize_views
+        if self.fail_after_register_on_sql and registered:
+            raise RuntimeError("injected sql failure after MemTable register (P1a SAF-001)")
+        return self._real.sql_built(query)
+
     def _register_arrow_stream_as_temp_view(self, view_name: str, stream_obj: object) -> None:
         if self.require_arrow_c_stream:
             assert hasattr(stream_obj, "__arrow_c_stream__")

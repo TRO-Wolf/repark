@@ -72,6 +72,11 @@ class _FailScanOnCacheView:
             raise RuntimeError("post-registration scan failure")
         return self._native_session.sql(query)
 
+    def sql_built(self, query: str) -> Any:
+        if "__repark_cache_" in query:
+            raise RuntimeError("post-registration scan failure")
+        return self._native_session.sql_built(query)
+
 
 def test_repeated_bare_eager_releases_every_registration(spark: ReparkSession) -> None:
     """C-002: ten bare eager() calls leave zero registrations after gc, no clearCache."""

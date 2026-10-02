@@ -8,6 +8,7 @@ use repark_core::writer_layout::{
 };
 
 use crate::AnalysisException;
+use crate::deep_stack::block_on;
 use crate::fence::fenced;
 use crate::session::PyReparkSession;
 
@@ -88,7 +89,7 @@ pub fn writer_plan(
             frame_columns: &frame_columns,
             case_sensitive,
         };
-        let planned = py.detach(|| runtime.block_on(inner.plan_table_write(&request)));
+        let planned = py.detach(|| block_on(&runtime, inner.plan_table_write(&request)));
         match planned {
             Ok(statement) => Ok(statement.as_str()),
             Err(WriterRefusal::MissingBucketColumn(column)) => Err(missing_column_error(

@@ -145,3 +145,71 @@ async fn ansi_merge_into_a_naive_timestamp_column_stores_the_walls() {
         "the naive column must stay naive"
     );
 }
+
+async fn instant_micros(session: &ReparkSession) -> Vec<(i64, i64)> {
+    let batches = session
+        .sql("SELECT id, ts FROM ice.sales.z ORDER BY id")
+        .await
+        .expect("read must run")
+        .collect()
+        .await
+        .expect("collect");
+    let mut rows = Vec::new();
+    for batch in &batches {
+        let ids = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .expect("Int64 id");
+        let ticks = batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<datafusion::arrow::array::TimestampMicrosecondArray>()
+            .expect("microsecond instants");
+        for row in 0..batch.num_rows() {
+            rows.push((ids.value(row), ticks.value(row)));
+        }
+    }
+    rows
+}
+
+#[tokio::test]
+async fn ansi_merge_into_an_instant_column_keeps_the_utc_reading() {
+    let warehouse_dir = TempDir::new().expect("warehouse tempdir");
+    let warehouse = warehouse_dir.path().to_str().expect("utf8").to_string();
+    let session = ansi_session(&warehouse).await;
+    session
+        .sql(&format!(
+            "CREATE SCHEMA ice.sales WITH (location = '{warehouse}/sales')"
+        ))
+        .await
+        .expect("CREATE SCHEMA must run");
+    session
+        .sql("CREATE TABLE ice.sales.z (id BIGINT, ts TIMESTAMP(6) WITH TIME ZONE)")
+        .await
+        .expect("CREATE TABLE must run");
+    session
+        .sql("INSERT INTO ice.sales.z VALUES (2, NULL)")
+        .await
+        .expect("INSERT must plan")
+        .collect()
+        .await
+        .expect("INSERT must run");
+    session
+        .sql(
+            "MERGE INTO ice.sales.z AS t USING (SELECT CAST(2 AS BIGINT) AS id, TIMESTAMP \
+             '2026-06-06 06:06:06' AS ts UNION ALL SELECT CAST(3 AS BIGINT) AS id, TIMESTAMP \
+             '2027-07-07 07:07:07' AS ts) AS s ON t.id = s.id WHEN MATCHED THEN UPDATE SET ts = \
+             s.ts WHEN NOT MATCHED THEN INSERT (id, ts) VALUES (s.id, s.ts)",
+        )
+        .await
+        .expect("MERGE must plan")
+        .collect()
+        .await
+        .expect("MERGE must run");
+    assert_eq!(
+        instant_micros(&session).await,
+        vec![(2, 1_780_725_966_000_000), (3, 1_814_944_027_000_000)],
+        "the ANSI door reads a naive wall as UTC on MERGE into an instant column"
+    );
+}
