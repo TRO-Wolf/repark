@@ -10,7 +10,8 @@ use datafusion::logical_expr::Expr;
 use datafusion::logical_expr::LogicalPlan;
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{
-    AccessExpr, Expr as SqlExpr, Ident, ObjectNamePart, Statement, Value, VisitMut, VisitorMut,
+    AccessExpr, Expr as SqlExpr, Ident, ObjectNamePart, Select, SelectItem, Statement, Value,
+    VisitMut, VisitorMut,
 };
 use repark_common::spark_error;
 
@@ -146,9 +147,11 @@ async fn plan_with_repair(
     ];
     let mut error = match first {
         Ok(plan) => {
+            let written = written_references(&inner, defaults);
             if plan_has_upper_ascii_field(&plan) {
-                ambiguity::audit_plan_for_ambiguity(&plan, &written_references(&inner, defaults))?;
+                ambiguity::audit_plan_for_ambiguity(&plan, &written)?;
             }
+            struct_fields::refuse_ambiguous_struct_fields(&plan, &written)?;
             return boxed_finish(state, original, inner, plan).await;
         }
         Err(error) => error,
@@ -190,6 +193,7 @@ async fn plan_with_repair(
         {
             Ok(plan) => {
                 ambiguity::audit_plan_for_ambiguity(&plan, &written)?;
+                struct_fields::refuse_ambiguous_struct_fields(&plan, &written)?;
                 return boxed_finish(state, original, inner, plan).await;
             }
             Err(next) => error = next,
@@ -328,6 +332,7 @@ struct WrittenRefs {
     projection: HashSet<String>,
     relations: Vec<(String, Vec<String>)>,
     views: HashSet<String>,
+    has_star: bool,
     defaults: [String; 2],
 }
 
@@ -351,6 +356,24 @@ impl WrittenRefs {
             }
             _ => parts,
         }
+    }
+}
+
+struct StarScan {
+    found: bool,
+}
+
+impl datafusion::sql::sqlparser::ast::Visitor for StarScan {
+    type Break = std::convert::Infallible;
+    fn pre_visit_select(&mut self, select: &Select) -> ControlFlow<Self::Break> {
+        self.found = self.found
+            || select.projection.iter().any(|item| {
+                matches!(
+                    item,
+                    SelectItem::Wildcard(_) | SelectItem::QualifiedWildcard(_, _)
+                )
+            });
+        ControlFlow::Continue(())
     }
 }
 
@@ -493,7 +516,9 @@ impl datafusion::sql::sqlparser::ast::Visitor for WrittenRefsCollector {
 
 fn written_references(statement: &Statement, defaults: [String; 2]) -> WrittenRefs {
     let mut collector = WrittenRefsCollector::default();
+    let mut stars = StarScan { found: false };
     let _ = datafusion::sql::sqlparser::ast::Visit::visit(statement, &mut collector);
+    let _ = datafusion::sql::sqlparser::ast::Visit::visit(statement, &mut stars);
     WrittenRefs {
         bare: collector.bare,
         qualified: collector.qualified,
@@ -501,17 +526,21 @@ fn written_references(statement: &Statement, defaults: [String; 2]) -> WrittenRe
         outer_qualified: collector.outer_qualified,
         projection: collector.projection,
         relations: collector.relations,
-        views: collector
-            .named
-            .into_iter()
-            .filter(|(written, _)| {
-                !written.is_empty() && !collector.ctes.contains(&written.to_ascii_lowercase())
-            })
-            .map(|(_, visible)| visible.to_ascii_lowercase())
-            .collect(),
+        has_star: stars.found,
+        views: visible_views(collector.named, &collector.ctes),
         defaults,
     }
 }
+
+fn visible_views(named: Vec<(String, String)>, ctes: &HashSet<String>) -> HashSet<String> {
+    named
+        .into_iter()
+        .filter(|(written, _)| !written.is_empty() && !ctes.contains(&written.to_ascii_lowercase()))
+        .map(|(_, visible)| visible.to_ascii_lowercase())
+        .collect()
+}
+
+type Twins<'a> = HashMap<String, Vec<(Option<&'a TableReference>, &'a str)>>;
 
 fn plan_has_upper_ascii_field(plan: &LogicalPlan) -> bool {
     let mut found = false;
@@ -876,6 +905,8 @@ mod fold_text;
 mod inner_scopes;
 mod scope_fields;
 mod stack;
+mod star_twins;
+mod struct_fields;
 mod twins;
 
 pub use fold_text::fold_query_text;

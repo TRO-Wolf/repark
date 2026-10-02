@@ -37,6 +37,7 @@ pub struct IcebergPartitionWriteExec {
     aborted: Arc<AtomicBool>,
     result_schema: SchemaRef,
     plan_properties: Arc<PlanProperties>,
+    case_insensitive: bool,
 }
 
 impl Debug for IcebergPartitionWriteExec {
@@ -53,6 +54,7 @@ impl Debug for IcebergPartitionWriteExec {
             .field("aborted", &self.aborted)
             .field("result_schema", &self.result_schema)
             .field("plan_properties", &self.plan_properties)
+            .field("case_insensitive", &self.case_insensitive)
             .finish()
     }
 }
@@ -74,6 +76,7 @@ impl IcebergPartitionWriteExec {
         input: Arc<dyn ExecutionPlan>,
         writers: usize,
         collected: FileCollector,
+        case_insensitive: bool,
     ) -> Self {
         let result_schema = result_schema();
         let plan_properties = Arc::new(PlanProperties::new(
@@ -90,6 +93,7 @@ impl IcebergPartitionWriteExec {
             aborted: Arc::new(AtomicBool::new(false)),
             result_schema,
             plan_properties,
+            case_insensitive,
         }
     }
 }
@@ -130,6 +134,7 @@ impl ExecutionPlan for IcebergPartitionWriteExec {
             child,
             self.writers,
             Arc::clone(&self.collected),
+            self.case_insensitive,
         )))
     }
 
@@ -146,6 +151,7 @@ impl ExecutionPlan for IcebergPartitionWriteExec {
         let one_writer = WriteConcurrency::new(1)?;
         let raise_abort = Arc::clone(&self.aborted);
         let observe_abort = Arc::clone(&self.aborted);
+        let case_insensitive = self.case_insensitive;
 
         let written = futures::stream::once(async move {
             let batches = Box::pin(
@@ -164,10 +170,19 @@ impl ExecutionPlan for IcebergPartitionWriteExec {
                     }),
             );
             let files = if unpartitioned {
-                write_data_files_from_stream_with_concurrency(&table, batches, one_writer).await?
+                write_data_files_from_stream_with_concurrency(
+                    &table,
+                    batches,
+                    one_writer,
+                    case_insensitive,
+                )
+                .await?
             } else {
                 write_partitioned_data_files_from_stream_with_concurrency(
-                    &table, batches, one_writer,
+                    &table,
+                    batches,
+                    one_writer,
+                    case_insensitive,
                 )
                 .await?
             };
@@ -197,6 +212,7 @@ pub async fn write_data_files_from_plan(
     input: Arc<dyn ExecutionPlan>,
     context: Arc<TaskContext>,
     concurrency: WriteConcurrency,
+    case_insensitive: bool,
 ) -> Result<Vec<DataFile>> {
     let inputs = input.output_partitioning().partition_count().max(1);
     let single = concurrency.max_concurrent_files <= 1;
@@ -217,6 +233,7 @@ pub async fn write_data_files_from_plan(
         input,
         writers,
         Arc::clone(&collected),
+        case_insensitive,
     ));
 
     let data_root = data_root(table);
@@ -591,6 +608,7 @@ mod tests {
             input,
             Arc::new(TaskContext::default()),
             WriteConcurrency::new(4).expect("concurrency"),
+            true,
         )
         .await
         .expect("write succeeds")
@@ -612,7 +630,7 @@ mod tests {
                 .execute(partition, Arc::clone(&context))
                 .expect("execute");
             files.extend(
-                write_data_files_from_stream_with_concurrency(&table, stream, one_writer)
+                write_data_files_from_stream_with_concurrency(&table, stream, one_writer, true)
                     .await
                     .expect("serial write succeeds"),
             );
@@ -659,6 +677,7 @@ mod tests {
                 input,
                 Arc::new(TaskContext::default()),
                 WriteConcurrency::new(4).expect("concurrency"),
+                true,
             )
             .await
             .expect("write succeeds");
@@ -691,6 +710,7 @@ mod tests {
             Arc::new(SlowPartitionedExec::new(2, 4, Duration::ZERO, None, 0)),
             Arc::new(TaskContext::default()),
             WriteConcurrency::new(4).expect("concurrency"),
+            true,
         )
         .await
         .expect("seed write succeeds");
@@ -716,6 +736,7 @@ mod tests {
             )),
             Arc::new(TaskContext::default()),
             WriteConcurrency::new(4).expect("concurrency"),
+            true,
         )
         .await
         .expect_err("the injected partition failure must surface");
@@ -756,6 +777,7 @@ mod tests {
             input,
             Arc::new(TaskContext::default()),
             WriteConcurrency::new(4).expect("concurrency"),
+            true,
         )
         .await
         .expect_err("the injected partition failure must surface");

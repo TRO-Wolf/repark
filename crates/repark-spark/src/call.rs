@@ -368,10 +368,12 @@ async fn execute_rewrite_position_delete_files(
     let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
     let pairs = rewrite_options::extract_option_pairs(&bound, "rewrite_position_delete_files")?;
     let options = rewrite_options::parse_rpd_options(&pairs, &table)?;
+    let case_sensitive = !crate::spark_door_case_insensitive(ctx.state().config().options());
     let where_predicate = match bound.optional_string("where")? {
         Some(where_sql) => Some(rewrite_where::parse_rewrite_where(
             where_sql.as_str(),
             table.metadata().current_schema(),
+            case_sensitive,
         )?),
         None => None,
     };
