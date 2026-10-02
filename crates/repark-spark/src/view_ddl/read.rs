@@ -16,6 +16,7 @@ use datafusion::sql::sqlparser::parser::Parser;
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use iceberg::{Catalog, ErrorKind, NamespaceIdent, TableIdent};
 use repark_common::spark_error;
+use repark_core::column_resolution::on_grown_stack_with;
 use repark_core::{CatalogRegistry, TempViewSession};
 use repark_iceberg::catalog::iceberg_to_datafusion;
 use repark_iceberg::view::{ViewReadSpec, view_read_spec};
@@ -87,6 +88,33 @@ impl SchemaProvider for ViewSchemaProvider {
     }
 
     async fn table(&self, name: &str) -> Result<Option<Arc<dyn TableProvider>>> {
+        on_grown_stack_with(
+            VIEW_EXPANSION_STACK_RED_ZONE,
+            VIEW_EXPANSION_STACK_SEGMENT,
+            self.table_resolved(name),
+        )
+        .await
+    }
+
+    fn table_exist(&self, name: &str) -> bool {
+        self.inner.table_exist(name)
+    }
+
+    fn register_table(
+        &self,
+        name: String,
+        table: Arc<dyn TableProvider>,
+    ) -> Result<Option<Arc<dyn TableProvider>>> {
+        self.inner.register_table(name, table)
+    }
+
+    fn deregister_table(&self, name: &str) -> Result<Option<Arc<dyn TableProvider>>> {
+        self.inner.deregister_table(name)
+    }
+}
+
+impl ViewSchemaProvider {
+    async fn table_resolved(&self, name: &str) -> Result<Option<Arc<dyn TableProvider>>> {
         if let Some(provider) = self.inner.table(name).await? {
             return Ok(Some(provider));
         }
@@ -117,22 +145,6 @@ impl SchemaProvider for ViewSchemaProvider {
         let spec = view_read_spec(&view)?;
         let plan = expand_view_body(&self.ctx, &self.catalogs, &self.catalog_name, &spec).await?;
         Ok(Some(Arc::new(ViewTable::new(plan, Some(spec.sql)))))
-    }
-
-    fn table_exist(&self, name: &str) -> bool {
-        self.inner.table_exist(name)
-    }
-
-    fn register_table(
-        &self,
-        name: String,
-        table: Arc<dyn TableProvider>,
-    ) -> Result<Option<Arc<dyn TableProvider>>> {
-        self.inner.register_table(name, table)
-    }
-
-    fn deregister_table(&self, name: &str) -> Result<Option<Arc<dyn TableProvider>>> {
-        self.inner.deregister_table(name)
     }
 }
 

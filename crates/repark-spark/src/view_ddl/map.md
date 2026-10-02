@@ -166,6 +166,12 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   **RP-56 DIFF-PROBE fold (2026-09-29):** the `_repark_view` wrapper is skipped when the
   view emits the stored names unchanged (`view_output_matches_stored`), so a catalog view
   over a twin table answers `SELECT *` like Spark instead of refusing on the wrapper.
+  **RP-56 (2026-10-02):** `table` resolves through
+  `repark_core::column_resolution::on_grown_stack_with` with the same 1 MiB red
+  zone and 8 MiB segment temp-view scans use, so a nested catalog-view chain
+  re-grows instead of overrunning the per-plan grown segment on an 8 MiB caller
+  stack; the 100-deep `VIEW_NESTED_DEPTH_LIMIT` refusal is unchanged.
+  pins: test_ice_views_1/test_nested_view_depth_guard
 - `describe.rs` — **PR2 (2026-09-22, V-DESCRIBE):** `describe_view_frame`
   is the view probe on the `TableNotFound` arm of `execute_describe_table`
   (`../describe_show.rs`): a loaded view answers, `ViewNotFound` and
