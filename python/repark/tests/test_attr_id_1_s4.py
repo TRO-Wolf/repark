@@ -200,12 +200,15 @@ def test_s4_unheld_sort_marker_funnels_to_oldest(spark: ReparkSession) -> None:
         twins.orderBy(frame.v).collect()
 
 
-def test_s4_pass_through_child_twin_parent_ref_binds(spark: ReparkSession) -> None:
-    """A twin parent ref binds by position on any pass-through child frame (insensitive)."""
+def test_s4_pass_through_child_twin_parent_ref_refuses(spark: ReparkSession) -> None:
+    """A twin parent ref refuses on any pass-through child frame (live Spark 4.1.2)."""
     frame = spark.createDataFrame([(1, 2)], ["id", "ID"])
-    assert frame.filter("1 > 0").select(frame["id"]).collect()[0][0] == 1
-    assert frame.alias("t").select(frame["id"]).collect()[0][0] == 1
-    assert frame.select("*").select(frame["id"]).collect()[0][0] == 1
+    with pytest.raises(AnalysisException, match="AMBIGUOUS_REFERENCE"):
+        frame.filter("1 > 0").select(frame["id"]).collect()
+    with pytest.raises(AnalysisException, match="AMBIGUOUS_REFERENCE"):
+        frame.alias("t").select(frame["id"]).collect()
+    with pytest.raises(AnalysisException, match="AMBIGUOUS_REFERENCE"):
+        frame.select("*").select(frame["id"]).collect()
 
 
 def test_s4_join_side_parent_ref_binds_by_position(spark: ReparkSession) -> None:
@@ -247,11 +250,11 @@ def test_s4_replaced_output_parent_ref_reads_new_value(spark: ReparkSession) -> 
 
 
 def test_s4_sort_marker_same_frame_twins_refuses(spark: ReparkSession) -> None:
-    """A marked sort key on its own twin frame stays written and unresolved (insensitive)."""
+    """A marked sort key on its own twin frame refuses ambiguous (live Spark 4.1.2)."""
     frame = spark.createDataFrame([(2, 20), (1, 10)], ["id", "ID"])
-    with pytest.raises(AnalysisException, match="UNRESOLVED_COLUMN"):
+    with pytest.raises(AnalysisException, match="AMBIGUOUS_REFERENCE"):
         frame.orderBy(frame["id"].desc()).collect()
-    with pytest.raises(AnalysisException, match="UNRESOLVED_COLUMN"):
+    with pytest.raises(AnalysisException, match="AMBIGUOUS_REFERENCE"):
         frame.orderBy(frame["id"].asc()).collect()
 
 

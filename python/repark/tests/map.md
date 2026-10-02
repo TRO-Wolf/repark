@@ -9023,11 +9023,20 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   output resolves by engine name on single names and raises on duplicate names;
   a same-frame twin getitem stays the written ref and refuses; an unheld marked
   sort key funnels to the oldest project hit while the plain parent ref refuses;
-  twin parent refs bind on pass-through children, join sides, and duplicate
+  twin parent refs refuse on pass-through children (**V-5 (2026-10-02)** flips the
+  S4 bind to the Spark refusal) and bind on join sides and duplicate
   select outputs; a rename that drops the name refuses while a case-only rename
   binds and a same-name replacement reads the new value; marked sort keys and
-  SQL-twin and compound refs refuse on their own frame; parent refs onto
+  SQL-twin and compound refs refuse on their own frame (marked sort keys refuse
+  `AMBIGUOUS_REFERENCE` per live Spark, V-5); parent refs onto
   duplicate engine names keep the shaped `AMBIGUOUS_REFERENCE` condition; an
   aliased side ref on a condition join binds its own side.
   No module docstring: the lane's no-comments ruling covers the new file; the
   contract lives here. pins: attr-id-1/C-040
+- [test_attr_id_1_v456.py](test_attr_id_1_v456.py) — **ATTR-ID-1 V-5 (2026-10-02):**
+  the verifier-fold twin pins, measured against live Spark 4.1.2 `p5_twins`.
+  The ported `test_v5` pin plus the 13 remaining F_ cells refuse
+  `AMBIGUOUS_REFERENCE` under `caseSensitive=false`; all 16 T_ cells bind with
+  Spark's rows under `caseSensitive=true`. No module docstring: the lane's
+  no-comments ruling covers the new file; the contract lives here.
+  pins: attr-id-1/C-044

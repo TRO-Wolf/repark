@@ -259,8 +259,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   unparsable text and `*` fall back to `_bind_schema_column`), stamps on read, and
   resolves under the live `session_case_sensitive`: one hit binds the engine field at
   that position with the written spelling; a folded ambiguous name with one exact
-  spelling present binds that position inline (the `Column` `_bind_schema_column`
-  would build, without the re-entry); several exact spellings raise the old whole-name
+  spelling present births an id-less written ref (V-5; S3a bound that position
+  inline); several exact spellings raise the old whole-name
   `AMBIGUOUS_REFERENCE` inline; a quoted spelling delegates to `_bind_schema_column`
   (the old path matches the raw written text, quotes intact); a pure folded ambiguous
   name raises Spark's `AMBIGUOUS_REFERENCE` echoing the written-case candidates; a
@@ -272,6 +272,14 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   reading the session rule; the rule, the relation check and the id-loudness check run
   only off that path, so the common bind costs what the old one did.
   Qualified names still call native `resolve_display_name` for the relation narrowing.
+  **ATTR-ID-1 V-5 (2026-10-02):** a folded-ambiguous name with one exact spelling
+  no longer binds that twin's id; it births an id-less written-ref `Column`
+  (exact-engine spelling, birth frame kept), so the engine refuses exactly as
+  base and Spark do on the birth frame and every pass-through child, while a
+  select-output twin frame (renamed engines) keeps binding. `_born_ambiguous`
+  spots those columns in `_bind_sort_key` and returns them verbatim: live Spark
+  refuses Column sort keys as `AMBIGUOUS_REFERENCE` but string keys as
+  `UNRESOLVED_COLUMN`, so strings keep the old sort path. pins: attr-id-1/C-044
   `_bind_stable_id_column` rebinds a parent Column by `_attr_id` to the first held
   position through `attribute_column`, but only across plans (a same-frame bind stays
   the written ref, so the engine shapes the refusal) and only onto a unique engine

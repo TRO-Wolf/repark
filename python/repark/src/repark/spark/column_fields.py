@@ -544,14 +544,24 @@ def _bind_resolved_name(frame: Any, written: str) -> Any:
             if status == "ambiguous" and name in displays:
                 if written != name:
                     return frame._bind_schema_column(written)
-                if len(exact_hits) == 1:
-                    status, hits = "bound", exact_hits
-                else:
+                if len(exact_hits) != 1:
                     could_be = ", ".join(f"`{displays[index]}`" for index in exact_hits)
                     raise AnalysisException(
                         f"[AMBIGUOUS_REFERENCE] Reference `{name}` is ambiguous, "
                         f"could be: [{could_be}]."
                     )
+                twin_engine = engine_names[exact_hits[0]]
+                twin_quoted = _quote_ident(twin_engine)
+                twin_born = Column(
+                    _native.PyColumn.column(twin_quoted).alias(name),
+                    spark_display=name,
+                    projection_name=name,
+                    stable_name=True,
+                    has_free_attribute=True,
+                    birth_frame=frame,
+                )
+                twin_born._sql_expr = twin_quoted
+                return twin_born
     else:
         if not _native.frame_is_relation(native):
             return frame._bind_schema_column(written)
@@ -884,6 +894,8 @@ def _bind_sort_key(frame: Any, item: Any) -> Any:
         if rebound is item and item._sort_ascending is None and item._sort_nulls_first is None:
             return rebound
         if item._stable_name and item._attr_id is None:
+            if _born_ambiguous(item):
+                return item
             name = item._projection_name
             if name is not None and name != "" and name != "*" and item._spark_display == name:
                 return _rewrap_with_markers(item, _resolve_sort_name(frame, name))
@@ -900,6 +912,16 @@ def _bind_sort_key(frame: Any, item: Any) -> Any:
                     return _rewrap_with_markers(item, bound)
         return _rebind_qualified_refs(frame, _rebind_free_names(frame, item, True), True)
     raise column_or_str_error(item)
+
+
+def _born_ambiguous(column: Any) -> bool:
+    """Whether ``column`` was born where its name already had a folded rival."""
+    birth = column._birth_frame
+    name = column._projection_name
+    if birth is None or name is None:
+        return False
+    folded = name.casefold()
+    return any(display != name and display.casefold() == folded for display in birth.columns)
 
 
 def _quote_filter_sql_identifiers(frame: Any, sql: str) -> str:
