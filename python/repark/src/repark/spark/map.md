@@ -323,6 +323,17 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   bind; the filter quoter gains the facade qualifiers and substitutes the
   held-qualified engine field under duplicate engines. Pins:
   `python/repark/tests/test_attr_id_1_s3e.py`. pins: attr-id-1/C-039
+  **ATTR-ID-1 S4 (2026-10-02):** `_bind_stable_id_column` splits into
+  `_exact_rebind_position` (one held position through `attribute_column`, onto a
+  unique engine field only) and `_qualified_narrow_position` (a qualifier-carrying
+  Column picks its one name-and-qualifier hit before the first-held fallback); an
+  id the frame does not hold consults the native `projection_source_ids` lineage
+  (alias, single-column `coalesce`, single-column searched `CASE`) before the
+  miss, and a miss still returns the column unchanged so the id reaches the
+  refusal and the engine fallback. `_column_of` routes an
+  `_is_ambiguous_qualified_ref` (qualifiers plus an id held twice) through the
+  qualified rewriter first. Pins: `python/repark/tests/test_attr_id_1_s4.py`.
+  pins: attr-id-1/C-040
 - `filter_quote.py` — **ATTR-ID-1 S3b H-1 (2026-10-01):** the filter-SQL
   identifier quoter, split out of `column_fields.py` at the size ceiling (pure
   move; the entry stays there). `_FILTER_TOKEN_PATTERN`,

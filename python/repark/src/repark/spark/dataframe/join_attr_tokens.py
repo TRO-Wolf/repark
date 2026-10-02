@@ -6,6 +6,7 @@ import functools
 import re
 from typing import TYPE_CHECKING, Any
 
+from repark import _native
 from repark.errors import AnalysisException
 from repark.spark import column_fields as _column_fields
 from repark.spark._idents import quote_ident as _quote_ident_sql
@@ -51,7 +52,10 @@ def _attr_token_exact_side(
     return None
 
 
-_ATTR_SIDE_BOUNDARY_RE = re.compile(r"(?i)(<=>|<=|>=|<>|!=|=|<|>|\bAND\b|\bOR\b)")
+_ATTR_SIDE_BOUNDARY_RE = re.compile(
+    r"(?i)(<=>|<=|>=|<>|!=|=|<|>|\bIS\s+NOT\s+DISTINCT\s+FROM\b"
+    r"|\bIS\s+DISTINCT\s+FROM\b|\bAND\b|\bOR\b)"
+)
 
 
 def _same_object_attr_alternation_safe(join_sql: str) -> bool:
@@ -145,6 +149,10 @@ def _replace_local_attr_token(
     attr_id = match.group(1)
     frame._raise_if_id_not_emitted(attr_id)
     if attr_id not in held:
+        sources = _native.projection_source_ids(frame._plan())
+        for position, source in enumerate(sources):
+            if source == attr_id and position < len(engines):
+                return _quote_ident_sql(spell(engines[position]))
         return match.group(0)
     return _quote_ident_sql(spell(engines[held.index(attr_id)]))
 

@@ -620,23 +620,18 @@ def _rewrap_with_markers(column: Any, bound: Any) -> Any:
     )
 
 
-def _bind_stable_id_column(frame: Any, column: Any) -> Any | None:
+def _exact_rebind_position(
+    frame: Any,
+    column: Any,
+    native: Any,
+    native_names: list[str],
+    held: list[str | None],
+    position: int,
+) -> Any:
     from repark.spark._idents import quote_ident as _quote_ident
     from repark.spark.column import Column
 
-    attr_id = column._attr_id
-    if attr_id is None:
-        return None
-    native = frame._plan()
-    held: list[str | None] = _native.attribute_ids(native)
-    if attr_id not in held:
-        return column
-    native_names = _native.logical_column_names(native)
-    if column._sql_expr is not None:
-        for position, engine in enumerate(native_names):
-            if held[position] == attr_id and _quote_ident(engine) == column._sql_expr:
-                return column
-    engine_field = native_names[held.index(attr_id)]
+    engine_field = native_names[position]
     if not _native.engine_field_is_unique(native, engine_field):
         return column
     quoted = _quote_ident(engine_field)
@@ -647,11 +642,58 @@ def _bind_stable_id_column(frame: Any, column: Any) -> Any | None:
         projection_name=column._projection_name,
         stable_name=True,
         has_free_attribute=True,
-        attr_id=attr_id,
+        attr_id=column._attr_id,
+        qualifiers=frozenset((frame._frame_qualifiers or {}).get(held[position]) or ()),
+        join_sql_expr=column._join_sql_expr,
         **carried_select_attrs(column),
     )
     rebound._sql_expr = quoted
     return _rewrap_with_markers(column, rebound)
+
+
+def _qualified_narrow_position(
+    frame: Any, column: Any, held: list[str | None], displays: list[str]
+) -> int | None:
+    qualifiers = column._qualifiers
+    frame_quals = frame._frame_qualifiers or {}
+    if not qualifiers or not frame_quals:
+        return None
+    name = column._projection_name or column._spark_display
+    if name is None:
+        return None
+    exact = bool(_native.session_case_sensitive(frame._session))
+    hits = []
+    for position, held_id in enumerate(held):
+        if held_id is None or position >= len(displays):
+            continue
+        if not (qualifiers & (frame_quals.get(held_id) or set())):
+            continue
+        display = displays[position]
+        if (display == name) if exact else (display.casefold() == name.casefold()):
+            hits.append(position)
+    if len(hits) == 1:
+        return hits[0]
+    return None
+
+
+def _bind_stable_id_column(frame: Any, column: Any) -> Any | None:
+    attr_id = column._attr_id
+    if attr_id is None:
+        return None
+    native = frame._plan()
+    held: list[str | None] = list(_native.attribute_ids(native))
+    native_names = list(_native.logical_column_names(native))
+    if attr_id in held:
+        narrowed = _qualified_narrow_position(frame, column, held, list(frame.columns))
+        if narrowed is not None:
+            return _exact_rebind_position(frame, column, native, native_names, held, narrowed)
+        hits = [position for position, held_id in enumerate(held) if held_id == attr_id]
+        return _exact_rebind_position(frame, column, native, native_names, held, hits[0])
+    sources = _native.projection_source_ids(native)
+    for position, source in enumerate(sources):
+        if source == attr_id and position < len(native_names):
+            return _exact_rebind_position(frame, column, native, native_names, held, position)
+    return column
 
 
 def _rebind_stable_name_column(frame: Any, column: Any) -> Any:
@@ -680,6 +722,9 @@ def _column_of(frame: Any, item: Any) -> Any:
     from repark.spark.column import Column
 
     if isinstance(item, Column):
+        if _is_ambiguous_qualified_ref(frame, item):
+            refused = frame._refuse_unemitted_ids(item)
+            return _rebind_qualified_refs(frame, refused, False)
         rebound = _rebind_stable_name_column(frame, item)
         if rebound is item:
             return _rebind_qualified_refs(frame, frame._refuse_unemitted_ids(rebound), False)
@@ -687,6 +732,13 @@ def _column_of(frame: Any, item: Any) -> Any:
     if isinstance(item, str):
         return _bind_resolved_name(frame, item)
     raise column_or_str_error(item)
+
+
+def _is_ambiguous_qualified_ref(frame: Any, item: Any) -> bool:
+    if not item._qualifiers or item._attr_id is None:
+        return False
+    held: list[str | None] = list(_native.attribute_ids(frame._plan()))
+    return sum(1 for held_id in held if held_id == item._attr_id) > 1
 
 
 def _ascii_folded(text: str) -> str:

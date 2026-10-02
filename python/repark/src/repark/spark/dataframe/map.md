@@ -677,6 +677,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   binds one-side ids and qualifier-disambiguated shared ids; `_resolve_join_token_sides`
   precomputes every token's side (exact, less-claimed complement, or positional
   alternation under the multi-token-arm guard); `_JoinAttrRewriter` applies the sides.
+  **ATTR-ID-1 S4 (2026-10-02):** the arm guard treats `IS [NOT] DISTINCT FROM`
+  as a comparison boundary like `=` (the `eqNullSafe` spelling), and the local
+  single-frame rewrite consults the native `projection_source_ids` lineage for a
+  token the frame does not hold. pins: attr-id-1/C-040
 - `polars_cells.py` owns every polars/duckdb cell and dtype spelling used by
   the show doors: `null` / lowercase bools / mixed-mode floats
   (shortest-expansion rules measured probe by probe against polars 1.43.2 —
