@@ -139,6 +139,11 @@ repairs the S3e mirror misses (red since ce53287a): the ``_frame_qualifiers`` sl
 ``EXPECTED_DATAFRAME_SLOTS`` / ``EXPECTED_DATAFRAME_DIR``, and ``_filter_quote`` /
 ``_qualified_names`` in both new-submodule sets. The join-token siding block moves to
 ``join_attr_tokens.py`` (CAP-1 split), so the package set gains exactly that name.
+ATTR-ID-1 SJ-2 (2026-10-02): every frame carries its lineage node, so
+``EXPECTED_DATAFRAME_SLOTS`` and ``EXPECTED_DATAFRAME_DIR`` each gain exactly ``_frame_node``;
+the unemitted-id family moves to ``unemitted_ids.py`` behind same-named class bindings (CAP-1
+split), so both new-submodule sets gain exactly ``unemitted_ids`` and ``core`` and the package
+each lose ``_ATTR_TOKEN_RE``.
 """
 
 from __future__ import annotations
