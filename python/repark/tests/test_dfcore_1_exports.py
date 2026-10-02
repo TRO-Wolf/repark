@@ -139,17 +139,17 @@ repairs the S3e mirror misses (red since ce53287a): the ``_frame_qualifiers`` sl
 ``EXPECTED_DATAFRAME_SLOTS`` / ``EXPECTED_DATAFRAME_DIR``, and ``_filter_quote`` /
 ``_qualified_names`` in both new-submodule sets. The join-token siding block moves to
 ``join_attr_tokens.py`` (CAP-1 split), so the package set gains exactly that name.
+ATTR-ID-1 SJ-2 (2026-10-02): every frame carries its lineage node, so
+``EXPECTED_DATAFRAME_SLOTS`` and ``EXPECTED_DATAFRAME_DIR`` each gain exactly ``_frame_node``;
+the unemitted-id family moves to ``unemitted_ids.py`` behind same-named class bindings (CAP-1
+split), so both new-submodule sets gain exactly ``unemitted_ids`` and ``core`` and the package
+each lose ``_ATTR_TOKEN_RE``.
 ATTR-ID-1 SJ-3 (2026-10-02): the siding block is deleted, so ``core`` and the
 package each lose ``_ATTR_SIDE_BOUNDARY_RE`` / ``_rewrite_join_attr_sql`` /
 ``_same_object_attr_alternation_safe`` and gain ``_join_condition_attr_names``
 plus ``weakref`` (the frame-registry import, listed like ``functools``);
 ``_emit_join_side_columns`` moves to ``join_attr_tokens.py`` behind the same
-re-export, so neither surface list changes for it. The same edit repairs the
-SJ-2 mirror misses (red since 5fb1b68a): ``_ATTR_TOKEN_RE`` leaves both surface
-lists, ``_frame_node`` joins ``EXPECTED_DATAFRAME_SLOTS`` /
-``EXPECTED_DATAFRAME_DIR``, and ``unemitted_ids`` joins both new-submodule
-sets; the alias scan now counts only rebinds with a same-class sibling, so the
-four ``unemitted_ids`` spellings bound on the class are not aliases.
+re-export, so neither surface list changes for it.
 """
 
 from __future__ import annotations
@@ -276,24 +276,17 @@ def test_dataframe_identity_unchanged() -> None:
 
 
 def test_dataframe_aliases_unchanged() -> None:
-    """Assert every alias still binds the same underlying method.
-
-    Helpers bound from a sibling module (SJ-2's ``unemitted_ids`` spellings) are
-    not aliases: an alias shares its function object with a same-class sibling.
-    """
+    """Assert every alias still binds the same underlying method."""
     seen: set[str] = set()
     for alias, target in EXPECTED_DATAFRAME_ALIASES:
         assert getattr(DataFrame, alias) is getattr(DataFrame, target)
         seen.add(alias)
-    bound = {
-        name
-        for name, value in vars(DataFrame).items()
-        if not name.startswith("__") and isinstance(value, type(DataFrame.filter))
-    }
     found = sorted(
         name
         for name, value in vars(DataFrame).items()
-        if name in bound and value.__name__ != name and value.__name__ in bound
+        if not name.startswith("__")
+        and isinstance(value, type(DataFrame.filter))
+        and value.__name__ != name
     )
     assert found == sorted(seen)
 

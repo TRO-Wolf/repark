@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from repark.spark.dataframe.core import DataFrame
 
 
-def remember_unemitted_right_ids(
+def _remember_unemitted_right_ids(
     frame: DataFrame, left: DataFrame, right: DataFrame, *, left_only: bool = True
 ) -> None:
     """Record (semi/anti) or forget (emitting join) exclusive right attribute ids.
@@ -42,7 +42,7 @@ def remember_unemitted_right_ids(
             }
 
 
-def raise_if_id_not_emitted(frame: DataFrame, attr_id: str | None) -> None:
+def _raise_if_id_not_emitted(frame: DataFrame, attr_id: str | None) -> None:
     """Raise Spark 4.1.2 ``MISSING_ATTRIBUTES`` when ``attr_id`` was not emitted."""
     if attr_id is None or attr_id not in frame._unemitted_attr_ids:
         return
@@ -62,22 +62,22 @@ def raise_if_id_not_emitted(frame: DataFrame, attr_id: str | None) -> None:
     )
 
 
-def raise_unemitted_attr_tokens(frame: DataFrame, join_sql: str) -> None:
+def _raise_unemitted_attr_tokens(frame: DataFrame, join_sql: str) -> None:
     """Refuse attribute tokens whose id is in :attr:`_unemitted_attr_ids`."""
     if not frame._unemitted_attr_ids or "__REPARK_ATTR_" not in join_sql:
         return
     for match in _ATTR_TOKEN_RE.finditer(join_sql):
-        raise_if_id_not_emitted(frame, match.group(1))
+        _raise_if_id_not_emitted(frame, match.group(1))
 
 
-def refuse_unemitted_ids(frame: DataFrame, column: Column) -> Column:
+def _refuse_unemitted_ids(frame: DataFrame, column: Column) -> Column:
     """Refuse a Column whose attribute was excluded by semi or anti join.
 
     A right-side attribute excluded by semi or anti raises ``MISSING_ATTRIBUTES``
     instead of falling back to the left side.
     """
-    raise_if_id_not_emitted(frame, column._attr_id)
+    _raise_if_id_not_emitted(frame, column._attr_id)
     join_sql = column._join_sql_expr
     if join_sql is not None:
-        raise_unemitted_attr_tokens(frame, join_sql)
+        _raise_unemitted_attr_tokens(frame, join_sql)
     return column

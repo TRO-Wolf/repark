@@ -1714,10 +1714,10 @@ class DataFrame:
             return [self._bind_schema_column(name) for name in names]
         return [self._bind_schema_column(name, name) for name in names]
 
-    _remember_unemitted_right_ids = unemitted_ids.remember_unemitted_right_ids
-    _raise_if_id_not_emitted = unemitted_ids.raise_if_id_not_emitted
-    _raise_unemitted_attr_tokens = unemitted_ids.raise_unemitted_attr_tokens
-    _refuse_unemitted_ids = unemitted_ids.refuse_unemitted_ids
+    _remember_unemitted_right_ids = unemitted_ids._remember_unemitted_right_ids
+    _raise_if_id_not_emitted = unemitted_ids._raise_if_id_not_emitted
+    _raise_unemitted_attr_tokens = unemitted_ids._raise_unemitted_attr_tokens
+    _refuse_unemitted_ids = unemitted_ids._refuse_unemitted_ids
 
     def _bind_schema_column(self, name: str, canonical: str | None = None) -> Column:
         """Bind a name case-insensitively and quote its canonical engine identifier,

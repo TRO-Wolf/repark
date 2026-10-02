@@ -733,8 +733,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   birth frame is dead or no longer emits the id. Only a token with neither
   stays out of the map. Pins: `python/repark/tests/test_attr_id_1_sj3.py`.
 - `unemitted_ids.py` — **ATTR-ID-1 SJ-2 (2026-10-02):** the semi/anti
-  unemitted-id family (`remember_unemitted_right_ids`/`raise_if_id_not_emitted`/
-  `raise_unemitted_attr_tokens`/`refuse_unemitted_ids`), split out of `core.py`
+  unemitted-id family (`_remember_unemitted_right_ids`/`_raise_if_id_not_emitted`/
+  `_raise_unemitted_attr_tokens`/`_refuse_unemitted_ids`), split out of `core.py`
   at the size ceiling (pure move; `DataFrame` binds the four spellings). Pins:
   `python/repark/tests/test_attr_id_1_sj2.py`.
 - `polars_cells.py` owns every polars/duckdb cell and dtype spelling used by

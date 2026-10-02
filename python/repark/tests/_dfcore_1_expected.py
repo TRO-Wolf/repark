@@ -689,6 +689,7 @@ EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
     "udf_projection",
     "udf_schema",
     "udf_window_projection",
+    "unemitted_ids",
     "writer_layout",
     "writer_s3",
     "writer_save",
@@ -715,6 +716,6 @@ EXPECTED_NEW_CORE_SUBMODULES: set[str] = {
     "surface_b",
     "udf_projection",
     "udf_window_projection",
-    "_native",
     "unemitted_ids",
+    "_native",
 }
