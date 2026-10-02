@@ -4040,6 +4040,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_facade_2_group2_no_python_assembly.py` — **FACADE-2 step 2 (2026-09-12):**
   AST walk of the named Group-2 methods on `column.py`; f-string / concat / `format` /
   `join` of display/SQL/join text is refused (refusals and raises are allowed).
+  ATTR-ID-1 S4 split the sort and string families into `column_sort.py` and
+  `column_string.py`; the walk follows every `_column_fields` / `_column_sort` /
+  `_column_string` binding on `Column` and the split modules' Group-2 helpers (2026-10-02).
   pins: facade-2/C-009, C-010, C-012
 - `test_facade_3_create_dataframe_goldens.py` + `facade_3_create_dataframe_goldens.json`
   — **FACADE-3 step 1 (2026-09-13):** byte-identical `schema.simpleString()` /
