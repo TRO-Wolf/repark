@@ -105,6 +105,15 @@ def test_s4_mixed_compound_arms_divergence(ruled_spark: ReparkSession) -> None:
     ]
 
 
+def test_s4_third_frame_unknown_id_raises_engine_error(ruled_spark: ReparkSession) -> None:
+    """A token whose id sits on neither join side is never sided; the engine refuses."""
+    left = ruled_spark.createDataFrame([(1,)], ["k"])
+    right = ruled_spark.createDataFrame([(1,)], ["k"])
+    third = ruled_spark.createDataFrame([(1,)], ["k"])
+    with pytest.raises(AnalysisException, match=r"UNRESOLVED_COLUMN"):
+        _ = left.join(right, third.k == 1).count()
+
+
 def test_s4_select_engine_names_shrunk(ruled_spark: ReparkSession) -> None:
     """Duplicate select outputs take positional ``__repark_sel_{n}`` engine names."""
     frame = _frame(ruled_spark)

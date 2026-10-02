@@ -9015,7 +9015,8 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   `Column`/`DataFrame`; join tokens carry attribute ids, never QCOL; reversed-order
   and mixed aliased/unaliased joins side exactly; lineage-sharing simple equi-joins
   keep the diagonal; lineage-sharing compound arms refuse (Spark reports ambiguity
-  too); mixed compound arms keep base rows as a divergence (Spark raises); duplicate
-  select outputs take positional `__repark_sel_{n}` engine names. No module
+  too); mixed compound arms keep base rows as a divergence (Spark raises); a token
+  whose id sits on neither join side reaches the engine unsided and refuses;
+  duplicate select outputs take positional `__repark_sel_{n}` engine names. No module
   docstring: the lane's no-comments ruling covers the new file; the contract
   lives here. pins: attr-id-1/C-040
