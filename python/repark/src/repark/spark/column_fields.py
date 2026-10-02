@@ -689,6 +689,14 @@ def _qualified_narrow_position(
     return None
 
 
+def _column_frame_id(column: Any) -> int | None:
+    """Return the frame-node id a column was bound against, else ``None``."""
+    birth = column._birth_frame
+    if birth is None:
+        return None
+    return birth._frame_node.id
+
+
 def _bind_stable_id_column(frame: Any, column: Any) -> Any | None:
     birth = column._birth_frame
     if birth is not None and birth is frame:

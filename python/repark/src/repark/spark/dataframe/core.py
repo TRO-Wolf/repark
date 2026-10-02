@@ -42,6 +42,7 @@ from repark.spark.dataframe import (
     subquery,
     surface_a,
     surface_b,
+    unemitted_ids,
 )
 from repark.spark.dataframe.cache_handle import _warn_storage_level_cosmetic_once
 from repark.spark.dataframe.explain import _EXPLAIN_SECTION_PLAN, _render_explain_sections
@@ -226,6 +227,7 @@ class DataFrame:
         "_eager_shape",
         "_engine_names",
         "_field_metadata",
+        "_frame_node",
         "_frame_qualifiers",
         "_handles",
         "_ingest_report",
@@ -261,6 +263,7 @@ class DataFrame:
         The shared ``alive_token`` makes held frames fail after ``ReparkSession.stop``.
         """
         self._inner = _native.stamp_attribute_ids(inner)
+        self._frame_node = _native.frame_root(self._inner)
         self._session = session
         self._alive_token: dict[str, bool] = (
             alive_token if alive_token is not None else {"alive": True}
@@ -299,7 +302,7 @@ class DataFrame:
         if not self._alive_token.get("alive", True):
             raise RuntimeError(_STOPPED_MESSAGE)
 
-    def _spawn(self, inner: Any, *others: DataFrame) -> DataFrame:
+    def _spawn(self, inner: Any, *others: DataFrame, node: Any | None = None) -> DataFrame:
         """Return a child sharing this frame's session and liveness token.
 
         Cache marks stay on the current object. Semi/anti unemitted-attribute exclusions and
@@ -308,6 +311,8 @@ class DataFrame:
         """
         self._ensure_alive()
         child = DataFrame(inner, self._session, self._alive_token)
+        nodes = [other._frame_node for other in others]
+        child._frame_node = node or _native.frame_derived(child._inner, self._frame_node, nodes)
         if self._frame_qualifiers is not None:
             child._frame_qualifiers = dict(self._frame_qualifiers)
         child._unemitted_attr_ids = dict(self._unemitted_attr_ids)
@@ -1735,71 +1740,10 @@ class DataFrame:
             return [self._bind_schema_column(name) for name in names]
         return [self._bind_schema_column(name, name) for name in names]
 
-    def _remember_unemitted_right_ids(
-        self, left: DataFrame, right: DataFrame, *, left_only: bool = True
-    ) -> None:
-        """Record (semi/anti) or forget (emitting join) exclusive right attribute ids.
-
-        ``left_only=True`` unions exclusive right ids into :attr:`_unemitted_attr_ids`.
-        ``left_only=False`` removes them after an emitting join.
-        """
-        held, engines = _column_fields._stamped_ids_and_engines(right)
-        displays = right.columns
-        if len(displays) != len(held):
-            displays = list(engines)
-        left_ids = set(_column_fields._stamped_ids_and_engines(left)[0])
-        exclusive = {
-            held_id: displays[position]
-            for position, held_id in enumerate(held)
-            if held_id is not None and held_id not in left_ids
-        }
-        if exclusive:
-            if left_only:
-                self._unemitted_attr_ids = {**self._unemitted_attr_ids, **exclusive}
-            else:
-                self._unemitted_attr_ids = {
-                    held_id: display
-                    for held_id, display in self._unemitted_attr_ids.items()
-                    if held_id not in exclusive
-                }
-
-    def _raise_if_id_not_emitted(self, attr_id: str | None) -> None:
-        """Raise Spark 4.1.2 ``MISSING_ATTRIBUTES`` when ``attr_id`` was not emitted."""
-        if attr_id is None or attr_id not in self._unemitted_attr_ids:
-            return
-        name = self._unemitted_attr_ids[attr_id]
-        available = ", ".join(f'"{column}"' for column in self.columns)
-        quoted = f'"{name}"'
-        if name in self.columns:
-            raise AnalysisException(
-                f"[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] "
-                f"Resolved attribute(s) {quoted} missing from {available} in operator "
-                f"!Project. Attribute(s) with the same name appear in the operation: "
-                f"{quoted}. Please check if the right attribute(s) are used."
-            )
-        raise AnalysisException(
-            f"[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT] "
-            f"Resolved attribute(s) {quoted} missing from {available} in operator !Project."
-        )
-
-    def _raise_unemitted_attr_tokens(self, join_sql: str) -> None:
-        """Refuse attribute tokens whose id is in :attr:`_unemitted_attr_ids`."""
-        if not self._unemitted_attr_ids or "__REPARK_ATTR_" not in join_sql:
-            return
-        for match in _ATTR_TOKEN_RE.finditer(join_sql):
-            self._raise_if_id_not_emitted(match.group(1))
-
-    def _refuse_unemitted_ids(self, column: Column) -> Column:
-        """Refuse a Column whose attribute was excluded by semi or anti join.
-
-        A right-side attribute excluded by semi or anti raises ``MISSING_ATTRIBUTES``
-        instead of falling back to the left side.
-        """
-        self._raise_if_id_not_emitted(column._attr_id)
-        join_sql = column._join_sql_expr
-        if join_sql is not None:
-            self._raise_unemitted_attr_tokens(join_sql)
-        return column
+    _remember_unemitted_right_ids = unemitted_ids.remember_unemitted_right_ids
+    _raise_if_id_not_emitted = unemitted_ids.raise_if_id_not_emitted
+    _raise_unemitted_attr_tokens = unemitted_ids.raise_unemitted_attr_tokens
+    _refuse_unemitted_ids = unemitted_ids.refuse_unemitted_ids
 
     def _bind_schema_column(self, name: str, canonical: str | None = None) -> Column:
         """Bind a name case-insensitively and quote its canonical engine identifier,
@@ -3551,7 +3495,6 @@ from repark.spark.dataframe.plan_collapse import (  # noqa: E402, I001
     _reject_aggregate_in_with_column,
     _reject_partition_transform,
     _ATTR_SIDE_BOUNDARY_RE,
-    _ATTR_TOKEN_RE,
     _arrow_debug_type_to_sql,
     _arrow_pa_type_label,
     _cell_text,

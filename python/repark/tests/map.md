@@ -9037,6 +9037,14 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   aliased side ref on a condition join binds its own side.
   No module docstring: the lane's no-comments ruling covers the new file; the
   contract lives here. pins: attr-id-1/C-040
+- [test_attr_id_1_sj2.py](test_attr_id_1_sj2.py) — **ATTR-ID-1 SJ-2 (2026-10-02):**
+  the seam pins. Every token-bearing bind site renders `F<id>` of its birth
+  node; frameless tokens render `F0` and free names carry no id; children mint
+  fresh node ids and checkpoint re-roots; the two self-join confs forward
+  through the native setter, default `true` (live Spark 4.1.2), refuse invalid
+  values before storing; twin sorts on pass-through children and the
+  overlay-born sibling sort keep their base answers. No module docstring: the
+  lane's no-comments ruling covers the new file; the contract lives here.
 - [test_attr_id_1_v456.py](test_attr_id_1_v456.py) — **ATTR-ID-1 V-5 (2026-10-02):**
   the verifier-fold twin pins, measured against live Spark 4.1.2 `p5_twins`.
   The ported `test_v5` pin plus the 13 remaining F_ cells refuse

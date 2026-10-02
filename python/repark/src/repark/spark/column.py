@@ -22,9 +22,9 @@ from repark.errors import (
     UnsupportedOperationException,
 )
 from repark.spark import column_fields as _column_fields
+from repark.spark import column_render as _column_render
 from repark.spark import column_sort as _column_sort
 from repark.spark import column_string as _column_string
-from repark.spark._idents import escape_attr_token_quals as _escape_attr_token_quals
 from repark.spark._idents import quote_ident as _quote_sql_field_ident
 from repark.spark._idents import sql_string_literal as _sql_string_literal
 
@@ -223,35 +223,9 @@ class Column:
         self._alias_metadata = dict(alias_metadata) if alias_metadata else None
         self._outer = bool(outer)
 
-    def sql_expr_part(self) -> str:
-        """SQL fragment for embedding this column into a generated SQL statement."""
-        if self._sql_expr is not None:
-            return self._sql_expr
-        return self.spark_display_part()
-
-    def join_sql_part(self) -> str:
-        """SQL fragment for join ON rewrite (H1) — id-qualified tokens when present."""
-        if self._join_sql_expr is not None:
-            return self._join_sql_expr
-        if self._attr_id is not None:
-            quals = _escape_attr_token_quals(self._qualifiers)
-            return f"__REPARK_ATTR_{self._attr_id}__{quals}__"
-        return self.sql_expr_part()
-
-    def sql_expr_without_alias(self) -> str:
-        """SQL fragment with a trailing NamedExpression ``AS name`` stripped (if present).
-
-        ``Column.alias`` embeds ``… AS name`` into ``sql_expr`` for MERGE/select surfaces.
-        Generator rewrites (``unnest`` / ``WHERE array_length(…)``) need the bare array
-        expression only — never an illegal ``AS`` inside ``unnest(...)``.
-        """
-        text = self.sql_expr_part()
-        if not self._stable_name or self._projection_name is None:
-            return text
-        suffix = f" AS {self._projection_name}"
-        if text.endswith(suffix):
-            return text[: -len(suffix)]
-        return text
+    sql_expr_part = _column_render.sql_expr_part
+    join_sql_part = _column_render.join_sql_part
+    sql_expr_without_alias = _column_render.sql_expr_without_alias
 
     @staticmethod
     def _to_column(value: Column | Scalar) -> Column:
@@ -262,29 +236,8 @@ class Column:
 
         return lit(value)
 
-    def spark_display_part(self) -> str:
-        """PySpark-style name fragment for this expression (aggregate output-name building)."""
-        if self._spark_display is not None:
-            return self._spark_display
-        return self._inner.display_name()
-
-    def spark_wrap_display_part(self) -> str:
-        """Child fragment when this column is embedded inside an outer expression display.
-
-        User ``.alias("v")`` stores ``spark_display`` as ``… AS v`` so aggregate arguments
-        keep Spark's ``sum(x AS y)`` form via :meth:`spark_display_part`. Outer wrappers
-        (``round`` / ``abs`` / arithmetic / cast / ``_scalar``) collapse that NamedExpression
-        to the projection name so ``.alias("v").round(2)`` displays ``round(v, 2)`` rather
-        than ``round((id * 1.234) AS v, 2)``.
-        """
-        if (
-            self._stable_name
-            and self._projection_name is not None
-            and self._spark_display is not None
-            and self._spark_display.endswith(f" AS {self._projection_name}")
-        ):
-            return self._projection_name
-        return self.spark_display_part()
+    spark_display_part = _column_render.spark_display_part
+    spark_wrap_display_part = _column_render.spark_wrap_display_part
 
     def _reject_nested_generator(self, operation: str) -> None:
         """Refuse ops that would drop ``_generator`` and silently skip unnest.

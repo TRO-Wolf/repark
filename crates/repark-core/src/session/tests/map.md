@@ -165,6 +165,9 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   qualifiers parse, and a token without a frame field is loud. Mutations, each reverted
   (records in the SJ-1b hand-back): the equality exemption removed (M-A3), the rewrite
   resolving by id (M-A4), right-first binding (M-A5).
+  **ATTR-ID-1 SJ-2 (2026-10-02):** `x_f0_frameless_token_binds_by_id_and_never_flags`
+  pins the `F0` contract — a frameless token parses, never flags ambiguity, binds
+  by id, and still refuses loud when its id is missing.
 - `session.rs` — ported v1 session battery plus P2G R2 / A13 / metadata-enumeration pins. RP-5: the bare-session half of the metadata-table enumeration contract (fork F-8 listing); mutation — make `information_schema` expect a `$snapshots` twin and the pin reds. pins: rp-5-fork-repin/C-003
   Child: [session/catalog_registration.rs](session/map.md).
   RP-5: `information_schema` hide pin now cites fork F-8 listing (no engine shim).

@@ -188,6 +188,11 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   and `dataframe/core.py` 3711 → 3653 (`_select_via_attr_sql` moves to
   `join_attr_tokens.py` behind a one-line delegate) with the script baseline.
   pins: attr-id-1/C-042
+- `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 SJ-2 (2026-10-02):**
+  mirror rows ratchet `spark/column.py` 1378 → 1331 (the fragment-render
+  family moves to `column_render.py`) and `dataframe/core.py` 3652 → 3595
+  (the unemitted-id family moves to `unemitted_ids.py`) with the script
+  baseline. Pins: `python/repark/tests/test_attr_id_1_sj2.py`.
 - `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 V-4 (2026-10-02):**
   mirror row ratchets `dataframe/core.py` 3653 → 3652 with the script baseline
   (the checkpoint swap moves to `cache_handle.bind_checkpoint_scan`).

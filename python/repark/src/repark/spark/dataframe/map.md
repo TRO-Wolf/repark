@@ -195,6 +195,11 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   duplicate-output select rewrite carry `Column._birth_frame` with `_attr_id`;
   `_select_via_attr_sql` moves to `join_attr_tokens.py` behind a one-line
   delegate (3715 → 3653, with the CAP-1 mirror). pins: attr-id-1/C-041
+  **ATTR-ID-1 SJ-2 (2026-10-02):** every frame carries `_frame_node`
+  (`frame_root` in `__init__`, `frame_derived` in `_spawn` with an optional
+  caller node, joins keep today's spawn); the unemitted-id family moves to
+  `unemitted_ids.py` behind `DataFrame` bindings (3652 → 3595, with the CAP-1
+  mirror). Pins: `python/repark/tests/test_attr_id_1_sj2.py`.
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`
@@ -284,6 +289,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   kernel, and attaches `_spark_error_class` / `_spark_message_parameters` /
   `_spark_sql_state` from the conditioned engine error. pins: df-rust-3/C-003, C-004
   **COLUMN-PARITY-1 (2026-09-15):** `to()` and `withMetadata` keep passing `alias(name, metadata=)`; with the column overlay the stamp, replace, cache and `to()` target-override positions answer Spark, and DF-METADATA-1 narrows to the positions a plan transform still loses (an earlier plain-rename repair in this branch was reverted).
+  **ATTR-ID-1 SJ-2 (2026-10-02):** `checkpoint` re-roots the child's frame
+  node with `frame_root`. Pins: `python/repark/tests/test_attr_id_1_sj2.py`.
 - `plan_introspect.py` owns the DF-PLAN-INTROSPECT-1 method bodies (2026-09-14;
   follow-up 2026-09-15) behind the one-line class bindings: `inputFiles` lists
   source files through the native `input_files` walk (cache reads the stashed
@@ -698,6 +705,14 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   temp-view select route for projections whose join SQL still carries attribute
   tokens) moves here from `core.py` (pure move); a one-line delegate on
   `DataFrame` keeps the frozen surface. pins: attr-id-1/C-041
+  **ATTR-ID-1 SJ-2 (2026-10-02):** `_ATTR_TOKEN_RE` takes the `F<frame>` field
+  (`__REPARK_ATTR_<id>__F<frame>__<quals>__`); the qualifier group moves from 2
+  to 3. Pins: `python/repark/tests/test_attr_id_1_sj2.py`.
+- `unemitted_ids.py` — **ATTR-ID-1 SJ-2 (2026-10-02):** the semi/anti
+  unemitted-id family (`remember_unemitted_right_ids`/`raise_if_id_not_emitted`/
+  `raise_unemitted_attr_tokens`/`refuse_unemitted_ids`), split out of `core.py`
+  at the size ceiling (pure move; `DataFrame` binds the four spellings). Pins:
+  `python/repark/tests/test_attr_id_1_sj2.py`.
 - `polars_cells.py` owns every polars/duckdb cell and dtype spelling used by
   the show doors: `null` / lowercase bools / mixed-mode floats
   (shortest-expansion rules measured probe by probe against polars 1.43.2 —

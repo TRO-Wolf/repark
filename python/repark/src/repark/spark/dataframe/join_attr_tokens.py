@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from repark.spark.dataframe.core import DataFrame
 
 
-_ATTR_TOKEN_RE = re.compile(r"__REPARK_ATTR_([A-Za-z0-9]+)__([\w\\|]*)__")
+_ATTR_TOKEN_RE = re.compile(r"__REPARK_ATTR_([A-Za-z0-9]+)__F(\d+)__([\w\\|]*)__")
 
 
 def _attr_token_exact_side(
@@ -95,7 +95,7 @@ def _resolve_join_token_sides(
     exact: list[str | None] = [
         _attr_token_exact_side(
             match.group(1),
-            _unescape_attr_token_quals(match.group(2)),
+            _unescape_attr_token_quals(match.group(3)),
             left_ids=left_ids,
             right_ids=right_ids,
             left_quals=left_quals,

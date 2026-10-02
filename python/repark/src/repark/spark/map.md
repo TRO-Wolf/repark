@@ -217,6 +217,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   The string-predicate family moves to `column_string.py` behind `Column`
   bindings (1485 → 1378, with the CAP-1 mirror). Pins:
   `python/repark/tests/test_attr_id_1_s4.py`. pins: attr-id-1/C-042
+  **ATTR-ID-1 SJ-2 (2026-10-02):** the fragment-render family
+  (`sql_expr_part`/`join_sql_part`/`sql_expr_without_alias`/`spark_display_part`/
+  `spark_wrap_display_part`) moves to `column_render.py` behind `Column`
+  bindings (1378 → 1331, with the CAP-1 mirror). Pins:
+  `python/repark/tests/test_attr_id_1_sj2.py`.
 - `column_fields.py` — **COLUMN-PARITY-1 (2026-09-14):** method bodies bound on
   `Column` (kept out of `column.py`, which is at its exact line baseline):
   `between` / `eqNullSafe` (extracted for headroom), `isin`, `isNaN`, `astype`,
@@ -374,6 +379,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   name refuses while a case-only rename still binds. `outer`, the sort bound
   column, and `_rewrap_with_markers` carry `_birth_frame` with `_attr_id`. Pins:
   `python/repark/tests/test_attr_id_1_s4.py`. pins: attr-id-1/C-041
+  **ATTR-ID-1 SJ-2 (2026-10-02):** `_column_frame_id(column)` reads the birth
+  frame's node id (`None` without a birth frame); it is the one helper every
+  frame-id read uses. Pins: `python/repark/tests/test_attr_id_1_sj2.py`.
 - `column_sort.py` — **ATTR-ID-1 S4 follow-up (2026-10-02):** the sort-marker
   family, split out of `column.py` at the size ceiling (pure move; `Column`
   binds the six `asc`/`desc` spellings). `_with_sort_order` re-marks the column
@@ -388,6 +396,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   size ceiling (pure move; `Column` binds the seven spellings). No module
   docstring: the lane's no-comments ruling covers the new file; the contract
   lives here. pins: attr-id-1/C-042
+- `column_render.py` — **ATTR-ID-1 SJ-2 (2026-10-02):** the expression-fragment
+  family (`sql_expr_part`/`join_sql_part`/`sql_expr_without_alias`/
+  `spark_display_part`/`spark_wrap_display_part`), split out of `column.py` at
+  the size ceiling (pure move; `Column` binds the five spellings).
+  `join_sql_part` renders the frame field from `_column_frame_id`, `F0` without
+  a birth frame. Pins: `python/repark/tests/test_attr_id_1_sj2.py`.
 - `filter_quote.py` — **ATTR-ID-1 S3b H-1 (2026-10-01):** the filter-SQL
   identifier quoter, split out of `column_fields.py` at the size ceiling (pure
   move; the entry stays there). `_FILTER_TOKEN_PATTERN`,

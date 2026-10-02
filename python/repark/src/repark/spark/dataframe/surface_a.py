@@ -382,7 +382,11 @@ def localCheckpoint(  # noqa: N802
 
 def checkpoint(frame: DataFrame, eager: bool = True) -> DataFrame:
     """Materialize like ``localCheckpoint`` (DF-CHECKPOINT-1). pins: C-003."""
-    return localCheckpoint(frame._identity_child(), eager=eager)
+    from repark import _native
+
+    child = frame._identity_child()
+    child._frame_node = _native.frame_root(child._inner)
+    return localCheckpoint(child, eager=eager)
 
 
 def sparkSession(frame: DataFrame) -> SparkSession:  # noqa: N802

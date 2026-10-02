@@ -37,6 +37,8 @@ from repark.spark.session.create_dataframe_rows import _materialize_arrow_as_mem
 from repark.spark.session.session_configuration import (
     SPARK_SQL_ANSI_ENABLED_KEY,
     SPARK_SQL_CASE_SENSITIVE_KEY,
+    SPARK_SQL_FAIL_AMBIGUOUS_SELF_JOIN_KEY,
+    SPARK_SQL_SELF_JOIN_AUTO_RESOLVE_KEY,
     _SQLCONF_STATIC_KEYS,
     _looks_like_datafusion_conf_key,
 )
@@ -276,7 +278,13 @@ def _restore_or_unset(session: ReparkSession, key: str) -> None:
     refuse_collation_session_key(key)
     builder_value = session._builder_config.get(key)
     if builder_value is not None:
-        if key in (SESSION_TIME_ZONE_KEY, SPARK_SQL_ANSI_ENABLED_KEY, SPARK_SQL_CASE_SENSITIVE_KEY):
+        if key in (
+            SESSION_TIME_ZONE_KEY,
+            SPARK_SQL_ANSI_ENABLED_KEY,
+            SPARK_SQL_CASE_SENSITIVE_KEY,
+            SPARK_SQL_FAIL_AMBIGUOUS_SELF_JOIN_KEY,
+            SPARK_SQL_SELF_JOIN_AUTO_RESOLVE_KEY,
+        ):
             inner = session._ensure_alive()
             _native.restore_runtime_config(inner, key, builder_value)
             session.conf._unset_keys().discard(key)

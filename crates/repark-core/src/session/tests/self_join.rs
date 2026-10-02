@@ -827,3 +827,20 @@ fn the_1182_message_is_spark_template() {
          also set spark.sql.analyzer.failAmbiguousSelfJoin to false to disable this check."
     );
 }
+
+#[test]
+fn x_f0_frameless_token_binds_by_id_and_never_flags() {
+    let env = env();
+    let id = env.d.node.outputs()[1].clone();
+    let token = format!("__REPARK_ATTR_{}__F0____", id.as_str());
+    let sql = answered(prepare(&env.d, &env.f, &format!("{token} > {token}"), ON));
+    assert!(sql.starts_with("_l."));
+    let absent = AttrId::mint();
+    let missing = format!("__REPARK_ATTR_{}__F0__v__", absent.as_str());
+    let names = HashMap::from([(absent, "v".to_string())]);
+    let refusal = prepare_named(&env.d, &env.f, &missing, &names, ON).unwrap();
+    assert!(matches!(
+        refusal,
+        Prepared::Refused(Refusal::Missing { .. })
+    ));
+}
