@@ -3389,6 +3389,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and `semanticHash` (one-line bindings over `plan_introspect.py`); package and
   core each gain exactly `plan_introspect` behind the new module import.
   pins: df-plan-introspect-1/C-004
+  ATTR-ID-1 SJ-2 (2026-10-02): slots and dir gain exactly `_frame_node`; both
+  new-submodule sets gain `unemitted_ids` (same-named class bindings, so no alias
+  rows); core and the package lose `_ATTR_TOKEN_RE`. `test_production_file_size.py`
+  re-pins the `_SQLCONF_DEFAULTS` hash for the two self-join conf defaults.
 - `test_dfcore_4b_exports.py` — DFCORE-4b ownership pin: `MOVED_DISPLAY_HELPERS`
   pins the ten bodies as `display.py`'s own frame-first functions, the six
   leavers as gone from the class, and the four wrappers as kept.
