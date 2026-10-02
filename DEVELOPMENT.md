@@ -20,6 +20,13 @@ read [STATUS.md](STATUS.md).
 - Linters/formatters (ruff, taplo, typos, zizmor) and the security tools (cargo-deny, cargo-audit,
   pip-audit) are all run at pinned versions by the Makefile via `uvx` / install-action — they
   never silently skip locally, and their pins match the workflow pins exactly.
+- **Docker, only for the live database tier** — `make pg-up` starts one disposable Postgres
+  from [`scripts/dev/pg/compose.yaml`](scripts/dev/pg/compose.yaml) through the stock
+  `docker compose` client, bounded to two cores and two gigabytes, on a random localhost port;
+  `make pg-down` removes it with its volume. Any daemon works — Desktop, Engine or rootless; set
+  `DOCKER_HOST` when yours is not the default. A box that also runs agents should use rootless
+  Docker under a cgroup slice so test containers share the agents' CPU and memory cap. Nothing in
+  `verify` or `preflight` needs Docker; the live-database cells skip when `REPARK_PG_URL` is unset.
 
 No JVM is needed for the normal build/test/verify loop. A Java 17 home is needed **only** for
 `make parity-live` (re-deriving Spark goldens from real Spark).

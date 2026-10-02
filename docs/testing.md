@@ -112,6 +112,16 @@ law for *authoring* a golden (routine CI must stay no-JVM for everyone); the liv
   one JVM `SparkContext` the live oracle runs on, so no test in that suite may call `.stop()` on
   a PySpark session — `conftest.py`'s `_shared_oracle_context_guard` fails the test that does.
 
+### The live database tier
+
+A live database cell runs only against the disposable container `make pg-up` starts from
+`scripts/dev/pg/compose.yaml` (one per invocation, logical replication on, bounded to two cores
+and two gigabytes, at most four at once), never against a database another system owns. The `pg_live` fixture (`python/repark-parity/tests/live_db/conftest.py`) gives each test a
+schema, a publication name and a slot name that carry one random tag, and drops all three on
+exit; a test that creates anything else drops it itself. Cells skip, not fail, when
+`REPARK_PG_URL` is unset. The Spark live-cell rules (guard the shared session, single-file seed,
+private catalog, no environment pop, prove co-collected) apply unchanged. Ruled 2026-10-01, CC-6.
+
 ### The torture suite (generator families at scale)
 
 `python/repark-parity/tests/torture/` drives the seeded generator families in
