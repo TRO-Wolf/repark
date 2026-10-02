@@ -696,7 +696,6 @@ EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
     "writer_schema",
     "writer_text",
     "_native",
-    "unemitted_ids",
 }
 
 EXPECTED_NEW_CORE_SUBMODULES: set[str] = {
