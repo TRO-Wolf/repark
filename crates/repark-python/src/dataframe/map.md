@@ -48,6 +48,15 @@ transforms, terminal actions, schema introspection, and Arrow C Stream export.
   takes an optional fetch, so DataFrame `.offset` plans a fetch-less `Limit`
   matching Spark's pure Offset; the facade's large-fetch encoding is retired.
   pins: cast-overflow-insert-1/C-001
+  **Merge-main fold (2026-10-01, PR #883):** `filter` / `select` route through
+  `is_duplicated::filter_frame` / `select_frame` inside the `drive_columns`
+  closure, so a marker rewrite runs on the grown stack under the same verdict
+  as the plain clone; the builders re-survey levels when the marker path ran
+  (it adds index, helper, sort, and drop levels the O(1) rule cannot count)
+  and compose O(1) otherwise. The helpers take the frame depths and clone
+  through `grown_clone_frame` / `grown_clone_expr`, so the grown-stack guard
+  holds with no new allow-list entry.
+  pins: polars-is-duplicated-1/C-002, deep-filter-chain-crash-1/C-013
 - [`tests.rs`](tests.rs) — **DEEP-FILTER-CHAIN-CRASH-1 verifier fold
   (2026-09-29):** the `dataframe` unit tests, moved verbatim from the inline
   module (Arrow export values, types, laziness, errors, schema caching).

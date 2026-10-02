@@ -4440,6 +4440,21 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_df_batch2.py (lint: functions_api not F; N802 sampleBy)` — R-DF-BATCH2 cube/rollup/unpivot/explain + loud census + C5 unpivot quote / cube alias.
 - `test_polars_ns.py` — R-POLARS-NS str/dt/fill_null + differential. (rider: dt test sorts client-side — UNION ALL order flake) TYPES-1 round 4 pins `with_row_index` BIGINT (pins: types-1/C-005).
 - `test_polars_ns.py (skeptic fix: real-path starts_with/slice + quote pin; full census)` — R-POLARS-NS str/dt/fill_null + differential.
+- `test_polars_is_duplicated_1.py` — **POLARS-IS-DUPLICATED-1 (2026-09-28):**
+  `Column.is_duplicated()` answers as real polars 1.43.2 on both doors through
+  filter, select and withColumn(s) (INT/BIGINT/DOUBLE/STRING/DATE/DECIMAL(10,2)/
+  BOOLEAN, empty and one-row frames, NaN/±0.0/null grouping, negation,
+  conjunction, expression receiver, prefilter), input row order kept; the 10k
+  frame pins true-count, duplicated values and mask sha256 under 2 s; the
+  must-not-change legs pin the window-in-filter refusal, window select,
+  isNull/isin/row_number/dropDuplicates, plain `rp.col` and the `dir` delta.
+  Expectations ride `polars_is_duplicated_1_polars_oracle.json` (17 KB).
+  **DIFF-PROBE fold (2026-09-29):** 8 order pins — a sort before the mask
+  survives filter/select on both doors asc/desc, a sort after the mask matches
+  the plain-column order with every key kept (tied, constant and second-key
+  shapes), plus limit/desc-nulls-last/3-key/sortWithinPartitions shapes, a
+  repartition set check and a groupBy over the mask column.
+  pins: polars-is-duplicated-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `test_pg_jdbc_options.py` — PG2 offline option pins (jdbc overloads, format aliases, XOR/caps).
   Ported minus **one** node (EC-4): `test_jdbc_num_partitions_above_cap_is_unsupported` — the
   `read_postgres` refuse-arm pre-empts the engine's cap error. The other offline pins raise their

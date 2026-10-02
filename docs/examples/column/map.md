@@ -30,6 +30,11 @@ see [../map.md](../map.md).
   `arr[1]`) and `getField` struct field (aliased read).
 - [round_ext.py](round_ext.py) — repark extension `round` (HALF_UP, delegates to
   `F.round`). No Spark analog: PySpark's `Column` has no `round`.
+- [is_duplicated_ext.py](is_duplicated_ext.py) — **POLARS-IS-DUPLICATED-1
+  (2026-09-28):** repark extension `is_duplicated` (polars duplicate mask:
+  null==null, NaN==NaN, -0.0==0.0) through filter, select and withColumns on
+  both doors, plus the `is_duplicated(c)` default projection name. No Spark
+  analog: PySpark's `Column` has no `is_duplicated`.
 - [accessor_namespaces.py](accessor_namespaces.py) — repark extensions `str` /
   `dt` (Polars-style namespaces, no PySpark analog) beside the PySpark-spelled
   twins `F.upper` / `F.trim` / `F.year`, measured Spark-equal.
