@@ -118,16 +118,24 @@ path = "crates/repark-python"
 layer = "bindings"
 status = "delivered"
 
-[components.repark-exec]
-path = "crates/repark-exec"
-status = "planned"
-
 [components.repark-io]
 path = "crates/repark-io"
 status = "planned"
 
 [components.repark-connect]
 path = "crates/repark-connect"
+status = "planned"
+
+[components.repark-cdc]
+path = "crates/repark-cdc"
+status = "planned"
+
+[components.repark-crawler]
+path = "crates/repark-crawler"
+status = "planned"
+
+[components.repark-spark-dialect]
+path = "crates/repark-spark-dialect"
 status = "planned"
 
 [components.repark-server]

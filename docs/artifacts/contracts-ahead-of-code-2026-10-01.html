@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Contracts Ahead of Code</title>
+<meta name="description" content="The RePark crate contracts ruled before the pre-declared crates have code, the Delta Lake seam, and the enterprise seams (2026-10-01).">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#f3f7f7; --surface:#ffffff; --ink:#15262a; --muted:#4d6468; --line:#cfdfe0;
+  --accent:#0f7c80; --accent-soft:#dcefef; --warn:#a65b00; --warn-soft:#fbeedd;
+  --bad:#a4262c; --bad-soft:#f8e2e3; --good:#2f6f3e; --good-soft:#e2f1e5;
+  --code-bg:#e8f0f0;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d1719; --surface:#132226; --ink:#dcebec; --muted:#93acaf; --line:#27403f;
+    --accent:#55c2c5; --accent-soft:#16383a; --warn:#e8a456; --warn-soft:#3a2a14;
+    --bad:#f0858a; --bad-soft:#3d1b1e; --good:#84c996; --good-soft:#18331f; --code-bg:#1a2d30;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d1719; --surface:#132226; --ink:#dcebec; --muted:#93acaf; --line:#27403f;
+  --accent:#55c2c5; --accent-soft:#16383a; --warn:#e8a456; --warn-soft:#3a2a14;
+  --bad:#f0858a; --bad-soft:#3d1b1e; --good:#84c996; --good-soft:#18331f; --code-bg:#1a2d30;
+  color-scheme: dark;
+}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;padding-inline:16px;padding-block:32px 64px}
+main{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:40px}
+header{display:flex;flex-direction:column;gap:10px;border-bottom:2px solid var(--accent);padding-bottom:20px}
+.eyebrow{font:500 12px/1.2 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+h1{font:600 clamp(28px,5vw,40px)/1.15 "IBM Plex Serif",Georgia,serif;margin:0;text-wrap:balance}
+h2{font:600 24px/1.25 "IBM Plex Serif",Georgia,serif;margin:0 0 12px;text-wrap:balance}
+h3{font:600 17px/1.35 "IBM Plex Sans",system-ui,sans-serif;margin:22px 0 6px;text-wrap:balance}
+p,li{max-width:68ch}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 12px;padding-left:22px}
+li{margin-bottom:6px}
+.lede{font-size:18px;color:var(--muted);margin:0}
+.meta{font:13px/1.5 "IBM Plex Mono",ui-monospace,monospace;color:var(--muted)}
+code{font:0.88em "IBM Plex Mono",ui-monospace,monospace;background:var(--code-bg);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+section{display:flex;flex-direction:column}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:8px 0 12px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.stat b{display:block;font:600 26px/1.1 "IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;color:var(--ink)}
+.stat span{font-size:13px;color:var(--muted)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:4px 0 12px}
+table{border-collapse:collapse;width:100%;min-width:620px;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:9px 12px;border-bottom:1px solid var(--line)}
+th{font:600 12px/1.3 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);background:var(--accent-soft)}
+tr:last-child td{border-bottom:none}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag{display:inline-block;font:600 11px/1 "IBM Plex Mono",ui-monospace,monospace;padding:3px 6px;border-radius:4px;white-space:nowrap;background:var(--accent-soft);color:var(--accent);margin-left:6px;vertical-align:middle}
+.tag.measured{background:var(--good-soft);color:var(--good)}
+.tag.judgement{background:var(--warn-soft);color:var(--warn)}
+.tag.rule{background:var(--bad-soft);color:var(--bad)}
+.callout{border-left:4px solid var(--accent);background:var(--surface);padding:12px 16px;border-radius:0 8px 8px 0;margin:4px 0 12px}
+.callout p:last-child{margin-bottom:0}
+.pair{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0 0 12px}
+.pair dt{font:600 12px/1.9 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.pair dd{margin:0;max-width:68ch}
+footer{border-top:1px solid var(--line);padding-top:16px}
+@media (max-width:520px){.pair{grid-template-columns:1fr}.pair dt{line-height:1.4;margin-top:6px}}
+pre{background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font:13px/1.5 "IBM Plex Mono",ui-monospace,monospace}
+pre code{background:none;padding:0}
+</style>
+
+</head>
+<body>
+<main>
+<header>
+  <div class="eyebrow">RePark · roadmap adjustment · 2026-10-01</div>
+  <h1>Contracts ahead of code</h1>
+  <p class="lede">The ten crate contracts between the pre-declared crates, Delta Lake as a seam rather than a feature, and the ten enterprise seams. Ruled by the owner on 2026-10-01 after three external reviews.</p>
+  <p class="meta">Prepared by a Claude session (claude-fable-5-1). Measured on <code>origin/main</code> at <code>daf9bbaa</code> and the PR branch at <code>3fc0ba92</code>. Record of ruling: <code>task/roadmap/epic-term/contracts-ahead-of-code-2026-10-01.md</code>.</p>
+</header>
+<section>
+<p><strong>Date:</strong> 2026-10-01 · <strong>Ruled by:</strong> the owner ("let's go ahead and get it added to the plan"), in discussion with a Claude session (claude-fable-5-1) · <strong>Measured on:</strong> <code>origin/main</code> at <code>daf9bbaa</code> (the third external review's base) and the <code>docs/roadmap-adjustments-2026-10-01</code> branch at <code>3fc0ba92</code> · <strong>Builds on:</strong> <a href="crate-layout-1-8-2026-10-01.md">crate-layout-1-8-2026-10-01.md</a> (the layout, CL-1…CL-8), <a href="unified-database-query-cdc-silver-plan-2026-09-13.md">unified-database-query-cdc-silver-plan-2026-09-13.md</a> (the three lifecycles, the capture checkpoint), <a href="deterministic-silver-layer-compiler-2026-09-12.md">deterministic-silver-layer-compiler-2026-09-12.md</a>, <a href="release-roadmap-2026-08-29.md">release-roadmap-2026-08-29.md</a> (rows 1.6, 1.7, 2.x, 3.0).</p>
+<p>The five arriving crates are pre-declared in the DAG gate and the manifest (CL-8) but have no code. This file rules the <strong>contracts between them before the first unit opens</strong>, so that each arrives onto decided boundaries rather than deciding them in its first pull request. Three external reviews shaped it: the Sail engineering review (plan quality, observability, complete workloads), the Supabase ETL review (recovery contracts for capture), and the eight-item review of the first draft of these contracts, checked against <code>daf9bbaa</code>, whose revisions to items 2, 4 and 7 are adopted below. Part B applies the same method to what an enterprise buyer asks for: plan the seam where it is cheap now, reserve the name, write the refusal, and let demand open the card.</p>
+</section>
+<section>
+<h2>Part A — the crate contracts</h2>
+<h3>CC-1 · Core consumes the services; Session owns embedded capture</h3>
+<p><code>repark-core</code> reaches down to <code>repark-connect</code>, <code>repark-cdc</code> and <code>repark-io</code> as each arrives, through the seams that already exist: <code>SessionExtension</code> (<code>crates/repark-core/src/extension.rs</code>: <code>configure</code>, <code>configure_analyzer_rules</code>, <code>register</code>) mounts providers and rules at build time; <code>ExecutionBackend</code> and <code>SqlDialect</code> stay the only other extension points. <code>SessionExtension</code> is a registration hook, not a lifecycle: a long-running capture task needs a handle the Session owns. In embedded mode that handle obeys four rules, decided here and implemented at 1.7:</p>
+<ol>
+<li>Registering a source does not start capture.</li>
+<li>Explicit asynchronous shutdown waits for owned work and reports the durable checkpoint.</li>
+<li>A shutdown timeout, or an ambiguous publication, produces an explicit recovery-required outcome, never a silent success.</li>
+<li>Dropping a Python object is never the only shutdown mechanism.</li>
+</ol>
+<p>The checkpoint outlives the Session; service mode (1.12) owns the same capture implementation later. <strong>Pushdown is rendered as what the statement actually pushed</strong>, per source, including residual filters kept engine-side, not as what the connector supports in general. That rendering is the <code>EXPLAIN</code> boundary the 1.6 acceptance line names.</p>
+<h3>CC-2 · Shared identity, the narrow T-6</h3>
+<p>Measured on <code>daf9bbaa</code>: the loader's <code>SourceKind</code> / <code>SourceSpec</code> / <code>ProfileSources</code> are <code>pub(crate)</code> in <code>crates/repark-core/src/config_file/sources.rs</code>, distinct from the public handles <code>SourceRow</code> / <code>NamedSource</code> in <code>named_sources.rs</code>. They do not move together. The split:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>crate</th>
+<th>owns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>repark-common</code></td>
+<td>the minimal source identity (configured name, kind, <strong>a source generation</strong>) and genuinely shared value types</td>
+</tr>
+<tr>
+<td><code>repark-connect</code></td>
+<td>connection settings and database-specific type conversion</td>
+</tr>
+<tr>
+<td><code>repark-core</code></td>
+<td>profile loading, precedence, registration, the user-facing handles</td>
+</tr>
+<tr>
+<td><code>repark-cdc</code></td>
+<td>replication lineage, offsets, capture state</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>A configured name is not a durable CDC identity.</strong> Re-pointing <code>orders</code> at a different database must not reuse the previous database's checkpoint; the generation field in the identity type is where that is detected, which is why it moves to <code>repark-common</code> with the name rather than later. A narrow <code>cdc → connect</code> same-tier edge is allowed only if connection code is genuinely shared; replication connections stay separate from query pools (unified plan line 56). T-6 is scheduled <strong>with the first connector consumer</strong> (C-1 of §A.9), not ahead of it: the boundary is ruled now, the move waits for its caller.</p>
+<h3>CC-3 · Configuration: four reserved prefixes, no keys</h3>
+<p><code>repark.connect.*</code>, <code>repark.cdc.*</code>, <code>repark.crawler.*</code> and <code>repark.io.*</code> are reserved beside the families on <code>main</code> (<code>repark.sql.*</code>, iceberg, text, memory, write, hadoop, display, merge, aws, scan). No key is defined until its unit lands. The <strong>owner crate interprets and validates</strong> its settings; <code>repark-core</code> loads, merges and transports them and never interprets a value it does not own. The named-source format from CFG-2 (<code>[&lt;profile&gt;.database.&lt;name&gt;.*]</code>) stays the one source format. A <code>repark.connect.*</code> session default and a source entry are the same key family, <strong>and the source entry wins</strong>, so the prefixes do not become a second configuration system.</p>
+<h3>CC-4 · Errors: operational meaning first, Spark wording where measured</h3>
+<p>Connector and capture errors carry structured operational meaning: authentication failure, retryable disconnect, lost replication history, invalid specification, ambiguous destination commit. A Spark condition is rendered only where the semantics match and the facade contract has been measured; otherwise the condition is RePark-owned, on the precedent of <code>CommitStateUnknown</code> (already in <code>repark-common/src/lib.rs</code>, the PyO3 exceptions and the Python taxonomy). Checkpoint loss is never forced into an approximately similar Spark class. There is no blanket carve-out: <strong>each RePark-owned condition gets a dated registry row</strong>, as a declared refusal does, so the extension boundary stays enumerable and cannot excuse an unrelated parity failure.</p>
+<h3>CC-5 · Features: Cargo modularity is not wheel availability</h3>
+<p>"In the standard wheel" does not require "no Cargo feature". Postgres query and capture ship in the standard wheel when delivered, behind features that stay available to Rust consumers (the <code>repark-distributed</code> precedent: <code>default = ["local"]</code>, <code>cluster</code> opt-in). <strong>SQL Server ships through pip as an opt-in</strong> (owner, 2026-10-01: "ship it as an option in pip"). A pip extra cannot switch compiled code inside one wheel, so the C-0 measurement (build time, wheel size, linking, platforms) decides the mechanism: compiled into the standard wheel with the extra carrying only Python dependencies, or a sibling <code>repark-mssql</code> wheel. A compiled capability omitted from the wheel cannot be enabled by a runtime setting, which is the reason the default leans inclusive.</p>
+<h3>CC-6 · Postgres tests: a disposable container, and the five failure scenarios</h3>
+<p>Live cells run against a disposable local Postgres container, never an Airflow-managed database without established ownership and isolation. Private schemas are not enough for capture tests: <strong>publications and replication slots get unique names and explicit cleanup</strong>. The failure harness covers destination writes, checkpoint persistence and reconnects, plus five scenarios that are the pin list of <code>repark-cdc</code>'s S0 and exist before any capture code:</p>
+<ol>
+<li>Crash after the destination commit, before checkpoint persistence.</li>
+<li>Snapshot-to-WAL handover under concurrent writes.</li>
+<li>Replay and duplicate delivery.</li>
+<li>Schema changes and partial update images.</li>
+<li>Lost slots or unavailable WAL.</li>
+</ol>
+<p>Postgres supplies the source behaviour; RePark's assertions establish separately that acknowledged progress stays recoverable. The live-cell rules (guard the shared session, single-file seed, private catalog, no environment pop, prove co-collected) apply unchanged.</p>
+<h3>CC-7 · Metrics: crate-owned emission, entry-point initialization</h3>
+<p>Each crate owns its metric meanings and bounded labels and emits through the <code>metrics</code> facade. <strong>Exporter initialization belongs to the embedding application or service entry point</strong>, with an explicit Python entry point beside the env-gated, process-wide <code>try_init_repark_tracing</code> (<code>crates/repark-python/src/lib.rs</code>), which is a precedent to inspect, not the model. The per-query report reads query-scoped measurements from the plan's <code>MetricsSet</code> directly: subtracting global counters fails under overlapping queries, and query ids as labels are unbounded cardinality. No <code>repark-telemetry</code> crate through 1.8; a module in <code>repark-common</code> until shared exporter or lifecycle code earns one.</p>
+<h3>CC-8 · Denied edges, in the gate, with kinds</h3>
+<p>Explicit denials go in <code>scripts/check_crate_dag.py</code> beside <code>ALLOWED_EDGES</code>, each naming the dependency kinds it covers, and only where they protect a decision no role or tier rule already implies. Four rows, all four kinds (normal, dev, build, optional):</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>denied</th>
+<th>protects</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>repark-python → repark-sql</code></td>
+<td>the bindings reach the doors through <code>repark-core</code>'s dialect seam only</td>
+</tr>
+<tr>
+<td><code>repark-python → repark-iceberg</code></td>
+<td>the bindings never reach a table service directly</td>
+</tr>
+<tr>
+<td><code>repark-functions → repark-spark-dialect</code></td>
+<td>the function leaf never learns the grammar (layout ruling §3.3); a dev edge would let a test smuggle it in</td>
+</tr>
+<tr>
+<td><code>repark-crawler → repark-cdc</code></td>
+<td>discovery never publishes and never reads capture state (the three lifecycles)</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>repark-cdc → repark-core</code> was proposed and dropped: the layering rule already forbids a tier-1 crate from reaching tier 2. The table lands as a small chore on the gate script in the tidy window, not in this docs change.</p>
+<h3>CC-9 · Capture shutdown and checkpoint advancement: the medallion's first decision</h3>
+<p>The most consequential open contract across all three reviews is the same one seen from two sides: the Supabase review's accepted-versus-durable distinction and the eight-item review's shutdown rules. It is filed once, as the first D-decision of the 1.7 charter, with these clauses: an event is <em>accepted</em> when the producer has it and <em>durable</em> when its Bronze outcome is committed; recovery advances on durable only; the four shutdown rules of CC-1; and <strong>a checkpoint written by one producer generation is never advanced by another</strong>. Diffing RePark's Bronze stream against Supabase ETL's output on the same source is a measurement, never a dependency.</p>
+<h3>CC-10 · Delta Lake: the seam, not the feature</h3>
+<p>An enterprise buyer is often a Databricks shop whose data is in Delta. The ask is "read what we have and help us land it in Iceberg", not "be our Delta writer". Delta write support would be a second table service with its own log, checkpoints, deletion vectors and <code>MERGE</code>, doubling an Iceberg-only parity matrix of 842 cells, against an oracle Databricks defines. Ruled:</p>
+<ul>
+<li><strong><code>repark-delta</code> is a reserved name</strong>, a tier-1 table service peer of <code>repark-iceberg</code>, listed in the layout ruling's §4 as <em>not before 2.x, demand-triggered</em>. It is <strong>not</strong> pre-declared: CL-8 pre-declares crates with a release, and this one has none.</li>
+<li><strong>A dated refusal row for <code>format("delta")</code></strong> on both doors, with Spark's error class, so the registry says what RePark does today.</li>
+<li><strong>A 2.x card, demand-triggered, read-only</strong>: <code>delta-rs</code> exposes a DataFusion <code>TableProvider</code>, so a scan is cheap in code; the real cost is version lockstep, since <code>delta-rs</code> pins its own DataFusion and the workspace pins 54.1, the problem the Ballista audit measured. Writes stay out of the card.</li>
+<li><strong>Bronze and Silver stay Iceberg-only publication targets.</strong> The <code>SilverPlan</code> compiles over a pinned Iceberg snapshot; a Delta source enters only through a read scan or capture into Bronze.</li>
+<li><strong>The Databricks route needs no Delta code</strong>: Unity Catalog serves UniForm-enabled Delta tables over the Iceberg REST protocol, and the fork's <code>iceberg-catalog-rest</code> is complete. The REST slot was ruled the same day: <strong>1.7</strong>, inside the medallion release (owner: "let's get the REST catalog moved to 1.7"). Delta-to-Iceberg metadata migration in the manner of Apache XTable, Iceberg metadata written over the same Parquet files, is the enterprise lever that pulls customers toward the format RePark owns.</li>
+</ul>
+<p>The release roadmap's "any second table format" in its explicitly-not-planned list now reads "as a publication target"; read-only interop is this card.</p>
+</section>
+<section>
+<h2>Part B — the enterprise seams</h2>
+<p>Same method: where a buyer will ask and the seam is cheap now, reserve it; where it is not, write the refusal or the demand-triggered row so it can be said in a sales call. Everything below was checked against the 2.x and 3.0 rows so that nothing duplicates what is already planned (authentication, grants with row filters and column masks in the planner, quotas, the audit table, signed images, secrets providers, observability, the maintenance policy, multi-writer, Flight SQL, Substrait).</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>id</th>
+<th>seam</th>
+<th>what the buyer asks</th>
+<th>ruled now</th>
+<th>the card</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ES-1</td>
+<td><strong>Connector auth methods</strong></td>
+<td>password auth to SQL Server or RDS is rarely allowed</td>
+<td>an auth-method field on <code>repark-connect</code>'s connection settings, reserved in C-1; password at 1.6; IAM token (RDS) and Kerberos / Active Directory as <strong>declared refusals</strong> with a dated row</td>
+<td>1.6 (field), demand-triggered (methods)</td>
+</tr>
+<tr>
+<td>ES-2</td>
+<td><strong>Azure and GCS object stores</strong></td>
+<td>multi-cloud warehouses</td>
+<td>the workspace builds <code>object_store</code> 0.13 with only the <code>aws</code> feature; ADLS Gen2 and GCS are features of the same crate behind the same <code>CredentialProvider</code> bridge; <code>repark.azure.*</code> and <code>repark.gcs.*</code> reserved beside <code>repark.aws.*</code>, no keys</td>
+<td>demand-triggered; the cost is a live-cell tier per cloud like <code>docs/tier2-aws.md</code>, not code</td>
+</tr>
+<tr>
+<td>ES-3</td>
+<td><strong>Iceberg table encryption</strong></td>
+<td>keys applied, not stored</td>
+<td>ENC-1 in the parity registry records that <code>encryption.key-id</code> is stored and never applied; the feature is a fork item filed with 3.0 authentication; <strong>ruled 2026-10-01: refuse</strong> — the first write to a table carrying <code>encryption.key-id</code> refuses, as Spark does without a KMS, and <code>CREATE</code> keeps succeeding as in Spark; a product card, release the owner's, flipping the ENC-1 pin on purpose</td>
+<td>the refusal next; encryption 3.0</td>
+</tr>
+<tr>
+<td>ES-4</td>
+<td><strong>Lineage emission</strong></td>
+<td>OpenLineage into Collibra, Atlan, DataHub</td>
+<td>the 3.0 audit row already records principal, sources and snapshot ids, which is the OpenLineage event shape; an emitter is one exporter over the CC-7 facade</td>
+<td>2.7 sub-item</td>
+</tr>
+<tr>
+<td>ES-5</td>
+<td><strong>Compliance erasure and legal hold</strong></td>
+<td>right-to-erasure with proof; records that may not expire</td>
+<td>erasure = delete, rewrite, expire, orphan sweep and an audit record as one procedure; legal hold = an Iceberg tag the maintenance policy refuses to expire; both over procedures that exist</td>
+<td>2.1 sub-items</td>
+</tr>
+<tr>
+<td>ES-6</td>
+<td><strong>More connectors</strong></td>
+<td>Oracle, MySQL, Snowflake, BigQuery</td>
+<td>behind <code>repark-connect</code>'s provider trait; the <code>format("jdbc")</code> URL dispatch row (2026-09-15) refuses by scheme; cloud warehouses through ADBC</td>
+<td>demand-triggered rows, no card</td>
+</tr>
+<tr>
+<td>ES-7</td>
+<td><strong>Airflow provider</strong></td>
+<td>schedule RePark from the orchestrator they run</td>
+<td>a sibling repository on the <code>dbt-repark</code> model, engine side unchanged</td>
+<td>demand-triggered</td>
+</tr>
+<tr>
+<td>ES-8</td>
+<td><strong>Unity Catalog, Hive metastore</strong></td>
+<td>read the catalog they have</td>
+<td>Unity through its Iceberg REST endpoint (CC-10, the REST campaign); Hive metastore stays out (ruled 2026-08-29)</td>
+<td>1.7 (the REST campaign, ruled 2026-10-01)</td>
+</tr>
+<tr>
+<td>ES-9</td>
+<td><strong>Supply chain</strong></td>
+<td>an SBOM and signed artifacts on every security questionnaire</td>
+<td>CycloneDX output beside the <code>cargo-deny</code> job already in CI; signed wheels join the signed image</td>
+<td>3.0 deployment row</td>
+</tr>
+<tr>
+<td>ES-10</td>
+<td><strong>Declared out, in writing</strong></td>
+<td>high availability, cross-region replication, FIPS-validated crypto</td>
+<td>HA and replication: single node is the thesis and table replication is a catalog concern; FIPS: RustCrypto is not a validated module</td>
+<td>the explicitly-not-planned list</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section>
+<h2>Part C — decisions recorded</h2>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>id</th>
+<th>decision</th>
+<th>status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CC-1</td>
+<td>core consumes the services through the existing seams; Session owns embedded capture under the four shutdown rules; <code>EXPLAIN</code> renders what was pushed, with residuals, per source</td>
+<td><strong>ruled 2026-10-01</strong></td>
+</tr>
+<tr>
+<td>CC-2</td>
+<td>the narrow T-6: identity with a generation field to common, connection settings and conversions to connect, loading and handles stay in core, lineage and offsets in cdc; scheduled with C-1</td>
+<td><strong>ruled 2026-10-01</strong></td>
+</tr>
+<tr>
+<td>CC-3</td>
+<td>four reserved prefixes, no keys; owner crate validates, core loads and merges; the source entry beats the session default</td>
+<td><strong>ruled 2026-10-01</strong></td>
+</tr>
+<tr>
+<td>CC-4</td>
+<td>structured operational meaning first; Spark wording where measured; RePark-owned otherwise with a dated registry row each</td>
+<td><strong>ruled 2026-10-01</strong></td>
+</tr>
+<tr>
+<td>CC-5</td>
+<td>Postgres query and capture in the standard wheel behind retained features; SQL Server a pip opt-in, the mechanism decided by the C-0 measurement</td>
+<td><strong>ruled 2026-10-01</strong> (owner: "ship it as an option in pip")</td>
+</tr>
+<tr>
+<td>CC-6</td>
+<td>disposable container, unique publication and slot names with cleanup, the five scenarios as cdc S0 pins</td>
+<td><strong>ruled 2026-10-01</strong></td>
+</tr>
+<tr>
+<td>CC-7</td>
+<td><code>metrics</code> facade, crate-owned emission, entry-point initialization with an explicit Python entry, plan-scoped per-query report, no telemetry crate through 1.8</td>
+<td><strong>ruled 2026-10-01</strong></td>
+</tr>
+<tr>
+<td>CC-8</td>
+<td>four denied edges with kinds in the gate script; <code>cdc → core</code> dropped as a duplicate; lands as a tidy-window chore</td>
+<td><strong>ruled 2026-10-01</strong>; the chore is open</td>
+</tr>
+<tr>
+<td>CC-9</td>
+<td>capture shutdown and checkpoint advancement filed as the 1.7 charter's first D-decision, with the generation clause</td>
+<td><strong>ruled 2026-10-01</strong></td>
+</tr>
+<tr>
+<td>CC-10</td>
+<td><code>repark-delta</code> reserved, not pre-declared; <code>format("delta")</code> refusal row; a read-only 2.x card on demand; Bronze and Silver Iceberg-only; the Databricks route is UniForm over Iceberg REST</td>
+<td><strong>ruled 2026-10-01</strong></td>
+</tr>
+<tr>
+<td>ES-1…ES-9</td>
+<td>the enterprise seams as tabled</td>
+<td><strong>ruled 2026-10-01</strong> ("get it added to the plan"); ES-3 ruled <strong>refuse</strong>, ES-8's REST slot ruled <strong>1.7</strong> the same day</td>
+</tr>
+<tr>
+<td>ES-10</td>
+<td>HA, replication and FIPS declared out</td>
+<td><strong>ruled 2026-10-01</strong></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section>
+<h2>Part D — what this change touches elsewhere</h2>
+<ul>
+<li><a href="crate-layout-1-8-2026-10-01.md">crate-layout-1-8-2026-10-01.md</a>: the role word is the gate's <code>capability</code>, not "tool"; the header cites design-plan cards 1.3 and 1.6 and the unified plan for the 1.7 crates (card 1.7 is dbt); <code>silver/</code> is on <code>main</code> already (S-0 and S-1, five modules), so the arrival reads "S-2 onward at 1.7"; §4 gains the <code>repark-delta</code> row.</li>
+<li><a href="roadmap-design-plan-2026-08-29.md">roadmap-design-plan-2026-08-29.md</a> card 1.6: Trino struck (1.10 since 2026-09-13), <code>SourceSpec</code> from CFG-2, the CC-2 module split, the ES-1 auth-method field.</li>
+<li><a href="release-roadmap-2026-08-29.md">release-roadmap-2026-08-29.md</a>: the 1.6 row's "1.8's CDC" is 1.7's; the explicitly-not-planned list carries the CC-10 and ES-10 wording; the 2.1, 2.7 and 3.0 rows carry ES-5, ES-4, ES-3 and ES-9; a Q&amp;A row for this ruling.</li>
+<li><code>ARCHITECTURE.md</code>: one sentence naming the five pre-declared arrivals, since the gate declares fifteen crates while the map draws ten.</li>
+<li><code>docs/artifacts/contracts-ahead-of-code-2026-10-01.html</code>: the artifact copy.</li>
+</ul>
+</section>
+<section>
+<h2>Leaves this directory when</h2>
+<p>C-1 has landed with the CC-2 move, the CC-8 chore has merged, and the 1.7 charter carries CC-9 as its first decision; then this file is the dated record and the cards name the contracts.</p>
+</section>
+</main>
+</body></html>

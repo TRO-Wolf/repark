@@ -11,6 +11,8 @@ Current state (release, delivered surface, what happens next) is **[../STATUS.md
 not this directory.
 
 ## Contents
+- [wo/](wo/map.md) — **work orders by grade (2026-10-01):** the three-grade template (self-directed /
+  guided / clerk), T-1 and C-0 at clerk grade, the ATTR-ID-1 orders moved out of `/tmp`.
 - [ledgers/](ledgers/map.md) — **the ledger bins (DL-1, 2026-08-23):** `staging/` →
   `completed/` → `archive/yyyy-mm/`; the directory is the status. Every unit ledger lives there
   (the 2026-08 backfill moved 122 to the archive and left four open charters in `staging/`).

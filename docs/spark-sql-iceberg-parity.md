@@ -1697,7 +1697,11 @@ perfectly good read.
   `crates/repark-spark/src/tests/v3_cow.rs::v3_create_with_encryption_key_id_still_scans_without_a_kms`
 - **Rationale** — DECLARED exclusion, owner-dated 2026-08-24. Implementing envelope encryption
   is fork work (GAP_MATRIX R130) and is not on the v1.0 slate. The pin holds the honest
-  current behavior so a later encryption landing reds it on purpose.
+  current behavior so a later encryption landing reds it on purpose. **Owner ruling 2026-10-01
+  (ES-3 of [../task/roadmap/epic-term/contracts-ahead-of-code-2026-10-01.md](../task/roadmap/epic-term/contracts-ahead-of-code-2026-10-01.md)):
+  refuse** — the first write to a table carrying `encryption.key-id` refuses, as Spark does
+  without a KMS; `CREATE` keeps succeeding as in Spark; a product card, release the owner's,
+  flipping the pin above on purpose.
 
 #### D-SHOW-TBLPROPERTIES — `SHOW TBLPROPERTIES t` answers Spark's rows on Iceberg tables — **FIXED 2026-09-26**
 
