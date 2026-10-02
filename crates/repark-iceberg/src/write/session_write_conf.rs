@@ -141,6 +141,7 @@ impl SessionWriteView {
             write_format: statement.write_format.clone(),
             delete_format: statement.delete_format.clone(),
             output_spec_id: statement.output_spec_id,
+            case_sensitive: statement.case_sensitive,
         }
     }
 }

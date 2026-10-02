@@ -82,6 +82,11 @@ fn audit_node(node: &LogicalPlan, written: &WrittenRefs, inside: bool) -> Result
             Ok(TreeNodeRecursion::Continue)
         })?;
     }
+    if written.has_star
+        && let LogicalPlan::Projection(projection) = node
+    {
+        super::star_twins::refuse_star_twins(node, &projection.expr, &twins)?;
+    }
     Ok(())
 }
 

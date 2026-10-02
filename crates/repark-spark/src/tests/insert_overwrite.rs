@@ -792,12 +792,12 @@ async fn empty_insert_overwrite_case_ambiguous_column_refuses() {
         ],
     )
     .unwrap();
-    ctx.register_batch("case_collide", batch).unwrap();
+    ctx.register_batch("cc", batch).unwrap();
 
     let error = execute(
         &ctx,
         &catalogs,
-        "INSERT OVERWRITE case_collide (id) SELECT 1 AS id WHERE false",
+        "INSERT OVERWRITE cc (id) SELECT 1 AS id WHERE false",
     )
     .await
     .expect_err("case-ambiguous column list must fail loud, not wipe");
@@ -806,7 +806,7 @@ async fn empty_insert_overwrite_case_ambiguous_column_refuses() {
         "error must name the ambiguity, got: {error}"
     );
     assert_eq!(
-        rows(&ctx, &catalogs, "SELECT * FROM case_collide").await,
+        rows(&ctx, &catalogs, "SELECT 1 FROM cc HAVING COUNT(*)=1").await,
         1,
         "ambiguous empty OW must leave prior rows"
     );

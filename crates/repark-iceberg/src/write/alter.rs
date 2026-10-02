@@ -1,14 +1,12 @@
 //! `ALTER TABLE` table-level mutations on the iceberg-rust 0.9.1 **public** API.
 
-use std::collections::HashMap;
-use std::hash::BuildHasher;
-
 use iceberg::spec::{PrimitiveType, Type};
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::{Catalog, Result, TableIdent, table::Table};
 
 pub use super::column_move::{resolve_batch_move_names, resolve_move_names, starts_with_alter};
 pub use super::partition_spec::{PartitionSpecChange, apply_partition_spec_changes};
+pub use super::table_admin::{rename_table, set_table_properties, unset_table_properties};
 
 /// Where a newly added column lands in its parent struct (Spark `FIRST` / `AFTER col`).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -72,55 +70,6 @@ pub enum SchemaChange {
     },
 }
 
-/// `ALTER TABLE … SET TBLPROPERTIES (…)` — set/overwrite table properties.
-/// # Errors
-/// Propagates any [`iceberg::Error`] from loading the table or committing the transaction.
-pub async fn set_table_properties<S: BuildHasher>(
-    catalog: &dyn Catalog,
-    ident: &TableIdent,
-    properties: &HashMap<String, String, S>,
-) -> Result<()> {
-    let table = catalog.load_table(ident).await?;
-    let tx = Transaction::new(&table);
-    let mut action = tx.update_table_properties();
-    for (key, value) in properties {
-        action = action.set(key.clone(), value.clone());
-    }
-    let tx = action.apply(tx)?;
-    tx.commit(catalog).await?;
-    Ok(())
-}
-
-/// `ALTER TABLE … UNSET TBLPROPERTIES (…)` — remove table properties by key.
-/// # Errors
-/// Propagates any [`iceberg::Error`] from loading the table or committing the transaction.
-pub async fn unset_table_properties(
-    catalog: &dyn Catalog,
-    ident: &TableIdent,
-    keys: &[String],
-) -> Result<()> {
-    let table = catalog.load_table(ident).await?;
-    let tx = Transaction::new(&table);
-    let mut action = tx.update_table_properties();
-    for key in keys {
-        action = action.remove(key.clone());
-    }
-    let tx = action.apply(tx)?;
-    tx.commit(catalog).await?;
-    Ok(())
-}
-
-/// `ALTER TABLE … RENAME TO …` — rename a table within (or across namespaces of) a catalog.
-/// # Errors
-/// Propagates any [`iceberg::Error`] (e.g.
-pub async fn rename_table(
-    catalog: &dyn Catalog,
-    src: &TableIdent,
-    dest: &TableIdent,
-) -> Result<()> {
-    catalog.rename_table(src, dest).await
-}
-
 /// Apply a batch of schema-evolution ops as ONE `UpdateSchema` transaction (I6).
 /// # Errors
 /// Propagates any [`iceberg::Error`] from load, action apply (validation), or commit.
@@ -150,9 +99,9 @@ pub async fn apply_schema_changes_on_table(
         return Ok(());
     }
     let tx = Transaction::new(table);
-    // Spark `spark.sql.caseSensitive=false` default — match column names case-insensitively.
-    let mut action = tx.update_schema().case_sensitive(false);
-    for change in changes {
+    let (sensitive, changes) = super::column_move::route_schema_changes(table, changes);
+    let mut action = tx.update_schema().case_sensitive(sensitive);
+    for change in &changes {
         action = match change {
             SchemaChange::AddColumn {
                 name,
@@ -196,6 +145,7 @@ pub async fn apply_schema_changes_on_table(
 mod tests {
     use super::*;
 
+    use std::collections::HashMap;
     use std::future::Future;
     use std::pin::Pin;
     use std::sync::Arc;

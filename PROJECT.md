@@ -94,13 +94,15 @@ The reasons someone picks this over DuckDB or Polars; everything else is table s
 
 ```
 crates/
-  repark-core        lazy-frame IR, planning, optimizer hooks, Session
-  repark-exec        execution config, spill, out-of-core (thin over DataFusion early on)
+  repark-core        lazy-frame IR, planning, optimizer hooks, Session, execution config and spill, silver/
   repark-io          smart CSV, Excel, JSON — the inference readers
-  repark-iceberg     catalogs (Glue, S3 Tables) + DML + maintenance; adapter over the owned fork
+  repark-iceberg     catalogs (Glue, S3 Tables, REST) + DML + maintenance; adapter over the owned fork
   repark-connect     Postgres, MSSQL connectivity
+  repark-cdc         native snapshot + CDC capture into Bronze
+  repark-crawler     bounded discovery runs; proposes Bronze and Silver specifications
   repark-sql         ANSI SQL front end (native dialect)
-  repark-spark       Spark semantics: function shims, Spark SQL dialect, the parity surface
+  repark-spark-dialect  the Spark SQL grammar, below the door
+  repark-spark       Spark semantics: the router and the DDL / DML / inspect / procedure families
   repark-ml          Arrow→DMatrix handoff, out-of-core training
   repark-python      PyO3: thin adapter over the internal engine API
 python/repark        native lazy API + repark.sql()

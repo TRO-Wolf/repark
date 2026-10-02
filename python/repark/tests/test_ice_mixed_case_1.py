@@ -578,11 +578,10 @@ _MEASURED_QUERY_CELLS = [
     "V02_control_outer_only",
     "V04_join_using_select",
 ]
-_MEASURED_TWIN_CELLS = [
+_MEASURED_TWIN_REF_CELLS = [
     "L08_qualified_twin",
     "L08_bare_twin",
     "L08_bare_twin_lower",
-    "L08_star_twin",
 ]
 _MEASURED_SETUP = [
     "CREATE NAMESPACE {CAT}.ns",
@@ -644,15 +643,15 @@ def test_measured_join_using_insert_answers_spark(measured: ReparkSession) -> No
     assert _sorted_rows(table) == recorded["rows"]
 
 
-@pytest.mark.parametrize("cell_id", _MEASURED_TWIN_CELLS)
-def test_measured_case_twin_table_refuses_at_adoption(
+@pytest.mark.parametrize("cell_id", _MEASURED_TWIN_REF_CELLS)
+def test_measured_case_twin_table_adopts_then_refuses_references(
     measured: ReparkSession, cell_id: str, tmp_path: Path
 ) -> None:
-    """Spark loads a case-twin Iceberg table and refuses the reference; RePark refuses the load.
+    """Spark adopts a case-twin Iceberg table and refuses each reference; RePark now does too.
 
-    Declared (registry ICE-MIXED-CASE-1 twin row): the fork's schema index
-    rejects ``id`` + ``ID`` while parsing the metadata, so every L-08 cell
-    refuses loud at adoption instead of at resolution. Never a silent answer.
+    RP-56: the fork's lazy lower-case index parses Spark's twin metadata, so
+    ``register_table`` adopts and every L-08 reference refuses at resolution with
+    Spark's ``AMBIGUOUS_REFERENCE`` sentence. Never a silent answer.
     """
     recorded = _MEASURED_CELLS[cell_id]
     assert recorded["outcome"] == "error"
@@ -661,13 +660,15 @@ def test_measured_case_twin_table_refuses_at_adoption(
     metadata = tmp_path / "tw" / "metadata" / "v3.metadata.json"
     metadata.parent.mkdir(parents=True)
     shutil.copyfile(_TWIN_METADATA, metadata)
-    with pytest.raises(Exception, match="Cannot build lower case index: id and ID collide"):
-        measured.sql(
-            f"CALL {_MEASURED_CATALOG}.system.register_table("
-            f"table => 'ns.tw', metadata_file => '{metadata}')"
-        ).collect()
-    with pytest.raises(AnalysisException):
+    measured.sql(
+        f"CALL {_MEASURED_CATALOG}.system.register_table("
+        f"table => 'ns.tw', metadata_file => '{metadata}')"
+    ).collect()
+    assert measured.catalog.tableExists(f"{_MEASURED_CATALOG}.ns.tw")
+    with pytest.raises(AnalysisException) as caught:
         measured.sql(_measured_sql(cell_id)).collect()
+    assert "AMBIGUOUS_REFERENCE" in str(caught.value)
+    assert "SQLSTATE: 42704" in str(caught.value)
 
 
 @pytest.mark.parametrize(
@@ -778,34 +779,57 @@ def test_correlated_scalar_subquery_select_list_refuses_like_spark(
             measured.sql(statement).to_arrow()
 
 
-def test_star_over_a_case_twin_frame_answers_both_columns_declared(
+def test_star_over_a_case_twin_frame_answers_like_spark(
     measured: ReparkSession,
 ) -> None:
-    """Q-21b-12 (declared): ``SELECT *`` over a twin input answers where Spark refuses 42711.
+    """Q-21b-12 reopened by the RP-56 verifier fold: the twin-frame star answers.
 
-    Spark refuses the star over the twin Iceberg table (``L08_star_twin``) and
-    the twin temp view's creation (``N03_star_twin_view_create``) with
-    ``[COLUMN_ALREADY_EXISTS]``. RePark refuses the twin Iceberg table at
-    adoption and the unquoted view DDL at planning, but a twin frame registered
-    from the DataFrame door answers the star: the DataFrame ``filter`` and
-    ``table`` paths lower to the same ``SELECT *``, so a star refusal in the
-    fold module would refuse DataFrame calls Spark answers (registry
-    ICE-MIXED-CASE-1 star row).
+    p9 ``f_twv_read`` (Spark 4.1.2, 2026-09-28): the DataFrame temp-view star
+    answers ``[a, A]`` with the row — only the scan of a twin catalog table
+    refuses (``L08_star_twin``). The SQL-text twin view still refuses at
+    creation (``N03_star_twin_view_create``, Spark's ``COLUMN_ALREADY_EXISTS``
+    sentence since CASESENS-1 slice 4).
     """
-    for cell in (_MEASURED_CELLS["L08_star_twin"], _ROUND_2_CELLS["N03_star_twin_view_create"]):
-        assert cell["outcome"] == "error"
-        assert "[COLUMN_ALREADY_EXISTS]" in cell["message"][0]
-        assert "SQLSTATE: 42711" in cell["message"][0]
+    assert _MEASURED_CELLS["L08_star_twin"]["outcome"] == "error"
     measured.sql("SELECT 1 AS id, 0 AS `ID`").createOrReplaceTempView("twv")
     table = measured.sql("SELECT * FROM twv").to_arrow()
     assert table.column_names == ["id", "ID"]
     assert _sorted_rows(table) == [[1, 0]]
+    measured.createDataFrame([(1, 2)], ["a", "A"]).createOrReplaceTempView("twv_df")
+    df_table = measured.sql("SELECT * FROM twv_df").to_arrow()
+    assert df_table.column_names == ["a", "A"]
+    assert _sorted_rows(df_table) == [[1, 2]]
     with pytest.raises(
         AnalysisException,
         match=r"\[COLUMN_ALREADY_EXISTS\] The column `id` already exists\. "
         r"Choose another name or rename the existing column\. SQLSTATE: 42711",
     ):
         measured.sql(_ROUND_2_CELLS["N03_star_twin_view_create"]["sql"]).collect()
+
+
+def test_case_twin_table_star_answers_under_true_and_refuses_under_false(
+    measured: ReparkSession,
+) -> None:
+    """RP-56 fold: with real data the twin-table star answers under true, refuses under false.
+
+    Under ``caseSensitive=true`` the twin table creates and reads back both
+    columns with the row; under ``false`` the star refuses with the recorded
+    ``L08_star_twin`` sentence instead of answering.
+    """
+    measured.conf.set(_CASE_SENSITIVE_KEY, "true")
+    try:
+        measured.sql(
+            f"CREATE TABLE {_MEASURED_CATALOG}.ns.twreal (id INT, ID INT) USING iceberg"
+        ).collect()
+        measured.sql(f"INSERT INTO {_MEASURED_CATALOG}.ns.twreal VALUES (1, 0)").collect()
+        table = measured.sql(f"SELECT * FROM {_MEASURED_CATALOG}.ns.twreal").to_arrow()
+        assert table.column_names == ["id", "ID"]
+        assert _sorted_rows(table) == [[1, 0]]
+    finally:
+        measured.conf.set(_CASE_SENSITIVE_KEY, "false")
+    with pytest.raises(AnalysisException) as caught:
+        measured.sql(f"SELECT * FROM {_MEASURED_CATALOG}.ns.twreal").collect()
+    assert _MEASURED_CELLS["L08_star_twin"]["message"][0] in str(caught.value)
 
 
 @pytest.mark.parametrize("cell_id", sorted(_ROUND_2_CELLS))

@@ -338,7 +338,8 @@ async fn finish_ctas_staged_commit(
             .map_err(iceberg_err)?;
         return Ok(());
     }
-    let (snapshot_extra, staging) = options.resolve_with_session(ctx)?;
+    let (snapshot_extra, mut staging) = options.resolve_with_session(ctx)?;
+    staging.case_sensitive = !crate::spark_door_case_insensitive(ctx.state().config().options());
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
     let stream = query.execute_stream().await?;
     let staged_table = staged.table().clone();
@@ -412,9 +413,17 @@ pub(crate) async fn write_ctas_query(
     query: DataFrame,
 ) -> Result<Vec<iceberg::spec::DataFile>> {
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
+    let case_insensitive = crate::spark_door_case_insensitive(ctx.state().config().options());
     let task_ctx = Arc::new(query.task_ctx());
     let plan = query.create_physical_plan().await?;
-    repark_iceberg::write::write_data_files_from_plan(table, plan, task_ctx, concurrency).await
+    repark_iceberg::write::write_data_files_from_plan(
+        table,
+        plan,
+        task_ctx,
+        concurrency,
+        case_insensitive,
+    )
+    .await
 }
 
 /// Resolve table location and `FileIO` for staged CTAS before any data write.
@@ -651,7 +660,9 @@ pub(crate) async fn execute_ctas_service_managed(
             }
             return Ok(());
         }
-        let (snapshot_extra, staging) = options.resolve_with_session(ctx)?;
+        let (snapshot_extra, mut staging) = options.resolve_with_session(ctx)?;
+        staging.case_sensitive =
+            !crate::spark_door_case_insensitive(ctx.state().config().options());
         let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
         let stream = query.execute_stream().await?;
         let data_files = if table.metadata().default_partition_spec().is_unpartitioned() {

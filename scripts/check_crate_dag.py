@@ -71,6 +71,11 @@ TIERS: dict[str, int] = {
     "repark-ml": 3,
     "repark-python": 4,
     "repark-distributed": 3,
+    "repark-connect": 1,
+    "repark-cdc": 1,
+    "repark-io": 1,
+    "repark-spark-dialect": 3,
+    "repark-crawler": 3,
 }
 
 # The role vocabulary. The structural rules quantify over exactly these; `audit_policy`
@@ -101,6 +106,11 @@ ROLES: dict[str, str] = {
     "repark-sql": "door",
     "repark-python": "bindings",
     "repark-distributed": "runtime",
+    "repark-connect": "table service",
+    "repark-cdc": "table service",
+    "repark-io": "table service",
+    "repark-spark-dialect": "capability",
+    "repark-crawler": "capability",
 }
 
 # The explicit edge table: (source, target) -> (permitted kinds, why the edge exists). EVERY
@@ -219,6 +229,84 @@ ALLOWED_EDGES: dict[tuple[str, str], tuple[frozenset[str], str]] = {
         "DEV-ONLY: the EC-1 type-identity guard names `repark_common::Error` alongside "
         "`repark_core::Error`, which is what makes 'the same type, re-exported' a compile error "
         "to break. The binding's product dep list stays the five crates the design names",
+    ),
+    ("repark-connect", "repark-common"): (
+        frozenset({"normal"}),
+        "PRE-DECLARED for release 1.6 (task/roadmap/epic-term/crate-layout-1-8-2026-10-01.md): "
+        "the error seed and the shared source identity the Postgres and SQL Server providers "
+        "render through. A tier-1 service never reaches the engine; repark-core reaches down",
+    ),
+    ("repark-cdc", "repark-common"): (
+        frozenset({"normal"}),
+        "PRE-DECLARED for release 1.7 (crate-layout-1-8-2026-10-01.md): the error seed the "
+        "capture runtime and its checkpoints speak",
+    ),
+    ("repark-cdc", "repark-iceberg"): (
+        frozenset({"normal"}),
+        "PRE-DECLARED for release 1.7 (crate-layout-1-8-2026-10-01.md): the Bronze append "
+        "path — captured events land through the owned write adapter, same tier",
+    ),
+    ("repark-io", "repark-common"): (
+        frozenset({"normal"}),
+        "PRE-DECLARED for release 1.8 (crate-layout-1-8-2026-10-01.md): the error seed the "
+        "inference readers raise through; the readers are DataFusion-native TableProviders",
+    ),
+    ("repark-core", "repark-connect"): (
+        frozenset({"normal"}),
+        "PRE-DECLARED for release 1.6 (crate-layout-1-8-2026-10-01.md): Session registers "
+        "the configured database sources in the one federated namespace, the way it "
+        "registers Iceberg catalogs today",
+    ),
+    ("repark-core", "repark-cdc"): (
+        frozenset({"normal"}),
+        "PRE-DECLARED for release 1.7 (crate-layout-1-8-2026-10-01.md): in embedded mode "
+        "Session owns the enabled capture jobs and their shutdown-to-checkpoint lifecycle "
+        "(unified-database-query-cdc-silver-plan-2026-09-13.md)",
+    ),
+    ("repark-core", "repark-io"): (
+        frozenset({"normal"}),
+        "PRE-DECLARED for release 1.8 (crate-layout-1-8-2026-10-01.md): the session-level "
+        "reader entry points install the inference readers as table providers",
+    ),
+    ("repark-spark-dialect", "repark-common"): (
+        frozenset({"normal"}),
+        "PRE-DECLARED for the tidy window (crate-layout-1-8-2026-10-01.md T-5): "
+        "repark_common::spark_error, the condition catalogue the grammar raises through",
+    ),
+    ("repark-spark-dialect", "repark-core"): (
+        frozenset({"normal"}),
+        "PRE-DECLARED for the tidy window (T-5): the SqlDialect seam and the plan types "
+        "the rewrites produce",
+    ),
+    ("repark-spark-dialect", "repark-functions"): (
+        frozenset({"normal"}),
+        "PRE-DECLARED for the tidy window (T-5): literal typing and the cast tables; "
+        "same tier, and nothing in functions ever imports the dialect",
+    ),
+    ("repark-spark", "repark-spark-dialect"): (
+        frozenset({"normal"}),
+        "PRE-DECLARED for the tidy window (T-5): the router and the four command families "
+        "consume the grammar extracted below them; door -> capability, same tier",
+    ),
+    ("repark-crawler", "repark-common"): (
+        frozenset({"normal"}),
+        "PRE-DECLARED for release 1.7 (crate-layout-1-8-2026-10-01.md): the error seed "
+        "and the shared source identity a discovery run records",
+    ),
+    ("repark-crawler", "repark-core"): (
+        frozenset({"normal"}),
+        "PRE-DECLARED for release 1.7 (crate-layout-1-8-2026-10-01.md): profiling under a "
+        "budget runs through a Session; a crawler run proposes and never publishes",
+    ),
+    ("repark-crawler", "repark-connect"): (
+        frozenset({"normal"}),
+        "PRE-DECLARED for release 1.7 (crate-layout-1-8-2026-10-01.md): discovery reads "
+        "source catalogs through the connector's read surface, without side effects",
+    ),
+    ("repark-python", "repark-crawler"): (
+        frozenset({"normal"}),
+        "PRE-DECLARED for release 1.7 (crate-layout-1-8-2026-10-01.md): a discovery run "
+        "is started from Python; the bindings reach down, nothing reaches them",
     ),
 }
 

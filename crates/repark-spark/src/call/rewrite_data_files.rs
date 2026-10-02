@@ -59,10 +59,12 @@ pub(super) async fn execute_rewrite_data_files(
                 .to_string(),
         ));
     }
+    let case_sensitive = !crate::spark_door_case_insensitive(ctx.state().config().options());
     let where_predicate = match bound.optional_string("where")? {
         Some(where_sql) => Some(parse_rewrite_where(
             where_sql.as_str(),
             table.metadata().current_schema(),
+            case_sensitive,
         )?),
         None => None,
     };
