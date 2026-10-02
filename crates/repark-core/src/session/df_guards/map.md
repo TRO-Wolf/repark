@@ -121,6 +121,17 @@ wrapped optimizer rule) and declares this directory.
   plan relation or a facade entry under the live rule, so join sides and
   `alias()` frames bind through the one id rule; a using-key union binds
   either side. Pins: `../tests/attr_id_s3e.rs`. pins: attr-id-1/C-039
+- `attr_lineage.rs` — **ATTR-ID-1 S4 (2026-10-02):** projection-output lineage,
+  a pure move out of `attr_id.rs` when that file passed the 1000-line ceiling.
+  `projection_source_ids` maps each `Projection` output to its input attribute id
+  through alias chains, single-column `coalesce` (`fillna`, both the built form and
+  the optimizer's `CASE WHEN col IS NOT NULL THEN col ELSE lit` form), and
+  single-column searched `CASE` (`replace`'s `WHEN col = lit THEN lit ELSE col`,
+  with the type-group cast and const-foldable literal casts). Only these strict
+  shapes resolve; anything else reads `None` so the caller keeps the old miss
+  behavior. Re-exported through `frame_names`. Pins:
+  `python/repark/tests/test_attr_id_1_s4.py` (fillna/replace/eqNullSafe/expression
+  pins). pins: attr-id-1/C-040
 - `case_bind.rs` — **U11-EDGE-1 (2026-09-26):** `bind_case_insensitive`, run first by
   `subquery.rs`'s `resolve_bound_expr` (the DataFrame door's one binding hook). An
   unqualified column the frame schema does not hold exactly binds to the single field that

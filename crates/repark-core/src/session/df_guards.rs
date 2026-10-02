@@ -15,6 +15,7 @@ use repark_common::Error;
 use crate::extension::SessionExtension;
 
 pub(crate) mod attr_id;
+pub(crate) mod attr_lineage;
 pub mod case_bind;
 pub(crate) mod sort_names;
 pub(super) mod subquery;

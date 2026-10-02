@@ -20,7 +20,7 @@ use datafusion::logical_expr::{
 use datafusion::optimizer::{ApplyOrder, OptimizerConfig, OptimizerRule};
 use repark_common::names::NameRule;
 
-const ATTR_KEY: &str = "repark.attr";
+pub(crate) const ATTR_KEY: &str = "repark.attr";
 
 static NEXT_ATTR: AtomicU64 = AtomicU64::new(1);
 
@@ -45,7 +45,7 @@ impl AttrId {
         self.0.len() == PROCESS_PREFIX.len() + 12 && self.0.starts_with(PROCESS_PREFIX.as_str())
     }
 
-    fn native(field: &Field) -> Option<Self> {
+    pub(crate) fn native(field: &Field) -> Option<Self> {
         Self::of(field).filter(Self::is_native)
     }
 

@@ -20,6 +20,7 @@ use super::attr_id::same_relation;
 
 pub use super::attr_id::{AttrId, Resolution, alias_with_fresh_id, attribute_ids, stamp, strip};
 pub use super::attr_id::{plan_is_relation, plan_is_stamped, remint_join_collisions, resolve};
+pub use super::attr_lineage::projection_source_ids;
 pub use super::sort_names::{SortShape, bind_free_names, bind_qualified_free_refs};
 pub use super::sort_names::{engine_field_is_unique, grandchild_key, grandchild_qualified_key};
 pub use super::sort_names::{join_dup_below_wrappers, join_output_sources};

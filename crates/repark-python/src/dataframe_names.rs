@@ -34,6 +34,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(frame_case_sensitive, module)?)?;
     module.add_function(wrap_pyfunction!(frame_is_relation, module)?)?;
     module.add_function(wrap_pyfunction!(grandchild_key_status, module)?)?;
+    module.add_function(wrap_pyfunction!(projection_source_ids, module)?)?;
     module.add_function(wrap_pyfunction!(java_fold_hits, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_join_condition, module)?)?;
     module.add_function(wrap_pyfunction!(remint_cross_collisions, module)?)?;
@@ -382,6 +383,14 @@ pub(crate) fn java_fold_hits(
 #[pyfunction]
 pub(crate) fn attribute_ids(frame: &PyDataFrame) -> Vec<Option<String>> {
     repark_core::frame_names::attribute_ids(frame.inner().schema())
+        .into_iter()
+        .map(|id| id.map(|id| id.as_str().to_string()))
+        .collect()
+}
+
+#[pyfunction]
+pub(crate) fn projection_source_ids(frame: &PyDataFrame) -> Vec<Option<String>> {
+    repark_core::frame_names::projection_source_ids(frame.inner().logical_plan())
         .into_iter()
         .map(|id| id.map(|id| id.as_str().to_string()))
         .collect()
