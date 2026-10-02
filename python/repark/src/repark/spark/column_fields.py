@@ -634,6 +634,8 @@ def _exact_rebind_position(
     from repark.spark.column import Column
 
     engine_field = native_names[position]
+    if native_names.count(engine_field) != 1:
+        return column
     quoted = _quote_ident(engine_field)
     shown = column._projection_name if column._projection_name is not None else engine_field
     rebound = Column(

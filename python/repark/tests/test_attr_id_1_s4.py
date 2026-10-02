@@ -268,3 +268,13 @@ def test_s4_compound_past_dup_output_refuses(spark: ReparkSession) -> None:
     projected = frame.select(frame.v, frame.v.alias("V"))
     with pytest.raises(AnalysisException, match="AMBIGUOUS_REFERENCE"):
         projected.select(projected.v + 1).collect()
+
+
+def test_s4_dup_engine_parent_ref_keeps_shaped_ambiguity(spark: ReparkSession) -> None:
+    """Parent refs onto duplicate engine names keep the shaped ambiguity (insensitive)."""
+    left = spark.createDataFrame([(1, 10)], ["id", "v"])
+    right = spark.createDataFrame([(1, 1)], ["id", "v"])
+    joined = left.join(right, "id")
+    with pytest.raises(AnalysisException) as refused:
+        joined.select(left.v, right.v).collect()
+    assert refused.value.getCondition() == "AMBIGUOUS_REFERENCE"

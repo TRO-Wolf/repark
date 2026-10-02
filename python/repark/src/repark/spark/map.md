@@ -351,7 +351,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   is deleted and the sameness test moves to `Column._birth_frame`: a column bound
   against the target frame stays verbatim (the engine shapes same-frame twin
   refusals), any other frame's held id rebinds by position through
-  `_exact_rebind_position`, which no longer gates on engine uniqueness. A lineage
+  `_exact_rebind_position`, which keeps the written ref when the target engine
+  name is not exactly unique (a marked duplicate-named ref would fail with a
+  bare engine error instead of the shaped ambiguity the engine reports for the
+  quoted written ref). A lineage
   hit (`projection_source_ids`) binds only when the output display still shows the
   column's written name under the live session rule, so a rename that drops the
   name refuses while a case-only rename still binds. `outer`, the sort bound
