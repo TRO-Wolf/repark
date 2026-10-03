@@ -228,8 +228,11 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   import; reads build root/derived nodes on first touch into a weak table
   keyed by frame (a missing entry is a loud internal error, never a
   fallback), writes record deferred roots, deferred derived args, or built
-  nodes. No module docstring: the lane's no-comments ruling covers the new
-  file; the contract lives here. `_frame_renews` walks deferred markers to
+  nodes. Deferred entries snapshot the spawn-time native plan, because UDF
+  and cache rewrites replace `_inner` after spawn; the lazy build runs on
+  the snapshot, so it sees exactly the plan the eager build saw. No module
+  docstring: the lane's no-comments ruling covers the new file; the contract
+  lives here. `_frame_renews` walks deferred markers to
   the nearest built node without building, mirroring the Rust renews match
   (roots never renew, derived inherits, set-op unions); a missing entry is
   the same loud error. The walk reads True on a derived marker over a

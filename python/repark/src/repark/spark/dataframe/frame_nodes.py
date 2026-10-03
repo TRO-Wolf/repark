@@ -15,10 +15,10 @@ def _resolve(frame: Any) -> Any:
     if entry[0] == "node":
         return entry[1]
     if entry[0] == "root":
-        node = _native.frame_root(frame._inner)
+        node = _native.frame_root(entry[1])
     else:
         node = _native.frame_derived(
-            frame._inner, entry[1]._frame_node, [other._frame_node for other in entry[2]]
+            entry[1], entry[2]._frame_node, [other._frame_node for other in entry[3]]
         )
     _NODES[frame] = ("node", node)
     registry = frame._alive_token.setdefault("frame_registry", weakref.WeakValueDictionary())
@@ -41,16 +41,16 @@ def _frame_renews(frame: Any) -> bool:
             if entry[1].renews:
                 return True
         elif entry[0] == "derived":
-            stack.append(entry[1])
-            stack.extend(entry[2])
+            stack.append(entry[2])
+            stack.extend(entry[3])
     return False
 
 
 def _assign(frame: Any, value: Any) -> None:
     if value is None:
-        _NODES[frame] = ("root",)
+        _NODES[frame] = ("root", frame._inner)
     elif isinstance(value, tuple):
-        _NODES[frame] = ("derived", value[0], value[1])
+        _NODES[frame] = ("derived", frame._inner, value[0], value[1])
     else:
         _NODES[frame] = ("node", value)
 
