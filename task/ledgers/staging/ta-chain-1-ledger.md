@@ -23,7 +23,7 @@ crate's golden oracle, skips each input's leading invalid run before calling the
 | C-004 | An interior NaN after the start still propagates exactly as in C. | `interior_nan_after_the_start_still_propagates` (inline, `prefix.rs`). | PROVEN | `trange(h=[NaN,3,4,…], l=[1,2,NaN,4,…])` = NaN×3 then 1.5; `atr(…, 2)` all-NaN; polars_talib answers the same (probe §1). pins: ta-chain-1/C-004. §2. |
 | C-005 | The kernel layer is untouched: no edit under `crates/repark-ta/src/` outside `udf/`; `cargo test -p repark-ta` count equals base; `goldens.rs` and the 158 kernel goldens are byte-identical. | `cargo test -p repark-ta` on base and head; `git diff origin/main --stat`. | PROVEN | 159 = 159 (106 lib + 11 contract + 41 goldens + 1 microbench) on both; the recorder rewrote the 158 kernel goldens byte-identical (no diff). pins: ta-chain-1/C-005. §2. |
 | C-006 | Perf: `bench_kernel_race.py --quick` head/base median ≤ 1.02 (the start-0 path stays a borrow). | Three interleaved runs per side, release builds, §4. | PROVEN | Sum of the four `repark_engine` medians: head 0.036307 s, base 0.036049 s, ratio 1.0072. Per kernel: EMA 1.0006, BBANDS 1.0028, RSI 1.0126, SMA 1.0212 (inside the run spread; §4). pins: ta-chain-1/C-006. §4. |
-| C-007 | Mutation: dropping the re-prefix fails `prefix_goldens` on length; forcing the start to 0 fails the prefix goldens; both reverted, tree clean. | Two mutation runs of `--test prefix_goldens` plus `udf::prefix`. | PROVEN | M1: 26 of 26 failed (length mismatch), 4 of 4 inline tests failed. M2: 24 of 26 failed (bit mismatch); the two `linearreg_5` twins survive (§3). Reverted with `git checkout`; `git status` clean. pins: ta-chain-1/C-007. §3. |
+| C-007 | Mutation: dropping the re-prefix fails `prefix_goldens` on length; forcing the start to 0 fails the prefix goldens; the all-invalid mutations M8 and M9 fail the wrapper-level all-invalid tests; all reverted, tree clean. | Mutation runs of `--test prefix_goldens` and `udf::prefix`. | PROVEN | M1: 26 of 26 failed (length mismatch), 4 of 4 inline tests failed. M2: 24 of 26 failed (bit mismatch); the two `linearreg_5` twins survive (§3). M8 (single-output helper answers `0.0 × len` on all-invalid input): 3 failed (`…_for_ad`, `…_for_plus_dm`, `…one_input_entirely_invalid…_trange`). M9 (all-invalid input routed through start 0, base's kernel answer): 4 failed (the three all-invalid family tests plus the trange shape). All reverted; tree clean. pins: ta-chain-1/C-007. §3. |
 
 ## 1. Red-first and oracle record (2026-10-03)
 
@@ -38,7 +38,15 @@ polars_talib probe (polars_talib 0.1.5, TA-Lib 0.4.0, polars 1.32.3):
 `ema([NaN,NaN,1..12],3)` and `ema([null,null,1..12],3)` both answer NaN×4 then 2.0..11.0;
 `trange` on the R-TC1-1 inputs answers NaN×3 then 1.5; `atr(…,2)` all-NaN. An all-NaN input
 makes polars_talib raise `TA_OUT_OF_RANGE_END_INDEX`; RePark answers NaN on every band there,
-by the owner's 2026-10-03 amendment, the same answer as at base.
+by the owner's 2026-10-03 amendment. **This is a change from base, not the base answer**
+(verifier fold, 2026-10-03, citing the DIFF-PROBE's 54 cells). On all-NaN/NULL input base
+answered 0.0 for `ad`, `adosc`, `aroon_down`, `aroon_up`, `aroonosc`, `mfi`, `minus_dm` and
+`plus_dm`, and 1.0 on one row for `sarext` (startvalue 1.0). Head answers NaN on every row.
+A second shape moves for the same reason. When ONE input is entirely invalid and the others are
+valid (for example close all-NaN, high and low finite), the start equals the length. `trange`,
+`atr`, `adx`, `obv` and `mfi` then go from finite on base to all-NaN on head. polars_talib raises
+there too, so this is intended under R-TC1-1. `evaluate_all_one_input_entirely_invalid_answers_all_nan_for_trange`
+pins it.
 
 ## 2. Implementation record (2026-10-03)
 
@@ -69,6 +77,19 @@ unskipped input the NaN run only blanks the windows that contain it (rows 0..8),
 exactly the skipped answer (start 5 + lookback 4). That series cannot tell the two apart. Every
 recursive or accumulating series does. Both mutations were reverted with `git checkout`, and
 `git status` was clean afterwards.
+
+Verifier fold (2026-10-03, V-1). The amendment's required test drives BBANDS, which answers NaN
+on all-NaN input with or without the skip, so two mutations survived every gate. M8 has the
+single-output helper return `0.0 × len` when start equals the length. M9 routes all-invalid input
+through start 0, which gives back base's 0.0 for `ad`, `mfi`, `plus_dm` and `aroon*`. The fold
+adds wrapper-level tests that drive `TaEvaluator::evaluate_all` with all-NaN and all-NULL input:
+`evaluate_all_all_invalid_input_answers_nan_for_ad`, `…_for_plus_dm` and `…_for_aroon_up`.
+Measured, 8 inline tests:
+- M8: 5 passed, 3 failed (`ad`, `plus_dm`, the trange one-input shape).
+- M9: 4 passed, 4 failed (`ad`, `plus_dm`, `aroon_up`, the trange shape).
+Both were restored from a saved copy and checked byte-identical with `cmp`. V-3: the inline chain
+test now also feeds the TRANGE output with its NaN row as NULL and asserts the same bits, which
+pins the densify path inside `prefix.rs`.
 
 ## 4. Bench record (2026-10-03, R-TC1-5)
 

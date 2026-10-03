@@ -61,7 +61,7 @@ mod tests {
     use datafusion::arrow::array::{Array, ArrayRef, Float64Array};
     use datafusion::logical_expr::PartitionEvaluator;
 
-    use super::super::{TaEvaluator, TaFn};
+    use super::super::{TaEvaluator, TaFn, multi_out_clear};
     use super::*;
     use crate::{atr, ema, trange};
 
@@ -134,10 +134,76 @@ mod tests {
             .collect();
         let tr = evaluate(TaFn::Trange, Vec::new(), &hlc);
         assert!(tr[0].is_nan());
+        let tr_nullable: Vec<Option<f64>> = tr
+            .iter()
+            .map(|value| (!value.is_nan()).then_some(*value))
+            .collect();
         let tr_array: ArrayRef = Arc::new(Float64Array::from(tr));
         let out = evaluate(TaFn::Ema, vec![5.0], &[tr_array]);
         assert_eq!(out.len(), 30);
         assert!(out[..5].iter().all(|value| value.is_nan()));
         assert!(out[5..].iter().all(|value| value.is_finite()));
+        let tr_null_array: ArrayRef = Arc::new(Float64Array::from(tr_nullable));
+        assert_eq!(tr_null_array.null_count(), 1);
+        let out_null = evaluate(TaFn::Ema, vec![5.0], &[tr_null_array]);
+        assert_eq!(out_null.len(), 30);
+        for (a, b) in out.iter().zip(&out_null) {
+            assert!(a.to_bits() == b.to_bits() || (a.is_nan() && b.is_nan()));
+        }
+    }
+
+    fn all_invalid(n_series: usize, len: usize, as_null: bool) -> Vec<ArrayRef> {
+        (0..n_series)
+            .map(|_| {
+                let array = if as_null {
+                    Float64Array::from(vec![None::<f64>; len])
+                } else {
+                    Float64Array::from(vec![f64::NAN; len])
+                };
+                Arc::new(array) as ArrayRef
+            })
+            .collect()
+    }
+
+    fn assert_all_invalid_answers_nan(func: TaFn, n_series: usize, params: &[f64]) {
+        for as_null in [false, true] {
+            multi_out_clear();
+            let out = evaluate(func, params.to_vec(), &all_invalid(n_series, 20, as_null));
+            assert_eq!(out.len(), 20, "{func:?} as_null={as_null}");
+            assert!(
+                out.iter().all(|value| value.is_nan()),
+                "{func:?} as_null={as_null}: {out:?}"
+            );
+        }
+        multi_out_clear();
+    }
+
+    #[test]
+    fn evaluate_all_all_invalid_input_answers_nan_for_ad() {
+        assert_all_invalid_answers_nan(TaFn::Ad, 4, &[]);
+    }
+
+    #[test]
+    fn evaluate_all_all_invalid_input_answers_nan_for_plus_dm() {
+        assert_all_invalid_answers_nan(TaFn::PlusDm, 2, &[14.0]);
+    }
+
+    #[test]
+    fn evaluate_all_all_invalid_input_answers_nan_for_aroon_up() {
+        assert_all_invalid_answers_nan(TaFn::AroonUp, 2, &[14.0]);
+    }
+
+    #[test]
+    fn evaluate_all_one_input_entirely_invalid_answers_all_nan_for_trange() {
+        let high: Vec<f64> = (0..12).map(|i| 51.5 + f64::from(i)).collect();
+        let low: Vec<f64> = (0..12).map(|i| 49.0 + f64::from(i)).collect();
+        let close = vec![f64::NAN; 12];
+        let hlc: Vec<ArrayRef> = [high, low, close]
+            .into_iter()
+            .map(|values| Arc::new(Float64Array::from(values)) as ArrayRef)
+            .collect();
+        let out = evaluate(TaFn::Trange, Vec::new(), &hlc);
+        assert_eq!(out.len(), 12);
+        assert!(out.iter().all(|value| value.is_nan()), "{out:?}");
     }
 }

@@ -34,6 +34,10 @@ Kernel math is **not** here — it stays in `../overlap.rs` etc.
   shape, and a chained TRANGE → EMA through `TaEvaluator`; `interior_nan_after_the_start_still_propagates`
   pins that an interior NaN still propagates as in C (TRANGE costs two rows, ATR(2) stays all-NaN).
   A clean input costs one comparison per series and passes the borrowed slices straight through.
+  Verifier fold: `evaluate_all_all_invalid_input_answers_nan_for_{ad,plus_dm,aroon_up}` (all-NaN
+  and all-NULL through `evaluate_all`; base answered 0.0 there) and
+  `evaluate_all_one_input_entirely_invalid_answers_all_nan_for_trange` (one input all-NaN makes
+  the start equal the length); the chain test carries a NULL twin. pins: ta-chain-1/C-007
   pins: ta-chain-1/C-004, C-006
 - `price.rs` — price-transform family (`avgprice`/`medprice`/`typprice`/
   `wclprice`).
