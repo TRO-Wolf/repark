@@ -8,6 +8,7 @@ from pathlib import Path
 _REPO = Path(__file__).resolve().parents[3]
 _RELEASE_YML = _REPO / ".github" / "workflows" / "release.yml"
 _WHEELS_YML = _REPO / ".github" / "workflows" / "wheels.yml"
+_SMOKE_YML = _REPO / ".github" / "workflows" / "smoke.yml"
 _RELEASE_DOC = _REPO / "docs" / "release.md"
 
 EXPECTED_RELEASE_LEGS: dict[str, str] = {
@@ -30,6 +31,21 @@ EXPECTED_PR_CONDITION = "github.event_name == 'pull_request' || github.ref == 'r
 ADMITTED_SMOKE_CONDITIONS: tuple[str, ...] = (
     EXPECTED_PR_CONDITION,
     f"always() && ({EXPECTED_PR_CONDITION})",
+)
+FORBIDDEN_SMOKE_TRIGGERS: tuple[tuple[str, str], ...] = (
+    ("tags", r"(?m)^\s+tags:"),
+    ("schedule", r"(?m)^ {2}schedule:"),
+    ("workflow_dispatch", r"(?m)^ {2}workflow_dispatch:"),
+)
+PUBLISHING_PATTERNS: tuple[tuple[str, str], ...] = (
+    ("pypa/gh-action-pypi-publish", r"pypa/gh-action-pypi-publish"),
+    ("maturin publish", r"maturin\s+(publish|upload)\b"),
+    ("maturin-action publish command", r"(?m)^\s+command:\s*[\"']?(publish|upload)\b"),
+    ("twine", r"\btwine\b"),
+    ("softprops/action-gh-release", r"softprops/action-gh-release"),
+    ("ncipollo/release-action", r"ncipollo/release-action"),
+    ("actions/create-release", r"actions/create-release"),
+    ("gh release create", r"\bgh\s+release\s+(create|upload)\b"),
 )
 
 
@@ -110,14 +126,32 @@ def _nightly_findings(text: str) -> list[str]:
 def _smoke_findings(text: str) -> list[str]:
     block = _job_block(text, "smoke")
     if block is None:
-        return ["wheels.yml: no smoke job"]
+        return ["smoke.yml: no smoke job"]
     findings: list[str] = []
     condition = re.search(r"(?m)^ {4}if:\s*(.+?)\s*$", block)
     if condition is None or condition.group(1) not in ADMITTED_SMOKE_CONDITIONS:
         found = condition.group(1) if condition is not None else "none"
-        findings.append(f"wheels.yml smoke: `if:` is {found!r}, not one of the two admitted forms")
+        findings.append(f"smoke.yml smoke: `if:` is {found!r}, not one of the two admitted forms")
     if re.search(r"(?m)^ {4}runs-on:\s*ubuntu-latest\s*$", block) is None:
-        findings.append("wheels.yml smoke: `runs-on` is not ubuntu-latest")
+        findings.append("smoke.yml smoke: `runs-on` is not ubuntu-latest")
+    return findings
+
+
+def _smoke_workflow_findings(text: str) -> list[str]:
+    triggers = re.search(r"(?ms)^on:\s*\n(.*?)(?=^\S|\Z)", text)
+    if triggers is None:
+        return ["smoke.yml: no `on:` block"]
+    findings: list[str] = []
+    for name, pattern in FORBIDDEN_SMOKE_TRIGGERS:
+        if re.search(pattern, triggers.group(1)):
+            findings.append(f"smoke.yml: `{name}` trigger")
+    if not re.search(r"(?m)^ {2}pull_request:", triggers.group(1)):
+        findings.append("smoke.yml: no pull_request trigger")
+    if not re.search(r"(?m)^ {2}push:\s*\n {4}branches:\s*\[main\]\s*$", triggers.group(1)):
+        findings.append("smoke.yml: push is not `branches: [main]`")
+    for name, pattern in PUBLISHING_PATTERNS:
+        if re.search(pattern, text):
+            findings.append(f"smoke.yml: publishing step ({name})")
     return findings
 
 
@@ -167,12 +201,51 @@ def test_doctored_nightly_matrix_fails() -> None:
 
 def test_pull_request_smoke_job_keeps_its_gate_and_host() -> None:
     """pins: platform-1/C-002."""
-    assert _smoke_findings(_WHEELS_YML.read_text(encoding="utf-8")) == []
+    assert _smoke_findings(_SMOKE_YML.read_text(encoding="utf-8")) == []
+
+
+def test_smoke_workflow_has_no_tag_trigger_and_no_publishing_step() -> None:
+    """pins: platform-1/C-002."""
+    assert _smoke_workflow_findings(_SMOKE_YML.read_text(encoding="utf-8")) == []
+
+
+def test_doctored_smoke_workflow_fails() -> None:
+    """pins: platform-1/C-002."""
+    text = _SMOKE_YML.read_text(encoding="utf-8")
+    push = "  push:\n    branches: [main]\n"
+    assert push in text
+    for injected in (
+        '  push:\n    branches: [main]\n    tags: ["v*"]\n',
+        push + '  schedule:\n    - cron: "43 6 * * *"\n',
+        push + "  workflow_dispatch:\n",
+        "  push:\n    branches: [main, release]\n",
+    ):
+        mutated = text.replace(push, injected, 1)
+        assert mutated != text
+        assert _smoke_workflow_findings(mutated) != [], injected
+    no_pr = text.replace("  pull_request:\n", "", 1)
+    assert no_pr != text
+    assert _smoke_workflow_findings(no_pr) != []
+    block = _job_block(text, "build")
+    assert block is not None
+    for step in (
+        "      - uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc\n",
+        "      - run: maturin publish --skip-existing\n",
+        "      - run: maturin upload dist/*\n",
+        "      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b\n"
+        "        with:\n          command: upload\n",
+        "      - run: twine upload dist/*\n",
+        "      - uses: softprops/action-gh-release@72f2c25fcb47643c292f7107632f7a47c1df5cd8\n",
+        "      - run: gh release create v0 dist/*\n",
+    ):
+        mutated = text.replace(block, block + step, 1)
+        assert mutated != text
+        assert _smoke_workflow_findings(mutated) != [], step
 
 
 def test_doctored_smoke_gate_fails() -> None:
     """pins: platform-1/C-002."""
-    text = _WHEELS_YML.read_text(encoding="utf-8")
+    text = _SMOKE_YML.read_text(encoding="utf-8")
     block = _job_block(text, "smoke")
     assert block is not None
     condition = re.search(r"(?m)^ {4}if:\s*(.+?)\s*$", block)

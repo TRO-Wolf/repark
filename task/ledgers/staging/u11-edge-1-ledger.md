@@ -14,6 +14,8 @@ key (`target/probe-u11-edge-1/replay-r3-case.json`).
 
 **Round 9 (2026-09-26, fixer, Claude Opus 5.5):** CI job "build + import smoke (debug, host)" on `d2e2520f` segfaulted `test_nested_view_depth_guard` (stack overflow in the view-body parse of the 458 752-byte grown segment, measured under gdb); `plan_with_repair` builds its boxed futures through `boxed_finish` and `boxed_case_sensitive`, so its debug poll frame drops from 18 792 to 14 696 bytes (main 15 720) and the debug wheel reads `w99` and trips at `w100` (2 passed).
 
+**Round 10 (2026-10-03, CI-1, Claude Opus 5.5, owner ruling on H-2):** the wheel smoke jobs (`changes`, `build`, the three `facade` shards, `dbt`, `examples` and the aggregate `build + import smoke (debug, host)`) live in `.github/workflows/smoke.yml`, triggered by `push` to `main` and `pull_request` only, with no tag trigger, schedule or dispatch; the `build` job builds the debug wheel with `--profile ci` and restores rust-cache `v2-df54-wheel`. `wheels.yml` keeps `release-wheels` and `platform-matrix`, both cache-free. zizmor 1.26.1 `--no-online-audits` no longer reports `cache-poisoning`. The 30-run proof of `test_nested_view_depth_guard` on the `ci` profile wheel is still to be recorded here.
+
 **Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
 
 **Why now.** Four scoreboard cells of the 2026-09-25 run: `E-CASE-SELECT` answered the stored
