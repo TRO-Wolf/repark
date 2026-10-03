@@ -13025,6 +13025,51 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **Rationale** — FIXED 2026-10-02 (ATTR-ID-1 SJ-3): the native
   `prepare_join_condition` resolves ON-clause references against each join side's
   plan the way Catalyst does, and the positional siding is deleted.
+  SJ-4 (2026-10-02) extends the refusal to post-join references through the
+  13-surface funnel; SJ-5 (2026-10-03) routes `crossJoin` through the same
+  builder and resolves free names against displays (R-SJ5-1). The general
+  refusal is row EX-DF-21.
+
+### EX-DF-21 — self-join references refuse `_LEGACY_ERROR_TEMP_1182` like Spark Classic — **FIXED 2026-10-03 (ATTR-ID-1 SJ-3 to SJ-5)**
+
+- **repark** — **FIXED 2026-10-03 (ATTR-ID-1 SJ-3 to SJ-5).** A column reference
+  whose frame sits on both sides of a join refuses `AnalysisException`
+  `_LEGACY_ERROR_TEMP_1182`, as Spark Classic does: in the join condition
+  (`d.join(f, d.id < f.id)`), where exempt same-id equalities are rewritten by
+  name instead, and after the join at the 13 checking surfaces (`select`,
+  `filter`/`where`, `withColumn(s)`, `repartition`, `orderBy`/`sort`,
+  `groupBy`/`cube`/`rollup`, both `agg` doors) — `s.join(d).select(d.v)` with
+  `s = d.select("id")` refuses where RePark used to answer the left `v`. EQUAL
+  on the condition, the `config` parameter
+  (`spark.sql.analyzer.failAmbiguousSelfJoin`), the verbatim template tail, and
+  the display names sorted with exact multiplicity (RePark has no exprIds, so
+  Spark's `id#0L, id#0L` renders `id, id`). `select('*')`, `count()` and the
+  name-based surfaces (`withColumnRenamed`, `dropDuplicates`, `fillna`,
+  `drop("v")`, `toDF`, `drop(Column)`, window expressions) never check.
+  `spark.sql.analyzer.failAmbiguousSelfJoin=false` turns the check off: every
+  reference binds left by id, and a re-minted id absent from the output raises
+  `MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION`. History: the
+  shapes answered per-side rows through positional token siding until the
+  native frame-lineage DAG, the condition preparer and the post-join funnel
+  landed.
+- **Apache Spark** — Spark Classic raises `AnalysisException`
+  (`_LEGACY_ERROR_TEMP_1182`, `Column … are ambiguous. It's probably because
+  you joined several Datasets together …`) with `ambiguousAttrs` naming each
+  ambiguous reference as `name#exprId` plus a type suffix and `config` naming
+  `spark.sql.analyzer.failAmbiguousSelfJoin`. *(oracle: recorded, live PySpark
+  4.1.2, 2026-10-02, ATTR-ID-1 selfjoin probes sj1–sj5 and sj2.params.json.)*
+- **Pin** —
+  `python/repark/tests/test_attr_id_1_sj3.py`,
+  `python/repark/tests/test_attr_id_1_sj4.py`,
+  `python/repark/tests/test_attr_id_1_sj5.py`
+- **Rationale** — FIXED 2026-10-03 (ATTR-ID-1 SJ-3 to SJ-5, owner ruling
+  2026-10-02 option A): the native `prepare_join_condition` detects, rewrites
+  and binds ON-clause references the way Catalyst does, and the post-join
+  funnel refuses ambiguous references at every checking surface. Dated
+  residues: the `ambiguousAttrs` order on multi-name refusals (ledger R-18),
+  the `!Join` operator text on MISSING refusals (ledger R-14), and views,
+  checkpoint and never-stamped plans keeping or cutting lineage (cards
+  VIEW-LINEAGE-SELFJOIN-1, LOCAL-CHECKPOINT-NEW-FRAME-1, ledger R-13).
 
 ### PERF-APPROXQUANTILE-1 — `approxQuantile` collects once per frame, not once per column × probability — **FIXED 2026-09-07 (DFCORE-5)**
 

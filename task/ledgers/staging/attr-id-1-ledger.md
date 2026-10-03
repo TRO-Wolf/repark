@@ -956,3 +956,58 @@ xfailed, 0 failed. `casesens_1` inside the sweep, no EQUAL pin change.
 Known V-4/V-1 interaction: `p7 child_before_materialize_join_parent`
 moves base-rows → left-bind (Spark refuses), owned by the pending V-1
 ruling. `bash /tmp/xattr/gate.sh` prints GATE GREEN.
+
+## Round SJ-6 (2026-10-03)
+
+**Model:** muse-spark-1.3-contributor (SJ-6 clerk, guided).
+**Work order:** `/tmp/oc-worker/direct/wo/attr-id-1-sj-6.md` (docs only): ledger clauses for the
+self-join rule, the mechanism and the halt-rule-3 table; the dated 1182 registry row; the
+`MISSING-REF-RESOLVE-1`, `VIEW-LINEAGE-SELFJOIN-1` and `LOCAL-CHECKPOINT-NEW-FRAME-1` cards;
+the release note. Owner ruling 2026-10-02: option A — Spark Classic is the oracle.
+
+| Clause | Statement | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-046 | Option A is the rule: every self-join reference Spark Classic refuses now refuses with `_LEGACY_ERROR_TEMP_1182`, EQUAL on the error — the condition, the `config` parameter (`spark.sql.analyzer.failAmbiguousSelfJoin`), the verbatim template tail, and the display names sorted with exact multiplicity (RePark has no exprIds, so Spark's `id#0L, id#0L` renders `id, id`). No branch binds an ambiguous reference to a side: there is no tie-break, and with the conf off every reference binds left by id. | The condition refusals, the post-join refusals at every checking surface, the rewrite and missing cells, the over-fire guards that still answer, and the conf-off left-bind rows, each EQUAL to live Spark 4.1.2. | PROVEN | `python/repark/tests/test_attr_id_1_sj3.py` (the `B_*`, `D_*`, `E_parent_alias_*` and `G_eq3_*` rows, `I_rewrite_name_missing`, `P_s4_third_frame`, the `P_v_*` verifier pins), `test_attr_id_1_sj4.py` (the `A_*`, `F_*`, `I_*`, `J_*` and `K_*` rows, every `H_off_*`, the answer guards), `test_attr_id_1_sj5.py` (the `C_*` rows and the 14 p1 cross cells); error parameters measured in `selfjoin/sj2.params.json`. |
+| C-047 | The mechanism is a frame-lineage DAG in Rust: every frame carries a `FrameId` and an immutable `FrameNode` (`Root`, `Derived`, `SetOp`, `Join` with its `remint` map); a join re-mints every right-output id found anywhere in the left lineage, not only output collisions; the condition preparer detects, rewrites exempt equalities by name, and binds left-first; the post-join funnel refuses at the 13 surfaces (select, filter/where, withColumn(s), repartition(+ByRange), orderBy/sort(+WithinPartitions), groupBy/cube/rollup, `DataFrame.agg`, `GroupedData.agg`) while name-based surfaces never check (`withColumnRenamed`, `dropDuplicates`, `fillna`, `drop(str)`, `toDF`, `drop(Column)`, window expressions); `renewed_absent` catches re-minted ids missing from the output; both confs read live; `crossJoin` runs through the join builder; positional siding and `remint_cross_collisions` are deleted. | The seam pins (token frame fields, `F0`, inert roots, conf forwarding), the condition-path pins, the funnel pins with the renewed-absent wiring evidence, and the cross-join pins with the over-fire guards. | PROVEN | `test_attr_id_1_sj2.py` (the seam pins, incl. frameless `F0` and inert empty roots), `test_attr_id_1_sj3.py` (the condition, rewrite and missing pins), `test_attr_id_1_sj4.py` (the funnel pins, incl. `K_on_*` preferring 1182 and `K_drop_*` missing), `test_attr_id_1_sj5.py` (the cross-join pins); the DAG and the preparer in `crates/repark-core/src/session/df_guards/`. |
+| C-048 | Free names resolve against the output's display names (ruling R-SJ5-1): one matching display binds to its engine field; more than one raises `AMBIGUOUS_REFERENCE` with Spark's `name` and `referenceNames`; none falls through to the engine, which reports `UNRESOLVED_COLUMN` as before. The rule runs on SQL text (filter/where/selectExpr, behind a dup-word pre-filter), compound select and withColumn expressions, summary/describe, qualified `F.col("q.v")`, and backquoted `` `q`.`v` `` filter text; bound-key windows and unique-display frames skip the check. | One cross cell plus one inner twin per surface, each EQUAL to live Spark's class and parameters, with the corpus `bq`/`sexpr`/`wcz`/`summ`/`q_col` cells back to EQUAL. | PROVEN | `test_attr_id_1_sj5.py` F1/F2 pins (`f1_bq_*`, `f1_sexpr_*`, `f1_wcz_*`, `f1_summ_*`, `f1_qcol_*`, `f1_window_free_ref_refuses`, `f1_dropdup_alias_answers`, `f2_bqqual_cross`). |
+| C-049 | Halt rule 3 holds as ruled: a `FrameNode` output without an id is an internal error, except a never-stamped plan, which gets an inert empty `Root` in the binding layer (R-SJ2-3); a frameless token renders `F0` and is never an ambiguity candidate (R-SJ2-2); the preparer answers `MISSING_ATTRIBUTES` (appear vs missing-from-input by the name rule) for an id on neither side, `UNRESOLVED_COLUMN`/`AMBIGUOUS_REFERENCE` for a rewrite miss/collision, and left-first otherwise; a reference whose frame is absent from the lineage is not ambiguous; an id outside every `remint` map passes unchanged; a re-minted id absent from the output raises `MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION` under either conf. | The missing pins under both confs, the sibling-absent answer guard, and the dead-birth-frame naming pins. | PROVEN | `test_attr_id_1_sj3.py` (`P_s4_third_frame`, `K_off_cond_missing`, `r3_cp_*_join_parent`, `r3_cp_x_join_self`, `token_carries_leaf_display_hex`), `test_attr_id_1_sj4.py` (`K_off_shared_*`, `K_drop_*`, `A_sibling_absent`). |
+
+**SJ-6 S4-statement correction (2026-10-03, append-only).** The sentence "No branch
+treats a missing id as anything but a loud error" (the S4 positional-fallback ruling and
+the verifier-fold correction) now holds for join-made absences: ids removed by the
+lineage re-mint are refused by `renewed_absent` or the preparer's MISSING arms before
+binding is reached. Ids made absent by non-join lineage — `withColumn` replace, alias
+and rename swaps, `toDF` — stay open under card `MISSING-REF-RESOLVE-1` (V-3), which
+owns the `_bind_stable_id_column` pass-through.
+
+**SJ-6 residues (2026-10-03).** One section, each with its cell and Spark's answer.
+Ledger residues R-13..R-18; the design's residue R-18 below is the work-order id, not
+this ledger's R-18. New: R-13 — a self-join whose lineage passes through a
+never-stamped plan, e.g. a `describe()` frame, is not detected; the lineage is cut at
+the non-relation (R-SJ2-3). No probe cell in `selfjoin/` or `verify/probes/` takes a
+describe/summary frame through a join, and Spark's answer for that shape is unmeasured;
+the cut itself is pinned by `test_sj2_describe_and_summary_answer` and
+`test_sj2_never_stamped_frames_get_inert_empty_roots`. R-14 — the MISSING refusal on
+post-join surfaces names operator `!Join`; Spark names the surface (`sj4.spark.json`):
+`!Project [v#1L]` (`K_off_shared_sel`), `!Filter (v#7L > cast(15 as bigint))`
+(`K_off_shared_filter`), `!Sort [v#13L ASC NULLS FIRST]` (`K_off_shared_order`).
+Unpinned precedent shared with the committed `K_off` pins (SJ-4 hand-back, ruled out
+of SJ-5). R-15 — qualified free names do not resolve in join conditions (the design's
+residue R-18, pre-existing): `test_h2_compound_alias_free_names_answer` is
+strict-xfailed — `(F.col("l.x") + F.col("l.y")) == (F.col("r.x") + F.col("r.y"))` over
+aliased frames, Spark 4.1.2 answers 3 under both case rules. The string-qualified
+alias join conditions (`E_str_*`, `F_anti_idiom_str` answering `[[1]]`, `G_eq3_str`)
+likewise keep their pre-option-A path. R-16 — `declare_sorted` (`core.py`) swaps
+`self._inner` for the re-registered sorted view in place and keeps its
+construction-time `_frame_node` (flagged 2026-10-02 as the 4th `_inner` swap).
+Source frames only, so the node never renews and no check fires; no probe cell
+covers a declared frame through a join, and Spark has no such API (the door is a
+repark extension). R-17 — `dropDuplicates` over duplicate displays:
+`r5p6.F|dd|j_left|w0|dd` (and the `star|dd` twin) — Spark answers `{"value": 4}`;
+RePark raises `AMBIGUOUS_REFERENCE` naming `` `v` `` twice, on main and on this head
+(a pre-existing main gap, R-SJ5-2 item 3). The aliased twin answers
+(`test_sj5_f1_dropdup_alias_answers`, 3). Ledger R-18 — the order of names in
+`ambiguousAttrs`: pins assert sorted names with exact multiplicity (R-SJ5-1 item 4).
+Measured (`sj-5/ambiguous_order_residue.json`): `A_inner_agg_f` Spark `v, id` vs
+RePark `id, v`; `SJ5_agg_two` Spark `id, id, v` vs RePark `id, v, id`; every other
+measured 1182 cell matches Spark's order exactly.
