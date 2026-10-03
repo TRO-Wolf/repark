@@ -55,7 +55,10 @@ core is pure pyarrow — no Spark, no JVM — so it runs in routine CI.
   (this map inventories the series; source comments state only the generator invariant)
   from C TA-Lib 0.4.0 via `polars-talib` (pinned in its header; asserts the bundled TA-Lib
   version). Run `uv run python/repark-parity/record_ta_goldens.py`; output lands in
-  `crates/repark-ta/tests/goldens/`.
+  `crates/repark-ta/tests/goldens/`. TA-CHAIN-1: `prefix_fixture()` + `prefix_cases()` also
+  record 13 leading-run series (the walk fixture with leading NaN runs per column, incl. the chain
+  `ema(trange(h, l, c), 21)`) into `crates/repark-ta/tests/goldens/prefix/` with their own
+  `manifest.json`.
 
 ## I want to...
 

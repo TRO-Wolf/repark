@@ -53,7 +53,16 @@ golden fails, the kernel drifted (or the oracle moved), never "close enough".
   `[-3e37,3e37]` with a negative start legal; MAVP min/max `[2,MAX_PERIOD]` + matype `0..=8` +
   periods-series length mismatch) and short/empty behavior (`InvalidRealParam` is the new
   non-period error variant).
-- [goldens/](goldens/map.md) — the recorded fixtures + `manifest.json` (checked in; ~1.5 MB).
+- `prefix_goldens.rs` (feature `datafusion`) — TA-CHAIN-1 wrapper-level gate: drives each
+  `ta_*` window UDF through the public `udf::window_udfs()` registration and `evaluate_all` over
+  the prefix fixture (the walk fixture with leading NaN runs: open 0, high 3, low 7, close 5,
+  periods 0, volume 2) and asserts `f64::to_bits` equality (NaN ↔ NaN allowed) against the
+  polars_talib prefix goldens. 26 tests = 13 series × twins, the run fed as NaN and as NULL with
+  the same expected bits; the chain `prefix_chain_ema21_of_trange` feeds the recorded
+  `prefix_trange` back in as the `ta_ema` input. The kernel-layer `goldens.rs` is untouched.
+- [goldens/](goldens/map.md) — the recorded fixtures + `manifest.json` (checked in; ~1.5 MB);
+  [goldens/prefix/](goldens/prefix/map.md) holds the TA-CHAIN-1 prefix goldens with their own
+  manifest.
 - `p1c_microbench.rs` — wall microbench (BBANDS 1e6-row, one kernel vs
   three independent sibling runs vs ideal-cached clone cost). Not a correctness gate —
   `cargo test -p repark-ta --release --test p1c_microbench -- --nocapture`.
