@@ -9075,7 +9075,7 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   outputs); a relation child of describe gets a non-empty node. No module
   docstring: the lane's no-comments ruling covers the new file; the contract
   lives here. **ATTR-ID-1 SJ-3 R-SJ3-2 (2026-10-02):** the frameless exact-form
-  pin renders the leaf field (`__D78__`).
+  pin renders the leaf field (`__D78__`). pins: attr-id-1/C-047
 - [test_attr_id_1_sj3.py](test_attr_id_1_sj3.py) — **ATTR-ID-1 SJ-3 (2026-10-02):**
   the condition-path pins, each named after its probe cell and EQUAL to live
   Spark 4.1.2 under both case rules: the `B_*`/`D_*`/`E_parent_alias_*`/`G_eq3_*`
@@ -9092,7 +9092,7 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   `v`; the bare-`PySparkException` internal error cannot fire), and the token
   leaf-hex render pin (ASCII plus non-ASCII).
   **ATTR-ID-1 SJ-4 (2026-10-02):** the three funnel pins un-xfail (the funnel
-  is wired).
+  is wired). pins: attr-id-1/C-046, C-047, C-049
 - [test_attr_id_1_sj4.py](test_attr_id_1_sj4.py) — **ATTR-ID-1 SJ-4 (2026-10-02):**
   the post-join detector pins, each named after its cell and EQUAL to live
   Spark 4.1.2: the §4 `A_*`/`F_*`/`I_*`/`J_*`/`K_*` rows and every `H_off_*`
@@ -9110,7 +9110,7 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   **ATTR-ID-1 SJ-5 (2026-10-03):** `A_inner_agg_f` un-xfails (keys and
   aggregate references refuse once, in Spark's multiplicity) with two
   deferral variants (`SJ5_agg_two`, `SJ5_agg_litkey`); `H_off_xj_sel_parent`
-  flips to Spark's measured answer (left `v`, 9 rows).
+  flips to Spark's measured answer (left `v`, 9 rows). pins: attr-id-1/C-046, C-047, C-049
 - [test_attr_id_1_sj5.py](test_attr_id_1_sj5.py) — **ATTR-ID-1 SJ-5 (2026-10-03):**
   the cross-join pins, each named after its cell and EQUAL to live Spark
   4.1.2 under both case rules: the §4 `C_*` rows (answers pin columns and
@@ -9125,6 +9125,7 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   window pair (aliased dropDuplicates answers, user window refuses).
   **ATTR-ID-1 SJ-5 F2 (2026-10-03):** one backquoted-qualified filter pin
   (`` `q`.`v` `` over an aliased cross join refuses, EQUAL to Spark).
+  pins: attr-id-1/C-047, C-048
 - [test_attr_id_1_v456.py](test_attr_id_1_v456.py) — **ATTR-ID-1 V-5 (2026-10-02):**
   the verifier-fold twin pins, measured against live Spark 4.1.2 `p5_twins`.
   The ported `test_v5` pin plus the 13 remaining F_ cells refuse
