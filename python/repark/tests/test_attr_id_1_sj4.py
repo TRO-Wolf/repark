@@ -126,7 +126,6 @@ def test_sj4_a_inner_group_f(spark: ReparkSession) -> None:
     _refuses_1182(lambda: env.d.join(env.f, env.d.id == env.f.id).groupBy(env.f.v).count(), ["v"])
 
 
-@pytest.mark.xfail(strict=True, reason="SJ-5: eager groupBy reports keys only")
 def test_sj4_a_inner_agg_f(spark: ReparkSession) -> None:
     """Group key plus aggregate expression refuse together (``A_inner_agg_f``)."""
     env = _env(spark)
@@ -134,6 +133,30 @@ def test_sj4_a_inner_agg_f(spark: ReparkSession) -> None:
         env.d.join(env.f, env.d.id == env.f.id).groupBy(env.d.id).agg(F.sum(env.f.v).alias("s"))
     assert refused.value.getCondition() == "_LEGACY_ERROR_TEMP_1182"
     assert sorted(refused.value.getMessageParameters()["ambiguousAttrs"].split(", ")) == ["id", "v"]
+
+
+def test_sj4_a_inner_agg_two_f(spark: ReparkSession) -> None:
+    """Two aggregate expressions keep multiplicity (``SJ5_agg_two``)."""
+    env = _env(spark)
+    with pytest.raises(AnalysisException) as refused:
+        env.d.join(env.f, env.d.id == env.f.id).groupBy(env.d.id).agg(
+            F.sum(env.f.v).alias("s"), F.max(env.f.id).alias("m")
+        )
+    assert refused.value.getCondition() == "_LEGACY_ERROR_TEMP_1182"
+    assert sorted(refused.value.getMessageParameters()["ambiguousAttrs"].split(", ")) == [
+        "id",
+        "id",
+        "v",
+    ]
+
+
+def test_sj4_a_inner_agg_litkey_f(spark: ReparkSession) -> None:
+    """A literal key leaves only the aggregate reference (``SJ5_agg_litkey``)."""
+    env = _env(spark)
+    with pytest.raises(AnalysisException) as refused:
+        env.d.join(env.f, env.d.id == env.f.id).groupBy(F.lit(1)).agg(F.sum(env.f.v).alias("s"))
+    assert refused.value.getCondition() == "_LEGACY_ERROR_TEMP_1182"
+    assert refused.value.getMessageParameters()["ambiguousAttrs"] == "v"
 
 
 def test_sj4_a_inner_order_f(spark: ReparkSession) -> None:
@@ -292,7 +315,9 @@ def test_sj4_i_checkpoint_sel_c(spark: ReparkSession) -> None:
     )
 
 
-@pytest.mark.xfail(strict=True, reason="LOCAL-CHECKPOINT-NEW-FRAME-1: localCheckpoint returns the same frame")
+@pytest.mark.xfail(
+    strict=True, reason="LOCAL-CHECKPOINT-NEW-FRAME-1: localCheckpoint returns the same frame"
+)
 def test_sj4_i_checkpoint_sel_d(spark: ReparkSession) -> None:
     """Checkpoint-child join select on the parent answers (``I_checkpoint_sel_d``)."""
     env = _env(spark)
@@ -727,14 +752,18 @@ def test_sj4_h_off_using_sel_f(spark: ReparkSession) -> None:
 
 
 def test_sj4_h_off_xj_sel_parent(spark: ReparkSession) -> None:
-    """Conf-off crossJoin select keeps its pre-existing class (``H_off_xj_sel_parent``).
+    """Conf-off crossJoin select answers the left ``v`` (``H_off_xj_sel_parent``).
 
-    Spark answers; the downstream binder stays ambiguous since before SJ-1.
-    The funnel must not fire here.
+    Flipped SJ-5: live Spark 4.1.2 answers the left ``v`` 9 rows, and the
+    join-builder cross path binds it there. The funnel must not fire here.
     """
     _off(spark)
     env = _env(spark)
-    _refuses_ambiguous(lambda: env.d.crossJoin(env.d).select(env.d.v))
+    frame = env.d.crossJoin(env.d).select(env.d.v)
+    assert frame.columns == ["v"]
+    assert sorted(tuple(row) for row in frame.collect()) == sorted(
+        [(10,), (10,), (10,), (20,), (20,), (20,), (30,), (30,), (30,)]
+    )
 
 
 @pytest.mark.xfail(strict=True, reason="MISSING-REF-RESOLVE-1: V-3 missing-reference resolution")

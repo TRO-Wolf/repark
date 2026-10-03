@@ -674,6 +674,7 @@ EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
     "explain",
     "export_errors",
     "grouped_arrow",
+    "grouped_pivot",
     "grouped_udf",
     "io_declared",
     "join_attr_tokens",

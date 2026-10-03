@@ -2276,12 +2276,13 @@ class DataFrame:
     def _join_on_condition_h1(
         self,
         other: DataFrame,
-        condition: Column,
+        condition: Column | None,
         engine_how: str,
     ) -> DataFrame:
         """Rewrite a condition join with id-qualified references.
 
         Semi and anti joins project only the left side because they emit no right-hand columns.
+        A ``None`` condition skips the preparer and still records the lineage remint.
         """
         left_alias = scratch_view_name(self._session, "_repark_jl_")
         right_alias = scratch_view_name(self._session, "_repark_jr_")
@@ -2298,21 +2299,24 @@ class DataFrame:
         self._session.create_or_replace_temp_view(left_alias, self._plan())
         self._session.create_or_replace_temp_view(right_alias, other._plan())
         try:
-            cond_sql = condition.join_sql_part()
-            on_sql, remint = _native.prepare_join_condition(
-                self._session,
-                cond_sql,
-                self._frame_node,
-                other._frame_node,
-                self._plan(),
-                other._plan(),
-                left_alias,
-                right_alias,
-                list(self.columns),
-                list(other.columns),
-                _join_condition_attr_names(self, cond_sql),
-            )
-            _native.refuse_ambiguous_join_condition(self._plan(), other._plan(), on_sql)
+            if condition is None:
+                remint = _native.join_shared_remint(self._frame_node, other._frame_node)
+            else:
+                cond_sql = condition.join_sql_part()
+                on_sql, remint = _native.prepare_join_condition(
+                    self._session,
+                    cond_sql,
+                    self._frame_node,
+                    other._frame_node,
+                    self._plan(),
+                    other._plan(),
+                    left_alias,
+                    right_alias,
+                    list(self.columns),
+                    list(other.columns),
+                    _join_condition_attr_names(self, cond_sql),
+                )
+                _native.refuse_ambiguous_join_condition(self._plan(), other._plan(), on_sql)
             left_cols = list(self.columns)
             right_cols = list(other.columns)
             all_display = left_cols if left_only else left_cols + right_cols
@@ -2376,15 +2380,15 @@ class DataFrame:
         """Group by columns and return a ``GroupedData`` handle.
 
         Arguments may be ``Column`` objects or names. Partition transforms are valid only in
-        ``DataFrameWriterV2.partitionedBy``.
+        ``DataFrameWriterV2.partitionedBy``. Ambiguous keys refuse at the terminal, named
+        together with the aggregate references.
         """
-        self._refuse_self_join_refs([column for column in cols if isinstance(column, Column)])
         self._prepare_for_plan()
         group_columns = [self._column_of(item) for item in cols]
         for column in group_columns:
             _reject_partition_transform(column)
             column._reject_nested_generator("groupBy")
-        return GroupedData(self, group_columns)
+        return GroupedData(self, group_columns, raw_group_columns=list(cols))
 
     groupBy = group_by  # noqa: N815 — deliberate PySpark-compatible camelCase alias
     groupby = group_by
@@ -2437,7 +2441,9 @@ class DataFrame:
         else:
             names = ", ".join(self._grouping_col_sql(item) for item in cols)
             sql_group = f"{clause}({names})" if names else clause
-        return GroupedData(self, group_columns, sql_group_clause=sql_group)
+        return GroupedData(
+            self, group_columns, sql_group_clause=sql_group, raw_group_columns=list(cols)
+        )
 
     def unpivot(
         self,
@@ -2691,22 +2697,7 @@ class DataFrame:
         self, other: DataFrame
     ) -> DataFrame:
         """Cartesian product (PySpark ``DataFrame.crossJoin``)."""
-        self._ensure_alive()
-        other._ensure_alive()
-        left = scratch_view_name(self._session, "__repark_x_l_")
-        right = scratch_view_name(self._session, "__repark_x_r_")
-        try:
-            self._session.create_or_replace_temp_view(left, self._plan())
-            other._session.create_or_replace_temp_view(right, other._plan())
-            planned = self._session.sql(f"SELECT * FROM {left} CROSS JOIN {right}")
-            child = self._spawn(planned, other)
-            if self._frame_qualifiers or other._frame_qualifiers:
-                child._inner = _native.remint_cross_collisions(child._plan(), len(self.columns))
-            child._frame_qualifiers = _qualified_names._join_frame_qualifiers(child, self, other)
-            return child
-        finally:
-            self._session.drop_temp_view(left)
-            other._session.drop_temp_view(right)
+        return self._join_on_condition_h1(other, None, "cross")
 
     cross_join = crossJoin
 
@@ -3429,8 +3420,8 @@ from repark.spark.dataframe.plan_collapse import (  # noqa: E402, I001
     _window_spec_structural_key,
 )
 from repark.spark.dataframe.actions_export import DataFrameNaFunctions  # noqa: E402
-from repark.spark.dataframe.joins_columns import (  # noqa: E402
-    GroupedData,
+from repark.spark.dataframe.joins_columns import GroupedData  # noqa: E402
+from repark.spark.dataframe.grouped_pivot import (  # noqa: E402
     _pivot_agg_output_suffix,
     _pivot_aggregate_builder,
     _pivot_aggregate_input,

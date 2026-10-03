@@ -3400,6 +3400,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   ATTR-ID-1 SJ-4 (2026-10-02): dir gains the funnel `_refuse_self_join_refs`;
   both new-submodule sets gain `repartition_ops` (trio move behind same-named
   bindings).
+  ATTR-ID-1 SJ-5 (2026-10-03): native set loses `remint_cross_collisions`
+  and gains `join_shared_remint`; no expected table tracks native names.
 - `test_dfcore_4b_exports.py` — DFCORE-4b ownership pin: `MOVED_DISPLAY_HELPERS`
   pins the ten bodies as `display.py`'s own frame-first functions, the six
   leavers as gone from the class, and the four wrappers as kept.
@@ -9094,14 +9096,24 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   rows; name-based surfaces pin no-check), the four measured uncovered-surface
   shapes (`sj4_range_f`, `sj4_cube_f`, `sj4_rollup_f`, `sj4_dfagg_f`), the
   renewed-absent wiring evidence (`sj4_k_*_on` prefer 1182, `sj4_k_drop_*`
-  miss without the appear clause), and strict xfails for `A_inner_agg_f`
-  (eager groupBy reports keys only; SJ-5 folds the aggregate names in) and the
+  miss without the appear clause), and strict xfails for the
   two V-1 shapes (Spark answers/misses via V-3 resolution, card
   MISSING-REF-RESOLVE-1), plus `I_checkpoint_sel_d` (Spark answers, RePark
   refuses because `localCheckpoint` returns the same frame; card
   LOCAL-CHECKPOINT-NEW-FRAME-1, ruled R-SJ4-1 on 2026-10-02). No module
   docstring: the lane's no-comments ruling covers the new file; the contract
   lives here.
+  **ATTR-ID-1 SJ-5 (2026-10-03):** `A_inner_agg_f` un-xfails (keys and
+  aggregate references refuse once, in Spark's multiplicity) with two
+  deferral variants (`SJ5_agg_two`, `SJ5_agg_litkey`); `H_off_xj_sel_parent`
+  flips to Spark's measured answer (left `v`, 9 rows).
+- [test_attr_id_1_sj5.py](test_attr_id_1_sj5.py) — **ATTR-ID-1 SJ-5 (2026-10-03):**
+  the cross-join pins, each named after its cell and EQUAL to live Spark
+  4.1.2 under both case rules: the §4 `C_*` rows (answers pin columns and
+  rows; refusals pin class, config, verbatim template, and names with
+  `#<n>L` stripped) and the 14 p1 cross 1182 cells, plus the over-fire
+  guards (name-based cross shapes must answer). No module docstring: the
+  lane's no-comments ruling covers the new file; the contract lives here.
 - [test_attr_id_1_v456.py](test_attr_id_1_v456.py) — **ATTR-ID-1 V-5 (2026-10-02):**
   the verifier-fold twin pins, measured against live Spark 4.1.2 `p5_twins`.
   The ported `test_v5` pin plus the 13 remaining F_ cells refuse

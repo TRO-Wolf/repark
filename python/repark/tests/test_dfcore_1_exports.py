@@ -154,6 +154,11 @@ ATTR-ID-1 SJ-4 (2026-10-02): ``EXPECTED_DATAFRAME_DIR`` gains the post-join
 funnel ``_refuse_self_join_refs``; the repartition trio moves to
 ``repartition_ops.py`` behind same-named bindings, so both new-submodule sets
 gain exactly ``repartition_ops``.
+ATTR-ID-1 SJ-5 (2026-10-03): the native set loses ``remint_cross_collisions``
+and gains ``join_shared_remint``; no expected table tracks native names, so no
+table changes for that. The pivot helper family moves to ``grouped_pivot.py``
+behind same-named imports, so ``EXPECTED_NEW_PACKAGE_SUBMODULES`` gains
+exactly ``grouped_pivot``.
 """
 
 from __future__ import annotations

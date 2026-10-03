@@ -41,7 +41,6 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(projection_source_ids, module)?)?;
     module.add_function(wrap_pyfunction!(java_fold_hits, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_join_condition, module)?)?;
-    module.add_function(wrap_pyfunction!(remint_cross_collisions, module)?)?;
     module.add_function(wrap_pyfunction!(requalify_join_sides, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_display_name, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_frame_names, module)?)?;
@@ -580,25 +579,6 @@ pub(crate) fn copy_attribute_ids(
         let plan =
             repark_core::frame_names::copy_attribute_ids(plan, source.inner().logical_plan())
                 .map_err(datafusion_to_py_err)?;
-        Ok(PyDataFrame::new(
-            DataFrame::new(state, plan),
-            frame.runtime_handle(),
-        ))
-    })
-}
-
-#[allow(clippy::missing_errors_doc)]
-#[pyfunction]
-pub(crate) fn remint_cross_collisions(
-    frame: &PyDataFrame,
-    left_width: usize,
-) -> PyResult<PyDataFrame> {
-    fenced!("dataframe_names.remint_cross_collisions", {
-        let (state, plan) = frame.inner().clone().into_parts();
-        let shared = repark_core::frame_names::join_collisions(&plan, left_width)
-            .map_err(datafusion_to_py_err)?;
-        let (plan, _) = repark_core::frame_names::remint_shared(plan, left_width, &shared)
-            .map_err(datafusion_to_py_err)?;
         Ok(PyDataFrame::new(
             DataFrame::new(state, plan),
             frame.runtime_handle(),

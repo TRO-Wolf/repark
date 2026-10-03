@@ -212,6 +212,13 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   ride delegation); the repartition trio moves to `repartition_ops.py` behind
   same-named bindings (3583 → 3494, with the CAP-1 mirror). Pins:
   `python/repark/tests/test_attr_id_1_sj4.py`.
+  **ATTR-ID-1 SJ-5 (2026-10-03):** `crossJoin` is
+  `_join_on_condition_h1(other, None, "cross")`; the `None` path skips the
+  preparer but keeps the join projection, the `remint_shared` map from the new
+  `join_shared_remint` native, and the `Join` node. `groupBy`/`cube`/`rollup`
+  keep the caller's raw keys on the `GroupedData` and defer the key check to
+  the terminal, so keys and aggregate references refuse once. Pins:
+  `python/repark/tests/test_attr_id_1_sj5.py`.
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`
@@ -380,6 +387,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   state stores; registry `GROUPED-DECL-*`). The pandas bridge
   `_apply_in_pandas_arrow_batches` moved here unchanged-in-behavior to keep
   `joins_columns.py` under its ceiling. pins: grouped-surface-1/C-001, C-002, C-003, C-006
+  **ATTR-ID-1 SJ-5 (2026-10-03):** the pandas terminals funnel the raw group
+  keys instead of the rebound ones.
+- `grouped_pivot.py` — **ATTR-ID-1 SJ-5 (2026-10-03):** the twelve `_pivot_*`
+  module helpers, moved here from `joins_columns.py` unchanged (pure move at
+  the size ceiling, behind same-named imports in `joins_columns.py` and
+  `core.py`).
 - `cogroup.py` owns `GroupedData.cogroup` and `PandasCogroupedOps` (GROUPED-SURFACE-1,
   2026-09-14). Both sides sort by their key names in the engine and merge-walk the two
   keyed-group segment streams — one group's segments buffered per side, so memory stays
@@ -695,6 +708,14 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   expressions through `_refuse_self_join_refs` (covering `DataFrame.agg` by
   delegation); `_grouped_agg_pandas` moves to `grouped_udf.py` at the size
   ceiling (1169 → 1119, with the CAP-1 mirror).
+  **ATTR-ID-1 SJ-5 (2026-10-03):** `GroupedData` carries `raw_group_columns`
+  (the caller's keys, pre-rebind); `agg` and the pandas terminals funnel the
+  raw keys plus the aggregate references in one call, and a single-dict
+  argument materializes through the dict path so its named references join
+  the keys (Spark refuses the dict form with `AMBIGUOUS_REFERENCE`, measured
+  `agg_dict`). The twelve `_pivot_*` module helpers move to `grouped_pivot.py`
+  behind same-named imports (1151 → 955, with the CAP-1 mirror; the exception
+  row retires under the default ceiling).
 - `plan_collapse.py` owns plan simplification, window structural keys, show formatting, Arrow
   display/type conversion, SQL literal quoting, identifier rewrites, and writer safety helpers.
   DISPLAY-POLARS-1 step 4 (2026-09-09, follow-up): the module keeps the show

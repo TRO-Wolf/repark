@@ -51,6 +51,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(frame_derived, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_self_join_refs, module)?)?;
     module.add_function(wrap_pyfunction!(prepare_join_condition, module)?)?;
+    module.add_function(wrap_pyfunction!(join_shared_remint, module)?)?;
     module.add_function(wrap_pyfunction!(join_plan_lineage, module)?)?;
     Ok(())
 }
@@ -260,6 +261,23 @@ pub fn prepare_join_condition(
             )),
             Prepared::Refused(refusal) => Err(refusal_error(py, &refusal)),
         }
+    })
+}
+
+#[allow(clippy::missing_errors_doc)]
+#[pyfunction]
+#[pyo3(signature = (left_node, right_node))]
+pub fn join_shared_remint(
+    left_node: &PyFrameNode,
+    right_node: &PyFrameNode,
+) -> PyResult<HashMap<String, String>> {
+    fenced!("frame_lineage.join_shared_remint", {
+        let remint: HashMap<String, String> =
+            shared_ids(&left_node.node, right_node.node.outputs())
+                .into_iter()
+                .map(|id| (id.as_str().to_string(), AttrId::mint().as_str().to_string()))
+                .collect();
+        Ok(remint)
     })
 }
 
