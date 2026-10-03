@@ -397,6 +397,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   fallback cannot resolve those twins. The S0 replay found 105 such cells: they
   answered once the alias join stopped refusing. A computed twin keeps the
   stack's pick (Spark sorts by the child's column). pins: casesens-2/C-012
+  **ATTR-ID-1 PERF-1 (2026-10-03):** `_split_written_name` memoizes by its
+  written-name argument (pure string function; every caller reads the
+  result without mutating it).
 - `column_sort.py` — **ATTR-ID-1 S4 follow-up (2026-10-02):** the sort-marker
   family, split out of `column.py` at the size ceiling (pure move; `Column`
   binds the six `asc`/`desc` spellings). `_with_sort_order` re-marks the column
@@ -537,7 +540,18 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   twins and multi-hit binds under a join raise unresolved as Spark does in
   sort). No module docstring: the
   lane's no-comments ruling covers the new file; the contract lives here.
-  pins: attr-id-1/C-039
+  **ATTR-ID-1 PERF-1 (2026-10-03):** `_frame_id_snapshot` reads stamped ids
+  plus engine names once per native handle into the `_ID_SNAPSHOTS` weak
+  table (keyed by frame, guarded by handle identity, so any `_inner` swap
+  misses and recomputes); `_stamped_frame_id_snapshot` adds the
+  stamp-on-missing pass. Every id-reader funnels through one of the two.
+  `_frame_engine_names` caches names alone per frame-plus-handle for the
+  `columns` fallback, which must not call `_plan()` (it would materialize
+  map bridges); it copies on return, so callers keep a fresh list. The
+  stable-id rebind and the subset `_bindings` funnel through the snapshots;
+  all downstream uses read the shared lists without mutation.
+  `_expand_select_star_item` returns early without a `*` in the written
+  name, which star expansion needs. pins: attr-id-1/C-039
   **ATTR-ID-1 S4 follow-up (2026-10-02):** the qualified star expansion, the
   qualified sort bound column, and the rebound rewrap carry `_birth_frame` with
   `_attr_id`, so expanded columns count as birth-frame columns at the bind.

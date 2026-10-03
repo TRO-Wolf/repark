@@ -1,27 +1,60 @@
 from __future__ import annotations
 
+import weakref
 from typing import Any
 
 from repark import _native
 from repark.spark.filter_quote import _frame_qualifiers_for_bind
 
+_ID_SNAPSHOTS: weakref.WeakKeyDictionary[Any, tuple[Any, list[str | None], list[str]]] = (
+    weakref.WeakKeyDictionary()
+)
+_ENGINE_NAMES: weakref.WeakKeyDictionary[Any, tuple[Any, list[str]]] = weakref.WeakKeyDictionary()
+
+
+def _frame_engine_names(frame: Any) -> list[str]:
+    native = frame._inner
+    snapshot = _ENGINE_NAMES.get(frame)
+    if snapshot is not None and snapshot[0] is native:
+        return list(snapshot[1])
+    engines = list(_native.logical_column_names(native))
+    _ENGINE_NAMES[frame] = (native, engines)
+    return list(engines)
+
+
+def _frame_id_snapshot(frame: Any) -> tuple[Any, list[str | None], list[str]]:
+    native = frame._plan()
+    snapshot = _ID_SNAPSHOTS.get(frame)
+    if snapshot is not None and snapshot[0] is native:
+        return (native, snapshot[1], snapshot[2])
+    held = list(_native.attribute_ids(native))
+    engines = list(_native.logical_column_names(native))
+    _ID_SNAPSHOTS[frame] = (native, held, engines)
+    return (native, held, engines)
+
+
+def _stamped_frame_id_snapshot(frame: Any) -> tuple[Any, list[str | None], list[str]]:
+    native, held, engines = _frame_id_snapshot(frame)
+    if None in held:
+        native = _native.stamp_attribute_ids(native)
+        frame._inner = native
+        held = list(_native.attribute_ids(native))
+        engines = list(_native.logical_column_names(native))
+        _ID_SNAPSHOTS[frame] = (native, held, engines)
+    return (native, held, engines)
+
 
 def _alias_frame_qualifiers(child: Any, name: str) -> dict[str, frozenset[str]]:
-    return {
-        held: frozenset({name}) for held in _native.attribute_ids(child._plan()) if held is not None
-    }
+    return {held: frozenset({name}) for held in _frame_id_snapshot(child)[1] if held is not None}
 
 
 def _join_frame_qualifiers(child: Any, left: Any, right: Any) -> dict[str, frozenset[str]] | None:
-    for frame in (child, left, right):
-        if None in list(_native.attribute_ids(frame._plan())):
-            frame._inner = _native.stamp_attribute_ids(frame._inner)
+    output_ids = _stamped_frame_id_snapshot(child)[1]
+    left_ids = _stamped_frame_id_snapshot(left)[1]
+    right_ids = _stamped_frame_id_snapshot(right)[1]
     sources = _native.join_output_sources(child._plan())
     if not any(sources):
         return None
-    left_ids = list(_native.attribute_ids(left._plan()))
-    right_ids = list(_native.attribute_ids(right._plan()))
-    output_ids = list(_native.attribute_ids(child._plan()))
     left_map = left._frame_qualifiers or {}
     right_map = right._frame_qualifiers or {}
     left_names = [left_map.get(held) or frozenset() for held in left_ids]
@@ -76,11 +109,7 @@ def _rewrap_rebound_column(column: Any, rebound: Any) -> Any:
 
 
 def _rebind_qualified_refs(frame: Any, column: Any, for_sort: bool) -> Any:
-    native = frame._plan()
-    held = list(_native.attribute_ids(native))
-    if None in held:
-        frame._inner = _native.stamp_attribute_ids(frame._inner)
-        native = frame._plan()
+    native = _stamped_frame_id_snapshot(frame)[0]
     exact = bool(_native.session_case_sensitive(frame._session))
     displays = list(frame.columns)
     rebound = _native.bind_qualified_free_refs(
@@ -91,7 +120,7 @@ def _rebind_qualified_refs(frame: Any, column: Any, for_sort: bool) -> Any:
 
 def _expand_select_star_item(frame: Any, item: Any) -> list[Any]:
     written = item if isinstance(item, str) else getattr(item, "_projection_name", None)
-    if not isinstance(written, str):
+    if not isinstance(written, str) or "*" not in written:
         return [item]
     star = _expand_qualified_star(frame, written)
     return [item] if star is None else star
@@ -105,14 +134,8 @@ def _expand_qualified_star(frame: Any, written: str) -> list[Any] | None:
     split = _split_written_name(written)
     if split is None or split[0] is None or split[1] != "*":
         return None
-    native = frame._plan()
-    held: list[str | None] = _native.attribute_ids(native)
-    if None in held:
-        native = _native.stamp_attribute_ids(native)
-        frame._inner = native
-        held = _native.attribute_ids(native)
+    native, held, engine_names = _stamped_frame_id_snapshot(frame)
     displays = frame.columns
-    engine_names = _native.logical_column_names(native)
     if len(displays) != len(engine_names) or not _native.frame_is_relation(native):
         return None
     exact = _native.session_case_sensitive(frame._session)
@@ -154,14 +177,8 @@ def _resolve_sort_qualified_name(
     from repark.spark._idents import quote_ident as _quote_ident
     from repark.spark.column_fields import _raise_unresolved_name
 
-    native = frame._plan()
-    held: list[str | None] = _native.attribute_ids(native)
-    if None in held:
-        native = _native.stamp_attribute_ids(native)
-        frame._inner = native
-        held = _native.attribute_ids(native)
+    native, held, engine_names = _stamped_frame_id_snapshot(frame)
     displays = frame.columns
-    engine_names = _native.logical_column_names(native)
     if len(displays) != len(engine_names) or not _native.frame_is_relation(native):
         return frame._bind_schema_column(written)
     exact = _native.session_case_sensitive(frame._session)

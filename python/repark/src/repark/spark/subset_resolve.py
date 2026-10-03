@@ -5,6 +5,7 @@ from typing import Any, NoReturn
 from repark import _native
 from repark.errors import AnalysisException
 from repark.spark import column_fields
+from repark.spark.qualified_names import _stamped_frame_id_snapshot
 
 
 def _hits_folded(frame: Any, written: str, displays: list[str], mode: str) -> list[int]:
@@ -17,13 +18,7 @@ def _hits_folded(frame: Any, written: str, displays: list[str], mode: str) -> li
 def _bindings(frame: Any) -> tuple[list[str], list[str], list[str | None]] | None:
     if frame._map_bridge is not None:
         return None
-    native: Any = frame._plan()
-    held: list[str | None] = list(_native.attribute_ids(native))
-    if None in held:
-        frame._inner = _native.stamp_attribute_ids(frame._inner)
-        native = frame._plan()
-        held = list(_native.attribute_ids(native))
-    engine_names: list[str] = _native.logical_column_names(native)
+    _, held, engine_names = _stamped_frame_id_snapshot(frame)
     if frame._display_names is not None and frame._engine_names is not None:
         displays = list(frame._display_names)
     else:

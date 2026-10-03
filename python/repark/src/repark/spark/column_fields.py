@@ -35,9 +35,11 @@ from repark.spark.filter_quote import (
     _unqualified_candidates,
 )
 from repark.spark.qualified_names import (
+    _frame_id_snapshot,
     _rebind_qualified_refs,
     _resolve_sort_qualified_name,
     _rewrap_rebound_column,
+    _stamped_frame_id_snapshot,
 )
 
 
@@ -380,24 +382,14 @@ def _update_fields_result(column: Any, value: Any, parts: Any) -> Any:
 
 
 def _stamped_ids_and_engines(frame: Any) -> tuple[list[str | None], list[str]]:
-    native = frame._plan()
-    held: list[str | None] = list(_native.attribute_ids(native))
-    if None in held:
-        frame._inner = _native.stamp_attribute_ids(frame._inner)
-        native = frame._plan()
-        held = list(_native.attribute_ids(native))
-    return (held, list(_native.logical_column_names(native)))
+    _, held, engines = _stamped_frame_id_snapshot(frame)
+    return (held, engines)
 
 
 def _bound_attr_id(frame: Any, engine_field: str) -> str | None:
-    native: Any = frame._plan()
-    if None in _native.attribute_ids(native):
-        native = _native.stamp_attribute_ids(native)
-        frame._inner = native
-    native_names: list[str] = _native.logical_column_names(native)
+    native, held, native_names = _stamped_frame_id_snapshot(frame)
     if engine_field not in native_names:
         raise RuntimeError(f"internal error: engine field {engine_field!r} left the native schema")
-    held: list[str | None] = _native.attribute_ids(native)
     attr_id: str | None = held[native_names.index(engine_field)]
     if attr_id is None and _native.frame_is_relation(native):
         raise RuntimeError(f"internal error: stamped field {engine_field!r} has no attribute id")
@@ -441,6 +433,7 @@ def _live_rule_hits(frame: Any, written: str, displays: list[str]) -> list[int]:
     return exact_hits + _native.java_fold_hits(written, displays, "b")
 
 
+@functools.lru_cache(maxsize=2048)
 def _split_written_name(written: str) -> tuple[list[str] | None, str] | None:
     parts: list[str] = []
     current: list[str] = []
@@ -485,14 +478,8 @@ def _bind_resolved_name(frame: Any, written: str) -> Any:
     qualifier_parts, name = split
     if name == "*":
         return frame._bind_schema_column(written)
-    native = frame._plan()
-    held: list[str | None] = _native.attribute_ids(native)
-    if None in held:
-        native = _native.stamp_attribute_ids(native)
-        frame._inner = native
-        held = _native.attribute_ids(native)
+    native, held, engine_names = _stamped_frame_id_snapshot(frame)
     displays = frame.columns
-    engine_names = _native.logical_column_names(native)
     if len(displays) != len(engine_names):
         return frame._bind_schema_column(written)
     if qualifier_parts is None:
@@ -666,9 +653,7 @@ def _bind_stable_id_column(frame: Any, column: Any) -> Any | None:
     attr_id = column._attr_id
     if attr_id is None:
         return None
-    native = frame._plan()
-    held: list[str | None] = list(_native.attribute_ids(native))
-    native_names = list(_native.logical_column_names(native))
+    native, held, native_names = _frame_id_snapshot(frame)
     if attr_id in held:
         narrowed = _qualified_narrow_position(frame, column, held, list(frame.columns))
         if narrowed is not None:
@@ -777,12 +762,7 @@ def _frame_has_unicode_folded_rivals(displays: list[str], held: list[str | None]
 def _rebind_free_names(frame: Any, column: Any, for_sort: bool) -> Any:
     if not for_sort and "__REPARK_ATTR_" not in column.join_sql_part():
         _refuse_ambiguous_free_names(frame, column=column, qualified_only=True)
-    native = frame._plan()
-    held = list(_native.attribute_ids(native))
-    if None in held:
-        frame._inner = _native.stamp_attribute_ids(frame._inner)
-        native = frame._plan()
-        held = list(_native.attribute_ids(native))
+    native, held, _ = _stamped_frame_id_snapshot(frame)
     exact = bool(_native.session_case_sensitive(frame._session))
     displays = list(frame.columns)
     if not exact and _frame_has_unicode_folded_rivals(displays, held):
@@ -833,17 +813,12 @@ def _resolve_sort_name(frame: Any, written: str) -> Any:
         return frame._bind_schema_column(written)
     if qualifier_parts is not None:
         return _resolve_sort_qualified_name(frame, written, qualifier_parts, name)
-    native = frame._plan()
+    native, held, engine_names = _frame_id_snapshot(frame)
     displays = list(frame.columns)
-    engine_names = list(_native.logical_column_names(native))
     if len(displays) != len(engine_names):
         return frame._bind_schema_column(written)
-    held: list[str | None] = list(_native.attribute_ids(native))
     if None in held:
-        frame._inner = _native.stamp_attribute_ids(frame._inner)
-        native = frame._plan()
-        engine_names = list(_native.logical_column_names(native))
-        held = list(_native.attribute_ids(native))
+        native, held, engine_names = _stamped_frame_id_snapshot(frame)
     exact_hits, folded_hits = _unqualified_candidates(name, displays)
     if len(exact_hits) == 1 and not folded_hits:
         position = exact_hits[0]
@@ -921,17 +896,12 @@ def _born_ambiguous(column: Any) -> bool:
 
 def _quote_filter_sql_identifiers(frame: Any, sql: str) -> str:
     _refuse_ambiguous_free_names(frame, sql=sql)
-    native = frame._plan()
+    native, held, engine_names = _frame_id_snapshot(frame)
     displays = list(frame.columns)
-    engine_names = list(_native.logical_column_names(native))
     if not displays or len(displays) != len(engine_names):
         return sql
-    held: list[str | None] = list(_native.attribute_ids(native))
     if None in held:
-        frame._inner = _native.stamp_attribute_ids(frame._inner)
-        native = frame._plan()
-        engine_names = list(_native.logical_column_names(native))
-        held = list(_native.attribute_ids(native))
+        native, held, engine_names = _stamped_frame_id_snapshot(frame)
     exact = bool(_native.session_case_sensitive(frame._session))
     qualifiers, frame_bind_quals = _known_qualifiers(frame, native, exact)
     fold_map: dict[str, list[int]] = {}

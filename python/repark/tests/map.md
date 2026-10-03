@@ -3387,6 +3387,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the 17 moved names on core and on the package IS the leaf module's object, not a copy.
   IO-BUCKET-CLUSTER-1 (2026-09-14): `EXPECTED_NEW_PACKAGE_SUBMODULES` gains
   `writer_layout`. pins: io-bucket-cluster-1/C-005
+  ATTR-ID-1 PERF-1 (2026-10-03): `EXPECTED_DATAFRAME_SLOTS` loses exactly
+  `_frame_node` (now a lazily-built property); the dir table is unchanged.
   pins: dfcore-1/C-001, C-002, C-003, C-008
   ATTR-ID-1 S3d (2026-10-01): core and the package each gain exactly
   `_subset_resolve` (the new S3d binding home, bound by `core`'s module import).
@@ -3453,6 +3455,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and gains `join_shared_remint`; no expected table tracks native names.
   CASESENS-2 port (2026-10-03): core and the package each swap
   `_join_condition_attr_names` for `_join_condition_args`. pins: casesens-2/C-009
+  PERF-1 merge into the CASESENS-2 port (2026-10-03): the docstring keeps both
+  dated lines (PERF-1's lazy `_frame_node` and `frame_nodes`; the port's
+  `_join_condition_args` swap); the expected tables merged without conflict.
 - `test_dfcore_4b_exports.py` — DFCORE-4b ownership pin: `MOVED_DISPLAY_HELPERS`
   pins the ten bodies as `display.py`'s own frame-first functions, the six
   leavers as gone from the class, and the four wrappers as kept.
