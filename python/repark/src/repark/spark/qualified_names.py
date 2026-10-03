@@ -109,7 +109,7 @@ def _rebind_qualified_refs(frame: Any, column: Any, for_sort: bool) -> Any:
 
 def _expand_select_star_item(frame: Any, item: Any) -> list[Any]:
     written = item if isinstance(item, str) else getattr(item, "_projection_name", None)
-    if not isinstance(written, str):
+    if not isinstance(written, str) or "*" not in written:
         return [item]
     star = _expand_qualified_star(frame, written)
     return [item] if star is None else star

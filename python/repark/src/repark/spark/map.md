@@ -391,6 +391,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   partition and order keys all carry an attribute id (internal
   `drop_duplicates`/`distinct` projections), while user windows with free
   refs still raise. Pins: `python/repark/tests/test_attr_id_1_sj5.py`.
+  **ATTR-ID-1 PERF-1 (2026-10-03):** `_split_written_name` memoizes by its
+  written-name argument (pure string function; every caller reads the
+  result without mutating it).
 - `column_sort.py` — **ATTR-ID-1 S4 follow-up (2026-10-02):** the sort-marker
   family, split out of `column.py` at the size ceiling (pure move; `Column`
   binds the six `asc`/`desc` spellings). `_with_sort_order` re-marks the column
@@ -532,7 +535,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   table (keyed by frame, guarded by handle identity, so any `_inner` swap
   misses and recomputes); `_stamped_frame_id_snapshot` adds the
   stamp-on-missing pass. Every id-reader funnels through one of the two.
-  pins: attr-id-1/C-039
+  `_expand_select_star_item` returns early without a `*` in the written
+  name, which star expansion needs. pins: attr-id-1/C-039
   **ATTR-ID-1 S4 follow-up (2026-10-02):** the qualified star expansion, the
   qualified sort bound column, and the rebound rewrap carry `_birth_frame` with
   `_attr_id`, so expanded columns count as birth-frame columns at the bind.

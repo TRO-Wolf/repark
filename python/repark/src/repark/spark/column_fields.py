@@ -433,6 +433,7 @@ def _live_rule_hits(frame: Any, written: str, displays: list[str]) -> list[int]:
     return exact_hits + _native.java_fold_hits(written, displays, "b")
 
 
+@functools.lru_cache(maxsize=2048)
 def _split_written_name(written: str) -> tuple[list[str] | None, str] | None:
     parts: list[str] = []
     current: list[str] = []
