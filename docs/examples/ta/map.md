@@ -64,7 +64,9 @@ column is asserted bit-exact against a golden.
 - [composition.py](composition.py) — `ta.over_columns` and
   `ta.with_indicators` fusing several kernels in one window; every produced
   column (`ema_5`, `trima_5`, `rsi_3`, `min_34` goldens) is asserted bit-exact
-  (EX-24).
+  (EX-24). TA-CHAIN-1 adds the chained column `ema21_of_tr` (`ta.ema` over a `ta.trange`
+  column on the prefix fixture), asserted against `goldens/prefix/prefix_chain_ema21_of_trange`;
+  `COVERS` is unchanged.
 
 ## Pointers
 

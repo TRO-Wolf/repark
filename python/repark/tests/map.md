@@ -6922,7 +6922,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `orderBy("ts")`; `last_row` row-count + last-bar values; one `WindowAggExec` via the N2
   mechanic (function-name tokens so DCE cannot fake fusion); `null_lookback` threads through
   `_NullLookbackColumn`. Does **not** edit `test_ta.py` (A12). Ledger:
-  `task/ta2-with-indicators-ledger.md`.
+  `task/ta2-with-indicators-ledger.md`. **TA-CHAIN-1 (2026-10-03):**
+  `test_chained_indicator_over_trange_matches_polars_talib_golden` (`ta.ema(tr, 21)` over a
+  `ta.trange` column on the prefix fixture, bit-exact against the polars_talib prefix goldens,
+  first finite row 28) and `test_leading_null_prefix_is_skipped_per_partition` (14 partitions,
+  NULL runs of 3 and 6 rows on two of them; each partition's first finite row is run + lookback
+  and its tail equals EMA over the trimmed series, bit-exact; skipped rows are NaN, never NULL).
+  pins: ta-chain-1/C-001, C-002, C-003
 - `test_n2_plan_collapse.py` — **r23b N2** plan-collapse pins: stage (a) logical alias-chain squash
   (no `ts AS ts AS ts`); stage (b) adjacent same-spec withColumns/withColumn merge → 1
   `WindowAggExec` + Arrow bit-exact vs single fused call; dependent `tr`→`etr5` keeps stacking;
