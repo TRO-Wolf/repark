@@ -8,7 +8,8 @@ the p6 miss cells refuse the same way. Under ``false`` qualified strings bind:
 the written last segment, and the exact qualified shape answers under ``true``
 while the self-join shape refuses naming ``l.ID``. The ``false`` door is
 otherwise byte-identical: the r7 guard legs, the S3 ``df_*_false`` legs,
-today's facade miss text, the R-19 lazy timing and the quoter battery.
+the R-19 lazy timing and the quoter battery; the ``false`` miss refuses
+Spark's measured text.
 
 The p6 oracle is ``casesens_2_spark_oracle.json`` (Spark 4.1.2 + Iceberg 1.11.0,
 measured 2026-09-28); p1/p4 legs read ``casesens_1_spark_oracle.json``.
@@ -36,11 +37,8 @@ schema, name via the session rule). ``p1/r7_selfjoin`` and
 ``p6/r18_alias_join`` answer Spark's names and rows,
 ``p6/selfjoin_true`` keeps refusing Spark's text, and a wrong-case alias
 qualifier under ``true`` refuses the class and SQLSTATE (its text is
-unrecorded). The p10 cells pin the non-join overlay shapes: the two
-``true`` qualified misses match Spark head plus candidates, the
-``false`` shapes that Spark refuses keep the R4 facade text, and the
-three shapes where Spark answers stay refuse-pinned as residue R-CS2-7
-(RePark's select/withColumn children lose the alias qualifier).
+unrecorded). The p10 cells pin the non-join overlay shapes: every
+``true`` and ``false`` shape answers or refuses as Spark recorded.
 
 pins: casesens-2/C-001, C-002, C-003, C-004, C-005, C-006, C-008
 """
@@ -106,6 +104,31 @@ _S2_RENAMED_KEYS: tuple[str, ...] = (
     "p6/wcr_twin_true",
     "p6/r20_wcr_twin",
 )
+
+_SPARK_SEL_NOPE_FALSE: dict[str, str] = {
+    "error": "AnalysisException",
+    "msg": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter "
+    "with name `nope` cannot be resolved. Did you mean one of the following? "
+    "[`id`, `s`, `Data`]. SQLSTATE: 42703;",
+    "getCondition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+    "getSqlState": "42703",
+}
+
+_SPARK_OVERLAY_DROPNA_ID: dict[str, str] = {
+    "error": "AnalysisException",
+    "msg": "[AMBIGUOUS_REFERENCE] Reference `id` is ambiguous, could be: [`id`, `id`]. "
+    "SQLSTATE: 42704",
+    "getCondition": "AMBIGUOUS_REFERENCE",
+    "getSqlState": "42704",
+}
+
+_SPARK_DUP_FILLNA_X: dict[str, str] = {
+    "error": "AnalysisException",
+    "msg": "[AMBIGUOUS_REFERENCE] Reference `x` is ambiguous, could be: [`x`, `x`]. "
+    "SQLSTATE: 42704",
+    "getCondition": "AMBIGUOUS_REFERENCE",
+    "getSqlState": "42704",
+}
 
 _SPARK_POSITION_SUFFIX = "; line "
 _REPARK_PREFIX: str = "Error during planning: "
@@ -297,7 +320,7 @@ def test_s1_qualified_strings_bind(tmp_path: Path) -> None:
 
 
 def test_s1_false_door_byte_identical(tmp_path: Path) -> None:
-    """Guards, miss text, lazy timing and the quoter match the S1 base."""
+    """Guards, lazy timing and the quoter match the S1 base; the miss answers Spark."""
     session = _open(tmp_path)
     try:
         _setup_tables(session)
@@ -308,11 +331,7 @@ def test_s1_false_door_byte_identical(tmp_path: Path) -> None:
         try:
             table.select("nope")
         except Exception as error:
-            assert type(error).__name__ == "AnalysisException"
-            assert str(error) == (
-                "A column with name `nope` cannot be resolved; "
-                "available columns: ['id', 'Data', 's']"
-            )
+            _assert_error("sel_nope_false", error, _SPARK_SEL_NOPE_FALSE)
         else:
             raise AssertionError("select(nope) answered instead of refusing")
         twins = session.createDataFrame([(1, 2)], ["id", "ID"])
@@ -439,7 +458,7 @@ def test_s3_fillna_follows_the_rule(tmp_path: Path) -> None:
 
 
 def test_s3_dropna_follows_the_rule(tmp_path: Path) -> None:
-    """dropna subsets fold under false, on the plain and overlay paths."""
+    """dropna subsets fold under false; overlay twins refuse as Spark does."""
     session = _open(tmp_path)
     try:
         _setup_tables_null(session)
@@ -450,15 +469,21 @@ def test_s3_dropna_follows_the_rule(tmp_path: Path) -> None:
             functions.col("id").alias("ID"), functions.col("Data").alias("ID")
         )
         assert overlay.columns == ["ID", "ID"]
-        dropped = overlay.dropna(subset=["id"])
-        assert _dtypes(dropped) == [["ID", "int"], ["ID", "string"]]
-        assert _rows(dropped) == []
+        try:
+            overlay.dropna(subset=["id"]).collect()
+        except Exception as error:
+            _assert_error("overlay_dropna_id", error, _SPARK_OVERLAY_DROPNA_ID)
+        else:
+            raise AssertionError("overlay dropna answered instead of refusing")
         dup = session.table("sc.ns.tn").select(
             functions.col("Data").alias("X"), functions.col("Data").alias("X")
         )
-        filled = dup.fillna("z", subset=["x"])
-        assert _dtypes(filled) == [["X", "string"], ["X", "string"]]
-        assert _rows(filled) == [["b", "b"], ["z", "z"]]
+        try:
+            dup.fillna("z", subset=["x"]).collect()
+        except Exception as error:
+            _assert_error("dup_fillna_x", error, _SPARK_DUP_FILLNA_X)
+        else:
+            raise AssertionError("twin fillna answered instead of refusing")
     finally:
         session.stop()
 
@@ -474,31 +499,13 @@ _P10_TRUE_MATCH_KEYS: tuple[str, ...] = (
     "p10/alias_dupe_sel_first_true",
 )
 
-_P10_FACADE_KEYS: tuple[tuple[str, str], ...] = (
-    (
-        "p10/alias_dupe_sel",
-        "A column with name `l.id` cannot be resolved; available columns: ['id', 'id']",
-    ),
-    (
-        "p10/alias_dupe_sel_fold",
-        "A column with name `l.ID` cannot be resolved; available columns: ['id', 'id']",
-    ),
-    (
-        "p10/alias_dupe_sel_wrongqual",
-        "A column with name `x.id` cannot be resolved; available columns: ['id', 'id']",
-    ),
-    (
-        "p10/alias_wc_sel",
-        "A column with name `l.ID` cannot be resolved; available columns: ['ID', 'Data', 's']",
-    ),
-    (
-        "p10/alias_wc_sel_lower",
-        "A column with name `l.id` cannot be resolved; available columns: ['ID', 'Data', 's']",
-    ),
-    (
-        "p10/alias_dupe_sel_first",
-        "A column with name `l.x` cannot be resolved; available columns: ['x', 'x']",
-    ),
+_P10_FALSE_KEYS: tuple[str, ...] = (
+    "p10/alias_dupe_sel",
+    "p10/alias_dupe_sel_fold",
+    "p10/alias_dupe_sel_wrongqual",
+    "p10/alias_wc_sel",
+    "p10/alias_wc_sel_lower",
+    "p10/alias_dupe_sel_first",
 )
 
 
@@ -565,53 +572,22 @@ def test_s4_probe10_true_qualified_misses_match(tmp_path: Path) -> None:
         session.stop()
 
 
-def test_s4_probe10_false_shapes_refuse(tmp_path: Path) -> None:
-    """False overlay qualified shapes keep the facade text, gaps recorded."""
+def test_s4_probe10_false_shapes_answer_as_spark(tmp_path: Path) -> None:
+    """False overlay qualified shapes answer or refuse as Spark recorded."""
     session = _open(tmp_path)
     try:
         _setup_tables(session)
-        for key, facade_text in _P10_FACADE_KEYS:
-            step = _oracle(key)
-            session.conf.set("spark.sql.caseSensitive", "false")
-            try:
-                _run_df(session, step["statement"]).collect()
-            except Exception as error:
-                assert type(error).__name__ == "AnalysisException", key
-                assert str(error) == facade_text, key
-            else:
-                raise AssertionError(f"{key} answered instead of refusing")
-            spark = step["spark"]
-            if "error" in spark:
-                assert spark["error"] == "AnalysisException", key
-                assert spark["getCondition"] == "UNRESOLVED_COLUMN.WITH_SUGGESTION", key
-                assert spark["getSqlState"] == "42703", key
-            else:
-                assert spark["cols"], key
+        for key in _P10_FALSE_KEYS:
+            _assert_df_step(session, key)
     finally:
         session.stop()
 
 
-def test_s4_probe10_true_gap_stays_pinned(tmp_path: Path) -> None:
-    """True multi-hit qualified select refuses qualified where Spark answers."""
+def test_s4_probe10_true_multi_hit_answers_as_spark(tmp_path: Path) -> None:
+    """True multi-hit qualified select answers Spark's recorded names and rows."""
     session = _open(tmp_path)
     try:
         _setup_tables(session)
-        step = _oracle("p10/alias_dupe_sel_true")
-        session.conf.set("spark.sql.caseSensitive", "true")
-        try:
-            _run_df(session, step["statement"]).collect()
-        except Exception as error:
-            assert type(error).__name__ == "AnalysisException"
-            assert _condition(error) == "UNRESOLVED_COLUMN.WITH_SUGGESTION"
-            assert _sql_state(error) == "42703"
-            mine = _plain_message(str(error))
-            assert mine.split(_SUGGESTION_MARK)[0] == (
-                "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function "
-                "parameter with name `l`.`id` cannot be resolved. "
-            ), "p10/alias_dupe_sel_true"
-            assert _candidates(mine) == {"`id`"}, "p10/alias_dupe_sel_true"
-        else:
-            raise AssertionError("p10/alias_dupe_sel_true answered instead of refusing")
-        assert step["spark"]["cols"], "p10/alias_dupe_sel_true"
+        _assert_df_step(session, "p10/alias_dupe_sel_true")
     finally:
         session.stop()

@@ -266,6 +266,20 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   R-CS2-7 answer-gaps. The oracle gains the p10 keys (existing keys
   byte-equal).
   pins: casesens-2/C-003, C-008
+  **CASESENS-2 port (2026-10-03):** on the ATTR-ID-1 stack five charter pins
+  move to live Spark 4.1.2's answers, each re-measured that day: the `false`
+  `select("nope")` refuses `UNRESOLVED_COLUMN.WITH_SUGGESTION` (not the legacy
+  facade text), the overlay `dropna(subset=["id"])` and twin
+  `fillna("z", subset=["x"])` refuse `AMBIGUOUS_REFERENCE` (not fan-out
+  answers), and the six `false` p10 shapes plus `p10/alias_dupe_sel_true` replay
+  the oracle in full through `_assert_df_step` (R-CS2-7 closed: the stack keeps
+  the alias qualifier, so the three answer-gaps answer and the refusals carry
+  Spark's head and candidates). The tests are renamed
+  `test_s4_probe10_false_shapes_answer_as_spark` and
+  `test_s4_probe10_true_multi_hit_answers_as_spark`. The twin `filter("id > 0")`
+  echo keeps `` [`id`, `ID`] `` (Spark echoes `` [`id`, `id`] ``): that is the
+  recorded divergence `test_filter_predicate_rewrite.py` pins, not a port
+  conflict. pins: casesens-2/C-006, C-011
 - [test_ntz_1.py](test_ntz_1.py) + `ntz_1_spark_oracle.json` — **WO NTZ-1 slice 1
   (2026-09-26):** the `TIMESTAMP_NTZ` literal and explicit casts replay Spark's measured
   answers — 29 literal/cast/refusal queries in UTC and New York sessions, the v2/v3
