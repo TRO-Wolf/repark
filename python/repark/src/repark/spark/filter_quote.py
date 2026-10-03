@@ -294,6 +294,19 @@ def _frame_qualifiers_for_bind(frame: Any) -> dict[str, list[str]] | None:
     return {attr: sorted(names) for attr, names in held.items()}
 
 
+def _displays_unique(displays: list[str]) -> bool:
+    """Whether no two displays match under either case rule."""
+    seen_exact = set()
+    seen_folded = set()
+    for display in displays:
+        folded = display.lower()
+        if display in seen_exact or folded in seen_folded:
+            return False
+        seen_exact.add(display)
+        seen_folded.add(folded)
+    return True
+
+
 def _refuse_ambiguous_free_names(
     frame: Any,
     *,
@@ -304,6 +317,9 @@ def _refuse_ambiguous_free_names(
     qualified_only: bool = False,
 ) -> None:
     """Refuse free names matching two displays that share no engine field."""
+    displays = list(frame.columns)
+    if _displays_unique(displays):
+        return
     _native.refuse_ambiguous_free_names(
         frame._plan(),
         sql=sql,
@@ -311,7 +327,7 @@ def _refuse_ambiguous_free_names(
         names=names,
         select_item=select_item,
         qualified_only=qualified_only,
-        displays=list(frame.columns),
+        displays=displays,
         exact=bool(_native.session_case_sensitive(frame._session)),
         frame_qualifiers=_frame_qualifiers_for_bind(frame),
     )

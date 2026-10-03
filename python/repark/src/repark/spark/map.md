@@ -452,6 +452,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **ATTR-ID-1 SJ-5 F1 (2026-10-03):** `_refuse_ambiguous_free_names` calls the
   native of the same name (one rule for SQL text, expressions, and name
   lists); `_quote_select_expr_dotted` checks each item first.
+  `_displays_unique` skips the call when no two displays match under either
+  case rule, which the native rule cannot refuse; `str.lower` over-matches
+  the native ASCII fold, so a unique verdict always agrees with it.
 - `subset_resolve.py` — **ATTR-ID-1 S3d (2026-10-01):** the
   `drop`/`dropDuplicates`/`fillna`/`dropna` name-binding home. `_bindings`
   reads the stamped ids, native engines, and facade displays (or `None` for a
