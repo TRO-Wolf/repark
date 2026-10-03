@@ -176,6 +176,12 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   `tokens_with_a_leaf_display_field_parse_and_span_to_its_close` pins that the
   parser skips the token's `__D<hex>__` leaf field (the `rfind("__")` close
   already covers it; no production change).
+  **ATTR-ID-1 SJ-4 (2026-10-02):** `tok_leaf` renders tokens with the `__D`
+  field; `k_off_shared_sel_missing` pins conf-off MISSING APPEAR,
+  `k_on_shared_sel_prefers_1182` pins ambiguity-first ordering, and
+  `k_drop_sel_missing_from_input` pins MISSING_FROM_INPUT under both confs;
+  `i_engine_display_falls_back_to_token_leaf` pins the leaf fallback for
+  engine-flavored displays.
 - `session.rs` — ported v1 session battery plus P2G R2 / A13 / metadata-enumeration pins. RP-5: the bare-session half of the metadata-table enumeration contract (fork F-8 listing); mutation — make `information_schema` expect a `$snapshots` twin and the pin reds. pins: rp-5-fork-repin/C-003
   Child: [session/catalog_registration.rs](session/map.md).
   RP-5: `information_schema` hide pin now cites fork F-8 listing (no engine shim).

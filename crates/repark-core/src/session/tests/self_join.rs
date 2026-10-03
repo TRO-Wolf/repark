@@ -26,6 +26,8 @@ const NOAUTO: SelfJoinRules = SelfJoinRules {
     auto_resolve: false,
 };
 
+const RULE: NameRule = NameRule::IgnoreCase;
+
 struct Frame {
     node: Arc<FrameNode>,
     schema: DFSchema,
@@ -131,6 +133,16 @@ fn tok(frame: &Frame, display: &str) -> String {
         frame.node.outputs()[position].as_str(),
         frame.node.id().get()
     )
+}
+
+fn tok_leaf(frame: &Frame, display: &str) -> String {
+    const HEX: &[u8; 16] = b"0123456789ABCDEF";
+    let mut coded = String::with_capacity(display.len() * 2);
+    for byte in display.bytes() {
+        coded.push(HEX[usize::from(byte >> 4)] as char);
+        coded.push(HEX[usize::from(byte & 15)] as char);
+    }
+    tok(frame, display).replace("____", &format!("____D{coded}__"))
 }
 
 fn side<'a>(frame: &'a Frame, alias: &'a str) -> JoinSide<'a> {
@@ -401,7 +413,7 @@ fn d_derived_eq_plus0() {
 fn d_self_eq_sel_d() {
     let Env { d, .. } = env();
     let joined = join(&d, &d);
-    let refusal = check_refs(&joined.node, &joined.displays, &[&tok(&d, "id")], ON).unwrap();
+    let refusal = check_refs(&joined.node, &joined.displays, &[&tok(&d, "id")], ON, RULE).unwrap();
     assert_eq!(
         refusal,
         Some(Refusal::SelfJoin {
@@ -745,7 +757,7 @@ fn x_on_cond_shared_eq() {
 fn a_inner_sel_f_v() {
     let Env { d, f, .. } = env();
     let joined = join(&d, &f);
-    let refusal = check_refs(&joined.node, &joined.displays, &[&tok(&f, "v")], ON).unwrap();
+    let refusal = check_refs(&joined.node, &joined.displays, &[&tok(&f, "v")], ON, RULE).unwrap();
     assert_eq!(
         refusal,
         Some(Refusal::SelfJoin {
@@ -753,9 +765,91 @@ fn a_inner_sel_f_v() {
         })
     );
     assert_eq!(
-        check_refs(&joined.node, &joined.displays, &[&tok(&f, "v")], OFF).unwrap(),
+        check_refs(&joined.node, &joined.displays, &[&tok(&f, "v")], OFF, RULE).unwrap(),
         None
     );
+}
+
+#[test]
+fn k_off_shared_sel_missing() {
+    let Env { d, s, .. } = env();
+    let joined = join(&s, &d);
+    assert_eq!(
+        check_refs(
+            &joined.node,
+            &joined.displays,
+            &[&tok_leaf(&d, "v")],
+            OFF,
+            RULE
+        )
+        .unwrap(),
+        Some(Refusal::Missing {
+            names: names(&["v"]),
+            input: names(&["id", "id", "v"]),
+            operation: names(&["v"]),
+        })
+    );
+}
+
+#[test]
+fn i_engine_display_falls_back_to_token_leaf() {
+    let Env { d, f, .. } = env();
+    let joined = join(&d, &f);
+    let engine = vec![
+        "__repark_l_0_id".to_string(),
+        "__repark_l_1_v".to_string(),
+        "__repark_r_2_id".to_string(),
+        "__repark_r_3_v".to_string(),
+    ];
+    assert_eq!(
+        check_refs(&joined.node, &engine, &[&tok_leaf(&f, "v")], ON, RULE).unwrap(),
+        Some(Refusal::SelfJoin {
+            names: names(&["v"])
+        })
+    );
+}
+
+#[test]
+fn k_on_shared_sel_prefers_1182() {
+    let Env { d, s, .. } = env();
+    let joined = join(&s, &d);
+    assert_eq!(
+        check_refs(
+            &joined.node,
+            &joined.displays,
+            &[&tok_leaf(&d, "v")],
+            ON,
+            RULE
+        )
+        .unwrap(),
+        Some(Refusal::SelfJoin {
+            names: names(&["v"])
+        })
+    );
+}
+
+#[test]
+fn k_drop_sel_missing_from_input() {
+    let Env { d, s, .. } = env();
+    let joined = join(&s, &d);
+    let dropped = derived(&joined, &[("id", Some(0)), ("id", Some(1))]);
+    for rules in [ON, OFF] {
+        assert_eq!(
+            check_refs(
+                &dropped.node,
+                &dropped.displays,
+                &[&tok_leaf(&d, "v")],
+                rules,
+                RULE
+            )
+            .unwrap(),
+            Some(Refusal::Missing {
+                names: names(&["v"]),
+                input: names(&["id", "id"]),
+                operation: Vec::new(),
+            })
+        );
+    }
 }
 
 #[test]
@@ -765,7 +859,7 @@ fn p_v_left_join_right_parent() {
     let parts = [tok(&d, "id"), tok(&f, "id"), tok(&f, "id")];
     let parts = parts.iter().map(String::as_str).collect::<Vec<_>>();
     assert_eq!(
-        check_refs(&joined.node, &joined.displays, &parts, ON).unwrap(),
+        check_refs(&joined.node, &joined.displays, &parts, ON, RULE).unwrap(),
         Some(Refusal::SelfJoin {
             names: names(&["id", "id"])
         })
@@ -778,7 +872,7 @@ fn i_window_f() {
     let joined = join(&d, &f);
     let part = format!("row_number() OVER (ORDER BY {} ASC)", tok(&f, "v"));
     assert_eq!(
-        check_refs(&joined.node, &joined.displays, &[&part], ON).unwrap(),
+        check_refs(&joined.node, &joined.displays, &[&part], ON, RULE).unwrap(),
         None
     );
 }
@@ -860,6 +954,6 @@ fn x_empty_root_never_renews_and_skips_refusal_checks() {
     assert!(!target.renews());
     assert!(target.outputs().is_empty());
     let shown = vec!["v".to_string()];
-    let refusal = check_refs(&target, &shown, &[], ON).unwrap();
+    let refusal = check_refs(&target, &shown, &[], ON, RULE).unwrap();
     assert!(refusal.is_none());
 }

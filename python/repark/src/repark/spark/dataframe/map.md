@@ -206,6 +206,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `__init__` indexes each frame by node id in the shared `alive_token` box
   (`frame_registry`, weak) so the names map resolves birth frames without a
   global. Pins: `python/repark/tests/test_attr_id_1_sj3.py`.
+  **ATTR-ID-1 SJ-4 (2026-10-02):** the 13 post-join surfaces funnel the user's
+  Columns through `_refuse_self_join_refs` before any rebind (nine direct call
+  sites; `withColumn`/`where`/`sort`/`sortWithinPartitions`/`DataFrame.agg`
+  ride delegation); the repartition trio moves to `repartition_ops.py` behind
+  same-named bindings (3583 → 3494, with the CAP-1 mirror). Pins:
+  `python/repark/tests/test_attr_id_1_sj4.py`.
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`
@@ -359,6 +365,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   old comparator defined, nested key types fall back to the per-row compare for that
   column), so `as_py` runs once per contiguous run, never per row.
   pins: dfcore-1/C-006, grouped-surface-1/C-002, C-004, C-009
+  **ATTR-ID-1 SJ-4 (2026-10-02):** `_grouped_agg_pandas` moves here from
+  `joins_columns.py` (pure move at the size ceiling).
 - `grouped_arrow.py` owns the grouped map bridges bound on `GroupedData` (GROUPED-SURFACE-1,
   2026-09-14): `apply` accepts only a GROUPED_MAP pandas marker and delegates to
   `applyInPandas` behind Spark's deprecation `UserWarning`; `applyInArrow` routes
@@ -683,6 +691,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   keep-set (`core._is_numeric_type_key`) covers the narrow widths
   (byte/short/float), matching Spark's NumericType.
   pins: dfcore-1/C-006, C-007, grouped-surface-1/C-007; pins: logical-width-1/C-013
+  **ATTR-ID-1 SJ-4 (2026-10-02):** `GroupedData.agg` funnels aggregate
+  expressions through `_refuse_self_join_refs` (covering `DataFrame.agg` by
+  delegation); `_grouped_agg_pandas` moves to `grouped_udf.py` at the size
+  ceiling (1169 → 1119, with the CAP-1 mirror).
 - `plan_collapse.py` owns plan simplification, window structural keys, show formatting, Arrow
   display/type conversion, SQL literal quoting, identifier rewrites, and writer safety helpers.
   DISPLAY-POLARS-1 step 4 (2026-09-09, follow-up): the module keeps the show
@@ -737,6 +749,14 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `_raise_unemitted_attr_tokens`/`_refuse_unemitted_ids`), split out of `core.py`
   at the size ceiling (pure move; `DataFrame` binds the four spellings). Pins:
   `python/repark/tests/test_attr_id_1_sj2.py`.
+  **ATTR-ID-1 SJ-4 (2026-10-02):** also owns `_refuse_self_join_refs`, the
+  post-join funnel: it returns early unless the frame node renews, else makes
+  the one native `refuse_self_join_refs` call over the Columns'
+  `join_sql_part()` tokens. Pins: `python/repark/tests/test_attr_id_1_sj4.py`.
+- `repartition_ops.py` — **ATTR-ID-1 SJ-4 (2026-10-02):** the single-node
+  repartition no-op trio (`repartition`/`repartitionByRange`/`repartitionById`),
+  split out of `core.py` at the size ceiling (pure move with the SJ-4 funnel
+  calls; `DataFrame` binds the three spellings).
 - `polars_cells.py` owns every polars/duckdb cell and dtype spelling used by
   the show doors: `null` / lowercase bools / mixed-mode floats
   (shortest-expansion rules measured probe by probe against polars 1.43.2 —

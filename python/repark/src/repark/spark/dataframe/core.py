@@ -37,6 +37,7 @@ from repark.spark.column_fields import column_window_spec as _column_window_spec
 from repark.spark.dataframe import (
     cache_handle,
     plan_introspect,
+    repartition_ops,
     replace_expr,
     statistics,
     streaming_batch,
@@ -1057,6 +1058,9 @@ class DataFrame:
                     f"got {type(column).__name__} for {name!r}"
                 )
             _reject_aggregate_in_with_column(column, surface="withColumns")
+        self._refuse_self_join_refs(
+            [column for column in colsMap.values() if isinstance(column, Column)]
+        )
         merged = self._try_merge_adjacent_window_layer(colsMap)
         if merged is not None:
             return merged
@@ -1153,6 +1157,7 @@ class DataFrame:
         if isinstance(condition, Column):
             _reject_partition_transform(condition)
             condition._reject_nested_generator("filter")
+            self._refuse_self_join_refs([condition])
             join_sql = condition.join_sql_part()
             if "__REPARK_ATTR_" in join_sql and self._display_names is not None:
                 local_sql = _rewrite_attr_tokens_local(join_sql, self)
@@ -1240,6 +1245,7 @@ class DataFrame:
             if isinstance(item, Column):
                 _reject_partition_transform(item)
                 _reject_non_numeric_range_order(self, item)
+        self._refuse_self_join_refs([item for item in expanded if isinstance(item, Column)])
         projected = [self._column_of(item) for item in expanded]
         generators = [column for column in projected if getattr(column, "_generator", None)]
         if len(generators) > 1:
@@ -1718,6 +1724,7 @@ class DataFrame:
     _raise_if_id_not_emitted = unemitted_ids._raise_if_id_not_emitted
     _raise_unemitted_attr_tokens = unemitted_ids._raise_unemitted_attr_tokens
     _refuse_unemitted_ids = unemitted_ids._refuse_unemitted_ids
+    _refuse_self_join_refs = unemitted_ids._refuse_self_join_refs
 
     def _bind_schema_column(self, name: str, canonical: str | None = None) -> Column:
         """Bind a name case-insensitively and quote its canonical engine identifier,
@@ -2067,109 +2074,9 @@ class DataFrame:
         """
         return replace_expr._replace(self, to_replace, value, subset)
 
-    def repartition(self, numPartitions: Any, *cols: Any) -> DataFrame:  # noqa: N803
-        """Accept ``repartition`` as a no-op (single-node; plan unchanged — disclosed).
-
-        Validates Spark-shaped first-arg types so Apache ``test_repartition`` error-class
-        pins land before the identity child is returned. List / bool / other non
-        int-or-Column-or-str first args raise ``NOT_COLUMN_OR_STR`` whether or not
-        ``*cols`` is present (Spark parity — sole-arg list must not silently no-op).
-        """
-        self._ensure_alive()
-        if isinstance(numPartitions, bool) or (
-            not isinstance(numPartitions, (int, str)) and not isinstance(numPartitions, Column)
-        ):
-            raise PySparkTypeError(
-                errorClass="NOT_COLUMN_OR_STR",
-                messageParameters={
-                    "arg_name": "numPartitions",
-                    "arg_type": type(numPartitions).__name__,
-                },
-            )
-        _ = cols
-        return self._identity_child()
-
-    def repartitionByRange(  # noqa: N802
-        self,
-        numPartitions: Any,  # noqa: N803 — PySpark parameter name
-        *cols: Any,
-    ) -> DataFrame:
-        """Accept ``repartitionByRange`` as a no-op (single-node; disclosed).
-
-        Type-checks the first argument against Spark's
-        ``NOT_COLUMN_OR_INT_OR_STR`` surface (Apache ``test_repartition_by_range``). Real
-        multi-partition range assignment is an engine seed (``spark_partition_id`` family).
-        """
-        self._ensure_alive()
-        if isinstance(numPartitions, list):
-            raise PySparkTypeError(
-                errorClass="NOT_COLUMN_OR_INT_OR_STR",
-                messageParameters={
-                    "arg_name": "numPartitions",
-                    "arg_type": "list",
-                },
-            )
-        if isinstance(numPartitions, bool) or (
-            not isinstance(numPartitions, (int, str)) and not isinstance(numPartitions, Column)
-        ):
-            raise PySparkTypeError(
-                errorClass="NOT_COLUMN_OR_INT_OR_STR",
-                messageParameters={
-                    "arg_name": "numPartitions",
-                    "arg_type": type(numPartitions).__name__,
-                },
-            )
-        _ = cols
-        return self._identity_child()
-
-    def repartitionById(  # noqa: N802
-        self,
-        numPartitions: Any,  # noqa: N803
-        partitionIdExpr: Any,  # noqa: N803
-    ) -> DataFrame:
-        """Accept ``repartitionById`` as a single-node no-op after Spark-shaped validation.
-
-        Validates ``numPartitions`` (``NOT_INT`` / ``VALUE_NOT_POSITIVE``) so Apache error
-        pins pass. A bare string / simple-name :class:`Column` whose schema type is not
-        integer-family raises :class:`~repark.errors.AnalysisException` at plan time
-        (Apache ``test_repartition_by_id_error_non_int_type``). Actual partition-id
-        routing needs multi-partition execution + ``spark_partition_id`` (engine seed).
-        """
-        self._ensure_alive()
-        if isinstance(numPartitions, bool) or not isinstance(numPartitions, int):
-            raise PySparkTypeError(
-                errorClass="NOT_INT",
-                messageParameters={
-                    "arg_name": "numPartitions",
-                    "arg_type": type(numPartitions).__name__,
-                },
-            )
-        if numPartitions <= 0:
-            raise PySparkValueError(
-                errorClass="VALUE_NOT_POSITIVE",
-                messageParameters={
-                    "arg_name": "numPartitions",
-                    "arg_value": str(numPartitions),
-                },
-            )
-        column_name: str | None = None
-        if isinstance(partitionIdExpr, str):
-            column_name = partitionIdExpr
-        elif isinstance(partitionIdExpr, Column):
-            display = partitionIdExpr.spark_display_part()
-            if display.isidentifier() and display in self.columns:
-                column_name = display
-        if column_name is not None:
-            type_keys = {
-                name: type_key for name, type_key, _ in self._inner.logical_schema_fields()
-            }
-            type_key = type_keys.get(column_name, "")
-            if type_key not in {"int", "long", "byte", "short"}:
-                raise AnalysisException(
-                    f"repartitionById requires an integer partition expression; "
-                    f"column `{column_name}` has type `{type_key or 'unknown'}`"
-                )
-        return self._identity_child()
+    repartition = repartition_ops.repartition
+    repartitionByRange = repartition_ops.repartitionByRange  # noqa: N815
+    repartitionById = repartition_ops.repartitionById  # noqa: N815
 
     def coalesce(self, numPartitions: int) -> DataFrame:  # noqa: N803
         """Accept ``coalesce(numPartitions)`` as a no-op (single-node — disclosed).
@@ -2235,6 +2142,7 @@ class DataFrame:
         the ``ascending`` keyword (a bool or a per-column list) overrides those. Null ordering
         follows Spark: ascending → nulls first, descending → nulls last.
         """
+        self._refuse_self_join_refs([column for column in cols if isinstance(column, Column)])
         columns, ascending_flags, nulls_first_flags = self._sort_specs(cols, ascending)
         return self._spawn_preserving_identity(
             self._plan().sort(columns, ascending_flags, nulls_first_flags)
@@ -2470,6 +2378,7 @@ class DataFrame:
         Arguments may be ``Column`` objects or names. Partition transforms are valid only in
         ``DataFrameWriterV2.partitionedBy``.
         """
+        self._refuse_self_join_refs([column for column in cols if isinstance(column, Column)])
         self._prepare_for_plan()
         group_columns = [self._column_of(item) for item in cols]
         for column in group_columns:
@@ -2482,10 +2391,12 @@ class DataFrame:
 
     def cube(self, *cols: Column | str) -> GroupedData:
         """Return a ``GroupedData`` cube grouping."""
+        self._refuse_self_join_refs([column for column in cols if isinstance(column, Column)])
         return self._grouping_sets_grouped("CUBE", cols)
 
     def rollup(self, *cols: Column | str) -> GroupedData:
         """Return a ``GroupedData`` rollup grouping."""
+        self._refuse_self_join_refs([column for column in cols if isinstance(column, Column)])
         return self._grouping_sets_grouped("ROLLUP", cols)
 
     def grouping_sets(self, *cols: Column | str) -> GroupedData:

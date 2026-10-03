@@ -3397,6 +3397,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   names and gain `_join_condition_attr_names` plus `weakref`;
   `_emit_join_side_columns` moves behind the same re-export (no surface change).
   The merge keeps SJ-2's same-named bindings and strict alias scan.
+  ATTR-ID-1 SJ-4 (2026-10-02): dir gains the funnel `_refuse_self_join_refs`;
+  both new-submodule sets gain `repartition_ops` (trio move behind same-named
+  bindings).
 - `test_dfcore_4b_exports.py` — DFCORE-4b ownership pin: `MOVED_DISPLAY_HELPERS`
   pins the ten bodies as `display.py`'s own frame-first functions, the six
   leavers as gone from the class, and the four wrappers as kept.
@@ -9082,6 +9085,20 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   `MISSING_ATTRIBUTES` naming `v`), `r3.cp_x_join_self` (dead birth still names
   `v`; the bare-`PySparkException` internal error cannot fire), and the token
   leaf-hex render pin (ASCII plus non-ASCII).
+  **ATTR-ID-1 SJ-4 (2026-10-02):** the three funnel pins un-xfail (the funnel
+  is wired).
+- [test_attr_id_1_sj4.py](test_attr_id_1_sj4.py) — **ATTR-ID-1 SJ-4 (2026-10-02):**
+  the post-join detector pins, each named after its cell and EQUAL to live
+  Spark 4.1.2: the §4 `A_*`/`F_*`/`I_*`/`J_*`/`K_*` rows and every `H_off_*`
+  (1182 pins assert class, config, verbatim template, and names; answers pin
+  rows; name-based surfaces pin no-check), the four measured uncovered-surface
+  shapes (`sj4_range_f`, `sj4_cube_f`, `sj4_rollup_f`, `sj4_dfagg_f`), the
+  renewed-absent wiring evidence (`sj4_k_*_on` prefer 1182, `sj4_k_drop_*`
+  miss without the appear clause), and strict xfails for `A_inner_agg_f`
+  (eager groupBy reports keys only; ruling picks the model) and the two V-1
+  shapes (Spark answers/misses via V-3 resolution, landing in SJ-5). No module
+  docstring: the lane's no-comments ruling covers the new file; the contract
+  lives here.
 - [test_attr_id_1_v456.py](test_attr_id_1_v456.py) — **ATTR-ID-1 V-5 (2026-10-02):**
   the verifier-fold twin pins, measured against live Spark 4.1.2 `p5_twins`.
   The ported `test_v5` pin plus the 13 remaining F_ cells refuse

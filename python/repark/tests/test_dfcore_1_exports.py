@@ -150,6 +150,10 @@ package each lose ``_ATTR_SIDE_BOUNDARY_RE`` / ``_rewrite_join_attr_sql`` /
 plus ``weakref`` (the frame-registry import, listed like ``functools``);
 ``_emit_join_side_columns`` moves to ``join_attr_tokens.py`` behind the same
 re-export, so neither surface list changes for it.
+ATTR-ID-1 SJ-4 (2026-10-02): ``EXPECTED_DATAFRAME_DIR`` gains the post-join
+funnel ``_refuse_self_join_refs``; the repartition trio moves to
+``repartition_ops.py`` behind same-named bindings, so both new-submodule sets
+gain exactly ``repartition_ops``.
 """
 
 from __future__ import annotations

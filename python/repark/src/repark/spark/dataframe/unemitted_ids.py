@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from repark import _native
 from repark.errors import AnalysisException
 from repark.spark import column_fields as _column_fields
 from repark.spark.dataframe.join_attr_tokens import _ATTR_TOKEN_RE
@@ -81,3 +82,15 @@ def _refuse_unemitted_ids(frame: DataFrame, column: Column) -> Column:
     if join_sql is not None:
         _raise_unemitted_attr_tokens(frame, join_sql)
     return column
+
+
+def _refuse_self_join_refs(frame: DataFrame, columns: list[Column]) -> None:
+    """Refuse Columns holding ambiguous self-join references on this frame."""
+    if not frame._frame_node.renews:
+        return
+    _native.refuse_self_join_refs(
+        frame._session,
+        frame._frame_node,
+        [column.join_sql_part() for column in columns],
+        list(frame.columns),
+    )

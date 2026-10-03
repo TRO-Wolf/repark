@@ -287,8 +287,15 @@ wrapped optimizer rule) and declares this directory.
   - `check_refs(target, displays, sql_parts, rules)` is the post-join check (SJ-4): the
     references of every part, deduplicated by (frame, id) as Spark's `ColumnReference`
     set is, minus window ones, walked with the target's outputs visible. It runs nothing
-    when `fail_ambiguous` is off or the target does not renew. `renewed_absent` is not
-    called (SJ-1a ruling 3: SJ-4 measures before wiring it).
+    when `fail_ambiguous` is off or the target does not renew.
+  - **ATTR-ID-1 SJ-4 (2026-10-02):** `check_refs` wires `renewed_absent` after
+    the ambiguity walk (SJ-1a ruling 3 discharged: live Spark refuses the
+    K shapes and their filter/order variants on every surface under both
+    conf settings, so no per-surface switch; conf-on ambiguity still wins).
+    `attr_token` also decodes the token's `__D` leaf display, which names the
+    missing attributes (via `missing_refusal`) and backs the ambiguous-image
+    name when the positional display is engine-flavored (crossJoin frames
+    carry no display overlay; SJ-5 owns that path).
   - `self_join_message(names, config)` is the verbatim `_LEGACY_ERROR_TEMP_1182` template;
     `missing_message`, `missing_condition` and `quoted_names` render `MISSING_ATTRIBUTES`
     in the facade's one-line shape plus Spark's `SQLSTATE: XX000`. The operator renders

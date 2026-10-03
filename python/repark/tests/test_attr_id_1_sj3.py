@@ -435,14 +435,12 @@ def test_sj3_p_h2_equi_count(ruled_spark: ReparkSession) -> None:
     ]
 
 
-@pytest.mark.xfail(strict=True, reason="SJ-4 wires the post-join refusal funnel")
 def test_sj3_d_self_eq_sel_d(ruled_spark: ReparkSession) -> None:
     """Post-join parent select refuses 1182 (``D_self_eq_sel_d``; SJ-4)."""
     d = _d(ruled_spark)
     _refuses_1182(lambda: d.join(d, d.id == d.id).select(d.id), ["id"])
 
 
-@pytest.mark.xfail(strict=True, reason="SJ-4 wires the post-join refusal funnel")
 def test_sj3_p_v_left_join_right_parent(ruled_spark: ReparkSession) -> None:
     """Right-parent select after a left join refuses (``P_v_left_join_right_parent``; SJ-4)."""
     ruled_spark.conf.set("spark.sql.caseSensitive", "false")
@@ -451,7 +449,6 @@ def test_sj3_p_v_left_join_right_parent(ruled_spark: ReparkSession) -> None:
     _refuses_1182(lambda: d.join(f, d.id == f.id, "left").select(d.id, f.id), ["id", "id"])
 
 
-@pytest.mark.xfail(strict=True, reason="SJ-4 wires the post-join refusal funnel")
 def test_sj3_p_v_anti_idiom(ruled_spark: ReparkSession) -> None:
     """The anti-join idiom refuses at the parent select (``P_v_anti_idiom``; SJ-4)."""
     ruled_spark.conf.set("spark.sql.caseSensitive", "false")

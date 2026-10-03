@@ -12,7 +12,9 @@ use repark_common::names::NameRule;
 use repark_common::spark_error;
 
 use super::attr_id::{AttrId, Resolution, attribute_ids, resolve};
-use super::frame_lineage::{AttrRef, FrameId, FrameNode, ambiguous_images, shared_ids};
+use super::frame_lineage::{
+    AttrRef, FrameId, FrameNode, ambiguous_images, renewed_absent, shared_ids,
+};
 
 const TOKEN: &str = "__REPARK_ATTR_";
 
@@ -78,6 +80,7 @@ pub struct AttrRefText {
     pub text: String,
     pub refs: Vec<AttrRef>,
     spans: Vec<Range<usize>>,
+    leaves: Vec<Option<String>>,
 }
 
 #[must_use]
@@ -104,17 +107,19 @@ pub fn parse_attr_refs(sql: &str) -> Result<AttrRefText> {
     let mut text = String::with_capacity(sql.len());
     let mut refs = Vec::new();
     let mut spans = Vec::new();
+    let mut leaves = Vec::new();
     let mut copied = 0;
     let mut index = 0;
     while let Some(&byte) = bytes.get(index) {
         if matches!(byte, b'\'' | b'"' | b'`') {
             index = after_quoted(bytes, index, byte);
         } else if bytes[index..].starts_with(TOKEN.as_bytes()) {
-            let (reference, end) = attr_token(sql, index)?;
+            let (reference, leaf, end) = attr_token(sql, index)?;
             text.push_str(&sql[copied..index]);
             let _ = write!(text, "{PLACEHOLDER}{}", refs.len());
             refs.push(reference);
             spans.push(index..end);
+            leaves.push(leaf);
             copied = end;
             index = end;
         } else {
@@ -122,7 +127,12 @@ pub fn parse_attr_refs(sql: &str) -> Result<AttrRefText> {
         }
     }
     text.push_str(&sql[copied..]);
-    Ok(AttrRefText { text, refs, spans })
+    Ok(AttrRefText {
+        text,
+        refs,
+        spans,
+        leaves,
+    })
 }
 
 fn after_quoted(bytes: &[u8], start: usize, quote: u8) -> usize {
@@ -141,7 +151,22 @@ fn after_quoted(bytes: &[u8], start: usize, quote: u8) -> usize {
     bytes.len()
 }
 
-fn attr_token(sql: &str, start: usize) -> Result<(AttrRef, usize)> {
+fn token_leaf(inner: &str) -> Option<String> {
+    let (_, coded) = inner.rsplit_once("__D")?;
+    if coded.is_empty()
+        || coded.len() % 2 != 0
+        || !coded.bytes().all(|byte| byte.is_ascii_hexdigit())
+    {
+        return None;
+    }
+    let bytes = (0..coded.len())
+        .step_by(2)
+        .map(|at| u8::from_str_radix(&coded[at..at + 2], 16).ok())
+        .collect::<Option<Vec<_>>>()?;
+    String::from_utf8(bytes).ok()
+}
+
+fn attr_token(sql: &str, start: usize) -> Result<(AttrRef, Option<String>, usize)> {
     let malformed = || {
         internal_datafusion_err!(
             "self-join references: malformed attribute token at byte {start}; a token is \
@@ -176,7 +201,7 @@ fn attr_token(sql: &str, start: usize) -> Result<(AttrRef, usize)> {
         attr: AttrId::from_token(&body[..id_len]),
         frame: FrameId::from_raw(frame),
     };
-    Ok((reference, end))
+    Ok((reference, token_leaf(&qualifiers[..close]), end))
 }
 
 fn parse_condition(text: &str) -> Result<SqlExpr> {
@@ -589,8 +614,9 @@ pub fn check_refs(
     displays: &[String],
     sql_parts: &[&str],
     rules: SelfJoinRules,
+    rule: NameRule,
 ) -> Result<Option<Refusal>> {
-    if !rules.fail_ambiguous || !target.renews() {
+    if !target.renews() {
         return Ok(None);
     }
     if displays.len() != target.outputs().len() {
@@ -601,29 +627,59 @@ pub fn check_refs(
         ));
     }
     let mut refs: Vec<AttrRef> = Vec::new();
+    let mut leaves: Vec<Option<String>> = Vec::new();
     for part in sql_parts {
         let parsed = parse_attr_refs(part)?;
         if parsed.refs.is_empty() {
             continue;
         }
         let windowed = Shape::of(&parse_condition(&parsed.text)?, &[], false).windowed;
-        for (index, reference) in parsed.refs.into_iter().enumerate() {
-            if !windowed.contains(&index) && !refs.contains(&reference) {
-                refs.push(reference);
+        for (index, reference) in parsed.refs.iter().enumerate() {
+            if !windowed.contains(&index) && !refs.contains(reference) {
+                refs.push(reference.clone());
+                leaves.push(parsed.leaves[index].clone());
             }
         }
     }
     let visible = target.outputs().iter().cloned().collect::<HashSet<_>>();
-    let images = ambiguous_images(target, &visible, &refs);
-    if images.is_empty() {
+    if rules.fail_ambiguous {
+        let images = ambiguous_images(target, &visible, &refs);
+        if !images.is_empty() {
+            let shown = displays.iter().collect::<Vec<_>>();
+            let names = images
+                .iter()
+                .map(|(index, image)| {
+                    let shown = display_at(target.outputs(), &shown, image)?;
+                    match &leaves[*index] {
+                        Some(leaf) if !leaf.is_empty() && shown.starts_with("__repark_") => {
+                            Ok(leaf.clone())
+                        }
+                        _ => Ok(shown.clone()),
+                    }
+                })
+                .collect::<Result<Vec<_>>>()?;
+            return Ok(Some(Refusal::SelfJoin { names }));
+        }
+    }
+    let absent = renewed_absent(target, &refs, &visible);
+    if absent.is_empty() {
         return Ok(None);
     }
-    let shown = displays.iter().collect::<Vec<_>>();
-    let names = images
-        .iter()
-        .map(|(_, image)| display_at(target.outputs(), &shown, image).cloned())
-        .collect::<Result<Vec<_>>>()?;
-    Ok(Some(Refusal::SelfJoin { names }))
+    let mut missing: Vec<&AttrId> = Vec::new();
+    let mut named: HashMap<AttrId, String> = HashMap::new();
+    for index in absent {
+        let reference = &refs[index];
+        if let Some(leaf) = &leaves[index] {
+            named
+                .entry(reference.attr.clone())
+                .or_insert_with(|| leaf.clone());
+        }
+        let attr = &reference.attr;
+        if !missing.contains(&attr) {
+            missing.push(attr);
+        }
+    }
+    missing_refusal(&missing, &named, displays.to_vec(), rule).map(Some)
 }
 
 #[must_use]

@@ -184,7 +184,13 @@ pub fn refuse_self_join_refs(
             return Ok(());
         }
         let parts = sql_parts.iter().map(String::as_str).collect::<Vec<_>>();
-        match check_refs(&target.node, &displays, &parts, session_rules(session)) {
+        match check_refs(
+            &target.node,
+            &displays,
+            &parts,
+            session_rules(session),
+            session_rule(session),
+        ) {
             Ok(None) => Ok(()),
             Ok(Some(refusal)) => Err(refusal_error(py, &refusal)),
             Err(error) => Err(datafusion_to_py_err(error)),
