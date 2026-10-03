@@ -580,3 +580,7 @@ declines it (a dated ruling in the intake, then the archive).
   still only on the branch — slice (d) (`grouping_id` + foundation) landed as `41534851`,
   slices (a)–(c) unbuilt with 10 names remaining per the 09-21 rescue report; kept branch
   `feat/fnp-agg-1` at `4a3379fe`; oracle recorded.
+- [ta-chain-1-card-2026-10-03.md](ta-chain-1-card-2026-10-03.md) — **card TA-CHAIN-1
+  (2026-10-03, owner ruling, v1.5.2):** `ta.ema` over `ta.trange` answers all-NaN because a
+  leading lookback NaN propagates through C-faithful kernels; polars_talib skips the leading
+  run (measured); wrapper-level fix, order at `task/wo/ta-chain-1-leading-prefix.md`.
