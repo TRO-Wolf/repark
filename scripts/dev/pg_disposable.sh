@@ -20,9 +20,14 @@ case "${1:-}" in
   url) . "$STATE"; echo "$REPARK_PG_URL" ;;
   reap)
     cutoff=$(date -u -d '-2 hours' +%s)
-    for id in $(docker ps -q --filter label=repark.disposable=1); do
-      started=$(date -u -d "$(docker inspect --format '{{.State.StartedAt}}' "$id")" +%s)
-      [ "$started" -lt "$cutoff" ] && docker rm -f "$id" >/dev/null
+    for id in $(docker ps -aq --filter label=repark.disposable=1); do
+      if [ "$(docker inspect --format '{{.State.Running}}' "$id")" = true ]; then
+        started=$(date -u -d "$(docker inspect --format '{{.State.StartedAt}}' "$id")" +%s)
+        [ "$started" -ge "$cutoff" ] && continue
+      fi
+      project=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' "$id")
+      docker rm -f -v "$id" >/dev/null
+      [ -n "$project" ] && docker network rm "${project}_default" >/dev/null 2>&1 || true
     done ;;
   *) echo "usage: $0 up|down|url|reap" >&2; exit 2 ;;
 esac
