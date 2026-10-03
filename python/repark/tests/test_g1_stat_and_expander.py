@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 
 from repark.errors import (
+    AnalysisException,
     IllegalArgumentException,
     PySparkTypeError,
     PySparkValueError,
@@ -380,7 +381,11 @@ def test_h1_select_cast_parent_column(spark: ReparkSession) -> None:
 
 
 def test_h1_rename_dropna_fillna_when_multi_name(spark: ReparkSession) -> None:
-    """Rename / na / when on multi-name condition joins."""
+    """Rename / na / when on multi-name condition joins.
+
+    The filled select refuses missing (``sj4_fail1_fill_sel``); the unfilled
+    ``when`` still answers.
+    """
     from repark import functions as functions_mod
 
     frame = spark.createDataFrame([(1, 2), (3, None)], ["a", "b"])
@@ -392,9 +397,12 @@ def test_h1_rename_dropna_fillna_when_multi_name(spark: ReparkSession) -> None:
     assert joined.dropna().count() == 1
     filled = joined.fillna(0)
     assert filled.columns == ["aa", "b", "a", "b"]
-    # Both sides' b filled; row with null→0.
-    left_b_vals = [row[0] for row in filled.select(left["b"]).collect()]
-    assert 0 in left_b_vals
+    with pytest.raises(AnalysisException) as refused:
+        filled.select(left["b"]).collect()
+    assert (
+        refused.value.getCondition() == "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+    )
+    assert '"b"' in str(refused.value)
     flags = joined.select(functions_mod.when(left["b"] > 0, 1).otherwise(0).alias("f")).collect()
     assert [row[0] for row in flags] == [1, 0]
 

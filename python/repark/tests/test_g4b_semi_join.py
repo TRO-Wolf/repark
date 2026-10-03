@@ -221,10 +221,10 @@ def test_inner_join_right_ref_still_resolves(spark: ReparkSession, how: str, on_
 
 @pytest.mark.parametrize("on_mode", ["name", "name_list", "condition"])
 def test_semi_then_inner_join_emits_the_same_right(spark: ReparkSession, on_mode: str) -> None:
-    """A later inner join of the same right emits it; ``select(right["k"])`` resolves.
+    """An emitting inner join of the same right resolves by name; by condition it refuses 1182.
 
-    Without the emitting-join subtract of the copied not-emitted set, the select would still
-    raise after the right side is in the output.
+    (``sj4_fail2_sel``, ``sj4_fail2_fil``). Without the emitting-join subtract of the copied
+    not-emitted set, the select would still raise after the right side is in the output.
     """
     _left, right, semi = _semi_family_join(spark, "leftsemi", on_mode)
     if on_mode == "condition":
@@ -233,10 +233,21 @@ def test_semi_then_inner_join_emits_the_same_right(spark: ReparkSession, on_mode
         joined = semi.join(right, on=["k"], how="inner")
     else:
         joined = semi.join(right, on="k", how="inner")
-    table = joined.select(right["k"]).to_arrow()
-    assert table.column_names == ["k"]
-    assert table.to_pydict()["k"] == [1]
-    assert joined.filter(right["k"] == 1).count() == 1
+    if on_mode == "condition":
+        with pytest.raises(AnalysisException) as refused_sel:
+            joined.select(right["k"]).to_arrow()
+        assert refused_sel.value.getCondition() == "_LEGACY_ERROR_TEMP_1182"
+        params = refused_sel.value.getMessageParameters()
+        assert params["config"] == "spark.sql.analyzer.failAmbiguousSelfJoin"
+        assert params["ambiguousAttrs"] == "k"
+        with pytest.raises(AnalysisException) as refused_fil:
+            joined.filter(right["k"] == 1).count()
+        assert refused_fil.value.getCondition() == "_LEGACY_ERROR_TEMP_1182"
+    else:
+        table = joined.select(right["k"]).to_arrow()
+        assert table.column_names == ["k"]
+        assert table.to_pydict()["k"] == [1]
+        assert joined.filter(right["k"] == 1).count() == 1
     third = spark.createDataFrame([(1,)], ["k"])
     other_inner = semi.join(third, on="k", how="inner")
     with pytest.raises(AnalysisException, match=_MISSING_APPEAR):
