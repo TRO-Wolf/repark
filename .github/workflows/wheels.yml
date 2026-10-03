@@ -1,5 +1,3 @@
-# PR and main builds use a host debug wheel; tags use a cold manylinux release build without cache.
-# Keep this required workflow unfiltered and install explicit wheel paths to prevent PyPI shadowing.
 name: wheels
 
 on:

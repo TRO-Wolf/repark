@@ -185,10 +185,6 @@ debug = "line-tables-only"
 # `[profile.ci.package."*"]` repeats `debug = false` for DEPENDENCIES specifically: they are
 # where the debuginfo volume lives, so the strip survives a later edit that turns workspace
 # debuginfo back on for backtraces.
-#
-# DORMANT: nothing invokes `--profile ci`. Measured in v1: the cold-build win was under the
-# adoption bar and warm rebuilds were slower (`incremental = false`); what it buys is artifact
-# weight. Re-measure before wiring; do not wire on this comment.
 [profile.ci]
 inherits = "dev"
 incremental = false
