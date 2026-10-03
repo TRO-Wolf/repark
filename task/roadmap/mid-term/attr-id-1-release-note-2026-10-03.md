@@ -15,8 +15,11 @@ share lineage: a `select`, `filter`, `groupBy`, `orderBy`, `withColumn` or aggre
 a column bound before the join raises when Spark cannot tell which side it points to.
 The error is Spark's, word for word, including the `ambiguousAttrs` names.
 
-The escape hatch is Spark's: `spark.sql.analyzer.failAmbiguousSelfJoin=false` turns the
-check off, and every reference binds to the left side by id, as RePark used to.
+Spark's switch `spark.sql.analyzer.failAmbiguousSelfJoin=false` turns the 1182 check
+off, and references then resolve by id. It is not a return to the old answers: a
+reference to a column the join renewed raises
+`MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION`, as Spark does, and the
+pattern above is one of them.
 
 A free name over duplicate column names tightens too: `filter("v > 1")`, `selectExpr`,
 `F.col("v")` and `summary`/`describe` over a frame with two `v` columns now raise
@@ -27,10 +30,14 @@ A free name over duplicate column names tightens too: `filter("v > 1")`, `select
 Alias the frames and reference the alias, as Spark's own message suggests:
 
 ```python
-s.alias("a").join(d.alias("b"), "id").select("b.v")
+s.alias("a").join(d.alias("b")).select(F.col("b.v"))
 ```
+
+The join stays the same cross join; only the reference changes.
 
 ## Pointers
 
 - The rule and its dated residues: row EX-DF-21 in `docs/spark-sql-iceberg-parity.md`.
+- Measured on Spark 4.1.2 (2026-10-03): the pattern raises 1182 naming `v`; the aliased
+  cross join answers four rows; with the switch off the pattern raises `MISSING_ATTRIBUTES`.
 - Up: [map.md](map.md)
