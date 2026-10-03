@@ -292,6 +292,18 @@ def test_sj4_i_checkpoint_sel_c(spark: ReparkSession) -> None:
     )
 
 
+@pytest.mark.xfail(strict=True, reason="SJ-5: checkpoint object separation for birth-side split")
+def test_sj4_i_checkpoint_sel_d(spark: ReparkSession) -> None:
+    """Checkpoint-child join select on the parent answers (``I_checkpoint_sel_d``)."""
+    env = _env(spark)
+    _answers(
+        lambda: (lambda c: env.d.join(c, env.d.id == c.id).select(env.d.v))(
+            env.d.localCheckpoint()
+        ),
+        [[10], [20], [30]],
+    )
+
+
 def test_sj4_i_join_then_join_unrelated_ref(spark: ReparkSession) -> None:
     """A parent ref past a second join refuses (``I_join_then_join_unrelated_ref``)."""
     env = _env(spark)
