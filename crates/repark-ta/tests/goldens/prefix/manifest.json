@@ -1,0 +1,19 @@
+{
+  "talib_version": "0.4.0 (Jan 24 2025 12:01:05)",
+  "polars_talib_version": "0.1.5",
+  "series": {
+    "prefix_adx_14": 5000,
+    "prefix_atr_14": 5000,
+    "prefix_bbands_upper_20": 5000,
+    "prefix_chain_ema21_of_trange": 5000,
+    "prefix_ema_21": 5000,
+    "prefix_linearreg_5": 5000,
+    "prefix_macd_12_26_9": 5000,
+    "prefix_mavp_sma": 5000,
+    "prefix_obv": 5000,
+    "prefix_rsi_14": 5000,
+    "prefix_sma_10": 5000,
+    "prefix_stoch_slowk": 5000,
+    "prefix_trange": 5000
+  }
+}

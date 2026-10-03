@@ -29,6 +29,8 @@ Recorded golden fixtures for the bit-exactness gate: raw little-endian `f64` bit
   `stoch_type7_*`/`stoch_mixed_7_0_*`/`stochf_type7_*`/`stochrsi_type7_*` — and the TA-3 volume
   family `ad`/`adosc_3_10`/`obv`/`mfi_14` plus `flat_ad`/`flat_adosc_3_10`/`flat_obv`/`flat_mfi_14`;
   the authoritative list is `manifest.json`).
+- [prefix/](prefix/map.md) — TA-CHAIN-1 leading-run goldens (13 series, own `manifest.json`),
+  consumed by `../prefix_goldens.rs`, never by `../goldens.rs`.
 
 **Do not hand-edit.** Re-record only when adding series or deliberately moving the oracle —
 the recorder asserts both oracle versions and writes atomically (temp + rename).
