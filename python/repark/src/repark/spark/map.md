@@ -527,6 +527,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   twins and multi-hit binds under a join raise unresolved as Spark does in
   sort). No module docstring: the
   lane's no-comments ruling covers the new file; the contract lives here.
+  **ATTR-ID-1 PERF-1 (2026-10-03):** `_frame_id_snapshot` reads stamped ids
+  plus engine names once per native handle into the `_ID_SNAPSHOTS` weak
+  table (keyed by frame, guarded by handle identity, so any `_inner` swap
+  misses and recomputes); `_stamped_frame_id_snapshot` adds the
+  stamp-on-missing pass. Every id-reader funnels through one of the two.
   pins: attr-id-1/C-039
   **ATTR-ID-1 S4 follow-up (2026-10-02):** the qualified star expansion, the
   qualified sort bound column, and the rebound rewrap carry `_birth_frame` with
