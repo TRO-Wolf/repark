@@ -585,3 +585,7 @@ declines it (a dated ruling in the intake, then the archive).
   (2026-10-03, owner ruling, v1.5.2):** `ta.ema` over `ta.trange` answers all-NaN because a
   leading lookback NaN propagates through C-faithful kernels; polars_talib skips the leading
   run (measured); wrapper-level fix, order at `task/wo/ta-chain-1-leading-prefix.md`.
+- [zizmor-gate-1-card-2026-10-03.md](zizmor-gate-1-card-2026-10-03.md) — **card ZIZMOR-GATE-1
+  (2026-10-03, clerk, after CI-1):** `--format sarif` exits 0 while findings exist (plain
+  mode exits 14); the ci.yml map guard passes `github.base_ref` via `env:`, and zizmor.yml
+  runs plain mode as the blocking step before the SARIF upload.
