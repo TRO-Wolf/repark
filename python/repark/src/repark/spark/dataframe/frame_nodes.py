@@ -26,6 +26,26 @@ def _resolve(frame: Any) -> Any:
     return node
 
 
+def _frame_renews(frame: Any) -> bool:
+    seen: set[int] = set()
+    stack: list[Any] = [frame]
+    while stack:
+        current = stack.pop()
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+        entry = _NODES.get(current)
+        if entry is None:
+            raise RuntimeError("internal error: frame has no lineage node")
+        if entry[0] == "node":
+            if entry[1].renews:
+                return True
+        elif entry[0] == "derived":
+            stack.append(entry[1])
+            stack.extend(entry[2])
+    return False
+
+
 def _assign(frame: Any, value: Any) -> None:
     if value is None:
         _NODES[frame] = ("root",)

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from repark import _native
 from repark.errors import AnalysisException
 from repark.spark import column_fields as _column_fields
+from repark.spark.dataframe import frame_nodes as _frame_nodes
 from repark.spark.dataframe.join_attr_tokens import _ATTR_TOKEN_RE
 
 if TYPE_CHECKING:
@@ -86,7 +87,7 @@ def _refuse_unemitted_ids(frame: DataFrame, column: Column) -> Column:
 
 def _refuse_self_join_refs(frame: DataFrame, columns: list[Column]) -> None:
     """Refuse Columns holding ambiguous self-join references on this frame."""
-    if not frame._frame_node.renews:
+    if not _frame_nodes._frame_renews(frame):
         return
     _native.refuse_self_join_refs(
         frame._session,

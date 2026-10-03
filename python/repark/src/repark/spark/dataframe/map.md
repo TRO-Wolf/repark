@@ -229,7 +229,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   keyed by frame (a missing entry is a loud internal error, never a
   fallback), writes record deferred roots, deferred derived args, or built
   nodes. No module docstring: the lane's no-comments ruling covers the new
-  file; the contract lives here.
+  file; the contract lives here. `_frame_renews` walks deferred markers to
+  the nearest built node without building, mirroring the Rust renews match
+  (roots never renew, derived inherits, set-op unions); a missing entry is
+  the same loud error. The walk reads True on a derived marker over a
+  never-stamped plan under a join, where the build cuts to an inert root;
+  the native check then returns early, so the answer is unchanged.
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`
