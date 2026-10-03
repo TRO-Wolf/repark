@@ -113,28 +113,82 @@ jobs:
           /tmp/wheeltest/bin/pip install "repark[numpy,pandas,polars,ml-ext] @ file://$WHEEL" pytest pytest-xdist ./python/repark-parity
           FILES=$(ls python/repark/tests/test_*.py | sort | awk -v s="$SHARD" 'NR % 3 == s')
           /tmp/wheeltest/bin/python -m pytest $FILES -q -n 4 --durations=25
+
+  dbt:
+    name: dbt-adapter tests
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131  # v7
+        with:
+          name: wheel-ci
+          path: python/repark/dist
+      - name: install the built wheel
+        run: |
+          python3 -m venv /tmp/wheeltest
+          /tmp/wheeltest/bin/pip install --upgrade pip
+          WHEEL=$(ls "$PWD"/python/repark/dist/repark-*.whl)
+          /tmp/wheeltest/bin/pip install "repark[numpy,pandas,polars,ml-ext] @ file://$WHEEL" pytest pytest-xdist ./python/repark-parity
       - name: dbt-adapter tests against the built wheel
-        if: matrix.shard == 0
         run: |
           /tmp/wheeltest/bin/pip install "dbt-core==1.9.11" "dbt-spark==1.9.3"
           /tmp/wheeltest/bin/python -m pytest python/dbt-repark/tests -q
+
+  examples:
+    name: example-coverage execute
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131  # v7
+        with:
+          name: wheel-ci
+          path: python/repark/dist
+      - name: install the built wheel
+        run: |
+          python3 -m venv /tmp/wheeltest
+          /tmp/wheeltest/bin/pip install --upgrade pip
+          WHEEL=$(ls "$PWD"/python/repark/dist/repark-*.whl)
+          /tmp/wheeltest/bin/pip install "repark[numpy,pandas,polars,ml-ext] @ file://$WHEEL" pytest pytest-xdist ./python/repark-parity
       - name: example-coverage execute (require native)
-        if: matrix.shard == 0
         run: /tmp/wheeltest/bin/python -I scripts/check_example_coverage.py --require-execute
 
   smoke:
     name: build + import smoke (debug, host)
-    needs: [changes, build, facade]
+    needs: [changes, build, facade, dbt, examples]
     if: always() && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     steps:
       - env:
           CODE: ${{ needs.changes.outputs.code }}
+          CHANGES: ${{ needs.changes.result }}
           BUILD: ${{ needs.build.result }}
           FACADE: ${{ needs.facade.result }}
+          DBT: ${{ needs.dbt.result }}
+          EXAMPLES: ${{ needs.examples.result }}
         run: |
-          if [ "$CODE" = "false" ]; then echo "docs-only change, the wheel is unchanged"; exit 0; fi
-          [ "$BUILD" = "success" ] && [ "$FACADE" = "success" ]
+          if [ "$CHANGES" = "success" ] && [ "$CODE" = "false" ]; then
+            echo "docs-only change, the wheel is unchanged"
+            exit 0
+          fi
+          for result in "$BUILD" "$FACADE" "$DBT" "$EXAMPLES"; do
+            if [ "$result" != "success" ]; then
+              echo "build=$BUILD facade=$FACADE dbt=$DBT examples=$EXAMPLES"
+              exit 1
+            fi
+          done
+          echo "build, facade, dbt and examples all succeeded"
 
   release-wheels:
     name: manylinux release wheels (tags)

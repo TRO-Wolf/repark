@@ -27,6 +27,10 @@ EXPECTED_MATRIX_CONDITION = (
     "github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'"
 )
 EXPECTED_PR_CONDITION = "github.event_name == 'pull_request' || github.ref == 'refs/heads/main'"
+ADMITTED_SMOKE_CONDITIONS: tuple[str, ...] = (
+    EXPECTED_PR_CONDITION,
+    f"always() && ({EXPECTED_PR_CONDITION})",
+)
 
 
 def _job_block(text: str, job: str) -> str | None:
@@ -103,6 +107,20 @@ def _nightly_findings(text: str) -> list[str]:
     return findings
 
 
+def _smoke_findings(text: str) -> list[str]:
+    block = _job_block(text, "smoke")
+    if block is None:
+        return ["wheels.yml: no smoke job"]
+    findings: list[str] = []
+    condition = re.search(r"(?m)^ {4}if:\s*(.+?)\s*$", block)
+    if condition is None or condition.group(1) not in ADMITTED_SMOKE_CONDITIONS:
+        found = condition.group(1) if condition is not None else "none"
+        findings.append(f"wheels.yml smoke: `if:` is {found!r}, not one of the two admitted forms")
+    if re.search(r"(?m)^ {4}runs-on:\s*ubuntu-latest\s*$", block) is None:
+        findings.append("wheels.yml smoke: `runs-on` is not ubuntu-latest")
+    return findings
+
+
 def test_release_matrix_names_exactly_the_five_legs() -> None:
     """pins: platform-1/C-003."""
     assert _release_findings(_RELEASE_YML.read_text(encoding="utf-8")) == []
@@ -149,11 +167,39 @@ def test_doctored_nightly_matrix_fails() -> None:
 
 def test_pull_request_smoke_job_keeps_its_gate_and_host() -> None:
     """pins: platform-1/C-002."""
-    block = _job_block(_WHEELS_YML.read_text(encoding="utf-8"), "smoke")
+    assert _smoke_findings(_WHEELS_YML.read_text(encoding="utf-8")) == []
+
+
+def test_doctored_smoke_gate_fails() -> None:
+    """pins: platform-1/C-002."""
+    text = _WHEELS_YML.read_text(encoding="utf-8")
+    block = _job_block(text, "smoke")
     assert block is not None
     condition = re.search(r"(?m)^ {4}if:\s*(.+?)\s*$", block)
-    assert condition is not None and condition.group(1) == EXPECTED_PR_CONDITION
-    assert re.search(r"(?m)^ {4}runs-on:\s*ubuntu-latest\s*$", block) is not None
+    assert condition is not None
+    current = condition.group(0) + "\n"
+    for form in ADMITTED_SMOKE_CONDITIONS:
+        admitted = text.replace(block, block.replace(current, f"    if: {form}\n", 1), 1)
+        assert _smoke_findings(admitted) == [], form
+    for doctored in (
+        "always()",
+        "github.event_name == 'pull_request'",
+        "always() || (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')",
+        "!cancelled() && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')",
+    ):
+        mutated = text.replace(block, block.replace(current, f"    if: {doctored}\n", 1), 1)
+        assert mutated != text
+        assert _smoke_findings(mutated) != [], doctored
+    ungated = text.replace(block, block.replace(current, "", 1), 1)
+    assert ungated != text
+    assert _smoke_findings(ungated) != []
+    rehosted = text.replace(
+        block,
+        block.replace("    runs-on: ubuntu-latest\n", "    runs-on: macos-latest\n", 1),
+        1,
+    )
+    assert rehosted != text
+    assert _smoke_findings(rehosted) != []
 
 
 def test_release_doc_lists_the_five_wheels() -> None:

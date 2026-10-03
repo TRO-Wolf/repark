@@ -136,6 +136,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   job keeps its gate and host; `docs/release.md` names all five legs. Doctored leg
   lists (dropped, renamed, appended, re-hosted, unmerged, cron removed, `pull_request`
   reachability) each fail. YAML read by indentation-aware regex, no PyYAML.
+  **CI-1 (2026-10-03, owner ruling):** the C-002 pin admits exactly two `smoke` `if:` forms, the bare PR-or-main gate and `always() && (` that gate `)`, so the aggregate can report on a skipped or failed upstream job; `test_doctored_smoke_gate_fails` proves `always()` alone, a PR-only gate, an `||` widening, a `!cancelled()` gate, a dropped `if:` and a re-hosted job each fail.
   pins: platform-1/C-001, C-002, C-003, C-004, C-005
 - `test_ice_read_perf_bench_workflow.py` — **ICE-READ-PERF-0 (2026-09-19):** pins over the
   dispatch-only `ice-read-perf-bench` job of `aws-acceptance.yml`. `live-aws` keeps the nightly
