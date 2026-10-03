@@ -3735,6 +3735,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **octo C1:** sampleBy fraction [0,1]+NaN; approxQuantile relativeError; join no-alias
   when column sets disjoint; **octo C2:** relativeError NaN; probability domain ValueError;
   **octo C3:** join(on=[]) crossJoin gate.
+  **ATTR-ID-1 SJ-5 F1 (2026-10-03):** the H1-C4 describe pin flips to Spark's
+  measured `AMBIGUOUS_REFERENCE` naming ``b`` twice.
 - `test_h2_group_h2.py` — **H2 r22** Group H long tail: non-origin dup projection multi-name
   map (cast/year/`sum,sum` display overlay); same-object self-join equi sugar + multi-token
   arm loud refuse + alias workaround; `Column.round` / wrap-display collapse;

@@ -429,17 +429,24 @@ def test_h1_todf_alias_union_sample_multi_name(spark: ReparkSession) -> None:
 
 
 def test_h1_withcolumns_describe_dropdup_multi_name(spark: ReparkSession) -> None:
-    """withColumns / describe / dropDuplicates on multi-name joins."""
+    """withColumns / describe / dropDuplicates on multi-name joins.
+
+    Flipped SJ-5 F1: live Spark 4.1.2 refuses the describe with
+    ``AMBIGUOUS_REFERENCE`` naming ``b`` twice.
+    """
     frame = spark.createDataFrame([(1, 2), (3, 4)], ["a", "b"])
     left = frame.select(frame.a.alias("aa"), frame.b)
     joined = left.join(frame, left.b == frame.b)
     widened = joined.withColumns({"z": left["b"]})
     assert widened.columns == ["aa", "b", "a", "b", "z"]
     assert widened.count() == 2
-    described = joined.describe()
-    assert described.columns[0] == "summary"
-    assert described.columns[1:] == ["aa", "b", "a", "b"]
-    assert described.count() == 5
+    with pytest.raises(AnalysisException, match="AMBIGUOUS_REFERENCE") as refused:
+        joined.describe()
+    assert refused.value.getCondition() == "AMBIGUOUS_REFERENCE"
+    assert refused.value.getMessageParameters() == {
+        "name": "`b`",
+        "referenceNames": "[`b`, `b`]",
+    }
     deduped = joined.dropDuplicates(["b"])
     assert deduped.columns == ["aa", "b", "a", "b"]
     assert deduped.count() == 2
