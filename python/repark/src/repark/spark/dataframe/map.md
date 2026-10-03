@@ -219,6 +219,17 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   keep the caller's raw keys on the `GroupedData` and defer the key check to
   the terminal, so keys and aggregate references refuse once. Pins:
   `python/repark/tests/test_attr_id_1_sj5.py`.
+  **ATTR-ID-1 PERF-1 (2026-10-03):** `_frame_node` leaves the slots for the
+  lazily-built property `frame_nodes.py` binds; births assign `None` (root)
+  or `(parent, others)` (derived), joins assign the built node, and the
+  birth registry moves into the first build (3485 → 3477, CAP-1 mirror).
+- `frame_nodes.py` — **ATTR-ID-1 PERF-1 (2026-10-03):** the lazy lineage-node
+  home. `_bind_frame_node` attaches `_frame_node` as a property at package
+  import; reads build root/derived nodes on first touch into a weak table
+  keyed by frame (a missing entry is a loud internal error, never a
+  fallback), writes record deferred roots, deferred derived args, or built
+  nodes. No module docstring: the lane's no-comments ruling covers the new
+  file; the contract lives here.
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`

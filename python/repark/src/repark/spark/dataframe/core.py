@@ -121,8 +121,6 @@ _CACHE_VIEW_PREFIX = "__repark_cache_"
 
 def _register_cache_frame(alive_token: dict[str, Any], frame: DataFrame) -> None:
     """Track a DataFrame marked for cache/persist so :meth:`Catalog.clearCache` can drop it."""
-    import weakref
-
     registry = alive_token.get("cache_frames")
     if not isinstance(registry, weakref.WeakSet):
         registry = weakref.WeakSet()
@@ -200,7 +198,6 @@ class DataFrame:
         "_eager_shape",
         "_engine_names",
         "_field_metadata",
-        "_frame_node",
         "_frame_qualifiers",
         "_handles",
         "_ingest_report",
@@ -236,13 +233,11 @@ class DataFrame:
         The shared ``alive_token`` makes held frames fail after ``ReparkSession.stop``.
         """
         self._inner = _native.stamp_attribute_ids(inner)
-        self._frame_node = _native.frame_root(self._inner)
+        self._frame_node = None
         self._session = session
         self._alive_token: dict[str, bool] = (
             alive_token if alive_token is not None else {"alive": True}
         )
-        registry = self._alive_token.setdefault("frame_registry", weakref.WeakValueDictionary())
-        registry[self._frame_node.id] = self
         self._persist_requested = False
         self._cache_view: str | None = None
         self._cache_view_owned_handle: Any | None = None
@@ -286,8 +281,7 @@ class DataFrame:
         """
         self._ensure_alive()
         child = DataFrame(inner, self._session, self._alive_token)
-        nodes = [other._frame_node for other in others]
-        child._frame_node = node or _native.frame_derived(child._inner, self._frame_node, nodes)
+        child._frame_node = node or (self, others)
         if self._frame_qualifiers is not None:
             child._frame_qualifiers = dict(self._frame_qualifiers)
         child._unemitted_attr_ids = dict(self._unemitted_attr_ids)
@@ -411,8 +405,6 @@ class DataFrame:
         """Attach one finalizer to drop this facade's MIA views."""
         if self._mia_cleanup_registered:
             return
-        import weakref
-
         self._mia_cleanup_registered = True
         weakref.finalize(self, _drop_mia_temp_views, self._session, self._mia_temp_views)
 

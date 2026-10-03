@@ -159,6 +159,11 @@ and gains ``join_shared_remint``; no expected table tracks native names, so no
 table changes for that. The pivot helper family moves to ``grouped_pivot.py``
 behind same-named imports, so ``EXPECTED_NEW_PACKAGE_SUBMODULES`` gains
 exactly ``grouped_pivot``.
+ATTR-ID-1 PERF-1 (2026-10-03): ``_frame_node`` leaves the slots for a
+lazily-built property of the same name, so ``EXPECTED_DATAFRAME_SLOTS``
+loses exactly that name and ``EXPECTED_DATAFRAME_DIR`` is unchanged. The
+builder moves to ``frame_nodes.py`` behind a same-named import, so the
+package set gains exactly ``frame_nodes``.
 """
 
 from __future__ import annotations

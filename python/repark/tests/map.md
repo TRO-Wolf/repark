@@ -3338,6 +3338,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the 17 moved names on core and on the package IS the leaf module's object, not a copy.
   IO-BUCKET-CLUSTER-1 (2026-09-14): `EXPECTED_NEW_PACKAGE_SUBMODULES` gains
   `writer_layout`. pins: io-bucket-cluster-1/C-005
+  ATTR-ID-1 PERF-1 (2026-10-03): `EXPECTED_DATAFRAME_SLOTS` loses exactly
+  `_frame_node` (now a lazily-built property); the dir table is unchanged.
   pins: dfcore-1/C-001, C-002, C-003, C-008
   ATTR-ID-1 S3d (2026-10-01): core and the package each gain exactly
   `_subset_resolve` (the new S3d binding home, bound by `core`'s module import).
