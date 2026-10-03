@@ -295,9 +295,9 @@ def test_ex_0_makefile_wires_the_target_into_ci() -> None:
     assert "skipping example execution" in gate_source
     workflow = (_REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
     assert "check_example_coverage.sh" in workflow
-    wheels = (_REPO / ".github" / "workflows" / "wheels.yml").read_text(encoding="utf-8")
-    assert "--require-execute" in wheels
-    assert "python -I scripts/check_example_coverage.py --require-execute" in wheels
+    smoke = (_REPO / ".github" / "workflows" / "smoke.yml").read_text(encoding="utf-8")
+    assert "--require-execute" in smoke
+    assert "python -I scripts/check_example_coverage.py --require-execute" in smoke
 
 
 def test_ex_0_execute_child_drops_python_path_overrides(monkeypatch: MonkeyPatch) -> None:

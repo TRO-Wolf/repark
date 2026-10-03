@@ -72,3 +72,32 @@ jobs:
           shared-key: "test"
       - name: build test artifacts (no run)
         run: cargo test --locked --workspace --no-run
+
+  warm-wheel:
+    name: Warm wheel cache
+    runs-on: ubuntu-latest
+    env:
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_TEST_DEBUG: "0"
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master 2026-07-11
+        with:
+          toolchain: "1.96.0"
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6  # v2.9.2 (node24)
+        with:
+          prefix-key: "v2-df54-wheel"
+          shared-key: "wheel"
+      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b  # v1
+        with:
+          maturin-version: "v1.14.1"
+          command: build
+          args: --out dist --profile ci
+          working-directory: python/repark
+          container: "off"

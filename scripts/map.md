@@ -1329,6 +1329,9 @@ repark-parity slice.
   export tables `install_into` appends. Dual-wired: `make check-example-coverage`
   in `make ci` and ci.yml's python job (static half). wheels.yml smoke runs
   `python -I … --require-execute`. The `.sh` wrapper forwards `"$@"`.
+  **CI-1 (2026-10-03, owner ruling on H-2):** the `--require-execute` run lives in
+  `smoke.yml`'s `examples` job now; the wrapper's header shed its two `Wired:` lines
+  (one named `wheels.yml`) rather than reword a comment, so this map is where the wiring lives.
   Example children drop PYTHONPATH.
   EX-1 (2026-08-31) widened the closed set with the seven surfaces the owner
   ruled into v0.7 — Column, Window, WindowSpec, Catalog, the `types` module

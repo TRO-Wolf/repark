@@ -19,56 +19,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  smoke:
-    name: build + import smoke (debug, host)
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
-        with:
-          python-version: "3.12"
-      # SHA-pinned: dtolnay/rust-toolchain refs are branches (not tags), so a floating ref would
-      # run unreviewed action code forever. The `toolchain:` input below selects the compiler.
-      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master 2026-07-11
-        with:
-          toolchain: "1.96.0"
-      # Do not restore or save shared build caches in a tag-triggered workflow. `lookup-only`
-      # still permits a save on miss and does not provide a warm build.
-      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b  # v1
-        with:
-          maturin-version: "v1.14.1"  # Makefile MATURIN pin
-          command: build
-          # Debug build on the host (no --release, no manylinux container).
-          args: --out dist
-          working-directory: python/repark
-          container: "off"
-      - name: import smoke test
-        run: |
-          python3 -m venv /tmp/wheeltest
-          /tmp/wheeltest/bin/pip install --upgrade pip
-          # Explicit wheel path — never resolve `repark` by name (PyPI name-reservation shadowing).
-          WHEEL=$(ls python/repark/dist/repark-*.whl)
-          /tmp/wheeltest/bin/pip install "$WHEEL"
-          /tmp/wheeltest/bin/python -c "import repark; print('repark', repark.__version__)"
-      - name: facade tests against the built wheel
-        # Install all four extras and repark-parity so this bare venv runs the full facade cohort.
-        # Keep PySpark and DuckDB absent so their gated tests skip.
-        run: |
-          # ABSOLUTE file:// URL — pip rejects a relative-path file URI ("non-local file URIs
-          # are not supported"), which would red this required job on every PR.
-          WHEEL=$(ls "$PWD"/python/repark/dist/repark-*.whl)
-          /tmp/wheeltest/bin/pip install "repark[numpy,pandas,polars,ml-ext] @ file://$WHEEL" pytest pytest-xdist ./python/repark-parity
-          /tmp/wheeltest/bin/python -m pytest python/repark/tests -q -n 4
-      - name: dbt-adapter tests against the built wheel
-        run: |
-          /tmp/wheeltest/bin/pip install "dbt-core==1.9.11" "dbt-spark==1.9.3"
-          /tmp/wheeltest/bin/python -m pytest python/dbt-repark/tests -q
-      - name: example-coverage execute (require native)
-        run: /tmp/wheeltest/bin/python -I scripts/check_example_coverage.py --require-execute
-
   release-wheels:
     name: manylinux release wheels (tags)
     if: startsWith(github.ref, 'refs/tags/v')

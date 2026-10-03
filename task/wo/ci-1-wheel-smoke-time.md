@@ -24,6 +24,7 @@ optimisation level chosen by measurement, and a proof run of the flaky test on t
 - Three shards by file name modulo three, in sorted order, with `pytest-xdist -n 4` inside each. No new Python dependency.
 - The depth-guard flake is a debug stack-frame margin (U11-EDGE-1 ledger, round 9). CI-1 proves whether the chosen profile removes it; it does not touch `deep_stack.rs` or any constant.
 - No code comments from Anthropic models. The workflow files carry comments today; CI-1 adds none and deletes the ones on lines it removes.
+- Owner, 2026-10-03: each facade shard runs pytest with `--durations=25`, and the hand-back JSON adds `"durations"`, the top 25 `[test id, seconds]` from each shard; no other test-speed work is in scope.
 
 ## 2. Files
 

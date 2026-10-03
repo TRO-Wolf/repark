@@ -136,6 +136,8 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   job keeps its gate and host; `docs/release.md` names all five legs. Doctored leg
   lists (dropped, renamed, appended, re-hosted, unmerged, cron removed, `pull_request`
   reachability) each fail. YAML read by indentation-aware regex, no PyYAML.
+  **CI-1 (2026-10-03, owner ruling):** the C-002 pin admits exactly two `smoke` `if:` forms, the bare PR-or-main gate and `always() && (` that gate `)`, so the aggregate can report on a skipped or failed upstream job; `test_doctored_smoke_gate_fails` proves `always()` alone, a PR-only gate, an `||` widening, a `!cancelled()` gate, a dropped `if:` and a re-hosted job each fail.
+  **CI-1 (2026-10-03, owner ruling on H-2, widening authorized by it):** the smoke jobs moved to `smoke.yml`, so the `smoke` assertions read `smoke.yml` (the two-form `if:` rule and `runs-on` stay) while the release and nightly assertions keep reading `wheels.yml`. C-002 also asserts `smoke.yml` triggers only on `push: branches: [main]` and `pull_request` (no `tags`, `schedule` or `workflow_dispatch`) and carries no publishing step (`pypa/gh-action-pypi-publish`, `maturin publish`/`upload`, a maturin-action `command: publish`/`upload`, `twine`, `softprops/action-gh-release`, `ncipollo/release-action`, `actions/create-release`, `gh release create`/`upload`); `test_doctored_smoke_workflow_fails` injects each forbidden trigger, a widened push branch list, a dropped `pull_request` and each publishing step, and every one fails.
   pins: platform-1/C-001, C-002, C-003, C-004, C-005
 - `test_ice_read_perf_bench_workflow.py` — **ICE-READ-PERF-0 (2026-09-19):** pins over the
   dispatch-only `ice-read-perf-bench` job of `aws-acceptance.yml`. `live-aws` keeps the nightly
@@ -382,7 +384,8 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   gate: five-family enumerator, uncovered / stale-backlog / covered-in-backlog
   reds, backlog and exceptions baselines, COVERS-must-be-used, seed `COVERS`,
   cloud exceptions, nonzero example exit, Makefile `make ci` + ci.yml dual-wire
-  + wheels.yml `python -I … --require-execute`; F.* includes installer
+  + wheels.yml `python -I … --require-execute` (**CI-1, 2026-10-03, owner ruling on H-2:**
+  the reader follows the job to `smoke.yml`, same two assertions); F.* includes installer
   `__all__` mutations (`try_*`, `zip_with`, xpath); backlog pins are
   campaign-true since 2026-09-01 (baseline is a `<=` direction ratchet in
   lockstep with the file — the ex-2 ledger's blocker section records the
