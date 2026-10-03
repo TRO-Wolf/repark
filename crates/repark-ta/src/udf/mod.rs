@@ -21,9 +21,12 @@ use crate::{
 
 mod momentum;
 mod overlap;
+mod prefix;
 mod price;
 mod volatility;
 mod volume;
+
+use prefix::{run_all_with_prefix_skipped, run_with_prefix_skipped};
 
 // Multi-output families use one thread-local cache keyed by family, params, and series identity.
 
@@ -677,8 +680,7 @@ impl PartitionEvaluator for TaEvaluator {
             let bands = if n_series == 1
                 && let Some(borrowed) = try_borrow_null_free_f64(&series_arrays[0])
             {
-                self.func
-                    .compute_all(&[borrowed], &self.params)
+                run_all_with_prefix_skipped(&[borrowed], |s| self.func.compute_all(s, &self.params))
                     .map_err(|err| DataFusionError::Execution(format!("TA kernel error: {err}")))?
             } else {
                 self.ensure_scratches(n_series);
@@ -687,8 +689,7 @@ impl PartitionEvaluator for TaEvaluator {
                     .iter()
                     .map(Vec::as_slice)
                     .collect();
-                self.func
-                    .compute_all(&slices, &self.params)
+                run_all_with_prefix_skipped(&slices, |s| self.func.compute_all(s, &self.params))
                     .map_err(|err| DataFusionError::Execution(format!("TA kernel error: {err}")))?
             };
             let out = bands
@@ -702,9 +703,7 @@ impl PartitionEvaluator for TaEvaluator {
         if n_series == 1
             && let Some(borrowed) = try_borrow_null_free_f64(&series_arrays[0])
         {
-            let out = self
-                .func
-                .compute(&[borrowed], &self.params)
+            let out = run_with_prefix_skipped(&[borrowed], |s| self.func.compute(s, &self.params))
                 .map_err(|err| DataFusionError::Execution(format!("TA kernel error: {err}")))?;
             return Ok(float64_array_from_values(&out));
         }
@@ -714,9 +713,7 @@ impl PartitionEvaluator for TaEvaluator {
             .iter()
             .map(Vec::as_slice)
             .collect();
-        let out = self
-            .func
-            .compute(&slices, &self.params)
+        let out = run_with_prefix_skipped(&slices, |s| self.func.compute(s, &self.params))
             .map_err(|err| DataFusionError::Execution(format!("TA kernel error: {err}")))?;
         Ok(float64_array_from_values(&out))
     }

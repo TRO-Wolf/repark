@@ -27,6 +27,11 @@ Kernel math is **not** here — it stays in `../overlap.rs` etc.
   `compute_all` for MACD* / STOCH* / AROON.
 - `volatility.rs` — `trange`/`atr`/`natr`.
 - `volume.rs` — TA-4 `ad`/`adosc`/`obv`/`mfi`.
+- `prefix.rs` — TA-CHAIN-1 leading-run skip: `leading_invalid_run` (latest first-valid row across
+  the inputs), `run_with_prefix_skipped` / `run_all_with_prefix_skipped` (trim the run, call the
+  kernel, re-prefix the skipped rows as NaN; start 0 is a pass-through borrow). `evaluate_all`'s
+  four kernel calls route through them. Inline tests pin the R-TC1-1 probes, the all-invalid band
+  shape, and a chained TRANGE → EMA through `TaEvaluator`.
 - `price.rs` — price-transform family (`avgprice`/`medprice`/`typprice`/
   `wclprice`).
 
@@ -39,6 +44,7 @@ Kernel math is **not** here — it stays in `../overlap.rs` etc.
 | Touch overlap dispatch | `overlap.rs` |
 | Touch momentum dispatch | `momentum.rs` |
 | Touch volatility / volume / price dispatch | the matching sibling |
+| Change how a leading NaN/NULL run is skipped | `prefix.rs` (semantics: polars_talib 0.1.5, `task/wo/ta-chain-1-leading-prefix.md` R-TC1-1) |
 | Change kernel arithmetic | the kernel file in `../` — not these wrappers |
 
 ## Pointers
@@ -55,6 +61,7 @@ Kernel math is **not** here — it stays in `../overlap.rs` etc.
 | Bit mismatch vs the kernel | Family `compute` arm vs the public kernel; never edit goldens |
 | Three BBANDS columns recompute | Check the TLS cache in `mod.rs`; sibling calls must share the pinned entry |
 | `invalid udf family dispatch` | A family `compute` table dropped a variant the router still sends; add the arm |
+| Chained indicator all-NaN (e.g. `ta_ema` over a `ta_trange` column) | `prefix.rs` — the input's leading NaN run must be skipped before the kernel; check the call site in `evaluate_all` routes through `run_with_prefix_skipped` / `run_all_with_prefix_skipped` |
 | `ta_ema` unknown after `TaExtension::register` | Same SPECS row — not an extension bug ([../extension/map.md](../extension/map.md)) |
 
 First checks: `cargo test -p repark-ta --features datafusion udf::`. Escalate to:
