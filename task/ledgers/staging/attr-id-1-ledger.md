@@ -1011,3 +1011,27 @@ RePark raises `AMBIGUOUS_REFERENCE` naming `` `v` `` twice, on main and on this 
 Measured (`sj-5/ambiguous_order_residue.json`): `A_inner_agg_f` Spark `v, id` vs
 RePark `id, v`; `SJ5_agg_two` Spark `id, id, v` vs RePark `id, v, id`; every other
 measured 1182 cell matches Spark's order exactly.
+
+## Round PERF-1 (2026-10-03)
+
+**Model:** muse-spark-1.3-contributor (executor, max); timing replays and rulings by the
+orchestrator. Six Python-only commits, behaviour-identical to SJ-5: per-frame caches of
+stamped ids and engine names, memoized written-name splits, lazy frame nodes built on
+first read, the `renews` guard walking deferred markers, spawn-time plan snapshots in
+deferred entries (the `_inner` swaps of UDF and cache rewrites), and metadata readers
+funnelled through the snapshot caches. Per-slice like-for-like against SJ-5: 0.9731.
+Full facade suite 14788 passed, 0 failed; parity suite 785 passed; S0 replay 0 moved
+cells against SJ-5 apart from the nondet list; `count_129.py` holds at 2; 842-cell
+inventory 0 key diffs; comment ban 0.
+
+**Timing (owner ruling 2026-10-03, R-PERF1-1).** Three like-for-like replays on the frozen
+tree `5dff0f34` against base `db3a1f37`: 1.2021, 1.2009, 1.2026; median 1.2021, spread
+0.0017. Earlier trees: 1.1983, 1.2047. The median is over the sketch's 1.20 bar.
+
+**Owner carve-out (2026-10-03).** The stack goes to main at 1.2021x like-for-like. The
+residual cost is stamping (1.188x at S4, before any self-join slice) and is carded as
+PERF-ATTR-STAMP-2 (`task/roadmap/mid-term/perf-attr-stamp-2-card-2026-10-03.md`).
+Condition: no release tag carries the stack until PERF-ATTR-STAMP-2 has landed and been
+measured; if it cannot reach 1.10x, the owner rules on its measured number before any
+tag. The all-cells ratio (median 1.1831) is rejected as a gate: refusals and FIXED cells
+do different work than main.
