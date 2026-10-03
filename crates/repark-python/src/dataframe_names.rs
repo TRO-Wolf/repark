@@ -16,7 +16,9 @@ use crate::dataframe::PyDataFrame;
 use crate::datafusion_to_py_err;
 use crate::fence::fenced;
 use crate::frame_lineage::PyFrameNode;
-use repark_core::frame_names::{AttrId, Disposition, FrameNode, NameRule, Resolution, SortShape};
+use crate::session::PyReparkSession;
+use crate::temp_view_names::session_rule;
+use repark_core::frame_names::{AttrId, FrameNode, NameRule, Resolution, SortShape};
 use repark_functions::case_sensitive::spark_case_sensitive_from_options;
 
 #[allow(clippy::missing_errors_doc)]
@@ -40,21 +42,15 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(grandchild_key_status, module)?)?;
     module.add_function(wrap_pyfunction!(projection_source_ids, module)?)?;
     module.add_function(wrap_pyfunction!(java_fold_hits, module)?)?;
-    module.add_function(wrap_pyfunction!(frame_is_exact, module)?)?;
-    module.add_function(wrap_pyfunction!(match_display_names, module)?)?;
-    module.add_function(wrap_pyfunction!(match_subset_names, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_join_condition, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_free_names, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_folded_duplicate_keys, module)?)?;
     module.add_function(wrap_pyfunction!(requalify_join_sides, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_display_name, module)?)?;
-    module.add_function(wrap_pyfunction!(resolve_df_names, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_frame_names, module)?)?;
     module.add_function(wrap_pyfunction!(sort_child_shape, module)?)?;
     module.add_function(wrap_pyfunction!(stamp_attribute_ids, module)?)?;
     module.add_function(wrap_pyfunction!(strip_attribute_ids, module)?)?;
-    module.add_function(wrap_pyfunction!(resolve_qualified_display_names, module)?)?;
-    module.add_function(wrap_pyfunction!(rewrite_join_condition_aliases, module)?)?;
     Ok(())
 }
 
@@ -213,9 +209,9 @@ fn refuse_ambiguous_join_condition(
 
 #[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
 #[pyfunction]
-fn refuse_folded_duplicate_keys(frame: &PyDataFrame, keys: Vec<String>) -> PyResult<()> {
+fn refuse_folded_duplicate_keys(session: &PyReparkSession, keys: Vec<String>) -> PyResult<()> {
     fenced!("dataframe_names.refuse_folded_duplicate_keys", {
-        repark_core::frame_names::refuse_folded_duplicate_keys(&keys, frame_rule(frame.inner()))
+        repark_core::frame_names::refuse_folded_duplicate_keys(&keys, session_rule(session))
             .map_err(datafusion_to_py_err)
     })
 }
@@ -269,80 +265,12 @@ pub(crate) fn requalify_join_sides(
 
 #[pyfunction]
 fn frame_case_sensitive(frame: &PyDataFrame) -> bool {
-    frame_is_exact(frame)
-}
-
-#[pyfunction]
-fn frame_is_exact(frame: &PyDataFrame) -> bool {
     matches!(frame_rule(frame.inner()), NameRule::Exact)
 }
 
 #[pyfunction]
 fn frame_is_relation(frame: &PyDataFrame) -> bool {
     repark_core::frame_names::plan_is_relation(frame.inner().logical_plan())
-}
-
-fn disposition_text(disposition: Disposition) -> String {
-    match disposition {
-        Disposition::Bound => "bound",
-        Disposition::Ambiguous => "ambiguous",
-        Disposition::Missing => "missing",
-    }
-    .to_string()
-}
-
-#[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
-#[pyfunction]
-fn resolve_df_names(
-    frame: &PyDataFrame,
-    names: Vec<String>,
-) -> PyResult<Vec<(String, String, String, String)>> {
-    fenced!("dataframe_names.resolve_df_names", {
-        repark_core::frame_names::resolve_df_names(
-            frame.inner().schema(),
-            &names,
-            frame_rule(frame.inner()),
-        )
-        .map(|rows| {
-            rows.into_iter()
-                .map(|(written, qualifier, engine, disposition)| {
-                    (written, qualifier, engine, disposition_text(disposition))
-                })
-                .collect()
-        })
-        .map_err(datafusion_to_py_err)
-    })
-}
-
-#[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
-#[pyfunction]
-fn match_display_names(
-    frame: &PyDataFrame,
-    written: Vec<String>,
-    held: Vec<String>,
-) -> PyResult<Vec<(String, Vec<String>, String)>> {
-    fenced!("dataframe_names.match_display_names", {
-        repark_core::frame_names::match_display_names(&written, &held, frame_rule(frame.inner()))
-            .map(|rows| {
-                rows.into_iter()
-                    .map(|(name, hits, disposition)| (name, hits, disposition_text(disposition)))
-                    .collect()
-            })
-            .map_err(datafusion_to_py_err)
-    })
-}
-
-#[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
-#[pyfunction]
-fn match_subset_names(
-    frame: &PyDataFrame,
-    written: Vec<String>,
-    held: Vec<String>,
-) -> PyResult<Vec<(String, Vec<String>)>> {
-    fenced!("dataframe_names.match_subset_names", {
-        repark_core::frame_names::match_subset_names(&written, &held, frame_rule(frame.inner()))
-            .map_err(datafusion_to_py_err)
-    })
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -707,31 +635,6 @@ pub(crate) fn grandchild_qualified_key(
     })
 }
 
-#[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
-#[pyfunction]
-fn resolve_qualified_display_names(
-    frame: &PyDataFrame,
-    displays: Vec<String>,
-    names: Vec<String>,
-) -> PyResult<Vec<(String, String, String)>> {
-    fenced!("dataframe_names.resolve_qualified_display_names", {
-        repark_core::frame_names::resolve_qualified_display_names(
-            frame.inner().schema(),
-            &displays,
-            &names,
-            frame_rule(frame.inner()),
-        )
-        .map(|rows| {
-            rows.into_iter()
-                .map(|(written, engine, disposition)| {
-                    (written, engine, disposition_text(disposition))
-                })
-                .collect()
-        })
-        .map_err(datafusion_to_py_err)
-    })
-}
-
 #[pyfunction]
 pub(crate) fn join_output_sources(frame: &PyDataFrame) -> Vec<Vec<(bool, usize)>> {
     repark_core::frame_names::join_output_sources(frame.inner().logical_plan())
@@ -772,22 +675,4 @@ pub(crate) fn copy_attribute_ids(
             frame.runtime_handle(),
         ))
     })
-}
-
-#[pyfunction]
-fn rewrite_join_condition_aliases(
-    left: &PyDataFrame,
-    right: &PyDataFrame,
-    condition_sql: &str,
-    left_view: &str,
-    right_view: &str,
-) -> String {
-    repark_core::frame_names::rewrite_join_condition_aliases(
-        left.inner().schema(),
-        right.inner().schema(),
-        condition_sql,
-        left_view,
-        right_view,
-        frame_rule(left.inner()),
-    )
 }

@@ -232,6 +232,30 @@ RePark binds); same-alias joins stay unmeasured. The condition half
 binds single-hit only (twin conditions keep today's refusal,
 unmeasured).
 
+## Port onto the ATTR-ID-1 stack (2026-10-03, phase 1; branch `feat/attr-id-1-casesens-2`, base `e6810060`)
+
+The four charter commits were cherry-picked onto the ATTR-ID-1 stack in order
+(`5b730b0c` → `e4be1feb`, `730530e1` → `581f91b1`, `63acd9bb` → `28f6d28a`,
+`4f927d2c` → `111e95b3`), conflicts resolved with the stack as the authority on
+identity: every conflicting `core.py`, `actions_export.py`, `case_bind.rs` and
+frozen-surface hunk kept the stack's side, the additive binding registrations
+kept both, and auto-merged lines that reached the charter's mechanism from a
+stack body were dropped with their hunk. The four fold commits (`0487afe7`,
+`15a7bb9d`, `b89a7d7f`, `3ac80920`) were not replayed (OD-1).
+
+Re-pointing (Claude commits on top of the picks):
+
+- **Retired.** The charter's matchers (`written_names.py` whole;
+  `written_names.rs` but `refuse_folded_duplicate_keys`; six bindings) are
+  deleted. The stack's `resolve` and its S3a–S3e binds already answer every site
+  they served; `test_casesens_2.py` proves it cell by cell.
+- **Kept, re-pointed.** `refuse_folded_duplicate_keys` lowers keys with the Java
+  `String.toLowerCase` table and reads the live session rule; the exact filter
+  miss and the sort fall-through miss render `unresolved_column` (Spark's
+  `UNRESOLVED_COLUMN`, every frame field suggested); the facade's unresolved
+  refusals suggest every display (the stack listed fold hits only, the "bare
+  suggestion lists" divergence the S3e record names).
+
 ## Clauses
 
 | Clause | Statement | Proof obligation | Verdict | Evidence |
@@ -244,6 +268,7 @@ unmeasured).
 | C-006 | The `false` path is otherwise byte-identical: `p1/r7_orderBy_ID`, `r7_groupBy_DATA`, `r7_dropDuplicates_ID`, `r7_fillna_subset`, `r7_sort_col_ID`, the S3 `df_*_false` legs, today's facade miss/ambiguous texts, the quoter battery and R-19's lazy timing all guard-pinned. | Guard pins plus the facade sweep. | PROVEN | S1 partial: `test_s1_false_door_byte_identical` green (r7 guards, S3 false legs, miss text, R-19 timing, quoter spot); M7 reds it. S2 partial: the S1 guard pins stay green and `test_s2_overlay_replace_unchanged` pins the R7 overlay replace set. S3: PROVEN — the S1/S2 pins stay green, the 281-test facade sweep passes, and the probe re-run flips exactly the six S3 legs (p1 zero flips). |
 | C-007 | One rule: every site this unit touches matches through `repark_common::names::NameRule`; no `casefold` / `lower` / `eq_ignore_ascii_case` name comparison is added (grep of the unit's diff); `core.py` shrinks in every slice (3973 → 3968 at S3); `_resolve_getitem_column_name` stays until its four remaining callers are migrated. | Grep of the unit diff; the S3 ruling keeps the matcher. | PROVEN | S1 partial: the S1 diff adds zero `casefold`/`lower`/`eq_ignore_ascii_case` (grep verified); `_resolve_getitem_column_name` keeps its S2/S3 callers (`declare_sorted`, `drop_duplicates`, `with_column_renamed` — note `declare_sorted` is outside S2/S3's named sites, S3 halt-rule-6 input). `core.py` stays 3973 in S1 (written-path body moved out per the Q2 ruling). S2 partial: the S2 diff adds zero `casefold`/`lower`/`eq_ignore_ascii_case` (grep verified); the `with_column_renamed` caller is gone, remaining callers are `declare_sorted` and `drop_duplicates`; `core.py` holds 3973 (26/26, call sites plus docstrings fund the folded loops). S3 partial: the S3 diff adds zero `casefold`/`lower`/`eq_ignore_ascii_case` and removes two `casefold` uses (grep verified); the `drop_duplicates` caller is gone and `core.py` ends 3968 (ceilings ratcheted). Halt-rule-6 FIRED: four non-S3 callers survive (`declare_sorted`, `col_regex_column`, `withMetadata`, `na.replace`'s `_resolve_subset_targets`, all present at `f2d3d220`) plus the export pin. Q1 ruling (a), 2026-09-28: the helper stays, this clause is amended as ruled, residue R-CS2-6 names the four callers — amended clause PROVEN. |
 | C-008 | Nothing regresses: the U11-EDGE-1 V-001 … V-004 pins, the `case_bind` and `column_resolution` batteries, the S3 `true` legs, the U8 C-033 keys and the ANSI door stay green; cells `E-CASE-SELECT`, `E-CASE-ALTER`, `E-CASE-INSERT-BY-NAME`, `E-CASE-MERGE`, `E-CASE-PARTITION-FIELD`, `E-CASE-TABLE-NAME`, `R-MT-CASE`, `P-CALL-UPPERCASE` replay unchanged. | Full lib sweeps, the facade sweep, the probe re-run and the scoreboard replay. | PROVEN | S1 partial: the WO gate batteries green (evidence in the S1 hand-back); zero existing pins changed. S2 partial: the WO gate batteries green (evidence in the S2 hand-back); zero existing pins changed. S3: PROVEN — the WO batteries green (evidence in the S3 hand-back); zero existing pins changed; the 8-cell scoreboard replay is identical to S2 modulo timing. |
+| C-010 | The port keeps the charter's behaviour through the stack: the charter's matchers retire without a cell moving; `withColumns` folded keys refuse `COLUMN_ALREADY_EXISTS` (42711, Java-lowered key) under the live `false` rule; unresolved refusals on select, getitem, groupBy, `fillna`/`dropna` subsets, string filters and sort keys suggest every frame display. | `test_casesens_2.py` in full plus the `test_attr_id_1_*` files; Rust `case_bind` pin. | PROVEN | `test_casesens_2.py` 16/16, `test_attr_id_1_*` 641 + 3 xfailed; `../../../crates/repark-core/src/session/tests/case_bind.rs::folded_with_columns_keys_refuse_only_under_ignore_case`. |
 
 ## Mutation record (2026-09-28, S1)
 

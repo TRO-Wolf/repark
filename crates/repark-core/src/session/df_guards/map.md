@@ -556,46 +556,22 @@ wrapped optimizer rule) and declares this directory.
   `IgnoreCase`) and gains the sibling `resolve_bound_expr_with(expr, schema, rule)`,
   re-exported through `frame_names` (`session.rs` sits exactly at its ceiling, so the root
   re-export cannot grow). pins: casesens-1/C-009
-- `written_names.rs` — **CASESENS-2 S1 (2026-09-28):** the DataFrame door's
-  written-name matchers (R5). `resolve_df_names(schema, names, rule)` matches
-  whole-first, then splits qualified strings on the last dot (the qualifier
-  through the local `qualifier_matches`, the segment through `NameRule`),
-  returning `(written, qualifier, engine, Disposition)`; `match_display_names`
-  matches caller-passed candidates with full fan-out. Under `Exact` both raise
-  `unresolved_column` instead of returning `Ambiguous`/`Missing`;
-  `unresolved_subset_name` renders the legacy drop-subset text for S3. The
-  qualifier comparison is local (not `same_relation`) because widening that
-  signature costs 4 reformatted lines the 1000-line `case_bind.rs` ceiling
-  cannot spare. Re-exported through `frame_names` (2 `pub use` lines).
-  Rust pins in the file's test module: `select_names_bind_and_refuse_by_rule`,
-  `qualified_names_split_on_the_last_dot`,
-  `display_names_fan_out_and_the_subset_text_is_legacy`.
-  pins: casesens-2/C-001, C-003
-  **CASESENS-2 S2 (2026-09-28):** `refuse_folded_duplicate_keys(keys, rule)`
-  (ok under `Exact`, Spark's 42711 text under `IgnoreCase`), re-exported
-  inside the existing `pub use` line (`case_bind.rs` stays 1000); pin
-  `display_match_fans_out_under_ignore_case_and_is_exact_under_exact`.
-  pins: casesens-2/C-004
-  **CASESENS-2 S3 (2026-09-28):** `match_subset_names(written, held, rule)`
-  (fan-out under `IgnoreCase`, exact hits under `Exact`, Spark's legacy
-  subset text on a miss under both rules), re-exported inside the existing
-  `pub use` line (`case_bind.rs` stays 1000); pin
-  `subset_names_fan_out_and_miss_with_the_legacy_text`.
-  pins: casesens-2/C-002, C-005
-  **CASESENS-2 S4 (2026-09-28):** `rewrite_join_condition_aliases`
-  (Databricks parse; two-part compounds rebind through the single side
-  whose qualifier matches and the single field whose name matches,
-  emitting a bare view plus a backticked engine field; anything else
-  passes byte-identical) and `resolve_qualified_display_names`
-  (positional schema-qualifier plus display pairing, first hit binds,
-  `Exact` raises the qualified `unresolved_column`); the written
-  qualifier builds `TableReference::Bare` directly because
-  `TableReference::from` lowercases. Re-exported on a third `pub use`
-  line funded by an inlined test `let` (`case_bind.rs` stays 1000).
-  Pins `join_condition_aliases_rebind_through_the_side_schemas`,
-  `join_condition_aliases_leave_other_references_untouched`,
-  `qualified_display_names_pair_schema_positions_with_displays`.
-  pins: casesens-2/C-003
+- `written_names.rs` — **CASESENS-2 port (2026-10-03):** what the ATTR-ID-1
+  stack keeps of the charter's written-name matchers (cherry-picks `e4be1feb`,
+  `581f91b1`, `28f6d28a`, `111e95b3`): `refuse_folded_duplicate_keys(keys, rule)`
+  alone. `Exact` passes; `IgnoreCase` lowers each key with
+  `java_case::string_lowered` and refuses the first repeat with Spark's
+  `COLUMN_ALREADY_EXISTS` (42711) naming the lowered key (live Spark 4.1.2,
+  2026-10-03: `{"v", "V"}` refuses `` `v` ``). The charter's `resolve_df_names`,
+  `match_display_names`, `match_subset_names`, `resolve_qualified_display_names`,
+  `rewrite_join_condition_aliases`, `unresolved_subset_name` and `Disposition`
+  are deleted with their inline tests: `attr_id::resolve` and the S3a–S3e binds
+  cover every site they served, and join conditions bind through
+  `predicate_names.rs`. `case_bind::unresolved_column` is `pub` so the binding
+  renders an engine miss with Spark's text and every frame field as a
+  suggestion. Pin: `../tests/case_bind.rs`
+  (`folded_with_columns_keys_refuse_only_under_ignore_case`).
+  pins: casesens-2/C-004, C-010
 
 ## Pointers
 

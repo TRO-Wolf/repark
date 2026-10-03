@@ -7,17 +7,6 @@ from typing import NoReturn
 from repark.errors import AnalysisException
 
 
-def _suggestion_candidates(name: str, displays: list[str]) -> list[str]:
-    lowered = name.lower()
-    seen: set[str] = set()
-    candidates: list[str] = []
-    for display in displays:
-        if display.lower() == lowered and display not in seen:
-            seen.add(display)
-            candidates.append(display)
-    return candidates
-
-
 def _qualified_target(qualifier: list[str] | None, name: str) -> str:
     if qualifier is None:
         return f"`{name}`"
@@ -29,9 +18,8 @@ def _raise_unresolved_name(qualifier: list[str] | None, name: str, displays: lis
         "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter "
         f"with name {_qualified_target(qualifier, name)} cannot be resolved."
     )
-    candidates = _suggestion_candidates(name, displays)
-    if candidates:
-        quoted = ", ".join(f"`{candidate}`" for candidate in candidates)
+    if displays:
+        quoted = ", ".join(f"`{candidate}`" for candidate in displays)
         message = f"{message} Did you mean one of the following? [{quoted}]."
     raise AnalysisException(f"{message} SQLSTATE: 42703")
 

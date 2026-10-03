@@ -259,7 +259,8 @@ fn is_final_sigma(values: &[char], index: usize) -> bool {
             .any(|value| value.is_alphabetic())
 }
 
-fn string_lowered(value: &str) -> String {
+#[must_use]
+pub fn string_lowered(value: &str) -> String {
     let values: Vec<char> = value.chars().collect();
     let mut lowered = String::with_capacity(value.len());
     for (index, current) in values.iter().enumerate() {

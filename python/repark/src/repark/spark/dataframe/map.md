@@ -219,43 +219,13 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   keep the caller's raw keys on the `GroupedData` and defer the key check to
   the terminal, so keys and aggregate references refuse once. Pins:
   `python/repark/tests/test_attr_id_1_sj5.py`.
-  CASESENS-2 S1 (2026-09-28): `_bind_schema_column` keeps the engine branch and
-  delegates the written path to `written_names._bind_written_column` (one-line
-  call site); `_rebind_stable_name_column` returns its input under `Exact`, and
-  string `filter` skips the quoter under `Exact`. `core` binds `written_names`,
-  so the package and core surfaces gain exactly that module name. `core.py`
-  stays 3973 (the extracted method funds the two gates and the module binding).
-  pins: casesens-2/C-001, C-003, C-006
-- `written_names.py` owns the CASESENS-2 S1 written-name body
-  `_bind_written_column(frame, name)` behind the `_bind_schema_column` call site:
-  exact-or-raise under `Exact`, the exact-membership fast path plus the native
-  R5 match and the legacy miss/ambiguity renderers under `IgnoreCase`, and
-  qualified strings riding the proven `F.col` path. Every string site shares
-  getitem's R-19 laziness (C-023 pins lazy `select` on twins).
-  pins: casesens-2/C-001, C-003, C-006
-  CASESENS-2 S2 (2026-09-28): the withColumn/rename body behind the three
-  `core.py` call sites — `_refuse_folded_with_columns_keys`,
-  `_match_with_columns_keys`, `_locate_rename_targets`,
-  `_rewrite_running_names`: native fan-out under `IgnoreCase`, exact `==`
-  behind the `frame_is_exact` gate under `Exact` (the raising R5 matcher
-  cannot serve append/no-op sites), exact-duplicate hits left alone (R-22).
-  `core.py` holds 3973. pins: casesens-2/C-002, C-004, C-006
-  CASESENS-2 S3 (2026-09-28): the subset body behind the na and
-  `drop_duplicates` call sites — `_match_lenient_subset` (misses match
-  nothing under `IgnoreCase`, refuse natively under `Exact`) and
-  `_match_subset_names` (fan-out under `IgnoreCase`, exact hits under
-  `Exact`, the legacy subset text on a miss under both rules). `core.py`
-  3973 → 3968 (ceilings ratcheted; the helper stays per the 2026-09-28
-  ruling, residue R-CS2-6). The unit diff adds zero matchers (grep).
-  pins: casesens-2/C-002, C-005, C-006, C-007
-  CASESENS-2 S4 (2026-09-28): the alias-qualified body behind the join
-  call site — `_rewrite_join_condition` (QCOL tokens then the native
-  alias rewrite) and `_bind_qualified_display_column` (dotted names on
-  overlay frames through the native pairing, written last segment kept,
-  `None` under `IgnoreCase` so the caller keeps today's refusal).
-  `core.py` 3968 → 3963 (ceilings ratcheted; the frozen surfaces lose
-  exactly `_rewrite_join_qcol_sql`, which keeps its `plan_collapse`
-  home). pins: casesens-2/C-003, C-008
+  CASESENS-2 port (2026-10-03): the charter's `written_names.py` (written-name,
+  withColumn/rename, subset and join-condition bodies behind `core.py` call
+  sites) is deleted, and no `core.py` call site reaches it: the cherry-picks kept
+  the stack's `_bind_schema_column`, `filter`, `withColumn(s)`, renames, `na` and
+  `dropDuplicates` bodies, which bind through `resolve` (S3a–S3e). The port adds
+  no Python-side name matcher (the C-007 rule; `column_errors.py` loses its
+  `lower()` filter). pins: casesens-2/C-003, C-006, C-007, C-010
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`

@@ -9,7 +9,8 @@ use datafusion::prelude::SessionContext;
 use crate::frame_names::NameRule::{Exact, IgnoreCase};
 use crate::frame_names::{
     FrameNode, attribute_reference, bind_projection_expr, drop_named_columns, join_on_named_keys,
-    refuse_ambiguous_condition, requalify_join_sides, stamp, union_by_folded_name,
+    refuse_ambiguous_condition, refuse_folded_duplicate_keys, requalify_join_sides, stamp,
+    union_by_folded_name,
 };
 use crate::session::df_guards::case_bind::bind_names;
 
@@ -564,4 +565,24 @@ fn free_sql_names_skips_nested_scopes_and_unparsable() {
     assert!(free_sql_names("v in (select v from t)", false).is_empty());
     assert!(free_sql_names("v + (", false).is_empty());
     assert!(free_sql_names("v FROM t", true).is_empty());
+}
+
+#[test]
+fn folded_with_columns_keys_refuse_only_under_ignore_case() {
+    let keys = ["ID".to_string(), "id".to_string()];
+    assert!(refuse_folded_duplicate_keys(&keys, Exact).is_ok());
+    let distinct = ["a".to_string(), "b".to_string()];
+    assert!(refuse_folded_duplicate_keys(&distinct, IgnoreCase).is_ok());
+    assert_eq!(
+        refuse_folded_duplicate_keys(&keys, IgnoreCase)
+            .unwrap_err()
+            .to_string(),
+        "Error during planning: [COLUMN_ALREADY_EXISTS] The column `id` already exists. Choose \
+         another name or rename the existing column. SQLSTATE: 42711"
+    );
+    let sigma = [
+        "\u{39f}\u{394}\u{39f}\u{3a3}".to_string(),
+        "\u{3bf}\u{3b4}\u{3bf}\u{3c2}".to_string(),
+    ];
+    assert!(refuse_folded_duplicate_keys(&sigma, IgnoreCase).is_err());
 }

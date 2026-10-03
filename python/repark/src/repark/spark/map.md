@@ -418,6 +418,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - `column_errors.py` — **ATTR-ID-1 SJ-5 F1 (2026-10-03):** the four
   unresolved/ambiguous error builders, moved here from `column_fields.py`
   unchanged (pure move at the size ceiling, re-imported there).
+  **CASESENS-2 port (2026-10-03):** `_raise_unresolved_name` suggests every
+  display in frame order, as Spark lists every input attribute (live Spark 4.1.2:
+  `select("nope")` suggests `` `id`, `s`, `Data` `` under both rules); the
+  fold-only `_suggestion_candidates` filter is deleted. pins: casesens-2/C-001, C-010
 - `filter_quote.py` — **ATTR-ID-1 S3b H-1 (2026-10-01):** the filter-SQL
   identifier quoter, split out of `column_fields.py` at the size ceiling (pure
   move; the entry stays there). `_FILTER_TOKEN_PATTERN`,

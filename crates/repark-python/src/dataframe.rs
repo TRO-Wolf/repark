@@ -20,6 +20,7 @@ use tokio::runtime::Runtime;
 
 use crate::arrow_export::StreamingBatchReader;
 use crate::column::PyColumn;
+use crate::column::expr_build::unresolved_sort_key;
 use crate::fence::{fenced, fenced_span};
 use crate::frame_lineage::PyFrameNode;
 use crate::{datafusion_to_py_err, to_py_err};
@@ -369,11 +370,9 @@ impl PyDataFrame {
                     Ok(self.bound(column)?.sort(is_ascending, nulls_first))
                 })
                 .collect::<PyResult<Vec<_>>>()?;
-            let df = self
-                .df
-                .clone()
-                .sort(sort_expressions)
-                .map_err(datafusion_to_py_err)?;
+            let df = self.df.clone().sort(sort_expressions).map_err(|error| {
+                datafusion_to_py_err(unresolved_sort_key(error, self.df.schema()))
+            })?;
             Ok(Self::new(df, Arc::clone(&self.runtime)))
         })
     }

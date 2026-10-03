@@ -66,21 +66,16 @@ pub(crate) fn parse_canonical_predicate_exact(
         Ok(expr) => Ok(expr),
         Err(error) => {
             if let Some((relation, name)) = missing_column(&error) {
-                let written = match &relation {
-                    Some(table) => format!("{table}.{name}"),
-                    None => name.clone(),
-                };
-                let probe = Expr::Column(Column::new(relation, name));
+                let column = Column::new(relation, name);
                 repark_core::frame_names::resolve_bound_expr_with(
-                    probe,
+                    Expr::Column(column.clone()),
                     frame.schema(),
                     repark_core::frame_names::NameRule::Exact,
                 )?;
-                repark_core::frame_names::resolve_df_names(
+                return Err(repark_core::frame_names::unresolved_column(
+                    &column,
                     frame.schema(),
-                    &[written],
-                    repark_core::frame_names::NameRule::Exact,
-                )?;
+                ));
             }
             Err(repark_spark::spark_literals::translate_downstream_error(
                 predicate,
@@ -147,6 +142,21 @@ fn missing_column(
         },
         datafusion::error::DataFusionError::Diagnostic(_, inner) => missing_column(inner),
         _ => None,
+    }
+}
+
+pub(crate) fn unresolved_sort_key(
+    error: datafusion::error::DataFusionError,
+    frame_schema: &DFSchema,
+) -> datafusion::error::DataFusionError {
+    let Some((relation, name)) = missing_column(&error) else {
+        return error;
+    };
+    match DFSchema::from_unqualified_fields(frame_schema.fields().clone(), HashMap::new()) {
+        Ok(unqualified) => {
+            repark_core::frame_names::unresolved_column(&Column::new(relation, name), &unqualified)
+        }
+        Err(_) => error,
     }
 }
 

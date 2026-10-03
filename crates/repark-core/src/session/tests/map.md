@@ -76,6 +76,10 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   **ATTR-ID-1 SJ-5 F2 (2026-10-03):** qualified idents collect with head
   parts; six `sql_mentions_duplicate` pins (present, absent, literal-only,
   backquoted, case-fold, non-word dup).
+  **CASESENS-2 port (2026-10-03):** `folded_with_columns_keys_refuse_only_under_ignore_case`
+  pins `refuse_folded_duplicate_keys` (the charter's inline pin, moved with the
+  surviving function; a Greek final-sigma pair proves the Java lowering).
+  pins: casesens-2/C-010
 - `attr_id_s3b.rs` — **ATTR-ID-1 S3b (2026-10-01):** the filter/sort binder
   pins, 15 tests on tagged `MemTable` frames (`alias_with_metadata` ids, no
   facade). `sort_shape` over a union, a join, an aggregate, a select through a

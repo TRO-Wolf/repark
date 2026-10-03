@@ -73,6 +73,10 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   length-plus-`String.toLowerCase` (probes s3d16..17; `select` shares this rule
   per the r1 `sel` cells, which is S3a/S3b territory).
   pins: attr-id-1/C-037
+  **CASESENS-2 port (2026-10-03):** `string_lowered` is public so
+  `refuse_folded_duplicate_keys` compares `withColumns` keys the way Spark's
+  `SchemaUtils.checkColumnNameDuplication` does (`toLowerCase(Locale.ROOT)`).
+  pins: casesens-2/C-010
 - `java_case_dump.txt` — the compacted Zulu-17 `Character` dump behind that
   test: one `cp upper lower` hex line per mapped codepoint, sorted,
   generated from the S3d probe dump with a round-trip check (the generator
