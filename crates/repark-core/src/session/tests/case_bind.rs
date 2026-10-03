@@ -481,7 +481,7 @@ fn free_sql_names_collects_predicate_idents_verbatim() {
 }
 
 #[test]
-fn free_sql_names_skips_aliases_functions_and_qualified() {
+fn free_sql_names_skips_aliases_and_functions() {
     use crate::frame_names::free_sql_names;
 
     assert_eq!(
@@ -492,7 +492,69 @@ fn free_sql_names_skips_aliases_functions_and_qualified() {
         free_sql_names("count(v)", true),
         vec![(Vec::new(), "v".to_string())]
     );
-    assert!(free_sql_names("q.v > 15", false).is_empty());
+}
+
+#[test]
+fn free_sql_names_collects_qualified_with_head_parts() {
+    use crate::frame_names::free_sql_names;
+
+    assert_eq!(
+        free_sql_names("q.v > 15", false),
+        vec![(vec!["q".to_string()], "v".to_string())]
+    );
+    assert_eq!(
+        free_sql_names("`q`.`v` > 15", false),
+        vec![(vec!["q".to_string()], "v".to_string())]
+    );
+}
+
+#[test]
+fn sql_mentions_duplicate_reports_a_present_dup() {
+    use crate::frame_names::sql_mentions_duplicate;
+
+    let displays = vec!["id".to_string(), "v".to_string(), "v".to_string()];
+    assert!(sql_mentions_duplicate("v > 15", &displays, Exact));
+}
+
+#[test]
+fn sql_mentions_duplicate_skips_an_absent_dup() {
+    use crate::frame_names::sql_mentions_duplicate;
+
+    let displays = vec!["id".to_string(), "v".to_string(), "v".to_string()];
+    assert!(!sql_mentions_duplicate("id > 1", &displays, Exact));
+}
+
+#[test]
+fn sql_mentions_duplicate_parses_a_literal_only_mention() {
+    use crate::frame_names::sql_mentions_duplicate;
+
+    let displays = vec!["id".to_string(), "v".to_string(), "v".to_string()];
+    assert!(sql_mentions_duplicate("name = 'v'", &displays, Exact));
+}
+
+#[test]
+fn sql_mentions_duplicate_parses_a_backquoted_mention() {
+    use crate::frame_names::sql_mentions_duplicate;
+
+    let displays = vec!["id".to_string(), "v".to_string(), "v".to_string()];
+    assert!(sql_mentions_duplicate("`v` > 15", &displays, Exact));
+}
+
+#[test]
+fn sql_mentions_duplicate_folds_case_when_insensitive() {
+    use crate::frame_names::sql_mentions_duplicate;
+
+    let displays = vec!["id".to_string(), "v".to_string(), "v".to_string()];
+    assert!(sql_mentions_duplicate("V > 15", &displays, IgnoreCase));
+    assert!(!sql_mentions_duplicate("V > 15", &displays, Exact));
+}
+
+#[test]
+fn sql_mentions_duplicate_parses_a_non_word_dup() {
+    use crate::frame_names::sql_mentions_duplicate;
+
+    let displays = vec!["id".to_string(), "my col".to_string(), "my col".to_string()];
+    assert!(sql_mentions_duplicate("id > 1", &displays, Exact));
 }
 
 #[test]

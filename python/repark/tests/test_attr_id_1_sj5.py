@@ -346,3 +346,9 @@ def test_sj5_f1_window_free_ref_refuses(spark: ReparkSession) -> None:
     _refuses_ambiguous_params(
         lambda: frame.withColumn("z", F.row_number().over(window)), "`v`", "[`v`, `v`]"
     )
+
+
+def test_sj5_f2_bqqual_cross(spark: ReparkSession) -> None:
+    """Backquoted qualified filter over an aliased cross join refuses (``bqqual_probe.py``)."""
+    frame = _cross_v(spark).withColumn("w", F.lit(1)).alias("q")
+    _refuses_ambiguous_params(lambda: frame.filter("`q`.`v` > 15"), "`q`.`v`", "[`q`.`v`, `q`.`v`]")

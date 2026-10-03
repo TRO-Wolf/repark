@@ -73,6 +73,9 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   **ATTR-ID-1 SJ-5 F1 (2026-10-03):** three `free_sql_names` pins (verbatim
   spellings, alias/function/qualified skips, nested-scope and guard
   declines).
+  **ATTR-ID-1 SJ-5 F2 (2026-10-03):** qualified idents collect with head
+  parts; six `sql_mentions_duplicate` pins (present, absent, literal-only,
+  backquoted, case-fold, non-word dup).
 - `attr_id_s3b.rs` — **ATTR-ID-1 S3b (2026-10-01):** the filter/sort binder
   pins, 15 tests on tagged `MemTable` frames (`alias_with_metadata` ids, no
   facade). `sort_shape` over a union, a join, an aggregate, a select through a

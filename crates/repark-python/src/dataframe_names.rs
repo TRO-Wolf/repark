@@ -334,6 +334,9 @@ pub(crate) fn refuse_ambiguous_free_names(
             return Ok(());
         }
         let collected: Vec<(Vec<String>, String)> = if let Some(sql) = sql.as_deref() {
+            if !repark_core::frame_names::sql_mentions_duplicate(sql, &displays, rule) {
+                return Ok(());
+            }
             repark_core::frame_names::free_sql_names(sql, select_item)
         } else if let Some(column) = column {
             let prepared = column

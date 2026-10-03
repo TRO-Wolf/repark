@@ -515,10 +515,16 @@ wrapped optimizer rule) and declares this directory.
   subquery); `refuse_free_names` resolves each against the output displays
   and reports the first name with two ids, unless two hit engines match and
   the engine raises itself. `case_bind.rs` gains `free_sql_names`, the same
-  rule over SQL text through the Databricks-dialect parser (unqualified
-  idents only; subqueries, CTEs and a top-level FROM decline to scan).
+  rule over SQL text through the Databricks-dialect parser (subqueries,
+  CTEs and a top-level FROM decline to scan).
   Pins: the `sort_names` unit module, `../tests/case_bind.rs`,
   `python/repark/tests/test_attr_id_1_sj5.py`.
+  **ATTR-ID-1 SJ-5 F2 (2026-10-03):** `free_sql_names` also collects
+  compound identifiers as qualifier plus written name.
+  `sql_mentions_duplicate` skips the parse when no word or backquoted token
+  matches a duplicated display under the session case rule; a duplicated
+  display with a non-word character always parses. Pins:
+  `../tests/case_bind.rs`.
   pins: attr-id-1/C-039
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /

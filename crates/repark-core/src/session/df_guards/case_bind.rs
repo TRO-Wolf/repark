@@ -348,11 +348,80 @@ fn collect_sql_ident(node: &SqlExpr, names: &mut Vec<(Vec<String>, String)>, nes
         SqlExpr::Identifier(ident) => {
             names.push((Vec::new(), ident.value.clone()));
         }
+        SqlExpr::CompoundIdentifier(parts) => {
+            if let Some((last, head)) = parts.split_last() {
+                names.push((
+                    head.iter().map(|part| part.value.clone()).collect(),
+                    last.value.clone(),
+                ));
+            }
+        }
         SqlExpr::Subquery(_) | SqlExpr::Exists { .. } | SqlExpr::InSubquery { .. } => {
             *nested = true;
         }
         _ => (),
     }
+}
+
+#[must_use]
+pub fn sql_mentions_duplicate(sql: &str, displays: &[String], rule: NameRule) -> bool {
+    let dups = displays
+        .iter()
+        .filter(|display| {
+            displays
+                .iter()
+                .filter(|other| rule.matches(other, display))
+                .count()
+                > 1
+        })
+        .collect::<Vec<_>>();
+    if dups.is_empty() {
+        return false;
+    }
+    if dups.iter().any(|display| {
+        !display
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+    }) {
+        return true;
+    }
+    sql_text_tokens(sql)
+        .iter()
+        .any(|token| dups.iter().any(|display| rule.matches(token, display)))
+}
+
+fn sql_text_tokens(sql: &str) -> Vec<&str> {
+    let bytes = sql.as_bytes();
+    let mut tokens = Vec::new();
+    let mut word: Option<usize> = None;
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] == b'`' {
+            if let Some(begin) = word.take() {
+                tokens.push(&sql[begin..index]);
+            }
+            match sql[index + 1..].find('`') {
+                Some(end) => {
+                    tokens.push(&sql[index + 1..index + 1 + end]);
+                    index += end + 2;
+                }
+                None => index += 1,
+            }
+            continue;
+        }
+        if bytes[index].is_ascii_alphanumeric() || bytes[index] == b'_' {
+            if word.is_none() {
+                word = Some(index);
+            }
+        } else if let Some(begin) = word.take() {
+            tokens.push(&sql[begin..index]);
+        }
+        index += 1;
+    }
+    if let Some(begin) = word {
+        tokens.push(&sql[begin..]);
+    }
+    tokens
 }
 
 #[allow(clippy::missing_errors_doc)]
