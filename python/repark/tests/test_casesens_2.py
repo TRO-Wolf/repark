@@ -591,3 +591,39 @@ def test_s4_probe10_true_multi_hit_answers_as_spark(tmp_path: Path) -> None:
         _assert_df_step(session, "p10/alias_dupe_sel_true")
     finally:
         session.stop()
+
+
+def test_port_sort_twins_from_one_join_refuse_as_spark(tmp_path: Path) -> None:
+    """Sort keys twinned by one join refuse UNRESOLVED_COLUMN; a computed twin still sorts."""
+    session = _open(tmp_path)
+    try:
+        left = session.createDataFrame([(1, 10), (2, 20), (3, 30), (4, None)], "id INT, v INT")
+        right = session.createDataFrame([(1, 1), (2, 99), (3, 3), (4, 7)], "id INT, v INT")
+        for setting in ("false", "true"):
+            session.conf.set("spark.sql.caseSensitive", setting)
+            joined = left.alias("a").join(
+                right.alias("b"), functions.col("a.id") == functions.col("b.id")
+            )
+            picked = joined.select("a.id", "a.v", "b.v")
+            for shaped in (
+                picked,
+                picked.distinct(),
+                picked.limit(10).withColumn("w", functions.lit(1)),
+            ):
+                try:
+                    shaped.orderBy("v").collect()
+                except Exception as error:
+                    assert _condition(error) == "UNRESOLVED_COLUMN.WITH_SUGGESTION", setting
+                    assert _sql_state(error) == "42703", setting
+                else:
+                    raise AssertionError(f"join twin sort answered under {setting}")
+            computed = left.select("id", functions.col("v"), (functions.col("v") - 15).alias("v"))
+            ordered = computed.withColumn("w", functions.lit(1)).orderBy("v")
+            assert _rows(ordered) == [
+                [1, 10, -5, 1],
+                [2, 20, 5, 1],
+                [3, 30, 15, 1],
+                [4, None, None, 1],
+            ]
+    finally:
+        session.stop()

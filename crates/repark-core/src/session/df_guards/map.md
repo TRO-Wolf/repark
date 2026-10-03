@@ -161,6 +161,15 @@ wrapped optimizer rule) and declares this directory.
   behavior. Re-exported through `frame_names`. Pins:
   `python/repark/tests/test_attr_id_1_s4.py` (fillna/replace/eqNullSafe/expression
   pins). pins: attr-id-1/C-040
+  **CASESENS-2 port phase 2 (2026-10-03):** `sort_hits_meet_at_join(plan,
+  positions)` follows output positions down through `Filter`, `Sort`, `Limit`,
+  `Repartition`, `Distinct::All`, `SubqueryAlias` and plain column projections
+  (a `Column` under any aliases), and answers whether two distinct positions
+  reach one `Join`'s output. A computed expression or any other node answers
+  `false`. Spark resolves a sort key that is ambiguous in the output through
+  the unary children, so twins that meet at one join cannot resolve. Pin:
+  `../tests/join_qualifiers.rs` (`sort_twins_from_two_join_positions_meet_at_the_join`).
+  pins: casesens-2/C-012
 - `frame_lineage.rs` — **ATTR-ID-1 SJ-1a (2026-10-02):** the lineage core for refusing
   ambiguous self-join references the way Spark Classic does (owner ruling 2026-10-02,
   option A; design sketch `attr-id-1-selfjoin-design.md` §2.1–§2.2). Spark tags every

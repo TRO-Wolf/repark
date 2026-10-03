@@ -391,6 +391,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   partition and order keys all carry an attribute id (internal
   `drop_duplicates`/`distinct` projections), while user windows with free
   refs still raise. Pins: `python/repark/tests/test_attr_id_1_sj5.py`.
+  **CASESENS-2 port phase 2 (2026-10-03):** `_resolve_sort_name`'s project
+  branch refuses `UNRESOLVED_COLUMN` when `_native.sort_hits_meet_at_join` says
+  the output twins trace to two positions of one join. Spark's child-scope
+  fallback cannot resolve those twins. The S0 replay found 105 such cells: they
+  answered once the alias join stopped refusing. A computed twin keeps the
+  stack's pick (Spark sorts by the child's column). pins: casesens-2/C-012
 - `column_sort.py` — **ATTR-ID-1 S4 follow-up (2026-10-02):** the sort-marker
   family, split out of `column.py` at the size ceiling (pure move; `Column`
   binds the six `asc`/`desc` spellings). `_with_sort_order` re-marks the column

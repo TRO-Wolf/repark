@@ -166,6 +166,10 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   a lambda parameter shadows the qualifier inside its own body only, by the
   session rule; two ids under one qualifier refuse `AMBIGUOUS_REFERENCE`; a
   struct field after the bound column is kept. pins: casesens-2/C-009
+  **Phase 2 (2026-10-03):** `sort_twins_from_two_join_positions_meet_at_the_join`
+  pins `sort_hits_meet_at_join` on SQL-built plans: join twins meet, also under
+  `DISTINCT`/`LIMIT`; a single position, a computed twin and a join-free
+  projection do not. pins: casesens-2/C-012
 - `self_join.rs` — **ATTR-ID-1 SJ-1b (2026-10-02):** 62 pins for `df_guards/self_join.rs`
   over hand-built DAGs (the probes' fixtures: `f`, `g`, `a`, `b` share `d`'s ids, `w`
   re-mints `id`, `r` re-mints `v` as `z`, `s` keeps `id`, `e` is unrelated). Each test is

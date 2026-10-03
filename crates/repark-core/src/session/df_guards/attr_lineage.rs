@@ -1,8 +1,58 @@
 use datafusion::common::Column;
 use datafusion::logical_expr::expr::{Alias, Case};
-use datafusion::logical_expr::{Expr, LogicalPlan, Operator};
+use datafusion::logical_expr::{Distinct, Expr, LogicalPlan, Operator};
 
 use super::attr_id::{ATTR_KEY, AttrId};
+
+#[must_use]
+pub fn sort_hits_meet_at_join(plan: &LogicalPlan, positions: &[usize]) -> bool {
+    let mut node = plan;
+    let mut at = positions.to_vec();
+    loop {
+        node = match node {
+            LogicalPlan::Filter(filter) => filter.input.as_ref(),
+            LogicalPlan::Sort(sort) => sort.input.as_ref(),
+            LogicalPlan::Limit(limit) => limit.input.as_ref(),
+            LogicalPlan::Repartition(repartition) => repartition.input.as_ref(),
+            LogicalPlan::Distinct(Distinct::All(input)) => input.as_ref(),
+            LogicalPlan::SubqueryAlias(alias) => alias.input.as_ref(),
+            LogicalPlan::Projection(projection) => {
+                let input = projection.input.schema();
+                let mut next = Vec::with_capacity(at.len());
+                for position in &at {
+                    let Some(index) = projection
+                        .expr
+                        .get(*position)
+                        .and_then(plain_source)
+                        .and_then(|column| input.maybe_index_of_column(column))
+                    else {
+                        return false;
+                    };
+                    next.push(index);
+                }
+                at = next;
+                projection.input.as_ref()
+            }
+            LogicalPlan::Join(_) => {
+                at.sort_unstable();
+                at.dedup();
+                return at.len() > 1;
+            }
+            _ => return false,
+        };
+    }
+}
+
+fn plain_source(expr: &Expr) -> Option<&Column> {
+    let mut node = expr;
+    loop {
+        match node {
+            Expr::Column(column) => return Some(column),
+            Expr::Alias(alias) => node = alias.expr.as_ref(),
+            _ => return None,
+        }
+    }
+}
 
 #[must_use]
 pub fn projection_source_ids(plan: &LogicalPlan) -> Vec<Option<AttrId>> {

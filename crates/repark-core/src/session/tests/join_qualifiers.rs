@@ -6,6 +6,7 @@ use datafusion::common::{DFSchema, Result};
 
 use crate::frame_names::{
     AttrId, FrameNode, JoinSide, NameRule, Prepared, SelfJoinRules, prepare_join_condition,
+    sort_hits_meet_at_join,
 };
 
 const KEY: &str = "repark.attr";
@@ -179,4 +180,32 @@ fn a_struct_field_after_the_bound_column_is_kept() {
         prepare(&left, &right, "l.s.a = r.id", NameRule::IgnoreCase).unwrap(),
         "_l.`c0`.a = _r.`c0`"
     );
+}
+
+async fn planned(sql: &str) -> datafusion::logical_expr::LogicalPlan {
+    datafusion::prelude::SessionContext::new()
+        .sql(sql)
+        .await
+        .unwrap()
+        .logical_plan()
+        .clone()
+}
+
+#[tokio::test]
+async fn sort_twins_from_two_join_positions_meet_at_the_join() {
+    let joined = "SELECT l.id, l.v AS a, r.v AS b FROM (SELECT 1 AS id, 10 AS v) l \
+                  JOIN (SELECT 1 AS id, 20 AS v) r ON l.id = r.id";
+    let plan = planned(joined).await;
+    assert!(sort_hits_meet_at_join(&plan, &[1, 2]));
+    assert!(!sort_hits_meet_at_join(&plan, &[1]));
+    let wrapped = planned(&format!("SELECT DISTINCT * FROM ({joined}) LIMIT 5")).await;
+    assert!(sort_hits_meet_at_join(&wrapped, &[1, 2]));
+    let computed = planned(
+        "SELECT l.v, r.v + 1 AS w FROM (SELECT 1 AS id, 10 AS v) l \
+         JOIN (SELECT 1 AS id, 20 AS v) r ON l.id = r.id",
+    )
+    .await;
+    assert!(!sort_hits_meet_at_join(&computed, &[0, 1]));
+    let single = planned("SELECT v, v + 1 AS w FROM (SELECT 1 AS v) t").await;
+    assert!(!sort_hits_meet_at_join(&single, &[0, 1]));
 }

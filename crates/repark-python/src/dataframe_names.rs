@@ -41,6 +41,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(frame_is_relation, module)?)?;
     module.add_function(wrap_pyfunction!(grandchild_key_status, module)?)?;
     module.add_function(wrap_pyfunction!(projection_source_ids, module)?)?;
+    module.add_function(wrap_pyfunction!(sort_hits_meet_at_join, module)?)?;
     module.add_function(wrap_pyfunction!(java_fold_hits, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_join_condition, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_free_names, module)?)?;
@@ -506,6 +507,12 @@ pub(crate) fn attribute_ids(frame: &PyDataFrame) -> Vec<Option<String>> {
         .into_iter()
         .map(|id| id.map(|id| id.as_str().to_string()))
         .collect()
+}
+
+#[allow(clippy::needless_pass_by_value)]
+#[pyfunction]
+pub(crate) fn sort_hits_meet_at_join(frame: &PyDataFrame, positions: Vec<usize>) -> bool {
+    repark_core::frame_names::sort_hits_meet_at_join(frame.inner().logical_plan(), &positions)
 }
 
 #[pyfunction]

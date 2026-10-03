@@ -280,6 +280,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   echo keeps `` [`id`, `ID`] `` (Spark echoes `` [`id`, `id`] ``): that is the
   recorded divergence `test_filter_predicate_rewrite.py` pins, not a port
   conflict. pins: casesens-2/C-006, C-011
+  **Phase 2 (2026-10-03):** `test_port_sort_twins_from_one_join_refuse_as_spark`
+  pins the replay's join-twin sort cells (`r5p10.*|j_ab|*|ob`, `r5p6.*|dd|j_alias|*|ob`)
+  under both rules, as Spark refuses them, plus the `colF_expr` control that
+  Spark answers. Mutation: skipping the walker reds it.
+  pins: casesens-2/C-012
 - [test_ntz_1.py](test_ntz_1.py) + `ntz_1_spark_oracle.json` — **WO NTZ-1 slice 1
   (2026-09-26):** the `TIMESTAMP_NTZ` literal and explicit casts replay Spark's measured
   answers — 29 literal/cast/refusal queries in UTC and New York sessions, the v2/v3

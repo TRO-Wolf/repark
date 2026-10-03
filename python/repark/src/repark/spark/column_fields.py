@@ -868,6 +868,8 @@ def _resolve_sort_name(frame: Any, written: str) -> Any:
     if written != name:
         return frame._bind_schema_column(written)
     if _native.sort_child_shape(native) == "project":
+        if _native.sort_hits_meet_at_join(native, hits):
+            _raise_unresolved_name(None, name, displays)
         ranked = [position for position in hits if held[position] is not None]
         position = min(ranked, key=held.__getitem__) if ranked else hits[0]
         engine = _checked_sort_position(frame, native, engine_names, held, position)
