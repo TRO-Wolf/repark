@@ -1,4 +1,4 @@
-# TA-CHAIN-1 — a leading NaN/NULL run on a `ta_*` input is skipped, as polars_talib does; a chained indicator stops answering all-NaN      grade: B   engine band: guided (Muse Spark at MAX)   release: v1.5.2
+# TA-CHAIN-1 — a leading NaN/NULL run on a `ta_*` input is skipped, as polars_talib does; a chained indicator stops answering all-NaN      grade: B   engine: Opus 5.5 at high effort (owner, 2026-10-03)   release: v1.5.2
 
 Written 2026-10-03 by a Claude session (claude-fable-5-1) on the owner's ruling of the same day ("Can we add it to the v1.5.2?"). Every `path:line` is at `origin/main` 3406dbb3. Facts marked **measured** were run on the owner's 1,000,000-row, 14-contract futures file and on hand-built frames with polars_talib 0.1.5 over polars 1.43.1 on 2026-10-03.
 
@@ -18,7 +18,7 @@ Written 2026-10-03 by a Claude session (claude-fable-5-1) on the owner's ruling 
 | R-TC1-4 | The kernel-layer goldens (`crates/repark-ta/tests/goldens.rs`, 158 series, two fixtures) are not edited and not re-recorded. New goldens for this unit are recorded through polars_talib into a separate directory with its own manifest, so `manifest_and_tests_cover_the_same_series` is not touched. |
 | R-TC1-5 | Perf cap 1.02x on `python/repark-parity/bench/ta/bench_kernel_race.py --quick` (one symbol, no prefix): the null-free fast path must stay a borrow when the start index is 0. Above the cap is a halt, not a tune. |
 | R-TC1-6 | `crates/repark-ta/src/udf/mod.rs` is at its sanctioned ceiling of 1821 lines (`scripts/check_rust_file_size.py:202-206`). It may not grow. The four `compute` / `compute_all` call blocks move into one helper in a new sibling file, which makes `mod.rs` shorter, not longer. |
-| R-TC1-7 | Engine and review: Muse Spark at MAX runs the three slices below, one commit each; then DIFF-PROBE base-vs-head and one Opus 5.5 verifier at medium effort (product-Rust PR rule, 2026-09-26). Opus executors are not used; the design is in this order. |
+| R-TC1-7 | Engine and review (owner, 2026-10-03, "I want this to be perfect"): one Opus 5.5 agent at high effort runs the three slices below, one commit each, in a single session; then DIFF-PROBE base-vs-head and one Opus 5.5 verifier at high effort in a fresh session that has not seen the executor's context. This is a dated exception to the 2026-09-26 usage rule (Opus executors only for design-heavy units, medium verifier on product-Rust PRs). The executor still decides nothing that this order has ruled; a gap in the order is a halt, not a judgment call. |
 | R-TC1-8 | Merge position: after #879 and #883 in the v1.5.2 queue, before the tag. One release-note line under the v1.5.2 notes: "Chained TA indicators (an indicator computed from another indicator's output) now answer where polars_talib answers; a leading NaN or NULL run on any `ta.*` input is skipped instead of propagating." |
 
 ## 2. Files
