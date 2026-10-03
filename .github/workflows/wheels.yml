@@ -112,7 +112,6 @@ jobs:
           WHEEL=$(ls "$PWD"/python/repark/dist/repark-*.whl)
           /tmp/wheeltest/bin/pip install "repark[numpy,pandas,polars,ml-ext] @ file://$WHEEL" pytest pytest-xdist ./python/repark-parity
           FILES=$(ls python/repark/tests/test_*.py | sort | awk -v s="$SHARD" 'NR % 3 == s')
-          if [ "$SHARD" = "2" ]; then FILES="$FILES python/repark/tests/test_ci1_forced_failure_missing.py"; fi
           /tmp/wheeltest/bin/python -m pytest $FILES -q -n 4 --durations=25
 
   dbt:
