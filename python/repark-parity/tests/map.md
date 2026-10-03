@@ -191,6 +191,12 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 - `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 SJ-3 (2026-10-02):**
   the mirror row ratchets `dataframe/core.py` 3595 → 3583 (V-2's siding calls
   are deleted) with the script baseline. Pins: `python/repark/tests/test_attr_id_1_sj3.py`.
+- `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 SJ-5 (2026-10-03):**
+  mirror rows ratchet `dataframe/core.py` 3494 → 3485 and retire the
+  `dataframe/joins_columns.py` row (the pivot family moves to
+  `grouped_pivot.py`, leaving the file under the default ceiling), so the
+  Python exception count drops 30 → 29, with the script baseline.
+  Pins: `python/repark/tests/test_attr_id_1_sj5.py`.
 - `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 SJ-4 (2026-10-02):**
   mirror rows ratchet `dataframe/core.py` 3583 → 3494 (the repartition trio
   moves to `repartition_ops.py`) and `dataframe/joins_columns.py` 1169 → 1119
