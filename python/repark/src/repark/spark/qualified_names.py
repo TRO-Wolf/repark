@@ -9,6 +9,17 @@ from repark.spark.filter_quote import _frame_qualifiers_for_bind
 _ID_SNAPSHOTS: weakref.WeakKeyDictionary[Any, tuple[Any, list[str | None], list[str]]] = (
     weakref.WeakKeyDictionary()
 )
+_ENGINE_NAMES: weakref.WeakKeyDictionary[Any, tuple[Any, list[str]]] = weakref.WeakKeyDictionary()
+
+
+def _frame_engine_names(frame: Any) -> list[str]:
+    native = frame._inner
+    snapshot = _ENGINE_NAMES.get(frame)
+    if snapshot is not None and snapshot[0] is native:
+        return list(snapshot[1])
+    engines = list(_native.logical_column_names(native))
+    _ENGINE_NAMES[frame] = (native, engines)
+    return list(engines)
 
 
 def _frame_id_snapshot(frame: Any) -> tuple[Any, list[str | None], list[str]]:

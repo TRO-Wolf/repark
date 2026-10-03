@@ -27,6 +27,13 @@ def _resolve(frame: Any) -> Any:
 
 
 def _frame_renews(frame: Any) -> bool:
+    entry = _NODES.get(frame)
+    if entry is None:
+        raise RuntimeError("internal error: frame has no lineage node")
+    if entry[0] == "node":
+        return bool(entry[1].renews)
+    if entry[0] == "root":
+        return False
     seen: set[int] = set()
     stack: list[Any] = [frame]
     while stack:

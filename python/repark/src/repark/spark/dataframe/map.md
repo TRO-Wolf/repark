@@ -222,7 +222,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   **ATTR-ID-1 PERF-1 (2026-10-03):** `_frame_node` leaves the slots for the
   lazily-built property `frame_nodes.py` binds; births assign `None` (root)
   or `(parent, others)` (derived), joins assign the built node, and the
-  birth registry moves into the first build (3485 → 3477, CAP-1 mirror).
+  birth registry moves into the first build (3485 → 3475, CAP-1 mirror).
 - `frame_nodes.py` — **ATTR-ID-1 PERF-1 (2026-10-03):** the lazy lineage-node
   home. `_bind_frame_node` attaches `_frame_node` as a property at package
   import; reads build root/derived nodes on first touch into a weak table
@@ -235,7 +235,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   lives here. `_frame_renews` walks deferred markers to
   the nearest built node without building, mirroring the Rust renews match
   (roots never renew, derived inherits, set-op unions); a missing entry is
-  the same loud error. The walk reads True on a derived marker over a
+  the same loud error. Built and root entries return before any walk
+  allocation. The walk reads True on a derived marker over a
   never-stamped plan under a join, where the build cuts to an inert root;
   the native check then returns early, so the answer is unchanged.
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.

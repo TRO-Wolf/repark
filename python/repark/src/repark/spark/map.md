@@ -535,6 +535,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   table (keyed by frame, guarded by handle identity, so any `_inner` swap
   misses and recomputes); `_stamped_frame_id_snapshot` adds the
   stamp-on-missing pass. Every id-reader funnels through one of the two.
+  `_frame_engine_names` caches names alone per frame-plus-handle for the
+  `columns` fallback, which must not call `_plan()` (it would materialize
+  map bridges); it copies on return, so callers keep a fresh list. The
+  stable-id rebind and the subset `_bindings` funnel through the snapshots;
+  all downstream uses read the shared lists without mutation.
   `_expand_select_star_item` returns early without a `*` in the written
   name, which star expansion needs. pins: attr-id-1/C-039
   **ATTR-ID-1 S4 follow-up (2026-10-02):** the qualified star expansion, the

@@ -1565,9 +1565,7 @@ class DataFrame:
             return list(self._display_names)
         if self._map_bridge is not None:
             return list(self._map_bridge["schema"].names)
-        from repark import _native
-
-        return _native.logical_column_names(self._inner)
+        return _qualified_names._frame_engine_names(self)
 
     def _display_overlay_names(self) -> list[str] | None:
         """Return display names when they differ from engine field names, else None."""

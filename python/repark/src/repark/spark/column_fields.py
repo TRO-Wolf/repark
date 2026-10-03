@@ -653,9 +653,7 @@ def _bind_stable_id_column(frame: Any, column: Any) -> Any | None:
     attr_id = column._attr_id
     if attr_id is None:
         return None
-    native = frame._plan()
-    held: list[str | None] = list(_native.attribute_ids(native))
-    native_names = list(_native.logical_column_names(native))
+    native, held, native_names = _frame_id_snapshot(frame)
     if attr_id in held:
         narrowed = _qualified_narrow_position(frame, column, held, list(frame.columns))
         if narrowed is not None:
