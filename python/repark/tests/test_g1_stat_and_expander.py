@@ -307,13 +307,16 @@ def test_h1_drop_by_column_correct_side(spark: ReparkSession) -> None:
 
 
 def test_h1_select_parent_columns_both_sides(spark: ReparkSession) -> None:
-    """joined.select(left['b'], right['b']) yields both bare display names."""
+    """Parent columns from both sides refuse 1182 (``sj4_fail3_both_sel``)."""
     frame = spark.createDataFrame([(1, 2), (3, 4)], ["a", "b"])
     left = frame.select(frame.a.alias("aa"), frame.b)
     joined = left.join(frame, left.b == frame.b)
-    both = joined.select(left["b"], frame["b"])
-    assert both.columns == ["b", "b"]
-    assert both.count() == 2
+    with pytest.raises(AnalysisException) as refused:
+        joined.select(left["b"], frame["b"]).collect()
+    assert refused.value.getCondition() == "_LEGACY_ERROR_TEMP_1182"
+    params = refused.value.getMessageParameters()
+    assert params["config"] == "spark.sql.analyzer.failAmbiguousSelfJoin"
+    assert params["ambiguousAttrs"] == "b"
 
 
 def test_h1_select_join_keys_all_how(spark: ReparkSession) -> None:
