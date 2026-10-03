@@ -1,6 +1,8 @@
 use std::ops::ControlFlow;
 
-use datafusion::common::{DataFusionError, Result, plan_datafusion_err};
+use std::convert::Infallible;
+
+use datafusion::common::{DFSchema, DataFusionError, Result, TableReference, plan_datafusion_err};
 use datafusion::sql::sqlparser::ast::{
     AccessExpr, Expr as SqlExpr, Ident, LambdaFunctionParameter, OneOrManyWithParens, Query,
     VisitMut, VisitorMut, visit_expressions_mut,
@@ -8,7 +10,7 @@ use datafusion::sql::sqlparser::ast::{
 use repark_common::names::NameRule;
 use repark_common::spark_error;
 
-use super::attr_id::{Resolution, resolve};
+use super::attr_id::{Resolution, resolve, same_relation};
 use super::self_join::JoinSide;
 
 const MAX_QUALIFIER_PARTS: usize = 3;
@@ -67,6 +69,118 @@ fn restore(ident: &mut Ident, placeholder: &str, texts: &[String]) {
         quote_style: None,
         span: ident.span,
     };
+}
+
+pub fn fold_frame_qualifiers(predicate: &mut SqlExpr, schema: &DFSchema, rule: NameRule) -> bool {
+    let mut folder = QualifierFold {
+        schema,
+        rule,
+        scopes: Vec::new(),
+        query_depth: 0,
+        rewritten: false,
+    };
+    let _ = predicate.visit(&mut folder);
+    folder.rewritten
+}
+
+struct QualifierFold<'a> {
+    schema: &'a DFSchema,
+    rule: NameRule,
+    scopes: Vec<Vec<String>>,
+    query_depth: usize,
+    rewritten: bool,
+}
+
+impl VisitorMut for QualifierFold<'_> {
+    type Break = Infallible;
+
+    fn pre_visit_query(&mut self, _query: &mut Query) -> ControlFlow<Self::Break> {
+        self.query_depth += 1;
+        ControlFlow::Continue(())
+    }
+
+    fn post_visit_query(&mut self, _query: &mut Query) -> ControlFlow<Self::Break> {
+        self.query_depth -= 1;
+        ControlFlow::Continue(())
+    }
+
+    fn pre_visit_expr(&mut self, expr: &mut SqlExpr) -> ControlFlow<Self::Break> {
+        if self.query_depth > 0 {
+            return ControlFlow::Continue(());
+        }
+        match expr {
+            SqlExpr::Lambda(lambda) => {
+                let params: Vec<&LambdaFunctionParameter> = match &lambda.params {
+                    OneOrManyWithParens::One(param) => vec![param],
+                    OneOrManyWithParens::Many(params) => params.iter().collect(),
+                };
+                self.scopes.push(
+                    params
+                        .iter()
+                        .map(|param| param.name.value.clone())
+                        .collect(),
+                );
+            }
+            SqlExpr::CompoundIdentifier(parts) => {
+                if let [root, next, ..] = parts.as_mut_slice() {
+                    self.fold(root, &next.value);
+                }
+            }
+            SqlExpr::CompoundFieldAccess { root, access_chain } => {
+                if let (
+                    SqlExpr::Identifier(head),
+                    Some(AccessExpr::Dot(SqlExpr::Identifier(next))),
+                ) = (root.as_mut(), access_chain.first())
+                {
+                    self.fold(head, &next.value);
+                }
+            }
+            _ => {}
+        }
+        ControlFlow::Continue(())
+    }
+
+    fn post_visit_expr(&mut self, expr: &mut SqlExpr) -> ControlFlow<Self::Break> {
+        if self.query_depth == 0 && matches!(expr, SqlExpr::Lambda(_)) {
+            self.scopes.pop();
+        }
+        ControlFlow::Continue(())
+    }
+}
+
+impl QualifierFold<'_> {
+    fn fold(&mut self, root: &mut Ident, next: &str) {
+        if self
+            .scopes
+            .iter()
+            .flatten()
+            .any(|name| self.rule.matches(&root.value, name))
+        {
+            return;
+        }
+        let schema = self.schema;
+        let written = TableReference::bare(root.value.as_str());
+        let mut spellings: Vec<&str> = Vec::new();
+        for (held, field) in schema.iter() {
+            let Some(held) = held else {
+                continue;
+            };
+            if held.catalog().is_none()
+                && held.schema().is_none()
+                && same_relation(&written, held, self.rule)
+                && self.rule.matches(next, field.name())
+                && !spellings.contains(&held.table())
+            {
+                spellings.push(held.table());
+            }
+        }
+        if let [held] = spellings.as_slice()
+            && (root.quote_style.is_none() || *held != root.value)
+        {
+            *root = Ident::with_quote('`', *held);
+            self.rewritten = true;
+        }
+    }
 }
 
 struct QualifierBinder<'a> {

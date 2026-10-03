@@ -28,6 +28,7 @@ pub use super::attr_id::{
 pub use super::attr_lineage::{projection_source_ids, sort_hits_meet_at_join};
 pub use super::frame_lineage::{AttrRef, FrameId, FrameKind, FrameNode};
 pub use super::frame_lineage::{all_ids, ambiguous, ambiguous_images, renewed_absent, shared_ids};
+pub use super::predicate_names::fold_frame_qualifiers;
 pub use super::self_join::{AttrRefText, JoinSide, Prepared, PreparedCondition, Refusal};
 pub use super::self_join::{SELF_JOIN_CONDITION, SelfJoinRules, check_refs, missing_condition};
 pub use super::self_join::{missing_message, parse_attr_refs, prepare_join_condition};

@@ -154,7 +154,7 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   DoubleType, computed in f64); the multiply coerces f32/int/decimal to f64 while
   bool/string still refuse (no numeric coercion).
   pins: abs-expr-1/C-001, C-002
-- [`expr_build.rs`](expr_build.rs) owns type parsing, alias handling, and expression inspection. **ATTR-ID-1 SJ-1b (2026-10-02):** `register(module)` adds the `grouping_id_column` pyfunction, which `lib.rs` used to register inline; the move pays for `lib.rs`'s two `frame_lineage` lines.
+- [`expr_build.rs`](expr_build.rs) owns type parsing, alias handling, and expression inspection. **ATTR-ID-1 SJ-1b (2026-10-02):** `register(module)` adds the `grouping_id_column` pyfunction, which `lib.rs` used to register inline; the move pays for `lib.rs`'s two `frame_lineage` lines. **R-CS2P-1 (2026-10-03):** `parse_canonical_predicate` (the insensitive filter door) keeps its plan when every parsed column is in the frame schema; otherwise `folded_qualifier_predicate` re-parses the canonical text to a SQL AST, runs `frame_names::fold_frame_qualifiers` under `IgnoreCase`, and plans the rewritten tree when a qualifier folded, so an alias qualifier binds in any case now that `subquery_alias` keeps the alias spelling. pins: casesens-2/C-013
   **CAST-MAP-SPELL-1 (2026-09-19):** `cast_to` sends a map-bearing type string to
   `repark_functions::cast_map::cast_map_expr` and every other one to `parse_data_type`;
   `plan_expr_column` runs the shared map-cast rewrite, so `F.expr` spells it too.

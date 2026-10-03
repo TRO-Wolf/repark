@@ -170,6 +170,13 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   pins `sort_hits_meet_at_join` on SQL-built plans: join twins meet, also under
   `DISTINCT`/`LIMIT`; a single position, a computed twin and a join-free
   projection do not. pins: casesens-2/C-012
+  **R-CS2P-1 (2026-10-03):**
+  `filter_qualifiers_fold_to_the_alias_spelling_only_under_ignore_case` pins
+  `fold_frame_qualifiers` on a `Tb`-qualified schema: unquoted, upper-case,
+  backticked and struct-path roots fold to `` `Tb` `` under `IgnoreCase`; the
+  `Exact` rule, an already-backticked exact root, an unknown qualifier, a
+  missing next name, a lambda parameter and a subquery stay as written.
+  pins: casesens-2/C-013
 - `self_join.rs` — **ATTR-ID-1 SJ-1b (2026-10-02):** 62 pins for `df_guards/self_join.rs`
   over hand-built DAGs (the probes' fixtures: `f`, `g`, `a`, `b` share `d`'s ids, `w`
   re-mints `id`, `r` re-mints `v` as `z`, `s` keeps `id`, `e` is unrelated). Each test is

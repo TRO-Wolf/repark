@@ -2,11 +2,11 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
-use datafusion::common::{DFSchema, Result};
+use datafusion::common::{DFSchema, Result, TableReference};
 
 use crate::frame_names::{
-    AttrId, FrameNode, JoinSide, NameRule, Prepared, SelfJoinRules, prepare_join_condition,
-    sort_hits_meet_at_join,
+    AttrId, FrameNode, JoinSide, NameRule, Prepared, SelfJoinRules, fold_frame_qualifiers,
+    prepare_join_condition, sort_hits_meet_at_join,
 };
 
 const KEY: &str = "repark.attr";
@@ -208,4 +208,57 @@ async fn sort_twins_from_two_join_positions_meet_at_the_join() {
     assert!(!sort_hits_meet_at_join(&computed, &[0, 1]));
     let single = planned("SELECT v, v + 1 AS w FROM (SELECT 1 AS v) t").await;
     assert!(!sort_hits_meet_at_join(&single, &[0, 1]));
+}
+
+fn folded(sql: &str, alias: &str, rule: NameRule) -> (bool, String) {
+    use datafusion::sql::sqlparser::dialect::DatabricksDialect;
+    use datafusion::sql::sqlparser::parser::Parser;
+    let fields = Schema::new(vec![
+        Field::new("id", DataType::Int64, true),
+        Field::new("Data", DataType::Utf8, true),
+        Field::new(
+            "s",
+            DataType::Struct(vec![Field::new("f", DataType::Int64, true)].into()),
+            true,
+        ),
+    ]);
+    let schema = DFSchema::try_from_qualified_schema(TableReference::bare(alias), &fields).unwrap();
+    let mut parsed = Parser::new(&DatabricksDialect {})
+        .try_with_sql(sql)
+        .unwrap()
+        .parse_expr()
+        .unwrap();
+    let rewritten = fold_frame_qualifiers(&mut parsed, &schema, rule);
+    (rewritten, parsed.to_string())
+}
+
+#[test]
+fn filter_qualifiers_fold_to_the_alias_spelling_only_under_ignore_case() {
+    for (written, expected) in [
+        ("tb.id > 1", "`Tb`.id > 1"),
+        ("TB.Data = 'a'", "`Tb`.Data = 'a'"),
+        ("Tb.id > 1", "`Tb`.id > 1"),
+        ("`tb`.`id` > 1", "`Tb`.`id` > 1"),
+        ("tb.s.f > 1", "`Tb`.s.f > 1"),
+    ] {
+        assert_eq!(
+            folded(written, "Tb", NameRule::IgnoreCase),
+            (true, expected.to_string()),
+            "{written}"
+        );
+    }
+    for (written, alias, rule) in [
+        ("tb.id > 1", "Tb", NameRule::Exact),
+        ("`Tb`.id > 1", "Tb", NameRule::IgnoreCase),
+        ("nope.id > 1", "Tb", NameRule::IgnoreCase),
+        ("tb.nope > 1", "Tb", NameRule::IgnoreCase),
+        ("exists(arr, tb -> tb.id > 1)", "Tb", NameRule::IgnoreCase),
+        ("id IN (SELECT tb.id FROM x)", "Tb", NameRule::IgnoreCase),
+    ] {
+        assert_eq!(
+            folded(written, alias, rule),
+            (false, written.to_string()),
+            "{written}"
+        );
+    }
 }

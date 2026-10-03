@@ -42,13 +42,39 @@ pub(crate) fn parse_canonical_predicate(
     predicate: &str,
 ) -> datafusion::error::Result<Expr> {
     let canonical = repark_spark::spark_literals::canonicalize(predicate)?;
-    frame.parse_sql_expr(canonical.as_ref()).map_err(|error| {
+    let parsed = match frame.parse_sql_expr(canonical.as_ref()) {
+        Ok(expr)
+            if expr
+                .column_refs()
+                .iter()
+                .all(|column| frame.schema().has_column(column)) =>
+        {
+            Ok(expr)
+        }
+        first => folded_qualifier_predicate(frame, canonical.as_ref()).unwrap_or(first),
+    };
+    parsed.map_err(|error| {
         repark_spark::spark_literals::translate_downstream_error(
             predicate,
             canonical.as_ref(),
             error,
         )
     })
+}
+
+fn folded_qualifier_predicate(
+    frame: &datafusion::prelude::DataFrame,
+    canonical: &str,
+) -> Option<datafusion::error::Result<Expr>> {
+    let (state, _) = frame.clone().into_parts();
+    let dialect = state.config().options().sql_parser.dialect;
+    let mut parsed = state.sql_to_expr_with_alias(canonical, &dialect).ok()?;
+    repark_core::frame_names::fold_frame_qualifiers(
+        &mut parsed.expr,
+        frame.schema(),
+        repark_core::frame_names::NameRule::IgnoreCase,
+    )
+    .then(|| state.create_logical_expr_from_sql_expr(parsed, frame.schema()))
 }
 
 pub(crate) fn parse_canonical_predicate_exact(

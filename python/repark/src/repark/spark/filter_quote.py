@@ -428,6 +428,8 @@ def _bind_filter_token(
         subscript = "".join(f"['{_escape_quotes(rest)}']" for rest in parts[1:])
         return _quote_ident(param) + subscript
     if not _name_matches_head(head, qualifiers, exact):
+        if exact and not _name_matches_head(head, displays, exact):
+            return token
         return _main_path_dotted_token(parts, displays, engine_names, fold_map)
     qualifier = ".".join(parts[:-1])
     status, hits, plan_quals = _native.resolve_display_name(
@@ -453,7 +455,7 @@ def _bind_filter_token(
         candidates_echo = ", ".join(f"`{token}`" for _ in hits)
         detail = f"[AMBIGUOUS_REFERENCE] Reference `{token}` is ambiguous, "
         raise AnalysisException(f"{detail}could be: [{candidates_echo}].")
-    if _name_matches_head(head, displays, exact):
+    if not exact and _name_matches_head(head, displays, exact):
         return _main_path_dotted_token(parts, displays, engine_names, fold_map)
     return token
 

@@ -236,6 +236,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **Re-verify (2026-09-28):** `test_nested_cast_of_a_column_keeps_the_written_child_name`
   (RC-3) and `test_describe_resolves_display_names_under_case_sensitive` (RC-4).
   pins: casesens-1/C-009, C-010
+- [test_cs2p1_alias_qualifier.py](test_cs2p1_alias_qualifier.py) —
+  **R-CS2P-1 (2026-10-03):** sixteen alias-qualifier shapes, each pinned under
+  both `caseSensitive` rules against live Spark 4.1.2 (probe `cs2p1/probe.py`,
+  measured 2026-10-03): the six R-CS2P-1 cells (`rc2_1`, `rc3_1`, `j1_col_l`,
+  `j1_fstrl`, `pred_join_j8`, `selfjoin_filter_S1`) beside right-case,
+  upper-case, backticked and struct-path controls. Answers compare names and
+  rows; refusals assert `UNRESOLVED_COLUMN.WITH_SUGGESTION` and the written
+  reference. pins: casesens-2/C-013
 - [test_casesens_2.py](test_casesens_2.py) + `casesens_2_spark_oracle.json` —
   **WO CASESENS-2 slice 1 (2026-09-28):** the R-CS1-10 true-door refusals plus
   getitem (class, condition, SQLSTATE, head, candidate set per leg), the five

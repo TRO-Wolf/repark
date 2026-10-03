@@ -82,8 +82,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `feat/casesens-2-s4`): the self-join halves bind (C-003 PROVEN, R-CS2-1
   CLOSED per the owner ruling); the p10 non-join overlay shapes pin the
   `true` misses, the R4 refusals, and the R-CS2-7 answer-gaps.
-  `risk_tier: high`.
-  pins: casesens-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  `risk_tier: high`. **R-CS2P-1 (2026-10-03):** closed by C-013, with the six
+  cells and Spark's answers in the residue row and mutations M11-M13.
+  pins: casesens-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-013
 - [r-fileorder-2-ledger.md](r-fileorder-2-ledger.md) —
   **R-FILEORDER-2 (2026-09-27), HALT per R1:** Spark 4.1.2's own `L-INSERT-OVERWRITE`
   lineage differs between runs (the same-JVM triple agrees, C-001; six fresh-JVM runs

@@ -433,7 +433,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   fold-only `_suggestion_candidates` filter is deleted. pins: casesens-2/C-001, C-010
 - `filter_quote.py` — **ATTR-ID-1 S3b H-1 (2026-10-01):** the filter-SQL
   identifier quoter, split out of `column_fields.py` at the size ceiling (pure
-  move; the entry stays there). `_FILTER_TOKEN_PATTERN`,
+  move; the entry stays there). **R-CS2P-1 (2026-10-03):** under the exact
+  rule `_bind_filter_token` leaves a dotted token to the engine when its head
+  matches no qualifier and no display, or when its qualified name misses;
+  folding the later segments there bound `l.id` as `id` (or `T.data` as
+  `` `T`.`Data` ``) where Spark refuses. pins: casesens-2/C-013 `_FILTER_TOKEN_PATTERN`,
   `_SQL_LITERAL_KEYWORDS`, the candidate pair, the lambda scope tokenizer
   (RC4-1/RC4-6/RC5-2 port: decl sites quoted, bodies resolve params, outer
   columns bind), `_main_path_dotted_token` (main's bare-ident tokenization

@@ -254,6 +254,18 @@ wrapped optimizer rule) and declares this directory.
   rewritten tree. The filter-string half is not ported: the stack's
   `filter_quote.py` already owns alias qualifiers and lambda scope (S3b H-1).
   Pins: `../tests/join_qualifiers.rs`. pins: casesens-2/C-009
+  **R-CS2P-1 (2026-10-03):** `fold_frame_qualifiers(predicate, schema, rule)`
+  (re-exported from `case_bind.rs`) is the filter-string half for the
+  insensitive door. It walks a parsed predicate with the same scope stack
+  (lambda parameters shadow, subqueries are skipped) and rewrites each compound
+  root, unquoted or backticked, that `same_relation` under `rule` matches to
+  exactly one bare held qualifier holding the next name: the root becomes that
+  held spelling, backticked, so DataFusion's identifier normalization keeps it.
+  A root matching no qualifier, or two spellings, is left for the engine (halt
+  rule 3). It returns whether anything changed; under `Exact` only a backticked
+  exact root is a no-op and an unquoted exact root is re-quoted, which the
+  facade never asks for. Pins: `../tests/join_qualifiers.rs`.
+  pins: casesens-2/C-013
 - `self_join.rs` — **ATTR-ID-1 SJ-1b (2026-10-02):** the self-join condition preparer, the
   post-join reference check and the refusal texts, all Rust (owner ruling 2026-10-02,
   option A: Spark Classic is the oracle, no "left wins" tie-break; sketch
