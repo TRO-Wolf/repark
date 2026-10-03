@@ -17,6 +17,7 @@ Out: the SQL Server container (a separate measurement under CC-5), any Rust.
 - No code comments; docstrings are required by the docstring-presence gate and are not comments.
 - The image is `postgres:16-alpine`; logical replication is on from the first run (`wal_level=logical`, 8 slots, 8 senders) so the 1.7 harness changes nothing here.
 - Docker (owner, 2026-10-02): the container is declared once in a Compose file and started through the stock `docker compose` client, so any daemon works (Desktop, Engine, rootless); the daemon is a machine-local choice named by `DOCKER_HOST`. On the owner's box that is rootless Docker under `repark.slice`, never the system daemon and never the docker group. The image is pre-pulled (`pull_policy: missing`). Every container is bounded (two cores, 2 GB, 256 pids), labelled `repark.disposable=1`, at most four run at once, and `reap` removes any older than two hours. No Dockerfile: nothing needs baking into the image.
+- Reboot recovery (owner, 2026-10-03): the state file lives in `$XDG_RUNTIME_DIR`, falling back to `/tmp` when that is not writable, and both are wiped at boot. **Recovery after a reboot is the label-based `reap`, never the state file.** The compose file sets no restart policy, so a container that was running at shutdown comes back stopped. `reap` therefore lists every labelled container (`docker ps -a`) and removes any that is not running, whatever its age, with its anonymous volume and its project network. A running one is removed only when it is older than two hours. Run `reap` once after any reboot, before the first `up`.
 
 ## 2. Files
 
@@ -91,9 +92,14 @@ case "${1:-}" in
   url) . "$STATE"; echo "$REPARK_PG_URL" ;;
   reap)
     cutoff=$(date -u -d '-2 hours' +%s)
-    for id in $(docker ps -q --filter label=repark.disposable=1); do
-      started=$(date -u -d "$(docker inspect --format '{{.State.StartedAt}}' "$id")" +%s)
-      [ "$started" -lt "$cutoff" ] && docker rm -f "$id" >/dev/null
+    for id in $(docker ps -aq --filter label=repark.disposable=1); do
+      if [ "$(docker inspect --format '{{.State.Running}}' "$id")" = true ]; then
+        started=$(date -u -d "$(docker inspect --format '{{.State.StartedAt}}' "$id")" +%s)
+        [ "$started" -ge "$cutoff" ] && continue
+      fi
+      project=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' "$id")
+      docker rm -f -v "$id" >/dev/null
+      [ -n "$project" ] && docker network rm "${project}_default" >/dev/null 2>&1 || true
     done ;;
   *) echo "usage: $0 up|down|url|reap" >&2; exit 2 ;;
 esac
