@@ -188,6 +188,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   and `dataframe/core.py` 3711 → 3653 (`_select_via_attr_sql` moves to
   `join_attr_tokens.py` behind a one-line delegate) with the script baseline.
   pins: attr-id-1/C-042
+- `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 SJ-3 (2026-10-02):**
+  the mirror row ratchets `dataframe/core.py` 3595 → 3583 (V-2's siding calls
+  are deleted) with the script baseline. Pins: `python/repark/tests/test_attr_id_1_sj3.py`.
 - `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 SJ-2 (2026-10-02):**
   mirror rows ratchet `spark/column.py` 1378 → 1331 (the fragment-render
   family moves to `column_render.py`) and `dataframe/core.py` 3652 → 3595
