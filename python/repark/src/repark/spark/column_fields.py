@@ -721,7 +721,18 @@ def _refuse_tokenless_free_names(frame: Any, column: Any) -> None:
     """Refuse free names in columns holding no parent-born token."""
     if "__REPARK_ATTR_" in column.join_sql_part():
         return
+    spec = column_window_spec(column)
+    if spec is not None and _window_keys_bound(spec):
+        return
     _refuse_ambiguous_free_names(frame, column=column)
+
+
+def _window_keys_bound(spec: Any) -> bool:
+    """Whether every window partition and order key carries a bind marker."""
+    keys = [*spec._partition_columns, *spec._order_columns]
+    return bool(keys) and all(
+        key._attr_id is not None or "__REPARK_ATTR_" in key.join_sql_part() for key in keys
+    )
 
 
 def _column_of(frame: Any, item: Any) -> Any:

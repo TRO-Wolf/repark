@@ -387,7 +387,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   token-bearing parent refs); `_rebind_free_names` runs the qualified-only
   check on the filter path; `_quote_filter_sql_identifiers` checks the SQL
   text first. The four error builders move to `column_errors.py` (pure move
-  at the ceiling). Pins: `python/repark/tests/test_attr_id_1_sj5.py`.
+  at the ceiling). `_window_keys_bound` skips the check for windows whose
+  partition and order keys all carry an attribute id (internal
+  `drop_duplicates`/`distinct` projections), while user windows with free
+  refs still raise. Pins: `python/repark/tests/test_attr_id_1_sj5.py`.
 - `column_sort.py` — **ATTR-ID-1 S4 follow-up (2026-10-02):** the sort-marker
   family, split out of `column.py` at the size ceiling (pure move; `Column`
   binds the six `asc`/`desc` spellings). `_with_sort_order` re-marks the column

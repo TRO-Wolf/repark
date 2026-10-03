@@ -9,6 +9,7 @@ import pytest
 from repark import ReparkSession
 from repark.errors import AnalysisException
 from repark.spark import functions as F  # noqa: N812
+from repark.spark.window import Window
 
 _FAIL_KEY = "spark.sql.analyzer.failAmbiguousSelfJoin"
 _AUTO_KEY = "spark.sql.selfJoinAutoResolveAmbiguity"
@@ -323,4 +324,25 @@ def test_sj5_f1_qcol_inner(spark: ReparkSession) -> None:
     frame = _inner_v(spark).withColumn("w", F.lit(1)).alias("q")
     _refuses_ambiguous_params(
         lambda: frame.filter(F.col("q.v") > 15), "`q`.`v`", "[`q`.`v`, `q`.`v`]"
+    )
+
+
+def _dd_alias_left(spark: ReparkSession) -> Any:
+    d = spark.createDataFrame([(1, 10), (2, 20), (3, 30)], ["id", "v"])
+    other = d.select("id", (F.col("v") * 2).alias("v"))
+    joined = d.select("id", "v").join(other.filter(F.col("id") < 3), "id", "left")
+    return joined.alias("q")
+
+
+def test_sj5_f1_dropdup_alias_answers(spark: ReparkSession) -> None:
+    """DropDuplicates over an aliased dup-display join answers (``r5p6.*|dd|j_*|alias|dd``)."""
+    _answers_value(lambda: _dd_alias_left(spark).dropDuplicates(["v"]).count(), 3)
+
+
+def test_sj5_f1_window_free_ref_refuses(spark: ReparkSession) -> None:
+    """Window over a free dup display refuses (``win_probe.py`` user-window)."""
+    frame = _cross_v(spark)
+    window = Window.partitionBy(F.col("v")).orderBy(F.col("id"))
+    _refuses_ambiguous_params(
+        lambda: frame.withColumn("z", F.row_number().over(window)), "`v`", "[`v`, `v`]"
     )

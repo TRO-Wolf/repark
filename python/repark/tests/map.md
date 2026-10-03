@@ -9119,7 +9119,8 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   **ATTR-ID-1 SJ-5 F1 (2026-10-03):** ten free-name pins per case rule, one
   cross cell plus one inner twin for each of filter-text, selectExpr,
   withColumn-compound, summary, and qualified-filter, each asserting the
-  class, the `name`/`referenceNames` parameters, and the message.
+  class, the `name`/`referenceNames` parameters, and the message; plus the
+  window pair (aliased dropDuplicates answers, user window refuses).
 - [test_attr_id_1_v456.py](test_attr_id_1_v456.py) — **ATTR-ID-1 V-5 (2026-10-02):**
   the verifier-fold twin pins, measured against live Spark 4.1.2 `p5_twins`.
   The ported `test_v5` pin plus the 13 remaining F_ cells refuse
