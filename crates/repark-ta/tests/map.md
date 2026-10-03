@@ -60,6 +60,10 @@ golden fails, the kernel drifted (or the oracle moved), never "close enough".
   polars_talib prefix goldens. 26 tests = 13 series × twins, the run fed as NaN and as NULL with
   the same expected bits; the chain `prefix_chain_ema21_of_trange` feeds the recorded
   `prefix_trange` back in as the `ta_ema` input. The kernel-layer `goldens.rs` is untouched.
+  Mutations (TA-CHAIN-1 C-007): returning the trimmed vector without the NaN re-prefix fails all
+  26 on length; forcing the start to 0 fails 24 of 26 (the `linearreg_5` twins survive because
+  LINEARREG recomputes each window, so the NaN run leaves no trace once out of the window).
+  pins: ta-chain-1/C-001, C-002, C-003, C-007
 - [goldens/](goldens/map.md) — the recorded fixtures + `manifest.json` (checked in; ~1.5 MB);
   [goldens/prefix/](goldens/prefix/map.md) holds the TA-CHAIN-1 prefix goldens with their own
   manifest.

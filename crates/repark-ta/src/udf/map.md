@@ -31,7 +31,10 @@ Kernel math is **not** here — it stays in `../overlap.rs` etc.
   the inputs), `run_with_prefix_skipped` / `run_all_with_prefix_skipped` (trim the run, call the
   kernel, re-prefix the skipped rows as NaN; start 0 is a pass-through borrow). `evaluate_all`'s
   four kernel calls route through them. Inline tests pin the R-TC1-1 probes, the all-invalid band
-  shape, and a chained TRANGE → EMA through `TaEvaluator`.
+  shape, and a chained TRANGE → EMA through `TaEvaluator`; `interior_nan_after_the_start_still_propagates`
+  pins that an interior NaN still propagates as in C (TRANGE costs two rows, ATR(2) stays all-NaN).
+  A clean input costs one comparison per series and passes the borrowed slices straight through.
+  pins: ta-chain-1/C-004, C-006
 - `price.rs` — price-transform family (`avgprice`/`medprice`/`typprice`/
   `wclprice`).
 

@@ -12,7 +12,8 @@ raw little-endian `f64` bit patterns, one u64 per row, nulls recorded as NaN.
 
 - `manifest.json` — oracle versions + the 13 series → row count. Kept apart from
   `../manifest.json` so `manifest_and_tests_cover_the_same_series` in `../../goldens.rs` is
-  untouched (R-TC1-4).
+  untouched (R-TC1-4). The 158 kernel goldens re-record byte-identical when the recorder runs.
+  pins: ta-chain-1/C-005
 - `prefix_ema_21`, `prefix_sma_10`, `prefix_rsi_14`, `prefix_linearreg_5`,
   `prefix_bbands_upper_20`, `prefix_macd_12_26_9` (the MACD line) — single-input kernels, start 5.
 - `prefix_adx_14`, `prefix_trange`, `prefix_atr_14`, `prefix_stoch_slowk` (polars_talib

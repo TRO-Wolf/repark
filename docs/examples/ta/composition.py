@@ -24,6 +24,13 @@ def golden(name: str) -> np.ndarray:
     return np.frombuffer((GOLDENS / f"{name}.bin").read_bytes(), dtype="<f8")
 
 
+def prefix_input(name: str, run: int) -> np.ndarray:
+    """A walk fixture column with its first ``run`` rows overwritten by NaN (TA-CHAIN-1)."""
+    values = golden(f"fixture_{name}").copy()
+    values[:run] = np.nan
+    return values
+
+
 def column(rows: list[Row], name: str) -> np.ndarray:
     return np.ascontiguousarray([row[name] for row in rows], dtype=np.float64)
 
@@ -77,6 +84,41 @@ def main() -> None:
         ).collect()
         expect_bit_exact("ta.rsi via ta.with_indicators", column(rows, "rsi3"), golden("rsi_3"))
         expect_bit_exact("ta.min via ta.with_indicators", column(rows, "min34"), golden("min_34"))
+        bars = repark.createDataFrame(
+            [
+                (index, "TEST", float(high), float(low), float(close))
+                for index, (high, low, close) in enumerate(
+                    zip(
+                        prefix_input("high", 3),
+                        prefix_input("low", 7),
+                        prefix_input("close", 5),
+                        strict=True,
+                    )
+                )
+            ],
+            ["ts", "symbol", "high", "low", "close"],
+        )
+        with_tr = ta.with_indicators(
+            bars,
+            partition="symbol",
+            order="ts",
+            columns={"tr": ta.trange("high", "low", "close")},
+        )
+        rows = (
+            ta.with_indicators(
+                with_tr,
+                partition="symbol",
+                order="ts",
+                columns={"ema21_of_tr": ta.ema("tr", timeperiod=21)},
+            )
+            .orderBy("ts")
+            .collect()
+        )
+        expect_bit_exact(
+            "chained ta.ema over ta.trange via ta.with_indicators",
+            column(rows, "ema21_of_tr"),
+            golden("prefix/prefix_chain_ema21_of_trange"),
+        )
     finally:
         repark.stop()
 
