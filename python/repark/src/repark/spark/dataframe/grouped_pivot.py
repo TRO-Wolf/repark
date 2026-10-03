@@ -57,7 +57,6 @@ def _pivot_recover_agg_name(aggregate: Column) -> str:
     if not aggregate._is_aggregate:
         return ""
     display = aggregate.spark_display_part()
-    # ``sum(x) AS total`` / ``count AS c`` — take the left of the last top-level AS.
     match = re.fullmatch(r"(?is)(.+?)\s+AS\s+(.+)", display.strip())
     if match is not None:
         return match.group(1).strip()
@@ -82,7 +81,6 @@ def _pivot_aggregate_builder(aggregate: Column) -> Callable[..., Column]:
     from repark.spark import functions as F  # noqa: N812
 
     name = _pivot_recover_agg_name(aggregate).casefold()
-    # Distinct counts need a separate refusal from conditional-count rebuilding.
     if _pivot_is_count_distinct_name(name):
         raise AnalysisException(
             "pivot does not support countDistinct yet "
@@ -96,11 +94,8 @@ def _pivot_aggregate_builder(aggregate: Column) -> Callable[..., Column]:
         return F.min
     if name.startswith("max("):
         return F.max
-    # GroupedData.count() uses the bare aggregate name ``count``.
     if name == "count" or name.startswith("count("):
         return F.count
-    # Conditional pivot rows inject NULLs, so first and last must ignore them.
-    # Alias recovery sees DataFusion first_value and last_value names.
     if name.startswith("first(") or name.startswith("first_value("):
         return lambda column: F.first(column, ignorenulls=True)
     if name.startswith("last(") or name.startswith("last_value("):
@@ -166,14 +161,11 @@ def _pivot_aggregate_input(
 
     name = _pivot_recover_agg_name(aggregate)
     name_cf = name.casefold()
-    # Require a word break after DISTINCT to avoid matching column names.
     if _pivot_is_count_distinct_name(name_cf):
         raise AnalysisException(
             "pivot does not support countDistinct yet "
             f"(got {name!r}); use count/sum/avg/min/max/first/last"
         )
-    # Bare count and count(*) count every row under the pivot condition.
-    # Keep count(1) separate because it can name a measure column.
     if name_cf in {"count", "count(*)"}:
         return F.lit(1)
     match = re.fullmatch(
@@ -190,13 +182,11 @@ def _pivot_aggregate_input(
     recovered_typed = _pivot_is_typed_scalar_inner(inner)
     native_typed = _pivot_native_shows_typed_literal(aggregate)
     if kind == "count":
-        # Typed literals are non-null row-count inputs. Compound expressions are not.
         if inner == "*" or recovered_typed or native_typed:
             return F.lit(1)
         if inner == "1" and _pivot_count_one_is_row_count(aggregate):
             return F.lit(1)
     elif recovered_typed or native_typed:
-        # Non-count literals must not bind digit-named measure columns.
         raise AnalysisException(
             "pivot requires simple column-name aggregate inputs "
             f"(got {name!r}); compound expressions, literals, and CAST are not supported yet"
@@ -205,7 +195,6 @@ def _pivot_aggregate_input(
         inner.startswith("`") and inner.endswith("`")
     ):
         inner = inner[1:-1]
-    # Simple identifiers only. Digit-leading names are valid Spark columns.
     if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*|[0-9][A-Za-z0-9_]*", inner):
         raise AnalysisException(
             "pivot requires simple column-name aggregate inputs "
@@ -215,7 +204,6 @@ def _pivot_aggregate_input(
         try:
             return frame._bind_schema_column(inner)
         except AnalysisException as bind_error:
-            # Unresolvable names must fail here, not surface a later schema error.
             raise AnalysisException(
                 "pivot requires simple column-name aggregate inputs "
                 f"(got {name!r}); compound expressions, literals, and CAST are not supported yet"
