@@ -3432,6 +3432,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   bindings).
   ATTR-ID-1 SJ-5 (2026-10-03): native set loses `remint_cross_collisions`
   and gains `join_shared_remint`; no expected table tracks native names.
+  CASESENS-2 port (2026-10-03): core and the package each swap
+  `_join_condition_attr_names` for `_join_condition_args`. pins: casesens-2/C-009
 - `test_dfcore_4b_exports.py` — DFCORE-4b ownership pin: `MOVED_DISPLAY_HELPERS`
   pins the ten bodies as `display.py`'s own frame-first functions, the six
   leavers as gone from the class, and the four wrappers as kept.
@@ -3776,6 +3778,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `P_h2_compound_same`, `P_h2_compound_alias`); the free-name compound answer
   (`F.col("l.x")` strings, Spark answers 3 both rules) carries strict xfail —
   qualified free names do not resolve in join conditions (R-18, pre-existing).
+  **CASESENS-2 port (2026-10-03):** the strict xfail is removed: alias-qualified
+  free names bind in join conditions through `resolve`, so the compound alias
+  join answers Spark's 3 rows (R-18 closed). pins: casesens-2/C-009
 - `test_f1_errorclass.py` — F1 true-EC residual: array.array unsupported →
   CANNOT_INFER_TYPE_FOR_FIELD; make_interval collect → PySparkNotImplementedError;
   `_merge_type` / `_make_type_verifier` class+param keys.
@@ -9014,6 +9019,12 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   renames `İd` insensitive (the native lower-of-uppers fix restores the S3c
   `U+0130 read as I` behavior exactly; probe s3d16).
   pins: attr-id-1/C-037
+  **CASESENS-2 port (2026-10-03):** the insensitive folded-keys pin flips to
+  live Spark 4.1.2's answer, measured that day:
+  `withColumns({"v": lit(1), "V": lit(2)})` refuses `COLUMN_ALREADY_EXISTS` 42711
+  naming `` `v` `` (the S3c "last key wins" row was not a Spark measurement);
+  the test is renamed `test_with_columns_folded_keys_refuse_insensitive`.
+  pins: casesens-2/C-004, C-011
 - [test_attr_id_1_s3d.py](test_attr_id_1_s3d.py) — **ATTR-ID-1 S3d (2026-10-01):** the
   `drop`/`dropDuplicates`/`fillna`/`dropna` cutover pins, each under both case rules
   unless noted. `drop(str)` drops a twin pair of one attribute and a two-attribute

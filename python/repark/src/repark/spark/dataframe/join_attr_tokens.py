@@ -10,6 +10,7 @@ from repark import _native
 from repark.spark import column_fields as _column_fields
 from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._temp_views import scratch_view_name
+from repark.spark.filter_quote import _frame_qualifiers_for_bind
 
 if TYPE_CHECKING:
     from repark.spark.column import Column
@@ -30,6 +31,27 @@ def _token_leaf_display(match: re.Match[str]) -> str | None:
         return bytes.fromhex(coded).decode("utf-8")
     except (ValueError, UnicodeDecodeError):
         return None
+
+
+def _join_condition_args(
+    frame: DataFrame, other: DataFrame, cond_sql: str, left_alias: str, right_alias: str
+) -> tuple[Any, ...]:
+    """Assemble the native condition preparer's arguments for one condition join."""
+    return (
+        frame._session,
+        cond_sql,
+        frame._frame_node,
+        other._frame_node,
+        frame._plan(),
+        other._plan(),
+        left_alias,
+        right_alias,
+        list(frame.columns),
+        list(other.columns),
+        _join_condition_attr_names(frame, cond_sql),
+        _frame_qualifiers_for_bind(frame),
+        _frame_qualifiers_for_bind(other),
+    )
 
 
 def _join_condition_attr_names(frame: DataFrame, cond_sql: str) -> dict[str, str]:

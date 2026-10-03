@@ -151,6 +151,7 @@ fn side<'a>(frame: &'a Frame, alias: &'a str) -> JoinSide<'a> {
         schema: &frame.schema,
         displays: &frame.displays,
         alias,
+        qualifiers: None,
     }
 }
 

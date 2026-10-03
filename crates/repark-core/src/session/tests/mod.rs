@@ -16,6 +16,7 @@ mod footer_cache_report;
 mod frame_lineage;
 mod hadoop_naming;
 mod io_stats;
+mod join_qualifiers;
 mod metadata_cache_report;
 mod namespace_create;
 mod nlj_tight_pool;

@@ -159,6 +159,8 @@ and gains ``join_shared_remint``; no expected table tracks native names, so no
 table changes for that. The pivot helper family moves to ``grouped_pivot.py``
 behind same-named imports, so ``EXPECTED_NEW_PACKAGE_SUBMODULES`` gains
 exactly ``grouped_pivot``.
+CASESENS-2 port (2026-10-03): ``core`` and the package each swap
+``_join_condition_attr_names`` for ``_join_condition_args``.
 """
 
 from __future__ import annotations

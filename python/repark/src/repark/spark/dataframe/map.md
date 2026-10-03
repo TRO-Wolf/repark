@@ -226,6 +226,18 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `dropDuplicates` bodies, which bind through `resolve` (S3a–S3e). The port adds
   no Python-side name matcher (the C-007 rule; `column_errors.py` loses its
   `lower()` filter). pins: casesens-2/C-003, C-006, C-007, C-010
+  CASESENS-2 port (2026-10-03, join conditions): `_join_on_condition_h1` passes
+  `*_join_condition_args(self, other, cond_sql, left_alias, right_alias)` to the
+  native preparer; the new `join_attr_tokens._join_condition_args` assembles the
+  thirteen arguments, the two facade qualifier maps last, so
+  `F.col("l.id") == F.col("r.id")` over `alias("l")`/`alias("r")` binds through
+  `resolve` (R-CS2-1 and the h2 R-18 gap answer Spark). `core` and the package
+  import `_join_condition_args` in place of `_join_condition_attr_names`
+  (through `plan_collapse`). `withColumns` calls
+  `_native.refuse_folded_duplicate_keys(self._session, keys)` after the key
+  checks, so folded keys refuse `COLUMN_ALREADY_EXISTS` under the live `false`
+  rule (live Spark 4.1.2, 2026-10-03). `core.py` 3485 → 3476 (ceilings
+  ratcheted). pins: casesens-2/C-004, C-009
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`

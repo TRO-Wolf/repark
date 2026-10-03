@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt::Write;
 use std::hash::BuildHasher;
 use std::ops::{ControlFlow, Range};
@@ -15,6 +15,7 @@ use super::attr_id::{AttrId, Resolution, attribute_ids, resolve};
 use super::frame_lineage::{
     AttrRef, FrameId, FrameNode, ambiguous_images, renewed_absent, shared_ids,
 };
+use super::predicate_names::{bind_condition_qualifiers, restore_placeholders};
 
 const TOKEN: &str = "__REPARK_ATTR_";
 
@@ -73,6 +74,7 @@ pub struct JoinSide<'a> {
     pub schema: &'a DFSchema,
     pub displays: &'a [String],
     pub alias: &'a str,
+    pub qualifiers: Option<&'a BTreeMap<String, Vec<String>>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -517,9 +519,19 @@ pub fn prepare_join_condition<S: BuildHasher>(
         .map(|id| (id.clone(), AttrId::mint()))
         .collect::<HashMap<_, _>>();
     let parsed = parse_attr_refs(cond_sql)?;
+    let mut qualified = parsed
+        .text
+        .contains('.')
+        .then(|| parse_condition(&parsed.text).ok())
+        .flatten();
+    if let Some(condition) = qualified.as_mut()
+        && !bind_condition_qualifiers(condition, left, right, rule, PLACEHOLDER)?
+    {
+        qualified = None;
+    }
     if parsed.refs.is_empty() {
         return Ok(Prepared::Condition(PreparedCondition {
-            sql: cond_sql.to_string(),
+            sql: qualified.map_or_else(|| cond_sql.to_string(), |condition| condition.to_string()),
             remint,
         }));
     }
@@ -590,10 +602,14 @@ pub fn prepare_join_condition<S: BuildHasher>(
     if rules.auto_resolve && left_ids.iter().any(|id| right_ids.contains(id)) {
         rewrite_pairs((left, right), &shape.pairs, &bound, &mut texts, rule)?;
     }
-    Ok(Prepared::Condition(PreparedCondition {
-        sql: spliced(cond_sql, &parsed.spans, &texts),
-        remint,
-    }))
+    let sql = match qualified {
+        Some(mut condition) => {
+            restore_placeholders(&mut condition, PLACEHOLDER, &texts);
+            condition.to_string()
+        }
+        None => spliced(cond_sql, &parsed.spans, &texts),
+    };
+    Ok(Prepared::Condition(PreparedCondition { sql, remint }))
 }
 
 fn spliced(sql: &str, spans: &[Range<usize>], texts: &[String]) -> String {

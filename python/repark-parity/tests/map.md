@@ -197,6 +197,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `grouped_pivot.py`, leaving the file under the default ceiling), so the
   Python exception count drops 30 → 29, with the script baseline.
   Pins: `python/repark/tests/test_attr_id_1_sj5.py`.
+- `test_cap_1_source_file_line_cap.py` — **CASESENS-2 port (2026-10-03):**
+  the mirror row ratchets `dataframe/core.py` 3485 → 3476 with the script
+  baseline. Pins: `python/repark/tests/test_casesens_2.py`.
 - `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 SJ-4 (2026-10-02):**
   mirror rows ratchet `dataframe/core.py` 3583 → 3494 (the repartition trio
   moves to `repartition_ops.py`) and `dataframe/joins_columns.py` 1169 → 1119

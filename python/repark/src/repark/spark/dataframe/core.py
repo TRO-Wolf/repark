@@ -1058,6 +1058,7 @@ class DataFrame:
                     f"got {type(column).__name__} for {name!r}"
                 )
             _reject_aggregate_in_with_column(column, surface="withColumns")
+        _native.refuse_folded_duplicate_keys(self._session, list(colsMap))
         self._refuse_self_join_refs(
             [column for column in colsMap.values() if isinstance(column, Column)]
         )
@@ -2304,17 +2305,7 @@ class DataFrame:
             else:
                 cond_sql = condition.join_sql_part()
                 on_sql, remint = _native.prepare_join_condition(
-                    self._session,
-                    cond_sql,
-                    self._frame_node,
-                    other._frame_node,
-                    self._plan(),
-                    other._plan(),
-                    left_alias,
-                    right_alias,
-                    list(self.columns),
-                    list(other.columns),
-                    _join_condition_attr_names(self, cond_sql),
+                    *_join_condition_args(self, other, cond_sql, left_alias, right_alias)
                 )
                 _native.refuse_ambiguous_join_condition(self._plan(), other._plan(), on_sql)
             left_cols = list(self.columns)
@@ -3407,7 +3398,7 @@ from repark.spark.dataframe.plan_collapse import (  # noqa: E402, I001
     _reject_non_numeric_range_order,
     _rewrite_attr_tokens_local,
     _emit_join_side_columns,
-    _join_condition_attr_names,
+    _join_condition_args,
     _spark_array_element_to_sql,
     _UNTYPED_NULL_ELEMENT,
     _sql_embed_expr_fragment,

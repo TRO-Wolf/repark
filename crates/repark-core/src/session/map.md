@@ -255,6 +255,8 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   recommended-rule order. `session.rs` re-exports `resolve_bound_expr` /
   `resolve_scoped_expr` / `resolve_subquery_plan` for the binding layer.
   pins: df-subquery-1/C-001, C-002, C-004
+  **CASESENS-2 port (2026-10-03):** declares the private `predicate_names`
+  module (the join-condition qualifier binder). pins: casesens-2/C-009
 - `tests/df_guard.rs` — the nine `df_guards.rs` pins, split out of `tests.rs` when the DEFECT-2
   **U11-EDGE-1 (2026-09-26):** `df_guards.rs` also declares `df_guards/case_bind.rs`
   (row in `df_guards/map.md`). pins: u11-edge-1/C-015

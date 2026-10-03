@@ -227,6 +227,24 @@ wrapped optimizer rule) and declares this directory.
   the column by the display at that image's position (Spark's `ambiguousAttrs`);
   `ambiguous` now maps it to indices, its verdicts unchanged. `FrameId::from_raw` reads a
   frame id back from a reference token (crate-private).
+- `predicate_names.rs` — **CASESENS-2 port (2026-10-03):** the join-condition
+  half of #881's `predicate_names.rs` (folds `15a7bb9d`, `b89a7d7f`, `3ac80920`),
+  re-pointed at `attr_id::resolve`. `bind_condition_qualifiers(condition, left,
+  right, rule, placeholder)` walks the parsed condition with #881's scope stack:
+  a lambda pushes its parameters and pops them on leaving, subqueries are
+  skipped, and a compound whose root is an in-scope parameter (by the session
+  rule) or a reference placeholder is left alone (RC4-1, RC4-6, RC5-2). Every
+  other `q.name[.field…]` (a compound identifier, or an identifier root with a
+  dot chain) tries the widest qualifier first (up to three parts) and resolves
+  `name` on each side with `resolve(schema, name, Some(q), rule, displays,
+  qualifiers)`. One side `Bound` rewrites the qualifier and name to
+  `` <side alias>.`<engine field>` `` and keeps the field chain; `Ambiguous` on a
+  side refuses `AMBIGUOUS_REFERENCE` naming `` `q`.`name` `` and the qualified
+  displays; both sides bound or neither leaves the text to the engine, as on
+  main. `restore_placeholders` puts each side's rendered reference back into the
+  rewritten tree. The filter-string half is not ported: the stack's
+  `filter_quote.py` already owns alias qualifiers and lambda scope (S3b H-1).
+  Pins: `../tests/join_qualifiers.rs`. pins: casesens-2/C-009
 - `self_join.rs` — **ATTR-ID-1 SJ-1b (2026-10-02):** the self-join condition preparer, the
   post-join reference check and the refusal texts, all Rust (owner ruling 2026-10-02,
   option A: Spark Classic is the oracle, no "left wins" tie-break; sketch
@@ -302,6 +320,14 @@ wrapped optimizer rule) and declares this directory.
     as `!Join` (Spark prints the plan node with exprIds).
   The join type is not an input: `emits_right` is never a verdict input (SJ-1a ruling 2).
   Pins: `../tests/self_join.rs`; the bindings in `crates/repark-python/src/frame_lineage.rs`.
+  **CASESENS-2 port (2026-10-03):** `JoinSide` carries the facade's
+  `qualifiers` (attribute id to alias names, `None` when the frame holds none),
+  and `prepare_join_condition` first hands the placeholder text to
+  `predicate_names::bind_condition_qualifiers` (only when it holds a `.`). When
+  that rewrites a free alias-qualified name, the final SQL is the rewritten tree
+  with each placeholder restored to its rendered side text; otherwise the
+  byte-span splice runs unchanged. Pins: `../tests/join_qualifiers.rs`.
+  pins: casesens-2/C-009
 - `case_bind.rs` — **U11-EDGE-1 (2026-09-26):** `bind_case_insensitive`, run first by
   `subquery.rs`'s `resolve_bound_expr` (the DataFrame door's one binding hook). An
   unqualified column the frame schema does not hold exactly binds to the single field that

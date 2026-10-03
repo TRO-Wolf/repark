@@ -712,6 +712,8 @@ fn binding_prepares_self_join_conditions_by_the_session_rules() {
                 shown.clone(),
                 shown.clone(),
                 HashMap::new(),
+                None,
+                None,
             )
         };
         let (sql, remint) = prepare(&format!("({} = {})", token(&d, 0), token(&f, 0)))

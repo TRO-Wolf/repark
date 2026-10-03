@@ -17,7 +17,7 @@ from repark.spark.column import Column
 from repark.spark.dataframe.join_attr_tokens import (
     _ATTR_TOKEN_RE,
     _emit_join_side_columns,
-    _join_condition_attr_names,
+    _join_condition_args,
     _replace_local_attr_token,
     _rewrite_attr_tokens_local,
 )

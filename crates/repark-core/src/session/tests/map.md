@@ -158,6 +158,14 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   `k_on_union_named_second_input_answers`; `emits_right` ignored (M-A7) reds none (see
   `../df_guards/map.md`). `attr_id.rs` and `attr_id_verify.rs` now call
   `remint_shared` with `join_collisions`, the old behaviour.
+- `join_qualifiers.rs` — **CASESENS-2 port (2026-10-03):** six pins for
+  `predicate_names::bind_condition_qualifiers` through `prepare_join_condition`
+  on stamped frames with facade qualifiers: alias-qualified names bind per side
+  under both rules (and in compound arithmetic); a wrong-case, unknown or
+  missing qualifier keeps its text; a qualifier both sides hold stays unbound;
+  a lambda parameter shadows the qualifier inside its own body only, by the
+  session rule; two ids under one qualifier refuse `AMBIGUOUS_REFERENCE`; a
+  struct field after the bound column is kept. pins: casesens-2/C-009
 - `self_join.rs` — **ATTR-ID-1 SJ-1b (2026-10-02):** 62 pins for `df_guards/self_join.rs`
   over hand-built DAGs (the probes' fixtures: `f`, `g`, `a`, `b` share `d`'s ids, `w`
   re-mints `id`, `r` re-mints `v` as `z`, `s` keeps `id`, `e` is unrelated). Each test is
@@ -192,6 +200,7 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   `k_drop_sel_missing_from_input` pins MISSING_FROM_INPUT under both confs;
   `i_engine_display_falls_back_to_token_leaf` pins the leaf fallback for
   engine-flavored displays.
+  **CASESENS-2 port (2026-10-03):** the `side` helper sets `qualifiers: None`.
 - `session.rs` — ported v1 session battery plus P2G R2 / A13 / metadata-enumeration pins. RP-5: the bare-session half of the metadata-table enumeration contract (fork F-8 listing); mutation — make `information_schema` expect a `$snapshots` twin and the pin reds. pins: rp-5-fork-repin/C-003
   Child: [session/catalog_registration.rs](session/map.md).
   RP-5: `information_schema` hide pin now cites fork F-8 listing (no engine shim).

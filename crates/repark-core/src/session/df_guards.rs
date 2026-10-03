@@ -18,6 +18,7 @@ pub(crate) mod attr_id;
 pub(crate) mod attr_lineage;
 pub mod case_bind;
 pub(crate) mod frame_lineage;
+mod predicate_names;
 pub(crate) mod self_join;
 pub(crate) mod sort_names;
 pub(super) mod subquery;

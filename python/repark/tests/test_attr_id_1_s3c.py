@@ -124,11 +124,13 @@ def test_with_columns_replaces_hits_and_appends_misses_in_order(
     assert _rows(updated) == [(1, 1, 2), (2, 1, 2)]
 
 
-def test_with_columns_folded_keys_last_key_wins_insensitive(spark: ReparkSession) -> None:
+def test_with_columns_folded_keys_refuse_insensitive(spark: ReparkSession) -> None:
     spark.conf.set("spark.sql.caseSensitive", "false")
-    updated = _frame(spark).withColumns({"v": functions.lit(1), "V": functions.lit(2)})
-    assert updated.columns == ["id", "V"]
-    assert _rows(updated) == [(1, 2), (2, 2)]
+    with pytest.raises(AnalysisException) as refused:
+        _frame(spark).withColumns({"v": functions.lit(1), "V": functions.lit(2)})
+    assert refused.value.getCondition() == "COLUMN_ALREADY_EXISTS"
+    assert refused.value.getSqlState() == "42711"
+    assert "[COLUMN_ALREADY_EXISTS] The column `v` already exists." in str(refused.value)
 
 
 def test_with_columns_folded_keys_replace_and_append_sensitive(spark: ReparkSession) -> None:

@@ -136,13 +136,8 @@ def test_h2_same_object_compound_self_join_refuses_loud(spark: ReparkSession) ->
     assert refused_alias.value.getCondition() == "_LEGACY_ERROR_TEMP_1182"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="R-18: qualified free names do not resolve in join conditions; "
-    "Spark 4.1.2 answers 3 under both case rules",
-)
 def test_h2_compound_alias_free_names_answer(spark: ReparkSession) -> None:
-    """Free-name compound alias join answers 3 (Spark-measured, R-18 gap)."""
+    """Free-name compound alias join answers 3 (Spark-measured, R-18 closed)."""
     frame = spark.createDataFrame([(1, 10), (2, 20), (3, 30)], ["x", "y"])
     left = frame.alias("l")
     right = frame.alias("r")

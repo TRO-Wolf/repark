@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
 use datafusion::common::DFSchema;
@@ -248,7 +248,7 @@ pub fn refuse_self_join_refs(
 #[pyfunction]
 #[pyo3(signature = (
     session, cond_sql, left_node, right_node, left_frame, right_frame, left_alias, right_alias,
-    left_displays, right_displays, names
+    left_displays, right_displays, names, left_qualifiers, right_qualifiers
 ))]
 pub fn prepare_join_condition(
     py: Python<'_>,
@@ -263,6 +263,8 @@ pub fn prepare_join_condition(
     left_displays: Vec<String>,
     right_displays: Vec<String>,
     names: HashMap<String, String>,
+    left_qualifiers: Option<BTreeMap<String, Vec<String>>>,
+    right_qualifiers: Option<BTreeMap<String, Vec<String>>>,
 ) -> PyResult<(String, HashMap<String, String>)> {
     fenced!("frame_lineage.prepare_join_condition", {
         let left = JoinSide {
@@ -270,12 +272,14 @@ pub fn prepare_join_condition(
             schema: left_frame.inner().schema(),
             displays: &left_displays,
             alias: left_alias,
+            qualifiers: left_qualifiers.as_ref(),
         };
         let right = JoinSide {
             node: &right_node.node,
             schema: right_frame.inner().schema(),
             displays: &right_displays,
             alias: right_alias,
+            qualifiers: right_qualifiers.as_ref(),
         };
         let names = names
             .iter()
