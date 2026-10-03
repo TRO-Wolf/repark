@@ -294,6 +294,29 @@ def _frame_qualifiers_for_bind(frame: Any) -> dict[str, list[str]] | None:
     return {attr: sorted(names) for attr, names in held.items()}
 
 
+def _refuse_ambiguous_free_names(
+    frame: Any,
+    *,
+    sql: str | None = None,
+    column: Any | None = None,
+    names: list[str] | None = None,
+    select_item: bool = False,
+    qualified_only: bool = False,
+) -> None:
+    """Refuse free names matching two displays that share no engine field."""
+    _native.refuse_ambiguous_free_names(
+        frame._plan(),
+        sql=sql,
+        column=None if column is None else column._inner,
+        names=names,
+        select_item=select_item,
+        qualified_only=qualified_only,
+        displays=list(frame.columns),
+        exact=bool(_native.session_case_sensitive(frame._session)),
+        frame_qualifiers=_frame_qualifiers_for_bind(frame),
+    )
+
+
 def _known_qualifiers(
     frame: Any, native: Any, exact: bool
 ) -> tuple[list[str], dict[str, list[str]] | None]:
@@ -500,6 +523,7 @@ def _quote_select_expr_dotted(frame: Any, expr: str) -> str:
         engine_names = list(_native.logical_column_names(native))
     exact = bool(_native.session_case_sensitive(frame._session))
     qualifiers, payload = _known_qualifiers(frame, native, exact)
+    _refuse_ambiguous_free_names(frame, sql=expr, select_item=True)
     single = _DOTTED_TOKEN_PATTERN.fullmatch(expr.strip())
     if single is not None:
         aliased = _single_token_select_alias(

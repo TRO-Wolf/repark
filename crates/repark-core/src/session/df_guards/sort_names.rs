@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use datafusion::common::tree_node::{Transformed, TreeNode};
+use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
 use datafusion::common::{
     Column, DFSchema, DFSchemaRef, DataFusionError, Result, TableReference, internal_datafusion_err,
 };
@@ -595,6 +595,93 @@ pub fn qualifier_star_positions(
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FreeNameOffense {
+    pub qualifier: Vec<String>,
+    pub written: String,
+    pub hits: Vec<usize>,
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn free_expr_names(expr: &Expr, qualified_only: bool) -> Result<Vec<(Vec<String>, String)>> {
+    let mut names = Vec::new();
+    expr.apply(|node| {
+        Ok(match node {
+            Expr::Exists(_) | Expr::InSubquery(_) | Expr::ScalarSubquery(_) => {
+                TreeNodeRecursion::Stop
+            }
+            Expr::Column(column) => {
+                let qualifier = column.relation.as_ref().map_or_else(Vec::new, |relation| {
+                    [
+                        relation.catalog(),
+                        relation.schema(),
+                        Some(relation.table()),
+                    ]
+                    .into_iter()
+                    .flatten()
+                    .map(str::to_string)
+                    .collect::<Vec<_>>()
+                });
+                if qualifier.is_empty() != qualified_only {
+                    names.push((qualifier, column.name.clone()));
+                }
+                TreeNodeRecursion::Continue
+            }
+            _ => TreeNodeRecursion::Continue,
+        })
+    })?;
+    Ok(names)
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn refuse_free_names(
+    schema: &DFSchema,
+    rule: NameRule,
+    displays: &[String],
+    frame_qualifiers: Option<&BTreeMap<String, Vec<String>>>,
+    names: &[(Vec<String>, String)],
+) -> Result<Option<FreeNameOffense>> {
+    if displays.len() != schema.fields().len() {
+        return Ok(None);
+    }
+    for (qualifier, written) in names {
+        let dotted = qualifier.join(".");
+        let Resolution::Ambiguous(hits) = resolve(
+            schema,
+            written,
+            (!qualifier.is_empty()).then_some(dotted.as_str()),
+            rule,
+            displays,
+            frame_qualifiers,
+        )?
+        else {
+            continue;
+        };
+        if duplicate_engine_hit(schema, rule, &hits) {
+            continue;
+        }
+        return Ok(Some(FreeNameOffense {
+            qualifier: qualifier.clone(),
+            written: written.clone(),
+            hits,
+        }));
+    }
+    Ok(None)
+}
+
+fn duplicate_engine_hit(schema: &DFSchema, rule: NameRule, hits: &[usize]) -> bool {
+    let engines = hits
+        .iter()
+        .filter_map(|position| schema.fields().get(*position))
+        .map(|field| field.name().as_str())
+        .collect::<Vec<_>>();
+    engines.iter().enumerate().any(|(index, left)| {
+        engines[index + 1..]
+            .iter()
+            .any(|right| rule.matches(left, right))
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
@@ -760,5 +847,126 @@ mod tests {
         let schema = keyed(&["id", "v"], &["a1", "a2"]);
         let union = union_of(schema);
         assert!(!union_dup_below_wrappers(&union, &[1]));
+    }
+
+    #[test]
+    fn free_expr_names_splits_qualified_and_plain_leaves() {
+        use datafusion::common::Column;
+        use datafusion::logical_expr::Expr;
+
+        let expr =
+            Expr::Column(Column::new_unqualified("v")) + Expr::Column(Column::new(Some("q"), "w"));
+        assert_eq!(
+            super::free_expr_names(&expr, false).unwrap(),
+            vec![(Vec::new(), "v".to_string())]
+        );
+        assert_eq!(
+            super::free_expr_names(&expr, true).unwrap(),
+            vec![(vec!["q".to_string()], "w".to_string())]
+        );
+    }
+
+    #[test]
+    fn free_expr_names_stops_at_subquery_scope() {
+        use datafusion::common::Column;
+        use datafusion::logical_expr::expr::Exists;
+        use datafusion::logical_expr::{Expr, Subquery};
+
+        let inner = Expr::Column(Column::new_unqualified("inner_v"));
+        let plan = empty(keyed(&["inner_v"], &["a9"]));
+        let exists = Expr::Exists(Exists {
+            subquery: Subquery {
+                subquery: std::sync::Arc::new(plan),
+                outer_ref_columns: vec![inner],
+                spans: datafusion::common::Spans::new(),
+            },
+            negated: false,
+        });
+        let expr = Expr::Column(Column::new_unqualified("v")).and(exists);
+        assert_eq!(
+            super::free_expr_names(&expr, false).unwrap(),
+            vec![(Vec::new(), "v".to_string())]
+        );
+    }
+
+    #[test]
+    fn refuse_free_names_reports_reminted_duplicate_display() {
+        use repark_common::names::NameRule;
+
+        let schema = keyed(&["id", "l_v", "r_v"], &["a1", "a2", "a3"]);
+        let displays = ["id", "v", "v"].map(str::to_string);
+        let offense = super::refuse_free_names(
+            &schema,
+            NameRule::IgnoreCase,
+            &displays,
+            None,
+            &[(Vec::new(), "v".to_string())],
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(offense.written, "v");
+        assert!(offense.qualifier.is_empty());
+        assert_eq!(offense.hits, vec![1, 2]);
+    }
+
+    #[test]
+    fn refuse_free_names_defers_to_duplicate_engine_fields() {
+        use repark_common::names::NameRule;
+
+        let schema = keyed(&["id", "v", "v"], &["a1", "a2", "a3"]);
+        let displays = ["id", "v", "v"].map(str::to_string);
+        let offense = super::refuse_free_names(
+            &schema,
+            NameRule::IgnoreCase,
+            &displays,
+            None,
+            &[(Vec::new(), "v".to_string())],
+        )
+        .unwrap();
+        assert!(offense.is_none());
+    }
+
+    #[test]
+    fn refuse_free_names_skips_unique_and_missing_names() {
+        use repark_common::names::NameRule;
+
+        let schema = keyed(&["id", "l_v", "r_v"], &["a1", "a2", "a3"]);
+        let displays = ["id", "v", "v"].map(str::to_string);
+        for written in ["id", "zzz"] {
+            let offense = super::refuse_free_names(
+                &schema,
+                NameRule::IgnoreCase,
+                &displays,
+                None,
+                &[(Vec::new(), written.to_string())],
+            )
+            .unwrap();
+            assert!(offense.is_none());
+        }
+    }
+
+    #[test]
+    fn refuse_free_names_matches_facade_qualifiers() {
+        use std::collections::BTreeMap;
+
+        use repark_common::names::NameRule;
+
+        let schema = keyed(&["id", "l_v", "r_v"], &["a1", "a2", "a3"]);
+        let displays = ["id", "v", "v"].map(str::to_string);
+        let quals = BTreeMap::from([
+            ("a2".to_string(), vec!["q".to_string()]),
+            ("a3".to_string(), vec!["q".to_string()]),
+        ]);
+        let offense = super::refuse_free_names(
+            &schema,
+            NameRule::IgnoreCase,
+            &displays,
+            Some(&quals),
+            &[(vec!["q".to_string()], "v".to_string())],
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(offense.qualifier, vec!["q".to_string()]);
+        assert_eq!(offense.hits, vec![1, 2]);
     }
 }

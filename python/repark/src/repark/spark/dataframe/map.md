@@ -480,6 +480,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `crosstab` casts both strata to string for Spark's
   string-key pivot form, feeds `pivot` simple-name aggregate inputs, and fills absent
   pairs with 0. pins: dfcore-3/C-004, C-005
+  **ATTR-ID-1 SJ-5 F1 (2026-10-03):** the no-columns `summary`/`describe`
+  path runs the native free-name check over the displays first, so a twice
+  shown display refuses with `AMBIGUOUS_REFERENCE` as Spark does.
 - `sampling.py` owns the five sampling bodies behind the public wrappers (DFCORE-4a,
   moved from `core.py`). `sample` resolves its three overloads in
   `_prepare_sample_args`: a bool first positional takes the bool/fraction/seed form,

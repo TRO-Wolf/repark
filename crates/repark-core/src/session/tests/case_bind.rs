@@ -461,3 +461,45 @@ async fn frame_functions_follow_the_rule() {
         "Error during planning: Cannot resolve column name \"ID\" among (id)."
     );
 }
+
+#[test]
+fn free_sql_names_collects_predicate_idents_verbatim() {
+    use crate::frame_names::free_sql_names;
+
+    assert_eq!(
+        free_sql_names("v > 15", false),
+        vec![(Vec::new(), "v".to_string())]
+    );
+    assert_eq!(
+        free_sql_names("`v` > 15 AND w < 2", false),
+        vec![(Vec::new(), "v".to_string()), (Vec::new(), "w".to_string())]
+    );
+    assert_eq!(
+        free_sql_names("V > 15", false),
+        vec![(Vec::new(), "V".to_string())]
+    );
+}
+
+#[test]
+fn free_sql_names_skips_aliases_functions_and_qualified() {
+    use crate::frame_names::free_sql_names;
+
+    assert_eq!(
+        free_sql_names("v + 1 AS z", true),
+        vec![(Vec::new(), "v".to_string())]
+    );
+    assert_eq!(
+        free_sql_names("count(v)", true),
+        vec![(Vec::new(), "v".to_string())]
+    );
+    assert!(free_sql_names("q.v > 15", false).is_empty());
+}
+
+#[test]
+fn free_sql_names_skips_nested_scopes_and_unparsable() {
+    use crate::frame_names::free_sql_names;
+
+    assert!(free_sql_names("v in (select v from t)", false).is_empty());
+    assert!(free_sql_names("v + (", false).is_empty());
+    assert!(free_sql_names("v FROM t", true).is_empty());
+}

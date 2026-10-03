@@ -41,6 +41,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(projection_source_ids, module)?)?;
     module.add_function(wrap_pyfunction!(java_fold_hits, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_join_condition, module)?)?;
+    module.add_function(wrap_pyfunction!(refuse_ambiguous_free_names, module)?)?;
     module.add_function(wrap_pyfunction!(requalify_join_sides, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_display_name, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_frame_names, module)?)?;
@@ -298,6 +299,81 @@ pub(crate) fn bind_free_names(
         )
         .map_err(datafusion_to_py_err)?;
         Ok(PyColumn::from_expr(bound))
+    })
+}
+
+#[allow(clippy::missing_errors_doc, clippy::too_many_arguments)]
+#[pyfunction]
+#[pyo3(signature = (frame, sql=None, column=None, names=None, *, select_item=false, qualified_only=false, displays, exact, frame_qualifiers=None))]
+pub(crate) fn refuse_ambiguous_free_names(
+    py: Python<'_>,
+    frame: &PyDataFrame,
+    sql: Option<String>,
+    column: Option<&PyColumn>,
+    names: Option<Vec<String>>,
+    select_item: bool,
+    qualified_only: bool,
+    displays: Vec<String>,
+    exact: bool,
+    frame_qualifiers: Option<BTreeMap<String, Vec<String>>>,
+) -> PyResult<()> {
+    fenced!("dataframe_names.refuse_ambiguous_free_names", {
+        let rule = NameRule::from_case_sensitive(exact);
+        if !folded_duplicate_display(&displays, rule) {
+            return Ok(());
+        }
+        let schema = frame.inner().schema();
+        if displays.len() != schema.fields().len() {
+            return Ok(());
+        }
+        if schema
+            .fields()
+            .iter()
+            .any(|field| AttrId::of(field).is_none())
+        {
+            return Ok(());
+        }
+        let collected: Vec<(Vec<String>, String)> = if let Some(sql) = sql.as_deref() {
+            repark_core::frame_names::free_sql_names(sql, select_item)
+        } else if let Some(column) = column {
+            let prepared = column
+                .expr()
+                .resolve_lambda_variables(schema)
+                .map_err(datafusion_to_py_err)?
+                .data;
+            repark_core::frame_names::free_expr_names(&prepared, qualified_only)
+                .map_err(datafusion_to_py_err)?
+        } else if let Some(names) = names {
+            names.into_iter().map(|name| (Vec::new(), name)).collect()
+        } else {
+            return Ok(());
+        };
+        let offense = repark_core::frame_names::refuse_free_names(
+            schema,
+            rule,
+            &displays,
+            frame_qualifiers.as_ref(),
+            &collected,
+        )
+        .map_err(datafusion_to_py_err)?;
+        if let Some(offense) = offense {
+            return Err(crate::frame_lineage::ambiguous_reference_error(
+                py,
+                &offense.qualifier,
+                &offense.written,
+                &offense.hits,
+                &displays,
+            ));
+        }
+        Ok(())
+    })
+}
+
+fn folded_duplicate_display(displays: &[String], rule: NameRule) -> bool {
+    displays.iter().enumerate().any(|(index, left)| {
+        displays[index + 1..]
+            .iter()
+            .any(|right| rule.matches(left, right))
     })
 }
 

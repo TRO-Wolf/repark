@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import functools
 import re
-from typing import Any, NoReturn
+from typing import Any
 
 from repark import _native
 from repark.errors import (
@@ -15,6 +15,10 @@ from repark.errors import (
     PySparkRuntimeError,
     PySparkTypeError,
     UnsupportedOperationException,
+)
+from repark.spark.column_errors import (
+    _raise_folded_ambiguous,
+    _raise_unresolved_name,
 )
 from repark.spark.filter_quote import (
     _FILTER_TOKEN_PATTERN,
@@ -26,6 +30,7 @@ from repark.spark.filter_quote import (
     _lambda_quoted_span,
     _lambda_scopes,
     _main_path_filter_sql,
+    _refuse_ambiguous_free_names,
     _scopes_have_folded_collision,
     _unqualified_candidates,
 )
@@ -470,49 +475,6 @@ def _split_written_name(written: str) -> tuple[list[str] | None, str] | None:
     return (parts[:-1], parts[-1])
 
 
-def _suggestion_candidates(name: str, displays: list[str]) -> list[str]:
-    lowered = name.lower()
-    seen: set[str] = set()
-    candidates: list[str] = []
-    for display in displays:
-        if display.lower() == lowered and display not in seen:
-            seen.add(display)
-            candidates.append(display)
-    return candidates
-
-
-def _qualified_target(qualifier: list[str] | None, name: str) -> str:
-    if qualifier is None:
-        return f"`{name}`"
-    return ".".join([*(f"`{part}`" for part in qualifier), f"`{name}`"])
-
-
-def _raise_unresolved_name(qualifier: list[str] | None, name: str, displays: list[str]) -> NoReturn:
-    message = (
-        "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter "
-        f"with name {_qualified_target(qualifier, name)} cannot be resolved."
-    )
-    candidates = _suggestion_candidates(name, displays)
-    if candidates:
-        quoted = ", ".join(f"`{candidate}`" for candidate in candidates)
-        message = f"{message} Did you mean one of the following? [{quoted}]."
-    raise AnalysisException(f"{message} SQLSTATE: 42703")
-
-
-def _raise_folded_ambiguous(
-    qualifier: list[str] | None, name: str, hits: list[int], displays: list[str]
-) -> NoReturn:
-    reference = _qualified_target(qualifier, name)
-    if qualifier is None:
-        echoed = ", ".join(f"`{displays[position]}`" for position in hits)
-    else:
-        echoed = ", ".join(_qualified_target(qualifier, displays[position]) for position in hits)
-    raise AnalysisException(
-        f"[AMBIGUOUS_REFERENCE] Reference {reference} is ambiguous, "
-        f"could be: [{echoed}]. SQLSTATE: 42704"
-    )
-
-
 def _bind_resolved_name(frame: Any, written: str) -> Any:
     from repark.spark._idents import quote_ident as _quote_ident
     from repark.spark.column import Column
@@ -735,11 +697,13 @@ def _rebind_stable_name_column(frame: Any, column: Any) -> Any:
     if rebound is not None:
         return rebound
     if not column._stable_name:
+        _refuse_tokenless_free_names(frame, column)
         return column
     name = column._projection_name
     if name is None or name == "" or name == "*":
         return column
     if column._spark_display != name:
+        _refuse_tokenless_free_names(frame, column)
         return column
     try:
         bound = _bind_resolved_name(frame, name)
@@ -748,8 +712,16 @@ def _rebind_stable_name_column(frame: Any, column: Any) -> Any:
             split = _split_written_name(name)
             if split is not None and split[0] is None:
                 raise
+        _refuse_tokenless_free_names(frame, column)
         return column
     return _rewrap_with_markers(column, bound)
+
+
+def _refuse_tokenless_free_names(frame: Any, column: Any) -> None:
+    """Refuse free names in columns holding no parent-born token."""
+    if "__REPARK_ATTR_" in column.join_sql_part():
+        return
+    _refuse_ambiguous_free_names(frame, column=column)
 
 
 def _column_of(frame: Any, item: Any) -> Any:
@@ -792,6 +764,8 @@ def _frame_has_unicode_folded_rivals(displays: list[str], held: list[str | None]
 
 
 def _rebind_free_names(frame: Any, column: Any, for_sort: bool) -> Any:
+    if not for_sort and "__REPARK_ATTR_" not in column.join_sql_part():
+        _refuse_ambiguous_free_names(frame, column=column, qualified_only=True)
     native = frame._plan()
     held = list(_native.attribute_ids(native))
     if None in held:
@@ -933,6 +907,7 @@ def _born_ambiguous(column: Any) -> bool:
 
 
 def _quote_filter_sql_identifiers(frame: Any, sql: str) -> str:
+    _refuse_ambiguous_free_names(frame, sql=sql)
     native = frame._plan()
     displays = list(frame.columns)
     engine_names = list(_native.logical_column_names(native))

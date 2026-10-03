@@ -127,6 +127,46 @@ pub(crate) fn refusal_error(py: Python<'_>, refusal: &Refusal) -> PyErr {
     }
 }
 
+pub(crate) fn ambiguous_reference_error(
+    py: Python<'_>,
+    qualifier: &[String],
+    written: &str,
+    hits: &[usize],
+    displays: &[String],
+) -> PyErr {
+    let quoted = |part: &str| format!("`{}`", part.replace('`', "``"));
+    let reference = qualifier
+        .iter()
+        .map(|part| quoted(part))
+        .chain(std::iter::once(quoted(written)))
+        .collect::<Vec<_>>()
+        .join(".");
+    let options = hits
+        .iter()
+        .filter_map(|position| displays.get(*position))
+        .map(|display| {
+            qualifier
+                .iter()
+                .map(|part| quoted(part))
+                .chain(std::iter::once(quoted(display)))
+                .collect::<Vec<_>>()
+                .join(".")
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    attached(
+        py,
+        AnalysisException::new_err(format!(
+            "[AMBIGUOUS_REFERENCE] Reference {reference} is ambiguous, could be: [{options}]."
+        )),
+        "AMBIGUOUS_REFERENCE",
+        &[
+            ("name", reference),
+            ("referenceNames", format!("[{options}]")),
+        ],
+    )
+}
+
 #[allow(clippy::missing_errors_doc)]
 #[pyfunction]
 pub fn frame_root(frame: &PyDataFrame) -> PyResult<PyFrameNode> {

@@ -32,6 +32,7 @@ pub use super::self_join::{AttrRefText, JoinSide, Prepared, PreparedCondition, R
 pub use super::self_join::{SELF_JOIN_CONDITION, SelfJoinRules, check_refs, missing_condition};
 pub use super::self_join::{missing_message, parse_attr_refs, prepare_join_condition};
 pub use super::self_join::{quoted_names, self_join_message};
+pub use super::sort_names::{FreeNameOffense, free_expr_names, refuse_free_names};
 pub use super::sort_names::{SortShape, bind_free_names, bind_qualified_free_refs};
 pub use super::sort_names::{engine_field_is_unique, grandchild_key, grandchild_qualified_key};
 pub use super::sort_names::{join_dup_below_wrappers, join_output_sources};
@@ -280,6 +281,77 @@ pub fn refuse_ambiguous_condition(condition_sql: &str, sides: &[&DFSchema]) -> R
     match refusal {
         ControlFlow::Break(error) => Err(error),
         ControlFlow::Continue(()) => Ok(()),
+    }
+}
+
+#[must_use]
+pub fn free_sql_names(sql: &str, select_item: bool) -> Vec<(Vec<String>, String)> {
+    if select_item {
+        if let Ok(statements) = Parser::parse_sql(&DatabricksDialect {}, &format!("SELECT {sql}")) {
+            return sql_statement_names(&statements);
+        }
+        return Vec::new();
+    }
+    if let Ok(parsed) = Parser::new(&DatabricksDialect {})
+        .try_with_sql(sql)
+        .and_then(|mut parser| parser.parse_expr())
+    {
+        return sql_expr_names(&parsed);
+    }
+    if let Ok(statements) = Parser::parse_sql(&DatabricksDialect {}, &format!("SELECT ({sql})")) {
+        return sql_statement_names(&statements);
+    }
+    Vec::new()
+}
+
+fn sql_statement_names(
+    statements: &[datafusion::sql::sqlparser::ast::Statement],
+) -> Vec<(Vec<String>, String)> {
+    use datafusion::sql::sqlparser::ast::{SetExpr, Statement};
+    for statement in statements {
+        let Statement::Query(query) = statement else {
+            return Vec::new();
+        };
+        if query.with.is_some() {
+            return Vec::new();
+        }
+        let SetExpr::Select(select) = query.body.as_ref() else {
+            return Vec::new();
+        };
+        if !select.from.is_empty() {
+            return Vec::new();
+        }
+    }
+    let mut names = Vec::new();
+    let mut nested = false;
+    for statement in statements {
+        let _: ControlFlow<()> = visit_expressions(statement, |node| {
+            collect_sql_ident(node, &mut names, &mut nested);
+            ControlFlow::<()>::Continue(())
+        });
+    }
+    if nested { Vec::new() } else { names }
+}
+
+fn sql_expr_names(parsed: &SqlExpr) -> Vec<(Vec<String>, String)> {
+    let mut names = Vec::new();
+    let mut nested = false;
+    let _: ControlFlow<()> = visit_expressions(parsed, |node| {
+        collect_sql_ident(node, &mut names, &mut nested);
+        ControlFlow::<()>::Continue(())
+    });
+    if nested { Vec::new() } else { names }
+}
+
+fn collect_sql_ident(node: &SqlExpr, names: &mut Vec<(Vec<String>, String)>, nested: &mut bool) {
+    match node {
+        SqlExpr::Identifier(ident) => {
+            names.push((Vec::new(), ident.value.clone()));
+        }
+        SqlExpr::Subquery(_) | SqlExpr::Exists { .. } | SqlExpr::InSubquery { .. } => {
+            *nested = true;
+        }
+        _ => (),
     }
 }
 

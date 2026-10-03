@@ -510,6 +510,15 @@ wrapped optimizer rule) and declares this directory.
   `join_output_sources` maps each join output position to its side feeds,
   pairing using keys; `qualifier_star_positions` lists the positions under
   one qualifier with their held parts. Pins: `../tests/attr_id_s3e.rs`.
+  **ATTR-ID-1 SJ-5 F1 (2026-10-03):** `free_expr_names` collects the free
+  column leaves of an expression (qualified or plain, never inside a
+  subquery); `refuse_free_names` resolves each against the output displays
+  and reports the first name with two ids, unless two hit engines match and
+  the engine raises itself. `case_bind.rs` gains `free_sql_names`, the same
+  rule over SQL text through the Databricks-dialect parser (unqualified
+  idents only; subqueries, CTEs and a top-level FROM decline to scan).
+  Pins: the `sort_names` unit module, `../tests/case_bind.rs`,
+  `python/repark/tests/test_attr_id_1_sj5.py`.
   pins: attr-id-1/C-039
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /

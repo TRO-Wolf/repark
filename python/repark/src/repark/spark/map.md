@@ -382,6 +382,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **ATTR-ID-1 SJ-2 (2026-10-02):** `_column_frame_id(column)` reads the birth
   frame's node id (`None` without a birth frame); it is the one helper every
   frame-id read uses. Pins: `python/repark/tests/test_attr_id_1_sj2.py`.
+  **ATTR-ID-1 SJ-5 F1 (2026-10-03):** `_rebind_stable_name_column` runs the
+  native free-name check on compounds that reach it unbound (skipped for
+  token-bearing parent refs); `_rebind_free_names` runs the qualified-only
+  check on the filter path; `_quote_filter_sql_identifiers` checks the SQL
+  text first. The four error builders move to `column_errors.py` (pure move
+  at the ceiling). Pins: `python/repark/tests/test_attr_id_1_sj5.py`.
 - `column_sort.py` — **ATTR-ID-1 S4 follow-up (2026-10-02):** the sort-marker
   family, split out of `column.py` at the size ceiling (pure move; `Column`
   binds the six `asc`/`desc` spellings). `_with_sort_order` re-marks the column
@@ -406,6 +412,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   display as `__D<UPPERHEX-OF-UTF8>__` after the qualifiers, so a token whose
   birth frame is an unbound dead temp still names its attribute for the native
   preparer's `names` map. Pins: `python/repark/tests/test_attr_id_1_sj3.py`.
+- `column_errors.py` — **ATTR-ID-1 SJ-5 F1 (2026-10-03):** the four
+  unresolved/ambiguous error builders, moved here from `column_fields.py`
+  unchanged (pure move at the size ceiling, re-imported there).
 - `filter_quote.py` — **ATTR-ID-1 S3b H-1 (2026-10-01):** the filter-SQL
   identifier quoter, split out of `column_fields.py` at the size ceiling (pure
   move; the entry stays there). `_FILTER_TOKEN_PATTERN`,
@@ -437,6 +446,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `core.py` at its ceiling) rewrites qualifier-headed dotted tokens to the
   engine field, aliasing a lone token to its written name; the filter
   binder takes the facade payload. pins: attr-id-1/C-039
+  **ATTR-ID-1 SJ-5 F1 (2026-10-03):** `_refuse_ambiguous_free_names` calls the
+  native of the same name (one rule for SQL text, expressions, and name
+  lists); `_quote_select_expr_dotted` checks each item first.
 - `subset_resolve.py` — **ATTR-ID-1 S3d (2026-10-01):** the
   `drop`/`dropDuplicates`/`fillna`/`dropna` name-binding home. `_bindings`
   reads the stamped ids, native engines, and facade displays (or `None` for a

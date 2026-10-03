@@ -238,3 +238,89 @@ def test_sj5_xje_sel(spark: ReparkSession) -> None:
         ["v", "w"],
         [[10, 100], [10, 200], [20, 100], [20, 200], [30, 100], [30, 200]],
     )
+
+
+def _refuses_ambiguous_params(thunk: Callable[[], Any], name: str, references: str) -> None:
+    with pytest.raises(AnalysisException) as refused:
+        thunk().collect()
+    assert refused.value.getCondition() == "AMBIGUOUS_REFERENCE"
+    assert refused.value.getMessageParameters() == {"name": name, "referenceNames": references}
+    assert str(refused.value) == (
+        f"[AMBIGUOUS_REFERENCE] Reference {name} is ambiguous, could be: {references}."
+    )
+
+
+def _cross_v(spark: ReparkSession) -> Any:
+    d = spark.createDataFrame([(1, 10), (2, 20), (3, 30)], ["id", "v"])
+    return d.select("id", "v").crossJoin(d.select(F.col("v")).filter(F.col("v") > 15))
+
+
+def _inner_v(spark: ReparkSession) -> Any:
+    d = spark.createDataFrame([(1, 10), (2, 20), (3, 30)], ["id", "v"])
+    left = d.select("id", "v")
+    right = d.select(F.col("v")).filter(F.col("v") > 15)
+    return left.join(right, left.v == right.v)
+
+
+def test_sj5_f1_bq_cross(spark: ReparkSession) -> None:
+    """Backquoted filter over a cross join refuses (``r5p6.*|j_cross|*|bq``)."""
+    frame = _cross_v(spark).distinct()
+    _refuses_ambiguous_params(lambda: frame.filter("`v` > 15"), "`v`", "[`v`, `v`]")
+
+
+def test_sj5_f1_bq_inner(spark: ReparkSession) -> None:
+    """Backquoted filter over an inner join refuses (F1 inner twin)."""
+    frame = _inner_v(spark)
+    _refuses_ambiguous_params(lambda: frame.filter("`v` > 15"), "`v`", "[`v`, `v`]")
+
+
+def test_sj5_f1_sexpr_cross(spark: ReparkSession) -> None:
+    """SelectExpr over a cross join refuses (``r5p7.*|j_cross|star|sexpr``)."""
+    frame = _cross_v(spark).select("*")
+    _refuses_ambiguous_params(lambda: frame.selectExpr("v + 1 AS z"), "`v`", "[`v`, `v`]")
+
+
+def test_sj5_f1_sexpr_inner(spark: ReparkSession) -> None:
+    """SelectExpr over an inner join refuses (F1 inner twin)."""
+    frame = _inner_v(spark)
+    _refuses_ambiguous_params(lambda: frame.selectExpr("v + 1 AS z"), "`v`", "[`v`, `v`]")
+
+
+def test_sj5_f1_wcz_cross(spark: ReparkSession) -> None:
+    """WithColumn compound over a cross join refuses (``r5p6.*|j_cross|*|wcz``)."""
+    frame = _cross_v(spark).distinct()
+    _refuses_ambiguous_params(lambda: frame.withColumn("z", F.col("v") + 1), "`v`", "[`v`, `v`]")
+
+
+def test_sj5_f1_wcz_inner(spark: ReparkSession) -> None:
+    """WithColumn compound over an inner join refuses (F1 inner twin)."""
+    frame = _inner_v(spark)
+    _refuses_ambiguous_params(lambda: frame.withColumn("z", F.col("v") + 1), "`v`", "[`v`, `v`]")
+
+
+def test_sj5_f1_summ_cross(spark: ReparkSession) -> None:
+    """Summary over a cross join refuses (``r5p6.*|j_cross|*|summ``)."""
+    frame = _cross_v(spark).distinct()
+    _refuses_ambiguous_params(lambda: frame.summary("count"), "`v`", "[`v`, `v`]")
+
+
+def test_sj5_f1_summ_inner(spark: ReparkSession) -> None:
+    """Summary over an inner join refuses (F1 inner twin)."""
+    frame = _inner_v(spark)
+    _refuses_ambiguous_params(lambda: frame.summary("count"), "`v`", "[`v`, `v`]")
+
+
+def test_sj5_f1_qcol_cross(spark: ReparkSession) -> None:
+    """Qualified filter over an aliased cross join refuses (``r5p7.*|j_cross|wc_alias|q_col``)."""
+    frame = _cross_v(spark).withColumn("w", F.lit(1)).alias("q")
+    _refuses_ambiguous_params(
+        lambda: frame.filter(F.col("q.v") > 15), "`q`.`v`", "[`q`.`v`, `q`.`v`]"
+    )
+
+
+def test_sj5_f1_qcol_inner(spark: ReparkSession) -> None:
+    """Qualified filter over an aliased inner join refuses (F1 inner twin)."""
+    frame = _inner_v(spark).withColumn("w", F.lit(1)).alias("q")
+    _refuses_ambiguous_params(
+        lambda: frame.filter(F.col("q.v") > 15), "`q`.`v`", "[`q`.`v`, `q`.`v`]"
+    )

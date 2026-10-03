@@ -70,6 +70,9 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   unchanged out of the inline `case_bind.rs` test module (the file sat at its
   ceiling); imports switch from `super::` to `crate::frame_names`, with
   `bind_names` through its widened `pub(crate)` path. pins: attr-id-1/C-039
+  **ATTR-ID-1 SJ-5 F1 (2026-10-03):** three `free_sql_names` pins (verbatim
+  spellings, alias/function/qualified skips, nested-scope and guard
+  declines).
 - `attr_id_s3b.rs` — **ATTR-ID-1 S3b (2026-10-01):** the filter/sort binder
   pins, 15 tests on tagged `MemTable` frames (`alias_with_metadata` ids, no
   facade). `sort_shape` over a union, a join, an aggregate, a select through a
