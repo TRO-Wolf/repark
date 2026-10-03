@@ -126,7 +126,7 @@ def test_sj4_a_inner_group_f(spark: ReparkSession) -> None:
     _refuses_1182(lambda: env.d.join(env.f, env.d.id == env.f.id).groupBy(env.f.v).count(), ["v"])
 
 
-@pytest.mark.xfail(strict=True, reason="eager groupBy reports keys only; ruling picks the model")
+@pytest.mark.xfail(strict=True, reason="SJ-5: eager groupBy reports keys only")
 def test_sj4_a_inner_agg_f(spark: ReparkSession) -> None:
     """Group key plus aggregate expression refuse together (``A_inner_agg_f``)."""
     env = _env(spark)
@@ -292,7 +292,7 @@ def test_sj4_i_checkpoint_sel_c(spark: ReparkSession) -> None:
     )
 
 
-@pytest.mark.xfail(strict=True, reason="SJ-5: checkpoint object separation for birth-side split")
+@pytest.mark.xfail(strict=True, reason="LOCAL-CHECKPOINT-NEW-FRAME-1: localCheckpoint returns the same frame")
 def test_sj4_i_checkpoint_sel_d(spark: ReparkSession) -> None:
     """Checkpoint-child join select on the parent answers (``I_checkpoint_sel_d``)."""
     env = _env(spark)
@@ -737,14 +737,14 @@ def test_sj4_h_off_xj_sel_parent(spark: ReparkSession) -> None:
     _refuses_ambiguous(lambda: env.d.crossJoin(env.d).select(env.d.v))
 
 
-@pytest.mark.xfail(strict=True, reason="V-3 missing-reference resolution lands in SJ-5")
+@pytest.mark.xfail(strict=True, reason="MISSING-REF-RESOLVE-1: V-3 missing-reference resolution")
 def test_sj4_v1_replaced_parent_filter(spark: ReparkSession) -> None:
     """Filter past a replaced column answers on the parent attribute (V-1)."""
     env = _env(spark)
     _answers(lambda: env.d.withColumn("v", -env.d.v).filter(env.d.v > 15), [[2, -20], [3, -30]])
 
 
-@pytest.mark.xfail(strict=True, reason="V-3 missing-reference resolution lands in SJ-5")
+@pytest.mark.xfail(strict=True, reason="MISSING-REF-RESOLVE-1: V-3 missing-reference resolution")
 def test_sj4_v1_swapped_alias_parent_select(spark: ReparkSession) -> None:
     """Select past swapped aliases misses the parent attribute (V-1)."""
     env = _env(spark)

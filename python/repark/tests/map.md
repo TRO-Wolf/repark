@@ -9095,8 +9095,11 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   shapes (`sj4_range_f`, `sj4_cube_f`, `sj4_rollup_f`, `sj4_dfagg_f`), the
   renewed-absent wiring evidence (`sj4_k_*_on` prefer 1182, `sj4_k_drop_*`
   miss without the appear clause), and strict xfails for `A_inner_agg_f`
-  (eager groupBy reports keys only; ruling picks the model) and the two V-1
-  shapes (Spark answers/misses via V-3 resolution, landing in SJ-5). No module
+  (eager groupBy reports keys only; SJ-5 folds the aggregate names in) and the
+  two V-1 shapes (Spark answers/misses via V-3 resolution, card
+  MISSING-REF-RESOLVE-1), plus `I_checkpoint_sel_d` (Spark answers, RePark
+  refuses because `localCheckpoint` returns the same frame; card
+  LOCAL-CHECKPOINT-NEW-FRAME-1, ruled R-SJ4-1 on 2026-10-02). No module
   docstring: the lane's no-comments ruling covers the new file; the contract
   lives here.
 - [test_attr_id_1_v456.py](test_attr_id_1_v456.py) — **ATTR-ID-1 V-5 (2026-10-02):**
