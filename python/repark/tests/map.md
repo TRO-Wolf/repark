@@ -3660,6 +3660,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   not refused; the measured cells are in `test_ice_replace_columns_1.py`); residual refuse
   ADD NOT NULL.
   FQ `mem.ns.table` only (no bare-name dependency).
+- `test_ansi_negative_zero_divisor_1.py` — **TA-SERIES-S0b (2026-10-04):** ANSI division by
+  `-0.0` raises `DIVIDE_BY_ZERO`, as Spark 4.1.2 does: scalar `1.0D / -0.0D`, column-valued
+  `-0.0` (SQL VALUES and DataFrame doors), and NaN still answers `nan`. Recorded Spark
+  cells from `results_spark_order.json`; no live Spark needed.
+  pins: ta-series-s0b/P-S0b-1
 - `test_ml_feature_oracle.py` — **U2:** NaN-mix SQL fixtures CAST float literals to DOUBLE;
   CountVectorizer `1.0` SQL now yields decimal128 vectors (values still sum). R-ML-FEATURE (M2) + Q1 R-ML-QUANTILE: VectorAssembler, StringIndexer/IndexToString,
   OHE sparse, Standard/MinMax/MaxAbs scalers, Bucketizer, Imputer mean/mode/**median**,
