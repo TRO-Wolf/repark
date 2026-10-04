@@ -157,7 +157,7 @@ COVERAGE_ATTESTATION:
     - id: AT-9
       status: ATTACKED
       evidence: The release-note line, the crate and udf maps and the example state the new semantics, including that an interior NaN still propagates and null_lookback is positional.
-      artifacts: [task/roadmap/mid-term/v1-5-2-release-notes-draft-2026-10-03.md]
+      artifacts: [task/roadmap/mid-term/v1-5-2-release-notes-2026-10-03.md]
     - id: AT-10
       status: ATTACKED
       evidence: Red-first inline and facade runs, both mutation reds, the reverts and the green reruns are recorded in sections 1 and 3.
