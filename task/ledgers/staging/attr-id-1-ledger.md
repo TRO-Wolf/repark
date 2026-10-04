@@ -1091,3 +1091,9 @@ O-1).** Over a SQL-defined temp view (`CREATE OR REPLACE TEMP VIEW sv AS SELECT 
   (`attr-id-1/stamp2-o1/verify/leak-base-rt.txt` and `leak-head-rt.txt` for the write,
   `leak-scope-base.txt` and `leak-scope-head.txt` for the count).
 
+
+**O-1 post-fold gate record (2026-10-04, append-only).** Frozen tree `e0eefd30` (the verifier V-1 fold: `strip_schema_ids` on the export schema). Three interleaved runs on a quiet box, against the three `5e4a0084` re-baseline replays:
+- Work-equal like ratio: 1.1240, 1.1244, 1.1276 over 25999 cells. Median **1.1244**, spread 0.0035 (bar ≤ 1.1656; re-baseline 1.2256).
+- C-012 wall: head 643.94, 644.48, 644.32 s, median **644.32 s** (bar ≤ 644.9 s; re-baseline 684.9 s). Main 507.81, 507.98, 506.75 s; head/main 1.2681 / 1.2687 / 1.2715. The box ran about 2% slower than at the re-baseline (main 498.2 s then).
+- fn-only ratio 1.2111 / 1.2150 / 1.2185. Outcome-class changes 0, value changes 0, in all three runs and the correctness replay (7 nondet cells skipped).
+- Program gate (card PERF-ATTR-STAMP-2, D-6): work-equal ≤ 1.10x is not yet met; it stands at 1.1244 after O-1.
