@@ -23,7 +23,7 @@ fn finish_session(py: Python<'_>, builder: ReparkSessionBuilder) -> PyResult<PyR
     let session = builder.build().map_err(to_py_err)?;
     repark_functions::install_shared_analyzer_rules(session.context());
     let runtime = shared_runtime()?;
-    py.detach(|| block_on(&runtime, session.register_configured_catalogs()))
+    py.detach(|| runtime.block_on(session.register_configured_catalogs()))
         .map_err(to_py_err)?;
     session.register_configured_sources().map_err(to_py_err)?;
     Ok(PyReparkSession {
@@ -209,7 +209,7 @@ impl PyReparkSession {
     pub fn read_parquet(&self, py: Python<'_>, path: &str) -> PyResult<PyDataFrame> {
         fenced_span!("py.read", "PyReparkSession.read_parquet", {
             let df = py
-                .detach(|| block_on(&self.runtime, self.session.read_parquet(path)))
+                .detach(|| self.runtime.block_on(self.session.read_parquet(path)))
                 .map_err(to_py_err)?;
             Ok(PyDataFrame::new(df, Arc::clone(&self.runtime)))
         })
@@ -228,7 +228,7 @@ impl PyReparkSession {
         fenced_span!("py.read", "PyReparkSession.read_csv", {
             let opts = options.unwrap_or_default();
             let df = py
-                .detach(|| block_on(&self.runtime, self.session.read_csv(path, &opts)))
+                .detach(|| self.runtime.block_on(self.session.read_csv(path, &opts)))
                 .map_err(to_py_err)?;
             Ok(PyDataFrame::new(df, Arc::clone(&self.runtime)))
         })
@@ -247,7 +247,7 @@ impl PyReparkSession {
         fenced_span!("py.read", "PyReparkSession.read_json", {
             let opts = options.unwrap_or_default();
             let df = py
-                .detach(|| block_on(&self.runtime, self.session.read_json(path, &opts)))
+                .detach(|| self.runtime.block_on(self.session.read_json(path, &opts)))
                 .map_err(to_py_err)?;
             Ok(PyDataFrame::new(df, Arc::clone(&self.runtime)))
         })
@@ -497,7 +497,7 @@ impl PyReparkSession {
     /// Returns `RuntimeError` for a two-part name, an unregistered catalog, or a probe failure.
     pub fn table_exists(&self, py: Python<'_>, name: &str) -> PyResult<bool> {
         fenced_span!("py.catalog", "PyReparkSession.table_exists", {
-            py.detach(|| block_on(&self.runtime, self.session.table_exists(name)))
+            py.detach(|| self.runtime.block_on(self.session.table_exists(name)))
                 .map_err(to_py_err)
         })
     }
@@ -538,7 +538,7 @@ impl PyReparkSession {
         fenced_span!("py.catalog", "PyReparkSession.register_memory_catalog", {
             py.detach(|| {
                 let registered = self.session.register_memory_catalog(name, warehouse);
-                block_on(&self.runtime, registered)
+                self.runtime.block_on(registered)
             })
             .map_err(to_py_err)
         })
@@ -593,7 +593,7 @@ impl PyReparkSession {
         fenced_span!("py.catalog", "PyReparkSession.list_iceberg_table_names", {
             py.detach(|| {
                 let listed = self.session.list_iceberg_table_names(catalog, namespace);
-                block_on(&self.runtime, listed)
+                self.runtime.block_on(listed)
             })
             .map_err(to_py_err)
         })
@@ -635,7 +635,7 @@ impl PyReparkSession {
         fenced_span!("py.catalog", "PyReparkSession.refresh_catalog_provider", {
             py.detach(|| {
                 let refreshed = self.session.refresh_catalog_provider(catalog);
-                block_on(&self.runtime, refreshed)
+                self.runtime.block_on(refreshed)
             })
             .map_err(to_py_err)
         })
@@ -660,7 +660,7 @@ impl PyReparkSession {
                     table,
                     warehouse_location,
                 );
-                block_on(&self.runtime, created)
+                self.runtime.block_on(created)
             })
             .map_err(to_py_err)
         })
@@ -681,7 +681,7 @@ impl PyReparkSession {
                 let dropped = self
                     .session
                     .testing_oob_drop_table(catalog_name, namespace, table);
-                block_on(&self.runtime, dropped)
+                self.runtime.block_on(dropped)
             })
             .map_err(to_py_err)
         })
@@ -703,7 +703,7 @@ impl PyReparkSession {
                 let made = self
                     .session
                     .testing_create_ref(table_name, kind, ref_name, snapshot_id);
-                block_on(&self.runtime, made)
+                self.runtime.block_on(made)
             })
             .map_err(to_py_err)
         })
@@ -720,7 +720,7 @@ impl PyReparkSession {
         fenced!("PyReparkSession.testing_list_snapshots", {
             py.detach(|| {
                 let listed = self.session.testing_list_snapshots(table_name);
-                block_on(&self.runtime, listed)
+                self.runtime.block_on(listed)
             })
             .map_err(to_py_err)
         })
@@ -737,7 +737,7 @@ impl PyReparkSession {
         fenced_span!("py.catalog", "PyReparkSession.register_late_catalogs", {
             py.detach(|| {
                 let registered = self.session.register_late_configured_catalogs(&config);
-                block_on(&self.runtime, registered)
+                self.runtime.block_on(registered)
             })
             .map_err(to_py_err)
         })
@@ -764,7 +764,7 @@ impl PyReparkSession {
                 let created = self
                     .session
                     .create_namespace(catalog, namespace, properties);
-                block_on(&self.runtime, created)
+                self.runtime.block_on(created)
             })
             .map_err(to_py_err)
         })

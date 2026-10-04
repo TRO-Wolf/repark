@@ -30,16 +30,13 @@ pub fn read_text(
     fenced_span!("py.read", "read_text", {
         let dataframe = Python::attach(|py| {
             py.detach(|| {
-                block_on(
-                    &session.runtime,
-                    session.session.read_text(
-                        path,
-                        wholetext,
-                        line_sep.as_deref(),
-                        user_schema,
-                        base_path.as_deref(),
-                    ),
-                )
+                session.runtime.block_on(session.session.read_text(
+                    path,
+                    wholetext,
+                    line_sep.as_deref(),
+                    user_schema,
+                    base_path.as_deref(),
+                ))
             })
         })
         .map_err(to_py_err)?;
