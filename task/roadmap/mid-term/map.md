@@ -585,6 +585,18 @@ declines it (a dated ruling in the intake, then the archive).
   (2026-10-03, owner ruling, v1.5.2):** `ta.ema` over `ta.trange` answers all-NaN because a
   leading lookback NaN propagates through C-faithful kernels; polars_talib skips the leading
   run (measured); wrapper-level fix, order at `task/wo/ta-chain-1-leading-prefix.md`.
+- [variance-alias-1-card-2026-10-03.md](variance-alias-1-card-2026-10-03.md) — **card
+  VARIANCE-ALIAS-1 (2026-10-03, owner delegate, post-1.5.2):** SQL `variance(x)` is
+  `UNRESOLVED_ROUTINE` on RePark; Spark and `var_samp` answer double `2.333333333333333`.
+  The DataFrame door already answers. Predates the ATTR-ID-1 stack.
+- [coalesce-nan-double-1-card-2026-10-03.md](coalesce-nan-double-1-card-2026-10-03.md) — **card
+  COALESCE-NAN-DOUBLE-1 (2026-10-03, owner delegate, post-1.5.2):** `coalesce` of a DOUBLE NaN
+  with decimal literal `-1.0` overflows `Decimal128(30, 15)` on RePark; Spark returns double
+  `NaN` and `1.5`. Predates the ATTR-ID-1 stack.
+- [qualifier-leak-h-1-card-2026-10-03.md](qualifier-leak-h-1-card-2026-10-03.md) — **card
+  QUALIFIER-LEAK-H-1 (2026-10-03, owner delegate, post-1.5.2):** cell
+  `r3.F_cp_bare_getU_join_parent` raises `AMBIGUOUS_REFERENCE` naming `_repark_jl_<hex>`.`V`;
+  Spark returns the joined rows. Predates the ATTR-ID-1 stack.
 - [zizmor-gate-1-card-2026-10-03.md](zizmor-gate-1-card-2026-10-03.md) — **card ZIZMOR-GATE-1
   (2026-10-03, clerk, after CI-1):** `--format sarif` exits 0 while findings exist (plain
   mode exits 14); the ci.yml map guard passes `github.base_ref` via `env:`, and zizmor.yml
