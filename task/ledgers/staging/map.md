@@ -2021,3 +2021,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   door with the same assertions (C-013).
   CI round expr (2026-09-30): `F.expr` pre-renders display-shaped text so
   composed embeddings keep base's grouping (C-014).
+- [grown-stack-gate-1-ledger.md](grown-stack-gate-1-ledger.md) —
+  **GROWN-STACK-GATE-1 (2026-10-04), in flight:** the 34 unconditional
+  `deep_stack::block_on` sites take the frame doors' verdicts — 24 no-plan
+  sites drive plain (C-001), 9 frame sites drive sized segments (C-002:
+  P1/P2/P4/P6 equal main), ML polls reuse the opener's segment (C-003),
+  writer SQL drives on the text gate OR the deep-view mark (C-004: P5
+  answers, P3 is the regression pin). Five mutations red, H7 episode and
+  the Q1/Q2/Q3 rulings filed; micro (C-005) and like-set (C-006) timings
+  run on the orchestrator's quiet box.
+  `risk_tier: standard`. Branch `fix/grown-stack-gate-1`.
+  pins: grown-stack-gate-1/C-001, C-002, C-003, C-004
