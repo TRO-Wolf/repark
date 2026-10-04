@@ -344,7 +344,7 @@ impl PyReparkSession {
         frame: &PyDataFrame,
     ) -> PyResult<()> {
         fenced_span!("py.action", "PyReparkSession.materialize_as_temp_view", {
-            let frame = frame.inner().clone();
+            let frame = frame.executable()?;
             py.detach(|| {
                 self.runtime
                     .block_on(self.session.materialize_dataframe_as_temp_view(name, frame))
@@ -364,7 +364,7 @@ impl PyReparkSession {
         budgets: (Option<u64>, Option<u64>),
     ) -> PyResult<()> {
         fenced_span!("py.action", "PyReparkSession.materialize_as_cache_view", {
-            let frame = frame.inner().clone();
+            let frame = frame.executable()?;
             py.detach(|| {
                 self.runtime.block_on(
                     self.session

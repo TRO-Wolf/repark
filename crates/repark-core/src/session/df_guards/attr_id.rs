@@ -6,7 +6,7 @@ use std::sync::{Arc, LazyLock};
 use datafusion::arrow::array::RecordBatch;
 use datafusion::arrow::datatypes::{Field, Schema, SchemaRef};
 use datafusion::common::metadata::FieldMetadata;
-use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
+use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
 use datafusion::common::{
     Column, DFSchema, DFSchemaRef, Result, ScalarValue, TableReference, internal_datafusion_err,
     internal_err,
@@ -377,6 +377,11 @@ impl OptimizerRule for StripAttributeIds {
     ) -> Result<Transformed<LogicalPlan>> {
         plan.transform_up_with_subqueries(drop_node_ids)
     }
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn strip_for_execution(plan: LogicalPlan) -> Result<LogicalPlan> {
+    plan.transform_up_with_subqueries(drop_node_ids).data()
 }
 
 fn drop_node_ids(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {

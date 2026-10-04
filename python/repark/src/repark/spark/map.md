@@ -255,7 +255,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `logical_schema_fields` on a fresh handle per bind, which re-ran the analyzer every time:
   22 of 82 s in a cProfile of the replay's `r3` corpus.
   pins: attr-id-1/C-016
-  **ATTR-ID-1 S2 exports (2026-09-30):** `_strip_attribute_id_metadata(table)` drops
+  **PERF-ATTR-STAMP-2 O-1 (2026-10-03):** `_strip_attribute_id_metadata` is deleted: the native export analyzes and executes the per-handle id-free twin, so no exported field carries `repark.attr` (pin `../../../tests/test_perf_attr_stamp_2_o1.py`). pins: attr-id-1/C-053
+  **ATTR-ID-1 S2 exports (2026-09-30, superseded by O-1):** `_strip_attribute_id_metadata(table)` drops
   the `repark.attr` key from every top-level Arrow field (Tables and RecordBatches;
   zero-copy when absent), called from `DataFrame._apply_export_display_names`.
   pins: attr-id-1/C-010

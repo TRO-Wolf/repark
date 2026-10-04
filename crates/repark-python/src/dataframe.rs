@@ -75,6 +75,7 @@ pub struct PyDataFrame {
     pub(crate) runtime: Arc<Runtime>,
     /// Cached analyzed Arrow schema.
     analyzed_schema: OnceLock<SchemaRef>,
+    executable: OnceLock<DataFrame>,
 }
 
 impl PyDataFrame {
@@ -89,7 +90,20 @@ impl PyDataFrame {
             df,
             runtime,
             analyzed_schema: OnceLock::new(),
+            executable: OnceLock::new(),
         }
+    }
+
+    pub(crate) fn executable(&self) -> PyResult<DataFrame> {
+        if let Some(df) = self.executable.get() {
+            return Ok(df.clone());
+        }
+        let (state, plan) = self.df.clone().into_parts();
+        let stripped =
+            repark_core::frame_names::strip_for_execution(plan).map_err(datafusion_to_py_err)?;
+        let df = DataFrame::new(state, stripped);
+        let _ = self.executable.set(df.clone());
+        Ok(self.executable.get().cloned().unwrap_or(df))
     }
 
     /// The held plan for session operations and ML streams.
@@ -107,7 +121,7 @@ impl PyDataFrame {
         if let Some(schema) = self.analyzed_schema.get() {
             return Ok(Arc::clone(schema));
         }
-        let (state, plan) = self.df.clone().into_parts();
+        let (state, plan) = self.executable()?.into_parts();
         let analyzed =
             repark_functions::analyze_eagerly(&state, plan).map_err(datafusion_to_py_err)?;
         let schema: SchemaRef = repark_core::strip_tighten_export_metadata(Arc::new(
@@ -145,7 +159,8 @@ impl PyDataFrame {
     /// Returns `RuntimeError` if the engine fails to execute the count.
     pub fn count(&self, py: Python<'_>) -> PyResult<usize> {
         fenced_span!("py.action", "PyDataFrame.count", {
-            py.detach(|| self.runtime.block_on(self.df.clone().count()))
+            let twin = self.executable()?;
+            py.detach(|| self.runtime.block_on(twin.count()))
                 .map_err(datafusion_to_py_err)
         })
     }
@@ -239,8 +254,7 @@ impl PyDataFrame {
     pub fn show(&self, py: Python<'_>, n: usize) -> PyResult<String> {
         fenced_span!("py.action", "PyDataFrame.show", {
             let limited = self
-                .df
-                .clone()
+                .executable()?
                 .limit(0, Some(n))
                 .map_err(datafusion_to_py_err)?;
             let batches = py.detach(|| {
@@ -271,8 +285,9 @@ impl PyDataFrame {
             let schema: SchemaRef = self.analyzed_arrow_schema_native()?;
             let schema = crate::arrow_export::coerced_export_schema(&schema);
             // Open a lazy batch stream — the physical plan build runs with the GIL released.
+            let twin = self.executable()?;
             let stream = py
-                .detach(|| self.runtime.block_on(self.df.clone().execute_stream()))
+                .detach(|| self.runtime.block_on(twin.execute_stream()))
                 .map_err(datafusion_to_py_err)?;
             let reader: Box<dyn RecordBatchReader + Send> = Box::new(
                 StreamingBatchReader::new(Arc::clone(&self.runtime), stream, schema)

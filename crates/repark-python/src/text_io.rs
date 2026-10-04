@@ -48,10 +48,11 @@ pub fn read_text(
 pub fn write_text_frame(frame: &PyDataFrame, path: &str, line_sep: Option<String>) -> PyResult<()> {
     fenced_span!("py.write", "write_text_frame", {
         let separator = line_sep.unwrap_or_else(|| "\n".to_string());
+        let twin = frame.executable()?;
         Python::attach(|py| {
             py.detach(|| {
                 frame.runtime.block_on(repark_core::write_text_frame(
-                    frame.inner(),
+                    &twin,
                     Path::new(path),
                     separator.as_str(),
                 ))
@@ -73,10 +74,11 @@ pub fn write_text_partitioned(
 ) -> PyResult<()> {
     fenced_span!("py.write", "write_text_partitioned", {
         let separator = line_sep.unwrap_or_else(|| "\n".to_string());
+        let twin = frame.executable()?;
         Python::attach(|py| {
             py.detach(|| {
                 frame.runtime.block_on(repark_core::write_text_partitioned(
-                    frame.inner(),
+                    &twin,
                     Path::new(path),
                     separator.as_str(),
                     &partition_columns,

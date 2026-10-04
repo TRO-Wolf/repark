@@ -21,6 +21,7 @@ use super::attr_id::same_relation;
 
 pub use super::attr_id::{
     AttrId, Resolution, alias_with_fresh_id, attribute_ids, copy_attribute_ids, stamp, strip,
+    strip_for_execution,
 };
 pub use super::attr_id::{
     join_collisions, plan_is_relation, plan_is_stamped, remint_shared, remint_with_map, resolve,

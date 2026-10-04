@@ -163,6 +163,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   line (line-neutral at 3973). `schema`/`printSchema`/`show`/`_repr` build from
   name/type/nullable triples and carry no field metadata.
   pins: attr-id-1/C-010
+  PERF-ATTR-STAMP-2 O-1 (2026-10-03): the funnel no longer strips `repark.attr`; it
+  keeps only the tighten strip, because the native export now runs the per-handle id-free
+  twin and its schema carries no id (`tests/test_perf_attr_stamp_2_o1.py`).
+  pins: attr-id-1/C-053
   ATTR-ID-1 S3a (2026-09-30): `__getitem__` and `__getattr__` route strings through
   `column_fields._bind_resolved_name`, and `_column_of` / `_rebind_stable_name_column`
   become one-line delegates to `column_fields` (bodies in the `column_fields.py` row

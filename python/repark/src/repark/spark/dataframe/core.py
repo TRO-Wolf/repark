@@ -3093,7 +3093,7 @@ class DataFrame:
 
     def _apply_export_display_names(self, table: Any) -> Any:
         """Apply display names at the Arrow boundary while preserving duplicate positions."""
-        table = _column_fields._strip_attribute_id_metadata(_strip_internal_tighten_metadata(table))
+        table = _strip_internal_tighten_metadata(table)
         if self._display_names is None or self._engine_names is None:
             return table
         display = list(self._display_names)

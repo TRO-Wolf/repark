@@ -12,7 +12,7 @@ use datafusion::functions_window::expr_fn::{lag, row_number};
 use datafusion::logical_expr::{LogicalPlan, cast, col, lit, try_cast, when};
 
 use crate::ReparkSession;
-use crate::frame_names::{AttrId, stamp};
+use crate::frame_names::{AttrId, stamp, strip_for_execution};
 
 const KEY: &str = "repark.attr";
 
@@ -285,4 +285,31 @@ fn a_stamped_frame_optimizes_to_the_plan_of_its_unstamped_twin() {
         optimized(stamped(grouped(clean_source(&session)))),
         optimized(grouped(source))
     );
+}
+
+#[test]
+fn a_stamped_plan_reaches_the_optimizer_backstop_and_its_collapsed_twin_plans_the_same() {
+    let session = ReparkSession::new().unwrap();
+    let frames = [
+        clean_source(&session),
+        failed_casts(clean_source(&session)),
+        stamped(
+            clean_source(&session)
+                .aggregate(vec![col("id")], vec![max(col("v")).alias("m")])
+                .unwrap(),
+        ),
+    ];
+    for frame in frames {
+        assert!(plan_carries_id(frame.logical_plan()));
+        let backstop = frame.clone().into_optimized_plan().unwrap();
+        assert!(!plan_carries_id(&backstop), "{backstop}");
+        let (state, plan) = frame.into_parts();
+        let twin = strip_for_execution(plan).unwrap();
+        assert!(!plan_carries_id(&twin), "{twin}");
+        let collapsed = DataFrame::new(state, twin).into_optimized_plan().unwrap();
+        assert_eq!(
+            collapsed.display_indent_schema().to_string(),
+            backstop.display_indent_schema().to_string()
+        );
+    }
 }

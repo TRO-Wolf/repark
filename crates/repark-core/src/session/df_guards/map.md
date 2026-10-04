@@ -74,6 +74,20 @@ wrapped optimizer rule) and declares this directory.
   (`repark_functions::analyze_eagerly`) and keeps the analyzed plan as the frame, whose ids the
   facade's join shape needs. Name resolution reads `DataFrame::schema()`, which the optimizer
   never touches. Pins: `../tests/attr_id_seam.rs`. pins: attr-id-1/C-015, C-016
+  **PERF-ATTR-STAMP-2 O-1 (2026-10-03, ruling R-O1-1, option A):** `strip_for_execution(plan)`
+  is the rule's own collapsing walk (`drop_node_ids`, bottom-up, subqueries included) as a
+  plain function, re-exported through `frame_names`. The binding's per-handle twin
+  (`PyDataFrame::executable`) calls it, so the native doors that execute analyze and optimize
+  an id-free plan. It is not the non-collapsing `strip`, which keeps `col AS col` wrappers in
+  the optimized plan. `StripAttributeIds` stays the first optimizer rule as the backstop for
+  every other path (the SQL door, view registration, the join door's planning), and is still
+  never an analyzer rule: the O-1 sketch's analyzer placement (E1) was measured to strip the
+  eager SQL door's frames and break every condition join and `crossJoin` with the frame-lineage
+  internal error (`/tmp/oc-worker/direct/wo/attr-id-1/stamp2-o1/probes/`). Pins:
+  `../tests/attr_id_seam.rs`
+  (`a_stamped_plan_reaches_the_optimizer_backstop_and_its_collapsed_twin_plans_the_same`,
+  `every_session_strips_ids_first_in_its_optimizer_and_never_in_its_analyzer`,
+  `an_analyzed_plan_keeps_its_ids_for_the_eager_sql_door`). pins: attr-id-1/C-052
   **ATTR-ID-1 S1b (2026-09-30):** identity is decided by structure, never by copied metadata
   (DataFusion copies the argument's metadata onto `first_value`, `last_value`, `lag`, `lead`,
   `nth_value`, a cast and a negation). `computed_outputs(node)` answers, by position, which

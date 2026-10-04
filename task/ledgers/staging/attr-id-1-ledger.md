@@ -1035,3 +1035,22 @@ Condition: no release tag carries the stack until PERF-ATTR-STAMP-2 has landed a
 measured; if it cannot reach 1.10x, the owner rules on its measured number before any
 tag. The all-cells ratio (median 1.1831) is rejected as a gate: refusals and FIXED cells
 do different work than main.
+
+## Round PERF-ATTR-STAMP-2 O-1 (2026-10-03)
+
+**Model:** claude-opus-5-5 (executor, high). **Work order:**
+`/tmp/oc-worker/direct/wo/stamp2-o1-slice.md` with the design sketch
+`attr-id-1/stamp2-step1/sketch.md`. **Ruling R-O1-1 (orchestrator, 2026-10-03):** option A. The
+sketch's analyzer placement (E1) was halted on measurement: the Spark SQL door analyzes eagerly
+(`crates/repark-spark/src/spark_ast.rs`), so E1 stripped `table()` and `sql()` frames and every
+condition join and `crossJoin` raised the frame-lineage internal error (6 probe cells
+OK → ERR, `attr-id-1/stamp2-o1/probes/`). Under option A the optimizer rule stays the
+backstop and the twin goes in at the native doors that execute.
+
+| Clause | Statement | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-050 | `PyDataFrame::executable()` holds the collapsing strip (`strip_for_execution`, the rule's `drop_node_ids` walk) of the held plan in a `OnceLock` on the immutable native handle. It is built once per handle, never shared across handles, and carries no `repark.attr`; `inner()` still returns the stamped plan. | The twin pin under two mutations (recompute per call; a global cache keyed on plan text), and the facade no-leak pin under `inner()` returning the twin. | PROVEN | `crates/repark-python/src/executable_twin_tests.rs` (`the_twin_is_built_once_per_handle_and_carries_no_id`); `python/repark/tests/test_perf_attr_stamp_2_o1.py::test_executing_doors_leave_the_stamped_handle_bindable`; mutation outputs `attr-id-1/stamp2-o1/mutations/m3`, `m4`, `m9`. |
+| C-051 | Thirteen native doors that hand a plan to execution analyze and execute the twin: the Arrow export, the analyzed schema, `count`, `show`, `input_files`, the temp and cache materializations, the two text writes, the three ML fits and `transpose`. The SQL door, view registration, the path and table writes (they register a view and run SQL), `semantic_hash` / `same_semantics` and the explicit strip keep the stamped plan, behind the optimizer backstop. | One door pin per twinned door: a probe analyzer rule sees no id during the door, and a control analysis of the stamped plan proves the probe live. Each pin goes red when its door reads `inner()`; the export door is proved alone. | PROVEN | `crates/repark-python/src/executable_twin_tests.rs` (13 door pins); `attr-id-1/stamp2-o1/mutations/m1-doors-except-n1.txt`, `m2-n1-only.txt`. |
+| C-052 | `StripAttributeIds` stays the first optimizer rule and is never an analyzer rule. A stamped plan reaching the optimizer comes out id-free, and its collapsed twin optimizes to the same plan. Temp views and SQL frames keep the source frame's ids (V1, V2, V8, V11, V13, V14, `SELECT v`, as Spark 4.1.2 measured). Condition joins, `crossJoin` and V5, V6 and V16 answer. | The backstop pin under two mutations (rule removed; non-collapsing `strip` in the twin); the view pin under view registration of the twin; the join pin under E1. On all 17157 frames the S0 replay collects, the DIFF-PROBE (in-process, stamped path against twin path) finds equal analyzed schemas (names, types, nullability, metadata other than the key). It finds equal optimized logical and physical plans up to engine-generated alias counters, apart from 2 mirrored comparisons (`s.f < s.id` against `s.id > s.f`). | PROVEN | `crates/repark-core/src/session/tests/attr_id_seam.rs`; `python/repark/tests/test_perf_attr_stamp_2_o1.py` (view and join pins); `attr-id-1/stamp2-o1/mutations/m5`, `m6`, `m8`, `m10`; `attr-id-1/stamp2-o1/diffprobe/summary.txt`. |
+| C-053 | The facade export strip `_strip_attribute_id_metadata` is deleted. Every native export schema is clean, and no file outside the four id readers mentions the attribute key. | The export pin under the analyzed schema reading the stamped plan; the grep pin under an added fallback reader. | PROVEN | `python/repark/tests/test_perf_attr_stamp_2_o1.py`; `attr-id-1/stamp2-o1/mutations/m7-n2-self-df.txt`, `m11-grep-pin-fallback.txt`. |
+

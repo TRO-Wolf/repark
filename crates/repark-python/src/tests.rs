@@ -4,6 +4,9 @@ use super::*;
 use pyo3::exceptions::PyRuntimeError;
 use repark_core::Error;
 
+#[path = "executable_twin_tests.rs"]
+mod executable_twin;
+
 /// Pin exception classification, inheritance, message preservation, and parse-analysis relations.
 #[test]
 fn to_py_err_routes_to_typed_exceptions_subclassing_runtime_error() {

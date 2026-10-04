@@ -107,6 +107,12 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   `push_down_leaf_projections` fails on the stamp's `s AS s` alias (M-A2). `df_guard.rs`'s
   rule-order pin now expects the strip first.
   pins: attr-id-1/C-015, C-016
+  **PERF-ATTR-STAMP-2 O-1 (2026-10-03):**
+  `a_stamped_plan_reaches_the_optimizer_backstop_and_its_collapsed_twin_plans_the_same`: for a
+  stamped source, a stamped aggregate and a stamped failed-cast count, the optimizer backstop
+  leaves no id, `strip_for_execution` leaves no id, and the twin optimizes to the backstop's
+  plan text with schema. It goes red if the backstop leaves the optimizer list, and if the twin
+  uses the non-collapsing `strip`. pins: attr-id-1/C-052
 - `attr_id_fresh.rs` — **ATTR-ID-1 S1b (2026-09-30):** fresh ids for computed outputs.
   Measured on DataFusion alone: a negated group key, `first_value`, `last_value`, `lag`, `lead`
   and `nth_value` copy their argument's id. After `stamp`, every aggregate value the facade

@@ -8964,6 +8964,23 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
     `…_an_accept_any_table`) also wipes a plain table with an empty `BY NAME`
     overwrite, with or without a NULL column (C-018).
   pins: u6-write-refusals/C-013, C-015, C-016, C-017, C-018
+- [test_perf_attr_stamp_2_o1.py](test_perf_attr_stamp_2_o1.py) — **PERF-ATTR-STAMP-2 O-1
+  (2026-10-03, ruling R-O1-1, option A):** the facade pins for the per-handle executable twin.
+  - `collect`, `count`, `show`, `explain`, `toPandas`, `columns` and `schema` leave a frame's
+    stamped ids unchanged and `df.select(df["v"])` resolving, over a source, an aggregate and a
+    join child. Goes red when `inner()` returns the twin.
+  - `pa.table(df)`, `pa.table(df._inner)`, a native `RecordBatchReader` and
+    `to_arrow_batches` carry no `repark.attr` with the facade strip deleted. Goes red when the
+    analyzed schema reads the stamped plan.
+  - Temp views and SQL frames keep the source ids, as Spark 4.1.2 measured: `table()` read
+    twice, `SELECT *`, `SELECT v`; V1, V2, V8, V11, V13, V14. Goes red when view registration
+    takes the twin.
+  - Condition joins, a condition join with a select, `crossJoin`, and V5, V6 and V16 over views
+    answer. These are the cells the analyzer placement broke; the pin goes red under that
+    placement.
+  - No file outside the four id readers mentions the attribute key (a grep pin). Goes red when
+    a fallback reader is added.
+  pins: attr-id-1/C-052, C-053
 - [test_attr_id_1_s2.py](test_attr_id_1_s2.py) — **ATTR-ID-1 S2 (2026-09-30):** the seam pins.
   Every spawned frame carries an id on every output field (`createDataFrame`, `sql`,
   `select`/`filter`/`withColumn` children, a join child, a parquet re-read); the bind sites

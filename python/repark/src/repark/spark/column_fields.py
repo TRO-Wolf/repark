@@ -396,25 +396,6 @@ def _bound_attr_id(frame: Any, engine_field: str) -> str | None:
     return attr_id
 
 
-def _strip_attribute_id_metadata(table: Any) -> Any:
-    import pyarrow as pa
-
-    key = b"repark.attr"
-    fields = []
-    changed = False
-    for field in table.schema:
-        metadata = field.metadata
-        if not metadata or key not in metadata:
-            fields.append(field)
-            continue
-        fields.append(field.with_metadata({k: v for k, v in metadata.items() if k != key}))
-        changed = True
-    if not changed:
-        return table
-    cleaned = pa.schema(fields, metadata=table.schema.metadata)
-    return type(table).from_arrays(list(table.columns), schema=cleaned)
-
-
 def column_or_str_error(item: Any) -> PySparkTypeError:
     """The ``select``/``_column_of`` rejection — ``TableArg`` gets Spark's conditioned error."""
     if type(item).__name__ == "TableArg" or "table_arg" in (type(item).__module__ or "").lower():

@@ -29,7 +29,7 @@ fn freq_items(
 }
 
 #[pyfunction]
-fn transpose(
+pub(crate) fn transpose(
     frame: &PyDataFrame,
     py: Python<'_>,
     index_column: &str,
@@ -37,7 +37,7 @@ fn transpose(
     max_values: usize,
 ) -> PyResult<(PyDataFrame, Vec<String>)> {
     fenced!("transpose", {
-        let source = frame.df.clone();
+        let source = frame.executable()?;
         let outcome = py
             .detach(|| {
                 frame.runtime.block_on(repark_core::transpose_frame(
