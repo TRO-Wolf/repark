@@ -1054,3 +1054,21 @@ backstop and the twin goes in at the native doors that execute.
 | C-052 | `StripAttributeIds` stays the first optimizer rule and is never an analyzer rule. A stamped plan reaching the optimizer comes out id-free, and its collapsed twin optimizes to the same plan. Temp views and SQL frames keep the source frame's ids (V1, V2, V8, V11, V13, V14, `SELECT v`, as Spark 4.1.2 measured). Condition joins, `crossJoin` and V5, V6 and V16 answer. | The backstop pin under two mutations (rule removed; non-collapsing `strip` in the twin); the view pin under view registration of the twin; the join pin under E1. On all 17157 frames the S0 replay collects, the DIFF-PROBE (in-process, stamped path against twin path) finds equal analyzed schemas (names, types, nullability, metadata other than the key). It finds equal optimized logical and physical plans up to engine-generated alias counters, apart from 2 mirrored comparisons (`s.f < s.id` against `s.id > s.f`). | PROVEN | `crates/repark-core/src/session/tests/attr_id_seam.rs`; `python/repark/tests/test_perf_attr_stamp_2_o1.py` (view and join pins); `attr-id-1/stamp2-o1/mutations/m5`, `m6`, `m8`, `m10`; `attr-id-1/stamp2-o1/diffprobe/summary.txt`. |
 | C-053 | The facade export strip `_strip_attribute_id_metadata` is deleted. Every native export schema is clean, and no file outside the four id readers mentions the attribute key. | The export pin under the analyzed schema reading the stamped plan; the grep pin under an added fallback reader. | PROVEN | `python/repark/tests/test_perf_attr_stamp_2_o1.py`; `attr-id-1/stamp2-o1/mutations/m7-n2-self-df.txt`, `m11-grep-pin-fallback.txt`. |
 
+
+**O-1 gate (2026-10-04, frozen head `25debe29`, quiet box, dev builds).** Three
+interleaved `replay_work.py` runs, main `db3a1f37` against this head
+(`attr-id-1/stamp2-o1/progress.txt`, scored by `l4l_run.py`):
+- Work-equal like ratio: 1.1234, 1.1229, 1.1238 over 25999 cells. Median **1.1234**,
+  spread 0.0009, against the re-baseline 1.2256 (bar ≤ 1.1656). fn-only: 1.2132, 1.2156,
+  1.2133.
+- C-012 wall: head 644.52, 643.90, 644.02 s, median **644.02 s** (bar ≤ 644.9 s; the
+  re-baseline head median was 684.9 s). Main ran 507.95, 508.48, 507.82 s (median 507.95 s)
+  against the re-baseline's 498.2 s, so the box ran about 2 % slower than at the
+  re-baseline. Head/main: 1.2689, 1.2663, 1.2682.
+- Outcome classes: 0 changes and 0 same-class value changes against the three `5e4a0084`
+  replays, in the correctness replay and in each timing run (7 nondet cells skipped).
+- Gates: Rust lib tests (repark-core 1090, repark-python 108), workspace clippy, fmt,
+  `rust-panic-ban`, ruff, `check_lib_py`, CAP-1 mirror, docstring presence, map lockstep and
+  comment ban (hits=0) all clean. Facade suite: 14841 passed, 0 failed, in two shards at
+  `-n 8`. Parity suite: 785 passed after the new files were tracked (the docs-links pin
+  had only flagged them as untracked).
