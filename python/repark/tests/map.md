@@ -4548,6 +4548,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   shapes), plus limit/desc-nulls-last/3-key/sortWithinPartitions shapes, a
   repartition set check and a groupBy over the mask column.
   pins: polars-is-duplicated-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  **Stack merge of main d0c50405+ (2026-10-04):** the `keep.dir_names` cell is
+  re-measured on the merged surface: the stack's `Column` carries `_attr_id`,
+  `_birth_frame` and `_qualifiers` where base carried `_origin_field`,
+  `_origin_plan_id`, `_string_predicate` and `_with_sort_order`, so the
+  `dir` delta still pins `is_duplicated` as the only addition. The polars
+  cells are unchanged.
 - `test_pg_jdbc_options.py` — PG2 offline option pins (jdbc overloads, format aliases, XOR/caps).
   Ported minus **one** node (EC-4): `test_jdbc_num_partitions_above_cap_is_unsupported` — the
   `read_postgres` refuse-arm pre-empts the engine's cap error. The other offline pins raise their

@@ -352,20 +352,21 @@ pub(crate) fn bind_free_names(
     for_sort: bool,
 ) -> PyResult<PyColumn> {
     fenced!("dataframe_names.bind_free_names", {
-        let prepared = column
-            .expr()
-            .resolve_lambda_variables(frame.inner().schema())
-            .map_err(datafusion_to_py_err)?
-            .data;
-        let bound = repark_core::frame_names::bind_free_names(
-            prepared,
-            frame.inner().logical_plan(),
-            NameRule::from_case_sensitive(exact),
-            &displays,
-            for_sort,
-        )
+        let bound = grown_column_work(frame, column, || {
+            let prepared = column
+                .expr()
+                .resolve_lambda_variables(frame.inner().schema())?
+                .data;
+            repark_core::frame_names::bind_free_names(
+                prepared,
+                frame.inner().logical_plan(),
+                NameRule::from_case_sensitive(exact),
+                &displays,
+                for_sort,
+            )
+        })
         .map_err(datafusion_to_py_err)?;
-        Ok(PyColumn::from_expr(bound))
+        Ok(PyColumn::combine_surveyed(bound, [column]))
     })
 }
 
@@ -406,13 +407,11 @@ pub(crate) fn refuse_ambiguous_free_names(
             }
             repark_core::frame_names::free_sql_names(sql, select_item)
         } else if let Some(column) = column {
-            let prepared = column
-                .expr()
-                .resolve_lambda_variables(schema)
-                .map_err(datafusion_to_py_err)?
-                .data;
-            repark_core::frame_names::free_expr_names(&prepared, qualified_only)
-                .map_err(datafusion_to_py_err)?
+            grown_column_work(frame, column, || {
+                let prepared = column.expr().resolve_lambda_variables(schema)?.data;
+                repark_core::frame_names::free_expr_names(&prepared, qualified_only)
+            })
+            .map_err(datafusion_to_py_err)?
         } else if let Some(names) = names {
             names.into_iter().map(|name| (Vec::new(), name)).collect()
         } else {
@@ -648,21 +647,22 @@ pub(crate) fn bind_qualified_free_refs(
     frame_qualifiers: Option<BTreeMap<String, Vec<String>>>,
 ) -> PyResult<PyColumn> {
     fenced!("dataframe_names.bind_qualified_free_refs", {
-        let prepared = column
-            .expr()
-            .resolve_lambda_variables(frame.inner().schema())
-            .map_err(datafusion_to_py_err)?
-            .data;
-        let bound = repark_core::frame_names::bind_qualified_free_refs(
-            prepared,
-            frame.inner().logical_plan(),
-            NameRule::from_case_sensitive(exact),
-            &displays,
-            frame_qualifiers.as_ref(),
-            for_sort,
-        )
+        let bound = grown_column_work(frame, column, || {
+            let prepared = column
+                .expr()
+                .resolve_lambda_variables(frame.inner().schema())?
+                .data;
+            repark_core::frame_names::bind_qualified_free_refs(
+                prepared,
+                frame.inner().logical_plan(),
+                NameRule::from_case_sensitive(exact),
+                &displays,
+                frame_qualifiers.as_ref(),
+                for_sort,
+            )
+        })
         .map_err(datafusion_to_py_err)?;
-        Ok(PyColumn::from_expr(bound))
+        Ok(PyColumn::combine_surveyed(bound, [column]))
     })
 }
 
@@ -740,6 +740,12 @@ fn grown_frame_need(frame: &PyDataFrame) -> usize {
     let depths = frame.depths();
     let clone = crate::deep_stack::clone_need_bytes(depths.plan, depths.expression);
     crate::deep_stack::drive_segment_bytes(&depths).map_or(clone, |bytes| bytes.max(clone))
+}
+
+fn grown_column_work<T>(frame: &PyDataFrame, column: &PyColumn, work: impl FnOnce() -> T) -> T {
+    let column_need =
+        crate::deep_stack::clone_need_bytes(column.plan_depth(), column.expression_depth());
+    crate::deep_stack::grown_sync(grown_frame_need(frame).max(column_need), work)
 }
 
 pub(crate) fn grown_frame_work<T>(frame: &PyDataFrame, work: impl FnOnce() -> T) -> T {
