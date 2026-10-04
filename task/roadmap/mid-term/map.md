@@ -597,3 +597,7 @@ declines it (a dated ruling in the intake, then the archive).
   QUALIFIER-LEAK-H-1 (2026-10-03, owner delegate, post-1.5.2):** cell
   `r3.F_cp_bare_getU_join_parent` raises `AMBIGUOUS_REFERENCE` naming `_repark_jl_<hex>`.`V`;
   Spark returns the joined rows. Predates the ATTR-ID-1 stack.
+- [zizmor-gate-1-card-2026-10-03.md](zizmor-gate-1-card-2026-10-03.md) — **card ZIZMOR-GATE-1
+  (2026-10-03, clerk, after CI-1):** `--format sarif` exits 0 while findings exist (plain
+  mode exits 14); the ci.yml map guard passes `github.base_ref` via `env:`, and zizmor.yml
+  runs plain mode as the blocking step before the SARIF upload.
