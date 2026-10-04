@@ -1074,7 +1074,7 @@ repark-parity slice.
   2026-08-25 at 31,000 / 6,000 B; ratcheted DL-5 2026-08-25 to 25,000 / 6,000 /
   31,000 / 35,000 B from the unit's final measurement; PROC-1 2026-08-25 added
   `.agents/skills/sepmo/unit-runbook.md` at 5,000 B (pointer-only, cannot become a second
-  spine). Raised only in the PR that needs it. Tests:
+  spine). Raised only in the PR that needs it. v1.5.2 (2026-10-03) raised the STATUS.md ceiling from 25,000 B to 25,050 B: the file was 24,670 B, and the release paragraph with its blank line is 380 B. Tests:
   `python/repark-parity/tests/test_dl_4_live_doc_compaction.py`,
   `python/repark-parity/tests/test_dl_5_contract_compaction.py`,
   `python/repark-parity/tests/test_proc_1_tiered_review.py`.

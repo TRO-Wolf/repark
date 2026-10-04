@@ -699,7 +699,7 @@ both tables with the script baselines (backtick-disclosure retire). pins: fnp-4b
   `test_cap_1_source_file_line_cap.py` mirrors the `append.rs` ceiling at its ratcheted 1884.
   pins: v3-11-row-id-determinism/C-003, C-005, C-008
   workstream names the run, carries the `V3-ROWID-3` line and stays under its dual-pinned
-  25,000-byte ceiling; registry `V3-ROWID-3` still carries both engines' measured answers and
+  25,050-byte ceiling; registry `V3-ROWID-3` still carries both engines' measured answers and
   names follow-up unit V3-11; and `docs/design/format-v3-track.md` §7's two "not measured" claims
   each carry a dated correction. Whitespace-normalized reads, so a re-wrap does not red it.
   pins: live-v3-aws-legs/C-004, C-005; live-v3-first-measurement/C-001, C-002, C-003
@@ -749,7 +749,7 @@ both tables with the script baselines (backtick-disclosure retire). pins: fnp-4b
   step and must never claim it. The fork half reads the five 🟡 `GAP_MATRIX.md` rows the gate
   leans on and the pin rev they were read at, which must still be the one in `Cargo.toml`.
   STATUS must carry the SCALE-v3 numbers, the V3-10 / RDF-1 / LOG1P-1 lines, the audit line and
-  its 25,000-byte ceiling, and the published gate board must be filed under `docs/artifacts/`
+  its 25,050-byte ceiling, and the published gate board must be filed under `docs/artifacts/`
   with a map row naming its sources.
   **Critic remediation (2026-09-03):** the audit is scoped to each row's §3 v1.0-requires cell,
   so the pin no longer forbids the word BACKLOG outright — a row may name one only beside

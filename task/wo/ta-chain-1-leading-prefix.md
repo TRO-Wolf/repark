@@ -19,7 +19,7 @@ Written 2026-10-03 by a Claude session (claude-fable-5-1) on the owner's ruling 
 | R-TC1-5 | Perf cap 1.02x on `python/repark-parity/bench/ta/bench_kernel_race.py --quick` (one symbol, no prefix): the null-free fast path must stay a borrow when the start index is 0. Above the cap is a halt, not a tune. |
 | R-TC1-6 | `crates/repark-ta/src/udf/mod.rs` is at its sanctioned baseline of 1821 lines (`scripts/check_rust_file_size.py:202-206`). The baseline is exact: the gate fails on growth and on shrinkage until the row ratchets down. The four `compute` / `compute_all` call blocks move into one helper in a new sibling file, which makes `mod.rs` shorter; the executor then ratchets the `EXCEPTIONS` row down to the measured head count (expected 1818) in the S1 commit. A ratchet-down is an ordinary edit, the direction the gate exists for. Raising the baseline is forbidden. The wrapper test `evaluate_all_chained_trange_into_ema_is_finite_after_lookback` lives in `prefix.rs`'s `#[cfg(test)]` module, where `super::TaEvaluator` is visible, so no test line lands in `mod.rs` (owner amendment, 2026-10-03, on the executor's halt). |
 | R-TC1-7 | Engine and review (owner, 2026-10-03, "I want this to be perfect"): one Opus 5.5 agent at high effort runs the three slices below, one commit each, in a single session; then DIFF-PROBE base-vs-head and one Opus 5.5 verifier at high effort in a fresh session that has not seen the executor's context. This is a dated exception to the 2026-09-26 usage rule (Opus executors only for design-heavy units, medium verifier on product-Rust PRs). The executor still decides nothing that this order has ruled; a gap in the order is a halt, not a judgment call. |
-| R-TC1-8 | Merge position: after #879 and #883 in the v1.5.2 queue, before the tag. The v1.5.2 notes file does not exist on main yet; S3 creates `task/roadmap/mid-term/v1-5-2-release-notes-draft-2026-10-03.md` on the v1.5.0 draft precedent (`v1-5-0-release-notes-draft-2026-09-27.md`: title, one paragraph naming the range from the v1.5.1 tag, then sections) with one section for this unit, plus its line in `task/roadmap/mid-term/map.md`; the release clerk finalizes and renames it at tag time (owner amendment, 2026-10-03). One release-note line under the v1.5.2 notes: "Chained TA indicators (an indicator computed from another indicator's output) now answer where polars_talib answers; a leading NaN or NULL run on any `ta.*` input is skipped instead of propagating." |
+| R-TC1-8 | Merge position: after #879 and #883 in the v1.5.2 queue, before the tag. The v1.5.2 notes file does not exist on main yet; S3 creates `task/roadmap/mid-term/v1-5-2-release-notes-2026-10-03.md` on the v1.5.0 draft precedent (`v1-5-0-release-notes-draft-2026-09-27.md`: title, one paragraph naming the range from the v1.5.1 tag, then sections) with one section for this unit, plus its line in `task/roadmap/mid-term/map.md`; the release clerk finalizes and renames it at tag time (owner amendment, 2026-10-03). One release-note line under the v1.5.2 notes: "Chained TA indicators (an indicator computed from another indicator's output) now answer where polars_talib answers; a leading NaN or NULL run on any `ta.*` input is skipped instead of propagating." |
 
 ## 2. Files
 
@@ -38,7 +38,7 @@ Written 2026-10-03 by a Claude session (claude-fable-5-1) on the owner's ruling 
 | `docs/examples/ta/composition.py` | edited: one chained column (`ema21_of_tr`) asserted against the new golden; `COVERS` unchanged | — |
 | `task/ledgers/staging/ta-chain-1-ledger.md` | new: clauses C-001…C-007 below | — |
 | `task/roadmap/mid-term/ta-chain-1-card-2026-10-03.md` | already filed with this order | — |
-| `task/roadmap/mid-term/v1-5-2-release-notes-draft-2026-10-03.md` | new (R-TC1-8): v1.5.0-draft shape, one section for this unit carrying the release-note line | — |
+| `task/roadmap/mid-term/v1-5-2-release-notes-2026-10-03.md` | new (R-TC1-8): v1.5.0-draft shape, one section for this unit carrying the release-note line | — |
 | `task/roadmap/mid-term/map.md` | edited: one line for the new draft, in the style of the v1.5.1 notes line | — |
 
 ## 3. Design sketch
@@ -122,7 +122,7 @@ Slice S3 — facade, example, ledger (one commit: `docs(ta-chain-1): chained ind
 {"unit":"TA-CHAIN-1","branch":"fix/ta-chain-1","commits":["<S1>","<S2>","<S3>"],
  "kernel_test_count":{"base":0,"head":0},
  "prefix_goldens":{"series":13,"twins_passed":26},
- "release_notes_file":"task/roadmap/mid-term/v1-5-2-release-notes-draft-2026-10-03.md",
+ "release_notes_file":"task/roadmap/mid-term/v1-5-2-release-notes-2026-10-03.md",
  "bench_kernel_race_quick":{"base_median_s":0.0,"head_median_s":0.0,"ratio":0.0},
  "mod_rs_lines":{"base":1821,"head":0},
  "ledger":"task/ledgers/staging/ta-chain-1-ledger.md","clauses_proven":["C-001","C-007"],
