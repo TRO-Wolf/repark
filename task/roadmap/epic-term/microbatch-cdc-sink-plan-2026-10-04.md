@@ -196,12 +196,12 @@ path by about a day and needs the owner to lift the one-Opus-lane cap for this b
 |---|---|---|---|
 | O-1 | offsets live in the Silver snapshot summary and a table property; no checkpoint directory for an Iceberg sink | yes (D-1) | proposed 2026-10-04 |
 | O-2 | the deterministic event id and version id enter the Bronze contract now, before the capture producer | yes (D-5) | proposed 2026-10-04 |
-| O-3 | catalog-only state; no control database before multi-writer; a shared catalog is required and a local filesystem catalog refuses a streaming query | yes (D-6) | proposed 2026-10-04 |
+| O-3 | catalog-only state; no control database before multi-writer; a shared catalog is required and a local filesystem catalog refuses a streaming query | yes (D-6) | **ruled 2026-10-04** (owner: "Catalog only") |
 | O-4 | the release slot: pull the micro-batch sink from the 2.2 row into **1.7** beside `repark-cdc`, since the producer writes Bronze and this driver consumes Bronze into Silver and both share CC-9 | 1.7 | proposed; implied by O-9, the owner confirms; the release-roadmap rows change in the PR that rules it |
 | O-5 | a Bronze table that receives row-level deletes | refuse | **ruled 2026-10-04** (owner: "No deletes in bronze"): Bronze is append-only by contract; a delete or overwrite snapshot inside a window is a contract violation and the query refuses; no opt-in skip |
 | O-6 | a genuinely keyless source table under D-5 | refuse | proposed |
-| O-7 | the next Opus slot is promised to the STAMP-2 re-measure and then the TA single-series sketch; the micro-batch sketch queues behind them unless the owner swaps the order | keep the order | open |
-| O-8 | a second Opus lane for this build | no | **ruled 2026-10-04** (owner: default): one Opus lane; the sequential path |
+| O-7 | the next Opus slot is promised to the STAMP-2 re-measure and then the TA single-series sketch; the micro-batch sketch queues behind them unless the owner swaps the order | keep the order | **ruled 2026-10-04** (owner: "TA first") |
+| O-8 | a second Opus lane for this build | no | **ruled 2026-10-04** (owner: "Keep everything in one opus orc slot"): one Opus orchestrator slot for every unit, this build included; the sequential path |
 | O-9 | does the 1.7 sink half open before the 1.6 connectors, since it depends only on Iceberg? | no | **ruled 2026-10-04** (owner: "Sink waits for 1.6"): the 1.7 row keeps its dependency on 1.6; the micro-batch executors open after the first 1.6 connector units; the packet, MB-0 and the fork asks need no Opus lane and run meanwhile |
 | O-10 | an HTML artifact copy under `docs/artifacts/` in the ruling change, as the 2026-10-01 adjustment carried | yes | **ruled 2026-10-04** (owner: default) |
 

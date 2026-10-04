@@ -99,7 +99,7 @@ is now the epic list from v0.6 through 3.0 (v0.7–v0.10 shifted to 1.1–1.4 wh
   driver under CC-1, idempotent replay, deterministic event and version ids in the Bronze contract,
   catalog-only state, `foreachBatch` first then `SilverPlan`, the facade), why not one lane in one shot,
   the slices MB-0…MB-5 with fork asks, harness, identity and acceptance, the parallel waves and merge
-  order, the owner decisions O-1…O-10 (O-5, O-8, O-9, O-10 ruled 2026-10-04) and the ordered start sequence
+  order, the owner decisions O-1…O-10 (O-3, O-5, O-7, O-8, O-9, O-10 ruled 2026-10-04) and the ordered start sequence
   without dates.
 - [contracts-ahead-of-code-2026-10-01.md](contracts-ahead-of-code-2026-10-01.md) — **contracts ahead of code (ruled
   2026-10-01):** the crate contracts between the pre-declared crates — CC-1 core consumes the services and
