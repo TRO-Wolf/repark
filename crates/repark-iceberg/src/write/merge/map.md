@@ -93,6 +93,13 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   too; the batch-sink helpers it shares (`BatchWriter`, `ForkBatchWriter`,
   `write_stream_into`, `write_stream_into_parallel`) are `pub(crate)` for that caller.
   pins: write-order-dist-1/C-008
+  **RP-56 DIFF-PROBE fold (2026-09-29):** the `write_data_files*` family moved to
+  `file_sink.rs` (re-exported here; baseline 1622 → 1569); the stream writer takes the
+  door's `case_insensitive` bit.
+- `file_sink.rs` — (RP-56 DIFF-PROBE fold, 2026-09-29) the unpartitioned
+  batch/stream file writers split out of `mod.rs`, re-exported there. Comment-free per the
+  owner ban. The error contract is unchanged: `max_concurrent_files < 1` refuses, conform
+  failures propagate.
 - `dv_close.rs` — v3 `RowDelta` DV-container close. `prepare_row_delta_deletes` writes
   V2 parquet position deletes or calls `close_touched_dv_containers_with_partitions` on V3, then
   `apply` stamps sibling sequences. C-003 pin
@@ -277,6 +284,17 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
 - `insert.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** the MERGE INSERT and UPDATE SET
   gates call `../void_store.rs::refuse_void_writes` with table `` before the ANSI matrix, so a
   value into a `VOID` column refuses with Spark's text. pins: u9-types-1/C-014
+- `insert.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** the MERGE INSERT and UPDATE SET
+  stream builders plan through `analyzed_store_source` and `wrap_store_outputs`, so a
+  fractional store refuses `CAST_OVERFLOW_IN_TABLE_INSERT` with the column named; the
+  update probe reads types from the unoptimized plan so a const division reaches the
+  rewrite instead of folding to `DIVIDE_BY_ZERO` first.
+  **Merge origin/main v1.5.1 (2026-09-29):** both sides kept — the void, negated-null
+  and NTZ gates plus the ANSI matrix judge the unanalyzed plan exactly as on main (an
+  analyzed plan would rename an `Int64` literal `Int32` in the refusal text), the
+  overflow wrap runs on the analyzed source, then the zone-wrapping subquery (which
+  re-analyzes and re-wraps in its own arm). Re-verify VO3-1 (2026-09-29): MERGE passes
+  `None` for the wrap's gate label — those gates already judge before the wrap.
 - `insert.rs` — **WO NTZ-1 slice 2 (2026-09-27):** the MERGE INSERT and UPDATE SET gates
   also call `../ntz_store.rs::refuse_ntz_writes` before the ANSI matrix, so an illegal
   source into an NTZ column refuses with Spark's `CANNOT_SAFELY_CAST` text naming

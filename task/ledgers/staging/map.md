@@ -11,6 +11,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   alone (C-001), `stamp` with Spark's first-input union rule (C-002), the join re-mint
   (C-003), `resolve` (C-004), the `repark-python` binds (C-005) and mutations M1–M4 (C-006);
   R-1..R-4 are dated residues for S2–S3. `risk_tier: standard`. Branch `feat/attr-id-1`.
+- [text-write-timestamp-zone-1-ledger.md](text-write-timestamp-zone-1-ledger.md) —
+  **WO TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29), in flight:** CSV and JSON
+  writes format LTZ in the session zone under Spark's default `timestampFormat`,
+  NTZ and DATE under their zone-free defaults, through one shared Rust
+  SELECT-level formatter (local + s3a); user patterns honored per kind, bad
+  patterns refused with Spark's class (C-001..C-005); parquet/reads untouched,
+  one intended neighbour change, four mandated flips (C-006); post-2100 tzdata,
+  zone-name, sink and inference residues R-1..R-5.
+  `risk_tier: standard`. Branch `fix/text-write-timestamp-zone-1`.
+  pins: text-write-timestamp-zone-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [aws-accept-replace-1-ledger.md](aws-accept-replace-1-ledger.md) —
   **WO AWS-ACCEPT-REPLACE-1 (2026-09-27), in flight:** RP-55 repins the fork to
   `6e937f49` (F-STAGED-SINGLE-WRITE-1 `#362` — a staged replace writes its metadata file
@@ -19,6 +29,17 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   AWS acceptance rerun is an owner residue (R-1).
   `risk_tier: standard`. Branch `chore/rp-55-staged-single-write`.
   pins: aws-accept-replace-1/C-001
+- [rp-56-ledger.md](rp-56-ledger.md) —
+  **WO RP-56 (2026-09-28), in flight:** RP-56 repins the fork to
+  `e1d74bef` (F-SCHEMA-LCI-LAZY-1 `#364` — case-twin columns build; the
+  lower-case index refuses only on a case-insensitive lookup, as Java does) and
+  carries the Spark-door twin pins under `caseSensitive=true` (CREATE and CTAS,
+  red at `6e937f49`, green at `e1d74bef`, C-001) plus the bare-name refusal under
+  `false`; the false-door CREATE acceptance is a dated residue (R-1). The Opus-verifier
+  fold (2026-09-28, VR-1..VR-5) scopes the star refusal to catalog-table scans, routes
+  nested DDL by the session flag (C-002/C-003), and records R-6…R-9.
+  `risk_tier: standard`. Branch `chore/rp-56-case-twin-schema`.
+  pins: rp-56/C-001
 - [intdiv-1-ledger.md](intdiv-1-ledger.md) —
   **WO INTDIV-1 (2026-09-28), in flight:** arithmetic over an integer `/` answers
   Spark's DOUBLE type and values in every scope — same scope, derived table, CTE, temp
@@ -53,6 +74,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (C-003, C-004 REJECTED) and return to base behaviour (C-006); a branching source
   refuses only when every leaf is a refused type (C-007). The STRING class moves to
   v1.5.2 card STORE-STRING-ASSIGN-1. pins: store-ts-to-numeric-1/C-006, C-007
+- [store-ts-doors-2-ledger.md](store-ts-doors-2-ledger.md) —
+  **WO STORE-TS-DOORS-2 (2026-09-29), in flight:** the two write doors #885
+  missed refuse like Spark — TIMESTAMP, TIMESTAMP_NTZ and DATE through a VALUES
+  node inside INSERT … SELECT into numeric columns (C-001) and `-NULL` into
+  TIMESTAMP, DATE and BOOLEAN through static-partition OVERWRITE (C-002) — while
+  every base match keeps its answer (C-003). `risk_tier: standard`. Branch
+  `fix/store-ts-doors-2`.
+  pins: store-ts-doors-2/C-001, C-002, C-003
 - [uuid-cast-window-1-ledger.md](uuid-cast-window-1-ledger.md) —
   **WO UUID-CAST-WINDOW-1 (2026-09-27), in flight:** the UUID refusal's SQL window
   counts as Spark 4.1.2 counts — the position in Unicode scalar values, the window
@@ -700,6 +729,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `fix/cast-ts-string-1`.
   pins: cast-ts-string-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010, C-011, C-012
+- [cast-overflow-insert-1-ledger.md](cast-overflow-insert-1-ledger.md) —
+  **CAST-OVERFLOW-INSERT-1 (2026-09-29), in flight:** out-of-range DOUBLE, FLOAT and
+  DECIMAL stores into integer columns refuse Spark 4.1.2's `CAST_OVERFLOW_IN_TABLE_INSERT`
+  on all nine write doors — the `StoreOverflowCast` Dml analyzer rule plus the same
+  conformance applied between eager analysis and optimization on the non-Dml internal
+  plans, with checked-cast boundary UDFs and a Spark-error catalog entry; R-INTDIV-9
+  closed. Verifier fold (2026-09-29): VO-1 judges the truncated value, VO-2 stops at
+  `LIMIT 0`, and the seven S3 observations stand as residues R-VO-S3-1..7.
+  `risk_tier: standard`. Branch `fix/cast-overflow-insert-1`.
+  pins: cast-overflow-insert-1/C-001, C-002, C-003, C-004
 - [cast-map-spell-1-ledger.md](cast-map-spell-1-ledger.md) —
   **CAST-MAP-SPELL-1 (2026-09-19), in flight:** `CAST(… AS MAP<…>)` and
   `.cast(MapType)` answer Spark 4.1.2 on every door — a cast-UDF plus token-rewrite
@@ -1221,6 +1260,17 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   pinned (1.5× standalone 2500 median) plus a strict-xfail linear flip pin.
   No product change. `risk_tier: standard`. Branch `perf/cast-1`.
   pins: perf-cast-1/C-001, C-002, C-003, C-004
+- [polars-is-duplicated-1-ledger.md](polars-is-duplicated-1-ledger.md) —
+  **WO POLARS-IS-DUPLICATED-1 (2026-09-28):** `Column.is_duplicated()` on both
+  doors answers real polars through filter, select and withColumn(s) (C-001..C-005),
+  general window predicates keep today's refusal and every keep-cell answers
+  unchanged (C-006), float normalisation lives only inside the lowering (C-007),
+  both mutations go red and revert clean (C-008), and the example inventory
+  carries the new name (C-009); `F.lit(1)` frame shape, join-ON refusal text and
+  nesting are dated residues (R-001..R-003); §3b folds the DIFF-PROBE order bugs
+  (a sort before/after the mask survives untouched).
+  `risk_tier: standard`. Branch `feat/polars-is-duplicated-1`.
+  pins: polars-is-duplicated-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [platform-1-ledger.md](platform-1-ledger.md) —
   **PLATFORM-1 step 1 (2026-09-12), in flight:** the abi3 wheel matrix —
   `wheels.yml` `platform-matrix` runs the four legs PRs never see (manylinux
@@ -1964,3 +2014,28 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   awaits the owner run on real AWS).
   `risk_tier: standard`. Branch `feat/s3-path-write-1`.
   pins: s3-path-write-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
+- [deep-filter-chain-crash-1-ledger.md](deep-filter-chain-crash-1-ledger.md) —
+  **DEEP-FILTER-CHAIN-CRASH-1 (2026-09-29), in flight:** deep operator chains
+  answer instead of killing the interpreter — every native entry point polls on
+  a 256 MiB stacker segment and the shared runtime builds 256 MiB pool threads
+  (C-001: one thousand filters count 50, base SIGSEGV at 610; C-002: 200 joins count 1
+  and 300 unions count 15050, base SIGSEGV at 110 joins; C-003: 120 withColumn
+  count 50 at the build-time ceiling; C-004: one-thousand-deep nested SQL raises
+  `RecursionError`, flat 600-union SQL counts 601). Step 0 backtraces, mutation
+  record (both pins SIGSEGV under restored old stacks), perf (+1.4%) and the
+  VmSize/VmRSS base-vs-head record live in the ledger; residues R-1..R-4.
+  `risk_tier: standard`. Branch `fix/deep-filter-chain-crash-1`.
+  pins: deep-filter-chain-crash-1/C-001, C-002, C-003, C-004
+- [string-literal-escape-1-ledger.md](string-literal-escape-1-ledger.md) —
+  **STRING-LITERAL-ESCAPE-1 (2026-09-29):** SQL string literals unescape as
+  Spark does (C-000 the 229-literal Step-0 matrix, C-001 quote-aware doubles
+  plus double-raw, C-002 raw head/tail splits, C-003 verbatim-exact values,
+  C-004 the zero-break guards).
+  `risk_tier: standard`. Branch `fix/string-literal-escape-1`.
+  pins: string-literal-escape-1/C-000, C-001, C-002, C-003, C-004
+  Re-verify VE3-1 (2026-09-30): the inventory now excepts `SQLTransformer`
+  (user-written SQL through the user door).
+  CI round seams (2026-09-30): the five test seams follow the `sql_built`
+  door with the same assertions (C-013).
+  CI round expr (2026-09-30): `F.expr` pre-renders display-shaped text so
+  composed embeddings keep base's grouping (C-014).

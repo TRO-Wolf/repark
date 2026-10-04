@@ -38,6 +38,10 @@ Rewrite or execute the INSERT forms the stock parser cannot model on the Spark d
   with Spark's text (before, the facade projected by position and a frame with one extra and
   one missing column committed shifted columns), a wider frame `TOO_MANY_DATA_COLUMNS` first;
   `prepare_source` reparses the rewritten source. The SQL door stays positional.
+  **STRING-LITERAL-ESCAPE-1 re-verify follow-up (2026-09-30):** the
+  volatility probe renders the predicate through `render_for_reparse`, so a
+  `\'` value parses instead of refusing unterminated.
+  pins: string-literal-escape-1/C-011
   pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-016, C-018, C-021, C-024;
   u7-write-df-2/C-013
   **Fold 2026-09-29 (verifier VT-2):** `execute_replace_where` calls the shared

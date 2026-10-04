@@ -58,7 +58,9 @@ API — the `repark.ta` Python namespace is built on it). **68/68 functions, 81/
   OVER (…)` (window UDFs).
 - **Public outputs:** `Vec<f64>` kernel results; registered TA window UDFs; a `SessionExtension`.
 - **State & lifecycle:** kernels are stateless (`&[f64]` in → `Vec<f64>` out); the optional UDF layer
-  holds a thread-local multi-output cache so split siblings share one kernel run.
+  holds a thread-local multi-output cache so split siblings share one kernel run. The UDF layer
+  skips each input's leading NaN/NULL run before the kernel, as polars_talib does, and re-prefixes
+  the skipped rows as NaN (`src/udf/prefix.rs`, TA-CHAIN-1); the kernels themselves keep C semantics.
 - **Allowed internal deps:** `repark-core` **only under the `datafusion` feature** (the `TaExtension`);
   the kernel core is dependency-light (runtime dep `thiserror`).
 - **Failure model:** `thiserror` kernel errors; a non-integral window period fails loud (no silent
@@ -93,6 +95,7 @@ API — the `repark.ta` Python namespace is built on it). **68/68 functions, 81/
 | New kernel is "close but not exact" (≤ a few ulp) | Look for `mul_add`, reordered accumulation, or a recomputed-per-window sum that C keeps incremental |
 | Values differ only late in a long series | Accumulator-drift mismatch: C's running totals were replaced by per-window recomputation (or vice versa) |
 | Three BBANDS columns ~3× slower than one | Check the thread-local multi-output cache in `src/udf/mod.rs` and the `tests/p1c_microbench.rs` shape |
+| A chained `ta_*` (an indicator over another indicator's output) answers all-NaN | The leading-run skip in `src/udf/prefix.rs` — `leading_invalid_run` must find the first valid row of every input; the kernel call itself is C-faithful and propagates NaN |
 | Need a recorded kernel ns/row | P-1 criterion: `cargo bench -p repark-ta --bench ta_kernels -- --quick` — [benches/map.md](benches/map.md); numbers stay planning-side |
 
 First checks: `cargo test -p repark-ta` (lib unit tests + goldens + contract). Escalate to:

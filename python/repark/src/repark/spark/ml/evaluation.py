@@ -42,7 +42,7 @@ def _sparse_positive_class_score_sql(score_quoted: str) -> str:
 
 def _collect_scalar(frame: Any, sql: str) -> float:
     """Run aggregate SQL and return its first cell as a float."""
-    rows = list(frame._spawn(frame._session.sql(sql)).collect())
+    rows = list(frame._spawn(frame._session.sql_built(sql)).collect())
     if not rows:
         raise IllegalArgumentException("evaluator query returned no rows")
     row = rows[0]
@@ -57,7 +57,8 @@ def _collect_scalar(frame: Any, sql: str) -> float:
 
 def _require_nonempty_eval(frame: Any, view: str, *, verb: str) -> None:
     """Refuse empty frames because aggregate metrics are undefined."""
-    rows = list(frame._spawn(frame._session.sql(f"SELECT COUNT(*) AS n FROM {view}")).collect())
+    counted = frame._session.sql_built(f"SELECT COUNT(*) AS n FROM {view}")
+    rows = list(frame._spawn(counted).collect())
     if not rows:
         raise IllegalArgumentException(f"{verb}: count query returned no rows")
     values = list(rows[0].asDict().values()) if hasattr(rows[0], "asDict") else list(rows[0])
@@ -318,7 +319,7 @@ class BinaryClassificationEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
             scored_sql = (
                 f"SELECT CAST({label} AS DOUBLE) AS label, ({score_sql}) AS score FROM {view}"
             )
-            scored_frame = frame._spawn(frame._session.sql(scored_sql))
+            scored_frame = frame._spawn(frame._session.sql_built(scored_sql))
             scored_frame.createOrReplaceTempView(scored)
             sql = f"""
             WITH ordered AS (
@@ -358,7 +359,7 @@ class BinaryClassificationEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
                 / NULLIF(n_pos * n_neg, 0.0) AS metric
             FROM stats
             """
-            rows = list(frame._spawn(frame._session.sql(sql)).collect())
+            rows = list(frame._spawn(frame._session.sql_built(sql)).collect())
             if not rows:
                 raise IllegalArgumentException("evaluator query returned no rows")
             row = rows[0]
@@ -425,7 +426,7 @@ class BinaryClassificationEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
             scored_sql = (
                 f"SELECT CAST({label} AS DOUBLE) AS label, ({score_sql}) AS score FROM {view}"
             )
-            scored_frame = frame._spawn(frame._session.sql(scored_sql))
+            scored_frame = frame._spawn(frame._session.sql_built(scored_sql))
             scored_frame.createOrReplaceTempView(scored)
             sql = f"""
             WITH ordered AS (
@@ -484,7 +485,7 @@ class BinaryClassificationEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
               (ap.sum_precision / NULLIF(stats_labels.n_pos, 0.0)) AS metric
             FROM stats_labels CROSS JOIN ap
             """
-            rows = list(frame._spawn(frame._session.sql(sql)).collect())
+            rows = list(frame._spawn(frame._session.sql_built(sql)).collect())
             if not rows:
                 raise IllegalArgumentException("evaluator query returned no rows")
             row = rows[0]

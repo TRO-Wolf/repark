@@ -356,8 +356,8 @@ class GroupedData:
             builtin_frame._prepare_for_plan()
             session.materialize_as_temp_view(udf_view, udf_frame._inner)
             session.materialize_as_temp_view(builtin_view, builtin_frame._inner)
-            udf_clean = frame._spawn(session.sql(f"SELECT * FROM {udf_view}"))
-            builtin_clean = frame._spawn(session.sql(f"SELECT * FROM {builtin_view}"))
+            udf_clean = frame._spawn(session.sql_built(f"SELECT * FROM {udf_view}"))
+            builtin_clean = frame._spawn(session.sql_built(f"SELECT * FROM {builtin_view}"))
 
             select_names: list[str] = list(key_names)
             for slot in ordered_slots:
@@ -374,7 +374,7 @@ class GroupedData:
                     left_column_names=list(udf_clean.columns),
                     right_column_names=list(builtin_clean.columns),
                 )
-                joined = frame._spawn(session.sql(join_sql))
+                joined = frame._spawn(session.sql_built(join_sql))
             else:
                 # Global aggregates produce one row per side, so crossJoin is exact.
                 joined = udf_clean.crossJoin(builtin_clean).select(*select_names)
@@ -382,7 +382,7 @@ class GroupedData:
             joined._prepare_for_plan()
             session.materialize_as_temp_view(out_view, joined._inner)
             # The result view must outlive the intermediate views.
-            return frame._spawn(session.sql(f"SELECT * FROM {out_view}"))
+            return frame._spawn(session.sql_built(f"SELECT * FROM {out_view}"))
         finally:
             with contextlib.suppress(Exception):
                 session.drop_temp_view(udf_view)
@@ -500,7 +500,7 @@ class GroupedData:
                 expression_sql, output_name = _global_agg_sql_parts(column)
                 select_parts.append(f"{expression_sql} AS {_quote_ident(output_name)}")
             sql = f"SELECT {', '.join(select_parts)} FROM {view} GROUP BY {group_sql}"
-            return frame._spawn(frame._session.sql(sql))
+            return frame._spawn(frame._session.sql_built(sql))
         finally:
             frame._session.drop_temp_view(view)
 

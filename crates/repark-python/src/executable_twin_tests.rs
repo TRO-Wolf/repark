@@ -94,7 +94,11 @@ impl Probed {
         assert!(carries_id(&stamped));
         let frame = PyDataFrame::new(DataFrame::new(state, stamped), Arc::clone(&runtime));
         Self {
-            session: PyReparkSession { session, runtime },
+            session: PyReparkSession {
+                session,
+                runtime,
+                deep_view_levels: AtomicUsize::new(0),
+            },
             frame,
             seen,
         }

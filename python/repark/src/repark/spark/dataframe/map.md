@@ -15,6 +15,27 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   Spark 4.1.2 path-write behaviour on S3 recorded in 38 `W-PATH-S3-*` cells against a local
   moto emulator; the evidence and the design answers live in `task/ledgers/staging/u12-probes/`.
   pins: s3-path-write-1/C-001, C-002, C-003, C-004, C-005, C-006
+- `writer_readwriter.py` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** the
+  temporal options leave the CSV/JSON unsupported sets for
+  `_TEMPORAL_WRITE_OPTIONS` (skipped in COPY option SQL, honored through the
+  SELECT builder), and the local CSV/JSON COPY inner `SELECT` comes from
+  `_build_text_write_select` (other formats keep `SELECT *`, so parquet
+  stays binary).
+  pins: text-write-timestamp-zone-1/C-001, C-002, C-006
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):** the local
+  COPY statement comes from `writer_layout.text_write_copy_sql` (plain
+  inner `SELECT`, resolved `STORED AS` name, merged spec OPTIONS); the
+  `_build_text_write_select` entry is gone.
+- `writer_layout.py` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):**
+  `text_write_select` carries writer state to the `session_text_write_select`
+  binding, which returns the COPY inner `SELECT`.
+  pins: text-write-timestamp-zone-1/C-001
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):**
+  `text_write_copy_parts` carries writer state plus `STORED AS` to the
+  `session_text_write_copy_parts` binding and returns the inner `SELECT`,
+  the resolved format name and the spec OPTIONS; `text_write_copy_sql`
+  assembles the full COPY, and `_merge_spec_options` appends the spec
+  pairs to the format OPTIONS clause.
 - `writer_s3.py` — **S3-PATH-WRITE-1 round 1 (2026-09-28):** the S3 path-write
   forward. `is_s3_url` detects the scheme without filesystem calls;
   `write_s3_path` carries writer state to the `session_write_path` binding,
@@ -262,6 +283,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   allocation. The walk reads True on a derived marker over a
   never-stamped plan under a join, where the build cuts to an inert root;
   the native check then returns early, so the answer is unchanged.
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** built scans, joins,
+  unpivot, and explain run through the native `sql_built` method; `selectExpr` stays on `sql`
+  (user text follows the flag). The set-op wrap plus its dict join ratchet the
+  baseline 3973 → 3971. pins: string-literal-escape-1/C-011
 - `actions_export.py` owns `DataFrameNaFunctions.fill`, `drop`, and `replace`.
   U11-EDGE-1 round 5 (2026-09-26): `drop` with no subset on a plain frame binds every column by
   its written name, as Spark resolves `dropna()`, so case twins refuse `AMBIGUOUS_REFERENCE`
@@ -466,6 +491,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   window result. The ordered path carries partition, order, and UDF inputs plus every
   source column on the group frame, overwrites same-name sources, and projects caller
   order last-wins. pins: dfcore-2/C-005
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** built projection SQL
+  runs through the native `sql_built` method. pins: string-literal-escape-1/C-011
 - `statistics.py` owns the statistics bodies behind the public wrappers (DFCORE-3,
   moved from `core.py` and `DataFrameStatFunctions.freqItems`; DF-RUST-3, 2026-09-15:
   `freqItems` runs the `FreqItemCounter` UDAF through `frame._plan().freq_items` —
@@ -546,6 +573,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   each stratum against one shared `rand(seed)` column so the sequence advances once
   per row. All three carry display names, engine names, and the origin map to each
   child, which keeps the `_repr_html_` hook. pins: dfcore-4a/C-004
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** built sample scans
+  run through the native `sql_built` method. pins: string-literal-escape-1/C-011
 - `display.py` owns the ten display bodies behind the public wrappers (DFCORE-4b,
   moved from `core.py`). DISPLAY-POLARS-1 departure (2026-09-09): `_resolve_display_style`'s
   one-line docstring said "default spark"; the default has been `polars` since step 1, so the
@@ -708,6 +737,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   pending-checkpoint materialize first and then reuse the shape, so
   `localCheckpoint(eager=False)` discharges on the next action with no count
   query. pins: review-fix-4/C-001, C-002, C-003
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** the built cache
+  shape scan runs through the native `sql_built` method. pins: string-literal-escape-1/C-011
 - `explain.py` owns the explain rendering support (DF-EXPLAIN-1, D-5 ruling 2026-09-08): the
   section headers `_LOGICAL_PLAN_HEADER` / `_PHYSICAL_PLAN_HEADER`, the `_EXPLAIN_CODEGEN_NOTE`
   line, the `_EXPLAIN_SECTION_PLAN` mode map (mode → SQL prefix + section keys), and the
@@ -762,6 +793,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `agg_dict`). The twelve `_pivot_*` module helpers move to `grouped_pivot.py`
   behind same-named imports (1151 → 955, with the CAP-1 mirror; the exception
   row retires under the default ceiling).
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** built agg SQL runs
+  through the native `sql_built` method. pins: string-literal-escape-1/C-011
 - `plan_collapse.py` owns plan simplification, window structural keys, show formatting, Arrow
   display/type conversion, SQL literal quoting, identifier rewrites, and writer safety helpers.
   DISPLAY-POLARS-1 step 4 (2026-09-09, follow-up): the module keeps the show
@@ -1369,8 +1402,10 @@ that held the comment (pins: comment-core-1/C-003).
 - `repartitionById`: Type-check simple name refs so non-int partition columns fail
   loud (Spark analysis). Bare attribute only — casts and expressions stay deferred
   to the engine seed.
-- `offset`: Fetch a very large tail after skip (practical unbounded offset on one
-  node).
+- `offset`: Plans a fetch-less engine `Limit` via `limit_with_skip(n, None)`
+  (CAST-OVERFLOW-INSERT-1 re-verify VO2-2, 2026-09-29), so a skipping offset over
+  a one-row constant source writes nothing, like Spark; the old large-fetch
+  encoding shadowed that shape.
 - `drop`: Live Spark 4.1.2: `drop(right["k"])` after leftsemi/leftanti is a no-op.
   Name-based drop removes every engine field whose display matches.
   **ATTR-ID-1 S3d (2026-10-01):** binding moves to
@@ -1659,3 +1694,5 @@ twin-join frame `select(b["id"] + 1, F.col("*"))` answers the presented fields `
 `functools.partial(_native.attribute_copy_name, self._plan())`, the collision-free name the
 native copy projection gave each field. `core.py` stays 3973 (the docstring gave the line).
 pins: u11-edge-1/C-029, C-030
+**STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** the REPLACE WHERE scan
+runs through the native `sql_built` method. pins: string-literal-escape-1/C-011

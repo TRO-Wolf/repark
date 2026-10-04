@@ -77,19 +77,22 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split tests by catalog backend with shared helpers kept local.",
     ),
     "crates/repark-iceberg/src/write/alter.rs": (
-        1606,
+        1556,
         "Iceberg ALTER operations share one transaction adapter.",
-        "Split property, rename, and schema-evolution operation families.",
+        "Split schema-evolution operation families; property and rename now live "
+        "in table_admin.rs.",
     ),
     "crates/repark-iceberg/src/write/append.rs": (
-        1804,
+        1737,
         "Append planning, file writing, and commit assembly share one entry module.",
-        "Extract writer preparation from transaction commit assembly.",
+        "Extract writer preparation from transaction commit assembly; "
+        "partitioned file writing now lives in partitioned_files.rs.",
     ),
     "crates/repark-iceberg/src/write/merge/mod.rs": (
-        1622,
+        1569,
         "The RePark-owned MERGE executor combines plan, COW, and MOR paths.",
-        "Split plan preparation from COW and MOR execution modules.",
+        "Split plan preparation from COW and MOR execution modules; "
+        "unpartitioned file writing now lives in merge/file_sink.rs.",
     ),
     "crates/repark-iceberg/src/write/merge/tests/merge.rs": (
         1032,
@@ -115,16 +118,6 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         1435,
         "Predicate DML scenarios share one consolidated test module.",
         "Split DELETE and UPDATE scenario families with shared setup retained.",
-    ),
-    "crates/repark-python/src/column/mod.rs": (
-        1012,
-        "PyO3 Column methods remain grouped in one binding module.",
-        "Extract the remaining date or window method family.",
-    ),
-    "crates/repark-python/src/session.rs": (
-        1122,
-        "PyO3 session construction and query entry points share one module.",
-        "Split configuration bindings from query and catalog bindings.",
     ),
     "crates/repark-spark/src/alter.rs": (
         1272,
@@ -207,7 +200,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split moving-average and band families only with identity proof.",
     ),
     "crates/repark-ta/src/udf/mod.rs": (
-        1821,
+        1818,
         "Window UDF cache, densification, specs, and dispatch share one module.",
         "Extract statistic and math dispatch from shared evaluation mechanics.",
     ),

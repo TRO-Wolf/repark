@@ -25,6 +25,15 @@ pins the outer-reference audit (red on the round-1 head and under the revert).
 Round 2 Q-21b-12: `n03_star_over_a_case_twin_answers_both_columns_declared` pins the declared
 star answer on a twin MemTable (Spark refuses 42711; a star refusal here would also refuse the
 DataFrame `filter` / `table` lowerings, which Spark answers — ledger N-03).
+RP-56 fold (2026-09-28, C-020 closed): `refuse_star_twins` in `star_twins.rs` refuses
+a written star over a non-scratch twin relation with Spark's recorded 42711 sentence (renamed
+`n03_star_over_a_case_twin_refuses_column_already_exists`, refusal under `false` plus the
+`true` answer); scratch relations keep answering so the DataFrame lowerings stay green.
+RP-56 verifier fold (2026-09-28): the refusal additionally requires the twin key inside one
+non-scratch table scan in the projection scope (`scan_twin_keys`), so derived/CTE/join/temp-view
+stars answer per p9/p9b (`vr3_derived_cte_and_join_twin_stars_answer`) while wrapped twin-table
+stars still refuse; the merge split the guard into `star_twins.rs` under the file-size gate.
+pins: rp-56/C-002
 Run 22b (2026-09-18, the debug-wheel segfault): `s22b_*` plan a 1,000-branch `UNION ALL`
 (plain and wrong-case fold) and a 5,000-branch one (both case modes) through
 `plan_statement_with_column_repair` on a thread with a 2 MiB stack — the tokio worker default.
@@ -70,6 +79,12 @@ pins: ice-error-conditions-1/C-011
   are public through `column_resolution` (`on_grown_stack` passes one value for both) so
   repark-spark's re-planning temp-view scan grows the stack the same way; removing that wrapper
   overflows the 100-level temp-view chain pins. pins: ice-views-1/C-018
+  **DEEP-FILTER-CHAIN-CRASH-1 verifier fold (2026-09-29):** `remaining_stack` is
+  public through `column_resolution` too, so the binding's small-stack backstop
+  reads the calling thread's remaining stack without a new dependency edge.
+  **CI segv (2026-09-30):** `run_on_grown_stack(red_zone, segment, work)` is the
+  sync form of the same primitive, so column clone/combine/drop runs grown
+  without a future or a runtime handle. pins: deep-filter-chain-crash-1/C-012
 - `tests.rs` — the battery below. **WO CASESENS-1 slice 2 (2026-09-27):**
   `sensitive_session_refuses_folded_names_and_keeps_backticks` answers unquoted
   exact `userId` where it refused `userid` (normalization-off exactness, net-zero
@@ -118,6 +133,9 @@ pins: ice-error-conditions-1/C-011
   returns the folded text, unchanged when the first plan succeeds; the MERGE
   door folds a parenthesized derived source with it before the fragment rewrite.
   pins: casesens-1/C-004
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** folded exits render
+  through `repark_iceberg::write::sql_text::render_for_reparse` so string
+  values re-parse exactly. pins: string-literal-escape-1/C-010
 - `twins.rs` — **WO CASESENS-1 slice 4 (2026-09-27):** the case-twin output
   pass (R9). `is_unique_name_error` matches DataFusion's `Projections require
   unique expression names` head through its wrappers; `respell_case_twins`
@@ -165,6 +183,24 @@ pins: ice-error-conditions-1/C-011
   relation back on the top projection (through `Sort` / `Limit` / `DISTINCT`), so a later
   DataFrame `F.col("t.ID")` still finds `t`; an explicit `AS` alias stays unqualified as in
   Spark. Pin `respelled_plain_references_keep_their_relation`. pins: u11-edge-1/C-018
+- `star_twins.rs` — **RP-56 merge (2026-09-28):** the twin-star guard split from
+  `../column_resolution.rs` under the file-size gate, a pure move with no renamed
+  items. `refuse_star_twins` refuses a written projection star over a non-scratch
+  twin relation with Spark's recorded 42711 sentence; `scan_twin_keys` scopes the
+  refusal to a twin key inside one non-scratch table scan.
+  **RP-56 DIFF-PROBE fold (2026-09-29):** the scan walker sees through `ViewTable`
+  nodes into the stored body (a stored twin-table scan still refuses), while
+  `Temporary` providers contribute no keys: a temp view re-plans its body through
+  the guarded door at every read, so a table-backed body refuses there and a
+  scan-free body answers (live Spark 4.1.2 answers the literal-twin view and
+  refuses the table-backed one, both 42711-shaped).
+  pins: rp-56/C-002
+- `struct_fields.rs` — **RP-56 DIFF-PROBE fold (2026-09-29):** the struct-twin
+  post-pass. A query that reads a struct field with two case-insensitive matches
+  refuses `42000 AMBIGUOUS_REFERENCE_TO_FIELDS` naming the written leaf; quoting
+  changes nothing (live Spark 4.1.2 refuses every spelling alike, 2026-09-29).
+  The pass runs only under `caseSensitive=false`.
+  pins: rp-56/C-003
 
 ## Purpose
 

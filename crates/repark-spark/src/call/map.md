@@ -175,6 +175,9 @@ and measured-parity contract would grow `call.rs` beyond its exact
   BETWEEN on primitives). Failures wrap as Spark's `Cannot parse predicates in where option`.
   In-module unit tests pin each convertible operator's Predicate shape.
   pins: maint-rewrite-data-files-options/C-007
+  **RP-56 verifier fold (2026-09-28):** column resolution tries the exact name first, and under
+  `false` a collided schema refuses with the fork's collision text ahead of the parse wrapper
+  (p9 `f_rewrite`, `t_rewrite_tw2_b`).
 - `remove_orphan_files.rs` — **IPI-30 guard narrowed (2026-09-22, owner ruling Q-55-6):** the
   procedure body, moved out of `call.rs` with its comments shed. The scan path is `location`,
   or the table location when `location` is absent. On a `TempFallbackAllowed` catalog

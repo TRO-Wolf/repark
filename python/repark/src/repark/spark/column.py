@@ -326,8 +326,7 @@ class Column:
     def __radd__(self, other: Scalar) -> Column:
         """``other + self`` — scalar on the left (PySpark ``Column.__radd__``).
 
-        PySpark commutes reflected ``+`` (``2 + x`` names as ``(x + 2)``, live 4.1.2); the
-        value is unchanged by commutativity, so mirror the name too.
+        PySpark commutes reflected ``+`` (``2 + x`` names as ``(x + 2)``, live 4.1.2).
         """
         return self._binary(other, "add", "+")
 
@@ -1166,6 +1165,7 @@ class Column:
 
     between = _column_fields.between
     eqNullSafe = _column_fields.eq_null_safe  # noqa: N815 — PySpark camelCase alias
+    is_duplicated = _column_fields.is_duplicated
     isin = _column_fields.isin
     isNaN = _column_fields.is_nan  # noqa: N815 — PySpark camelCase alias
     astype = _column_fields.astype

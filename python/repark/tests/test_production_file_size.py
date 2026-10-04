@@ -108,7 +108,7 @@ EXPECTED_SYMBOL_HASHES = {
     "_SPARK_SCALAR_MERGE_LABELS": (
         "3ec9222f7d117ea3c837932d15a5fc76da0e56ef7f90cea2c582149b6e8dc698"
     ),
-    "_SQLCONF_DEFAULTS": ("b0a993895500a6e53dc2f798507fc197575e94caeb75284ae4933bb3551a6d03"),
+    "_SQLCONF_DEFAULTS": ("3bbe7a82a99a0fa37614fa5d19b9e9cb5fc4f3580c78164f53f815b565cea13f"),
     "_SQLCONF_STATIC_KEYS": ("2c84e6ea547146fc355d10edcd2b83ae5c099c343f89c7df7ead1cfd68aa1d0b"),
     "_STOPPED_MESSAGE": ("ff5d7792959eab651b434834b392792dfdf05bcd0e5ccb61268e4ba4b6f18397"),
     "_TARGET_PARTITIONS_KEYS": ("1eccee64899f848c45eaad695a0eb745e6a9aef804baa7714261f5522c0eb131"),
@@ -182,7 +182,7 @@ EXPECTED_SYMBOL_HASHES = {
         "1d2e344dee78ff621e20d878701fd3da50599e3c4879c76485ef9dc93a71f9ff"
     ),
     "_forward_datafusion_conf": (
-        "f538f4aa93cd6fff1585c5b200e651cefb86f61097b5264cc45d93a9a79f6026"
+        "8e488940c2381193b9e96cfc01ad372c0f119b3e9c2492480f224e79a3698e92"
     ),
     "_infer_arrow_type_from_python_sample": (
         "03a76e73c5c2a06d49feb91028fd9ee2bf68b22cf12716700fbaaa741a38f157"
@@ -218,7 +218,7 @@ EXPECTED_SYMBOL_HASHES = {
         "75fde5520c9bd4362523509defbde54daa899a612f112f6b43117b97b952f1a6"
     ),
     "_materialize_values_as_memtable_frame": (
-        "6161ab242a59a6829c18f8cfc4e8a26cbebdd1ba667a4b49836e1a20ca32d0a6"
+        "0be19ae38cbdb9310540ae80e29a82c8cb9bd6bd7fc5572c8bf14e38ff33912c"
     ),
     "_merge_inferred_arrow_types": (
         "57700f5b94f7ceaf04c261e55f7a365b4a2453e9995775418cab2558a3b2f437"

@@ -77,6 +77,35 @@ handling (`CAST(NULL AS VOID)` rewrite, the non-NULL VALUES refusal into
   into TIMESTAMP refuses as on base. TIMESTAMP, TIMESTAMP_NTZ and DATE cells into
   numeric and BOOLEAN columns, BOOLEAN into numeric and numeric into BOOLEAN still
   refuse. pins: store-ts-to-numeric-1/C-001, C-006, C-007
+  **WO STORE-TS-DOORS-2 (2026-09-29):** a SELECT over a VALUES node is judged
+  too — `select_values_arms` maps each projected output position to the VALUES
+  cells that flow into it (derived tables, CTEs, UNION arms, joins; table and
+  view columns, literals, CASTs, functions and ambiguous refs stay unmapped)
+  and each arm's projected rows run through the unchanged `check_row`, so the
+  STRING silence and the leaf rule apply exactly as on the VALUES door. The
+  table load moved verbatim into `load_presented`.
+  pins: store-ts-doors-2/C-001
+  **Fold 2026-09-29 (verifier VT-1):** a mapped STRING cell is skipped when a
+  sibling set-operation arm at the same position has static type TIMESTAMP,
+  TIMESTAMP_NTZ or DATE — `SiblingJudge` types mapped sibling columns by
+  `leaf_type`, table provenance through the shared table loader and
+  SELECT-no-FROM expressions by `leaf_type` then the existing probe, and a
+  skipped cell is projected as the silent NULL cell. Any other sibling, any
+  non-STRING cell and any unresolvable shape keep the pre-fold judgment.
+  pins: store-ts-doors-2/C-001, C-003
+  **Fold 2026-09-30 (re-verify VT2-1, VT2-2, VT2-4, VT2-5):** the judge moves
+  verbatim to `sibling_types.rs` and this file keeps the refusal path
+  (`refuse_value` still types by `literal_source_type` then the probe, and
+  still fail-closes when the probe cannot parse). The skip call site now
+  passes only the position and the cell.
+  pins: store-ts-doors-2/C-001, C-003
+  **Fold 2026-10-01 (re-verify VT6-1):** `probe_source_type` parses the probe
+  SELECT and runs it through the statement's pre-gate rewrite chain
+  (`spark_ast::apply_pregate_judge_rewrites`) before `ctx.sql`, so a bare
+  `localtimestamp` demotes to the column the statement plans instead of
+  probing as the TIMESTAMP function; a probe that cannot parse still falls
+  back to the original text and fail-closes as before.
+  pins: store-ts-doors-2/C-001, C-003
 - `insert_source_types.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):**
   `refuse_insert_source_types` is the Spark door's INSERT gate for two source
   types the analyzer gate cannot see: a negated NULL (Spark's DOUBLE, judged by
@@ -103,6 +132,118 @@ handling (`CAST(NULL AS VOID)` rewrite, the non-NULL VALUES refusal into
   and only for a table with a DATE, BOOLEAN, timestamp or BINARY column and a
   source with a `Null`-typed column. STRING sources store on every INSERT door as
   on base. pins: store-ts-to-numeric-1/C-002, C-006
+  **WO STORE-TS-DOORS-2 (2026-09-29):** `refuse_partition_overwrite_sources`
+  maps the filled partition-overwrite source onto the table columns minus the
+  static partition columns (or by column list, bailing when a static column is
+  listed) and runs the shared `refuse_negated_null_writes`, so `-NULL` into
+  TIMESTAMP, DATE and BOOLEAN refuses on the static-partition door exactly as on
+  the other INSERT doors. Called from `execute_partition_overwrite`.
+  pins: store-ts-doors-2/C-002
+- `select_values_arms.rs` — **WO STORE-TS-DOORS-2 (2026-09-29):**
+  `resolve_insert_arms` resolves an INSERT source into VALUES-cell arms: one arm
+  per UNION side, each output position mapped to the VALUES cells that flow into
+  it through transparent projections over derived tables, CTEs and joins.
+  Unmapped positions (table and view columns, literals, CASTs, functions,
+  ambiguous refs, unexpandable stars, mismatched aliases, recursive CTEs) judge
+  nothing, so the gate only ever refuses a VALUES cell Spark refuses.
+  `arm_row_groups` groups the arm's positions by VALUES node and `null_cell`
+  builds the silent placeholder. Eight classifier tests.
+  pins: store-ts-doors-2/C-001
+  **Fold 2026-09-29 (verifier VT-1):** each arm position also carries sibling
+  provenance — table and column for a table-arm column ref, the expression for
+  a SELECT-no-FROM projection — resolved through derived tables, CTEs and
+  set-operation merges next to the cell map, so the store gate can type the
+  sibling arm Spark widens against. Two provenance tests.
+  pins: store-ts-doors-2/C-001, C-003
+  **Fold 2026-09-30 (re-verify VT2-1, VT2-2, VT2-4, VT2-5):** each arm also
+  carries its rendered SELECT (`arm_sql`; VALUES leaves carry none). A plain
+  or qualified star over an unresolvable factor now yields an arm with no
+  positions that still carries the SELECT, instead of dropping the arm, so
+  the judge can plan that arm alone as a fallback; every other drop stays a
+  drop. The mixed-star and recursive classifier pins now expect one empty
+  arm; their positions stay unmapped.
+  pins: store-ts-doors-2/C-001, C-003
+  **Fold 2026-09-30 (re-verify VT3-1):** the carried SELECT is scoped —
+  `sibling_scope::scoped_arm_sql` prefixes every in-scope CTE definition
+  (innermost wins on shadowing) and declines to scope case twins, so an arm
+  is never planned outside its statement's CTE scope. Call sites only; the
+  resolver and its classifier pins are unchanged.
+  pins: store-ts-doors-2/C-001, C-003
+- `sibling_scope.rs` — **Fold 2026-10-01 (re-verify VT5-1):** the CTE-scope
+  prefix moved verbatim from `sibling_types.rs` (`scoped_arm_sql`,
+  `unmapped_arm` and their helpers), so the judge file stays under its
+  ceiling. Call sites only; the resolver and its classifier pins are
+  unchanged.
+  pins: store-ts-doors-2/C-001, C-003
+- `sibling_types/` — **Fold 2026-09-30 (re-verify VT2-1, VT2-2, VT2-4,
+  VT2-5):** `SiblingJudge`, moved here from `ltz_values_store.rs`, decides
+  the VT-1 skip from one per-position map built once per statement and
+  reused for every cell. A cell and every sibling cell are typed the way
+  the refusal types them — `literal_source_type`, then `leaf_type` for the
+  TIMESTAMP/NTZ shapes the probe would only confirm, then the existing
+  probe — so the skip and the refusal never type a cell differently
+  (VT2-1: function-valued STRING cells and VALUES siblings of
+  `current_timestamp()`/`make_timestamp()`). A position no cell or
+  provenance entry resolves falls back to planning that arm's SELECT
+  alone through the session and reading the column type (R2: stars over
+  tables, expressions over table columns, constant expressions in a
+  SELECT with FROM, temp-view siblings); a plan failure keeps the old
+  judgment, while an ambiguity failure passes the STRING cell through
+  so the analyzer raises Spark's AMBIGUOUS_REFERENCE (VT2-2). Probes
+  are cached by probe text, table schemas by table, arm plans by arm,
+  so a probe-heavy deep UNION plans each arm at most once (VT2-4).
+  Six tests: unmapped-star shapes, static typing, the ambiguity
+  matcher, probe sharing, skip beside TIMESTAMP but not BIGINT, and
+  the plan-failure fall-through.
+  pins: store-ts-doors-2/C-001, C-003
+  **Fold 2026-09-30 (re-verify VT3-1..VT3-3):** the arm plan keeps four
+  outcomes. `Typed` judges by column type as before. `Ambiguous` matches
+  only the typed `SchemaError::AmbiguousReference` and the
+  `[AMBIGUOUS_REFERENCE]` tag, never the bare word, and a position-less
+  ambiguous arm judges instead of unjudging every position (VT3-2).
+  `Unresolved` (unknown column, function or table) leaves the cell unjudged
+  so the analyzer raises Spark's own class (VT3-3). `Failed` (no arm SQL, or
+  the constructed SQL cannot parse) keeps the old judgment, as does a
+  resolution failure retried once lowercased in a case-insensitive session
+  when the retry resolves. Eight tests cover the fold: the inverted matcher,
+  the unjudged failure, the kept judgment without SQL, the prefix, the
+  shadowing and recursion prefix, the case-twin decline, and the retry pair.
+  pins: store-ts-doors-2/C-001, C-003
+  **Fold 2026-09-30 (re-verify VT4-1, VT4-4):** the arm plan runs through
+  `plan_statement_with_column_repair` with the executing dialect, the same
+  planner the statement itself uses, so the gate judges the arm the statement
+  actually plans; a raw plan skews on any name the repair would fix, and the
+  skew unjudges the arm and stores (VT4-1). The lowercase retry is gone:
+  repair subsumes it. A consulted arm that plans `Ambiguous` now unjudges
+  every position, superseding the fold-3 per-position rule, so the analyzer's
+  AMBIGUOUS_REFERENCE surfaces instead of a sibling-gate CANNOT_SAFELY_CAST
+  (VT4-4); an ambiguous arm means the statement fails, so no store is
+  possible. Four tests: lowercase refs over uppercase columns, exact
+  case-sensitive refs, missing case-sensitive refs, and an ambiguous arm
+  unjudging a VALUES position elsewhere.
+  pins: store-ts-doors-2/C-001, C-003
+  **Fold 2026-10-01 (re-verify VT5-1):** `Unresolved` narrows to genuine
+  resolution failures — the typed `SchemaError::FieldNotFound`, RePark's
+  error-class tags (`[UNRESOLVED_COLUMN]` / `[UNRESOLVED_ROUTINE]` /
+  `[TABLE_OR_VIEW_NOT_FOUND]`) and a fixed list of DataFusion message
+  prefixes, because DataFusion 54 carries `Plan` and `Diagnostic` errors as
+  strings with no typed variant for them — so a later rewrite can no longer
+  turn a planning failure into a store (VT5-1). Every other failure is
+  `Failed` and keeps the earlier refusal. Three tests: the resolution
+  matcher, and an unquoted-interval window arm plus a coercion-failure arm
+  keeping their judgment.
+  pins: store-ts-doors-2/C-001, C-003
+  **Fold 2026-10-01 (re-verify VT6-1, VT6-2):** the arm plan runs the
+  re-parsed arm through the statement's pre-gate rewrite chain
+  (`spark_ast::apply_pregate_judge_rewrites`), so the judge plans exactly
+  what the statement plans: a bare `localtimestamp` demotes to the STRING
+  column instead of re-parsing as the TIMESTAMP function and skipping the
+  position (VT6-1). The classifier anchors its tags at the payload start
+  (RePark emits no error prefix of its own) and drops the `Table not found`
+  and `failed to resolve schema/catalog` prefixes no producer emits on this
+  path (VT6-2). The judge plus its pins moves to `sibling_types/` at the
+  file ceiling. Directory map: [sibling_types/map.md](sibling_types/map.md).
+  pins: store-ts-doors-2/C-001, C-003
 - `source_leaves.rs` — **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):**
   `source_type_is_reliable` decides whether a new refusal may trust RePark's
   planned source type. A plain cell (literal, typed string, CAST, a non-widening

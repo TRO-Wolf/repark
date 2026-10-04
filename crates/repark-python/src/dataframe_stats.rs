@@ -5,6 +5,7 @@ use pyo3::types::PyDict;
 use pyo3::wrap_pyfunction;
 
 use crate::dataframe::PyDataFrame;
+use crate::deep_stack::block_on;
 use crate::exceptions::AnalysisException;
 use crate::fence::fenced;
 use crate::to_py_err;
@@ -22,8 +23,16 @@ fn freq_items(
     capacity: usize,
 ) -> PyResult<PyDataFrame> {
     fenced!("freq_items", {
-        let df = repark_core::freq_items(frame.df.clone(), &column_names, capacity)
-            .map_err(to_py_err)?;
+        let depths = frame.depths();
+        let need = crate::deep_stack::clone_need_bytes(depths.plan, depths.expression);
+        let df = crate::deep_stack::grown_sync(need, || {
+            repark_core::freq_items(
+                crate::deep_stack::grown_clone_frame(frame.inner(), &frame.depths()),
+                &column_names,
+                capacity,
+            )
+        })
+        .map_err(to_py_err)?;
         Ok(PyDataFrame::new(df, Arc::clone(&frame.runtime)))
     })
 }
@@ -40,12 +49,10 @@ pub(crate) fn transpose(
         let source = frame.executable()?;
         let outcome = py
             .detach(|| {
-                frame.runtime.block_on(repark_core::transpose_frame(
-                    source,
-                    index_column,
-                    key_names,
-                    max_values,
-                ))
+                block_on(
+                    &frame.runtime,
+                    repark_core::transpose_frame(source, index_column, key_names, max_values),
+                )
             })
             .map_err(|error| match error {
                 repark_core::TransposeError::Spark(spark) => {

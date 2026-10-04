@@ -16,6 +16,7 @@ from repark.spark.session.session_configuration import (
     SPARK_SQL_FAIL_AMBIGUOUS_SELF_JOIN_KEY,
     SPARK_SQL_SELF_JOIN_AUTO_RESOLVE_KEY,
     MERGE_SCHEMA_KEY,
+    TIME_PARSER_POLICY_KEY,
     WAP_SESSION_KEYS,
     _DISPLAY_INT_DEFAULTS,
     _RETAINED_CACHE_BYTES_KEY,
@@ -248,6 +249,7 @@ class RuntimeConfig:
             SPARK_SQL_CASE_SENSITIVE_KEY,
             SPARK_SQL_FAIL_AMBIGUOUS_SELF_JOIN_KEY,
             SPARK_SQL_SELF_JOIN_AUTO_RESOLVE_KEY,
+            TIME_PARSER_POLICY_KEY,
         ):
             _native.set_runtime_config(inner, key, text)
             if key == SESSION_TIME_ZONE_KEY:
@@ -416,6 +418,7 @@ class RuntimeConfig:
             SPARK_SQL_FAIL_AMBIGUOUS_SELF_JOIN_KEY,
             SPARK_SQL_SELF_JOIN_AUTO_RESOLVE_KEY,
             PARTITION_OVERWRITE_MODE_KEY,
+            TIME_PARSER_POLICY_KEY,
         ):
             self._store().pop(key, None)
             self._unset_keys().add(key)

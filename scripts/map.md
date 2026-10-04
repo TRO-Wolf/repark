@@ -19,6 +19,16 @@ ATTR-ID-1 S3e (2026-10-01): `check_lib_py.py` ratchets `dataframe/core.py` 3803 
 ATTR-ID-1 S3b (2026-10-01): `check_lib_py.py` ratchets `dataframe/core.py` 3921 → 3846 (the filter quoter and its token helpers move to `column_fields.py`, `filter`/`_sort_specs` delegate to it), shrink-only, with the CAP-1 mirror. pins: attr-id-1/C-025
 
 ATTR-ID-1 S3a (2026-09-30): `check_lib_py.py` ratchets `dataframe/core.py` 3973 → 3921 (`_column_of` and `_rebind_stable_name_column` become one-line delegates to `column_fields`, `__getitem__`/`__getattr__` route through the resolve rule, the alias overlay restores deduplicated display names), shrink-only, with the CAP-1 mirror. pins: attr-id-1/C-024
+TA-CHAIN-1 S1 (2026-10-03): `check_rust_file_size.py` ratchets `repark-ta/src/udf/mod.rs` 1821 → 1818 (the four `compute` / `compute_all` calls in `evaluate_all` route through the new `udf/prefix.rs` helpers; the wrapper tests live in `prefix.rs`), shrink-only, integer only (owner amendment R-TC1-6, 2026-10-03).
+RP-56 DIFF-PROBE fold (2026-09-29): `check_rust_file_size.py` ratchets `repark-iceberg/src/write/append.rs` 1804 → 1737 (the `write_partitioned_data_files*` family moved to `partitioned_files.rs`) and `repark-iceberg/src/write/merge/mod.rs` 1622 → 1569 (the `write_data_files*` family moved to `merge/file_sink.rs`), shrink-only.
+DEEP-FILTER-CHAIN-CRASH-1 CI segv (2026-09-30): `check_rust_file_size.py` ratchets `repark-python/src/column/mod.rs` 1011 → 1005 (rustfmt joins three calls shortened by the grown clone-out; the `Clone` derive leaves with the manual impl), shrink-only, with the CAP-1 mirror. pins: deep-filter-chain-crash-1/C-012
+
+DEEP-FILTER-CHAIN-CRASH-1 limits fold (2026-09-29): `check_rust_file_size.py` ratchets `repark-python/src/column/mod.rs` 1012 → 1011 (the SQL text-cap call leaves `Column.sql`), shrink-only, with the CAP-1 mirror. pins: deep-filter-chain-crash-1/C-009
+STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30): `check_lib_py.py` ratchets `dataframe/core.py` 3973 → 3971 and `session/session_core.py` 2293 → 2277, with the CAP-1 mirror, shrink-only. pins: string-literal-escape-1/C-011
+
+STRING-LITERAL-ESCAPE-1 re-verify follow-up (2026-09-30): `check_rust_file_size.py` ratchets `repark-python/src/session.rs` 1122 → 1097 (`apply_session_knobs` moves to `session_runtime.rs` to fund the `sql_built` method), with the CAP-1 mirror, shrink-only. pins: string-literal-escape-1/C-011
+
+STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30): `check_lib_py.py` ratchets `spark/functions.py` 1984 → 1938 (the `lit` rendering helpers move unchanged to `functions_lit.py`; the shed `#` notes live in the spark map), with the CAP-1 mirror, shrink-only. pins: string-literal-escape-1/C-009
 
 WO CASESENS-1 S5 (2026-09-27): `check_rust_file_size.py` ratchets `repark-iceberg/src/write/alter.rs` 1607 → 1606 (the DROP/REPLACE name pin is rewritten to the exact refusal without its comments), shrink-only. pins: casesens-1/C-013
 
@@ -65,6 +75,8 @@ IPI-40 views PR1 WO-R2 (2026-09-21): `check_lib_py.py` ratchets `session/session
 U7 PR1 (2026-09-24): `check_lib_py.py` ratchets `spark/dataframe/writer_readwriter.py` 1077 → 1073 (the iceberg `save` branch and the CTAS body move to `writer_save.py`; the `_format_explicit` slot adds three lines back), shrink-only. Round 2 (2026-09-24): 1073 → 1039 (`saveAsTable`'s mode and bucket branches move into the Rust `writer_plan` kernel; `_ctas_sql` leaves), with the CAP-1 mirror. U7 PR2 (2026-09-24): 1039 → 1033 (the `DataFrameWriterV2.option` branch/tag refusal leaves), with the CAP-1 mirror, then 1033 → 1031 (`overwrite(condition)` hands its SQL to `writer_schema.replace_where_statement`), then 1031 → 1029 (slice-2 round 2, 2026-09-25: the by-name binding moves to the Rust door), each with the CAP-1 mirror. `docs_links_allowlist.txt` loses the `iceberg-guide.md` REF-1 anchor row: the guide now links the row's full heading slug. pins: u7-write-df-2/C-005, C-006
 
 ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19): `check_rust_file_size.py` DROPS the `write/predicate_dml.rs` exception (1034 → 960, under the default ceiling: the MoR arms split to `predicate_dml/mor_commit.rs` and the UPDATE allow-list moved to `predicate_dml/plain.rs`) `write/merge/tests/streaming_scan.rs` 3020 → 3018 and `write/predicate_dml/tests/predicate_dml.rs` 1440 → 1435, all shrink-only, with the CAP-1 mirror.
+
+DEEP-FILTER-CHAIN-CRASH-1 re-verify fold (2026-09-30): `check_rust_file_size.py` DROPS the `repark-python/src/column/mod.rs` exception (1005 → 969, under the default ceiling: the unit tests moved verbatim to `column/expr_tests.rs` and the `PyColumn` level constructors to `column/levels.rs`) and the `repark-python/src/session.rs` exception (1122 → 802, under the default ceiling: the unit tests moved verbatim to `session_tests.rs`), both shrink-only, with the CAP-1 mirror (rust count 36 → 34). pins: deep-filter-chain-crash-1/C-013
 
 ICE-SESSION-WRITE-CONF-1 (2026-09-19): `check_rust_file_size.py` ratchets `write/merge/mod.rs` 1761 → 1701 (MERGE staging splits to `session_staging.rs`) and `write/predicate_dml.rs` 1139 → 1034 (identity COW commits split to `cow_commit.rs`), both shrink-only, with the CAP-1 mirror.
 ICE-RDF-SORT-PARSE-1 (2026-09-20): `check_rust_file_size.py` ratchets `repark-spark/src/tests/call.rs` 1303 → 1289 (`call_rewrite_sort_strategy_refuses_loud` becomes `call_rewrite_positional_strategy_routes_to_the_rewriter` — the R135 wording it pinned no longer exists, and the replacement asserts the fork's unsorted-table refusal through both the named and the positional door), shrink-only. pins: ice-rdf-sort-parse-1/C-004
@@ -927,6 +939,8 @@ repark-parity slice.
 
 ## Contents
 
+- [dev/](dev/map.md) — **C-0 (2026-10-02):** disposable Postgres Compose file and
+  `pg_disposable.sh` (`up` / `down` / `url` / `reap`) for the live-database cells.
 - `coordinator/` — the tick-driven lane coordinator (2026-09-22, moved in from the campaign's
   scratch tooling and renamed from `xorch`): a bash driver that waits for free and wakes a model
   for one bounded tick at a time, one lane per systemd unit; engines for Grok, Muse, GLM and Codex;
@@ -1183,7 +1197,12 @@ repark-parity slice.
   is the forbidden door→door product edge. Third-party crates are out of scope (internal = any
   Cargo workspace member — membership, not the `repark-` name, is the test); a new workspace
   member missing from `TIERS`/`ROLES` fails the guard; mapped crates that have not landed yet are
-  simply not inspected. NOTE the binding's deliberate **non-edges** (no `repark-sql`, no
+  simply not inspected — and since 2026-10-01 the table carries the layout of record ahead of
+  the code: `repark-connect`, `repark-cdc`, `repark-io` (tier 1), `repark-spark-dialect` and
+  `repark-crawler` (tier 3) are pre-declared with their edges from
+  `task/roadmap/epic-term/crate-layout-1-8-2026-10-01.md` (CL-8), so each arrives onto an
+  enforced layout. A pre-declared row is still audited: the declaration audit rejected the
+  first draft's tier-1 → `repark-core` edges as layering inversions. NOTE the binding's deliberate **non-edges** (no `repark-sql`, no
   `repark-iceberg`) are still enforced by review, not here — this guard bans edges, it never
   requires one. Wired into `make check-crate-dag` (in the `make ci` chain),
   `.pre-commit-config.yaml`, and the hook installed by `make install-hooks`.
@@ -1330,6 +1349,9 @@ repark-parity slice.
   export tables `install_into` appends. Dual-wired: `make check-example-coverage`
   in `make ci` and ci.yml's python job (static half). wheels.yml smoke runs
   `python -I … --require-execute`. The `.sh` wrapper forwards `"$@"`.
+  **CI-1 (2026-10-03, owner ruling on H-2):** the `--require-execute` run lives in
+  `smoke.yml`'s `examples` job now; the wrapper's header shed its two `Wired:` lines
+  (one named `wheels.yml`) rather than reword a comment, so this map is where the wiring lives.
   Example children drop PYTHONPATH.
   EX-1 (2026-08-31) widened the closed set with the seven surfaces the owner
   ruled into v0.7 — Column, Window, WindowSpec, Catalog, the `types` module

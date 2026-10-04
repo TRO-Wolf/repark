@@ -6,6 +6,12 @@ measurements behind it; it leaves when the owner charters it (a brief under `bri
 declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
+- [crate-layout-review-2026-09-30.md](crate-layout-review-2026-09-30.md) — **crate layout review
+  (2026-09-30):** RePark's test placement (53 % of Rust lines are tests; 36 single-file `tests.rs`
+  directories; 45 integration binaries) measured against Sail, Polars and DataFusion, the four
+  options with their costs (one integration binary per crate, the `#[path]` rule question, family
+  grouping, statement-and-answer tests as data), and the recommended order after v1.5.1. Leaves when
+  the owner charters an option or declines the review.
 - [read-path-obligations-2026-09-27.md](read-path-obligations-2026-09-27.md) — **WO READ-PATH-1
   (2026-09-27):** the obligations inventory — all 211 binding sentences from AGENTS.md, CLAUDE.md
   and the three skills, each with its old home, new home and role trigger. Closes when the PR merges.
@@ -139,6 +145,24 @@ declines it (a dated ruling in the intake, then the archive).
 - [tz-offset-seconds-1-card-2026-09-16.md](tz-offset-seconds-1-card-2026-09-16.md) — **card TZ-OFFSET-SECONDS-1
   (2026-09-16, 1.6, ruling Q-17c-1):** sub-minute fixed session offsets (`+05:30:30`) carried as seconds east of UTC
   in a typed zone instead of an Arrow `Tz` string; closes the dated declaration SET-ANSI-RUNTIME-4. No 1.5 code.
+- [plan-depth-1-card-2026-09-30.md](plan-depth-1-card-2026-09-30.md) — **card PLAN-DEPTH-1
+  (2026-09-30, mid-term, ruling OD-3):** `count()` over 200 or more chained `DataFrame.filter`
+  calls segfaults (stack overflow); verifier finding RC5-5, S3, pre-existing. Covered by PR #892
+  (DEEP-FILTER-CHAIN-CRASH-1); closes when #892 merges, after re-running the repro with string
+  and Column filters under both `caseSensitive` settings on main.
+- [sql-lambda-scope-1-card-2026-09-30.md](sql-lambda-scope-1-card-2026-09-30.md) — **card SQL-LAMBDA-SCOPE-1
+  (2026-09-30, mid-term, ruling OD-3):** the `spark.sql` door scopes higher-order-function
+  lambdas to the wrong rows (`exists` predicates answer `[2]`/`[1]`/`[1,5]`/`[5]` where Spark
+  answers `[1,2]`/`[1,5]`/`[1,2,5]`/`[1,5]`); verifier finding RC5-6, S3, pre-existing, base and
+  head identical. The `DataFrame.filter` forms already answer Spark.
+- [sort-parent-column-1-card-2026-09-30.md](sort-parent-column-1-card-2026-09-30.md) — **card SORT-PARENT-COLUMN-1
+  (2026-09-30, mid-term, ruling OD-3):** `orderBy(parent Column)` on a case-twin frame sorts by
+  the output twin instead of the hidden parent attribute under `caseSensitive=true`;
+  verifier finding RC5-7, S3, pre-existing, base and head identical. Home is the R-CS2-18 family.
+- [unicode-case-version-1-card-2026-09-30.md](unicode-case-version-1-card-2026-09-30.md) — **card UNICODE-CASE-VERSION-1
+  (2026-09-30, mid-term, ruling OD-3):** case folding uses Rust's Unicode 16 tables while JDK 17
+  Spark uses Unicode 13, so Unicode 14–16 case pairs fold in RePark but stay distinct in Spark;
+  verifier finding RC3-5 / residue R-CS2-17, S3, 34 cells. The boundary moves with the deployment JDK.
 - [bl11-encoder-perf-1-card-2026-09-16.md](bl11-encoder-perf-1-card-2026-09-16.md) — **card BL11-ENCODER-PERF-1
   (2026-09-16, P3 perf, ruling Q-17c-5):** the numeric → BINARY encoder builds fixed-width output in bulk (arithmetic
   offsets, cloned validity) instead of a per-row builder; starts from 17c's measured 26.81 ms vs 18.35 ms (~1.5×).
@@ -410,6 +434,7 @@ declines it (a dated ruling in the intake, then the archive).
 - [v1-5-0-release-readiness-2026-09-27.md](v1-5-0-release-readiness-2026-09-27.md) — **v1.5.0 release-readiness audit (2026-09-27, WO RELEASE-READY-1, docs only):** every non-EQUAL answered matrix cell against its carve-out record, C-1 to C-5 with their follow-ups, spec units U0–U12 with landing PRs, the `docs/release.md` blockers and open items as read-only verdicts, the non-blocking follow-ups, and six numbered findings (F-1 U12 unstarted and F-6 the missing C-2 card need the owner; F-2 to F-5 fixed by dated pointer notes in the same round). Closed 2026-09-27: the evening rerun confirmed the matrix and v1.5.0 shipped as tag `v1.5.0`.
 - [v1-5-0-release-notes-draft-2026-09-27.md](v1-5-0-release-notes-draft-2026-09-27.md) — **v1.5.0 release notes, FINAL (2026-09-27, tag `v1.5.0`):** the shipped notes, covering `2c7a4d25` (v1.4.2) to the tag — parity by area with the measured rerun matrix, behaviour changes, performance, fixes (including the #868 UUID fix), the five carve-outs in plain words, and known follow-ups, every line from a commit subject, the spec, a ledger or the matrix.
 - [v1-5-1-release-notes-2026-09-29.md](v1-5-1-release-notes-2026-09-29.md) — **v1.5.1 release notes (2026-09-29):** the notes for the first patch on 1.5.0, covering `9392dbc3` (v1.5.0) to `8568e57a`: U12 S3 path writes with the live AWS acceptance result, CASESENS-1, the TIMESTAMP/NTZ/DATE/numeric store-assignment units, INTDIV-1, the RP-55 fork repin, one performance note, the rerun matrix (705/132/5/0), and the v1.5.2 follow-ups. Every line comes from a commit subject, a ledger, a verifier hand-back or the matrix.
+- [v1-5-2-release-notes-2026-10-03.md](v1-5-2-release-notes-2026-10-03.md) — **v1.5.2 release notes (2026-10-03):** the notes for the second patch on 1.5.0, from `db3a1f37` (v1.5.1): TA-CHAIN-1, POLARS-IS-DUPLICATED-1, DEEP-FILTER-CHAIN-CRASH-1, STORE-TS-DOORS-2, STRING-LITERAL-ESCAPE-1, CAST-OVERFLOW-INSERT-1 and TEXT-WRITE-TIMESTAMP-ZONE-1, the RP-56 fork repin, CI-1 wheel-smoke sharding and the C-0 disposable Postgres harness.
 - [release-diff-1-5-1-pre-existing.md](release-diff-1-5-1-pre-existing.md) — **RELEASE-DIFF-1-5-1-PE (2026-09-29):** the wrong answers found on main by the v1.5.1 release differential and the per-PR verifiers that were already there before this release. PE-3 to PE-26 each carry a severity, Spark's answer and a card name, with the silent rows (S1) first.
 - [cast-overflow-in-table-insert-1.md](cast-overflow-in-table-insert-1.md) — **CAST-OVERFLOW-IN-TABLE-INSERT-1 card (2026-09-28):** an out-of-range fractional store into an integer column refuses `CAST_OVERFLOW_IN_TABLE_INSERT`, as Spark does. It is in flight as PR #891 (v1.5.2).
 - [polars-is-duplicated-1.md](polars-is-duplicated-1.md) — **POLARS-IS-DUPLICATED-1 card (2026-09-28, owner ruling):** `.filter(col('x').is_duplicated())` on both `rp.col` and `F.col`, with Polars 1.43.2 semantics (every occurrence, null==null, NaN==NaN, 0.0==-0.0). It is in flight as PR #883 (v1.5.2).
@@ -418,3 +443,166 @@ declines it (a dated ruling in the intake, then the archive).
 - [local-checkpoint-new-frame-1-card-2026-10-03.md](local-checkpoint-new-frame-1-card-2026-10-03.md) — **card LOCAL-CHECKPOINT-NEW-FRAME-1 (2026-10-03, ATTR-ID-1 SJ-6, ruled R-SJ4-1):** `localCheckpoint()` returns a new frame, so `I_checkpoint_sel_d` answers Spark's rows; the same-object pins are rewritten to the new semantics.
 - [perf-attr-stamp-2-card-2026-10-03.md](perf-attr-stamp-2-card-2026-10-03.md) — **card PERF-ATTR-STAMP-2 (2026-10-03, owner ruling, design unit, before 1.6):** take attribute-id stamping under 1.10x like-for-like; the stack ships to main at 1.2021x as a dated carve-out and no release tag carries it until this card lands and is measured.
 - [attr-id-1-release-note-2026-10-03.md](attr-id-1-release-note-2026-10-03.md) — **ATTR-ID-1 release note (2026-10-03, SJ-6):** the user-visible tightening that ships with the ATTR-ID-1 stack, not v1.5.2 — the `s.join(d).select(d.v)` 1182 refusal, the `failAmbiguousSelfJoin=false` escape hatch, the free-name `AMBIGUOUS_REFERENCE` tightening, and the alias fix.
+- [fexpr-operator-paren-1-card-2026-10-01.md](fexpr-operator-paren-1-card-2026-10-01.md) — **card FEXPR-OPERATOR-PAREN-1
+  (2026-10-01, HIGH, from the overnight owner-items backlog, #890 re-verify 3 VE4-1):** an `F.expr`
+  fragment without spaces around a binary operator is composed without parentheses, so
+  `cube(F.expr('a-b')*2)` and `F.expr('(a) - (b)')` give wrong cube/rollup grouping keys
+  (RePark -1/-16/3, Spark -14/0/10/4); cause `python/repark/src/repark/spark/functions.py:326-329,338`.
+- [concat-nested-memory-1-card-2026-10-01.md](concat-nested-memory-1-card-2026-10-01.md) — **card
+  CONCAT-NESTED-MEMORY-1 (2026-10-01, HIGH, from the overnight owner-items backlog, #892 lane):**
+  300 nested `F.concat(e, F.lit('x'))` over a 50-row frame grew a debug process to 90+ GB over
+  4.5 h (119 GB in another run); the `/tmp/concat.py` probe is gone (evidence not retained), so the
+  repro is rebuilt inline and runs must be memory-capped (`ulimit -v 67108864`, about 240 s).
+- [string-to-date-truncate-1-card-2026-10-01.md](string-to-date-truncate-1-card-2026-10-01.md) — **card
+  STRING-TO-DATE-TRUNCATE-1 (2026-10-01, from the overnight owner-items backlog, VN6-4 S3):**
+  `string_to_date` (`crates/repark-functions/src/cast_map/leaf.rs:562-576`) rejects
+  `'2024-01-01 junk'` and `'2024-01-01Tjunk'` where Spark truncates to the date; ANSI-off
+  `nullif(DATE '2024-01-01', '2024-01-01 junk')` returns the date where Spark returns NULL.
+- [s3a-overwrite-commit-1-card-2026-10-01.md](s3a-overwrite-commit-1-card-2026-10-01.md) — **card
+  S3A-OVERWRITE-COMMIT-1 (2026-10-01, from the overnight owner-items backlog, #889 rollback fold
+  on moto):** an s3a `mode("overwrite")` text write deletes the destination's existing objects
+  BEFORE the COPY, so a failed overwrite leaves the destination empty; Spark's commit protocol
+  keeps the old data until commit; same on `3d4f2030` and on base.
+- [coalesce-shuffle-flake-1-card-2026-10-01.md](coalesce-shuffle-flake-1-card-2026-10-01.md) — **card
+  COALESCE-SHUFFLE-FLAKE-1 (2026-10-01, from the overnight owner-items backlog, #888 re-verify 7):**
+  an attack3 coalesce/shuffle wrong-result flake, reproduced on base; evidence
+  `/tmp/oc-worker/direct/wo/reverify7-nvl/` (evidence location, retained).
+- [json-ntz-null-inference-1-card-2026-10-01.md](json-ntz-null-inference-1-card-2026-10-01.md) — **card
+  JSON-NTZ-NULL-INFERENCE-1 (2026-10-01, from the overnight owner-items backlog, #889 fold):** a
+  mostly-null NTZ column drops out of JSON read-back key inference, so appending such a frame to
+  its own seed fails append validation.
+- [view-ansi-capture-1-card-2026-10-01.md](view-ansi-capture-1-card-2026-10-01.md) — **card
+  VIEW-ANSI-CAPTURE-1 (2026-10-01, from the overnight owner-items backlog, #888 re-verify 8
+  VN9-4):** views are re-analyzed under the current session's ANSI setting, not the setting they
+  were created under, so a view created under ANSI on with `sequence(1, '3')` or a CAST changes
+  behaviour when read under ANSI off; Spark keeps the creation-time setting.
+- [const-eval-ceiling-1-card-2026-10-01.md](const-eval-ceiling-1-card-2026-10-01.md) — **card
+  CONST-EVAL-CEILING-1 (2026-10-01, the owner's card, from the overnight owner-items backlog):**
+  replace the mirror constant evaluator (`cardinality.rs` const_i128/const_f64/exact_i128, and
+  `cardinality_nullif.rs`) with a ceiling check on DataFusion's ExprSimplifier/ConstEvaluator
+  output; includes the line-67 unknown-versus-NULL defect (`nullif(101,
+  coalesce(CAST('0' AS INT), 101))` proves a false equality) as a known instance.
+- [verbatim-ctas-escape-1-card-2026-10-01.md](verbatim-ctas-escape-1-card-2026-10-01.md) — **card
+  VERBATIM-CTAS-ESCAPE-1 (2026-10-01, from the overnight owner-items backlog, #890 re-verify
+  VE2-3):** in verbatim mode (`spark.sql.parser.escapedStringLiterals=true`), CTAS and INSERT
+  OVERWRITE with a `\'` literal fail with a parse error, while Spark accepts them.
+- [cte-temp-view-precedence-1-card-2026-10-01.md](cte-temp-view-precedence-1-card-2026-10-01.md) — **card
+  CTE-TEMP-VIEW-PRECEDENCE-1 (2026-10-01, from the overnight owner-items backlog, one card covering
+  lines 69, 77 and 81):** CTE-versus-temp-view precedence gives silent wrong data on column-list
+  INSERT, static-partition OVERWRITE and CTAS (a CTE should shadow a same-named temp view); the
+  facade region walker expands CTE references on the column-list door; VT4-2 (quoted-case CTE name)
+  and VT4-3 (`PARTITION (p)` / `PARTITION (p='v')` doors).
+- [merge-update-ts-widening-1-card-2026-10-01.md](merge-update-ts-widening-1-card-2026-10-01.md) — **card
+  MERGE-UPDATE-TS-WIDENING-1 (2026-10-01, from the overnight owner-items backlog, #894 re-verify
+  2, pre-existing on base):** MERGE and UPDATE refuse the STRING-plus-TIMESTAMP widening that
+  Spark stores.
+- [fexpr-timestamp-zone-1-card-2026-10-01.md](fexpr-timestamp-zone-1-card-2026-10-01.md) — **card
+  FEXPR-TIMESTAMP-ZONE-1 (2026-10-01, from the overnight owner-items backlog, #888 re-verify
+  10):** `F.expr` TIMESTAMP literals resolve in UTC instead of the session zone (a DataFrame
+  `F.expr` door gap; SQL resolves them in the session zone).
+- [ml-cv-fold-test-strength-1-card-2026-10-01.md](ml-cv-fold-test-strength-1-card-2026-10-01.md) — **card
+  ML-CV-FOLD-TEST-STRENGTH-1 (2026-10-01, from the overnight owner-items backlog, VE4-2):**
+  `test_ml_boost_oracle.py::test_cross_validator_materializes_fold_labels` cannot tell folds that
+  ignore the materialized view from folds that use it, because the fold-count query reads the view anyway.
+- [unpivot-perf-flake-1-card-2026-10-01.md](unpivot-perf-flake-1-card-2026-10-01.md) — **card
+  UNPIVOT-PERF-FLAKE-1 (2026-10-01, from the overnight owner-items backlog, CI flake):**
+  `python/repark/tests/test_perf_unpivot_1.py::test_stack_is_linear_in_columns` is timing-based
+  and fails on shared CI runners with no product cause (hit #891 at exponent 1.224 and #892 at
+  1.120); needs a noise-robust bound.
+- [spark-string-ts-functions-1-card-2026-10-01.md](spark-string-ts-functions-1-card-2026-10-01.md) — **card
+  SPARK-STRING-TS-FUNCTIONS-1 (2026-10-01, from the overnight owner-items backlog, #894 fold 4):**
+  RePark registers no Spark `string()`, `timestamp()` or `current_user()` function
+  (datafusion-spark 54.1 ships none); `SELECT string(1)` raises `UNRESOLVED_ROUTINE` where Spark answers.
+- [string-numeric-parse-perf-1-card-2026-10-01.md](string-numeric-parse-perf-1-card-2026-10-01.md) — **unit
+  STRING-NUMERIC-PARSE-PERF-1 (2026-10-01, the owner's new unit, from the overnight owner-items
+  backlog):** a fast Spark-compatible string→number parse in the shared `cast_map`
+  (`crates/repark-functions/src/cast_map/leaf.rs`, `string_to_fractional`, then
+  `java_double/parse_float.rs`); target string→DOUBLE/INT/BIGINT/DECIMAL within 1.05x of
+  DataFusion's native cast with byte-identical Spark semantics; carried by #888 as VN7-5, not a #888 blocker.
+- [nvl-type-coercion-2-card-2026-10-02.md](nvl-type-coercion-2-card-2026-10-02.md) — **card
+  NVL-TYPE-COERCION-2 (2026-10-02, design-heavy, from the #888 park):** one pre-coercion
+  mode-aware rewrite for the nvl family (Spark types `nvl('a', 5)` BIGINT on, STRING off;
+  the rewrite runs after `type_coercion`), deleting the base route, `core_declared`, the
+  fexpr markers, the F.expr `type_coercion` strip and the ceiling mirror evaluator; the
+  review experiment fixed 16 of 31 nested cap-b cells with zero ANSI-off movement. An Opus
+  design sketch comes first; no more folds on `54bc9ac2`.
+- [coalesce-ansi-widen-1-card-2026-10-02.md](coalesce-ansi-widen-1-card-2026-10-02.md) — **card
+  COALESCE-ANSI-WIDEN-1 (2026-10-02, from the #888 review):** bare `coalesce`/`array`
+  widening over STRING with DATE, BINARY and DECIMAL, pre-existing on base (four measured
+  cells: `coalesce('2024-01-02', DATE'2024-01-02')`, `array(sdt, dt)`, `upper(TIMESTAMP)`,
+  `coalesce(1.50BD, '1.5')`); BINARY shapes not yet measured.
+- [bare-literal-function-column-1-card-2026-10-02.md](bare-literal-function-column-1-card-2026-10-02.md) — **card
+  BARE-LITERAL-FUNCTION-COLUMN-1 (2026-10-02, S1, from the overnight owner-items backlog,
+  #894 round-6 VT7-1):** a STRING column named `current_timestamp`/`current_date` resolves
+  as the function (`bare_nullary.rs:9` lacks column-first); SELECT returns and stores the
+  current time where Spark uses the column; 24 cells, pre-existing on base.
+- [session-conf-live-1-card-2026-10-02.md](session-conf-live-1-card-2026-10-02.md) — **card
+  SESSION-CONF-LIVE-1 (2026-10-02, from ATTR-ID-1 S3c):** frames keep the case rule from
+  creation in `task_ctx`, so `conf.set` flips leave facade-live and native planning
+  disagreeing (121 gap-moved cells); a session-infrastructure card, outside S3a–S3e.
+- [createdataframe-dup-names-1-card-2026-10-02.md](createdataframe-dup-names-1-card-2026-10-02.md) — **card
+  CREATEDATAFRAME-DUP-NAMES-1 (2026-10-02, from ATTR-ID-1 S3d residue 2):** RePark's
+  `createDataFrame` refuses duplicate column names where Spark mints distinct ids (probe
+  `s3d18` unbuildable; the multi-id-union refusal is pinned via alias-dup instead).
+- [selectexpr-dup-field-join-1-card-2026-10-02.md](selectexpr-dup-field-join-1-card-2026-10-02.md) — **card
+  SELECTEXPR-DUP-FIELD-JOIN-1 (2026-10-02, from ATTR-ID-1 S3e):** `selectExpr` over
+  duplicate-field join frames fails at the scratch-view scan, on main-identical untouched
+  paths; a view/engine follow-up.
+- [qualified-display-name-1-card-2026-10-02.md](qualified-display-name-1-card-2026-10-02.md) — **card
+  QUALIFIED-DISPLAY-NAME-1 (2026-10-02, from ATTR-ID-1 S3e):** Spark strips qualifiers in
+  compound display names (`(v + v)`) and `selectExpr` (`(v + 1)`); RePark keeps the written
+  qualifier; a display-naming follow-up.
+- [star-error-shape-1-card-2026-10-02.md](star-error-shape-1-card-2026-10-02.md) — **card
+  STAR-ERROR-SHAPE-1 (2026-10-02, from ATTR-ID-1 S3e):** `INVALID_USAGE_OF_STAR_OR_REGEX`
+  for `F.col("q.*")` in filter/withColumn/orderBy, `CANNOT_RESOLVE_STAR_EXPAND` for unknown
+  stars, and shaped `getitem` `q.*`, where RePark gives engine errors; an error-shaping
+  follow-up.
+- [unresolved-suggest-qualified-1-card-2026-10-02.md](unresolved-suggest-qualified-1-card-2026-10-02.md) — **card
+  UNRESOLVED-SUGGEST-QUALIFIED-1 (2026-10-02, from ATTR-ID-1 S3e):** Spark's UNRESOLVED
+  suggestion lists are qualifier-qualified; RePark echoes bare names, unchanged from main;
+  a suggestion-list follow-up.
+- [withcolumn-dup-display-1-card-2026-10-02.md](withcolumn-dup-display-1-card-2026-10-02.md) — **card
+  WITHCOLUMN-DUP-DISPLAY-1 (2026-10-02, from ATTR-ID-1 S3e):** `withColumn` over
+  duplicate-display frames raises a bare AMBIGUOUS_REFERENCE via `_iter_bound_columns`,
+  main-identical; an engine/bounds follow-up.
+- [qualified-twin-bind-1-card-2026-10-02.md](qualified-twin-bind-1-card-2026-10-02.md) — **card
+  QUALIFIED-TWIN-BIND-1 (2026-10-02, record only, from ATTR-ID-1 S3e):** single-id
+  multi-hit qualified binds against Spark's two-attribute refusal under the settled
+  S1/C-038 select-dup model; target "revisit if a cell disagrees".
+- [df-metadata-col-1-card-2026-10-02.md](df-metadata-col-1-card-2026-10-02.md) — **card
+  DF-METADATA-COL-1 (2026-10-02, re-cut from closed draft PR #662):**
+  `DataFrame.metadataColumn` and the hidden `_metadata` struct on file scans, two weeks
+  stale with review findings open (P1 L-501 + 3 P2 + 1 P3, R-18b-16..19, Spark cells
+  recorded); kept branch `feat/df-metadata-col-1` at `e07acb9c`, round-4 tree saved as a
+  patch.
+- [java-regex-features-1-card-2026-10-02.md](java-regex-features-1-card-2026-10-02.md) — **card
+  JAVA-REGEX-FEATURES-1 (2026-10-02, re-cut from closed draft PR #658):** `split` /
+  `regexp_*` / `rlike` answer Java lookaround, backreferences and possessive quantifiers
+  via `fancy-regex 0.11`, verification-clean but never queued; kept branch
+  `feat/java-regex-features-1` at `4c36c6f6`; three declared residue cells with recorded
+  Spark answers.
+- [fnp-agg-1-card-2026-10-02.md](fnp-agg-1-card-2026-10-02.md) — **card FNP-AGG-1
+  (2026-10-02, re-cut from closed draft PR #625, step 1 of 5):** the aggregate names
+  still only on the branch — slice (d) (`grouping_id` + foundation) landed as `41534851`,
+  slices (a)–(c) unbuilt with 10 names remaining per the 09-21 rescue report; kept branch
+  `feat/fnp-agg-1` at `4a3379fe`; oracle recorded.
+- [ta-chain-1-card-2026-10-03.md](ta-chain-1-card-2026-10-03.md) — **card TA-CHAIN-1
+  (2026-10-03, owner ruling, v1.5.2):** `ta.ema` over `ta.trange` answers all-NaN because a
+  leading lookback NaN propagates through C-faithful kernels; polars_talib skips the leading
+  run (measured); wrapper-level fix, order at `task/wo/ta-chain-1-leading-prefix.md`.
+- [variance-alias-1-card-2026-10-03.md](variance-alias-1-card-2026-10-03.md) — **card
+  VARIANCE-ALIAS-1 (2026-10-03, owner delegate, post-1.5.2):** SQL `variance(x)` is
+  `UNRESOLVED_ROUTINE` on RePark; Spark and `var_samp` answer double `2.333333333333333`.
+  The DataFrame door already answers. Predates the ATTR-ID-1 stack.
+- [coalesce-nan-double-1-card-2026-10-03.md](coalesce-nan-double-1-card-2026-10-03.md) — **card
+  COALESCE-NAN-DOUBLE-1 (2026-10-03, owner delegate, post-1.5.2):** `coalesce` of a DOUBLE NaN
+  with decimal literal `-1.0` overflows `Decimal128(30, 15)` on RePark; Spark returns double
+  `NaN` and `1.5`. Predates the ATTR-ID-1 stack.
+- [qualifier-leak-h-1-card-2026-10-03.md](qualifier-leak-h-1-card-2026-10-03.md) — **card
+  QUALIFIER-LEAK-H-1 (2026-10-03, owner delegate, post-1.5.2):** cell
+  `r3.F_cp_bare_getU_join_parent` raises `AMBIGUOUS_REFERENCE` naming `_repark_jl_<hex>`.`V`;
+  Spark returns the joined rows. Predates the ATTR-ID-1 stack.
+- [zizmor-gate-1-card-2026-10-03.md](zizmor-gate-1-card-2026-10-03.md) — **card ZIZMOR-GATE-1
+  (2026-10-03, clerk, after CI-1):** `--format sarif` exits 0 while findings exist (plain
+  mode exits 14); the ci.yml map guard passes `github.base_ref` via `env:`, and zizmor.yml
+  runs plain mode as the blocking step before the SARIF upload.

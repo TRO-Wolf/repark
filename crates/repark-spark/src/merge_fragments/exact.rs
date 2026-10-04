@@ -46,7 +46,9 @@ fn check_scoped_exact(
     if let Some(error) = check.error {
         return Err(error);
     }
-    Ok(expr.to_string())
+    Ok(repark_iceberg::write::sql_text::render_for_reparse(
+        &mut expr,
+    ))
 }
 
 struct ExactCheck<'a> {

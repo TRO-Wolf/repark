@@ -28,7 +28,7 @@ members = [
 
 [workspace.package]
 edition = "2024"
-version = "1.5.1"
+version = "1.5.2"
 license = "Apache-2.0"
 rust-version = "1.96"
 repository = "https://github.com/TRO-Wolf/repark"
@@ -159,11 +159,11 @@ repark-distributed = { path = "crates/repark-distributed", default-features = fa
 # repark-iceberg catalog module (Glue primary + S3 Tables secondary builders).
 # -------------------------------------------------------------------------------------------
 [patch.crates-io]
-iceberg = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "6e937f49943efbc94a11878b9ff32084d142e8b2" }
-iceberg-datafusion = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "6e937f49943efbc94a11878b9ff32084d142e8b2" }
-iceberg-catalog-glue = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "6e937f49943efbc94a11878b9ff32084d142e8b2" }
-iceberg-catalog-s3tables = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "6e937f49943efbc94a11878b9ff32084d142e8b2" }
-iceberg-storage-opendal = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "6e937f49943efbc94a11878b9ff32084d142e8b2" }
+iceberg = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "e1d74befb0d79c3cee03a344f00403a13af8e632" }
+iceberg-datafusion = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "e1d74befb0d79c3cee03a344f00403a13af8e632" }
+iceberg-catalog-glue = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "e1d74befb0d79c3cee03a344f00403a13af8e632" }
+iceberg-catalog-s3tables = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "e1d74befb0d79c3cee03a344f00403a13af8e632" }
+iceberg-storage-opendal = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "e1d74befb0d79c3cee03a344f00403a13af8e632" }
 
 # -------------------------------------------------------------------------------------------
 # Build profiles (carried from the private v1 repository). Profiles are architecture — every
@@ -185,14 +185,11 @@ debug = "line-tables-only"
 # `[profile.ci.package."*"]` repeats `debug = false` for DEPENDENCIES specifically: they are
 # where the debuginfo volume lives, so the strip survives a later edit that turns workspace
 # debuginfo back on for backtraces.
-#
-# DORMANT: nothing invokes `--profile ci`. Measured in v1: the cold-build win was under the
-# adoption bar and warm rebuilds were slower (`incremental = false`); what it buys is artifact
-# weight. Re-measure before wiring; do not wire on this comment.
 [profile.ci]
 inherits = "dev"
 incremental = false
 debug = false
+opt-level = 2
 
 [profile.ci.package."*"]
 debug = false

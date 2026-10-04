@@ -268,6 +268,15 @@ impl ReparkSession {
         ])
     }
 
+    #[allow(clippy::missing_errors_doc)]
+    pub fn list_temp_view_names(&self) -> Result<Vec<String>> {
+        crate::temp_view::assert_home_intact(self.context(), &self.temp_view_home)?;
+        let Some(schema) = self.temp_view_home.provider.as_ref() else {
+            return Ok(Vec::new());
+        };
+        Ok(schema.table_names())
+    }
+
     /// Resolve a one-part name to the home-qualified `[catalog, schema, table]` reference.
     /// # Errors
     /// Fails with [`Error::Analysis`] when a catalog has replaced this session's temp-view home.

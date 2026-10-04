@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use datafusion::error::DataFusionError;
 use pyo3::prelude::*;
-use repark_core::{Error, ReparkSession, Result, SESSION_TIME_ZONE_KEY};
+use repark_core::{Error, ReparkSession, ReparkSessionBuilder, Result, SESSION_TIME_ZONE_KEY};
 use repark_functions::ansi::{
     SPARK_SQL_ANSI_ENABLED_KEY, SparkAnsiConfig, parse_runtime_spark_sql_ansi_enabled,
     parse_spark_sql_ansi_enabled,
@@ -22,6 +22,7 @@ use repark_functions::merge_schema::{
 };
 use repark_functions::session_time_zone::SessionTimeZoneConfig;
 
+use crate::deep_stack::block_on;
 use crate::fence::fenced_span;
 
 const DEFAULT_CATALOG_KEY: &str = repark_core::CatalogRegistry::DEFAULT_CATALOG_KEY;
@@ -139,9 +140,10 @@ pub fn register_late_catalog_block(
 ) -> PyResult<bool> {
     fenced_span!("py.catalog", "register_late_catalog_block", {
         py.detach(|| {
-            session
-                .runtime
-                .block_on(session.session.register_late_catalog_block(&config))
+            block_on(
+                &session.runtime,
+                session.session.register_late_catalog_block(&config),
+            )
         })
         .map_err(to_py_err)
     })
@@ -208,6 +210,10 @@ fn apply_runtime_config(
     }
     if key == DEFAULT_CATALOG_KEY {
         apply_default_catalog(session, Some(value));
+        return Ok(());
+    }
+    if key == repark_core::TIME_PARSER_POLICY_KEY {
+        session.set_time_parser_policy(value)?;
         return Ok(());
     }
     if session.set_iceberg_session_write_conf(key, value) {
@@ -381,4 +387,38 @@ pub(crate) fn prepare_session_sql(query: &str) -> PyResult<std::borrow::Cow<'_, 
 pub(crate) fn register_native_door_functions(ctx: &datafusion::prelude::SessionContext) {
     repark_functions::spark_log1p::register(ctx);
     repark_functions::cast_map::register(ctx);
+}
+
+pub(crate) fn apply_session_knobs(
+    memory_limit_gb: Option<usize>,
+    batch_size: Option<usize>,
+    target_partitions: Option<usize>,
+    config: Option<HashMap<String, String>>,
+) -> PyResult<ReparkSessionBuilder> {
+    let mut builder = ReparkSession::builder();
+    match memory_limit_gb {
+        None => {}
+        Some(0) => builder = builder.memory_limit_bytes(0),
+        Some(gb) => builder = builder.memory_limit_gb(gb),
+    }
+    if let Some(0) = batch_size {
+        return Err(to_py_err(repark_core::Error::Config(
+            "batch_size must be >= 1 (got 0)".to_string(),
+        )));
+    }
+    if let Some(0) = target_partitions {
+        return Err(to_py_err(repark_core::Error::Config(
+            "target_partitions must be >= 1 (got 0)".to_string(),
+        )));
+    }
+    if let Some(rows) = batch_size {
+        builder = builder.batch_size(rows);
+    }
+    if let Some(parts) = target_partitions {
+        builder = builder.target_partitions(parts);
+    }
+    if let Some(config) = config {
+        builder = builder.configs(config);
+    }
+    Ok(builder)
 }

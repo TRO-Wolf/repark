@@ -287,6 +287,7 @@ async fn write(table: &Table, rows_per_partition: Vec<usize>) -> Vec<DataFile> {
         Arc::new(PartitionedSourceExec::new(rows_per_partition)),
         Arc::new(TaskContext::default()),
         WriteConcurrency::new(writers).expect("concurrency"),
+        true,
     )
     .await
     .expect("write succeeds")
@@ -487,6 +488,7 @@ async fn unknown_distribution_mode_is_a_planning_error() {
         Arc::new(PartitionedSourceExec::new(vec![32, 32])),
         Arc::new(TaskContext::default()),
         WriteConcurrency::new(2).expect("concurrency"),
+        true,
     )
     .await
     .expect_err("an unknown distribution mode refuses");
@@ -507,6 +509,7 @@ async fn stream_write(table: &Table, rows_per_batch: Vec<usize>) -> Vec<DataFile
         table,
         futures::stream::iter(batches),
         WriteConcurrency::new(4).expect("concurrency"),
+        true,
     )
     .await
     .expect("stream write succeeds")
@@ -713,6 +716,7 @@ async fn a_late_failure_into_a_partitioned_table_leaves_no_data_file() {
         )),
         Arc::new(TaskContext::default()),
         WriteConcurrency::new(4).expect("concurrency"),
+        true,
     )
     .await
     .expect_err("the injected partition failure must surface");
@@ -887,6 +891,7 @@ async fn unpartitioned_sorted_write_keeps_sorted_files() {
         &table,
         stream,
         WriteConcurrency::new(2).expect("concurrency"),
+        true,
     )
     .await
     .expect("sorted write succeeds");

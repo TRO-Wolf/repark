@@ -613,7 +613,7 @@ class DataFrame:
             self._session.register_arrow_stream_as_temp_view(view_name, stream_obj)
             self._track_mia_view(view_name, replace_ephemeral=replace_ephemeral)
             tracked = True
-            return self._session.sql(f"SELECT * FROM {view_name}")
+            return self._session.sql_built(f"SELECT * FROM {view_name}")
         except Exception:
             if not tracked:
                 with contextlib.suppress(Exception):
@@ -632,7 +632,7 @@ class DataFrame:
             self._session.register_ipc_stream_as_temp_view(view_name, ipc_bytes)
             self._track_mia_view(view_name, replace_ephemeral=replace_ephemeral)
             tracked = True
-            return self._session.sql(f"SELECT * FROM {view_name}")
+            return self._session.sql_built(f"SELECT * FROM {view_name}")
         except Exception:
             if not tracked:
                 with contextlib.suppress(Exception):
@@ -664,7 +664,7 @@ class DataFrame:
         placeholder = pa.Table.from_batches([], schema=arrow_schema)
         register_arrow_exporter_as_temp_view(self._session, view_name, placeholder)
         try:
-            placeholder_inner = self._session.sql(f"SELECT * FROM {view_name}")
+            placeholder_inner = self._session.sql_built(f"SELECT * FROM {view_name}")
         except Exception:
             with contextlib.suppress(Exception):
                 self._session.drop_temp_view(view_name)
@@ -959,7 +959,7 @@ class DataFrame:
             engine_keys.append(self._engine_field_for_display(canonical))
         view = self._source_view_name
         self._session.declare_temp_view_sorted(view, engine_keys, tightenNulls)
-        self._inner = self._session.sql(f"SELECT * FROM {view}")
+        self._inner = self._session.sql_built(f"SELECT * FROM {view}")
         self._tighten_derived = tightenNulls
         return self
 
@@ -1398,7 +1398,7 @@ class DataFrame:
                 expression_sql, output_name = _global_agg_sql_parts(column)
                 parts.append(f"{expression_sql} AS {_quote_ident(output_name)}")
             sql = f"SELECT {', '.join(parts)} FROM {view}"
-            return self._spawn(self._session.sql(sql))
+            return self._spawn(self._session.sql_built(sql))
         finally:
             self._session.drop_temp_view(view)
 
@@ -1491,7 +1491,7 @@ class DataFrame:
             sql = f"SELECT {', '.join(select_parts)} FROM {view}"
             if where is not None:
                 sql = f"{sql} WHERE {where}"
-            return self._spawn(mid._session.sql(sql))
+            return self._spawn(mid._session.sql_built(sql))
         finally:
             mid._session.drop_temp_view(view)
 
@@ -2092,8 +2092,8 @@ class DataFrame:
     def offset(self, n: int) -> DataFrame:
         """Skip the first ``n`` rows (PySpark ``DataFrame.offset``).
 
-        Implemented as ``limit_with_skip(n, large_fetch)`` then unrestricted remainder via a
-        large fetch cap (engine has no pure OFFSET without LIMIT).
+        Plans a fetch-less engine ``Limit``, so a skipping offset over a
+        one-row constant source writes nothing, like Spark.
         """
         self._ensure_alive()
         if isinstance(n, bool) or not isinstance(n, int):
@@ -2102,7 +2102,7 @@ class DataFrame:
             raise PySparkValueError(f"offset must be >= 0, got {n}")
         if n == 0:
             return self._identity_child()
-        return self._spawn_preserving_identity(self._plan().limit_with_skip(n, 2**31 - 1))
+        return self._spawn_preserving_identity(self._plan().limit_with_skip(n, None))
 
     def drop(self, *cols: Column | str) -> DataFrame:
         """Drop columns by name or :class:`Column` (PySpark ``DataFrame.drop``).
@@ -2340,7 +2340,7 @@ class DataFrame:
                 )
             sides = (self._plan(), None if left_only else other._plan())
             planned, node = _native.requalify_join_sides(
-                self._session.sql(join_sql),
+                self._session.sql_built(join_sql),
                 *sides,
                 self._frame_node,
                 other._frame_node,
@@ -2463,7 +2463,7 @@ class DataFrame:
                     f"{_quote_ident(value_col)} AS {val_out} FROM {view}"
                 )
             sql = " UNION ALL ".join(parts)
-            return self._spawn(self._session.sql(sql))
+            return self._spawn(self._session.sql_built(sql))
         finally:
             self._session.drop_temp_view(view)
 
@@ -2488,7 +2488,7 @@ class DataFrame:
         view = scratch_view_name(self._session, "__repark_explain_")
         surface_b.register_view_without_fill(self, view)
         try:
-            plan = self._spawn(self._session.sql(f"{sql} SELECT * FROM {view}"))
+            plan = self._spawn(self._session.sql_built(f"{sql} SELECT * FROM {view}"))
             rows = [(row["plan_type"], row["plan"]) for row in surface_b.rows_without_fill(plan)]
         finally:
             self._session.drop_temp_view(view)
@@ -2624,7 +2624,8 @@ class DataFrame:
         try:
             self._session.create_or_replace_temp_view(left, self._plan())
             other._session.create_or_replace_temp_view(right, other._plan())
-            planned = self._session.sql(f"SELECT * FROM {left} {op_sql} SELECT * FROM {right}")
+            query = f"SELECT * FROM {left} {op_sql} SELECT * FROM {right}"
+            planned = self._session.sql_built(query)
             child = self._spawn(planned, other)
             if self._display_names is not None and self._engine_names is not None:
                 child._display_names = list(self._display_names)
@@ -2776,10 +2777,7 @@ class DataFrame:
         if not isinstance(colsMap, dict):
             raise PySparkTypeError(
                 errorClass="NOT_DICT",
-                messageParameters={
-                    "arg_name": "colsMap",
-                    "arg_type": type(colsMap).__name__,
-                },
+                messageParameters={"arg_name": "colsMap", "arg_type": type(colsMap).__name__},
             )
         original = self.columns
         names = list(original)

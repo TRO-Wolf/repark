@@ -11,7 +11,12 @@ change read [AGENTS.md](AGENTS.md).
 
 repark is one Cargo workspace of ten crates layered on Apache DataFusion + Arrow + the owned
 `iceberg-rust` fork. Dependencies point **one way, down the tiers** — no cycles, no door-to-door
-edge, bindings reach inward only.
+edge, bindings reach inward only. Five more crates are **pre-declared** — tier, role and edges in
+`scripts/check_crate_dag.py`, `planned` rows in `repo-manifest.toml`, no directory until their first
+unit — `repark-connect`, `repark-cdc` and `repark-io` at tier 1, `repark-spark-dialect` and
+`repark-crawler` at tier 3 (layout of record:
+[task/roadmap/epic-term/crate-layout-1-8-2026-10-01.md](task/roadmap/epic-term/crate-layout-1-8-2026-10-01.md));
+the map below draws what is built.
 
 ```
  tier 4  bindings            repark-python  (PyO3 cdylib `_native`; the only crate allowed `unsafe`)

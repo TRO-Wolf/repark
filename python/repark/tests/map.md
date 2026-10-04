@@ -1,5 +1,7 @@
 # map — python/repark/tests
 
+CAST-OVERFLOW-INSERT-1 (2026-09-29): `test_cast_overflow_insert_1.py` is the overflow-store battery — 9 tests over the 76-cell recorded Spark 4.1.2 oracle in `cast_overflow_insert_1_spark_oracle.json`, one door-group test per door (VALUES, INSERT SELECT, OVERWRITE, BY NAME, UPDATE, MERGE, DataFrame) plus range, untouched-refusal and must-not-change groups. Every refusal cell asserts the Spark class, message head, SQLSTATE and the post-statement read-back; every store cell asserts exact rows and column types. Divergences with their causes: `dec-div0` names RePark's `DECIMAL(17,6)` against Spark's `DECIMAL(8,6)`; `upd/div0-col` keeps the pre-existing UPDATE `__common_expr_1` failure; `ovw/empty-const` keeps the wipe-guard text; `insel/cte` keeps the CTE gap; the int-overflow keep-pin keeps its text per the brief. Verifier fold (2026-09-29): `vo1/` pins the truncated-bound stores per width for DOUBLE and FLOAT plus the exact-boundary refusals (all 17 statements measured on live Spark 4.1.2, banner `4.1.2 UTC`); `vo2/` pins `LIMIT 0` (plain, ORDER BY, subquery, BY NAME) and DataFrame `.limit(0)` succeeding with the table unchanged; `_frame_run` honours a `limit` cell key. Fixture trim (2026-09-29): the oracle keeps the asserted cells only — dropped `meta`, `ordered`, `divergence` and `keep_pin`, none read by the test module — compacted to one cell per line (1601 down to 104 lines); the full corpus lives at `/tmp/oc-worker/direct/wo/cast-overflow-evidence/cast_overflow_insert_1_spark_oracle.full.json`; the DIFF-PROBE 13 near-miss cells are recorded in the ledger as VALUES-CONSTANT-FOLD-PARITY. Re-verify fold (2026-09-29): `vo2b/` pins `LIMIT 0` below the defining projection (plain, table-backed, two-level, INT-target, DataFrame `.limit(0).selectExpr`) succeeding with the table unchanged, with the Filter-between and JOIN keep-refusals; `vo2c/` pins a skipping `OFFSET` over a one-row constant (plain, ORDER BY, subquery, below the defining projection, DataFrame `.offset(5)`) succeeding, with the `OFFSET 0`, `LIMIT 5 OFFSET 1` and table-backed keep-refusals; `_frame_run` honours `offset` and `select` cell keys. pins: cast-overflow-insert-1/C-001, C-002, C-003, C-004. Re-verify VO3-1 (2026-09-29): eight `test_vo3_1_*` pins assert a row with both a store-type refusal and an overflow reports the store refusal (never `CAST_OVERFLOW`) with the seed row intact on BY NAME, INSERT OVERWRITE, dynamic-partition OVERWRITE and `insertInto(overwrite=True)`, in both column orders. Re-verify VO4-1 (2026-09-30): five `test_vo4_1_*` pins assert a short or long source reports base's arity error byte-identical with the seed row intact on INSERT OVERWRITE, dynamic-partition OVERWRITE, `insertInto(overwrite=True)`, `insertInto(overwrite=False)` and INSERT INTO SELECT, each with a DATE column and a `1e19D` column, reusing the VO3 session and seed helpers.
+
 IPI-40 views PR3 (2026-09-23): `test_ice_views_3_alter.py` pins bare and two-part ALTER VIEW SET/UNSET/RENAME through USE, the three-part near miss, exact missing-view and no-USE refusals, and the unchanged ALTER TABLE missing-target answer on a view. `test_ice_views_1.py` pins SHOW VIEWS IN after USE, bare CREATE/DROP, the bare and two-part view write refusals, and successful bare and two-part table INSERT with exact rows. The direct router pins for CREATE/DROP/write-guard are in `crates/repark-spark/src/tests/alter_view_routing.rs` because the facade qualifies those bare names before dispatch.
 
 IPI-40 PR3 r2b (2026-09-23): every `pytest.raises` added by PR3 in `test_ice_views_1.py` and `test_ice_views_3_alter.py` also asserts the exact class (`type(caught.value) is …`); the three parser near-misses (`ALTER VIEW v` with no verb, `ALTER VIEWS`, `ALTER VIEWX`) are measured as `ParseException`. `test_ice_views_1.py` adds bare and two-part SELECT from a view after USE (`[[0],[1],[2]]`); SELECT names are qualified by the facade, so these pins are the only ones that measure that path.
@@ -18,7 +20,10 @@ IPI-40 PR3 critic r1 (2026-09-23): `test_ice_views_3_alter.py` pins full refusal
 
 U1-MEM-LAYOUT-1 (2026-09-23): the maintenance sweep test name now describes the memory table at `<warehouse>/ns/events`. pins: u1-mem-layout-1/C-021
 
-ICE-MIXED-CASE-1 (2026-09-17): `test_ice_mixed_case_1.py` pins the Spark-door case-insensitive column resolution cells against `ice_mixed_case_1_spark_oracle.json` (live PySpark 4.1.2 recording); `_record_ice_mixed_case_1.py` is the recorder driver, not a collected test. Round 3: the WHERE-cell ids read `MC-WHERE-*` (typos gate); the record script stays ruff-clean; the moved-symbol baseline carries the new `_SQLCONF_DEFAULTS` hash for the `spark.sql.caseSensitive` default row. Run 21b: the oracle JSON gains `measured_21b` (the orchestrator's `probe_mc.py` recording, verbatim) and the pin file gains the V-01 / V-02 / V-04 / L-08 cells on a `measured` memory-catalog fixture, the twin-adoption declared refusal and the 42704 ambiguity sentence. The measured V-04 INSERT cell is `xfail(strict=True)` on fork ask F-DML-FIELD-ID-1 (the pre-existing join-INSERT field-id misroute, ledger §7, registry ID-1); `test_join_using_insert_folds_and_writes_the_left_columns` keeps the fold green. Run 21b round 2 (2026-09-18): the oracle gains `measured_21b_r2` (the orchestrator's `probe_mc2.py` cells, copied from its log — the probe stopped before writing JSON); Q-21b-11 pins the three correlated IN-subquery spellings (Spark answers `[[1],[2]]`, RePark refuses loud at physical planning — declared, the same refusal as an all-lowercase schema) and the scalar-subquery cell (both refuse). N-02: the case-twin reference pin gains a correlated EXISTS cell (`t.ID` from inside the subquery refuses 42704). Q-21b-12: `test_star_over_a_case_twin_frame_answers_both_columns_declared` pins the declared `SELECT *` answer on a twin frame beside the two recorded Spark 42711 cells. `test_live_spark_matches_the_round_2_recording` re-derives every `measured_21b_r2` cell on live Spark under `REPARK_PARITY_LIVE=1` (one hadoop catalog per cell). Run 22b (N-04): each correlated IN-subquery cell also asserts Spark's recorded output column name, the requested spelling. Run 22b (the debug-wheel segfault): `test_five_thousand_branch_union_all_plans_on_the_spark_door` plans (no collect) a 5,000-branch `UNION ALL` count under the default `caseSensitive=false` — segfaulted before the grown-stack fix; about 62 s on the debug wheel (DataFusion's quadratic per-level span walk), C-022. The module docstring's `pins:` line cites C-019…C-021 explicitly (the ledger-grammar citation reads comma lists). U11-EDGE-1 (2026-09-26): the SQL door now names outputs with the query's spelling, so `_assert_success` compares the recorded Spark names exactly, the stored-name divergence pin became `test_sql_door_wrong_case_outputs_requested_spelling` (`userid`, `EVENTNAME`) and the `SET spark.sql.caseSensitive` leg reads `USERID`. pins: ice-mixed-case-1/C-001…C-016
+ICE-MIXED-CASE-1 (2026-09-17): `test_ice_mixed_case_1.py` pins the Spark-door case-insensitive column resolution cells against `ice_mixed_case_1_spark_oracle.json` (live PySpark 4.1.2 recording); `_record_ice_mixed_case_1.py` is the recorder driver, not a collected test. Round 3: the WHERE-cell ids read `MC-WHERE-*` (typos gate); the record script stays ruff-clean; the moved-symbol baseline carries the new `_SQLCONF_DEFAULTS` hash for the `spark.sql.caseSensitive` default row. Run 21b: the oracle JSON gains `measured_21b` (the orchestrator's `probe_mc.py` recording, verbatim) and the pin file gains the V-01 / V-02 / V-04 / L-08 cells on a `measured` memory-catalog fixture, the twin adoption plus the 42704 ambiguity sentence (RP-56, 2026-09-28: adoption succeeds, references refuse at resolution; the fold closes the star too — a written star over twins refuses the recorded 42711 on tables and temp views, and the real-data twin table answers under `true`; the verifier fold rescopes the refusal to catalog-table scans, so temp-view stars answer). The measured V-04 INSERT cell is `xfail(strict=True)` on fork ask F-DML-FIELD-ID-1 (the pre-existing join-INSERT field-id misroute, ledger §7, registry ID-1); `test_join_using_insert_folds_and_writes_the_left_columns` keeps the fold green. Run 21b round 2 (2026-09-18): the oracle gains `measured_21b_r2` (the orchestrator's `probe_mc2.py` cells, copied from its log — the probe stopped before writing JSON); Q-21b-11 pins the three correlated IN-subquery spellings (Spark answers `[[1],[2]]`, RePark refuses loud at physical planning — declared, the same refusal as an all-lowercase schema) and the scalar-subquery cell (both refuse). N-02: the case-twin reference pin gains a correlated EXISTS cell (`t.ID` from inside the subquery refuses 42704). Q-21b-12: `test_star_over_a_case_twin_frame_answers_like_spark` (renamed again by the RP-56 verifier fold: p9 `f_twv_read` answers, so the temp-view star answers `[id, ID]`/`[a, A]` with the row) keeps the SQL-text twin-view creation refusal beside it. `test_live_spark_matches_the_round_2_recording` re-derives every `measured_21b_r2` cell on live Spark under `REPARK_PARITY_LIVE=1` (one hadoop catalog per cell). Run 22b (N-04): each correlated IN-subquery cell also asserts Spark's recorded output column name, the requested spelling. Run 22b (the debug-wheel segfault): `test_five_thousand_branch_union_all_plans_on_the_spark_door` plans (no collect) a 5,000-branch `UNION ALL` count under the default `caseSensitive=false` — segfaulted before the grown-stack fix; about 62 s on the debug wheel (DataFusion's quadratic per-level span walk), C-022. The module docstring's `pins:` line cites C-019…C-021 explicitly (the ledger-grammar citation reads comma lists). U11-EDGE-1 (2026-09-26): the SQL door now names outputs with the query's spelling, so `_assert_success` compares the recorded Spark names exactly, the stored-name divergence pin became `test_sql_door_wrong_case_outputs_requested_spelling` (`userid`, `EVENTNAME`) and the `SET spark.sql.caseSensitive` leg reads `USERID`. pins: ice-mixed-case-1/C-001…C-016
+
+ICE-CASE-TWIN-1 (2026-09-28): `test_ice_case_twin_1.py` pins the RP-56 verifier fold against the p9/p9b Spark 4.1.2 recordings on a `twf` memory-catalog fixture: derived/`s.*`/CTE/join twin stars answer `[a, A]`; nested DROP IF EXISTS drops and ADD answers under `true` (DESCRIBE-asserted) while the false-door check refuses loud with the fork collision text; branch reads refuse the recorded 42711 under `false` while pinned time-travel reads and true-door branch reads answer; GROUP BY window and EXISTS stars refuse; `rewrite_data_files(where)` refuses loud under `false` and answers under `true`. pins: rp-56/C-002, C-003
+DIFF-PROBE fold (2026-09-29): C-003 rewritten to live Spark (the false-door DROP IF EXISTS of an existing field applies; unambiguous top-level RENAME and nested ADD apply; ambiguous DROP/RENAME refuse loud) plus new pins: tag selectors refuse 42711, every twin struct spelling refuses 42000 quoting-independently, scan-free temp views answer while table-backed ones refuse, catalog twin views read both values, CTAS star answers on the fast and options paths. pins: rp-56/C-003
 
 ICE-MIXED-CASE-1 note, U9-TYPES-1 round-3 fixer (2026-09-26): `test_measured_join_using_insert_answers_spark` (the V-04 INSERT cell) is green, its strict xfail on F-DML-FIELD-ID-1 removed; it asserts the recorded `V04_join_using_insert` Spark rows. The uuid-as-text catalog switch routes every `insert_into` through the fork's `UuidTextToBytesExec`, which rebuilds each batch against the target schema, so the right-side join column is no longer written NULL; switching it off turns the cell back to an xfail. pins: ice-mixed-case-1/C-015
 
@@ -3092,8 +3097,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_typed_partition_column_shapes_refuse_like_spark` pins the `MAP` and two-field `STRUCT`
   non-primitive texts (the element splitter keeps commas inside `<…>`) and the `DEFAULT`,
   out-of-order and repeated `NOT NULL` / `COMMENT` `PARSE_SYNTAX_ERROR`s (r2 V-001); `test_ctas_mixing_untyped_and_typed_partition_elements_answers_the_mix_text`
-  pins Spark's mix text on CTAS; `test_typed_partition_columns_differing_by_case_reach_the_fork_under_case_sensitive`
-  pins the fork's lower-case-index refusal under `caseSensitive=true`. No table is created.
+  pins Spark's mix text on CTAS; `test_typed_partition_columns_differing_by_case_serve_under_case_sensitive`
+  pins twin columns serving under `caseSensitive=true` (**RP-56 (2026-09-28):** the fork's
+  lazy lower-case index builds, so the declared/typed twins land; columns plus the empty
+  count). No table is created on the refusal legs.
   pins: ice-nested-evo-1/C-058
 - [ice_tsns_sql_1_oracle.json](ice_tsns_sql_1_oracle.json) — **ICE-TSNS-SQL-1 (2026-09-17):**
   the PyIceberg `StaticTable` read-back of the DataFrame-door control (schema type names, spec,
@@ -3886,8 +3893,28 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **IO-ORC-1 (2026-09-16):** `test_load_orc_declared_not_implemented` becomes
   `test_load_orc_reaches_the_scan` (missing path is `PATH_NOT_FOUND` now).
   pins: io-orc-1/C-004
+- `test_text_write_timestamp_zone_1.py` + `text_write_timestamp_zone_1_fixture.json` —
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** 179 Spark-recorded CSV/JSON
+  timestamp-write cells (4 zones, defaults, user formats, refusals, nested)
+  compared byte for byte or by error token, CSV/JSON read-back legs, and a
+  moto s3a leg.
+  pins: text-write-timestamp-zone-1/C-001, C-002, C-003, C-005, C-006
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 verifier fold (2026-09-29):** 20 more cells
+  (quote runs, year width, `VV` display ids, backslash patterns, case twins,
+  trailing-`]` classes) plus LEGACY-refusal and LMT-residue legs (207 pins).
+  **Re-verify (2026-09-29):** 34 more cells (zero-offset `VV` spellings,
+  `g` padding widths) plus policy-default, no-LEGACY-clause, and
+  optioned-non-temporal LEGACY legs (244 pins).
+  **Re-verify 2 (2026-09-30):** a `perf`-marked shuffled-data pin: 20k
+  timestamps over 1900-2024 write to CSV inside a 1.0 s debug budget.
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 3 fold (2026-09-30):** the
+  failed-local-write trio: a 400k-row JSON write with zone letters on NTZ
+  leaves no destination on overwrite (plain and partitioned) and keeps every
+  destination byte on append.
+  pins: text-write-timestamp-zone-1/C-008
 - `test_r2_read_formats2.py` — R2 writer option matrix / path modes / partitionBy: quoteAll /
-  escapeQuotes wired; dateFormat/timestampFormat refuse-loud; parquet compression; path
+  escapeQuotes wired; dateFormat/timestampFormat honored (TEXT-WRITE-TIMESTAMP-ZONE-1
+  flipped the three refuse-loud legs to honored pins); parquet compression; path
   mode overwrite/append/error/ignore; partitionBy hive layout + multi-col + append merge +
   unknown-col loud; **octo fix half:** root `read.parquet(partitioned)` no null-fill /
   no empty root part (C3-001/C6-001), duplicate partitionBy loud (C3-002), append col-set +
@@ -4506,6 +4533,21 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_df_batch2.py (lint: functions_api not F; N802 sampleBy)` — R-DF-BATCH2 cube/rollup/unpivot/explain + loud census + C5 unpivot quote / cube alias.
 - `test_polars_ns.py` — R-POLARS-NS str/dt/fill_null + differential. (rider: dt test sorts client-side — UNION ALL order flake) TYPES-1 round 4 pins `with_row_index` BIGINT (pins: types-1/C-005).
 - `test_polars_ns.py (skeptic fix: real-path starts_with/slice + quote pin; full census)` — R-POLARS-NS str/dt/fill_null + differential.
+- `test_polars_is_duplicated_1.py` — **POLARS-IS-DUPLICATED-1 (2026-09-28):**
+  `Column.is_duplicated()` answers as real polars 1.43.2 on both doors through
+  filter, select and withColumn(s) (INT/BIGINT/DOUBLE/STRING/DATE/DECIMAL(10,2)/
+  BOOLEAN, empty and one-row frames, NaN/±0.0/null grouping, negation,
+  conjunction, expression receiver, prefilter), input row order kept; the 10k
+  frame pins true-count, duplicated values and mask sha256 under 2 s; the
+  must-not-change legs pin the window-in-filter refusal, window select,
+  isNull/isin/row_number/dropDuplicates, plain `rp.col` and the `dir` delta.
+  Expectations ride `polars_is_duplicated_1_polars_oracle.json` (17 KB).
+  **DIFF-PROBE fold (2026-09-29):** 8 order pins — a sort before the mask
+  survives filter/select on both doors asc/desc, a sort after the mask matches
+  the plain-column order with every key kept (tied, constant and second-key
+  shapes), plus limit/desc-nulls-last/3-key/sortWithinPartitions shapes, a
+  repartition set check and a groupBy over the mask column.
+  pins: polars-is-duplicated-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `test_pg_jdbc_options.py` — PG2 offline option pins (jdbc overloads, format aliases, XOR/caps).
   Ported minus **one** node (EC-4): `test_jdbc_num_partitions_above_cap_is_unsupported` — the
   `read_postgres` refuse-arm pre-empts the engine's cap error. The other offline pins raise their
@@ -4745,6 +4787,62 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   STRING/DOUBLE UNION, `max` over a STRING/DOUBLE CASE, and a STRING/TIMESTAMP CASE
   into DATE through VALUES. 79 cells; the oracle is one cell per line and drops the
   temp views no cell reads. pins: store-ts-to-numeric-1/C-006
+- [test_store_ts_doors_2.py](test_store_ts_doors_2.py) +
+  `store_ts_doors_2_spark_oracle.json` — **WO STORE-TS-DOORS-2 (2026-09-29):**
+  one session replays 26 cells recorded on Spark 4.1.2 + Iceberg 1.11.0 (UTC) in
+  order and compares refusal (class, SQLSTATE, message body with the RePark-only
+  planning prefix allowed) and the target read-back after every statement.
+  Refusals: TIMESTAMP, `CAST(1 AS TIMESTAMP)`, TIMESTAMP_NTZ and DATE through a
+  VALUES node inside INSERT … SELECT into BIGINT, DOUBLE and INT — direct, star,
+  CTE, UNION, nested-alias, join, VALUES-join, WHERE and ORDER BY/LIMIT shapes
+  (C-001); `-NULL` into TIMESTAMP, DATE and BOOLEAN through static-partition
+  OVERWRITE VALUES and SELECT, plus the already-refusing listed and dynamic
+  forms (C-002). Stores in the same test: explicit `CAST(b AS BIGINT)`, INT,
+  NULL, TIMESTAMP into DATE, and `-NULL` into BIGINT (C-001, C-002). Two
+  in-test pins hold the boundary: a temp view over VALUES keeps the WI-1
+  refusal text and a STRING source still stores (C-003).
+  **Fold 2026-09-29 (verifier VT-1):** 21 more oracle cells (`p01`–`p21`) pin the
+  widened set-operation stores and the kept STRING refusals, and three in-test
+  pins hold the carried texts: STRING beside BIGINT/BOOLEAN still names STRING,
+  the EXCEPT/INTERSECT/UNION datetime clashes into BIGINT refuse, and STRING
+  beside table TIMESTAMP into BIGINT keeps the analyzer `type_coercion` refusal.
+  pins: store-ts-doors-2/C-001, C-002, C-003
+  **Fold 2026-09-30 (re-verify VT3-1..VT3-3):** eighteen `test_fold3_*` pins:
+  the 5 reachable CTE-shadow refusals (inline, arm-WITH, dynamic partition,
+  column expression, join), a nested WITH, a CTE shadowing a table (star and
+  column forms) and a qualified-star CTE shadowing a temp view; TIMESTAMP-CTE
+  and plain-view store guards; a CTE, a view and a column named `ambiguous`
+  refusing plus the missing-`ambiguous` not-found surfacing; unknown column,
+  routine and table surfacing the analyzer's class with nothing stored; and
+  quoted-case refusal guards. The column-list CTE shadow is a carried-card
+  pin instead: it asserts today's facade-rewritten store, not Spark's
+  refusal. The 7 new shapes carry Spark 4.1.2 answers measured once for this
+  fold. pins: store-ts-doors-2/C-001, C-003
+  **Fold 2026-09-30 (re-verify VT4-1, VT4-4):** five `test_fold4_*` pins: the
+  36 mixed-case storing cells (8 case-insensitive and 4 case-sensitive arm
+  shapes over uppercase columns, a mixed-case column, an uppercase view and a
+  derived table, each on INTO, dynamic partition and column-list) refusing
+  CANNOT_SAFELY_CAST with nothing stored; TIMESTAMP-twin store guards; a
+  case-sensitive missing column surfacing UNRESOLVED_COLUMN on all three
+  doors; and a real ambiguity at a non-datetime position surfacing
+  AMBIGUOUS_REFERENCE on INTO and column-list. Spark answers are the
+  re-verify-3 attack5/6/7 recordings. pins: store-ts-doors-2/C-001, C-003
+  **Fold 2026-10-01 (re-verify VT5-1):** three `test_fold5_*` pins: the 24
+  unquoted-`INTERVAL` window-frame cells (4 arm shapes on INTO, dynamic
+  partition and column-list in both case modes) refusing
+  CANNOT_SAFELY_CAST with nothing stored; the quoted-bound, integer-range
+  and TIMESTAMP-arm controls; and two further unquoted frame shapes
+  refusing as Spark 4.1.2 does. pins: store-ts-doors-2/C-001, C-003
+- [test_store_ts_doors_2_fold6.py](test_store_ts_doors_2_fold6.py) —
+  **Fold 2026-10-01 (re-verify VT6-1):** four `test_fold6_*` pins, split out
+  at the 1000-line ceiling: the 6 nullary-column arm shapes
+  (`coalesce`/`WHERE`, `CASE`, derived `coalesce`, scalar subquery,
+  uppercase) on INTO, dynamic partition and column-list
+  case-insensitive plus INTO case-sensitive, each refusing as Spark 4.1.2
+  does with nothing stored (CANNOT_SAFELY_CAST; UNRESOLVED_COLUMN for the
+  uppercase case-sensitive shape); the direct, backticked and qualified
+  controls refusing; and the TIMESTAMP-`coalesce` store guards.
+  pins: store-ts-doors-2/C-001, C-003
 - `test_merge_semantics_audit.py` — **MERGE-audit corpus** (2026-08-14 audit gap-map rows
   c/d/g/n/o): null-safe `<=>` / `eqNullSafe` ON matches NULL keys (both doors); builder-door
   `=` NULL keys do not match; self-merge (target as source) updates once per row; join-key
@@ -6919,7 +7017,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `orderBy("ts")`; `last_row` row-count + last-bar values; one `WindowAggExec` via the N2
   mechanic (function-name tokens so DCE cannot fake fusion); `null_lookback` threads through
   `_NullLookbackColumn`. Does **not** edit `test_ta.py` (A12). Ledger:
-  `task/ta2-with-indicators-ledger.md`.
+  `task/ta2-with-indicators-ledger.md`. **TA-CHAIN-1 (2026-10-03):**
+  `test_chained_indicator_over_trange_matches_polars_talib_golden` (`ta.ema(tr, 21)` over a
+  `ta.trange` column on the prefix fixture, bit-exact against the polars_talib prefix goldens,
+  first finite row 28) and `test_leading_null_prefix_is_skipped_per_partition` (14 partitions,
+  NULL runs of 3 and 6 rows on two of them; each partition's first finite row is run + lookback
+  and its tail equals EMA over the trimmed series, bit-exact; skipped rows are NaN, never NULL).
+  pins: ta-chain-1/C-001, C-002, C-003
 - `test_n2_plan_collapse.py` — **r23b N2** plan-collapse pins: stage (a) logical alias-chain squash
   (no `ts AS ts AS ts`); stage (b) adjacent same-spec withColumns/withColumn merge → 1
   `WindowAggExec` + Arrow bit-exact vs single fused call; dependent `tr`→`etr5` keeps stacking;
@@ -7174,6 +7278,45 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   render from value text on `spark.sql` / `selectExpr` / `F.expr`, explicit
   aliases stay.
   pins: fnp-4b/C-001, C-003, C-014, C-015, C-029
+- `test_string_literal_escape_1.py` — **STRING-LITERAL-ESCAPE-1 (2026-09-29):**
+  PE-10 facade pins over the live PySpark 4.1.2 oracle — doubled `""` collapse
+  inside double-quoted literals, `r"…"` literals answering, raw `''`/`""`
+  splitting into head plus quoted tail, verbatim mode keeping doublings and
+  marking raw values with the opening quote — each on `spark.sql` (value,
+  length, Arrow type), `F.expr` / `selectExpr` / `filter`, and an
+  `INSERT INTO … VALUES` round-trip.
+  pins: string-literal-escape-1/C-001, C-002, C-003, C-004
+  **DIFF-PROBE fold (2026-09-29):** verbatim DDL read-back pins — TBLPROPERTIES
+  keys/values, column COMMENT text, ALTER SET, and namespace PROPERTIES/DBPROPERTIES
+  collapse like Spark; verbatim OPTIONS values stay verbatim (survivor pin).
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** VE-1 UNSET/SHOW-key/
+  COMMENT ON pins, VE-2 filter/where/F.expr flag pins, and VE-3 UPDATE/DELETE/
+  MERGE predicate pins, each with a default-mode control.
+  pins: string-literal-escape-1/C-008, C-009, C-010
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** VE2-1 built-door pins
+  (cube/rollup/groupingSets/unpivot, mergeInto incl. an `F.expr` condition,
+  overwrite cond/partitions, createTable schema str) and VE2-2 nested
+  UPDATE/MERGE SET pins, each with a default-mode control; the
+  `_forward_datafusion_conf` and `_materialize_values_as_memtable_frame`
+  symbol hashes move in `test_production_file_size.py` (built doors route
+  `_sql_built`).
+  pins: string-literal-escape-1/C-011, C-012
+  **STRING-LITERAL-ESCAPE-1 re-verify VE3-1 (2026-09-30):** `SQLTransformer`
+  is user-written SQL through the user door, so verbatim/default literal and
+  `WHERE s = 'it''s'` pins equal `spark.sql` (and Spark).
+  **STRING-LITERAL-ESCAPE-1 CI round (2026-09-30):** the failure-injection
+  and SQL-spy seams in `test_catalog_surface_1.py`,
+  `test_create_dataframe_materialize.py`, `test_eager_own_1.py`,
+  `test_mapinarrow.py`, and `test_ml_boost_oracle.py` follow the
+  `sql_built` door the product now uses for facade-built SQL, with the same
+  assertions; the two capped files rename the seam method (line-neutral),
+  the other three observe both doors.
+  pins: string-literal-escape-1/C-013
+  **STRING-LITERAL-ESCAPE-1 merge (2026-10-01):** the text-write merge pin —
+  a verbatim CSV write with timestampFormat `yyyy-MM-dd''HH:mm:ss` and
+  `it's` / `it''s` values writes the Spark bytes, equal to the default-mode
+  bytes for the same frame.
+  pins: string-literal-escape-1/C-015
 - `test_fnp_4b_hof_display.py` — **FNP-4B round 6 (2026-09-15):** Q3 red pin for run
   16a — selectExpr higher-order display must hide the `__repark_hof_array_field__`
   packing marker. **Round 7 (2026-09-15):** strict xfail per R-16c-10; 16a flips
@@ -7527,6 +7670,66 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   lands with C-014; the `C_MEM.t` arm leaves the refusal loop.
   pins: catalog-1/C-001, C-002, C-003, C-004,
   C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
+- [test_deep_filter_chain_crash_1.py](test_deep_filter_chain_crash_1.py) —
+  **DEEP-FILTER-CHAIN-CRASH-1 (2026-09-29):** deep operator chains answer instead
+  of killing the interpreter. One module-scoped fixture drives the whole battery
+  in a single isolated interpreter (a crash fails the fixture, never pytest):
+  1,000 chained filters count 50 on the DataFrame door (Spark 4.1.2 oracle 50;
+  base segfaulted at 610), 200 joins count 1 and 300 unions count 15050 (base
+  segfaulted at 110 joins), 120 `withColumn` count 50 (plan-build time, 44 s at
+  200 on base, caps the depth — not the stack), 1,000-deep nested SQL raises a
+  catchable `RecursionError` (Spark refuses nested-deep SQL too, with
+  `FAILED_TO_PARSE_TOO_COMPLEX`), and flat 600-union SQL counts 601.
+  **Limits fold (2026-09-29):** the battery gains the 200,000-item IN list
+  over `range(1000)` (counts 1000, ~60 s on debug — the text cap is gone),
+  8,193 unions counting 409700 (union spines skip the plan cap, ~560 s),
+  8,192 filters refusing `AnalysisException` (base crashes and Spark refuses
+  there), a 300-term AND answering 50 (Spark answers 300, refuses 350), and
+  a 1,500-term AND refusing `AnalysisException` at `filter()` (worker
+  timeout 1500 s).
+  pins: deep-filter-chain-crash-1/C-001, C-002, C-003, C-004, C-009, C-010, C-011
+- [test_deep_subquery_expression_1.py](test_deep_subquery_expression_1.py) —
+  **DEEP-FILTER-CHAIN-CRASH-1 verifier fold (2026-09-29, VD-1..VD-3):**
+  subquery plans and deep expressions never kill the interpreter. One
+  module-scoped fixture drives the battery in a single isolated interpreter
+  (1200 s timeout: the 5,000-term OR answers in ~220 s and the 20,000-term
+  DF OR's Python-side tree build takes ~360 s on a debug build): a
+  1,000-deep chain counts 50 under a scalar subquery and under
+  `IN (SELECT ...)` (both segfaulted on f958d1a8), a 5,000-term OR through
+  `sql()` answers 50 (the SQL door grows past any expression depth, and
+  Spark answers these shapes through SQL too), a 20,000-term OR through
+  `filter()` raises `AnalysisException` naming the deep-expression limit
+  (Spark raises `StackOverflowError` at `.filter()` the same way), a
+  2,000-deep `+1` select raises the same refusal, and a 16-deep chain
+  counts 50 on a 512 KiB thread (the small-stack backstop grows under 2 MiB
+  remaining). **Limits fold (2026-09-29):** the 1 MiB refusal pin became a
+  1.1 MB answer pin (`SELECT 1` plus padding collects 1).
+  pins: deep-filter-chain-crash-1/C-005, C-006, C-007, C-008
+  **CI segv (2026-09-30):** the grown per-op clone costs ~1.9x on the
+  pathological 20,000-term quadratic build (~360 s → ~680 s debug), so the full
+  worker takes ~940-966 s against the 1200 s budget; every other shape is
+  unchanged in answer and time. pins: deep-filter-chain-crash-1/C-012
+- [test_deep_expr_build_small_stack_1.py](test_deep_expr_build_small_stack_1.py) —
+  **DEEP-FILTER-CHAIN-CRASH-1 CI segv (2026-09-30):** the 6,000-term OR builds on
+  the caller thread and on an 8 MiB thread in one isolated interpreter (~90 s),
+  then refuses `AnalysisException` at `filter()` on both. The debug `Expr::clone`
+  costs ~1.6 KiB per level, so the build (not the builder) overflowed CI's 8 MiB
+  main stack while the lane's 32 MiB survived; 4000 builds and 6000 crashes
+  pre-fix on 8 MiB.
+  pins: deep-filter-chain-crash-1/C-012
+- [test_deep_reverify_1.py](test_deep_reverify_1.py) —
+  **DEEP-FILTER-CHAIN-CRASH-1 re-verify fold (2026-09-30):** the VD2 pins, one
+  isolated interpreter per path. Main: 2,000-term SQL-text OR answers 50
+  through `F.expr`, `selectExpr`, and string `filter` (the 1,500 cap no longer
+  applies to SQL text); 1,500-term DF-built OR refuses `AnalysisException`
+  (Spark refuses DF-built chains past 300 terms); a 5,001-term mixed DF/text
+  OR answers 50 (Spark answers it); `sql()` over a 1,000-deep view counts 50
+  and `explain` names Filter. 256 KiB and 512 KiB threads: a 16-deep count
+  answers 50, a 2,000-term DF-built OR refuses, `.columns` reads a 500-deep
+  frame, and `gc.collect()` frees a deep cycle. GC: `gc.collect()` frees a
+  6,000-term column plus a 1,000-deep frame cycle on main and a 6,000-term
+  column plus a 200-deep frame cycle on a 256 KiB thread.
+  pins: deep-filter-chain-crash-1/C-013, C-014, C-015, C-016, C-017, C-018
 
 ## I want to...
 

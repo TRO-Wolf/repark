@@ -11,7 +11,7 @@ core is pure pyarrow — no Spark, no JVM — so it runs in routine CI.
 - `pyproject.toml` — hatchling package; `pyarrow>=25` and `pydantic>=2.10,<3`
   (**PYC-4**, 2026-08-22 — harness records are BaseModel; dual-wire stays a
   dataclass because it runs as bare `python3`); `record` extra (`pyspark`) for
-  golden refresh.
+  golden refresh; `live-db` extra (`psycopg[binary]`) for the C-0 live cells.
 - `src/repark_parity/` — `compare.py` (the comparison core), `__init__.py`, `py.typed`.
 - `tests/` — unit tests for the comparison core **and the dataset generators**; the
   TORTURE-1 both-door suite lives in [tests/torture/](tests/torture/map.md).
@@ -55,7 +55,10 @@ core is pure pyarrow — no Spark, no JVM — so it runs in routine CI.
   (this map inventories the series; source comments state only the generator invariant)
   from C TA-Lib 0.4.0 via `polars-talib` (pinned in its header; asserts the bundled TA-Lib
   version). Run `uv run python/repark-parity/record_ta_goldens.py`; output lands in
-  `crates/repark-ta/tests/goldens/`.
+  `crates/repark-ta/tests/goldens/`. TA-CHAIN-1: `prefix_fixture()` + `prefix_cases()` also
+  record 13 leading-run series (the walk fixture with leading NaN runs per column, incl. the chain
+  `ema(trange(h, l, c), 21)`) into `crates/repark-ta/tests/goldens/prefix/` with their own
+  `manifest.json`.
 
 ## I want to...
 

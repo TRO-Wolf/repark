@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Crate Layout Review</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#f3f7f7; --surface:#ffffff; --ink:#15262a; --muted:#4d6468; --line:#cfdfe0;
+  --accent:#0f7c80; --accent-soft:#dcefef; --warn:#a65b00; --warn-soft:#fbeedd;
+  --bad:#a4262c; --bad-soft:#f8e2e3; --good:#2f6f3e; --good-soft:#e2f1e5;
+  --code-bg:#e8f0f0;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d1719; --surface:#132226; --ink:#dcebec; --muted:#93acaf; --line:#27403f;
+    --accent:#55c2c5; --accent-soft:#16383a; --warn:#e8a456; --warn-soft:#3a2a14;
+    --bad:#f0858a; --bad-soft:#3d1b1e; --good:#84c996; --good-soft:#18331f; --code-bg:#1a2d30;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d1719; --surface:#132226; --ink:#dcebec; --muted:#93acaf; --line:#27403f;
+  --accent:#55c2c5; --accent-soft:#16383a; --warn:#e8a456; --warn-soft:#3a2a14;
+  --bad:#f0858a; --bad-soft:#3d1b1e; --good:#84c996; --good-soft:#18331f; --code-bg:#1a2d30;
+  color-scheme: dark;
+}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;padding-inline:16px;padding-block:32px 64px}
+main{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:40px}
+header{display:flex;flex-direction:column;gap:10px;border-bottom:2px solid var(--accent);padding-bottom:20px}
+.eyebrow{font:500 12px/1.2 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+h1{font:600 clamp(28px,5vw,40px)/1.15 "IBM Plex Serif",Georgia,serif;margin:0;text-wrap:balance}
+h2{font:600 24px/1.25 "IBM Plex Serif",Georgia,serif;margin:0 0 12px;text-wrap:balance}
+h3{font:600 17px/1.35 "IBM Plex Sans",system-ui,sans-serif;margin:22px 0 6px;text-wrap:balance}
+p,li{max-width:68ch}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 12px;padding-left:22px}
+li{margin-bottom:6px}
+.lede{font-size:18px;color:var(--muted);margin:0}
+.meta{font:13px/1.5 "IBM Plex Mono",ui-monospace,monospace;color:var(--muted)}
+code{font:0.88em "IBM Plex Mono",ui-monospace,monospace;background:var(--code-bg);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+section{display:flex;flex-direction:column}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:8px 0 12px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.stat b{display:block;font:600 26px/1.1 "IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;color:var(--ink)}
+.stat span{font-size:13px;color:var(--muted)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:4px 0 12px}
+table{border-collapse:collapse;width:100%;min-width:620px;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:9px 12px;border-bottom:1px solid var(--line)}
+th{font:600 12px/1.3 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);background:var(--accent-soft)}
+tr:last-child td{border-bottom:none}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag{display:inline-block;font:600 11px/1 "IBM Plex Mono",ui-monospace,monospace;padding:3px 6px;border-radius:4px;white-space:nowrap;background:var(--accent-soft);color:var(--accent);margin-left:6px;vertical-align:middle}
+.tag.measured{background:var(--good-soft);color:var(--good)}
+.tag.judgement{background:var(--warn-soft);color:var(--warn)}
+.tag.rule{background:var(--bad-soft);color:var(--bad)}
+.callout{border-left:4px solid var(--accent);background:var(--surface);padding:12px 16px;border-radius:0 8px 8px 0;margin:4px 0 12px}
+.callout p:last-child{margin-bottom:0}
+.pair{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0 0 12px}
+.pair dt{font:600 12px/1.9 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.pair dd{margin:0;max-width:68ch}
+footer{border-top:1px solid var(--line);padding-top:16px}
+@media (max-width:520px){.pair{grid-template-columns:1fr}.pair dt{line-height:1.4;margin-top:6px}}
+</style>
+</head>
+<body>
+
+<main>
+<header>
+  <div class="eyebrow">RePark · roadmap review · 2026-09-30</div>
+  <h1>How RePark's crates are laid out, against Sail, Polars and DataFusion</h1>
+  <p class="lede">The owner asked whether the directories that hold only a <code>tests.rs</code> can be avoided, and whether the crates could be organised more like Polars, DataFusion or Sail. This page measures the current layout, compares it with those three, and lays out the options with their costs. Nothing was changed.</p>
+  <p class="meta">Prepared by a Claude session (claude-fable-5-1) for the RePark owner. RePark measured on <code>origin/main</code> at <code>adc26586</code> (2026-09-28). The other three measured from their GitHub default-branch file listings on 2026-09-29; DataFusion 54.1.0 also inspected from the cargo registry. The markdown of record is <code>task/roadmap/mid-term/crate-layout-review-2026-09-30.md</code>.</p>
+</header>
+
+<section>
+  <h2>1. The short version</h2>
+  <p>The <code>foo.rs</code> plus <code>foo/tests.rs</code> pattern is the smallest part of what separates RePark from those three projects. What separates them is that they keep most behaviour tests out of Rust files: DataFusion in 526 <code>.slt</code> files, Sail in 87 gold-data files and 237 Python test files, Polars in 467 Python test files. RePark holds 53 % of its Rust lines as tests, and the directory pattern is a symptom of that volume.</p>
+  <div class="callout">
+    <p>Each claim is marked <span class="tag measured">measured</span> when it comes from a count over the trees, <span class="tag rule">rule</span> when an AGENTS.md rule bears on it, and <span class="tag judgement">judgement</span> when it is my reading.</p>
+  </div>
+</section>
+
+<section>
+  <h2>2. The four layouts side by side <span class="tag measured">measured</span></h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th></th><th class="num">RePark</th><th class="num">Sail</th><th class="num">Polars</th><th class="num">DataFusion</th></tr></thead>
+    <tbody>
+      <tr><td>Crates</td><td class="num">10</td><td class="num">38</td><td class="num">31</td><td class="num">40</td></tr>
+      <tr><td><code>.rs</code> files</td><td class="num">966</td><td class="num">1,210</td><td class="num">2,199</td><td class="num">1,764</td></tr>
+      <tr><td>Directories holding only <code>tests.rs</code></td><td class="num">36</td><td class="num">0</td><td class="num">0</td><td class="num">1</td></tr>
+      <tr><td>Files under <code>src/**/tests/</code></td><td class="num">246</td><td class="num">0</td><td class="num">14</td><td class="num">25</td></tr>
+      <tr><td>Integration test binaries</td><td class="num">45</td><td class="num">3</td><td class="num">14</td><td class="num">23</td></tr>
+      <tr><td>Behaviour tests kept as data or Python</td><td class="num">not counted</td><td class="num">87 gold, 237 Python</td><td class="num">467 Python</td><td class="num">526 <code>.slt</code></td></tr>
+      <tr><td>Deepest <code>src/</code> nesting</td><td class="num">3</td><td class="num">3</td><td class="num">5</td><td class="num">4</td></tr>
+    </tbody>
+  </table></div>
+  <p>The three reference counts come from file listings only, so their test share by lines is unknown. RePark's Python facade suite was not counted on this page either; the comparison is about where Rust-side behaviour tests live.</p>
+  <p>Three details from the reference trees:</p>
+  <ul>
+    <li><b>DataFusion</b> puts one function per file under a category directory (<code>functions/src/string/upper.rs</code>), writes unit tests inline (69 of 120 files in <code>datafusion-functions</code> 54.1.0 carry a test module, none has a <code>tests.rs</code>), and groups integration tests into a few binaries with submodules (<code>core/tests/core_integration.rs</code>). Statement-level behaviour lives in <code>.slt</code> files run by <code>sqllogictest</code>.</li>
+    <li><b>Polars</b> keeps one integration binary for the umbrella crate (<code>polars/tests/it/main.rs</code>) and one crate-level test tree (<code>polars-lazy/src/tests/</code>, 14 files). Behaviour is tested from Python.</li>
+    <li><b>Sail</b> has no Rust test trees at all: 3 integration binaries across 38 crates. Behaviour is pinned by gold-data JSON under <code>sail-spark-connect/tests/gold_data/</code> (recorded answers, regenerated by an environment flag) and by a Python suite.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>3. RePark from the inside <span class="tag measured">measured</span></h2>
+  <div class="stats">
+    <div class="stat"><b>53 %</b><span>of Rust lines are tests (203k of 384k)</span></div>
+    <div class="stat"><b>3</b><span>test placements in use at once</span></div>
+    <div class="stat"><b>36</b><span>single-file test directories, each with a map.md</span></div>
+    <div class="stat"><b>45</b><span>integration binaries, 24 in repark-sql</span></div>
+  </div>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Crate</th><th class="num">Product</th><th class="num">Inline tests</th><th class="num">Out-of-line tests</th><th class="num">Integration</th><th class="num">Test share</th></tr></thead>
+    <tbody>
+      <tr><td>repark-spark</td><td class="num">44,353</td><td class="num">7,811</td><td class="num">88,405</td><td class="num">3,546</td><td class="num">69 %</td></tr>
+      <tr><td>repark-functions</td><td class="num">53,855</td><td class="num">16,305</td><td class="num">3,746</td><td class="num">0</td><td class="num">27 %</td></tr>
+      <tr><td>repark-core</td><td class="num">29,499</td><td class="num">6,435</td><td class="num">14,094</td><td class="num">2,085</td><td class="num">43 %</td></tr>
+      <tr><td>repark-iceberg</td><td class="num">22,224</td><td class="num">8,451</td><td class="num">26,661</td><td class="num">0</td><td class="num">61 %</td></tr>
+      <tr><td>repark-python</td><td class="num">11,328</td><td class="num">1,972</td><td class="num">692</td><td class="num">940</td><td class="num">24 %</td></tr>
+      <tr><td>repark-sql</td><td class="num">11,148</td><td class="num">206</td><td class="num">7,382</td><td class="num">5,963</td><td class="num">55 %</td></tr>
+      <tr><td>repark-ta</td><td class="num">4,831</td><td class="num">2,400</td><td class="num">142</td><td class="num">1,664</td><td class="num">47 %</td></tr>
+      <tr><td>repark-distributed</td><td class="num">2,333</td><td class="num">93</td><td class="num">0</td><td class="num">2,509</td><td class="num">53 %</td></tr>
+      <tr><td>repark-ml</td><td class="num">1,092</td><td class="num">470</td><td class="num">0</td><td class="num">0</td><td class="num">30 %</td></tr>
+      <tr><td>repark-common</td><td class="num">820</td><td class="num">596</td><td class="num">237</td><td class="num">0</td><td class="num">50 %</td></tr>
+      <tr><td><b>Total</b></td><td class="num"><b>181,483</b></td><td class="num"><b>44,739</b></td><td class="num"><b>141,359</b></td><td class="num"><b>16,707</b></td><td class="num"><b>53 %</b></td></tr>
+    </tbody>
+  </table></div>
+  <p>Lines are counted with blank lines, the way the file-size gate counts them. "Inline" is the tail of a product file from its <code>#[cfg(test)] mod … {</code> to the end; "out-of-line" is every file named <code>tests.rs</code>, <code>*_tests.rs</code>, or sitting under a <code>src/**/tests/</code> directory.</p>
+
+  <h3>3.1 Three placements are in use at once</h3>
+  <ul>
+    <li><b>Inline test modules</b> in 230 product files, about 45k lines.</li>
+    <li><b><code>foo.rs</code> plus <code>foo/tests.rs</code></b>, declared with <code>#[cfg(test)] mod tests;</code> in 80 files. This gives the 36 directories that hold one file and one <code>map.md</code>. Those maps are not empty: with code comments banned, <code>na_fill/map.md</code> is where the module's purpose and its <code>pins:</code> citation live.</li>
+    <li><b>Crate-level <code>src/tests/</code> trees</b> in 11 places, 246 files. <code>repark-spark/src/tests/</code> alone is 161 files, 85,604 lines and 1,875 tests; 147 of those files run SQL through a session helper. They reach crate internals with <code>use super::super::*</code>, so they are unit tests by visibility even though they read like integration tests.</li>
+  </ul>
+  <p>The second pattern has precedent: from memory, the Rust standard library enforces it with a tidy check. The unusual part is carrying a directory and a map for one file.</p>
+
+  <h3>3.2 The crate roots are flat</h3>
+  <p><code>repark-spark/src</code> has 61 files and 18 directories at its root; <code>repark-functions/src</code> has 77 files and 25 directories. DataFusion groups functions by category and Sail's function crate by kind (<code>scalar</code>, <code>aggregate</code>, <code>window</code>). RePark's roots mix DDL, DML, casts, literals and routing at one level.</p>
+
+  <h3>3.3 Integration binaries are unconsolidated</h3>
+  <p><code>repark-sql</code> has 24 top-level files under <code>tests/</code> and <code>repark-spark</code> 9. Cargo links each one as its own binary against the whole engine. The run-21 freeze on this machine came from 89 concurrent <code>rust-lld</code> processes; the number of test binaries is one of the multipliers.</p>
+</section>
+
+<section>
+  <h2>4. Options, cheapest first</h2>
+
+  <h3>4.1 One integration binary per crate <span class="tag measured">measured</span></h3>
+  <dl class="pair">
+    <dt>Shape</dt><dd>Polars: <code>tests/it/main.rs</code> with one module per former file. DataFusion: <code>core_integration.rs</code> declaring <code>mod sql; mod dataframe;</code> and so on.</dd>
+    <dt>Gain</dt><dd>45 link steps become about 8. Shared fixtures stop being copied per binary.</dd>
+    <dt>Cost</dt><dd>Every <code>cargo test -p … --test cross_door</code> in briefs, gates and CI changes to a filter. Mechanical otherwise.</dd>
+  </dl>
+
+  <h3>4.2 Remove the single-file test directories <span class="tag rule">rule</span></h3>
+  <dl class="pair">
+    <dt>Shape</dt><dd>The only way to keep a child test module out of a directory is <code>#[cfg(test)] #[path = "na_fill_tests.rs"] mod tests;</code> next to <code>na_fill.rs</code>.</dd>
+    <dt>Blocker</dt><dd>AGENTS.md rules this out: "Rust module layout is the default one … <code>#[path = "…"]</code> is not module inclusion: move the file into the canonical tree." One <code>#[path]</code> use exists in the tree today.</dd>
+    <dt>So</dt><dd>Removing the 36 directories needs an owner decision to carve a test-module exception into that rule. Without it, the alternatives are to leave them, to fold each <code>tests.rs</code> into its crate's <code>src/tests/</code> tree (which widens private items to <code>pub(crate)</code>; 59 of the out-of-line files reach parent internals through <code>super::</code>), or to move the tests back inline (which the file-size gate then counts against the product file).</dd>
+  </dl>
+
+  <h3>4.3 Group the flat crate roots by family <span class="tag judgement">judgement</span></h3>
+  <dl class="pair">
+    <dt>Shape</dt><dd><code>repark-spark/src/{ddl,dml,cast,literal,router,…}/</code>; <code>repark-functions/src/{datetime,string,math,…}/</code>, the DataFusion arrangement.</dd>
+    <dt>Gain</dt><dd>A reader or an agent finds a family in one directory instead of a 79-entry listing. No crate-graph change.</dd>
+    <dt>Cost</dt><dd>Every moved file changes its <code>map.md</code> rows and its <code>pins:</code> citations, and the file-size <code>EXCEPTIONS</code> table is keyed by path. Test filter names derive from module paths, so gate filters change too. Do it one family at a time.</dd>
+  </dl>
+
+  <h3>4.4 Move statement-and-answer tests into data files <span class="tag judgement">judgement</span></h3>
+  <dl class="pair">
+    <dt>Shape</dt><dd>DataFusion's <code>.slt</code> or Sail's gold JSON: a statement, the recorded answer, and a harness that runs both engines. RePark already records Spark answers as JSON oracles for the Python suite; this brings the same shape to the Rust side.</dd>
+    <dt>Gain</dt><dd>This is what makes the reference projects look the way they do. A behaviour test is a row in a data file, so it does not count against any <code>.rs</code> ceiling, cannot bloat a module, and is recorded from Spark rather than written by hand. It also fits the Rust-first ruling: the harness is Rust, the cases are data.</dd>
+    <dt>Cost</dt><dd>A harness to build and a corpus to migrate. Tests that assert on Iceberg metadata (snapshot summaries, manifest counts, as in <code>src/tests/truncate.rs</code>) do not fit a statement-and-answer format and stay in Rust. Only 147 of the 161 <code>repark-spark</code> test files are candidates, and each needs a reading before it moves.</dd>
+  </dl>
+
+  <h3>4.5 More crates <span class="tag judgement">judgement</span></h3>
+  <p>Sail and DataFusion have four times RePark's crate count. A split of <code>repark-spark</code> or <code>repark-functions</code> would follow the family grouping of 4.3, not precede it, and ARCHITECTURE.md fixes the crate DAG. I would not open this now.</p>
+</section>
+
+<section>
+  <h2>5. What any move has to carry <span class="tag measured">measured</span></h2>
+  <ul>
+    <li><code>scripts/check_rust_file_size.py</code> keys its <code>EXCEPTIONS</code> table by path and fails closed on a path that no longer exists; the current table has rows for test files (<code>dynamic_flatten/tests.rs</code> at 1,442, <code>catalog/tests/catalog.rs</code> at 1,843).</li>
+    <li>Every directory carries a <code>map.md</code>, checked for lockstep in the same commit, and <code>pins: unit/C-NNN</code> citations live in those maps, so a moved test moves its citation.</li>
+    <li>Briefs, gates and CI name test paths and <code>cargo test</code> filters. A rename silently narrows a filter unless the filter is updated.</li>
+    <li>Relocated code sheds its comments under the comment gate, which is no cost for tests already free of them and a review duty for the rest.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>6. Recommendation</h2>
+  <ol>
+    <li>After v1.5.1 ships, do 4.1 (integration binaries) as one mechanical unit per crate, starting with <code>repark-sql</code>.</li>
+    <li>Put 4.2 to the owner as a one-line rule question: allow <code>#[path]</code> for a <code>#[cfg(test)]</code> child module and nothing else, or keep the directories. Either answer closes the question.</li>
+    <li>Pilot 4.4 on one statement family (<code>repark-spark/src/tests/call_*.rs</code> is a contained set) before deciding whether to migrate more. It is the only option that changes how tests are written, and the only one that moves RePark toward the reference layouts rather than tidying within the current one.</li>
+    <li>Take 4.3 family by family behind the pilot, when a family is next touched.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>7. What was not verified</h2>
+  <ul>
+    <li>The reference projects were measured from file listings, not checkouts; nothing about their line counts or test share is claimed.</li>
+    <li>The standard-library precedent for <code>foo/tests.rs</code> is from memory.</li>
+    <li>The 147-of-161 candidate count for 4.4 is a grep for a SQL call through a session helper, not a reading of each file.</li>
+    <li>No build or test was run for this review.</li>
+  </ul>
+</section>
+
+<footer>
+  <p class="meta">Sources: <code>origin/main</code> at <code>adc26586</code> (<code>crates/</code>, <code>scripts/check_rust_file_size.py</code>, <code>AGENTS.md</code> "Rust module layout"); GitHub tree listings of <code>lakehq/sail</code>, <code>pola-rs/polars</code> and <code>apache/datafusion</code> default branches on 2026-09-29; <code>datafusion-functions</code>, <code>datafusion-spark</code>, <code>datafusion-sql</code> and <code>datafusion-sqllogictest</code> 54.1.0 from the cargo registry.</p>
+</footer>
+</main>
+</body>
+</html>

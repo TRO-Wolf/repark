@@ -18,6 +18,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 ## Contents
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
+- `cast_overflow_insert.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** end-to-end refusal
+  pins over a real Iceberg table: every door refuses `CAST_OVERFLOW_IN_TABLE_INSERT` with
+  source/target/column named and nothing written; in-range, int-to-int and string stores
+  keep their behavior.
 - `describe_view_routing.rs` — DESCRIBE routing pins table and view probe failures,
   the viewless catalog refusal, unchanged tables, and stored view columns after
   the source table disappears, including EXTENDED. Failure pins check the
@@ -464,10 +468,30 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `declared_refuse.rs` — **FNP-15/16:** Spark-door parse-altitude refusals for the six
   unreachable names and the sketch family; passthrough attach pin.
   pins: fnp-15-16/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  **WO STORE-TS-DOORS-2 re-verify fold 6 (2026-10-01):** the source pin
+  matches the valve call inside the shared pre-gate chain.
+  pins: store-ts-doors-2/C-001, C-003
 - `spark_string_literals.rs` — **SQP-1:** the string-literal escape pins (C-001..C-008, C-010,
   C-012): the escape domain, `\'`/unpaired-backslash lexing, adjacency + the DataFusion-native
   `OPTIONS` carve-out, quote-runs-are-not-triple-quotes, raw strings, LIKE/RLIKE/backtick controls,
   exactly-once-on-every-path, the one-caller grep pin, the Generic-dialect honesty pin.
+- `string_literal_escape_1.rs` — **STRING-LITERAL-ESCAPE-1 (2026-09-29):** the
+  PE-10 pins in their own leaf (the SQP-1 leaf is byte-frozen, so nothing lands
+  there): doubled-`""` collapse in double-quoted literals, `r"…"` answering,
+  raw `''`/`""` head/tail splitting, verbatim doublings kept and raw values
+  marked, the escape-free-doubles borrow pin, and direct quote-awareness units.
+  pins: string-literal-escape-1/C-001, C-002, C-003, C-004
+  **DIFF-PROBE fold (2026-09-29):** `verbatim_ddl_positions_take_default_treatment`
+  pins verbatim DDL canonicals (property lists borrowed, backslashes unescaped,
+  `COMMENT` doubles rewritten single-quoted, the `SELECT comment` alias guard,
+  `EXPLAIN` passthrough).
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** the DDL table gains
+  `UNSET` (both `IF EXISTS` shapes), `SHOW TBLPROPERTIES` key, and
+  `COMMENT ON` rows. pins: string-literal-escape-1/C-008
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):**
+  `built_statements_parse_default_on_a_verbatim_session` pins the override
+  wiring: `Some(false)` answers default values, `None` keeps the flag.
+  pins: string-literal-escape-1/C-011
 - `cast_binary.rs` — **SQP-1 (C-009):** `CAST … AS BINARY` plans to Arrow `Binary` (B1/B8–B10/B13/
   B15), refuses illegal sources (`DATATYPE_MISMATCH`, B2–B7), keeps `VARBINARY` refusing (B12),
   leaves a `BINARY` DDL column untouched; `TRY_CAST(<int>)` refuses without the ANSI-off suggestion.
@@ -476,6 +500,15 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   off; `CAST_WITH_CONF_SUGGESTION` plus the conf remedy for integrals when ANSI is on;
   `CAST_WITHOUT_SUGGESTION` for the never-castable sources in both modes and for `TRY_CAST`.
   pins: bl-11-numeric-binary/C-001, C-002, C-003
+- `case_twin_columns.rs` — **RP-56 (2026-09-28):** case-twin columns under
+  `spark.sql.caseSensitive=true` — `CREATE TABLE (a INT, A INT)` reads back columns `a`/`A`
+  via `SELECT *` (0 rows) and `DESCRIBE` (`int`/`int`), CTAS `SELECT 1 AS a, 2 AS "A"`
+  reads `[[1, 2]]` as `Int32`, and a bare-name `SELECT a` under `false` refuses (the
+  text is recorded in the ledger and asserted as a refusal only). The CTAS pin quotes
+  `"A"` because the unquoted twin-alias spelling refuses in DataFusion's projection
+  check before reaching the fork. All three pins are red at fork `6e937f49`
+  (`Cannot build lower case index: a and A collide`) and green at `e1d74bef`.
+  pins: rp-56/C-001
 - `casesens_ddl.rs` — **WO CASESENS-1 slice 5 (2026-09-27):** the Iceberg DDL
   door pins: `write_order_follows_the_case_rule` (the `false` legs answer with the
   measured source ids 2/4/1/1; the `true` legs refuse `Cannot find field '<written>'
@@ -1311,6 +1344,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `ARRAY<MAP<…>>` reach the non-primitive refusal whole; `DEFAULT` and `NULL` options, `COMMENT` before
   `NOT NULL`, and a repeated `NOT NULL` or `COMMENT` answer `PARSE_SYNTAX_ERROR` near the
   unexpected token (r2 V-001); a CTAS mixing untyped and typed elements answers the mix text.
+  **RP-56 (2026-09-28):** under `caseSensitive=true` a case-only pair now serves — the
+  fork's lazy lower-case index builds, so the declared/typed twins land with their schemas
+  and identity fields (renamed `typed_partition_columns_differing_by_case_serve_under_case_sensitive`);
+  the exact-duplicate `COLUMN_ALREADY_EXISTS` leg is unchanged.
   pins: ice-nested-evo-1/C-058
 - [column_comment_ddl.rs](column_comment_ddl.rs) — **WO U5 PR2a (2026-09-24):** `ALTER
   COLUMN … COMMENT` on the Spark door. The docs land as Spark measured: top level, nested
@@ -1547,6 +1584,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   spark_ast source attach (Q-001), a string-literal negative (incl. CAST-in-literal),
   and a default (non-COLLATE) `ORDER BY` untouched pin. Ledger:
   [`../../../../task/y7-collation-refuse-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-13-y7-collation-refuse-ledger.md).
+  **WO STORE-TS-DOORS-2 re-verify fold 6 (2026-10-01):** the source attach
+  matches the valve call inside the shared pre-gate chain.
+  pins: store-ts-doors-2/C-001, C-003
 - `window_temporal_range.rs` pins the Spark door's `RANGE` frames on datetime order keys and the
   paths that must remain unchanged:
   `temporal_range_bare_offset_over_timestamp_key_refuses_like_spark` (Spark's error class),

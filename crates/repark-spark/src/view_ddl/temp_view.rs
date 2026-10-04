@@ -74,7 +74,7 @@ impl TableProvider for ReplanningTempView {
     }
 
     fn table_type(&self) -> TableType {
-        TableType::View
+        TableType::Temporary
     }
 
     fn supports_filters_pushdown(

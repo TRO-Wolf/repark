@@ -10,6 +10,7 @@ import contextlib
 import inspect
 import io
 import re
+from pathlib import Path
 
 import numpy as np
 import pyarrow as pa
@@ -18,6 +19,9 @@ import pytest
 from repark import ReparkSession, Window, ta
 from repark.errors import PySparkTypeError
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
+
+GOLDENS = Path(__file__).resolve().parents[3] / "crates" / "repark-ta" / "tests" / "goldens"
+PREFIX_RUNS = {"high": 3, "low": 7, "close": 5}
 
 
 @pytest.fixture
@@ -339,3 +343,105 @@ def test_last_row_with_null_lookback_keeps_last_bar_values(
             np.asarray([last_by_symbol[symbol]], dtype=np.float64),
             np.asarray([full_values[full_index]], dtype=np.float64),
         )
+
+
+def _golden(path: Path) -> np.ndarray:
+    """Read one recorded golden as little-endian ``float64``."""
+    return np.frombuffer(path.read_bytes(), dtype="<f8")
+
+
+def _prefix_bars(spark: ReparkSession) -> object:
+    """The TA-CHAIN-1 prefix fixture: walk H/L/C with leading NaN runs of 3, 7 and 5 rows."""
+    series = {}
+    for name, run in PREFIX_RUNS.items():
+        values = _golden(GOLDENS / f"fixture_{name}.bin").copy()
+        values[:run] = np.nan
+        series[name] = values
+    rows = [
+        ("TEST", index, float(high), float(low), float(close))
+        for index, (high, low, close) in enumerate(
+            zip(series["high"], series["low"], series["close"], strict=True)
+        )
+    ]
+    return spark.createDataFrame(rows, ["symbol", "ts", "high", "low", "close"])
+
+
+def test_chained_indicator_over_trange_matches_polars_talib_golden(
+    spark: ReparkSession,
+) -> None:
+    """``ema(trange(h, l, c), 21)`` answers where polars_talib answers, bit-exact (TA-CHAIN-1)."""
+    with_tr = ta.with_indicators(
+        _prefix_bars(spark),
+        partition="symbol",
+        order="ts",
+        columns={"tr": ta.trange("high", "low", "close")},
+    )
+    chained = ta.with_indicators(
+        with_tr,
+        partition="symbol",
+        order="ts",
+        columns={"ema21_of_tr": ta.ema("tr", timeperiod=21)},
+    )
+    table = chained.to_arrow().sort_by("ts")
+    tr = table.column("tr").to_numpy(zero_copy_only=False)
+    got = table.column("ema21_of_tr").to_numpy(zero_copy_only=False)
+    _assert_bit_exact(tr, _golden(GOLDENS / "prefix" / "prefix_trange.bin"))
+    _assert_bit_exact(got, _golden(GOLDENS / "prefix" / "prefix_chain_ema21_of_trange.bin"))
+    assert int(np.flatnonzero(~np.isnan(got))[0]) == 28
+    assert np.isfinite(got[28:]).all()
+
+
+def test_leading_null_prefix_is_skipped_per_partition(spark: ReparkSession) -> None:
+    """A leading NULL run is skipped per partition; the other partitions start at the lookback."""
+    bars_per_symbol = 40
+    lookback = 4
+    null_runs = {"S03": 3, "S09": 6}
+    symbols = [f"S{index:02d}" for index in range(14)]
+    closes = {
+        symbol: [
+            100.0 + float(offset) + float((index * (offset + 3)) % 11)
+            for index in range(bars_per_symbol)
+        ]
+        for offset, symbol in enumerate(symbols)
+    }
+    rows = [
+        (symbol, index, None if index < null_runs.get(symbol, 0) else close)
+        for symbol in symbols
+        for index, close in enumerate(closes[symbol])
+    ]
+    frame = spark.createDataFrame(rows, ["symbol", "ts", "close"])
+    table = (
+        ta.with_indicators(
+            frame,
+            partition="symbol",
+            order="ts",
+            columns={"ema5": ta.ema("close", timeperiod=5)},
+        )
+        .to_arrow()
+        .sort_by([("symbol", "ascending"), ("ts", "ascending")])
+    )
+    assert table.column("ema5").null_count == 0
+    got_symbols = table.column("symbol").to_pylist()
+    values = table.column("ema5").to_numpy(zero_copy_only=False)
+    for symbol in symbols:
+        mask = np.asarray([name == symbol for name in got_symbols])
+        got = values[mask]
+        run = null_runs.get(symbol, 0)
+        assert got.size == bars_per_symbol
+        assert int(np.flatnonzero(~np.isnan(got))[0]) == run + lookback, symbol
+        assert np.isfinite(got[run + lookback :]).all(), symbol
+        trimmed = spark.createDataFrame(
+            [(symbol, index, close) for index, close in enumerate(closes[symbol][run:])],
+            ["symbol", "ts", "close"],
+        )
+        clean = (
+            ta.with_indicators(
+                trimmed,
+                partition="symbol",
+                order="ts",
+                columns={"ema5": ta.ema("close", timeperiod=5)},
+            )
+            .to_arrow()
+            .sort_by("ts")
+        )
+        _assert_bit_exact(got[run:], clean.column("ema5").to_numpy(zero_copy_only=False))

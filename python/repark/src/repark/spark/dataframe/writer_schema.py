@@ -24,7 +24,7 @@ def _split_columns(
     session: Any, dataframe: Any, table_ref: str
 ) -> tuple[list[str], list[str], dict[str, str], list[str], list[str]]:
     """Target columns, source columns, the source case-fold map, the matched pair, the extras."""
-    target_columns = list(session.sql(f"SELECT * FROM {table_ref} LIMIT 0").column_names())
+    target_columns = list(session.sql_built(f"SELECT * FROM {table_ref} LIMIT 0").column_names())
     source_columns = list(dataframe.columns)
     source_by_case = _by_name_casefold_map(source_columns, surface="DataFrame")
     target_by_case = _by_name_casefold_map(target_columns, surface="table")

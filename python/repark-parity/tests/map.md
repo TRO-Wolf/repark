@@ -1,6 +1,9 @@
 # map — python/repark-parity/tests
 
 ATTR-ID-1 S3b (2026-10-01): CAP-1 mirror row ratcheted down with the code — `dataframe/core.py` 3921 → 3846 (the filter quoter moves to `column_fields.py`). The `check_lib_py.py` exception row moved in the same commit; no row raised. pins: attr-id-1/C-025
+STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30): the CAP-1 mirror follows the shrink-only ratchets `dataframe/core.py` 3973 → 3971 and `session/session_core.py` 2293 → 2277. pins: string-literal-escape-1/C-011
+
+STRING-LITERAL-ESCAPE-1 re-verify follow-up (2026-09-30): the CAP-1 mirror follows the shrink-only ratchet `repark-python/src/session.rs` 1122 → 1097. pins: string-literal-escape-1/C-011
 
 WO CATALOG-1 (2026-09-26): the CAP-1 mirror drops the retired `catalog_config.rs` row, follows `session/tests/session.rs` 1407 → 1406, and the exception count 38 → 37. pins: catalog-1/C-006
 
@@ -78,6 +81,10 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   wrote `docs/perf/eager-own-1-2026-09-13/{base,after}.json`.
   Needs the native module.
   pins: eager-own-1/C-001, C-012
+- [live_db/](live_db/map.md) — **C-0 (2026-10-02):** the `pg_live` fixture (unique
+  schema, publication and slot names, explicit cleanup) and the five cdc S0 pins
+  (`xfail(strict=True)` until the 1.7 producer). Cells skip when `REPARK_PG_URL`
+  is unset. No native module.
 - [spill/](spill/map.md) — **NEVEROOM-1 steps 1–3 (2026-09-10/11):** the spill-coverage
   matrix harness, the full-tier run, and the CI golden: the subprocess-per-cell runner
   with an address-space cap, the in-engine `range()` generators sized to the limit
@@ -130,6 +137,8 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   job keeps its gate and host; `docs/release.md` names all five legs. Doctored leg
   lists (dropped, renamed, appended, re-hosted, unmerged, cron removed, `pull_request`
   reachability) each fail. YAML read by indentation-aware regex, no PyYAML.
+  **CI-1 (2026-10-03, owner ruling):** the C-002 pin admits exactly two `smoke` `if:` forms, the bare PR-or-main gate and `always() && (` that gate `)`, so the aggregate can report on a skipped or failed upstream job; `test_doctored_smoke_gate_fails` proves `always()` alone, a PR-only gate, an `||` widening, a `!cancelled()` gate, a dropped `if:` and a re-hosted job each fail.
+  **CI-1 (2026-10-03, owner ruling on H-2, widening authorized by it):** the smoke jobs moved to `smoke.yml`, so the `smoke` assertions read `smoke.yml` (the two-form `if:` rule and `runs-on` stay) while the release and nightly assertions keep reading `wheels.yml`. C-002 also asserts `smoke.yml` triggers only on `push: branches: [main]` and `pull_request` (no `tags`, `schedule` or `workflow_dispatch`) and carries no publishing step (`pypa/gh-action-pypi-publish`, `maturin publish`/`upload`, a maturin-action `command: publish`/`upload`, `twine`, `softprops/action-gh-release`, `ncipollo/release-action`, `actions/create-release`, `gh release create`/`upload`); `test_doctored_smoke_workflow_fails` injects each forbidden trigger, a widened push branch list, a dropped `pull_request` and each publishing step, and every one fails.
   pins: platform-1/C-001, C-002, C-003, C-004, C-005
 - `test_ice_read_perf_bench_workflow.py` — **ICE-READ-PERF-0 (2026-09-19):** pins over the
   dispatch-only `ice-read-perf-bench` job of `aws-acceptance.yml`. `live-aws` keeps the nightly
@@ -176,6 +185,10 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   (`DataFrameWriter.bucketBy`/`bucket_by`/`sortBy`/`sort_by`/`clusterBy`/`cluster_by`,
   `DataFrameWriterV2.clusterBy`/`cluster_by`); backlog and exceptions baselines hold.
   pins: io-bucket-cluster-1/C-003
+- `test_ex_0_example_coverage.py` — **POLARS-IS-DUPLICATED-1 (2026-09-28):**
+  the enumerated public surface moves 1086 → 1087 as `Column.is_duplicated`
+  joins the `Column` inventory; `docs/examples/column/is_duplicated_ext.py`
+  covers it and the snapshot gains the row. pins: polars-is-duplicated-1/C-009
 - `test_ex_0_example_coverage.py` — **FNP-GEN-1 step 2 (2026-09-16):** the
   enumerated public surface moves 1062 → 1064 as `F.inline` and
   `F.inline_outer` join `__all__` through the generator installer;
@@ -230,10 +243,27 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 - `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 S3c (2026-10-01):**
   mirror row ratchets `dataframe/core.py` 3846 → 3836 with the script baseline
   (the lifted duplicate-finals refusal and its docstring). pins: attr-id-1/C-030
+- `test_cap_1_source_file_line_cap.py` — **TA-CHAIN-1 (2026-10-03):** the Rust mirror row
+  ratchets `repark-ta/src/udf/mod.rs` 1821 → 1818 with the script baseline (R-TC1-6).
+- `test_cap_1_source_file_line_cap.py` — **DEEP-FILTER-CHAIN-CRASH-1 CI segv (2026-09-30):**
+  mirror row ratchets `repark-python/src/column/mod.rs` 1011 → 1005 with the script
+  baseline. pins: deep-filter-chain-crash-1/C-012
+- `test_cap_1_source_file_line_cap.py` — **DEEP-FILTER-CHAIN-CRASH-1 limits fold (2026-09-29):**
+  mirror row ratchets `repark-python/src/column/mod.rs` 1012 → 1011 with the script
+  baseline. pins: deep-filter-chain-crash-1/C-009
+- `test_cap_1_source_file_line_cap.py` — **STRING-LITERAL-ESCAPE-1 verifier fold
+  (2026-09-30):** mirror row ratchets `spark/functions.py` 1984 → 1938 with the
+  script baseline (the `lit` rendering helpers move to `functions_lit.py`).
+  pins: string-literal-escape-1/C-009
 - `test_cap_1_source_file_line_cap.py` — **WO CASESENS-1 slice 5 (2026-09-27):**
   mirror row ratchets `repark-iceberg/src/write/alter.rs` 1607 → 1606 with the script
   baseline and drops the retired `repark-python/src/dataframe.rs` 1005 row.
   pins: casesens-1/C-013
+- `test_cap_1_source_file_line_cap.py` — **RP-56 DIFF-PROBE fold (2026-09-29):**
+  mirror rows ratchet `repark-iceberg/src/write/alter.rs` 1606 → 1556,
+  `repark-iceberg/src/write/append.rs` 1804 → 1737 and
+  `repark-iceberg/src/write/merge/mod.rs` 1622 → 1569 with the script baselines
+  (three pure-move splits). pins: rp-56/C-003
 - `test_cap_1_source_file_line_cap.py` — **WO CASESENS-1 CI fix round (2026-09-28,
   PR #876):** the `crates/repark-spark/src/tests/alter.rs` mirror row ratchets
   1182 → 1181 with the script baseline (the final fold's shrink). No other row moves.
@@ -407,7 +437,8 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   gate: five-family enumerator, uncovered / stale-backlog / covered-in-backlog
   reds, backlog and exceptions baselines, COVERS-must-be-used, seed `COVERS`,
   cloud exceptions, nonzero example exit, Makefile `make ci` + ci.yml dual-wire
-  + wheels.yml `python -I … --require-execute`; F.* includes installer
+  + wheels.yml `python -I … --require-execute` (**CI-1, 2026-10-03, owner ruling on H-2:**
+  the reader follows the job to `smoke.yml`, same two assertions); F.* includes installer
   `__all__` mutations (`try_*`, `zip_with`, xpath); backlog pins are
   campaign-true since 2026-09-01 (baseline is a `<=` direction ratchet in
   lockstep with the file — the ex-2 ledger's blocker section records the
@@ -1177,3 +1208,4 @@ RP-42 fork pin bump (2026-09-20, run 27): `test_v3_cov_docs.py` holds its own co
   `repark-spark/src/tests/ctas.rs` 1357 → 1356. pins: ice-nested-evo-1/C-057
 - `test_cap_1_source_file_line_cap.py` — **U7 PR1 writer surface (2026-09-24):** the `python/repark/src/repark/spark/dataframe/writer_readwriter.py` mirror row ratchets 1077 → 1073 to the measured file and `scripts/check_lib_py.py`. No other row moves. Round 2 (2026-09-24): the same row ratchets 1073 → 1039 in lockstep with the gate. U7 PR2 (2026-09-24): 1039 → 1033 in lockstep with the gate (the `DataFrameWriterV2.option` branch/tag refusal leaves), then 1033 → 1031 (`overwrite(condition)` delegates its SQL to `writer_schema.py`).
 - `test_cap_1_source_file_line_cap.py` — **U7 PR1 writer surface (2026-09-24):** the `python/repark/src/repark/spark/dataframe/writer_readwriter.py` mirror row ratchets 1077 → 1073 to the measured file and `scripts/check_lib_py.py`. No other row moves. Round 2 (2026-09-24): the same row ratchets 1073 → 1039 in lockstep with the gate. U7 PR2 (2026-09-24): 1039 → 1033 in lockstep with the gate (the `DataFrameWriterV2.option` branch/tag refusal leaves), then 1033 → 1031 (`overwrite(condition)` delegates its SQL to `writer_schema.py`), then 1031 → 1029 (slice-2 round 2, 2026-09-25: the by-name binding moves to Rust). pins: u7-write-df-2/C-013
+- `test_cap_1_source_file_line_cap.py` — **DEEP-FILTER-CHAIN-CRASH-1 re-verify fold (2026-09-30):** the `repark-python/src/column/mod.rs` row (1005) and the `repark-python/src/session.rs` row (1122) retire with the script rows (`mod.rs` 1005 → 969: tests to `expr_tests.rs`, level constructors to `levels.rs`; `session.rs` 1122 → 802: tests to `session_tests.rs`); the rust count 36 → 34. pins: deep-filter-chain-crash-1/C-013

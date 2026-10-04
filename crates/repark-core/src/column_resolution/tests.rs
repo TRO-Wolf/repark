@@ -729,16 +729,63 @@ async fn r02_lowercase_only_plans_skip_the_audit() {
 }
 
 #[tokio::test]
-async fn n03_star_over_a_case_twin_answers_both_columns_declared() {
+async fn n03_star_over_a_case_twin_refuses_column_already_exists() {
     let ctx = measured_ctx();
     for sql in [
         "SELECT * FROM tw",
         "SELECT t.* FROM tw AS t",
         "SELECT * FROM (SELECT * FROM tw) AS s",
     ] {
-        let (names, rows) = measured_rows(&ctx, sql).await;
-        assert_eq!(names, ["id", "ID"], "{sql}");
-        assert_eq!(rows, text_rows(&[&["1", "0"]]), "{sql}");
+        let error = plan_error(&ctx.state(), sql, true).await;
+        assert!(
+            error.contains(
+                "[COLUMN_ALREADY_EXISTS] The column `id` already exists. Choose another name or rename the existing column. SQLSTATE: 42711"
+            ),
+            "{sql}: unexpected message: {error}"
+        );
+        assert_eq!(
+            plan_names(&ctx.state(), sql, false).await,
+            ["id".to_string(), "ID".to_string()],
+            "{sql}"
+        );
+    }
+    let union = "SELECT * FROM mc UNION ALL SELECT * FROM tw";
+    let error = plan_error(&ctx.state(), union, true).await;
+    assert!(
+        error.contains(
+            "[COLUMN_ALREADY_EXISTS] The column `id` already exists. Choose another name or rename the existing column. SQLSTATE: 42711"
+        ),
+        "{union}: unexpected message: {error}"
+    );
+    assert_eq!(
+        plan_names(&ctx.state(), union, false).await,
+        ["userId".to_string(), "eventName".to_string()],
+        "{union}"
+    );
+}
+
+#[tokio::test]
+async fn vr3_derived_cte_and_join_twin_stars_answer() {
+    let ctx = measured_ctx();
+    for (sql, names) in [
+        (
+            "SELECT * FROM (SELECT 1 AS a, 2 AS \"A\") s",
+            ["a".to_string(), "A".to_string()],
+        ),
+        (
+            "SELECT s.* FROM (SELECT 1 AS a, 2 AS \"A\") s",
+            ["a".to_string(), "A".to_string()],
+        ),
+        (
+            "WITH c AS (SELECT 1 AS a, 2 AS \"A\") SELECT * FROM c",
+            ["a".to_string(), "A".to_string()],
+        ),
+        (
+            "SELECT * FROM (SELECT x AS u FROM ja) a JOIN (SELECT y AS \"U\" FROM jb) b ON a.u = b.U",
+            ["u".to_string(), "U".to_string()],
+        ),
+    ] {
+        assert_eq!(plan_names(&ctx.state(), sql, true).await, names, "{sql}");
     }
 }
 

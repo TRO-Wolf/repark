@@ -185,7 +185,7 @@ def _select_via_attr_sql(
     view = scratch_view_name(frame._session, "_repark_h1_sel_")
     frame._session.create_or_replace_temp_view(view, _native.attribute_copies(frame._plan()))
     try:
-        planned = frame._session.sql(f"SELECT {', '.join(proj_parts)} FROM {view}")
+        planned = frame._session.sql_built(f"SELECT {', '.join(proj_parts)} FROM {view}")
         child = frame._spawn(planned)
         if h1_display_names is not None:
             child._display_names = h1_display_names

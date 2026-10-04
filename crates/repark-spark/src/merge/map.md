@@ -67,6 +67,10 @@ and the star-sentinel rewrite live here instead of in it.
   repark-iceberg `presented_arrow_schema`, so a `STRUCT<u: uuid>` field folds as `Utf8`:
   `MERGE … UPDATE SET t.s.u = s.v`, `SET t.s.u = '…'` and `SET s = s.ns` commit like Spark
   instead of refusing `Struct("u": FixedSizeBinary(16))` store-assign. pins: u9-types-1/C-016
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** the value renders at
+  `leaf_sql`, `Keyed.sql`, and `repeated_insert_keys` go through
+  `render_for_reparse`, so doubled quotes survive the nested rebuild and `\'`
+  parses instead of refusing. pins: string-literal-escape-1/C-012
 
 ## Pointers
 

@@ -2,7 +2,6 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
 use datafusion::common::DFSchema;
-use datafusion::dataframe::DataFrame;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3::wrap_pyfunction;
@@ -337,10 +336,11 @@ pub fn join_plan_lineage(
 ) -> PyResult<(PyDataFrame, PyFrameNode)> {
     fenced!("frame_lineage.join_plan_lineage", {
         let shared = shared_ids(&left_node.node, right_node.node.outputs());
-        let (state, plan) = joined_frame.inner().clone().into_parts();
-        let (plan, remint) = repark_core::frame_names::remint_shared(plan, left_width, &shared)
-            .map_err(datafusion_to_py_err)?;
-        let schema = plan.schema().clone();
+        let (reminted, remint) =
+            crate::dataframe_names::grown_plan_rewrite(joined_frame, |plan| {
+                repark_core::frame_names::remint_shared(plan, left_width, &shared)
+            })?;
+        let schema = reminted.inner().schema().clone();
         let node = FrameNode::join(
             &schema,
             Arc::clone(&left_node.node),
@@ -349,9 +349,6 @@ pub fn join_plan_lineage(
             emits_right,
         )
         .map_err(datafusion_to_py_err)?;
-        Ok((
-            PyDataFrame::new(DataFrame::new(state, plan), joined_frame.runtime_handle()),
-            PyFrameNode { node },
-        ))
+        Ok((reminted, PyFrameNode { node }))
     })
 }

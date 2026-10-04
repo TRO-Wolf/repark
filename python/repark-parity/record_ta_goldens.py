@@ -54,6 +54,8 @@ FLAT_VOLUME_SEED = 77
 VOLUME_LOG_MEAN = float(np.log(1_000_000.0))
 VOLUME_LOG_SIGMA = 0.35
 OUT_DIR = Path(__file__).resolve().parents[2] / "crates" / "repark-ta" / "tests" / "goldens"
+PREFIX_DIR = OUT_DIR / "prefix"
+PREFIX_RUNS = {"open": 0, "high": 3, "low": 7, "close": 5, "periods": 0, "volume": 2}
 
 
 def positive_volume(n_rows: int, seed: int) -> np.ndarray:
@@ -413,6 +415,56 @@ def flat_cases() -> dict[str, pl.Expr]:
     }
 
 
+def prefix_fixture() -> pl.DataFrame:
+    """The walk fixture with each column's leading `PREFIX_RUNS` rows overwritten by NaN."""
+    walk = walk_fixture()
+    columns: dict[str, np.ndarray] = {}
+    for name, run in PREFIX_RUNS.items():
+        values = walk[name].to_numpy().copy()
+        values[:run] = np.nan
+        columns[name] = values
+    return pl.DataFrame(columns)
+
+
+def prefix_cases() -> dict[str, pl.Expr]:
+    """The TA-CHAIN-1 leading-run goldens, recorded through polars_talib over `prefix_fixture`."""
+    c, h, lo = pl.col("close"), pl.col("high"), pl.col("low")
+    p, v = pl.col("periods"), pl.col("volume")
+    bb = plta.bbands(c, timeperiod=20, nbdevup=2.0, nbdevdn=2.0)
+    macd = plta.macd(c, fastperiod=12, slowperiod=26, signalperiod=9)
+    return {
+        "prefix_ema_21": plta.ema(c, timeperiod=21),
+        "prefix_sma_10": plta.sma(c, timeperiod=10),
+        "prefix_rsi_14": plta.rsi(c, timeperiod=14),
+        "prefix_adx_14": plta.adx(h, lo, c, timeperiod=14),
+        "prefix_trange": plta.trange(h, lo, c),
+        "prefix_atr_14": plta.atr(h, lo, c, timeperiod=14),
+        "prefix_bbands_upper_20": bb.struct.field("upperband"),
+        "prefix_macd_12_26_9": macd.struct.field("macd"),
+        "prefix_stoch_slowk": plta.stoch(h, lo, c).struct.field("slowk"),
+        "prefix_obv": plta.obv(c, v),
+        "prefix_linearreg_5": plta.linearreg(c, timeperiod=5),
+        "prefix_mavp_sma": plta.mavp(c, p, minperiod=5, maxperiod=20, matype=0),
+        "prefix_chain_ema21_of_trange": plta.ema(plta.trange(h, lo, c), timeperiod=21),
+    }
+
+
+def record_prefix(talib_version: str, wrapper_version: str) -> int:
+    """Write the prefix goldens and their own manifest into `PREFIX_DIR`."""
+    PREFIX_DIR.mkdir(parents=True, exist_ok=True)
+    pcases = prefix_cases()
+    presult = prefix_fixture().with_columns(**pcases)
+    for name in pcases:
+        write_atomic(PREFIX_DIR / f"{name}.bin", series_bits(presult[name].to_list()))
+    manifest_doc = {
+        "talib_version": talib_version,
+        "polars_talib_version": wrapper_version,
+        "series": dict(sorted((name, N_ROWS) for name in pcases)),
+    }
+    write_atomic(PREFIX_DIR / "manifest.json", (json.dumps(manifest_doc, indent=2) + "\n").encode())
+    return len(pcases)
+
+
 def main() -> None:
     talib_version = plta.__talib_version__
     if not talib_version.startswith(EXPECTED_TALIB_VERSION_PREFIX):
@@ -457,11 +509,14 @@ def main() -> None:
         "series": dict(sorted(manifest.items())),
     }
     write_atomic(OUT_DIR / "manifest.json", (json.dumps(manifest_doc, indent=2) + "\n").encode())
+    n_prefix = record_prefix(talib_version, wrapper_version)
     logger.info(
-        "recorded %d series (%d walk + %d flat) from TA-Lib %s / polars_talib %s into %s",
+        "recorded %d series (%d walk + %d flat) and %d prefix series from TA-Lib %s / "
+        "polars_talib %s into %s",
         len(manifest),
         len(cases),
         len(fcases),
+        n_prefix,
         talib_version,
         wrapper_version,
         OUT_DIR,

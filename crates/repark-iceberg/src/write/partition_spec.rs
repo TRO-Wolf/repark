@@ -237,7 +237,7 @@ fn resolve_field_by_transform(
     let metadata = table.metadata();
     let schema = metadata.current_schema();
     let source_id = schema
-        .field_by_name(source_name)
+        .try_field_by_name_case_insensitive(source_name)?
         .map(|field| field.id)
         .ok_or_else(|| {
             Error::new(

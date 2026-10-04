@@ -380,10 +380,12 @@ async fn refuse_non_deterministic(
     base_table: &str,
     predicate: &Expr,
 ) -> Result<()> {
+    let mut rendered = Expr::clone(predicate);
+    let predicate_sql = repark_iceberg::write::sql_text::render_for_reparse(&mut rendered);
     let check = spark_ast::execute_passthrough(
         ctx,
         catalogs,
-        &format!("SELECT * FROM {base_table} WHERE {predicate}"),
+        &format!("SELECT * FROM {base_table} WHERE {predicate_sql}"),
     )
     .await?;
     let mut volatile = false;

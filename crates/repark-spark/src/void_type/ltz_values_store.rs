@@ -3,7 +3,8 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
     DataType as SqlDataType, ExactNumberInfo, Expr, FunctionArg, FunctionArgExpr,
-    FunctionArguments, Insert, ObjectName, SetExpr, TableObject, TypedString, UnaryOperator, Value,
+    FunctionArguments, Insert, ObjectName, Query, SetExpr, TableObject, TypedString, UnaryOperator,
+    Value,
 };
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_common::spark_error;
@@ -37,36 +38,12 @@ pub(crate) async fn refuse_unassignable_ltz_values(
         _ => None,
     };
     let Some(values) = values else {
+        return refuse_select_arms(ctx, catalogs, insert, source).await;
+    };
+    let Some((presented, display)) = load_presented(ctx, catalogs, name).await else {
         return Ok(());
     };
-    let parts = qualify_table_parts(ctx, name_parts(name));
-    if parts.len() < 3 {
-        return Ok(());
-    }
-    let Some(catalog) = catalogs.get(&parts[0]) else {
-        return Ok(());
-    };
-    let Ok(namespace) = NamespaceIdent::from_vec(parts[1..parts.len() - 1].to_vec()) else {
-        return Ok(());
-    };
-    let ident = TableIdent::new(namespace, parts[parts.len() - 1].clone());
-    let Ok(table) = catalog.load_table(&ident).await else {
-        return Ok(());
-    };
-    let schema = table.metadata().current_schema();
-    let Ok(presented) = repark_iceberg::catalog::uuid_presentation::presented_arrow_schema(schema)
-    else {
-        return Ok(());
-    };
-    if !presented
-        .fields()
-        .iter()
-        .any(|field| is_judged_target(field.data_type()))
-    {
-        return Ok(());
-    }
     let case_insensitive = crate::spark_door_case_insensitive(ctx.state().config().options());
-    let display = quoted_table_display(&parts);
     for row in &values.rows {
         check_row(
             ctx,
@@ -77,6 +54,93 @@ pub(crate) async fn refuse_unassignable_ltz_values(
             case_insensitive,
         )
         .await?;
+    }
+    Ok(())
+}
+
+async fn load_presented(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    name: &ObjectName,
+) -> Option<(ArrowSchema, String)> {
+    let parts = qualify_table_parts(ctx, name_parts(name));
+    if parts.len() < 3 {
+        return None;
+    }
+    let presented = load_table_schema(catalogs, &parts).await?;
+    if !presented
+        .fields()
+        .iter()
+        .any(|field| is_judged_target(field.data_type()))
+    {
+        return None;
+    }
+    Some((presented, quoted_table_display(&parts)))
+}
+
+pub(super) async fn load_table_schema(
+    catalogs: &CatalogRegistry,
+    parts: &[String],
+) -> Option<ArrowSchema> {
+    let catalog = catalogs.get(&parts[0])?;
+    let namespace = NamespaceIdent::from_vec(parts[1..parts.len() - 1].to_vec()).ok()?;
+    let ident = TableIdent::new(namespace, parts[parts.len() - 1].clone());
+    let table = catalog.load_table(&ident).await.ok()?;
+    let schema = table.metadata().current_schema();
+    repark_iceberg::catalog::uuid_presentation::presented_arrow_schema(schema).ok()
+}
+
+async fn refuse_select_arms(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    insert: &Insert,
+    source: &Query,
+) -> Result<()> {
+    let TableObject::TableName(name) = &insert.table else {
+        return Ok(());
+    };
+    let case_insensitive = crate::spark_door_case_insensitive(ctx.state().config().options());
+    let arms = super::select_values_arms::resolve_insert_arms(source, case_insensitive);
+    if arms
+        .iter()
+        .all(|arm| arm.positions.iter().all(Vec::is_empty))
+    {
+        return Ok(());
+    }
+    let Some((presented, display)) = load_presented(ctx, catalogs, name).await else {
+        return Ok(());
+    };
+    let mut siblings =
+        super::sibling_types::SiblingJudge::new(ctx, catalogs, &arms, case_insensitive);
+    for arm in &arms {
+        for rows in super::select_values_arms::arm_row_groups(arm) {
+            for row in rows {
+                let mut projected = Vec::with_capacity(arm.positions.len());
+                for (position, cells) in arm.positions.iter().enumerate() {
+                    let cell = cells
+                        .iter()
+                        .find(|cell| cell.rows.as_ptr() == rows.as_ptr())
+                        .and_then(|cell| row.content.get(cell.column));
+                    let value = cell
+                        .cloned()
+                        .unwrap_or_else(super::select_values_arms::null_cell);
+                    if siblings.skip_string(position, &value).await {
+                        projected.push(super::select_values_arms::null_cell());
+                    } else {
+                        projected.push(value);
+                    }
+                }
+                check_row(
+                    ctx,
+                    &presented,
+                    &display,
+                    &projected,
+                    &insert.columns,
+                    case_insensitive,
+                )
+                .await?;
+            }
+        }
     }
     Ok(())
 }
@@ -94,7 +158,15 @@ async fn check_row(
             return Ok(());
         }
         for (value, field) in row.iter().zip(presented.fields()) {
-            refuse_value(ctx, display, field.name(), field.data_type(), value).await?;
+            refuse_value(
+                ctx,
+                display,
+                field.name(),
+                field.data_type(),
+                value,
+                case_insensitive,
+            )
+            .await?;
         }
         return Ok(());
     }
@@ -112,7 +184,15 @@ async fn check_row(
         }) else {
             continue;
         };
-        refuse_value(ctx, display, field.name(), field.data_type(), value).await?;
+        refuse_value(
+            ctx,
+            display,
+            field.name(),
+            field.data_type(),
+            value,
+            case_insensitive,
+        )
+        .await?;
     }
     Ok(())
 }
@@ -123,6 +203,7 @@ async fn refuse_value(
     column: &str,
     target: &DataType,
     value: &Expr,
+    case_insensitive: bool,
 ) -> Result<()> {
     if is_null_or_default_cell(value) || !is_judged_target(target) {
         return Ok(());
@@ -131,7 +212,7 @@ async fn refuse_value(
         data_type
     } else {
         let select = nvl_coalesce_text(value).unwrap_or_else(|| super::probe_text(value));
-        let Some(probed) = probe_source_type(ctx, &select).await? else {
+        let Some(probed) = probe_source_type(ctx, &select, case_insensitive).await? else {
             return Ok(());
         };
         probed
@@ -291,7 +372,7 @@ fn integer_text_type(text: &str) -> DataType {
     }
 }
 
-fn nvl_coalesce_text(value: &Expr) -> Option<String> {
+pub(super) fn nvl_coalesce_text(value: &Expr) -> Option<String> {
     let mut peeled = value;
     while let Expr::Nested(inner) = peeled {
         peeled = inner;
@@ -377,8 +458,28 @@ fn decimal_text_type(text: &str) -> Option<DataType> {
     ))
 }
 
-async fn probe_source_type(ctx: &SessionContext, select: &str) -> Result<Option<DataType>> {
-    let frame = ctx.sql(&format!("SELECT {select} AS probe")).await?;
+pub(super) async fn probe_source_type(
+    ctx: &SessionContext,
+    select: &str,
+    case_insensitive: bool,
+) -> Result<Option<DataType>> {
+    let probe_sql = format!("SELECT {select} AS probe");
+    let state = ctx.state();
+    let session_dialect = state.config().options().sql_parser.dialect;
+    let dialect = crate::dialect_for_executing_parse(&probe_sql, session_dialect);
+    let rewritten = state
+        .sql_to_statement(&probe_sql, &dialect)
+        .ok()
+        .and_then(|mut statement| {
+            if let datafusion::sql::parser::Statement::Statement(inner) = &mut statement {
+                crate::spark_ast::apply_pregate_judge_rewrites(&probe_sql, inner, case_insensitive);
+                Some(inner.to_string())
+            } else {
+                None
+            }
+        })
+        .unwrap_or(probe_sql);
+    let frame = ctx.sql(&rewritten).await?;
     Ok(frame
         .schema()
         .fields()
@@ -531,7 +632,7 @@ mod tests {
     #[tokio::test]
     async fn probe_that_cannot_parse_refuses_instead_of_passing() {
         let ctx = SessionContext::new();
-        let error = probe_source_type(&ctx, "-- nothing but a comment")
+        let error = probe_source_type(&ctx, "-- nothing but a comment", true)
             .await
             .expect_err("an unparsable probe must refuse");
         assert!(error.to_string().contains("ParserError"), "{error}");
@@ -716,7 +817,7 @@ mod tests {
              TIMESTAMP))",
         );
         let target = DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into()));
-        refuse_value(&ctx, "`t`", "c", &target, &row[0])
+        refuse_value(&ctx, "`t`", "c", &target, &row[0], true)
             .await
             .unwrap();
     }
@@ -726,7 +827,7 @@ mod tests {
         let ctx = SessionContext::new();
         let row = values_row("INSERT INTO t VALUES (replace('a\\\\''b', '\\\\''', ''))");
         let target = DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into()));
-        let error = refuse_value(&ctx, "`t`", "c", &target, &row[0])
+        let error = refuse_value(&ctx, "`t`", "c", &target, &row[0], true)
             .await
             .unwrap_err();
         let text = error.to_string();

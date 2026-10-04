@@ -30,9 +30,11 @@ Each test re-copies fresh because the mutating cells (UPDATE / DELETE / MERGE
   `sc.ns.tw`, copied verbatim from the orchestrator's recording warehouse
   (`probe_mc.py`, PySpark 4.1.2 + Iceberg 1.11.0). Schema `id INT` then `ID INT`
   added through the Iceberg Java API `updateSchema().addColumn("ID", …)` — Spark
-  allows ASCII case-twin fields. Only the metadata file is kept: RePark's fork
-  refuses the file while parsing it (`Cannot build lower case index: id and ID
-  collide`), before any manifest or data path is read, so the pin needs no data
-  files and the baked `/tmp/kb-oracle-mc` location is never touched.
+  allows ASCII case-twin fields. Only the metadata file is kept: before RP-56 the fork
+  refused the file while parsing it, so no data files were needed and the baked
+  `/tmp/kb-oracle-mc` location was never touched. Since RP-56 (2026-09-28) the lazy
+  index parses the file and adoption succeeds; references refuse at resolution, and the
+  star refuses at planning with the recorded 42711 sentence, so the baked location
+  stays untouched.
   pins: ice-mixed-case-1/C-013
 - `map.md` — this file.

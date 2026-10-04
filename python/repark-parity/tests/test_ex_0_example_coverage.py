@@ -56,7 +56,7 @@ def test_ex_0_enumerator_emits_five_families_and_repark_sql() -> None:
     assert "F.unwrap_udt" in names
     assert "F.from_json" in names
     assert "F.stack" in names
-    assert len(rows) == 1086
+    assert len(rows) == 1087
 
 
 def test_ex_0_uncovered_name_is_red() -> None:
@@ -295,9 +295,9 @@ def test_ex_0_makefile_wires_the_target_into_ci() -> None:
     assert "skipping example execution" in gate_source
     workflow = (_REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
     assert "check_example_coverage.sh" in workflow
-    wheels = (_REPO / ".github" / "workflows" / "wheels.yml").read_text(encoding="utf-8")
-    assert "--require-execute" in wheels
-    assert "python -I scripts/check_example_coverage.py --require-execute" in wheels
+    smoke = (_REPO / ".github" / "workflows" / "smoke.yml").read_text(encoding="utf-8")
+    assert "--require-execute" in smoke
+    assert "python -I scripts/check_example_coverage.py --require-execute" in smoke
 
 
 def test_ex_0_execute_child_drops_python_path_overrides(monkeypatch: MonkeyPatch) -> None:
@@ -339,7 +339,7 @@ def test_ex_1_class_surfaces_are_enumerated_with_their_counts() -> None:
     families: dict[str, int] = {}
     for family, _name in rows:
         families[family] = families.get(family, 0) + 1
-    assert families["column"] == 47
+    assert families["column"] == 48
     assert families["window"] == 22
     assert families["catalog"] == 54
     assert families["types"] == 46

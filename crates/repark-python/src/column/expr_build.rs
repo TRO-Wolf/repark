@@ -37,77 +37,93 @@ pub(crate) fn written_column(name: &str) -> Expr {
     Expr::Column(Column::from_qualified_name_ignore_case(name))
 }
 
+pub(crate) fn frame_verbatim(frame: &datafusion::prelude::DataFrame) -> bool {
+    repark_spark::spark_literals::escaped_verbatim_from_options(
+        frame.task_ctx().session_config().options(),
+    )
+}
+
 pub(crate) fn parse_canonical_predicate(
-    frame: &datafusion::prelude::DataFrame,
+    frame: &crate::dataframe::PyDataFrame,
     predicate: &str,
 ) -> datafusion::error::Result<Expr> {
-    let canonical = repark_spark::spark_literals::canonicalize(predicate)?;
-    let parsed = match frame.parse_sql_expr(canonical.as_ref()) {
+    let verbatim = frame_verbatim(frame.inner());
+    let canonical = repark_spark::spark_literals::canonicalize_verbatim(predicate, verbatim)?;
+    let schema = frame.inner().schema();
+    let parsed = match frame.inner().parse_sql_expr(canonical.as_ref()) {
         Ok(expr)
             if expr
                 .column_refs()
                 .iter()
-                .all(|column| frame.schema().has_column(column)) =>
+                .all(|column| schema.has_column(column)) =>
         {
             Ok(expr)
         }
         first => folded_qualifier_predicate(frame, canonical.as_ref()).unwrap_or(first),
     };
     parsed.map_err(|error| {
-        repark_spark::spark_literals::translate_downstream_error(
+        repark_spark::spark_literals::translate_downstream_error_verbatim(
             predicate,
             canonical.as_ref(),
             error,
+            verbatim,
         )
     })
 }
 
 fn folded_qualifier_predicate(
-    frame: &datafusion::prelude::DataFrame,
+    frame: &crate::dataframe::PyDataFrame,
     canonical: &str,
 ) -> Option<datafusion::error::Result<Expr>> {
-    let (state, _) = frame.clone().into_parts();
+    let (state, _) =
+        crate::deep_stack::grown_clone_frame(frame.inner(), &frame.depths()).into_parts();
+    let schema = frame.inner().schema();
     let dialect = state.config().options().sql_parser.dialect;
     let mut parsed = state.sql_to_expr_with_alias(canonical, &dialect).ok()?;
     repark_core::frame_names::fold_frame_qualifiers(
         &mut parsed.expr,
-        frame.schema(),
+        schema,
         repark_core::frame_names::NameRule::IgnoreCase,
     )
-    .then(|| state.create_logical_expr_from_sql_expr(parsed, frame.schema()))
+    .then(|| state.create_logical_expr_from_sql_expr(parsed, schema))
 }
 
 pub(crate) fn parse_canonical_predicate_exact(
-    frame: &datafusion::prelude::DataFrame,
+    frame: &crate::dataframe::PyDataFrame,
     predicate: &str,
 ) -> datafusion::error::Result<Expr> {
-    let canonical = repark_spark::spark_literals::canonicalize(predicate)?;
-    let (mut state, _) = frame.clone().into_parts();
+    let verbatim = frame_verbatim(frame.inner());
+    let canonical = repark_spark::spark_literals::canonicalize_verbatim(predicate, verbatim)?;
+    let (mut state, _) =
+        crate::deep_stack::grown_clone_frame(frame.inner(), &frame.depths()).into_parts();
     state
         .config_mut()
         .options_mut()
         .sql_parser
         .enable_ident_normalization = false;
-    match state.create_logical_expr(canonical.as_ref(), frame.schema()) {
+    match state.create_logical_expr(canonical.as_ref(), frame.inner().schema()) {
         Ok(expr) => Ok(expr),
         Err(error) => {
             if let Some((relation, name)) = missing_column(&error) {
                 let column = Column::new(relation, name);
                 repark_core::frame_names::resolve_bound_expr_with(
                     Expr::Column(column.clone()),
-                    frame.schema(),
+                    frame.inner().schema(),
                     repark_core::frame_names::NameRule::Exact,
                 )?;
                 return Err(repark_core::frame_names::unresolved_column(
                     &column,
-                    frame.schema(),
+                    frame.inner().schema(),
                 ));
             }
-            Err(repark_spark::spark_literals::translate_downstream_error(
-                predicate,
-                canonical.as_ref(),
-                error,
-            ))
+            Err(
+                repark_spark::spark_literals::translate_downstream_error_verbatim(
+                    predicate,
+                    canonical.as_ref(),
+                    error,
+                    verbatim,
+                ),
+            )
         }
     }
 }
@@ -122,8 +138,13 @@ pub(crate) async fn plan_expr_column(
     let select_sql = format!("SELECT ({canonical}) AS _repark_expr");
     let plan = match context.sql(&select_sql).await {
         Ok(frame) => {
-            match repark_functions::analyze_eagerly(&context.state(), frame.logical_plan().clone())
-            {
+            let planned = crate::deep_stack::plan_depths(frame.logical_plan());
+            let owned = crate::deep_stack::grown_clone_plan(
+                frame.logical_plan(),
+                planned.plan,
+                planned.expression,
+            );
+            match repark_functions::analyze_eagerly(&context.state(), owned) {
                 Ok(analyzed) => analyzed,
                 Err(error) => {
                     if missing_column(&error).is_some() {
@@ -381,6 +402,27 @@ pub(super) fn percentile_approx_list_expr(
     }
 }
 
+#[allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
+pub(super) fn is_duplicated_expr(receiver: Expr) -> PyResult<Expr> {
+    let keyed = crate::is_duplicated::dup_key_udf().call(vec![receiver]);
+    let one = PyColumn::from_expr(lit(1));
+    let counted = PyColumn::count_aggregate(vec![one], false)?;
+    let counted_expr = counted.expr();
+    let windowed = super::window::build_over_expression(
+        &counted_expr,
+        super::window::OverSpec {
+            partition_by: vec![PyColumn::from_expr(keyed)],
+            order_by: Vec::new(),
+            order_ascending: Vec::new(),
+            order_nulls_first: Vec::new(),
+            frame_units: None,
+            frame_start: None,
+            frame_end: None,
+        },
+    )?;
+    Ok(crate::is_duplicated::dup_mask_udf().call(vec![windowed.gt(lit(1))]))
+}
+
 pub(super) fn window_from_aggregate(
     agg: &datafusion::logical_expr::expr::AggregateFunction,
 ) -> Expr {
@@ -394,8 +436,8 @@ pub(super) fn window_from_aggregate(
 
 impl PyColumn {
     /// Build Spark `collect_list` / `collect_set` semantics for NULL and empty groups.
-    pub(super) fn collect_aggregate(argument: Expr, distinct: bool) -> PyResult<Self> {
-        let base = array_agg_udaf().call(vec![argument]);
+    pub(super) fn collect_aggregate(column: &PyColumn, distinct: bool) -> PyResult<Self> {
+        let base = array_agg_udaf().call(vec![column.expr()]);
         let aggregated = if distinct {
             base.distinct()
                 .null_treatment(NullTreatment::IgnoreNulls)
@@ -411,7 +453,7 @@ impl PyColumn {
         // DataFusion returns NULL for an empty array_agg; Spark returns an empty array.
         let empty = datafusion::functions_nested::expr_fn::make_array(vec![]);
         let expr = datafusion::functions::expr_fn::coalesce(vec![aggregated, empty]);
-        Ok(Self::from_expr(expr))
+        Ok(Self::combine_surveyed(expr, [column]))
     }
 
     pub(super) fn grouping_id_call(args: Vec<Expr>) -> PyResult<Expr> {
@@ -422,6 +464,16 @@ impl PyColumn {
 
     /// Build a single count-distinct argument, nulling multi-column tuples when any field is NULL.
     pub(super) fn count_distinct_argument(args: Vec<Expr>) -> PyResult<Expr> {
+        let mut deepest = 0;
+        for arg in &args {
+            deepest = deepest.max(crate::deep_stack::expression_depth(arg));
+        }
+        crate::deep_stack::grow_expr_if_needed(deepest, || {
+            Self::count_distinct_argument_inner(args)
+        })
+    }
+
+    fn count_distinct_argument_inner(args: Vec<Expr>) -> PyResult<Expr> {
         if args.len() == 1 {
             return args.into_iter().next().ok_or_else(|| {
                 PyValueError::new_err("count(DISTINCT …) requires at least one argument column")
@@ -451,7 +503,10 @@ pub(crate) fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
 pub(crate) fn grouping_id_column(args: Vec<PyColumn>) -> PyResult<PyColumn> {
     fenced!("grouping_id_column", {
         let exprs = args.iter().map(PyColumn::expr).collect::<Vec<_>>();
-        Ok(PyColumn::from_expr(PyColumn::grouping_id_call(exprs)?))
+        Ok(PyColumn::combine_surveyed(
+            PyColumn::grouping_id_call(exprs)?,
+            &args,
+        ))
     })
 }
 
@@ -685,5 +740,63 @@ mod tests {
             }
             other => panic!("expected qualified Alias, got {other:?}"),
         }
+    }
+
+    async fn frame_with_string_column(verbatim: bool) -> datafusion::prelude::DataFrame {
+        let config = if verbatim {
+            repark_spark::spark_literals::with_escaped_string_literals_config(
+                SessionConfig::new(),
+                true,
+            )
+        } else {
+            SessionConfig::new()
+        };
+        let context = SessionContext::new_with_config(config);
+        context
+            .sql("SELECT 'placeholder' AS v")
+            .await
+            .expect("string-column frame")
+    }
+
+    fn wrapped_frame(
+        runtime: &Arc<tokio::runtime::Runtime>,
+        frame: datafusion::prelude::DataFrame,
+    ) -> crate::dataframe::PyDataFrame {
+        crate::dataframe::PyDataFrame::new(frame, Arc::clone(runtime))
+    }
+
+    fn comparison_literal(expr: &Expr) -> String {
+        match expr {
+            Expr::BinaryExpr(datafusion::logical_expr::BinaryExpr { right, .. }) => {
+                match right.as_ref() {
+                    Expr::Literal(ScalarValue::Utf8(Some(value)), _) => value.clone(),
+                    other => panic!("expected Utf8 literal, got {other:?}"),
+                }
+            }
+            other => panic!("expected comparison, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn filter_predicates_follow_the_frame_verbatim_flag() {
+        let runtime = Arc::new(tokio::runtime::Runtime::new().expect("a runtime builds"));
+        let verbatim = wrapped_frame(&runtime, runtime.block_on(frame_with_string_column(true)));
+        assert_eq!(
+            comparison_literal(&parse_canonical_predicate(&verbatim, "v = 'it''s'").unwrap()),
+            "it''s"
+        );
+        assert_eq!(
+            comparison_literal(&parse_canonical_predicate_exact(&verbatim, "v = 'it''s'").unwrap()),
+            "it''s"
+        );
+        let default = wrapped_frame(&runtime, runtime.block_on(frame_with_string_column(false)));
+        assert_eq!(
+            comparison_literal(&parse_canonical_predicate(&default, "v = 'it''s'").unwrap()),
+            "it's"
+        );
+        assert_eq!(
+            comparison_literal(&parse_canonical_predicate_exact(&default, "v = 'it''s'").unwrap()),
+            "it's"
+        );
     }
 }

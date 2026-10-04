@@ -225,18 +225,18 @@ class CrossValidator(Estimator["CrossValidatorModel"]):
         )
         try:
             try:
-                folded_lazy = frame._spawn(frame._session.sql(primary_sql))
+                folded_lazy = frame._spawn(frame._session.sql_built(primary_sql))
                 primary_used = True
             except Exception:
-                folded_lazy = frame._spawn(frame._session.sql(fallback_sql))
+                folded_lazy = frame._spawn(frame._session.sql_built(fallback_sql))
                 primary_used = False
             frame._session.materialize_as_temp_view(mat_view, folded_lazy._inner)
             if primary_used and self._folds_degenerate(frame, mat_view, fold_col, num_folds):
                 with contextlib.suppress(Exception):
                     frame._session.drop_temp_view(mat_view)
-                folded_lazy = frame._spawn(frame._session.sql(fallback_sql))
+                folded_lazy = frame._spawn(frame._session.sql_built(fallback_sql))
                 frame._session.materialize_as_temp_view(mat_view, folded_lazy._inner)
-            folded = frame._spawn(frame._session.sql(f"SELECT * FROM {mat_view}"))
+            folded = frame._spawn(frame._session.sql_built(f"SELECT * FROM {mat_view}"))
         except Exception:
             with contextlib.suppress(Exception):
                 frame._session.drop_temp_view(mat_view)
@@ -251,7 +251,7 @@ class CrossValidator(Estimator["CrossValidatorModel"]):
         """Return True when any fold is empty or any train has fewer than two rows."""
         quoted = _quote_ident(fold_col)
         tally = frame._spawn(
-            frame._session.sql(
+            frame._session.sql_built(
                 f"SELECT {quoted} AS fold, COUNT(*) AS fold_rows FROM {mat_view} GROUP BY {quoted}"
             )
         ).collect()
@@ -280,7 +280,7 @@ class CrossValidator(Estimator["CrossValidatorModel"]):
         folded.createOrReplaceTempView(train_view)
         try:
             train = frame._spawn(
-                frame._session.sql(
+                frame._session.sql_built(
                     f"SELECT * EXCLUDE ({quoted_fold}) FROM {train_view} "
                     f"WHERE {quoted_fold} <> {fold_index}"
                 )
@@ -289,13 +289,13 @@ class CrossValidator(Estimator["CrossValidatorModel"]):
             cols = [name for name in folded.columns if name != fold_col]
             col_sql = ", ".join(_quote_ident(name) for name in cols)
             train = frame._spawn(
-                frame._session.sql(
+                frame._session.sql_built(
                     f"SELECT {col_sql} FROM {train_view} WHERE {quoted_fold} <> {fold_index}"
                 )
             )
         try:
             test = frame._spawn(
-                frame._session.sql(
+                frame._session.sql_built(
                     f"SELECT * EXCLUDE ({quoted_fold}) FROM {train_view} "
                     f"WHERE {quoted_fold} = {fold_index}"
                 )
@@ -304,7 +304,7 @@ class CrossValidator(Estimator["CrossValidatorModel"]):
             cols = [name for name in folded.columns if name != fold_col]
             col_sql = ", ".join(_quote_ident(name) for name in cols)
             test = frame._spawn(
-                frame._session.sql(
+                frame._session.sql_built(
                     f"SELECT {col_sql} FROM {train_view} WHERE {quoted_fold} = {fold_index}"
                 )
             )

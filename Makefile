@@ -52,17 +52,9 @@ ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check
 
 # `test` is the Rust workspace suite, and that is the whole of it — deliberately, not pending.
 # The Python suites are excluded because each needs something `cargo test` cannot give it:
-#   * the FACADE suite (python/repark/tests) needs the compiled native module, so it runs behind a
-#     build step — locally `make py-test-facade` (maturin develop + pytest, extras provisioned);
-#     in CI the wheels.yml `smoke` job, which runs the same suite against the PACKAGED wheel (a
-#     facade regression must not pass CI on an import smoke alone).
 #   * the PARITY harness (python/repark-parity/tests) is pyarrow + pydantic (PYC-4 records) —
 #     `make py-test`, mirrored by ci.yml's `parity-harness tests` step.
 #   * the LIVE oracle tier needs a JVM — `make parity-live` / parity-live.yml, never in `verify`.
-# `make verify` = `ci` + `test`; it is JVM-free and native-build-free on purpose
-# (inner-loop speed). The compiled-module facade suite is `make py-test-facade` and is
-# wired into `make preflight` (2026-08-12, G14), not into `verify`. CI still runs that
-# suite against the built wheel (`wheels.yml` smoke).
 .PHONY: test
 test: rust-test ## Rust workspace suite only (facade: `make py-test-facade`, also in preflight; parity: `make py-test`)
 
@@ -71,6 +63,18 @@ verify: ci test ## ci + rust-test — JVM-free, native-build-free (inner-loop)
 
 .PHONY: preflight
 preflight: verify py-test-facade py-test-parity-cap py-test-dbt audit workflows-lint ## The pre-PR gate: verify + facade suite + CAP-1 parity mirror + dbt-adapter suite + security + workflow lint
+
+.PHONY: pg-up
+pg-up: ## Start one disposable Postgres (logical replication on); prints REPARK_PG_URL
+	scripts/dev/pg_disposable.sh up
+
+.PHONY: pg-down
+pg-down: ## Stop the disposable Postgres this shell started
+	scripts/dev/pg_disposable.sh down
+
+.PHONY: pg-url
+pg-url: ## Print the running disposable Postgres URL
+	scripts/dev/pg_disposable.sh url
 
 .PHONY: audit
 audit: rust-audit rust-deny py-audit ## Security gates (cargo-audit + cargo-deny + pip-audit)
@@ -150,10 +154,6 @@ check-python-conventions: ## The two Python rules Ruff cannot express (nested de
 
 .PHONY: check-example-coverage
 check-example-coverage: ## Public-surface example coverage (inventory vs COVERS vs backlog ratchet)
-	@# SSOT: scripts/check_example_coverage.py — enumerator, coverage rules, BACKLOG_BASELINE
-	@# and EXCEPTIONS_BASELINE. Dual-wired with ci.yml's python job (static half; native is
-	@# absent there so execution skips). wheels.yml smoke runs --require-execute after the
-	@# packaged wheel is installed. Pattern-keeper for wiring claims: check_parity_live_dual_wire.py.
 	@./scripts/check_example_coverage.sh
 
 .PHONY: check-docstring-presence
@@ -249,9 +249,6 @@ check-lib-py: ## Python source ceiling + facade no-stub guard
 develop: ## Build + install the native module editable into the root .venv (maturin develop)
 	cd python/repark && VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" $(MATURIN) develop
 
-# The canonical facade extras — the same four docs/port/census.md §4 fixes for the full-extras
-# cohort and wheels.yml's `smoke` job installs (`repark[numpy,pandas,polars,ml-ext]`). Keep the
-# three in lockstep: a cohort whose denominator moves with an install decision is not a gate.
 FACADE_EXTRAS := --extra numpy --extra pandas --extra polars --extra ml-ext
 
 DBT_PINS := dbt-core==1.9.11 dbt-spark==1.9.3

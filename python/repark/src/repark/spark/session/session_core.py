@@ -8,6 +8,7 @@ from typing import Any
 
 import repark.spark.session._funcs as _sf
 import repark.spark.session.session_surface as _session_surface
+import repark.spark.session.sql_run as _sql_run
 from repark.spark.session._coerce import range_bound_as_int as _range_bound_as_int
 from repark.spark.session._coerce import sql_clause_end_after as _sql_clause_end_after
 from repark.spark.session.builder_conf import RuntimeConfig, SparkContext
@@ -22,8 +23,6 @@ from repark.spark.session.session_time_zone import (
     SESSION_TIME_ZONE_KEYS,
     normalize_session_time_zone_config,
 )
-from repark.spark.session.sql_cache_statements import try_sql_cache_statement
-from repark.spark.session.sql_set_statements import try_sql_set_statement
 from repark.spark.session.timestamp_type import (
     TIMESTAMP_TYPE_KEYS,
     normalize_timestamp_type_config,
@@ -172,26 +171,11 @@ class ReparkSession:
         ``CACHE`` / ``UNCACHE`` / ``REFRESH`` statements answer ahead of the engine
         through the catalog surface, so ``spark.catalog.isCached`` agrees with SQL.
         """
-        inner = self._ensure_alive()
-        _promote_active(self)
-        # UDTF FROM-name(lit_args) before scalar UDF rewrite (distinct registries).
-        from repark.spark.udtf import try_sql_registered_udtf
+        return _sql_run.run_sql(self, query, built=False)
 
-        for rewrite in (
-            try_sql_set_statement,
-            try_sql_cache_statement,
-            try_sql_registered_udtf,
-        ):
-            if (frame := rewrite(self, query)) is not None:
-                return frame
-        # Registry-name scan before bare-table expand (rewrite may re-enter sql).
-        if (udf_frame := self._sql_with_registered_udfs(query)) is not None:
-            return udf_frame
-        expanded = self._expand_bare_table_names_in_sql(query)
-        frame = DataFrame(inner.sql(expanded), inner, self._alive_token)
-        if _is_catalog_state_statement(query):
-            self._sync_catalog_state_from_engine()
-        return frame
+    def _sql_built(self, query: str) -> DataFrame:
+        """Run facade-built SQL; literals parse in default mode whatever the flag says."""
+        return _sql_run.run_sql(self, query, built=True)
 
     def _sync_catalog_state_from_engine(self) -> None:
         """Copy the engine session defaults into the facade current-catalog box."""
@@ -1093,7 +1077,7 @@ class ReparkSession:
                 "SELECT CAST(value AS BIGINT) AS id FROM generate_series("
                 f"{range_start}, {inclusive_stop}, {range_step})"
             )
-        return self.sql(query)
+        return self._sql_built(query)
 
     def create_dataframe(self, data: Any, schema: Any = None) -> DataFrame:
         """Build a :class:`DataFrame` from rows (PySpark ``createDataFrame``).
@@ -1287,7 +1271,7 @@ class ReparkSession:
         state = self._catalog_state()
         if state.get("information_schema_enabled"):
             return
-        self.sql("SET datafusion.catalog.information_schema = true")
+        self._sql_built("SET datafusion.catalog.information_schema = true")
         state["information_schema_enabled"] = True
 
     def _note_registered_catalog(self, name: str) -> None:
