@@ -7637,13 +7637,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: deep-filter-chain-crash-1/C-013, C-014, C-015, C-016, C-017, C-018
 - [test_grown_stack_gate_1.py](test_grown_stack_gate_1.py) —
   **GROWN-STACK-GATE-1 (2026-10-04):** the 34 gated sites answer on small
-  stacks, one isolated interpreter, deep work on 8 MiB threads (~50 s). P1
+  stacks, one isolated interpreter per shape, deep work on 8 MiB threads
+  (~90 s); a crash fails only that shape's test and names it. P1
   (2,000-deep view count 20) is a must-not-change neighbour; P2 (cache
   count 20), P4 (inputFiles over parquet, 1 file) and P6 (10 shallow
   shapes) pin the frame verdicts; P3 (2,000-deep write.csv roundtrip, 21
   rows with the header row) is the regression pin for the write-options
   door's deep-view mark; P5 (2,000-term OR INSERT, 22,951 bytes) answers
-  40 rows. Every constant recorded from a base run first.
+  40 rows. Verifier fold V-1 adds the D-pins: deep write.text (20),
+  partitioned text (4 parts), localCheckpoint (20), transpose (1) and the
+  ML fit ([2.0, [3.0]]). Every constant recorded from a base run first.
   pins: grown-stack-gate-1/C-002, C-003, C-004
 
 ## I want to...

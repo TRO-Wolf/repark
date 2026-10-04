@@ -1,7 +1,7 @@
 # Unit ledger — GROWN-STACK-GATE-1 · the 34 unconditional grown-stack sites take verdicts
 
-**Date:** 2026-10-04 · **Branch:** `fix/grown-stack-gate-1` · **Base:** `22cce0eb`
-(`origin/main`) · **Model:** Muse Spark (`muse-spark-1.3-contributor`) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+**Date:** 2026-10-04 · **Branch:** `fix/grown-stack-gate-1` · **Base:** `1060ebeb`
+(`origin/main`), product code `d0c50405` (v1.5.2 release) · **Model:** Muse Spark (`muse-spark-1.3-contributor`) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 
 **Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
@@ -41,8 +41,8 @@ P4 and P5 matched main before and after.
 | clause | claim | method | status | evidence |
 |---|---|---|---|---|
 | C-001 | The 24 no-plan sites drive plain `runtime.block_on` with no growth and no `stack_is_small` fallback; no answer changes. | S1 gate set on the S1 head against base. | PROVEN | `cargo test -p repark-python --lib` 119 passed; deep pins 11/11 on base and S1 alike; the 258-file read/catalog set 10017 passed, 0 failed on S1. |
-| C-002 | The 9 frame sites drive the frame doors' segment verdict; P1 (neighbour) counts 20, P2 counts 20, P4 lists 1 parquet file, P6 answers at all 10 sites — every cell equals main. | One isolated-interpreter pin battery, deep work on 8 MiB threads. | PROVEN | `test_grown_stack_gate_1.py` P1/P2/P4/P6 tests, 14 passed on head; every constant recorded from a base run first (P3 21 rows: 20 data plus the header row read back as data). |
-| C-003 | ML streams poll at the opener's verdict: `open_stream` returns the stream with its segment, `for_each_batch` reuses it, never recomputed per batch. | P6 ML shape plus the `test_ml*` gate files. | PROVEN | `test_grown_stack_gate_1.py` `test_shallow_linear_regression_fits` ([2.0, [3.0]]); M1 red (below) proves the verdict carries the deep shape. |
+| C-002 | The 9 frame sites drive the frame doors' segment verdict; P1 (neighbour) counts 20, P2 counts 20, P4 lists 1 parquet file, P6 answers at all 10 sites, and the D-pins answer deep write.text (20), partitioned text (4 parts), localCheckpoint (20) and transpose (1) — every cell equals main. | One isolated interpreter per shape, deep work on 8 MiB threads; a crash fails only that shape's test and names it. | PROVEN | `test_grown_stack_gate_1.py` P1/P2/P4/P6/D tests, 19 passed on head; every constant recorded from a base run first (P3 21 rows: 20 data plus the header row read back as data). |
+| C-003 | ML streams poll at the opener's verdict: `open_stream` returns the stream with its segment, `for_each_batch` reuses it, never recomputed per batch. | Deep ML pin plus the P6 ML shape and the `test_ml*` gate files. | PROVEN | `test_grown_stack_gate_1.py` `test_deep_linear_regression_fits` ([2.0, [3.0]], base recorded first) and `test_shallow_linear_regression_fits`; M9 red (below) proves the verdict carries the deep shape. |
 | C-004 | The SQL-text site drives on the text gate OR the deep-view mark; P5 (2,000-term OR INSERT, 22,951 bytes) answers 40 rows as on main, and P3 (short COPY over a 2,000-deep view) answers 21 rows as on main. | P5 pin plus the P3 regression pin; M4/M5 red. | PROVEN | `test_grown_stack_gate_1.py` `test_long_or_insert_answers`, `test_deep_frame_csv_roundtrip_counts`; base answers recorded first on both shapes. |
 | C-005 | The four micro shapes stay within 1.005 of v1.5.1 (release wheels, 5 fresh processes per side, medians, A/A first). | Orchestrator-run on a quiet box (resume: do not time on the lane). | OPEN | Pending orchestrator timing; the head build for it is this unit's last commit. |
 | C-006 | The work-equal like set stays within noise of v1.5.1's 299 s (three interleaved runs, dev builds). | Orchestrator-run on a quiet box. | OPEN | Pending orchestrator timing. |
@@ -55,6 +55,14 @@ write-done (unmutated: answers 20). M3: `segment = None` at `input_files` →
 P4 SIGSEGV rc=139. M4: `grown = false` at the SQL-text site → P5 SIGSEGV
 rc=139. M5: the deep-view OR dropped → P3 SIGSEGV rc=139 with no write-done.
 Restores verified by grep (no `None`/`false` remnants) and a green pin run.
+**Verifier fold (V-1):** one combined mutant (`segment` → `None` at the 5
+V-1 sites, verifier `combined_mutant.diff` plus the M2 `write_text_frame`
+change) reds exactly the 5 new D-pins (each rc=-11, named per shape) while
+the 14 older pins stay green. M6: `write_text_frame` → D-text red. M7:
+`write_text_partitioned` → D-text-part red. M8:
+`materialize_as_temp_view` → D-ckpt red. M9: `open_stream` +
+`for_each_batch` → D-ml red. M10: `transpose` → D-transpose red. Reverted
+by checkout, rebuilt, 19/19 green.
 
 **Over-cap refusals (order §3).** Past `MAX_PLAN_DEPTH` the 9 frame sites
 raise through `frame_drive_segment_cached` exactly as the frame doors do;

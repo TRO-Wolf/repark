@@ -2028,7 +2028,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   P1/P2/P4/P6 equal main), ML polls reuse the opener's segment (C-003),
   writer SQL drives on the text gate OR the deep-view mark (C-004: P5
   answers, P3 is the regression pin). Five mutations red, H7 episode and
-  the Q1/Q2/Q3 rulings filed; micro (C-005) and like-set (C-006) timings
-  run on the orchestrator's quiet box.
+  the Q1/Q2/Q3 rulings filed; verifier fold V-1 adds deep pins for the
+  five unpinned sized sites (M6-M10, one subprocess per shape); micro
+  (C-005) and like-set (C-006) timings run on the orchestrator's quiet
+  box.
   `risk_tier: standard`. Branch `fix/grown-stack-gate-1`.
   pins: grown-stack-gate-1/C-001, C-002, C-003, C-004
