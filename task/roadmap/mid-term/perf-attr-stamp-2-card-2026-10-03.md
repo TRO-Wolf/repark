@@ -159,7 +159,7 @@ or O-4 together with O-1).** This is *inferred* from the measured buckets.
 | D-3 | If the step 1 median for O-1 is not under 1.10x, the design sketch rules between O-3 and O-4+O-1 on step 0's data. Python-side O-5 and O-6 only top up a native fix; they are never the plan of record. |
 | D-4 | Whichever carrier is chosen, a frame or column with no id raises the existing internal error (`column_fields.py`: "internal error: stamped field … has no attribute id"). It never falls back to a name, position or side. |
 | D-5 | Every cache (stripped twin, lazy memo, side table) is keyed on the native handle and re-derived whenever `_inner` is reassigned. Never key on the Python frame object. |
-| D-6 | The timing gate is the median of three replays on one frozen tree, at or under **1.10x**, reported with all three ratios and the spread (ledger clause C-012 style, as in R-PERF1-1). Two runs do not pass it. |
+| D-6 | **Re-aimed (owner delegate ruling, 2026-10-03, Q2).** PRIMARY gate: the C-012 `replay.py` wall clock, median of three, at or under **1.10x** of a same-day main run (main measured 499.0 s on 2026-10-03; 1.10x is about 549 s). SECOND gate: like-for-like median of three at or under 1.10x. Every ratio and the spread are reported. Two runs never pass. Over the gate is a halt to the owner, with no carve-out. Baseline recorded 2026-10-03 on the full stack head `5e4a0084`: C-012 wall clock **1.375x** (main 498.99 / 499.30 / 497.40 s, head 687.03 / 685.95 / 683.86 s, both dev-profile `make develop` builds); like-for-like **1.2344x** (1.2366 / 1.2344 / 1.2338 on 26003 cells). The like-for-like set shrank from 29169 cells because cells now EQUAL to Spark drop out of it. |
 
 ## Steps
 
@@ -183,7 +183,9 @@ or O-4 together with O-1).** This is *inferred* from the measured buckets.
 - **S0 replay, zero answer or class moves** against the stack-head replay current at the start
   of the unit. Known case-only flakes (two `AMBIGUOUS_REFERENCE` `v`/`V` cells, pre-existing
   HashMap order per the PERF-1 hand-back) are proven by three reruns.
-- **Median of three like-for-like replays** on one frozen tree, at or under 1.10x (D-6).
+- **PRIMARY: the C-012 `replay.py` wall clock,** median of three, at or under 1.10x of a same-day main run (D-6, re-aimed 2026-10-03).
+- **SECOND: median of three like-for-like replays** on one frozen tree, at or under 1.10x (D-6).
+- **Step 0 measured (2026-10-03, r5p6, dev builds):** `replay_timed.py` times only the lazy build `fn()`, and `collect()` runs outside the timer. Of the +122.9 s, the timed build accounts for +46.8 s and the outside time for +76.1 s. Of the outside time, native `__arrow_c_stream__` accounts for +70.8 s: about 50 s from 2156 more executing queries (3772 cells answer where main errored, 3662 of them EQUAL to Spark) and about 29 s from each execution being 19% slower (9.75 to 11.62 ms). `stamp_attribute_ids` costs 2.4 s.
 - **The full facade suite** (`python/repark/tests` at `-n 8`, 0 failed) and the parity suite.
 - **The 842-cell inventory**, 0 regressions after reruns of the known flakes.
 - **`count_129.py` holds at 2.**
