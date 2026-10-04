@@ -5,7 +5,7 @@ use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
 use crate::dataframe::PyDataFrame;
-use crate::deep_stack::block_on;
+use crate::deep_stack::{block_on_grown_sized, frame_drive_segment_cached};
 use crate::fence::fenced_span;
 use crate::session::PyReparkSession;
 use crate::to_py_err;
@@ -49,15 +49,17 @@ pub fn read_text(
 pub fn write_text_frame(frame: &PyDataFrame, path: &str, line_sep: Option<String>) -> PyResult<()> {
     fenced_span!("py.write", "write_text_frame", {
         let separator = line_sep.unwrap_or_else(|| "\n".to_string());
+        let segment = frame_drive_segment_cached(&frame.depths())?;
         Python::attach(|py| {
             py.detach(|| {
-                block_on(
+                block_on_grown_sized(
                     &frame.runtime,
                     repark_core::write_text_frame(
                         frame.inner(),
                         Path::new(path),
                         separator.as_str(),
                     ),
+                    segment,
                 )
             })
         })
@@ -77,9 +79,10 @@ pub fn write_text_partitioned(
 ) -> PyResult<()> {
     fenced_span!("py.write", "write_text_partitioned", {
         let separator = line_sep.unwrap_or_else(|| "\n".to_string());
+        let segment = frame_drive_segment_cached(&frame.depths())?;
         Python::attach(|py| {
             py.detach(|| {
-                block_on(
+                block_on_grown_sized(
                     &frame.runtime,
                     repark_core::write_text_partitioned(
                         frame.inner(),
@@ -88,6 +91,7 @@ pub fn write_text_partitioned(
                         &partition_columns,
                         session_zone,
                     ),
+                    segment,
                 )
             })
         })

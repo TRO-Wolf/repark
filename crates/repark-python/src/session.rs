@@ -13,7 +13,9 @@ use tokio::runtime::Runtime;
 use crate::UnsupportedOperationException;
 use crate::arrow_export::drain_arrow_c_stream;
 use crate::dataframe::{PyDataFrame, with_stream_poll_no_detach};
-use crate::deep_stack::{block_on, block_on_grown_if, build_shared_runtime};
+use crate::deep_stack::{
+    block_on_grown_if, block_on_grown_sized, build_shared_runtime, frame_drive_segment_cached,
+};
 use crate::fence::{fenced, fenced_span};
 use crate::session_runtime::apply_session_knobs;
 use crate::to_py_err;
@@ -77,7 +79,7 @@ impl PyReparkSession {
             .fetch_max(depths.plan.max(depths.expression), Ordering::Relaxed);
     }
 
-    fn deep_view_levels(&self) -> usize {
+    pub(crate) fn deep_view_levels(&self) -> usize {
         self.deep_view_levels.load(Ordering::Relaxed)
     }
 
@@ -367,7 +369,7 @@ impl PyReparkSession {
                 let sorted = self
                     .session
                     .declare_temp_view_sorted(name, &keys, tighten_nulls);
-                block_on(&self.runtime, sorted)
+                self.runtime.block_on(sorted)
             })
             .map_err(to_py_err)
         })
@@ -383,10 +385,11 @@ impl PyReparkSession {
         frame: &PyDataFrame,
     ) -> PyResult<()> {
         fenced_span!("py.action", "PyReparkSession.materialize_as_temp_view", {
+            let segment = frame_drive_segment_cached(&frame.depths())?;
             let frame = crate::deep_stack::grown_clone_frame(frame.inner(), &frame.depths());
             py.detach(|| {
                 let materialized = self.session.materialize_dataframe_as_temp_view(name, frame);
-                block_on(&self.runtime, materialized)
+                block_on_grown_sized(&self.runtime, materialized, segment)
             })
             .map_err(to_py_err)
         })
@@ -403,12 +406,13 @@ impl PyReparkSession {
         budgets: (Option<u64>, Option<u64>),
     ) -> PyResult<()> {
         fenced_span!("py.action", "PyReparkSession.materialize_as_cache_view", {
+            let segment = frame_drive_segment_cached(&frame.depths())?;
             let frame = crate::deep_stack::grown_clone_frame(frame.inner(), &frame.depths());
             py.detach(|| {
                 let materialized = self
                     .session
                     .materialize_dataframe_as_cache_view(name, frame, budgets);
-                block_on(&self.runtime, materialized)
+                block_on_grown_sized(&self.runtime, materialized, segment)
             })
             .map_err(to_py_err)
         })
