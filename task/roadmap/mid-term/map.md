@@ -586,6 +586,10 @@ declines it (a dated ruling in the intake, then the archive).
   (2026-10-03, owner ruling, v1.5.2):** `ta.ema` over `ta.trange` answers all-NaN because a
   leading lookback NaN propagates through C-faithful kernels; polars_talib skips the leading
   run (measured); wrapper-level fix, order at `task/wo/ta-chain-1-leading-prefix.md`.
+- [grown-stack-gate-1-card-2026-10-04.md](grown-stack-gate-1-card-2026-10-04.md) — **card
+  GROWN-STACK-GATE-1 (2026-10-04, owner, grade B):** 34 unconditional `deep_stack::block_on` sites grow
+  a 128 MiB stack on every poll; main's work-equal like set +5.2 % from v1.5.1; gate them as R4 gated
+  the frame doors; order at `task/wo/grown-stack-gate-1.md`; the stack merge waits on it.
 - [ta-single-series-parallel-1-card-2026-10-04.md](ta-single-series-parallel-1-card-2026-10-04.md) — **card
   TA-SINGLE-SERIES-PARALLEL-1 (2026-10-04, owner, design grade, next TA item after v1.5.2):** one
   1,000,000-row series with dependent `ta.*` levels runs 0.49 s on one core against polars_talib's 0.12 s;
