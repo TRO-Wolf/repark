@@ -162,7 +162,7 @@ verifier round; they are not dates.
 | **MB-3** driver | the Session-owned task, both triggers, the four shutdown rules, progress reporting | new `crates/repark-core/src/microbatch/` | pins: available-now drains and stops; processing-time ticks; shutdown reports the durable offset; drop does not stop | Opus 5.5 | 1–2 |
 | **MB-4** facade | builders, `StreamingQuery`, error classes, the SES-DECL flips, the IPI-47 cells; surface first against a stub binding, wire-up last | `python/repark/src/repark/spark/`, `crates/repark-python/src/` new module | the MB-0 cells; the registry rows | Muse at max | 1–2 |
 | **MB-5** multi-source and `SilverPlan` hook | vector offsets; inputs pinned at their end snapshots inside a batch; the hook for S-2 | the MB-3 module | pins: a two-input fact with late arrival on one input converges | Opus 5.5 | 1–2 |
-| **Identity** | the `uuid5` kernel and the RePark-owned function with its registry row; the Bronze contract clause | `repark-common`, `repark-functions`, `docs/` | goldens over the canonical encoding: decimals, zones, NULL vs absent, composite keys, a key change, a recreated table (generation) | Muse at max; Opus medium verifier | 1 |
+| **Identity** | the `uuid5` kernel and the RePark-owned function with its registry row; the Bronze contract clause; a one-time backfill unit per existing Bronze table with a duplicate report (§10) | `repark-common`, `repark-functions`, `docs/` | goldens over the canonical encoding: decimals, zones, NULL vs absent, composite keys, a key change, a recreated table (generation); the backfill is idempotent and its report counts duplicates per table | Muse at max; Opus medium verifier | 1–1.5 |
 | **Acceptance** | the owner's clinic Bronze tables into Silver through `foreachBatch`; duplicate delivery; a kill between sink commit and the next trigger; the SCD2 dimensions identical to the existing Glue job's | a live cell under the Spark-gated tier | the two outputs diff to zero rows | Muse at max | 1 |
 
 Critical path: packet → contracts → MB-2a → MB-2c → MB-3 → MB-5 → acceptance, about seven lane-days.
@@ -197,7 +197,7 @@ path by about a day and needs the owner to lift the one-Opus-lane cap for this b
 | O-1 | offsets live in the Silver snapshot summary and a table property; no checkpoint directory for an Iceberg sink | yes (D-1) | proposed 2026-10-04 |
 | O-2 | the deterministic event id and version id enter the Bronze contract now, before the capture producer | yes (D-5) | proposed 2026-10-04 |
 | O-3 | catalog-only state; no control database before multi-writer; a shared catalog is required and a local filesystem catalog refuses a streaming query | yes (D-6) | **ruled 2026-10-04** (owner: "Catalog only") |
-| O-4 | the release slot: pull the micro-batch sink from the 2.2 row into **1.7** beside `repark-cdc`, since the producer writes Bronze and this driver consumes Bronze into Silver and both share CC-9 | 1.7 | proposed; implied by O-9, the owner confirms; the release-roadmap rows change in the PR that rules it |
+| O-4 | the release slot: pull the micro-batch sink from the 2.2 row into **1.7** beside `repark-cdc`, since the producer writes Bronze and this driver consumes Bronze into Silver and both share CC-9 | 1.7 | **ruled 2026-10-04** (owner: "Sink waits for 1.6", confirmed on the question); the release-roadmap rows change in the ruling commit |
 | O-5 | a Bronze table that receives row-level deletes | refuse | **ruled 2026-10-04** (owner: "No deletes in bronze"): Bronze is append-only by contract; a delete or overwrite snapshot inside a window is a contract violation and the query refuses; no opt-in skip |
 | O-6 | a genuinely keyless source table under D-5 | refuse | proposed |
 | O-7 | the next Opus slot is promised to the STAMP-2 re-measure and then the TA single-series sketch; the micro-batch sketch queues behind them unless the owner swaps the order | keep the order | **ruled 2026-10-04** (owner: "TA first") |
@@ -234,6 +234,35 @@ per product-Rust PR and none on test-only or docs PRs; relocated code sheds its 
 ruling (the runtime, the offset contract, the commit protocol and the identity kernel are Rust; Python
 forwards builders and the `foreachBatch` callable); the fork rules; probes inside the worker slice or
 under a 64 GiB virtual-memory cap; the live-cell rules for the acceptance cell.
+
+## 10. To be addressed — existing Bronze tables and the identity backfill
+
+Filed 2026-10-04 at the owner's instruction, in the wording the owner asked to keep. It answers the
+owner's question on O-2, "will this work with already built bronze tables?", and is brought up with
+the Bronze contract clause and the identity slice.
+
+**How it lands on existing Bronze.** One schema change per table adds the id column, which in Iceberg
+is metadata only. One backfill pass then fills it from the existing columns: the source table identity,
+the primary key, and the version rule. That is a one-time rewrite of each Bronze table through repark,
+and your Bronze volumes are small. From then on new rows carry the id at write. The alternative is to
+compute the id on read inside the batch source and never store it in Bronze. Both give identical ids,
+since that is what deterministic means. I recommend the backfill so the contract is uniform and external
+readers such as the Glue job and Trino see the same column rather than recomputing it.
+
+**The precondition is a version rule per table.** Your current Bronze rows carry the source columns plus
+an ingestion timestamp, an operation type that is always APPEND, a DAG version and a run type. None of
+the pipeline columns may feed the id. So the event id for the existing tables is the source table plus
+the primary key plus the source's own version column where the source has one, such as an updated-at
+field. A table whose source has no version column needs a declared fallback in its Bronze contract, and
+that fallback has to be something the source row carries, not the extraction date. The capture producer
+will later use the same per-table rule with the LSN as the version, so the daily Bronze and the capture
+Bronze of one source table hash the same way. This is the "declared, not inferred" rule the silver
+compiler already applies to dataset mode.
+
+**What the backfill will surface.** Rows the daily DAG extracted twice, for instance after a re-run, get
+the same id. That is the feature, not a bug. The backfill report will show how many duplicates each table
+already holds, and Silver dedups on the id from the first batch onward. The generation field for existing
+tables is their current table UUID, so a future drop-and-recreate cannot collide with them.
 
 ## Leaves this directory when
 
