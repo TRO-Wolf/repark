@@ -845,16 +845,14 @@ fn strip_expr(expr: Expr) -> Result<Expr> {
     .map(|transformed| transformed.data)
 }
 
-pub(crate) fn strip_record_batches(
-    schema: SchemaRef,
-    batches: Vec<RecordBatch>,
-) -> Result<(SchemaRef, Vec<RecordBatch>)> {
+#[must_use]
+pub fn strip_schema_ids(schema: SchemaRef) -> SchemaRef {
     if schema
         .fields()
         .iter()
         .all(|field| AttrId::of(field).is_none())
     {
-        return Ok((schema, batches));
+        return schema;
     }
     let fields = schema
         .fields()
@@ -865,7 +863,18 @@ pub(crate) fn strip_record_batches(
             Arc::new(stripped)
         })
         .collect::<Vec<_>>();
-    let schema = Arc::new(Schema::new_with_metadata(fields, schema.metadata().clone()));
+    Arc::new(Schema::new_with_metadata(fields, schema.metadata().clone()))
+}
+
+pub(crate) fn strip_record_batches(
+    schema: SchemaRef,
+    batches: Vec<RecordBatch>,
+) -> Result<(SchemaRef, Vec<RecordBatch>)> {
+    let stripped = strip_schema_ids(Arc::clone(&schema));
+    if Arc::ptr_eq(&stripped, &schema) {
+        return Ok((schema, batches));
+    }
+    let schema = stripped;
     let batches = batches
         .into_iter()
         .map(|batch| {

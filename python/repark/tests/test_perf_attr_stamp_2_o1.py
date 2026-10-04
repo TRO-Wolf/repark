@@ -144,3 +144,31 @@ def test_no_new_reader_of_the_attribute_key() -> None:
         if pattern.search(path.read_text(encoding="utf-8")):
             readers.add(relative)
     assert readers == _ID_READERS
+
+
+def test_export_schema_is_clean_over_sql_defined_views(spark: ReparkSession) -> None:
+    d = spark.createDataFrame([(1, 10), (2, 20)], ["id", "v"])
+    d.createOrReplaceTempView("o1_sq_tv")
+    spark.sql("CREATE OR REPLACE TEMP VIEW o1_sq_sv AS SELECT * FROM o1_sq_tv")
+    spark.sql("CREATE OR REPLACE TEMP VIEW o1_sq_sv2 AS SELECT id, v * 2 AS v2 FROM o1_sq_sv")
+    sv = spark.table("o1_sq_sv")
+    joined_sql = (
+        "SELECT o1_sq_sv.id, o1_sq_tv.v FROM o1_sq_sv JOIN o1_sq_tv ON o1_sq_sv.id = o1_sq_tv.id"
+    )
+    cases = [
+        (sv, [(1, 10), (2, 20)]),
+        (spark.sql("SELECT * FROM o1_sq_sv"), [(1, 10), (2, 20)]),
+        (sv.select(sv["v"]), [(10,), (20,)]),
+        (sv.filter(sv["id"] > 1), [(2, 20)]),
+        (sv.withColumn("z", sv["v"] + 1), [(1, 10, 11), (2, 20, 21)]),
+        (sv.join(d, "id"), [(1, 10, 10), (2, 20, 20)]),
+        (spark.sql(joined_sql), [(1, 10), (2, 20)]),
+        (spark.table("o1_sq_sv2"), [(1, 20), (2, 40)]),
+    ]
+    for frame, expected in cases:
+        _assert_clean(frame.toArrow().schema)
+        _assert_clean(pa.table(frame).schema)
+        _assert_clean(pa.table(frame._inner).schema)
+        for batch in frame.to_arrow_batches():
+            _assert_clean(batch.schema)
+        assert _rows(frame) == expected

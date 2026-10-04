@@ -8980,6 +8980,11 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
     placement.
   - No file outside the four id readers mentions the attribute key (a grep pin). Goes red when
     a fallback reader is added.
+  - O-1 fold V-1 (2026-10-04): `test_export_schema_is_clean_over_sql_defined_views`. Over a
+    SQL-defined temp view, the frame from `table`, `SELECT *`, select, filter, `withColumn`,
+    a join, a SQL join and a nested view exports no `repark.attr` through `toArrow`, `pa.table`
+    (facade frame and native handle) and `to_arrow_batches`, and answers. Goes red when the
+    native schema strip is removed.
   pins: attr-id-1/C-052, C-053
 - [test_attr_id_1_s2.py](test_attr_id_1_s2.py) — **ATTR-ID-1 S2 (2026-09-30):** the seam pins.
   Every spawned frame carries an id on every output field (`createDataFrame`, `sql`,

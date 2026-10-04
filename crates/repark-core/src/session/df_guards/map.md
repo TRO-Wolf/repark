@@ -88,6 +88,11 @@ wrapped optimizer rule) and declares this directory.
   (`a_stamped_plan_reaches_the_optimizer_backstop_and_its_collapsed_twin_plans_the_same`,
   `every_session_strips_ids_first_in_its_optimizer_and_never_in_its_analyzer`,
   `an_analyzed_plan_keeps_its_ids_for_the_eager_sql_door`). pins: attr-id-1/C-052
+  **O-1 fold V-1 (2026-10-04):** `strip_schema_ids(schema)` drops the key from every top-level
+  field of an Arrow schema and returns the same `Arc` when no field carries it;
+  `strip_record_batches` now uses it. The binding applies it to the analyzed export schema, so a
+  provider schema that carries ids (a SQL-defined temp view, which neither the backstop nor
+  `drop_node_ids` can clean) never reaches an export. pins: attr-id-1/C-053
   **ATTR-ID-1 S1b (2026-09-30):** identity is decided by structure, never by copied metadata
   (DataFusion copies the argument's metadata onto `first_value`, `last_value`, `lag`, `lead`,
   `nth_value`, a cast and a negation). `computed_outputs(node)` answers, by position, which
