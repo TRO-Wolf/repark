@@ -1,13 +1,13 @@
-# The micro-batch change-data sink — Bronze to Silver over Iceberg snapshots (planned 2026-10-04)
+# The micro-batch change-data sink — Bronze to Silver over Iceberg snapshots (ruled 2026-10-04)
 
-**Date:** 2026-10-04 · **Filed by:** the owner's project-lead delegate (a Claude session, claude-fable-5-1) from an owner discussion the same day · **Measured on:** `origin/main` at `1060ebeb` · **Builds on:** [contracts-ahead-of-code-2026-10-01.md](contracts-ahead-of-code-2026-10-01.md) (CC-1, CC-2, CC-6, CC-9), [crate-layout-1-8-2026-10-01.md](crate-layout-1-8-2026-10-01.md) (CL-1, CL-2), [unified-database-query-cdc-silver-plan-2026-09-13.md](unified-database-query-cdc-silver-plan-2026-09-13.md) (the three lifecycles, the capture and recovery protocol, the publication state machine), [deterministic-silver-layer-compiler-2026-09-12.md](deterministic-silver-layer-compiler-2026-09-12.md) (§5 input identity, §6 determinism and identity), [../mid-term/ice-streaming-1-6.md](../mid-term/ice-streaming-1-6.md) (the v1.6.0 card and its step 0), [../../ledgers/staging/ice-changelog-1-ledger.md](../../ledgers/staging/ice-changelog-1-ledger.md), [../../ledgers/staging/silver-s0-ledger.md](../../ledgers/staging/silver-s0-ledger.md) (C-008), [release-roadmap-2026-08-29.md](release-roadmap-2026-08-29.md) (rows 1.7 and 2.2).
+**Date:** 2026-10-04 · **Ruled by:** the owner ("Go with recommendations"; "Catalog only. Sink waits for 1.6. TA first. No deletes in bronze."), in discussion with the owner's project-lead delegate (a Claude session, claude-fable-5-1) · **Measured on:** `origin/main` at `1060ebeb` · **Builds on:** [contracts-ahead-of-code-2026-10-01.md](contracts-ahead-of-code-2026-10-01.md) (CC-1, CC-2, CC-6, CC-9), [crate-layout-1-8-2026-10-01.md](crate-layout-1-8-2026-10-01.md) (CL-1, CL-2), [unified-database-query-cdc-silver-plan-2026-09-13.md](unified-database-query-cdc-silver-plan-2026-09-13.md) (the three lifecycles, the capture and recovery protocol, the publication state machine), [deterministic-silver-layer-compiler-2026-09-12.md](deterministic-silver-layer-compiler-2026-09-12.md) (§5 input identity, §6 determinism and identity), [../mid-term/ice-streaming-1-6.md](../mid-term/ice-streaming-1-6.md) (the v1.6.0 card and its step 0), [../../ledgers/staging/ice-changelog-1-ledger.md](../../ledgers/staging/ice-changelog-1-ledger.md), [../../ledgers/staging/silver-s0-ledger.md](../../ledgers/staging/silver-s0-ledger.md) (C-008), [release-roadmap-2026-08-29.md](release-roadmap-2026-08-29.md) (rows 1.7 and 2.2).
 
 The owner asked what RePark needs for a Flink-like micro-batch runtime that can serve as part of a
 CDC connector or sink: take an existing Bronze and Silver schema on Iceberg tables, detect changes to
 Bronze, and run in-flight ETL upserts into Silver. This file records the answer, the decisions it
-rests on, the slices, how they parallelise, and the order in which they open. Everything under
-"Decisions" is **proposed** until the owner rules in this change's review; the rows the owner has ruled
-so far are marked in §7.
+rests on, the slices, how they parallelise, and the order in which they open. The ten decisions of
+§7 are **ruled** (2026-10-04); the merge of this file is the ruling, and §11 lists the rows and pointers
+it moves elsewhere.
 
 ## 1. What "Flink-like" means here
 
@@ -194,12 +194,12 @@ path by about a day and needs the owner to lift the one-Opus-lane cap for this b
 
 | id | decision | proposed | status |
 |---|---|---|---|
-| O-1 | offsets live in the Silver snapshot summary and a table property; no checkpoint directory for an Iceberg sink | yes (D-1) | proposed 2026-10-04 |
-| O-2 | the deterministic event id and version id enter the Bronze contract now, before the capture producer | yes (D-5) | proposed 2026-10-04 |
+| O-1 | offsets live in the Silver snapshot summary and a table property; no checkpoint directory for an Iceberg sink | yes (D-1) | **ruled 2026-10-04** (owner: "Go with recommendations"): the only design in which the crash between sink commit and checkpoint cannot happen, and the one O-3 implies |
+| O-2 | the deterministic event id and version id enter the Bronze contract now, before the capture producer | yes (D-5) | **ruled 2026-10-04** (owner: "Go with recommendations"): row-level dedup is what catches a source redelivering across batches; existing tables take the §10 backfill |
 | O-3 | catalog-only state; no control database before multi-writer; a shared catalog is required and a local filesystem catalog refuses a streaming query | yes (D-6) | **ruled 2026-10-04** (owner: "Catalog only") |
 | O-4 | the release slot: pull the micro-batch sink from the 2.2 row into **1.7** beside `repark-cdc`, since the producer writes Bronze and this driver consumes Bronze into Silver and both share CC-9 | 1.7 | **ruled 2026-10-04** (owner: "Sink waits for 1.6", confirmed on the question); the release-roadmap rows change in the ruling commit |
 | O-5 | a Bronze table that receives row-level deletes | refuse | **ruled 2026-10-04** (owner: "No deletes in bronze"): Bronze is append-only by contract; a delete or overwrite snapshot inside a window is a contract violation and the query refuses; no opt-in skip |
-| O-6 | a genuinely keyless source table under D-5 | refuse | proposed |
+| O-6 | a genuinely keyless source table under D-5 | refuse | **ruled 2026-10-04** (owner: "Go with recommendations"): a whole-row hash collapses genuine duplicates; refuse with a dated registry row, a surrogate rule is a demand-triggered card |
 | O-7 | the next Opus slot is promised to the STAMP-2 re-measure and then the TA single-series sketch; the micro-batch sketch queues behind them unless the owner swaps the order | keep the order | **ruled 2026-10-04** (owner: "TA first") |
 | O-8 | a second Opus lane for this build | no | **ruled 2026-10-04** (owner: "Keep everything in one opus orc slot"): one Opus orchestrator slot for every unit, this build included; the sequential path |
 | O-9 | does the 1.7 sink half open before the 1.6 connectors, since it depends only on Iceberg? | no | **ruled 2026-10-04** (owner: "Sink waits for 1.6"): the 1.7 row keeps its dependency on 1.6; the micro-batch executors open after the first 1.6 connector units; the packet, MB-0 and the fork asks need no Opus lane and run meanwhile |
@@ -263,6 +263,22 @@ compiler already applies to dataset mode.
 the same id. That is the feature, not a bug. The backfill report will show how many duplicates each table
 already holds, and Silver dedups on the id from the first batch onward. The generation field for existing
 tables is their current table UUID, so a future drop-and-recreate cannot collide with them.
+
+## 11. What this change touches elsewhere
+
+- [release-roadmap-2026-08-29.md](release-roadmap-2026-08-29.md): the 1.7 row gains the sink and names the
+  wait on 1.6; the 2.2 row records that its incremental and changelog reads shipped in v1.5.0 and that the
+  `readStream` / `writeStream` subset moved here; a dated Q&A row.
+- [roadmap-design-plan-2026-08-29.md](roadmap-design-plan-2026-08-29.md): card 2.2 loses the facade
+  micro-batch subset and its two streaming pins; new card 1.7-B names the homes (a `repark-core` module,
+  the identity kernel in `repark-common`, the write adapter in `repark-iceberg`, the binding module in
+  `repark-python`), no new crate and no new edge.
+- [../mid-term/ice-streaming-1-6.md](../mid-term/ice-streaming-1-6.md) re-points to 1.7 and to this file;
+  its [../mid-term/map.md](../mid-term/map.md) entry, the C-1 note in
+  [../mid-term/ice-parity-inventory-2026-09-19.md](../mid-term/ice-parity-inventory-2026-09-19.md), the
+  carve-out line in `STATUS.md` and the two residue lines of `docs/spark-sql-iceberg-parity.md` say 1.7.
+- `ARCHITECTURE.md`: one sentence naming the micro-batch module and the identity kernel.
+- `docs/artifacts/microbatch-cdc-sink-plan-2026-10-04.html`: the artifact copy (O-10).
 
 ## Leaves this directory when
 

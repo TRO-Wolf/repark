@@ -3404,7 +3404,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `hasattr(spark, "readStream")` raises `NOT_IMPLEMENTED` rather than answering `False` —
   the same shape classic's `client` property already has (it raises
   `ONLY_SUPPORTED_WITH_SPARK_CONNECT`, not `AttributeError`).
-- Residue — carved out of the v1.5.0 gate (owner ruling C-1, 2026-09-19) →
+- Residue — carved out of the v1.5.0 gate (owner ruling C-1, 2026-09-19; re-pointed to 1.7 on 2026-10-04) →
   [ice-streaming-1-6.md](../task/roadmap/mid-term/ice-streaming-1-6.md).
 ### SES-DECL-streams — no `StreamingQueryManager` without a streaming engine
 - **repark** — `spark.streams` raises `PySparkNotImplementedError` with condition
@@ -3416,7 +3416,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Rationale** — DECLARED 2026-09-14. Same engine gap as `readStream`; an `active == []`
   facade would be a silent lie about query lifecycle support. The R-5 `hasattr`
   consequence from the `readStream` row applies identically here.
-- Residue — carved out of the v1.5.0 gate (owner ruling C-1, 2026-09-19) →
+- Residue — carved out of the v1.5.0 gate (owner ruling C-1, 2026-09-19; re-pointed to 1.7 on 2026-10-04) →
   [ice-streaming-1-6.md](../task/roadmap/mid-term/ice-streaming-1-6.md).
 ### SES-DECL-dataSource — the Python data source API is deferred
 - **repark** — `spark.dataSource` raises `PySparkNotImplementedError` with condition
