@@ -2,6 +2,8 @@
 
 v1.5.2 is the second patch on 1.5.0. Every change is additive under the API freeze.
 
+Tagged `v1.5.2` at `d0c50405` (2026-10-04 11:55 UTC); published to PyPI 2026-10-04 13:33 UTC, five wheels (release run 37200345489).
+
 ## TA indicators: chained indicators answer (TA-CHAIN-1)
 
 Chained TA indicators (an indicator computed from another indicator's output) now answer where polars_talib answers; a leading NaN or NULL run on any `ta.*` input is skipped instead of propagating.

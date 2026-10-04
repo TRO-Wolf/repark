@@ -2,6 +2,8 @@
 
 v1.5.1 is the first patch on 1.5.0. Every change is additive under the API freeze.
 
+Tagged `v1.5.1` at `db3a1f37` (2026-09-29 23:33 UTC, re-pointed by the owner after the macOS Intel leg timed out); published to PyPI 2026-09-30 00:30 UTC, five wheels.
+
 ## S3 path writes (U12, 7bbb8e95)
 - DataFrame path writes land on `s3://` and `s3a://` with Spark's save modes.
 - The s3a endpoint keys are honoured: `fs.s3a.endpoint`, `.endpoint.region`, `.path.style.access` and `.connection.ssl.enabled`.
