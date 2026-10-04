@@ -102,7 +102,7 @@ def test_status_known_issues_match_the_registry() -> None:
     assert "UPDATE IN and correlated IN / ANY / ALL stay valved" not in text
     assert "G3-E8-NULL's UPDATE half stays refused" in text
     assert text.count("docs/spark-sql-iceberg-parity.md") >= 3
-    ceiling = 25_050
+    ceiling = 25_000
     assert _STATUS.stat().st_size <= ceiling, _STATUS.stat().st_size
 
 

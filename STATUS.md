@@ -11,7 +11,7 @@ _Last updated: 2026-09-12._
 
 ## Release state
 
-**v1.5.2 (2026-10-03) — the second patch on 1.5.0.** TA-CHAIN-1, POLARS-IS-DUPLICATED-1, DEEP-FILTER-CHAIN-CRASH-1, STORE-TS-DOORS-2, STRING-LITERAL-ESCAPE-1, CAST-OVERFLOW-INSERT-1, TEXT-WRITE-TIMESTAMP-ZONE-1. The 842-cell matrix on the release candidate: MATRIX-PENDING. Notes: [v1-5-2-release-notes-2026-10-03.md](task/roadmap/mid-term/v1-5-2-release-notes-2026-10-03.md).
+**v1.5.2 (2026-10-03):** TA-CHAIN-1, POLARS-IS-DUPLICATED-1, DEEP-FILTER-CHAIN-CRASH-1, STORE-TS-DOORS-2, STRING-LITERAL-ESCAPE-1, CAST-OVERFLOW-INSERT-1, TEXT-WRITE-TIMESTAMP-ZONE-1. Matrix 705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT. [Notes](task/roadmap/mid-term/v1-5-2-release-notes-2026-10-03.md).
 
 **v1.5.1 (2026-09-29) — the first patch on 1.5.0**, additive under the API freeze. S3 path writes (U12) land on `s3://` and `s3a://` with Spark's save modes, verified on live AWS. Names resolve by `spark.sql.caseSensitive` on both doors (CASESENS-1). Store assignment follows Spark between TIMESTAMP, TIMESTAMP_NTZ, DATE and numeric columns on every write door (NTZ-1, LTZ-STORE-INT-1, LTZ-STACKED-SIGN-1, STORE-TS-TO-NUMERIC-1, NTZ-STORE-DOORS-1). Integer division stays fractional (INTDIV-1). The 842-cell matrix holds at **705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT** on the fresh-build rerun of 2026-09-29 (main `8568e57a`). Notes: [v1-5-1-release-notes-2026-09-29.md](task/roadmap/mid-term/v1-5-1-release-notes-2026-09-29.md).
 

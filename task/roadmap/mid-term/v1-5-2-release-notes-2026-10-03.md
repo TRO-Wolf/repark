@@ -124,4 +124,4 @@ harness, and after a reboot the label-based reap removes stopped containers.
 
 ## Matrix
 
-The 842-cell matrix on the release candidate: MATRIX-PENDING.
+The 842-cell matrix on a fresh build of the release candidate (`8148c29c`, scoreboard 2026-10-03, the v1.5.1 harness and compare rules) reads **705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT**, unchanged from v1.5.1.
