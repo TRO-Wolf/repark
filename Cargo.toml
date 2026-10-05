@@ -16,6 +16,7 @@ resolver = "3"
 members = [
   "crates/repark-common",
   "crates/repark-iceberg",
+  "crates/repark-connect",
   "crates/repark-core",
   "crates/repark-functions",
   "crates/repark-ta",

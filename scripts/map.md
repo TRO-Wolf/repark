@@ -1186,8 +1186,18 @@ repark-parity slice.
   `task/roadmap/epic-term/crate-layout-1-8-2026-10-01.md` (CL-8), so each arrives onto an
   enforced layout. A pre-declared row is still audited: the declaration audit rejected the
   first draft's tier-1 → `repark-core` edges as layering inversions. NOTE the binding's deliberate **non-edges** (no `repark-sql`, no
-  `repark-iceberg`) are still enforced by review, not here — this guard bans edges, it never
-  requires one. Wired into `make check-crate-dag` (in the `make ci` chain),
+  `repark-iceberg`) are still enforced by review, not here — this guard bans edges and never
+  asks for an undeclared one. A declared row is a different matter once BOTH of its crates are
+  workspace members: the drift rule then reports it as a stale policy row if no dependency
+  backs it, because the table describes the workspace.
+  **C-1 (2026-10-05, ruling R-14):** `repark-connect` became a member with C-1, and nothing
+  calls it yet, so the pre-declared `repark-core → repark-connect` row left `ALLOWED_EDGES`.
+  `repark-connect`'s `TIERS` and `ROLES` entries stay. C-2 restores the row (`normal`, reason
+  "PRE-DECLARED for release 1.6 (crate-layout-1-8-2026-10-01.md): Session registers the
+  configured database sources in the one federated namespace, the way it registers Iceberg
+  catalogs today") in the change that adds the dependency and mounts the providers.
+  pins: c-1/C-001
+  Wired into `make check-crate-dag` (in the `make ci` chain),
   `.pre-commit-config.yaml`, and the hook installed by `make install-hooks`.
   **Dual-wired:** the `crate-DAG layering guard` step in the ci.yml `guards` job mirrors the
   Makefile target — change one, change the other.

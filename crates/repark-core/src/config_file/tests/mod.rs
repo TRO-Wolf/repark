@@ -6,6 +6,8 @@ use std::path::Path;
 
 use tempfile::TempDir;
 
+use repark_common::{SourceIdentity, SourceKind};
+
 use crate::catalog_config::{CatalogKind, parse_catalog_specs};
 
 use super::discovery::discover;
@@ -13,7 +15,7 @@ use super::interpolate::interpolate_table;
 use super::maintenance::{MaintenancePolicy, parse_duration};
 use super::profile::effective_table;
 use super::redact::redact_config;
-use super::sources::{SourceKind, SourceSpec, profile_sources};
+use super::sources::{SourceSpec, profile_sources};
 use super::wiring::load_file_config;
 use super::{ConfigFile, parse};
 
@@ -554,9 +556,9 @@ url = "http://trino:8080"
     let company = sources
         .sources
         .iter()
-        .find(|source| source.name == "company_db")
+        .find(|source| source.identity.name == "company_db")
         .expect("company_db");
-    assert_eq!(company.kind, SourceKind::Postgres);
+    assert_eq!(company.identity.kind, SourceKind::Postgres);
     assert_eq!(
         company.props.get("url").map(String::as_str),
         Some("postgresql://localhost:5432/company")
@@ -564,15 +566,43 @@ url = "http://trino:8080"
     let warehouse = sources
         .sources
         .iter()
-        .find(|source| source.name == "warehouse_dw")
+        .find(|source| source.identity.name == "warehouse_dw")
         .expect("warehouse_dw");
-    assert_eq!(warehouse.kind, SourceKind::SqlServer);
+    assert_eq!(warehouse.identity.kind, SourceKind::SqlServer);
     let federated = sources
         .sources
         .iter()
-        .find(|source| source.name == "federated")
+        .find(|source| source.identity.name == "federated")
         .expect("federated");
-    assert_eq!(federated.kind, SourceKind::Trino);
+    assert_eq!(federated.identity.kind, SourceKind::Trino);
+}
+
+#[test]
+fn a_source_identity_round_trips_through_the_loader() {
+    let profile = single_profile(
+        r#"
+[prod.database.postgres.company_db]
+url = "postgresql://localhost:5432/company"
+"#,
+    );
+    let sources = profile_sources("prod", &profile).expect("profile sources");
+    assert_eq!(sources.sources.len(), 1);
+    let source = &sources.sources[0];
+    let expected = SourceIdentity {
+        name: "company_db".to_string(),
+        kind: SourceKind::Postgres,
+        generation: SourceIdentity::UNASSIGNED_GENERATION,
+    };
+    assert_eq!(source.identity, expected);
+    assert_eq!(source.identity.generation, 0);
+    assert_eq!(source.key_path(), "prod.database.postgres.company_db");
+    let reparsed = SourceKind::from_spelling(source.identity.kind.spelling());
+    assert_eq!(reparsed, Some(source.identity.kind));
+    let assigned = SourceIdentity {
+        generation: 7,
+        ..source.identity.clone()
+    };
+    assert_ne!(assigned, source.identity);
 }
 
 #[test]
@@ -685,8 +715,7 @@ fn a_dump_masks_every_key_the_secret_predicate_matches() {
 fn a_source_spec_debug_masks_secret_props() {
     let secret = "SUPER_SECRET_VALUE_do_not_leak";
     let source = SourceSpec {
-        name: "company_db".to_string(),
-        kind: SourceKind::Postgres,
+        identity: SourceIdentity::unassigned("company_db".to_string(), SourceKind::Postgres),
         profile: "default".to_string(),
         auto_register: true,
         props: BTreeMap::from([

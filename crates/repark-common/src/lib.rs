@@ -1,8 +1,11 @@
 //! Shared domain types and the crate-wide error type for the repark engine.
 
 pub mod names;
+pub mod source;
 pub mod spark_error;
 pub mod surfaces;
+
+pub use source::{SourceIdentity, SourceKind};
 
 use thiserror::Error;
 

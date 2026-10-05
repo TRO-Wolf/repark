@@ -124,7 +124,8 @@ status = "planned"
 
 [components.repark-connect]
 path = "crates/repark-connect"
-status = "planned"
+layer = "table service"
+status = "delivered"
 
 [components.repark-cdc]
 path = "crates/repark-cdc"
