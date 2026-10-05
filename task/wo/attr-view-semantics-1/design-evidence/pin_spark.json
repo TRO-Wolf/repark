@@ -1,0 +1,112 @@
+{
+ "engine": "spark",
+ "rows": [
+  {
+   "id": "S4-fillna cs=false",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"b\" missing from \"aa\", \"b\", \"a\", \"b\" in operator !Project [b#1L]. Attribute(s) with the same name appear in the operation: \"b\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [b#1L]\n+- Project [coalesce(aa#4L, cast(0.0 as bigint)) AS aa#5L, coalesce(b#1L, cast(0.0 as bigint)) AS b#6L, coalesce(a#2L, cast(0.0 as bigint)) AS a#7L, coalesce(b#3L, cast(0.0 as bigint)) AS b#8L]\n   +- Join Inner, (aa#4L = a#2L)\n      :- Project [a#0L AS aa#4L, b#1L]\n      :  +- LogicalRDD [a#0L, b#1L], false",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "S4-replace cs=false",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"b\" missing from \"aa\", \"b\", \"a\", \"b\" in operator !Project [b#1L]. Attribute(s) with the same name appear in the operation: \"b\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [b#1L]\n+- Project [CASE WHEN (cast(aa#4L as double) = 2.0) THEN cast(200.0 as bigint) ELSE aa#4L END AS aa#9L, CASE WHEN (cast(b#1L as double) = 2.0) THEN cast(200.0 as bigint) ELSE b#1L END AS b#10L, CASE WHEN (cast(a#2L as double) = 2.0) THEN cast(200.0 as bigint) ELSE a#2L END AS a#11L, CASE WHEN (cast(b#3L as ",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "S4-expr-output cs=false",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"b\" missing from \"b\", \"a\" in operator !Project [b#14L]. Attribute(s) with the same name appear in the operation: \"b\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [b#14L]\n+- Project [(b#14L + cast(1 as bigint)) AS b#15L, a#13L]\n   +- LogicalRDD [a#13L, b#14L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "S4-fillna cs=true",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"b\" missing from \"aa\", \"b\", \"a\", \"b\" in operator !Project [b#17L]. Attribute(s) with the same name appear in the operation: \"b\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [b#17L]\n+- Project [coalesce(aa#20L, cast(0.0 as bigint)) AS aa#21L, coalesce(b#17L, cast(0.0 as bigint)) AS b#22L, coalesce(a#18L, cast(0.0 as bigint)) AS a#23L, coalesce(b#19L, cast(0.0 as bigint)) AS b#24L]\n   +- Join Inner, (aa#20L = a#18L)\n      :- Project [a#16L AS aa#20L, b#17L]\n      :  +- LogicalRDD [a#1",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "S4-replace cs=true",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"b\" missing from \"aa\", \"b\", \"a\", \"b\" in operator !Project [b#17L]. Attribute(s) with the same name appear in the operation: \"b\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [b#17L]\n+- Project [CASE WHEN (cast(aa#20L as double) = 2.0) THEN cast(200.0 as bigint) ELSE aa#20L END AS aa#25L, CASE WHEN (cast(b#17L as double) = 2.0) THEN cast(200.0 as bigint) ELSE b#17L END AS b#26L, CASE WHEN (cast(a#18L as double) = 2.0) THEN cast(200.0 as bigint) ELSE a#18L END AS a#27L, CASE WHEN (cast",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "S4-expr-output cs=true",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"b\" missing from \"b\", \"a\" in operator !Project [b#30L]. Attribute(s) with the same name appear in the operation: \"b\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [b#30L]\n+- Project [(b#30L + cast(1 as bigint)) AS b#31L, a#29L]\n   +- LogicalRDD [a#29L, b#30L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "S4-renamed-V2",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT] Resolved attribute(s) \"v\" missing from \"id\", \"V2\" in operator !Project [v#33L].  SQLSTATE: XX000;\n!Project [v#33L]\n+- Project [id#32L, v#33L AS V2#34L]\n   +- LogicalRDD [id#32L, v#33L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT"
+  },
+  {
+   "id": "S4-case-only-rename",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"V\" in operator !Project [v#33L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#33L]\n+- Project [id#32L, v#33L AS V#35L]\n   +- LogicalRDD [id#32L, v#33L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "S4-replaced-output",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [v#33L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#33L]\n+- Project [id#32L, (v#33L + cast(1 as bigint)) AS v#36L]\n   +- LogicalRDD [id#32L, v#33L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "SJ4-V1 swapped alias",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [v#38L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#38L]\n+- Project [v#38L AS id#39L, id#37L AS v#40L]\n   +- LogicalRDD [id#37L, v#38L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "ISIN two frames",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"i\" missing from \"i\", \"d\", \"s\", \"st\" in operator !Project [i#45 IN (1,3) AS r#49]. Attribute(s) with the same name appear in the operation: \"i\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [i#45 IN (1,3) AS r#49]\n+- LogicalRDD [i#41, d#42, s#43, st#44], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "ISIN one frame",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     false
+    ],
+    [
+     null
+    ],
+    [
+     true
+    ]
+   ],
+   "columns": [
+    "r"
+   ]
+  }
+ ]
+}
