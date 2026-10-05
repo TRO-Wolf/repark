@@ -100,7 +100,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split construction and configuration from query and catalog methods.",
     ),
     "python/repark/src/repark/spark/ta.py": (
-        1818,
+        1795,
         "Technical-analysis facade wrappers share one generated-like public surface.",
         "Split wrappers by indicator family while preserving exports.",
     ),

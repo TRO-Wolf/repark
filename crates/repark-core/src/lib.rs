@@ -33,6 +33,7 @@ mod pre_execute;
 mod range_table;
 mod read_options;
 mod runtime;
+pub mod series_order;
 mod session;
 mod session_owner;
 mod session_time_zone;

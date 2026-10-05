@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -11,22 +12,30 @@ use datafusion::common::config::ConfigOptions;
 use datafusion::datasource::memory::{MemTable, MemorySourceConfig};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::execution::TaskContext;
+use datafusion::functions_aggregate::sum::sum_udaf;
 use datafusion::logical_expr::function::{PartitionEvaluatorArgs, WindowUDFFieldArgs};
 use datafusion::logical_expr::{
     Operator, PartitionEvaluator, Signature, Volatility, WindowFrame, WindowFunctionDefinition,
     WindowUDF, WindowUDFImpl,
 };
+use datafusion::physical_expr::EquivalenceProperties;
 use datafusion::physical_expr::PhysicalExpr;
 use datafusion::physical_expr::expressions::{BinaryExpr, Column, Literal};
 use datafusion::physical_expr::window::WindowExpr;
 use datafusion::physical_optimizer::PhysicalOptimizerRule;
+use datafusion::physical_plan::coalesce_partitions::CoalescePartitionsExec;
+use datafusion::physical_plan::execution_plan::{Boundedness, EmissionType, PlanProperties};
+use datafusion::physical_plan::stream::RecordBatchStreamAdapter;
 use datafusion::physical_plan::windows::{WindowAggExec, create_window_expr};
-use datafusion::physical_plan::{ExecutionPlan, collect, displayable};
+use datafusion::physical_plan::{
+    DisplayAs, DisplayFormatType, ExecutionPlan, ExecutionPlanProperties, Partitioning,
+    SendableRecordBatchStream, collect, displayable,
+};
 use datafusion::prelude::{SessionConfig, SessionContext};
 use datafusion::scalar::ScalarValue;
 use futures::StreamExt;
 
-use super::exec::ParallelWindowExec;
+use super::exec::{InputOrder, ParallelWindowExec};
 use super::{ParallelSinglePartitionConfig, ParallelWindowRule};
 use crate::ReparkSession;
 
@@ -605,4 +614,208 @@ async fn parallel_window_flag_off_session_keeps_window_agg_exec() {
         plan.contains("ParallelWindowExec: wdw=[sum(t.x) ROWS BETWEEN"),
         "{plan}"
     );
+}
+
+#[derive(Debug)]
+struct DelayedExec {
+    partitions: usize,
+    properties: Arc<PlanProperties>,
+}
+
+fn delayed(partitions: usize) -> Arc<dyn ExecutionPlan> {
+    Arc::new(DelayedExec {
+        partitions,
+        properties: Arc::new(PlanProperties::new(
+            EquivalenceProperties::new(schema()),
+            Partitioning::UnknownPartitioning(partitions),
+            EmissionType::Incremental,
+            Boundedness::Bounded,
+        )),
+    })
+}
+
+impl DisplayAs for DelayedExec {
+    fn fmt_as(&self, _mode: DisplayFormatType, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(formatter, "DelayedExec: partitions={}", self.partitions)
+    }
+}
+
+impl ExecutionPlan for DelayedExec {
+    fn name(&self) -> &'static str {
+        "DelayedExec"
+    }
+
+    fn properties(&self) -> &Arc<PlanProperties> {
+        &self.properties
+    }
+
+    fn children(&self) -> Vec<&Arc<dyn ExecutionPlan>> {
+        Vec::new()
+    }
+
+    fn with_new_children(
+        self: Arc<Self>,
+        _children: Vec<Arc<dyn ExecutionPlan>>,
+    ) -> Result<Arc<dyn ExecutionPlan>> {
+        Ok(self)
+    }
+
+    fn execute(
+        &self,
+        partition: usize,
+        _context: Arc<TaskContext>,
+    ) -> Result<SendableRecordBatchStream> {
+        let wait = u64::try_from(self.partitions - partition).unwrap_or_default() * 60;
+        let start = i64::try_from(partition).unwrap_or_default() * 100;
+        let stream = futures::stream::once(async move {
+            std::thread::sleep(Duration::from_millis(wait));
+            Ok(batch(start, 100))
+        });
+        Ok(Box::pin(RecordBatchStreamAdapter::new(schema(), stream)))
+    }
+}
+
+fn aggregate_expr(name: &str) -> Arc<dyn WindowExpr> {
+    create_window_expr(
+        &WindowFunctionDefinition::AggregateUDF(sum_udaf()),
+        format!("sum({name})"),
+        &[column(name)],
+        &[],
+        &[],
+        Arc::new(WindowFrame::new(None)),
+        schema(),
+        false,
+        false,
+        None,
+    )
+    .expect("aggregate window expression")
+}
+
+fn ids(batch: &RecordBatch) -> Vec<i64> {
+    batch
+        .column(0)
+        .as_any()
+        .downcast_ref::<Int64Array>()
+        .expect("ids")
+        .values()
+        .to_vec()
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 8)]
+async fn series_order_current_row_order_partition_index() {
+    let state = Arc::new(ProbeState::default());
+    let exprs = vec![
+        window_expr(&probe("pass", Mode::Count, &state), column("x"), &[]),
+        window_expr(&probe("scale", Mode::Scale(3), &state), column("y"), &[]),
+    ];
+    let plan = window(
+        Arc::new(CoalescePartitionsExec::new(delayed(4))),
+        exprs.clone(),
+    );
+    let optimized = optimize(plan, true);
+    let node = parallel_node(&optimized).expect("partition-index arm fires");
+    assert_eq!(node.input_order(), InputOrder::PartitionIndex);
+    assert!(node.children()[0].downcast_ref::<DelayedExec>().is_some());
+    assert_eq!(
+        optimized.output_partitioning().partition_count(),
+        1,
+        "one output partition"
+    );
+    let source_order: Vec<i64> = (0..400).collect();
+    let expected = concat_batches(
+        &schema(),
+        &(0..4).map(|p| batch(p * 100, 100)).collect::<Vec<_>>(),
+    )
+    .expect("source");
+    for _ in 0..3 {
+        let got = run(Arc::clone(&optimized), 8)
+            .await
+            .expect("partition index");
+        assert_eq!(ids(&got), source_order);
+        assert_eq!(
+            got.column(4),
+            expected.column(1),
+            "pass-through follows source order"
+        );
+    }
+    let rebuilt = Arc::clone(&optimized)
+        .with_new_children(vec![delayed(4)])
+        .expect("rebuild");
+    assert_eq!(
+        parallel_node(&rebuilt).expect("rebuilt").input_order(),
+        InputOrder::PartitionIndex
+    );
+    assert_eq!(rebuilt.output_partitioning().partition_count(), 1);
+    let got = run(rebuilt, 8).await.expect("rebuilt run");
+    assert_eq!(ids(&got), source_order);
+
+    let one = window(
+        Arc::new(CoalescePartitionsExec::new(delayed(4))),
+        vec![exprs[0].clone()],
+    );
+    let one = optimize(one, true);
+    assert_eq!(
+        parallel_node(&one).expect("one group fires").input_order(),
+        InputOrder::PartitionIndex
+    );
+    assert_eq!(ids(&run(one, 8).await.expect("one group")), source_order);
+
+    let off = optimize(
+        window(Arc::new(CoalescePartitionsExec::new(delayed(4))), exprs),
+        false,
+    );
+    assert!(off.downcast_ref::<WindowAggExec>().is_some());
+}
+
+#[test]
+fn partition_index_keeps_aggregate_over_coalesce() {
+    let state = Arc::new(ProbeState::default());
+    let aggregates = optimize(
+        window(
+            Arc::new(CoalescePartitionsExec::new(delayed(4))),
+            vec![aggregate_expr("x"), aggregate_expr("y")],
+        ),
+        true,
+    );
+    let node = parallel_node(&aggregates).expect("the S2b arm still fires");
+    assert_eq!(node.input_order(), InputOrder::Single);
+    assert!(
+        node.children()[0]
+            .downcast_ref::<CoalescePartitionsExec>()
+            .is_some()
+    );
+    let single = optimize(
+        window(
+            Arc::new(CoalescePartitionsExec::new(delayed(4))),
+            vec![aggregate_expr("x")],
+        ),
+        true,
+    );
+    assert!(single.downcast_ref::<WindowAggExec>().is_some());
+    let mixed = optimize(
+        window(
+            Arc::new(CoalescePartitionsExec::new(delayed(4))),
+            vec![
+                window_expr(&probe("pass", Mode::Count, &state), column("x"), &[]),
+                aggregate_expr("y"),
+            ],
+        ),
+        true,
+    );
+    assert_eq!(
+        parallel_node(&mixed).expect("mixed").input_order(),
+        InputOrder::Single
+    );
+    let fetched = optimize(
+        window(
+            Arc::new(CoalescePartitionsExec::new(delayed(4)).with_fetch(Some(5))),
+            vec![window_expr(
+                &probe("pass", Mode::Count, &state),
+                column("x"),
+                &[],
+            )],
+        ),
+        true,
+    );
+    assert!(fetched.downcast_ref::<WindowAggExec>().is_some());
 }

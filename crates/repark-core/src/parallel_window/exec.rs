@@ -12,12 +12,14 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::execution::TaskContext;
 use datafusion::physical_expr::window::WindowExpr;
 use datafusion::physical_expr_common::sort_expr::OrderingRequirements;
+use datafusion::physical_plan::coalesce_partitions::CoalescePartitionsExec;
 use datafusion::physical_plan::execution_plan::{CardinalityEffect, PlanProperties};
 use datafusion::physical_plan::metrics::{BaselineMetrics, ExecutionPlanMetricsSet, MetricsSet};
 use datafusion::physical_plan::stream::RecordBatchStreamAdapter;
 use datafusion::physical_plan::windows::WindowAggExec;
 use datafusion::physical_plan::{
-    DisplayAs, DisplayFormatType, Distribution, ExecutionPlan, SendableRecordBatchStream,
+    DisplayAs, DisplayFormatType, Distribution, ExecutionPlan, ExecutionPlanProperties,
+    SendableRecordBatchStream,
 };
 use futures::{StreamExt, TryStreamExt};
 use tokio::sync::Semaphore;
@@ -25,6 +27,7 @@ use tokio::sync::Semaphore;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InputOrder {
     Single,
+    PartitionIndex,
 }
 
 #[derive(Debug)]
@@ -54,9 +57,31 @@ impl ParallelWindowExec {
         }
     }
 
+    #[must_use]
+    pub fn from_unordered_coalesce(
+        window: &WindowAggExec,
+        source: Arc<dyn ExecutionPlan>,
+        groups: Vec<Vec<usize>>,
+    ) -> Self {
+        Self {
+            input: source,
+            window_expr: window.window_expr().to_vec(),
+            groups,
+            input_order: InputOrder::PartitionIndex,
+            required_ordering: vec![None],
+            properties: Arc::clone(window.properties()),
+            metrics: ExecutionPlanMetricsSet::new(),
+        }
+    }
+
     #[cfg(test)]
     pub(super) fn groups(&self) -> &[Vec<usize>] {
         &self.groups
+    }
+
+    #[cfg(test)]
+    pub(super) fn input_order(&self) -> InputOrder {
+        self.input_order
     }
 
     fn output_schema(&self) -> SchemaRef {
@@ -109,7 +134,7 @@ impl ExecutionPlan for ParallelWindowExec {
     }
 
     fn maintains_input_order(&self) -> Vec<bool> {
-        vec![true]
+        vec![self.input_order == InputOrder::Single]
     }
 
     fn required_input_ordering(&self) -> Vec<Option<OrderingRequirements>> {
@@ -117,7 +142,10 @@ impl ExecutionPlan for ParallelWindowExec {
     }
 
     fn required_input_distribution(&self) -> Vec<Distribution> {
-        vec![Distribution::SinglePartition]
+        match self.input_order {
+            InputOrder::Single => vec![Distribution::SinglePartition],
+            InputOrder::PartitionIndex => vec![Distribution::UnspecifiedDistribution],
+        }
     }
 
     fn with_new_children(
@@ -130,8 +158,18 @@ impl ExecutionPlan for ParallelWindowExec {
                 children.len()
             ))
         })?;
-        let window = WindowAggExec::try_new(self.window_expr.clone(), child, true)?;
-        Ok(Arc::new(Self::from_window(&window, self.groups.clone())))
+        let groups = self.groups.clone();
+        Ok(Arc::new(match self.input_order {
+            InputOrder::Single => {
+                let window = WindowAggExec::try_new(self.window_expr.clone(), child, true)?;
+                Self::from_window(&window, groups)
+            }
+            InputOrder::PartitionIndex => {
+                let coalesce = Arc::new(CoalescePartitionsExec::new(Arc::clone(&child)));
+                let window = WindowAggExec::try_new(self.window_expr.clone(), coalesce, true)?;
+                Self::from_unordered_coalesce(&window, child, groups)
+            }
+        }))
     }
 
     fn execute(
@@ -141,6 +179,7 @@ impl ExecutionPlan for ParallelWindowExec {
     ) -> Result<SendableRecordBatchStream> {
         let input = match self.input_order {
             InputOrder::Single => self.input.execute(partition, Arc::clone(&context))?,
+            InputOrder::PartitionIndex => partition_index_stream(&self.input, &context)?,
         };
         let permits = self
             .groups
@@ -167,7 +206,11 @@ impl ExecutionPlan for ParallelWindowExec {
     }
 
     fn partition_statistics(&self, partition: Option<usize>) -> Result<Arc<Statistics>> {
-        let input = Arc::unwrap_or_clone(self.input.partition_statistics(partition)?);
+        let read = match self.input_order {
+            InputOrder::Single => partition,
+            InputOrder::PartitionIndex => None,
+        };
+        let input = Arc::unwrap_or_clone(self.input.partition_statistics(read)?);
         let mut column_statistics = input.column_statistics;
         column_statistics
             .extend((0..self.window_expr.len()).map(|_| ColumnStatistics::new_unknown()));
@@ -181,6 +224,30 @@ impl ExecutionPlan for ParallelWindowExec {
     fn cardinality_effect(&self) -> CardinalityEffect {
         CardinalityEffect::Equal
     }
+}
+
+fn partition_index_stream(
+    input: &Arc<dyn ExecutionPlan>,
+    context: &Arc<TaskContext>,
+) -> Result<SendableRecordBatchStream> {
+    let tasks = (0..input.output_partitioning().partition_count())
+        .map(|partition| {
+            let stream = input.execute(partition, Arc::clone(context))?;
+            Ok(SpawnedTask::spawn(stream.try_collect::<Vec<RecordBatch>>()))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let ordered = futures::stream::iter(tasks)
+        .then(|task| async move {
+            task.join_unwind()
+                .await
+                .map_err(|error| DataFusionError::ExecutionJoin(Box::new(error)))?
+        })
+        .map_ok(|batches| futures::stream::iter(batches.into_iter().map(Ok)))
+        .try_flatten();
+    Ok(Box::pin(RecordBatchStreamAdapter::new(
+        input.schema(),
+        ordered,
+    )))
 }
 
 struct WindowJob {

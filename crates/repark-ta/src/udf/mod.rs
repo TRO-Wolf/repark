@@ -8,9 +8,7 @@ use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
 use datafusion::common::{DataFusionError, Result, ScalarValue};
 use datafusion::logical_expr::function::{PartitionEvaluatorArgs, WindowUDFFieldArgs};
-use datafusion::logical_expr::{
-    PartitionEvaluator, Signature, Volatility, WindowUDF, WindowUDFImpl,
-};
+use datafusion::logical_expr::{PartitionEvaluator, Signature, WindowUDF, WindowUDFImpl};
 use datafusion::physical_expr::expressions::Literal;
 use datafusion::prelude::SessionContext;
 
@@ -29,7 +27,8 @@ mod volume;
 
 #[cfg(test)]
 use glue::try_borrow_null_free_f64;
-use glue::{float64_array_from_vec, try_borrow_all_null_free};
+use glue::{float64_array_from_vec, make_udf, try_borrow_all_null_free, with_null_prefix};
+pub use glue::{is_ta_window, window_udf_with_null_prefix};
 use prefix::{run_all_with_prefix_skipped, run_with_prefix_skipped};
 
 // Multi-output families use one thread-local cache keyed by family, params, and series identity.
@@ -600,16 +599,18 @@ fn period(value: f64) -> crate::Result<usize> {
 }
 
 /// Window-UDF wrapper that extracts literal parameters and evaluates one full partition.
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug)]
 struct TaWindowUdf {
     name: &'static str,
+    display: String,
     func: TaFn,
     signature: Signature,
+    null_prefix: usize,
 }
 
 impl WindowUDFImpl for TaWindowUdf {
     fn name(&self) -> &str {
-        self.name
+        &self.display
     }
 
     fn signature(&self) -> &Signature {
@@ -633,11 +634,12 @@ impl WindowUDFImpl for TaWindowUdf {
             })?;
             params.push(scalar_f64(literal.value())?);
         }
-        Ok(Box::new(TaEvaluator {
+        let evaluator = TaEvaluator {
             func: self.func,
             params,
             densify_scratch: Vec::new(),
-        }))
+        };
+        Ok(with_null_prefix(evaluator, self.null_prefix))
     }
 
     fn field(&self, field_args: WindowUDFFieldArgs) -> Result<FieldRef> {
@@ -774,31 +776,19 @@ fn scalar_f64(value: &ScalarValue) -> Result<f64> {
     }
 }
 
-/// Build the [`WindowUDF`] for one spec-table entry.
-fn make_udf(name: &'static str, func: TaFn) -> WindowUDF {
-    WindowUDF::new_from_impl(TaWindowUdf {
-        name,
-        func,
-        signature: Signature::any(func.arity(), Volatility::Immutable),
-    })
-}
-
 /// Return every TA window UDF for registration or inspection.
 #[must_use]
 pub fn window_udfs() -> Vec<WindowUDF> {
     SPECS
         .iter()
-        .map(|&(name, func)| make_udf(name, func))
+        .map(|&(name, func)| make_udf(name, func, 0))
         .collect()
 }
 
 /// Return the TA window UDF for `name`, or `None` when unknown.
 #[must_use]
 pub fn window_udf(name: &str) -> Option<Arc<WindowUDF>> {
-    SPECS
-        .iter()
-        .find(|(spec_name, _)| *spec_name == name)
-        .map(|&(spec_name, func)| Arc::new(make_udf(spec_name, func)))
+    window_udf_with_null_prefix(name, 0)
 }
 
 /// Register every TA window UDF on `ctx`.

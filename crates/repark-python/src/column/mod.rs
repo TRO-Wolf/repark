@@ -24,6 +24,7 @@ pub(crate) mod expr_build;
 mod expr_tests;
 mod function_dispatch;
 mod levels;
+pub(crate) mod series;
 mod window;
 
 use expr_build::{
@@ -580,8 +581,6 @@ impl PyColumn {
 
     /// A TA window function (`ta_ema`, `ta_adx`, `ta_bbands_upper`, …) as an un-`OVER`ed window
     /// expression: the series column(s) then the scalar literal params, in `args` order.
-    /// The `repark.ta` facade builds these; [`PyColumn::over`] attaches the `ORDER BY` and
-    /// partition.
     ///
     /// The wrapped [`WindowUDF`](datafusion::logical_expr::WindowUDF) is the *same* instance the
     /// session registers for the SQL path (`repark_ta::udf`), so the two surfaces are one kernel.
@@ -589,11 +588,12 @@ impl PyColumn {
     /// # Errors
     /// Returns `ValueError` if `name` is not a known TA window function.
     #[staticmethod]
-    pub fn ta_window(name: &str, args: Vec<PyColumn>) -> PyResult<Self> {
+    #[pyo3(signature = (name, args, null_prefix = 0))]
+    pub fn ta_window(name: &str, args: Vec<PyColumn>, null_prefix: usize) -> PyResult<Self> {
         fenced!("Column.ta_window", {
-            let udf = repark_ta::udf::window_udf(name).ok_or_else(|| {
-                PyValueError::new_err(format!("unknown TA window function {name:?}"))
-            })?;
+            let udf = repark_ta::udf::window_udf_with_null_prefix(name, null_prefix).ok_or_else(
+                || PyValueError::new_err(format!("unknown TA window function {name:?}")),
+            )?;
             let arg_exprs: Vec<Expr> = args.iter().map(PyColumn::expr).collect();
             Ok(Self::combine_surveyed(
                 Expr::from(WindowFunction::new(

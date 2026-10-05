@@ -48,6 +48,18 @@ Kernel math is **not** here — it stays in `../overlap.rs` etc.
   1818 → 1801 and its exact baseline ratchets with it. The inline test pins the borrow pointers, the
   moved buffer, and bit-identity against the old densify-and-copy glue for ADX, TRANGE, ATR, WILLR,
   EMA, RSI and both STOCH bands. pins: ta-series-s2b/C-007
+  **S2a (2026-10-05):** the native `null_lookback`. `TaWindowUdf` carries `null_prefix` and a
+  derived `display` name (`ta_ema_null_prefix_12` when non-zero, the plain name otherwise);
+  its `PartialEq` / `Hash` live here and cover the base name, function, signature and
+  `null_prefix`, so two prefixes never compare or hash equal and DataFusion never merges them.
+  `make_udf` moved here from `mod.rs`; `window_udf_with_null_prefix` is the facade's
+  constructor and `window_udf` delegates to it with 0; `window_udfs` / `register_all` (the SQL
+  path) stay unprefixed. `with_null_prefix` wraps the `TaEvaluator` in a `NullPrefixEvaluator`
+  only when the prefix is non-zero: it runs the evaluator, then sets the first `null_prefix`
+  rows **of each window partition** NULL in the validity bitmap over the same values buffer
+  (no copy; values, and every later NaN, unchanged). `is_ta_window` tells the facade's series
+  rewrite that a window function is a TA kernel. `udf/mod.rs` shrinks 1801 → 1791 and its exact
+  baseline and the CAP-1 mirror ratchet with it. pins: ta-series-s2a/C-005, C-006, C-008
 - `price.rs` — price-transform family (`avgprice`/`medprice`/`typprice`/
   `wclprice`).
 

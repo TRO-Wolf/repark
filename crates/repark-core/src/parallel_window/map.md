@@ -5,8 +5,6 @@
 TA-SINGLE-SERIES-PARALLEL-1 slices S2b and S3 (2026-10-04): generic physical operators that run
 the expressions of a one-partition window (S2b) and of a one-partition projection (S3) in
 parallel, and drop the useless RoundRobin over one partition (S3). DataFusion's `WindowAggExec` evaluates every
-TA-SINGLE-SERIES-PARALLEL-1 slice S2b (2026-10-04): a generic physical operator that runs the
-expressions of a one-partition window in parallel. DataFusion's `WindowAggExec` evaluates every
 window expression serially on the polling thread (`compute_window_aggregates`); on one long series
 (the owner's `ta.*` benchmark: 14 indicators over 1 M rows) that pins the query to one core.
 `ParallelWindowRule` swaps such a node for `ParallelWindowExec`, which computes the same columns
@@ -43,12 +41,29 @@ provider's cloned state would not be enough. The flag defaults to on; it has no 
   `udf/mod.rs`) still computes each family once. `BoundedWindowAggExec` is never touched:
   measured, no `ta.*` plan produces one (a TA window UDF is not bounded-capable, so a node holding
   one is a `WindowAggExec`), and the non-TA one-partition windows that do (`lag`, `row_number`,
-  running `sum` over `ORDER BY`) stay as DataFusion planned them.
+  running `sum` over `ORDER BY`) stay as DataFusion planned them. **S2a (2026-10-05):** before
+  that test the rule tries the partition-index arm. It fires when the `WindowAggExec`'s input is
+  a `CoalescePartitionsExec` without a fetch and **every** expression has an empty `PARTITION BY`
+  and an empty `ORDER BY` and is a window UDF (`StandardWindowExpr` over `WindowUDFExpr`),
+  whatever the group count. Through the facade only a bare `ta.*` column that the series rewrite
+  left as `OVER ()` (case (c), no declared order and no temporal column) reaches it, because the
+  facade refuses `.over(...)` without `ORDER BY` for every window UDF. Through SQL, an unordered
+  window UDF that DataFusion plans as a `WindowAggExec` (`ta_*() OVER ()`, for one) reads in
+  partition-index order too: deterministic, otherwise the
+  same answer. Every other `OVER ()` window keeps today's plan: aggregates (`sum(x) OVER ()`)
+  and mixed aggregate/UDF nodes take the S2b arm over the coalesce when they have at least two
+  groups, and stay a `WindowAggExec` otherwise.
 - `exec.rs` — `ParallelWindowExec`. Built from the `WindowAggExec` it replaces: the same input,
   expressions, `PlanProperties`, required ordering (captured from the source node), single
   partition distribution and `maintains_input_order`; `with_new_children` rebuilds through
-  `WindowAggExec::try_new` so the properties stay DataFusion's. `InputOrder::Single` is the only
-  arm here (the partition-index arm for an `OVER ()` over several partitions belongs to S2a).
+  `WindowAggExec::try_new` so the properties stay DataFusion's. **S2a (2026-10-05):** the
+  `InputOrder::PartitionIndex` arm, built by `from_unordered_coalesce` from a `WindowAggExec`
+  over `CoalescePartitionsExec ← X`: the input is X itself, the plan properties stay the
+  coalesced window's (one output partition), the required input distribution is unspecified,
+  there is no required ordering and input order is not maintained; `with_new_children` rebuilds
+  the coalesced window around the new child. Execution spawns one `SpawnedTask` per X partition
+  that collects it, then joins the tasks **in partition-index order**, so the window sees X's
+  partitions concatenated 0, 1, … instead of in completion order; statistics read X's totals.
   Execution: collect the input and `concat_batches` it once (as `WindowAggStream` does); empty
   input emits no batch; one `SpawnedTask::spawn_blocking` per group, capped by a
   `tokio::sync::Semaphore` of `min(groups, target_partitions)`; each group evaluates its members
@@ -129,6 +144,12 @@ provider's cloned state would not be enough. The flag defaults to on; it has no 
   against off; `sum`/`avg`/`max`/`count OVER ()` and a mixed whole-frame/`lag` node fire, the
   `lag`/`row_number`/running-`sum` node plans as `BoundedWindowAggExec` and is untouched).
   pins: ta-series-s2b/C-002, C-003, C-004, C-005, C-006, C-009, C-010, C-013
+  **S2a (2026-10-05):** `series_order_current_row_order_partition_index` (P-S2a-4: a
+  four-partition `DelayedExec` whose partition i finishes after `(4 - i) × 60 ms`, under a
+  coalesced pass-through window UDF; the arm fires with one or two groups, drops the coalesce,
+  survives `with_new_children`, and three runs read ids 0…399 in source order) and
+  `partition_index_keeps_aggregate_over_coalesce` (aggregates, a mixed node and a fetching
+  coalesce keep today's plan). pins: ta-series-s2a/C-004
 - Gates measured for the slice (goldens, kernel race, owner-shape facade identity against base,
   speed): `task/ledgers/staging/ta-series-s2b-ledger.md`. pins: ta-series-s2b/C-008, C-011, C-012
 
