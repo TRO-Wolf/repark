@@ -616,3 +616,12 @@ declines it (a dated ruling in the intake, then the archive).
   MISSING_ATTRIBUTES; measured on Spark 4.1.2, 1.5.2 and the stack (`d5c97862`) — 11/7 on main,
   9/9 on the stack, the two V-3 internal errors the only new stack differences; scope (a)–(d)
   with proposed pins, V10/F16 out, grade and release questions for the owner.
+- [explain-root-sort-1-card-2026-10-04.md](explain-root-sort-1-card-2026-10-04.md) — **card
+  EXPLAIN-ROOT-SORT-1 (2026-10-04, measured on 1.5.2):** the facade's `explain()` plans the
+  frame through a scratch view, so DataFusion's subquery sort elimination hides a root `Sort`
+  that `collect()` executes; fix by explaining the frame's own plan; pins per sort shape.
+- [distributed-encode-1-card-2026-10-04.md](distributed-encode-1-card-2026-10-04.md) — **card
+  DISTRIBUTED-ENCODE-1 (2026-10-04):** three `repark-distributed --features cluster` tests red on
+  main (two `LazyMemTableExec` encode failures, one pushdown-surface test); the codec encodes only
+  `IcebergTableScan`, so RePark execs such as `NljBuildSideExec` likely fail to encode (inferred);
+  measure first, then codec arms or single-node flags.

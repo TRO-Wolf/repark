@@ -71,6 +71,7 @@ fn scan_spec(warehouse: &str, snapshot_id: Option<i64>, filters: Vec<String>) ->
 
 async fn iceberg_session(warehouse: &str) -> (ReparkSession, SessionContext) {
     let session = match ReparkSession::builder()
+        .parallel_single_partition(false)
         .target_partitions(EXECUTOR_COUNT)
         .build()
     {
@@ -195,7 +196,7 @@ async fn cluster_answer(
     session: &ReparkSession,
     plan: Arc<dyn ExecutionPlan>,
 ) -> (Vec<RecordBatch>, HashMap<String, usize>, JobStatus) {
-    let provider = ReparkSessionProvider::from_session(session);
+    let provider = ReparkSessionProvider::from_session(session).expect("ReparkSessionProvider");
     let cluster = match ReparkClusterExecutor::new(EXECUTOR_COUNT, bind_address(), provider).await {
         Ok(cluster) => cluster,
         Err(error) => panic!("ReparkClusterExecutor::new: {error}"),
