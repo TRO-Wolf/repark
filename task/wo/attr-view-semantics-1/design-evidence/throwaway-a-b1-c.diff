@@ -1,0 +1,545 @@
+diff --git a/crates/repark-core/src/session/df_guards/attr_id.rs b/crates/repark-core/src/session/df_guards/attr_id.rs
+index ded766cf..c2f8c94b 100644
+--- a/crates/repark-core/src/session/df_guards/attr_id.rs
++++ b/crates/repark-core/src/session/df_guards/attr_id.rs
+@@ -193,6 +193,125 @@ pub fn stamp(plan: LogicalPlan) -> Result<LogicalPlan> {
+     project_ids(plan, &minted)
+ }
+ 
++pub const WRITTEN_ALIAS: &str = "repark_written_alias";
++
++#[derive(Debug, Clone, Copy, PartialEq, Eq)]
++pub enum Located {
++    Output,
++    Hidden,
++    PullUp,
++    Absent,
++}
++
++fn join_key_holds(join: &Join, id: &AttrId) -> bool {
++    let side_holds = |side: &LogicalPlan, expr: &Expr| match expr {
++        Expr::Column(column) => side
++            .schema()
++            .index_of_column(column)
++            .ok()
++            .is_some_and(|index| AttrId::of(side.schema().field(index)).as_ref() == Some(id)),
++        _ => false,
++    };
++    join.on
++        .iter()
++        .any(|(left, right)| side_holds(&join.left, left) || side_holds(&join.right, right))
++}
++
++fn schema_holds(schema: &DFSchema, id: &AttrId) -> bool {
++    schema
++        .fields()
++        .iter()
++        .any(|field| AttrId::of(field).as_ref() == Some(id))
++}
++
++fn facade_internal(alias: &TableReference) -> bool {
++    let table = alias.table();
++    table.starts_with("__repark") || table.starts_with("_repark")
++}
++
++#[must_use]
++pub fn locate(plan: &LogicalPlan, id: &AttrId) -> Located {
++    if schema_holds(plan.schema(), id) {
++        return Located::Output;
++    }
++    let mentioned = plan
++        .exists(|node| Ok(schema_holds(node.schema(), id)))
++        .unwrap_or(true);
++    if !mentioned {
++        return Located::Absent;
++    }
++    let mut node = plan;
++    loop {
++        let next: &LogicalPlan = match node {
++            LogicalPlan::Projection(projection) => &projection.input,
++            LogicalPlan::Filter(filter) => &filter.input,
++            LogicalPlan::Sort(sort) => &sort.input,
++            LogicalPlan::Limit(limit) => &limit.input,
++            LogicalPlan::Distinct(Distinct::All(input)) => input,
++            LogicalPlan::Repartition(repartition) => &repartition.input,
++            LogicalPlan::SubqueryAlias(alias) if facade_internal(&alias.alias) => &alias.input,
++            LogicalPlan::SubqueryAlias(_)
++            | LogicalPlan::Union(_)
++            | LogicalPlan::Aggregate(_)
++            | LogicalPlan::TableScan(_)
++            | LogicalPlan::Values(_)
++            | LogicalPlan::EmptyRelation(_) => return Located::Absent,
++            _ => return Located::PullUp,
++        };
++        if schema_holds(next.schema(), id) {
++            if let LogicalPlan::Join(join) = next
++                && join_key_holds(join, id)
++            {
++                return Located::Hidden;
++            }
++            return Located::PullUp;
++        }
++        node = next;
++    }
++}
++
++fn written_marker_arg(expr: &Expr) -> Option<Expr> {
++    let Expr::ScalarFunction(function) = expr else {
++        return None;
++    };
++    if function.func.name() != WRITTEN_ALIAS || function.args.len() != 1 {
++        return None;
++    }
++    function.args.first().cloned()
++}
++
++#[allow(clippy::missing_errors_doc)]
++pub fn consume_written_aliases(plan: LogicalPlan) -> Result<LogicalPlan> {
++    plan.transform_up(|node| match node {
++        LogicalPlan::Projection(projection) => {
++            let expr = projection
++                .expr
++                .iter()
++                .map(|expr| match expr {
++                    Expr::Alias(alias) => match written_marker_arg(&alias.expr) {
++                        Some(inner) => {
++                            let mut metadata = alias.metadata.clone().unwrap_or_default();
++                            metadata.extend(AttrId::mint().metadata());
++                            Expr::Alias(Alias {
++                                expr: Box::new(inner),
++                                relation: alias.relation.clone(),
++                                name: alias.name.clone(),
++                                metadata: Some(metadata),
++                            })
++                        }
++                        None => expr.clone(),
++                    },
++                    other => other.clone(),
++                })
++                .collect::<Vec<_>>();
++            Projection::try_new(expr, Arc::clone(&projection.input))
++                .map(|rebuilt| Transformed::yes(LogicalPlan::Projection(rebuilt)))
++        }
++        other => other.recompute_schema().map(Transformed::yes),
++    })
++    .data()
++}
++
+ fn union_ids(union: &Union) -> Vec<Option<AttrId>> {
+     let first = union
+         .inputs
+diff --git a/crates/repark-core/src/session/df_guards/case_bind.rs b/crates/repark-core/src/session/df_guards/case_bind.rs
+index 3be9048d..77a0b422 100644
+--- a/crates/repark-core/src/session/df_guards/case_bind.rs
++++ b/crates/repark-core/src/session/df_guards/case_bind.rs
+@@ -24,7 +24,8 @@ pub use super::attr_id::{
+     strip_for_execution, strip_schema_ids,
+ };
+ pub use super::attr_id::{
+-    join_collisions, plan_is_relation, plan_is_stamped, remint_shared, remint_with_map, resolve,
++    Located, WRITTEN_ALIAS, consume_written_aliases, join_collisions, locate, plan_is_relation,
++    plan_is_stamped, remint_shared, remint_with_map, resolve,
+ };
+ pub use super::attr_lineage::{projection_source_ids, sort_hits_meet_at_join};
+ pub use super::frame_lineage::{AttrRef, FrameId, FrameKind, FrameNode};
+diff --git a/crates/repark-python/src/dataframe_names.rs b/crates/repark-python/src/dataframe_names.rs
+index 2c01a089..12763671 100644
+--- a/crates/repark-python/src/dataframe_names.rs
++++ b/crates/repark-python/src/dataframe_names.rs
+@@ -51,6 +51,8 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
+     module.add_function(wrap_pyfunction!(resolve_frame_names, module)?)?;
+     module.add_function(wrap_pyfunction!(sort_child_shape, module)?)?;
+     module.add_function(wrap_pyfunction!(stamp_attribute_ids, module)?)?;
++    module.add_function(wrap_pyfunction!(locate_attribute, module)?)?;
++    module.add_function(wrap_pyfunction!(plan_display, module)?)?;
+     module.add_function(wrap_pyfunction!(strip_attribute_ids, module)?)?;
+     Ok(())
+ }
+@@ -799,3 +801,18 @@ mod tests {
+         );
+     }
+ }
++
++#[pyfunction]
++pub(crate) fn locate_attribute(frame: &PyDataFrame, id: &str) -> &'static str {
++    match repark_core::frame_names::locate(frame.inner().logical_plan(), &AttrId::from_token(id)) {
++        repark_core::frame_names::Located::Output => "output",
++        repark_core::frame_names::Located::Hidden => "hidden",
++        repark_core::frame_names::Located::PullUp => "pullup",
++        repark_core::frame_names::Located::Absent => "absent",
++    }
++}
++
++#[pyfunction]
++pub(crate) fn plan_display(frame: &PyDataFrame) -> String {
++    frame.inner().logical_plan().display_indent_schema().to_string()
++}
+diff --git a/crates/repark-python/src/lib.rs b/crates/repark-python/src/lib.rs
+index ded07a23..7f8c0a17 100644
+--- a/crates/repark-python/src/lib.rs
++++ b/crates/repark-python/src/lib.rs
+@@ -2,6 +2,7 @@
+ 
+ #[cfg(feature = "allocator-mimalloc")]
+ mod allocator;
++mod written_alias;
+ mod arrow_export;
+ mod cache_budget;
+ mod catalog_census;
+diff --git a/crates/repark-python/src/session.rs b/crates/repark-python/src/session.rs
+index 16332926..12754051 100644
+--- a/crates/repark-python/src/session.rs
++++ b/crates/repark-python/src/session.rs
+@@ -170,10 +170,34 @@ impl PyReparkSession {
+         fenced_span!("py.sql", "PyReparkSession.sql", {
+             let grown = crate::deep_stack::sql_drive_grown(query)
+                 || self.deep_view_levels() > crate::deep_stack::DEEP_NESTING_DEPTH;
+-            let df = py.detach(|| {
+-                let planned = Self::plan_session_sql(&self.session, query);
+-                block_on_grown_if(&self.runtime, planned, grown)
+-            })?;
++            let mut marked = crate::written_alias::mark_written_aliases(query);
++            if marked.is_some() {
++                crate::written_alias::register(self.session.context());
++            }
++            let first = marked.as_deref().map(|text| {
++                py.detach(|| {
++                    let planned = Self::plan_session_sql(&self.session, text);
++                    block_on_grown_if(&self.runtime, planned, grown)
++                })
++            });
++            let df = match first {
++                Some(Ok(df)) => df,
++                _ => {
++                    marked = None;
++                    py.detach(|| {
++                        let planned = Self::plan_session_sql(&self.session, query);
++                        block_on_grown_if(&self.runtime, planned, grown)
++                    })?
++                }
++            };
++            let df = if marked.is_some() {
++                let (state, plan) = df.into_parts();
++                let consumed = repark_core::frame_names::consume_written_aliases(plan)
++                    .map_err(crate::datafusion_to_py_err)?;
++                datafusion::prelude::DataFrame::new(state, consumed)
++            } else {
++                df
++            };
+             let mut depths = crate::deep_stack::plan_depths(df.logical_plan());
+             depths.plan = depths.plan.max(self.deep_view_levels());
+             depths.expression = depths.expression.max(self.deep_view_levels());
+diff --git a/crates/repark-python/src/written_alias.rs b/crates/repark-python/src/written_alias.rs
+new file mode 100644
+index 00000000..d526bad2
+--- /dev/null
++++ b/crates/repark-python/src/written_alias.rs
+@@ -0,0 +1,173 @@
++use std::hash::{Hash, Hasher};
++use std::ops::ControlFlow;
++use std::sync::Arc;
++
++use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
++use datafusion::common::{Result, internal_datafusion_err};
++use datafusion::logical_expr::simplify::{ExprSimplifyResult, SimplifyContext};
++use datafusion::logical_expr::{
++    ColumnarValue, Expr, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
++    Volatility,
++};
++use datafusion::prelude::SessionContext;
++use datafusion::sql::sqlparser::ast::{
++    Expr as SqlExpr, Query, SelectItem, SetExpr, Spanned, Statement, Visit, Visitor,
++};
++use datafusion::sql::sqlparser::dialect::SparkSqlDialect;
++use datafusion::sql::sqlparser::parser::Parser;
++use datafusion::sql::sqlparser::tokenizer::Location;
++use repark_core::frame_names::WRITTEN_ALIAS;
++
++#[derive(Debug)]
++struct WrittenAlias {
++    signature: Signature,
++}
++
++impl PartialEq for WrittenAlias {
++    fn eq(&self, _other: &Self) -> bool {
++        true
++    }
++}
++
++impl Eq for WrittenAlias {}
++
++impl Hash for WrittenAlias {
++    fn hash<H: Hasher>(&self, state: &mut H) {
++        WRITTEN_ALIAS.hash(state);
++    }
++}
++
++impl ScalarUDFImpl for WrittenAlias {
++    fn name(&self) -> &str {
++        WRITTEN_ALIAS
++    }
++
++    fn signature(&self) -> &Signature {
++        &self.signature
++    }
++
++    fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
++        arg_types
++            .first()
++            .cloned()
++            .ok_or_else(|| internal_datafusion_err!("written alias takes one argument"))
++    }
++
++    fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
++        let field = args
++            .arg_fields
++            .first()
++            .ok_or_else(|| internal_datafusion_err!("written alias takes one argument"))?;
++        Ok(Arc::new(Field::new(
++            WRITTEN_ALIAS,
++            field.data_type().clone(),
++            field.is_nullable(),
++        )))
++    }
++
++    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
++        args.args
++            .into_iter()
++            .next()
++            .ok_or_else(|| internal_datafusion_err!("written alias takes one argument"))
++    }
++
++    fn simplify(&self, mut args: Vec<Expr>, _info: &SimplifyContext) -> Result<ExprSimplifyResult> {
++        if args.len() == 1 {
++            return Ok(ExprSimplifyResult::Simplified(args.remove(0)));
++        }
++        Ok(ExprSimplifyResult::Original(args))
++    }
++}
++
++pub(crate) fn register(ctx: &SessionContext) {
++    if !ctx.state().scalar_functions().contains_key(WRITTEN_ALIAS) {
++        ctx.register_udf(ScalarUDF::new_from_impl(WrittenAlias {
++            signature: Signature::any(1, Volatility::Immutable),
++        }));
++    }
++}
++
++struct Collect {
++    spans: Vec<(Location, Location)>,
++}
++
++impl Visitor for Collect {
++    type Break = ();
++
++    fn pre_visit_query(&mut self, query: &Query) -> ControlFlow<Self::Break> {
++        collect_set(&query.body, &mut self.spans);
++        ControlFlow::Continue(())
++    }
++}
++
++fn collect_set(body: &SetExpr, spans: &mut Vec<(Location, Location)>) {
++    match body {
++        SetExpr::Select(select) => {
++            for item in &select.projection {
++                if let SelectItem::ExprWithAlias { expr, .. } = item
++                    && matches!(expr, SqlExpr::Identifier(_) | SqlExpr::CompoundIdentifier(_))
++                {
++                    let span = expr.span();
++                    spans.push((span.start, span.end));
++                }
++            }
++        }
++        SetExpr::SetOperation { left, right, .. } => {
++            collect_set(left, spans);
++            collect_set(right, spans);
++        }
++        _ => {}
++    }
++}
++
++fn byte_offset(sql: &str, at: Location) -> Option<usize> {
++    let line = usize::try_from(at.line).ok()?.checked_sub(1)?;
++    let column = usize::try_from(at.column).ok()?.checked_sub(1)?;
++    let mut start = 0;
++    for (index, text) in sql.split_inclusive('\n').enumerate() {
++        if index == line {
++            return text
++                .char_indices()
++                .map(|(offset, _)| start + offset)
++                .chain(std::iter::once(start + text.len()))
++                .nth(column);
++        }
++        start += text.len();
++    }
++    (line == sql.split_inclusive('\n').count() && column == 0).then_some(sql.len())
++}
++
++pub(crate) fn mark_written_aliases(sql: &str) -> Option<String> {
++    if !sql.to_ascii_lowercase().contains("as") {
++        return None;
++    }
++    let statements = Parser::parse_sql(&SparkSqlDialect {}, sql).ok()?;
++    let [statement] = statements.as_slice() else {
++        return None;
++    };
++    if !matches!(statement, Statement::Query(_)) {
++        return None;
++    }
++    let mut collect = Collect { spans: Vec::new() };
++    let _ = statement.visit(&mut collect);
++    let mut ranges = collect
++        .spans
++        .iter()
++        .map(|(start, end)| Some((byte_offset(sql, *start)?, byte_offset(sql, *end)?)))
++        .collect::<Option<Vec<_>>>()?;
++    if ranges.is_empty() {
++        return None;
++    }
++    ranges.sort_unstable();
++    ranges.dedup();
++    let mut out = sql.to_string();
++    for (start, end) in ranges.into_iter().rev() {
++        if start >= end || end > out.len() {
++            return None;
++        }
++        out.insert(end, ')');
++        out.insert_str(start, &format!("{WRITTEN_ALIAS}("));
++    }
++    Some(out)
++}
+diff --git a/crates/repark-spark/src/view_ddl/execute.rs b/crates/repark-spark/src/view_ddl/execute.rs
+index 7355fcba..9734b43c 100644
+--- a/crates/repark-spark/src/view_ddl/execute.rs
++++ b/crates/repark-spark/src/view_ddl/execute.rs
+@@ -13,7 +13,7 @@ use repark_common::{
+     names::{column_already_exists, folded_duplicate},
+     spark_error,
+ };
+-use repark_core::{CatalogRegistry, LocationPolicy, TempViewSession, frame_names};
++use repark_core::{CatalogRegistry, LocationPolicy, TempViewSession};
+ use repark_iceberg::view::{
+     ViewDefinition, ViewTarget, create_or_replace_view, drop_catalog_view, list_catalog_views,
+     split_view_properties, view_schema_for_output,
+@@ -153,9 +153,6 @@ pub(crate) async fn execute_create_temp_view(
+     refuse_recursive_temp_view(ctx, &view).await?;
+     let provider = Arc::clone(&view);
+     let frame = ctx.read_table(provider)?;
+-    let (state, plan) = frame.into_parts();
+-    let carried = frame_names::copy_attribute_ids(plan, &view.definition_plan)?;
+-    let frame = DataFrame::new(state, carried);
+     if crate::spark_door_case_insensitive(ctx.state().config().options()) {
+         let names = frame
+             .schema()
+diff --git a/python/repark/src/repark/spark/column_fields.py b/python/repark/src/repark/spark/column_fields.py
+index 32d215d2..54698309 100644
+--- a/python/repark/src/repark/spark/column_fields.py
++++ b/python/repark/src/repark/spark/column_fields.py
+@@ -864,6 +864,7 @@ def _bind_sort_key(frame: Any, item: Any) -> Any:
+     if isinstance(item, str):
+         return _resolve_sort_name(frame, item)
+     if isinstance(item, Column):
++        frame._refuse_unemitted_ids(item, door="sort")
+         rebound = _bind_stable_id_column(frame, item)
+         if rebound is not None and rebound is not item:
+             return rebound
+diff --git a/python/repark/src/repark/spark/dataframe/core.py b/python/repark/src/repark/spark/dataframe/core.py
+index 96a7bf0c..2c85e4c3 100644
+--- a/python/repark/src/repark/spark/dataframe/core.py
++++ b/python/repark/src/repark/spark/dataframe/core.py
+@@ -1156,7 +1156,7 @@ class DataFrame:
+                 local_sql = _rewrite_attr_tokens_local(join_sql, self)
+                 if "__REPARK_ATTR_" not in local_sql:
+                     return self._spawn_preserving_identity(self._plan().filter_sql(local_sql))
+-            predicate = self._refuse_unemitted_ids(condition)
++            predicate = self._refuse_unemitted_ids(condition, door="filter")
+             predicate = _column_fields._rebind_free_names(self, predicate, False)
+             return self._spawn_preserving_identity(self._plan().filter(predicate._inner))
+         if isinstance(condition, str):
+diff --git a/python/repark/src/repark/spark/dataframe/joins_columns.py b/python/repark/src/repark/spark/dataframe/joins_columns.py
+index e89886a2..77250758 100644
+--- a/python/repark/src/repark/spark/dataframe/joins_columns.py
++++ b/python/repark/src/repark/spark/dataframe/joins_columns.py
+@@ -132,6 +132,8 @@ class GroupedData:
+         from repark.spark.functions import PandasUDFColumn
+ 
+         self._dataframe._refuse_self_join_refs(self._agg_funnel_columns(exprs))
++        for written in self._agg_funnel_columns(exprs):
++            self._dataframe._refuse_unemitted_ids(written, door="aggregate")
+         if any(isinstance(expr, PandasUDFColumn) for expr in exprs):
+             return self._agg_via_pandas_udfs(exprs)
+ 
+diff --git a/python/repark/src/repark/spark/dataframe/unemitted_ids.py b/python/repark/src/repark/spark/dataframe/unemitted_ids.py
+index 813b1789..32e0916f 100644
+--- a/python/repark/src/repark/spark/dataframe/unemitted_ids.py
++++ b/python/repark/src/repark/spark/dataframe/unemitted_ids.py
+@@ -72,7 +72,60 @@ def _raise_unemitted_attr_tokens(frame: DataFrame, join_sql: str) -> None:
+         _raise_if_id_not_emitted(frame, match.group(1))
+ 
+ 
+-def _refuse_unemitted_ids(frame: DataFrame, column: Column) -> Column:
++_OPERATORS = {"project": "!Project", "filter": "!Filter", "sort": "!Sort", "aggregate": "!Aggregate"}
++
++
++def _refuse_absent_ids(frame: DataFrame, column: Column, door: str) -> None:
++    """Raise Spark's ``MISSING_ATTRIBUTES`` for a referenced attribute the door cannot reach."""
++    from repark.spark.dataframe.join_attr_tokens import (
++        _birth_frame_attr_names,
++        _token_leaf_display,
++    )
++
++    refs: list[tuple[str, str]] = []
++    if column._attr_id is not None:
++        birth_names = _birth_frame_attr_names(column._birth_frame)
++        shown = column._projection_name or column._spark_display or ""
++        refs.append((column._attr_id, birth_names.get(column._attr_id, shown)))
++    join_sql = column._join_sql_expr
++    if join_sql is not None and "__REPARK_ATTR_" in join_sql:
++        refs.extend(
++            (match.group(1), _token_leaf_display(match) or "")
++            for match in _ATTR_TOKEN_RE.finditer(join_sql)
++        )
++    if not refs:
++        return
++    held, _engines = _column_fields._stamped_ids_and_engines(frame)
++    plan = frame._plan()
++    for attr_id, name in refs:
++        if attr_id in held:
++            continue
++        where = _native.locate_attribute(plan, attr_id)
++        if where in ("output", "hidden"):
++            continue
++        if door in ("filter", "sort") and where != "absent":
++            continue
++        columns = list(frame.columns)
++        exact = bool(_native.session_case_sensitive(frame._session))
++        appear = [c for c in columns if (c == name if exact else c.casefold() == name.casefold())]
++        quoted = f'"{name}"'
++        available = ", ".join(f'"{c}"' for c in columns)
++        operator = _OPERATORS.get(door, "!Project")
++        if appear:
++            raise AnalysisException(
++                f"[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] "
++                f"Resolved attribute(s) {quoted} missing from {available} in operator "
++                f"{operator}. Attribute(s) with the same name appear in the operation: "
++                f"{quoted}. Please check if the right attribute(s) are used. SQLSTATE: XX000"
++            )
++        raise AnalysisException(
++            f"[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT] "
++            f"Resolved attribute(s) {quoted} missing from {available} in operator {operator}."
++            f"  SQLSTATE: XX000"
++        )
++
++
++def _refuse_unemitted_ids(frame: DataFrame, column: Column, door: str = "project") -> Column:
+     """Refuse a Column whose attribute was excluded by semi or anti join.
+ 
+     A right-side attribute excluded by semi or anti raises ``MISSING_ATTRIBUTES``
+@@ -82,6 +135,7 @@ def _refuse_unemitted_ids(frame: DataFrame, column: Column) -> Column:
+     join_sql = column._join_sql_expr
+     if join_sql is not None:
+         _raise_unemitted_attr_tokens(frame, join_sql)
++    _refuse_absent_ids(frame, column, door)
+     return column
+ 
+ 
