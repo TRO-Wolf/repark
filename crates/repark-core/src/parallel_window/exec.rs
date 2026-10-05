@@ -230,9 +230,24 @@ fn partition_index_stream(
     input: &Arc<dyn ExecutionPlan>,
     context: &Arc<TaskContext>,
 ) -> Result<SendableRecordBatchStream> {
+    let mut session_config = context.session_config().clone();
+    session_config
+        .options_mut()
+        .execution
+        .enable_file_stream_work_stealing = false;
+    let context = Arc::new(TaskContext::new(
+        context.task_id(),
+        context.session_id(),
+        session_config,
+        context.scalar_functions().clone(),
+        context.higher_order_functions().clone(),
+        context.aggregate_functions().clone(),
+        context.window_functions().clone(),
+        context.runtime_env(),
+    ));
     let tasks = (0..input.output_partitioning().partition_count())
         .map(|partition| {
-            let stream = input.execute(partition, Arc::clone(context))?;
+            let stream = input.execute(partition, Arc::clone(&context))?;
             Ok(SpawnedTask::spawn(stream.try_collect::<Vec<RecordBatch>>()))
         })
         .collect::<Result<Vec<_>>>()?;

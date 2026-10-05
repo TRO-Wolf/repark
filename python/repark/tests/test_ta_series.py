@@ -283,6 +283,73 @@ def test_bare_ta_current_row_order_reads_partitions_in_index_order(
         _assert_bit_equal(got, expected)
 
 
+def test_bare_ta_file_stream_stealing_reads_file_order(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """V950-1: case (c) over stealing-prone reads equals the file-order answer, 10 of 10."""
+    rng = np.random.default_rng(950)
+    directory = tmp_path / "steal"
+    directory.mkdir()
+    rid = 0
+    for part in range(8):
+        rows = int(rng.integers(200, 4_000))
+        ids = np.arange(rid, rid + rows)
+        rid += rows
+        pq.write_table(
+            pa.table({"rid": ids, "close": 100.0 + np.cumsum(rng.normal(size=rows))}),
+            directory / f"part-{part:02d}.parquet",
+        )
+    frame = spark.read.parquet(str(directory))
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
+        bare = frame.select("rid", ta.ema("close", timeperiod=9).alias("e"))
+    assert [notice.split(" because")[0] for notice in _series_warnings(record)] == [
+        "ta.* series computed over the frame's current row order"
+    ]
+    plan = _physical_plan_text(bare)
+    assert "ParallelWindowExec" in plan, plan
+    assert "CoalescePartitionsExec" not in plan, plan
+    assert "{8 groups:" in plan, plan
+    window = Window.orderBy("rid")
+    expected = _arrow(
+        frame.select("rid", ta.ema("close", timeperiod=9).over(window).alias("e")), "rid"
+    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        for _ in range(10):
+            got = bare.toArrow()
+            assert np.array_equal(np.asarray(got["rid"]), np.asarray(expected["rid"]))
+            _assert_bit_equal(got, expected)
+    big_rows = 1_200_000
+    big_path = tmp_path / "big.parquet"
+    pq.write_table(
+        pa.table(
+            {
+                "rid": np.arange(big_rows, dtype=np.int64),
+                "close": 4_000.0 + np.cumsum(rng.normal(scale=2.0, size=big_rows)),
+                "high": 4_000.0 + np.cumsum(rng.normal(scale=2.0, size=big_rows)),
+            }
+        ),
+        big_path,
+        row_group_size=100_000,
+    )
+    big = spark.read.parquet(str(big_path))
+    big_bare = big.select("rid", ta.ema("close", timeperiod=9).alias("e"))
+    big_plan = _physical_plan_text(big_bare)
+    assert "ParallelWindowExec" in big_plan, big_plan
+    groups = re.search(r"\{(\d+) groups?:", big_plan)
+    assert groups is not None and int(groups.group(1)) > 1, big_plan
+    big_expected = _arrow(
+        big.select("rid", ta.ema("close", timeperiod=9).over(window).alias("e")), "rid"
+    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        for _ in range(10):
+            big_got = big_bare.toArrow()
+            assert np.array_equal(np.asarray(big_got["rid"]), np.asarray(big_expected["rid"]))
+            _assert_bit_equal(big_got, big_expected)
+
+
 def _two_symbol_frame(spark: ReparkSession, tmp_path: Path) -> object:
     return _read(spark, tmp_path, _bars()).sort(TS)
 
