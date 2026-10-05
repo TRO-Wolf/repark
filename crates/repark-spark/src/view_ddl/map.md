@@ -136,6 +136,10 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   the write/aggregate strip doors never meet a keyed `TableScan`;
   `temp_view_scan` sees the registered frame through that pass-through
   projection for DESCRIBE comments and the recursive-view walk.
+  **ATTR-VIEW-SEMANTICS-1 item (a) (2026-10-05):** the carry is deleted, so the
+  registered frame is the born-clean scan and each read mints fresh ids through
+  the facade stamp, like Spark; `temp_view_scan` keeps its Projection arm and
+  matches the bare scan.
   See `task/roadmap/mid-term/attr-view-semantics-1-card-2026-10-04.md`.
 - `temp_view.rs` — **IPI-40 PR6** `ReplanningTempView`, the provider behind
   a SQL temp view (registered through `create_or_replace_temp_view_from`): it

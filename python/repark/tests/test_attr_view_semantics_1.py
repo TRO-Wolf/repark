@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from repark import ReparkSession
+from repark import ReparkSession, _native
 from repark.errors import AnalysisException
 
 
@@ -21,6 +21,11 @@ def _seeded(spark: ReparkSession) -> Any:
     frame.createOrReplaceTempView("tv")
     spark.sql("CREATE OR REPLACE TEMP VIEW sv AS SELECT * FROM tv")
     return frame
+
+
+def _classes(ids: list[str | None], base: set[str | None]) -> list[str]:
+    """Label each id ``new``, ``carried`` (it equals a source id), or ``missing``."""
+    return ["carried" if held in base else ("missing" if held is None else "new") for held in ids]
 
 
 def test_sql_view_write_parquet_answers(spark: ReparkSession, tmp_path: Path) -> None:
@@ -86,6 +91,88 @@ def test_sql_view_over_stamped_frame_describe_keeps_comments(spark: ReparkSessio
         ("data_type", "string"),
         ("comment", "string"),
     ]
+
+
+def test_sql_view_self_join_answers(spark: ReparkSession) -> None:
+    """Q02: joining two reads of a SQL temp view answers Spark's rows."""
+    _source = _seeded(spark)
+    left = spark.table("sv")
+    right = spark.table("sv")
+    joined = left.join(right, left["id"] == right["id"]).select(left["v"], right["v"])
+    assert sorted(tuple(row) for row in joined.collect()) == [(10, 10), (20, 20)]
+
+
+def test_sql_view_each_read_mints(spark: ReparkSession) -> None:
+    """Two reads of a SQL temp view mint pairwise-distinct ids, all fresh against ``tv``."""
+    source = _seeded(spark)
+    base = set(_native.attribute_ids(source._inner))
+    first = list(_native.attribute_ids(spark.table("sv")._inner))
+    second = list(_native.attribute_ids(spark.table("sv")._inner))
+    assert _classes(first, base) == ["new", "new"]
+    assert _classes(second, base) == ["new", "new"]
+    assert len(set(first + second)) == 4
+
+
+def test_dataframe_view_reads_carry(spark: ReparkSession) -> None:
+    """Two reads of a DataFrame view carry the registered frame's ids."""
+    source = _seeded(spark)
+    base = list(_native.attribute_ids(source._inner))
+    assert all(held is not None for held in base)
+    assert list(_native.attribute_ids(spark.table("tv")._inner)) == base
+    assert list(_native.attribute_ids(spark.table("tv")._inner)) == base
+
+
+_MINT_ROWS = ["M20", "M21", "M22", "M23", "M24", "M25", "M26", "M27", "M28"]
+
+
+@pytest.mark.parametrize("row", _MINT_ROWS)
+def test_sql_view_read_mints_row(spark: ReparkSession, row: str) -> None:
+    """M20-M28: every read of a SQL temp view mints the ids Spark calls new."""
+    source = _seeded(spark)
+    base = set(_native.attribute_ids(source._inner))
+    spark.sql("CREATE OR REPLACE TEMP VIEW sc (a, b) AS SELECT * FROM tv")
+    spark.sql("CREATE OR REPLACE TEMP VIEW sv1 AS SELECT v FROM tv")
+    spark.sql("CREATE OR REPLACE TEMP VIEW svv AS SELECT * FROM sv")
+    if row == "M20":
+        got = list(_native.attribute_ids(spark.table("sv")._inner))
+        assert _classes(got, base) == ["new", "new"]
+    elif row == "M21":
+        first = list(_native.attribute_ids(spark.table("sv")._inner))
+        second = list(_native.attribute_ids(spark.table("sv")._inner))
+        assert _classes(first, base) == ["new", "new"]
+        assert _classes(second, base) == ["new", "new"]
+        assert len(set(first + second)) == 4
+    elif row == "M22":
+        got = list(_native.attribute_ids(spark.sql("SELECT * FROM sv")._inner))
+        assert _classes(got, base) == ["new", "new"]
+    elif row == "M23":
+        frame = spark.table("sc")
+        assert frame.columns == ["a", "b"]
+        assert _classes(list(_native.attribute_ids(frame._inner)), base) == ["new", "new"]
+    elif row == "M24":
+        got = list(_native.attribute_ids(spark.table("sv1")._inner))
+        assert _classes(got, base) == ["new"]
+    elif row == "M25":
+        spark.sql("CREATE OR REPLACE TEMP VIEW sv AS SELECT * FROM tv")
+        got = list(_native.attribute_ids(spark.table("sv")._inner))
+        assert _classes(got, base) == ["new", "new"]
+    elif row == "M26":
+        over = list(_native.attribute_ids(spark.table("svv")._inner))
+        under = set(_native.attribute_ids(spark.table("sv")._inner))
+        assert _classes(over, base) == ["new", "new"]
+        assert not set(over) & under
+    elif row == "M27":
+        spark.sql("CREATE OR REPLACE TEMP VIEW sv AS SELECT * FROM tv")
+        first = list(_native.attribute_ids(spark.table("sv")._inner))
+        second = list(_native.attribute_ids(spark.table("sv")._inner))
+        assert _classes(first, base) == ["new", "new"]
+        assert _classes(second, base) == ["new", "new"]
+        assert len(set(first + second)) == 4
+    elif row == "M28":
+        got = list(_native.attribute_ids(spark.sql("SELECT * FROM svv")._inner))
+        under = set(_native.attribute_ids(spark.table("sv")._inner))
+        assert _classes(got, base) == ["new", "new"]
+        assert not set(got) & under
 
 
 def test_sql_view_over_stamped_frame_cycle_refused(spark: ReparkSession) -> None:

@@ -25,6 +25,18 @@ A free name over duplicate column names tightens too: `filter("v > 1")`, `select
 `F.col("v")` and `summary`/`describe` over a frame with two `v` columns now raise
 `AMBIGUOUS_REFERENCE`, as Spark does, instead of answering one side's rows.
 
+## Each read of a SQL temp view mints fresh attribute ids, like Spark
+
+```python
+left = spark.table("sv"); right = spark.table("sv")
+left.join(right, left["id"] == right["id"]).select(left["v"], right["v"])
+```
+
+with `sv` created by `CREATE TEMP VIEW sv AS SELECT * FROM tv` now answers
+`[(10, 10), (20, 20)]`, as Spark 4.1.2 does, where the stack refused
+`_LEGACY_ERROR_TEMP_1182`. A DataFrame view (`createOrReplaceTempView`) keeps
+carrying the registered frame's ids on every read, as Spark does.
+
 ## The fix in user code
 
 Alias the frames and reference the alias, as Spark's own message suggests:

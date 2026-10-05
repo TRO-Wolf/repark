@@ -51,7 +51,7 @@ impl repark_core::TempViewSession for StubViews {
 }
 
 #[tokio::test]
-async fn sql_temp_view_over_a_stamped_frame_registers_a_clean_scan_with_carried_ids() {
+async fn sql_temp_view_over_a_stamped_frame_registers_a_clean_scan_with_fresh_ids() {
     let warehouse = TempDir::new().expect("temp warehouse");
     let (ctx, catalogs) = setup(&warehouse).await;
     let source = ctx
@@ -88,9 +88,10 @@ async fn sql_temp_view_over_a_stamped_frame_registers_a_clean_scan_with_carried_
     assert_eq!(registered.len(), 1);
     assert_eq!(registered[0].0, "sv");
     let frame = registered[0].1.clone();
-    assert_eq!(
-        repark_core::frame_names::attribute_ids(frame.schema()),
-        wanted
+    assert!(
+        repark_core::frame_names::attribute_ids(frame.schema())
+            .iter()
+            .all(Option::is_none)
     );
     let mut scans = Vec::new();
     frame

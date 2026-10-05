@@ -33,8 +33,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `temp_view_attr_ids.rs` — **ATTR-VIEW-SEMANTICS-1 item (d) (2026-10-05):**
   the producer pin over a stub `TempViewSession`: a SQL temp view over a
   stamped `tv` registers a frame whose scan and provider schemas carry no
-  attribute ids while the frame schema carries `tv`'s ids, and the registered
-  plan strips and collects its row.
+  attribute ids, and the registered plan strips and collects its row.
+  **Item (a) (2026-10-05):** the frame schema joins the clean set (no carried
+  ids, distinct from `tv`'s), since each read mints fresh ids through the
+  facade stamp, like Spark.
   See `task/roadmap/mid-term/attr-view-semantics-1-card-2026-10-04.md`.
 - `temp_view_errors.rs` — **IPI-40 PR6b3b (2026-09-24):** end-to-end pins over a
   ctx-backed `TempViewSession` (`CtxTempViews`) for every `view_ddl/temp_view.rs` refusal with

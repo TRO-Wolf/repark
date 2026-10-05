@@ -9482,4 +9482,8 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   while `a` keeps its old rows; both go red when the arm reverts to a bare
   TableScan. `createOrReplaceTempView` takes no comment, so the DESCRIBE pin
   spells the comments as SQL aliases.
+  Item (a) (2026-10-05): the Q02 self-join over two `sv` reads answers
+  `[(10, 10), (20, 20)]`; two `sv` reads mint pairwise-distinct ids fresh
+  against `tv` while two `tv` reads carry the source ids; the M20-M28 mint rows
+  pin Spark's new-id answer per read shape.
   See `task/roadmap/mid-term/attr-view-semantics-1-card-2026-10-04.md`.
