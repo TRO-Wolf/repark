@@ -19,6 +19,11 @@ distributed session must carry (`../map.md`). Three tests were already red on `o
 and `session_spill_dir_has_no_shuffle_files_after_complete_and_after_cancel` (Ballista cannot
 encode the `range()` table's `LazyMemTableExec`), and
 `date_and_timestamp_predicates_measure_the_pushdown_surface`.
+Verifier V-1 (2026-10-04): every `ReparkSessionProvider::from_session` / `from_context` call
+now unwraps the provider's `Result`, and `codec.rs` carries
+`provider_refuses_a_session_with_single_partition_parallelism_on`: a default session is refused
+through both doors with the builder fix in the message; a `false` session and a plain
+`SessionContext::new()` are accepted. pins: ta-series-s2b/C-014
 
 - `local_executor.rs` — three pins against `LocalDataFusionExecutor`:
   `range(1000)` sum equals the direct DataFusion collect (C-001);

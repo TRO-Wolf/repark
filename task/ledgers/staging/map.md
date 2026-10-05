@@ -11,8 +11,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   multi-series inputs (C-007); owner shape identical to base through the facade (C-008); a
   single-node opt-out that distributed sessions set (C-010); goldens and kernel race (C-011);
   bare −106 ms, explicit −122 ms, partitioned unchanged (C-012); EXPLAIN and plan-count pins
-  (C-013). `risk_tier: standard`. Branch `perf/ta-series-s2b-parallel-window`.
-  pins: ta-series-s2b/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
+  (C-013); the distributed provider refuses a session with the flag on (C-014, verifier V-1).
+  `risk_tier: standard`. Branch `perf/ta-series-s2b-parallel-window`.
+  pins: ta-series-s2b/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
 - [text-write-timestamp-zone-1-ledger.md](text-write-timestamp-zone-1-ledger.md) —
   **WO TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29), in flight:** CSV and JSON
   writes format LTZ in the session zone under Spark's default `timestampFormat`,

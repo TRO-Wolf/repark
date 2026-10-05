@@ -196,7 +196,7 @@ async fn cluster_answer(
     session: &ReparkSession,
     plan: Arc<dyn ExecutionPlan>,
 ) -> (Vec<RecordBatch>, HashMap<String, usize>, JobStatus) {
-    let provider = ReparkSessionProvider::from_session(session);
+    let provider = ReparkSessionProvider::from_session(session).expect("ReparkSessionProvider");
     let cluster = match ReparkClusterExecutor::new(EXECUTOR_COUNT, bind_address(), provider).await {
         Ok(cluster) => cluster,
         Err(error) => panic!("ReparkClusterExecutor::new: {error}"),

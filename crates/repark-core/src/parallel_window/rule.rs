@@ -9,7 +9,7 @@ use datafusion::physical_plan::windows::WindowAggExec;
 use datafusion::physical_plan::{ExecutionPlan, ExecutionPlanProperties};
 
 use super::exec::ParallelWindowExec;
-use super::parallel_single_partition_enabled;
+use super::{PARALLEL_WINDOW_RULE, parallel_single_partition_enabled};
 
 #[derive(Debug, Default)]
 pub struct ParallelWindowRule;
@@ -38,7 +38,7 @@ impl PhysicalOptimizerRule for ParallelWindowRule {
     }
 
     fn name(&self) -> &'static str {
-        "parallel_window"
+        PARALLEL_WINDOW_RULE
     }
 
     fn schema_check(&self) -> bool {

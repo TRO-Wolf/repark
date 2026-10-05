@@ -847,7 +847,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `WindowAggExec` with at least two argument groups; and the `repark.parallel` carrier the rule
   reads. `lib.rs` declares the module; `session.rs` gains
   `ReparkSessionBuilder::parallel_single_partition(bool)` (on by default) and attaches the carrier
-  beside the write-concurrency knob. Distributed sessions must build with it off. See
+  beside the write-concurrency knob. Distributed sessions must build with it off; `lib.rs`
+  re-exports `parallel_single_partition_active`, which `ReparkSessionProvider` uses to refuse a
+  session that did not (verifier V-1). See
   [parallel_window/map.md](parallel_window/map.md).
 - `orc_schema.rs` — **IO-ORC-1 (2026-09-16):** the ORC schema half beside the scan:
   footer-attribute mapping (LONG→`timestamp_ntz`, instant→UTC-stamped `timestamp`,

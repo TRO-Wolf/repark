@@ -25,6 +25,10 @@ provider's cloned state would not be enough. The flag defaults to on; it has no 
   `repark.ansi` and `repark.overwrite`: `SET` refuses, `entries()` is empty so it never lists).
   `with_parallel_single_partition` attaches it at session build (`None` → on);
   `parallel_single_partition_enabled` reads it from `ConfigOptions` (absent → on).
+  `parallel_single_partition_active(&SessionState)` (re-exported from the crate root) is true
+  when the state carries the `parallel_window` rule (`PARALLEL_WINDOW_RULE`, also the rule's
+  `name()`) and the carrier reads on; `repark-distributed`'s provider refuses such a session
+  (verifier V-1). pins: ta-series-s2b/C-014
 - `rule.rs` — `ParallelWindowRule` (`parallel_window`), a `PhysicalOptimizerRule` appended after
   DataFusion's list, so distribution and ordering are already enforced and the swap changes no
   requirement. It fires on a `WindowAggExec` when the flag is on, **every** expression has an

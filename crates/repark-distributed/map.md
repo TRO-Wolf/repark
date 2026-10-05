@@ -12,7 +12,15 @@ feature — the Ballista-backed cluster executor. Ballista Milestone 1; the grou
 session is a `ReparkSession`, so it carries every physical rule the core session installs.
 `ParallelWindowExec` has no codec arm, so any `ReparkSession` that feeds `ReparkSessionProvider`
 or a cluster plan **must** be built with `ReparkSessionBuilder::parallel_single_partition(false)`;
-every session the crate's tests build does. The rule and its flag:
+every session the crate's tests build does. **Enforced, not by convention (verifier V-1 on #940,
+2026-10-04):** `ReparkSessionProvider::from_session` and `from_context` return `Result` and refuse
+a session whose state carries the `parallel_window` physical rule with the `repark.parallel`
+carrier reading on (`repark_core::parallel_single_partition_active`); the error names the builder
+call that fixes it. Both doors read the carrier, because `from_session` goes through
+`from_context` and the carrier lives on the context's own `SessionState`. A plain
+`SessionContext::new()` carries no such rule and is accepted. It refuses rather than forcing the
+flag off in the cloned state, because the plans a cluster runs are built on the original
+context. pins: ta-series-s2b/C-014 The rule and its flag:
 [../repark-core/src/parallel_window/map.md](../repark-core/src/parallel_window/map.md).
 
 ## Design notes (card BALLISTA-M1-A, D-1 and D-2)

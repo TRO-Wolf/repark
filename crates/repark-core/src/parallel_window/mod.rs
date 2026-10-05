@@ -2,6 +2,7 @@ use std::any::Any;
 
 use datafusion::common::config::{ConfigEntry, ConfigExtension, ConfigOptions, ExtensionOptions};
 use datafusion::error::{DataFusionError, Result};
+use datafusion::execution::SessionState;
 use datafusion::prelude::SessionConfig;
 
 mod exec;
@@ -69,4 +70,15 @@ pub fn parallel_single_partition_enabled(options: &ConfigOptions) -> bool {
         .extensions
         .get::<ParallelSinglePartitionConfig>()
         .is_none_or(|config| config.enabled)
+}
+
+pub(crate) const PARALLEL_WINDOW_RULE: &str = "parallel_window";
+
+#[must_use]
+pub fn parallel_single_partition_active(state: &SessionState) -> bool {
+    state
+        .physical_optimizers()
+        .iter()
+        .any(|rule| rule.name() == PARALLEL_WINDOW_RULE)
+        && parallel_single_partition_enabled(state.config_options())
 }

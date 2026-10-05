@@ -205,7 +205,7 @@ async fn local_answer(context: &SessionContext, plan: Arc<dyn ExecutionPlan>) ->
 }
 
 async fn cluster_answer(session: &ReparkSession, plan: Arc<dyn ExecutionPlan>) -> Vec<RecordBatch> {
-    let provider = ReparkSessionProvider::from_session(session);
+    let provider = ReparkSessionProvider::from_session(session).expect("ReparkSessionProvider");
     let cluster = match ReparkClusterExecutor::new(2, bind_address(), provider).await {
         Ok(cluster) => cluster,
         Err(error) => panic!("ReparkClusterExecutor::new: {error}"),
@@ -407,7 +407,7 @@ async fn completed_two_stage_hash_aggregate_reports_shuffle_bytes() {
     );
 
     let expected = local_answer(&context, Arc::clone(&plan)).await;
-    let provider = ReparkSessionProvider::from_session(&session);
+    let provider = ReparkSessionProvider::from_session(&session).expect("ReparkSessionProvider");
     let cluster = match ReparkClusterExecutor::new(2, bind_address(), provider).await {
         Ok(cluster) => cluster,
         Err(error) => panic!("ReparkClusterExecutor::new: {error}"),
@@ -481,7 +481,7 @@ async fn session_spill_dir_has_no_shuffle_files_after_complete_and_after_cancel(
 
     let long_sql = "SELECT id FROM range(100000000)";
     let long_plan = physical_plan(&context, long_sql).await;
-    let provider = ReparkSessionProvider::from_session(&session);
+    let provider = ReparkSessionProvider::from_session(&session).expect("ReparkSessionProvider");
     let cluster = match ReparkClusterExecutor::new(2, bind_address(), provider).await {
         Ok(cluster) => cluster,
         Err(error) => panic!("ReparkClusterExecutor::new: {error}"),

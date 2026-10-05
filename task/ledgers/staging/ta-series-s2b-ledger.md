@@ -33,6 +33,7 @@ input (S2a); the parallel projection (S3); fusion (S5); the ANSI guard (S0); the
 | C-010 | P-S2b-10: with `parallel_single_partition(false)` (or the carrier's `enabled = false`), a qualifying plan stays a `WindowAggExec`. Every `ReparkSession` the `repark-distributed` tests build sets it. | `parallel_window_flag_off_keeps_window_agg_exec`, `parallel_window_flag_off_session_keeps_window_agg_exec`; mutation: ignore the flag. | PROVEN | Green. Red under the mutation: both tests fail (`tests.rs:432`, `:601`). Ten distributed construction sites pass `false`; `repark-distributed --features cluster` matches base test for test (three tests red on both, §4). §2. |
 | C-011 | The kernel layer is untouched: the 158 kernel and 13 prefix goldens hash to the sketch's value, and `bench_kernel_race.py --quick` stays within 1.02× of the previous lane's medians. | `sha256sum crates/repark-ta/tests/goldens/*.bin crates/repark-ta/tests/goldens/prefix/* \| sha256sum`; `cargo test -p repark-ta` and `--features datafusion --test prefix_goldens`; three interleaved race runs per side. | PROVEN | Hash `af74ab17a59b0452a92b03e085bb6e0106f8ae74bbd0ec9a32db01239f5e87a8`; 159 + 26 tests green. Race, head median of 3: sma 0.008279 (0.950×), ema 0.008386 (0.906×), rsi 0.008696 (0.997×), bbands 0.010447 (1.006×). §4. |
 | C-012 | Speed: on release wheels built with the same command, head is faster than base on both owner spellings, and the partitioned shape is not slower than base and stays ≤ 0.18 s. | Five interleaved rounds per side (`round.py`), plus a nine-sample re-measure of the partitioned shape (`part.py`). | PROVEN | Bare 0.4501 → 0.3442 s (−106 ms); explicit 0.5720 → 0.4499 s (−122 ms). Partitioned: one sample per round gave 0.1335 → 0.1436 s; nine samples per round gave 0.1346 → 0.1322 s (pooled 45 samples: 0.1320 → 0.1321). §4. |
+| C-014 | P-S2b-11 (verifier V-1 on #940): R-S2b-6 is enforced, not conventional. `ReparkSessionProvider::from_session` and `from_context` refuse a session whose state carries the `parallel_window` rule with the `repark.parallel` carrier on, and the error names `ReparkSessionBuilder::parallel_single_partition(false)`; a `false` session and a plain `SessionContext::new()` are accepted. | `crates/repark-distributed/tests/codec.rs::provider_refuses_a_session_with_single_partition_parallelism_on`; mutation: drop the check. | PROVEN | Green, through both doors (the carrier is readable from the context's own `SessionState`, so `from_context` refuses too). Red under the mutation: `codec.rs:308` (`a parallel session is refused`). `--features cluster` keeps the same three base failures and nothing new. §5. |
 | C-013 | EXPLAIN prints `ParallelWindowExec: wdw=[…]` with the expression list `WindowAggExec` prints; the plan-shape facade pins that count window operators count both names, and nothing else in the facade or parity suites changes. | `parallel_window_flag_off_session_keeps_window_agg_exec` (the EXPLAIN line); facade files naming `ta`/`Window`/`over(`/`window`, `-n 8`; `python/repark-parity` `-k "ta or window"`. | PROVEN | 2,068 facade tests: 8 plan-count assertions failed before the update and pass after (`test_n2_plan_collapse.py` × 6, `test_ta.py` × 2); parity 276 passed. §4. |
 
 ## 1. R-S2b-6 record (2026-10-04)
@@ -112,6 +113,18 @@ stands.
   `check_lib_py.py`, `check_crate_dag.sh`, `git diff --exit-code origin/main -- Cargo.lock
   '**/Cargo.toml'`, the comment-ban scan and the map check, all clean.
 
+## 5. Verifier fold V-1 (2026-10-04)
+
+The #940 verifier passed the PR and filed V-1 (S2): the single-node rule was held only by
+convention. Ruling: the provider refuses. `from_session` and `from_context` now return `Result`;
+both read the carrier from the context's `SessionState`, so no door is left unchecked. The check
+is `repark_core::parallel_single_partition_active`: the state's physical optimizer list contains
+`parallel_window` and the carrier reads on. A vanilla context (no rule) is accepted, which the
+cluster tests that build from `SessionContext::new()` rely on. All 21 existing test call sites unwrap
+the `Result`. P-S2b-11 is green and red under "drop the check". V-2 (a `repark-python --lib`
+deep-argument test through `build_shared_runtime`) was not taken: it needs a window plan with a
+deep argument built inside `repark-python`, which does not fit in 30 lines.
+
 ```yaml
 COVERAGE_ATTESTATION:
   pr_unit: ta-series-s2b
@@ -145,7 +158,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark-parity/bench/ta/bench_kernel_race.py]
     - id: AT-8
       status: ATTACKED
-      evidence: No dependency or Cargo.lock change; SpawnedTask and tokio Semaphore come from existing direct dependencies; distributed sessions build with the flag off because the codec has no arm for the new node.
+      evidence: No dependency or Cargo.lock change; SpawnedTask and tokio Semaphore come from existing direct dependencies; distributed sessions build with the flag off because the codec has no arm for the new node, and the provider refuses one that does not (C-014).
       artifacts: [crates/repark-distributed/map.md, crates/repark-core/src/session.rs]
     - id: AT-9
       status: ATTACKED
@@ -153,7 +166,7 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-core/src/parallel_window/exec.rs]
     - id: AT-10
       status: ATTACKED
-      evidence: Ten pins, each red under its own mutation (twelve mutations in all, recorded in section 2 and the clause rows), the tree restored and the full suites green afterwards.
+      evidence: Eleven pins, each red under its own mutation (thirteen mutations in all, recorded in section 2 and the clause rows), the tree restored and the full suites green afterwards.
       artifacts: [crates/repark-core/src/parallel_window/tests.rs, crates/repark-ta/src/udf/glue.rs]
   complete: true
 ```
