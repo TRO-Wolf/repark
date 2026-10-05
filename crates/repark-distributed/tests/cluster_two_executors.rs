@@ -134,7 +134,10 @@ async fn wait_until_running(
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn two_executors_sum_matches_local_and_status_walks_queued_running_completed() {
-    let session = match ReparkSession::new() {
+    let session = match ReparkSession::builder()
+        .parallel_single_partition(false)
+        .build()
+    {
         Ok(session) => session,
         Err(error) => panic!("ReparkSession::new: {error}"),
     };
@@ -150,7 +153,7 @@ async fn two_executors_sum_matches_local_and_status_walks_queued_running_complet
     };
     let expected = drain_stream(local_handle.stream()).await;
 
-    let provider = ReparkSessionProvider::from_session(&session);
+    let provider = ReparkSessionProvider::from_session(&session).expect("ReparkSessionProvider");
     let cluster = match ReparkClusterExecutor::new(2, bind_address(), provider).await {
         Ok(cluster) => cluster,
         Err(error) => panic!("ReparkClusterExecutor::new: {error}"),
@@ -229,7 +232,10 @@ async fn two_executors_sum_matches_local_and_status_walks_queued_running_complet
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn repark_udf_registered_through_session_provider_resolves_on_two_executors() {
-    let session = match ReparkSession::new() {
+    let session = match ReparkSession::builder()
+        .parallel_single_partition(false)
+        .build()
+    {
         Ok(session) => session,
         Err(error) => panic!("ReparkSession::new: {error}"),
     };
@@ -246,7 +252,7 @@ async fn repark_udf_registered_through_session_provider_resolves_on_two_executor
     };
     let expected = drain_stream(local_handle.stream()).await;
 
-    let provider = ReparkSessionProvider::from_context(&context);
+    let provider = ReparkSessionProvider::from_context(&context).expect("ReparkSessionProvider");
     let has_udf = provider
         .function_registry()
         .scalar_functions
@@ -256,7 +262,8 @@ async fn repark_udf_registered_through_session_provider_resolves_on_two_executor
         "ReparkSessionProvider registry missing repark_times_ten"
     );
 
-    let vanilla_provider = ReparkSessionProvider::from_context(&SessionContext::new());
+    let vanilla_provider =
+        ReparkSessionProvider::from_context(&SessionContext::new()).expect("ReparkSessionProvider");
     let vanilla_has_udf = vanilla_provider
         .function_registry()
         .scalar_functions
@@ -327,14 +334,17 @@ async fn repark_udf_registered_through_session_provider_resolves_on_two_executor
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn cancel_mid_flight_sets_cancelled_and_no_running_tasks_within_five_seconds() {
-    let session = match ReparkSession::new() {
+    let session = match ReparkSession::builder()
+        .parallel_single_partition(false)
+        .build()
+    {
         Ok(session) => session,
         Err(error) => panic!("ReparkSession::new: {error}"),
     };
     let context = session.context().clone();
     let sql = "SELECT id FROM range(100000000)";
     let plan = physical_plan(&context, sql).await;
-    let provider = ReparkSessionProvider::from_context(&context);
+    let provider = ReparkSessionProvider::from_context(&context).expect("ReparkSessionProvider");
     let cluster = match ReparkClusterExecutor::new(2, bind_address(), provider).await {
         Ok(cluster) => cluster,
         Err(error) => panic!("ReparkClusterExecutor::new: {error}"),
@@ -385,7 +395,8 @@ async fn cancel_mid_flight_sets_cancelled_and_no_running_tasks_within_five_secon
 
 #[test]
 fn repark_ballista_codec_installs_the_physical_wrapper_and_the_ballista_logical_codec() {
-    let provider = ReparkSessionProvider::from_context(&SessionContext::new());
+    let provider =
+        ReparkSessionProvider::from_context(&SessionContext::new()).expect("ReparkSessionProvider");
     let installed = repark_ballista_codec(&provider);
     let physical = format!("{:?}", installed.physical_extension_codec());
     assert!(
