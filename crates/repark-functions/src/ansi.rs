@@ -241,14 +241,14 @@ fn refuse_if_array_has_numeric_zero(array: &ArrayRef) -> Result<()> {
             primitive_has_zero(array.as_primitive::<UInt64Type>(), |value| value == 0)
         }
         DataType::Float16 => primitive_has_zero(array.as_primitive::<Float16Type>(), |value| {
-            value.to_bits() == 0
+            value.to_f32() == 0.0
         }),
-        DataType::Float32 => primitive_has_zero(array.as_primitive::<Float32Type>(), |value| {
-            value.to_bits() == 0
-        }),
-        DataType::Float64 => primitive_has_zero(array.as_primitive::<Float64Type>(), |value| {
-            value.to_bits() == 0
-        }),
+        DataType::Float32 => {
+            primitive_has_zero(array.as_primitive::<Float32Type>(), |value| value == 0.0)
+        }
+        DataType::Float64 => {
+            primitive_has_zero(array.as_primitive::<Float64Type>(), |value| value == 0.0)
+        }
         DataType::Decimal32(_, _) => {
             primitive_has_zero(array.as_primitive::<Decimal32Type>(), |value| value == 0)
         }
@@ -311,9 +311,14 @@ fn is_numeric_zero(value: &ScalarValue) -> bool {
     if value.is_null() {
         return false;
     }
-    match ScalarValue::new_zero(&value.data_type()) {
-        Ok(zero) => *value == zero,
-        Err(_) => false,
+    match value {
+        ScalarValue::Float16(Some(v)) => v.to_f32() == 0.0,
+        ScalarValue::Float32(Some(v)) => *v == 0.0,
+        ScalarValue::Float64(Some(v)) => *v == 0.0,
+        _ => match ScalarValue::new_zero(&value.data_type()) {
+            Ok(zero) => *value == zero,
+            Err(_) => false,
+        },
     }
 }
 
@@ -555,7 +560,7 @@ mod tests {
             float16_array(vec![Some(-0.0f32)]),
         ];
         for array in &negative_zero {
-            refuse_if_array_has_numeric_zero(array).expect("negative zero passes, as today");
+            assert_refuses_with_divide_by_zero(array);
             assert_matches_scalar_path(array);
         }
     }
@@ -611,6 +616,37 @@ mod tests {
         let middle = floats.slice(1, 1);
         assert_refuses_with_divide_by_zero(&middle);
         assert_matches_scalar_path(&middle);
+    }
+
+    #[test]
+    fn ansi_guard_scalar_negative_zero_refuses() {
+        let f16_neg_zero = float16_array(vec![Some(-0.0f32)]);
+        let f16_scalar =
+            ScalarValue::try_from_array(f16_neg_zero.as_ref(), 0).expect("f16 extracts");
+        for scalar in [
+            ScalarValue::Float32(Some(-0.0)),
+            ScalarValue::Float64(Some(-0.0)),
+            ScalarValue::Float32(Some(0.0)),
+            ScalarValue::Float64(Some(0.0)),
+            f16_scalar,
+        ] {
+            let error = refuse_if_numeric_zero(&scalar).expect_err("zero scalar must refuse");
+            assert!(
+                error.to_string().contains("DIVIDE_BY_ZERO"),
+                "refusal must carry the Spark class: {error}"
+            );
+        }
+        let f16_nan = float16_array(vec![Some(f32::NAN)]);
+        let f16_nan_scalar =
+            ScalarValue::try_from_array(f16_nan.as_ref(), 0).expect("f16 extracts");
+        for scalar in [
+            ScalarValue::Float32(Some(f32::NAN)),
+            ScalarValue::Float64(Some(f64::NAN)),
+            f16_nan_scalar,
+            ScalarValue::Float64(None),
+        ] {
+            refuse_if_numeric_zero(&scalar).expect("nan and null scalars must pass");
+        }
     }
 
     #[test]

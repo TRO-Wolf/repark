@@ -5,7 +5,7 @@ use pyo3::types::PyDict;
 use pyo3::wrap_pyfunction;
 
 use crate::dataframe::PyDataFrame;
-use crate::deep_stack::block_on;
+use crate::deep_stack::{block_on_grown_sized, frame_drive_segment_cached};
 use crate::exceptions::AnalysisException;
 use crate::fence::fenced;
 use crate::to_py_err;
@@ -46,12 +46,14 @@ fn transpose(
     max_values: usize,
 ) -> PyResult<(PyDataFrame, Vec<String>)> {
     fenced!("transpose", {
+        let segment = frame_drive_segment_cached(&frame.depths())?;
         let source = crate::deep_stack::grown_clone_frame(&frame.df, &frame.depths());
         let outcome = py
             .detach(|| {
-                block_on(
+                block_on_grown_sized(
                     &frame.runtime,
                     repark_core::transpose_frame(source, index_column, key_names, max_values),
+                    segment,
                 )
             })
             .map_err(|error| match error {
