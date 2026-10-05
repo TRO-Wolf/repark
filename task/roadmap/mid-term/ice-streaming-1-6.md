@@ -1,4 +1,10 @@
-# ICE-STREAMING — structured streaming over Iceberg tables, a v1.6.0 card
+# ICE-STREAMING — structured streaming over Iceberg tables (filed as a v1.6.0 card; re-pointed to 1.7 on 2026-10-04)
+
+> **Re-pointed 2026-10-04 (owner).** The slot is **1.7**, not v1.6.0, and the design is ruled in
+> [../epic-term/microbatch-cdc-sink-plan-2026-10-04.md](../epic-term/microbatch-cdc-sink-plan-2026-10-04.md)
+> (D-1…D-8, O-1…O-10): micro-batch only; `availableNow` and processing-time; offsets in the sink's snapshot
+> summary with no checkpoint directory for an Iceberg sink; the epoch check before commit; Iceberg source and
+> sink only; Rust first. Step 0 below stands as slice MB-0. The filename keeps its links.
 
 **Filed:** 2026-09-19 by the orchestrating session on the owner's ruling C-1
 ([ice-parity-inventory-2026-09-19.md §0](ice-parity-inventory-2026-09-19.md#0-owner-ruling-2026-09-19--this-slate-gates-v150)):
