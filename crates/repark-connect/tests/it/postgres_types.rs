@@ -119,6 +119,14 @@ fn float4_round_trips() {
     let actual: Vec<Option<u32>> = decoded.iter().map(bits).collect();
     let expected: Vec<Option<u32>> = values.into_iter().map(bits).collect();
     assert_eq!(actual, expected);
+    let wire = row("float4")
+        .encode(&Float32Array::from(vec![1.5_f32]))
+        .expect("encode");
+    assert_eq!(wire, vec![Some(vec![0x3f, 0xc0, 0x00, 0x00])]);
+    let decoded = row("float4")
+        .decode(&[Some(&[0x3f, 0xc0, 0x00, 0x00][..])])
+        .expect("decode");
+    assert_eq!(decoded.as_primitive::<Float32Type>().value(0), 1.5_f32);
 }
 
 #[test]
@@ -139,6 +147,17 @@ fn float8_round_trips() {
     let actual: Vec<Option<u64>> = decoded.iter().map(bits).collect();
     let expected: Vec<Option<u64>> = values.into_iter().map(bits).collect();
     assert_eq!(actual, expected);
+    let wire = row("float8")
+        .encode(&Float64Array::from(vec![1.5_f64]))
+        .expect("encode");
+    assert_eq!(
+        wire,
+        vec![Some(vec![0x3f, 0xf8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])]
+    );
+    let decoded = row("float8")
+        .decode(&[Some(&[0x3f, 0xf8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00][..])])
+        .expect("decode");
+    assert_eq!(decoded.as_primitive::<Float64Type>().value(0), 1.5_f64);
 }
 
 fn text_values() -> StringArray {
