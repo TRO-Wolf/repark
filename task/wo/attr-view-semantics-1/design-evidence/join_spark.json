@@ -1,0 +1,251 @@
+{
+ "engine": "spark",
+ "rows": [
+  {
+   "id": "J1 join(df2,'id',inner).select(df1.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ]
+   ],
+   "columns": [
+    "id"
+   ]
+  },
+  {
+   "id": "J2 join(df2,'id',inner).select(df2.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ]
+   ],
+   "columns": [
+    "id"
+   ]
+  },
+  {
+   "id": "J1 join(df2,'id',left).select(df1.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ]
+   ],
+   "columns": [
+    "id"
+   ]
+  },
+  {
+   "id": "J2 join(df2,'id',left).select(df2.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     null
+    ]
+   ],
+   "columns": [
+    "id"
+   ]
+  },
+  {
+   "id": "J1 join(df2,'id',right).select(df1.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     null
+    ]
+   ],
+   "columns": [
+    "id"
+   ]
+  },
+  {
+   "id": "J2 join(df2,'id',right).select(df2.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ]
+   ],
+   "columns": [
+    "id"
+   ]
+  },
+  {
+   "id": "J1 join(df2,'id',full).select(df1.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     null
+    ]
+   ],
+   "columns": [
+    "id"
+   ]
+  },
+  {
+   "id": "J2 join(df2,'id',full).select(df2.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     null
+    ]
+   ],
+   "columns": [
+    "id"
+   ]
+  },
+  {
+   "id": "J3 join(df2,'id').filter(df2.id > 2)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     3,
+     1,
+     2
+    ]
+   ],
+   "columns": [
+    "id",
+    "v1",
+    "v2"
+   ]
+  },
+  {
+   "id": "J4 join(df2,'id').orderBy(df2.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     2,
+     1,
+     2
+    ],
+    [
+     3,
+     1,
+     2
+    ]
+   ],
+   "columns": [
+    "id",
+    "v1",
+    "v2"
+   ]
+  },
+  {
+   "id": "J5 join(df2, df1.id==df2.id).select(df1.v1).select(df2.id)",
+   "kind": "run",
+   "outcome": "ERR",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT] Resolved attribute(s) \"id\" missing from \"v1\" in operator !Project [id#2L].  SQLSTATE: XX000;\n!Project [id#2L]\n+- Project [v1#1L]\n   +- Join Inner, (id#0L = id#2L)\n      :- LogicalRDD [id#0L, v1#1L], false\n      +- LogicalRDD [id#2L, v2#3L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT"
+  },
+  {
+   "id": "J6 join(df2, df1.id==df2.id).select(df1.v1).filter(df2.id > 2)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     1
+    ]
+   ],
+   "columns": [
+    "v1"
+   ]
+  },
+  {
+   "id": "J7 join(df2,'id').select(df2.v2)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     2
+    ],
+    [
+     2
+    ]
+   ],
+   "columns": [
+    "v2"
+   ]
+  },
+  {
+   "id": "J8 join(df2,'id').groupBy(df2.id).count()",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     2,
+     1
+    ],
+    [
+     3,
+     1
+    ]
+   ],
+   "columns": [
+    "id",
+    "count"
+   ]
+  }
+ ]
+}

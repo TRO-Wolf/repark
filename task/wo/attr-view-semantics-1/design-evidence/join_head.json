@@ -1,0 +1,245 @@
+{
+ "engine": "stack",
+ "rows": [
+  {
+   "id": "J1 join(df2,'id',inner).select(df1.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ]
+   ],
+   "columns": [
+    "id"
+   ]
+  },
+  {
+   "id": "J2 join(df2,'id',inner).select(df2.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ]
+   ],
+   "columns": [
+    "id"
+   ]
+  },
+  {
+   "id": "J1 join(df2,'id',left).select(df1.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ]
+   ],
+   "columns": [
+    "id"
+   ]
+  },
+  {
+   "id": "J2 join(df2,'id',left).select(df2.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ]
+   ],
+   "columns": [
+    "id"
+   ]
+  },
+  {
+   "id": "J1 join(df2,'id',right).select(df1.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     null
+    ]
+   ],
+   "columns": [
+    "id"
+   ]
+  },
+  {
+   "id": "J2 join(df2,'id',right).select(df2.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     null
+    ]
+   ],
+   "columns": [
+    "id"
+   ]
+  },
+  {
+   "id": "J1 join(df2,'id',full).select(df1.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     null
+    ]
+   ],
+   "columns": [
+    "id"
+   ]
+  },
+  {
+   "id": "J2 join(df2,'id',full).select(df2.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     null
+    ]
+   ],
+   "columns": [
+    "id"
+   ]
+  },
+  {
+   "id": "J3 join(df2,'id').filter(df2.id > 2)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     3,
+     1,
+     2
+    ]
+   ],
+   "columns": [
+    "id",
+    "v1",
+    "v2"
+   ]
+  },
+  {
+   "id": "J4 join(df2,'id').orderBy(df2.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     2,
+     1,
+     2
+    ],
+    [
+     3,
+     1,
+     2
+    ]
+   ],
+   "columns": [
+    "id",
+    "v1",
+    "v2"
+   ]
+  },
+  {
+   "id": "J5 join(df2, df1.id==df2.id).select(df1.v1).select(df2.id)",
+   "kind": "run",
+   "outcome": "ERR",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT] Resolved attribute(s) \"id\" missing from \"v1\" in operator !Project.  SQLSTATE: XX000",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT"
+  },
+  {
+   "id": "J6 join(df2, df1.id==df2.id).select(df1.v1).filter(df2.id > 2)",
+   "kind": "run",
+   "outcome": "ERR",
+   "message": "Schema error: No field named id. Valid fields are v1, datafusion.public.__repark_cdf_b371581e987441b6b56c779011030bf4.__repark_l_f7016c1c16e3_0_id, datafusion.public.__repark_cdf_b371581e987441b6b56c779011030bf4.v1, datafusion.public.__repark_cdf_3da541cc0ccf436b85ba8db7e0a73ce4.__repark_r_ea8fa73abdc1_2_id, datafusion.public.__repark_cdf_3da541cc0ccf436b85ba8db7e0a73ce4.v2.",
+   "condition": null
+  },
+  {
+   "id": "J7 join(df2,'id').select(df2.v2)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     2
+    ],
+    [
+     2
+    ]
+   ],
+   "columns": [
+    "v2"
+   ]
+  },
+  {
+   "id": "J8 join(df2,'id').groupBy(df2.id).count()",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     2,
+     1
+    ],
+    [
+     3,
+     1
+    ]
+   ],
+   "columns": [
+    "id",
+    "count"
+   ]
+  }
+ ]
+}

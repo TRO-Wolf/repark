@@ -1,0 +1,880 @@
+{
+ "engine": "stack",
+ "banner": {
+  "version": "stack"
+ },
+ "rows": [
+  {
+   "id": "M01 d",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000001",
+    "aa9b068bda4f5f211000000000002"
+   ],
+   "classes": [
+    "d.id",
+    "d.v"
+   ]
+  },
+  {
+   "id": "M02 table(tv)",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000001",
+    "aa9b068bda4f5f211000000000002"
+   ],
+   "classes": [
+    "d.id",
+    "d.v"
+   ]
+  },
+  {
+   "id": "M03 table(tv) again",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000001",
+    "aa9b068bda4f5f211000000000002"
+   ],
+   "classes": [
+    "d.id",
+    "d.v"
+   ]
+  },
+  {
+   "id": "M04 SELECT * FROM tv",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000001",
+    "aa9b068bda4f5f211000000000002"
+   ],
+   "classes": [
+    "d.id",
+    "d.v"
+   ]
+  },
+  {
+   "id": "M05 SELECT v FROM tv",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000002"
+   ],
+   "classes": [
+    "d.v"
+   ]
+  },
+  {
+   "id": "M06 SELECT v AS v FROM tv",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000002"
+   ],
+   "classes": [
+    "d.v"
+   ]
+  },
+  {
+   "id": "M07 SELECT v AS w FROM tv",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "w"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000003"
+   ],
+   "classes": [
+    "new"
+   ]
+  },
+  {
+   "id": "M08 SELECT t.v FROM tv t",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000002"
+   ],
+   "classes": [
+    "d.v"
+   ]
+  },
+  {
+   "id": "M09 SELECT t.v AS v FROM tv t",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000002"
+   ],
+   "classes": [
+    "d.v"
+   ]
+  },
+  {
+   "id": "M10 SELECT v + 0 AS v FROM tv",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000004"
+   ],
+   "classes": [
+    "new"
+   ]
+  },
+  {
+   "id": "M11 SELECT id, v AS v FROM tv",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000001",
+    "aa9b068bda4f5f211000000000002"
+   ],
+   "classes": [
+    "d.id",
+    "d.v"
+   ]
+  },
+  {
+   "id": "M12 SELECT * FROM (SELECT v AS v FROM tv)",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000002"
+   ],
+   "classes": [
+    "d.v"
+   ]
+  },
+  {
+   "id": "M13 SELECT v FROM tv WHERE v > 0",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000002"
+   ],
+   "classes": [
+    "d.v"
+   ]
+  },
+  {
+   "id": "M14 SELECT CAST(v AS BIGINT) AS v FROM tv",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000005"
+   ],
+   "classes": [
+    "new"
+   ]
+  },
+  {
+   "id": "M20 CREATE TEMP VIEW sv AS SELECT *; table(sv)",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000006",
+    "aa9b068bda4f5f211000000000007"
+   ],
+   "classes": [
+    "new",
+    "new"
+   ]
+  },
+  {
+   "id": "M21 table(sv) again",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000008",
+    "aa9b068bda4f5f211000000000009"
+   ],
+   "classes": [
+    "new",
+    "new"
+   ]
+  },
+  {
+   "id": "M22 SELECT * FROM sv",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f21100000000000c",
+    "aa9b068bda4f5f21100000000000d"
+   ],
+   "classes": [
+    "new",
+    "new"
+   ]
+  },
+  {
+   "id": "M23 CREATE TEMP VIEW sc (a, b) AS SELECT *; table(sc)",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "a",
+    "b"
+   ],
+   "raw": [
+    "aa9b068bda4f5f21100000000000e",
+    "aa9b068bda4f5f21100000000000f"
+   ],
+   "classes": [
+    "new",
+    "new"
+   ]
+  },
+  {
+   "id": "M24 CREATE TEMP VIEW sv1 AS SELECT v; table(sv1)",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000010"
+   ],
+   "classes": [
+    "new"
+   ]
+  },
+  {
+   "id": "M25 CREATE OR REPLACE TEMP VIEW sv AS SELECT *; table(sv)",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000011",
+    "aa9b068bda4f5f211000000000012"
+   ],
+   "classes": [
+    "new",
+    "new"
+   ]
+  },
+  {
+   "id": "M26 view over view: CREATE TEMP VIEW svv AS SELECT * FROM sv",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000015",
+    "aa9b068bda4f5f211000000000016"
+   ],
+   "classes": [
+    "new",
+    "new"
+   ]
+  },
+  {
+   "id": "M27 table(sv) vs earlier read",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000017",
+    "aa9b068bda4f5f211000000000018"
+   ],
+   "classes": [
+    "new",
+    "new"
+   ]
+  },
+  {
+   "id": "M28 SELECT * FROM svv",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000019",
+    "aa9b068bda4f5f21100000000001a"
+   ],
+   "classes": [
+    "new",
+    "new"
+   ]
+  },
+  {
+   "id": "M30 df.select(df.v.alias('v'))",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f21100000000001b"
+   ],
+   "classes": [
+    "new"
+   ]
+  },
+  {
+   "id": "M31 df.select(df.v.alias('w'))",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "w"
+   ],
+   "raw": [
+    "aa9b068bda4f5f21100000000001c"
+   ],
+   "classes": [
+    "new"
+   ]
+  },
+  {
+   "id": "M32 df.withColumnRenamed('v','w')",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "w"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000001",
+    "aa9b068bda4f5f21100000000001d"
+   ],
+   "classes": [
+    "d.id",
+    "new"
+   ]
+  },
+  {
+   "id": "M33 df.withColumnRenamed('v','v')",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000001",
+    "aa9b068bda4f5f21100000000001e"
+   ],
+   "classes": [
+    "d.id",
+    "new"
+   ]
+  },
+  {
+   "id": "M34 df.select('v')",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000002"
+   ],
+   "classes": [
+    "d.v"
+   ]
+  },
+  {
+   "id": "M35 df.selectExpr('v AS v')",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f21100000000001f"
+   ],
+   "classes": [
+    "new"
+   ]
+  },
+  {
+   "id": "M36 df.select(df.v)",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000002"
+   ],
+   "classes": [
+    "d.v"
+   ]
+  },
+  {
+   "id": "M37 df.alias('t').select('t.v')",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000002"
+   ],
+   "classes": [
+    "d.v"
+   ]
+  },
+  {
+   "id": "M40 createOrReplaceTempView(dv); table(dv)",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000001",
+    "aa9b068bda4f5f211000000000002"
+   ],
+   "classes": [
+    "d.id",
+    "d.v"
+   ]
+  },
+  {
+   "id": "M41 SELECT * FROM dv",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000001",
+    "aa9b068bda4f5f211000000000002"
+   ],
+   "classes": [
+    "d.id",
+    "d.v"
+   ]
+  },
+  {
+   "id": "M42 createOrReplaceTempView of renamed; table(rv)",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "w"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000001",
+    "aa9b068bda4f5f211000000000020"
+   ],
+   "classes": [
+    "d.id",
+    "ren.w"
+   ]
+  },
+  {
+   "id": "M43 createOrReplaceTempView of sql(v AS v); table(qv)",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "aa9b068bda4f5f211000000000002"
+   ],
+   "classes": [
+    "d.v"
+   ]
+  },
+  {
+   "id": "R-M06 sql(v AS v).select(d.v) [V4]",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "R-M07 sql(v AS w).select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "Schema error: No field named datafusion.public.tv.v. Valid fields are w.",
+   "condition": null
+  },
+  {
+   "id": "R-M08 sql(t.v).select(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "R-M10 sql(v + 0 AS v).select(d.v) [V3]",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "R-M14 sql(CAST(v) AS v).select(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "R-M20 table(sv).select(d.v) [V9]",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "R-M23 table(sc).select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "Schema error: No field named v. Valid fields are datafusion.public.sc.a, datafusion.public.sc.b, datafusion.public.sc.a, datafusion.public.sc.b.",
+   "condition": null
+  },
+  {
+   "id": "R-M26 table(svv).select(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "R-M30 df.select(df.v.alias('v')).select(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "R-M31 df.select(df.v.alias('w')).select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "Schema error: No field named datafusion.public.__repark_cdf_dd7fb9cca6db4a62be33efa1bf937d8d.v. Valid fields are w.",
+   "condition": null
+  },
+  {
+   "id": "R-M32 df.withColumnRenamed('v','w').select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "Schema error: No field named datafusion.public.__repark_cdf_dd7fb9cca6db4a62be33efa1bf937d8d.v. Valid fields are id, w.",
+   "condition": null
+  },
+  {
+   "id": "R-M35 df.selectExpr('v AS v').select(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "R-M40 table(dv).select(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "R-M43 table(qv).select(sqlf.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "R-M43b table(qv).select(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "R-M42 table(rv).select(ren.w)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "R-V12 tv replaced by e, table(tv).select(d.v) [V12]",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "R-V15 view over aggregate, table(ta).select(d.v) [V15]",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "R-V15b view over aggregate, table(ta).select(d.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  {
+   "id": "R-V3b sql(v + 0 AS w).select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "Schema error: No field named datafusion.public.tv.v. Valid fields are w.",
+   "condition": null
+  },
+  {
+   "id": "R-V3c sql(id, v + 0 AS v).select(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "R-V3d sql(id, v + 0 AS v).select(d.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  {
+   "id": "R-V3e sql(v + 0 AS v).filter(d.v > 0)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "R-V3f sql(v + 0 AS v).withColumn('z', d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10,
+     10
+    ],
+    [
+     20,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "R-V3g sql(v + 0 AS v).orderBy(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "R-V3h sql(v + 0 AS v).select(col('v'))",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "R-V3i sql(v + 0 AS v).select('v')",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  }
+ ]
+}

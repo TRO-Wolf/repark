@@ -1,0 +1,2401 @@
+{
+ "engine": "stack",
+ "banner": {
+  "version": "stack"
+ },
+ "rows": [
+  {
+   "id": "V3 select(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     11
+    ],
+    [
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V3 select(d.v + 1)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "(v + 1)"
+   ],
+   "rows": [
+    [
+     12
+    ],
+    [
+     22
+    ]
+   ]
+  },
+  {
+   "id": "V3 select(d.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id"
+   ],
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  {
+   "id": "V3 select(d.id, 'v')",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     11
+    ],
+    [
+     2,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V3 withColumn('z', d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v",
+    "z"
+   ],
+   "rows": [
+    [
+     1,
+     11,
+     11
+    ],
+    [
+     2,
+     21,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V3 filter(d.v > 15)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     2,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V3 where(d.v == 10)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": []
+  },
+  {
+   "id": "V3 orderBy(d.v.desc())",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     11
+    ],
+    [
+     2,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V3 sort(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     11
+    ],
+    [
+     2,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V3 groupBy(d.v).count()",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v",
+    "count"
+   ],
+   "rows": [
+    [
+     11,
+     1
+    ],
+    [
+     21,
+     1
+    ]
+   ]
+  },
+  {
+   "id": "V3 groupBy('id').agg(max(d.v))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "max(v)"
+   ],
+   "rows": [
+    [
+     1,
+     11
+    ],
+    [
+     2,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V3 agg(max(d.v))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "max(v)"
+   ],
+   "rows": [
+    [
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V3 drop(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     11
+    ],
+    [
+     2,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V3 q[d.v] via select(q[...])",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     11
+    ],
+    [
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V3 join(other, d.id == other.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "s"
+   ],
+   "rows": [
+    [
+     "a"
+    ],
+    [
+     "b"
+    ]
+   ]
+  },
+  {
+   "id": "V3 join(other, q.id == other.id).select(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     11
+    ],
+    [
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V3 filter(d.v > 15).select('v')",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V3 dropDuplicates([d.v])-name",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     11
+    ],
+    [
+     2,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V3 withColumn('z', d.v + 1)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v",
+    "z"
+   ],
+   "rows": [
+    [
+     1,
+     11,
+     12
+    ],
+    [
+     2,
+     21,
+     22
+    ]
+   ]
+  },
+  {
+   "id": "V3 select(F.col('v'))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     11
+    ],
+    [
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V4 select(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V4 select(d.v + 1)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "(v + 1)"
+   ],
+   "rows": [
+    [
+     11
+    ],
+    [
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V4 select(d.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id"
+   ],
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  {
+   "id": "V4 select(d.id, 'v')",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V4 withColumn('z', d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v",
+    "z"
+   ],
+   "rows": [
+    [
+     1,
+     10,
+     10
+    ],
+    [
+     2,
+     20,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V4 filter(d.v > 15)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V4 where(d.v == 10)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ]
+   ]
+  },
+  {
+   "id": "V4 orderBy(d.v.desc())",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V4 sort(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V4 groupBy(d.v).count()",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v",
+    "count"
+   ],
+   "rows": [
+    [
+     10,
+     1
+    ],
+    [
+     20,
+     1
+    ]
+   ]
+  },
+  {
+   "id": "V4 groupBy('id').agg(max(d.v))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "max(v)"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V4 agg(max(d.v))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "max(v)"
+   ],
+   "rows": [
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V4 drop(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id"
+   ],
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  {
+   "id": "V4 q[d.v] via select(q[...])",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V4 join(other, d.id == other.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "s"
+   ],
+   "rows": [
+    [
+     "a"
+    ],
+    [
+     "b"
+    ]
+   ]
+  },
+  {
+   "id": "V4 join(other, q.id == other.id).select(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V4 filter(d.v > 15).select('v')",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V4 dropDuplicates([d.v])-name",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V4 withColumn('z', d.v + 1)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v",
+    "z"
+   ],
+   "rows": [
+    [
+     1,
+     10,
+     11
+    ],
+    [
+     2,
+     20,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V4 select(F.col('v'))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V9 select(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V9 select(d.v + 1)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "(v + 1)"
+   ],
+   "rows": [
+    [
+     11
+    ],
+    [
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V9 select(d.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id"
+   ],
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  {
+   "id": "V9 select(d.id, 'v')",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V9 withColumn('z', d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v",
+    "z"
+   ],
+   "rows": [
+    [
+     1,
+     10,
+     10
+    ],
+    [
+     2,
+     20,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V9 filter(d.v > 15)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V9 where(d.v == 10)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ]
+   ]
+  },
+  {
+   "id": "V9 orderBy(d.v.desc())",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V9 sort(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V9 groupBy(d.v).count()",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v",
+    "count"
+   ],
+   "rows": [
+    [
+     10,
+     1
+    ],
+    [
+     20,
+     1
+    ]
+   ]
+  },
+  {
+   "id": "V9 groupBy('id').agg(max(d.v))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "max(v)"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V9 agg(max(d.v))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "max(v)"
+   ],
+   "rows": [
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V9 drop(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id"
+   ],
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  {
+   "id": "V9 q[d.v] via select(q[...])",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V9 join(other, d.id == other.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "s"
+   ],
+   "rows": [
+    [
+     "a"
+    ],
+    [
+     "b"
+    ]
+   ]
+  },
+  {
+   "id": "V9 join(other, q.id == other.id).select(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V9 filter(d.v > 15).select('v')",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V9 dropDuplicates([d.v])-name",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V9 withColumn('z', d.v + 1)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v",
+    "z"
+   ],
+   "rows": [
+    [
+     1,
+     10,
+     11
+    ],
+    [
+     2,
+     20,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V9 select(F.col('v'))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V15 select(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V15 select(d.v + 1)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "(v + 1)"
+   ],
+   "rows": [
+    [
+     11
+    ],
+    [
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V15 select(d.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id"
+   ],
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  {
+   "id": "V15 select(d.id, 'v')",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V15 withColumn('z', d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v",
+    "z"
+   ],
+   "rows": [
+    [
+     1,
+     10,
+     10
+    ],
+    [
+     2,
+     20,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V15 filter(d.v > 15)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V15 where(d.v == 10)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ]
+   ]
+  },
+  {
+   "id": "V15 orderBy(d.v.desc())",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V15 sort(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V15 groupBy(d.v).count()",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v",
+    "count"
+   ],
+   "rows": [
+    [
+     10,
+     1
+    ],
+    [
+     20,
+     1
+    ]
+   ]
+  },
+  {
+   "id": "V15 groupBy('id').agg(max(d.v))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "max(v)"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V15 agg(max(d.v))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "max(v)"
+   ],
+   "rows": [
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V15 drop(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V15 q[d.v] via select(q[...])",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V15 join(other, d.id == other.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "s"
+   ],
+   "rows": [
+    [
+     "a"
+    ],
+    [
+     "b"
+    ]
+   ]
+  },
+  {
+   "id": "V15 join(other, q.id == other.id).select(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V15 filter(d.v > 15).select('v')",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V15 dropDuplicates([d.v])-name",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V15 withColumn('z', d.v + 1)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v",
+    "z"
+   ],
+   "rows": [
+    [
+     1,
+     10,
+     11
+    ],
+    [
+     2,
+     20,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V15 select(F.col('v'))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "DFX select(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     11
+    ],
+    [
+     21
+    ]
+   ]
+  },
+  {
+   "id": "DFX select(d.v + 1)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "(v + 1)"
+   ],
+   "rows": [
+    [
+     12
+    ],
+    [
+     22
+    ]
+   ]
+  },
+  {
+   "id": "DFX select(d.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id"
+   ],
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  {
+   "id": "DFX select(d.id, 'v')",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     11
+    ],
+    [
+     2,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "DFX withColumn('z', d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v",
+    "z"
+   ],
+   "rows": [
+    [
+     1,
+     11,
+     11
+    ],
+    [
+     2,
+     21,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "DFX filter(d.v > 15)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     2,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "DFX where(d.v == 10)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": []
+  },
+  {
+   "id": "DFX orderBy(d.v.desc())",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     11
+    ],
+    [
+     2,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "DFX sort(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     11
+    ],
+    [
+     2,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "DFX groupBy(d.v).count()",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v",
+    "count"
+   ],
+   "rows": [
+    [
+     11,
+     1
+    ],
+    [
+     21,
+     1
+    ]
+   ]
+  },
+  {
+   "id": "DFX groupBy('id').agg(max(d.v))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "max(v)"
+   ],
+   "rows": [
+    [
+     1,
+     11
+    ],
+    [
+     2,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "DFX agg(max(d.v))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "max(v)"
+   ],
+   "rows": [
+    [
+     21
+    ]
+   ]
+  },
+  {
+   "id": "DFX drop(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     11
+    ],
+    [
+     2,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "DFX q[d.v] via select(q[...])",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     11
+    ],
+    [
+     21
+    ]
+   ]
+  },
+  {
+   "id": "DFX join(other, d.id == other.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "s"
+   ],
+   "rows": [
+    [
+     "a"
+    ],
+    [
+     "b"
+    ]
+   ]
+  },
+  {
+   "id": "DFX join(other, q.id == other.id).select(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     11
+    ],
+    [
+     21
+    ]
+   ]
+  },
+  {
+   "id": "DFX filter(d.v > 15).select('v')",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     21
+    ]
+   ]
+  },
+  {
+   "id": "DFX dropDuplicates([d.v])-name",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     11
+    ],
+    [
+     2,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "DFX withColumn('z', d.v + 1)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v",
+    "z"
+   ],
+   "rows": [
+    [
+     1,
+     11,
+     12
+    ],
+    [
+     2,
+     21,
+     22
+    ]
+   ]
+  },
+  {
+   "id": "DFX select(F.col('v'))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     11
+    ],
+    [
+     21
+    ]
+   ]
+  },
+  {
+   "id": "WCR select(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "WCR select(d.v + 1)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "(v + 1)"
+   ],
+   "rows": [
+    [
+     11
+    ],
+    [
+     21
+    ]
+   ]
+  },
+  {
+   "id": "WCR select(d.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id"
+   ],
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  {
+   "id": "WCR select(d.id, 'v')",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "WCR withColumn('z', d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v",
+    "z"
+   ],
+   "rows": [
+    [
+     1,
+     10,
+     10
+    ],
+    [
+     2,
+     20,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "WCR filter(d.v > 15)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "WCR where(d.v == 10)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ]
+   ]
+  },
+  {
+   "id": "WCR orderBy(d.v.desc())",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "WCR sort(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "WCR groupBy(d.v).count()",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v",
+    "count"
+   ],
+   "rows": [
+    [
+     10,
+     1
+    ],
+    [
+     20,
+     1
+    ]
+   ]
+  },
+  {
+   "id": "WCR groupBy('id').agg(max(d.v))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "max(v)"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "WCR agg(max(d.v))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "max(v)"
+   ],
+   "rows": [
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "WCR drop(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "WCR q[d.v] via select(q[...])",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "WCR join(other, d.id == other.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "s"
+   ],
+   "rows": [
+    [
+     "a"
+    ],
+    [
+     "b"
+    ]
+   ]
+  },
+  {
+   "id": "WCR join(other, q.id == other.id).select(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "WCR filter(d.v > 15).select('v')",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "WCR dropDuplicates([d.v])-name",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "WCR withColumn('z', d.v + 1)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v",
+    "z"
+   ],
+   "rows": [
+    [
+     1,
+     10,
+     11
+    ],
+    [
+     2,
+     20,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "WCR select(F.col('v'))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V12 select(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     100
+    ],
+    [
+     200
+    ]
+   ]
+  },
+  {
+   "id": "V12 select(d.v + 1)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "(v + 1)"
+   ],
+   "rows": [
+    [
+     101
+    ],
+    [
+     201
+    ]
+   ]
+  },
+  {
+   "id": "V12 select(d.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id"
+   ],
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  {
+   "id": "V12 select(d.id, 'v')",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     100
+    ],
+    [
+     2,
+     200
+    ]
+   ]
+  },
+  {
+   "id": "V12 withColumn('z', d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v",
+    "z"
+   ],
+   "rows": [
+    [
+     1,
+     100,
+     100
+    ],
+    [
+     2,
+     200,
+     200
+    ]
+   ]
+  },
+  {
+   "id": "V12 filter(d.v > 15)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     100
+    ],
+    [
+     2,
+     200
+    ]
+   ]
+  },
+  {
+   "id": "V12 where(d.v == 10)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": []
+  },
+  {
+   "id": "V12 orderBy(d.v.desc())",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     100
+    ],
+    [
+     2,
+     200
+    ]
+   ]
+  },
+  {
+   "id": "V12 sort(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     100
+    ],
+    [
+     2,
+     200
+    ]
+   ]
+  },
+  {
+   "id": "V12 groupBy(d.v).count()",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v",
+    "count"
+   ],
+   "rows": [
+    [
+     100,
+     1
+    ],
+    [
+     200,
+     1
+    ]
+   ]
+  },
+  {
+   "id": "V12 groupBy('id').agg(max(d.v))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "max(v)"
+   ],
+   "rows": [
+    [
+     1,
+     100
+    ],
+    [
+     2,
+     200
+    ]
+   ]
+  },
+  {
+   "id": "V12 agg(max(d.v))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "max(v)"
+   ],
+   "rows": [
+    [
+     200
+    ]
+   ]
+  },
+  {
+   "id": "V12 drop(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     100
+    ],
+    [
+     2,
+     200
+    ]
+   ]
+  },
+  {
+   "id": "V12 q[d.v] via select(q[...])",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     100
+    ],
+    [
+     200
+    ]
+   ]
+  },
+  {
+   "id": "V12 join(other, d.id == other.id)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"id\" missing from \"id\", \"v\", \"id\", \"s\" in operator !Join. Attribute(s) with the same name appear in the operation: \"id\". Please check if the right attribute(s) are used. SQLSTATE: XX000",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V12 join(other, q.id == other.id).select(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     100
+    ],
+    [
+     200
+    ]
+   ]
+  },
+  {
+   "id": "V12 filter(d.v > 15).select('v')",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     100
+    ],
+    [
+     200
+    ]
+   ]
+  },
+  {
+   "id": "V12 dropDuplicates([d.v])-name",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     100
+    ],
+    [
+     2,
+     200
+    ]
+   ]
+  },
+  {
+   "id": "V12 withColumn('z', d.v + 1)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v",
+    "z"
+   ],
+   "rows": [
+    [
+     1,
+     100,
+     101
+    ],
+    [
+     2,
+     200,
+     201
+    ]
+   ]
+  },
+  {
+   "id": "V12 select(F.col('v'))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     100
+    ],
+    [
+     200
+    ]
+   ]
+  }
+ ]
+}
