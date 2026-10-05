@@ -65,6 +65,10 @@ def _physical_plan_text(df: object) -> str:
     return match.group(1).replace("\\n", "\n").replace("\\'", "'")
 
 
+def _window_operator_count(plan: str) -> int:
+    return plan.count("WindowAggExec") + plan.count("ParallelWindowExec")
+
+
 def _logical_plan_text(df: object) -> str:
     buffer = io.StringIO()
     with contextlib.redirect_stdout(buffer):
@@ -122,8 +126,8 @@ def test_stage_b_adjacent_same_spec_withcolumns_merges(bars: object) -> None:
     chained = bars.withColumns(batch1).withColumns(batch2)  # type: ignore[attr-defined]
     fused = bars.withColumns({**batch1, **batch2})  # type: ignore[attr-defined]
     plan = _physical_plan_text(chained)
-    assert plan.count("WindowAggExec") == 1, plan[:2000]
-    assert plan.count("WindowAggExec") == _physical_plan_text(fused).count("WindowAggExec")
+    assert _window_operator_count(plan) == 1, plan[:2000]
+    assert _window_operator_count(plan) == _window_operator_count(_physical_plan_text(fused))
     left = chained.to_arrow().sort_by("ts")  # type: ignore[attr-defined]
     right = fused.to_arrow().sort_by("ts")  # type: ignore[attr-defined]
     for name in (*batch1, *batch2):
@@ -145,7 +149,7 @@ def test_stage_b_adjacent_same_spec_withcolumn_merges(bars: object) -> None:
     for name, column in specs:
         frame = frame.withColumn(name, column)  # type: ignore[attr-defined]
     plan = _physical_plan_text(frame)
-    assert plan.count("WindowAggExec") == 1, plan[:2000]
+    assert _window_operator_count(plan) == 1, plan[:2000]
     fused = bars.withColumns(dict(specs))  # type: ignore[attr-defined]
     left = frame.to_arrow().sort_by("ts")  # type: ignore[attr-defined]
     right = fused.to_arrow().sort_by("ts")  # type: ignore[attr-defined]
@@ -162,7 +166,7 @@ def test_stage_b_dependent_column_keeps_stacking(bars: object) -> None:
     frame = bars.withColumn("tr", ta.trange("high", "low", "close").over(window))  # type: ignore[attr-defined]
     frame = frame.withColumn("etr5", F.avg("tr").over(window))  # type: ignore[attr-defined]
     plan = _physical_plan_text(frame)
-    assert plan.count("WindowAggExec") == 2, plan[:2000]
+    assert _window_operator_count(plan) == 2, plan[:2000]
     table = frame.to_arrow().sort_by("ts")  # type: ignore[attr-defined]
     assert "tr" in table.column_names and "etr5" in table.column_names
     assert table.num_rows == bars.count()  # type: ignore[attr-defined]
@@ -177,7 +181,7 @@ def test_stage_b_filter_blocks_merge(bars: object) -> None:
     frame = frame.filter(F.col("close") > 0)  # type: ignore[attr-defined]
     frame = frame.withColumns({"sma10": ta.sma("close", timeperiod=10).over(window)})
     plan = _physical_plan_text(frame)
-    assert plan.count("WindowAggExec") == 2, plan[:2000]
+    assert _window_operator_count(plan) == 2, plan[:2000]
 
 
 def test_stage_b_round_wrap_same_layer_merges(bars: object) -> None:
@@ -193,7 +197,7 @@ def test_stage_b_round_wrap_same_layer_merges(bars: object) -> None:
     }
     chained = bars.withColumns(batch1).withColumns(batch2)  # type: ignore[attr-defined]
     plan = _physical_plan_text(chained)
-    assert plan.count("WindowAggExec") == 1, plan[:2000]
+    assert _window_operator_count(plan) == 1, plan[:2000]
     fused = bars.withColumns({**batch1, **batch2})  # type: ignore[attr-defined]
     left = chained.to_arrow().sort_by("ts")  # type: ignore[attr-defined]
     right = fused.to_arrow().sort_by("ts")  # type: ignore[attr-defined]
@@ -231,7 +235,7 @@ def test_stage_b_four_chain_operator_shape(bars: object) -> None:
         chained = chained.withColumns(batch)  # type: ignore[attr-defined]
         combined.update(batch)
     plan = _physical_plan_text(chained)
-    assert plan.count("WindowAggExec") == 1, plan[:2500]
+    assert _window_operator_count(plan) == 1, plan[:2500]
     fused = bars.withColumns(combined)  # type: ignore[attr-defined]
     left = chained.to_arrow().sort_by("ts")  # type: ignore[attr-defined]
     right = fused.to_arrow().sort_by("ts")  # type: ignore[attr-defined]
@@ -249,7 +253,7 @@ def test_stage_b_different_window_spec_no_merge(bars: object) -> None:
     frame = bars.withColumn("ema5", ta.ema("close", timeperiod=5).over(w1))  # type: ignore[attr-defined]
     frame = frame.withColumn("sma10", ta.sma("close", timeperiod=10).over(w2))  # type: ignore[attr-defined]
     plan = _physical_plan_text(frame)
-    assert plan.count("WindowAggExec") == 2, plan[:2000]
+    assert _window_operator_count(plan) == 2, plan[:2000]
 
 
 def test_stage_b_drop_blocks_merge(bars: object) -> None:
@@ -259,7 +263,7 @@ def test_stage_b_drop_blocks_merge(bars: object) -> None:
     frame = frame.drop("volume")  # type: ignore[attr-defined]
     frame = frame.withColumn("sma10", ta.sma("close", timeperiod=10).over(window))  # type: ignore[attr-defined]
     plan = _physical_plan_text(frame)
-    assert plan.count("WindowAggExec") == 2, plan[:2000]
+    assert _window_operator_count(plan) == 2, plan[:2000]
     table = frame.to_arrow()  # type: ignore[attr-defined]
     assert "ema5" in table.column_names and "sma10" in table.column_names
     assert "volume" not in table.column_names
@@ -272,7 +276,7 @@ def test_stage_b_select_subset_blocks_merge(bars: object) -> None:
     frame = frame.select("ts", "close", "high", "low", "ema5")  # type: ignore[attr-defined]
     frame = frame.withColumn("sma10", ta.sma("close", timeperiod=10).over(window))  # type: ignore[attr-defined]
     plan = _physical_plan_text(frame)
-    assert plan.count("WindowAggExec") == 2, plan[:2000]
+    assert _window_operator_count(plan) == 2, plan[:2000]
     table = frame.to_arrow()  # type: ignore[attr-defined]
     assert set(table.column_names) >= {"ts", "close", "ema5", "sma10"}
 
@@ -287,7 +291,7 @@ def test_stage_b_alias_wrap_same_layer_merges(bars: object) -> None:
         "sma10", ta.sma("close", timeperiod=10).over(window).alias("sma10")
     )
     plan = _physical_plan_text(frame)
-    assert plan.count("WindowAggExec") == 1, plan[:2000]
+    assert _window_operator_count(plan) == 1, plan[:2000]
     fused = bars.withColumns(  # type: ignore[attr-defined]
         {
             "ema5": ta.ema("close", timeperiod=5).over(window).alias("ema5"),
@@ -310,7 +314,7 @@ def test_stage_b_cache_blocks_merge(bars: object) -> None:
     frame = frame.cache()  # type: ignore[attr-defined]
     frame = frame.withColumn("sma10", ta.sma("close", timeperiod=10).over(window))  # type: ignore[attr-defined]
     plan = _physical_plan_text(frame)
-    assert plan.count("WindowAggExec") == 2, plan[:2000]
+    assert _window_operator_count(plan) == 2, plan[:2000]
     table = frame.to_arrow()  # type: ignore[attr-defined]
     assert "ema5" in table.column_names and "sma10" in table.column_names
 
@@ -329,7 +333,7 @@ def test_stage_b_overwrite_base_name_blocks_merge(bars: object) -> None:
         "ema10", ta.ema("close", timeperiod=10).over(window)
     )
     plan = _physical_plan_text(frame)
-    assert plan.count("WindowAggExec") == 2, plan[:2000]
+    assert _window_operator_count(plan) == 2, plan[:2000]
     table = frame.to_arrow().sort_by("ts")  # type: ignore[attr-defined]
     assert "close" in table.column_names and "ema10" in table.column_names
     close_vals = table.column("close").to_numpy(zero_copy_only=False)
@@ -432,7 +436,7 @@ def test_t3_operator_17_ta_chain_plan_and_value_parity(bars: object) -> None:
         combined.update(batch)
     physical = _physical_plan_text(chained)
     logical = _logical_plan_text(chained)
-    assert physical.count("WindowAggExec") == 1, physical[:2500]
+    assert _window_operator_count(physical) == 1, physical[:2500]
     assert physical.count("ProjectionExec") <= 2, physical[:2500]
     assert _repeated_alias_nodes(logical) == [], logical[:1500]
     # Triple identity anti-pattern must stay dead.

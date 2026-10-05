@@ -6932,6 +6932,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   NULL runs of 3 and 6 rows on two of them; each partition's first finite row is run + lookback
   and its tail equals EMA over the trimmed series, bit-exact; skipped rows are NaN, never NULL).
   pins: ta-chain-1/C-001, C-002, C-003
+- `test_n2_plan_collapse.py`, `test_ta.py` — **TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04):**
+  the plan-shape pins that count `WindowAggExec` now count `WindowAggExec` plus
+  `ParallelWindowExec` (`_window_operator_count` in `test_n2_plan_collapse.py`, inline in the two
+  `test_ta.py` fusion pins, whose file keeps its 1020-line baseline). A fused one-partition TA
+  window with two or more argument groups now plans as `ParallelWindowExec`; the operator count
+  and every value assertion are unchanged. pins: ta-series-s2b/C-013
 - `test_n2_plan_collapse.py` — **r23b N2** plan-collapse pins: stage (a) logical alias-chain squash
   (no `ts AS ts AS ts`); stage (b) adjacent same-spec withColumns/withColumn merge → 1
   `WindowAggExec` + Arrow bit-exact vs single fused call; dependent `tr`→`etr5` keeps stacking;
