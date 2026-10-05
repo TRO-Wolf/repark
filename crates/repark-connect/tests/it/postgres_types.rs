@@ -126,7 +126,10 @@ fn float4_round_trips() {
     let decoded = row("float4")
         .decode(&[Some(&[0x3f, 0xc0, 0x00, 0x00][..])])
         .expect("decode");
-    assert_eq!(decoded.as_primitive::<Float32Type>().value(0), 1.5_f32);
+    assert_eq!(
+        decoded.as_primitive::<Float32Type>().value(0).to_bits(),
+        1.5_f32.to_bits()
+    );
 }
 
 #[test]
@@ -157,7 +160,10 @@ fn float8_round_trips() {
     let decoded = row("float8")
         .decode(&[Some(&[0x3f, 0xf8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00][..])])
         .expect("decode");
-    assert_eq!(decoded.as_primitive::<Float64Type>().value(0), 1.5_f64);
+    assert_eq!(
+        decoded.as_primitive::<Float64Type>().value(0).to_bits(),
+        1.5_f64.to_bits()
+    );
 }
 
 fn text_values() -> StringArray {
