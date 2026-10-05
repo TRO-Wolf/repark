@@ -25,6 +25,7 @@ def spark() -> Iterator[ReparkSession]:
         ReparkSession.builder.appName("pytest-ta-series-s1")
         .config("datafusion.execution.target_partitions", "16")
         .config("datafusion.optimizer.repartition_file_scans", "true")
+        .config("datafusion.execution.batch_size", "8192")
         .getOrCreate()
     )
     yield session
@@ -136,7 +137,12 @@ def test_descending_and_nulls_first_order_carried(spark: ReparkSession) -> None:
         assert _is_ordered(_keys(desc_last), True, False)
         assert _is_ordered(_keys(asc_last), False, False)
         assert _is_ordered(_keys(asc_first), False, True)
-    resorted = _permutation_frame(spark).sort(F.desc("key")).eager().sort("key")
+    resorted = (
+        _nullable_key_frame(spark)
+        .sort(F.desc_nulls_first("key"))
+        .eager()
+        .sort(F.asc_nulls_first("key"))
+    )
     for _ in range(RUNS):
         assert _is_ordered(_keys(resorted), False, True)
 

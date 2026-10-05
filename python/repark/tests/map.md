@@ -7637,7 +7637,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: deep-filter-chain-crash-1/C-013, C-014, C-015, C-016, C-017, C-018
 - [test_ta_series_s1_ordered_cache.py](test_ta_series_s1_ordered_cache.py) —
   **TA-SERIES S1 (2026-10-04):** the ordered-cache facade pins over a 200k-row
-  permutation frame at `target_partitions=16` with `repartition_file_scans=true`.
+  permutation frame at `target_partitions=16` with `repartition_file_scans=true` and
+  `batch_size=8192`, so the 200k rows genuinely split (25 batches — at the default
+  65536 they would stay 4 batches and never exercise the scan split).
   `test_sorted_eager_reads_back_in_order` pins `.sort().eager()` reading back sorted
   through plain and `withColumn` reads; the parametrized
   `test_sorted_cache_keeps_order_on_plain_reads` pins collect, `withColumn`,
