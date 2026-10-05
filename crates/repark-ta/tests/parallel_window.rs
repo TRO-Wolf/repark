@@ -5,10 +5,13 @@ use std::sync::Arc;
 use datafusion::arrow::array::{Array, ArrayRef, Float64Array, Int64Array, RecordBatch};
 use datafusion::arrow::compute::concat_batches;
 use datafusion::arrow::datatypes::{DataType, Field, Schema, SchemaRef};
+use datafusion::dataframe::DataFrame;
 use datafusion::datasource::memory::MemTable;
+use datafusion::logical_expr::LogicalPlan;
 use datafusion::physical_plan::{collect, displayable};
 use datafusion::prelude::SessionContext;
 use repark_core::ReparkSession;
+use repark_core::frame_names::{AttrId, stamp, strip_for_execution};
 use repark_ta::TaExtension;
 
 const ROWS: i64 = 50_000;
@@ -166,5 +169,40 @@ async fn parallel_window_multi_output_siblings_bit_identical() {
     let (plan, got) = run(&session(true), SIBLINGS).await;
     let (_, expected) = run(&session(false), SIBLINGS).await;
     assert_eq!(window_expressions(&plan, "ParallelWindowExec"), 7, "{plan}");
+    assert_bit_identical(&got, &expected);
+}
+
+const STAMPED_LEVEL: &str = "SELECT ts, \
+    ta_sma(close, 10) OVER (ORDER BY ts) AS sma10, \
+    ta_sma(close, 20) OVER (ORDER BY ts) AS sma20, \
+    ta_ema(close, 5) OVER (ORDER BY ts) AS ema5 \
+    FROM bars";
+
+fn plan_carries_id(plan: &LogicalPlan) -> bool {
+    plan.schema()
+        .fields()
+        .iter()
+        .any(|field| AttrId::of(field).is_some())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 8)]
+async fn stamped_frame_parallel_window_matches_serial_answer() {
+    let parallel = session(true);
+    let frame = parallel.sql(STAMPED_LEVEL).await.expect("sql");
+    let (state, plan) = frame.into_parts();
+    let stamped = stamp(plan).expect("stamp");
+    assert!(plan_carries_id(&stamped));
+    let stripped = strip_for_execution(stamped).expect("strip");
+    assert!(!plan_carries_id(&stripped));
+    let twin = DataFrame::new(state, stripped);
+    let physical = twin.create_physical_plan().await.expect("plan");
+    let text = displayable(physical.as_ref()).indent(true).to_string();
+    assert_eq!(window_expressions(&text, "ParallelWindowExec"), 3, "{text}");
+    let schema = physical.schema();
+    let batches = collect(physical, parallel.task_ctx())
+        .await
+        .expect("collect");
+    let got = concat_batches(&schema, &batches).expect("concat");
+    let (_, expected) = run(&session(false), STAMPED_LEVEL).await;
     assert_bit_identical(&got, &expected);
 }
