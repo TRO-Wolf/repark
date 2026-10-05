@@ -204,6 +204,7 @@ path by about a day and needs the owner to lift the one-Opus-lane cap for this b
 | O-8 | a second Opus lane for this build | no | **ruled 2026-10-04** (owner: "Keep everything in one opus orc slot"): one Opus orchestrator slot for every unit, this build included; the sequential path |
 | O-9 | does the 1.7 sink half open before the 1.6 connectors, since it depends only on Iceberg? | no | **ruled 2026-10-04** (owner: "Sink waits for 1.6"): the 1.7 row keeps its dependency on 1.6; the micro-batch executors open after the first 1.6 connector units; the packet, MB-0 and the fork asks need no Opus lane and run meanwhile |
 | O-10 | an HTML artifact copy under `docs/artifacts/` in the ruling change, as the 2026-10-01 adjustment carried | yes | **ruled 2026-10-04** (owner: default) |
+| O-9a | O-9 amended: may the sink slices open beside C-1 rather than after the first connector units? | yes | **ruled 2026-10-05** (owner): "the sink slices no longer wait for C-1. After the micro-batch design sketch in the Opus slot, MB-1 and MB-2a may run on Muse in parallel with C-1. Count lanes against the cap of four before every launch. Release slot stays 1.7 beside repark-cdc; packaging order is unchanged." The same day: the packet PR is docs-only with no Opus verifier; the two fork requests file today ([F-APPEND-WINDOW-FAILLOUD-1](../mid-term/f-append-window-failloud-1-2026-10-05.md), [F-COMMIT-OFFSET-PROPERTY-1](../mid-term/f-commit-offset-property-1-2026-10-05.md)); MB-0 runs on Muse after the bisect timing run |
 
 ## 8. The order things happen (no dates)
 
