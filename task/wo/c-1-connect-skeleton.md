@@ -1,4 +1,4 @@
-# C-1 — the connect skeleton: crate, identity move, settings, Postgres type map · grade B · Muse Spark 1.3 contributor at max · 1.6
+# C-1 — the connect skeleton: crate, identity move, settings, Postgres type map · grade B · Claude Opus 5.5 (`claude-opus-5-5`) · 1.6
 
 ## 0. Why, and what is out
 
@@ -19,9 +19,11 @@ stay: `refuse_source_ddl` and the `read_postgres` refusal retire in C-2, per the
 ## 1. Rulings already made
 
 - R-1 (engine): card 1.6 lists C-1 as design-heavy (an Opus executor with a design
-  sketch). The owner's 2026-10-05 go puts C-1 on **Muse Spark 1.3 contributor at
-  max**, with every decision pre-made in this order. The owner's dispatch wins; the
-  card's design-heavy note is recorded so the verifier holds the design bar.
+  sketch). The owner's 2026-10-05 go first put C-1 on Muse with every decision
+  pre-made in this order. The owner's ruling later the same day ("assign opus for
+  executor and review for the cdc work … anything related to 1.6 and the cdc or
+  Iceberg … use Opus 5.5 for everything", for 12 hours) puts it on **Claude Opus 5.5**
+  (`claude-opus-5-5`), with a scoped Opus 5.5 verifier.
 - R-2 (home and role): `crates/repark-connect`, tier 1, role `table service`, peer of
   `repark-iceberg` (card 1.6; [the layout](../roadmap/epic-term/crate-layout-1-8-2026-10-01.md)
   §1; CL-8). Pre-declared in `scripts/check_crate_dag.py` (`TIERS`, `ROLES`) and as a
@@ -49,7 +51,7 @@ stay: `refuse_source_ddl` and the `read_postgres` refusal retire in C-2, per the
   (`insert_database_source`, `database_source`), `session.rs` (the `source_specs`
   fields), `config_file/wiring.rs` (the `profile_sources` assembly), and
   `config_file/tests`. Loader behavior is unchanged; every CFG-2 test stays green.
-  The generation field's representation is **not** ruled in any source: H-GEN.
+  The generation field's representation is R-12.
 - R-5 (settings): `settings.rs` holds the connection settings with the reserved
   `auth_method` field (card 1.6; ES-1). The key spelling follows the only multi-word
   database key on `main`, `auto_register`
@@ -57,7 +59,7 @@ stay: `refuse_source_ddl` and the `read_postgres` refusal retire in C-2, per the
   until its unit lands; the owner crate interprets and validates"), C-1 interprets
   **only** `auth_method` and carries every other prop through untouched; endpoint
   keys land with C-2, their first consumer. Absent `auth_method` means password, the
-  1.6 value (ES-1). The value spellings for the two ES-1 refusals are H-AUTH. Any
+  1.6 value (ES-1). The value spellings are R-13. Any
   other value is an invalid specification (CC-4).
 - R-6 (auth refusals): IAM token (RDS) and Kerberos / Active Directory are declared
   refusals with one dated registry row each (ES-1, CC-4). Rows go in
@@ -108,11 +110,11 @@ Design sketch, naming types and signatures:
 
 - `repark-common`: `SourceKind` moved unchanged (`Postgres`, `SqlServer`, `Trino`,
   with `spelling()`); new `SourceIdentity { name: String, kind: SourceKind,
-  generation: H-GEN }`. `SourceSpec` in core keeps `profile`, `auto_register`,
+  generation: u64 }`. `SourceSpec` in core keeps `profile`, `auto_register`,
   `props` and carries the identity; `key_path()` renders from it unchanged.
 - `settings.rs`: `ConnectionSettings` built from one source's props: the parsed
   `auth_method` plus the untouched prop map. `AuthMethod`: password accepted
-  (explicit or absent); the H-AUTH spellings refused with the R-6 dated rows;
+  (explicit or absent); `iam_token` and `kerberos` refused with the R-6 dated rows (R-13);
   anything else an invalid-specification error (CC-4).
 - `types/postgres.rs`: one table, one row per Postgres type: the Postgres name, the
   Arrow `DataType` or `DECLARED` with its registry row, and the pin name. One
@@ -146,19 +148,21 @@ Design sketch, naming types and signatures:
 | `python3 scripts/check_rust_file_size.py` | clean (new files under the default ceiling; ceilings never move up) |
 | `bash scripts/check_map_md.sh --base origin/main` | clean |
 | `python3 scripts/check_docs_links.py` | clean (the registry rows link correctly) |
+| `cargo clippy --workspace --all-targets -- -D warnings -A clippy::disallowed_methods` | exit 0 |
+| `make rust-panic-ban` | exit 0 |
+| `./scripts/check_lib_rs.sh` and `python3 scripts/sync_map_md.py --check` | clean |
+| `python3 /tmp/oc-worker/_lib/comment_ban.py <clone> origin/main HEAD` | `hits=0` |
 
 ## 6. Halt rules
 
-- **H-GEN** The representation (and default) of the identity's generation field is
-  not ruled in CC-2, the card, or any source found by grep: `u64`, UUID, endpoint
-  fingerprint and opaque string all satisfy "detect re-pointing". Halt with the
-  question. Recommended option: `u64`, default `0` meaning unassigned, assigned by
-  first use at 1.7 — equality is the only operation C-1 needs, and 1.7's capture
-  owns assignment (CC-2/CC-9).
-- **H-AUTH** The `auth_method` value spellings for the two ES-1 refusals are not
-  ruled: `auto_register` (snake) is the only multi-word database key, while
-  `catalog-impl` (kebab) is the catalog precedent. Halt with the question.
-  Recommended option: `password` (default when absent), `iam_token`, `kerberos`.
+- ~~H-GEN~~ **Ruled R-12 (orchestrator, 2026-10-05; reversible before 1.6 ships):** the
+  identity's generation field is a `u64`, where `0` means unassigned. 1.7's capture
+  assigns it on first use (CC-2/CC-9). Equality is the only operation C-1 needs.
+- ~~H-AUTH~~ **Ruled R-13 (orchestrator, 2026-10-05; reversible before 1.6 ships):**
+  `auth_method` values are `password` (the default when absent), `iam_token` and
+  `kerberos`. That is snake case, following `auto_register`, the only multi-word
+  database key. `iam_token` and `kerberos` are the ES-1 declared refusals with
+  their dated rows. Any other value is an invalid specification (CC-4).
 - **H-GATE** A gate needs a change outside §2's file list: hand back the gate's
   output; do not edit the gate and do not widen the file list.
 - **H-AMBIG** Any other decision this order does not pre-make: halt on the first
