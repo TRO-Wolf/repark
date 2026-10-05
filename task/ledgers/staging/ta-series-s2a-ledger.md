@@ -160,3 +160,21 @@ clause holds on the combined branch.
   `null_prefix` 3, `parallel_window` 2, `prefix_goldens` 26.
 - Facade, the 111 files plus S1's file, `-n 8`: 3,263 passed, 135 skipped, 106 xfailed,
   0 failed (S2a alone 3,256 / 135 / 103, plus S1's 6 passed and 3 xfailed and P-S2a-9).
+
+**Speed preparation (stacked; nothing timed).** Release wheels, `CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16
+uvx maturin@1.14.1 build --release`, each in its own worktree and target directory: **base-main**
+= `origin/main` `c4c363e2` (S0 + S2b + S0b + GSG); **base-s3s1** = `74b0900a` merged with
+`b1337ead` (local merge `17a3af35`, no S2a; the S3 lane's `perf/ta-series-s3-with-s1` predates
+S3's merge of main, so it was not reused); **head** = `perf/ta-series-s2a-on-s1` `894a9f33`.
+EXPLAIN on the owner's shapes (`s2a-evidence/owner/plans-{base-main,base-s3s1,head-on-s1}.txt`):
+head's sorted-eager bare plan equals its explicit plan and base-s3s1's explicit plan (one
+`SortPreservingMergeExec`, no `SortExec`, `ParallelWindowExec` + two `WindowAggExec`, two
+`ParallelProjectionExec`); base-main's bare plan has two `CoalescePartitionsExec` and two
+RoundRobins and no sort. On the head wheel the owner's sorted eager frame resolves by (a) with
+no warning, bare equals explicit bit for bit, and explicit equals base-s3s1 bit for bit.
+
+**Owner-file outputs.** The nine 1,000,000-row Arrow outputs written for §4 and for this check
+(base and head explicit, sorted and unsorted; head bare, sorted and unsorted; on S1: head bare
+and explicit, base-s3s1 explicit) all hash to
+`9d6e743b5cd5356f50b7493fcd737c4dbcdf501eca4b358afeaa8a57de9ee8dd`: one table, byte for byte
+(`s2a-evidence/owner/arrows.sha256`). The files (788 MB) were then deleted.
