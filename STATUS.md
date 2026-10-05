@@ -17,7 +17,7 @@ _Last updated: 2026-09-12._
 
 **v1.5.0 (2026-09-27) — the Spark–Iceberg parity minor.** The v1.5.0 gate is met: zero non-EQUAL cells that Spark
 4.1.2 answers on the 842-cell Spark + Iceberg matrix, except dated owner carve-outs — **705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT** on the fresh-build rerun of 2026-09-27 (main `f7422565`).
-Carved out: C-1 structured streaming and C-2 nested namespaces (v1.6.0 cards), C-4 the v3 variant type; C-3 and C-5
+Carved out: C-1 structured streaming (now 1.7) and C-2 nested namespaces (v1.6.0 card), C-4 the v3 variant type; C-3 and C-5
 count EQUAL under dated harness rules (commit order, `_row_id` order). It covers inspection and nested DDL,
 metadata-table and time-travel reads, DataFrame and SQL writes, MERGE/UPDATE/DELETE, procedures and table
 properties, `TIMESTAMP_NTZ` literals and casts; the UUID refusal no longer panics on non-ASCII SQL. S3 path writes

@@ -299,6 +299,8 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `ParallelWindowRule`, right after `NljBuildSideReset`. It reads the session's
   `repark.parallel` carrier and is a no-op when the session was built with
   `parallel_single_partition(false)`. Full design in `../parallel_window/map.md`.
+  **S3 (2026-10-04):** `ParallelProjectionRule` is appended right after `ParallelWindowRule`
+  and reads the same carrier. pins: ta-series-s3/C-005
   **CONF-UNREAD-1 step 1 (2026-09-11):** `df_guards.rs` also owns
   `DEAD_DATAFUSION_54_1_KEYS` (today only `datafusion.execution.coalesce_batches`,
   which 54.1.0 defines but no engine path reads) with its refusal constructor;

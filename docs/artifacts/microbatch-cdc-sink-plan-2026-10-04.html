@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Micro-batch Change-data Sink</title>
+<meta name="description" content="The RePark micro-batch change-data sink, Bronze to Silver over Iceberg snapshots: what main has, the design, the slices, the waves, the ten owner rulings and the order of work (2026-10-04).">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#f3f7f7; --surface:#ffffff; --ink:#15262a; --muted:#4d6468; --line:#cfdfe0;
+  --accent:#0f7c80; --accent-soft:#dcefef; --warn:#a65b00; --warn-soft:#fbeedd;
+  --bad:#a4262c; --bad-soft:#f8e2e3; --good:#2f6f3e; --good-soft:#e2f1e5;
+  --code-bg:#e8f0f0;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d1719; --surface:#132226; --ink:#dcebec; --muted:#93acaf; --line:#27403f;
+    --accent:#55c2c5; --accent-soft:#16383a; --warn:#e8a456; --warn-soft:#3a2a14;
+    --bad:#f0858a; --bad-soft:#3d1b1e; --good:#84c996; --good-soft:#18331f; --code-bg:#1a2d30;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d1719; --surface:#132226; --ink:#dcebec; --muted:#93acaf; --line:#27403f;
+  --accent:#55c2c5; --accent-soft:#16383a; --warn:#e8a456; --warn-soft:#3a2a14;
+  --bad:#f0858a; --bad-soft:#3d1b1e; --good:#84c996; --good-soft:#18331f; --code-bg:#1a2d30;
+  color-scheme: dark;
+}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;padding-inline:16px;padding-block:32px 64px;margin:0}
+main{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:40px}
+header{display:flex;flex-direction:column;gap:10px;border-bottom:2px solid var(--accent);padding-bottom:20px}
+.eyebrow{font:500 12px/1.2 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+h1{font:600 clamp(28px,5vw,40px)/1.15 "IBM Plex Serif",Georgia,serif;margin:0;text-wrap:balance}
+h2{font:600 24px/1.25 "IBM Plex Serif",Georgia,serif;margin:0 0 12px;text-wrap:balance}
+h3{font:600 17px/1.35 "IBM Plex Sans",system-ui,sans-serif;margin:22px 0 6px;text-wrap:balance}
+p,li{max-width:68ch}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 12px;padding-left:22px}
+li{margin-bottom:6px}
+.lede{font-size:18px;color:var(--muted);margin:0}
+.meta{font:13px/1.5 "IBM Plex Mono",ui-monospace,monospace;color:var(--muted)}
+code{font:0.88em "IBM Plex Mono",ui-monospace,monospace;background:var(--code-bg);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+section{display:flex;flex-direction:column}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:8px 0 12px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.stat b{display:block;font:600 26px/1.1 "IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;color:var(--ink)}
+.stat span{font-size:13px;color:var(--muted)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:4px 0 12px}
+table{border-collapse:collapse;width:100%;min-width:620px;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:9px 12px;border-bottom:1px solid var(--line)}
+th{font:600 12px/1.3 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);background:var(--accent-soft)}
+tr:last-child td{border-bottom:none}
+.tag{display:inline-block;font:600 11px/1 "IBM Plex Mono",ui-monospace,monospace;padding:3px 6px;border-radius:4px;white-space:nowrap;background:var(--accent-soft);color:var(--accent)}
+.tag.measured{background:var(--good-soft);color:var(--good)}
+.tag.judgement{background:var(--warn-soft);color:var(--warn)}
+.tag.rule{background:var(--bad-soft);color:var(--bad)}
+.callout{border-left:4px solid var(--accent);background:var(--surface);padding:12px 16px;border-radius:0 8px 8px 0;margin:4px 0 12px}
+.quote{border-left:4px solid var(--line);padding:4px 16px;margin:0 0 12px;color:var(--ink)}
+footer{font:13px/1.5 "IBM Plex Mono",ui-monospace,monospace;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}
+</style>
+</head>
+<body>
+<main>
+<header>
+<div class="eyebrow">RePark · roadmap adjustment · ruled 2026-10-04</div>
+<h1>The micro-batch change-data sink</h1>
+<p class="lede">Bronze to Silver over Iceberg snapshots: a loop, not a streaming engine. What <code>main</code> already has, the design, the slices, how they parallelise, the ten owner rulings, and the order work opens.</p>
+<p class="meta">Measured on origin/main at 1060ebeb · markdown of record: task/roadmap/epic-term/microbatch-cdc-sink-plan-2026-10-04.md · owner: "Go with recommendations"; "Catalog only. Sink waits for 1.6. TA first. No deletes in bronze."</p>
+</header>
+
+<section>
+<h2>1 · What "Flink-like" means here</h2>
+<p>A source offset per Bronze table, a trigger, one batch per trigger read as an incremental scan between two snapshots, the Silver transform over that batch, one commit into Silver, and the offset advanced atomically with that commit. Flink's heavy parts, keyed operator state and event-time timers, are not needed for a Bronze-to-Silver upsert sink because every piece of durable state lives in an Iceberg table. Latency is the Bronze commit cadence, not sub-second.</p>
+</section>
+
+<section>
+<h2>2 · What <code>main</code> already has</h2>
+<div class="stats">
+<div class="stat"><b>3</b><span>doors over one Iceberg range scan shipped (append window, <code>t.changes</code>, changelog view)</span></div>
+<div class="stat"><b>2</b><span><code>MERGE INTO</code> arms, copy-on-write and merge-on-read, with the OCC anchor</span></div>
+<div class="stat"><b>0</b><span>lines of streaming runtime; <code>readStream</code> and <code>writeStream</code> are declared refusals</span></div>
+</div>
+<div class="tablewrap"><table>
+<tr><th>capability</th><th>where</th><th>state</th></tr>
+<tr><td>Incremental APPEND scan between two snapshot ids</td><td><code>repark-core/src/time_travel/incremental.rs</code></td><td><span class="tag measured">shipped</span> ICE-CHANGELOG-1</td></tr>
+<tr><td><code>t.changes</code> relation and <code>create_changelog_view</code> (carryovers, net changes, update images)</td><td><code>repark-iceberg/src/catalog/changelog.rs</code>, <code>repark-spark/src/call/changelog/</code></td><td><span class="tag measured">shipped</span>; a range with row-level delete files refuses, as Iceberg 1.11.0 does</td></tr>
+<tr><td><code>MERGE INTO</code>, copy-on-write and merge-on-read, deletion vectors on v3, <code>validate_from_snapshot</code></td><td><code>repark-iceberg/src/write/merge/</code></td><td><span class="tag measured">shipped</span></td></tr>
+<tr><td>Snapshot-summary properties on write</td><td>ICE-WRITE-OPTIONS-1</td><td><span class="tag measured">shipped</span>; the slot an idempotency marker goes in</td></tr>
+<tr><td>Stage, validate, conditional commit against an expected base; unknown outcome resolved by walking snapshots for the run key</td><td>silver-s0 C-008</td><td><span class="tag judgement">proven implementable</span>, not built</td></tr>
+<tr><td>Typed <code>SilverPlan</code>: parse, canonical identity, explain</td><td><code>repark-core/src/silver/</code></td><td>S-0 and S-1 on <code>main</code>; no execution</td></tr>
+<tr><td>Session owns embedded capture under four shutdown rules; accepted vs durable; generation fencing; five crash scenarios</td><td>CC-1, CC-9, CC-6</td><td><span class="tag rule">ruled</span>, not built</td></tr>
+<tr><td>No <code>repark-streaming</code> crate</td><td>CL-2</td><td><span class="tag rule">ruled</span></td></tr>
+</table></div>
+<p>The storage side is largely in place. What is missing is the loop around it, the offset contract, the identity rule for records, and the facade.</p>
+</section>
+
+<section>
+<h2>3 · The design, D-1 to D-8</h2>
+<ul>
+<li><b>D-1 Offsets live in the sink.</b> Each micro-batch commit stamps the query id, the epoch and the source snapshot id of every Bronze input into the Silver snapshot summary, and writes the same offset vector as a table property in the same commit. No checkpoint directory for an Iceberg sink. The crash between sink commit and checkpoint cannot happen because there is no second write.</li>
+<li><b>D-2 A batch source over the append scan.</b> Next window, caps by files or rows, and a <em>refusal</em> when the window holds an overwrite or delete snapshot: Bronze is append-only by contract (O-5).</li>
+<li><b>D-3 A Session-owned driver.</b> A tokio task in <code>repark-core</code>, one batch in flight per query, <code>availableNow</code> and processing-time triggers, the four CC-1 shutdown rules. Its only soft state is the in-flight batch, rebuilt from the sink.</li>
+<li><b>D-4 Idempotent replay.</b> The epoch check before commit; the C-008 walk on an unknown outcome; two drivers on one sink are safe because the second loses at the expected-base validation.</li>
+<li><b>D-5 Deterministic identity on every record.</b> An <em>event id</em> on Bronze (source generation, table identity, canonical key, source position) and a <em>version id</em> for Silver (the same without the operation), UUIDv5 over canonical typed bytes, a vectorised kernel in <code>repark-common</code>, a RePark-owned function with a dated registry row. Nothing the pipeline minted feeds the hash. It enters the Bronze contract now (O-2).</li>
+<li><b>D-6 Catalog-only state.</b> Offsets in the sink, ids computed, the replication slot holding the capture position, OCC plus the generation field for fencing, staged files invisible until commit. A shared catalog is required; a local filesystem catalog refuses a streaming query. A control database earns its place only at multi-writer (2.x).</li>
+<li><b>D-7 Two transform doors, <code>foreachBatch</code> first.</b> An existing Silver job body runs unchanged while the runtime owns offsets, triggers and exactly-once; <code>SilverPlan</code> S-2 is the second door. A Silver table fed by several Bronze tables has a vector offset.</li>
+<li><b>D-8 The facade.</b> <code>readStream</code>, <code>writeStream</code>, <code>trigger</code>, <code>foreachBatch</code>, <code>StreamingQuery</code>; the SES-DECL rows flip and the three IPI-47 cells get measured. Rust first.</li>
+</ul>
+<div class="callout"><b>Operational costs, stated up front.</b> A short trigger produces thousands of Silver snapshots a day, so <code>expire_snapshots</code> and compaction policy are part of the design. Merge-on-read sinks need <code>rewrite_data_files</code> on a schedule. One catalog commit per batch per table is the hot path.</div>
+</section>
+
+<section>
+<h2>4 · Why not one lane, one shot</h2>
+<p>The build is four to five units the size of ICE-CHANGELOG-1, which landed about 1,750 lines of product Rust and 840 of Python in one day and then needed a remediation round. A verifier reading one PR of that size has no catch rate; the review pipeline is one scoped verifier per product PR and one PR per slice. Every design question is answered from recorded Spark plus Iceberg cells, and the careful ICE-CHANGELOG-1 packet still got two of ten decisions wrong until the lane read the bytecode. Exactly-once is a proof, not a feature, and the harness that proves it decides MB-2's shape. The fork changes are a separate repository and pin cycle. The hours spent on the prompt go into a design packet in the shape of the ATTR-ID-1 design order, so each slice runs in fewer rounds.</p>
+</section>
+
+<section>
+<h2>5 · The slices</h2>
+<div class="tablewrap"><table>
+<tr><th>slice</th><th>what</th><th>tier</th><th>lane-days</th></tr>
+<tr><td>Packet</td><td>§7 ruled, the oracle cell list, the fork asks, slice orders with file assignments</td><td>the delegate and the owner; then an Opus 5.5 sketch</td><td>0.5–1</td></tr>
+<tr><td>MB-0 oracle</td><td>the v1.6.0 card's step 0 cells plus <code>foreachBatch</code> into an Iceberg sink and restart after a committed and an uncommitted batch</td><td>clerk (Muse at max)</td><td>0.5</td></tr>
+<tr><td>Fork</td><td>summary properties on the row-delta commit path; the pin bump (the fail-loud ask may be unnecessary now that O-5 is refuse: RePark can read the window's snapshot operations from metadata)</td><td>Opus 5.5 or Grok 4.7 guided</td><td>1–2</td></tr>
+<tr><td>Contracts</td><td>the offset type, the batch-source trait, the summary key names, the <code>StreamingQuery</code> states, the registry rows; no behaviour</td><td>Opus 5.5, small</td><td>0.5</td></tr>
+<tr><td>MB-1 source</td><td>the batch source: next window, caps, refusal, offset arithmetic</td><td>Muse at max or Grok 4.7 guided</td><td>1</td></tr>
+<tr><td>MB-2a sink and offsets</td><td>summary stamping and the offset property in the same commit; resume-from-sink</td><td>Opus 5.5</td><td>1–1.5</td></tr>
+<tr><td>Harness</td><td>the crash harness, test-only, written before MB-2c</td><td>Muse at max</td><td>1</td></tr>
+<tr><td>MB-2c replay and reconcile</td><td>the epoch check; the C-008 walk; generation fencing</td><td>Opus 5.5, same lane as 2a</td><td>1–1.5</td></tr>
+<tr><td>MB-3 driver</td><td>the Session-owned task, both triggers, the four shutdown rules</td><td>Opus 5.5</td><td>1–2</td></tr>
+<tr><td>MB-4 facade</td><td>builders, <code>StreamingQuery</code>, error classes, the SES-DECL flips; surface first, wire-up last</td><td>Muse at max</td><td>1–2</td></tr>
+<tr><td>MB-5 multi-source</td><td>vector offsets; the <code>SilverPlan</code> hook</td><td>Opus 5.5</td><td>1–2</td></tr>
+<tr><td>Identity</td><td>the <code>uuid5</code> kernel, the function and registry row, the Bronze contract clause, a one-time backfill per existing Bronze table with a duplicate report</td><td>Muse at max; Opus medium verifier</td><td>1–1.5</td></tr>
+<tr><td>Acceptance</td><td>the owner's clinic Bronze tables into Silver through <code>foreachBatch</code>; duplicate delivery; a kill between commit and trigger; SCD2 dimensions identical to the existing job's</td><td>Muse at max</td><td>1</td></tr>
+</table></div>
+<p>Critical path: packet → contracts → MB-2a → MB-2c → MB-3 → MB-5 → acceptance, about seven lane-days. Sequential, ten to fourteen.</p>
+</section>
+
+<section>
+<h2>6 · Parallel waves and merge order</h2>
+<div class="tablewrap"><table>
+<tr><th>wave</th><th>Opus 5.5 lane</th><th>Muse at max / Grok 4.7 guided</th><th>fork repository</th></tr>
+<tr><td>0</td><td>the sketch from the packet; the owner reads it</td><td>MB-0</td><td>file the asks</td></tr>
+<tr><td>1</td><td>contracts, then MB-2a</td><td>harness; MB-1; identity</td><td>the changes and the pin bump</td></tr>
+<tr><td>2</td><td>MB-2c, then MB-3</td><td>MB-4 surface against a stub</td><td>—</td></tr>
+<tr><td>3</td><td>MB-5</td><td>MB-4 wire-up; acceptance</td><td>—</td></tr>
+</table></div>
+<p>Merge order: contracts, fork pin, then MB-2a, MB-1, harness and identity in any order, then MB-2c, MB-3, MB-4, MB-5, acceptance. One Opus orchestrator slot for every unit (O-8), so this is the sequential path.</p>
+</section>
+
+<section>
+<h2>7 · The ten owner rulings</h2>
+<div class="tablewrap"><table>
+<tr><th>id</th><th>decision</th><th>ruled</th></tr>
+<tr><td>O-1</td><td>offsets in the Silver snapshot summary and a table property; no checkpoint directory for an Iceberg sink</td><td><span class="tag rule">yes</span></td></tr>
+<tr><td>O-2</td><td>deterministic event and version ids enter the Bronze contract now; existing tables backfilled once</td><td><span class="tag rule">yes</span></td></tr>
+<tr><td>O-3</td><td>catalog-only state; shared catalog required; no control database before multi-writer</td><td><span class="tag rule">yes</span> "Catalog only"</td></tr>
+<tr><td>O-4</td><td>the release slot</td><td><span class="tag rule">1.7</span></td></tr>
+<tr><td>O-5</td><td>a Bronze table that receives row-level deletes</td><td><span class="tag rule">refuse</span> "No deletes in bronze"</td></tr>
+<tr><td>O-6</td><td>a genuinely keyless source table</td><td><span class="tag rule">refuse</span></td></tr>
+<tr><td>O-7</td><td>the next Opus slot: STAMP-2 re-measure, then the TA sketch, then this sketch</td><td><span class="tag rule">keep</span> "TA first"</td></tr>
+<tr><td>O-8</td><td>a second Opus lane for this build</td><td><span class="tag rule">no</span> "Keep everything in one opus orc slot"</td></tr>
+<tr><td>O-9</td><td>does the sink open before the 1.6 connectors?</td><td><span class="tag rule">no</span> "Sink waits for 1.6"</td></tr>
+<tr><td>O-10</td><td>an HTML artifact copy in the ruling change</td><td><span class="tag rule">yes</span></td></tr>
+</table></div>
+</section>
+
+<section>
+<h2>8 · The order things happen</h2>
+<ol>
+<li>The packet.</li>
+<li>MB-0 on the free Muse slot, as soon as the parity-live lane hands back.</li>
+<li>The fork asks filed and the fork PR opened.</li>
+<li>The Opus slot already committed: #937 lands, the STAMP-2 re-measure, then the TA single-series sketch.</li>
+<li>The first 1.6 connector units; the micro-batch executors do not open before them.</li>
+<li>The micro-batch design sketch; the owner reads it.</li>
+<li>The contracts PR.</li>
+<li>MB-2a, with the harness, MB-1 and identity in parallel on Muse.</li>
+<li>The fork pin bump merges.</li>
+<li>MB-2c; the harness goes green.</li>
+<li>MB-3; MB-4 surface in parallel.</li>
+<li>MB-4 wire-up.</li>
+<li>MB-5.</li>
+<li>Acceptance on the owner's clinic pipeline.</li>
+<li>The release-roadmap rows and <code>STATUS.md</code> updated in the PR that ships MB-5, closing IPI-47 on the three cells.</li>
+</ol>
+</section>
+
+<section>
+<h2>10 · Existing Bronze tables and the identity backfill</h2>
+<p class="meta">Filed at the owner's instruction in the wording the owner asked to keep; it answers "will this work with already built bronze tables?"</p>
+<div class="quote">
+<p><b>How it lands on existing Bronze.</b> One schema change per table adds the id column, which in Iceberg is metadata only. One backfill pass then fills it from the existing columns: the source table identity, the primary key, and the version rule. That is a one-time rewrite of each Bronze table through repark, and your Bronze volumes are small. From then on new rows carry the id at write. The alternative is to compute the id on read inside the batch source and never store it in Bronze. Both give identical ids, since that is what deterministic means. I recommend the backfill so the contract is uniform and external readers such as the Glue job and Trino see the same column rather than recomputing it.</p>
+<p><b>The precondition is a version rule per table.</b> Your current Bronze rows carry the source columns plus an ingestion timestamp, an operation type that is always APPEND, a DAG version and a run type. None of the pipeline columns may feed the id. So the event id for the existing tables is the source table plus the primary key plus the source's own version column where the source has one, such as an updated-at field. A table whose source has no version column needs a declared fallback in its Bronze contract, and that fallback has to be something the source row carries, not the extraction date. The capture producer will later use the same per-table rule with the LSN as the version, so the daily Bronze and the capture Bronze of one source table hash the same way. This is the "declared, not inferred" rule the silver compiler already applies to dataset mode.</p>
+<p><b>What the backfill will surface.</b> Rows the daily DAG extracted twice, for instance after a re-run, get the same id. That is the feature, not a bug. The backfill report will show how many duplicates each table already holds, and Silver dedups on the id from the first batch onward. The generation field for existing tables is their current table UUID, so a future drop-and-recreate cannot collide with them.</p>
+</div>
+</section>
+
+<section>
+<h2>11 · What this change touches elsewhere</h2>
+<ul>
+<li><code>release-roadmap-2026-08-29.md</code>: the 1.7 row gains the sink and the wait on 1.6; the 2.2 row records that its incremental and changelog reads shipped in v1.5.0 and that the <code>readStream</code> / <code>writeStream</code> subset moved; a dated Q&amp;A row.</li>
+<li><code>roadmap-design-plan-2026-08-29.md</code>: card 2.2 loses the facade micro-batch subset and its two streaming pins; new card 1.7-B names the homes, no new crate and no new edge.</li>
+<li><code>task/roadmap/mid-term/ice-streaming-1-6.md</code> re-points to 1.7; its map entry, the C-1 note in the parity inventory, the <code>STATUS.md</code> carve-out line and the two residue lines of the parity document say 1.7.</li>
+<li><code>ARCHITECTURE.md</code>: one sentence naming the micro-batch module and the identity kernel.</li>
+<li>This page: the artifact copy (O-10).</li>
+</ul>
+</section>
+
+<section>
+<h2>Leaves this directory when</h2>
+<p>The packet exists under <code>task/wo/microbatch/</code> with §7 ruled, and the cards MB-0…MB-5 are filed; then the markdown of record is the dated record and the orders carry the contracts.</p>
+</section>
+
+<footer>Rendering of task/roadmap/epic-term/microbatch-cdc-sink-plan-2026-10-04.md · the sources stay authoritative.</footer>
+</main>
+</body></html>

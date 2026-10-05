@@ -6,10 +6,14 @@ use datafusion::execution::SessionState;
 use datafusion::prelude::SessionConfig;
 
 mod exec;
+mod projection;
 mod rule;
 
+pub use projection::ParallelProjectionRule;
 pub use rule::ParallelWindowRule;
 
+#[cfg(test)]
+mod projection_tests;
 #[cfg(test)]
 mod tests;
 
