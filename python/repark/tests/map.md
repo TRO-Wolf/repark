@@ -6924,6 +6924,29 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **r21 T4 ta-etl:** `over_columns` type guards; `withColumns(over_columns(...))` → one
   `WindowAggExec` + Arrow bit-exact vs sequential `withColumn`; **r23b N2:** sequential same-spec
   independent `withColumn` also merges to one `WindowAggExec` (was N-stack anti-pattern pin).
+- `test_ta_series.py` — **TA-SINGLE-SERIES-PARALLEL-1 S2a (2026-10-05):** the bare `ta.*` series
+  pins through the facade. `test_series_equals_explicit_orderby` (P-S2a-1: the owner's levels,
+  bare against `.over(Window.orderBy(ts))`, bit for bit, on a lazily sorted and an eager frame);
+  `test_series_order_declared_beats_temporal` (P-S2a-2, no warning);
+  `test_series_order_timestamp_before_date_and_warns_once` (P-S2a-3: a DATE then a TIMESTAMP
+  resolves to the TIMESTAMP; exactly one `UserWarning` over three binds);
+  `test_series_order_date_fallback` (P-S2a-3b);
+  `test_bare_ta_current_row_order_reads_partitions_in_index_order` (P-S2a-4, facade side: a
+  four-file union with no temporal column plans `ParallelWindowExec` with no coalesce and reads
+  source order three times); `test_null_lookback_native_matches_row_number_rewrite` (P-S2a-5:
+  explicit, bare and `with_indicators` NULL / NaN cells equal the `row_number` + CASE spelling,
+  12 NULL + 1 NaN per symbol); `test_mixing_series_and_partitioned_window` (P-S2a-7, at 1 and
+  16 partitions: the partitioned operator stays `WindowAggExec`, the series one is
+  `ParallelWindowExec`, and both are bit-equal to each alone). pins: ta-series-s2a/C-001, C-002,
+  C-003, C-004, C-005, C-007
+  **Stacked on S1 (2026-10-05):** `test_series_order_sorted_eager_frame_is_declared` (P-S2a-9: a
+  frame sorted by a later timestamp column, `.eager().lazy()`, resolves by (a) through S1's
+  declared `MemTable` order, no warning, bit-equal to the explicit spelling over that column).
+  pins: ta-series-s2a/C-013
+  **V950-1 fold (2026-10-05):** `test_bare_ta_file_stream_stealing_reads_file_order` (case (c)
+  over an 8-file directory read and over one 1.2 M-row file split into byte ranges reads the
+  file-order answer 10 of 10 times each; asserts 8 file groups and more than 1 file group).
+  pins: ta-series-s2a/C-004
 - `test_ta_with_indicators.py` — **conductor-13 TA-2:** `ta.with_indicators` serving helper.
   Arrow value+type vs hand-built `over_columns`; required keyword-only `partition`/`order`
   (TypeError on omit; empty partition refuses); cross-symbol RSI leak vs unpartitioned
@@ -7666,6 +7689,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the xfail-strict `test_sorted_cache_filter_read_order_follow_up`, owned by card
   CACHE-ORDER-READ-1 (`BatchSplitStream` at execution plus `RoundRobinBatch(16)`
   above it plus completion-order `CoalescePartitionsExec`).
+  pins: ta-series-s1/P-S1-1, P-S1-2, P-S1-5, P-S1-6
   `test_rematerialised_sorted_cache_keeps_order_at_scale` (S1 fold V944-1, 2026-10-05)
   pins the verifier's re-materialise shape at 1M rows (`sort().eager()` then
   `select().eager()` reads back sorted 3/3).

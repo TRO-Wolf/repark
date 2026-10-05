@@ -591,7 +591,13 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   pins: row-tuple-1/C-001, C-002, C-004
 - `storage.py` — StorageLevel flags and the facade cache contract. Disk, off-heap,
   and replication flags are recorded; actual persistence is engine-owned.
-- `ta.py` — TA-Lib technical-analysis/window helpers and `with_indicators`. ML
+- `ta.py` — **TA-SINGLE-SERIES-PARALLEL-1 S2a (2026-10-05):** `_window` passes the lookback to
+  `PyColumn.ta_window` as `null_prefix` when `null_lookback=True`, so the window function emits
+  the prefix natively in both spellings; `_NullLookbackColumn` no longer overrides `.over` (the
+  `row_number` + CASE rewrite is gone) and `_LookbackAwareColumn` keeps the name and arguments
+  so `with_indicators(null_lookback=True)` rebuilds through `_window`. The module docstring
+  carries the series-order note (docs D). pins: ta-series-s2a/C-005, C-012
+  TA-Lib technical-analysis/window helpers and `with_indicators`. ML
   estimators and feature/evaluation surfaces live in [ml/map.md](ml/map.md).
 - `types.py` — Spark SQL data types, DDL/JSON conversion, schema inspection, interval
   support, metadata, and Python-value verification.

@@ -1,5 +1,6 @@
 # map — scripts/
 
+TA-SINGLE-SERIES-PARALLEL-1 S2a (2026-10-05): `check_rust_file_size.py` ratchets `repark-ta/src/udf/mod.rs` 1801 → 1791 (`make_udf` moves to `udf/glue.rs` beside the native `null_prefix` helpers; `window_udf` delegates to `window_udf_with_null_prefix`) and `check_lib_py.py` ratchets `python/repark/src/repark/spark/ta.py` 1818 → 1795 (the `row_number` + CASE rewrite in `_NullLookbackColumn.over` is gone), shrink-only, with the CAP-1 mirror.
 TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04): `check_rust_file_size.py` ratchets `repark-ta/src/udf/mod.rs` 1818 → 1801 (the output copy and the single-series borrow move to the new `udf/glue.rs`), shrink-only, with the CAP-1 mirror.
 TA-CHAIN-1 S1 (2026-10-03): `check_rust_file_size.py` ratchets `repark-ta/src/udf/mod.rs` 1821 → 1818 (the four `compute` / `compute_all` calls in `evaluate_all` route through the new `udf/prefix.rs` helpers; the wrapper tests live in `prefix.rs`), shrink-only, integer only (owner amendment R-TC1-6, 2026-10-03).
 RP-56 DIFF-PROBE fold (2026-09-29): `check_rust_file_size.py` ratchets `repark-iceberg/src/write/append.rs` 1804 → 1737 (the `write_partitioned_data_files*` family moved to `partitioned_files.rs`) and `repark-iceberg/src/write/merge/mod.rs` 1622 → 1569 (the `write_data_files*` family moved to `merge/file_sink.rs`), shrink-only.

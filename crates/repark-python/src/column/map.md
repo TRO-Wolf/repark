@@ -290,6 +290,18 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   parse like the session door; default mode takes the identical path as
   before. pins: string-literal-escape-1/C-009
 - [`window.rs`](window.rs) owns Spark frame conversion and unordered-window policy.
+- [`series.rs`](series.rs) — **TA-SINGLE-SERIES-PARALLEL-1 S2a (2026-10-05):** `bind_series(frame, bound)`,
+  called by both bind choke points in `../dataframe_names.rs`. When the bound expression holds a
+  bare TA window (`repark_ta::udf::is_ta_window`, empty `PARTITION BY` and `ORDER BY`), it resolves
+  the frame's order with `repark_core::series_order::resolve_series_order` and rebuilds every such
+  window through `build_over_expression` with `OverSpec { order_by: keys, .. }`, the builder the
+  explicit `.over(Window.orderBy(K))` uses, so the bare spelling is the explicit one by
+  construction. With no keys (case (c)) the window stays `OVER ()`. For (b) and (c) it raises one
+  `UserWarning` per session (`PyErr::warn`, the sketch §1.3 texts) when
+  `claim_series_order_notice` says the session has not warned yet. Expressions without a bare
+  TA window return untouched after one walk. **`ta_window` (mod.rs)** takes
+  `null_prefix = 0` and builds through `repark_ta::udf::window_udf_with_null_prefix`.
+  pins: ta-series-s2a/C-001, C-003, C-005
   **WIN-SLIDE-1 (2026-09-04):** a `RANGE` offset is emitted as `ScalarValue::Utf8`, not `Int64`.
   DataFusion's window-frame coercion casts a `Utf8` bound to the ORDER BY key's type (that is the
   shape its own SQL planner produces) and passes any other scalar through untouched — and a bound

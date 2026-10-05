@@ -121,8 +121,12 @@ illustrative. A claim with no verified basis does not go in.
   DataFusion/ANSI, its own process-wide session); the no-blended-parser rule (ADR-0002); why two
   sessions; wrong-door sniffing at a high level and what the Python callable does *today*;
   identifier case (ID-1); how to choose.
-- [ta-guide.md](ta-guide.md) — the `repark.ta` library: the un-`OVER`ed-column shape, `over_columns`
-  and the `with_indicators` serving door, the `null_lookback` prefix rewrite, the 81 entry points
+- [ta-guide.md](ta-guide.md) — the `repark.ta` library: the un-`OVER`ed-column shape (with the
+  TA-SINGLE-SERIES-PARALLEL-1 S2a note, 2026-10-05: a bare `ta.*` column is a series over the
+  frame's declared order, else the first timestamp column, else the first date column, else the
+  current row order, warned once per session; V950-2, 2026-10-05: a temp-view or SQL-subquery
+  `ORDER BY` is not a declared order), `over_columns`
+  and the `with_indicators` serving door, the native `null_lookback` prefix, the 81 entry points
   over 68 kernels, the `ta_*` SQL spelling (Spark door only), the TA-Lib C 0.4.0 bit-exactness
   claim as the crate states it (`f64::to_bits` goldens, the `linearreg_angle` libm caveat), the
   SE-1 `declareSorted` door with its measured null-placement boundary and the

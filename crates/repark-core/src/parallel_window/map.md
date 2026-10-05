@@ -43,12 +43,34 @@ provider's cloned state would not be enough. The flag defaults to on; it has no 
   `udf/mod.rs`) still computes each family once. `BoundedWindowAggExec` is never touched:
   measured, no `ta.*` plan produces one (a TA window UDF is not bounded-capable, so a node holding
   one is a `WindowAggExec`), and the non-TA one-partition windows that do (`lag`, `row_number`,
-  running `sum` over `ORDER BY`) stay as DataFusion planned them.
+  running `sum` over `ORDER BY`) stay as DataFusion planned them. **S2a (2026-10-05):** before
+  that test the rule tries the partition-index arm. It fires when the `WindowAggExec`'s input is
+  a `CoalescePartitionsExec` without a fetch and **every** expression has an empty `PARTITION BY`
+  and an empty `ORDER BY` and is a window UDF (`StandardWindowExpr` over `WindowUDFExpr`),
+  whatever the group count. Through the facade only a bare `ta.*` column that the series rewrite
+  left as `OVER ()` (case (c), no declared order and no temporal column) reaches it, because the
+  facade refuses `.over(...)` without `ORDER BY` for every window UDF. Through SQL, an unordered
+  window UDF that DataFusion plans as a `WindowAggExec` (`ta_*() OVER ()`, for one) reads in
+  partition-index order too: the arm runs the input with file-stream work stealing off, so the
+  read is deterministic, otherwise the same answer. Every other `OVER ()` window keeps today's
+  plan: aggregates (`sum(x) OVER ()`)
+  and mixed aggregate/UDF nodes take the S2b arm over the coalesce when they have at least two
+  groups, and stay a `WindowAggExec` otherwise.
 - `exec.rs` — `ParallelWindowExec`. Built from the `WindowAggExec` it replaces: the same input,
   expressions, `PlanProperties`, required ordering (captured from the source node), single
   partition distribution and `maintains_input_order`; `with_new_children` rebuilds through
-  `WindowAggExec::try_new` so the properties stay DataFusion's. `InputOrder::Single` is the only
-  arm here (the partition-index arm for an `OVER ()` over several partitions belongs to S2a).
+  `WindowAggExec::try_new` so the properties stay DataFusion's. **S2a (2026-10-05):** the
+  `InputOrder::PartitionIndex` arm, built by `from_unordered_coalesce` from a `WindowAggExec`
+  over `CoalescePartitionsExec ← X`: the input is X itself, the plan properties stay the
+  coalesced window's (one output partition), the required input distribution is unspecified,
+  there is no required ordering and input order is not maintained; `with_new_children` rebuilds
+  the coalesced window around the new child. Execution spawns one `SpawnedTask` per X partition
+  that collects it, then joins the tasks **in partition-index order**, so the window sees X's
+  partitions concatenated 0, 1, … instead of in completion order; statistics read X's totals.
+  **V950-1 fold (2026-10-05):** the arm executes X with a `TaskContext` derived from the incoming
+  one whose session config sets `execution.enable_file_stream_work_stealing = false`, so each
+  partition reads its own file group (or byte range) and partition-index order is file order; the
+  `Single` arm and every other operator keep the incoming context unchanged.
   Execution: collect the input and `concat_batches` it once (as `WindowAggStream` does); empty
   input emits no batch; one `SpawnedTask::spawn_blocking` per group, capped by a
   `tokio::sync::Semaphore` of `min(groups, target_partitions)`; each group evaluates its members
@@ -85,6 +107,7 @@ provider's cloned state would not be enough. The flag defaults to on; it has no 
   **Neither pass fires when any expression of the projection (or of any projection in the
   chain) is volatile** (`is_volatile`: `rand`, `randn`, the volatile time casts; orchestrator
   Q-S3-2). Execution is per input batch, so the output batch shape equals `ProjectionExec`'s: a
+  batch below `PARALLEL_PROJECTION_MIN_ROWS` rows is evaluated serially in line; otherwise each
   batch below `PARALLEL_PROJECTION_MIN_ROWS` rows is evaluated serially in line, as is any batch
   when only one task can run (`min(tasks, target_partitions) <= 1`, the DIFF-PROBE #945 tp1 fold:
   serial evaluation on blocking threads paid spawn and join overhead per batch); otherwise each
@@ -98,6 +121,7 @@ provider's cloned state would not be enough. The flag defaults to on; it has no 
   RoundRobin over one ordered partition (EXPLAIN `maintains_sort_order=true`, the shape S1's
   ordered cache produces above the L1 window, where the RoundRobin spilled the whole batch) is
   dropped the same way.
+  pins: ta-series-s3/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
   pins: ta-series-s3/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
 - `projection_tests.rs` — the S3 pins (no TA dependency): `parallel_projection_bit_identical`
   (13 × `round`, 3 × `/`, a `CASE` over a window subquery, through a session against the
@@ -112,6 +136,8 @@ provider's cloned state would not be enough. The flag defaults to on; it has no 
   `parallel_projection_drops_order_preserving_round_robin` (a sorted single-batch source under a
   `maintains_sort_order=true` RoundRobin over a `WindowAggExec` and over a `ParallelWindowExec`,
   P-S3-8); `parallel_projection_keeps_multi_batch_fan_out` (multi-batch single-partition sources
+  keep their RoundRobin, P-S3-9). Window inputs come from `window` (two whole-frame `sum`s).
+  pins: ta-series-s3/C-001, C-002, C-003, C-004, C-005, C-007, C-008, C-009, C-012
   keep their RoundRobin, P-S3-9);
   `parallel_projection_single_permit_serial` (with `target_partitions = 1` a batch at the
   threshold stays serial, the `parallel_batches` counter at 0, bit-identical, P-S3-10).
@@ -136,8 +162,19 @@ provider's cloned state would not be enough. The flag defaults to on; it has no 
   against off; `sum`/`avg`/`max`/`count OVER ()` and a mixed whole-frame/`lag` node fire, the
   `lag`/`row_number`/running-`sum` node plans as `BoundedWindowAggExec` and is untouched).
   pins: ta-series-s2b/C-002, C-003, C-004, C-005, C-006, C-009, C-010, C-013
+  **S2a (2026-10-05):** `series_order_current_row_order_partition_index` (P-S2a-4: a
+  four-partition `DelayedExec` whose partition i finishes after `(4 - i) × 60 ms`, under a
+  coalesced pass-through window UDF; the arm fires with one or two groups, drops the coalesce,
+  survives `with_new_children`, and three runs read ids 0…399 in source order) and
+  `partition_index_keeps_aggregate_over_coalesce` (aggregates, a mixed node and a fetching
+  coalesce keep today's plan). pins: ta-series-s2a/C-004
 - Gates measured for the slice (goldens, kernel race, owner-shape facade identity against base,
   speed): `task/ledgers/staging/ta-series-s2b-ledger.md`. pins: ta-series-s2b/C-008, C-011, C-012
+- S2a gates (goldens, crate suites, facade, parity, hygiene) and the owner-file correctness record
+  on release wheels (bare equals explicit, explicit equals base, 0 rows off polars_talib):
+  `task/ledgers/staging/ta-series-s2a-ledger.md`; the speed record on main (bare 0.71× of
+  `origin/main` before S3/S1, 0.86 / 0.68 of polars_talib) is its §6.
+  pins: ta-series-s2a/C-009, C-010, C-011
 
 ## Pointers
 

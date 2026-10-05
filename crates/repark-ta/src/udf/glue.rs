@@ -1,9 +1,115 @@
+use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Array, ArrayRef, Float64Array};
+use datafusion::arrow::array::{Array, ArrayRef, BooleanBufferBuilder, Float64Array};
+use datafusion::arrow::buffer::NullBuffer;
+use datafusion::common::{DataFusionError, Result};
+use datafusion::logical_expr::expr::WindowFunction;
+use datafusion::logical_expr::{
+    PartitionEvaluator, Signature, Volatility, WindowFunctionDefinition, WindowUDF,
+};
+
+use super::{SPECS, TaEvaluator, TaFn, TaWindowUdf};
 
 pub(super) fn float64_array_from_vec(values: Vec<f64>) -> ArrayRef {
     Arc::new(Float64Array::from(values))
+}
+
+pub(super) fn make_udf(name: &'static str, func: TaFn, null_prefix: usize) -> WindowUDF {
+    let display = if null_prefix == 0 {
+        name.to_owned()
+    } else {
+        format!("{name}_null_prefix_{null_prefix}")
+    };
+    WindowUDF::new_from_impl(TaWindowUdf {
+        name,
+        display,
+        func,
+        signature: Signature::any(func.arity(), Volatility::Immutable),
+        null_prefix,
+    })
+}
+
+#[must_use]
+pub fn window_udf_with_null_prefix(name: &str, null_prefix: usize) -> Option<Arc<WindowUDF>> {
+    SPECS
+        .iter()
+        .find(|(spec_name, _)| *spec_name == name)
+        .map(|&(spec_name, func)| Arc::new(make_udf(spec_name, func, null_prefix)))
+}
+
+#[must_use]
+pub fn is_ta_window(function: &WindowFunction) -> bool {
+    match &function.fun {
+        WindowFunctionDefinition::WindowUDF(udf) => {
+            udf.inner().downcast_ref::<TaWindowUdf>().is_some()
+        }
+        WindowFunctionDefinition::AggregateUDF(_) => false,
+    }
+}
+
+impl PartialEq for TaWindowUdf {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+            && self.func == other.func
+            && self.signature == other.signature
+            && self.null_prefix == other.null_prefix
+    }
+}
+
+impl Eq for TaWindowUdf {}
+
+impl Hash for TaWindowUdf {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+        self.func.hash(state);
+        self.signature.hash(state);
+        self.null_prefix.hash(state);
+    }
+}
+
+pub(super) fn with_null_prefix(
+    evaluator: TaEvaluator,
+    null_prefix: usize,
+) -> Box<dyn PartitionEvaluator> {
+    if null_prefix == 0 {
+        Box::new(evaluator)
+    } else {
+        Box::new(NullPrefixEvaluator {
+            inner: evaluator,
+            null_prefix,
+        })
+    }
+}
+
+#[derive(Debug)]
+struct NullPrefixEvaluator {
+    inner: TaEvaluator,
+    null_prefix: usize,
+}
+
+impl PartitionEvaluator for NullPrefixEvaluator {
+    fn evaluate_all(&mut self, values: &[ArrayRef], num_rows: usize) -> Result<ArrayRef> {
+        let output = self.inner.evaluate_all(values, num_rows)?;
+        null_leading_rows(&output, self.null_prefix)
+    }
+}
+
+fn null_leading_rows(array: &ArrayRef, null_prefix: usize) -> Result<ArrayRef> {
+    let floats = array
+        .as_any()
+        .downcast_ref::<Float64Array>()
+        .ok_or_else(|| {
+            DataFusionError::Internal("TA window output is not a Float64 array".to_owned())
+        })?;
+    let len = floats.len();
+    let prefix = null_prefix.min(len);
+    let mut validity = BooleanBufferBuilder::new(len);
+    validity.append_n(prefix, false);
+    validity.append_n(len - prefix, true);
+    let leading = NullBuffer::new(validity.finish());
+    let nulls = NullBuffer::union(Some(&leading), floats.nulls());
+    Ok(Arc::new(Float64Array::new(floats.values().clone(), nulls)))
 }
 
 pub(super) fn try_borrow_null_free_f64(array: &ArrayRef) -> Option<&[f64]> {

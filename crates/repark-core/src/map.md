@@ -856,6 +856,18 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   projection with at least two non-column expressions evaluates them in parallel; never on a
   volatile expression. See [parallel_window/map.md](parallel_window/map.md).
   pins: ta-series-s3/C-001, C-002, C-004, C-007, C-012
+  **S2a (2026-10-05):** `ParallelWindowExec` gains the `InputOrder::PartitionIndex` arm: an
+  unordered, unpartitioned window of window-UDF expressions over `CoalescePartitionsExec` drops
+  the coalesce and reads its input's partitions in index order. pins: ta-series-s2a/C-004
+- `series_order.rs` (+ [series_order/](series_order/map.md)) — **TA-SINGLE-SERIES-PARALLEL-1 S2a
+  (2026-10-05):** the generic order resolver behind the bare `ta.*` series (no TA knowledge).
+  `resolve_series_order(plan, schema)` returns the frame's declared order (a `Sort`, or a
+  `MemTable` scan's `sort_order`, reached through `Projection` / `Filter` / `SubqueryAlias` /
+  `Window` / `Limit`), else the first timestamp column (else the first date column) ascending
+  NULLS FIRST, else no keys (the current row order). `SeriesOrderNotice` is the once-per-session
+  warning flag, a `repark.series` carrier that `session.rs` attaches at build (one line beside
+  the `repark.parallel` carrier); `lib.rs` declares `pub mod series_order;`.
+  pins: ta-series-s2a/C-002, C-003
   session that did not (verifier V-1). See
   [parallel_window/map.md](parallel_window/map.md).
 - `orc_schema.rs` — **IO-ORC-1 (2026-09-16):** the ORC schema half beside the scan:

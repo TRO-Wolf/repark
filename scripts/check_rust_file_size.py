@@ -200,7 +200,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split moving-average and band families only with identity proof.",
     ),
     "crates/repark-ta/src/udf/mod.rs": (
-        1801,
+        1791,
         "Window UDF cache, densification, specs, and dispatch share one module.",
         "Extract statistic and math dispatch from shared evaluation mechanics.",
     ),
