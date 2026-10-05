@@ -62,9 +62,13 @@ provider's cloned state would not be enough. The flag defaults to on; it has no 
   `ParallelProjectionExec`. The rule is appended right after `ParallelWindowRule`, reads the
   same `repark.parallel` carrier (off → the plan is returned unchanged) and runs two passes.
   **R-S3-1a, the RoundRobin drop** (the earlier sketch's S4, folded into S3 by the orchestrator's
-  Q-S3-1 = A ruling): a `ProjectionExec`, or a chain of them, sitting directly on a
-  `RepartitionExec(RoundRobinBatch(n))` whose input has one partition is rebuilt over the
-  RoundRobin's input, whatever the expression count. The drop is decided at the first
+  Q-S3-1 = A ruling, narrowed by Q-S3-3 = A): a `ProjectionExec`, or a chain of them, sitting
+  directly on a `RepartitionExec(RoundRobinBatch(n))` whose input has one partition **and emits
+  exactly one batch by construction** (`emits_one_batch`: a `WindowAggExec` or
+  `ParallelWindowExec`, directly or through `ProjectionExec` / `ParallelProjectionExec`) is rebuilt
+  over the RoundRobin's input, whatever the expression count. Any other single-partition source
+  (`range()`, a file scan, a multi-batch `DataSourceExec` or `MemTable`) keeps its fan-out, so its
+  batch parallelism and memory-pool behaviour are unchanged. The drop is decided at the first
   non-projection parent of the chain (or at the root, which has no requirement): that parent's
   required distribution for the child must be unspecified or single-partition (a hash
   requirement is refused, because one partition would satisfy it while breaking co-partitioning
@@ -89,7 +93,7 @@ provider's cloned state would not be enough. The flag defaults to on; it has no 
   `parallel_single_partition_active` and the distributed provider's refusal cover it. A
   RoundRobin over one ordered partition (EXPLAIN `maintains_sort_order=true`, the shape S1's
   ordered cache produces, where the RoundRobin spilled the whole batch) is dropped the same way.
-  pins: ta-series-s3/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  pins: ta-series-s3/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-012
 - `projection_tests.rs` — the S3 pins (no TA dependency): `parallel_projection_bit_identical`
   (13 × `round`, 3 × `/`, a `CASE`, through a session against the flag-off session);
   `parallel_projection_removes_rr_spm_sandwich` (the owner's two RoundRobins, a two-projection
@@ -100,8 +104,10 @@ provider's cloned state would not be enough. The flag defaults to on; it has no 
   `parallel_projection_volatile_unchanged` (a seeded volatile probe); and
   `parallel_projection_lowest_index_error`, `parallel_projection_drop_cancels`;
   `parallel_projection_drops_order_preserving_round_robin` (a sorted single-batch source under a
-  `maintains_sort_order=true` RoundRobin, P-S3-8).
-  pins: ta-series-s3/C-001, C-002, C-003, C-004, C-005, C-007, C-008, C-009
+  `maintains_sort_order=true` RoundRobin over a `WindowAggExec` and over a `ParallelWindowExec`,
+  P-S3-8); `parallel_projection_keeps_multi_batch_fan_out` (multi-batch single-partition sources
+  keep their RoundRobin, P-S3-9). Window inputs come from `window` (two whole-frame `sum`s).
+  pins: ta-series-s3/C-001, C-002, C-003, C-004, C-005, C-007, C-008, C-009, C-012
 - `tests.rs` — the S2b pins on probe window UDFs (no TA dependency; `repark-core` cannot see
   `repark-ta`). `parallel_window_matches_serial_window_across_batches` (five expressions, three
   groups, three input batches); `parallel_window_keeps_multi_output_siblings` (three band

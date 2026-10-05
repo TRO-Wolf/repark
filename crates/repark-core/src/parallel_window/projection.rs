@@ -21,6 +21,7 @@ use datafusion::physical_plan::metrics::{
 use datafusion::physical_plan::projection::{ProjectionExec, ProjectionExpr};
 use datafusion::physical_plan::repartition::RepartitionExec;
 use datafusion::physical_plan::stream::RecordBatchStreamAdapter;
+use datafusion::physical_plan::windows::WindowAggExec;
 use datafusion::physical_plan::{
     DisplayAs, DisplayFormatType, Distribution, ExecutionPlan, ExecutionPlanProperties,
     Partitioning, SendableRecordBatchStream,
@@ -28,6 +29,7 @@ use datafusion::physical_plan::{
 use futures::TryStreamExt;
 use tokio::sync::Semaphore;
 
+use super::exec::ParallelWindowExec;
 use super::parallel_single_partition_enabled;
 
 pub(crate) const PARALLEL_PROJECTION_RULE: &str = "parallel_projection";
@@ -142,6 +144,7 @@ fn without_round_robin(child: &Arc<dyn ExecutionPlan>) -> Result<Option<Arc<dyn 
     };
     if !matches!(repartition.partitioning(), Partitioning::RoundRobinBatch(_))
         || repartition.input().output_partitioning().partition_count() != 1
+        || !emits_one_batch(repartition.input())
     {
         return Ok(None);
     }
@@ -153,6 +156,24 @@ fn without_round_robin(child: &Arc<dyn ExecutionPlan>) -> Result<Option<Arc<dyn 
         )?);
     }
     Ok(Some(rebuilt))
+}
+
+fn emits_one_batch(plan: &Arc<dyn ExecutionPlan>) -> bool {
+    let mut cursor = plan;
+    loop {
+        if cursor.downcast_ref::<WindowAggExec>().is_some()
+            || cursor.downcast_ref::<ParallelWindowExec>().is_some()
+        {
+            return true;
+        }
+        if let Some(projection) = cursor.downcast_ref::<ProjectionExec>() {
+            cursor = projection.input();
+        } else if let Some(projection) = cursor.downcast_ref::<ParallelProjectionExec>() {
+            cursor = projection.projection.input();
+        } else {
+            return false;
+        }
+    }
 }
 
 fn parent_accepts(

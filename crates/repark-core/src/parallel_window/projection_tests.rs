@@ -11,10 +11,13 @@ use datafusion::datasource::memory::{MemTable, MemorySourceConfig};
 use datafusion::datasource::source::DataSourceExec;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::execution::TaskContext;
+use datafusion::functions_aggregate::sum::sum_udaf;
 use datafusion::logical_expr::{
     ColumnarValue, Operator, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, Volatility,
 };
+use datafusion::logical_expr::{WindowFrame, WindowFunctionDefinition};
 use datafusion::physical_expr::expressions::{BinaryExpr, Column, Literal};
+use datafusion::physical_expr::window::WindowExpr;
 use datafusion::physical_expr::{LexOrdering, PhysicalExpr, PhysicalSortExpr};
 use datafusion::physical_optimizer::PhysicalOptimizerRule;
 use datafusion::physical_plan::coalesce_partitions::CoalescePartitionsExec;
@@ -24,6 +27,7 @@ use datafusion::physical_plan::projection::{ProjectionExec, ProjectionExpr};
 use datafusion::physical_plan::repartition::RepartitionExec;
 use datafusion::physical_plan::sorts::sort::SortExec;
 use datafusion::physical_plan::sorts::sort_preserving_merge::SortPreservingMergeExec;
+use datafusion::physical_plan::windows::{WindowAggExec, create_window_expr};
 use datafusion::physical_plan::{
     ExecutionPlan, ExecutionPlanProperties, Partitioning, collect, displayable,
 };
@@ -31,10 +35,10 @@ use datafusion::prelude::{SessionConfig, SessionContext};
 use datafusion::scalar::ScalarValue;
 use futures::StreamExt;
 
-use super::ParallelSinglePartitionConfig;
 use super::projection::{
     PARALLEL_PROJECTION_MIN_ROWS, ParallelProjectionExec, ParallelProjectionRule,
 };
+use super::{ParallelSinglePartitionConfig, ParallelWindowRule};
 use crate::ReparkSession;
 
 fn schema() -> SchemaRef {
@@ -142,6 +146,28 @@ fn by_id() -> LexOrdering {
 
 fn sorted(input: Arc<dyn ExecutionPlan>) -> Arc<dyn ExecutionPlan> {
     Arc::new(SortExec::new(by_id(), input))
+}
+
+fn whole_sum(input: &Arc<dyn ExecutionPlan>, name: &str) -> Arc<dyn WindowExpr> {
+    let index = input.schema().index_of(name).expect("window column");
+    create_window_expr(
+        &WindowFunctionDefinition::AggregateUDF(sum_udaf()),
+        format!("sum_{name}"),
+        &[Arc::new(Column::new(name, index)) as Arc<dyn PhysicalExpr>],
+        &[],
+        &[],
+        Arc::new(WindowFrame::new(None)),
+        input.schema(),
+        false,
+        false,
+        None,
+    )
+    .expect("window expression")
+}
+
+fn window(input: Arc<dyn ExecutionPlan>) -> Arc<dyn ExecutionPlan> {
+    let exprs = vec![whole_sum(&input, "x"), whole_sum(&input, "y")];
+    Arc::new(WindowAggExec::try_new(exprs, input, true).expect("window"))
 }
 
 fn options(enabled: bool) -> ConfigOptions {
@@ -276,7 +302,8 @@ const OWNER_PROJECTION: &str = "SELECT id, \
     round(x / 7.0, 4) AS r10, round(y / 11.0, 4) AS r11, round(z / 13.0, 4) AS r12, \
     round(x + y + z, 4) AS r13, \
     x / y AS d1, y / z AS d2, round(z * 0.5, 4) / x AS d3, \
-    CASE WHEN x > y THEN x ELSE y END AS c1 FROM t";
+    CASE WHEN x > y THEN x ELSE y END AS c1, w \
+    FROM (SELECT id, x, y, z, sum(x) OVER () AS w FROM t) AS s";
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn parallel_projection_bit_identical() {
@@ -287,14 +314,14 @@ async fn parallel_projection_bit_identical() {
     assert_eq!(node.len(), 1, "{}", text(&plan_on));
     assert_eq!(round_robins(&plan_on), 0, "{}", text(&plan_on));
     assert_eq!(round_robins(&plan_off), 1, "{}", text(&plan_off));
-    assert!(parallel_batches(&plan_on) >= 2, "{}", text(&plan_on));
-    assert_eq!(got.num_columns(), 18);
+    assert_eq!(parallel_batches(&plan_on), 1, "{}", text(&plan_on));
+    assert_eq!(got.num_columns(), 19);
     assert_eq!(got.num_rows(), expected.num_rows());
     assert_bit_identical(&got, &sorted_by_id(&expected));
 }
 
 fn sandwich(merge: bool) -> Arc<dyn ExecutionPlan> {
-    let level_one = sorted(source(&[700, 900, 400]));
+    let level_one = window(sorted(source(&[700, 900, 400])));
     let spread = round_robin(level_one, merge);
     let p_b = project(
         spread,
@@ -329,7 +356,7 @@ fn sandwich(merge: bool) -> Arc<dyn ExecutionPlan> {
         Arc::new(CoalescePartitionsExec::new(p_a))
     };
     let p_c = project(
-        merged,
+        window(merged),
         vec![
             item(at("id", 0), "id"),
             item(at("x", 1), "x"),
@@ -379,7 +406,10 @@ async fn parallel_projection_removes_rr_spm_sandwich() {
         assert_eq!(chain_top.output_partitioning().partition_count(), 1);
         assert_eq!(chain_top.name(), "ProjectionExec");
         assert_eq!(chain_top.children()[0].name(), "ProjectionExec");
-        assert_eq!(chain_top.children()[0].children()[0].name(), "SortExec");
+        assert_eq!(
+            chain_top.children()[0].children()[0].name(),
+            "WindowAggExec"
+        );
         assert_eq!(
             find(&head, "ParallelProjectionExec").len(),
             2,
@@ -428,7 +458,7 @@ async fn parallel_projection_small_input_serial() {
 fn parallel_projection_respects_parent_ordering() {
     let spread = || {
         project(
-            round_robin(sorted(source(&[700, 900, 400])), true),
+            round_robin(window(sorted(source(&[700, 900, 400]))), true),
             vec![
                 item(column("id"), "id"),
                 item(binary(column("x"), Operator::Multiply, float(2.0)), "a"),
@@ -543,7 +573,8 @@ impl ScalarUDFImpl for SeededRand {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn parallel_projection_volatile_unchanged() {
     let sizes = [big(), 900, big()];
-    let query = "SELECT id, seeded_rand(42) AS r, x * 2.0 AS a, x + y AS b FROM t";
+    let query = "SELECT id, seeded_rand(42) AS r, x * 2.0 AS a, x + y AS b, w \
+                 FROM (SELECT id, x, y, z, sum(x) OVER () AS w FROM t) AS s";
     let (plan_on, got) = sql_run(&sql_session(true, &sizes), query).await;
     let (plan_off, expected) = sql_run(&sql_session(false, &sizes), query).await;
     assert_eq!(text(&plan_on), text(&plan_off));
@@ -562,7 +593,7 @@ async fn parallel_projection_volatile_unchanged() {
     );
     let chain = project(
         project(
-            round_robin(source(&[big()]), false),
+            round_robin(window(source(&[big()])), false),
             vec![
                 item(column("id"), "id"),
                 item(call, "r"),
@@ -768,9 +799,8 @@ fn sorted_single_batch() -> Arc<dyn ExecutionPlan> {
     DataSourceExec::from_data_source(source)
 }
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn parallel_projection_drops_order_preserving_round_robin() {
-    let spread = round_robin(sorted_single_batch(), true);
+fn l1_shape(level_one: Arc<dyn ExecutionPlan>) -> Arc<dyn ExecutionPlan> {
+    let spread = round_robin(level_one, true);
     assert!(
         text(&spread).contains("input_partitions=1, maintains_sort_order=true"),
         "{}",
@@ -782,38 +812,63 @@ async fn parallel_projection_drops_order_preserving_round_robin() {
         vec![
             item(column("id"), "id"),
             item(binary(column("x"), Operator::Multiply, float(2.0)), "a"),
+            item(binary(column("y"), Operator::Plus, float(1.0)), "b"),
         ],
     );
-    let merged: Arc<dyn ExecutionPlan> = Arc::new(SortPreservingMergeExec::new(by_id(), level));
-    let top = project(
-        round_robin(merged, true),
+    Arc::new(SortPreservingMergeExec::new(by_id(), level))
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn parallel_projection_drops_order_preserving_round_robin() {
+    let serial_window = window(sorted_single_batch());
+    let parallel_window = ParallelWindowRule
+        .optimize(Arc::clone(&serial_window), &options(true))
+        .expect("window rule");
+    assert_eq!(parallel_window.name(), "ParallelWindowExec");
+    for level_one in [serial_window, parallel_window] {
+        let base = l1_shape(level_one);
+        let head = optimize(Arc::clone(&base), true);
+        assert_eq!(round_robins(&head), 0, "{}", text(&head));
+        let merge = find(&head, "SortPreservingMergeExec");
+        assert_eq!(merge.len(), 1);
+        let child = merge[0].children()[0];
+        assert_eq!(child.output_partitioning().partition_count(), 1);
+        assert_eq!(child.name(), "ParallelProjectionExec");
+        let requirement =
+            LexOrdering::new([PhysicalSortExpr::new_default(at("id", 0))]).expect("ordering");
+        assert!(
+            child
+                .equivalence_properties()
+                .ordering_satisfy(requirement)
+                .expect("ordering check")
+        );
+        let expected = run(base).await.expect("base");
+        let got = run(head).await.expect("head");
+        assert_bit_identical(&got, &expected);
+    }
+}
+
+#[test]
+fn parallel_projection_keeps_multi_batch_fan_out() {
+    let exprs = || {
         vec![
-            item(at("id", 0), "id"),
-            item(binary(at("a", 1), Operator::Plus, float(1.0)), "b"),
-            item(binary(at("a", 1), Operator::Divide, float(3.0)), "c"),
-        ],
-    );
-    let head = optimize(Arc::clone(&top), true);
-    assert_eq!(round_robins(&head), 0, "{}", text(&head));
-    assert!(head.downcast_ref::<ParallelProjectionExec>().is_some());
-    assert_eq!(head.output_partitioning().partition_count(), 1);
-    let requirement =
-        LexOrdering::new([PhysicalSortExpr::new_default(at("id", 0))]).expect("ordering");
-    assert!(
-        head.equivalence_properties()
-            .ordering_satisfy(requirement)
-            .expect("ordering check")
-    );
-    let merge = find(&head, "SortPreservingMergeExec");
-    assert_eq!(merge.len(), 1);
-    assert_eq!(
-        merge[0].children()[0]
-            .output_partitioning()
-            .partition_count(),
-        1
-    );
-    assert!(merge[0].children()[0].output_ordering().is_some());
-    let expected = run(top).await.expect("base");
-    let got = run(head).await.expect("head");
-    assert_bit_identical(&got, &expected);
+            item(column("id"), "id"),
+            item(binary(column("x"), Operator::Multiply, float(2.0)), "a"),
+            item(binary(column("y"), Operator::Plus, float(1.0)), "b"),
+        ]
+    };
+    let unordered: Arc<dyn ExecutionPlan> = Arc::new(CoalescePartitionsExec::new(project(
+        round_robin(source(&[700, 900, 400]), false),
+        exprs(),
+    )));
+    let ordered: Arc<dyn ExecutionPlan> = Arc::new(SortPreservingMergeExec::new(
+        by_id(),
+        project(round_robin(sorted(source(&[700, 900, 400])), true), exprs()),
+    ));
+    let root = project(round_robin(sorted_single_batch(), false), exprs());
+    for plan in [unordered, ordered, root] {
+        let kept = optimize(Arc::clone(&plan), true);
+        assert_eq!(text(&kept), text(&plan));
+        assert_eq!(round_robins(&kept), 1);
+    }
 }
