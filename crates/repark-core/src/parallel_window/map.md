@@ -5,6 +5,8 @@
 TA-SINGLE-SERIES-PARALLEL-1 slices S2b and S3 (2026-10-04): generic physical operators that run
 the expressions of a one-partition window (S2b) and of a one-partition projection (S3) in
 parallel, and drop the useless RoundRobin over one partition (S3). DataFusion's `WindowAggExec` evaluates every
+TA-SINGLE-SERIES-PARALLEL-1 slice S2b (2026-10-04): a generic physical operator that runs the
+expressions of a one-partition window in parallel. DataFusion's `WindowAggExec` evaluates every
 window expression serially on the polling thread (`compute_window_aggregates`); on one long series
 (the owner's `ta.*` benchmark: 14 indicators over 1 M rows) that pins the query to one core.
 `ParallelWindowRule` swaps such a node for `ParallelWindowExec`, which computes the same columns

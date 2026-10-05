@@ -856,6 +856,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   projection with at least two non-column expressions evaluates them in parallel; never on a
   volatile expression. See [parallel_window/map.md](parallel_window/map.md).
   pins: ta-series-s3/C-001, C-002, C-004, C-007, C-012
+  session that did not (verifier V-1). See
+  [parallel_window/map.md](parallel_window/map.md).
 - `orc_schema.rs` — **IO-ORC-1 (2026-09-16):** the ORC schema half beside the scan:
   footer-attribute mapping (LONG→`timestamp_ntz`, instant→UTC-stamped `timestamp`,
   local-tz-kind→naive, recursive through struct/list/map), schema union by name under
