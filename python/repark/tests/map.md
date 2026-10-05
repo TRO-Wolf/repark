@@ -413,6 +413,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `3dd30491a9d9f9c58c10a8dd61077e3c07ea8b92bb57ef2952bbff69133828c9`; the live tier
   re-derives the fixture with the recorder's `--check` mode.
   pins: ice-meta-delete-1/C-001, C-002, C-003, C-004, C-005
+  PARITY-LIVE-STOP-1 (2026-10-04): the recorder leaves the shared live-oracle session running.
   **ICE-META-DELETE-1 (2026-09-19, step 6):** the clause citations of this unit's pins live in this map, not in the source — the owner's comment ban covers doc comments too.
 
 - [test_ice_overwrite_mode_1_transform.py](test_ice_overwrite_mode_1_transform.py) +
@@ -1619,6 +1620,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   'rewrite-all','true')` included, instead of writing six files per partition
   to clear the fork's `min_input_files = 5` default.
   pins: ice-sorted-insert-1/C-006, C-007, C-008, C-009, C-010
+  PARITY-LIVE-STOP-1 (2026-10-04): the recorder leaves the shared live-oracle session running.
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 (2026-09-14):**
   `test_array_append_oracle_cells` / `test_array_prepend_oracle_cells` pin the nine
   D-2 oracle cells measured on live PySpark 4.1.2 through the facade on the Arrow
@@ -4907,6 +4909,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Every cell runs on the facade door and pins the native-door CALL refusal.
   pins: ice-procs-route-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
   C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
+  PARITY-LIVE-STOP-1 (2026-10-04): the recorder leaves the shared live-oracle session running.
   Round 1 routing (2026-09-19): the facade pins go green against the release
   native (25 passed, 2 strict xfails for the version range), and the live
   re-derivation passes on fresh randomness (canonicalized run-stamped tails).
