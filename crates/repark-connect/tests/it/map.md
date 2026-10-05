@@ -18,7 +18,8 @@ See [../map.md](../map.md).
   (`bool_round_trips` … `bytea_round_trips`): Arrow array → wire values → Arrow array, equal,
   over NULLs and boundary values (`MIN` / `MAX`, `-0.0`, the infinities and NaN compared by bit
   pattern, multibyte UTF-8, invalid-UTF-8 bytes in `bytea`), plus one byte-exact wire check per
-  integer width. `declared_types_refuse_naming_their_row` holds the declared list and each
+  integer width, and (verifier V-1, 2026-10-05) a big-endian wire anchor for `float4` / `float8`
+  in both directions, so a symmetric little-endian codec is red. `declared_types_refuse_naming_their_row` holds the declared list and each
   row's refusal. The error pins cover wrong wire length, invalid UTF-8 and a wrong Arrow type.
   `type_map_has_one_row_per_type_and_a_live_pin_per_row` reads this file through
   `include_str!`, so a row whose `pin` names no test here is red.
