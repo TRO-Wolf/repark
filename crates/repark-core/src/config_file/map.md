@@ -63,7 +63,7 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   **C-1 (2026-10-05), the CC-2 identity move:** `SourceKind` moved to `repark-common`
   unchanged, and `SourceSpec` carries a `repark_common::SourceIdentity` (`name`, `kind`,
   `generation`) in place of its `name` and `kind` fields; the loader builds it with
-  `SourceIdentity::unassigned` (generation `0`, R-12). `profile`, `auto_register` and `props`
+  `SourceIdentity::unassigned` (generation `None`, R-12 as amended by the owner, 2026-10-05). `profile`, `auto_register` and `props`
   stay here, `key_path()` renders the same spelling, and the manual `Debug` prints the
   identity where it printed `name` and `kind`, still masking props through `redact_value`.
   Loader behavior is unchanged. pins: c-1/C-002

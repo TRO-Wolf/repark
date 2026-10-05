@@ -2,6 +2,7 @@ mod session_catalog;
 mod wiring;
 
 use std::collections::{BTreeMap, HashMap};
+use std::num::NonZeroU64;
 use std::path::Path;
 
 use tempfile::TempDir;
@@ -591,15 +592,15 @@ url = "postgresql://localhost:5432/company"
     let expected = SourceIdentity {
         name: "company_db".to_string(),
         kind: SourceKind::Postgres,
-        generation: SourceIdentity::UNASSIGNED_GENERATION,
+        generation: None,
     };
     assert_eq!(source.identity, expected);
-    assert_eq!(source.identity.generation, 0);
+    assert_eq!(source.identity.generation, None);
     assert_eq!(source.key_path(), "prod.database.postgres.company_db");
     let reparsed = SourceKind::from_spelling(source.identity.kind.spelling());
     assert_eq!(reparsed, Some(source.identity.kind));
     let assigned = SourceIdentity {
-        generation: 7,
+        generation: NonZeroU64::new(7),
         ..source.identity.clone()
     };
     assert_ne!(assigned, source.identity);

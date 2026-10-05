@@ -1,3 +1,5 @@
+use std::num::NonZeroU64;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SourceKind {
     Postgres,
@@ -30,18 +32,16 @@ impl SourceKind {
 pub struct SourceIdentity {
     pub name: String,
     pub kind: SourceKind,
-    pub generation: u64,
+    pub generation: Option<NonZeroU64>,
 }
 
 impl SourceIdentity {
-    pub const UNASSIGNED_GENERATION: u64 = 0;
-
     #[must_use]
     pub fn unassigned(name: String, kind: SourceKind) -> Self {
         Self {
             name,
             kind,
-            generation: Self::UNASSIGNED_GENERATION,
+            generation: None,
         }
     }
 }

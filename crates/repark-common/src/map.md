@@ -51,8 +51,9 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   spellings `postgres | sqlserver | trino`) moved here unchanged from
   `repark-core/src/config_file/sources.rs`, all three variants (CFG-2 parses `trino`; its
   connector moved to 1.10 without dropping the spelling), and the minimal source identity
-  `SourceIdentity { name, kind, generation }`. `generation` is a `u64` whose
-  `UNASSIGNED_GENERATION` (`0`) means not yet assigned (R-12, reversible before 1.6 ships):
+  `SourceIdentity { name, kind, generation }`. `generation` is an `Option<NonZeroU64>`, `None`
+  meaning not yet assigned (R-12 as amended, owner, 2026-10-05: "generation u64/0-unassigned accepted, with 0 only in the serialized form and an Option or NonZero type in Rust"). `0` belongs only to a serialized form,
+  mapped `0` ↔ `None` at that boundary; C-1 serializes no identity, so no `0` exists in Rust.
   1.7's capture assigns it on first use, and re-pointing a configured name at another database
   is detected there (CC-2, CC-9); equality is the only operation C-1 needs. `lib.rs`
   re-exports both. `repark-connect` owns the settings and conversions, `repark-core` the

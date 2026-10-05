@@ -18,7 +18,7 @@ the battery passed the 1,000-line file ceiling — stage pins versus wiring pins
   pins: cfg-2/C-002
   **C-1 (2026-10-05):** the source pins read `identity.name` / `identity.kind` (the CC-2
   move; assertions unchanged) and gain `a_source_identity_round_trips_through_the_loader`:
-  name, kind and the unassigned generation survive the loader, `key_path()` renders as
+  name, kind and the unassigned generation (`None`) survive the loader, `key_path()` renders as
   before, the kind spelling round-trips, and a different generation compares unequal.
   pins: c-1/C-002
 - `wiring.rs` — the 8 step-3 wiring pins (display/session/`conf` translation, nested-`conf`
