@@ -29,5 +29,10 @@ impl EngineRuntime {
     }
 }
 
+#[must_use]
+pub fn built_with_debug_assertions() -> bool {
+    cfg!(debug_assertions)
+}
+
 #[cfg(test)]
 mod tests;

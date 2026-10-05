@@ -3,7 +3,7 @@
 use std::cell::RefCell;
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Array, ArrayRef, Float64Array, Float64Builder};
+use datafusion::arrow::array::{Array, ArrayRef, Float64Array};
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
 use datafusion::common::{DataFusionError, Result, ScalarValue};
@@ -19,6 +19,7 @@ use crate::{
     stddev, sum, tsf, var,
 };
 
+mod glue;
 mod momentum;
 mod overlap;
 mod prefix;
@@ -26,6 +27,9 @@ mod price;
 mod volatility;
 mod volume;
 
+#[cfg(test)]
+use glue::try_borrow_null_free_f64;
+use glue::{float64_array_from_vec, try_borrow_all_null_free};
 use prefix::{run_all_with_prefix_skipped, run_with_prefix_skipped};
 
 // Multi-output families use one thread-local cache keyed by family, params, and series identity.
@@ -675,12 +679,10 @@ impl PartitionEvaluator for TaEvaluator {
         {
             let series_ids: Vec<SeriesId> = series_arrays.iter().map(series_id).collect();
             if let Some(cached) = multi_out_lookup(family, &series_ids, &self.params, band) {
-                return Ok(float64_array_from_values(&cached));
+                return Ok(float64_array_from_vec(cached));
             }
-            let bands = if n_series == 1
-                && let Some(borrowed) = try_borrow_null_free_f64(&series_arrays[0])
-            {
-                run_all_with_prefix_skipped(&[borrowed], |s| self.func.compute_all(s, &self.params))
+            let bands = if let Some(borrowed) = try_borrow_all_null_free(series_arrays) {
+                run_all_with_prefix_skipped(&borrowed, |s| self.func.compute_all(s, &self.params))
                     .map_err(|err| DataFusionError::Execution(format!("TA kernel error: {err}")))?
             } else {
                 self.ensure_scratches(n_series);
@@ -697,15 +699,13 @@ impl PartitionEvaluator for TaEvaluator {
                 .cloned()
                 .ok_or_else(|| DataFusionError::Execution("TA multi-output band missing".into()))?;
             multi_out_store(family, &series_ids, series_arrays, &self.params, bands);
-            return Ok(float64_array_from_values(&out));
+            return Ok(float64_array_from_vec(out));
         }
 
-        if n_series == 1
-            && let Some(borrowed) = try_borrow_null_free_f64(&series_arrays[0])
-        {
-            let out = run_with_prefix_skipped(&[borrowed], |s| self.func.compute(s, &self.params))
+        if let Some(borrowed) = try_borrow_all_null_free(series_arrays) {
+            let out = run_with_prefix_skipped(&borrowed, |s| self.func.compute(s, &self.params))
                 .map_err(|err| DataFusionError::Execution(format!("TA kernel error: {err}")))?;
-            return Ok(float64_array_from_values(&out));
+            return Ok(float64_array_from_vec(out));
         }
         self.ensure_scratches(n_series);
         densify_series_into(series_arrays, &mut self.densify_scratch[..n_series])?;
@@ -715,17 +715,7 @@ impl PartitionEvaluator for TaEvaluator {
             .collect();
         let out = run_with_prefix_skipped(&slices, |s| self.func.compute(s, &self.params))
             .map_err(|err| DataFusionError::Execution(format!("TA kernel error: {err}")))?;
-        Ok(float64_array_from_values(&out))
-    }
-}
-
-/// Borrow a null-free `Float64` values buffer.
-fn try_borrow_null_free_f64(array: &ArrayRef) -> Option<&[f64]> {
-    let floats = array.as_any().downcast_ref::<Float64Array>()?;
-    if floats.null_count() == 0 {
-        Some(floats.values().as_ref())
-    } else {
-        None
+        Ok(float64_array_from_vec(out))
     }
 }
 
@@ -772,13 +762,6 @@ fn densify_float64_into(floats: &Float64Array, scratch: &mut Vec<f64>) {
             scratch.push(values[index]);
         }
     }
-}
-
-/// Build a dense `Float64Array` from kernel output.
-fn float64_array_from_values(values: &[f64]) -> ArrayRef {
-    let mut builder = Float64Builder::with_capacity(values.len());
-    builder.append_slice(values);
-    Arc::new(builder.finish())
 }
 
 /// Read a numeric, non-null scalar literal as `f64`.
@@ -1310,7 +1293,7 @@ mod tests {
     #[test]
     fn float64_builder_output_is_dense_bit_exact() {
         let values = vec![f64::NAN, 1.5, -2.25, 0.0];
-        let array = float64_array_from_values(&values);
+        let array = float64_array_from_vec(values.clone());
         let floats = array
             .as_any()
             .downcast_ref::<Float64Array>()

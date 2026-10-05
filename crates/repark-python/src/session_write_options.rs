@@ -4,7 +4,9 @@ use std::sync::Arc;
 use pyo3::prelude::*;
 
 use crate::dataframe::PyDataFrame;
-use crate::deep_stack::block_on;
+use crate::deep_stack::{
+    block_on_grown_if, block_on_grown_sized, frame_drive_segment_cached, sql_drive_grown,
+};
 use crate::fence::fenced_span;
 use crate::session::PyReparkSession;
 
@@ -31,7 +33,9 @@ pub fn session_sql_with_write_options(
         }
     };
     fenced_span!("py.sql", "session_sql_with_write_options", {
-        if crate::deep_stack::sql_drive_grown(query) {
+        let grown = sql_drive_grown(query)
+            || session.deep_view_levels() > crate::deep_stack::DEEP_NESTING_DEPTH;
+        if grown {
             crate::deep_stack::grown_sync(crate::deep_stack::GROWN_STACK_SEGMENT_BYTES, || {
                 repark_spark::refuse_declared_function_in_sql(query)
             })
@@ -44,7 +48,7 @@ pub fn session_sql_with_write_options(
         let inner = session.session.clone();
         let df = py
             .detach(|| {
-                block_on(
+                block_on_grown_if(
                     &runtime,
                     inner.sql_built_with_write_options(
                         query,
@@ -52,6 +56,7 @@ pub fn session_sql_with_write_options(
                         overwrite_intent,
                         source_by_name,
                     ),
+                    grown,
                 )
             })
             .map_err(crate::to_py_err)?;
@@ -75,11 +80,13 @@ pub fn session_write_path(
     fenced_span!("py.write", "session_write_path", {
         let runtime = Arc::clone(&session.runtime);
         let inner = session.session.clone();
+        let segment = frame_drive_segment_cached(&frame.depths())?;
         let frame = crate::deep_stack::grown_clone_frame(frame.inner(), &frame.depths());
         py.detach(|| {
-            block_on(
+            block_on_grown_sized(
                 &runtime,
                 inner.write_path(&frame, url, format, mode, &options, &partition_by),
+                segment,
             )
         })
         .map_err(crate::to_py_err)

@@ -73,7 +73,11 @@ fn scan_spec(warehouse: &str) -> IcebergScanSpec {
 }
 
 async fn iceberg_session(warehouse: &str) -> (ReparkSession, SessionContext) {
-    let session = match ReparkSession::builder().target_partitions(2).build() {
+    let session = match ReparkSession::builder()
+        .parallel_single_partition(false)
+        .target_partitions(2)
+        .build()
+    {
         Ok(session) => session,
         Err(error) => panic!("ReparkSession::build: {error}"),
     };
@@ -274,11 +278,14 @@ impl ExecutionPlan for UnownedScanExec {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn repark_ballista_codec_installs_the_repark_physical_wrapper() {
-    let session = match ReparkSession::new() {
+    let session = match ReparkSession::builder()
+        .parallel_single_partition(false)
+        .build()
+    {
         Ok(session) => session,
         Err(error) => panic!("ReparkSession::new: {error}"),
     };
-    let provider = ReparkSessionProvider::from_session(&session);
+    let provider = ReparkSessionProvider::from_session(&session).expect("ReparkSessionProvider");
     let codec = repark_ballista_codec(&provider);
     let installed = format!("{:?}", codec.physical_extension_codec());
     assert!(
@@ -288,12 +295,37 @@ async fn repark_ballista_codec_installs_the_repark_physical_wrapper() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn provider_refuses_a_session_with_single_partition_parallelism_on() {
+    let on = ReparkSession::builder().build().expect("default session");
+    let off = ReparkSession::builder()
+        .parallel_single_partition(false)
+        .build()
+        .expect("single-node-off session");
+    for refused in [
+        ReparkSessionProvider::from_session(&on).err(),
+        ReparkSessionProvider::from_context(on.context()).err(),
+    ] {
+        let message = refused.expect("a parallel session is refused").to_string();
+        assert!(
+            message.contains("ReparkSessionBuilder::parallel_single_partition(false)"),
+            "{message}"
+        );
+    }
+    assert!(ReparkSessionProvider::from_session(&off).is_ok());
+    assert!(ReparkSessionProvider::from_context(off.context()).is_ok());
+    assert!(ReparkSessionProvider::from_context(&SessionContext::new()).is_ok());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn ballista_shuffle_nodes_round_trip_through_the_wrapper() {
-    let session = match ReparkSession::new() {
+    let session = match ReparkSession::builder()
+        .parallel_single_partition(false)
+        .build()
+    {
         Ok(session) => session,
         Err(error) => panic!("ReparkSession::new: {error}"),
     };
-    let provider = ReparkSessionProvider::from_session(&session);
+    let provider = ReparkSessionProvider::from_session(&session).expect("ReparkSessionProvider");
     let codec = repark_ballista_codec(&provider);
     let physical = codec.physical_extension_codec();
     let task = SessionContext::new().task_ctx();
@@ -348,7 +380,7 @@ async fn iceberg_table_scan_round_trips_through_the_wrapper() {
         "spec.scan must produce IcebergTableScan, got {}",
         scan.name()
     );
-    let provider = ReparkSessionProvider::from_session(&session);
+    let provider = ReparkSessionProvider::from_session(&session).expect("ReparkSessionProvider");
     let codec = repark_ballista_codec(&provider);
     let physical = codec.physical_extension_codec();
 
@@ -445,7 +477,8 @@ async fn wrapper_refuses_the_scan_without_the_session_catalog() {
         Ok(bytes) => bytes,
         Err(error) => panic!("spec encode: {error}"),
     };
-    let vanilla_provider = ReparkSessionProvider::from_context(&SessionContext::new());
+    let vanilla_provider =
+        ReparkSessionProvider::from_context(&SessionContext::new()).expect("ReparkSessionProvider");
     let vanilla_codec = repark_ballista_codec(&vanilla_provider);
     let physical = vanilla_codec.physical_extension_codec();
     let task = SessionContext::new().task_ctx();
@@ -492,7 +525,7 @@ async fn unowned_node_refuses_encode_and_passes_the_rewrite_untouched() {
         "the file-group rewrite must leave a plan with no IcebergTableScan untouched"
     );
 
-    let provider = ReparkSessionProvider::from_session(&session);
+    let provider = ReparkSessionProvider::from_session(&session).expect("ReparkSessionProvider");
     let codec = repark_ballista_codec(&provider);
     let physical = codec.physical_extension_codec();
     let mut buffer = Vec::new();
@@ -535,7 +568,11 @@ fn named_spec(
 }
 
 async fn adversarial_session(warehouse: &str) -> (ReparkSession, SessionContext) {
-    let session = match ReparkSession::builder().target_partitions(2).build() {
+    let session = match ReparkSession::builder()
+        .parallel_single_partition(false)
+        .target_partitions(2)
+        .build()
+    {
         Ok(session) => session,
         Err(error) => panic!("ReparkSession::build: {error}"),
     };
@@ -699,7 +736,7 @@ async fn cluster_batches(
     };
     let expected = drain(local_handle.stream(), label).await;
 
-    let provider = ReparkSessionProvider::from_session(session);
+    let provider = ReparkSessionProvider::from_session(session).expect("ReparkSessionProvider");
     let cluster = match ReparkClusterExecutor::new(2, bind_address(), provider).await {
         Ok(cluster) => cluster,
         Err(error) => panic!("{label} ReparkClusterExecutor::new: {error}"),
@@ -750,7 +787,7 @@ async fn string_literal_injection_predicate_travels_exactly() {
         vec!["name = 'x] snapshot_id=1'".to_owned()],
     );
     let scan = built_scan(&context, &spec).await;
-    let provider = ReparkSessionProvider::from_session(&session);
+    let provider = ReparkSessionProvider::from_session(&session).expect("ReparkSessionProvider");
     let codec = repark_ballista_codec(&provider);
     let physical = codec.physical_extension_codec();
     let buffer = encode_must_travel(physical, &scan, "literal-injection");
@@ -777,7 +814,7 @@ async fn string_literal_predicate_travels_exactly() {
         vec!["name = 'alpha'".to_owned()],
     );
     let scan = built_scan(&context, &spec).await;
-    let provider = ReparkSessionProvider::from_session(&session);
+    let provider = ReparkSessionProvider::from_session(&session).expect("ReparkSessionProvider");
     let codec = repark_ballista_codec(&provider);
     let physical = codec.physical_extension_codec();
     let buffer = encode_must_travel(physical, &scan, "string-literal");
@@ -822,7 +859,7 @@ async fn date_and_timestamp_predicates_measure_the_pushdown_surface() {
         "measured: the fork drops the DATE predicate out of the scan node, got {}",
         plan_verbose(&scan)
     );
-    let provider = ReparkSessionProvider::from_session(&session);
+    let provider = ReparkSessionProvider::from_session(&session).expect("ReparkSessionProvider");
     let codec = repark_ballista_codec(&provider);
     let physical = codec.physical_extension_codec();
     match encode_or_refusal(physical, &scan, "date-predicate") {
@@ -849,7 +886,7 @@ async fn in_list_predicate_travels_exactly_or_refuses() {
         vec!["id IN (1, 2, 3)".to_owned()],
     );
     let scan = built_scan(&context, &spec).await;
-    let provider = ReparkSessionProvider::from_session(&session);
+    let provider = ReparkSessionProvider::from_session(&session).expect("ReparkSessionProvider");
     let codec = repark_ballista_codec(&provider);
     let physical = codec.physical_extension_codec();
     match encode_or_refusal(physical, &scan, "in-list") {
@@ -876,7 +913,7 @@ async fn bracket_column_projection_travels_exactly() {
         Vec::new(),
     );
     let scan = built_scan(&context, &spec).await;
-    let provider = ReparkSessionProvider::from_session(&session);
+    let provider = ReparkSessionProvider::from_session(&session).expect("ReparkSessionProvider");
     let codec = repark_ballista_codec(&provider);
     let physical = codec.physical_extension_codec();
     let buffer = encode_must_travel(physical, &scan, "bracket-column");
@@ -898,7 +935,7 @@ async fn bracket_table_identifier_travels_exactly() {
     let (session, context) = adversarial_session(&warehouse_text).await;
     let spec = named_spec(&warehouse_text, "we]t", None, Vec::new());
     let scan = built_scan(&context, &spec).await;
-    let provider = ReparkSessionProvider::from_session(&session);
+    let provider = ReparkSessionProvider::from_session(&session).expect("ReparkSessionProvider");
     let codec = repark_ballista_codec(&provider);
     let physical = codec.physical_extension_codec();
     let buffer = encode_must_travel(physical, &scan, "bracket-table");

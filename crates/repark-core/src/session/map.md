@@ -309,6 +309,12 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   build side so the OOM fallback's second `execute(0)` meets fresh `RepartitionExec`
   channels. Full design in `../map.md` (`nlj_build_reset.rs`).
   pins: never-oom-panic-1/C-004, C-005
+  **TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04):** one more appended physical rule,
+  `ParallelWindowRule`, right after `NljBuildSideReset`. It reads the session's
+  `repark.parallel` carrier and is a no-op when the session was built with
+  `parallel_single_partition(false)`. Full design in `../parallel_window/map.md`.
+  **S3 (2026-10-04):** `ParallelProjectionRule` is appended right after `ParallelWindowRule`
+  and reads the same carrier. pins: ta-series-s3/C-005
   **CONF-UNREAD-1 step 1 (2026-09-11):** `df_guards.rs` also owns
   `DEAD_DATAFUSION_54_1_KEYS` (today only `datafusion.execution.coalesce_batches`,
   which 54.1.0 defines but no engine path reads) with its refusal constructor;

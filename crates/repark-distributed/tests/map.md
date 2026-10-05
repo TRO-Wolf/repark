@@ -11,6 +11,20 @@ The crate-root `lib.rs` gate forbids inline `#[cfg(test)]` modules, so the pins 
 
 ## Contents
 
+**TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04):** every `ReparkSession` these tests build (ten
+sites across `local_executor.rs`, `cluster_two_executors.rs`, `codec.rs`, `multi_stage.rs` and
+`iceberg_scan.rs`) passes `parallel_single_partition(false)`, the single-node opt-out a
+distributed session must carry (`../map.md`). Three tests were already red on `origin/main`
+`ac8a72da` and are unchanged by this: `cancel_mid_flight_sets_cancelled_and_no_running_tasks_within_five_seconds`
+and `session_spill_dir_has_no_shuffle_files_after_complete_and_after_cancel` (Ballista cannot
+encode the `range()` table's `LazyMemTableExec`), and
+`date_and_timestamp_predicates_measure_the_pushdown_surface`.
+Verifier V-1 (2026-10-04): every `ReparkSessionProvider::from_session` / `from_context` call
+now unwraps the provider's `Result`, and `codec.rs` carries
+`provider_refuses_a_session_with_single_partition_parallelism_on`: a default session is refused
+through both doors with the builder fix in the message; a `false` session and a plain
+`SessionContext::new()` are accepted. pins: ta-series-s2b/C-014
+
 - `local_executor.rs` — three pins against `LocalDataFusionExecutor`:
   `range(1000)` sum equals the direct DataFusion collect (C-001);
   `status` is `Queued`/`Running` before drain and `Completed` after (C-002);

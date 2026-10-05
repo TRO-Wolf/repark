@@ -20,7 +20,7 @@ use repark_ml::{
 use tokio::runtime::Runtime;
 
 use crate::dataframe::PyDataFrame;
-use crate::deep_stack::block_on;
+use crate::deep_stack::{block_on_grown_sized, frame_drive_segment_cached};
 use crate::fence::fenced;
 use crate::{IllegalArgumentException, UnsupportedOperationException};
 
@@ -41,24 +41,31 @@ fn ml_to_py_err(err: MlError) -> PyErr {
 }
 
 /// Open `execute_stream` on a clone of the held plan without collecting it.
-fn open_stream(plan: &DataFrame, runtime: &Runtime) -> Result<SendableRecordBatchStream, MlError> {
+fn open_stream(
+    plan: &DataFrame,
+    runtime: &Runtime,
+) -> Result<(SendableRecordBatchStream, Option<usize>), MlError> {
     let depths = crate::deep_stack::plan_depths(plan.logical_plan());
+    let segment = frame_drive_segment_cached(&depths)
+        .map_err(|err| MlError::IllegalArgument(err.to_string()))?;
     let owned = crate::deep_stack::grown_clone_frame(plan, &depths);
-    block_on(runtime, owned.execute_stream())
-        .map_err(|err| MlError::IllegalArgument(format!("execute_stream: {err}")))
+    let stream = block_on_grown_sized(runtime, owned.execute_stream(), segment)
+        .map_err(|err| MlError::IllegalArgument(format!("execute_stream: {err}")))?;
+    Ok((stream, segment))
 }
 
 /// Drain a stream and invoke `on_batch` for each batch.
 fn for_each_batch<F>(
     runtime: &Runtime,
     mut stream: SendableRecordBatchStream,
+    segment: Option<usize>,
     mut on_batch: F,
 ) -> Result<(), MlError>
 where
     F: FnMut(&RecordBatch) -> Result<(), MlError>,
 {
     loop {
-        match block_on(runtime, stream.next()) {
+        match block_on_grown_sized(runtime, stream.next(), segment) {
             None => break,
             Some(Ok(batch)) => on_batch(&batch)?,
             Some(Err(err)) => {
@@ -270,10 +277,10 @@ fn discover_feature_width_and_count(
     runtime: &Runtime,
     features_col: &str,
 ) -> Result<(usize, u64), MlError> {
-    let stream = open_stream(plan, runtime)?;
+    let (stream, segment) = open_stream(plan, runtime)?;
     let mut width = None;
     let mut num_valid = 0_u64;
-    for_each_batch(runtime, stream, |batch| {
+    for_each_batch(runtime, stream, segment, |batch| {
         let features = column_by_name(batch, features_col)?;
         for index in 0..batch.num_rows() {
             if features.is_null(index) {
@@ -301,9 +308,9 @@ fn stream_xy_into_ols(
     num_features: usize,
     acc: &mut LinearRegressionAccumulator,
 ) -> Result<(), MlError> {
-    let stream = open_stream(plan, runtime)?;
+    let (stream, segment) = open_stream(plan, runtime)?;
     let mut row_offset = 0_u64;
-    for_each_batch(runtime, stream, |batch| {
+    for_each_batch(runtime, stream, segment, |batch| {
         let features_arr = column_by_name(batch, features_col)?;
         let label_arr = column_by_name(batch, label_col)?;
         for index in 0..batch.num_rows() {
@@ -406,9 +413,9 @@ pub fn fit_logistic_regression(
                     .map_err(ml_to_py_err)?;
             let mut solution =
                 fit_logistic_irls(num_features, fit_intercept, max_iter, tol, |acc| {
-                    let stream = open_stream(&plan, runtime.as_ref())?;
+                    let (stream, segment) = open_stream(&plan, runtime.as_ref())?;
                     let mut row_offset = 0_u64;
-                    for_each_batch(runtime.as_ref(), stream, |batch| {
+                    for_each_batch(runtime.as_ref(), stream, segment, |batch| {
                         let features_arr = column_by_name(batch, &features_col)?;
                         let label_arr = column_by_name(batch, &label_col)?;
                         for index in 0..batch.num_rows() {
@@ -452,10 +459,10 @@ fn kmeans_count_valid(
     runtime: &Runtime,
     features_col: &str,
 ) -> Result<(usize, u64), MlError> {
-    let stream = open_stream(plan, runtime)?;
+    let (stream, segment) = open_stream(plan, runtime)?;
     let mut width = None;
     let mut num_valid = 0_u64;
-    for_each_batch(runtime, stream, |batch| {
+    for_each_batch(runtime, stream, segment, |batch| {
         let features_arr = column_by_name(batch, features_col)?;
         for index in 0..batch.num_rows() {
             if features_arr.is_null(index) {
@@ -484,10 +491,10 @@ fn kmeans_materialize_centers(
     k: usize,
 ) -> Result<Vec<Vec<f64>>, MlError> {
     let mut centers: Vec<Option<Vec<f64>>> = vec![None; k];
-    let stream = open_stream(plan, runtime)?;
+    let (stream, segment) = open_stream(plan, runtime)?;
     let mut valid_index = 0_u64;
     let mut remaining = k;
-    for_each_batch(runtime, stream, |batch| {
+    for_each_batch(runtime, stream, segment, |batch| {
         if remaining == 0 {
             return Ok(());
         }
@@ -531,9 +538,9 @@ fn kmeans_stream_pass(
     num_features: usize,
     pass: &mut KMeansPass,
 ) -> Result<(), MlError> {
-    let stream = open_stream(plan, runtime)?;
+    let (stream, segment) = open_stream(plan, runtime)?;
     let mut row_offset = 0_u64;
-    for_each_batch(runtime, stream, |batch| {
+    for_each_batch(runtime, stream, segment, |batch| {
         let features_arr = column_by_name(batch, features_col)?;
         for index in 0..batch.num_rows() {
             if features_arr.is_null(index) {
