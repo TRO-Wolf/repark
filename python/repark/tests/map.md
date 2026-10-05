@@ -7666,7 +7666,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the xfail-strict `test_sorted_cache_filter_read_order_follow_up`, owned by card
   CACHE-ORDER-READ-1 (`BatchSplitStream` at execution plus `RoundRobinBatch(16)`
   above it plus completion-order `CoalescePartitionsExec`).
-  pins: ta-series-s1/P-S1-1, P-S1-2, P-S1-5, P-S1-6
+  `test_rematerialised_sorted_cache_keeps_order_at_scale` (S1 fold V944-1, 2026-10-05)
+  pins the verifier's re-materialise shape at 1M rows (`sort().eager()` then
+  `select().eager()` reads back sorted 3/3).
+  pins: ta-series-s1/P-S1-1, P-S1-2, P-S1-5, P-S1-6, P-S1-7f
 - [test_grown_stack_gate_1.py](test_grown_stack_gate_1.py) —
   **GROWN-STACK-GATE-1 (2026-10-04):** the 34 gated sites answer on small
   stacks, one isolated interpreter per shape, deep work on 8 MiB threads
