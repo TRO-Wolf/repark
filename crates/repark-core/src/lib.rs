@@ -24,6 +24,7 @@ mod object_store_s3;
 mod orc_footer;
 mod orc_scan;
 mod orc_schema;
+mod parallel_window;
 mod partition_discovery;
 mod partition_overwrite_mode;
 mod partition_timestamp;
@@ -73,7 +74,8 @@ pub use extension::{SessionBuildConf, SessionExtension};
 pub use pre_execute::PreExecute;
 
 // --- The embedding's executor handle (EC-5 / design §4 Q7).
-pub use runtime::EngineRuntime;
+pub use parallel_window::parallel_single_partition_active;
+pub use runtime::{EngineRuntime, built_with_debug_assertions};
 
 // --- Catalog configuration + engine-side registry (hoisted).
 pub use catalog_config::{CatalogKind, CatalogSpec, parse_catalog_specs, prop_key_is_secret};
@@ -141,11 +143,6 @@ pub use update_fields::{register_update_fields, update_fields_call, update_field
 mod plan_canonical;
 mod plan_introspect;
 pub use plan_introspect::{input_files, same_semantics, semantic_hash};
-
-#[must_use]
-pub fn built_with_debug_assertions() -> bool {
-    cfg!(debug_assertions)
-}
 
 pub(crate) use error_map::{iceberg_err, resolve_s3_region_override};
 pub(crate) use idents::parse_table_identifier_segments;

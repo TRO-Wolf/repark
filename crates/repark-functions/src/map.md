@@ -463,6 +463,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   with Spark's `INVALID_CONF_VALUE.TYPE_MISMATCH`; the lenient builder parser is frozen).
   The function carries `#[allow(clippy::missing_errors_doc)]` (R-17c-3: no Rust `///`).
   Its carrier `set` refusal now points at the runtime `SET` spelling.
+  **TA-SERIES-S0 (2026-10-04):** the raise kernel scans typed value buffers under the null bitmap; results match the scalar path bit for bit (P-S0-1, P-S0-2, P-S0-3).
+  **TA-SERIES-S0b (2026-10-04):** float divisors refuse on `== 0.0`, so `-0.0` raises `DIVIDE_BY_ZERO` as Spark 4.1.2 does; NaN still passes (P-S0b-1).
   pins: set-ansi-runtime-1/C-001
 - `case_sensitive.rs` — **ICE-RTAS-BYNAME-1 round 2 (2026-09-17):** Spark-door
   `spark.sql.caseSensitive` carrier (`SparkCaseSensitiveConfig`,

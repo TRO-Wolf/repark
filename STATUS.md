@@ -11,9 +11,9 @@ _Last updated: 2026-09-12._
 
 ## Release state
 
-**v1.5.2 (2026-10-03):** TA-CHAIN-1, POLARS-IS-DUPLICATED-1, DEEP-FILTER-CHAIN-CRASH-1, STORE-TS-DOORS-2, STRING-LITERAL-ESCAPE-1, CAST-OVERFLOW-INSERT-1, TEXT-WRITE-TIMESTAMP-ZONE-1. Matrix 705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT. [Notes](task/roadmap/mid-term/v1-5-2-release-notes-2026-10-03.md).
+**v1.5.2 (2026-10-03):** TA-CHAIN-1, POLARS-IS-DUPLICATED-1, DEEP-FILTER-CHAIN-CRASH-1, STORE-TS-DOORS-2, STRING-LITERAL-ESCAPE-1, CAST-OVERFLOW-INSERT-1, TEXT-WRITE-TIMESTAMP-ZONE-1. Matrix 705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT. Tagged `v1.5.2` at `d0c50405` (2026-10-04 11:55 UTC); on PyPI 13:33 UTC, five wheels. [Notes](task/roadmap/mid-term/v1-5-2-release-notes-2026-10-03.md).
 
-**v1.5.1 (2026-09-29) — the first patch on 1.5.0**, additive under the API freeze. S3 path writes (U12) land on `s3://` and `s3a://` with Spark's save modes, verified on live AWS. Names resolve by `spark.sql.caseSensitive` on both doors (CASESENS-1). Store assignment follows Spark between TIMESTAMP, TIMESTAMP_NTZ, DATE and numeric columns on every write door (NTZ-1, LTZ-STORE-INT-1, LTZ-STACKED-SIGN-1, STORE-TS-TO-NUMERIC-1, NTZ-STORE-DOORS-1). Integer division stays fractional (INTDIV-1). The 842-cell matrix holds at **705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT** on the fresh-build rerun of 2026-09-29 (main `8568e57a`). Notes: [v1-5-1-release-notes-2026-09-29.md](task/roadmap/mid-term/v1-5-1-release-notes-2026-09-29.md).
+**v1.5.1 (2026-09-29) — the first patch on 1.5.0**, additive under the API freeze. S3 path writes (U12) land on `s3://` and `s3a://` with Spark's save modes, verified on live AWS. Names resolve by `spark.sql.caseSensitive` on both doors (CASESENS-1). Store assignment follows Spark between TIMESTAMP, TIMESTAMP_NTZ, DATE and numeric columns on every write door (NTZ-1, LTZ-STORE-INT-1, LTZ-STACKED-SIGN-1, STORE-TS-TO-NUMERIC-1, NTZ-STORE-DOORS-1). Integer division stays fractional (INTDIV-1). The 842-cell matrix holds at **705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT** on the fresh-build rerun of 2026-09-29 (main `8568e57a`). Tagged `v1.5.1` at `db3a1f37`; on PyPI 2026-09-30 00:30 UTC, five wheels. Notes: [v1-5-1-release-notes-2026-09-29.md](task/roadmap/mid-term/v1-5-1-release-notes-2026-09-29.md).
 
 **v1.5.0 (2026-09-27) — the Spark–Iceberg parity minor.** The v1.5.0 gate is met: zero non-EQUAL cells that Spark
 4.1.2 answers on the 842-cell Spark + Iceberg matrix, except dated owner carve-outs — **705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT** on the fresh-build rerun of 2026-09-27 (main `f7422565`).
@@ -27,13 +27,11 @@ properties, `TIMESTAMP_NTZ` literals and casts; the UUID refusal no longer panic
 **v1.4.2 (2026-09-15) — the second patch on 1.4.0, cut so DECIMAL-CACHE-1 (#632) reaches PyPI.**
 Decimal arithmetic that overflows 38 digits now types like PySpark 4.1.2 (`decimal(38,10) * 5` →
 `decimal(38,8)`) and materializes through `.eager()` / `.cache()` / `.persist()`; the cache view
-conforms every batch to the analyzed schema and names both fields when it cannot. Also carries the
-run-15 and run-16 parity families merged since v1.4.1, all additive under the API freeze.
+conforms every batch to the analyzed schema and names both fields when it cannot.
 
 **v1.4.1 (2026-09-14) — the first patch on 1.4.0, cut so the five-leg wheel set reaches PyPI:**
 Windows x86_64, macOS arm64 and x86_64, Linux aarch64 and x86_64 — each leg an import
 smoke and one collect, no platform acceptance (PLATFORM-2..4 stay slated for 1.6).
-Carries everything since 1.4.0, additive under the freeze.
 
 **v1.4.0 (2026-09-12) — the maintenance minor on 1.3**, additive under the API freeze (no frozen
 name or required parameter changed). Roadmap 1.4 closes: the maintenance policy shipped in 1.2 and

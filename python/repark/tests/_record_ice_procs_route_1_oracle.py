@@ -731,12 +731,9 @@ def record_oracle(warehouse: Path) -> list[dict[str, Any]]:
     session = live_session(warehouse)
     for catalog in ("sc", "hc"):
         session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.ns").collect()
-    try:
-        return [
-            record_cell(session, warehouse, cell, family, kind) for cell, family, kind in CELL_KINDS
-        ]
-    finally:
-        session.stop()
+    return [
+        record_cell(session, warehouse, cell, family, kind) for cell, family, kind in CELL_KINDS
+    ]
 
 
 def drop_secs(record: dict[str, Any]) -> dict[str, Any]:

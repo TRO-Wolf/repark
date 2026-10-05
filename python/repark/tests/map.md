@@ -470,6 +470,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `3dd30491a9d9f9c58c10a8dd61077e3c07ea8b92bb57ef2952bbff69133828c9`; the live tier
   re-derives the fixture with the recorder's `--check` mode.
   pins: ice-meta-delete-1/C-001, C-002, C-003, C-004, C-005
+  PARITY-LIVE-STOP-1 (2026-10-04): the recorder leaves the shared live-oracle session running.
   **ICE-META-DELETE-1 (2026-09-19, step 6):** the clause citations of this unit's pins live in this map, not in the source — the owner's comment ban covers doc comments too.
 
 - [test_ice_overwrite_mode_1_transform.py](test_ice_overwrite_mode_1_transform.py) +
@@ -1676,6 +1677,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   'rewrite-all','true')` included, instead of writing six files per partition
   to clear the fork's `min_input_files = 5` default.
   pins: ice-sorted-insert-1/C-006, C-007, C-008, C-009, C-010
+  PARITY-LIVE-STOP-1 (2026-10-04): the recorder leaves the shared live-oracle session running.
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 (2026-09-14):**
   `test_array_append_oracle_cells` / `test_array_prepend_oracle_cells` pin the nine
   D-2 oracle cells measured on live PySpark 4.1.2 through the facade on the Arrow
@@ -3740,6 +3742,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   not refused; the measured cells are in `test_ice_replace_columns_1.py`); residual refuse
   ADD NOT NULL.
   FQ `mem.ns.table` only (no bare-name dependency).
+- `test_ansi_negative_zero_divisor_1.py` — **TA-SERIES-S0b (2026-10-04):** ANSI division by
+  `-0.0` raises `DIVIDE_BY_ZERO`, as Spark 4.1.2 does: scalar `1.0D / -0.0D`, column-valued
+  `-0.0` (SQL VALUES and DataFrame doors), and NaN still answers `nan`. Recorded Spark
+  cells from `results_spark_order.json`; no live Spark needed.
+  pins: ta-series-s0b/P-S0b-1
 - `test_ml_feature_oracle.py` — **U2:** NaN-mix SQL fixtures CAST float literals to DOUBLE;
   CountVectorizer `1.0` SQL now yields decimal128 vectors (values still sum). R-ML-FEATURE (M2) + Q1 R-ML-QUANTILE: VectorAssembler, StringIndexer/IndexToString,
   OHE sparse, Standard/MinMax/MaxAbs scalers, Bucketizer, Imputer mean/mode/**median**,
@@ -5006,6 +5013,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Every cell runs on the facade door and pins the native-door CALL refusal.
   pins: ice-procs-route-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
   C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
+  PARITY-LIVE-STOP-1 (2026-10-04): the recorder leaves the shared live-oracle session running.
   Round 1 routing (2026-09-19): the facade pins go green against the release
   native (25 passed, 2 strict xfails for the version range), and the live
   re-derivation passes on fresh randomness (canonicalized run-stamped tails).
@@ -7030,6 +7038,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   NULL runs of 3 and 6 rows on two of them; each partition's first finite row is run + lookback
   and its tail equals EMA over the trimmed series, bit-exact; skipped rows are NaN, never NULL).
   pins: ta-chain-1/C-001, C-002, C-003
+- `test_n2_plan_collapse.py`, `test_ta.py` — **TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04):**
+  the plan-shape pins that count `WindowAggExec` now count `WindowAggExec` plus
+  `ParallelWindowExec` (`_window_operator_count` in `test_n2_plan_collapse.py`, inline in the two
+  `test_ta.py` fusion pins, whose file keeps its 1020-line baseline). A fused one-partition TA
+  window with two or more argument groups now plans as `ParallelWindowExec`; the operator count
+  and every value assertion are unchanged. pins: ta-series-s2b/C-013
 - `test_n2_plan_collapse.py` — **r23b N2** plan-collapse pins: stage (a) logical alias-chain squash
   (no `ts AS ts AS ts`); stage (b) adjacent same-spec withColumns/withColumn merge → 1
   `WindowAggExec` + Arrow bit-exact vs single fused call; dependent `tr`→`etr5` keeps stacking;
@@ -7736,6 +7750,19 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   6,000-term column plus a 1,000-deep frame cycle on main and a 6,000-term
   column plus a 200-deep frame cycle on a 256 KiB thread.
   pins: deep-filter-chain-crash-1/C-013, C-014, C-015, C-016, C-017, C-018
+- [test_grown_stack_gate_1.py](test_grown_stack_gate_1.py) —
+  **GROWN-STACK-GATE-1 (2026-10-04):** the 34 gated sites answer on small
+  stacks, one isolated interpreter per shape, deep work on 8 MiB threads
+  (~90 s); a crash fails only that shape's test and names it. P1
+  (2,000-deep view count 20) is a must-not-change neighbour; P2 (cache
+  count 20), P4 (inputFiles over parquet, 1 file) and P6 (10 shallow
+  shapes) pin the frame verdicts; P3 (2,000-deep write.csv roundtrip, 21
+  rows with the header row) is the regression pin for the write-options
+  door's deep-view mark; P5 (2,000-term OR INSERT, 22,951 bytes) answers
+  40 rows. Verifier fold V-1 adds the D-pins: deep write.text (20),
+  partitioned text (4 parts), localCheckpoint (20), transpose (1) and the
+  ML fit ([2.0, [3.0]]). Every constant recorded from a base run first.
+  pins: grown-stack-gate-1/C-002, C-003, C-004
 
 ## I want to...
 

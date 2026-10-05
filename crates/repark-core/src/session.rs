@@ -19,6 +19,7 @@ use crate::config_file::maintenance::MaintenancePolicy;
 use crate::config_file::sources::SourceSpec;
 use crate::dialect::{DataFusionDialect, SqlDialect};
 use crate::extension::{NoopSessionExtension, SessionBuildConf, SessionExtension};
+use crate::parallel_window::with_parallel_single_partition;
 use crate::session_owner::{session_owner_snapshot, with_session_owner};
 use crate::session_time_zone::{SessionTimeZone, resolve_session_time_zone};
 use crate::temp_view::{TempViewHome, build_temp_view_home};
@@ -112,6 +113,7 @@ pub struct ReparkSessionBuilder {
     config_file: Option<PathBuf>,
     maintenance: Option<(String, Option<MaintenancePolicy>)>,
     source_specs: Vec<Arc<SourceSpec>>,
+    parallel_single_partition: Option<bool>,
 }
 
 impl std::fmt::Debug for ReparkSessionBuilder {
@@ -186,6 +188,12 @@ impl ReparkSessionBuilder {
     #[must_use]
     pub fn target_partitions(mut self, partitions: usize) -> Self {
         self.target_partitions = Some(partitions);
+        self
+    }
+
+    #[must_use]
+    pub fn parallel_single_partition(mut self, enabled: bool) -> Self {
+        self.parallel_single_partition = Some(enabled);
         self
     }
 
@@ -282,6 +290,7 @@ impl ReparkSessionBuilder {
             config = config.with_target_partitions(partitions);
         }
         config = repark_iceberg::write::with_write_concurrency(config, write_concurrency);
+        config = with_parallel_single_partition(config, self.parallel_single_partition);
         // Explicit DataFusion keys override typed setters and defaults before extension configure.
         apply_datafusion_config_keys(&mut config, &self.config)?;
         // Configure runs after engine options and before runtime assembly.

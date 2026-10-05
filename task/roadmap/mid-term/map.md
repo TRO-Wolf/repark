@@ -435,6 +435,7 @@ declines it (a dated ruling in the intake, then the archive).
 - [v1-5-0-release-notes-draft-2026-09-27.md](v1-5-0-release-notes-draft-2026-09-27.md) — **v1.5.0 release notes, FINAL (2026-09-27, tag `v1.5.0`):** the shipped notes, covering `2c7a4d25` (v1.4.2) to the tag — parity by area with the measured rerun matrix, behaviour changes, performance, fixes (including the #868 UUID fix), the five carve-outs in plain words, and known follow-ups, every line from a commit subject, the spec, a ledger or the matrix.
 - [v1-5-1-release-notes-2026-09-29.md](v1-5-1-release-notes-2026-09-29.md) — **v1.5.1 release notes (2026-09-29):** the notes for the first patch on 1.5.0, covering `9392dbc3` (v1.5.0) to `8568e57a`: U12 S3 path writes with the live AWS acceptance result, CASESENS-1, the TIMESTAMP/NTZ/DATE/numeric store-assignment units, INTDIV-1, the RP-55 fork repin, one performance note, the rerun matrix (705/132/5/0), and the v1.5.2 follow-ups. Every line comes from a commit subject, a ledger, a verifier hand-back or the matrix.
 - [v1-5-2-release-notes-2026-10-03.md](v1-5-2-release-notes-2026-10-03.md) — **v1.5.2 release notes (2026-10-03):** the notes for the second patch on 1.5.0, from `db3a1f37` (v1.5.1): TA-CHAIN-1, POLARS-IS-DUPLICATED-1, DEEP-FILTER-CHAIN-CRASH-1, STORE-TS-DOORS-2, STRING-LITERAL-ESCAPE-1, CAST-OVERFLOW-INSERT-1 and TEXT-WRITE-TIMESTAMP-ZONE-1, the RP-56 fork repin, CI-1 wheel-smoke sharding and the C-0 disposable Postgres harness.
+- [v1-5-3-card-2026-10-04.md](v1-5-3-card-2026-10-04.md) — **card v1.5.3 (2026-10-04):** the third patch on 1.5.0, from main after `d0c50405`. Unit PARITY-LIVE-STOP-1 (clerk grade, not a release gate): no test stops the shared live-oracle context. The nightly `parity-live` run has been red since 2026-09-16 and cascaded on 09-19; it has 162 failed and 7,565 guard errors on `3f067bee`. The card records the measured history, more than one stopper, and the out-of-scope failures. The ATTR-ID-1 stack is not scheduled here.
 - [release-diff-1-5-1-pre-existing.md](release-diff-1-5-1-pre-existing.md) — **RELEASE-DIFF-1-5-1-PE (2026-09-29):** the wrong answers found on main by the v1.5.1 release differential and the per-PR verifiers that were already there before this release. PE-3 to PE-26 each carry a severity, Spark's answer and a card name, with the silent rows (S1) first.
 - [cast-overflow-in-table-insert-1.md](cast-overflow-in-table-insert-1.md) — **CAST-OVERFLOW-IN-TABLE-INSERT-1 card (2026-09-28):** an out-of-range fractional store into an integer column refuses `CAST_OVERFLOW_IN_TABLE_INSERT`, as Spark does. It is in flight as PR #891 (v1.5.2).
 - [polars-is-duplicated-1.md](polars-is-duplicated-1.md) — **POLARS-IS-DUPLICATED-1 card (2026-09-28, owner ruling):** `.filter(col('x').is_duplicated())` on both `rp.col` and `F.col`, with Polars 1.43.2 semantics (every occurrence, null==null, NaN==NaN, 0.0==-0.0). It is in flight as PR #883 (v1.5.2).
@@ -590,6 +591,14 @@ declines it (a dated ruling in the intake, then the archive).
   (2026-10-03, owner ruling, v1.5.2):** `ta.ema` over `ta.trange` answers all-NaN because a
   leading lookback NaN propagates through C-faithful kernels; polars_talib skips the leading
   run (measured); wrapper-level fix, order at `task/wo/ta-chain-1-leading-prefix.md`.
+- [grown-stack-gate-1-card-2026-10-04.md](grown-stack-gate-1-card-2026-10-04.md) — **card
+  GROWN-STACK-GATE-1 (2026-10-04, owner, grade B):** 34 unconditional `deep_stack::block_on` sites grow
+  a 128 MiB stack on every poll; main's work-equal like set +5.2 % from v1.5.1; gate them as R4 gated
+  the frame doors; order at `task/wo/grown-stack-gate-1.md`; the stack merge waits on it.
+- [ta-single-series-parallel-1-card-2026-10-04.md](ta-single-series-parallel-1-card-2026-10-04.md) — **card
+  TA-SINGLE-SERIES-PARALLEL-1 (2026-10-04, owner, design grade, next TA item after v1.5.2):** one
+  1,000,000-row series with dependent `ta.*` levels runs 0.49 s on one core against polars_talib's 0.12 s;
+  parallel window-expression evaluation or a K-operator zip, sketch first; gate ratio ≤ 1.00.
 - [variance-alias-1-card-2026-10-03.md](variance-alias-1-card-2026-10-03.md) — **card
   VARIANCE-ALIAS-1 (2026-10-03, owner delegate, post-1.5.2):** SQL `variance(x)` is
   `UNRESOLVED_ROUTINE` on RePark; Spark and `var_samp` answer double `2.333333333333333`.
@@ -606,3 +615,30 @@ declines it (a dated ruling in the intake, then the archive).
   (2026-10-03, clerk, after CI-1):** `--format sarif` exits 0 while findings exist (plain
   mode exits 14); the ci.yml map guard passes `github.base_ref` via `env:`, and zizmor.yml
   runs plain mode as the blocking step before the SARIF upload.
+- [attr-view-semantics-1-card-2026-10-04.md](attr-view-semantics-1-card-2026-10-04.md) — **card
+  ATTR-VIEW-SEMANTICS-1 (2026-10-04, measurement plus filing, no product code):** SQL aliases
+  and SQL-defined views mint ids in Spark (`v#3L`, `id#16L/v#17L`) and foreign columns raise
+  MISSING_ATTRIBUTES; measured on Spark 4.1.2, 1.5.2 and the stack (`d5c97862`) — 11/7 on main,
+  9/9 on the stack, the two V-3 internal errors the only new stack differences; scope (a)–(d)
+  with proposed pins, V10/F16 out, grade and release questions for the owner.
+- [explain-root-sort-1-card-2026-10-04.md](explain-root-sort-1-card-2026-10-04.md) — **card
+  EXPLAIN-ROOT-SORT-1 (2026-10-04, measured on 1.5.2):** the facade's `explain()` plans the
+  frame through a scratch view, so DataFusion's subquery sort elimination hides a root `Sort`
+  that `collect()` executes; fix by explaining the frame's own plan; pins per sort shape.
+- [distributed-encode-1-card-2026-10-04.md](distributed-encode-1-card-2026-10-04.md) — **card
+  DISTRIBUTED-ENCODE-1 (2026-10-04):** three `repark-distributed --features cluster` tests red on
+  main (two `LazyMemTableExec` encode failures, one pushdown-surface test); the codec encodes only
+  `IcebergTableScan`, so RePark execs such as `NljBuildSideExec` likely fail to encode (inferred);
+  measure first, then codec arms or single-node flags.
+- [cache-order-read-1-card-2026-10-05.md](cache-order-read-1-card-2026-10-05.md) — **card
+  CACHE-ORDER-READ-1 (2026-10-05, filed by Muse Spark 1.3 for the orchestrator, from TA series
+  S1):** filter reads of a sorted single-partition `eager()` frame interleave (0 of 10 on S1's
+  head, 1 of 10 on 1.5.2, 3 of 3 ordered on Spark 4.1.2) because `BatchSplitStream` splits the
+  stored batch under `RoundRobinBatch`; two design options (unsplit rule, trailing
+  `SortPreservingMerge`) with costs; grade lean B with an Opus sketch, release after S1.
+- [ansi-remainder-class-1-card-2026-10-05.md](ansi-remainder-class-1-card-2026-10-05.md) — **card
+  ANSI-REMAINDER-CLASS-1 (2026-10-05, filed by Muse Spark 1.3 for the orchestrator, from the
+  PR #943 check):** the 10-cell ANSI-on matrix where Spark raises `REMAINDER_BY_ZERO` — RePark
+  raises `DIVIDE_BY_ZERO` on `%`, answers `NULL` on `mod`/`pmod`, `NaN` on a `-0.0` divisor,
+  and cannot parse infix `div`; the guard learns its operator, with the error text per operator;
+  grade lean B, small.

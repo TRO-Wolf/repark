@@ -11,6 +11,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   alone (C-001), `stamp` with Spark's first-input union rule (C-002), the join re-mint
   (C-003), `resolve` (C-004), the `repark-python` binds (C-005) and mutations M1–M4 (C-006);
   R-1..R-4 are dated residues for S2–S3. `risk_tier: standard`. Branch `feat/attr-id-1`.
+- [ta-series-s2b-ledger.md](ta-series-s2b-ledger.md) —
+  **TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04), in flight:** `ParallelWindowExec` runs the
+  argument groups of a one-partition, empty-`PARTITION BY` `WindowAggExec` on the blocking pool,
+  bit-identical to the serial node (C-001..C-006, C-009); zero-copy TA output and borrowed
+  multi-series inputs (C-007); owner shape identical to base through the facade (C-008); a
+  single-node opt-out that distributed sessions set (C-010); goldens and kernel race (C-011);
+  bare −106 ms, explicit −122 ms, partitioned unchanged (C-012); EXPLAIN and plan-count pins
+  (C-013); the distributed provider refuses a session with the flag on (C-014, verifier V-1).
+  `risk_tier: standard`. Branch `perf/ta-series-s2b-parallel-window`.
+  pins: ta-series-s2b/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
 - [text-write-timestamp-zone-1-ledger.md](text-write-timestamp-zone-1-ledger.md) —
   **WO TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29), in flight:** CSV and JSON
   writes format LTZ in the session zone under Spark's default `timestampFormat`,
@@ -2039,3 +2049,17 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   door with the same assertions (C-013).
   CI round expr (2026-09-30): `F.expr` pre-renders display-shaped text so
   composed embeddings keep base's grouping (C-014).
+- [grown-stack-gate-1-ledger.md](grown-stack-gate-1-ledger.md) —
+  **GROWN-STACK-GATE-1 (2026-10-04), in flight:** the 34 unconditional
+  `deep_stack::block_on` sites take the frame doors' verdicts — 24 no-plan
+  sites drive plain (C-001), 9 frame sites drive sized segments (C-002:
+  P1/P2/P4/P6 equal main), ML polls reuse the opener's segment (C-003),
+  writer SQL drives on the text gate OR the deep-view mark (C-004: P5
+  answers, P3 is the regression pin). Five mutations red, H7 episode and
+  the Q1/Q2/Q3 rulings filed; verifier fold V-1 adds deep pins for the
+  five unpinned sized sites (M6-M10, one subprocess per shape); micro
+  C-005 unmeasurable at ±0.005 with every A/B point ≤ 1.005 (owner
+  rules), like-set C-006 measured +3.2% outside the band with the R4
+  confound filed.
+  `risk_tier: standard`. Branch `fix/grown-stack-gate-1`.
+  pins: grown-stack-gate-1/C-001, C-002, C-003, C-004

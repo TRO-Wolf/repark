@@ -854,6 +854,15 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   every match, hidden names only); `OrcPartition::execute` streams batches from
   the ArrowReader through `OrcBatchStream` (R-18b-14, text_scan pattern), never
   a collected Vec. pins: io-orc-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- `parallel_window/` — **TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04):** `ParallelWindowRule` +
+  `ParallelWindowExec`, a parallel stand-in for a one-partition, empty-`PARTITION BY`
+  `WindowAggExec` with at least two argument groups; and the `repark.parallel` carrier the rule
+  reads. `lib.rs` declares the module; `session.rs` gains
+  `ReparkSessionBuilder::parallel_single_partition(bool)` (on by default) and attaches the carrier
+  beside the write-concurrency knob. Distributed sessions must build with it off; `lib.rs`
+  re-exports `parallel_single_partition_active`, which `ReparkSessionProvider` uses to refuse a
+  session that did not (verifier V-1). See
+  [parallel_window/map.md](parallel_window/map.md).
 - `orc_schema.rs` — **IO-ORC-1 (2026-09-16):** the ORC schema half beside the scan:
   footer-attribute mapping (LONG→`timestamp_ntz`, instant→UTC-stamped `timestamp`,
   local-tz-kind→naive, recursive through struct/list/map), schema union by name under
@@ -924,6 +933,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `impl From<Arc<Runtime>> for EngineRuntime` — a fidelity phase does not ship untested public
   API (design §8, "do not clean up on the way past"; docs/testing.md "every behavior gets a test").
   Re-add it only with a test and a caller.
+  **TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04):** `built_with_debug_assertions` moved here
+  unchanged from `lib.rs` (still re-exported at the crate root) so `lib.rs` stays under its
+  `check_lib_rs.py` ceiling after `mod parallel_window;`.
 - `extension.rs` (+ `extension/tests.rs`) — the registration seam (design §3):
   `SessionExtension` with three defaulted hooks (`configure` pre-assembly,
   `configure_analyzer_rules` during context assembly, and `register` post-context) at v1's inline

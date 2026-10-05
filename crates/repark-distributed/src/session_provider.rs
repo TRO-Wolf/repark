@@ -6,7 +6,7 @@ use ballista_core::{ConfigProducer, RuntimeProducer};
 use ballista_scheduler::SessionBuilder;
 use datafusion::execution::SessionState;
 use datafusion::prelude::{SessionConfig, SessionContext};
-use repark_core::ReparkSession;
+use repark_core::{Error, ReparkSession, Result, parallel_single_partition_active};
 
 #[derive(Clone)]
 pub struct ReparkSessionProvider {
@@ -14,16 +14,24 @@ pub struct ReparkSessionProvider {
 }
 
 impl ReparkSessionProvider {
-    #[must_use]
-    pub fn from_session(session: &ReparkSession) -> Self {
+    #[allow(clippy::missing_errors_doc)]
+    pub fn from_session(session: &ReparkSession) -> Result<Self> {
         Self::from_context(session.context())
     }
 
-    #[must_use]
-    pub fn from_context(context: &SessionContext) -> Self {
-        Self {
-            state: context.state(),
+    #[allow(clippy::missing_errors_doc)]
+    pub fn from_context(context: &SessionContext) -> Result<Self> {
+        let state = context.state();
+        if parallel_single_partition_active(&state) {
+            return Err(Error::Config(
+                "ReparkSessionProvider refuses a session with single-partition parallelism on: \
+                 ParallelWindowExec has no distributed codec arm, and the plans a cluster runs \
+                 are built on this session's own context; build the session with \
+                 ReparkSessionBuilder::parallel_single_partition(false)"
+                    .to_owned(),
+            ));
         }
+        Ok(Self { state })
     }
 
     #[must_use]
