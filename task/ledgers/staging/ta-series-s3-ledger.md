@@ -65,15 +65,20 @@ fusion, any kernel or facade change.
   (`RepartitionExec::maintains_input_order_helper`), so the rebuilt chain carries the same
   orderings. The parent's ordering is re-checked with the test `SanityCheckPlan` uses, because
   this rule runs after it.
-- **Batches.** `RoundRobinBatch` moves whole batches, and `ParallelProjectionExec` projects batch
-  by batch, so every expression sees the batches it saw before. That keeps per-batch functions
-  such as `rand(seed)` unchanged, even though they are refused anyway (C-007).
+- **Batches.** Correction from the #945 verifier (V945-1, measured): over one input partition the
+  order-preserving `RoundRobinBatch` re-chunks the single window batch into `batch_size` batches
+  (`datafusion-physical-plan-54.1.0/src/repartition/mod.rs:1310-1325`). After the drop,
+  downstream operators receive the one window-sized batch. Rows are identical. Per-batch
+  functions such as `rand(seed)` are refused by the rule anyway (C-007), so their batching
+  never changes.
 - **Tasks.** One `spawn_blocking` task per non-column expression, under a semaphore of
   `min(tasks, target_partitions)`. Column expressions are evaluated in line.
 - **Root partition count.** A root chain over a window output loses its RoundRobin too, so the
   plan's output partition count drops from n to 1. `write_data_files_from_plan` (`repark-iceberg`)
-  sizes its writers from that count. A window emits one batch, so before the drop only
-  partition 0 carried rows; the file count is unchanged. Multi-batch sources keep their fan-out
+  sizes its writers from that count. Measured by the #945 verifier: a path
+  (COPY) write of a 150k-row unpartitioned window frame gives 3 files on base (65,536 /
+  65,536 / 18,928 rows) and 1 file on head (150,000 rows), with identical rows. One file is
+  Spark's shape for an unpartitioned window output. The Iceberg writer was not measured. Multi-batch sources keep their fan-out
   (ruling Q-S3-3, C-012).
 
 ## 2. Pin and mutation record (2026-10-04)
