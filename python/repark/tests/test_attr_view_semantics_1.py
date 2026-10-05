@@ -6,6 +6,7 @@ from typing import Any
 import pytest
 
 from repark import ReparkSession
+from repark.errors import AnalysisException
 
 
 @pytest.fixture
@@ -66,3 +67,40 @@ def test_sql_view_v9_unchanged(spark: ReparkSession) -> None:
     source = _seeded(spark)
     got = sorted(tuple(row) for row in spark.table("sv").select(source["v"]).collect())
     assert got == [(10,), (20,)]
+
+
+def test_sql_view_over_stamped_frame_describe_keeps_comments(spark: ReparkSession) -> None:
+    """DESCRIBE of a commented SQL view over stamped ``tv`` keeps names, types and comments."""
+    _source = _seeded(spark)
+    spark.sql(
+        "CREATE OR REPLACE TEMP VIEW sv (id COMMENT 'the id', v COMMENT 'the v') "
+        "AS SELECT * FROM tv"
+    )
+    frame = spark.sql("DESCRIBE sv")
+    assert [tuple(row) for row in frame.collect()] == [
+        ("id", "bigint", "the id"),
+        ("v", "bigint", "the v"),
+    ]
+    assert frame.dtypes == [
+        ("col_name", "string"),
+        ("data_type", "string"),
+        ("comment", "string"),
+    ]
+
+
+def test_sql_view_over_stamped_frame_cycle_refused(spark: ReparkSession) -> None:
+    """A REPLACE closing a cycle through a stamped SQL view is RECURSIVE_VIEW naming the path."""
+    _source = _seeded(spark)
+    spark.sql("CREATE TEMP VIEW a AS SELECT * FROM tv")
+    spark.sql("CREATE TEMP VIEW b AS SELECT * FROM a")
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql("CREATE OR REPLACE TEMP VIEW a AS SELECT * FROM b")
+    assert type(caught.value) is AnalysisException
+    assert str(caught.value) == (
+        "Error during planning: [RECURSIVE_VIEW] Recursive view `a` detected "
+        "(cycle: `a` -> `b` -> `a`). SQLSTATE: 42K0H"
+    )
+    assert caught.value.getCondition() == "RECURSIVE_VIEW"
+    assert caught.value.getSqlState() == "42K0H"
+    got = sorted(tuple(row) for row in spark.sql("SELECT * FROM a").collect())
+    assert got == [(1, 10), (2, 20)]

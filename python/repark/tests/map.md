@@ -9474,4 +9474,12 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   resolves by name (pre-existing lifecycle, identical on the unmodified stack).
   No module docstring: the lane's no-comments ruling covers the new file; the
   contract lives here.
+  Fold F-1 (#951, 2026-10-05): two pins over the stamped frame hold the
+  `temp_view_scan` Projection arm — DESCRIBE of a commented SQL view over `tv`
+  keeps both alias comments with Spark 4.1.2's rows and dtypes (measured
+  2026-10-05: identical), and a REPLACE closing the `a`/`b` cycle through the
+  stamped view refuses RECURSIVE_VIEW with Spark's text, condition and SQLSTATE
+  while `a` keeps its old rows; both go red when the arm reverts to a bare
+  TableScan. `createOrReplaceTempView` takes no comment, so the DESCRIBE pin
+  spells the comments as SQL aliases.
   See `task/roadmap/mid-term/attr-view-semantics-1-card-2026-10-04.md`.
