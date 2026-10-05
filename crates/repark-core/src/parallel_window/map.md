@@ -152,6 +152,9 @@ provider's cloned state would not be enough. The flag defaults to on; it has no 
   coalesce keep today's plan). pins: ta-series-s2a/C-004
 - Gates measured for the slice (goldens, kernel race, owner-shape facade identity against base,
   speed): `task/ledgers/staging/ta-series-s2b-ledger.md`. pins: ta-series-s2b/C-008, C-011, C-012
+- S2a gates (goldens, crate suites, facade, parity, hygiene) and the owner-file correctness record
+  on release wheels (bare equals explicit, explicit equals base, 0 rows off polars_talib):
+  `task/ledgers/staging/ta-series-s2a-ledger.md`. pins: ta-series-s2a/C-009, C-010
 
 ## Pointers
 
