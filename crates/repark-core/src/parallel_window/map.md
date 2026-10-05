@@ -2,8 +2,9 @@
 
 ## Purpose
 
-TA-SINGLE-SERIES-PARALLEL-1 slice S2b (2026-10-04): a generic physical operator that runs the
-expressions of a one-partition window in parallel. DataFusion's `WindowAggExec` evaluates every
+TA-SINGLE-SERIES-PARALLEL-1 slices S2b and S3 (2026-10-04): generic physical operators that run
+the expressions of a one-partition window (S2b) and of a one-partition projection (S3) in
+parallel, and drop the useless RoundRobin over one partition (S3). DataFusion's `WindowAggExec` evaluates every
 window expression serially on the polling thread (`compute_window_aggregates`); on one long series
 (the owner's `ta.*` benchmark: 14 indicators over 1 M rows) that pins the query to one core.
 `ParallelWindowRule` swaps such a node for `ParallelWindowExec`, which computes the same columns
@@ -57,6 +58,50 @@ provider's cloned state would not be enough. The flag defaults to on; it has no 
   stacks of `repark-python/src/deep_stack.rs` (`RUNTIME_THREAD_STACK_BYTES`). EXPLAIN prints
   `ParallelWindowExec: wdw=[…]` with exactly the expression list `WindowAggExec` prints.
 
+- `projection.rs` — **S3 (2026-10-04):** `ParallelProjectionRule` (`parallel_projection`) and
+  `ParallelProjectionExec`. The rule is appended right after `ParallelWindowRule`, reads the
+  same `repark.parallel` carrier (off → the plan is returned unchanged) and runs two passes.
+  **R-S3-1a, the RoundRobin drop** (the earlier sketch's S4, folded into S3 by the orchestrator's
+  Q-S3-1 = A ruling): a `ProjectionExec`, or a chain of them, sitting directly on a
+  `RepartitionExec(RoundRobinBatch(n))` whose input has one partition is rebuilt over the
+  RoundRobin's input, whatever the expression count. The drop is decided at the first
+  non-projection parent of the chain (or at the root, which has no requirement): that parent's
+  required distribution for the child must be unspecified or single-partition (a hash
+  requirement is refused, because one partition would satisfy it while breaking co-partitioning
+  with a sibling), and its required ordering, if any, must hold on the rebuilt child (the same
+  `ordering_satisfy_requirement` test DataFusion's `SanityCheckPlan` runs). A RoundRobin over one
+  partition keeps that partition's ordering, so the rebuilt chain carries the same orderings;
+  the `SortPreservingMergeExec` or `CoalescePartitionsExec` above then sees one partition and
+  passes its input through. RoundRobinBatch moves whole batches, so the projection still sees
+  the same batches. **R-S3-1b, the parallel swap:** a `ProjectionExec` over one input partition
+  with at least two non-column expressions becomes a `ParallelProjectionExec` with the same
+  `PlanProperties`, expressions and EXPLAIN list (`ParallelProjectionExec: expr=[…]`).
+  **Neither pass fires when any expression of the projection (or of any projection in the
+  chain) is volatile** (`is_volatile`: `rand`, `randn`, the volatile time casts; orchestrator
+  Q-S3-2). Execution is per input batch, so the output batch shape equals `ProjectionExec`'s: a
+  batch below `PARALLEL_PROJECTION_MIN_ROWS` rows is evaluated serially in line; otherwise each
+  non-column expression is one `SpawnedTask::spawn_blocking` (bounded by a semaphore of
+  `min(tasks, target_partitions)`), column expressions are evaluated in line (an `Arc` clone),
+  and the columns are placed by expression index. The error of the lowest expression index
+  wins, as in the serial projection. Dropping the stream drops the batch future and its
+  `SpawnedTask`s. A `parallel_batches` counter metric records how many batches took the
+  parallel path. Single node only: the rule ships beside `ParallelWindowRule`, so
+  `parallel_single_partition_active` and the distributed provider's refusal cover it. A
+  RoundRobin over one ordered partition (EXPLAIN `maintains_sort_order=true`, the shape S1's
+  ordered cache produces, where the RoundRobin spilled the whole batch) is dropped the same way.
+  pins: ta-series-s3/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- `projection_tests.rs` — the S3 pins (no TA dependency): `parallel_projection_bit_identical`
+  (13 × `round`, 3 × `/`, a `CASE`, through a session against the flag-off session);
+  `parallel_projection_removes_rr_spm_sandwich` (the owner's two RoundRobins, a two-projection
+  chain under a `SortPreservingMergeExec` and under a `CoalescePartitionsExec`);
+  `parallel_projection_small_input_serial` (the `parallel_batches` counter below and above the
+  threshold); `parallel_projection_respects_parent_ordering` (an unsatisfiable merge ordering and
+  a partitioned hash join keep the plan); `parallel_projection_flag_off`;
+  `parallel_projection_volatile_unchanged` (a seeded volatile probe); and
+  `parallel_projection_lowest_index_error`, `parallel_projection_drop_cancels`;
+  `parallel_projection_drops_order_preserving_round_robin` (a sorted single-batch source under a
+  `maintains_sort_order=true` RoundRobin, P-S3-8).
+  pins: ta-series-s3/C-001, C-002, C-003, C-004, C-005, C-007, C-008, C-009
 - `tests.rs` — the S2b pins on probe window UDFs (no TA dependency; `repark-core` cannot see
   `repark-ta`). `parallel_window_matches_serial_window_across_batches` (five expressions, three
   groups, three input batches); `parallel_window_keeps_multi_output_siblings` (three band

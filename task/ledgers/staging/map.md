@@ -4,6 +4,15 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [ta-series-s3-ledger.md](ta-series-s3-ledger.md) —
+  **TA-SINGLE-SERIES-PARALLEL-1 S3 (2026-10-04), in flight:** `ParallelProjectionRule` drops a
+  RoundRobin over one partition under a projection chain when the parent's requirements still
+  hold (the old sketch's S4, folded in by ruling Q-S3-1 = A), and `ParallelProjectionExec` runs
+  the non-column expressions of a one-partition projection on the blocking pool, bit-identical
+  to `ProjectionExec` (C-001..C-005, C-008, C-009); never on a volatile expression (C-007);
+  facade identity, gates and speed open (C-006, C-010, C-011).
+  `risk_tier: standard`. Branch `perf/ta-series-s3-parallel-projection`.
+  pins: ta-series-s3/C-001, C-002, C-003, C-004, C-005, C-007, C-008, C-009
 - [ta-series-s2b-ledger.md](ta-series-s2b-ledger.md) —
   **TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04), in flight:** `ParallelWindowExec` runs the
   argument groups of a one-partition, empty-`PARTITION BY` `WindowAggExec` on the blocking pool,
