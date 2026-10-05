@@ -352,7 +352,7 @@ impl ProjectionJob {
         let rows = batch.num_rows();
         let columns = {
             let _timer = self.metrics.elapsed_compute().timer();
-            if rows < PARALLEL_PROJECTION_MIN_ROWS {
+            if rows < PARALLEL_PROJECTION_MIN_ROWS || self.permits <= 1 {
                 evaluate_serial(&self.exprs, &batch)?
             } else {
                 self.parallel_batches.add(1);
