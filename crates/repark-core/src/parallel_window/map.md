@@ -92,12 +92,14 @@ provider's cloned state would not be enough. The flag defaults to on; it has no 
   parallel path. Single node only: the rule ships beside `ParallelWindowRule`, so
   `parallel_single_partition_active` and the distributed provider's refusal cover it. A
   RoundRobin over one ordered partition (EXPLAIN `maintains_sort_order=true`, the shape S1's
-  ordered cache produces, where the RoundRobin spilled the whole batch) is dropped the same way.
-  pins: ta-series-s3/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-012
+  ordered cache produces above the L1 window, where the RoundRobin spilled the whole batch) is
+  dropped the same way.
+  pins: ta-series-s3/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
 - `projection_tests.rs` — the S3 pins (no TA dependency): `parallel_projection_bit_identical`
-  (13 × `round`, 3 × `/`, a `CASE`, through a session against the flag-off session);
-  `parallel_projection_removes_rr_spm_sandwich` (the owner's two RoundRobins, a two-projection
-  chain under a `SortPreservingMergeExec` and under a `CoalescePartitionsExec`);
+  (13 × `round`, 3 × `/`, a `CASE` over a window subquery, through a session against the
+  flag-off session); `parallel_projection_removes_rr_spm_sandwich` (the owner's two RoundRobins
+  over window outputs, a two-projection chain under a `SortPreservingMergeExec` and under a
+  `CoalescePartitionsExec`);
   `parallel_projection_small_input_serial` (the `parallel_batches` counter below and above the
   threshold); `parallel_projection_respects_parent_ordering` (an unsatisfiable merge ordering and
   a partitioned hash join keep the plan); `parallel_projection_flag_off`;
