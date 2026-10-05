@@ -31,6 +31,7 @@ Out of scope:
 | R-4 | No new refusal fires where Spark answers. Every cell the matrix records as EQUAL must stay EQUAL, and so must every self-join pin (`python/repark/tests/test_attr_id_1_sj*.py` on the stack). |
 | R-5 | Single source of truth for identity stays `crates/repark-core/src/session/df_guards/attr_id.rs` on the stack (`stamp`, `attribute_ids`, `resolve`). No new carrier, no name-based fallback, no Python-side identity decision. |
 | R-6 | No new crate, no Cargo change, no `.github` change. No comments in any code file (markdown may explain). Ceilings only ratchet down. |
+| R-7 | (orchestrator, 2026-10-05, after the sketch halted at H5) The #951 pin `test_sql_view_v9_unchanged` was only a scope guard for item (d), holding until (c). Slice (c) replaces it in the same commit with `test_sql_view_foreign_column_missing_attributes`, which asserts the oracle's `MISSING_ATTRIBUTES` text. H5 still holds for every other #951 pin. |
 
 ## 2. The sketch round (Opus 5.5, high): what it must produce
 
