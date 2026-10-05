@@ -51,7 +51,7 @@ impl repark_core::TempViewSession for StubViews {
 }
 
 #[tokio::test]
-async fn sql_temp_view_over_a_stamped_frame_registers_a_clean_scan_with_fresh_ids() {
+async fn sql_temp_view_over_a_stamped_frame_registers_a_clean_scan_with_no_carried_ids() {
     let warehouse = TempDir::new().expect("temp warehouse");
     let (ctx, catalogs) = setup(&warehouse).await;
     let source = ctx

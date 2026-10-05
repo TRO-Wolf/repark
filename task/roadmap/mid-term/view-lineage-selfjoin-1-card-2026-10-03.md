@@ -20,6 +20,11 @@ view")`):
 | `J_view_sel_t` | `d.join(t, …).select(t.v)` | 1182 | 1182 (their ids are `d`'s) |
 | `J_sql_sel_q` | `d.join(q, …).select(q.v)` | 1182 | 1182 |
 | `J_view_left_sel_t` | the left-join twin | rows `[[10],[20],[30]]` | answers (over-fire guard) |
+| `sv_d:b`, `sv_tv:b` (and `sv_join_d`, `sv_join_tv`) | `a = table(sv); a.join(X, a.id == X.id).select(X.v)`, X = `d` or `table("tv")` | 1182 | answers (since ATTR-VIEW item (a), 2026-10-05; equal to main) |
+| `sv_d:ab`, `sv_tv:ab` | `….select(a.v, X.v)` | 1182 | answers (since (a); equal to main) |
+| `sv_d:bid`, `sv_tv:bid` | `….select(X.id)` | 1182 | answers (since (a); equal to main) |
+| `sv_d_filter_d` | `a.join(d, …).filter(d.v > 10)` | 1182 | answers (since (a); equal to main) |
+| `replace:sv_join_e_sel` | after `CREATE OR REPLACE sv` over `tv2`: `table(sv).join(e, …).select(e.v)` | 1182 | answers (since (a); equal to main) |
 
 No pin covers `J_view_sel_d` or `J_sql_sel_d` yet; `J_view_sel_t`, `J_sql_sel_q` and
 `J_view_left_sel_t` are pinned in `test_attr_id_1_sj4.py`.
@@ -29,6 +34,7 @@ No pin covers `J_view_sel_d` or `J_sql_sel_d` yet; `J_view_sel_t`, `J_sql_sel_q`
 | id | decision |
 |---|---|
 | D-1 | The temp-view registry stores the registering frame's lineage node; `S.table` and `S.sql` build from it instead of rooting. Rust-first, like the join nodes. |
+| D-1a | **(2026-10-05, owner)** ATTR-VIEW item (a) removed the stack's accidental id-copy refusal: SQL-view reads now mint fresh ids on every read. The SQL-view rows above (`sv_*`) therefore answer, as main does. D-1 is now the only mechanism that can refuse them, so step 0 measures in the (a) world, on a stack that includes item (a). |
 | D-2 | `J_view_sel_d` and `J_sql_sel_d` refuse 1182 with Spark's names; `J_view_sel_t` and `J_sql_sel_q` stay 1182; `J_view_left_sel_t` still answers. |
 | D-3 | Measure first: views over joined frames, views over views, and `cache()`/`checkpoint()` between register and read, before ruling what the stored node covers. |
 

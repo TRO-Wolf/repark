@@ -37,6 +37,17 @@ with `sv` created by `CREATE TEMP VIEW sv AS SELECT * FROM tv` now answers
 `_LEGACY_ERROR_TEMP_1182`. A DataFrame view (`createOrReplaceTempView`) keeps
 carrying the registered frame's ids on every read, as Spark does.
 
+One shape still differs from Spark, and answers exactly as main does today:
+
+```python
+a = spark.table("sv"); a.join(d, a["id"] == d["id"]).select(d["v"])
+```
+
+Here `d` is the DataFrame behind `tv`. Spark refuses this with
+`_LEGACY_ERROR_TEMP_1182` ("Column v#… are ambiguous"); this release answers it
+from `d`'s side. The same holds for `.select(a["v"], d["v"])`, `d["id"]` and
+`.filter(d["v"] > 10)`. Card VIEW-LINEAGE-SELFJOIN-1 owns the fix.
+
 ## The fix in user code
 
 Alias the frames and reference the alias, as Spark's own message suggests:
