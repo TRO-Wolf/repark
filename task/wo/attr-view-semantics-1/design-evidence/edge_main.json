@@ -1,0 +1,530 @@
+{
+ "engine": "main",
+ "banner": {
+  "version": "stack"
+ },
+ "rows": [
+  {
+   "id": "P01 d.select('id').select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "Schema error: No field named datafusion.public.__repark_cdf_319f013a626241369c6911f68016a282.v. Valid fields are id.",
+   "condition": null
+  },
+  {
+   "id": "P02 d.select('id').filter(d.v > 15)",
+   "kind": "run",
+   "outcome": "ERR",
+   "columns": [
+    "id"
+   ],
+   "error_class": "AnalysisException",
+   "message": "type_coercion\ncaused by\nSchema error: No field named datafusion.public.__repark_cdf_319f013a626241369c6911f68016a282.v. Valid fields are id.",
+   "condition": null
+  },
+  {
+   "id": "P03 d.select('id').withColumn('z', d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "Schema error: No field named datafusion.public.__repark_cdf_319f013a626241369c6911f68016a282.v. Valid fields are id.",
+   "condition": null
+  },
+  {
+   "id": "P04 d.select('id').orderBy(d.v.desc())",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id"
+   ],
+   "rows": [
+    [
+     2
+    ],
+    [
+     1
+    ]
+   ]
+  },
+  {
+   "id": "P05 agg frame .filter(d.v > 15)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "P06 agg frame .orderBy(d.v.desc())",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     2,
+     20
+    ],
+    [
+     1,
+     10
+    ]
+   ]
+  },
+  {
+   "id": "P07 neg.filter(d.v > 15)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": []
+  },
+  {
+   "id": "P08 neg.orderBy(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     2,
+     -20
+    ],
+    [
+     1,
+     -10
+    ]
+   ]
+  },
+  {
+   "id": "P09 neg.alias('t').filter(d.v > 15)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": []
+  },
+  {
+   "id": "P10 neg.alias('t').orderBy(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     2,
+     -20
+    ],
+    [
+     1,
+     -10
+    ]
+   ]
+  },
+  {
+   "id": "P11 table(pv).filter(d.v > 15)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": []
+  },
+  {
+   "id": "P12 table(pv).orderBy(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     2,
+     -20
+    ],
+    [
+     1,
+     -10
+    ]
+   ]
+  },
+  {
+   "id": "P13 sql(id, -v AS v).filter(d.v > 15)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": []
+  },
+  {
+   "id": "P14 sql(id, -v AS v).orderBy(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     2,
+     -20
+    ],
+    [
+     1,
+     -10
+    ]
+   ]
+  },
+  {
+   "id": "P15 table(sv).orderBy(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "P16 neg.filter(d.v > 15).filter(d.v > 15)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": []
+  },
+  {
+   "id": "P17 neg.drop(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id"
+   ],
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  {
+   "id": "P18 sql(id, -v AS v).drop(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id"
+   ],
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  {
+   "id": "P19 table(sv).drop(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id"
+   ],
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  {
+   "id": "P20 neg.distinct().filter(d.v > 15)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": []
+  },
+  {
+   "id": "P21 neg.limit(5).filter(d.v > 15)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": []
+  },
+  {
+   "id": "P22 neg.union(neg).filter(d.v > 15)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": []
+  },
+  {
+   "id": "P23 neg.filter(d.v > 15) where neg via withColumnRenamed",
+   "kind": "run",
+   "outcome": "ERR",
+   "columns": [
+    "id",
+    "w"
+   ],
+   "error_class": "AnalysisException",
+   "message": "type_coercion\ncaused by\nSchema error: No field named datafusion.public.__repark_cdf_319f013a626241369c6911f68016a282.v. Valid fields are id, w.",
+   "condition": null
+  },
+  {
+   "id": "P24 d.select('id').where(d.v == 10).select('id')",
+   "kind": "run",
+   "outcome": "ERR",
+   "columns": [
+    "id"
+   ],
+   "error_class": "AnalysisException",
+   "message": "type_coercion\ncaused by\nSchema error: No field named datafusion.public.__repark_cdf_319f013a626241369c6911f68016a282.v. Valid fields are id.",
+   "condition": null
+  },
+  {
+   "id": "Q01 table(sv) a,b join a.id==b.id select(a.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "Q02 table(sv) a,b join a.id==b.id select(a.v,b.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v",
+    "v"
+   ],
+   "rows": [
+    [
+     10,
+     10
+    ],
+    [
+     20,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "Q03 table(sv).select(table(sv).v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "Q04 a=table(sv); a.select(a.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "Q05 table(sv) a,b join on 'id' select(a.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "Error during planning: [AMBIGUOUS_REFERENCE] Reference `v` is ambiguous, could be: [`v`, `v`]. SQLSTATE: 42704",
+   "condition": "AMBIGUOUS_REFERENCE"
+  },
+  {
+   "id": "Q06 table(tv) a,b join a.id==b.id select(a.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "Q07 table(tv).select(table(tv).v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "Q08 q=sql(v AS v); q.join(q, q.id==q.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v",
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10,
+     1,
+     10
+    ],
+    [
+     2,
+     20,
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "Q09 sql(v AS v) twice joined select(q1.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "Q10 sql(SELECT * FROM sv a JOIN sv b ON a.id=b.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v",
+    "w"
+   ],
+   "rows": [
+    [
+     10,
+     10
+    ],
+    [
+     20,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "Q11 table(sv).select('v')",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "Q12 table(sv).select(F.col('v'))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  }
+ ]
+}

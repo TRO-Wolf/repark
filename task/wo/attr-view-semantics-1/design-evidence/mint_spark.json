@@ -1,0 +1,819 @@
+{
+ "engine": "spark",
+ "banner": {
+  "version": "4.1.2",
+  "zone": "America/New_York"
+ },
+ "rows": [
+  {
+   "id": "M01 d",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "0",
+    "1"
+   ],
+   "classes": [
+    "d.id",
+    "d.v"
+   ]
+  },
+  {
+   "id": "M02 table(tv)",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "0",
+    "1"
+   ],
+   "classes": [
+    "d.id",
+    "d.v"
+   ]
+  },
+  {
+   "id": "M03 table(tv) again",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "0",
+    "1"
+   ],
+   "classes": [
+    "d.id",
+    "d.v"
+   ]
+  },
+  {
+   "id": "M04 SELECT * FROM tv",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "0",
+    "1"
+   ],
+   "classes": [
+    "d.id",
+    "d.v"
+   ]
+  },
+  {
+   "id": "M05 SELECT v FROM tv",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "1"
+   ],
+   "classes": [
+    "d.v"
+   ]
+  },
+  {
+   "id": "M06 SELECT v AS v FROM tv",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "2"
+   ],
+   "classes": [
+    "new"
+   ]
+  },
+  {
+   "id": "M07 SELECT v AS w FROM tv",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "w"
+   ],
+   "raw": [
+    "3"
+   ],
+   "classes": [
+    "new"
+   ]
+  },
+  {
+   "id": "M08 SELECT t.v FROM tv t",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "1"
+   ],
+   "classes": [
+    "d.v"
+   ]
+  },
+  {
+   "id": "M09 SELECT t.v AS v FROM tv t",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "4"
+   ],
+   "classes": [
+    "new"
+   ]
+  },
+  {
+   "id": "M10 SELECT v + 0 AS v FROM tv",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "5"
+   ],
+   "classes": [
+    "new"
+   ]
+  },
+  {
+   "id": "M11 SELECT id, v AS v FROM tv",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "0",
+    "6"
+   ],
+   "classes": [
+    "d.id",
+    "new"
+   ]
+  },
+  {
+   "id": "M12 SELECT * FROM (SELECT v AS v FROM tv)",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "7"
+   ],
+   "classes": [
+    "new"
+   ]
+  },
+  {
+   "id": "M13 SELECT v FROM tv WHERE v > 0",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "1"
+   ],
+   "classes": [
+    "d.v"
+   ]
+  },
+  {
+   "id": "M14 SELECT CAST(v AS BIGINT) AS v FROM tv",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "8"
+   ],
+   "classes": [
+    "new"
+   ]
+  },
+  {
+   "id": "M20 CREATE TEMP VIEW sv AS SELECT *; table(sv)",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "9",
+    "10"
+   ],
+   "classes": [
+    "new",
+    "new"
+   ]
+  },
+  {
+   "id": "M21 table(sv) again",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "11",
+    "12"
+   ],
+   "classes": [
+    "new",
+    "new"
+   ]
+  },
+  {
+   "id": "M22 SELECT * FROM sv",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "15",
+    "16"
+   ],
+   "classes": [
+    "new",
+    "new"
+   ]
+  },
+  {
+   "id": "M23 CREATE TEMP VIEW sc (a, b) AS SELECT *; table(sc)",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "a",
+    "b"
+   ],
+   "raw": [
+    "19",
+    "20"
+   ],
+   "classes": [
+    "new",
+    "new"
+   ]
+  },
+  {
+   "id": "M24 CREATE TEMP VIEW sv1 AS SELECT v; table(sv1)",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "21"
+   ],
+   "classes": [
+    "new"
+   ]
+  },
+  {
+   "id": "M25 CREATE OR REPLACE TEMP VIEW sv AS SELECT *; table(sv)",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "22",
+    "23"
+   ],
+   "classes": [
+    "new",
+    "new"
+   ]
+  },
+  {
+   "id": "M26 view over view: CREATE TEMP VIEW svv AS SELECT * FROM sv",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "28",
+    "29"
+   ],
+   "classes": [
+    "new",
+    "new"
+   ]
+  },
+  {
+   "id": "M27 table(sv) vs earlier read",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "32",
+    "33"
+   ],
+   "classes": [
+    "new",
+    "new"
+   ]
+  },
+  {
+   "id": "M28 SELECT * FROM svv",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "34",
+    "35"
+   ],
+   "classes": [
+    "new",
+    "new"
+   ]
+  },
+  {
+   "id": "M30 df.select(df.v.alias('v'))",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "38"
+   ],
+   "classes": [
+    "new"
+   ]
+  },
+  {
+   "id": "M31 df.select(df.v.alias('w'))",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "w"
+   ],
+   "raw": [
+    "39"
+   ],
+   "classes": [
+    "new"
+   ]
+  },
+  {
+   "id": "M32 df.withColumnRenamed('v','w')",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "w"
+   ],
+   "raw": [
+    "0",
+    "40"
+   ],
+   "classes": [
+    "d.id",
+    "new"
+   ]
+  },
+  {
+   "id": "M33 df.withColumnRenamed('v','v')",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "0",
+    "41"
+   ],
+   "classes": [
+    "d.id",
+    "new"
+   ]
+  },
+  {
+   "id": "M34 df.select('v')",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "1"
+   ],
+   "classes": [
+    "d.v"
+   ]
+  },
+  {
+   "id": "M35 df.selectExpr('v AS v')",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "42"
+   ],
+   "classes": [
+    "new"
+   ]
+  },
+  {
+   "id": "M36 df.select(df.v)",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "1"
+   ],
+   "classes": [
+    "d.v"
+   ]
+  },
+  {
+   "id": "M37 df.alias('t').select('t.v')",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "1"
+   ],
+   "classes": [
+    "d.v"
+   ]
+  },
+  {
+   "id": "M40 createOrReplaceTempView(dv); table(dv)",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "0",
+    "1"
+   ],
+   "classes": [
+    "d.id",
+    "d.v"
+   ]
+  },
+  {
+   "id": "M41 SELECT * FROM dv",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "raw": [
+    "0",
+    "1"
+   ],
+   "classes": [
+    "d.id",
+    "d.v"
+   ]
+  },
+  {
+   "id": "M42 createOrReplaceTempView of renamed; table(rv)",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "w"
+   ],
+   "raw": [
+    "0",
+    "43"
+   ],
+   "classes": [
+    "d.id",
+    "ren.w"
+   ]
+  },
+  {
+   "id": "M43 createOrReplaceTempView of sql(v AS v); table(qv)",
+   "kind": "ids",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "raw": [
+    "44"
+   ],
+   "classes": [
+    "sqlf.v"
+   ]
+  },
+  {
+   "id": "R-M06 sql(v AS v).select(d.v) [V4]",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"v\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#1L]\n+- Project [v#1L AS v#45L]\n   +- SubqueryAlias tv\n      +- View (`tv`, [id#0L, v#1L])\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "R-M07 sql(v AS w).select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT] Resolved attribute(s) \"v\" missing from \"w\" in operator !Project [v#1L].  SQLSTATE: XX000;\n!Project [v#1L]\n+- Project [v#1L AS w#46L]\n   +- SubqueryAlias tv\n      +- View (`tv`, [id#0L, v#1L])\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT"
+  },
+  {
+   "id": "R-M08 sql(t.v).select(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "R-M10 sql(v + 0 AS v).select(d.v) [V3]",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"v\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#1L]\n+- Project [(v#1L + cast(0 as bigint)) AS v#47L]\n   +- SubqueryAlias tv\n      +- View (`tv`, [id#0L, v#1L])\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "R-M14 sql(CAST(v) AS v).select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"v\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#1L]\n+- Project [cast(v#1L as bigint) AS v#48L]\n   +- SubqueryAlias tv\n      +- View (`tv`, [id#0L, v#1L])\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "R-M20 table(sv).select(d.v) [V9]",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#1L]\n+- SubqueryAlias sv\n   +- View (`sv`, [id#49L, v#50L])\n      +- Project [cast(id#0L as bigint) AS id#49L, cast(v#1L as bigint) AS v#50L]\n         +- Project [id#0L, v#1L]\n            +- SubqueryAlias tv\n               +- View (`tv`, [id#0L, v#1L])\n                  +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "R-M23 table(sc).select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT] Resolved attribute(s) \"v\" missing from \"a\", \"b\" in operator !Project [v#1L].  SQLSTATE: XX000;\n!Project [v#1L]\n+- SubqueryAlias sc\n   +- View (`sc`, [a#51L, b#52L])\n      +- Project [cast(id#0L as bigint) AS a#51L, cast(v#1L as bigint) AS b#52L]\n         +- Project [id#0L, v#1L]\n            +- SubqueryAlias tv\n               +- View (`tv`, [id#0L, v#1L])\n                  +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT"
+  },
+  {
+   "id": "R-M26 table(svv).select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#1L]\n+- SubqueryAlias svv\n   +- View (`svv`, [id#53L, v#54L])\n      +- Project [cast(id#55L as bigint) AS id#53L, cast(v#56L as bigint) AS v#54L]\n         +- Project [id#55L, v#56L]\n            +- SubqueryAlias sv\n               +- View (`sv`, [id#55L, v#56L])\n                  +- Project [cast(id#0L as bigint) AS id#55L, cast(v#1L as bigint) AS v#56L]\n                     +- Project [id#0L, v#1L]\n                        +- SubqueryAlias tv\n                           +- View (`tv`, [id#0L, v#1L])\n                              +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "R-M30 df.select(df.v.alias('v')).select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"v\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#1L]\n+- Project [v#1L AS v#57L]\n   +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "R-M31 df.select(df.v.alias('w')).select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT] Resolved attribute(s) \"v\" missing from \"w\" in operator !Project [v#1L].  SQLSTATE: XX000;\n!Project [v#1L]\n+- Project [v#1L AS w#58L]\n   +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT"
+  },
+  {
+   "id": "R-M32 df.withColumnRenamed('v','w').select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT] Resolved attribute(s) \"v\" missing from \"id\", \"w\" in operator !Project [v#1L].  SQLSTATE: XX000;\n!Project [v#1L]\n+- Project [id#0L, v#1L AS w#59L]\n   +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT"
+  },
+  {
+   "id": "R-M35 df.selectExpr('v AS v').select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"v\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#1L]\n+- Project [v#1L AS v#60L]\n   +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "R-M40 table(dv).select(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "R-M43 table(qv).select(sqlf.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "R-M43b table(qv).select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"v\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#1L]\n+- SubqueryAlias qv\n   +- View (`qv`, [v#44L])\n      +- Project [v#1L AS v#44L]\n         +- SubqueryAlias tv\n            +- View (`tv`, [id#0L, v#1L])\n               +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "R-M42 table(rv).select(ren.w)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "R-V12 tv replaced by e, table(tv).select(d.v) [V12]",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#1L]\n+- SubqueryAlias tv\n   +- View (`tv`, [id#61L, v#62L])\n      +- LogicalRDD [id#61L, v#62L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "R-V15 view over aggregate, table(ta).select(d.v) [V15]",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#1L]\n+- SubqueryAlias ta\n   +- View (`ta`, [id#0L, v#63L])\n      +- Aggregate [id#0L], [id#0L, sum(v#1L) AS v#63L]\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "R-V15b view over aggregate, table(ta).select(d.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  {
+   "id": "R-V3b sql(v + 0 AS w).select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT] Resolved attribute(s) \"v\" missing from \"w\" in operator !Project [v#1L].  SQLSTATE: XX000;\n!Project [v#1L]\n+- Project [(v#1L + cast(0 as bigint)) AS w#67L]\n   +- SubqueryAlias tv\n      +- View (`tv`, [id#0L, v#1L])\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT"
+  },
+  {
+   "id": "R-V3c sql(id, v + 0 AS v).select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#1L]\n+- Project [id#0L, (v#1L + cast(0 as bigint)) AS v#68L]\n   +- SubqueryAlias tv\n      +- View (`tv`, [id#0L, v#1L])\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "R-V3d sql(id, v + 0 AS v).select(d.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  {
+   "id": "R-V3e sql(v + 0 AS v).filter(d.v > 0)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "R-V3f sql(v + 0 AS v).withColumn('z', d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"v\" in operator !Project [v#71L, v#1L AS z#72L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#71L, v#1L AS z#72L]\n+- Project [(v#1L + cast(0 as bigint)) AS v#71L]\n   +- SubqueryAlias tv\n      +- View (`tv`, [id#0L, v#1L])\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "R-V3g sql(v + 0 AS v).orderBy(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "R-V3h sql(v + 0 AS v).select(col('v'))",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "R-V3i sql(v + 0 AS v).select('v')",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  }
+ ]
+}

@@ -1,0 +1,112 @@
+{
+ "engine": "stack",
+ "rows": [
+  {
+   "id": "S4-fillna cs=false",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"b\" missing from \"aa\", \"b\", \"a\", \"b\" in operator !Project. Attribute(s) with the same name appear in the operation: \"b\". Please check if the right attribute(s) are used. SQLSTATE: XX000",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "S4-replace cs=false",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"b\" missing from \"aa\", \"b\", \"a\", \"b\" in operator !Project. Attribute(s) with the same name appear in the operation: \"b\". Please check if the right attribute(s) are used. SQLSTATE: XX000",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "S4-expr-output cs=false",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"b\" missing from \"b\", \"a\" in operator !Project. Attribute(s) with the same name appear in the operation: \"b\". Please check if the right attribute(s) are used. SQLSTATE: XX000",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "S4-fillna cs=true",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"b\" missing from \"aa\", \"b\", \"a\", \"b\" in operator !Project. Attribute(s) with the same name appear in the operation: \"b\". Please check if the right attribute(s) are used. SQLSTATE: XX000",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "S4-replace cs=true",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"b\" missing from \"aa\", \"b\", \"a\", \"b\" in operator !Project. Attribute(s) with the same name appear in the operation: \"b\". Please check if the right attribute(s) are used. SQLSTATE: XX000",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "S4-expr-output cs=true",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"b\" missing from \"b\", \"a\" in operator !Project. Attribute(s) with the same name appear in the operation: \"b\". Please check if the right attribute(s) are used. SQLSTATE: XX000",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "S4-renamed-V2",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT] Resolved attribute(s) \"v\" missing from \"id\", \"V2\" in operator !Project.  SQLSTATE: XX000",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT"
+  },
+  {
+   "id": "S4-case-only-rename",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"V\" in operator !Project. Attribute(s) with the same name appear in the operation: \"v\". Please check if the right attribute(s) are used. SQLSTATE: XX000",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "S4-replaced-output",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project. Attribute(s) with the same name appear in the operation: \"v\". Please check if the right attribute(s) are used. SQLSTATE: XX000",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "SJ4-V1 swapped alias",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project. Attribute(s) with the same name appear in the operation: \"v\". Please check if the right attribute(s) are used. SQLSTATE: XX000",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "ISIN two frames",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"i\" missing from \"i\", \"d\", \"s\", \"st\" in operator !Project. Attribute(s) with the same name appear in the operation: \"i\". Please check if the right attribute(s) are used. SQLSTATE: XX000",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "ISIN one frame",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     false
+    ],
+    [
+     null
+    ],
+    [
+     true
+    ]
+   ],
+   "columns": [
+    "r"
+   ]
+  }
+ ]
+}

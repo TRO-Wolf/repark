@@ -1,0 +1,152 @@
+[
+ {
+  "q": "SELECT V FROM tv",
+  "cols": [
+   "V"
+  ],
+  "classes": [
+   "new"
+  ]
+ },
+ {
+  "q": "SELECT tv.V FROM tv",
+  "cols": [
+   "V"
+  ],
+  "classes": [
+   "new"
+  ]
+ },
+ {
+  "q": "SELECT v AS V FROM tv",
+  "cols": [
+   "V"
+  ],
+  "classes": [
+   "new"
+  ]
+ },
+ {
+  "q": "SELECT V AS V FROM tv",
+  "cols": [
+   "V"
+  ],
+  "classes": [
+   "new"
+  ]
+ },
+ {
+  "q": "SELECT `v` AS v FROM tv",
+  "cols": [
+   "v"
+  ],
+  "classes": [
+   "d.v"
+  ]
+ },
+ {
+  "q": "SELECT * FROM (SELECT V FROM tv) q",
+  "cols": [
+   "V"
+  ],
+  "classes": [
+   "d.v"
+  ]
+ },
+ {
+  "q": "SELECT ID, V FROM tv",
+  "cols": [
+   "ID",
+   "V"
+  ],
+  "classes": [
+   "new",
+   "new"
+  ]
+ },
+ {
+  "q": "SELECT v FROM tv ORDER BY id",
+  "cols": [
+   "v"
+  ],
+  "classes": [
+   "d.v"
+  ]
+ },
+ {
+  "q": "SELECT DISTINCT v FROM tv",
+  "cols": [
+   "v"
+  ],
+  "classes": [
+   "d.v"
+  ]
+ },
+ {
+  "q": "SELECT id, v FROM tv GROUP BY id, v",
+  "cols": [
+   "id",
+   "v"
+  ],
+  "classes": [
+   "d.id",
+   "d.v"
+  ]
+ },
+ {
+  "q": "SELECT id AS id, sum(v) AS v FROM tv GROUP BY id",
+  "cols": [
+   "id",
+   "v"
+  ],
+  "classes": [
+   "d.id",
+   "new"
+  ]
+ },
+ {
+  "q": "WITH q AS (SELECT v FROM tv) SELECT * FROM q",
+  "cols": [
+   "v"
+  ],
+  "classes": [
+   "d.v"
+  ]
+ },
+ {
+  "q": "WITH q AS (SELECT v AS v FROM tv) SELECT * FROM q",
+  "cols": [
+   "v"
+  ],
+  "classes": [
+   "d.v"
+  ]
+ },
+ {
+  "q": "SELECT v FROM tv UNION ALL SELECT v FROM tv",
+  "cols": [
+   "v"
+  ],
+  "classes": [
+   "d.v"
+  ]
+ },
+ {
+  "q": "SELECT v AS v FROM tv UNION ALL SELECT v FROM tv",
+  "cols": [
+   "v"
+  ],
+  "classes": [
+   "d.v"
+  ]
+ },
+ {
+  "q": "SELECT a.v FROM tv a JOIN tv b ON a.id = b.id",
+  "cols": [
+   "v"
+  ],
+  "classes": [
+   "d.v"
+  ]
+ }
+]
