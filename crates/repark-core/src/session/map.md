@@ -111,6 +111,16 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   ceiling). The moved code sheds two comments; their reason lives here: the
   listing reads the build-time home and refuses when a catalog replaced its
   provider, otherwise an empty home lists empty.
+  **TA-SERIES S1 (2026-10-04):** `register_collected_memtable` captures the physical
+  plan's `output_ordering` and, when every key is a plain output column of the stored
+  schema, concats the conformed batches into one batch and registers the `MemTable`
+  `with_sort_order` (the logical key mapping lives in `sorted_view.rs`
+  `ordered_cache_sort_exprs`, direction and nulls-first carried exactly), so a sorted
+  `.eager()` / `cache()` / `persist()` / `localCheckpoint` reads back in order as on
+  Spark 4.1.2. A single batch declares without concatting; an empty collect, a
+  non-column key, a concat that would double past `max_bytes`, and any cache above
+  1 GiB all keep today's path (split batches, no declared order, no error).
+  pins: ta-series-s1/P-S1-1, P-S1-2, P-S1-3, P-S1-4, P-S1-5
 - `cache_budget.rs` — **EAGER-BUDGET-1 step 1 (2026-09-13):** D-2 retained-byte accounting.
   `ReparkSession::retained_cache_bytes` enumerates the temp-view home's `__repark_cache_*`
   tables, downcasts each provider to `MemTable`, clones each partition's batch list under a
