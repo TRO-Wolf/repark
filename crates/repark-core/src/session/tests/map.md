@@ -181,8 +181,9 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   to one sorted batch with the declared key; an unsorted plan keeps its batch count
   with no declared order; an exact-`max_bytes` budget still materializes but keeps
   the split batches with no declared order; an empty sorted plan stores no rows; a
-  sort-then-filter plan that fans out to 16 partitions keeps split batches with no
-  declared order and its window ranks still follow key order.
+  sort-then-filter plan that fans out to 16 partitions (the sort kept with a
+  pass-through LIMIT, else the optimizer drops a limit-less sort) keeps split batches
+  with no declared order and its window ranks still follow key order.
   pins: ta-series-s1/P-S1-3, P-S1-4, P-S1-6
 - `commit_unknown.rs` — **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** `engine_err` classification
   pins for the ambiguous-commit path — the stamped `CommitStateUnknownError` wrapper maps to

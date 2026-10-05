@@ -224,7 +224,7 @@ async fn sort_filter_cache_multi_partition_not_declared() {
         .register_record_batches_as_temp_view("src", batches[0].schema(), batches)
         .expect("source view");
     let frame = session
-        .sql("SELECT id FROM (SELECT id FROM src ORDER BY id) WHERE id > 0")
+        .sql("SELECT id FROM (SELECT id FROM src ORDER BY id LIMIT 200000) WHERE id > 0")
         .await
         .expect("sort filter plan");
     session
