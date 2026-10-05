@@ -65,7 +65,7 @@ fn series_spec(keys: &[SortExpr]) -> OverSpec {
         partition_by: Vec::new(),
         order_by: keys
             .iter()
-            .map(|key| PyColumn::from_expr(key.expr.clone()))
+            .map(|key| PyColumn::from_expr(crate::deep_stack::grown_clone_expr(&key.expr, 1, 0)))
             .collect(),
         order_ascending: keys.iter().map(|key| key.asc).collect(),
         order_nulls_first: keys.iter().map(|key| key.nulls_first).collect(),
@@ -82,12 +82,11 @@ fn series_order_notice(source: &SeriesOrderSource) -> Option<String> {
             "ta.* series ordered by '{name}' (the first date/timestamp column) because the frame \
              has no declared order; sort the frame first or use .over(Window.orderBy(...))"
         )),
-        SeriesOrderSource::CurrentRowOrder => Some(
+        SeriesOrderSource::CurrentRowOrder => Some(String::from(
             "ta.* series computed over the frame's current row order because the frame has no \
              declared order and no date/timestamp column; sort the frame first or use \
-             .over(Window.orderBy(...))"
-                .to_owned(),
-        ),
+             .over(Window.orderBy(...))",
+        )),
     }
 }
 

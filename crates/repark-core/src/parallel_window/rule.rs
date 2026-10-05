@@ -65,9 +65,9 @@ fn parallel_groups(window: &WindowAggExec) -> Option<Vec<Vec<usize>>> {
     (groups.len() >= 2).then_some(groups)
 }
 
-fn partition_index_parts(
-    window: &WindowAggExec,
-) -> Option<(Arc<dyn ExecutionPlan>, Vec<Vec<usize>>)> {
+type PartitionIndexParts = (Arc<dyn ExecutionPlan>, Vec<Vec<usize>>);
+
+fn partition_index_parts(window: &WindowAggExec) -> Option<PartitionIndexParts> {
     let coalesce = window.input().downcast_ref::<CoalescePartitionsExec>()?;
     if coalesce.fetch().is_some() {
         return None;
