@@ -30,7 +30,7 @@ scope: S1 (#944, held), S5 fusion, any kernel, any new crate.
 | C-008 | P-S2a-8: SQL `ta_*() OVER (…)` answers are unchanged: `ta_ema(close, 13) OVER (PARTITION BY sym ORDER BY ts)` equals the kernel per symbol, NaN prefix, no NULL; no registered name carries a prefix. | `null_prefix.rs::sql_ta_unchanged`; `repark-spark --test ta_window`, `repark-sql --test ta_toll`; mutation: register the prefixed UDF in SQL. | PROVEN | Green. Red under the mutation: `null_prefix.rs:286`. §2, §3. |
 | C-009 | Gates: goldens byte-identical; `repark-core`, `repark-ta` (with and without `datafusion`), `repark-python` (lib and `bindings`), `repark-spark` `ta_window`, `repark-sql` `ta_toll` green; facade 111 files equal to base apart from the new file; parity `-k "ta or window or projection"` 276; clippy, fmt, panic ban, file sizes, comment ban, maps, ledgers, crate DAG, no Cargo change, docs links. | The commands in §3. | PROVEN | §3. |
 | C-010 | Correctness on the owner's real file (release wheels): sorted eager frame, the bare spelling equals the explicit one bit for bit and polars_talib 0.1.6 with 0 differing rows; unsorted lazy read, the bare spelling resolves (b) `event_timestamp_utc` and equals the explicit spelling over `Window.orderBy("event_timestamp_utc")`; the explicit spelling equals base on both frames. | `s2a-evidence/owner/owner_run.py` + `compare.py` on the base and head release wheels. | PROVEN | 1,000,000 rows × 28 columns, every comparison bit-identical; 17 TA columns against polars_talib with 0 differing values and 0 NULL/NaN mismatches; the bare output is time-sorted as produced. §4. |
-| C-011 | Speed (sequencing trap): bare not more than 3 % slower than base; partitioned ≤ 0.18 s and not slower than base; kernel race ≤ 1.02×. | Interleaved median of 5 on release wheels, after READY_FOR_SPEED. | OPEN | Held at READY_FOR_SPEED by the order. |
+| C-011 | Speed on the stacked branch (release wheels, interleaved, median of 5, uptime every round): H-a head bare ≤ 1.03 × base-main bare; head against base-now on both spellings and the partitioned shape; head's ratio to polars_talib ≤ 1.00 on both spellings; partitioned ≤ 0.18 s; kernel race ≤ 1.02×. | `s2a-evidence/speed/rounds.sh` (`round.py`, the S3 harness: one warm-up and one timed run per shape per process) and `rounds9.sh` (`round9.py`, nine alternating samples per process); `s2a-evidence/kernel_race/`. | PROVEN | Bare 0.1190 s against base-main 0.1677 (0.71×; nine-sample 0.65×); polars ratio bare 0.86, explicit 0.68 (nine-sample 0.75, 0.74); explicit 0.0941 against base-now 0.0933 (1.009×); partitioned 0.1187 s. Kernel race re-measured, all ≤ 1.0× (§6). |
 | C-013 | P-S2a-9 (orchestrator ruling 2026-10-05, S2a stacked on S1): on the combined branch a sorted eager frame carries its declared order through S1's ordered cache, so the owner's levels bare resolve by (a) with no warning and equal the explicit spelling over the declared key bit for bit. | `test_ta_series.py::test_series_order_sorted_eager_frame_is_declared` (sorted by a later timestamp column `booked`, then `.eager().lazy()`); mutation: drop the `MemTable` `sort_order` arm. | PROVEN | Green on `perf/ta-series-s2a-on-s1`. Red under the mutation (`m9_no_memtable_arm`): the frame falls to (b) and warns naming `event_timestamp_utc`. §5. |
 | C-012 | Docs (D): `docs/guide/ta-guide.md` opens "The shape" with the sketch §9 note (Q2 wording), replaces the "Ordering is yours to supply" bullet and describes the native prefix; `ta.py`'s module docstring carries the same words. | `make check-docs-links`; review. | PROVEN | Commit `f660041c`; docs links clean (1,295 files). The "(also through `.eager()`, `.cache()` and `localCheckpoint`)" clause holds once S1 (#944) lands; on this base those frames resolve by (b) with the warning (§4). |
 
@@ -178,3 +178,108 @@ no warning, bare equals explicit bit for bit, and explicit equals base-s3s1 bit 
 and explicit, base-s3s1 explicit) all hash to
 `9d6e743b5cd5356f50b7493fcd737c4dbcdf501eca4b358afeaa8a57de9ee8dd`: one table, byte for byte
 (`s2a-evidence/owner/arrows.sha256`). The files (788 MB) were then deleted.
+
+## 6. On main, and the speed record (2026-10-05)
+
+**Merge.** `origin/main` `538771bd` (S3 #945 squashed with the tp1 fold; S1 #944 squashed
+with verifier fold `d798d0d9`, V944-1 and V944-2) merged into `perf/ta-series-s2a-on-s1` as
+`8c8a655e`. Exactly six paths conflicted: `projection.rs`, `projection_tests.rs`,
+`temp_views.rs`, `ordered_cache.rs`, `test_ta_series_s1_ordered_cache.py` and the S3 ledger.
+The branch held the S3 or S1 branch head of each byte for byte, and no S2a commit touches them.
+The executor halted on the product-Rust conflicts; orchestrator ruling: take main's version of
+the six. Afterwards `git diff origin/main` over the six is empty, and the branch's diff over
+main is S2a only (35 paths).
+
+**Re-runs on the merged branch.** `test_ta_series.py` 10 passed (P-S2a-9 included) and S1's
+facade file 7 passed, 3 xfailed; `repark-core --lib` 1,015 passed, 1 ignored; `repark-ta`
+106 + 11 + 41 + 1 and, with `datafusion`, 151 + 11 + 41 + 3 `null_prefix` + 1 + 2 + 26; golden
+hash unchanged; comment ban `hits=0`.
+
+**Wheels** (same command, own worktree and target each; one venv each with polars 1.43.1,
+polars-runtime-32 1.43.1, polars_talib 0.1.6, numpy 2.5.3, pyarrow 25.0.1): base-main
+`c4c363e2` (kept from §5, sha256 `69a458c3…`), base-now `538771bd` (`87964362…`), head
+`8c8a655e` (`3008833a…`).
+
+**Owner file on the head wheel.** Sorted eager: bare resolves (a), no warning, bit-identical to
+explicit; unsorted lazy: (b) with the warning, bit-identical to the explicit spelling; 17 TA
+columns against polars_talib 0.1.6: 0 differing values, 0 NULL/NaN mismatches. The four outputs
+hash to the same `9d6e743b…` as every earlier output (`owner/arrows.sha256`), then deleted.
+
+**Speed** (`s2a-evidence/speed/rounds.jsonl`, the S3 harness; side order rotated each round;
+load1 5.5–7.7, mostly the host's Airflow DAG processor):
+
+| median of 5 (s) | base-main | base-now | head |
+|---|---|---|---|
+| bare (`benchmark_script`) | 0.1677 | 0.0870 | 0.1190 |
+| explicit (`benchmark_window_orderby`) | 0.2798 | 0.0933 | 0.0941 |
+| partitioned | 0.1073 | 0.1315 | 0.1187 |
+| polars_talib (same processes) | 0.1307 | 0.1255 | 0.1381 |
+
+- **H-a:** head bare / base-main bare = 0.71. Pass.
+- **Card gate, ratio to polars_talib (head's own rounds):** bare 0.86, explicit 0.68. Pass.
+- **Head against base-now:** explicit 1.009×, partitioned 0.90×, bare 1.37×. The one-sample
+  bare numbers carry a first-position effect (the bare shape is timed first in each process; head
+  bare ranged 0.085–0.202 s while head explicit, the same plan, stayed at 0.094). base-now's bare
+  spelling is the old unordered `OVER ()` over a `CoalescePartitionsExec`, which the series
+  rewrite replaces with the ordered plan.
+- **Nine samples per process** (`rounds9.jsonl`, alternating shape order, median per process,
+  then median of 5): bare base-main 0.1490, base-now 0.0922, head 0.0969 (head/base-main 0.65,
+  head/base-now 1.051); explicit 0.2789 / 0.0953 / 0.0955 (head/base-now 1.002); partitioned
+  0.1031 / 0.1306 / 0.1238; polars 0.1274 / 0.1269 / 0.1288; head ratio to polars bare 0.75,
+  explicit 0.74.
+- **Partitioned** stays ≤ 0.18 s and is faster than base-now. It is slower than base-main
+  (1.11×; nine-sample 1.20×), and so is base-now (1.23× / 1.27×): the change comes with S3/S1
+  on main, not with S2a.
+- **Kernel race** (`--quick`, release, interleaved with base-now; `kernel_race/`): the first
+  three runs per side (load1 8–11) gave head medians sma 0.008986 (1.031× the previous lane's
+  0.008716), ema 0.008661, rsi 0.008449, bbands 0.010201. Five further interleaved runs gave
+  sma 0.008078 (0.927×), ema 0.008061 (0.871×), rsi 0.008393 (0.963×), bbands 0.010402
+  (1.001×); base-now in the same runs 0.008067, 0.008556, 0.008600, 0.010556 (head ≤ 1.001× on
+  each). The first triple's sma spread (0.00836–0.00916) is load noise; the S2a path adds one
+  expression walk at bind time and nothing at execution for an explicit window.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: ta-series-s2a
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Each order item (resolver, rewrite, warning, native null_lookback, partition-index arm, facade, docs, maps) maps to a clause; every pin P-S2a-1 to P-S2a-9 has a measured red under its named mutation.
+      artifacts: [crates/repark-core/src/series_order/tests.rs, crates/repark-ta/tests/null_prefix.rs, python/repark/tests/test_ta_series.py]
+    - id: AT-2
+      status: ATTACKED
+      evidence: No declared order, no temporal column, a date-only schema, a zoned timestamp, aliased sort keys, dropped and computed keys, NULL and NaN prefixes per partition and a fetching coalesce are exercised; a prefix longer than its partition is clamped by construction (not pinned).
+      artifacts: [crates/repark-core/src/series_order.rs, crates/repark-ta/src/udf/glue.rs]
+    - id: AT-3
+      status: ATTACKED
+      evidence: A failing rewrite surfaces the builder's error and a failing warning call returns its PyErr (by construction, not pinned); the partition-index arm joins its tasks in index order and propagates the first join error.
+      artifacts: [crates/repark-python/src/column/series.rs, crates/repark-core/src/parallel_window/exec.rs]
+    - id: AT-4
+      status: ATTACKED
+      evidence: The notice flag is one AtomicBool shared by every config clone of a session; partition tasks are SpawnedTasks dropped with the stream; output is assembled in partition-index order, never completion order.
+      artifacts: [crates/repark-core/src/series_order.rs, crates/repark-core/src/parallel_window/tests.rs]
+    - id: AT-5
+      status: N/A
+      justification: No privileged action, secret, network or deserialization; the repark.series carrier refuses SET and is attached only by the Rust session builder.
+    - id: AT-6
+      status: ATTACKED
+      evidence: Bare equals explicit by construction and bit for bit on the owner's file, explicit equals base, 0 rows off polars_talib, goldens unchanged, SQL TA answers unchanged.
+      artifacts: [crates/repark-ta/tests/null_prefix.rs, python/repark/tests/test_ta_series.py]
+    - id: AT-7
+      status: ATTACKED
+      evidence: Interleaved release-wheel rounds against main today and main now, single and nine samples per process, kernel race re-measured; one bind-time walk is the only cost on the explicit path.
+      artifacts: [crates/repark-python/src/column/series.rs]
+    - id: AT-8
+      status: ATTACKED
+      evidence: No dependency, Cargo.toml or Cargo.lock change; the new core module has no TA knowledge and the crate DAG is unchanged.
+      artifacts: [crates/repark-core/src/series_order.rs]
+    - id: AT-9
+      status: ATTACKED
+      evidence: The (b) and (c) cases warn once per session with the column named; EXPLAIN shows the ordered window for the bare spelling.
+      artifacts: [crates/repark-python/src/column/series.rs]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Twelve mutations across nine pins, each red, the tree restored and the suites green afterwards.
+      artifacts: [crates/repark-core/src/series_order/tests.rs, crates/repark-core/src/parallel_window/tests.rs, crates/repark-ta/tests/null_prefix.rs, python/repark/tests/test_ta_series.py]
+  complete: true
+```

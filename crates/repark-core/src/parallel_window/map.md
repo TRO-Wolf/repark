@@ -167,7 +167,9 @@ provider's cloned state would not be enough. The flag defaults to on; it has no 
   speed): `task/ledgers/staging/ta-series-s2b-ledger.md`. pins: ta-series-s2b/C-008, C-011, C-012
 - S2a gates (goldens, crate suites, facade, parity, hygiene) and the owner-file correctness record
   on release wheels (bare equals explicit, explicit equals base, 0 rows off polars_talib):
-  `task/ledgers/staging/ta-series-s2a-ledger.md`. pins: ta-series-s2a/C-009, C-010
+  `task/ledgers/staging/ta-series-s2a-ledger.md`; the speed record on main (bare 0.71× of
+  `origin/main` before S3/S1, 0.86 / 0.68 of polars_talib) is its §6.
+  pins: ta-series-s2a/C-009, C-010, C-011
 
 ## Pointers
 
