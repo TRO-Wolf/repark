@@ -1,0 +1,326 @@
+{
+ "engine": "repark152",
+ "rows": [
+  {
+   "id": "d",
+   "kind": "ids",
+   "outcome": "ERR",
+   "error_class": "AttributeError",
+   "error_first_line": "module 'repark._native' has no attribute 'attribute_ids'",
+   "condition": null
+  },
+  {
+   "id": "table",
+   "kind": "ids",
+   "outcome": "ERR",
+   "error_class": "AttributeError",
+   "error_first_line": "module 'repark._native' has no attribute 'attribute_ids'",
+   "condition": null
+  },
+  {
+   "id": "table2",
+   "kind": "ids",
+   "outcome": "ERR",
+   "error_class": "AttributeError",
+   "error_first_line": "module 'repark._native' has no attribute 'attribute_ids'",
+   "condition": null
+  },
+  {
+   "id": "sql-star",
+   "kind": "ids",
+   "outcome": "ERR",
+   "error_class": "AttributeError",
+   "error_first_line": "module 'repark._native' has no attribute 'attribute_ids'",
+   "condition": null
+  },
+  {
+   "id": "sql-v",
+   "kind": "ids",
+   "outcome": "ERR",
+   "error_class": "AttributeError",
+   "error_first_line": "module 'repark._native' has no attribute 'attribute_ids'",
+   "condition": null
+  },
+  {
+   "id": "sql-vplus0",
+   "kind": "ids",
+   "outcome": "ERR",
+   "error_class": "AttributeError",
+   "error_first_line": "module 'repark._native' has no attribute 'attribute_ids'",
+   "condition": null
+  },
+  {
+   "id": "sql-alias",
+   "kind": "ids",
+   "outcome": "ERR",
+   "error_class": "AttributeError",
+   "error_first_line": "module 'repark._native' has no attribute 'attribute_ids'",
+   "condition": null
+  },
+  {
+   "id": "V1",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V2",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V3",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V4",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V5",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     1,
+     10,
+     1,
+     10
+    ],
+    [
+     2,
+     20,
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V6",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     1,
+     10,
+     1,
+     10
+    ],
+    [
+     2,
+     20,
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V6b",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "error_first_line": "Error during planning: [AMBIGUOUS_REFERENCE] Reference `v` is ambiguous, could be: [`v`, `v`]. SQLSTATE: 42704",
+   "condition": "AMBIGUOUS_REFERENCE"
+  },
+  {
+   "id": "V7",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10,
+     10
+    ],
+    [
+     20,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "d2",
+   "kind": "ids",
+   "outcome": "ERR",
+   "error_class": "AttributeError",
+   "error_first_line": "module 'repark._native' has no attribute 'attribute_ids'",
+   "condition": null
+  },
+  {
+   "id": "table-tv2",
+   "kind": "ids",
+   "outcome": "ERR",
+   "error_class": "AttributeError",
+   "error_first_line": "module 'repark._native' has no attribute 'attribute_ids'",
+   "condition": null
+  },
+  {
+   "id": "V8",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10,
+     1
+    ],
+    [
+     20,
+     1
+    ]
+   ]
+  },
+  {
+   "id": "sv",
+   "kind": "ids",
+   "outcome": "ERR",
+   "error_class": "AttributeError",
+   "error_first_line": "module 'repark._native' has no attribute 'attribute_ids'",
+   "condition": null
+  },
+  {
+   "id": "V9",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V3-write",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V3-groupby",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     1
+    ]
+   ]
+  },
+  {
+   "id": "V10",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "UnsupportedOperationException",
+   "error_first_line": "createGlobalTempView is not supported yet (no global_temp catalog; disclosed R-DF-BATCH2)",
+   "condition": null
+  },
+  {
+   "id": "V11",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V12",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V13",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V14",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V15",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  }
+ ]
+}
