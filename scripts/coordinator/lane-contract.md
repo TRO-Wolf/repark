@@ -3,7 +3,7 @@
 Purpose: the one work-order / hand-back / resume interface every lane and worker family shares.
 
 Source: work order ORCHESTRATOR-DOCTRINE-1 (owner-accepted proposal, 2026-09-26); `handbook.md`
-for the work-order fields; the muse-worker, devin-worker, grok-worker, and codex-worker skill
+for the work-order fields; the muse-worker, grok-worker, and codex-worker skill
 files for the hand-back shape (residue table below). No skill file is edited by this contract.
 
 ## Work order
