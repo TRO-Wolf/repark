@@ -610,3 +610,9 @@ declines it (a dated ruling in the intake, then the archive).
   (2026-10-03, clerk, after CI-1):** `--format sarif` exits 0 while findings exist (plain
   mode exits 14); the ci.yml map guard passes `github.base_ref` via `env:`, and zizmor.yml
   runs plain mode as the blocking step before the SARIF upload.
+- [attr-view-semantics-1-card-2026-10-04.md](attr-view-semantics-1-card-2026-10-04.md) — **card
+  ATTR-VIEW-SEMANTICS-1 (2026-10-04, measurement plus filing, no product code):** SQL aliases
+  and SQL-defined views mint ids in Spark (`v#3L`, `id#16L/v#17L`) and foreign columns raise
+  MISSING_ATTRIBUTES; measured on Spark 4.1.2, 1.5.2 and the stack (`d5c97862`) — 11/7 on main,
+  9/9 on the stack, the two V-3 internal errors the only new stack differences; scope (a)–(d)
+  with proposed pins, V10/F16 out, grade and release questions for the owner.
