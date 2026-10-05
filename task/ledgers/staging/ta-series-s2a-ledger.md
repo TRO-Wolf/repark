@@ -31,6 +31,7 @@ scope: S1 (#944, held), S5 fusion, any kernel, any new crate.
 | C-009 | Gates: goldens byte-identical; `repark-core`, `repark-ta` (with and without `datafusion`), `repark-python` (lib and `bindings`), `repark-spark` `ta_window`, `repark-sql` `ta_toll` green; facade 111 files equal to base apart from the new file; parity `-k "ta or window or projection"` 276; clippy, fmt, panic ban, file sizes, comment ban, maps, ledgers, crate DAG, no Cargo change, docs links. | The commands in §3. | PROVEN | §3. |
 | C-010 | Correctness on the owner's real file (release wheels): sorted eager frame, the bare spelling equals the explicit one bit for bit and polars_talib 0.1.6 with 0 differing rows; unsorted lazy read, the bare spelling resolves (b) `event_timestamp_utc` and equals the explicit spelling over `Window.orderBy("event_timestamp_utc")`; the explicit spelling equals base on both frames. | `s2a-evidence/owner/owner_run.py` + `compare.py` on the base and head release wheels. | PROVEN | 1,000,000 rows × 28 columns, every comparison bit-identical; 17 TA columns against polars_talib with 0 differing values and 0 NULL/NaN mismatches; the bare output is time-sorted as produced. §4. |
 | C-011 | Speed (sequencing trap): bare not more than 3 % slower than base; partitioned ≤ 0.18 s and not slower than base; kernel race ≤ 1.02×. | Interleaved median of 5 on release wheels, after READY_FOR_SPEED. | OPEN | Held at READY_FOR_SPEED by the order. |
+| C-013 | P-S2a-9 (orchestrator ruling 2026-10-05, S2a stacked on S1): on the combined branch a sorted eager frame carries its declared order through S1's ordered cache, so the owner's levels bare resolve by (a) with no warning and equal the explicit spelling over the declared key bit for bit. | `test_ta_series.py::test_series_order_sorted_eager_frame_is_declared` (sorted by a later timestamp column `booked`, then `.eager().lazy()`); mutation: drop the `MemTable` `sort_order` arm. | PROVEN | Green on `perf/ta-series-s2a-on-s1`. Red under the mutation (`m9_no_memtable_arm`): the frame falls to (b) and warns naming `event_timestamp_utc`. §5. |
 | C-012 | Docs (D): `docs/guide/ta-guide.md` opens "The shape" with the sketch §9 note (Q2 wording), replaces the "Ordering is yours to supply" bullet and describes the native prefix; `ta.py`'s module docstring carries the same words. | `make check-docs-links`; review. | PROVEN | Commit `f660041c`; docs links clean (1,295 files). The "(also through `.eager()`, `.cache()` and `localCheckpoint`)" clause holds once S1 (#944) lands; on this base those frames resolve by (b) with the warning (§4). |
 
 ## 1. Design record (2026-10-05)
@@ -139,3 +140,23 @@ Release wheels were built with `CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16 uvx matur
   `CoalescePartitionsExec`. The bare spelling now pays the explicit spelling's sort on this
   base: the sketch §0.6 sequencing trap, which S1 removes. Timing is the orchestrator's next step.
 - `test_deep_filter_chain_crash_1.py` on the head release wheel: 9 passed in 104 s.
+
+## 5. Stacked on S1 (2026-10-05, orchestrator ruling)
+
+**Ruling:** S2a ships stacked on S1 (#944) and S3 (#945); the H-a gate compares the combined
+head's bare spelling with `origin/main`'s bare spelling. Local branch `perf/ta-series-s2a-on-s1`
+= `6d1cc2a7` + `origin/fix/ta-series-s1-ordered-cache` (`b1337ead`), merged without conflicts
+(only `map.md` files auto-merged); `origin/perf/ta-series-s3-parallel-projection` had not moved
+(`74b0900a`, already in the base). S1 stamps `MemTable::sort_order` with plain
+`Column::from_name` keys, which the resolver's `MemTable` arm reads through the eager frame's
+projection, so the docs note's "(also through `.eager()`, `.cache()` and `localCheckpoint`)"
+clause holds on the combined branch.
+
+- Pins: `test_ta_series.py` 10 passed (P-S2a-9 new) and no `ta.* series` warning remains in the
+  file (the eager leg of P-S2a-1 now resolves by (a)); S1's
+  `test_ta_series_s1_ordered_cache.py` 6 passed, 3 xfailed (its strict follow-up xfails);
+  P-S2a-9 red under `m9_no_memtable_arm`.
+- `cargo test -p repark-core --lib`: 1,012 passed, 1 ignored. `repark-ta --features datafusion`
+  `null_prefix` 3, `parallel_window` 2, `prefix_goldens` 26.
+- Facade, the 111 files plus S1's file, `-n 8`: 3,263 passed, 135 skipped, 106 xfailed,
+  0 failed (S2a alone 3,256 / 135 / 103, plus S1's 6 passed and 3 xfailed and P-S2a-9).

@@ -13,7 +13,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   unchanged (C-007, C-008); gates (C-009); owner-file correctness on release wheels (C-010);
   docs note (C-012); speed held at READY_FOR_SPEED (C-011). `risk_tier: standard`. Branch
   `perf/ta-series-s2a-series-order`.
-  pins: ta-series-s2a/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-012
+  pins: ta-series-s2a/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-012, C-013
 - [ta-series-s3-ledger.md](ta-series-s3-ledger.md) —
   **TA-SINGLE-SERIES-PARALLEL-1 S3 (2026-10-04), in flight:** `ParallelProjectionRule` drops a
   RoundRobin over a one-batch window output under a projection chain when the parent's

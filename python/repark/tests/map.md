@@ -6934,6 +6934,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   16 partitions: the partitioned operator stays `WindowAggExec`, the series one is
   `ParallelWindowExec`, and both are bit-equal to each alone). pins: ta-series-s2a/C-001, C-002,
   C-003, C-004, C-005, C-007
+  **Stacked on S1 (2026-10-05):** `test_series_order_sorted_eager_frame_is_declared` (P-S2a-9: a
+  frame sorted by a later timestamp column, `.eager().lazy()`, resolves by (a) through S1's
+  declared `MemTable` order, no warning, bit-equal to the explicit spelling over that column).
+  pins: ta-series-s2a/C-013
 - `test_ta_with_indicators.py` — **conductor-13 TA-2:** `ta.with_indicators` serving helper.
   Arrow value+type vs hand-built `over_columns`; required keyword-only `partition`/`order`
   (TypeError on omit; empty partition refuses); cross-symbol RSI leak vs unpartitioned

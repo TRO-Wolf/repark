@@ -174,6 +174,20 @@ def test_series_order_declared_beats_temporal(spark: ReparkSession, tmp_path: Pa
     assert not _arrow(bare)["ema5"].equals(_arrow(by_first)["ema5"])
 
 
+def test_series_order_sorted_eager_frame_is_declared(spark: ReparkSession, tmp_path: Path) -> None:
+    """P-S2a-9: a sorted eager frame carries its declared order (S1), so the bare column uses it."""
+    table = _bars().append_column(
+        "booked", pa.array(np.arange(ROWS, dtype=np.int64)[::-1] * 1_000_000, pa.timestamp("us"))
+    )
+    frame = _read(spark, tmp_path, table).sort("booked").eager().lazy()
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
+        bare = _owner_levels(frame, None)
+    assert _series_warnings(record) == []
+    explicit = _owner_levels(frame, Window.orderBy("booked"))
+    _assert_bit_equal(_arrow(bare), _arrow(explicit))
+
+
 def test_series_order_timestamp_before_date_and_warns_once(
     spark: ReparkSession, tmp_path: Path
 ) -> None:
