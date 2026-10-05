@@ -1,0 +1,24 @@
+[
+ {
+  "q": "SELECT repark_written_alias(v) AS z FROM tv",
+  "outcome": "ERR",
+  "condition": "UNRESOLVED_ROUTINE",
+  "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `repark_written_alias` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"
+ },
+ {
+  "q": "SELECT v AS v FROM tv",
+  "outcome": "OK"
+ },
+ {
+  "q": "SELECT repark_written_alias(v) AS z FROM tv",
+  "outcome": "ERR",
+  "condition": "UNRESOLVED_ROUTINE",
+  "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `repark_written_alias` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"
+ },
+ {
+  "q": "SELECT REPARK_WRITTEN_ALIAS(v) FROM tv",
+  "outcome": "ERR",
+  "condition": "UNRESOLVED_ROUTINE",
+  "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `REPARK_WRITTEN_ALIAS` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"
+ }
+]

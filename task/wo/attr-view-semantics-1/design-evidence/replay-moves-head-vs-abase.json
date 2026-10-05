@@ -1,0 +1,22 @@
+{
+ "toward": [
+  "r3.F_cp_al1_sel_parent",
+  "r3.F_cp_al1id_sel_parent",
+  "r3.F_cp_al_al_sel_parent",
+  "r3.F_cp_wcr_sel_parent",
+  "r3.T_cp_al1_sel_parent",
+  "r3.T_cp_al1id_sel_parent",
+  "r3.T_cp_al_al_sel_parent",
+  "r3.T_cp_wcr_sel_parent",
+  "r4p4.F_al q sel parent",
+  "r4p4.F_al u sel parent",
+  "r4p4.F_al x sel parent",
+  "r4p4.F_al z sel parent",
+  "r4p4.T_al q sel parent",
+  "r4p4.T_al u sel parent",
+  "r4p4.T_al x sel parent",
+  "r4p4.T_al z sel parent"
+ ],
+ "away": [],
+ "same_class": []
+}
