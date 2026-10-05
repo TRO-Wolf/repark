@@ -16,8 +16,7 @@ import math
 import pyarrow as pa
 import pytest
 
-from repark import ReparkSession
-from repark import functions
+from repark import ReparkSession, functions
 from repark.errors import PySparkException
 
 
