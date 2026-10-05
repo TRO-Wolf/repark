@@ -44,8 +44,8 @@ P4 and P5 matched main before and after.
 | C-002 | The 9 frame sites drive the frame doors' segment verdict; P1 (neighbour) counts 20, P2 counts 20, P4 lists 1 parquet file, P6 answers at all 10 sites, and the D-pins answer deep write.text (20), partitioned text (4 parts), localCheckpoint (20) and transpose (1) — every cell equals main. | One isolated interpreter per shape, deep work on 8 MiB threads; a crash fails only that shape's test and names it. | PROVEN | `test_grown_stack_gate_1.py` P1/P2/P4/P6/D tests, 19 passed on head; every constant recorded from a base run first (P3 21 rows: 20 data plus the header row read back as data). |
 | C-003 | ML streams poll at the opener's verdict: `open_stream` returns the stream with its segment, `for_each_batch` reuses it, never recomputed per batch. | Deep ML pin plus the P6 ML shape and the `test_ml*` gate files. | PROVEN | `test_grown_stack_gate_1.py` `test_deep_linear_regression_fits` ([2.0, [3.0]], base recorded first) and `test_shallow_linear_regression_fits`; M9 red (below) proves the verdict carries the deep shape. |
 | C-004 | The SQL-text site drives on the text gate OR the deep-view mark; P5 (2,000-term OR INSERT, 22,951 bytes) answers 40 rows as on main, and P3 (short COPY over a 2,000-deep view) answers 21 rows as on main. | P5 pin plus the P3 regression pin; M4/M5 red. | PROVEN | `test_grown_stack_gate_1.py` `test_long_or_insert_answers`, `test_deep_frame_csv_roundtrip_counts`; base answers recorded first on both shapes. |
-| C-005 | The four micro shapes stay within 1.005 of v1.5.1 (release wheels, 5 fresh processes per side, medians, A/A first). | Orchestrator-run on a quiet box (resume: do not time on the lane). | OPEN | Pending orchestrator timing; the head build for it is this unit's last commit. |
-| C-006 | The work-equal like set stays within noise of v1.5.1's 299 s (three interleaved runs, dev builds). | Orchestrator-run on a quiet box. | OPEN | Pending orchestrator timing. |
+| C-005 | Micro shapes within 1.005 of v1.5.1 (release wheels, codegen-units 16, separate target dirs). | 21 fresh processes per side, interleaved, medians; bootstrap 95% CI of the median ratio (2,000 resamples, seed 20261004); A/A first. | OPEN | A/A (v1.5.1 vs itself): scans 0.9960, sql_dir 0.9977, df_write 0.9851, sink 1.0376 — df_write/sink outside ±0.005, so the bar is UNMEASURABLE by this method; all four A/A CIs overlap 1.0. A/B (head/v1.5.1): scans 0.9940 [0.9808, 1.0023], sql_dir 1.0007 [0.9872, 1.0122], df_write 0.9706 [0.9554, 0.9911], sink 0.9667 [0.9345, 0.9908] — every point ≤ 1.005; scans/sql_dir overlap 1.0, df_write/sink exclude it on the faster side. Owner rules. Evidence: lane `micro-aa21.txt`, `micro-ab21.txt`, `-boot.txt` files with uptimes. |
+| C-006 | The work-equal like set stays within noise of v1.5.1. | Three interleaved `replay_work.py` runs (v1.5.1 dev vs head dev, `ENG=gsg1`), work-equal via `l4l_run.py` (two-constant path copy); noise band = v1.5.1 spread. | REJECTED | 43,843 like cells (all rc=0). Main work seconds: 487.8/488.5/488.7 (median 488.5, spread 0.9). Head: 504.2/504.2/507.5 (median 504.2, spread 3.3). Ratios: 1.0337/1.0322/1.0386 (median 1.0337, spread 0.0064). Head median lies OUTSIDE the [487.8, 488.7] band. The residual is uniform across parts/rounds and cannot come from this unit's cold sites; head-vs-v1.5.1 conflates R4's per-action verdict overhead on the hot frame doors (present in head, absent in v1.5.1) plus the v1.5.2 fixes and fork repin — see the note below. Same-toolchain builds (rustc 1.96.0 both sides). |
 
 **Mutations (each built, run in a subprocess, observed red, restored, rebuilt
 green; H3 would halt on any green).** M1: `segment = None` at
@@ -80,7 +80,23 @@ fits on either engine.
 instead; the S1 and S2 commit bodies record the deferral. `cargo build` and
 the lib suite pass with the private helper.
 
-**Residues.** R-1: C-005/C-006 timings run on the orchestrator's quiet box,
-not the lane. R-2: `declare_temp_view_sorted` leaves no deep pin of its
-own — no deep shape can reach it (source frames only, MemTable only); P6
-covers it shallow.
+**C-006 analysis note (inference from the measurements, flagged as such).**
+The +3.2% residual is uniform: wall ratios p6 1.0330/1.0309/1.0389 and
+rest 1.0318/1.0319/1.0371 across all three rounds, while the micro shows head
+faster-or-equal on all four shapes. This unit touches none of the like
+set's hot paths (frame doors, SQL doors and readers are byte-identical in
+verdict logic to R4 or cheaper — reads dropped their growth), so a uniform
+residual cannot be its verdicts. What differs on the hot path between
+v1.5.1 and head is R4's per-action verdict (`depths()` walk, segment-cache
+lookup and conditional grown clone on every frame action), the seven v1.5.2
+fixes and the fork repin (6e937f49 → e1d74bef). The card's +5.2% thesis
+attributed the v1.5.1→v1.5.2 gap to the 34 unconditional growths; with all
+34 gated, +3.2% remains, so R4's per-action overhead is the larger term.
+Isolating this unit's own delta needs head against 22cce0eb (pre-change,
+growth intact), which this round did not run.
+
+**Residues.** R-1: C-005 waits on the owner (unmeasurable at ±0.005; every
+A/B point ≤ 1.005). R-2: `declare_temp_view_sorted` leaves no deep pin of
+its own — no deep shape can reach it (source frames only, MemTable only);
+P6 covers it shallow. R-3: the head-vs-22cce0eb leg that would isolate this
+unit's own delta is unrunned.

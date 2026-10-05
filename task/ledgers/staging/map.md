@@ -2030,7 +2030,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   answers, P3 is the regression pin). Five mutations red, H7 episode and
   the Q1/Q2/Q3 rulings filed; verifier fold V-1 adds deep pins for the
   five unpinned sized sites (M6-M10, one subprocess per shape); micro
-  (C-005) and like-set (C-006) timings run on the orchestrator's quiet
-  box.
+  C-005 unmeasurable at ±0.005 with every A/B point ≤ 1.005 (owner
+  rules), like-set C-006 measured +3.2% outside the band with the R4
+  confound filed.
   `risk_tier: standard`. Branch `fix/grown-stack-gate-1`.
   pins: grown-stack-gate-1/C-001, C-002, C-003, C-004
