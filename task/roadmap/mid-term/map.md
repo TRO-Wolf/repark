@@ -58,9 +58,10 @@ declines it (a dated ruling in the intake, then the archive).
   2026-09-23: in the v1.5.0 target; owner 2026-09-27: back to v1.5.1):** plain Parquet, CSV and JSON path writes to `s3://` — reads reach S3, Iceberg
   tables on S3 write, but the path writer is a local staging-and-rename protocol; step 0 is a recorded Spark oracle
   (`W-PATH-S3-*` cells join the gate), then six design questions ruled Rust-first, one day lane, no fork work.
-- [ice-streaming-1-6.md](ice-streaming-1-6.md) — **card ICE-STREAMING (2026-09-19, v1.6.0, owner ruling C-1):**
-  structured streaming read and write of Iceberg tables leaves the v1.5.0 parity gate (3 inventory cells, IPI-47) and
-  is scheduled with the connectors minor; step 0 is a recorded Spark oracle, then six design questions to rule.
+- [ice-streaming-1-6.md](ice-streaming-1-6.md) — **card ICE-STREAMING (2026-09-19, v1.6.0, owner ruling C-1;
+  re-pointed to 1.7 on 2026-10-04):** structured streaming read and write of Iceberg tables leaves the v1.5.0
+  parity gate (3 inventory cells, IPI-47); the design is ruled in the epic-term micro-batch plan, step 0 is slice
+  MB-0.
 - [ice-variant-1-6.md](ice-variant-1-6.md) — **card ICE-VARIANT (2026-09-27, v1.6.0, owner ruling C-4):**
   the `variant` type leaves the v1.5.0 gate (cell `TY-VARIANT-V3`, shredded Parquet in the Spark leg, fork issue
   R88 open) and is scheduled as integration of the upstream `parquet-variant*` crates the fork already links
@@ -615,7 +616,9 @@ declines it (a dated ruling in the intake, then the archive).
   and SQL-defined views mint ids in Spark (`v#3L`, `id#16L/v#17L`) and foreign columns raise
   MISSING_ATTRIBUTES; measured on Spark 4.1.2, 1.5.2 and the stack (`d5c97862`) — 11/7 on main,
   9/9 on the stack, the two V-3 internal errors the only new stack differences; scope (a)–(d)
-  with proposed pins, V10/F16 out, grade and release questions for the owner.
+  with proposed pins, V10/F16 out; **owner rulings 2026-10-05:** grade B with an Opus sketch after the TA
+  series work, (d) fixed on the stack before the stack-to-main PR, (a)–(c) their own PR on main after
+  the stack merges, (c) ships with a release note in the minor (no warning-first), V6b out.
 - [explain-root-sort-1-card-2026-10-04.md](explain-root-sort-1-card-2026-10-04.md) — **card
   EXPLAIN-ROOT-SORT-1 (2026-10-04, measured on 1.5.2):** the facade's `explain()` plans the
   frame through a scratch view, so DataFusion's subquery sort elimination hides a root `Sort`
@@ -625,3 +628,15 @@ declines it (a dated ruling in the intake, then the archive).
   main (two `LazyMemTableExec` encode failures, one pushdown-surface test); the codec encodes only
   `IcebergTableScan`, so RePark execs such as `NljBuildSideExec` likely fail to encode (inferred);
   measure first, then codec arms or single-node flags.
+- [cache-order-read-1-card-2026-10-05.md](cache-order-read-1-card-2026-10-05.md) — **card
+  CACHE-ORDER-READ-1 (2026-10-05, filed by Muse Spark 1.3 for the orchestrator, from TA series
+  S1):** filter reads of a sorted single-partition `eager()` frame interleave (0 of 10 on S1's
+  head, 1 of 10 on 1.5.2, 3 of 3 ordered on Spark 4.1.2) because `BatchSplitStream` splits the
+  stored batch under `RoundRobinBatch`; two design options (unsplit rule, trailing
+  `SortPreservingMerge`) with costs; grade lean B with an Opus sketch, release after S1.
+- [ansi-remainder-class-1-card-2026-10-05.md](ansi-remainder-class-1-card-2026-10-05.md) — **card
+  ANSI-REMAINDER-CLASS-1 (2026-10-05, filed by Muse Spark 1.3 for the orchestrator, from the
+  PR #943 check):** the 10-cell ANSI-on matrix where Spark raises `REMAINDER_BY_ZERO` — RePark
+  raises `DIVIDE_BY_ZERO` on `%`, answers `NULL` on `mod`/`pmod`, `NaN` on a `-0.0` divisor,
+  and cannot parse infix `div`; the guard learns its operator, with the error text per operator;
+  grade lean B, small.

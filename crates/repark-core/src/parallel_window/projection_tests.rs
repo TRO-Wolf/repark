@@ -454,6 +454,31 @@ async fn parallel_projection_small_input_serial() {
     assert_bit_identical(&got, &expected);
 }
 
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn parallel_projection_single_permit_serial() {
+    let exprs = || {
+        vec![
+            item(column("id"), "id"),
+            item(binary(column("x"), Operator::Multiply, float(2.0)), "a"),
+            item(binary(column("y"), Operator::Plus, column("z")), "b"),
+            item(binary(column("z"), Operator::Divide, float(3.0)), "c"),
+        ]
+    };
+    let plan = optimize(project(source(&[big()]), exprs()), true);
+    assert_eq!(find(&plan, "ParallelProjectionExec").len(), 1);
+    let batches = collect(Arc::clone(&plan), context(1))
+        .await
+        .expect("single permit");
+    let got = concat_batches(&plan.schema(), &batches).expect("concat");
+    assert_eq!(parallel_batches(&plan), 0);
+    let serial = project(source(&[big()]), exprs());
+    let batches = collect(Arc::clone(&serial), context(1))
+        .await
+        .expect("serial");
+    let expected = concat_batches(&serial.schema(), &batches).expect("concat");
+    assert_bit_identical(&got, &expected);
+}
+
 #[test]
 fn parallel_projection_respects_parent_ordering() {
     let spread = || {
@@ -768,18 +793,16 @@ async fn parallel_projection_drop_cancels() {
             source(&[big()]),
             vec![
                 item(gated("block", true, &gate), "a"),
-                item(gated("count", false, &gate), "b"),
+                item(gated("block-two", true, &gate), "b"),
+                item(gated("count", false, &gate), "c"),
             ],
         ),
         true,
     );
     assert!(plan.downcast_ref::<ParallelProjectionExec>().is_some());
-    let mut stream = plan.execute(0, context(1)).expect("stream");
+    let mut stream = plan.execute(0, context(2)).expect("stream");
     let first = tokio::time::timeout(Duration::from_millis(100), stream.next()).await;
-    assert!(
-        first.is_err(),
-        "the blocked expression holds the only permit"
-    );
+    assert!(first.is_err(), "the blocked expressions hold both permits");
     while !gate.started.load(Ordering::Acquire) {
         tokio::time::sleep(Duration::from_millis(1)).await;
     }

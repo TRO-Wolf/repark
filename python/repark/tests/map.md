@@ -3662,6 +3662,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   not refused; the measured cells are in `test_ice_replace_columns_1.py`); residual refuse
   ADD NOT NULL.
   FQ `mem.ns.table` only (no bare-name dependency).
+- `test_ansi_negative_zero_divisor_1.py` — **TA-SERIES-S0b (2026-10-04):** ANSI division by
+  `-0.0` raises `DIVIDE_BY_ZERO`, as Spark 4.1.2 does: scalar `1.0D / -0.0D`, column-valued
+  `-0.0` (SQL VALUES and DataFrame doors), and NaN still answers `nan`. Recorded Spark
+  cells from `results_spark_order.json`; no live Spark needed.
+  pins: ta-series-s0b/P-S0b-1
 - `test_ml_feature_oracle.py` — **U2:** NaN-mix SQL fixtures CAST float literals to DOUBLE;
   CountVectorizer `1.0` SQL now yields decimal128 vectors (values still sum). R-ML-FEATURE (M2) + Q1 R-ML-QUANTILE: VectorAssembler, StringIndexer/IndexToString,
   OHE sparse, Standard/MinMax/MaxAbs scalers, Bucketizer, Imputer mean/mode/**median**,
@@ -7681,6 +7686,23 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   CACHE-ORDER-READ-1 (`BatchSplitStream` at execution plus `RoundRobinBatch(16)`
   above it plus completion-order `CoalescePartitionsExec`).
   pins: ta-series-s1/P-S1-1, P-S1-2, P-S1-5, P-S1-6
+  `test_rematerialised_sorted_cache_keeps_order_at_scale` (S1 fold V944-1, 2026-10-05)
+  pins the verifier's re-materialise shape at 1M rows (`sort().eager()` then
+  `select().eager()` reads back sorted 3/3).
+  pins: ta-series-s1/P-S1-1, P-S1-2, P-S1-5, P-S1-6, P-S1-7f
+- [test_grown_stack_gate_1.py](test_grown_stack_gate_1.py) —
+  **GROWN-STACK-GATE-1 (2026-10-04):** the 34 gated sites answer on small
+  stacks, one isolated interpreter per shape, deep work on 8 MiB threads
+  (~90 s); a crash fails only that shape's test and names it. P1
+  (2,000-deep view count 20) is a must-not-change neighbour; P2 (cache
+  count 20), P4 (inputFiles over parquet, 1 file) and P6 (10 shallow
+  shapes) pin the frame verdicts; P3 (2,000-deep write.csv roundtrip, 21
+  rows with the header row) is the regression pin for the write-options
+  door's deep-view mark; P5 (2,000-term OR INSERT, 22,951 bytes) answers
+  40 rows. Verifier fold V-1 adds the D-pins: deep write.text (20),
+  partitioned text (4 parts), localCheckpoint (20), transpose (1) and the
+  ML fit ([2.0, [3.0]]). Every constant recorded from a base run first.
+  pins: grown-stack-gate-1/C-002, C-003, C-004
 
 ## I want to...
 

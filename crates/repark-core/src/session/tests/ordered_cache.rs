@@ -1,5 +1,5 @@
 use super::super::*;
-use arrow::array::{Int32Array, RecordBatch, UInt64Array};
+use arrow::array::{Int32Array, Int64Array, RecordBatch, UInt64Array};
 use arrow::datatypes::{DataType, Field, Schema};
 use datafusion::common::Column;
 use datafusion::datasource::MemTable;
@@ -267,6 +267,117 @@ async fn sort_filter_cache_multi_partition_not_declared() {
         pairs.windows(2).all(|pair| pair[0].1 < pair[1].1),
         "ranks follow key order"
     );
+}
+
+#[tokio::test]
+async fn sorted_cache_rematerialised_large_keeps_order() {
+    let session = ReparkSession::builder()
+        .batch_size(8_192)
+        .build()
+        .expect("session");
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("key", DataType::Int64, false),
+        Field::new("id", DataType::Int64, false),
+    ]));
+    let rows = 1_000_000_i64;
+    let shuffled = Int64Array::from(
+        (0..rows)
+            .map(|id| (id * 7_919 + 13) % rows)
+            .collect::<Vec<i64>>(),
+    );
+    let ids = Int64Array::from((0..rows).collect::<Vec<i64>>());
+    let whole = RecordBatch::try_new(schema.clone(), vec![Arc::new(shuffled), Arc::new(ids)])
+        .expect("shuffled fixture batch");
+    let mut batches = Vec::new();
+    let mut offset = 0_usize;
+    while offset < 1_000_000_usize {
+        let length = (1_000_000_usize - offset).min(100_000);
+        batches.push(whole.slice(offset, length));
+        offset += length;
+    }
+    session
+        .register_record_batches_as_temp_view("src", schema, batches)
+        .expect("source view");
+    let frame = session
+        .sql("SELECT key, id FROM src ORDER BY key")
+        .await
+        .expect("sorted plan");
+    session
+        .materialize_dataframe_as_cache_view("ordered", frame, (None, None))
+        .await
+        .expect("first materialize");
+    let (stored, order) = materialized_shape(&session, "ordered").await;
+    assert_eq!(stored.len(), 1, "sorted cache concats to one batch");
+    assert_eq!(
+        sole_key(&order).expr,
+        Expr::Column(Column::from_name("key"))
+    );
+    let frame = session
+        .sql("SELECT key, id FROM ordered")
+        .await
+        .expect("plain plan");
+    let collected = frame.collect().await.expect("rematerialize stream");
+    assert!(collected.len() > 1, "rematerialize stream genuinely splits");
+    assert_eq!(
+        collected.iter().map(RecordBatch::num_rows).sum::<usize>(),
+        1_000_000
+    );
+    let frame = session
+        .sql("SELECT key, id FROM ordered")
+        .await
+        .expect("plain plan");
+    session
+        .materialize_dataframe_as_cache_view("cached", frame, (None, None))
+        .await
+        .expect("cache materialize");
+    let (stored, order) = materialized_shape(&session, "cached").await;
+    assert_eq!(stored.len(), 1, "sliced sorted cache concats to one batch");
+    let keys = stored[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<Int64Array>()
+        .expect("int64 key column");
+    assert_eq!(keys.len(), 1_000_000);
+    assert!(
+        keys.values().windows(2).all(|pair| pair[0] <= pair[1]),
+        "stored batch is sorted"
+    );
+    let key = sole_key(&order);
+    assert_eq!(key.expr, Expr::Column(Column::from_name("key")));
+    assert!(key.asc);
+    assert!(!key.nulls_first);
+}
+
+#[tokio::test]
+async fn sorted_cache_over_session_total_keeps_todays_path() {
+    let session = ReparkSession::new().expect("session");
+    let batches = ascending_batches(4, 500);
+    session
+        .register_record_batches_as_temp_view("src", batches[0].schema(), batches)
+        .expect("source view");
+    session
+        .declare_temp_view_sorted("src", &["id".to_string()], false)
+        .await
+        .expect("source declares sorted");
+    let frame = session.sql("SELECT id FROM src").await.expect("plain plan");
+    session
+        .materialize_dataframe_as_cache_view("__repark_cache_held", frame, (None, None))
+        .await
+        .expect("held cache materialize");
+    let retained = session
+        .retained_cache_bytes()
+        .await
+        .expect("retained bytes");
+    assert!(retained > 0, "held cache retains bytes");
+    let budget = retained.saturating_mul(2).saturating_add(retained / 2);
+    let frame = session.sql("SELECT id FROM src").await.expect("plain plan");
+    session
+        .materialize_dataframe_as_cache_view("guarded", frame, (None, Some(budget)))
+        .await
+        .expect("session-total budget still admits");
+    let (stored, order) = materialized_shape(&session, "guarded").await;
+    assert_eq!(stored.len(), 4, "guarded cache keeps its split batches");
+    assert!(order.is_empty(), "guarded cache declares no order");
 }
 
 #[tokio::test]

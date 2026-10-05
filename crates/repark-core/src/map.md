@@ -868,6 +868,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   warning flag, a `repark.series` carrier that `session.rs` attaches at build (one line beside
   the `repark.parallel` carrier); `lib.rs` declares `pub mod series_order;`.
   pins: ta-series-s2a/C-002, C-003
+  session that did not (verifier V-1). See
+  [parallel_window/map.md](parallel_window/map.md).
 - `orc_schema.rs` — **IO-ORC-1 (2026-09-16):** the ORC schema half beside the scan:
   footer-attribute mapping (LONG→`timestamp_ntz`, instant→UTC-stamped `timestamp`,
   local-tz-kind→naive, recursive through struct/list/map), schema union by name under

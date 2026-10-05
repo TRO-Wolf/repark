@@ -223,7 +223,8 @@ impl ReparkSession {
             &schema,
             single_partition,
             batches,
-            max_bytes,
+            (max_bytes, max_total_bytes),
+            retained,
         )?;
         let partitions = if batches.is_empty() {
             vec![vec![]]
@@ -390,7 +391,8 @@ fn apply_ordered_cache(
     schema: &SchemaRef,
     single_partition: bool,
     batches: Vec<RecordBatch>,
-    max_bytes: Option<u64>,
+    budgets: (Option<u64>, Option<u64>),
+    retained: u64,
 ) -> Result<(Vec<RecordBatch>, Vec<Vec<SortExpr>>)> {
     let mut batches = batches;
     let mut declared: Vec<Vec<SortExpr>> = Vec::new();
@@ -399,7 +401,7 @@ fn apply_ordered_cache(
         && let Some(physical_ordering) = ordering
         && let Some(keys) =
             crate::sorted_view::ordered_cache_sort_exprs(physical_ordering, physical_schema, schema)
-        && (batches.len() == 1 || ordered_cache_concat_fits(&batches, max_bytes))
+        && (batches.len() == 1 || ordered_cache_concat_fits(&batches, budgets, retained))
     {
         if batches.len() > 1 {
             batches =
@@ -410,19 +412,27 @@ fn apply_ordered_cache(
     Ok((batches, declared))
 }
 
-fn ordered_cache_concat_fits(batches: &[RecordBatch], max_bytes: Option<u64>) -> bool {
-    let mut bytes = 0_u64;
-    for batch in batches {
-        bytes =
-            bytes.saturating_add(u64::try_from(batch.get_array_memory_size()).unwrap_or(u64::MAX));
-    }
+fn ordered_cache_concat_fits(
+    batches: &[RecordBatch],
+    budgets: (Option<u64>, Option<u64>),
+    retained: u64,
+) -> bool {
+    let bytes =
+        super::cache_budget::distinct_buffer_bytes(batches, &mut std::collections::HashSet::new());
     if bytes > ORDERED_CACHE_CONCAT_LIMIT_BYTES {
         return false;
     }
-    match max_bytes {
-        Some(limit) => bytes.saturating_mul(2) <= limit,
-        None => true,
+    if let Some(limit) = budgets.0
+        && bytes.saturating_mul(2) > limit
+    {
+        return false;
     }
+    if let Some(limit) = budgets.1
+        && retained.saturating_add(bytes.saturating_mul(2)) > limit
+    {
+        return false;
+    }
+    true
 }
 
 fn conform_batches_to_schema(

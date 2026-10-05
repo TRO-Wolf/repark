@@ -1,6 +1,6 @@
 """TA-SERIES S1 pins: a sorted single-partition cache keeps its order on plain reads.
 
-pins: ta-series-s1/P-S1-1, P-S1-2, P-S1-5, P-S1-6
+pins: ta-series-s1/P-S1-1, P-S1-2, P-S1-5, P-S1-6, P-S1-7f
 """
 
 from __future__ import annotations
@@ -145,6 +145,22 @@ def test_descending_and_nulls_first_order_carried(spark: ReparkSession) -> None:
     )
     for _ in range(RUNS):
         assert _is_ordered(_keys(resorted), False, True)
+
+
+def test_rematerialised_sorted_cache_keeps_order_at_scale(spark: ReparkSession) -> None:
+    rows = 1_000_000
+    shuffled = (F.col("id") * 7_919 + 13) % rows
+    reread = (
+        spark.range(0, rows)
+        .withColumn("key", shuffled)
+        .sort("key")
+        .eager()
+        .select("key", "id")
+        .eager()
+    )
+    for _ in range(RUNS):
+        keys = reread.toArrow().column("key").to_pylist()
+        assert _is_ordered(keys, False, True)
 
 
 def test_sort_filter_cache_multi_partition_not_declared(spark: ReparkSession) -> None:

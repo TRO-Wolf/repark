@@ -84,3 +84,15 @@ V10 and global temp views (F16). The measurement confirms the carve-out: `create
 1. **Grade.** Lean: B with an Opus design sketch, since the unit touches identity semantics (mint points, provider registration, the MISSING_ATTRIBUTES refusal).
 2. **Release.** Lean: with or right after the stack merge, not 1.5.3 — every scope item except V6b needs attribute ids, which exist only on the stack, and (c) converts answers into errors.
 3. **Whether (c) can break user code that resolves today.** Lean: yes for same-name foreign columns (the V12 and V15 shapes answer on main today), but only on shapes Spark already refuses — so (c) ships with the stack merge and a release note, never as a silent patch.
+
+## Owner rulings (2026-10-05)
+
+1. **Grade: B, with an Opus design sketch.** It queues in the one Opus slot behind the TA series work, which goes first. The order copies `views_probe.py`, `matrix.md` and the three engine JSONs (`spark.json`, `repark152.json`, `stack.json`) from `/tmp/oc-worker/direct/wo/attr-view-semantics-1/` into the repo beside the order, because `/tmp` is wiped at boot and this card cites them.
+2. **Release: split.**
+   - Scope item **(d)**, the V-3a parquet write and V-3b `groupBy().count()` internal errors, is a **stack regression**: EQUAL on main, DIFFERS on the stack. It is fixed **on the stack before the stack-to-main PR opens**, and it is not part of this unit's release question.
+   - Items **(a), (b) and (c)** land as **their own PR on main, right after the stack merges**. Nothing folds into the stack.
+3. **(c) breaks code, and ships that way.** It ships with a release note naming the V3, V4, V9, V12 and V15 shapes, with **no warning-first release**. Spark 4.1.2 already refuses every one of them; this is the same rule as self-join option A. The release note goes in the **minor** the stack ships in, not in a patch.
+
+**V6b** is out of this card's scope. It is checked against the SJ slices and not added here.
+
+**No work starts** until the TA series work is done and the Opus slot frees.

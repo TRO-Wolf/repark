@@ -5,6 +5,8 @@
 TA-SINGLE-SERIES-PARALLEL-1 slices S2b and S3 (2026-10-04): generic physical operators that run
 the expressions of a one-partition window (S2b) and of a one-partition projection (S3) in
 parallel, and drop the useless RoundRobin over one partition (S3). DataFusion's `WindowAggExec` evaluates every
+TA-SINGLE-SERIES-PARALLEL-1 slice S2b (2026-10-04): a generic physical operator that runs the
+expressions of a one-partition window in parallel. DataFusion's `WindowAggExec` evaluates every
 window expression serially on the polling thread (`compute_window_aggregates`); on one long series
 (the owner's `ta.*` benchmark: 14 indicators over 1 M rows) that pins the query to one core.
 `ParallelWindowRule` swaps such a node for `ParallelWindowExec`, which computes the same columns
@@ -101,6 +103,9 @@ provider's cloned state would not be enough. The flag defaults to on; it has no 
   chain) is volatile** (`is_volatile`: `rand`, `randn`, the volatile time casts; orchestrator
   Q-S3-2). Execution is per input batch, so the output batch shape equals `ProjectionExec`'s: a
   batch below `PARALLEL_PROJECTION_MIN_ROWS` rows is evaluated serially in line; otherwise each
+  batch below `PARALLEL_PROJECTION_MIN_ROWS` rows is evaluated serially in line, as is any batch
+  when only one task can run (`min(tasks, target_partitions) <= 1`, the DIFF-PROBE #945 tp1 fold:
+  serial evaluation on blocking threads paid spawn and join overhead per batch); otherwise each
   non-column expression is one `SpawnedTask::spawn_blocking` (bounded by a semaphore of
   `min(tasks, target_partitions)`), column expressions are evaluated in line (an `Arc` clone),
   and the columns are placed by expression index. The error of the lowest expression index
@@ -112,6 +117,7 @@ provider's cloned state would not be enough. The flag defaults to on; it has no 
   ordered cache produces above the L1 window, where the RoundRobin spilled the whole batch) is
   dropped the same way.
   pins: ta-series-s3/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
+  pins: ta-series-s3/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
 - `projection_tests.rs` — the S3 pins (no TA dependency): `parallel_projection_bit_identical`
   (13 × `round`, 3 × `/`, a `CASE` over a window subquery, through a session against the
   flag-off session); `parallel_projection_removes_rr_spm_sandwich` (the owner's two RoundRobins
@@ -127,6 +133,13 @@ provider's cloned state would not be enough. The flag defaults to on; it has no 
   P-S3-8); `parallel_projection_keeps_multi_batch_fan_out` (multi-batch single-partition sources
   keep their RoundRobin, P-S3-9). Window inputs come from `window` (two whole-frame `sum`s).
   pins: ta-series-s3/C-001, C-002, C-003, C-004, C-005, C-007, C-008, C-009, C-012
+  keep their RoundRobin, P-S3-9);
+  `parallel_projection_single_permit_serial` (with `target_partitions = 1` a batch at the
+  threshold stays serial, the `parallel_batches` counter at 0, bit-identical, P-S3-10).
+  `parallel_projection_drop_cancels` runs its queued task under two permits (three expressions,
+  `target_partitions = 2`), because one permit now takes the serial path. Window inputs come
+  from `window` (two whole-frame `sum`s).
+  pins: ta-series-s3/C-001, C-002, C-003, C-004, C-005, C-007, C-008, C-009, C-012, C-013
 - `tests.rs` — the S2b pins on probe window UDFs (no TA dependency; `repark-core` cannot see
   `repark-ta`). `parallel_window_matches_serial_window_across_batches` (five expressions, three
   groups, three input batches); `parallel_window_keeps_multi_output_siblings` (three band

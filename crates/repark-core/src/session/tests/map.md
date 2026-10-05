@@ -185,6 +185,14 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   pass-through LIMIT, else the optimizer drops a limit-less sort) keeps split batches
   with no declared order and its window ranks still follow key order.
   pins: ta-series-s1/P-S1-3, P-S1-4, P-S1-6
+  **S1 FOLD V944-1/V944-2 (2026-10-05):** `sorted_cache_rematerialised_large_keeps_order`
+  re-materialises a sorted 1M-row cache (`ORDER BY` then `SELECT`, `batch_size=8192`, so
+  the second plan streams 123 slices of one buffer in one partition) and pins one stored
+  batch with the declared ascending key; restoring the per-batch size sum reds it.
+  `sorted_cache_over_session_total_keeps_todays_path` pins that a session-total budget of
+  `2.5 * retained` still admits the materialize but keeps split batches with no declared
+  order; dropping the session-total check reds it.
+  pins: ta-series-s1/P-S1-7, P-S1-8
 - `commit_unknown.rs` — **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** `engine_err` classification
   pins for the ambiguous-commit path — the stamped `CommitStateUnknownError` wrapper maps to
   `Error::CommitStateUnknown` carrying the minted `operation_id`, a bare iceberg
