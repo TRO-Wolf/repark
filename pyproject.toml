@@ -17,7 +17,7 @@ src = ["python/repark/src", "python/repark-parity/src"]
 # Recorded Critic evidence (task/mw-6-critic-evidence/**): oracle scripts and probes captured
 # verbatim, never hand-edited — a linter would rewrite them. Excluded for the same reason as
 # task/census/ (PROC-1, 2026-08-25).
-extend-exclude = ["task/mw-6-critic-evidence", "task/wo/attr-view-semantics-1"]
+extend-exclude = ["task/mw-6-critic-evidence"]
 
 [tool.ruff.lint]
 # Pragmatic-but-strict default. Annotations (ANN) enforce the "type hints on every signature"

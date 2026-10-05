@@ -1,7 +1,9 @@
 import json
-import os
 import sys
 import tempfile
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any
 
 ENGINE = sys.argv[1]
 OUT_PATH = sys.argv[2]
@@ -9,26 +11,26 @@ WORK = tempfile.mkdtemp(prefix="viewsprobe_" + ENGINE + "_")
 
 if ENGINE == "spark":
     from pyspark.sql import SparkSession
-    from pyspark.sql import functions as F
+    from pyspark.sql import functions as sf
 
     S = (
         SparkSession.builder.master("local[1]")
         .appName("views")
         .config("spark.ui.enabled", "false")
-        .config("spark.sql.warehouse.dir", os.path.join(WORK, "warehouse"))
+        .config("spark.sql.warehouse.dir", str(Path(WORK) / "warehouse"))
         .getOrCreate()
     )
     S.sparkContext.setLogLevel("OFF")
 else:
     from repark import ReparkSession
-    from repark.spark import functions as F
+    from repark.spark import functions as sf
 
     S = ReparkSession.builder.appName("views").getOrCreate()
 
 ROWS = []
 
 
-def record_ids(label, frame):
+def record_ids(label: str, frame: Any) -> None:
     entry = {"id": label, "kind": "ids"}
     try:
         if ENGINE == "spark":
@@ -47,7 +49,7 @@ def record_ids(label, frame):
     ROWS.append(entry)
 
 
-def record_run(label, fn):
+def record_run(label: str, fn: Callable[[], Any]) -> None:
     entry = {"id": label, "kind": "run"}
     try:
         value = fn()
@@ -61,7 +63,7 @@ def record_run(label, fn):
     ROWS.append(entry)
 
 
-def record_value(label, fn):
+def record_value(label: str, fn: Callable[[], Any]) -> None:
     entry = {"id": label, "kind": "run"}
     try:
         entry["outcome"] = "OK"
@@ -96,7 +98,7 @@ t1 = S.table("tv")
 t2 = S.table("tv")
 record_run("V6b", lambda t1=t1, t2=t2: t1.join(t2, "id").select(t1["v"]))
 record_run("V7", lambda: S.sql("SELECT a.v, b.v AS w FROM tv a JOIN tv b ON a.id = b.id"))
-d2 = d.withColumn("w", F.lit(1))
+d2 = d.withColumn("w", sf.lit(1))
 d2.createOrReplaceTempView("tv2")
 record_ids("d2", d2)
 record_ids("table-tv2", S.table("tv2"))
@@ -106,8 +108,8 @@ record_ids("sv", S.table("sv"))
 record_run("V9", lambda: S.table("sv").select(d["v"]))
 
 
-def v3_write():
-    path = os.path.join(WORK, "sv_parquet")
+def v3_write() -> list[tuple[Any, ...]]:
+    path = str(Path(WORK) / "sv_parquet")
     S.table("sv").write.mode("overwrite").parquet(path)
     return sorted(tuple(r) for r in S.read.parquet(path).collect())
 
@@ -138,10 +140,10 @@ record_run("V12", lambda: S.table("tv").select(d["v"]))
 record_run("V13", lambda: S.table("tv").select(e["v"]))
 d.filter(d["id"] > 1).createOrReplaceTempView("tf")
 record_run("V14", lambda: S.table("tf").select(d["v"]))
-d.groupBy("id").agg(F.sum("v").alias("v")).createOrReplaceTempView("ta")
+d.groupBy("id").agg(sf.sum("v").alias("v")).createOrReplaceTempView("ta")
 record_run("V15", lambda: S.table("ta").select(d["v"]))
 
-with open(OUT_PATH, "w") as handle:
+with Path(OUT_PATH).open("w") as handle:
     json.dump({"engine": ENGINE, "rows": ROWS}, handle, indent=1, default=str)
 
 if ENGINE == "spark":

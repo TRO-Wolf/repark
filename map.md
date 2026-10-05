@@ -119,9 +119,6 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   **PROC-1 (2026-08-25):** `[tool.ruff] extend-exclude` carries the recorded Critic evidence
   (`task/mw-6-critic-evidence/`), which `.typos.toml` excludes too — verbatim oracle output a
   linter must not rewrite, the same rationale as `task/census/`.
-  **ATTR-VIEW-SEMANTICS-1 (2026-10-05):** `extend-exclude` also carries
-  `task/wo/attr-view-semantics-1/`, whose `views_probe.py` is the recorded probe the card cites,
-  kept verbatim beside its three engine outputs.
   Isolated `make py-test` / ci.yml `parity-harness tests` pass `--with pydantic` because
   `--no-project` ignores package metadata.
   `uv.lock` is checked in from phase 3 on and is validated, never rewritten, by `uv lock --locked`.
