@@ -15,5 +15,6 @@ them.
 - [ta-chain-1-leading-prefix.md](ta-chain-1-leading-prefix.md) — **TA-CHAIN-1, grade B (v1.5.2):** a leading NaN/NULL run on a `ta_*` input is skipped before the kernel as polars_talib does, so a chained indicator (`ema` of `trange`) stops answering all-NaN; wrapper-only, kernels and the 158 goldens untouched, prefix goldens recorded through polars_talib, 1.02x cap; Opus 5.5 at high effort for the executor and the verifier (owner, 2026-10-03).
 - [attr-view-semantics-1/](attr-view-semantics-1/) — **ATTR-VIEW-SEMANTICS-1, grade B (owner, 2026-10-05):** SQL temp views and SQL aliases mint attribute ids, and a foreign column raises `MISSING_ATTRIBUTES` (items a–c). An Opus design sketch comes first, then Muse slices. They land on main right after the ATTR-ID-1 stack merges, with a release note. The probe, the matrix and the three engine outputs sit beside the order.
 - [attr-id-1/](attr-id-1/) — the ATTR-ID-1 orders (design sketch, S0…S4, the resumes and fixes), moved out of `/tmp` on 2026-10-01 with local paths and session links scrubbed; the design order is the grade-B template.
+- [microbatch/](microbatch/) — the micro-batch packet (docs only, 2026-10-05): the decisions, the MB-0 cell list, the design-sketch order and the slice orders.
 
 Up: [../map.md](../map.md).
