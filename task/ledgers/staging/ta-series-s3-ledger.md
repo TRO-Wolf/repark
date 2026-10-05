@@ -48,7 +48,7 @@ fusion, any kernel or facade change.
 | C-003 | P-S3-3: a batch below `PARALLEL_PROJECTION_MIN_ROWS` is evaluated serially in line; a batch at or above it takes the parallel path. The output is equal either way. | `parallel_projection_small_input_serial` (the `parallel_batches` counter); mutation: remove the threshold. | PROVEN | Green: three small batches count 0; a 49,152-row batch plus a 300-row batch count 1. Red under the mutation: `projection_tests.rs:442`, `left: 3, right: 0`. The threshold value is provisional; its measurement belongs to the speed phase (C-011). §2. |
 | C-004 | P-S3-4: the drop is refused when the parent's requirement would not hold afterwards. The parent's distribution must be unspecified or single-partition (a hash requirement is refused: one partition would satisfy it but break co-partitioning), and its ordering must be satisfied by the rebuilt child. | `parallel_projection_respects_parent_ordering` (a merge on an ordering the child lacks; a partitioned hash join; a satisfiable merge as control); mutation: drop the requirement check. | PROVEN | Green: both refused plans print unchanged and keep their RoundRobin; the control drops it. Red under the mutation: `projection_tests.rs:472`, the RoundRobin over the window under `SortPreservingMergeExec: [a@1 ASC]` disappears. §2. |
 | C-005 | P-S3-5: with the `repark.parallel` carrier off (by `ConfigOptions` or `ReparkSessionBuilder::parallel_single_partition(false)`), both passes are no-ops. EXPLAIN on the on-session prints `ParallelProjectionExec: expr=[…]` with `ProjectionExec`'s list. | `parallel_projection_flag_off`; mutation: ignore the flag. | PROVEN | Green. Red under the mutation: `projection_tests.rs:508`, the sandwich plan turns into `ParallelProjectionExec` with no RoundRobin. §2. |
-| C-006 | P-S3-6: through the facade, on release wheels, a 50,000-row slice of `test_futures.parquet` in both owner spellings is bit-identical to base `978a3efd`, and head's plans carry no one-partition RoundRobin. | `probe.py` and `compare.py` on base and head release wheels. | OPEN | Pending the release wheels (§3). |
+| C-006 | P-S3-6: through the facade, on release wheels, a 50,000-row slice of `test_futures.parquet` in both owner spellings is bit-identical to base `978a3efd`. On the full file, head's plans for both spellings carry no `RoundRobinBatch`. | `probe.py` and `compare.py` (`s3-evidence/p6/`) on release wheels of base and head, both built with `CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16 maturin build --release`. | PROVEN | 50k slice: bare and explicit, 50,000 × 28, no difference in bits, validity or values; a seeded `rand(42)` projection is identical too. Head plans carry 2 `ParallelProjectionExec` per spelling. Full file: base 2 RoundRobins per spelling, head 0. The explicit spelling is bit-identical to base at 1,000,000 rows. Bare and `rand` are not comparable at 1 M, because base differs from base run to run there (the cache read order S1 fixes). §3. |
 | C-007 | P-S3-7: neither pass fires when any expression of the projection, or of any projection in a chain, is volatile. Plan and values stay identical to the flag-off session. | `parallel_projection_volatile_unchanged` (a seeded volatile probe UDF through SQL, and a manual chain); mutation: ignore volatility. | PROVEN | Green: the on and off plans print identically with one RoundRobin, and values are equal by id. Red under the mutation: `projection_tests.rs:580`, `ParallelProjectionExec: expr=[id@0 as id, seeded_rand(42) as r, …]` with no RoundRobin above the window. §2. |
 | C-008 | The S2b machinery carries over: the error of the lowest expression index wins whatever finishes first, and dropping the stream cancels the queued expression tasks. | `parallel_projection_lowest_index_error`, `parallel_projection_drop_cancels`; mutations: first-to-finish error; run the batch future on a detached `tokio::spawn`. | PROVEN | Green. Red: `Execution error: probe failure second`; `projection_tests.rs:792`, `left: 1, right: 0`. §2. |
 | C-009 | P-S3-8: a RoundRobin over one ordered window output (EXPLAIN `maintains_sort_order=true`, the S1 spill shape above the L1 window) is dropped too, over `WindowAggExec` and over `ParallelWindowExec`. The rebuilt projection keeps the window's ordering, so the `SortPreservingMergeExec` above it passes its input through. | `parallel_projection_drops_order_preserving_round_robin` (a sorted single-batch source under each window kind); mutation: refuse when the RoundRobin's input carries an ordering. | PROVEN | Green on both window kinds: zero RoundRobins, and the merge's child is a one-partition `ParallelProjectionExec` ordered by `id`; the output is bit-identical. Red under the mutation: `projection_tests.rs:831`, `left: 1, right: 0`. §2. |
@@ -86,6 +86,22 @@ After the narrowing all ten were re-run, and all ten went red. After them,
 contexts found that `DataSourceExec` splits its batches to the session `batch_size` (8,192 by
 default), which kept every probe batch below the threshold. The test contexts now set a 1 Mi-row
 batch size; the owner's configuration uses 64,000.
+
+## 3. Facade identity record (2026-10-05, P-S3-6)
+
+The slice is the first 50,000 rows of `test_futures.parquet`, read in place and written to the
+session scratch area. Release wheels were built from separate worktrees with separate target
+directories (the S2b stale-fingerprint lesson): base `978a3efd` and head `ec6807d2`. At 50,000
+rows neither base plan has a RoundRobin; DataFusion adds none for that size. On the full file,
+base has the two RoundRobins (L1/L2 and top) in each spelling, and head has none.
+
+**S3 + S1** (`perf/ta-series-s3-with-s1` = `ec6807d2` + `b1337ead`, local only, release wheel
+built): on the full file both spellings have no RoundRobin. Both are deterministic across two
+runs, and the bare output is time-sorted. The explicit spelling is bit-identical to S3 head
+alone. Its seeded `rand` frame keeps its RoundRobin, because the source is not a window and the
+expression is volatile.
+
+`test_deep_filter_chain_crash_1.py` on the head release wheel: 9 passed in 105 s.
 
 ## 4. Gates (2026-10-05, head)
 

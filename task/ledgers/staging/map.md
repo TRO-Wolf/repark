@@ -11,9 +11,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Q-S3-3 = A so multi-batch sources keep their fan-out, C-012), and `ParallelProjectionExec` runs
   the non-column expressions of a one-partition projection on the blocking pool, bit-identical
   to `ProjectionExec` (C-001..C-005, C-008, C-009); never on a volatile expression (C-007);
-  gates green (C-010); facade identity and speed open (C-006, C-011).
+  facade identity on release wheels (C-006); gates green (C-010); speed open (C-011).
   `risk_tier: standard`. Branch `perf/ta-series-s3-parallel-projection`.
-  pins: ta-series-s3/C-001, C-002, C-003, C-004, C-005, C-007, C-008, C-009, C-010, C-012
+  pins: ta-series-s3/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-012
 - [ta-series-s2b-ledger.md](ta-series-s2b-ledger.md) —
   **TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04), in flight:** `ParallelWindowExec` runs the
   argument groups of a one-partition, empty-`PARTITION BY` `WindowAggExec` on the blocking pool,
