@@ -34,6 +34,11 @@ BALLISTA-M2-B adds `predicate_expr.rs` (typed `Predicate` → `Expr`) behind tha
   two-executor pin registers in-memory table `t` here; the UDF pin registers `repark_times_ten`
   on that same session so the executor registry has it.
   pins: ballista-m1-b/C-002, C-003
+  **TA-SINGLE-SERIES-PARALLEL-1 S2b, verifier V-1 (2026-10-04):** `from_session` /
+  `from_context` now return `Result` and refuse a session with single-partition parallelism on
+  (the `parallel_window` rule installed and the `repark.parallel` carrier on), naming
+  `ReparkSessionBuilder::parallel_single_partition(false)`. See `../map.md`.
+  pins: ta-series-s2b/C-014
 - `codec.rs` (`cluster` feature) — BALLISTA-M2-B D-1/D-3: `ReparkPhysicalExtensionCodec`
   still delegates every unowned node to `BallistaPhysicalExtensionCodec`. Encode of
   `IcebergTableScan` downcasts the node (`node.as_any` / `downcast_ref`) and reads the

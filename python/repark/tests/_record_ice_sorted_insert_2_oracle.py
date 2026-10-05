@@ -303,12 +303,9 @@ def _record(warehouse: Path) -> dict[str, Any]:
     spark = _spark_session(warehouse)
     cells: dict[str, Any] = {}
     plan = _plan()
-    try:
-        spark.sql(f"CREATE NAMESPACE IF NOT EXISTS {_CATALOG}.{_NAMESPACE}")
-        for program in plan:
-            _run_program(spark, program, cells)
-    finally:
-        spark.stop()
+    spark.sql(f"CREATE NAMESPACE IF NOT EXISTS {_CATALOG}.{_NAMESPACE}")
+    for program in plan:
+        _run_program(spark, program, cells)
     return {"oracle": _ORACLE_NOTE, "plan": plan, "cells": cells}
 
 

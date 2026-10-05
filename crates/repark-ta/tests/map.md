@@ -71,6 +71,17 @@ golden fails, the kernel drifted (or the oracle moved), never "close enough".
   three independent sibling runs vs ideal-cached clone cost). Not a correctness gate —
   `cargo test -p repark-ta --release --test p1c_microbench -- --nocapture`.
 
+- `parallel_window.rs` (feature `datafusion`) — TA-SINGLE-SERIES-PARALLEL-1 S2b: two
+  `ReparkSession`s with `TaExtension`, one built with the default (`ParallelWindowExec` on) and
+  one with `parallel_single_partition(false)`, over the same 50,000-row one-partition table of
+  eight batches. `parallel_window_bit_identical` runs the owner benchmark's level 3 (TRANGE in a
+  CTE, then the 14 `ORDER BY ts` indicators: EMA5, RSI 13/21/34, SMA 10/20/34, EMA of TR 5/13/21,
+  LINEARREG5, ADX 5/13/21), asserts 14 expressions on `ParallelWindowExec` and on the serial
+  `WindowAggExec`, no `BoundedWindowAggExec`, and compares every column's `to_bits`, validity,
+  name and order. `parallel_window_multi_output_siblings_bit_identical` interleaves BBANDS
+  upper/middle/lower, MACD/signal and STOCH slowk/slowd so siblings are not adjacent.
+  pins: ta-series-s2b/C-001, C-002
+
 ## Pointers
 
 - Up: [../map.md](../map.md)
