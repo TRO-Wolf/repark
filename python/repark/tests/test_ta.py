@@ -959,7 +959,7 @@ def test_over_columns_withcolumns_fuses_window_agg(bars: object) -> None:
     }
     fused = bars.withColumns(ta.over_columns(window, bare))  # type: ignore[attr-defined]
     plan = _physical_plan_text(fused)
-    assert plan.count("WindowAggExec") == 1, plan[:1500]
+    assert plan.count("WindowAggExec") + plan.count("ParallelWindowExec") == 1, plan[:1500]
     # Bit-exact vs sequential withColumn on the Arrow path (value + presence).
     sequential = bars  # type: ignore[assignment]
     for name, column in bare.items():
@@ -990,7 +990,7 @@ def test_sequential_withcolumn_same_spec_merges_window_aggs(bars: object) -> Non
     for name, column in zip(names, builders, strict=True):
         frame = frame.withColumn(name, column.over(window))  # type: ignore[attr-defined]
     plan = _physical_plan_text(frame)
-    assert plan.count("WindowAggExec") == 1, plan[:2000]
+    assert plan.count("WindowAggExec") + plan.count("ParallelWindowExec") == 1, plan[:2000]
     # Bit-exact vs single fused withColumns on the Arrow path.
     bare = {name: column.over(window) for name, column in zip(names, builders, strict=True)}
     fused = bars.withColumns(bare)  # type: ignore[attr-defined]

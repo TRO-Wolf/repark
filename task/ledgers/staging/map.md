@@ -4,6 +4,15 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [ta-series-s2b-ledger.md](ta-series-s2b-ledger.md) —
+  **TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04), in flight:** `ParallelWindowExec` runs the
+  argument groups of a one-partition, empty-`PARTITION BY` `WindowAggExec` on the blocking pool,
+  bit-identical to the serial node (C-001..C-006, C-009); zero-copy TA output and borrowed
+  multi-series inputs (C-007); owner shape identical to base through the facade (C-008); a
+  single-node opt-out that distributed sessions set (C-010); goldens and kernel race (C-011);
+  bare −106 ms, explicit −122 ms, partitioned unchanged (C-012); EXPLAIN and plan-count pins
+  (C-013). `risk_tier: standard`. Branch `perf/ta-series-s2b-parallel-window`.
+  pins: ta-series-s2b/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
 - [text-write-timestamp-zone-1-ledger.md](text-write-timestamp-zone-1-ledger.md) —
   **WO TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29), in flight:** CSV and JSON
   writes format LTZ in the session zone under Spark's default `timestampFormat`,

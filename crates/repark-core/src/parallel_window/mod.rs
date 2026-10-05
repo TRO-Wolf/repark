@@ -9,6 +9,9 @@ mod rule;
 
 pub use rule::ParallelWindowRule;
 
+#[cfg(test)]
+mod tests;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ParallelSinglePartitionConfig {
     pub enabled: bool,

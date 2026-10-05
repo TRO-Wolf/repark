@@ -53,6 +53,26 @@ provider's cloned state would not be enough. The flag defaults to on; it has no 
   stacks of `repark-python/src/deep_stack.rs` (`RUNTIME_THREAD_STACK_BYTES`). EXPLAIN prints
   `ParallelWindowExec: wdw=[…]` with exactly the expression list `WindowAggExec` prints.
 
+- `tests.rs` — the S2b pins on probe window UDFs (no TA dependency; `repark-core` cannot see
+  `repark-ta`). `parallel_window_matches_serial_window_across_batches` (five expressions, three
+  groups, three input batches); `parallel_window_keeps_multi_output_siblings` (three band
+  siblings → one group, one compute through a thread-local cache);
+  `parallel_window_skips_partitioned_and_single_group` (a `PARTITION BY` window over one
+  partition, a three-partition input built without enforcement, a one-group window);
+  `parallel_window_flag_off_keeps_window_agg_exec` and
+  `parallel_window_flag_off_session_keeps_window_agg_exec` (the flag off, by `ConfigOptions` and
+  by `ReparkSessionBuilder`, which also pins the EXPLAIN line); `parallel_window_lowest_index_error`
+  (a slow failure at index 0 against a fast one at index 2); `parallel_window_drop_cancels` (one
+  permit, a blocked group, the stream dropped, the queued group never runs);
+  `parallel_window_deep_arg_runtime_stack` (a 4,000-deep `x + 1.0` argument on a runtime with
+  32 MiB stacks, remaining stack above 16 MiB inside the evaluator); and
+  `parallel_window_non_ta_windows_bit_identical` (four non-TA queries over three batches, rule on
+  against off; `sum`/`avg`/`max`/`count OVER ()` and a mixed whole-frame/`lag` node fire, the
+  `lag`/`row_number`/running-`sum` node plans as `BoundedWindowAggExec` and is untouched).
+  pins: ta-series-s2b/C-002, C-003, C-004, C-005, C-006, C-009, C-010, C-013
+- Gates measured for the slice (goldens, kernel race, owner-shape facade identity against base,
+  speed): `task/ledgers/staging/ta-series-s2b-ledger.md`. pins: ta-series-s2b/C-008, C-011, C-012
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

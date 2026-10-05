@@ -54,6 +54,11 @@ impl ParallelWindowExec {
         }
     }
 
+    #[cfg(test)]
+    pub(super) fn groups(&self) -> &[Vec<usize>] {
+        &self.groups
+    }
+
     fn output_schema(&self) -> SchemaRef {
         Arc::clone(self.properties.eq_properties.schema())
     }

@@ -47,7 +47,7 @@ Kernel math is **not** here — it stays in `../overlap.rs` etc.
   densifies through `mod.rs`. `try_borrow_null_free_f64` moved here unchanged. `udf/mod.rs` shrinks
   1818 → 1801 and its exact baseline ratchets with it. The inline test pins the borrow pointers, the
   moved buffer, and bit-identity against the old densify-and-copy glue for ADX, TRANGE, ATR, WILLR,
-  EMA, RSI and both STOCH bands.
+  EMA, RSI and both STOCH bands. pins: ta-series-s2b/C-007
 - `price.rs` — price-transform family (`avgprice`/`medprice`/`typprice`/
   `wclprice`).
 
