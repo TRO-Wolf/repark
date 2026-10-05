@@ -412,6 +412,37 @@ sources it consumes are CFG-2's (delivered in 1.5), not CFG-1's; the crate is pr
 - **Home:** sibling repo `dbt-repark`; engine-side only `config.py` (CFG-1 profiles readable as
   dbt targets). No engine card.
 
+### Card 1.7-B — The micro-batch change-data sink (added 2026-10-04, ruled)
+
+- **Owner ruling (2026-10-04):** [microbatch-cdc-sink-plan-2026-10-04.md](microbatch-cdc-sink-plan-2026-10-04.md) D-1…D-8 and O-1…O-10. Batch over
+  snapshots, not a streaming engine; the sink waits for 1.6 (O-9); Bronze is append-only (O-5).
+- **Home:** UPDATE `repark-core`: NEW module `microbatch/` (the Session-owned driver, the batch
+  source over `time_travel/incremental.rs`, the offset vector, the triggers, the four CC-1
+  shutdown rules). UPDATE `repark-iceberg/src/write/`: NEW module beside `merge/` that stamps the
+  query id, the epoch and the source snapshot vector into the snapshot summary and the offset
+  table property in the same commit, resumes from the sink, and runs the epoch check and the
+  silver-s0 C-008 walk on `CommitStateUnknown`. UPDATE `repark-common`: the deterministic
+  identity kernel (UUIDv5 over canonical typed bytes: source generation, table identity, key,
+  version) and the offset type. UPDATE `repark-functions`: the RePark-owned identity function
+  with its dated registry row. UPDATE `repark-python`: NEW binding module for `readStream`,
+  `writeStream`, `trigger`, `foreachBatch`, `StreamingQuery`; the facade forwards builders only.
+- **Edges:** none new. No new crate (CL-2: no `repark-streaming`).
+- **Reference:** Spark 4.1.2 + Iceberg 1.11.0 recorded in slice MB-0 (the v1.6.0 card's step 0
+  cells plus `foreachBatch` into an Iceberg sink and restart after a committed and an
+  uncommitted batch); Iceberg's Flink and Spark sinks for the summary-carried offset.
+- **Pins:** the stamps round-trip and resume is one read; `availableNow` drains exactly to the
+  snapshot at start and a second run reads nothing; a kill between the sink commit and the next
+  trigger applies no batch twice; duplicate delivery across batches dedups on the event id; two
+  drivers on one sink apply every batch once; a delete or overwrite snapshot inside a window
+  refuses; shutdown reports the durable offset and a dropped Python object does not stop the
+  query; the owner's Bronze tables into Silver through `foreachBatch` diff to zero rows against
+  the existing job.
+- **Done when:** the three IPI-47 cells are EQUAL, the SES-DECL-readStream and SES-DECL-streams
+  rows flip, and the docs say "batch over snapshots, not a streaming engine".
+- **Hand back when:** a slice needs a checkpoint store outside Iceberg (O-1 forbids it for an
+  Iceberg sink); a Bronze source has no key (O-6: refuse) or no version rule (§10 of the plan:
+  declare, never infer).
+
 ### Card 1.8 — Spark Connect server → `repark-server` NEW (+ ADR-0005 discharge)
 
 - **Home:**
@@ -528,10 +559,9 @@ sources it consumes are CFG-2's (delivered in 1.5), not CFG-1's; the crate is pr
   the cheap path — added data files only, no delete-file replay). UPDATE `repark-sql` +
   `repark-spark` grammar (`FROM t CHANGES BETWEEN snapshot A AND B`, Spark's `table_changes`
   / `$changes` form — the `$changes` suffix hooks the existing
-  `repark-spark/src/metadata_tables.rs` resolver). Facade micro-batch subset: NEW
-  `python/repark/src/repark/spark/streaming/{reader,writer,trigger}.py` (Iceberg source/sink
-  only; `availableNow`, processing-time), state = last consumed snapshot id in a small
-  checkpoint file.
+  `repark-spark/src/metadata_tables.rs` resolver). The facade micro-batch subset **moved to card 1.7-B on
+  2026-10-04**; its state is the sink's snapshot summary, not a checkpoint file (O-1 of the
+  micro-batch plan).
 - **Edges:** none new. The only `iceberg` items this card may import are ones that exist
   upstream (`TableMetadata`, `Snapshot`, `ManifestList`, `ManifestEntry`, `ManifestStatus`,
   `DataContentType`, `FileScanTask`, `ArrowReaderBuilder`); the manifest walk in
@@ -542,8 +572,7 @@ sources it consumes are CFG-2's (delivered in 1.5), not CFG-1's; the crate is pr
   (`ChangelogOperation`, how it orders overwrite snapshots) — nothing from it is called.
 - **Pins:** changelog columns match Spark on the shared fixture across append / DV delete /
   overwrite; an append-only range yields no `DELETE` rows and reads no delete files (assert on
-  the scanned-file list); `availableNow` drains exactly to the snapshot at start; a second run
-  reads nothing; a compile-time pin greps the `changes/` module for the two fork scan type
+  the scanned-file list); a compile-time pin greps the `changes/` module for the two fork scan type
   names and fails if either appears.
 - **Done when:** the docs state "batch over snapshots, not a streaming engine", the oracle rows
   are green, and the module builds against the upstream `iceberg` API surface listed above.

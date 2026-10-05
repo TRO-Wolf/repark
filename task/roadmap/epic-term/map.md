@@ -91,6 +91,16 @@ is now the epic list from v0.6 through 3.0 (v0.7–v0.10 shifted to 1.1–1.4 wh
   inspect/ procedures/`); the `repark-sql → repark-spark` edge measured already dev-only and the DAG
   table already complete, so the five arriving crates are pre-declared instead (CL-8); the tidy window
   (post-v1.5.2, pre-1.6) as units T-1…T-5 at clerk tier; decisions CL-1…CL-9.
+- [microbatch-cdc-sink-plan-2026-10-04.md](microbatch-cdc-sink-plan-2026-10-04.md) — **the micro-batch
+  change-data sink (ruled 2026-10-04):** Bronze to Silver over Iceberg snapshots as a
+  loop, not a streaming engine — what `main` already has (incremental append scan, `t.changes`, `MERGE`
+  with the OCC anchor, summary properties, the S-0 commit recipe), the design D-1…D-8 (offsets in the sink
+  summary and a table property with no checkpoint directory, a fail-loud batch source, a Session-owned
+  driver under CC-1, idempotent replay, deterministic event and version ids in the Bronze contract,
+  catalog-only state, `foreachBatch` first then `SilverPlan`, the facade), why not one lane in one shot,
+  the slices MB-0…MB-5 with fork asks, harness, identity and acceptance, the parallel waves and merge
+  order, the owner decisions O-1…O-10 (all ruled 2026-10-04) and the ordered start sequence
+  without dates; §10 the existing-Bronze identity backfill, filed in the owner's wording.
 - [contracts-ahead-of-code-2026-10-01.md](contracts-ahead-of-code-2026-10-01.md) — **contracts ahead of code (ruled
   2026-10-01):** the crate contracts between the pre-declared crates — CC-1 core consumes the services and
   Session owns embedded capture under four shutdown rules, CC-2 the narrow T-6 identity move with a

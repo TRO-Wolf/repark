@@ -58,9 +58,10 @@ declines it (a dated ruling in the intake, then the archive).
   2026-09-23: in the v1.5.0 target; owner 2026-09-27: back to v1.5.1):** plain Parquet, CSV and JSON path writes to `s3://` — reads reach S3, Iceberg
   tables on S3 write, but the path writer is a local staging-and-rename protocol; step 0 is a recorded Spark oracle
   (`W-PATH-S3-*` cells join the gate), then six design questions ruled Rust-first, one day lane, no fork work.
-- [ice-streaming-1-6.md](ice-streaming-1-6.md) — **card ICE-STREAMING (2026-09-19, v1.6.0, owner ruling C-1):**
-  structured streaming read and write of Iceberg tables leaves the v1.5.0 parity gate (3 inventory cells, IPI-47) and
-  is scheduled with the connectors minor; step 0 is a recorded Spark oracle, then six design questions to rule.
+- [ice-streaming-1-6.md](ice-streaming-1-6.md) — **card ICE-STREAMING (2026-09-19, v1.6.0, owner ruling C-1;
+  re-pointed to 1.7 on 2026-10-04):** structured streaming read and write of Iceberg tables leaves the v1.5.0
+  parity gate (3 inventory cells, IPI-47); the design is ruled in the epic-term micro-batch plan, step 0 is slice
+  MB-0.
 - [ice-variant-1-6.md](ice-variant-1-6.md) — **card ICE-VARIANT (2026-09-27, v1.6.0, owner ruling C-4):**
   the `variant` type leaves the v1.5.0 gate (cell `TY-VARIANT-V3`, shredded Parquet in the Spark leg, fork issue
   R88 open) and is scheduled as integration of the upstream `parquet-variant*` crates the fork already links

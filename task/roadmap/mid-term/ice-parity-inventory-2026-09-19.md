@@ -42,7 +42,9 @@ still-true list are part of the same gate, and so is a green `aws-acceptance` ru
   restart recovery, exactly-once commits). Its Iceberg half is built by v1.5.0 anyway — incremental append and
   changelog reads (IPI-22) are what Spark's streaming read loops over. The card is
   [ice-streaming-1-6.md](ice-streaming-1-6.md). v1.5.0's claim is therefore full Spark–Iceberg parity **for batch**;
-  registry rows SES-DECL-readStream and SES-DECL-streams stay until v1.6.0 and the release notes say so.
+  registry rows SES-DECL-readStream and SES-DECL-streams stay until the facade slice of the sink lands and the
+  release notes say so. **Re-pointed 2026-10-04 (owner):** the slot is 1.7 and the design is
+  [../epic-term/microbatch-cdc-sink-plan-2026-10-04.md](../epic-term/microbatch-cdc-sink-plan-2026-10-04.md).
 
 Candidates not yet ruled, each with its default until the owner rules: IPI-17 (Spark's `merge-schema` +
 `INSERT … VALUES` adds `col1..colN` — default: do not copy, DECLARED), IPI-18 (RePark accepts three reader options
