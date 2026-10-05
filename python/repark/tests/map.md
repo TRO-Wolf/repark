@@ -7635,18 +7635,6 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   6,000-term column plus a 1,000-deep frame cycle on main and a 6,000-term
   column plus a 200-deep frame cycle on a 256 KiB thread.
   pins: deep-filter-chain-crash-1/C-013, C-014, C-015, C-016, C-017, C-018
-- [test_ta_series_s1_ordered_cache.py](test_ta_series_s1_ordered_cache.py) —
-  **TA-SERIES S1 (2026-10-04):** the ordered-cache facade pins over a 200k-row
-  permutation frame at `target_partitions=16` with `repartition_file_scans=true`.
-  `test_sorted_eager_reads_back_in_order` pins `.sort().eager()` reading back sorted
-  through plain, `withColumn` and `filter` reads; the parametrized
-  `test_sorted_cache_keeps_order_through_filter_and_withcolumn` pins the six Spark 4.1.2
-  measured shapes (collect, filter, withColumn, select-all, shaped-before-sort,
-  shaped-after-sort) on the `cache`, `eager` and `localCheckpoint` doors, 3 runs each;
-  `test_descending_and_nulls_first_order_carried` pins exact read-back for the four
-  direction/nulls combinations plus `row_number` over an ascending window on
-  descending-stored data, which reds if the declared direction is wrong.
-  pins: ta-series-s1/P-S1-1, P-S1-2, P-S1-5
 
 ## I want to...
 

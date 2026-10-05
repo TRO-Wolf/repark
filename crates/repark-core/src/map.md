@@ -1227,14 +1227,6 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   (a wrong claim would silently corrupt every window result). A NULL key under tighten
   refuses naming the key and `tightenNulls`. Plan pins + refusal battery:
   `../tests/declared_sorted.rs`.
-  **TA-SERIES S1 (2026-10-04):** `ordered_cache_sort_exprs` maps a physical
-  `output_ordering` to logical `SortExpr`s for the ordered cache: each key must be a
-  physical `Column` whose index names a field of the stored schema (index resolves
-  through the physical schema, so a conform reorder cannot misroute a key), and
-  ascending/descending plus nulls-first carry exactly; anything else declines with
-  `None` and the cache keeps today's path. Inline `ordered_cache_tests` pin the four
-  direction/nulls combinations and the three declines.
-  pins: ta-series-s1/P-S1-5
 - `session_time_zone.rs` (+ `session_time_zone/tests.rs`) — the session timezone
   (`spark.sql.session.timeZone`). Holds the **one** authoritative spelling of that conf key
   (`SESSION_TIME_ZONE_KEY` — no alternate spelling exists, deliberately), the validated
