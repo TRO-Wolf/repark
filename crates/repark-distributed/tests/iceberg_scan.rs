@@ -71,6 +71,7 @@ fn scan_spec(warehouse: &str, snapshot_id: Option<i64>, filters: Vec<String>) ->
 
 async fn iceberg_session(warehouse: &str) -> (ReparkSession, SessionContext) {
     let session = match ReparkSession::builder()
+        .parallel_single_partition(false)
         .target_partitions(EXECUTOR_COUNT)
         .build()
     {

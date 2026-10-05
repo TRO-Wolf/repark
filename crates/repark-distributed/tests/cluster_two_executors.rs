@@ -134,7 +134,10 @@ async fn wait_until_running(
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn two_executors_sum_matches_local_and_status_walks_queued_running_completed() {
-    let session = match ReparkSession::new() {
+    let session = match ReparkSession::builder()
+        .parallel_single_partition(false)
+        .build()
+    {
         Ok(session) => session,
         Err(error) => panic!("ReparkSession::new: {error}"),
     };
@@ -229,7 +232,10 @@ async fn two_executors_sum_matches_local_and_status_walks_queued_running_complet
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn repark_udf_registered_through_session_provider_resolves_on_two_executors() {
-    let session = match ReparkSession::new() {
+    let session = match ReparkSession::builder()
+        .parallel_single_partition(false)
+        .build()
+    {
         Ok(session) => session,
         Err(error) => panic!("ReparkSession::new: {error}"),
     };
@@ -327,7 +333,10 @@ async fn repark_udf_registered_through_session_provider_resolves_on_two_executor
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn cancel_mid_flight_sets_cancelled_and_no_running_tasks_within_five_seconds() {
-    let session = match ReparkSession::new() {
+    let session = match ReparkSession::builder()
+        .parallel_single_partition(false)
+        .build()
+    {
         Ok(session) => session,
         Err(error) => panic!("ReparkSession::new: {error}"),
     };

@@ -8,6 +8,13 @@ feature — the Ballista-backed cluster executor. Ballista Milestone 1; the grou
 [../../task/roadmap/epic-term/ballista-audit-2026-09-08.md](../../task/roadmap/epic-term/ballista-audit-2026-09-08.md)
 §26.F–§26.H, and the cards are slate 2's BALLISTA-M1-A…D.
 
+**Single-node rules stay off (TA-SINGLE-SERIES-PARALLEL-1 S2b, 2026-10-04).** A distributed
+session is a `ReparkSession`, so it carries every physical rule the core session installs.
+`ParallelWindowExec` has no codec arm, so any `ReparkSession` that feeds `ReparkSessionProvider`
+or a cluster plan **must** be built with `ReparkSessionBuilder::parallel_single_partition(false)`;
+every session the crate's tests build does. The rule and its flag:
+[../repark-core/src/parallel_window/map.md](../repark-core/src/parallel_window/map.md).
+
 ## Design notes (card BALLISTA-M1-A, D-1 and D-2)
 
 - **D-1 Placement.** Tier 3, role `runtime`: the crate depends on `repark-core` (the session and

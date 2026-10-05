@@ -73,7 +73,11 @@ fn scan_spec(warehouse: &str) -> IcebergScanSpec {
 }
 
 async fn iceberg_session(warehouse: &str) -> (ReparkSession, SessionContext) {
-    let session = match ReparkSession::builder().target_partitions(2).build() {
+    let session = match ReparkSession::builder()
+        .parallel_single_partition(false)
+        .target_partitions(2)
+        .build()
+    {
         Ok(session) => session,
         Err(error) => panic!("ReparkSession::build: {error}"),
     };
@@ -274,7 +278,10 @@ impl ExecutionPlan for UnownedScanExec {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn repark_ballista_codec_installs_the_repark_physical_wrapper() {
-    let session = match ReparkSession::new() {
+    let session = match ReparkSession::builder()
+        .parallel_single_partition(false)
+        .build()
+    {
         Ok(session) => session,
         Err(error) => panic!("ReparkSession::new: {error}"),
     };
@@ -289,7 +296,10 @@ async fn repark_ballista_codec_installs_the_repark_physical_wrapper() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn ballista_shuffle_nodes_round_trip_through_the_wrapper() {
-    let session = match ReparkSession::new() {
+    let session = match ReparkSession::builder()
+        .parallel_single_partition(false)
+        .build()
+    {
         Ok(session) => session,
         Err(error) => panic!("ReparkSession::new: {error}"),
     };
@@ -535,7 +545,11 @@ fn named_spec(
 }
 
 async fn adversarial_session(warehouse: &str) -> (ReparkSession, SessionContext) {
-    let session = match ReparkSession::builder().target_partitions(2).build() {
+    let session = match ReparkSession::builder()
+        .parallel_single_partition(false)
+        .target_partitions(2)
+        .build()
+    {
         Ok(session) => session,
         Err(error) => panic!("ReparkSession::build: {error}"),
     };

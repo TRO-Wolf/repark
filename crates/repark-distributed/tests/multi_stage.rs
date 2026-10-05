@@ -31,7 +31,9 @@ fn session_with(
     target_partitions: usize,
     extra: &[(&str, &str)],
 ) -> (ReparkSession, SessionContext) {
-    let mut builder = ReparkSession::builder().target_partitions(target_partitions);
+    let mut builder = ReparkSession::builder()
+        .parallel_single_partition(false)
+        .target_partitions(target_partitions);
     for (key, value) in extra {
         builder = builder.config(*key, *value);
     }
