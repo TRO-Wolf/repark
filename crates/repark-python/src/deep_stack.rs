@@ -30,7 +30,7 @@ pub(crate) fn build_shared_runtime() -> io::Result<Runtime> {
         .build()
 }
 
-pub(crate) fn block_on<F: Future>(runtime: &Runtime, future: F) -> F::Output {
+fn block_on<F: Future>(runtime: &Runtime, future: F) -> F::Output {
     runtime.block_on(on_grown_stack_with(
         GROWN_STACK_SEGMENT_BYTES,
         GROWN_STACK_SEGMENT_BYTES,
