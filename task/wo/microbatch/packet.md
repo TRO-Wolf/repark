@@ -99,8 +99,9 @@ never from documentation.
 - **Q4.** Does a `replace` (rewrite/compaction) snapshot inside a window fail
   loud or skip silently? (O-5 rules delete/overwrite only; MB-0's Spark cell
   decides.)
-- **Q5.** Does RePark read a Spark checkpoint directory to migrate a running
-  job, or does every query start from the sink offsets alone?
+- ~~**Q5.**~~ **Ruled (owner, 2026-10-05):** a query always starts from the sink's
+  offsets, and a Spark checkpoint is never parsed. Migration is a one-time explicit
+  start-snapshot option on the first run, documented as a dated difference row.
 - **Q6.** What are the exact snapshot-summary key names, the table-property
   key, and the offset encoding — single input and vector form?
 - **Q7.** What are the `StreamingQuery` states, the progress shape, and the
@@ -110,7 +111,17 @@ never from documentation.
   (Pending the F-COMMIT measurement (3).)
 - **Q9.** What is the `foreachBatch` callable contract — its arguments, its
   failure and retry semantics, and what the callable observes per batch?
-- **Q10.** Which maintenance hooks ship with the slices (`expire_snapshots`,
-  compaction policy, `rewrite_data_files` schedule) and which stay later?
-- **Q11.** Are file and rate sources a product surface or test-only harness
-  helpers for pinning the Iceberg cells?
+- ~~**Q10.**~~ **Ruled (owner, 2026-10-05):** the slices carry no maintenance hooks.
+  The driver never runs expiry or compaction implicitly. The only thing shipped is the
+  guard that offsets are read from the current snapshot's summary. Driver-scheduled
+  maintenance is a later card.
+- ~~**Q11.**~~ **Ruled (owner, 2026-10-05):** the Iceberg source is the product feature.
+  The rate source is a test-only helper, outside the public surface. A file source is a
+  later, dated card.
+
+**Sequencing (owner, 2026-10-05):** the design sketch runs after MB-0's recordings
+land.
+
+**Q8 input (fork #366, merged `267370b7`):** a retried commit silently clobbers a
+same-key property set by a racer. No `TableRequirement` can assert a property value,
+so the protection lives in RePark: MB-2c's generation fencing (CC-9).
