@@ -9464,3 +9464,14 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   from `p7_cache`, and a byte-continuity pin over cache/unpersist/checkpoint.
   No module docstring: the lane's no-comments ruling covers the new file; the
   contract lives here. pins: attr-id-1/C-044, C-045
+- [test_attr_view_semantics_1.py](test_attr_view_semantics_1.py) — **ATTR-VIEW-SEMANTICS-1
+  item (d) (2026-10-05):** a SQL temp view over a stamped frame answers Spark on
+  the parquet-write door (V-3a, rows read back) and the groupBy-count door (V-3b);
+  one combined pin runs both plus the in-scope siblings (OR REPLACE, projected and
+  join views, SQL-read groupBy, saveAsTable, csv, json) with no internal error;
+  V9 keeps its pre-existing answer. Every pin holds the seeded source frame:
+  releasing it drops the createDataFrame scratch view the SQL view's re-plan
+  resolves by name (pre-existing lifecycle, identical on the unmodified stack).
+  No module docstring: the lane's no-comments ruling covers the new file; the
+  contract lives here.
+  See `task/roadmap/mid-term/attr-view-semantics-1-card-2026-10-04.md`.

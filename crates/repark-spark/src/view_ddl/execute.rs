@@ -13,7 +13,7 @@ use repark_common::{
     names::{column_already_exists, folded_duplicate},
     spark_error,
 };
-use repark_core::{CatalogRegistry, LocationPolicy, TempViewSession};
+use repark_core::{CatalogRegistry, LocationPolicy, TempViewSession, frame_names};
 use repark_iceberg::view::{
     ViewDefinition, ViewTarget, create_or_replace_view, drop_catalog_view, list_catalog_views,
     split_view_properties, view_schema_for_output,
@@ -151,7 +151,11 @@ pub(crate) async fn execute_create_temp_view(
         )));
     }
     refuse_recursive_temp_view(ctx, &view).await?;
-    let frame = ctx.read_table(view)?;
+    let provider = Arc::clone(&view);
+    let frame = ctx.read_table(provider)?;
+    let (state, plan) = frame.into_parts();
+    let carried = frame_names::copy_attribute_ids(plan, &view.definition_plan)?;
+    let frame = DataFrame::new(state, carried);
     if crate::spark_door_case_insensitive(ctx.state().config().options()) {
         let names = frame
             .schema()

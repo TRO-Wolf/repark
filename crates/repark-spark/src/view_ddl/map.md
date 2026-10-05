@@ -129,6 +129,14 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   function as the session's `ViewDefinitionPlans` resolver so the store gates can follow a
   `-NULL` column through a temp view. `get_logical_plan` stays unimplemented, so
   DataFusion never inlines a replanning view. pins: store-ts-to-numeric-1/C-002
+  **ATTR-VIEW-SEMANTICS-1 item (d) (2026-10-05):** the provider schema is born
+  without attribute ids (`strip_schema_ids` at CREATE), while the registered
+  frame carries the definition's ids above the scan
+  (`copy_attribute_ids` in `execute.rs`), so reads keep the carried ids and
+  the write/aggregate strip doors never meet a keyed `TableScan`;
+  `temp_view_scan` sees the registered frame through that pass-through
+  projection for DESCRIBE comments and the recursive-view walk.
+  See `task/roadmap/mid-term/attr-view-semantics-1-card-2026-10-04.md`.
 - `temp_view.rs` — **IPI-40 PR6** `ReplanningTempView`, the provider behind
   a SQL temp view (registered through `create_or_replace_temp_view_from`): it
   re-plans the stored body at every scan under the creation-time catalog and
