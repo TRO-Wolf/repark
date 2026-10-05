@@ -4,9 +4,10 @@ use std::sync::Arc;
 
 use arrow::array::RecordBatch;
 use arrow::compute::{CastOptions, cast_with_options, concat_batches};
-use arrow::datatypes::{DataType, SchemaRef};
+use arrow::datatypes::{DataType, Schema, SchemaRef};
 use datafusion::datasource::MemTable;
 use datafusion::logical_expr::SortExpr;
+use datafusion::physical_expr::PhysicalSortExpr;
 use datafusion::physical_plan::ExecutionPlanProperties;
 use datafusion::prelude::DataFrame;
 use datafusion::sql::TableReference;
@@ -215,25 +216,15 @@ impl ReparkSession {
         let (schema, batches) = crate::sorted_view::apply_tighten_provenance_on_materialize(
             &analyzed, schema, batches,
         )?;
-        let mut batches = conform_batches_to_schema(&schema, &batches)?;
-        let mut declared: Vec<Vec<SortExpr>> = Vec::new();
-        if !batches.is_empty()
-            && single_partition
-            && let Some(physical_ordering) = ordering.as_deref()
-            && let Some(keys) = crate::sorted_view::ordered_cache_sort_exprs(
-                physical_ordering,
-                &physical_schema,
-                &schema,
-            )
-            && (batches.len() == 1 || ordered_cache_concat_fits(&batches, max_bytes))
-        {
-            if batches.len() > 1 {
-                batches = vec![
-                    concat_batches(&schema, &batches).map_err(|error| engine_err(error.into()))?,
-                ];
-            }
-            declared = vec![keys];
-        }
+        let batches = conform_batches_to_schema(&schema, &batches)?;
+        let (batches, declared) = apply_ordered_cache(
+            ordering.as_deref(),
+            physical_schema.as_ref(),
+            &schema,
+            single_partition,
+            batches,
+            max_bytes,
+        )?;
         let partitions = if batches.is_empty() {
             vec![vec![]]
         } else {
@@ -392,6 +383,32 @@ impl crate::dialect::TempViewSession for ReparkSession {
 }
 
 const ORDERED_CACHE_CONCAT_LIMIT_BYTES: u64 = 1 << 30;
+
+fn apply_ordered_cache(
+    ordering: Option<&[PhysicalSortExpr]>,
+    physical_schema: &Schema,
+    schema: &SchemaRef,
+    single_partition: bool,
+    batches: Vec<RecordBatch>,
+    max_bytes: Option<u64>,
+) -> Result<(Vec<RecordBatch>, Vec<Vec<SortExpr>>)> {
+    let mut batches = batches;
+    let mut declared: Vec<Vec<SortExpr>> = Vec::new();
+    if !batches.is_empty()
+        && single_partition
+        && let Some(physical_ordering) = ordering
+        && let Some(keys) =
+            crate::sorted_view::ordered_cache_sort_exprs(physical_ordering, physical_schema, schema)
+        && (batches.len() == 1 || ordered_cache_concat_fits(&batches, max_bytes))
+    {
+        if batches.len() > 1 {
+            batches =
+                vec![concat_batches(schema, &batches).map_err(|error| engine_err(error.into()))?];
+        }
+        declared = vec![keys];
+    }
+    Ok((batches, declared))
+}
 
 fn ordered_cache_concat_fits(batches: &[RecordBatch], max_bytes: Option<u64>) -> bool {
     let mut bytes = 0_u64;
