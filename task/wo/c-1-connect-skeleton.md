@@ -155,9 +155,12 @@ Design sketch, naming types and signatures:
 
 ## 6. Halt rules
 
-- ~~H-GEN~~ **Ruled R-12 (orchestrator, 2026-10-05; reversible before 1.6 ships):** the
-  identity's generation field is a `u64`, where `0` means unassigned. 1.7's capture
-  assigns it on first use (CC-2/CC-9). Equality is the only operation C-1 needs.
+- ~~H-GEN~~ **Ruled R-12 (orchestrator, 2026-10-05). The owner accepted it the same day,
+  with one change:** "generation u64/0-unassigned accepted, with 0 only in the serialized
+  form and an Option or NonZero type in Rust". In Rust the identity's generation is
+  `Option<NonZeroU64>`, where `None` means unassigned. The `0` exists only at a
+  serialization boundary. 1.7's capture assigns it on first use (CC-2/CC-9). The R-13
+  spellings were accepted unchanged.
 - ~~H-AUTH~~ **Ruled R-13 (orchestrator, 2026-10-05; reversible before 1.6 ships):**
   `auth_method` values are `password` (the default when absent), `iam_token` and
   `kerberos`. That is snake case, following `auto_register`, the only multi-word

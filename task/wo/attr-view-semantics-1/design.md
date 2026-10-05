@@ -108,6 +108,10 @@ Evidence:
 2. **Plan, with a fallback:** plan the marked text. If that planning fails, plan the original text instead.
    - That makes the marker unable to add an error. At worst a written alias carries, which is today's behaviour and the same class.
    - Measured need: `SELECT id AS Id, ID FROM sc.ns.t` under case folding (casesens `p1/tw_Id_ID`). Marked, DataFusion sees an unqualified `id` beside a qualified `t.id` and raises a schema ambiguity before RePark's case repair runs. With the fallback, all 70 `test_casesens_1.py` cells pass.
+   - **Owner condition (2026-10-05):** "fallback accepted only with a counter and a pin that the measured corpus hits it zero times; a shape that needs the fallback is a finding."
+     - **The counter.** Slice B adds a session-visible counter of fallback hits, which the pins can read.
+     - **The pin.** A pin runs the measured corpus and asserts the counter stays at **0**. The corpus is the design probes (mint, case, alias-spell, edge), `test_casesens_1.py` and the replay.
+     - **The known hit is finding F-B1:** `SELECT id AS Id, ID FROM sc.ns.t`. Slice B must make the marked text plan for this shape, so the zero-hit pin holds. One approach is to mark only an alias whose name differs from every other output under the session's name rule, or to qualify the marked reference. If it cannot, the slice halts and names F-B1 for the owner. Either way, `test_case_twin_alias_falls_back` becomes a pin that the shape answers **without** the fallback.
 3. **Consume:** after planning, rewrite every `Projection` expression `Alias(repark_written_alias(x), name)` to `alias_with_fresh_id(x, name)` (`attr_id.rs:118`), and recompute parent schemas.
    - The marker is then gone from the stamped plan; `stamp` sees an alias that carries its own id and keeps it.
    - A marker left anywhere else is a no-op function whose `simplify` returns its argument (for example a `GROUP BY` that names the alias), so the optimized and physical plans are identical to the unmarked ones.
