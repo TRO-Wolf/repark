@@ -39,6 +39,15 @@ Kernel math is **not** here — it stays in `../overlap.rs` etc.
   `evaluate_all_one_input_entirely_invalid_answers_all_nan_for_trange` (one input all-NaN makes
   the start equal the length); the chain test carries a NULL twin. pins: ta-chain-1/C-007
   pins: ta-chain-1/C-004, C-006
+- `glue.rs` — TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04): the evaluator's zero-copy output and
+  input borrow. `float64_array_from_vec` moves the kernel's `Vec<f64>` into a `Float64Array`
+  (no copy; the old `Float64Builder` copy is gone). `try_borrow_all_null_free` borrows every
+  series argument when all are null-free `Float64`, so multi-series functions (ADX, TRANGE, ATR,
+  WILLR, STOCH, …) no longer densify-copy their inputs; any NULL or non-`Float64` input still
+  densifies through `mod.rs`. `try_borrow_null_free_f64` moved here unchanged. `udf/mod.rs` shrinks
+  1818 → 1801 and its exact baseline ratchets with it. The inline test pins the borrow pointers, the
+  moved buffer, and bit-identity against the old densify-and-copy glue for ADX, TRANGE, ATR, WILLR,
+  EMA, RSI and both STOCH bands.
 - `price.rs` — price-transform family (`avgprice`/`medprice`/`typprice`/
   `wclprice`).
 
