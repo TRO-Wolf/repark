@@ -10,6 +10,7 @@ mod io_stats;
 mod metadata_cache_report;
 mod namespace_create;
 mod nlj_tight_pool;
+mod ordered_cache;
 mod path_write;
 mod pool_refusals;
 mod s3_prefix_read;

@@ -7659,6 +7659,24 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   6,000-term column plus a 1,000-deep frame cycle on main and a 6,000-term
   column plus a 200-deep frame cycle on a 256 KiB thread.
   pins: deep-filter-chain-crash-1/C-013, C-014, C-015, C-016, C-017, C-018
+- [test_ta_series_s1_ordered_cache.py](test_ta_series_s1_ordered_cache.py) —
+  **TA-SERIES S1 (2026-10-04):** the ordered-cache facade pins over a 200k-row
+  permutation frame at `target_partitions=16` with `repartition_file_scans=true` and
+  `batch_size=8192`, so the 200k rows genuinely split (25 batches — at the default
+  65536 they would stay 4 batches and never exercise the scan split).
+  `test_sorted_eager_reads_back_in_order` pins `.sort().eager()` reading back sorted
+  through plain and `withColumn` reads; the parametrized
+  `test_sorted_cache_keeps_order_on_plain_reads` pins collect, `withColumn`,
+  select-all and shaped-before-sort on the `cache`, `eager` and `localCheckpoint`
+  doors, 3 runs each; `test_descending_and_nulls_first_order_carried` pins exact
+  read-back for the four direction/nulls combinations plus a re-sort-ascending killer
+  (an ascending mutation elides the downstream sort and the collect comes back
+  reversed); `test_sort_filter_cache_multi_partition_not_declared` pins per-row window
+  correctness over a fan-out materialize that must not declare. Filter reads live in
+  the xfail-strict `test_sorted_cache_filter_read_order_follow_up`, owned by card
+  CACHE-ORDER-READ-1 (`BatchSplitStream` at execution plus `RoundRobinBatch(16)`
+  above it plus completion-order `CoalescePartitionsExec`).
+  pins: ta-series-s1/P-S1-1, P-S1-2, P-S1-5, P-S1-6
 
 ## I want to...
 

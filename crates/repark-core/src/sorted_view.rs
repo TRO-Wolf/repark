@@ -10,6 +10,8 @@ use arrow::record_batch::RecordBatch;
 use datafusion::common::Column;
 use datafusion::common::tree_node::TreeNodeRecursion;
 use datafusion::logical_expr::{DdlStatement, Expr, LogicalPlan, SortExpr};
+use datafusion::physical_expr::PhysicalSortExpr;
+use datafusion::physical_expr::expressions::Column as PhysicalColumn;
 use datafusion::prelude::SessionContext;
 
 use crate::error_map::engine_err;
@@ -28,6 +30,29 @@ pub(crate) fn declared_sort_order(keys: &[String]) -> Vec<Vec<SortExpr>> {
         .map(|key| SortExpr::new(Expr::Column(Column::from_name(key.clone())), true, false))
         .collect();
     vec![order]
+}
+
+pub(crate) fn ordered_cache_sort_exprs(
+    ordering: &[PhysicalSortExpr],
+    physical_schema: &Schema,
+    stored_schema: &Schema,
+) -> Option<Vec<SortExpr>> {
+    if ordering.is_empty() {
+        return None;
+    }
+    ordering
+        .iter()
+        .map(|key| {
+            let column = key.expr.downcast_ref::<PhysicalColumn>()?;
+            let name = physical_schema.fields().get(column.index())?.name().clone();
+            stored_schema.index_of(&name).ok()?;
+            Some(SortExpr::new(
+                Expr::Column(Column::from_name(name)),
+                !key.options.descending,
+                key.options.nulls_first,
+            ))
+        })
+        .collect()
 }
 
 /// Verify `batches` are lexicographically sorted by `keys` (ASC NULLS LAST), including across
@@ -665,4 +690,89 @@ fn rebuild_batches(
         })
         .collect::<Result<Vec<RecordBatch>>>()?;
     Ok((schema, rebuilt))
+}
+
+#[cfg(test)]
+mod ordered_cache_tests {
+    use super::*;
+
+    use datafusion::common::ScalarValue;
+    use datafusion::physical_expr::expressions::Literal;
+
+    fn two_column_schema() -> Schema {
+        Schema::new(vec![
+            Field::new("alpha", DataType::Int32, true),
+            Field::new("beta", DataType::Utf8, true),
+        ])
+    }
+
+    fn physical_key(index: usize, descending: bool, nulls_first: bool) -> PhysicalSortExpr {
+        PhysicalSortExpr::new(
+            Arc::new(PhysicalColumn::new("key", index)),
+            SortOptions {
+                descending,
+                nulls_first,
+            },
+        )
+    }
+
+    #[test]
+    fn direction_and_nulls_first_carry_exactly() {
+        let schema = two_column_schema();
+        let ordering = vec![physical_key(0, false, true), physical_key(1, true, false)];
+        let keys =
+            ordered_cache_sort_exprs(&ordering, &schema, &schema).expect("plain columns convert");
+        assert_eq!(keys.len(), 2);
+        assert_eq!(keys[0].expr, Expr::Column(Column::from_name("alpha")));
+        assert!(keys[0].asc);
+        assert!(keys[0].nulls_first);
+        assert_eq!(keys[1].expr, Expr::Column(Column::from_name("beta")));
+        assert!(!keys[1].asc);
+        assert!(!keys[1].nulls_first);
+    }
+
+    #[test]
+    fn descending_nulls_first_and_ascending_nulls_last_carry() {
+        let schema = two_column_schema();
+        let ordering = vec![physical_key(1, true, true), physical_key(0, false, false)];
+        let keys =
+            ordered_cache_sort_exprs(&ordering, &schema, &schema).expect("plain columns convert");
+        assert_eq!(keys[0].expr, Expr::Column(Column::from_name("beta")));
+        assert!(!keys[0].asc);
+        assert!(keys[0].nulls_first);
+        assert_eq!(keys[1].expr, Expr::Column(Column::from_name("alpha")));
+        assert!(keys[1].asc);
+        assert!(!keys[1].nulls_first);
+    }
+
+    #[test]
+    fn non_column_key_declines() {
+        let schema = two_column_schema();
+        let literal = PhysicalSortExpr::new(
+            Arc::new(Literal::new(ScalarValue::Int32(Some(1)))),
+            SortOptions::default(),
+        );
+        assert!(ordered_cache_sort_exprs(&[literal], &schema, &schema).is_none());
+    }
+
+    #[test]
+    fn out_of_range_index_declines() {
+        let schema = two_column_schema();
+        let ordering = vec![physical_key(7, false, true)];
+        assert!(ordered_cache_sort_exprs(&ordering, &schema, &schema).is_none());
+    }
+
+    #[test]
+    fn key_missing_from_stored_schema_declines() {
+        let physical_schema = two_column_schema();
+        let stored_schema = Schema::new(vec![Field::new("alpha", DataType::Int32, true)]);
+        let ordering = vec![physical_key(1, false, true)];
+        assert!(ordered_cache_sort_exprs(&ordering, &physical_schema, &stored_schema).is_none());
+    }
+
+    #[test]
+    fn empty_ordering_declines() {
+        let schema = two_column_schema();
+        assert!(ordered_cache_sort_exprs(&[], &schema, &schema).is_none());
+    }
 }

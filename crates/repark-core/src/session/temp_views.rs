@@ -3,9 +3,12 @@
 use std::sync::Arc;
 
 use arrow::array::RecordBatch;
-use arrow::compute::{CastOptions, cast_with_options};
-use arrow::datatypes::{DataType, SchemaRef};
+use arrow::compute::{CastOptions, cast_with_options, concat_batches};
+use arrow::datatypes::{DataType, Schema, SchemaRef};
 use datafusion::datasource::MemTable;
+use datafusion::logical_expr::SortExpr;
+use datafusion::physical_expr::PhysicalSortExpr;
+use datafusion::physical_plan::ExecutionPlanProperties;
 use datafusion::prelude::DataFrame;
 use datafusion::sql::TableReference;
 use repark_common::{Error, Result};
@@ -156,6 +159,9 @@ impl ReparkSession {
             .create_physical_plan(&optimized, &state)
             .await
             .map_err(engine_err)?;
+        let ordering = physical.properties().output_ordering().cloned();
+        let physical_schema = physical.schema();
+        let single_partition = physical.output_partitioning().partition_count() == 1;
         let (mut seen, retained) = if max_total_bytes.is_some() {
             self.live_cache_buffer_set().await?
         } else {
@@ -211,12 +217,25 @@ impl ReparkSession {
             &analyzed, schema, batches,
         )?;
         let batches = conform_batches_to_schema(&schema, &batches)?;
+        let (batches, declared) = apply_ordered_cache(
+            ordering.as_deref(),
+            physical_schema.as_ref(),
+            &schema,
+            single_partition,
+            batches,
+            max_bytes,
+        )?;
         let partitions = if batches.is_empty() {
             vec![vec![]]
         } else {
             vec![batches]
         };
         let table = MemTable::try_new(schema, partitions).map_err(engine_err)?;
+        let table = if declared.is_empty() {
+            table
+        } else {
+            table.with_sort_order(declared)
+        };
         self.replace_view(name, Arc::new(table))
     }
 
@@ -360,6 +379,49 @@ impl crate::dialect::TempViewSession for ReparkSession {
 
     fn drop_temp_view(&self, name: &str) -> Result<bool> {
         ReparkSession::drop_temp_view(self, name)
+    }
+}
+
+const ORDERED_CACHE_CONCAT_LIMIT_BYTES: u64 = 1 << 30;
+
+fn apply_ordered_cache(
+    ordering: Option<&[PhysicalSortExpr]>,
+    physical_schema: &Schema,
+    schema: &SchemaRef,
+    single_partition: bool,
+    batches: Vec<RecordBatch>,
+    max_bytes: Option<u64>,
+) -> Result<(Vec<RecordBatch>, Vec<Vec<SortExpr>>)> {
+    let mut batches = batches;
+    let mut declared: Vec<Vec<SortExpr>> = Vec::new();
+    if !batches.is_empty()
+        && single_partition
+        && let Some(physical_ordering) = ordering
+        && let Some(keys) =
+            crate::sorted_view::ordered_cache_sort_exprs(physical_ordering, physical_schema, schema)
+        && (batches.len() == 1 || ordered_cache_concat_fits(&batches, max_bytes))
+    {
+        if batches.len() > 1 {
+            batches =
+                vec![concat_batches(schema, &batches).map_err(|error| engine_err(error.into()))?];
+        }
+        declared = vec![keys];
+    }
+    Ok((batches, declared))
+}
+
+fn ordered_cache_concat_fits(batches: &[RecordBatch], max_bytes: Option<u64>) -> bool {
+    let mut bytes = 0_u64;
+    for batch in batches {
+        bytes =
+            bytes.saturating_add(u64::try_from(batch.get_array_memory_size()).unwrap_or(u64::MAX));
+    }
+    if bytes > ORDERED_CACHE_CONCAT_LIMIT_BYTES {
+        return false;
+    }
+    match max_bytes {
+        Some(limit) => bytes.saturating_mul(2) <= limit,
+        None => true,
     }
 }
 
