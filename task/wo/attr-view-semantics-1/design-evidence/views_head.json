@@ -1,0 +1,310 @@
+{
+ "engine": "stack",
+ "rows": [
+  {
+   "id": "d",
+   "kind": "ids",
+   "outcome": "OK",
+   "ids": [
+    "a46845d38937094a0000000000001",
+    "a46845d38937094a0000000000002"
+   ]
+  },
+  {
+   "id": "table",
+   "kind": "ids",
+   "outcome": "OK",
+   "ids": [
+    "a46845d38937094a0000000000001",
+    "a46845d38937094a0000000000002"
+   ]
+  },
+  {
+   "id": "table2",
+   "kind": "ids",
+   "outcome": "OK",
+   "ids": [
+    "a46845d38937094a0000000000001",
+    "a46845d38937094a0000000000002"
+   ]
+  },
+  {
+   "id": "sql-star",
+   "kind": "ids",
+   "outcome": "OK",
+   "ids": [
+    "a46845d38937094a0000000000001",
+    "a46845d38937094a0000000000002"
+   ]
+  },
+  {
+   "id": "sql-v",
+   "kind": "ids",
+   "outcome": "OK",
+   "ids": [
+    "a46845d38937094a0000000000002"
+   ]
+  },
+  {
+   "id": "sql-vplus0",
+   "kind": "ids",
+   "outcome": "OK",
+   "ids": [
+    "a46845d38937094a0000000000003"
+   ]
+  },
+  {
+   "id": "sql-alias",
+   "kind": "ids",
+   "outcome": "OK",
+   "ids": [
+    "a46845d38937094a0000000000004"
+   ]
+  },
+  {
+   "id": "V1",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V2",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V3",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "error_first_line": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"v\" in operator !Project. Attribute(s) with the same name appear in the operation: \"v\". Please check if the right attribute(s) are used. SQLSTATE: XX000",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V4",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "error_first_line": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"v\" in operator !Project. Attribute(s) with the same name appear in the operation: \"v\". Please check if the right attribute(s) are used. SQLSTATE: XX000",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V5",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     1,
+     10,
+     1,
+     10
+    ],
+    [
+     2,
+     20,
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V6",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     1,
+     10,
+     1,
+     10
+    ],
+    [
+     2,
+     20,
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V6b",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "error_first_line": "Error during planning: [AMBIGUOUS_REFERENCE] Reference `v` is ambiguous, could be: [`v`, `v`]. SQLSTATE: 42704",
+   "condition": "AMBIGUOUS_REFERENCE"
+  },
+  {
+   "id": "V7",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10,
+     10
+    ],
+    [
+     20,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "d2",
+   "kind": "ids",
+   "outcome": "OK",
+   "ids": [
+    "a46845d38937094a0000000000001",
+    "a46845d38937094a0000000000002",
+    "a46845d38937094a000000000000d"
+   ]
+  },
+  {
+   "id": "table-tv2",
+   "kind": "ids",
+   "outcome": "OK",
+   "ids": [
+    "a46845d38937094a0000000000001",
+    "a46845d38937094a0000000000002",
+    "a46845d38937094a000000000000d"
+   ]
+  },
+  {
+   "id": "V8",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10,
+     1
+    ],
+    [
+     20,
+     1
+    ]
+   ]
+  },
+  {
+   "id": "sv",
+   "kind": "ids",
+   "outcome": "OK",
+   "ids": [
+    "a46845d38937094a000000000000e",
+    "a46845d38937094a000000000000f"
+   ]
+  },
+  {
+   "id": "V9",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "error_first_line": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project. Attribute(s) with the same name appear in the operation: \"v\". Please check if the right attribute(s) are used. SQLSTATE: XX000",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V3-write",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V3-groupby",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     1
+    ]
+   ]
+  },
+  {
+   "id": "V10",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "UnsupportedOperationException",
+   "error_first_line": "createGlobalTempView is not supported yet (no global_temp catalog; disclosed R-DF-BATCH2)",
+   "condition": null
+  },
+  {
+   "id": "V11",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V12",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "error_first_line": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project. Attribute(s) with the same name appear in the operation: \"v\". Please check if the right attribute(s) are used. SQLSTATE: XX000",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V13",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V14",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V15",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "error_first_line": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project. Attribute(s) with the same name appear in the operation: \"v\". Please check if the right attribute(s) are used. SQLSTATE: XX000",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  }
+ ]
+}

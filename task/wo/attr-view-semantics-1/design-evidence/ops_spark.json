@@ -1,0 +1,1694 @@
+{
+ "engine": "spark",
+ "banner": {
+  "version": "4.1.2",
+  "zone": "America/New_York"
+ },
+ "rows": [
+  {
+   "id": "V3 select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#1L]\n+- Project [id#0L, (v#1L + cast(1 as bigint)) AS v#8L]\n   +- SubqueryAlias tv\n      +- View (`tv`, [id#0L, v#1L])\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V3 select(d.v + 1)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [(v#1L + cast(1 as bigint)) AS (v + 1)#10L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [(v#1L + cast(1 as bigint)) AS (v + 1)#10L]\n+- Project [id#0L, (v#1L + cast(1 as bigint)) AS v#9L]\n   +- SubqueryAlias tv\n      +- View (`tv`, [id#0L, v#1L])\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V3 select(d.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id"
+   ],
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  {
+   "id": "V3 select(d.id, 'v')",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     11
+    ],
+    [
+     2,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V3 withColumn('z', d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [id#0L, v#13L, v#1L AS z#14L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [id#0L, v#13L, v#1L AS z#14L]\n+- Project [id#0L, (v#1L + cast(1 as bigint)) AS v#13L]\n   +- SubqueryAlias tv\n      +- View (`tv`, [id#0L, v#1L])\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V3 filter(d.v > 15)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     2,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V3 where(d.v == 10)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     11
+    ]
+   ]
+  },
+  {
+   "id": "V3 orderBy(d.v.desc())",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     11
+    ],
+    [
+     2,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V3 sort(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     11
+    ],
+    [
+     2,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V3 groupBy(d.v).count()",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Aggregate [v#1L], [v#1L, count(1) AS count#20L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Aggregate [v#1L], [v#1L, count(1) AS count#20L]\n+- Project [id#0L, (v#1L + cast(1 as bigint)) AS v#19L]\n   +- SubqueryAlias tv\n      +- View (`tv`, [id#0L, v#1L])\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V3 groupBy('id').agg(max(d.v))",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Aggregate [id#0L], [id#0L, max(v#1L) AS max(v)#28L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Aggregate [id#0L], [id#0L, max(v#1L) AS max(v)#28L]\n+- Project [id#0L, (v#1L + cast(1 as bigint)) AS v#24L]\n   +- SubqueryAlias tv\n      +- View (`tv`, [id#0L, v#1L])\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V3 agg(max(d.v))",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Aggregate [max(v#1L) AS max(v)#33L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Aggregate [max(v#1L) AS max(v)#33L]\n+- Project [id#0L, (v#1L + cast(1 as bigint)) AS v#29L]\n   +- SubqueryAlias tv\n      +- View (`tv`, [id#0L, v#1L])\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V3 drop(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     11
+    ],
+    [
+     2,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V3 q[d.v] via select(q[...])",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     11
+    ],
+    [
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V3 join(other, d.id == other.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "s"
+   ],
+   "rows": [
+    [
+     "a"
+    ],
+    [
+     "b"
+    ]
+   ]
+  },
+  {
+   "id": "V3 join(other, q.id == other.id).select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\", \"id\", \"s\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#1L]\n+- Join Inner, (id#0L = id#6L)\n   :- Project [id#0L, (v#1L + cast(1 as bigint)) AS v#37L]\n   :  +- SubqueryAlias tv\n   :     +- View (`tv`, [id#0L, v#1L])\n   :        +- LogicalRDD [id#0L, v#1L], false\n   +- LogicalRDD [id#6L, s#7], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V3 filter(d.v > 15).select('v')",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V3 dropDuplicates([d.v])-name",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     11
+    ],
+    [
+     2,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V3 withColumn('z', d.v + 1)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [id#0L, v#48L, (v#1L + cast(1 as bigint)) AS z#49L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [id#0L, v#48L, (v#1L + cast(1 as bigint)) AS z#49L]\n+- Project [id#0L, (v#1L + cast(1 as bigint)) AS v#48L]\n   +- SubqueryAlias tv\n      +- View (`tv`, [id#0L, v#1L])\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V3 select(F.col('v'))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     11
+    ],
+    [
+     21
+    ]
+   ]
+  },
+  {
+   "id": "V4 select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#1L]\n+- Project [id#0L, v#1L AS v#51L]\n   +- SubqueryAlias tv\n      +- View (`tv`, [id#0L, v#1L])\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V4 select(d.v + 1)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [(v#1L + cast(1 as bigint)) AS (v + 1)#53L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [(v#1L + cast(1 as bigint)) AS (v + 1)#53L]\n+- Project [id#0L, v#1L AS v#52L]\n   +- SubqueryAlias tv\n      +- View (`tv`, [id#0L, v#1L])\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V4 select(d.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id"
+   ],
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  {
+   "id": "V4 select(d.id, 'v')",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V4 withColumn('z', d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [id#0L, v#56L, v#1L AS z#57L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [id#0L, v#56L, v#1L AS z#57L]\n+- Project [id#0L, v#1L AS v#56L]\n   +- SubqueryAlias tv\n      +- View (`tv`, [id#0L, v#1L])\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V4 filter(d.v > 15)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V4 where(d.v == 10)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ]
+   ]
+  },
+  {
+   "id": "V4 orderBy(d.v.desc())",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V4 sort(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V4 groupBy(d.v).count()",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Aggregate [v#1L], [v#1L, count(1) AS count#63L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Aggregate [v#1L], [v#1L, count(1) AS count#63L]\n+- Project [id#0L, v#1L AS v#62L]\n   +- SubqueryAlias tv\n      +- View (`tv`, [id#0L, v#1L])\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V4 groupBy('id').agg(max(d.v))",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Aggregate [id#0L], [id#0L, max(v#1L) AS max(v)#71L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Aggregate [id#0L], [id#0L, max(v#1L) AS max(v)#71L]\n+- Project [id#0L, v#1L AS v#67L]\n   +- SubqueryAlias tv\n      +- View (`tv`, [id#0L, v#1L])\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V4 agg(max(d.v))",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Aggregate [max(v#1L) AS max(v)#76L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Aggregate [max(v#1L) AS max(v)#76L]\n+- Project [id#0L, v#1L AS v#72L]\n   +- SubqueryAlias tv\n      +- View (`tv`, [id#0L, v#1L])\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V4 drop(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V4 q[d.v] via select(q[...])",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V4 join(other, d.id == other.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "s"
+   ],
+   "rows": [
+    [
+     "a"
+    ],
+    [
+     "b"
+    ]
+   ]
+  },
+  {
+   "id": "V4 join(other, q.id == other.id).select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\", \"id\", \"s\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#1L]\n+- Join Inner, (id#0L = id#6L)\n   :- Project [id#0L, v#1L AS v#80L]\n   :  +- SubqueryAlias tv\n   :     +- View (`tv`, [id#0L, v#1L])\n   :        +- LogicalRDD [id#0L, v#1L], false\n   +- LogicalRDD [id#6L, s#7], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V4 filter(d.v > 15).select('v')",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V4 dropDuplicates([d.v])-name",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V4 withColumn('z', d.v + 1)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [id#0L, v#91L, (v#1L + cast(1 as bigint)) AS z#92L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [id#0L, v#91L, (v#1L + cast(1 as bigint)) AS z#92L]\n+- Project [id#0L, v#1L AS v#91L]\n   +- SubqueryAlias tv\n      +- View (`tv`, [id#0L, v#1L])\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V4 select(F.col('v'))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V9 select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#1L]\n+- SubqueryAlias sv\n   +- View (`sv`, [id#94L, v#95L])\n      +- Project [cast(id#0L as bigint) AS id#94L, cast(v#1L as bigint) AS v#95L]\n         +- Project [id#0L, v#1L]\n            +- SubqueryAlias tv\n               +- View (`tv`, [id#0L, v#1L])\n                  +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V9 select(d.v + 1)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [(v#1L + cast(1 as bigint)) AS (v + 1)#98L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [(v#1L + cast(1 as bigint)) AS (v + 1)#98L]\n+- SubqueryAlias sv\n   +- View (`sv`, [id#96L, v#97L])\n      +- Project [cast(id#0L as bigint) AS id#96L, cast(v#1L as bigint) AS v#97L]\n         +- Project [id#0L, v#1L]\n            +- SubqueryAlias tv\n               +- View (`tv`, [id#0L, v#1L])\n                  +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V9 select(d.id)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"id\" missing from \"id\", \"v\" in operator !Project [id#0L]. Attribute(s) with the same name appear in the operation: \"id\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [id#0L]\n+- SubqueryAlias sv\n   +- View (`sv`, [id#99L, v#100L])\n      +- Project [cast(id#0L as bigint) AS id#99L, cast(v#1L as bigint) AS v#100L]\n         +- Project [id#0L, v#1L]\n            +- SubqueryAlias tv\n               +- View (`tv`, [id#0L, v#1L])\n                  +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V9 select(d.id, 'v')",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"id\" missing from \"id\", \"v\" in operator !Project [id#0L, v#102L]. Attribute(s) with the same name appear in the operation: \"id\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [id#0L, v#102L]\n+- SubqueryAlias sv\n   +- View (`sv`, [id#101L, v#102L])\n      +- Project [cast(id#0L as bigint) AS id#101L, cast(v#1L as bigint) AS v#102L]\n         +- Project [id#0L, v#1L]\n            +- SubqueryAlias tv\n               +- View (`tv`, [id#0L, v#1L])\n                  +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V9 withColumn('z', d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [id#103L, v#104L, v#1L AS z#105L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [id#103L, v#104L, v#1L AS z#105L]\n+- SubqueryAlias sv\n   +- View (`sv`, [id#103L, v#104L])\n      +- Project [cast(id#0L as bigint) AS id#103L, cast(v#1L as bigint) AS v#104L]\n         +- Project [id#0L, v#1L]\n            +- SubqueryAlias tv\n               +- View (`tv`, [id#0L, v#1L])\n                  +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V9 filter(d.v > 15)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Filter (v#1L > cast(15 as bigint)). Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Filter (v#1L > cast(15 as bigint))\n+- SubqueryAlias sv\n   +- View (`sv`, [id#106L, v#107L])\n      +- Project [cast(id#0L as bigint) AS id#106L, cast(v#1L as bigint) AS v#107L]\n         +- Project [id#0L, v#1L]\n            +- SubqueryAlias tv\n               +- View (`tv`, [id#0L, v#1L])\n                  +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V9 where(d.v == 10)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Filter (v#1L = cast(10 as bigint)). Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Filter (v#1L = cast(10 as bigint))\n+- SubqueryAlias sv\n   +- View (`sv`, [id#108L, v#109L])\n      +- Project [cast(id#0L as bigint) AS id#108L, cast(v#1L as bigint) AS v#109L]\n         +- Project [id#0L, v#1L]\n            +- SubqueryAlias tv\n               +- View (`tv`, [id#0L, v#1L])\n                  +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V9 orderBy(d.v.desc())",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Sort [v#1L DESC NULLS LAST], true. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Sort [v#1L DESC NULLS LAST], true\n+- SubqueryAlias sv\n   +- View (`sv`, [id#110L, v#111L])\n      +- Project [cast(id#0L as bigint) AS id#110L, cast(v#1L as bigint) AS v#111L]\n         +- Project [id#0L, v#1L]\n            +- SubqueryAlias tv\n               +- View (`tv`, [id#0L, v#1L])\n                  +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V9 sort(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Sort [v#1L ASC NULLS FIRST], true. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Sort [v#1L ASC NULLS FIRST], true\n+- SubqueryAlias sv\n   +- View (`sv`, [id#112L, v#113L])\n      +- Project [cast(id#0L as bigint) AS id#112L, cast(v#1L as bigint) AS v#113L]\n         +- Project [id#0L, v#1L]\n            +- SubqueryAlias tv\n               +- View (`tv`, [id#0L, v#1L])\n                  +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V9 groupBy(d.v).count()",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Aggregate [v#1L], [v#1L, count(1) AS count#116L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Aggregate [v#1L], [v#1L, count(1) AS count#116L]\n+- SubqueryAlias sv\n   +- View (`sv`, [id#114L, v#115L])\n      +- Project [cast(id#0L as bigint) AS id#114L, cast(v#1L as bigint) AS v#115L]\n         +- Project [id#0L, v#1L]\n            +- SubqueryAlias tv\n               +- View (`tv`, [id#0L, v#1L])\n                  +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V9 groupBy('id').agg(max(d.v))",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Aggregate [id#120L], [id#120L, max(v#1L) AS max(v)#125L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Aggregate [id#120L], [id#120L, max(v#1L) AS max(v)#125L]\n+- SubqueryAlias sv\n   +- View (`sv`, [id#120L, v#121L])\n      +- Project [cast(id#0L as bigint) AS id#120L, cast(v#1L as bigint) AS v#121L]\n         +- Project [id#0L, v#1L]\n            +- SubqueryAlias tv\n               +- View (`tv`, [id#0L, v#1L])\n                  +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V9 agg(max(d.v))",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Aggregate [max(v#1L) AS max(v)#131L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Aggregate [max(v#1L) AS max(v)#131L]\n+- SubqueryAlias sv\n   +- View (`sv`, [id#126L, v#127L])\n      +- Project [cast(id#0L as bigint) AS id#126L, cast(v#1L as bigint) AS v#127L]\n         +- Project [id#0L, v#1L]\n            +- SubqueryAlias tv\n               +- View (`tv`, [id#0L, v#1L])\n                  +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V9 drop(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V9 q[d.v] via select(q[...])",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V9 join(other, d.id == other.id)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"id\" missing from \"id\", \"v\", \"id\", \"s\" in operator !Join Inner, (id#0L = id#6L). Attribute(s) with the same name appear in the operation: \"id\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Join Inner, (id#0L = id#6L)\n:- SubqueryAlias sv\n:  +- View (`sv`, [id#136L, v#137L])\n:     +- Project [cast(id#0L as bigint) AS id#136L, cast(v#1L as bigint) AS v#137L]\n:        +- Project [id#0L, v#1L]\n:           +- SubqueryAlias tv\n:              +- View (`tv`, [id#0L, v#1L])\n:                 +- LogicalRDD [id#0L, v#1L], false\n+- LogicalRDD [id#6L, s#7], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V9 join(other, q.id == other.id).select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\", \"id\", \"s\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#1L]\n+- Join Inner, (id#138L = id#6L)\n   :- SubqueryAlias sv\n   :  +- View (`sv`, [id#138L, v#139L])\n   :     +- Project [cast(id#0L as bigint) AS id#138L, cast(v#1L as bigint) AS v#139L]\n   :        +- Project [id#0L, v#1L]\n   :           +- SubqueryAlias tv\n   :              +- View (`tv`, [id#0L, v#1L])\n   :                 +- LogicalRDD [id#0L, v#1L], false\n   +- LogicalRDD [id#6L, s#7], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V9 filter(d.v > 15).select('v')",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Filter (v#1L > cast(15 as bigint)). Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Filter (v#1L > cast(15 as bigint))\n+- SubqueryAlias sv\n   +- View (`sv`, [id#140L, v#141L])\n      +- Project [cast(id#0L as bigint) AS id#140L, cast(v#1L as bigint) AS v#141L]\n         +- Project [id#0L, v#1L]\n            +- SubqueryAlias tv\n               +- View (`tv`, [id#0L, v#1L])\n                  +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V9 dropDuplicates([d.v])-name",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V9 withColumn('z', d.v + 1)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [id#152L, v#153L, (v#1L + cast(1 as bigint)) AS z#154L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [id#152L, v#153L, (v#1L + cast(1 as bigint)) AS z#154L]\n+- SubqueryAlias sv\n   +- View (`sv`, [id#152L, v#153L])\n      +- Project [cast(id#0L as bigint) AS id#152L, cast(v#1L as bigint) AS v#153L]\n         +- Project [id#0L, v#1L]\n            +- SubqueryAlias tv\n               +- View (`tv`, [id#0L, v#1L])\n                  +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V9 select(F.col('v'))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V15 select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#1L]\n+- SubqueryAlias ta\n   +- View (`ta`, [id#0L, v#2L])\n      +- Aggregate [id#0L], [id#0L, sum(v#1L) AS v#2L]\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V15 select(d.v + 1)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [(v#1L + cast(1 as bigint)) AS (v + 1)#157L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [(v#1L + cast(1 as bigint)) AS (v + 1)#157L]\n+- SubqueryAlias ta\n   +- View (`ta`, [id#0L, v#2L])\n      +- Aggregate [id#0L], [id#0L, sum(v#1L) AS v#2L]\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V15 select(d.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id"
+   ],
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  {
+   "id": "V15 select(d.id, 'v')",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V15 withColumn('z', d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [id#0L, v#2L, v#1L AS z#161L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [id#0L, v#2L, v#1L AS z#161L]\n+- SubqueryAlias ta\n   +- View (`ta`, [id#0L, v#2L])\n      +- Aggregate [id#0L], [id#0L, sum(v#1L) AS v#2L]\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V15 filter(d.v > 15)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Filter (v#1L > cast(15 as bigint)). Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Filter (v#1L > cast(15 as bigint))\n+- SubqueryAlias ta\n   +- View (`ta`, [id#0L, v#2L])\n      +- Aggregate [id#0L], [id#0L, sum(v#1L) AS v#2L]\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V15 where(d.v == 10)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Filter (v#1L = cast(10 as bigint)). Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Filter (v#1L = cast(10 as bigint))\n+- SubqueryAlias ta\n   +- View (`ta`, [id#0L, v#2L])\n      +- Aggregate [id#0L], [id#0L, sum(v#1L) AS v#2L]\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V15 orderBy(d.v.desc())",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Sort [v#1L DESC NULLS LAST], true. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Sort [v#1L DESC NULLS LAST], true\n+- SubqueryAlias ta\n   +- View (`ta`, [id#0L, v#2L])\n      +- Aggregate [id#0L], [id#0L, sum(v#1L) AS v#2L]\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V15 sort(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Sort [v#1L ASC NULLS FIRST], true. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Sort [v#1L ASC NULLS FIRST], true\n+- SubqueryAlias ta\n   +- View (`ta`, [id#0L, v#2L])\n      +- Aggregate [id#0L], [id#0L, sum(v#1L) AS v#2L]\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V15 groupBy(d.v).count()",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Aggregate [v#1L], [v#1L, count(1) AS count#162L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Aggregate [v#1L], [v#1L, count(1) AS count#162L]\n+- SubqueryAlias ta\n   +- View (`ta`, [id#0L, v#2L])\n      +- Aggregate [id#0L], [id#0L, sum(v#1L) AS v#2L]\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V15 groupBy('id').agg(max(d.v))",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Aggregate [id#0L], [id#0L, max(v#1L) AS max(v)#169L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Aggregate [id#0L], [id#0L, max(v#1L) AS max(v)#169L]\n+- SubqueryAlias ta\n   +- View (`ta`, [id#0L, v#2L])\n      +- Aggregate [id#0L], [id#0L, sum(v#1L) AS v#2L]\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V15 agg(max(d.v))",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Aggregate [max(v#1L) AS max(v)#173L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Aggregate [max(v#1L) AS max(v)#173L]\n+- SubqueryAlias ta\n   +- View (`ta`, [id#0L, v#2L])\n      +- Aggregate [id#0L], [id#0L, sum(v#1L) AS v#2L]\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V15 drop(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V15 q[d.v] via select(q[...])",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V15 join(other, d.id == other.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "s"
+   ],
+   "rows": [
+    [
+     "a"
+    ],
+    [
+     "b"
+    ]
+   ]
+  },
+  {
+   "id": "V15 join(other, q.id == other.id).select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\", \"id\", \"s\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#1L]\n+- Join Inner, (id#0L = id#6L)\n   :- SubqueryAlias ta\n   :  +- View (`ta`, [id#0L, v#2L])\n   :     +- Aggregate [id#0L], [id#0L, sum(v#1L) AS v#2L]\n   :        +- LogicalRDD [id#0L, v#1L], false\n   +- LogicalRDD [id#6L, s#7], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V15 filter(d.v > 15).select('v')",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Filter (v#1L > cast(15 as bigint)). Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Filter (v#1L > cast(15 as bigint))\n+- SubqueryAlias ta\n   +- View (`ta`, [id#0L, v#2L])\n      +- Aggregate [id#0L], [id#0L, sum(v#1L) AS v#2L]\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V15 dropDuplicates([d.v])-name",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V15 withColumn('z', d.v + 1)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [id#0L, v#2L, (v#1L + cast(1 as bigint)) AS z#184L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [id#0L, v#2L, (v#1L + cast(1 as bigint)) AS z#184L]\n+- SubqueryAlias ta\n   +- View (`ta`, [id#0L, v#2L])\n      +- Aggregate [id#0L], [id#0L, sum(v#1L) AS v#2L]\n         +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V15 select(F.col('v'))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "DFX select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#1L]\n+- Project [id#0L, (v#1L + cast(1 as bigint)) AS v#185L]\n   +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "DFX select(d.v + 1)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [(v#1L + cast(1 as bigint)) AS (v + 1)#187L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [(v#1L + cast(1 as bigint)) AS (v + 1)#187L]\n+- Project [id#0L, (v#1L + cast(1 as bigint)) AS v#186L]\n   +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "DFX select(d.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id"
+   ],
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  {
+   "id": "DFX select(d.id, 'v')",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     11
+    ],
+    [
+     2,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "DFX withColumn('z', d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [id#0L, v#190L, v#1L AS z#191L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [id#0L, v#190L, v#1L AS z#191L]\n+- Project [id#0L, (v#1L + cast(1 as bigint)) AS v#190L]\n   +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "DFX filter(d.v > 15)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     2,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "DFX where(d.v == 10)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     11
+    ]
+   ]
+  },
+  {
+   "id": "DFX orderBy(d.v.desc())",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     11
+    ],
+    [
+     2,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "DFX sort(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     11
+    ],
+    [
+     2,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "DFX groupBy(d.v).count()",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Aggregate [v#1L], [v#1L, count(1) AS count#197L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Aggregate [v#1L], [v#1L, count(1) AS count#197L]\n+- Project [id#0L, (v#1L + cast(1 as bigint)) AS v#196L]\n   +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "DFX groupBy('id').agg(max(d.v))",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Aggregate [id#0L], [id#0L, max(v#1L) AS max(v)#205L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Aggregate [id#0L], [id#0L, max(v#1L) AS max(v)#205L]\n+- Project [id#0L, (v#1L + cast(1 as bigint)) AS v#201L]\n   +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "DFX agg(max(d.v))",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Aggregate [max(v#1L) AS max(v)#210L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Aggregate [max(v#1L) AS max(v)#210L]\n+- Project [id#0L, (v#1L + cast(1 as bigint)) AS v#206L]\n   +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "DFX drop(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     11
+    ],
+    [
+     2,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "DFX q[d.v] via select(q[...])",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     11
+    ],
+    [
+     21
+    ]
+   ]
+  },
+  {
+   "id": "DFX join(other, d.id == other.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "s"
+   ],
+   "rows": [
+    [
+     "a"
+    ],
+    [
+     "b"
+    ]
+   ]
+  },
+  {
+   "id": "DFX join(other, q.id == other.id).select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\", \"id\", \"s\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#1L]\n+- Join Inner, (id#0L = id#6L)\n   :- Project [id#0L, (v#1L + cast(1 as bigint)) AS v#214L]\n   :  +- LogicalRDD [id#0L, v#1L], false\n   +- LogicalRDD [id#6L, s#7], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "DFX filter(d.v > 15).select('v')",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     21
+    ]
+   ]
+  },
+  {
+   "id": "DFX dropDuplicates([d.v])-name",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     11
+    ],
+    [
+     2,
+     21
+    ]
+   ]
+  },
+  {
+   "id": "DFX withColumn('z', d.v + 1)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [id#0L, v#225L, (v#1L + cast(1 as bigint)) AS z#226L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [id#0L, v#225L, (v#1L + cast(1 as bigint)) AS z#226L]\n+- Project [id#0L, (v#1L + cast(1 as bigint)) AS v#225L]\n   +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "DFX select(F.col('v'))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     11
+    ],
+    [
+     21
+    ]
+   ]
+  },
+  {
+   "id": "WCR select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#1L]\n+- Project [id#0L, v#1L AS v#228L]\n   +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "WCR select(d.v + 1)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [(v#1L + cast(1 as bigint)) AS (v + 1)#230L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [(v#1L + cast(1 as bigint)) AS (v + 1)#230L]\n+- Project [id#0L, v#1L AS v#229L]\n   +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "WCR select(d.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id"
+   ],
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  {
+   "id": "WCR select(d.id, 'v')",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "WCR withColumn('z', d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [id#0L, v#233L, v#1L AS z#234L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [id#0L, v#233L, v#1L AS z#234L]\n+- Project [id#0L, v#1L AS v#233L]\n   +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "WCR filter(d.v > 15)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "WCR where(d.v == 10)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ]
+   ]
+  },
+  {
+   "id": "WCR orderBy(d.v.desc())",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "WCR sort(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "WCR groupBy(d.v).count()",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Aggregate [v#1L], [v#1L, count(1) AS count#240L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Aggregate [v#1L], [v#1L, count(1) AS count#240L]\n+- Project [id#0L, v#1L AS v#239L]\n   +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "WCR groupBy('id').agg(max(d.v))",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Aggregate [id#0L], [id#0L, max(v#1L) AS max(v)#248L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Aggregate [id#0L], [id#0L, max(v#1L) AS max(v)#248L]\n+- Project [id#0L, v#1L AS v#244L]\n   +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "WCR agg(max(d.v))",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Aggregate [max(v#1L) AS max(v)#253L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Aggregate [max(v#1L) AS max(v)#253L]\n+- Project [id#0L, v#1L AS v#249L]\n   +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "WCR drop(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "WCR q[d.v] via select(q[...])",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "WCR join(other, d.id == other.id)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "s"
+   ],
+   "rows": [
+    [
+     "a"
+    ],
+    [
+     "b"
+    ]
+   ]
+  },
+  {
+   "id": "WCR join(other, q.id == other.id).select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\", \"id\", \"s\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#1L]\n+- Join Inner, (id#0L = id#6L)\n   :- Project [id#0L, v#1L AS v#257L]\n   :  +- LogicalRDD [id#0L, v#1L], false\n   +- LogicalRDD [id#6L, s#7], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "WCR filter(d.v > 15).select('v')",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "WCR dropDuplicates([d.v])-name",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "WCR withColumn('z', d.v + 1)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [id#0L, v#268L, (v#1L + cast(1 as bigint)) AS z#269L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [id#0L, v#268L, (v#1L + cast(1 as bigint)) AS z#269L]\n+- Project [id#0L, v#1L AS v#268L]\n   +- LogicalRDD [id#0L, v#1L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "WCR select(F.col('v'))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V12 select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#1L]\n+- SubqueryAlias tv\n   +- View (`tv`, [id#271L, v#272L])\n      +- LogicalRDD [id#271L, v#272L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V12 select(d.v + 1)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [(v#1L + cast(1 as bigint)) AS (v + 1)#273L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [(v#1L + cast(1 as bigint)) AS (v + 1)#273L]\n+- SubqueryAlias tv\n   +- View (`tv`, [id#271L, v#272L])\n      +- LogicalRDD [id#271L, v#272L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V12 select(d.id)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"id\" missing from \"id\", \"v\" in operator !Project [id#0L]. Attribute(s) with the same name appear in the operation: \"id\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [id#0L]\n+- SubqueryAlias tv\n   +- View (`tv`, [id#271L, v#272L])\n      +- LogicalRDD [id#271L, v#272L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V12 select(d.id, 'v')",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"id\" missing from \"id\", \"v\" in operator !Project [id#0L, v#272L]. Attribute(s) with the same name appear in the operation: \"id\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [id#0L, v#272L]\n+- SubqueryAlias tv\n   +- View (`tv`, [id#271L, v#272L])\n      +- LogicalRDD [id#271L, v#272L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V12 withColumn('z', d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [id#271L, v#272L, v#1L AS z#274L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [id#271L, v#272L, v#1L AS z#274L]\n+- SubqueryAlias tv\n   +- View (`tv`, [id#271L, v#272L])\n      +- LogicalRDD [id#271L, v#272L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V12 filter(d.v > 15)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Filter (v#1L > cast(15 as bigint)). Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Filter (v#1L > cast(15 as bigint))\n+- SubqueryAlias tv\n   +- View (`tv`, [id#271L, v#272L])\n      +- LogicalRDD [id#271L, v#272L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V12 where(d.v == 10)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Filter (v#1L = cast(10 as bigint)). Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Filter (v#1L = cast(10 as bigint))\n+- SubqueryAlias tv\n   +- View (`tv`, [id#271L, v#272L])\n      +- LogicalRDD [id#271L, v#272L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V12 orderBy(d.v.desc())",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Sort [v#1L DESC NULLS LAST], true. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Sort [v#1L DESC NULLS LAST], true\n+- SubqueryAlias tv\n   +- View (`tv`, [id#271L, v#272L])\n      +- LogicalRDD [id#271L, v#272L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V12 sort(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Sort [v#1L ASC NULLS FIRST], true. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Sort [v#1L ASC NULLS FIRST], true\n+- SubqueryAlias tv\n   +- View (`tv`, [id#271L, v#272L])\n      +- LogicalRDD [id#271L, v#272L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V12 groupBy(d.v).count()",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Aggregate [v#1L], [v#1L, count(1) AS count#275L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Aggregate [v#1L], [v#1L, count(1) AS count#275L]\n+- SubqueryAlias tv\n   +- View (`tv`, [id#271L, v#272L])\n      +- LogicalRDD [id#271L, v#272L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V12 groupBy('id').agg(max(d.v))",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Aggregate [id#271L], [id#271L, max(v#1L) AS max(v)#282L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Aggregate [id#271L], [id#271L, max(v#1L) AS max(v)#282L]\n+- SubqueryAlias tv\n   +- View (`tv`, [id#271L, v#272L])\n      +- LogicalRDD [id#271L, v#272L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V12 agg(max(d.v))",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Aggregate [max(v#1L) AS max(v)#286L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Aggregate [max(v#1L) AS max(v)#286L]\n+- SubqueryAlias tv\n   +- View (`tv`, [id#271L, v#272L])\n      +- LogicalRDD [id#271L, v#272L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V12 drop(d.v)",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     100
+    ],
+    [
+     2,
+     200
+    ]
+   ]
+  },
+  {
+   "id": "V12 q[d.v] via select(q[...])",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     100
+    ],
+    [
+     200
+    ]
+   ]
+  },
+  {
+   "id": "V12 join(other, d.id == other.id)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"id\" missing from \"id\", \"v\", \"id\", \"s\" in operator !Join Inner, (id#0L = id#6L). Attribute(s) with the same name appear in the operation: \"id\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Join Inner, (id#0L = id#6L)\n:- SubqueryAlias tv\n:  +- View (`tv`, [id#271L, v#272L])\n:     +- LogicalRDD [id#271L, v#272L], false\n+- LogicalRDD [id#6L, s#7], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V12 join(other, q.id == other.id).select(d.v)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\", \"id\", \"s\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [v#1L]\n+- Join Inner, (id#271L = id#6L)\n   :- SubqueryAlias tv\n   :  +- View (`tv`, [id#271L, v#272L])\n   :     +- LogicalRDD [id#271L, v#272L], false\n   +- LogicalRDD [id#6L, s#7], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V12 filter(d.v > 15).select('v')",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Filter (v#1L > cast(15 as bigint)). Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Filter (v#1L > cast(15 as bigint))\n+- SubqueryAlias tv\n   +- View (`tv`, [id#271L, v#272L])\n      +- LogicalRDD [id#271L, v#272L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V12 dropDuplicates([d.v])-name",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "id",
+    "v"
+   ],
+   "rows": [
+    [
+     1,
+     100
+    ],
+    [
+     2,
+     200
+    ]
+   ]
+  },
+  {
+   "id": "V12 withColumn('z', d.v + 1)",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "message": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [id#271L, v#272L, (v#1L + cast(1 as bigint)) AS z#295L]. Attribute(s) with the same name appear in the operation: \"v\".\nPlease check if the right attribute(s) are used. SQLSTATE: XX000;\n!Project [id#271L, v#272L, (v#1L + cast(1 as bigint)) AS z#295L]\n+- SubqueryAlias tv\n   +- View (`tv`, [id#271L, v#272L])\n      +- LogicalRDD [id#271L, v#272L], false\n",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V12 select(F.col('v'))",
+   "kind": "run",
+   "outcome": "OK",
+   "columns": [
+    "v"
+   ],
+   "rows": [
+    [
+     100
+    ],
+    [
+     200
+    ]
+   ]
+  }
+ ]
+}
