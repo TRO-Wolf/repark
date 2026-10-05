@@ -615,7 +615,9 @@ declines it (a dated ruling in the intake, then the archive).
   and SQL-defined views mint ids in Spark (`v#3L`, `id#16L/v#17L`) and foreign columns raise
   MISSING_ATTRIBUTES; measured on Spark 4.1.2, 1.5.2 and the stack (`d5c97862`) — 11/7 on main,
   9/9 on the stack, the two V-3 internal errors the only new stack differences; scope (a)–(d)
-  with proposed pins, V10/F16 out, grade and release questions for the owner.
+  with proposed pins, V10/F16 out; **owner rulings 2026-10-05:** grade B with an Opus sketch after the TA
+  series work, (d) fixed on the stack before the stack-to-main PR, (a)–(c) their own PR on main after
+  the stack merges, (c) ships with a release note in the minor (no warning-first), V6b out.
 - [explain-root-sort-1-card-2026-10-04.md](explain-root-sort-1-card-2026-10-04.md) — **card
   EXPLAIN-ROOT-SORT-1 (2026-10-04, measured on 1.5.2):** the facade's `explain()` plans the
   frame through a scratch view, so DataFusion's subquery sort elimination hides a root `Sort`
