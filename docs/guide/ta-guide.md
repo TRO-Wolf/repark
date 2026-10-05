@@ -8,6 +8,13 @@ states it exactly as the repo does.
 
 ## The shape
 
+> **Sort before computing series indicators.** A bare `ta.*` column (no `.over(...)`) is computed
+> over the frame's declared sort order — `df.sort("ts")` (also through `.eager()`, `.cache()` and
+> `localCheckpoint`). Without one, the first timestamp column (or, without one, the first date
+> column) orders the series and RePark warns once per session; with neither, the frame's current
+> row order is used. Rows that share a key value have no defined order among themselves. Use
+> `.over(Window.partitionBy(...).orderBy(...))` for one series per instrument.
+
 `repark.ta` lives at `repark.spark.ta`, so the mechanical `pyspark` → `repark.spark` swap lands on
 it. Every `ta.*` function returns an **un-`OVER`ed** `Column`: the kernels are *stateful,
 full-series* functions — every value depends on the whole ordered history — so a column is only
@@ -59,8 +66,9 @@ df.withColumn("sma3", ta.sma("close", timeperiod=3).over(w)).select(
 
 Two rules follow from "the kernel needs the whole ordered history":
 
-- **Ordering is yours to supply.** Without an `ORDER BY` inside `.over(...)` the partition order is
-  undefined, exactly as in Spark.
+- **Ordering comes from the window, or from the frame.** Inside `.over(...)` the window's
+  `ORDER BY` is the order, and an explicit `.over(...)` without one is refused for a `ta.*` column.
+  A bare `ta.*` column takes the frame's order, as the note above describes.
 - **So is partitioning.** `Window.orderBy("ts")` alone treats every symbol as one series, so RSI,
   EMA and MACD silently leak across instruments that share timestamps. That footgun is the reason
   the serving helper below refuses to guess column names.
@@ -183,10 +191,11 @@ df.withColumn("sma3", ta.sma("close", timeperiod=3, null_lookback=True).over(w))
 +--------+----+--------------------+
 ```
 
-The rewrite is by **row position** (`row_number() <= lookback`), never a blanket `isnan`, so a
-mid-series NaN is never rewritten — a hole in your data still shows as a hole. The default is
-`False` and leaves the kernel output byte-unchanged. `with_indicators(..., null_lookback=True)`
-threads the same rewrite through every column in the dict.
+The prefix is by **row position** — the window function itself emits the first `lookback` rows of
+each window partition as `NULL`, in both the bare and the `.over(...)` spelling — never a blanket
+`isnan`, so a mid-series NaN is never rewritten — a hole in your data still shows as a hole. The
+default is `False` and leaves the kernel output byte-unchanged. `with_indicators(...,
+null_lookback=True)` threads the same prefix through every column in the dict.
 
 ## The indicator set
 
