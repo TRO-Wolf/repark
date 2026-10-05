@@ -4,7 +4,6 @@ use std::sync::Arc;
 use pyo3::prelude::*;
 
 use crate::dataframe::PyDataFrame;
-use crate::deep_stack::block_on;
 use crate::fence::{fenced, fenced_span};
 use crate::session::PyReparkSession;
 use crate::to_py_err;
@@ -69,15 +68,14 @@ pub fn read_iceberg_incremental(
         let inner: &PyReparkSession = &session;
         let df = py
             .detach(|| {
-                block_on(
-                    &inner.runtime,
-                    repark_core::time_travel::incremental::read_incremental(
+                inner
+                    .runtime
+                    .block_on(repark_core::time_travel::incremental::read_incremental(
                         &inner.session,
                         table_name,
                         &window,
                         &travel,
-                    ),
-                )
+                    ))
             })
             .map_err(to_py_err)?;
         Ok(PyDataFrame::new(df, Arc::clone(&inner.runtime)))
@@ -93,7 +91,11 @@ pub fn read_iceberg_path(
     fenced_span!("py.read", "PyReparkSession.read_iceberg_path", {
         let inner: &PyReparkSession = &session;
         let df = py
-            .detach(|| block_on(&inner.runtime, inner.session.read_iceberg_path(path)))
+            .detach(|| {
+                inner
+                    .runtime
+                    .block_on(inner.session.read_iceberg_path(path))
+            })
             .map_err(to_py_err)?;
         Ok(PyDataFrame::new(df, Arc::clone(&inner.runtime)))
     })
@@ -129,15 +131,12 @@ pub(crate) fn read_iceberg_table_pinned(
         };
         let df = py
             .detach(|| {
-                block_on(
-                    &session.runtime,
-                    session.session.read_iceberg_table(
-                        table_name,
-                        opts,
-                        version_as_of,
-                        timestamp_as_of,
-                    ),
-                )
+                session.runtime.block_on(session.session.read_iceberg_table(
+                    table_name,
+                    opts,
+                    version_as_of,
+                    timestamp_as_of,
+                ))
             })
             .map_err(to_py_err)?;
         Ok(PyDataFrame::new(df, Arc::clone(&session.runtime)))

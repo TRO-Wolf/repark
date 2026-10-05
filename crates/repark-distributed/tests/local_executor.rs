@@ -11,7 +11,10 @@ use repark_core::ReparkSession;
 use repark_distributed::{DistributedExecutor, JobStatus, LocalDataFusionExecutor};
 
 fn session_context() -> SessionContext {
-    let session = match ReparkSession::new() {
+    let session = match ReparkSession::builder()
+        .parallel_single_partition(false)
+        .build()
+    {
         Ok(session) => session,
         Err(error) => panic!("ReparkSession::new: {error}"),
     };

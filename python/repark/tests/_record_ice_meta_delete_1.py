@@ -217,7 +217,6 @@ def record(warehouse: Path) -> dict[str, Any]:
         for version in VERSIONS
         for mode in MODES
     }
-    session.stop()
     return cells
 
 
