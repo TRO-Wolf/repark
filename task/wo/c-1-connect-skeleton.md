@@ -110,7 +110,7 @@ Design sketch, naming types and signatures:
 
 - `repark-common`: `SourceKind` moved unchanged (`Postgres`, `SqlServer`, `Trino`,
   with `spelling()`); new `SourceIdentity { name: String, kind: SourceKind,
-  generation: Option<NonZeroU64> }` (R-12 as amended). `SourceSpec` in core keeps `profile`, `auto_register`,
+  generation: u64 }`. `SourceSpec` in core keeps `profile`, `auto_register`,
   `props` and carries the identity; `key_path()` renders from it unchanged.
 - `settings.rs`: `ConnectionSettings` built from one source's props: the parsed
   `auth_method` plus the untouched prop map. `AuthMethod`: password accepted
@@ -158,9 +158,6 @@ Design sketch, naming types and signatures:
 - ~~H-GEN~~ **Ruled R-12 (orchestrator, 2026-10-05; reversible before 1.6 ships):** the
   identity's generation field is a `u64`, where `0` means unassigned. 1.7's capture
   assigns it on first use (CC-2/CC-9). Equality is the only operation C-1 needs.
-  **Amended (owner, 2026-10-05: "generation u64/0-unassigned accepted, with 0 only in the serialized form and an Option or NonZero type in Rust"):** the Rust type is
-  `Option<NonZeroU64>`, `None` meaning unassigned; `0` exists only in a serialized form, mapped
-  `0` ↔ `None` at that boundary. C-1 serializes no identity, so no `0` appears in Rust.
 - ~~H-AUTH~~ **Ruled R-13 (orchestrator, 2026-10-05; reversible before 1.6 ships):**
   `auth_method` values are `password` (the default when absent), `iam_token` and
   `kerberos`. That is snake case, following `auto_register`, the only multi-word
