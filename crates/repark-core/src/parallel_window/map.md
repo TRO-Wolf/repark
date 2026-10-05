@@ -51,8 +51,9 @@ provider's cloned state would not be enough. The flag defaults to on; it has no 
   left as `OVER ()` (case (c), no declared order and no temporal column) reaches it, because the
   facade refuses `.over(...)` without `ORDER BY` for every window UDF. Through SQL, an unordered
   window UDF that DataFusion plans as a `WindowAggExec` (`ta_*() OVER ()`, for one) reads in
-  partition-index order too: deterministic, otherwise the
-  same answer. Every other `OVER ()` window keeps today's plan: aggregates (`sum(x) OVER ()`)
+  partition-index order too: the arm runs the input with file-stream work stealing off, so the
+  read is deterministic, otherwise the same answer. Every other `OVER ()` window keeps today's
+  plan: aggregates (`sum(x) OVER ()`)
   and mixed aggregate/UDF nodes take the S2b arm over the coalesce when they have at least two
   groups, and stay a `WindowAggExec` otherwise.
 - `exec.rs` — `ParallelWindowExec`. Built from the `WindowAggExec` it replaces: the same input,
@@ -66,6 +67,10 @@ provider's cloned state would not be enough. The flag defaults to on; it has no 
   the coalesced window around the new child. Execution spawns one `SpawnedTask` per X partition
   that collects it, then joins the tasks **in partition-index order**, so the window sees X's
   partitions concatenated 0, 1, … instead of in completion order; statistics read X's totals.
+  **V950-1 fold (2026-10-05):** the arm executes X with a `TaskContext` derived from the incoming
+  one whose session config sets `execution.enable_file_stream_work_stealing = false`, so each
+  partition reads its own file group (or byte range) and partition-index order is file order; the
+  `Single` arm and every other operator keep the incoming context unchanged.
   Execution: collect the input and `concat_batches` it once (as `WindowAggStream` does); empty
   input emits no batch; one `SpawnedTask::spawn_blocking` per group, capped by a
   `tokio::sync::Semaphore` of `min(groups, target_partitions)`; each group evaluates its members

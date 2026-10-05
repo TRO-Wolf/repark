@@ -10,10 +10,13 @@ states it exactly as the repo does.
 
 > **Sort before computing series indicators.** A bare `ta.*` column (no `.over(...)`) is computed
 > over the frame's declared sort order — `df.sort("ts")` (also through `.eager()`, `.cache()` and
-> `localCheckpoint`). Without one, the first timestamp column (or, without one, the first date
-> column) orders the series and RePark warns once per session; with neither, the frame's current
-> row order is used. Rows that share a key value have no defined order among themselves. Use
-> `.over(Window.partitionBy(...).orderBy(...))` for one series per instrument.
+> `localCheckpoint`). An order declared only through a temp view or a SQL subquery's `ORDER BY`
+> is not seen as a declared order; such frames use the first-timestamp rule and warn — sort the
+> DataFrame (or use `.over(Window.orderBy(...))`) to be explicit. Without one, the first timestamp
+> column (or, without one, the first date column) orders the series and RePark warns once per
+> session; with neither, the frame's current row order is used. Rows that share a key value have
+> no defined order among themselves. Use `.over(Window.partitionBy(...).orderBy(...))` for one
+> series per instrument.
 
 `repark.ta` lives at `repark.spark.ta`, so the mechanical `pyspark` → `repark.spark` swap lands on
 it. Every `ta.*` function returns an **un-`OVER`ed** `Column`: the kernels are *stateful,

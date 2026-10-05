@@ -283,3 +283,50 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-core/src/series_order/tests.rs, crates/repark-core/src/parallel_window/tests.rs, crates/repark-ta/tests/null_prefix.rs, python/repark/tests/test_ta_series.py]
   complete: true
 ```
+
+## 7. Verifier fold V950-1 / V950-2 (2026-10-05)
+
+The scoped Opus verifier passed #950 (`verify950/handback.json`) with one S2 and one S3; both
+fold here under the S2a-fold rulings R-F1…R-F4. **C-004 correction:** the clause's determinism
+claim as written was false. Joining X's partitions in index order is not enough: DataFusion 54's
+`datafusion.execution.enable_file_stream_work_stealing` (default true) lets an idle partition
+read files or byte-range morsels assigned to a sibling, so partition order is not file order.
+Measured on the pre-fold head: the owner's single-file frame came back in file order 5 of 10
+runs, 10 of 10 with stealing off. The corrected claim is that case (c) reads file order because
+the arm runs its input with stealing off.
+
+- **V950-1 (S2), R-F1.** `partition_index_stream` (`crates/repark-core/src/parallel_window/exec.rs`)
+  now executes X with a `TaskContext` derived from the incoming one (same task and session id,
+  same functions, same runtime) whose session config sets
+  `enable_file_stream_work_stealing = false`. `DataSourceExec::execute` builds its sibling state
+  from the first execute call's config, so the override covers the whole subtree. Only the
+  `InputOrder::PartitionIndex` arm uses the derived context; the `Single` arm and every other
+  operator keep the incoming context unchanged. No Cargo change, no new crate, no `.github`.
+- **V950-1 pins, R-F2.**
+  `test_ta_series.py::test_bare_ta_file_stream_stealing_reads_file_order` runs case (c) 10 times
+  over an 8-file directory read written by the test (plan shows 8 file groups) and 10 times over
+  one 1.2 M-row file (31 MB, 12 row groups) that `target_partitions=16` splits into 16 file
+  groups (asserted from the plan), each time bit-equal to the explicit
+  `.over(Window.orderBy("rid"))` answer with the identical row order. Post-fix: 10 of 10 on both
+  legs (three runs: one pin run, two counting-probe runs). Mutation (the override dropped): the
+  pin goes red on the byte-range leg; the counting probe over three runs differs 0, 1 and 3 of 10
+  on the multi-file leg and 4, 6 and 3 of 10 on the byte-range leg, in row order and in values.
+- **V950-2 (S3), R-F3.** Docs only: the `ta-guide.md` order note now says an order declared only
+  through a temp view or a SQL subquery's `ORDER BY` is not a declared order.
+- Maps: the `parallel_window` `rule.rs` / `exec.rs` rows name the work-stealing override, the
+  facade-tests row carries the new pin (`pins: ta-series-s2a/C-004`), the guide row notes V950-2.
+
+```yaml
+FOLD_ATTESTATION:
+  fold: V950-1 / V950-2 (#950)
+  unit: ta-series-s2a
+  date: 2026-10-05
+  corrects: C-004
+  fix: crates/repark-core/src/parallel_window/exec.rs (partition_index_stream)
+  pin: python/repark/tests/test_ta_series.py::test_bare_ta_file_stream_stealing_reads_file_order
+  pin_result: 10/10 multi-file (8 groups), 10/10 byte-range (16 groups), bit-equal to file order
+  mutation: override dropped, pin red; probe diffs multi-file 0-3/10, byte-range 3-6/10
+  docs: docs/guide/ta-guide.md order note (V950-2)
+  maps: parallel_window, python/repark/tests, docs/guide
+  complete: true
+```

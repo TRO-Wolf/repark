@@ -6943,6 +6943,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   frame sorted by a later timestamp column, `.eager().lazy()`, resolves by (a) through S1's
   declared `MemTable` order, no warning, bit-equal to the explicit spelling over that column).
   pins: ta-series-s2a/C-013
+  **V950-1 fold (2026-10-05):** `test_bare_ta_file_stream_stealing_reads_file_order` (case (c)
+  over an 8-file directory read and over one 1.2 M-row file split into byte ranges reads the
+  file-order answer 10 of 10 times each; asserts 8 file groups and more than 1 file group).
+  pins: ta-series-s2a/C-004
 - `test_ta_with_indicators.py` — **conductor-13 TA-2:** `ta.with_indicators` serving helper.
   Arrow value+type vs hand-built `over_columns`; required keyword-only `partition`/`order`
   (TypeError on omit; empty partition refuses); cross-symbol RSI leak vs unpartitioned
