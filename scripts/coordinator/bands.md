@@ -25,7 +25,7 @@ an unscored engine runs guided.
 | Grok 4.7 | 38.0 / 37.6 | llm-stats, Snorkel | guided |
 | GPT-5.6 Sol | 37.3 | llm-stats, Snorkel | guided |
 | Muse Spark 1.3 | 33.3 | AA (Intelligence Index v4.3 note) | guided |
-| Devin SWE-2 | 27.3 | benchlm.ai | guided |
+| Devin SWE-2 | 27.3 | benchlm.ai | retired — subscription cancelled by the owner 2026-10-05; never dispatched |
 | GPT-5.6 Terra | 21.5 | llm-stats, Snorkel | clerk |
 | Grok 4.6 | 20.3 | llm-stats, Snorkel | clerk |
 | GPT-5.6 Luna | 17.3 | llm-stats, Snorkel | clerk |

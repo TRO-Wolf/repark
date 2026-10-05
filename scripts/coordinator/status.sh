@@ -46,7 +46,7 @@ main_sha() {
 
 rounds_ended() {
   local L=$1 T
-  for T in devin muse grok opus; do
+  for T in muse grok opus; do
     [ -d $SCRATCH/$T-worker/$L ] && find $SCRATCH/$T-worker/$L -mindepth 2 -maxdepth 2 -name exit -newer $MK -printf "$T %h\n" 2>/dev/null
   done
   [ -d $ROOT/codex-worker/$L ] && find $ROOT/codex-worker/$L -mindepth 2 -maxdepth 2 -name exit -newer $MK -printf "codex %h\n" 2>/dev/null
@@ -136,7 +136,7 @@ echo "## world status for $UNIT"
 for L in $LANES; do
   echo "### lane $L"
   echo "active worker units: $(systemctl --user list-units --no-legend --state=active "*-$L-*" 2>/dev/null | awk '{print $1}' | tr '\n' ' ')"
-  for T in devin muse grok; do
+  for T in muse grok; do
     D=$(ls -d $SCRATCH/$T-worker/$L/*/ 2>/dev/null | tail -1)
     [ -n "$D" ] || continue
     echo "latest $T round: $D exit=$(cat $D/exit 2>/dev/null || echo running) handback=$([ -f $D/handback.json ] && echo yes || echo no)"
