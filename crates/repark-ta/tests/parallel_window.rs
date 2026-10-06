@@ -231,6 +231,10 @@ async fn stamped_plan_through_optimizer_reaches_executors_stripped() {
     let (state, plan) = frame.into_parts();
     let stamped = stamp(plan).expect("stamp");
     assert!(plan_carries_id(&stamped));
+    let optimized = DataFrame::new(state.clone(), stamped.clone())
+        .into_optimized_plan()
+        .expect("optimize");
+    assert!(!plan_carries_id(&optimized));
     let physical = DataFrame::new(state, stamped)
         .create_physical_plan()
         .await
@@ -244,6 +248,11 @@ async fn stamped_plan_through_optimizer_reaches_executors_stripped() {
     let frame = parallel.sql(second).await.expect("sql");
     let (state, plan) = frame.into_parts();
     let stamped = stamp(plan).expect("stamp");
+    assert!(plan_carries_id(&stamped));
+    let optimized = DataFrame::new(state.clone(), stamped.clone())
+        .into_optimized_plan()
+        .expect("optimize");
+    assert!(!plan_carries_id(&optimized));
     let physical = DataFrame::new(state, stamped)
         .create_physical_plan()
         .await
