@@ -165,7 +165,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **Fold SM-2c C-3 (2026-10-06):** `_register_temp_view` renames the registered
   frame's output fields to the display names when they are exactly unique
   (`writer_layout._rename_to_unique_display_names`), so a dropped-side twin
-  engine name never reaches the view. pins: attr-id-1/C-067, C-068. Every
+  engine name never reaches the view; EXPLAIN opts out with
+  `rename_fields=False` because the plan text must show the true engine
+  plan. pins: attr-id-1/C-067, C-068. Every
   raised `AnalysisException` carries its Spark errorClass through the
   `_integral` attach helpers (`getCondition`). `Table Properties` parses as
   comma-joined `k=v` with `=`-less fragments folded into the previous value

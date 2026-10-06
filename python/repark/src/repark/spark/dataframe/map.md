@@ -1758,5 +1758,8 @@ file, table or view: `writer_layout._registration_frame` (strip plus
 forward, `_rename_to_unique_display_names` feeds `_register_temp_view` and
 both text writers, and the native `rename_output_fields` binding projects
 the positional aliases on the Rust side. Duplicate display names skip the
-rename, so refusals and positional `insertInto` behave as before.
+rename, so refusals and positional `insertInto` behave as before. EXPLAIN's
+scratch view passes `rename_fields=False` through
+`register_view_without_fill`, so the plan text shows the true engine plan
+(the R5 refusal stays out of that helper for the same reason).
 pins: attr-id-1/C-067, C-068
