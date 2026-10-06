@@ -17,7 +17,7 @@ use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::parser::Parser;
 use repark_common::spark_error;
 
-use super::attr_id::{same_relation, with_id};
+use super::attr_id::same_relation;
 
 pub use super::attr_id::{
     AttrId, Resolution, alias_with_fresh_id, attribute_ids, copy_attribute_ids, stamp, strip,
@@ -639,50 +639,17 @@ pub fn join_on_named_keys(
     }
     let mut seen: HashSet<String> = HashSet::new();
     let mut right_kept = 0usize;
-    let left_width = left_schema.fields().len();
-    let coalesce_keys = matches!(join_type, JoinType::Full | JoinType::Right);
-    let right_cols: Vec<Option<Column>> = keys
-        .iter()
-        .map(|key| {
-            joined
-                .schema()
-                .iter()
-                .enumerate()
-                .filter(|(index, _)| *index >= left_width)
-                .find(|(_, (_, field))| rule.matches(key, field.name()))
-                .map(|(_, (qualifier, field))| Column::new(qualifier.cloned(), field.name()))
-        })
-        .collect();
     let projection: Vec<Expr> = joined
         .schema()
         .iter()
         .enumerate()
-        .filter_map(|(index, (qualifier, field))| {
-            let matched = keys.iter().position(|key| rule.matches(key, field.name()));
-            let keep = matched.is_none_or(|key| seen.insert(keys[key].clone()));
-            right_kept += usize::from(keep && index >= left_width);
-            keep.then_some((qualifier, field, matched))
+        .filter(|(index, (_, field))| {
+            let matched = keys.iter().find(|key| rule.matches(key, field.name()));
+            let keep = matched.is_none_or(|key| seen.insert(key.clone()));
+            right_kept += usize::from(keep && *index >= left_schema.fields().len());
+            keep
         })
-        .map(|(qualifier, field, matched)| {
-            let side = Column::new(qualifier.cloned(), field.name());
-            if !coalesce_keys {
-                return Expr::Column(side);
-            }
-            let Some(key) = matched else {
-                return Expr::Column(side);
-            };
-            let Some(right) = right_cols[key].clone() else {
-                return Expr::Column(side);
-            };
-            let merged = datafusion::functions::expr_fn::coalesce(vec![
-                Expr::Column(side),
-                Expr::Column(right),
-            ]);
-            match AttrId::of(field) {
-                Some(id) => with_id(merged, None, field.name(), &id),
-                None => merged.alias(field.name()),
-            }
-        })
+        .map(|(_, (qualifier, field))| Expr::Column(Column::new(qualifier.cloned(), field.name())))
         .collect();
     let right_start = projection.len() - right_kept;
     let (state, plan) = joined.select(projection)?.into_parts();

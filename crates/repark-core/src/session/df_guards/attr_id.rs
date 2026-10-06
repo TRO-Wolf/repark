@@ -330,12 +330,7 @@ fn strip_aliases(expr: &Expr) -> &Expr {
     inner
 }
 
-pub(super) fn with_id(
-    expr: Expr,
-    qualifier: Option<&TableReference>,
-    name: &str,
-    id: &AttrId,
-) -> Expr {
+fn with_id(expr: Expr, qualifier: Option<&TableReference>, name: &str, id: &AttrId) -> Expr {
     match expr {
         Expr::Alias(alias) => {
             let mut metadata = alias.metadata.clone().unwrap_or_default();

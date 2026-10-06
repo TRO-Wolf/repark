@@ -612,23 +612,22 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   (`select("id", "id")`) still run. The case-sensitivity read falls back to
   insensitive when the session is a test double, which has no native handle.
   pins: attr-id-1/C-063
-  **Fold SM-2 R6 (2026-10-06):** the USING-key marker home. `_using_state`
-  runs at the two DataFrame USING sites: it restores the kept key's facade
-  qualifier names (the Rust coalesce projection is opaque to
-  `join_output_sources`, which only sees through passthrough columns) and
-  returns the immutable `(kept ids, keys, refused qualifier names)` mark
-  for `left`/`right`/`full` (each side's qualifier names that must not
-  resolve to the merged key; `inner`/`semi`/`anti` carry none).
+  **Fold SM-2 R6 (2026-10-06, R-R6-2/3):** the USING-key marker home.
+  `_using_state` runs at the two DataFrame USING sites and returns the
+  immutable `(kept ids, keys, refused qualifier names, right key ids)`
+  mark for `left`/`right`/`full` (`inner`/`semi`/`anti` carry none): the
+  kept key is the left key physically, so left-side references bind it
+  Spark-exact and only right-side qualifier names refuse. No facade
+  qualifier patching: the kept field keeps its main qualifiers.
   `_join_frame_qualifiers` unions side marks onto every join child, so
   later joins still see nested USING keys. The chokes refuse before any
   bind: `_refuse_using_key_name` (select/getitem/sort strings),
   `_refuse_using_key_text` (generated backtick-quoted SQL and user SQL with
   quoted spans skipped), and `_refuse_using_key_tokens` (attribute tokens
-  whose birth frame is neither join side, i.e. pre-join side keys reused
-  after the merge, where Spark answers left values). Stale marks (key
-  projected away, shadowed aliases, alias-descendant births) refuse loud;
-  the unqualified key always binds the merged value. No new registry: one
-  per-frame attribute, propagated by `_spawn`.
+  carrying a right-input key id, i.e. pre-join right keys reused after
+  the merge, where Spark answers per-side values; left-id tokens pass
+  and bind the kept key). The unqualified key always binds the merged
+  value. No new registry: one per-frame attribute, propagated by `_spawn`.
   pins: attr-id-1/C-066
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and

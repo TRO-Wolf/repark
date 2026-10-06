@@ -527,13 +527,14 @@ wrapped optimizer rule) and declares this directory.
   `SELF_JOIN_CONDITION`, `SelfJoinRules`, `check_refs`, `missing_condition`,
   `missing_message`, `parse_attr_refs`, `prepare_join_condition`, `quoted_names` and
   `self_join_message`.
-  **Fold SM-2 R6 (2026-10-06):** `join_on_named_keys` keeps
-  `coalesce(left key, right key)` for `Full`/`Right` (Spark's merged key;
-  side columns rebuilt qualified from the joined schema because
-  `bind_name` returns bare columns), stamped with the kept attribute id
-  through `attr_id::with_id` (widened to `pub(super)`); `Inner`/`Left` and
-  the semi/anti early return are untouched, and the SQL door never calls
-  this function. pins: attr-id-1/C-066
+  **Fold SM-2 R6 (2026-10-06, R-R6-1):** `join_on_named_keys` keeps the
+  left key physically on every join type, as on main; the `Full`/`Right`
+  `coalesce(left key, right key)` from `d66de2e3` is reverted in this
+  commit (it removed the left key from the merged plan and forced
+  refusals on left-side references main answers Spark-exact), and
+  `attr_id::with_id` is private again. Coalesced star and per-side key
+  fields are the USING-PER-SIDE-KEYS-1 v1.5.3 follow-up.
+  pins: attr-id-1/C-066
 - `sort_names.rs` — **ATTR-ID-1 S3b (2026-10-01):** the filter/sort free-name
   binder over the S1 `resolve`. `sort_shape` descends Filter/Sort/Limit/
   Repartition/Distinct/SubqueryAlias and transparent Projections (a passthrough,

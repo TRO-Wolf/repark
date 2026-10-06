@@ -336,7 +336,7 @@ def _merge_using_marks(first: Any, second: Any) -> Any:
         return first
     kept = first[0] | second[0]
     keys = tuple(dict.fromkeys([*first[1], *second[1]]))
-    return (kept, keys, first[2] | second[2])
+    return (kept, keys, first[2] | second[2], first[3] | second[3])
 
 
 def _using_state(child: Any, left: Any, right: Any, keys: list[str], engine_how: str) -> Any:
@@ -347,10 +347,9 @@ def _using_state(child: Any, left: Any, right: Any, keys: list[str], engine_how:
     held = _stamped_frame_id_snapshot(child)[1]
     left_held, left_engines = _stamped_frame_id_snapshot(left)[1:]
     right_held, right_engines = _stamped_frame_id_snapshot(right)[1:]
-    left_map = left._frame_qualifiers or {}
     right_map = right._frame_qualifiers or {}
-    quals = dict(child._frame_qualifiers) if child._frame_qualifiers else {}
     kept: list[str] = []
+    right_ids: list[str] = []
     for key in keys:
         folded = key if exact else key.lower()
         left_pos = next(
@@ -375,26 +374,16 @@ def _using_state(child: Any, left: Any, right: Any, keys: list[str], engine_how:
         if kept_id is None:
             continue
         kept.append(kept_id)
-        if engine_how == "left":
-            continue
-        names = left_map.get(left_held[left_pos]) or frozenset()
         if right_pos is not None and right_pos < len(right_held):
-            names = names | (right_map.get(right_held[right_pos]) or frozenset())
-        if names:
-            quals[kept_id] = quals.get(kept_id, frozenset()) | names
-    if quals != (child._frame_qualifiers or {}):
-        child._frame_qualifiers = quals or None
-    left_names = frozenset(name for values in left_map.values() for name in values)
-    right_names = frozenset(name for values in right_map.values() for name in values)
-    if engine_how == "left":
-        refused = right_names
-    elif engine_how == "right":
-        refused = left_names
-    else:
-        refused = left_names | right_names
+            right_id = right_held[right_pos]
+            if right_id is not None:
+                right_ids.append(right_id)
+    refused = frozenset(name for values in right_map.values() for name in values)
     if not refused or not kept:
         return merged
-    return _merge_using_marks(merged, (frozenset(kept), tuple(keys), refused))
+    return _merge_using_marks(
+        merged, (frozenset(kept), tuple(keys), refused, frozenset(right_ids))
+    )
 
 
 def _using_mark_live(mark: Any, held: list[str | None]) -> bool:
@@ -466,16 +455,16 @@ def _refuse_using_key_tokens(frames: tuple[Any, ...], sql: str) -> None:
 
     if "__REPARK_ATTR_" not in sql:
         return
-    kept: set[str] = set()
+    right_ids: set[str] = set()
     for frame in frames:
         mark = _using_mark(frame)
         if mark is not None:
-            kept |= mark[0]
-    if not kept:
+            right_ids |= mark[3]
+    if not right_ids:
         return
     registry = frames[0]._alive_token.get("frame_registry", {})
     for match in _ATTR_TOKEN_RE.finditer(sql):
-        if match.group(1) not in kept:
+        if match.group(1) not in right_ids:
             continue
         birth = registry.get(int(match.group(2)))
         if birth is None or not birth._alive_token.get("alive", False):
