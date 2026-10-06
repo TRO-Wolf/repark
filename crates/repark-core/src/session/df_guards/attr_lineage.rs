@@ -3,6 +3,7 @@ use datafusion::logical_expr::expr::{Alias, Case};
 use datafusion::logical_expr::{Distinct, Expr, LogicalPlan, Operator};
 
 use super::attr_id::{ATTR_KEY, AttrId};
+use super::sort_names::below_transparent;
 
 #[must_use]
 pub fn sort_hits_meet_at_join(plan: &LogicalPlan, positions: &[usize]) -> bool {
@@ -51,6 +52,23 @@ fn plain_source(expr: &Expr) -> Option<&Column> {
             Expr::Alias(alias) => node = alias.expr.as_ref(),
             _ => return None,
         }
+    }
+}
+
+#[must_use]
+pub fn project_input_is_join(plan: &LogicalPlan) -> bool {
+    let mut node = plan;
+    loop {
+        let below = below_transparent(node);
+        if !std::ptr::eq(below, node) {
+            node = below;
+            continue;
+        }
+        return matches!(
+            node,
+            LogicalPlan::Projection(projection)
+                if matches!(projection.input.as_ref(), LogicalPlan::Join(_))
+        );
     }
 }
 

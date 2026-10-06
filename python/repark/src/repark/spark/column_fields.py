@@ -868,7 +868,7 @@ def _resolve_sort_name(frame: Any, written: str, is_column_key: bool = False) ->
     if _native.sort_child_shape(native) == "project":
         if _native.sort_hits_meet_at_join(native, hits):
             _raise_unresolved_name(None, name, displays)
-        return _route_sort_key_through_input(native, name, hits, exact, engine_names, is_column_key)
+        return _route_sort_key_through_input(native, name, hits, exact, is_column_key)
     _raise_unresolved_name(None, name, displays)
 
 

@@ -15,7 +15,6 @@ from repark.spark._integral import (
 from repark.spark.filter_quote import (
     _DOTTED_TOKEN_PATTERN,
     _frame_qualifiers_for_bind,
-    _unqualified_candidates,
 )
 
 _ID_SNAPSHOTS: weakref.WeakKeyDictionary[Any, tuple[Any, list[str | None], list[str]]] = (
@@ -305,7 +304,6 @@ def _route_sort_key_through_input(
     name: str,
     hits: list[int],
     exact: bool,
-    engine_names: list[str],
     is_column_key: bool,
 ) -> Any:
     from repark.spark._idents import quote_ident as _quote_ident
@@ -319,20 +317,16 @@ def _route_sort_key_through_input(
             projection_name=name,
             stable_name=True,
         )
-    exact_hits, folded_hits = _unqualified_candidates(name, engine_names)
-    matched: int = len(exact_hits)
-    if not exact:
-        matched += len(folded_hits)
-    if matched > 0 or is_column_key:
-        return Column(
-            _native.PyColumn.column(_quote_ident(name)),
-            spark_display=name,
-            projection_name=name,
-            stable_name=True,
+    if not is_column_key and _native.sort_project_input_is_join(native):
+        echo: str = ", ".join(f"`{name}`" for _ in hits)
+        raise AnalysisException(
+            f"[AMBIGUOUS_REFERENCE] Reference `{name}` is ambiguous, could be: [{echo}]."
         )
-    echo: str = ", ".join(f"`{name}`" for _ in hits)
-    raise AnalysisException(
-        f"[AMBIGUOUS_REFERENCE] Reference `{name}` is ambiguous, could be: [{echo}]."
+    return Column(
+        _native.PyColumn.column(_quote_ident(name)),
+        spark_display=name,
+        projection_name=name,
+        stable_name=True,
     )
 
 

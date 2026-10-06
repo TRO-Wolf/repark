@@ -10,7 +10,8 @@ use repark_common::names::NameRule;
 
 use super::attr_id::{AttrId, Resolution, qualifier_matches_position, resolve};
 use super::case_bind::{
-    ambiguous_reference, attribute_reference, is_scratch_relation, unresolved_column,
+    ambiguous_reference, attribute_reference, is_scratch_relation, sort_hits_meet_at_join,
+    unresolved_column,
 };
 
 #[must_use]
@@ -48,7 +49,7 @@ pub fn sort_shape(plan: &LogicalPlan) -> SortShape {
     }
 }
 
-fn below_transparent(plan: &LogicalPlan) -> &LogicalPlan {
+pub(crate) fn below_transparent(plan: &LogicalPlan) -> &LogicalPlan {
     match plan {
         LogicalPlan::Filter(filter) => filter.input.as_ref(),
         LogicalPlan::Sort(sort) => sort.input.as_ref(),
@@ -264,19 +265,12 @@ pub fn bind_free_names(
     if displays.len() != schema.fields().len() {
         return Ok(expr);
     }
-    let sort_input = if for_sort {
-        project_input_schema(plan)
-    } else {
-        None
-    };
     let join_dup = !for_sort && join_dup_below_wrappers(plan);
     expr.transform(|node| {
         Ok(match node {
-            Expr::Column(column) if column.relation.is_none() => {
-                Transformed::yes(bind_free_column(
-                    column, schema, rule, displays, for_sort, sort_input, join_dup,
-                )?)
-            }
+            Expr::Column(column) if column.relation.is_none() => Transformed::yes(
+                bind_free_column(column, schema, rule, displays, for_sort, plan, join_dup)?,
+            ),
             _ => Transformed::no(node),
         })
     })
@@ -289,7 +283,7 @@ fn bind_free_column(
     rule: NameRule,
     displays: &[String],
     for_sort: bool,
-    sort_input: Option<&DFSchema>,
+    plan: &LogicalPlan,
     join_dup: bool,
 ) -> Result<Expr> {
     match resolve(schema, &column.name, None, rule, displays, None)? {
@@ -312,9 +306,12 @@ fn bind_free_column(
             if !for_sort {
                 return ambiguous_for_hits(&column, schema, &hits);
             }
-            let Some(input) = sort_input else {
+            let Some(input) = project_input_schema(plan) else {
                 return Err(unresolved_column(&column, schema));
             };
+            if sort_hits_meet_at_join(plan, &hits) {
+                return Err(unresolved_column(&column, schema));
+            }
             match unique_spelling(input, &column.name, rule) {
                 Some(spelling) if spelling != column.name => {
                     Ok(Expr::Column(Column::from_name(spelling)))

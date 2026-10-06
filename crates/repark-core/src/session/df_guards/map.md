@@ -189,6 +189,11 @@ wrapped optimizer rule) and declares this directory.
   the unary children, so twins that meet at one join cannot resolve. Pin:
   `../tests/join_qualifiers.rs` (`sort_twins_from_two_join_positions_meet_at_the_join`).
   pins: casesens-2/C-012
+  **Fold SM-2c round B (2026-10-06):** `project_input_is_join(plan)` answers
+  whether the projection below the transparent wrappers reads directly from a
+  join, sharing `sort_names::below_transparent`; the facade's sort route uses
+  it to keep main's `AMBIGUOUS_REFERENCE` refusal for string keys over join
+  inputs. pins: attr-id-1/C-070
 - `frame_lineage.rs` — **ATTR-ID-1 SJ-1a (2026-10-02):** the lineage core for refusing
   ambiguous self-join references the way Spark Classic does (owner ruling 2026-10-02,
   option A; design sketch `attr-id-1-selfjoin-design.md` §2.1–§2.2). Spark tags every
@@ -608,14 +613,15 @@ wrapped optimizer rule) and declares this directory.
   **Fold SM-2c round B (2026-10-06):** the Project-sort arm no longer binds the
   oldest id (`oldest_field` is deleted: an oldest twin that is not the source
   column sorts rows neither Spark nor main produces). `bind_free_column` takes
-  the projection input schema below the transparent wrappers instead of the
-  shape; on ambiguity it returns the key unbound, respelled to the input's
-  casing when the input carries exactly one column of the name under the
-  session rule, so DataFusion's missing-sort-column pushdown sorts by that
-  input column. Otherwise the unbound key flows to the engine, which refuses
-  or pushes deeper exactly as on main. `project_input_spelling` exposes the
-  same walk to the facade's string-sort route. Pins: `../tests/attr_id_s3b.rs`.
-  pins: attr-id-1/C-069
+  the plan; on ambiguity it refuses `UNRESOLVED_COLUMN` when the hits meet at
+  a join (the string route's check, shared), else returns the key unbound,
+  respelled to the input's casing when the projection input carries exactly
+  one column of the name under the session rule, so DataFusion's
+  missing-sort-column pushdown sorts by that input column. Otherwise the
+  unbound key flows to the engine, which refuses or pushes deeper exactly as
+  on main. `project_input_spelling` exposes the same walk to the facade's
+  string-sort route. Pins: `../tests/attr_id_s3b.rs`.
+  pins: attr-id-1/C-069, C-070
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside

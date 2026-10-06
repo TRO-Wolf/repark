@@ -43,6 +43,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(projection_source_ids, module)?)?;
     module.add_function(wrap_pyfunction!(sort_hits_meet_at_join, module)?)?;
     module.add_function(wrap_pyfunction!(sort_project_input_spelling, module)?)?;
+    module.add_function(wrap_pyfunction!(sort_project_input_is_join, module)?)?;
     module.add_function(wrap_pyfunction!(java_fold_hits, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_join_condition, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_free_names, module)?)?;
@@ -604,6 +605,11 @@ pub(crate) fn sort_project_input_spelling(
         written,
         NameRule::from_case_sensitive(exact),
     )
+}
+
+#[pyfunction]
+pub(crate) fn sort_project_input_is_join(frame: &PyDataFrame) -> bool {
+    repark_core::frame_names::project_input_is_join(frame.inner().logical_plan())
 }
 
 #[pyfunction]

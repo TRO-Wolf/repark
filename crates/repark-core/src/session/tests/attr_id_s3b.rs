@@ -260,6 +260,29 @@ fn bind_free_names_sort_is_unresolved_on_join() {
 }
 
 #[test]
+fn bind_free_names_sort_is_unresolved_when_twins_meet_at_join() {
+    let context = SessionContext::new();
+    let picked = tagged_joined(&context)
+        .select(vec![
+            col("l.id").alias_with_metadata("id", Some(tag("k1"))),
+            col("l.v").alias_with_metadata("e1", Some(tag("l2"))),
+            col("r.v").alias_with_metadata("e2", Some(tag("r2"))),
+        ])
+        .unwrap();
+    let plan = picked.logical_plan().clone();
+    assert_eq!(sort_shape(&plan), SortShape::Project);
+    let err = bind_free_names(
+        col("v"),
+        &plan,
+        IgnoreCase,
+        &["id".into(), "v".into(), "v".into()],
+        true,
+    );
+    let message = format!("{:?}", err.unwrap_err());
+    assert!(message.contains("UNRESOLVED_COLUMN"), "{message}");
+}
+
+#[test]
 fn bind_free_names_leaves_missing_and_qualified() {
     let (_context, frame) = dup_schema();
     let plan = frame.logical_plan();

@@ -96,7 +96,8 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   pins green. pins: attr-id-1/C-025
   **Fold SM-2c round B (2026-10-06):** the Project-sort pin now asserts the
   input spelling (`v`, not the oldest engine), plus a case-mismatched respell
-  pin and a pass-through pin for a non-unique input. pins: attr-id-1/C-069
+  pin, a pass-through pin for a non-unique input, and an unresolved pin for
+  twins meeting at a join. pins: attr-id-1/C-069, C-070
 - `attr_id_seam.rs` — **ATTR-ID-1 S2b (2026-09-30):** the logical/physical seam. A core
   session's optimizer starts with `repark_strip_attribute_ids` and its analyzer does not carry
   it, so an analyzed plan (the Spark SQL door's eager analysis) keeps its ids. An Aggregate
