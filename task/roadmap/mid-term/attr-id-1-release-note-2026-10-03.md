@@ -157,7 +157,9 @@ The join stays the same cross join; only the reference changes. Where v1.5.2 rai
 A self-join whose two sides carry the same column names answers under this
 release, where main could not plan it. The internal twin names
 (`__repark_l_*`, `__repark_r_*`) never escape the engine (fold SM-2,
-2026-10-06):
+2026-10-06; SM-2c C-3, 2026-10-06, closes the drop-then-write leak, so a
+frame whose duplicate display name was dropped writes its display names to
+files, tables and views):
 
 - Writes of duplicate display names refuse with Spark's exact
   `[COLUMN_ALREADY_EXISTS] The column `<name>` already exists. Choose another
@@ -179,8 +181,13 @@ release, where main could not plan it. The internal twin names
 - `mapInPandas` and `mapInArrow` over a frame with duplicate display names
   refuse with Spark's exact `[AMBIGUOUS_REFERENCE]`, naming the first
   duplicate with its qualified candidates (SQLSTATE 42704), instead of
-  running with internal names. Scalar and grouped-aggregation pandas UDF
-  input Series are positional (`_0`, `_1`, …), as on Spark.
+  running with internal names. A frame that selects the same column twice
+  (one attribute id under two display names, e.g. `d.select(d.v, d.v,
+  d.id)`) still runs, and the function sees the input names `v,v,id`;
+  Spark renames them to `v_0,v_1,id` (named divergence, pin
+  `test_map_in_pandas_same_origin_duplicate_input_names_divergence`).
+  Scalar and grouped-aggregation pandas UDF input Series are positional
+  (`_0`, `_1`, …), as on Spark.
 - Temp views over exact-duplicate display names refuse with
   `[COLUMN_ALREADY_EXISTS]` (SQLSTATE 42711) instead of registering twin
   engine names. Case-twin columns register and answer. This is a deliberate
