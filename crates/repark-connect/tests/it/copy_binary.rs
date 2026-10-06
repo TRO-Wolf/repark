@@ -542,6 +542,18 @@ fn batch_byte_cap_saturates_at_max_batch_bytes() {
 }
 
 #[test]
+fn one_column_never_outgrows_arrow_i32_offsets() {
+    let worst = MAX_BATCH_BYTES
+        .checked_add(MAX_FIELD_BYTES)
+        .expect("the two bounds add without overflow");
+    let arrow_offset_limit = usize::try_from(i32::MAX).expect("i32::MAX fits usize");
+    assert!(
+        worst <= arrow_offset_limit,
+        "a batch at the cap plus one maximal field is {worst} bytes, past {arrow_offset_limit}"
+    );
+}
+
+#[test]
 fn carry_releases_capacity_past_the_byte_cap() {
     let field = vec![b'a'; 64 << 20];
     let mut bytes = header_with(0, &[]);

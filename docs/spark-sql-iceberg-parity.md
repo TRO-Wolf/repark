@@ -3527,8 +3527,11 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   (`PlannedColumn::resolve`) answers `ConnectError::UnmappedType` naming this row (C-2a,
   2026-10-06). It stays declared until D-M2 reads Spark 4.1.2's type for a JDBC `time` column
   ([c-2-design.md](../task/wo/c-2-design.md) §2.7).
-- **Apache Spark** — the JDBC source reads `time` through its PostgreSQL dialect. *(oracle:
-  documented; no value claim — C-2's live cells attach the first measurement.)*
+- **Apache Spark** — the JDBC source reads `time` as `TimestampType`: 1970-01-01 plus the
+  time of day, with microseconds cut to milliseconds (`12:34:56.123456` reads as
+  `1970-01-01 12:34:56.123`), and `24:00:00` reads as `1970-01-02 00:00:00`. *(oracle:
+  recorded — D-M2, `python/repark-parity/tests/live_spark/c2_jdbc_oracle.json` cells
+  `DM2-T01` and `DM2-V10`, Spark 4.1.2 over pgjdbc 42.7.13, 2026-10-06.)*
 - **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row`
 - **Rationale** — DECLARED 2026-10-05 (C-1). Postgres accepts `24:00:00`, one microsecond past
   the last value Arrow's `Time64(Microsecond)` day holds.

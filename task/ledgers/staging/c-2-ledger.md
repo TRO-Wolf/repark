@@ -146,6 +146,16 @@ four-line records.
   `ServerText` mapping) to `::text`, and a pin asserts the cast.** `ServerText` decode keeps
   bytes verbatim, which is only correct for server-rendered text; a raw binary interval is
   usually valid UTF-8 and would decode silently without the cast.
+- **Open item (2026-10-06, re-verify S3): the straddling-field peak is still about 3x the
+  field.** The carry grows by `Vec` doubling from the first partial chunk, so its capacity nears
+  twice the field before the builder copy (re-verify `memory.rs`, 512–1023 MiB fields). Reserving
+  the carry at the declared field length on the first partial chunk would bring it to about 2x.
+  Non-blocking; C-3 owns the gated memory benchmark.
+- **Open item (2026-10-06, re-verify S3): three accounting mutations survive.** They are
+  `buffered_bytes()` without the carry (r11), a variable-width NULL charged 0 (r13), and
+  variable-width values charged with no offset bytes (r15)
+  (the re-verify's `mutate_rv.py`). Each needs an exact-count pin on `buffered_bytes()`.
+  Non-blocking.
 
 ## 4. R-7 citations (ConnectorX and ADBC)
 
