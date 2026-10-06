@@ -5033,6 +5033,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "repark-connect"
+version = "1.5.2"
+dependencies = [
+ "arrow",
+ "repark-common",
+ "thiserror 2.0.20",
+]
+
+[[package]]
 name = "repark-core"
 version = "1.5.2"
 dependencies = [

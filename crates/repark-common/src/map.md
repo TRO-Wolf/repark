@@ -46,6 +46,19 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   (22003), measured byte-exact on live Spark 4.1.2 for DOUBLE and DECIMAL(38,0)
   sources, with catalogue + template pins (44 conditions).
 
+- `source.rs` — **C-1 (2026-10-05), the CC-2 identity move:** `SourceKind`
+  (`Postgres`, `SqlServer`, `Trino`; `from_spelling` / `spelling` over the exact loader
+  spellings `postgres | sqlserver | trino`) moved here unchanged from
+  `repark-core/src/config_file/sources.rs`, all three variants (CFG-2 parses `trino`; its
+  connector moved to 1.10 without dropping the spelling), and the minimal source identity
+  `SourceIdentity { name, kind, generation }`. `generation` is an `Option<NonZeroU64>`, `None`
+  meaning not yet assigned (R-12 as amended, owner, 2026-10-05: "generation u64/0-unassigned accepted, with 0 only in the serialized form and an Option or NonZero type in Rust"). `0` belongs only to a serialized form,
+  mapped `0` ↔ `None` at that boundary; C-1 serializes no identity, so no `0` exists in Rust.
+  1.7's capture assigns it on first use, and re-pointing a configured name at another database
+  is detected there (CC-2, CC-9); equality is the only operation C-1 needs. `lib.rs`
+  re-exports both. `repark-connect` owns the settings and conversions, `repark-core` the
+  loading and handles, `repark-cdc` lineage and offsets.
+  pins: c-1/C-002
 - `names.rs` — **WO CASESENS-1 slice 2 (2026-09-27):** the one
   name-matching rule every binder calls. `NameRule { Exact, IgnoreCase }`
   (`from_case_sensitive`, `matches`, `lookup` → `NameHit::{One, Many,

@@ -1001,6 +1001,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `register_iceberg_catalog` consult for the duplicate-name refusal, and
   `database_source(name)`, the `pub(crate)` lookup `refuse_source_ddl` uses to rebuild
   the D-1 refusal for a DDL plan naming a source.
+  **C-1 (2026-10-05):** the key is `spec.identity.name` (the CC-2 identity now lives in
+  `repark-common`); keys and behavior unchanged. pins: c-1/C-002
   pins: cfg-2/C-012
   **ICE-VIEWS-1 (2026-09-20):** view lookup beside table lookup (`is_view`),
   the installed-wrapper directory (`view_wrapper_for` / `note_view_wrapper`)
@@ -1008,7 +1010,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **R2 (2026-09-21):** `is_view` returns a `Result` — genuine catalog errors
   propagate (fail-closed); `FeatureUnsupported`/`NamespaceNotFound` stay false.
   pins: ice-views-1/C-006, C-007, C-012
-- `named_sources.rs` (+ [named_sources/](named_sources/map.md)) — **CFG-2 step 1
+- `named_sources.rs` (+ [named_sources/](named_sources/map.md)) — **C-1 (2026-10-05):** reads
+  the source name and kind through `SourceSpec.identity` (CC-2; `SourceKind` now imported from
+  `repark-common`); every message, row and handle is unchanged. pins: c-1/C-002
+  **CFG-2 step 1
   (2026-09-13):** named database sources. `register_configured_sources()` (called wherever
   `register_configured_catalogs` runs) installs one `RefusingSourceCatalogProvider` per
   auto-registered `SourceSpec` — a `CatalogProvider`/`SchemaProvider` whose every table

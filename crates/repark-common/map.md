@@ -23,6 +23,9 @@ workspace reserves `repark-core` for the Session crate.)
   from H-2 G8), `Row` / `SessionProfile`, and the `audit()` each door's `matrix.rs` runs as a
   compile-run test (design `docs/design/sql-doors.md` §2 Q13, graft G2). Tier 0 so neither
   door needs an edge to the other.
+- `src/source.rs` — the minimal source identity (`SourceKind`, `SourceIdentity` with its
+  generation), moved here by C-1 (CC-2) so `repark-connect` and later `repark-cdc` share it
+  without reaching `repark-core`. See [src/map.md](src/map.md).
 - `src/tests.rs` — file-backed test module: the exhaustive `exception_class` routing pin and the
   message-preservation pin.
 
@@ -36,7 +39,8 @@ workspace reserves `repark-core` for the Session crate.)
 
 ## Component contract
 
-- **Owns:** the workspace `Error` / `ErrorClass` / `Result` seed; the dialect-neutral SQL **surface
+- **Owns:** the workspace `Error` / `ErrorClass` / `Result` seed; the minimal source identity
+  (`source`: `SourceKind`, `SourceIdentity`, CC-2); the dialect-neutral SQL **surface
   registry** (`surfaces`: the 50-ID capability vocabulary, `Row` / `SessionProfile`, `audit()`).
 - **Does not own:** any engine / session / IO logic; error *folding* (that happens at the
   session / PyO3 boundary); door-specific matrices (each door owns its `matrix.rs`).

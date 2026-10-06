@@ -4,6 +4,15 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [c-1-ledger.md](c-1-ledger.md) —
+  **C-1, card 1.6 (2026-10-05), in flight:** `crates/repark-connect` lands on its pre-declared
+  footprint with the one `connect → common` edge (C-001); the CC-2 move puts `SourceKind` and
+  `SourceIdentity { name, kind, generation }` in `repark-common` (C-002); `settings.rs` reserves
+  `auth_method` with password accepted, `iam_token` / `kerberos` declared and anything else an
+  invalid specification (C-003..C-006); the Postgres type map maps ten types with a round-trip
+  pin each and declares nine (C-007, C-008); eleven `CONNECT-DECL-*` registry rows (C-009); ADBC
+  and ConnectorX cited (C-010); gates (C-011). `risk_tier: standard`. Branch
+  `feat/c-1-connect-skeleton`.
 - [ta-series-s2a-ledger.md](ta-series-s2a-ledger.md) —
   **TA-SINGLE-SERIES-PARALLEL-1 S2a + D (2026-10-05), in flight:** a bare `ta.*` column binds as
   the explicit `.over(Window.orderBy(K))` spelling, K being the declared order, else the first

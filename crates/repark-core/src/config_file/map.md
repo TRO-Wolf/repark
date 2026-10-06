@@ -60,6 +60,13 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   refusal messages and the collision error share.
   pins: cfg-1/C-010, C-011, C-012, C-013, C-014, C-016, C-017
   pins: cfg-2/C-002
+  **C-1 (2026-10-05), the CC-2 identity move:** `SourceKind` moved to `repark-common`
+  unchanged, and `SourceSpec` carries a `repark_common::SourceIdentity` (`name`, `kind`,
+  `generation`) in place of its `name` and `kind` fields; the loader builds it with
+  `SourceIdentity::unassigned` (generation `None`, R-12 as amended by the owner, 2026-10-05). `profile`, `auto_register` and `props`
+  stay here, `key_path()` renders the same spelling, and the manual `Debug` prints the
+  identity where it printed `name` and `kind`, still masking props through `redact_value`.
+  Loader behavior is unchanged. pins: c-1/C-002
 - `redact.rs` — `redact_value` / `redact_config` over `../../catalog_config.rs`'s
   `prop_key_is_secret` (widened to `pub(crate)` this step, the one authorized edit outside
   the family; the predicate is not re-implemented). The `***` mask matches the `CatalogSpec`
