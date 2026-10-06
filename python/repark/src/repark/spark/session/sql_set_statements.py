@@ -257,10 +257,10 @@ def _listing_frame(session: ReparkSession, *, verbose: bool) -> DataFrame:
 
 
 def _redact_conf_value(key: str, value: str) -> str:
-    """Redact when Spark's default ``spark.redaction.regex`` matches the key or value."""
+    """Redact on Spark's default ``spark.redaction.regex``; else mask embedded credentials."""
     if _REDACTION_RE.search(key) is not None or _REDACTION_RE.search(value) is not None:
         return _REDACTED_VALUE
-    return value
+    return _native.mask_value_credentials(value)
 
 
 def _reset_all(session: ReparkSession) -> DataFrame:

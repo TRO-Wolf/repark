@@ -5268,6 +5268,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (engine not-found, no `1.10`), and the `listCatalogs` observation stays pinned
   (the source name does not appear — D-11 measured, not changed).
   pins: cfg-2/C-013, C-014, C-015, C-016, C-017, C-019
+- `test_source_url_redaction_1.py` — **SOURCE-URL-REDACT-1 (2026-10-06):** the facade pin: a `repark.toml` with a
+  per-test random password in a source `url`, a query string, a keyword DSN, an ODBC string, a
+  catalog `uri` and a `[conf]` key; the password appears nowhere in `sources()` (`repr` / `str`),
+  `spark.conf.getAll`, `SET` / `SET -v` / `SET k` or the `ping()` refusal, and the host does.
+  Mutation (`redact_value` key-only) reds the `sources()` and `getAll` legs.
+  pins: source-url-redact-1/C-011, C-012, C-013
 - `test_t3_ux_polish.py` — **r21 T3** (2026-08-03): display_style conf.set→show + property/conf
   lockstep + module `repark.display_style` refuse-loud; **F-T3-001** conf.unset resets
   live style + conf.get to default `spark` (show spark-like; no split-brain); default

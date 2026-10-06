@@ -171,6 +171,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** declares
   `session/text_write_format.rs` and registers its UDF at session build.
   pins: text-write-timestamp-zone-1/C-001
+  **SOURCE-URL-REDACT-1 (2026-10-06):** the session stores the raw conf rows (`raw_conf_dump_rows`) so S3 endpoint
+  resolution reads the configured endpoint, and `conf_dump()` returns them through
+  `redact_dump_rows`. pins: source-url-redact-1/C-008
 - `session_owner.rs` — the session-built DESCRIBE owner: `DescribeOwnerConfig`
   (`repark.describe` prefix, `owner`, default `unknown`), the build-time
   `session_owner_snapshot` (`USER`, then `USERNAME`, then `unknown`), and the
@@ -270,6 +273,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **U10 / R-DF-LOAD-PATH (2026-09-23):** `mod iceberg_path;` joined the module list at
   the exact 155-line baseline; the stale half-comment above the `error_map` re-export
   (its note is already carried by `session.rs`'s own line) was the line shed for it.
+  **SOURCE-URL-REDACT-1 (2026-10-06):** re-exports `repark_common::redaction` as `repark_core::redaction`, the
+  binding's path to the redactor (no new crate edge). pins: source-url-redact-1/C-014
 - `iceberg_path.rs` (+ [iceberg_path/](iceberg_path/map.md)) — **U10 / R-DF-LOAD-PATH +
   R-DF-LOAD-METADATA-JSON (2026-09-23):** `ReparkSession::read_iceberg_path`, the
   `format("iceberg").load(<path>)` arm — Spark's `IcebergSource` rule applied at the
@@ -472,6 +477,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   camelCase and one-word spellings, `privateKey` plus OAuth `bearer`, and the
   `basic.auth.user.info` blob; the kind matrix pins the `repark.sql.catalog.m = memory`
   synonym of the bare Spark spelling.
+  **SOURCE-URL-REDACT-1 (2026-10-06):** `prop_key_is_secret` moved to `repark-common::redaction` and is re-exported
+  here unchanged; the `CatalogSpec` `Debug` masks through `redact_value`, so a password inside
+  a `uri` / `url` value is masked too, and the `type` / `catalog-impl` unrecognized-value
+  refusal echoes the value through `mask_value_credentials`. pins: source-url-redact-1/C-006, C-009
 - `read_options.rs` — CSV/JSON Spark option-map helpers, `read_csv_path` (nullValue
   all-Utf8 scan; `utf8_columns` re-read so timestamp CAST sees raw offset text), and the
   local-CSV first-line Utf8 schema. **CSV-INFER-PERF-1** moved the CSV read body here so

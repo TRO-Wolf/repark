@@ -1,5 +1,7 @@
 # map — repark-spark/src/tests
 
+**SOURCE-URL-REDACT-1 (2026-10-06):** `describe_show.rs` gains `describe_namespace_extended_masks_url_userinfo_spark_would_show`: a namespace property `postgresql://u:…@db.example.com/sales` renders with `***` for the password where Spark 4.1.2 prints it. pins: source-url-redact-1/C-010
+
 U1-MEM-LAYOUT-1 (2026-09-23): the Spark memory-layout and orphan co-tenancy test modules, their manifest entries, and moved fixture paths are recorded below.
 
 ICE-MIXED-CASE-1 (2026-09-17): `common.rs` test helper carries the case-sensitivity flag into session config — round 21b through `with_spark_case_sensitive_config(config, false)`, main's carrier. pins: ice-mixed-case-1/C-012

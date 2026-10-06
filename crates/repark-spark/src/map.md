@@ -2173,6 +2173,10 @@ pins: rp-4-fork-repin/C-005, C-006
   The detail block gains Spark's measured `Comment` row (after `Type`, only when the stored
   `comment` property is set), which is where the facade's `catalog.getTable(...).description`
   now reads the table comment.
+  **SOURCE-URL-REDACT-1 (2026-10-06):** `render_namespace_properties` keeps Spark's key-or-value regex arm and masks
+  every other value through `repark_common::redaction::mask_value_credentials`, so a URL
+  password Spark 4.1.2 prints is masked (registry `CONNECT-DIV-url-userinfo`).
+  pins: source-url-redact-1/C-010
 - `show_create.rs` — **C1 SHOW CREATE (2026-09-23):** `SHOW CREATE TABLE <name> [AS SERDE]`
   for Iceberg tables, answering Spark 4.1.2 + Iceberg 1.11 `ShowCreateTableExec` text byte
   for byte (one Utf8 `createtab_stmt` row ending in one `\n`). Token-level parser in the

@@ -68,6 +68,17 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   `Option<Generation>` or a non-zero type"; R-12 as amended, owner, 2026-10-05). `new` is the
   serialized `0` ↔ `None` boundary the first serializing unit calls. `lib.rs` re-exports it.
   pins: c-1/C-012
+
+- `redaction.rs` — **SOURCE-URL-REDACT-1 (2026-10-06):** the shared property redactor. `prop_key_is_secret`
+  (moved here unchanged from `repark-core/src/catalog_config.rs`, which re-exports it),
+  `redact_value(key, value)` (a secret key gives `***`, any other value goes through
+  `mask_value_credentials`) and `mask_value_credentials(value)`: URL userinfo of any
+  `scheme://` keeps the user and host and masks the password; a userinfo with no colon is
+  masked whole; an `@` after `://` with a `:` before it that does not parse cleanly masks the
+  whole userinfo (fail closed); a secret-named query parameter or libpq / ODBC keyword
+  (`prop_key_is_secret`, or a compact name `sig`, `…pwd`, `…signature`) masks its value,
+  quoted, braced and unterminated forms included. Unit pins at the bottom of the module.
+  pins: source-url-redact-1/C-001, C-002, C-003, C-004, C-005, C-006
 - `names.rs` — **WO CASESENS-1 slice 2 (2026-09-27):** the one
   name-matching rule every binder calls. `NameRule { Exact, IgnoreCase }`
   (`from_case_sensitive`, `matches`, `lookup` → `NameHit::{One, Many,

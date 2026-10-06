@@ -4,6 +4,12 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [source-url-redact-1-ledger.md](source-url-redact-1-ledger.md) —
+  **SOURCE-URL-REDACT-1 (2026-10-06), security, v1.5.3 release item:** value-aware redaction
+  in `repark-common::redaction` (URL userinfo, fail-closed authority, secret query parameters,
+  libpq / ODBC keywords; C-001..C-006), routed through `sources()`, the `Debug` impls, the
+  config dump, `getAll`, the `SET` listings and `DESCRIBE NAMESPACE EXTENDED` (C-007..C-012),
+  the surface audit (C-013) and gates (C-014). `risk_tier: high`.
 - [c-1-ledger.md](c-1-ledger.md) —
   **C-1, card 1.6 (2026-10-05), in flight:** `crates/repark-connect` lands on its pre-declared
   footprint with the one `connect → common` edge (C-001); the CC-2 move puts `SourceKind` and

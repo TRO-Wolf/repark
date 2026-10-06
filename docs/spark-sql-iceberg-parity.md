@@ -3529,6 +3529,28 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row`
 - **Rationale** — DECLARED 2026-10-05 (C-1). As `json`, and the binary wire form carries a
   version byte before the text, so the codec is not `text`'s.
+### CONNECT-DIV-url-userinfo — a credential inside a URL- or DSN-shaped property value is masked where Spark shows it
+- **repark** — every display of a source, catalog, conf or namespace property value masks the
+  credential inside the value, whatever the key: URL userinfo keeps the user and the host
+  (`postgresql://alice:***@db.example.com:5432/sales`), a userinfo with no colon is masked
+  whole, an unclean authority fails closed to `scheme://***@host`, and a secret-named query
+  parameter or libpq / ODBC keyword (`password`, `sslpassword`, `access_token`, `pwd`, `sig`,
+  `X-Amz-Signature`, …) shows `***`. The surfaces are `sources()`, `spark.conf.getAll`,
+  `SET k` / `SET` / `SET -v` (when Spark's regex has not already redacted the whole value),
+  `DESCRIBE NAMESPACE EXTENDED` and the `CatalogSpec` / `SourceSpec` `Debug`. An explicit
+  `spark.conf.get(k)` and the `SET k = v` echo stay raw, as in Spark.
+- **Apache Spark** — Spark 4.1.2 shows the password. `SET spark.repark.test.conn` and bare
+  `SET` answer `mysql://bob:RuntimePw2@db.example.com/sales` when neither the key nor the value
+  matches its redaction regex; `DESCRIBE NAMESPACE EXTENDED` answers
+  `((conn,postgresql://u:NsPw5@db.example.com/sales), (plain,p7))`; `spark.conf.getAll` is
+  unredacted. *(oracle: measured 2026-10-06, live pyspark 4.1.2, private local session.)*
+- **Pin** — `crates/repark-spark/src/tests/describe_show.rs::describe_namespace_extended_masks_url_userinfo_spark_would_show`,
+  `python/repark/tests/test_source_url_redaction_1.py::test_set_listings_never_carry_the_password`,
+  `::test_config_dump_never_carries_the_password`
+- **Rationale** — DECLARED 2026-10-06 (SOURCE-URL-REDACT-1). The CDC North Star default:
+  credentials are never displayed, even where Spark displays them (owner, 2026-10-06: "we need
+  security to be tight"). The host, port and database stay visible for debugging. Retire the
+  row only if the owner rules that Spark's display wins.
 ### SES-ARTIFACT-1 — `addArtifact(s)` supports driver-local `pyfile` copies only
 - **repark** — `addArtifact`/`addArtifacts` validate exactly like Spark: more than one of
   `pyfile`/`archive`/`file` true raises `PySparkValueError` with condition

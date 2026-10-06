@@ -214,6 +214,8 @@ repo.
   that `test_dataframe_writeto_appends_by_name` and `test_measured_join_using_insert_answers_spark`
   (F-DML-FIELD-ID-1) are green: the uuid-as-text catalog switch rebuilds every `insert_into`
   batch against the target schema.
+  **SOURCE-URL-REDACT-1 (2026-10-06):** §5 gains `CONNECT-DIV-url-userinfo`: a credential inside a URL- or
+  DSN-shaped property value is masked on every display where Spark 4.1.2 prints it.
 - [design/](design/map.md) — settled design documents, one per deliberate design pass
   ([design/session-api.md](design/session-api.md): the phase-1 Session API — crate layout,
   seams, forced-edit ledger, omissions ledger, server landing map;
