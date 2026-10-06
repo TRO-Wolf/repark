@@ -9584,3 +9584,10 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   unsupported. The refusal is the ruled divergence FA-6 (Spark registers
   the view). No module docstring: the lane's no-comments ruling covers the
   new file; the contract lives here. pins: attr-id-1/C-064
+- [test_attr_id_1_sm2_r7.py](test_attr_id_1_sm2_r7.py) — **Fold SM-2 R7
+  (2026-10-06):** a qualified `DataFrame.__getitem__` repr keeps the
+  qualifier (`Column<'r.t'>`, `Column<'b.v'>`, alias `Column<'x.id'>`,
+  folded `Column<'r.T'>`, USING side `Column<'l.id'>`), equal to Spark
+  4.1.2; guards pin bare projections/compounds and unchanged `F.col`
+  reprs. No module docstring: the lane's no-comments ruling covers the
+  new file; the contract lives here. pins: attr-id-1/C-065

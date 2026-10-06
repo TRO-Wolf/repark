@@ -230,6 +230,14 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `spark_wrap_display_part`) moves to `column_render.py` behind `Column`
   bindings (1378 → 1331, with the CAP-1 mirror). Pins:
   `python/repark/tests/test_attr_id_1_sj2.py`.
+  **Fold SM-2 R7 (2026-10-06):** `Column` gains the `_repr_display` slot
+  (default `None`, set post-bind, never a constructor parameter):
+  `__repr__` prefers it over `spark_display_part()`, so a qualified getitem
+  repr keeps the qualifier (`Column<'r.t'>`) while projections and compounds
+  keep the bare name. `for_select` and rewraps do not propagate it (they
+  build plan-internal columns; the user's original keeps the state).
+  Line-neutral at the exact 1331 baseline (two docstring lines tightened).
+  pins: attr-id-1/C-065
 - `column_fields.py` — **COLUMN-PARITY-1 (2026-09-14):** method bodies bound on
   `Column` (kept out of `column.py`, which is at its exact line baseline):
   `between` / `eqNullSafe` (extracted for headroom), `isin`, `isNaN`, `astype`,
@@ -294,6 +302,13 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   spots those columns in `_bind_sort_key` and returns them verbatim: live Spark
   refuses Column sort keys as `AMBIGUOUS_REFERENCE` but string keys as
   `UNRESOLVED_COLUMN`, so strings keep the old sort path. pins: attr-id-1/C-044
+  **Fold SM-2 R7 (2026-10-06):** `_bind_resolved_name` stores a repr-only
+  display on qualified binds (written qualifier case-canonicalized against the
+  frame's held qualifier names, written name spelling): `repr` keeps the
+  qualifier while `spark_display`/`projection_name` stay bare. Held names, not
+  plan qualifiers, so a USING kept key shows the written side, never the
+  internal join qualifier. Unqualified binds leave it `None`.
+  pins: attr-id-1/C-065
   `_bind_stable_id_column` rebinds a parent Column by `_attr_id` to the first held
   position through `attribute_column`, but only across plans (a same-frame bind stays
   the written ref, so the engine shapes the refusal) and only onto a unique engine

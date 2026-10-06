@@ -68,6 +68,7 @@ class Column:
         "_partition_transform",
         "_projection_name",
         "_qualifiers",
+        "_repr_display",
         "_sort_ascending",
         "_sort_nulls_first",
         "_spark_display",
@@ -134,10 +135,9 @@ class Column:
         ``[MISSING_GROUP_BY]`` — sticky ``_is_aggregate`` alone is not enough.
 
         ``has_ungroupable`` is sticky non-groupable identity for analytics / generators
-        (window ``.over(...)``, ``F.rand()``) that are neither foldable nor free attrs
+        (window ``.over(...)``, ``F.rand()``) that are neither foldable nor free attrs,
         OR-propagated like free so nested ``sum(x)+row_number().over(...)``
         / ``coalesce(sum, window)`` raise ``[MISSING_GROUP_BY]`` instead of pure_global.
-        Nested compositions also need this marker.
 
         ``is_aggregate_function`` marks a bare AggregateFunction (``F.sum``/… builders)
         acceptable to native ``DataFrame.aggregate``. Preserved only across ``.alias`` /
@@ -167,9 +167,8 @@ class Column:
         ``attr_id``: set when this Column binds a frame field (``df["x"]`` / ``df.x``);
         joins resolve the side through this id.
 
-        ``birth_frame``: the frame this Column was bound against. A select/sort bind
-        keeps the written reference verbatim when the target frame is the birth frame,
-        and rebinds the held attribute by position on any other frame.
+        ``birth_frame``: the frame this Column was bound against. A select/sort bind keeps
+        the written reference verbatim on the birth frame, rebinding by position elsewhere.
 
         ``qualifiers``: the bound frame's qualifier names for this attribute, empty when the
         frame carries none; joins side id-sharing tokens through these names.
@@ -216,6 +215,7 @@ class Column:
         self._attr_id = attr_id
         self._birth_frame = birth_frame
         self._qualifiers = qualifiers if qualifiers is not None else frozenset()
+        self._repr_display = None
         self._join_sql_expr = join_sql_expr
         # Simple ORDER BY column names for value-offset RANGE numeric-type check at select.
         self._g2_range_order_names = list(g2_range_order_names) if g2_range_order_names else None
@@ -384,7 +384,7 @@ class Column:
 
     def __repr__(self) -> str:
         """Render as ``Column<'expr'>`` (PySpark ``Column.__repr__``)."""
-        return f"Column<'{self.spark_display_part()}'>"
+        return f"Column<'{self._repr_display or self.spark_display_part()}'>"
 
     # ---- comparison -------------------------------------------------------------------------
 

@@ -544,6 +544,17 @@ def _bind_resolved_name(frame: Any, written: str) -> Any:
     attr_id = held[position]
     if attr_id is None and _native.frame_is_relation(native):
         raise RuntimeError(f"internal error: stamped field {engine_field!r} has no attribute id")
+    repr_display = None
+    if qualifier_parts is not None:
+        shown = ".".join(qualifier_parts)
+        if len(qualifier_parts) == 1:
+            held_quals = (frame._frame_qualifiers or {}).get(attr_id) or ()
+            match = [qual for qual in held_quals if qual == shown] or [
+                qual for qual in held_quals if qual.lower() == shown.lower()
+            ]
+            if len(match) == 1:
+                shown = match[0]
+        repr_display = f"{shown}.{name}"
     bound = Column(
         _native.PyColumn.column(quoted).alias(name),
         spark_display=name,
@@ -555,6 +566,7 @@ def _bind_resolved_name(frame: Any, written: str) -> Any:
         qualifiers=frozenset((frame._frame_qualifiers or {}).get(attr_id) or ()),
     )
     bound._sql_expr = quoted
+    bound._repr_display = repr_display
     return bound
 
 
