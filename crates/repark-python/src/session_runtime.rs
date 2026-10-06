@@ -146,8 +146,11 @@ fn apply_runtime_config(
         let enabled = if strict_boolean {
             parse_runtime_spark_sql_ansi_enabled(value).map_err(refused_boolean_knob)?
         } else {
-            parse_spark_sql_ansi_enabled(value)
-                .map_err(|error| Error::IllegalArgument(configuration_message(error)))?
+            parse_spark_sql_ansi_enabled(value).map_err(|error| {
+                Error::IllegalArgument(repark_core::redaction::mask_value_credentials(
+                    &configuration_message(error),
+                ))
+            })?
         };
         write_ansi_flag(session, enabled)?;
         return Ok(());
@@ -434,6 +437,41 @@ mod tests {
     #[test]
     fn merge_schema_refusal_masks_a_url_password() {
         assert_masked_refusal(SPARK_SQL_ICEBERG_MERGE_SCHEMA_KEY);
+    }
+
+    #[test]
+    fn conf_set_masks_a_url_password_for_case_sensitive_and_merge_schema() {
+        let session = repark_core::ReparkSession::builder()
+            .build()
+            .expect("session");
+        for key in [
+            SPARK_SQL_CASE_SENSITIVE_KEY,
+            SPARK_SQL_ICEBERG_MERGE_SCHEMA_KEY,
+        ] {
+            let error = super::apply_runtime_config(&session, key, URL, true)
+                .expect_err("a url must refuse");
+            let Error::IllegalArgument(message) = error else {
+                panic!("boolean knob refusal must be IllegalArgument, got {error}");
+            };
+            assert!(message.contains(MASKED), "{message}");
+            assert!(!message.contains("u:pw@"), "{message}");
+            assert!(message.contains("SQLSTATE: 22022"), "{message}");
+        }
+    }
+
+    #[test]
+    fn restore_ansi_masks_a_url_password() {
+        let session = repark_core::ReparkSession::builder()
+            .build()
+            .expect("session");
+        let error = super::apply_runtime_config(&session, SPARK_SQL_ANSI_ENABLED_KEY, URL, false)
+            .expect_err("a url must refuse");
+        let Error::IllegalArgument(message) = error else {
+            panic!("ansi restore refusal must be IllegalArgument, got {error}");
+        };
+        assert!(message.contains(MASKED), "{message}");
+        assert!(!message.contains("u:pw@"), "{message}");
+        assert!(message.contains("should be boolean, but was"), "{message}");
     }
 
     #[test]
