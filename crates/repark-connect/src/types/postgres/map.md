@@ -31,9 +31,9 @@ Arrow builders. No codec allocates per value. See [../map.md](../map.md).
   `POSTGRES_EPOCH_MICROS` = 946 684 800 000 000, checked). The infinities (`i32::MAX` /
   `i32::MIN`, `i64::MAX` / `i64::MIN`, `date.h` `DATEVAL_NOEND` / `NOBEGIN`, `timestamp.h`
   `DT_NOEND` / `NOBEGIN`) refuse per value; a timestamp whose 1970-based µs overflow `i64`
-  (after 294247-01-10) refuses as out of range. `UTC_ZONE_LABEL` = `"+00:00"`, the label
-  iceberg-rust's Arrow schema gives `timestamptz` (`iceberg::arrow::UTC_TIME_ZONE`), so a
-  federated join compares like types (C-2d pins the join). pins: c-2/C-007, C-008
+  (after 294247-01-10) refuses as out of range. `UTC_ZONE_LABEL` = `"UTC"`, the label an
+  Iceberg read exports for `timestamptz` (measured on main `4a643e56`), so a federated join
+  compares like types (C-2d pins the join). pins: c-2/C-007, C-008
 - `text_like.rs` — UTF-8-validated text (never lossy), `jsonb` (version byte `01` stripped;
   any other version, or an empty value, is a malformed stream) and `uuid` (16 bytes rendered
   into a 36-byte stack buffer as lowercase `8-4-4-4-12`, `uuid_out`'s form). pins: c-2/C-010

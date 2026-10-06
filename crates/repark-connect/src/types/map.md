@@ -26,7 +26,7 @@ Remote ↔ Arrow type conversion, one table per backend (card 1.6). See [../map.
     `Numeric(DecimalTarget)`, `Decimal128(p,s)` resolved from the type modifier; `date` →
     `Date32`; `timestamp` → `Timestamp(Microsecond, None)`, the wall clock (C-2c localises it
     into the session zone for Spark's default `TimestampType`, or keeps it under
-    `prefer_timestamp_ntz`); `timestamptz` → `Timestamp(Microsecond, "+00:00")`, the instant;
+    `prefer_timestamp_ntz`); `timestamptz` → `Timestamp(Microsecond, "UTC")`, the instant;
     `interval` → `ServerText` (`Utf8`: the scan casts it to `pg_catalog.text` under the pinned
     `IntervalStyle`, so the wire is the server's text); `uuid` → `Uuid`, `json` → `Json`,
     `jsonb` → `Jsonb` (all `Utf8`). The codecs live in `postgres/` (its map is under Pointers). Values the

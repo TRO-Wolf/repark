@@ -456,7 +456,7 @@ fn timestamp_ntz_anchors_round_trip() {
 #[test]
 fn timestamptz_anchors_round_trip() {
     assert_timestamp_anchors("timestamptz", Some(UTC_ZONE_LABEL));
-    assert_eq!(UTC_ZONE_LABEL, "+00:00");
+    assert_eq!(UTC_ZONE_LABEL, "UTC");
 }
 
 #[test]

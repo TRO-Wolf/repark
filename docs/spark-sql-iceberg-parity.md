@@ -3538,7 +3538,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 
 ### CONNECT-DECL-pg-timestamptz — RETIRED (2026-10-06, C-2a): Postgres `timestamptz` maps to a UTC microsecond timestamp
 
-> **CLOSED 2026-10-06 (C-2a, [c-2-design.md](../task/wo/c-2-design.md) §2.7).** `timestamptz` maps to `Timestamp(Microsecond, "+00:00")`, the stored instant exactly, with the zone label iceberg-rust's Arrow schema gives an Iceberg `timestamptz` column (`UTC_TIME_ZONE`). `±infinity` and values after 294247-01-10 refuse as for `timestamp`. The declared pin `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row` went RED on purpose against the new table and now holds `time` alone; the replacing pins are `crates/repark-connect/tests/it/postgres_types.rs::timestamptz_anchors_round_trip`. Retired per §6.
+> **CLOSED 2026-10-06 (C-2a, [c-2-design.md](../task/wo/c-2-design.md) §2.7).** `timestamptz` maps to `Timestamp(Microsecond, "UTC")`, the stored instant exactly, with the zone label an Iceberg read exports, so a Postgres × Iceberg union or join sees one type. `±infinity` and values after 294247-01-10 refuse as for `timestamp`. The declared pin `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row` went RED on purpose against the new table and now holds `time` alone; the replacing pins are `crates/repark-connect/tests/it/postgres_types.rs::timestamptz_anchors_round_trip`. Corrected by the C-2a fold (round B, 2026-10-06): the label is `UTC`, measured on main `4a643e56`. Retired per §6.
 
 ### CONNECT-DECL-pg-interval — RETIRED (2026-10-06, C-2a): Postgres `interval` reads as the server's text
 

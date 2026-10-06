@@ -3,7 +3,7 @@ use crate::error::ValueRefusal;
 
 pub const POSTGRES_EPOCH_DAYS: i32 = 10_957;
 pub const POSTGRES_EPOCH_MICROS: i64 = 946_684_800_000_000;
-pub const UTC_ZONE_LABEL: &str = "+00:00";
+pub const UTC_ZONE_LABEL: &str = "UTC";
 
 pub(super) fn date(bytes: &[u8]) -> Result<i32, CodecError> {
     let days = i32::from_be_bytes(fixed::<4>(bytes)?);
