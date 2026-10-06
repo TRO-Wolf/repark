@@ -3530,27 +3530,43 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Rationale** — DECLARED 2026-10-05 (C-1). As `json`, and the binary wire form carries a
   version byte before the text, so the codec is not `text`'s.
 ### CONNECT-DIV-url-userinfo — a credential inside a URL- or DSN-shaped property value is masked where Spark shows it
-- **repark** — every display of a source, catalog, conf or namespace property value masks the
-  credential inside the value, whatever the key: URL userinfo keeps the user and the host
-  (`postgresql://alice:***@db.example.com:5432/sales`), a userinfo with no colon is masked
-  whole, an unclean authority fails closed to `scheme://***@host`, and a secret-named query
-  parameter or libpq / ODBC keyword (`password`, `sslpassword`, `access_token`, `pwd`, `sig`,
-  `X-Amz-Signature`, …) shows `***`. The surfaces are `sources()`, `spark.conf.getAll`,
-  `SET k` / `SET` / `SET -v` (when Spark's regex has not already redacted the whole value),
-  `DESCRIBE NAMESPACE EXTENDED` and the `CatalogSpec` / `SourceSpec` `Debug`. An explicit
+- **repark** — every display of a source, catalog, conf, namespace, table or view property
+  value masks the credential inside the value, whatever the key: URL userinfo, read only inside
+  the RFC 3986 authority (it ends at the first `/`, `?` or `#`), keeps the user and the host
+  (`postgresql://alice:***@db.example.com:5432/sales`); a userinfo with no colon, or whose user
+  part carries an `@`, is masked whole; and a secret-named query parameter or libpq / ODBC
+  keyword (`password`, `sslpassword`, `access_token`, `pwd`, `sig`, `X-Amz-Signature`, …)
+  shows `***`. The surfaces are `sources()`, `spark.conf.getAll`, `SET k` / `SET` / `SET -v`
+  (when the Spark regexes have not already redacted the whole value), `DESCRIBE NAMESPACE
+  EXTENDED`, `DESCRIBE TABLE EXTENDED`, `SHOW CREATE TABLE` (table and view), `SHOW TABLE
+  EXTENDED`, `SHOW TBLPROPERTIES` (table and view, with or without a key), the `CatalogSpec` /
+  `SourceSpec` `Debug`, the config-value refusals and the memory-catalog spans. An explicit
   `spark.conf.get(k)` and the `SET k = v` echo stay raw, as in Spark.
-- **Apache Spark** — Spark 4.1.2 shows the password. `SET spark.repark.test.conn` and bare
-  `SET` answer `mysql://bob:RuntimePw2@db.example.com/sales` when neither the key nor the value
-  matches its redaction regex; `DESCRIBE NAMESPACE EXTENDED` answers
-  `((conn,postgresql://u:NsPw5@db.example.com/sales), (plain,p7))`; `spark.conf.getAll` is
-  unredacted. *(oracle: measured 2026-10-06, live pyspark 4.1.2, private local session.)*
-- **Pin** — `crates/repark-spark/src/tests/describe_show.rs::describe_namespace_extended_masks_url_userinfo_spark_would_show`,
+- **Apache Spark** — Spark 4.1.2 shows the password on every one of these. `SET spark.p.conn`
+  and bare `SET` answer `mysql://bob:SetPw@db.example.com/sales` when neither the key nor the
+  value matches a redaction regex; `DESCRIBE NAMESPACE EXTENDED` answers
+  `((conn,postgresql://u:NsPw@db.example.com/sales))`; on an Iceberg table with
+  `'conn' = 'postgresql://u:TblPw@db.example.com/sales'`, `DESCRIBE TABLE EXTENDED`'s
+  `Table Properties` answers `[conn=postgresql://u:TblPw@db.example.com/sales,…]`,
+  `SHOW CREATE TABLE` carries `'conn' = 'postgresql://u:TblPw@db.example.com/sales'`,
+  `SHOW TABLE EXTENDED`'s `Table Properties:` line carries it character by character, and
+  `SHOW TBLPROPERTIES t` / `t ('conn')` answer it; on an Iceberg view, `SHOW TBLPROPERTIES v`,
+  `SHOW CREATE TABLE v` and `DESCRIBE TABLE EXTENDED v`'s `View Properties` answer
+  `postgresql://u:ViewPw@db.example.com/sales`; `spark.conf.getAll` is unredacted.
+  *(oracle: measured 2026-10-06, live pyspark 4.1.2 with iceberg-spark-runtime-4.1 1.11.0 over
+  an `InMemoryCatalog`, private local session.)* RePark's `DESCRIBE TABLE EXTENDED` of a view
+  renders no property row.
+- **Pin** — `crates/repark-spark/src/tests/describe_show.rs::describe_namespace_extended_masks_url_userinfo_spark_would_show`;
+  `crates/repark-spark/src/tests/property_display_redaction.rs` (`describe_table_extended_…`,
+  `show_create_table_…`, `show_table_extended_…`, `show_tblproperties_of_a_table_…`,
+  `show_tblproperties_of_a_view_…`, `show_create_table_of_a_view_masks_a_property_password`);
   `python/repark/tests/test_source_url_redaction_1.py::test_set_listings_never_carry_the_password`,
   `::test_config_dump_never_carries_the_password`
-- **Rationale** — DECLARED 2026-10-06 (SOURCE-URL-REDACT-1). The CDC North Star default:
-  credentials are never displayed, even where Spark displays them (owner, 2026-10-06: "we need
-  security to be tight"). The host, port and database stay visible for debugging. Retire the
-  row only if the owner rules that Spark's display wins.
+- **Rationale** — DECLARED 2026-10-06 (SOURCE-URL-REDACT-1; extended by its fold 1 the same day
+  to tables and views). The CDC North Star default: credentials are never displayed, even
+  where Spark displays them (owner, 2026-10-06: "we need security to be tight"). The host,
+  port and database stay visible for debugging. Retire the row only if the owner rules that
+  Spark's display wins.
 ### SES-ARTIFACT-1 — `addArtifact(s)` supports driver-local `pyfile` copies only
 - **repark** — `addArtifact`/`addArtifacts` validate exactly like Spark: more than one of
   `pyfile`/`archive`/`file` true raises `PySparkValueError` with condition
@@ -5359,9 +5375,11 @@ the pin rather than obeying it.
 > fields; `RESET` / `RESET k` answer the zero-column frame (`RESET k` restores a
 > builder-seeded value when one exists); bare `SET` lists the runtime-set keys sorted,
 > and `SET -v` adds the empty `meaning` / `Since version` columns. Redaction on
-> `SET k` / bare `SET` / `SET -v` uses Spark's default `spark.redaction.regex`
-> `(?i)secret|password|token|access[.]key` against the **key or the value**, replacing
-> the value with `*********(redacted)`; the `SET k = v` echo is the raw value.
+> `SET k` / bare `SET` / `SET -v` uses Spark's defaults `spark.redaction.regex`
+> `(?i)secret|password|token|access[.]?key` and `spark.sql.redaction.options.regex`
+> `(?i)url` against the **key or the value**, replacing the value with `*********(redacted)`
+> (both defaults read from Spark 4.1.2 and probed, 2026-10-06, SOURCE-URL-REDACT-1 fold 1;
+> the door had `access[.]key` and no `url` before); the `SET k = v` echo is the raw value.
 > Offset zones follow Java `ZoneId.of`: `+05`, `+5`, `+18:00`, `GMT+8` are accepted;
 > `+18:01` refuses `[INVALID_CONF_VALUE.TIME_ZONE]`. `SELECT current_timezone()`
 > resolves and answers the session zone as a non-null string. Spark-class errors the

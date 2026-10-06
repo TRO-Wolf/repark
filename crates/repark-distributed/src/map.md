@@ -1,5 +1,7 @@
 # map — repark-distributed/src
 
+**SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** audit finding, no change here: `iceberg_provider.rs` reads a session catalog provider's `Debug` text functionally (`catalog_spec_from_debug`, line 738), and the `debug_quoted_values` refusal (lines 696-697) echoes that text's `StorageConfig` props slice, whose URL-embedded passwords the fork's `Debug` does not mask. Recorded in the unit ledger §6. pins: source-url-redact-1/C-020
+
 ## Purpose
 
 Source for the distributed-execution crate. The crate seed (BALLISTA-M1-A step 0) carries an

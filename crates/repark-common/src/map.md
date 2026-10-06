@@ -79,6 +79,9 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   (`prop_key_is_secret`, or a compact name `sig`, `…pwd`, `…signature`) masks its value,
   quoted, braced and unterminated forms included. Unit pins at the bottom of the module.
   pins: source-url-redact-1/C-001, C-002, C-003, C-004, C-005, C-006
+  **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** userinfo is read only inside the RFC 3986 authority (it ends at the first
+  `/`, `?` or `#`), so a path, query or fragment `@` never masks or hides the host; a userinfo
+  whose user part carries an `@` is masked whole. pins: source-url-redact-1/C-002, C-015
 - `names.rs` — **WO CASESENS-1 slice 2 (2026-09-27):** the one
   name-matching rule every binder calls. `NameRule { Exact, IgnoreCase }`
   (`from_case_sensitive`, `matches`, `lookup` → `NameHit::{One, Many,

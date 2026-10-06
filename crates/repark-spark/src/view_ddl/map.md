@@ -66,6 +66,9 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   `COLUMN_ALREADY_EXISTS` 42711 on a folded duplicate in the effective output
   names (aliases when given, else the planned body) under
   `caseSensitive=false` (R10), before registration. pins: casesens-1/C-012
+  **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** `show_tblproperties_rows` (views: `SHOW TBLPROPERTIES`, `SHOW CREATE TABLE`)
+  masks every stored value and the `location` row through `mask_value_credentials`; the
+  table arm in `show_tblproperties.rs` masks its stored values the same way. pins: source-url-redact-1/C-016
 - `parse.rs` + `execute.rs` + the router arm — **PR4 (2026-09-22,
   V-SHOW-TBLPROPERTIES):** `try_parse_show_tblproperties` (quoted, unquoted
   and dotted keys; a quoted key ends at the string; a tail that tokenizes but

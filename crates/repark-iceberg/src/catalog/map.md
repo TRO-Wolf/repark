@@ -67,6 +67,8 @@ Source comments retain only API and safety contracts; implementation narration i
   (on/off). pins: ice-footer-cache-1/C-002
   No product behaviour changes: the wrapper only delegates and counts.
   pins: ice-read-perf-0/C-010
+  **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** the three `catalog.memory_catalog*` spans record `warehouse` through
+  `repark_common::redaction::mask_value_credentials` (the edge exists). pins: source-url-redact-1/C-018
 - `io_stats.rs` — **ICE-READ-PERF-0 (2026-09-19):** the Iceberg I/O counters. `IcebergIoCounters`
   holds one pair of relaxed `AtomicU64` (requests, bytes) per operation kind (`IcebergIoOp`:
   exists, metadata/HEAD, whole read, ranged read, footer read, write, delete, list) and per file class

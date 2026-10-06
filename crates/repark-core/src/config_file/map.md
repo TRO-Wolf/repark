@@ -121,6 +121,7 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   **SOURCE-URL-REDACT-1 (2026-10-06):** `raw_conf_dump_rows` builds the merged `(key, value, source)` rows unredacted
   and `redact_dump_rows` masks them; `conf_dump_rows` (tests only) composes the two.
   pins: source-url-redact-1/C-008
+  **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** the `session.*` integer refusal echoes the value masked. pins: source-url-redact-1/C-017
 - `maintenance.rs` — `MaintenancePolicy` (the six D-1 profile-level keys plus the
   `tables` map of per-table `TablePolicy` entries) with `from_table` (unknown keys refuse
   naming the `name.maintenance.key` path; `adaptive_partitioning` refuses as not yet
@@ -136,6 +137,7 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   and `parse_maintenance_policy` (full-document text in, typed policy out, `None` for a
   profile with no maintenance table) are public for the Spark procedure; the
   `#[allow(dead_code)]` is gone now that `plan_steps` calls `resolve` through the stamp.
+  **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** `parse_duration`'s refusal echoes the value masked. pins: source-url-redact-1/C-017
 - `tests/` — `mod.rs` keeps the 40 stage pins untouched (the seed's three, step-1
   discovery/merge/interpolation, step-1b `$`-edge flips, step 2's catalog/database/redaction
   pins) plus CFG-2 step 1's `auto_register` non-boolean refusal; `wiring.rs` carries the

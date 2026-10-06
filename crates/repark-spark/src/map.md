@@ -1136,6 +1136,8 @@ pins: rp-4-fork-repin/C-005, C-006
   `with_escaped_string_literals_config`, `escaped_verbatim_from_options`)
   turn `pub` for the binding's `filter`/`where`/`F.expr` doors.
   pins: string-literal-escape-1/C-008, C-009
+  **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** the `escapedStringLiterals` refusal echoes the rejected value through
+  `mask_value_credentials`. pins: source-url-redact-1/C-017
 - `spark_literal_typing.rs` — **SQL-LITERAL-TYPING-1 (2026-09-16):**
   `SparkIntegralLiteral` types unsuffixed integral literals as Spark does —
   Int64 fitting i32 narrows to Int32, UInt64 becomes Decimal128(digits, 0),
@@ -2251,6 +2253,9 @@ pins: rp-4-fork-repin/C-005, C-006
   `format_version_number` is `pub(crate)` so the SHOW TBLPROPERTIES table arm
   (`view_ddl/show_tblproperties.rs`) reuses it instead of duplicating the mapping.
   pins: tblprops-1/C-001
+  **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** every value that is not key-redacted goes through
+  `mask_value_credentials`, so `DESCRIBE TABLE EXTENDED`, `SHOW CREATE TABLE` and
+  `SHOW TABLE EXTENDED` mask a URL password Spark 4.1.2 prints. pins: source-url-redact-1/C-016
 - `metadata_tables.rs` — I2 metadata-table path rewrite (`.snapshots` → `$snapshots`);
   19 in-module tests. **RP-1:** `METADATA_TABLE_NAMES` includes `position_deletes` (16th
   `MetadataTableType` at pin `5e7b2e4`); **RP-42:** fork #332 ports the scan, so it serves
