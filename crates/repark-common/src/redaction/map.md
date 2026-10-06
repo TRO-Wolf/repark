@@ -8,7 +8,7 @@ See [../map.md](../map.md).
 
 ## Contents
 
-- `tests.rs` — the hand-written pins, one test per shape or rule. Round 1 and fold 1: URL
+- `tests.rs` — the hand-written pins, one test per shape or rule. **SOURCE-URL-REDACT-1-FN fold 3 (2026-10-06):** `mask_url_userinfo_masks_a_url_password_and_leaves_other_text` pins a URL password inside a sentence, the Iceberg key-collision sentences, and `s3://bucket@x/path`. Round 1 and fold 1: URL
   userinfo for every scheme, the lone token, every URL in a value, the authority scoping,
   query parameters, libpq and ODBC keywords, untouched non-secrets, the key rule.
   pins: source-url-redact-1/C-001, C-002, C-003, C-004, C-005, C-006, C-015
