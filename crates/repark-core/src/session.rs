@@ -85,11 +85,10 @@ fn apply_datafusion_config_keys(
         if DEAD_DATAFUSION_54_1_KEYS.contains(&key.as_str()) {
             return Err(dead_datafusion_54_1_refusal(key, value));
         }
-        config.options_mut().set(key, value).map_err(|error| {
-            Error::Config(format!(
-                "invalid DataFusion session config '{key}' = '{value}': {error}"
-            ))
-        })?;
+        config
+            .options_mut()
+            .set(key, value)
+            .map_err(|error| df_guards::invalid_datafusion_config(key, value, &error))?;
     }
     Ok(())
 }

@@ -237,8 +237,12 @@ fn swap_fair_spill_pool(context: &SessionContext, pool_bytes: Option<usize>) -> 
 /// # Errors
 /// [`Error::Config`] naming the key when the string is not a DF capacity.
 fn parse_memory_limit_value(value: &str) -> Result<usize> {
-    SessionContext::parse_capacity_limit(MEMORY_LIMIT_KEY, value)
-        .map_err(|error| Error::Config(format!("invalid {MEMORY_LIMIT_KEY} = '{value}': {error}")))
+    SessionContext::parse_capacity_limit(MEMORY_LIMIT_KEY, value).map_err(|error| {
+        Error::Config(format!(
+            "invalid {MEMORY_LIMIT_KEY} = '{}': {error}",
+            repark_common::redaction::mask_value_credentials(value)
+        ))
+    })
 }
 
 /// Parse `SET [VARIABLE] <key> = <value>` (quoted or bare).

@@ -347,7 +347,8 @@ fn parse_knob(label: &str, key: &str, value: Option<&toml::Value>) -> Result<Opt
         }),
         toml::Value::String(text) => text.trim().parse::<usize>().map(Some).map_err(|_| {
             Error::Config(format!(
-                "key `{label}.session.{key}` must be a non-negative integer, got `{text}`"
+                "key `{label}.session.{key}` must be a non-negative integer, got `{}`",
+                repark_common::redaction::mask_value_credentials(text)
             ))
         }),
         _ => Err(Error::Config(format!(
