@@ -2,6 +2,7 @@ use iceberg::spec::{
     FormatVersion, NullOrder, Schema as IcebergSchema, SortDirection, SortField, SortOrder,
     TableMetadata, Transform,
 };
+use repark_common::redaction::mask_value_credentials;
 use repark_core::prop_key_is_secret;
 
 use crate::describe_show::REDACTION_REPLACEMENT_TEXT;
@@ -67,9 +68,11 @@ pub(crate) fn spark_table_properties(metadata: &TableMetadata) -> Vec<(String, S
             .map(|(key, value)| (key.clone(), value.clone())),
     );
     for (key, value) in &mut pairs {
-        if prop_key_is_secret(key) {
-            *value = REDACTION_REPLACEMENT_TEXT.to_string();
-        }
+        *value = if prop_key_is_secret(key) {
+            REDACTION_REPLACEMENT_TEXT.to_string()
+        } else {
+            mask_value_credentials(value)
+        };
     }
     pairs.sort_by(|left, right| left.0.cmp(&right.0));
     pairs

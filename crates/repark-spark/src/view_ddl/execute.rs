@@ -553,7 +553,10 @@ pub(crate) fn show_tblproperties_rows(
 ) -> Vec<(String, String)> {
     let metadata = view.metadata();
     let mut rows = vec![
-        ("location".to_string(), metadata.location().to_string()),
+        (
+            "location".to_string(),
+            repark_common::redaction::mask_value_credentials(metadata.location()),
+        ),
         ("provider".to_string(), "iceberg".to_string()),
         (
             "format-version".to_string(),
@@ -564,7 +567,12 @@ pub(crate) fn show_tblproperties_rows(
         .properties()
         .iter()
         .filter(|(name, _)| !SHOW_TBLPROPERTIES_RESERVED.contains(&name.as_str()))
-        .map(|(name, value)| (name.clone(), value.clone()))
+        .map(|(name, value)| {
+            (
+                name.clone(),
+                repark_common::redaction::mask_value_credentials(value),
+            )
+        })
         .collect::<Vec<_>>();
     stored.sort();
     rows.extend(stored);
