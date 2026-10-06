@@ -1,5 +1,8 @@
 # The micro-batch packet — decisions, order, fork asks, open questions (2026-10-05)
 
+> **North Star briefing (owner, 2026-10-05).** Every executor and verifier on this order reads [the CDC and micro-batch North Star](../../roadmap/epic-term/cdc-microbatch-north-star-2026-10-05.md) first: NS-1…NS-19, the authority order in §2 (Flink governs guarantees, Spark the surface, Iceberg's own sinks the commits, else refuse with a dated row), the Rust placement in §4, and the production-grade lists in §5. The North Star sits below every ruled O/D/CC/ES/CL row and above the agent's judgment. For a question no ruled row answers, write the four lines (the question, Flink's answer, Spark's answer, the NS default), act on the default, and record the four lines as a dated ledger row. Halt only for the three §8 cases.
+
+
 The plan is
 [task/roadmap/epic-term/microbatch-cdc-sink-plan-2026-10-04.md](../../roadmap/epic-term/microbatch-cdc-sink-plan-2026-10-04.md)
 (§3 D-1…D-8, §5 slices, §6 waves, §7 O-1…O-10, §8 order, §9 rules, §10
