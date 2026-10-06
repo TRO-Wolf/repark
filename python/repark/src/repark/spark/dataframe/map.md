@@ -1696,3 +1696,11 @@ native copy projection gave each field. `core.py` stays 3973 (the docstring gave
 pins: u11-edge-1/C-029, C-030
 **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** the REPLACE WHERE scan
 runs through the native `sql_built` method. pins: string-literal-escape-1/C-011
+**Fold SM-2 R2 (2026-10-06):** frames with duplicate display names refuse the
+named writes with Spark's exact `COLUMN_ALREADY_EXISTS` (SQLSTATE 42711) before
+any file is created: `writer_layout._refuse_duplicate_output_columns` checks
+`frame.columns` (folded when the session is case-insensitive, exact otherwise)
+and is called from `_apply_path_write` (parquet, json, csv), `save` (orc,
+ahead of the format refusal), `write_table` (saveAsTable create/replace),
+`_run_ctas` and V2 `append`. `insertInto` stays positional (Spark writes it);
+saveAsTable-append stays by-name loud. pins: attr-id-1/C-061

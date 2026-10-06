@@ -9542,3 +9542,16 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   file by version number, never mtime.
   No module docstring: the lane's no-comments ruling covers the new file; the
   contract lives here. pins: attr-id-1/C-060
+- [_sm2_shared.py](_sm2_shared.py) — **Fold SM-2 shared pins (2026-10-06):**
+  session/join builders plus refusal-shape and no-`__repark_`-bytes helpers for
+  the fold's pin files. No module docstring: the lane's no-comments ruling
+  covers the new file; the contract lives here. pins: attr-id-1/C-061
+- [test_attr_id_1_sm2_dupwrites.py](test_attr_id_1_sm2_dupwrites.py) — **Fold
+  SM-2 R2 (2026-10-06):** duplicate-display-name writes refuse
+  `COLUMN_ALREADY_EXISTS` with Spark's exact text, condition and SQLSTATE, and
+  create no file or table (parquet, json, csv, orc, saveAsTable, V2 create and
+  V2 append); `insertInto` writes positionally as Spark does; folded-only
+  duplicates report the folded name. The csv refusal is the ruled divergence
+  FA-5 (Spark writes the duplicate header). No module docstring: the lane's
+  no-comments ruling covers the new file; the contract lives here.
+  pins: attr-id-1/C-061

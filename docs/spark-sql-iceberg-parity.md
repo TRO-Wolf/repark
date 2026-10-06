@@ -3305,6 +3305,22 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   visible (`conf.get` discloses it), and both directions stay under test so a drift in
   either inference path reds.
 
+### FA-5 — csv writes of duplicate display names refuse (Spark writes them)
+
+- **repark** — a frame whose display names hold duplicates refuses a csv path
+  write with `[COLUMN_ALREADY_EXISTS]`, naming the first duplicate, before any
+  file is created — the same refusal as the parquet/json/orc/table doors.
+- **Apache Spark** — writes the file with the duplicate display header
+  (`id,s,v,id,s,v` on the fold's self-join). *(oracle: live 4.1.2, 2026-10-06,
+  raw header line of the written part file.)*
+- **Pin** — `python/repark/tests/test_attr_id_1_sm2_dupwrites.py::test_csv_write_of_duplicate_display_names_refuses_as_ruled_divergence`
+- **Rationale** — DECLARED as a deliberate divergence (orchestrator, 2026-10-06):
+  the csv rows can only carry the twin engine names today, and writing them
+  would ship a silent wrong answer; the loud refusal holds the line until the
+  physical-only COPY rename lands (follow-up on the v1.5.3 card, 2026-10-06).
+  The pin asserts the refusal, so the rename reds it and forces this row to be
+  re-recorded together with the behavior.
+
 ### DF-STREAM-1 — `dropDuplicatesWithinWatermark` drops the appended plan dump
 
 - **repark** — raises `AnalysisException` with errorClass `_LEGACY_ERROR_TEMP_3102` at the call,

@@ -48,6 +48,25 @@ def _raise_analysis(
     raise error
 
 
+def _refuse_duplicate_output_columns(frame: Any) -> None:
+    columns = list(frame.columns)
+    sensitive = _native.session_case_sensitive(frame._session)
+    seen: list[str] = []
+    for name in columns:
+        folded = name.lower()
+        for earlier in seen:
+            if earlier == name or (not sensitive and earlier.lower() == folded):
+                reported = folded
+                _raise_analysis(
+                    f"[COLUMN_ALREADY_EXISTS] The column `{reported}` already exists. "
+                    "Choose another name or rename the existing column. SQLSTATE: 42711",
+                    "COLUMN_ALREADY_EXISTS",
+                    {"columnName": reported},
+                    "42711",
+                )
+        seen.append(name)
+
+
 def run_through_temp_view(
     dataframe: DataFrame,
     build_sql: Callable[[str], str],
