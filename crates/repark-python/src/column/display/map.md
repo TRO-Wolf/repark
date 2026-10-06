@@ -1,5 +1,7 @@
 # map — repark-python/src/column/display
 
+SOURCE-URL-REDACT-1-FN fold 2 (2026-10-06): display `PyErr` messages pass through `exceptions::mask_user_visible`.
+
 ## Purpose
 
 Child modules of [`display.rs`](../display.rs). The Group-1 typed constructors arrived

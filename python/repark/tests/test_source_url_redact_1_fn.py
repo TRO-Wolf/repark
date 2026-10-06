@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from repark import ReparkSession
-from repark.errors import IllegalArgumentException
+from repark.errors import AnalysisException, IllegalArgumentException
 
 URL = "postgresql://u:pw@h/db"
 MASKED = "postgresql://u:***@h/db"
@@ -65,3 +65,36 @@ def test_reset_masks_a_url_stored_as_the_ansi_builder_value() -> None:
         _assert_masked(str(caught.value), ANSI_KEY, sqlstate=False)
     finally:
         spark.stop()
+
+
+PLAN_KEYS = ("repark.sql.maxArrayElements", "repark.sql.allowLocalFilesystemDDL")
+TIME_ZONE_KEY = "spark.sql.session.timeZone"
+FILE_SCOPED_KEY = "repark.merge.file-scoped-rewrite"
+
+
+def _assert_url_masked(message: str, key: str) -> None:
+    assert MASKED in message
+    assert "u:pw@" not in message
+    assert key in message
+
+
+@pytest.mark.parametrize("key", PLAN_KEYS)
+def test_builder_plan_knob_masks_a_url_password(key: str) -> None:
+    with pytest.raises(AnalysisException) as caught:
+        ReparkSession.builder.config(key, URL).getOrCreate()
+    assert type(caught.value).__name__ == "AnalysisException"
+    _assert_url_masked(str(caught.value), key)
+
+
+def test_builder_time_zone_masks_a_url_password() -> None:
+    with pytest.raises(IllegalArgumentException) as caught:
+        ReparkSession.builder.config(TIME_ZONE_KEY, URL).getOrCreate()
+    assert type(caught.value).__name__ == "IllegalArgumentException"
+    _assert_url_masked(str(caught.value), TIME_ZONE_KEY)
+
+
+def test_builder_file_scoped_rewrite_masks_a_url_password() -> None:
+    with pytest.raises(IllegalArgumentException) as caught:
+        ReparkSession.builder.config(FILE_SCOPED_KEY, URL).getOrCreate()
+    assert type(caught.value).__name__ == "IllegalArgumentException"
+    _assert_url_masked(str(caught.value), FILE_SCOPED_KEY)
