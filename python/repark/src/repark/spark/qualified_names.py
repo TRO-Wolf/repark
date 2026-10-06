@@ -1,9 +1,16 @@
 from __future__ import annotations
 
 import weakref
-from typing import Any
+from types import MethodType
+from typing import Any, NoReturn
 
 from repark import _native
+from repark.errors import AnalysisException
+from repark.spark._integral import (
+    _attached_error_class,
+    _attached_message_parameters,
+    _attached_sql_state,
+)
 from repark.spark.filter_quote import _frame_qualifiers_for_bind
 
 _ID_SNAPSHOTS: weakref.WeakKeyDictionary[Any, tuple[Any, list[str | None], list[str]]] = (
@@ -66,6 +73,54 @@ def _arrow_c_stream_with_display(frame: Any, requested_schema: Any) -> Any:
     )
     batches = (batch.rename_columns(displays) for batch in reader)
     return pa.RecordBatchReader.from_batches(renamed, batches).__arrow_c_stream__(requested_schema)
+
+
+def _refuse_ambiguous_map_input(frame: Any) -> None:
+    columns = list(frame.columns)
+    held = _stamped_frame_id_snapshot(frame)[1]
+    if len(columns) != len(held):
+        return
+    try:
+        sensitive = _native.session_case_sensitive(frame._session)
+    except (TypeError, AttributeError):
+        sensitive = False
+    groups: dict[str, list[int]] = {}
+    for position, name in enumerate(columns):
+        groups.setdefault(name if sensitive else name.lower(), []).append(position)
+    for positions in groups.values():
+        if len(positions) < 2:
+            continue
+        distinct = {
+            held[position] if held[position] is not None else f"#{position}"
+            for position in positions
+        }
+        if len(distinct) < 2:
+            continue
+        reported = columns[positions[0]]
+        qualifiers = getattr(frame, "_frame_qualifiers", None) or {}
+        candidates = []
+        for position in positions:
+            names = sorted(qualifiers.get(held[position]) or ())
+            candidates.append(f"`{names[0]}`.`{reported}`" if names else f"`{reported}`")
+        candidates.sort()
+        references = "[" + ", ".join(candidates) + "]"
+        quoted = f"`{reported}`"
+        _raise_ambiguous_reference(quoted, references)
+
+
+def _raise_ambiguous_reference(quoted: str, references: str) -> NoReturn:
+    error = AnalysisException(
+        f"[AMBIGUOUS_REFERENCE] Reference {quoted} is ambiguous, "
+        f"could be: {references}. SQLSTATE: 42704"
+    )
+    error._spark_error_class = "AMBIGUOUS_REFERENCE"
+    error._spark_message_parameters = {"name": quoted, "referenceNames": references}
+    error._spark_sql_state = "42704"
+    error.getErrorClass = MethodType(_attached_error_class, error)
+    error.getCondition = MethodType(_attached_error_class, error)
+    error.getMessageParameters = MethodType(_attached_message_parameters, error)
+    error.getSqlState = MethodType(_attached_sql_state, error)
+    raise error
 
 
 def _join_frame_qualifiers(child: Any, left: Any, right: Any) -> dict[str, frozenset[str]] | None:

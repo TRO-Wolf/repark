@@ -580,6 +580,14 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `pa.table(J)` over a duplicate-display-name join carries the display names
   like `toArrow` does; frames without an overlay take the passthrough arm.
   pins: attr-id-1/C-062
+  **Fold SM-2 R4 (2026-10-06):** `_refuse_ambiguous_map_input` refuses a
+  `mapInArrow`/`mapInPandas` input whose first duplicate display name (folded
+  unless the session is case-sensitive) carries distinct stamped attribute
+  ids, with Spark's exact `AMBIGUOUS_REFERENCE` text, condition, SQLSTATE
+  42704 and `name`/`referenceNames` params; same-id duplicates
+  (`select("id", "id")`) still run. The case-sensitivity read falls back to
+  insensitive when the session is a test double, which has no native handle.
+  pins: attr-id-1/C-063
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
   unsupported operations fail explicitly.

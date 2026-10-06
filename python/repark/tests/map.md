@@ -9563,3 +9563,15 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   exports its engine names. No module docstring: the lane's no-comments
   ruling covers the new file; the contract lives here.
   pins: attr-id-1/C-062
+- [test_attr_id_1_sm2_duppandas.py](test_attr_id_1_sm2_duppandas.py) — **Fold
+  SM-2 R4 (2026-10-06):** `mapInPandas`/`mapInArrow` over duplicate-display
+  frames with distinct attribute ids refuse `AMBIGUOUS_REFERENCE` with
+  Spark's exact text, condition, SQLSTATE 42704 and message params (self,
+  mixed, USING `s`, cross, qualified select, star, literals, folded-ID
+  spelling; the refusal fires at the call, before the function runs);
+  same-origin duplicates still run; scalar and grouped-agg pandas UDF input
+  Series are positional (`_0`, …); `toPandas` carries the display names. One
+  named divergence pin: same-origin duplicate map inputs keep `(id, id)`
+  where Spark shows `(id_0, id_1)`. No module docstring: the lane's
+  no-comments ruling covers the new file; the contract lives here.
+  pins: attr-id-1/C-063

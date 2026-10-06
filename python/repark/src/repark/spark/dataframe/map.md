@@ -440,6 +440,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   old comparator defined, nested key types fall back to the per-row compare for that
   column), so `as_py` runs once per contiguous run, never per row.
   pins: dfcore-1/C-006, grouped-surface-1/C-002, C-004, C-009
+  **Fold SM-2 R4 (2026-10-06):** `_grouped_agg_pandas` names each input Series
+  by its positional slot (`_0`, …), as Spark 4.1.2 does, so the
+  `__repark_gagg_in_*` intermediate never reaches user code.
+  pins: attr-id-1/C-063
   **ATTR-ID-1 SJ-4 (2026-10-02):** `_grouped_agg_pandas` moves here from
   `joins_columns.py` (pure move at the size ceiling).
 - `grouped_arrow.py` owns the grouped map bridges bound on `GroupedData` (GROUPED-SURFACE-1,
@@ -879,6 +883,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - `udf_bridge.py` owns action-time pandas, classic, and Arrow UDF callbacks without importing
   `DataFrame` at module scope. DFCORE-2 (2026-09-07) keeps callback execution here; only the
   projection rewrites moved out. pins: dfcore-2/C-005
+  **Fold SM-2 R4 (2026-10-06):** `_pandas_udf_series_args_for_slot` names each
+  input Series by its positional slot (`_0`, `_1`, …), as Spark 4.1.2 does, so
+  the `__repark_pudf_in_*` intermediate never reaches user code.
+  pins: attr-id-1/C-063
 - `io_declared.py` owns the orc-write / xml declared-refusal bodies and the `jdbc` reader-writer
   surface (IO-DECLARED-1, 2026-09-14; registry IO-ORC-1 / IO-XML-1 / IO-JDBC-1).
   **IO-ORC-1 (2026-09-16):** the orc reader refusal is deleted (the read side is a real
@@ -1706,3 +1714,8 @@ ahead of the format refusal), `write_table` (saveAsTable create/replace),
 saveAsTable-append stays by-name loud. pins: attr-id-1/C-061
 **Fold SM-2 R3 (2026-10-06):** `core.py`'s `__arrow_c_stream__` delegates to
 `qualified_names._arrow_c_stream_with_display`. pins: attr-id-1/C-062
+**Fold SM-2 R4 (2026-10-06):** `core.py`'s `mapInArrow` calls
+`qualified_names._refuse_ambiguous_map_input` after schema coercion, covering
+`mapInPandas` and the grouped/cogroup bridges; the call is line-neutral
+against the `mapInPandas` docstring at the exact 3464 baseline.
+pins: attr-id-1/C-063

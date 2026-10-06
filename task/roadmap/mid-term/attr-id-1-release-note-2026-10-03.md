@@ -74,8 +74,13 @@ release, where main could not plan it. The internal twin names
   which the engine cannot plan over; `insertInto` keeps writing positionally,
   as Spark does.
 - Arrow exports (`pa.table(frame)`) and `toArrow` carry the display names
-  (`id, s, v, id, s, v`), exactly as Spark's `arrow_dup` answers. Pandas and
-  UDF inputs are renamed at the batch boundary the same way.
+  (`id, s, v, id, s, v`), exactly as Spark's `arrow_dup` answers.
+  `toPandas` carries the display names the same way.
+- `mapInPandas` and `mapInArrow` over a frame with duplicate display names
+  refuse with Spark's exact `[AMBIGUOUS_REFERENCE]`, naming the first
+  duplicate with its qualified candidates (SQLSTATE 42704), instead of
+  running with internal names. Scalar and grouped-aggregation pandas UDF
+  input Series are positional (`_0`, `_1`, …), as on Spark.
 
 ## Pointers
 

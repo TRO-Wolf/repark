@@ -654,6 +654,7 @@ class DataFrame:
         if not callable(func):
             raise PySparkTypeError(f"mapInArrow func must be callable, got {type(func).__name__}")
         declared, arrow_schema = _coerce_map_in_arrow_schema(schema)
+        _qualified_names._refuse_ambiguous_map_input(self)
         import contextlib
 
         from repark.spark._arrow_stream import register_arrow_exporter_as_temp_view
@@ -688,8 +689,7 @@ class DataFrame:
     ) -> DataFrame:
         """Apply a pandas-DataFrame iterator UDF through ``mapInArrow``.
 
-        Requires the optional ``pandas`` extra.
-        """
+        Requires the optional ``pandas`` extra."""
         self._ensure_alive()
         try:
             __import__("pandas")

@@ -263,12 +263,14 @@ def _grouped_agg_pandas(pdf: Any, *, keys: list[str], specs: list[dict[str, Any]
         row[key_name] = pdf[key_name].iloc[0] if len(pdf) > 0 else None
     for spec in specs:
         series_args: list[Any] = []
-        for input_name in spec["input_inter_names"]:
+        for position, input_name in enumerate(spec["input_inter_names"]):
             if input_name not in pdf.columns:
                 raise PySparkException(
                     f"GROUPED_AGG pandas_udf input column missing from group frame: {input_name!r}"
                 )
-            series_args.append(pdf[input_name])
+            series = pdf[input_name]
+            series.name = f"_{position}"
+            series_args.append(series)
         try:
             value = spec["user_func"](*series_args)
         except PySparkException:

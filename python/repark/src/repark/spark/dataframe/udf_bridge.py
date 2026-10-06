@@ -90,13 +90,15 @@ def _arrow_array_to_pandas_series(array: Any) -> Any:
 def _pandas_udf_series_args_for_slot(batch: Any, slot: dict[str, Any]) -> list[Any]:
     """Build pandas Series arguments for one UDF slot and Arrow batch."""
     series_args: list[Any] = []
-    for input_name in slot["input_inter_names"]:
+    for position, input_name in enumerate(slot["input_inter_names"]):
         if input_name not in batch.schema.names:
             raise PySparkException(
                 "pandas_udf input column missing from streamed batch: "
                 f"{input_name!r}; batch fields={list(batch.schema.names)}"
             )
-        series_args.append(_arrow_array_to_pandas_series(batch.column(input_name)))
+        series = _arrow_array_to_pandas_series(batch.column(input_name))
+        series.name = f"_{position}"
+        series_args.append(series)
     return series_args
 
 
