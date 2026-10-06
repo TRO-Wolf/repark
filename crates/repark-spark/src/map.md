@@ -1849,7 +1849,8 @@ pins: rp-4-fork-repin/C-005, C-006
   carrier (`repark_functions::case_sensitive`, default false) and the
   partition-overwrite-mode knob (**ICE-DYN-OVERWRITE-1**, 2026-09-17). A bad
   `spark.sql.iceberg.merge-schema` value is formatted here with `mask_value_credentials`
-  (**SOURCE-URL-REDACT-1-FN**). pins: source-url-redact-1/C-055. It installs
+  (**SOURCE-URL-REDACT-1-FN**). Fold 1 masks every `Configuration` message
+  `configure` returns. pins: source-url-redact-1/C-055. It installs
   the Spark fanout commit order on the fork's `DataFileCommitOrder` hook
   (row-lineage-order-1). Tests:
   [extension/map.md](extension/map.md) and [../tests/session_timezone.rs](../tests/session_timezone.rs).

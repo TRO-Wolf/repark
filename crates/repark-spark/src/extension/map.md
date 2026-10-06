@@ -25,7 +25,10 @@ function-registry + analyzer-rule installation + the composed
   `configure_defaults_ansi_enabled_true`, `configure_honors_ansi_enabled_false`,
   `configure_refuses_ansi_notabool`. **SOURCE-URL-REDACT-1-FN (2026-10-06):**
   `configure_masks_a_url_password_in_the_merge_schema_refusal` masks a URL password in
-  the session-build refusal. pins: source-url-redact-1/C-055
+  the session-build refusal. Fold 1 masks every `Configuration` message from
+  `configure` (`masking_a_configuration_message_changes_only_the_url_password`,
+  `configure_masks_a_url_password_in_the_case_sensitive_refusal`,
+  `configure_masks_a_url_password_in_the_ansi_refusal`). pins: source-url-redact-1/C-055
   **Q10:** `configure_defaults_timestamp_type_ltz`,
   `configure_honors_timestamp_type_ntz`, `configure_refuses_invalid_timestamp_type`.
   **FNP-8 (2026-09-07):** `analyzer_configuration_seats_hof_preparation_and_float_stringify_before_type_coercion`

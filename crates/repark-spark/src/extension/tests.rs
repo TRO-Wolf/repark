@@ -8,6 +8,7 @@ use datafusion::prelude::{SessionConfig, SessionContext};
 use repark_core::{SessionBuildConf, SessionExtension, SessionTimeZone};
 use repark_functions::ansi::{SPARK_SQL_ANSI_ENABLED_KEY, SparkAnsiConfig};
 use repark_functions::cardinality::ReparkSqlConfig;
+use repark_functions::case_sensitive::SPARK_SQL_CASE_SENSITIVE_KEY;
 use repark_functions::merge_schema::SPARK_SQL_ICEBERG_MERGE_SCHEMA_KEY;
 use repark_functions::session_time_zone::{SessionTimeZoneConfig, session_time_zone_from_options};
 use repark_functions::timestamp_type::{
@@ -211,6 +212,81 @@ fn configure_refuses_ansi_notabool() {
         err.contains(SPARK_SQL_ANSI_ENABLED_KEY),
         "error must name the key: {err}"
     );
+}
+
+#[test]
+fn masking_a_configuration_message_changes_only_the_url_password() {
+    let url = "postgresql://u:pw@h/db";
+    let masked_url = "postgresql://u:***@h/db";
+    let messages = [
+        format!(
+            "The value '{url}' in the config \"spark.sql.caseSensitive\" is invalid. \
+             spark.sql.caseSensitive should be boolean, but was {url}"
+        ),
+        format!(
+            "The value '{url}' in the config \"spark.sql.ansi.enabled\" is invalid. \
+             spark.sql.ansi.enabled should be boolean, but was {url}"
+        ),
+        format!(
+            "The value '{url}' in the config \"spark.sql.timestampType\" is invalid. \
+             spark.sql.timestampType should be one of TIMESTAMP_LTZ, TIMESTAMP_NTZ"
+        ),
+        format!(
+            "invalid value {url} for spark.sql.shuffle.partitions: expected a positive integer"
+        ),
+    ];
+    for message in messages {
+        let masked = repark_common::redaction::mask_value_credentials(&message);
+        assert_eq!(masked, message.replace(url, masked_url));
+        assert!(!masked.contains("u:pw@"), "{masked}");
+    }
+    for plain in [
+        "The value 'notabool' in the config \"spark.sql.caseSensitive\" is invalid. \
+         spark.sql.caseSensitive should be boolean, but was notabool",
+        "The value 'maybe' in the config \"spark.sql.ansi.enabled\" is invalid. \
+         spark.sql.ansi.enabled should be boolean, but was maybe",
+    ] {
+        assert_eq!(
+            repark_common::redaction::mask_value_credentials(plain),
+            plain
+        );
+    }
+}
+
+fn configure_refusal(key: &str, value: &str) -> String {
+    let mut conf = HashMap::new();
+    conf.insert(key.to_string(), value.to_string());
+    let zone = SessionTimeZone::default();
+    SparkExtension
+        .configure(build_conf(&conf, &zone), SessionConfig::new())
+        .expect_err("a bad session conf value must refuse")
+        .to_string()
+}
+
+#[test]
+fn configure_masks_a_url_password_in_the_case_sensitive_refusal() {
+    let err = configure_refusal(SPARK_SQL_CASE_SENSITIVE_KEY, "postgresql://u:pw@h/db");
+    assert!(
+        err.contains(
+            "The value 'postgresql://u:***@h/db' in the config \"spark.sql.caseSensitive\" is \
+             invalid. spark.sql.caseSensitive should be boolean, but was postgresql://u:***@h/db"
+        ),
+        "{err}"
+    );
+    assert!(!err.contains("u:pw@"), "{err}");
+}
+
+#[test]
+fn configure_masks_a_url_password_in_the_ansi_refusal() {
+    let err = configure_refusal(SPARK_SQL_ANSI_ENABLED_KEY, "postgresql://u:pw@h/db");
+    assert!(
+        err.contains(
+            "The value 'postgresql://u:***@h/db' in the config \"spark.sql.ansi.enabled\" is \
+             invalid. spark.sql.ansi.enabled should be boolean, but was postgresql://u:***@h/db"
+        ),
+        "{err}"
+    );
+    assert!(!err.contains("u:pw@"), "{err}");
 }
 
 #[test]
