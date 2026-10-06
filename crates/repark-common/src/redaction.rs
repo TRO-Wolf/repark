@@ -45,18 +45,16 @@ fn mask_url_userinfo(value: &str) -> String {
         out.push_str(&rest[..authority_start]);
         let tail = &rest[authority_start..];
         let region_end = tail.find(char::is_whitespace).unwrap_or(tail.len());
-        let region = &tail[..region_end];
-        let clean_end = region.find(['/', '?', '#']).unwrap_or(region.len());
-        let consumed = if let Some(at) = region[..clean_end].rfind('@') {
-            push_masked_userinfo(&mut out, &region[..at]);
-            at
-        } else if let Some(at) = region.rfind('@')
-            && region[..at].contains(':')
-        {
-            out.push_str(REDACTED);
-            at
-        } else {
-            0
+        let authority_end = tail[..region_end]
+            .find(['/', '?', '#'])
+            .unwrap_or(region_end);
+        let authority = &tail[..authority_end];
+        let consumed = match authority.rfind('@') {
+            Some(at) => {
+                push_masked_userinfo(&mut out, &authority[..at]);
+                at
+            }
+            None => 0,
         };
         rest = &tail[consumed..];
     }
@@ -68,7 +66,9 @@ fn push_masked_userinfo(out: &mut String, userinfo: &str) {
     if userinfo.is_empty() {
         return;
     }
-    if let Some((user, _)) = userinfo.split_once(':') {
+    if let Some((user, _)) = userinfo.split_once(':')
+        && !user.contains('@')
+    {
         out.push_str(user);
         out.push(':');
     }
@@ -240,12 +240,27 @@ mod tests {
     }
 
     #[test]
-    fn unclean_userinfo_fails_closed_to_the_whole_userinfo() {
+    fn userinfo_is_read_only_inside_the_authority() {
+        let cases = [
+            ("https://h:443/p?m=a@b.c", "https://h:443/p?m=a@b.c"),
+            ("https://u:p1@h/x@y", "https://u:***@h/x@y"),
+            ("https://h/p#frag:x@y", "https://h/p#frag:x@y"),
+            ("https://u:p2@h/p#a:b@c", "https://u:***@h/p#a:b@c"),
+            ("https://h?u:p@x", "https://h?u:p@x"),
+            ("http://[::1]:8080/x@y", "http://[::1]:8080/x@y"),
+        ];
+        for (raw, expected) in cases {
+            assert_eq!(masked(raw), expected, "{raw}");
+        }
+    }
+
+    #[test]
+    fn unclean_userinfo_inside_the_authority_fails_closed() {
+        assert_eq!(masked("https://a@b:c@h/x"), "https://***@h/x");
         assert_eq!(
-            masked("postgresql://alice:pa/ss@db.example.com:5432/sales"),
-            "postgresql://***@db.example.com:5432/sales"
+            masked("postgresql://u:p@ss@h/db"),
+            "postgresql://u:***@h/db"
         );
-        assert_eq!(masked("mysql://u:p?w#d@h/db"), "mysql://***@h/db");
     }
 
     #[test]
