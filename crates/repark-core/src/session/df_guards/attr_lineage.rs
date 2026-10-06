@@ -99,7 +99,7 @@ pub fn sort_sourced_twin_engine(
         if found.is_some() {
             return None;
         }
-        found = Some(projection.schema().fields().get(*hit)?.name().clone());
+        found = Some(projection.schema.fields().get(*hit)?.name().clone());
     }
     found
 }
