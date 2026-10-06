@@ -545,6 +545,20 @@ mod tests {
     }
 
     #[test]
+    fn an_invalid_endpoint_refusal_masks_its_userinfo() {
+        for raw in [
+            "http://minio:EndpointPw2@127.0.0.1:99999",
+            "minio:EndpointPw2@127.0.0.1:99999",
+        ] {
+            let message = normalize_endpoint(raw, None)
+                .expect_err("port 99999 is not a valid URL")
+                .to_string();
+            assert!(!message.contains("EndpointPw2"), "{message}");
+            assert!(message.contains("127.0.0.1"), "{message}");
+        }
+    }
+
+    #[test]
     fn endpoint_config_resolves_from_conf_dump_rows() {
         let rows = vec![
             (

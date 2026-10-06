@@ -209,6 +209,38 @@ async fn describe_namespace_extended_renders_property_values_raw() {
 }
 
 #[tokio::test]
+async fn describe_namespace_masks_comment_location_and_owner_credentials() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE NAMESPACE ice.leaky COMMENT 'jdbc:postgresql://u:CmPw1@db.example.com/sales' \
+             LOCATION 's3a://AKIAX:LocPw2@bucket/wh' \
+             WITH DBPROPERTIES ('owner' = 'mysql://o:OwPw3@db.example.com/x')",
+    )
+    .await
+    .unwrap();
+    let rows = describe_rows(&ctx, &catalogs, "DESCRIBE NAMESPACE ice.leaky").await;
+    let rendered = format!("{rows:?}");
+    for password in ["CmPw1", "LocPw2", "OwPw3"] {
+        assert!(!rendered.contains(password), "{rendered}");
+    }
+    assert!(rows.contains(&(
+        "Comment".to_string(),
+        "jdbc:postgresql://u:***@db.example.com/sales".to_string()
+    )));
+    assert!(rows.contains(&(
+        "Location".to_string(),
+        "s3a://AKIAX:***@bucket/wh".to_string()
+    )));
+    assert!(rows.contains(&(
+        "Owner".to_string(),
+        "mysql://o:***@db.example.com/x".to_string()
+    )));
+}
+
+#[tokio::test]
 async fn describe_namespace_extended_masks_url_userinfo_spark_would_show() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;

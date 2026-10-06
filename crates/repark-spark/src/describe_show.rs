@@ -23,6 +23,7 @@ use crate::catalog_ops::{
 };
 use crate::namespace_ddl::consume_word;
 use crate::spark_type_names::spark_ddl_type_name;
+use repark_common::redaction::mask_value_credentials;
 use repark_core::{CatalogRegistry, DescribeOwnerConfig};
 use repark_functions::iceberg_system;
 
@@ -111,13 +112,13 @@ pub(crate) fn describe_namespace_batch(
         ),
     ];
     if let Some(comment) = properties.get("comment") {
-        rows.push(("Comment", comment.clone()));
+        rows.push(("Comment", mask_value_credentials(comment)));
     }
     if let Some(location) = repark_iceberg::catalog::resolve_namespace_location(properties) {
-        rows.push(("Location", location.to_string()));
+        rows.push(("Location", mask_value_credentials(location)));
     }
     if let Some(owner) = properties.get("owner") {
-        rows.push(("Owner", owner.clone()));
+        rows.push(("Owner", mask_value_credentials(owner)));
     }
     if describe.extended {
         rows.push(("Properties", render_namespace_properties(properties)));
@@ -160,7 +161,7 @@ pub(crate) fn render_namespace_properties(properties: &HashMap<String, String>) 
             let shown = if property_is_redacted(key, value) {
                 REDACTION_REPLACEMENT_TEXT.to_string()
             } else {
-                repark_common::redaction::mask_value_credentials(value)
+                mask_value_credentials(value)
             };
             format!("({key},{shown})")
         })
