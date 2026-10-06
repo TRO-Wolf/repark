@@ -1098,3 +1098,9 @@ O-1).** Over a SQL-defined temp view (`CREATE OR REPLACE TEMP VIEW sv AS SELECT 
 - C-012 wall: head 643.94, 644.48, 644.32 s, median **644.32 s** (bar ≤ 644.9 s; re-baseline 684.9 s). Main 507.81, 507.98, 506.75 s; head/main 1.2681 / 1.2687 / 1.2715. The box ran about 2% slower than at the re-baseline (main 498.2 s then).
 - fn-only ratio 1.2111 / 1.2150 / 1.2185. Outcome-class changes 0, value changes 0, in all three runs and the correctness replay (7 nondet cells skipped).
 - Program gate (card PERF-ATTR-STAMP-2, D-6): work-equal ≤ 1.10x is not yet met; it stands at 1.1244 after O-1.
+
+## Fold SM-2 (2026-10-06)
+
+| Clause | Statement | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-060 | A nested second `WRITE ORDERED BY` replaces the sort key: under `caseSensitive=false`, `ALTER TABLE sc.ns.o1 WRITE ORDERED BY CAT` then `WRITE ORDERED BY s.A` leaves the default sort order at source-id 4 (`s.a`), equal to Spark 4.1.2's recorded `so_false_nested_A_meta`. The DIFF-PROBE `REGRESSION` row for `p2:so_false_nested_A_meta` was a probe misread, not a product regression: in the probe's own head warehouse `v3.metadata.json` carries source-id 4, while v2 and v3 share one timestamp tick (`2026-10-06 09:50:57.101325550`), so the probe's mtime pick returned v2. No product change. | One SQL pin (ALTER twice, assert metadata source-ids 2 then 4, selecting the metadata file by version number); the pin goes red on a wrong expected value. | PROVEN | `python/repark/tests/test_attr_id_1_sm2_r1.py::test_nested_write_ordered_by_replaces_the_sort_key`; probe warehouses `diff-probe/out/corpus-{head,base}/wh/p2-{head,base}/sc/ns/o1/metadata/`. |

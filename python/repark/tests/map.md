@@ -9532,3 +9532,13 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   against `tv` while two `tv` reads carry the source ids; the M20-M28 mint rows
   pin Spark's new-id answer per read shape. pins: attr-id-1/C-054
   See `task/roadmap/mid-term/attr-view-semantics-1-card-2026-10-04.md`.
+- [test_attr_id_1_sm2_r1.py](test_attr_id_1_sm2_r1.py) — **Fold SM-2 R1
+  (2026-10-06):** the nested `WRITE ORDERED BY` pin. Under
+  `caseSensitive=false` the second ALTER replaces the sort key, so the
+  metadata source-id moves 2 (`cat`) then 4 (`s.a`), equal to Spark 4.1.2's
+  recorded `so_false_nested_A_meta`. The DIFF-PROBE row that named this a
+  regression misread the metadata: commits v2 and v3 landed in one timestamp
+  tick and the probe's mtime pick returned v2. The pin selects the metadata
+  file by version number, never mtime.
+  No module docstring: the lane's no-comments ruling covers the new file; the
+  contract lives here. pins: attr-id-1/C-060
