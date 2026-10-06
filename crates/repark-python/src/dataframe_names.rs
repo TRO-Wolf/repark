@@ -73,6 +73,7 @@ pub(crate) fn bound_column(frame: &DataFrame, column: &PyColumn) -> PyResult<(Ex
             )
         })
         .map_err(datafusion_to_py_err)?;
+    let bound = crate::column::series::bind_series(frame, bound)?;
     let depth = crate::deep_stack::expression_depth(&bound);
     Ok((bound, depth))
 }
@@ -89,6 +90,7 @@ pub(crate) fn bound_projection(frame: &DataFrame, column: &PyColumn) -> PyResult
             )
         })
         .map_err(datafusion_to_py_err)?;
+    let bound = crate::column::series::bind_series(frame, bound)?;
     let depth = crate::deep_stack::expression_depth(&bound);
     Ok((bound, depth))
 }

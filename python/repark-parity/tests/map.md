@@ -243,6 +243,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 - `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 S3c (2026-10-01):**
   mirror row ratchets `dataframe/core.py` 3846 → 3836 with the script baseline
   (the lifted duplicate-finals refusal and its docstring). pins: attr-id-1/C-030
+- `test_cap_1_source_file_line_cap.py` — **TA-SINGLE-SERIES-PARALLEL-1 S2a (2026-10-05):** the mirror
+  rows ratchet `repark-ta/src/udf/mod.rs` 1801 → 1791 and `python/repark/src/repark/spark/ta.py`
+  1818 → 1795 with the script baselines.
 - `test_cap_1_source_file_line_cap.py` — **TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04):** the Rust
   mirror row ratchets `repark-ta/src/udf/mod.rs` 1818 → 1801 with the script baseline.
 - `test_cap_1_source_file_line_cap.py` — **TA-CHAIN-1 (2026-10-03):** the Rust mirror row

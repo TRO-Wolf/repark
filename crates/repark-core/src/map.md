@@ -861,6 +861,25 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `ReparkSessionBuilder::parallel_single_partition(bool)` (on by default) and attaches the carrier
   beside the write-concurrency knob. Distributed sessions must build with it off; `lib.rs`
   re-exports `parallel_single_partition_active`, which `ReparkSessionProvider` uses to refuse a
+  session that did not (verifier V-1). **S3 (2026-10-04):** `ParallelProjectionRule` +
+  `ParallelProjectionExec` in the same module: a projection chain over a one-partition
+  RoundRobin whose input is a one-batch window output loses the RoundRobin when its parent's
+  requirements still hold (multi-batch sources keep their fan-out), and a one-partition
+  projection with at least two non-column expressions evaluates them in parallel; never on a
+  volatile expression. See [parallel_window/map.md](parallel_window/map.md).
+  pins: ta-series-s3/C-001, C-002, C-004, C-007, C-012
+  **S2a (2026-10-05):** `ParallelWindowExec` gains the `InputOrder::PartitionIndex` arm: an
+  unordered, unpartitioned window of window-UDF expressions over `CoalescePartitionsExec` drops
+  the coalesce and reads its input's partitions in index order. pins: ta-series-s2a/C-004
+- `series_order.rs` (+ [series_order/](series_order/map.md)) — **TA-SINGLE-SERIES-PARALLEL-1 S2a
+  (2026-10-05):** the generic order resolver behind the bare `ta.*` series (no TA knowledge).
+  `resolve_series_order(plan, schema)` returns the frame's declared order (a `Sort`, or a
+  `MemTable` scan's `sort_order`, reached through `Projection` / `Filter` / `SubqueryAlias` /
+  `Window` / `Limit`), else the first timestamp column (else the first date column) ascending
+  NULLS FIRST, else no keys (the current row order). `SeriesOrderNotice` is the once-per-session
+  warning flag, a `repark.series` carrier that `session.rs` attaches at build (one line beside
+  the `repark.parallel` carrier); `lib.rs` declares `pub mod series_order;`.
+  pins: ta-series-s2a/C-002, C-003
   session that did not (verifier V-1). See
   [parallel_window/map.md](parallel_window/map.md).
 - `orc_schema.rs` — **IO-ORC-1 (2026-09-16):** the ORC schema half beside the scan:
@@ -994,6 +1013,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `register_iceberg_catalog` consult for the duplicate-name refusal, and
   `database_source(name)`, the `pub(crate)` lookup `refuse_source_ddl` uses to rebuild
   the D-1 refusal for a DDL plan naming a source.
+  **C-1 (2026-10-05):** the key is `spec.identity.name` (the CC-2 identity now lives in
+  `repark-common`); keys and behavior unchanged. pins: c-1/C-002
   pins: cfg-2/C-012
   **ICE-VIEWS-1 (2026-09-20):** view lookup beside table lookup (`is_view`),
   the installed-wrapper directory (`view_wrapper_for` / `note_view_wrapper`)
@@ -1001,7 +1022,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **R2 (2026-09-21):** `is_view` returns a `Result` — genuine catalog errors
   propagate (fail-closed); `FeatureUnsupported`/`NamespaceNotFound` stay false.
   pins: ice-views-1/C-006, C-007, C-012
-- `named_sources.rs` (+ [named_sources/](named_sources/map.md)) — **CFG-2 step 1
+- `named_sources.rs` (+ [named_sources/](named_sources/map.md)) — **C-1 (2026-10-05):** reads
+  the source name and kind through `SourceSpec.identity` (CC-2; `SourceKind` now imported from
+  `repark-common`); every message, row and handle is unchanged. pins: c-1/C-002
+  **CFG-2 step 1
   (2026-09-13):** named database sources. `register_configured_sources()` (called wherever
   `register_configured_catalogs` runs) installs one `RefusingSourceCatalogProvider` per
   auto-registered `SourceSpec` — a `CatalogProvider`/`SchemaProvider` whose every table
@@ -1251,6 +1275,14 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   (a wrong claim would silently corrupt every window result). A NULL key under tighten
   refuses naming the key and `tightenNulls`. Plan pins + refusal battery:
   `../tests/declared_sorted.rs`.
+  **TA-SERIES S1 (2026-10-04):** `ordered_cache_sort_exprs` maps a physical
+  `output_ordering` to logical `SortExpr`s for the ordered cache: each key must be a
+  physical `Column` whose index names a field of the stored schema (index resolves
+  through the physical schema, so a conform reorder cannot misroute a key), and
+  ascending/descending plus nulls-first carry exactly; anything else declines with
+  `None` and the cache keeps today's path. Inline `ordered_cache_tests` pin the four
+  direction/nulls combinations and the three declines.
+  pins: ta-series-s1/P-S1-5
 - `session_time_zone.rs` (+ `session_time_zone/tests.rs`) — the session timezone
   (`spark.sql.session.timeZone`). Holds the **one** authoritative spelling of that conf key
   (`SESSION_TIME_ZONE_KEY` — no alternate spelling exists, deliberately), the validated

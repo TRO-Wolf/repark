@@ -2,8 +2,11 @@
 
 pub mod java_case;
 pub mod names;
+pub mod source;
 pub mod spark_error;
 pub mod surfaces;
+
+pub use source::{Generation, SourceIdentity, SourceKind};
 
 use thiserror::Error;
 

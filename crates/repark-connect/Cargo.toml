@@ -1,0 +1,17 @@
+[package]
+name = "repark-connect"
+description = "Database connectivity for repark: connection settings and the remote-to-Arrow type maps for Postgres and SQL Server sources."
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+repark-common.workspace = true
+arrow.workspace = true
+thiserror.workspace = true

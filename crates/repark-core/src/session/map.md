@@ -117,6 +117,29 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   ceiling). The moved code sheds two comments; their reason lives here: the
   listing reads the build-time home and refuses when a catalog replaced its
   provider, otherwise an empty home lists empty.
+  **TA-SERIES S1 (2026-10-04):** `register_collected_memtable` captures the physical
+  plan's `output_ordering` and, when every key is a plain output column of the stored
+  schema **and the plan has one output partition**, concats the conformed batches into
+  one batch and registers the `MemTable` `with_sort_order` (the logical key mapping
+  lives in `sorted_view.rs` `ordered_cache_sort_exprs`, direction and nulls-first
+  carried exactly), so a sorted `.eager()` / `cache()` / `persist()` /
+  `localCheckpoint` reads back in order as on Spark 4.1.2. The partition gate is a
+  correctness condition, not an optimisation: a multi-partition output is collected in
+  completion order, so declaring its per-partition ordering as global order would lie
+  and wrongly elide downstream sorts (measured: rank 34465 for key=1). A single batch
+  declares without concatting; an empty collect, a non-column key, a multi-partition
+  output, a concat that would double past `max_bytes`, and any cache above 1 GiB all
+  keep today's path (split batches, no declared order, no error).
+  pins: ta-series-s1/P-S1-1, P-S1-2, P-S1-3, P-S1-4, P-S1-5, P-S1-6
+  **S1 FOLD V944-1/V944-2 (2026-10-05):** `ordered_cache_concat_fits` sizes the
+  concat with `cache_budget::distinct_buffer_bytes` over a fresh pointer set instead of
+  the per-batch `get_array_memory_size` sum, because a re-materialised cache arrives as
+  8192-row slices of one buffer and the old sum counted the whole buffer once per slice
+  (a frame around 750k rows silently lost its declared order). The 1 GiB cap and the
+  `2 * bytes <= max_bytes` rule are unchanged; the guard additionally keeps today's path
+  when `max_total_bytes` is set and `retained + 2 * bytes` would exceed it, so the
+  transient concat peak (source plus copy) stays inside the session budget.
+  pins: ta-series-s1/P-S1-7, P-S1-8
 - `cache_budget.rs` — **EAGER-BUDGET-1 step 1 (2026-09-13):** D-2 retained-byte accounting.
   `ReparkSession::retained_cache_bytes` enumerates the temp-view home's `__repark_cache_*`
   tables, downcasts each provider to `MemTable`, clones each partition's batch list under a
@@ -305,6 +328,8 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `ParallelWindowRule`, right after `NljBuildSideReset`. It reads the session's
   `repark.parallel` carrier and is a no-op when the session was built with
   `parallel_single_partition(false)`. Full design in `../parallel_window/map.md`.
+  **S3 (2026-10-04):** `ParallelProjectionRule` is appended right after `ParallelWindowRule`
+  and reads the same carrier. pins: ta-series-s3/C-005
   **CONF-UNREAD-1 step 1 (2026-09-11):** `df_guards.rs` also owns
   `DEAD_DATAFUSION_54_1_KEYS` (today only `datafusion.execution.coalesce_batches`,
   which 54.1.0 defines but no engine path reads) with its refusal constructor;

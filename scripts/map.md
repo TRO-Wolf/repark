@@ -19,6 +19,7 @@ ATTR-ID-1 S3e (2026-10-01): `check_lib_py.py` ratchets `dataframe/core.py` 3803 
 ATTR-ID-1 S3b (2026-10-01): `check_lib_py.py` ratchets `dataframe/core.py` 3921 → 3846 (the filter quoter and its token helpers move to `column_fields.py`, `filter`/`_sort_specs` delegate to it), shrink-only, with the CAP-1 mirror. pins: attr-id-1/C-025
 
 ATTR-ID-1 S3a (2026-09-30): `check_lib_py.py` ratchets `dataframe/core.py` 3973 → 3921 (`_column_of` and `_rebind_stable_name_column` become one-line delegates to `column_fields`, `__getitem__`/`__getattr__` route through the resolve rule, the alias overlay restores deduplicated display names), shrink-only, with the CAP-1 mirror. pins: attr-id-1/C-024
+TA-SINGLE-SERIES-PARALLEL-1 S2a (2026-10-05): `check_rust_file_size.py` ratchets `repark-ta/src/udf/mod.rs` 1801 → 1791 (`make_udf` moves to `udf/glue.rs` beside the native `null_prefix` helpers; `window_udf` delegates to `window_udf_with_null_prefix`) and `check_lib_py.py` ratchets `python/repark/src/repark/spark/ta.py` 1818 → 1795 (the `row_number` + CASE rewrite in `_NullLookbackColumn.over` is gone), shrink-only, with the CAP-1 mirror.
 TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04): `check_rust_file_size.py` ratchets `repark-ta/src/udf/mod.rs` 1818 → 1801 (the output copy and the single-series borrow move to the new `udf/glue.rs`), shrink-only, with the CAP-1 mirror.
 TA-CHAIN-1 S1 (2026-10-03): `check_rust_file_size.py` ratchets `repark-ta/src/udf/mod.rs` 1821 → 1818 (the four `compute` / `compute_all` calls in `evaluate_all` route through the new `udf/prefix.rs` helpers; the wrapper tests live in `prefix.rs`), shrink-only, integer only (owner amendment R-TC1-6, 2026-10-03).
 RP-56 DIFF-PROBE fold (2026-09-29): `check_rust_file_size.py` ratchets `repark-iceberg/src/write/append.rs` 1804 → 1737 (the `write_partitioned_data_files*` family moved to `partitioned_files.rs`) and `repark-iceberg/src/write/merge/mod.rs` 1622 → 1569 (the `write_data_files*` family moved to `merge/file_sink.rs`), shrink-only.
@@ -1204,8 +1205,18 @@ repark-parity slice.
   `task/roadmap/epic-term/crate-layout-1-8-2026-10-01.md` (CL-8), so each arrives onto an
   enforced layout. A pre-declared row is still audited: the declaration audit rejected the
   first draft's tier-1 → `repark-core` edges as layering inversions. NOTE the binding's deliberate **non-edges** (no `repark-sql`, no
-  `repark-iceberg`) are still enforced by review, not here — this guard bans edges, it never
-  requires one. Wired into `make check-crate-dag` (in the `make ci` chain),
+  `repark-iceberg`) are still enforced by review, not here — this guard bans edges and never
+  asks for an undeclared one. A declared row is a different matter once BOTH of its crates are
+  workspace members: the drift rule then reports it as a stale policy row if no dependency
+  backs it, because the table describes the workspace.
+  **C-1 (2026-10-05, ruling R-14):** `repark-connect` became a member with C-1, and nothing
+  calls it yet, so the pre-declared `repark-core → repark-connect` row left `ALLOWED_EDGES`.
+  `repark-connect`'s `TIERS` and `ROLES` entries stay. C-2 restores the row (`normal`, reason
+  "PRE-DECLARED for release 1.6 (crate-layout-1-8-2026-10-01.md): Session registers the
+  configured database sources in the one federated namespace, the way it registers Iceberg
+  catalogs today") in the change that adds the dependency and mounts the providers.
+  pins: c-1/C-001
+  Wired into `make check-crate-dag` (in the `make ci` chain),
   `.pre-commit-config.yaml`, and the hook installed by `make install-hooks`.
   **Dual-wired:** the `crate-DAG layering guard` step in the ci.yml `guards` job mirrors the
   Makefile target — change one, change the other.

@@ -1,8 +1,14 @@
 """Technical-analysis indicators backed by the native repark-ta kernels.
 
-Indicators are ordered window functions and require an OVER ordering. Kernels emit a
-deterministic NaN lookback prefix; null_lookback=True converts only that prefix to SQL
-NULL. Mid-series NaN values remain unchanged.
+Sort before computing series indicators. A bare ``ta.*`` column (no ``.over(...)``) is computed
+over the frame's declared sort order — ``df.sort("ts")`` (also through ``.eager()``, ``.cache()``
+and ``localCheckpoint``). Without one, the first timestamp column (or, without one, the first
+date column) orders the series and RePark warns once per session; with neither, the frame's
+current row order is used. Rows that share a key value have no defined order among themselves.
+Use ``.over(Window.partitionBy(...).orderBy(...))`` for one series per instrument.
+
+Kernels emit a deterministic NaN lookback prefix; null_lookback=True converts only that prefix
+of each window partition to SQL NULL. Mid-series NaN values remain unchanged.
 """
 
 from __future__ import annotations
@@ -34,10 +40,6 @@ def _series(value: Column | str) -> Column:
 
 
 # ---- lookback lengths (deterministic prefix NaN count per kernel; TA-Lib / repark-ta) ------------
-#
-# Rust kernels emit NaN for the lookback prefix (bit-exact ``to_bits`` goldens). ``null_lookback``
-# is a Python-side opt-in that converts ONLY that prefix to SQL NULL after ``.over(...)`` — by
-# row position (``row_number() <= lookback``), never by blanket ``isnan``. Mid-series NaN is kept.
 
 
 def _ma_lookback(period: int, matype: int) -> int:
@@ -76,50 +78,22 @@ def _max2(left: int, right: int) -> int:
 
 
 class _LookbackAwareColumn(Column):
-    """Un-``OVER``ed TA column that carries the kernel lookback length.
+    """Un-``OVER``ed TA column that carries the kernel lookback length, name and arguments.
 
-    Default (``null_lookback=False``) factories return this instead of a bare :class:`Column`
-    so :func:`with_indicators` can thread ``null_lookback`` through
-    :class:`_NullLookbackColumn`. ``.over`` is inherited — no prefix rewrite — so existing
-    NaN-prefix goldens stay byte-unchanged.
+    :func:`with_indicators` rebuilds it with the native null prefix when ``null_lookback`` is set.
     """
 
-    __slots__ = ("_lookback",)
+    __slots__ = ("_lookback", "_ta_args", "_ta_name")
 
-    def __init__(self, inner: object, lookback: int) -> None:
+    def __init__(self, inner: object, lookback: int, name: str, args: list[Column]) -> None:
         super().__init__(inner)
         self._lookback = lookback
+        self._ta_name = name
+        self._ta_args = args
 
 
-class _NullLookbackColumn(Column):
-    """TA window :class:`Column` that nulls the deterministic lookback prefix on ``.over``.
-
-    Default (``null_lookback=False``) paths never construct this class — existing NaN-prefix
-    goldens stay byte-unchanged. With the flag, ``.over(w)`` becomes::
-
-        when(row_number().over(w) > lookback, ta_result.over(w))
-        # rows 1..lookback → SQL NULL; later rows (incl. mid-series NaN) pass through
-    """
-
-    __slots__ = ("_lookback",)
-
-    def __init__(self, inner: object, lookback: int) -> None:
-        super().__init__(inner)
-        self._lookback = lookback
-
-    def over(self, window: object) -> Column:  # type: ignore[override]
-        """Apply the window, then force SQL NULL on the lookback prefix only."""
-        from repark.spark.functions import row_number, when
-        from repark.spark.window import WindowSpec
-
-        if not isinstance(window, WindowSpec):
-            raise PySparkTypeError(f"expected a WindowSpec, got {type(window).__name__}")
-        applied = super().over(window)
-        if self._lookback <= 0:
-            return applied
-        # 1-based row_number: prefix length == lookback → indices 1..lookback are NULL.
-        # No isnan/is_null on the value path — mid-series NaN is never rewritten.
-        return when(row_number().over(window) > self._lookback, applied)
+class _NullLookbackColumn(_LookbackAwareColumn):
+    """TA window column whose native window function emits the lookback prefix as SQL NULL."""
 
 
 def _window(
@@ -131,16 +105,17 @@ def _window(
 ) -> Column:
     """Build the un-``OVER``ed TA window-function :class:`Column` for ``name`` from ``args``.
 
-    When ``null_lookback`` is true, wrap so ``.over(w)`` converts the first ``lookback`` rows
-    from kernel NaN to SQL NULL (polars_talib-shaped). Default is false — kernel NaN unchanged.
-    The default path still carries the lookback length (:class:`_LookbackAwareColumn`) so
-    :func:`with_indicators` can thread the existing rewrite rather than invent a kernel path.
+    When ``null_lookback`` is true, the native window function emits the first ``lookback`` rows
+    of each window partition as SQL NULL (polars_talib-shaped). Default is false — kernel NaN
+    unchanged.
     """
-    column = Column(_native.PyColumn.ta_window(name, [argument._inner for argument in args]))
     lookback_length = _nonneg(lookback)
+    prefix = lookback_length if null_lookback else 0
+    natives = [argument._inner for argument in args]
+    column = Column(_native.PyColumn.ta_window(name, natives, prefix))
     if null_lookback:
-        return _NullLookbackColumn(column._inner, lookback_length)
-    return _LookbackAwareColumn(column._inner, lookback_length)
+        return _NullLookbackColumn(column._inner, lookback_length, name, args)
+    return _LookbackAwareColumn(column._inner, lookback_length, name, args)
 
 
 def over_columns(window: WindowSpec, columns: dict[str, Column]) -> dict[str, Column]:
@@ -246,7 +221,7 @@ def _window_key_columns(value: _WindowKey, *, label: str) -> list[Column]:
 
 
 def _thread_null_lookback(columns: dict[str, Column]) -> dict[str, Column]:
-    """Re-wrap each ta.* column through :class:`_NullLookbackColumn` (existing rewrite path).
+    """Rebuild each ta.* column with the native null prefix (:class:`_NullLookbackColumn`).
 
     Must not use ``getattr(column, "_lookback", None)``: :class:`Column.__getattr__`
     builds a field-access Column for any missing name, so a non-TA value would
@@ -254,12 +229,14 @@ def _thread_null_lookback(columns: dict[str, Column]) -> dict[str, Column]:
     """
     prepared: dict[str, Column] = {}
     for name, column in columns.items():
-        if not isinstance(column, (_LookbackAwareColumn, _NullLookbackColumn)):
+        if not isinstance(column, _LookbackAwareColumn):
             raise PySparkTypeError(
                 f"with_indicators null_lookback=True requires a ta.* indicator Column for "
                 f"{name!r}; {type(column).__name__} has no lookback"
             )
-        prepared[name] = _NullLookbackColumn(column._inner, int(column._lookback))
+        prepared[name] = _window(
+            column._ta_name, column._ta_args, lookback=int(column._lookback), null_lookback=True
+        )
     return prepared
 
 
@@ -312,9 +289,9 @@ def with_indicators(
     Builds the fused :func:`over_columns` window from existing plan pieces only (the TA
     window plus ``row_number`` / ``max`` for ``last_row``). No engine edits.
 
-    ``null_lookback`` is threaded through the existing :class:`_NullLookbackColumn` rewrite
-    (lookback-by-length, never blanket ``isnan``). Factory-level ``ta.ema(...,
-    null_lookback=True)`` still wins on its own via ``.over``.
+    ``null_lookback`` rebuilds every column with the native null prefix (lookback-by-length per
+    window partition, never blanket ``isnan``). Factory-level ``ta.ema(..., null_lookback=True)``
+    carries the prefix on its own.
 
     ``last_row=True`` keeps the last bar of the TA window in each partition so serving
     collects ``N_symbols`` rows, not all input rows.

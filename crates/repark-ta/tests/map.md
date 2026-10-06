@@ -10,6 +10,14 @@ golden fails, the kernel drifted (or the oracle moved), never "close enough".
 
 ## Contents
 
+- `null_prefix.rs` — **TA-SINGLE-SERIES-PARALLEL-1 S2a (2026-10-05)**, feature `datafusion`:
+  `null_lookback_native_matches_row_number_rewrite` (P-S2a-5: `ta_ema(tr, 13)` with prefix 12
+  over `PARTITION BY sym ORDER BY ts` against `CASE WHEN row_number() > 12 THEN … END` on the
+  same window, cell for cell, 12 NULL + 1 NaN per symbol, and the whole-frame window);
+  `null_prefix_instances_never_cse` (P-S2a-6: prefixed and plain instances differ in equality
+  and hash, and both columns survive one `select`); `sql_ta_unchanged` (P-S2a-8: SQL
+  `ta_ema(close, 13) OVER (…)` equals the kernel per symbol, NaN prefix, no NULL, and no
+  registered name carries a prefix). pins: ta-series-s2a/C-005, C-006, C-008
 - `goldens.rs` — **strict `f64::to_bits` equality** per element (NaN ↔ NaN allowed) for every
   kernel × param-set: 41 tests (39 golden checks plus two fixture/manifest checks) over 158 recorded series across two fixtures — the 5000-row
   lognormal walk (happy path, all 5 BBANDS band branches, the WG1 overlap-MA family incl. TRIMA

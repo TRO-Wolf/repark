@@ -431,6 +431,7 @@ fn ta_window_ema_over_matches_the_kernel() {
         let ema_col = PyColumn::ta_window(
             "ta_ema",
             vec![PyColumn::column("close").expect("col builds"), period],
+            0,
         )
         .expect("ta_window builds")
         .over(
@@ -470,6 +471,7 @@ fn ta_window_rejects_an_unknown_function() {
         let result = PyColumn::ta_window(
             "ta_not_real",
             vec![PyColumn::column("v").expect("col builds")],
+            0,
         );
         assert!(result.is_err(), "unknown TA window function is an error");
     });

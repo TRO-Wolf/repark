@@ -1,0 +1,297 @@
+{
+ "engine": "spark",
+ "rows": [
+  {
+   "id": "d",
+   "kind": "ids",
+   "outcome": "OK",
+   "ids": "List(id#0L, v#1L)"
+  },
+  {
+   "id": "table",
+   "kind": "ids",
+   "outcome": "OK",
+   "ids": "List(id#0L, v#1L)"
+  },
+  {
+   "id": "table2",
+   "kind": "ids",
+   "outcome": "OK",
+   "ids": "List(id#0L, v#1L)"
+  },
+  {
+   "id": "sql-star",
+   "kind": "ids",
+   "outcome": "OK",
+   "ids": "List(id#0L, v#1L)"
+  },
+  {
+   "id": "sql-v",
+   "kind": "ids",
+   "outcome": "OK",
+   "ids": "List(v#1L)"
+  },
+  {
+   "id": "sql-vplus0",
+   "kind": "ids",
+   "outcome": "OK",
+   "ids": "List(v#2L)"
+  },
+  {
+   "id": "sql-alias",
+   "kind": "ids",
+   "outcome": "OK",
+   "ids": "List(v#3L)"
+  },
+  {
+   "id": "V1",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V2",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V3",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "error_first_line": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"v\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V4",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "error_first_line": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"v\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V5",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     1,
+     10,
+     1,
+     10
+    ],
+    [
+     2,
+     20,
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V6",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     1,
+     10,
+     1,
+     10
+    ],
+    [
+     2,
+     20,
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V6b",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V7",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10,
+     10
+    ],
+    [
+     20,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "d2",
+   "kind": "ids",
+   "outcome": "OK",
+   "ids": "List(id#0L, v#1L, w#15)"
+  },
+  {
+   "id": "table-tv2",
+   "kind": "ids",
+   "outcome": "OK",
+   "ids": "List(id#0L, v#1L, w#15)"
+  },
+  {
+   "id": "V8",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10,
+     1
+    ],
+    [
+     20,
+     1
+    ]
+   ]
+  },
+  {
+   "id": "sv",
+   "kind": "ids",
+   "outcome": "OK",
+   "ids": "List(id#16L, v#17L)"
+  },
+  {
+   "id": "V9",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "error_first_line": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V3-write",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V3-groupby",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     1
+    ]
+   ]
+  },
+  {
+   "id": "global-gv",
+   "kind": "ids",
+   "outcome": "OK",
+   "ids": "List(id#0L, v#1L)"
+  },
+  {
+   "id": "V10",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V11",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V12",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "error_first_line": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  },
+  {
+   "id": "V13",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     10
+    ],
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V14",
+   "kind": "run",
+   "outcome": "OK",
+   "rows": [
+    [
+     20
+    ]
+   ]
+  },
+  {
+   "id": "V15",
+   "kind": "run",
+   "outcome": "ERR",
+   "error_class": "AnalysisException",
+   "error_first_line": "[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] Resolved attribute(s) \"v\" missing from \"id\", \"v\" in operator !Project [v#1L]. Attribute(s) with the same name appear in the operation: \"v\".",
+   "condition": "MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION"
+  }
+ ]
+}

@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashMap};
 
-use repark_common::{Error, Result};
+use repark_common::{Error, Result, SourceIdentity, SourceKind};
 
 use super::Profile;
 use super::redact::redact_value;
@@ -10,36 +10,9 @@ pub(crate) const CATALOG_KEY_PREFIX: &str = "repark.sql.catalog.";
 pub(crate) const IN_MEMORY_CATALOG_CLASS: &str = "org.apache.iceberg.inmemory.InMemoryCatalog";
 const DATABASE_KIND_SPELLINGS: &[&str] = &["postgres", "sqlserver", "trino"];
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum SourceKind {
-    Postgres,
-    SqlServer,
-    Trino,
-}
-
-impl SourceKind {
-    fn from_spelling(spelling: &str) -> Option<SourceKind> {
-        match spelling {
-            "postgres" => Some(SourceKind::Postgres),
-            "sqlserver" => Some(SourceKind::SqlServer),
-            "trino" => Some(SourceKind::Trino),
-            _ => None,
-        }
-    }
-
-    pub(crate) fn spelling(self) -> &'static str {
-        match self {
-            SourceKind::Postgres => "postgres",
-            SourceKind::SqlServer => "sqlserver",
-            SourceKind::Trino => "trino",
-        }
-    }
-}
-
 #[derive(Clone, PartialEq, Eq)]
 pub(crate) struct SourceSpec {
-    pub name: String,
-    pub kind: SourceKind,
+    pub identity: SourceIdentity,
     pub profile: String,
     pub auto_register: bool,
     pub props: BTreeMap<String, String>,
@@ -50,8 +23,8 @@ impl SourceSpec {
         format!(
             "{}.database.{}.{}",
             self.profile,
-            self.kind.spelling(),
-            self.name
+            self.identity.kind.spelling(),
+            self.identity.name
         )
     }
 }
@@ -64,8 +37,7 @@ impl std::fmt::Debug for SourceSpec {
             .map(|(key, value)| (key.clone(), redact_value(key, value)))
             .collect();
         f.debug_struct("SourceSpec")
-            .field("name", &self.name)
-            .field("kind", &self.kind)
+            .field("identity", &self.identity)
             .field("profile", &self.profile)
             .field("auto_register", &self.auto_register)
             .field("props", &props)
@@ -196,8 +168,7 @@ fn source_specs(profile_name: &str, database: &toml::Table) -> Result<Vec<Source
                 converted.insert(prop.clone(), text.clone());
             }
             sources.push(SourceSpec {
-                name: name.clone(),
-                kind,
+                identity: SourceIdentity::unassigned(name.clone(), kind),
                 profile: profile_name.to_string(),
                 auto_register,
                 props: converted,
@@ -224,7 +195,7 @@ fn refuse_duplicate_names(
     named.extend(
         sources
             .iter()
-            .map(|spec| (spec.name.clone(), spec.key_path())),
+            .map(|spec| (spec.identity.name.clone(), spec.key_path())),
     );
     for (index, (name, path)) in named.iter().enumerate() {
         let prior = named[..index]

@@ -64,6 +64,7 @@ pub(super) fn context_with_df_54_1_rule_guards(
         .with_analyzer_rules(analyzer_rules)
         .with_physical_optimizer_rule(Arc::new(crate::nlj_build_reset::NljBuildSideReset))
         .with_physical_optimizer_rule(Arc::new(crate::parallel_window::ParallelWindowRule))
+        .with_physical_optimizer_rule(Arc::new(crate::parallel_window::ParallelProjectionRule))
         .build();
     let context = SessionContext::new_with_state(state);
     crate::stack::register_stack(&context);

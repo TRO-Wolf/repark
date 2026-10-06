@@ -44,7 +44,7 @@ pub(crate) fn refuse_source_ddl(
     if let Some(spec) = spec {
         return Err(DataFusionError::NotImplemented(connector_pending_message(
             &spec.key_path(),
-            spec.kind.spelling(),
+            spec.identity.kind.spelling(),
         )));
     }
     Ok(())
@@ -104,7 +104,7 @@ impl RefusingSourceCatalogProvider {
     fn new(spec: &SourceSpec) -> Self {
         Self {
             schema: Arc::new(RefusingSourceSchemaProvider {
-                message: connector_pending_message(&spec.key_path(), spec.kind.spelling()),
+                message: connector_pending_message(&spec.key_path(), spec.identity.kind.spelling()),
             }),
         }
     }
@@ -132,8 +132,8 @@ pub struct SourceRow {
 impl SourceRow {
     fn from_spec(spec: &SourceSpec) -> Self {
         Self {
-            name: spec.name.clone(),
-            kind: spec.kind.spelling().to_string(),
+            name: spec.identity.name.clone(),
+            kind: spec.identity.kind.spelling().to_string(),
             key_path: spec.key_path(),
             auto_register: spec.auto_register,
             properties: spec
@@ -155,8 +155,8 @@ pub struct NamedSource {
 impl NamedSource {
     fn from_spec(spec: &SourceSpec) -> Self {
         Self {
-            name: spec.name.clone(),
-            kind: spec.kind.spelling().to_string(),
+            name: spec.identity.name.clone(),
+            kind: spec.identity.kind.spelling().to_string(),
             key_path: spec.key_path(),
         }
     }
@@ -199,13 +199,13 @@ impl ReparkSession {
     pub fn source(&self, name: &str) -> Result<NamedSource> {
         self.source_specs
             .iter()
-            .find(|spec| spec.name == name)
+            .find(|spec| spec.identity.name == name)
             .map(|spec| NamedSource::from_spec(spec))
             .ok_or_else(|| {
                 let declared: Vec<&str> = self
                     .source_specs
                     .iter()
-                    .map(|spec| spec.name.as_str())
+                    .map(|spec| spec.identity.name.as_str())
                     .collect();
                 let list = if declared.is_empty() {
                     "none".to_string()
@@ -229,14 +229,16 @@ impl ReparkSession {
                 .catalogs
                 .write()
                 .unwrap_or_else(PoisonError::into_inner);
-            if catalogs.is_registered(&spec.name) || self.context().catalog(&spec.name).is_some() {
+            if catalogs.is_registered(&spec.identity.name)
+                || self.context().catalog(&spec.identity.name).is_some()
+            {
                 return Err(Error::DataFusion(format!(
                     "catalog '{}' is already registered",
-                    spec.name
+                    spec.identity.name
                 )));
             }
             self.context()
-                .register_catalog(spec.name.clone(), Arc::new(provider));
+                .register_catalog(spec.identity.name.clone(), Arc::new(provider));
             catalogs.insert_database_source(Arc::clone(spec));
         }
         Ok(())

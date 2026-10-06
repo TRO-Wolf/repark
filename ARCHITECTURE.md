@@ -17,6 +17,7 @@ unit — `repark-connect`, `repark-cdc` and `repark-io` at tier 1, `repark-spark
 `repark-crawler` at tier 3 (layout of record:
 [task/roadmap/epic-term/crate-layout-1-8-2026-10-01.md](task/roadmap/epic-term/crate-layout-1-8-2026-10-01.md));
 the map below draws what is built.
+The 1.7 micro-batch change-data sink adds no crate: a `microbatch/` module in `repark-core`, a summary-stamping write adapter in `repark-iceberg`, and the deterministic identity kernel in `repark-common` ([task/roadmap/epic-term/microbatch-cdc-sink-plan-2026-10-04.md](task/roadmap/epic-term/microbatch-cdc-sink-plan-2026-10-04.md)).
 
 ```
  tier 4  bindings            repark-python  (PyO3 cdylib `_native`; the only crate allowed `unsafe`)

@@ -22,7 +22,7 @@ check their evidence, and move pull requests to the merge queue.
   (exit 0 = clean). Run it on every hand-back before anything else.
 - Never touch /home/*/CodeRepos (the live checkout belongs to someone else). Work only in {{SCRATCH}}/<lane>.
 - Never run `claude` yourself: every Claude executor round goes through `r7-launch.sh … opus`, and
-  clerk jobs (rebases, red lint/docs/ledger checks) through `luna`, `muse-clerk` or `devin`.
+  clerk jobs (rebases, red lint/docs/ledger checks) through `luna` or `muse-clerk` (`devin` retired 2026-10-05: subscription cancelled).
   The critic runs only through the review script in the Toolbox; no PR enters the queue without one.
 - No AWS commands. No `--no-verify`. No edits to STATUS.md. No version bumps, no tags.
 - Commit identity in every clone: user.name `TRO-Wolf`, user.email `64240326+TRO-Wolf@users.noreply.github.com`.
@@ -34,7 +34,7 @@ check their evidence, and move pull requests to the merge queue.
 ## Toolbox (absolute paths; each returns at once)
 - New RePark lane: `{{LIB}}/r9-lane.sh <lane> <branch>` (slow: run it under
   `systemd-run --user --slice=repark.slice --collect --unit=setup-<lane>-$(date +%H%M%S) …` and end the tick).
-- Launch an executor: `{{LIB}}/r7-launch.sh <lane> <opus|terra|sol|luna|muse|muse-clerk|devin> <work-order.md>`
+- Launch an executor: `{{LIB}}/r7-launch.sh <lane> <opus|terra|sol|luna|muse|muse-clerk> <work-order.md>`
   (`opus` = Claude Opus 5.5 high for the hard steps; `terra` = GPT-5.6 Terra max, `sol` = GPT-6 Sol high;
   `luna` = GPT-6 Luna medium for narrow mechanical work orders; Codex rounds (`terra`/`sol`/`luna`) land under
   `{{ROOT}}/codex-worker/<lane>/<stamp>/`, `opus` rounds under `{{SCRATCH}}/opus-worker/<lane>/<stamp>/`);
@@ -81,7 +81,7 @@ packet says otherwise. Keep at most TWO executor rounds running at once.
   `<ErrorKind> => <msg>`; Java answers the bare message) and pin the FULL string.
 - TRAILERS: `opus` rounds get their `Authored-By: Claude (<model id>) <noreply@anthropic.com>` line from the launcher;
   every other tier's work order states its trailer — `Authored-By: Muse Spark (muse-spark-1.3-contributor) <noreply@meta.ai>`,
-  `Authored-By: Devin SWE-2 (swe-2-high) <noreply@cognition.ai>`, `Authored-By: GPT-5.6 Terra (gpt-5.6-terra) <noreply@openai.com>`
+  `Authored-By: GPT-5.6 Terra (gpt-5.6-terra) <noreply@openai.com>`
   (Sol and Luna likewise, with their model ids). The PR script rejects any other attribution trailer.
 - EXECUTOR BANDS: before any executor launch, look the engine up in {{HERE}}/bands.md. Self-directed engines get the
   ordinary work order; guided engines get an order that passes the guided-execution checklist there (rulings pre-made,

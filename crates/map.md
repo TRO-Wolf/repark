@@ -32,6 +32,7 @@ rule to the 64 remaining banner files. Ledger:
 |---|---|
 | [repark-common](repark-common/map.md) | Shared error-seed types (`Error` / `ErrorClass` / `Result`) + the dialect-neutral SQL surface registry (`surfaces`) both doors' `matrix.rs` audits against. Bottom of the DAG. |
 | [repark-iceberg](repark-iceberg/map.md) | Iceberg surface (tier 1): Glue + S3 Tables catalog wiring for DataFusion (`catalog/`) + the Spark-semantics write adapter — MERGE INTO, append, overwrite, ALTER — over the owned fork (`write/`). Carries the `[patch.crates-io]` fork pin's consumers. |
+| [repark-connect](repark-connect/map.md) | Database connectivity (tier 1, role `table service`, peer of repark-iceberg; card 1.6): connection settings with the reserved auth-method field and the Postgres ↔ Arrow type map since C-1 (2026-10-05). Providers, pushdown, reads and writes arrive with C-2 onward. pins: c-1/C-001 |
 | [repark-core](repark-core/map.md) | The Session-centric engine API (tier 2): `ReparkSession` over a DataFusion `SessionContext` + the `ExecutionBackend` / `SqlDialect` / `SessionExtension` seams (delivered; phase-1 PR-C). |
 | [repark-functions](repark-functions/map.md) | Spark-compatible function registry (tier 3): `datafusion-spark` registration + the Spark-semantics date shim + analyzer rules. DataFusion-native — no `repark-core` dep. |
 | [repark-ta](repark-ta/map.md) | Technical-analysis kernels (tier 3): bit-exact TA-Lib 0.4.0 hand-ports, golden-gated, plus the optional `datafusion` feature's window-UDF layer and the door-neutral `TaExtension`. |
@@ -41,7 +42,9 @@ rule to the 64 remaining banner files. Ledger:
 | [repark-distributed](repark-distributed/map.md) | Distributed execution (tier 3, role `runtime`): the `DistributedExecutor` seam plus the local DataFusion executor, with the Ballista-backed cluster executor behind the off-by-default `cluster` feature. BALLISTA-M1-A. |
 | [repark-python](repark-python/map.md) | The PyO3 `cdylib` (**tier 4 bindings**; no crate depends on it): `repark._native`, a thin adapter exposing `PyReparkSession` / `PyDataFrame` / `PyColumn`, the PySpark exception taxonomy, ML fit binders, and zero-copy Arrow C streams. It is the only crate allowed `unsafe` and the only crate outside workspace lints. |
 
-DAG: `repark-core → {repark-iceberg, repark-common}`, `repark-iceberg → repark-common`;
+DAG: `repark-core → {repark-iceberg, repark-common}`, `repark-iceberg → repark-common`,
+`repark-connect → repark-common` (C-1; C-2 adds `repark-core → repark-connect` and its
+policy row with the providers, R-14);
 `repark-functions` is a tier-3 leaf with no internal deps (speaks `datafusion::error::Result`);
 `repark-ta → repark-core` **only under the `datafusion` feature** (the `TaExtension` wrapper — the
 kernel core stays dependency-light); `repark-spark → {repark-core, repark-iceberg,
@@ -92,6 +95,7 @@ tiers 0–1, which is what keeps each free to have its own grammar. The one cros
 |---|---|
 | Add an error variant / shared seed type | [repark-common/map.md](repark-common/map.md) |
 | Catalog wiring / MERGE / append / overwrite / ALTER | [repark-iceberg/map.md](repark-iceberg/map.md) |
+| Postgres / SQL Server connection settings or type maps | [repark-connect/map.md](repark-connect/map.md) |
 | Add a `ReparkSession` method / session knob / reader | [repark-core/map.md](repark-core/map.md) |
 | Add/fix a Spark function or date-shim UDF | [repark-functions/map.md](repark-functions/map.md) |
 | Add / fix a TA indicator, or its SQL window UDF | [repark-ta/map.md](repark-ta/map.md) |

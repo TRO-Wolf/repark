@@ -293,7 +293,8 @@ impl CatalogRegistry {
     }
 
     pub(crate) fn insert_database_source(&mut self, spec: Arc<SourceSpec>) {
-        self.database_sources.insert(spec.name.clone(), spec);
+        self.database_sources
+            .insert(spec.identity.name.clone(), spec);
     }
 
     #[must_use]

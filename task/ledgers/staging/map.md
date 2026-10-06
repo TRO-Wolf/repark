@@ -11,6 +11,35 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   alone (C-001), `stamp` with Spark's first-input union rule (C-002), the join re-mint
   (C-003), `resolve` (C-004), the `repark-python` binds (C-005) and mutations M1–M4 (C-006);
   R-1..R-4 are dated residues for S2–S3. `risk_tier: standard`. Branch `feat/attr-id-1`.
+- [c-1-ledger.md](c-1-ledger.md) —
+  **C-1, card 1.6 (2026-10-05), in flight:** `crates/repark-connect` lands on its pre-declared
+  footprint with the one `connect → common` edge (C-001); the CC-2 move puts `SourceKind` and
+  `SourceIdentity { name, kind, generation }` in `repark-common` (C-002); `settings.rs` reserves
+  `auth_method` with password accepted, `iam_token` / `kerberos` declared and anything else an
+  invalid specification (C-003..C-006); the Postgres type map maps ten types with a round-trip
+  pin each and declares nine (C-007, C-008); eleven `CONNECT-DECL-*` registry rows (C-009); ADBC
+  and ConnectorX cited (C-010); gates (C-011). `risk_tier: standard`. Branch
+  `feat/c-1-connect-skeleton`.
+- [ta-series-s2a-ledger.md](ta-series-s2a-ledger.md) —
+  **TA-SINGLE-SERIES-PARALLEL-1 S2a + D (2026-10-05), in flight:** a bare `ta.*` column binds as
+  the explicit `.over(Window.orderBy(K))` spelling, K being the declared order, else the first
+  timestamp column, else the first date column, else the current row order with a
+  partition-index read (C-001..C-004); one `UserWarning` per session for the last two (C-003);
+  native `null_lookback` per window partition in both spellings (C-005, C-006); mixing and SQL
+  unchanged (C-007, C-008); gates (C-009); owner-file correctness on release wheels (C-010);
+  docs note (C-012); speed on main: bare 0.71× of main today, 0.86 / 0.68 of polars_talib (C-011). `risk_tier: standard`. Branch
+  `perf/ta-series-s2a-series-order`.
+  pins: ta-series-s2a/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
+- [ta-series-s3-ledger.md](ta-series-s3-ledger.md) —
+  **TA-SINGLE-SERIES-PARALLEL-1 S3 (2026-10-04), in flight:** `ParallelProjectionRule` drops a
+  RoundRobin over a one-batch window output under a projection chain when the parent's
+  requirements still hold (the old sketch's S4, folded in by ruling Q-S3-1 = A, narrowed by
+  Q-S3-3 = A so multi-batch sources keep their fan-out, C-012), and `ParallelProjectionExec` runs
+  the non-column expressions of a one-partition projection on the blocking pool, bit-identical
+  to `ProjectionExec` (C-001..C-005, C-008, C-009); never on a volatile expression (C-007);
+  facade identity on release wheels (C-006); gates green (C-010); bare −41 ms, explicit −118 ms, partitioned unchanged, threshold kept at 16,384 by measurement (C-011).
+  `risk_tier: standard`. Branch `perf/ta-series-s3-parallel-projection`.
+  pins: ta-series-s3/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
 - [ta-series-s2b-ledger.md](ta-series-s2b-ledger.md) —
   **TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04), in flight:** `ParallelWindowExec` runs the
   argument groups of a one-partition, empty-`PARTITION BY` `WindowAggExec` on the blocking pool,

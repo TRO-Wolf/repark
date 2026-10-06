@@ -3448,7 +3448,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `hasattr(spark, "readStream")` raises `NOT_IMPLEMENTED` rather than answering `False` —
   the same shape classic's `client` property already has (it raises
   `ONLY_SUPPORTED_WITH_SPARK_CONNECT`, not `AttributeError`).
-- Residue — carved out of the v1.5.0 gate (owner ruling C-1, 2026-09-19) →
+- Residue — carved out of the v1.5.0 gate (owner ruling C-1, 2026-09-19; re-pointed to 1.7 on 2026-10-04) →
   [ice-streaming-1-6.md](../task/roadmap/mid-term/ice-streaming-1-6.md).
 ### SES-DECL-streams — no `StreamingQueryManager` without a streaming engine
 - **repark** — `spark.streams` raises `PySparkNotImplementedError` with condition
@@ -3460,7 +3460,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Rationale** — DECLARED 2026-09-14. Same engine gap as `readStream`; an `active == []`
   facade would be a silent lie about query lifecycle support. The R-5 `hasattr`
   consequence from the `readStream` row applies identically here.
-- Residue — carved out of the v1.5.0 gate (owner ruling C-1, 2026-09-19) →
+- Residue — carved out of the v1.5.0 gate (owner ruling C-1, 2026-09-19; re-pointed to 1.7 on 2026-10-04) →
   [ice-streaming-1-6.md](../task/roadmap/mid-term/ice-streaming-1-6.md).
 ### SES-DECL-dataSource — the Python data source API is deferred
 - **repark** — `spark.dataSource` raises `PySparkNotImplementedError` with condition
@@ -3472,6 +3472,107 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Rationale** — DECLARED 2026-09-14. Reachable in principle (the registration plumbing is
   Python-side), deferred until the data-source execution contract is scheduled. The R-5
   `hasattr` consequence from the `readStream` row applies identically here.
+### CONNECT-DECL-auth-iam_token — a database source refuses `auth_method = "iam_token"`
+- **repark** — a source whose props carry `auth_method = "iam_token"` refuses when its
+  connection settings are built (`ConnectionSettings::from_props`) with
+  `SettingsError::DeclaredAuthMethod`, whose message names `iam_token` and this row, and which
+  folds to `Error::NotImplemented` (the Unsupported class). Absent `auth_method` and
+  `password` connect.
+- **Apache Spark** — the JDBC data source has no IAM auth option of its own; an RDS IAM token
+  reaches Postgres as the driver's password (minted outside Spark) or through a wrapper driver.
+  *(oracle: documented — Spark's JDBC data source options; no value claim.)*
+- **Pin** — `crates/repark-connect/tests/it/settings.rs::iam_token_is_a_declared_refusal`
+- **Rationale** — DECLARED 2026-10-05 (C-1; ES-1, CC-4). Card 1.6 ships password auth; RDS IAM
+  tokens are demand-triggered. The `auth_method` field is reserved now so adding the method
+  later changes no key. Retire the row in the unit that implements token minting.
+### CONNECT-DECL-auth-kerberos — a database source refuses `auth_method = "kerberos"`
+- **repark** — a source whose props carry `auth_method = "kerberos"` refuses when its
+  connection settings are built with `SettingsError::DeclaredAuthMethod`, whose message names
+  `kerberos` and this row, and which folds to `Error::NotImplemented` (the Unsupported class).
+- **Apache Spark** — the JDBC data source authenticates with Kerberos through its `keytab` and
+  `principal` options and built-in connection providers, PostgreSQL and SQL Server among them.
+  *(oracle: documented — Spark's JDBC data source options; no value claim.)*
+- **Pin** — `crates/repark-connect/tests/it/settings.rs::kerberos_is_a_declared_refusal`
+- **Rationale** — DECLARED 2026-10-05 (C-1; ES-1, CC-4). Kerberos / Active Directory needs a
+  GSSAPI stack the 1.6 drivers do not carry; it is demand-triggered. The value is spelled now
+  so the field's vocabulary is closed and a typo is an invalid specification, not a silent
+  password attempt.
+### CONNECT-DECL-pg-numeric — Postgres `numeric` has no Arrow mapping yet
+- **repark** — the Postgres type map (`crates/repark-connect/src/types/postgres.rs`) declares
+  `numeric`: encoding or decoding it answers `TypeMapError::Declared` naming this row.
+- **Apache Spark** — the JDBC source reads `numeric` through its PostgreSQL dialect as a
+  decimal. *(oracle: documented; no value claim — C-2's live cells against the C-0 container
+  attach the first measurement.)*
+- **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row`
+- **Rationale** — DECLARED 2026-10-05 (C-1, card 1.6 "declare, never approximate"). Two
+  plausible mappings: a bounded `Decimal128`/`Decimal256`, which cannot hold every unbounded
+  `numeric` or its `NaN` / `±Infinity` values, and the string the ADBC PostgreSQL driver
+  returns. C-2 decides with the read path.
+### CONNECT-DECL-pg-date — Postgres `date` has no Arrow mapping yet
+- **repark** — the Postgres type map declares `date`: encoding or decoding it answers
+  `TypeMapError::Declared` naming this row.
+- **Apache Spark** — the JDBC source reads `date` as `DateType`. *(oracle: documented; no value
+  claim — C-2's live cells attach the first measurement.)*
+- **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row`
+- **Rationale** — DECLARED 2026-10-05 (C-1). `Date32` holds every finite Postgres date, but
+  `infinity` and `-infinity` have no Arrow value; refusing the value or the type is C-2's call.
+### CONNECT-DECL-pg-time — Postgres `time` has no Arrow mapping yet
+- **repark** — the Postgres type map declares `time` (without time zone): encoding or decoding
+  it answers `TypeMapError::Declared` naming this row.
+- **Apache Spark** — the JDBC source reads `time` through its PostgreSQL dialect. *(oracle:
+  documented; no value claim — C-2's live cells attach the first measurement.)*
+- **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row`
+- **Rationale** — DECLARED 2026-10-05 (C-1). Postgres accepts `24:00:00`, one microsecond past
+  the last value Arrow's `Time64(Microsecond)` day holds.
+### CONNECT-DECL-pg-timestamp — Postgres `timestamp` has no Arrow mapping yet
+- **repark** — the Postgres type map declares `timestamp` (without time zone): encoding or
+  decoding it answers `TypeMapError::Declared` naming this row.
+- **Apache Spark** — the JDBC source reads `timestamp` as a timestamp type. *(oracle:
+  documented; no value claim — C-2's live cells attach the first measurement.)*
+- **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row`
+- **Rationale** — DECLARED 2026-10-05 (C-1). `Timestamp(Microsecond, None)` holds every finite
+  value, but `infinity` and `-infinity` have no Arrow value.
+### CONNECT-DECL-pg-timestamptz — Postgres `timestamptz` has no Arrow mapping yet
+- **repark** — the Postgres type map declares `timestamptz`: encoding or decoding it answers
+  `TypeMapError::Declared` naming this row.
+- **Apache Spark** — the JDBC source reads `timestamptz` as `TimestampType`. *(oracle:
+  documented; no value claim — C-2's live cells attach the first measurement.)*
+- **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row`
+- **Rationale** — DECLARED 2026-10-05 (C-1). ADBC names `Timestamp(Microsecond, "UTC")`, but
+  `infinity` and `-infinity` have no Arrow value; C-2 decides with the read path.
+### CONNECT-DECL-pg-interval — Postgres `interval` has no Arrow mapping yet
+- **repark** — the Postgres type map declares `interval`: encoding or decoding it answers
+  `TypeMapError::Declared` naming this row.
+- **Apache Spark** — the JDBC source reads `interval` through its PostgreSQL dialect. *(oracle:
+  documented; no value claim — C-2's live cells attach the first measurement.)*
+- **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row`
+- **Rationale** — DECLARED 2026-10-05 (C-1). Postgres carries months, days and microseconds;
+  `IntervalMonthDayNano` overflows at the nanosecond scale for the largest microsecond
+  values, and recent Postgres releases add infinite intervals.
+### CONNECT-DECL-pg-uuid — Postgres `uuid` has no Arrow mapping yet
+- **repark** — the Postgres type map declares `uuid`: encoding or decoding it answers
+  `TypeMapError::Declared` naming this row.
+- **Apache Spark** — the JDBC source reads `uuid` as `StringType`. *(oracle: documented; no
+  value claim — C-2's live cells attach the first measurement.)*
+- **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row`
+- **Rationale** — DECLARED 2026-10-05 (C-1). Two plausible mappings: `FixedSizeBinary(16)`
+  (with or without the `arrow.uuid` extension) and `Utf8`.
+### CONNECT-DECL-pg-json — Postgres `json` has no Arrow mapping yet
+- **repark** — the Postgres type map declares `json`: encoding or decoding it answers
+  `TypeMapError::Declared` naming this row.
+- **Apache Spark** — the JDBC source reads `json` as `StringType`. *(oracle: documented; no
+  value claim — C-2's live cells attach the first measurement.)*
+- **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row`
+- **Rationale** — DECLARED 2026-10-05 (C-1). Two plausible mappings: plain `Utf8` and `Utf8`
+  under the `arrow.json` extension type.
+### CONNECT-DECL-pg-jsonb — Postgres `jsonb` has no Arrow mapping yet
+- **repark** — the Postgres type map declares `jsonb`: encoding or decoding it answers
+  `TypeMapError::Declared` naming this row.
+- **Apache Spark** — the JDBC source reads `jsonb` as `StringType`. *(oracle: documented; no
+  value claim — C-2's live cells attach the first measurement.)*
+- **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row`
+- **Rationale** — DECLARED 2026-10-05 (C-1). As `json`, and the binary wire form carries a
+  version byte before the text, so the codec is not `text`'s.
 ### SES-ARTIFACT-1 — `addArtifact(s)` supports driver-local `pyfile` copies only
 - **repark** — `addArtifact`/`addArtifacts` validate exactly like Spark: more than one of
   `pyfile`/`archive`/`file` true raises `PySparkValueError` with condition
