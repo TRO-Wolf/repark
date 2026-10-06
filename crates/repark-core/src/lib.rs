@@ -54,10 +54,10 @@ mod unknown_routine;
 mod update_fields;
 
 // --- The Session surface (v1 names, courtesy `Session` alias).
+pub use repark_common::java_case::{fold_b_equal, string_lower_equal};
 pub use session::{
     DATAFUSION_CONFIG_PREFIX, ReparkSession, ReparkSession as Session, ReparkSessionBuilder,
-    fold_b_equal, frame_names, resolve_bound_expr, resolve_scoped_expr, resolve_subquery_plan,
-    string_lower_equal, writer_layout,
+    frame_names, resolve_bound_expr, resolve_scoped_expr, resolve_subquery_plan, writer_layout,
 };
 
 // === Session timezone ===
