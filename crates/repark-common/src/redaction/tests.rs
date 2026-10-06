@@ -637,3 +637,17 @@ fn multi_line_json_and_yaml_secrets_are_masked() {
         ("host:\n  h\nport: 1", "host:\n  h\nport: 1"),
     ]);
 }
+
+#[test]
+fn a_user_colon_authority_runs_past_a_parameter_looking_password_tail() {
+    assert_masks(&[
+        (
+            "postgresql://u:tok;a=bcdefg@db.example.com/db",
+            "postgresql://u:***@db.example.com/db",
+        ),
+        (
+            "postgresql://u:abtoken=QZX12;a=bcdKQV@db.example.com/db",
+            "postgresql://u:***@db.example.com/db",
+        ),
+    ]);
+}
