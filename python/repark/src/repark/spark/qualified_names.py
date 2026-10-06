@@ -21,6 +21,7 @@ _ID_SNAPSHOTS: weakref.WeakKeyDictionary[Any, tuple[Any, list[str | None], list[
     weakref.WeakKeyDictionary()
 )
 _ENGINE_NAMES: weakref.WeakKeyDictionary[Any, tuple[Any, list[str]]] = weakref.WeakKeyDictionary()
+_USING_MARKS: weakref.WeakKeyDictionary[Any, Any] = weakref.WeakKeyDictionary()
 
 
 def _frame_engine_names(frame: Any) -> list[str]:
@@ -133,7 +134,7 @@ def _join_frame_qualifiers(child: Any, left: Any, right: Any) -> dict[str, froze
     right_ids = _stamped_frame_id_snapshot(right)[1]
     sources = _native.join_output_sources(child._plan())
     if not any(sources):
-        child._using_keys = _merge_using_marks(_using_mark(left), _using_mark(right))
+        _set_using_mark(child, _merge_using_marks(_using_mark(left), _using_mark(right)))
         return None
     left_map = left._frame_qualifiers or {}
     right_map = right._frame_qualifiers or {}
@@ -153,7 +154,7 @@ def _join_frame_qualifiers(child: Any, left: Any, right: Any) -> dict[str, froze
                 names = names | side[side_position]
         if names:
             output[output_id] = output.get(output_id, frozenset()) | names
-    child._using_keys = _merge_using_marks(_using_mark(left), _using_mark(right))
+    _set_using_mark(child, _merge_using_marks(_using_mark(left), _using_mark(right)))
     return output or None
 
 
@@ -326,7 +327,14 @@ def _raise_using_key_reference(ref: str) -> NoReturn:
 
 
 def _using_mark(frame: Any) -> Any:
-    return getattr(frame, "_using_keys", None)
+    return _USING_MARKS.get(frame)
+
+
+def _set_using_mark(frame: Any, mark: Any) -> None:
+    if mark is None:
+        _USING_MARKS.pop(frame, None)
+    else:
+        _USING_MARKS[frame] = mark
 
 
 def _merge_using_marks(first: Any, second: Any) -> Any:
@@ -339,10 +347,11 @@ def _merge_using_marks(first: Any, second: Any) -> Any:
     return (kept, keys, first[2] | second[2], first[3] | second[3])
 
 
-def _using_state(child: Any, left: Any, right: Any, keys: list[str], engine_how: str) -> Any:
+def _using_state(child: Any, left: Any, right: Any, keys: list[str], engine_how: str) -> None:
     merged = _merge_using_marks(_using_mark(left), _using_mark(right))
     if engine_how not in ("left", "right", "full"):
-        return merged
+        _set_using_mark(child, merged)
+        return
     exact = _session_exact(child)
     held = _stamped_frame_id_snapshot(child)[1]
     left_held, left_engines = _stamped_frame_id_snapshot(left)[1:]
@@ -380,8 +389,10 @@ def _using_state(child: Any, left: Any, right: Any, keys: list[str], engine_how:
                 right_ids.append(right_id)
     refused = frozenset(name for values in right_map.values() for name in values)
     if not refused or not kept:
-        return merged
-    return _merge_using_marks(merged, (frozenset(kept), tuple(keys), refused, frozenset(right_ids)))
+        _set_using_mark(child, merged)
+        return
+    mark = _merge_using_marks(merged, (frozenset(kept), tuple(keys), refused, frozenset(right_ids)))
+    _set_using_mark(child, mark)
 
 
 def _using_mark_live(mark: Any, held: list[str | None]) -> bool:

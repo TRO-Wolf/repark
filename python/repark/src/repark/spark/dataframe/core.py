@@ -54,7 +54,6 @@ from repark.spark.dataframe.udf_bridge import (
     _run_pandas_udf_arrow_batches,
     _run_python_udf_arrow_batches,
 )
-from repark.spark.dataframe.writer_layout import _refuse_duplicate_output_columns
 from repark.spark.row import Row
 from repark.spark.types import DataType, StructField, StructType
 
@@ -221,7 +220,6 @@ class DataFrame:
         "_storage_level",
         "_tighten_derived",
         "_unemitted_attr_ids",
-        "_using_keys",
     )
 
     def __init__(
@@ -262,7 +260,6 @@ class DataFrame:
         self._frame_qualifiers: dict[str, frozenset[str]] | None = None
         self._join_qualifiers: list[str] | None = None
         self._unemitted_attr_ids: dict[str, str] = {}
-        self._using_keys: Any = None
         self._collapse_base: DataFrame | None = None
         self._layer_window_key: tuple[Any, ...] | None = None
         self._layer_map: dict[str, Any] | None = None
@@ -288,7 +285,7 @@ class DataFrame:
         if self._frame_qualifiers is not None:
             child._frame_qualifiers = dict(self._frame_qualifiers)
         child._unemitted_attr_ids = dict(self._unemitted_attr_ids)
-        child._using_keys = self._using_keys
+        _qualified_names._set_using_mark(child, _qualified_names._using_mark(self))
         child._tighten_derived = self._tighten_derived or any(
             other._tighten_derived for other in others
         )
@@ -863,6 +860,8 @@ class DataFrame:
 
     def create_or_replace_temp_view(self, name: str) -> None:
         """Register this DataFrame as a replaceable temporary view."""
+        from repark.spark.dataframe.writer_layout import _refuse_duplicate_output_columns
+
         _refuse_duplicate_output_columns(self, exact_only=True)
         surface_b.register_view_without_fill(self, name)
 
@@ -1147,8 +1146,7 @@ class DataFrame:
         ``"ID"`` as a string *literal*, as Spark does, so comparing it to a number is loud on
         both doors (FNP-4B). Only the refusal text differs: DataFusion's planning prefix on
         the ambiguity, and the Arrow cast error where ANSI Spark raises
-        ``CAST_INVALID_INPUT``.
-        The rewriter never touches a quoted span.
+        ``CAST_INVALID_INPUT``. The rewriter never touches a quoted span.
         """
         if isinstance(condition, Column):
             _reject_partition_transform(condition)
@@ -2233,7 +2231,7 @@ class DataFrame:
             child = left._spawn(planned, other, node=node)
             replace_expr._assign_join_qualifiers(child, len(left.columns), side_names)
             child._frame_qualifiers = _qualified_names._join_frame_qualifiers(child, left, right)
-            child._using_keys = _qualified_names._using_state(child, left, right, [on], engine_how)
+            _qualified_names._using_state(child, left, right, [on], engine_how)
             child._remember_unemitted_right_ids(
                 self, other, left_only=engine_how in _SEMI_JOIN_HOWS
             )
@@ -2253,7 +2251,7 @@ class DataFrame:
             child = left._spawn(planned, other, node=node)
             replace_expr._assign_join_qualifiers(child, len(left.columns), side_names)
             child._frame_qualifiers = _qualified_names._join_frame_qualifiers(child, left, right)
-            child._using_keys = _qualified_names._using_state(child, left, right, keys, engine_how)
+            _qualified_names._using_state(child, left, right, keys, engine_how)
             child._remember_unemitted_right_ids(
                 self, other, left_only=engine_how in _SEMI_JOIN_HOWS
             )
@@ -2514,6 +2512,8 @@ class DataFrame:
 
     def create_global_temp_view(self, name: str) -> None:
         """Unsupported global_temp namespace (R- loud; use session temp views)."""
+        from repark.spark.dataframe.writer_layout import _refuse_duplicate_output_columns
+
         _refuse_duplicate_output_columns(self, exact_only=True)
         from repark.errors import UnsupportedOperationException
 

@@ -1736,11 +1736,13 @@ unsupported error for duplicate-free frames. The refusal stays out of
 frames through it. Line-neutral at the exact 3464 baseline (the
 `create_temp_view` alive check is subsumed by the refusal's `columns` read;
 the `mapInPandas` docstring is one line). pins: attr-id-1/C-064
-**Fold SM-2 R6 (2026-10-06):** `core.py` carries the `_using_keys` slot
-(default `None`, shared by `_spawn` since the mark is immutable): the two
-DataFrame USING sites set it from `qualified_names._using_state`, and the
-condition-join site scans each condition with
-`_refuse_using_keys_in_cond` before preparing it. Line-neutral at the exact
-3464 baseline (the `join` docstring tightens five lines and the condition
-docstring one; the dropped "`drop` is a no-op" half-sentence named no frame).
+**Fold SM-2 R6 (2026-10-06):** the two DataFrame USING sites record their
+mark with `qualified_names._using_state` (SM-2b item 5: the mark lives in
+that module's `_USING_MARKS` weak map, never as a `DataFrame` slot, so the
+export snapshots stay unchanged), and the condition-join site scans each
+condition with `_refuse_using_keys_in_cond` before preparing it.
+Line-neutral at the exact 3464 baseline (the `join` docstring tightens five
+lines and the condition docstring one; the dropped "`drop` is a no-op"
+half-sentence named no frame; SM-2b rebalances the two refusal imports
+against the slot/`__init__` removals plus one filter-docstring join).
 pins: attr-id-1/C-066

@@ -8,6 +8,7 @@ import pytest
 
 from repark.errors import AnalysisException, UnsupportedOperationException
 from repark.spark import functions as spark_functions
+from repark.spark.qualified_names import _using_mark
 
 
 def _using_frames(session: Any) -> tuple[Any, Any]:
@@ -304,7 +305,7 @@ def test_no_alias_using_carries_no_marker(tmp_path: Path) -> None:
     session = sm2._open(tmp_path, "sm2-r6-noalias")
     left, right = _using_frames(session)
     frame = left.join(right, "id", "full")
-    assert frame._using_keys is None
+    assert _using_mark(frame) is None
     assert _rows(frame.select("*")) == [
         (1, "a", None),
         (2, "b", "x"),

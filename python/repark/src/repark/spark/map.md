@@ -640,7 +640,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   carrying a right-input key id, i.e. pre-join right keys reused after
   the merge, where Spark answers per-side values; left-id tokens pass
   and bind the kept key). The unqualified key always binds the merged
-  value. No new registry: one per-frame attribute, propagated by `_spawn`.
+  value. No new registry and no `DataFrame` slot: the `_USING_MARKS` weak map
+  holds the mark, copied by `_spawn` (SM-2b item 5).
   pins: attr-id-1/C-066
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
