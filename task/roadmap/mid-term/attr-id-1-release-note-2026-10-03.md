@@ -172,7 +172,10 @@ release, where main could not plan it. The internal twin names
   as Spark does.
 - Arrow exports (`pa.table(frame)`) and `toArrow` carry the display names
   (`id, s, v, id, s, v`), exactly as Spark's `arrow_dup` answers.
-  `toPandas` carries the display names the same way.
+  `toPandas` carries the display names the same way. Raw polars consumers
+  of a duplicate-name frame (`pl.from_arrow(frame)`, `pl.DataFrame(frame)`)
+  now get polars' own `DuplicateError` instead of internal `__repark_`
+  names; use `to_polars()`, which disambiguates with `__1` suffixes.
 - `mapInPandas` and `mapInArrow` over a frame with duplicate display names
   refuse with Spark's exact `[AMBIGUOUS_REFERENCE]`, naming the first
   duplicate with its qualified candidates (SQLSTATE 42704), instead of

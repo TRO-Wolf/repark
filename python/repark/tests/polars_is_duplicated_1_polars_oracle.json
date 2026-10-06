@@ -940,6 +940,7 @@
    "_qualifiers",
    "_reject_higher_order",
    "_reject_nested_generator",
+   "_repr_display",
    "_sort_ascending",
    "_sort_nulls_first",
    "_spark_display",

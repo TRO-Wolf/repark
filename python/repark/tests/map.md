@@ -4567,6 +4567,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `_origin_plan_id`, `_string_predicate` and `_with_sort_order`, so the
   `dir` delta still pins `is_duplicated` as the only addition. The polars
   cells are unchanged.
+  **Fold SM-2 R7 (2026-10-06, pins: attr-id-1/C-065):** the baseline gains the
+  intentional private `_repr_display` slot (the qualified-getitem repr
+  display), so the `dir` delta still pins `is_duplicated` as the only
+  addition over the documented baseline.
 - `test_pg_jdbc_options.py` — PG2 offline option pins (jdbc overloads, format aliases, XOR/caps).
   Ported minus **one** node (EC-4): `test_jdbc_num_partitions_above_cap_is_unsupported` — the
   `read_postgres` refuse-arm pre-empts the engine's cap error. The other offline pins raise their
@@ -9584,8 +9588,10 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   `arrow_dup`: the native Arrow C stream export renames schema and batches
   to the overlay names (Arrow allows duplicate field names; SM-2b item 3
   moved the rename to Rust, pyarrow-free); a non-duplicate twin frame still
-  exports its engine names. No module docstring: the lane's no-comments
-  ruling covers the new file; the contract lives here.
+  exports its engine names. Raw polars consumers of a duplicate-name frame
+  get polars' own `DuplicateError` (SM-2c Q2, 2026-10-06); `to_polars()`
+  disambiguates with `__1` suffixes. No module docstring: the lane's
+  no-comments ruling covers the new file; the contract lives here.
   pins: attr-id-1/C-062
 - [test_attr_id_1_sm2_duppandas.py](test_attr_id_1_sm2_duppandas.py) — **Fold
   SM-2 R4 (2026-10-06):** `mapInPandas`/`mapInArrow` over duplicate-display
