@@ -2,12 +2,11 @@ mod session_catalog;
 mod wiring;
 
 use std::collections::{BTreeMap, HashMap};
-use std::num::NonZeroU64;
 use std::path::Path;
 
 use tempfile::TempDir;
 
-use repark_common::{SourceIdentity, SourceKind};
+use repark_common::{Generation, SourceIdentity, SourceKind};
 
 use crate::catalog_config::{CatalogKind, parse_catalog_specs};
 
@@ -600,10 +599,32 @@ url = "postgresql://localhost:5432/company"
     let reparsed = SourceKind::from_spelling(source.identity.kind.spelling());
     assert_eq!(reparsed, Some(source.identity.kind));
     let assigned = SourceIdentity {
-        generation: NonZeroU64::new(7),
+        generation: Generation::new(7),
         ..source.identity.clone()
     };
     assert_ne!(assigned, source.identity);
+}
+
+#[test]
+fn a_zero_generation_cannot_be_built() {
+    assert_eq!(Generation::new(0), None);
+}
+
+#[test]
+fn a_non_zero_generation_round_trips_through_new_and_get() {
+    for value in [1, 7, u64::MAX] {
+        let generation = Generation::new(value).expect("non-zero generation");
+        assert_eq!(generation.get().get(), value);
+    }
+}
+
+#[test]
+fn two_different_generations_compare_unequal() {
+    let first = Generation::new(1).expect("generation 1");
+    let second = Generation::new(2).expect("generation 2");
+    assert_ne!(first, second);
+    assert!(first < second);
+    assert_eq!(first, Generation::new(1).expect("generation 1 again"));
 }
 
 #[test]

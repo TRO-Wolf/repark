@@ -28,11 +28,26 @@ impl SourceKind {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct Generation(NonZeroU64);
+
+impl Generation {
+    #[must_use]
+    pub fn new(value: u64) -> Option<Generation> {
+        NonZeroU64::new(value).map(Generation)
+    }
+
+    #[must_use]
+    pub fn get(self) -> NonZeroU64 {
+        self.0
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SourceIdentity {
     pub name: String,
     pub kind: SourceKind,
-    pub generation: Option<NonZeroU64>,
+    pub generation: Option<Generation>,
 }
 
 impl SourceIdentity {

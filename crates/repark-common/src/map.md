@@ -59,6 +59,15 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   re-exports both. `repark-connect` owns the settings and conversions, `repark-core` the
   loading and handles, `repark-cdc` lineage and offsets.
   pins: c-1/C-002
+  **C-1b (2026-10-06), NS-14:** the generation is the named newtype
+  `Generation(NonZeroU64)` (`Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord`), and
+  `SourceIdentity.generation` is an `Option<Generation>`, `None` still meaning unassigned.
+  `Generation::new(u64) -> Option<Generation>` maps `0` to `None`, `get()` returns the
+  `NonZeroU64`; there is no `Default` and no `From<u64>`, so a `0` generation cannot be built
+  (North Star NS-14: "never a bare `u64` across a function boundary … in Rust it is
+  `Option<Generation>` or a non-zero type"; R-12 as amended, owner, 2026-10-05). `new` is the
+  serialized `0` ↔ `None` boundary the first serializing unit calls. `lib.rs` re-exports it.
+  pins: c-1/C-012
 - `names.rs` — **WO CASESENS-1 slice 2 (2026-09-27):** the one
   name-matching rule every binder calls. `NameRule { Exact, IgnoreCase }`
   (`from_case_sensitive`, `matches`, `lookup` → `NameHit::{One, Many,
