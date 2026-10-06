@@ -522,8 +522,8 @@ fn numeric_typmods_resolve_to_spark_decimal_types() {
     ] {
         assert_eq!(column("numeric", typmod).field().data_type(), &expected);
     }
-    let wide = column("numeric", TypeMod::numeric(1000, 40));
-    assert_eq!(decimal(&wide, &numeric_wire(0, 0, 1, &[1, 5000])), 2);
+    let thousand = column("numeric", TypeMod::numeric(1000, 40));
+    assert_eq!(decimal(&thousand, &numeric_wire(0, 0, 1, &[1, 5000])), 2);
     let over = column("numeric", TypeMod::numeric(39, 1));
     let wire = numeric_wire(
         9,
