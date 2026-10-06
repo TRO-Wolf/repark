@@ -189,11 +189,13 @@ wrapped optimizer rule) and declares this directory.
   the unary children, so twins that meet at one join cannot resolve. Pin:
   `../tests/join_qualifiers.rs` (`sort_twins_from_two_join_positions_meet_at_the_join`).
   pins: casesens-2/C-012
-  **Fold SM-2c round B (2026-10-06):** `project_input_is_join(plan)` answers
-  whether the projection below the transparent wrappers reads directly from a
-  join, sharing `sort_names::below_transparent`; the facade's sort route uses
-  it to keep main's `AMBIGUOUS_REFERENCE` refusal for string keys over join
-  inputs. pins: attr-id-1/C-070
+  **Fold SM-2c round B (2026-10-06):** `sort_sourced_twin_engine(plan, hits,
+  written, rule)` binds the one ambiguous twin whose attribute traces down
+  through pass-through projections to a field of the written name (sharing
+  `sort_names::below_transparent`), and only when the projection input
+  carries no column of the name — the computed-twin-over-reminted shape,
+  where Spark and the engine's deep pushdown sort by the source column
+  through both levels. Pins: `../tests/attr_id_s3b.rs`. pins: attr-id-1/C-071
 - `frame_lineage.rs` — **ATTR-ID-1 SJ-1a (2026-10-02):** the lineage core for refusing
   ambiguous self-join references the way Spark Classic does (owner ruling 2026-10-02,
   option A; design sketch `attr-id-1-selfjoin-design.md` §2.1–§2.2). Spark tags every
@@ -614,14 +616,16 @@ wrapped optimizer rule) and declares this directory.
   oldest id (`oldest_field` is deleted: an oldest twin that is not the source
   column sorts rows neither Spark nor main produces). `bind_free_column` takes
   the plan; on ambiguity it refuses `UNRESOLVED_COLUMN` when the hits meet at
-  a join (the string route's check, shared), else returns the key unbound,
-  respelled to the input's casing when the projection input carries exactly
-  one column of the name under the session rule, so DataFusion's
-  missing-sort-column pushdown sorts by that input column. Otherwise the
-  unbound key flows to the engine, which refuses or pushes deeper exactly as
-  on main. `project_input_spelling` exposes the same walk to the facade's
-  string-sort route. Pins: `../tests/attr_id_s3b.rs`.
-  pins: attr-id-1/C-069, C-070
+  a join (the string route's check, shared), binds the sourced twin when one
+  hit traces to the written name, else returns the key unbound, respelled to
+  the input's casing when the projection input carries exactly one column of
+  the name under the session rule, so DataFusion's missing-sort-column
+  pushdown sorts by that input column. Otherwise the unbound key flows to the
+  engine, which refuses or pushes deeper exactly as on main. The spelling and
+  sourced checks are mutually exclusive (one input match versus none), so both
+  doors run them in the same order. `project_input_spelling` exposes the
+  input walk to the facade. Pins: `../tests/attr_id_s3b.rs`.
+  pins: attr-id-1/C-069, C-070, C-071
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside

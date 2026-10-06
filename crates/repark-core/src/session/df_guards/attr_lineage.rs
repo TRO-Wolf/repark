@@ -1,6 +1,7 @@
 use datafusion::common::Column;
 use datafusion::logical_expr::expr::{Alias, Case};
 use datafusion::logical_expr::{Distinct, Expr, LogicalPlan, Operator};
+use repark_common::names::NameRule;
 
 use super::attr_id::{ATTR_KEY, AttrId};
 use super::sort_names::below_transparent;
@@ -56,20 +57,69 @@ fn plain_source(expr: &Expr) -> Option<&Column> {
 }
 
 #[must_use]
-pub fn project_input_is_join(plan: &LogicalPlan) -> bool {
+pub fn sort_sourced_twin_engine(
+    plan: &LogicalPlan,
+    hits: &[usize],
+    written: &str,
+    rule: NameRule,
+) -> Option<String> {
     let mut node = plan;
-    loop {
+    let projection = loop {
         let below = below_transparent(node);
         if !std::ptr::eq(below, node) {
             node = below;
             continue;
         }
-        return matches!(
-            node,
-            LogicalPlan::Projection(projection)
-                if matches!(projection.input.as_ref(), LogicalPlan::Join(_))
-        );
+        if let LogicalPlan::Projection(projection) = node {
+            break projection;
+        }
+        return None;
+    };
+    if projection
+        .input
+        .schema()
+        .fields()
+        .iter()
+        .any(|field| rule.matches(written, field.name()))
+    {
+        return None;
     }
+    let sources = projection_source_ids(node);
+    let mut found = None;
+    for hit in hits {
+        let Some(Some(id)) = sources.get(*hit) else {
+            continue;
+        };
+        let Some(name) = traced_source_name(projection.input.as_ref(), id) else {
+            continue;
+        };
+        if !rule.matches(written, &name) {
+            continue;
+        }
+        if found.is_some() {
+            return None;
+        }
+        found = Some(projection.schema().fields().get(*hit)?.name().clone());
+    }
+    found
+}
+
+fn traced_source_name(plan: &LogicalPlan, id: &AttrId) -> Option<String> {
+    let position = plan
+        .schema()
+        .fields()
+        .iter()
+        .position(|field| AttrId::native(field).as_ref() == Some(id))?;
+    let LogicalPlan::Projection(projection) = plan else {
+        return plan
+            .schema()
+            .fields()
+            .get(position)
+            .map(|field| field.name().clone());
+    };
+    let sources = projection_source_ids(plan);
+    let next = sources.get(position)?.clone()?;
+    traced_source_name(projection.input.as_ref(), &next)
 }
 
 #[must_use]

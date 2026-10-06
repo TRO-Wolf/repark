@@ -260,6 +260,36 @@ fn bind_free_names_sort_is_unresolved_on_join() {
 }
 
 #[test]
+fn bind_free_names_sort_binds_sourced_twin_over_reminted_input() {
+    let context = SessionContext::new();
+    let computed = source(&context)
+        .select(vec![
+            col("id").alias_with_metadata("id", Some(tag("a0"))),
+            col("v").alias_with_metadata("e1", Some(tag("a2"))),
+            (col("v") - lit(15)).alias_with_metadata("e2", Some(tag("a3"))),
+        ])
+        .unwrap();
+    let outer = computed
+        .select(vec![
+            col("id"),
+            col("e1").alias_with_metadata("o1", Some(tag("a2"))),
+            col("e2").alias_with_metadata("o2", Some(tag("a3"))),
+            lit(1).alias("w"),
+        ])
+        .unwrap();
+    let plan = stamp(outer.logical_plan().clone()).unwrap();
+    assert_eq!(sort_shape(&plan), SortShape::Project);
+    let bound = bind_free_names(
+        col("v"),
+        &plan,
+        IgnoreCase,
+        &["id".into(), "v".into(), "v".into(), "w".into()],
+        true,
+    );
+    assert_eq!(bound_name(bound.unwrap()), "o1");
+}
+
+#[test]
 fn bind_free_names_sort_is_unresolved_when_twins_meet_at_join() {
     let context = SessionContext::new();
     let picked = tagged_joined(&context)

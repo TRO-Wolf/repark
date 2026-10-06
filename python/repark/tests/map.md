@@ -9330,8 +9330,9 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   pins: attr-id-1/C-025
   **Fold SM-2c round B (2026-10-06):** the renamed input-route pin on
   non-monotonic twins plus one pin per door (exact-dup `F.col`, exact-dup
-  string, insensitive twin-expression refusal, sensitive per-twin rows).
-  pins: attr-id-1/C-069
+  string, insensitive twin-expression refusal, sensitive per-twin rows) and
+  a sourced-twin expression pin over a reminted select.
+  pins: attr-id-1/C-069, C-071
   **ATTR-ID-1 S3b H-1 (2026-10-01):** the §9e pins (C-026): aliased-join and
   corpus-cross-join dups refuse on both doors under both rules; the missing
   sort key falls through in output order; the three lambda shapes bind under

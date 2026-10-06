@@ -123,6 +123,13 @@ def test_orderby_string_over_exact_project_dup_sorts_by_input(ruled_spark: Repar
     assert _rows(flipped.orderBy("v")) == [(11, -10, 2), (21, -20, 3), (31, -30, 1)]
 
 
+def test_orderby_expr_over_computed_twin_sorts_by_source(ruled_spark: ReparkSession) -> None:
+    frame = _frame(ruled_spark)
+    computed = frame.select(frame.id, frame.v, (frame.v - 15).alias("v"))
+    ordered = computed.withColumn("w", functions.lit(1)).orderBy(functions.col("v") + 0)
+    assert _rows(ordered) == [(2, 10, -5, 1), (3, 20, 5, 1), (1, 30, 15, 1)]
+
+
 def test_orderby_expr_over_case_twins_is_ambiguous_insensitive(spark: ReparkSession) -> None:
     spark.conf.set("spark.sql.caseSensitive", "false")
     frame = _frame(spark)
