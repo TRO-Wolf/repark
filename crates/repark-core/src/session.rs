@@ -201,7 +201,7 @@ impl ReparkSessionBuilder {
         for warning in &file.warnings {
             eprintln!("{warning}");
         }
-        let conf_dump = crate::config_file::conf_dump_rows(&file, &self.config);
+        let conf_dump = crate::config_file::raw_conf_dump_rows(&file, &self.config);
         self.maintenance.clone_from(&file.maintenance);
         self.source_specs = file
             .source_specs
@@ -408,7 +408,7 @@ impl ReparkSession {
 
     #[must_use]
     pub fn conf_dump(&self) -> Vec<(String, String, String)> {
-        self.conf_dump.to_vec()
+        crate::config_file::redact_dump_rows(&self.conf_dump)
     }
 
     /// Run a SQL string through the session-default [`SqlDialect`].

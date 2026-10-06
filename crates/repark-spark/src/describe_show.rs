@@ -158,9 +158,9 @@ pub(crate) fn render_namespace_properties(properties: &HashMap<String, String>) 
         .iter()
         .map(|(key, value)| {
             let shown = if property_is_redacted(key, value) {
-                REDACTION_REPLACEMENT_TEXT
+                REDACTION_REPLACEMENT_TEXT.to_string()
             } else {
-                value.as_str()
+                repark_common::redaction::mask_value_credentials(value)
             };
             format!("({key},{shown})")
         })

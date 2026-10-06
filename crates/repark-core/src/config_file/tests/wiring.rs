@@ -275,6 +275,22 @@ fn file_builder_precedence_is_builder_then_profile_then_default() {
 }
 
 #[test]
+fn file_dump_masks_a_password_inside_a_catalog_uri() {
+    let file = try_loaded_file(
+        "[default.catalog.pg]\ntype = \"jdbc\"\nurl = \"postgresql://u:CatPw9@db.example.com/sales\"\n",
+        &[],
+    )
+    .expect("fixture loads");
+    let dumped = conf_dump_rows(&file, &HashMap::new());
+    let rendered = format!("{dumped:?}");
+    assert!(!rendered.contains("CatPw9"), "{rendered}");
+    assert!(
+        rendered.contains("postgresql://u:***@db.example.com/sales"),
+        "{rendered}"
+    );
+}
+
+#[test]
 fn file_dump_reports_origin_and_masks_secrets() {
     let file = try_loaded_file(
         "[default.conf]\npassword = \"s3cret\"\nnickname = \"plain\"\n[prod.conf]\nnickname = \"prod-name\"\n",

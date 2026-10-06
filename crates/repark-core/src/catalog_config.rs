@@ -3,6 +3,8 @@
 use std::collections::{BTreeMap, HashMap};
 use std::hash::BuildHasher;
 
+pub use repark_common::redaction::prop_key_is_secret;
+use repark_common::redaction::{mask_value_credentials, redact_value};
 use repark_common::{Error, Result};
 
 pub mod refusal;
@@ -47,17 +49,10 @@ pub struct CatalogSpec {
 
 impl std::fmt::Debug for CatalogSpec {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut props: Vec<(&str, &str)> = self
+        let mut props: Vec<(&str, String)> = self
             .props
             .iter()
-            .map(|(key, value)| {
-                let shown = if prop_key_is_secret(key) {
-                    "***"
-                } else {
-                    value.as_str()
-                };
-                (key.as_str(), shown)
-            })
+            .map(|(key, value)| (key.as_str(), redact_value(key, value)))
             .collect();
         props.sort_by(|left, right| left.0.cmp(right.0));
         f.debug_struct("CatalogSpec")
@@ -67,30 +62,6 @@ impl std::fmt::Debug for CatalogSpec {
             .field("refusal", &self.refusal)
             .finish()
     }
-}
-
-/// Whether a catalog property key's **value** should be redacted in Debug output (C1-SEC-002).
-#[must_use]
-pub fn prop_key_is_secret(key: &str) -> bool {
-    let lower = key.to_ascii_lowercase().replace(['-', '.'], "_");
-    let compact = lower.replace('_', "");
-    lower.contains("aws_secret")
-        || lower.contains("secret")
-        || lower.contains("password")
-        || lower.contains("token")
-        || lower.contains("credential")
-        || lower.contains("connection_string")
-        || lower.ends_with("access_key_id")
-        || lower.ends_with("access_key")
-        || compact.contains("accesskey")
-        || compact.contains("apikey")
-        || compact.contains("privatekey")
-        || compact == "bearer"
-        || compact.ends_with("bearer")
-        || lower.contains("user_info")
-        || compact.contains("userinfo")
-        || lower == "key"
-        || lower.ends_with("_key") && !lower.contains("bucket") && !lower.contains("arn")
 }
 
 /// The in-progress state accumulated for one catalog name while scanning the config map.
@@ -187,10 +158,11 @@ fn apply_prop(block: &mut Block, name: &str, prop: &str, value: &str) -> Result<
             block.kind_from_impl = Some(
                 crate::catalog_kind::kind_from_catalog_impl(value).ok_or_else(|| {
                     Error::Config(format!(
-                        "{} has an unrecognized value '{value}' \
+                        "{} has an unrecognized value '{}' \
                      (expected a class ending in 'GlueCatalog', 'S3TablesCatalog', \
                      'JDBCTableCatalog', or 'InMemoryCatalog')",
-                        dual_catalog_key(name, "catalog-impl")
+                        dual_catalog_key(name, "catalog-impl"),
+                        mask_value_credentials(value)
                     ))
                 })?,
             );
@@ -201,9 +173,10 @@ fn apply_prop(block: &mut Block, name: &str, prop: &str, value: &str) -> Result<
             block.kind_from_type =
                 Some(crate::catalog_kind::kind_from_type(value).ok_or_else(|| {
                     Error::Config(format!(
-                        "{} has an unrecognized value '{value}' \
+                        "{} has an unrecognized value '{}' \
                      (expected 'glue', 's3tables', 'memory', 'hadoop', 'postgres', or 'jdbc')",
-                        dual_catalog_key(name, "type")
+                        dual_catalog_key(name, "type"),
+                        mask_value_credentials(value)
                     ))
                 })?);
         }
@@ -805,6 +778,34 @@ mod tests {
             rendered.contains("s3://bucket/wh"),
             "non-secret warehouse value must remain visible: {rendered}"
         );
+    }
+
+    #[test]
+    fn catalog_spec_debug_and_kind_refusal_mask_url_userinfo() {
+        let spec = CatalogSpec {
+            name: "pg".to_string(),
+            kind: CatalogKind::Postgres,
+            refusal: None,
+            props: HashMap::from([(
+                "uri".to_string(),
+                "jdbc:postgresql://u:DebugPw3@db.example.com/sales".to_string(),
+            )]),
+        };
+        let rendered = format!("{spec:?}");
+        assert!(!rendered.contains("DebugPw3"), "{rendered}");
+        assert!(
+            rendered.contains("jdbc:postgresql://u:***@db.example.com/sales"),
+            "{rendered}"
+        );
+        let config = HashMap::from([(
+            "spark.sql.catalog.pg.type".to_string(),
+            "postgresql://u:TypePw4@db.example.com/sales".to_string(),
+        )]);
+        let message = parse_catalog_specs(&config)
+            .expect_err("a URL is not a catalog type")
+            .to_string();
+        assert!(!message.contains("TypePw4"), "{message}");
+        assert!(message.contains("db.example.com"), "{message}");
     }
 
     #[test]

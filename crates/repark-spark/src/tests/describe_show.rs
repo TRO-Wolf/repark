@@ -208,6 +208,26 @@ async fn describe_namespace_extended_renders_property_values_raw() {
     );
 }
 
+#[tokio::test]
+async fn describe_namespace_extended_masks_url_userinfo_spark_would_show() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE NAMESPACE ice.conn WITH DBPROPERTIES ( \
+             'conn' = 'postgresql://u:NsPw5@db.example.com/sales', 'plain' = 'p7')",
+    )
+    .await
+    .unwrap();
+    let rows = describe_rows(&ctx, &catalogs, "DESCRIBE NAMESPACE EXTENDED ice.conn").await;
+    let (_, properties) = rows.last().unwrap();
+    assert_eq!(
+        properties,
+        "((conn,postgresql://u:***@db.example.com/sales), (plain,p7))"
+    );
+}
+
 /// Z2: the redaction TRUTH TABLE, reproduced row for row from a live pyspark 4.0.0 v2-catalog run.
 #[tokio::test]
 async fn describe_namespace_extended_redaction_truth_table() {
