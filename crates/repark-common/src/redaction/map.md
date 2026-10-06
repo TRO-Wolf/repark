@@ -35,3 +35,8 @@ See [../map.md](../map.md).
   (0 survivals outside the R-9 known limit and the R-2 storage lone tokens) are in the ledger;
   the known limits are named in `CONNECT-DIV-url-userinfo`.
   pins: source-url-redact-1/C-041, C-043, C-044, C-045, C-046, C-047, C-048, C-049, C-050, C-051
+  **SOURCE-URL-REDACT-1 fold 4 (2026-10-06):** `tests.rs` pins a URL embedded in JSON,
+  parentheses, quotes, angle and square brackets, braces and comma lists, a bare login whose
+  password holds `@x(`, and the verifier's N19 pin; `corpus.rs` adds the `embedded-url` class
+  (18 classes).
+  pins: source-url-redact-1/C-052, C-053, C-054

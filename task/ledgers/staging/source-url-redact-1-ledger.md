@@ -69,11 +69,14 @@ audit only).
 | C-044 | Fold 3 R-5 (re-verify S2): the legs record masked spans on the original value in order (URL userinfo, logins, key=value, JSON/YAML) and a later leg skips positions an earlier leg masked, so `postgresql://alice:MySecret=Value18@db.example.com/db` → `postgresql://alice:***@db.example.com/db`, while `jdbc:sqlserver://db:1433;user=sa;password=Spring@2026x` → `…;password=***` and the fold-2 query-`@` case hold; the URL fail-closed leg stops at a `;` or whitespace opening a named parameter unless the authority already has a `user:` shape. | `redaction::tests::the_key_value_leg_never_fires_inside_a_userinfo`, `::a_user_colon_authority_runs_past_a_parameter_looking_password_tail`; corpus class `secret-word-in-userinfo` and every repro of both verdicts as fixed cases. | PROVEN | §2; mutants N4, F7, F8, F9 red. |
 | C-045 | Fold 3 R-6 (re-verify S2): the Oracle and bare login legs fail closed — a password holding `' ( ) , ; =` or whitespace, or a quoted user, is masked up to the `@` before a host (`/` form: a host, `//`, `(` or `[`; `:` form: a host); prose stays (`contact john@example.com`); a `/` inside an Oracle password needs a `(` or `//` follower, so image references (`docker.io/library/postgres@sha256:…`) stay. | `redaction::tests::oracle_and_bare_logins_fail_closed`; corpus classes `oracle-ezconnect`, `bare-user-colon-pw`. | PROVEN | §2; mutants N1, N2, N3, N20, F4, F10..F13 red. |
 | C-046 | Fold 3 R-7 (re-verify S2): a secret YAML key whose value starts on the next line, a block scalar (`|`, `>`, chomping and indent digits) with its indented lines, and a JSON value on a following line are masked; a tab separator is pinned. | `redaction::tests::multi_line_json_and_yaml_secrets_are_masked`; corpus class `json-yaml-multiline`. | PROVEN | §2; mutants N6, F5, F6 red. |
-| C-047 | Fold 3 R-8: the re-verify's N1..N22 re-expressed on the fold-3 code plus F1..F14 for the new rules (36 mutants, `target/mut3/run.py`): 33 red; N7 survives as an over-mask only; N19 and F14 are equivalent (a follower with a space is never host-like; an empty span is never added); a surviving mutant was checked for leaks by rebuilding the re-verify probe against it — none leaks. | `target/mut3/run.py`; §3 fold 3. | PROVEN | §3. |
+| C-047 | Fold 3 R-8: the re-verify's N1..N22 re-expressed on the fold-3 code plus F1..F14 for the new rules (36 mutants, `target/mut3/run.py`): 33 red at fold 3, and N19 red since fold 4 (re-verify 2 showed it leaks: `mysql://bob:Pw#Leak3@db.example.com and more`; it is not an equivalent, as fold 3 recorded); N7 survives as an over-mask only; F14 is equivalent (an empty span is never added). | `target/mut3/run.py`; §3 fold 3. | PROVEN | §3. |
 | C-048 | Fold 3 R-9: the known limits are recorded (§4) and named in the divergence row: XML, command lines, `Cookie:`, bare tokens under non-secret keys, percent-encoded option passwords, a fullwidth `：//`, a password containing `://`, a lone token with `:` showing its user half. | The divergence row; §4. | PROVEN | §4. |
 | C-049 | Fold 3 R-10: `CONNECT-DIV-url-userinfo` states that storage locations display as Spark shows them and that secret keys redact as Spark does and more, with Spark 4.1.2 re-measured on fifteen keys and the re-verify's `live/` scripts re-run on both engines. | The registry row. | PROVEN | §5 fold 3; `python3 scripts/check_docs_links.py` clean. |
 | C-050 | Fold 3 corpus and fuzz: the `repark-common` corpus mirrors the re-verify's 17 classes (9,000 shaped, half hard, `redact_value` on a quarter) plus the storage-location class and every repro of both verdicts as fixed cases, and 4,000 garbage inputs; the re-verify's own probe at 96,000 shaped + 96,000 garbage gives 0 panics and 0 survivals in every class except the R-9 lone-token-with-`:` known limit (124/2870) and the R-2 storage-scheme lone tokens shown as is (164/2825, 181/2870). | `redaction::corpus::*` (four tests); `reverify/probe` rerun from `target/rprobe`. | PROVEN | §3 fold 3 class table. |
 | C-051 | Fold 3 gates: the 23 previous gates, `cargo test -p repark-distributed --features cluster --lib`, the re-verify's probe and `live/` scripts, the adapted mutant run, the comment ban at 0. | §2 fold 3. | PROVEN | §2 fold 3. |
+| C-052 | Fold 4 item 1 (re-verify 2 new S1, `reverify2/live/repark_embedded.py`): the fail-closed follower host ends at `" ' ( ) ] { } , < >` as well as `/ ? # ;` and whitespace (skipping a leading `[IPv6]` literal), so a URL inside JSON, parentheses, quotes, angle or square brackets, braces or a comma list masks its password: `{"conn":"postgresql://u:Pw/EmbLeak1@db.example.com"}` → `{"conn":"postgresql://u:***@db.example.com"}`; the bare-login chain crosses a `(` so a password holding `@x(` masks to the last host. | `redaction::tests::an_embedded_url_fails_closed_up_to_its_delimited_host`, `::a_bare_login_password_holding_an_at_and_a_paren_masks_to_the_last_host`; corpus class `embedded-url` (0 survivals). | PROVEN | §2 fold 4; `repark_embedded.py` 0 leaked markers on `getAll`, `SET` and `SHOW TBLPROPERTIES`; mutant F15 (delimiters dropped) red. |
+| C-053 | Fold 4 item 2: N19 is a leaking survivor; the verifier's pin `mysql://bob:Pw#Leak3@db.example.com and more` → `mysql://bob:***@db.example.com and more` and its `/` sibling kill it. | `redaction::tests::whitespace_after_the_host_ends_the_fail_closed_follower`. | PROVEN | §2 fold 4: N19 red. |
+| C-054 | Fold 4 gates: `cargo test -p repark-common` / `-p repark-core` / `-p repark-spark --lib`, `make rust-clippy`, `cargo fmt --check`, `make rust-panic-ban`, the map / ledger / docs-link checks, `repark_embedded.py` on the debug build, the N19 run red, the re-verify probe at 96k unchanged, the comment ban at 0. | §2 fold 4. | PROVEN | §2 fold 4. |
 
 ## 1. Surface audit
 
@@ -204,6 +207,20 @@ waited, never bypassed.
 | mutation run `target/mut3/run.py` | — | 33 red, 1 over-mask only, 2 equivalent (§3); run on `b158636c`, before the pedantic refactor `f7f9f2f4`, which changes no behavior |
 | `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xsec1 4a643e56 HEAD` | 0 | `hits=0` |
 
+**Fold 4 re-run** (wrapper and flock unchanged).
+
+| command | exit | output |
+|---|---|---|
+| `cargo test -p repark-common --lib` | 0 | 68 passed (35 redaction pins + 4 corpus tests, 18 classes) |
+| `cargo test -p repark-core --lib` | 0 | 1026 passed, 1 ignored |
+| `cargo test -p repark-spark --lib` | 0 | 2625 passed, 5 ignored |
+| `make rust-clippy` / `cargo fmt --all --check` / `make rust-panic-ban` | 0 | clean |
+| `python3 scripts/sync_map_md.py --check` / `check_ledger_grammar.py` / `check_docs_links.py` | 0 | clean |
+| `reverify2/live/repark_embedded.py` on the debug build | 0 | `"leaked_markers": []` |
+| N19 and F15 (`target/mut3/n19.py`) | — | both red |
+| re-verify probe, 96,000 + 96,000 | 0 | panics 0; every class 0 except the R-9 lone-token-with-`:` limit (124/2870) and the R-2 storage lone tokens (164/2825, 181/2870) |
+| `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xsec1 4a643e56 HEAD` | 0 | `hits=0` |
+
 ## 3. Mutation
 
 `redact_value` reverted to key-only (`value.to_string()` in the else arm), the debug module
@@ -284,7 +301,8 @@ A mutant that the pins leave green is re-checked with the re-verify probe built 
 |---|---|
 | red | N1 login leg, N2 quoted Oracle password, N3 bare-form host check, N4 key=value before userinfo, N5 JSON/YAML leg, N6 YAML tab, N8 JSON `,}]` stop, N9 `;` ends the authority, N10 host-likeness second arm, N11 one-letter TLD, N12 `…name` exclusion, N13 `pass`, N14 `accountkey`, N15 `authorization`, N16 MySQL parenthesized pairs, N17 `@` chain, N18 host-follows skip, N20 `=` word delimiter, N21 `pat`, N22 quoted escapes, F1 storage exception, F2 storage hides `user:pw`, F3 TNS follower, F4 `/`-in-password guard, F5 next-line YAML, F6 block scalars, F7 parameter boundary, F8 `user:` shape ignored (red after its pin), F9 key=value inside a userinfo, F10 login inside a URL region, F11 `jdbc:` colon skip, F12 bare login stops at a newline, F13 login `@` chain |
 | green, over-mask only (probe: no leak) | N7 (a bare YAML key without a space after the colon) |
-| green, equivalent | N19 (a follower with a space is never host-like either way), F14 (an empty userinfo yields an empty span, never added) |
+| green, equivalent | F14 (an empty userinfo yields an empty span, never added) |
+| red since fold 4 | N19 (whitespace no longer ends the follower host): fold 3 recorded it as equivalent; re-verify 2 showed it leaks on `mysql://bob:Pw#Leak3@db.example.com and more`, and `whitespace_after_the_host_ends_the_fail_closed_follower` now kills it |
 
 ### Fold 3 fuzz: the re-verify probe (`reverify/probe`, 96,000 shaped + 96,000 garbage, its seed)
 
