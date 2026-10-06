@@ -23,9 +23,7 @@ def _sort_source_ids(warehouse: Path) -> list[int]:
     )
     meta = json.loads(files[-1].read_text(encoding="utf-8"))
     current = [
-        order
-        for order in meta["sort-orders"]
-        if order["order-id"] == meta["default-sort-order-id"]
+        order for order in meta["sort-orders"] if order["order-id"] == meta["default-sort-order-id"]
     ]
     return [field["source-id"] for field in current[0]["fields"]]
 
@@ -35,8 +33,7 @@ def test_nested_write_ordered_by_replaces_the_sort_key(tmp_path: Path) -> None:
     session.conf.set("spark.sql.caseSensitive", "false")
     session.sql("CREATE NAMESPACE IF NOT EXISTS sc.ns").collect()
     session.sql(
-        "CREATE TABLE sc.ns.o1 (id INT NOT NULL, cat STRING, s STRUCT<a: INT>)"
-        " USING iceberg"
+        "CREATE TABLE sc.ns.o1 (id INT NOT NULL, cat STRING, s STRUCT<a: INT>) USING iceberg"
     ).collect()
     session.sql("ALTER TABLE sc.ns.o1 WRITE ORDERED BY CAT").collect()
     assert _sort_source_ids(tmp_path) == [2]
