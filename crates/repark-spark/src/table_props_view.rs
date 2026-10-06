@@ -68,14 +68,18 @@ pub(crate) fn spark_table_properties(metadata: &TableMetadata) -> Vec<(String, S
             .map(|(key, value)| (key.clone(), value.clone())),
     );
     for (key, value) in &mut pairs {
-        *value = if prop_key_is_secret(key) {
-            REDACTION_REPLACEMENT_TEXT.to_string()
-        } else {
-            mask_value_credentials(value)
-        };
+        *value = displayed_property_value(key, value);
     }
     pairs.sort_by(|left, right| left.0.cmp(&right.0));
     pairs
+}
+
+pub(crate) fn displayed_property_value(key: &str, value: &str) -> String {
+    if prop_key_is_secret(key) || crate::describe_show::property_is_redacted(key, value) {
+        REDACTION_REPLACEMENT_TEXT.to_string()
+    } else {
+        mask_value_credentials(value)
+    }
 }
 
 fn is_reserved_property(key: &str) -> bool {

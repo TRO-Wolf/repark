@@ -1,6 +1,5 @@
 use iceberg::TableIdent;
 use iceberg::table::Table;
-use repark_common::redaction::mask_value_credentials;
 
 const HIDDEN_STORED_PROPERTIES: [&str; 2] = ["comment", "owner"];
 
@@ -39,7 +38,12 @@ pub(crate) fn table_rows(
     let mut stored_rows = stored
         .iter()
         .filter(|(name, _)| !is_hidden(name))
-        .map(|(name, value)| (name.clone(), mask_value_credentials(value)))
+        .map(|(name, value)| {
+            (
+                name.clone(),
+                crate::table_props_view::displayed_property_value(name, value),
+            )
+        })
         .collect::<Vec<_>>();
     stored_rows.sort();
     rows.extend(stored_rows);

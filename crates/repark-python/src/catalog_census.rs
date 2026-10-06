@@ -21,7 +21,28 @@ pub fn iceberg_metadata_cache_census(
     })
 }
 
+#[pyfunction]
+pub fn namespace_metadata(
+    session: PyRef<'_, PyReparkSession>,
+    catalog: &str,
+    namespace: &str,
+) -> PyResult<(Option<String>, Option<String>)> {
+    fenced!("catalog_census.namespace_metadata", {
+        let catalogs = session.session.catalogs_snapshot();
+        let runtime = &session.runtime;
+        session
+            .py()
+            .detach(|| {
+                runtime.block_on(repark_spark::describe_show::namespace_metadata(
+                    &catalogs, catalog, namespace,
+                ))
+            })
+            .map_err(crate::datafusion_to_py_err)
+    })
+}
+
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(iceberg_metadata_cache_census, module)?)?;
+    module.add_function(wrap_pyfunction!(namespace_metadata, module)?)?;
     Ok(())
 }

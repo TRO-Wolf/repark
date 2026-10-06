@@ -555,7 +555,7 @@ pub(crate) fn show_tblproperties_rows(
     let mut rows = vec![
         (
             "location".to_string(),
-            repark_common::redaction::mask_value_credentials(metadata.location()),
+            crate::table_props_view::displayed_property_value("location", metadata.location()),
         ),
         ("provider".to_string(), "iceberg".to_string()),
         (
@@ -570,7 +570,7 @@ pub(crate) fn show_tblproperties_rows(
         .map(|(name, value)| {
             (
                 name.clone(),
-                repark_common::redaction::mask_value_credentials(value),
+                crate::table_props_view::displayed_property_value(name, value),
             )
         })
         .collect::<Vec<_>>();

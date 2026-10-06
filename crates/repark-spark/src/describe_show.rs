@@ -86,17 +86,39 @@ pub(crate) async fn execute_describe_namespace(
     catalogs: &CatalogRegistry,
     describe: DescribeNamespace,
 ) -> Result<DataFrame> {
-    let handle = catalog_handle(catalogs, &describe.catalog)?;
-    let ident = NamespaceIdent::new(describe.namespace.clone());
+    let properties =
+        existing_namespace_properties(catalogs, &describe.catalog, &describe.namespace).await?;
+    ctx.read_batch(describe_namespace_batch(&describe, &properties)?)
+}
+
+async fn existing_namespace_properties(
+    catalogs: &CatalogRegistry,
+    catalog: &str,
+    namespace: &str,
+) -> Result<HashMap<String, String>> {
+    let handle = catalog_handle(catalogs, catalog)?;
+    let ident = NamespaceIdent::new(namespace.to_string());
     if !handle.namespace_exists(&ident).await.map_err(iceberg_err)? {
         return Err(DataFusionError::Plan(format!(
-            "[SCHEMA_NOT_FOUND] The schema `{}` cannot be found. Verify the spelling and \
-             correctness of the schema and catalog.",
-            describe.namespace
+            "[SCHEMA_NOT_FOUND] The schema `{namespace}` cannot be found. Verify the spelling and \
+             correctness of the schema and catalog."
         )));
     }
-    let namespace = handle.get_namespace(&ident).await.map_err(iceberg_err)?;
-    ctx.read_batch(describe_namespace_batch(&describe, namespace.properties())?)
+    let loaded = handle.get_namespace(&ident).await.map_err(iceberg_err)?;
+    Ok(loaded.properties().clone())
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub async fn namespace_metadata(
+    catalogs: &CatalogRegistry,
+    catalog: &str,
+    namespace: &str,
+) -> Result<(Option<String>, Option<String>)> {
+    let properties = existing_namespace_properties(catalogs, catalog, namespace).await?;
+    Ok((
+        properties.get("comment").cloned(),
+        repark_iceberg::catalog::resolve_namespace_location(&properties).map(str::to_string),
+    ))
 }
 
 /// Build the `info_name` / `info_value` batch for one namespace.
@@ -158,11 +180,7 @@ pub(crate) fn render_namespace_properties(properties: &HashMap<String, String>) 
     let rendered: Vec<String> = pairs
         .iter()
         .map(|(key, value)| {
-            let shown = if property_is_redacted(key, value) {
-                REDACTION_REPLACEMENT_TEXT.to_string()
-            } else {
-                mask_value_credentials(value)
-            };
+            let shown = crate::table_props_view::displayed_property_value(key, value);
             format!("({key},{shown})")
         })
         .collect();

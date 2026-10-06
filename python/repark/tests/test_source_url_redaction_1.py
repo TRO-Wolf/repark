@@ -118,3 +118,17 @@ def test_knob_refusals_never_carry_the_password(spark: ReparkSession, password: 
     for message in refusals:
         assert password not in message, message
         assert HOST in message, message
+
+
+def test_get_database_returns_the_stored_location_and_comment(
+    spark: ReparkSession, password: str
+) -> None:
+    location = "s3://lake/teams/data@corp.example.com/ns"
+    comment = f"jdbc:postgresql://u:{password}@{HOST}/sales"
+    spark.sql(f"CREATE NAMESPACE mem.lake COMMENT '{comment}' LOCATION '{location}'")
+    database = spark.catalog.getDatabase("mem.lake")
+    assert database.locationUri == location
+    assert database.description == comment
+    described = repr(spark.sql("DESCRIBE NAMESPACE mem.lake").collect())
+    assert password not in described
+    assert location in described

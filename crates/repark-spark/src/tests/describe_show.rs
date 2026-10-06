@@ -260,7 +260,6 @@ async fn describe_namespace_extended_masks_url_userinfo_spark_would_show() {
     );
 }
 
-/// Z2: the redaction TRUTH TABLE, reproduced row for row from a live pyspark 4.0.0 v2-catalog run.
 #[tokio::test]
 async fn describe_namespace_extended_redaction_truth_table() {
     let wh = TempDir::new().unwrap();
@@ -280,15 +279,14 @@ async fn describe_namespace_extended_redaction_truth_table() {
 
     let rows = describe_rows(&ctx, &catalogs, "DESCRIBE NAMESPACE EXTENDED ice.creds").await;
     let (_, properties) = rows.last().unwrap();
-    // Verbatim from the live oracle.
     assert_eq!(
         properties,
-        "((ACCESS-KEY,p6), (SeCrEt,*********(redacted)), (access.key,*********(redacted)), \
-             (access_key,p8), (accesskey,*********(redacted)), (bare,*********(redacted)), \
-             (dashaccess-key,p10), (innocent,*********(redacted)), (jdbc_url,*********(redacted)), \
+        "((ACCESS-KEY,*********(redacted)), (SeCrEt,*********(redacted)), (access.key,*********(redacted)), \
+             (access_key,*********(redacted)), (accesskey,*********(redacted)), (bare,*********(redacted)), \
+             (dashaccess-key,*********(redacted)), (innocent,*********(redacted)), (jdbc_url,*********(redacted)), \
              (my_token_2,*********(redacted)), (password,*********(redacted)), (plain,p7), \
              (urlish,*********(redacted)), (valueurl,*********(redacted)))",
-        "the rendered Properties string must match live Spark byte for byte"
+        "Spark's redacted rows plus RePark's key rule (access_key, ACCESS-KEY, dashaccess-key)"
     );
     // Negative-assert every plaintext secret the redaction is there to stop.
     for (key, secret) in [

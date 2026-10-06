@@ -15,7 +15,7 @@ mod column_move;
 mod create_table;
 mod ctas;
 mod describe_column;
-mod describe_show;
+pub mod describe_show;
 mod dialect;
 mod format_version;
 mod insert_arity;
