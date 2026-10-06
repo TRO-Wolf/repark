@@ -18,7 +18,8 @@ fn true_and_false_parse_case_insensitively() {
 #[test]
 fn a_non_boolean_refuses_with_sparks_conf_value_class() {
     let error = parse_merge_schema_value("yes").expect_err("yes");
-    let message = error.to_string();
+    assert_eq!(error.raw, "yes");
+    let message = boolean_type_mismatch_message(error.key, &error.raw);
     assert!(
         message.contains("[INVALID_CONF_VALUE.TYPE_MISMATCH]"),
         "{message}"

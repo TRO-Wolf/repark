@@ -27,6 +27,11 @@ and hand execution, SQL, and ML semantics to the engine crates.
   the bounded pool; zero batch/partitions refuse instead of defaulting), funding the
   `sql_built` method; `session.rs` ratchets 1122 → 1097.
   pins: string-literal-escape-1/C-011
+  **SOURCE-URL-REDACT-1-FN (2026-10-06):** `refused_boolean_knob` turns a
+  `BooleanConfRefusal` into `IllegalArgument` whose message is Spark's
+  `INVALID_CONF_VALUE.TYPE_MISMATCH` text with `mask_value_credentials` of the raw
+  value (`spark.sql.caseSensitive`, `spark.sql.ansi.enabled`,
+  `spark.sql.iceberg.merge-schema`). pins: source-url-redact-1/C-055
 
 ## Modules
 

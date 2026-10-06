@@ -47,7 +47,17 @@ impl SessionExtension for SparkExtension {
             case_sensitive,
         );
         let merge_schema =
-            repark_functions::merge_schema::merge_schema_from_config_map(session.conf)?;
+            match repark_functions::merge_schema::merge_schema_from_config_map(session.conf) {
+                Ok(enabled) => enabled,
+                Err(refusal) => {
+                    return Err(datafusion::error::DataFusionError::Configuration(
+                        repark_functions::merge_schema::boolean_type_mismatch_message(
+                            refusal.key,
+                            &repark_common::redaction::mask_value_credentials(&refusal.raw),
+                        ),
+                    ));
+                }
+            };
         let config = repark_functions::merge_schema::with_merge_schema_config(config, merge_schema);
         let overwrite_mode = repark_core::partition_overwrite_mode_from_config_map(session.conf)?;
         let config = repark_core::with_partition_overwrite_mode(config, overwrite_mode);

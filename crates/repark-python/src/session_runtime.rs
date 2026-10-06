@@ -11,8 +11,8 @@ use repark_functions::case_sensitive::{
     SPARK_SQL_CASE_SENSITIVE_KEY, SparkCaseSensitiveConfig, parse_runtime_spark_sql_case_sensitive,
 };
 use repark_functions::merge_schema::{
-    MergeSchemaConfig, SPARK_SQL_ICEBERG_MERGE_SCHEMA_KEY, is_merge_schema_session_key,
-    parse_merge_schema_value,
+    BooleanConfRefusal, MergeSchemaConfig, SPARK_SQL_ICEBERG_MERGE_SCHEMA_KEY,
+    boolean_type_mismatch_message, is_merge_schema_session_key, parse_merge_schema_value,
 };
 use repark_functions::session_time_zone::SessionTimeZoneConfig;
 
@@ -143,13 +143,12 @@ fn apply_runtime_config(
     strict_boolean: bool,
 ) -> Result<()> {
     if key == SPARK_SQL_ANSI_ENABLED_KEY {
-        let parsed = if strict_boolean {
-            parse_runtime_spark_sql_ansi_enabled(value)
+        let enabled = if strict_boolean {
+            parse_runtime_spark_sql_ansi_enabled(value).map_err(refused_boolean_knob)?
         } else {
             parse_spark_sql_ansi_enabled(value)
+                .map_err(|error| Error::IllegalArgument(configuration_message(error)))?
         };
-        let enabled =
-            parsed.map_err(|error| Error::IllegalArgument(configuration_message(error)))?;
         write_ansi_flag(session, enabled)?;
         return Ok(());
     }
@@ -159,14 +158,13 @@ fn apply_runtime_config(
         return Ok(());
     }
     if key == SPARK_SQL_CASE_SENSITIVE_KEY {
-        let enabled = parse_runtime_spark_sql_case_sensitive(value)
-            .map_err(|error| Error::IllegalArgument(configuration_message(error)))?;
+        let enabled =
+            parse_runtime_spark_sql_case_sensitive(value).map_err(refused_boolean_knob)?;
         write_case_sensitive_flag(session, enabled)?;
         return Ok(());
     }
     if is_merge_schema_session_key(key) {
-        let enabled = parse_merge_schema_value(value)
-            .map_err(|error| Error::IllegalArgument(configuration_message(error)))?;
+        let enabled = parse_merge_schema_value(value).map_err(refused_boolean_knob)?;
         write_merge_schema_flag(session, enabled)?;
         return Ok(());
     }
@@ -208,6 +206,14 @@ fn configuration_message(error: DataFusionError) -> String {
         DataFusionError::Configuration(message) => message,
         other => other.to_string(),
     }
+}
+
+fn refused_boolean_knob(refusal: BooleanConfRefusal) -> Error {
+    let BooleanConfRefusal { key, raw } = refusal;
+    Error::IllegalArgument(boolean_type_mismatch_message(
+        key,
+        &repark_core::redaction::mask_value_credentials(&raw),
+    ))
 }
 
 fn write_ansi_flag(session: &ReparkSession, enabled: bool) -> Result<()> {
@@ -376,4 +382,72 @@ pub(crate) fn apply_session_knobs(
         builder = builder.configs(config);
     }
     Ok(builder)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        BooleanConfRefusal, SPARK_SQL_ANSI_ENABLED_KEY, SPARK_SQL_CASE_SENSITIVE_KEY,
+        SPARK_SQL_ICEBERG_MERGE_SCHEMA_KEY, refused_boolean_knob,
+    };
+    use repark_core::Error;
+
+    const URL: &str = "postgresql://u:pw@h/db";
+    const MASKED: &str = "postgresql://u:***@h/db";
+
+    fn message_for(key: &'static str, raw: &str) -> String {
+        match refused_boolean_knob(BooleanConfRefusal {
+            key,
+            raw: raw.to_string(),
+        }) {
+            Error::IllegalArgument(message) => message,
+            other => panic!("boolean knob refusal must be IllegalArgument, got {other}"),
+        }
+    }
+
+    fn assert_masked_refusal(key: &'static str) {
+        let message = message_for(key, URL);
+        assert_eq!(
+            repark_common::redaction::mask_value_credentials(URL),
+            MASKED,
+            "the pin must use the masker's own string"
+        );
+        assert_eq!(
+            message,
+            format!(
+                "[INVALID_CONF_VALUE.TYPE_MISMATCH] The value '{MASKED}' in the config \"{key}\" \
+                 is invalid. It should be a/an 'boolean' value. SQLSTATE: 22022"
+            )
+        );
+    }
+
+    #[test]
+    fn case_sensitive_refusal_masks_a_url_password() {
+        assert_masked_refusal(SPARK_SQL_CASE_SENSITIVE_KEY);
+    }
+
+    #[test]
+    fn ansi_refusal_masks_a_url_password() {
+        assert_masked_refusal(SPARK_SQL_ANSI_ENABLED_KEY);
+    }
+
+    #[test]
+    fn merge_schema_refusal_masks_a_url_password() {
+        assert_masked_refusal(SPARK_SQL_ICEBERG_MERGE_SCHEMA_KEY);
+    }
+
+    #[test]
+    fn a_credential_free_bad_value_is_unchanged() {
+        let raw = "maybe";
+        assert_eq!(repark_common::redaction::mask_value_credentials(raw), raw);
+        let message = message_for(SPARK_SQL_CASE_SENSITIVE_KEY, raw);
+        assert_eq!(
+            message,
+            format!(
+                "[INVALID_CONF_VALUE.TYPE_MISMATCH] The value '{raw}' in the config \
+                 \"{SPARK_SQL_CASE_SENSITIVE_KEY}\" is invalid. It should be a/an 'boolean' \
+                 value. SQLSTATE: 22022"
+            )
+        );
+    }
 }

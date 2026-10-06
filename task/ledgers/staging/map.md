@@ -12,7 +12,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   the surface audit (C-013) and gates (C-014). Fold 1 (C-015..C-020) and fold 2 (C-021..C-039,
   the verifier's findings, the corpus pin and the mutation rerun), fold 3 (C-040..C-051, the
   re-verify's findings: raw functional reads, storage paths, Spark's key rule, TNS, spans,
-  multi-line documents, mutants, known limits). `risk_tier: high`.
+  multi-line documents, mutants, known limits). C-055 closes the boolean-knob follow-up
+  without a new crate edge. `risk_tier: high`.
 - [c-1-ledger.md](c-1-ledger.md) —
   **C-1, card 1.6 (2026-10-05), in flight:** `crates/repark-connect` lands on its pre-declared
   footprint with the one `connect → common` edge (C-001); the CC-2 move puts `SourceKind` and

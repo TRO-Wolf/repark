@@ -20,6 +20,8 @@ use datafusion::logical_expr::{
 };
 use datafusion::prelude::SessionConfig;
 
+use crate::merge_schema::BooleanConfRefusal;
+
 /// Canonical Spark `SQLConf` key.
 pub const SPARK_SQL_ANSI_ENABLED_KEY: &str = "spark.sql.ansi.enabled";
 
@@ -106,17 +108,18 @@ where
 }
 
 #[allow(clippy::missing_errors_doc)]
-pub fn parse_runtime_spark_sql_ansi_enabled(raw: &str) -> Result<bool> {
+pub fn parse_runtime_spark_sql_ansi_enabled(
+    raw: &str,
+) -> std::result::Result<bool, BooleanConfRefusal> {
     if raw.eq_ignore_ascii_case("true") {
         Ok(true)
     } else if raw.eq_ignore_ascii_case("false") {
         Ok(false)
     } else {
-        Err(DataFusionError::Configuration(format!(
-            "[INVALID_CONF_VALUE.TYPE_MISMATCH] The value '{raw}' in the config \
-             \"{SPARK_SQL_ANSI_ENABLED_KEY}\" is invalid. It should be a/an 'boolean' value. \
-             SQLSTATE: 22022"
-        )))
+        Err(BooleanConfRefusal {
+            key: SPARK_SQL_ANSI_ENABLED_KEY,
+            raw: raw.to_string(),
+        })
     }
 }
 
@@ -365,7 +368,7 @@ mod tests {
         for raw in ["1", "yes", "0", "no", " true ", "maybe"] {
             let error = parse_runtime_spark_sql_ansi_enabled(raw)
                 .expect_err("runtime must refuse the value");
-            let message = error.to_string();
+            let message = crate::merge_schema::boolean_type_mismatch_message(error.key, &error.raw);
             assert!(
                 message.contains("[INVALID_CONF_VALUE.TYPE_MISMATCH]"),
                 "refusal must carry Spark's class: {message}"

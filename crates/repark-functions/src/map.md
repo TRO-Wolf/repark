@@ -1,6 +1,6 @@
 # map — repark-functions/src
 
-**SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** follow-up, no change here: the `case_sensitive.rs`, `merge_schema.rs` and `ansi.rs` boolean-knob refusals echo the rejected value raw; `repark-functions` has no `repark-common` edge, so they stay until a unit adds one. pins: source-url-redact-1/C-035
+**SOURCE-URL-REDACT-1-FN (2026-10-06):** the `case_sensitive.rs`, `ansi.rs` and `merge_schema.rs` boolean-knob refusals return `BooleanConfRefusal` (`key`, `raw`) and do not format the Spark sentence. `repark-python` and `repark-spark` format it with `mask_value_credentials`. No `repark-functions` → `repark-common` edge. pins: source-url-redact-1/C-035, C-055
 
 CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
 (pins: cc-3-comment-condensation/C-009).
@@ -1340,7 +1340,9 @@ First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](.
 - `merge_schema.rs` — `spark.sql.iceberg.merge-schema`, a `ConfigExtension`
   carrier beside the ANSI, case-sensitivity and time-zone knobs
   (`with_merge_schema_config` at session build, `merge_schema_from_options` at
-  read time, `parse_merge_schema_value` for both doors). It lives in
+  read time, `parse_merge_schema_value` for both doors). A non-boolean value is
+  `BooleanConfRefusal`; `boolean_type_mismatch_message` is the Spark sentence, and the
+  caller supplies the shown value. It lives in
   `repark-functions` because that is where every Spark session knob this
   repository serves already lives, and because `repark-python`'s
   `set_runtime_config` allowlist and `repark-spark`'s write-option parser both

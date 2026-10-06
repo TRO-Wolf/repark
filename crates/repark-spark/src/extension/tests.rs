@@ -8,6 +8,7 @@ use datafusion::prelude::{SessionConfig, SessionContext};
 use repark_core::{SessionBuildConf, SessionExtension, SessionTimeZone};
 use repark_functions::ansi::{SPARK_SQL_ANSI_ENABLED_KEY, SparkAnsiConfig};
 use repark_functions::cardinality::ReparkSqlConfig;
+use repark_functions::merge_schema::SPARK_SQL_ICEBERG_MERGE_SCHEMA_KEY;
 use repark_functions::session_time_zone::{SessionTimeZoneConfig, session_time_zone_from_options};
 use repark_functions::timestamp_type::{
     SPARK_SQL_TIMESTAMP_TYPE_KEY, SparkTimestampType, SparkTimestampTypeConfig,
@@ -210,6 +211,25 @@ fn configure_refuses_ansi_notabool() {
         err.contains(SPARK_SQL_ANSI_ENABLED_KEY),
         "error must name the key: {err}"
     );
+}
+
+#[test]
+fn configure_masks_a_url_password_in_the_merge_schema_refusal() {
+    let mut conf = HashMap::new();
+    conf.insert(
+        SPARK_SQL_ICEBERG_MERGE_SCHEMA_KEY.to_string(),
+        "postgresql://u:pw@h/db".to_string(),
+    );
+    let zone = SessionTimeZone::default();
+    let err = SparkExtension
+        .configure(build_conf(&conf, &zone), SessionConfig::new())
+        .expect_err("a non-boolean merge-schema value must refuse")
+        .to_string();
+    assert!(err.contains("postgresql://u:***@h/db"), "{err}");
+    assert!(!err.contains("u:pw@"), "{err}");
+    assert!(err.contains("[INVALID_CONF_VALUE.TYPE_MISMATCH]"), "{err}");
+    assert!(err.contains("SQLSTATE: 22022"), "{err}");
+    assert!(err.contains(SPARK_SQL_ICEBERG_MERGE_SCHEMA_KEY), "{err}");
 }
 
 /// Q10: `configure` installs `spark.sql.timestampType` default `TIMESTAMP_LTZ`.
