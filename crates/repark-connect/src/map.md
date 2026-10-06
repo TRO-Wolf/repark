@@ -6,8 +6,45 @@ Product code for `repark-connect`. See [../map.md](../map.md).
 
 ## Contents
 
-- `lib.rs` — `mod settings; mod types;` and the re-exports: `AUTH_METHOD_KEY`, `AuthMethod`,
-  `ConnectionSettings`, `SettingsError`, and the `postgres` module.
+- `lib.rs` — `mod copy_binary; mod error; mod settings; mod types;` and the re-exports:
+  `BatchLimits`, `COPY_SIGNATURE`, `CopyBinaryDecoder`, `DEFAULT_BATCH_BYTES`,
+  `DEFAULT_BATCH_ROWS`; `ConnectError`, `ProtocolViolation`, `Result`, `UNMAPPED_ROW`,
+  `ValueRefusal`; `AUTH_METHOD_KEY`, `AuthMethod`, `ConnectionSettings`; and the `postgres`
+  module.
+- `error.rs` — C-2a (2026-10-06; sketch [c-2-design.md](../../../task/wo/c-2-design.md) §2.2,
+  NS-15). The crate's one error enum, `ConnectError` (`thiserror`), and
+  `Result<T> = std::result::Result<T, ConnectError>`. C-1's `SettingsError` and `TypeMapError`
+  fold into it: their six variants (`InvalidAuthMethod`, `DeclaredAuthMethod`, `Declared`,
+  `ArrowType`, `WireLength`, `InvalidUtf8`) keep their names, fields and message text, so the
+  registry rows only rename the type. C-2a adds `UnmappedType` (a column outside the map, at
+  resolution), `UnrepresentableValue` (a value its Arrow type cannot hold, with the
+  `ValueRefusal` reason enum whose `registry_row()` names the row), `EncodeNotBuilt`,
+  `Protocol` (with the `ProtocolViolation` enum: a malformed COPY stream), `Disconnected` (the
+  stream ended before its trailer) and `Arrow` (a batch Arrow would not build). Reasons are
+  enums, never strings a caller matches. The fold into `repark_common::Error` is by class:
+  `InvalidAuthMethod` → `Config` (IllegalArgument); the declared variants → `NotImplemented`
+  (Unsupported); the operational ones → `DataFusion` (the class they reach Python with until
+  C-6 lands the CC-4 classes). The connection variants of §2.2 (auth, TLS, timeouts, pool,
+  permissions, server errors) arrive with their producers in C-2b, and so does the source name:
+  the decoder is pure and knows columns, not sources. pins: c-2/C-001
+- `copy_binary.rs` — C-2a (2026-10-06; sketch §2.6). `CopyBinaryDecoder`, the resumable state
+  machine over `COPY … TO STDOUT (FORMAT BINARY)` chunks, independent of how the server or TLS
+  cuts the stream: `Header → HeaderExtension → TupleStart → FieldLength(i) → FieldValue(i, n)
+  → Done`. The header is the 11-byte `PGCOPY\n\377\r\n\0` signature, the flags word (bit 16,
+  OIDs, refuses; bits 17–31 refuse; bits 0–15 are ignored, as the docs direct) and the
+  extension, skipped. Each tuple's field count must equal the planned column count (an empty
+  projection counts rows with field count `0`); a field length of `-1` is NULL (refused in a
+  planned NOT NULL column), any other negative length is malformed. The `ff ff` trailer ends
+  the stream and any byte after it refuses; `finish()` before the trailer is `Disconnected`.
+  `decode(&mut &[u8])` consumes the chunk and returns at most one `RecordBatch`, leaving the
+  rest of the chunk with the caller, so the C-2b stream yields one batch per step. A field
+  inside the chunk decodes from a borrowed slice; only a field or a fixed header word that
+  straddles a chunk boundary copies into the one reusable carry buffer. Batches flush at
+  `BatchLimits::rows` (the session batch size, default 8192) or at `bytes` of builder growth
+  (default 64 MiB), whichever comes first; a tuple is never split, so one value larger than the
+  cap forms a one-row batch. `buffered_bytes()` is the memory-charge seam: the C-2c scan
+  resizes its DataFusion `MemoryReservation` to it, so C-2a adds no dependency.
+  pins: c-2/C-002, C-003, C-004, C-005, C-006
 - `settings.rs` — C-1 (2026-10-05). `ConnectionSettings::from_props` reads one source's props
   (the core loader's `SourceSpec.props`). It interprets only `auth_method` (R-5, CC-3) and
   carries every other prop through untouched; the interpreted `auth_method` key leaves the
@@ -18,10 +55,11 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   (`CONNECT-DECL-auth-iam_token`, `CONNECT-DECL-auth-kerberos`); anything else is CC-4's
   invalid specification and lists the three spellings. `Debug` prints the prop keys only, so a
   `password` value never reaches a log; the core loader's redaction predicate lives in
-  `repark-core` and is out of this crate's reach.
+  `repark-core` and is out of this crate's reach. Since C-2a its errors are `ConnectError`'s
+  (no behaviour change). C-2b adds the endpoint keys beside it in `settings/postgres.rs`.
   pins: c-1/C-003, C-004, C-005, C-006
 - `types.rs` — `pub mod postgres;` (`mssql` joins with C-5).
-- `types/` — [types/map.md](types/map.md): the Postgres type map.
+- `types/` — [types/map.md](types/map.md): the Postgres type map and its codecs.
 
 ## Pointers
 

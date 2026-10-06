@@ -3431,7 +3431,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 ### CONNECT-DECL-auth-iam_token — a database source refuses `auth_method = "iam_token"`
 - **repark** — a source whose props carry `auth_method = "iam_token"` refuses when its
   connection settings are built (`ConnectionSettings::from_props`) with
-  `SettingsError::DeclaredAuthMethod`, whose message names `iam_token` and this row, and which
+  `ConnectError::DeclaredAuthMethod`, whose message names `iam_token` and this row, and which
   folds to `Error::NotImplemented` (the Unsupported class). Absent `auth_method` and
   `password` connect.
 - **Apache Spark** — the JDBC data source has no IAM auth option of its own; an RDS IAM token
@@ -3443,7 +3443,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   later changes no key. Retire the row in the unit that implements token minting.
 ### CONNECT-DECL-auth-kerberos — a database source refuses `auth_method = "kerberos"`
 - **repark** — a source whose props carry `auth_method = "kerberos"` refuses when its
-  connection settings are built with `SettingsError::DeclaredAuthMethod`, whose message names
+  connection settings are built with `ConnectError::DeclaredAuthMethod`, whose message names
   `kerberos` and this row, and which folds to `Error::NotImplemented` (the Unsupported class).
 - **Apache Spark** — the JDBC data source authenticates with Kerberos through its `keytab` and
   `principal` options and built-in connection providers, PostgreSQL and SQL Server among them.
@@ -3453,82 +3453,108 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   GSSAPI stack the 1.6 drivers do not carry; it is demand-triggered. The value is spelled now
   so the field's vocabulary is closed and a typo is an invalid specification, not a silent
   password attempt.
-### CONNECT-DECL-pg-numeric — Postgres `numeric` has no Arrow mapping yet
-- **repark** — the Postgres type map (`crates/repark-connect/src/types/postgres.rs`) declares
-  `numeric`: encoding or decoding it answers `TypeMapError::Declared` naming this row.
-- **Apache Spark** — the JDBC source reads `numeric` through its PostgreSQL dialect as a
-  decimal. *(oracle: documented; no value claim — C-2's live cells against the C-0 container
-  attach the first measurement.)*
-- **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row`
-- **Rationale** — DECLARED 2026-10-05 (C-1, card 1.6 "declare, never approximate"). Two
-  plausible mappings: a bounded `Decimal128`/`Decimal256`, which cannot hold every unbounded
-  `numeric` or its `NaN` / `±Infinity` values, and the string the ADBC PostgreSQL driver
-  returns. C-2 decides with the read path.
-### CONNECT-DECL-pg-date — Postgres `date` has no Arrow mapping yet
-- **repark** — the Postgres type map declares `date`: encoding or decoding it answers
-  `TypeMapError::Declared` naming this row.
-- **Apache Spark** — the JDBC source reads `date` as `DateType`. *(oracle: documented; no value
-  claim — C-2's live cells attach the first measurement.)*
-- **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row`
-- **Rationale** — DECLARED 2026-10-05 (C-1). `Date32` holds every finite Postgres date, but
-  `infinity` and `-infinity` have no Arrow value; refusing the value or the type is C-2's call.
+### CONNECT-DECL-pg-numeric-special — a Postgres `numeric` `NaN` or `±Infinity` refuses per value
+- **repark** — decoding a `numeric` value whose sign word is `NaN` (`0xC000`), `+Infinity`
+  (`0xD000`) or `-Infinity` (`0xF000`) refuses that value with
+  `ConnectError::UnrepresentableValue` (reason `NumericNaN` / `NumericInfinity`), naming the
+  column, the row index and this row; it folds to the Unsupported class. Once C-2c pushes
+  filters, a value outside a pushed filter's range is never read, so the scan can succeed where
+  the residual path refuses; the rows returned never differ.
+- **Apache Spark** — the JDBC source reads `numeric` through pgjdbc's `getBigDecimal`, which
+  cannot build a `BigDecimal` from `NaN` or an infinity, so the read fails. *(oracle:
+  documented — the C-2 sketch's FL-3; no value claim, D-M2 measures it.)*
+- **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::numeric_special_values_refuse`
+- **Rationale** — DECLARED 2026-10-06 (C-2a; card 1.6 "declare, never approximate"; FL-3,
+  where Flink and Spark agree). `Decimal128` has no `NaN` and no infinity. Retire when an
+  opt-in quarantine (North Star §7) or a Spark-measured mapping lands.
+### CONNECT-DECL-pg-infinite-datetime — a Postgres `date` or timestamp `±infinity` refuses per value
+- **repark** — decoding a `date` of `infinity` (`0x7FFFFFFF`) or `-infinity` (`0x80000000`), or
+  a `timestamp` / `timestamptz` of `±infinity` (`i64::MAX` / `i64::MIN` microseconds), refuses
+  that value with `ConnectError::UnrepresentableValue` (reason `InfiniteDate` /
+  `InfiniteTimestamp`) naming this row; it folds to the Unsupported class. The pushed-filter
+  note of CONNECT-DECL-pg-numeric-special applies.
+- **Apache Spark** — recent releases of the PostgreSQL dialect special-case infinite
+  timestamps; 4.1.2's exact mapping is unmeasured. *(oracle: documented — FL-4; D-M2 measures
+  it.)*
+- **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::date_anchors_round_trip`,
+  `::timestamp_ntz_anchors_round_trip`, `::timestamptz_anchors_round_trip`
+- **Rationale** — DECLARED 2026-10-06 (C-2a; FL-4; the sketch's Q1, lean acted on: refuse).
+  `Date32` and `Timestamp(Microsecond)` have no infinity, and a sentinel would approximate.
+  Switching to Spark's measured mapping later is additive.
+### CONNECT-DECL-pg-out-of-range — a Postgres value outside its Arrow type's range refuses per value
+- **repark** — these refuse with `ConnectError::UnrepresentableValue` naming this row and fold
+  to the Unsupported class: a `numeric` that, after HALF_UP rounding to the planned scale, needs
+  more integer digits than the planned `Decimal128(p,s)` holds (`p − s`; 20 for unconstrained
+  `numeric` at `(38,18)`; reason `NumericOutOfRange`); a `timestamp` / `timestamptz` after
+  294247-01-10T04:00:54.775807, where microseconds since 1970 overflow 64 bits while Postgres
+  reaches 294276 AD (`TimestampOutOfRange`); and a `date` past `Date32`, which no finite
+  Postgres date reaches (`DateOutOfRange`).
+- **Apache Spark** — `Decimal.set` rounds HALF_UP to the scale and raises when the precision
+  is exceeded (Flink's `DecimalData.fromBigDecimal` returns null instead). *(oracle:
+  documented — FL-2; D-M2 measures it.)*
+- **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::bounded_numeric_overflow_refuses`,
+  `::timestamp_ntz_anchors_round_trip`, `::date_anchors_round_trip`
+- **Rationale** — DECLARED 2026-10-06 (C-2a; FL-2, Spark's answer: raise, which is also
+  NS-6). Retire per type if a wider Arrow type is adopted for it.
+### CONNECT-DECL-pg-unmapped — a Postgres column whose type is outside the map refuses at resolution
+- **repark** — `PlannedColumn::resolve` refuses, with `ConnectError::UnmappedType` naming the
+  column, the type, this row and the fix ("select it through `query` with a cast, or a view"),
+  a column whose type has no row in the Postgres type map: arrays, composites, ranges,
+  multiranges, `money`, geometric, network and bit-string types, `timetz`, `xml`, any other
+  base type, and any type class other than base and enum. A `numeric(p,s)` with `s < 0` or
+  `s > p` (allowed since PostgreSQL 15) refuses the same way. `time` refuses under its own row,
+  CONNECT-DECL-pg-time. Enums read as their label (`Utf8`). It folds to the Unsupported class.
+- **Apache Spark** — the JDBC source reads a driver `OTHER` type as `StringType`, the
+  server's text; Flink's Postgres type mapper raises "Doesn't support Postgres type".
+  *(oracle: documented — FL-6; no value claim.)*
+- **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::unmapped_types_refuse_at_resolution`,
+  `::numeric_typmods_resolve_to_spark_decimal_types`
+- **Rationale** — DECLARED 2026-10-06 (C-2a; FL-6; North Star §2 rank 4 until a Spark oracle
+  cell confirms a mapping). Adding a type is one row, one codec arm, one pin and one oracle
+  cell.
+### CONNECT-DECL-pg-numeric — RETIRED (2026-10-06, C-2a): Postgres `numeric` maps to Spark's decimal type
+
+> **CLOSED 2026-10-06 (C-2a, [c-2-design.md](../task/wo/c-2-design.md) §2.7).** `numeric(p,s)` with `1 ≤ p ≤ 38` maps to `Decimal128(p,s)`; `p > 38` maps to `Decimal128(38, min(s,38))` (Spark's `DecimalType.bounded`); unconstrained `numeric` maps to `Decimal128(38,18)` (Spark's `SYSTEM_DEFAULT`). Fractional digits beyond the scale round HALF_UP. Values no Arrow decimal holds refuse per value under CONNECT-DECL-pg-numeric-special and CONNECT-DECL-pg-out-of-range, and a scale outside `0..=p` refuses the column under CONNECT-DECL-pg-unmapped. The declared pin `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row` went RED on purpose against the new table and now holds `time` alone; the replacing pins are `crates/repark-connect/tests/it/postgres_types.rs::numeric_anchors_round_trip`, `crates/repark-connect/tests/it/postgres_types.rs::numeric_typmods_resolve_to_spark_decimal_types`, `crates/repark-connect/tests/it/postgres_types.rs::unconstrained_numeric_rounds_half_up_at_scale_18`. Retired per §6.
+
+### CONNECT-DECL-pg-date — RETIRED (2026-10-06, C-2a): Postgres `date` maps to `Date32`
+
+> **CLOSED 2026-10-06 (C-2a, [c-2-design.md](../task/wo/c-2-design.md) §2.7).** `date` maps to `Date32`: days since 1970-01-01 are the wire's days since 2000-01-01 plus 10957, a checked add. `±infinity` refuses per value under CONNECT-DECL-pg-infinite-datetime. The declared pin `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row` went RED on purpose against the new table and now holds `time` alone; the replacing pins are `crates/repark-connect/tests/it/postgres_types.rs::date_anchors_round_trip`. Retired per §6.
+
 ### CONNECT-DECL-pg-time — Postgres `time` has no Arrow mapping yet
 - **repark** — the Postgres type map declares `time` (without time zone): encoding or decoding
-  it answers `TypeMapError::Declared` naming this row.
+  it answers `ConnectError::Declared` naming this row, and resolving a `time` column
+  (`PlannedColumn::resolve`) answers `ConnectError::UnmappedType` naming this row (C-2a,
+  2026-10-06). It stays declared until D-M2 reads Spark 4.1.2's type for a JDBC `time` column
+  ([c-2-design.md](../task/wo/c-2-design.md) §2.7).
 - **Apache Spark** — the JDBC source reads `time` through its PostgreSQL dialect. *(oracle:
   documented; no value claim — C-2's live cells attach the first measurement.)*
 - **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row`
 - **Rationale** — DECLARED 2026-10-05 (C-1). Postgres accepts `24:00:00`, one microsecond past
   the last value Arrow's `Time64(Microsecond)` day holds.
-### CONNECT-DECL-pg-timestamp — Postgres `timestamp` has no Arrow mapping yet
-- **repark** — the Postgres type map declares `timestamp` (without time zone): encoding or
-  decoding it answers `TypeMapError::Declared` naming this row.
-- **Apache Spark** — the JDBC source reads `timestamp` as a timestamp type. *(oracle:
-  documented; no value claim — C-2's live cells attach the first measurement.)*
-- **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row`
-- **Rationale** — DECLARED 2026-10-05 (C-1). `Timestamp(Microsecond, None)` holds every finite
-  value, but `infinity` and `-infinity` have no Arrow value.
-### CONNECT-DECL-pg-timestamptz — Postgres `timestamptz` has no Arrow mapping yet
-- **repark** — the Postgres type map declares `timestamptz`: encoding or decoding it answers
-  `TypeMapError::Declared` naming this row.
-- **Apache Spark** — the JDBC source reads `timestamptz` as `TimestampType`. *(oracle:
-  documented; no value claim — C-2's live cells attach the first measurement.)*
-- **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row`
-- **Rationale** — DECLARED 2026-10-05 (C-1). ADBC names `Timestamp(Microsecond, "UTC")`, but
-  `infinity` and `-infinity` have no Arrow value; C-2 decides with the read path.
-### CONNECT-DECL-pg-interval — Postgres `interval` has no Arrow mapping yet
-- **repark** — the Postgres type map declares `interval`: encoding or decoding it answers
-  `TypeMapError::Declared` naming this row.
-- **Apache Spark** — the JDBC source reads `interval` through its PostgreSQL dialect. *(oracle:
-  documented; no value claim — C-2's live cells attach the first measurement.)*
-- **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row`
-- **Rationale** — DECLARED 2026-10-05 (C-1). Postgres carries months, days and microseconds;
-  `IntervalMonthDayNano` overflows at the nanosecond scale for the largest microsecond
-  values, and recent Postgres releases add infinite intervals.
-### CONNECT-DECL-pg-uuid — Postgres `uuid` has no Arrow mapping yet
-- **repark** — the Postgres type map declares `uuid`: encoding or decoding it answers
-  `TypeMapError::Declared` naming this row.
-- **Apache Spark** — the JDBC source reads `uuid` as `StringType`. *(oracle: documented; no
-  value claim — C-2's live cells attach the first measurement.)*
-- **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row`
-- **Rationale** — DECLARED 2026-10-05 (C-1). Two plausible mappings: `FixedSizeBinary(16)`
-  (with or without the `arrow.uuid` extension) and `Utf8`.
-### CONNECT-DECL-pg-json — Postgres `json` has no Arrow mapping yet
-- **repark** — the Postgres type map declares `json`: encoding or decoding it answers
-  `TypeMapError::Declared` naming this row.
-- **Apache Spark** — the JDBC source reads `json` as `StringType`. *(oracle: documented; no
-  value claim — C-2's live cells attach the first measurement.)*
-- **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row`
-- **Rationale** — DECLARED 2026-10-05 (C-1). Two plausible mappings: plain `Utf8` and `Utf8`
-  under the `arrow.json` extension type.
-### CONNECT-DECL-pg-jsonb — Postgres `jsonb` has no Arrow mapping yet
-- **repark** — the Postgres type map declares `jsonb`: encoding or decoding it answers
-  `TypeMapError::Declared` naming this row.
-- **Apache Spark** — the JDBC source reads `jsonb` as `StringType`. *(oracle: documented; no
-  value claim — C-2's live cells attach the first measurement.)*
-- **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row`
-- **Rationale** — DECLARED 2026-10-05 (C-1). As `json`, and the binary wire form carries a
-  version byte before the text, so the codec is not `text`'s.
+### CONNECT-DECL-pg-timestamp — RETIRED (2026-10-06, C-2a): Postgres `timestamp` decodes to its wall clock
+
+> **CLOSED 2026-10-06 (C-2a, [c-2-design.md](../task/wo/c-2-design.md) §2.7).** `timestamp` decodes to `Timestamp(Microsecond, None)`, the wall clock: the wire's microseconds since 2000-01-01 plus 946 684 800 000 000, a checked add. C-2c places the wall clock in the session zone for Spark's default `TimestampType` and keeps it as NTZ under `prefer_timestamp_ntz`. `±infinity` refuses under CONNECT-DECL-pg-infinite-datetime and values after 294247-01-10 under CONNECT-DECL-pg-out-of-range. The declared pin `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row` went RED on purpose against the new table and now holds `time` alone; the replacing pins are `crates/repark-connect/tests/it/postgres_types.rs::timestamp_ntz_anchors_round_trip`. Retired per §6.
+
+### CONNECT-DECL-pg-timestamptz — RETIRED (2026-10-06, C-2a): Postgres `timestamptz` maps to a UTC microsecond timestamp
+
+> **CLOSED 2026-10-06 (C-2a, [c-2-design.md](../task/wo/c-2-design.md) §2.7).** `timestamptz` maps to `Timestamp(Microsecond, "+00:00")`, the stored instant exactly, with the zone label iceberg-rust's Arrow schema gives an Iceberg `timestamptz` column (`UTC_TIME_ZONE`). `±infinity` and values after 294247-01-10 refuse as for `timestamp`. The declared pin `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row` went RED on purpose against the new table and now holds `time` alone; the replacing pins are `crates/repark-connect/tests/it/postgres_types.rs::timestamptz_anchors_round_trip`. Retired per §6.
+
+### CONNECT-DECL-pg-interval — RETIRED (2026-10-06, C-2a): Postgres `interval` reads as the server's text
+
+> **CLOSED 2026-10-06 (C-2a, [c-2-design.md](../task/wo/c-2-design.md) §2.7).** `interval` maps to `Utf8`, the server's own rendering: the scan casts the column to `pg_catalog.text` under the pinned `IntervalStyle = postgres` (mapping `ServerText`), so the decoder keeps the text verbatim. This is Spark's `StringType` for the driver's `OTHER`. The declared pin `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row` went RED on purpose against the new table and now holds `time` alone; the replacing pins are `crates/repark-connect/tests/it/postgres_types.rs::json_and_interval_are_text_verbatim`. Retired per §6.
+
+### CONNECT-DECL-pg-uuid — RETIRED (2026-10-06, C-2a): Postgres `uuid` reads as its canonical text
+
+> **CLOSED 2026-10-06 (C-2a, [c-2-design.md](../task/wo/c-2-design.md) §2.7).** `uuid` maps to `Utf8`: the 16 wire bytes render as lowercase `8-4-4-4-12` hex, `uuid_out`'s form, which is Spark's `StringType`. The declared pin `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row` went RED on purpose against the new table and now holds `time` alone; the replacing pins are `crates/repark-connect/tests/it/postgres_types.rs::uuid_renders_lowercase_canonical`. Retired per §6.
+
+### CONNECT-DECL-pg-json — RETIRED (2026-10-06, C-2a): Postgres `json` reads as its stored text
+
+> **CLOSED 2026-10-06 (C-2a, [c-2-design.md](../task/wo/c-2-design.md) §2.7).** `json` maps to `Utf8`: the stored text byte for byte, UTF-8 validated, which is Spark's `StringType`. The declared pin `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row` went RED on purpose against the new table and now holds `time` alone; the replacing pins are `crates/repark-connect/tests/it/postgres_types.rs::json_and_interval_are_text_verbatim`. Retired per §6.
+
+### CONNECT-DECL-pg-jsonb — RETIRED (2026-10-06, C-2a): Postgres `jsonb` reads as its canonical text
+
+> **CLOSED 2026-10-06 (C-2a, [c-2-design.md](../task/wo/c-2-design.md) §2.7).** `jsonb` maps to `Utf8`: the version byte `01` is stripped and the rest is `jsonb_out`'s canonical text; any other version byte is a malformed stream (`ConnectError::Protocol`). The declared pin `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row` went RED on purpose against the new table and now holds `time` alone; the replacing pins are `crates/repark-connect/tests/it/postgres_types.rs::jsonb_strips_version_one_and_refuses_others`. Retired per §6.
+
 ### CONNECT-DIV-url-userinfo — a credential inside a property value is masked where Spark shows it; secret keys redact at least as Spark does
 - **repark** — every display of a source, catalog, conf, namespace, table or view property
   value masks the credential inside the value, whatever the key: URL userinfo inside the

@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use repark_common::{Error, ErrorClass};
-use repark_connect::{AUTH_METHOD_KEY, AuthMethod, ConnectionSettings, SettingsError};
+use repark_connect::{AUTH_METHOD_KEY, AuthMethod, ConnectError, ConnectionSettings};
 
 fn props(pairs: &[(&str, &str)]) -> BTreeMap<String, String> {
     pairs
@@ -42,7 +42,7 @@ fn iam_token_is_a_declared_refusal() {
     let error = ConnectionSettings::from_props(&source).expect_err("iam_token refuses");
     assert_eq!(
         error,
-        SettingsError::DeclaredAuthMethod {
+        ConnectError::DeclaredAuthMethod {
             method: AuthMethod::IamToken,
             registry_row: "CONNECT-DECL-auth-iam_token",
         }
@@ -60,7 +60,7 @@ fn kerberos_is_a_declared_refusal() {
     let error = ConnectionSettings::from_props(&source).expect_err("kerberos refuses");
     assert_eq!(
         error,
-        SettingsError::DeclaredAuthMethod {
+        ConnectError::DeclaredAuthMethod {
             method: AuthMethod::Kerberos,
             registry_row: "CONNECT-DECL-auth-kerberos",
         }
@@ -87,7 +87,7 @@ fn any_other_auth_method_is_an_invalid_specification() {
         let error = ConnectionSettings::from_props(&source).expect_err("invalid value refuses");
         assert_eq!(
             error,
-            SettingsError::InvalidAuthMethod {
+            ConnectError::InvalidAuthMethod {
                 value: value.to_string(),
             }
         );
