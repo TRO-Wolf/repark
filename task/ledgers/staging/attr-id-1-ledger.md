@@ -1099,6 +1099,15 @@ O-1).** Over a SQL-defined temp view (`CREATE OR REPLACE TEMP VIEW sv AS SELECT 
 - fn-only ratio 1.2111 / 1.2150 / 1.2185. Outcome-class changes 0, value changes 0, in all three runs and the correctness replay (7 nondet cells skipped).
 - Program gate (card PERF-ATTR-STAMP-2, D-6): work-equal ≤ 1.10x is not yet met; it stands at 1.1244 after O-1.
 
+## Round STACK-TO-MAIN SM-1 (2026-10-06)
+
+**Model:** muse-spark-1.3-contributor (executor, max). **Work order:** FOLD SM-1, the stack-to-main verifier's findings.
+
+| Clause | Statement | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-055 | An unheld marked sort key over same-name twins refuses `AMBIGUOUS_REFERENCE` with v1.5.2's text: `_bind_sort_key` returns the key verbatim when its display matches several outputs under the live rule, so the engine shapes the refusal; one match still funnels (V-3, MISSING-REF-RESOLVE-1); `oldest_field` stays for plain free-name sorts. | `flip_twins_desc`, `flip_twins_asc` and `pin_twins_desc` raise `AMBIGUOUS_REFERENCE` equal to main, every other `halt3`/`sort_dup` cell unchanged from `h3_head`/`sd_head`; the pin asserts both twin orders on both directions plus the plain refusal; restoring the funnel goes red. | PROVEN | `python/repark/tests/test_attr_id_1_s4.py::test_s4_unheld_sort_marker_over_same_name_twins_refuses`; `halt3.py`, `sort_dup.py` on the SM-1 build; mutation restoring the fall-through. |
+| C-056 | A stamped TA frame planned through `create_physical_plan` with no hand strip reaches `ParallelWindowExec` and `ParallelProjectionExec` with no `repark.attr` on any physical node schema or batch schema, via `StripAttributeIds` as the first optimizer rule. | The pin plans both shapes, asserts no key and both executors present; removing the rule goes red. | PROVEN | `crates/repark-ta/tests/parallel_window.rs::stamped_plan_through_optimizer_reaches_executors_stripped`; mutation removing `StripAttributeIds`. |
+
 ## Fold SM-2 (2026-10-06)
 
 | Clause | Statement | Proof obligation | Verdict | Evidence |

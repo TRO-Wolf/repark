@@ -36,6 +36,21 @@ The union, view and SQL shapes in the same probe file decide the rest of the rul
 | D-3 | The card flips `test_s4_replaced_output_parent_ref_reads_new_value` (today asserts the new value `[11]`) and un-xfails the two V-1 pins `test_sj4_v1_replaced_parent_filter` (Spark `[[2,-20],[3,-30]]`) and `test_sj4_v1_swapped_alias_parent_select` (Spark MISSING naming `v`). |
 | D-4 | Measure first: the full `p2_lineage` grid under both case rules, plus the union, view, SQL, aggregate, cast, `toDF` and `selectExpr` shapes, before ruling the per-surface split. A shape Spark answers keeps answering; a shape Spark refuses refuses. |
 
+### D-4 orderBy grid (2026-10-06, `halt3.py`, `frame = [(1,30),(2,None),(3,10),(4,20)]`)
+
+| Cell | Head | Main | Spark |
+|---|---|---|---|
+| `single_v_desc` | `[[-10,3],[-20,4],[-30,1],[null,2]]` | same as head | `[[-30,1],[-20,4],[-10,3],[null,2]]` |
+| `single_v_plain` | `[[null,2],[-30,1],[-20,4],[-10,3]]` | same as head | `[[null,2],[-10,3],[-20,4],[-30,1]]` |
+| `withColumn_replace_desc` | `[[3,-10],[4,-20],[1,-30],[2,null]]` | same as head | `[[1,-30],[4,-20],[3,-10],[2,null]]` |
+| `withColumn_replace_sort_plain` | `[[2,null],[1,-30],[4,-20],[3,-10]]` | same as head | `[[2,null],[3,-10],[4,-20],[1,-30]]` |
+| `flip_twins_desc` | `[[-10,11,3],[-20,21,4],[-30,31,1],[null,null,2]]` | `ERR AMBIGUOUS_REFERENCE` | `[[-30,31,1],[-20,21,4],[-10,11,3],[null,null,2]]` |
+| `flip_twins_asc` | `[[null,null,2],[-30,31,1],[-20,21,4],[-10,11,3]]` | `ERR AMBIGUOUS_REFERENCE` | `[[null,null,2],[-10,11,3],[-20,21,4],[-30,31,1]]` |
+
+SM-1 moves `flip_twins_desc` / `flip_twins_asc` from the head rows above to
+`ERR AMBIGUOUS_REFERENCE`, equal to main; Spark still answers through the hidden
+projection.
+
 ## Steps
 
 | step | worker | what |

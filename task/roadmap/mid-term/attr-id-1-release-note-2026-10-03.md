@@ -1,7 +1,8 @@
 # ATTR-ID-1 release note (2026-10-03)
 
 A user-visible tightening that ships with the ATTR-ID-1 stack, not v1.5.2. Self-join
-references Spark refuses now refuse in RePark too, with Spark's error.
+references Spark refuses now refuse in RePark too, with Spark's error. Every comparison
+below is versus v1.5.2 (main).
 
 ## Ambiguous self-join references now raise, as in Spark
 
@@ -10,9 +11,10 @@ s.join(d).select(d.v)
 ```
 
 with `s = d.select("id")` now raises `_LEGACY_ERROR_TEMP_1182`, as Spark Classic does,
-where RePark used to answer the left `v`. The same holds after any join whose two sides
-share lineage: a `select`, `filter`, `groupBy`, `orderBy`, `withColumn` or aggregate over
-a column bound before the join raises when Spark cannot tell which side it points to.
+where v1.5.2 answered d's `v` (rows `[[10], [10], [20], [20]]`; `s` has no `v`).
+Probe `release_note.py` `R1.s_join_d_select_dv`. The same holds after any join whose two
+sides share lineage: a `select`, `filter`, `groupBy`, `orderBy`, `withColumn` or aggregate
+over a column bound before the join raises when Spark cannot tell which side it points to.
 The error is Spark's, word for word, including the `ambiguousAttrs` names.
 
 Spark's switch `spark.sql.analyzer.failAmbiguousSelfJoin=false` turns the 1182 check
@@ -21,9 +23,13 @@ reference to a column the join renewed raises
 `MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION`, as Spark does, and the
 pattern above is one of them.
 
-A free name over duplicate column names tightens too: `filter("v > 1")`, `selectExpr`,
-`F.col("v")` and `summary`/`describe` over a frame with two `v` columns now raise
-`AMBIGUOUS_REFERENCE`, as Spark does, instead of answering one side's rows.
+A free name over duplicate column names now raises Spark's `AMBIGUOUS_REFERENCE`
+throughout. v1.5.2 already raised on every probed shape (`AMBIGUOUS_REFERENCE` for
+`filter` / `describe` / `summary`, an internal `Schema error` for `selectExpr` / `F.col`),
+so the change is error-class normalisation, not a new refusal. Probes `release_note.py`
+`R3.*` and `rn_extra.py`. Known gap: a USING self-join
+`d.join(d.withColumnRenamed('id', 'id'), 'id').selectExpr('v')` still raises a schema
+error (`rn_extra.py` `using_self.selectExpr`), where Spark raises `AMBIGUOUS_REFERENCE`.
 
 ## Each read of a SQL temp view mints fresh attribute ids, like Spark
 
@@ -33,8 +39,9 @@ left.join(right, left["id"] == right["id"]).select(left["v"], right["v"])
 ```
 
 with `sv` created by `CREATE TEMP VIEW sv AS SELECT * FROM tv` now answers
-`[(10, 10), (20, 20)]`, as Spark 4.1.2 does, where the stack refused
-`_LEGACY_ERROR_TEMP_1182`. A DataFrame view (`createOrReplaceTempView`) keeps
+`[(10, 10), (20, 20)]`, as Spark 4.1.2 does. Ids mint per read, like Spark. For this
+shape v1.5.2 already answered the same rows, so there is no behaviour change versus
+v1.5.2. Probe `release_note.py` `R4`. A DataFrame view (`createOrReplaceTempView`) keeps
 carrying the registered frame's ids on every read, as Spark does.
 
 One shape still differs from Spark, and answers exactly as main does today:
@@ -48,6 +55,92 @@ Here `d` is the DataFrame behind `tv`. Spark refuses this with
 from `d`'s side. The same holds for `.select(a["v"], d["v"])`, `d["id"]` and
 `.filter(d["v"] > 10)`. Card VIEW-LINEAGE-SELFJOIN-1 owns the fix.
 
+## Further changes toward Spark, versus v1.5.2
+
+(a) A DataFrame-view two-read self-join now raises 1182 where v1.5.2 answered:
+
+```python
+left = spark.table("tv"); right = spark.table("tv")
+left.join(right, left["id"] == right["id"]).select(left["v"], right["v"])
+```
+
+raises `_LEGACY_ERROR_TEMP_1182`, as Spark does; v1.5.2 answered `[(10, 10), (20, 20)]`.
+Probe `R5.dfview_two_reads`.
+
+(b) A cross-field self-join condition now raises 1182 where v1.5.2 answered `[]`:
+
+```python
+d.join(d, d.id == d.v)
+```
+
+Probe `X5.cross_field_self_join`.
+
+(c) Aliased joins with qualified references now answer where v1.5.2 raised
+`UNRESOLVED_COLUMN` / `No field named`:
+
+```python
+d.alias("l").join(o.alias("r"), F.col("l.id") == F.col("r.id")).select("l.v", "r.v")
+```
+
+answers `[[10, 5]]`, as Spark does. Probes `X1.aliased_join_qualified_cond`,
+`X2.aliased_self_join` (`.select('a.v', 'b.v')`), and `R7.alias_fix`
+(`s.alias("a").join(d.alias("b")).select(F.col("b.v"))`, four rows).
+
+(d) `withColumnsRenamed` to duplicate names answers (EX-DF-18):
+
+```python
+spark.createDataFrame([(1, 2, 3)], "g INT, k INT, v INT").withColumnsRenamed({"g": "k", "k": "k"})
+```
+
+answers `[[1, 2, 3]]`, as Spark does; v1.5.2 raised a duplicate-names error.
+Probe `X4.withColumnsRenamed_dup`.
+
+(e) CASESENS-2 S1–S3 under `caseSensitive=true`: `select('ID')`, `df['ID']`, `fillna`
+and `dropDuplicates` refuse, and `withColumn('VAL')` appends; under `false`,
+`select('t.ID')` answers:
+
+```python
+q = spark.createDataFrame([(1, 2)], "id INT, Val INT")
+q.select("ID")
+```
+
+under `true` raises `UNRESOLVED_COLUMN.WITH_SUGGESTION`, as Spark does; v1.5.2 answered
+`[[1]]`. Under `true`, `q.withColumn("VAL", F.lit(9))` appends `[[1, 2, 9]]`, as Spark
+does; v1.5.2 replaced `[[1, 9]]`. Under `false`, `q.alias("t").select("t.ID")` answers
+`[[1]]`, as Spark does; v1.5.2 raised. Probes `CS.true.select_ID`,
+`CS.true.getitem_ID`, `CS.true.fillna_VAL`, `CS.true.dropDuplicates_VAL`,
+`CS.true.withColumn_VAL`, `CS.false.alias_qualified_T_ID`.
+
+(f) `orderBy` of a duplicate name raises `UNRESOLVED_COLUMN.WITH_SUGGESTION` where
+v1.5.2 raised `AMBIGUOUS_REFERENCE`:
+
+```python
+d.join(o, d.id == o.id).orderBy("v")
+```
+
+Probe `sort_dup.py` `join_orderBy_str` (and its six siblings).
+
+(g) With `failAmbiguousSelfJoin=false`, `s2.join(d).select(d.v)` answers where v1.5.2
+raised:
+
+```python
+s2 = d.select("id", "v")
+s2.join(d).select(d.v)
+```
+
+answers four rows, as Spark does; v1.5.2 raised `AMBIGUOUS_REFERENCE`.
+Probe `R2.off.s2_join_d_select_dv`.
+
+## A sort by an unheld id over twins refuses, as v1.5.2 did
+
+```python
+frame.select((frame.v * -1).alias("V"), (frame.v + 1).alias("v"), frame.id).orderBy(frame.v.desc())
+```
+
+raises `AMBIGUOUS_REFERENCE`, as v1.5.2 did. Spark sorts by the original column through
+a hidden projection; card MISSING-REF-RESOLVE-1 owns that gap. Probes `halt3.py`
+`flip_twins_desc` / `flip_twins_asc`.
+
 ## The fix in user code
 
 Alias the frames and reference the alias, as Spark's own message suggests:
@@ -56,7 +149,8 @@ Alias the frames and reference the alias, as Spark's own message suggests:
 s.alias("a").join(d.alias("b")).select(F.col("b.v"))
 ```
 
-The join stays the same cross join; only the reference changes.
+The join stays the same cross join; only the reference changes. Where v1.5.2 raised
+`No field named b.v`, this release answers four rows, as Spark does (probe `R7`).
 
 ## Qualified self-joins: written files and exports
 
