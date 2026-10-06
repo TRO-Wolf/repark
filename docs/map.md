@@ -214,6 +214,12 @@ repo.
   that `test_dataframe_writeto_appends_by_name` and `test_measured_join_using_insert_answers_spark`
   (F-DML-FIELD-ID-1) are green: the uuid-as-text catalog switch rebuilds every `insert_into`
   batch against the target schema.
+  **SOURCE-URL-REDACT-1 (2026-10-06):** §5 gains `CONNECT-DIV-url-userinfo`: a credential inside a URL- or
+  DSN-shaped property value is masked on every display where Spark 4.1.2 prints it.
+  **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** `CONNECT-DIV-url-userinfo` adds the `DESCRIBE NAMESPACE` Comment and Location
+  rows (Spark 4.1.2 measured printing both) and the Oracle, JSON, YAML and wider-name shapes.
+  **SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** `CONNECT-DIV-url-userinfo` states the storage-location carve-out, the key rule
+  matched to Spark 4.1.2 and beyond, and the known limits.
 - [design/](design/map.md) — settled design documents, one per deliberate design pass
   ([design/session-api.md](design/session-api.md): the phase-1 Session API — crate layout,
   seams, forced-edit ledger, omissions ledger, server landing map;

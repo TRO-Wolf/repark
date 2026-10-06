@@ -45,7 +45,8 @@ impl WriteFormat {
             "csv" => Ok(Self::Csv),
             "json" => Ok(Self::Json),
             _ => Err(Error::Analysis(format!(
-                "unknown path write format '{raw}' (expected parquet, csv or json)"
+                "unknown path write format '{}' (expected parquet, csv or json)",
+                repark_common::redaction::mask_value_credentials(raw)
             ))),
         }
     }
@@ -83,7 +84,8 @@ impl SaveMode {
             "append" => Ok(Self::Append),
             _ => Err(Error::Analysis(format!(
                 "path write mode must be one of ('append', 'overwrite', 'error', \
-                 'errorifexists', 'ignore'), got '{raw}'"
+                 'errorifexists', 'ignore'), got '{}'",
+                repark_common::redaction::mask_value_credentials(raw)
             ))),
         }
     }
@@ -175,8 +177,9 @@ fn normalize_write_compression(raw: &str) -> Result<&'static str> {
         "xz" => Ok("xz"),
         "zstd" | "zst" => Ok("zstd"),
         _ => Err(Error::Analysis(format!(
-            "unsupported write compression '{raw}'; repark supports gzip, bzip2, xz, zstd, \
-             none/uncompressed"
+            "unsupported write compression '{}'; repark supports gzip, bzip2, xz, zstd, \
+             none/uncompressed",
+            repark_common::redaction::mask_value_credentials(raw)
         ))),
     }
 }
@@ -197,8 +200,9 @@ fn normalize_parquet_write_compression(raw: &str) -> Result<String> {
             Ok(lowered)
         }
         _ => Err(Error::Analysis(format!(
-            "unsupported parquet write compression '{raw}'; repark supports snappy, gzip, zstd, \
-             lz4, none/uncompressed"
+            "unsupported parquet write compression '{}'; repark supports snappy, gzip, zstd, \
+             lz4, none/uncompressed",
+            repark_common::redaction::mask_value_credentials(raw)
         ))),
     }
 }
@@ -323,14 +327,17 @@ fn parse_write_destination(url: &str) -> Result<(String, String, String)> {
     match url.split_once("://") {
         Some((scheme, _)) if !object_store_s3::is_s3_scheme(&scheme.to_ascii_lowercase()) => {
             Err(Error::Analysis(format!(
-                "path write destination '{url}' is not an s3:// or s3a:// URL"
+                "path write destination '{}' is not an s3:// or s3a:// URL",
+                repark_common::redaction::mask_value_credentials(url)
             )))
         }
         Some(_) => Err(Error::Analysis(format!(
-            "path write destination '{url}' has no bucket"
+            "path write destination '{}' has no bucket",
+            repark_common::redaction::mask_value_credentials(url)
         ))),
         None => Err(Error::Analysis(format!(
-            "invalid path write destination '{url}'"
+            "invalid path write destination '{}'",
+            repark_common::redaction::mask_value_credentials(url)
         ))),
     }
 }

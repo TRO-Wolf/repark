@@ -100,6 +100,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   pins: perf-approxpct-1/C-002; io-text-1/U-10
 - `_secrets.py` — secret-property classification and redacted runtime configuration
   listing. Explicit `get` calls do not redact values.
+  **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** `mask_credentials(value)` passes non-strings through and sends strings to
+  `_native.mask_value_credentials`; the session modules' conf refusals echo through it.
+  pins: source-url-redact-1/C-017
+  **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the `prop_key_is_secret` mirror is deleted; only `mask_credentials` remains.
+  pins: source-url-redact-1/C-032
 - `_temp_views.py` — temporary-view ownership and cleanup helpers.
   **FNP-4B (2026-09-15):** `local_view_name` also strips backtick quoting (handles are
   backticked since the D-2 quoter move). pins: fnp-4b/C-008
@@ -131,6 +136,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `listCatalogs` idiom — for `ReparkSession.sources()` rows. pins: cfg-2/C-013
   **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** the built USE / SHOW
   / LIKE scans run through `_sql_built`. pins: string-literal-escape-1/C-011
+  **SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** `getDatabase` reads the stored comment and location through
+  `_native.namespace_metadata` instead of parsing the display-masked `DESCRIBE NAMESPACE`.
+  pins: source-url-redact-1/C-040
 - `catalog_surface.py` — **CATALOG-SURFACE-1 (2026-09-14):** the thirteen-name second
   half of the `Catalog` surface — `getTable` / `listColumns` / `listFunctions` /
   `getFunction` metadata (DESCRIBE + SHOW PARTITIONS + the `repark.spark.functions`

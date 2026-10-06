@@ -64,6 +64,8 @@ unformatted, as the UDF left them unwrapped.
   Spark does (re-verify 2026-09-29). `merge_spec_options` appends the spec
   pairs to the format OPTIONS clause the builders validate first, so eager
   refusal order never changed.
+  **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the legacy-policy fallback reads the session's raw conf rows
+  (`&self.conf_dump`), never the display-redacted `conf_dump()`. pins: source-url-redact-1/C-031
 - `spec.rs` — `TextWriteSpec`: the session zone text with its canonical and
   Java display ids plus the three compiled format specs, built once per COPY
   in the factory's `create`. `from_format_options` strips the `repark.text.*`

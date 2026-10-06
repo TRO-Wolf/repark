@@ -170,7 +170,8 @@ pub(crate) fn secret_column_flag(options: &HashMap<String, String>) -> Result<Se
         "refuse" => Ok(SecretColumnFlag::Refuse),
         _ => Err(Error::Analysis(format!(
             "reader option \"flag_secret_columns\" accepts only \"off\", \"warn\", or \
-             \"refuse\"; got {raw:?}"
+             \"refuse\"; got {:?}",
+            repark_common::redaction::mask_value_credentials(raw)
         ))),
     }
 }
@@ -186,7 +187,7 @@ pub(crate) fn apply_secret_column_flag(
         .fields()
         .iter()
         .map(|field| field.name().as_str())
-        .filter(|name| crate::prop_key_is_secret(name))
+        .filter(|name| repark_common::redaction::column_name_is_secret_shaped(name))
         .collect();
     if flagged.is_empty() {
         return Ok(());
@@ -404,7 +405,8 @@ pub(crate) fn parse_bool_option(key: &str, raw: &str) -> Result<bool> {
         "true" | "1" | "yes" | "t" | "y" => Ok(true),
         "false" | "0" | "no" | "f" | "n" => Ok(false),
         _ => Err(Error::Analysis(format!(
-            "reader option {key:?} expects a boolean, got {raw:?}"
+            "reader option {key:?} expects a boolean, got {:?}",
+            repark_common::redaction::mask_value_credentials(raw)
         ))),
     }
 }
@@ -423,7 +425,8 @@ pub(crate) fn parse_single_byte_option(key: &str, raw: &str) -> Result<u8> {
         return Ok(b'\t');
     }
     Err(Error::Analysis(format!(
-        "reader option {key:?} expects a single character, got {raw:?}"
+        "reader option {key:?} expects a single character, got {:?}",
+        repark_common::redaction::mask_value_credentials(raw)
     )))
 }
 
@@ -464,6 +467,15 @@ mod tests {
             .iter()
             .map(|(key, value)| ((*key).to_string(), (*value).to_string()))
             .collect()
+    }
+
+    #[test]
+    fn a_boolean_option_refusal_masks_a_url_password() {
+        let message = parse_bool_option("header", "jdbc:postgresql://u:ReadPw1@db.example.com/s")
+            .expect_err("a URL is not a boolean")
+            .to_string();
+        assert!(!message.contains("ReadPw1"), "{message}");
+        assert!(message.contains("u:***@db.example.com"), "{message}");
     }
 
     fn utf8_schema_of(names: &[&str]) -> arrow::datatypes::Schema {

@@ -111,6 +111,29 @@ fn sources_listing_names_kind_profile_and_redacts_secrets() {
     );
 }
 
+#[test]
+fn sources_listing_masks_a_password_inside_a_url_shaped_value() {
+    let (_directory, session) = session_with_source(
+        "[default.database.postgres.acme]\n\
+         url = \"postgresql://alice:S3cretPw@db.example.com:5432/sales\"\n\
+         dsn = \"host=db.example.com dbname=sales password=S3cretPw\"\n\
+         user = \"alice\"\n",
+    );
+    let rows = session.sources();
+    let properties = &rows[0].properties;
+    assert_eq!(
+        properties.get("url").map(String::as_str),
+        Some("postgresql://alice:***@db.example.com:5432/sales")
+    );
+    assert_eq!(
+        properties.get("dsn").map(String::as_str),
+        Some("host=db.example.com dbname=sales password=***")
+    );
+    assert_eq!(properties.get("user").map(String::as_str), Some("alice"));
+    let rendered = format!("{rows:?} {:?}", session.source_specs);
+    assert!(!rendered.contains("S3cretPw"), "{rendered}");
+}
+
 #[tokio::test]
 async fn auto_register_false_lists_but_does_not_register() {
     let (_directory, session) = session_with_source(

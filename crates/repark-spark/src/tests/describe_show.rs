@@ -208,7 +208,58 @@ async fn describe_namespace_extended_renders_property_values_raw() {
     );
 }
 
-/// Z2: the redaction TRUTH TABLE, reproduced row for row from a live pyspark 4.0.0 v2-catalog run.
+#[tokio::test]
+async fn describe_namespace_masks_comment_location_and_owner_credentials() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE NAMESPACE ice.leaky COMMENT 'jdbc:postgresql://u:CmPw1@db.example.com/sales' \
+             LOCATION 's3a://AKIAX:LocPw2@bucket/wh' \
+             WITH DBPROPERTIES ('owner' = 'mysql://o:OwPw3@db.example.com/x')",
+    )
+    .await
+    .unwrap();
+    let rows = describe_rows(&ctx, &catalogs, "DESCRIBE NAMESPACE ice.leaky").await;
+    let rendered = format!("{rows:?}");
+    for password in ["CmPw1", "LocPw2", "OwPw3"] {
+        assert!(!rendered.contains(password), "{rendered}");
+    }
+    assert!(rows.contains(&(
+        "Comment".to_string(),
+        "jdbc:postgresql://u:***@db.example.com/sales".to_string()
+    )));
+    assert!(rows.contains(&(
+        "Location".to_string(),
+        "s3a://AKIAX:***@bucket/wh".to_string()
+    )));
+    assert!(rows.contains(&(
+        "Owner".to_string(),
+        "mysql://o:***@db.example.com/x".to_string()
+    )));
+}
+
+#[tokio::test]
+async fn describe_namespace_extended_masks_url_userinfo_spark_would_show() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE NAMESPACE ice.conn WITH DBPROPERTIES ( \
+             'conn' = 'postgresql://u:NsPw5@db.example.com/sales', 'plain' = 'p7')",
+    )
+    .await
+    .unwrap();
+    let rows = describe_rows(&ctx, &catalogs, "DESCRIBE NAMESPACE EXTENDED ice.conn").await;
+    let (_, properties) = rows.last().unwrap();
+    assert_eq!(
+        properties,
+        "((conn,postgresql://u:***@db.example.com/sales), (plain,p7))"
+    );
+}
+
 #[tokio::test]
 async fn describe_namespace_extended_redaction_truth_table() {
     let wh = TempDir::new().unwrap();
@@ -228,15 +279,14 @@ async fn describe_namespace_extended_redaction_truth_table() {
 
     let rows = describe_rows(&ctx, &catalogs, "DESCRIBE NAMESPACE EXTENDED ice.creds").await;
     let (_, properties) = rows.last().unwrap();
-    // Verbatim from the live oracle.
     assert_eq!(
         properties,
-        "((ACCESS-KEY,p6), (SeCrEt,*********(redacted)), (access.key,*********(redacted)), \
-             (access_key,p8), (accesskey,*********(redacted)), (bare,*********(redacted)), \
-             (dashaccess-key,p10), (innocent,*********(redacted)), (jdbc_url,*********(redacted)), \
+        "((ACCESS-KEY,*********(redacted)), (SeCrEt,*********(redacted)), (access.key,*********(redacted)), \
+             (access_key,*********(redacted)), (accesskey,*********(redacted)), (bare,*********(redacted)), \
+             (dashaccess-key,*********(redacted)), (innocent,*********(redacted)), (jdbc_url,*********(redacted)), \
              (my_token_2,*********(redacted)), (password,*********(redacted)), (plain,p7), \
              (urlish,*********(redacted)), (valueurl,*********(redacted)))",
-        "the rendered Properties string must match live Spark byte for byte"
+        "Spark's redacted rows plus RePark's key rule (access_key, ACCESS-KEY, dashaccess-key)"
     );
     // Negative-assert every plaintext secret the redaction is there to stop.
     for (key, secret) in [

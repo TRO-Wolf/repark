@@ -471,8 +471,9 @@ class RuntimeConfig:
         Runtime values win on key collision. Explicitly :meth:`unset` keys are omitted
         even when still present on the builder snapshot. Always non-empty via
         ``_SQLCONF_DEFAULTS``. Secret-shaped keys have their **values** replaced with
-        ``***`` (keys remain visible); explicit :meth:`get` of a named secret key
-        returns the real value so intentional lookups still work.
+        ``***`` and credentials inside other values are masked (keys remain visible);
+        explicit :meth:`get` of a named secret key returns the real value so intentional
+        lookups still work.
         """
         self._session._ensure_alive()
         tomb = self._unset_keys()
@@ -484,9 +485,7 @@ class RuntimeConfig:
             if key not in tomb:
                 merged[key] = value
         merged[_RETAINED_CACHE_BYTES_KEY] = _retained_cache_bytes_value(self._session)
-        return {
-            key: ("***" if _prop_key_is_secret(key) else value) for key, value in merged.items()
-        }
+        return {key: _native.redact_property_value(key, value) for key, value in merged.items()}
 
     def isModifiable(self, key: str) -> bool:  # noqa: N802 — PySpark camelCase
         """Return whether ``key`` can be set at runtime (Spark static-conf subset)."""

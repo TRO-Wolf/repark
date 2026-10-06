@@ -275,6 +275,36 @@ fn file_builder_precedence_is_builder_then_profile_then_default() {
 }
 
 #[test]
+fn file_dump_masks_a_password_inside_a_catalog_uri() {
+    let file = try_loaded_file(
+        "[default.catalog.pg]\ntype = \"jdbc\"\nurl = \"postgresql://u:CatPw9@db.example.com/sales\"\n",
+        &[],
+    )
+    .expect("fixture loads");
+    let dumped = conf_dump_rows(&file, &HashMap::new());
+    let rendered = format!("{dumped:?}");
+    assert!(!rendered.contains("CatPw9"), "{rendered}");
+    assert!(
+        rendered.contains("postgresql://u:***@db.example.com/sales"),
+        "{rendered}"
+    );
+}
+
+#[test]
+fn typed_knob_refusals_mask_a_password_in_the_echoed_value() {
+    for text in [
+        "[default.session]\nbatch_size = \"postgresql://u:KnobPw1@db.example.com/sales\"\n",
+        "[default.maintenance]\nsnapshot_older_than = \"postgresql://u:KnobPw1@db.example.com/sales\"\n",
+    ] {
+        let message = try_loaded_file(text, &[])
+            .expect_err("a URL is not a typed knob value")
+            .to_string();
+        assert!(!message.contains("KnobPw1"), "{message}");
+        assert!(message.contains("u:***@db.example.com"), "{message}");
+    }
+}
+
+#[test]
 fn file_dump_reports_origin_and_masks_secrets() {
     let file = try_loaded_file(
         "[default.conf]\npassword = \"s3cret\"\nnickname = \"plain\"\n[prod.conf]\nnickname = \"prod-name\"\n",

@@ -68,6 +68,34 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   `Option<Generation>` or a non-zero type"; R-12 as amended, owner, 2026-10-05). `new` is the
   serialized `0` ↔ `None` boundary the first serializing unit calls. `lib.rs` re-exports it.
   pins: c-1/C-012
+
+- `redaction.rs` — **SOURCE-URL-REDACT-1 (2026-10-06):** the shared property redactor. `prop_key_is_secret`
+  (moved here unchanged from `repark-core/src/catalog_config.rs`, which re-exports it),
+  `redact_value(key, value)` (a secret key gives `***`, any other value goes through
+  `mask_value_credentials`) and `mask_value_credentials(value)`: URL userinfo of any
+  `scheme://` keeps the user and host and masks the password; a userinfo with no colon is
+  masked whole; an `@` after `://` with a `:` before it that does not parse cleanly masks the
+  whole userinfo (fail closed); a secret-named query parameter or libpq / ODBC keyword
+  (`prop_key_is_secret`, or a compact name `sig`, `…pwd`, `…signature`) masks its value,
+  quoted, braced and unterminated forms included. Unit pins at the bottom of the module.
+  pins: source-url-redact-1/C-001, C-002, C-003, C-004, C-005, C-006
+  **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** userinfo is read only inside the RFC 3986 authority (it ends at the first
+  `/`, `?` or `#`), so a path, query or fragment `@` never masks or hides the host; a userinfo
+  whose user part carries an `@` is masked whole. pins: source-url-redact-1/C-002, C-015
+  **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the legs run key=value (parenthesized pairs included), then quoted-JSON and
+  YAML colon pairs, then URL userinfo (the authority ends at `/ ? # ;`, not at whitespace; an
+  authority that is not a clean host fails closed up to a later `@host`), then Oracle
+  `user/password@host` and bare `user:password@host`. `prop_key_is_secret` adds `account_key`,
+  `authorization` and a final `pat`; `column_name_is_secret_shaped` keeps the previous rule for
+  the secret-column read flag. Tests moved to [redaction/](redaction/map.md).
+  pins: source-url-redact-1/C-021, C-022, C-024, C-025, C-026, C-027, C-034
+  **SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** the legs record masked spans on the original value (URL userinfo, then Oracle
+  and bare logins, then key=value, then JSON/YAML) and a later leg skips what an earlier one
+  masked, so key=value never fires inside a userinfo; a storage scheme whose userinfo has no
+  `:` is shown as is; Oracle TNS descriptors, fail-closed logins and multi-line JSON/YAML are
+  masked. pins: source-url-redact-1/C-041, C-043, C-044, C-045, C-046
+  **SOURCE-URL-REDACT-1 fold 4 (2026-10-06):** `host_text` ends a follower host at `" ' ( ) ] { } , < >`
+  too, so an embedded URL fails closed. pins: source-url-redact-1/C-052
 - `names.rs` — **WO CASESENS-1 slice 2 (2026-09-27):** the one
   name-matching rule every binder calls. `NameRule { Exact, IgnoreCase }`
   (`from_case_sensitive`, `matches`, `lookup` → `NameHit::{One, Many,

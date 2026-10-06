@@ -21,6 +21,9 @@ that answers for a registered source name until its connector lands (roadmap 1.1
   ambient environment.
   pins: cfg-2/C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-011
 
+  **SOURCE-URL-REDACT-1 (2026-10-06):** `sources_listing_masks_a_password_inside_a_url_shaped_value`: a source's
+  `url` and keyword `dsn` list with the password masked and the host and user kept, and the
+  `SourceSpec` `Debug` carries no password. pins: source-url-redact-1/C-007
 ## Pointers
 
 - Up: [../map.md](../map.md)

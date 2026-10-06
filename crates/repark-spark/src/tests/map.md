@@ -1,5 +1,13 @@
 # map — repark-spark/src/tests
 
+**SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** `property_display_redaction.rs` adds one SQL pin per property display for the key rule (`*_redacts_secret_keys_like_spark`, the keyed `SHOW TBLPROPERTIES` forms) and `a_credential_free_storage_location_is_shown_as_spark_shows_it`; `describe_show.rs`'s truth table carries Spark's rows plus the key rule. pins: source-url-redact-1/C-041, C-042
+
+**SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** `describe_show.rs` gains `describe_namespace_masks_comment_location_and_owner_credentials` (SQL). pins: source-url-redact-1/C-029
+
+**SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** `property_display_redaction.rs` — one SQL pin per table / view property display (`DESCRIBE TABLE EXTENDED`, `SHOW CREATE TABLE` of a table and a view, `SHOW TABLE EXTENDED` with its per-character separators removed, `SHOW TBLPROPERTIES` of a table and a view with and without a key): the password is absent and `postgresql://u:***@db.example.com/sales` present. pins: source-url-redact-1/C-016
+
+**SOURCE-URL-REDACT-1 (2026-10-06):** `describe_show.rs` gains `describe_namespace_extended_masks_url_userinfo_spark_would_show`: a namespace property `postgresql://u:…@db.example.com/sales` renders with `***` for the password where Spark 4.1.2 prints it. pins: source-url-redact-1/C-010
+
 U1-MEM-LAYOUT-1 (2026-09-23): the Spark memory-layout and orphan co-tenancy test modules, their manifest entries, and moved fixture paths are recorded below.
 
 ICE-MIXED-CASE-1 (2026-09-17): `common.rs` test helper carries the case-sensitivity flag into session config — round 21b through `with_spark_case_sensitive_config(config, false)`, main's carrier. pins: ice-mixed-case-1/C-012

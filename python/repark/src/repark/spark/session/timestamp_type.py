@@ -19,6 +19,7 @@ as naive µs. Explicit ``TimestampType`` / ``TimestampNTZType`` / ``TIMESTAMP_NT
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from repark.spark._secrets import mask_credentials
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
@@ -42,7 +43,7 @@ def parse_timestamp_type(raw: str) -> str:
     if trimmed in {TIMESTAMP_LTZ_VALUE, TIMESTAMP_NTZ_VALUE}:
         return trimmed
     raise IllegalArgumentException(
-        f"The value '{raw}' in the config \"{TIMESTAMP_TYPE_KEY}\" is invalid. "
+        f"The value '{mask_credentials(raw)}' in the config \"{TIMESTAMP_TYPE_KEY}\" is invalid. "
         f"{TIMESTAMP_TYPE_KEY} should be one of {TIMESTAMP_LTZ_VALUE}, {TIMESTAMP_NTZ_VALUE}"
     )
 

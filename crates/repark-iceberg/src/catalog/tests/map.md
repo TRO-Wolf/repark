@@ -109,6 +109,7 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
   `catalog.memory_catalog_cached_with_props` span records exactly `warehouse`,
   `metadata_cache`, `manifest_cache_bytes` and `footer_cache`. No field value carries a prop
   name or value, even with a secret-looking key in the props.
+  **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** `memory_catalog_span_masks_a_password_in_the_warehouse`. pins: source-url-redact-1/C-018
 - `lineage_columns.rs` — **V3-4 critic:** stored `_row_id` wins over `first_row_id +` pos;
   `WHERE id = lit` keeps matching lineage rows; `try_new_with_snapshot` is absent.
   pins: v3-4-serve-lineage-columns/C-017, C-019, C-020

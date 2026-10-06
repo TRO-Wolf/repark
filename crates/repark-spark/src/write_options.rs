@@ -175,7 +175,8 @@ pub(crate) fn refuse_invalid_isolation(options: &StatementWriteOptions) -> Resul
         Some(raw) => match raw.to_ascii_lowercase().as_str() {
             "snapshot" | "serializable" => Ok(()),
             _ => Err(DataFusionError::Plan(format!(
-                "Invalid isolation level: {raw}"
+                "Invalid isolation level: {}",
+                repark_common::redaction::mask_value_credentials(raw)
             ))),
         },
     }
@@ -192,7 +193,8 @@ fn validate_write_format(raw: &str) -> Result<String> {
         "parquet" => Ok("parquet".to_string()),
         "orc" | "avro" => Ok(raw.to_ascii_lowercase()),
         _ => Err(repark_iceberg::write::illegal_argument_error(format!(
-            "Invalid file format: {raw}"
+            "Invalid file format: {}",
+            repark_common::redaction::mask_value_credentials(raw)
         ))),
     }
 }
@@ -201,7 +203,8 @@ fn validate_distribution_mode(raw: &str) -> Result<String> {
     match raw.to_ascii_lowercase().as_str() {
         "none" | "hash" | "range" => Ok(raw.to_ascii_lowercase()),
         _ => Err(DataFusionError::Plan(format!(
-            "Invalid distribution mode: {raw}"
+            "Invalid distribution mode: {}",
+            repark_common::redaction::mask_value_credentials(raw)
         ))),
     }
 }
@@ -212,6 +215,18 @@ mod tests {
 
     fn pair(key: &str, value: &str) -> (String, String) {
         (key.to_string(), value.to_string())
+    }
+
+    #[test]
+    fn an_invalid_write_option_refusal_masks_a_url_password() {
+        let error = StatementWriteOptions::validate(vec![pair(
+            "write-format",
+            "jdbc:postgresql://u:WritePw1@db.example.com/s",
+        )])
+        .expect_err("a URL is not a file format");
+        let message = error.to_string();
+        assert!(!message.contains("WritePw1"), "{message}");
+        assert!(message.contains("u:***@db.example.com"), "{message}");
     }
 
     #[test]

@@ -9,9 +9,8 @@ from typing import Any
 import pytest
 from _support import read_frame_door, read_sql_door
 
-from repark import ReparkSession
+from repark import ReparkSession, _native
 from repark.errors import AnalysisException
-from repark.spark._secrets import prop_key_is_secret
 from repark_parity.torture import FAMILIES, Family, FamilyOutput
 from repark_parity.torture.secrets import (
     FLAGGED_COLUMN_NAMES,
@@ -31,11 +30,11 @@ def test_family_satisfies_protocol() -> None:
 
 
 def test_flagged_names_match_the_needle_set() -> None:
-    """Every flagged name trips prop_key_is_secret; every ordinary name does not (D-4a)."""
+    """Every flagged name redacts through the native key rule; every ordinary name does not."""
     for name in FLAGGED_COLUMN_NAMES:
-        assert prop_key_is_secret(name), name
+        assert _native.redact_property_value(name, "v") == "***", name
     for name in ORDINARY_COLUMN_NAMES:
-        assert not prop_key_is_secret(name), name
+        assert _native.redact_property_value(name, "v") == "v", name
 
 
 def test_secrets_parquet_dataframe_door(spark: ReparkSession, secrets_data: FamilyOutput) -> None:

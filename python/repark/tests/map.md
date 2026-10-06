@@ -2341,6 +2341,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   dropped — `catalog_surface.session_table` is the resolved-identity door).
   pins: csv-infer-perf-1/C-002, C-005; facade-4/C-014, C-022, C-026;
   catalog-surface-1/C-008
+  **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** the moved-symbol hashes of `_config_value_error`, `_forward_datafusion_conf`
+  and `normalize_display_style` follow their masked-echo edits. pins: source-url-redact-1/C-017
+  **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** `_prop_key_is_secret` leaves the compatibility inventory with the alias.
+  pins: source-url-redact-1/C-032
 - [test_spark_sql_grammar_1.py](test_spark_sql_grammar_1.py) — **SPARK-SQL-GRAMMAR-1
   (2026-09-16):** SQL-door pins for Spark operators, keywords and type names —
   value AND Arrow type/nullability through ``spark.sql`` (``selectExpr`` legs ride
@@ -3505,6 +3509,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (conformance inventory covers every Rust arm + `bucket`/`arn` `_key` exclusions; octo C1-SEC-001);
   getAll isolation pin (octo C2-Q-002);
   `getAll` redacts; `get(explicit)` unchanged.
+  **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the needle inventories assert through `_native.redact_property_value`, the
+  live Rust key rule. pins: source-url-redact-1/C-032
 - `test_dynamic_flatten.py` — **r24 DF1** `DataFrame.dynamicFlatten` / `dynamic_flatten`
   (planner is native `repark_core::dynamic_flatten`; this file is the facade contract):
   nested struct-in-struct; null parent/mid struct → NULL not zero
@@ -5268,6 +5274,18 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (engine not-found, no `1.10`), and the `listCatalogs` observation stays pinned
   (the source name does not appear — D-11 measured, not changed).
   pins: cfg-2/C-013, C-014, C-015, C-016, C-017, C-019
+- `test_source_url_redaction_1.py` — **SOURCE-URL-REDACT-1 (2026-10-06):** the facade pin: a `repark.toml` with a
+  per-test random password in a source `url`, a query string, a keyword DSN, an ODBC string, a
+  catalog `uri` and a `[conf]` key; the password appears nowhere in `sources()` (`repr` / `str`),
+  `spark.conf.getAll`, `SET` / `SET -v` / `SET k` or the `ping()` refusal, and the host does.
+  Mutation (`redact_value` key-only) reds the `sources()` and `getAll` legs.
+  pins: source-url-redact-1/C-011, C-012, C-013
+  **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** `test_set_redaction_matches_the_spark_4_1_2_default_regexes` pins the
+  measured `SET` rule; `test_knob_refusals_never_carry_the_password` pins the time zone,
+  `SET spark.sql.shuffle.partitions` and display-style refusals; the `SET`-listing pin uses a
+  `*_conn` key, since a `*_url` key is now whole-value redacted. pins: source-url-redact-1/C-017, C-019
+  **SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** `test_get_database_returns_the_stored_location_and_comment` pins the raw
+  `getDatabase` path while `DESCRIBE NAMESPACE` stays masked. pins: source-url-redact-1/C-040
 - `test_t3_ux_polish.py` — **r21 T3** (2026-08-03): display_style conf.set→show + property/conf
   lockstep + module `repark.display_style` refuse-loud; **F-T3-001** conf.unset resets
   live style + conf.get to default `spark` (show spark-like; no split-brain); default
