@@ -111,3 +111,16 @@ pub fn spark_case_sensitive_from_options(options: &ConfigOptions) -> bool {
             extension.enabled
         })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{SPARK_SQL_CASE_SENSITIVE_KEY, parse_runtime_spark_sql_case_sensitive};
+
+    #[test]
+    fn runtime_refusal_keeps_the_key_and_the_raw_value() {
+        let raw = "postgresql://u:pw@h/db";
+        let error = parse_runtime_spark_sql_case_sensitive(raw).expect_err("url must refuse");
+        assert_eq!(error.key, SPARK_SQL_CASE_SENSITIVE_KEY);
+        assert_eq!(error.raw, raw);
+    }
+}

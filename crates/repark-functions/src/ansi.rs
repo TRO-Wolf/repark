@@ -369,6 +369,8 @@ mod tests {
             let error = parse_runtime_spark_sql_ansi_enabled(raw)
                 .expect_err("runtime must refuse the value");
             let message = crate::merge_schema::boolean_type_mismatch_message(error.key, &error.raw);
+            assert_eq!(error.key, SPARK_SQL_ANSI_ENABLED_KEY);
+            assert_eq!(error.raw, raw);
             assert!(
                 message.contains("[INVALID_CONF_VALUE.TYPE_MISMATCH]"),
                 "refusal must carry Spark's class: {message}"
