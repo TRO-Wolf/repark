@@ -138,6 +138,35 @@ Round 1, then fold 1 re-run of the whole list on the fold-1 tree (`01a1f1c4` + d
 | `bash scripts/check_map_md.sh --base 4a643e56` | 0 | no output |
 | `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xsec1 4a643e56 HEAD` | 0 | `hits=0` |
 
+**Fold 2 re-run** on the fold-2 tree (`4dbbbec7`), same wrapper; the 09:00 quiet gate run held the
+lock for part of it and the flock waited, never bypassed.
+
+| command | exit | output |
+|---|---|---|
+| `cargo test -p repark-common --lib` | 0 | 57 passed (24 redaction pins + 2 corpus tests) |
+| `cargo test -p repark-core --lib` | 0 | 1026 passed, 1 ignored |
+| `cargo test -p repark-spark --lib` | 0 | 2617 passed, 5 ignored |
+| `cargo test -p repark-iceberg --lib` | 0 | 804 passed |
+| `cargo test -p repark-distributed --features cluster --lib` | 0 | 7 passed |
+| `make rust-clippy` | 0 | no diagnostics |
+| `cargo clippy -p repark-distributed --features cluster --all-targets -- -D warnings -A clippy::disallowed_methods` | 0 | no diagnostics |
+| `make rust-panic-ban` | 0 | clean |
+| `cargo fmt --all --check` | 0 | no output |
+| `./scripts/check_rust_file_size.sh` | 0 | 1043 files clean |
+| `./scripts/check_lib_rs.sh` | 0 | 11 crate roots clean |
+| `./scripts/check_crate_dag.sh` | 0 | 23 internal edges clean |
+| `python3 scripts/check_lib_py.py` | 0 | 945 files clean |
+| `python3 scripts/check_docstring_presence.py` | 0 | 307 files clean |
+| `python3 scripts/sync_map_md.py --check` | 0 | 362 maps clean |
+| `python3 scripts/check_ledger_grammar.py` | 0 | 302 live ledgers clean (2968 clauses) |
+| `python3 scripts/check_docs_links.py` | 0 | clean |
+| `bash scripts/check_map_md.sh --base 4a643e56` | 0 | no output |
+| `uvx ruff@0.15.22 check` / `format --check` (touched Python) | 0 | clean |
+| `pytest`, debug build: the 148 facade files touching conf refusals, table / namespace displays, redaction, `getAll`, `SET`, `_secrets`, `flag_secret_columns` or write options (recorders, perf, scale, spill and live excluded), plus `test_source_url_redaction_1.py`, `test_session_sources.py`, `test_config_mirror.py`, `test_torture_secrets.py`, `test_datasets_secrets.py`, in five chunks | 0 | 782 + 1209 + 928 + 1549 + 390 = 4858 passed, 0 failed |
+| `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xsec1 4a643e56 HEAD` | 0 | `hits=0` |
+| mutation re-run (`target/mut/run.py`, 31 mutants) | — | §3 |
+
+
 ## 3. Mutation
 
 `redact_value` reverted to key-only (`value.to_string()` in the else arm), the debug module
