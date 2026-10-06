@@ -445,3 +445,33 @@ fn the_column_predicate_keeps_the_pre_widening_rule() {
         );
     }
 }
+
+#[test]
+fn a_host_must_look_like_one_before_the_fail_closed_leg_stands_down() {
+    assert_masks(&[
+        (
+            "https://tok.\tx@db.example.com/x",
+            "https://***@db.example.com/x",
+        ),
+        (
+            "https://tok.é?x@db.example.com/x",
+            "https://***@db.example.com/x",
+        ),
+        (
+            "redis://tok:#x@db.example.com/x",
+            "redis://tok:***@db.example.com/x",
+        ),
+        (
+            "s3a://u:QZX785079b/(%3A\"@?KQV@h1.example.com/db",
+            "s3a://u:***@h1.example.com/db",
+        ),
+        (
+            "https://10.0.0.1/a@b.example.com",
+            "https://10.0.0.1/a@b.example.com",
+        ),
+        (
+            "https://h.example.com:8443/a/b@c",
+            "https://h.example.com:8443/a/b@c",
+        ),
+    ]);
+}
