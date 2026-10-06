@@ -431,3 +431,70 @@ fn grown_stack_guard_rejects_bypass_sites() {
         offenders.join("\n")
     );
 }
+
+#[test]
+fn boundary_mask_leaves_a_credential_free_message_byte_identical() {
+    let plain =
+        "config `repark.sql.maxArrayElements` must be a positive integer (got \"notabool\")";
+    let zone = "spark.sql.session.timeZone must be a zone id";
+    Python::attach(|py| {
+        let raised = to_py_err(Error::Analysis(plain.to_string()));
+        assert_eq!(raised.value(py).to_string(), plain);
+        let expected_plan =
+            repark_core::engine_err(datafusion::error::DataFusionError::Plan(plain.to_string()))
+                .to_string();
+        let plan =
+            datafusion_to_py_err(datafusion::error::DataFusionError::Plan(plain.to_string()));
+        assert_eq!(plan.value(py).to_string(), expected_plan);
+        let expected_config = repark_core::engine_err(
+            datafusion::error::DataFusionError::Configuration(zone.to_string()),
+        )
+        .to_string();
+        let configured = datafusion_to_py_err(datafusion::error::DataFusionError::Configuration(
+            zone.to_string(),
+        ));
+        assert_eq!(configured.value(py).to_string(), expected_config);
+    });
+}
+
+#[test]
+fn boundary_mask_hides_a_url_password_in_plan_and_configuration_messages() {
+    let url = "postgresql://u:pw@h/db";
+    let masked = "postgresql://u:***@h/db";
+    let plan_inner = format!("config `k` must be a positive integer (got {url:?})");
+    let zone_inner = format!("`spark.sql.session.timeZone` = {url:?} is not a zone");
+    Python::attach(|py| {
+        let plan =
+            datafusion_to_py_err(datafusion::error::DataFusionError::Plan(plan_inner.clone()));
+        let plan_text = plan.value(py).to_string();
+        assert!(plan_text.contains(masked));
+        assert!(!plan_text.contains("u:pw@"));
+        assert!(plan.is_instance_of::<AnalysisException>(py));
+        let configured = datafusion_to_py_err(datafusion::error::DataFusionError::Configuration(
+            zone_inner.clone(),
+        ));
+        let config_text = configured.value(py).to_string();
+        assert!(config_text.contains(masked));
+        assert!(!config_text.contains("u:pw@"));
+        assert!(configured.is_instance_of::<IllegalArgumentException>(py));
+        let direct = to_py_err(Error::Config(zone_inner));
+        let direct_text = direct.value(py).to_string();
+        assert!(direct_text.contains(masked));
+        assert!(!direct_text.contains("u:pw@"));
+        assert!(direct.is_instance_of::<IllegalArgumentException>(py));
+    });
+}
+
+#[test]
+fn masking_a_message_twice_is_a_no_op() {
+    let text = "saw postgresql://u:pw@h/db and notabool";
+    let once = repark_core::redaction::mask_value_credentials(text);
+    let twice = repark_core::redaction::mask_value_credentials(&once);
+    assert_eq!(once, twice);
+    assert!(once.contains("postgresql://u:***@h/db"));
+    assert!(!once.contains("u:pw@"));
+    let plain = "notabool stays";
+    assert_eq!(repark_core::redaction::mask_value_credentials(plain), plain);
+    let via = super::exceptions::mask_user_visible(text);
+    assert_eq!(super::exceptions::mask_user_visible(&via), via);
+}

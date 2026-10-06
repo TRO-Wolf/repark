@@ -120,11 +120,13 @@ fn lateral_join(
             "inner" | "cross" => JoinType::Inner,
             "left" => JoinType::Left,
             other => {
-                return Err(crate::exceptions::AnalysisException::new_err(format!(
-                    "[UNSUPPORTED_JOIN_TYPE] Unsupported join type '{other}'. Supported join \
+                return Err(crate::exceptions::AnalysisException::new_err(
+                    crate::exceptions::mask_user_visible(format!(
+                        "[UNSUPPORTED_JOIN_TYPE] Unsupported join type '{other}'. Supported join \
                      types include: 'inner', 'leftouter', 'left', 'left_outer', 'cross'. \
                      SQLSTATE: 0A000"
-                )));
+                    )),
+                ));
             }
         };
         let deepest = on.as_ref().map_or(0, PyColumn::df_depth);

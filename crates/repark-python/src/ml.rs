@@ -27,7 +27,7 @@ use crate::{IllegalArgumentException, UnsupportedOperationException};
 /// Map an ML error to a PySpark-shaped Python exception.
 #[allow(clippy::needless_pass_by_value)]
 fn ml_to_py_err(err: MlError) -> PyErr {
-    let message = err.to_string();
+    let message = crate::exceptions::mask_user_visible(&err.to_string());
     match &err {
         MlError::Unsupported(_)
         | MlError::ElasticNetUnsupported { .. }

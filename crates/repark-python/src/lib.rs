@@ -51,12 +51,12 @@ pub use exceptions::{
 /// Convert a crate error to its PySpark-shaped Python exception.
 #[allow(clippy::needless_pass_by_value)]
 pub(crate) fn to_py_err(err: repark_core::Error) -> PyErr {
-    let message = err.to_string();
+    let message = exceptions::mask_user_visible(&err.to_string());
     if let Some(routine) = unresolved_routine::unresolved_routine(&message) {
-        return AnalysisException::new_err(format!(
+        return AnalysisException::new_err(exceptions::mask_user_visible(format!(
             "[UNRESOLVED_ROUTINE] Cannot resolve routine `{routine}` on search path \
              [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883"
-        ));
+        )));
     }
     match err.exception_class() {
         ErrorClass::Parse => ParseException::new_err(message),
