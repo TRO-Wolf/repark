@@ -475,3 +475,165 @@ fn a_host_must_look_like_one_before_the_fail_closed_leg_stands_down() {
         ),
     ]);
 }
+
+#[test]
+fn storage_locations_without_a_password_are_shown_as_is() {
+    assert_masks(&[
+        (
+            "s3://lake/teams/data@corp.example.com/ns",
+            "s3://lake/teams/data@corp.example.com/ns",
+        ),
+        (
+            "s3://lake/events/user=john@corp.com/part-0.parquet",
+            "s3://lake/events/user=john@corp.com/part-0.parquet",
+        ),
+        (
+            "hdfs://nn/warehouse/db.db/t/dt=2024@x",
+            "hdfs://nn/warehouse/db.db/t/dt=2024@x",
+        ),
+        (
+            "s3://bucket/path?versionId=a@b",
+            "s3://bucket/path?versionId=a@b",
+        ),
+        ("s3://bucket@x/path", "s3://bucket@x/path"),
+        (
+            "wasbs://container@account.blob.core.windows.net/dir",
+            "wasbs://container@account.blob.core.windows.net/dir",
+        ),
+        (
+            "abfss://container@account.dfs.core.windows.net/path/a@b.parquet",
+            "abfss://container@account.dfs.core.windows.net/path/a@b.parquet",
+        ),
+        (
+            "s3a://AKIAX:wJalr/K7MDENG@bucket/warehouse",
+            "s3a://AKIAX:***@bucket/warehouse",
+        ),
+        ("s3a://AKIA:secret@bucket/x", "s3a://AKIA:***@bucket/x"),
+        ("https://h/u@example.com", "https://***@example.com"),
+    ]);
+}
+
+#[test]
+fn oracle_tns_descriptors_mask_the_password() {
+    assert_masks(&[
+        (
+            "jdbc:oracle:thin:scott/OraDescPw1@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=db.example.com)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=ORCL)))",
+            "jdbc:oracle:thin:scott/***@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=db.example.com)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=ORCL)))",
+        ),
+        (
+            "scott/OraDescPw3@(DESCRIPTION=(ADDRESS=(HOST=h)(PORT=1521)))",
+            "scott/***@(DESCRIPTION=(ADDRESS=(HOST=h)(PORT=1521)))",
+        ),
+        (
+            "jdbc:oracle:thin:scott/Ora/Pw2@(DESCRIPTION=(ADDRESS=(HOST=h)))",
+            "jdbc:oracle:thin:scott/***@(DESCRIPTION=(ADDRESS=(HOST=h)))",
+        ),
+    ]);
+}
+
+#[test]
+fn the_key_value_leg_never_fires_inside_a_userinfo() {
+    assert_masks(&[
+        (
+            "postgresql://alice:MySecret=Value18@db.example.com/db",
+            "postgresql://alice:***@db.example.com/db",
+        ),
+        (
+            "postgresql://alice:MyPwd=Value18@db.example.com/db",
+            "postgresql://alice:***@db.example.com/db",
+        ),
+        (
+            "jdbc:sqlserver://db:1433;user=sa;password=Spring@2026x",
+            "jdbc:sqlserver://db:1433;user=sa;password=***",
+        ),
+        (
+            "jdbc:sqlserver://h;user=u@x.example.com;password={Pw@1;x}",
+            "jdbc:sqlserver://h;user=u@x.example.com;password=***",
+        ),
+        (
+            "jdbc:sqlserver://db.example.com;user=alice@corp.com;encrypt=true",
+            "jdbc:sqlserver://db.example.com;user=alice@corp.com;encrypt=true",
+        ),
+        (
+            "postgresql://db.example.com:5432/sales?user=u&password=Pa@ssw0rdQ",
+            "postgresql://db.example.com:5432/sales?user=u&password=***",
+        ),
+        (
+            "postgresql://u:p/x@h1 yLeak7@db.example.com/z",
+            "postgresql://u:***@db.example.com/z",
+        ),
+    ]);
+}
+
+#[test]
+fn oracle_and_bare_logins_fail_closed() {
+    assert_masks(&[
+        (
+            "jdbc:oracle:thin:scott/Ora,Pw12@db.example.com:1521/ORCL",
+            "jdbc:oracle:thin:scott/***@db.example.com:1521/ORCL",
+        ),
+        (
+            "jdbc:oracle:thin:scott/Ora;Pw13@db.example.com:1521/ORCL",
+            "jdbc:oracle:thin:scott/***@db.example.com:1521/ORCL",
+        ),
+        (
+            "jdbc:oracle:thin:scott/Ora=Pw14@db.example.com:1521/ORCL",
+            "jdbc:oracle:thin:scott/***@db.example.com:1521/ORCL",
+        ),
+        (
+            "jdbc:oracle:thin:scott/Ora(Pw15)@db.example.com:1521/ORCL",
+            "jdbc:oracle:thin:scott/***@db.example.com:1521/ORCL",
+        ),
+        (
+            "jdbc:oracle:thin:scott/Ora'Pw16@db.example.com:1521/ORCL",
+            "jdbc:oracle:thin:scott/***@db.example.com:1521/ORCL",
+        ),
+        (
+            "jdbc:oracle:thin:\"scott\"/OraPw11@db.example.com:1521/ORCL",
+            "jdbc:oracle:thin:\"scott\"/***@db.example.com:1521/ORCL",
+        ),
+        (
+            "user=scott/OraKv1@db.example.com:1521/ORCL",
+            "user=scott/***@db.example.com:1521/ORCL",
+        ),
+        (
+            "admin:QZX804085]-)*KQV@db.example.com",
+            "admin:***@db.example.com",
+        ),
+        ("u:Two Words\n9@db.example.com", "u:***@db.example.com"),
+        ("contact john@example.com", "contact john@example.com"),
+        (
+            "docker.io/library/postgres@sha256:abcdef0123",
+            "docker.io/library/postgres@sha256:abcdef0123",
+        ),
+        (
+            "jdbc:oracle:thin:@db.example.com:1521:ORCL",
+            "jdbc:oracle:thin:@db.example.com:1521:ORCL",
+        ),
+        (
+            "jdbc:oracle:thin:@//db.example.com:1521/ORCL",
+            "jdbc:oracle:thin:@//db.example.com:1521/ORCL",
+        ),
+    ]);
+}
+
+#[test]
+fn multi_line_json_and_yaml_secrets_are_masked() {
+    assert_masks(&[
+        (
+            "password:\n  YamlNext25\nhost: h",
+            "password:\n  ***\nhost: h",
+        ),
+        (
+            "client_secret: |\n  X1\n  X2\nhost: h",
+            "client_secret: ***\nhost: h",
+        ),
+        ("token: >-\n  Folded\nhost: h", "token: ***\nhost: h"),
+        (
+            "{\n  \"password\":\n    \"JsonNl26\"\n}",
+            "{\n  \"password\":\n    ***\n}",
+        ),
+        ("token:\tLeak11", "token:\t***"),
+        ("host:\n  h\nport: 1", "host:\n  h\nport: 1"),
+    ]);
+}
