@@ -443,9 +443,9 @@ fn boundary_mask_leaves_a_credential_free_message_byte_identical() {
         let expected_plan =
             repark_core::engine_err(datafusion::error::DataFusionError::Plan(plain.to_string()))
                 .to_string();
-        let plan =
+        let via_df =
             datafusion_to_py_err(datafusion::error::DataFusionError::Plan(plain.to_string()));
-        assert_eq!(plan.value(py).to_string(), expected_plan);
+        assert_eq!(via_df.value(py).to_string(), expected_plan);
         let expected_config = repark_core::engine_err(
             datafusion::error::DataFusionError::Configuration(zone.to_string()),
         )
