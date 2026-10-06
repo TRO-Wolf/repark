@@ -58,6 +58,25 @@ s.alias("a").join(d.alias("b")).select(F.col("b.v"))
 
 The join stays the same cross join; only the reference changes.
 
+## Qualified self-joins: written files and exports
+
+A self-join whose two sides carry the same column names answers under this
+release, where main could not plan it. The internal twin names
+(`__repark_l_*`, `__repark_r_*`) never escape the engine (fold SM-2,
+2026-10-06):
+
+- Writes of duplicate display names refuse with Spark's exact
+  `[COLUMN_ALREADY_EXISTS] The column `<name>` already exists. Choose another
+  name or rename the existing column. SQLSTATE: 42711`, before any file is
+  created. This covers parquet, json, orc, `saveAsTable` and `writeTo`.
+  The csv refusal is a deliberate divergence (row FA-5 in
+  `docs/spark-sql-iceberg-parity.md` §5): Spark writes the duplicate header,
+  which the engine cannot plan over; `insertInto` keeps writing positionally,
+  as Spark does.
+- Arrow exports (`pa.table(frame)`) and `toArrow` carry the display names
+  (`id, s, v, id, s, v`), exactly as Spark's `arrow_dup` answers. Pandas and
+  UDF inputs are renamed at the batch boundary the same way.
+
 ## Pointers
 
 - The rule and its dated residues: row EX-DF-21 in `docs/spark-sql-iceberg-parity.md`.

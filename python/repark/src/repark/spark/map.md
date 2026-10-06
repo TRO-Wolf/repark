@@ -575,6 +575,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   stays at its exact 1529 baseline (one bind line in, one `__radd__` docstring
   line out, net zero).
   pins: polars-is-duplicated-1/C-001
+  **Fold SM-2 R3 (2026-10-06):** `_arrow_c_stream_with_display` re-exports the
+  Arrow C stream with the display overlay names when the frame holds one, so
+  `pa.table(J)` over a duplicate-display-name join carries the display names
+  like `toArrow` does; frames without an overlay take the passthrough arm.
+  pins: attr-id-1/C-062
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
   unsupported operations fail explicitly.

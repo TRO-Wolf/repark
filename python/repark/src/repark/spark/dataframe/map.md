@@ -1704,3 +1704,5 @@ and is called from `_apply_path_write` (parquet, json, csv), `save` (orc,
 ahead of the format refusal), `write_table` (saveAsTable create/replace),
 `_run_ctas` and V2 `append`. `insertInto` stays positional (Spark writes it);
 saveAsTable-append stays by-name loud. pins: attr-id-1/C-061
+**Fold SM-2 R3 (2026-10-06):** `core.py`'s `__arrow_c_stream__` delegates to
+`qualified_names._arrow_c_stream_with_display`. pins: attr-id-1/C-062

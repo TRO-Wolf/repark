@@ -48,6 +48,26 @@ def _alias_frame_qualifiers(child: Any, name: str) -> dict[str, frozenset[str]]:
     return {held: frozenset({name}) for held in _frame_id_snapshot(child)[1] if held is not None}
 
 
+def _arrow_c_stream_with_display(frame: Any, requested_schema: Any) -> Any:
+    import pyarrow as pa
+
+    overlay = frame._display_overlay_names()
+    if overlay is None:
+        return frame._action_inner().__arrow_c_stream__(requested_schema)
+    displays = list(overlay)
+    reader = pa.RecordBatchReader.from_stream(frame._action_inner())
+    if len(displays) != len(reader.schema):
+        return reader.__arrow_c_stream__(requested_schema)
+    renamed = pa.schema(
+        [
+            pa.field(display, field.type, field.nullable, field.metadata)
+            for display, field in zip(displays, reader.schema, strict=True)
+        ]
+    )
+    batches = (batch.rename_columns(displays) for batch in reader)
+    return pa.RecordBatchReader.from_batches(renamed, batches).__arrow_c_stream__(requested_schema)
+
+
 def _join_frame_qualifiers(child: Any, left: Any, right: Any) -> dict[str, frozenset[str]] | None:
     output_ids = _stamped_frame_id_snapshot(child)[1]
     left_ids = _stamped_frame_id_snapshot(left)[1]

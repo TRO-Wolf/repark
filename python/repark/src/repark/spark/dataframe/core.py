@@ -3063,7 +3063,7 @@ class DataFrame:
         ``pyarrow.table(df)`` and ``polars.from_arrow(df)`` consume it directly.
         """
         self._ensure_alive()
-        return self._action_inner().__arrow_c_stream__(requested_schema)
+        return _qualified_names._arrow_c_stream_with_display(self, requested_schema)
 
     def count(self) -> int:
         """Return the number of rows (PySpark ``DataFrame.count``)."""
