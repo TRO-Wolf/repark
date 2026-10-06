@@ -16,6 +16,8 @@ pub const DEFAULT_BATCH_BYTES: NonZeroUsize = match NonZeroUsize::new(64 << 20) 
     Some(bytes) => bytes,
     None => NonZeroUsize::MIN,
 };
+pub const MAX_FIELD_BYTES: usize = 1 << 30;
+pub const MAX_BATCH_BYTES: usize = (1 << 30) - 1;
 
 const HEADER_BYTES: usize = 19;
 const OID_FLAG: u32 = 1 << 16;
@@ -33,7 +35,11 @@ pub struct BatchLimits {
 impl BatchLimits {
     #[must_use]
     pub fn new(rows: NonZeroUsize, bytes: NonZeroUsize) -> BatchLimits {
-        BatchLimits { rows, bytes }
+        let capped = bytes.get().min(MAX_BATCH_BYTES);
+        BatchLimits {
+            rows,
+            bytes: NonZeroUsize::new(capped).unwrap_or(bytes),
+        }
     }
 
     #[must_use]
@@ -202,8 +208,7 @@ impl CopyBinaryDecoder {
                         }
                         continue;
                     }
-                    let length = usize::try_from(length)
-                        .map_err(|_| protocol(ProtocolViolation::FieldLength { length }))?;
+                    let length = field_length(length)?;
                     self.state = State::FieldValue { column, length };
                 }
                 State::FieldValue { column, length } => {
@@ -326,6 +331,18 @@ impl CopyBinaryDecoder {
             actual: i16::MAX,
         })
     }
+}
+
+fn field_length(length: i32) -> Result<usize> {
+    let length =
+        usize::try_from(length).map_err(|_| protocol(ProtocolViolation::FieldLength { length }))?;
+    if length > MAX_FIELD_BYTES {
+        return Err(protocol(ProtocolViolation::FieldTooLong {
+            length,
+            max: MAX_FIELD_BYTES,
+        }));
+    }
+    Ok(length)
 }
 
 fn read_header(header: &[u8; HEADER_BYTES]) -> Result<usize> {

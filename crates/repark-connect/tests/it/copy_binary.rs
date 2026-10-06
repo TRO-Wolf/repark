@@ -7,7 +7,7 @@ use arrow::datatypes::Int32Type;
 use repark_connect::postgres::{PgTypeKind, PlannedColumn, TypeMod};
 use repark_connect::{
     BatchLimits, COPY_SIGNATURE, ConnectError, CopyBinaryDecoder, DEFAULT_BATCH_BYTES,
-    DEFAULT_BATCH_ROWS, ProtocolViolation, ValueRefusal,
+    DEFAULT_BATCH_ROWS, MAX_BATCH_BYTES, MAX_FIELD_BYTES, ProtocolViolation, ValueRefusal,
 };
 
 type Field = Option<Vec<u8>>;
@@ -437,4 +437,52 @@ fn batches_flush_at_rows_and_at_bytes() {
     let mut rest: &[u8] = &stream(&small);
     assert!(decoder.decode(&mut rest).expect("below the cap").is_some());
     assert_eq!(decoder.buffered_bytes(), 0);
+}
+
+#[test]
+fn copy_field_longer_than_postgres_max_refuses() {
+    let over = i32::try_from(MAX_FIELD_BYTES + 1).expect("one past the maximum fits i32");
+    for length in [i32::MAX, over] {
+        let mut bytes = header_with(0, &[]);
+        bytes.extend(tuple(&[Some(vec![b'a'])]));
+        bytes.extend_from_slice(&1_i16.to_be_bytes());
+        bytes.extend_from_slice(&length.to_be_bytes());
+        let mut decoder = decoder(vec![base("payload", "text")]);
+        let mut rest: &[u8] = &bytes;
+        let error = decoder
+            .decode(&mut rest)
+            .expect_err("a field past the maximum refuses");
+        assert_eq!(
+            error,
+            protocol(ProtocolViolation::FieldTooLong {
+                length: usize::try_from(length).expect("a refused length is positive"),
+                max: MAX_FIELD_BYTES,
+            })
+        );
+    }
+}
+
+#[test]
+fn copy_field_at_postgres_max_is_accepted() {
+    let mut bytes = header_with(0, &[]);
+    bytes.extend_from_slice(&1_i16.to_be_bytes());
+    let length = i32::try_from(MAX_FIELD_BYTES).expect("the maximum fits i32");
+    bytes.extend_from_slice(&length.to_be_bytes());
+    let mut decoder = decoder(vec![base("payload", "text")]);
+    let mut rest: &[u8] = &bytes;
+    assert!(
+        decoder
+            .decode(&mut rest)
+            .expect("a field at the maximum passes the length check")
+            .is_none()
+    );
+    assert!(rest.is_empty());
+}
+
+#[test]
+fn batch_byte_cap_saturates_at_max_batch_bytes() {
+    assert_eq!(BatchLimits::default().bytes(), DEFAULT_BATCH_BYTES);
+    assert_eq!(limits(8192, usize::MAX).bytes().get(), MAX_BATCH_BYTES);
+    assert_eq!(limits(8192, MAX_BATCH_BYTES).bytes().get(), MAX_BATCH_BYTES);
+    assert_eq!(limits(8192, 64).bytes().get(), 64);
 }

@@ -154,6 +154,7 @@ pub enum ProtocolViolation {
     HeaderExtension { length: i32 },
     FieldCount { expected: usize, actual: i16 },
     FieldLength { length: i32 },
+    FieldTooLong { length: usize, max: usize },
     NullInNotNullColumn { column: usize },
     TrailingBytes,
     NumericSign { sign: u16 },
@@ -187,6 +188,12 @@ impl fmt::Display for ProtocolViolation {
                 write!(
                     f,
                     "a field length is negative ({length}) and not the NULL marker"
+                )
+            }
+            ProtocolViolation::FieldTooLong { length, max } => {
+                write!(
+                    f,
+                    "a field declares length {length}, beyond the {max}-byte maximum"
                 )
             }
             ProtocolViolation::NullInNotNullColumn { column } => {

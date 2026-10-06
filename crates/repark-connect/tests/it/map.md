@@ -26,8 +26,13 @@ See [../map.md](../map.md).
   the one-chunk decode), `copy_field_count_must_match_projection` (and the empty projection
   that counts rows), `copy_fields_refuse_bad_lengths_nulls_and_values_naming_the_column`, and
   `batches_flush_at_rows_and_at_bytes` (3 + 3 + 1 at `rows = 3`; a 64 MiB `bytea` flushes alone
-  and leaves the rest of the chunk with the caller).
-  pins: c-2/C-002, C-003, C-004, C-005, C-006
+  and leaves the rest of the chunk with the caller). The C-2a F-1 fold (2026-10-06) adds
+  `copy_field_longer_than_postgres_max_refuses` (`0x7fffffff` and `MAX_FIELD_BYTES + 1`,
+  header-only, refused before the payload), `copy_field_at_postgres_max_is_accepted` (exactly
+  the maximum passes the length word with no payload fed), and
+  `batch_byte_cap_saturates_at_max_batch_bytes` (`usize::MAX` saturates, smaller caps pass
+  through).
+  pins: c-2/C-002, C-003, C-004, C-005, C-006, C-015
 - `postgres_types.rs` — C-1 (2026-10-05): one round-trip pin per mapped row, named in the row
   (`bool_round_trips` … `bytea_round_trips`): Arrow array → wire values → Arrow array, equal,
   over NULLs and boundary values (`MIN` / `MAX`, `-0.0`, the infinities and NaN compared by bit
