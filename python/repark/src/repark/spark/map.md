@@ -309,6 +309,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   plan qualifiers, so a USING kept key shows the written side, never the
   internal join qualifier. Unqualified binds leave it `None`.
   pins: attr-id-1/C-065
+  **Fold SM-2 R6 (2026-10-06):** the qualified USING-key chokes in the bind
+  path: `_bind_resolved_name` and `_quote_filter_sql_identifiers` call into
+  `qualified_names` before resolving, so refused side-key references fail
+  with the explicit unsupported error instead of binding the merged key.
+  pins: attr-id-1/C-066
   `_bind_stable_id_column` rebinds a parent Column by `_attr_id` to the first held
   position through `attribute_column`, but only across plans (a same-frame bind stays
   the written ref, so the engine shapes the refusal) and only onto a unique engine
@@ -496,6 +501,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `_displays_unique` skips the call when no two displays match under either
   case rule, which the native rule cannot refuse; `str.lower` over-matches
   the native ASCII fold, so a unique verdict always agrees with it.
+  **Fold SM-2 R6 (2026-10-06):** `_quote_select_expr_dotted` calls the
+  USING-key text choke after the ambiguity check, so refused side-key
+  references fail explicit instead of binding the merged key.
+  pins: attr-id-1/C-066
 - `subset_resolve.py` — **ATTR-ID-1 S3d (2026-10-01):** the
   `drop`/`dropDuplicates`/`fillna`/`dropna` name-binding home. `_bindings`
   reads the stamped ids, native engines, and facade displays (or `None` for a
@@ -603,6 +612,24 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   (`select("id", "id")`) still run. The case-sensitivity read falls back to
   insensitive when the session is a test double, which has no native handle.
   pins: attr-id-1/C-063
+  **Fold SM-2 R6 (2026-10-06):** the USING-key marker home. `_using_state`
+  runs at the two DataFrame USING sites: it restores the kept key's facade
+  qualifier names (the Rust coalesce projection is opaque to
+  `join_output_sources`, which only sees through passthrough columns) and
+  returns the immutable `(kept ids, keys, refused qualifier names)` mark
+  for `left`/`right`/`full` (each side's qualifier names that must not
+  resolve to the merged key; `inner`/`semi`/`anti` carry none).
+  `_join_frame_qualifiers` unions side marks onto every join child, so
+  later joins still see nested USING keys. The chokes refuse before any
+  bind: `_refuse_using_key_name` (select/getitem/sort strings),
+  `_refuse_using_key_text` (generated backtick-quoted SQL and user SQL with
+  quoted spans skipped), and `_refuse_using_key_tokens` (attribute tokens
+  whose birth frame is neither join side, i.e. pre-join side keys reused
+  after the merge, where Spark answers left values). Stale marks (key
+  projected away, shadowed aliases, alias-descendant births) refuse loud;
+  the unqualified key always binds the merged value. No new registry: one
+  per-frame attribute, propagated by `_spawn`.
+  pins: attr-id-1/C-066
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
   unsupported operations fail explicitly.

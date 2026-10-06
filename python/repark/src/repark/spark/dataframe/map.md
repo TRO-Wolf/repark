@@ -857,6 +857,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   post-join funnel: it returns early unless the frame node renews, else makes
   the one native `refuse_self_join_refs` call over the Columns'
   `join_sql_part()` tokens. Pins: `python/repark/tests/test_attr_id_1_sj4.py`.
+  **Fold SM-2 R6 (2026-10-06):** the funnel also runs the USING-key column
+  choke first when the frame carries a mark, covering filter/sort/select
+  `Column` args (filter has no other qualified rebind). pins: attr-id-1/C-066
 - `repartition_ops.py` — **ATTR-ID-1 SJ-4 (2026-10-02):** the single-node
   repartition no-op trio (`repartition`/`repartitionByRange`/`repartitionById`),
   split out of `core.py` at the size ceiling (pure move with the SJ-4 funnel
@@ -1729,3 +1732,11 @@ unsupported error for duplicate-free frames. The refusal stays out of
 frames through it. Line-neutral at the exact 3464 baseline (the
 `create_temp_view` alive check is subsumed by the refusal's `columns` read;
 the `mapInPandas` docstring is one line). pins: attr-id-1/C-064
+**Fold SM-2 R6 (2026-10-06):** `core.py` carries the `_using_keys` slot
+(default `None`, shared by `_spawn` since the mark is immutable): the two
+DataFrame USING sites set it from `qualified_names._using_state`, and the
+condition-join site scans each condition with
+`_refuse_using_keys_in_cond` before preparing it. Line-neutral at the exact
+3464 baseline (the `join` docstring tightens five lines and the condition
+docstring one; the dropped "`drop` is a no-op" half-sentence named no frame).
+pins: attr-id-1/C-066

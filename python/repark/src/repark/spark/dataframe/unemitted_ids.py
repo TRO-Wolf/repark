@@ -87,6 +87,10 @@ def _refuse_unemitted_ids(frame: DataFrame, column: Column) -> Column:
 
 def _refuse_self_join_refs(frame: DataFrame, columns: list[Column]) -> None:
     """Refuse Columns holding ambiguous self-join references on this frame."""
+    if getattr(frame, "_using_keys", None) is not None:
+        from repark.spark import qualified_names as _qualified_names
+
+        _qualified_names._refuse_using_key_columns(frame, columns)
     if not _frame_nodes._frame_renews(frame):
         return
     _native.refuse_self_join_refs(

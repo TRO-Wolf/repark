@@ -221,6 +221,7 @@ class DataFrame:
         "_storage_level",
         "_tighten_derived",
         "_unemitted_attr_ids",
+        "_using_keys",
     )
 
     def __init__(
@@ -261,6 +262,7 @@ class DataFrame:
         self._frame_qualifiers: dict[str, frozenset[str]] | None = None
         self._join_qualifiers: list[str] | None = None
         self._unemitted_attr_ids: dict[str, str] = {}
+        self._using_keys: Any = None
         self._collapse_base: DataFrame | None = None
         self._layer_window_key: tuple[Any, ...] | None = None
         self._layer_map: dict[str, Any] | None = None
@@ -286,6 +288,7 @@ class DataFrame:
         if self._frame_qualifiers is not None:
             child._frame_qualifiers = dict(self._frame_qualifiers)
         child._unemitted_attr_ids = dict(self._unemitted_attr_ids)
+        child._using_keys = self._using_keys
         child._tighten_derived = self._tighten_derived or any(
             other._tighten_derived for other in others
         )
@@ -2164,23 +2167,17 @@ class DataFrame:
     ) -> DataFrame:
         """Join with ``other`` (PySpark ``DataFrame.join``).
 
-        ``on`` is a shared column name, a list of names (equi-join, single merged key column), a
-        boolean :class:`Column` condition (all columns kept), or ``None`` for a Cartesian product
-        (subject to ``spark.sql.crossJoin.enabled`` via :attr:`session.conf`). ``how`` defaults
-        to ``"inner"``. Supported join types: ``inner``, ``left`` / ``left_outer`` / ``leftouter``,
-        ``right`` / ``right_outer`` / ``rightouter``, ``full`` / ``outer`` / ``fullouter`` /
-        ``full_outer``, ``cross``, ``semi`` / ``leftsemi`` / ``left_semi``, ``anti`` /
-        ``leftanti`` / ``left_anti``. Partition-transform Columns (``F.years`` / …) in a Column
-        condition raise — valid only inside :meth:`DataFrameWriterV2.partitionedBy`.
-
-        Semi and anti joins filter the left side and emit no right-hand columns. NULL keys do not
-        match. A semi or anti join with ``on=None`` is refused instead of becoming Cartesian.
-        Right-parent Columns then raise ``MISSING_ATTRIBUTES``; ``drop`` is a no-op.
-
+        ``on`` is a shared name, a list of names (equi-join, one merged key), a boolean
+        :class:`Column` (all columns kept), or ``None`` for Cartesian (needs
+        ``spark.sql.crossJoin.enabled``). ``how`` defaults to ``"inner"``; supported:
+        ``inner``, ``left``/``left_outer``/``leftouter``, ``right``/``right_outer``/``rightouter``,
+        ``full``/``outer``/``fullouter``/``full_outer``, ``cross``, ``semi``/``leftsemi``/
+        ``left_semi``, ``anti``/``leftanti``/``left_anti``. Partition transforms in a Column
+        condition raise (valid only in :meth:`DataFrameWriterV2.partitionedBy`).
+        Semi/anti joins filter the left side and emit no right columns; NULL keys do not match.
+        A conditionless semi/anti is refused; right-parent Columns raise ``MISSING_ATTRIBUTES``.
         Condition joins rewrite id-qualified references to relation-qualified SQL, so self-joins
-        and duplicate non-key names resolve. Output
-        may carry Spark-legal duplicate *display* names with unique engine fields + attribute ids
-        for post-join ``select(df1["x"])`` / ``drop(df1["x"])`` / ``AMBIGUOUS_REFERENCE``.
+        resolve; duplicate displays over unique engine fields keep post-join refs unambiguous.
         """
         join_how = "inner" if how is None else str(how).lower().replace("_", "")
         how_aliases = {
@@ -2236,6 +2233,7 @@ class DataFrame:
             child = left._spawn(planned, other, node=node)
             replace_expr._assign_join_qualifiers(child, len(left.columns), side_names)
             child._frame_qualifiers = _qualified_names._join_frame_qualifiers(child, left, right)
+            child._using_keys = _qualified_names._using_state(child, left, right, [on], engine_how)
             child._remember_unemitted_right_ids(
                 self, other, left_only=engine_how in _SEMI_JOIN_HOWS
             )
@@ -2255,6 +2253,7 @@ class DataFrame:
             child = left._spawn(planned, other, node=node)
             replace_expr._assign_join_qualifiers(child, len(left.columns), side_names)
             child._frame_qualifiers = _qualified_names._join_frame_qualifiers(child, left, right)
+            child._using_keys = _qualified_names._using_state(child, left, right, keys, engine_how)
             child._remember_unemitted_right_ids(
                 self, other, left_only=engine_how in _SEMI_JOIN_HOWS
             )
@@ -2272,8 +2271,8 @@ class DataFrame:
     ) -> DataFrame:
         """Rewrite a condition join with id-qualified references.
 
-        Semi and anti joins project only the left side because they emit no right-hand columns.
-        A ``None`` condition skips the preparer and still records the lineage remint.
+        Semi/anti joins project only the left side; a ``None`` condition skips the preparer
+        and still records the lineage remint.
         """
         left_alias = scratch_view_name(self._session, "_repark_jl_")
         right_alias = scratch_view_name(self._session, "_repark_jr_")
@@ -2294,6 +2293,7 @@ class DataFrame:
                 remint = _native.join_shared_remint(self._frame_node, other._frame_node)
             else:
                 cond_sql = condition.join_sql_part()
+                _qualified_names._refuse_using_keys_in_cond(self, other, condition)
                 on_sql, remint = _native.prepare_join_condition(
                     *_join_condition_args(self, other, cond_sql, left_alias, right_alias)
                 )

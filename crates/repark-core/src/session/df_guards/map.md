@@ -527,6 +527,13 @@ wrapped optimizer rule) and declares this directory.
   `SELF_JOIN_CONDITION`, `SelfJoinRules`, `check_refs`, `missing_condition`,
   `missing_message`, `parse_attr_refs`, `prepare_join_condition`, `quoted_names` and
   `self_join_message`.
+  **Fold SM-2 R6 (2026-10-06):** `join_on_named_keys` keeps
+  `coalesce(left key, right key)` for `Full`/`Right` (Spark's merged key;
+  side columns rebuilt qualified from the joined schema because
+  `bind_name` returns bare columns), stamped with the kept attribute id
+  through `attr_id::with_id` (widened to `pub(super)`); `Inner`/`Left` and
+  the semi/anti early return are untouched, and the SQL door never calls
+  this function. pins: attr-id-1/C-066
 - `sort_names.rs` — **ATTR-ID-1 S3b (2026-10-01):** the filter/sort free-name
   binder over the S1 `resolve`. `sort_shape` descends Filter/Sort/Limit/
   Repartition/Distinct/SubqueryAlias and transparent Projections (a passthrough,

@@ -9591,3 +9591,12 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   4.1.2; guards pin bare projections/compounds and unchanged `F.col`
   reprs. No module docstring: the lane's no-comments ruling covers the
   new file; the contract lives here. pins: attr-id-1/C-065
+- [test_attr_id_1_sm2_r6.py](test_attr_id_1_sm2_r6.py) — **Fold SM-2 R6
+  (2026-10-06):** DataFrame `USING` joins merge the kept key per Spark
+  4.1.2 (coalesced star/key on `right`/`full`, per-side values where they
+  coincide, `semi`/`anti` `42703` on the missing side, mixed-type values);
+  refused side-key references fail explicit on every choke (select,
+  getitem, compound, sort, filter, selectExpr, join condition) plus stale
+  pre-join side keys, with literal/unqualified/no-alias guards. No module
+  docstring: the lane's no-comments ruling covers the new file; the
+  contract lives here. pins: attr-id-1/C-066

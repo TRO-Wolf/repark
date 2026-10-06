@@ -542,6 +542,12 @@ def _quote_select_expr_dotted(frame: Any, expr: str) -> str:
     exact = bool(_native.session_case_sensitive(frame._session))
     qualifiers, payload = _known_qualifiers(frame, native, exact)
     _refuse_ambiguous_free_names(frame, sql=expr, select_item=True)
+    from repark.spark import qualified_names as _qualified_names
+
+    held_here = list(_native.attribute_ids(native))
+    _qualified_names._refuse_using_key_text(
+        _qualified_names._using_mark(frame), held_here, expr, exact, False
+    )
     single = _DOTTED_TOKEN_PATTERN.fullmatch(expr.strip())
     if single is not None:
         aliased = _single_token_select_alias(

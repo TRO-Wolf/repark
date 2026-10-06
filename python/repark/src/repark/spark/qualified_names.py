@@ -1,17 +1,21 @@
 from __future__ import annotations
 
+import re
 import weakref
 from types import MethodType
 from typing import Any, NoReturn
 
 from repark import _native
-from repark.errors import AnalysisException
+from repark.errors import AnalysisException, UnsupportedOperationException
 from repark.spark._integral import (
     _attached_error_class,
     _attached_message_parameters,
     _attached_sql_state,
 )
-from repark.spark.filter_quote import _frame_qualifiers_for_bind
+from repark.spark.filter_quote import (
+    _DOTTED_TOKEN_PATTERN,
+    _frame_qualifiers_for_bind,
+)
 
 _ID_SNAPSHOTS: weakref.WeakKeyDictionary[Any, tuple[Any, list[str | None], list[str]]] = (
     weakref.WeakKeyDictionary()
@@ -129,6 +133,7 @@ def _join_frame_qualifiers(child: Any, left: Any, right: Any) -> dict[str, froze
     right_ids = _stamped_frame_id_snapshot(right)[1]
     sources = _native.join_output_sources(child._plan())
     if not any(sources):
+        child._using_keys = _merge_using_marks(_using_mark(left), _using_mark(right))
         return None
     left_map = left._frame_qualifiers or {}
     right_map = right._frame_qualifiers or {}
@@ -148,6 +153,7 @@ def _join_frame_qualifiers(child: Any, left: Any, right: Any) -> dict[str, froze
                 names = names | side[side_position]
         if names:
             output[output_id] = output.get(output_id, frozenset()) | names
+    child._using_keys = _merge_using_marks(_using_mark(left), _using_mark(right))
     return output or None
 
 
@@ -187,6 +193,7 @@ def _rebind_qualified_refs(frame: Any, column: Any, for_sort: bool) -> Any:
     native = _stamped_frame_id_snapshot(frame)[0]
     exact = bool(_native.session_case_sensitive(frame._session))
     displays = list(frame.columns)
+    _refuse_using_key_columns(frame, [column])
     rebound = _native.bind_qualified_free_refs(
         native, column._inner, displays, exact, for_sort, _frame_qualifiers_for_bind(frame)
     )
@@ -258,6 +265,7 @@ def _resolve_sort_qualified_name(
         return frame._bind_schema_column(written)
     exact = _native.session_case_sensitive(frame._session)
     qualifier = ".".join(qualifier_parts)
+    _refuse_using_key_name(frame, held, qualifier_parts, name)
     status, hits, plan_quals = _native.resolve_display_name(
         native, name, qualifier, displays, exact, _frame_qualifiers_for_bind(frame)
     )
@@ -301,3 +309,201 @@ def _sort_qualified_bound_column(
     )
     bound._sql_expr = quoted
     return bound
+
+
+def _session_exact(frame: Any) -> bool:
+    try:
+        return bool(_native.session_case_sensitive(frame._session))
+    except (TypeError, AttributeError):
+        return False
+
+
+def _raise_using_key_reference(ref: str) -> NoReturn:
+    raise UnsupportedOperationException(
+        f"qualified reference {ref} to a USING join key is not supported in repark v1 "
+        "(Spark resolves per-side keys; the unqualified key reads the merged value)"
+    )
+
+
+def _using_mark(frame: Any) -> Any:
+    return getattr(frame, "_using_keys", None)
+
+
+def _merge_using_marks(first: Any, second: Any) -> Any:
+    if first is None:
+        return second
+    if second is None:
+        return first
+    kept = first[0] | second[0]
+    keys = tuple(dict.fromkeys([*first[1], *second[1]]))
+    return (kept, keys, first[2] | second[2])
+
+
+def _using_state(child: Any, left: Any, right: Any, keys: list[str], engine_how: str) -> Any:
+    merged = _merge_using_marks(_using_mark(left), _using_mark(right))
+    if engine_how not in ("left", "right", "full"):
+        return merged
+    exact = _session_exact(child)
+    held = _stamped_frame_id_snapshot(child)[1]
+    left_held, left_engines = _stamped_frame_id_snapshot(left)[1:]
+    right_held, right_engines = _stamped_frame_id_snapshot(right)[1:]
+    left_map = left._frame_qualifiers or {}
+    right_map = right._frame_qualifiers or {}
+    quals = dict(child._frame_qualifiers) if child._frame_qualifiers else {}
+    kept: list[str] = []
+    for key in keys:
+        folded = key if exact else key.lower()
+        left_pos = next(
+            (
+                index
+                for index, name in enumerate(left_engines)
+                if (name if exact else name.lower()) == folded
+            ),
+            None,
+        )
+        right_pos = next(
+            (
+                index
+                for index, name in enumerate(right_engines)
+                if (name if exact else name.lower()) == folded
+            ),
+            None,
+        )
+        if left_pos is None or left_pos >= len(held) or left_pos >= len(left_held):
+            continue
+        kept_id = held[left_pos]
+        if kept_id is None:
+            continue
+        kept.append(kept_id)
+        if engine_how == "left":
+            continue
+        names = left_map.get(left_held[left_pos]) or frozenset()
+        if right_pos is not None and right_pos < len(right_held):
+            names = names | (right_map.get(right_held[right_pos]) or frozenset())
+        if names:
+            quals[kept_id] = quals.get(kept_id, frozenset()) | names
+    if quals != (child._frame_qualifiers or {}):
+        child._frame_qualifiers = quals or None
+    left_names = frozenset(name for values in left_map.values() for name in values)
+    right_names = frozenset(name for values in right_map.values() for name in values)
+    if engine_how == "left":
+        refused = right_names
+    elif engine_how == "right":
+        refused = left_names
+    else:
+        refused = left_names | right_names
+    if not refused or not kept:
+        return merged
+    return _merge_using_marks(merged, (frozenset(kept), tuple(keys), refused))
+
+
+def _using_mark_live(mark: Any, held: list[str | None]) -> bool:
+    return bool(mark and mark[0] and mark[2]) and any(kept_id in held for kept_id in mark[0])
+
+
+def _using_pair_hit(mark: Any, qualifier: str, name: str, exact: bool) -> bool:
+    folded_qual = qualifier if exact else qualifier.lower()
+    folded_name = name if exact else name.lower()
+    keys_hit = any((key if exact else key.lower()) == folded_name for key in mark[1])
+    if not keys_hit:
+        return False
+    return any((cand if exact else cand.lower()) == folded_qual for cand in mark[2])
+
+
+def _refuse_using_key_name(
+    frame: Any, held: list[str | None], qualifier_parts: list[str] | None, name: str
+) -> None:
+    from repark.spark._idents import quote_ident as _quote_ident
+
+    mark = _using_mark(frame)
+    if mark is None or not qualifier_parts or len(qualifier_parts) != 1:
+        return
+    if not _using_mark_live(mark, held):
+        return
+    if not _using_pair_hit(mark, qualifier_parts[0], name, _session_exact(frame)):
+        return
+    _raise_using_key_reference(f"{_quote_ident(qualifier_parts[0])}.{_quote_ident(name)}")
+
+
+_QUOTED_RUN_RE = re.compile(r'"(?:[^"]|"")+"(?:\."(?:[^"]|"")+")+')
+_SINGLE_QUOTED_RE = re.compile(r"('(?:[^']|'')*')")
+_DOUBLE_QUOTED_RE = re.compile(r'("(?:[^"]|"")*")')
+
+
+def _refuse_using_key_text(
+    mark: Any, held: list[str | None], sql: str, exact: bool, generated: bool
+) -> None:
+    from repark.spark._idents import quote_ident as _quote_ident
+
+    if mark is None or not _using_mark_live(mark, held):
+        return
+    if generated:
+        for match in _QUOTED_RUN_RE.finditer(sql.replace("`", '"')):
+            parts = [part.replace('""', '"') for part in match.group(0).split('"."')]
+            parts[0] = parts[0][1:]
+            parts[-1] = parts[-1][:-1]
+            if len(parts) == 2 and _using_pair_hit(mark, parts[0], parts[1], exact):
+                _raise_using_key_reference(f"{_quote_ident(parts[0])}.{_quote_ident(parts[1])}")
+        return
+    for piece in _SINGLE_QUOTED_RE.split(sql):
+        if piece.startswith("'"):
+            continue
+        for subpiece in _DOUBLE_QUOTED_RE.split(piece):
+            if subpiece.startswith('"'):
+                continue
+            for match in _DOTTED_TOKEN_PATTERN.finditer(subpiece.replace("`", "")):
+                parts = match.group(1).split(".")
+                if len(parts) == 2 and _using_pair_hit(mark, parts[0], parts[1], exact):
+                    _raise_using_key_reference(f"{_quote_ident(parts[0])}.{_quote_ident(parts[1])}")
+
+
+def _refuse_using_key_tokens(frames: tuple[Any, ...], sql: str) -> None:
+    from repark.spark._idents import quote_ident as _quote_ident
+    from repark.spark.dataframe.join_attr_tokens import (
+        _ATTR_TOKEN_RE,
+        _token_leaf_display,
+    )
+
+    if "__REPARK_ATTR_" not in sql:
+        return
+    kept: set[str] = set()
+    for frame in frames:
+        mark = _using_mark(frame)
+        if mark is not None:
+            kept |= mark[0]
+    if not kept:
+        return
+    registry = frames[0]._alive_token.get("frame_registry", {})
+    for match in _ATTR_TOKEN_RE.finditer(sql):
+        if match.group(1) not in kept:
+            continue
+        birth = registry.get(int(match.group(2)))
+        if birth is None or not birth._alive_token.get("alive", False):
+            continue
+        if any(birth is frame for frame in frames):
+            continue
+        leaf = _token_leaf_display(match) or match.group(1)
+        _raise_using_key_reference(_quote_ident(leaf))
+
+
+def _refuse_using_key_columns(frame: Any, columns: list[Any]) -> None:
+    mark = _using_mark(frame)
+    if mark is None:
+        return
+    held = _stamped_frame_id_snapshot(frame)[1]
+    exact = _session_exact(frame)
+    for column in columns:
+        sql = column.join_sql_part()
+        _refuse_using_key_text(mark, held, sql, exact, True)
+        _refuse_using_key_tokens((frame,), sql)
+
+
+def _refuse_using_keys_in_cond(self: Any, other: Any, condition: Any) -> None:
+    sql = condition.join_sql_part()
+    for frame in (self, other):
+        mark = _using_mark(frame)
+        if mark is None:
+            continue
+        held = _stamped_frame_id_snapshot(frame)[1]
+        _refuse_using_key_text(mark, held, sql, _session_exact(frame), True)
+    _refuse_using_key_tokens((self, other), sql)

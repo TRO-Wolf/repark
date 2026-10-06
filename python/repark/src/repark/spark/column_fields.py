@@ -37,9 +37,12 @@ from repark.spark.filter_quote import (
 from repark.spark.qualified_names import (
     _frame_id_snapshot,
     _rebind_qualified_refs,
+    _refuse_using_key_name,
+    _refuse_using_key_text,
     _resolve_sort_qualified_name,
     _rewrap_rebound_column,
     _stamped_frame_id_snapshot,
+    _using_mark,
 )
 
 
@@ -518,6 +521,7 @@ def _bind_resolved_name(frame: Any, written: str) -> Any:
                 twin_born._sql_expr = twin_quoted
                 return twin_born
     else:
+        _refuse_using_key_name(frame, held, qualifier_parts, name)
         if not _native.frame_is_relation(native):
             return frame._bind_schema_column(written)
         exact = _native.session_case_sensitive(frame._session)
@@ -921,6 +925,7 @@ def _quote_filter_sql_identifiers(frame: Any, sql: str) -> str:
     if None in held:
         native, held, engine_names = _stamped_frame_id_snapshot(frame)
     exact = bool(_native.session_case_sensitive(frame._session))
+    _refuse_using_key_text(_using_mark(frame), held, sql, exact, False)
     qualifiers, frame_bind_quals = _known_qualifiers(frame, native, exact)
     fold_map: dict[str, list[int]] = {}
     for position, display in enumerate(displays):

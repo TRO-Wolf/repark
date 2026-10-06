@@ -86,6 +86,14 @@ release, where main could not plan it. The internal twin names
   engine names. This is a deliberate divergence (row FA-6 in
   `docs/spark-sql-iceberg-parity.md` §5): Spark registers the view, which
   the engine cannot plan over yet.
+- DataFrame `USING` joins merge the key the way Spark does: `select("*")`
+  and the unqualified key over `right` and `full` joins show the coalesced
+  value (`4`, not `NULL`, on right-outer rows). Per-side qualified key
+  references that the merged plan cannot answer (`r.id` on `left`, `l.id`
+  on `right`, both on `full`, and pre-join side-key columns reused after
+  the join) refuse loudly instead of answering with merged values; the
+  sides that coincide with the merged key keep answering, and `semi`/`anti`
+  still refuse the missing side as Spark does (`42703`).
 
 ## Pointers
 
