@@ -389,7 +389,26 @@ impl ColumnAppender {
         })
     }
 
+    pub(crate) fn arrow_width(&self) -> Option<usize> {
+        match self {
+            Self::Boolean(_) => Some(1),
+            Self::Int16(_) => Some(2),
+            Self::Int32(_) | Self::Float32(_) | Self::Date(_) => Some(4),
+            Self::Int64(_) | Self::Float64(_) | Self::Timestamp(_) | Self::Timestamptz(_) => {
+                Some(8)
+            }
+            Self::Numeric(_, _) => Some(16),
+            Self::Utf8(_)
+            | Self::Binary(_)
+            | Self::Uuid(_)
+            | Self::Json(_)
+            | Self::Jsonb(_)
+            | Self::ServerText(_) => None,
+        }
+    }
+
     pub(crate) fn append(&mut self, bytes: &[u8]) -> std::result::Result<usize, CodecError> {
+        let width = self.arrow_width();
         match self {
             Self::Boolean(builder) => {
                 let [byte] = fixed::<1>(bytes)?;
@@ -416,13 +435,18 @@ impl ColumnAppender {
                 builder.append_value(text_like::uuid(bytes, &mut rendered)?);
                 return Ok(text_like::UUID_TEXT_BYTES + OFFSET_BYTES);
             }
-            Self::Jsonb(builder) => builder.append_value(text_like::jsonb(bytes)?),
+            Self::Jsonb(builder) => {
+                let body = text_like::jsonb(bytes)?;
+                builder.append_value(body);
+                return Ok(body.len() + OFFSET_BYTES);
+            }
         }
-        Ok(bytes.len().max(1) + OFFSET_BYTES)
+        Ok(width.unwrap_or(bytes.len() + OFFSET_BYTES))
     }
 
-    pub(crate) fn append_null(&mut self) {
+    pub(crate) fn append_null(&mut self) -> usize {
         each_builder!(self, builder => builder.append_null());
+        self.arrow_width().unwrap_or(OFFSET_BYTES)
     }
 
     pub(crate) fn finish(&mut self) -> ArrayRef {

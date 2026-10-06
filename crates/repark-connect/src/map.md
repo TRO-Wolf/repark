@@ -57,8 +57,13 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   ceiling. The C-2a F-4 fold (2026-10-06) bounds the carry: when a straddling field completes,
   a carry whose capacity exceeds the batch byte cap is dropped for a fresh `Vec`, while a
   smaller one stays cleared for reuse; `buffered_bytes()` reports builder bytes plus the carry
-  capacity, so the C-2c reservation seam sees the retained allocation.
-  pins: c-2/C-002, C-003, C-004, C-005, C-006, C-015, C-016
+  capacity, so the C-2c reservation seam sees the retained allocation. The C-2a F-5 fold
+  (2026-10-06) charges what the builders hold: `ColumnAppender::arrow_width` is the one width
+  table (bool 1, int2 2, int4/float4/date 4, int8/float8/timestamps 8, numeric 16), charged for
+  values and NULLs; variable values charge stored bytes plus 4 offset bytes (`jsonb` the
+  stripped body, `uuid` the 36 rendered bytes) and NULLs the 4 offset bytes; validity charges
+  ceil(buffered rows x columns / 8), counted in the flush test and `buffered_bytes()`.
+  pins: c-2/C-002, C-003, C-004, C-005, C-006, C-015, C-016, C-017
 - `settings.rs` — C-1 (2026-10-05). `ConnectionSettings::from_props` reads one source's props
   (the core loader's `SourceSpec.props`). It interprets only `auth_method` (R-5, CC-3) and
   carries every other prop through untouched; the interpreted `auth_method` key leaves the

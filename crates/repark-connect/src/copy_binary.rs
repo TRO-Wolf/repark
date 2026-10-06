@@ -117,7 +117,9 @@ impl CopyBinaryDecoder {
 
     #[must_use]
     pub fn buffered_bytes(&self) -> usize {
-        self.bytes.saturating_add(self.carry.capacity())
+        self.bytes
+            .saturating_add(self.validity_bytes())
+            .saturating_add(self.carry.capacity())
     }
 
     #[must_use]
@@ -290,7 +292,7 @@ impl CopyBinaryDecoder {
         if !planned.nullable() {
             return Err(protocol(ProtocolViolation::NullInNotNullColumn { column }));
         }
-        appender.append_null();
+        self.bytes += appender.append_null();
         Ok(())
     }
 
@@ -306,10 +308,15 @@ impl CopyBinaryDecoder {
         self.state = State::TupleStart;
         self.rows += 1;
         self.tuples += 1;
-        if self.rows >= self.limits.rows.get() || self.bytes >= self.limits.bytes.get() {
+        let charged = self.bytes.saturating_add(self.validity_bytes());
+        if self.rows >= self.limits.rows.get() || charged >= self.limits.bytes.get() {
             return self.flush().map(Some);
         }
         Ok(None)
+    }
+
+    fn validity_bytes(&self) -> usize {
+        self.rows.saturating_mul(self.columns.len()).div_ceil(8)
     }
 
     fn flush(&mut self) -> Result<RecordBatch> {

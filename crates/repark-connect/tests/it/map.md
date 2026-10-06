@@ -34,7 +34,9 @@ See [../map.md](../map.md).
   through). The C-2a F-4 fold (2026-10-06) adds
   `carry_releases_capacity_past_the_byte_cap` (one 64 MiB `text` field in 64 KiB chunks under
   a 1 MiB cap, then a small row; `buffered_bytes()` stays under the cap after the flush).
-  pins: c-2/C-002, C-003, C-004, C-005, C-006, C-015, C-016
+  The C-2a F-5 fold (2026-10-06) adds `null_rows_charge_their_builder_bytes` (one million
+  all-NULL `numeric,timestamp,text` rows under a 1 MiB cap flush more than once).
+  pins: c-2/C-002, C-003, C-004, C-005, C-006, C-015, C-016, C-017
 - `postgres_types.rs` — C-1 (2026-10-05): one round-trip pin per mapped row, named in the row
   (`bool_round_trips` … `bytea_round_trips`): Arrow array → wire values → Arrow array, equal,
   over NULLs and boundary values (`MIN` / `MAX`, `-0.0`, the infinities and NaN compared by bit

@@ -507,3 +507,33 @@ fn carry_releases_capacity_past_the_byte_cap() {
         decoder.buffered_bytes()
     );
 }
+
+#[test]
+fn null_rows_charge_their_builder_bytes() {
+    let rows = 1_000_000;
+    let one = tuple(&[None, None, None]);
+    let mut bytes = header_with(0, &[]);
+    for _ in 0..rows {
+        bytes.extend_from_slice(&one);
+    }
+    bytes.extend_from_slice(&(-1_i16).to_be_bytes());
+    let columns = vec![
+        base("n", "numeric"),
+        base("t", "timestamp"),
+        base("s", "text"),
+    ];
+    let mut decoder =
+        CopyBinaryDecoder::new(columns, limits(usize::MAX, 1 << 20)).expect("a decoder");
+    let mut rest: &[u8] = &bytes;
+    let mut batches = 0;
+    while !rest.is_empty() {
+        if decoder.decode(&mut rest).expect("decode").is_some() {
+            batches += 1;
+        }
+    }
+    decoder.finish().expect("complete");
+    assert!(
+        batches >= 2,
+        "one million all-NULL rows flush more than once, got {batches}"
+    );
+}
