@@ -5284,6 +5284,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   measured `SET` rule; `test_knob_refusals_never_carry_the_password` pins the time zone,
   `SET spark.sql.shuffle.partitions` and display-style refusals; the `SET`-listing pin uses a
   `*_conn` key, since a `*_url` key is now whole-value redacted. pins: source-url-redact-1/C-017, C-019
+  **SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** `test_get_database_returns_the_stored_location_and_comment` pins the raw
+  `getDatabase` path while `DESCRIBE NAMESPACE` stays masked. pins: source-url-redact-1/C-040
 - `test_t3_ux_polish.py` — **r21 T3** (2026-08-03): display_style conf.set→show + property/conf
   lockstep + module `repark.display_style` refuse-loud; **F-T3-001** conf.unset resets
   live style + conf.get to default `spark` (show spark-like; no split-brain); default

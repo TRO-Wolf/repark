@@ -89,6 +89,11 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   `authorization` and a final `pat`; `column_name_is_secret_shaped` keeps the previous rule for
   the secret-column read flag. Tests moved to [redaction/](redaction/map.md).
   pins: source-url-redact-1/C-021, C-022, C-024, C-025, C-026, C-027, C-034
+  **SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** the legs record masked spans on the original value (URL userinfo, then Oracle
+  and bare logins, then key=value, then JSON/YAML) and a later leg skips what an earlier one
+  masked, so key=value never fires inside a userinfo; a storage scheme whose userinfo has no
+  `:` is shown as is; Oracle TNS descriptors, fail-closed logins and multi-line JSON/YAML are
+  masked. pins: source-url-redact-1/C-041, C-043, C-044, C-045, C-046
 - `names.rs` — **WO CASESENS-1 slice 2 (2026-09-27):** the one
   name-matching rule every binder calls. `NameRule { Exact, IgnoreCase }`
   (`from_case_sensitive`, `matches`, `lookup` → `NameHit::{One, Many,

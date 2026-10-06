@@ -106,6 +106,8 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   from `show_tblproperties_batch`.
   pins: [`../tests/show_tblproperties.rs`](../tests/show_tblproperties.rs)
   pins: tblprops-1/C-001, C-002, C-003, C-004, C-005, C-006, C-011
+  **SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** table rows and `execute.rs`'s view rows (SHOW TBLPROPERTIES, SHOW CREATE view)
+  apply `displayed_property_value`, the key rule as well as the value rule. pins: source-url-redact-1/C-042
 - `temp_parse.rs` — **IPI-40 PR6** grammar for `CREATE [OR REPLACE] [GLOBAL]
   TEMP|TEMPORARY VIEW`: `try_parse_create_temp_view` (verbatim body, column
   aliases with COMMENT, view COMMENT accepted) and the Spark-measured parse

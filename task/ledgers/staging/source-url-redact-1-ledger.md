@@ -62,6 +62,18 @@ audit only).
 | C-037 | Fold 2 corpus: a fixed-seed LCG test in `repark-common` with 6,000 shaped inputs over 12 classes (`url-userinfo`, `query-param`, `libpq-dsn`, `odbc-braced`, `lone-token`, `jdbc-sqlserver`, `multi-url`, `oracle-ezconnect`, `json`, `yaml`, `query-at-port`, `whitespace-userinfo`; every other input from the hard set `@ : / ? # & ; = space \n \t " ' { } \`), each with a marker password, plus 3,000 garbage inputs: no marker survives (the verifier's leak test: the whole marker or any hard-split piece of 6+ bytes), `catch_unwind` sees no panic, every host is kept. Two classes leave a character out, documented: a lone token never carries `:` (a `token:x@host` is a user and a password by RFC 3986, and the user is kept), and an Oracle password never carries `"` (Oracle cannot quote one). | `redaction::corpus::the_shaped_corpus_never_leaks_its_marker_and_keeps_its_host`, `::garbage_inputs_never_panic`. | PROVEN | §2: 0.15 s in debug; §3: 15 of the 31 mutants also red the corpus. |
 | C-038 | The verifier's own harness (`verify/probe`, 20,000 shaped + 20,000 garbage, its seed), rerun against the fold-2 redactor from a copy under `target/`: 0 panics; 820 survivals before, 67 after, and every one of the 67 is the lone-token-with-colon case, where the shown part is the RFC user and the password half is masked (0 of them leak the marker's `KQV` tail). | The probe output in §3. | PROVEN | §3. |
 | C-039 | Fold 2 gates: the brief's list plus `cargo test -p repark-common --lib` with the corpus, `-p repark-core`, `-p repark-spark`, `-p repark-distributed --features cluster`, the touched facade and parity files, the mutation rerun, and the comment ban at 0. | §2. | PROVEN | §2. |
+| C-040 | Fold 3 R-1 (re-verify S1, `reverify/live/repark_getdatabase.py`): `spark.catalog.getDatabase(…).locationUri` and `.description` return the stored namespace values: the facade calls a native `namespace_metadata` (repark-spark `describe_show`, the same `namespace_exists` check and `SCHEMA_NOT_FOUND` text) instead of parsing the display-masked `DESCRIBE NAMESPACE`. Every site that parses display output for a functional value is listed in §7 and reads raw or only non-secret fields. | `test_source_url_redaction_1.py::test_get_database_returns_the_stored_location_and_comment`; the catalog suites. | PROVEN | §2 fold 3; live: `locationUri` `s3://lake/teams/data@corp.example.com/ns`, `description` raw. |
+| C-041 | Fold 3 R-2 (re-verify S2, `live/repark_overmask.py`): a storage scheme (`s3`, `s3a`, `s3n`, `gs`, `gcs`, `abfs`, `abfss`, `wasb`, `wasbs`, `hdfs`, `file`, `viewfs`, `oss`, `cos`, `r2`) whose userinfo carries no `:` is shown as is, on the authority and the fail-closed legs alike; a legacy `s3a://AKIA…:secret@bucket` still masks; non-storage schemes keep fail-closed (`https://h/u@example.com` → `https://***@example.com`). | `redaction::tests::storage_locations_without_a_password_are_shown_as_is`; `corpus::credential_free_storage_locations_are_shown_as_is`; `property_display_redaction::a_credential_free_storage_location_is_shown_as_spark_shows_it`. | PROVEN | §2; mutants F1 and F2 red; the probe's location list all `KEPT`. |
+| C-042 | Fold 3 R-3 (re-verify S1, `live/repark_keyrule.py`): every table, view and namespace property display — `SHOW TBLPROPERTIES` of a table or view with or without a key, `SHOW CREATE TABLE` of a table or view, `DESCRIBE TABLE EXTENDED`, `SHOW TABLE EXTENDED`, `DESCRIBE NAMESPACE EXTENDED` — shows `*********(redacted)` when Spark 4.1.2's measured rule (key or value matches `(?i)secret|password|token|access[.]?key|url`) or `prop_key_is_secret` matches, through one helper, `table_props_view::displayed_property_value`; other values go through `mask_value_credentials`. | `property_display_redaction::*_redacts_secret_keys_like_spark` (seven SQL pins, with the keyed form); `describe_show::describe_namespace_extended_redaction_truth_table` (updated to Spark's rows plus the key rule). | PROVEN | §2: `cargo test -p repark-spark --lib` 2625 passed; live: 0 leaks on all eight `repark_keyrule.py` statements; Spark measurement in §5. |
+| C-043 | Fold 3 R-4 (re-verify S1, `probe/src/bin/repro.rs`): an Oracle thin TNS descriptor `user/password@(DESCRIPTION=…)` masks the password, bare or under `jdbc:oracle:thin:`. | `redaction::tests::oracle_tns_descriptors_mask_the_password`; corpus class `oracle-tns-descriptor`. | PROVEN | §2; mutant F3 red; probe class 0 survivals. |
+| C-044 | Fold 3 R-5 (re-verify S2): the legs record masked spans on the original value in order (URL userinfo, logins, key=value, JSON/YAML) and a later leg skips positions an earlier leg masked, so `postgresql://alice:MySecret=Value18@db.example.com/db` → `postgresql://alice:***@db.example.com/db`, while `jdbc:sqlserver://db:1433;user=sa;password=Spring@2026x` → `…;password=***` and the fold-2 query-`@` case hold; the URL fail-closed leg stops at a `;` or whitespace opening a named parameter unless the authority already has a `user:` shape. | `redaction::tests::the_key_value_leg_never_fires_inside_a_userinfo`, `::a_user_colon_authority_runs_past_a_parameter_looking_password_tail`; corpus class `secret-word-in-userinfo` and every repro of both verdicts as fixed cases. | PROVEN | §2; mutants N4, F7, F8, F9 red. |
+| C-045 | Fold 3 R-6 (re-verify S2): the Oracle and bare login legs fail closed — a password holding `' ( ) , ; =` or whitespace, or a quoted user, is masked up to the `@` before a host (`/` form: a host, `//`, `(` or `[`; `:` form: a host); prose stays (`contact john@example.com`); a `/` inside an Oracle password needs a `(` or `//` follower, so image references (`docker.io/library/postgres@sha256:…`) stay. | `redaction::tests::oracle_and_bare_logins_fail_closed`; corpus classes `oracle-ezconnect`, `bare-user-colon-pw`. | PROVEN | §2; mutants N1, N2, N3, N20, F4, F10..F13 red. |
+| C-046 | Fold 3 R-7 (re-verify S2): a secret YAML key whose value starts on the next line, a block scalar (`|`, `>`, chomping and indent digits) with its indented lines, and a JSON value on a following line are masked; a tab separator is pinned. | `redaction::tests::multi_line_json_and_yaml_secrets_are_masked`; corpus class `json-yaml-multiline`. | PROVEN | §2; mutants N6, F5, F6 red. |
+| C-047 | Fold 3 R-8: the re-verify's N1..N22 re-expressed on the fold-3 code plus F1..F14 for the new rules (36 mutants, `target/mut3/run.py`): 33 red; N7 survives as an over-mask only; N19 and F14 are equivalent (a follower with a space is never host-like; an empty span is never added); a surviving mutant was checked for leaks by rebuilding the re-verify probe against it — none leaks. | `target/mut3/run.py`; §3 fold 3. | PROVEN | §3. |
+| C-048 | Fold 3 R-9: the known limits are recorded (§4) and named in the divergence row: XML, command lines, `Cookie:`, bare tokens under non-secret keys, percent-encoded option passwords, a fullwidth `：//`, a password containing `://`, a lone token with `:` showing its user half. | The divergence row; §4. | PROVEN | §4. |
+| C-049 | Fold 3 R-10: `CONNECT-DIV-url-userinfo` states that storage locations display as Spark shows them and that secret keys redact as Spark does and more, with Spark 4.1.2 re-measured on fifteen keys and the re-verify's `live/` scripts re-run on both engines. | The registry row. | PROVEN | §5 fold 3; `python3 scripts/check_docs_links.py` clean. |
+| C-050 | Fold 3 corpus and fuzz: the `repark-common` corpus mirrors the re-verify's 17 classes (9,000 shaped, half hard, `redact_value` on a quarter) plus the storage-location class and every repro of both verdicts as fixed cases, and 4,000 garbage inputs; the re-verify's own probe at 96,000 shaped + 96,000 garbage gives 0 panics and 0 survivals in every class except the R-9 lone-token-with-`:` known limit (124/2870) and the R-2 storage-scheme lone tokens shown as is (164/2825, 181/2870). | `redaction::corpus::*` (four tests); `reverify/probe` rerun from `target/rprobe`. | PROVEN | §3 fold 3 class table. |
+| C-051 | Fold 3 gates: the 23 previous gates, `cargo test -p repark-distributed --features cluster --lib`, the re-verify's probe and `live/` scripts, the adapted mutant run, the comment ban at 0. | §2 fold 3. | PROVEN | §2 fold 3. |
 
 ## 1. Surface audit
 
@@ -238,6 +250,28 @@ rebuilt, the tree restored after.
 `lone-token-userinfo/hard 67/1450` (all `token:rest@host`, user shown, password masked), every
 soft class 0, panics 0.
 
+### Fold 3 mutations (`target/mut3/run.py`, 36 mutants on `redaction.rs`, each restored)
+
+The re-verify's N1..N22, re-expressed on the span-based code, and F1..F14 for the fold-3 rules.
+A mutant that the pins leave green is re-checked with the re-verify probe built against it.
+
+| Result | Mutants |
+|---|---|
+| red | N1 login leg, N2 quoted Oracle password, N3 bare-form host check, N4 key=value before userinfo, N5 JSON/YAML leg, N6 YAML tab, N8 JSON `,}]` stop, N9 `;` ends the authority, N10 host-likeness second arm, N11 one-letter TLD, N12 `…name` exclusion, N13 `pass`, N14 `accountkey`, N15 `authorization`, N16 MySQL parenthesized pairs, N17 `@` chain, N18 host-follows skip, N20 `=` word delimiter, N21 `pat`, N22 quoted escapes, F1 storage exception, F2 storage hides `user:pw`, F3 TNS follower, F4 `/`-in-password guard, F5 next-line YAML, F6 block scalars, F7 parameter boundary, F8 `user:` shape ignored (red after its pin), F9 key=value inside a userinfo, F10 login inside a URL region, F11 `jdbc:` colon skip, F12 bare login stops at a newline, F13 login `@` chain |
+| green, over-mask only (probe: no leak) | N7 (a bare YAML key without a space after the colon) |
+| green, equivalent | N19 (a follower with a space is never host-like either way), F14 (an empty userinfo yields an empty span, never added) |
+
+### Fold 3 fuzz: the re-verify probe (`reverify/probe`, 96,000 shaped + 96,000 garbage, its seed)
+
+Panics 0. Every class 0 survivals (soft and hard): `azure-connstr`, `bare-user-colon-pw`,
+`jdbc-sqlserver`, `json-inline`, `json-yaml-multiline`, `kafka-jaas`, `kv-before-url`,
+`libpq-dsn`, `multi-url`, `odbc-braced`, `oracle-ezconnect`, `oracle-tns-descriptor`,
+`query-param`, `secret-word-in-userinfo`, `url-userinfo`, `yaml-inline`, and `lone-token-userinfo`
+apart from: 124/2870 hard `[known:lone-token-colon-user-half]` (R-9) and 164/2825 soft +
+181/2870 hard `s3a://token@host` shown as is (R-2, a storage scheme without `:`). Location list:
+all ten `KEPT`. Before fold 3 the same probe found 1078+1223 TNS, 534 EZConnect, 547+730 bare,
+1372+1399 multi-line and 454+429 secret-word survivals.
+
 ## 4. Measured, out of scope
 
 - **`repark-functions` boolean-knob refusals** echo the rejected value raw:
@@ -247,9 +281,15 @@ soft class 0, panics 0.
   `check_crate_dag.py` declares none, so none was added (C-035); a card follow-up row.
 - **The `cluster` feature is never built by CI**: `repark-distributed`'s `iceberg_provider.rs`
   (C-033) compiles only under `--features cluster`, which no Makefile target or workflow runs.
-- **Still not masked (fold 2):** a `key=value` whose key is not secret-named (`auth=…`), a
-  percent-encoded `password%3D…` inside an option, a fullwidth or fraction-slash `://`, and a
-  bare token with no key (`ghp_…`, `AKIA…`, `Bearer …` without a secret-named key).
+- **Known limits (fold 3, R-9), recorded and named in the divergence row:** XML
+  (`<password>Xml36</password>`, `<property name="password" value="Xml37"/>`), command lines
+  (`--password Cli44`, `-pCli46`, `mysql -u root -pCli47`), `Cookie: session=Ck41`, a bare token
+  under a non-secret key (`ghp_…`, `AKIA…`, `auth=…`), a percent-encoded `password%3D…` inside
+  an option, a fullwidth or fraction-slash `://`, a password that itself contains `://`
+  (`postgresql://u:ab://cd58@…` shows `u:ab`), and a lone token with `:` showing its user half.
+- **Accepted over-masks (pinned):** a non-storage URL with a dotless portless host and a later
+  `@host` (`https://h/u@example.com`); a `user/word@domain` value (`alice/team@example.com`)
+  and a bare `word:word@host` (`time:12@example.com`), the `user/` and `user:` shapes R-6 names.
 - **Spark refuses `owner` in `DBPROPERTIES`** (`UNSUPPORTED_FEATURE.SET_NAMESPACE_PROPERTY`)
   where RePark accepts it; pre-existing, seen while measuring C-029.
 - **The round-1 `SET` `url` gap** is closed by C-019; **table properties, typed knobs and the
@@ -297,6 +337,16 @@ DESC_NS_ROWS [('Catalog Name', 'ice'), ('Namespace Name', 'leaky'),
               ('Comment', 'jdbc:postgresql://u:CmPw1@db.example.com/sales'),
               ('Location', 's3a://AKIAX:LocPw2@bucket/wh'), ('Owner', 'john')]
 ```
+
+Fold 3 (re-measured, same runtime): fifteen property keys on a table, a view and a namespace
+(`target/f3/spark_keys.py`). Redacted `*********(redacted)` on a table's `SHOW TBLPROPERTIES`,
+`DESCRIBE TABLE EXTENDED`, `SHOW TABLE EXTENDED`, `SHOW CREATE TABLE` (table and view) and
+`DESCRIBE NAMESPACE EXTENDED`: `password`, `aws.secret-access-key`, `client.token`, `accesskey`,
+`jdbc_url`, `plain`=`my password text`, `plain2`=`has url inside`. Raw on all of them:
+`access_key`, `my_key`, `acct.key`, `api_key_id`, `authorization`, `conn_string`, `credential`,
+`pat`. A view's `SHOW TBLPROPERTIES` and `DESCRIBE TABLE EXTENDED` redact nothing. The re-verify's
+`live/spark_probe.py` re-run: `SHOW TBLPROPERTIES t ('password')` → `*********(redacted)`;
+`DESCRIBE NAMESPACE` Location `s3://lake/teams/data@corp.example.com/ns` raw.
 
 ## 6. Provider `Debug` audit (fold 1 item 6, no product change)
 
@@ -368,3 +418,16 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-common/src/redaction.rs, python/repark/tests/test_source_url_redaction_1.py]
   complete: true
 ```
+
+## 7. Functional readers of display output (fold 3, R-1)
+
+| Site | Reads | Verdict |
+|---|---|---|
+| `python/repark/src/repark/spark/catalog.py` `get_database` | was `DESCRIBE NAMESPACE` Comment / Location | now the native `namespace_metadata`, unmasked (C-040) |
+| `python/repark/src/repark/spark/catalog_surface.py` `_table_properties` | `DESCRIBE TABLE EXTENDED` `Table Properties`, only `current-snapshot-id` | non-secret key and numeric value; never redacted |
+| `catalog_surface.py` `_table_comment` (`getTable().description`) | `DESCRIBE TABLE EXTENDED` `Comment` row | that row is not masked |
+| `catalog_surface.py` `_partition_source_columns` | `# Partition Information` rows | column names only |
+| `catalog.py` `listDatabases` / `databaseExists` | `SHOW NAMESPACES` | names only |
+| `crates/repark-core/src/session.rs` S3 endpoint resolution | the raw conf rows (`&self.conf_dump`) | raw (C-008) |
+| `crates/repark-core/src/session/text_write_format/select.rs` legacy policy | the raw conf rows | raw (C-031) |
+| `session_core.py` `.config(conf=…)` | the caller's own `SparkConf.getAll()` | an external object, raw |

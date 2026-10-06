@@ -191,7 +191,7 @@ and hand execution, SQL, and ML semantics to the engine crates.
   rather than a `PyReparkSession` method, because `session.rs` sits on its exact CAP-1 baseline
   and pyo3 allows one `#[pymethods]` block per type; the product path pays nothing, since the
   counters are two relaxed atomic loads read only when asked.
-  pins: perf-ice-catalog-io-1/C-001 |
+  pins: perf-ice-catalog-io-1/C-001 **SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** `namespace_metadata(session, catalog, namespace)` returns the stored comment and location for `getDatabase`. pins: source-url-redact-1/C-040 |
 | [`logical_names.rs`](logical_names.rs) | `DataFrame.columns` from the plan's logical schema,
   with no analyzer pass. Sound because every rule in `repark_functions::analyzer_rules` rewrites
   through `NamePreserver` and none adds, drops or reorders a projection expression;

@@ -3529,52 +3529,75 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row`
 - **Rationale** — DECLARED 2026-10-05 (C-1). As `json`, and the binary wire form carries a
   version byte before the text, so the codec is not `text`'s.
-### CONNECT-DIV-url-userinfo — a credential inside a URL- or DSN-shaped property value is masked where Spark shows it
+### CONNECT-DIV-url-userinfo — a credential inside a property value is masked where Spark shows it; secret keys redact at least as Spark does
 - **repark** — every display of a source, catalog, conf, namespace, table or view property
-  value masks the credential inside the value, whatever the key: URL userinfo, read only inside
-  the authority (it ends at the first `/`, `?`, `#` or `;`, not at whitespace), keeps the
-  user and the host (`postgresql://alice:***@db.example.com:5432/sales`); a userinfo with no
-  colon, or whose user part carries an `@`, is masked whole; an authority that is not a clean
-  host followed later by `@host` fails closed up to that `@`; a secret-named query parameter,
-  `;`-property, libpq / ODBC / JAAS keyword or JSON / YAML key (`password`, `passwd`, `pwd`,
-  `pass`, `pw`, `passcode`, `sslpassword`, `access_token`, `sig`, `sas`, `AccountKey`,
-  `X-Amz-Signature`, `Authorization`, …) shows `***`; and an Oracle thin / EZConnect
-  `user/password@host` or a bare `user:password@host` masks the password. The surfaces are
-  `sources()`, `spark.conf.getAll`, `SET k` / `SET` / `SET -v` (when the Spark regexes have not
-  already redacted the whole value), `DESCRIBE NAMESPACE` (its Comment, Location and Owner
-  rows) and `DESCRIBE NAMESPACE EXTENDED`, `DESCRIBE TABLE EXTENDED`, `SHOW CREATE TABLE` (table and view), `SHOW TABLE
-  EXTENDED`, `SHOW TBLPROPERTIES` (table and view, with or without a key), the `CatalogSpec` /
-  `SourceSpec` `Debug`, the config-value refusals and the memory-catalog spans. An explicit
-  `spark.conf.get(k)` and the `SET k = v` echo stay raw, as in Spark.
-- **Apache Spark** — Spark 4.1.2 shows the password on every one of these. `SET spark.p.conn`
-  and bare `SET` answer `mysql://bob:SetPw@db.example.com/sales` when neither the key nor the
-  value matches a redaction regex; `DESCRIBE NAMESPACE EXTENDED` answers
-  `((conn,postgresql://u:NsPw@db.example.com/sales))`; `DESCRIBE NAMESPACE` answers
-  `('Comment', 'jdbc:postgresql://u:CmPw1@db.example.com/sales')` and
-  `('Location', 's3a://AKIAX:LocPw2@bucket/wh')`; on an Iceberg table with
-  `'conn' = 'postgresql://u:TblPw@db.example.com/sales'`, `DESCRIBE TABLE EXTENDED`'s
-  `Table Properties` answers `[conn=postgresql://u:TblPw@db.example.com/sales,…]`,
-  `SHOW CREATE TABLE` carries `'conn' = 'postgresql://u:TblPw@db.example.com/sales'`,
-  `SHOW TABLE EXTENDED`'s `Table Properties:` line carries it character by character, and
-  `SHOW TBLPROPERTIES t` / `t ('conn')` answer it; on an Iceberg view, `SHOW TBLPROPERTIES v`,
-  `SHOW CREATE TABLE v` and `DESCRIBE TABLE EXTENDED v`'s `View Properties` answer
-  `postgresql://u:ViewPw@db.example.com/sales`; `spark.conf.getAll` is unredacted.
-  *(oracle: measured 2026-10-06, live pyspark 4.1.2 with iceberg-spark-runtime-4.1 1.11.0 over
-  an `InMemoryCatalog`, private local session.)* RePark's `DESCRIBE TABLE EXTENDED` of a view
-  renders no property row.
-- **Pin** — `crates/repark-spark/src/tests/describe_show.rs::describe_namespace_extended_masks_url_userinfo_spark_would_show`,
-  `::describe_namespace_masks_comment_location_and_owner_credentials`;
-  `crates/repark-spark/src/tests/property_display_redaction.rs` (`describe_table_extended_…`,
-  `show_create_table_…`, `show_table_extended_…`, `show_tblproperties_of_a_table_…`,
-  `show_tblproperties_of_a_view_…`, `show_create_table_of_a_view_masks_a_property_password`);
+  value masks the credential inside the value, whatever the key: URL userinfo inside the
+  authority (it ends at the first `/`, `?`, `#` or `;`, not at whitespace) keeps the user and
+  the host (`postgresql://alice:***@db.example.com:5432/sales`); a userinfo with no colon, or
+  whose user part carries an `@`, is masked whole; an authority that is not a clean host
+  followed later by `@host` fails closed up to that `@`; a secret-named query parameter,
+  `;`-property, libpq / ODBC / JAAS keyword or JSON / YAML key (same line, next line or block
+  scalar) shows `***`; an Oracle thin, EZConnect or TNS-descriptor `user/password@…` and a bare
+  `user:password@host` mask the password. **Storage locations display as Spark shows them**: a
+  value whose scheme is `s3`, `s3a`, `s3n`, `gs`, `gcs`, `abfs`, `abfss`, `wasb`, `wasbs`,
+  `hdfs`, `file`, `viewfs`, `oss`, `cos` or `r2` and whose userinfo carries no `:` is shown as
+  is (`s3://lake/teams/data@corp.example.com/ns`, `wasbs://container@account…`), while a
+  legacy `s3a://AKIA…:secret@bucket` still masks. **Secret keys redact as Spark does, and
+  more**: every table, view and namespace property display shows `*********(redacted)` when
+  Spark's rule (the key or the value matches `(?i)secret|password|token|access[.]?key|url`) or
+  RePark's `prop_key_is_secret` matches; RePark therefore also redacts `access_key`,
+  `my_key`-style `_key`, `authorization`, `credential`, `pat` and every secret key in a view's
+  `SHOW TBLPROPERTIES`, where Spark shows them. The surfaces are `sources()`,
+  `spark.conf.getAll`, `SET k` / `SET` / `SET -v` (when the Spark regexes have not already
+  redacted the whole value), `DESCRIBE NAMESPACE` (Comment, Location, Owner) and `DESCRIBE
+  NAMESPACE EXTENDED`, `DESCRIBE TABLE EXTENDED`, `SHOW CREATE TABLE` (table and view), `SHOW
+  TABLE EXTENDED`, `SHOW TBLPROPERTIES` (table and view, with or without a key), the
+  `CatalogSpec` / `SourceSpec` `Debug`, the config-value refusals and the memory-catalog spans.
+  Functional reads stay raw: an explicit `spark.conf.get(k)`, the `SET k = v` echo, and
+  `spark.catalog.getDatabase(…).locationUri` / `.description`, which read the stored
+  namespace metadata. **Known limits**: XML (`<password>…</password>`,
+  `<property name="password" value=…/>`), command lines (`--password X`, `-pX`), `Cookie:`
+  shapes, bare tokens under a non-secret key, percent-encoded passwords inside an option,
+  a fullwidth `：//`, a password that itself contains `://`, and a lone token with a `:`
+  (`scheme://tok:rest@host`, read as user and password, shows its user half).
+- **Apache Spark** — Spark 4.1.2 shows the credential on every value surface above.
+  `SET spark.p.conn` and bare `SET` answer `mysql://bob:SetPw@db.example.com/sales`;
+  `DESCRIBE NAMESPACE` answers `('Comment', 'jdbc:postgresql://u:CmPw1@db.example.com/sales')`
+  and `('Location', 's3a://AKIAX:LocPw2@bucket/wh')`; `DESCRIBE NAMESPACE EXTENDED`,
+  `DESCRIBE TABLE EXTENDED`, `SHOW TABLE EXTENDED`, `SHOW CREATE TABLE` and `SHOW TBLPROPERTIES`
+  show `postgresql://u:TblPw@db.example.com/sales` under a non-secret key; credential-free
+  storage locations (`s3://lake/teams/data@corp.example.com/ns`,
+  `s3://lake/raw/user@example.com/p`) are shown as is. Its key redaction, re-measured on a
+  table, a view and a namespace with fifteen keys: `password`, `aws.secret-access-key`,
+  `client.token`, `accesskey`, `jdbc_url`, a value `my password text` and a value `has url
+  inside` show `*********(redacted)` in `SHOW TBLPROPERTIES` of a table (with or without a
+  key), `DESCRIBE TABLE EXTENDED`, `SHOW TABLE EXTENDED`, `SHOW CREATE TABLE` of a table or a
+  view and `DESCRIBE NAMESPACE EXTENDED`, while `access_key`, `my_key`, `acct.key`,
+  `api_key_id`, `authorization`, `conn_string`, `credential` and `pat` stay raw; a view's
+  `SHOW TBLPROPERTIES` and `DESCRIBE TABLE EXTENDED` redact nothing. *(oracle: measured
+  2026-10-06, live pyspark 4.1.2 with iceberg-spark-runtime-4.1 1.11.0 over an
+  `InMemoryCatalog`, private local session; the re-verify's `live/` scripts re-run on both
+  engines.)*
+- **Pin** — `crates/repark-spark/src/tests/property_display_redaction.rs` (the value pins and
+  `show_tblproperties_of_a_table_redacts_secret_keys_like_spark`,
+  `show_tblproperties_of_a_view_redacts_secret_keys`,
+  `show_create_table_of_a_view_redacts_secret_keys_like_spark`,
+  `show_create_table_redacts_secret_keys_like_spark`,
+  `describe_table_extended_redacts_secret_keys_like_spark`,
+  `show_table_extended_redacts_secret_keys_like_spark`,
+  `describe_namespace_extended_redacts_secret_keys_like_spark`,
+  `a_credential_free_storage_location_is_shown_as_spark_shows_it`);
+  `crates/repark-spark/src/tests/describe_show.rs::describe_namespace_masks_comment_location_and_owner_credentials`;
+  `crates/repark-common/src/redaction/tests.rs::storage_locations_without_a_password_are_shown_as_is`;
   `python/repark/tests/test_source_url_redaction_1.py::test_set_listings_never_carry_the_password`,
-  `::test_config_dump_never_carries_the_password`
-- **Rationale** — DECLARED 2026-10-06 (SOURCE-URL-REDACT-1; extended by its fold 1 the same day
-  to tables and views, and by fold 2 to the `DESCRIBE NAMESPACE` rows and the Oracle, JSON,
-  YAML and wider parameter-name shapes). The CDC North Star default: credentials are never displayed, even
-  where Spark displays them (owner, 2026-10-06: "we need security to be tight"). The host,
-  port and database stay visible for debugging. Retire the row only if the owner rules that
-  Spark's display wins.
+  `::test_get_database_returns_the_stored_location_and_comment`
+- **Rationale** — DECLARED 2026-10-06 (SOURCE-URL-REDACT-1; extended by fold 1 to tables and
+  views, by fold 2 to the namespace rows and the Oracle, JSON, YAML and wider-name shapes, and
+  by fold 3 to the storage-location carve-out, Spark's key rule on every property display, TNS
+  descriptors and multi-line documents). The CDC North Star default: credentials are never
+  displayed, even where Spark displays them (owner, 2026-10-06: "we need security to be
+  tight"). Host, port, database and credential-free locations stay visible for debugging.
+  Retire the row only if the owner rules that Spark's display wins.
 ### SES-ARTIFACT-1 — `addArtifact(s)` supports driver-local `pyfile` copies only
 - **repark** — `addArtifact`/`addArtifacts` validate exactly like Spark: more than one of
   `pyfile`/`archive`/`file` true raises `PySparkValueError` with condition

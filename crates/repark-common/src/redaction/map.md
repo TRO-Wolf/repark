@@ -27,3 +27,11 @@ See [../map.md](../map.md).
   password) and an Oracle password never carries `"`. Runs in about 0.15 s in debug. The
   verifier's own 40,000-case harness, rerun against this code, leaks no password.
   pins: source-url-redact-1/C-037, C-038, C-039
+  **SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** the corpus mirrors the re-verify's 17 classes (9,000 shaped inputs, a quarter
+  through `redact_value`), carries every repro of both verdicts as fixed cases and a
+  storage-location class that must stay unchanged, and 4,000 garbage inputs; `tests.rs` adds
+  the storage, TNS, userinfo-span, fail-closed login, multi-line and mutant-killing pins. The
+  36-mutant run (33 red, N7 over-mask only, N19 and F14 equivalent) and the re-verify probe
+  (0 survivals outside the R-9 known limit and the R-2 storage lone tokens) are in the ledger;
+  the known limits are named in `CONNECT-DIV-url-userinfo`.
+  pins: source-url-redact-1/C-041, C-043, C-044, C-045, C-046, C-047, C-048, C-049, C-050, C-051
