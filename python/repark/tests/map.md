@@ -2343,6 +2343,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   catalog-surface-1/C-008
   **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** the moved-symbol hashes of `_config_value_error`, `_forward_datafusion_conf`
   and `normalize_display_style` follow their masked-echo edits. pins: source-url-redact-1/C-017
+  **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** `_prop_key_is_secret` leaves the compatibility inventory with the alias.
+  pins: source-url-redact-1/C-032
 - [test_spark_sql_grammar_1.py](test_spark_sql_grammar_1.py) — **SPARK-SQL-GRAMMAR-1
   (2026-09-16):** SQL-door pins for Spark operators, keywords and type names —
   value AND Arrow type/nullability through ``spark.sql`` (``selectExpr`` legs ride
@@ -3507,6 +3509,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (conformance inventory covers every Rust arm + `bucket`/`arn` `_key` exclusions; octo C1-SEC-001);
   getAll isolation pin (octo C2-Q-002);
   `getAll` redacts; `get(explicit)` unchanged.
+  **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the needle inventories assert through `_native.redact_property_value`, the
+  live Rust key rule. pins: source-url-redact-1/C-032
 - `test_dynamic_flatten.py` — **r24 DF1** `DataFrame.dynamicFlatten` / `dynamic_flatten`
   (planner is native `repark_core::dynamic_flatten`; this file is the facade contract):
   nested struct-in-struct; null parent/mid struct → NULL not zero

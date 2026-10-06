@@ -129,9 +129,20 @@ fn escaped_for_json(password: &str) -> String {
         .replace('\t', "\\t")
 }
 
-fn shaped(rng: &mut Lcg, hard: bool) -> (&'static str, String, String, String) {
+type Shaped = (&'static str, String, String, String);
+
+fn shaped(rng: &mut Lcg, hard: bool) -> Shaped {
+    let class = rng.below(12);
+    if class < 6 {
+        shaped_url_and_keyword(rng, hard, class)
+    } else {
+        shaped_mixed(rng, hard, class)
+    }
+}
+
+fn shaped_url_and_keyword(rng: &mut Lcg, hard: bool, class: usize) -> Shaped {
     let user = rng.pick(&["u", "alice", "", "a%40b", "AKIAX"]);
-    match rng.below(12) {
+    match class {
         0 => {
             let password = marker(rng, hard, &[]);
             let host = rng.pick(HOSTS);
@@ -182,7 +193,7 @@ fn shaped(rng: &mut Lcg, hard: bool) -> (&'static str, String, String, String) {
             );
             ("lone-token", input, password, host.to_string())
         }
-        5 => {
+        _ => {
             let password = marker(rng, hard, &[]);
             let input = format!(
                 "jdbc:sqlserver://db.example.com:1433;databaseName=d;user=u;{}={password};encrypt=true",
@@ -195,6 +206,12 @@ fn shaped(rng: &mut Lcg, hard: bool) -> (&'static str, String, String, String) {
                 "db.example.com:1433".to_string(),
             )
         }
+    }
+}
+
+fn shaped_mixed(rng: &mut Lcg, hard: bool, class: usize) -> Shaped {
+    let user = rng.pick(&["u", "alice", "", "a%40b", "AKIAX"]);
+    match class {
         6 => {
             let password = marker(rng, hard, &[]);
             let input = format!(

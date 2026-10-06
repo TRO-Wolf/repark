@@ -37,12 +37,31 @@ audit only).
 | C-012 | The facade pin: a `repark.toml` with a per-test random password in a source `url`, a query string, a keyword DSN, an ODBC string, a catalog `uri` and a `[conf]` key; the password appears nowhere in `sources()`, `repr` / `str` of the rows, `spark.conf.getAll`, the `SET` listings or the `source("acme").ping()` refusal, and the host does. Mutation: `redact_value` reverted to key-only reds it. | `python/repark/tests/test_source_url_redaction_1.py` (four tests). | PROVEN | §2: 4 passed. §3: 2 failed under the mutation (`test_sources_rows_never_carry_the_password`, `test_config_dump_never_carries_the_password`); the `SET` and `ping` legs do not pass through `redact_value` and stay green. |
 | C-013 | Every surface that prints a source or catalog property value is audited with a verdict (§1 table). | The table in §1, each row with its pin or its code reading. | PROVEN | §1. |
 | C-014 | Gates of the brief green; no new dependency (`repark-python` reaches the redactor through `repark_core::redaction`, not a new edge); zero code comments added. | §2 commands. | PROVEN | §2. |
-| C-015 | Fold 1 item 1: `https://h:443/p?m=a@b.c` comes out unchanged, `https://u:p@h/x@y` masks to `https://u:***@h/x@y`, an `@` inside a fragment or a query is never userinfo (`https://h/p#frag:x@y`, `https://h?u:p@x` unchanged; `https://u:p@h/p#a:b@c` → `https://u:***@h/p#a:b@c`), and a bracketed IPv6 host with a path `@` stays whole. Mutation: the authority ends at whitespace only. | `userinfo_is_read_only_inside_the_authority`. | PROVEN | §2 green; §3 M-2 red at `redaction.rs:251`. |
+| C-015 | Fold 1 item 1: `https://h:443/p?m=a@b.c` comes out unchanged, `https://u:p@h/x@y` masks to `https://u:***@h/x@y`, an `@` inside a fragment or a query is never userinfo (`https://h.example.com/p#frag:x@y`, `https://h.example.com?u:p@x` unchanged — fold 2 moved these two pins to a dotted host, because a dotless portless host followed by a later `@host` now fails closed, C-034; `https://u:p@h/p#a:b@c` → `https://u:***@h/p#a:b@c`), and a bracketed IPv6 host with a path `@` stays whole. Mutation: the authority ends at whitespace only. | `userinfo_is_read_only_inside_the_authority`. | PROVEN | §2 green; §3 M-2 red at `redaction.rs:251`. |
 | C-016 | Fold 1 item 2: `DESCRIBE TABLE EXTENDED`, `SHOW CREATE TABLE` and `SHOW TABLE EXTENDED` (all through `spark_table_properties`, key rule kept), `SHOW TBLPROPERTIES` of a table and of a view (with and without a key; the view's `location` row too), and `SHOW CREATE TABLE` of a view mask a credential inside a property value, where Spark 4.1.2 prints it on all six (§5); `CONNECT-DIV-url-userinfo` names every surface. RePark's `DESCRIBE TABLE EXTENDED` of a view renders no property row (not-applicable). Mutation: `mask_value_credentials` as the identity. | `tests::property_display_redaction` — one SQL pin per surface (six tests); `SHOW TABLE EXTENDED` is compared with its per-character `, ` separators removed, so the password check is not vacuous. | PROVEN | §2: `cargo test -p repark-spark --lib` 2615 passed. §3 M-1: all six red at `property_display_redaction.rs:54`. |
 | C-017 | Fold 1 item 3: every configuration refusal that echoes a rejected value runs it through `mask_value_credentials` — Rust: `session.*` integers (`wiring.rs`), maintenance durations (`maintenance.rs`), `partitionOverwriteMode`, `timeParserPolicy`, the session time zone (`INVALID_CONF_VALUE.TIME_ZONE`), the S3 boolean and endpoint refusals, the DataFusion conf and dead-key refusals, `memory_limit`, `escapedStringLiterals`; facade: `_secrets.mask_credentials` (the native masker) in `_config_value_error`, `parse_timestamp_type`, the `datafusion.*` forward refusals, `normalize_display_style`, the integer-config refusal, `_normalize_display_int`'s non-integer arm and `_type_mismatch_error`. | `config_file::tests::wiring::typed_knob_refusals_mask_a_password_in_the_echoed_value` (the one Rust pin); `test_source_url_redaction_1.py::test_knob_refusals_never_carry_the_password` (time zone, `SET spark.sql.shuffle.partitions`, display style). | PROVEN | §2 green; §3 M-1 red at `wiring.rs:302` and in the facade test. `test_production_file_size.py`'s moved-symbol hashes follow the three edited bodies (`_config_value_error`, `_forward_datafusion_conf`, `normalize_display_style`). |
 | C-018 | Fold 1 item 4: the `catalog.memory_catalog`, `catalog.memory_catalog_cached` and `catalog.memory_catalog_cached_with_props` spans record `warehouse` through `mask_value_credentials`; the `repark-iceberg → repark-common` edge already exists (`normal`, declared in `check_crate_dag.py`). | `catalog::tests::memory_props_span::memory_catalog_span_masks_a_password_in_the_warehouse`. | PROVEN | §2: `cargo test -p repark-iceberg --lib` 804 passed. §3 M-1 red at `memory_props_span.rs:80`. |
 | C-019 | Fold 1 item 5: `_REDACTION_RE` is Spark 4.1.2's measured `SET` rule, `(?i)secret|password|token|access[.]?key|url` against the key or the value — `spark.redaction.regex` (default `(?i)secret|password|token|access[.]?key`) unioned with `spark.sql.redaction.options.regex` (default `(?i)url`), both defaults read from the oracle's JVM config entries, and the probe (§5) redacts `accesskey`, `access.key`, a `my url` value, an `AccessKey here` value and a `*_url` key while `access_key` stays visible. Mutation: the old `access[.]key` pattern. | `test_source_url_redaction_1.py::test_set_redaction_matches_the_spark_4_1_2_default_regexes`; `test_sql_set_door_1.py` unchanged and green. | PROVEN | §2 green; §3 M-3 red (`assert {'spark.p.acc…'my url', …} == {…dacted)', …}`). |
 | C-020 | Fold 1 item 6 (audit only, no product change): every place a catalog provider (`ReparkCatalogProvider`, `IcebergCatalogProvider`, the iceberg-rust catalogs) reaches `{:?}` in an error, a log, a span, an EXPLAIN or a Python repr is listed in §6 with file and line and a verdict. | §6. | PROVEN | §6: one user-visible raw-credential path, in `repark-distributed` (not in the Python wheel); none in the shipped facade. |
+| C-021 | Fold 2 item 1 (verifier S1, `verify/probe/src/bin/repro.rs`): an Oracle thin or EZConnect `user/password@host` with no `://` masks the password and keeps the user and host — `jdbc:oracle:thin:scott/Tiger2026@db.example.com:1521/ORCL` → `…scott/***@db…`, the `@//db…` form, the bare `scott/Tiger2026@db…`, a quoted `scott/"Ti ger;26"@db…`; a bare `u:BareUserPass5@db.example.com:5432` likewise. The user must start with a letter and follow a word boundary or a `:` (`/` form), so a port, a path segment or a scheme never matches. | `redaction::tests::oracle_thin_and_ezconnect_passwords_are_masked`; corpus class `oracle-ezconnect`. | PROVEN | §2 green; §3 M-20 (slash leg dropped) and M-30 (any user start) red. |
+| C-022 | Fold 2 item 2 (S1): `jdbc:sqlserver://db:1433;user=sa;password=Spring@2026x;encrypt=true` → `…;password=***;encrypt=true`, host kept: the key=value legs run before the userinfo leg, and the authority also ends at `;`. MySQL's parenthesized `address=(…)(password=Pw69)/db` ends the value at `)`. | `redaction::tests::a_parameter_password_carrying_an_at_sign_keeps_the_host`; corpus class `jdbc-sqlserver`. | PROVEN | §2 green; §3 M-2 and M-29 red. |
+| C-023 | Fold 2 item 3 (S1, overlaps fold 1): `postgresql://db.example.com:5432/sales?user=u&password=Pa@ssw0rdQ` → `…?user=u&password=***`, host kept. | Same pin as C-022; corpus class `query-at-port`. | PROVEN | §2 green; §3 M-2 red. |
+| C-024 | Fold 2 item 4 (S2): unencoded whitespace in a userinfo (space, `\t`, `\n`) is masked: the authority no longer ends at whitespace unless a clean host precedes it (`https://h.example.com:8080 contact admin@x.com` stays). | `redaction::tests::whitespace_inside_userinfo_fails_closed`; corpus class `whitespace-userinfo`. | PROVEN | §2 green. §3 M-4 (whitespace ends the authority) is an **equivalent** mutant: the fail-closed leg reaches the same `@` and masks the same span, so no input separates them; recorded, not killed. |
+| C-025 | Fold 2 item 5 (S2): a parameter named `passwd`, `pass`, `pw`, `passcode`, `sas`, `AccountKey` or `SharedAccessKey` is secret (`client_secret`, `apiKey` already were through `prop_key_is_secret`); a name ending in `name` is not (`SharedAccessKeyName=RootManageSharedAccessKey` stays). | `redaction::tests::the_wider_secret_parameter_names_are_masked`. | PROVEN | §2 green; §3 M-21, M-22 red. |
+| C-026 | Fold 2 item 6 (S2): a JSON key in quotes (`{"user":"u","password":"JsonPw6"}` → `"password":***`, escaped quotes, single quotes and bare numbers included) and a YAML `key: value` (`password: YamlPw8`, `Authorization: Basic …`) mask the value of a secret-named key; a bare key needs a space after its colon, so `scheme:` and `host:port` never match. | `redaction::tests::json_and_yaml_secret_values_are_masked`; corpus classes `json`, `yaml`. | PROVEN | §2 green; §3 M-19 red. |
+| C-027 | Fold 2 item 7 (S2): `prop_key_is_secret` adds a key containing `account_key` (`fs.azure.account.key.<acct>…`), `authorization` (`header.Authorization`) and a final segment `pat`. Its one functional caller, the `flag_secret_columns` read option (`read_options.rs:189`), moves to `column_name_is_secret_shaped`, the pre-widening rule under a new name, so no column decision changes; every other caller is a display. | `redaction::tests::the_key_rule_covers_azure_account_keys_authorization_and_pats`, `::the_column_predicate_keeps_the_pre_widening_rule`; the torture `flag_secret_columns` cells green. | PROVEN | §2 green; §3 M-23..M-25 and M-31 red. |
+| C-028 | Fold 2 item 8 (S3): the verifier's three surviving mutants are killed or classified — M-13 (only a space ends an unquoted DSN value) red on the `\t` / `\n` pin, M-18 (an empty userinfo masks) red on `postgresql://@h/db`, M-4 equivalent (C-024) — and the rerun over 31 mutants of the new code (the verifier's 18 plus 13 for the new legs) leaves 30 red and that one equivalent. | `target/mut/run.py` (workspace scratch, not committed), results in §3. | PROVEN | §3. |
+| C-029 | Fold 2 item 9 (S3): `DESCRIBE NAMESPACE`'s Comment, Location and Owner rows mask through `mask_value_credentials`; Spark 4.1.2 prints Comment and Location raw (§5). | `tests::describe_show::describe_namespace_masks_comment_location_and_owner_credentials` (SQL). | PROVEN | §2: `cargo test -p repark-spark --lib` green. |
+| C-030 | Fold 2 item 10 (S3): the S3 endpoint refusal (`normalize_endpoint`, both arms) echoes the endpoint masked (done in fold 1, pinned now). | `object_store_s3::tests::an_invalid_endpoint_refusal_masks_its_userinfo`. | PROVEN | §2 green. |
+| C-031 | Fold 2 item 11 (S3): the text-write legacy-policy check reads the session's raw conf rows (`&self.conf_dump`), never the display-redacted `conf_dump()`; it was the only functional reader of `conf_dump()` (grep of non-test callers). | The text-write and time-parser-policy suites, unchanged and green. | PROVEN | §2: `cargo test -p repark-core --lib` green. |
+| C-032 | Fold 2 item 12 (S3): `_secrets.prop_key_is_secret` and `_funcs.py`'s unused alias are deleted; `test_a3_secrets_redaction.py` and `test_torture_secrets.py` assert through `_native.redact_property_value`, so they exercise the live Rust key rule. | Those two files; `test_production_file_size.py` without the alias. | PROVEN | §2: green on a debug build. |
+| C-033 | Fold 2 item 13 (the fold-1 audit's raw-password path, §6 A-2): `repark-distributed`'s props-map refusal names the session catalog and the byte offset and no longer echoes the provider's `Debug` text; no `repark-common` edge was needed. The file is behind the `cluster` feature, which no Makefile target or workflow builds. | `iceberg_provider::tests::a_malformed_props_map_refusal_never_echoes_the_debug_text` (`--features cluster`). | PROVEN | §2: `cargo test -p repark-distributed --features cluster --lib` green; mutation (echo restored) red at `iceberg_provider.rs:839`. |
+| C-034 | Fold 2 item 14: an unencoded `/`, `?`, `#` or `;` inside a password fails closed — when the authority is not a clean host (a non-numeric or empty port, a dotless portless label, a dotted name whose last label is not an alphabetic TLD or an IPv4) and a later `@` precedes a host, the mask runs to that `@`, keeping a plain user (`postgresql://alice:pa/ss@h/db` → `postgresql://alice:***@h/db`; `s3a://AKIAX:wJalr/K7MDENG@bucket/warehouse`; `https://AbCd/EfGh+IjKl9@git.example.com/repo.git` → `https://***@git…`). The other side is pinned too: `https://h:443/p?m=a@b.c`, `https://db.example.com/u@x.example.com` and `https://10.0.0.1/a@b.example.com` stay. Accepted over-mask, pinned: `https://h/u@example.com` → `https://***@example.com` and `s3://bucket/2024@x/part.parquet` hides the bucket. | `redaction::tests::an_unencoded_delimiter_inside_the_password_fails_closed`, `::a_host_must_look_like_one_before_the_fail_closed_leg_stands_down`. | PROVEN | §2 green; §3 M-3, M-26, M-27, M-28 red. |
+| C-035 | Fold 2 item 15: `repark-functions` has no `repark-common` edge and `check_crate_dag.py` declares none, so its three boolean-knob refusals (`case_sensitive.rs:79`, `merge_schema.rs:59`, `ansi.rs:116`) still echo the value; recorded as a follow-up row on the card. | `./scripts/check_crate_dag.sh`; the card row. | PROVEN | §4, and the card. |
+| C-036 | Fold 2 item 16: the reader-option (`flag_secret_columns`, boolean, single-character), write-option (isolation, file format, distribution mode) and path-write (format, mode, compression, destination) refusals echo the value masked. | `read_options::tests::a_boolean_option_refusal_masks_a_url_password`, `write_options::tests::an_invalid_write_option_refusal_masks_a_url_password`. | PROVEN | §2 green. |
+| C-037 | Fold 2 corpus: a fixed-seed LCG test in `repark-common` with 6,000 shaped inputs over 12 classes (`url-userinfo`, `query-param`, `libpq-dsn`, `odbc-braced`, `lone-token`, `jdbc-sqlserver`, `multi-url`, `oracle-ezconnect`, `json`, `yaml`, `query-at-port`, `whitespace-userinfo`; every other input from the hard set `@ : / ? # & ; = space \n \t " ' { } \`), each with a marker password, plus 3,000 garbage inputs: no marker survives (the verifier's leak test: the whole marker or any hard-split piece of 6+ bytes), `catch_unwind` sees no panic, every host is kept. Two classes leave a character out, documented: a lone token never carries `:` (a `token:x@host` is a user and a password by RFC 3986, and the user is kept), and an Oracle password never carries `"` (Oracle cannot quote one). | `redaction::corpus::the_shaped_corpus_never_leaks_its_marker_and_keeps_its_host`, `::garbage_inputs_never_panic`. | PROVEN | §2: 0.15 s in debug; §3: 15 of the 31 mutants also red the corpus. |
+| C-038 | The verifier's own harness (`verify/probe`, 20,000 shaped + 20,000 garbage, its seed), rerun against the fold-2 redactor from a copy under `target/`: 0 panics; 820 survivals before, 67 after, and every one of the 67 is the lone-token-with-colon case, where the shown part is the RFC user and the password half is masked (0 of them leak the marker's `KQV` tail). | The probe output in §3. | PROVEN | §3. |
+| C-039 | Fold 2 gates: the brief's list plus `cargo test -p repark-common --lib` with the corpus, `-p repark-core`, `-p repark-spark`, `-p repark-distributed --features cluster`, the touched facade and parity files, the mutation rerun, and the comment ban at 0. | §2. | PROVEN | §2. |
 
 ## 1. Surface audit
 
@@ -71,6 +90,11 @@ audit only).
 | `SHOW TBLPROPERTIES` (table and view, with and without a key) | now-redacted (fold 1) | C-016 |
 | `DESCRIBE TABLE EXTENDED` of a view | not-applicable | RePark renders the view schema only, no property row. |
 | `SET` whole-value redaction (Spark regexes) | now-redacted (fold 1) | C-019 |
+| `DESCRIBE NAMESPACE` Comment, Location, Owner rows | now-redacted (fold 2) | C-029 |
+| S3 endpoint refusal (`normalize_endpoint`) | now-redacted (fold 1, pinned fold 2) | C-030 |
+| Reader-option, write-option and path-write refusals | now-redacted (fold 2) | C-036 |
+| `repark-distributed` props-map codec refusal | now-redacted (fold 2) | C-033 |
+| `repark-functions` boolean-knob refusals | not-applicable (no edge; follow-up) | C-035 |
 
 **Executor readings (no halt).**
 - **The redactor's home.** `repark-common` is the one crate every consumer reaches (core,
@@ -144,18 +168,61 @@ rebuilt, the tree restored after.
   `test_set_redaction_matches_the_spark_4_1_2_default_regexes` red:
   `assert {'spark.p.acc...'my url', ...} == {'spark.p.acc...dacted)', ...}`.
 
+### Fold 2 mutations (`target/mut/run.py`, each applied to `redaction.rs`, tested, restored)
+
+| Mutant | Result |
+|---|---|
+| M-1 only a `postgresql` scheme | red (corpus + 6 pins) |
+| M-2 key=value leg dropped | red (corpus + 5 pins) |
+| M-3 fail-closed leg dropped | red (corpus + 2 pins) |
+| M-4 whitespace ends the authority | **equivalent** (C-024) |
+| M-5 `pwd` suffix dropped | red |
+| M-6 `sig` dropped | red |
+| M-7 `signature` dropped | red |
+| M-8 backslash escape ignored | red |
+| M-9 doubled brace ignored | red |
+| M-10 lone token kept | red |
+| M-11 first `@` instead of last | red |
+| M-12 every delimiter ends a value | red |
+| M-13 only a space ends an unquoted value | red (`every_whitespace_kind_ends_an_unquoted_keyword_value`) |
+| M-14 unterminated quote left unmasked | red |
+| M-15 `redact_value` key-only | red |
+| M-16 only the first URL | red |
+| M-17 leading whitespace kept in the value | red |
+| M-18 empty userinfo masked | red (`an_empty_userinfo_is_left_alone`) |
+| M-19 JSON/YAML leg dropped | red |
+| M-20 Oracle / bare `user:pass@` leg dropped | red |
+| M-21 `…name` not excluded | red |
+| M-22 `passwd` dropped | red |
+| M-23 key rule loses `account_key` | red |
+| M-24 key rule loses `authorization` | red |
+| M-25 key rule loses `pat` | red |
+| M-26 any dotted name is a clean host | red |
+| M-27 an empty port is clean | red |
+| M-28 first `@` instead of first `@host` | red |
+| M-29 no parenthesized pairs | red |
+| M-30 an Oracle user may start with a digit | red |
+| M-31 the column rule widens with the key rule | red |
+
+30 red, 1 equivalent, 0 survivors. The verifier's probe rerun (C-038): `jdbc-sqlserver/hard 0/1501`,
+`query-param/hard 0/1474`, `url-userinfo/hard 0/1374`, `multi-url/hard 0/1393`,
+`lone-token-userinfo/hard 67/1450` (all `token:rest@host`, user shown, password masked), every
+soft class 0, panics 0.
+
 ## 4. Measured, out of scope
 
 - **`repark-functions` boolean-knob refusals** echo the rejected value raw:
   `crates/repark-functions/src/case_sensitive.rs:79` (`spark.sql.caseSensitive`),
   `merge_schema.rs:59` (`spark.sql.iceberg.merge-schema`), `ansi.rs:116`
   (`spark.sql.ansi.enabled`). `repark-functions` has no `repark-common` edge and
-  `check_crate_dag.py` declares none, so per the fold none was added.
-- **Per-call option refusals** echo the rejected value: reader options
-  (`read_options.rs:173`, `:407`, `:426`), write options (`write_options.rs:178`, `:195`,
-  `:204`), path-write format / mode / compression (`session/path_write.rs:48`, `:86`, `:178`,
-  `:200`) and the path-write destination (`:333`). These are the caller's own arguments, not
-  configuration; listed for the owner.
+  `check_crate_dag.py` declares none, so none was added (C-035); a card follow-up row.
+- **The `cluster` feature is never built by CI**: `repark-distributed`'s `iceberg_provider.rs`
+  (C-033) compiles only under `--features cluster`, which no Makefile target or workflow runs.
+- **Still not masked (fold 2):** a `key=value` whose key is not secret-named (`auth=…`), a
+  percent-encoded `password%3D…` inside an option, a fullwidth or fraction-slash `://`, and a
+  bare token with no key (`ghp_…`, `AKIA…`, `Bearer …` without a secret-named key).
+- **Spark refuses `owner` in `DBPROPERTIES`** (`UNSUPPORTED_FEATURE.SET_NAMESPACE_PROPERTY`)
+  where RePark accepts it; pre-existing, seen while measuring C-029.
 - **The round-1 `SET` `url` gap** is closed by C-019; **table properties, typed knobs and the
   memory-catalog spans** by C-016..C-018.
 
@@ -194,6 +261,14 @@ VIEW_DESC [Row(col_name='View Properties', data_type="['conn' = 'postgresql://u:
 VIEW_SHOW_CREATE CREATE VIEW ice.ns.v ( a) TBLPROPERTIES ( 'conn' = 'postgresql://u:ViewPw@db.example.com/sales', …)
 ```
 
+Fold 2 (same box, same runtime jar, `InMemoryCatalog`):
+
+```
+DESC_NS_ROWS [('Catalog Name', 'ice'), ('Namespace Name', 'leaky'),
+              ('Comment', 'jdbc:postgresql://u:CmPw1@db.example.com/sales'),
+              ('Location', 's3a://AKIAX:LocPw2@bucket/wh'), ('Owner', 'john')]
+```
+
 ## 6. Provider `Debug` audit (fold 1 item 6, no product change)
 
 What the `Debug` carries: `ReparkCatalogProvider` (`crates/repark-iceberg/src/catalog/provider.rs:23`)
@@ -211,7 +286,7 @@ have hand-written `Debug` impls.
 | # | Sink | File:line | User-visible | Verdict |
 |---|---|---|---|---|
 | A-1 | `format!("{catalog:?}")` of a session `CatalogProvider`, parsed back into a `CatalogSpec` (`catalog_spec_from_debug`) | `crates/repark-distributed/src/iceberg_provider.rs:738` | no — functional, never printed | functional read; not changed (fold instruction) |
-| A-2 | The parse's refusal echoes the props slice of that `Debug` text: `"{ICEBERG_TABLE_SCAN} debug text has an unterminated string in {text:?}"` | `crates/repark-distributed/src/iceberg_provider.rs:696-697` | **yes**, as a codec error from the distributed scan encode | **a raw password can reach it today**: the slice is the first `props: {…}` of the `Debug` text, the `StorageConfig` map, whose secret-named keys the fork masks but whose URL-embedded passwords it does not; the error fires when a value there carries a `}` or a `"` (an ODBC-braced or quoted password ends the slice early). `repark-distributed` is a delivered surface crate, not in the Python wheel. |
+| A-2 | The parse's refusal echoes the props slice of that `Debug` text: `"{ICEBERG_TABLE_SCAN} debug text has an unterminated string in {text:?}"` | `crates/repark-distributed/src/iceberg_provider.rs:696-697` | **yes**, as a codec error from the distributed scan encode | **fixed in fold 2 (C-033)**; before it, a raw password could reach it: the slice is the first `props: {…}` of the `Debug` text, the `StorageConfig` map, whose secret-named keys the fork masks but whose URL-embedded passwords it does not; the error fires when a value there carries a `}` or a `"` (an ODBC-braced or quoted password ends the slice early). `repark-distributed` is a delivered surface crate, not in the Python wheel. |
 | A-3 | The other codec errors on that path name the catalog name, the kind token or a marker only | `iceberg_provider.rs:685`, `:762`, `:781` | yes | no credential |
 | A-4 | `IcebergScanSpec` derives `Debug` over a `CatalogSpec` | `iceberg_provider.rs:29` | only if printed; no `{:?}` sink found | `CatalogSpec` `Debug` redacts (C-009) |
 | A-5 | `#[tracing::instrument]` on every catalog function | `crates/repark-iceberg/src/catalog/mod.rs:100`, `:176`, `:191`, `:202`; `builders.rs:24`, `:39`, `:57` | log | every catalog argument is in `skip(…)`; fields are names, keys, booleans and the masked warehouse (C-018) |

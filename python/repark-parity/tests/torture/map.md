@@ -63,7 +63,7 @@ The suite needs the native module (the doors are repark's), so run it through
 - `test_torture_secrets.py` — the secrets cells (step 3): protocol conformance and the
   needle-set membership pin (every `FLAGGED_COLUMN_NAMES` entry redacts through
   `_native.redact_property_value`, the live Rust key rule; every ordinary name does not —
-  D-4a; SOURCE-URL-REDACT-1 fold 2 retired the Python mirror it used to call), row counts and the shared
+  D-4a; SOURCE-URL-REDACT-1 fold 2 retired the Python mirror it used to call; pins: source-url-redact-1/C-032), row counts and the shared
   declared schema on both doors for Parquet and CSV, `test_secret_flag_off_warn_refuse`
   parametrized over both doors (`off` reads clean; `warn` emits exactly one
   `WARNING: flag_secret_columns=warn` stderr line naming every flagged column and no

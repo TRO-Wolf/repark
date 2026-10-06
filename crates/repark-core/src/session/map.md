@@ -234,6 +234,8 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   **STRING-LITERAL-ESCAPE-1 merge (2026-10-01):** both S3 commit legs run the
   engine-built COPY through `sql_built_with_write_options`, so the statement
   parses in default mode in every session mode.
+  **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the format, mode, compression and destination refusals echo the value or URL
+  through `mask_value_credentials`. pins: source-url-redact-1/C-036
 - `text_write_format.rs` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** the
   user-pattern compiler and validator (Spark `INVALID_DATETIME_PATTERN` /
   `INCONSISTENT_BEHAVIOR_CROSS_VERSION` classes, NTZ downgrades, DATE lazy

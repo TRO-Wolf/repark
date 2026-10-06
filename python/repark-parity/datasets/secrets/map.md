@@ -28,6 +28,7 @@ that looks like a live key eventually gets reported as a leak.
 
 - `datagen.py` — `generate` / `small` / `write_files` / `read_parquet` /
   `fake_secret` / CLI (`--rows` default 1_000_000, `--seed` default 42, `--out`).
+  **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the docstring names `column_name_is_secret_shaped`. pins: source-url-redact-1/C-032
 - `manifest.json` — class id → column, parquet type, needle, needle form,
   `secret` flag. Tests read this file.
 - `__init__.py` — public door.

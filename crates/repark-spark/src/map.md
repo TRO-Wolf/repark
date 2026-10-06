@@ -562,6 +562,8 @@ pins: rp-4-fork-repin/C-005, C-006
   **IPI-41 WO3a (2026-09-22):** `validate_write_format` accepts orc/avro
   case-insensitively (parquet-identical normalisation); only unknown names refuse
   with `Invalid file format`. pins: ice-orc-avro-1/C-021
+  **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the isolation, file-format and distribution-mode refusals echo the value
+  masked. pins: source-url-redact-1/C-036
 - `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): delete-only `commit_truncate_to`;
   PARTITION / IF EXISTS / missing TABLE / multi-target refuse. Pins:
   [tests/truncate.rs](tests/truncate.rs). pins: dml-c-truncate/C-002, C-005, C-006, C-007
@@ -2179,6 +2181,8 @@ pins: rp-4-fork-repin/C-005, C-006
   every other value through `repark_common::redaction::mask_value_credentials`, so a URL
   password Spark 4.1.2 prints is masked (registry `CONNECT-DIV-url-userinfo`).
   pins: source-url-redact-1/C-010
+  **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** `describe_namespace_batch` masks the Comment, Location and Owner rows through
+  `mask_value_credentials`. pins: source-url-redact-1/C-029
 - `show_create.rs` — **C1 SHOW CREATE (2026-09-23):** `SHOW CREATE TABLE <name> [AS SERDE]`
   for Iceberg tables, answering Spark 4.1.2 + Iceberg 1.11 `ShowCreateTableExec` text byte
   for byte (one Utf8 `createtab_stmt` row ending in one `\n`). Token-level parser in the

@@ -1,5 +1,7 @@
 # map — repark-spark/src/tests
 
+**SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** `describe_show.rs` gains `describe_namespace_masks_comment_location_and_owner_credentials` (SQL). pins: source-url-redact-1/C-029
+
 **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** `property_display_redaction.rs` — one SQL pin per table / view property display (`DESCRIBE TABLE EXTENDED`, `SHOW CREATE TABLE` of a table and a view, `SHOW TABLE EXTENDED` with its per-character separators removed, `SHOW TBLPROPERTIES` of a table and a view with and without a key): the password is absent and `postgresql://u:***@db.example.com/sales` present. pins: source-url-redact-1/C-016
 
 **SOURCE-URL-REDACT-1 (2026-10-06):** `describe_show.rs` gains `describe_namespace_extended_masks_url_userinfo_spark_would_show`: a namespace property `postgresql://u:…@db.example.com/sales` renders with `***` for the password where Spark 4.1.2 prints it. pins: source-url-redact-1/C-010

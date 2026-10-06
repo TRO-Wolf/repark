@@ -929,6 +929,8 @@ both tables with the script baselines (backtick-disclosure retire). pins: fnp-4b
   **Acceptance pin in the module docstring:** reads behave NORMALLY today — the opt-in
   secrets-flagging mechanism is a roadmap feature this fixture predates, so nothing
   here asserts redaction. Facade read pins are DS-4.
+  **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the docstrings name `column_name_is_secret_shaped`, the rule the read flag
+  uses, instead of the deleted Python mirror. pins: source-url-redact-1/C-032
 - `test_datasets_smartcsv.py` — **DS-3** messy-CSV torture generator: A9 defaults,
   table-identity determinism, both manifest scopes (**column** classes present in
   `small()`; **file** classes provable in the emitted text at 64 rows), the delimiter

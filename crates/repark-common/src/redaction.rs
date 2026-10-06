@@ -200,19 +200,19 @@ fn is_host_like(text: &str) -> bool {
     !text.is_empty() && text.split(',').all(|part| host_and_port(part).is_some())
 }
 
-fn host_and_port(part: &str) -> Option<(&str, Option<&str>)> {
-    let (host, port) = if part.starts_with('[') {
-        let close = part.find(']')? + 1;
-        let remainder = &part[close..];
+fn host_and_port(segment: &str) -> Option<(&str, Option<&str>)> {
+    let (host, port) = if segment.starts_with('[') {
+        let close = segment.find(']')? + 1;
+        let remainder = &segment[close..];
         if remainder.is_empty() {
-            (&part[..close], None)
+            (&segment[..close], None)
         } else {
-            (&part[..close], Some(remainder.strip_prefix(':')?))
+            (&segment[..close], Some(remainder.strip_prefix(':')?))
         }
     } else {
-        match part.rsplit_once(':') {
+        match segment.rsplit_once(':') {
             Some((host, port)) => (host, Some(port)),
-            None => (part, None),
+            None => (segment, None),
         }
     };
     let host_ok = host.starts_with('[')
@@ -393,18 +393,13 @@ fn colon_pair_name(prefix: &str) -> Option<(&str, bool)> {
 
 fn colon_value_end(value: &str, start: usize, quoted_name: bool) -> usize {
     let rest = &value[start..];
-    match rest.as_bytes().first() {
-        Some(quote @ (b'\'' | b'"')) => {
-            quoted_value_end(rest, *quote).map_or(value.len(), |end| start + end)
-        }
-        _ => {
-            let stop = |character: char| {
-                matches!(character, '\n' | '\r')
-                    || quoted_name && matches!(character, ',' | '}' | ']')
-            };
-            rest.find(stop).map_or(value.len(), |end| start + end)
-        }
+    if let Some(quote @ (b'\'' | b'"')) = rest.as_bytes().first() {
+        return quoted_value_end(rest, *quote).map_or(value.len(), |end| start + end);
     }
+    let stop = |character: char| {
+        matches!(character, '\n' | '\r') || quoted_name && matches!(character, ',' | '}' | ']')
+    };
+    rest.find(stop).map_or(value.len(), |end| start + end)
 }
 
 fn mask_slash_credentials(value: &str) -> String {

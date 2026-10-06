@@ -509,6 +509,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   prefix once per call through `object_store_s3`, so both the first read and
   the `utf8_columns` re-read share the directory spelling.
   pins: s3-path-write-1/C-013
+  **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the `flag_secret_columns` flag reads
+  `repark_common::redaction::column_name_is_secret_shaped`, the pre-widening rule, so the
+  widened display key rule changes no column decision; the flag, boolean and single-character
+  option refusals echo the value masked. pins: source-url-redact-1/C-027, C-036
 - `text_scan.rs` — **IO-TEXT-1 (2026-09-14):** the Spark `text` scan. **IO-TEXT-1 (2026-09-15, orchestrator):** `text_scan.rs` carries no doc comments (the unit's workers are briefed comment-free); the two public `Result` entry points take `#[allow(clippy::missing_errors_doc)]` instead.
   A `TableProvider` over sorted local files, plain dirs (hidden `_`/`.` skipped,
   `key=value` dirs descended), and Hadoop globs (see `text_glob.rs`), serving one
@@ -836,6 +840,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   keys read under every spelling.
   **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** the refusals here echo a rejected config value through
   `mask_value_credentials`. pins: source-url-redact-1/C-017
+  **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** `an_invalid_endpoint_refusal_masks_its_userinfo` pins the masked endpoint
+  refusal. pins: source-url-redact-1/C-030
 - `orc_footer.rs` — **IO-ORC-1 (2026-09-16):** the ORC footer attributes orc-rust drops:
   tail/postscript parse, block-framed decompress in all five codecs, and a minimal
   protobuf field walk returning per-column `spark.sql.catalyst.type` values plus the

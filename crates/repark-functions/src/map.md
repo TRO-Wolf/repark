@@ -1,5 +1,7 @@
 # map — repark-functions/src
 
+**SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** follow-up, no change here: the `case_sensitive.rs`, `merge_schema.rs` and `ansi.rs` boolean-knob refusals echo the rejected value raw; `repark-functions` has no `repark-common` edge, so they stay until a unit adds one. pins: source-url-redact-1/C-035
+
 CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
 (pins: cc-3-comment-condensation/C-009).
 

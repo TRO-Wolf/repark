@@ -82,6 +82,13 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** userinfo is read only inside the RFC 3986 authority (it ends at the first
   `/`, `?` or `#`), so a path, query or fragment `@` never masks or hides the host; a userinfo
   whose user part carries an `@` is masked whole. pins: source-url-redact-1/C-002, C-015
+  **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the legs run key=value (parenthesized pairs included), then quoted-JSON and
+  YAML colon pairs, then URL userinfo (the authority ends at `/ ? # ;`, not at whitespace; an
+  authority that is not a clean host fails closed up to a later `@host`), then Oracle
+  `user/password@host` and bare `user:password@host`. `prop_key_is_secret` adds `account_key`,
+  `authorization` and a final `pat`; `column_name_is_secret_shaped` keeps the previous rule for
+  the secret-column read flag. Tests moved to [redaction/](redaction/map.md).
+  pins: source-url-redact-1/C-021, C-022, C-024, C-025, C-026, C-027, C-034
 - `names.rs` — **WO CASESENS-1 slice 2 (2026-09-27):** the one
   name-matching rule every binder calls. `NameRule { Exact, IgnoreCase }`
   (`from_case_sensitive`, `matches`, `lookup` → `NameHit::{One, Many,

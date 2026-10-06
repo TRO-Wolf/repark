@@ -3532,20 +3532,26 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 ### CONNECT-DIV-url-userinfo — a credential inside a URL- or DSN-shaped property value is masked where Spark shows it
 - **repark** — every display of a source, catalog, conf, namespace, table or view property
   value masks the credential inside the value, whatever the key: URL userinfo, read only inside
-  the RFC 3986 authority (it ends at the first `/`, `?` or `#`), keeps the user and the host
-  (`postgresql://alice:***@db.example.com:5432/sales`); a userinfo with no colon, or whose user
-  part carries an `@`, is masked whole; and a secret-named query parameter or libpq / ODBC
-  keyword (`password`, `sslpassword`, `access_token`, `pwd`, `sig`, `X-Amz-Signature`, …)
-  shows `***`. The surfaces are `sources()`, `spark.conf.getAll`, `SET k` / `SET` / `SET -v`
-  (when the Spark regexes have not already redacted the whole value), `DESCRIBE NAMESPACE
-  EXTENDED`, `DESCRIBE TABLE EXTENDED`, `SHOW CREATE TABLE` (table and view), `SHOW TABLE
+  the authority (it ends at the first `/`, `?`, `#` or `;`, not at whitespace), keeps the
+  user and the host (`postgresql://alice:***@db.example.com:5432/sales`); a userinfo with no
+  colon, or whose user part carries an `@`, is masked whole; an authority that is not a clean
+  host followed later by `@host` fails closed up to that `@`; a secret-named query parameter,
+  `;`-property, libpq / ODBC / JAAS keyword or JSON / YAML key (`password`, `passwd`, `pwd`,
+  `pass`, `pw`, `passcode`, `sslpassword`, `access_token`, `sig`, `sas`, `AccountKey`,
+  `X-Amz-Signature`, `Authorization`, …) shows `***`; and an Oracle thin / EZConnect
+  `user/password@host` or a bare `user:password@host` masks the password. The surfaces are
+  `sources()`, `spark.conf.getAll`, `SET k` / `SET` / `SET -v` (when the Spark regexes have not
+  already redacted the whole value), `DESCRIBE NAMESPACE` (its Comment, Location and Owner
+  rows) and `DESCRIBE NAMESPACE EXTENDED`, `DESCRIBE TABLE EXTENDED`, `SHOW CREATE TABLE` (table and view), `SHOW TABLE
   EXTENDED`, `SHOW TBLPROPERTIES` (table and view, with or without a key), the `CatalogSpec` /
   `SourceSpec` `Debug`, the config-value refusals and the memory-catalog spans. An explicit
   `spark.conf.get(k)` and the `SET k = v` echo stay raw, as in Spark.
 - **Apache Spark** — Spark 4.1.2 shows the password on every one of these. `SET spark.p.conn`
   and bare `SET` answer `mysql://bob:SetPw@db.example.com/sales` when neither the key nor the
   value matches a redaction regex; `DESCRIBE NAMESPACE EXTENDED` answers
-  `((conn,postgresql://u:NsPw@db.example.com/sales))`; on an Iceberg table with
+  `((conn,postgresql://u:NsPw@db.example.com/sales))`; `DESCRIBE NAMESPACE` answers
+  `('Comment', 'jdbc:postgresql://u:CmPw1@db.example.com/sales')` and
+  `('Location', 's3a://AKIAX:LocPw2@bucket/wh')`; on an Iceberg table with
   `'conn' = 'postgresql://u:TblPw@db.example.com/sales'`, `DESCRIBE TABLE EXTENDED`'s
   `Table Properties` answers `[conn=postgresql://u:TblPw@db.example.com/sales,…]`,
   `SHOW CREATE TABLE` carries `'conn' = 'postgresql://u:TblPw@db.example.com/sales'`,
@@ -3556,14 +3562,16 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   *(oracle: measured 2026-10-06, live pyspark 4.1.2 with iceberg-spark-runtime-4.1 1.11.0 over
   an `InMemoryCatalog`, private local session.)* RePark's `DESCRIBE TABLE EXTENDED` of a view
   renders no property row.
-- **Pin** — `crates/repark-spark/src/tests/describe_show.rs::describe_namespace_extended_masks_url_userinfo_spark_would_show`;
+- **Pin** — `crates/repark-spark/src/tests/describe_show.rs::describe_namespace_extended_masks_url_userinfo_spark_would_show`,
+  `::describe_namespace_masks_comment_location_and_owner_credentials`;
   `crates/repark-spark/src/tests/property_display_redaction.rs` (`describe_table_extended_…`,
   `show_create_table_…`, `show_table_extended_…`, `show_tblproperties_of_a_table_…`,
   `show_tblproperties_of_a_view_…`, `show_create_table_of_a_view_masks_a_property_password`);
   `python/repark/tests/test_source_url_redaction_1.py::test_set_listings_never_carry_the_password`,
   `::test_config_dump_never_carries_the_password`
 - **Rationale** — DECLARED 2026-10-06 (SOURCE-URL-REDACT-1; extended by its fold 1 the same day
-  to tables and views). The CDC North Star default: credentials are never displayed, even
+  to tables and views, and by fold 2 to the `DESCRIBE NAMESPACE` rows and the Oracle, JSON,
+  YAML and wider parameter-name shapes). The CDC North Star default: credentials are never displayed, even
   where Spark displays them (owner, 2026-10-06: "we need security to be tight"). The host,
   port and database stay visible for debugging. Retire the row only if the owner rules that
   Spark's display wins.
