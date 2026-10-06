@@ -572,7 +572,7 @@ fn colon_pair_spans(value: &str, spans: &mut Spans) {
             continue;
         };
         let after = &value[index..];
-        if !quoted && !(after.is_empty() || after.starts_with([' ', '\t', '\n', '\r'])) {
+        if !(quoted || after.is_empty() || after.starts_with([' ', '\t', '\n', '\r'])) {
             continue;
         }
         if !parameter_name_is_secret(name) {

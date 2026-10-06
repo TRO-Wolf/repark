@@ -224,8 +224,10 @@ fn shaped(rng: &mut Lcg, hard: bool) -> Case {
     let class = rng.below(17);
     if class < 6 {
         shaped_urls(rng, class, password)
+    } else if class < 9 {
+        shaped_logins(rng, class, hard, password)
     } else if class < 12 {
-        shaped_logins_and_documents(rng, class, hard, password)
+        shaped_documents(rng, class, password)
     } else {
         shaped_parameters(rng, class, password)
     }
@@ -314,7 +316,7 @@ fn shaped_urls(rng: &mut Lcg, class: usize, password: String) -> Case {
     }
 }
 
-fn shaped_logins_and_documents(rng: &mut Lcg, class: usize, hard: bool, password: String) -> Case {
+fn shaped_logins(rng: &mut Lcg, class: usize, hard: bool, password: String) -> Case {
     match class {
         6 => {
             let shown = if hard
@@ -359,7 +361,7 @@ fn shaped_logins_and_documents(rng: &mut Lcg, class: usize, hard: bool, password
                 Some("HOST=db.example.com"),
             )
         }
-        8 => {
+        _ => {
             let input = format!(
                 "{}:{password}@{}",
                 rng.pick(&["u", "alice", "admin"]),
@@ -367,6 +369,11 @@ fn shaped_logins_and_documents(rng: &mut Lcg, class: usize, hard: bool, password
             );
             case("bare-user-colon-pw", input, password, None)
         }
+    }
+}
+
+fn shaped_documents(rng: &mut Lcg, class: usize, password: String) -> Case {
+    match class {
         9 => {
             let layout = rng.pick(&[
                 "{\"user\":\"u\",\"KEY\":\"VAL\"}",
