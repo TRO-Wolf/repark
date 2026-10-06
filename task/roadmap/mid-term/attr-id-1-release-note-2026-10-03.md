@@ -81,6 +81,11 @@ release, where main could not plan it. The internal twin names
   duplicate with its qualified candidates (SQLSTATE 42704), instead of
   running with internal names. Scalar and grouped-aggregation pandas UDF
   input Series are positional (`_0`, `_1`, …), as on Spark.
+- Temp views over duplicate display names refuse with
+  `[COLUMN_ALREADY_EXISTS]` (SQLSTATE 42711) instead of registering twin
+  engine names. This is a deliberate divergence (row FA-6 in
+  `docs/spark-sql-iceberg-parity.md` §5): Spark registers the view, which
+  the engine cannot plan over yet.
 
 ## Pointers
 

@@ -54,6 +54,7 @@ from repark.spark.dataframe.udf_bridge import (
     _run_pandas_udf_arrow_batches,
     _run_python_udf_arrow_batches,
 )
+from repark.spark.dataframe.writer_layout import _refuse_duplicate_output_columns
 from repark.spark.row import Row
 from repark.spark.types import DataType, StructField, StructType
 
@@ -687,9 +688,7 @@ class DataFrame:
         func: Callable[[Any], Any],
         schema: Any,
     ) -> DataFrame:
-        """Apply a pandas-DataFrame iterator UDF through ``mapInArrow``.
-
-        Requires the optional ``pandas`` extra."""
+        """Apply a pandas-DataFrame iterator UDF through ``mapInArrow`` (needs the pandas extra)."""
         self._ensure_alive()
         try:
             __import__("pandas")
@@ -861,6 +860,7 @@ class DataFrame:
 
     def create_or_replace_temp_view(self, name: str) -> None:
         """Register this DataFrame as a replaceable temporary view."""
+        _refuse_duplicate_output_columns(self)
         surface_b.register_view_without_fill(self, name)
 
     createOrReplaceTempView = create_or_replace_temp_view  # noqa: N815 — PySpark camelCase alias
@@ -2508,13 +2508,13 @@ class DataFrame:
 
     def create_temp_view(self, name: str) -> None:
         """Create a temp view; fails if the name exists (PySpark ``createTempView``)."""
-        self._ensure_alive()
         self.create_or_replace_temp_view(name)
 
     createTempView = create_temp_view  # noqa: N815
 
     def create_global_temp_view(self, name: str) -> None:
         """Unsupported global_temp namespace (R- loud; use session temp views)."""
+        _refuse_duplicate_output_columns(self)
         from repark.errors import UnsupportedOperationException
 
         raise UnsupportedOperationException(

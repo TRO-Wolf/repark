@@ -1719,3 +1719,13 @@ saveAsTable-append stays by-name loud. pins: attr-id-1/C-061
 `mapInPandas` and the grouped/cogroup bridges; the call is line-neutral
 against the `mapInPandas` docstring at the exact 3464 baseline.
 pins: attr-id-1/C-063
+**Fold SM-2 R5 (2026-10-06):** `core.py`'s `create_or_replace_temp_view`
+(covering `create_temp_view`) and `create_global_temp_view` (covering both
+global spellings) call `writer_layout._refuse_duplicate_output_columns`
+first, so duplicate-display-name frames refuse `COLUMN_ALREADY_EXISTS`
+(42711) before anything is registered; the global doors keep their
+unsupported error for duplicate-free frames. The refusal stays out of
+`surface_b.register_view_without_fill` because EXPLAIN registers twin
+frames through it. Line-neutral at the exact 3464 baseline (the
+`create_temp_view` alive check is subsumed by the refusal's `columns` read;
+the `mapInPandas` docstring is one line). pins: attr-id-1/C-064

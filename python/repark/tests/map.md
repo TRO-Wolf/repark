@@ -9575,3 +9575,12 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   where Spark shows `(id_0, id_1)`. No module docstring: the lane's
   no-comments ruling covers the new file; the contract lives here.
   pins: attr-id-1/C-063
+- [test_attr_id_1_sm2_dupviews.py](test_attr_id_1_sm2_dupviews.py) — **Fold
+  SM-2 R5 (2026-10-06):** the four temp-view doors over duplicate-display
+  frames refuse `COLUMN_ALREADY_EXISTS` with Spark's exact text, condition
+  and SQLSTATE 42711, naming the first duplicate, and register nothing
+  (self, mixed, USING `s`, folded); guards pin plain
+  register/read/describe, replace, EXPLAIN-over-twins, and globals-still-
+  unsupported. The refusal is the ruled divergence FA-6 (Spark registers
+  the view). No module docstring: the lane's no-comments ruling covers the
+  new file; the contract lives here. pins: attr-id-1/C-064

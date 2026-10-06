@@ -3321,6 +3321,25 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   The pin asserts the refusal, so the rename reds it and forces this row to be
   re-recorded together with the behavior.
 
+### FA-6 — temp views over duplicate display names refuse (Spark registers them)
+
+- **repark** — a frame whose display names hold duplicates refuses
+  `createOrReplaceTempView`, `createTempView`, `createGlobalTempView` and
+  `createOrReplaceGlobalTempView` with `[COLUMN_ALREADY_EXISTS]`, naming the
+  first duplicate (SQLSTATE 42711), before anything is registered. The global
+  doors keep their existing unsupported error for duplicate-free frames.
+- **Apache Spark** — registers the view; `SELECT *`, `spark.table` and
+  `DESCRIBE` all carry the duplicate display names (`id, s, v, id, s, v` on
+  the fold's self-join). *(oracle: live 4.1.2, 2026-10-06, `v_self`/`v_r`.)*
+- **Pin** — `python/repark/tests/test_attr_id_1_sm2_dupviews.py` (11 tests)
+- **Rationale** — DECLARED as a deliberate divergence (orchestrator, 2026-10-06):
+  the engine cannot hold duplicate names in a view schema (a duplicate
+  `(qualifier, name)` pair is unplannable), and registering the twin engine
+  names would ship a silent wrong answer; the loud refusal holds the line
+  until duplicate-name view schemas land (follow-up on the v1.5.3 card,
+  2026-10-06). The pins assert the refusal, so the follow-up reds them and
+  forces this row to be re-recorded together with the behavior.
+
 ### DF-STREAM-1 — `dropDuplicatesWithinWatermark` drops the appended plan dump
 
 - **repark** — raises `AnalysisException` with errorClass `_LEGACY_ERROR_TEMP_3102` at the call,
