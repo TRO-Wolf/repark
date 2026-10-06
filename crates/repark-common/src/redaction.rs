@@ -256,12 +256,23 @@ fn host_follows(region: &str, at: usize) -> bool {
 }
 
 fn follower_host(region: &str, at: usize) -> &str {
-    let follower = &region[at + 1..];
-    let host_end = follower
+    host_text(&region[at + 1..])
+}
+
+fn host_text(follower: &str) -> &str {
+    let bracket_end = if follower.starts_with('[') {
+        follower.find(']').map_or(0, |close| close + 1)
+    } else {
+        0
+    };
+    let host_end = follower[bracket_end..]
         .find(|character: char| {
-            matches!(character, '/' | '?' | '#' | ';') || character.is_whitespace()
+            matches!(
+                character,
+                '/' | '?' | '#' | ';' | '"' | '\'' | '(' | ')' | ']' | '{' | '}' | ',' | '<' | '>'
+            ) || character.is_whitespace()
         })
-        .unwrap_or(follower.len());
+        .map_or(follower.len(), |end| bracket_end + end);
     &follower[..host_end]
 }
 
@@ -390,7 +401,8 @@ fn login_password_end(value: &str, start: usize, slash: bool) -> Option<usize> {
         }
         let mut at = first;
         while let Some(next) = rest[at + 1..reach].find(|character: char| {
-            matches!(character, '@' | '/' | '(') || character.is_whitespace()
+            matches!(character, '@' | '/')
+                || slash && (character == '(' || character.is_whitespace())
         }) {
             let candidate = at + 1 + next;
             if rest.as_bytes()[candidate] != b'@'
@@ -420,12 +432,7 @@ fn login_follower_ok(follower: &str, slash: bool) -> bool {
             || follower.starts_with("//")
             || follower.starts_with(char::is_alphanumeric)
     } else {
-        let host_end = follower
-            .find(|character: char| {
-                matches!(character, '/' | '?' | '#' | ';') || character.is_whitespace()
-            })
-            .unwrap_or(follower.len());
-        is_host_like(&follower[..host_end])
+        is_host_like(host_text(follower))
     }
 }
 

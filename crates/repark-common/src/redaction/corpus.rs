@@ -221,8 +221,10 @@ fn case(class: &'static str, input: String, password: String, host: Option<&'sta
 
 fn shaped(rng: &mut Lcg, hard: bool) -> Case {
     let password = marker(rng, hard);
-    let class = rng.below(17);
-    if class < 6 {
+    let class = rng.below(18);
+    if class == 17 {
+        shaped_embedded(rng, password)
+    } else if class < 6 {
         shaped_urls(rng, class, password)
     } else if class < 9 {
         shaped_logins(rng, class, hard, password)
@@ -231,6 +233,27 @@ fn shaped(rng: &mut Lcg, hard: bool) -> Case {
     } else {
         shaped_parameters(rng, class, password)
     }
+}
+
+fn shaped_embedded(rng: &mut Lcg, password: String) -> Case {
+    let user = rng.pick(&["u", "alice", "", "a%40b", "AKIAX"]);
+    let host = rng.pick(HOSTS);
+    let url = format!(
+        "{}://{user}:{password}@{host}{}",
+        rng.pick(SCHEMES),
+        rng.pick(TAILS)
+    );
+    let input = match rng.below(8) {
+        0 => format!("{{\"conn\":\"{}\"}}", escaped_for_json(&url)),
+        1 => format!("({url})"),
+        2 => format!("'{url}'"),
+        3 => format!("\"{url}\""),
+        4 => format!("<{url}>"),
+        5 => format!("[{url}]"),
+        6 => format!("{url}, {url}"),
+        _ => format!("{url} and more"),
+    };
+    case("embedded-url", input, password, Some(host))
 }
 
 fn shaped_urls(rng: &mut Lcg, class: usize, password: String) -> Case {
@@ -583,7 +606,7 @@ fn the_shaped_corpus_never_leaks_its_marker_and_keeps_its_host() {
         failures.len(),
         failures.join("\n")
     );
-    assert_eq!(totals.len(), 17, "{totals:?}");
+    assert_eq!(totals.len(), 18, "{totals:?}");
     assert!(totals.values().all(|count| *count > 300), "{totals:?}");
 }
 

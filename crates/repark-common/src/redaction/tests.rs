@@ -651,3 +651,63 @@ fn a_user_colon_authority_runs_past_a_parameter_looking_password_tail() {
         ),
     ]);
 }
+
+#[test]
+fn an_embedded_url_fails_closed_up_to_its_delimited_host() {
+    assert_masks(&[
+        (
+            "{\"conn\":\"postgresql://u:Pw/EmbLeak1@db.example.com\"}",
+            "{\"conn\":\"postgresql://u:***@db.example.com\"}",
+        ),
+        (
+            "(postgresql://u:Pw#EmbLeak2@db.example.com)",
+            "(postgresql://u:***@db.example.com)",
+        ),
+        (
+            "postgresql://u:Pw/EmbLeak3@db1.example.com, postgresql://u:Pw/EmbLeak3@db2.example.com",
+            "postgresql://u:***@db1.example.com, postgresql://u:***@db2.example.com",
+        ),
+        (
+            "url='postgresql://u:Pw?Leak5@db.example.com'",
+            "url='postgresql://u:***@db.example.com'",
+        ),
+        (
+            "<postgresql://u:Pw/Leak10@db.example.com>",
+            "<postgresql://u:***@db.example.com>",
+        ),
+        (
+            "[postgresql://u:Pw/Leak11@db.example.com]",
+            "[postgresql://u:***@db.example.com]",
+        ),
+        (
+            "{postgresql://u:Pw/Leak12@db.example.com}",
+            "{postgresql://u:***@db.example.com}",
+        ),
+        (
+            "postgresql://u:Pw/Leak13@[::1]:5432,[::2]:5432/db",
+            "postgresql://u:***@[::1]:5432,[::2]:5432/db",
+        ),
+    ]);
+}
+
+#[test]
+fn whitespace_after_the_host_ends_the_fail_closed_follower() {
+    assert_masks(&[
+        (
+            "mysql://bob:Pw#Leak3@db.example.com and more",
+            "mysql://bob:***@db.example.com and more",
+        ),
+        (
+            "mysql://bob:Pw/Leak4@db.example.com and more",
+            "mysql://bob:***@db.example.com and more",
+        ),
+    ]);
+}
+
+#[test]
+fn a_bare_login_password_holding_an_at_and_a_paren_masks_to_the_last_host() {
+    assert_masks(&[(
+        "alice:QZX338633|-@ß(：KQV@db.example.com:5432",
+        "alice:***@db.example.com:5432",
+    )]);
+}
