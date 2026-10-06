@@ -92,6 +92,10 @@ golden fails, the kernel drifted (or the oracle moved), never "close enough".
   with attribute ids, strips the twin for execution, and compares the parallel answer
   bit-identically with the serial answer.
   pins: ta-series-s2b/C-001, C-002
+  **ATTR-ID-1 SM-1 (2026-10-06):** `stamped_plan_through_optimizer_reaches_executors_stripped`
+  plans a stamped frame through `create_physical_plan` with no hand strip and asserts no
+  `repark.attr` on any physical node or batch schema with both parallel executors present.
+  pins: attr-id-1/C-056
 
 ## Pointers
 
