@@ -118,9 +118,9 @@ def test_orderby_fcol_over_exact_project_dup_sorts_by_input(ruled_spark: ReparkS
 
 def test_orderby_string_over_exact_project_dup_sorts_by_input(ruled_spark: ReparkSession) -> None:
     frame = _frame(ruled_spark)
-    flipped = frame.select((frame.v + 1).alias("v"), (frame.v * -1).alias("v"), frame.id)
-    assert _rows(flipped.sort("v", ascending=False)) == [(31, -30, 1), (21, -20, 3), (11, -10, 2)]
-    assert _rows(flipped.orderBy("v")) == [(11, -10, 2), (21, -20, 3), (31, -30, 1)]
+    flipped = frame.select((frame.v * -1).alias("v"), (frame.v + 1).alias("v"), frame.id)
+    assert _rows(flipped.sort("v")) == [(-10, 11, 2), (-20, 21, 3), (-30, 31, 1)]
+    assert _rows(flipped.sort("v", ascending=False)) == [(-30, 31, 1), (-20, 21, 3), (-10, 11, 2)]
 
 
 def test_orderby_expr_over_computed_twin_sorts_by_source(ruled_spark: ReparkSession) -> None:
