@@ -10,7 +10,6 @@ import sys
 import tempfile
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -54,11 +53,13 @@ FAIL_ID = 3
 PROGRESS_TIMEOUT_S = 120.0
 
 
-@dataclass(frozen=True)
 class Bench:
-    spark: SparkSession
-    warehouse: Path
-    checkpoints: Path
+    __slots__ = ("checkpoints", "spark", "warehouse")
+
+    def __init__(self, spark: SparkSession, warehouse: Path, checkpoints: Path) -> None:
+        self.spark = spark
+        self.warehouse = warehouse
+        self.checkpoints = checkpoints
 
     def table(self, name: str) -> str:
         return f"{NAMESPACE}.{name}"
