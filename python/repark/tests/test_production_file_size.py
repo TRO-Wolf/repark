@@ -158,7 +158,7 @@ EXPECTED_SYMBOL_HASHES = {
     "_column_null_sql_from_raw_tuples": (
         "3343f53e64755500788d291cc68dd36223d99f02f0aedd523ebacc929384adb3"
     ),
-    "_config_value_error": ("382e2fae1c4ba4641fea43c8aead9040749dab0b82054f8c1e2220ddb8b71ae5"),
+    "_config_value_error": ("517532283d45044d27272e893e64a50caec955d73a51f95153205686026cf2df"),
     "_create_dataframe_from_rows": (
         "957e98392c344c4d3f8125a5f4282cb05f63d8ee27d1871b1476b19a9809f2a8"
     ),
@@ -182,7 +182,7 @@ EXPECTED_SYMBOL_HASHES = {
         "1d2e344dee78ff621e20d878701fd3da50599e3c4879c76485ef9dc93a71f9ff"
     ),
     "_forward_datafusion_conf": (
-        "8e488940c2381193b9e96cfc01ad372c0f119b3e9c2492480f224e79a3698e92"
+        "0924ab2fdc14786580cc1584a74674c49e292574b415a475525437771cfcfa3c"
     ),
     "_infer_arrow_type_from_python_sample": (
         "03a76e73c5c2a06d49feb91028fd9ee2bf68b22cf12716700fbaaa741a38f157"
@@ -397,7 +397,7 @@ EXPECTED_SYMBOL_HASHES = {
     ),
     "default_display_style": ("43547a84b8832b0627850b825fc9bc1ef099cb546ad7f69d7a7710161b3aa78e"),
     "logger": ("fa49a10e7315bca551601a1c6c048afadc925fcc6a050e5bfcd74012a380f91e"),
-    "normalize_display_style": ("8b1e207bfcb7f37f433f026942124dd695674b14369d7a18bf3dbcc6b311b9ec"),
+    "normalize_display_style": ("0620c7c6efb2ed693eca117a39c89c477b327f481a89c3c984df290a0f3c2e4c"),
     "resolve_table_name": ("288d5d9d42ed8aeb750ae86edd824150ca0782cc5cd2eda96c3d49e87bf96ca6"),
 }
 

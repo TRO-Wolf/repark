@@ -16,8 +16,8 @@ and ``spark.sql.session.timeZone`` validate in Rust and apply to the live sessio
 (registry SET-ANSI-RUNTIME-1 FIXED); anything they refuse raises before anything is stored.
 Residue: SET-TZ-LOCAL-1. ``RESET <key>`` restores a builder-seeded
 value when one exists. Redaction on ``SET k`` / ``SET`` / ``SET -v`` uses Spark's
-default ``spark.redaction.regex`` against the key or the value; ``SET k = v``
-echoes the raw value. Invalid-conf messages carry ``SQLSTATE: 22022``;
+``spark.redaction.regex`` and ``spark.sql.redaction.options.regex`` defaults against the key
+or the value; ``SET k = v`` echoes the raw value. Invalid-conf messages carry ``SQLSTATE: 22022``;
 ``CANNOT_MODIFY_STATIC_CONFIG`` carries ``SQLSTATE: 46110``.
 """
 
@@ -49,6 +49,7 @@ from repark.spark.session.sql_relations import (
     _sql_mask_strings_and_comments,
 )
 from repark.spark.types import refuse_collation_session_key
+from repark.spark._secrets import mask_credentials
 
 if TYPE_CHECKING:
     from repark.spark.dataframe import DataFrame
@@ -58,7 +59,7 @@ _UNDEFINED_CONF_VALUE = "<undefined>"
 
 _REDACTED_VALUE = "*********(redacted)"
 
-_REDACTION_RE = re.compile(r"(?i)secret|password|token|access[.]key")
+_REDACTION_RE = re.compile(r"(?i)secret|password|token|access[.]?key|url")
 
 _INT_VALUE_RE = re.compile(r"[+-]?\d+")
 
@@ -302,7 +303,7 @@ def _refuse_unless_typed(key: str, value: str) -> None:
 def _type_mismatch_error(key: str, value: str, expected: str) -> str:
     """Spark's ``INVALID_CONF_VALUE.TYPE_MISMATCH`` message for one refused value."""
     return (
-        f"[INVALID_CONF_VALUE.TYPE_MISMATCH] The value '{value}' in the config "
+        f"[INVALID_CONF_VALUE.TYPE_MISMATCH] The value '{mask_credentials(value)}' in the config "
         f"\"{key}\" is invalid. It should be a/an '{expected}' value."
         f"{_SQLSTATE_INVALID_CONF}"
     )

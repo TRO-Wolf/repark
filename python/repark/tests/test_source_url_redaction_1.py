@@ -66,8 +66,8 @@ def test_config_dump_never_carries_the_password(spark: ReparkSession, password: 
 
 
 def test_set_listings_never_carry_the_password(spark: ReparkSession, password: str) -> None:
-    spark.conf.set("spark.repark.test.runtime_url", f"mysql://bob:{password}@{HOST}/sales")
-    for statement in ("SET", "SET -v", "SET spark.repark.test.runtime_url"):
+    spark.conf.set("spark.repark.test.runtime_conn", f"mysql://bob:{password}@{HOST}/sales")
+    for statement in ("SET", "SET -v", "SET spark.repark.test.runtime_conn"):
         rendered = repr(spark.sql(statement).collect())
         assert password not in rendered, statement
         assert HOST in rendered, statement
@@ -78,3 +78,43 @@ def test_ping_refusal_never_carries_the_password(spark: ReparkSession, password:
         spark.source("acme").ping()
     assert password not in str(excinfo.value)
     assert "acme" in str(excinfo.value)
+
+
+def test_set_redaction_matches_the_spark_4_1_2_default_regexes(spark: ReparkSession) -> None:
+    probes = {
+        "spark.p.accesskey": "v1",
+        "spark.p.access_key": "v2",
+        "spark.p.access.key": "v3",
+        "spark.p.plain": "my url",
+        "spark.p.plain2": "AccessKey here",
+        "spark.p.jdbc_url": "v4",
+    }
+    for key, value in probes.items():
+        spark.conf.set(key, value)
+    listed = {row["key"]: row["value"] for row in spark.sql("SET").collect()}
+    redacted = "*********(redacted)"
+    assert {key: listed[key] for key in probes} == {
+        "spark.p.accesskey": redacted,
+        "spark.p.access_key": "v2",
+        "spark.p.access.key": redacted,
+        "spark.p.plain": redacted,
+        "spark.p.plain2": redacted,
+        "spark.p.jdbc_url": redacted,
+    }
+
+
+def test_knob_refusals_never_carry_the_password(spark: ReparkSession, password: str) -> None:
+    url = f"mysql://bob:{password}@{HOST}/sales"
+    refusals = []
+    with pytest.raises(PySparkException) as excinfo:
+        spark.conf.set("spark.sql.session.timeZone", url)
+    refusals.append(str(excinfo.value))
+    with pytest.raises(PySparkException) as excinfo:
+        spark.sql(f"SET spark.sql.shuffle.partitions = {url}")
+    refusals.append(str(excinfo.value))
+    with pytest.raises(PySparkException) as excinfo:
+        spark.conf.set("repark.display.style", url)
+    refusals.append(str(excinfo.value))
+    for message in refusals:
+        assert password not in message, message
+        assert HOST in message, message
