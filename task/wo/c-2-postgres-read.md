@@ -1,5 +1,18 @@
 # C-2 — the Postgres read path: COPY BINARY decode, pushdown, mounted providers · grade-B skeleton · Opus design sketch first · 1.6
 
+> **North Star briefing (owner, 2026-10-05).** Every executor and verifier on this order reads [the CDC and micro-batch North Star](../roadmap/epic-term/cdc-microbatch-north-star-2026-10-05.md) first: NS-1…NS-19, the authority order in §2 (Flink governs guarantees, Spark the surface, Iceberg's own sinks the commits, else refuse with a dated row), the Rust placement in §4, and the production-grade lists in §5. The North Star sits below every ruled O/D/CC/ES/CL row and above the agent's judgment. For a question no ruled row answers, write the four lines (the question, Flink's answer, Spark's answer, the NS default), act on the default, and record the four lines as a dated ledger row. Halt only for the three §8 cases.
+
+> **Design-sketch checklist (North Star §7).** The sketch opens with these eight lines, each answered, or it is returned unread:
+> 1. the guarantee kept (NS-1);
+> 2. the crash matrix (§5 Solidity);
+> 3. where every bit of state lives (NS-2);
+> 4. the fencing token (NS-5);
+> 5. the bounds (NS-7);
+> 6. the credential surfaces (§5 Security);
+> 7. the Spark names used (§6);
+> 8. the divergence rows filed.
+
+
 ## 0. Why, and what is out
 
 C-2 is the first live connector: Postgres sources declared under CFG-2 become
