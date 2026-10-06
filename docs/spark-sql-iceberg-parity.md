@@ -3532,9 +3532,18 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row`
 - **Rationale** — DECLARED 2026-10-05 (C-1). Postgres accepts `24:00:00`, one microsecond past
   the last value Arrow's `Time64(Microsecond)` day holds.
-### CONNECT-DECL-pg-timestamp — RETIRED (2026-10-06, C-2a): Postgres `timestamp` decodes to its wall clock
-
-> **CLOSED 2026-10-06 (C-2a, [c-2-design.md](../task/wo/c-2-design.md) §2.7).** `timestamp` decodes to `Timestamp(Microsecond, None)`, the wall clock: the wire's microseconds since 2000-01-01 plus 946 684 800 000 000, a checked add. C-2c places the wall clock in the session zone for Spark's default `TimestampType` and keeps it as NTZ under `prefer_timestamp_ntz`. `±infinity` refuses under CONNECT-DECL-pg-infinite-datetime and values after 294247-01-10 under CONNECT-DECL-pg-out-of-range. The declared pin `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row` went RED on purpose against the new table and now holds `time` alone; the replacing pins are `crates/repark-connect/tests/it/postgres_types.rs::timestamp_ntz_anchors_round_trip`. Retired per §6.
+### CONNECT-DECL-pg-timestamp — Postgres `timestamp` reads as NTZ until C-2c places it
+- **repark** — `timestamp` (without time zone) decodes to `Timestamp(Microsecond, None)`, the
+  wall clock (C-2a, 2026-10-06). That matches Spark only under `preferTimestampNTZ`; in
+  default mode the wall clock still needs placing in the session zone, which is C-2c's
+  localiser ([c-2-design.md](../task/wo/c-2-design.md) §2.7, FL-5).
+- **Apache Spark** — the JDBC source reads `timestamp` as `timestamp` by default, and as
+  `timestamp_ntz` only under `preferTimestampNTZ`. *(oracle: measured — D-M2 DM2-T11/T12 in
+  `python/repark-parity/tests/live_spark/c2_jdbc_oracle.json`.)*
+- **Pin** — `crates/repark-connect/tests/it/postgres_types.rs::timestamp_ntz_anchors_round_trip`
+- **Rationale** — DECLARED 2026-10-05 (C-1); retired 2026-10-06 (C-2a) and re-declared the same
+  day (C-2a fold, round D) on the D-M2 measurement: the NTZ decode is the wall clock, not
+  Spark's default `TimestampType`. Retire when C-2c's localiser places it.
 
 ### CONNECT-DECL-pg-timestamptz — RETIRED (2026-10-06, C-2a): Postgres `timestamptz` maps to a UTC microsecond timestamp
 

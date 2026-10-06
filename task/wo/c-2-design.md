@@ -879,6 +879,7 @@ foreground, while the machine rule holds.
 | `crates/repark-connect/tests/it/tls.rs` | new: the config pin | 200 |
 | maps; the registry's C-2b rows; the ledger | lockstep | — |
 
+- **Statement builder:** casts `interval` (and any `ServerText` mapping) to `::text`, and a pin asserts the cast.
 - **Gates:** the common set, plus:
   - `cargo deny check` (D-M1);
   - `cargo build -p repark-connect --no-default-features` (the pure core builds without the driver);
