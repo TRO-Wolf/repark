@@ -152,9 +152,7 @@ def test_outer_using_stale_left_key_joins_again(tmp_path: Path, how: str) -> Non
     left, right = _using_frames(session)
     aliased_left = left.alias("l")
     frame = aliased_left.join(right.alias("r"), "id", how)
-    again = frame.join(
-        right.alias("q"), aliased_left["id"] == spark_functions.col("q.id")
-    )
+    again = frame.join(right.alias("q"), aliased_left["id"] == spark_functions.col("q.id"))
     assert _rows(again) == [(2, "b", "x", 2, "x"), (3, "c", "y", 3, "y")]
     session.stop()
 
@@ -221,9 +219,7 @@ def test_outer_using_refuses_right_key_select(tmp_path: Path, how: str) -> None:
 
 
 @pytest.mark.parametrize("how", ["left", "right", "full"])
-def test_outer_using_refuses_right_key_sort_filter_expr(
-    tmp_path: Path, how: str
-) -> None:
+def test_outer_using_refuses_right_key_sort_filter_expr(tmp_path: Path, how: str) -> None:
     session = sm2._open(tmp_path, f"sm2-r6-{how}-rsfe")
     left, right = _using_frames(session)
     frame = left.alias("l").join(right.alias("r"), "id", how)
@@ -248,9 +244,7 @@ def test_outer_using_refuses_right_key_compound(tmp_path: Path, how: str) -> Non
 
 
 @pytest.mark.parametrize("how", ["left", "right", "full"])
-def test_outer_using_refuses_right_key_join_condition(
-    tmp_path: Path, how: str
-) -> None:
+def test_outer_using_refuses_right_key_join_condition(tmp_path: Path, how: str) -> None:
     session = sm2._open(tmp_path, f"sm2-r6-{how}-rcond")
     left, right = _using_frames(session)
     frame = left.alias("l").join(right.alias("r"), "id", how)
@@ -265,9 +259,7 @@ def test_outer_using_refuses_right_key_join_condition(
 
 
 @pytest.mark.parametrize("how", ["left", "right", "full"])
-def test_outer_using_refuses_stale_right_key_select_filter_sort(
-    tmp_path: Path, how: str
-) -> None:
+def test_outer_using_refuses_stale_right_key_select_filter_sort(tmp_path: Path, how: str) -> None:
     session = sm2._open(tmp_path, f"sm2-r6-{how}-rstale")
     left, right = _using_frames(session)
     aliased_right = right.alias("r")
@@ -280,18 +272,14 @@ def test_outer_using_refuses_stale_right_key_select_filter_sort(
 
 
 @pytest.mark.parametrize("how", ["left", "right", "full"])
-def test_outer_using_refuses_stale_right_key_join_condition(
-    tmp_path: Path, how: str
-) -> None:
+def test_outer_using_refuses_stale_right_key_join_condition(tmp_path: Path, how: str) -> None:
     session = sm2._open(tmp_path, f"sm2-r6-{how}-rstalec")
     left, right = _using_frames(session)
     aliased_right = right.alias("r")
     frame = left.alias("l").join(aliased_right, "id", how)
     side_key = aliased_right["id"]
     _assert_using_refusal(
-        lambda: frame.join(
-            right.alias("q"), side_key == spark_functions.col("q.id")
-        ).collect(),
+        lambda: frame.join(right.alias("q"), side_key == spark_functions.col("q.id")).collect(),
         "`id`",
     )
     session.stop()

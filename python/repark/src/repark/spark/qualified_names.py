@@ -381,9 +381,7 @@ def _using_state(child: Any, left: Any, right: Any, keys: list[str], engine_how:
     refused = frozenset(name for values in right_map.values() for name in values)
     if not refused or not kept:
         return merged
-    return _merge_using_marks(
-        merged, (frozenset(kept), tuple(keys), refused, frozenset(right_ids))
-    )
+    return _merge_using_marks(merged, (frozenset(kept), tuple(keys), refused, frozenset(right_ids)))
 
 
 def _using_mark_live(mark: Any, held: list[str | None]) -> bool:
