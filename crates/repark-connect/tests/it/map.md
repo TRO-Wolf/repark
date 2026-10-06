@@ -31,8 +31,10 @@ See [../map.md](../map.md).
   header-only, refused before the payload), `copy_field_at_postgres_max_is_accepted` (exactly
   the maximum passes the length word with no payload fed), and
   `batch_byte_cap_saturates_at_max_batch_bytes` (`usize::MAX` saturates, smaller caps pass
-  through).
-  pins: c-2/C-002, C-003, C-004, C-005, C-006, C-015
+  through). The C-2a F-4 fold (2026-10-06) adds
+  `carry_releases_capacity_past_the_byte_cap` (one 64 MiB `text` field in 64 KiB chunks under
+  a 1 MiB cap, then a small row; `buffered_bytes()` stays under the cap after the flush).
+  pins: c-2/C-002, C-003, C-004, C-005, C-006, C-015, C-016
 - `postgres_types.rs` — C-1 (2026-10-05): one round-trip pin per mapped row, named in the row
   (`bool_round_trips` … `bytea_round_trips`): Arrow array → wire values → Arrow array, equal,
   over NULLs and boundary values (`MIN` / `MAX`, `-0.0`, the infinities and NaN compared by bit

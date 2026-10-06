@@ -54,8 +54,11 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   flushes at the first tuple reaching the cap, and the appender reports at least the stored
   bytes, so one column holds under (cap - 1) + `MAX_FIELD_BYTES` = 2^31 - 2, strictly below
   `i32::MAX`. The -1 sits in the batch cap so the per-value bound stays the round Postgres
-  ceiling.
-  pins: c-2/C-002, C-003, C-004, C-005, C-006, C-015
+  ceiling. The C-2a F-4 fold (2026-10-06) bounds the carry: when a straddling field completes,
+  a carry whose capacity exceeds the batch byte cap is dropped for a fresh `Vec`, while a
+  smaller one stays cleared for reuse; `buffered_bytes()` reports builder bytes plus the carry
+  capacity, so the C-2c reservation seam sees the retained allocation.
+  pins: c-2/C-002, C-003, C-004, C-005, C-006, C-015, C-016
 - `settings.rs` — C-1 (2026-10-05). `ConnectionSettings::from_props` reads one source's props
   (the core loader's `SourceSpec.props`). It interprets only `auth_method` (R-5, CC-3) and
   carries every other prop through untouched; the interpreted `auth_method` key leaves the

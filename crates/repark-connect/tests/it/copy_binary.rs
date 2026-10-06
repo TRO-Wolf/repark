@@ -486,3 +486,24 @@ fn batch_byte_cap_saturates_at_max_batch_bytes() {
     assert_eq!(limits(8192, MAX_BATCH_BYTES).bytes().get(), MAX_BATCH_BYTES);
     assert_eq!(limits(8192, 64).bytes().get(), 64);
 }
+
+#[test]
+fn carry_releases_capacity_past_the_byte_cap() {
+    let field = vec![b'a'; 64 << 20];
+    let mut bytes = header_with(0, &[]);
+    bytes.extend(tuple(&[Some(field)]));
+    bytes.extend(tuple(&[Some(vec![b'b'])]));
+    bytes.extend_from_slice(&(-1_i16).to_be_bytes());
+    let cap = 1 << 20;
+    let mut decoder =
+        CopyBinaryDecoder::new(vec![base("payload", "text")], limits(usize::MAX, cap))
+            .expect("a decoder");
+    let chunks: Vec<&[u8]> = bytes.chunks(64 << 10).collect();
+    let batches = feed(&mut decoder, &chunks).expect("two rows");
+    assert_eq!(batches.len(), 2);
+    assert!(
+        decoder.buffered_bytes() < cap,
+        "buffered {} stays under the 1 MiB cap",
+        decoder.buffered_bytes()
+    );
+}

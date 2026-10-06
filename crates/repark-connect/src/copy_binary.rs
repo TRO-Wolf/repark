@@ -117,7 +117,7 @@ impl CopyBinaryDecoder {
 
     #[must_use]
     pub fn buffered_bytes(&self) -> usize {
-        self.bytes
+        self.bytes.saturating_add(self.carry.capacity())
     }
 
     #[must_use]
@@ -229,6 +229,9 @@ impl CopyBinaryDecoder {
                         let appended = self.append_value(column, &carried);
                         self.carry = carried;
                         self.carry.clear();
+                        if self.carry.capacity() > self.limits.bytes.get() {
+                            self.carry = Vec::new();
+                        }
                         appended?;
                     }
                     if let Some(batch) = self.end_field(column)? {
