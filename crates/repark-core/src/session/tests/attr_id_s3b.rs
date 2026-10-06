@@ -236,8 +236,8 @@ fn bind_free_names_sort_passes_through_when_input_is_not_unique() {
     let inner = dup_schema().1;
     let doubled = inner
         .select(vec![
-            col("e1").alias_with_metadata("v", Some(tag("a4"))),
-            col("e2").alias_with_metadata("v", Some(tag("a5"))),
+            col("e1").alias_with_metadata("o1", Some(tag("a4"))),
+            col("e2").alias_with_metadata("o2", Some(tag("a5"))),
         ])
         .unwrap();
     let plan = doubled.logical_plan();
