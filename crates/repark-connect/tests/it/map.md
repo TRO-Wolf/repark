@@ -38,7 +38,9 @@ See [../map.md](../map.md).
   all-NULL `numeric,timestamp,text` rows under a 1 MiB cap flush more than once).
   The C-2a F-6 fold (2026-10-06) adds `batch_flushes_at_the_exact_byte_cap` (two `int4`
   rows under a 5-byte cap flush 1 + 1) and `copy_critical_flag_bits_each_refuse` (bits 18,
-  24 and 30 each refuse).
+  24 and 30 each refuse). The C-2a F-7 fold (2026-10-06) adds
+  `decoder_is_poisoned_after_an_error` (an OID refusal, then a valid chunk answers the same
+  error unread, and so does `finish`).
   pins: c-2/C-002, C-003, C-004, C-005, C-006, C-015, C-016, C-017
 - `postgres_types.rs` — C-1 (2026-10-05): one round-trip pin per mapped row, named in the row
   (`bool_round_trips` … `bytea_round_trips`): Arrow array → wire values → Arrow array, equal,

@@ -79,6 +79,7 @@ pub struct CopyBinaryDecoder {
     rows: usize,
     bytes: usize,
     tuples: usize,
+    poisoned: Option<ConnectError>,
 }
 
 impl CopyBinaryDecoder {
@@ -102,6 +103,7 @@ impl CopyBinaryDecoder {
             rows: 0,
             bytes: 0,
             tuples: 0,
+            poisoned: None,
         })
     }
 
@@ -134,19 +136,30 @@ impl CopyBinaryDecoder {
 
     #[allow(clippy::missing_errors_doc)]
     pub fn decode(&mut self, chunk: &mut &[u8]) -> Result<Option<RecordBatch>> {
+        if let Some(error) = &self.poisoned {
+            return Err(error.clone());
+        }
         let input: &[u8] = chunk;
         let mut pos = 0;
         let outcome = self.run(input, &mut pos);
         *chunk = input.get(pos..).unwrap_or_default();
+        if let Err(error) = &outcome {
+            self.poisoned = Some(error.clone());
+        }
         outcome
     }
 
     #[allow(clippy::missing_errors_doc)]
-    pub fn finish(&self) -> Result<()> {
+    pub fn finish(&mut self) -> Result<()> {
+        if let Some(error) = &self.poisoned {
+            return Err(error.clone());
+        }
         if self.state == State::Done {
             Ok(())
         } else {
-            Err(ConnectError::Disconnected)
+            let error = ConnectError::Disconnected;
+            self.poisoned = Some(error.clone());
+            Err(error)
         }
     }
 
@@ -320,6 +333,9 @@ impl CopyBinaryDecoder {
     }
 
     fn flush(&mut self) -> Result<RecordBatch> {
+        if let Some(error) = &self.poisoned {
+            return Err(error.clone());
+        }
         let arrays: Vec<ArrayRef> = self
             .appenders
             .iter_mut()

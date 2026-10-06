@@ -62,7 +62,10 @@ Product code for `repark-connect`. See [../map.md](../map.md).
   table (bool 1, int2 2, int4/float4/date 4, int8/float8/timestamps 8, numeric 16), charged for
   values and NULLs; variable values charge stored bytes plus 4 offset bytes (`jsonb` the
   stripped body, `uuid` the 36 rendered bytes) and NULLs the 4 offset bytes; validity charges
-  ceil(buffered rows x columns / 8), counted in the flush test and `buffered_bytes()`.
+  ceil(buffered rows x columns / 8), counted in the flush test and `buffered_bytes()`. The
+  C-2a F-7 fold (2026-10-06) poisons the decoder: the first error from `decode` or `finish`
+  is kept, and every later `decode`, `finish` or flush answers it without reading input;
+  `finish` takes `&mut self`.
   pins: c-2/C-002, C-003, C-004, C-005, C-006, C-015, C-016, C-017
 - `settings.rs` — C-1 (2026-10-05). `ConnectionSettings::from_props` reads one source's props
   (the core loader's `SourceSpec.props`). It interprets only `auth_method` (R-5, CC-3) and

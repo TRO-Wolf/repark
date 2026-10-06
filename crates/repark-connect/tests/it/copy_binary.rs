@@ -208,6 +208,24 @@ fn copy_truncated_stream_is_disconnected() {
     assert_eq!(decoder.finish(), Err(ConnectError::Disconnected));
 }
 
+#[test]
+fn decoder_is_poisoned_after_an_error() {
+    let mut decoder = decoder(vec![base("n", "int4")]);
+    let bad = header_with(1 << 16, &[]);
+    let mut rest: &[u8] = &bad;
+    let error = decoder.decode(&mut rest).expect_err("OIDs refuse");
+    assert_eq!(error, protocol(ProtocolViolation::OidColumns));
+    let valid = stream(&int4s(&[Some(1)]));
+    let mut chunk: &[u8] = &valid;
+    let error = decoder.decode(&mut chunk).expect_err("the poison holds");
+    assert_eq!(error, protocol(ProtocolViolation::OidColumns));
+    assert_eq!(chunk, valid.as_slice(), "a poisoned decode reads no input");
+    assert_eq!(
+        decoder.finish(),
+        Err(protocol(ProtocolViolation::OidColumns))
+    );
+}
+
 fn every_mapping() -> (Vec<PlannedColumn>, Vec<Vec<Field>>) {
     let columns = vec![
         base("flag", "bool"),
