@@ -702,7 +702,6 @@ EXPECTED_RUNTIME_NAMES = (
     "_parse_table_identifier_segments",
     "_prepare_nested_cell",
     "_promote_csv_string_types",
-    "_prop_key_is_secret",
     "_python_scalar_merge_kind",
     "_quote_ident",
     "_quote_ident_if_needed",

@@ -6,7 +6,7 @@ format. That is a hard hygiene fence, not a style preference — a fixture that 
 like a live key is a fixture that eventually gets reported as a leak.
 
 ``manifest.json`` labels each column with the needle class it stands for (the needle
-inventory lives in the facade's ``prop_key_is_secret`` mirror). Two columns are
+inventory lives in the Rust ``column_name_is_secret_shaped`` rule). Two columns are
 deliberate NEGATIVE controls: ``id`` matches nothing, and ``bucket_key`` ends with
 ``_key`` yet is excluded by the documented ``bucket`` carve-out. Reads behave
 normally here — opt-in secret flagging on data columns lands later (DS-4 pins).

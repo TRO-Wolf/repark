@@ -4,12 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from repark.spark._secrets import prop_key_is_secret
+from repark import _native
 from repark.spark.session import ReparkSession
 
-# Needle inventory mirrored from catalog_config.rs:126 prop_key_is_secret (do not edit Rust).
-# Conformance pin: every Rust arm has ≥1 positive key; `bucket`/`arn`
-# inside `_key` stay non-secret.
 _SECRET_KEYS: tuple[str, ...] = (
     "aws_secret_access_key",
     "s3.secret-access-key",
@@ -62,14 +59,14 @@ def spark() -> ReparkSession:
 
 @pytest.mark.parametrize("key", _SECRET_KEYS)
 def test_prop_key_is_secret_needles(key: str) -> None:
-    """Python mirror matches the Rust needle set for known secret key spellings."""
-    assert prop_key_is_secret(key) is True, key
+    """The native key rule redacts every known secret key spelling."""
+    assert _native.redact_property_value(key, "v") == "***", key
 
 
 @pytest.mark.parametrize("key", _NON_SECRET_KEYS)
 def test_prop_key_is_secret_non_secrets(key: str) -> None:
     """Non-secret keys stay unredacted."""
-    assert prop_key_is_secret(key) is False, key
+    assert _native.redact_property_value(key, "v") == "v", key
 
 
 def test_get_all_redacts_secret_values(spark: ReparkSession) -> None:

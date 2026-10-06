@@ -6,8 +6,8 @@ or refuses a credential-named data column. Opt-in secrets-flagging is a later
 feature this fixture deliberately PREDATES; facade-level read pins land in DS-4,
 not here.
 
-The needle inventory this family stands in for is the facade's
-``prop_key_is_secret`` mirror — but this lane is pure pyarrow and does NOT import
+The needle inventory this family stands in for is the Rust
+``column_name_is_secret_shaped`` rule — but this lane is pure pyarrow and does NOT import
 repark, so the needles are carried as labels in ``manifest.json`` and re-derived
 here with the same fold (lowercase, hyphen/dot to underscore, then underscores
 stripped for the compact form).
@@ -46,7 +46,7 @@ def _datagen() -> Any:
 
 
 def _fold(name: str) -> tuple[str, str]:
-    """The ``prop_key_is_secret`` fold: (lower with separators folded, compact form)."""
+    """The ``column_name_is_secret_shaped`` fold: (lower with separators folded, compact form)."""
     lower = name.lower().replace("-", "_").replace(".", "_")
     return lower, lower.replace("_", "")
 
