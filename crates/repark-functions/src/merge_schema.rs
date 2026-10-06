@@ -11,10 +11,19 @@ pub const SPARK_SQL_ICEBERG_MERGE_SCHEMA_KEY: &str = "spark.sql.iceberg.merge-sc
 
 pub const DEFAULT_MERGE_SCHEMA: bool = false;
 
-#[derive(Debug)]
 pub struct BooleanConfRefusal {
     pub key: &'static str,
     pub raw: String,
+}
+
+impl std::fmt::Debug for BooleanConfRefusal {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("BooleanConfRefusal")
+            .field("key", &self.key)
+            .field("raw_len", &self.raw.len())
+            .finish()
+    }
 }
 
 #[must_use]

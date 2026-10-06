@@ -1,6 +1,6 @@
 # map — repark-functions/src
 
-**SOURCE-URL-REDACT-1-FN (2026-10-06):** the `case_sensitive.rs`, `ansi.rs` and `merge_schema.rs` boolean-knob refusals return `BooleanConfRefusal` (`key`, `raw`) and do not format the Spark sentence. `repark-python` and `repark-spark` format it with `mask_value_credentials`. No `repark-functions` → `repark-common` edge. pins: source-url-redact-1/C-035, C-055
+**SOURCE-URL-REDACT-1-FN (2026-10-06):** the `case_sensitive.rs`, `ansi.rs` and `merge_schema.rs` boolean-knob refusals return `BooleanConfRefusal` (`key`, `raw`). `Debug` prints `key` and `raw_len`. `repark-python` and `repark-spark` format the Spark sentence with `mask_value_credentials`. The builder door masks every `Configuration` message. No `repark-functions` → `repark-common` edge. pins: source-url-redact-1/C-035, C-055
 
 CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
 (pins: cc-3-comment-condensation/C-009).
