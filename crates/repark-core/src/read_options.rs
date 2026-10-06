@@ -186,7 +186,7 @@ pub(crate) fn apply_secret_column_flag(
         .fields()
         .iter()
         .map(|field| field.name().as_str())
-        .filter(|name| crate::prop_key_is_secret(name))
+        .filter(|name| repark_common::redaction::column_name_is_secret_shaped(name))
         .collect();
     if flagged.is_empty() {
         return Ok(());

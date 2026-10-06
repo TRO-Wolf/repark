@@ -2,7 +2,24 @@ pub const REDACTED: &str = "***";
 
 #[must_use]
 pub fn prop_key_is_secret(key: &str) -> bool {
-    let lower = key.to_ascii_lowercase().replace(['-', '.'], "_");
+    let lower = folded_key(key);
+    secret_shaped(&lower)
+        || lower.contains("account_key")
+        || lower.contains("authorization")
+        || lower == "pat"
+        || lower.ends_with("_pat")
+}
+
+#[must_use]
+pub fn column_name_is_secret_shaped(name: &str) -> bool {
+    secret_shaped(&folded_key(name))
+}
+
+fn folded_key(key: &str) -> String {
+    key.to_ascii_lowercase().replace(['-', '.'], "_")
+}
+
+fn secret_shaped(lower: &str) -> bool {
     let compact = lower.replace('_', "");
     lower.contains("aws_secret")
         || lower.contains("secret")
@@ -34,7 +51,10 @@ pub fn redact_value(key: &str, value: &str) -> String {
 
 #[must_use]
 pub fn mask_value_credentials(value: &str) -> String {
-    mask_secret_parameters(&mask_url_userinfo(value))
+    let masked = mask_secret_parameters(value);
+    let masked = mask_colon_pairs(&masked);
+    let masked = mask_url_userinfo(&masked);
+    mask_slash_credentials(&masked)
 }
 
 fn mask_url_userinfo(value: &str) -> String {
@@ -44,22 +64,96 @@ fn mask_url_userinfo(value: &str) -> String {
         let authority_start = found + "://".len();
         out.push_str(&rest[..authority_start]);
         let tail = &rest[authority_start..];
-        let region_end = tail.find(char::is_whitespace).unwrap_or(tail.len());
-        let authority_end = tail[..region_end]
-            .find(['/', '?', '#'])
-            .unwrap_or(region_end);
-        let authority = &tail[..authority_end];
-        let consumed = match authority.rfind('@') {
-            Some(at) => {
-                push_masked_userinfo(&mut out, &authority[..at]);
-                at
-            }
-            None => 0,
-        };
+        let region = &tail[..next_url_start(tail)];
+        let consumed = mask_authority(&mut out, region);
         rest = &tail[consumed..];
     }
     out.push_str(rest);
     out
+}
+
+fn next_url_start(tail: &str) -> usize {
+    let Some(next) = tail.find("://") else {
+        return tail.len();
+    };
+    tail[..next]
+        .char_indices()
+        .rev()
+        .find(|(_, character)| !is_scheme_char(*character))
+        .map_or(0, |(position, character)| position + character.len_utf8())
+}
+
+fn is_scheme_char(character: char) -> bool {
+    character.is_ascii_alphanumeric() || matches!(character, '+' | '-' | '.' | ':')
+}
+
+fn mask_authority(out: &mut String, region: &str) -> usize {
+    let authority_end = region.find(['/', '?', '#', ';']).unwrap_or(region.len());
+    let mut authority = &region[..authority_end];
+    if let Some(space) = authority.find(char::is_whitespace)
+        && is_clean_host(&authority[..space])
+    {
+        authority = &authority[..space];
+    }
+    if let Some(at) = authority.rfind('@') {
+        let host = &authority[at + 1..];
+        let end = match unclean_userinfo_end(region, authority.len()) {
+            Some(later)
+                if !is_host_like(host)
+                    || !is_clean_host(host) && is_clean_host(follower_host(region, later)) =>
+            {
+                later
+            }
+            _ => at,
+        };
+        push_masked_userinfo(out, &region[..end]);
+        return end;
+    }
+    if is_clean_host(authority) {
+        return 0;
+    }
+    match unclean_userinfo_end(region, authority.len()) {
+        Some(at) => {
+            push_masked_userinfo(out, &region[..at]);
+            at
+        }
+        None => 0,
+    }
+}
+
+fn unclean_userinfo_end(region: &str, from: usize) -> Option<usize> {
+    let mut search = from;
+    while let Some(offset) = region[search..].find('@') {
+        let first = search + offset;
+        search = first + 1;
+        if !host_follows(region, first) {
+            continue;
+        }
+        let mut at = first;
+        while let Some(next) = region[at + 1..].find(['@', '/', '?', '#']) {
+            let candidate = at + 1 + next;
+            if region.as_bytes()[candidate] != b'@' || !host_follows(region, candidate) {
+                break;
+            }
+            at = candidate;
+        }
+        return Some(at);
+    }
+    None
+}
+
+fn host_follows(region: &str, at: usize) -> bool {
+    is_host_like(follower_host(region, at))
+}
+
+fn follower_host(region: &str, at: usize) -> &str {
+    let follower = &region[at + 1..];
+    let host_end = follower
+        .find(|character: char| {
+            matches!(character, '/' | '?' | '#' | ';') || character.is_whitespace()
+        })
+        .unwrap_or(follower.len());
+    &follower[..host_end]
 }
 
 fn push_masked_userinfo(out: &mut String, userinfo: &str) {
@@ -67,12 +161,67 @@ fn push_masked_userinfo(out: &mut String, userinfo: &str) {
         return;
     }
     if let Some((user, _)) = userinfo.split_once(':')
-        && !user.contains('@')
+        && !user.contains(|character: char| {
+            matches!(character, '@' | '/' | '?' | '#' | ';') || character.is_whitespace()
+        })
     {
         out.push_str(user);
         out.push(':');
     }
     out.push_str(REDACTED);
+}
+
+fn is_clean_host(authority: &str) -> bool {
+    authority.is_empty()
+        || authority.split(',').all(|part| match host_and_port(part) {
+            Some((host, port)) => {
+                port.is_some_and(|digits| !digits.is_empty())
+                    || host.starts_with('[')
+                    || is_dotted_name(host)
+                    || host.eq_ignore_ascii_case("localhost")
+            }
+            None => false,
+        })
+}
+
+fn is_dotted_name(host: &str) -> bool {
+    let labels: Vec<&str> = host.split('.').collect();
+    labels.len() > 1
+        && labels.iter().all(|label| !label.is_empty())
+        && (labels
+            .iter()
+            .all(|label| label.bytes().all(|byte| byte.is_ascii_digit()))
+            || labels.last().is_some_and(|top| {
+                top.chars().count() >= 2 && top.chars().all(char::is_alphabetic)
+            }))
+}
+
+fn is_host_like(text: &str) -> bool {
+    !text.is_empty() && text.split(',').all(|part| host_and_port(part).is_some())
+}
+
+fn host_and_port(part: &str) -> Option<(&str, Option<&str>)> {
+    let (host, port) = if part.starts_with('[') {
+        let close = part.find(']')? + 1;
+        let remainder = &part[close..];
+        if remainder.is_empty() {
+            (&part[..close], None)
+        } else {
+            (&part[..close], Some(remainder.strip_prefix(':')?))
+        }
+    } else {
+        match part.rsplit_once(':') {
+            Some((host, port)) => (host, Some(port)),
+            None => (part, None),
+        }
+    };
+    let host_ok = host.starts_with('[')
+        || !host.is_empty()
+            && host.chars().all(|character| {
+                character.is_alphanumeric() || matches!(character, '-' | '.' | '_' | '%')
+            });
+    let port_ok = port.is_none_or(|digits| digits.bytes().all(|byte| byte.is_ascii_digit()));
+    (host_ok && port_ok).then_some((host, port))
 }
 
 fn mask_secret_parameters(value: &str) -> String {
@@ -87,7 +236,13 @@ fn mask_secret_parameters(value: &str) -> String {
             continue;
         }
         let value_start = index + (value[index..].len() - value[index..].trim_start().len());
-        let value_end = parameter_value_end(value, value_start);
+        let value_end = if value[..equals].trim_end().ends_with(&format!("({name}")) {
+            value[value_start..]
+                .find(')')
+                .map_or(value.len(), |end| value_start + end)
+        } else {
+            parameter_value_end(value, value_start)
+        };
         if value_end > value_start {
             out.push_str(&value[copied..value_start]);
             out.push_str(REDACTED);
@@ -114,15 +269,19 @@ fn is_parameter_name_char(character: char) -> bool {
 }
 
 fn parameter_name_is_secret(name: &str) -> bool {
-    if prop_key_is_secret(name) {
-        return true;
-    }
     let compact: String = name
         .chars()
         .filter(char::is_ascii_alphanumeric)
         .map(|character| character.to_ascii_lowercase())
         .collect();
-    compact == "sig" || compact.ends_with("pwd") || compact.ends_with("signature")
+    if compact.ends_with("name") {
+        return false;
+    }
+    prop_key_is_secret(name)
+        || matches!(compact.as_str(), "sig" | "pw" | "pass" | "sas")
+        || ["pwd", "passwd", "passcode", "signature", "accountkey"]
+            .iter()
+            .any(|suffix| compact.ends_with(suffix))
 }
 
 fn parameter_value_end(value: &str, start: usize) -> usize {
@@ -184,218 +343,142 @@ fn starts_next_parameter(after: &str) -> bool {
     name_end > 0 && after[name_end..].trim_start().starts_with('=')
 }
 
-#[cfg(test)]
-mod tests {
-    use super::{mask_value_credentials, prop_key_is_secret, redact_value};
-
-    fn masked(value: &str) -> String {
-        mask_value_credentials(value)
-    }
-
-    #[test]
-    fn url_userinfo_password_is_masked_keeping_user_host_and_database() {
-        assert_eq!(
-            masked("postgresql://alice:S3cretPw@db.example.com:5432/sales"),
-            "postgresql://alice:***@db.example.com:5432/sales"
-        );
-    }
-
-    #[test]
-    fn url_userinfo_is_masked_for_every_scheme() {
-        let cases = [
-            (
-                "jdbc:postgresql://u:pw1@h:5432/db",
-                "jdbc:postgresql://u:***@h:5432/db",
-            ),
-            ("postgres://u:pw2@h/db", "postgres://u:***@h/db"),
-            ("mysql://u:pw3@h:3306/db", "mysql://u:***@h:3306/db"),
-            ("sqlserver://u:pw4@h:1433", "sqlserver://u:***@h:1433"),
-            ("redis://:pw5@h:6379/0", "redis://:***@h:6379/0"),
-            ("http://u:pw6@h/x", "http://u:***@h/x"),
-            ("https://u:pw7@h:8443/x?y=1", "https://u:***@h:8443/x?y=1"),
-            ("s3://AKIAX:pw8@bucket/path", "s3://AKIAX:***@bucket/path"),
-            (
-                "thrift://u:pw9@metastore:9083",
-                "thrift://u:***@metastore:9083",
-            ),
-            ("custom+tls://u:pw10@h", "custom+tls://u:***@h"),
-            ("postgresql://u:p@ss@h/db", "postgresql://u:***@h/db"),
-            (
-                "postgresql://u:pw11@h1:5432,h2:5432/db",
-                "postgresql://u:***@h1:5432,h2:5432/db",
-            ),
-        ];
-        for (raw, expected) in cases {
-            assert_eq!(masked(raw), expected, "{raw}");
+fn mask_colon_pairs(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    let mut copied = 0;
+    let mut index = 0;
+    while let Some(offset) = value[index..].find(':') {
+        let colon = index + offset;
+        index = colon + 1;
+        let Some((name, quoted)) = colon_pair_name(&value[copied..colon]) else {
+            continue;
+        };
+        let after = &value[index..];
+        if !quoted && !after.starts_with([' ', '\t']) {
+            continue;
         }
-    }
-
-    #[test]
-    fn lone_userinfo_is_masked_whole() {
-        assert_eq!(
-            masked("https://tok123@h.example.com/x"),
-            "https://***@h.example.com/x"
-        );
-        assert_eq!(masked("git+ssh://deploy@h/repo"), "git+ssh://***@h/repo");
-    }
-
-    #[test]
-    fn userinfo_is_read_only_inside_the_authority() {
-        let cases = [
-            ("https://h:443/p?m=a@b.c", "https://h:443/p?m=a@b.c"),
-            ("https://u:p1@h/x@y", "https://u:***@h/x@y"),
-            ("https://h/p#frag:x@y", "https://h/p#frag:x@y"),
-            ("https://u:p2@h/p#a:b@c", "https://u:***@h/p#a:b@c"),
-            ("https://h?u:p@x", "https://h?u:p@x"),
-            ("http://[::1]:8080/x@y", "http://[::1]:8080/x@y"),
-        ];
-        for (raw, expected) in cases {
-            assert_eq!(masked(raw), expected, "{raw}");
+        if !parameter_name_is_secret(name) {
+            continue;
         }
-    }
-
-    #[test]
-    fn unclean_userinfo_inside_the_authority_fails_closed() {
-        assert_eq!(masked("https://a@b:c@h/x"), "https://***@h/x");
-        assert_eq!(
-            masked("postgresql://u:p@ss@h/db"),
-            "postgresql://u:***@h/db"
-        );
-    }
-
-    #[test]
-    fn every_url_in_a_value_is_masked() {
-        assert_eq!(
-            masked("primary=postgresql://a:pw1@h1/db replica=postgresql://b:pw2@h2/db"),
-            "primary=postgresql://a:***@h1/db replica=postgresql://b:***@h2/db"
-        );
-    }
-
-    #[test]
-    fn secret_query_parameters_are_masked() {
-        let cases = [
-            (
-                "postgresql://h/db?user=a&password=x1&sslmode=require",
-                "postgresql://h/db?user=a&password=***&sslmode=require",
-            ),
-            (
-                "postgresql://h/db?sslpassword=x2",
-                "postgresql://h/db?sslpassword=***",
-            ),
-            (
-                "https://h/api?access_token=x3&page=2",
-                "https://h/api?access_token=***&page=2",
-            ),
-            (
-                "https://b.s3.amazonaws.com/k?X-Amz-Credential=AKIA%2F1&X-Amz-Signature=x4&X-Amz-Expires=60",
-                "https://b.s3.amazonaws.com/k?X-Amz-Credential=***&X-Amz-Signature=***&X-Amz-Expires=60",
-            ),
-            (
-                "https://acct.blob.core.windows.net/c?sv=2021&sig=x5",
-                "https://acct.blob.core.windows.net/c?sv=2021&sig=***",
-            ),
-            (
-                "jdbc:sqlserver://h:1433;databaseName=d;user=u;password=x6;encrypt=true",
-                "jdbc:sqlserver://h:1433;databaseName=d;user=u;password=***;encrypt=true",
-            ),
-        ];
-        for (raw, expected) in cases {
-            assert_eq!(masked(raw), expected, "{raw}");
+        let value_start = index + (after.len() - after.trim_start_matches([' ', '\t']).len());
+        let value_end = colon_value_end(value, value_start, quoted);
+        if value_end > value_start {
+            out.push_str(&value[copied..value_start]);
+            out.push_str(REDACTED);
+            copied = value_end;
         }
+        index = value_end.max(index);
     }
+    out.push_str(&value[copied..]);
+    out
+}
 
-    #[test]
-    fn keyword_dsn_secrets_are_masked() {
-        let cases = [
-            (
-                "host=h port=5432 dbname=d user=u password=x1",
-                "host=h port=5432 dbname=d user=u password=***",
-            ),
-            (
-                "host=h password = x2 dbname=d",
-                "host=h password = *** dbname=d",
-            ),
-            (
-                "host=h password='a b\\'c' dbname=d",
-                "host=h password=*** dbname=d",
-            ),
-            (
-                "host=h password=pa&ss;word dbname=d",
-                "host=h password=*** dbname=d",
-            ),
-            (
-                "host=h password='unterminated dbname=d",
-                "host=h password=***",
-            ),
-            (
-                "Server=h;Database=d;Uid=u;Pwd=x3;",
-                "Server=h;Database=d;Uid=u;Pwd=***;",
-            ),
-            (
-                "Server=h; PWD={a;b}}c}; Database=d",
-                "Server=h; PWD=***; Database=d",
-            ),
-            (
-                "Driver={ODBC};Server=h;Password=\"q;w\";",
-                "Driver={ODBC};Server=h;Password=***;",
-            ),
-        ];
-        for (raw, expected) in cases {
-            assert_eq!(masked(raw), expected, "{raw}");
+fn colon_pair_name(prefix: &str) -> Option<(&str, bool)> {
+    let trimmed = prefix.trim_end_matches([' ', '\t']);
+    if let Some(quote) = trimmed
+        .chars()
+        .next_back()
+        .filter(|character| matches!(character, '"' | '\''))
+    {
+        let inner = &trimmed[..trimmed.len() - 1];
+        let open = inner.rfind(quote)?;
+        return Some((&inner[open + 1..], true));
+    }
+    if trimmed.len() != prefix.len() {
+        return None;
+    }
+    let name = parameter_name_before(prefix);
+    (!name.is_empty()).then_some((name, false))
+}
+
+fn colon_value_end(value: &str, start: usize, quoted_name: bool) -> usize {
+    let rest = &value[start..];
+    match rest.as_bytes().first() {
+        Some(quote @ (b'\'' | b'"')) => {
+            quoted_value_end(rest, *quote).map_or(value.len(), |end| start + end)
         }
-    }
-
-    #[test]
-    fn non_secret_values_are_untouched() {
-        let cases = [
-            "https://db.example.com:5432/sales",
-            "postgresql://db.example.com/sales?user=alice&sslmode=require",
-            "s3://bucket/warehouse/path/part-0.parquet",
-            "alice@example.com",
-            "C:\\Users\\alice\\data\\file.csv",
-            "host=h port=5432 dbname=d user=u",
-            "org.apache.iceberg.aws.glue.GlueCatalog",
-            "a=b=c",
-            "",
-            "password=",
-        ];
-        for raw in cases {
-            assert_eq!(masked(raw), raw, "{raw}");
-        }
-    }
-
-    #[test]
-    fn redact_value_keeps_the_key_rule_and_adds_the_value_rule() {
-        assert_eq!(redact_value("password", "plain"), "***");
-        assert_eq!(redact_value("s3.secret-access-key", "x"), "***");
-        assert_eq!(
-            redact_value(
-                "url",
-                "postgresql://alice:S3cretPw@db.example.com:5432/sales"
-            ),
-            "postgresql://alice:***@db.example.com:5432/sales"
-        );
-        assert_eq!(
-            redact_value("uri", "jdbc:postgresql://u:p@h/db"),
-            "jdbc:postgresql://u:***@h/db"
-        );
-        assert_eq!(redact_value("user", "alice"), "alice");
-    }
-
-    #[test]
-    fn prop_key_is_secret_is_unchanged_by_the_move() {
-        for key in [
-            "password",
-            "s3.access-key-id",
-            "client.secret",
-            "token",
-            "key",
-            "my_key",
-        ] {
-            assert!(prop_key_is_secret(key), "{key}");
-        }
-        for key in ["url", "uri", "user", "host", "bucket_key", "kms_key_arn"] {
-            assert!(!prop_key_is_secret(key), "{key}");
+        _ => {
+            let stop = |character: char| {
+                matches!(character, '\n' | '\r')
+                    || quoted_name && matches!(character, ',' | '}' | ']')
+            };
+            rest.find(stop).map_or(value.len(), |end| start + end)
         }
     }
 }
+
+fn mask_slash_credentials(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    let mut copied = 0;
+    let mut index = 0;
+    while let Some(offset) = value[index..].find(['/', ':']) {
+        let separator = index + offset;
+        index = separator + 1;
+        let colon = value.as_bytes()[separator] == b':';
+        if colon && value[index..].starts_with("//") {
+            continue;
+        }
+        let user_start = value[copied..separator]
+            .char_indices()
+            .rev()
+            .find(|(_, character)| !is_identifier_char(*character))
+            .map_or(copied, |(position, character)| {
+                copied + position + character.len_utf8()
+            });
+        if !value[user_start..separator]
+            .starts_with(|character: char| character.is_ascii_alphabetic())
+        {
+            continue;
+        }
+        let bounded = value[..user_start]
+            .chars()
+            .next_back()
+            .is_none_or(|character| !colon && character == ':' || is_word_delimiter(character));
+        if !bounded {
+            continue;
+        }
+        let Some(at) = credential_password_end(value, index, colon) else {
+            continue;
+        };
+        out.push_str(&value[copied..index]);
+        out.push_str(REDACTED);
+        copied = at;
+        index = at;
+    }
+    out.push_str(&value[copied..]);
+    out
+}
+
+fn credential_password_end(value: &str, start: usize, colon: bool) -> Option<usize> {
+    let rest = &value[start..];
+    if !colon && let Some(quoted) = rest.strip_prefix('"') {
+        let close = quoted.find('"')? + 2;
+        return rest[close..].starts_with('@').then_some(start + close);
+    }
+    let word_end = rest.find(is_word_delimiter).unwrap_or(rest.len());
+    let at = rest[..word_end].rfind('@')?;
+    if at == 0 || at + 1 >= word_end {
+        return None;
+    }
+    if colon && (rest[..at].contains([':', '/']) || !host_follows(&rest[..word_end], at)) {
+        return None;
+    }
+    Some(start + at)
+}
+
+fn is_identifier_char(character: char) -> bool {
+    character.is_ascii_alphanumeric() || matches!(character, '_' | '$' | '#' | '.' | '-')
+}
+
+fn is_word_delimiter(character: char) -> bool {
+    character.is_whitespace()
+        || matches!(
+            character,
+            ';' | ',' | '(' | ')' | '"' | '\'' | '=' | '<' | '>'
+        )
+}
+
+#[cfg(test)]
+mod corpus;
+#[cfg(test)]
+mod tests;
