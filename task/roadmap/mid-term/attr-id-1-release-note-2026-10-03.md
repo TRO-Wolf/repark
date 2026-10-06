@@ -89,7 +89,9 @@ release, where main could not plan it. The internal twin names
 - DataFrame `USING` joins keep the left key: left-side qualified key
   references answer on every join type, and right-side references answer
   on `inner` but refuse loudly on `left`/`right`/`full` instead of
-  answering left values silently. `semi`/`anti` still refuse the missing
+  answering left values silently (on aliased frames; a stale `r["id"]`
+  from an unaliased frame still answers left values, as in v1.5.2).
+  `semi`/`anti` still refuse the missing
   side as Spark does (`42703`). `select("*")` and the unqualified key over
   `right` and `full` joins show the left key (`NULL` on right-outer
   rows); the coalesced star and per-side key values are a v1.5.3
