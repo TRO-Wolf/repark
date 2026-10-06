@@ -190,11 +190,12 @@ wrapped optimizer rule) and declares this directory.
   `../tests/join_qualifiers.rs` (`sort_twins_from_two_join_positions_meet_at_the_join`).
   pins: casesens-2/C-012
   **Fold SM-2c round B (2026-10-06):** `sort_sourced_twin_engine(plan, hits,
-  written, rule)` binds the one ambiguous twin whose attribute traces down
-  through pass-through projections to a field of the written name (sharing
-  `sort_names::below_transparent`), and only when the projection input
-  carries no column of the name — the computed-twin-over-reminted shape,
-  where Spark and the engine's deep pushdown sort by the source column
+  written, rule)` binds the one ambiguous twin whose plain-column expression
+  chain traces down through projections to a column of the written name
+  (sharing `sort_names::below_transparent` for the top walk; scans carry no
+  attribute ids, so the trace reads expressions, never ids), and only when
+  the projection input carries no column of the name — the
+  computed-twin-over-reminted shape, where Spark sorts by the source column
   through both levels. Pins: `../tests/attr_id_s3b.rs`. pins: attr-id-1/C-071
 - `frame_lineage.rs` — **ATTR-ID-1 SJ-1a (2026-10-02):** the lineage core for refusing
   ambiguous self-join references the way Spark Classic does (owner ruling 2026-10-02,

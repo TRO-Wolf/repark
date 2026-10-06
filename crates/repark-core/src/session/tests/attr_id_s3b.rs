@@ -13,7 +13,6 @@ use datafusion::logical_expr::{Expr, LogicalPlan, Subquery, col, lit};
 use datafusion::prelude::SessionContext;
 
 use crate::frame_names::{
-    AttrId,
     NameRule::{Exact, IgnoreCase},
     Resolution, SortShape, bind_free_names, grandchild_key, sort_shape, stamp,
 };
@@ -28,23 +27,6 @@ fn source(context: &SessionContext) -> DataFrame {
     let schema = Arc::new(Schema::new(vec![
         Field::new("id", DataType::Int64, false),
         Field::new("v", DataType::Int64, false),
-        Field::new("w", DataType::Utf8, false),
-    ]));
-    let columns: Vec<ArrayRef> = vec![
-        Arc::new(Int64Array::from(vec![1, 2])),
-        Arc::new(Int64Array::from(vec![10, 20])),
-        Arc::new(StringArray::from(vec!["a", "b"])),
-    ];
-    context
-        .read_batch(RecordBatch::try_new(schema, columns).unwrap())
-        .unwrap()
-}
-
-fn tagged_source(context: &SessionContext, id: &str) -> DataFrame {
-    let schema = Arc::new(Schema::new(vec![
-        Field::new("id", DataType::Int64, false),
-        Field::new("v", DataType::Int64, false)
-            .with_metadata(HashMap::from([(KEY.to_string(), id.to_string())])),
         Field::new("w", DataType::Utf8, false),
     ]));
     let columns: Vec<ArrayRef> = vec![
@@ -280,21 +262,18 @@ fn bind_free_names_sort_is_unresolved_on_join() {
 #[test]
 fn bind_free_names_sort_binds_sourced_twin_over_reminted_input() {
     let context = SessionContext::new();
-    let source_id = AttrId::mint();
-    let pass_id = AttrId::mint();
-    let computed_id = AttrId::mint();
-    let computed = tagged_source(&context, source_id.as_str())
+    let computed = source(&context)
         .select(vec![
             col("id").alias_with_metadata("id", Some(tag("a0"))),
-            col("v").alias_with_metadata("e1", Some(tag(pass_id.as_str()))),
-            (col("v") - lit(15)).alias_with_metadata("e2", Some(tag(computed_id.as_str()))),
+            col("v").alias_with_metadata("e1", Some(tag("a2"))),
+            (col("v") - lit(15)).alias_with_metadata("e2", Some(tag("a3"))),
         ])
         .unwrap();
     let outer = computed
         .select(vec![
             col("id"),
-            col("e1").alias_with_metadata("o1", Some(tag(pass_id.as_str()))),
-            col("e2").alias_with_metadata("o2", Some(tag(computed_id.as_str()))),
+            col("e1").alias_with_metadata("o1", Some(tag("a2"))),
+            col("e2").alias_with_metadata("o2", Some(tag("a3"))),
             lit(1).alias("w"),
         ])
         .unwrap();

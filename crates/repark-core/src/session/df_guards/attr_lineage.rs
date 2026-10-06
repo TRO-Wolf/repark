@@ -84,13 +84,9 @@ pub fn sort_sourced_twin_engine(
     {
         return None;
     }
-    let sources = projection_source_ids(node);
     let mut found = None;
     for hit in hits {
-        let Some(Some(id)) = sources.get(*hit) else {
-            continue;
-        };
-        let Some(name) = traced_source_name(projection.input.as_ref(), id) else {
+        let Some(name) = traced_column_name(node, *hit) else {
             continue;
         };
         if !rule.matches(written, &name) {
@@ -104,22 +100,39 @@ pub fn sort_sourced_twin_engine(
     found
 }
 
-fn traced_source_name(plan: &LogicalPlan, id: &AttrId) -> Option<String> {
-    let position = plan
-        .schema()
-        .fields()
-        .iter()
-        .position(|field| AttrId::native(field).as_ref() == Some(id))?;
-    let LogicalPlan::Projection(projection) = plan else {
-        return plan
-            .schema()
-            .fields()
-            .get(position)
-            .map(|field| field.name().clone());
-    };
-    let sources = projection_source_ids(plan);
-    let next = sources.get(position)?.clone()?;
-    traced_source_name(projection.input.as_ref(), &next)
+fn traced_column_name(plan: &LogicalPlan, mut position: usize) -> Option<String> {
+    let mut node = plan;
+    let mut name = None;
+    loop {
+        if let LogicalPlan::Projection(projection) = node {
+            let column = plain_projection_source(projection.expr.get(position)?)?;
+            name = Some(column.name.clone());
+            node = projection.input.as_ref();
+            position = node.schema().maybe_index_of_column(column)?;
+            continue;
+        }
+        node = match node {
+            LogicalPlan::Filter(filter) => filter.input.as_ref(),
+            LogicalPlan::Sort(sort) => sort.input.as_ref(),
+            LogicalPlan::Limit(limit) => limit.input.as_ref(),
+            LogicalPlan::Repartition(repartition) => repartition.input.as_ref(),
+            LogicalPlan::Distinct(Distinct::All(input)) => input.as_ref(),
+            LogicalPlan::Distinct(Distinct::On(on)) => on.input.as_ref(),
+            LogicalPlan::SubqueryAlias(alias) => alias.input.as_ref(),
+            _ => return name,
+        };
+    }
+}
+
+fn plain_projection_source(expr: &Expr) -> Option<&Column> {
+    let mut node = expr;
+    loop {
+        match node {
+            Expr::Column(column) => return Some(column),
+            Expr::Alias(alias) => node = alias.expr.as_ref(),
+            _ => return None,
+        }
+    }
 }
 
 #[must_use]
