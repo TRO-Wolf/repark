@@ -159,7 +159,7 @@ or O-4 together with O-1).** This is *inferred* from the measured buckets.
 | D-3 | If the step 1 median for O-1 is not under 1.10x, the design sketch rules between O-3 and O-4+O-1 on step 0's data. Python-side O-5 and O-6 only top up a native fix; they are never the plan of record. |
 | D-4 | Whichever carrier is chosen, a frame or column with no id raises the existing internal error (`column_fields.py`: "internal error: stamped field … has no attribute id"). It never falls back to a name, position or side. |
 | D-5 | Every cache (stripped twin, lazy memo, side table) is keyed on the native handle and re-derived whenever `_inner` is reassigned. Never key on the Python frame object. |
-| D-6 | **Re-aimed (owner delegate ruling, 2026-10-03, Q2).** PRIMARY gate: the C-012 `replay.py` wall clock, median of three, at or under **1.10x** of a same-day main run (main measured 499.0 s on 2026-10-03; 1.10x is about 549 s). SECOND gate: like-for-like median of three at or under 1.10x. Every ratio and the spread are reported. Two runs never pass. Over the gate is a halt to the owner, with no carve-out. Baseline recorded 2026-10-03 on the full stack head `5e4a0084`: C-012 wall clock **1.375x** (main 498.99 / 499.30 / 497.40 s, head 687.03 / 685.95 / 683.86 s, both dev-profile `make develop` builds); like-for-like **1.2344x** (1.2366 / 1.2344 / 1.2338 on 26003 cells). The like-for-like set shrank from 29169 cells because cells now EQUAL to Spark drop out of it. |
+| D-6 | **Re-based to release builds (owner, 2026-10-06).** The gate is the **work-equal like ratio, median of three, at or under 1.10x, read on release builds of both sides** (`maturin develop --release`, with the codegen-units override recorded in the gate record below). Over the gate is a halt to the owner, with no carve-out. Two runs never pass. Every ratio and the spread are reported. *Work-equal like set:* the cells whose outcome class is the same on both sides; a cell's work is its `fn()` build plus `collect()`, timed by `replay_work.py`. Debug-build numbers stay in this card as dated history labelled **dev**; they inform and never pass or fail the gate. **History.** 2026-10-03 afternoon (owner delegate, Q2): the primary gate was the C-012 `replay.py` wall clock, median of three, ≤ 1.10x of a same-day main run, measured 1.375x on `5e4a0084` (main 498.99 / 499.30 / 497.40 s, head 687.03 / 685.95 / 683.86 s, dev), with like-for-like 1.2344x (1.2366 / 1.2344 / 1.2338 on 26003 cells, dev) as the second gate. 2026-10-03 evening (owner): the wall-clock gate is unreachable by construction, because 7,532 cells now answer where main errored early; the gate was re-based to the work-equal like set ≤ 1.10x, median of three (dev), with the plan-build-only ratio and the full wall clock reported beside it. 2026-10-06 (owner): the build profile was re-based to release; the number did not move. |
 
 ## Steps
 
@@ -183,8 +183,8 @@ or O-4 together with O-1).** This is *inferred* from the measured buckets.
 - **S0 replay, zero answer or class moves** against the stack-head replay current at the start
   of the unit. Known case-only flakes (two `AMBIGUOUS_REFERENCE` `v`/`V` cells, pre-existing
   HashMap order per the PERF-1 hand-back) are proven by three reruns.
-- **PRIMARY: the C-012 `replay.py` wall clock,** median of three, at or under 1.10x of a same-day main run (D-6, re-aimed 2026-10-03).
-- **SECOND: median of three like-for-like replays** on one frozen tree, at or under 1.10x (D-6).
+- **The gate (D-6, re-based 2026-10-06): the work-equal like ratio, median of three, ≤ 1.10x on release builds of both sides.** The gate record below holds it. Over 1.10 is a halt to the owner, with no carve-out.
+- **Reported, not gated:** the plan-build-only ratio and the full C-012 wall clock.
 - **Step 0 measured (2026-10-03, r5p6, dev builds):** `replay_timed.py` times only the lazy build `fn()`, and `collect()` runs outside the timer. Of the +122.9 s, the timed build accounts for +46.8 s and the outside time for +76.1 s. Of the outside time, native `__arrow_c_stream__` accounts for +70.8 s: about 50 s from 2156 more executing queries (3772 cells answer where main errored, 3662 of them EQUAL to Spark) and about 29 s from each execution being 19% slower (9.75 to 11.62 ms). `stamp_attribute_ids` costs 2.4 s.
 - **The full facade suite** (`python/repark/tests` at `-n 8`, 0 failed) and the parity suite.
 - **The 842-cell inventory**, 0 regressions after reruns of the known flakes.
@@ -193,6 +193,44 @@ or O-4 together with O-1).** This is *inferred* from the measured buckets.
   --lib`, clippy `-D warnings`, `cargo fmt --check`, `make rust-panic-ban`.
 - **The comment ban at 0 hits.**
 - **Scheduled before 1.6.**
+
+## Gate record (2026-10-06, release builds)
+
+**Result: MET at 1.0989** (owner ruling 2026-10-06: this quiet three-run is the gate record).
+
+**The pair.** Main `4a643e56` against stack `7f45e460`, the stack with main merged in (#965), so the stack is measured as it will merge. Both sides come from fresh clones, built one after the other with `uvx maturin@1.14.1 develop --release` and `CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16`. That override replaces the workspace `[profile.release]` value `codegen-units = 1`, while `lto = "thin"` is unchanged. Both sides carry it, and it cuts a build to about 10.7 minutes. The run started after a 300 s settle, with the build lock held through the runs. It used three interleaved `replay_work.py` runs over r5p6 and 23 families, scored on the work-equal like set.
+
+| run | main work (s) | stack work (s) | work-equal like | plan-build only |
+|---|---|---|---|---|
+| 1 | 42.0 | 46.1 | 1.0990 | 1.1551 |
+| 2 | 42.1 | 46.3 | 1.0989 | 1.1552 |
+| 3 | 42.2 | 46.2 | 1.0957 | 1.1479 |
+| **median** | | | **1.0989** | 1.1551 |
+
+- **Spread:** 0.33 pt, over 25,999 cells. Summing per-cell medians of the three runs gives 1.0964.
+- **Per family:** r5p6 carries 3.03 s of the 4.02 s excess (ratio 1.162). Next are r5p7 at 1.216 (0.47 s) and r3 at 1.075 (0.38 s). The r5p6 row is on the v1.5.3 card as a dated, non-blocking follow-up.
+- **Plan-build only:** the same cells, timing only the lazy `fn()` build and leaving `collect()` outside the timer. This is the PERF-1 like-for-like measure. It is reported beside the gate and not gated, because the 2026-10-03 evening ruling moved the gate from it to the work-equal set (D-6, History).
+
+**Preview (2026-10-06 05:26, not the record).** Main `9f41347f` against stack `c7c9a881`, release builds, run straight after the two builds at load 10.8:
+
+| run | main work (s) | stack work (s) | work-equal like | plan-build only |
+|---|---|---|---|---|
+| 1 | 40.7 | 42.8 | 1.0515 | 1.1001 |
+| 2 | 39.1 | 42.8 | 1.0935 | 1.1417 |
+| 3 | 39.1 | 42.8 | 1.0931 | 1.1445 |
+| **median** | | | 1.0931 | 1.1417 |
+
+- **Run 1 flattered the stack:** main ran slow (40.7 s against 39.1 s in runs 2 and 3) while the box was still loaded from the builds. Spread 4.20 pt.
+- **The gate record runs 0.58 pt higher.** It is the same harness, on main with TA series S1/S2a/S3, C-1 and RP-57 merged into both sides. Both sides also ran about 8% slower in absolute terms than in the preview.
+
+**Dev history** (debug builds; informs, never gates):
+
+| date | main | stack | work-equal like, median (runs) |
+|---|---|---|---|
+| 2026-10-04 | `db3a1f37` | `25debe29` (O-1) | 1.1234 (1.1234 / 1.1229 / 1.1238) |
+| 2026-10-04 | `5e4a0084` re-baseline replays | `e0eefd30` (O-1 post-fold) | 1.1244 (1.1240 / 1.1244 / 1.1276) |
+| 2026-10-05 | `9f41347f` | `14ece68b` (main merged, #949) | 1.1031 (1.1031 / 1.1041 / 1.0975) |
+| 2026-10-06 | `9f41347f` | `c7c9a881` (ATTR-VIEW item (a)) | 1.1012 (1.1003 / 1.1012 / 1.1026) |
 
 ## Risks
 
