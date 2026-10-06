@@ -50,7 +50,7 @@ def _raise_analysis(
 
 def _refuse_duplicate_output_columns(frame: Any, *, exact_only: bool = False) -> None:
     columns = list(frame.columns)
-    sensitive = True if exact_only else bool(_native.frame_case_sensitive(frame._plan()))
+    sensitive = True if exact_only else bool(_native.frame_case_sensitive(frame._inner))
     seen: list[str] = []
     for name in columns:
         folded = name.lower()

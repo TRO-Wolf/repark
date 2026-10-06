@@ -1719,8 +1719,9 @@ does) and is called from `_apply_path_write` (parquet, json, csv), `save`
 (orc, ahead of the format refusal), `write_table` (saveAsTable
 create/replace), `_run_ctas` and V2 `append`. `insertInto` stays positional
 (Spark writes it); saveAsTable-append stays by-name loud. The case rule comes
-from the plan (`frame_case_sensitive`), never the session object, so proxied
-sessions keep working. pins: attr-id-1/C-061
+from the frame's stored plan handle (`frame_case_sensitive` over `_inner`,
+which never materializes bridges), never the session object, so proxied
+sessions keep working and lazy frames still run once. pins: attr-id-1/C-061
 **Fold SM-2 R3 (2026-10-06):** `core.py`'s `__arrow_c_stream__` delegates to
 `qualified_names._arrow_c_stream_with_display`. pins: attr-id-1/C-062
 **Fold SM-2 R4 (2026-10-06):** `core.py`'s `mapInArrow` calls
