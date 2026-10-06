@@ -179,6 +179,31 @@ lock for part of it and the flock waited, never bypassed.
 | mutation re-run (`target/mut/run.py`, 31 mutants) | — | §3 |
 
 
+**Fold 3 re-run** on the fold-3 tree, same wrapper; Muse lanes shared the lock and the flock
+waited, never bypassed.
+
+| command | exit | output |
+|---|---|---|
+| `cargo test -p repark-common --lib` | 0 | 65 passed (32 redaction pins + 4 corpus tests) |
+| `cargo test -p repark-core --lib` | 0 | 1026 passed, 1 ignored |
+| `cargo test -p repark-spark --lib` | 0 | 2625 passed, 5 ignored |
+| `cargo test -p repark-iceberg --lib` | 0 | 804 passed |
+| `cargo test -p repark-distributed --features cluster --lib` | 0 | 7 passed |
+| `make rust-clippy` | 0 | no diagnostics |
+| `cargo clippy -p repark-distributed --features cluster --all-targets -- -D warnings -A clippy::disallowed_methods` | 0 | no diagnostics |
+| `make rust-panic-ban` | 0 | clean |
+| `cargo fmt --all --check` | 0 | no output |
+| `./scripts/check_rust_file_size.sh` / `check_lib_rs.sh` / `check_crate_dag.sh` | 0 | clean |
+| `python3 scripts/check_lib_py.py` / `check_docstring_presence.py` | 0 | clean |
+| `python3 scripts/sync_map_md.py --check` / `check_ledger_grammar.py` / `check_docs_links.py` | 0 | clean (2980 clauses) |
+| `bash scripts/check_map_md.sh --base 4a643e56` | 0 | no output |
+| `uvx ruff@0.15.22 check` / `format --check` (touched Python) | 0 | clean |
+| `pytest`, debug build, the same 148 facade files in five chunks plus `test_source_url_redaction_1.py`, `test_session_sources.py`, `test_config_mirror.py`, `test_catalog_surface.py`, `test_torture_secrets.py`, `test_datasets_secrets.py` | 0 | 781 + 1221 + 929 + 1549 + 423 = 4903 passed after the namespace truth table was moved to the key rule (it failed once on the first chunk, as R-3 intends) |
+| re-verify probe, 96,000 + 96,000 | 0 | §3 fold 3 class table; panics 0 |
+| re-verify `live/` scripts on this build and on Spark 4.1.2 | 0 | `getDatabase` raw; the userinfo, Oracle, TNS and YAML repros masked on `getAll` / `SET`; 0 leaks on the eight key-rule statements; storage paths kept |
+| mutation run `target/mut3/run.py` | — | 33 red, 1 over-mask only, 2 equivalent (§3); run on `b158636c`, before the pedantic refactor `f7f9f2f4`, which changes no behavior |
+| `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xsec1 4a643e56 HEAD` | 0 | `hits=0` |
+
 ## 3. Mutation
 
 `redact_value` reverted to key-only (`value.to_string()` in the else arm), the debug module
