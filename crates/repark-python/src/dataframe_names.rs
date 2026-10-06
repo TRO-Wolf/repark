@@ -46,6 +46,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(refuse_ambiguous_join_condition, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_free_names, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_folded_duplicate_keys, module)?)?;
+    module.add_function(wrap_pyfunction!(rename_output_fields, module)?)?;
     module.add_function(wrap_pyfunction!(requalify_join_sides, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_display_name, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_frame_names, module)?)?;
@@ -512,6 +513,26 @@ pub(crate) fn strip_attribute_ids(frame: &PyDataFrame) -> PyResult<PyDataFrame> 
             repark_core::frame_names::strip(plan).map(|plan| (plan, ()))
         })?;
         Ok(stripped)
+    })
+}
+
+#[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
+#[pyfunction]
+pub(crate) fn rename_output_fields(
+    frame: &PyDataFrame,
+    names: Vec<String>,
+) -> PyResult<PyDataFrame> {
+    fenced!("dataframe_names.rename_output_fields", {
+        let depths = frame.depths();
+        let need = crate::deep_stack::clone_need_bytes(depths.plan, depths.expression);
+        let df = crate::deep_stack::grown_sync(need, || {
+            repark_core::frame_names::rename_output_fields(
+                crate::deep_stack::grown_clone_frame(frame.inner(), &frame.depths()),
+                &names,
+            )
+        })
+        .map_err(datafusion_to_py_err)?;
+        Ok(PyDataFrame::new(df, frame.runtime_handle()))
     })
 }
 

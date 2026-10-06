@@ -535,6 +535,10 @@ wrapped optimizer rule) and declares this directory.
   `attr_id::with_id` is private again. Coalesced star and per-side key
   fields are the USING-PER-SIDE-KEYS-1 v1.5.3 follow-up.
   pins: attr-id-1/C-066
+  **Fold SM-2c C-3 (2026-10-06):** `rename_output_fields(frame, names)`
+  re-projects the frame positionally under the given names (one `select`;
+  a length mismatch is a loud plan error) for the write/view registration
+  boundary. pins: attr-id-1/C-067, C-068
 - `sort_names.rs` — **ATTR-ID-1 S3b (2026-10-01):** the filter/sort free-name
   binder over the S1 `resolve`. `sort_shape` descends Filter/Sort/Limit/
   Repartition/Distinct/SubqueryAlias and transparent Projections (a passthrough,

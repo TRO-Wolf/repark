@@ -102,6 +102,26 @@ pub fn with_attribute_copies(frame: DataFrame) -> Result<DataFrame> {
     frame.select(projection)
 }
 
+#[allow(clippy::missing_errors_doc)]
+pub fn rename_output_fields(frame: DataFrame, names: &[String]) -> Result<DataFrame> {
+    let schema = frame.schema();
+    if names.len() != schema.fields().len() {
+        return plan_err!(
+            "rename needs one name per output field: {} fields, {} names",
+            schema.fields().len(),
+            names.len()
+        );
+    }
+    let projection = schema
+        .iter()
+        .zip(names.iter())
+        .map(|((qualifier, field), name)| {
+            Expr::Column(Column::new(qualifier.cloned(), field.name())).alias(name)
+        })
+        .collect::<Vec<_>>();
+    frame.select(projection)
+}
+
 #[must_use]
 pub fn is_scratch_relation(table: &str) -> bool {
     table.starts_with("_repark_") || table.starts_with("__repark_")

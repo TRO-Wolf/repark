@@ -161,7 +161,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   (~0.53 ms per cached `spark.table` call, measured 1000×). `persist`'s
   materialize path notes the same baseline on identity-mapped frames via
   `cache_handle.bind_registered_view`; `create_or_replace_temp_view` registers
-  through `_register_temp_view` so replacements bump the view token. Every
+  through `_register_temp_view` so replacements bump the view token.
+  **Fold SM-2c C-3 (2026-10-06):** `_register_temp_view` renames the registered
+  frame's output fields to the display names when they are exactly unique
+  (`writer_layout._rename_to_unique_display_names`), so a dropped-side twin
+  engine name never reaches the view. pins: attr-id-1/C-067, C-068. Every
   raised `AnalysisException` carries its Spark errorClass through the
   `_integral` attach helpers (`getCondition`). `Table Properties` parses as
   comma-joined `k=v` with `=`-less fragments folded into the previous value

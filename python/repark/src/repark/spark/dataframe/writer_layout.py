@@ -67,6 +67,20 @@ def _refuse_duplicate_output_columns(frame: Any, *, exact_only: bool = False) ->
         seen.append(name)
 
 
+def _registration_frame(dataframe: DataFrame) -> Any:
+    """Return the stripped native frame writers register, renamed to unique display names."""
+    stripped = _native.strip_attribute_ids(dataframe._native_for_registration())
+    return _rename_to_unique_display_names(dataframe, stripped)
+
+
+def _rename_to_unique_display_names(dataframe: DataFrame, native: Any) -> Any:
+    """Rename native output fields to the display names when they differ and are unique."""
+    overlay = dataframe._display_overlay_names()
+    if overlay is None or len(set(overlay)) != len(overlay):
+        return native
+    return _native.rename_output_fields(native, list(overlay))
+
+
 def run_through_temp_view(
     dataframe: DataFrame,
     build_sql: Callable[[str], str],
@@ -80,7 +94,7 @@ def run_through_temp_view(
     dataframe._ensure_alive()
     session = dataframe._session
     view_name = scratch_view_name(session, prefix)
-    registered = _native.strip_attribute_ids(dataframe._native_for_registration())
+    registered = _registration_frame(dataframe)
     session.create_or_replace_temp_view(view_name, registered)
     try:
         _native.session_sql_with_write_options(

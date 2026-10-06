@@ -9632,3 +9632,14 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   literal/unqualified/no-alias guards. No module docstring: the lane's
   no-comments ruling covers the new file; the contract lives here.
   pins: attr-id-1/C-066
+- [test_attr_id_1_sm2c_leak.py](test_attr_id_1_sm2c_leak.py) — **Fold SM-2c
+  C-3 (2026-10-06):** a frame whose display names are unique but whose
+  engine fields are twin names (a dropped self-join side, C-067; a dropped
+  join key, C-068) writes the display names to every door — parquet, csv,
+  json, `saveAsTable` new/append, `writeTo` create/replace/append (the
+  append is by-name over a reordered target), positional `insertInto`,
+  temp views (`SELECT id` answers) — with Spark's values; text writes
+  values and reports the display column name; orc still refuses the
+  format and the global doors stay unsupported. No module docstring: the
+  lane's no-comments ruling covers the new file; the contract lives here.
+  pins: attr-id-1/C-067, C-068

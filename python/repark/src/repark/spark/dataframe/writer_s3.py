@@ -18,11 +18,13 @@ def write_s3_path(writer: Any, path: str, *, stored_as: str) -> None:
     The engine owns the save mode, the part layout, and the commit; this
     forward only carries the writer state across the binding.
     """
+    from repark.spark.dataframe.writer_layout import _registration_frame
+
     dataframe = writer._dataframe
     dataframe._ensure_alive()
     _native.session_write_path(
         dataframe._session,
-        _native.strip_attribute_ids(dataframe._native_for_registration()),
+        _registration_frame(dataframe),
         path,
         stored_as.lower(),
         writer._mode,

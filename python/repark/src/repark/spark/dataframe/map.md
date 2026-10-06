@@ -1750,3 +1750,13 @@ lines and the condition docstring one; the dropped "`drop` is a no-op"
 half-sentence named no frame; SM-2b rebalances the two refusal imports
 against the slot/`__init__` removals plus one filter-docstring join).
 pins: attr-id-1/C-066
+**Fold SM-2c C-3 (2026-10-06):** every writer and temp-view door registers a
+frame whose output fields are renamed to the display names when they differ
+and are exactly unique, so a dropped-side twin engine name never reaches a
+file, table or view: `writer_layout._registration_frame` (strip plus
+`_rename_to_unique_display_names`) feeds `run_through_temp_view` and the S3
+forward, `_rename_to_unique_display_names` feeds `_register_temp_view` and
+both text writers, and the native `rename_output_fields` binding projects
+the positional aliases on the Rust side. Duplicate display names skip the
+rename, so refusals and positional `insertInto` behave as before.
+pins: attr-id-1/C-067, C-068

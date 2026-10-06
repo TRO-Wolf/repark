@@ -68,7 +68,11 @@ def write_text_path(writer: Any, path: str) -> None:
     staging = destination.parent / (
         f"repark-staging-{uuid.uuid4().hex}-{destination.name or 'out'}"
     )
-    native = writer._dataframe._native_for_registration()
+    from repark.spark.dataframe.writer_layout import _rename_to_unique_display_names
+
+    native = _rename_to_unique_display_names(
+        writer._dataframe, writer._dataframe._native_for_registration()
+    )
     try:
         try:
             if partition_columns:
@@ -149,11 +153,12 @@ def _write_partitioned_text(
 ) -> None:
     """Stream the frame once into hive leaf dirs (the engine renders keys). pins: io-text-1/U-1"""
     from repark import _native
+    from repark.spark.dataframe.writer_layout import _rename_to_unique_display_names
     from repark.spark.session.session_time_zone import active_session_time_zone
 
     frame = writer._dataframe
     _native.write_text_partitioned(
-        frame._native_for_registration(),
+        _rename_to_unique_display_names(frame, frame._native_for_registration()),
         str(staging),
         partition_columns,
         linesep,
