@@ -128,7 +128,8 @@ pub fn parse_maintenance_policy(
 pub fn parse_duration(key_path: &str, text: &str) -> Result<Duration> {
     let invalid = || {
         Error::Config(format!(
-            "key `{key_path}` has an invalid duration `{text}`; expected `<n>d`, `<n>h` or `<n>m`"
+            "key `{key_path}` has an invalid duration `{}`; expected `<n>d`, `<n>h` or `<n>m`",
+            repark_common::redaction::mask_value_credentials(text)
         ))
     };
     let Some(suffix) = text.chars().last() else {

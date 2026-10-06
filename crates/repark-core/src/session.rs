@@ -85,11 +85,10 @@ fn apply_datafusion_config_keys(
         if DEAD_DATAFUSION_54_1_KEYS.contains(&key.as_str()) {
             return Err(dead_datafusion_54_1_refusal(key, value));
         }
-        config.options_mut().set(key, value).map_err(|error| {
-            Error::Config(format!(
-                "invalid DataFusion session config '{key}' = '{value}': {error}"
-            ))
-        })?;
+        config
+            .options_mut()
+            .set(key, value)
+            .map_err(|error| df_guards::invalid_datafusion_config(key, value, &error))?;
     }
     Ok(())
 }
@@ -201,7 +200,7 @@ impl ReparkSessionBuilder {
         for warning in &file.warnings {
             eprintln!("{warning}");
         }
-        let conf_dump = crate::config_file::conf_dump_rows(&file, &self.config);
+        let conf_dump = crate::config_file::raw_conf_dump_rows(&file, &self.config);
         self.maintenance.clone_from(&file.maintenance);
         self.source_specs = file
             .source_specs
@@ -408,7 +407,7 @@ impl ReparkSession {
 
     #[must_use]
     pub fn conf_dump(&self) -> Vec<(String, String, String)> {
-        self.conf_dump.to_vec()
+        crate::config_file::redact_dump_rows(&self.conf_dump)
     }
 
     /// Run a SQL string through the session-default [`SqlDialect`].

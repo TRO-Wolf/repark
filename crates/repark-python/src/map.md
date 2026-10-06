@@ -76,7 +76,10 @@ and hand execution, SQL, and ML semantics to the engine crates.
   tuples, `session_source` resolves one name through `ReparkSession::source` (the
   undeclared-name refusal maps through `to_py_err`), and `session_source_ping` re-resolves
   then calls `NamedSource::ping` so the connector-pending refusal keeps its engine class.
-  pins: cfg-2/C-013, C-014, C-015 **ICE-CHANGELOG-1 (2026-09-20):** a fourth free
+  pins: cfg-2/C-013, C-014, C-015 **SOURCE-URL-REDACT-1 (2026-10-06):** two pure `#[pyfunction]`s,
+  `redact_property_value(key, value)` and `mask_value_credentials(value)`, expose
+  `repark_core::redaction` to the facade's `getAll` and `SET` listings. pins: source-url-redact-1/C-011
+  **ICE-CHANGELOG-1 (2026-09-20):** a fourth free
   `#[pyfunction]`, `read_iceberg_incremental`, takes the table name plus two raw option maps
   (the incremental window, and the time-travel pins found beside it) and drives
   `repark_core::time_travel::incremental::read_incremental` — the facade decides nothing, and
@@ -194,7 +197,7 @@ and hand execution, SQL, and ML semantics to the engine crates.
   rather than a `PyReparkSession` method, because `session.rs` sits on its exact CAP-1 baseline
   and pyo3 allows one `#[pymethods]` block per type; the product path pays nothing, since the
   counters are two relaxed atomic loads read only when asked.
-  pins: perf-ice-catalog-io-1/C-001 |
+  pins: perf-ice-catalog-io-1/C-001 **SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** `namespace_metadata(session, catalog, namespace)` returns the stored comment and location for `getDatabase`. pins: source-url-redact-1/C-040 |
 | [`logical_names.rs`](logical_names.rs) | `DataFrame.columns` from the plan's logical schema,
   with no analyzer pass. Sound because every rule in `repark_functions::analyzer_rules` rewrites
   through `NamePreserver` and none adds, drops or reorders a projection expression;

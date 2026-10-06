@@ -789,11 +789,14 @@ pub(crate) fn parse_escaped_string_literals(raw: &str) -> Result<bool> {
     match raw.trim().to_ascii_lowercase().as_str() {
         "true" | "1" | "yes" => Ok(true),
         "false" | "0" | "no" => Ok(false),
-        _ => Err(DataFusionError::Configuration(format!(
-            "The value '{raw}' in the config \
-             \"{SPARK_SQL_PARSER_ESCAPED_STRING_LITERALS_KEY}\" is invalid. \
-             {SPARK_SQL_PARSER_ESCAPED_STRING_LITERALS_KEY} should be boolean, but was {raw}"
-        ))),
+        _ => {
+            let raw = repark_common::redaction::mask_value_credentials(raw);
+            Err(DataFusionError::Configuration(format!(
+                "The value '{raw}' in the config \
+                 \"{SPARK_SQL_PARSER_ESCAPED_STRING_LITERALS_KEY}\" is invalid. \
+                 {SPARK_SQL_PARSER_ESCAPED_STRING_LITERALS_KEY} should be boolean, but was {raw}"
+            )))
+        }
     }
 }
 

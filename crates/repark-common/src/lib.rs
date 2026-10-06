@@ -2,6 +2,7 @@
 
 pub mod java_case;
 pub mod names;
+pub mod redaction;
 pub mod source;
 pub mod spark_error;
 pub mod surfaces;

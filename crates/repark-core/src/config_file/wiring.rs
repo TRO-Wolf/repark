@@ -347,7 +347,8 @@ fn parse_knob(label: &str, key: &str, value: Option<&toml::Value>) -> Result<Opt
         }),
         toml::Value::String(text) => text.trim().parse::<usize>().map(Some).map_err(|_| {
             Error::Config(format!(
-                "key `{label}.session.{key}` must be a non-negative integer, got `{text}`"
+                "key `{label}.session.{key}` must be a non-negative integer, got `{}`",
+                repark_common::redaction::mask_value_credentials(text)
             ))
         }),
         _ => Err(Error::Config(format!(
@@ -402,7 +403,21 @@ fn section_keys(table: &toml::Table) -> HashSet<String> {
     keys
 }
 
+#[cfg(test)]
 pub(crate) fn conf_dump_rows(
+    file: &FileConfig,
+    builder_config: &HashMap<String, String>,
+) -> Vec<(String, String, String)> {
+    redact_dump_rows(&raw_conf_dump_rows(file, builder_config))
+}
+
+pub(crate) fn redact_dump_rows(rows: &[(String, String, String)]) -> Vec<(String, String, String)> {
+    rows.iter()
+        .map(|(key, value, source)| (key.clone(), redact_value(key, value), source.clone()))
+        .collect()
+}
+
+pub(crate) fn raw_conf_dump_rows(
     file: &FileConfig,
     builder_config: &HashMap<String, String>,
 ) -> Vec<(String, String, String)> {
@@ -421,6 +436,6 @@ pub(crate) fn conf_dump_rows(
     }
     merged
         .into_iter()
-        .map(|(key, (value, source))| (key.clone(), redact_value(&key, &value), source))
+        .map(|(key, (value, source))| (key, value, source))
         .collect()
 }

@@ -399,8 +399,8 @@ class Catalog:
         Returns a :data:`Database` namedtuple. ``locationUri`` is the namespace warehouse
         location when the catalog stores one (``location``, else the ``location_uri``
         mirror) — unlike :meth:`listDatabases`, which leaves it ``None`` (registry FA-2).
-        Existence and location both come from ``DESCRIBE NAMESPACE`` (the engine already
-        checks ``namespace_exists`` and preserves catalog/IO errors). Missing schema →
+        Existence and location both come from the stored namespace metadata, read unmasked
+        through the same ``namespace_exists`` check ``DESCRIBE NAMESPACE`` uses. Missing schema →
         :class:`~repark.errors.AnalysisException` ``SCHEMA_NOT_FOUND``. Two-part
         ``catalog.db`` forms name that catalog, as in :meth:`database_exists`.
         """
@@ -418,23 +418,11 @@ class Catalog:
                 f"[SCHEMA_NOT_FOUND] The schema `{name}` cannot be found. Verify "
                 f"the spelling and correctness of the schema and catalog."
             )
-        # Existence and location both come from DESCRIBE NAMESPACE (engine
-        # namespace_exists + get_namespace + location resolver). Do not SHOW-list
-        # listDatabases stays on SHOW (FA-2).
-        sql = f"DESCRIBE NAMESPACE {_multipart([catalog, name])}"
-        table = self._session._sql_built(sql).to_arrow()
-        description: str | None = None
-        location_uri: str | None = None
-        rows = zip(
-            table.column("info_name").to_pylist(),
-            table.column("info_value").to_pylist(),
-            strict=True,
+        from repark import _native
+
+        description, location_uri = _native.namespace_metadata(
+            self._session._ensure_alive(), catalog, name
         )
-        for info_name, info_value in rows:
-            if info_name == "Comment":
-                description = info_value
-            elif info_name == "Location":
-                location_uri = info_value
         return Database(
             name=name,
             catalog=catalog,

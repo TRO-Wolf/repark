@@ -26,8 +26,6 @@ from typing import TYPE_CHECKING as TYPE_CHECKING, Any as Any
 
 from repark import _native as _native
 
-from repark.spark._secrets import prop_key_is_secret as _prop_key_is_secret
-
 from repark.spark._idents import is_plain_ident as _is_plain_ident
 
 from repark.spark._idents import quote_ident as _quote_ident

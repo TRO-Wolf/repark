@@ -23,6 +23,7 @@ use crate::catalog_ops::{
 };
 use crate::namespace_ddl::consume_word;
 use crate::spark_type_names::spark_ddl_type_name;
+use repark_common::redaction::mask_value_credentials;
 use repark_core::{CatalogRegistry, DescribeOwnerConfig};
 use repark_functions::iceberg_system;
 
@@ -85,17 +86,39 @@ pub(crate) async fn execute_describe_namespace(
     catalogs: &CatalogRegistry,
     describe: DescribeNamespace,
 ) -> Result<DataFrame> {
-    let handle = catalog_handle(catalogs, &describe.catalog)?;
-    let ident = NamespaceIdent::new(describe.namespace.clone());
+    let properties =
+        existing_namespace_properties(catalogs, &describe.catalog, &describe.namespace).await?;
+    ctx.read_batch(describe_namespace_batch(&describe, &properties)?)
+}
+
+async fn existing_namespace_properties(
+    catalogs: &CatalogRegistry,
+    catalog: &str,
+    namespace: &str,
+) -> Result<HashMap<String, String>> {
+    let handle = catalog_handle(catalogs, catalog)?;
+    let ident = NamespaceIdent::new(namespace.to_string());
     if !handle.namespace_exists(&ident).await.map_err(iceberg_err)? {
         return Err(DataFusionError::Plan(format!(
-            "[SCHEMA_NOT_FOUND] The schema `{}` cannot be found. Verify the spelling and \
-             correctness of the schema and catalog.",
-            describe.namespace
+            "[SCHEMA_NOT_FOUND] The schema `{namespace}` cannot be found. Verify the spelling and \
+             correctness of the schema and catalog."
         )));
     }
-    let namespace = handle.get_namespace(&ident).await.map_err(iceberg_err)?;
-    ctx.read_batch(describe_namespace_batch(&describe, namespace.properties())?)
+    let loaded = handle.get_namespace(&ident).await.map_err(iceberg_err)?;
+    Ok(loaded.properties().clone())
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub async fn namespace_metadata(
+    catalogs: &CatalogRegistry,
+    catalog: &str,
+    namespace: &str,
+) -> Result<(Option<String>, Option<String>)> {
+    let properties = existing_namespace_properties(catalogs, catalog, namespace).await?;
+    Ok((
+        properties.get("comment").cloned(),
+        repark_iceberg::catalog::resolve_namespace_location(&properties).map(str::to_string),
+    ))
 }
 
 /// Build the `info_name` / `info_value` batch for one namespace.
@@ -111,13 +134,13 @@ pub(crate) fn describe_namespace_batch(
         ),
     ];
     if let Some(comment) = properties.get("comment") {
-        rows.push(("Comment", comment.clone()));
+        rows.push(("Comment", mask_value_credentials(comment)));
     }
     if let Some(location) = repark_iceberg::catalog::resolve_namespace_location(properties) {
-        rows.push(("Location", location.to_string()));
+        rows.push(("Location", mask_value_credentials(location)));
     }
     if let Some(owner) = properties.get("owner") {
-        rows.push(("Owner", owner.clone()));
+        rows.push(("Owner", mask_value_credentials(owner)));
     }
     if describe.extended {
         rows.push(("Properties", render_namespace_properties(properties)));
@@ -157,11 +180,7 @@ pub(crate) fn render_namespace_properties(properties: &HashMap<String, String>) 
     let rendered: Vec<String> = pairs
         .iter()
         .map(|(key, value)| {
-            let shown = if property_is_redacted(key, value) {
-                REDACTION_REPLACEMENT_TEXT
-            } else {
-                value.as_str()
-            };
+            let shown = crate::table_props_view::displayed_property_value(key, value);
             format!("({key},{shown})")
         })
         .collect();

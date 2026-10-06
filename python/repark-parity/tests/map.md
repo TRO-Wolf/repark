@@ -85,6 +85,11 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   schema, publication and slot names, explicit cleanup) and the five cdc S0 pins
   (`xfail(strict=True)` until the 1.7 producer). Cells skip when `REPARK_PG_URL`
   is unset. No native module.
+- [live_spark/](live_spark/map.md) — **MB-0 (2026-10-06):** the streaming oracle
+  for 1.7. The recorder `mb0_streaming_oracle.py`, its 24 cells on Spark 4.1.2 +
+  Iceberg 1.11.0 (`mb0_streaming_oracle.json`) and their SHA-256. It is run by hand
+  through the managed interpreter, is not collected by pytest, and needs no native
+  module.
 - [spill/](spill/map.md) — **NEVEROOM-1 steps 1–3 (2026-09-10/11):** the spill-coverage
   matrix harness, the full-tier run, and the CI golden: the subprocess-per-cell runner
   with an address-space cap, the in-engine `range()` generators sized to the limit
@@ -980,6 +985,8 @@ both tables with the script baselines (backtick-disclosure retire). pins: fnp-4b
   **Acceptance pin in the module docstring:** reads behave NORMALLY today — the opt-in
   secrets-flagging mechanism is a roadmap feature this fixture predates, so nothing
   here asserts redaction. Facade read pins are DS-4.
+  **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the docstrings name `column_name_is_secret_shaped`, the rule the read flag
+  uses, instead of the deleted Python mirror. pins: source-url-redact-1/C-032
 - `test_datasets_smartcsv.py` — **DS-3** messy-CSV torture generator: A9 defaults,
   table-identity determinism, both manifest scopes (**column** classes present in
   `small()`; **file** classes provable in the emitted text at 64 rows), the delimiter

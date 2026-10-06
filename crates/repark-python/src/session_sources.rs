@@ -57,6 +57,20 @@ pub fn session_source_ping(session: PyRef<'_, PyReparkSession>, name: &str) -> P
 }
 
 #[pyfunction]
+pub fn redact_property_value(key: &str, value: &str) -> PyResult<String> {
+    fenced!("session_sources.redact_property_value", {
+        Ok(repark_core::redaction::redact_value(key, value))
+    })
+}
+
+#[pyfunction]
+pub fn mask_value_credentials(value: &str) -> PyResult<String> {
+    fenced!("session_sources.mask_value_credentials", {
+        Ok(repark_core::redaction::mask_value_credentials(value))
+    })
+}
+
+#[pyfunction]
 pub fn read_iceberg_incremental(
     py: Python<'_>,
     session: PyRef<'_, PyReparkSession>,
@@ -105,6 +119,8 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(session_sources, module)?)?;
     module.add_function(wrap_pyfunction!(session_source, module)?)?;
     module.add_function(wrap_pyfunction!(session_source_ping, module)?)?;
+    module.add_function(wrap_pyfunction!(redact_property_value, module)?)?;
+    module.add_function(wrap_pyfunction!(mask_value_credentials, module)?)?;
     module.add_function(wrap_pyfunction!(read_iceberg_incremental, module)?)?;
     module.add_function(wrap_pyfunction!(read_iceberg_path, module)?)?;
     Ok(())

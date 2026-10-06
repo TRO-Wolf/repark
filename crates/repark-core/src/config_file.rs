@@ -18,7 +18,7 @@ use self::profile::profile_from_table;
 
 pub(crate) type EnvironmentLookup<'a> = &'a dyn Fn(&str) -> Option<String>;
 
-pub(crate) use wiring::{conf_dump_rows, load_for_build};
+pub(crate) use wiring::{load_for_build, raw_conf_dump_rows, redact_dump_rows};
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct ConfigFile {

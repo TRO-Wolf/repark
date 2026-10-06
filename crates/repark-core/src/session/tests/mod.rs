@@ -10,6 +10,7 @@ mod aws_gate;
 mod cache_budget;
 mod case_bind;
 mod commit_unknown;
+mod conf_dump_redaction;
 mod conf_unread;
 mod df_guard;
 mod footer_cache_report;

@@ -38,7 +38,12 @@ pub(crate) fn table_rows(
     let mut stored_rows = stored
         .iter()
         .filter(|(name, _)| !is_hidden(name))
-        .map(|(name, value)| (name.clone(), value.clone()))
+        .map(|(name, value)| {
+            (
+                name.clone(),
+                crate::table_props_view::displayed_property_value(name, value),
+            )
+        })
         .collect::<Vec<_>>();
     stored_rows.sort();
     rows.extend(stored_rows);

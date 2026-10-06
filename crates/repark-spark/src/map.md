@@ -562,6 +562,8 @@ pins: rp-4-fork-repin/C-005, C-006
   **IPI-41 WO3a (2026-09-22):** `validate_write_format` accepts orc/avro
   case-insensitively (parquet-identical normalisation); only unknown names refuse
   with `Invalid file format`. pins: ice-orc-avro-1/C-021
+  **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the isolation, file-format and distribution-mode refusals echo the value
+  masked. pins: source-url-redact-1/C-036
 - `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): delete-only `commit_truncate_to`;
   PARTITION / IF EXISTS / missing TABLE / multi-target refuse. Pins:
   [tests/truncate.rs](tests/truncate.rs). pins: dml-c-truncate/C-002, C-005, C-006, C-007
@@ -1136,6 +1138,8 @@ pins: rp-4-fork-repin/C-005, C-006
   `with_escaped_string_literals_config`, `escaped_verbatim_from_options`)
   turn `pub` for the binding's `filter`/`where`/`F.expr` doors.
   pins: string-literal-escape-1/C-008, C-009
+  **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** the `escapedStringLiterals` refusal echoes the rejected value through
+  `mask_value_credentials`. pins: source-url-redact-1/C-017
 - `spark_literal_typing.rs` — **SQL-LITERAL-TYPING-1 (2026-09-16):**
   `SparkIntegralLiteral` types unsuffixed integral literals as Spark does —
   Int64 fitting i32 narrows to Int32, UInt64 becomes Decimal128(digits, 0),
@@ -2173,6 +2177,16 @@ pins: rp-4-fork-repin/C-005, C-006
   The detail block gains Spark's measured `Comment` row (after `Type`, only when the stored
   `comment` property is set), which is where the facade's `catalog.getTable(...).description`
   now reads the table comment.
+  **SOURCE-URL-REDACT-1 (2026-10-06):** `render_namespace_properties` keeps Spark's key-or-value regex arm and masks
+  every other value through `repark_common::redaction::mask_value_credentials`, so a URL
+  password Spark 4.1.2 prints is masked (registry `CONNECT-DIV-url-userinfo`).
+  pins: source-url-redact-1/C-010
+  **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** `describe_namespace_batch` masks the Comment, Location and Owner rows through
+  `mask_value_credentials`. pins: source-url-redact-1/C-029
+  **SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** `pub mod describe_show` exposes `namespace_metadata`, the stored comment and
+  location behind the same `namespace_exists` check, for the facade's `getDatabase`; the
+  namespace Properties go through `table_props_view::displayed_property_value`.
+  pins: source-url-redact-1/C-040, C-042
 - `show_create.rs` — **C1 SHOW CREATE (2026-09-23):** `SHOW CREATE TABLE <name> [AS SERDE]`
   for Iceberg tables, answering Spark 4.1.2 + Iceberg 1.11 `ShowCreateTableExec` text byte
   for byte (one Utf8 `createtab_stmt` row ending in one `\n`). Token-level parser in the
@@ -2247,6 +2261,13 @@ pins: rp-4-fork-repin/C-005, C-006
   `format_version_number` is `pub(crate)` so the SHOW TBLPROPERTIES table arm
   (`view_ddl/show_tblproperties.rs`) reuses it instead of duplicating the mapping.
   pins: tblprops-1/C-001
+  **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** every value that is not key-redacted goes through
+  `mask_value_credentials`, so `DESCRIBE TABLE EXTENDED`, `SHOW CREATE TABLE` and
+  `SHOW TABLE EXTENDED` mask a URL password Spark 4.1.2 prints. pins: source-url-redact-1/C-016
+  **SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** `displayed_property_value(key, value)` shows `*********(redacted)` when Spark's
+  measured rule (`property_is_redacted`) or `prop_key_is_secret` matches, else the
+  credential-masked value; every table, view and namespace property display uses it.
+  pins: source-url-redact-1/C-042
 - `metadata_tables.rs` — I2 metadata-table path rewrite (`.snapshots` → `$snapshots`);
   19 in-module tests. **RP-1:** `METADATA_TABLE_NAMES` includes `position_deletes` (16th
   `MetadataTableType` at pin `5e7b2e4`); **RP-42:** fork #332 ports the scan, so it serves

@@ -324,6 +324,9 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   (key named, `cannot take effect`) that `docs/guide/session-and-conf.md`
   quotes verbatim in its `datafusion.*` paragraph.
   pins: conf-unread-1/C-007
+- `conf_dump_redaction.rs` — **SOURCE-URL-REDACT-1 (2026-10-06):** `conf_dump()` masks a password inside a builder
+  conf URL and an S3 endpoint, while `resolve_endpoint_from_dump` over the stored rows still
+  sees the configured endpoint. pins: source-url-redact-1/C-008
 - `df_guard.rs` — nine DataFusion 54.1 guard pins (the eighth, 2026-09-25: the leaf-pushdown alias-collision decline on a LEFT JOIN projection; the ninth, fix round 5: `BoomOnProjection`, a non-collision inner error on a Projection stays loud, so the decline cannot widen to every error). pins: u8-write-sql/C-030
 - `io_stats.rs` — **ICE-READ-PERF-0 (2026-09-19):** a session-level read through a registered
   memory catalog counts data-file ranged reads into `iceberg_io_stats()`, and

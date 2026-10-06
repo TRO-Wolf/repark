@@ -102,9 +102,13 @@ pub fn parse_runtime_session_zone_value(raw: &str) -> Result<SessionTimeZone> {
 }
 
 fn invalid_runtime_zone(raw: &str) -> Error {
+    let shown = repark_common::redaction::mask_value_credentials(raw);
     spark_error::illegal_argument(
         spark_error::INVALID_CONF_VALUE_TIME_ZONE,
-        &[("value", raw), ("configKey", SESSION_TIME_ZONE_KEY)],
+        &[
+            ("value", shown.as_str()),
+            ("configKey", SESSION_TIME_ZONE_KEY),
+        ],
     )
 }
 
@@ -324,9 +328,10 @@ pub fn parse_time_parser_policy(raw: &str) -> DataFusionResult<TimeParserPolicy>
         "CORRECTED" => Ok(TimeParserPolicy::Corrected),
         "EXCEPTION" => Ok(TimeParserPolicy::Exception),
         _ => Err(DataFusionError::Configuration(format!(
-            "[INVALID_CONF_VALUE.OUT_OF_RANGE_OF_OPTIONS] The value '{raw}' in the config \
+            "[INVALID_CONF_VALUE.OUT_OF_RANGE_OF_OPTIONS] The value '{}' in the config \
              \"{TIME_PARSER_POLICY_KEY}\" is invalid. It should be one of 'LEGACY, CORRECTED, \
-             EXCEPTION'. SQLSTATE: 22022"
+             EXCEPTION'. SQLSTATE: 22022",
+            repark_common::redaction::mask_value_credentials(raw)
         ))),
     }
 }

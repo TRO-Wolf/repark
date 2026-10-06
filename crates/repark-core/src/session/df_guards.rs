@@ -34,8 +34,20 @@ pub(super) const DEAD_DATAFUSION_54_1_KEYS: &[&str] = &["datafusion.execution.co
 
 pub(super) fn dead_datafusion_54_1_refusal(key: &str, value: &str) -> Error {
     Error::Config(format!(
-        "unsupported DataFusion session config '{key}' = '{value}': DataFusion 54.1.0 defines \
-         the option but no engine path reads it, so the value cannot take effect"
+        "unsupported DataFusion session config '{key}' = '{}': DataFusion 54.1.0 defines \
+         the option but no engine path reads it, so the value cannot take effect",
+        repark_common::redaction::mask_value_credentials(value)
+    ))
+}
+
+pub(super) fn invalid_datafusion_config(
+    key: &str,
+    value: &str,
+    error: &datafusion::error::DataFusionError,
+) -> Error {
+    Error::Config(format!(
+        "invalid DataFusion session config '{key}' = '{}': {error}",
+        repark_common::redaction::mask_value_credentials(value)
     ))
 }
 

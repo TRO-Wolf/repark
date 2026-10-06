@@ -114,7 +114,7 @@ pub use error_map::{
 pub use pool_refusals::{
     PoolRefusalLog, REFUSAL_CONTAINMENT_NOTE, RefusalRecordingPool, pool_refusal_log,
 };
-pub use repark_common::{Error, ErrorClass, Result};
+pub use repark_common::{Error, ErrorClass, Result, redaction};
 pub use unknown_routine::map_unknown_routine_message;
 
 // === SE-1 tightenNulls ===

@@ -687,14 +687,16 @@ fn debug_field<'text>(text: &'text str, marker: &str) -> Result<&'text str> {
         })
 }
 
-fn debug_quoted_values(text: &str) -> Result<Vec<String>> {
+fn debug_quoted_values(name: &str, text: &str) -> Result<Vec<String>> {
     let mut values = Vec::new();
     let mut rest = text;
     while let Some(start) = rest.find('"') {
         rest = &rest[start + 1..];
         let Some(end) = rest.find('"') else {
             return Err(codec_err(format!(
-                "{ICEBERG_TABLE_SCAN} debug text has an unterminated string in {text:?}"
+                "{ICEBERG_TABLE_SCAN} debug text of session catalog {name:?} has an unterminated \
+                 string in its props map at byte {}",
+                text.len() - rest.len() - 1
             )));
         };
         values.push(rest[..end].to_owned());
@@ -787,7 +789,7 @@ fn catalog_spec_from_debug(name: &str, debug: &str) -> Result<CatalogSpec> {
     if let Some(warehouse) = debug_string_field(rest, "warehouse: \"") {
         props.insert("warehouse".to_owned(), warehouse);
     }
-    for (key, value) in debug_props_map(rest)? {
+    for (key, value) in debug_props_map(name, rest)? {
         props.insert(key, value);
     }
     Ok(CatalogSpec {
@@ -803,7 +805,7 @@ fn debug_string_field(text: &str, marker: &str) -> Option<String> {
     rest.find('"').map(|end| rest[..end].to_owned())
 }
 
-fn debug_props_map(text: &str) -> Result<Vec<(String, String)>> {
+fn debug_props_map(name: &str, text: &str) -> Result<Vec<(String, String)>> {
     let Some(start) = text.find("props: {") else {
         return Ok(Vec::new());
     };
@@ -813,10 +815,29 @@ fn debug_props_map(text: &str) -> Result<Vec<(String, String)>> {
             "{ICEBERG_TABLE_SCAN} catalog props map is unterminated"
         )));
     };
-    let values = debug_quoted_values(&rest[..end])?;
+    let values = debug_quoted_values(name, &rest[..end])?;
     let mut pairs = Vec::with_capacity(values.len() / 2);
     for pair in values.chunks_exact(2) {
         pairs.push((pair[0].clone(), pair[1].clone()));
     }
     Ok(pairs)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::catalog_spec_from_debug;
+
+    #[test]
+    fn a_malformed_props_map_refusal_never_echoes_the_debug_text() {
+        let debug = "ReparkCatalogProvider { catalog: MemoryCatalog { name: \"cat\", \
+                     file_io: FileIO { config: StorageConfig { props: {\"uri\": \
+                     \"jdbc:postgresql://u:DistPw1@db.example.com/s}x\", \"k\": \"v\"} } }, \
+                     warehouse: \"/tmp/wh\" } }";
+        let message = catalog_spec_from_debug("cat", debug)
+            .expect_err("a `}` inside a value ends the props slice early")
+            .to_string();
+        assert!(!message.contains("DistPw1"), "{message}");
+        assert!(!message.contains("jdbc:postgresql"), "{message}");
+        assert!(message.contains("\"cat\""), "{message}");
+    }
 }

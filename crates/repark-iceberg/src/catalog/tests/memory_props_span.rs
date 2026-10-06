@@ -2,7 +2,9 @@ use std::collections::{BTreeSet, HashMap};
 
 use tempfile::TempDir;
 
-use crate::catalog::{CatalogCaches, IcebergCacheSettings, memory_catalog_cached_with_props};
+use crate::catalog::{
+    CatalogCaches, IcebergCacheSettings, memory_catalog, memory_catalog_cached_with_props,
+};
 use crate::tests::tracing::{SpanEvent, begin_catalog_capture, clear_catalog_capture_slot};
 
 struct ClearOnDrop;
@@ -57,4 +59,26 @@ async fn props_builder_span_matches_cached_fields_and_records_no_props() {
             assert!(!value.contains(forbidden), "{forbidden} in {fields:?}");
         }
     }
+}
+
+#[tokio::test]
+async fn memory_catalog_span_masks_a_password_in_the_warehouse() {
+    let capture = begin_catalog_capture();
+    let _clear = ClearOnDrop;
+    let _ = memory_catalog("unsupported+scheme://u:WhPw5@store.example.com/wh").await;
+    let events: Vec<SpanEvent> = capture
+        .snapshot()
+        .into_iter()
+        .filter(|(name, _)| name == "catalog.memory_catalog")
+        .collect();
+    assert_eq!(events.len(), 1, "{events:?}");
+    let warehouse = events[0]
+        .1
+        .iter()
+        .find(|(name, _)| name == "warehouse")
+        .map(|(_, value)| value.as_str());
+    assert_eq!(
+        warehouse,
+        Some("unsupported+scheme://u:***@store.example.com/wh")
+    );
 }

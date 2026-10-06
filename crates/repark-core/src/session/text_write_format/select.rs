@@ -134,7 +134,7 @@ impl ReparkSession {
             .get::<TimeParserPolicyConfig>()
             .map(|carrier| carrier.policy);
         let legacy = live.map_or_else(
-            || conf_dump_selects_legacy_policy(&self.conf_dump()),
+            || conf_dump_selects_legacy_policy(&self.conf_dump),
             TimeParserPolicy::is_legacy,
         );
         if legacy {

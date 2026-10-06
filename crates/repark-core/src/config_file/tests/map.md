@@ -59,6 +59,11 @@ the battery passed the 1,000-line file ceiling — stage pins versus wiring pins
   pins: review-fix-7/C-002, C-003
   pins: review-fix-2/C-001, C-002
 
+  **SOURCE-URL-REDACT-1 (2026-10-06):** `file_dump_masks_a_password_inside_a_catalog_uri`: a postgres catalog `url`
+  with a password dumps as `postgresql://u:***@db.example.com/sales`. pins: source-url-redact-1/C-008
+  **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** `typed_knob_refusals_mask_a_password_in_the_echoed_value`: a URL as
+  `session.batch_size` or `maintenance.snapshot_older_than` refuses without the password and
+  with the host. pins: source-url-redact-1/C-017
 ## Pointers
 
 - Up: [../map.md](../map.md)

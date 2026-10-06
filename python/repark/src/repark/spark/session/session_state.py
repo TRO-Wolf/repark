@@ -7,6 +7,7 @@ import sys
 import warnings
 
 from typing import Any
+from repark.spark._secrets import mask_credentials
 
 
 _active_session: ReparkSession | None = None
@@ -94,7 +95,7 @@ def _config_value_error(key: str, value: int, requirement: str) -> str:
     """
 
     return (
-        f"[INVALID_CONF_VALUE.REQUIREMENT] The value '{value}' in the config "
+        f"[INVALID_CONF_VALUE.REQUIREMENT] The value '{mask_credentials(value)}' in the config "
         f'"{key}" is invalid. {requirement}'
     )
 

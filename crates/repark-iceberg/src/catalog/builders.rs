@@ -24,7 +24,7 @@ use crate::catalog::location::storage_factory_for_location;
 #[tracing::instrument(
     name = "catalog.memory_catalog",
     skip(warehouse),
-    fields(warehouse = %warehouse)
+    fields(warehouse = %repark_common::redaction::mask_value_credentials(warehouse))
 )]
 pub async fn memory_catalog(warehouse: &str) -> Result<Arc<dyn Catalog>> {
     memory_catalog_cached(
@@ -40,7 +40,7 @@ pub async fn memory_catalog(warehouse: &str) -> Result<Arc<dyn Catalog>> {
     name = "catalog.memory_catalog_cached",
     skip(warehouse, caches),
     fields(
-        warehouse = %warehouse,
+        warehouse = %repark_common::redaction::mask_value_credentials(warehouse),
         metadata_cache = caches.metadata_cache().is_some(),
         manifest_cache_bytes = caches.manifest_cache_bytes(),
         footer_cache = caches.footer_cache().is_some()
@@ -58,7 +58,7 @@ pub async fn memory_catalog_cached(
     name = "catalog.memory_catalog_cached_with_props",
     skip(warehouse, caches, props),
     fields(
-        warehouse = %warehouse,
+        warehouse = %repark_common::redaction::mask_value_credentials(warehouse),
         metadata_cache = caches.metadata_cache().is_some(),
         manifest_cache_bytes = caches.manifest_cache_bytes(),
         footer_cache = caches.footer_cache().is_some()

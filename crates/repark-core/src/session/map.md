@@ -240,6 +240,8 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   **STRING-LITERAL-ESCAPE-1 merge (2026-10-01):** both S3 commit legs run the
   engine-built COPY through `sql_built_with_write_options`, so the statement
   parses in default mode in every session mode.
+  **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the format, mode, compression and destination refusals echo the value or URL
+  through `mask_value_credentials`. pins: source-url-redact-1/C-036
 - `text_write_format.rs` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** the
   user-pattern compiler and validator (Spark `INVALID_DATETIME_PATTERN` /
   `INCONSISTENT_BEHAVIOR_CROSS_VERSION` classes, NTZ downgrades, DATE lazy
@@ -344,6 +346,8 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   pins: df-subquery-1/C-001, C-002, C-004
   **CASESENS-2 port (2026-10-03):** declares the private `predicate_names`
   module (the join-condition qualifier binder). pins: casesens-2/C-009
+  **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** `dead_datafusion_54_1_refusal` and the new `invalid_datafusion_config` echo
+  the value masked; `spill.rs`'s `memory_limit` refusal likewise. pins: source-url-redact-1/C-017
 - `tests/df_guard.rs` — the nine `df_guards.rs` pins, split out of `tests.rs` when the DEFECT-2
   **U11-EDGE-1 (2026-09-26):** `df_guards.rs` also declares `df_guards/case_bind.rs`
   (row in `df_guards/map.md`). pins: u11-edge-1/C-015

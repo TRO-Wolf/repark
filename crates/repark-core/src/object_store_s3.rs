@@ -68,7 +68,8 @@ fn parse_endpoint_bool(key: &str, raw: &str) -> Result<bool> {
         "true" => Ok(true),
         "false" => Ok(false),
         _ => Err(Error::Config(format!(
-            "S3 config `{key}` expects a boolean, got {raw:?}"
+            "S3 config `{key}` expects a boolean, got {:?}",
+            repark_common::redaction::mask_value_credentials(raw)
         ))),
     }
 }
@@ -105,7 +106,10 @@ pub(crate) fn write_target_url(scheme: &str, bucket: &str, key: &str) -> String 
 fn normalize_endpoint(raw: &str, ssl_enabled: Option<bool>) -> Result<String> {
     if raw.contains("://") {
         Url::parse(raw).map_err(|source| {
-            Error::Config(format!("S3 endpoint {raw:?} is not a valid URL: {source}"))
+            Error::Config(format!(
+                "S3 endpoint {:?} is not a valid URL: {source}",
+                repark_common::redaction::mask_value_credentials(raw)
+            ))
         })?;
         return Ok(raw.to_string());
     }
@@ -116,7 +120,10 @@ fn normalize_endpoint(raw: &str, ssl_enabled: Option<bool>) -> Result<String> {
     };
     let normalized = format!("{scheme}://{raw}");
     Url::parse(&normalized).map_err(|source| {
-        Error::Config(format!("S3 endpoint {raw:?} is not a valid URL: {source}"))
+        Error::Config(format!(
+            "S3 endpoint {:?} is not a valid URL: {source}",
+            repark_common::redaction::mask_value_credentials(raw)
+        ))
     })?;
     Ok(normalized)
 }
@@ -535,6 +542,20 @@ mod tests {
             "got: {message}"
         );
         assert!(message.contains("sometimes"), "got: {message}");
+    }
+
+    #[test]
+    fn an_invalid_endpoint_refusal_masks_its_userinfo() {
+        for raw in [
+            "http://minio:EndpointPw2@127.0.0.1:99999",
+            "minio:EndpointPw2@127.0.0.1:99999",
+        ] {
+            let message = normalize_endpoint(raw, None)
+                .expect_err("port 99999 is not a valid URL")
+                .to_string();
+            assert!(!message.contains("EndpointPw2"), "{message}");
+            assert!(message.contains("127.0.0.1"), "{message}");
+        }
     }
 
     #[test]

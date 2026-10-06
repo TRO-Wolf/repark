@@ -17,6 +17,7 @@ from repark.spark.session.session_state import _config_value_error, _warn_unboun
 from repark.spark.session.session_time_zone import DEFAULT_SESSION_TIME_ZONE, SESSION_TIME_ZONE_KEY
 
 from repark.spark.session.timestamp_type import DEFAULT_TIMESTAMP_TYPE, TIMESTAMP_TYPE_KEY
+from repark.spark._secrets import mask_credentials
 
 
 if TYPE_CHECKING:
@@ -175,7 +176,7 @@ def _forward_datafusion_conf(session: ReparkSession, key: str, value: str) -> No
 
     if not _is_datafusion_conf_key(key):
         raise IllegalArgumentException(
-            f"[INVALID_CONF_VALUE.REQUIREMENT] The value {value!r} in the config "
+            f"[INVALID_CONF_VALUE.REQUIREMENT] The value {mask_credentials(value)!r} in the config "
             f"{key!r} is invalid. datafusion.* keys must be canonical lowercase "
             f"'datafusion.<identifier path>' (letters, digits, underscore, dots; "
             f"no surrounding whitespace)."
@@ -193,7 +194,7 @@ def _forward_datafusion_conf(session: ReparkSession, key: str, value: str) -> No
         message = str(engine_error).strip() or repr(engine_error)
 
         raise IllegalArgumentException(
-            f"[INVALID_CONF_VALUE.REQUIREMENT] The value {value!r} in the config "
+            f"[INVALID_CONF_VALUE.REQUIREMENT] The value {mask_credentials(value)!r} in the config "
             f"{key!r} is invalid. {message}"
         ) from engine_error
 
@@ -318,7 +319,7 @@ def normalize_display_style(value: str | object) -> str:
 
     if not isinstance(value, str):
         raise IllegalArgumentException(
-            f"[INVALID_CONF_VALUE.REQUIREMENT] The value {value!r} in the config "
+            f"[INVALID_CONF_VALUE.REQUIREMENT] The value {mask_credentials(value)!r} in the config "
             f'"{_DISPLAY_STYLE_KEY}" is invalid. '
             f"The value of {_DISPLAY_STYLE_KEY} must be one of "
             f"{sorted(_DISPLAY_STYLE_VALUES)}"
@@ -328,7 +329,7 @@ def normalize_display_style(value: str | object) -> str:
 
     if normalized not in _DISPLAY_STYLE_VALUES:
         raise IllegalArgumentException(
-            f"[INVALID_CONF_VALUE.REQUIREMENT] The value '{value}' in the config "
+            f"[INVALID_CONF_VALUE.REQUIREMENT] The value '{mask_credentials(value)}' in the config "
             f'"{_DISPLAY_STYLE_KEY}" is invalid. '
             f"The value of {_DISPLAY_STYLE_KEY} must be one of "
             f"{sorted(_DISPLAY_STYLE_VALUES)}"
@@ -393,7 +394,7 @@ def lookup_int_entry(
             parsed = int(value)
         except ValueError as error:
             raise IllegalArgumentException(
-                f"config key {key!r} must be an integer, got {value!r}"
+                f"config key {key!r} must be an integer, got {mask_credentials(value)!r}"
             ) from error
         found.append((key, parsed))
     if not found:
@@ -584,7 +585,7 @@ def _normalize_display_int(key: str, value: str | int | object) -> int:
     """Validate a ``repark.display.max_rows|max_cols|str_len`` value as a positive int."""
     if isinstance(value, bool):
         raise IllegalArgumentException(
-            f"[INVALID_CONF_VALUE.REQUIREMENT] The value {value!r} in the config "
+            f"[INVALID_CONF_VALUE.REQUIREMENT] The value {mask_credentials(value)!r} in the config "
             f'"{key}" is invalid. '
             f"The value of {key} must be a positive integer."
         )
@@ -594,19 +595,19 @@ def _normalize_display_int(key: str, value: str | int | object) -> int:
         parsed = int(value.strip())
     else:
         raise IllegalArgumentException(
-            f"[INVALID_CONF_VALUE.REQUIREMENT] The value {value!r} in the config "
+            f"[INVALID_CONF_VALUE.REQUIREMENT] The value {mask_credentials(value)!r} in the config "
             f'"{key}" is invalid. '
             f"The value of {key} must be a positive integer."
         )
     if parsed < 1:
         raise IllegalArgumentException(
-            f"[INVALID_CONF_VALUE.REQUIREMENT] The value {value!r} in the config "
+            f"[INVALID_CONF_VALUE.REQUIREMENT] The value {mask_credentials(value)!r} in the config "
             f'"{key}" is invalid. '
             f"The value of {key} must be a positive integer."
         )
     if key.lower() == "repark.display.max_rows" and parsed > _DISPLAY_MAX_ROWS_CEILING:
         raise IllegalArgumentException(
-            f"[INVALID_CONF_VALUE.REQUIREMENT] The value {value!r} in the config "
+            f"[INVALID_CONF_VALUE.REQUIREMENT] The value {mask_credentials(value)!r} in the config "
             f'"{key}" is invalid. '
             f"The value of {key} must be a positive integer "
             f"at most {_DISPLAY_MAX_ROWS_CEILING}."

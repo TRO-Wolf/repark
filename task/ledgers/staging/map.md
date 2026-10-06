@@ -11,6 +11,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   alone (C-001), `stamp` with Spark's first-input union rule (C-002), the join re-mint
   (C-003), `resolve` (C-004), the `repark-python` binds (C-005) and mutations M1–M4 (C-006);
   R-1..R-4 are dated residues for S2–S3. `risk_tier: standard`. Branch `feat/attr-id-1`.
+- [source-url-redact-1-ledger.md](source-url-redact-1-ledger.md) —
+  **SOURCE-URL-REDACT-1 (2026-10-06), security, v1.5.3 release item:** value-aware redaction
+  in `repark-common::redaction` (URL userinfo, fail-closed authority, secret query parameters,
+  libpq / ODBC keywords; C-001..C-006), routed through `sources()`, the `Debug` impls, the
+  config dump, `getAll`, the `SET` listings and `DESCRIBE NAMESPACE EXTENDED` (C-007..C-012),
+  the surface audit (C-013) and gates (C-014). Fold 1 (C-015..C-020) and fold 2 (C-021..C-039,
+  the verifier's findings, the corpus pin and the mutation rerun), fold 3 (C-040..C-051, the
+  re-verify's findings: raw functional reads, storage paths, Spark's key rule, TNS, spans,
+  multi-line documents, mutants, known limits). `risk_tier: high`.
 - [c-1-ledger.md](c-1-ledger.md) —
   **C-1, card 1.6 (2026-10-05), in flight:** `crates/repark-connect` lands on its pre-declared
   footprint with the one `connect → common` edge (C-001); the CC-2 move puts `SourceKind` and

@@ -30,9 +30,10 @@ pub fn parse_partition_overwrite_mode(raw: &str) -> Result<PartitionOverwriteMod
         "static" => Ok(PartitionOverwriteMode::Static),
         "dynamic" => Ok(PartitionOverwriteMode::Dynamic),
         _ => Err(DataFusionError::Configuration(format!(
-            "[INVALID_CONF_VALUE.OUT_OF_RANGE_OF_OPTIONS] The value '{raw}' in the config \
+            "[INVALID_CONF_VALUE.OUT_OF_RANGE_OF_OPTIONS] The value '{}' in the config \
              \"{PARTITION_OVERWRITE_MODE_KEY}\" is invalid. It should be one of 'STATIC, \
-             DYNAMIC'. SQLSTATE: 22022"
+             DYNAMIC'. SQLSTATE: 22022",
+            repark_common::redaction::mask_value_credentials(raw)
         ))),
     }
 }

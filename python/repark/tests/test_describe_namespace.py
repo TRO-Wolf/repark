@@ -88,9 +88,9 @@ def test_describe_namespace_redaction_truth_table(spark: ReparkSession) -> None:
 
     Live pyspark 4.0.0 (v2 catalog). Spark folds ``(?i)secret|password|token|access[.]?key``
     and ``(?i)url`` over the key AND the value, replacing the value on either hit. ``innocent``
-    and ``bare`` are the value-only hits a key-only predicate silently misses;
-    ``access_key``/``ACCESS-KEY`` are shown by BOTH engines (Spark's separator is ``[.]?``),
-    a named inherited gap rather than a repark choice.
+    and ``bare`` are the value-only hits a key-only predicate silently misses. RePark also
+    applies its own key rule (SOURCE-URL-REDACT-1 fold 3), so ``access_key``, ``ACCESS-KEY``
+    and ``dashaccess-key``, which Spark shows, are redacted too.
     """
     spark.sql(
         f"CREATE NAMESPACE {CATALOG}.creds WITH DBPROPERTIES ("
@@ -102,9 +102,11 @@ def test_describe_namespace_redaction_truth_table(spark: ReparkSession) -> None:
     )
     properties = dict(_rows(spark, f"DESCRIBE NAMESPACE EXTENDED {CATALOG}.creds"))["Properties"]
     assert properties == (
-        "((ACCESS-KEY,p6), (SeCrEt,*********(redacted)), (access.key,*********(redacted)), "
-        "(access_key,p8), (accesskey,*********(redacted)), (bare,*********(redacted)), "
-        "(dashaccess-key,p10), (innocent,*********(redacted)), (jdbc_url,*********(redacted)), "
+        "((ACCESS-KEY,*********(redacted)), (SeCrEt,*********(redacted)), "
+        "(access.key,*********(redacted)), (access_key,*********(redacted)), "
+        "(accesskey,*********(redacted)), (bare,*********(redacted)), "
+        "(dashaccess-key,*********(redacted)), (innocent,*********(redacted)), "
+        "(jdbc_url,*********(redacted)), "
         "(my_token_2,*********(redacted)), (password,*********(redacted)), (plain,p7), "
         "(urlish,*********(redacted)), (valueurl,*********(redacted)))"
     )
