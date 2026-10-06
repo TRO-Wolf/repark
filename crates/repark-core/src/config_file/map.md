@@ -67,6 +67,9 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   stay here, `key_path()` renders the same spelling, and the manual `Debug` prints the
   identity where it printed `name` and `kind`, still masking props through `redact_value`.
   Loader behavior is unchanged. pins: c-1/C-002
+  **C-1b (2026-10-06):** the identity's generation is `Option<repark_common::Generation>`
+  (NS-14); the loader still builds it unassigned, so this module needed no edit.
+  pins: c-1/C-012
 - `redact.rs` — `redact_value` / `redact_config` over `../../catalog_config.rs`'s
   `prop_key_is_secret` (widened to `pub(crate)` this step, the one authorized edit outside
   the family; the predicate is not re-implemented). The `***` mask matches the `CatalogSpec`

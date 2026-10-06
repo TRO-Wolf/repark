@@ -30,6 +30,7 @@ refusal retire in C-2.
 | C-009 | Eleven dated registry rows land in [the registry](../../../docs/spark-sql-iceberg-parity.md) §5 beside `SES-DECL`, each with the repark / Apache Spark / Pin / Rationale shape: `CONNECT-DECL-auth-iam_token`, `CONNECT-DECL-auth-kerberos`, `CONNECT-DECL-pg-numeric`, `-pg-date`, `-pg-time`, `-pg-timestamp`, `-pg-timestamptz`, `-pg-interval`, `-pg-uuid`, `-pg-json`, `-pg-jsonb` (R-6, R-7). | The rows; `python3 scripts/check_docs_links.py`; each row's pin exists. | PROVEN | §2: links clean; every pin names a live test in `crates/repark-connect/tests/it/`. The Spark halves are *documented* with no value claim; C-2's live cells attach the first measurement. |
 | C-010 | R-10: ADBC shaped the type map's Arrow contract (each mapped row's Arrow type is the one the ADBC PostgreSQL driver's documented type-mapping table names; a disagreement or an unholdable value declares the row). ConnectorX shapes the partitioned reads and is recorded as not yet (C-2, C-3). | The crate map's "Design bars" section and this clause. | PROVEN | `crates/repark-connect/map.md` "Design bars (R-10)". The ADBC basis is its document, not a run of the driver. |
 | C-011 | Gates of order §5 green; dependencies are `repark-common`, `arrow`, `thiserror` at workspace versions (R-8); `Cargo.lock` gains only the new member; no code comments (R-11). | The §5 commands. | PROVEN | §2: every gate green after R-14, the commit made with hooks on. `Cargo.lock` gains 9 lines, the new package entry only. |
+| C-012 | C-1b (2026-10-06), North Star NS-14 ("Newtypes for every identifier … never a bare `u64` across a function boundary. The `0 = unassigned` sentinel exists only in serialised form; in Rust it is `Option<Generation>` or a non-zero type") on top of R-12 as amended (owner, 2026-10-05): the generation is the named newtype `pub struct Generation(NonZeroU64)` in `repark-common/src/source.rs`, deriving `Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord`, built only by `Generation::new(u64) -> Option<Generation>` (`0` gives `None`) and read by `get(self) -> NonZeroU64`, with no `Default` and no `From<u64>`; `SourceIdentity.generation` is `Option<Generation>` and `SourceIdentity::unassigned` keeps `None`. | `a_zero_generation_cannot_be_built`, `a_non_zero_generation_round_trips_through_new_and_get`, `two_different_generations_compare_unequal`, and `a_source_identity_round_trips_through_the_loader` still green; mutation: `new` accepts `0`. | PROVEN | §4: the three pins green. Red under the mutation (`new` returning `Some(Generation(NonZeroU64::new(value).unwrap_or(NonZeroU64::MIN)))`): `config_file/tests/mod.rs:610`, `left: Some(Generation(1))`, `right: None`; tree restored. The only callers are `lib.rs`'s re-export and the config-file tests; the loader builds through `unassigned` and needed no edit. |
 
 ## 1. Executor readings (no halt)
 
@@ -149,3 +150,29 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-connect/tests/it/postgres_types.rs, crates/repark-core/src/config_file/tests/mod.rs]
   complete: true
 ```
+
+## 4. C-1b — the `Generation` newtype (2026-10-06)
+
+**Order:** C-1b, branch `fix/c-1-generation-newtype` from `origin/main` `2c5daff3`, executor Claude
+Opus 5.5 (`claude-opus-5-5`). **Rule:** North Star NS-14 on top of R-12 as amended by the owner,
+2026-10-05. Clause C-012.
+
+**Four-line records.** None. Every question the change met has a ruled answer: the type, its
+derives, its constructor and accessor, and the absence of `Default` and `From<u64>` are in the
+order; the `Option` wrapping and the serialized `0` are NS-14 and the R-12 amendment.
+
+**Gates.** Run on the finished tree, exit codes verbatim.
+
+| command | exit | output |
+|---|---|---|
+| `cargo test -p repark-common -p repark-core -p repark-connect` | 0 | 1119 passed, 0 failed, 2 ignored |
+| `make rust-clippy` | 0 | no diagnostics |
+| `cargo fmt --check` | 0 | no output |
+| `make rust-panic-ban` | 0 | clean |
+| `./scripts/check_crate_dag.sh` | 0 | 23 internal edges clean |
+| `python3 scripts/check_rust_file_size.py` | 0 | 1038 files clean |
+| `bash scripts/check_map_md.sh --base origin/main` | 0 | no output |
+| `python3 scripts/check_ledger_grammar.py` | 0 | 301 live ledgers clean |
+| `python3 scripts/check_docs_links.py` | 0 | clean |
+| `python3 scripts/sync_map_md.py --check` | 0 | maps clean |
+| `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xc1b origin/main HEAD` | 0 | `hits=0` |

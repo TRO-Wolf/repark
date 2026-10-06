@@ -21,6 +21,11 @@ the battery passed the 1,000-line file ceiling — stage pins versus wiring pins
   name, kind and the unassigned generation (`None`) survive the loader, `key_path()` renders as
   before, the kind spelling round-trips, and a different generation compares unequal.
   pins: c-1/C-002
+  **C-1b (2026-10-06), NS-14:** the generation is built through `Generation::new`, and three
+  pins hold the newtype: `a_zero_generation_cannot_be_built` (`new(0)` is `None`),
+  `a_non_zero_generation_round_trips_through_new_and_get` (1, 7, `u64::MAX`) and
+  `two_different_generations_compare_unequal`.
+  pins: c-1/C-012
 - `wiring.rs` — the 8 step-3 wiring pins (display/session/`conf` translation, nested-`conf`
   dot-join flattening, the builder-profile-default precedence table, the redacted
   source-column dump, the byte-identical catalog done condition, the database-source
