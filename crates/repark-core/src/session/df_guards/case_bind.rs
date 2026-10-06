@@ -38,7 +38,9 @@ pub use super::sort_names::{FreeNameOffense, free_expr_names, refuse_free_names}
 pub use super::sort_names::{SortShape, bind_free_names, bind_qualified_free_refs};
 pub use super::sort_names::{engine_field_is_unique, grandchild_key, grandchild_qualified_key};
 pub use super::sort_names::{join_dup_below_wrappers, join_output_sources};
-pub use super::sort_names::{qualifier_star_positions, sort_shape, union_dup_below_wrappers};
+pub use super::sort_names::{
+    project_input_spelling, qualifier_star_positions, sort_shape, union_dup_below_wrappers,
+};
 pub use super::subquery::resolve_bound_expr_with;
 pub use super::written_names::refuse_folded_duplicate_keys;
 pub use repark_common::names::{NameHit, NameRule};

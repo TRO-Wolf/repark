@@ -548,7 +548,8 @@ wrapped optimizer rule) and declares this directory.
   with no join below). `bind_free_names` rewrites each unqualified `Column`
   (qualified tokens and subquery plans pass through): one id binds the engine
   field as an attribute reference, several refuse — `AMBIGUOUS_REFERENCE` on the
-  filter path, the oldest id on a Project sort, `UNRESOLVED_COLUMN` on any other
+  filter path, the projection-input route on a Project sort (SM-2c round B
+  below; the S3b oldest-id rule was wrong), `UNRESOLVED_COLUMN` on any other
   sort — and a miss passes through for the engine. No exact-preference anywhere:
   Spark refuses an exact spelling among folded rivals on both filter doors
   (`test_filter_predicate_rewrite.py`), and the S3a inline exact bind stays a
@@ -604,6 +605,17 @@ wrapped optimizer rule) and declares this directory.
   display with a non-word character always parses. Pins:
   `../tests/case_bind.rs`.
   pins: attr-id-1/C-039
+  **Fold SM-2c round B (2026-10-06):** the Project-sort arm no longer binds the
+  oldest id (`oldest_field` is deleted: an oldest twin that is not the source
+  column sorts rows neither Spark nor main produces). `bind_free_column` takes
+  the projection input schema below the transparent wrappers instead of the
+  shape; on ambiguity it returns the key unbound, respelled to the input's
+  casing when the input carries exactly one column of the name under the
+  session rule, so DataFusion's missing-sort-column pushdown sorts by that
+  input column. Otherwise the unbound key flows to the engine, which refuses
+  or pushes deeper exactly as on main. `project_input_spelling` exposes the
+  same walk to the facade's string-sort route. Pins: `../tests/attr_id_s3b.rs`.
+  pins: attr-id-1/C-069
 - `subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference
   scope resolution (`resolve_bound_expr` / `resolve_scoped_expr` /
   `resolve_subquery_plan`, innermost-first so an unqualified `col.outer()` binds inside

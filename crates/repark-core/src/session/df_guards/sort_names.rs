@@ -264,17 +264,19 @@ pub fn bind_free_names(
     if displays.len() != schema.fields().len() {
         return Ok(expr);
     }
-    let shape = if for_sort {
-        sort_shape(plan)
+    let sort_input = if for_sort {
+        project_input_schema(plan)
     } else {
-        SortShape::Other
+        None
     };
     let join_dup = !for_sort && join_dup_below_wrappers(plan);
     expr.transform(|node| {
         Ok(match node {
-            Expr::Column(column) if column.relation.is_none() => Transformed::yes(
-                bind_free_column(column, schema, rule, displays, for_sort, shape, join_dup)?,
-            ),
+            Expr::Column(column) if column.relation.is_none() => {
+                Transformed::yes(bind_free_column(
+                    column, schema, rule, displays, for_sort, sort_input, join_dup,
+                )?)
+            }
             _ => Transformed::no(node),
         })
     })
@@ -287,7 +289,7 @@ fn bind_free_column(
     rule: NameRule,
     displays: &[String],
     for_sort: bool,
-    shape: SortShape,
+    sort_input: Option<&DFSchema>,
     join_dup: bool,
 ) -> Result<Expr> {
     match resolve(schema, &column.name, None, rule, displays, None)? {
@@ -307,13 +309,18 @@ fn bind_free_column(
             Ok(attribute_reference(field.name()))
         }
         Resolution::Ambiguous(hits) => {
-            if for_sort {
-                if shape == SortShape::Project {
-                    return oldest_field(schema, &hits);
-                }
-                return Err(unresolved_column(&column, schema));
+            if !for_sort {
+                return ambiguous_for_hits(&column, schema, &hits);
             }
-            ambiguous_for_hits(&column, schema, &hits)
+            let Some(input) = sort_input else {
+                return Err(unresolved_column(&column, schema));
+            };
+            match unique_spelling(input, &column.name, rule) {
+                Some(spelling) if spelling != column.name => {
+                    Ok(Expr::Column(Column::from_name(spelling)))
+                }
+                _ => Ok(Expr::Column(column)),
+            }
         }
         Resolution::Missing => Ok(Expr::Column(column)),
     }
@@ -328,19 +335,34 @@ fn ambiguous_for_hits(column: &Column, schema: &DFSchema, hits: &[usize]) -> Res
     Err(ambiguous_reference(column, &options))
 }
 
-fn oldest_field(schema: &DFSchema, hits: &[usize]) -> Result<Expr> {
-    let oldest = hits
+fn project_input_schema(plan: &LogicalPlan) -> Option<&DFSchema> {
+    let mut node = plan;
+    loop {
+        let below = below_transparent(node);
+        if !std::ptr::eq(below, node) {
+            node = below;
+            continue;
+        }
+        if let LogicalPlan::Projection(projection) = node {
+            return Some(projection.input.schema());
+        }
+        return None;
+    }
+}
+
+fn unique_spelling(schema: &DFSchema, written: &str, rule: NameRule) -> Option<String> {
+    let mut matches = schema
+        .fields()
         .iter()
-        .filter_map(|position| {
-            let field = schema.fields().get(*position)?;
-            AttrId::of(field).map(|id| (id, field.name().clone()))
-        })
-        .min_by(|(left, _), (right, _)| left.cmp(right))
-        .map(|(_, name)| name);
-    oldest.map_or_else(
-        || Err(internal_datafusion_err!("resolve bound an id-free hit")),
-        |name| Ok(attribute_reference(&name)),
-    )
+        .filter(|field| rule.matches(written, field.name()))
+        .map(|field| field.name().clone());
+    let first = matches.next()?;
+    matches.next().is_none().then_some(first)
+}
+
+#[must_use]
+pub fn project_input_spelling(plan: &LogicalPlan, written: &str, rule: NameRule) -> Option<String> {
+    unique_spelling(project_input_schema(plan)?, written, rule)
 }
 
 #[allow(clippy::missing_errors_doc)]

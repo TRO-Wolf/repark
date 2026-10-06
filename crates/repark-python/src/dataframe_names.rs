@@ -42,6 +42,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(grandchild_key_status, module)?)?;
     module.add_function(wrap_pyfunction!(projection_source_ids, module)?)?;
     module.add_function(wrap_pyfunction!(sort_hits_meet_at_join, module)?)?;
+    module.add_function(wrap_pyfunction!(sort_project_input_spelling, module)?)?;
     module.add_function(wrap_pyfunction!(java_fold_hits, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_join_condition, module)?)?;
     module.add_function(wrap_pyfunction!(refuse_ambiguous_free_names, module)?)?;
@@ -590,6 +591,19 @@ pub(crate) fn attribute_ids(frame: &PyDataFrame) -> Vec<Option<String>> {
 #[pyfunction]
 pub(crate) fn sort_hits_meet_at_join(frame: &PyDataFrame, positions: Vec<usize>) -> bool {
     repark_core::frame_names::sort_hits_meet_at_join(frame.inner().logical_plan(), &positions)
+}
+
+#[pyfunction]
+pub(crate) fn sort_project_input_spelling(
+    frame: &PyDataFrame,
+    written: &str,
+    exact: bool,
+) -> Option<String> {
+    repark_core::frame_names::project_input_spelling(
+        frame.inner().logical_plan(),
+        written,
+        NameRule::from_case_sensitive(exact),
+    )
 }
 
 #[pyfunction]

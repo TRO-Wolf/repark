@@ -446,6 +446,15 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   rule, so the engine refuses `AMBIGUOUS_REFERENCE` with v1.5.2's text
   instead of binding the oldest project hit; one match still funnels
   (MISSING-REF-RESOLVE-1). pins: attr-id-1/C-055
+  **Fold SM-2c round B (2026-10-06):** `_resolve_sort_name` no longer binds
+  the oldest hit on an ambiguous Project sort (that rule sorted rows neither
+  Spark nor main produces); it delegates to
+  `qualified_names._route_sort_key_through_input`, which sorts by the
+  projection's input column when the input carries exactly one of the name,
+  else flows unbound (Column keys, refused or pushed deeper exactly as on
+  main) or raises `AMBIGUOUS_REFERENCE` with main's text (string keys over
+  reminted outputs). Stable `F.col` keys pass `is_column_key=True` so the
+  reminted-input shapes keep main's passthrough. pins: attr-id-1/C-069
 - `column_sort.py` — **ATTR-ID-1 S4 follow-up (2026-10-02):** the sort-marker
   family, split out of `column.py` at the size ceiling (pure move; `Column`
   binds the six `asc`/`desc` spellings). `_with_sort_order` re-marks the column
@@ -648,6 +657,16 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   value. No new registry and no `DataFrame` slot: the `_USING_MARKS` weak map
   holds the mark, copied by `_spawn` (SM-2b item 5).
   pins: attr-id-1/C-066
+  **Fold SM-2c round B (2026-10-06):** `_route_sort_key_through_input`
+  serves the ambiguous-Project arm of `_resolve_sort_name`: it reads the
+  input spelling from `_native.sort_project_input_spelling` and binds it as
+  a plain column (no attribute mark, so the final binder and DataFusion's
+  missing-sort-column pushdown treat it exactly as main's unbound key),
+  returns the written spelling unbound when the engine still matches a twin
+  or the key came from a Column, and raises `AMBIGUOUS_REFERENCE` with
+  main's text only for string keys over reminted outputs, where main
+  refuses at the getitem. No docstring: the lane's no-comments ruling
+  covers the new helper; the contract lives here. pins: attr-id-1/C-069
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
   unsupported operations fail explicitly.

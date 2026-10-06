@@ -214,12 +214,36 @@ fn bind_free_names_filter_refuses_exact_among_folded_rivals() {
 }
 
 #[test]
-fn bind_free_names_sort_binds_oldest_on_project() {
+fn bind_free_names_sort_routes_project_dup_through_input() {
     let (_context, frame) = dup_schema();
     let plan = frame.logical_plan();
     assert_eq!(sort_shape(plan), SortShape::Project);
     let bound = bind_free_names(col("v"), plan, IgnoreCase, &["v".into(), "v".into()], true);
-    assert_eq!(bound_name(bound.unwrap()), "e2");
+    assert_eq!(bound_name(bound.unwrap()), "v");
+}
+
+#[test]
+fn bind_free_names_sort_respells_case_mismatched_key_to_input() {
+    let (_context, frame) = dup_schema();
+    let plan = frame.logical_plan();
+    let written = Expr::Column(Column::from_name("V"));
+    let bound = bind_free_names(written, plan, IgnoreCase, &["v".into(), "v".into()], true);
+    assert_eq!(bound_name(bound.unwrap()), "v");
+}
+
+#[test]
+fn bind_free_names_sort_passes_through_when_input_is_not_unique() {
+    let inner = dup_schema().1;
+    let doubled = inner
+        .select(vec![
+            col("e1").alias_with_metadata("v", Some(tag("a4"))),
+            col("e2").alias_with_metadata("v", Some(tag("a5"))),
+        ])
+        .unwrap();
+    let plan = doubled.logical_plan();
+    assert_eq!(sort_shape(plan), SortShape::Project);
+    let bound = bind_free_names(col("v"), plan, IgnoreCase, &["v".into(), "v".into()], true);
+    assert_eq!(bound_name(bound.unwrap()), "v");
 }
 
 #[test]
