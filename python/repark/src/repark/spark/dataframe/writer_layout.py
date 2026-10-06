@@ -48,9 +48,9 @@ def _raise_analysis(
     raise error
 
 
-def _refuse_duplicate_output_columns(frame: Any) -> None:
+def _refuse_duplicate_output_columns(frame: Any, *, exact_only: bool = False) -> None:
     columns = list(frame.columns)
-    sensitive = _native.session_case_sensitive(frame._session)
+    sensitive = True if exact_only else bool(_native.frame_case_sensitive(frame._plan()))
     seen: list[str] = []
     for name in columns:
         folded = name.lower()

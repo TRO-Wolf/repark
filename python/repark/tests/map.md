@@ -9573,9 +9573,11 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   create no file or table (parquet, json, csv, orc, saveAsTable, V2 create and
   V2 append); `insertInto` writes positionally as Spark does; folded-only
   duplicates report the folded name. The csv refusal is the ruled divergence
-  FA-5 (Spark writes the duplicate header). No module docstring: the lane's
-  no-comments ruling covers the new file; the contract lives here.
-  pins: attr-id-1/C-061
+  FA-5 (Spark writes the duplicate header). SM-2b narrowing: csv refuses
+  exact duplicates only (case-twins write the raw header, pinned), and a
+  case-sensitive parquet twin pin holds the per-flag rule. No module
+  docstring: the lane's no-comments ruling covers the new file; the contract
+  lives here. pins: attr-id-1/C-061
 - [test_attr_id_1_sm2_dupexport.py](test_attr_id_1_sm2_dupexport.py) — **Fold
   SM-2 R3 (2026-10-06):** `pa.table(J)` over a duplicate-display-name join
   carries the display names, equal to `J.toArrow()` and to Spark's
@@ -9597,14 +9599,15 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   no-comments ruling covers the new file; the contract lives here.
   pins: attr-id-1/C-063
 - [test_attr_id_1_sm2_dupviews.py](test_attr_id_1_sm2_dupviews.py) — **Fold
-  SM-2 R5 (2026-10-06):** the four temp-view doors over duplicate-display
-  frames refuse `COLUMN_ALREADY_EXISTS` with Spark's exact text, condition
-  and SQLSTATE 42711, naming the first duplicate, and register nothing
-  (self, mixed, USING `s`, folded); guards pin plain
-  register/read/describe, replace, EXPLAIN-over-twins, and globals-still-
-  unsupported. The refusal is the ruled divergence FA-6 (Spark registers
-  the view). No module docstring: the lane's no-comments ruling covers the
-  new file; the contract lives here. pins: attr-id-1/C-064
+  SM-2 R5 (2026-10-06):** the four temp-view doors over exact-duplicate-
+  display frames refuse `COLUMN_ALREADY_EXISTS` with Spark's exact text,
+  condition and SQLSTATE 42711, naming the first duplicate, and register
+  nothing (self, mixed, USING `s`); the folded pin registers and answers
+  (SM-2b narrowing); guards pin plain register/read/describe, replace,
+  EXPLAIN-over-twins, and globals-still-unsupported. The refusal is the
+  ruled divergence FA-6 (Spark registers the view). No module docstring:
+  the lane's no-comments ruling covers the new file; the contract lives
+  here. pins: attr-id-1/C-064
 - [test_attr_id_1_sm2_r7.py](test_attr_id_1_sm2_r7.py) — **Fold SM-2 R7
   (2026-10-06):** a qualified `DataFrame.__getitem__` repr keeps the
   qualifier (`Column<'r.t'>`, `Column<'b.v'>`, alias `Column<'x.id'>`,

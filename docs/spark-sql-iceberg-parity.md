@@ -3305,11 +3305,13 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   visible (`conf.get` discloses it), and both directions stay under test so a drift in
   either inference path reds.
 
-### FA-5 — csv writes of duplicate display names refuse (Spark writes them)
+### FA-5 — csv writes of exact-duplicate display names refuse (Spark writes them)
 
-- **repark** — a frame whose display names hold duplicates refuses a csv path
-  write with `[COLUMN_ALREADY_EXISTS]`, naming the first duplicate, before any
-  file is created — the same refusal as the parquet/json/orc/table doors.
+- **repark** — a frame whose display names hold exact duplicates refuses a csv
+  path write with `[COLUMN_ALREADY_EXISTS]`, naming the first duplicate,
+  before any file is created — the same refusal as the parquet/json/orc/table
+  doors. Case-twin columns (`T`, `t`) write with the raw header, as Spark
+  does (SM-2b narrowing, 2026-10-06).
 - **Apache Spark** — writes the file with the duplicate display header
   (`id,s,v,id,s,v` on the fold's self-join). *(oracle: live 4.1.2, 2026-10-06,
   raw header line of the written part file.)*
@@ -3321,13 +3323,15 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   The pin asserts the refusal, so the rename reds it and forces this row to be
   re-recorded together with the behavior.
 
-### FA-6 — temp views over duplicate display names refuse (Spark registers them)
+### FA-6 — temp views over exact-duplicate display names refuse (Spark registers them)
 
-- **repark** — a frame whose display names hold duplicates refuses
+- **repark** — a frame whose display names hold exact duplicates refuses
   `createOrReplaceTempView`, `createTempView`, `createGlobalTempView` and
   `createOrReplaceGlobalTempView` with `[COLUMN_ALREADY_EXISTS]`, naming the
-  first duplicate (SQLSTATE 42711), before anything is registered. The global
-  doors keep their existing unsupported error for duplicate-free frames.
+  first duplicate (SQLSTATE 42711), before anything is registered. Case-twin
+  columns (`id`, `ID`) register and answer, as Spark does (SM-2b narrowing,
+  2026-10-06). The global doors keep their existing unsupported error for
+  duplicate-free frames.
 - **Apache Spark** — registers the view; `SELECT *`, `spark.table` and
   `DESCRIBE` all carry the duplicate display names (`id, s, v, id, s, v` on
   the fold's self-join). *(oracle: live 4.1.2, 2026-10-06, `v_self`/`v_r`.)*

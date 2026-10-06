@@ -1710,11 +1710,14 @@ runs through the native `sql_built` method. pins: string-literal-escape-1/C-011
 **Fold SM-2 R2 (2026-10-06):** frames with duplicate display names refuse the
 named writes with Spark's exact `COLUMN_ALREADY_EXISTS` (SQLSTATE 42711) before
 any file is created: `writer_layout._refuse_duplicate_output_columns` checks
-`frame.columns` (folded when the session is case-insensitive, exact otherwise)
-and is called from `_apply_path_write` (parquet, json, csv), `save` (orc,
-ahead of the format refusal), `write_table` (saveAsTable create/replace),
-`_run_ctas` and V2 `append`. `insertInto` stays positional (Spark writes it);
-saveAsTable-append stays by-name loud. pins: attr-id-1/C-061
+`frame.columns` (folded when the plan reads case-insensitive, exact otherwise;
+csv passes `exact_only`, so case-twins write with the raw header as Spark
+does) and is called from `_apply_path_write` (parquet, json, csv), `save`
+(orc, ahead of the format refusal), `write_table` (saveAsTable
+create/replace), `_run_ctas` and V2 `append`. `insertInto` stays positional
+(Spark writes it); saveAsTable-append stays by-name loud. The case rule comes
+from the plan (`frame_case_sensitive`), never the session object, so proxied
+sessions keep working. pins: attr-id-1/C-061
 **Fold SM-2 R3 (2026-10-06):** `core.py`'s `__arrow_c_stream__` delegates to
 `qualified_names._arrow_c_stream_with_display`. pins: attr-id-1/C-062
 **Fold SM-2 R4 (2026-10-06):** `core.py`'s `mapInArrow` calls
@@ -1725,8 +1728,9 @@ pins: attr-id-1/C-063
 **Fold SM-2 R5 (2026-10-06):** `core.py`'s `create_or_replace_temp_view`
 (covering `create_temp_view`) and `create_global_temp_view` (covering both
 global spellings) call `writer_layout._refuse_duplicate_output_columns`
-first, so duplicate-display-name frames refuse `COLUMN_ALREADY_EXISTS`
-(42711) before anything is registered; the global doors keep their
+with `exact_only` first, so exact-duplicate-display-name frames refuse
+`COLUMN_ALREADY_EXISTS` (42711) before anything is registered while
+case-twin frames register and answer; the global doors keep their
 unsupported error for duplicate-free frames. The refusal stays out of
 `surface_b.register_view_without_fill` because EXPLAIN registers twin
 frames through it. Line-neutral at the exact 3464 baseline (the

@@ -162,8 +162,11 @@ release, where main could not plan it. The internal twin names
 - Writes of duplicate display names refuse with Spark's exact
   `[COLUMN_ALREADY_EXISTS] The column `<name>` already exists. Choose another
   name or rename the existing column. SQLSTATE: 42711`, before any file is
-  created. This covers parquet, json, orc, `saveAsTable` and `writeTo`.
-  The csv refusal is a deliberate divergence (row FA-5 in
+  created. This covers parquet, json, orc, `saveAsTable` and `writeTo`,
+  matching Spark's case rule (case-twin columns refuse only when the
+  session is case-insensitive). Csv refuses exact duplicates only; it
+  writes case-twin headers as Spark does. The exact-duplicate csv
+  refusal is a deliberate divergence (row FA-5 in
   `docs/spark-sql-iceberg-parity.md` §5): Spark writes the duplicate header,
   which the engine cannot plan over; `insertInto` keeps writing positionally,
   as Spark does.
@@ -175,11 +178,11 @@ release, where main could not plan it. The internal twin names
   duplicate with its qualified candidates (SQLSTATE 42704), instead of
   running with internal names. Scalar and grouped-aggregation pandas UDF
   input Series are positional (`_0`, `_1`, …), as on Spark.
-- Temp views over duplicate display names refuse with
+- Temp views over exact-duplicate display names refuse with
   `[COLUMN_ALREADY_EXISTS]` (SQLSTATE 42711) instead of registering twin
-  engine names. This is a deliberate divergence (row FA-6 in
-  `docs/spark-sql-iceberg-parity.md` §5): Spark registers the view, which
-  the engine cannot plan over yet.
+  engine names. Case-twin columns register and answer. This is a deliberate
+  divergence (row FA-6 in `docs/spark-sql-iceberg-parity.md` §5): Spark
+  registers the view, which the engine cannot plan over yet.
 - DataFrame `USING` joins keep the left key: left-side qualified key
   references answer on every join type, and right-side references answer
   on `inner` but refuse loudly on `left`/`right`/`full` instead of

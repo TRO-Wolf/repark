@@ -372,7 +372,9 @@ class DataFrameWriter:
                 f"path write mode must be one of {self._PATH_MODES}, got {self._mode!r}"
             )
         if stored_as in ("PARQUET", "JSON", "CSV"):
-            writer_layout._refuse_duplicate_output_columns(self._dataframe)
+            writer_layout._refuse_duplicate_output_columns(
+                self._dataframe, exact_only=stored_as == "CSV"
+            )
         destination = Path(path)
         if _writer_s3.is_s3_url(path):
             return _writer_s3.write_s3_path(self, path, stored_as=stored_as)

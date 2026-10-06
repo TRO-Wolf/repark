@@ -168,6 +168,35 @@ def test_parquet_write_of_folded_duplicate_names_reports_the_folded_name(
     session.stop()
 
 
+def test_csv_write_of_case_twin_names_writes_the_raw_header(tmp_path: Path) -> None:
+    session = sm2._open(tmp_path, "sm2-dupwrites-csvtwins")
+    frame = session.sql("SELECT 1 AS T, 2 AS t")
+    assert frame.columns == ["T", "t"]
+    target = tmp_path / "twin_csv"
+    frame.write.mode("overwrite").option("header", "true").csv(str(target))
+    parts = sorted(target.rglob("*.csv"))
+    assert len(parts) == 1
+    assert parts[0].read_text(encoding="utf-8").splitlines()[0] == "T,t"
+    sm2._assert_no_twin_bytes(target)
+    session.stop()
+
+
+def test_parquet_write_of_case_twin_names_writes_when_case_sensitive(
+    tmp_path: Path,
+) -> None:
+    session = sm2._open(tmp_path, "sm2-dupwrites-sensitive")
+    session.conf.set("spark.sql.caseSensitive", "true")
+    try:
+        frame = session.sql("SELECT 1 AS T, 2 AS t")
+        target = tmp_path / "twin_parquet"
+        frame.write.mode("overwrite").parquet(str(target))
+        assert len(list(target.rglob("*.parquet"))) >= 1
+        sm2._assert_no_twin_bytes(target)
+    finally:
+        session.conf.set("spark.sql.caseSensitive", "false")
+    session.stop()
+
+
 def test_parquet_write_of_unique_names_still_succeeds(tmp_path: Path) -> None:
     session = sm2._open(tmp_path, "sm2-dupwrites-plain")
     frame = session.createDataFrame([(1, "a", 10), (2, "b", 20)], ["id", "s", "v"])

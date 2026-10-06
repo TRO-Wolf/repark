@@ -76,7 +76,7 @@ def test_temp_view_over_using_join_names_first_duplicate_key(tmp_path: Path) -> 
     session.stop()
 
 
-def test_temp_view_over_folded_join_names_folded_first_duplicate(tmp_path: Path) -> None:
+def test_temp_view_over_folded_join_names_registers_and_answers(tmp_path: Path) -> None:
     session = sm2._open(tmp_path, "sm2-dupviews-fold")
     upper = session.createDataFrame([(1, "x"), (3, "y")], ["ID", "T"])
     lower = session.createDataFrame([(1, "a", 10), (2, "b", 20)], ["id", "s", "v"])
@@ -85,11 +85,11 @@ def test_temp_view_over_folded_join_names_folded_first_duplicate(tmp_path: Path)
         spark_functions.col("r.ID") == spark_functions.col("l.id"),
     )
     assert frame.columns == ["ID", "T", "id", "s", "v"]
-    refused = sm2._refusal_of(lambda: frame.createOrReplaceTempView("vj"))
-    assert isinstance(refused, AnalysisException)
-    assert sm2._condition_of(refused) == "COLUMN_ALREADY_EXISTS"
-    assert str(refused).splitlines()[0] == sm2._expected_dup_message("id")
-    assert session.catalog.tableExists("vj") is False
+    frame.createOrReplaceTempView("vj")
+    assert session.catalog.tableExists("vj") is True
+    table = session.sql("SELECT * FROM vj").to_arrow()
+    assert table.column_names == ["ID", "T", "id", "s", "v"]
+    assert table.num_rows == 1
     session.stop()
 
 
