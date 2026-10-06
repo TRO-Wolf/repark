@@ -9,6 +9,12 @@ recorded cells, not from documentation. Order:
 [mb-0-oracle.md](../../../../task/wo/microbatch/mb-0-oracle.md). Nothing here is
 collected by pytest, and no RePark code runs.
 
+D-M2 (2026-10-06): the Postgres JDBC oracle for the connect track (1.6). It records
+58 cells, `DM2-T01…T30` (types), `DM2-V01…V10` (values) and `DM2-S01…S04`
+(shapes), on live Spark 4.1.2 reading Postgres 16.15 through pgjdbc 42.7.13.
+The C-2 registry takes its Spark halves from these recorded cells, not from
+documentation. Nothing here is collected by pytest, and no RePark code runs.
+
 ## Contents
 
 - `mb0_streaming_oracle.py` is the recorder. There is one function per cell, and
@@ -21,6 +27,21 @@ collected by pytest, and no RePark code runs.
   pretty-printed with sorted keys. Each entry carries exactly `cell`, `statement`, `kind`,
   `answer` and `field`. The preamble names the versions and the catalog (`hadoop`).
 - `mb0_streaming_oracle.sha256` holds `sha256sum` of the JSON. Check it with
+  `sha256sum -c` from this directory.
+- `c2_jdbc_oracle.py` is the D-M2 recorder. Cells are data (`define_cells`),
+  one entry per `(code, tz)` id, and `record_all` prints each entry as one
+  JSON line. Run it through the managed interpreter only (brief step 2),
+  with `DM2_PG_URL` (from `make pg-url`), `DM2_WAREHOUSE` pointing at an
+  empty private directory, and `DM2_PGJDBC_JAR` when the jar lives outside
+  the D-M2 jars directory. `DM2_OUT` redirects the JSON for a re-run
+  comparison. Missing Spark, psql, jar or database prints `SKIP` and exits 0.
+- `c2_jdbc_oracle.json` is the D-M2 recording: the Spark, pgjdbc (version
+  and SHA-256), Postgres and date preamble plus `setup_preamble`, then the
+  58 cells in recorder order, pretty-printed with sorted keys. Each entry
+  carries exactly `id`, `sql_setup`, `read`, `tz`, `schema`, `rows` and
+  `error` (`class`, `error_class`, `sqlstate`, `message`); only `DM2-S03`
+  adds `explain` and `push_down_limit`.
+- `c2_jdbc_oracle.sha256` holds `sha256sum` of the JSON. Check it with
   `sha256sum -c` from this directory.
 
 ## Recording choices
@@ -46,9 +67,59 @@ collected by pytest, and no RePark code runs.
   the second commit. T1 also records `streaming-max-files-per-micro-batch=1` under
   `once`.
 
-## Volatile fields
+## D-M2 recording choices
 
-A re-run is byte-identical except for these fields:
+- Every read sets `.option("driver", "org.postgresql.Driver")` next to
+  `spark.jars`: analysis-time `DriverManager.getDriver` cannot see
+  `spark.jars` jars, and without the option every cell fails with
+  `No suitable driver`. The explicit driver routes through Spark's
+  `DriverRegistry`, which loads it from the Spark classloader.
+- The recorder creates its tables through the `psql` CLI, one
+  `ON_ERROR_STOP=1` invocation per cell, because `/tmp/sparkenv` has no
+  `psycopg`. Each `CREATE` runs once; tz-repeat, `DM2-T12` and `DM2-S02`
+  cells re-read an earlier cell's table, and their `sql_setup` repeats the
+  creating statements as provenance.
+- `read` records `url` as `<pg-url>` and omits `user`/`password`; the
+  password never reaches the JSON. `$WAREHOUSE` and `$RECORDER` are
+  scrubbed like the MB-0 prefixes.
+- `schema` is kept when only `collect` fails, so a failing value still
+  pins the type mapping. `error_class`/`sqlstate` come from the Python
+  getters first, then the `java_exception` getters; the `message` is the
+  first 400 characters verbatim.
+- `DM2-S03` also records the formatted plan and the `push_down_limit`
+  triple: whether the external-engine query carries a whole-word `LIMIT`,
+  the unset `JDBCOptions.pushDownLimit` read off the analyzed plan, and a
+  reflection error slot. A whole-word match is used because the table is
+  named `t_limit100`.
+- A re-run is byte-identical, including py4j object ids and plan
+  attribute ids: the call sequence is fixed, so both id streams repeat.
+
+## D-M2 measured notes (2026-10-06, read from the recording)
+
+- The four flagged numerics match the C-2a reflection: `(39,1)`, `(50,10)`
+  and `(1000,40)` read as `decimal(38,0)`, `(50,45)` as `decimal(38,33)`,
+  with fraction digits rounded half up into the target scale.
+- `numeric(5,-2)` reads as `decimal(38,38)` live, not `decimal(7,0)` as
+  the reflection predicted, and its `collect` fails with
+  `NUMERIC_VALUE_OUT_OF_RANGE` (`22003`). `bpchar(5)` reads as `string`,
+  not `char(5)`: live pgjdbc reports it as `VARCHAR`, while the verifier
+  assumed the `CHAR` type code.
+- Every UTC repeat answers identically to its `America/New_York` twin,
+  so the JDBC timestamp path follows the JVM default time zone
+  (`America/New_York` here, recorded as `jvm_timezone`), not the session
+  time zone.
+- `V1` JDBC pushes no limit: the plan keeps `CollectLimit` above the
+  scan with a bare external query, while the unset option reads back
+  `true`.
+- `NaN`/`Infinity` numerics fail in `PgResultSet.toBigDecimal`
+  (`Bad value for type BigDecimal`); date/timestamp infinities return
+  boundary dates instead of failing. The DST gap reads as `03:30`, the
+  overlap as `01:30` with `fold=1`, and `time '24:00:00'` as next-day
+  midnight. An unknown JDBC option is silently ignored.
+
+## Volatile fields (MB-0)
+
+An MB-0 re-run is byte-identical except for these fields:
 
 - query ids and run ids, plus the snapshot ids inside every error text
   (R2, R4, R5, R7, W6);
