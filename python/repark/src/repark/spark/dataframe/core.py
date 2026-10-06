@@ -3312,7 +3312,7 @@ class DataFrame:
         """
         import polars as pl
 
-        frame = pl.DataFrame(self)
+        frame = pl.DataFrame(self._action_inner())
         display = self._display_names
         if display is None or self._engine_names is None or len(display) != frame.width:
             return frame

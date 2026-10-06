@@ -137,9 +137,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   pins: df-colregex-1/C-003
   FACADE-1 (2026-09-12): mapInArrow construction registers an empty Arrow table through
   the capsule helper (IPC only when the native symbol is absent). `to_arrow` /
-  `to_arrow_batches` go through `require_pyarrow`. `to_polars` always consumes
-  `__arrow_c_stream__` via `pl.DataFrame(self)` and suffixes duplicate display
-  names on the polars columns; it does not call `to_arrow`. mapInArrow
+  `to_arrow_batches` go through `require_pyarrow`. `to_polars` consumes the
+  engine-name stream via `pl.DataFrame(self._action_inner())` (SM-2b item 4:
+  the facade `__arrow_c_stream__` carries duplicate display names since R3,
+  which polars refuses, so `to_polars` reads unique engine names) and
+  suffixes duplicate display names on the polars columns; it does not call
+  `to_arrow`. mapInArrow
   still materializes UDF output batches in Python before the capsule register: a live
   RecordBatchReader over the generator would re-enter `__arrow_c_stream__` while Rust
   holds the GIL and abort. Use `Table.from_batches`, not `RecordBatchReader.from_batches`,
