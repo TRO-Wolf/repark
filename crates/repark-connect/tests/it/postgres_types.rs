@@ -611,6 +611,13 @@ fn unconstrained_numeric_rounds_half_up_at_scale_18() {
 }
 
 #[test]
+fn numeric_group_at_exponent_minus_four_rounds_half_up() {
+    let whole = column("numeric", TypeMod::numeric(8, 0));
+    assert_eq!(decimal(&whole, &numeric_wire(0, 0, 1, &[7, 5000])), 8);
+    assert_eq!(decimal(&whole, &numeric_wire(0, 0x4000, 1, &[7, 5000])), -8);
+}
+
+#[test]
 fn bounded_numeric_overflow_refuses() {
     let numeric = column("numeric", TypeMod::NONE);
     let error = decode_one(&numeric, &numeric_wire(5, 0, 0, &[1])).expect_err("21 digits");

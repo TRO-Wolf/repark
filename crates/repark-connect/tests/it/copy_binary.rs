@@ -145,6 +145,20 @@ fn copy_oid_flag_refuses() {
 }
 
 #[test]
+fn copy_critical_flag_bits_each_refuse() {
+    for bit in [18_u32, 24, 30] {
+        let flags = 1_u32 << bit;
+        let error = decode_all(vec![base("n", "int4")], &header_with(flags, &[]))
+            .expect_err("a critical flag refuses");
+        assert_eq!(
+            error,
+            protocol(ProtocolViolation::CriticalFlags { flags }),
+            "bit {bit}"
+        );
+    }
+}
+
+#[test]
 fn copy_trailer_ends_and_trailing_bytes_refuse() {
     let bytes = stream(&int4s(&[Some(1), Some(2)]));
     let mut decoder = decoder(vec![base("n", "int4")]);
@@ -437,6 +451,28 @@ fn batches_flush_at_rows_and_at_bytes() {
     let mut rest: &[u8] = &stream(&small);
     assert!(decoder.decode(&mut rest).expect("below the cap").is_some());
     assert_eq!(decoder.buffered_bytes(), 0);
+}
+
+#[test]
+fn batch_flushes_at_the_exact_byte_cap() {
+    let bytes = stream(&int4s(&[Some(1), Some(2)]));
+    let mut decoder =
+        CopyBinaryDecoder::new(vec![base("n", "int4")], limits(1000, 5)).expect("a decoder");
+    let mut rest: &[u8] = &bytes;
+    let first = decoder
+        .decode(&mut rest)
+        .expect("the exact cap flushes")
+        .expect("a batch on the first row");
+    assert_eq!(first.num_rows(), 1);
+    assert!(!rest.is_empty(), "the second row stays with the caller");
+    let second = decoder
+        .decode(&mut rest)
+        .expect("the second row")
+        .expect("a batch on the second row");
+    assert_eq!(second.num_rows(), 1);
+    assert!(decoder.decode(&mut rest).expect("the trailer").is_none());
+    assert!(rest.is_empty());
+    decoder.finish().expect("complete");
 }
 
 #[test]

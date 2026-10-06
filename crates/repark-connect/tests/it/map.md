@@ -36,6 +36,9 @@ See [../map.md](../map.md).
   a 1 MiB cap, then a small row; `buffered_bytes()` stays under the cap after the flush).
   The C-2a F-5 fold (2026-10-06) adds `null_rows_charge_their_builder_bytes` (one million
   all-NULL `numeric,timestamp,text` rows under a 1 MiB cap flush more than once).
+  The C-2a F-6 fold (2026-10-06) adds `batch_flushes_at_the_exact_byte_cap` (two `int4`
+  rows under a 5-byte cap flush 1 + 1) and `copy_critical_flag_bits_each_refuse` (bits 18,
+  24 and 30 each refuse).
   pins: c-2/C-002, C-003, C-004, C-005, C-006, C-015, C-016, C-017
 - `postgres_types.rs` — C-1 (2026-10-05): one round-trip pin per mapped row, named in the row
   (`bool_round_trips` … `bytea_round_trips`): Arrow array → wire values → Arrow array, equal,
@@ -57,7 +60,9 @@ See [../map.md](../map.md).
     `1.5` → 2 and T05 half-up values, the T10 refusal, the kept `p > 1000` refusal),
     `numeric_special_values_refuse`,
     `unconstrained_numeric_rounds_half_up_at_scale_18` (`5e-19` → `1e-18`, its negative, and
-    `4.999e-19` → 0), `bounded_numeric_overflow_refuses` (21 integer digits, a carry from
+    `4.999e-19` → 0), `numeric_group_at_exponent_minus_four_rounds_half_up` (`7.5` → 8 at
+    `numeric(8,0)`, both signs, the dropped group at exponent -4),
+    `bounded_numeric_overflow_refuses` (21 integer digits, a carry from
     rounding past 38 digits, 10^38 into `(38,0)`, an absurd weight);
     `uuid_renders_lowercase_canonical`, `jsonb_strips_version_one_and_refuses_others`,
     `json_and_interval_are_text_verbatim`; `unmapped_types_refuse_at_resolution` (the
