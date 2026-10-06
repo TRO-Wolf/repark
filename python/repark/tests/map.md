@@ -9423,7 +9423,7 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   `eqNullSafe` sides a shared-lineage self-join; a parent ref past an arithmetic
   output resolves by engine name on single names and raises on duplicate names;
   a same-frame twin getitem stays the written ref and refuses; an unheld marked
-  sort key funnels to the oldest project hit while the plain parent ref refuses;
+  sort key refuses over same-name twins while the plain parent ref refuses;
   twin parent refs refuse on pass-through children (**V-5 (2026-10-02)** flips the
   S4 bind to the Spark refusal) and bind on join sides and duplicate
   select outputs; a rename that drops the name refuses while a case-only rename
@@ -9438,6 +9438,9 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   `_LEGACY_ERROR_TEMP_1182` with Spark's names; `test_s4_mixed_compound_arms_divergence`
   is renamed `..._refuses` (divergence closed, EX-DF-20 fixed); the third-frame pin
   expects `MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION`.
+  **ATTR-ID-1 SM-1 (2026-10-06):** `test_s4_unheld_sort_marker_funnels_to_oldest`
+  is renamed `..._over_same_name_twins_refuses` and asserts `AMBIGUOUS_REFERENCE`
+  on both twin orders and both sort directions. pins: attr-id-1/C-055
 - [test_attr_id_1_sj2.py](test_attr_id_1_sj2.py) — **ATTR-ID-1 SJ-2 (2026-10-02):**
   the seam pins. Every token-bearing bind site renders `F<id>` of its birth
   node; frameless tokens render `F0` and free names carry no id; children mint

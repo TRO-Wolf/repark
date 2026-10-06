@@ -886,6 +886,22 @@ def _bind_sort_key(frame: Any, item: Any) -> Any:
                     pass
                 else:
                     return _rewrap_with_markers(item, bound)
+        if item._attr_id is not None and not item._qualifiers:
+            _, held, engine_names = _frame_id_snapshot(frame)
+            if item._attr_id not in held:
+                name = item._projection_name or item._spark_display
+                if name is not None and name != "" and name != "*":
+                    displays = list(frame.columns)
+                    if len(displays) == len(engine_names):
+                        if None in held:
+                            _, held, engine_names = _stamped_frame_id_snapshot(frame)
+                        if len(displays) == len(engine_names):
+                            exact_hits, folded_hits = _unqualified_candidates(name, displays)
+                            exact = bool(_native.session_case_sensitive(frame._session))
+                            candidates = exact_hits if exact else exact_hits + folded_hits
+                            status, _ = _group_candidates(candidates, held)
+                            if status == "ambiguous":
+                                return item
         return _rebind_qualified_refs(frame, _rebind_free_names(frame, item, True), True)
     raise column_or_str_error(item)
 

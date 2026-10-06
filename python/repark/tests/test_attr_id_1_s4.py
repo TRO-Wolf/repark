@@ -189,16 +189,19 @@ def test_s4_same_frame_twin_getitem_stays_written_ref(spark: ReparkSession) -> N
         frame.select(frame["id"]).collect()
 
 
-def test_s4_unheld_sort_marker_funnels_to_oldest(spark: ReparkSession) -> None:
-    """A marked parent ref no output holds sorts by the oldest project hit (insensitive)."""
+def test_s4_unheld_sort_marker_over_same_name_twins_refuses(spark: ReparkSession) -> None:
+    """A marked parent ref no output holds refuses over same-name twins (insensitive)."""
     frame = spark.createDataFrame([(1, 30), (2, None), (3, 10), (4, 20)], ["id", "v"])
+    flipped = frame.select((frame.v * -1).alias("V"), (frame.v + 1).alias("v"), frame.id)
+    with pytest.raises(AnalysisException, match="AMBIGUOUS_REFERENCE"):
+        flipped.orderBy(frame.v.desc()).collect()
+    with pytest.raises(AnalysisException, match="AMBIGUOUS_REFERENCE"):
+        flipped.orderBy(frame.v.asc()).collect()
     twins = frame.select((frame.v + 1).alias("V"), (frame.v * -1).alias("v"), frame.id)
-    assert [tuple(row) for row in twins.orderBy(frame.v.desc()).collect()] == [
-        (31, -30, 1),
-        (21, -20, 4),
-        (11, -10, 3),
-        (None, None, 2),
-    ]
+    with pytest.raises(AnalysisException, match="AMBIGUOUS_REFERENCE"):
+        twins.orderBy(frame.v.desc()).collect()
+    with pytest.raises(AnalysisException, match="AMBIGUOUS_REFERENCE"):
+        twins.orderBy(frame.v.asc()).collect()
     with pytest.raises(AnalysisException, match="AMBIGUOUS_REFERENCE"):
         twins.orderBy(frame.v).collect()
 

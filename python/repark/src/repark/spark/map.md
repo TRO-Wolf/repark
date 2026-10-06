@@ -409,6 +409,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **ATTR-ID-1 PERF-1 (2026-10-03):** `_split_written_name` memoizes by its
   written-name argument (pure string function; every caller reads the
   result without mutating it).
+  **ATTR-ID-1 SM-1 (2026-10-06):** `_bind_sort_key` returns an unheld marked
+  sort key verbatim when its display matches several outputs under the live
+  rule, so the engine refuses `AMBIGUOUS_REFERENCE` with v1.5.2's text
+  instead of binding the oldest project hit; one match still funnels
+  (MISSING-REF-RESOLVE-1). pins: attr-id-1/C-055
 - `column_sort.py` — **ATTR-ID-1 S4 follow-up (2026-10-02):** the sort-marker
   family, split out of `column.py` at the size ceiling (pure move; `Column`
   binds the six `asc`/`desc` spellings). `_with_sort_order` re-marks the column
