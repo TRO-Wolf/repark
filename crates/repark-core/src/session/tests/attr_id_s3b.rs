@@ -233,11 +233,17 @@ fn bind_free_names_sort_respells_case_mismatched_key_to_input() {
 
 #[test]
 fn bind_free_names_sort_passes_through_when_input_is_not_unique() {
-    let inner = dup_schema().1;
+    let context = SessionContext::new();
+    let inner = source(&context)
+        .select(vec![
+            (col("v") + lit(1)).alias_with_metadata("e1", Some(tag("a4"))),
+            (col("v") + lit(2)).alias_with_metadata("e2", Some(tag("a5"))),
+        ])
+        .unwrap();
     let doubled = inner
         .select(vec![
-            col("e1").alias_with_metadata("o1", Some(tag("a4"))),
-            col("e2").alias_with_metadata("o2", Some(tag("a5"))),
+            col("e1").alias_with_metadata("o1", Some(tag("a6"))),
+            col("e2").alias_with_metadata("o2", Some(tag("a7"))),
         ])
         .unwrap();
     let plan = doubled.logical_plan();
