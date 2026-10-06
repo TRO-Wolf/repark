@@ -162,7 +162,7 @@ fn arrow_c_stream_exports_a_consumable_stream_with_correct_values() {
 
         let capsule = df_cell
             .borrow(py)
-            .__arrow_c_stream__(py, None)
+            .__arrow_c_stream__(py, None, None)
             .expect("stream capsule produced");
 
         let name = capsule
@@ -265,9 +265,12 @@ fn arrow_c_stream_defers_execution_and_does_not_collect_up_front() {
             .expect("plan builds — the CAST error is deferred to execution, not raised at plan time");
         let df_cell: Py<PyDataFrame> = Py::new(py, df).expect("dataframe pyclass");
 
-        let capsule = df_cell.borrow(py).__arrow_c_stream__(py, None).expect(
-            "streaming export returns a capsule WITHOUT materializing (no up-front collect)",
-        );
+        let capsule = df_cell
+            .borrow(py)
+            .__arrow_c_stream__(py, None, None)
+            .expect(
+                "streaming export returns a capsule WITHOUT materializing (no up-front collect)",
+            );
 
         let reader = import_stream(&capsule);
         let drain: Result<Vec<RecordBatch>, ArrowError> = reader.collect();
@@ -285,7 +288,7 @@ fn arrow_c_stream_defers_execution_and_does_not_collect_up_front() {
 fn collect_one_batch(py: Python<'_>, df: &Py<PyDataFrame>) -> RecordBatch {
     let capsule = df
         .borrow(py)
-        .__arrow_c_stream__(py, None)
+        .__arrow_c_stream__(py, None, None)
         .expect("stream capsule produced");
     let reader = import_stream(&capsule);
     let schema = reader.schema();

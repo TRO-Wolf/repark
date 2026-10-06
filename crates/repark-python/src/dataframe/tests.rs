@@ -158,7 +158,7 @@ fn arrow_c_stream_export_is_lazy_and_does_not_materialize_up_front() {
         let py_dataframe = PyDataFrame::new(dataframe, reader_test_runtime());
 
         let capsule = py_dataframe
-            .__arrow_c_stream__(python, None)
+            .__arrow_c_stream__(python, None, None)
             .expect("streaming export returns a capsule");
         assert_eq!(
             produced.load(Ordering::SeqCst),
@@ -323,7 +323,7 @@ fn drive_panicking_stream_export_child() {
         let py_dataframe = PyDataFrame::new(dataframe, reader_test_runtime());
 
         let capsule = py_dataframe
-            .__arrow_c_stream__(python, None)
+            .__arrow_c_stream__(python, None, None)
             .expect("export returns a capsule (execute_stream is lazy — no poll yet)");
         let mut reader = import_capsule_stream(&capsule);
 

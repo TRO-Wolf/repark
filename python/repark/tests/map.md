@@ -9581,8 +9581,9 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
 - [test_attr_id_1_sm2_dupexport.py](test_attr_id_1_sm2_dupexport.py) — **Fold
   SM-2 R3 (2026-10-06):** `pa.table(J)` over a duplicate-display-name join
   carries the display names, equal to `J.toArrow()` and to Spark's
-  `arrow_dup`: the Arrow C stream dunder re-exports with the overlay names
-  (Arrow allows duplicate field names); a non-duplicate twin frame still
+  `arrow_dup`: the native Arrow C stream export renames schema and batches
+  to the overlay names (Arrow allows duplicate field names; SM-2b item 3
+  moved the rename to Rust, pyarrow-free); a non-duplicate twin frame still
   exports its engine names. No module docstring: the lane's no-comments
   ruling covers the new file; the contract lives here.
   pins: attr-id-1/C-062

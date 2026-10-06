@@ -71,6 +71,11 @@ transforms, terminal actions, schema introspection, and Arrow C Stream export.
   `drive_columns`; `join_on_names` takes the two lineage nodes and returns
   `(frame, Join node)` from inside `grown_sync`.
   pins: attr-id-1/C-050, C-051, C-053, deep-filter-chain-crash-1/C-013
+  **Fold SM-2b item 3 (2026-10-06):** `__arrow_c_stream__` takes an optional
+  `display_names` vector alongside `requested_schema` (protocol-compatible:
+  consumers pass at most one argument); a length-matched vector renames the
+  export schema and batches, anything else keeps engine names.
+  pins: attr-id-1/C-062
 - [`tests.rs`](tests.rs) — **DEEP-FILTER-CHAIN-CRASH-1 verifier fold
   (2026-09-29):** the `dataframe` unit tests, moved verbatim from the inline
   module (Arrow export values, types, laziness, errors, schema caching).

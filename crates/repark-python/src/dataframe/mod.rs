@@ -380,17 +380,25 @@ impl PyDataFrame {
     }
 
     #[allow(clippy::needless_pass_by_value)]
-    #[pyo3(signature = (requested_schema=None))]
+    #[pyo3(signature = (requested_schema=None, display_names=None))]
     #[allow(clippy::missing_errors_doc)]
     pub fn __arrow_c_stream__<'py>(
         &self,
         py: Python<'py>,
         requested_schema: Option<Bound<'py, PyAny>>,
+        display_names: Option<Vec<String>>,
     ) -> PyResult<Bound<'py, PyCapsule>> {
         fenced_span!("py.action", "PyDataFrame.__arrow_c_stream__", {
             let _ = requested_schema;
             let schema: SchemaRef = self.analyzed_arrow_schema_native()?;
             let schema = crate::arrow_export::coerced_export_schema(&schema);
+            let (schema, rename) = match display_names {
+                Some(names) if names.len() == schema.fields().len() => (
+                    crate::arrow_export::renamed_export_schema(&schema, &names),
+                    true,
+                ),
+                _ => (schema, false),
+            };
             let segment = frame_drive_segment_cached(&self.depths)?;
             let grown = segment.is_some();
             let twin = self.executable()?;
@@ -399,7 +407,8 @@ impl PyDataFrame {
                 .map_err(datafusion_to_py_err)?;
             let reader: Box<dyn RecordBatchReader + Send> = Box::new(
                 StreamingBatchReader::new(Arc::clone(&self.runtime), stream, schema, grown)
-                    .with_refusals(crate::arrow_export::refusal_log(&self.df)),
+                    .with_refusals(crate::arrow_export::refusal_log(&self.df))
+                    .with_renamed_batches(rename),
             );
             let ffi_stream = FFI_ArrowArrayStream::new(reader);
 

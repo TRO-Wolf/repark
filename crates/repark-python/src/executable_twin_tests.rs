@@ -215,7 +215,7 @@ fn export_executes_the_twin() {
     Python::attach(|py| {
         let capsule = probed
             .frame
-            .__arrow_c_stream__(py, None)
+            .__arrow_c_stream__(py, None, None)
             .expect("the export opens");
         drop(capsule);
     });

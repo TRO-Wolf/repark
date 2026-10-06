@@ -612,11 +612,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   stays at its exact 1529 baseline (one bind line in, one `__radd__` docstring
   line out, net zero).
   pins: polars-is-duplicated-1/C-001
-  **Fold SM-2 R3 (2026-10-06):** `_arrow_c_stream_with_display` re-exports the
-  Arrow C stream with the display overlay names when the frame holds one, so
+  **Fold SM-2 R3 (2026-10-06):** `_arrow_c_stream_with_display` passes the
+  display overlay names into the native dunder when the frame holds one, so
   `pa.table(J)` over a duplicate-display-name join carries the display names
   like `toArrow` does; frames without an overlay take the passthrough arm.
-  pins: attr-id-1/C-062
+  SM-2b item 3 moved the rename to the Rust side (no pyarrow import on
+  either stream path). pins: attr-id-1/C-062
   **Fold SM-2 R4 (2026-10-06):** `_refuse_ambiguous_map_input` refuses a
   `mapInArrow`/`mapInPandas` input whose first duplicate display name (folded
   unless the session is case-sensitive) carries distinct stamped attribute
