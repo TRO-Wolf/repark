@@ -47,12 +47,22 @@ impl DecimalTarget {
         let NumericModifier::Constrained { precision, scale } = modifier else {
             return Some(DecimalTarget::UNCONSTRAINED);
         };
-        if !(1..=MAX_TYPMOD_PRECISION).contains(&precision) || scale < 0 || scale > precision {
+        if !(1..=MAX_TYPMOD_PRECISION).contains(&precision) {
             return None;
         }
+        let jdbc_scale = scale & 0xffff;
+        let effective = precision.max(jdbc_scale);
+        let (target_precision, target_scale) = if effective <= MAX_DECIMAL128_PRECISION {
+            (effective, jdbc_scale)
+        } else {
+            (
+                MAX_DECIMAL128_PRECISION,
+                0.max(jdbc_scale - (effective - MAX_DECIMAL128_PRECISION)),
+            )
+        };
         Some(DecimalTarget {
-            precision: u8::try_from(precision.min(MAX_DECIMAL128_PRECISION)).ok()?,
-            scale: i8::try_from(scale.min(MAX_DECIMAL128_PRECISION)).ok()?,
+            precision: u8::try_from(target_precision).ok()?,
+            scale: i8::try_from(target_scale).ok()?,
         })
     }
 }

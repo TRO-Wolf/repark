@@ -513,29 +513,55 @@ fn numeric_typmods_resolve_to_spark_decimal_types() {
         (TypeMod::NONE, DataType::Decimal128(38, 18)),
         (TypeMod::numeric(1, 0), DataType::Decimal128(1, 0)),
         (TypeMod::numeric(38, 38), DataType::Decimal128(38, 38)),
-        (TypeMod::numeric(50, 10), DataType::Decimal128(38, 10)),
-        (TypeMod::numeric(1000, 40), DataType::Decimal128(38, 38)),
+        (TypeMod::numeric(39, 1), DataType::Decimal128(38, 0)),
+        (TypeMod::numeric(50, 10), DataType::Decimal128(38, 0)),
+        (TypeMod::numeric(50, 45), DataType::Decimal128(38, 33)),
+        (TypeMod::numeric(1000, 40), DataType::Decimal128(38, 0)),
+        (TypeMod::numeric(3, 5), DataType::Decimal128(5, 5)),
+        (TypeMod::numeric(5, -2), DataType::Decimal128(38, 38)),
     ] {
         assert_eq!(column("numeric", typmod).field().data_type(), &expected);
     }
-    for (typmod, rendered) in [
-        (TypeMod::numeric(5, -2), "numeric(5,-2)"),
-        (TypeMod::numeric(3, 5), "numeric(3,5)"),
-    ] {
-        let error = PlannedColumn::resolve(Arc::from("s.t.c"), "numeric", PgTypeKind::Base, typmod)
-            .expect_err("scale outside 0..=precision refuses the column");
-        assert_eq!(
-            error,
-            ConnectError::UnmappedType {
-                column: Arc::from("s.t.c"),
-                postgres_type: rendered.to_string(),
-                row: UNMAPPED_ROW,
-            }
-        );
-    }
-    let bounded = column("numeric", TypeMod::numeric(50, 10));
-    let wire = numeric_wire(0, 0, 11, &[1, 2345, 6789, 5000]);
-    assert_eq!(decimal(&bounded, &wire), 12_345_678_950);
+    let wide = column("numeric", TypeMod::numeric(1000, 40));
+    assert_eq!(decimal(&wide, &numeric_wire(0, 0, 1, &[1, 5000])), 2);
+    let over = column("numeric", TypeMod::numeric(39, 1));
+    let wire = numeric_wire(
+        9,
+        0,
+        1,
+        &[
+            12, 3456, 7890, 1234, 5678, 9012, 3456, 7890, 1234, 5678, 5000,
+        ],
+    );
+    assert_eq!(
+        decimal(&over, &wire),
+        12_345_678_901_234_567_890_123_456_789_012_345_679
+    );
+    let narrow = column("numeric", TypeMod::numeric(3, 5));
+    assert_eq!(decimal(&narrow, &numeric_wire(-1, 0, 5, &[12, 3000])), 123);
+    let negative_scale = column("numeric", TypeMod::numeric(5, -2));
+    let error = decode_one(&negative_scale, &numeric_wire(1, 0, 0, &[1, 2300]))
+        .expect_err("12300 cannot fit Decimal128(38,38)");
+    assert_eq!(refusal(&error), ValueRefusal::NumericOutOfRange);
+    assert!(
+        error.to_string().contains("CONNECT-DECL-pg-out-of-range"),
+        "{error}"
+    );
+    let error = PlannedColumn::resolve(
+        Arc::from("s.t.c"),
+        "numeric",
+        PgTypeKind::Base,
+        TypeMod::numeric(1001, 0),
+    )
+    .expect_err("precision past 1000 refuses the column");
+    assert_eq!(
+        error,
+        ConnectError::UnmappedType {
+            column: Arc::from("s.t.c"),
+            postgres_type: String::from("numeric(1001,0)"),
+            row: UNMAPPED_ROW,
+        }
+    );
 }
 
 #[test]
@@ -604,7 +630,7 @@ fn bounded_numeric_overflow_refuses() {
     let error = decode_one(&numeric, &rounds_over).expect_err("rounding carries past 38");
     assert_eq!(refusal(&error), ValueRefusal::NumericOutOfRange);
     let bounded = column("numeric", TypeMod::numeric(50, 10));
-    let error = decode_one(&bounded, &numeric_wire(7, 0, 0, &[1])).expect_err("29 digits");
+    let error = decode_one(&bounded, &numeric_wire(9, 0, 0, &[100])).expect_err("10^38 at scale 0");
     assert_eq!(refusal(&error), ValueRefusal::NumericOutOfRange);
     let error = decode_one(&numeric, &numeric_wire(i16::MAX, 0, 0, &[1])).expect_err("weight");
     assert_eq!(refusal(&error), ValueRefusal::NumericOutOfRange);

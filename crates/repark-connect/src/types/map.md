@@ -39,7 +39,7 @@ Remote ↔ Arrow type conversion, one table per backend (card 1.6). See [../map.
     discovered column into the planned column the decoder consumes: a base type in the table
     maps through its row (`numeric` reads the modifier); an enum reads as its label (`Utf8`);
     anything else (`PgTypeKind::Other`, a base type not in the table, a declared row, a
-    `numeric` scale outside `0..=p`) refuses with `ConnectError::UnmappedType`, naming the
+    `numeric` precision outside `1..=1000`) refuses with `ConnectError::UnmappedType`, naming the
     column, the type, the row (`CONNECT-DECL-pg-unmapped` or the declared row) and the fix.
     Domains resolve to their base type in discovery (C-2b) before this call. `TypeMod` is the
     `atttypmod` newtype (NS-14), and `use self::PostgresMapping as Mapping` keeps the table rows

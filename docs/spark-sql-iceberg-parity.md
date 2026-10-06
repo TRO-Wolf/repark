@@ -3501,8 +3501,9 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   column, the type, this row and the fix ("select it through `query` with a cast, or a view"),
   a column whose type has no row in the Postgres type map: arrays, composites, ranges,
   multiranges, `money`, geometric, network and bit-string types, `timetz`, `xml`, any other
-  base type, and any type class other than base and enum. A `numeric(p,s)` with `s < 0` or
-  `s > p` (allowed since PostgreSQL 15) refuses the same way. `time` refuses under its own row,
+  base type, and any type class other than base and enum. Every `numeric(p,s)` maps,
+  including `s < 0` and `s > p` (allowed since PostgreSQL 15); only a precision outside
+  `1..=1000`, which Postgres never sends, refuses the same way. `time` refuses under its own row,
   CONNECT-DECL-pg-time. Enums read as their label (`Utf8`). It folds to the Unsupported class.
 - **Apache Spark** — the JDBC source reads a driver `OTHER` type as `StringType`, the
   server's text; Flink's Postgres type mapper raises "Doesn't support Postgres type".
@@ -3514,7 +3515,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   cell.
 ### CONNECT-DECL-pg-numeric — RETIRED (2026-10-06, C-2a): Postgres `numeric` maps to Spark's decimal type
 
-> **CLOSED 2026-10-06 (C-2a, [c-2-design.md](../task/wo/c-2-design.md) §2.7).** `numeric(p,s)` with `1 ≤ p ≤ 38` maps to `Decimal128(p,s)`; `p > 38` maps to `Decimal128(38, min(s,38))` (Spark's `DecimalType.bounded`); unconstrained `numeric` maps to `Decimal128(38,18)` (Spark's `SYSTEM_DEFAULT`). Fractional digits beyond the scale round HALF_UP. Values no Arrow decimal holds refuse per value under CONNECT-DECL-pg-numeric-special and CONNECT-DECL-pg-out-of-range, and a scale outside `0..=p` refuses the column under CONNECT-DECL-pg-unmapped. The declared pin `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row` went RED on purpose against the new table and now holds `time` alone; the replacing pins are `crates/repark-connect/tests/it/postgres_types.rs::numeric_anchors_round_trip`, `crates/repark-connect/tests/it/postgres_types.rs::numeric_typmods_resolve_to_spark_decimal_types`, `crates/repark-connect/tests/it/postgres_types.rs::unconstrained_numeric_rounds_half_up_at_scale_18`. Retired per §6.
+> **CLOSED 2026-10-06 (C-2a, [c-2-design.md](../task/wo/c-2-design.md) §2.7).** `numeric(p,s)` maps to `Decimal128` by Spark 4.1.2's `DecimalType.boundedPreferIntegralDigits` over pgjdbc's raw scale: effective precision `max(p,s)` at or under 38 maps to `(max(p,s),s)`; past 38 it maps to `(38, max(0, s-(max(p,s)-38)))`; unconstrained `numeric` maps to `Decimal128(38,18)` (Spark's `SYSTEM_DEFAULT`). A negative scale arrives as pgjdbc's raw low 16 bits, so every negative scale maps to `Decimal128(38,38)`. Fractional digits beyond the scale round HALF_UP. Values no Arrow decimal holds refuse per value under CONNECT-DECL-pg-numeric-special and CONNECT-DECL-pg-out-of-range, and only a precision outside `1..=1000` refuses the column under CONNECT-DECL-pg-unmapped. The declared pin `crates/repark-connect/tests/it/postgres_types.rs::declared_types_refuse_naming_their_row` went RED on purpose against the new table and now holds `time` alone; the replacing pins are `crates/repark-connect/tests/it/postgres_types.rs::numeric_anchors_round_trip`, `crates/repark-connect/tests/it/postgres_types.rs::numeric_typmods_resolve_to_spark_decimal_types`, `crates/repark-connect/tests/it/postgres_types.rs::unconstrained_numeric_rounds_half_up_at_scale_18`. Corrected by the C-2a fold (round B, 2026-10-06): the rule is `boundedPreferIntegralDigits`, measured in D-M2 DM2-T05…T10. Retired per §6.
 
 ### CONNECT-DECL-pg-date — RETIRED (2026-10-06, C-2a): Postgres `date` maps to `Date32`
 

@@ -49,10 +49,12 @@ See [../map.md](../map.md).
     the last representable µs, the first one past it, both infinities, the zone label);
     `numeric_anchors_round_trip` (`12345.678` as `numeric(8,3)`, `-0.5` as `numeric(2,1)`, the
     38-digit maximum, scale padding, zero, a short value, a digit out of range),
-    `numeric_typmods_resolve_to_spark_decimal_types`, `numeric_special_values_refuse`,
+    `numeric_typmods_resolve_to_spark_decimal_types` (D-M2 DM2-T05…T10 types, the T08
+    `1.5` → 2 and T05 half-up values, the T10 refusal, the kept `p > 1000` refusal),
+    `numeric_special_values_refuse`,
     `unconstrained_numeric_rounds_half_up_at_scale_18` (`5e-19` → `1e-18`, its negative, and
     `4.999e-19` → 0), `bounded_numeric_overflow_refuses` (21 integer digits, a carry from
-    rounding past 38 digits, 29 digits into `(38,10)`, an absurd weight);
+    rounding past 38 digits, 10^38 into `(38,0)`, an absurd weight);
     `uuid_renders_lowercase_canonical`, `jsonb_strips_version_one_and_refuses_others`,
     `json_and_interval_are_text_verbatim`; `unmapped_types_refuse_at_resolution` (the
     `pg-unmapped` and `pg-time` refusals, enums as labels), 

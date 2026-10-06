@@ -12,9 +12,12 @@ Arrow builders. No codec allocates per value. See [../map.md](../map.md).
 
 - `numeric.rs` — `DecimalTarget` (the planned `Decimal128(p,s)`) and its resolution from the
   `atttypmod` (`((p << 16) | (s & 0x7ff)) + 4`, the 11-bit scale sign-extended as PostgreSQL 15
-  packs it): no modifier gives `Decimal128(38,18)` (Spark's `SYSTEM_DEFAULT`); `1 ≤ p ≤ 38`,
-  `0 ≤ s ≤ p` gives `(p,s)`; `p > 38` gives `(38, min(s,38))` (Spark's `DecimalType.bounded`);
-  a scale outside `0..=p` refuses the column. `decode` reads `ndigits`, `weight`, `sign`,
+  packs it): no modifier gives `Decimal128(38,18)` (Spark's `SYSTEM_DEFAULT`); a constrained
+  modifier gives Spark 4.1.2's `DecimalType.boundedPreferIntegralDigits` over pgjdbc's raw
+  scale (`s & 0xffff`, so every negative scale lands at `(38,38)`): effective precision
+  `max(p,s)` at or under 38 gives `(max(p,s),s)`, past 38 gives `(38, max(0, s-(max(p,s)-38)))`;
+  only a precision outside `1..=1000` refuses the column (D-M2 DM2-T05…T10). `decode` reads
+  `ndigits`, `weight`, `sign`,
   `dscale` and the base-10000 digits (`numeric_send`) straight into an `i128` at the planned
   scale: each digit contributes `digit × 10^(4·(weight − i) + s)` with checked arithmetic, the
   first dropped decimal decides HALF_UP (away from zero, which is both Spark's
