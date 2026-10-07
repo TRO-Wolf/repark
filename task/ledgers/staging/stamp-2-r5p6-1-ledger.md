@@ -33,9 +33,10 @@ The full attribution, with every table and artifact path, is
 | C-005 | Attribution: no stack code carries the 0.64 pt between `7f45e460` and `13de60e1`; the r5p6 excess over main is construction-side and the largest single block is the `fillna` SQL re-plan through `sql_built`. | The attribution table below and `attribution.md` §1–§3. | **PROVEN** |
 | C-007 | The CAST arm admits only `TINYINT`, `SMALLINT`, `INT`, `BIGINT`, `FLOAT`, `DOUBLE` and `DECIMAL(p,s)`: the targets whose native cast of `0`, `1` and `999999999` equals the SQL route's in value, type, nullability and error, measured on a twin column of the target type and across a 13-type twin matrix (overflow on `TINYINT`, `SMALLINT` and narrow decimals raises the same error on both routes). Every other target (`TIMESTAMP`, `DATE`, `TIMESTAMP_NTZ`, `STRING`, `BOOLEAN`, `BINARY`, nested CASTs) keeps the SQL route, so `coalesce(<TIMESTAMP, DATE, TIMESTAMP_NTZ or void twin>, CAST(n AS TIMESTAMP))` answers `n` seconds as head and Spark do, not `n` microseconds (verifier S1). | `test_coalesce_cast_to_a_native_type_skips_the_sql_replan`, `test_coalesce_cast_to_a_datetime_keeps_the_sql_replan`; mutations M6, M7, M8 below. | **PROVEN** |
 | C-008 | A native exactness attempt that raises (the native `select`, the name read or the spawn in `_attr_exact_plan`) is a miss: `_attr_exact_child` returns `None` and the SQL route runs unchanged, so a refusal keeps head's SQL-route text (`coalesce(Boolean, Int64)`, not the native planner's `coalesce(Boolean, Int32)`; verifier S2, 117 grid cells). | `test_raising_native_probe_keeps_the_sql_route_refusal`; mutation M9 below. | **PROVEN** |
+| C-009 | The literal bounds hold on both arms: `1000000000` (ten digits), `-1` (a sign) and `1.5` (a fraction), bare and as `CAST(<that> AS BIGINT)`, keep the SQL route with equal answers, while `0` and `999999999` bare take the native route (verifier S3). | `test_out_of_shape_literals_keep_the_sql_replan`; mutations M10, M11, M12 below. | **PROVEN** |
 | C-006 | Pre-measure: the fix brings the whole like set under 1.10 and r5p6 from 1.18 to about 1.13 against main `575f57ca`, single runs by `l4l_gate.py`'s method. | The pre-measure table below. | **PROVEN** |
 
-`LOGIC_SCORE` = **8/8 `PROVEN`**.
+`LOGIC_SCORE` = **9/9 `PROVEN`**.
 
 ## Attribution table (C-005)
 
@@ -91,6 +92,9 @@ guard. The sort lineage trace and twin search were already lazy (C-004); this un
 | M7 | the CAST whitelist gains `TIMESTAMP` | `test_coalesce_cast_to_a_datetime_keeps_the_sql_replan` |
 | M8 | the CAST arm takes any type token again (`[A-Z_]+(\(…\))?`, verifier V8 and the S1 shape) | `test_coalesce_cast_to_a_datetime_keeps_the_sql_replan` |
 | M9 | `_attr_exact_child` lets the native attempt's exception propagate | `test_raising_native_probe_keeps_the_sql_route_refusal` |
+| M10 | either arm accepts a sign, `-?\d{1,9}` (verifier V1; bare and CAST run separately) | `test_out_of_shape_literals_keep_the_sql_replan`, both runs |
+| M11 | either arm accepts ten digits, `\d{1,10}` (verifier V2; bare and CAST run separately) | `test_out_of_shape_literals_keep_the_sql_replan`, both runs |
+| M12 | either arm accepts a fraction, `\d{1,9}(\.\d+)?` (verifier V3; bare and CAST run separately) | bare: the decimal-fill, `coalesce`-shape and bounds pins; CAST: the bounds pin |
 | M5 | the twin search runs in the unique-key (`Bound`) arm | only the counter assertion (`attr_id_s3b.rs:460`); every binding answer and the other 97 `attr_id` tests stay green |
 
 ## Pre-measure (C-006)
@@ -119,7 +123,7 @@ COVERAGE_ATTESTATION:
       artifacts: [task/ledgers/staging/stamp-2-r5p6-1-ledger.md, python/repark/tests/test_stamp_2_r5p6_1.py, crates/repark-core/src/session/tests/attr_id_s3b.rs]
     - id: AT-2
       status: ATTACKED
-      evidence: Literal boundaries probed on both doors — 0, 7, 999999999 and 2147483647 type INT, 3000000000 BIGINT, decimals DECIMAL through SQL; the shape admits only up to nine digits and no sign; decimal and spaced-alias inputs are pinned to the SQL route.
+      evidence: Literal boundaries probed on both doors — 0, 7, 999999999 and 2147483647 type INT, 3000000000 BIGINT, decimals DECIMAL through SQL; the shape admits only up to nine digits and no sign; ten-digit, negative and fractional literals on both arms (C-009), decimal and spaced-alias inputs are pinned to the SQL route.
       artifacts: [python/repark/src/repark/spark/dataframe/join_attr_tokens.py, python/repark/tests/test_stamp_2_r5p6_1.py]
     - id: AT-3
       status: ATTACKED

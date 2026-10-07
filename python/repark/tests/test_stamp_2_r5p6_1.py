@@ -16,6 +16,7 @@ from repark.spark.dataframe import join_attr_tokens
 _NATIVE_CASTS = ("tinyint", "smallint", "int", "bigint", "float", "double", "decimal(10,2)")
 _SQL_CAST_TWINS = ("TIMESTAMP", "DATE", "TIMESTAMP_NTZ", "void")
 _CAST_LITERALS = (0, 1, 999999999)
+_OUT_OF_SHAPE_LITERALS = (1000000000, -1, 1.5)
 _SORT_TRACES = (
     "sort_hits_meet_at_join",
     "sort_input_carries_twice",
@@ -146,6 +147,11 @@ def _coalesce_cast(frame: Any, value: Any, target: str) -> Any:
     return frame.select(filled.alias("c"), "i")
 
 
+def _coalesce_id_cast(frame: Any, value: Any, target: str) -> Any:
+    filled = spark_functions.coalesce(frame["id"], spark_functions.lit(value).cast(target))
+    return frame.select(filled.alias("c"), "v")
+
+
 def _coalesce_bool(frame: Any) -> Any:
     return frame.select(spark_functions.coalesce(frame["b"], spark_functions.lit(0)))
 
@@ -263,3 +269,21 @@ def test_raising_native_probe_keeps_the_sql_route_refusal(
     assert native == sql
     assert native[:2] == ("refused", "AnalysisException")
     assert "coalesce(Boolean, Int64)" in native[2]
+
+
+def test_out_of_shape_literals_keep_the_sql_replan(
+    spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    twins = _frames(spark)["twins"]
+    for value in _OUT_OF_SHAPE_LITERALS:
+        builds = {
+            "bare": partial(_coalesce_id, twins, value),
+            "cast": partial(_coalesce_id_cast, twins, value, "bigint"),
+        }
+        for form, build in builds.items():
+            routes, native, sql = _routes_and_answers(monkeypatch, build)
+            assert routes == [False], (value, form)
+            assert native == sql, (value, form)
+    for value in (0, 999999999):
+        routes, _, _ = _routes_and_answers(monkeypatch, partial(_coalesce_id, twins, value))
+        assert routes == [True], value

@@ -9672,10 +9672,12 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   `CAST(n AS TIMESTAMP)` over TIMESTAMP, DATE, TIMESTAMP_NTZ and void twins
   (deleting the CAST arm or admitting `TIMESTAMP` reds one of the two). A
   `coalesce` over Boolean twins whose native probe raises falls back and
-  refuses with the SQL route's `coalesce(Boolean, Int64)` text. A unique sort key binds without any
+  refuses with the SQL route's `coalesce(Boolean, Int64)` text. `1000000000`,
+  `-1` and `1.5`, bare and cast to `BIGINT`, keep the SQL route (a sign, a
+  tenth digit or a fraction admitted on either arm reds it). A unique sort key binds without any
   `_native.sort_*` trace door while an ambiguous one calls them. Mutations:
   dropping the first-held fill binding reds both fill-route pins, dropping the
   literal-shape check reds the decimal pins, and dropping the
   binding-equivalence check reds the second-twin pin. No module docstring: the
   lane's no-comments ruling covers the new file; the contract lives here.
-  pins: stamp-2-r5p6-1/C-001, C-002, C-003, C-004, C-007, C-008
+  pins: stamp-2-r5p6-1/C-001, C-002, C-003, C-004, C-007, C-008, C-009
