@@ -282,6 +282,7 @@ impl MicroBatchSource {
     pub async fn initial_offset(&self) -> Result<Option<InputOffset>, MicroBatchError> {
         let table = self.load().await?;
         WindowPlanner::new(table, self.caps)
+            .named(self.name.clone())
             .initial_offset(&self.start)
             .await
     }
@@ -293,7 +294,7 @@ impl MicroBatchSource {
         limit: WindowLimit,
     ) -> Result<Option<SourceBatch>, MicroBatchError> {
         let table = self.load().await?;
-        let planner = WindowPlanner::new(table.clone(), self.caps);
+        let planner = WindowPlanner::new(table.clone(), self.caps).named(self.name.clone());
         let Some(plan) = planner.next_window(from, limit).await? else {
             return Ok(None);
         };

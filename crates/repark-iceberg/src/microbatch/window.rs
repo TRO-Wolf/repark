@@ -47,6 +47,7 @@ pub struct WindowPlan {
 pub struct WindowPlanner {
     table: Table,
     caps: ReadCaps,
+    name: Option<String>,
     #[cfg(test)]
     planned: std::sync::Arc<std::sync::atomic::AtomicUsize>,
 }
@@ -57,9 +58,16 @@ impl WindowPlanner {
         Self {
             table,
             caps,
+            name: None,
             #[cfg(test)]
             planned: std::sync::Arc::default(),
         }
+    }
+
+    #[must_use]
+    pub fn named(mut self, name: impl Into<String>) -> Self {
+        self.name = Some(name.into());
+        self
     }
 
     #[allow(clippy::missing_errors_doc)]
@@ -322,13 +330,15 @@ impl WindowPlanner {
     }
 
     fn table_name(&self) -> String {
-        self.table.identifier().to_string()
+        self.name
+            .clone()
+            .unwrap_or_else(|| self.table.identifier().to_string())
     }
 
     fn offset(&self, snapshot: i64, position: u64) -> InputOffset {
         InputOffset {
             table: TableUuid::of(&self.table),
-            table_name: self.table_name(),
+            table_name: self.table.identifier().to_string(),
             snapshot: SnapshotId::new(snapshot),
             position: FilePosition::new(position),
         }

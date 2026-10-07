@@ -319,3 +319,45 @@ fn boolean_twins_compare_by_meaning() {
     .expect_err("a non-boolean key keeps the exact comparison");
     assert!(error.to_string().contains("different values"), "{error}");
 }
+
+#[tokio::test]
+async fn planner_errors_name_the_table_as_the_source_was_opened() {
+    let (warehouse, session) = session_with_two_appends().await;
+    let root = warehouse
+        .path()
+        .to_str()
+        .expect("the warehouse path must be text");
+    let (source, end) = drained_source(&session).await;
+    assert_eq!(end.table_name, "sales.orders");
+    let handle = session
+        .catalogs_snapshot()
+        .get("ice")
+        .cloned()
+        .expect("the catalog must be visible");
+    let sales = NamespaceIdent::new("sales".to_string());
+    handle
+        .drop_table(&TableIdent::new(sales.clone(), "orders".to_string()))
+        .await
+        .expect("the table must drop");
+    let replacement = handle
+        .create_table(&sales, orders_creation(&format!("{root}/sales/orders-v2")))
+        .await
+        .expect("the replacement must create");
+    session
+        .refresh_catalog_provider("ice")
+        .await
+        .expect("the provider must refresh");
+    let error = source
+        .next_batch(&end, WindowLimit::Capped)
+        .await
+        .err()
+        .expect("a replaced table must refuse");
+    assert_eq!(
+        error.to_string(),
+        format!(
+            "source table ice.sales.orders was replaced (recorded uuid {}, current uuid {}); start a new query (new queryName)",
+            end.table,
+            TableUuid::of(&replacement)
+        )
+    );
+}

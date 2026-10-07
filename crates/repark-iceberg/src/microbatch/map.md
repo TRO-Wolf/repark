@@ -34,7 +34,10 @@ Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
   pins: mb-1/C-006, C-020, C-024, C-036
 - `window.rs` — the sketch's §3.3: `ReadCaps`, `StartPosition`,
   `WindowLimit`, `PlannedFile`, `WindowPlan`, and
-  `WindowPlanner::{new, initial_offset, next_window}` over a held table.
+  `WindowPlanner::{new, named, initial_offset, next_window}` over a held
+  table. Fold 2 (G8): `named` sets the table name its refusals carry, so a
+  source's errors name the table as it was opened (`ice.sales.orders`); the
+  offsets it writes keep the table identifier.
   Fold 1: the window walks `(from, head]` lazily, one snapshot at a time,
   checking each operation as it enters and planning an append's files only
   while the private `Window` has room. Per-snapshot append scans list the

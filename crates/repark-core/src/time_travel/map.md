@@ -96,13 +96,17 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
   rather than passing silently, and two spellings of a skip key compare as
   booleans, so `false`/`FALSE` twins are accepted (G7).
   pins: mb-1/C-038
+  Both planner calls go through `WindowPlanner::named(name)`, so a planner
+  refusal such as `SourceReplaced` names the table as the source was opened
+  (G8).
+  pins: mb-1/C-039
 - `microbatch_source_tests.rs` — the `microbatch_source.rs` pins, split out
   under `#[path]` (fold 1 round B). pins: mb-1/C-014, C-015, C-026, C-027, C-028, C-029, C-030
 - `microbatch_source_fold2_tests.rs` — fold 2's source pins, a child of
   `microbatch_source_tests.rs`: the per-run read schema over a rename, a drop
   and re-add, a type promotion and a change after open; the Unicode-folded
-  keys and the boolean twins.
-  pins: mb-1/C-033, C-038
+  keys and the boolean twins; the `SourceReplaced` text.
+  pins: mb-1/C-033, C-038, C-039
 - `metadata_at.rs` — **IPI-23-MT-READER-1 (2026-09-22):** the ONE metadata-table
   AS OF decision both doors share. `provider_for_spec` is the #802
   `prepare_metadata_as_of` body moved down from `repark-spark` (refuse/serve-current/

@@ -466,6 +466,7 @@ re-verifier**, so G1 is implemented as ruled.
 | C-036 | (G5) A snapshot still in the metadata but not an ancestor of the head refuses `SnapshotNotInLineage { table, snapshot, head }`: `AfterSnapshot(x)` at `initial_offset`, and a resumed `from` at `next_window` under both limits and at any position. The text opens with Spark's `Cannot find snapshot after <id>: not an ancestor of table's current snapshot` and never says "expired". An ancestor still resumes. | The G5 pins in `window_fold2_pins.rs` and `error.rs`, plus mutations g5a and g5b. | **PROVEN** | 2 pins green: `a_snapshot_rolled_out_of_the_lineage_refuses_as_not_an_ancestor` (q09's shape: append s1, append s2, `rollback_to(s1)`, append s3; `AfterSnapshot(s2)`, `(s2,0)` and `(s2,1)` refuse naming s2 and s3; `(s1,1)` resumes to s3) and `lineage_refusal_starts_with_spark_text_and_never_says_expired` (byte-exact). The variant joins `every_error_variant_renders_a_message`. g5a and g5b red. pins: mb-1/C-036 |
 | C-037 | (G6) `FromTimestamp` mirrors `oldestAncestorAfter`: a head below T reads `None`; otherwise the walk from the head returns the snapshot after the first one with `ts < T`, a snapshot with `ts == T` itself, or the oldest ancestor when none is below T. | The G6 pin in `window_fold2_pins.rs` plus mutations g6a and g6b. | **PROVEN** | 1 pin green: `from_timestamp_walks_back_from_the_head_as_oldest_ancestor_after` (a real s1 at offset 0, then skewed snapshots at +50 s, +20 s and +60 s built through `TableMetadataBuilder`: T = +30 s lands on the head where the oldest-first rule gave +50 s; +60 s the head; +20 s the equal snapshot; +10 s the +50 s snapshot; 0 and -1 s s1; +60.001 s `None`; with the +20 s snapshot as head, T = +30 s reads `None` where the old rule landed on +50 s). g6a (the old oldest-first search) and g6b (no head check) red. pins: mb-1/C-037 |
 | C-038 | (G7) After the ASCII fold, a key containing any non-ASCII character whose Unicode lowercase starts with `streaming-`, `stream-` or `repark.cdc.` refuses `Catalog` naming the key, so the Kelvin-sign `repar\u{212A}.cdc.start-after-snapshot-id` can no longer pass as an ignored key and silently replay from `Earliest`. A non-ASCII key outside the prefixes still passes. Two spellings of a skip key compare as booleans: `false`/`FALSE` are accepted, `TRUE`/`true` refuse MBE-3, and `false`/`TRUE` or `false`/`0` refuse as different values; every other key keeps the exact comparison. | The G7 pins in `microbatch_source_fold2_tests.rs` plus mutations g7a and g7b. | **PROVEN** | 2 pins green: `a_key_that_folds_to_a_streaming_prefix_only_under_unicode_refuses` (four keys byte-exact, two non-prefixed keys pass) and `boolean_twins_compare_by_meaning`. g7a and g7b red. pins: mb-1/C-038 |
+| C-039 | (G8) Planner errors name the table as the source was opened: `MicroBatchSource` builds both planners with `WindowPlanner::named(self.name)`, so `SourceReplaced` reads `source table ice.sales.orders was replaced (…)`. The offsets keep the table identifier (`sales.orders`) in `table_name`. | The G8 pin in `microbatch_source_fold2_tests.rs` plus mutation g8. | **PROVEN** | 1 pin green: `planner_errors_name_the_table_as_the_source_was_opened` (k07's shape: drain, drop, re-create; the text byte-exact with both uuids; the drained offset's `table_name` is `sales.orders`). g8 red. pins: mb-1/C-039 |
 
 ## Dated decision rows — fold 2
 
@@ -503,6 +504,10 @@ re-verifier**, so G1 is implemented as ruled.
   the option; RePark refuses it loud instead of guessing either way. Rust's
   `to_lowercase` is the probe. Supersedes C-027's "with equal values they are accepted"
   for the skip keys, which now compare by meaning.
+- **G8 (2026-10-07).** Only the refusal texts change. `InputOffset.table_name` stays
+  the table identifier, because offsets are stamped into the sink and read back by
+  later runs; a display-only change must not move stored bytes. A planner built
+  without `named` keeps the identifier.
 
 ## Gates — fold 2
 
@@ -549,4 +554,7 @@ test result: FAILED. 25 passed; 1 failed; 0 ignored; 0 measured; 1027 filtered o
 g7b microbatch_source.rs `|| (boolean && …)` -> `|| (false && …)` (exact twin comparison)
 test time_travel::microbatch_source::tests::microbatch_source_fold2_tests::boolean_twins_compare_by_meaning ... FAILED
 test result: FAILED. 25 passed; 1 failed; 0 ignored; 0 measured; 1027 filtered out
+g8 microbatch_source.rs next_batch's planner drops `.named(self.name.clone())`
+test time_travel::microbatch_source::tests::microbatch_source_fold2_tests::planner_errors_name_the_table_as_the_source_was_opened ... FAILED
+test result: FAILED. 26 passed; 1 failed; 0 ignored; 0 measured; 1027 filtered out
 ```
