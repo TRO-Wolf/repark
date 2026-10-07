@@ -17,6 +17,18 @@ _NATIVE_CASTS = ("tinyint", "smallint", "int", "bigint", "float", "double", "dec
 _SQL_CAST_TWINS = ("TIMESTAMP", "DATE", "TIMESTAMP_NTZ", "void")
 _CAST_LITERALS = (0, 1, 999999999)
 _OUT_OF_SHAPE_LITERALS = (1000000000, -1, 1.5)
+_VALID_DECIMAL_EDGES = ("decimal(38,0)", "decimal(38,38)", "decimal(1,0)")
+_INVALID_DECIMALS = {
+    "decimal(39,0)": (
+        "schema",
+        "[DECIMAL_PRECISION_EXCEEDS_MAX_PRECISION] Decimal precision 39 exceeds max precision 38.",
+    ),
+    "decimal(5,6)": (
+        "select",
+        "Decimal(precision = 5, scale = 6) should satisfy `0 < precision <= 76`, "
+        "and `scale <= precision`.",
+    ),
+}
 _SORT_TRACES = (
     "sort_hits_meet_at_join",
     "sort_sourced_twin_engine",
@@ -151,6 +163,32 @@ def _coalesce_cast(frame: Any, value: Any, target: str) -> Any:
 def _coalesce_id_cast(frame: Any, value: Any, target: str) -> Any:
     filled = spark_functions.coalesce(frame["id"], spark_functions.lit(value).cast(target))
     return frame.select(filled.alias("c"), "v")
+
+
+def _door_outcome(build: Callable[[], Any]) -> tuple[Any, ...]:
+    door = "select"
+    try:
+        frame = build()
+        door = "schema"
+        schema = frame.schema.simpleString()
+        door = "collect"
+        return ("answered", schema, sorted(map(tuple, frame.collect()), key=repr))
+    except PySparkException as error:
+        return (door, type(error).__name__, str(error))
+
+
+def _routes_and_doors(
+    monkeypatch: pytest.MonkeyPatch, build: Callable[[], Any]
+) -> tuple[list[bool], tuple[Any, ...], tuple[Any, ...]]:
+    routes: list[bool] = []
+    with monkeypatch.context() as patch:
+        exact = partial(_spy_exact, routes, join_attr_tokens._attr_exact_child)
+        patch.setattr(join_attr_tokens, "_attr_exact_child", exact)
+        native = _door_outcome(build)
+    with monkeypatch.context() as patch:
+        patch.setattr(join_attr_tokens, "_attr_exact_child", _no_exact)
+        sql = _door_outcome(build)
+    return routes, native, sql
 
 
 def _coalesce_bool(frame: Any) -> Any:
@@ -289,3 +327,28 @@ def test_out_of_shape_literals_keep_the_sql_replan(
     for value in (0, 999999999):
         routes, _, _ = _routes_and_answers(monkeypatch, partial(_coalesce_id, twins, value))
         assert routes == [True], value
+
+
+def test_valid_decimal_bounds_keep_the_native_route(
+    spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    twins = _cast_twins(spark, "INT")
+    for target in _VALID_DECIMAL_EDGES:
+        for value in _CAST_LITERALS:
+            build = partial(_coalesce_cast, twins, value, target)
+            routes, native, sql = _routes_and_answers(monkeypatch, build)
+            assert routes == [True], (target, value)
+            assert native == sql, (target, value)
+
+
+def test_invalid_decimal_cast_keeps_the_sql_route_refusal(
+    spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    twins = _cast_twins(spark, "INT")
+    for target, (door, text) in _INVALID_DECIMALS.items():
+        build = partial(_coalesce_cast, twins, 1, target)
+        routes, native, sql = _routes_and_doors(monkeypatch, build)
+        assert routes == [False], target
+        assert native == sql, target
+        assert native[:2] == (door, "AnalysisException"), target
+        assert text in native[2], target

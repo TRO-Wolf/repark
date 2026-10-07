@@ -35,9 +35,10 @@ The full attribution, with every table and artifact path, is
 | C-008 | A native exactness attempt that raises (the native `select`, the name read or the spawn in `_attr_exact_plan`) is a miss: `_attr_exact_child` returns `None` and the SQL route runs unchanged, so a refusal keeps head's SQL-route text (`coalesce(Boolean, Int64)`, not the native planner's `coalesce(Boolean, Int32)`; verifier S2, 117 grid cells). | `test_raising_native_probe_keeps_the_sql_route_refusal`; mutation M9 below. | **PROVEN** |
 | C-009 | The literal bounds hold on both arms: `1000000000` (ten digits), `-1` (a sign) and `1.5` (a fraction), bare and as `CAST(<that> AS BIGINT)`, keep the SQL route with equal answers, while `0` and `999999999` bare take the native route (verifier S3). | `test_out_of_shape_literals_keep_the_sql_replan`; mutations M10, M11, M12 below. | **PROVEN** |
 | C-010 | `SORT_TRACES` (`#[cfg(test)]` only) counts all four lineage doors (`sort_hits_meet_at_join`, `sort_sourced_twin_engine`, `sort_input_carries_twice`, `sort_output_carries_twice`): a unique key leaves it unmoved and the ambiguous Project key moves it by exactly 4, one per door. The facade spy names the same four; `sort_output_carries_twice` has no `_native` export, so the spy asserts it stays unexported and patches the doors the facade can call (verifier S3). | `bind_free_names_sort_binds_unique_key_without_tracing_lineage`, `test_unique_sort_key_binds_without_the_lineage_trace`; mutations M13, M14 below. | **PROVEN** |
+| C-011 | The CAST arm's `DECIMAL(p,s)` admits only a valid Spark decimal, `1 <= p <= 38` and `0 <= s <= p`, checked numerically on the regex's groups in `_exact_shape`. Any other decimal (`DECIMAL(39,0)`, `DECIMAL(5,6)`, `DECIMAL(38,39)`, `DECIMAL(99,0)`, `DECIMAL(0,0)`) takes the SQL route, so it raises head's `AnalysisException` text at head's call (`.schema` for `DECIMAL(39,0)`, the `select` for the rest), with no made-up schema and no `PySparkException` at the action. `DECIMAL(38,0)`, `DECIMAL(38,38)` and `DECIMAL(1,0)` keep the native route with the SQL route's answers (re-verify S2). | `test_invalid_decimal_cast_keeps_the_sql_route_refusal`, `test_valid_decimal_bounds_keep_the_native_route`; mutations M15–M18 below; the fold 2 grid rows below. | **PROVEN** |
 | C-006 | Pre-measure: the fix brings the whole like set under 1.10 and r5p6 from 1.18 to about 1.13 against main `575f57ca`, single runs by `l4l_gate.py`'s method. | The pre-measure table below. | **PROVEN** |
 
-`LOGIC_SCORE` = **10/10 `PROVEN`**.
+`LOGIC_SCORE` = **11/11 `PROVEN`**.
 
 ## Attribution table (C-005)
 
@@ -85,6 +86,9 @@ guard. The sort lineage trace and twin search were already lazy (C-004); this un
 | Fold 1: fill suites (13 files, `-n 8`) | 486 passed, 65 skipped, 3 xfailed, unchanged; the unit's 10 pins pass |
 | Fold 1: sort grid (`reverify2/sort4`, 394 cells) | 394/394 equal to `s4_orch.json` and `s4_sm2d.json` |
 | Fold 1: `cargo test -p repark-core --lib attr_id` | 98 passed |
+| Fold 2: the re-verify's 2,294-cell grid (`reverify/cells{,2,3,4}.py`, its `rr.py` / `rcmp.py`) on the fix overlay against `13de60e1`'s facade, same native build | 0 differences; 530 cells take the native route and 210 fall back after a raise, as on `f8fc8fa0` |
+| Fold 2: the re-verify's attack grid (`reverify/cells5.py`, 1,703 cells, ANSI on and off) against `13de60e1` | 0 differences in both modes; the 4 `badtype` cells now take the SQL route and give head's `AnalysisException`, and they are the only route changes from `f8fc8fa0` (1,638 → 1,634 native per mode) |
+| Fold 2: fill suites (13 files, `-n 8`) | 486 passed, 65 skipped, 3 xfailed, unchanged; the unit's 12 pins pass |
 
 ## Mutations (red-first)
 
@@ -103,6 +107,10 @@ guard. The sort lineage trace and twin search were already lazy (C-004); this un
 | M12 | either arm accepts a fraction, `\d{1,9}(\.\d+)?` (verifier V3; bare and CAST run separately) | bare: the decimal-fill, `coalesce`-shape and bounds pins; CAST: the bounds pin |
 | M13 | the `Bound` arm calls `sort_output_carries_twice` or `sort_input_carries_twice` (the verifier's escape; run separately) | the counter assertion (`attr_id_s3b.rs:460`), both runs |
 | M14 | `sort_output_carries_twice` or `sort_input_carries_twice` stops counting (run separately) | the exact-count assertion (`attr_id_s3b.rs:463`), both runs |
+| M15 | the DECIMAL arm reverts to the regex alone (`_EXACT_SHAPE.fullmatch` without the numeric check) | `test_invalid_decimal_cast_keeps_the_sql_route_refusal` |
+| M16 | the precision bound `1 <= p <= 38` is dropped | `test_invalid_decimal_cast_keeps_the_sql_route_refusal` |
+| M17 | the scale bound `s <= p` is dropped | `test_invalid_decimal_cast_keeps_the_sql_route_refusal` |
+| M18 | the precision cap tightens to 37 | `test_valid_decimal_bounds_keep_the_native_route` |
 | M5 | the twin search runs in the unique-key (`Bound`) arm | only the counter assertion (`attr_id_s3b.rs:460`); every binding answer and the other 97 `attr_id` tests stay green |
 
 ## Pre-measure (C-006)
@@ -177,5 +185,11 @@ COVERAGE_ATTESTATION:
       evidence: Fold 1 re-ran the verifier's 2,294-cell grid against head's facade with 0 differences.
     - id: AT-10
       evidence: Fold 1 mutations M6–M14 each red a pin.
+    - id: AT-2
+      evidence: Fold 2 bounds the DECIMAL arm numerically (C-011); precision 0, 39 and 99 and scale above precision keep the SQL route, and 38,0, 38,38 and 1,0 stay native with equal answers.
+    - id: AT-6
+      evidence: Fold 2 re-ran the re-verify's 2,294-cell grid and its 1,703-cell attack grid (ANSI on and off) against head's facade with 0 differences.
+    - id: AT-10
+      evidence: Fold 2 mutations M15–M18 each red a pin.
   complete: true
 ```

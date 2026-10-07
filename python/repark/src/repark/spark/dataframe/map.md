@@ -874,6 +874,13 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `_attr_exact_child` wraps `_attr_exact_plan`: any exception in the native
   attempt is a miss and the SQL route runs, so a refusal carries the SQL
   route's text, not the native planner's. pins: stamp-2-r5p6-1/C-008
+  `_exact_shape` admits `DECIMAL(p,s)` only for a valid Spark decimal,
+  `1 <= p <= 38` and `s <= p`, checked numerically on the regex's `precision`
+  and `scale` groups. The regex alone admitted `DECIMAL(39,0)`, `DECIMAL(5,6)`
+  and `DECIMAL(0,0)`: these planned natively with a made-up `.schema`, and
+  their actions raised `PySparkException`. On the SQL route they raise head's
+  `AnalysisException` at head's call (`.schema` for `DECIMAL(39,0)`, the
+  `select` for the others). pins: stamp-2-r5p6-1/C-011
   Replacing each token by the engine the SQL route binds (the first position
   holding the id) must reproduce the column's `_sql_expr`, so both routes read
   the same fields. The native output names must equal the names the SQL route

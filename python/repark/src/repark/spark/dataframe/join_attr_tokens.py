@@ -21,7 +21,11 @@ _ATTR_TOKEN_RE = re.compile(
     r"__REPARK_ATTR_([A-Za-z0-9]+)__F(\d+)__([\w\\|]*?)(?:__D([0-9A-Fa-f]*))?__"
 )
 _ENGINE_UNSAFE = (" ", "(", ")", "+", "-", "*", "/")
-_EXACT_CAST_TYPE = r"(?:TINYINT|SMALLINT|INT|BIGINT|FLOAT|DOUBLE|DECIMAL\(\d{1,2},\d{1,2}\))"
+_EXACT_CAST_TYPE = (
+    r"(?:TINYINT|SMALLINT|INT|BIGINT|FLOAT|DOUBLE"
+    r"|DECIMAL\((?P<precision>\d{1,2}),(?P<scale>\d{1,2})\))"
+)
+_MAX_DECIMAL_PRECISION = 38
 _EXACT_SHAPE = re.compile(
     rf"\x00|coalesce\(\x00, (?:\d{{1,9}}|CAST\(\d{{1,9}} AS {_EXACT_CAST_TYPE}\))\)"
 )
@@ -224,9 +228,19 @@ def _attr_exact(column: Column, held: list[str | None], engines: list[str]) -> b
         last = match.end()
     spelled.append(join_sql[last:])
     shape.append(join_sql[last:])
-    if _EXACT_SHAPE.fullmatch("".join(shape)) is None:
+    if not _exact_shape("".join(shape)):
         return False
     return "".join(spelled) == column._sql_expr
+
+
+def _exact_shape(shape: str) -> bool:
+    match = _EXACT_SHAPE.fullmatch(shape)
+    if match is None:
+        return False
+    if match.group("precision") is None:
+        return True
+    precision = int(match.group("precision"))
+    return 1 <= precision <= _MAX_DECIMAL_PRECISION and int(match.group("scale")) <= precision
 
 
 def _attr_exact_child(
